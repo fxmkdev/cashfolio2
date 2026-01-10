@@ -1,4 +1,4 @@
-import type { AgChartOptions, AgChartTheme } from "ag-charts-community";
+import type { AgChartOptions, AgChartTheme } from "ag-charts-enterprise";
 import { getTheme } from "~/theme";
 
 export const defaultChartTheme: AgChartTheme = {

@@ -14,9 +14,14 @@ import { ensureUser } from "./users/functions.server";
 import { getPageTitle } from "./meta";
 import { LoadingBar } from "./platform/loading-bar";
 import { defaultShouldRevalidate } from "./revalidation";
-import { AllCommunityModule, ModuleRegistry } from "ag-charts-community";
+import {
+  AllEnterpriseModule,
+  LicenseManager,
+  ModuleRegistry,
+} from "ag-charts-enterprise";
 
-ModuleRegistry.registerModules([AllCommunityModule]);
+ModuleRegistry.registerModules([AllEnterpriseModule]);
+LicenseManager.setLicenseKey(process.env.AG_CHARTS_LICENSE_KEY!);
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },

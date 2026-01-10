@@ -11,7 +11,7 @@ import { defaultChartOptions, defaultChartTheme } from "~/platform/charts";
 import { defaultShouldRevalidate } from "~/revalidation";
 import { serialize } from "~/serialization";
 import { getBalanceSheet } from "../functions.server";
-import type { AgChartOptions } from "ag-charts-community";
+import type { AgChartOptions } from "ag-charts-enterprise";
 import { formatISODate, formatMoney } from "~/formatting";
 import { format, parseISO } from "date-fns";
 import { getTheme } from "~/theme";

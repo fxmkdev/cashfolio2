@@ -29,7 +29,7 @@ import type {
   AgBarSeriesOptions,
   AgChartOptions,
   AgLineSeriesOptions,
-} from "ag-charts-community";
+} from "ag-charts-enterprise";
 import { useAccountBook } from "~/account-books/hooks";
 import { getMinBookingDate } from "~/transactions/functions.server";
 import { mergeById } from "~/utils";

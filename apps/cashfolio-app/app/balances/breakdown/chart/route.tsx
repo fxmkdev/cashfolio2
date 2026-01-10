@@ -10,7 +10,7 @@ import { AgCharts } from "ag-charts-react";
 import { serialize } from "~/serialization";
 import { defaultChartOptions } from "~/platform/charts";
 import { formatMoney, percentageNumberFormat } from "~/formatting";
-import type { AgChartOptions } from "ag-charts-community";
+import type { AgChartOptions } from "ag-charts-enterprise";
 import type { Route } from "./+types/route";
 import { sum } from "~/utils";
 import { Subheading } from "~/platform/heading";

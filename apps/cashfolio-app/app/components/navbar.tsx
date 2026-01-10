@@ -24,6 +24,7 @@ import {
   Cog8ToothIcon,
 } from "~/platform/icons/standard";
 import {
+  ArrowsRightLeftIcon,
   ChartBarIcon,
   ScaleIcon,
   WalletIcon,
@@ -64,6 +65,10 @@ export function Navbar() {
           <NavSidebarItem href={`/${accountBook.id}/income`}>
             <ChartBarIcon />
             <SidebarLabel>Income</SidebarLabel>
+          </NavSidebarItem>
+          <NavSidebarItem href={`/${accountBook.id}/income/sankey`}>
+            <ArrowsRightLeftIcon />
+            <SidebarLabel>Income Sankey</SidebarLabel>
           </NavSidebarItem>
           <NavSidebarItem href={`/${accountBook.id}/accounts`}>
             <WalletIcon />
