@@ -5,6 +5,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
   type LoaderFunctionArgs,
 } from "react-router";
 
@@ -19,9 +20,7 @@ import {
   LicenseManager,
   ModuleRegistry,
 } from "ag-charts-enterprise";
-
-ModuleRegistry.registerModules([AllEnterpriseModule]);
-LicenseManager.setLicenseKey(process.env.AG_CHARTS_LICENSE_KEY!);
+import { useRef } from "react";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -65,6 +64,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   return {
     viewPreferences: user.viewPreferences as Record<string, string>,
+    agGridLicenseKey: process.env.AG_CHARTS_LICENSE_KEY!,
   };
 }
 
@@ -76,6 +76,15 @@ export const meta: Route.MetaFunction = () => [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const { agGridLicenseKey } = useLoaderData<typeof loader>();
+  const isInitializedRef = useRef(false);
+
+  if (isInitializedRef.current === false) {
+    ModuleRegistry.registerModules([AllEnterpriseModule]);
+    LicenseManager.setLicenseKey(agGridLicenseKey);
+  }
+  isInitializedRef.current = true;
+
   return (
     <html
       lang="en"
