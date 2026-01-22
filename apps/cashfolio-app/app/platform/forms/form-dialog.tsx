@@ -7,10 +7,8 @@ import {
   type ReactNode,
 } from "react";
 import { useFetcher } from "react-router";
-import { Dialog } from "../dialog";
-import { Button } from "../button";
 import { ErrorMessage } from "./fieldset";
-import type { Alert } from "../alert";
+import { Button, Modal, type ModalBaseProps } from "@mantine/core";
 
 export type FetcherData =
   | { success: true; errors: never }
@@ -32,17 +30,17 @@ export function FormDialog({
   entityId,
   onClose,
   action,
-  dialogComponent: DialogComponent = Dialog,
-  ...props
-}: Omit<
-  ComponentProps<typeof Alert & typeof Dialog>,
-  "onClose" | "children"
-> & {
+  opened,
+  title,
+  size,
+}: {
+  size?: ModalBaseProps["size"];
+  opened: boolean;
+  title: ReactNode;
   entityId?: string;
   onClose: (action: FormCloseAction) => void;
   action?: string;
   children?: ReactNode | ((context: FormDialogContextType) => ReactNode);
-  dialogComponent?: typeof Alert & typeof Dialog;
 }) {
   const [submitCount, setSubmitCount] = useState(0);
   const fetcher = useFetcher<FetcherData>({
@@ -67,13 +65,18 @@ export function FormDialog({
     entityId,
   };
   return (
-    <DialogComponent {...props} onClose={() => onDialogClose("cancel")}>
+    <Modal
+      opened={opened}
+      onClose={() => onDialogClose("cancel")}
+      title={title}
+      size={size}
+    >
       <fetcher.Form className="contents" action={action} method="POST">
         <FormDialogContext.Provider value={contextValue}>
           {typeof children === "function" ? children(contextValue) : children}
         </FormDialogContext.Provider>
       </fetcher.Form>
-    </DialogComponent>
+    </Modal>
   );
 }
 
@@ -88,7 +91,7 @@ export function CancelButton(
   return (
     <Button
       {...(props as TertiaryButtonProps)}
-      hierarchy="tertiary"
+      variant="subtle"
       onClick={() => onDialogClose("cancel")}
     >
       Cancel
@@ -101,6 +104,7 @@ export function CreateOrSaveButton() {
   return (
     <Button
       type="submit"
+      variant="filled"
       disabled={fetcher.state !== "idle" || fetcher.data?.success}
     >
       {entityId

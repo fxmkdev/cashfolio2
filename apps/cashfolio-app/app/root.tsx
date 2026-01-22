@@ -15,6 +15,16 @@ import { getPageTitle } from "./meta";
 import { LoadingBar } from "./platform/loading-bar";
 import { defaultShouldRevalidate } from "./revalidation";
 import { AllCommunityModule, ModuleRegistry } from "ag-charts-community";
+import {
+  ColorSchemeScript,
+  createTheme,
+  mantineHtmlProps,
+  MantineProvider,
+} from "@mantine/core";
+
+// Import styles of packages that you've installed.
+// All packages except `@mantine/hooks` require styles imports
+import "@mantine/core/styles.css";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -70,15 +80,21 @@ export const meta: Route.MetaFunction = () => [
   { name: "apple-mobile-web-app-title", content: "Cashfolio" },
 ];
 
+const theme = createTheme({
+  primaryColor: "cyan",
+});
+
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
       className="text-neutral-950 antialiased lg:bg-neutral-100 dark:bg-neutral-900 dark:text-white dark:lg:bg-neutral-950"
+      {...mantineHtmlProps}
     >
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <ColorSchemeScript defaultColorScheme="auto" />
         <Meta />
         <Links />
         <script type="text/javascript">
@@ -90,8 +106,10 @@ if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
         </script>
       </head>
       <body>
-        <LoadingBar />
-        {children}
+        <MantineProvider theme={theme} defaultColorScheme="auto">
+          <LoadingBar />
+          {children}
+        </MantineProvider>
         <ScrollRestoration />
         <Scripts />
       </body>

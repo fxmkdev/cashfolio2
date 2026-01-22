@@ -13,13 +13,13 @@ import {
 import { DeleteAccountBook, useDeleteAccountBook } from "./delete-account-book";
 import type { Route } from "./+types/route";
 import { getPageTitle } from "~/meta";
-import { AccountGroupCombobox } from "~/account-groups/account-group-combobox";
 import { ensureAuthorized } from "../functions.server";
 import { serialize } from "~/serialization";
 import { getAccountGroupsWithPath } from "~/account-groups/data";
 import { Field, FieldGroup, Label } from "~/platform/forms/fieldset";
 import { AccountType } from "~/.prisma-client/enums";
 import { defaultShouldRevalidate } from "~/revalidation";
+import { Select } from "@mantine/core";
 
 export const meta: Route.MetaFunction = () => [
   { title: getPageTitle("Settings") },
@@ -97,10 +97,14 @@ export default function Route() {
             <div>
               <FieldGroup>
                 <Field>
-                  <Label>Securities</Label>
-                  <AccountGroupCombobox
+                  <Select
+                    label="Securities"
+                    searchable
                     name="securityHoldingGainLossAccountGroupId"
-                    accountGroups={accountGroups}
+                    data={accountGroups.map((g) => ({
+                      value: g.id,
+                      label: g.path,
+                    }))}
                     defaultValue={
                       accountBook.securityHoldingGainLossAccountGroupId ??
                       undefined
@@ -108,10 +112,14 @@ export default function Route() {
                   />
                 </Field>
                 <Field>
-                  <Label>Cryptocurrencies</Label>
-                  <AccountGroupCombobox
+                  <Select
+                    label="Cryptocurrencies"
+                    searchable
                     name="cryptoHoldingGainLossAccountGroupId"
-                    accountGroups={accountGroups}
+                    data={accountGroups.map((g) => ({
+                      value: g.id,
+                      label: g.path,
+                    }))}
                     defaultValue={
                       accountBook.cryptoHoldingGainLossAccountGroupId ??
                       undefined
@@ -119,10 +127,14 @@ export default function Route() {
                   />
                 </Field>
                 <Field>
-                  <Label>Foreign Exchange</Label>
-                  <AccountGroupCombobox
+                  <Select
+                    label="Foreign Exchange"
+                    searchable
                     name="fxHoldingGainLossAccountGroupId"
-                    accountGroups={accountGroups}
+                    data={accountGroups.map((g) => ({
+                      value: g.id,
+                      label: g.path,
+                    }))}
                     defaultValue={
                       accountBook.fxHoldingGainLossAccountGroupId ?? undefined
                     }
