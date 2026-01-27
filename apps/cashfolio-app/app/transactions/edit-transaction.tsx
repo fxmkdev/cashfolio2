@@ -1,18 +1,8 @@
-import { DialogActions, DialogBody, DialogTitle } from "~/platform/dialog";
-import {
-  ErrorMessage,
-  Field,
-  FieldGroup,
-  Label,
-} from "~/platform/forms/fieldset";
-import { Input } from "~/platform/forms/input";
+import { DialogActions } from "~/platform/dialog";
 import type { AccountOption } from "~/types";
-import { AccountCombobox } from "~/accounts/account-combobox";
-import { DateInput } from "~/platform/forms/date-input";
 import { FormattedNumberInput } from "~/platform/forms/formatted-number-input";
 import { useEffect, useState, type Dispatch } from "react";
 import type { Serialize } from "~/serialization";
-import { CurrencyCombobox } from "../components/currency-combobox";
 import type { TransactionWithBookings } from "~/transactions/types";
 import {
   CancelButton,
@@ -22,20 +12,26 @@ import {
   useFormDialogContext,
 } from "~/platform/forms/form-dialog";
 import { useAccountBook } from "~/account-books/hooks";
-import { Checkbox, CheckboxField } from "~/platform/forms/checkbox";
-import { Switch } from "~/platform/forms/switch";
-import * as Headless from "@headlessui/react";
 import {
   addNewBooking,
   SplitTransactionForm,
   type BookingFormValues,
 } from "./split-transaction-form";
-import { UnitListbox } from "~/units/unit-listbox";
 import { Unit } from "~/.prisma-client/enums";
-import { CryptocurrencyCombobox } from "~/components/cryptocurrency-combobox";
 import { formatISO } from "date-fns";
 import invariant from "tiny-invariant";
 import { isSplitTransaction } from "./functions";
+import {
+  Checkbox,
+  Grid,
+  Select,
+  Stack,
+  Switch,
+  TextInput,
+} from "@mantine/core";
+import { DateInput } from "@mantine/dates";
+import { currencies } from "~/currencies";
+import { cryptocurrencies } from "~/cryptocurrencies";
 
 export function useEditTransaction() {
   const [isOpen, setIsOpen] = useState(false);
@@ -80,8 +76,9 @@ export function EditTransaction({
   const [createAnother, setCreateAnother] = useState(false);
   return (
     <FormDialog
-      size="3xl"
-      open={isOpen}
+      title={transaction ? "Edit Transaction" : "New Transaction"}
+      size="xl"
+      opened={isOpen}
       onClose={(action) => {
         if (action === "cancel" || !createAnother) {
           onClose();
@@ -177,51 +174,42 @@ function TransactionFormGroup({
   return (
     <>
       <input type="hidden" name="transactionId" value={transaction?.id} />
-      <div className="flex justify-between items-center">
-        <DialogTitle>
-          {transaction ? "Edit Transaction" : "New Transaction"}
-        </DialogTitle>
-        <Headless.Field className="flex items-center gap-4">
-          <Switch
-            checked={mode === "split"}
-            onChange={(value) => setMode(value ? "split" : "simple")}
-            disabled={requiresSplitMode}
+      <Stack gap="xl">
+        <Switch
+          checked={mode === "split"}
+          onChange={(e) =>
+            setMode(e.currentTarget.checked ? "split" : "simple")
+          }
+          disabled={requiresSplitMode}
+          label="Split transaction"
+        />
+        {mode === "simple" ? (
+          <SimpleForm
+            accounts={accounts}
+            lockedAccountId={lockedAccountId}
+            bookings={bookings}
+            description={description}
+            setDescription={setDescription}
+            setBookings={setBookings}
           />
-          <Label>Split transaction</Label>
-        </Headless.Field>
-      </div>
-      <DialogBody>
-        <FieldGroup>
-          {mode === "simple" ? (
-            <SimpleForm
-              accounts={accounts}
-              lockedAccountId={lockedAccountId}
-              bookings={bookings}
-              description={description}
-              setDescription={setDescription}
-              setBookings={setBookings}
-            />
-          ) : (
-            <SplitTransactionForm
-              accounts={accounts}
-              fetcher={fetcher}
-              description={description}
-              setDescription={setDescription}
-              bookings={bookings}
-              setBookings={setBookings}
-            />
-          )}
-          <FormErrorMessage />
-        </FieldGroup>
-      </DialogBody>
+        ) : (
+          <SplitTransactionForm
+            accounts={accounts}
+            fetcher={fetcher}
+            description={description}
+            setDescription={setDescription}
+            bookings={bookings}
+            setBookings={setBookings}
+          />
+        )}
+        <FormErrorMessage />
+      </Stack>
       <DialogActions>
-        <CheckboxField className="mr-4">
-          <Checkbox
-            onChange={(value) => setCreateAnother(value)}
-            checked={createAnother}
-          />
-          <Label>Create another</Label>
-        </CheckboxField>
+        <Checkbox
+          label="Create another"
+          onChange={(e) => setCreateAnother(e.currentTarget.checked)}
+          checked={createAnother}
+        />
         <CancelButton />
         <CreateOrSaveButton />
       </DialogActions>
@@ -261,34 +249,32 @@ function SimpleForm({
   }
   return (
     <>
-      <div className="flex flex-col gap-8 sm:grid sm:grid-cols-12 sm:gap-4">
-        <Field className="col-span-3">
-          <Label>Date</Label>
+      <Grid>
+        <Grid.Col span={3}>
           <DateInput
+            label="Date"
             name="bookings[0][date]"
             onChange={(value) =>
               updateBooking(bookings[0].id, { date: value?.toString() })
             }
             value={bookings[0].date}
-            autoFocus
-            invalid={!!fetcher.data?.errors?.[`bookings[0][date]`]}
+            error={fetcher.data?.errors?.[`bookings[0][date]`]}
           />
-          {fetcher.data?.errors?.[`bookings[0][date]`] && (
-            <ErrorMessage>
-              {fetcher.data?.errors?.[`bookings[0][date]`]}
-            </ErrorMessage>
-          )}
           <input
             type="hidden"
             name="bookings[1][date]"
             value={bookings[1].date}
           />
-        </Field>
-        <Field className="col-span-9">
-          <Label>To Account</Label>
-          <AccountCombobox
-            accounts={accounts}
+        </Grid.Col>
+        <Grid.Col span={9}>
+          <Select
+            searchable
+            label="To Account"
             name="bookings[1][accountId]"
+            data={accounts.map((a) => ({
+              value: a.id,
+              label: `${a.groupPath} / ${a.name}`,
+            }))}
             value={bookings[1].accountId}
             onChange={(value) => {
               const selectedAccount = accounts.find((a) => a.id === value);
@@ -314,37 +300,36 @@ function SimpleForm({
                   : undefined,
               });
             }}
-            invalid={!!fetcher.data?.errors?.[`bookings[1][accountId]`]}
+            error={fetcher.data?.errors?.[`bookings[1][accountId]`]}
           />
-          {fetcher.data?.errors?.[`bookings[1][accountId]`] && (
-            <ErrorMessage>
-              {fetcher.data?.errors?.[`bookings[1][accountId]`]}
-            </ErrorMessage>
-          )}
           <input
             type="hidden"
             name="bookings[0][accountId]"
             value={lockedAccountId}
           />
-        </Field>
-      </div>
-      <div className="flex flex-col gap-8 sm:grid sm:grid-cols-12 sm:gap-4">
-        <Field className="col-span-4">
-          <Label>Description (optional)</Label>
-          <Input
-            type="text"
+        </Grid.Col>
+      </Grid>
+      <Grid>
+        <Grid.Col span={4}>
+          <TextInput
             name="description"
-            invalid={!!fetcher.data?.errors?.description}
+            label="Description (optional)"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            error={fetcher.data?.errors?.description}
           />
-          {fetcher.data?.errors?.description && (
-            <ErrorMessage>{fetcher.data?.errors?.description}</ErrorMessage>
-          )}
-        </Field>
-        <Field className="col-span-3">
-          <Label>Unit</Label>
-          <UnitListbox disabled={true} value={bookings[0].unit} />
+        </Grid.Col>
+        <Grid.Col span={3}>
+          <Select
+            label="Unit"
+            disabled
+            value={bookings[0].unit}
+            data={[
+              { value: Unit.CURRENCY, label: "Currency" },
+              { value: Unit.CRYPTOCURRENCY, label: "Cryptocurrency" },
+              { value: Unit.SECURITY, label: "Security" },
+            ]}
+          />
           <input
             type="hidden"
             name={`bookings[0][unit]`}
@@ -355,14 +340,16 @@ function SimpleForm({
             name={`bookings[1][unit]`}
             value={bookings[1].unit}
           />
-        </Field>
-        <Field className="col-span-2">
+        </Grid.Col>
+        <Grid.Col span={2}>
           {bookings[0].unit === Unit.CURRENCY ? (
             <>
-              <Label>Currency</Label>
-              <CurrencyCombobox
+              <Select
+                searchable
+                disabled
+                label="Currency"
                 value={bookings[0].currency ?? ""}
-                disabled={true}
+                data={Object.keys(currencies)}
               />
               <input
                 type="hidden"
@@ -377,10 +364,11 @@ function SimpleForm({
             </>
           ) : bookings[0].unit === Unit.CRYPTOCURRENCY ? (
             <>
-              <Label>Cryptoccy.</Label>
-              <CryptocurrencyCombobox
+              <Select
+                label="Cryptoccy."
                 value={bookings[0].cryptocurrency ?? ""}
                 disabled={true}
+                data={Object.keys(cryptocurrencies)}
               />
               <input
                 type="hidden"
@@ -395,8 +383,11 @@ function SimpleForm({
             </>
           ) : (
             <>
-              <Label>Symbol</Label>
-              <Input value={bookings[0].symbol ?? ""} disabled={true} />
+              <TextInput
+                label="Symbol"
+                value={bookings[0].symbol ?? ""}
+                disabled={true}
+              />
               <input
                 type="hidden"
                 name={`bookings[0][symbol]`}
@@ -409,10 +400,10 @@ function SimpleForm({
               />
             </>
           )}
-        </Field>
-        <Field className="col-span-3">
-          <Label>Value</Label>
+        </Grid.Col>
+        <Grid.Col span={3}>
           <FormattedNumberInput
+            label="Value"
             value={bookings[1].value}
             onValueChange={({ floatValue }) => {
               updateBooking(bookings[0].id, {
@@ -422,20 +413,16 @@ function SimpleForm({
               updateBooking(bookings[1].id, { value: floatValue?.toString() });
             }}
             name="bookings[1][value]"
-            invalid={!!fetcher.data?.errors?.[`bookings[1][value]`]}
+            hideControls
+            error={fetcher.data?.errors?.[`bookings[1][value]`]}
           />
-          {fetcher.data?.errors?.[`bookings[1][value]`] && (
-            <ErrorMessage>
-              {fetcher.data?.errors?.[`bookings[1][value]`]}
-            </ErrorMessage>
-          )}
           <input
             type="hidden"
             name="bookings[0][value]"
             value={bookings[0].value}
           />
-        </Field>
-      </div>
+        </Grid.Col>
+      </Grid>
     </>
   );
 }

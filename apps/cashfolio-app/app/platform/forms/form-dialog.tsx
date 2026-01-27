@@ -7,8 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { useFetcher } from "react-router";
-import { ErrorMessage } from "./fieldset";
-import { Button, Modal, type ModalBaseProps } from "@mantine/core";
+import { Button, Input, Modal, type ModalBaseProps } from "@mantine/core";
 
 export type FetcherData =
   | { success: true; errors: never }
@@ -80,18 +79,17 @@ export function FormDialog({
   );
 }
 
-type TertiaryButtonProps = ComponentProps<typeof Button> & {
-  hierarchy: "tertiary";
-};
+type CancelButtonProps = Omit<
+  ComponentProps<typeof Button>,
+  "variant" | "children" | "onClick"
+>;
 
-export function CancelButton(
-  props: Omit<TertiaryButtonProps, "hierarchy" | "children" | "onClick">,
-) {
+export function CancelButton(props: CancelButtonProps) {
   const { onDialogClose } = useFormDialogContext();
   return (
     <Button
-      {...(props as TertiaryButtonProps)}
-      variant="subtle"
+      {...(props as CancelButtonProps)}
+      variant="default"
       onClick={() => onDialogClose("cancel")}
     >
       Cancel
@@ -123,7 +121,7 @@ export function DeleteButton() {
   return (
     <Button
       type="submit"
-      variant="destructive"
+      color="red"
       disabled={fetcher.state !== "idle" || fetcher.data?.success}
     >
       {fetcher.state === "idle" ? "Delete" : "Deleting…"}
@@ -134,7 +132,7 @@ export function DeleteButton() {
 export function FormErrorMessage() {
   const { fetcher } = useFormDialogContext();
   if (!fetcher.data?.errors?.form) return null;
-  return <ErrorMessage>{fetcher.data.errors.form}</ErrorMessage>;
+  return <Input.Error>{fetcher.data.errors.form}</Input.Error>;
 }
 
 export function useFormDialogContext() {

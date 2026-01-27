@@ -1,5 +1,4 @@
 import type { Serialize } from "~/serialization";
-import { TableCell, TableRow } from "~/platform/table";
 import clsx from "clsx";
 import type { AccountsNode } from "./accounts-tree";
 import type { Account } from "~/.prisma-client/client";
@@ -10,10 +9,10 @@ import {
   WalletIcon,
 } from "~/platform/icons/standard";
 import { useAccountBook } from "~/account-books/hooks";
-import { useFetcher, useRouteLoaderData } from "react-router";
-import { Badge } from "~/platform/badge";
+import { useFetcher, useNavigate, useRouteLoaderData } from "react-router";
 import type { loader as rootLoader } from "~/root";
 import { formatISODate } from "~/formatting";
+import { Badge, Table } from "@mantine/core";
 
 export type AccountsNodeTableRowOptions = {
   showInactiveBadge?: boolean;
@@ -66,6 +65,8 @@ export function AccountsNodeTableRow<TData = {}>({
   options: AccountsNodeTableRowOptions;
 }) {
   const accountBook = useAccountBook();
+
+  const navigate = useNavigate();
 
   const fetcher = useFetcher();
   const expandedStateKey = `${viewPrefix}-account-group-${node.id}-expanded`;
@@ -120,14 +121,17 @@ export function AccountsNodeTableRow<TData = {}>({
     : undefined;
   return (
     <>
-      <TableRow
+      <Table.Tr
         {...(node.nodeType === "account"
           ? {
-              href: `/${accountBook.id}/accounts/${node.id}${urlSearchParams ? `?${urlSearchParams.toString()}` : ""}`,
+              onClick: () =>
+                navigate(
+                  `/${accountBook.id}/accounts/${node.id}${urlSearchParams ? `?${urlSearchParams.toString()}` : ""}`,
+                ),
             }
           : { onClick: () => toggleExpanded() })}
       >
-        <TableCell>
+        <Table.Td>
           <div
             className={clsx({
               "pl-0": level === 0,
@@ -156,13 +160,15 @@ export function AccountsNodeTableRow<TData = {}>({
               )}
               <span className="truncate">{node.name}</span>
               {options.showInactiveBadge && !node.isActive && (
-                <Badge color="accent-negative">Inactive</Badge>
+                <Badge color="red" size="sm">
+                  Inactive
+                </Badge>
               )}
             </div>
           </div>
-        </TableCell>
+        </Table.Td>
         {children?.(node)}
-      </TableRow>
+      </Table.Tr>
 
       {optimisticIsExpanded && (
         <AccountsNodeChildrenTableRows

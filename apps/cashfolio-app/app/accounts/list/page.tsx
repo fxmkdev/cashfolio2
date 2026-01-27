@@ -12,7 +12,7 @@ import { DeleteAccount, useDeleteAccount } from "~/accounts/delete-account";
 import { PlusCircleIcon } from "~/platform/icons/standard";
 import { AccountList } from "../account-list";
 import { ShowInactiveSwitch } from "./show-inactive-switch";
-import { Button, Flex, Title } from "@mantine/core";
+import { Button, Group, Title } from "@mantine/core";
 
 export function Page({
   loaderData: { tree, accountGroups },
@@ -30,30 +30,30 @@ export function Page({
 
   return (
     <div>
-      <Flex gap="sm" align="center" justify="space-between">
+      <Group gap="sm" align="center" justify="space-between">
         <Title order={2} size="h3">
           Accounts
         </Title>
-        <Flex gap="xl" align="center">
+        <Group gap="xl" align="center">
           <ShowInactiveSwitch />
-          <Flex gap="sm" align="center">
+          <Group gap="sm" align="center">
             <Button
-              variant="outline"
+              variant="default"
               leftSection={<PlusCircleIcon className="size-4" />}
               onClick={() => onNewAccount()}
             >
               New Account
             </Button>
             <Button
-              variant="outline"
+              variant="default"
               leftSection={<PlusCircleIcon className="size-4" />}
               onClick={() => onNewAccountGroup()}
             >
               New Group
             </Button>
-          </Flex>
-        </Flex>
-      </Flex>
+          </Group>
+        </Group>
+      </Group>
       <EditAccount {...editAccountProps} accountGroups={accountGroups} />
       <EditAccountGroup
         {...editAccountGroupProps}

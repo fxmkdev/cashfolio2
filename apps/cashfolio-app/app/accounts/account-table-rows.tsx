@@ -2,10 +2,9 @@ import { PencilSquareIcon, TrashIcon } from "~/platform/icons/standard";
 import type { AccountGroup } from "~/.prisma-client/client";
 import type { AccountsNode } from "~/account-groups/accounts-tree";
 import { AccountsNodeChildrenTableRows } from "~/account-groups/table-rows";
-import { TableCell } from "~/platform/table";
 import type { Serialize } from "~/serialization";
-import { Badge } from "~/platform/badge";
-import { AccountType, Unit } from "~/.prisma-client/enums";
+import { Unit } from "~/.prisma-client/enums";
+import { ActionIcon, Badge, Group, Table } from "@mantine/core";
 
 export function AccountsTableRows({
   node,
@@ -26,43 +25,45 @@ export function AccountsTableRows({
     >
       {(node) => (
         <>
-          <TableCell className="w-40 space-x-2">
+          <Table.Td className="w-40 space-x-2">
             {node.nodeType === "account" &&
               (node.unit === Unit.CURRENCY ? (
-                <Badge>{node.currency}</Badge>
+                <Badge size="sm">{node.currency}</Badge>
               ) : node.unit === Unit.CRYPTOCURRENCY ? (
-                <Badge>{node.cryptocurrency}</Badge>
+                <Badge size="sm">{node.cryptocurrency}</Badge>
               ) : node.unit === Unit.SECURITY ? (
                 <>
-                  <Badge>{node.symbol}</Badge>
-                  <Badge>{node.tradeCurrency}</Badge>
+                  <Badge size="sm">{node.symbol}</Badge>
+                  <Badge size="sm">{node.tradeCurrency}</Badge>
                 </>
               ) : null)}
-          </TableCell>
-          <TableCell>
+          </Table.Td>
+          <Table.Td>
             {node.nodeType === "accountGroup" && (
-              <div className="flex gap-2 items-center">
-                <button
-                  className="z-10"
+              <Group wrap="nowrap">
+                <ActionIcon
+                  size="sm"
+                  variant="default"
                   onClick={(e) => {
                     e.stopPropagation();
                     onEditAccountGroup(node);
                   }}
                 >
                   <PencilSquareIcon className="size-4" />
-                </button>
-                <button
-                  className="z-10"
+                </ActionIcon>
+                <ActionIcon
+                  variant="default"
+                  size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDeleteAccountGroup(node.id);
                   }}
                 >
                   <TrashIcon className="size-4" />
-                </button>
-              </div>
+                </ActionIcon>
+              </Group>
             )}
-          </TableCell>
+          </Table.Td>
         </>
       )}
     </AccountsNodeChildrenTableRows>

@@ -1,6 +1,6 @@
+import { Group } from "@mantine/core";
 import { useState } from "react";
 import { useAccountBook } from "~/account-books/hooks";
-import { Alert, AlertActions, AlertTitle } from "~/platform/alert";
 import {
   CancelButton,
   DeleteButton,
@@ -37,20 +37,17 @@ export function DeleteAccountGroup({
   const accountBook = useAccountBook();
   return (
     <FormDialog
-      dialogComponent={Alert}
-      open={isOpen}
+      title="Are you sure you want to delete this account group?"
+      opened={isOpen}
       onClose={onClose}
       size="md"
       action={`/${accountBook.id}/account-groups/delete`}
     >
       <input type="hidden" name="accountGroupId" value={accountGroupId} />
-      <AlertTitle>
-        Are you sure you want to delete this account group?
-      </AlertTitle>
-      <AlertActions>
+      <Group justify="end">
         <CancelButton />
         <DeleteButton />
-      </AlertActions>
+      </Group>
     </FormDialog>
   );
 }

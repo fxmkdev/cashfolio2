@@ -1,16 +1,10 @@
-import {
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/platform/table";
 import { AccountsTableRows } from "./account-table-rows";
 import type { Serialize } from "~/serialization";
 import type { AccountsNode } from "~/types";
 import { useEditAccountGroup } from "~/account-groups/edit-account-group";
 import { useDeleteAccountGroup } from "~/account-groups/delete-account-group";
 import type { LoaderData } from "./list/route";
+import { Table } from "@mantine/core";
 
 export function AccountList({
   tree,
@@ -30,21 +24,21 @@ export function AccountList({
   return (
     <>
       <Table
-        bleed
-        dense
         striped
+        verticalSpacing="sm"
+        highlightOnHover
         className="mt-8 [--gutter:--spacing(6)] lg:[--gutter:--spacing(10)]"
       >
-        <TableHead>
-          <TableRow>
-            <TableHeader>Name</TableHeader>
-            <TableHeader>Ccy./Symbol</TableHeader>
-            <TableHeader className="w-10">
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Name</Table.Th>
+            <Table.Th>Ccy./Symbol</Table.Th>
+            <Table.Th className="w-10">
               <span className="sr-only">Actions</span>
-            </TableHeader>
-          </TableRow>
-        </TableHead>
-        <TableBody>
+            </Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
           <AccountsTableRows
             node={
               {
@@ -59,7 +53,7 @@ export function AccountList({
             onDeleteAccountGroup={onDeleteAccountGroup}
             viewPrefix={viewPrefix}
           />
-        </TableBody>
+        </Table.Tbody>
       </Table>
     </>
   );

@@ -1,11 +1,6 @@
+import { Group, Stack, Text } from "@mantine/core";
 import { useState } from "react";
 import { useAccountBook } from "~/account-books/hooks";
-import {
-  Alert,
-  AlertActions,
-  AlertDescription,
-  AlertTitle,
-} from "~/platform/alert";
 import {
   CancelButton,
   DeleteButton,
@@ -42,21 +37,22 @@ export function DeleteTransaction({
   const accountBook = useAccountBook();
   return (
     <FormDialog
-      dialogComponent={Alert}
-      open={isOpen}
+      title="Are you sure you want to delete this transaction?"
+      opened={isOpen}
       onClose={onClose}
-      size="sm"
+      size="md"
       action={`/${accountBook.id}/transactions/delete`}
     >
       <input type="hidden" name="transactionId" value={transactionId} />
-      <AlertTitle>Are you sure you want to delete this transaction?</AlertTitle>
-      <AlertDescription>
-        This will delete the transaction and all its associated bookings.
-      </AlertDescription>
-      <AlertActions>
-        <CancelButton autoFocus />
-        <DeleteButton />
-      </AlertActions>
+      <Stack gap="lg">
+        <Text size="sm">
+          This will delete the transaction and all its associated bookings.
+        </Text>
+        <Group justify="end">
+          <CancelButton data-autofocus />
+          <DeleteButton />
+        </Group>
+      </Stack>
     </FormDialog>
   );
 }
