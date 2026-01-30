@@ -4,7 +4,7 @@ import type { AccountsNode } from "~/types";
 import { useEditAccountGroup } from "~/account-groups/edit-account-group";
 import { useDeleteAccountGroup } from "~/account-groups/delete-account-group";
 import type { LoaderData } from "./list/route";
-import { Table } from "@mantine/core";
+import { Table, VisuallyHidden } from "@mantine/core";
 
 export function AccountList({
   tree,
@@ -23,18 +23,13 @@ export function AccountList({
 }) {
   return (
     <>
-      <Table
-        striped
-        verticalSpacing="sm"
-        highlightOnHover
-        className="mt-8 [--gutter:--spacing(6)] lg:[--gutter:--spacing(10)]"
-      >
+      <Table striped verticalSpacing="sm" highlightOnHover mt="sm">
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Name</Table.Th>
             <Table.Th>Ccy./Symbol</Table.Th>
-            <Table.Th className="w-10">
-              <span className="sr-only">Actions</span>
+            <Table.Th>
+              <VisuallyHidden>Actions</VisuallyHidden>
             </Table.Th>
           </Table.Tr>
         </Table.Thead>

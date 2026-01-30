@@ -9,10 +9,10 @@ import {
   useDeleteAccountGroup,
 } from "~/account-groups/delete-account-group";
 import { DeleteAccount, useDeleteAccount } from "~/accounts/delete-account";
-import { PlusCircleIcon } from "~/platform/icons/standard";
 import { AccountList } from "../account-list";
 import { ShowInactiveSwitch } from "./show-inactive-switch";
 import { Button, Group, Title } from "@mantine/core";
+import { IconCirclePlus } from "@tabler/icons-react";
 
 export function Page({
   loaderData: { tree, accountGroups },
@@ -39,14 +39,14 @@ export function Page({
           <Group gap="sm" align="center">
             <Button
               variant="default"
-              leftSection={<PlusCircleIcon className="size-4" />}
+              leftSection={<IconCirclePlus size={16} />}
               onClick={() => onNewAccount()}
             >
               New Account
             </Button>
             <Button
               variant="default"
-              leftSection={<PlusCircleIcon className="size-4" />}
+              leftSection={<IconCirclePlus size={16} />}
               onClick={() => onNewAccountGroup()}
             >
               New Group

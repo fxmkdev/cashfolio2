@@ -8,17 +8,15 @@ import {
 import type { Period } from "./types";
 import type { ReactNode } from "react";
 import clsx from "clsx";
-import { NativeSelect } from "@mantine/core";
+import { Group, NativeSelect } from "@mantine/core";
 
 export function PeriodSelector({
-  className,
   periodSpecifier,
   period,
   minBookingDate,
   onNavigate,
   additionalControls,
 }: {
-  className?: string;
   periodSpecifier: string;
   period: Period;
   minBookingDate: string;
@@ -27,7 +25,7 @@ export function PeriodSelector({
 }) {
   const accountBook = useAccountBook();
   return (
-    <div className={clsx("flex justify-center items-center gap-2", className)}>
+    <Group align="center" gap="sm">
       <NativeSelect
         value={periodSpecifier}
         onChange={(e) => {
@@ -146,6 +144,6 @@ export function PeriodSelector({
       )}
 
       {additionalControls}
-    </div>
+    </Group>
   );
 }

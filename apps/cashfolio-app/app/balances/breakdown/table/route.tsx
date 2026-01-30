@@ -3,7 +3,7 @@ import { BalancesTableRows } from "./table-rows";
 import { useRouteLoaderData } from "react-router";
 import { type loader as breakdownLoader } from "../route";
 import invariant from "tiny-invariant";
-import { Table } from "@mantine/core";
+import { SimpleGrid, Stack, Table, VisuallyHidden } from "@mantine/core";
 
 export default function Route() {
   const loaderData = useRouteLoaderData<typeof breakdownLoader>(
@@ -14,15 +14,15 @@ export default function Route() {
   const { balanceSheet } = loaderData;
 
   return (
-    <div className="xl:grid grid-cols-2 gap-12 mt-8">
+    <SimpleGrid>
       <Table layout="fixed" striped>
         <Table.Thead>
           <Table.Tr>
             <Table.Th>{balanceSheet.assets.name}</Table.Th>
-            <Table.Th className="text-right w-32">
-              <span className="sr-only">Balance in Original Currency</span>
+            <Table.Th align="right">
+              <VisuallyHidden>Balance in Original Currency</VisuallyHidden>
             </Table.Th>
-            <Table.Th className="text-right w-32">
+            <Table.Th align="right">
               {formatMoney(balanceSheet.assets.balance)}
             </Table.Th>
           </Table.Tr>
@@ -31,15 +31,15 @@ export default function Route() {
           <BalancesTableRows node={balanceSheet.assets} />
         </Table.Tbody>
       </Table>
-      <div className="space-y-12">
+      <Stack gap="md">
         <Table striped layout="fixed">
           <Table.Thead>
             <Table.Tr>
               <Table.Th>{balanceSheet.liabilities.name}</Table.Th>
-              <Table.Th className="text-right w-32">
-                <span className="sr-only">Balance in Original Currency</span>
+              <Table.Th align="right">
+                <VisuallyHidden>Balance in Original Currency</VisuallyHidden>
               </Table.Th>
-              <Table.Th className="text-right w-32">
+              <Table.Th align="right">
                 {formatMoney(-balanceSheet.liabilities.balance)}
               </Table.Th>
             </Table.Tr>
@@ -52,13 +52,13 @@ export default function Route() {
           <Table.Tbody>
             <Table.Tr>
               <Table.Th>Net Worth</Table.Th>
-              <Table.Th className="text-right">
+              <Table.Th align="right">
                 {formatMoney(balanceSheet.equity)}
               </Table.Th>
             </Table.Tr>
           </Table.Tbody>
         </Table>
-      </div>
-    </div>
+      </Stack>
+    </SimpleGrid>
   );
 }

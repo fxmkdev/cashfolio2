@@ -44,7 +44,7 @@ export default function Route() {
   return (
     <>
       <AgCharts
-        className="h-[calc(100vh-18.5rem)]"
+        style={{ height: "calc(100vh - 18.5rem)" }}
         options={
           {
             ...defaultChartOptions,

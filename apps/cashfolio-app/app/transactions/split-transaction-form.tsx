@@ -7,7 +7,6 @@ import { FormattedNumberInput } from "~/platform/forms/formatted-number-input";
 import type { Serialize } from "~/serialization";
 import type { AccountOption } from "~/types";
 import type { action } from "./actions/create";
-import { PlusIcon, TrashIcon } from "~/platform/icons/standard";
 import type { Booking } from "~/.prisma-client/client";
 import {
   ActionIcon,
@@ -24,6 +23,7 @@ import {
 import { DateInput } from "@mantine/dates";
 import { currencies } from "~/currencies";
 import { cryptocurrencies } from "~/cryptocurrencies";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 
 export function SplitTransactionForm({
   accounts,
@@ -304,7 +304,7 @@ function BookingsTable({
                   variant="subtle"
                   color="red"
                 >
-                  <TrashIcon className="size-4" />
+                  <IconTrash size={16} />
                 </ActionIcon>
               </Flex>
             </Group>
@@ -317,7 +317,7 @@ function BookingsTable({
         <Button
           type="button"
           variant="default"
-          leftSection={<PlusIcon className="size-4" />}
+          leftSection={<IconPlus size={16} />}
           onClick={() => setBookings(addNewBooking(bookings))}
         >
           Add booking

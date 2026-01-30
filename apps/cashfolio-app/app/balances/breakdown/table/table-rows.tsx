@@ -15,7 +15,7 @@ export function BalancesTableRows({
     <AccountsNodeChildrenTableRows node={node} viewPrefix="balances">
       {(node) => (
         <>
-          <Table.Td className="text-right">
+          <Table.Td align="right">
             {node.nodeType === "account" &&
               !!node.balanceInOriginalCurrency && (
                 <>
@@ -28,7 +28,7 @@ export function BalancesTableRows({
                 </>
               )}
           </Table.Td>
-          <Table.Td className="text-right">
+          <Table.Td align="right">
             {formatMoney(negated ? -node.balance : node.balance)}
           </Table.Td>
         </>

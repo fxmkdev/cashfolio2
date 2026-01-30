@@ -24,7 +24,7 @@ export function IncomeTableRows({
     >
       {(node) => (
         <>
-          <Table.Td className="text-right">
+          <Table.Td align="right">
             {formatMoney(incomeByNodeId[node.id] ?? 0)}
           </Table.Td>
         </>

@@ -1,10 +1,10 @@
-import { PencilSquareIcon, TrashIcon } from "~/platform/icons/standard";
 import type { AccountGroup } from "~/.prisma-client/client";
 import type { AccountsNode } from "~/account-groups/accounts-tree";
 import { AccountsNodeChildrenTableRows } from "~/account-groups/table-rows";
 import type { Serialize } from "~/serialization";
 import { Unit } from "~/.prisma-client/enums";
 import { ActionIcon, Badge, Group, Table } from "@mantine/core";
+import { IconPencil, IconTrash } from "@tabler/icons-react";
 
 export function AccountsTableRows({
   node,
@@ -25,7 +25,7 @@ export function AccountsTableRows({
     >
       {(node) => (
         <>
-          <Table.Td className="w-40 space-x-2">
+          <Table.Td>
             {node.nodeType === "account" &&
               (node.unit === Unit.CURRENCY ? (
                 <Badge size="sm">{node.currency}</Badge>
@@ -49,7 +49,7 @@ export function AccountsTableRows({
                     onEditAccountGroup(node);
                   }}
                 >
-                  <PencilSquareIcon className="size-4" />
+                  <IconPencil size={16} />
                 </ActionIcon>
                 <ActionIcon
                   variant="default"
@@ -59,7 +59,7 @@ export function AccountsTableRows({
                     onDeleteAccountGroup(node.id);
                   }}
                 >
-                  <TrashIcon className="size-4" />
+                  <IconTrash size={16} />
                 </ActionIcon>
               </Group>
             )}

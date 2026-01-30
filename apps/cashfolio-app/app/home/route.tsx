@@ -30,11 +30,7 @@ export default function Route() {
       <Stack gap="lg">
         <Text size="lg">There are no account books yet.</Text>
 
-        <fetcher.Form
-          method="POST"
-          action="/account-books/create"
-          className="contents"
-        >
+        <fetcher.Form method="POST" action="/account-books/create">
           <Select
             label="Reference Currency"
             name="referenceCurrency"

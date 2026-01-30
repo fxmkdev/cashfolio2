@@ -70,7 +70,7 @@ export function FormDialog({
       title={title}
       size={size}
     >
-      <fetcher.Form className="contents" action={action} method="POST">
+      <fetcher.Form action={action} method="POST">
         <FormDialogContext.Provider value={contextValue}>
           {typeof children === "function" ? children(contextValue) : children}
         </FormDialogContext.Provider>

@@ -20,11 +20,8 @@ import {
 } from "@mantine/core";
 import { Logo } from "~/components/logo";
 import { useAccountBook } from "./hooks";
-import {
-  ArrowRightStartOnRectangleIcon,
-  Cog8ToothIcon,
-} from "~/platform/icons/navigation";
 import { LinkTab } from "~/platform/link-tab";
+import { IconArrowRight, IconSettings } from "@tabler/icons-react";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const userContext = await ensureAuthenticated(request);
@@ -59,19 +56,17 @@ export default function Route() {
   const match = useMatch("/:accountBookId/:segment1?/*");
 
   return (
-    <AppShell header={{ height: "4.5rem" }}>
+    <AppShell header={{ height: "4rem" }}>
       <AppShell.Header>
         <Grid p="md">
           <Grid.Col span="auto">
-            <Link
-              className="mt-1 flex items-center gap-4"
-              to="/"
-              aria-label="Home"
-            >
-              <Logo className="w-8" />
-              <Title order={1} size="h4">
-                Cashfolio
-              </Title>
+            <Link to="/" aria-label="Home">
+              <Group gap="sm">
+                <Logo style={{ width: "2rem" }} />
+                <Title order={1} size="h4">
+                  Cashfolio
+                </Title>
+              </Group>
             </Link>
           </Grid.Col>
           <Grid.Col span={6}>
@@ -98,14 +93,14 @@ export default function Route() {
                 href={`/${accountBook.id}/settings`}
                 variant="default"
               >
-                <Cog8ToothIcon className="size-4" />
+                <IconSettings size={16} />
               </ActionIcon>
               <ActionIcon
                 component="a"
                 href="/api/logto/sign-out"
                 variant="default"
               >
-                <ArrowRightStartOnRectangleIcon className="size-4" />
+                <IconArrowRight size={16} />
               </ActionIcon>
             </Group>
           </Grid.Col>

@@ -110,7 +110,6 @@ export function getInitialTimelinePeriod(range: TimelineRange): Period {
 }
 
 export function TimelineSelector({
-  className,
   period,
   rangeSpecifier,
   range,
@@ -119,7 +118,6 @@ export function TimelineSelector({
   minBookingDate,
   isBreakdownAllocationAvailable,
 }: {
-  className?: string;
   period: Period;
   rangeSpecifier: string;
   range: TimelineRange;
@@ -131,7 +129,7 @@ export function TimelineSelector({
   const navigate = useNavigate();
   const accountBook = useAccountBook();
   return (
-    <Group justify="center" gap="sm" className={className}>
+    <Group justify="center" gap="sm">
       <NativeSelect
         value={period.granularity}
         onChange={(e) => {
