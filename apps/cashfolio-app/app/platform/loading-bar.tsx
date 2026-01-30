@@ -1,10 +1,9 @@
-import { AnimatePresence, motion } from "motion/react";
 import { useFetchers, useNavigation } from "react-router";
 import { useDebouncedValue } from "./debounce";
 import { nprogress, NavigationProgress } from "@mantine/nprogress";
 import { useEffect } from "react";
 
-const ANIMATION_DEBOUNCE_IN_MS = 100;
+const ANIMATION_DEBOUNCE_IN_MS = 300;
 
 export function LoadingBar() {
   const navigation = useNavigation();

@@ -7,7 +7,6 @@ import {
   FormDialog,
 } from "~/platform/forms/form-dialog";
 import { useAccountBook } from "~/account-books/hooks";
-import { DialogActions } from "~/platform/dialog";
 import type { AccountOption } from "~/types";
 import {
   getAccountUnitInfo,
@@ -17,7 +16,7 @@ import {
 } from "~/units/functions";
 import type { Account } from "~/.prisma-client/client";
 import { Unit } from "~/.prisma-client/enums";
-import { Select, Stack, Text } from "@mantine/core";
+import { Group, Select, Stack, Text } from "@mantine/core";
 
 export function useRebook() {
   const [isOpen, setIsOpen] = useState(false);
@@ -158,10 +157,10 @@ export function Rebook({
           </>
         ))}
       </Stack>
-      <DialogActions>
+      <Group justify="end">
         <CancelButton />
         <CreateOrSaveButton />
-      </DialogActions>
+      </Group>
     </FormDialog>
   );
 }

@@ -1,15 +1,9 @@
 import { formatMoney } from "~/formatting";
-import {
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/platform/table";
 import { BalancesTableRows } from "./table-rows";
 import { useRouteLoaderData } from "react-router";
 import { type loader as breakdownLoader } from "../route";
 import invariant from "tiny-invariant";
+import { Table } from "@mantine/core";
 
 export default function Route() {
   const loaderData = useRouteLoaderData<typeof breakdownLoader>(
@@ -21,48 +15,48 @@ export default function Route() {
 
   return (
     <div className="xl:grid grid-cols-2 gap-12 mt-8">
-      <Table dense bleed striped fixedLayout>
-        <TableHead>
-          <TableRow>
-            <TableHeader>{balanceSheet.assets.name}</TableHeader>
-            <TableHeader className="text-right w-32">
+      <Table layout="fixed" striped>
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>{balanceSheet.assets.name}</Table.Th>
+            <Table.Th className="text-right w-32">
               <span className="sr-only">Balance in Original Currency</span>
-            </TableHeader>
-            <TableHeader className="text-right w-32">
+            </Table.Th>
+            <Table.Th className="text-right w-32">
               {formatMoney(balanceSheet.assets.balance)}
-            </TableHeader>
-          </TableRow>
-        </TableHead>
-        <TableBody>
+            </Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
           <BalancesTableRows node={balanceSheet.assets} />
-        </TableBody>
+        </Table.Tbody>
       </Table>
       <div className="space-y-12">
-        <Table bleed dense striped fixedLayout>
-          <TableHead>
-            <TableRow>
-              <TableHeader>{balanceSheet.liabilities.name}</TableHeader>
-              <TableHeader className="text-right w-32">
+        <Table striped layout="fixed">
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>{balanceSheet.liabilities.name}</Table.Th>
+              <Table.Th className="text-right w-32">
                 <span className="sr-only">Balance in Original Currency</span>
-              </TableHeader>
-              <TableHeader className="text-right w-32">
+              </Table.Th>
+              <Table.Th className="text-right w-32">
                 {formatMoney(-balanceSheet.liabilities.balance)}
-              </TableHeader>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+              </Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
             <BalancesTableRows node={balanceSheet.liabilities} negated={true} />
-          </TableBody>
+          </Table.Tbody>
         </Table>
-        <Table dense bleed striped fixedLayout>
-          <TableBody>
-            <TableRow>
-              <TableHeader>Net Worth</TableHeader>
-              <TableHeader className="text-right">
+        <Table striped layout="fixed">
+          <Table.Tbody>
+            <Table.Tr>
+              <Table.Th>Net Worth</Table.Th>
+              <Table.Th className="text-right">
                 {formatMoney(balanceSheet.equity)}
-              </TableHeader>
-            </TableRow>
-          </TableBody>
+              </Table.Th>
+            </Table.Tr>
+          </Table.Tbody>
         </Table>
       </div>
     </div>

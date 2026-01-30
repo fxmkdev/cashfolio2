@@ -19,15 +19,14 @@ import {
   dateOrDateOptionKey,
   saveViewPreference,
 } from "~/view-preferences/functions";
-import { Field } from "~/platform/forms/fieldset";
-import { Select } from "~/platform/forms/select";
 import { useEffect, useState } from "react";
 import { useAccountBook } from "~/account-books/hooks";
 import { formatISODate } from "~/formatting";
-import { DateInput } from "~/platform/forms/date-input";
 import { findSubtreeRootNode } from "~/income/functions";
 import type { BalancesAccountsNode } from "../types";
 import type { AccountGroupNode } from "~/account-groups/accounts-tree";
+import { Group, NativeSelect, Stack } from "@mantine/core";
+import { DateInput } from "@mantine/dates";
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -91,84 +90,76 @@ export default function Route() {
   }, [date]);
 
   return (
-    <div className="space-y-4 mt-12">
-      <div className="flex items-center justify-center gap-2">
-        <Field>
-          <Select
-            value={dateOption}
-            onChange={(e) => {
-              const newDateOption = e.target.value;
+    <Stack gap="md" mt="lg">
+      <Group gap="sm" justify="center">
+        <NativeSelect
+          value={dateOption}
+          onChange={(e) => {
+            const newDateOption = e.target.value;
 
-              const dateOrDateOption =
-                newDateOption === "date"
-                  ? formatISODate(parseISO(date))
-                  : newDateOption;
+            const dateOrDateOption =
+              newDateOption === "date"
+                ? formatISODate(parseISO(date))
+                : newDateOption;
 
-              navigate(`../breakdown/${dateOrDateOption}`);
-              saveViewPreference(
-                dateOrDateOptionKey(accountBook.id),
-                dateOrDateOption,
-              );
-            }}
-          >
-            <option value="today">Today</option>
-            <option value="end-of-last-month">End of Last Month</option>
-            <option value="end-of-last-quarter">End of Last Quarter</option>
-            <option value="end-of-last-year">End of Last Year</option>
-            <option value="date">Select date…</option>
-          </Select>
-        </Field>
-        <Field className="max-w-36 w-full">
-          <DateInput
-            value={formatISODate(parseISO(dateValue))}
-            disabled={
-              dateOption === "today" ||
-              dateOption === "end-of-last-month" ||
-              dateOption === "end-of-last-quarter" ||
-              dateOption === "end-of-last-year"
-            }
-            onChange={(value) => {
-              if (value) {
-                const utcDate = value.toDate("UTC");
-                setDateValue(value.toString());
-                if (isAfter(utcDate, Date.UTC(1970, 0, 1))) {
-                  const formattedDate = formatISODate(utcDate);
-                  navigate(`../breakdown/${formattedDate}`);
+            navigate(`../breakdown/${dateOrDateOption}`);
+            saveViewPreference(
+              dateOrDateOptionKey(accountBook.id),
+              dateOrDateOption,
+            );
+          }}
+        >
+          <option value="today">Today</option>
+          <option value="end-of-last-month">End of Last Month</option>
+          <option value="end-of-last-quarter">End of Last Quarter</option>
+          <option value="end-of-last-year">End of Last Year</option>
+          <option value="date">Select date…</option>
+        </NativeSelect>
+        <DateInput
+          value={formatISODate(parseISO(dateValue))}
+          disabled={
+            dateOption === "today" ||
+            dateOption === "end-of-last-month" ||
+            dateOption === "end-of-last-quarter" ||
+            dateOption === "end-of-last-year"
+          }
+          onChange={(value) => {
+            if (value) {
+              const utcDate = parseISO(value);
+              setDateValue(value.toString());
+              if (isAfter(utcDate, Date.UTC(1970, 0, 1))) {
+                const formattedDate = formatISODate(utcDate);
+                navigate(`../breakdown/${formattedDate}`);
 
-                  saveViewPreference(
-                    dateOrDateOptionKey(accountBook.id),
-                    formattedDate,
-                  );
-                }
+                saveViewPreference(
+                  dateOrDateOptionKey(accountBook.id),
+                  formattedDate,
+                );
               }
-            }}
-          />
-        </Field>
+            }
+          }}
+        />
 
-        <Field>
-          <Select
-            onChange={(e) => navigate(e.target.value)}
-            value={match?.params.viewType}
-          >
-            <option value="chart">Chart</option>
-            <option value="table">Table</option>
-          </Select>
-        </Field>
+        <NativeSelect
+          onChange={(e) => navigate(e.target.value)}
+          value={match?.params.viewType}
+        >
+          <option value="chart">Chart</option>
+          <option value="table">Table</option>
+        </NativeSelect>
         {match?.params.viewType === "chart" && (
-          <Field>
-            <Select
-              value={match?.params.chartType}
-              onChange={(e) => {
-                navigate(`./chart/${e.target.value}`);
-              }}
-            >
-              <option value="assets">Assets</option>
-              <option value="liabilities">Liabilities</option>
-            </Select>
-          </Field>
+          <NativeSelect
+            value={match?.params.chartType}
+            onChange={(e) => {
+              navigate(`./chart/${e.target.value}`);
+            }}
+          >
+            <option value="assets">Assets</option>
+            <option value="liabilities">Liabilities</option>
+          </NativeSelect>
         )}
-      </div>
+      </Group>
       <Outlet />
-    </div>
+    </Stack>
   );
 }

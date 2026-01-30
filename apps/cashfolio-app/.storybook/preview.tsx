@@ -2,7 +2,6 @@ import type { Preview } from "@storybook/react-vite";
 import "../app/app.css";
 import { createRoutesStub } from "react-router";
 import { themes } from "storybook/theming";
-import { UNSAFE_PortalProvider } from "react-aria";
 import { Globals } from "storybook/internal/types";
 
 const preview: Preview = {
@@ -46,29 +45,6 @@ const preview: Preview = {
         <Story />
       </div>
     ),
-    (Story, { globals, id }) => {
-      // Since we might have several stories with different themes on the same document
-      // add the theme attribute to the react-aria portal container
-      const theme = getTheme(globals);
-      return (
-        <UNSAFE_PortalProvider
-          getContainer={() => {
-            const portalId = `portal-${id}`;
-            let portal = document.getElementById(portalId);
-            if (!portal) {
-              portal = document.createElement("div");
-              portal.id = portalId;
-              document.body.appendChild(portal);
-            }
-
-            portal.setAttribute("data-theme", theme);
-            return portal;
-          }}
-        >
-          <Story />
-        </UNSAFE_PortalProvider>
-      );
-    },
   ],
   tags: ["autodocs"],
 };

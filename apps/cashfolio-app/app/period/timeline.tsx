@@ -7,8 +7,6 @@ import type {
   TimelineRange,
   TimelineView,
 } from "./types";
-import { Field } from "~/platform/forms/fieldset";
-import { Select } from "~/platform/forms/select";
 import { useNavigate } from "react-router";
 import { addDays, format, getMonth, getQuarter, getYear } from "date-fns";
 import { today } from "~/dates";
@@ -17,6 +15,7 @@ import {
   saveViewPreference,
   timelineRangeKey,
 } from "~/view-preferences/functions";
+import { Group, NativeSelect } from "@mantine/core";
 
 const YEAR_RANGE_REGEX = /^(\d{4})$/;
 const QUARTER_RANGE_REGEX = /^(\d{4})-Q(\d)$/i;
@@ -132,123 +131,141 @@ export function TimelineSelector({
   const navigate = useNavigate();
   const accountBook = useAccountBook();
   return (
-    <div className={clsx("flex items-center justify-center gap-2", className)}>
-      <Field>
-        <Select
-          value={period.granularity}
-          onChange={(e) => {
-            const newRange =
-              e.target.value === "year"
-                ? "5y"
-                : e.target.value === "quarter"
-                  ? "4q"
-                  : "12m";
-            navigate(
-              view
-                ? `../income/${nodeId}/${newRange}/${view}`
-                : `../timeline/${newRange}`,
-            );
+    <Group justify="center" gap="sm" className={className}>
+      <NativeSelect
+        value={period.granularity}
+        onChange={(e) => {
+          const newRange =
+            e.target.value === "year"
+              ? "5y"
+              : e.target.value === "quarter"
+                ? "4q"
+                : "12m";
+          navigate(
+            view
+              ? `../income/${nodeId}/${newRange}/${view}`
+              : `../timeline/${newRange}`,
+          );
 
-            saveViewPreference(timelineRangeKey(accountBook.id), newRange);
-          }}
-        >
-          <option value="year">Years</option>
-          <option value="quarter">Quarters</option>
-          <option value="month">Months</option>
-        </Select>
-      </Field>
-      <Field>
-        <Select
-          value={rangeSpecifier}
-          onChange={(e) => {
-            const newRange = e.target.value;
-            navigate(
-              view
-                ? `../income/${nodeId}/${newRange}/${view}`
-                : `../timeline/${newRange}`,
-            );
+          saveViewPreference(timelineRangeKey(accountBook.id), newRange);
+        }}
+      >
+        <option value="year">Years</option>
+        <option value="quarter">Quarters</option>
+        <option value="month">Months</option>
+      </NativeSelect>
+      <NativeSelect
+        value={rangeSpecifier}
+        onChange={(e) => {
+          const newRange = e.target.value;
+          navigate(
+            view
+              ? `../income/${nodeId}/${newRange}/${view}`
+              : `../timeline/${newRange}`,
+          );
 
-            saveViewPreference(timelineRangeKey(accountBook.id), newRange);
-          }}
-        >
-          {period.granularity === "year" ? (
-            <>
-              <option value="3y">Last 3 Years</option>
-              <option value="5y">Last 5 Years</option>
-              <option value="10y">Last 10 Years</option>
-              <option value="max-year">Max</option>
-              {minBookingDate && (
-                <>
-                  <option disabled>──────────</option>
-                  <option value={range.period?.year ?? getYear(today())}>
-                    Select Year…
-                  </option>
-                </>
-              )}
-            </>
-          ) : period.granularity === "quarter" ? (
-            <>
-              <option value="4q">Last 4 Quarters</option>
-              <option value="8q">Last 8 Quarters</option>
-              <option value="12q">Last 12 Quarters</option>
-              <option value="24q">Last 24 Quarters</option>
-              <option value="max-quarter">Max</option>
-              {minBookingDate && (
-                <>
-                  <option disabled>──────────</option>
-                  <option
-                    value={
-                      range.period
-                        ? `${range.period.year}-q${(range.period as QuarterPeriod).quarter}`
-                        : format(today(), "yyyy-QQQ").toLowerCase()
-                    }
-                  >
-                    Select Quarter…
-                  </option>
-                </>
-              )}
-            </>
-          ) : period.granularity === "month" ? (
-            <>
-              <option value="3m">Last 3 Months</option>
-              <option value="6m">Last 6 Months</option>
-              <option value="12m">Last 12 Months</option>
-              <option value="24m">Last 24 Months</option>
-              <option value="36m">Last 36 Months</option>
-              <option value="48m">Last 48 Months</option>
-              <option value="max-month">Max</option>
-              {minBookingDate && (
-                <>
-                  <option disabled>──────────</option>
-                  <option
-                    value={
-                      range.period
-                        ? `${range.period.year}-${((range.period as MonthPeriod).month + 1).toString().padStart(2, "0")}`
-                        : format(today(), "yyyy-MM")
-                    }
-                  >
-                    Select Month…
-                  </option>
-                </>
-              )}
-            </>
-          ) : null}
-        </Select>
-      </Field>
+          saveViewPreference(timelineRangeKey(accountBook.id), newRange);
+        }}
+      >
+        {period.granularity === "year" ? (
+          <>
+            <option value="3y">Last 3 Years</option>
+            <option value="5y">Last 5 Years</option>
+            <option value="10y">Last 10 Years</option>
+            <option value="max-year">Max</option>
+            {minBookingDate && (
+              <>
+                <option disabled>──────────</option>
+                <option value={range.period?.year ?? getYear(today())}>
+                  Select Year…
+                </option>
+              </>
+            )}
+          </>
+        ) : period.granularity === "quarter" ? (
+          <>
+            <option value="4q">Last 4 Quarters</option>
+            <option value="8q">Last 8 Quarters</option>
+            <option value="12q">Last 12 Quarters</option>
+            <option value="24q">Last 24 Quarters</option>
+            <option value="max-quarter">Max</option>
+            {minBookingDate && (
+              <>
+                <option disabled>──────────</option>
+                <option
+                  value={
+                    range.period
+                      ? `${range.period.year}-q${(range.period as QuarterPeriod).quarter}`
+                      : format(today(), "yyyy-QQQ").toLowerCase()
+                  }
+                >
+                  Select Quarter…
+                </option>
+              </>
+            )}
+          </>
+        ) : period.granularity === "month" ? (
+          <>
+            <option value="3m">Last 3 Months</option>
+            <option value="6m">Last 6 Months</option>
+            <option value="12m">Last 12 Months</option>
+            <option value="24m">Last 24 Months</option>
+            <option value="36m">Last 36 Months</option>
+            <option value="48m">Last 48 Months</option>
+            <option value="max-month">Max</option>
+            {minBookingDate && (
+              <>
+                <option disabled>──────────</option>
+                <option
+                  value={
+                    range.period
+                      ? `${range.period.year}-${((range.period as MonthPeriod).month + 1).toString().padStart(2, "0")}`
+                      : format(today(), "yyyy-MM")
+                  }
+                >
+                  Select Month…
+                </option>
+              </>
+            )}
+          </>
+        ) : null}
+      </NativeSelect>
       {range.period && minBookingDate && (
         <>
-          <Field>
-            <Select
-              value={range.period.year}
+          <NativeSelect
+            value={range.period.year}
+            onChange={(e) => {
+              const newPeriod =
+                range.granularity === "year"
+                  ? e.currentTarget.value
+                  : range.granularity === "quarter"
+                    ? `${e.currentTarget.value}-q${range.period!.quarter}`
+                    : `${e.currentTarget.value}-${(range.period!.month + 1)
+                        .toString()
+                        .padStart(2, "0")}`;
+              navigate(
+                view
+                  ? `../income/${nodeId}/${newPeriod}/${view}`
+                  : `../timeline/${newPeriod}`,
+              );
+            }}
+          >
+            {new Array(
+              getYear(today()) - getYear(addDays(minBookingDate, 1)) + 1,
+            )
+              .fill(getYear(addDays(minBookingDate, 1)))
+              .map((year, i) => (
+                <option key={year + i} value={year + i}>
+                  {year + i}
+                </option>
+              ))
+              .toReversed()}
+          </NativeSelect>
+          {range.granularity === "quarter" && (
+            <NativeSelect
+              value={range.period.quarter}
               onChange={(e) => {
-                const newPeriod =
-                  range.granularity === "year"
-                    ? e.currentTarget.value
-                    : range.granularity === "quarter"
-                      ? `${e.currentTarget.value}-q${range.period!.quarter}`
-                      : `${e.currentTarget.value}-${(range.period!.month + 1)
-                          .toString()
-                          .padStart(2, "0")}`;
+                const newPeriod = `${range.period!.year}-q${e.currentTarget.value}`;
                 navigate(
                   view
                     ? `../income/${nodeId}/${newPeriod}/${view}`
@@ -256,94 +273,64 @@ export function TimelineSelector({
                 );
               }}
             >
-              {new Array(
-                getYear(today()) - getYear(addDays(minBookingDate, 1)) + 1,
-              )
-                .fill(getYear(addDays(minBookingDate, 1)))
-                .map((year, i) => (
-                  <option key={year + i} value={year + i}>
-                    {year + i}
-                  </option>
-                ))
-                .toReversed()}
-            </Select>
-          </Field>
-          {range.granularity === "quarter" && (
-            <Field>
-              <Select
-                value={range.period.quarter}
-                onChange={(e) => {
-                  const newPeriod = `${range.period!.year}-q${e.currentTarget.value}`;
-                  navigate(
-                    view
-                      ? `../income/${nodeId}/${newPeriod}/${view}`
-                      : `../timeline/${newPeriod}`,
-                  );
-                }}
-              >
-                <option value={4}>Q4</option>
-                <option value={3}>Q3</option>
-                <option value={2}>Q2</option>
-                <option value={1}>Q1</option>
-              </Select>
-            </Field>
+              <option value={4}>Q4</option>
+              <option value={3}>Q3</option>
+              <option value={2}>Q2</option>
+              <option value={1}>Q1</option>
+            </NativeSelect>
           )}
           {range.granularity === "month" && (
-            <Field>
-              <Select
-                value={range.period.month}
-                onChange={(e) => {
-                  const newPeriod = `${range.period!.year}-${(Number(e.currentTarget.value) + 1).toString().padStart(2, "0")}`;
-                  navigate(
-                    view
-                      ? `../income/${nodeId}/${newPeriod}/${view}`
-                      : `../timeline/${newPeriod}`,
-                  );
-                }}
-              >
-                <option value={11}>December</option>
-                <option value={10}>November</option>
-                <option value={9}>October</option>
-                <option value={8}>September</option>
-                <option value={7}>August</option>
-                <option value={6}>July</option>
-                <option value={5}>June</option>
-                <option value={4}>May</option>
-                <option value={3}>April</option>
-                <option value={2}>March</option>
-                <option value={1}>February</option>
-                <option value={0}>January</option>
-              </Select>
-            </Field>
+            <NativeSelect
+              value={range.period.month}
+              onChange={(e) => {
+                const newPeriod = `${range.period!.year}-${(Number(e.currentTarget.value) + 1).toString().padStart(2, "0")}`;
+                navigate(
+                  view
+                    ? `../income/${nodeId}/${newPeriod}/${view}`
+                    : `../timeline/${newPeriod}`,
+                );
+              }}
+            >
+              <option value={11}>December</option>
+              <option value={10}>November</option>
+              <option value={9}>October</option>
+              <option value={8}>September</option>
+              <option value={7}>August</option>
+              <option value={6}>July</option>
+              <option value={5}>June</option>
+              <option value={4}>May</option>
+              <option value={3}>April</option>
+              <option value={2}>March</option>
+              <option value={1}>February</option>
+              <option value={0}>January</option>
+            </NativeSelect>
           )}
         </>
       )}
 
       {view && (
-        <Field>
-          <Select
-            value={view}
-            onChange={(e) => {
-              navigate(
-                `../income/${nodeId}/${rangeSpecifier}/${e.currentTarget.value}`,
-              );
-            }}
-          >
-            <option value="totals">Totals</option>
-            <option value="breakdown">Breakdown</option>
-            {range.numberOfPeriods === 1 && (
-              <>
-                <option value="breakdown-table">Breakdown (Table)</option>
-                {isBreakdownAllocationAvailable && (
-                  <option value="breakdown-allocation">
-                    Breakdown (Allocation)
-                  </option>
-                )}
-              </>
-            )}
-          </Select>
-        </Field>
+        <NativeSelect
+          value={view}
+          onChange={(e) => {
+            navigate(
+              `../income/${nodeId}/${rangeSpecifier}/${e.currentTarget.value}`,
+            );
+          }}
+        >
+          <option value="totals">Totals</option>
+          <option value="breakdown">Breakdown</option>
+          {range.numberOfPeriods === 1 && (
+            <>
+              <option value="breakdown-table">Breakdown (Table)</option>
+              {isBreakdownAllocationAvailable && (
+                <option value="breakdown-allocation">
+                  Breakdown (Allocation)
+                </option>
+              )}
+            </>
+          )}
+        </NativeSelect>
       )}
-    </div>
+    </Group>
   );
 }

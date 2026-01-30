@@ -83,7 +83,8 @@ export const meta: Route.MetaFunction = () => [
 ];
 
 const theme = createTheme({
-  primaryColor: "cyan",
+  primaryColor: "blue",
+  defaultRadius: "md",
 });
 
 export function Layout({ children }: { children: React.ReactNode }) {

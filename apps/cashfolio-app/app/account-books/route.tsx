@@ -1,4 +1,4 @@
-import { Link, Outlet, type LoaderFunctionArgs } from "react-router";
+import { Link, Outlet, useMatch, type LoaderFunctionArgs } from "react-router";
 import invariant from "tiny-invariant";
 import { ensureAuthenticated } from "~/auth/functions.server";
 import { prisma } from "~/prisma.server";
@@ -9,14 +9,22 @@ import {
   getFirstBookingDate,
 } from "./functions.server";
 import { defaultShouldRevalidate } from "~/revalidation";
-import { ActionIcon, AppShell, Grid, Group, Stack, Title } from "@mantine/core";
+import {
+  ActionIcon,
+  AppShell,
+  Grid,
+  Group,
+  Stack,
+  Tabs,
+  Title,
+} from "@mantine/core";
 import { Logo } from "~/components/logo";
 import { useAccountBook } from "./hooks";
-import { NavLink } from "~/platform/nav-link";
 import {
   ArrowRightStartOnRectangleIcon,
   Cog8ToothIcon,
 } from "~/platform/icons/navigation";
+import { LinkTab } from "~/platform/link-tab";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const userContext = await ensureAuthenticated(request);
@@ -48,6 +56,8 @@ export const shouldRevalidate = defaultShouldRevalidate;
 
 export default function Route() {
   const accountBook = useAccountBook();
+  const match = useMatch("/:accountBookId/:segment1?/*");
+
   return (
     <AppShell header={{ height: "4.5rem" }}>
       <AppShell.Header>
@@ -66,9 +76,19 @@ export default function Route() {
           </Grid.Col>
           <Grid.Col span={6}>
             <Group gap="xs" justify="center">
-              <NavLink to={`/${accountBook.id}/balances`}>Balances</NavLink>
-              <NavLink to={`/${accountBook.id}/income`}>Income</NavLink>
-              <NavLink to={`/${accountBook.id}/accounts`}>Accounts</NavLink>
+              <Tabs variant="pills" value={match?.params["segment1"] ?? ""}>
+                <Tabs.List>
+                  <LinkTab value="balances" to={`/${accountBook.id}/balances`}>
+                    Balances
+                  </LinkTab>
+                  <LinkTab value="income" to={`/${accountBook.id}/income`}>
+                    Income
+                  </LinkTab>
+                  <LinkTab value="accounts" to={`/${accountBook.id}/accounts`}>
+                    Accounts
+                  </LinkTab>
+                </Tabs.List>
+              </Tabs>
             </Group>
           </Grid.Col>
           <Grid.Col span="auto">
@@ -92,9 +112,7 @@ export default function Route() {
         </Grid>
       </AppShell.Header>
       <AppShell.Main px="md">
-        <Stack py="md">
-          <Outlet />
-        </Stack>
+        <Outlet />
       </AppShell.Main>
     </AppShell>
   );

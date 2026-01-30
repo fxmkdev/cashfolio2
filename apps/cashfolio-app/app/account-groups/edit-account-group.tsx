@@ -1,5 +1,4 @@
-import { useMemo, useState } from "react";
-import { DialogActions } from "~/platform/dialog";
+import { useState } from "react";
 import type { Serialize } from "~/serialization";
 import type { AccountGroupOption } from "~/types";
 import {
@@ -10,6 +9,7 @@ import {
 import { useAccountBook } from "~/account-books/hooks";
 import {
   Grid,
+  Group,
   Input,
   SegmentedControl,
   Select,
@@ -136,10 +136,10 @@ export function EditAccountGroup({
           </Grid.Col>
         </Grid>
       </Stack>
-      <DialogActions>
+      <Group justify="end">
         <CancelButton />
         <CreateOrSaveButton />
-      </DialogActions>
+      </Group>
     </FormDialog>
   );
 }

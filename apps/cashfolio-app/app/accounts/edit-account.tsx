@@ -1,6 +1,5 @@
 import type { Account } from "~/.prisma-client/client";
 import { useEffect, useState } from "react";
-import { DialogActions } from "~/platform/dialog";
 import type { Serialize } from "~/serialization";
 import type { AccountGroupOption } from "~/types";
 import {
@@ -16,6 +15,7 @@ import {
 } from "~/.prisma-client/enums";
 import {
   Grid,
+  Group,
   Input,
   SegmentedControl,
   Select,
@@ -232,10 +232,10 @@ export function EditAccount({
           </Grid.Col>
         </Grid>
       </Stack>
-      <DialogActions>
+      <Group justify="end">
         <CancelButton />
         <CreateOrSaveButton />
-      </DialogActions>
+      </Group>
     </FormDialog>
   );
 }

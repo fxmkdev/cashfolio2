@@ -1,4 +1,5 @@
 import {
+  Link,
   redirect,
   useLoaderData,
   useNavigate,
@@ -34,19 +35,9 @@ import { useAccountBook } from "~/account-books/hooks";
 import { getMinBookingDate } from "~/transactions/functions.server";
 import { mergeById } from "~/utils";
 import { getAccountsTree } from "~/account-groups/accounts-tree";
-import {
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/platform/table";
 import { IncomeTableRows } from "./table-rows";
 import { getPageTitle } from "~/meta";
-import { Button } from "~/platform/button";
 import { ChevronUpIcon } from "~/platform/icons/standard";
-import { Heading } from "~/platform/heading";
-import { Text } from "~/platform/text";
 import { prisma } from "~/prisma.server";
 import { AccountType } from "~/.prisma-client/client";
 import { getViewPreference } from "~/view-preferences/functions.server";
@@ -54,6 +45,7 @@ import { timelineRangeKey } from "~/view-preferences/functions";
 import type { Route } from "./+types/route";
 import { getIncome } from "./functions.server";
 import { getTheme } from "~/theme";
+import { Button, Group, Stack, Table, Text, Title } from "@mantine/core";
 
 export const meta: Route.MetaFunction = ({ loaderData }) => [
   { title: getPageTitle(`Income / ${loaderData.rootNode.name}`) },
@@ -237,21 +229,24 @@ export default function Route() {
 
   return (
     <>
-      <div className="flex justify-between items-center gap-8">
-        <div className="shrink-0">
-          <Heading>{rootNode.name}</Heading>
-          <Text>Reference Currency: {accountBook.referenceCurrency}</Text>
-        </div>
-        <div>
-          <Button
-            disabled={!parentNodeId}
-            hierarchy="secondary"
-            href={`../income/${parentNodeId}/${rangeSpecifier}/breakdown`}
-          >
-            <ChevronUpIcon />
-            Up
-          </Button>
-        </div>
+      <Group justify="space-between" gap="lg">
+        <Stack gap={0}>
+          <Title order={2} size="h3">
+            {rootNode.name}
+          </Title>
+          <Text c="dimmed" size="sm">
+            Reference Currency: {accountBook.referenceCurrency}
+          </Text>
+        </Stack>
+        <Button
+          disabled={!parentNodeId}
+          variant="default"
+          component={Link}
+          to={`../income/${parentNodeId}/${rangeSpecifier}/breakdown`}
+        >
+          <ChevronUpIcon />
+          Up
+        </Button>
 
         <TimelineSelector
           period={period}
@@ -262,23 +257,18 @@ export default function Route() {
           nodeId={rootNode.id}
           isBreakdownAllocationAvailable={isBreakdownAllocationAvailable}
         />
-      </div>
+      </Group>
       {view === "breakdown-table" ? (
-        <Table
-          dense
-          bleed
-          striped
-          className="mt-8 [--gutter:--spacing(6)] lg:[--gutter:--spacing(10)]"
-        >
-          <TableHead>
-            <TableRow>
-              <TableHeader>{rootNode.name}</TableHeader>
-              <TableHeader className="text-right w-32">
+        <Table striped mt="md">
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>{rootNode.name}</Table.Th>
+              <Table.Th className="text-right w-32">
                 {formatMoney(timeline[0].incomeByNodeId[rootNode.id] ?? 0)}
-              </TableHeader>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+              </Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
             <IncomeTableRows
               node={rootNode}
               incomeByNodeId={timeline[0].incomeByNodeId}
@@ -289,7 +279,7 @@ export default function Route() {
                 },
               }}
             />
-          </TableBody>
+          </Table.Tbody>
         </Table>
       ) : view === "breakdown-allocation" ? (
         <AgCharts

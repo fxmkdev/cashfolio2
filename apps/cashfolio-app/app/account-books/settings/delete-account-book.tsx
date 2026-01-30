@@ -1,5 +1,5 @@
+import { Group } from "@mantine/core";
 import { useState } from "react";
-import { Alert, AlertActions, AlertTitle } from "~/platform/alert";
 import {
   CancelButton,
   DeleteButton,
@@ -35,21 +35,18 @@ export function DeleteAccountBook({
 }) {
   return (
     <FormDialog
-      dialogComponent={Alert}
-      open={isOpen}
+      opened={isOpen}
       onClose={onClose}
       size="md"
       action="/account-books/delete"
+      title="Are you sure you want to delete this account book?"
     >
       <input type="hidden" name="_action" value="delete" />
       <input type="hidden" name="accountBookId" value={accountBookId} />
-      <AlertTitle>
-        Are you sure you want to delete this account book?
-      </AlertTitle>
-      <AlertActions>
+      <Group justify="end">
         <CancelButton />
         <DeleteButton />
-      </AlertActions>
+      </Group>
     </FormDialog>
   );
 }

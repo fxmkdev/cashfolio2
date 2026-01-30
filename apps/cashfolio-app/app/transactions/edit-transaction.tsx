@@ -1,4 +1,3 @@
-import { DialogActions } from "~/platform/dialog";
 import type { AccountOption } from "~/types";
 import { FormattedNumberInput } from "~/platform/forms/formatted-number-input";
 import { useEffect, useState, type Dispatch } from "react";
@@ -24,6 +23,7 @@ import { isSplitTransaction } from "./functions";
 import {
   Checkbox,
   Grid,
+  Group,
   Select,
   Stack,
   Switch,
@@ -204,7 +204,7 @@ function TransactionFormGroup({
         )}
         <FormErrorMessage />
       </Stack>
-      <DialogActions>
+      <Group justify="end">
         <Checkbox
           label="Create another"
           onChange={(e) => setCreateAnother(e.currentTarget.checked)}
@@ -212,7 +212,7 @@ function TransactionFormGroup({
         />
         <CancelButton />
         <CreateOrSaveButton />
-      </DialogActions>
+      </Group>
     </>
   );
 }
