@@ -204,7 +204,7 @@ function TransactionFormGroup({
         )}
         <FormErrorMessage />
       </Stack>
-      <Group justify="end">
+      <Group justify="end" mt="xl">
         <Checkbox
           label="Create another"
           onChange={(e) => setCreateAnother(e.currentTarget.checked)}

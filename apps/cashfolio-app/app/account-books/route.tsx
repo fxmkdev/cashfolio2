@@ -12,9 +12,9 @@ import { defaultShouldRevalidate } from "~/revalidation";
 import {
   ActionIcon,
   AppShell,
+  Box,
   Grid,
   Group,
-  Stack,
   Tabs,
   Title,
 } from "@mantine/core";
@@ -112,7 +112,9 @@ export default function Route() {
         </Grid>
       </AppShell.Header>
       <AppShell.Main px="md">
-        <Outlet />
+        <Box mt="lg">
+          <Outlet />
+        </Box>
       </AppShell.Main>
     </AppShell>
   );

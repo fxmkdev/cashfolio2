@@ -232,7 +232,7 @@ export function EditAccount({
           </Grid.Col>
         </Grid>
       </Stack>
-      <Group justify="end">
+      <Group justify="end" mt="xl">
         <CancelButton />
         <CreateOrSaveButton />
       </Group>
