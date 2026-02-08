@@ -1,5 +1,6 @@
 import { index, route } from "@react-router/dev/routes";
 import { routes as accountRoutes } from "../accounts/routes";
+import { routes as account2Routes } from "../accounts2/routes";
 import { routes as accountGroupRoutes } from "../account-groups/routes";
 import { routes as transactionRoutes } from "../transactions/routes";
 import { routes as incomeRoutes } from "../income/routes";
@@ -17,6 +18,7 @@ export const routes = [
     ...balanceRoutes,
     ...incomeRoutes,
     ...accountRoutes,
+    ...account2Routes,
     ...accountGroupRoutes,
     ...transactionRoutes,
   ]),

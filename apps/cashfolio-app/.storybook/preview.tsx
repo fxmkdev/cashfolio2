@@ -1,8 +1,13 @@
 import type { Preview } from "@storybook/react-vite";
 import "../app/app.css";
-import { createRoutesStub } from "react-router";
 import { themes } from "storybook/theming";
-import { Globals } from "storybook/internal/types";
+import { MantineProvider } from "@mantine/core";
+import { theme } from "../app/theme";
+import "../app/mantine";
+import {
+  ModuleRegistry as GridModuleRegistry,
+  AllEnterpriseModule as GridAllEnterpriseModule,
+} from "ag-grid-enterprise";
 
 const preview: Preview = {
   parameters: {
@@ -17,41 +22,21 @@ const preview: Preview = {
       // see https://github.com/storybookjs/storybook/issues/28664#issuecomment-2241393451
       theme: themes[getPreferredColorScheme()],
     },
-
-    backgrounds: {
-      options: {
-        light: { name: "Light", value: "var(--color-neutral-100)" },
-        dark: { name: "Dark", value: "var(--color-neutral-950)" },
-      },
-    },
-  },
-  initialGlobals: {
-    backgrounds: { value: "light" },
   },
   decorators: [
     (Story) => {
-      const Stub = createRoutesStub([
-        {
-          path: "*",
-          Component: Story,
-          loader: () => ({}),
-        },
-      ]);
-
-      return <Stub initialEntries={["/"]} />;
+      return (
+        <div data-ag-theme-mode={getPreferredColorScheme()}>
+          <MantineProvider theme={theme} defaultColorScheme="auto">
+            <Story />
+          </MantineProvider>
+        </div>
+      );
     },
-    (Story, { globals }) => (
-      <div data-theme={getTheme(globals)}>
-        <Story />
-      </div>
-    ),
   ],
-  tags: ["autodocs"],
 };
 
-function getTheme(globals: Globals): "light" | "dark" {
-  return globals.backgrounds?.value === "dark" ? "dark" : "light";
-}
+GridModuleRegistry.registerModules([GridAllEnterpriseModule]);
 
 export default preview;
 

@@ -14,21 +14,26 @@ import { ensureUser } from "./users/functions.server";
 import { getPageTitle } from "./meta";
 import { LoadingBar } from "./platform/loading-bar";
 import { defaultShouldRevalidate } from "./revalidation";
-import { AllCommunityModule, ModuleRegistry } from "ag-charts-community";
+import {
+  AllCommunityModule as ChartsAllCommunityModule,
+  ModuleRegistry as ChartsModuleRegistry,
+} from "ag-charts-community";
+import {
+  ModuleRegistry as GridModuleRegistry,
+  AllCommunityModule as GridAllCommunityModule,
+} from "ag-grid-enterprise";
+
 import {
   ColorSchemeScript,
-  createTheme,
   mantineHtmlProps,
   MantineProvider,
 } from "@mantine/core";
+import "./mantine";
 
-// Import styles of packages that you've installed.
-// All packages except `@mantine/hooks` require styles imports
-import "@mantine/core/styles.css";
-import "@mantine/dates/styles.css";
-import "@mantine/nprogress/styles.css";
+import { theme } from "./theme";
 
-ModuleRegistry.registerModules([AllCommunityModule]);
+ChartsModuleRegistry.registerModules([ChartsAllCommunityModule]);
+GridModuleRegistry.registerModules([GridAllCommunityModule]);
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -82,11 +87,6 @@ export const meta: Route.MetaFunction = () => [
   { name: "apple-mobile-web-app-title", content: "Cashfolio" },
 ];
 
-const theme = createTheme({
-  primaryColor: "blue",
-  defaultRadius: "md",
-});
-
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" {...mantineHtmlProps}>
@@ -96,13 +96,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <ColorSchemeScript defaultColorScheme="auto" />
         <Meta />
         <Links />
-        <script type="text/javascript">
-          {`
-if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-  document.documentElement.setAttribute("data-theme", "dark");
-}
-`}
-        </script>
       </head>
       <body>
         <MantineProvider theme={theme} defaultColorScheme="auto">
