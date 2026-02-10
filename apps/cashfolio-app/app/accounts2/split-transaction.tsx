@@ -5,17 +5,13 @@ import {
   Box,
   Button,
   Group,
-  Input,
-  Space,
   Stack,
-  Text,
   TextInput,
   ThemeIcon,
   Tooltip,
 } from "@mantine/core";
 import { Unit } from "~/.prisma-client/enums";
 import {
-  IconCheck,
   IconInfoCircle,
   IconTablePlus,
   IconTrash,
@@ -56,9 +52,14 @@ export type BookingValues = {
 };
 
 export function SplitTransaction({
-  bookings = [],
+  initialValues,
+  onDeleteTransaction,
 }: {
-  bookings: BookingValues[];
+  initialValues?: {
+    description?: string;
+    bookings?: Omit<BookingValues, "key">[];
+  };
+  onDeleteTransaction?: () => void;
 }) {
   const { thousandSeparator, decimalSeparator } =
     getNumberFormatSymbols("en-CH");
@@ -67,11 +68,16 @@ export function SplitTransaction({
     mode: "uncontrolled",
     initialValues: {
       date:
-        bookings.length > 0
-          ? min(bookings.map((d) => d.date as string).filter((d) => !!d))
+        initialValues?.bookings && initialValues.bookings.length > 0
+          ? min(
+              initialValues.bookings
+                .map((d) => d.date as string)
+                .filter((d) => !!d),
+            )
           : undefined,
-      description: "",
-      bookings: bookings.map((b) => ({ ...b, key: createId() })),
+      description: initialValues?.description,
+      bookings:
+        initialValues?.bookings?.map((b) => ({ ...b, key: createId() })) ?? [],
     },
     onValuesChange: ({ date }, { date: previousDate }) => {
       if (date !== previousDate) {
@@ -220,9 +226,22 @@ export function SplitTransaction({
           }}
         />
 
-        <Group justify="end">
-          <Button variant="subtle">Cancel</Button>
-          <Button type="submit">Create</Button>
+        <Group justify="space-between">
+          {onDeleteTransaction ? (
+            <Button
+              variant="subtle"
+              color="red"
+              onClick={() => onDeleteTransaction()}
+            >
+              Delete Transaction
+            </Button>
+          ) : (
+            <Box />
+          )}
+          <Group>
+            <Button variant="subtle">Cancel</Button>
+            <Button type="submit">{initialValues ? "Save" : "Create"}</Button>
+          </Group>
         </Group>
       </Stack>
     </form>

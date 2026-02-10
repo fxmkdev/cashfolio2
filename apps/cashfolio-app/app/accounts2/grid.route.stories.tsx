@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import GridRoute, { mockData } from "./grid.route";
+import GridRoute from "./grid.route";
 import { createRoutesStub } from "react-router";
 
 const meta: Meta<typeof GridRoute> = {
@@ -12,7 +12,7 @@ const meta: Meta<typeof GridRoute> = {
           path: "*",
           Component: Story,
           loader: () => ({
-            data: mockData,
+            // data: mockData,
           }),
         },
       ]);

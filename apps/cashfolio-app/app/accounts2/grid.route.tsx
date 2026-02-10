@@ -2,90 +2,80 @@ import { type ColDef } from "ag-grid-enterprise";
 import type { Route } from "./+types/grid.route";
 import { serialize } from "~/serialization";
 import { useLoaderData } from "react-router";
-import { Unit } from "~/.prisma-client/enums";
+import { AccountType, Unit } from "~/.prisma-client/enums";
 import { useState } from "react";
 import { Badge } from "@mantine/core";
 import { DataGrid } from "./data-grid";
+import { prisma } from "~/prisma.server";
+import { ensureAuthorized } from "~/account-books/functions.server";
 
-export const mockData: {
-  id: string;
-  nodeType: "accountGroup" | "account";
-  name: string;
-  unit?: Unit;
-  currency?: string;
-  symbol?: string;
-  tradeCurrency?: string;
-  cryptocurrency?: string;
-  parentId?: string;
-  isActive: boolean;
-}[] = [
-  { id: "A", nodeType: "accountGroup", name: "Cash", isActive: true },
-  {
-    id: "B",
-    nodeType: "account",
-    name: "neon",
-    unit: Unit.CURRENCY,
-    currency: "CHF",
-    parentId: "A",
-    isActive: true,
-  },
-  {
-    id: "C",
-    nodeType: "account",
-    name: "Julius Bär",
-    unit: Unit.CURRENCY,
-    currency: "CHF",
-    parentId: "A",
-    isActive: true,
-  },
-  {
-    id: "C2",
-    nodeType: "account",
-    name: "DKB",
-    unit: Unit.CURRENCY,
-    currency: "EUR",
-    parentId: "A",
-    isActive: true,
-  },
-  {
-    id: "C3",
-    nodeType: "account",
-    name: "PostFinance",
-    unit: Unit.CURRENCY,
-    currency: "CHF",
-    parentId: "A",
-    isActive: false,
-  },
-  { id: "D", nodeType: "accountGroup", name: "Stocks", isActive: true },
-  {
-    id: "E",
-    nodeType: "accountGroup",
-    name: "Julius Bär",
-    parentId: "D",
-    isActive: true,
-  },
-  {
-    id: "F",
-    nodeType: "account",
-    name: "Vanguard All-World UCITS ETF",
-    unit: Unit.SECURITY,
-    symbol: "FWRA.L",
-    tradeCurrency: "USD",
-    parentId: "E",
-    isActive: true,
-  },
-];
+export async function loader({ request, params }: Route.LoaderArgs) {
+  const link = await ensureAuthorized(request, params);
 
-export function loader({ params }: Route.LoaderArgs) {
+  const type =
+    params.type === "assets"
+      ? AccountType.ASSET
+      : params.type === "liabilities"
+        ? AccountType.LIABILITY
+        : params.type === "equities"
+          ? AccountType.EQUITY
+          : undefined;
+
+  const accounts = await prisma.account.findMany({
+    where: {
+      accountBookId: link.accountBookId,
+      isActive: true,
+      type,
+    },
+    orderBy: [{ name: "asc" }],
+  });
+
+  const accountGroups = await prisma.accountGroup.findMany({
+    where: {
+      accountBookId: link.accountBookId,
+      isActive: true,
+      type,
+    },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+
   return serialize({
-    data: mockData,
+    data: accounts
+      .map((a) => ({
+        id: a.id,
+        nodeType: "account",
+        name: a.name,
+        unit: a.unit ?? undefined,
+        currency: a.currency ?? undefined,
+        cryptocurrency: a.cryptocurrency ?? undefined,
+        symbol: a.symbol ?? undefined,
+        tradeCurrency: a.tradeCurrency ?? undefined,
+        parentId: a.groupId as string | undefined,
+        isActive: a.isActive,
+      }))
+      .concat(
+        accountGroups
+          .filter((ag) => !!ag.parentGroupId)
+          .map((ag) => ({
+            id: ag.id,
+            nodeType: "accountGroup",
+            name: ag.name,
+            unit: undefined,
+            currency: undefined,
+            cryptocurrency: undefined,
+            symbol: undefined,
+            tradeCurrency: undefined,
+            parentId: ag.parentGroupId ?? undefined,
+            isActive: ag.isActive,
+          })),
+      ),
   });
 }
 
 export default function GridRoute() {
   const { data } = useLoaderData<typeof loader>();
 
-  const [columnDefs] = useState<ColDef<(typeof mockData)[number]>[]>([
+  const [columnDefs] = useState<ColDef<(typeof data)[number]>[]>([
     {
       colId: "currency",
       headerName: "Ccy.",
@@ -126,7 +116,9 @@ export default function GridRoute() {
 
   return (
     <DataGrid
-      domLayout="autoHeight"
+      containerStyle={{
+        height: `calc(100vh - 10rem)`,
+      }}
       rowData={data}
       columnDefs={columnDefs}
       autoGroupColumnDef={{
@@ -142,15 +134,7 @@ export default function GridRoute() {
       treeData={true}
       treeDataParentIdField="parentId"
       getRowId={({ data }) => data.id}
-      groupDefaultExpanded={-1}
       excludeChildrenWhenTreeDataFiltering={true}
-      onGridReady={(e) => {
-        e.api.setColumnFilterModel("isActive", {
-          filterType: "set",
-          values: ["true"],
-        });
-        e.api.onFilterChanged();
-      }}
     />
   );
 }

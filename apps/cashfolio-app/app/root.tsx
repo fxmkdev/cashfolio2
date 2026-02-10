@@ -20,7 +20,7 @@ import {
 } from "ag-charts-community";
 import {
   ModuleRegistry as GridModuleRegistry,
-  AllCommunityModule as GridAllCommunityModule,
+  AllEnterpriseModule as GridAllEnterpriseModule,
 } from "ag-grid-enterprise";
 
 import {
@@ -33,7 +33,7 @@ import "./mantine";
 import { theme } from "./theme";
 
 ChartsModuleRegistry.registerModules([ChartsAllCommunityModule]);
-GridModuleRegistry.registerModules([GridAllCommunityModule]);
+GridModuleRegistry.registerModules([GridAllEnterpriseModule]);
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
