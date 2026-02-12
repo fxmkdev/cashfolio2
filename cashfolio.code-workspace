@@ -2,6 +2,7 @@
   "folders": [
     { "path": ".", "name": "<root>" },
     { "path": "apps/cashfolio-app", "name": "apps/cashfolio-app" },
+    { "path": "apps/cashfolio-app2", "name": "apps/cashfolio-app2" },
     { "path": "infra/cashfolio-redis", "name": "infra/cashfolio-redis" },
     { "path": "tools/cli", "name": "tools/cli" },
     { "path": "tools/importer", "name": "tools/importer" },
