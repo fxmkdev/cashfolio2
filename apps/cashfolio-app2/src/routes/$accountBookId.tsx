@@ -75,6 +75,7 @@ function AccountsPage() {
   const [editingAccount, setEditingAccount] = useState<
     { id: string; initialValues: AccountInitialValues } | undefined
   >();
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   const filteredAccounts = accounts.filter((a) => matchesTab(a, tab));
   const isEquityTab = tab.startsWith("EQUITY-");
@@ -115,7 +116,7 @@ function AccountsPage() {
         tradeCurrency: values.tradeCurrency,
       },
     });
-    setEditingAccount(undefined);
+    setEditModalOpen(false);
     router.invalidate();
   }
 
@@ -180,7 +181,7 @@ function AccountsPage() {
                 <Table.Td>
                   <ActionIcon
                     variant="subtle"
-                    onClick={() =>
+                    onClick={() => {
                       setEditingAccount({
                         id: account.id,
                         initialValues: {
@@ -194,8 +195,9 @@ function AccountsPage() {
                           symbol: account.symbol,
                           tradeCurrency: account.tradeCurrency,
                         },
-                      })
-                    }
+                      });
+                      setEditModalOpen(true);
+                    }}
                   >
                     <IconPencil size={16} />
                   </ActionIcon>
@@ -224,8 +226,9 @@ function AccountsPage() {
       />
 
       <EditAccountModal
-        opened={!!editingAccount}
-        onClose={() => setEditingAccount(undefined)}
+        opened={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        onExitTransitionEnd={() => setEditingAccount(undefined)}
         accountGroups={accountGroups}
         onSubmit={handleUpdateAccount}
         initialValues={editingAccount?.initialValues}
