@@ -11,7 +11,12 @@
     "prisma:generate": "DATABASE_URL=dummy prisma generate"
   },
   "dependencies": {
+    "@mantine/core": "^8.3.12",
+    "@mantine/form": "^8.3.14",
+    "@mantine/hooks": "^8.3.12",
+    "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
+    "@tabler/icons-react": "^3.36.1",
     "@tanstack/react-router": "^1.121.34",
     "@tanstack/react-start": "^1.121.34",
     "react": "^19.0.0",
@@ -22,6 +27,9 @@
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "postcss": "^8.5.6",
+    "postcss-preset-mantine": "^1.18.0",
+    "postcss-simple-vars": "^7.0.1",
     "prisma": "^7.2.0",
     "typescript": "^5.9.0",
     "vite": "^7.0.0"
