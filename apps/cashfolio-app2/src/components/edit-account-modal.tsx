@@ -42,7 +42,7 @@ export function EditAccountModal({
 }: {
   opened: boolean;
   onClose: () => void;
-  accountGroups: { value: string; label: string; type: string }[];
+  accountGroups: { value: string; label: string; type: string; equityAccountSubtype: string | null }[];
   onSubmit: (values: TransformedFormValues) => void | Promise<void>;
 }) {
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
@@ -113,7 +113,8 @@ export function EditAccountModal({
     }
   }, [opened]);
 
-  const { unit, type } = form.getTransformedValues() as TransformedFormValues;
+  const { unit, type, equityAccountSubtype } =
+    form.getTransformedValues() as TransformedFormValues;
   return (
     <Modal opened={opened} onClose={onClose} title="New Account" size="lg">
       <form
@@ -180,7 +181,13 @@ export function EditAccountModal({
                 searchable
                 withAlignedLabels
                 disabled={!type}
-                data={accountGroups.filter((g) => g.type === type)}
+                data={accountGroups.filter(
+                  (g) =>
+                    g.type === type &&
+                    (!equityAccountSubtype ||
+                      !g.equityAccountSubtype ||
+                      g.equityAccountSubtype === equityAccountSubtype),
+                )}
                 {...form.getInputProps("groupId")}
               />
             </Grid.Col>

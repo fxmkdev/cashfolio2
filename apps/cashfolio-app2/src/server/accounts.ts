@@ -55,6 +55,7 @@ export const getAccountGroups = createServerFn({ method: "GET" })
         value: g.id,
         label: getGroupPath(g.id, groups),
         type: g.type,
+        equityAccountSubtype: g.equityAccountSubtype,
       }))
       .toSorted((a, b) => a.label.localeCompare(b.label));
   });
