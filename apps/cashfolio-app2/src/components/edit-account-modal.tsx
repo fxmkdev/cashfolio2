@@ -8,7 +8,7 @@ import {
   Select,
 } from "@mantine/core";
 import { isNotEmpty, useForm } from "@mantine/form";
-import { useEffect, useReducer } from "react";
+import { useEffect, useReducer, useRef } from "react";
 import { Fragment } from "react/jsx-runtime";
 import {
   AccountType,
@@ -34,23 +34,57 @@ export type TransformedFormValues = FormValues & {
   equityAccountSubtype?: EquityAccountSubtype;
 };
 
+export type AccountInitialValues = {
+  name: string;
+  type: AccountType;
+  equityAccountSubtype?: EquityAccountSubtype | null;
+  groupId: string;
+  unit?: Unit | null;
+  currency?: string | null;
+  cryptocurrency?: string | null;
+  symbol?: string | null;
+  tradeCurrency?: string | null;
+};
+
+function toFormValues(initial: AccountInitialValues): FormValues {
+  const typeDescriptor: FormValues["typeDescriptor"] =
+    initial.type === AccountType.EQUITY && initial.equityAccountSubtype
+      ? `${AccountType.EQUITY}-${initial.equityAccountSubtype}`
+      : (initial.type as "ASSET" | "LIABILITY");
+
+  return {
+    name: initial.name,
+    typeDescriptor,
+    groupId: initial.groupId,
+    unit: initial.unit ?? Unit.CURRENCY,
+    currency: initial.currency ?? undefined,
+    cryptocurrency: initial.cryptocurrency ?? undefined,
+    symbol: initial.symbol ?? undefined,
+    tradeCurrency: initial.tradeCurrency ?? undefined,
+  };
+}
+
 export function EditAccountModal({
   opened,
   onClose,
   accountGroups,
   onSubmit,
+  initialValues,
 }: {
   opened: boolean;
   onClose: () => void;
   accountGroups: { value: string; label: string; type: string; equityAccountSubtype: string | null }[];
   onSubmit: (values: TransformedFormValues) => void | Promise<void>;
+  initialValues?: AccountInitialValues;
 }) {
+  const isEdit = !!initialValues;
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
+  const isResettingRef = useRef(false);
   const form = useForm<FormValues>({
     mode: "uncontrolled",
-    initialValues: {
-      unit: Unit.CURRENCY,
-    },
+    initialValues: initialValues
+      ? toFormValues(initialValues)
+      : { unit: Unit.CURRENCY },
     validate: {
       name: isNotEmpty("Name is required"),
       typeDescriptor: isNotEmpty("Type is required"),
@@ -96,7 +130,7 @@ export function EditAccountModal({
       };
     },
     onValuesChange: (values, previous) => {
-      if (values.typeDescriptor !== previous.typeDescriptor) {
+      if (values.typeDescriptor !== previous.typeDescriptor && !isResettingRef.current) {
         form.setFieldValue("groupId", undefined);
         forceUpdate();
       }
@@ -108,15 +142,23 @@ export function EditAccountModal({
   });
 
   useEffect(() => {
-    if (!opened) {
+    if (opened) {
+      isResettingRef.current = true;
+      if (initialValues) {
+        form.setInitialValues(toFormValues(initialValues));
+      } else {
+        form.setInitialValues({ unit: Unit.CURRENCY });
+      }
       form.reset();
+      isResettingRef.current = false;
+      forceUpdate();
     }
-  }, [opened]);
+  }, [opened, initialValues]);
 
   const { unit, type, equityAccountSubtype } =
     form.getTransformedValues() as TransformedFormValues;
   return (
-    <Modal opened={opened} onClose={onClose} title="New Account" size="lg">
+    <Modal opened={opened} onClose={onClose} title={isEdit ? "Edit Account" : "New Account"} size="lg">
       <form
         onSubmit={form.onSubmit((values) =>
           onSubmit(values as TransformedFormValues)
@@ -260,7 +302,7 @@ export function EditAccountModal({
               Cancel
             </Button>
             <Button variant="filled" type="submit">
-              Create
+              {isEdit ? "Save" : "Create"}
             </Button>
           </Group>
         </Stack>

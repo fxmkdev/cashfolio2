@@ -60,7 +60,7 @@ export const getAccountGroups = createServerFn({ method: "GET" })
       .toSorted((a, b) => a.label.localeCompare(b.label));
   });
 
-export type CreateAccountInput = {
+export type AccountInput = {
   accountBookId: string;
   name: string;
   type: AccountType;
@@ -74,7 +74,7 @@ export type CreateAccountInput = {
 };
 
 export const createAccount = createServerFn({ method: "POST" })
-  .inputValidator((data: CreateAccountInput) => data)
+  .inputValidator((data: AccountInput) => data)
   .handler(async ({ data }) => {
     const account = await prisma.account.create({
       data: {
@@ -88,6 +88,26 @@ export const createAccount = createServerFn({ method: "POST" })
         symbol: data.symbol,
         tradeCurrency: data.tradeCurrency,
         accountBookId: data.accountBookId,
+      },
+    });
+    return account;
+  });
+
+export const updateAccount = createServerFn({ method: "POST" })
+  .inputValidator((data: AccountInput & { id: string }) => data)
+  .handler(async ({ data }) => {
+    const account = await prisma.account.update({
+      where: { id_accountBookId: { id: data.id, accountBookId: data.accountBookId } },
+      data: {
+        name: data.name,
+        type: data.type,
+        equityAccountSubtype: data.equityAccountSubtype,
+        groupId: data.groupId,
+        unit: data.unit,
+        currency: data.currency,
+        cryptocurrency: data.cryptocurrency,
+        symbol: data.symbol,
+        tradeCurrency: data.tradeCurrency,
       },
     });
     return account;
