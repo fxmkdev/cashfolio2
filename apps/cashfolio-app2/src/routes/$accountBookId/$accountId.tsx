@@ -1,7 +1,21 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useMemo, useRef } from "react";
-import { Anchor, Badge, Container, Group, Title } from "@mantine/core";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  ActionIcon,
+  Anchor,
+  Badge,
+  Button,
+  Container,
+  Group,
+  Modal,
+  Title,
+  Tooltip,
+} from "@mantine/core";
+import {
+  IconArrowLeft,
+  IconCashPlus,
+  IconPencil,
+} from "@tabler/icons-react";
 import type {
   ColDef,
   ICellRendererParams,
@@ -9,11 +23,23 @@ import type {
 } from "ag-grid-enterprise";
 import { DataGrid } from "../../components/data-grid";
 import { getAccountForLedger, getLedgerData } from "../../server/ledger";
+import { getAccounts } from "../../server/accounts";
+import {
+  createTransaction,
+  getTransaction,
+  updateTransaction,
+} from "../../server/transactions";
 import {
   AccountType,
   EquityAccountSubtype,
   Unit,
 } from "../../.prisma-client/enums";
+import { FORMATTED_NUMERIC_COLUMN } from "../../components/column-types";
+import { format } from "date-fns";
+import {
+  SplitTransaction,
+  type AccountOption,
+} from "../../components/split-transaction";
 
 export const Route = createFileRoute("/$accountBookId/$accountId")({
   validateSearch: (
@@ -25,21 +51,15 @@ export const Route = createFileRoute("/$accountBookId/$accountId")({
         : undefined,
   }),
   loader: async ({ params: { accountBookId, accountId } }) => {
-    const [account, bookings] = await Promise.all([
+    const [account, bookings, accounts] = await Promise.all([
       getAccountForLedger({ data: { accountId, accountBookId } }),
       getLedgerData({ data: { accountId, accountBookId } }),
+      getAccounts({ data: { accountBookId } }),
     ]);
-    return { account, bookings };
+    return { account, bookings, accounts };
   },
   component: LedgerPage,
 });
-
-function formatNumber(value: number): string {
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
 
 function shouldNegate(
   type: AccountType,
@@ -81,9 +101,87 @@ type LedgerRow = {
 };
 
 function LedgerPage() {
-  const { account, bookings } = Route.useLoaderData();
+  const { account, bookings, accounts } = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const { transactionId } = Route.useSearch();
+  const [modalOpened, setModalOpened] = useState(false);
+  const [editModalOpened, setEditModalOpened] = useState(false);
+  const [editingTransactionId, setEditingTransactionId] = useState<
+    string | undefined
+  >();
+  const [editingTransactionData, setEditingTransactionData] = useState<
+    Awaited<ReturnType<typeof getTransaction>> | undefined
+  >();
+  const router = useRouter();
+
+  const accountOptions = useMemo<AccountOption[]>(
+    () =>
+      accounts.map((a) => ({
+        label: `${a.groupPath} / ${a.name}`,
+        value: a.id,
+        unit: a.unit as Unit,
+        currency: a.currency,
+        cryptocurrency: a.cryptocurrency,
+        symbol: a.symbol,
+        tradeCurrency: a.tradeCurrency,
+      })),
+    [accounts],
+  );
+
+  async function handleCreateTransaction(values: {
+    description: string;
+    bookings: {
+      date: string;
+      accountId: string;
+      description: string;
+      unit: Unit;
+      currency?: string;
+      cryptocurrency?: string;
+      symbol?: string;
+      tradeCurrency?: string;
+      value: number;
+    }[];
+  }) {
+    await createTransaction({
+      data: { accountBookId, ...values },
+    });
+    setModalOpened(false);
+    router.invalidate();
+  }
+
+  const handleEditClick = useCallback(async function handleEditClick(transactionId: string) {
+    const data = await getTransaction({
+      data: { transactionId, accountBookId },
+    });
+    setEditingTransactionId(transactionId);
+    setEditingTransactionData(data);
+    setEditModalOpened(true);
+  }, [accountBookId]);
+
+  async function handleUpdateTransaction(values: {
+    description: string;
+    bookings: {
+      date: string;
+      accountId: string;
+      description: string;
+      unit: Unit;
+      currency?: string;
+      cryptocurrency?: string;
+      symbol?: string;
+      tradeCurrency?: string;
+      value: number;
+    }[];
+  }) {
+    await updateTransaction({
+      data: {
+        accountBookId,
+        transactionId: editingTransactionId!,
+        ...values,
+      },
+    });
+    setEditModalOpened(false);
+    router.invalidate();
+  }
 
   const rows = useMemo<LedgerRow[]>(() => {
     const negate = shouldNegate(account.type, account.equityAccountSubtype);
@@ -98,11 +196,7 @@ function LedgerPage() {
         return {
           id: b.id,
           transactionId: b.transactionId,
-          date: new Date(b.date).toLocaleDateString(undefined, {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          }),
+          date: format(new Date(b.date), "dd.MM.yyyy"),
           counterpartyAccounts: b.counterpartyAccounts,
           description: b.description || b.transactionDescription,
           debit: value > 0 ? value : null,
@@ -158,28 +252,49 @@ function LedgerPage() {
         field: "debit",
         headerName: "Debit",
         width: 130,
-        type: "rightAligned",
-        valueFormatter: ({ value }) =>
-          value != null ? formatNumber(value) : "",
+        type: FORMATTED_NUMERIC_COLUMN,
       },
       {
         field: "credit",
         headerName: "Credit",
         width: 130,
-        type: "rightAligned",
-        valueFormatter: ({ value }) =>
-          value != null ? formatNumber(value) : "",
+        type: FORMATTED_NUMERIC_COLUMN,
       },
       {
         field: "balance",
         headerName: "Balance",
         width: 130,
-        type: "rightAligned",
-        valueFormatter: ({ value }) =>
-          value != null ? formatNumber(value) : "",
+        type: FORMATTED_NUMERIC_COLUMN,
+      },
+      {
+        colId: "actions",
+        headerName: "",
+        width: 50,
+        sortable: false,
+        filter: false,
+        resizable: false,
+        suppressHeaderMenuButton: true,
+        cellClass: "actions-cell",
+        cellRenderer: ({ data }: ICellRendererParams<LedgerRow>) => {
+          if (!data) return null;
+          return (
+            <Group gap={4} wrap="nowrap" h="100%" align="center">
+              <Tooltip label="Edit">
+                <ActionIcon
+                  variant="subtle"
+                  size="sm"
+                  onClick={() => handleEditClick(data.transactionId)}
+                  aria-label="Edit"
+                >
+                  <IconPencil size={16} />
+                </ActionIcon>
+              </Tooltip>
+            </Group>
+          );
+        },
       },
     ],
-    [accountBookId],
+    [accountBookId, handleEditClick],
   );
 
   const scrollTargetRef = useRef(transactionId);
@@ -224,22 +339,30 @@ function LedgerPage() {
 
   return (
     <Container fluid py="xl" px="xl">
-      <Group mb="lg" gap="md">
-        <Link
-          to="/$accountBookId"
-          params={{ accountBookId }}
-          search={{ tab: backTab }}
+      <Group mb="lg" gap="md" justify="space-between">
+        <Group gap="md">
+          <Link
+            to="/$accountBookId"
+            params={{ accountBookId }}
+            search={{ tab: backTab }}
+          >
+            <IconArrowLeft size={20} />
+          </Link>
+          <Title order={2}>
+            {account.groupPath} / {account.name}
+          </Title>
+          {unitLabel && (
+            <Badge size="lg" color="gray">
+              {unitLabel}
+            </Badge>
+          )}
+        </Group>
+        <Button
+          leftSection={<IconCashPlus size={16} />}
+          onClick={() => setModalOpened(true)}
         >
-          <IconArrowLeft size={20} />
-        </Link>
-        <Title order={2}>
-          {account.groupPath} / {account.name}
-        </Title>
-        {unitLabel && (
-          <Badge size="lg" color="gray">
-            {unitLabel}
-          </Badge>
-        )}
+          Add Transaction
+        </Button>
       </Group>
 
       <DataGrid
@@ -253,6 +376,39 @@ function LedgerPage() {
         getRowId={({ data }) => data.id}
         onRowDataUpdated={handleRowDataUpdated}
       />
+
+      <Modal
+        opened={modalOpened}
+        onClose={() => setModalOpened(false)}
+        title="Add Transaction"
+        size="100%"
+      >
+        <SplitTransaction
+          accounts={accountOptions}
+          onClose={() => setModalOpened(false)}
+          onSubmit={handleCreateTransaction}
+        />
+      </Modal>
+
+      <Modal
+        opened={editModalOpened}
+        onClose={() => setEditModalOpened(false)}
+        title="Edit Transaction"
+        size="100%"
+        onExitTransitionEnd={() => {
+          setEditingTransactionId(undefined);
+          setEditingTransactionData(undefined);
+        }}
+      >
+        {editingTransactionData && (
+          <SplitTransaction
+            initialValues={editingTransactionData}
+            accounts={accountOptions}
+            onClose={() => setEditModalOpened(false)}
+            onSubmit={handleUpdateTransaction}
+          />
+        )}
+      </Modal>
     </Container>
   );
 }

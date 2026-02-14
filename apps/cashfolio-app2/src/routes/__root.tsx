@@ -8,9 +8,8 @@ import {
   ColorSchemeScript,
   MantineProvider,
   mantineHtmlProps,
-  useMantineTheme,
 } from "@mantine/core";
-import "@mantine/core/styles.css";
+import "../mantine";
 import { theme } from "../theme";
 import { ModuleRegistry, AllEnterpriseModule } from "ag-grid-enterprise";
 import { useColorScheme } from "@mantine/hooks";

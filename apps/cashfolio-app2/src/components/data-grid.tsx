@@ -1,6 +1,27 @@
 import { AgGridReact, type AgGridReactProps } from "ag-grid-react";
 import { gridTheme } from "./grid-theme";
+import { columnTypes } from "./column-types";
+import { format } from "date-fns";
 
-export function DataGrid(props: AgGridReactProps) {
-  return <AgGridReact theme={gridTheme} {...props} />;
+export function DataGrid({
+  ...props
+}: AgGridReactProps & { ref?: React.Ref<AgGridReact> }) {
+  return (
+    <AgGridReact
+      singleClickEdit={true}
+      theme={gridTheme}
+      columnTypes={columnTypes}
+      dataTypeDefinitions={dataTypeDefinitions}
+      {...props}
+    />
+  );
 }
+
+const dataTypeDefinitions: AgGridReactProps["dataTypeDefinitions"] = {
+  dateString: {
+    baseDataType: "dateString",
+    extendsDataType: "dateString",
+
+    valueFormatter: ({ value }) => (value ? format(value, "dd.MM.yyyy") : ""),
+  },
+};
