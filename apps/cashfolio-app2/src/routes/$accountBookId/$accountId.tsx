@@ -202,7 +202,14 @@ function LedgerPage() {
       if (rowNodes.length === 0) return;
 
       event.api.ensureNodeVisible(rowNodes[0]!, "middle");
-      event.api.flashCells({ rowNodes });
+
+      // Double rAF to ensure the scroll has completed before flashing
+      // – prevents a console error produced by AG Grid since the 'style' property is not yet defined
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          event.api.flashCells({ rowNodes });
+        });
+      });
     },
     [rows],
   );
