@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { Badge, Container, Group, Title } from "@mantine/core";
+import { Anchor, Badge, Container, Group, Title } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
-import type { ColDef } from "ag-grid-enterprise";
+import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { DataGrid } from "../../components/data-grid";
 import { getAccountForLedger, getLedgerData } from "../../server/ledger";
 import {
@@ -60,7 +60,7 @@ function getUnitLabel(account: {
 type LedgerRow = {
   id: string;
   date: string;
-  counterparty: string;
+  counterpartyAccounts: { id: string; name: string }[];
   description: string;
   debit: number | null;
   credit: number | null;
@@ -87,7 +87,7 @@ function LedgerPage() {
           month: "short",
           day: "numeric",
         }),
-        counterparty: b.counterpartyNames.join(", "),
+        counterpartyAccounts: b.counterpartyAccounts,
         description: b.description || b.transactionDescription,
         debit: value > 0 ? value : null,
         credit: value < 0 ? -value : null,
@@ -104,9 +104,28 @@ function LedgerPage() {
         width: 130,
       },
       {
-        field: "counterparty",
+        field: "counterpartyAccounts",
         headerName: "Account(s)",
         flex: 1,
+        cellRenderer: ({
+          value,
+        }: ICellRendererParams<LedgerRow, LedgerRow["counterpartyAccounts"]>) => {
+          if (!value) return null;
+          return value.map((a, i) => (
+            <span key={a.id}>
+              {i > 0 && ", "}
+              <Link
+                to="/$accountBookId/$accountId"
+                params={{ accountBookId, accountId: a.id }}
+                style={{ textDecoration: "none" }}
+              >
+                <Anchor component="span" size="sm">
+                  {a.name}
+                </Anchor>
+              </Link>
+            </span>
+          ));
+        },
       },
       {
         field: "description",
@@ -138,7 +157,7 @@ function LedgerPage() {
           value != null ? formatNumber(value) : "",
       },
     ],
-    [],
+    [accountBookId],
   );
 
   const unitLabel = getUnitLabel(account);

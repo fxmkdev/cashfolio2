@@ -56,7 +56,7 @@ export const getLedgerData = createServerFn({ method: "GET" })
               },
               select: {
                 account: {
-                  select: { name: true },
+                  select: { id: true, name: true },
                 },
               },
             },
@@ -71,10 +71,10 @@ export const getLedgerData = createServerFn({ method: "GET" })
       description: b.description,
       value: Number(b.value),
       transactionDescription: b.transaction.description,
-      counterpartyNames: [
-        ...new Set(
-          b.transaction.bookings.map((sb) => sb.account.name),
-        ),
+      counterpartyAccounts: [
+        ...new Map(
+          b.transaction.bookings.map((sb) => [sb.account.id, sb.account]),
+        ).values(),
       ],
     }));
   });
