@@ -371,6 +371,7 @@ function AccountsPage() {
         accountGroups={accountGroups}
         onSubmit={handleCreateAccount}
         existingNodes={existingNodes}
+        typeDescriptor={tab}
       />
 
       <EditAccountModal
@@ -382,6 +383,7 @@ function AccountsPage() {
         initialValues={editingAccount?.initialValues}
         existingNodes={existingNodes}
         editingId={editingAccount?.id}
+        typeDescriptor={tab}
       />
 
       <EditAccountGroupModal
@@ -390,6 +392,7 @@ function AccountsPage() {
         accountGroups={accountGroups}
         onSubmit={handleCreateGroup}
         existingNodes={existingNodes}
+        typeDescriptor={tab}
       />
 
       <EditAccountGroupModal
@@ -401,6 +404,7 @@ function AccountsPage() {
         initialValues={editingGroup?.initialValues}
         existingNodes={existingNodes}
         editingId={editingGroup?.id}
+        typeDescriptor={tab}
       />
 
       <Modal

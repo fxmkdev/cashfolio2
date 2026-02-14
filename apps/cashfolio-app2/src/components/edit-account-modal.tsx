@@ -8,7 +8,7 @@ import {
   Select,
 } from "@mantine/core";
 import { isNotEmpty, useForm } from "@mantine/form";
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer } from "react";
 import { Fragment } from "react/jsx-runtime";
 import {
   AccountType,
@@ -90,6 +90,7 @@ export function EditAccountModal({
   initialValues,
   existingNodes,
   editingId,
+  typeDescriptor,
 }: {
   opened: boolean;
   onClose: () => void;
@@ -99,15 +100,15 @@ export function EditAccountModal({
   initialValues?: AccountInitialValues;
   existingNodes?: ExistingNode[];
   editingId?: string;
+  typeDescriptor: FormValues["typeDescriptor"];
 }) {
   const isEdit = !!initialValues;
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
-  const isResettingRef = useRef(false);
   const form = useForm<FormValues>({
     mode: "uncontrolled",
     initialValues: initialValues
       ? toFormValues(initialValues)
-      : { unit: Unit.CURRENCY },
+      : { unit: Unit.CURRENCY, typeDescriptor },
     validate: {
       name: (value, values) => {
         const siblingNames = existingNodes
@@ -160,11 +161,6 @@ export function EditAccountModal({
       };
     },
     onValuesChange: (values, previous) => {
-      if (values.typeDescriptor !== previous.typeDescriptor && !isResettingRef.current) {
-        form.setFieldValue("groupId", undefined);
-        forceUpdate();
-      }
-
       if (values.unit !== previous.unit) {
         forceUpdate();
       }
@@ -173,14 +169,12 @@ export function EditAccountModal({
 
   useEffect(() => {
     if (opened) {
-      isResettingRef.current = true;
       if (initialValues) {
         form.setInitialValues(toFormValues(initialValues));
       } else {
-        form.setInitialValues({ unit: Unit.CURRENCY });
+        form.setInitialValues({ unit: Unit.CURRENCY, typeDescriptor });
       }
       form.reset();
-      isResettingRef.current = false;
       forceUpdate();
     }
   }, [opened, initialValues]);
@@ -211,6 +205,7 @@ export function EditAccountModal({
                 withAsterisk
                 withAlignedLabels
                 allowDeselect={false}
+                disabled
                 data={[
                   {
                     group: "Position Accounts (Non-Equity)",
@@ -252,7 +247,6 @@ export function EditAccountModal({
                 withAsterisk
                 searchable
                 withAlignedLabels
-                disabled={!type}
                 data={accountGroups.filter(
                   (g) =>
                     g.type === type &&

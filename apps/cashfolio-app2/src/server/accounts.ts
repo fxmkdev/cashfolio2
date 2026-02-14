@@ -270,12 +270,17 @@ export const updateAccount = createServerFn({ method: "POST" })
       })
     ).map((a) => a.name);
     validateAccountInput(data, siblingNames);
+    const existing = await prisma.account.findUniqueOrThrow({
+      where: { id_accountBookId: { id: data.id, accountBookId: data.accountBookId } },
+      select: { type: true, equityAccountSubtype: true },
+    });
+    if (data.type !== existing.type || data.equityAccountSubtype !== (existing.equityAccountSubtype ?? undefined)) {
+      throw new Error("Account type cannot be changed");
+    }
     const account = await prisma.account.update({
       where: { id_accountBookId: { id: data.id, accountBookId: data.accountBookId } },
       data: {
         name: data.name,
-        type: data.type,
-        equityAccountSubtype: data.equityAccountSubtype,
         groupId: data.groupId,
         unit: data.unit,
         currency: data.currency,
@@ -334,12 +339,17 @@ export const updateAccountGroup = createServerFn({ method: "POST" })
       })
     ).map((g) => g.name);
     validateAccountGroupInput(data, siblingNames);
+    const existing = await prisma.accountGroup.findUniqueOrThrow({
+      where: { id_accountBookId: { id: data.id, accountBookId: data.accountBookId } },
+      select: { type: true, equityAccountSubtype: true },
+    });
+    if (data.type !== existing.type || data.equityAccountSubtype !== (existing.equityAccountSubtype ?? undefined)) {
+      throw new Error("Group type cannot be changed");
+    }
     const group = await prisma.accountGroup.update({
       where: { id_accountBookId: { id: data.id, accountBookId: data.accountBookId } },
       data: {
         name: data.name,
-        type: data.type,
-        equityAccountSubtype: data.equityAccountSubtype,
         parentGroupId: data.parentGroupId,
       },
     });
