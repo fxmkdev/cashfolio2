@@ -209,13 +209,19 @@ function LedgerPage() {
 
   const unitLabel = getUnitLabel(account);
 
+  const backTab = (
+    account.type === AccountType.EQUITY && account.equityAccountSubtype
+      ? `EQUITY-${account.equityAccountSubtype}`
+      : account.type
+  ) as "ASSET" | "LIABILITY" | `EQUITY-${EquityAccountSubtype}`;
+
   return (
     <Container fluid py="xl" px="xl">
       <Group mb="lg" gap="md">
         <Link
           to="/$accountBookId"
           params={{ accountBookId }}
-          search={{ tab: "ASSET" }}
+          search={{ tab: backTab }}
         >
           <IconArrowLeft size={20} />
         </Link>
