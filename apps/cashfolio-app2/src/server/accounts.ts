@@ -5,6 +5,10 @@ import type {
   EquityAccountSubtype,
   Unit,
 } from "../.prisma-client/enums";
+import {
+  validateAccountInput,
+  validateAccountGroupInput,
+} from "../shared/account-validation";
 
 function getGroupPath(
   groupId: string,
@@ -228,6 +232,7 @@ export type AccountInput = {
 export const createAccount = createServerFn({ method: "POST" })
   .inputValidator((data: AccountInput) => data)
   .handler(async ({ data }) => {
+    validateAccountInput(data);
     const account = await prisma.account.create({
       data: {
         name: data.name,
@@ -248,6 +253,7 @@ export const createAccount = createServerFn({ method: "POST" })
 export const updateAccount = createServerFn({ method: "POST" })
   .inputValidator((data: AccountInput & { id: string }) => data)
   .handler(async ({ data }) => {
+    validateAccountInput(data);
     const account = await prisma.account.update({
       where: { id_accountBookId: { id: data.id, accountBookId: data.accountBookId } },
       data: {
@@ -276,6 +282,7 @@ export type AccountGroupInput = {
 export const createAccountGroup = createServerFn({ method: "POST" })
   .inputValidator((data: AccountGroupInput) => data)
   .handler(async ({ data }) => {
+    validateAccountGroupInput(data);
     const group = await prisma.accountGroup.create({
       data: {
         name: data.name,
@@ -291,6 +298,7 @@ export const createAccountGroup = createServerFn({ method: "POST" })
 export const updateAccountGroup = createServerFn({ method: "POST" })
   .inputValidator((data: AccountGroupInput & { id: string }) => data)
   .handler(async ({ data }) => {
+    validateAccountGroupInput(data);
     const group = await prisma.accountGroup.update({
       where: { id_accountBookId: { id: data.id, accountBookId: data.accountBookId } },
       data: {

@@ -13,6 +13,10 @@ import {
   AccountType,
   EquityAccountSubtype,
 } from "../.prisma-client/enums";
+import {
+  validateAccountGroupName,
+  validateAccountGroupParentGroupId,
+} from "../shared/account-validation";
 
 type FormValues = {
   name?: string;
@@ -67,9 +71,9 @@ export function EditAccountGroupModal({
     mode: "uncontrolled",
     initialValues: initialValues ? toFormValues(initialValues) : {},
     validate: {
-      name: isNotEmpty("Name is required"),
+      name: (value) => validateAccountGroupName(value),
       typeDescriptor: isNotEmpty("Type is required"),
-      parentGroupId: isNotEmpty("Parent Group is required"),
+      parentGroupId: (value) => validateAccountGroupParentGroupId(value),
     },
     transformValues: (values) => {
       const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??

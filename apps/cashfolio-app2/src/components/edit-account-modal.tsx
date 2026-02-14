@@ -17,6 +17,15 @@ import {
 } from "../.prisma-client/enums";
 import { cryptocurrencies } from "../cryptocurrencies";
 import { currencies } from "../currencies";
+import {
+  validateAccountName,
+  validateAccountGroupId,
+  validateAccountUnit,
+  validateAccountCurrency,
+  validateAccountCryptocurrency,
+  validateAccountSymbol,
+  validateAccountTradeCurrency,
+} from "../shared/account-validation";
 
 type FormValues = {
   name?: string;
@@ -88,38 +97,35 @@ export function EditAccountModal({
       ? toFormValues(initialValues)
       : { unit: Unit.CURRENCY },
     validate: {
-      name: isNotEmpty("Name is required"),
+      name: (value) => validateAccountName(value),
       typeDescriptor: isNotEmpty("Type is required"),
-      groupId: isNotEmpty("Group is required"),
+      groupId: (value) => validateAccountGroupId(value),
       unit: (value, values) =>
-        values.typeDescriptor === AccountType.ASSET ||
-        values.typeDescriptor === AccountType.LIABILITY
-          ? isNotEmpty("Unit is required")(value)
-          : null,
+        validateAccountUnit(value, values.typeDescriptor as AccountType),
       currency: (value, values) =>
-        (values.typeDescriptor === AccountType.ASSET ||
-          values.typeDescriptor === AccountType.LIABILITY) &&
-        values.unit === Unit.CURRENCY
-          ? isNotEmpty("Currency is required")(value)
-          : null,
+        validateAccountCurrency(
+          value,
+          values.unit,
+          values.typeDescriptor as AccountType,
+        ),
       cryptocurrency: (value, values) =>
-        (values.typeDescriptor === AccountType.ASSET ||
-          values.typeDescriptor === AccountType.LIABILITY) &&
-        values.unit === Unit.CRYPTOCURRENCY
-          ? isNotEmpty("Cryptocurrency is required")(value)
-          : null,
+        validateAccountCryptocurrency(
+          value,
+          values.unit,
+          values.typeDescriptor as AccountType,
+        ),
       symbol: (value, values) =>
-        (values.typeDescriptor === AccountType.ASSET ||
-          values.typeDescriptor === AccountType.LIABILITY) &&
-        values.unit === Unit.SECURITY
-          ? isNotEmpty("Symbol is required")(value)
-          : null,
+        validateAccountSymbol(
+          value,
+          values.unit,
+          values.typeDescriptor as AccountType,
+        ),
       tradeCurrency: (value, values) =>
-        (values.typeDescriptor === AccountType.ASSET ||
-          values.typeDescriptor === AccountType.LIABILITY) &&
-        values.unit === Unit.SECURITY
-          ? isNotEmpty("Trade Currency is required")(value)
-          : null,
+        validateAccountTradeCurrency(
+          value,
+          values.unit,
+          values.typeDescriptor as AccountType,
+        ),
     },
     transformValues: (values) => {
       const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
