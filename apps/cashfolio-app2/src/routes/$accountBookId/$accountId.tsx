@@ -4,16 +4,15 @@ import {
   ActionIcon,
   Anchor,
   Badge,
+  Breadcrumbs,
   Button,
   Container,
   Group,
   Modal,
   Text,
-  Title,
   Tooltip,
 } from "@mantine/core";
 import {
-  IconArrowLeft,
   IconCashPlus,
   IconPencil,
   IconTrash,
@@ -405,16 +404,29 @@ function LedgerPage() {
     <Container fluid py="xl" px="xl">
       <Group mb="lg" gap="md" justify="space-between">
         <Group gap="md">
-          <Link
-            to="/$accountBookId"
-            params={{ accountBookId }}
-            search={{ tab: backTab }}
-          >
-            <IconArrowLeft size={20} />
-          </Link>
-          <Title order={2}>
-            {account.groupPath} / {account.name}
-          </Title>
+          <Breadcrumbs fz="h2" fw={700}>
+            <Anchor
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              {...({
+                component: Link,
+                to: "/$accountBookId",
+                params: { accountBookId },
+                search: { tab: backTab },
+              } as any)}
+              fz="inherit"
+              fw="inherit"
+            >
+              {account.groupPathSegments[0] ?? "Accounts"}
+            </Anchor>
+            {account.groupPathSegments.slice(1).map((segment) => (
+              <Text key={segment} fz="inherit" fw="inherit">
+                {segment}
+              </Text>
+            ))}
+            <Text fz="inherit" fw="inherit">
+              {account.name}
+            </Text>
+          </Breadcrumbs>
           {unitLabel && (
             <Badge size="lg" color="gray">
               {unitLabel}

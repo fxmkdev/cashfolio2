@@ -32,17 +32,17 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
       select: { id: true, name: true, parentGroupId: true },
     });
 
-    function getGroupPath(groupId: string): string {
+    function getGroupPathSegments(groupId: string): string[] {
       const group = allGroups.find((g) => g.id === groupId);
-      if (!group) return "";
-      const prefix = group.parentGroupId
-        ? `${getGroupPath(group.parentGroupId)} / `
-        : "";
-      return prefix + group.name;
+      if (!group) return [];
+      const parentSegments = group.parentGroupId
+        ? getGroupPathSegments(group.parentGroupId)
+        : [];
+      return [...parentSegments, group.name];
     }
 
     const { groupId, ...rest } = account;
-    return { ...rest, groupPath: getGroupPath(groupId) };
+    return { ...rest, groupPathSegments: getGroupPathSegments(groupId) };
   });
 
 export const getLedgerData = createServerFn({ method: "GET" })
