@@ -4,8 +4,8 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
-import { ActionIcon, Button, Container, Group, Tabs, Title } from "@mantine/core";
-import { IconPencil, IconPlus } from "@tabler/icons-react";
+import { ActionIcon, Button, Container, Group, Modal, Tabs, Text, Title, Tooltip } from "@mantine/core";
+import { IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
 import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
 import { EditAccountModal } from "../components/edit-account-modal";
 import type {
@@ -21,6 +21,8 @@ import { DataGrid } from "../components/data-grid";
 import {
   createAccount,
   createAccountGroup,
+  deleteAccount,
+  deleteAccountGroup,
   getAccountGroups,
   getAccountTreeData,
   updateAccount,
@@ -104,6 +106,9 @@ function AccountsPage() {
     { id: string; initialValues: AccountGroupInitialValues } | undefined
   >();
   const [editGroupModalOpen, setEditGroupModalOpen] = useState(false);
+  const [deletingRow, setDeletingRow] = useState<
+    { id: string; nodeType: "account" | "accountGroup"; name: string } | undefined
+  >();
 
   const isEquityTab = tab.startsWith("EQUITY-");
 
@@ -172,22 +177,46 @@ function AccountsPage() {
       {
         colId: "actions",
         headerName: "",
-        width: 60,
+        width: 80,
         sortable: false,
         filter: false,
         resizable: false,
         suppressHeaderMenuButton: true,
+        cellClass: "actions-cell",
         cellRenderer: ({ data }: ICellRendererParams<TreeRow>) => {
           if (!data) return null;
+          const deleteLabel = data.deleteDisabledReason ?? "Delete";
           return (
-            <ActionIcon
-              variant="subtle"
-              size="sm"
-              onClick={() => handleEditRow(data)}
-              aria-label="Edit"
-            >
-              <IconPencil size={16} />
-            </ActionIcon>
+            <Group gap={4} wrap="nowrap" h="100%" align="center">
+              <Tooltip label="Edit">
+                <ActionIcon
+                  variant="subtle"
+                  size="sm"
+                  onClick={() => handleEditRow(data)}
+                  aria-label="Edit"
+                >
+                  <IconPencil size={16} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label={deleteLabel}>
+                <ActionIcon
+                  variant="subtle"
+                  size="sm"
+                  color="red"
+                  disabled={!data.deletable}
+                  onClick={() =>
+                    setDeletingRow({
+                      id: data.id,
+                      nodeType: data.nodeType,
+                      name: data.name,
+                    })
+                  }
+                  aria-label="Delete"
+                >
+                  <IconTrash size={16} />
+                </ActionIcon>
+              </Tooltip>
+            </Group>
           );
         },
       } satisfies ColDef<TreeRow>,
@@ -246,6 +275,17 @@ function AccountsPage() {
       },
     });
     setCreateGroupModalOpened(false);
+    router.invalidate();
+  }
+
+  async function handleDelete() {
+    if (!deletingRow) return;
+    if (deletingRow.nodeType === "account") {
+      await deleteAccount({ data: { id: deletingRow.id, accountBookId } });
+    } else {
+      await deleteAccountGroup({ data: { id: deletingRow.id, accountBookId } });
+    }
+    setDeletingRow(undefined);
     router.invalidate();
   }
 
@@ -349,6 +389,28 @@ function AccountsPage() {
         onSubmit={handleUpdateGroup}
         initialValues={editingGroup?.initialValues}
       />
+
+      <Modal
+        opened={!!deletingRow}
+        onClose={() => setDeletingRow(undefined)}
+        title={
+          deletingRow?.nodeType === "account"
+            ? "Delete Account"
+            : "Delete Group"
+        }
+      >
+        <Text mb="lg">
+          Are you sure you want to delete {deletingRow?.name}?
+        </Text>
+        <Group justify="flex-end">
+          <Button variant="subtle" onClick={() => setDeletingRow(undefined)}>
+            Cancel
+          </Button>
+          <Button color="red" onClick={handleDelete}>
+            Delete
+          </Button>
+        </Group>
+      </Modal>
     </Container>
   );
 }

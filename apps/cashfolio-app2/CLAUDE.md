@@ -20,6 +20,7 @@ pnpm prisma:generate  # Regenerate Prisma client (DATABASE_URL=dummy prisma gene
 - Use **Mantine styling** where possible; use **CSS modules** when manual styling is needed
 - Import Prisma enums from `src/.prisma-client/enums` (not `@prisma/client`)
 - Do not edit `src/routeTree.gen.ts` (auto-generated)
+- When introducing new patterns or conventions, update `CLAUDE.md` and the relevant `docs/` files to keep documentation in sync
 
 ## Architecture References
 
