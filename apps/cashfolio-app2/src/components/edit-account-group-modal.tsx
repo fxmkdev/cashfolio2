@@ -17,6 +17,7 @@ import {
   validateAccountGroupName,
   validateAccountGroupParentGroupId,
 } from "../shared/account-validation";
+import type { ExistingNode } from "./edit-account-modal";
 
 type FormValues = {
   name?: string;
@@ -56,6 +57,8 @@ export function EditAccountGroupModal({
   accountGroups,
   onSubmit,
   initialValues,
+  existingNodes,
+  editingId,
 }: {
   opened: boolean;
   onClose: () => void;
@@ -63,6 +66,8 @@ export function EditAccountGroupModal({
   accountGroups: { value: string; label: string; type: string; equityAccountSubtype: string | null }[];
   onSubmit: (values: AccountGroupTransformedFormValues) => void | Promise<void>;
   initialValues?: AccountGroupInitialValues;
+  existingNodes?: ExistingNode[];
+  editingId?: string;
 }) {
   const isEdit = !!initialValues;
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
@@ -71,7 +76,17 @@ export function EditAccountGroupModal({
     mode: "uncontrolled",
     initialValues: initialValues ? toFormValues(initialValues) : {},
     validate: {
-      name: (value) => validateAccountGroupName(value),
+      name: (value, values) => {
+        const siblingNames = existingNodes
+          ?.filter(
+            (n) =>
+              n.nodeType === "accountGroup" &&
+              n.parentId === values.parentGroupId &&
+              n.id !== editingId,
+          )
+          .map((n) => n.name);
+        return validateAccountGroupName(value, siblingNames);
+      },
       typeDescriptor: isNotEmpty("Type is required"),
       parentGroupId: (value) => validateAccountGroupParentGroupId(value),
     },

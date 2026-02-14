@@ -73,6 +73,14 @@ function toFormValues(initial: AccountInitialValues): FormValues {
   };
 }
 
+export type ExistingNode = {
+  id: string;
+  name: string;
+  nodeType: string;
+  parentId?: string;
+  groupId: string;
+};
+
 export function EditAccountModal({
   opened,
   onClose,
@@ -80,6 +88,8 @@ export function EditAccountModal({
   accountGroups,
   onSubmit,
   initialValues,
+  existingNodes,
+  editingId,
 }: {
   opened: boolean;
   onClose: () => void;
@@ -87,6 +97,8 @@ export function EditAccountModal({
   accountGroups: { value: string; label: string; type: string; equityAccountSubtype: string | null }[];
   onSubmit: (values: TransformedFormValues) => void | Promise<void>;
   initialValues?: AccountInitialValues;
+  existingNodes?: ExistingNode[];
+  editingId?: string;
 }) {
   const isEdit = !!initialValues;
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
@@ -97,7 +109,17 @@ export function EditAccountModal({
       ? toFormValues(initialValues)
       : { unit: Unit.CURRENCY },
     validate: {
-      name: (value) => validateAccountName(value),
+      name: (value, values) => {
+        const siblingNames = existingNodes
+          ?.filter(
+            (n) =>
+              n.nodeType === "account" &&
+              n.groupId === values.groupId &&
+              n.id !== editingId,
+          )
+          .map((n) => n.name);
+        return validateAccountName(value, siblingNames);
+      },
       typeDescriptor: isNotEmpty("Type is required"),
       groupId: (value) => validateAccountGroupId(value),
       unit: (value, values) =>

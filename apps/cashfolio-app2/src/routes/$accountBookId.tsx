@@ -83,7 +83,14 @@ export const Route = createFileRoute("/$accountBookId")({
     const treeData = Object.fromEntries(
       tabs.map((t, i) => [t.value, treeDataByTab[i]]),
     ) as Record<TabValue, Awaited<ReturnType<typeof getAccountTreeData>>>;
-    return { accountGroups, treeData };
+    const existingNodes = treeDataByTab.flat().map((n) => ({
+      id: n.id,
+      name: n.name,
+      nodeType: n.nodeType,
+      parentId: n.parentId,
+      groupId: n.groupId,
+    }));
+    return { accountGroups, treeData, existingNodes };
   },
   component: AccountsPage,
 });
@@ -91,7 +98,7 @@ export const Route = createFileRoute("/$accountBookId")({
 type TreeRow = Awaited<ReturnType<typeof getAccountTreeData>>[number];
 
 function AccountsPage() {
-  const { accountGroups, treeData } = Route.useLoaderData();
+  const { accountGroups, treeData, existingNodes } = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const { tab } = Route.useSearch();
   const navigate = useNavigate({ from: "/$accountBookId" });
@@ -363,6 +370,7 @@ function AccountsPage() {
         onClose={() => setCreateModalOpened(false)}
         accountGroups={accountGroups}
         onSubmit={handleCreateAccount}
+        existingNodes={existingNodes}
       />
 
       <EditAccountModal
@@ -372,6 +380,8 @@ function AccountsPage() {
         accountGroups={accountGroups}
         onSubmit={handleUpdateAccount}
         initialValues={editingAccount?.initialValues}
+        existingNodes={existingNodes}
+        editingId={editingAccount?.id}
       />
 
       <EditAccountGroupModal
@@ -379,6 +389,7 @@ function AccountsPage() {
         onClose={() => setCreateGroupModalOpened(false)}
         accountGroups={accountGroups}
         onSubmit={handleCreateGroup}
+        existingNodes={existingNodes}
       />
 
       <EditAccountGroupModal
@@ -388,6 +399,8 @@ function AccountsPage() {
         accountGroups={accountGroups}
         onSubmit={handleUpdateGroup}
         initialValues={editingGroup?.initialValues}
+        existingNodes={existingNodes}
+        editingId={editingGroup?.id}
       />
 
       <Modal

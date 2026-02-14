@@ -3,8 +3,18 @@ import type { AccountInput, AccountGroupInput } from "../server/accounts";
 
 // Per-field validators return an error message string or null if valid.
 
-export function validateAccountName(name?: string): string | null {
-  return name ? null : "Name is required";
+export function validateAccountName(
+  name?: string,
+  siblingNames?: string[],
+): string | null {
+  if (!name) return "Name is required";
+  if (
+    siblingNames &&
+    siblingNames.some((n) => n.localeCompare(name, undefined, { sensitivity: "accent" }) === 0)
+  ) {
+    return "An account with this name already exists in this group";
+  }
+  return null;
 }
 
 export function validateAccountGroupId(groupId?: string): string | null {
@@ -59,8 +69,18 @@ export function validateAccountTradeCurrency(
   return tradeCurrency ? null : "Trade Currency is required";
 }
 
-export function validateAccountGroupName(name?: string): string | null {
-  return name ? null : "Name is required";
+export function validateAccountGroupName(
+  name?: string,
+  siblingNames?: string[],
+): string | null {
+  if (!name) return "Name is required";
+  if (
+    siblingNames &&
+    siblingNames.some((n) => n.localeCompare(name, undefined, { sensitivity: "accent" }) === 0)
+  ) {
+    return "A group with this name already exists";
+  }
+  return null;
 }
 
 export function validateAccountGroupParentGroupId(
@@ -71,9 +91,12 @@ export function validateAccountGroupParentGroupId(
 
 // Full-input validators for server-side use. Throw on first error.
 
-export function validateAccountInput(data: AccountInput): void {
+export function validateAccountInput(
+  data: AccountInput,
+  siblingNames?: string[],
+): void {
   const errors = [
-    validateAccountName(data.name),
+    validateAccountName(data.name, siblingNames),
     validateAccountGroupId(data.groupId),
     validateAccountUnit(data.unit, data.type),
     validateAccountCurrency(data.currency, data.unit, data.type),
@@ -87,9 +110,12 @@ export function validateAccountInput(data: AccountInput): void {
   }
 }
 
-export function validateAccountGroupInput(data: AccountGroupInput): void {
+export function validateAccountGroupInput(
+  data: AccountGroupInput,
+  siblingNames?: string[],
+): void {
   const errors = [
-    validateAccountGroupName(data.name),
+    validateAccountGroupName(data.name, siblingNames),
     validateAccountGroupParentGroupId(data.parentGroupId),
   ].filter(Boolean);
 

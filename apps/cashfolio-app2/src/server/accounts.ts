@@ -232,7 +232,13 @@ export type AccountInput = {
 export const createAccount = createServerFn({ method: "POST" })
   .inputValidator((data: AccountInput) => data)
   .handler(async ({ data }) => {
-    validateAccountInput(data);
+    const siblingNames = (
+      await prisma.account.findMany({
+        where: { groupId: data.groupId, accountBookId: data.accountBookId },
+        select: { name: true },
+      })
+    ).map((a) => a.name);
+    validateAccountInput(data, siblingNames);
     const account = await prisma.account.create({
       data: {
         name: data.name,
@@ -253,7 +259,17 @@ export const createAccount = createServerFn({ method: "POST" })
 export const updateAccount = createServerFn({ method: "POST" })
   .inputValidator((data: AccountInput & { id: string }) => data)
   .handler(async ({ data }) => {
-    validateAccountInput(data);
+    const siblingNames = (
+      await prisma.account.findMany({
+        where: {
+          groupId: data.groupId,
+          accountBookId: data.accountBookId,
+          id: { not: data.id },
+        },
+        select: { name: true },
+      })
+    ).map((a) => a.name);
+    validateAccountInput(data, siblingNames);
     const account = await prisma.account.update({
       where: { id_accountBookId: { id: data.id, accountBookId: data.accountBookId } },
       data: {
@@ -282,7 +298,16 @@ export type AccountGroupInput = {
 export const createAccountGroup = createServerFn({ method: "POST" })
   .inputValidator((data: AccountGroupInput) => data)
   .handler(async ({ data }) => {
-    validateAccountGroupInput(data);
+    const siblingNames = (
+      await prisma.accountGroup.findMany({
+        where: {
+          parentGroupId: data.parentGroupId ?? null,
+          accountBookId: data.accountBookId,
+        },
+        select: { name: true },
+      })
+    ).map((g) => g.name);
+    validateAccountGroupInput(data, siblingNames);
     const group = await prisma.accountGroup.create({
       data: {
         name: data.name,
@@ -298,7 +323,17 @@ export const createAccountGroup = createServerFn({ method: "POST" })
 export const updateAccountGroup = createServerFn({ method: "POST" })
   .inputValidator((data: AccountGroupInput & { id: string }) => data)
   .handler(async ({ data }) => {
-    validateAccountGroupInput(data);
+    const siblingNames = (
+      await prisma.accountGroup.findMany({
+        where: {
+          parentGroupId: data.parentGroupId ?? null,
+          accountBookId: data.accountBookId,
+          id: { not: data.id },
+        },
+        select: { name: true },
+      })
+    ).map((g) => g.name);
+    validateAccountGroupInput(data, siblingNames);
     const group = await prisma.accountGroup.update({
       where: { id_accountBookId: { id: data.id, accountBookId: data.accountBookId } },
       data: {
