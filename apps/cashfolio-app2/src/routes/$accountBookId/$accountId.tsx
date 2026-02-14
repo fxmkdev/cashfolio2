@@ -21,6 +21,7 @@ import {
 import type {
   ColDef,
   ICellRendererParams,
+  IRowNode,
   RowDataUpdatedEvent,
 } from "ag-grid-enterprise";
 import { DataGrid } from "../../components/data-grid";
@@ -148,10 +149,11 @@ function LedgerPage() {
       value: number;
     }[];
   }) {
-    await createTransaction({
+    const transaction = await createTransaction({
       data: { accountBookId, ...values },
     });
     setModalOpened(false);
+    pendingScrollRef.current = transaction.id;
     router.invalidate();
   }
 
@@ -186,6 +188,7 @@ function LedgerPage() {
       },
     });
     setEditModalOpened(false);
+    pendingScrollRef.current = editingTransactionId;
     router.invalidate();
   }
 
@@ -333,34 +336,46 @@ function LedgerPage() {
 
   const scrollTargetRef = useRef(transactionId);
   scrollTargetRef.current = transactionId;
+  const pendingScrollRef = useRef<string | undefined>(undefined);
 
   const handleRowDataUpdated = useCallback(
     (event: RowDataUpdatedEvent<LedgerRow>) => {
-      const targetTxId = scrollTargetRef.current;
+      const targetTxId = pendingScrollRef.current ?? scrollTargetRef.current;
       if (!targetTxId) return;
       scrollTargetRef.current = undefined;
+      pendingScrollRef.current = undefined;
 
-      const matchingIds = rows
-        .filter((r) => r.transactionId === targetTxId)
-        .map((r) => r.id);
-      if (matchingIds.length === 0) return;
-
-      const rowNodes = matchingIds
-        .map((id) => event.api.getRowNode(id))
-        .filter((n): n is NonNullable<typeof n> => !!n);
+      const rowNodes: IRowNode<LedgerRow>[] = [];
+      event.api.forEachNode((node) => {
+        if (node.data?.transactionId === targetTxId) {
+          rowNodes.push(node);
+        }
+      });
       if (rowNodes.length === 0) return;
 
-      event.api.ensureNodeVisible(rowNodes[0]!, "middle");
+      // rowNodes are in display order (newest first); scroll to the last = earliest booking
+      event.api.ensureNodeVisible(rowNodes[rowNodes.length - 1]!, "middle");
 
-      // Double rAF to ensure the scroll has completed before flashing
-      // – prevents a console error produced by AG Grid since the 'style' property is not yet defined
-      requestAnimationFrame(() => {
+      // Flash cells after scrolling completes; use bodyScrollEnd event
+      // with a rAF fallback for when no scroll is needed (target already visible)
+      let flashed = false;
+      const flash = () => {
+        if (flashed) return;
+        flashed = true;
+        event.api.removeEventListener("bodyScrollEnd", onScrollEnd);
         requestAnimationFrame(() => {
-          event.api.flashCells({ rowNodes });
+          requestAnimationFrame(() => {
+            event.api.flashCells({ rowNodes });
+          });
         });
+      };
+      const onScrollEnd = () => flash();
+      event.api.addEventListener("bodyScrollEnd", onScrollEnd);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(flash);
       });
     },
-    [rows],
+    [],
   );
 
   const unitLabel = getUnitLabel(account);
