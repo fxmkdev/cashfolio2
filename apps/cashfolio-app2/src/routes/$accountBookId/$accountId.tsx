@@ -334,6 +334,7 @@ function LedgerPage() {
     [accountBookId, handleEditClick],
   );
 
+  const navigate = Route.useNavigate();
   const scrollTargetRef = useRef(transactionId);
   scrollTargetRef.current = transactionId;
   const pendingScrollRef = useRef<string | undefined>(undefined);
@@ -342,6 +343,16 @@ function LedgerPage() {
     (event: RowDataUpdatedEvent<LedgerRow>) => {
       const targetTxId = pendingScrollRef.current ?? scrollTargetRef.current;
       if (!targetTxId) return;
+
+      // Clear search param immediately so subsequent re-renders (e.g. after
+      // deleting a transaction) don't pick it up again.
+      if (!pendingScrollRef.current && scrollTargetRef.current) {
+        navigate({
+          search: (prev) => ({ ...prev, transactionId: undefined }),
+          replace: true,
+        });
+      }
+
       scrollTargetRef.current = undefined;
       pendingScrollRef.current = undefined;
 
@@ -375,7 +386,7 @@ function LedgerPage() {
         requestAnimationFrame(flash);
       });
     },
-    [],
+    [navigate],
   );
 
   const unitLabel = getUnitLabel(account);
