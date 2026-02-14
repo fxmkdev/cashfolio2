@@ -21,6 +21,12 @@ pnpm prisma:generate  # Regenerate Prisma client (DATABASE_URL=dummy prisma gene
 - Import Prisma enums from `src/.prisma-client/enums` (not `@prisma/client`)
 - Do not edit `src/routeTree.gen.ts` (auto-generated)
 - When introducing new patterns or conventions, update `CLAUDE.md` and the relevant `docs/` files to keep documentation in sync
+- Use **`@tabler/icons-react`** for icons
+- Use **`@paralleldrive/cuid2`** for generating unique IDs
+- Use **`date-fns`** for date operations
+- Use **`react-number-format`** for locale-aware number inputs
+- App uses **`en-CH`** locale for number formatting
+- Currency/crypto data constants live in `src/currencies.ts` and `src/cryptocurrencies.ts`
 
 ## Architecture References
 

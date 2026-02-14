@@ -53,3 +53,49 @@ Shared validators live in `src/shared/account-validation.ts` and are used both c
 - Per-field validators (e.g. `validateAccountName`) return an error message string or `null`
 - Full-input validators (`validateAccountInput`, `validateAccountGroupInput`) throw on the first error
 - **Duplicate name checking**: name validators accept an optional `siblingNames` parameter. The server queries sibling names before validation; the client derives them from `existingNodes` (the full tree data passed to modals)
+
+## Transaction Editing (SplitTransaction)
+
+`src/components/split-transaction.tsx` handles create/edit of transactions with split bookings:
+
+- **Debit/credit mutual exclusivity**: setting one clears the other
+- **Current account booking**: locked (read-only), always first in the list
+- **Minimum bookings**: at least 2 bookings enforced
+- **Date propagation**: date changes propagate to all bookings
+- **Unit auto-population**: unit is auto-populated from selected account metadata
+
+### Form Root Validation
+
+- All bookings must have the same unit
+- Debit/credit must balance (sum difference < 0.001)
+
+### Unit Identifier Pattern
+
+Bookings are grouped by a unit identifier string: `currency:${code}`, `crypto:${symbol}`, or `security:${symbol}`. Only one unit identifier is allowed per transaction.
+
+## AG Grid Column Types
+
+Defined in `src/components/column-types.tsx`:
+
+- `FORMATTED_NUMERIC_COLUMN` — right-aligned, `en-CH` locale number formatting
+- `SELECT_COLUMN` — searchable dropdown editor
+- `TEXT_COLUMN` — text input editor
+- `DATE_COLUMN` — date input with min/max constraints from context
+
+## AG Grid Context Pattern
+
+Grids pass a context object to cell renderers and editors containing helper data, form references, and callbacks.
+
+## Session Storage for UI State
+
+Expanded group IDs are persisted in sessionStorage with the key `cashfolio:expandedGroups:${accountBookId}:${tab}`.
+
+## Transaction Highlighting
+
+The ledger supports a `transactionId` search param to auto-scroll to a transaction, flash its cells, then clear the param from the URL.
+
+## Theme & Styling
+
+- Theme config in `src/theme.ts`: `primaryColor: "blue"`, `defaultRadius: "md"`, `fontFamily: "Inter, sans-serif"`
+- AG Grid theme in `src/components/grid-theme.tsx` maps Mantine CSS variables to AG Grid theming
+- PostCSS configured with `postcss-preset-mantine` and `postcss-simple-vars`
