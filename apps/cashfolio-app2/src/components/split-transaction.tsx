@@ -78,6 +78,7 @@ function getUnitIdentifier(booking: BookingValues): string | undefined {
 export function SplitTransaction({
   initialValues,
   accounts,
+  currentAccountId,
   onClose,
   onSubmit,
   onDeleteTransaction,
@@ -87,6 +88,7 @@ export function SplitTransaction({
     bookings?: Omit<BookingValues, "key">[];
   };
   accounts: AccountOption[];
+  currentAccountId: string;
   onClose: () => void;
   onSubmit: (values: {
     description: string;
@@ -109,6 +111,8 @@ export function SplitTransaction({
 
   const today = startOfDay(new Date());
 
+  const currentAccount = accounts.find((a) => a.value === currentAccountId);
+
   const form = useForm({
     mode: "uncontrolled",
     initialValues: {
@@ -123,7 +127,15 @@ export function SplitTransaction({
       description: initialValues?.description,
       bookings:
         initialValues?.bookings?.map((b) => ({ ...b, key: createId() })) ?? [
-          { key: createId() } as BookingValues,
+          {
+            key: createId(),
+            account: currentAccountId,
+            unit: currentAccount?.unit,
+            currency: currentAccount?.currency ?? undefined,
+            cryptocurrency: currentAccount?.cryptocurrency ?? undefined,
+            symbol: currentAccount?.symbol ?? undefined,
+            tradeCurrency: currentAccount?.tradeCurrency ?? undefined,
+          } as BookingValues,
           { key: createId() } as BookingValues,
         ],
     },
@@ -199,6 +211,13 @@ export function SplitTransaction({
     form.insertListItem("bookings", newRow);
   }
 
+  const lockedBookingKey = useMemo(() => {
+    const first = form.values.bookings.find(
+      (b) => b.account === currentAccountId,
+    );
+    return first?.key;
+  }, [form.values.bookings, currentAccountId]);
+
   const columnDefs = useMemo(
     () => [
       {
@@ -244,6 +263,7 @@ export function SplitTransaction({
         context: { options: accounts },
         minWidth: 150,
         flex: 1,
+        editable: ({ data, context }) => data?.key !== context.lockedBookingKey,
         cellStyle: ({ context, node }: CellClassParams) =>
           context.form.errors[`bookings.${node.rowIndex}.account`]
             ? { borderColor: "var(--mantine-color-error)" }
@@ -322,7 +342,7 @@ export function SplitTransaction({
               color="red"
               size="md"
               variant="subtle"
-              disabled={context.canDelete}
+              disabled={context.canDelete || data.key === context.lockedBookingKey}
               onClick={() => {
                 if (context.onDelete) {
                   context.onDelete(data.key);
@@ -475,6 +495,7 @@ export function SplitTransaction({
           context={{
             status: form.isValid("bookings") ? null : form.errors.bookings,
             canDelete: form.values.bookings.length <= 2,
+            lockedBookingKey,
             onDelete: (key: string) => {
               const index = form.values.bookings.findIndex(
                 (b) => b.key === key,

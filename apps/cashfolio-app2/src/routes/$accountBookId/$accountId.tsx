@@ -434,6 +434,7 @@ function LedgerPage() {
       >
         <SplitTransaction
           accounts={accountOptions}
+          currentAccountId={account.id}
           onClose={() => setModalOpened(false)}
           onSubmit={handleCreateTransaction}
         />
@@ -453,6 +454,7 @@ function LedgerPage() {
           <SplitTransaction
             initialValues={editingTransactionData}
             accounts={accountOptions}
+            currentAccountId={account.id}
             onClose={() => setEditModalOpened(false)}
             onSubmit={handleUpdateTransaction}
             onDeleteTransaction={() => {
