@@ -9,7 +9,6 @@
 
 `EditAccountModal` and `EditAccountGroupModal` share these conventions:
 
-- **`isResettingRef`**: a ref set to `true` while the form is being reset inside `useEffect`, so that `onValuesChange` can skip side effects (e.g. clearing dependent fields) during reset
 - **`onExitTransitionEnd`**: used to defer clearing `initialValues` state until after the close animation, so the modal title stays stable ("Edit Account" not "New Account") while closing
 - **`forceUpdate` reducer**: triggers a re-render after programmatic `setFieldValue` calls on uncontrolled forms
 
@@ -35,4 +34,12 @@
 Account/group types are represented in form selects as composite strings:
 `"ASSET" | "LIABILITY" | "EQUITY-INCOME" | "EQUITY-EXPENSE" | "EQUITY-GAIN_LOSS"`
 
-The form's `transformValues` splits these into separate `type` and `equityAccountSubtype` fields. When the type descriptor changes, dependent fields (group, parent group) are reset.
+The form's `transformValues` splits these into separate `type` and `equityAccountSubtype` fields. The type is always derived from the currently selected tab and the Type field is always disabled — it cannot be changed after creation. The server enforces this by rejecting type changes on update.
+
+## Validation Pattern
+
+Shared validators live in `src/shared/account-validation.ts` and are used both client-side (in Mantine form `validate`) and server-side (in server function handlers).
+
+- Per-field validators (e.g. `validateAccountName`) return an error message string or `null`
+- Full-input validators (`validateAccountInput`, `validateAccountGroupInput`) throw on the first error
+- **Duplicate name checking**: name validators accept an optional `siblingNames` parameter. The server queries sibling names before validation; the client derives them from `existingNodes` (the full tree data passed to modals)
