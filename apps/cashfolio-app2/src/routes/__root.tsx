@@ -8,13 +8,12 @@ import {
   ColorSchemeScript,
   MantineProvider,
   mantineHtmlProps,
+  useMantineTheme,
 } from "@mantine/core";
 import "@mantine/core/styles.css";
 import { theme } from "../theme";
-import {
-  ModuleRegistry,
-  AllEnterpriseModule,
-} from "ag-grid-enterprise";
+import { ModuleRegistry, AllEnterpriseModule } from "ag-grid-enterprise";
+import { useColorScheme } from "@mantine/hooks";
 
 ModuleRegistry.registerModules([AllEnterpriseModule]);
 
@@ -44,10 +43,17 @@ function RootComponent() {
       </head>
       <body>
         <MantineProvider theme={theme} defaultColorScheme="auto">
-          <Outlet />
+          <AgGridThemeProvider>
+            <Outlet />
+          </AgGridThemeProvider>
         </MantineProvider>
         <Scripts />
       </body>
     </html>
   );
+}
+
+function AgGridThemeProvider({ children }: { children: React.ReactNode }) {
+  const colorScheme = useColorScheme();
+  return <div data-ag-theme-mode={colorScheme}>{children}</div>;
 }
