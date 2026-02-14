@@ -7,17 +7,17 @@ import { useCallback, useMemo, useState } from "react";
 import { ActionIcon, Button, Container, Group, Modal, Tabs, Text, Title, Tooltip } from "@mantine/core";
 import { IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
 import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
-import { EditAccountModal } from "../components/edit-account-modal";
+import { EditAccountModal } from "../../components/edit-account-modal";
 import type {
   AccountInitialValues,
   TransformedFormValues,
-} from "../components/edit-account-modal";
-import { EditAccountGroupModal } from "../components/edit-account-group-modal";
+} from "../../components/edit-account-modal";
+import { EditAccountGroupModal } from "../../components/edit-account-group-modal";
 import type {
   AccountGroupInitialValues,
   AccountGroupTransformedFormValues,
-} from "../components/edit-account-group-modal";
-import { DataGrid } from "../components/data-grid";
+} from "../../components/edit-account-group-modal";
+import { DataGrid } from "../../components/data-grid";
 import {
   createAccount,
   createAccountGroup,
@@ -27,12 +27,12 @@ import {
   getAccountTreeData,
   updateAccount,
   updateAccountGroup,
-} from "../server/accounts";
+} from "../../server/accounts";
 import {
   AccountType,
   EquityAccountSubtype,
   Unit,
-} from "../.prisma-client/enums";
+} from "../../.prisma-client/enums";
 
 const tabs = [
   { value: "ASSET", label: "Asset", type: AccountType.ASSET },
@@ -59,7 +59,7 @@ const tabs = [
 
 type TabValue = (typeof tabs)[number]["value"];
 
-export const Route = createFileRoute("/$accountBookId")({
+export const Route = createFileRoute("/$accountBookId/")({
   validateSearch: (search: Record<string, unknown>): { tab: TabValue } => ({
     tab: tabs.some((t) => t.value === search.tab)
       ? (search.tab as TabValue)
@@ -101,7 +101,7 @@ function AccountsPage() {
   const { accountGroups, treeData, existingNodes } = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const { tab } = Route.useSearch();
-  const navigate = useNavigate({ from: "/$accountBookId" });
+  const navigate = useNavigate({ from: "/$accountBookId/" });
   const router = useRouter();
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [editingAccount, setEditingAccount] = useState<
@@ -313,7 +313,7 @@ function AccountsPage() {
   }
 
   return (
-    <Container size="lg" py="xl">
+    <Container fluid py="xl" px="xl">
       <Group justify="space-between" mb="lg">
         <Title order={2}>Accounts</Title>
         <Group>
@@ -363,6 +363,14 @@ function AccountsPage() {
         treeData={true}
         treeDataParentIdField="parentId"
         getRowId={({ data }) => data.id}
+        onRowDoubleClicked={(e) => {
+          if (e.data?.nodeType === "account") {
+            navigate({
+              to: "/$accountBookId/$accountId",
+              params: { accountBookId, accountId: e.data.id },
+            });
+          }
+        }}
       />
 
       <EditAccountModal

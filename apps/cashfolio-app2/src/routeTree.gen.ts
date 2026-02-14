@@ -9,50 +9,68 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AccountBookIdRouteImport } from './routes/$accountBookId'
+import { Route as AccountBookIdIndexRouteImport } from './routes/$accountBookId/index'
+import { Route as AccountBookIdAccountIdRouteImport } from './routes/$accountBookId/$accountId'
 
-const AccountBookIdRoute = AccountBookIdRouteImport.update({
-  id: '/$accountBookId',
-  path: '/$accountBookId',
+const AccountBookIdIndexRoute = AccountBookIdIndexRouteImport.update({
+  id: '/$accountBookId/',
+  path: '/$accountBookId/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountBookIdAccountIdRoute = AccountBookIdAccountIdRouteImport.update({
+  id: '/$accountBookId/$accountId',
+  path: '/$accountBookId/$accountId',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/$accountBookId': typeof AccountBookIdRoute
+  '/$accountBookId/$accountId': typeof AccountBookIdAccountIdRoute
+  '/$accountBookId/': typeof AccountBookIdIndexRoute
 }
 export interface FileRoutesByTo {
-  '/$accountBookId': typeof AccountBookIdRoute
+  '/$accountBookId/$accountId': typeof AccountBookIdAccountIdRoute
+  '/$accountBookId': typeof AccountBookIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/$accountBookId': typeof AccountBookIdRoute
+  '/$accountBookId/$accountId': typeof AccountBookIdAccountIdRoute
+  '/$accountBookId/': typeof AccountBookIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/$accountBookId'
+  fullPaths: '/$accountBookId/$accountId' | '/$accountBookId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/$accountBookId'
-  id: '__root__' | '/$accountBookId'
+  to: '/$accountBookId/$accountId' | '/$accountBookId'
+  id: '__root__' | '/$accountBookId/$accountId' | '/$accountBookId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  AccountBookIdRoute: typeof AccountBookIdRoute
+  AccountBookIdAccountIdRoute: typeof AccountBookIdAccountIdRoute
+  AccountBookIdIndexRoute: typeof AccountBookIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/$accountBookId': {
-      id: '/$accountBookId'
+    '/$accountBookId/': {
+      id: '/$accountBookId/'
       path: '/$accountBookId'
-      fullPath: '/$accountBookId'
-      preLoaderRoute: typeof AccountBookIdRouteImport
+      fullPath: '/$accountBookId/'
+      preLoaderRoute: typeof AccountBookIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$accountBookId/$accountId': {
+      id: '/$accountBookId/$accountId'
+      path: '/$accountBookId/$accountId'
+      fullPath: '/$accountBookId/$accountId'
+      preLoaderRoute: typeof AccountBookIdAccountIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  AccountBookIdRoute: AccountBookIdRoute,
+  AccountBookIdAccountIdRoute: AccountBookIdAccountIdRoute,
+  AccountBookIdIndexRoute: AccountBookIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

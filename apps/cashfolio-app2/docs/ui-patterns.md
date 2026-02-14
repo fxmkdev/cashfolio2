@@ -36,6 +36,16 @@ Account/group types are represented in form selects as composite strings:
 
 The form's `transformValues` splits these into separate `type` and `equityAccountSubtype` fields. The type is always derived from the currently selected tab and the Type field is always disabled — it cannot be changed after creation. The server enforces this by rejecting type changes on update.
 
+## Ledger Page Pattern
+
+The account ledger (`src/routes/$accountBookId/$accountId.tsx`) shows all bookings for a single account in chronological order.
+
+- **Sign convention**: Values are negated for `LIABILITY` and `EQUITY` (non-`EXPENSE`) accounts so that balances display naturally (positive = increase)
+- **Debit/Credit split**: Positive adjusted values → debit column, negative → credit column (shown as positive)
+- **Running balance**: Accumulated across all bookings in chronological order
+- **Counterparty names**: Derived from sibling bookings on the same transaction, deduplicated
+- **Navigation**: Double-click an account row on the accounts list to open its ledger; back link returns to accounts list
+
 ## Validation Pattern
 
 Shared validators live in `src/shared/account-validation.ts` and are used both client-side (in Mantine form `validate`) and server-side (in server function handlers).
