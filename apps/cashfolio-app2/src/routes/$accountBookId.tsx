@@ -3,10 +3,10 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Button, Container, Group, Tabs, Title } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
-import { type ColDef } from "ag-grid-enterprise";
+import { useCallback, useMemo, useState } from "react";
+import { ActionIcon, Button, Container, Group, Tabs, Title } from "@mantine/core";
+import { IconPencil, IconPlus } from "@tabler/icons-react";
+import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
 import { EditAccountModal } from "../components/edit-account-modal";
 import type {
   AccountInitialValues,
@@ -107,6 +107,40 @@ function AccountsPage() {
 
   const isEquityTab = tab.startsWith("EQUITY-");
 
+  const handleEditRow = useCallback(
+    (data: TreeRow) => {
+      if (data.nodeType === "account") {
+        setEditingAccount({
+          id: data.id,
+          initialValues: {
+            name: data.name,
+            type: data.type,
+            equityAccountSubtype: data.equityAccountSubtype,
+            groupId: data.groupId,
+            unit: data.unit,
+            currency: data.currency,
+            cryptocurrency: data.cryptocurrency,
+            symbol: data.symbol,
+            tradeCurrency: data.tradeCurrency,
+          },
+        });
+        setEditModalOpen(true);
+      } else if (data.nodeType === "accountGroup") {
+        setEditingGroup({
+          id: data.id,
+          initialValues: {
+            name: data.name,
+            type: data.type,
+            equityAccountSubtype: data.equityAccountSubtype,
+            parentGroupId: data.parentId,
+          },
+        });
+        setEditGroupModalOpen(true);
+      }
+    },
+    [],
+  );
+
   const columnDefs = useMemo<ColDef<TreeRow>[]>(
     () => [
       ...(!isEquityTab
@@ -135,8 +169,30 @@ function AccountsPage() {
             } satisfies ColDef<TreeRow>,
           ]
         : []),
+      {
+        colId: "actions",
+        headerName: "",
+        width: 60,
+        sortable: false,
+        filter: false,
+        resizable: false,
+        suppressHeaderMenuButton: true,
+        cellRenderer: ({ data }: ICellRendererParams<TreeRow>) => {
+          if (!data) return null;
+          return (
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              onClick={() => handleEditRow(data)}
+              aria-label="Edit"
+            >
+              <IconPencil size={16} />
+            </ActionIcon>
+          );
+        },
+      } satisfies ColDef<TreeRow>,
     ],
-    [isEquityTab],
+    [isEquityTab, handleEditRow],
   );
 
   async function handleCreateAccount(values: TransformedFormValues) {
@@ -260,37 +316,6 @@ function AccountsPage() {
         treeData={true}
         treeDataParentIdField="parentId"
         getRowId={({ data }) => data.id}
-        onRowDoubleClicked={({ data }) => {
-          if (!data) return;
-          if (data.nodeType === "account") {
-            setEditingAccount({
-              id: data.id,
-              initialValues: {
-                name: data.name,
-                type: data.type,
-                equityAccountSubtype: data.equityAccountSubtype,
-                groupId: data.groupId,
-                unit: data.unit,
-                currency: data.currency,
-                cryptocurrency: data.cryptocurrency,
-                symbol: data.symbol,
-                tradeCurrency: data.tradeCurrency,
-              },
-            });
-            setEditModalOpen(true);
-          } else if (data.nodeType === "accountGroup") {
-            setEditingGroup({
-              id: data.id,
-              initialValues: {
-                name: data.name,
-                type: data.type,
-                equityAccountSubtype: data.equityAccountSubtype,
-                parentGroupId: data.parentId,
-              },
-            });
-            setEditGroupModalOpen(true);
-          }
-        }}
       />
 
       <EditAccountModal
