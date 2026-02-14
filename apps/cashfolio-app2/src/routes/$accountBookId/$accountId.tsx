@@ -225,7 +225,9 @@ function LedgerPage() {
         >
           <IconArrowLeft size={20} />
         </Link>
-        <Title order={2}>{account.name}</Title>
+        <Title order={2}>
+          {account.groupPath} / {account.name}
+        </Title>
         {unitLabel && (
           <Badge size="lg" color="gray">
             {unitLabel}

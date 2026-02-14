@@ -6,7 +6,7 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
     (data: { accountId: string; accountBookId: string }) => data,
   )
   .handler(async ({ data }) => {
-    return await prisma.account.findUniqueOrThrow({
+    const account = await prisma.account.findUniqueOrThrow({
       where: {
         id_accountBookId: {
           id: data.accountId,
@@ -23,8 +23,26 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
         cryptocurrency: true,
         symbol: true,
         tradeCurrency: true,
+        groupId: true,
       },
     });
+
+    const allGroups = await prisma.accountGroup.findMany({
+      where: { accountBookId: data.accountBookId },
+      select: { id: true, name: true, parentGroupId: true },
+    });
+
+    function getGroupPath(groupId: string): string {
+      const group = allGroups.find((g) => g.id === groupId);
+      if (!group) return "";
+      const prefix = group.parentGroupId
+        ? `${getGroupPath(group.parentGroupId)} / `
+        : "";
+      return prefix + group.name;
+    }
+
+    const { groupId, ...rest } = account;
+    return { ...rest, groupPath: getGroupPath(groupId) };
   });
 
 export const getLedgerData = createServerFn({ method: "GET" })
