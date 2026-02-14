@@ -1,53 +1,54 @@
-import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
 import {
-  ActionIcon,
-  Badge,
-  Button,
-  Container,
-  Group,
-  Table,
-  Tabs,
-  Text,
-  Title,
-} from "@mantine/core";
-import { IconPencil, IconPlus } from "@tabler/icons-react";
+  createFileRoute,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { Button, Container, Group, Tabs, Title } from "@mantine/core";
+import { IconPlus } from "@tabler/icons-react";
+import { type ColDef } from "ag-grid-enterprise";
 import { EditAccountModal } from "../components/edit-account-modal";
 import type {
   AccountInitialValues,
   TransformedFormValues,
 } from "../components/edit-account-modal";
+import { DataGrid } from "../components/data-grid";
 import {
   createAccount,
   getAccountGroups,
-  getAccounts,
+  getAccountTreeData,
   updateAccount,
 } from "../server/accounts";
 import {
   AccountType,
   EquityAccountSubtype,
+  Unit,
 } from "../.prisma-client/enums";
 
 const tabs = [
-  { value: "ASSET", label: "Asset" },
-  { value: "LIABILITY", label: "Liability" },
-  { value: `EQUITY-${EquityAccountSubtype.INCOME}`, label: "Income" },
-  { value: `EQUITY-${EquityAccountSubtype.EXPENSE}`, label: "Expense" },
-  { value: `EQUITY-${EquityAccountSubtype.GAIN_LOSS}`, label: "Gain/Loss" },
+  { value: "ASSET", label: "Asset", type: AccountType.ASSET },
+  { value: "LIABILITY", label: "Liability", type: AccountType.LIABILITY },
+  {
+    value: `EQUITY-${EquityAccountSubtype.INCOME}`,
+    label: "Income",
+    type: AccountType.EQUITY,
+    equityAccountSubtype: EquityAccountSubtype.INCOME,
+  },
+  {
+    value: `EQUITY-${EquityAccountSubtype.EXPENSE}`,
+    label: "Expense",
+    type: AccountType.EQUITY,
+    equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+  },
+  {
+    value: `EQUITY-${EquityAccountSubtype.GAIN_LOSS}`,
+    label: "Gain/Loss",
+    type: AccountType.EQUITY,
+    equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+  },
 ] as const;
 
 type TabValue = (typeof tabs)[number]["value"];
-
-function matchesTab(
-  account: { type: string; equityAccountSubtype: string | null },
-  tab: TabValue,
-): boolean {
-  if (tab === "ASSET" || tab === "LIABILITY") {
-    return account.type === tab;
-  }
-  const [, subtype] = tab.split("-");
-  return account.type === AccountType.EQUITY && account.equityAccountSubtype === subtype;
-}
 
 export const Route = createFileRoute("/$accountBookId")({
   validateSearch: (search: Record<string, unknown>): { tab: TabValue } => ({
@@ -56,17 +57,32 @@ export const Route = createFileRoute("/$accountBookId")({
       : "ASSET",
   }),
   loader: async ({ params: { accountBookId } }) => {
-    const [accounts, accountGroups] = await Promise.all([
-      getAccounts({ data: { accountBookId } }),
+    const [accountGroups, ...treeDataByTab] = await Promise.all([
       getAccountGroups({ data: { accountBookId } }),
+      ...tabs.map((t) =>
+        getAccountTreeData({
+          data: {
+            accountBookId,
+            type: t.type,
+            ...("equityAccountSubtype" in t
+              ? { equityAccountSubtype: t.equityAccountSubtype }
+              : undefined),
+          },
+        }),
+      ),
     ]);
-    return { accounts, accountGroups };
+    const treeData = Object.fromEntries(
+      tabs.map((t, i) => [t.value, treeDataByTab[i]]),
+    ) as Record<TabValue, Awaited<ReturnType<typeof getAccountTreeData>>>;
+    return { accountGroups, treeData };
   },
   component: AccountsPage,
 });
 
+type TreeRow = Awaited<ReturnType<typeof getAccountTreeData>>[number];
+
 function AccountsPage() {
-  const { accounts, accountGroups } = Route.useLoaderData();
+  const { accountGroups, treeData } = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const { tab } = Route.useSearch();
   const navigate = useNavigate({ from: "/$accountBookId" });
@@ -77,8 +93,39 @@ function AccountsPage() {
   >();
   const [editModalOpen, setEditModalOpen] = useState(false);
 
-  const filteredAccounts = accounts.filter((a) => matchesTab(a, tab));
   const isEquityTab = tab.startsWith("EQUITY-");
+
+  const columnDefs = useMemo<ColDef<TreeRow>[]>(
+    () => [
+      ...(!isEquityTab
+        ? [
+            {
+              colId: "currency",
+              headerName: "Ccy.",
+              filter: true,
+              width: 100,
+              valueGetter: ({ data }: { data: TreeRow | undefined }) => {
+                if (!data?.unit) return undefined;
+                switch (data.unit) {
+                  case Unit.CURRENCY:
+                    return data.currency;
+                  case Unit.SECURITY:
+                    return data.tradeCurrency;
+                  case Unit.CRYPTOCURRENCY:
+                    return data.cryptocurrency;
+                }
+              },
+            } satisfies ColDef<TreeRow>,
+            {
+              field: "symbol",
+              filter: true,
+              width: 120,
+            } satisfies ColDef<TreeRow>,
+          ]
+        : []),
+    ],
+    [isEquityTab],
+  );
 
   async function handleCreateAccount(values: TransformedFormValues) {
     await createAccount({
@@ -134,9 +181,7 @@ function AccountsPage() {
 
       <Tabs
         value={tab}
-        onChange={(value) =>
-          navigate({ search: { tab: value as TabValue } })
-        }
+        onChange={(value) => navigate({ search: { tab: value as TabValue } })}
       >
         <Tabs.List mb="md">
           {tabs.map((t) => (
@@ -145,78 +190,44 @@ function AccountsPage() {
             </Tabs.Tab>
           ))}
         </Tabs.List>
-
-        <Table striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Account</Table.Th>
-              {!isEquityTab && <Table.Th>Unit</Table.Th>}
-              {!isEquityTab && <Table.Th>Currency / Symbol</Table.Th>}
-              <Table.Th>Active</Table.Th>
-              <Table.Th>Actions</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {filteredAccounts.map((account) => (
-              <Table.Tr key={`${account.id}-${account.accountBookId}`}>
-                <Table.Td>
-                  {account.groupPath} / {account.name}
-                </Table.Td>
-                {!isEquityTab && (
-                  <Table.Td>{account.unit ?? "—"}</Table.Td>
-                )}
-                {!isEquityTab && (
-                  <Table.Td>
-                    {account.currency ??
-                      account.cryptocurrency ??
-                      account.symbol ??
-                      "—"}
-                  </Table.Td>
-                )}
-                <Table.Td>
-                  <Badge color={account.isActive ? "green" : "gray"}>
-                    {account.isActive ? "Active" : "Inactive"}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>
-                  <ActionIcon
-                    variant="subtle"
-                    onClick={() => {
-                      setEditingAccount({
-                        id: account.id,
-                        initialValues: {
-                          name: account.name,
-                          type: account.type,
-                          equityAccountSubtype: account.equityAccountSubtype,
-                          groupId: account.groupId,
-                          unit: account.unit,
-                          currency: account.currency,
-                          cryptocurrency: account.cryptocurrency,
-                          symbol: account.symbol,
-                          tradeCurrency: account.tradeCurrency,
-                        },
-                      });
-                      setEditModalOpen(true);
-                    }}
-                  >
-                    <IconPencil size={16} />
-                  </ActionIcon>
-                </Table.Td>
-              </Table.Tr>
-            ))}
-            {filteredAccounts.length === 0 && (
-              <Table.Tr>
-                <Table.Td colSpan={isEquityTab ? 3 : 5}>
-                  <Text c="dimmed" ta="center" py="md">
-                    No accounts yet. Click &quot;Add Account&quot; to create
-                    one.
-                  </Text>
-                </Table.Td>
-              </Table.Tr>
-            )}
-          </Table.Tbody>
-        </Table>
       </Tabs>
+
+      <DataGrid
+        containerStyle={{ height: "calc(100vh - 11rem)" }}
+        rowData={treeData[tab]}
+        columnDefs={columnDefs}
+        autoGroupColumnDef={{
+          headerName: "Name",
+          field: "name",
+          flex: 1,
+          filter: true,
+          valueGetter: ({ data }) => data?.name,
+          cellRendererParams: {
+            suppressCount: true,
+          },
+        }}
+        treeData={true}
+        treeDataParentIdField="parentId"
+        getRowId={({ data }) => data.id}
+        onRowDoubleClicked={({ data }) => {
+          if (!data || data.nodeType !== "account") return;
+          setEditingAccount({
+            id: data.id,
+            initialValues: {
+              name: data.name,
+              type: data.type,
+              equityAccountSubtype: data.equityAccountSubtype,
+              groupId: data.groupId,
+              unit: data.unit,
+              currency: data.currency,
+              cryptocurrency: data.cryptocurrency,
+              symbol: data.symbol,
+              tradeCurrency: data.tradeCurrency,
+            },
+          });
+          setEditModalOpen(true);
+        }}
+      />
 
       <EditAccountModal
         opened={createModalOpened}

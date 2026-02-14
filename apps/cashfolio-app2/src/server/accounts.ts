@@ -60,6 +60,85 @@ export const getAccountGroups = createServerFn({ method: "GET" })
       .toSorted((a, b) => a.label.localeCompare(b.label));
   });
 
+export const getAccountTreeData = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: { accountBookId: string; type?: AccountType; equityAccountSubtype?: EquityAccountSubtype }) => data,
+  )
+  .handler(async ({ data }) => {
+    const [accounts, accountGroups] = await Promise.all([
+      prisma.account.findMany({
+        where: {
+          accountBookId: data.accountBookId,
+          isActive: true,
+          type: data.type,
+          ...(data.equityAccountSubtype
+            ? { equityAccountSubtype: data.equityAccountSubtype }
+            : undefined),
+        },
+        orderBy: [{ name: "asc" }],
+      }),
+      prisma.accountGroup.findMany({
+        where: {
+          accountBookId: data.accountBookId,
+          type: data.type,
+          ...(data.equityAccountSubtype
+            ? {
+                OR: [
+                  { equityAccountSubtype: data.equityAccountSubtype },
+                  { equityAccountSubtype: null },
+                ],
+              }
+            : undefined),
+        },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      }),
+    ]);
+
+    // Top-level groups are excluded from the tree (tabs represent them).
+    // Replace references to top-level groups with undefined so children become root nodes.
+    const topLevelGroupIds = new Set(
+      accountGroups.filter((ag) => !ag.parentGroupId).map((ag) => ag.id),
+    );
+    const resolveParentId = (parentId: string | null | undefined) =>
+      parentId && topLevelGroupIds.has(parentId) ? undefined : parentId ?? undefined;
+
+    const accountRows = accounts.map((a) => ({
+      id: a.id,
+      nodeType: "account" as "account" | "accountGroup",
+      name: a.name,
+      type: a.type,
+      equityAccountSubtype: a.equityAccountSubtype,
+      unit: a.unit as Unit | null,
+      currency: a.currency as string | null,
+      cryptocurrency: a.cryptocurrency as string | null,
+      symbol: a.symbol as string | null,
+      tradeCurrency: a.tradeCurrency as string | null,
+      parentId: resolveParentId(a.groupId),
+      isActive: a.isActive,
+      groupId: a.groupId,
+    }));
+
+    const groupRows = accountGroups
+      .filter((ag) => !topLevelGroupIds.has(ag.id))
+      .map((ag) => ({
+        id: ag.id,
+        nodeType: "accountGroup" as "account" | "accountGroup",
+        name: ag.name,
+        type: ag.type,
+        equityAccountSubtype: ag.equityAccountSubtype,
+        unit: null as Unit | null,
+        currency: null as string | null,
+        cryptocurrency: null as string | null,
+        symbol: null as string | null,
+        tradeCurrency: null as string | null,
+        parentId: resolveParentId(ag.parentGroupId),
+        isActive: ag.isActive,
+        groupId: ag.id,
+      }));
+
+    return [...accountRows, ...groupRows];
+  });
+
 export type AccountInput = {
   accountBookId: string;
   name: string;

@@ -171,6 +171,12 @@ importers:
       '@tanstack/react-start':
         specifier: ^1.121.34
         version: 1.159.5(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(vite@7.3.0(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2)(sugarss@5.0.1(postcss@8.5.6))(tsx@4.21.0))
+      ag-grid-enterprise:
+        specifier: ^35.0.1
+        version: 35.0.1
+      ag-grid-react:
+        specifier: ^35.0.1
+        version: 35.0.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react:
         specifier: ^19.0.0
         version: 19.2.3
@@ -178,9 +184,6 @@ importers:
         specifier: ^19.0.0
         version: 19.2.3(react@19.2.3)
     devDependencies:
-      '@tanstack/router-plugin':
-        specifier: ^1.121.34
-        version: 1.159.5(@tanstack/react-router@1.159.5(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(vite@7.3.0(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2)(sugarss@5.0.1(postcss@8.5.6))(tsx@4.21.0))
       '@types/node':
         specifier: ^24.0.0
         version: 24.10.4

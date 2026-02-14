@@ -11,6 +11,12 @@ import {
 } from "@mantine/core";
 import "@mantine/core/styles.css";
 import { theme } from "../theme";
+import {
+  ModuleRegistry,
+  AllEnterpriseModule,
+} from "ag-grid-enterprise";
+
+ModuleRegistry.registerModules([AllEnterpriseModule]);
 
 export const Route = createRootRoute({
   component: RootComponent,
