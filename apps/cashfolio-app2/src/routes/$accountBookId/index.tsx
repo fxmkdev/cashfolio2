@@ -3,10 +3,10 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { ActionIcon, Button, Container, Group, Modal, Tabs, Text, Title, Tooltip } from "@mantine/core";
 import { IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
-import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
+import { type ColDef, type ICellRendererParams, type IsGroupOpenByDefaultParams, type RowGroupOpenedEvent } from "ag-grid-enterprise";
 import { EditAccountModal } from "../../components/edit-account-modal";
 import type {
   AccountInitialValues,
@@ -118,6 +118,30 @@ function AccountsPage() {
   >();
 
   const isEquityTab = tab.startsWith("EQUITY-");
+
+  const storageKey = `cashfolio:expandedGroups:${accountBookId}:${tab}`;
+  const storageKeyRef = useRef(storageKey);
+  storageKeyRef.current = storageKey;
+
+  const isGroupOpenByDefault = useCallback(
+    (params: IsGroupOpenByDefaultParams) => {
+      const stored = sessionStorage.getItem(storageKeyRef.current);
+      if (stored == null) return params.rowNode.level === 0;
+      const expandedIds: string[] = JSON.parse(stored);
+      return expandedIds.includes(params.rowNode.key!);
+    },
+    [],
+  );
+
+  const onRowGroupOpened = useCallback((event: RowGroupOpenedEvent) => {
+    const expandedIds: string[] = [];
+    event.api.forEachNode((node) => {
+      if (node.group && node.expanded && node.key) {
+        expandedIds.push(node.key);
+      }
+    });
+    sessionStorage.setItem(storageKeyRef.current, JSON.stringify(expandedIds));
+  }, []);
 
   const handleEditRow = useCallback(
     (data: TreeRow) => {
@@ -362,6 +386,8 @@ function AccountsPage() {
         }}
         treeData={true}
         treeDataParentIdField="parentId"
+        isGroupOpenByDefault={isGroupOpenByDefault}
+        onRowGroupOpened={onRowGroupOpened}
         getRowId={({ data }) => data.id}
         onRowDoubleClicked={(e) => {
           if (e.data?.nodeType === "account") {
