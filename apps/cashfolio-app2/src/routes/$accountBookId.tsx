@@ -12,12 +12,19 @@ import type {
   AccountInitialValues,
   TransformedFormValues,
 } from "../components/edit-account-modal";
+import { EditAccountGroupModal } from "../components/edit-account-group-modal";
+import type {
+  AccountGroupInitialValues,
+  AccountGroupTransformedFormValues,
+} from "../components/edit-account-group-modal";
 import { DataGrid } from "../components/data-grid";
 import {
   createAccount,
+  createAccountGroup,
   getAccountGroups,
   getAccountTreeData,
   updateAccount,
+  updateAccountGroup,
 } from "../server/accounts";
 import {
   AccountType,
@@ -92,6 +99,11 @@ function AccountsPage() {
     { id: string; initialValues: AccountInitialValues } | undefined
   >();
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [createGroupModalOpened, setCreateGroupModalOpened] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<
+    { id: string; initialValues: AccountGroupInitialValues } | undefined
+  >();
+  const [editGroupModalOpen, setEditGroupModalOpen] = useState(false);
 
   const isEquityTab = tab.startsWith("EQUITY-");
 
@@ -167,16 +179,55 @@ function AccountsPage() {
     router.invalidate();
   }
 
+  async function handleCreateGroup(values: AccountGroupTransformedFormValues) {
+    await createAccountGroup({
+      data: {
+        accountBookId,
+        name: values.name!,
+        type: values.type,
+        equityAccountSubtype: values.equityAccountSubtype,
+        parentGroupId: values.parentGroupId,
+      },
+    });
+    setCreateGroupModalOpened(false);
+    router.invalidate();
+  }
+
+  async function handleUpdateGroup(values: AccountGroupTransformedFormValues) {
+    if (!editingGroup) return;
+    await updateAccountGroup({
+      data: {
+        id: editingGroup.id,
+        accountBookId,
+        name: values.name!,
+        type: values.type,
+        equityAccountSubtype: values.equityAccountSubtype,
+        parentGroupId: values.parentGroupId,
+      },
+    });
+    setEditGroupModalOpen(false);
+    router.invalidate();
+  }
+
   return (
     <Container size="lg" py="xl">
       <Group justify="space-between" mb="lg">
         <Title order={2}>Accounts</Title>
-        <Button
-          leftSection={<IconPlus size={16} />}
-          onClick={() => setCreateModalOpened(true)}
-        >
-          Add Account
-        </Button>
+        <Group>
+          <Button
+            variant="default"
+            leftSection={<IconPlus size={16} />}
+            onClick={() => setCreateGroupModalOpened(true)}
+          >
+            Add Group
+          </Button>
+          <Button
+            leftSection={<IconPlus size={16} />}
+            onClick={() => setCreateModalOpened(true)}
+          >
+            Add Account
+          </Button>
+        </Group>
       </Group>
 
       <Tabs
@@ -210,22 +261,35 @@ function AccountsPage() {
         treeDataParentIdField="parentId"
         getRowId={({ data }) => data.id}
         onRowDoubleClicked={({ data }) => {
-          if (!data || data.nodeType !== "account") return;
-          setEditingAccount({
-            id: data.id,
-            initialValues: {
-              name: data.name,
-              type: data.type,
-              equityAccountSubtype: data.equityAccountSubtype,
-              groupId: data.groupId,
-              unit: data.unit,
-              currency: data.currency,
-              cryptocurrency: data.cryptocurrency,
-              symbol: data.symbol,
-              tradeCurrency: data.tradeCurrency,
-            },
-          });
-          setEditModalOpen(true);
+          if (!data) return;
+          if (data.nodeType === "account") {
+            setEditingAccount({
+              id: data.id,
+              initialValues: {
+                name: data.name,
+                type: data.type,
+                equityAccountSubtype: data.equityAccountSubtype,
+                groupId: data.groupId,
+                unit: data.unit,
+                currency: data.currency,
+                cryptocurrency: data.cryptocurrency,
+                symbol: data.symbol,
+                tradeCurrency: data.tradeCurrency,
+              },
+            });
+            setEditModalOpen(true);
+          } else if (data.nodeType === "accountGroup") {
+            setEditingGroup({
+              id: data.id,
+              initialValues: {
+                name: data.name,
+                type: data.type,
+                equityAccountSubtype: data.equityAccountSubtype,
+                parentGroupId: data.parentId,
+              },
+            });
+            setEditGroupModalOpen(true);
+          }
         }}
       />
 
@@ -243,6 +307,22 @@ function AccountsPage() {
         accountGroups={accountGroups}
         onSubmit={handleUpdateAccount}
         initialValues={editingAccount?.initialValues}
+      />
+
+      <EditAccountGroupModal
+        opened={createGroupModalOpened}
+        onClose={() => setCreateGroupModalOpened(false)}
+        accountGroups={accountGroups}
+        onSubmit={handleCreateGroup}
+      />
+
+      <EditAccountGroupModal
+        opened={editGroupModalOpen}
+        onClose={() => setEditGroupModalOpen(false)}
+        onExitTransitionEnd={() => setEditingGroup(undefined)}
+        accountGroups={accountGroups}
+        onSubmit={handleUpdateGroup}
+        initialValues={editingGroup?.initialValues}
       />
     </Container>
   );

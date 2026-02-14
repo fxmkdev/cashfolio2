@@ -191,3 +191,41 @@ export const updateAccount = createServerFn({ method: "POST" })
     });
     return account;
   });
+
+export type AccountGroupInput = {
+  accountBookId: string;
+  name: string;
+  type: AccountType;
+  equityAccountSubtype?: EquityAccountSubtype;
+  parentGroupId?: string;
+};
+
+export const createAccountGroup = createServerFn({ method: "POST" })
+  .inputValidator((data: AccountGroupInput) => data)
+  .handler(async ({ data }) => {
+    const group = await prisma.accountGroup.create({
+      data: {
+        name: data.name,
+        type: data.type,
+        equityAccountSubtype: data.equityAccountSubtype,
+        parentGroupId: data.parentGroupId,
+        accountBookId: data.accountBookId,
+      },
+    });
+    return group;
+  });
+
+export const updateAccountGroup = createServerFn({ method: "POST" })
+  .inputValidator((data: AccountGroupInput & { id: string }) => data)
+  .handler(async ({ data }) => {
+    const group = await prisma.accountGroup.update({
+      where: { id_accountBookId: { id: data.id, accountBookId: data.accountBookId } },
+      data: {
+        name: data.name,
+        type: data.type,
+        equityAccountSubtype: data.equityAccountSubtype,
+        parentGroupId: data.parentGroupId,
+      },
+    });
+    return group;
+  });
