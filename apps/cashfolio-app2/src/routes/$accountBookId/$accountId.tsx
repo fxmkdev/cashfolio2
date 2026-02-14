@@ -12,11 +12,7 @@ import {
   Text,
   Tooltip,
 } from "@mantine/core";
-import {
-  IconCashPlus,
-  IconPencil,
-  IconTrash,
-} from "@tabler/icons-react";
+import { IconCashPlus, IconPencil, IconTrash } from "@tabler/icons-react";
 import type {
   ColDef,
   ICellRendererParams,
@@ -122,15 +118,17 @@ function LedgerPage() {
 
   const accountOptions = useMemo<AccountOption[]>(
     () =>
-      accounts.filter((a) => a.isActive).map((a) => ({
-        label: `${a.groupPath} / ${a.name}`,
-        value: a.id,
-        unit: a.unit as Unit,
-        currency: a.currency,
-        cryptocurrency: a.cryptocurrency,
-        symbol: a.symbol,
-        tradeCurrency: a.tradeCurrency,
-      })),
+      accounts
+        .filter((a) => a.isActive)
+        .map((a) => ({
+          label: `${a.groupPath} / ${a.name}`,
+          value: a.id,
+          unit: a.unit as Unit,
+          currency: a.currency,
+          cryptocurrency: a.cryptocurrency,
+          symbol: a.symbol,
+          tradeCurrency: a.tradeCurrency,
+        })),
     [accounts],
   );
 
@@ -156,14 +154,17 @@ function LedgerPage() {
     router.invalidate();
   }
 
-  const handleEditClick = useCallback(async function handleEditClick(transactionId: string) {
-    const data = await getTransaction({
-      data: { transactionId, accountBookId },
-    });
-    setEditingTransactionId(transactionId);
-    setEditingTransactionData(data);
-    setEditModalOpened(true);
-  }, [accountBookId]);
+  const handleEditClick = useCallback(
+    async function handleEditClick(transactionId: string) {
+      const data = await getTransaction({
+        data: { transactionId, accountBookId },
+      });
+      setEditingTransactionId(transactionId);
+      setEditingTransactionData(data);
+      setEditModalOpened(true);
+    },
+    [accountBookId],
+  );
 
   async function handleUpdateTransaction(values: {
     description: string;
@@ -219,9 +220,17 @@ function LedgerPage() {
           date: format(new Date(b.date), "dd.MM.yyyy"),
           counterpartyAccounts: b.counterpartyAccounts,
           description: b.description || b.transactionDescription,
-          debit: negate ? (value < 0 ? -value : null) : value > 0 ? value : null,
+          debit: negate
+            ? value < 0
+              ? -value
+              : null
+            : value > 0
+              ? value
+              : null,
           credit: negate
-            ? (value > 0 ? value : null)
+            ? value > 0
+              ? value
+              : null
             : value < 0
               ? -value
               : null,
@@ -484,13 +493,6 @@ function LedgerPage() {
             currentAccountId={account.id}
             onClose={() => setEditModalOpened(false)}
             onSubmit={handleUpdateTransaction}
-            onDeleteTransaction={() => {
-              setEditModalOpened(false);
-              setDeletingTransaction({
-                id: editingTransactionId!,
-                description: editingTransactionData.description,
-              });
-            }}
           />
         )}
       </Modal>

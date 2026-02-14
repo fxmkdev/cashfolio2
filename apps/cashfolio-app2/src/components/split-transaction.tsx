@@ -81,7 +81,6 @@ export function SplitTransaction({
   currentAccountId,
   onClose,
   onSubmit,
-  onDeleteTransaction,
 }: {
   initialValues?: {
     description?: string;
@@ -125,19 +124,21 @@ export function SplitTransaction({
             )
           : undefined,
       description: initialValues?.description,
-      bookings:
-        initialValues?.bookings?.map((b) => ({ ...b, key: createId() })) ?? [
-          {
-            key: createId(),
-            account: currentAccountId,
-            unit: currentAccount?.unit,
-            currency: currentAccount?.currency ?? undefined,
-            cryptocurrency: currentAccount?.cryptocurrency ?? undefined,
-            symbol: currentAccount?.symbol ?? undefined,
-            tradeCurrency: currentAccount?.tradeCurrency ?? undefined,
-          } as BookingValues,
-          { key: createId() } as BookingValues,
-        ],
+      bookings: initialValues?.bookings?.map((b) => ({
+        ...b,
+        key: createId(),
+      })) ?? [
+        {
+          key: createId(),
+          account: currentAccountId,
+          unit: currentAccount?.unit,
+          currency: currentAccount?.currency ?? undefined,
+          cryptocurrency: currentAccount?.cryptocurrency ?? undefined,
+          symbol: currentAccount?.symbol ?? undefined,
+          tradeCurrency: currentAccount?.tradeCurrency ?? undefined,
+        } as BookingValues,
+        { key: createId() } as BookingValues,
+      ],
     },
     onValuesChange: ({ date }, { date: previousDate }) => {
       if (date !== previousDate) {
@@ -219,142 +220,146 @@ export function SplitTransaction({
   }, [form.values.bookings, currentAccountId]);
 
   const columnDefs = useMemo(
-    () => [
-      {
-        editable: false,
-        width: 0,
-        colSpan: (params) => (params.data ? 1 : 6),
-        cellRendererSelector: (params) => {
-          if (!params.data) {
-            return {
-              component: ({ context }: CustomCellRendererProps) => {
-                if (!context.status) return null;
-                return (
-                  <Group align="center" h="100%" gap="xs">
-                    <ThemeIcon variant="light" size="sm" color="red">
-                      <IconX size={14} />
-                    </ThemeIcon>
-                    <Box>{context.status}</Box>
-                  </Group>
-                );
-              },
-            };
-          }
+    () =>
+      [
+        {
+          editable: false,
+          width: 0,
+          colSpan: (params) => (params.data ? 1 : 6),
+          cellRendererSelector: (params) => {
+            if (!params.data) {
+              return {
+                component: ({ context }: CustomCellRendererProps) => {
+                  if (!context.status) return null;
+                  return (
+                    <Group align="center" h="100%" gap="xs">
+                      <ThemeIcon variant="light" size="sm" color="red">
+                        <IconX size={14} />
+                      </ThemeIcon>
+                      <Box>{context.status}</Box>
+                    </Group>
+                  );
+                },
+              };
+            }
 
-          return undefined;
+            return undefined;
+          },
         },
-      },
-      {
-        field: "date",
-        type: DATE_COLUMN,
-        cellDataType: "dateString",
-        width: 110,
-        cellStyle: ({ value, context }: CellClassParams) =>
-          isSameDay(value, context.startDate)
-            ? { color: "var(--mantine-color-dimmed)" }
-            : { color: "var(--mantine-color-yellow-text)", fontWeight: 600 },
-        cellEditorParams: ({ context }: any) => ({
-          startDate: context.startDate,
-        }),
-      },
-      {
-        field: "account",
-        type: SELECT_COLUMN,
-        context: { options: accounts },
-        minWidth: 150,
-        flex: 1,
-        editable: ({ data, context }) => data?.key !== context.lockedBookingKey,
-        cellStyle: ({ context, node }: CellClassParams) =>
-          context.form.errors[`bookings.${node.rowIndex}.account`]
-            ? { borderColor: "var(--mantine-color-error)" }
-            : { borderColor: "transparent" },
-      },
-      {
-        field: "description",
-        type: TEXT_COLUMN,
-        width: 150,
-      },
-      {
-        field: "unit",
-        type: SELECT_COLUMN,
-        editable: ({ data }) => {
-          if (!data?.account) return true;
-          const acct = accounts.find((a) => a.value === data.account);
-          return !acct?.unit;
+        {
+          field: "date",
+          type: DATE_COLUMN,
+          cellDataType: "dateString",
+          width: 110,
+          cellStyle: ({ value, context }: CellClassParams) =>
+            isSameDay(value, context.startDate)
+              ? { color: "var(--mantine-color-dimmed)" }
+              : { color: "var(--mantine-color-yellow-text)", fontWeight: 600 },
+          cellEditorParams: ({ context }: any) => ({
+            startDate: context.startDate,
+          }),
         },
-        width: 120,
-        context: {
-          options: [
-            { label: "Currency", value: Unit.CURRENCY },
-            { label: "Crypto", value: Unit.CRYPTOCURRENCY },
-            { label: "Security", value: Unit.SECURITY },
-          ],
+        {
+          field: "account",
+          type: SELECT_COLUMN,
+          context: { options: accounts },
+          minWidth: 150,
+          flex: 1,
+          editable: ({ data, context }) =>
+            data?.key !== context.lockedBookingKey,
+          cellStyle: ({ context, node }: CellClassParams) =>
+            context.form.errors[`bookings.${node.rowIndex}.account`]
+              ? { borderColor: "var(--mantine-color-error)" }
+              : { borderColor: "transparent" },
         },
-      },
-      {
-        field: "currency",
-        headerName: "Ccy.",
-        type: SELECT_COLUMN,
-        editable: ({ data }) => {
-          if (!data?.account) return true;
-          const acct = accounts.find((a) => a.value === data.account);
-          return !acct?.unit;
+        {
+          field: "description",
+          type: TEXT_COLUMN,
+          width: 150,
         },
-        width: 90,
-        context: {
-          options: [
-            { label: "CHF", value: "CHF" },
-            { label: "EUR", value: "EUR" },
-            { label: "USD", value: "USD" },
-          ],
+        {
+          field: "unit",
+          type: SELECT_COLUMN,
+          editable: ({ data }) => {
+            if (!data?.account) return true;
+            const acct = accounts.find((a) => a.value === data.account);
+            return !acct?.unit;
+          },
+          width: 120,
+          context: {
+            options: [
+              { label: "Currency", value: Unit.CURRENCY },
+              { label: "Crypto", value: Unit.CRYPTOCURRENCY },
+              { label: "Security", value: Unit.SECURITY },
+            ],
+          },
         },
-      },
-      {
-        field: "debit",
-        type: FORMATTED_NUMERIC_COLUMN,
-        aggFunc: "sum",
-        width: 105,
-        cellStyle: ({ context, node }: CellClassParams) =>
-          context.form.errors[`bookings.${node.rowIndex}.debit`]
-            ? { borderColor: "var(--mantine-color-error)" }
-            : { borderColor: "transparent" },
-      },
-      {
-        field: "credit",
-        type: FORMATTED_NUMERIC_COLUMN,
-        aggFunc: "sum",
-        width: 105,
-        tooltipValueGetter: ({ context, node }) =>
-          context.form.errors[`bookings.${node?.rowIndex}.credit`],
-        cellStyle: ({ context, node }) =>
-          context.form.errors[`bookings.${node?.rowIndex}.credit`]
-            ? { borderColor: "var(--mantine-color-error)" }
-            : { borderColor: "transparent" },
-      },
-      {
-        editable: false,
-        width: 60,
-        cellRenderer: ({ data, context }: CustomCellRendererProps) => {
-          if (!data) return;
-          return (
-            <ActionIcon
-              mt={4}
-              color="red"
-              size="md"
-              variant="subtle"
-              disabled={context.canDelete || data.key === context.lockedBookingKey}
-              onClick={() => {
-                if (context.onDelete) {
-                  context.onDelete(data.key);
+        {
+          field: "currency",
+          headerName: "Ccy.",
+          type: SELECT_COLUMN,
+          editable: ({ data }) => {
+            if (!data?.account) return true;
+            const acct = accounts.find((a) => a.value === data.account);
+            return !acct?.unit;
+          },
+          width: 90,
+          context: {
+            options: [
+              { label: "CHF", value: "CHF" },
+              { label: "EUR", value: "EUR" },
+              { label: "USD", value: "USD" },
+            ],
+          },
+        },
+        {
+          field: "debit",
+          type: FORMATTED_NUMERIC_COLUMN,
+          aggFunc: "sum",
+          width: 105,
+          cellStyle: ({ context, node }: CellClassParams) =>
+            context.form.errors[`bookings.${node.rowIndex}.debit`]
+              ? { borderColor: "var(--mantine-color-error)" }
+              : { borderColor: "transparent" },
+        },
+        {
+          field: "credit",
+          type: FORMATTED_NUMERIC_COLUMN,
+          aggFunc: "sum",
+          width: 105,
+          tooltipValueGetter: ({ context, node }) =>
+            context.form.errors[`bookings.${node?.rowIndex}.credit`],
+          cellStyle: ({ context, node }) =>
+            context.form.errors[`bookings.${node?.rowIndex}.credit`]
+              ? { borderColor: "var(--mantine-color-error)" }
+              : { borderColor: "transparent" },
+        },
+        {
+          editable: false,
+          width: 60,
+          cellRenderer: ({ data, context }: CustomCellRendererProps) => {
+            if (!data) return;
+            return (
+              <ActionIcon
+                mt={4}
+                color="red"
+                size="md"
+                variant="subtle"
+                disabled={
+                  context.canDelete || data.key === context.lockedBookingKey
                 }
-              }}
-            >
-              <IconTrash size={16} />
-            </ActionIcon>
-          );
+                onClick={() => {
+                  if (context.onDelete) {
+                    context.onDelete(data.key);
+                  }
+                }}
+              >
+                <IconTrash size={16} />
+              </ActionIcon>
+            );
+          },
         },
-      },
-    ] as ColDef[],
+      ] as ColDef[],
     [accounts],
   );
 
@@ -424,7 +429,7 @@ export function SplitTransaction({
         <DataGrid
           ref={gridRef}
           containerStyle={{
-            height: `calc(100vh - 20rem)`,
+            height: `calc(100vh - 30.5rem)`,
           }}
           rowData={form.values.bookings}
           getRowId={({ data }) => data.key}
@@ -474,11 +479,9 @@ export function SplitTransaction({
                     account: e.newValue,
                     unit: selectedAccount.unit,
                     currency: selectedAccount.currency ?? undefined,
-                    cryptocurrency:
-                      selectedAccount.cryptocurrency ?? undefined,
+                    cryptocurrency: selectedAccount.cryptocurrency ?? undefined,
                     symbol: selectedAccount.symbol ?? undefined,
-                    tradeCurrency:
-                      selectedAccount.tradeCurrency ?? undefined,
+                    tradeCurrency: selectedAccount.tradeCurrency ?? undefined,
                   });
                 }
               }
@@ -510,18 +513,7 @@ export function SplitTransaction({
           }}
         />
 
-        <Group justify="space-between">
-          {onDeleteTransaction ? (
-            <Button
-              variant="subtle"
-              color="red"
-              onClick={() => onDeleteTransaction()}
-            >
-              Delete Transaction
-            </Button>
-          ) : (
-            <Box />
-          )}
+        <Group justify="end">
           <Group>
             <Button variant="subtle" onClick={onClose}>
               Cancel
