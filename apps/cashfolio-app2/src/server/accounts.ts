@@ -136,6 +136,23 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
       };
     });
 
+    // Fetch account book to check for referenced holding gain/loss groups
+    const accountBook = await prisma.accountBook.findUniqueOrThrow({
+      where: { id: data.accountBookId },
+      select: {
+        securityHoldingGainLossAccountGroupId: true,
+        cryptoHoldingGainLossAccountGroupId: true,
+        fxHoldingGainLossAccountGroupId: true,
+      },
+    });
+    const referencedByAccountBook = new Set(
+      [
+        accountBook.securityHoldingGainLossAccountGroupId,
+        accountBook.cryptoHoldingGainLossAccountGroupId,
+        accountBook.fxHoldingGainLossAccountGroupId,
+      ].filter(Boolean) as string[],
+    );
+
     // Fetch all accounts (including inactive) to check group deletability
     const allAccountsForGroup = await prisma.account.groupBy({
       by: ["groupId"],
@@ -165,7 +182,8 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
       .map((ag) => {
         const hasChildAccounts = accountCountByGroupId.has(ag.id);
         const hasChildGroups = groupsWithChildren.has(ag.id);
-        const deletable = !hasChildAccounts && !hasChildGroups;
+        const isReferencedByAccountBook = referencedByAccountBook.has(ag.id);
+        const deletable = !hasChildAccounts && !hasChildGroups && !isReferencedByAccountBook;
         return {
           id: ag.id,
           nodeType: "accountGroup" as "account" | "accountGroup",
@@ -181,11 +199,13 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
           isActive: ag.isActive,
           groupId: ag.id,
           deletable,
-          deleteDisabledReason: hasChildAccounts
-            ? "Cannot delete group because it contains accounts"
-            : hasChildGroups
-              ? "Cannot delete group because it contains sub-groups"
-              : undefined,
+          deleteDisabledReason: isReferencedByAccountBook
+            ? "Cannot delete group because it is used as a holding gain/loss group"
+            : hasChildAccounts
+              ? "Cannot delete group because it contains accounts"
+              : hasChildGroups
+                ? "Cannot delete group because it contains sub-groups"
+                : undefined,
         };
       });
 
@@ -300,14 +320,30 @@ export const deleteAccount = createServerFn({ method: "POST" })
 export const deleteAccountGroup = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
-    const [childAccounts, childGroups] = await Promise.all([
+    const [childAccounts, childGroups, accountBook] = await Promise.all([
       prisma.account.count({
         where: { groupId: data.id, accountBookId: data.accountBookId },
       }),
       prisma.accountGroup.count({
         where: { parentGroupId: data.id, accountBookId: data.accountBookId },
       }),
+      prisma.accountBook.findUniqueOrThrow({
+        where: { id: data.accountBookId },
+        select: {
+          securityHoldingGainLossAccountGroupId: true,
+          cryptoHoldingGainLossAccountGroupId: true,
+          fxHoldingGainLossAccountGroupId: true,
+        },
+      }),
     ]);
+    const isReferencedByAccountBook = [
+      accountBook.securityHoldingGainLossAccountGroupId,
+      accountBook.cryptoHoldingGainLossAccountGroupId,
+      accountBook.fxHoldingGainLossAccountGroupId,
+    ].includes(data.id);
+    if (isReferencedByAccountBook) {
+      throw new Error("Cannot delete group that is used as a holding gain/loss group");
+    }
     if (childAccounts > 0) {
       throw new Error("Cannot delete group that contains accounts");
     }
