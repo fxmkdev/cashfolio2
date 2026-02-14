@@ -1,8 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { Anchor, Badge, Container, Group, Title } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
-import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
+import type {
+  ColDef,
+  ICellRendererParams,
+  RowDataUpdatedEvent,
+} from "ag-grid-enterprise";
 import { DataGrid } from "../../components/data-grid";
 import { getAccountForLedger, getLedgerData } from "../../server/ledger";
 import {
@@ -12,6 +16,14 @@ import {
 } from "../../.prisma-client/enums";
 
 export const Route = createFileRoute("/$accountBookId/$accountId")({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { transactionId?: string } => ({
+    transactionId:
+      typeof search.transactionId === "string"
+        ? search.transactionId
+        : undefined,
+  }),
   loader: async ({ params: { accountBookId, accountId } }) => {
     const [account, bookings] = await Promise.all([
       getAccountForLedger({ data: { accountId, accountBookId } }),
@@ -59,6 +71,7 @@ function getUnitLabel(account: {
 
 type LedgerRow = {
   id: string;
+  transactionId: string;
   date: string;
   counterpartyAccounts: { id: string; name: string }[];
   description: string;
@@ -70,30 +83,34 @@ type LedgerRow = {
 function LedgerPage() {
   const { account, bookings } = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
+  const { transactionId } = Route.useSearch();
 
   const rows = useMemo<LedgerRow[]>(() => {
     const negate = shouldNegate(account.type, account.equityAccountSubtype);
     let balance = 0;
 
-    return bookings.map((b) => {
-      const rawValue = Number(b.value);
-      const value = negate ? -rawValue : rawValue;
-      balance += value;
+    return bookings
+      .map((b) => {
+        const rawValue = Number(b.value);
+        const value = negate ? -rawValue : rawValue;
+        balance += value;
 
-      return {
-        id: b.id,
-        date: new Date(b.date).toLocaleDateString(undefined, {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        }),
-        counterpartyAccounts: b.counterpartyAccounts,
-        description: b.description || b.transactionDescription,
-        debit: value > 0 ? value : null,
-        credit: value < 0 ? -value : null,
-        balance,
-      };
-    }).reverse();
+        return {
+          id: b.id,
+          transactionId: b.transactionId,
+          date: new Date(b.date).toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          }),
+          counterpartyAccounts: b.counterpartyAccounts,
+          description: b.description || b.transactionDescription,
+          debit: value > 0 ? value : null,
+          credit: value < 0 ? -value : null,
+          balance,
+        };
+      })
+      .reverse();
   }, [account, bookings]);
 
   const columnDefs = useMemo<ColDef<LedgerRow>[]>(
@@ -109,14 +126,19 @@ function LedgerPage() {
         flex: 1,
         cellRenderer: ({
           value,
-        }: ICellRendererParams<LedgerRow, LedgerRow["counterpartyAccounts"]>) => {
-          if (!value) return null;
+          data,
+        }: ICellRendererParams<
+          LedgerRow,
+          LedgerRow["counterpartyAccounts"]
+        >) => {
+          if (!value || !data) return null;
           return value.map((a, i) => (
             <span key={a.id}>
               {i > 0 && ", "}
               <Link
                 to="/$accountBookId/$accountId"
                 params={{ accountBookId, accountId: a.id }}
+                search={{ transactionId: data.transactionId }}
                 style={{ textDecoration: "none" }}
               >
                 <Anchor component="span" size="sm">
@@ -160,6 +182,31 @@ function LedgerPage() {
     [accountBookId],
   );
 
+  const scrollTargetRef = useRef(transactionId);
+  scrollTargetRef.current = transactionId;
+
+  const handleRowDataUpdated = useCallback(
+    (event: RowDataUpdatedEvent<LedgerRow>) => {
+      const targetTxId = scrollTargetRef.current;
+      if (!targetTxId) return;
+      scrollTargetRef.current = undefined;
+
+      const matchingIds = rows
+        .filter((r) => r.transactionId === targetTxId)
+        .map((r) => r.id);
+      if (matchingIds.length === 0) return;
+
+      const rowNodes = matchingIds
+        .map((id) => event.api.getRowNode(id))
+        .filter((n): n is NonNullable<typeof n> => !!n);
+      if (rowNodes.length === 0) return;
+
+      event.api.ensureNodeVisible(rowNodes[0]!, "middle");
+      event.api.flashCells({ rowNodes });
+    },
+    [rows],
+  );
+
   const unitLabel = getUnitLabel(account);
 
   return (
@@ -181,7 +228,7 @@ function LedgerPage() {
       </Group>
 
       <DataGrid
-        containerStyle={{ height: "calc(100vh - 11rem)" }}
+        containerStyle={{ height: "calc(100vh - 8rem)" }}
         rowData={rows}
         columnDefs={columnDefs}
         defaultColDef={{
@@ -189,6 +236,7 @@ function LedgerPage() {
           suppressHeaderMenuButton: true,
         }}
         getRowId={({ data }) => data.id}
+        onRowDataUpdated={handleRowDataUpdated}
       />
     </Container>
   );

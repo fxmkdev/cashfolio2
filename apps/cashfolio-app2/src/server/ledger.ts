@@ -47,6 +47,7 @@ export const getLedgerData = createServerFn({ method: "GET" })
         date: true,
         description: true,
         value: true,
+        transactionId: true,
         transaction: {
           select: {
             description: true,
@@ -70,6 +71,7 @@ export const getLedgerData = createServerFn({ method: "GET" })
       date: b.date,
       description: b.description,
       value: Number(b.value),
+      transactionId: b.transactionId,
       transactionDescription: b.transaction.description,
       counterpartyAccounts: [
         ...new Map(
