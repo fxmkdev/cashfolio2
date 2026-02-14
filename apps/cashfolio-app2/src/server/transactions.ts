@@ -214,3 +214,18 @@ export const createTransaction = createServerFn({ method: "POST" })
 
     return transaction;
   });
+
+export const deleteTransaction = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: { transactionId: string; accountBookId: string }) => data,
+  )
+  .handler(async ({ data }) => {
+    await prisma.transaction.delete({
+      where: {
+        id_accountBookId: {
+          id: data.transactionId,
+          accountBookId: data.accountBookId,
+        },
+      },
+    });
+  });

@@ -8,6 +8,7 @@ import {
   Container,
   Group,
   Modal,
+  Text,
   Title,
   Tooltip,
 } from "@mantine/core";
@@ -15,6 +16,7 @@ import {
   IconArrowLeft,
   IconCashPlus,
   IconPencil,
+  IconTrash,
 } from "@tabler/icons-react";
 import type {
   ColDef,
@@ -26,6 +28,7 @@ import { getAccountForLedger, getLedgerData } from "../../server/ledger";
 import { getAccounts } from "../../server/accounts";
 import {
   createTransaction,
+  deleteTransaction,
   getTransaction,
   updateTransaction,
 } from "../../server/transactions";
@@ -112,11 +115,14 @@ function LedgerPage() {
   const [editingTransactionData, setEditingTransactionData] = useState<
     Awaited<ReturnType<typeof getTransaction>> | undefined
   >();
+  const [deletingTransaction, setDeletingTransaction] = useState<
+    { id: string; description: string } | undefined
+  >();
   const router = useRouter();
 
   const accountOptions = useMemo<AccountOption[]>(
     () =>
-      accounts.map((a) => ({
+      accounts.filter((a) => a.isActive).map((a) => ({
         label: `${a.groupPath} / ${a.name}`,
         value: a.id,
         unit: a.unit as Unit,
@@ -180,6 +186,18 @@ function LedgerPage() {
       },
     });
     setEditModalOpened(false);
+    router.invalidate();
+  }
+
+  async function handleDeleteTransaction() {
+    if (!deletingTransaction) return;
+    await deleteTransaction({
+      data: {
+        transactionId: deletingTransaction.id,
+        accountBookId,
+      },
+    });
+    setDeletingTransaction(undefined);
     router.invalidate();
   }
 
@@ -269,7 +287,7 @@ function LedgerPage() {
       {
         colId: "actions",
         headerName: "",
-        width: 50,
+        width: 80,
         sortable: false,
         filter: false,
         resizable: false,
@@ -287,6 +305,22 @@ function LedgerPage() {
                   aria-label="Edit"
                 >
                   <IconPencil size={16} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Delete">
+                <ActionIcon
+                  variant="subtle"
+                  size="sm"
+                  color="red"
+                  onClick={() =>
+                    setDeletingTransaction({
+                      id: data.transactionId,
+                      description: data.description,
+                    })
+                  }
+                  aria-label="Delete"
+                >
+                  <IconTrash size={16} />
                 </ActionIcon>
               </Tooltip>
             </Group>
@@ -406,8 +440,36 @@ function LedgerPage() {
             accounts={accountOptions}
             onClose={() => setEditModalOpened(false)}
             onSubmit={handleUpdateTransaction}
+            onDeleteTransaction={() => {
+              setEditModalOpened(false);
+              setDeletingTransaction({
+                id: editingTransactionId!,
+                description: editingTransactionData.description,
+              });
+            }}
           />
         )}
+      </Modal>
+
+      <Modal
+        opened={!!deletingTransaction}
+        onClose={() => setDeletingTransaction(undefined)}
+        title="Delete Transaction"
+      >
+        <Text mb="lg">
+          Are you sure you want to delete {deletingTransaction?.description}?
+        </Text>
+        <Group justify="flex-end">
+          <Button
+            variant="subtle"
+            onClick={() => setDeletingTransaction(undefined)}
+          >
+            Cancel
+          </Button>
+          <Button color="red" onClick={handleDeleteTransaction}>
+            Delete
+          </Button>
+        </Group>
       </Modal>
     </Container>
   );
