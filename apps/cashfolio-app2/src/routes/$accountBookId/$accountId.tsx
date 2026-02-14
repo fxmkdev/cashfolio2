@@ -220,8 +220,12 @@ function LedgerPage() {
           date: format(new Date(b.date), "dd.MM.yyyy"),
           counterpartyAccounts: b.counterpartyAccounts,
           description: b.description || b.transactionDescription,
-          debit: value > 0 ? value : null,
-          credit: value < 0 ? -value : null,
+          debit: negate ? (value < 0 ? -value : null) : value > 0 ? value : null,
+          credit: negate
+            ? (value > 0 ? value : null)
+            : value < 0
+              ? -value
+              : null,
           balance,
         };
       })
