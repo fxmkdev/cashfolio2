@@ -10,7 +10,11 @@ import {
   ThemeIcon,
   Tooltip,
 } from "@mantine/core";
-import { Unit } from "../.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../.prisma-client/enums";
 import {
   IconInfoCircle,
   IconTablePlus,
@@ -41,6 +45,8 @@ export type AccountOption = {
   cryptocurrency?: string | null;
   symbol?: string | null;
   tradeCurrency?: string | null;
+  type: AccountType;
+  equityAccountSubtype?: EquityAccountSubtype | null;
 };
 
 export type BookingValues = {
@@ -62,6 +68,20 @@ export type SplitTransactionFormValues = {
   description?: string;
   bookings: BookingValues[];
 };
+
+function isIncomeAccount(acct: AccountOption | undefined): boolean {
+  return (
+    acct?.type === AccountType.EQUITY &&
+    acct?.equityAccountSubtype === EquityAccountSubtype.INCOME
+  );
+}
+
+function isExpenseAccount(acct: AccountOption | undefined): boolean {
+  return (
+    acct?.type === AccountType.EQUITY &&
+    acct?.equityAccountSubtype === EquityAccountSubtype.EXPENSE
+  );
+}
 
 function getUnitIdentifier(booking: BookingValues): string | undefined {
   if (!booking.unit) return undefined;
@@ -156,6 +176,18 @@ export function SplitTransaction({
       },
       bookings: {
         [formRootRule]: (bookings) => {
+          for (const booking of bookings) {
+            if (!booking.account) continue;
+            const acct = accounts.find((a) => a.value === booking.account);
+            if (!acct) continue;
+            if (isIncomeAccount(acct) && booking.debit !== undefined) {
+              return "Income accounts cannot have debit entries.";
+            }
+            if (isExpenseAccount(acct) && booking.credit !== undefined) {
+              return "Expense accounts cannot have credit entries.";
+            }
+          }
+
           const unitIdentifiers = new Set(
             bookings
               .map((b) => getUnitIdentifier(b))
@@ -317,6 +349,11 @@ export function SplitTransaction({
           type: FORMATTED_NUMERIC_COLUMN,
           aggFunc: "sum",
           width: 105,
+          editable: ({ data }) => {
+            if (!data?.account) return true;
+            const acct = accounts.find((a) => a.value === data.account);
+            return !isIncomeAccount(acct);
+          },
           cellStyle: ({ context, node }: CellClassParams) =>
             context.form.errors[`bookings.${node.rowIndex}.debit`]
               ? { borderColor: "var(--mantine-color-error)" }
@@ -327,6 +364,11 @@ export function SplitTransaction({
           type: FORMATTED_NUMERIC_COLUMN,
           aggFunc: "sum",
           width: 105,
+          editable: ({ data }) => {
+            if (!data?.account) return true;
+            const acct = accounts.find((a) => a.value === data.account);
+            return !isExpenseAccount(acct);
+          },
           tooltipValueGetter: ({ context, node }) =>
             context.form.errors[`bookings.${node?.rowIndex}.credit`],
           cellStyle: ({ context, node }) =>
@@ -472,17 +514,22 @@ export function SplitTransaction({
                   selectedAccount.tradeCurrency ?? undefined,
                 );
 
+                const clearDebit = isIncomeAccount(selectedAccount);
+                const clearCredit = isExpenseAccount(selectedAccount);
+                if (clearDebit) {
+                  form.setFieldValue(`bookings.${e.rowIndex}.debit`, undefined);
+                }
+                if (clearCredit) {
+                  form.setFieldValue(`bookings.${e.rowIndex}.credit`, undefined);
+                }
+
                 const rowNode = e.api.getRowNode(e.data.key);
-                if (rowNode) {
-                  rowNode.setData({
-                    ...e.data,
-                    account: e.newValue,
-                    unit: selectedAccount.unit,
-                    currency: selectedAccount.currency ?? undefined,
-                    cryptocurrency: selectedAccount.cryptocurrency ?? undefined,
-                    symbol: selectedAccount.symbol ?? undefined,
-                    tradeCurrency: selectedAccount.tradeCurrency ?? undefined,
-                  });
+                if (rowNode && e.rowIndex != null) {
+                  // Use form state (not e.data) as source of truth so that any
+                  // previously cleared opposite field (debit↔credit mutual
+                  // exclusion only updates the form, not the grid) is not
+                  // accidentally restored by spreading stale grid data.
+                  rowNode.setData({ ...form.values.bookings[e.rowIndex] });
                 }
               }
             }

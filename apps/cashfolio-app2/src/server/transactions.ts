@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
-import { Unit } from "../.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../.prisma-client/enums";
 import { isAfter, startOfDay } from "date-fns";
 
 export type CreateTransactionInput = {
@@ -88,6 +92,47 @@ function validateCreateTransaction(input: CreateTransactionInput) {
   }
 }
 
+async function validateAccountTypeBookings(
+  bookings: { accountId: string; value: number }[],
+  accountBookId: string,
+) {
+  const accountIds = bookings.map((b) => b.accountId).filter(Boolean);
+  if (accountIds.length === 0) return;
+
+  const accounts = await prisma.account.findMany({
+    where: { id: { in: accountIds }, accountBookId },
+    select: { id: true, type: true, equityAccountSubtype: true },
+  });
+  const accountMap = new Map(accounts.map((a) => [a.id, a]));
+
+  const errors: string[] = [];
+  for (let i = 0; i < bookings.length; i++) {
+    const b = bookings[i];
+    const account = accountMap.get(b.accountId);
+    if (!account) continue;
+
+    if (
+      account.type === AccountType.EQUITY &&
+      account.equityAccountSubtype === EquityAccountSubtype.INCOME &&
+      b.value > 0
+    ) {
+      errors.push(`Booking ${i}: Income accounts cannot have debit entries.`);
+    }
+
+    if (
+      account.type === AccountType.EQUITY &&
+      account.equityAccountSubtype === EquityAccountSubtype.EXPENSE &&
+      b.value < 0
+    ) {
+      errors.push(`Booking ${i}: Expense accounts cannot have credit entries.`);
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(errors.join(" "));
+  }
+}
+
 export const getTransaction = createServerFn({ method: "GET" })
   .inputValidator(
     (data: { transactionId: string; accountBookId: string }) => data,
@@ -132,6 +177,7 @@ export const updateTransaction = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     validateCreateTransaction(data);
+    await validateAccountTypeBookings(data.bookings, data.accountBookId);
 
     await prisma.$transaction([
       prisma.booking.deleteMany({
@@ -181,6 +227,7 @@ export const createTransaction = createServerFn({ method: "POST" })
   .inputValidator((data: CreateTransactionInput) => data)
   .handler(async ({ data }) => {
     validateCreateTransaction(data);
+    await validateAccountTypeBookings(data.bookings, data.accountBookId);
 
     const transaction = await prisma.transaction.create({
       data: {

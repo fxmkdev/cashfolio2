@@ -148,6 +148,9 @@ function LedgerPage() {
           cryptocurrency: a.cryptocurrency,
           symbol: a.symbol,
           tradeCurrency: a.tradeCurrency,
+          type: a.type as AccountType,
+          equityAccountSubtype:
+            a.equityAccountSubtype as EquityAccountSubtype | null,
         })),
     [accounts],
   );
@@ -225,6 +228,12 @@ function LedgerPage() {
   }
 
   const isEquity = account.type === AccountType.EQUITY;
+  const isIncome =
+    account.type === AccountType.EQUITY &&
+    account.equityAccountSubtype === EquityAccountSubtype.INCOME;
+  const isExpense =
+    account.type === AccountType.EQUITY &&
+    account.equityAccountSubtype === EquityAccountSubtype.EXPENSE;
 
   const rows = useMemo<LedgerRow[]>(() => {
     const negate = shouldNegate(account.type, account.equityAccountSubtype);
@@ -309,26 +318,34 @@ function LedgerPage() {
         ? [
             {
               field: "currency" as const,
-              headerName: "Currency",
+              headerName: "Ccy.",
               width: 100,
               filter: true,
             },
           ]
         : []),
-      {
-        field: "debit",
-        headerName: "Debit",
-        width: 130,
-        type: FORMATTED_NUMERIC_COLUMN,
-        filter: "agNumberColumnFilter",
-      },
-      {
-        field: "credit",
-        headerName: "Credit",
-        width: 130,
-        type: FORMATTED_NUMERIC_COLUMN,
-        filter: "agNumberColumnFilter",
-      },
+      ...(isIncome
+        ? []
+        : [
+            {
+              field: "debit" as const,
+              headerName: "Debit",
+              width: 130,
+              type: FORMATTED_NUMERIC_COLUMN,
+              filter: "agNumberColumnFilter",
+            },
+          ]),
+      ...(isExpense
+        ? []
+        : [
+            {
+              field: "credit" as const,
+              headerName: "Credit",
+              width: 130,
+              type: FORMATTED_NUMERIC_COLUMN,
+              filter: "agNumberColumnFilter",
+            },
+          ]),
       ...(isEquity
         ? []
         : [
@@ -384,7 +401,7 @@ function LedgerPage() {
         },
       },
     ],
-    [accountBookId, handleEditClick, isEquity],
+    [accountBookId, handleEditClick, isEquity, isIncome, isExpense],
   );
 
   const navigate = Route.useNavigate();
