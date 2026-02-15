@@ -68,7 +68,8 @@ function getTypeLabel(
   if (type === AccountType.LIABILITY) return "Liability";
   if (equityAccountSubtype === EquityAccountSubtype.INCOME) return "Income";
   if (equityAccountSubtype === EquityAccountSubtype.EXPENSE) return "Expense";
-  if (equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS) return "Gain/Loss";
+  if (equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS)
+    return "Gain/Loss";
   return "Accounts";
 }
 
@@ -134,7 +135,13 @@ function LedgerPage() {
       accounts
         .filter((a) => a.isActive)
         .map((a) => ({
-          label: [getTypeLabel(a.type, a.equityAccountSubtype), a.groupPath, a.name].filter(Boolean).join(" / "),
+          label: [
+            getTypeLabel(a.type, a.equityAccountSubtype),
+            a.groupPath,
+            a.name,
+          ]
+            .filter(Boolean)
+            .join(" / "),
           value: a.id,
           unit: a.unit as Unit,
           currency: a.currency,
@@ -296,6 +303,7 @@ function LedgerPage() {
         field: "description",
         headerName: "Description",
         width: 400,
+        filter: "agTextColumnFilter",
       },
       ...(isEquity
         ? [
