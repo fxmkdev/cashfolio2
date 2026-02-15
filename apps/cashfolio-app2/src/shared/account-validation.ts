@@ -17,8 +17,8 @@ export function validateAccountName(
   return null;
 }
 
-export function validateAccountGroupId(groupId?: string): string | null {
-  return groupId ? null : "Group is required";
+export function validateAccountGroupId(_groupId?: string): string | null {
+  return null;
 }
 
 function isAssetOrLiability(type?: AccountType): boolean {
@@ -84,9 +84,9 @@ export function validateAccountGroupName(
 }
 
 export function validateAccountGroupParentGroupId(
-  parentGroupId?: string,
+  _parentGroupId?: string,
 ): string | null {
-  return parentGroupId ? null : "Parent Group is required";
+  return null;
 }
 
 // Full-input validators for server-side use. Throw on first error.
@@ -97,7 +97,6 @@ export function validateAccountInput(
 ): void {
   const errors = [
     validateAccountName(data.name, siblingNames),
-    validateAccountGroupId(data.groupId),
     validateAccountUnit(data.unit, data.type),
     validateAccountCurrency(data.currency, data.unit, data.type),
     validateAccountCryptocurrency(data.cryptocurrency, data.unit, data.type),
@@ -116,7 +115,6 @@ export function validateAccountGroupInput(
 ): void {
   const errors = [
     validateAccountGroupName(data.name, siblingNames),
-    validateAccountGroupParentGroupId(data.parentGroupId),
   ].filter(Boolean);
 
   if (errors.length > 0) {

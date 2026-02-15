@@ -121,8 +121,8 @@ model Account {
   equityAccountSubtype EquityAccountSubtype?
   isActive             Boolean               @default(true)
 
-  group   AccountGroup @relation(fields: [groupId, accountBookId], references: [id, accountBookId], onDelete: Restrict)
-  groupId String
+  group   AccountGroup? @relation(fields: [groupId, accountBookId], references: [id, accountBookId], onDelete: Restrict)
+  groupId String?
 
   unit           Unit?
   currency       String?

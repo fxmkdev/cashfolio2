@@ -19,7 +19,6 @@ import { cryptocurrencies } from "../cryptocurrencies";
 import { currencies } from "../currencies";
 import {
   validateAccountName,
-  validateAccountGroupId,
   validateAccountUnit,
   validateAccountCurrency,
   validateAccountCryptocurrency,
@@ -47,7 +46,7 @@ export type AccountInitialValues = {
   name: string;
   type: AccountType;
   equityAccountSubtype?: EquityAccountSubtype | null;
-  groupId: string;
+  groupId?: string | null;
   unit?: Unit | null;
   currency?: string | null;
   cryptocurrency?: string | null;
@@ -64,7 +63,7 @@ function toFormValues(initial: AccountInitialValues): FormValues {
   return {
     name: initial.name,
     typeDescriptor,
-    groupId: initial.groupId,
+    groupId: initial.groupId ?? undefined,
     unit: initial.unit ?? Unit.CURRENCY,
     currency: initial.currency ?? undefined,
     cryptocurrency: initial.cryptocurrency ?? undefined,
@@ -78,7 +77,7 @@ export type ExistingNode = {
   name: string;
   nodeType: string;
   parentId?: string;
-  groupId: string;
+  groupId?: string;
 };
 
 export function EditAccountModal({
@@ -122,7 +121,7 @@ export function EditAccountModal({
         return validateAccountName(value, siblingNames);
       },
       typeDescriptor: isNotEmpty("Type is required"),
-      groupId: (value) => validateAccountGroupId(value),
+      groupId: () => null,
       unit: (value, values) =>
         validateAccountUnit(value, values.typeDescriptor as AccountType),
       currency: (value, values) =>
@@ -244,8 +243,8 @@ export function EditAccountModal({
             <Grid.Col span={12}>
               <Select
                 label="Group"
-                withAsterisk
                 searchable
+                clearable
                 withAlignedLabels
                 data={accountGroups.filter(
                   (g) =>

@@ -60,6 +60,18 @@ export const Route = createFileRoute("/$accountBookId/$accountId")({
   component: LedgerPage,
 });
 
+function getTypeLabel(
+  type: AccountType,
+  equityAccountSubtype: EquityAccountSubtype | null,
+): string {
+  if (type === AccountType.ASSET) return "Asset";
+  if (type === AccountType.LIABILITY) return "Liability";
+  if (equityAccountSubtype === EquityAccountSubtype.INCOME) return "Income";
+  if (equityAccountSubtype === EquityAccountSubtype.EXPENSE) return "Expense";
+  if (equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS) return "Gain/Loss";
+  return "Accounts";
+}
+
 function shouldNegate(
   type: AccountType,
   equityAccountSubtype: EquityAccountSubtype | null,
@@ -122,7 +134,7 @@ function LedgerPage() {
       accounts
         .filter((a) => a.isActive)
         .map((a) => ({
-          label: `${a.groupPath} / ${a.name}`,
+          label: [getTypeLabel(a.type, a.equityAccountSubtype), a.groupPath, a.name].filter(Boolean).join(" / "),
           value: a.id,
           unit: a.unit as Unit,
           currency: a.currency,
@@ -442,9 +454,9 @@ function LedgerPage() {
               fz="inherit"
               fw="inherit"
             >
-              {account.groupPathSegments[0] ?? "Accounts"}
+              {getTypeLabel(account.type, account.equityAccountSubtype)}
             </Anchor>
-            {account.groupPathSegments.slice(1).map((segment) => (
+            {account.groupPathSegments.map((segment) => (
               <Text key={segment} fz="inherit" fw="inherit">
                 {segment}
               </Text>

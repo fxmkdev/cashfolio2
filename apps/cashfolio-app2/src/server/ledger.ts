@@ -42,7 +42,7 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
     }
 
     const { groupId, ...rest } = account;
-    return { ...rest, groupPathSegments: getGroupPathSegments(groupId) };
+    return { ...rest, groupPathSegments: groupId ? getGroupPathSegments(groupId) : [] };
   });
 
 export const getLedgerData = createServerFn({ method: "GET" })

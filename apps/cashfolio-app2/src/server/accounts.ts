@@ -38,7 +38,7 @@ export const getAccounts = createServerFn({ method: "GET" })
     return accounts
       .map((a) => ({
         ...a,
-        groupPath: getGroupPath(a.groupId, allGroups),
+        groupPath: a.groupId ? getGroupPath(a.groupId, allGroups) : "",
       }))
       .toSorted((a, b) =>
         `${a.groupPath} / ${a.name}`.localeCompare(
@@ -98,14 +98,6 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
       }),
     ]);
 
-    // Top-level groups are excluded from the tree (tabs represent them).
-    // Replace references to top-level groups with undefined so children become root nodes.
-    const topLevelGroupIds = new Set(
-      accountGroups.filter((ag) => !ag.parentGroupId).map((ag) => ag.id),
-    );
-    const resolveParentId = (parentId: string | null | undefined) =>
-      parentId && topLevelGroupIds.has(parentId) ? undefined : parentId ?? undefined;
-
     // Batch-fetch booking counts per account to determine deletability
     const bookingCounts = await prisma.booking.groupBy({
       by: ["accountId"],
@@ -132,9 +124,9 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
         cryptocurrency: a.cryptocurrency as string | null,
         symbol: a.symbol as string | null,
         tradeCurrency: a.tradeCurrency as string | null,
-        parentId: resolveParentId(a.groupId),
+        parentId: a.groupId ?? undefined,
         isActive: a.isActive,
-        groupId: a.groupId,
+        groupId: a.groupId ?? undefined,
         deletable: !hasBookings,
         deleteDisabledReason: hasBookings ? "Cannot delete account because it has bookings" : undefined,
       };
@@ -181,9 +173,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
         .map((g) => g.parentGroupId!),
     );
 
-    const groupRows = accountGroups
-      .filter((ag) => !topLevelGroupIds.has(ag.id))
-      .map((ag) => {
+    const groupRows = accountGroups.map((ag) => {
         const hasChildAccounts = accountCountByGroupId.has(ag.id);
         const hasChildGroups = groupsWithChildren.has(ag.id);
         const isReferencedByAccountBook = referencedByAccountBook.has(ag.id);
@@ -199,7 +189,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
           cryptocurrency: null as string | null,
           symbol: null as string | null,
           tradeCurrency: null as string | null,
-          parentId: resolveParentId(ag.parentGroupId),
+          parentId: ag.parentGroupId ?? undefined,
           isActive: ag.isActive,
           groupId: ag.id,
           deletable,
@@ -221,7 +211,7 @@ export type AccountInput = {
   name: string;
   type: AccountType;
   equityAccountSubtype?: EquityAccountSubtype;
-  groupId: string;
+  groupId?: string;
   unit?: Unit;
   currency?: string;
   cryptocurrency?: string;
@@ -234,7 +224,7 @@ export const createAccount = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const siblingNames = (
       await prisma.account.findMany({
-        where: { groupId: data.groupId, accountBookId: data.accountBookId },
+        where: { groupId: data.groupId ?? null, accountBookId: data.accountBookId },
         select: { name: true },
       })
     ).map((a) => a.name);
@@ -244,7 +234,7 @@ export const createAccount = createServerFn({ method: "POST" })
         name: data.name,
         type: data.type,
         equityAccountSubtype: data.equityAccountSubtype,
-        groupId: data.groupId,
+        groupId: data.groupId ?? null,
         unit: data.unit,
         currency: data.currency,
         cryptocurrency: data.cryptocurrency,
@@ -262,7 +252,7 @@ export const updateAccount = createServerFn({ method: "POST" })
     const siblingNames = (
       await prisma.account.findMany({
         where: {
-          groupId: data.groupId,
+          groupId: data.groupId ?? null,
           accountBookId: data.accountBookId,
           id: { not: data.id },
         },
@@ -281,7 +271,7 @@ export const updateAccount = createServerFn({ method: "POST" })
       where: { id_accountBookId: { id: data.id, accountBookId: data.accountBookId } },
       data: {
         name: data.name,
-        groupId: data.groupId,
+        groupId: data.groupId ?? null,
         unit: data.unit,
         currency: data.currency,
         cryptocurrency: data.cryptocurrency,

@@ -15,7 +15,6 @@ import {
 } from "../.prisma-client/enums";
 import {
   validateAccountGroupName,
-  validateAccountGroupParentGroupId,
 } from "../shared/account-validation";
 import type { ExistingNode } from "./edit-account-modal";
 
@@ -89,7 +88,7 @@ export function EditAccountGroupModal({
         return validateAccountGroupName(value, siblingNames);
       },
       typeDescriptor: isNotEmpty("Type is required"),
-      parentGroupId: (value) => validateAccountGroupParentGroupId(value),
+      parentGroupId: () => null,
     },
     transformValues: (values) => {
       const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
@@ -180,8 +179,8 @@ export function EditAccountGroupModal({
             <Grid.Col span={12}>
               <Select
                 label="Parent Group"
-                withAsterisk
                 searchable
+                clearable
                 withAlignedLabels
                 data={accountGroups.filter(
                   (g) =>
