@@ -1,5 +1,6 @@
 import type { CellClassParams, ColDef } from "ag-grid-enterprise";
 import { currencies } from "../currencies";
+import { cryptocurrencies } from "../cryptocurrencies";
 import {
   isIncomeAccount,
   isExpenseAccount,
@@ -76,6 +77,11 @@ export type TransactionFormValues = {
 };
 
 const currencyOptions = Object.keys(currencies).map((code) => ({
+  label: code,
+  value: code,
+}));
+
+const cryptocurrencyOptions = Object.keys(cryptocurrencies).map((code) => ({
   label: code,
   value: code,
 }));
@@ -244,7 +250,7 @@ export function EditTransactionModal({
         {
           editable: false,
           width: 0,
-          colSpan: (params) => (params.data ? 1 : 6),
+          colSpan: (params) => (params.data ? 1 : 7),
           cellRendererSelector: (params) => {
             if (!params.data) {
               return {
@@ -314,7 +320,7 @@ export function EditTransactionModal({
           },
         },
         {
-          field: "currency",
+          colId: "ccy",
           headerName: "Ccy.",
           type: SELECT_COLUMN,
           editable: ({ data }) => {
@@ -323,9 +329,53 @@ export function EditTransactionModal({
             return !acct?.unit;
           },
           width: 90,
-          context: {
-            options: currencyOptions,
+          valueFormatter: ({ value }: { value: unknown }) =>
+            (value as string) ?? "",
+          valueGetter: ({ data }: { data?: BookingValues }) => {
+            if (!data) return null;
+            switch (data.unit) {
+              case Unit.CURRENCY:
+                return data.currency ?? null;
+              case Unit.CRYPTOCURRENCY:
+                return data.cryptocurrency ?? null;
+              case Unit.SECURITY:
+                return data.tradeCurrency ?? null;
+              default:
+                return null;
+            }
           },
+          cellEditorParams: ({ data }: { data?: BookingValues }) => ({
+            options:
+              data?.unit === Unit.CRYPTOCURRENCY
+                ? cryptocurrencyOptions
+                : currencyOptions,
+          }),
+          valueSetter: ({ data, newValue }: { data: BookingValues; newValue: string | null }) => {
+            switch (data.unit) {
+              case Unit.CURRENCY:
+                data.currency = newValue ?? undefined;
+                break;
+              case Unit.CRYPTOCURRENCY:
+                data.cryptocurrency = newValue ?? undefined;
+                break;
+              case Unit.SECURITY:
+                data.tradeCurrency = newValue ?? undefined;
+                break;
+            }
+            return true;
+          },
+        },
+        {
+          field: "symbol",
+          headerName: "Symbol",
+          type: TEXT_COLUMN,
+          editable: ({ data }) => {
+            if (data?.unit !== Unit.SECURITY) return false;
+            if (!data?.account) return true;
+            const acct = accounts.find((a) => a.value === data.account);
+            return !acct?.unit;
+          },
+          width: 90,
         },
         {
           field: "debit",
@@ -466,10 +516,35 @@ export function EditTransactionModal({
             suppressHeaderMenuButton: true,
           }}
           onCellValueChanged={(e) => {
-            form.setFieldValue(
-              `bookings.${e.rowIndex}.${e.colDef.field}`,
-              e.newValue,
-            );
+            if (e.colDef.colId === "ccy") {
+              const booking = form.values.bookings[e.rowIndex!];
+              switch (booking?.unit) {
+                case Unit.CURRENCY:
+                  form.setFieldValue(
+                    `bookings.${e.rowIndex}.currency`,
+                    e.newValue,
+                  );
+                  break;
+                case Unit.CRYPTOCURRENCY:
+                  form.setFieldValue(
+                    `bookings.${e.rowIndex}.cryptocurrency`,
+                    e.newValue,
+                  );
+                  break;
+                case Unit.SECURITY:
+                  form.setFieldValue(
+                    `bookings.${e.rowIndex}.tradeCurrency`,
+                    e.newValue,
+                  );
+                  break;
+              }
+
+            } else {
+              form.setFieldValue(
+                `bookings.${e.rowIndex}.${e.colDef.field}`,
+                e.newValue,
+              );
+            }
 
             if (e.colDef.field === "account") {
               const selectedAccount = accounts.find(

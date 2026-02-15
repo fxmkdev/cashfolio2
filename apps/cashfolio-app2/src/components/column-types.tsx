@@ -54,17 +54,20 @@ export const columnTypes: AgGridReactProps["columnTypes"] = {
   },
   [SELECT_COLUMN]: {
     valueFormatter: ({ value, colDef }) =>
-      colDef.context.options.find(
+      (colDef.context?.options ?? []).find(
         (o: { label: string; value: string }) => o.value === value,
       )?.label ?? "",
     cellEditor: ({
       colDef,
+      options: paramsOptions,
       searchable,
       value,
       onValueChange,
     }: CustomCellEditorProps & {
       searchable?: boolean;
+      options?: { label: string; value: string }[];
     }) => {
+      const options = paramsOptions ?? colDef.context?.options ?? [];
       const ref = useRef<HTMLInputElement>(null);
       useEffect(() => {
         ref.current?.select();
@@ -91,7 +94,7 @@ export const columnTypes: AgGridReactProps["columnTypes"] = {
           selectFirstOptionOnChange
           searchable={searchable ?? true}
           withAlignedLabels
-          data={colDef.context.options}
+          data={options}
           onDropdownOpen={() => setIsDropdownOpen(true)}
           onDropdownClose={() => setIsDropdownOpen(false)}
           value={value}

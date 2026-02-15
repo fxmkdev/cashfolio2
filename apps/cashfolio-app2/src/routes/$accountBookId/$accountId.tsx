@@ -92,7 +92,10 @@ type LedgerRow = {
   date: string;
   counterpartyAccounts: { id: string; name: string }[];
   description: string;
+  unit: Unit | null;
   currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
   debit: number | null;
   credit: number | null;
   balance: number | null;
@@ -236,7 +239,10 @@ function LedgerPage() {
           date: format(new Date(b.date), "dd.MM.yyyy"),
           counterpartyAccounts: b.counterpartyAccounts,
           description: b.description || b.transactionDescription,
+          unit: b.unit,
           currency: b.currency,
+          cryptocurrency: b.cryptocurrency,
+          symbol: b.symbol,
           debit: negate
             ? value < 0
               ? -value
@@ -302,10 +308,23 @@ function LedgerPage() {
       ...(isEquity
         ? [
             {
-              field: "currency" as const,
-              headerName: "Ccy.",
-              width: 100,
+              colId: "unitIdentifier",
+              headerName: "Ccy./Symbol",
+              width: 130,
               filter: true,
+              valueGetter: ({ data }: { data?: LedgerRow }) => {
+                if (!data) return null;
+                switch (data.unit) {
+                  case Unit.CURRENCY:
+                    return data.currency;
+                  case Unit.CRYPTOCURRENCY:
+                    return data.cryptocurrency;
+                  case Unit.SECURITY:
+                    return data.symbol;
+                  default:
+                    return null;
+                }
+              },
             },
           ]
         : []),
