@@ -419,3 +419,26 @@ export const deleteAccountGroup = createServerFn({ method: "POST" })
       where: { id_accountBookId: { id: data.id, accountBookId: data.accountBookId } },
     });
   });
+
+export const reorderAccountTreeItems = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      accountBookId: string;
+      updates: { id: string; nodeType: "account" | "accountGroup"; sortOrder: number }[];
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    await prisma.$transaction(
+      data.updates.map((u) =>
+        u.nodeType === "account"
+          ? prisma.account.update({
+              where: { id_accountBookId: { id: u.id, accountBookId: data.accountBookId } },
+              data: { sortOrder: u.sortOrder },
+            })
+          : prisma.accountGroup.update({
+              where: { id_accountBookId: { id: u.id, accountBookId: data.accountBookId } },
+              data: { sortOrder: u.sortOrder },
+            }),
+      ),
+    );
+  });

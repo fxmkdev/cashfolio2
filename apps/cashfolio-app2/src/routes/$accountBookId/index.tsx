@@ -4,9 +4,28 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { ActionIcon, Button, Container, Group, Modal, Tabs, Text, Title, Tooltip } from "@mantine/core";
+import {
+  ActionIcon,
+  Button,
+  Container,
+  Group,
+  Modal,
+  Tabs,
+  Text,
+  Title,
+  Tooltip,
+} from "@mantine/core";
 import { IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
-import { type ColDef, type ICellRendererParams, type IsGroupOpenByDefaultParams, type RowGroupOpenedEvent } from "ag-grid-enterprise";
+import {
+  type ColDef,
+  type ICellRendererParams,
+  type IsGroupOpenByDefaultParams,
+  type RowClassParams,
+  type RowDragEndEvent,
+  type RowDragLeaveEvent,
+  type RowDragMoveEvent,
+  type RowGroupOpenedEvent,
+} from "ag-grid-enterprise";
 import { EditAccountModal } from "../../components/edit-account-modal";
 import type {
   AccountInitialValues,
@@ -25,6 +44,7 @@ import {
   deleteAccountGroup,
   getAccountGroups,
   getAccountTreeData,
+  reorderAccountTreeItems,
   updateAccount,
   updateAccountGroup,
 } from "../../server/accounts";
@@ -114,7 +134,8 @@ function AccountsPage() {
   >();
   const [editGroupModalOpen, setEditGroupModalOpen] = useState(false);
   const [deletingRow, setDeletingRow] = useState<
-    { id: string; nodeType: "account" | "accountGroup"; name: string } | undefined
+    | { id: string; nodeType: "account" | "accountGroup"; name: string }
+    | undefined
   >();
 
   const isEquityTab = tab.startsWith("EQUITY-");
@@ -122,6 +143,11 @@ function AccountsPage() {
   const storageKey = `cashfolio:expandedGroups:${accountBookId}:${tab}`;
   const storageKeyRef = useRef(storageKey);
   storageKeyRef.current = storageKey;
+
+  const dragIndicatorRef = useRef<{
+    overId: string;
+    position: "above" | "below";
+  } | null>(null);
 
   const isGroupOpenByDefault = useCallback(
     (params: IsGroupOpenByDefaultParams) => {
@@ -143,37 +169,155 @@ function AccountsPage() {
     sessionStorage.setItem(storageKeyRef.current, JSON.stringify(expandedIds));
   }, []);
 
-  const handleEditRow = useCallback(
-    (data: TreeRow) => {
-      if (data.nodeType === "account") {
-        setEditingAccount({
-          id: data.id,
-          initialValues: {
-            name: data.name,
-            type: data.type,
-            equityAccountSubtype: data.equityAccountSubtype,
-            groupId: data.groupId ?? undefined,
-            sortOrder: data.sortOrder ?? undefined,
-            unit: data.unit,
-            currency: data.currency,
-            cryptocurrency: data.cryptocurrency,
-            symbol: data.symbol,
-            tradeCurrency: data.tradeCurrency,
-          },
-        });
-        setEditModalOpen(true);
-      } else if (data.nodeType === "accountGroup") {
-        setEditingGroup({
-          id: data.id,
-          initialValues: {
-            name: data.name,
-            type: data.type,
-            equityAccountSubtype: data.equityAccountSubtype,
-            parentGroupId: data.parentId,
-        sortOrder: data.sortOrder ?? undefined,
-          },
-        });
-        setEditGroupModalOpen(true);
+  const handleEditRow = useCallback((data: TreeRow) => {
+    if (data.nodeType === "account") {
+      setEditingAccount({
+        id: data.id,
+        initialValues: {
+          name: data.name,
+          type: data.type,
+          equityAccountSubtype: data.equityAccountSubtype,
+          groupId: data.groupId ?? undefined,
+          sortOrder: data.sortOrder ?? undefined,
+          unit: data.unit,
+          currency: data.currency,
+          cryptocurrency: data.cryptocurrency,
+          symbol: data.symbol,
+          tradeCurrency: data.tradeCurrency,
+        },
+      });
+      setEditModalOpen(true);
+    } else if (data.nodeType === "accountGroup") {
+      setEditingGroup({
+        id: data.id,
+        initialValues: {
+          name: data.name,
+          type: data.type,
+          equityAccountSubtype: data.equityAccountSubtype,
+          parentGroupId: data.parentId,
+          sortOrder: data.sortOrder ?? undefined,
+        },
+      });
+      setEditGroupModalOpen(true);
+    }
+  }, []);
+
+  const handleRowDragEnd = useCallback(
+    async (event: RowDragEndEvent<TreeRow>) => {
+      dragIndicatorRef.current = null;
+      const draggedData = event.node.data;
+      const overData = event.overNode?.data;
+      if (!draggedData || !overData || draggedData.id === overData.id) return;
+
+      // Only allow reordering within the same parent level
+      const draggedParentId = draggedData.parentId ?? null;
+      const overParentId = overData.parentId ?? null;
+      if (draggedParentId !== overParentId) return;
+
+      // Get current siblings in their display order
+      const siblings = treeData[tab].filter(
+        (row) => (row.parentId ?? null) === draggedParentId,
+      );
+
+      const draggedIndex = siblings.findIndex((r) => r.id === draggedData.id);
+      const overIndex = siblings.findIndex((r) => r.id === overData.id);
+      if (draggedIndex === -1 || overIndex === -1 || draggedIndex === overIndex)
+        return;
+
+      // Reorder: remove dragged, insert at new position
+      const newSiblings = [...siblings];
+      newSiblings.splice(draggedIndex, 1);
+      const newOverIndex = overIndex > draggedIndex ? overIndex - 1 : overIndex;
+      const insertAt =
+        draggedIndex < overIndex ? newOverIndex + 1 : newOverIndex;
+      newSiblings.splice(insertAt, 0, draggedData);
+
+      await reorderAccountTreeItems({
+        data: {
+          accountBookId,
+          updates: newSiblings.map((row, i) => ({
+            id: row.id,
+            nodeType: row.nodeType,
+            sortOrder: i,
+          })),
+        },
+      });
+      router.invalidate();
+
+      dragIndicatorRef.current = null;
+      event.api.redrawRows({ rowNodes: [event.overNode!] });
+    },
+    [treeData, tab, accountBookId, router],
+  );
+
+  const getRowClass = useCallback((params: RowClassParams<TreeRow>) => {
+    if (!dragIndicatorRef.current || !params.data) return undefined;
+    if (params.data.id === dragIndicatorRef.current.overId) {
+      return dragIndicatorRef.current.position === "above"
+        ? "drag-indicator-above"
+        : "drag-indicator-below";
+    }
+    return undefined;
+  }, []);
+
+  const handleRowDragMove = useCallback(
+    (event: RowDragMoveEvent<TreeRow>) => {
+      const draggedData = event.node.data;
+      const overNode = event.overNode;
+      const overData = overNode?.data;
+      const prevOverId = dragIndicatorRef.current?.overId;
+
+      if (!draggedData || !overData || draggedData.id === overData.id) {
+        dragIndicatorRef.current = null;
+        if (prevOverId) {
+          const prevNode = event.api.getRowNode(prevOverId);
+          if (prevNode) event.api.redrawRows({ rowNodes: [prevNode] });
+        }
+        return;
+      }
+
+      const draggedParentId = draggedData.parentId ?? null;
+      const overParentId = overData.parentId ?? null;
+      if (draggedParentId !== overParentId) {
+        dragIndicatorRef.current = null;
+        if (prevOverId) {
+          const prevNode = event.api.getRowNode(prevOverId);
+          if (prevNode) event.api.redrawRows({ rowNodes: [prevNode] });
+        }
+        return;
+      }
+
+      const siblings = treeData[tab].filter(
+        (row) => (row.parentId ?? null) === draggedParentId,
+      );
+      const draggedIndex = siblings.findIndex((r) => r.id === draggedData.id);
+      const overIndex = siblings.findIndex((r) => r.id === overData.id);
+
+      dragIndicatorRef.current = {
+        overId: overData.id,
+        position: draggedIndex < overIndex ? "below" : "above",
+      };
+
+      const nodesToRedraw = [];
+      if (prevOverId && prevOverId !== overData.id) {
+        const prevNode = event.api.getRowNode(prevOverId);
+        if (prevNode) nodesToRedraw.push(prevNode);
+      }
+      if (overNode) nodesToRedraw.push(overNode);
+      if (nodesToRedraw.length > 0) {
+        event.api.redrawRows({ rowNodes: nodesToRedraw });
+      }
+    },
+    [treeData, tab],
+  );
+
+  const handleRowDragLeave = useCallback(
+    (event: RowDragLeaveEvent<TreeRow>) => {
+      const prevOverId = dragIndicatorRef.current?.overId;
+      dragIndicatorRef.current = null;
+      if (prevOverId) {
+        const prevNode = event.api.getRowNode(prevOverId);
+        if (prevNode) event.api.redrawRows({ rowNodes: [prevNode] });
       }
     },
     [],
@@ -385,6 +529,7 @@ function AccountsPage() {
           field: "name",
           flex: 1,
           filter: true,
+          rowDrag: true,
           valueGetter: ({ data }) => data?.name,
           cellRendererParams: {
             suppressCount: true,
@@ -395,6 +540,10 @@ function AccountsPage() {
         isGroupOpenByDefault={isGroupOpenByDefault}
         onRowGroupOpened={onRowGroupOpened}
         getRowId={({ data }) => data.id}
+        getRowClass={getRowClass}
+        onRowDragEnd={handleRowDragEnd}
+        onRowDragMove={handleRowDragMove}
+        onRowDragLeave={handleRowDragLeave}
         onRowDoubleClicked={(e) => {
           if (e.data?.nodeType === "account") {
             navigate({
