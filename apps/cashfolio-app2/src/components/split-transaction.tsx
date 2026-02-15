@@ -1,4 +1,5 @@
 import type { CellClassParams, ColDef } from "ag-grid-enterprise";
+import { currencies } from "../currencies";
 import { useMemo, useRef } from "react";
 import {
   ActionIcon,
@@ -68,6 +69,11 @@ export type SplitTransactionFormValues = {
   description?: string;
   bookings: BookingValues[];
 };
+
+const currencyOptions = Object.keys(currencies).map((code) => ({
+  label: code,
+  value: code,
+}));
 
 function isIncomeAccount(acct: AccountOption | undefined): boolean {
   return (
@@ -337,11 +343,7 @@ export function SplitTransaction({
           },
           width: 90,
           context: {
-            options: [
-              { label: "CHF", value: "CHF" },
-              { label: "EUR", value: "EUR" },
-              { label: "USD", value: "USD" },
-            ],
+            options: currencyOptions,
           },
         },
         {
