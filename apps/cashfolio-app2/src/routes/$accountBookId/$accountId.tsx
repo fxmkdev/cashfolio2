@@ -311,6 +311,7 @@ function LedgerPage() {
               field: "currency" as const,
               headerName: "Currency",
               width: 100,
+              filter: true,
             },
           ]
         : []),
@@ -319,12 +320,14 @@ function LedgerPage() {
         headerName: "Debit",
         width: 130,
         type: FORMATTED_NUMERIC_COLUMN,
+        filter: "agNumberColumnFilter",
       },
       {
         field: "credit",
         headerName: "Credit",
         width: 130,
         type: FORMATTED_NUMERIC_COLUMN,
+        filter: "agNumberColumnFilter",
       },
       ...(isEquity
         ? []
@@ -334,6 +337,7 @@ function LedgerPage() {
               headerName: "Balance",
               width: 130,
               type: FORMATTED_NUMERIC_COLUMN,
+              filter: "agNumberColumnFilter",
             },
           ]),
       {

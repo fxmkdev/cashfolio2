@@ -528,7 +528,7 @@ function AccountsPage() {
           headerName: "Name",
           field: "name",
           flex: 1,
-          filter: true,
+          filter: "agTextColumnFilter",
           rowDrag: true,
           valueGetter: ({ data }) => data?.name,
           cellRendererParams: {
