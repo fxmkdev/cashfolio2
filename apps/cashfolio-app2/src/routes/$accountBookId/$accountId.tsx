@@ -94,9 +94,10 @@ type LedgerRow = {
   date: string;
   counterpartyAccounts: { id: string; name: string }[];
   description: string;
+  currency: string | null;
   debit: number | null;
   credit: number | null;
-  balance: number;
+  balance: number | null;
 };
 
 function LedgerPage() {
@@ -204,6 +205,8 @@ function LedgerPage() {
     router.invalidate();
   }
 
+  const isEquity = account.type === AccountType.EQUITY;
+
   const rows = useMemo<LedgerRow[]>(() => {
     const negate = shouldNegate(account.type, account.equityAccountSubtype);
     let balance = 0;
@@ -220,6 +223,7 @@ function LedgerPage() {
           date: format(new Date(b.date), "dd.MM.yyyy"),
           counterpartyAccounts: b.counterpartyAccounts,
           description: b.description || b.transactionDescription,
+          currency: b.currency,
           debit: negate
             ? value < 0
               ? -value
@@ -234,11 +238,11 @@ function LedgerPage() {
             : value < 0
               ? -value
               : null,
-          balance,
+          balance: isEquity ? null : balance,
         };
       })
       .reverse();
-  }, [account, bookings]);
+  }, [account, bookings, isEquity]);
 
   const columnDefs = useMemo<ColDef<LedgerRow>[]>(
     () => [
@@ -281,6 +285,15 @@ function LedgerPage() {
         headerName: "Description",
         width: 400,
       },
+      ...(isEquity
+        ? [
+            {
+              field: "currency" as const,
+              headerName: "Currency",
+              width: 100,
+            },
+          ]
+        : []),
       {
         field: "debit",
         headerName: "Debit",
@@ -293,12 +306,16 @@ function LedgerPage() {
         width: 130,
         type: FORMATTED_NUMERIC_COLUMN,
       },
-      {
-        field: "balance",
-        headerName: "Balance",
-        width: 130,
-        type: FORMATTED_NUMERIC_COLUMN,
-      },
+      ...(isEquity
+        ? []
+        : [
+            {
+              field: "balance" as const,
+              headerName: "Balance",
+              width: 130,
+              type: FORMATTED_NUMERIC_COLUMN,
+            },
+          ]),
       {
         colId: "actions",
         headerName: "",
@@ -343,7 +360,7 @@ function LedgerPage() {
         },
       },
     ],
-    [accountBookId, handleEditClick],
+    [accountBookId, handleEditClick, isEquity],
   );
 
   const navigate = Route.useNavigate();
