@@ -5,6 +5,27 @@
 - **Mantine 8** for all UI components, forms (`@mantine/form`), and theming
 - **AG Grid Enterprise** wrapped in `src/components/data-grid.tsx` with tree data support
 
+## Shared Utilities (`src/shared/`)
+
+`src/shared/account-utils.ts` contains pure utility functions used across routes, components, and server functions:
+
+| Function | Purpose |
+|---|---|
+| `getTypeLabel(type, equityAccountSubtype)` | Human-readable label for an account type (e.g. `"Income"`, `"Asset"`) |
+| `isIncomeAccount(acct)` | True when account is `EQUITY / INCOME` |
+| `isExpenseAccount(acct)` | True when account is `EQUITY / EXPENSE` |
+| `getUnitIdentifier({ unit, currency, cryptocurrency, symbol })` | Canonical string key for a booking's unit (`"currency:CHF"`, `"crypto:BTC"`, `"security:AAPL"`) |
+
+## Custom Hooks (`src/hooks/`)
+
+Route-level logic that doesn't belong in components is extracted into hooks in `src/hooks/`:
+
+| Hook | File | Purpose |
+|---|---|---|
+| `useAccountTreeDnD` | `use-account-tree-dnd.ts` | Drag-and-drop reordering for the accounts tree |
+| `useExpandedGroups` | `use-expanded-groups.ts` | Persist/restore expanded group state via sessionStorage |
+| `useTransactionScroll` | `use-transaction-scroll.ts` | Scroll-to and flash a transaction row on the ledger grid |
+
 ## Modal Pattern
 
 `EditAccountModal` and `EditAccountGroupModal` share these conventions:
@@ -27,7 +48,7 @@
 
 - Add `deletable` and `deleteDisabledReason` fields to data returned from the server
 - Check constraints server-side before deleting (never trust client-side `deletable` alone)
-- Use a confirmation `Modal` before performing destructive actions
+- Use `<ConfirmDeleteModal>` (`src/components/confirm-delete-modal.tsx`) for delete confirmations — props: `opened`, `onClose`, `title`, `name` (the item being deleted), `onConfirm`
 
 ## Type Descriptor Pattern
 
@@ -80,6 +101,8 @@ Shared validators live in `src/shared/account-validation.ts` and are used both c
 
 Bookings are grouped by a unit identifier string: `currency:${code}`, `crypto:${symbol}`, or `security:${symbol}`. Only one unit identifier is allowed per transaction.
 
+The shared `getUnitIdentifier({ unit, currency, cryptocurrency, symbol })` in `src/shared/account-utils.ts` produces these strings. Callers must guard that `unit` is set before calling it.
+
 ## AG Grid Column Types
 
 Defined in `src/components/column-types.tsx`:
@@ -108,10 +131,15 @@ Columns use AG Grid's built-in filter UI (not URL search params):
 
 ## Row Drag-and-Drop Pattern
 
-The accounts tree supports reordering rows via drag-and-drop within the same parent level:
+The accounts tree supports reordering rows via drag-and-drop within the same parent level. All DnD logic is encapsulated in `useAccountTreeDnD` (`src/hooks/use-account-tree-dnd.ts`):
+
+```ts
+const { handleRowDragEnd, handleRowDragMove, handleRowDragLeave, getRowClass } =
+  useAccountTreeDnD({ treeData, tab, accountBookId, router });
+```
 
 - AG Grid's `rowDrag` is enabled; `rowDragManaged` is **not** used (manual DnD events)
-- A `dragIndicatorRef` tracks the drop target and position (`"above"` | `"below"` | `null`)
+- An internal `dragIndicatorRef` tracks the drop target and position (`"above"` | `"below"` | `null`)
 - `getRowClass()` returns `"drag-indicator-above"` or `"drag-indicator-below"` to render a box-shadow indicator line via CSS (in `grid-theme.css`)
 - On `rowDragEnd`, the new `sortOrder` values are computed and sent to `reorderAccountTreeItems`; the loader is then invalidated to refresh the tree
 
@@ -125,13 +153,29 @@ The `getAccountTreeData` server function returns a single flat array where each 
 
 ## Session Storage for UI State
 
-Expanded group IDs are persisted in sessionStorage with the key `cashfolio:expandedGroups:${accountBookId}:${tab}`.
+Expanded group IDs are persisted in sessionStorage with the key `cashfolio:expandedGroups:${accountBookId}:${tab}`. This is encapsulated in `useExpandedGroups` (`src/hooks/use-expanded-groups.ts`):
+
+```ts
+const { isGroupOpenByDefault, onRowGroupOpened } = useExpandedGroups(storageKey);
+```
+
+Pass the returned callbacks directly to the `DataGrid` props of the same names.
 
 ## Transaction Highlighting
 
-The ledger supports a `transactionId` search param to auto-scroll to a transaction, flash its cells, then clear the param from the URL.
+The ledger supports a `transactionId` search param to auto-scroll to a transaction, flash its cells, then clear the param from the URL. This is encapsulated in `useTransactionScroll` (`src/hooks/use-transaction-scroll.ts`):
 
-Implementation: `pendingScrollRef` stores the target transaction ID; on `RowDataUpdated`, the grid calls `ensureNodeVisible()` for all matching rows. After the scroll completes (via `bodyScrollEnd` or a double `requestAnimationFrame` fallback), `flashCells()` is called. The search param is cleared immediately on mount to avoid re-triggering on re-renders.
+```ts
+const { pendingScrollRef, handleRowDataUpdated } = useTransactionScroll(
+  transactionId,
+  navigate,
+);
+```
+
+- `transactionId` comes from the route's search params; `navigate` comes from `Route.useNavigate()`
+- Pass `handleRowDataUpdated` to the `DataGrid`'s `onRowDataUpdated` prop
+- After creating or updating a transaction, set `pendingScrollRef.current = transactionId` before invalidating the router — this triggers the scroll/flash on the next data update
+- Implementation: on `RowDataUpdated`, `ensureNodeVisible()` is called for all matching rows. After the scroll completes (via `bodyScrollEnd` or a double `requestAnimationFrame` fallback), `flashCells()` is called. The search param is cleared from the URL immediately to avoid re-triggering on re-renders.
 
 ## Theme & Styling
 
