@@ -42,6 +42,7 @@ The account ledger (`src/routes/$accountBookId/$accountId.tsx`) shows all bookin
 
 - **Sign convention**: Values are negated for `LIABILITY` and `EQUITY` (non-`EXPENSE`) accounts so that balances display naturally (positive = increase)
 - **Debit/Credit split**: Positive adjusted values → debit column, negative → credit column (shown as positive)
+- **Debit/Credit column visibility**: Income accounts hide the debit column; Expense accounts hide the credit column; Equity (non-Expense) accounts hide the balance column
 - **Running balance**: Accumulated across all bookings in chronological order
 - **Counterparty names**: Derived from sibling bookings on the same transaction, deduplicated
 - **Navigation**: Double-click an account row on the accounts list to open its ledger; back link returns to accounts list
@@ -63,6 +64,12 @@ Shared validators live in `src/shared/account-validation.ts` and are used both c
 - **Minimum bookings**: at least 2 bookings enforced
 - **Date propagation**: date changes propagate to all bookings
 - **Unit auto-population**: unit is auto-populated from selected account metadata
+
+### Account Type Debit/Credit Restrictions
+
+- **Income** accounts may not have a positive (debit) value
+- **Expense** accounts may not have a negative (credit) value
+- Enforced both client-side in `SplitTransaction` and server-side in `validateAccountTypeBookings()`
 
 ### Form Root Validation
 
@@ -86,6 +93,36 @@ Defined in `src/components/column-types.tsx`:
 
 Grids pass a context object to cell renderers and editors containing helper data, form references, and callbacks.
 
+## AG Grid Column Filters
+
+Columns use AG Grid's built-in filter UI (not URL search params):
+
+- `filter: "agTextColumnFilter"` — text contains/starts-with filter
+- `filter: "agNumberColumnFilter"` — numeric comparison filter
+- `filter: true` — default filter for the column type
+- `filter: false` — explicitly disable filtering on a column (e.g. actions column)
+
+## AG Grid Theme Synchronization
+
+`AgThemeModeSynchronizer` (in `__root.tsx`) listens to `useComputedColorScheme()` and sets `data-ag-theme-mode` on `documentElement`. The AG Grid Quartz theme responds to this attribute to switch between light and dark mode. AG Grid theme config is in `src/components/grid-theme.tsx`.
+
+## Row Drag-and-Drop Pattern
+
+The accounts tree supports reordering rows via drag-and-drop within the same parent level:
+
+- AG Grid's `rowDrag` is enabled; `rowDragManaged` is **not** used (manual DnD events)
+- A `dragIndicatorRef` tracks the drop target and position (`"above"` | `"below"` | `null`)
+- `getRowClass()` returns `"drag-indicator-above"` or `"drag-indicator-below"` to render a box-shadow indicator line via CSS (in `grid-theme.css`)
+- On `rowDragEnd`, the new `sortOrder` values are computed and sent to `reorderAccountTreeItems`; the loader is then invalidated to refresh the tree
+
+## Node Type Mixing in Tree Data
+
+The `getAccountTreeData` server function returns a single flat array where each row has a `nodeType` field (`"account"` or `"accountGroup"`). AG Grid's tree data groups them hierarchically. Fields that don't apply to a node type are `null`.
+
+## FormattedNumberInput
+
+`src/components/formatted-number-input.tsx` wraps Mantine's `NumberInput` using `Intl.NumberFormat` to extract locale-specific thousand/decimal separators (defaults to `en-CH`). Used in `FORMATTED_NUMERIC_COLUMN` and `SplitTransaction`.
+
 ## Session Storage for UI State
 
 Expanded group IDs are persisted in sessionStorage with the key `cashfolio:expandedGroups:${accountBookId}:${tab}`.
@@ -93,6 +130,8 @@ Expanded group IDs are persisted in sessionStorage with the key `cashfolio:expan
 ## Transaction Highlighting
 
 The ledger supports a `transactionId` search param to auto-scroll to a transaction, flash its cells, then clear the param from the URL.
+
+Implementation: `pendingScrollRef` stores the target transaction ID; on `RowDataUpdated`, the grid calls `ensureNodeVisible()` for all matching rows. After the scroll completes (via `bodyScrollEnd` or a double `requestAnimationFrame` fallback), `flashCells()` is called. The search param is cleared immediately on mount to avoid re-triggering on re-renders.
 
 ## Theme & Styling
 

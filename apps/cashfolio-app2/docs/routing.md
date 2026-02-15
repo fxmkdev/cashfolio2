@@ -8,12 +8,14 @@
 
 ### Route Structure
 
-- `$accountBookId/index.tsx` — accounts page with tabs (one per account type)
+- `$accountBookId/index.tsx` — accounts page with tabs (one per account type: Asset, Liability, Income, Expense, Gain/Loss)
 - `$accountBookId/$accountId.tsx` — ledger page for a single account
 
 ### Search Parameters
 
-- Routes use `validateSearch` to define typed, validated search parameters (e.g. `transactionId` on the ledger route)
+- Routes use `validateSearch` to define typed, validated search parameters
+- `$accountBookId/index.tsx` uses `tab: TabValue` to track the active account type tab
+- `$accountBookId/$accountId.tsx` uses `transactionId?: string` to auto-scroll and highlight a booking row
 
 ### Loader Pattern
 
@@ -25,3 +27,8 @@
 - Created with `createServerFn` from `@tanstack/react-start`
 - Pattern: `createServerFn({ method })` → `.inputValidator()` → `.handler()`
 - Server-only files use `.server.ts` suffix
+- Key files: `accounts.ts`, `ledger.ts`, `transactions.ts`
+
+### Reorder Pattern
+
+`reorderAccountTreeItems` (in `accounts.ts`) issues a batch of Prisma updates inside a transaction to update `sortOrder` values after drag-and-drop reordering.
