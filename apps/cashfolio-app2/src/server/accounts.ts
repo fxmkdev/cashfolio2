@@ -79,7 +79,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
             ? { equityAccountSubtype: data.equityAccountSubtype }
             : undefined),
         },
-        orderBy: [{ name: "asc" }],
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       }),
       prisma.accountGroup.findMany({
         where: {
@@ -127,6 +127,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
         parentId: a.groupId ?? undefined,
         isActive: a.isActive,
         groupId: a.groupId ?? undefined,
+        sortOrder: a.sortOrder,
         deletable: !hasBookings,
         deleteDisabledReason: hasBookings ? "Cannot delete account because it has bookings" : undefined,
       };
@@ -192,6 +193,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
           parentId: ag.parentGroupId ?? undefined,
           isActive: ag.isActive,
           groupId: ag.id,
+          sortOrder: ag.sortOrder,
           deletable,
           deleteDisabledReason: isReferencedByAccountBook
             ? "Cannot delete group because it is used as a holding gain/loss group"
@@ -203,7 +205,21 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
         };
       });
 
-    return [...accountRows, ...groupRows];
+    const allRows = [...accountRows, ...groupRows];
+    allRows.sort((a, b) => {
+      // Group siblings together (same parentId)
+      const parentA = a.parentId ?? "";
+      const parentB = b.parentId ?? "";
+      if (parentA !== parentB) return parentA.localeCompare(parentB);
+      // sortOrder: defined values first, nulls last
+      if (a.sortOrder !== b.sortOrder) {
+        if (a.sortOrder == null) return 1;
+        if (b.sortOrder == null) return -1;
+        return a.sortOrder - b.sortOrder;
+      }
+      return a.name.localeCompare(b.name);
+    });
+    return allRows;
   });
 
 export type AccountInput = {
@@ -212,6 +228,7 @@ export type AccountInput = {
   type: AccountType;
   equityAccountSubtype?: EquityAccountSubtype;
   groupId?: string;
+  sortOrder?: number;
   unit?: Unit;
   currency?: string;
   cryptocurrency?: string;
@@ -235,6 +252,7 @@ export const createAccount = createServerFn({ method: "POST" })
         type: data.type,
         equityAccountSubtype: data.equityAccountSubtype,
         groupId: data.groupId ?? null,
+        sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : null,
         unit: data.unit,
         currency: data.currency,
         cryptocurrency: data.cryptocurrency,
@@ -272,6 +290,7 @@ export const updateAccount = createServerFn({ method: "POST" })
       data: {
         name: data.name,
         groupId: data.groupId ?? null,
+        sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : null,
         unit: data.unit,
         currency: data.currency,
         cryptocurrency: data.cryptocurrency,
@@ -288,6 +307,7 @@ export type AccountGroupInput = {
   type: AccountType;
   equityAccountSubtype?: EquityAccountSubtype;
   parentGroupId?: string;
+  sortOrder?: number;
 };
 
 export const createAccountGroup = createServerFn({ method: "POST" })
@@ -309,6 +329,7 @@ export const createAccountGroup = createServerFn({ method: "POST" })
         type: data.type,
         equityAccountSubtype: data.equityAccountSubtype,
         parentGroupId: data.parentGroupId,
+        sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : null,
         accountBookId: data.accountBookId,
       },
     });
@@ -341,6 +362,7 @@ export const updateAccountGroup = createServerFn({ method: "POST" })
       data: {
         name: data.name,
         parentGroupId: data.parentGroupId,
+        sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : null,
       },
     });
     return group;

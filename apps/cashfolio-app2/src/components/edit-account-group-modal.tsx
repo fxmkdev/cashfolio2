@@ -2,6 +2,7 @@ import {
   Button,
   Group,
   Modal,
+  NumberInput,
   Stack,
   TextInput,
   Grid,
@@ -22,6 +23,7 @@ type FormValues = {
   name?: string;
   typeDescriptor?: "ASSET" | "LIABILITY" | `EQUITY-${EquityAccountSubtype}`;
   parentGroupId?: string;
+  sortOrder?: number;
 };
 
 export type AccountGroupTransformedFormValues = FormValues & {
@@ -34,6 +36,7 @@ export type AccountGroupInitialValues = {
   type: AccountType;
   equityAccountSubtype?: EquityAccountSubtype | null;
   parentGroupId?: string | null;
+  sortOrder?: number | null;
 };
 
 function toFormValues(initial: AccountGroupInitialValues): FormValues {
@@ -46,6 +49,7 @@ function toFormValues(initial: AccountGroupInitialValues): FormValues {
     name: initial.name,
     typeDescriptor,
     parentGroupId: initial.parentGroupId ?? undefined,
+    sortOrder: initial.sortOrder ?? undefined,
   };
 }
 
@@ -176,7 +180,7 @@ export function EditAccountGroupModal({
                 {...form.getInputProps("typeDescriptor")}
               />
             </Grid.Col>
-            <Grid.Col span={12}>
+            <Grid.Col span={9}>
               <Select
                 label="Parent Group"
                 searchable
@@ -190,6 +194,13 @@ export function EditAccountGroupModal({
                       g.equityAccountSubtype === equityAccountSubtype),
                 )}
                 {...form.getInputProps("parentGroupId")}
+              />
+            </Grid.Col>
+            <Grid.Col span={3}>
+              <NumberInput
+                label="Sort Order"
+                allowDecimal={false}
+                {...form.getInputProps("sortOrder")}
               />
             </Grid.Col>
           </Grid>

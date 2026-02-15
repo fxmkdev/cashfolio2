@@ -2,6 +2,7 @@ import {
   Button,
   Group,
   Modal,
+  NumberInput,
   Stack,
   TextInput,
   Grid,
@@ -30,6 +31,7 @@ type FormValues = {
   name?: string;
   typeDescriptor?: "ASSET" | "LIABILITY" | `EQUITY-${EquityAccountSubtype}`;
   groupId?: string;
+  sortOrder?: number;
   unit: Unit;
   currency?: string;
   cryptocurrency?: string;
@@ -47,6 +49,7 @@ export type AccountInitialValues = {
   type: AccountType;
   equityAccountSubtype?: EquityAccountSubtype | null;
   groupId?: string | null;
+  sortOrder?: number | null;
   unit?: Unit | null;
   currency?: string | null;
   cryptocurrency?: string | null;
@@ -64,6 +67,7 @@ function toFormValues(initial: AccountInitialValues): FormValues {
     name: initial.name,
     typeDescriptor,
     groupId: initial.groupId ?? undefined,
+    sortOrder: initial.sortOrder ?? undefined,
     unit: initial.unit ?? Unit.CURRENCY,
     currency: initial.currency ?? undefined,
     cryptocurrency: initial.cryptocurrency ?? undefined,
@@ -240,7 +244,7 @@ export function EditAccountModal({
                 {...form.getInputProps("typeDescriptor")}
               />
             </Grid.Col>
-            <Grid.Col span={12}>
+            <Grid.Col span={9}>
               <Select
                 label="Group"
                 searchable
@@ -254,6 +258,13 @@ export function EditAccountModal({
                       g.equityAccountSubtype === equityAccountSubtype),
                 )}
                 {...form.getInputProps("groupId")}
+              />
+            </Grid.Col>
+            <Grid.Col span={3}>
+              <NumberInput
+                label="Sort Order"
+                allowDecimal={false}
+                {...form.getInputProps("sortOrder")}
               />
             </Grid.Col>
             {(

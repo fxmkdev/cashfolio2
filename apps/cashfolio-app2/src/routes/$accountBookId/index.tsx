@@ -153,6 +153,7 @@ function AccountsPage() {
             type: data.type,
             equityAccountSubtype: data.equityAccountSubtype,
             groupId: data.groupId ?? undefined,
+            sortOrder: data.sortOrder ?? undefined,
             unit: data.unit,
             currency: data.currency,
             cryptocurrency: data.cryptocurrency,
@@ -169,6 +170,7 @@ function AccountsPage() {
             type: data.type,
             equityAccountSubtype: data.equityAccountSubtype,
             parentGroupId: data.parentId,
+        sortOrder: data.sortOrder ?? undefined,
           },
         });
         setEditGroupModalOpen(true);
@@ -263,6 +265,7 @@ function AccountsPage() {
         type: values.type,
         equityAccountSubtype: values.equityAccountSubtype,
         groupId: values.groupId,
+        sortOrder: values.sortOrder,
         unit: values.unit,
         currency: values.currency,
         cryptocurrency: values.cryptocurrency,
@@ -284,6 +287,7 @@ function AccountsPage() {
         type: values.type,
         equityAccountSubtype: values.equityAccountSubtype,
         groupId: values.groupId,
+        sortOrder: values.sortOrder,
         unit: values.unit,
         currency: values.currency,
         cryptocurrency: values.cryptocurrency,
@@ -303,6 +307,7 @@ function AccountsPage() {
         type: values.type,
         equityAccountSubtype: values.equityAccountSubtype,
         parentGroupId: values.parentGroupId,
+        sortOrder: values.sortOrder,
       },
     });
     setCreateGroupModalOpened(false);
@@ -330,6 +335,7 @@ function AccountsPage() {
         type: values.type,
         equityAccountSubtype: values.equityAccountSubtype,
         parentGroupId: values.parentGroupId,
+        sortOrder: values.sortOrder,
       },
     });
     setEditGroupModalOpen(false);
