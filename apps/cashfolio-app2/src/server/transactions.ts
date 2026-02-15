@@ -6,6 +6,7 @@ import {
   Unit,
 } from "../.prisma-client/enums";
 import { isAfter, startOfDay } from "date-fns";
+import { getUnitIdentifier } from "../shared/account-utils";
 
 export type CreateTransactionInput = {
   accountBookId: string;
@@ -22,22 +23,6 @@ export type CreateTransactionInput = {
     value: number;
   }[];
 };
-
-function getUnitIdentifier(booking: {
-  unit: Unit;
-  currency?: string;
-  cryptocurrency?: string;
-  symbol?: string;
-}): string {
-  switch (booking.unit) {
-    case Unit.CURRENCY:
-      return `currency:${booking.currency}`;
-    case Unit.CRYPTOCURRENCY:
-      return `crypto:${booking.cryptocurrency}`;
-    case Unit.SECURITY:
-      return `security:${booking.symbol}`;
-  }
-}
 
 function validateCreateTransaction(input: CreateTransactionInput) {
   const errors: string[] = [];

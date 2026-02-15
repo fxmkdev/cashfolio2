@@ -1,5 +1,10 @@
 import type { CellClassParams, ColDef } from "ag-grid-enterprise";
 import { currencies } from "../currencies";
+import {
+  isIncomeAccount,
+  isExpenseAccount,
+  getUnitIdentifier,
+} from "../shared/account-utils";
 import { useMemo, useRef } from "react";
 import {
   ActionIcon,
@@ -74,32 +79,6 @@ const currencyOptions = Object.keys(currencies).map((code) => ({
   label: code,
   value: code,
 }));
-
-function isIncomeAccount(acct: AccountOption | undefined): boolean {
-  return (
-    acct?.type === AccountType.EQUITY &&
-    acct?.equityAccountSubtype === EquityAccountSubtype.INCOME
-  );
-}
-
-function isExpenseAccount(acct: AccountOption | undefined): boolean {
-  return (
-    acct?.type === AccountType.EQUITY &&
-    acct?.equityAccountSubtype === EquityAccountSubtype.EXPENSE
-  );
-}
-
-function getUnitIdentifier(booking: BookingValues): string | undefined {
-  if (!booking.unit) return undefined;
-  switch (booking.unit) {
-    case Unit.CURRENCY:
-      return `currency:${booking.currency}`;
-    case Unit.CRYPTOCURRENCY:
-      return `crypto:${booking.cryptocurrency}`;
-    case Unit.SECURITY:
-      return `security:${booking.symbol}`;
-  }
-}
 
 export function SplitTransaction({
   initialValues,
@@ -196,8 +175,8 @@ export function SplitTransaction({
 
           const unitIdentifiers = new Set(
             bookings
-              .map((b) => getUnitIdentifier(b))
-              .filter((id): id is string => !!id),
+              .filter((b): b is BookingValues & { unit: Unit } => b.unit != null)
+              .map((b) => getUnitIdentifier(b)),
           );
           if (unitIdentifiers.size !== 1) return null;
 

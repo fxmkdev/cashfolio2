@@ -3,15 +3,13 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActionIcon,
   Button,
   Container,
   Group,
-  Modal,
   Tabs,
-  Text,
   Title,
   Tooltip,
 } from "@mantine/core";
@@ -19,13 +17,10 @@ import { IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
 import {
   type ColDef,
   type ICellRendererParams,
-  type IsGroupOpenByDefaultParams,
-  type RowClassParams,
-  type RowDragEndEvent,
-  type RowDragLeaveEvent,
-  type RowDragMoveEvent,
-  type RowGroupOpenedEvent,
 } from "ag-grid-enterprise";
+import { useAccountTreeDnD } from "../../hooks/use-account-tree-dnd";
+import { useExpandedGroups } from "../../hooks/use-expanded-groups";
+import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
 import { EditAccountModal } from "../../components/edit-account-modal";
 import type {
   AccountInitialValues,
@@ -44,7 +39,6 @@ import {
   deleteAccountGroup,
   getAccountGroups,
   getAccountTreeData,
-  reorderAccountTreeItems,
   updateAccount,
   updateAccountGroup,
 } from "../../server/accounts";
@@ -141,33 +135,15 @@ function AccountsPage() {
   const isEquityTab = tab.startsWith("EQUITY-");
 
   const storageKey = `cashfolio:expandedGroups:${accountBookId}:${tab}`;
-  const storageKeyRef = useRef(storageKey);
-  storageKeyRef.current = storageKey;
+  const { isGroupOpenByDefault, onRowGroupOpened } =
+    useExpandedGroups(storageKey);
 
-  const dragIndicatorRef = useRef<{
-    overId: string;
-    position: "above" | "below";
-  } | null>(null);
-
-  const isGroupOpenByDefault = useCallback(
-    (params: IsGroupOpenByDefaultParams) => {
-      const stored = sessionStorage.getItem(storageKeyRef.current);
-      if (stored == null) return params.rowNode.level === 0;
-      const expandedIds: string[] = JSON.parse(stored);
-      return expandedIds.includes(params.rowNode.key!);
-    },
-    [],
-  );
-
-  const onRowGroupOpened = useCallback((event: RowGroupOpenedEvent) => {
-    const expandedIds: string[] = [];
-    event.api.forEachNode((node) => {
-      if (node.group && node.expanded && node.key) {
-        expandedIds.push(node.key);
-      }
-    });
-    sessionStorage.setItem(storageKeyRef.current, JSON.stringify(expandedIds));
-  }, []);
+  const {
+    handleRowDragEnd,
+    handleRowDragMove,
+    handleRowDragLeave,
+    getRowClass,
+  } = useAccountTreeDnD({ treeData, tab, accountBookId, router });
 
   const handleEditRow = useCallback((data: TreeRow) => {
     if (data.nodeType === "account") {
@@ -201,127 +177,6 @@ function AccountsPage() {
       setEditGroupModalOpen(true);
     }
   }, []);
-
-  const handleRowDragEnd = useCallback(
-    async (event: RowDragEndEvent<TreeRow>) => {
-      dragIndicatorRef.current = null;
-      const draggedData = event.node.data;
-      const overData = event.overNode?.data;
-      if (!draggedData || !overData || draggedData.id === overData.id) return;
-
-      // Only allow reordering within the same parent level
-      const draggedParentId = draggedData.parentId ?? null;
-      const overParentId = overData.parentId ?? null;
-      if (draggedParentId !== overParentId) return;
-
-      // Get current siblings in their display order
-      const siblings = treeData[tab].filter(
-        (row) => (row.parentId ?? null) === draggedParentId,
-      );
-
-      const draggedIndex = siblings.findIndex((r) => r.id === draggedData.id);
-      const overIndex = siblings.findIndex((r) => r.id === overData.id);
-      if (draggedIndex === -1 || overIndex === -1 || draggedIndex === overIndex)
-        return;
-
-      // Reorder: remove dragged, insert at new position
-      const newSiblings = [...siblings];
-      newSiblings.splice(draggedIndex, 1);
-      const newOverIndex = overIndex > draggedIndex ? overIndex - 1 : overIndex;
-      const insertAt =
-        draggedIndex < overIndex ? newOverIndex + 1 : newOverIndex;
-      newSiblings.splice(insertAt, 0, draggedData);
-
-      await reorderAccountTreeItems({
-        data: {
-          accountBookId,
-          updates: newSiblings.map((row, i) => ({
-            id: row.id,
-            nodeType: row.nodeType,
-            sortOrder: i,
-          })),
-        },
-      });
-      router.invalidate();
-
-      dragIndicatorRef.current = null;
-      event.api.redrawRows({ rowNodes: [event.overNode!] });
-    },
-    [treeData, tab, accountBookId, router],
-  );
-
-  const getRowClass = useCallback((params: RowClassParams<TreeRow>) => {
-    if (!dragIndicatorRef.current || !params.data) return undefined;
-    if (params.data.id === dragIndicatorRef.current.overId) {
-      return dragIndicatorRef.current.position === "above"
-        ? "drag-indicator-above"
-        : "drag-indicator-below";
-    }
-    return undefined;
-  }, []);
-
-  const handleRowDragMove = useCallback(
-    (event: RowDragMoveEvent<TreeRow>) => {
-      const draggedData = event.node.data;
-      const overNode = event.overNode;
-      const overData = overNode?.data;
-      const prevOverId = dragIndicatorRef.current?.overId;
-
-      if (!draggedData || !overData || draggedData.id === overData.id) {
-        dragIndicatorRef.current = null;
-        if (prevOverId) {
-          const prevNode = event.api.getRowNode(prevOverId);
-          if (prevNode) event.api.redrawRows({ rowNodes: [prevNode] });
-        }
-        return;
-      }
-
-      const draggedParentId = draggedData.parentId ?? null;
-      const overParentId = overData.parentId ?? null;
-      if (draggedParentId !== overParentId) {
-        dragIndicatorRef.current = null;
-        if (prevOverId) {
-          const prevNode = event.api.getRowNode(prevOverId);
-          if (prevNode) event.api.redrawRows({ rowNodes: [prevNode] });
-        }
-        return;
-      }
-
-      const siblings = treeData[tab].filter(
-        (row) => (row.parentId ?? null) === draggedParentId,
-      );
-      const draggedIndex = siblings.findIndex((r) => r.id === draggedData.id);
-      const overIndex = siblings.findIndex((r) => r.id === overData.id);
-
-      dragIndicatorRef.current = {
-        overId: overData.id,
-        position: draggedIndex < overIndex ? "below" : "above",
-      };
-
-      const nodesToRedraw = [];
-      if (prevOverId && prevOverId !== overData.id) {
-        const prevNode = event.api.getRowNode(prevOverId);
-        if (prevNode) nodesToRedraw.push(prevNode);
-      }
-      if (overNode) nodesToRedraw.push(overNode);
-      if (nodesToRedraw.length > 0) {
-        event.api.redrawRows({ rowNodes: nodesToRedraw });
-      }
-    },
-    [treeData, tab],
-  );
-
-  const handleRowDragLeave = useCallback(
-    (event: RowDragLeaveEvent<TreeRow>) => {
-      const prevOverId = dragIndicatorRef.current?.overId;
-      dragIndicatorRef.current = null;
-      if (prevOverId) {
-        const prevNode = event.api.getRowNode(prevOverId);
-        if (prevNode) event.api.redrawRows({ rowNodes: [prevNode] });
-      }
-    },
-    [],
-  );
 
   const columnDefs = useMemo<ColDef<TreeRow>[]>(
     () => [
@@ -596,27 +451,15 @@ function AccountsPage() {
         typeDescriptor={tab}
       />
 
-      <Modal
+      <ConfirmDeleteModal
         opened={!!deletingRow}
         onClose={() => setDeletingRow(undefined)}
         title={
-          deletingRow?.nodeType === "account"
-            ? "Delete Account"
-            : "Delete Group"
+          deletingRow?.nodeType === "account" ? "Delete Account" : "Delete Group"
         }
-      >
-        <Text mb="lg">
-          Are you sure you want to delete {deletingRow?.name}?
-        </Text>
-        <Group justify="flex-end">
-          <Button variant="subtle" onClick={() => setDeletingRow(undefined)}>
-            Cancel
-          </Button>
-          <Button color="red" onClick={handleDelete}>
-            Delete
-          </Button>
-        </Group>
-      </Modal>
+        name={deletingRow?.name}
+        onConfirm={handleDelete}
+      />
     </Container>
   );
 }

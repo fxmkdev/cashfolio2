@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActionIcon,
   Anchor,
@@ -12,12 +12,13 @@ import {
   Text,
   Tooltip,
 } from "@mantine/core";
+import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
+import { getTypeLabel } from "../../shared/account-utils";
+import { useTransactionScroll } from "../../hooks/use-transaction-scroll";
 import { IconCashPlus, IconPencil, IconTrash } from "@tabler/icons-react";
 import type {
   ColDef,
   ICellRendererParams,
-  IRowNode,
-  RowDataUpdatedEvent,
 } from "ag-grid-enterprise";
 import { DataGrid } from "../../components/data-grid";
 import { getAccountForLedger, getLedgerData } from "../../server/ledger";
@@ -59,19 +60,6 @@ export const Route = createFileRoute("/$accountBookId/$accountId")({
   },
   component: LedgerPage,
 });
-
-function getTypeLabel(
-  type: AccountType,
-  equityAccountSubtype: EquityAccountSubtype | null,
-): string {
-  if (type === AccountType.ASSET) return "Asset";
-  if (type === AccountType.LIABILITY) return "Liability";
-  if (equityAccountSubtype === EquityAccountSubtype.INCOME) return "Income";
-  if (equityAccountSubtype === EquityAccountSubtype.EXPENSE) return "Expense";
-  if (equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS)
-    return "Gain/Loss";
-  return "Accounts";
-}
 
 function shouldNegate(
   type: AccountType,
@@ -405,58 +393,9 @@ function LedgerPage() {
   );
 
   const navigate = Route.useNavigate();
-  const scrollTargetRef = useRef(transactionId);
-  scrollTargetRef.current = transactionId;
-  const pendingScrollRef = useRef<string | undefined>(undefined);
-
-  const handleRowDataUpdated = useCallback(
-    (event: RowDataUpdatedEvent<LedgerRow>) => {
-      const targetTxId = pendingScrollRef.current ?? scrollTargetRef.current;
-      if (!targetTxId) return;
-
-      // Clear search param immediately so subsequent re-renders (e.g. after
-      // deleting a transaction) don't pick it up again.
-      if (!pendingScrollRef.current && scrollTargetRef.current) {
-        navigate({
-          search: (prev) => ({ ...prev, transactionId: undefined }),
-          replace: true,
-        });
-      }
-
-      scrollTargetRef.current = undefined;
-      pendingScrollRef.current = undefined;
-
-      const rowNodes: IRowNode<LedgerRow>[] = [];
-      event.api.forEachNode((node) => {
-        if (node.data?.transactionId === targetTxId) {
-          rowNodes.push(node);
-        }
-      });
-      if (rowNodes.length === 0) return;
-
-      // rowNodes are in display order (newest first); scroll to the last = earliest booking
-      event.api.ensureNodeVisible(rowNodes[rowNodes.length - 1]!, "middle");
-
-      // Flash cells after scrolling completes; use bodyScrollEnd event
-      // with a rAF fallback for when no scroll is needed (target already visible)
-      let flashed = false;
-      const flash = () => {
-        if (flashed) return;
-        flashed = true;
-        event.api.removeEventListener("bodyScrollEnd", onScrollEnd);
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            event.api.flashCells({ rowNodes });
-          });
-        });
-      };
-      const onScrollEnd = () => flash();
-      event.api.addEventListener("bodyScrollEnd", onScrollEnd);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(flash);
-      });
-    },
-    [navigate],
+  const { pendingScrollRef, handleRowDataUpdated } = useTransactionScroll(
+    transactionId,
+    navigate,
   );
 
   const unitLabel = getUnitLabel(account);
@@ -555,26 +494,13 @@ function LedgerPage() {
         )}
       </Modal>
 
-      <Modal
+      <ConfirmDeleteModal
         opened={!!deletingTransaction}
         onClose={() => setDeletingTransaction(undefined)}
         title="Delete Transaction"
-      >
-        <Text mb="lg">
-          Are you sure you want to delete {deletingTransaction?.description}?
-        </Text>
-        <Group justify="flex-end">
-          <Button
-            variant="subtle"
-            onClick={() => setDeletingTransaction(undefined)}
-          >
-            Cancel
-          </Button>
-          <Button color="red" onClick={handleDeleteTransaction}>
-            Delete
-          </Button>
-        </Group>
-      </Modal>
+        name={deletingTransaction?.description}
+        onConfirm={handleDeleteTransaction}
+      />
     </Container>
   );
 }
