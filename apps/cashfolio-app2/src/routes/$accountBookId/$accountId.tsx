@@ -16,10 +16,7 @@ import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
 import { getTypeLabel } from "../../shared/account-utils";
 import { useTransactionScroll } from "../../hooks/use-transaction-scroll";
 import { IconCashPlus, IconPencil, IconTrash } from "@tabler/icons-react";
-import type {
-  ColDef,
-  ICellRendererParams,
-} from "ag-grid-enterprise";
+import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { DataGrid } from "../../components/data-grid";
 import { getAccountForLedger, getLedgerData } from "../../server/ledger";
 import { getAccounts } from "../../server/accounts";
@@ -37,9 +34,9 @@ import {
 import { FORMATTED_NUMERIC_COLUMN } from "../../components/column-types";
 import { format } from "date-fns";
 import {
-  SplitTransaction,
+  EditTransactionModal,
   type AccountOption,
-} from "../../components/split-transaction";
+} from "../../components/edit-transaction-modal";
 
 export const Route = createFileRoute("/$accountBookId/$accountId")({
   validateSearch: (
@@ -465,7 +462,7 @@ function LedgerPage() {
         title="Add Transaction"
         size="100%"
       >
-        <SplitTransaction
+        <EditTransactionModal
           accounts={accountOptions}
           currentAccountId={account.id}
           onClose={() => setModalOpened(false)}
@@ -484,7 +481,7 @@ function LedgerPage() {
         }}
       >
         {editingTransactionData && (
-          <SplitTransaction
+          <EditTransactionModal
             initialValues={editingTransactionData}
             accounts={accountOptions}
             currentAccountId={account.id}

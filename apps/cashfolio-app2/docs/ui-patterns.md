@@ -76,9 +76,9 @@ Shared validators live in `src/shared/account-validation.ts` and are used both c
 - Full-input validators (`validateAccountInput`, `validateAccountGroupInput`) throw on the first error
 - **Duplicate name checking**: name validators accept an optional `siblingNames` parameter. The server queries sibling names before validation; the client derives them from `existingNodes` (the full tree data passed to modals)
 
-## Transaction Editing (SplitTransaction)
+## Transaction Editing (EditTransactionModal)
 
-`src/components/split-transaction.tsx` handles create/edit of transactions with split bookings:
+`src/components/edit-transaction-modal.tsx` handles create/edit of transactions with split bookings:
 
 - **Debit/credit mutual exclusivity**: setting one clears the other
 - **Current account booking**: locked (read-only), always first in the list
@@ -90,7 +90,7 @@ Shared validators live in `src/shared/account-validation.ts` and are used both c
 
 - **Income** accounts may not have a positive (debit) value
 - **Expense** accounts may not have a negative (credit) value
-- Enforced both client-side in `SplitTransaction` and server-side in `validateAccountTypeBookings()`
+- Enforced both client-side in `EditTransactionModal` and server-side in `validateAccountTypeBookings()`
 
 ### Form Root Validation
 
@@ -149,7 +149,7 @@ The `getAccountTreeData` server function returns a single flat array where each 
 
 ## FormattedNumberInput
 
-`src/components/formatted-number-input.tsx` wraps Mantine's `NumberInput` using `Intl.NumberFormat` to extract locale-specific thousand/decimal separators (defaults to `en-CH`). Used in `FORMATTED_NUMERIC_COLUMN` and `SplitTransaction`.
+`src/components/formatted-number-input.tsx` wraps Mantine's `NumberInput` using `Intl.NumberFormat` to extract locale-specific thousand/decimal separators (defaults to `en-CH`). Used in `FORMATTED_NUMERIC_COLUMN` and `EditTransactionModal`.
 
 ## Session Storage for UI State
 

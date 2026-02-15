@@ -69,7 +69,7 @@ export type BookingValues = {
   credit?: number;
 };
 
-export type SplitTransactionFormValues = {
+export type TransactionFormValues = {
   date?: Date;
   description?: string;
   bookings: BookingValues[];
@@ -80,7 +80,7 @@ const currencyOptions = Object.keys(currencies).map((code) => ({
   value: code,
 }));
 
-export function SplitTransaction({
+export function EditTransactionModal({
   initialValues,
   accounts,
   currentAccountId,
@@ -175,7 +175,9 @@ export function SplitTransaction({
 
           const unitIdentifiers = new Set(
             bookings
-              .filter((b): b is BookingValues & { unit: Unit } => b.unit != null)
+              .filter(
+                (b): b is BookingValues & { unit: Unit } => b.unit != null,
+              )
               .map((b) => getUnitIdentifier(b)),
           );
           if (unitIdentifiers.size !== 1) return null;
@@ -501,7 +503,10 @@ export function SplitTransaction({
                   form.setFieldValue(`bookings.${e.rowIndex}.debit`, undefined);
                 }
                 if (clearCredit) {
-                  form.setFieldValue(`bookings.${e.rowIndex}.credit`, undefined);
+                  form.setFieldValue(
+                    `bookings.${e.rowIndex}.credit`,
+                    undefined,
+                  );
                 }
 
                 const rowNode = e.api.getRowNode(e.data.key);
