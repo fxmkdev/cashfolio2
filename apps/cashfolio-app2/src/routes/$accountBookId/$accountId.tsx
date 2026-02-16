@@ -101,6 +101,32 @@ type LedgerRow = {
   balance: number | null;
 };
 
+type LedgerAccountOptionSource = Awaited<ReturnType<typeof getAccounts>>[number];
+
+function toAccountOption(account: LedgerAccountOptionSource): AccountOption {
+  return {
+    label: [getTypeLabel(account.type, account.equityAccountSubtype), account.groupPath, account.name]
+      .filter(Boolean)
+      .join(" / "),
+    value: account.id,
+    unit: account.unit as Unit,
+    currency: account.currency,
+    cryptocurrency: account.cryptocurrency,
+    symbol: account.symbol,
+    tradeCurrency: account.tradeCurrency,
+    type: account.type as AccountType,
+    equityAccountSubtype:
+      account.equityAccountSubtype as EquityAccountSubtype | null,
+  };
+}
+
+function createAccountOptions(
+  accounts: LedgerAccountOptionSource[],
+  includeAccount: (account: LedgerAccountOptionSource) => boolean,
+): AccountOption[] {
+  return accounts.filter(includeAccount).map(toAccountOption);
+}
+
 function LedgerPage() {
   const { account, bookings, accounts } = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
@@ -119,28 +145,27 @@ function LedgerPage() {
   const router = useRouter();
 
   const accountOptions = useMemo<AccountOption[]>(
-    () =>
-      accounts
-        .filter((a) => a.isActive)
-        .map((a) => ({
-          label: [
-            getTypeLabel(a.type, a.equityAccountSubtype),
-            a.groupPath,
-            a.name,
-          ]
-            .filter(Boolean)
-            .join(" / "),
-          value: a.id,
-          unit: a.unit as Unit,
-          currency: a.currency,
-          cryptocurrency: a.cryptocurrency,
-          symbol: a.symbol,
-          tradeCurrency: a.tradeCurrency,
-          type: a.type as AccountType,
-          equityAccountSubtype:
-            a.equityAccountSubtype as EquityAccountSubtype | null,
-        })),
+    () => createAccountOptions(accounts, (a) => a.isActive),
     [accounts],
+  );
+
+  const editAccountOptions = useMemo<AccountOption[]>(
+    () => {
+      if (!editingTransactionData) return accountOptions;
+
+      const selectedAccountIds = new Set([
+        account.id,
+        ...editingTransactionData.bookings
+          .map((b) => b.account)
+          .filter((id): id is string => Boolean(id)),
+      ]);
+
+      return createAccountOptions(
+        accounts,
+        (a) => a.isActive || selectedAccountIds.has(a.id),
+      );
+    },
+    [account.id, accountOptions, accounts, editingTransactionData],
   );
 
   async function handleCreateTransaction(values: {
@@ -502,7 +527,7 @@ function LedgerPage() {
         {editingTransactionData && (
           <EditTransactionModal
             initialValues={editingTransactionData}
-            accounts={accountOptions}
+            accounts={editAccountOptions}
             currentAccountId={account.id}
             onClose={() => setEditModalOpened(false)}
             onSubmit={handleUpdateTransaction}
