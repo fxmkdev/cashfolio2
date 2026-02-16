@@ -1,23 +1,29 @@
 import {
   createFileRoute,
+  Link,
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActionIcon,
+  Anchor,
+  Breadcrumbs,
   Button,
   Container,
   Group,
   Tabs,
+  Text,
   Title,
   Tooltip,
 } from "@mantine/core";
-import { IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
 import {
-  type ColDef,
-  type ICellRendererParams,
-} from "ag-grid-enterprise";
+  IconArchive,
+  IconPencil,
+  IconPlus,
+  IconTrash,
+} from "@tabler/icons-react";
+import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
 import { useAccountTreeDnD } from "../../hooks/use-account-tree-dnd";
 import { useExpandedGroups } from "../../hooks/use-expanded-groups";
 import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
@@ -86,7 +92,9 @@ export const Route = createFileRoute("/$accountBookId/")({
   loaderDeps: ({ search }) => ({ mode: search.mode }),
   loader: async ({ params: { accountBookId }, deps: { mode } }) => {
     const accountState = mode === "archived" ? "inactive" : "active";
-    const accountGroupsPromise: Promise<Awaited<ReturnType<typeof getAccountGroups>>> =
+    const accountGroupsPromise: Promise<
+      Awaited<ReturnType<typeof getAccountGroups>>
+    > =
       mode === "active"
         ? getAccountGroups({ data: { accountBookId } })
         : Promise.resolve([]);
@@ -360,42 +368,61 @@ function AccountsPage() {
 
   return (
     <Container fluid py="xl" px="xl">
-      <Group justify="space-between" mb="lg">
-        <Title order={2}>
-          {isArchivedMode ? "Archived Accounts" : "Accounts"}
-        </Title>
-        <Group>
-          <Button
-            variant="default"
-            onClick={() =>
-              navigate({
-                search: {
-                  tab,
-                  mode: isArchivedMode ? "active" : "archived",
-                },
-              })
-            }
-          >
-            {isArchivedMode ? "Show Active Accounts" : "Show Archived Accounts"}
-          </Button>
-          {!isArchivedMode && (
-            <>
-              <Button
-                variant="default"
-                leftSection={<IconPlus size={16} />}
-                onClick={() => setCreateGroupModalOpened(true)}
-              >
-                Add Group
-              </Button>
-              <Button
-                leftSection={<IconPlus size={16} />}
-                onClick={() => setCreateModalOpened(true)}
-              >
-                Add Account
-              </Button>
-            </>
-          )}
-        </Group>
+      <Group mb="lg" gap="md" justify="space-between" mih={36}>
+        {isArchivedMode ? (
+          <Breadcrumbs fz="h2" fw={700} lh="var(--mantine-h2-line-height)">
+            <Anchor
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              {...({
+                component: Link,
+                to: "/$accountBookId",
+                params: { accountBookId },
+                search: { tab, mode: "active" },
+              } as any)}
+              fz="inherit"
+              fw="inherit"
+              lh="inherit"
+            >
+              Accounts
+            </Anchor>
+            <Text fz="inherit" fw="inherit" lh="inherit">
+              Archive
+            </Text>
+          </Breadcrumbs>
+        ) : (
+          <Title order={2}>Accounts</Title>
+        )}
+        {!isArchivedMode && (
+          <Group>
+            <Button
+              variant="default"
+              leftSection={<IconArchive size={16} />}
+              onClick={() =>
+                navigate({
+                  search: {
+                    tab,
+                    mode: "archived",
+                  },
+                })
+              }
+            >
+              Archive
+            </Button>
+            <Button
+              variant="default"
+              leftSection={<IconPlus size={16} />}
+              onClick={() => setCreateGroupModalOpened(true)}
+            >
+              Add Group
+            </Button>
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={() => setCreateModalOpened(true)}
+            >
+              Add Account
+            </Button>
+          </Group>
+        )}
       </Group>
 
       <Tabs
