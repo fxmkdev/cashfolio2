@@ -66,14 +66,23 @@ export const getAccountGroups = createServerFn({ method: "GET" })
 
 export const getAccountTreeData = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { accountBookId: string; type?: AccountType; equityAccountSubtype?: EquityAccountSubtype }) => data,
+    (
+      data: {
+        accountBookId: string;
+        type?: AccountType;
+        equityAccountSubtype?: EquityAccountSubtype;
+        accountState?: "active" | "inactive";
+      },
+    ) => data,
   )
   .handler(async ({ data }) => {
+    const accountState = data.accountState ?? "active";
+
     const [accounts, accountGroups] = await Promise.all([
       prisma.account.findMany({
         where: {
           accountBookId: data.accountBookId,
-          isActive: true,
+          isActive: accountState === "active",
           type: data.type,
           ...(data.equityAccountSubtype
             ? { equityAccountSubtype: data.equityAccountSubtype }
@@ -130,8 +139,27 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
         sortOrder: a.sortOrder,
         deletable: !hasBookings,
         deleteDisabledReason: hasBookings ? "Cannot delete account because it has bookings" : undefined,
-      };
-    });
+        };
+      });
+
+    let filteredGroups = accountGroups;
+    if (accountState === "inactive") {
+      const groupById = new Map(accountGroups.map((g) => [g.id, g]));
+      const groupsWithInactiveAccounts = new Set<string>();
+
+      for (const account of accounts) {
+        let currentGroupId = account.groupId;
+        while (currentGroupId) {
+          groupsWithInactiveAccounts.add(currentGroupId);
+          currentGroupId =
+            groupById.get(currentGroupId)?.parentGroupId ?? null;
+        }
+      }
+
+      filteredGroups = accountGroups.filter((g) =>
+        groupsWithInactiveAccounts.has(g.id),
+      );
+    }
 
     // Fetch account book to check for referenced holding gain/loss groups
     const accountBook = await prisma.accountBook.findUniqueOrThrow({
@@ -174,7 +202,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
         .map((g) => g.parentGroupId!),
     );
 
-    const groupRows = accountGroups.map((ag) => {
+    const groupRows = filteredGroups.map((ag) => {
         const hasChildAccounts = accountCountByGroupId.has(ag.id);
         const hasChildGroups = groupsWithChildren.has(ag.id);
         const isReferencedByAccountBook = referencedByAccountBook.has(ag.id);

@@ -72,20 +72,32 @@ const tabs = [
 ] as const;
 
 type TabValue = (typeof tabs)[number]["value"];
+type AccountsMode = "active" | "archived";
 
 export const Route = createFileRoute("/$accountBookId/")({
-  validateSearch: (search: Record<string, unknown>): { tab: TabValue } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { tab: TabValue; mode: AccountsMode } => ({
     tab: tabs.some((t) => t.value === search.tab)
       ? (search.tab as TabValue)
       : "ASSET",
+    mode: search.mode === "archived" ? "archived" : "active",
   }),
-  loader: async ({ params: { accountBookId } }) => {
+  loaderDeps: ({ search }) => ({ mode: search.mode }),
+  loader: async ({ params: { accountBookId }, deps: { mode } }) => {
+    const accountState = mode === "archived" ? "inactive" : "active";
+    const accountGroupsPromise: Promise<Awaited<ReturnType<typeof getAccountGroups>>> =
+      mode === "active"
+        ? getAccountGroups({ data: { accountBookId } })
+        : Promise.resolve([]);
+
     const [accountGroups, ...treeDataByTab] = await Promise.all([
-      getAccountGroups({ data: { accountBookId } }),
+      accountGroupsPromise,
       ...tabs.map((t) =>
         getAccountTreeData({
           data: {
             accountBookId,
+            accountState,
             type: t.type,
             ...("equityAccountSubtype" in t
               ? { equityAccountSubtype: t.equityAccountSubtype }
@@ -114,7 +126,7 @@ type TreeRow = Awaited<ReturnType<typeof getAccountTreeData>>[number];
 function AccountsPage() {
   const { accountGroups, treeData, existingNodes } = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
-  const { tab } = Route.useSearch();
+  const { tab, mode } = Route.useSearch();
   const navigate = useNavigate({ from: "/$accountBookId/" });
   const router = useRouter();
   const [createModalOpened, setCreateModalOpened] = useState(false);
@@ -133,8 +145,9 @@ function AccountsPage() {
   >();
 
   const isEquityTab = tab.startsWith("EQUITY-");
+  const isArchivedMode = mode === "archived";
 
-  const storageKey = `cashfolio:expandedGroups:${accountBookId}:${tab}`;
+  const storageKey = `cashfolio:expandedGroups:${accountBookId}:${mode}:${tab}`;
   const { isGroupOpenByDefault, onRowGroupOpened } =
     useExpandedGroups(storageKey);
 
@@ -206,54 +219,58 @@ function AccountsPage() {
             } satisfies ColDef<TreeRow>,
           ]
         : []),
-      {
-        colId: "actions",
-        headerName: "",
-        width: 80,
-        sortable: false,
-        filter: false,
-        resizable: false,
-        suppressHeaderMenuButton: true,
-        cellClass: "actions-cell",
-        cellRenderer: ({ data }: ICellRendererParams<TreeRow>) => {
-          if (!data) return null;
-          const deleteLabel = data.deleteDisabledReason ?? "Delete";
-          return (
-            <Group gap={4} wrap="nowrap" h="100%" align="center">
-              <Tooltip label="Edit">
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  onClick={() => handleEditRow(data)}
-                  aria-label="Edit"
-                >
-                  <IconPencil size={16} />
-                </ActionIcon>
-              </Tooltip>
-              <Tooltip label={deleteLabel}>
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  color="red"
-                  disabled={!data.deletable}
-                  onClick={() =>
-                    setDeletingRow({
-                      id: data.id,
-                      nodeType: data.nodeType,
-                      name: data.name,
-                    })
-                  }
-                  aria-label="Delete"
-                >
-                  <IconTrash size={16} />
-                </ActionIcon>
-              </Tooltip>
-            </Group>
-          );
-        },
-      } satisfies ColDef<TreeRow>,
+      ...(!isArchivedMode
+        ? [
+            {
+              colId: "actions",
+              headerName: "",
+              width: 80,
+              sortable: false,
+              filter: false,
+              resizable: false,
+              suppressHeaderMenuButton: true,
+              cellClass: "actions-cell",
+              cellRenderer: ({ data }: ICellRendererParams<TreeRow>) => {
+                if (!data) return null;
+                const deleteLabel = data.deleteDisabledReason ?? "Delete";
+                return (
+                  <Group gap={4} wrap="nowrap" h="100%" align="center">
+                    <Tooltip label="Edit">
+                      <ActionIcon
+                        variant="subtle"
+                        size="sm"
+                        onClick={() => handleEditRow(data)}
+                        aria-label="Edit"
+                      >
+                        <IconPencil size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                    <Tooltip label={deleteLabel}>
+                      <ActionIcon
+                        variant="subtle"
+                        size="sm"
+                        color="red"
+                        disabled={!data.deletable}
+                        onClick={() =>
+                          setDeletingRow({
+                            id: data.id,
+                            nodeType: data.nodeType,
+                            name: data.name,
+                          })
+                        }
+                        aria-label="Delete"
+                      >
+                        <IconTrash size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                  </Group>
+                );
+              },
+            } satisfies ColDef<TreeRow>,
+          ]
+        : []),
     ],
-    [isEquityTab, handleEditRow],
+    [isArchivedMode, isEquityTab, handleEditRow],
   );
 
   async function handleCreateAccount(values: TransformedFormValues) {
@@ -344,27 +361,48 @@ function AccountsPage() {
   return (
     <Container fluid py="xl" px="xl">
       <Group justify="space-between" mb="lg">
-        <Title order={2}>Accounts</Title>
+        <Title order={2}>
+          {isArchivedMode ? "Archived Accounts" : "Accounts"}
+        </Title>
         <Group>
           <Button
             variant="default"
-            leftSection={<IconPlus size={16} />}
-            onClick={() => setCreateGroupModalOpened(true)}
+            onClick={() =>
+              navigate({
+                search: {
+                  tab,
+                  mode: isArchivedMode ? "active" : "archived",
+                },
+              })
+            }
           >
-            Add Group
+            {isArchivedMode ? "Show Active Accounts" : "Show Archived Accounts"}
           </Button>
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={() => setCreateModalOpened(true)}
-          >
-            Add Account
-          </Button>
+          {!isArchivedMode && (
+            <>
+              <Button
+                variant="default"
+                leftSection={<IconPlus size={16} />}
+                onClick={() => setCreateGroupModalOpened(true)}
+              >
+                Add Group
+              </Button>
+              <Button
+                leftSection={<IconPlus size={16} />}
+                onClick={() => setCreateModalOpened(true)}
+              >
+                Add Account
+              </Button>
+            </>
+          )}
         </Group>
       </Group>
 
       <Tabs
         value={tab}
-        onChange={(value) => navigate({ search: { tab: value as TabValue } })}
+        onChange={(value) =>
+          navigate({ search: { tab: value as TabValue, mode } })
+        }
       >
         <Tabs.List mb="md">
           {tabs.map((t) => (
@@ -384,7 +422,7 @@ function AccountsPage() {
           field: "name",
           flex: 1,
           filter: "agTextColumnFilter",
-          rowDrag: true,
+          rowDrag: !isArchivedMode,
           valueGetter: ({ data }) => data?.name,
           cellRendererParams: {
             suppressCount: true,
@@ -395,10 +433,10 @@ function AccountsPage() {
         isGroupOpenByDefault={isGroupOpenByDefault}
         onRowGroupOpened={onRowGroupOpened}
         getRowId={({ data }) => data.id}
-        getRowClass={getRowClass}
-        onRowDragEnd={handleRowDragEnd}
-        onRowDragMove={handleRowDragMove}
-        onRowDragLeave={handleRowDragLeave}
+        getRowClass={isArchivedMode ? undefined : getRowClass}
+        onRowDragEnd={isArchivedMode ? undefined : handleRowDragEnd}
+        onRowDragMove={isArchivedMode ? undefined : handleRowDragMove}
+        onRowDragLeave={isArchivedMode ? undefined : handleRowDragLeave}
         onRowDoubleClicked={(e) => {
           if (e.data?.nodeType === "account") {
             navigate({
@@ -409,57 +447,63 @@ function AccountsPage() {
         }}
       />
 
-      <EditAccountModal
-        opened={createModalOpened}
-        onClose={() => setCreateModalOpened(false)}
-        accountGroups={accountGroups}
-        onSubmit={handleCreateAccount}
-        existingNodes={existingNodes}
-        typeDescriptor={tab}
-      />
+      {!isArchivedMode && (
+        <>
+          <EditAccountModal
+            opened={createModalOpened}
+            onClose={() => setCreateModalOpened(false)}
+            accountGroups={accountGroups}
+            onSubmit={handleCreateAccount}
+            existingNodes={existingNodes}
+            typeDescriptor={tab}
+          />
 
-      <EditAccountModal
-        opened={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-        onExitTransitionEnd={() => setEditingAccount(undefined)}
-        accountGroups={accountGroups}
-        onSubmit={handleUpdateAccount}
-        initialValues={editingAccount?.initialValues}
-        existingNodes={existingNodes}
-        editingId={editingAccount?.id}
-        typeDescriptor={tab}
-      />
+          <EditAccountModal
+            opened={editModalOpen}
+            onClose={() => setEditModalOpen(false)}
+            onExitTransitionEnd={() => setEditingAccount(undefined)}
+            accountGroups={accountGroups}
+            onSubmit={handleUpdateAccount}
+            initialValues={editingAccount?.initialValues}
+            existingNodes={existingNodes}
+            editingId={editingAccount?.id}
+            typeDescriptor={tab}
+          />
 
-      <EditAccountGroupModal
-        opened={createGroupModalOpened}
-        onClose={() => setCreateGroupModalOpened(false)}
-        accountGroups={accountGroups}
-        onSubmit={handleCreateGroup}
-        existingNodes={existingNodes}
-        typeDescriptor={tab}
-      />
+          <EditAccountGroupModal
+            opened={createGroupModalOpened}
+            onClose={() => setCreateGroupModalOpened(false)}
+            accountGroups={accountGroups}
+            onSubmit={handleCreateGroup}
+            existingNodes={existingNodes}
+            typeDescriptor={tab}
+          />
 
-      <EditAccountGroupModal
-        opened={editGroupModalOpen}
-        onClose={() => setEditGroupModalOpen(false)}
-        onExitTransitionEnd={() => setEditingGroup(undefined)}
-        accountGroups={accountGroups}
-        onSubmit={handleUpdateGroup}
-        initialValues={editingGroup?.initialValues}
-        existingNodes={existingNodes}
-        editingId={editingGroup?.id}
-        typeDescriptor={tab}
-      />
+          <EditAccountGroupModal
+            opened={editGroupModalOpen}
+            onClose={() => setEditGroupModalOpen(false)}
+            onExitTransitionEnd={() => setEditingGroup(undefined)}
+            accountGroups={accountGroups}
+            onSubmit={handleUpdateGroup}
+            initialValues={editingGroup?.initialValues}
+            existingNodes={existingNodes}
+            editingId={editingGroup?.id}
+            typeDescriptor={tab}
+          />
 
-      <ConfirmDeleteModal
-        opened={!!deletingRow}
-        onClose={() => setDeletingRow(undefined)}
-        title={
-          deletingRow?.nodeType === "account" ? "Delete Account" : "Delete Group"
-        }
-        name={deletingRow?.name}
-        onConfirm={handleDelete}
-      />
+          <ConfirmDeleteModal
+            opened={!!deletingRow}
+            onClose={() => setDeletingRow(undefined)}
+            title={
+              deletingRow?.nodeType === "account"
+                ? "Delete Account"
+                : "Delete Group"
+            }
+            name={deletingRow?.name}
+            onConfirm={handleDelete}
+          />
+        </>
+      )}
     </Container>
   );
 }
