@@ -19,6 +19,7 @@ import {
 } from "@mantine/core";
 import {
   IconArchive,
+  IconArchiveOff,
   IconPencil,
   IconPlus,
   IconTrash,
@@ -48,6 +49,8 @@ import {
   deleteAccountGroup,
   getAccountGroups,
   getAccountTreeData,
+  unarchiveAccount,
+  unarchiveAccountGroup,
   updateAccount,
   updateAccountGroup,
 } from "../../server/accounts";
@@ -206,6 +209,18 @@ function AccountsPage() {
     }
   }, []);
 
+  const handleUnarchiveRow = useCallback(
+    async (row: TreeRow) => {
+      if (row.nodeType === "account") {
+        await unarchiveAccount({ data: { id: row.id, accountBookId } });
+      } else {
+        await unarchiveAccountGroup({ data: { id: row.id, accountBookId } });
+      }
+      router.invalidate();
+    },
+    [accountBookId, router],
+  );
+
   const columnDefs = useMemo<ColDef<TreeRow>[]>(
     () => [
       ...(!isEquityTab
@@ -234,77 +249,94 @@ function AccountsPage() {
             } satisfies ColDef<TreeRow>,
           ]
         : []),
-      ...(!isArchivedMode
-        ? [
-            {
-              colId: "actions",
-              headerName: "",
-              width: 110,
-              sortable: false,
-              filter: false,
-              resizable: false,
-              suppressHeaderMenuButton: true,
-              cellClass: "actions-cell",
-              cellRenderer: ({ data }: ICellRendererParams<TreeRow>) => {
-                if (!data) return null;
-                const deleteLabel = data.deleteDisabledReason ?? "Delete";
-                const archiveLabel = data.archiveDisabledReason ?? "Archive";
-                return (
-                  <Group gap={4} wrap="nowrap" h="100%" align="center">
-                    <Tooltip label="Edit">
-                      <ActionIcon
-                        variant="subtle"
-                        size="sm"
-                        onClick={() => handleEditRow(data)}
-                        aria-label="Edit"
-                      >
-                        <IconPencil size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                    <Tooltip label={archiveLabel}>
-                      <ActionIcon
-                        variant="subtle"
-                        size="sm"
-                        color="yellow"
-                        disabled={!data.archivable}
-                        onClick={() =>
-                          setArchivingRow({
-                            id: data.id,
-                            nodeType: data.nodeType,
-                            name: data.name,
-                          })
-                        }
-                        aria-label="Archive"
-                      >
-                        <IconArchive size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                    <Tooltip label={deleteLabel}>
-                      <ActionIcon
-                        variant="subtle"
-                        size="sm"
-                        color="red"
-                        disabled={!data.deletable}
-                        onClick={() =>
-                          setDeletingRow({
-                            id: data.id,
-                            nodeType: data.nodeType,
-                            name: data.name,
-                          })
-                        }
-                        aria-label="Delete"
-                      >
-                        <IconTrash size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                  </Group>
-                );
-              },
-            } satisfies ColDef<TreeRow>,
-          ]
-        : []),
+      {
+        colId: "actions",
+        headerName: "",
+        width: isArchivedMode ? 50 : 110,
+        sortable: false,
+        filter: false,
+        resizable: false,
+        suppressHeaderMenuButton: true,
+        cellClass: "actions-cell",
+        cellRenderer: ({ data }: ICellRendererParams<TreeRow>) => {
+          if (!data) return null;
+
+          if (isArchivedMode) {
+            const unarchiveLabel = data.unarchiveDisabledReason ?? "Unarchive";
+            return (
+              <Group gap={4} wrap="nowrap" h="100%" align="center">
+                <Tooltip label={unarchiveLabel}>
+                  <ActionIcon
+                    variant="subtle"
+                    size="sm"
+                    color="blue"
+                    disabled={!data.unarchivable}
+                    onClick={() => void handleUnarchiveRow(data)}
+                    aria-label="Unarchive"
+                  >
+                    <IconArchiveOff size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
+            );
+          }
+
+          const deleteLabel = data.deleteDisabledReason ?? "Delete";
+          const archiveLabel = data.archiveDisabledReason ?? "Archive";
+          return (
+            <Group gap={4} wrap="nowrap" h="100%" align="center">
+              <Tooltip label="Edit">
+                <ActionIcon
+                  variant="subtle"
+                  size="sm"
+                  onClick={() => handleEditRow(data)}
+                  aria-label="Edit"
+                >
+                  <IconPencil size={16} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label={archiveLabel}>
+                <ActionIcon
+                  variant="subtle"
+                  size="sm"
+                  color="yellow"
+                  disabled={!data.archivable}
+                  onClick={() =>
+                    setArchivingRow({
+                      id: data.id,
+                      nodeType: data.nodeType,
+                      name: data.name,
+                    })
+                  }
+                  aria-label="Archive"
+                >
+                  <IconArchive size={16} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label={deleteLabel}>
+                <ActionIcon
+                  variant="subtle"
+                  size="sm"
+                  color="red"
+                  disabled={!data.deletable}
+                  onClick={() =>
+                    setDeletingRow({
+                      id: data.id,
+                      nodeType: data.nodeType,
+                      name: data.name,
+                    })
+                  }
+                  aria-label="Delete"
+                >
+                  <IconTrash size={16} />
+                </ActionIcon>
+              </Tooltip>
+            </Group>
+          );
+        },
+      } satisfies ColDef<TreeRow>,
     ],
-    [isArchivedMode, isEquityTab, handleEditRow],
+    [isArchivedMode, isEquityTab, handleEditRow, handleUnarchiveRow],
   );
 
   async function handleCreateAccount(values: TransformedFormValues) {

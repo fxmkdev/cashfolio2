@@ -22,6 +22,36 @@ function getGroupPath(
   return prefix + group.name;
 }
 
+type GroupHierarchyNode = {
+  id: string;
+  parentGroupId: string | null;
+  isActive: boolean;
+};
+
+function hasInactiveAncestorGroup(
+  groupId: string | null | undefined,
+  groupById: Map<string, GroupHierarchyNode>,
+): boolean {
+  let currentGroupId = groupId ?? null;
+  while (currentGroupId) {
+    const group = groupById.get(currentGroupId);
+    if (!group) return true;
+    if (!group.isActive) return true;
+    currentGroupId = group.parentGroupId;
+  }
+  return false;
+}
+
+async function getGroupHierarchy(
+  accountBookId: string,
+): Promise<Map<string, GroupHierarchyNode>> {
+  const groups = await prisma.accountGroup.findMany({
+    where: { accountBookId },
+    select: { id: true, parentGroupId: true, isActive: true },
+  });
+  return new Map(groups.map((g) => [g.id, g]));
+}
+
 export const getAccounts = createServerFn({ method: "GET" })
   .inputValidator((data: { accountBookId: string }) => data)
   .handler(async ({ data }) => {
@@ -104,6 +134,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       }),
     ]);
+    const groupById = new Map(accountGroups.map((g) => [g.id, g]));
 
     const assetAndLiabilityAccountIds = accounts
       .filter((a) => a.type === "ASSET" || a.type === "LIABILITY")
@@ -190,7 +221,12 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
       const requiresZeroBalance = a.type === "ASSET" || a.type === "LIABILITY";
       const hasZeroBalance =
         !requiresZeroBalance || (balanceByAccountId.get(a.id) ?? 0) === 0;
+      const hasInactiveAncestor = hasInactiveAncestorGroup(
+        a.groupId,
+        groupById,
+      );
       const archivable = a.isActive && hasZeroBalance;
+      const unarchivable = !a.isActive && !hasInactiveAncestor;
       return {
         id: a.id,
         nodeType: "account" as "account" | "accountGroup",
@@ -216,6 +252,12 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
           : hasZeroBalance
             ? undefined
             : "Cannot archive account because its balance is not 0",
+        unarchivable,
+        unarchiveDisabledReason: a.isActive
+          ? "Account is already active"
+          : hasInactiveAncestor
+            ? "Cannot unarchive account because its parent group is archived"
+            : undefined,
       };
     });
 
@@ -279,11 +321,16 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
       const hasChildGroups = groupsWithChildren.has(ag.id);
       const hasActiveChildAccounts = groupsWithActiveAccounts.has(ag.id);
       const hasActiveChildGroups = groupsWithActiveChildGroups.has(ag.id);
+      const hasInactiveAncestor = hasInactiveAncestorGroup(
+        ag.parentGroupId,
+        groupById,
+      );
       const isReferencedByAccountBook = referencedByAccountBook.has(ag.id);
       const deletable =
         !hasChildAccounts && !hasChildGroups && !isReferencedByAccountBook;
       const archivable =
         ag.isActive && !hasActiveChildAccounts && !hasActiveChildGroups;
+      const unarchivable = !ag.isActive && !hasInactiveAncestor;
       return {
         id: ag.id,
         nodeType: "accountGroup" as "account" | "accountGroup",
@@ -315,6 +362,12 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
             : hasActiveChildGroups
               ? "Cannot archive group because it contains active sub-groups"
               : undefined,
+        unarchivable,
+        unarchiveDisabledReason: ag.isActive
+          ? "Group is already active"
+          : hasInactiveAncestor
+            ? "Cannot unarchive group because its parent group is archived"
+            : undefined,
       };
     });
 
@@ -631,6 +684,60 @@ export const archiveAccountGroup = createServerFn({ method: "POST" })
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
       },
       data: { isActive: false },
+    });
+  });
+
+export const unarchiveAccount = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: string; accountBookId: string }) => data)
+  .handler(async ({ data }) => {
+    const account = await prisma.account.findUniqueOrThrow({
+      where: {
+        id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
+      },
+      select: { isActive: true, groupId: true },
+    });
+
+    if (account.isActive) return;
+
+    const groupById = await getGroupHierarchy(data.accountBookId);
+    if (hasInactiveAncestorGroup(account.groupId, groupById)) {
+      throw new Error(
+        "Cannot unarchive account because its parent group is archived",
+      );
+    }
+
+    await prisma.account.update({
+      where: {
+        id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
+      },
+      data: { isActive: true },
+    });
+  });
+
+export const unarchiveAccountGroup = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: string; accountBookId: string }) => data)
+  .handler(async ({ data }) => {
+    const group = await prisma.accountGroup.findUniqueOrThrow({
+      where: {
+        id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
+      },
+      select: { isActive: true, parentGroupId: true },
+    });
+
+    if (group.isActive) return;
+
+    const groupById = await getGroupHierarchy(data.accountBookId);
+    if (hasInactiveAncestorGroup(group.parentGroupId, groupById)) {
+      throw new Error(
+        "Cannot unarchive group because its parent group is archived",
+      );
+    }
+
+    await prisma.accountGroup.update({
+      where: {
+        id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
+      },
+      data: { isActive: true },
     });
   });
 
