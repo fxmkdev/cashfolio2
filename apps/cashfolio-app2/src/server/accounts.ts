@@ -263,7 +263,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
 
     let filteredGroups = accountGroups.filter((g) => g.isActive);
     if (accountState === "inactive") {
-      const groupById = new Map(accountGroups.map((g) => [g.id, g]));
+      const groupsById = new Map(accountGroups.map((g) => [g.id, g]));
       const groupsToInclude = new Set<string>();
 
       for (const group of accountGroups) {
@@ -272,7 +272,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
           while (currentGroupId) {
             groupsToInclude.add(currentGroupId);
             currentGroupId =
-              groupById.get(currentGroupId)?.parentGroupId ?? null;
+              groupsById.get(currentGroupId)?.parentGroupId ?? null;
           }
         }
       }
@@ -280,7 +280,8 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
         let currentGroupId = account.groupId;
         while (currentGroupId) {
           groupsToInclude.add(currentGroupId);
-          currentGroupId = groupById.get(currentGroupId)?.parentGroupId ?? null;
+          currentGroupId =
+            groupsById.get(currentGroupId)?.parentGroupId ?? null;
         }
       }
 
