@@ -194,6 +194,13 @@ Defined in `src/components/column-types.tsx`:
 - `TEXT_COLUMN` — text input editor
 - `DATE_COLUMN` — date input with min/max constraints from context
 
+## AG Grid Column Alignment
+
+- Right-align date and numeric values to improve vertical scanning in ledger and
+  modal grids.
+- `DATE_COLUMN` and `FORMATTED_NUMERIC_COLUMN` include right-aligned header and
+  cell classes by default.
+
 ## AG Grid Context Pattern
 
 Grids pass a context object to cell renderers and editors containing helper

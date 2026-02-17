@@ -31,7 +31,10 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../../.prisma-client/enums";
-import { FORMATTED_NUMERIC_COLUMN } from "../../components/column-types";
+import {
+  DATE_COLUMN,
+  FORMATTED_NUMERIC_COLUMN,
+} from "../../components/column-types";
 import { format } from "date-fns";
 import {
   EditTransactionModal,
@@ -294,6 +297,7 @@ function LedgerPage() {
         field: "date",
         headerName: "Date",
         width: 130,
+        type: DATE_COLUMN,
       },
       {
         field: "counterpartyAccounts",

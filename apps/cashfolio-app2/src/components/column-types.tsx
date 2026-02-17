@@ -121,6 +121,8 @@ export const columnTypes: AgGridReactProps["columnTypes"] = {
     },
   },
   [DATE_COLUMN]: {
+    headerClass: "ag-right-aligned-header",
+    cellClass: "ag-right-aligned-cell",
     cellEditor: ({
       value,
       onValueChange,

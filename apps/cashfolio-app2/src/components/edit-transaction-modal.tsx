@@ -290,7 +290,7 @@ export function EditTransactionModal({
           field: "date",
           type: DATE_COLUMN,
           cellDataType: "dateString",
-          width: 110,
+          width: 118,
           cellStyle: ({ value, context }: CellClassParams) =>
             isSameDay(value, context.startDate)
               ? { color: "var(--mantine-color-dimmed)" }
