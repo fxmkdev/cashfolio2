@@ -11,3 +11,8 @@
 .ag-row:hover .ag-cell.actions-cell {
   opacity: 1;
 }
+
+.ag-cell.ag-cell-disabled {
+  color: var(--mantine-color-dimmed);
+  cursor: not-allowed;
+}

@@ -51,6 +51,8 @@ Route-level logic that doesn't belong in components is extracted into hooks in
 
 - Use `cellClass: "actions-cell"` so icons only appear on row hover (styled in
   `src/components/grid-theme.css`)
+- Reuse this class in modal grids too (for example `EditTransactionModal`'s
+  actions column) to keep action affordances consistent across the app
 - Wrap multiple action icons in a
   `<Group gap={4} wrap="nowrap" h="100%" align="center">`
 - If actions-column rendering grows beyond simple inline JSX, extract it into
@@ -138,6 +140,17 @@ with split bookings:
 - **Date propagation**: date changes propagate to all bookings
 - **Unit auto-population**: unit is auto-populated from selected account
   metadata
+
+### Conditional Editability Affordance
+
+- Conditionally non-editable data cells use `cellClassRules` to apply
+  `"ag-cell-disabled"` so users can see which fields are locked in the current
+  row context
+- `"ag-cell-disabled"` styling is intentionally subtle in
+  `src/components/grid-theme.css` (`color: var(--mantine-color-dimmed)` and
+  `cursor: not-allowed`)
+- Do not apply this affordance to permanently non-editable columns
+  (`editable: false`, e.g. status/col-span or actions columns)
 
 ### Account Type Debit/Credit Restrictions
 

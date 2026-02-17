@@ -86,6 +86,21 @@ const cryptocurrencyOptions = Object.keys(cryptocurrencies).map((code) => ({
   value: code,
 }));
 
+function isEditableCell(params: CellClassParams) {
+  const { colDef, node } = params;
+  if (node.rowPinned || !params.data) return false;
+
+  if (typeof colDef.editable === "function") {
+    return colDef.editable(params as any);
+  }
+
+  if (typeof colDef.editable === "boolean") {
+    return colDef.editable;
+  }
+
+  return true;
+}
+
 export function EditTransactionModal({
   initialValues,
   accounts,
@@ -350,7 +365,13 @@ export function EditTransactionModal({
                 ? cryptocurrencyOptions
                 : currencyOptions,
           }),
-          valueSetter: ({ data, newValue }: { data: BookingValues; newValue: string | null }) => {
+          valueSetter: ({
+            data,
+            newValue,
+          }: {
+            data: BookingValues;
+            newValue: string | null;
+          }) => {
             switch (data.unit) {
               case Unit.CURRENCY:
                 data.currency = newValue ?? undefined;
@@ -412,25 +433,33 @@ export function EditTransactionModal({
         {
           editable: false,
           width: 60,
+          cellClass: "actions-cell",
           cellRenderer: ({ data, context }: CustomCellRendererProps) => {
             if (!data) return;
+            const deleteDisabledReason =
+              data.key === context.lockedBookingKey
+                ? "Current account booking cannot be deleted"
+                : context.canDelete
+                  ? "At least 2 bookings are required"
+                  : null;
             return (
-              <ActionIcon
-                mt={4}
-                color="red"
-                size="md"
-                variant="subtle"
-                disabled={
-                  context.canDelete || data.key === context.lockedBookingKey
-                }
-                onClick={() => {
-                  if (context.onDelete) {
-                    context.onDelete(data.key);
-                  }
-                }}
-              >
-                <IconTrash size={16} />
-              </ActionIcon>
+              <Tooltip label={deleteDisabledReason ?? "Delete booking"}>
+                <ActionIcon
+                  mt={4}
+                  color="red"
+                  size="md"
+                  variant="subtle"
+                  disabled={!!deleteDisabledReason}
+                  onClick={() => {
+                    if (context.onDelete) {
+                      context.onDelete(data.key);
+                    }
+                  }}
+                  aria-label="Delete booking"
+                >
+                  <IconTrash size={16} />
+                </ActionIcon>
+              </Tooltip>
             );
           },
         },
@@ -514,6 +543,13 @@ export function EditTransactionModal({
             resizable: false,
             sortable: false,
             suppressHeaderMenuButton: true,
+            cellClassRules: {
+              "ag-cell-disabled": (params) => {
+                if (params.node.rowPinned || !params.data) return false;
+                if (params.colDef.editable === false) return false;
+                return !isEditableCell(params);
+              },
+            },
           }}
           onCellValueChanged={(e) => {
             if (e.colDef.colId === "ccy") {
@@ -538,7 +574,6 @@ export function EditTransactionModal({
                   );
                   break;
               }
-
             } else {
               form.setFieldValue(
                 `bookings.${e.rowIndex}.${e.colDef.field}`,
