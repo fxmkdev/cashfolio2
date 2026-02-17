@@ -26,6 +26,7 @@ import {
 import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
 import { useAccountTreeDnD } from "../../hooks/use-account-tree-dnd";
 import { useExpandedGroups } from "../../hooks/use-expanded-groups";
+import { ConfirmArchiveModal } from "../../components/confirm-archive-modal";
 import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
 import { EditAccountModal } from "../../components/edit-account-modal";
 import type {
@@ -39,6 +40,8 @@ import type {
 } from "../../components/edit-account-group-modal";
 import { DataGrid } from "../../components/data-grid";
 import {
+  archiveAccount,
+  archiveAccountGroup,
   createAccount,
   createAccountGroup,
   deleteAccount,
@@ -147,6 +150,10 @@ function AccountsPage() {
     { id: string; initialValues: AccountGroupInitialValues } | undefined
   >();
   const [editGroupModalOpen, setEditGroupModalOpen] = useState(false);
+  const [archivingRow, setArchivingRow] = useState<
+    | { id: string; nodeType: "account" | "accountGroup"; name: string }
+    | undefined
+  >();
   const [deletingRow, setDeletingRow] = useState<
     | { id: string; nodeType: "account" | "accountGroup"; name: string }
     | undefined
@@ -232,7 +239,7 @@ function AccountsPage() {
             {
               colId: "actions",
               headerName: "",
-              width: 80,
+              width: 110,
               sortable: false,
               filter: false,
               resizable: false,
@@ -241,6 +248,7 @@ function AccountsPage() {
               cellRenderer: ({ data }: ICellRendererParams<TreeRow>) => {
                 if (!data) return null;
                 const deleteLabel = data.deleteDisabledReason ?? "Delete";
+                const archiveLabel = data.archiveDisabledReason ?? "Archive";
                 return (
                   <Group gap={4} wrap="nowrap" h="100%" align="center">
                     <Tooltip label="Edit">
@@ -251,6 +259,24 @@ function AccountsPage() {
                         aria-label="Edit"
                       >
                         <IconPencil size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                    <Tooltip label={archiveLabel}>
+                      <ActionIcon
+                        variant="subtle"
+                        size="sm"
+                        color="yellow"
+                        disabled={!data.archivable}
+                        onClick={() =>
+                          setArchivingRow({
+                            id: data.id,
+                            nodeType: data.nodeType,
+                            name: data.name,
+                          })
+                        }
+                        aria-label="Archive"
+                      >
+                        <IconArchive size={16} />
                       </ActionIcon>
                     </Tooltip>
                     <Tooltip label={deleteLabel}>
@@ -346,6 +372,19 @@ function AccountsPage() {
       await deleteAccountGroup({ data: { id: deletingRow.id, accountBookId } });
     }
     setDeletingRow(undefined);
+    router.invalidate();
+  }
+
+  async function handleArchive() {
+    if (!archivingRow) return;
+    if (archivingRow.nodeType === "account") {
+      await archiveAccount({ data: { id: archivingRow.id, accountBookId } });
+    } else {
+      await archiveAccountGroup({
+        data: { id: archivingRow.id, accountBookId },
+      });
+    }
+    setArchivingRow(undefined);
     router.invalidate();
   }
 
@@ -528,6 +567,18 @@ function AccountsPage() {
             }
             name={deletingRow?.name}
             onConfirm={handleDelete}
+          />
+
+          <ConfirmArchiveModal
+            opened={!!archivingRow}
+            onClose={() => setArchivingRow(undefined)}
+            title={
+              archivingRow?.nodeType === "account"
+                ? "Archive Account"
+                : "Archive Group"
+            }
+            name={archivingRow?.name}
+            onConfirm={handleArchive}
           />
         </>
       )}
