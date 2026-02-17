@@ -7,6 +7,7 @@ import {
 } from "../.prisma-client/enums";
 import { isAfter, startOfDay } from "date-fns";
 import { getUnitIdentifier } from "../shared/account-utils";
+import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 
 export type CreateTransactionInput = {
   accountBookId: string;
@@ -123,6 +124,7 @@ export const getTransaction = createServerFn({ method: "GET" })
     (data: { transactionId: string; accountBookId: string }) => data,
   )
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     const transaction = await prisma.transaction.findUniqueOrThrow({
       where: {
         id_accountBookId: {
@@ -161,6 +163,7 @@ export const updateTransaction = createServerFn({ method: "POST" })
     (data: CreateTransactionInput & { transactionId: string }) => data,
   )
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     validateCreateTransaction(data);
     await validateAccountTypeBookings(data.bookings, data.accountBookId);
 
@@ -211,6 +214,7 @@ export const updateTransaction = createServerFn({ method: "POST" })
 export const createTransaction = createServerFn({ method: "POST" })
   .inputValidator((data: CreateTransactionInput) => data)
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     validateCreateTransaction(data);
     await validateAccountTypeBookings(data.bookings, data.accountBookId);
 
@@ -252,6 +256,7 @@ export const deleteTransaction = createServerFn({ method: "POST" })
     (data: { transactionId: string; accountBookId: string }) => data,
   )
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     await prisma.transaction.delete({
       where: {
         id_accountBookId: {

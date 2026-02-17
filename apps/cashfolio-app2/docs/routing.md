@@ -10,6 +10,10 @@
 
 ### Route Structure
 
+- `index.tsx` — authenticated home route; redirects to the first accessible
+  account book
+- `api/logto/$action.tsx` — auth endpoints: `/api/logto/sign-in`,
+  `/api/logto/callback`, `/api/logto/sign-out`, `/api/logto/sign-up`
 - `$accountBookId/index.tsx` — accounts page with tabs (one per account type:
   Asset, Liability, Income, Expense, Gain/Loss)
 - `$accountBookId/$accountId.tsx` — ledger page for a single account
@@ -36,6 +40,16 @@
 - Pattern: `createServerFn({ method })` → `.inputValidator()` → `.handler()`
 - Server-only files use `.server.ts` suffix
 - Key files: `accounts.ts`, `ledger.ts`, `transactions.ts`
+
+### Auth & Authorization
+
+- Logto integration uses `@logto/node` with `CookieStorage` in
+  `src/auth/logto.server.ts`
+- User auth guard: `src/auth/functions.server.ts` (`ensureAuthenticated`)
+- User upsert/lookup: `src/users/functions.server.ts`
+- Account-book authorization guard: `src/account-books/functions.server.ts`
+- All account/ledger/transaction server functions enforce account-book access
+  before querying/updating data
 
 ### Account Status Actions
 

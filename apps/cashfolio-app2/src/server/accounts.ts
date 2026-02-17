@@ -9,6 +9,7 @@ import {
   validateAccountInput,
   validateAccountGroupInput,
 } from "../shared/account-validation";
+import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 
 function getGroupPath(
   groupId: string,
@@ -55,6 +56,7 @@ async function getGroupHierarchy(
 export const getAccounts = createServerFn({ method: "GET" })
   .inputValidator((data: { accountBookId: string }) => data)
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     const [accounts, allGroups] = await Promise.all([
       prisma.account.findMany({
         where: { accountBookId: data.accountBookId },
@@ -80,6 +82,7 @@ export const getAccounts = createServerFn({ method: "GET" })
 export const getAccountGroups = createServerFn({ method: "GET" })
   .inputValidator((data: { accountBookId: string }) => data)
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     const groups = await prisma.accountGroup.findMany({
       where: { accountBookId: data.accountBookId, isActive: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -104,6 +107,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
     }) => data,
   )
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     const accountState = data.accountState ?? "active";
 
     const [accounts, accountGroups] = await Promise.all([
@@ -406,6 +410,7 @@ export type AccountInput = {
 export const createAccount = createServerFn({ method: "POST" })
   .inputValidator((data: AccountInput) => data)
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     const siblingNames = (
       await prisma.account.findMany({
         where: {
@@ -437,6 +442,7 @@ export const createAccount = createServerFn({ method: "POST" })
 export const updateAccount = createServerFn({ method: "POST" })
   .inputValidator((data: AccountInput & { id: string }) => data)
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     const siblingNames = (
       await prisma.account.findMany({
         where: {
@@ -490,6 +496,7 @@ export type AccountGroupInput = {
 export const createAccountGroup = createServerFn({ method: "POST" })
   .inputValidator((data: AccountGroupInput) => data)
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     const siblingNames = (
       await prisma.accountGroup.findMany({
         where: {
@@ -516,6 +523,7 @@ export const createAccountGroup = createServerFn({ method: "POST" })
 export const updateAccountGroup = createServerFn({ method: "POST" })
   .inputValidator((data: AccountGroupInput & { id: string }) => data)
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     const siblingNames = (
       await prisma.accountGroup.findMany({
         where: {
@@ -555,6 +563,7 @@ export const updateAccountGroup = createServerFn({ method: "POST" })
 export const deleteAccount = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     const bookingCount = await prisma.booking.count({
       where: { accountId: data.id, accountBookId: data.accountBookId },
     });
@@ -571,6 +580,7 @@ export const deleteAccount = createServerFn({ method: "POST" })
 export const deleteAccountGroup = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     const [childAccounts, childGroups, accountBook] = await Promise.all([
       prisma.account.count({
         where: { groupId: data.id, accountBookId: data.accountBookId },
@@ -613,6 +623,7 @@ export const deleteAccountGroup = createServerFn({ method: "POST" })
 export const archiveAccount = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     const account = await prisma.account.findUniqueOrThrow({
       where: {
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
@@ -643,6 +654,7 @@ export const archiveAccount = createServerFn({ method: "POST" })
 export const archiveAccountGroup = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     const group = await prisma.accountGroup.findUniqueOrThrow({
       where: {
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
@@ -691,6 +703,7 @@ export const archiveAccountGroup = createServerFn({ method: "POST" })
 export const unarchiveAccount = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     const account = await prisma.account.findUniqueOrThrow({
       where: {
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
@@ -718,6 +731,7 @@ export const unarchiveAccount = createServerFn({ method: "POST" })
 export const unarchiveAccountGroup = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     const group = await prisma.accountGroup.findUniqueOrThrow({
       where: {
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
@@ -754,6 +768,7 @@ export const reorderAccountTreeItems = createServerFn({ method: "POST" })
     }) => data,
   )
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     await prisma.$transaction(
       data.updates.map((u) =>
         u.nodeType === "account"

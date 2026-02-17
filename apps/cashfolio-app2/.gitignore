@@ -1,5 +1,6 @@
 node_modules
 .vite
 .tanstack
+dist
 src/.prisma-client
 .env

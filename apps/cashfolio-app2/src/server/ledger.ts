@@ -1,9 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
+import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 
 export const getAccountForLedger = createServerFn({ method: "GET" })
   .inputValidator((data: { accountId: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     const account = await prisma.account.findUniqueOrThrow({
       where: {
         id_accountBookId: {
@@ -50,6 +52,7 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
 export const getLedgerData = createServerFn({ method: "GET" })
   .inputValidator((data: { accountId: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
     const bookings = await prisma.booking.findMany({
       where: {
         accountId: data.accountId,

@@ -11,6 +11,7 @@
     "prisma:generate": "DATABASE_URL=dummy prisma generate"
   },
   "dependencies": {
+    "@logto/node": "^3.1.8",
     "@mantine/core": "^8.3.12",
     "@mantine/dates": "^8.3.13",
     "@mantine/form": "^8.3.14",
