@@ -2,7 +2,9 @@
 
 Guidance for coding agents and contributors working in this repository.
 
-Cashfolio is a double-entry accounting web app built with TanStack Start, Mantine, and Prisma. This package (`cashfolio-app2`) is a rewrite of `cashfolio-app`.
+Cashfolio is a double-entry accounting web app built with TanStack Start,
+Mantine, and Prisma. This package (`cashfolio-app2`) is a rewrite of
+`cashfolio-app`.
 
 ## Development Commands
 
@@ -27,7 +29,8 @@ pnpm prisma:generate  # Regenerate Prisma client (DATABASE_URL=dummy prisma gene
 - Use `date-fns` for date operations.
 - Use `react-number-format` for locale-aware number inputs.
 - Use `en-CH` locale for number formatting.
-- Keep currency/crypto constants in `src/currencies.ts` and `src/cryptocurrencies.ts`.
+- Keep currency/crypto constants in `src/currencies.ts` and
+  `src/cryptocurrencies.ts`.
 
 ## Quality Checklist
 

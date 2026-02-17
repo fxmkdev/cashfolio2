@@ -2,9 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
 
 export const getAccountForLedger = createServerFn({ method: "GET" })
-  .inputValidator(
-    (data: { accountId: string; accountBookId: string }) => data,
-  )
+  .inputValidator((data: { accountId: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
     const account = await prisma.account.findUniqueOrThrow({
       where: {
@@ -43,13 +41,14 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
     }
 
     const { groupId, ...rest } = account;
-    return { ...rest, groupPathSegments: groupId ? getGroupPathSegments(groupId) : [] };
+    return {
+      ...rest,
+      groupPathSegments: groupId ? getGroupPathSegments(groupId) : [],
+    };
   });
 
 export const getLedgerData = createServerFn({ method: "GET" })
-  .inputValidator(
-    (data: { accountId: string; accountBookId: string }) => data,
-  )
+  .inputValidator((data: { accountId: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
     const bookings = await prisma.booking.findMany({
       where: {

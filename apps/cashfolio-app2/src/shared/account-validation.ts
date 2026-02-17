@@ -10,7 +10,9 @@ export function validateAccountName(
   if (!name) return "Name is required";
   if (
     siblingNames &&
-    siblingNames.some((n) => n.localeCompare(name, undefined, { sensitivity: "accent" }) === 0)
+    siblingNames.some(
+      (n) => n.localeCompare(name, undefined, { sensitivity: "accent" }) === 0,
+    )
   ) {
     return "An account with this name already exists in this group";
   }
@@ -76,7 +78,9 @@ export function validateAccountGroupName(
   if (!name) return "Name is required";
   if (
     siblingNames &&
-    siblingNames.some((n) => n.localeCompare(name, undefined, { sensitivity: "accent" }) === 0)
+    siblingNames.some(
+      (n) => n.localeCompare(name, undefined, { sensitivity: "accent" }) === 0,
+    )
   ) {
     return "A group with this name already exists";
   }
@@ -113,9 +117,9 @@ export function validateAccountGroupInput(
   data: AccountGroupInput,
   siblingNames?: string[],
 ): void {
-  const errors = [
-    validateAccountGroupName(data.name, siblingNames),
-  ].filter(Boolean);
+  const errors = [validateAccountGroupName(data.name, siblingNames)].filter(
+    Boolean,
+  );
 
   if (errors.length > 0) {
     throw new Error(errors[0]!);

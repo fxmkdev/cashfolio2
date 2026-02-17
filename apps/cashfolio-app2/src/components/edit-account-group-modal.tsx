@@ -10,13 +10,8 @@ import {
 } from "@mantine/core";
 import { isNotEmpty, useForm } from "@mantine/form";
 import { useEffect, useReducer } from "react";
-import {
-  AccountType,
-  EquityAccountSubtype,
-} from "../.prisma-client/enums";
-import {
-  validateAccountGroupName,
-} from "../shared/account-validation";
+import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
+import { validateAccountGroupName } from "../shared/account-validation";
 import type { ExistingNode } from "./edit-account-modal";
 
 type FormValues = {
@@ -67,7 +62,12 @@ export function EditAccountGroupModal({
   opened: boolean;
   onClose: () => void;
   onExitTransitionEnd?: () => void;
-  accountGroups: { value: string; label: string; type: string; equityAccountSubtype: string | null }[];
+  accountGroups: {
+    value: string;
+    label: string;
+    type: string;
+    equityAccountSubtype: string | null;
+  }[];
   onSubmit: (values: AccountGroupTransformedFormValues) => void | Promise<void>;
   initialValues?: AccountGroupInitialValues;
   existingNodes?: ExistingNode[];
@@ -78,7 +78,9 @@ export function EditAccountGroupModal({
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const form = useForm<FormValues>({
     mode: "uncontrolled",
-    initialValues: initialValues ? toFormValues(initialValues) : { typeDescriptor },
+    initialValues: initialValues
+      ? toFormValues(initialValues)
+      : { typeDescriptor },
     validate: {
       name: (value, values) => {
         const siblingNames = existingNodes
@@ -121,10 +123,16 @@ export function EditAccountGroupModal({
   const { type, equityAccountSubtype } =
     form.getTransformedValues() as AccountGroupTransformedFormValues;
   return (
-    <Modal opened={opened} onClose={onClose} onExitTransitionEnd={onExitTransitionEnd} title={isEdit ? "Edit Group" : "New Group"} size="lg">
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      onExitTransitionEnd={onExitTransitionEnd}
+      title={isEdit ? "Edit Group" : "New Group"}
+      size="lg"
+    >
       <form
         onSubmit={form.onSubmit((values) =>
-          onSubmit(values as AccountGroupTransformedFormValues)
+          onSubmit(values as AccountGroupTransformedFormValues),
         )}
       >
         <Stack gap="xl">

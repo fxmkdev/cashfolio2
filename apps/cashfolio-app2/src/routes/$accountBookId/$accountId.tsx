@@ -104,11 +104,17 @@ type LedgerRow = {
   balance: number | null;
 };
 
-type LedgerAccountOptionSource = Awaited<ReturnType<typeof getAccounts>>[number];
+type LedgerAccountOptionSource = Awaited<
+  ReturnType<typeof getAccounts>
+>[number];
 
 function toAccountOption(account: LedgerAccountOptionSource): AccountOption {
   return {
-    label: [getTypeLabel(account.type, account.equityAccountSubtype), account.groupPath, account.name]
+    label: [
+      getTypeLabel(account.type, account.equityAccountSubtype),
+      account.groupPath,
+      account.name,
+    ]
       .filter(Boolean)
       .join(" / "),
     value: account.id,
@@ -152,24 +158,21 @@ function LedgerPage() {
     [accounts],
   );
 
-  const editAccountOptions = useMemo<AccountOption[]>(
-    () => {
-      if (!editingTransactionData) return accountOptions;
+  const editAccountOptions = useMemo<AccountOption[]>(() => {
+    if (!editingTransactionData) return accountOptions;
 
-      const selectedAccountIds = new Set([
-        account.id,
-        ...editingTransactionData.bookings
-          .map((b) => b.account)
-          .filter((id): id is string => Boolean(id)),
-      ]);
+    const selectedAccountIds = new Set([
+      account.id,
+      ...editingTransactionData.bookings
+        .map((b) => b.account)
+        .filter((id): id is string => Boolean(id)),
+    ]);
 
-      return createAccountOptions(
-        accounts,
-        (a) => a.isActive || selectedAccountIds.has(a.id),
-      );
-    },
-    [account.id, accountOptions, accounts, editingTransactionData],
-  );
+    return createAccountOptions(
+      accounts,
+      (a) => a.isActive || selectedAccountIds.has(a.id),
+    );
+  }, [account.id, accountOptions, accounts, editingTransactionData]);
 
   async function handleCreateTransaction(values: {
     description: string;

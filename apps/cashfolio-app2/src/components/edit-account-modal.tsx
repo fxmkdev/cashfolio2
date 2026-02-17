@@ -98,7 +98,12 @@ export function EditAccountModal({
   opened: boolean;
   onClose: () => void;
   onExitTransitionEnd?: () => void;
-  accountGroups: { value: string; label: string; type: string; equityAccountSubtype: string | null }[];
+  accountGroups: {
+    value: string;
+    label: string;
+    type: string;
+    equityAccountSubtype: string | null;
+  }[];
   onSubmit: (values: TransformedFormValues) => void | Promise<void>;
   initialValues?: AccountInitialValues;
   existingNodes?: ExistingNode[];
@@ -185,10 +190,16 @@ export function EditAccountModal({
   const { unit, type, equityAccountSubtype } =
     form.getTransformedValues() as TransformedFormValues;
   return (
-    <Modal opened={opened} onClose={onClose} onExitTransitionEnd={onExitTransitionEnd} title={isEdit ? "Edit Account" : "New Account"} size="lg">
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      onExitTransitionEnd={onExitTransitionEnd}
+      title={isEdit ? "Edit Account" : "New Account"}
+      size="lg"
+    >
       <form
         onSubmit={form.onSubmit((values) =>
-          onSubmit(values as TransformedFormValues)
+          onSubmit(values as TransformedFormValues),
         )}
       >
         <Stack gap="xl">
