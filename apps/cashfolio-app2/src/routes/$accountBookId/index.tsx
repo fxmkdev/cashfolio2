@@ -17,7 +17,6 @@ import {
 } from "@mantine/core";
 import { IconArchive, IconPlus } from "@tabler/icons-react";
 import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
-import { useAccountTreeDnD } from "../../hooks/use-account-tree-dnd";
 import { useExpandedGroups } from "../../hooks/use-expanded-groups";
 import {
   ActiveAccountTreeActionsCell,
@@ -35,6 +34,7 @@ import type {
   AccountGroupInitialValues,
   AccountGroupTransformedFormValues,
 } from "../../components/edit-account-group-modal";
+import { ReorderGroupChildrenModal } from "../../components/reorder-group-children-modal";
 import { DataGrid } from "../../components/data-grid";
 import {
   archiveAccount,
@@ -45,6 +45,7 @@ import {
   deleteAccountGroup,
   getAccountGroups,
   getAccountTreeData,
+  reorderAccountTreeItems,
   unarchiveAccount,
   unarchiveAccountGroup,
   updateAccount,
@@ -132,6 +133,8 @@ export const Route = createFileRoute("/$accountBookId/")({
 });
 
 type TreeRow = Awaited<ReturnType<typeof getAccountTreeData>>[number];
+const ROOT_PARENT_KEY = "__root__";
+
 type RowTarget = {
   id: string;
   nodeType: "account" | "accountGroup";
@@ -174,6 +177,9 @@ function AccountsPage() {
     | { id: string; nodeType: "account" | "accountGroup"; name: string }
     | undefined
   >();
+  const [reorderingRow, setReorderingRow] = useState<
+    { name: string; parentKey: string } | undefined
+  >();
 
   const isEquityTab = tab.startsWith("EQUITY-");
   const isArchivedMode = mode === "archived";
@@ -182,12 +188,25 @@ function AccountsPage() {
   const { isGroupOpenByDefault, onRowGroupOpened } =
     useExpandedGroups(storageKey);
 
-  const {
-    handleRowDragEnd,
-    handleRowDragMove,
-    handleRowDragLeave,
-    getRowClass,
-  } = useAccountTreeDnD({ treeData, tab, accountBookId, router });
+  const rowsByParentKey = useMemo(() => {
+    const siblingRowsByParentKey = new Map<string, TreeRow[]>();
+    for (const row of treeData[tab]) {
+      const parentKey = row.parentId ?? ROOT_PARENT_KEY;
+      const siblings = siblingRowsByParentKey.get(parentKey) ?? [];
+      siblings.push(row);
+      siblingRowsByParentKey.set(parentKey, siblings);
+    }
+    return siblingRowsByParentKey;
+  }, [treeData, tab]);
+
+  const selectedSiblingRows = useMemo(() => {
+    if (!reorderingRow) return [];
+    return (rowsByParentKey.get(reorderingRow.parentKey) ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      nodeType: row.nodeType,
+    }));
+  }, [rowsByParentKey, reorderingRow]);
 
   const handleEditRow = useCallback((data: TreeRow) => {
     if (data.nodeType === "account") {
@@ -265,7 +284,7 @@ function AccountsPage() {
       {
         colId: "actions",
         headerName: "",
-        width: isArchivedMode ? 50 : 110,
+        width: isArchivedMode ? 50 : 145,
         sortable: false,
         filter: false,
         resizable: false,
@@ -284,21 +303,40 @@ function AccountsPage() {
             );
           }
 
+          const parentKey = data.parentId ?? ROOT_PARENT_KEY;
+          const siblingCount =
+            (rowsByParentKey.get(parentKey)?.length ?? 0) - 1;
+          const hasSiblings = siblingCount >= 1;
+
           return (
             <ActiveAccountTreeActionsCell
               archiveLabel={data.archiveDisabledReason ?? "Archive"}
               deleteLabel={data.deleteDisabledReason ?? "Delete"}
               archivable={data.archivable}
               deletable={data.deletable}
+              showReorder={hasSiblings}
+              reorderLabel="Reorder siblings"
               onEdit={() => handleEditRow(data)}
               onArchive={() => setArchivingRow(toRowTarget(data))}
               onDelete={() => setDeletingRow(toRowTarget(data))}
+              onReorder={() =>
+                setReorderingRow({
+                  name: data.name,
+                  parentKey,
+                })
+              }
             />
           );
         },
       } satisfies ColDef<TreeRow>,
     ],
-    [isArchivedMode, isEquityTab, handleEditRow, handleUnarchiveRow],
+    [
+      isArchivedMode,
+      isEquityTab,
+      handleEditRow,
+      handleUnarchiveRow,
+      rowsByParentKey,
+    ],
   );
 
   async function handleCreateAccount(values: TransformedFormValues) {
@@ -399,6 +437,22 @@ function AccountsPage() {
     router.invalidate();
   }
 
+  async function handleReorderSiblings(
+    rows: { id: string; nodeType: "account" | "accountGroup" }[],
+  ) {
+    await reorderAccountTreeItems({
+      data: {
+        accountBookId,
+        updates: rows.map((row, i) => ({
+          id: row.id,
+          nodeType: row.nodeType,
+          sortOrder: i,
+        })),
+      },
+    });
+    router.invalidate();
+  }
+
   return (
     <Container fluid py="xl" px="xl">
       <Group mb="lg" gap="md" justify="space-between" mih={36}>
@@ -482,7 +536,6 @@ function AccountsPage() {
           field: "name",
           flex: 1,
           filter: "agTextColumnFilter",
-          rowDrag: !isArchivedMode,
           valueGetter: ({ data }) => data?.name,
           cellRendererParams: {
             suppressCount: true,
@@ -493,10 +546,6 @@ function AccountsPage() {
         isGroupOpenByDefault={isGroupOpenByDefault}
         onRowGroupOpened={onRowGroupOpened}
         getRowId={({ data }) => data.id}
-        getRowClass={isArchivedMode ? undefined : getRowClass}
-        onRowDragEnd={isArchivedMode ? undefined : handleRowDragEnd}
-        onRowDragMove={isArchivedMode ? undefined : handleRowDragMove}
-        onRowDragLeave={isArchivedMode ? undefined : handleRowDragLeave}
         onRowDoubleClicked={(e) => {
           if (e.data?.nodeType === "account") {
             navigate({
@@ -573,6 +622,14 @@ function AccountsPage() {
             }
             name={archivingRow?.name}
             onConfirm={handleArchive}
+          />
+
+          <ReorderGroupChildrenModal
+            opened={!!reorderingRow}
+            onClose={() => setReorderingRow(undefined)}
+            rowName={reorderingRow?.name ?? ""}
+            initialRows={selectedSiblingRows}
+            onReorder={handleReorderSiblings}
           />
         </>
       )}

@@ -25,7 +25,6 @@ Route-level logic that doesn't belong in components is extracted into hooks in
 
 | Hook                   | File                        | Purpose                                                  |
 | ---------------------- | --------------------------- | -------------------------------------------------------- |
-| `useAccountTreeDnD`    | `use-account-tree-dnd.ts`   | Drag-and-drop reordering for the accounts tree           |
 | `useExpandedGroups`    | `use-expanded-groups.ts`    | Persist/restore expanded group state via sessionStorage  |
 | `useTransactionScroll` | `use-transaction-scroll.ts` | Scroll-to and flash a transaction row on the ledger grid |
 
@@ -193,25 +192,22 @@ Columns use AG Grid's built-in filter UI (not URL search params):
 The AG Grid Quartz theme responds to this attribute to switch between light and
 dark mode. AG Grid theme config is in `src/components/grid-theme.tsx`.
 
-## Row Drag-and-Drop Pattern
+## Sibling Reorder Pattern
 
-The accounts tree supports reordering rows via drag-and-drop within the same
-parent level. All DnD logic is encapsulated in `useAccountTreeDnD`
-(`src/hooks/use-account-tree-dnd.ts`):
-
-```ts
-const { handleRowDragEnd, handleRowDragMove, handleRowDragLeave, getRowClass } =
-  useAccountTreeDnD({ treeData, tab, accountBookId, router });
-```
-
-- AG Grid's `rowDrag` is enabled; `rowDragManaged` is **not** used (manual DnD
-  events)
-- An internal `dragIndicatorRef` tracks the drop target and position (`"above"`
-  | `"below"` | `null`)
-- `getRowClass()` returns `"drag-indicator-above"` or `"drag-indicator-below"`
-  to render a box-shadow indicator line via CSS (in `grid-theme.css`)
-- On `rowDragEnd`, the new `sortOrder` values are computed and sent to
-  `reorderAccountTreeItems`; the loader is then invalidated to refresh the tree
+- The main accounts tree does not use row dragging.
+- Active account and group rows expose a reorder action icon in the actions
+  column only when the row has at least one sibling (same parent).
+- Clicking the action opens `ReorderGroupChildrenModal`
+  (`src/components/reorder-group-children-modal.tsx`) and shows all siblings
+  (accounts and groups) of the clicked row.
+- The modal uses a compact AG Grid with:
+  - no header (`headerHeight={0}`)
+  - one draggable name column
+  - `rowDragManaged` for in-modal reordering
+- This also supports root-level rows (no parent group), so root groups can be
+  reordered.
+- On row drag end, the modal sends updated sibling `sortOrder` values to
+  `reorderAccountTreeItems`; the route then invalidates loader data.
 
 ## Node Type Mixing in Tree Data
 

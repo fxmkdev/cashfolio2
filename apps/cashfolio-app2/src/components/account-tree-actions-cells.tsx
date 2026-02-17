@@ -1,5 +1,6 @@
 import { ActionIcon, Group, Tooltip } from "@mantine/core";
 import {
+  IconArrowsSort,
   IconArchive,
   IconArchiveOff,
   IconPencil,
@@ -38,20 +39,38 @@ export function ActiveAccountTreeActionsCell({
   deleteLabel,
   archivable,
   deletable,
+  reorderLabel,
+  showReorder,
   onEdit,
   onArchive,
   onDelete,
+  onReorder,
 }: {
   archiveLabel: string;
   deleteLabel: string;
   archivable: boolean;
   deletable: boolean;
+  reorderLabel?: string;
+  showReorder?: boolean;
   onEdit: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  onReorder?: () => void;
 }) {
   return (
     <Group gap={4} wrap="nowrap" h="100%" align="center">
+      {showReorder && (
+        <Tooltip label={reorderLabel ?? "Reorder siblings"}>
+          <ActionIcon
+            variant="subtle"
+            size="sm"
+            onClick={onReorder}
+            aria-label="Reorder siblings"
+          >
+            <IconArrowsSort size={16} />
+          </ActionIcon>
+        </Tooltip>
+      )}
       <Tooltip label="Edit">
         <ActionIcon
           variant="subtle"

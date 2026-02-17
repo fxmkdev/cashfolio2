@@ -54,5 +54,5 @@ functions.
 ### Reorder Pattern
 
 `reorderAccountTreeItems` (in `accounts.ts`) issues a batch of Prisma updates
-inside a transaction to update `sortOrder` values after drag-and-drop
-reordering.
+inside a transaction to update `sortOrder` values after reordering sibling rows
+in the reorder modal.
