@@ -40,7 +40,7 @@ export function ActiveAccountTreeActionsCell({
   archivable,
   deletable,
   reorderLabel,
-  showReorder,
+  reorderEnabled = true,
   onEdit,
   onArchive,
   onDelete,
@@ -51,7 +51,7 @@ export function ActiveAccountTreeActionsCell({
   archivable: boolean;
   deletable: boolean;
   reorderLabel?: string;
-  showReorder?: boolean;
+  reorderEnabled?: boolean;
   onEdit: () => void;
   onArchive: () => void;
   onDelete: () => void;
@@ -59,18 +59,17 @@ export function ActiveAccountTreeActionsCell({
 }) {
   return (
     <Group gap={4} wrap="nowrap" h="100%" align="center">
-      {showReorder && (
-        <Tooltip label={reorderLabel ?? "Reorder siblings"}>
-          <ActionIcon
-            variant="subtle"
-            size="sm"
-            onClick={onReorder}
-            aria-label="Reorder siblings"
-          >
-            <IconArrowsSort size={16} />
-          </ActionIcon>
-        </Tooltip>
-      )}
+      <Tooltip label={reorderLabel ?? "Reorder siblings"}>
+        <ActionIcon
+          variant="subtle"
+          size="sm"
+          disabled={!reorderEnabled}
+          onClick={onReorder}
+          aria-label="Reorder siblings"
+        >
+          <IconArrowsSort size={16} />
+        </ActionIcon>
+      </Tooltip>
       <Tooltip label="Edit">
         <ActionIcon
           variant="subtle"

@@ -307,6 +307,9 @@ function AccountsPage() {
           const siblingCount =
             (rowsByParentKey.get(parentKey)?.length ?? 0) - 1;
           const hasSiblings = siblingCount >= 1;
+          const reorderLabel = hasSiblings
+            ? "Reorder siblings"
+            : "Cannot reorder because this row has no siblings";
 
           return (
             <ActiveAccountTreeActionsCell
@@ -314,8 +317,8 @@ function AccountsPage() {
               deleteLabel={data.deleteDisabledReason ?? "Delete"}
               archivable={data.archivable}
               deletable={data.deletable}
-              showReorder={hasSiblings}
-              reorderLabel="Reorder siblings"
+              reorderEnabled={hasSiblings}
+              reorderLabel={reorderLabel}
               onEdit={() => handleEditRow(data)}
               onArchive={() => setArchivingRow(toRowTarget(data))}
               onDelete={() => setDeletingRow(toRowTarget(data))}

@@ -42,10 +42,22 @@ Route-level logic that doesn't belong in components is extracted into hooks in
 
 - Always wrap `ActionIcon` components in a `Tooltip` describing the action (e.g.
   "Edit", "Delete")
-- When an action is disabled, the tooltip should explain why (e.g. "Cannot
-  delete account because it has bookings")
+- Action availability behavior is defined in `Action Availability Pattern`.
 - Tooltip `openDelay` is configured globally in `src/theme.ts` (default 500ms) —
   do not override per-instance unless necessary
+
+## Action Availability Pattern
+
+- For each conditional action, provide both:
+  - an availability boolean (e.g. `deletable`, `archivable`, `unarchivable`)
+  - a disabled-reason string (e.g. `deleteDisabledReason`,
+    `archiveDisabledReason`, `unarchiveDisabledReason`)
+- In the UI, always render the action and wire availability to
+  `ActionIcon.disabled`.
+- The tooltip label should use the disabled reason when unavailable, otherwise a
+  default action label.
+- Enforce rules server-side as well; UI availability is an affordance, not an
+  authorization check.
 
 ## Data Grid Actions Column
 
@@ -84,7 +96,6 @@ Route-level logic that doesn't belong in components is extracted into hooks in
   (`src/components/confirm-archive-modal.tsx`)
 - Archived view triggers unarchive directly from the action icon (no
   confirmation modal)
-- Keep tooltips on status actions; disabled status actions must explain why
 
 ## Type Descriptor Pattern
 
@@ -208,8 +219,8 @@ dark mode. AG Grid theme config is in `src/components/grid-theme.tsx`.
 ## Sibling Reorder Pattern
 
 - The main accounts tree does not use row dragging.
-- Active account and group rows expose a reorder action icon in the actions
-  column only when the row has at least one sibling (same parent).
+- Reorder action availability follows the generic `Action Availability Pattern`.
+- Availability is based on sibling count under the same parent.
 - Clicking the action opens `ReorderGroupChildrenModal`
   (`src/components/reorder-group-children-modal.tsx`) and shows all siblings
   (accounts and groups) of the clicked row.
