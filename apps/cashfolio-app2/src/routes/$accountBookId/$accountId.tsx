@@ -458,7 +458,10 @@ function LedgerPage() {
                 component: Link,
                 to: "/$accountBookId",
                 params: { accountBookId },
-                search: { tab: backTab },
+                search: {
+                  tab: backTab,
+                  mode: account.isActive ? "active" : "archived",
+                },
               } as any)}
               fz="inherit"
               fw="inherit"

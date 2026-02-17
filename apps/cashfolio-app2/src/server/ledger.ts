@@ -16,6 +16,7 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
       select: {
         id: true,
         name: true,
+        isActive: true,
         type: true,
         equityAccountSubtype: true,
         unit: true,
