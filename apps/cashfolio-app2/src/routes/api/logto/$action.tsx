@@ -15,10 +15,21 @@ export const Route = createFileRoute("/api/logto/$action")({
             return handleLogtoSignIn();
           case "callback":
             return handleLogtoSignInCallback(request);
-          case "sign-out":
-            return handleLogtoSignOut();
           case "sign-up":
             return handleLogtoSignUp();
+          case "sign-out":
+            return new Response("Method Not Allowed", {
+              status: 405,
+              headers: { Allow: "POST" },
+            });
+          default:
+            return new Response("Not Found", { status: 404 });
+        }
+      },
+      POST: async ({ request, params }) => {
+        switch (params.action) {
+          case "sign-out":
+            return handleLogtoSignOut(request);
           default:
             return new Response("Not Found", { status: 404 });
         }

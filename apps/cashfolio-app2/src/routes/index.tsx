@@ -1,4 +1,4 @@
-import { Anchor, Container, Stack, Text } from "@mantine/core";
+import { Button, Container, Stack, Text } from "@mantine/core";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { getFirstUserAccountBookId } from "../server/home";
 
@@ -24,9 +24,11 @@ function HomePage() {
     <Container py="xl">
       <Stack gap="md">
         <Text size="lg">There are no account books yet.</Text>
-        <Anchor href="/api/logto/sign-out" w="fit-content">
-          Sign out
-        </Anchor>
+        <form action="/api/logto/sign-out" method="post">
+          <Button type="submit" variant="subtle" px={0}>
+            Sign out
+          </Button>
+        </form>
       </Stack>
     </Container>
   );

@@ -12,8 +12,9 @@
 
 - `index.tsx` — authenticated home route; redirects to the first accessible
   account book
-- `api/logto/$action.tsx` — auth endpoints: `/api/logto/sign-in`,
-  `/api/logto/callback`, `/api/logto/sign-out`, `/api/logto/sign-up`
+- `api/logto/$action.tsx` — auth endpoints: `GET /api/logto/sign-in`,
+  `GET /api/logto/callback`, `GET /api/logto/sign-up`,
+  `POST /api/logto/sign-out`
 - `$accountBookId/index.tsx` — accounts page with tabs (one per account type:
   Asset, Liability, Income, Expense, Gain/Loss)
 - `$accountBookId/$accountId.tsx` — ledger page for a single account

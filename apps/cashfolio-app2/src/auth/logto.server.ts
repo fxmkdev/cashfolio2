@@ -18,7 +18,6 @@ const LOGTO_APP_ID = requireEnv("LOGTO_APP_ID");
 const LOGTO_APP_SECRET = requireEnv("LOGTO_APP_SECRET");
 const BASE_URL = requireEnv("BASE_URL");
 const SESSION_SECRET = requireEnv("SESSION_SECRET");
-const COOKIE_DOMAIN = requireEnv("COOKIE_DOMAIN");
 
 const logtoConfig: LogtoConfig = {
   endpoint: LOGTO_ENDPOINT,
@@ -37,7 +36,7 @@ async function createLogtoClient(onNavigate?: (url: string) => void) {
     isSecure: true,
     getCookie: (name) => getCookie(name),
     setCookie: (name, value, options) => {
-      setCookie(name, value, { ...options, domain: COOKIE_DOMAIN });
+      setCookie(name, value, options);
     },
   });
 
@@ -94,11 +93,11 @@ export async function handleLogtoSignUp() {
 }
 
 export async function handleLogtoSignInCallback(request: Request) {
-  const isForwardedHttpsTraffic =
-    request.headers.get("x-forwarded-proto") === "https";
-  const callbackUri = isForwardedHttpsTraffic
-    ? request.url.replace("http://", "https://")
-    : request.url;
+  const requestUrl = new URL(request.url);
+  const callbackUri = new URL(
+    `${requestUrl.pathname}${requestUrl.search}`,
+    BASE_URL,
+  ).toString();
 
   const { client } = await createLogtoClient();
 
@@ -110,7 +109,37 @@ export async function handleLogtoSignInCallback(request: Request) {
   });
 }
 
-export async function handleLogtoSignOut() {
+function ensureSameOriginRequest(request: Request) {
+  const expectedOrigin = new URL(BASE_URL).origin;
+  const requestOrigin = request.headers.get("origin");
+
+  if (requestOrigin) {
+    if (requestOrigin !== expectedOrigin) {
+      throw new Response("Forbidden", { status: 403 });
+    }
+    return;
+  }
+
+  const referer = request.headers.get("referer");
+  if (!referer) {
+    throw new Response("Forbidden", { status: 403 });
+  }
+
+  let refererOrigin = "";
+  try {
+    refererOrigin = new URL(referer).origin;
+  } catch {
+    throw new Response("Forbidden", { status: 403 });
+  }
+
+  if (refererOrigin !== expectedOrigin) {
+    throw new Response("Forbidden", { status: 403 });
+  }
+}
+
+export async function handleLogtoSignOut(request: Request) {
+  ensureSameOriginRequest(request);
+
   let navigateToUrl = "/";
 
   const { client, storage } = await createLogtoClient((url) => {
