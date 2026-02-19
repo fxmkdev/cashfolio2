@@ -1,4 +1,8 @@
-import type { CellClassParams, ColDef } from "ag-grid-enterprise";
+import type {
+  CellClassParams,
+  ColDef,
+  RowDragEndEvent,
+} from "ag-grid-enterprise";
 import { currencies } from "../currencies";
 import { cryptocurrencies } from "../cryptocurrencies";
 import {
@@ -6,7 +10,7 @@ import {
   isExpenseAccount,
   getUnitIdentifier,
 } from "../shared/account-utils";
-import { useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import {
   ActionIcon,
   Box,
@@ -259,13 +263,43 @@ export function EditTransactionModal({
     return first?.key;
   }, [form.values.bookings, currentAccountId]);
 
+  const onRowDragEnd = useCallback(
+    (event: RowDragEndEvent<BookingValues>) => {
+      const displayOrderKeys: string[] = [];
+      event.api.forEachNodeAfterFilterAndSort((node) => {
+        if (node.data?.key) {
+          displayOrderKeys.push(node.data.key);
+        }
+      });
+
+      if (displayOrderKeys.length !== form.values.bookings.length) return;
+
+      const currentKeys = form.values.bookings.map((b) => b.key);
+      if (!currentKeys.every((key) => displayOrderKeys.includes(key))) return;
+
+      const hasChanged = displayOrderKeys.some(
+        (key, index) => key !== currentKeys[index],
+      );
+      if (!hasChanged) return;
+
+      const bookingByKey = new Map(form.values.bookings.map((b) => [b.key, b]));
+      const reorderedBookings = displayOrderKeys
+        .map((key) => bookingByKey.get(key))
+        .filter((b): b is BookingValues => Boolean(b));
+
+      if (reorderedBookings.length !== form.values.bookings.length) return;
+      form.setFieldValue("bookings", reorderedBookings);
+    },
+    [form],
+  );
+
   const columnDefs = useMemo(
     () =>
       [
         {
           editable: false,
           width: 0,
-          colSpan: (params) => (params.data ? 1 : 7),
+          colSpan: (params) => (params.data ? 1 : 8),
           cellRendererSelector: (params) => {
             if (!params.data) {
               return {
@@ -285,6 +319,13 @@ export function EditTransactionModal({
 
             return undefined;
           },
+        },
+        {
+          colId: "drag",
+          headerName: "",
+          editable: false,
+          width: 40,
+          rowDrag: ({ data, node }) => !node.rowPinned && Boolean(data),
         },
         {
           field: "date",
@@ -538,6 +579,9 @@ export function EditTransactionModal({
           rowData={form.values.bookings}
           getRowId={({ data }) => data.key}
           columnDefs={columnDefs}
+          rowDragManaged
+          animateRows
+          onRowDragEnd={onRowDragEnd}
           defaultColDef={{
             editable: true,
             resizable: false,

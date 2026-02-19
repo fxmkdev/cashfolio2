@@ -174,7 +174,8 @@ model Booking {
   symbol         String?
   tradeCurrency  String?
 
-  value Decimal
+  value     Decimal
+  sortOrder Int     @default(0)
 
   accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
   accountBookId String

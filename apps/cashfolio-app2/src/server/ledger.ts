@@ -80,6 +80,7 @@ export const getLedgerData = createServerFn({ method: "GET" })
               where: {
                 accountId: { not: data.accountId },
               },
+              orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
               select: {
                 account: {
                   select: { id: true, name: true },

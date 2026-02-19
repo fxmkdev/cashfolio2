@@ -170,11 +170,13 @@ handlers).
 with split bookings:
 
 - **Debit/credit mutual exclusivity**: setting one clears the other
-- **Current account booking**: locked (read-only), always first in the list
+- **Current account booking**: locked (read-only) and non-deletable
 - **Minimum bookings**: at least 2 bookings enforced
 - **Date propagation**: date changes propagate to all bookings
 - **Unit auto-population**: unit is auto-populated from selected account
   metadata
+- **Booking row reordering**: enabled via AG Grid row drag in both create and
+  edit flows
 
 ### Conditional Editability Affordance
 

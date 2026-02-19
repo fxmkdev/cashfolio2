@@ -21,8 +21,9 @@
   `sortOrder`
 - `Transaction` — has `description`; contains one or more `Booking` rows
 - `Booking` — has `date`, `description`, `value` (Decimal), `unit`, `currency`,
-  `cryptocurrency`, `symbol`, `tradeCurrency`; links to both `Account` and
-  `Transaction`
+  `cryptocurrency`, `symbol`, `tradeCurrency`, `sortOrder`; links to both
+  `Account` and `Transaction`. Booking display order within a transaction uses
+  `sortOrder` first, then `id` for deterministic fallback.
 
 **Auth / multi-tenancy models:**
 

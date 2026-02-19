@@ -133,7 +133,9 @@ export const getTransaction = createServerFn({ method: "GET" })
         },
       },
       include: {
-        bookings: true,
+        bookings: {
+          orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+        },
       },
     });
 
@@ -184,7 +186,7 @@ export const updateTransaction = createServerFn({ method: "POST" })
         data: {
           description: data.description,
           bookings: {
-            create: data.bookings.map((b) => ({
+            create: data.bookings.map((b, sortOrder) => ({
               date: new Date(b.date),
               description: b.description,
               account: {
@@ -201,6 +203,7 @@ export const updateTransaction = createServerFn({ method: "POST" })
               symbol: b.symbol,
               tradeCurrency: b.tradeCurrency,
               value: b.value,
+              sortOrder,
               accountBook: {
                 connect: { id: data.accountBookId },
               },
@@ -223,7 +226,7 @@ export const createTransaction = createServerFn({ method: "POST" })
         description: data.description,
         accountBookId: data.accountBookId,
         bookings: {
-          create: data.bookings.map((b) => ({
+          create: data.bookings.map((b, sortOrder) => ({
             date: new Date(b.date),
             description: b.description,
             account: {
@@ -240,6 +243,7 @@ export const createTransaction = createServerFn({ method: "POST" })
             symbol: b.symbol,
             tradeCurrency: b.tradeCurrency,
             value: b.value,
+            sortOrder,
             accountBook: {
               connect: { id: data.accountBookId },
             },
