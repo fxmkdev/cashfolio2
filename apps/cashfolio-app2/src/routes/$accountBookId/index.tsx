@@ -1,17 +1,14 @@
 import {
   createFileRoute,
-  Link,
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import {
-  Anchor,
   Breadcrumbs,
   Button,
   Container,
   Tabs,
-  Text,
   Title,
   Group,
 } from "@mantine/core";
@@ -56,6 +53,7 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../../.prisma-client/enums";
+import { AccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
 
 const tabs = [
   { value: "ASSET", label: "Asset", type: AccountType.ASSET },
@@ -461,23 +459,12 @@ function AccountsPage() {
       <Group mb="lg" gap="md" justify="space-between" mih={36}>
         {isArchivedMode ? (
           <Breadcrumbs fz="h2" fw={700} lh="var(--mantine-h2-line-height)">
-            <Anchor
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              {...({
-                component: Link,
-                to: "/$accountBookId",
-                params: { accountBookId },
-                search: { tab, mode: "active" },
-              } as any)}
-              fz="inherit"
-              fw="inherit"
-              lh="inherit"
-            >
-              Accounts
-            </Anchor>
-            <Text fz="inherit" fw="inherit" lh="inherit">
-              Archive
-            </Text>
+            <AccountsBreadcrumbSegments
+              accountBookId={accountBookId}
+              tab={tab}
+              mode="archived"
+              archiveIsLink={false}
+            />
           </Breadcrumbs>
         ) : (
           <Title order={2}>Accounts</Title>

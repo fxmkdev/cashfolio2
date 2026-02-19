@@ -1,8 +1,7 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActionIcon,
-  Anchor,
   Badge,
   Breadcrumbs,
   Button,
@@ -13,6 +12,8 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
+import { AccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
+import { LinkAnchor } from "../../components/link-anchor";
 import { getTypeLabel } from "../../shared/account-utils";
 import { useTransactionScroll } from "../../hooks/use-transaction-scroll";
 import { IconCashPlus, IconPencil, IconTrash } from "@tabler/icons-react";
@@ -317,16 +318,14 @@ function LedgerPage() {
           return value.map((a, i) => (
             <span key={a.id}>
               {i > 0 && ", "}
-              <Link
+              <LinkAnchor
                 to="/$accountBookId/$accountId"
                 params={{ accountBookId, accountId: a.id }}
                 search={{ transactionId: data.transactionId }}
-                style={{ textDecoration: "none" }}
+                size="sm"
               >
-                <Anchor component="span" size="sm">
-                  {a.name}
-                </Anchor>
-              </Link>
+                {a.name}
+              </LinkAnchor>
             </span>
           ));
         },
@@ -459,22 +458,14 @@ function LedgerPage() {
       <Group mb="lg" gap="md" justify="space-between">
         <Group gap="md">
           <Breadcrumbs fz="h2" fw={700}>
-            <Anchor
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              {...({
-                component: Link,
-                to: "/$accountBookId",
-                params: { accountBookId },
-                search: {
-                  tab: backTab,
-                  mode: account.isActive ? "active" : "archived",
-                },
-              } as any)}
-              fz="inherit"
-              fw="inherit"
-            >
+            <AccountsBreadcrumbSegments
+              accountBookId={accountBookId}
+              tab={backTab}
+              mode={account.isActive ? "active" : "archived"}
+            />
+            <Text fz="inherit" fw="inherit">
               {getTypeLabel(account.type, account.equityAccountSubtype)}
-            </Anchor>
+            </Text>
             {account.groupPathSegments.map((segment) => (
               <Text key={segment} fz="inherit" fw="inherit">
                 {segment}

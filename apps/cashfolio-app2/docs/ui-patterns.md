@@ -5,6 +5,9 @@
 - **Mantine 8** for all UI components, forms (`@mantine/form`), and theming
 - **AG Grid Enterprise** wrapped in `src/components/data-grid.tsx` with tree
   data support
+- Use `LinkAnchor` from `src/components/link-anchor.tsx` for in-app links that
+  should look like Mantine anchors. Avoid `Anchor` + `component={Link}` with
+  casts.
 
 ## Shared Utilities (`src/shared/`)
 
