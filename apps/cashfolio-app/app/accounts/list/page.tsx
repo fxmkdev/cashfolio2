@@ -9,11 +9,10 @@ import {
   useDeleteAccountGroup,
 } from "~/account-groups/delete-account-group";
 import { DeleteAccount, useDeleteAccount } from "~/accounts/delete-account";
-import { Heading } from "~/platform/heading";
-import { Button } from "~/platform/button";
-import { PlusCircleIcon } from "~/platform/icons/standard";
 import { AccountList } from "../account-list";
 import { ShowInactiveSwitch } from "./show-inactive-switch";
+import { Button, Group, Title } from "@mantine/core";
+import { IconCirclePlus } from "@tabler/icons-react";
 
 export function Page({
   loaderData: { tree, accountGroups },
@@ -31,22 +30,30 @@ export function Page({
 
   return (
     <div>
-      <div className="flex justify-between items-center gap-4">
-        <Heading>Accounts</Heading>
-        <div className="flex gap-8">
+      <Group gap="sm" align="center" justify="space-between">
+        <Title order={2} size="h3">
+          Accounts
+        </Title>
+        <Group gap="xl" align="center">
           <ShowInactiveSwitch />
-          <div className="flex gap-4">
-            <Button hierarchy="secondary" onClick={() => onNewAccount()}>
-              <PlusCircleIcon />
+          <Group gap="sm" align="center">
+            <Button
+              variant="default"
+              leftSection={<IconCirclePlus size={16} />}
+              onClick={() => onNewAccount()}
+            >
               New Account
             </Button>
-            <Button hierarchy="secondary" onClick={() => onNewAccountGroup()}>
-              <PlusCircleIcon />
+            <Button
+              variant="default"
+              leftSection={<IconCirclePlus size={16} />}
+              onClick={() => onNewAccountGroup()}
+            >
               New Group
             </Button>
-          </div>
-        </div>
-      </div>
+          </Group>
+        </Group>
+      </Group>
       <EditAccount {...editAccountProps} accountGroups={accountGroups} />
       <EditAccountGroup
         {...editAccountGroupProps}

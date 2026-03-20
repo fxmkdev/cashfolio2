@@ -1,16 +1,5 @@
-import type { AccountGroup, AccountType } from "~/.prisma-client/client";
 import { useState } from "react";
-import { DialogActions, DialogBody, DialogTitle } from "~/platform/dialog";
-import {
-  Description,
-  Field,
-  FieldGroup,
-  Label,
-} from "~/platform/forms/fieldset";
-import { Input } from "~/platform/forms/input";
-import { Radio, RadioField, RadioGroup } from "~/platform/forms/radio";
 import type { Serialize } from "~/serialization";
-import { AccountGroupCombobox } from "./account-group-combobox";
 import type { AccountGroupOption } from "~/types";
 import {
   CancelButton,
@@ -18,7 +7,18 @@ import {
   FormDialog,
 } from "~/platform/forms/form-dialog";
 import { useAccountBook } from "~/account-books/hooks";
-import { Switch, SwitchField } from "~/platform/forms/switch";
+import {
+  Grid,
+  Group,
+  Input,
+  SegmentedControl,
+  Select,
+  Stack,
+  Switch,
+  TextInput,
+} from "@mantine/core";
+import type { AccountGroup } from "~/.prisma-client/client";
+import { AccountType } from "~/.prisma-client/enums";
 import { FormattedNumberInput } from "~/platform/forms/formatted-number-input";
 
 export function useEditAccountGroup() {
@@ -58,9 +58,10 @@ export function EditAccountGroup({
   const accountBook = useAccountBook();
   return (
     <FormDialog
-      open={isOpen}
+      title={accountGroup ? `Edit ${accountGroup.name}` : "New Group"}
+      opened={isOpen}
       onClose={onClose}
-      size="3xl"
+      size="lg"
       entityId={accountGroup?.id}
       action={
         accountGroup
@@ -71,75 +72,74 @@ export function EditAccountGroup({
       {!!accountGroup && (
         <input type="hidden" name="id" value={accountGroup.id} />
       )}
-      <DialogTitle>
-        {accountGroup ? `Edit ${accountGroup.name}` : "New Group"}
-      </DialogTitle>
-      <DialogBody>
-        <FieldGroup>
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-4">
-            <Field>
-              <Label>Name</Label>
-              <Input name="name" defaultValue={accountGroup?.name} />
-            </Field>
-            <Field disabled={!!accountGroup}>
-              <Label>Type</Label>
-              <RadioGroup
-                name="type"
-                defaultValue={accountGroup?.type ?? "ASSET"}
-                onChange={(value) => setSelectedType(value as AccountType)}
-              >
-                <RadioField>
-                  <Radio value="ASSET" />
-                  <Label>Asset</Label>
-                </RadioField>
-                <RadioField>
-                  <Radio value="LIABILITY" />
-                  <Label>Liability</Label>
-                </RadioField>
-                <RadioField>
-                  <Radio value="EQUITY" />
-                  <Label>Equity</Label>
-                </RadioField>
-              </RadioGroup>
-            </Field>
-          </div>
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-4">
-            <Field>
-              <Label>Parent Group</Label>
-              <AccountGroupCombobox
-                accountGroups={accountGroups.filter(
+      <Stack gap="xl">
+        <Grid>
+          <Grid.Col span={6}>
+            <TextInput
+              label="Name"
+              name="name"
+              defaultValue={accountGroup?.name}
+            />
+          </Grid.Col>
+          <Grid.Col span={6}>
+            <Input.Wrapper label="Type">
+              <div>
+                <SegmentedControl
+                  name="type"
+                  fullWidth={true}
+                  disabled={!!accountGroup}
+                  defaultValue={accountGroup?.type ?? "ASSET"}
+                  onChange={(value) => setSelectedType(value as AccountType)}
+                  data={[
+                    { label: "Asset", value: AccountType.ASSET },
+                    { label: "Liability", value: AccountType.LIABILITY },
+                    { label: "Equity", value: AccountType.EQUITY },
+                  ]}
+                />
+              </div>
+            </Input.Wrapper>
+          </Grid.Col>
+        </Grid>
+        <Grid>
+          <Grid.Col span={6}>
+            <Select
+              label="Parent Group"
+              searchable
+              defaultValue={accountGroup?.parentGroupId ?? ""}
+              name="parentGroupId"
+              data={accountGroups
+                .filter(
                   (g) => g.type === selectedType && g.id !== accountGroup?.id,
-                )}
-                defaultValue={accountGroup?.parentGroupId ?? ""}
-                name="parentGroupId"
-              />
-            </Field>
-            <Field>
-              <Label>Sort Order</Label>
-              <FormattedNumberInput
-                name="sortOrder"
-                defaultValue={accountGroup?.sortOrder ?? ""}
-              />
-            </Field>
-          </div>
-          <SwitchField>
-            <Label>Is Active</Label>
-            <Description>
-              Inactive account groups are hidden in most places. Deactivating
-              this account group will also deactivate all its sub-groups and
-              accounts.
-            </Description>
+                )
+                .map((g) => ({ value: g.id, label: g.path }))}
+            />
+          </Grid.Col>
+          <Grid.Col span={6}>
+            <FormattedNumberInput
+              label="Sort Order"
+              name="sortOrder"
+              defaultValue={accountGroup?.sortOrder ?? ""}
+            />
+          </Grid.Col>
+        </Grid>
+        <Grid>
+          <Grid.Col span={12}>
             <Switch
               name="isActive"
               defaultChecked={accountGroup?.isActive ?? true}
+              label="Is Active"
+              labelPosition="left"
+              description="Inactive account groups are hidden in most places. Deactivating
+              this account group will also deactivate all its sub-groups and
+              accounts."
             />
-          </SwitchField>
-        </FieldGroup>
-      </DialogBody>
-      <DialogActions>
+          </Grid.Col>
+        </Grid>
+      </Stack>
+      <Group justify="end" mt="xl">
         <CancelButton />
         <CreateOrSaveButton />
-      </DialogActions>
+      </Group>
     </FormDialog>
   );
 }

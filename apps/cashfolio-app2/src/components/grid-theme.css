@@ -1,0 +1,18 @@
+.ag-cell,
+.ag-full-width-row .ag-cell-wrapper.ag-row-group {
+  -webkit-font-smoothing: var(--mantine-webkit-font-smoothing);
+}
+
+.ag-cell.actions-cell {
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.ag-row:hover .ag-cell.actions-cell {
+  opacity: 1;
+}
+
+.ag-cell.ag-cell-disabled {
+  color: var(--mantine-color-dimmed);
+  cursor: not-allowed;
+}

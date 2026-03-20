@@ -7,10 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { useFetcher } from "react-router";
-import { Dialog } from "../dialog";
-import { Button } from "../button";
-import { ErrorMessage } from "./fieldset";
-import type { Alert } from "../alert";
+import { Button, Input, Modal, type ModalBaseProps } from "@mantine/core";
 
 export type FetcherData =
   | { success: true; errors: never }
@@ -32,17 +29,17 @@ export function FormDialog({
   entityId,
   onClose,
   action,
-  dialogComponent: DialogComponent = Dialog,
-  ...props
-}: Omit<
-  ComponentProps<typeof Alert & typeof Dialog>,
-  "onClose" | "children"
-> & {
+  opened,
+  title,
+  size,
+}: {
+  size?: ModalBaseProps["size"];
+  opened: boolean;
+  title: ReactNode;
   entityId?: string;
   onClose: (action: FormCloseAction) => void;
   action?: string;
   children?: ReactNode | ((context: FormDialogContextType) => ReactNode);
-  dialogComponent?: typeof Alert & typeof Dialog;
 }) {
   const [submitCount, setSubmitCount] = useState(0);
   const fetcher = useFetcher<FetcherData>({
@@ -67,28 +64,32 @@ export function FormDialog({
     entityId,
   };
   return (
-    <DialogComponent {...props} onClose={() => onDialogClose("cancel")}>
-      <fetcher.Form className="contents" action={action} method="POST">
+    <Modal
+      opened={opened}
+      onClose={() => onDialogClose("cancel")}
+      title={title}
+      size={size}
+    >
+      <fetcher.Form action={action} method="POST">
         <FormDialogContext.Provider value={contextValue}>
           {typeof children === "function" ? children(contextValue) : children}
         </FormDialogContext.Provider>
       </fetcher.Form>
-    </DialogComponent>
+    </Modal>
   );
 }
 
-type TertiaryButtonProps = ComponentProps<typeof Button> & {
-  hierarchy: "tertiary";
-};
+type CancelButtonProps = Omit<
+  ComponentProps<typeof Button>,
+  "variant" | "children" | "onClick"
+>;
 
-export function CancelButton(
-  props: Omit<TertiaryButtonProps, "hierarchy" | "children" | "onClick">,
-) {
+export function CancelButton(props: CancelButtonProps) {
   const { onDialogClose } = useFormDialogContext();
   return (
     <Button
-      {...(props as TertiaryButtonProps)}
-      hierarchy="tertiary"
+      {...(props as CancelButtonProps)}
+      variant="default"
       onClick={() => onDialogClose("cancel")}
     >
       Cancel
@@ -101,6 +102,7 @@ export function CreateOrSaveButton() {
   return (
     <Button
       type="submit"
+      variant="filled"
       disabled={fetcher.state !== "idle" || fetcher.data?.success}
     >
       {entityId
@@ -119,7 +121,7 @@ export function DeleteButton() {
   return (
     <Button
       type="submit"
-      variant="destructive"
+      color="red"
       disabled={fetcher.state !== "idle" || fetcher.data?.success}
     >
       {fetcher.state === "idle" ? "Delete" : "Deleting…"}
@@ -130,7 +132,7 @@ export function DeleteButton() {
 export function FormErrorMessage() {
   const { fetcher } = useFormDialogContext();
   if (!fetcher.data?.errors?.form) return null;
-  return <ErrorMessage>{fetcher.data.errors.form}</ErrorMessage>;
+  return <Input.Error>{fetcher.data.errors.form}</Input.Error>;
 }
 
 export function useFormDialogContext() {

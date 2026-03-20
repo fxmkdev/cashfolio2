@@ -13,7 +13,7 @@ import { formatMoney, percentageNumberFormat } from "~/formatting";
 import type { AgChartOptions } from "ag-charts-community";
 import type { Route } from "./+types/route";
 import { sum } from "~/utils";
-import { Subheading } from "~/platform/heading";
+import { Group, Title } from "@mantine/core";
 
 export function loader({ params }: Route.LoaderArgs) {
   if (!params.chartType) {
@@ -44,7 +44,7 @@ export default function Route() {
   return (
     <>
       <AgCharts
-        className="h-[calc(100vh_-_18.5rem)] mt-4"
+        style={{ height: "calc(100vh - 18.5rem)" }}
         options={
           {
             ...defaultChartOptions,
@@ -100,9 +100,9 @@ export default function Route() {
           } as AgChartOptions
         }
       />
-      <Subheading className="text-center mt-4">
-        Total: {formatMoney(totalBalance)}
-      </Subheading>
+      <Group justify="center">
+        <Title size="h5">Total: {formatMoney(totalBalance)}</Title>
+      </Group>
     </>
   );
 }

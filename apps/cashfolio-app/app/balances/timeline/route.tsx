@@ -26,6 +26,7 @@ import {
 } from "~/period/timeline.server";
 import { ensureUser } from "~/users/functions.server";
 import invariant from "tiny-invariant";
+import { Box } from "@mantine/core";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await ensureUser(request);
@@ -96,93 +97,99 @@ export default function Route() {
   return (
     <>
       <TimelineSelector
-        className="mt-12"
         period={loaderData.period}
         rangeSpecifier={loaderData.rangeSpecifier}
         range={loaderData.range}
       />
-      <AgCharts
-        className="h-[calc(100vh_-_16rem)] mt-4"
-        options={
-          {
-            ...defaultChartOptions,
-            theme: {
-              ...defaultChartTheme,
-              palette: {
-                fills: [positiveFillColor, negativeFillColor, neutralFillColor],
-              },
-            },
-            series: [
-              {
-                type: "area",
-                xKey: "date",
-                yKey: "assets",
-                yName: "Assets",
-                marker: { enabled: true },
-                interpolation: { type: "smooth" },
-                tooltip: {
-                  renderer: (params) => ({
-                    heading: format(params.datum.date, "dd MMM yyyy"),
-                  }),
+      <Box mt="sm">
+        <AgCharts
+          style={{ height: "calc(100vh - 16rem)" }}
+          options={
+            {
+              ...defaultChartOptions,
+              theme: {
+                ...defaultChartTheme,
+                palette: {
+                  fills: [
+                    positiveFillColor,
+                    negativeFillColor,
+                    neutralFillColor,
+                  ],
                 },
               },
-              {
-                type: "area",
-                xKey: "date",
-                yKey: "liabilities",
-                yName: "Liabilities",
-                marker: { enabled: true },
-                interpolation: { type: "smooth" },
-                tooltip: {
-                  renderer: (params) => ({
-                    heading: format(params.datum.date, "dd MMM yyyy"),
-                  }),
+              series: [
+                {
+                  type: "area",
+                  xKey: "date",
+                  yKey: "assets",
+                  yName: "Assets",
+                  marker: { enabled: true },
+                  interpolation: { type: "smooth" },
+                  tooltip: {
+                    renderer: (params) => ({
+                      heading: format(params.datum.date, "dd MMM yyyy"),
+                    }),
+                  },
+                },
+                {
+                  type: "area",
+                  xKey: "date",
+                  yKey: "liabilities",
+                  yName: "Liabilities",
+                  marker: { enabled: true },
+                  interpolation: { type: "smooth" },
+                  tooltip: {
+                    renderer: (params) => ({
+                      heading: format(params.datum.date, "dd MMM yyyy"),
+                    }),
+                  },
+                },
+                {
+                  type: "line",
+                  xKey: "date",
+                  yKey: "netWorth",
+                  yName: "Net Worth",
+                  marker: { enabled: true },
+                  interpolation: { type: "smooth" },
+                  tooltip: {
+                    renderer: (params) => ({
+                      heading: format(params.datum.date, "dd MMM yyyy"),
+                    }),
+                  },
+                },
+              ],
+              formatter: {
+                y: (params) => formatMoney(params.value as number),
+              },
+              listeners: {
+                seriesNodeDoubleClick: (event) => {
+                  navigate(`../breakdown/${formatISODate(event.datum.date)}`);
                 },
               },
-              {
-                type: "line",
-                xKey: "date",
-                yKey: "netWorth",
-                yName: "Net Worth",
-                marker: { enabled: true },
-                interpolation: { type: "smooth" },
-                tooltip: {
-                  renderer: (params) => ({
-                    heading: format(params.datum.date, "dd MMM yyyy"),
-                  }),
+              axes: {
+                x: {
+                  type: "time",
+                  label:
+                    loaderData.period.granularity === "quarter"
+                      ? {
+                          formatter: (params) =>
+                            format(params.value, "QQQ yyyy"),
+                        }
+                      : undefined,
                 },
               },
-            ],
-            formatter: {
-              y: (params) => formatMoney(params.value as number),
-            },
-            listeners: {
-              seriesNodeDoubleClick: (event) => {
-                navigate(`../breakdown/${formatISODate(event.datum.date)}`);
-              },
-            },
-            axes: {
-              x: {
-                type: "time",
-                label:
-                  loaderData.period.granularity === "quarter"
-                    ? {
-                        formatter: (params) => format(params.value, "QQQ yyyy"),
-                      }
-                    : undefined,
-              },
-            },
-            data: loaderData.balanceSheets.map(
-              ({ periodDateRange, balanceSheet }) => ({
-                date: parseISO(periodDateRange.to),
-                assets: balanceSheet.assets.balance,
-                liabilities: -balanceSheet.liabilities.balance,
-                netWorth: balanceSheet.equity,
-              }),
-            ),
-          } as AgChartOptions
-        }
-      />
+              data: loaderData.balanceSheets.map(
+                ({ periodDateRange, balanceSheet }) => ({
+                  date: parseISO(periodDateRange.to),
+                  assets: balanceSheet.assets.balance,
+                  liabilities: -balanceSheet.liabilities.balance,
+                  netWorth: balanceSheet.equity,
+                }),
+              ),
+            } as AgChartOptions
+          }
+        />
+      </Box>
     </>
   );
 }

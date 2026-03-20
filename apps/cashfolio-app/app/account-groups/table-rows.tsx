@@ -1,19 +1,18 @@
 import type { Serialize } from "~/serialization";
-import { TableCell, TableRow } from "~/platform/table";
 import clsx from "clsx";
 import type { AccountsNode } from "./accounts-tree";
 import type { Account } from "~/.prisma-client/client";
 import { useState, type ReactNode } from "react";
-import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  WalletIcon,
-} from "~/platform/icons/standard";
 import { useAccountBook } from "~/account-books/hooks";
-import { useFetcher, useRouteLoaderData } from "react-router";
-import { Badge } from "~/platform/badge";
+import { useFetcher, useNavigate, useRouteLoaderData } from "react-router";
 import type { loader as rootLoader } from "~/root";
 import { formatISODate } from "~/formatting";
+import { Badge, Box, Group, Table, Text } from "@mantine/core";
+import {
+  IconChevronDown,
+  IconChevronRight,
+  IconWallet,
+} from "@tabler/icons-react";
 
 export type AccountsNodeTableRowOptions = {
   showInactiveBadge?: boolean;
@@ -67,6 +66,8 @@ export function AccountsNodeTableRow<TData = {}>({
 }) {
   const accountBook = useAccountBook();
 
+  const navigate = useNavigate();
+
   const fetcher = useFetcher();
   const expandedStateKey = `${viewPrefix}-account-group-${node.id}-expanded`;
 
@@ -81,8 +82,8 @@ export function AccountsNodeTableRow<TData = {}>({
       : isExpanded;
 
   const ExpandCollapseIcon = optimisticIsExpanded
-    ? ChevronDownIcon
-    : ChevronRightIcon;
+    ? IconChevronDown
+    : IconChevronRight;
 
   function toggleExpanded() {
     if (node.nodeType === "accountGroup" && node.children.length === 0) {
@@ -120,49 +121,42 @@ export function AccountsNodeTableRow<TData = {}>({
     : undefined;
   return (
     <>
-      <TableRow
+      <Table.Tr
         {...(node.nodeType === "account"
           ? {
-              href: `/${accountBook.id}/accounts/${node.id}${urlSearchParams ? `?${urlSearchParams.toString()}` : ""}`,
+              onClick: () =>
+                navigate(
+                  `/${accountBook.id}/accounts/${node.id}${urlSearchParams ? `?${urlSearchParams.toString()}` : ""}`,
+                ),
             }
           : { onClick: () => toggleExpanded() })}
       >
-        <TableCell>
-          <div
-            className={clsx({
-              "pl-0": level === 0,
-              "pl-4": level === 1,
-              "pl-8": level === 2,
-              "pl-12": level === 3,
-              "pl-16": level === 4,
-              "pl-20": level === 5,
-              "pl-24": level === 6,
-              "pl-28": level === 7,
-              "pl-32": level === 8,
-              "pl-36": level === 9,
-              "pl-40": level === 10,
-            })}
-          >
-            <div className="flex gap-2 items-center">
+        <Table.Td>
+          <Box pl={level * 16}>
+            <Group gap="sm">
               {node.nodeType === "account" ? (
-                <WalletIcon className="size-4 shrink-0" />
+                <IconWallet size={16} />
               ) : (
                 <ExpandCollapseIcon
-                  className={clsx(
-                    "size-4 shrink-0",
-                    node.children.length === 0 && "invisible",
-                  )}
+                  size={16}
+                  style={
+                    node.children.length === 0 ? { visibility: "hidden" } : {}
+                  }
                 />
               )}
-              <span className="truncate">{node.name}</span>
+              <Text truncate="end" size="sm">
+                {node.name}
+              </Text>
               {options.showInactiveBadge && !node.isActive && (
-                <Badge color="accent-negative">Inactive</Badge>
+                <Badge color="red" size="sm">
+                  Inactive
+                </Badge>
               )}
-            </div>
-          </div>
-        </TableCell>
+            </Group>
+          </Box>
+        </Table.Td>
         {children?.(node)}
-      </TableRow>
+      </Table.Tr>
 
       {optimisticIsExpanded && (
         <AccountsNodeChildrenTableRows

@@ -1,11 +1,8 @@
+import { Button, Container, Select, Stack, Text } from "@mantine/core";
 import { redirect, useFetcher, type LoaderFunctionArgs } from "react-router";
 import invariant from "tiny-invariant";
 import { ensureAuthenticated } from "~/auth/functions.server";
-import { CurrencyCombobox } from "~/components/currency-combobox";
-import { AuthLayout } from "~/platform/auth-layout";
-import { Button } from "~/platform/button";
-import { Field, Label } from "~/platform/forms/fieldset";
-import { Text } from "~/platform/text";
+import { currencies } from "~/currencies";
 import { prisma } from "~/prisma.server";
 import { defaultShouldRevalidate } from "~/revalidation";
 import { getOrCreateUser } from "~/users/functions.server";
@@ -29,22 +26,19 @@ export const shouldRevalidate = defaultShouldRevalidate;
 export default function Route() {
   const fetcher = useFetcher();
   return (
-    <AuthLayout>
-      <div className="flex flex-col items-center gap-12">
-        <Text>There are no account books yet.</Text>
+    <Container>
+      <Stack gap="lg">
+        <Text size="lg">There are no account books yet.</Text>
 
-        <fetcher.Form
-          method="POST"
-          action="/account-books/create"
-          className="contents"
-        >
-          <Field>
-            <Label>Reference Currency</Label>
-            <CurrencyCombobox name="referenceCurrency" />
-          </Field>
+        <fetcher.Form method="POST" action="/account-books/create">
+          <Select
+            label="Reference Currency"
+            name="referenceCurrency"
+            data={Object.keys(currencies)}
+          />
           <Button type="submit">Create Account Book</Button>
         </fetcher.Form>
-      </div>
-    </AuthLayout>
+      </Stack>
+    </Container>
   );
 }

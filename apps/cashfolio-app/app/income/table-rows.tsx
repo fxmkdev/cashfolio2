@@ -1,11 +1,11 @@
 import type { Serialize } from "~/serialization";
-import { TableCell } from "~/platform/table";
 import { formatMoney } from "~/formatting";
 import {
   AccountsNodeChildrenTableRows,
   type AccountsNodeTableRowOptions,
 } from "~/account-groups/table-rows";
 import type { AccountsNode } from "~/account-groups/accounts-tree";
+import { Table } from "@mantine/core";
 
 export function IncomeTableRows({
   node,
@@ -24,9 +24,9 @@ export function IncomeTableRows({
     >
       {(node) => (
         <>
-          <TableCell className="text-right">
+          <Table.Td align="right">
             {formatMoney(incomeByNodeId[node.id] ?? 0)}
-          </TableCell>
+          </Table.Td>
         </>
       )}
     </AccountsNodeChildrenTableRows>

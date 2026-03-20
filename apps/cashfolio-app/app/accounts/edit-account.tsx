@@ -1,32 +1,30 @@
 import type { Account } from "~/.prisma-client/client";
 import { useEffect, useState } from "react";
-import { DialogActions, DialogBody, DialogTitle } from "~/platform/dialog";
-import {
-  Description,
-  Field,
-  FieldGroup,
-  Fieldset,
-  Label,
-} from "~/platform/forms/fieldset";
-import { Input } from "~/platform/forms/input";
-import { Radio, RadioField, RadioGroup } from "~/platform/forms/radio";
 import type { Serialize } from "~/serialization";
-import { AccountGroupCombobox } from "~/account-groups/account-group-combobox";
 import type { AccountGroupOption } from "~/types";
-import { CurrencyCombobox } from "~/components/currency-combobox";
-import { CryptocurrencyCombobox } from "~/components/cryptocurrency-combobox";
 import {
   CancelButton,
   FormDialog,
   CreateOrSaveButton,
 } from "~/platform/forms/form-dialog";
 import { useAccountBook } from "~/account-books/hooks";
-import { Switch, SwitchField } from "~/platform/forms/switch";
 import {
   AccountType,
   EquityAccountSubtype,
   Unit,
 } from "~/.prisma-client/enums";
+import {
+  Grid,
+  Group,
+  Input,
+  SegmentedControl,
+  Select,
+  Stack,
+  Switch,
+  TextInput,
+} from "@mantine/core";
+import { currencies } from "~/currencies";
+import { cryptocurrencies } from "~/cryptocurrencies";
 
 export function useEditAccount() {
   const [isOpen, setIsOpen] = useState(false);
@@ -70,8 +68,9 @@ export function EditAccount({
   const accountBook = useAccountBook();
   return (
     <FormDialog
-      open={isOpen}
-      size="xl"
+      size="lg"
+      title={account ? `Edit ${account.name}` : "New Account"}
+      opened={isOpen}
       onClose={onClose}
       entityId={account?.id}
       action={
@@ -81,158 +80,162 @@ export function EditAccount({
       }
     >
       {!!account && <input type="hidden" name="id" value={account.id} />}
-      <DialogTitle>
-        {account ? `Edit ${account.name}` : "New Account"}
-      </DialogTitle>
-      <DialogBody>
-        <Fieldset>
-          <FieldGroup>
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-4">
-              <Field>
-                <Label>Name</Label>
-                <Input name="name" defaultValue={account?.name} />
-              </Field>
-              <Field disabled={!!account}>
-                <Label>Type</Label>
-                <RadioGroup
+      <Stack gap="xl">
+        <Grid>
+          <Grid.Col span={6}>
+            <TextInput name="name" defaultValue={account?.name} label="Name" />
+          </Grid.Col>
+
+          <Grid.Col span={6}>
+            <Input.Wrapper label="Type">
+              <div>
+                <SegmentedControl
                   name="type"
+                  fullWidth={true}
+                  disabled={!!account}
                   defaultValue={account?.type || AccountType.ASSET}
                   onChange={(value) => setSelectedType(value as AccountType)}
-                >
-                  <RadioField>
-                    <Radio value={AccountType.ASSET} />
-                    <Label>Asset</Label>
-                  </RadioField>
-                  <RadioField>
-                    <Radio value={AccountType.LIABILITY} />
-                    <Label>Liability</Label>
-                  </RadioField>
-                  <RadioField>
-                    <Radio value={AccountType.EQUITY} />
-                    <Label>Equity</Label>
-                  </RadioField>
-                </RadioGroup>
-              </Field>
-              {!!account && (
-                <input type="hidden" name="type" value={account.type} />
-              )}
-            </div>
-            {selectedType === AccountType.EQUITY && (
-              <Field>
-                <Label>Subtype</Label>
-                <RadioGroup
-                  name="equityAccountSubtype"
-                  defaultValue={
-                    account?.equityAccountSubtype ||
-                    EquityAccountSubtype.GAIN_LOSS
-                  }
-                >
-                  <RadioField>
-                    <Radio value={EquityAccountSubtype.GAIN_LOSS} />
-                    <Label>Gain/Loss</Label>
-                  </RadioField>
-                  <RadioField>
-                    <Radio value={EquityAccountSubtype.INCOME} />
-                    <Label>Income</Label>
-                  </RadioField>
-                  <RadioField>
-                    <Radio value={EquityAccountSubtype.EXPENSE} />
-                    <Label>Expense</Label>
-                  </RadioField>
-                </RadioGroup>
-              </Field>
-            )}
-            <Field>
-              <Label>Group</Label>
-              <AccountGroupCombobox
-                name="groupId"
-                defaultValue={account?.groupId}
-                accountGroups={accountGroups.filter(
-                  (g) => g.type === selectedType,
-                )}
-              />
-            </Field>
-            {selectedType !== AccountType.EQUITY && (
-              <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-4">
-                <Field>
-                  <Label>Unit</Label>
-                  <RadioGroup
-                    name="unit"
-                    defaultValue={account?.unit || Unit.CURRENCY}
-                    onChange={(v) => setSelectedUnit(v as Unit)}
-                  >
-                    <RadioField>
-                      <Radio value={Unit.CURRENCY} />
-                      <Label>Currency</Label>
-                    </RadioField>
-                    <RadioField>
-                      <Radio value={Unit.CRYPTOCURRENCY} />
-                      <Label>Cryptocurrency</Label>
-                    </RadioField>
-                    <RadioField>
-                      <Radio value={Unit.SECURITY} />
-                      <Label>Security</Label>
-                    </RadioField>
-                  </RadioGroup>
-                </Field>
-                {selectedUnit === Unit.CURRENCY && (
-                  <Field>
-                    <Label>Currency</Label>
-                    <CurrencyCombobox
-                      name="currency"
-                      defaultValue={
-                        account?.currency || accountBook.referenceCurrency
-                      }
-                    />
-                  </Field>
-                )}
-                {selectedUnit === Unit.CRYPTOCURRENCY && (
-                  <Field>
-                    <Label>Cryptocurrency</Label>
-                    <CryptocurrencyCombobox
-                      name="cryptocurrency"
-                      defaultValue={account?.cryptocurrency || ""}
-                    />
-                  </Field>
-                )}
-                {selectedUnit === Unit.SECURITY && (
-                  <FieldGroup>
-                    <Field>
-                      <Label>Symbol</Label>
-                      <Input
-                        name="symbol"
-                        defaultValue={account?.symbol || ""}
-                      />
-                    </Field>
-                    <Field>
-                      <Label>Trade Ccy.</Label>
-                      <CurrencyCombobox
-                        name="tradeCurrency"
-                        defaultValue={account?.tradeCurrency || ""}
-                      />
-                    </Field>
-                  </FieldGroup>
-                )}
+                  data={[
+                    { label: "Asset", value: AccountType.ASSET },
+                    { label: "Liability", value: AccountType.LIABILITY },
+                    { label: "Equity", value: AccountType.EQUITY },
+                  ]}
+                />
               </div>
+            </Input.Wrapper>
+            {!!account && (
+              <input type="hidden" name="type" value={account.type} />
             )}
-            <SwitchField>
-              <Label>Is Active</Label>
-              <Description>
-                Inactive accounts are hidden in most places. Use this if the
-                account was closed or is not used anymore actively.
-              </Description>
-              <Switch
-                name="isActive"
-                defaultChecked={account?.isActive ?? true}
-              />
-            </SwitchField>
-          </FieldGroup>
-        </Fieldset>
-      </DialogBody>
-      <DialogActions>
+          </Grid.Col>
+        </Grid>
+        {selectedType === AccountType.EQUITY && (
+          <Grid>
+            <Grid.Col span={6}>
+              <Input.Wrapper label="Subtype">
+                <div>
+                  <SegmentedControl
+                    name="equityAccountSubtype"
+                    fullWidth={true}
+                    defaultValue={
+                      account?.equityAccountSubtype ||
+                      EquityAccountSubtype.GAIN_LOSS
+                    }
+                    data={[
+                      {
+                        label: "Gain/Loss",
+                        value: EquityAccountSubtype.GAIN_LOSS,
+                      },
+                      { label: "Income", value: EquityAccountSubtype.INCOME },
+                      { label: "Expense", value: EquityAccountSubtype.EXPENSE },
+                    ]}
+                  />
+                </div>
+              </Input.Wrapper>
+            </Grid.Col>
+          </Grid>
+        )}
+
+        <Grid>
+          <Grid.Col span={12}>
+            <Select
+              label="Group"
+              searchable
+              name="groupId"
+              defaultValue={account?.groupId}
+              data={accountGroups
+                .filter((g) => g.type === selectedType)
+                .map((g) => ({ value: g.id, label: g.path }))}
+            />
+          </Grid.Col>
+        </Grid>
+        {selectedType !== AccountType.EQUITY && (
+          <>
+            <Grid>
+              <Grid.Col span={12}>
+                <Input.Wrapper label="Unit">
+                  <div>
+                    <SegmentedControl
+                      name="unit"
+                      defaultValue={account?.unit || Unit.CURRENCY}
+                      onChange={(v) => setSelectedUnit(v as Unit)}
+                      data={[
+                        { label: "Currency", value: Unit.CURRENCY },
+                        {
+                          label: "Cryptocurrency",
+                          value: Unit.CRYPTOCURRENCY,
+                        },
+                        { label: "Security", value: Unit.SECURITY },
+                      ]}
+                    />
+                  </div>
+                </Input.Wrapper>
+              </Grid.Col>
+            </Grid>
+            <Grid>
+              {selectedUnit === Unit.CURRENCY && (
+                <Grid.Col span={6}>
+                  <Select
+                    label="Currency"
+                    searchable
+                    name="currency"
+                    defaultValue={
+                      account?.currency || accountBook.referenceCurrency
+                    }
+                    data={Object.keys(currencies)}
+                  />
+                </Grid.Col>
+              )}
+              {selectedUnit === Unit.CRYPTOCURRENCY && (
+                <Grid.Col span={6}>
+                  <Select
+                    label="Cryptocurrency"
+                    searchable
+                    name="cryptocurrency"
+                    defaultValue={account?.cryptocurrency || ""}
+                    data={Object.keys(cryptocurrencies)}
+                  />
+                </Grid.Col>
+              )}
+              {selectedUnit === Unit.SECURITY && (
+                <>
+                  <Grid.Col span={6}>
+                    <TextInput
+                      label="Symbol"
+                      name="symbol"
+                      defaultValue={account?.symbol || ""}
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={6}>
+                    <Select
+                      label="Trade Ccy."
+                      searchable
+                      name="tradeCurrency"
+                      defaultValue={account?.tradeCurrency || ""}
+                      data={Object.keys(currencies)}
+                    />
+                  </Grid.Col>
+                </>
+              )}
+            </Grid>
+          </>
+        )}
+        <Grid>
+          <Grid.Col span={12}>
+            <Switch
+              name="isActive"
+              defaultChecked={account?.isActive ?? true}
+              label="Is Active"
+              labelPosition="left"
+              description="Inactive accounts are hidden in most places. Use this if the
+                account was closed or is not used anymore actively."
+            />
+          </Grid.Col>
+        </Grid>
+      </Stack>
+      <Group justify="end" mt="xl">
         <CancelButton />
         <CreateOrSaveButton />
-      </DialogActions>
+      </Group>
     </FormDialog>
   );
 }

@@ -7,35 +7,8 @@ import {
   DeleteTransaction,
   useDeleteTransaction,
 } from "~/transactions/delete-transaction";
-import { Heading } from "~/platform/heading";
-import { Button } from "~/platform/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/platform/table";
 import { formatDate, formatISODate, formatMoney } from "~/formatting";
 import { Fragment } from "react/jsx-runtime";
-import { TextLink } from "~/platform/text";
-import {
-  Dropdown,
-  DropdownButton,
-  DropdownDivider,
-  DropdownItem,
-  DropdownMenu,
-} from "~/platform/dropdown";
-import {
-  ArrowRightStartOnRectangleIcon,
-  EllipsisVerticalIcon,
-  ListBulletIcon,
-  PencilSquareIcon,
-  PlusCircleIcon,
-  TrashIcon,
-} from "~/platform/icons/standard";
-import { Badge } from "~/platform/badge";
 import { useAccountBook } from "~/account-books/hooks";
 import { EditAccount, useEditAccount } from "../edit-account";
 import { DeleteAccount, useDeleteAccount } from "../delete-account";
@@ -45,6 +18,26 @@ import { PeriodSelector } from "~/period/period-selector";
 import { useNavigate } from "react-router";
 import { parseISO } from "date-fns";
 import { isSplitTransaction } from "~/transactions/functions";
+import {
+  ActionIcon,
+  Anchor,
+  Badge,
+  Button,
+  Group,
+  Menu,
+  Table,
+  Text,
+  Title,
+  VisuallyHidden,
+} from "@mantine/core";
+import {
+  IconDotsVertical,
+  IconList,
+  IconPencil,
+  IconPlus,
+  IconSquareArrowRight,
+  IconTrash,
+} from "@tabler/icons-react";
 
 export function Page({
   loaderData: {
@@ -78,46 +71,55 @@ export function Page({
 
   return (
     <>
-      <div className="flex justify-between items-center">
-        <Heading className="flex items-center gap-4">
-          {account.groupPath} / {account.name}
-          <div className="flex items-center gap-2">
-            <Badge>{getUnitLabel(ledgerUnitInfo)}</Badge>
-            {!account.isActive && (
-              <Badge color="accent-negative">Inactive</Badge>
-            )}
-          </div>
-        </Heading>
+      <Group gap="sm" align="center" justify="space-between">
+        <Group align="center" gap="sm">
+          <Title order={2} size="h3">
+            {account.groupPath} / {account.name}
+          </Title>
+          <Badge>{getUnitLabel(ledgerUnitInfo)}</Badge>
+          {!account.isActive && <Badge color="red">Inactive</Badge>}
+        </Group>
 
         <EditAccount {...editAccountProps} accountGroups={accountGroups} />
         <DeleteAccount {...deleteAccountProps} />
 
-        <div className="flex gap-4">
+        <Group gap="sm" align="center">
           {account.isActive && (
-            <Button hierarchy="primary" onClick={() => onNewTransaction()}>
-              <PlusCircleIcon />
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={() => onNewTransaction()}
+            >
               New Transaction
             </Button>
           )}
-          <Dropdown>
-            <DropdownButton as={Button} hierarchy="secondary">
-              <EllipsisVerticalIcon />
-              <span className="sr-only">Account Actions</span>
-            </DropdownButton>
-            <DropdownMenu>
-              <DropdownItem onClick={() => onEditAccount(account)}>
-                <PencilSquareIcon />
+          <Menu position="bottom-end">
+            <Menu.Target>
+              <ActionIcon size={36} variant="default">
+                <VisuallyHidden>Account Actions</VisuallyHidden>
+                <IconDotsVertical size={16} />
+              </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item
+                leftSection={<IconPencil size={16} />}
+                onClick={() => setTimeout(() => onEditAccount(account))}
+              >
                 Edit Account
-              </DropdownItem>
-              <DropdownDivider />
-              <DropdownItem onClick={() => onDeleteAccount(account.id)}>
-                <TrashIcon />
+              </Menu.Item>
+              <Menu.Divider />
+              <Menu.Item
+                leftSection={<IconTrash size={16} />}
+                color="red"
+                onClick={(e) => {
+                  setTimeout(() => onDeleteAccount(account.id));
+                }}
+              >
                 Delete Account
-              </DropdownItem>
-            </DropdownMenu>
-          </Dropdown>
-        </div>
-      </div>
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+        </Group>
+      </Group>
 
       <EditTransaction
         {...editTransactionProps}
@@ -137,7 +139,6 @@ export function Page({
       />
 
       <PeriodSelector
-        className="mt-12"
         period={period}
         periodSpecifier={periodSpecifier}
         minBookingDate={minBookingDate}
@@ -146,121 +147,125 @@ export function Page({
         }
       />
 
-      <Table
-        fixedLayout
-        dense
-        bleed
-        striped
-        className="mt-8 [--gutter:--spacing(6)] lg:[--gutter:--spacing(10)]"
-      >
-        <TableHead>
-          <TableRow>
-            <TableHeader className="w-32">Date</TableHeader>
-            <TableHeader>Account(s)</TableHeader>
-            <TableHeader>Description</TableHeader>
+      <Table layout="fixed" striped verticalSpacing="sm" mt="md">
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Date</Table.Th>
+            <Table.Th>Account(s)</Table.Th>
+            <Table.Th>Description</Table.Th>
             {account.type === "EQUITY" && (
-              <TableHeader className="w-32 text-right">Value (FX)</TableHeader>
+              <Table.Th align="right">Value (FX)</Table.Th>
             )}
-            <TableHeader className="w-32 text-right">Value</TableHeader>
-            <TableHeader className="w-32 text-right">Balance</TableHeader>
-            <TableHeader className="w-4">
-              <span className="sr-only">Actions</span>
-            </TableHeader>
-          </TableRow>
-        </TableHead>
-        <TableBody>
+            <Table.Th align="right">Value</Table.Th>
+            <Table.Th align="right">Balance</Table.Th>
+            <Table.Th>
+              <VisuallyHidden>Actions</VisuallyHidden>
+            </Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
           {ledgerRows.map((lr) => (
-            <TableRow key={lr.booking.id} className="group">
-              <TableCell>{formatDate(lr.booking.date)}</TableCell>
-              <TableCell className="truncate">
-                {Array.from(
-                  new Set(
-                    lr.booking.transaction.bookings
-                      .map((b) => b.accountId)
-                      .filter((accountId) => accountId !== account.id),
-                  ),
-                ).map((accountId, i, arr) => (
-                  <Fragment key={accountId}>
-                    <TextLink href={`/${accountBook.id}/accounts/${accountId}`}>
-                      {allAccounts.find((a) => a.id === accountId)?.name}
-                    </TextLink>
-                    {i < arr.length - 1 ? ", " : null}
-                  </Fragment>
-                ))}
-              </TableCell>
-              <TableCell className="truncate">
-                {isSplitTransaction(lr.booking.transaction.bookings) && (
-                  <>
-                    <Badge color="accent-neutral">
-                      <ListBulletIcon
-                        className="size-3"
-                        title="Split Transaction"
-                      />
-                    </Badge>{" "}
-                  </>
-                )}
-                {lr.booking.transaction.description} {lr.booking.description}
-              </TableCell>
+            <Table.Tr key={lr.booking.id}>
+              <Table.Td>{formatDate(lr.booking.date)}</Table.Td>
+              <Table.Td>
+                <Text truncate="end">
+                  {Array.from(
+                    new Set(
+                      lr.booking.transaction.bookings
+                        .map((b) => b.accountId)
+                        .filter((accountId) => accountId !== account.id),
+                    ),
+                  ).map((accountId, i, arr) => (
+                    <Fragment key={accountId}>
+                      <Anchor
+                        size="sm"
+                        href={`/${accountBook.id}/accounts/${accountId}`}
+                      >
+                        {allAccounts.find((a) => a.id === accountId)?.name}
+                      </Anchor>
+                      {i < arr.length - 1 ? ", " : null}
+                    </Fragment>
+                  ))}
+                </Text>
+              </Table.Td>
+              <Table.Td>
+                <Text truncate="end">
+                  {isSplitTransaction(lr.booking.transaction.bookings) && (
+                    <>
+                      <Badge color="accent-neutral">
+                        <IconList size={16} title="Split Transaction" />
+                      </Badge>{" "}
+                    </>
+                  )}
+                  {lr.booking.transaction.description} {lr.booking.description}
+                </Text>
+              </Table.Td>
               {account.type === "EQUITY" && (
-                <TableCell className="text-right">
+                <Table.Td align="right">
                   {!isSameUnit(getUnitInfo(lr.booking), ledgerUnitInfo)
                     ? `${lr.booking.currency} ${formatMoney(lr.booking.value)}`
                     : null}
-                </TableCell>
+                </Table.Td>
               )}
-              <TableCell className="text-right">
+              <Table.Td align="right">
                 {formatMoney(lr.valueInLedgerUnit)}
-              </TableCell>
-              <TableCell className="text-right">
-                {formatMoney(lr.balance)}
-              </TableCell>
-              <TableCell>
-                <Dropdown>
-                  <DropdownButton
-                    as="button"
-                    className="opacity-0 group-hover:opacity-100 focus:opacity-100"
-                  >
-                    <EllipsisVerticalIcon className="-mb-0.5 size-4" />
-                  </DropdownButton>
-                  <DropdownMenu anchor="bottom end">
-                    <DropdownItem
-                      onClick={() => onEditTransaction(lr.booking.transaction)}
-                    >
-                      <PencilSquareIcon />
-                      Edit
-                    </DropdownItem>
-                    <DropdownItem onClick={() => onMoveBooking(lr.booking)}>
-                      <ArrowRightStartOnRectangleIcon />
-                      Rebook
-                    </DropdownItem>
-                    <DropdownDivider />
-                    <DropdownItem
+              </Table.Td>
+              <Table.Td align="right">{formatMoney(lr.balance)}</Table.Td>
+              <Table.Td>
+                <Menu position="bottom-end">
+                  <Menu.Target>
+                    <ActionIcon variant="default" size="sm">
+                      <IconDotsVertical size={16} />
+                    </ActionIcon>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Item
+                      leftSection={<IconPencil size={16} />}
                       onClick={() =>
-                        onDeleteTransaction(lr.booking.transactionId)
+                        setTimeout(() =>
+                          onEditTransaction(lr.booking.transaction),
+                        )
                       }
                     >
-                      <TrashIcon />
+                      Edit
+                    </Menu.Item>
+                    <Menu.Item
+                      leftSection={<IconSquareArrowRight size={16} />}
+                      onClick={() =>
+                        setTimeout(() => onMoveBooking(lr.booking))
+                      }
+                    >
+                      Rebook
+                    </Menu.Item>
+                    <Menu.Divider />
+                    <Menu.Item
+                      leftSection={<IconTrash size={16} />}
+                      color="red"
+                      onClick={() =>
+                        setTimeout(() =>
+                          onDeleteTransaction(lr.booking.transactionId),
+                        )
+                      }
+                    >
                       Delete
-                    </DropdownItem>
-                  </DropdownMenu>
-                </Dropdown>
-              </TableCell>
-            </TableRow>
+                    </Menu.Item>
+                  </Menu.Dropdown>
+                </Menu>
+              </Table.Td>
+            </Table.Tr>
           ))}
           {openingBalance != null && (
-            <TableRow>
-              <TableCell />
-              <TableCell />
-              <TableCell colSpan={2}>
+            <Table.Tr>
+              <Table.Td />
+              <Table.Td />
+              <Table.Td colSpan={2}>
                 <em>Opening balance</em>
-              </TableCell>
-              <TableCell className="text-right">
-                {formatMoney(openingBalance)}
-              </TableCell>
-              <TableCell />
-            </TableRow>
+              </Table.Td>
+              <Table.Td align="right">{formatMoney(openingBalance)}</Table.Td>
+              <Table.Td />
+            </Table.Tr>
           )}
-        </TableBody>
+        </Table.Tbody>
       </Table>
     </>
   );

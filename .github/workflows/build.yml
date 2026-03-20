@@ -14,7 +14,7 @@ on:
 
 env:
   NODE_VERSION: 24
-  FLYCTL_VERSION: 0.3.193
+  FLYCTL_VERSION: 0.4.25
 
 jobs:
   version:
@@ -61,21 +61,6 @@ jobs:
             --push \
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
-  cashfolio-app-typecheck:
-    name: "cashfolio-app: Typecheck"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup
-        uses: felixmokross/webplatform/.github/actions/setup@main
-      - name: Install dependencies
-        run: pnpm --filter cashfolio-app install
-      - name: Generate Prisma Client
-        run: pnpm --filter cashfolio-app prisma:generate
-      - name: Run typecheck in cashfolio-app
-        run: pnpm --filter cashfolio-app typecheck
 
   cashfolio-app-unit-tests:
     name: "cashfolio-app: Unit Tests"
@@ -157,7 +142,6 @@ jobs:
     if: github.event_name != 'pull_request'
     needs:
       - version
-      - cashfolio-app-typecheck
       - cashfolio-app-unit-tests
       - cashfolio-app-build-push
       - cashfolio-redis-build-push

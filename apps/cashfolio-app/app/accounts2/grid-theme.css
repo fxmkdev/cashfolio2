@@ -1,0 +1,4 @@
+.ag-cell,
+.ag-full-width-row .ag-cell-wrapper.ag-row-group {
+  -webkit-font-smoothing: var(--mantine-webkit-font-smoothing);
+}

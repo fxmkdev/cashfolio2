@@ -1,0 +1,184 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/.prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+}
+
+enum EquityAccountSubtype {
+  GAIN_LOSS
+  INCOME
+  EXPENSE
+}
+
+enum Unit {
+  CURRENCY
+  CRYPTOCURRENCY
+  SECURITY
+}
+
+enum UserRole {
+  ADMIN
+}
+
+model User {
+  id         String @id @default(cuid())
+  externalId String @unique
+
+  viewPreferences Json?
+
+  accountBookLinks UserAccountBookLink[]
+
+  roles UserRole[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserAccountBookLink {
+  userId        String
+  accountBookId String
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountBook AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+
+  @@id([userId, accountBookId])
+}
+
+model AccountBook {
+  id                String @default(cuid())
+  name              String
+  referenceCurrency String
+
+  securityHoldingGainLossAccountGroupId String?
+  securityHoldingGainLossAccountGroup   AccountGroup? @relation("security-holding-gain-loss", fields: [securityHoldingGainLossAccountGroupId, id], references: [id, accountBookId], onDelete: Restrict)
+
+  cryptoHoldingGainLossAccountGroupId String?
+  cryptoHoldingGainLossAccountGroup   AccountGroup? @relation("crypto-holding-gain-loss", fields: [cryptoHoldingGainLossAccountGroupId, id], references: [id, accountBookId], onDelete: Restrict)
+
+  fxHoldingGainLossAccountGroupId String?
+  fxHoldingGainLossAccountGroup   AccountGroup? @relation("fx-holding-gain-loss", fields: [fxHoldingGainLossAccountGroupId, id], references: [id, accountBookId], onDelete: Restrict)
+
+  groups       AccountGroup[]
+  accounts     Account[]
+  transactions Transaction[]
+  bookings     Booking[]
+
+  userLinks UserAccountBookLink[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([id])
+}
+
+model AccountGroup {
+  id                   String                @default(cuid())
+  name                 String
+  type                 AccountType
+  equityAccountSubtype EquityAccountSubtype?
+  isActive             Boolean               @default(true)
+  sortOrder            Int?
+
+  parentGroup   AccountGroup? @relation("parent-child", fields: [parentGroupId, accountBookId], references: [id, accountBookId], onDelete: Restrict)
+  parentGroupId String?
+
+  childGroups AccountGroup[] @relation("parent-child")
+  accounts    Account[]
+
+  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  accountBookId String
+
+  // not needed as we are always within the same account book – but required by Prisma
+  securityHoldingGainLossAccountBooks AccountBook[] @relation("security-holding-gain-loss")
+  cryptoHoldingGainLossAccountBooks   AccountBook[] @relation("crypto-holding-gain-loss")
+  fxHoldingGainLossAccountBooks       AccountBook[] @relation("fx-holding-gain-loss")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([id, accountBookId])
+}
+
+model Account {
+  id                   String                @default(cuid())
+  name                 String
+  type                 AccountType
+  equityAccountSubtype EquityAccountSubtype?
+  isActive             Boolean               @default(true)
+  sortOrder            Int?
+
+  group   AccountGroup? @relation(fields: [groupId, accountBookId], references: [id, accountBookId], onDelete: Restrict)
+  groupId String?
+
+  unit           Unit?
+  currency       String?
+  cryptocurrency String?
+  symbol         String?
+  tradeCurrency  String?
+
+  bookings Booking[]
+
+  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  accountBookId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([id, accountBookId])
+}
+
+model Transaction {
+  id          String @default(cuid())
+  description String
+
+  bookings Booking[]
+
+  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  accountBookId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([id, accountBookId])
+}
+
+model Booking {
+  id          String   @default(cuid())
+  date        DateTime
+  description String
+
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId, accountBookId], references: [id, accountBookId], onDelete: Cascade)
+
+  accountId String
+  account   Account @relation(fields: [accountId, accountBookId], references: [id, accountBookId])
+
+  unit           Unit
+  currency       String?
+  cryptocurrency String?
+  symbol         String?
+  tradeCurrency  String?
+
+  value     Decimal
+  sortOrder Int     @default(0)
+
+  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  accountBookId String
+
+  @@id([id, accountBookId])
+}

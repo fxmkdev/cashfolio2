@@ -1,8 +1,8 @@
 import type { Serialize } from "~/serialization";
-import { TableCell } from "~/platform/table";
 import { formatMoney } from "~/formatting";
 import type { BalancesAccountsNode } from "../../types";
 import { AccountsNodeChildrenTableRows } from "~/account-groups/table-rows";
+import { Table } from "@mantine/core";
 
 export function BalancesTableRows({
   node,
@@ -15,7 +15,7 @@ export function BalancesTableRows({
     <AccountsNodeChildrenTableRows node={node} viewPrefix="balances">
       {(node) => (
         <>
-          <TableCell className="text-right">
+          <Table.Td align="right">
             {node.nodeType === "account" &&
               !!node.balanceInOriginalCurrency && (
                 <>
@@ -27,10 +27,10 @@ export function BalancesTableRows({
                   )}
                 </>
               )}
-          </TableCell>
-          <TableCell className="text-right">
+          </Table.Td>
+          <Table.Td align="right">
             {formatMoney(negated ? -node.balance : node.balance)}
-          </TableCell>
+          </Table.Td>
         </>
       )}
     </AccountsNodeChildrenTableRows>
