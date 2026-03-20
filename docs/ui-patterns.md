@@ -1,5 +1,8 @@
 # UI Patterns
 
+Scope: This document describes `apps/cashfolio-app2`. Unless noted otherwise,
+paths are relative to that app directory.
+
 ## Mantine
 
 - **Mantine 8** for all UI components, forms (`@mantine/form`), and theming

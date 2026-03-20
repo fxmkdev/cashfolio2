@@ -2,18 +2,20 @@
 
 Guidance for coding agents and contributors working in this repository.
 
-Cashfolio is a double-entry accounting web app built with TanStack Start,
-Mantine, and Prisma. This package (`cashfolio-app2`) is a rewrite of
-`cashfolio-app`.
+This file currently documents only `apps/cashfolio-app2` (the TanStack Start
+rewrite of `cashfolio-app`).
+
+Unless explicitly stated otherwise, paths and conventions in this file and the
+linked docs are for `apps/cashfolio-app2`.
 
 ## Development Commands
 
 ```bash
-pnpm dev              # Start dev server
-pnpm build            # Production build
-pnpm typecheck        # tsc --noEmit
-pnpm format           # Prettier check
-pnpm prisma:generate  # Regenerate Prisma client (DATABASE_URL=dummy prisma generate)
+pnpm --filter cashfolio-app2 dev              # Start dev server
+pnpm --filter cashfolio-app2 build            # Production build
+pnpm --filter cashfolio-app2 typecheck        # tsc --noEmit
+pnpm --filter cashfolio-app2 format           # Prettier check
+pnpm --filter cashfolio-app2 prisma:generate  # Regenerate Prisma client (DATABASE_URL=dummy prisma generate)
 ```
 
 ## Working Conventions
@@ -34,9 +36,9 @@ pnpm prisma:generate  # Regenerate Prisma client (DATABASE_URL=dummy prisma gene
 
 ## Quality Checklist
 
-- Run `pnpm typecheck` before finishing code changes.
-- Run `pnpm format` when touching formatting-sensitive files.
-- If Prisma schema/client changes, run `pnpm prisma:generate`.
+- Run `pnpm --filter cashfolio-app2 typecheck` before finishing code changes.
+- Run `pnpm --filter cashfolio-app2 format` when touching formatting-sensitive files.
+- If Prisma schema/client changes, run `pnpm --filter cashfolio-app2 prisma:generate`.
 - Update relevant docs under `docs/` when behavior or conventions change.
 
 ## Architecture References

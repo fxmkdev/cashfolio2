@@ -1,5 +1,8 @@
 # Routing & Server Functions
 
+Scope: This document describes `apps/cashfolio-app2`. Unless noted otherwise,
+paths are relative to that app directory.
+
 ## TanStack Router
 
 - File-based routing in `src/routes/`

@@ -1,11 +1,14 @@
 # Database & Prisma
 
+Scope: This document describes `apps/cashfolio-app2`. Unless noted otherwise,
+paths are relative to that app directory.
+
 - **Prisma 7** with PostgreSQL, schema at `prisma/schema.prisma`
 - Generated client output: `src/.prisma-client/`
 - Prisma client singleton in `src/prisma.server.ts` — uses `PrismaPg` adapter
   for connection pooling; stores in `global.__db__` in development to avoid
   connection exhaustion during hot reload
-- Custom Prisma configuration in `prisma.config.ts` at project root
+- Custom Prisma configuration in `prisma.config.ts` at the app root
 
 ## Models
 
