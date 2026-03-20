@@ -176,7 +176,3 @@ export async function resetAndSeedDatabase(): Promise<SeededData> {
     },
   };
 }
-
-export async function closeDatabase() {
-  await prisma.$disconnect();
-}
