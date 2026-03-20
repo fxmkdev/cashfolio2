@@ -10,8 +10,8 @@
     "format": "prettier --check .",
     "prisma:generate": "DATABASE_URL=dummy prisma generate",
     "e2e:install": "playwright install chromium",
-    "e2e": "DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@127.0.0.1:5433/postgres?schema=public} BASE_URL=${BASE_URL:-http://127.0.0.1:4173} E2E_AUTH_BYPASS=${E2E_AUTH_BYPASS:-true} E2E_AUTH_EXTERNAL_ID=${E2E_AUTH_EXTERNAL_ID:-e2e-user} pnpm exec prisma migrate deploy && playwright test",
-    "e2e:ci": "playwright test"
+    "e2e": "E2E_TEST_MODE=${E2E_TEST_MODE:-true} DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@127.0.0.1:5433/postgres?schema=public} BASE_URL=${BASE_URL:-http://127.0.0.1:4173} E2E_AUTH_BYPASS=${E2E_AUTH_BYPASS:-true} E2E_AUTH_EXTERNAL_ID=${E2E_AUTH_EXTERNAL_ID:-e2e-user} sh -c 'pnpm prisma:generate && pnpm exec prisma migrate deploy && playwright test'",
+    "e2e:ci": "E2E_TEST_MODE=${E2E_TEST_MODE:-true} sh -c 'pnpm prisma:generate && playwright test'"
   },
   "dependencies": {
     "@logto/node": "^3.1.8",

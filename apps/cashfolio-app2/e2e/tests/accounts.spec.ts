@@ -1,11 +1,19 @@
 import { expect, test } from "@playwright/test";
 import { agGridRowByText, clickRowAction } from "../support/grid";
-import { resetAndSeedDatabase, type SeededData } from "../support/db";
+import {
+  closeDatabase,
+  resetAndSeedDatabase,
+  type SeededData,
+} from "../support/db";
 
 let seeded: SeededData;
 
 test.beforeAll(async () => {
   seeded = await resetAndSeedDatabase();
+});
+
+test.afterAll(async () => {
+  await closeDatabase();
 });
 
 test("create, edit, archive, and unarchive account", async ({ page }) => {

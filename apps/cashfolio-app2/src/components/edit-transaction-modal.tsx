@@ -629,6 +629,9 @@ export function EditTransactionModal({
             }
 
             if (e.colDef.field === "account") {
+              const currentBooking = form.values.bookings[e.rowIndex];
+              if (!currentBooking) return;
+
               const selectedAccount = accounts.find(
                 (a) => a.value === e.newValue,
               );
@@ -637,19 +640,15 @@ export function EditTransactionModal({
                 const clearCredit = isExpenseAccount(selectedAccount);
 
                 const nextBooking: BookingValues = {
-                  ...form.values.bookings[e.rowIndex],
+                  ...currentBooking,
                   account: e.newValue ?? undefined,
                   unit: selectedAccount.unit,
                   currency: selectedAccount.currency ?? undefined,
                   cryptocurrency: selectedAccount.cryptocurrency ?? undefined,
                   symbol: selectedAccount.symbol ?? undefined,
                   tradeCurrency: selectedAccount.tradeCurrency ?? undefined,
-                  debit: clearDebit
-                    ? undefined
-                    : form.values.bookings[e.rowIndex]?.debit,
-                  credit: clearCredit
-                    ? undefined
-                    : form.values.bookings[e.rowIndex]?.credit,
+                  debit: clearDebit ? undefined : currentBooking.debit,
+                  credit: clearCredit ? undefined : currentBooking.credit,
                 };
 
                 form.setFieldValue(`bookings.${e.rowIndex}`, nextBooking);

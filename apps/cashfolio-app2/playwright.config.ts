@@ -37,6 +37,7 @@ export default defineConfig({
       ...process.env,
       DATABASE_URL: databaseUrl,
       BASE_URL: baseUrl,
+      E2E_TEST_MODE: process.env.E2E_TEST_MODE ?? "true",
       E2E_AUTH_BYPASS: process.env.E2E_AUTH_BYPASS ?? "true",
       E2E_AUTH_EXTERNAL_ID: process.env.E2E_AUTH_EXTERNAL_ID ?? "e2e-user",
     },

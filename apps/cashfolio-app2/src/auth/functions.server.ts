@@ -2,7 +2,11 @@ import { redirect } from "@tanstack/react-router";
 import type { LogtoContext } from "@logto/node";
 
 function getE2EBypassExternalId(): string | null {
-  if (process.env.E2E_AUTH_BYPASS !== "true") {
+  const bypassRequested = process.env.E2E_AUTH_BYPASS === "true";
+  const testModeEnabled =
+    process.env.E2E_TEST_MODE === "true" || process.env.CI === "true";
+
+  if (!bypassRequested || !testModeEnabled) {
     return null;
   }
 

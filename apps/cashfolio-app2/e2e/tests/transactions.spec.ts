@@ -4,7 +4,11 @@ import {
   clickRowAction,
   setGridCellValue,
 } from "../support/grid";
-import { resetAndSeedDatabase, type SeededData } from "../support/db";
+import {
+  closeDatabase,
+  resetAndSeedDatabase,
+  type SeededData,
+} from "../support/db";
 
 let seeded: SeededData;
 
@@ -22,6 +26,10 @@ async function fillTransactionHeader(page: Page, description: string) {
 
 test.beforeAll(async () => {
   seeded = await resetAndSeedDatabase();
+});
+
+test.afterAll(async () => {
+  await closeDatabase();
 });
 
 test("create, edit, delete, and create multi-booking transaction", async ({

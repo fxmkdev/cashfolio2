@@ -16,6 +16,7 @@ E2E runs use a test-only auth bypass in `src/auth/functions.server.ts`.
 
 Required env vars:
 
+- `E2E_TEST_MODE=true`
 - `E2E_AUTH_BYPASS=true`
 - `E2E_AUTH_EXTERNAL_ID=<external-id-used-for-seeded-user>`
 
@@ -32,6 +33,12 @@ When bypass is disabled, app auth behavior remains unchanged.
   - baseline asset/expense accounts used in core transaction flows
 
 ## Commands
+
+Prerequisite for a fresh checkout:
+
+```bash
+pnpm --filter cashfolio-app2 prisma:generate
+```
 
 ```bash
 pnpm --filter cashfolio-app2 e2e:install
