@@ -3,8 +3,7 @@ import type { LogtoContext } from "@logto/node";
 
 function getE2EBypassExternalId(): string | null {
   const bypassRequested = process.env.E2E_AUTH_BYPASS === "true";
-  const testModeEnabled =
-    process.env.E2E_TEST_MODE === "true" || process.env.CI === "true";
+  const testModeEnabled = process.env.E2E_TEST_MODE === "true";
 
   if (!bypassRequested || !testModeEnabled) {
     return null;
