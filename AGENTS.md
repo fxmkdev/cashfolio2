@@ -2,11 +2,36 @@
 
 Guidance for coding agents and contributors working in this repository.
 
-This file currently documents only `apps/cashfolio-app2` (the TanStack Start
-rewrite of `cashfolio-app`).
+This repository has multiple apps. This file includes:
 
-Unless explicitly stated otherwise, paths and conventions in this file and the
-linked docs are for `apps/cashfolio-app2`.
+- repository-wide collaboration rules
+- app-specific conventions for `apps/cashfolio-app2` (the TanStack Start rewrite
+  of `cashfolio-app`)
+
+Unless explicitly stated otherwise, app-specific paths and conventions in this
+file and the linked docs are for `apps/cashfolio-app2`.
+
+## Repository-wide Guidelines
+
+- Use `pnpm` as package manager.
+- Keep changes focused and minimal; avoid unrelated refactors.
+- Keep docs in sync when introducing new patterns or conventions.
+- Pull request titles must follow Conventional Commits because GitHub squash
+  merge is configured to use the PR title as the commit on `main`.
+  - Format: `<type>(optional-scope): <description>`
+  - Example: `feat(cashfolio-app2): add archived-account unarchive action`
+  - Use descriptive commits inside the PR for review clarity; the PR title is
+    the canonical squash commit message.
+
+See [docs/contributing.md](docs/contributing.md) for the full contribution
+guidelines.
+
+## Docs Structure
+
+- Workspace docs index: [docs/README.md](docs/README.md)
+- App-specific architecture docs:
+  - `docs/apps/cashfolio-app2/`
+  - `apps/cashfolio-app/docs/` (legacy app-local docs)
 
 ## Development Commands
 
@@ -18,14 +43,11 @@ pnpm --filter cashfolio-app2 format           # Prettier check
 pnpm --filter cashfolio-app2 prisma:generate  # Regenerate Prisma client (DATABASE_URL=dummy prisma generate)
 ```
 
-## Working Conventions
+## cashfolio-app2 Working Conventions
 
-- Use `pnpm` as package manager.
-- Keep changes focused and minimal; avoid unrelated refactors.
 - Prefer Mantine styling; use CSS modules when manual styling is required.
 - Import Prisma enums from `src/.prisma-client/enums` (not `@prisma/client`).
 - Do not edit `src/routeTree.gen.ts` (generated file).
-- Keep docs in sync when introducing new patterns or conventions.
 - Use `@tabler/icons-react` for icons.
 - Use `@paralleldrive/cuid2` for unique IDs.
 - Use `date-fns` for date operations.
@@ -37,12 +59,14 @@ pnpm --filter cashfolio-app2 prisma:generate  # Regenerate Prisma client (DATABA
 ## Quality Checklist
 
 - Run `pnpm --filter cashfolio-app2 typecheck` before finishing code changes.
-- Run `pnpm --filter cashfolio-app2 format` when touching formatting-sensitive files.
-- If Prisma schema/client changes, run `pnpm --filter cashfolio-app2 prisma:generate`.
+- Run `pnpm --filter cashfolio-app2 format` when touching formatting-sensitive
+  files.
+- If Prisma schema/client changes, run
+  `pnpm --filter cashfolio-app2 prisma:generate`.
 - Update relevant docs under `docs/` when behavior or conventions change.
 
 ## Architecture References
 
-- [Routing and server functions](docs/routing.md)
-- [Database and Prisma](docs/database.md)
-- [UI patterns](docs/ui-patterns.md)
+- [Routing and server functions](docs/apps/cashfolio-app2/routing.md)
+- [Database and Prisma](docs/apps/cashfolio-app2/database.md)
+- [UI patterns](docs/apps/cashfolio-app2/ui-patterns.md)
