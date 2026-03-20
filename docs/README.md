@@ -5,7 +5,7 @@ references.
 
 ## Workspace Guides
 
-- [Contributing](contributing.md)
+- [Contributing](CONTRIBUTING.md)
 - [Cashfolio domain diagram](cashfolio.excalidraw)
 
 ## App-specific Docs

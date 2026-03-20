@@ -23,7 +23,7 @@ file and the linked docs are for `apps/cashfolio-app2`.
   - Use descriptive commits inside the PR for review clarity; the PR title is
     the canonical squash commit message.
 
-See [docs/contributing.md](docs/contributing.md) for the full contribution
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for the full contribution
 guidelines.
 
 ## Docs Structure
