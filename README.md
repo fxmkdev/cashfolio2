@@ -1,0 +1,25 @@
+# Cashfolio Monorepo
+
+This repository contains multiple Cashfolio applications and shared tooling.
+
+## Documentation
+
+- Contribution guidelines: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Shared workspace docs: `docs/`
+  - [Cashfolio domain diagram](docs/cashfolio.excalidraw)
+- App/package docs live alongside code:
+  - `apps/cashfolio-app2/docs/`
+    - [Overview](apps/cashfolio-app2/docs/README.md)
+    - [Routing and server functions](apps/cashfolio-app2/docs/routing.md)
+    - [Database and Prisma](apps/cashfolio-app2/docs/database.md)
+    - [UI patterns](apps/cashfolio-app2/docs/ui-patterns.md)
+  - `apps/cashfolio-app/docs/` (legacy app-local docs)
+
+## Common Commands
+
+```bash
+pnpm --filter cashfolio-app2 dev
+pnpm --filter cashfolio-app2 build
+pnpm --filter cashfolio-app2 typecheck
+pnpm --filter cashfolio-app2 format
+```
