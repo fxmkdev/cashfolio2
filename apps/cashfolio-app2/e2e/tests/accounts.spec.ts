@@ -43,7 +43,10 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
     .click();
   await expect(agGridRowByText(page, updatedName)).toHaveCount(0);
 
-  await page.locator("button:has-text('Archive')").first().click();
+  await page
+    .getByRole("button", { name: "Archive" })
+    .filter({ hasText: "Archive" })
+    .click();
   const archivedRow = agGridRowByText(page, updatedName);
   await expect(archivedRow).toBeVisible();
 

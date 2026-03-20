@@ -16,6 +16,27 @@ const prisma = new PrismaClient({ adapter });
 
 const DEFAULT_EXTERNAL_ID = process.env.E2E_AUTH_EXTERNAL_ID ?? "e2e-user";
 
+function assertSafeResetTarget() {
+  if (process.env.E2E_TEST_MODE !== "true") {
+    throw new Error(
+      "Refusing e2e DB reset because E2E_TEST_MODE is not set to true.",
+    );
+  }
+
+  const parsedUrl = new URL(databaseUrl);
+  const allowedHosts = new Set(["127.0.0.1", "localhost", "postgres"]);
+  const databaseName = parsedUrl.pathname.replace(/^\//, "");
+  const isAllowedDatabase =
+    databaseName === "postgres" ||
+    /(?:^|[_-])(test|e2e)(?:$|[_-])/i.test(databaseName);
+
+  if (!allowedHosts.has(parsedUrl.hostname) || !isAllowedDatabase) {
+    throw new Error(
+      `Refusing e2e DB reset for DATABASE_URL host=${parsedUrl.hostname} db=${databaseName}.`,
+    );
+  }
+}
+
 export type SeededData = {
   accountBookId: string;
   userExternalId: string;
@@ -26,6 +47,8 @@ export type SeededData = {
 };
 
 export async function resetAndSeedDatabase(): Promise<SeededData> {
+  assertSafeResetTarget();
+
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
       "Booking",
