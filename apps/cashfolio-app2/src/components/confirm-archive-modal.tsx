@@ -20,7 +20,11 @@ export function ConfirmArchiveModal({
         <Button variant="subtle" onClick={onClose}>
           Cancel
         </Button>
-        <Button color="yellow" onClick={onConfirm}>
+        <Button
+          color="yellow"
+          onClick={onConfirm}
+          data-testid="confirm-archive-button"
+        >
           Archive
         </Button>
       </Group>

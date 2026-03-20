@@ -20,7 +20,11 @@ export function ConfirmDeleteModal({
         <Button variant="subtle" onClick={onClose}>
           Cancel
         </Button>
-        <Button color="red" onClick={onConfirm}>
+        <Button
+          color="red"
+          onClick={onConfirm}
+          data-testid="confirm-delete-button"
+        >
           Delete
         </Button>
       </Group>

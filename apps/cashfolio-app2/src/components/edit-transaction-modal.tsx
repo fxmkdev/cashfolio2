@@ -567,6 +567,7 @@ export function EditTransactionModal({
             variant="default"
             leftSection={<IconTablePlus size={16} />}
             onClick={() => onAdd()}
+            data-testid="transaction-add-booking"
           >
             Add booking
           </Button>
@@ -596,8 +597,10 @@ export function EditTransactionModal({
             },
           }}
           onCellValueChanged={(e) => {
+            if (e.rowIndex == null) return;
+
             if (e.colDef.colId === "ccy") {
-              const booking = form.values.bookings[e.rowIndex!];
+              const booking = form.values.bookings[e.rowIndex];
               switch (booking?.unit) {
                 case Unit.CURRENCY:
                   form.setFieldValue(
@@ -630,46 +633,30 @@ export function EditTransactionModal({
                 (a) => a.value === e.newValue,
               );
               if (selectedAccount) {
-                form.setFieldValue(
-                  `bookings.${e.rowIndex}.unit`,
-                  selectedAccount.unit,
-                );
-                form.setFieldValue(
-                  `bookings.${e.rowIndex}.currency`,
-                  selectedAccount.currency ?? undefined,
-                );
-                form.setFieldValue(
-                  `bookings.${e.rowIndex}.cryptocurrency`,
-                  selectedAccount.cryptocurrency ?? undefined,
-                );
-                form.setFieldValue(
-                  `bookings.${e.rowIndex}.symbol`,
-                  selectedAccount.symbol ?? undefined,
-                );
-                form.setFieldValue(
-                  `bookings.${e.rowIndex}.tradeCurrency`,
-                  selectedAccount.tradeCurrency ?? undefined,
-                );
-
                 const clearDebit = isIncomeAccount(selectedAccount);
                 const clearCredit = isExpenseAccount(selectedAccount);
-                if (clearDebit) {
-                  form.setFieldValue(`bookings.${e.rowIndex}.debit`, undefined);
-                }
-                if (clearCredit) {
-                  form.setFieldValue(
-                    `bookings.${e.rowIndex}.credit`,
-                    undefined,
-                  );
-                }
+
+                const nextBooking: BookingValues = {
+                  ...form.values.bookings[e.rowIndex],
+                  account: e.newValue ?? undefined,
+                  unit: selectedAccount.unit,
+                  currency: selectedAccount.currency ?? undefined,
+                  cryptocurrency: selectedAccount.cryptocurrency ?? undefined,
+                  symbol: selectedAccount.symbol ?? undefined,
+                  tradeCurrency: selectedAccount.tradeCurrency ?? undefined,
+                  debit: clearDebit
+                    ? undefined
+                    : form.values.bookings[e.rowIndex]?.debit,
+                  credit: clearCredit
+                    ? undefined
+                    : form.values.bookings[e.rowIndex]?.credit,
+                };
+
+                form.setFieldValue(`bookings.${e.rowIndex}`, nextBooking);
 
                 const rowNode = e.api.getRowNode(e.data.key);
-                if (rowNode && e.rowIndex != null) {
-                  // Use form state (not e.data) as source of truth so that any
-                  // previously cleared opposite field (debit↔credit mutual
-                  // exclusion only updates the form, not the grid) is not
-                  // accidentally restored by spreading stale grid data.
-                  rowNode.setData({ ...form.values.bookings[e.rowIndex] });
+                if (rowNode) {
+                  rowNode.setData(nextBooking);
                 }
               }
             }
@@ -705,7 +692,9 @@ export function EditTransactionModal({
             <Button variant="subtle" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">{initialValues ? "Save" : "Create"}</Button>
+            <Button type="submit" data-testid="transaction-modal-submit">
+              {initialValues ? "Save" : "Create"}
+            </Button>
           </Group>
         </Group>
       </Stack>

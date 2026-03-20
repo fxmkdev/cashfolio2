@@ -13,26 +13,31 @@ function requireEnv(name: string): string {
   return value;
 }
 
-const LOGTO_ENDPOINT = requireEnv("LOGTO_ENDPOINT");
-const LOGTO_APP_ID = requireEnv("LOGTO_APP_ID");
-const LOGTO_APP_SECRET = requireEnv("LOGTO_APP_SECRET");
-const BASE_URL = requireEnv("BASE_URL");
-const SESSION_SECRET = requireEnv("SESSION_SECRET");
+function getRuntimeConfig(): {
+  logtoConfig: LogtoConfig;
+  baseUrl: string;
+  sessionSecret: string;
+} {
+  return {
+    logtoConfig: {
+      endpoint: requireEnv("LOGTO_ENDPOINT"),
+      appId: requireEnv("LOGTO_APP_ID"),
+      appSecret: requireEnv("LOGTO_APP_SECRET"),
+      scopes: ["email"],
+    },
+    baseUrl: requireEnv("BASE_URL"),
+    sessionSecret: requireEnv("SESSION_SECRET"),
+  };
+}
 
-const logtoConfig: LogtoConfig = {
-  endpoint: LOGTO_ENDPOINT,
-  appId: LOGTO_APP_ID,
-  appSecret: LOGTO_APP_SECRET,
-  scopes: ["email"],
-};
-
-function absoluteUrl(pathname: string): string {
-  return new URL(pathname, BASE_URL).toString();
+function absoluteUrl(pathname: string, baseUrl: string): string {
+  return new URL(pathname, baseUrl).toString();
 }
 
 async function createLogtoClient(onNavigate?: (url: string) => void) {
+  const { logtoConfig, sessionSecret } = getRuntimeConfig();
   const storage = new CookieStorage({
-    encryptionKey: SESSION_SECRET,
+    encryptionKey: sessionSecret,
     isSecure: true,
     getCookie: (name) => getCookie(name),
     setCookie: (name, value, options) => {
@@ -61,12 +66,13 @@ export async function getLogtoContext(
 
 export async function handleLogtoSignIn() {
   let navigateToUrl = "/api/logto/sign-in";
+  const { baseUrl } = getRuntimeConfig();
 
   const { client } = await createLogtoClient((url) => {
     navigateToUrl = url;
   });
 
-  await client.signIn(absoluteUrl("/api/logto/callback"));
+  await client.signIn(absoluteUrl("/api/logto/callback", baseUrl));
 
   return new Response(null, {
     status: 302,
@@ -76,13 +82,14 @@ export async function handleLogtoSignIn() {
 
 export async function handleLogtoSignUp() {
   let navigateToUrl = "/api/logto/sign-up";
+  const { baseUrl } = getRuntimeConfig();
 
   const { client } = await createLogtoClient((url) => {
     navigateToUrl = url;
   });
 
   await client.signIn({
-    redirectUri: absoluteUrl("/api/logto/callback"),
+    redirectUri: absoluteUrl("/api/logto/callback", baseUrl),
     interactionMode: "signUp",
   });
 
@@ -93,10 +100,11 @@ export async function handleLogtoSignUp() {
 }
 
 export async function handleLogtoSignInCallback(request: Request) {
+  const { baseUrl } = getRuntimeConfig();
   const requestUrl = new URL(request.url);
   const callbackUri = new URL(
     `${requestUrl.pathname}${requestUrl.search}`,
-    BASE_URL,
+    baseUrl,
   ).toString();
 
   const { client } = await createLogtoClient();
@@ -110,7 +118,8 @@ export async function handleLogtoSignInCallback(request: Request) {
 }
 
 function ensureSameOriginRequest(request: Request) {
-  const expectedOrigin = new URL(BASE_URL).origin;
+  const { baseUrl } = getRuntimeConfig();
+  const expectedOrigin = new URL(baseUrl).origin;
   const requestOrigin = request.headers.get("origin");
 
   if (requestOrigin) {
@@ -138,6 +147,7 @@ function ensureSameOriginRequest(request: Request) {
 }
 
 export async function handleLogtoSignOut(request: Request) {
+  const { baseUrl } = getRuntimeConfig();
   ensureSameOriginRequest(request);
 
   let navigateToUrl = "/";
@@ -146,7 +156,7 @@ export async function handleLogtoSignOut(request: Request) {
     navigateToUrl = url;
   });
 
-  await client.signOut(absoluteUrl("/"));
+  await client.signOut(absoluteUrl("/", baseUrl));
   await storage.destroy();
 
   return new Response(null, {

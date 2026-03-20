@@ -346,7 +346,11 @@ export function EditAccountModal({
             <Button variant="subtle" onClick={() => onClose()}>
               Cancel
             </Button>
-            <Button variant="filled" type="submit">
+            <Button
+              variant="filled"
+              type="submit"
+              data-testid="account-modal-submit"
+            >
               {isEdit ? "Save" : "Create"}
             </Button>
           </Group>
