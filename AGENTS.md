@@ -23,14 +23,13 @@ file and the linked docs are for `apps/cashfolio-app2`.
   - Use descriptive commits inside the PR for review clarity; the PR title is
     the canonical squash commit message.
 
-See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for the full contribution
-guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution guidelines.
 
 ## Docs Structure
 
-- Workspace docs index: [docs/README.md](docs/README.md)
+- Shared workspace docs: `docs/`
 - App-specific architecture docs:
-  - `docs/apps/cashfolio-app2/`
+  - `apps/cashfolio-app2/docs/`
   - `apps/cashfolio-app/docs/` (legacy app-local docs)
 
 ## Development Commands
@@ -63,10 +62,11 @@ pnpm --filter cashfolio-app2 prisma:generate  # Regenerate Prisma client (DATABA
   files.
 - If Prisma schema/client changes, run
   `pnpm --filter cashfolio-app2 prisma:generate`.
-- Update relevant docs under `docs/` when behavior or conventions change.
+- Update relevant docs in `docs/` (shared) or app-local `docs/` folders when
+  behavior or conventions change.
 
 ## Architecture References
 
-- [Routing and server functions](docs/apps/cashfolio-app2/routing.md)
-- [Database and Prisma](docs/apps/cashfolio-app2/database.md)
-- [UI patterns](docs/apps/cashfolio-app2/ui-patterns.md)
+- [Routing and server functions](apps/cashfolio-app2/docs/routing.md)
+- [Database and Prisma](apps/cashfolio-app2/docs/database.md)
+- [UI patterns](apps/cashfolio-app2/docs/ui-patterns.md)
