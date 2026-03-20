@@ -294,7 +294,6 @@ function AccountsPage() {
           if (isArchivedMode) {
             return (
               <ArchivedAccountTreeActionsCell
-                rowId={data.id}
                 unarchiveLabel={data.unarchiveDisabledReason ?? "Unarchive"}
                 unarchivable={data.unarchivable}
                 onUnarchive={() => void handleUnarchiveRow(data)}
@@ -312,7 +311,6 @@ function AccountsPage() {
 
           return (
             <ActiveAccountTreeActionsCell
-              rowId={data.id}
               archiveLabel={data.archiveDisabledReason ?? "Archive"}
               deleteLabel={data.deleteDisabledReason ?? "Delete"}
               archivable={data.archivable}
@@ -484,7 +482,6 @@ function AccountsPage() {
                   },
                 })
               }
-              data-testid="accounts-open-archive"
             >
               Archive
             </Button>
@@ -492,14 +489,12 @@ function AccountsPage() {
               variant="default"
               leftSection={<IconPlus size={16} />}
               onClick={() => setCreateGroupModalOpened(true)}
-              data-testid="accounts-add-group"
             >
               Add Group
             </Button>
             <Button
               leftSection={<IconPlus size={16} />}
               onClick={() => setCreateModalOpened(true)}
-              data-testid="accounts-add-account"
             >
               Add Account
             </Button>

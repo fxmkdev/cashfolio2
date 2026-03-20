@@ -411,7 +411,6 @@ function LedgerPage() {
                   size="sm"
                   onClick={() => handleEditClick(data.transactionId)}
                   aria-label="Edit"
-                  data-testid={`ledger-edit-transaction-${data.transactionId}`}
                 >
                   <IconPencil size={16} />
                 </ActionIcon>
@@ -428,7 +427,6 @@ function LedgerPage() {
                     })
                   }
                   aria-label="Delete"
-                  data-testid={`ledger-delete-transaction-${data.transactionId}`}
                 >
                   <IconTrash size={16} />
                 </ActionIcon>
@@ -486,7 +484,6 @@ function LedgerPage() {
         <Button
           leftSection={<IconCashPlus size={16} />}
           onClick={() => setModalOpened(true)}
-          data-testid="ledger-add-transaction"
         >
           Add Transaction
         </Button>

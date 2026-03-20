@@ -567,7 +567,6 @@ export function EditTransactionModal({
             variant="default"
             leftSection={<IconTablePlus size={16} />}
             onClick={() => onAdd()}
-            data-testid="transaction-add-booking"
           >
             Add booking
           </Button>
@@ -691,9 +690,7 @@ export function EditTransactionModal({
             <Button variant="subtle" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" data-testid="transaction-modal-submit">
-              {initialValues ? "Save" : "Create"}
-            </Button>
+            <Button type="submit">{initialValues ? "Save" : "Create"}</Button>
           </Group>
         </Group>
       </Stack>

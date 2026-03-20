@@ -13,7 +13,7 @@ import {
 let seeded: SeededData;
 
 async function openCreateTransaction(page: Page) {
-  await page.getByTestId("ledger-add-transaction").click();
+  await page.getByRole("button", { name: "Add Transaction" }).click();
   await expect(
     page.getByRole("heading", { name: "Add Transaction" }),
   ).toBeVisible();
@@ -43,7 +43,10 @@ test("create, edit, delete, and create multi-booking transaction", async ({
   await setGridCellValue(page, 1, "date", "01.01.2026");
   await setGridCellValue(page, 1, "account", seeded.savingsAccount.name);
   await setGridCellValue(page, 1, "debit", "100");
-  await page.getByTestId("transaction-modal-submit").click();
+  await page
+    .getByRole("dialog", { name: "Add Transaction" })
+    .getByRole("button", { name: "Create" })
+    .click();
 
   const createdTransactionRow = agGridRowByText(page, "E2E Transaction 1");
   await expect(createdTransactionRow).toBeVisible();
@@ -54,7 +57,10 @@ test("create, edit, delete, and create multi-booking transaction", async ({
   ).toBeVisible();
 
   await page.getByLabel("Description").fill("E2E Transaction 1 Updated");
-  await page.getByTestId("transaction-modal-submit").click();
+  await page
+    .getByRole("dialog", { name: "Edit Transaction" })
+    .getByRole("button", { name: "Save" })
+    .click();
 
   const updatedTransactionRow = agGridRowByText(
     page,
@@ -63,7 +69,10 @@ test("create, edit, delete, and create multi-booking transaction", async ({
   await expect(updatedTransactionRow).toBeVisible();
 
   await clickRowAction(updatedTransactionRow, "Delete");
-  await page.getByTestId("confirm-delete-button").click();
+  await page
+    .getByRole("dialog", { name: "Delete Transaction" })
+    .getByRole("button", { name: "Delete" })
+    .click();
   await expect(agGridRowByText(page, "E2E Transaction 1 Updated")).toHaveCount(
     0,
   );
@@ -74,11 +83,14 @@ test("create, edit, delete, and create multi-booking transaction", async ({
   await setGridCellValue(page, 1, "date", "01.01.2026");
   await setGridCellValue(page, 1, "account", seeded.savingsAccount.name);
   await setGridCellValue(page, 1, "debit", "100");
-  await page.getByTestId("transaction-add-booking").click();
+  await page.getByRole("button", { name: "Add booking" }).click();
   await setGridCellValue(page, 2, "date", "01.01.2026");
   await setGridCellValue(page, 2, "account", seeded.investmentsAccount.name);
   await setGridCellValue(page, 2, "debit", "200");
-  await page.getByTestId("transaction-modal-submit").click();
+  await page
+    .getByRole("dialog", { name: "Add Transaction" })
+    .getByRole("button", { name: "Create" })
+    .click();
 
   await expect(agGridRowByText(page, "E2E Split Transaction")).toBeVisible();
 

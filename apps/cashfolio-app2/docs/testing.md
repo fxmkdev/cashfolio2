@@ -10,6 +10,29 @@ paths are relative to that app directory.
 - Tests: `e2e/tests/`
 - DB/setup helpers: `e2e/support/`
 
+## Query Priority
+
+When writing Playwright tests, follow Testing Library query priority:
+https://testing-library.com/docs/queries/about#priority
+
+Use this order whenever possible:
+
+1. `getByRole` (with accessible name)
+2. `getByLabel` / `getByPlaceholder`
+3. `getByText` / `getByDisplayValue`
+4. `getByAltText` / `getByTitle`
+5. `getByTestId` only as a last resort
+
+Guidelines:
+
+- Prefer queries that reflect how users find and interact with UI.
+- Do not add new `data-testid` attributes by default.
+- Use `data-testid` only when semantic/accessibility queries are not practical
+  (for example, some AG Grid internals or repeated icon-only controls without a
+  stable accessible name).
+- When adding a new `data-testid`, document briefly in the test why higher
+  priority queries were not sufficient.
+
 ## Auth in E2E
 
 E2E runs use a test-only auth bypass in `src/auth/functions.server.ts`.

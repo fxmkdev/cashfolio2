@@ -22,27 +22,36 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
   const createdName = "E2E Asset Account";
   const updatedName = "E2E Asset Account Updated";
 
-  await page.getByTestId("accounts-add-account").click();
+  await page.getByRole("button", { name: "Add Account" }).click();
   await page.getByLabel("Name").fill(createdName);
   await page.getByRole("textbox", { name: "Currency" }).click();
   await page.getByRole("option", { name: "CHF" }).first().click();
-  await page.getByTestId("account-modal-submit").click();
+  await page
+    .getByRole("dialog", { name: "New Account" })
+    .getByRole("button", { name: "Create" })
+    .click();
 
   const createdRow = agGridRowByText(page, createdName);
   await expect(createdRow).toBeVisible();
 
   await clickRowAction(createdRow, "Edit");
   await page.getByLabel("Name").fill(updatedName);
-  await page.getByTestId("account-modal-submit").click();
+  await page
+    .getByRole("dialog", { name: "Edit Account" })
+    .getByRole("button", { name: "Save" })
+    .click();
 
   const updatedRow = agGridRowByText(page, updatedName);
   await expect(updatedRow).toBeVisible();
 
   await clickRowAction(updatedRow, "Archive");
-  await page.getByTestId("confirm-archive-button").click();
+  await page
+    .getByRole("dialog", { name: "Archive Account" })
+    .getByRole("button", { name: "Archive" })
+    .click();
   await expect(agGridRowByText(page, updatedName)).toHaveCount(0);
 
-  await page.getByTestId("accounts-open-archive").click();
+  await page.locator("button:has-text('Archive')").first().click();
   const archivedRow = agGridRowByText(page, updatedName);
   await expect(archivedRow).toBeVisible();
 
@@ -64,5 +73,7 @@ test("navigate from accounts grid to ledger", async ({ page }) => {
   await expect(page).toHaveURL(
     new RegExp(`/${seeded.accountBookId}/${seeded.cashAccount.id}`),
   );
-  await expect(page.getByTestId("ledger-add-transaction")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Add Transaction" }),
+  ).toBeVisible();
 });

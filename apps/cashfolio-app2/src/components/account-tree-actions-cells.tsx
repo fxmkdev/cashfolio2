@@ -8,12 +8,10 @@ import {
 } from "@tabler/icons-react";
 
 export function ArchivedAccountTreeActionsCell({
-  rowId,
   unarchiveLabel,
   unarchivable,
   onUnarchive,
 }: {
-  rowId?: string;
   unarchiveLabel: string;
   unarchivable: boolean;
   onUnarchive: () => void;
@@ -28,9 +26,6 @@ export function ArchivedAccountTreeActionsCell({
           disabled={!unarchivable}
           onClick={onUnarchive}
           aria-label="Unarchive"
-          data-testid={
-            rowId ? `account-tree-unarchive-${rowId}` : "account-tree-unarchive"
-          }
         >
           <IconArchiveOff size={16} />
         </ActionIcon>
@@ -40,7 +35,6 @@ export function ArchivedAccountTreeActionsCell({
 }
 
 export function ActiveAccountTreeActionsCell({
-  rowId,
   archiveLabel,
   deleteLabel,
   archivable,
@@ -52,7 +46,6 @@ export function ActiveAccountTreeActionsCell({
   onDelete,
   onReorder,
 }: {
-  rowId?: string;
   archiveLabel: string;
   deleteLabel: string;
   archivable: boolean;
@@ -73,9 +66,6 @@ export function ActiveAccountTreeActionsCell({
           disabled={!reorderEnabled}
           onClick={onReorder}
           aria-label="Reorder siblings"
-          data-testid={
-            rowId ? `account-tree-reorder-${rowId}` : "account-tree-reorder"
-          }
         >
           <IconArrowsSort size={16} />
         </ActionIcon>
@@ -86,9 +76,6 @@ export function ActiveAccountTreeActionsCell({
           size="sm"
           onClick={onEdit}
           aria-label="Edit"
-          data-testid={
-            rowId ? `account-tree-edit-${rowId}` : "account-tree-edit"
-          }
         >
           <IconPencil size={16} />
         </ActionIcon>
@@ -101,9 +88,6 @@ export function ActiveAccountTreeActionsCell({
           disabled={!archivable}
           onClick={onArchive}
           aria-label="Archive"
-          data-testid={
-            rowId ? `account-tree-archive-${rowId}` : "account-tree-archive"
-          }
         >
           <IconArchive size={16} />
         </ActionIcon>
@@ -116,9 +100,6 @@ export function ActiveAccountTreeActionsCell({
           disabled={!deletable}
           onClick={onDelete}
           aria-label="Delete"
-          data-testid={
-            rowId ? `account-tree-delete-${rowId}` : "account-tree-delete"
-          }
         >
           <IconTrash size={16} />
         </ActionIcon>
