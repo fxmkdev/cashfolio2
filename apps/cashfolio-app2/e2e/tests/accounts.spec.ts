@@ -59,6 +59,14 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
   await page.getByRole("link", { name: "Archive" }).click();
   await expect(archivedRow).toBeVisible();
 
+  await archivedRow.dblclick();
+  await expect(
+    page.getByRole("button", { name: /Add (Split )?Transaction/ }),
+  ).toBeVisible();
+
+  await page.goto(`/${seeded.accountBookId}/?tab=ASSET&mode=archived`);
+  await expect(archivedRow).toBeVisible();
+
   await clickRowAction(archivedRow, "Unarchive");
   await expect(agGridRowByText(page, updatedName)).toHaveCount(0);
 
@@ -78,6 +86,6 @@ test("navigate from accounts grid to ledger", async ({ page }) => {
     new RegExp(`/${seeded.accountBookId}/${seeded.cashAccount.id}`),
   );
   await expect(
-    page.getByRole("button", { name: "Add Split Transaction" }),
+    page.getByRole("button", { name: /Add (Split )?Transaction/ }),
   ).toBeVisible();
 });
