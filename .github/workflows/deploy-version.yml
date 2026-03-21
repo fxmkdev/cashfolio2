@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ inputs.deploy-cashfolio-app2 }}
     environment:
-      name: ${{ inputs.environment }}-cashfolio-app2
+      name: ${{ inputs.environment }}-cashfolio-app
       url: https://${{ vars.CANONICAL_HOSTNAME }}/
     steps:
       - name: Checkout
