@@ -54,3 +54,24 @@ export function getUnitIdentifier(booking: {
       return `security:${booking.symbol}`;
   }
 }
+
+export function getSimpleTransactionUnitIdentifier(account: {
+  unit: Unit | null;
+  currency?: string | null;
+  cryptocurrency?: string | null;
+  symbol?: string | null;
+  tradeCurrency?: string | null;
+}): string | null {
+  if (!account.unit) return null;
+
+  if (account.unit === Unit.CURRENCY) {
+    return account.currency ? `currency:${account.currency}` : null;
+  }
+
+  if (account.unit === Unit.CRYPTOCURRENCY) {
+    return account.cryptocurrency ? `crypto:${account.cryptocurrency}` : null;
+  }
+
+  if (!account.symbol || !account.tradeCurrency) return null;
+  return `security:${account.symbol}:${account.tradeCurrency}`;
+}

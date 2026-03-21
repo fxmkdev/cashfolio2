@@ -14,14 +14,23 @@ import {
 import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
 import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
 import { LinkAnchor } from "../../components/link-anchor";
-import { getTypeLabel } from "../../shared/account-utils";
+import {
+  getSimpleTransactionUnitIdentifier,
+  getTypeLabel,
+} from "../../shared/account-utils";
 import { useTransactionScroll } from "../../hooks/use-transaction-scroll";
-import { IconCashPlus, IconPencil, IconTrash } from "@tabler/icons-react";
+import {
+  IconBolt,
+  IconCashPlus,
+  IconPencil,
+  IconTrash,
+} from "@tabler/icons-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { DataGrid } from "../../components/data-grid";
 import { getAccountForLedger, getLedgerData } from "../../server/ledger";
 import { getAccounts } from "../../server/accounts";
 import {
+  createSimpleTransaction,
   createTransaction,
   deleteTransaction,
   getTransaction,
@@ -41,6 +50,7 @@ import {
   EditTransactionModal,
   type AccountOption,
 } from "../../components/edit-transaction-modal";
+import { SimpleTransactionModal } from "../../components/simple-transaction-modal";
 
 export const Route = createFileRoute("/$accountBookId/$accountId")({
   validateSearch: (
@@ -142,6 +152,7 @@ function LedgerPage() {
   const { accountBookId } = Route.useParams();
   const { transactionId } = Route.useSearch();
   const [modalOpened, setModalOpened] = useState(false);
+  const [simpleModalOpened, setSimpleModalOpened] = useState(false);
   const [editModalOpened, setEditModalOpened] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | undefined
@@ -175,6 +186,44 @@ function LedgerPage() {
     );
   }, [account.id, accountOptions, accounts, editingTransactionData]);
 
+  const currentSimpleUnitIdentifier = useMemo(
+    () => getSimpleTransactionUnitIdentifier(account),
+    [account],
+  );
+
+  const simpleCounterAccountOptions = useMemo<AccountOption[]>(
+    () =>
+      createAccountOptions(
+        accounts,
+        (candidate) =>
+          candidate.isActive &&
+          candidate.id !== account.id &&
+          (candidate.type === AccountType.EQUITY ||
+            ((candidate.type === AccountType.ASSET ||
+              candidate.type === AccountType.LIABILITY) &&
+              currentSimpleUnitIdentifier !== null &&
+              getSimpleTransactionUnitIdentifier({
+                unit: candidate.unit,
+                currency: candidate.currency,
+                cryptocurrency: candidate.cryptocurrency,
+                symbol: candidate.symbol,
+                tradeCurrency: candidate.tradeCurrency,
+              }) === currentSimpleUnitIdentifier)),
+      ),
+    [account.id, accounts, currentSimpleUnitIdentifier],
+  );
+  const currentAccountLabel = useMemo(
+    () =>
+      [
+        getTypeLabel(account.type, account.equityAccountSubtype),
+        account.groupPathSegments.join(" / "),
+        account.name,
+      ]
+        .filter(Boolean)
+        .join(" / "),
+    [account],
+  );
+
   async function handleCreateTransaction(values: {
     description: string;
     bookings: {
@@ -193,6 +242,25 @@ function LedgerPage() {
       data: { accountBookId, ...values },
     });
     setModalOpened(false);
+    pendingScrollRef.current = transaction.id;
+    router.invalidate();
+  }
+
+  async function handleCreateSimpleTransaction(values: {
+    date: string;
+    description: string;
+    counterAccountId: string;
+    amount: number;
+    direction: "DEBIT" | "CREDIT";
+  }) {
+    const transaction = await createSimpleTransaction({
+      data: {
+        accountBookId,
+        accountId: account.id,
+        ...values,
+      },
+    });
+    setSimpleModalOpened(false);
     pendingScrollRef.current = transaction.id;
     router.invalidate();
   }
@@ -446,6 +514,14 @@ function LedgerPage() {
   );
 
   const unitLabel = getUnitLabel(account);
+  const simpleTransactionDisabledReason =
+    account.type !== AccountType.ASSET && account.type !== AccountType.LIABILITY
+      ? "Simple transactions are only available for asset and liability accounts."
+      : !currentSimpleUnitIdentifier
+        ? "Simple transactions require a current account with a complete unit."
+        : simpleCounterAccountOptions.length === 0
+          ? "No eligible account is available."
+          : null;
 
   const backTab = (
     account.type === AccountType.EQUITY && account.equityAccountSubtype
@@ -481,12 +557,28 @@ function LedgerPage() {
             </Badge>
           )}
         </Group>
-        <Button
-          leftSection={<IconCashPlus size={16} />}
-          onClick={() => setModalOpened(true)}
-        >
-          Add Transaction
-        </Button>
+        <Group gap="sm">
+          <Tooltip
+            label={simpleTransactionDisabledReason ?? "Quick two-booking entry"}
+          >
+            <span>
+              <Button
+                leftSection={<IconBolt size={16} />}
+                onClick={() => setSimpleModalOpened(true)}
+                disabled={!!simpleTransactionDisabledReason}
+              >
+                Add Simple Transaction
+              </Button>
+            </span>
+          </Tooltip>
+          <Button
+            leftSection={<IconCashPlus size={16} />}
+            variant="default"
+            onClick={() => setModalOpened(true)}
+          >
+            Add Split Transaction
+          </Button>
+        </Group>
       </Group>
 
       <DataGrid
@@ -500,6 +592,20 @@ function LedgerPage() {
         getRowId={({ data }) => data.id}
         onRowDataUpdated={handleRowDataUpdated}
       />
+
+      <Modal
+        opened={simpleModalOpened}
+        onClose={() => setSimpleModalOpened(false)}
+        title="Add Simple Transaction"
+        size="xl"
+      >
+        <SimpleTransactionModal
+          currentAccount={{ id: account.id, label: currentAccountLabel }}
+          accounts={simpleCounterAccountOptions}
+          onClose={() => setSimpleModalOpened(false)}
+          onSubmit={handleCreateSimpleTransaction}
+        />
+      </Modal>
 
       <Modal
         opened={modalOpened}

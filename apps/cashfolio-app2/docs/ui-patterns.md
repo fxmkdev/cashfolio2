@@ -17,12 +17,13 @@ paths are relative to that app directory.
 `src/shared/account-utils.ts` contains pure utility functions used across
 routes, components, and server functions:
 
-| Function                                                        | Purpose                                                                                         |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `getTypeLabel(type, equityAccountSubtype)`                      | Human-readable label for an account type (e.g. `"Income"`, `"Asset"`)                           |
-| `isIncomeAccount(acct)`                                         | True when account is `EQUITY / INCOME`                                                          |
-| `isExpenseAccount(acct)`                                        | True when account is `EQUITY / EXPENSE`                                                         |
-| `getUnitIdentifier({ unit, currency, cryptocurrency, symbol })` | Canonical string key for a booking's unit (`"currency:CHF"`, `"crypto:BTC"`, `"security:AAPL"`) |
+| Function                                                        | Purpose                                                                                                       |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `getTypeLabel(type, equityAccountSubtype)`                      | Human-readable label for an account type (e.g. `"Income"`, `"Asset"`)                                         |
+| `isIncomeAccount(acct)`                                         | True when account is `EQUITY / INCOME`                                                                        |
+| `isExpenseAccount(acct)`                                        | True when account is `EQUITY / EXPENSE`                                                                       |
+| `getUnitIdentifier({ unit, currency, cryptocurrency, symbol })` | Canonical string key for a booking's unit (`"currency:CHF"`, `"crypto:BTC"`, `"security:AAPL"`)               |
+| `getSimpleTransactionUnitIdentifier({ ... })`                   | Canonical key for simple-flow account compatibility (`"currency:CHF"`, `"crypto:BTC"`, `"security:AAPL:USD"`) |
 
 ## Custom Hooks (`src/hooks/`)
 
@@ -180,6 +181,34 @@ with split bookings:
   metadata
 - **Booking row reordering**: enabled via AG Grid row drag in both create and
   edit flows
+
+## Simple Transaction Creation
+
+`src/components/simple-transaction-modal.tsx` handles quick creation of
+two-booking transactions from the ledger route
+(`src/routes/$accountBookId/$accountId.tsx`).
+
+- Entry fields:
+  - date, description, and amount (first row)
+  - current account (read-only), direction toggle action icon, and counter
+    account (second row)
+- Always creates exactly 2 bookings:
+  - current account booking
+  - selected counter account booking
+- Both bookings use the current account's unit identifier
+- If the selected account is equity, the equity booking still receives the
+  current account's unit fields
+- For equity account-type restrictions:
+  - selecting an `INCOME` account forces `Debit` on the current account
+  - selecting an `EXPENSE` account forces `Credit` on the current account
+  - the direction toggle action icon is disabled while forced
+- Availability:
+  - only for current accounts of type `ASSET` or `LIABILITY`
+  - current account must have a complete unit identifier
+  - selected account must be active
+  - `ASSET`/`LIABILITY` options must match the current account unit identifier
+  - all active `EQUITY` accounts are available
+- Server-side validation re-checks all constraints before creation
 
 ### Conditional Editability Affordance
 

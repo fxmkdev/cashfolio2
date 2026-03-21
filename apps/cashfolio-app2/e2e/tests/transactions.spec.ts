@@ -9,9 +9,16 @@ import { resetAndSeedDatabase, type SeededData } from "../support/db";
 let seeded: SeededData;
 
 async function openCreateTransaction(page: Page) {
-  await page.getByRole("button", { name: "Add Transaction" }).click();
+  await page.getByRole("button", { name: "Add Split Transaction" }).click();
   await expect(
     page.getByRole("heading", { name: "Add Transaction" }),
+  ).toBeVisible();
+}
+
+async function openCreateSimpleTransaction(page: Page) {
+  await page.getByRole("button", { name: "Add Simple Transaction" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Add Simple Transaction" }),
   ).toBeVisible();
 }
 
@@ -88,4 +95,33 @@ test("create, edit, delete, and create multi-booking transaction", async ({
 
   await page.reload();
   await expect(agGridRowByText(page, "E2E Split Transaction")).toBeVisible();
+});
+
+test("create simple transaction", async ({ page }) => {
+  await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
+
+  await openCreateSimpleTransaction(page);
+  const simpleDialog = page.getByRole("dialog", {
+    name: "Add Simple Transaction",
+  });
+
+  await page.getByLabel("Date").fill("02.01.2026");
+  await page.getByLabel("Description").fill("E2E Simple Transaction");
+  await page.getByRole("textbox", { name: "Counter account" }).click();
+  await page
+    .getByRole("option", { name: /E2E Expense/ })
+    .first()
+    .click();
+
+  await expect(
+    simpleDialog.getByRole("button", {
+      name: "Swap debit/credit direction",
+    }),
+  ).toBeDisabled();
+
+  await page.getByLabel("Amount").fill("42");
+
+  await simpleDialog.getByRole("button", { name: "Create" }).click();
+
+  await expect(agGridRowByText(page, "E2E Simple Transaction")).toBeVisible();
 });
