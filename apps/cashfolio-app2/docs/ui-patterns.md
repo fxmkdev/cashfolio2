@@ -54,7 +54,7 @@ Route-level logic that doesn't belong in components is extracted into hooks in
 
 ## Breadcrumbs Pattern
 
-- Use `AccountsBreadcrumbSegments`
+- Use `getAccountsBreadcrumbSegments`
   (`src/components/accounts-breadcrumb-segments.tsx`) for the shared leading
   segments on account routes.
 - Use `LinkAnchor` for breadcrumb links; do not compose Mantine `Anchor` with

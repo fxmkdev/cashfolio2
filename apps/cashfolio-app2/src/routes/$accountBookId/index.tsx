@@ -53,7 +53,7 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../../.prisma-client/enums";
-import { AccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
+import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
 
 const tabs = [
   { value: "ASSET", label: "Asset", type: AccountType.ASSET },
@@ -459,12 +459,12 @@ function AccountsPage() {
       <Group mb="lg" gap="md" justify="space-between" mih={36}>
         {isArchivedMode ? (
           <Breadcrumbs fz="h2" fw={700} lh="var(--mantine-h2-line-height)">
-            <AccountsBreadcrumbSegments
-              accountBookId={accountBookId}
-              tab={tab}
-              mode="archived"
-              archiveIsLink={false}
-            />
+            {getAccountsBreadcrumbSegments({
+              accountBookId,
+              tab,
+              mode: "archived",
+              archiveIsLink: false,
+            })}
           </Breadcrumbs>
         ) : (
           <Title order={2}>Accounts</Title>
