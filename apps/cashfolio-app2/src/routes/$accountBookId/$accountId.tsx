@@ -113,7 +113,6 @@ type LedgerRow = {
   debit: number | null;
   credit: number | null;
   balance: number | null;
-  balanceInReferenceCurrency: number | null;
 };
 
 type LedgerAccountOptionSource = Awaited<
@@ -327,33 +326,12 @@ function LedgerPage() {
   const rows = useMemo<LedgerRow[]>(() => {
     const negate = shouldNegate(account.type, account.equityAccountSubtype);
     let balance = 0;
-    let balanceInReferenceCurrency: number | null =
-      account.unit === Unit.CURRENCY ? 0 : null;
 
     return bookings
       .map((b) => {
         const rawValue = Number(b.value);
         const value = negate ? -rawValue : rawValue;
         balance += value;
-
-        const rawValueInReferenceCurrency =
-          b.valueInReferenceCurrency == null
-            ? null
-            : Number(b.valueInReferenceCurrency);
-        const valueInReferenceCurrency =
-          rawValueInReferenceCurrency == null
-            ? null
-            : negate
-              ? -rawValueInReferenceCurrency
-              : rawValueInReferenceCurrency;
-
-        if (balanceInReferenceCurrency != null) {
-          if (valueInReferenceCurrency == null) {
-            balanceInReferenceCurrency = null;
-          } else {
-            balanceInReferenceCurrency += valueInReferenceCurrency;
-          }
-        }
 
         return {
           id: b.id,
@@ -380,9 +358,6 @@ function LedgerPage() {
               ? -value
               : null,
           balance: isEquity ? null : balance,
-          balanceInReferenceCurrency: isEquity
-            ? null
-            : balanceInReferenceCurrency,
         };
       })
       .reverse();
@@ -484,17 +459,6 @@ function LedgerPage() {
               type: FORMATTED_NUMERIC_COLUMN,
               filter: "agNumberColumnFilter",
             },
-            ...(account.unit === Unit.CURRENCY
-              ? [
-                  {
-                    field: "balanceInReferenceCurrency" as const,
-                    headerName: `Balance (${account.referenceCurrency})`,
-                    width: 170,
-                    type: FORMATTED_NUMERIC_COLUMN,
-                    filter: "agNumberColumnFilter",
-                  },
-                ]
-              : []),
           ]),
       {
         colId: "actions",
@@ -540,15 +504,7 @@ function LedgerPage() {
         },
       },
     ],
-    [
-      account.referenceCurrency,
-      account.unit,
-      accountBookId,
-      handleEditClick,
-      isEquity,
-      isIncome,
-      isExpense,
-    ],
+    [accountBookId, handleEditClick, isEquity, isIncome, isExpense],
   );
 
   const navigate = Route.useNavigate();

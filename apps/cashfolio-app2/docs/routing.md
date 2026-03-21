@@ -75,16 +75,18 @@ functions.
 inside a transaction to update `sortOrder` values after reordering sibling rows
 in the reorder modal.
 
-### Ledger FX Reference Balance
+### Account List FX Reference Balance
 
-- The ledger route (`$accountBookId/$accountId.tsx`) can render a second balance
-  column in the account book reference currency for currency-unit accounts.
+- The account list route (`$accountBookId/index.tsx`) renders `Balance` and
+  `Balance (<referenceCurrency>)` columns.
 - Reference-currency conversion is resolved server-side in
-  `src/server/ledger.ts`, using `src/server/fx.server.ts`.
+  `src/server/accounts.ts`, using `src/server/fx.server.ts`.
 - FX rates are requested from currencylayer historical API and cached in Redis
   TimeSeries keys (`fx:currencylayer:USD:<TARGET_CURRENCY>`).
 - When an exact date is not available, the newest available prior rate is used
   (first from cache, otherwise by historical API backtracking).
+- Ref-currency balances are currently populated for `Unit.CURRENCY` accounts
+  only; security and cryptocurrency rows remain empty in that column.
 
 Required runtime env vars for this feature:
 

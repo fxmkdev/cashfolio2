@@ -10,6 +10,7 @@ import {
   validateAccountGroupInput,
 } from "../shared/account-validation";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
+import { getCurrencyExchangeRate } from "./fx.server";
 
 function getGroupPath(
   groupId: string,
@@ -97,6 +98,19 @@ export const getAccountGroups = createServerFn({ method: "GET" })
       .toSorted((a, b) => a.label.localeCompare(b.label));
   });
 
+export const getAccountBookReferenceCurrency = createServerFn({
+  method: "GET",
+})
+  .inputValidator((data: { accountBookId: string }) => data)
+  .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
+    const accountBook = await prisma.accountBook.findUniqueOrThrow({
+      where: { id: data.accountBookId },
+      select: { referenceCurrency: true },
+    });
+    return accountBook.referenceCurrency;
+  });
+
 export const getAccountTreeData = createServerFn({ method: "GET" })
   .inputValidator(
     (data: {
@@ -175,6 +189,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
       prisma.accountBook.findUniqueOrThrow({
         where: { id: data.accountBookId },
         select: {
+          referenceCurrency: true,
           securityHoldingGainLossAccountGroupId: true,
           cryptoHoldingGainLossAccountGroupId: true,
           fxHoldingGainLossAccountGroupId: true,
@@ -219,58 +234,98 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
     const rawBalanceByAccountId = new Map(
       accountBalances.map((b) => [b.accountId, Number(b._sum.value ?? 0)]),
     );
+    const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
+    const today = new Date();
+    const exchangeRateBySourceCurrency = new Map<string, number | null>();
 
-    const accountRows = accounts.map((a) => {
-      const hasBookings = (bookingCountByAccountId.get(a.id) ?? 0) > 0;
-      const rawBalance = rawBalanceByAccountId.get(a.id) ?? 0;
-      const requiresZeroBalance = a.type === "ASSET" || a.type === "LIABILITY";
-      const hasZeroBalance = !requiresZeroBalance || rawBalance === 0;
-      const hasInactiveAncestor = hasInactiveAncestorGroup(
-        a.groupId,
-        groupById,
-      );
-      const archivable = a.isActive && hasZeroBalance;
-      const unarchivable = !a.isActive && !hasInactiveAncestor;
-      const displayBalance =
-        a.type === "ASSET"
-          ? rawBalance
-          : a.type === "LIABILITY"
-            ? -rawBalance
-            : null;
-      return {
-        id: a.id,
-        nodeType: "account" as "account" | "accountGroup",
-        name: a.name,
-        type: a.type,
-        equityAccountSubtype: a.equityAccountSubtype,
-        unit: a.unit as Unit | null,
-        currency: a.currency as string | null,
-        cryptocurrency: a.cryptocurrency as string | null,
-        symbol: a.symbol as string | null,
-        tradeCurrency: a.tradeCurrency as string | null,
-        balance: displayBalance as number | null,
-        parentId: a.groupId ?? undefined,
-        isActive: a.isActive,
-        groupId: a.groupId ?? undefined,
-        sortOrder: a.sortOrder,
-        deletable: !hasBookings,
-        deleteDisabledReason: hasBookings
-          ? "Cannot delete account because it has bookings"
-          : undefined,
-        archivable,
-        archiveDisabledReason: !a.isActive
-          ? "Account is already archived"
-          : hasZeroBalance
-            ? undefined
-            : "Cannot archive account because its balance is not 0",
-        unarchivable,
-        unarchiveDisabledReason: a.isActive
-          ? "Account is already active"
-          : hasInactiveAncestor
-            ? "Cannot unarchive account because its parent group is archived"
+    const accountRows = await Promise.all(
+      accounts.map(async (a) => {
+        const rawBalance = rawBalanceByAccountId.get(a.id) ?? 0;
+        let rawBalanceInReferenceCurrency: number | null = null;
+        if (a.unit === "CURRENCY" && a.currency) {
+          const sourceCurrency = a.currency.toUpperCase();
+          if (sourceCurrency === referenceCurrency) {
+            rawBalanceInReferenceCurrency = rawBalance;
+          } else {
+            const cachedRate = exchangeRateBySourceCurrency.get(sourceCurrency);
+            const exchangeRate =
+              cachedRate !== undefined
+                ? cachedRate
+                : await getCurrencyExchangeRate({
+                    sourceCurrency,
+                    targetCurrency: referenceCurrency,
+                    date: today,
+                  });
+            if (cachedRate === undefined) {
+              exchangeRateBySourceCurrency.set(sourceCurrency, exchangeRate);
+            }
+            if (exchangeRate != null) {
+              rawBalanceInReferenceCurrency = rawBalance * exchangeRate;
+            }
+          }
+        }
+
+        const hasBookings = (bookingCountByAccountId.get(a.id) ?? 0) > 0;
+        const requiresZeroBalance =
+          a.type === "ASSET" || a.type === "LIABILITY";
+        const hasZeroBalance = !requiresZeroBalance || rawBalance === 0;
+        const hasInactiveAncestor = hasInactiveAncestorGroup(
+          a.groupId,
+          groupById,
+        );
+        const archivable = a.isActive && hasZeroBalance;
+        const unarchivable = !a.isActive && !hasInactiveAncestor;
+        const displayBalance =
+          a.type === "ASSET"
+            ? rawBalance
+            : a.type === "LIABILITY"
+              ? -rawBalance
+              : null;
+        const displayBalanceInReferenceCurrency =
+          rawBalanceInReferenceCurrency == null
+            ? null
+            : a.type === "ASSET"
+              ? rawBalanceInReferenceCurrency
+              : a.type === "LIABILITY"
+                ? -rawBalanceInReferenceCurrency
+                : null;
+
+        return {
+          id: a.id,
+          nodeType: "account" as "account" | "accountGroup",
+          name: a.name,
+          type: a.type,
+          equityAccountSubtype: a.equityAccountSubtype,
+          unit: a.unit as Unit | null,
+          currency: a.currency as string | null,
+          cryptocurrency: a.cryptocurrency as string | null,
+          symbol: a.symbol as string | null,
+          tradeCurrency: a.tradeCurrency as string | null,
+          balance: displayBalance as number | null,
+          balanceInReferenceCurrency: displayBalanceInReferenceCurrency,
+          parentId: a.groupId ?? undefined,
+          isActive: a.isActive,
+          groupId: a.groupId ?? undefined,
+          sortOrder: a.sortOrder,
+          deletable: !hasBookings,
+          deleteDisabledReason: hasBookings
+            ? "Cannot delete account because it has bookings"
             : undefined,
-      };
-    });
+          archivable,
+          archiveDisabledReason: !a.isActive
+            ? "Account is already archived"
+            : hasZeroBalance
+              ? undefined
+              : "Cannot archive account because its balance is not 0",
+          unarchivable,
+          unarchiveDisabledReason: a.isActive
+            ? "Account is already active"
+            : hasInactiveAncestor
+              ? "Cannot unarchive account because its parent group is archived"
+              : undefined,
+        };
+      }),
+    );
 
     let filteredGroups = accountGroups.filter((g) => g.isActive);
     if (accountState === "inactive") {
@@ -355,6 +410,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
         symbol: null as string | null,
         tradeCurrency: null as string | null,
         balance: null as number | null,
+        balanceInReferenceCurrency: null as number | null,
         parentId: ag.parentGroupId ?? undefined,
         isActive: ag.isActive,
         groupId: ag.id,

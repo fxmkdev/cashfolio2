@@ -42,6 +42,7 @@ import {
   deleteAccount,
   deleteAccountGroup,
   getAccountGroups,
+  getAccountBookReferenceCurrency,
   getAccountTreeData,
   reorderAccountTreeItems,
   unarchiveAccount,
@@ -100,22 +101,27 @@ export const Route = createFileRoute("/$accountBookId/")({
       mode === "active"
         ? getAccountGroups({ data: { accountBookId } })
         : Promise.resolve([]);
+    const referenceCurrencyPromise = getAccountBookReferenceCurrency({
+      data: { accountBookId },
+    });
 
-    const [accountGroups, ...treeDataByTab] = await Promise.all([
-      accountGroupsPromise,
-      ...tabs.map((t) =>
-        getAccountTreeData({
-          data: {
-            accountBookId,
-            accountState,
-            type: t.type,
-            ...("equityAccountSubtype" in t
-              ? { equityAccountSubtype: t.equityAccountSubtype }
-              : undefined),
-          },
-        }),
-      ),
-    ]);
+    const [accountGroups, referenceCurrency, ...treeDataByTab] =
+      await Promise.all([
+        accountGroupsPromise,
+        referenceCurrencyPromise,
+        ...tabs.map((t) =>
+          getAccountTreeData({
+            data: {
+              accountBookId,
+              accountState,
+              type: t.type,
+              ...("equityAccountSubtype" in t
+                ? { equityAccountSubtype: t.equityAccountSubtype }
+                : undefined),
+            },
+          }),
+        ),
+      ]);
     const treeData = Object.fromEntries(
       tabs.map((t, i) => [t.value, treeDataByTab[i]]),
     ) as Record<TabValue, Awaited<ReturnType<typeof getAccountTreeData>>>;
@@ -126,7 +132,7 @@ export const Route = createFileRoute("/$accountBookId/")({
       parentId: n.parentId,
       groupId: n.groupId,
     }));
-    return { accountGroups, treeData, existingNodes };
+    return { accountGroups, treeData, existingNodes, referenceCurrency };
   },
   component: AccountsPage,
 });
@@ -153,7 +159,8 @@ function getEntityLabel(nodeType: RowTarget["nodeType"]): string {
 }
 
 function AccountsPage() {
-  const { accountGroups, treeData, existingNodes } = Route.useLoaderData();
+  const { accountGroups, treeData, existingNodes, referenceCurrency } =
+    Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const { tab, mode } = Route.useSearch();
   const navigate = useNavigate({ from: "/$accountBookId/" });
@@ -279,7 +286,7 @@ function AccountsPage() {
               width: 120,
             } satisfies ColDef<TreeRow>,
             {
-              colId: "balance",
+              field: "balance",
               headerName: "Balance",
               width: 130,
               type: FORMATTED_NUMERIC_COLUMN,
@@ -287,6 +294,19 @@ function AccountsPage() {
               valueGetter: ({ data }: { data: TreeRow | undefined }) => {
                 if (!data || data.nodeType !== "account") return null;
                 return data.balance;
+              },
+            } satisfies ColDef<TreeRow>,
+            {
+              field: "balanceInReferenceCurrency",
+              headerName: `Balance (${referenceCurrency})`,
+              width: 170,
+              type: FORMATTED_NUMERIC_COLUMN,
+              filter: "agNumberColumnFilter",
+              valueGetter: ({ data }: { data: TreeRow | undefined }) => {
+                if (!data || data.nodeType !== "account") return null;
+                return data.unit === Unit.CURRENCY
+                  ? data.balanceInReferenceCurrency
+                  : null;
               },
             } satisfies ColDef<TreeRow>,
           ]
@@ -349,6 +369,7 @@ function AccountsPage() {
       handleEditRow,
       handleUnarchiveRow,
       rowsByParentKey,
+      referenceCurrency,
     ],
   );
 
