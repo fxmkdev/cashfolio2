@@ -10,8 +10,8 @@
   "devDependencies": {
     "@types/node": "^24.10.4",
     "commander": "^13.1.0",
-    "dotenv": "^17.2.3",
-    "redis": "^5.10.0",
+    "dotenv": "^17.3.1",
+    "redis": "^5.11.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
