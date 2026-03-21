@@ -200,3 +200,7 @@ export async function resetAndSeedDatabase(): Promise<SeededData> {
     },
   };
 }
+
+export async function disconnectDb(): Promise<void> {
+  await prisma.$disconnect();
+}
