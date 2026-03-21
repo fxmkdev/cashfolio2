@@ -45,9 +45,16 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       - name: Delete Neon branch
+        id: delete-neon-branch
         uses: neondatabase/delete-branch-action@v3
         continue-on-error: true
         with:
           project_id: ${{ vars.NEON_PROJECT_ID }}
           branch: ${{ steps.names.outputs.neon_branch_name }}
           api_key: ${{ secrets.NEON_API_KEY }}
+      - name: Warn if Neon branch deletion failed
+        if: steps.delete-neon-branch.outcome == 'failure'
+        run: |
+          echo "::warning::Failed to delete Neon branch ${NEON_BRANCH_NAME}. It may already be expired or there may be a Neon API/permission issue. Branches are created with a 14-day expiration fallback."
+        env:
+          NEON_BRANCH_NAME: ${{ steps.names.outputs.neon_branch_name }}

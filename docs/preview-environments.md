@@ -19,6 +19,13 @@ On pull requests (non-forks), CI now:
 When a PR is closed, CI deletes the corresponding Fly app and Neon branch (via
 `neondatabase/delete-branch-action`).
 
+Neon branch lifecycle notes:
+
+1. CI sets `expires_at` to 14 days in the create-branch step.
+2. This is a safety fallback in case close-time cleanup fails.
+3. For long-lived PRs without updates, the Neon preview branch can expire before the PR is closed.
+4. A later PR update (`synchronize`) will recreate/reuse the branch name and restore preview DB provisioning.
+
 ## Required GitHub configuration
 
 Dynamic preview jobs create one GitHub environment per PR (`preview-pr-<PR_NUMBER>`)
