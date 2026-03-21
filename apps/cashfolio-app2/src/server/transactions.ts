@@ -25,6 +25,16 @@ export type CreateTransactionInput = {
   }[];
 };
 
+export type CreateSimpleTransactionInput = {
+  accountBookId: string;
+  accountId: string;
+  date: string;
+  description: string;
+  counterAccountId: string;
+  amount: number;
+  direction: "DEBIT" | "CREDIT";
+};
+
 function validateCreateTransaction(input: CreateTransactionInput) {
   const errors: string[] = [];
   const today = startOfDay(new Date());
@@ -246,6 +256,150 @@ export const createTransaction = createServerFn({ method: "POST" })
             sortOrder,
             accountBook: {
               connect: { id: data.accountBookId },
+            },
+          })),
+        },
+      },
+    });
+
+    return transaction;
+  });
+
+export const createSimpleTransaction = createServerFn({ method: "POST" })
+  .inputValidator((data: CreateSimpleTransactionInput) => data)
+  .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
+
+    if (!Number.isFinite(data.amount) || data.amount <= 0) {
+      throw new Error("Amount must be greater than zero.");
+    }
+    if (data.direction !== "DEBIT" && data.direction !== "CREDIT") {
+      throw new Error("Direction must be either DEBIT or CREDIT.");
+    }
+
+    const bookingDate = new Date(data.date);
+    const today = startOfDay(new Date());
+
+    if (isNaN(bookingDate.getTime())) {
+      throw new Error("Date is required.");
+    }
+    if (isAfter(startOfDay(bookingDate), today)) {
+      throw new Error("Date cannot be in the future.");
+    }
+
+    if (data.accountId === data.counterAccountId) {
+      throw new Error(
+        "Counter account must be different from the current account.",
+      );
+    }
+
+    const accounts = await prisma.account.findMany({
+      where: {
+        accountBookId: data.accountBookId,
+        id: { in: [data.accountId, data.counterAccountId] },
+      },
+      select: {
+        id: true,
+        type: true,
+        unit: true,
+        currency: true,
+        isActive: true,
+      },
+    });
+
+    const currentAccount = accounts.find(
+      (account) => account.id === data.accountId,
+    );
+    const counterAccount = accounts.find(
+      (account) => account.id === data.counterAccountId,
+    );
+
+    if (!currentAccount) {
+      throw new Error("Current account was not found.");
+    }
+    if (!counterAccount) {
+      throw new Error("Counter account was not found.");
+    }
+
+    if (
+      currentAccount.type !== AccountType.ASSET &&
+      currentAccount.type !== AccountType.LIABILITY
+    ) {
+      throw new Error(
+        "Simple transactions are only allowed for asset or liability accounts.",
+      );
+    }
+
+    if (currentAccount.unit !== Unit.CURRENCY || !currentAccount.currency) {
+      throw new Error("Current account must be a currency account.");
+    }
+
+    if (!counterAccount.isActive) {
+      throw new Error("Counter account must be active.");
+    }
+
+    if (
+      counterAccount.unit !== Unit.CURRENCY ||
+      counterAccount.currency !== currentAccount.currency
+    ) {
+      throw new Error(
+        "Counter account must use the same currency as the current account.",
+      );
+    }
+
+    const currentValue =
+      data.direction === "DEBIT" ? data.amount : -data.amount;
+    const createInput: CreateTransactionInput = {
+      accountBookId: data.accountBookId,
+      description: data.description,
+      bookings: [
+        {
+          date: bookingDate.toISOString(),
+          accountId: currentAccount.id,
+          description: "",
+          unit: Unit.CURRENCY,
+          currency: currentAccount.currency,
+          value: currentValue,
+        },
+        {
+          date: bookingDate.toISOString(),
+          accountId: counterAccount.id,
+          description: "",
+          unit: Unit.CURRENCY,
+          currency: currentAccount.currency,
+          value: -currentValue,
+        },
+      ],
+    };
+
+    validateCreateTransaction(createInput);
+    await validateAccountTypeBookings(createInput.bookings, data.accountBookId);
+
+    const transaction = await prisma.transaction.create({
+      data: {
+        description: createInput.description,
+        accountBookId: createInput.accountBookId,
+        bookings: {
+          create: createInput.bookings.map((booking, sortOrder) => ({
+            date: new Date(booking.date),
+            description: booking.description,
+            account: {
+              connect: {
+                id_accountBookId: {
+                  id: booking.accountId,
+                  accountBookId: createInput.accountBookId,
+                },
+              },
+            },
+            unit: booking.unit,
+            currency: booking.currency,
+            cryptocurrency: booking.cryptocurrency,
+            symbol: booking.symbol,
+            tradeCurrency: booking.tradeCurrency,
+            value: booking.value,
+            sortOrder,
+            accountBook: {
+              connect: { id: createInput.accountBookId },
             },
           })),
         },

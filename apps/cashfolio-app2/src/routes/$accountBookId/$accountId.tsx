@@ -16,12 +16,18 @@ import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcr
 import { LinkAnchor } from "../../components/link-anchor";
 import { getTypeLabel } from "../../shared/account-utils";
 import { useTransactionScroll } from "../../hooks/use-transaction-scroll";
-import { IconCashPlus, IconPencil, IconTrash } from "@tabler/icons-react";
+import {
+  IconBolt,
+  IconCashPlus,
+  IconPencil,
+  IconTrash,
+} from "@tabler/icons-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { DataGrid } from "../../components/data-grid";
 import { getAccountForLedger, getLedgerData } from "../../server/ledger";
 import { getAccounts } from "../../server/accounts";
 import {
+  createSimpleTransaction,
   createTransaction,
   deleteTransaction,
   getTransaction,
@@ -41,6 +47,7 @@ import {
   EditTransactionModal,
   type AccountOption,
 } from "../../components/edit-transaction-modal";
+import { SimpleTransactionModal } from "../../components/simple-transaction-modal";
 
 export const Route = createFileRoute("/$accountBookId/$accountId")({
   validateSearch: (
@@ -142,6 +149,7 @@ function LedgerPage() {
   const { accountBookId } = Route.useParams();
   const { transactionId } = Route.useSearch();
   const [modalOpened, setModalOpened] = useState(false);
+  const [simpleModalOpened, setSimpleModalOpened] = useState(false);
   const [editModalOpened, setEditModalOpened] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | undefined
@@ -175,6 +183,19 @@ function LedgerPage() {
     );
   }, [account.id, accountOptions, accounts, editingTransactionData]);
 
+  const simpleCounterAccountOptions = useMemo<AccountOption[]>(
+    () =>
+      createAccountOptions(
+        accounts,
+        (candidate) =>
+          candidate.isActive &&
+          candidate.id !== account.id &&
+          candidate.unit === Unit.CURRENCY &&
+          candidate.currency === account.currency,
+      ),
+    [account.currency, account.id, accounts],
+  );
+
   async function handleCreateTransaction(values: {
     description: string;
     bookings: {
@@ -193,6 +214,25 @@ function LedgerPage() {
       data: { accountBookId, ...values },
     });
     setModalOpened(false);
+    pendingScrollRef.current = transaction.id;
+    router.invalidate();
+  }
+
+  async function handleCreateSimpleTransaction(values: {
+    date: string;
+    description: string;
+    counterAccountId: string;
+    amount: number;
+    direction: "DEBIT" | "CREDIT";
+  }) {
+    const transaction = await createSimpleTransaction({
+      data: {
+        accountBookId,
+        accountId: account.id,
+        ...values,
+      },
+    });
+    setSimpleModalOpened(false);
     pendingScrollRef.current = transaction.id;
     router.invalidate();
   }
@@ -446,6 +486,14 @@ function LedgerPage() {
   );
 
   const unitLabel = getUnitLabel(account);
+  const simpleTransactionDisabledReason =
+    account.type !== AccountType.ASSET && account.type !== AccountType.LIABILITY
+      ? "Simple transactions are only available for asset and liability accounts."
+      : account.unit !== Unit.CURRENCY || !account.currency
+        ? "Simple transactions require a currency account."
+        : simpleCounterAccountOptions.length === 0
+          ? "No active same-currency counter account is available."
+          : null;
 
   const backTab = (
     account.type === AccountType.EQUITY && account.equityAccountSubtype
@@ -481,12 +529,27 @@ function LedgerPage() {
             </Badge>
           )}
         </Group>
-        <Button
-          leftSection={<IconCashPlus size={16} />}
-          onClick={() => setModalOpened(true)}
-        >
-          Add Transaction
-        </Button>
+        <Group gap="sm">
+          <Tooltip
+            label={simpleTransactionDisabledReason ?? "Quick two-booking entry"}
+          >
+            <span>
+              <Button
+                leftSection={<IconBolt size={16} />}
+                onClick={() => setSimpleModalOpened(true)}
+                disabled={!!simpleTransactionDisabledReason}
+              >
+                Add Simple Transaction
+              </Button>
+            </span>
+          </Tooltip>
+          <Button
+            leftSection={<IconCashPlus size={16} />}
+            onClick={() => setModalOpened(true)}
+          >
+            Add Transaction
+          </Button>
+        </Group>
       </Group>
 
       <DataGrid
@@ -500,6 +563,20 @@ function LedgerPage() {
         getRowId={({ data }) => data.id}
         onRowDataUpdated={handleRowDataUpdated}
       />
+
+      <Modal
+        opened={simpleModalOpened}
+        onClose={() => setSimpleModalOpened(false)}
+        title="Add Simple Transaction"
+        size="lg"
+      >
+        <SimpleTransactionModal
+          accountName={account.name}
+          accounts={simpleCounterAccountOptions}
+          onClose={() => setSimpleModalOpened(false)}
+          onSubmit={handleCreateSimpleTransaction}
+        />
+      </Modal>
 
       <Modal
         opened={modalOpened}

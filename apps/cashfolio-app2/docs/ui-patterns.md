@@ -181,6 +181,24 @@ with split bookings:
 - **Booking row reordering**: enabled via AG Grid row drag in both create and
   edit flows
 
+## Simple Transaction Creation
+
+`src/components/simple-transaction-modal.tsx` handles quick creation of
+two-booking transactions from the ledger route
+(`src/routes/$accountBookId/$accountId.tsx`).
+
+- Entry fields: date, description, counter account, amount, debit/credit
+  direction (applied to the current account)
+- Always creates exactly 2 bookings:
+  - current account booking
+  - selected counter account booking
+- Both bookings use `Unit.CURRENCY` and the current account currency
+- Availability:
+  - only for current accounts of type `ASSET` or `LIABILITY`
+  - current account must be a currency account
+  - counter account must be active and have the same currency
+- Server-side validation re-checks all constraints before creation
+
 ### Conditional Editability Affordance
 
 - Conditionally non-editable data cells use `cellClassRules` to apply
