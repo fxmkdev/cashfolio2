@@ -148,7 +148,7 @@ jobs:
       - name: Setup
         uses: felixmokross/webplatform/.github/actions/setup@main
       - name: Install dependencies
-        run: pnpm --filter cashfolio-app2 install
+        run: pnpm install
       - name: Run format check
         run: pnpm --filter cashfolio-app2 format
 
