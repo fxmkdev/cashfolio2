@@ -124,6 +124,34 @@ jobs:
             apps/cashfolio-app2/test-results
           if-no-files-found: ignore
 
+  cashfolio-app2-typecheck:
+    name: "cashfolio-app2: Typecheck"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup
+        uses: felixmokross/webplatform/.github/actions/setup@main
+      - name: Install dependencies
+        run: pnpm --filter cashfolio-app2 install
+      - name: Generate Prisma Client
+        run: pnpm --filter cashfolio-app2 prisma:generate
+      - name: Run typecheck
+        run: pnpm --filter cashfolio-app2 typecheck
+
+  cashfolio-app2-format:
+    name: "cashfolio-app2: Format"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup
+        uses: felixmokross/webplatform/.github/actions/setup@main
+      - name: Install dependencies
+        run: pnpm --filter cashfolio-app2 install
+      - name: Run format check
+        run: pnpm --filter cashfolio-app2 format
+
   cashfolio-redis-build-push:
     name: "cashfolio-redis: Build and Push"
     runs-on: ubuntu-latest
@@ -178,6 +206,8 @@ jobs:
       - cashfolio-app-build-push
       - cashfolio-redis-build-push
       - cashfolio-app2-e2e
+      - cashfolio-app2-typecheck
+      - cashfolio-app2-format
     uses: ./.github/workflows/deploy-version.yml
     with:
       version_with_sha: ${{ needs.version.outputs.version_with_sha }}
@@ -194,6 +224,8 @@ jobs:
       - cashfolio-app-build-push
       - cashfolio-redis-build-push
       - cashfolio-app2-e2e
+      - cashfolio-app2-typecheck
+      - cashfolio-app2-format
       - cli-typecheck
     uses: ./.github/workflows/deploy-version.yml
     with:
