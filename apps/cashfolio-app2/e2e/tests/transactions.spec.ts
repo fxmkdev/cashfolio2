@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
+  agGridCellByColId,
   agGridRowByText,
   clickRowAction,
   setGridCellValue,
@@ -124,4 +125,8 @@ test("create simple transaction", async ({ page }) => {
   await simpleDialog.getByRole("button", { name: "Create" }).click();
 
   await expect(agGridRowByText(page, "E2E Simple Transaction")).toBeVisible();
+
+  await page.goto(`/${seeded.accountBookId}/?tab=ASSET&mode=active`);
+  const cashRow = agGridRowByText(page, seeded.cashAccount.name);
+  await expect(agGridCellByColId(cashRow, "balance")).toHaveText("-42.00");
 });

@@ -7,6 +7,10 @@ export function agGridRowByText(page: Page, text: string): Locator {
     .first();
 }
 
+export function agGridCellByColId(row: Locator, colId: string): Locator {
+  return row.locator(`[col-id="${colId}"]`).first();
+}
+
 export async function clickRowAction(
   row: Locator,
   actionLabel: "Edit" | "Delete" | "Archive" | "Unarchive",
