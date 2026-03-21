@@ -74,3 +74,30 @@ functions.
 `reorderAccountTreeItems` (in `accounts.ts`) issues a batch of Prisma updates
 inside a transaction to update `sortOrder` values after reordering sibling rows
 in the reorder modal.
+
+### Account List FX Reference Balance
+
+- The account list route (`$accountBookId/index.tsx`) renders `Balance` and
+  `Balance (<referenceCurrency>)` columns.
+- Reference-currency conversion is resolved server-side in
+  `src/server/accounts.ts`, using `src/server/fx.server.ts`.
+- FX rates are requested from currencylayer historical API and cached in Redis
+  TimeSeries keys (`fx:currencylayer:USD:<TARGET_CURRENCY>`).
+- When an exact date is not available, the newest available prior rate is used
+  (first from cache, otherwise by historical API backtracking).
+- Ref-currency balances are currently populated for `Unit.CURRENCY` accounts
+  only; security and cryptocurrency rows remain empty in that column.
+
+Required runtime env vars for this feature:
+
+- `CURRENCYLAYER_API_KEY`
+- `REDIS_URL` — must point to a Redis deployment with RedisTimeSeries module
+  support (for example, Redis Stack)
+
+`REDIS_URL` should point to the shared staging Redis (with RedisTimeSeries
+support) when preview and staging should share FX cache entries.
+
+Dynamic PR preview deployment (`.github/workflows/build.yml`) sets:
+
+- `CURRENCYLAYER_API_KEY` from `secrets.CURRENCYLAYER_API_KEY`
+- `REDIS_URL` from `secrets.STAGING_REDIS_URL` (shared staging Redis)

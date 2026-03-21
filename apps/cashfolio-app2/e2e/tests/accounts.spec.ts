@@ -94,11 +94,17 @@ test("balance column visibility and baseline values across tabs/modes", async ({
     page.getByRole("columnheader", { name: "Symbol" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("columnheader", { name: "Balance" }),
+    page.getByRole("columnheader", { name: "Balance", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: /^Balance \([A-Z]{3}\)$/ }),
   ).toBeVisible();
 
   const cashRow = agGridRowByText(page, seeded.cashAccount.name);
   await expect(agGridCellByColId(cashRow, "balance")).toHaveText("0.00");
+  await expect(
+    agGridCellByColId(cashRow, "balanceInReferenceCurrency"),
+  ).toHaveText("0.00");
 
   const assetsGroupRow = agGridRowByText(page, "Assets");
   await expect(agGridCellByColId(assetsGroupRow, "balance")).toHaveText(
@@ -110,18 +116,27 @@ test("balance column visibility and baseline values across tabs/modes", async ({
     .filter({ hasText: "Archive" })
     .click();
   await expect(
-    page.getByRole("columnheader", { name: "Balance" }),
+    page.getByRole("columnheader", { name: "Balance", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: /^Balance \([A-Z]{3}\)$/ }),
   ).toBeVisible();
 
   await page.goto(`/${seeded.accountBookId}/?tab=LIABILITY&mode=active`);
   await expect(
-    page.getByRole("columnheader", { name: "Balance" }),
+    page.getByRole("columnheader", { name: "Balance", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: /^Balance \([A-Z]{3}\)$/ }),
   ).toBeVisible();
 
   await page.goto(
     `/${seeded.accountBookId}/?tab=EQUITY-${encodeURIComponent("EXPENSE")}&mode=active`,
   );
-  await expect(page.getByRole("columnheader", { name: "Balance" })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole("columnheader", { name: "Balance", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("columnheader", { name: /^Balance \([A-Z]{3}\)$/ }),
+  ).toHaveCount(0);
 });
