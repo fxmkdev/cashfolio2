@@ -33,9 +33,6 @@ RUN pnpm --filter cashfolio-app2 prisma:generate
 # Build application
 RUN pnpm --filter cashfolio-app2 build
 
-# Remove development dependencies
-RUN pnpm --dir apps/cashfolio-app2 prune --prod
-
 FROM base
 
 # Install openssl needed to run Prisma
