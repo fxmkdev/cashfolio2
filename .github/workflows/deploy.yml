@@ -11,9 +11,9 @@ on:
           - preview
           - staging
           - prod
-      deploy-cashfolio-app:
+      deploy-cashfolio-app2:
         type: boolean
-        description: "Deploy cashfolio-app"
+        description: "Deploy cashfolio-app2"
         default: true
       deploy-cashfolio-redis:
         type: boolean
@@ -39,6 +39,6 @@ jobs:
       version_with_sha: ${{ needs.version.outputs.version_with_sha }}
       sha: ${{ needs.version.outputs.sha }}
       environment: ${{ inputs.environment }}
-      deploy-cashfolio-app: ${{ inputs.deploy-cashfolio-app }}
+      deploy-cashfolio-app2: ${{ inputs.deploy-cashfolio-app2 }}
       deploy-cashfolio-redis: ${{ inputs.deploy-cashfolio-redis }}
     secrets: inherit
