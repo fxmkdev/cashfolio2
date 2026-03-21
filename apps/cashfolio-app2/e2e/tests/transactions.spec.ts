@@ -101,19 +101,28 @@ test("create simple transaction", async ({ page }) => {
   await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
 
   await openCreateSimpleTransaction(page);
+  const simpleDialog = page.getByRole("dialog", {
+    name: "Add Simple Transaction",
+  });
+
   await page.getByLabel("Date").fill("02.01.2026");
   await page.getByLabel("Description").fill("E2E Simple Transaction");
   await page.getByRole("textbox", { name: "Account" }).click();
   await page
-    .getByRole("option", { name: /E2E Savings/ })
+    .getByRole("option", { name: /E2E Expense/ })
     .first()
     .click();
+
+  await expect(
+    simpleDialog.locator('input[type="radio"][value="DEBIT"]'),
+  ).toBeDisabled();
+  await expect(
+    simpleDialog.locator('input[type="radio"][value="CREDIT"]'),
+  ).toBeChecked();
+
   await page.getByLabel("Amount").fill("42");
 
-  await page
-    .getByRole("dialog", { name: "Add Simple Transaction" })
-    .getByRole("button", { name: "Create" })
-    .click();
+  await simpleDialog.getByRole("button", { name: "Create" }).click();
 
   await expect(agGridRowByText(page, "E2E Simple Transaction")).toBeVisible();
 });

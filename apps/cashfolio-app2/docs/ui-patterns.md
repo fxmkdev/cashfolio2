@@ -196,6 +196,10 @@ two-booking transactions from the ledger route
 - If the selected account is equity, the equity booking still receives the
   current account's unit fields
 - Amount input shows the active unit label in the left section
+- For equity account-type restrictions:
+  - selecting an `INCOME` account forces `Debit` on the current account
+  - selecting an `EXPENSE` account forces `Credit` on the current account
+  - the debit/credit segmented control is disabled while forced
 - Availability:
   - only for current accounts of type `ASSET` or `LIABILITY`
   - current account must have a complete unit identifier

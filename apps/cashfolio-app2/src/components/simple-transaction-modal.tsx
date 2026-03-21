@@ -1,4 +1,5 @@
 import {
+  Badge,
   Button,
   Group,
   SegmentedControl,
@@ -9,12 +10,21 @@ import {
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { isAfter, parse, startOfDay } from "date-fns";
+import { useEffect } from "react";
 import { AccountType, Unit } from "../.prisma-client/enums";
 import { isExpenseAccount, isIncomeAccount } from "../shared/account-utils";
 import type { AccountOption } from "./edit-transaction-modal";
 import { FormattedNumberInput } from "./formatted-number-input";
 
 type Direction = "DEBIT" | "CREDIT";
+
+function getForcedDirection(
+  account: AccountOption | undefined,
+): Direction | null {
+  if (isIncomeAccount(account)) return "DEBIT";
+  if (isExpenseAccount(account)) return "CREDIT";
+  return null;
+}
 
 export function SimpleTransactionModal({
   currentAccount,
@@ -42,7 +52,7 @@ export function SimpleTransactionModal({
   const today = startOfDay(new Date());
 
   const form = useForm({
-    mode: "uncontrolled",
+    mode: "controlled",
     initialValues: {
       date: today,
       description: "",
@@ -89,11 +99,18 @@ export function SimpleTransactionModal({
   const selectedAccount = accounts.find(
     (account) => account.value === form.values.counterAccountId,
   );
+  const forcedDirection = getForcedDirection(selectedAccount);
   const unitLabel = getUnitLabel(
     selectedAccount && selectedAccount.type !== AccountType.EQUITY
       ? selectedAccount
       : currentAccount,
   );
+
+  useEffect(() => {
+    if (forcedDirection && form.values.direction !== forcedDirection) {
+      form.setFieldValue("direction", forcedDirection);
+    }
+  }, [forcedDirection, form.values.direction]);
 
   return (
     <form
@@ -105,7 +122,7 @@ export function SimpleTransactionModal({
             description: values.description,
             counterAccountId: values.counterAccountId,
             amount: Number(values.amount),
-            direction: values.direction,
+            direction: forcedDirection ?? values.direction,
           });
         })(event)
       }
@@ -142,6 +159,7 @@ export function SimpleTransactionModal({
               { value: "DEBIT", label: "Debit" },
               { value: "CREDIT", label: "Credit" },
             ]}
+            disabled={forcedDirection !== null}
             mt={24}
             {...form.getInputProps("direction")}
           />
@@ -152,8 +170,14 @@ export function SimpleTransactionModal({
             hideControls
             locale="en-CH"
             w={220}
-            leftSection={unitLabel ?? undefined}
-            leftSectionWidth={70}
+            leftSection={
+              unitLabel ? (
+                <Badge size="xs" fz="0.62rem" px={5}>
+                  {unitLabel}
+                </Badge>
+              ) : undefined
+            }
+            leftSectionWidth={82}
             {...form.getInputProps("amount")}
           />
         </Group>

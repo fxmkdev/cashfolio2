@@ -99,8 +99,34 @@ async function validateAccountTypeBookings(
     where: { id: { in: accountIds }, accountBookId },
     select: { id: true, type: true, equityAccountSubtype: true },
   });
-  const accountMap = new Map(accounts.map((a) => [a.id, a]));
+  const accountMap = new Map(
+    accounts.map((account) => [account.id, accountTypeMeta(account)]),
+  );
+  validateAccountTypeBookingsWithAccounts(bookings, accountMap);
+}
 
+type AccountTypeMeta = {
+  id: string;
+  type: AccountType;
+  equityAccountSubtype: EquityAccountSubtype | null;
+};
+
+function accountTypeMeta(account: {
+  id: string;
+  type: AccountType;
+  equityAccountSubtype: EquityAccountSubtype | null;
+}): AccountTypeMeta {
+  return {
+    id: account.id,
+    type: account.type,
+    equityAccountSubtype: account.equityAccountSubtype,
+  };
+}
+
+function validateAccountTypeBookingsWithAccounts(
+  bookings: { accountId: string; value: number }[],
+  accountMap: Map<string, AccountTypeMeta>,
+) {
   const errors: string[] = [];
   for (let i = 0; i < bookings.length; i++) {
     const b = bookings[i];
@@ -127,6 +153,37 @@ async function validateAccountTypeBookings(
   if (errors.length > 0) {
     throw new Error(errors.join(" "));
   }
+}
+
+function buildTransactionCreateData(input: CreateTransactionInput) {
+  return {
+    description: input.description,
+    accountBookId: input.accountBookId,
+    bookings: {
+      create: input.bookings.map((booking, sortOrder) => ({
+        date: new Date(booking.date),
+        description: booking.description,
+        account: {
+          connect: {
+            id_accountBookId: {
+              id: booking.accountId,
+              accountBookId: input.accountBookId,
+            },
+          },
+        },
+        unit: booking.unit,
+        currency: booking.currency,
+        cryptocurrency: booking.cryptocurrency,
+        symbol: booking.symbol,
+        tradeCurrency: booking.tradeCurrency,
+        value: booking.value,
+        sortOrder,
+        accountBook: {
+          connect: { id: input.accountBookId },
+        },
+      })),
+    },
+  };
 }
 
 type SimpleUnitFields = {
@@ -290,34 +347,7 @@ export const createTransaction = createServerFn({ method: "POST" })
     await validateAccountTypeBookings(data.bookings, data.accountBookId);
 
     const transaction = await prisma.transaction.create({
-      data: {
-        description: data.description,
-        accountBookId: data.accountBookId,
-        bookings: {
-          create: data.bookings.map((b, sortOrder) => ({
-            date: new Date(b.date),
-            description: b.description,
-            account: {
-              connect: {
-                id_accountBookId: {
-                  id: b.accountId,
-                  accountBookId: data.accountBookId,
-                },
-              },
-            },
-            unit: b.unit,
-            currency: b.currency,
-            cryptocurrency: b.cryptocurrency,
-            symbol: b.symbol,
-            tradeCurrency: b.tradeCurrency,
-            value: b.value,
-            sortOrder,
-            accountBook: {
-              connect: { id: data.accountBookId },
-            },
-          })),
-        },
-      },
+      data: buildTransactionCreateData(data),
     });
 
     return transaction;
@@ -359,6 +389,7 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
       select: {
         id: true,
         type: true,
+        equityAccountSubtype: true,
         unit: true,
         currency: true,
         cryptocurrency: true,
@@ -391,10 +422,6 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
       );
     }
 
-    if (currentAccount.unit !== Unit.CURRENCY || !currentAccount.currency) {
-      throw new Error("Current account must be a currency account.");
-    }
-
     if (!counterAccount.isActive) {
       throw new Error("Account must be active.");
     }
@@ -424,6 +451,25 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
       }
     }
 
+    if (
+      counterAccount.type === AccountType.EQUITY &&
+      counterAccount.equityAccountSubtype === EquityAccountSubtype.INCOME &&
+      data.direction !== "DEBIT"
+    ) {
+      throw new Error(
+        "Income accounts require a debit on the current account.",
+      );
+    }
+    if (
+      counterAccount.type === AccountType.EQUITY &&
+      counterAccount.equityAccountSubtype === EquityAccountSubtype.EXPENSE &&
+      data.direction !== "CREDIT"
+    ) {
+      throw new Error(
+        "Expense accounts require a credit on the current account.",
+      );
+    }
+
     const bookingUnitFields = getBookingUnitFields(currentAccount);
 
     const currentValue =
@@ -450,37 +496,16 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
     };
 
     validateCreateTransaction(createInput);
-    await validateAccountTypeBookings(createInput.bookings, data.accountBookId);
+    const accountMap = new Map(
+      [currentAccount, counterAccount].map((account) => [
+        account.id,
+        accountTypeMeta(account),
+      ]),
+    );
+    validateAccountTypeBookingsWithAccounts(createInput.bookings, accountMap);
 
     const transaction = await prisma.transaction.create({
-      data: {
-        description: createInput.description,
-        accountBookId: createInput.accountBookId,
-        bookings: {
-          create: createInput.bookings.map((booking, sortOrder) => ({
-            date: new Date(booking.date),
-            description: booking.description,
-            account: {
-              connect: {
-                id_accountBookId: {
-                  id: booking.accountId,
-                  accountBookId: createInput.accountBookId,
-                },
-              },
-            },
-            unit: booking.unit,
-            currency: booking.currency,
-            cryptocurrency: booking.cryptocurrency,
-            symbol: booking.symbol,
-            tradeCurrency: booking.tradeCurrency,
-            value: booking.value,
-            sortOrder,
-            accountBook: {
-              connect: { id: createInput.accountBookId },
-            },
-          })),
-        },
-      },
+      data: buildTransactionCreateData(createInput),
     });
 
     return transaction;
