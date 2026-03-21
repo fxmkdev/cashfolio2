@@ -2,6 +2,8 @@ import { getRedisClient } from "../redis.server";
 
 const BASE_CURRENCY = "USD";
 const MAX_BACKTRACK_DAYS = 30;
+const CURRENCYLAYER_TIMEOUT_MS = 10_000;
+const FX_SERIES_RETENTION_MS = 10 * 365 * 24 * 60 * 60 * 1000;
 
 type CurrencyLayerHistoricalResponse = {
   success: boolean;
@@ -83,7 +85,10 @@ async function storeCachedRate(
   const redis = await getRedisClient();
   if (!redis) return;
 
-  await redis.ts.add(key, timestamp, rate, { ON_DUPLICATE: "LAST" });
+  await redis.ts.add(key, timestamp, rate, {
+    ON_DUPLICATE: "LAST",
+    RETENTION: FX_SERIES_RETENTION_MS,
+  });
 }
 
 async function fetchUsdToCurrencyRateFromCurrencyLayer(
@@ -100,7 +105,28 @@ async function fetchUsdToCurrencyRateFromCurrencyLayer(
     date: toDayString(date),
   });
   const url = `https://api.currencylayer.com/historical?${params.toString()}`;
-  const response = await fetch(url);
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    CURRENCYLAYER_TIMEOUT_MS,
+  );
+  let response: Response;
+  try {
+    response = await fetch(url, { signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      console.warn("Currencylayer request timed out", {
+        targetCurrency,
+        date: toDayString(date),
+        timeoutMs: CURRENCYLAYER_TIMEOUT_MS,
+      });
+      return null;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+
   if (!response.ok) {
     throw new Error(
       `Currencylayer request failed with ${response.status} ${response.statusText}`,

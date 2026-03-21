@@ -232,9 +232,16 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
       accounts.map(async (a) => {
         const rawBalance = rawBalanceByAccountId.get(a.id) ?? 0;
         let rawBalanceInReferenceCurrency: number | null = null;
-        if (a.unit === "CURRENCY" && a.currency) {
+        const shouldComputeReferenceBalance =
+          (a.type === "ASSET" || a.type === "LIABILITY") &&
+          a.unit === "CURRENCY" &&
+          Boolean(a.currency);
+
+        if (shouldComputeReferenceBalance && a.currency) {
           const sourceCurrency = a.currency.toUpperCase();
-          if (sourceCurrency === referenceCurrency) {
+          if (rawBalance === 0) {
+            rawBalanceInReferenceCurrency = 0;
+          } else if (sourceCurrency === referenceCurrency) {
             rawBalanceInReferenceCurrency = rawBalance;
           } else {
             const existingPromise =
