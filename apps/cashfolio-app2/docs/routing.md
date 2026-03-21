@@ -89,6 +89,8 @@ in the reorder modal.
   security and cryptocurrency rows remain empty in that column.
 - Group rows in `Balance (<referenceCurrency>)` show aggregated sums of
   descendant `Unit.CURRENCY` account balances.
+- If any descendant `Unit.CURRENCY` balance is unavailable (`null`), the group
+  row remains blank to avoid displaying a partial aggregate.
 
 Required runtime env vars for this feature:
 

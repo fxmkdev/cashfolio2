@@ -214,51 +214,80 @@ function AccountsPage() {
   }, [rowsByParentKey, reorderingRow]);
 
   const balanceInReferenceCurrencyByGroupId = useMemo(() => {
-    const groupSumByGroupId = new Map<string, number | null>();
+    type GroupBalanceAggregation = {
+      sum: number;
+      hasCurrencyDescendants: boolean;
+      hasMissingReferenceBalance: boolean;
+    };
 
-    const calculateGroupSum = (
+    const groupAggregationByGroupId = new Map<
+      string,
+      GroupBalanceAggregation
+    >();
+    const groupsBeingVisited = new Set<string>();
+
+    const calculateGroupAggregation = (
       groupId: string,
-    ): { sum: number; hasValue: boolean } => {
-      if (groupSumByGroupId.has(groupId)) {
-        const existing = groupSumByGroupId.get(groupId);
-        return { sum: existing ?? 0, hasValue: existing != null };
+    ): GroupBalanceAggregation => {
+      const cachedAggregation = groupAggregationByGroupId.get(groupId);
+      if (cachedAggregation) {
+        return cachedAggregation;
       }
 
-      const children = rowsByParentKey.get(groupId) ?? [];
+      if (groupsBeingVisited.has(groupId)) {
+        return {
+          sum: 0,
+          hasCurrencyDescendants: false,
+          hasMissingReferenceBalance: true,
+        };
+      }
+
+      groupsBeingVisited.add(groupId);
+
       let sum = 0;
-      let hasValue = false;
+      let hasCurrencyDescendants = false;
+      let hasMissingReferenceBalance = false;
+      const children = rowsByParentKey.get(groupId) ?? [];
 
       for (const child of children) {
         if (child.nodeType === "account") {
-          if (
-            child.unit === Unit.CURRENCY &&
-            child.balanceInReferenceCurrency != null
-          ) {
+          if (child.unit !== Unit.CURRENCY) continue;
+
+          hasCurrencyDescendants = true;
+          if (child.balanceInReferenceCurrency == null) {
+            hasMissingReferenceBalance = true;
+          } else {
             sum += child.balanceInReferenceCurrency;
-            hasValue = true;
           }
           continue;
         }
 
-        const childSum = calculateGroupSum(child.id);
-        if (childSum.hasValue) {
-          sum += childSum.sum;
-          hasValue = true;
-        }
+        const childAggregation = calculateGroupAggregation(child.id);
+        sum += childAggregation.sum;
+        hasCurrencyDescendants =
+          hasCurrencyDescendants || childAggregation.hasCurrencyDescendants;
+        hasMissingReferenceBalance =
+          hasMissingReferenceBalance ||
+          childAggregation.hasMissingReferenceBalance;
       }
 
-      const groupSum = hasValue ? sum : null;
-      groupSumByGroupId.set(groupId, groupSum);
-      return { sum: groupSum ?? 0, hasValue };
+      groupsBeingVisited.delete(groupId);
+
+      const aggregation: GroupBalanceAggregation = {
+        sum,
+        hasCurrencyDescendants,
+        hasMissingReferenceBalance,
+      };
+      groupAggregationByGroupId.set(groupId, aggregation);
+      return aggregation;
     };
 
     for (const row of treeData[tab]) {
-      if (row.nodeType === "accountGroup") {
-        calculateGroupSum(row.id);
-      }
+      if (row.nodeType !== "accountGroup") continue;
+      calculateGroupAggregation(row.id);
     }
 
-    return groupSumByGroupId;
+    return groupAggregationByGroupId;
   }, [rowsByParentKey, treeData, tab]);
 
   const handleEditRow = useCallback((data: TreeRow) => {
@@ -356,7 +385,16 @@ function AccountsPage() {
                     ? data.balanceInReferenceCurrency
                     : null;
                 }
-                return balanceInReferenceCurrencyByGroupId.get(data.id) ?? null;
+                const groupAggregation =
+                  balanceInReferenceCurrencyByGroupId.get(data.id);
+                if (
+                  !groupAggregation ||
+                  !groupAggregation.hasCurrencyDescendants ||
+                  groupAggregation.hasMissingReferenceBalance
+                ) {
+                  return null;
+                }
+                return groupAggregation.sum;
               },
             } satisfies ColDef<TreeRow>,
           ]

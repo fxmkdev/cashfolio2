@@ -81,6 +81,9 @@ Route-level logic that doesn't belong in components is extracted into hooks in
 - `Balance` is account-level only (group rows are blank), with no aggregation.
 - `Balance (<referenceCurrency>)` is account-level for `Unit.CURRENCY` rows and
   shows aggregated descendant sums on group rows.
+- If any descendant `Unit.CURRENCY` account in a group cannot be converted
+  (blank `Balance (<referenceCurrency>)`), that group row stays blank in this
+  column to avoid partial totals.
 - Balances are displayed in each account's own unit/currency; no conversion.
 - Liability balances are sign-adjusted for display (same direction as ledger
   display conventions).
