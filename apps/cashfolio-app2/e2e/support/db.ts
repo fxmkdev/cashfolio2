@@ -25,9 +25,10 @@ function assertSafeResetTarget() {
 
   const parsedUrl = new URL(databaseUrl);
   const allowedHosts = new Set(["127.0.0.1", "localhost", "postgres"]);
+  const allowedDatabaseNames = new Set(["postgres", "cashfolio"]);
   const databaseName = parsedUrl.pathname.replace(/^\//, "");
   const isAllowedDatabase =
-    databaseName === "postgres" ||
+    allowedDatabaseNames.has(databaseName) ||
     /(?:^|[_-])(test|e2e)(?:$|[_-])/i.test(databaseName);
 
   if (!allowedHosts.has(parsedUrl.hostname) || !isAllowedDatabase) {
