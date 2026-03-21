@@ -94,7 +94,7 @@ test("balance column visibility and baseline values across tabs/modes", async ({
     page.getByRole("columnheader", { name: "Symbol" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("columnheader", { name: "Balance" }),
+    page.getByRole("columnheader", { name: "Balance", exact: true }),
   ).toBeVisible();
 
   const cashRow = agGridRowByText(page, seeded.cashAccount.name);
@@ -110,18 +110,18 @@ test("balance column visibility and baseline values across tabs/modes", async ({
     .filter({ hasText: "Archive" })
     .click();
   await expect(
-    page.getByRole("columnheader", { name: "Balance" }),
+    page.getByRole("columnheader", { name: "Balance", exact: true }),
   ).toBeVisible();
 
   await page.goto(`/${seeded.accountBookId}/?tab=LIABILITY&mode=active`);
   await expect(
-    page.getByRole("columnheader", { name: "Balance" }),
+    page.getByRole("columnheader", { name: "Balance", exact: true }),
   ).toBeVisible();
 
   await page.goto(
     `/${seeded.accountBookId}/?tab=EQUITY-${encodeURIComponent("EXPENSE")}&mode=active`,
   );
-  await expect(page.getByRole("columnheader", { name: "Balance" })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole("columnheader", { name: "Balance", exact: true }),
+  ).toHaveCount(0);
 });
