@@ -216,7 +216,7 @@ function AccountsPage() {
   const balanceInReferenceCurrencyByGroupId = useMemo(() => {
     type GroupBalanceAggregation = {
       sum: number;
-      hasCurrencyDescendants: boolean;
+      hasAccountDescendants: boolean;
       hasMissingReferenceBalance: boolean;
     };
 
@@ -234,15 +234,13 @@ function AccountsPage() {
       }
 
       let sum = 0;
-      let hasCurrencyDescendants = false;
+      let hasAccountDescendants = false;
       let hasMissingReferenceBalance = false;
       const children = rowsByParentKey.get(groupId) ?? [];
 
       for (const child of children) {
         if (child.nodeType === "account") {
-          if (child.unit !== Unit.CURRENCY) continue;
-
-          hasCurrencyDescendants = true;
+          hasAccountDescendants = true;
           if (child.balanceInReferenceCurrency == null) {
             hasMissingReferenceBalance = true;
           } else {
@@ -253,8 +251,8 @@ function AccountsPage() {
 
         const childAggregation = calculateGroupAggregation(child.id);
         sum += childAggregation.sum;
-        hasCurrencyDescendants =
-          hasCurrencyDescendants || childAggregation.hasCurrencyDescendants;
+        hasAccountDescendants =
+          hasAccountDescendants || childAggregation.hasAccountDescendants;
         hasMissingReferenceBalance =
           hasMissingReferenceBalance ||
           childAggregation.hasMissingReferenceBalance;
@@ -262,7 +260,7 @@ function AccountsPage() {
 
       const aggregation: GroupBalanceAggregation = {
         sum,
-        hasCurrencyDescendants,
+        hasAccountDescendants,
         hasMissingReferenceBalance,
       };
       groupAggregationByGroupId.set(groupId, aggregation);
@@ -376,7 +374,7 @@ function AccountsPage() {
                   balanceInReferenceCurrencyByGroupId.get(data.id);
                 if (
                   !groupAggregation ||
-                  !groupAggregation.hasCurrencyDescendants ||
+                  !groupAggregation.hasAccountDescendants ||
                   groupAggregation.hasMissingReferenceBalance
                 ) {
                   return null;
