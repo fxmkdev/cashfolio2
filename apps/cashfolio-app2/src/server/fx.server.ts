@@ -1,4 +1,3 @@
-import { format, subDays } from "date-fns";
 import { getRedisClient } from "../redis.server";
 
 const BASE_CURRENCY = "USD";
@@ -18,11 +17,22 @@ type CachedRateResult = {
 let hasWarnedMissingCurrencyLayerApiKey = false;
 
 function toDayString(date: Date): string {
-  return format(date, "yyyy-MM-dd");
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function toSeriesTimestamp(date: Date): number {
-  return Date.parse(`${toDayString(date)}T00:00:00.000Z`);
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+function toUtcDay(date: Date): Date {
+  return new Date(toSeriesTimestamp(date));
+}
+
+function subUtcDay(date: Date): Date {
+  return new Date(date.getTime() - 24 * 60 * 60 * 1000);
 }
 
 function getRedisSeriesKey(targetCurrency: string): string {
@@ -57,7 +67,7 @@ async function getCachedRate(
     return { rate: exactEntry.value, timestamp: exactEntry.timestamp };
   }
 
-  const [latestEntry] = await redis.ts.revRange(key, "-", timestamp, {
+  const [latestEntry] = await redis.ts.revRange(key, timestamp, "-", {
     COUNT: 1,
   });
   if (!latestEntry) return null;
@@ -122,17 +132,29 @@ async function getUsdToCurrencyRate(
   const cached = await getCachedRate(key, requestedTimestamp);
   if (cached) return cached.rate;
 
-  let requestedDate = date;
+  let requestedDate = toUtcDay(date);
   for (let i = 0; i <= MAX_BACKTRACK_DAYS; i++) {
     const fetchedRate = await fetchUsdToCurrencyRateFromCurrencyLayer(
       targetCurrency,
       requestedDate,
     );
     if (fetchedRate != null) {
-      await storeCachedRate(key, toSeriesTimestamp(requestedDate), fetchedRate);
+      try {
+        await storeCachedRate(
+          key,
+          toSeriesTimestamp(requestedDate),
+          fetchedRate,
+        );
+      } catch (error) {
+        console.error(
+          "Failed to cache FX rate",
+          { key, requestedDate: requestedDate.toISOString() },
+          error,
+        );
+      }
       return fetchedRate;
     }
-    requestedDate = subDays(requestedDate, 1);
+    requestedDate = subUtcDay(requestedDate);
   }
 
   return null;

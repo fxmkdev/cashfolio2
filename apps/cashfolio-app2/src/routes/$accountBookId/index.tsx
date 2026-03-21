@@ -42,7 +42,6 @@ import {
   deleteAccount,
   deleteAccountGroup,
   getAccountGroups,
-  getAccountBookReferenceCurrency,
   getAccountTreeData,
   reorderAccountTreeItems,
   unarchiveAccount,
@@ -101,43 +100,43 @@ export const Route = createFileRoute("/$accountBookId/")({
       mode === "active"
         ? getAccountGroups({ data: { accountBookId } })
         : Promise.resolve([]);
-    const referenceCurrencyPromise = getAccountBookReferenceCurrency({
-      data: { accountBookId },
-    });
-
-    const [accountGroups, referenceCurrency, ...treeDataByTab] =
-      await Promise.all([
-        accountGroupsPromise,
-        referenceCurrencyPromise,
-        ...tabs.map((t) =>
-          getAccountTreeData({
-            data: {
-              accountBookId,
-              accountState,
-              type: t.type,
-              ...("equityAccountSubtype" in t
-                ? { equityAccountSubtype: t.equityAccountSubtype }
-                : undefined),
-            },
-          }),
-        ),
-      ]);
+    const [accountGroups, ...treeDataByTab] = await Promise.all([
+      accountGroupsPromise,
+      ...tabs.map((t) =>
+        getAccountTreeData({
+          data: {
+            accountBookId,
+            accountState,
+            type: t.type,
+            ...("equityAccountSubtype" in t
+              ? { equityAccountSubtype: t.equityAccountSubtype }
+              : undefined),
+          },
+        }),
+      ),
+    ]);
+    const referenceCurrency = treeDataByTab[0].referenceCurrency;
     const treeData = Object.fromEntries(
-      tabs.map((t, i) => [t.value, treeDataByTab[i]]),
-    ) as Record<TabValue, Awaited<ReturnType<typeof getAccountTreeData>>>;
-    const existingNodes = treeDataByTab.flat().map((n) => ({
-      id: n.id,
-      name: n.name,
-      nodeType: n.nodeType,
-      parentId: n.parentId,
-      groupId: n.groupId,
-    }));
+      tabs.map((t, i) => [t.value, treeDataByTab[i].rows]),
+    ) as Record<
+      TabValue,
+      Awaited<ReturnType<typeof getAccountTreeData>>["rows"]
+    >;
+    const existingNodes = treeDataByTab.flatMap((tabData) =>
+      tabData.rows.map((n) => ({
+        id: n.id,
+        name: n.name,
+        nodeType: n.nodeType,
+        parentId: n.parentId,
+        groupId: n.groupId,
+      })),
+    );
     return { accountGroups, treeData, existingNodes, referenceCurrency };
   },
   component: AccountsPage,
 });
 
-type TreeRow = Awaited<ReturnType<typeof getAccountTreeData>>[number];
+type TreeRow = Awaited<ReturnType<typeof getAccountTreeData>>["rows"][number];
 const ROOT_PARENT_KEY = "__root__";
 
 type RowTarget = {

@@ -91,10 +91,11 @@ in the reorder modal.
 Required runtime env vars for this feature:
 
 - `CURRENCYLAYER_API_KEY`
-- `REDIS_URL`
+- `REDIS_URL` — must point to a Redis deployment with RedisTimeSeries module
+  support (for example, Redis Stack)
 
-`REDIS_URL` should point to the shared staging Redis when preview and staging
-should share FX cache entries.
+`REDIS_URL` should point to the shared staging Redis (with RedisTimeSeries
+support) when preview and staging should share FX cache entries.
 
 Dynamic PR preview deployment (`.github/workflows/build.yml`) sets:
 

@@ -98,19 +98,6 @@ export const getAccountGroups = createServerFn({ method: "GET" })
       .toSorted((a, b) => a.label.localeCompare(b.label));
   });
 
-export const getAccountBookReferenceCurrency = createServerFn({
-  method: "GET",
-})
-  .inputValidator((data: { accountBookId: string }) => data)
-  .handler(async ({ data }) => {
-    await ensureAuthorizedForAccountBookId(data.accountBookId);
-    const accountBook = await prisma.accountBook.findUniqueOrThrow({
-      where: { id: data.accountBookId },
-      select: { referenceCurrency: true },
-    });
-    return accountBook.referenceCurrency;
-  });
-
 export const getAccountTreeData = createServerFn({ method: "GET" })
   .inputValidator(
     (data: {
@@ -236,7 +223,10 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
     );
     const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
     const today = new Date();
-    const exchangeRateBySourceCurrency = new Map<string, number | null>();
+    const exchangeRateBySourceCurrency = new Map<
+      string,
+      Promise<number | null>
+    >();
 
     const accountRows = await Promise.all(
       accounts.map(async (a) => {
@@ -247,18 +237,23 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
           if (sourceCurrency === referenceCurrency) {
             rawBalanceInReferenceCurrency = rawBalance;
           } else {
-            const cachedRate = exchangeRateBySourceCurrency.get(sourceCurrency);
-            const exchangeRate =
-              cachedRate !== undefined
-                ? cachedRate
-                : await getCurrencyExchangeRate({
-                    sourceCurrency,
-                    targetCurrency: referenceCurrency,
-                    date: today,
-                  });
-            if (cachedRate === undefined) {
-              exchangeRateBySourceCurrency.set(sourceCurrency, exchangeRate);
+            const existingPromise =
+              exchangeRateBySourceCurrency.get(sourceCurrency);
+            const exchangeRatePromise =
+              existingPromise ??
+              getCurrencyExchangeRate({
+                sourceCurrency,
+                targetCurrency: referenceCurrency,
+                date: today,
+              });
+            if (!existingPromise) {
+              exchangeRateBySourceCurrency.set(
+                sourceCurrency,
+                exchangeRatePromise,
+              );
             }
+
+            const exchangeRate = await exchangeRatePromise;
             if (exchangeRate != null) {
               rawBalanceInReferenceCurrency = rawBalance * exchangeRate;
             }
@@ -454,7 +449,10 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
       }
       return a.name.localeCompare(b.name);
     });
-    return allRows;
+    return {
+      referenceCurrency: accountBook.referenceCurrency,
+      rows: allRows,
+    };
   });
 
 export type AccountInput = {
