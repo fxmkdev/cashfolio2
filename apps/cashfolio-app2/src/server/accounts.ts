@@ -216,21 +216,27 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
     const bookingCountByAccountId = new Map(
       bookingCounts.map((b) => [b.accountId, b._count]),
     );
-    const balanceByAccountId = new Map(
+    const rawBalanceByAccountId = new Map(
       accountBalances.map((b) => [b.accountId, Number(b._sum.value ?? 0)]),
     );
 
     const accountRows = accounts.map((a) => {
       const hasBookings = (bookingCountByAccountId.get(a.id) ?? 0) > 0;
+      const rawBalance = rawBalanceByAccountId.get(a.id) ?? 0;
       const requiresZeroBalance = a.type === "ASSET" || a.type === "LIABILITY";
-      const hasZeroBalance =
-        !requiresZeroBalance || (balanceByAccountId.get(a.id) ?? 0) === 0;
+      const hasZeroBalance = !requiresZeroBalance || rawBalance === 0;
       const hasInactiveAncestor = hasInactiveAncestorGroup(
         a.groupId,
         groupById,
       );
       const archivable = a.isActive && hasZeroBalance;
       const unarchivable = !a.isActive && !hasInactiveAncestor;
+      const displayBalance =
+        a.type === "ASSET"
+          ? rawBalance
+          : a.type === "LIABILITY"
+            ? -rawBalance
+            : null;
       return {
         id: a.id,
         nodeType: "account" as "account" | "accountGroup",
@@ -242,6 +248,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
         cryptocurrency: a.cryptocurrency as string | null,
         symbol: a.symbol as string | null,
         tradeCurrency: a.tradeCurrency as string | null,
+        balance: displayBalance as number | null,
         parentId: a.groupId ?? undefined,
         isActive: a.isActive,
         groupId: a.groupId ?? undefined,
@@ -347,6 +354,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
         cryptocurrency: null as string | null,
         symbol: null as string | null,
         tradeCurrency: null as string | null,
+        balance: null as number | null,
         parentId: ag.parentGroupId ?? undefined,
         isActive: ag.isActive,
         groupId: ag.id,

@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { agGridRowByText, clickRowAction } from "../support/grid";
+import {
+  agGridCellByColId,
+  agGridRowByText,
+  clickRowAction,
+} from "../support/grid";
 import { resetAndSeedDatabase, type SeededData } from "../support/db";
 
 let seeded: SeededData;
@@ -78,4 +82,46 @@ test("navigate from accounts grid to ledger", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: /Add (Split )?Transaction/ }),
   ).toBeVisible();
+});
+
+test("balance column visibility and baseline values across tabs/modes", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/?tab=ASSET&mode=active`);
+
+  await expect(page.getByRole("columnheader", { name: "Ccy." })).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Symbol" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Balance" }),
+  ).toBeVisible();
+
+  const cashRow = agGridRowByText(page, seeded.cashAccount.name);
+  await expect(agGridCellByColId(cashRow, "balance")).toHaveText("0.00");
+
+  const assetsGroupRow = agGridRowByText(page, "Assets");
+  await expect(agGridCellByColId(assetsGroupRow, "balance")).toHaveText(
+    /^\s*$/,
+  );
+
+  await page
+    .getByRole("button", { name: "Archive" })
+    .filter({ hasText: "Archive" })
+    .click();
+  await expect(
+    page.getByRole("columnheader", { name: "Balance" }),
+  ).toBeVisible();
+
+  await page.goto(`/${seeded.accountBookId}/?tab=LIABILITY&mode=active`);
+  await expect(
+    page.getByRole("columnheader", { name: "Balance" }),
+  ).toBeVisible();
+
+  await page.goto(
+    `/${seeded.accountBookId}/?tab=EQUITY-${encodeURIComponent("EXPENSE")}&mode=active`,
+  );
+  await expect(page.getByRole("columnheader", { name: "Balance" })).toHaveCount(
+    0,
+  );
 });

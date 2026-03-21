@@ -74,6 +74,14 @@ Route-level logic that doesn't belong in components is extracted into hooks in
 - Breadcrumb links should point to `/$accountBookId` and preserve the current
   `tab` and desired `mode` in route search params.
 
+## Accounts List Columns
+
+- Non-equity tabs (`ASSET`, `LIABILITY`) render `Ccy.`, `Symbol`, and `Balance`.
+- `Balance` is account-level only (group rows are blank), with no aggregation.
+- Balances are displayed in each account's own unit/currency; no conversion.
+- Liability balances are sign-adjusted for display (same direction as ledger
+  display conventions).
+
 ## Action Availability Pattern
 
 - For each conditional action, provide both:
