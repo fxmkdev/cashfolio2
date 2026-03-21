@@ -213,6 +213,54 @@ function AccountsPage() {
     }));
   }, [rowsByParentKey, reorderingRow]);
 
+  const balanceInReferenceCurrencyByGroupId = useMemo(() => {
+    const groupSumByGroupId = new Map<string, number | null>();
+
+    const calculateGroupSum = (
+      groupId: string,
+    ): { sum: number; hasValue: boolean } => {
+      if (groupSumByGroupId.has(groupId)) {
+        const existing = groupSumByGroupId.get(groupId);
+        return { sum: existing ?? 0, hasValue: existing != null };
+      }
+
+      const children = rowsByParentKey.get(groupId) ?? [];
+      let sum = 0;
+      let hasValue = false;
+
+      for (const child of children) {
+        if (child.nodeType === "account") {
+          if (
+            child.unit === Unit.CURRENCY &&
+            child.balanceInReferenceCurrency != null
+          ) {
+            sum += child.balanceInReferenceCurrency;
+            hasValue = true;
+          }
+          continue;
+        }
+
+        const childSum = calculateGroupSum(child.id);
+        if (childSum.hasValue) {
+          sum += childSum.sum;
+          hasValue = true;
+        }
+      }
+
+      const groupSum = hasValue ? sum : null;
+      groupSumByGroupId.set(groupId, groupSum);
+      return { sum: groupSum ?? 0, hasValue };
+    };
+
+    for (const row of treeData[tab]) {
+      if (row.nodeType === "accountGroup") {
+        calculateGroupSum(row.id);
+      }
+    }
+
+    return groupSumByGroupId;
+  }, [rowsByParentKey, treeData, tab]);
+
   const handleEditRow = useCallback((data: TreeRow) => {
     if (data.nodeType === "account") {
       setEditingAccount({
@@ -302,10 +350,13 @@ function AccountsPage() {
               type: FORMATTED_NUMERIC_COLUMN,
               filter: "agNumberColumnFilter",
               valueGetter: ({ data }: { data: TreeRow | undefined }) => {
-                if (!data || data.nodeType !== "account") return null;
-                return data.unit === Unit.CURRENCY
-                  ? data.balanceInReferenceCurrency
-                  : null;
+                if (!data) return null;
+                if (data.nodeType === "account") {
+                  return data.unit === Unit.CURRENCY
+                    ? data.balanceInReferenceCurrency
+                    : null;
+                }
+                return balanceInReferenceCurrencyByGroupId.get(data.id) ?? null;
               },
             } satisfies ColDef<TreeRow>,
           ]
@@ -369,6 +420,7 @@ function AccountsPage() {
       handleUnarchiveRow,
       rowsByParentKey,
       referenceCurrency,
+      balanceInReferenceCurrencyByGroupId,
     ],
   );
 

@@ -76,8 +76,11 @@ Route-level logic that doesn't belong in components is extracted into hooks in
 
 ## Accounts List Columns
 
-- Non-equity tabs (`ASSET`, `LIABILITY`) render `Ccy.`, `Symbol`, and `Balance`.
+- Non-equity tabs (`ASSET`, `LIABILITY`) render `Ccy.`, `Symbol`, `Balance`, and
+  `Balance (<referenceCurrency>)`.
 - `Balance` is account-level only (group rows are blank), with no aggregation.
+- `Balance (<referenceCurrency>)` is account-level for `Unit.CURRENCY` rows and
+  shows aggregated descendant sums on group rows.
 - Balances are displayed in each account's own unit/currency; no conversion.
 - Liability balances are sign-adjusted for display (same direction as ledger
   display conventions).
