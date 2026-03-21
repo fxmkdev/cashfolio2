@@ -115,12 +115,13 @@ async function fetchUsdToCurrencyRateFromCurrencyLayer(
     response = await fetch(url, { signal: controller.signal });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      console.warn("Currencylayer request timed out", {
+      const timeoutError = new Error("Currencylayer request timed out");
+      console.warn(timeoutError.message, {
         targetCurrency,
         date: toDayString(date),
         timeoutMs: CURRENCYLAYER_TIMEOUT_MS,
       });
-      return null;
+      throw timeoutError;
     }
     throw error;
   } finally {

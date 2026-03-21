@@ -457,7 +457,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
       return a.name.localeCompare(b.name);
     });
     return {
-      referenceCurrency: accountBook.referenceCurrency,
+      referenceCurrency: accountBook.referenceCurrency.toUpperCase(),
       rows: allRows,
     };
   });
