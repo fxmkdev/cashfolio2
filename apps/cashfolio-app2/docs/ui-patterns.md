@@ -76,8 +76,14 @@ Route-level logic that doesn't belong in components is extracted into hooks in
 
 ## Accounts List Columns
 
-- Non-equity tabs (`ASSET`, `LIABILITY`) render `Ccy.`, `Symbol`, and `Balance`.
+- Non-equity tabs (`ASSET`, `LIABILITY`) render `Ccy.`, `Symbol`, `Balance`, and
+  `Balance (<referenceCurrency>)`.
 - `Balance` is account-level only (group rows are blank), with no aggregation.
+- `Balance (<referenceCurrency>)` is account-level for `Unit.CURRENCY` rows and
+  shows aggregated descendant sums on group rows.
+- If any descendant account in a group has a blank
+  `Balance (<referenceCurrency>)`, that group row stays blank in this column to
+  avoid partial totals.
 - Balances are displayed in each account's own unit/currency; no conversion.
 - Liability balances are sign-adjusted for display (same direction as ledger
   display conventions).
@@ -175,6 +181,9 @@ handlers).
 - **Duplicate name checking**: name validators accept an optional `siblingNames`
   parameter. The server queries sibling names before validation; the client
   derives them from `existingNodes` (the full tree data passed to modals)
+- **Group-parent cycle prevention**: editing a group cannot set its parent to
+  itself or any of its descendant groups. Enforce this both in modal validation
+  and in `updateAccountGroup` server checks.
 
 ## Transaction Editing (EditTransactionModal)
 

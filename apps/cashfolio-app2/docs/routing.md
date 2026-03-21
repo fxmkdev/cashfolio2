@@ -85,8 +85,12 @@ in the reorder modal.
   TimeSeries keys (`fx:currencylayer:USD:<TARGET_CURRENCY>`).
 - When an exact date is not available, the newest available prior rate is used
   (first from cache, otherwise by historical API backtracking).
-- Ref-currency balances are currently populated for `Unit.CURRENCY` accounts
-  only; security and cryptocurrency rows remain empty in that column.
+- Ref-currency balances are populated for `Unit.CURRENCY` accounts only;
+  security and cryptocurrency rows remain empty in that column.
+- Group rows in `Balance (<referenceCurrency>)` show aggregated sums of
+  descendant `Unit.CURRENCY` account balances.
+- If any descendant account has an unavailable (`null`) reference-currency
+  balance, the group row remains blank to avoid displaying a partial aggregate.
 
 Required runtime env vars for this feature:
 

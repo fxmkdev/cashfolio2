@@ -213,6 +213,68 @@ function AccountsPage() {
     }));
   }, [rowsByParentKey, reorderingRow]);
 
+  const balanceInReferenceCurrencyByGroupId = useMemo(() => {
+    type GroupBalanceAggregation = {
+      sum: number;
+      hasAccountDescendants: boolean;
+      hasMissingReferenceBalance: boolean;
+    };
+
+    const groupAggregationByGroupId = new Map<
+      string,
+      GroupBalanceAggregation
+    >();
+
+    const calculateGroupAggregation = (
+      groupId: string,
+    ): GroupBalanceAggregation => {
+      const cachedAggregation = groupAggregationByGroupId.get(groupId);
+      if (cachedAggregation) {
+        return cachedAggregation;
+      }
+
+      let sum = 0;
+      let hasAccountDescendants = false;
+      let hasMissingReferenceBalance = false;
+      const children = rowsByParentKey.get(groupId) ?? [];
+
+      for (const child of children) {
+        if (child.nodeType === "account") {
+          hasAccountDescendants = true;
+          if (child.balanceInReferenceCurrency == null) {
+            hasMissingReferenceBalance = true;
+          } else {
+            sum += child.balanceInReferenceCurrency;
+          }
+          continue;
+        }
+
+        const childAggregation = calculateGroupAggregation(child.id);
+        sum += childAggregation.sum;
+        hasAccountDescendants =
+          hasAccountDescendants || childAggregation.hasAccountDescendants;
+        hasMissingReferenceBalance =
+          hasMissingReferenceBalance ||
+          childAggregation.hasMissingReferenceBalance;
+      }
+
+      const aggregation: GroupBalanceAggregation = {
+        sum,
+        hasAccountDescendants,
+        hasMissingReferenceBalance,
+      };
+      groupAggregationByGroupId.set(groupId, aggregation);
+      return aggregation;
+    };
+
+    for (const row of treeData[tab]) {
+      if (row.nodeType !== "accountGroup") continue;
+      calculateGroupAggregation(row.id);
+    }
+
+    return groupAggregationByGroupId;
+  }, [rowsByParentKey, treeData, tab]);
+
   const handleEditRow = useCallback((data: TreeRow) => {
     if (data.nodeType === "account") {
       setEditingAccount({
@@ -302,10 +364,22 @@ function AccountsPage() {
               type: FORMATTED_NUMERIC_COLUMN,
               filter: "agNumberColumnFilter",
               valueGetter: ({ data }: { data: TreeRow | undefined }) => {
-                if (!data || data.nodeType !== "account") return null;
-                return data.unit === Unit.CURRENCY
-                  ? data.balanceInReferenceCurrency
-                  : null;
+                if (!data) return null;
+                if (data.nodeType === "account") {
+                  return data.unit === Unit.CURRENCY
+                    ? data.balanceInReferenceCurrency
+                    : null;
+                }
+                const groupAggregation =
+                  balanceInReferenceCurrencyByGroupId.get(data.id);
+                if (
+                  !groupAggregation ||
+                  !groupAggregation.hasAccountDescendants ||
+                  groupAggregation.hasMissingReferenceBalance
+                ) {
+                  return null;
+                }
+                return groupAggregation.sum;
               },
             } satisfies ColDef<TreeRow>,
           ]
@@ -369,6 +443,7 @@ function AccountsPage() {
       handleUnarchiveRow,
       rowsByParentKey,
       referenceCurrency,
+      balanceInReferenceCurrencyByGroupId,
     ],
   );
 

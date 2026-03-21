@@ -54,6 +54,34 @@ async function getGroupHierarchy(
   return new Map(groups.map((g) => [g.id, g]));
 }
 
+function ensureNoGroupCycle(params: {
+  groupId: string;
+  parentGroupId?: string | null;
+  groupById: Map<string, GroupHierarchyNode>;
+}): void {
+  const { groupId, parentGroupId, groupById } = params;
+  if (!parentGroupId) return;
+  if (parentGroupId === groupId) {
+    throw new Error("A group cannot be its own parent");
+  }
+
+  const visitedGroupIds = new Set<string>();
+  let currentGroupId: string | null = parentGroupId;
+
+  while (currentGroupId) {
+    if (currentGroupId === groupId) {
+      throw new Error("A group cannot be moved under one of its sub-groups");
+    }
+    if (visitedGroupIds.has(currentGroupId)) {
+      throw new Error(
+        "Cannot update group because the group hierarchy contains a cycle",
+      );
+    }
+    visitedGroupIds.add(currentGroupId);
+    currentGroupId = groupById.get(currentGroupId)?.parentGroupId ?? null;
+  }
+}
+
 export const getAccounts = createServerFn({ method: "GET" })
   .inputValidator((data: { accountBookId: string }) => data)
   .handler(async ({ data }) => {
@@ -612,17 +640,24 @@ export const updateAccountGroup = createServerFn({ method: "POST" })
   .inputValidator((data: AccountGroupInput & { id: string }) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
-    const siblingNames = (
-      await prisma.accountGroup.findMany({
+    const [siblingGroups, groupById] = await Promise.all([
+      prisma.accountGroup.findMany({
         where: {
           parentGroupId: data.parentGroupId ?? null,
           accountBookId: data.accountBookId,
           id: { not: data.id },
         },
         select: { name: true },
-      })
-    ).map((g) => g.name);
+      }),
+      getGroupHierarchy(data.accountBookId),
+    ]);
+    const siblingNames = siblingGroups.map((g) => g.name);
     validateAccountGroupInput(data, siblingNames);
+    ensureNoGroupCycle({
+      groupId: data.id,
+      parentGroupId: data.parentGroupId,
+      groupById,
+    });
     const existing = await prisma.accountGroup.findUniqueOrThrow({
       where: {
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
