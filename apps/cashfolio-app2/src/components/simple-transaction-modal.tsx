@@ -60,6 +60,7 @@ export function SimpleTransactionModal({
     validate: {
       date: (value) => {
         if (!value) return "Date is required";
+        if (isNaN(value.getTime())) return "Date is invalid";
         if (isAfter(startOfDay(value), today)) {
           return "Date cannot be in the future";
         }
@@ -122,7 +123,7 @@ export function SimpleTransactionModal({
             amount: Number(values.amount),
             direction: forcedDirection ?? values.direction,
           });
-        })(event)
+        }, console.error)(event)
       }
     >
       <Stack gap="md">

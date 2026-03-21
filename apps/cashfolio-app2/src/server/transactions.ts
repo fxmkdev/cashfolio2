@@ -443,6 +443,9 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
     ) {
       const counterUnitIdentifier =
         getSimpleTransactionUnitIdentifier(counterAccount);
+      if (!counterUnitIdentifier) {
+        throw new Error("Counter account unit details are incomplete.");
+      }
       if (counterUnitIdentifier !== currentUnitIdentifier) {
         throw new Error(
           "Asset and liability accounts must use the same unit as the current account.",
