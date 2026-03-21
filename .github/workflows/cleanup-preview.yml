@@ -30,11 +30,17 @@ jobs:
           set -euo pipefail
 
           FLY_APP="${{ steps.names.outputs.fly_app }}"
-          if flyctl status --app "$FLY_APP" > /dev/null 2>&1; then
+          if fly_status_output="$(flyctl status --app "$FLY_APP" 2>&1)"; then
             echo "Destroying Fly app ${FLY_APP}"
             flyctl apps destroy "$FLY_APP" --yes
           else
-            echo "Fly app ${FLY_APP} does not exist, skipping"
+            if printf '%s\n' "$fly_status_output" | grep -qiE 'could not find app|app not found'; then
+              echo "Fly app ${FLY_APP} does not exist, skipping"
+            else
+              echo "Failed to check status of Fly app ${FLY_APP}:"
+              printf '%s\n' "$fly_status_output"
+              exit 1
+            fi
           fi
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
