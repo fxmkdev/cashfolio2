@@ -232,16 +232,27 @@ jobs:
         run: |
           set -euo pipefail
 
-          if flyctl status --app "$FLY_APP" > /dev/null 2>&1; then
+          set +e
+          FLY_STATUS_OUTPUT="$(flyctl status --app "$FLY_APP" 2>&1)"
+          FLY_STATUS_EXIT="$?"
+          set -e
+
+          if [ "$FLY_STATUS_EXIT" -eq 0 ]; then
             echo "Reusing Fly app $FLY_APP"
             exit 0
           fi
 
-          echo "Creating Fly app $FLY_APP"
-          if [ -n "${FLY_ORG:-}" ]; then
-            flyctl apps create "$FLY_APP" --org "$FLY_ORG"
+          if printf '%s\n' "$FLY_STATUS_OUTPUT" | grep -qiE 'could not find app|app not found|unknown app'; then
+            echo "Creating Fly app $FLY_APP"
+            if [ -n "${FLY_ORG:-}" ]; then
+              flyctl apps create "$FLY_APP" --org "$FLY_ORG"
+            else
+              flyctl apps create "$FLY_APP"
+            fi
           else
-            flyctl apps create "$FLY_APP"
+            echo "flyctl status failed for app $FLY_APP with an unexpected error:"
+            printf '%s\n' "$FLY_STATUS_OUTPUT"
+            exit "$FLY_STATUS_EXIT"
           fi
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -340,13 +351,16 @@ jobs:
         with:
           script: |
             const marker = "<!-- cashfolio-app2-dynamic-preview -->";
-            const body = `${marker}
-            Dynamic preview deployed
-
-            - URL: ${process.env.PREVIEW_URL}
-            - Fly app: \`${process.env.FLY_APP}\`
-            - Neon branch: \`${process.env.NEON_BRANCH_NAME}\`
-            - Commit: \`${context.sha.slice(0, 7)}\``;
+            const bodyLines = [
+              marker,
+              "Dynamic preview deployed",
+              "",
+              `- URL: ${process.env.PREVIEW_URL}`,
+              `- Fly app: \`${process.env.FLY_APP}\``,
+              `- Neon branch: \`${process.env.NEON_BRANCH_NAME}\``,
+              `- Commit: \`${context.sha.slice(0, 7)}\``,
+            ];
+            const body = bodyLines.join("\n");
 
             const { owner, repo } = context.repo;
             const issue_number = context.payload.pull_request.number;
