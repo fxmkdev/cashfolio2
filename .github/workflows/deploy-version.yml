@@ -14,7 +14,7 @@ on:
       high_availability:
         type: boolean
         default: true
-      deploy-cashfolio-app:
+      deploy-cashfolio-app2:
         type: boolean
         default: true
       deploy-cashfolio-redis:
@@ -26,10 +26,10 @@ env:
   FLYCTL_VERSION: 0.4.25
 
 jobs:
-  cashfolio-app-deploy:
-    name: "cashfolio-app: Deploy"
+  cashfolio-app2-deploy:
+    name: "cashfolio-app2: Deploy"
     runs-on: ubuntu-latest
-    if: ${{ inputs.deploy-cashfolio-app }}
+    if: ${{ inputs.deploy-cashfolio-app2 }}
     environment:
       name: ${{ inputs.environment }}-cashfolio-app
       url: https://${{ vars.CANONICAL_HOSTNAME }}/
@@ -43,11 +43,11 @@ jobs:
       - name: Prepare configuration file
         run: |
           envsubst \
-              < apps/cashfolio-app/fly.template.toml \
-              > apps/cashfolio-app/fly.generated.toml \
+              < apps/cashfolio-app2/fly.template.toml \
+              > apps/cashfolio-app2/fly.generated.toml \
 
           echo "Generated configuration file:"
-          cat apps/cashfolio-app/fly.generated.toml
+          cat apps/cashfolio-app2/fly.generated.toml
         env:
           FLY_APP: ${{  vars.FLY_APP }}
           FLY_PRIMARY_REGION: ${{ vars.FLY_PRIMARY_REGION }}
@@ -57,15 +57,13 @@ jobs:
           FLY_CPUS: ${{ vars.FLY_CPUS }}
           CANONICAL_HOSTNAME: ${{ vars.CANONICAL_HOSTNAME }}
           BASE_URL: ${{ vars.BASE_URL }}
-          COOKIE_DOMAIN: ${{ vars.COOKIE_DOMAIN }}
-          LOGTO_APP_ID: ${{ vars.LOGTO_APP_ID }}
           LOGTO_ENDPOINT: ${{ vars.LOGTO_ENDPOINT }}
           LOGTO_TENANT_ID: ${{ vars.LOGTO_TENANT_ID }}
-          LOGTO_MANAGEMENT_APP_ID: ${{ vars.LOGTO_MANAGEMENT_APP_ID }}
-      - name: Deploy cashfolio-app
+          LOGTO_APP_ID: ${{ vars.LOGTO_APP_ID }}
+      - name: Deploy cashfolio-app2
         run: |
           flyctl deploy \
-          --config apps/cashfolio-app/fly.generated.toml \
+          --config apps/cashfolio-app2/fly.generated.toml \
           --ha=${{ inputs.high_availability }} \
           --image registry.fly.io/${{ vars.FLY_CASHFOLIO_APP_STAGING_APP }}:v${{ inputs.version_with_sha }} \
         env:
