@@ -95,3 +95,8 @@ Required runtime env vars for this feature:
 
 `REDIS_URL` should point to the shared staging Redis when preview and staging
 should share FX cache entries.
+
+Dynamic PR preview deployment (`.github/workflows/build.yml`) sets:
+
+- `CURRENCYLAYER_API_KEY` from `secrets.CURRENCYLAYER_API_KEY`
+- `REDIS_URL` from `secrets.STAGING_REDIS_URL` (shared staging Redis)
