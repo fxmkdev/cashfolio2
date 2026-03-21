@@ -12,7 +12,7 @@ On pull requests (non-forks), CI now:
 1. Builds and pushes the `cashfolio-app2` image
 2. Creates or reuses a Neon branch named `pr-<PR_NUMBER>-cashfolio-app2` from production using `neondatabase/create-branch-action`
 3. Creates or reuses a Fly app named `cashfolio-app2-pr-<PR_NUMBER>`
-4. Sets Fly secrets (`DATABASE_URL`, `LOGTO_APP_SECRET`, `SESSION_SECRET`)
+4. Sets Fly secrets (`DATABASE_URL`, `LOGTO_APP_SECRET`, `SESSION_SECRET`), with `SESSION_SECRET` generated per deploy in CI
 5. Deploys the PR image to `https://cashfolio-app2-pr-<PR_NUMBER>.fly.dev/`
 6. Posts/updates a PR comment with the dynamic preview URL
 
@@ -29,7 +29,6 @@ environment-scoped secrets/variables.
 
 - `FLY_API_TOKEN`
 - `LOGTO_APP_SECRET`
-- `SESSION_SECRET`
 - `NEON_API_KEY`
 
 ### Variables

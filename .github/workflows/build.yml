@@ -245,6 +245,14 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           FLY_ORG: ${{ vars.FLY_ORG }}
+      - name: Generate preview session secret
+        id: session-secret
+        run: |
+          set -euo pipefail
+
+          SESSION_SECRET="$(openssl rand -hex 32)"
+          echo "::add-mask::${SESSION_SECRET}"
+          echo "value=${SESSION_SECRET}" >> "$GITHUB_OUTPUT"
       - name: Set Fly app secrets
         run: |
           set -euo pipefail
@@ -253,7 +261,7 @@ jobs:
             --app "$FLY_APP" \
             DATABASE_URL="${{ steps.neon.outputs.db_url }}" \
             LOGTO_APP_SECRET="${{ secrets.LOGTO_APP_SECRET }}" \
-            SESSION_SECRET="${{ secrets.SESSION_SECRET }}"
+            SESSION_SECRET="${{ steps.session-secret.outputs.value }}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       - name: Prepare Fly configuration file
