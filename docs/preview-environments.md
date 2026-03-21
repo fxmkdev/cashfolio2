@@ -42,6 +42,7 @@ environment-scoped secrets/variables.
 - `LOGTO_APP_SECRET`
 - `NEON_API_KEY`
 - `CURRENCYLAYER_API_KEY`
+- `COINLAYER_API_KEY`
 - `STAGING_REDIS_URL`
 
 ### Variables

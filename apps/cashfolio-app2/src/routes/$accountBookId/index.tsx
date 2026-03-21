@@ -366,9 +366,7 @@ function AccountsPage() {
               valueGetter: ({ data }: { data: TreeRow | undefined }) => {
                 if (!data) return null;
                 if (data.nodeType === "account") {
-                  return data.unit === Unit.CURRENCY
-                    ? data.balanceInReferenceCurrency
-                    : null;
+                  return data.balanceInReferenceCurrency;
                 }
                 const groupAggregation =
                   balanceInReferenceCurrencyByGroupId.get(data.id);
