@@ -49,6 +49,15 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
     .click();
   const archivedRow = agGridRowByText(page, updatedName);
   await expect(archivedRow).toBeVisible();
+  await expect(page.getByText(/Accounts\s*\/\s*Archive/)).toBeVisible();
+
+  await archivedRow.dblclick();
+  await expect(
+    page.getByRole("button", { name: "Add Transaction" }),
+  ).toBeVisible();
+  await expect(page.getByText(/Accounts\s*\/\s*Archive/)).toBeVisible();
+  await page.getByRole("link", { name: "Archive" }).click();
+  await expect(archivedRow).toBeVisible();
 
   await clickRowAction(archivedRow, "Unarchive");
   await expect(agGridRowByText(page, updatedName)).toHaveCount(0);

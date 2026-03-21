@@ -31,26 +31,32 @@ export function AccountsBreadcrumbSegments({
       >
         Accounts
       </LinkAnchor>
-      {mode === "archived" &&
-        (archiveIsLink ? (
-          <LinkAnchor
-            to="/$accountBookId"
-            params={{ accountBookId }}
-            search={{
-              tab,
-              mode: "archived",
-            }}
-            fz="inherit"
-            fw="inherit"
-            lh="inherit"
-          >
-            Archive
-          </LinkAnchor>
-        ) : (
-          <Text fz="inherit" fw="inherit" lh="inherit">
-            Archive
+      {mode === "archived" && (
+        <>
+          <Text component="span" fz="inherit" fw="inherit" lh="inherit">
+            {" / "}
           </Text>
-        ))}
+          {archiveIsLink ? (
+            <LinkAnchor
+              to="/$accountBookId"
+              params={{ accountBookId }}
+              search={{
+                tab,
+                mode: "archived",
+              }}
+              fz="inherit"
+              fw="inherit"
+              lh="inherit"
+            >
+              Archive
+            </LinkAnchor>
+          ) : (
+            <Text fz="inherit" fw="inherit" lh="inherit">
+              Archive
+            </Text>
+          )}
+        </>
+      )}
     </>
   );
 }
