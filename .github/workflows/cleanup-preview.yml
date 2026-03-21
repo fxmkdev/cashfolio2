@@ -1,0 +1,65 @@
+name: Cleanup dynamic preview
+on:
+  pull_request:
+    types:
+      - closed
+
+env:
+  FLYCTL_VERSION: 0.4.25
+  NEON_API_BASE: https://console.neon.tech/api/v2
+
+jobs:
+  cleanup-preview:
+    name: Cleanup preview resources
+    if: github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    environment:
+      name: preview-cashfolio-app
+    steps:
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: ${{ env.FLYCTL_VERSION }}
+      - name: Resolve preview resource names
+        id: names
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          echo "fly_app=cashfolio-app2-pr-${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "neon_branch_name=pr-${PR_NUMBER}-cashfolio-app2" >> "$GITHUB_OUTPUT"
+      - name: Delete Fly app
+        run: |
+          set -euo pipefail
+
+          FLY_APP="${{ steps.names.outputs.fly_app }}"
+          if flyctl status --app "$FLY_APP" > /dev/null 2>&1; then
+            echo "Destroying Fly app ${FLY_APP}"
+            flyctl apps destroy "$FLY_APP" --yes
+          else
+            echo "Fly app ${FLY_APP} does not exist, skipping"
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Delete Neon branch
+        run: |
+          set -euo pipefail
+
+          BRANCH_NAME="${{ steps.names.outputs.neon_branch_name }}"
+          BRANCHES_RESPONSE="$(curl -fsS \
+            -H "Authorization: Bearer ${NEON_API_KEY}" \
+            "${NEON_API_BASE}/projects/${NEON_PROJECT_ID}/branches?search=${BRANCH_NAME}&limit=100")"
+
+          BRANCH_ID="$(printf '%s' "$BRANCHES_RESPONSE" | jq -r --arg name "$BRANCH_NAME" '.branches[]? | select(.name == $name) | .id' | head -n1)"
+
+          if [ -z "$BRANCH_ID" ]; then
+            echo "Neon branch ${BRANCH_NAME} does not exist, skipping"
+            exit 0
+          fi
+
+          echo "Deleting Neon branch ${BRANCH_NAME} (${BRANCH_ID})"
+          curl -fsS \
+            -X DELETE \
+            -H "Authorization: Bearer ${NEON_API_KEY}" \
+            "${NEON_API_BASE}/projects/${NEON_PROJECT_ID}/branches/${BRANCH_ID}" > /dev/null
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
