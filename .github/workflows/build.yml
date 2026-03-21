@@ -77,6 +77,53 @@ jobs:
       - name: Run unit tests
         run: pnpm --filter cli start test
 
+  cashfolio-app2-e2e:
+    name: "cashfolio-app2: E2E"
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cashfolio
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cashfolio"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cashfolio?schema=public
+      BASE_URL: http://127.0.0.1:4173
+      E2E_AUTH_BYPASS: "true"
+      E2E_AUTH_EXTERNAL_ID: e2e-user
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup
+        uses: felixmokross/webplatform/.github/actions/setup@main
+      - name: Install dependencies
+        run: pnpm --filter cashfolio-app2 install
+      - name: Generate Prisma Client
+        run: pnpm --filter cashfolio-app2 prisma:generate
+      - name: Migrate test database
+        run: pnpm --filter cashfolio-app2 exec prisma migrate deploy
+      - name: Install Playwright browser
+        run: pnpm --filter cashfolio-app2 exec playwright install --with-deps chromium
+      - name: Run e2e tests
+        run: pnpm --filter cashfolio-app2 e2e:ci
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cashfolio-app2-playwright-artifacts
+          path: |
+            apps/cashfolio-app2/playwright-report
+            apps/cashfolio-app2/test-results
+          if-no-files-found: ignore
+
   cashfolio-redis-build-push:
     name: "cashfolio-redis: Build and Push"
     runs-on: ubuntu-latest
@@ -130,6 +177,7 @@ jobs:
       - version
       - cashfolio-app-build-push
       - cashfolio-redis-build-push
+      - cashfolio-app2-e2e
     uses: ./.github/workflows/deploy-version.yml
     with:
       version_with_sha: ${{ needs.version.outputs.version_with_sha }}
@@ -145,6 +193,7 @@ jobs:
       - cashfolio-app-unit-tests
       - cashfolio-app-build-push
       - cashfolio-redis-build-push
+      - cashfolio-app2-e2e
       - cli-typecheck
     uses: ./.github/workflows/deploy-version.yml
     with:

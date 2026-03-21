@@ -4,3 +4,5 @@ node_modules
 dist
 src/.prisma-client
 .env
+playwright-report
+test-results
