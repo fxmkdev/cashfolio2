@@ -91,7 +91,7 @@ function getCoinLayerApiKey(): string | null {
   const apiKey = process.env.COINLAYER_API_KEY?.trim();
   if (!apiKey && !hasWarnedMissingCoinLayerApiKey) {
     console.warn(
-      "COINLAYER_API_KEY is not set; reference-currency conversion will be unavailable when account cryptocurrency differs.",
+      "COINLAYER_API_KEY is not set; cryptocurrency reference conversion will be unavailable.",
     );
     hasWarnedMissingCoinLayerApiKey = true;
   }
