@@ -27,11 +27,11 @@ export async function getRedisClient(): Promise<RedisClient | null> {
   }
 
   if (!redisClient.isOpen) {
-    redisConnectPromise ??= redisClient
-      .connect()
-      .then(() => redisClient)
-      .catch((error) => {
-        redisConnectPromise = null;
+    redisConnectPromise ??= (async () => {
+      try {
+        await redisClient.connect();
+        return redisClient;
+      } catch (error) {
         if (!hasWarnedRedisUnavailable) {
           console.warn(
             "Unable to connect to Redis; continuing without FX cache.",
@@ -40,9 +40,13 @@ export async function getRedisClient(): Promise<RedisClient | null> {
           hasWarnedRedisUnavailable = true;
         }
         return null;
-      });
+      } finally {
+        redisConnectPromise = null;
+      }
+    })();
+
     const connectedClient = await redisConnectPromise;
-    if (!connectedClient) {
+    if (!connectedClient || !connectedClient.isOpen) {
       return null;
     }
   }

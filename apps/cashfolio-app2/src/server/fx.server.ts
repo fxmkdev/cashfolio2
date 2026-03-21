@@ -71,7 +71,7 @@ async function getCachedRate(
       return { rate: exactEntry.value, timestamp: exactEntry.timestamp };
     }
 
-    const [latestEntry] = await redis.ts.revRange(key, timestamp, "-", {
+    const [latestEntry] = await redis.ts.revRange(key, "-", timestamp, {
       COUNT: 1,
     });
     if (!latestEntry) return null;
@@ -169,10 +169,18 @@ async function getUsdToCurrencyRate(
   const requestedTimestamp = toSeriesTimestamp(date);
 
   const cached = await getCachedRate(key, requestedTimestamp);
-  if (cached) return cached.rate;
+  if (cached?.timestamp === requestedTimestamp) {
+    return cached.rate;
+  }
 
   let requestedDate = toUtcDay(date);
   for (let i = 0; i <= MAX_BACKTRACK_DAYS; i++) {
+    const currentTimestamp = toSeriesTimestamp(requestedDate);
+    if (cached && currentTimestamp <= cached.timestamp) {
+      // We already have the newest known cached point at-or-before this day.
+      return cached.rate;
+    }
+
     const fetchedRate = await fetchUsdToCurrencyRateFromCurrencyLayer(
       targetCurrency,
       requestedDate,
@@ -194,6 +202,10 @@ async function getUsdToCurrencyRate(
       return fetchedRate;
     }
     requestedDate = subUtcDay(requestedDate);
+  }
+
+  if (cached) {
+    return cached.rate;
   }
 
   return null;
