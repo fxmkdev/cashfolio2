@@ -1,5 +1,4 @@
 import {
-  Badge,
   Button,
   Group,
   SegmentedControl,
@@ -172,9 +171,18 @@ export function SimpleTransactionModal({
             w={220}
             leftSection={
               unitLabel ? (
-                <Badge size="xs" fz="0.62rem" px={5}>
+                <span
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    textAlign: "left",
+                    fontSize: "0.68rem",
+                    lineHeight: 1,
+                    paddingLeft: "0.35rem",
+                  }}
+                >
                   {unitLabel}
-                </Badge>
+                </span>
               ) : undefined
             }
             leftSectionWidth={82}
