@@ -1,0 +1,60 @@
+name: Cleanup dynamic preview
+on:
+  pull_request:
+    types:
+      - closed
+
+env:
+  FLYCTL_VERSION: 0.4.25
+
+jobs:
+  cleanup-preview:
+    name: Cleanup preview resources
+    if: github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    environment:
+      name: preview-pr-${{ github.event.pull_request.number }}
+    steps:
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: ${{ env.FLYCTL_VERSION }}
+      - name: Resolve preview resource names
+        id: names
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          echo "fly_app=cashfolio-app2-pr-${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "neon_branch_name=pr-${PR_NUMBER}-cashfolio-app2" >> "$GITHUB_OUTPUT"
+      - name: Delete Fly app
+        run: |
+          set -euo pipefail
+
+          FLY_APP="${{ steps.names.outputs.fly_app }}"
+          if fly_status_output="$(flyctl status --app "$FLY_APP" 2>&1)"; then
+            echo "Destroying Fly app ${FLY_APP}"
+            flyctl apps destroy "$FLY_APP" --yes
+          else
+            if printf '%s\n' "$fly_status_output" | grep -qiE 'could not find app|app not found'; then
+              echo "Fly app ${FLY_APP} does not exist, skipping"
+            else
+              echo "Failed to check status of Fly app ${FLY_APP}:"
+              printf '%s\n' "$fly_status_output"
+              exit 1
+            fi
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Delete Neon branch
+        id: delete-neon-branch
+        uses: neondatabase/delete-branch-action@v3
+        continue-on-error: true
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch: ${{ steps.names.outputs.neon_branch_name }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+      - name: Warn if Neon branch deletion failed
+        if: steps.delete-neon-branch.outcome == 'failure'
+        run: |
+          echo "::warning::Failed to delete Neon branch ${NEON_BRANCH_NAME}. It may already be expired or there may be a Neon API/permission issue. Branches are created with a 14-day expiration fallback."
+        env:
+          NEON_BRANCH_NAME: ${{ steps.names.outputs.neon_branch_name }}

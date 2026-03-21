@@ -7,6 +7,7 @@ This repository contains multiple Cashfolio applications and shared tooling.
 - Contribution guidelines: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Shared workspace docs: `docs/`
   - [Cashfolio domain diagram](docs/cashfolio.excalidraw)
+  - [Preview environments](docs/preview-environments.md)
 - App/package docs live alongside code:
   - `apps/cashfolio-app2/docs/`
     - [Overview](apps/cashfolio-app2/docs/README.md)
