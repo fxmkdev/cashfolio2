@@ -4,11 +4,12 @@ const BASE_CURRENCY = "USD";
 const MAX_BACKTRACK_DAYS = 30;
 const CURRENCYLAYER_TIMEOUT_MS = 10_000;
 const FX_SERIES_RETENTION_MS = 10 * 365 * 24 * 60 * 60 * 1000;
+const BACKTRACKED_FALLBACK_TTL_SECONDS = 60 * 60;
 
 type CurrencyLayerHistoricalResponse = {
   success: boolean;
   quotes?: Record<string, number>;
-  error?: { info?: string };
+  error?: { code?: number; info?: string };
 };
 
 type CachedRateResult = {
@@ -16,8 +17,15 @@ type CachedRateResult = {
   timestamp: number;
 };
 
+type BacktrackedFallbackCacheEntry = {
+  rate: number;
+  sourceTimestamp: number;
+};
+
 let hasWarnedMissingCurrencyLayerApiKey = false;
 let hasWarnedFxCacheReadFailure = false;
+let hasWarnedFxFallbackCacheReadFailure = false;
+let hasWarnedFxFallbackCacheWriteFailure = false;
 
 function toDayString(date: Date): string {
   const year = date.getUTCFullYear();
@@ -40,6 +48,13 @@ function subUtcDay(date: Date): Date {
 
 function getRedisSeriesKey(targetCurrency: string): string {
   return `fx:currencylayer:${BASE_CURRENCY}:${targetCurrency}`;
+}
+
+function getBacktrackedFallbackCacheKey(
+  targetCurrency: string,
+  requestedTimestamp: number,
+): string {
+  return `fx:currencylayer:fallback:${BASE_CURRENCY}:${targetCurrency}:${requestedTimestamp}`;
 }
 
 function getCurrencyLayerApiKey(): string | null {
@@ -103,6 +118,82 @@ async function storeCachedRate(
   });
 }
 
+async function getBacktrackedFallbackFromCache(
+  key: string,
+): Promise<BacktrackedFallbackCacheEntry | null> {
+  try {
+    const redis = await getRedisClient();
+    if (!redis) return null;
+
+    const rawValue = await redis.get(key);
+    if (!rawValue) return null;
+
+    const parsed = JSON.parse(
+      rawValue,
+    ) as Partial<BacktrackedFallbackCacheEntry>;
+    if (
+      typeof parsed.rate !== "number" ||
+      typeof parsed.sourceTimestamp !== "number"
+    ) {
+      return null;
+    }
+
+    return {
+      rate: parsed.rate,
+      sourceTimestamp: parsed.sourceTimestamp,
+    };
+  } catch (error) {
+    if (!hasWarnedFxFallbackCacheReadFailure) {
+      console.warn(
+        "Failed to read backtracked FX fallback from Redis cache; continuing without fallback cache.",
+        error,
+      );
+      hasWarnedFxFallbackCacheReadFailure = true;
+    }
+    return null;
+  }
+}
+
+async function storeBacktrackedFallbackInCache(
+  key: string,
+  entry: BacktrackedFallbackCacheEntry,
+): Promise<void> {
+  try {
+    const redis = await getRedisClient();
+    if (!redis) return;
+
+    await redis.setEx(
+      key,
+      BACKTRACKED_FALLBACK_TTL_SECONDS,
+      JSON.stringify(entry),
+    );
+  } catch (error) {
+    if (!hasWarnedFxFallbackCacheWriteFailure) {
+      console.warn(
+        "Failed to store backtracked FX fallback in Redis cache.",
+        error,
+      );
+      hasWarnedFxFallbackCacheWriteFailure = true;
+    }
+  }
+}
+
+async function clearBacktrackedFallbackFromCache(key: string): Promise<void> {
+  try {
+    const redis = await getRedisClient();
+    if (!redis) return;
+    await redis.del(key);
+  } catch (error) {
+    if (!hasWarnedFxFallbackCacheWriteFailure) {
+      console.warn(
+        "Failed to clear backtracked FX fallback from Redis cache.",
+        error,
+      );
+      hasWarnedFxFallbackCacheWriteFailure = true;
+    }
+  }
+}
+
 async function fetchUsdToCurrencyRateFromCurrencyLayer(
   targetCurrency: string,
   date: Date,
@@ -148,6 +239,18 @@ async function fetchUsdToCurrencyRateFromCurrencyLayer(
 
   const data = (await response.json()) as CurrencyLayerHistoricalResponse;
   if (!data.success) {
+    const errorCode = data.error?.code;
+    const errorInfo = data.error?.info?.toLowerCase();
+    const isNoDataError =
+      errorCode === 106 ||
+      (typeof errorInfo === "string" &&
+        (errorInfo.includes("no results") ||
+          errorInfo.includes("did not return any results") ||
+          errorInfo.includes("no data")));
+    if (isNoDataError) {
+      return null;
+    }
+
     throw new Error(
       `Currencylayer request failed: ${data.error?.info ?? "Unknown error"}`,
     );
@@ -167,10 +270,22 @@ async function getUsdToCurrencyRate(
 
   const key = getRedisSeriesKey(targetCurrency);
   const requestedTimestamp = toSeriesTimestamp(date);
+  const backtrackedFallbackCacheKey = getBacktrackedFallbackCacheKey(
+    targetCurrency,
+    requestedTimestamp,
+  );
 
   const cached = await getCachedRate(key, requestedTimestamp);
   if (cached?.timestamp === requestedTimestamp) {
+    await clearBacktrackedFallbackFromCache(backtrackedFallbackCacheKey);
     return cached.rate;
+  }
+
+  const cachedBacktrackedFallback = await getBacktrackedFallbackFromCache(
+    backtrackedFallbackCacheKey,
+  );
+  if (cachedBacktrackedFallback) {
+    return cachedBacktrackedFallback.rate;
   }
 
   let requestedDate = toUtcDay(date);
@@ -178,6 +293,10 @@ async function getUsdToCurrencyRate(
     const currentTimestamp = toSeriesTimestamp(requestedDate);
     if (cached && currentTimestamp <= cached.timestamp) {
       // We already have the newest known cached point at-or-before this day.
+      await storeBacktrackedFallbackInCache(backtrackedFallbackCacheKey, {
+        rate: cached.rate,
+        sourceTimestamp: cached.timestamp,
+      });
       return cached.rate;
     }
 
@@ -199,12 +318,26 @@ async function getUsdToCurrencyRate(
           error,
         );
       }
+
+      if (currentTimestamp < requestedTimestamp) {
+        await storeBacktrackedFallbackInCache(backtrackedFallbackCacheKey, {
+          rate: fetchedRate,
+          sourceTimestamp: currentTimestamp,
+        });
+      } else {
+        await clearBacktrackedFallbackFromCache(backtrackedFallbackCacheKey);
+      }
+
       return fetchedRate;
     }
     requestedDate = subUtcDay(requestedDate);
   }
 
   if (cached) {
+    await storeBacktrackedFallbackInCache(backtrackedFallbackCacheKey, {
+      rate: cached.rate,
+      sourceTimestamp: cached.timestamp,
+    });
     return cached.rate;
   }
 
