@@ -17,6 +17,7 @@ type CachedRateResult = {
 };
 
 let hasWarnedMissingCurrencyLayerApiKey = false;
+let hasWarnedFxCacheReadFailure = false;
 
 function toDayString(date: Date): string {
   const year = date.getUTCFullYear();
@@ -56,25 +57,36 @@ async function getCachedRate(
   key: string,
   timestamp: number,
 ): Promise<CachedRateResult | null> {
-  const redis = await getRedisClient();
-  if (!redis) return null;
+  try {
+    const redis = await getRedisClient();
+    if (!redis) return null;
 
-  const exists = await redis.exists(key);
-  if (!exists) return null;
+    const exists = await redis.exists(key);
+    if (!exists) return null;
 
-  const [exactEntry] = await redis.ts.range(key, timestamp, timestamp, {
-    COUNT: 1,
-  });
-  if (exactEntry) {
-    return { rate: exactEntry.value, timestamp: exactEntry.timestamp };
+    const [exactEntry] = await redis.ts.range(key, timestamp, timestamp, {
+      COUNT: 1,
+    });
+    if (exactEntry) {
+      return { rate: exactEntry.value, timestamp: exactEntry.timestamp };
+    }
+
+    const [latestEntry] = await redis.ts.revRange(key, timestamp, "-", {
+      COUNT: 1,
+    });
+    if (!latestEntry) return null;
+
+    return { rate: latestEntry.value, timestamp: latestEntry.timestamp };
+  } catch (error) {
+    if (!hasWarnedFxCacheReadFailure) {
+      console.warn(
+        "Failed to read FX rate from Redis cache; continuing with API lookup.",
+        error,
+      );
+      hasWarnedFxCacheReadFailure = true;
+    }
+    return null;
   }
-
-  const [latestEntry] = await redis.ts.revRange(key, timestamp, "-", {
-    COUNT: 1,
-  });
-  if (!latestEntry) return null;
-
-  return { rate: latestEntry.value, timestamp: latestEntry.timestamp };
 }
 
 async function storeCachedRate(

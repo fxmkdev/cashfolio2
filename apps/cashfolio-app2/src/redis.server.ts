@@ -3,8 +3,9 @@ import { createClient, type RedisClientType } from "redis";
 type RedisClient = RedisClientType;
 
 let redisClient: RedisClient | null = null;
-let redisConnectPromise: Promise<RedisClient> | null = null;
+let redisConnectPromise: Promise<RedisClient | null> | null = null;
 let hasWarnedMissingRedisUrl = false;
+let hasWarnedRedisUnavailable = false;
 
 export async function getRedisClient(): Promise<RedisClient | null> {
   const redisUrl = process.env.REDIS_URL?.trim();
@@ -26,11 +27,24 @@ export async function getRedisClient(): Promise<RedisClient | null> {
   }
 
   if (!redisClient.isOpen) {
-    redisConnectPromise ??= redisClient.connect().catch((error) => {
-      redisConnectPromise = null;
-      throw error;
-    });
-    await redisConnectPromise;
+    redisConnectPromise ??= redisClient
+      .connect()
+      .then(() => redisClient)
+      .catch((error) => {
+        redisConnectPromise = null;
+        if (!hasWarnedRedisUnavailable) {
+          console.warn(
+            "Unable to connect to Redis; continuing without FX cache.",
+            error,
+          );
+          hasWarnedRedisUnavailable = true;
+        }
+        return null;
+      });
+    const connectedClient = await redisConnectPromise;
+    if (!connectedClient) {
+      return null;
+    }
   }
 
   return redisClient;
