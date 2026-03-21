@@ -309,7 +309,7 @@ async function fetchUsdPerCryptocurrencyRateFromCoinLayer(
     target: BASE_CURRENCY,
     symbols: cryptocurrency,
   });
-  const url = `http://api.coinlayer.com/${toDayString(date)}?${params.toString()}`;
+  const url = `https://api.coinlayer.com/${toDayString(date)}?${params.toString()}`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), COINLAYER_TIMEOUT_MS);
   let response: Response;
