@@ -33,6 +33,7 @@ import type {
 } from "../../components/edit-account-group-modal";
 import { ReorderGroupChildrenModal } from "../../components/reorder-group-children-modal";
 import { DataGrid } from "../../components/data-grid";
+import { FORMATTED_NUMERIC_COLUMN } from "../../components/column-types";
 import {
   archiveAccount,
   archiveAccountGroup,
@@ -276,6 +277,17 @@ function AccountsPage() {
               field: "symbol",
               filter: true,
               width: 120,
+            } satisfies ColDef<TreeRow>,
+            {
+              colId: "balance",
+              headerName: "Balance",
+              width: 130,
+              type: FORMATTED_NUMERIC_COLUMN,
+              filter: "agNumberColumnFilter",
+              valueGetter: ({ data }: { data: TreeRow | undefined }) => {
+                if (!data || data.nodeType !== "account") return null;
+                return data.balance;
+              },
             } satisfies ColDef<TreeRow>,
           ]
         : []),
