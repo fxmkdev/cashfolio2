@@ -1,9 +1,7 @@
 # Preview environments
 
-This repository now supports two preview concepts:
-
-- Static preview: long-lived shared preview environment (`preview`)
-- Dynamic preview: one environment per pull request for `cashfolio-app2`
+This repository uses dynamic preview environments: one environment per pull
+request for `cashfolio-app2`.
 
 ## Dynamic preview behavior
 
@@ -15,6 +13,12 @@ On pull requests (non-forks), CI now:
 4. Sets Fly secrets (`DATABASE_URL`, `LOGTO_APP_SECRET`, `SESSION_SECRET`), with `SESSION_SECRET` generated per deploy in CI
 5. Deploys the PR image to `https://cashfolio-app2-pr-<PR_NUMBER>.fly.dev/`
 6. Posts/updates a PR comment with the dynamic preview URL
+
+Redis cache note:
+
+- Dynamic preview apps use the shared staging Redis cache. CI injects
+  `STAGING_REDIS_URL` into each preview app as `REDIS_URL`
+  (no per-PR Redis instance is provisioned).
 
 When a PR is closed, CI deletes the corresponding Fly app and Neon branch (via
 `neondatabase/delete-branch-action`).
@@ -37,6 +41,8 @@ environment-scoped secrets/variables.
 - `FLY_API_TOKEN`
 - `LOGTO_APP_SECRET`
 - `NEON_API_KEY`
+- `CURRENCYLAYER_API_KEY`
+- `STAGING_REDIS_URL`
 
 ### Variables
 

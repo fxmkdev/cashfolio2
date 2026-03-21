@@ -5,7 +5,7 @@ program
   .command("proxy-redis")
   .argument(
     "<environment>",
-    "The environment to proxy to, 'prod', 'staging', or 'preview'",
+    "The environment to proxy to, 'prod' or 'staging'",
   )
   .action(async (environment) => {
     console.log(`Proxying to Redis on environment '${environment}'`);
@@ -27,11 +27,9 @@ function getRedisSetup(environment: string) {
       return [6383, "cashfolio-redis"];
     case "staging":
       return [6382, "cashfolio-redis-staging"];
-    case "preview":
-      return [6381, "cashfolio-redis-preview"];
     default:
       throw new Error(
-        `Unknown environment '${environment}'. Use 'prod', 'staging', or 'preview'.`,
+        `Unknown environment '${environment}'. Use 'prod' or 'staging'.`,
       );
   }
 }
