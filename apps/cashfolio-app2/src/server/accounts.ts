@@ -223,6 +223,14 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
     );
     const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
     const today = new Date();
+    const usdToReferenceRatePromise =
+      referenceCurrency === "USD"
+        ? Promise.resolve(1)
+        : getCurrencyExchangeRate({
+            sourceCurrency: "USD",
+            targetCurrency: referenceCurrency,
+            date: today,
+          });
     const exchangeRateBySourceCurrency = new Map<
       string,
       Promise<number | null>
@@ -248,11 +256,22 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
               exchangeRateBySourceCurrency.get(sourceCurrency);
             const exchangeRatePromise =
               existingPromise ??
-              getCurrencyExchangeRate({
-                sourceCurrency,
-                targetCurrency: referenceCurrency,
-                date: today,
-              });
+              (async () => {
+                const [usdToReferenceRate, sourceToUsdRate] = await Promise.all(
+                  [
+                    usdToReferenceRatePromise,
+                    getCurrencyExchangeRate({
+                      sourceCurrency,
+                      targetCurrency: "USD",
+                      date: today,
+                    }),
+                  ],
+                );
+                if (usdToReferenceRate == null || sourceToUsdRate == null) {
+                  return null;
+                }
+                return sourceToUsdRate * usdToReferenceRate;
+              })();
             if (!existingPromise) {
               exchangeRateBySourceCurrency.set(
                 sourceCurrency,
