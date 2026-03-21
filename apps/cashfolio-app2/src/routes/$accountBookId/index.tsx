@@ -224,7 +224,6 @@ function AccountsPage() {
       string,
       GroupBalanceAggregation
     >();
-    const groupsBeingVisited = new Set<string>();
 
     const calculateGroupAggregation = (
       groupId: string,
@@ -233,16 +232,6 @@ function AccountsPage() {
       if (cachedAggregation) {
         return cachedAggregation;
       }
-
-      if (groupsBeingVisited.has(groupId)) {
-        return {
-          sum: 0,
-          hasCurrencyDescendants: false,
-          hasMissingReferenceBalance: true,
-        };
-      }
-
-      groupsBeingVisited.add(groupId);
 
       let sum = 0;
       let hasCurrencyDescendants = false;
@@ -270,8 +259,6 @@ function AccountsPage() {
           hasMissingReferenceBalance ||
           childAggregation.hasMissingReferenceBalance;
       }
-
-      groupsBeingVisited.delete(groupId);
 
       const aggregation: GroupBalanceAggregation = {
         sum,
