@@ -10,7 +10,6 @@ import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { isAfter, parse, startOfDay } from "date-fns";
 import { useEffect } from "react";
-import { AccountType, Unit } from "../.prisma-client/enums";
 import { isExpenseAccount, isIncomeAccount } from "../shared/account-utils";
 import type { AccountOption } from "./edit-transaction-modal";
 import { FormattedNumberInput } from "./formatted-number-input";
@@ -26,18 +25,10 @@ function getForcedDirection(
 }
 
 export function SimpleTransactionModal({
-  currentAccount,
   accounts,
   onClose,
   onSubmit,
 }: {
-  currentAccount: {
-    unit: Unit | null;
-    currency: string | null;
-    cryptocurrency: string | null;
-    symbol: string | null;
-    tradeCurrency: string | null;
-  };
   accounts: AccountOption[];
   onClose: () => void;
   onSubmit: (values: {
@@ -99,11 +90,6 @@ export function SimpleTransactionModal({
     (account) => account.value === form.values.counterAccountId,
   );
   const forcedDirection = getForcedDirection(selectedAccount);
-  const unitLabel = getUnitLabel(
-    selectedAccount && selectedAccount.type !== AccountType.EQUITY
-      ? selectedAccount
-      : currentAccount,
-  );
 
   useEffect(() => {
     if (forcedDirection && form.values.direction !== forcedDirection) {
@@ -169,23 +155,6 @@ export function SimpleTransactionModal({
             hideControls
             locale="en-CH"
             w={220}
-            leftSection={
-              unitLabel ? (
-                <span
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    textAlign: "left",
-                    fontSize: "0.68rem",
-                    lineHeight: 1,
-                    paddingLeft: "0.35rem",
-                  }}
-                >
-                  {unitLabel}
-                </span>
-              ) : undefined
-            }
-            leftSectionWidth={82}
             {...form.getInputProps("amount")}
           />
         </Group>
@@ -199,22 +168,4 @@ export function SimpleTransactionModal({
       </Stack>
     </form>
   );
-}
-
-function getUnitLabel(account: {
-  unit?: Unit | null;
-  currency?: string | null;
-  cryptocurrency?: string | null;
-  symbol?: string | null;
-}): string | null {
-  if (account.unit === Unit.CURRENCY) {
-    return account.currency ?? null;
-  }
-  if (account.unit === Unit.CRYPTOCURRENCY) {
-    return account.cryptocurrency ?? null;
-  }
-  if (account.unit === Unit.SECURITY) {
-    return account.symbol ?? null;
-  }
-  return null;
 }

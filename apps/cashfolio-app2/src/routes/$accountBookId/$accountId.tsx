@@ -601,13 +601,6 @@ function LedgerPage() {
         size="xl"
       >
         <SimpleTransactionModal
-          currentAccount={{
-            unit: account.unit,
-            currency: account.currency,
-            cryptocurrency: account.cryptocurrency,
-            symbol: account.symbol,
-            tradeCurrency: account.tradeCurrency,
-          }}
           accounts={simpleCounterAccountOptions}
           onClose={() => setSimpleModalOpened(false)}
           onSubmit={handleCreateSimpleTransaction}
