@@ -1,9 +1,7 @@
 # Preview environments
 
-This repository now supports two preview concepts:
-
-- Static preview: long-lived shared preview environment (`preview`)
-- Dynamic preview: one environment per pull request for `cashfolio-app2`
+This repository uses dynamic preview environments: one environment per pull
+request for `cashfolio-app2`.
 
 ## Dynamic preview behavior
 
