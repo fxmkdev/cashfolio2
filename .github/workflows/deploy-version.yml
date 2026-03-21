@@ -57,6 +57,9 @@ jobs:
           FLY_CPUS: ${{ vars.FLY_CPUS }}
           CANONICAL_HOSTNAME: ${{ vars.CANONICAL_HOSTNAME }}
           BASE_URL: ${{ vars.BASE_URL }}
+          LOGTO_ENDPOINT: ${{ vars.LOGTO_ENDPOINT }}
+          LOGTO_TENANT_ID: ${{ vars.LOGTO_TENANT_ID }}
+          LOGTO_APP_ID: ${{ vars.LOGTO_APP_ID }}
       - name: Deploy cashfolio-app2
         run: |
           flyctl deploy \
