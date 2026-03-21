@@ -129,6 +129,64 @@ async function validateAccountTypeBookings(
   }
 }
 
+type SimpleUnitFields = {
+  unit: Unit | null;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  tradeCurrency: string | null;
+};
+
+function getSimpleUnitIdentifier(account: SimpleUnitFields): string | null {
+  if (!account.unit) return null;
+
+  if (account.unit === Unit.CURRENCY) {
+    return account.currency ? `currency:${account.currency}` : null;
+  }
+  if (account.unit === Unit.CRYPTOCURRENCY) {
+    return account.cryptocurrency ? `crypto:${account.cryptocurrency}` : null;
+  }
+
+  return account.symbol ? `security:${account.symbol}` : null;
+}
+
+function getBookingUnitFields(account: SimpleUnitFields): {
+  unit: Unit;
+  currency?: string;
+  cryptocurrency?: string;
+  symbol?: string;
+  tradeCurrency?: string;
+} {
+  if (!account.unit) {
+    throw new Error("Current account must define a unit.");
+  }
+
+  if (account.unit === Unit.CURRENCY) {
+    if (!account.currency)
+      throw new Error("Current account currency is missing.");
+    return { unit: Unit.CURRENCY, currency: account.currency };
+  }
+
+  if (account.unit === Unit.CRYPTOCURRENCY) {
+    if (!account.cryptocurrency) {
+      throw new Error("Current account cryptocurrency is missing.");
+    }
+    return {
+      unit: Unit.CRYPTOCURRENCY,
+      cryptocurrency: account.cryptocurrency,
+    };
+  }
+
+  if (!account.symbol) {
+    throw new Error("Current account symbol is missing.");
+  }
+  return {
+    unit: Unit.SECURITY,
+    symbol: account.symbol,
+    tradeCurrency: account.tradeCurrency ?? undefined,
+  };
+}
+
 export const getTransaction = createServerFn({ method: "GET" })
   .inputValidator(
     (data: { transactionId: string; accountBookId: string }) => data,
@@ -303,6 +361,9 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
         type: true,
         unit: true,
         currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
         isActive: true,
       },
     });
@@ -335,17 +396,35 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
     }
 
     if (!counterAccount.isActive) {
-      throw new Error("Counter account must be active.");
+      throw new Error("Account must be active.");
+    }
+
+    const currentUnitIdentifier = getSimpleUnitIdentifier(currentAccount);
+    if (!currentUnitIdentifier) {
+      throw new Error("Current account unit details are incomplete.");
     }
 
     if (
-      counterAccount.unit !== Unit.CURRENCY ||
-      counterAccount.currency !== currentAccount.currency
+      counterAccount.type !== AccountType.EQUITY &&
+      counterAccount.type !== AccountType.ASSET &&
+      counterAccount.type !== AccountType.LIABILITY
     ) {
-      throw new Error(
-        "Counter account must use the same currency as the current account.",
-      );
+      throw new Error("Account type is not supported for simple transactions.");
     }
+
+    if (
+      counterAccount.type === AccountType.ASSET ||
+      counterAccount.type === AccountType.LIABILITY
+    ) {
+      const counterUnitIdentifier = getSimpleUnitIdentifier(counterAccount);
+      if (counterUnitIdentifier !== currentUnitIdentifier) {
+        throw new Error(
+          "Asset and liability accounts must use the same unit as the current account.",
+        );
+      }
+    }
+
+    const bookingUnitFields = getBookingUnitFields(currentAccount);
 
     const currentValue =
       data.direction === "DEBIT" ? data.amount : -data.amount;
@@ -357,16 +436,14 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
           date: bookingDate.toISOString(),
           accountId: currentAccount.id,
           description: "",
-          unit: Unit.CURRENCY,
-          currency: currentAccount.currency,
+          ...bookingUnitFields,
           value: currentValue,
         },
         {
           date: bookingDate.toISOString(),
           accountId: counterAccount.id,
           description: "",
-          unit: Unit.CURRENCY,
-          currency: currentAccount.currency,
+          ...bookingUnitFields,
           value: -currentValue,
         },
       ],

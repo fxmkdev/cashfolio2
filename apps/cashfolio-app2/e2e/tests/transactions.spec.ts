@@ -9,7 +9,7 @@ import { resetAndSeedDatabase, type SeededData } from "../support/db";
 let seeded: SeededData;
 
 async function openCreateTransaction(page: Page) {
-  await page.getByRole("button", { name: "Add Transaction" }).click();
+  await page.getByRole("button", { name: "Add Split Transaction" }).click();
   await expect(
     page.getByRole("heading", { name: "Add Transaction" }),
   ).toBeVisible();
@@ -103,7 +103,7 @@ test("create simple transaction", async ({ page }) => {
   await openCreateSimpleTransaction(page);
   await page.getByLabel("Date").fill("02.01.2026");
   await page.getByLabel("Description").fill("E2E Simple Transaction");
-  await page.getByRole("textbox", { name: "Counter account" }).click();
+  await page.getByRole("textbox", { name: "Account" }).click();
   await page
     .getByRole("option", { name: /E2E Savings/ })
     .first()

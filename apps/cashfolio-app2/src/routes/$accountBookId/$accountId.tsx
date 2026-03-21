@@ -97,6 +97,22 @@ function getUnitLabel(account: {
   }
 }
 
+function getSimpleUnitIdentifier(account: {
+  unit: Unit | null;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+}): string | null {
+  if (!account.unit) return null;
+  if (account.unit === Unit.CURRENCY) {
+    return account.currency ? `currency:${account.currency}` : null;
+  }
+  if (account.unit === Unit.CRYPTOCURRENCY) {
+    return account.cryptocurrency ? `crypto:${account.cryptocurrency}` : null;
+  }
+  return account.symbol ? `security:${account.symbol}` : null;
+}
+
 type LedgerRow = {
   id: string;
   transactionId: string;
@@ -183,6 +199,11 @@ function LedgerPage() {
     );
   }, [account.id, accountOptions, accounts, editingTransactionData]);
 
+  const currentSimpleUnitIdentifier = useMemo(
+    () => getSimpleUnitIdentifier(account),
+    [account],
+  );
+
   const simpleCounterAccountOptions = useMemo<AccountOption[]>(
     () =>
       createAccountOptions(
@@ -190,10 +211,18 @@ function LedgerPage() {
         (candidate) =>
           candidate.isActive &&
           candidate.id !== account.id &&
-          candidate.unit === Unit.CURRENCY &&
-          candidate.currency === account.currency,
+          (candidate.type === AccountType.EQUITY ||
+            ((candidate.type === AccountType.ASSET ||
+              candidate.type === AccountType.LIABILITY) &&
+              currentSimpleUnitIdentifier !== null &&
+              getSimpleUnitIdentifier({
+                unit: candidate.unit,
+                currency: candidate.currency,
+                cryptocurrency: candidate.cryptocurrency,
+                symbol: candidate.symbol,
+              }) === currentSimpleUnitIdentifier)),
       ),
-    [account.currency, account.id, accounts],
+    [account.id, accounts, currentSimpleUnitIdentifier],
   );
 
   async function handleCreateTransaction(values: {
@@ -489,10 +518,10 @@ function LedgerPage() {
   const simpleTransactionDisabledReason =
     account.type !== AccountType.ASSET && account.type !== AccountType.LIABILITY
       ? "Simple transactions are only available for asset and liability accounts."
-      : account.unit !== Unit.CURRENCY || !account.currency
-        ? "Simple transactions require a currency account."
+      : !currentSimpleUnitIdentifier
+        ? "Simple transactions require a current account with a complete unit."
         : simpleCounterAccountOptions.length === 0
-          ? "No active same-currency counter account is available."
+          ? "No eligible account is available."
           : null;
 
   const backTab = (
@@ -545,9 +574,10 @@ function LedgerPage() {
           </Tooltip>
           <Button
             leftSection={<IconCashPlus size={16} />}
+            variant="default"
             onClick={() => setModalOpened(true)}
           >
-            Add Transaction
+            Add Split Transaction
           </Button>
         </Group>
       </Group>
@@ -568,10 +598,16 @@ function LedgerPage() {
         opened={simpleModalOpened}
         onClose={() => setSimpleModalOpened(false)}
         title="Add Simple Transaction"
-        size="lg"
+        size="xl"
       >
         <SimpleTransactionModal
-          accountName={account.name}
+          currentAccount={{
+            unit: account.unit,
+            currency: account.currency,
+            cryptocurrency: account.cryptocurrency,
+            symbol: account.symbol,
+            tradeCurrency: account.tradeCurrency,
+          }}
           accounts={simpleCounterAccountOptions}
           onClose={() => setSimpleModalOpened(false)}
           onSubmit={handleCreateSimpleTransaction}

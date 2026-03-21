@@ -187,16 +187,21 @@ with split bookings:
 two-booking transactions from the ledger route
 (`src/routes/$accountBookId/$accountId.tsx`).
 
-- Entry fields: date, description, counter account, amount, debit/credit
-  direction (applied to the current account)
+- Entry fields: date, description, account, debit/credit direction (applied to
+  the current account), and amount
 - Always creates exactly 2 bookings:
   - current account booking
   - selected counter account booking
-- Both bookings use `Unit.CURRENCY` and the current account currency
+- Both bookings use the current account's unit identifier
+- If the selected account is equity, the equity booking still receives the
+  current account's unit fields
+- Amount input shows the active unit label in the left section
 - Availability:
   - only for current accounts of type `ASSET` or `LIABILITY`
-  - current account must be a currency account
-  - counter account must be active and have the same currency
+  - current account must have a complete unit identifier
+  - selected account must be active
+  - `ASSET`/`LIABILITY` options must match the current account unit identifier
+  - all active `EQUITY` accounts are available
 - Server-side validation re-checks all constraints before creation
 
 ### Conditional Editability Affordance

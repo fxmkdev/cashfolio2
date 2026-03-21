@@ -4,12 +4,12 @@ import {
   SegmentedControl,
   Select,
   Stack,
-  Text,
   TextInput,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { isAfter, parse, startOfDay } from "date-fns";
+import { AccountType, Unit } from "../.prisma-client/enums";
 import { isExpenseAccount, isIncomeAccount } from "../shared/account-utils";
 import type { AccountOption } from "./edit-transaction-modal";
 import { FormattedNumberInput } from "./formatted-number-input";
@@ -17,12 +17,18 @@ import { FormattedNumberInput } from "./formatted-number-input";
 type Direction = "DEBIT" | "CREDIT";
 
 export function SimpleTransactionModal({
-  accountName,
+  currentAccount,
   accounts,
   onClose,
   onSubmit,
 }: {
-  accountName: string;
+  currentAccount: {
+    unit: Unit | null;
+    currency: string | null;
+    cryptocurrency: string | null;
+    symbol: string | null;
+    tradeCurrency: string | null;
+  };
   accounts: AccountOption[];
   onClose: () => void;
   onSubmit: (values: {
@@ -53,12 +59,12 @@ export function SimpleTransactionModal({
         return null;
       },
       counterAccountId: (value, values) => {
-        if (!value) return "Counter account is required";
+        if (!value) return "Account is required";
 
         const counterAccount = accounts.find(
           (account) => account.value === value,
         );
-        if (!counterAccount) return "Counter account is required";
+        if (!counterAccount) return "Account is required";
 
         if (values.direction === "DEBIT" && isExpenseAccount(counterAccount)) {
           return "Expense accounts cannot be credited";
@@ -80,6 +86,15 @@ export function SimpleTransactionModal({
     },
   });
 
+  const selectedAccount = accounts.find(
+    (account) => account.value === form.values.counterAccountId,
+  );
+  const unitLabel = getUnitLabel(
+    selectedAccount && selectedAccount.type !== AccountType.EQUITY
+      ? selectedAccount
+      : currentAccount,
+  );
+
   return (
     <form
       onSubmit={(event) =>
@@ -96,31 +111,38 @@ export function SimpleTransactionModal({
       }
     >
       <Stack gap="md">
-        <DateInput
-          valueFormat="DD.MM.YYYY"
-          dateParser={(value) => parse(value, "dd.MM.yyyy", new Date())}
-          label="Date"
-          {...form.getInputProps("date")}
-        />
+        <Group align="start" wrap="nowrap">
+          <DateInput
+            valueFormat="DD.MM.YYYY"
+            dateParser={(value) => parse(value, "dd.MM.yyyy", new Date())}
+            label="Date"
+            w={180}
+            {...form.getInputProps("date")}
+          />
+          <TextInput
+            label="Description"
+            flex={1}
+            {...form.getInputProps("description")}
+          />
+        </Group>
 
-        <TextInput label="Description" {...form.getInputProps("description")} />
-
-        <Select
-          label="Counter account"
-          data={accounts.map((account) => ({
-            value: account.value,
-            label: account.label,
-          }))}
-          searchable
-          {...form.getInputProps("counterAccountId")}
-        />
-
-        <Group grow align="end">
+        <Group align="end" wrap="nowrap">
+          <Select
+            label="Account"
+            data={accounts.map((account) => ({
+              value: account.value,
+              label: account.label,
+            }))}
+            searchable
+            flex={1}
+            {...form.getInputProps("counterAccountId")}
+          />
           <SegmentedControl
             data={[
               { value: "DEBIT", label: "Debit" },
               { value: "CREDIT", label: "Credit" },
             ]}
+            mt={24}
             {...form.getInputProps("direction")}
           />
           <FormattedNumberInput
@@ -129,12 +151,12 @@ export function SimpleTransactionModal({
             allowNegative={false}
             hideControls
             locale="en-CH"
+            w={220}
+            leftSection={unitLabel ?? undefined}
+            leftSectionWidth={70}
             {...form.getInputProps("amount")}
           />
         </Group>
-        <Text size="sm" c="dimmed">
-          Debit/Credit applies to {accountName}.
-        </Text>
 
         <Group justify="end">
           <Button variant="subtle" onClick={onClose}>
@@ -145,4 +167,22 @@ export function SimpleTransactionModal({
       </Stack>
     </form>
   );
+}
+
+function getUnitLabel(account: {
+  unit?: Unit | null;
+  currency?: string | null;
+  cryptocurrency?: string | null;
+  symbol?: string | null;
+}): string | null {
+  if (account.unit === Unit.CURRENCY) {
+    return account.currency ?? null;
+  }
+  if (account.unit === Unit.CRYPTOCURRENCY) {
+    return account.cryptocurrency ?? null;
+  }
+  if (account.unit === Unit.SECURITY) {
+    return account.symbol ?? null;
+  }
+  return null;
 }

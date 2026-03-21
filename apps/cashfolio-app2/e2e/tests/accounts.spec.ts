@@ -78,6 +78,6 @@ test("navigate from accounts grid to ledger", async ({ page }) => {
     new RegExp(`/${seeded.accountBookId}/${seeded.cashAccount.id}`),
   );
   await expect(
-    page.getByRole("button", { name: "Add Transaction" }),
+    page.getByRole("button", { name: "Add Split Transaction" }),
   ).toBeVisible();
 });
