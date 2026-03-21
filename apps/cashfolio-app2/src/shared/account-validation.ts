@@ -88,8 +88,20 @@ export function validateAccountGroupName(
 }
 
 export function validateAccountGroupParentGroupId(
-  _parentGroupId?: string,
+  parentGroupId?: string,
+  options?: {
+    editingId?: string;
+    descendantGroupIds?: Set<string>;
+  },
 ): string | null {
+  const editingId = options?.editingId;
+  if (!parentGroupId || !editingId) return null;
+  if (parentGroupId === editingId) {
+    return "A group cannot be its own parent";
+  }
+  if (options.descendantGroupIds?.has(parentGroupId)) {
+    return "A group cannot be moved under one of its sub-groups";
+  }
   return null;
 }
 

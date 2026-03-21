@@ -9,9 +9,12 @@ import {
   Select,
 } from "@mantine/core";
 import { isNotEmpty, useForm } from "@mantine/form";
-import { useEffect, useReducer } from "react";
+import { useEffect, useMemo, useReducer } from "react";
 import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
-import { validateAccountGroupName } from "../shared/account-validation";
+import {
+  validateAccountGroupName,
+  validateAccountGroupParentGroupId,
+} from "../shared/account-validation";
 import type { ExistingNode } from "./edit-account-modal";
 
 type FormValues = {
@@ -76,6 +79,28 @@ export function EditAccountGroupModal({
 }) {
   const isEdit = !!initialValues;
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
+  const descendantGroupIds = useMemo(() => {
+    if (!editingId || !existingNodes) return new Set<string>();
+
+    const childGroupsByParentId = new Map<string, string[]>();
+    for (const node of existingNodes) {
+      if (node.nodeType !== "accountGroup" || !node.parentId) continue;
+      const currentChildren = childGroupsByParentId.get(node.parentId) ?? [];
+      currentChildren.push(node.id);
+      childGroupsByParentId.set(node.parentId, currentChildren);
+    }
+
+    const descendants = new Set<string>();
+    const stack = [...(childGroupsByParentId.get(editingId) ?? [])];
+    while (stack.length > 0) {
+      const groupId = stack.pop();
+      if (!groupId || descendants.has(groupId)) continue;
+      descendants.add(groupId);
+      stack.push(...(childGroupsByParentId.get(groupId) ?? []));
+    }
+    return descendants;
+  }, [editingId, existingNodes]);
+
   const form = useForm<FormValues>({
     mode: "uncontrolled",
     initialValues: initialValues
@@ -94,7 +119,11 @@ export function EditAccountGroupModal({
         return validateAccountGroupName(value, siblingNames);
       },
       typeDescriptor: isNotEmpty("Type is required"),
-      parentGroupId: () => null,
+      parentGroupId: (value) =>
+        validateAccountGroupParentGroupId(value, {
+          editingId,
+          descendantGroupIds,
+        }),
     },
     transformValues: (values) => {
       const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
@@ -199,7 +228,9 @@ export function EditAccountGroupModal({
                     g.type === type &&
                     (!equityAccountSubtype ||
                       !g.equityAccountSubtype ||
-                      g.equityAccountSubtype === equityAccountSubtype),
+                      g.equityAccountSubtype === equityAccountSubtype) &&
+                    g.value !== editingId &&
+                    !descendantGroupIds.has(g.value),
                 )}
                 {...form.getInputProps("parentGroupId")}
               />

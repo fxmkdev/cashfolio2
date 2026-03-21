@@ -178,6 +178,9 @@ handlers).
 - **Duplicate name checking**: name validators accept an optional `siblingNames`
   parameter. The server queries sibling names before validation; the client
   derives them from `existingNodes` (the full tree data passed to modals)
+- **Group-parent cycle prevention**: editing a group cannot set its parent to
+  itself or any of its descendant groups. Enforce this both in modal validation
+  and in `updateAccountGroup` server checks.
 
 ## Transaction Editing (EditTransactionModal)
 
