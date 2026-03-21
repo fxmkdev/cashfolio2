@@ -74,3 +74,22 @@ functions.
 `reorderAccountTreeItems` (in `accounts.ts`) issues a batch of Prisma updates
 inside a transaction to update `sortOrder` values after reordering sibling rows
 in the reorder modal.
+
+### Ledger FX Reference Balance
+
+- The ledger route (`$accountBookId/$accountId.tsx`) can render a second balance
+  column in the account book reference currency for currency-unit accounts.
+- Reference-currency conversion is resolved server-side in
+  `src/server/ledger.ts`, using `src/server/fx.server.ts`.
+- FX rates are requested from currencylayer historical API and cached in Redis
+  TimeSeries keys (`fx:currencylayer:USD:<TARGET_CURRENCY>`).
+- When an exact date is not available, the newest available prior rate is used
+  (first from cache, otherwise by historical API backtracking).
+
+Required runtime env vars for this feature:
+
+- `CURRENCYLAYER_API_KEY`
+- `REDIS_URL`
+
+`REDIS_URL` should point to the shared staging Redis when preview and staging
+should share FX cache entries.
