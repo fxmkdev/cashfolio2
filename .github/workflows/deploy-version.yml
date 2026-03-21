@@ -94,8 +94,10 @@ jobs:
               exit 1
             fi
 
-            echo "[$attempt/$MAX_ATTEMPTS] Waiting for image: $IMAGE"
-            sleep "$SLEEP_SECONDS"
+            if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+              echo "[$attempt/$MAX_ATTEMPTS] Waiting for image: $IMAGE"
+              sleep "$SLEEP_SECONDS"
+            fi
           done
 
           echo "Timed out waiting for image: $IMAGE"
