@@ -74,11 +74,20 @@ export function SimpleTransactionModal({
         );
         if (!counterAccount) return "Counter account is required";
 
-        if (values.direction === "DEBIT" && isExpenseAccount(counterAccount)) {
+        const effectiveDirection =
+          getForcedDirection(counterAccount) ?? values.direction;
+
+        if (
+          effectiveDirection === "DEBIT" &&
+          isExpenseAccount(counterAccount)
+        ) {
           return "Expense accounts cannot be credited";
         }
 
-        if (values.direction === "CREDIT" && isIncomeAccount(counterAccount)) {
+        if (
+          effectiveDirection === "CREDIT" &&
+          isIncomeAccount(counterAccount)
+        ) {
           return "Income accounts cannot be debited";
         }
 
