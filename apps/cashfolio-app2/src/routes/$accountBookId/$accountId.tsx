@@ -12,7 +12,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
-import { AccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
+import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
 import { LinkAnchor } from "../../components/link-anchor";
 import { getTypeLabel } from "../../shared/account-utils";
 import { useTransactionScroll } from "../../hooks/use-transaction-scroll";
@@ -458,11 +458,11 @@ function LedgerPage() {
       <Group mb="lg" gap="md" justify="space-between">
         <Group gap="md">
           <Breadcrumbs fz="h2" fw={700}>
-            <AccountsBreadcrumbSegments
-              accountBookId={accountBookId}
-              tab={backTab}
-              mode={account.isActive ? "active" : "archived"}
-            />
+            {getAccountsBreadcrumbSegments({
+              accountBookId,
+              tab: backTab,
+              mode: account.isActive ? "active" : "archived",
+            })}
             <Text fz="inherit" fw="inherit">
               {getTypeLabel(account.type, account.equityAccountSubtype)}
             </Text>
