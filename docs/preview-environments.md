@@ -14,11 +14,6 @@ On pull requests (non-forks), CI now:
 5. Deploys the PR image to `https://cashfolio-app2-pr-<PR_NUMBER>.fly.dev/`
 6. Posts/updates a PR comment with the dynamic preview URL
 
-Redis cache note:
-
-- Dynamic preview environments intentionally use the staging Redis instance as
-  a shared cache (no per-PR Redis instance is provisioned).
-
 When a PR is closed, CI deletes the corresponding Fly app and Neon branch (via
 `neondatabase/delete-branch-action`).
 
