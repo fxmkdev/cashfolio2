@@ -20,7 +20,9 @@ When a PR is closed, CI deletes the corresponding Fly app and Neon branch.
 
 ## Required GitHub configuration
 
-Dynamic preview jobs run in GitHub environment `preview-cashfolio-app` and require:
+Dynamic preview jobs create one GitHub environment per PR (`preview-pr-<PR_NUMBER>`)
+and read configuration from repository or organization scope (global), not from
+environment-scoped secrets/variables.
 
 ### Secrets
 

@@ -193,7 +193,8 @@ jobs:
       - cashfolio-app2-typecheck
       - cashfolio-app2-format
     environment:
-      name: preview-cashfolio-app
+      name: preview-pr-${{ github.event.pull_request.number }}
+      url: https://cashfolio-app2-pr-${{ github.event.pull_request.number }}.fly.dev/
     permissions:
       contents: read
       pull-requests: write
