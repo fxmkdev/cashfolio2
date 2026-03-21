@@ -6,7 +6,6 @@ on:
 
 env:
   FLYCTL_VERSION: 0.4.25
-  NEON_API_BASE: https://console.neon.tech/api/v2
 
 jobs:
   cleanup-preview:
@@ -40,26 +39,9 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       - name: Delete Neon branch
-        run: |
-          set -euo pipefail
-
-          BRANCH_NAME="${{ steps.names.outputs.neon_branch_name }}"
-          BRANCHES_RESPONSE="$(curl -fsS \
-            -H "Authorization: Bearer ${NEON_API_KEY}" \
-            "${NEON_API_BASE}/projects/${NEON_PROJECT_ID}/branches?search=${BRANCH_NAME}&limit=100")"
-
-          BRANCH_ID="$(printf '%s' "$BRANCHES_RESPONSE" | jq -r --arg name "$BRANCH_NAME" '.branches[]? | select(.name == $name) | .id' | head -n1)"
-
-          if [ -z "$BRANCH_ID" ]; then
-            echo "Neon branch ${BRANCH_NAME} does not exist, skipping"
-            exit 0
-          fi
-
-          echo "Deleting Neon branch ${BRANCH_NAME} (${BRANCH_ID})"
-          curl -fsS \
-            -X DELETE \
-            -H "Authorization: Bearer ${NEON_API_KEY}" \
-            "${NEON_API_BASE}/projects/${NEON_PROJECT_ID}/branches/${BRANCH_ID}" > /dev/null
-        env:
-          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        uses: neondatabase/delete-branch-action@v3
+        continue-on-error: true
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch: ${{ steps.names.outputs.neon_branch_name }}
+          api_key: ${{ secrets.NEON_API_KEY }}

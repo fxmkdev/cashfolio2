@@ -202,8 +202,6 @@ jobs:
       group: preview-pr-${{ github.event.pull_request.number }}
       cancel-in-progress: true
     env:
-      NEON_API_BASE: https://console.neon.tech/api/v2
-      PR_NUMBER: ${{ github.event.pull_request.number }}
       FLY_APP: cashfolio-app2-pr-${{ github.event.pull_request.number }}
       PREVIEW_HOSTNAME: cashfolio-app2-pr-${{ github.event.pull_request.number }}.fly.dev
       PREVIEW_URL: https://cashfolio-app2-pr-${{ github.event.pull_request.number }}.fly.dev/
@@ -216,81 +214,19 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@master
         with:
           version: ${{ env.FLYCTL_VERSION }}
-      - name: Ensure Neon branch and resolve DATABASE_URL
+      - name: Set Neon branch expiration date
+        run: echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+      - name: Create or reuse Neon branch
         id: neon
-        run: |
-          set -euo pipefail
-
-          BRANCHES_RESPONSE="$(curl -fsS \
-            -H "Authorization: Bearer ${NEON_API_KEY}" \
-            "${NEON_API_BASE}/projects/${NEON_PROJECT_ID}/branches?search=${NEON_BRANCH_NAME}&limit=100")"
-
-          BRANCH_ID="$(printf '%s' "$BRANCHES_RESPONSE" | jq -r --arg name "$NEON_BRANCH_NAME" '.branches[]? | select(.name == $name) | .id' | head -n1)"
-
-          if [ -z "$BRANCH_ID" ]; then
-            echo "Creating Neon branch ${NEON_BRANCH_NAME} from ${NEON_PROD_BRANCH_ID}"
-            CREATE_PAYLOAD="$(jq -n \
-              --arg branch_name "$NEON_BRANCH_NAME" \
-              --arg parent_id "$NEON_PROD_BRANCH_ID" \
-              '{branch: {name: $branch_name, parent_id: $parent_id}, endpoints: [{type: "read_write"}]}')"
-
-            CREATE_RESPONSE="$(curl -fsS \
-              -X POST \
-              -H "Authorization: Bearer ${NEON_API_KEY}" \
-              -H "Content-Type: application/json" \
-              -d "$CREATE_PAYLOAD" \
-              "${NEON_API_BASE}/projects/${NEON_PROJECT_ID}/branches")"
-
-            BRANCH_ID="$(printf '%s' "$CREATE_RESPONSE" | jq -r '.branch.id')"
-          else
-            echo "Reusing Neon branch ${NEON_BRANCH_NAME} (${BRANCH_ID})"
-          fi
-
-          if [ -z "$BRANCH_ID" ] || [ "$BRANCH_ID" = "null" ]; then
-            echo "Failed to determine Neon branch id"
-            exit 1
-          fi
-
-          DATABASE_NAME_ESCAPED="$(jq -nr --arg value "$NEON_DATABASE_NAME" '$value|@uri')"
-          ROLE_NAME_ESCAPED="$(jq -nr --arg value "$NEON_ROLE_NAME" '$value|@uri')"
-
-          DATABASE_URL=""
-          for attempt in $(seq 1 24); do
-            CONNECTION_RESPONSE="$(curl -sS \
-              -w "\n%{http_code}" \
-              -H "Authorization: Bearer ${NEON_API_KEY}" \
-              "${NEON_API_BASE}/projects/${NEON_PROJECT_ID}/connection_uri?branch_id=${BRANCH_ID}&database_name=${DATABASE_NAME_ESCAPED}&role_name=${ROLE_NAME_ESCAPED}")"
-
-            RESPONSE_BODY="$(printf '%s' "$CONNECTION_RESPONSE" | sed '$d')"
-            STATUS_CODE="$(printf '%s' "$CONNECTION_RESPONSE" | tail -n1)"
-
-            if [ "$STATUS_CODE" = "200" ]; then
-              DATABASE_URL="$(printf '%s' "$RESPONSE_BODY" | jq -r '.uri // empty')"
-              if [ -n "$DATABASE_URL" ]; then
-                break
-              fi
-            fi
-
-            if [ "$attempt" -lt 24 ]; then
-              echo "Waiting for Neon connection URI (${attempt}/24)"
-              sleep 5
-            fi
-          done
-
-          if [ -z "$DATABASE_URL" ]; then
-            echo "Failed to resolve Neon connection URI for branch ${BRANCH_ID}"
-            exit 1
-          fi
-
-          echo "::add-mask::${DATABASE_URL}"
-          echo "branch_id=${BRANCH_ID}" >> "$GITHUB_OUTPUT"
-          echo "database_url=${DATABASE_URL}" >> "$GITHUB_OUTPUT"
-        env:
-          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
-          NEON_PROD_BRANCH_ID: ${{ vars.NEON_PROD_BRANCH_ID }}
-          NEON_DATABASE_NAME: ${{ vars.NEON_DATABASE_NAME }}
-          NEON_ROLE_NAME: ${{ vars.NEON_ROLE_NAME }}
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_name: ${{ env.NEON_BRANCH_NAME }}
+          parent_branch: ${{ vars.NEON_PROD_BRANCH_ID }}
+          database: ${{ vars.NEON_DATABASE_NAME || 'neondb' }}
+          role: ${{ vars.NEON_ROLE_NAME || 'neondb_owner' }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          expires_at: ${{ env.EXPIRES_AT }}
       - name: Ensure Fly app exists
         run: |
           set -euo pipefail
@@ -315,7 +251,7 @@ jobs:
 
           flyctl secrets set \
             --app "$FLY_APP" \
-            DATABASE_URL="${{ steps.neon.outputs.database_url }}" \
+            DATABASE_URL="${{ steps.neon.outputs.db_url }}" \
             LOGTO_APP_SECRET="${{ secrets.LOGTO_APP_SECRET }}" \
             SESSION_SECRET="${{ secrets.SESSION_SECRET }}"
         env:
