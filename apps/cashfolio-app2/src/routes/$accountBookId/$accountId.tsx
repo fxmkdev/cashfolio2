@@ -102,6 +102,7 @@ function getSimpleUnitIdentifier(account: {
   currency: string | null;
   cryptocurrency: string | null;
   symbol: string | null;
+  tradeCurrency: string | null;
 }): string | null {
   if (!account.unit) return null;
   if (account.unit === Unit.CURRENCY) {
@@ -110,7 +111,8 @@ function getSimpleUnitIdentifier(account: {
   if (account.unit === Unit.CRYPTOCURRENCY) {
     return account.cryptocurrency ? `crypto:${account.cryptocurrency}` : null;
   }
-  return account.symbol ? `security:${account.symbol}` : null;
+  if (!account.symbol || !account.tradeCurrency) return null;
+  return `security:${account.symbol}:${account.tradeCurrency}`;
 }
 
 type LedgerRow = {
@@ -220,9 +222,21 @@ function LedgerPage() {
                 currency: candidate.currency,
                 cryptocurrency: candidate.cryptocurrency,
                 symbol: candidate.symbol,
+                tradeCurrency: candidate.tradeCurrency,
               }) === currentSimpleUnitIdentifier)),
       ),
     [account.id, accounts, currentSimpleUnitIdentifier],
+  );
+  const currentAccountLabel = useMemo(
+    () =>
+      [
+        getTypeLabel(account.type, account.equityAccountSubtype),
+        account.groupPathSegments.join(" / "),
+        account.name,
+      ]
+        .filter(Boolean)
+        .join(" / "),
+    [account],
   );
 
   async function handleCreateTransaction(values: {
@@ -601,6 +615,7 @@ function LedgerPage() {
         size="xl"
       >
         <SimpleTransactionModal
+          currentAccount={{ id: account.id, label: currentAccountLabel }}
           accounts={simpleCounterAccountOptions}
           onClose={() => setSimpleModalOpened(false)}
           onSubmit={handleCreateSimpleTransaction}

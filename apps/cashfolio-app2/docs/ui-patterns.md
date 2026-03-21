@@ -187,8 +187,10 @@ with split bookings:
 two-booking transactions from the ledger route
 (`src/routes/$accountBookId/$accountId.tsx`).
 
-- Entry fields: date, description, account, debit/credit direction (applied to
-  the current account), and amount
+- Entry fields:
+  - date and description (first row)
+  - current account (read-only), direction toggle action icon, counter account,
+    and amount (second row)
 - Always creates exactly 2 bookings:
   - current account booking
   - selected counter account booking
@@ -198,7 +200,7 @@ two-booking transactions from the ledger route
 - For equity account-type restrictions:
   - selecting an `INCOME` account forces `Debit` on the current account
   - selecting an `EXPENSE` account forces `Credit` on the current account
-  - the debit/credit segmented control is disabled while forced
+  - the direction toggle action icon is disabled while forced
 - Availability:
   - only for current accounts of type `ASSET` or `LIABILITY`
   - current account must have a complete unit identifier

@@ -204,7 +204,8 @@ function getSimpleUnitIdentifier(account: SimpleUnitFields): string | null {
     return account.cryptocurrency ? `crypto:${account.cryptocurrency}` : null;
   }
 
-  return account.symbol ? `security:${account.symbol}` : null;
+  if (!account.symbol || !account.tradeCurrency) return null;
+  return `security:${account.symbol}:${account.tradeCurrency}`;
 }
 
 function getBookingUnitFields(account: SimpleUnitFields): {
@@ -237,10 +238,13 @@ function getBookingUnitFields(account: SimpleUnitFields): {
   if (!account.symbol) {
     throw new Error("Current account symbol is missing.");
   }
+  if (!account.tradeCurrency) {
+    throw new Error("Current account trade currency is missing.");
+  }
   return {
     unit: Unit.SECURITY,
     symbol: account.symbol,
-    tradeCurrency: account.tradeCurrency ?? undefined,
+    tradeCurrency: account.tradeCurrency,
   };
 }
 
@@ -423,7 +427,7 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
     }
 
     if (!counterAccount.isActive) {
-      throw new Error("Account must be active.");
+      throw new Error("Counter account must be active.");
     }
 
     const currentUnitIdentifier = getSimpleUnitIdentifier(currentAccount);

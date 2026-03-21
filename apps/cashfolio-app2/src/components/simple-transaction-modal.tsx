@@ -1,15 +1,17 @@
 import {
+  ActionIcon,
   Button,
   Group,
-  SegmentedControl,
   Select,
   Stack,
   TextInput,
+  Tooltip,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { isAfter, parse, startOfDay } from "date-fns";
 import { useEffect } from "react";
+import { IconArrowRight } from "@tabler/icons-react";
 import { isExpenseAccount, isIncomeAccount } from "../shared/account-utils";
 import type { AccountOption } from "./edit-transaction-modal";
 import { FormattedNumberInput } from "./formatted-number-input";
@@ -24,11 +26,20 @@ function getForcedDirection(
   return null;
 }
 
+function getDirectionLabel(direction: Direction): string {
+  return direction === "DEBIT" ? "Debit account" : "Credit account";
+}
+
 export function SimpleTransactionModal({
+  currentAccount,
   accounts,
   onClose,
   onSubmit,
 }: {
+  currentAccount: {
+    id: string;
+    label: string;
+  };
   accounts: AccountOption[];
   onClose: () => void;
   onSubmit: (values: {
@@ -59,12 +70,12 @@ export function SimpleTransactionModal({
         return null;
       },
       counterAccountId: (value, values) => {
-        if (!value) return "Account is required";
+        if (!value) return "Counter account is required";
 
         const counterAccount = accounts.find(
           (account) => account.value === value,
         );
-        if (!counterAccount) return "Account is required";
+        if (!counterAccount) return "Counter account is required";
 
         if (values.direction === "DEBIT" && isExpenseAccount(counterAccount)) {
           return "Expense accounts cannot be credited";
@@ -90,6 +101,12 @@ export function SimpleTransactionModal({
     (account) => account.value === form.values.counterAccountId,
   );
   const forcedDirection = getForcedDirection(selectedAccount);
+  const forcedDirectionReason =
+    forcedDirection === "DEBIT"
+      ? "Income accounts require current account debit."
+      : forcedDirection === "CREDIT"
+        ? "Expense accounts require current account credit."
+        : null;
 
   useEffect(() => {
     if (forcedDirection && form.values.direction !== forcedDirection) {
@@ -128,26 +145,60 @@ export function SimpleTransactionModal({
           />
         </Group>
 
-        <Group align="end" wrap="nowrap">
+        <Group align="end" wrap="wrap">
           <Select
-            label="Account"
+            label="Current account"
+            data={[{ value: currentAccount.id, label: currentAccount.label }]}
+            value={currentAccount.id}
+            disabled
+            description={getDirectionLabel(form.values.direction)}
+            style={{ flex: "1 1 16rem" }}
+          />
+
+          <Tooltip
+            label={forcedDirectionReason ?? "Swap debit/credit direction"}
+          >
+            <span>
+              <ActionIcon
+                mt={24}
+                variant="default"
+                size="lg"
+                disabled={forcedDirection !== null}
+                onClick={() =>
+                  form.setFieldValue(
+                    "direction",
+                    form.values.direction === "DEBIT" ? "CREDIT" : "DEBIT",
+                  )
+                }
+                aria-label="Swap debit/credit direction"
+              >
+                <IconArrowRight
+                  size={18}
+                  style={{
+                    transform:
+                      form.values.direction === "DEBIT"
+                        ? undefined
+                        : "rotate(180deg)",
+                  }}
+                />
+              </ActionIcon>
+            </span>
+          </Tooltip>
+
+          <Select
+            label="Counter account"
             data={accounts.map((account) => ({
               value: account.value,
               label: account.label,
             }))}
             searchable
-            flex={1}
+            description={getDirectionLabel(
+              form.values.direction === "DEBIT" ? "CREDIT" : "DEBIT",
+            )}
+            style={{ flex: "1 1 16rem" }}
             {...form.getInputProps("counterAccountId")}
           />
-          <SegmentedControl
-            data={[
-              { value: "DEBIT", label: "Debit" },
-              { value: "CREDIT", label: "Credit" },
-            ]}
-            disabled={forcedDirection !== null}
-            mt={24}
-            {...form.getInputProps("direction")}
-          />
+
           <FormattedNumberInput
             label="Amount"
             decimalScale={2}

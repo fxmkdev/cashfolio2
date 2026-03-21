@@ -107,18 +107,19 @@ test("create simple transaction", async ({ page }) => {
 
   await page.getByLabel("Date").fill("02.01.2026");
   await page.getByLabel("Description").fill("E2E Simple Transaction");
-  await page.getByRole("textbox", { name: "Account" }).click();
+  await page.getByRole("textbox", { name: "Counter account" }).click();
   await page
     .getByRole("option", { name: /E2E Expense/ })
     .first()
     .click();
 
+  await expect(simpleDialog.getByText("Credit account")).toBeVisible();
+  await expect(simpleDialog.getByText("Debit account")).toBeVisible();
   await expect(
-    simpleDialog.locator('input[type="radio"][value="DEBIT"]'),
+    simpleDialog.getByRole("button", {
+      name: "Swap debit/credit direction",
+    }),
   ).toBeDisabled();
-  await expect(
-    simpleDialog.locator('input[type="radio"][value="CREDIT"]'),
-  ).toBeChecked();
 
   await page.getByLabel("Amount").fill("42");
 
