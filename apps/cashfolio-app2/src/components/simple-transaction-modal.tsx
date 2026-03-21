@@ -26,10 +26,6 @@ function getForcedDirection(
   return null;
 }
 
-function getDirectionLabel(direction: Direction): string {
-  return direction === "DEBIT" ? "Debit account" : "Credit account";
-}
-
 export function SimpleTransactionModal({
   currentAccount,
   accounts,
@@ -143,6 +139,15 @@ export function SimpleTransactionModal({
             flex={1}
             {...form.getInputProps("description")}
           />
+          <FormattedNumberInput
+            label="Amount"
+            decimalScale={2}
+            allowNegative={false}
+            hideControls
+            locale="en-CH"
+            w={220}
+            {...form.getInputProps("amount")}
+          />
         </Group>
 
         <Group align="end" wrap="wrap">
@@ -151,7 +156,6 @@ export function SimpleTransactionModal({
             data={[{ value: currentAccount.id, label: currentAccount.label }]}
             value={currentAccount.id}
             disabled
-            description={getDirectionLabel(form.values.direction)}
             style={{ flex: "1 1 16rem" }}
           />
 
@@ -192,21 +196,8 @@ export function SimpleTransactionModal({
               label: account.label,
             }))}
             searchable
-            description={getDirectionLabel(
-              form.values.direction === "DEBIT" ? "CREDIT" : "DEBIT",
-            )}
             style={{ flex: "1 1 16rem" }}
             {...form.getInputProps("counterAccountId")}
-          />
-
-          <FormattedNumberInput
-            label="Amount"
-            decimalScale={2}
-            allowNegative={false}
-            hideControls
-            locale="en-CH"
-            w={220}
-            {...form.getInputProps("amount")}
           />
         </Group>
 

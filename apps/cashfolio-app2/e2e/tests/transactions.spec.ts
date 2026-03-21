@@ -113,8 +113,6 @@ test("create simple transaction", async ({ page }) => {
     .first()
     .click();
 
-  await expect(simpleDialog.getByText("Credit account")).toBeVisible();
-  await expect(simpleDialog.getByText("Debit account")).toBeVisible();
   await expect(
     simpleDialog.getByRole("button", {
       name: "Swap debit/credit direction",

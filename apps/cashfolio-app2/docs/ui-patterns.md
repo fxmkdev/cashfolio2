@@ -188,9 +188,9 @@ two-booking transactions from the ledger route
 (`src/routes/$accountBookId/$accountId.tsx`).
 
 - Entry fields:
-  - date and description (first row)
-  - current account (read-only), direction toggle action icon, counter account,
-    and amount (second row)
+  - date, description, and amount (first row)
+  - current account (read-only), direction toggle action icon, and counter
+    account (second row)
 - Always creates exactly 2 bookings:
   - current account booking
   - selected counter account booking
