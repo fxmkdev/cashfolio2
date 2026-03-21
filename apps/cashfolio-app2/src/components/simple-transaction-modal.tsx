@@ -181,7 +181,7 @@ export function SimpleTransactionModal({
                   size={18}
                   style={{
                     transform:
-                      form.values.direction === "DEBIT"
+                      form.values.direction === "CREDIT"
                         ? undefined
                         : "rotate(180deg)",
                   }}
