@@ -17,12 +17,13 @@ paths are relative to that app directory.
 `src/shared/account-utils.ts` contains pure utility functions used across
 routes, components, and server functions:
 
-| Function                                                        | Purpose                                                                                         |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `getTypeLabel(type, equityAccountSubtype)`                      | Human-readable label for an account type (e.g. `"Income"`, `"Asset"`)                           |
-| `isIncomeAccount(acct)`                                         | True when account is `EQUITY / INCOME`                                                          |
-| `isExpenseAccount(acct)`                                        | True when account is `EQUITY / EXPENSE`                                                         |
-| `getUnitIdentifier({ unit, currency, cryptocurrency, symbol })` | Canonical string key for a booking's unit (`"currency:CHF"`, `"crypto:BTC"`, `"security:AAPL"`) |
+| Function                                                        | Purpose                                                                                                       |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `getTypeLabel(type, equityAccountSubtype)`                      | Human-readable label for an account type (e.g. `"Income"`, `"Asset"`)                                         |
+| `isIncomeAccount(acct)`                                         | True when account is `EQUITY / INCOME`                                                                        |
+| `isExpenseAccount(acct)`                                        | True when account is `EQUITY / EXPENSE`                                                                       |
+| `getUnitIdentifier({ unit, currency, cryptocurrency, symbol })` | Canonical string key for a booking's unit (`"currency:CHF"`, `"crypto:BTC"`, `"security:AAPL"`)               |
+| `getSimpleTransactionUnitIdentifier({ ... })`                   | Canonical key for simple-flow account compatibility (`"currency:CHF"`, `"crypto:BTC"`, `"security:AAPL:USD"`) |
 
 ## Custom Hooks (`src/hooks/`)
 

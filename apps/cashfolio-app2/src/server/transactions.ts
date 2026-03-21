@@ -6,7 +6,10 @@ import {
   Unit,
 } from "../.prisma-client/enums";
 import { isAfter, startOfDay } from "date-fns";
-import { getUnitIdentifier } from "../shared/account-utils";
+import {
+  getSimpleTransactionUnitIdentifier,
+  getUnitIdentifier,
+} from "../shared/account-utils";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 
 export type CreateTransactionInput = {
@@ -194,20 +197,6 @@ type SimpleUnitFields = {
   tradeCurrency: string | null;
 };
 
-function getSimpleUnitIdentifier(account: SimpleUnitFields): string | null {
-  if (!account.unit) return null;
-
-  if (account.unit === Unit.CURRENCY) {
-    return account.currency ? `currency:${account.currency}` : null;
-  }
-  if (account.unit === Unit.CRYPTOCURRENCY) {
-    return account.cryptocurrency ? `crypto:${account.cryptocurrency}` : null;
-  }
-
-  if (!account.symbol || !account.tradeCurrency) return null;
-  return `security:${account.symbol}:${account.tradeCurrency}`;
-}
-
 function getBookingUnitFields(account: SimpleUnitFields): {
   unit: Unit;
   currency?: string;
@@ -369,11 +358,15 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
       throw new Error("Direction must be either DEBIT or CREDIT.");
     }
 
+    if (typeof data.date !== "string" || data.date.trim() === "") {
+      throw new Error("Date is required.");
+    }
+
     const bookingDate = new Date(data.date);
     const today = startOfDay(new Date());
 
     if (isNaN(bookingDate.getTime())) {
-      throw new Error("Date is required.");
+      throw new Error("Date is invalid.");
     }
     if (isAfter(startOfDay(bookingDate), today)) {
       throw new Error("Date cannot be in the future.");
@@ -430,7 +423,8 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
       throw new Error("Counter account must be active.");
     }
 
-    const currentUnitIdentifier = getSimpleUnitIdentifier(currentAccount);
+    const currentUnitIdentifier =
+      getSimpleTransactionUnitIdentifier(currentAccount);
     if (!currentUnitIdentifier) {
       throw new Error("Current account unit details are incomplete.");
     }
@@ -447,7 +441,8 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
       counterAccount.type === AccountType.ASSET ||
       counterAccount.type === AccountType.LIABILITY
     ) {
-      const counterUnitIdentifier = getSimpleUnitIdentifier(counterAccount);
+      const counterUnitIdentifier =
+        getSimpleTransactionUnitIdentifier(counterAccount);
       if (counterUnitIdentifier !== currentUnitIdentifier) {
         throw new Error(
           "Asset and liability accounts must use the same unit as the current account.",

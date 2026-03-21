@@ -14,7 +14,10 @@ import {
 import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
 import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
 import { LinkAnchor } from "../../components/link-anchor";
-import { getTypeLabel } from "../../shared/account-utils";
+import {
+  getSimpleTransactionUnitIdentifier,
+  getTypeLabel,
+} from "../../shared/account-utils";
 import { useTransactionScroll } from "../../hooks/use-transaction-scroll";
 import {
   IconBolt,
@@ -95,24 +98,6 @@ function getUnitLabel(account: {
     case Unit.CRYPTOCURRENCY:
       return account.cryptocurrency;
   }
-}
-
-function getSimpleUnitIdentifier(account: {
-  unit: Unit | null;
-  currency: string | null;
-  cryptocurrency: string | null;
-  symbol: string | null;
-  tradeCurrency: string | null;
-}): string | null {
-  if (!account.unit) return null;
-  if (account.unit === Unit.CURRENCY) {
-    return account.currency ? `currency:${account.currency}` : null;
-  }
-  if (account.unit === Unit.CRYPTOCURRENCY) {
-    return account.cryptocurrency ? `crypto:${account.cryptocurrency}` : null;
-  }
-  if (!account.symbol || !account.tradeCurrency) return null;
-  return `security:${account.symbol}:${account.tradeCurrency}`;
 }
 
 type LedgerRow = {
@@ -202,7 +187,7 @@ function LedgerPage() {
   }, [account.id, accountOptions, accounts, editingTransactionData]);
 
   const currentSimpleUnitIdentifier = useMemo(
-    () => getSimpleUnitIdentifier(account),
+    () => getSimpleTransactionUnitIdentifier(account),
     [account],
   );
 
@@ -217,7 +202,7 @@ function LedgerPage() {
             ((candidate.type === AccountType.ASSET ||
               candidate.type === AccountType.LIABILITY) &&
               currentSimpleUnitIdentifier !== null &&
-              getSimpleUnitIdentifier({
+              getSimpleTransactionUnitIdentifier({
                 unit: candidate.unit,
                 currency: candidate.currency,
                 cryptocurrency: candidate.cryptocurrency,
