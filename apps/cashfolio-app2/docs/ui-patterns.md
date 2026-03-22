@@ -79,11 +79,17 @@ Route-level logic that doesn't belong in components is extracted into hooks in
 - Non-equity tabs (`ASSET`, `LIABILITY`) render `Ccy.`, `Symbol`, `Balance`, and
   `Balance (<referenceCurrency>)`.
 - `Balance` is account-level only (group rows are blank), with no aggregation.
-- `Balance (<referenceCurrency>)` is account-level for `Unit.CURRENCY` rows and
-  shows aggregated descendant sums on group rows.
+- `Balance (<referenceCurrency>)` is account-level for leaf accounts across
+  `Unit.CURRENCY`, `Unit.CRYPTOCURRENCY`, and `Unit.SECURITY` when a reference
+  conversion is available (or the raw balance is 0), and shows aggregated
+  descendant sums on group rows.
+- Non-equity tabs render a pinned footer row with `Total` in
+  `Balance (<referenceCurrency>)`.
 - If any descendant account in a group has a blank
   `Balance (<referenceCurrency>)`, that group row stays blank in this column to
   avoid partial totals.
+- The footer `Total` also stays blank when any account row in the tab has a
+  blank `Balance (<referenceCurrency>)` value.
 - Balances are displayed in each account's own unit/currency; no conversion.
 - Liability balances are sign-adjusted for display (same direction as ledger
   display conventions).

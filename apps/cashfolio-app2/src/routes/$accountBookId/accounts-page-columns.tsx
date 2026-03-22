@@ -9,6 +9,8 @@ import {
 import type { GroupBalanceAggregation } from "./accounts-page-data";
 import {
   ROOT_PARENT_KEY,
+  isReferenceCurrencyTotalFooterRow,
+  type AccountsGridRow,
   toRowTarget,
   type RowTarget,
   type TreeRow,
@@ -25,7 +27,7 @@ export function useAccountTreeColumnDefs(params: {
   onArchiveRow: (row: RowTarget) => void;
   onDeleteRow: (row: RowTarget) => void;
   onReorderRow: (value: { name: string; parentKey: string }) => void;
-}): ColDef<TreeRow>[] {
+}): ColDef<AccountsGridRow>[] {
   const {
     isArchivedMode,
     isEquityTab,
@@ -39,7 +41,7 @@ export function useAccountTreeColumnDefs(params: {
     onReorderRow,
   } = params;
 
-  return useMemo<ColDef<TreeRow>[]>(
+  return useMemo<ColDef<AccountsGridRow>[]>(
     () => [
       ...(!isEquityTab
         ? [
@@ -48,8 +50,15 @@ export function useAccountTreeColumnDefs(params: {
               headerName: "Ccy.",
               filter: true,
               width: 100,
-              valueGetter: ({ data }: { data: TreeRow | undefined }) => {
-                if (!data?.unit) return undefined;
+              valueGetter: ({
+                data,
+              }: {
+                data: AccountsGridRow | undefined;
+              }) => {
+                if (!data || isReferenceCurrencyTotalFooterRow(data)) {
+                  return undefined;
+                }
+                if (!data.unit) return undefined;
                 switch (data.unit) {
                   case Unit.CURRENCY:
                     return data.currency;
@@ -59,31 +68,48 @@ export function useAccountTreeColumnDefs(params: {
                     return data.cryptocurrency;
                 }
               },
-            } satisfies ColDef<TreeRow>,
+            } satisfies ColDef<AccountsGridRow>,
             {
               field: "symbol",
               filter: true,
               width: 120,
-            } satisfies ColDef<TreeRow>,
+            } satisfies ColDef<AccountsGridRow>,
             {
               field: "balance",
               headerName: "Balance",
               width: 130,
               type: FORMATTED_NUMERIC_COLUMN,
               filter: "agNumberColumnFilter",
-              valueGetter: ({ data }: { data: TreeRow | undefined }) => {
-                if (!data || data.nodeType !== "account") return null;
+              valueGetter: ({
+                data,
+              }: {
+                data: AccountsGridRow | undefined;
+              }) => {
+                if (
+                  !data ||
+                  isReferenceCurrencyTotalFooterRow(data) ||
+                  data.nodeType !== "account"
+                ) {
+                  return null;
+                }
                 return data.balance;
               },
-            } satisfies ColDef<TreeRow>,
+            } satisfies ColDef<AccountsGridRow>,
             {
               field: "balanceInReferenceCurrency",
               headerName: `Balance (${referenceCurrency})`,
               width: 170,
               type: FORMATTED_NUMERIC_COLUMN,
               filter: "agNumberColumnFilter",
-              valueGetter: ({ data }: { data: TreeRow | undefined }) => {
+              valueGetter: ({
+                data,
+              }: {
+                data: AccountsGridRow | undefined;
+              }) => {
                 if (!data) return null;
+                if (isReferenceCurrencyTotalFooterRow(data)) {
+                  return data.balanceInReferenceCurrency;
+                }
                 if (data.nodeType === "account") {
                   return data.balanceInReferenceCurrency;
                 }
@@ -98,7 +124,7 @@ export function useAccountTreeColumnDefs(params: {
                 }
                 return groupAggregation.sum;
               },
-            } satisfies ColDef<TreeRow>,
+            } satisfies ColDef<AccountsGridRow>,
           ]
         : []),
       {
@@ -110,8 +136,9 @@ export function useAccountTreeColumnDefs(params: {
         resizable: false,
         suppressHeaderMenuButton: true,
         cellClass: "actions-cell",
-        cellRenderer: ({ data }: ICellRendererParams<TreeRow>) => {
+        cellRenderer: ({ data }: ICellRendererParams<AccountsGridRow>) => {
           if (!data) return null;
+          if (isReferenceCurrencyTotalFooterRow(data)) return null;
 
           if (isArchivedMode) {
             return (
@@ -151,7 +178,7 @@ export function useAccountTreeColumnDefs(params: {
             />
           );
         },
-      } satisfies ColDef<TreeRow>,
+      } satisfies ColDef<AccountsGridRow>,
     ],
     [
       isArchivedMode,

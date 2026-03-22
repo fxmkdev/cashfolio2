@@ -31,6 +31,18 @@ export type TreeRow = Awaited<
   ReturnType<typeof getAccountTreeData>
 >["rows"][number];
 
+export const REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID =
+  "__reference_currency_total_footer__";
+
+export type ReferenceCurrencyTotalFooterRow = {
+  id: typeof REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID;
+  rowType: "referenceCurrencyTotalFooter";
+  name: "Total";
+  balanceInReferenceCurrency: number | null;
+};
+
+export type AccountsGridRow = TreeRow | ReferenceCurrencyTotalFooterRow;
+
 export const ROOT_PARENT_KEY = "__root__";
 
 export type RowTarget = {
@@ -49,6 +61,14 @@ export function toRowTarget(data: TreeRow): RowTarget {
 
 export function getEntityLabel(nodeType: RowTarget["nodeType"]): string {
   return nodeType === "account" ? "Account" : "Group";
+}
+
+export function isReferenceCurrencyTotalFooterRow(
+  row: AccountsGridRow | undefined,
+): row is ReferenceCurrencyTotalFooterRow {
+  return (
+    !!row && "rowType" in row && row.rowType === "referenceCurrencyTotalFooter"
+  );
 }
 
 function isTabValue(value: unknown): value is TabValue {
