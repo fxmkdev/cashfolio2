@@ -6,6 +6,7 @@ import {
 import {
   getAccountUnitIdentifier,
   getBookingUnitIdentifier,
+  isBookingValueCompatibleWithAccountType,
 } from "../shared/account-utils";
 
 export type RebookBookingValidationInput = {
@@ -62,19 +63,19 @@ export function validateRebookBookingTarget(args: {
     }
   }
 
-  if (
-    targetAccount.type === AccountType.EQUITY &&
-    targetAccount.equityAccountSubtype === EquityAccountSubtype.INCOME &&
-    booking.value > 0
-  ) {
-    throw new Error("Income accounts cannot have debit entries.");
-  }
+  if (!isBookingValueCompatibleWithAccountType(booking.value, targetAccount)) {
+    if (
+      targetAccount.type === AccountType.EQUITY &&
+      targetAccount.equityAccountSubtype === EquityAccountSubtype.INCOME
+    ) {
+      throw new Error("Income accounts cannot have debit entries.");
+    }
 
-  if (
-    targetAccount.type === AccountType.EQUITY &&
-    targetAccount.equityAccountSubtype === EquityAccountSubtype.EXPENSE &&
-    booking.value < 0
-  ) {
-    throw new Error("Expense accounts cannot have credit entries.");
+    if (
+      targetAccount.type === AccountType.EQUITY &&
+      targetAccount.equityAccountSubtype === EquityAccountSubtype.EXPENSE
+    ) {
+      throw new Error("Expense accounts cannot have credit entries.");
+    }
   }
 }

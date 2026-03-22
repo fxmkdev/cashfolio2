@@ -256,23 +256,25 @@ function LedgerPage() {
     [],
   );
 
-  const rebookingUnitIdentifier = useMemo(() => {
-    if (!rebooking || rebooking.bookingUnit.unit == null) return null;
+  const hasCompleteBookingUnit = useMemo(() => {
+    if (!rebooking || rebooking.bookingUnit.unit == null) return false;
 
-    return getBookingUnitIdentifier({
+    const bookingUnitIdentifier = getBookingUnitIdentifier({
       unit: rebooking.bookingUnit.unit,
       currency: rebooking.bookingUnit.currency,
       cryptocurrency: rebooking.bookingUnit.cryptocurrency,
       symbol: rebooking.bookingUnit.symbol,
       tradeCurrency: rebooking.bookingUnit.tradeCurrency,
     });
+
+    return bookingUnitIdentifier != null;
   }, [rebooking]);
 
   const rebookTargetAccountOptions = useMemo(() => {
     if (
       !rebooking ||
       rebooking.bookingUnit.unit == null ||
-      rebookingUnitIdentifier == null
+      !hasCompleteBookingUnit
     ) {
       return [];
     }
@@ -301,13 +303,7 @@ function LedgerPage() {
       .filter((option) => eligibleAccountIds.has(option.value))
       .toSorted((a, b) => a.label.localeCompare(b.label))
       .map((option) => ({ value: option.value, label: option.label }));
-  }, [
-    account.id,
-    accountOptions,
-    accounts,
-    rebooking,
-    rebookingUnitIdentifier,
-  ]);
+  }, [account.id, accountOptions, accounts, hasCompleteBookingUnit, rebooking]);
 
   async function handleRebookBooking(values: { targetAccountId: string }) {
     if (!rebooking) return;
@@ -500,7 +496,7 @@ function LedgerPage() {
           <RebookBookingModal
             targetAccounts={rebookTargetAccountOptions}
             disabledReason={
-              rebookingUnitIdentifier == null
+              !hasCompleteBookingUnit
                 ? "This booking has incomplete unit data and cannot be rebooked."
                 : undefined
             }
