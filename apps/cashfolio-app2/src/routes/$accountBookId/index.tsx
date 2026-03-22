@@ -70,6 +70,17 @@ function DashboardPage() {
 
   const hasBookings = overview.bookingsCount > 0;
   const hasConvertedBookings = overview.convertedBookingsCount > 0;
+  const chartTextColor = isDarkMode ? theme.colors.dark[0] : theme.black;
+  const tooltipBackgroundColor = isDarkMode
+    ? theme.colors.dark[6]
+    : theme.white;
+  const tooltipTextColor = isDarkMode ? theme.colors.gray[0] : theme.black;
+  const tooltipSubtleTextColor = isDarkMode
+    ? theme.colors.gray[3]
+    : theme.colors.gray[7];
+  const tooltipBorderColor = isDarkMode
+    ? theme.colors.dark[4]
+    : theme.colors.gray[3];
 
   const chartOptions = useMemo<AgCartesianChartOptions>(
     () => ({
@@ -79,8 +90,13 @@ function DashboardPage() {
       },
       theme: {
         params: {
-          textColor: isDarkMode ? theme.colors.dark[0] : theme.black,
-          foregroundColor: isDarkMode ? theme.colors.dark[0] : theme.black,
+          textColor: chartTextColor,
+          foregroundColor: chartTextColor,
+          borderColor: tooltipBorderColor,
+          tooltipBackgroundColor,
+          tooltipBorder: true,
+          tooltipTextColor,
+          tooltipSubtleTextColor,
         },
       },
       legend: {
@@ -158,7 +174,17 @@ function DashboardPage() {
         },
       },
     }),
-    [compactNumberFormatter, isDarkMode, overview.points, theme],
+    [
+      chartTextColor,
+      compactNumberFormatter,
+      isDarkMode,
+      overview.points,
+      theme,
+      tooltipBackgroundColor,
+      tooltipBorderColor,
+      tooltipSubtleTextColor,
+      tooltipTextColor,
+    ],
   );
 
   return (
