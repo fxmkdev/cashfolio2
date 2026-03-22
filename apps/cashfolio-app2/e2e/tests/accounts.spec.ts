@@ -105,6 +105,11 @@ test("balance column visibility and baseline values across tabs/modes", async ({
   await expect(
     agGridCellByColId(cashRow, "balanceInReferenceCurrency"),
   ).toHaveText("0.00");
+  const cryptoRow = agGridRowByText(page, seeded.cryptoAccount.name);
+  await expect(agGridCellByColId(cryptoRow, "balance")).toHaveText("0.00");
+  await expect(
+    agGridCellByColId(cryptoRow, "balanceInReferenceCurrency"),
+  ).toHaveText("0.00");
 
   const assetsGroupRow = agGridRowByText(page, "Assets");
   await expect(agGridCellByColId(assetsGroupRow, "balance")).toHaveText(

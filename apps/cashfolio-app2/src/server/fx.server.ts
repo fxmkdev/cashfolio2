@@ -3,12 +3,19 @@ import { getRedisClient } from "../redis.server";
 const BASE_CURRENCY = "USD";
 const MAX_BACKTRACK_DAYS = 30;
 const CURRENCYLAYER_TIMEOUT_MS = 10_000;
+const COINLAYER_TIMEOUT_MS = 10_000;
 const FX_SERIES_RETENTION_MS = 10 * 365 * 24 * 60 * 60 * 1000;
 const BACKTRACKED_FALLBACK_TTL_SECONDS = 60 * 60;
 
 type CurrencyLayerHistoricalResponse = {
   success: boolean;
   quotes?: Record<string, number>;
+  error?: { code?: number; info?: string };
+};
+
+type CoinLayerHistoricalResponse = {
+  success: boolean;
+  rates?: Record<string, number>;
   error?: { code?: number; info?: string };
 };
 
@@ -23,6 +30,7 @@ type BacktrackedFallbackCacheEntry = {
 };
 
 let hasWarnedMissingCurrencyLayerApiKey = false;
+let hasWarnedMissingCoinLayerApiKey = false;
 let hasWarnedFxCacheReadFailure = false;
 let hasWarnedFxFallbackCacheReadFailure = false;
 let hasWarnedFxFallbackCacheWriteFailure = false;
@@ -46,15 +54,26 @@ function subUtcDay(date: Date): Date {
   return new Date(date.getTime() - 24 * 60 * 60 * 1000);
 }
 
-function getRedisSeriesKey(targetCurrency: string): string {
+function getCurrencyRedisSeriesKey(targetCurrency: string): string {
   return `fx:currencylayer:${BASE_CURRENCY}:${targetCurrency}`;
 }
 
-function getBacktrackedFallbackCacheKey(
+function getCurrencyBacktrackedFallbackCacheKey(
   targetCurrency: string,
   requestedTimestamp: number,
 ): string {
   return `fx:currencylayer:fallback:${BASE_CURRENCY}:${targetCurrency}:${requestedTimestamp}`;
+}
+
+function getCryptocurrencyRedisSeriesKey(cryptocurrency: string): string {
+  return `fx:coinlayer:${BASE_CURRENCY}:${cryptocurrency}`;
+}
+
+function getCryptocurrencyBacktrackedFallbackCacheKey(
+  cryptocurrency: string,
+  requestedTimestamp: number,
+): string {
+  return `fx:coinlayer:fallback:${BASE_CURRENCY}:${cryptocurrency}:${requestedTimestamp}`;
 }
 
 function getCurrencyLayerApiKey(): string | null {
@@ -64,6 +83,17 @@ function getCurrencyLayerApiKey(): string | null {
       "CURRENCYLAYER_API_KEY is not set; reference-currency conversion will be unavailable when account currency differs.",
     );
     hasWarnedMissingCurrencyLayerApiKey = true;
+  }
+  return apiKey ?? null;
+}
+
+function getCoinLayerApiKey(): string | null {
+  const apiKey = process.env.COINLAYER_API_KEY?.trim();
+  if (!apiKey && !hasWarnedMissingCoinLayerApiKey) {
+    console.warn(
+      "COINLAYER_API_KEY is not set; cryptocurrency reference conversion will be unavailable.",
+    );
+    hasWarnedMissingCoinLayerApiKey = true;
   }
   return apiKey ?? null;
 }
@@ -194,6 +224,21 @@ async function clearBacktrackedFallbackFromCache(key: string): Promise<void> {
   }
 }
 
+function isNoDataProviderError(error?: {
+  code?: number;
+  info?: string;
+}): boolean {
+  const errorCode = error?.code;
+  const errorInfo = error?.info?.toLowerCase();
+  return (
+    errorCode === 106 ||
+    (typeof errorInfo === "string" &&
+      (errorInfo.includes("no results") ||
+        errorInfo.includes("did not return any results") ||
+        errorInfo.includes("no data")))
+  );
+}
+
 async function fetchUsdToCurrencyRateFromCurrencyLayer(
   targetCurrency: string,
   date: Date,
@@ -239,15 +284,7 @@ async function fetchUsdToCurrencyRateFromCurrencyLayer(
 
   const data = (await response.json()) as CurrencyLayerHistoricalResponse;
   if (!data.success) {
-    const errorCode = data.error?.code;
-    const errorInfo = data.error?.info?.toLowerCase();
-    const isNoDataError =
-      errorCode === 106 ||
-      (typeof errorInfo === "string" &&
-        (errorInfo.includes("no results") ||
-          errorInfo.includes("did not return any results") ||
-          errorInfo.includes("no data")));
-    if (isNoDataError) {
+    if (isNoDataProviderError(data.error)) {
       return null;
     }
 
@@ -260,20 +297,69 @@ async function fetchUsdToCurrencyRateFromCurrencyLayer(
   return typeof quote === "number" ? quote : null;
 }
 
-async function getUsdToCurrencyRate(
-  targetCurrency: string,
+async function fetchUsdPerCryptocurrencyRateFromCoinLayer(
+  cryptocurrency: string,
   date: Date,
 ): Promise<number | null> {
-  if (targetCurrency === BASE_CURRENCY) {
-    return 1;
+  const apiKey = getCoinLayerApiKey();
+  if (!apiKey) return null;
+
+  const params = new URLSearchParams({
+    access_key: apiKey,
+    target: BASE_CURRENCY,
+    symbols: cryptocurrency,
+  });
+  const url = `https://api.coinlayer.com/${toDayString(date)}?${params.toString()}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), COINLAYER_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(url, { signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      const timeoutError = new Error("Coinlayer request timed out");
+      console.warn(timeoutError.message, {
+        cryptocurrency,
+        date: toDayString(date),
+        timeoutMs: COINLAYER_TIMEOUT_MS,
+      });
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
 
-  const key = getRedisSeriesKey(targetCurrency);
-  const requestedTimestamp = toSeriesTimestamp(date);
-  const backtrackedFallbackCacheKey = getBacktrackedFallbackCacheKey(
-    targetCurrency,
-    requestedTimestamp,
-  );
+  if (!response.ok) {
+    throw new Error(
+      `Coinlayer request failed with ${response.status} ${response.statusText}`,
+    );
+  }
+
+  const data = (await response.json()) as CoinLayerHistoricalResponse;
+  if (!data.success) {
+    if (isNoDataProviderError(data.error)) {
+      return null;
+    }
+
+    throw new Error(
+      `Coinlayer request failed: ${data.error?.info ?? "Unknown error"}`,
+    );
+  }
+
+  const rate = data.rates?.[cryptocurrency];
+  return typeof rate === "number" ? rate : null;
+}
+
+async function getUsdRateWithBacktracking(args: {
+  seriesKey: string;
+  backtrackedFallbackCacheKey: string;
+  date: Date;
+  fetchRate: (date: Date) => Promise<number | null>;
+}): Promise<number | null> {
+  const requestedTimestamp = toSeriesTimestamp(args.date);
+  const key = args.seriesKey;
+  const backtrackedFallbackCacheKey = args.backtrackedFallbackCacheKey;
 
   const cached = await getCachedRate(key, requestedTimestamp);
   if (cached?.timestamp === requestedTimestamp) {
@@ -288,7 +374,7 @@ async function getUsdToCurrencyRate(
     return cachedBacktrackedFallback.rate;
   }
 
-  let requestedDate = toUtcDay(date);
+  let requestedDate = toUtcDay(args.date);
   for (let i = 0; i <= MAX_BACKTRACK_DAYS; i++) {
     const currentTimestamp = toSeriesTimestamp(requestedDate);
     if (cached && currentTimestamp <= cached.timestamp) {
@@ -300,10 +386,7 @@ async function getUsdToCurrencyRate(
       return cached.rate;
     }
 
-    const fetchedRate = await fetchUsdToCurrencyRateFromCurrencyLayer(
-      targetCurrency,
-      requestedDate,
-    );
+    const fetchedRate = await args.fetchRate(requestedDate);
     if (fetchedRate != null) {
       try {
         await storeCachedRate(
@@ -344,6 +427,42 @@ async function getUsdToCurrencyRate(
   return null;
 }
 
+async function getUsdToCurrencyRate(
+  targetCurrency: string,
+  date: Date,
+): Promise<number | null> {
+  if (targetCurrency === BASE_CURRENCY) {
+    return 1;
+  }
+
+  return getUsdRateWithBacktracking({
+    seriesKey: getCurrencyRedisSeriesKey(targetCurrency),
+    backtrackedFallbackCacheKey: getCurrencyBacktrackedFallbackCacheKey(
+      targetCurrency,
+      toSeriesTimestamp(date),
+    ),
+    date,
+    fetchRate: (targetDate) =>
+      fetchUsdToCurrencyRateFromCurrencyLayer(targetCurrency, targetDate),
+  });
+}
+
+async function getUsdPerCryptocurrencyRate(
+  cryptocurrency: string,
+  date: Date,
+): Promise<number | null> {
+  return getUsdRateWithBacktracking({
+    seriesKey: getCryptocurrencyRedisSeriesKey(cryptocurrency),
+    backtrackedFallbackCacheKey: getCryptocurrencyBacktrackedFallbackCacheKey(
+      cryptocurrency,
+      toSeriesTimestamp(date),
+    ),
+    date,
+    fetchRate: (targetDate) =>
+      fetchUsdPerCryptocurrencyRateFromCoinLayer(cryptocurrency, targetDate),
+  });
+}
+
 export async function getCurrencyExchangeRate(args: {
   sourceCurrency: string;
   targetCurrency: string;
@@ -368,6 +487,33 @@ export async function getCurrencyExchangeRate(args: {
   } catch (error) {
     console.error(
       `Unable to retrieve FX rate for ${sourceCurrency} -> ${targetCurrency}`,
+      error,
+    );
+    return null;
+  }
+}
+
+export async function getCryptocurrencyToCurrencyExchangeRate(args: {
+  cryptocurrency: string;
+  targetCurrency: string;
+  date: Date;
+}): Promise<number | null> {
+  const cryptocurrency = args.cryptocurrency.toUpperCase();
+  const targetCurrency = args.targetCurrency.toUpperCase();
+
+  try {
+    const [usdToTargetRate, cryptoToUsdRate] = await Promise.all([
+      getUsdToCurrencyRate(targetCurrency, args.date),
+      getUsdPerCryptocurrencyRate(cryptocurrency, args.date),
+    ]);
+    if (usdToTargetRate == null || cryptoToUsdRate == null) {
+      return null;
+    }
+
+    return cryptoToUsdRate * usdToTargetRate;
+  } catch (error) {
+    console.error(
+      `Unable to retrieve FX rate for ${cryptocurrency} -> ${targetCurrency}`,
       error,
     );
     return null;

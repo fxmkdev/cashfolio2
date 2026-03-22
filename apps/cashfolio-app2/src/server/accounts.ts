@@ -10,7 +10,10 @@ import {
   validateAccountGroupInput,
 } from "../shared/account-validation";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
-import { getCurrencyExchangeRate } from "./fx.server";
+import {
+  getCryptocurrencyToCurrencyExchangeRate,
+  getCurrencyExchangeRate,
+} from "./fx.server";
 
 function getGroupPath(
   groupId: string,
@@ -263,17 +266,24 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
       string,
       Promise<number | null>
     >();
+    const exchangeRateByCryptocurrency = new Map<
+      string,
+      Promise<number | null>
+    >();
 
     const accountRows = await Promise.all(
       accounts.map(async (a) => {
         const rawBalance = rawBalanceByAccountId.get(a.id) ?? 0;
         let rawBalanceInReferenceCurrency: number | null = null;
-        const shouldComputeReferenceBalance =
-          (a.type === "ASSET" || a.type === "LIABILITY") &&
-          a.unit === "CURRENCY" &&
-          Boolean(a.currency);
+        const isAssetOrLiability = a.type === "ASSET" || a.type === "LIABILITY";
+        const shouldComputeCurrencyReferenceBalance =
+          isAssetOrLiability && a.unit === "CURRENCY" && Boolean(a.currency);
+        const shouldComputeCryptocurrencyReferenceBalance =
+          isAssetOrLiability &&
+          a.unit === "CRYPTOCURRENCY" &&
+          Boolean(a.cryptocurrency);
 
-        if (shouldComputeReferenceBalance && a.currency) {
+        if (shouldComputeCurrencyReferenceBalance && a.currency) {
           const sourceCurrency = a.currency.toUpperCase();
           if (rawBalance === 0) {
             rawBalanceInReferenceCurrency = 0;
@@ -303,6 +313,35 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
             if (!existingPromise) {
               exchangeRateBySourceCurrency.set(
                 sourceCurrency,
+                exchangeRatePromise,
+              );
+            }
+
+            const exchangeRate = await exchangeRatePromise;
+            if (exchangeRate != null) {
+              rawBalanceInReferenceCurrency = rawBalance * exchangeRate;
+            }
+          }
+        } else if (
+          shouldComputeCryptocurrencyReferenceBalance &&
+          a.cryptocurrency
+        ) {
+          const cryptocurrency = a.cryptocurrency.toUpperCase();
+          if (rawBalance === 0) {
+            rawBalanceInReferenceCurrency = 0;
+          } else {
+            const existingPromise =
+              exchangeRateByCryptocurrency.get(cryptocurrency);
+            const exchangeRatePromise =
+              existingPromise ??
+              getCryptocurrencyToCurrencyExchangeRate({
+                cryptocurrency,
+                targetCurrency: referenceCurrency,
+                date: today,
+              });
+            if (!existingPromise) {
+              exchangeRateByCryptocurrency.set(
+                cryptocurrency,
                 exchangeRatePromise,
               );
             }

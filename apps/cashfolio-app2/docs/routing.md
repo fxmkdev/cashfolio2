@@ -81,20 +81,23 @@ in the reorder modal.
   `Balance (<referenceCurrency>)` columns.
 - Reference-currency conversion is resolved server-side in
   `src/server/accounts.ts`, using `src/server/fx.server.ts`.
-- FX rates are requested from currencylayer historical API and cached in Redis
-  TimeSeries keys (`fx:currencylayer:USD:<TARGET_CURRENCY>`).
+- Currency FX rates are requested from currencylayer historical API and cached
+  in Redis TimeSeries keys (`fx:currencylayer:USD:<TARGET_CURRENCY>`).
+- Cryptocurrency USD prices are requested from coinlayer historical API and
+  cached in Redis TimeSeries keys (`fx:coinlayer:USD:<CRYPTO_SYMBOL>`).
 - When an exact date is not available, the newest available prior rate is used
   (first from cache, otherwise by historical API backtracking).
-- Ref-currency balances are populated for `Unit.CURRENCY` accounts only;
-  security and cryptocurrency rows remain empty in that column.
+- Ref-currency balances are populated for `Unit.CURRENCY` and
+  `Unit.CRYPTOCURRENCY` accounts; security rows remain empty in that column.
 - Group rows in `Balance (<referenceCurrency>)` show aggregated sums of
-  descendant `Unit.CURRENCY` account balances.
+  descendant `Unit.CURRENCY` and `Unit.CRYPTOCURRENCY` account balances.
 - If any descendant account has an unavailable (`null`) reference-currency
   balance, the group row remains blank to avoid displaying a partial aggregate.
 
 Required runtime env vars for this feature:
 
 - `CURRENCYLAYER_API_KEY`
+- `COINLAYER_API_KEY`
 - `REDIS_URL` — must point to a Redis deployment with RedisTimeSeries module
   support (for example, Redis Stack)
 
@@ -104,4 +107,5 @@ support) when preview and staging should share FX cache entries.
 Dynamic PR preview deployment (`.github/workflows/build.yml`) sets:
 
 - `CURRENCYLAYER_API_KEY` from `secrets.CURRENCYLAYER_API_KEY`
+- `COINLAYER_API_KEY` from `secrets.COINLAYER_API_KEY`
 - `REDIS_URL` from `secrets.STAGING_REDIS_URL` (shared staging Redis)
