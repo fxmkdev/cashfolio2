@@ -222,6 +222,13 @@ function LedgerPage() {
     account.type === AccountType.EQUITY &&
     account.equityAccountSubtype === EquityAccountSubtype.EXPENSE;
 
+  const handleDeleteClick = useCallback(
+    (transactionId: string, description: string) => {
+      setDeletingTransaction({ id: transactionId, description });
+    },
+    [],
+  );
+
   const rows = useMemo(
     () => buildLedgerRows(account, bookings),
     [account, bookings],
@@ -232,9 +239,8 @@ function LedgerPage() {
     isEquity,
     isIncome,
     isExpense,
-    onEditClick: (value) => void handleEditClick(value),
-    onDeleteClick: (transactionId, description) =>
-      setDeletingTransaction({ id: transactionId, description }),
+    onEditClick: handleEditClick,
+    onDeleteClick: handleDeleteClick,
   });
 
   const navigate = Route.useNavigate();
