@@ -33,3 +33,4 @@ jobs:
           storybookBuildDir: apps/cashfolio-app2/storybook-static
           exitZeroOnChanges: true
           exitOnceUploaded: true
+          autoAcceptChanges: true
