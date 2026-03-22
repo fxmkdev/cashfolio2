@@ -260,8 +260,11 @@ two-booking transactions from the ledger route
 ### Unit Identifier Pattern
 
 Bookings are grouped by a unit identifier string: `currency:${code}`,
-`crypto:${symbol}`, or `security:${symbol}`. Only one unit identifier is allowed
-per transaction.
+`crypto:${symbol}`, or `security:${symbol}`.
+
+In the UI transaction form, only one unit identifier is allowed per transaction.
+Server-side validation intentionally allows multi-unit transactions and only
+enforces sum-to-zero when all bookings share the same unit identifier.
 
 The shared `getUnitIdentifier({ unit, currency, cryptocurrency, symbol })` in
 `src/shared/account-utils.ts` produces these strings. Callers must guard that
