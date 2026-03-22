@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { addMonths, format, startOfMonth, subMonths } from "date-fns";
 import {
   AccountType,
   EquityAccountSubtype,
@@ -19,8 +18,43 @@ type DashboardBucket = {
   expense: number;
 };
 
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
 function toDateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+function getUtcMonthKey(date: Date): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function startOfUtcMonth(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+}
+
+function addUtcMonths(date: Date, amount: number): Date {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + amount, 1),
+  );
+}
+
+function getUtcMonthLabel(date: Date): string {
+  return `${MONTH_LABELS[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
 }
 
 function round2(value: number): number {
@@ -35,9 +69,9 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
     const now = new Date();
-    const currentMonthStart = startOfMonth(now);
-    const periodStart = subMonths(currentMonthStart, 11);
-    const periodEnd = addMonths(currentMonthStart, 1);
+    const currentMonthStart = startOfUtcMonth(now);
+    const periodStart = addUtcMonths(currentMonthStart, -11);
+    const periodEnd = addUtcMonths(currentMonthStart, 1);
 
     const [accountBook, bookings] = await Promise.all([
       prisma.accountBook.findUniqueOrThrow({
@@ -73,11 +107,11 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
     const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
     const bucketsByMonthKey = new Map<string, DashboardBucket>();
     const monthStarts: Date[] = Array.from({ length: 12 }, (_, index) =>
-      addMonths(periodStart, index),
+      addUtcMonths(periodStart, index),
     );
 
     for (const monthStart of monthStarts) {
-      const monthKey = format(monthStart, "yyyy-MM");
+      const monthKey = getUtcMonthKey(monthStart);
       bucketsByMonthKey.set(monthKey, {
         monthStart,
         income: 0,
@@ -86,10 +120,15 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
     }
 
     const exchangeRateByKey = new Map<string, Promise<number | null>>();
+    const conversionTasks: Array<{
+      booking: (typeof bookings)[number];
+      bucket: DashboardBucket;
+      exchangeRatePromise: Promise<number | null>;
+    }> = [];
     let skippedBookingsCount = 0;
 
     for (const booking of bookings) {
-      const monthKey = format(startOfMonth(booking.date), "yyyy-MM");
+      const monthKey = getUtcMonthKey(booking.date);
       const bucket = bucketsByMonthKey.get(monthKey);
       if (!bucket) {
         continue;
@@ -168,34 +207,48 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
         continue;
       }
 
-      const exchangeRate = await exchangeRatePromise;
+      conversionTasks.push({ booking, bucket, exchangeRatePromise });
+    }
+
+    await Promise.all(
+      Array.from(
+        new Set(conversionTasks.map((task) => task.exchangeRatePromise)),
+      ),
+    );
+
+    for (const task of conversionTasks) {
+      const exchangeRate = await task.exchangeRatePromise;
       if (exchangeRate == null) {
         skippedBookingsCount += 1;
         continue;
       }
 
-      const convertedMagnitude = Math.abs(Number(booking.value) * exchangeRate);
+      const rawConvertedValue = Number(task.booking.value) * exchangeRate;
       if (
-        booking.account.equityAccountSubtype === EquityAccountSubtype.INCOME
+        task.booking.account.equityAccountSubtype ===
+        EquityAccountSubtype.INCOME
       ) {
-        bucket.income += convertedMagnitude;
+        task.bucket.income += -rawConvertedValue;
       } else if (
-        booking.account.equityAccountSubtype === EquityAccountSubtype.EXPENSE
+        task.booking.account.equityAccountSubtype ===
+        EquityAccountSubtype.EXPENSE
       ) {
-        bucket.expense += convertedMagnitude;
+        task.bucket.expense += rawConvertedValue;
       }
     }
 
     const points = monthStarts.map((monthStart) => {
-      const monthKey = format(monthStart, "yyyy-MM");
+      const monthKey = getUtcMonthKey(monthStart);
       const bucket = bucketsByMonthKey.get(monthKey)!;
-      const income = round2(bucket.income);
-      const expense = round2(bucket.expense);
-      const net = round2(income - expense);
+      const incomeSigned = round2(bucket.income);
+      const expenseSigned = round2(bucket.expense);
+      const income = round2(Math.abs(incomeSigned));
+      const expense = round2(Math.abs(expenseSigned));
+      const net = round2(incomeSigned - expenseSigned);
 
       return {
         monthStart: monthStart.toISOString(),
-        monthLabel: format(monthStart, "MMM yyyy"),
+        monthLabel: getUtcMonthLabel(monthStart),
         income,
         expense,
         net,
