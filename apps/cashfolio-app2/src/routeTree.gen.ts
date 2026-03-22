@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountBookIdIndexRouteImport } from './routes/$accountBookId/index'
+import { Route as AccountBookIdAccountsRouteImport } from './routes/$accountBookId/accounts'
 import { Route as AccountBookIdAccountIdRouteImport } from './routes/$accountBookId/$accountId'
 import { Route as ApiLogtoActionRouteImport } from './routes/api/logto/$action'
 
@@ -22,6 +23,11 @@ const IndexRoute = IndexRouteImport.update({
 const AccountBookIdIndexRoute = AccountBookIdIndexRouteImport.update({
   id: '/$accountBookId/',
   path: '/$accountBookId/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountBookIdAccountsRoute = AccountBookIdAccountsRouteImport.update({
+  id: '/$accountBookId/accounts',
+  path: '/$accountBookId/accounts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountBookIdAccountIdRoute = AccountBookIdAccountIdRouteImport.update({
@@ -38,12 +44,14 @@ const ApiLogtoActionRoute = ApiLogtoActionRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$accountBookId/$accountId': typeof AccountBookIdAccountIdRoute
+  '/$accountBookId/accounts': typeof AccountBookIdAccountsRoute
   '/$accountBookId/': typeof AccountBookIdIndexRoute
   '/api/logto/$action': typeof ApiLogtoActionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$accountBookId/$accountId': typeof AccountBookIdAccountIdRoute
+  '/$accountBookId/accounts': typeof AccountBookIdAccountsRoute
   '/$accountBookId': typeof AccountBookIdIndexRoute
   '/api/logto/$action': typeof ApiLogtoActionRoute
 }
@@ -51,6 +59,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$accountBookId/$accountId': typeof AccountBookIdAccountIdRoute
+  '/$accountBookId/accounts': typeof AccountBookIdAccountsRoute
   '/$accountBookId/': typeof AccountBookIdIndexRoute
   '/api/logto/$action': typeof ApiLogtoActionRoute
 }
@@ -59,18 +68,21 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$accountBookId/$accountId'
+    | '/$accountBookId/accounts'
     | '/$accountBookId/'
     | '/api/logto/$action'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/$accountBookId/$accountId'
+    | '/$accountBookId/accounts'
     | '/$accountBookId'
     | '/api/logto/$action'
   id:
     | '__root__'
     | '/'
     | '/$accountBookId/$accountId'
+    | '/$accountBookId/accounts'
     | '/$accountBookId/'
     | '/api/logto/$action'
   fileRoutesById: FileRoutesById
@@ -78,6 +90,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountBookIdAccountIdRoute: typeof AccountBookIdAccountIdRoute
+  AccountBookIdAccountsRoute: typeof AccountBookIdAccountsRoute
   AccountBookIdIndexRoute: typeof AccountBookIdIndexRoute
   ApiLogtoActionRoute: typeof ApiLogtoActionRoute
 }
@@ -96,6 +109,13 @@ declare module '@tanstack/react-router' {
       path: '/$accountBookId'
       fullPath: '/$accountBookId/'
       preLoaderRoute: typeof AccountBookIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$accountBookId/accounts': {
+      id: '/$accountBookId/accounts'
+      path: '/$accountBookId/accounts'
+      fullPath: '/$accountBookId/accounts'
+      preLoaderRoute: typeof AccountBookIdAccountsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$accountBookId/$accountId': {
@@ -118,6 +138,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountBookIdAccountIdRoute: AccountBookIdAccountIdRoute,
+  AccountBookIdAccountsRoute: AccountBookIdAccountsRoute,
   AccountBookIdIndexRoute: AccountBookIdIndexRoute,
   ApiLogtoActionRoute: ApiLogtoActionRoute,
 }

@@ -63,7 +63,7 @@ Route-level logic that doesn't belong in components is extracted into hooks in
 - Keep breadcrumb typography consistent by setting heading styles on
   `<Breadcrumbs ...>` and inheriting in children (`fz="inherit"`,
   `fw="inherit"`, `lh="inherit"`).
-- Accounts page (`src/routes/$accountBookId/index.tsx`) shows a plain
+- Accounts page (`src/routes/$accountBookId/accounts.tsx`) shows a plain
   `<Title order={2}>Accounts</Title>` in active mode and breadcrumbs in archived
   mode.
 - Archived accounts header renders `Accounts / Archive` with
@@ -71,8 +71,20 @@ Route-level logic that doesn't belong in components is extracted into hooks in
 - Ledger page (`src/routes/$accountBookId/$accountId.tsx`) renders: `Accounts`
   (and `Archive` when the account is archived), then account type, group path
   segments, then account name.
-- Breadcrumb links should point to `/$accountBookId` and preserve the current
-  `tab` and desired `mode` in route search params.
+- Breadcrumb links should point to `/$accountBookId/accounts` and preserve the
+  current `tab` and desired `mode` in route search params.
+
+## Dashboard Chart Pattern
+
+- Dashboard route (`src/routes/$accountBookId/index.tsx`) is the default entry
+  for an account book.
+- The v1 chart combines:
+  - grouped absolute bars for Income and Expense
+  - a signed Net line (`income - expense`) on the same axis
+- Data spans the last 12 months and is normalized to the account-book reference
+  currency.
+- When conversion rates are unavailable for some bookings, the chart remains
+  visible and a partial-data note is shown.
 
 ## Accounts List Columns
 

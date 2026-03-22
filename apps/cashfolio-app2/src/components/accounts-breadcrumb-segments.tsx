@@ -20,7 +20,7 @@ export function getAccountsBreadcrumbSegments({
   const segments: ReactNode[] = [
     <LinkAnchor
       key="accounts"
-      to="/$accountBookId"
+      to="/$accountBookId/accounts"
       params={{ accountBookId }}
       search={{
         tab,
@@ -39,7 +39,7 @@ export function getAccountsBreadcrumbSegments({
       archiveIsLink ? (
         <LinkAnchor
           key="archive"
-          to="/$accountBookId"
+          to="/$accountBookId/accounts"
           params={{ accountBookId }}
           search={{
             tab,

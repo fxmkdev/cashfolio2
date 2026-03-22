@@ -131,7 +131,7 @@ test("create simple transaction", async ({ page }) => {
 
   await expect(agGridRowByText(page, "E2E Simple Transaction")).toBeVisible();
 
-  await page.goto(`/${seeded.accountBookId}/?tab=ASSET&mode=active`);
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
   const cashRow = agGridRowByText(page, seeded.cashAccount.name);
   await expect(agGridCellByColId(cashRow, "balance")).toHaveText("-342.00");
 });

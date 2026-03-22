@@ -10,7 +10,6 @@ export const Route = createFileRoute("/")({
       throw redirect({
         to: "/$accountBookId",
         params: { accountBookId },
-        search: { tab: "ASSET", mode: "active" },
       });
     }
 
