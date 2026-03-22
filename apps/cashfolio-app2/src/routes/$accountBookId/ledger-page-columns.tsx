@@ -23,6 +23,7 @@ export function useLedgerColumnDefs(args: {
   onRebookClick: (args: {
     bookingId: string;
     transactionId: string;
+    bookingValue: number;
     bookingUnit: {
       unit: Unit | null;
       currency: string | null;
@@ -172,6 +173,7 @@ export function useLedgerColumnDefs(args: {
                     onRebookClick({
                       bookingId: data.id,
                       transactionId: data.transactionId,
+                      bookingValue: data.bookingValue,
                       bookingUnit: {
                         unit: data.unit,
                         currency: data.currency,

@@ -39,6 +39,30 @@ export function isExpenseAccount(
   );
 }
 
+export function isBookingValueCompatibleWithAccountType(
+  value: number,
+  account: {
+    type: AccountType;
+    equityAccountSubtype?: EquityAccountSubtype | null;
+  },
+): boolean {
+  if (
+    account.type === AccountType.EQUITY &&
+    account.equityAccountSubtype === EquityAccountSubtype.INCOME
+  ) {
+    return value <= 0;
+  }
+
+  if (
+    account.type === AccountType.EQUITY &&
+    account.equityAccountSubtype === EquityAccountSubtype.EXPENSE
+  ) {
+    return value >= 0;
+  }
+
+  return true;
+}
+
 export function getUnitIdentifier(booking: {
   unit: Unit;
   currency?: string;

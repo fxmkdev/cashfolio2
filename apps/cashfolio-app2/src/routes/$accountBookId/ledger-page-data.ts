@@ -89,6 +89,7 @@ export function buildLedgerRows(
       return {
         id: booking.id,
         transactionId: booking.transactionId,
+        bookingValue: rawValue,
         date: format(new Date(booking.date), "dd.MM.yyyy"),
         counterpartyAccounts: booking.counterpartyAccounts,
         description: booking.description || booking.transactionDescription,

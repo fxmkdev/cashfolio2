@@ -29,6 +29,7 @@ export type LedgerAccountOptionSource = Awaited<
 export type LedgerRow = {
   id: string;
   transactionId: string;
+  bookingValue: number;
   date: string;
   counterpartyAccounts: { id: string; name: string }[];
   description: string;

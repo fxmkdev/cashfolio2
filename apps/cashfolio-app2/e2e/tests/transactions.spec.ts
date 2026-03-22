@@ -139,6 +139,9 @@ test("rebook booking to another compatible account", async ({ page }) => {
     .getByRole("option", { name: new RegExp(seeded.savingsAccount.name) })
     .first()
     .click();
+  await simpleDialog
+    .getByRole("button", { name: "Swap debit/credit direction" })
+    .click();
   await page.getByLabel("Amount").fill("100");
   await simpleDialog.getByRole("button", { name: "Create" }).click();
 
@@ -164,6 +167,9 @@ test("rebook booking to another compatible account", async ({ page }) => {
   ).toHaveCount(0);
   await expect(
     page.getByRole("option", { name: new RegExp(seeded.cryptoAccount.name) }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("option", { name: new RegExp(seeded.expenseAccount.name) }),
   ).toHaveCount(0);
   await page
     .getByRole("option", { name: new RegExp(seeded.investmentsAccount.name) })

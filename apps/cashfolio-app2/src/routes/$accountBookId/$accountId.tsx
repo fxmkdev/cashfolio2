@@ -14,6 +14,7 @@ import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
 import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
 import {
   getTypeLabel,
+  isBookingValueCompatibleWithAccountType,
   isBookingUnitCompatibleWithAccount,
 } from "../../shared/account-utils";
 import { useTransactionScroll } from "../../hooks/use-transaction-scroll";
@@ -78,6 +79,7 @@ function LedgerPage() {
     | {
         bookingId: string;
         transactionId: string;
+        bookingValue: number;
         bookingUnit: {
           unit: Unit | null;
           currency: string | null;
@@ -238,6 +240,7 @@ function LedgerPage() {
     (args: {
       bookingId: string;
       transactionId: string;
+      bookingValue: number;
       bookingUnit: {
         unit: Unit | null;
         currency: string | null;
@@ -265,7 +268,11 @@ function LedgerPage() {
         (candidate) =>
           candidate.isActive &&
           candidate.id !== account.id &&
-          isBookingUnitCompatibleWithAccount(bookingUnit, candidate),
+          isBookingUnitCompatibleWithAccount(bookingUnit, candidate) &&
+          isBookingValueCompatibleWithAccountType(
+            rebooking.bookingValue,
+            candidate,
+          ),
       )
       .toSorted((a, b) =>
         `${a.groupPath} / ${a.name}`.localeCompare(
