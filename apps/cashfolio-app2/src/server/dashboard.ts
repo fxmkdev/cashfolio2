@@ -32,6 +32,7 @@ const MONTH_LABELS = [
   "Nov",
   "Dec",
 ] as const;
+const ONE_EXCHANGE_RATE_PROMISE: Promise<number | null> = Promise.resolve(1);
 
 function toDateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -145,7 +146,7 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
 
         const sourceCurrency = booking.currency.toUpperCase();
         if (sourceCurrency === referenceCurrency) {
-          exchangeRatePromise = Promise.resolve(1);
+          exchangeRatePromise = ONE_EXCHANGE_RATE_PROMISE;
         } else {
           const cacheKey = `currency:${sourceCurrency}:${referenceCurrency}:${dateKey}`;
           const existingPromise = exchangeRateByKey.get(cacheKey);

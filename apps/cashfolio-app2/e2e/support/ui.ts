@@ -13,6 +13,7 @@ export async function openDialogFromButton(
   const button = page.getByRole("button", { name: args.buttonName });
   const dialog = page.getByRole("dialog", { name: args.dialogName });
   const attempts = args.attempts ?? 3;
+  let lastError: unknown;
 
   await expect(button).toBeVisible();
 
@@ -23,13 +24,14 @@ export async function openDialogFromButton(
       await expect(dialog).toBeVisible({ timeout: 2_500 });
       return dialog;
     } catch (error) {
-      if (attempt === attempts) {
-        throw error;
-      }
+      lastError = error;
     }
   }
 
   throw new Error(
     `Failed to open dialog after ${attempts} attempts: ${String(args.dialogName)}`,
+    {
+      cause: lastError,
+    },
   );
 }
