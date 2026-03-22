@@ -50,7 +50,8 @@ paths are relative to that app directory.
 - Pattern: `createServerFn({ method })` → `.inputValidator()` → `.handler()`
 - Server-only files use `.server.ts` suffix
 - Key files: `accounts.ts` (barrel), `accounts-queries.ts`,
-  `accounts-mutations.ts`, `ledger.ts`, `transactions.ts`
+  `accounts-mutations.ts`, `ledger.ts`, `transactions.ts` (barrel),
+  `transactions-queries.ts`, `transactions-mutations.ts`
 
 ### Auth & Authorization
 
