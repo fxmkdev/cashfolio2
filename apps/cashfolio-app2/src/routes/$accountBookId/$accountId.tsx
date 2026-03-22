@@ -282,29 +282,32 @@ function LedgerPage() {
       unit: rebooking.bookingUnit.unit,
     };
 
-    return accounts
-      .filter(
-        (candidate) =>
-          candidate.isActive &&
-          candidate.id !== account.id &&
-          isBookingUnitCompatibleWithAccount(bookingUnit, candidate) &&
-          isBookingValueCompatibleWithAccountType(
-            rebooking.bookingValue,
-            candidate,
-          ),
-      )
-      .toSorted((a, b) =>
-        `${a.groupPath} / ${a.name}`.localeCompare(
-          `${b.groupPath} / ${b.name}`,
-        ),
-      )
-      .map((candidate) => ({
-        value: candidate.id,
-        label: [candidate.groupPath, candidate.name]
-          .filter(Boolean)
-          .join(" / "),
-      }));
-  }, [account.id, accounts, rebooking, rebookingUnitIdentifier]);
+    const eligibleAccountIds = new Set(
+      accounts
+        .filter(
+          (candidate) =>
+            candidate.isActive &&
+            candidate.id !== account.id &&
+            isBookingUnitCompatibleWithAccount(bookingUnit, candidate) &&
+            isBookingValueCompatibleWithAccountType(
+              rebooking.bookingValue,
+              candidate,
+            ),
+        )
+        .map((candidate) => candidate.id),
+    );
+
+    return accountOptions
+      .filter((option) => eligibleAccountIds.has(option.value))
+      .toSorted((a, b) => a.label.localeCompare(b.label))
+      .map((option) => ({ value: option.value, label: option.label }));
+  }, [
+    account.id,
+    accountOptions,
+    accounts,
+    rebooking,
+    rebookingUnitIdentifier,
+  ]);
 
   async function handleRebookBooking(values: { targetAccountId: string }) {
     if (!rebooking) return;
