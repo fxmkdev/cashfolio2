@@ -32,3 +32,4 @@ jobs:
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
           storybookBuildDir: apps/cashfolio-app2/storybook-static
           exitZeroOnChanges: true
+          exitOnceUploaded: true

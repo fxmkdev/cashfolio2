@@ -32,5 +32,5 @@ Chromatic publishing:
 
 - Workflow: `.github/workflows/chromatic.yml`
 - Trigger: every branch push and manual `workflow_dispatch`
-- Behavior: publish-only with non-blocking visual changes (`exitZeroOnChanges`)
+- Behavior: publish-only (`exitZeroOnChanges` + `exitOnceUploaded`) so CI does not block on visual/component review results
 - Required secret: `CHROMATIC_PROJECT_TOKEN`
