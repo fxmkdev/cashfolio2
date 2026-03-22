@@ -1,0 +1,30 @@
+name: Chromatic
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: "cashfolio-app2: Publish Storybook to Chromatic"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: felixmokross/webplatform/.github/actions/setup@main
+
+      - name: Install dependencies
+        run: pnpm --filter cashfolio-app2 install
+
+      - name: Generate Prisma Client
+        run: pnpm --filter cashfolio-app2 prisma:generate
+
+      - name: Publish Storybook to Chromatic
+        uses: chromaui/action@latest
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN_CASHFOLIO_APP2 }}
+          workingDir: apps/cashfolio-app2
+          buildScriptName: build-storybook
+          exitZeroOnChanges: true
