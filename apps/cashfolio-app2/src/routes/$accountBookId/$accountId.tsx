@@ -13,6 +13,7 @@ import {
 import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
 import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
 import {
+  getBookingUnitIdentifier,
   getTypeLabel,
   isBookingValueCompatibleWithAccountType,
   isBookingUnitCompatibleWithAccount,
@@ -255,8 +256,26 @@ function LedgerPage() {
     [],
   );
 
+  const rebookingUnitIdentifier = useMemo(() => {
+    if (!rebooking || rebooking.bookingUnit.unit == null) return null;
+
+    return getBookingUnitIdentifier({
+      unit: rebooking.bookingUnit.unit,
+      currency: rebooking.bookingUnit.currency,
+      cryptocurrency: rebooking.bookingUnit.cryptocurrency,
+      symbol: rebooking.bookingUnit.symbol,
+      tradeCurrency: rebooking.bookingUnit.tradeCurrency,
+    });
+  }, [rebooking]);
+
   const rebookTargetAccountOptions = useMemo(() => {
-    if (!rebooking || rebooking.bookingUnit.unit == null) return [];
+    if (
+      !rebooking ||
+      rebooking.bookingUnit.unit == null ||
+      rebookingUnitIdentifier == null
+    ) {
+      return [];
+    }
 
     const bookingUnit = {
       ...rebooking.bookingUnit,
@@ -285,7 +304,7 @@ function LedgerPage() {
           .filter(Boolean)
           .join(" / "),
       }));
-  }, [account.id, accounts, rebooking]);
+  }, [account.id, accounts, rebooking, rebookingUnitIdentifier]);
 
   async function handleRebookBooking(values: { targetAccountId: string }) {
     if (!rebooking) return;
@@ -478,7 +497,7 @@ function LedgerPage() {
           <RebookBookingModal
             targetAccounts={rebookTargetAccountOptions}
             disabledReason={
-              rebooking.bookingUnit.unit == null
+              rebookingUnitIdentifier == null
                 ? "This booking has incomplete unit data and cannot be rebooked."
                 : undefined
             }
