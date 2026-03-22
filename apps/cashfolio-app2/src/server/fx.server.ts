@@ -85,15 +85,19 @@ function getCryptocurrencyBacktrackedFallbackCacheKey(
   return `fx:coinlayer:fallback:${BASE_CURRENCY}:${cryptocurrency}:${requestedTimestamp}`;
 }
 
-function getSecurityRedisSeriesKey(symbol: string): string {
-  return `fx:marketstack:${symbol}`;
+function getSecurityRedisSeriesKey(
+  symbol: string,
+  tradeCurrency: string,
+): string {
+  return `fx:marketstack:${symbol}:${tradeCurrency}`;
 }
 
 function getSecurityBacktrackedFallbackCacheKey(
   symbol: string,
+  tradeCurrency: string,
   requestedTimestamp: number,
 ): string {
-  return `fx:marketstack:fallback:${symbol}:${requestedTimestamp}`;
+  return `fx:marketstack:fallback:${symbol}:${tradeCurrency}:${requestedTimestamp}`;
 }
 
 function getCurrencyLayerApiKey(): string | null {
@@ -384,6 +388,7 @@ async function fetchUsdPerCryptocurrencyRateFromCoinLayer(
 
 async function fetchSecurityPriceFromMarketstack(
   symbol: string,
+  tradeCurrency: string,
   date: Date,
   retryCount = 0,
 ): Promise<number | null> {
@@ -405,6 +410,7 @@ async function fetchSecurityPriceFromMarketstack(
       const timeoutError = new Error("Marketstack request timed out");
       console.warn(timeoutError.message, {
         symbol,
+        tradeCurrency,
         date: toDayString(date),
         timeoutMs: MARKETSTACK_TIMEOUT_MS,
       });
@@ -422,7 +428,12 @@ async function fetchSecurityPriceFromMarketstack(
     await new Promise((resolve) =>
       setTimeout(resolve, MARKETSTACK_RATE_LIMIT_RETRY_DELAY_MS),
     );
-    return fetchSecurityPriceFromMarketstack(symbol, date, retryCount + 1);
+    return fetchSecurityPriceFromMarketstack(
+      symbol,
+      tradeCurrency,
+      date,
+      retryCount + 1,
+    );
   }
 
   if (!response.ok) {
@@ -562,17 +573,19 @@ async function getUsdPerCryptocurrencyRate(
 
 async function getSecurityPrice(
   symbol: string,
+  tradeCurrency: string,
   date: Date,
 ): Promise<number | null> {
   return getRateWithBacktracking({
-    seriesKey: getSecurityRedisSeriesKey(symbol),
+    seriesKey: getSecurityRedisSeriesKey(symbol, tradeCurrency),
     backtrackedFallbackCacheKey: getSecurityBacktrackedFallbackCacheKey(
       symbol,
+      tradeCurrency,
       toSeriesTimestamp(date),
     ),
     date,
     fetchRate: (targetDate) =>
-      fetchSecurityPriceFromMarketstack(symbol, targetDate),
+      fetchSecurityPriceFromMarketstack(symbol, tradeCurrency, targetDate),
   });
 }
 
@@ -645,7 +658,7 @@ export async function getSecurityToCurrencyExchangeRate(args: {
 
   try {
     const [securityPrice, tradeToTargetRate] = await Promise.all([
-      getSecurityPrice(symbol, args.date),
+      getSecurityPrice(symbol, tradeCurrency, args.date),
       getCurrencyExchangeRate({
         sourceCurrency: tradeCurrency,
         targetCurrency,

@@ -95,7 +95,7 @@ update `sortOrder` values after reordering sibling rows in the reorder modal.
 - Cryptocurrency USD prices are requested from coinlayer historical API and
   cached in Redis TimeSeries keys (`fx:coinlayer:USD:<CRYPTO_SYMBOL>`).
 - Security EOD close prices are requested from marketstack API and cached in
-  Redis TimeSeries keys (`fx:marketstack:<SYMBOL>`).
+  Redis TimeSeries keys (`fx:marketstack:<SYMBOL>:<TRADE_CURRENCY>`).
 - When an exact date is not available, the newest available prior rate is used
   (first from cache, otherwise by historical API backtracking).
 - Ref-currency balances are populated for `Unit.CURRENCY`,
