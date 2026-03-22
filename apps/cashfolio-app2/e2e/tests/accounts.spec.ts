@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import {
   agGridCellByColId,
   agGridPinnedBottomRow,
@@ -18,6 +18,18 @@ test.beforeAll(async () => {
   seeded = await resetAndSeedDatabase();
 });
 
+async function selectDashboardPeriod(page: Page, period: "12m" | "10y") {
+  await page.evaluate((value) => {
+    const input = document.querySelector<HTMLInputElement>(
+      `input[type="radio"][value="${value}"]`,
+    );
+    if (!input) {
+      throw new Error(`Dashboard period input not found for value: ${value}`);
+    }
+    input.click();
+  }, period);
+}
+
 test("dashboard is default account-book route and links to accounts", async ({
   page,
 }) => {
@@ -36,7 +48,7 @@ test("dashboard is default account-book route and links to accounts", async ({
     ),
   ).toBeVisible();
 
-  await page.locator("label[for$='-10y']").click();
+  await selectDashboardPeriod(page, "10y");
   await expect(page).toHaveURL(
     new RegExp(`/${seeded.accountBookId}\\?period=10y$`),
   );
@@ -55,7 +67,7 @@ test("dashboard is default account-book route and links to accounts", async ({
     page.getByText("Last 10 years · Amounts shown in CHF"),
   ).toBeVisible();
 
-  await page.locator("label[for$='-12m']").click();
+  await selectDashboardPeriod(page, "12m");
   await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}$`));
   await expect(
     page.getByText("Last 12 months · Amounts shown in CHF"),
