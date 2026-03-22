@@ -3,7 +3,7 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Breadcrumbs,
   Button,
@@ -13,12 +13,7 @@ import {
   Group,
 } from "@mantine/core";
 import { IconArchive, IconPlus } from "@tabler/icons-react";
-import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
 import { useExpandedGroups } from "../../hooks/use-expanded-groups";
-import {
-  ActiveAccountTreeActionsCell,
-  ArchivedAccountTreeActionsCell,
-} from "../../components/account-tree-actions-cells";
 import { ConfirmArchiveModal } from "../../components/confirm-archive-modal";
 import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
 import { EditAccountModal } from "../../components/edit-account-modal";
@@ -33,7 +28,6 @@ import type {
 } from "../../components/edit-account-group-modal";
 import { ReorderGroupChildrenModal } from "../../components/reorder-group-children-modal";
 import { DataGrid } from "../../components/data-grid";
-import { FORMATTED_NUMERIC_COLUMN } from "../../components/column-types";
 import {
   archiveAccount,
   archiveAccountGroup,
@@ -41,121 +35,36 @@ import {
   createAccountGroup,
   deleteAccount,
   deleteAccountGroup,
-  getAccountGroups,
-  getAccountTreeData,
   reorderAccountTreeItems,
   unarchiveAccount,
   unarchiveAccountGroup,
   updateAccount,
   updateAccountGroup,
 } from "../../server/accounts";
-import {
-  AccountType,
-  EquityAccountSubtype,
-  Unit,
-} from "../../.prisma-client/enums";
 import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
-
-const tabs = [
-  { value: "ASSET", label: "Asset", type: AccountType.ASSET },
-  { value: "LIABILITY", label: "Liability", type: AccountType.LIABILITY },
-  {
-    value: `EQUITY-${EquityAccountSubtype.INCOME}`,
-    label: "Income",
-    type: AccountType.EQUITY,
-    equityAccountSubtype: EquityAccountSubtype.INCOME,
-  },
-  {
-    value: `EQUITY-${EquityAccountSubtype.EXPENSE}`,
-    label: "Expense",
-    type: AccountType.EQUITY,
-    equityAccountSubtype: EquityAccountSubtype.EXPENSE,
-  },
-  {
-    value: `EQUITY-${EquityAccountSubtype.GAIN_LOSS}`,
-    label: "Gain/Loss",
-    type: AccountType.EQUITY,
-    equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
-  },
-] as const;
-
-type TabValue = (typeof tabs)[number]["value"];
-type AccountsMode = "active" | "archived";
+import {
+  getEntityLabel,
+  parseAccountsSearch,
+  tabs,
+  type TabValue,
+  type TreeRow,
+} from "./accounts-page-types";
+import { loadAccountsPageData } from "./accounts-page-loader";
+import {
+  useBalanceInReferenceCurrencyByGroupId,
+  useRowsByParentKey,
+  useSelectedSiblingRows,
+} from "./accounts-page-data";
+import { useAccountTreeColumnDefs } from "./accounts-page-columns";
 
 export const Route = createFileRoute("/$accountBookId/")({
-  validateSearch: (
-    search: Record<string, unknown>,
-  ): { tab: TabValue; mode: AccountsMode } => ({
-    tab: tabs.some((t) => t.value === search.tab)
-      ? (search.tab as TabValue)
-      : "ASSET",
-    mode: search.mode === "archived" ? "archived" : "active",
-  }),
+  validateSearch: parseAccountsSearch,
   loaderDeps: ({ search }) => ({ mode: search.mode }),
   loader: async ({ params: { accountBookId }, deps: { mode } }) => {
-    const accountState = mode === "archived" ? "inactive" : "active";
-    const accountGroupsPromise: Promise<
-      Awaited<ReturnType<typeof getAccountGroups>>
-    > =
-      mode === "active"
-        ? getAccountGroups({ data: { accountBookId } })
-        : Promise.resolve([]);
-    const [accountGroups, ...treeDataByTab] = await Promise.all([
-      accountGroupsPromise,
-      ...tabs.map((t) =>
-        getAccountTreeData({
-          data: {
-            accountBookId,
-            accountState,
-            type: t.type,
-            ...("equityAccountSubtype" in t
-              ? { equityAccountSubtype: t.equityAccountSubtype }
-              : undefined),
-          },
-        }),
-      ),
-    ]);
-    const referenceCurrency = treeDataByTab[0].referenceCurrency;
-    const treeData = Object.fromEntries(
-      tabs.map((t, i) => [t.value, treeDataByTab[i].rows]),
-    ) as Record<
-      TabValue,
-      Awaited<ReturnType<typeof getAccountTreeData>>["rows"]
-    >;
-    const existingNodes = treeDataByTab.flatMap((tabData) =>
-      tabData.rows.map((n) => ({
-        id: n.id,
-        name: n.name,
-        nodeType: n.nodeType,
-        parentId: n.parentId,
-        groupId: n.groupId,
-      })),
-    );
-    return { accountGroups, treeData, existingNodes, referenceCurrency };
+    return loadAccountsPageData({ accountBookId, mode });
   },
   component: AccountsPage,
 });
-
-type TreeRow = Awaited<ReturnType<typeof getAccountTreeData>>["rows"][number];
-const ROOT_PARENT_KEY = "__root__";
-
-type RowTarget = {
-  id: string;
-  nodeType: "account" | "accountGroup";
-  name: string;
-};
-
-function toRowTarget(data: TreeRow): RowTarget {
-  return {
-    id: data.id,
-    nodeType: data.nodeType,
-    name: data.name,
-  };
-}
-
-function getEntityLabel(nodeType: RowTarget["nodeType"]): string {
-  return nodeType === "account" ? "Account" : "Group";
-}
 
 function AccountsPage() {
   const { accountGroups, treeData, existingNodes, referenceCurrency } =
@@ -193,87 +102,13 @@ function AccountsPage() {
   const { isGroupOpenByDefault, onRowGroupOpened } =
     useExpandedGroups(storageKey);
 
-  const rowsByParentKey = useMemo(() => {
-    const siblingRowsByParentKey = new Map<string, TreeRow[]>();
-    for (const row of treeData[tab]) {
-      const parentKey = row.parentId ?? ROOT_PARENT_KEY;
-      const siblings = siblingRowsByParentKey.get(parentKey) ?? [];
-      siblings.push(row);
-      siblingRowsByParentKey.set(parentKey, siblings);
-    }
-    return siblingRowsByParentKey;
-  }, [treeData, tab]);
-
-  const selectedSiblingRows = useMemo(() => {
-    if (!reorderingRow) return [];
-    return (rowsByParentKey.get(reorderingRow.parentKey) ?? []).map((row) => ({
-      id: row.id,
-      name: row.name,
-      nodeType: row.nodeType,
-    }));
-  }, [rowsByParentKey, reorderingRow]);
-
-  const balanceInReferenceCurrencyByGroupId = useMemo(() => {
-    type GroupBalanceAggregation = {
-      sum: number;
-      hasAccountDescendants: boolean;
-      hasMissingReferenceBalance: boolean;
-    };
-
-    const groupAggregationByGroupId = new Map<
-      string,
-      GroupBalanceAggregation
-    >();
-
-    const calculateGroupAggregation = (
-      groupId: string,
-    ): GroupBalanceAggregation => {
-      const cachedAggregation = groupAggregationByGroupId.get(groupId);
-      if (cachedAggregation) {
-        return cachedAggregation;
-      }
-
-      let sum = 0;
-      let hasAccountDescendants = false;
-      let hasMissingReferenceBalance = false;
-      const children = rowsByParentKey.get(groupId) ?? [];
-
-      for (const child of children) {
-        if (child.nodeType === "account") {
-          hasAccountDescendants = true;
-          if (child.balanceInReferenceCurrency == null) {
-            hasMissingReferenceBalance = true;
-          } else {
-            sum += child.balanceInReferenceCurrency;
-          }
-          continue;
-        }
-
-        const childAggregation = calculateGroupAggregation(child.id);
-        sum += childAggregation.sum;
-        hasAccountDescendants =
-          hasAccountDescendants || childAggregation.hasAccountDescendants;
-        hasMissingReferenceBalance =
-          hasMissingReferenceBalance ||
-          childAggregation.hasMissingReferenceBalance;
-      }
-
-      const aggregation: GroupBalanceAggregation = {
-        sum,
-        hasAccountDescendants,
-        hasMissingReferenceBalance,
-      };
-      groupAggregationByGroupId.set(groupId, aggregation);
-      return aggregation;
-    };
-
-    for (const row of treeData[tab]) {
-      if (row.nodeType !== "accountGroup") continue;
-      calculateGroupAggregation(row.id);
-    }
-
-    return groupAggregationByGroupId;
-  }, [rowsByParentKey, treeData, tab]);
+  const rowsByParentKey = useRowsByParentKey(treeData[tab]);
+  const selectedSiblingRows = useSelectedSiblingRows(
+    rowsByParentKey,
+    reorderingRow,
+  );
+  const balanceInReferenceCurrencyByGroupId =
+    useBalanceInReferenceCurrencyByGroupId(rowsByParentKey, treeData[tab]);
 
   const handleEditRow = useCallback((data: TreeRow) => {
     if (data.nodeType === "account") {
@@ -320,130 +155,18 @@ function AccountsPage() {
     [accountBookId, router],
   );
 
-  const columnDefs = useMemo<ColDef<TreeRow>[]>(
-    () => [
-      ...(!isEquityTab
-        ? [
-            {
-              colId: "currency",
-              headerName: "Ccy.",
-              filter: true,
-              width: 100,
-              valueGetter: ({ data }: { data: TreeRow | undefined }) => {
-                if (!data?.unit) return undefined;
-                switch (data.unit) {
-                  case Unit.CURRENCY:
-                    return data.currency;
-                  case Unit.SECURITY:
-                    return data.tradeCurrency;
-                  case Unit.CRYPTOCURRENCY:
-                    return data.cryptocurrency;
-                }
-              },
-            } satisfies ColDef<TreeRow>,
-            {
-              field: "symbol",
-              filter: true,
-              width: 120,
-            } satisfies ColDef<TreeRow>,
-            {
-              field: "balance",
-              headerName: "Balance",
-              width: 130,
-              type: FORMATTED_NUMERIC_COLUMN,
-              filter: "agNumberColumnFilter",
-              valueGetter: ({ data }: { data: TreeRow | undefined }) => {
-                if (!data || data.nodeType !== "account") return null;
-                return data.balance;
-              },
-            } satisfies ColDef<TreeRow>,
-            {
-              field: "balanceInReferenceCurrency",
-              headerName: `Balance (${referenceCurrency})`,
-              width: 170,
-              type: FORMATTED_NUMERIC_COLUMN,
-              filter: "agNumberColumnFilter",
-              valueGetter: ({ data }: { data: TreeRow | undefined }) => {
-                if (!data) return null;
-                if (data.nodeType === "account") {
-                  return data.balanceInReferenceCurrency;
-                }
-                const groupAggregation =
-                  balanceInReferenceCurrencyByGroupId.get(data.id);
-                if (
-                  !groupAggregation ||
-                  !groupAggregation.hasAccountDescendants ||
-                  groupAggregation.hasMissingReferenceBalance
-                ) {
-                  return null;
-                }
-                return groupAggregation.sum;
-              },
-            } satisfies ColDef<TreeRow>,
-          ]
-        : []),
-      {
-        colId: "actions",
-        headerName: "",
-        width: isArchivedMode ? 50 : 145,
-        sortable: false,
-        filter: false,
-        resizable: false,
-        suppressHeaderMenuButton: true,
-        cellClass: "actions-cell",
-        cellRenderer: ({ data }: ICellRendererParams<TreeRow>) => {
-          if (!data) return null;
-
-          if (isArchivedMode) {
-            return (
-              <ArchivedAccountTreeActionsCell
-                unarchiveLabel={data.unarchiveDisabledReason ?? "Unarchive"}
-                unarchivable={data.unarchivable}
-                onUnarchive={() => void handleUnarchiveRow(data)}
-              />
-            );
-          }
-
-          const parentKey = data.parentId ?? ROOT_PARENT_KEY;
-          const siblingCount =
-            (rowsByParentKey.get(parentKey)?.length ?? 0) - 1;
-          const hasSiblings = siblingCount >= 1;
-          const reorderLabel = hasSiblings
-            ? "Reorder siblings"
-            : "Cannot reorder because this row has no siblings";
-
-          return (
-            <ActiveAccountTreeActionsCell
-              archiveLabel={data.archiveDisabledReason ?? "Archive"}
-              deleteLabel={data.deleteDisabledReason ?? "Delete"}
-              archivable={data.archivable}
-              deletable={data.deletable}
-              reorderEnabled={hasSiblings}
-              reorderLabel={reorderLabel}
-              onEdit={() => handleEditRow(data)}
-              onArchive={() => setArchivingRow(toRowTarget(data))}
-              onDelete={() => setDeletingRow(toRowTarget(data))}
-              onReorder={() =>
-                setReorderingRow({
-                  name: data.name,
-                  parentKey,
-                })
-              }
-            />
-          );
-        },
-      } satisfies ColDef<TreeRow>,
-    ],
-    [
-      isArchivedMode,
-      isEquityTab,
-      handleEditRow,
-      handleUnarchiveRow,
-      rowsByParentKey,
-      referenceCurrency,
-      balanceInReferenceCurrencyByGroupId,
-    ],
-  );
+  const columnDefs = useAccountTreeColumnDefs({
+    isArchivedMode,
+    isEquityTab,
+    rowsByParentKey,
+    referenceCurrency,
+    balanceInReferenceCurrencyByGroupId,
+    onEditRow: handleEditRow,
+    onUnarchiveRow: handleUnarchiveRow,
+    onArchiveRow: setArchivingRow,
+    onDeleteRow: setDeletingRow,
+    onReorderRow: setReorderingRow,
+  });
 
   async function handleCreateAccount(values: TransformedFormValues) {
     await createAccount({
