@@ -110,11 +110,19 @@ test("balance column visibility and baseline values across tabs/modes", async ({
   await expect(
     agGridCellByColId(cryptoRow, "balanceInReferenceCurrency"),
   ).toHaveText("0.00");
+  const securityRow = agGridRowByText(page, seeded.securityAccount.name);
+  await expect(agGridCellByColId(securityRow, "balance")).toHaveText("0.00");
+  await expect(
+    agGridCellByColId(securityRow, "balanceInReferenceCurrency"),
+  ).toHaveText("0.00");
 
   const assetsGroupRow = agGridRowByText(page, "Assets");
   await expect(agGridCellByColId(assetsGroupRow, "balance")).toHaveText(
     /^\s*$/,
   );
+  await expect(
+    agGridCellByColId(assetsGroupRow, "balanceInReferenceCurrency"),
+  ).toHaveText("0.00");
 
   await page
     .getByRole("button", { name: "Archive" })

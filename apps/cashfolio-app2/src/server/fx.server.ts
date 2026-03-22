@@ -4,6 +4,9 @@ const BASE_CURRENCY = "USD";
 const MAX_BACKTRACK_DAYS = 30;
 const CURRENCYLAYER_TIMEOUT_MS = 10_000;
 const COINLAYER_TIMEOUT_MS = 10_000;
+const MARKETSTACK_TIMEOUT_MS = 10_000;
+const MARKETSTACK_RATE_LIMIT_RETRY_DELAY_MS = 1_000;
+const MARKETSTACK_RATE_LIMIT_MAX_RETRIES = 3;
 const FX_SERIES_RETENTION_MS = 10 * 365 * 24 * 60 * 60 * 1000;
 const BACKTRACKED_FALLBACK_TTL_SECONDS = 60 * 60;
 
@@ -19,6 +22,11 @@ type CoinLayerHistoricalResponse = {
   error?: { code?: number; info?: string };
 };
 
+type MarketstackEodResponse = {
+  data?: Array<{ close?: number }>;
+  error?: { code?: string | number; message?: string };
+};
+
 type CachedRateResult = {
   rate: number;
   timestamp: number;
@@ -31,6 +39,7 @@ type BacktrackedFallbackCacheEntry = {
 
 let hasWarnedMissingCurrencyLayerApiKey = false;
 let hasWarnedMissingCoinLayerApiKey = false;
+let hasWarnedMissingMarketstackApiKey = false;
 let hasWarnedFxCacheReadFailure = false;
 let hasWarnedFxFallbackCacheReadFailure = false;
 let hasWarnedFxFallbackCacheWriteFailure = false;
@@ -76,6 +85,17 @@ function getCryptocurrencyBacktrackedFallbackCacheKey(
   return `fx:coinlayer:fallback:${BASE_CURRENCY}:${cryptocurrency}:${requestedTimestamp}`;
 }
 
+function getSecurityRedisSeriesKey(symbol: string): string {
+  return `fx:marketstack:${symbol}`;
+}
+
+function getSecurityBacktrackedFallbackCacheKey(
+  symbol: string,
+  requestedTimestamp: number,
+): string {
+  return `fx:marketstack:fallback:${symbol}:${requestedTimestamp}`;
+}
+
 function getCurrencyLayerApiKey(): string | null {
   const apiKey = process.env.CURRENCYLAYER_API_KEY?.trim();
   if (!apiKey && !hasWarnedMissingCurrencyLayerApiKey) {
@@ -94,6 +114,17 @@ function getCoinLayerApiKey(): string | null {
       "COINLAYER_API_KEY is not set; cryptocurrency reference conversion will be unavailable.",
     );
     hasWarnedMissingCoinLayerApiKey = true;
+  }
+  return apiKey ?? null;
+}
+
+function getMarketstackApiKey(): string | null {
+  const apiKey = process.env.MARKETSTACK_API_KEY?.trim();
+  if (!apiKey && !hasWarnedMissingMarketstackApiKey) {
+    console.warn(
+      "MARKETSTACK_API_KEY is not set; security reference conversion will be unavailable.",
+    );
+    hasWarnedMissingMarketstackApiKey = true;
   }
   return apiKey ?? null;
 }
@@ -351,7 +382,73 @@ async function fetchUsdPerCryptocurrencyRateFromCoinLayer(
   return typeof rate === "number" ? rate : null;
 }
 
-async function getUsdRateWithBacktracking(args: {
+async function fetchSecurityPriceFromMarketstack(
+  symbol: string,
+  date: Date,
+  retryCount = 0,
+): Promise<number | null> {
+  const apiKey = getMarketstackApiKey();
+  if (!apiKey) return null;
+
+  const params = new URLSearchParams({
+    access_key: apiKey,
+    symbols: symbol,
+  });
+  const url = `https://api.marketstack.com/v2/eod/${toDayString(date)}?${params.toString()}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), MARKETSTACK_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(url, { signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      const timeoutError = new Error("Marketstack request timed out");
+      console.warn(timeoutError.message, {
+        symbol,
+        date: toDayString(date),
+        timeoutMs: MARKETSTACK_TIMEOUT_MS,
+      });
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  if (
+    response.status === 429 &&
+    retryCount < MARKETSTACK_RATE_LIMIT_MAX_RETRIES
+  ) {
+    await new Promise((resolve) =>
+      setTimeout(resolve, MARKETSTACK_RATE_LIMIT_RETRY_DELAY_MS),
+    );
+    return fetchSecurityPriceFromMarketstack(symbol, date, retryCount + 1);
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `Marketstack request failed with ${response.status} ${response.statusText}`,
+    );
+  }
+
+  const data = (await response.json()) as MarketstackEodResponse;
+  if (data.error?.message) {
+    const errorInfo = data.error.message.toLowerCase();
+    if (
+      errorInfo.includes("no data") ||
+      errorInfo.includes("no result") ||
+      errorInfo.includes("did not return any results")
+    ) {
+      return null;
+    }
+    throw new Error(`Marketstack request failed: ${data.error.message}`);
+  }
+
+  const price = data.data?.[0]?.close;
+  return typeof price === "number" ? price : null;
+}
+
+async function getRateWithBacktracking(args: {
   seriesKey: string;
   backtrackedFallbackCacheKey: string;
   date: Date;
@@ -435,7 +532,7 @@ async function getUsdToCurrencyRate(
     return 1;
   }
 
-  return getUsdRateWithBacktracking({
+  return getRateWithBacktracking({
     seriesKey: getCurrencyRedisSeriesKey(targetCurrency),
     backtrackedFallbackCacheKey: getCurrencyBacktrackedFallbackCacheKey(
       targetCurrency,
@@ -451,7 +548,7 @@ async function getUsdPerCryptocurrencyRate(
   cryptocurrency: string,
   date: Date,
 ): Promise<number | null> {
-  return getUsdRateWithBacktracking({
+  return getRateWithBacktracking({
     seriesKey: getCryptocurrencyRedisSeriesKey(cryptocurrency),
     backtrackedFallbackCacheKey: getCryptocurrencyBacktrackedFallbackCacheKey(
       cryptocurrency,
@@ -460,6 +557,22 @@ async function getUsdPerCryptocurrencyRate(
     date,
     fetchRate: (targetDate) =>
       fetchUsdPerCryptocurrencyRateFromCoinLayer(cryptocurrency, targetDate),
+  });
+}
+
+async function getSecurityPrice(
+  symbol: string,
+  date: Date,
+): Promise<number | null> {
+  return getRateWithBacktracking({
+    seriesKey: getSecurityRedisSeriesKey(symbol),
+    backtrackedFallbackCacheKey: getSecurityBacktrackedFallbackCacheKey(
+      symbol,
+      toSeriesTimestamp(date),
+    ),
+    date,
+    fetchRate: (targetDate) =>
+      fetchSecurityPriceFromMarketstack(symbol, targetDate),
   });
 }
 
@@ -514,6 +627,39 @@ export async function getCryptocurrencyToCurrencyExchangeRate(args: {
   } catch (error) {
     console.error(
       `Unable to retrieve FX rate for ${cryptocurrency} -> ${targetCurrency}`,
+      error,
+    );
+    return null;
+  }
+}
+
+export async function getSecurityToCurrencyExchangeRate(args: {
+  symbol: string;
+  tradeCurrency: string;
+  targetCurrency: string;
+  date: Date;
+}): Promise<number | null> {
+  const symbol = args.symbol.toUpperCase();
+  const tradeCurrency = args.tradeCurrency.toUpperCase();
+  const targetCurrency = args.targetCurrency.toUpperCase();
+
+  try {
+    const [securityPrice, tradeToTargetRate] = await Promise.all([
+      getSecurityPrice(symbol, args.date),
+      getCurrencyExchangeRate({
+        sourceCurrency: tradeCurrency,
+        targetCurrency,
+        date: args.date,
+      }),
+    ]);
+    if (securityPrice == null || tradeToTargetRate == null) {
+      return null;
+    }
+
+    return securityPrice * tradeToTargetRate;
+  } catch (error) {
+    console.error(
+      `Unable to retrieve security exchange rate for ${symbol} (${tradeCurrency} -> ${targetCurrency})`,
       error,
     );
     return null;

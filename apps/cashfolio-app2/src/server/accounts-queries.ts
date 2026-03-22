@@ -9,6 +9,7 @@ import { ensureAuthorizedForAccountBookId } from "../account-books/functions.ser
 import {
   getCryptocurrencyToCurrencyExchangeRate,
   getCurrencyExchangeRate,
+  getSecurityToCurrencyExchangeRate,
 } from "./fx.server";
 import { getGroupPath, hasInactiveAncestorGroup } from "./accounts-helpers";
 
@@ -197,6 +198,7 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
       string,
       Promise<number | null>
     >();
+    const exchangeRateBySecurity = new Map<string, Promise<number | null>>();
 
     const accountRows = await Promise.all(
       accounts.map(async (a) => {
@@ -209,6 +211,11 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
           isAssetOrLiability &&
           a.unit === "CRYPTOCURRENCY" &&
           Boolean(a.cryptocurrency);
+        const shouldComputeSecurityReferenceBalance =
+          isAssetOrLiability &&
+          a.unit === "SECURITY" &&
+          Boolean(a.symbol) &&
+          Boolean(a.tradeCurrency);
 
         if (shouldComputeCurrencyReferenceBalance && a.currency) {
           const sourceCurrency = a.currency.toUpperCase();
@@ -271,6 +278,35 @@ export const getAccountTreeData = createServerFn({ method: "GET" })
                 cryptocurrency,
                 exchangeRatePromise,
               );
+            }
+
+            const exchangeRate = await exchangeRatePromise;
+            if (exchangeRate != null) {
+              rawBalanceInReferenceCurrency = rawBalance * exchangeRate;
+            }
+          }
+        } else if (
+          shouldComputeSecurityReferenceBalance &&
+          a.symbol &&
+          a.tradeCurrency
+        ) {
+          const symbol = a.symbol.toUpperCase();
+          const tradeCurrency = a.tradeCurrency.toUpperCase();
+          if (rawBalance === 0) {
+            rawBalanceInReferenceCurrency = 0;
+          } else {
+            const securityKey = `${symbol}:${tradeCurrency}:${referenceCurrency}`;
+            const existingPromise = exchangeRateBySecurity.get(securityKey);
+            const exchangeRatePromise =
+              existingPromise ??
+              getSecurityToCurrencyExchangeRate({
+                symbol,
+                tradeCurrency,
+                targetCurrency: referenceCurrency,
+                date: today,
+              });
+            if (!existingPromise) {
+              exchangeRateBySecurity.set(securityKey, exchangeRatePromise);
             }
 
             const exchangeRate = await exchangeRatePromise;
