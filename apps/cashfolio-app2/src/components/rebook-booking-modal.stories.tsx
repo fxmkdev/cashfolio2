@@ -53,6 +53,7 @@ export const SubmitAndCancel: Story = {
     await userEvent.click(
       await body.findByRole("option", { name: "Savings (CHF)" }),
     );
+    await expect(targetAccountInput).toHaveValue("Savings (CHF)");
     await userEvent.type(targetAccountInput, "{enter}");
     await expect(args.onSubmit).toHaveBeenCalledWith({
       targetAccountId: "account-savings",

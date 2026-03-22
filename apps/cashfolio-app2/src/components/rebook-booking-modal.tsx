@@ -18,12 +18,13 @@ export function RebookBookingModal({
   onSubmit: (values: { targetAccountId: string }) => Promise<void>;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const selectedTargetAccountIdRef = useRef<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [targetAccountId, setTargetAccountId] = useState<string | null>(null);
-  const [dropdownOpened, setDropdownOpened] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
+    selectedTargetAccountIdRef.current = null;
     setTargetAccountId(null);
     setValidationError(null);
     setSubmitError(null);
@@ -40,7 +41,8 @@ export function RebookBookingModal({
 
     if (noEligibleAccountReason) return;
 
-    const selectedTargetAccountId = targetAccountId;
+    const selectedTargetAccountId =
+      targetAccountId ?? selectedTargetAccountIdRef.current;
     if (!selectedTargetAccountId) {
       setValidationError("Target account is required");
       return;
@@ -69,17 +71,20 @@ export function RebookBookingModal({
           data-autofocus
           value={targetAccountId}
           onChange={(value) => {
+            selectedTargetAccountIdRef.current = value;
             setTargetAccountId(value);
             setValidationError(null);
             setSubmitError(null);
           }}
-          onDropdownOpen={() => setDropdownOpened(true)}
-          onDropdownClose={() => setDropdownOpened(false)}
           onKeyDown={(event) => {
-            if (event.key === "Enter" && !dropdownOpened) {
-              event.preventDefault();
-              formRef.current?.requestSubmit();
-            }
+            if (event.key !== "Enter") return;
+
+            const isDropdownOpen =
+              event.currentTarget.getAttribute("aria-expanded") === "true";
+            if (isDropdownOpen) return;
+
+            event.preventDefault();
+            formRef.current?.requestSubmit();
           }}
           disabled={!!noEligibleAccountReason}
         />
