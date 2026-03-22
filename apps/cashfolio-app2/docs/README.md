@@ -16,7 +16,7 @@ pnpm --filter cashfolio-app2 prisma:generate
 pnpm --filter cashfolio-app2 storybook
 ```
 
-Build and run story interaction tests:
+Build Storybook:
 
 ```bash
 pnpm --filter cashfolio-app2 build-storybook
@@ -33,4 +33,4 @@ Chromatic publishing:
 - Workflow: `.github/workflows/chromatic.yml`
 - Trigger: every branch push and manual `workflow_dispatch`
 - Behavior: publish-only with non-blocking visual changes (`exitZeroOnChanges`)
-- Required secret: `CHROMATIC_PROJECT_TOKEN_CASHFOLIO_APP2`
+- Required secret: `CHROMATIC_PROJECT_TOKEN`

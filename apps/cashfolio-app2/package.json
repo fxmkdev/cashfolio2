@@ -13,7 +13,7 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test-storybook": "NPM_CONFIG_CACHE=${NPM_CONFIG_CACHE:-/tmp/.npm-cache} test-storybook --url http://127.0.0.1:6006",
-    "chromatic": "chromatic --project-token=$CHROMATIC_PROJECT_TOKEN_CASHFOLIO_APP2 --exit-zero-on-changes",
+    "chromatic": "chromatic --project-token=${CHROMATIC_PROJECT_TOKEN:-$CHROMATIC_PROJECT_TOKEN_CASHFOLIO_APP2} --exit-zero-on-changes",
     "prisma:generate": "DATABASE_URL=dummy prisma generate",
     "e2e:install": "playwright install chromium",
     "e2e": "E2E_TEST_MODE=${E2E_TEST_MODE:-true} DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@127.0.0.1:5433/postgres?schema=public} BASE_URL=${BASE_URL:-http://127.0.0.1:4173} E2E_AUTH_BYPASS=${E2E_AUTH_BYPASS:-true} E2E_AUTH_EXTERNAL_ID=${E2E_AUTH_EXTERNAL_ID:-e2e-user} sh -c 'pnpm prisma:generate && pnpm exec prisma migrate deploy && playwright test'",

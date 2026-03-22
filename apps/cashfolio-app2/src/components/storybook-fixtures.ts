@@ -16,6 +16,12 @@ export const accountGroupOptions = [
     equityAccountSubtype: null,
   },
   {
+    value: "group-cash",
+    label: "Cash",
+    type: AccountType.ASSET,
+    equityAccountSubtype: null,
+  },
+  {
     value: "group-liabilities",
     label: "Liabilities",
     type: AccountType.LIABILITY,
