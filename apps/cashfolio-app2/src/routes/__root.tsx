@@ -12,10 +12,18 @@ import {
 } from "@mantine/core";
 import "../mantine";
 import { theme } from "../theme";
-import { ModuleRegistry, AllEnterpriseModule } from "ag-grid-enterprise";
+import {
+  AllCommunityModule as ChartsAllCommunityModule,
+  ModuleRegistry as ChartsModuleRegistry,
+} from "ag-charts-community";
+import {
+  AllEnterpriseModule as GridAllEnterpriseModule,
+  ModuleRegistry as GridModuleRegistry,
+} from "ag-grid-enterprise";
 import { useEffect } from "react";
 
-ModuleRegistry.registerModules([AllEnterpriseModule]);
+ChartsModuleRegistry.registerModules([ChartsAllCommunityModule]);
+GridModuleRegistry.registerModules([GridAllEnterpriseModule]);
 
 export const Route = createRootRoute({
   component: RootComponent,

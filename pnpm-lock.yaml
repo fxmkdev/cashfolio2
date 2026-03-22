@@ -180,6 +180,12 @@ importers:
       '@tanstack/react-start':
         specifier: ^1.167.2
         version: 1.167.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vite@7.3.0(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2)(sugarss@5.0.1(postcss@8.5.8))(tsx@4.21.0))
+      ag-charts-community:
+        specifier: ^13.1.0
+        version: 13.1.0
+      ag-charts-react:
+        specifier: ^13.1.0
+        version: 13.1.0(react@19.2.4)
       ag-grid-enterprise:
         specifier: ^35.1.0
         version: 35.1.0

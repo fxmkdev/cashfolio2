@@ -27,6 +27,8 @@
     "@tabler/icons-react": "^3.40.0",
     "@tanstack/react-router": "^1.168.1",
     "@tanstack/react-start": "^1.167.2",
+    "ag-charts-community": "^13.1.0",
+    "ag-charts-react": "^13.1.0",
     "ag-grid-enterprise": "^35.1.0",
     "ag-grid-react": "^35.1.0",
     "date-fns": "^4.1.0",

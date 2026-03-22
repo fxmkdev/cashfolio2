@@ -6,8 +6,8 @@ paths are relative to that app directory.
 ## TanStack Router
 
 - File-based routing in `src/routes/`
-- `src/routes/__root.tsx` — root layout with AG Grid module registration,
-  Mantine providers, and color scheme sync
+- `src/routes/__root.tsx` — root layout with AG Grid + AG Charts module
+  registration, Mantine providers, and color scheme sync
 - Route files use `createFileRoute` with `loader` for server-side data fetching
   and `component` for rendering
 
@@ -18,7 +18,9 @@ paths are relative to that app directory.
 - `api/logto/$action.tsx` — auth endpoints: `GET /api/logto/sign-in`,
   `GET /api/logto/callback`, `GET /api/logto/sign-up`,
   `POST /api/logto/sign-out`
-- `$accountBookId/index.tsx` — accounts page with tabs (one per account type:
+- `$accountBookId/index.tsx` — dashboard page with a monthly income/expense
+  chart (last 12 months)
+- `$accountBookId/accounts.tsx` — accounts page with tabs (one per account type:
   Asset, Liability, Income, Expense, Gain/Loss)
 - `$accountBookId/$accountId.tsx` — ledger page for a single account
 - Route-local helper modules can live next to a route file when orchestration
@@ -31,7 +33,7 @@ paths are relative to that app directory.
 ### Search Parameters
 
 - Routes use `validateSearch` to define typed, validated search parameters
-- `$accountBookId/index.tsx` uses:
+- `$accountBookId/accounts.tsx` uses:
   - `tab: TabValue` to track the active account type tab
   - `mode: "active" | "archived"` to switch between active and archived account
     trees
@@ -48,10 +50,12 @@ paths are relative to that app directory.
 - Located in `src/server/` (e.g. `src/server/accounts.ts`)
 - Created with `createServerFn` from `@tanstack/react-start`
 - Pattern: `createServerFn({ method })` → `.inputValidator()` → `.handler()`
-- Server-only files use `.server.ts` suffix
+- Server-only modules may use `.server.ts` suffix where helpful (for example
+  auth/session integration files), while domain server-function modules in
+  `src/server/` commonly use `.ts`
 - Key files: `accounts.ts` (barrel), `accounts-queries.ts`,
-  `accounts-mutations.ts`, `ledger.ts`, `transactions.ts` (barrel),
-  `transactions-queries.ts`, `transactions-mutations.ts`
+  `accounts-mutations.ts`, `dashboard.ts`, `ledger.ts`, `transactions.ts`
+  (barrel), `transactions-queries.ts`, `transactions-mutations.ts`
 
 ### Auth & Authorization
 
@@ -65,7 +69,7 @@ paths are relative to that app directory.
 
 ### Account Status Actions
 
-The status-changing server functions used by `$accountBookId/index.tsx` are
+The status-changing server functions used by `$accountBookId/accounts.tsx` are
 implemented in `src/server/accounts-mutations.ts` and re-exported via
 `src/server/accounts.ts`:
 
@@ -86,7 +90,7 @@ update `sortOrder` values after reordering sibling rows in the reorder modal.
 
 ### Account List FX Reference Balance
 
-- The account list route (`$accountBookId/index.tsx`) renders `Balance` and
+- The account list route (`$accountBookId/accounts.tsx`) renders `Balance` and
   `Balance (<referenceCurrency>)` columns.
 - Reference-currency conversion and account/group reference-balance assembly are
   implemented in `src/server/accounts-queries.ts` (re-exported via

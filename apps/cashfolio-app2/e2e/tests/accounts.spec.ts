@@ -10,6 +10,7 @@ import {
   seedAssetAccountWithMissingReferenceBalance,
   type SeededData,
 } from "../support/db";
+import { openDialogFromButton } from "../support/ui";
 
 let seeded: SeededData;
 
@@ -17,26 +18,45 @@ test.beforeAll(async () => {
   seeded = await resetAndSeedDatabase();
 });
 
+test("dashboard is default account-book route and links to accounts", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}`);
+
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Income & Expense Overview" }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Accounts" }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}/accounts\\?tab=ASSET&mode=active$`),
+  );
+});
+
 test("create, edit, archive, and unarchive account", async ({ page }) => {
-  await page.goto(`/${seeded.accountBookId}/?tab=ASSET&mode=active`);
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
 
   const createdName = "E2E Asset Account";
   const updatedName = "E2E Asset Account Updated";
 
-  await page.getByRole("button", { name: "Add Account" }).click();
-  await page.getByLabel("Name").fill(createdName);
-  await page.getByRole("textbox", { name: "Currency" }).click();
+  const newAccountDialog = await openDialogFromButton(page, {
+    buttonName: "Add Account",
+    dialogName: "New Account",
+  });
+
+  await newAccountDialog.getByLabel("Name").fill(createdName);
+  await newAccountDialog.getByRole("textbox", { name: "Currency" }).click();
   await page.getByRole("option", { name: "CHF" }).first().click();
-  await page
-    .getByRole("dialog", { name: "New Account" })
-    .getByRole("button", { name: "Create" })
-    .click();
+  await newAccountDialog.getByRole("button", { name: "Create" }).click();
 
   const createdRow = agGridRowByText(page, createdName);
   await expect(createdRow).toBeVisible();
 
   await clickRowAction(createdRow, "Edit");
-  await page.getByLabel("Name").fill(updatedName);
+  const editDialog = page.getByRole("dialog", { name: "Edit Account" });
+  await expect(editDialog).toBeVisible();
+  await editDialog.getByLabel("Name").fill(updatedName);
   await page
     .getByRole("dialog", { name: "Edit Account" })
     .getByRole("button", { name: "Save" })
@@ -46,6 +66,8 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
   await expect(updatedRow).toBeVisible();
 
   await clickRowAction(updatedRow, "Archive");
+  const archiveDialog = page.getByRole("dialog", { name: "Archive Account" });
+  await expect(archiveDialog).toBeVisible();
   await page
     .getByRole("dialog", { name: "Archive Account" })
     .getByRole("button", { name: "Archive" })
@@ -63,19 +85,19 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: /Add (Split )?Transaction/ }),
   ).toBeVisible();
-  await page.goto(`/${seeded.accountBookId}/?tab=ASSET&mode=archived`);
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=archived`);
   await expect(archivedRow).toBeVisible();
 
   await clickRowAction(archivedRow, "Unarchive");
   await expect(agGridRowByText(page, updatedName)).toHaveCount(0);
 
-  await page.goto(`/${seeded.accountBookId}/?tab=ASSET&mode=active`);
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
   const unarchivedRow = agGridRowByText(page, updatedName);
   await expect(unarchivedRow).toBeVisible();
 });
 
 test("navigate from accounts grid to ledger", async ({ page }) => {
-  await page.goto(`/${seeded.accountBookId}/?tab=ASSET&mode=active`);
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
 
   const cashRow = agGridRowByText(page, seeded.cashAccount.name);
   await expect(cashRow).toBeVisible();
@@ -92,7 +114,7 @@ test("navigate from accounts grid to ledger", async ({ page }) => {
 test("balance column visibility and baseline values across tabs/modes", async ({
   page,
 }) => {
-  await page.goto(`/${seeded.accountBookId}/?tab=ASSET&mode=active`);
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
 
   await expect(page.getByRole("columnheader", { name: "Ccy." })).toBeVisible();
   await expect(
@@ -150,7 +172,9 @@ test("balance column visibility and baseline values across tabs/modes", async ({
     agGridCellByColId(archivedFooterRow, "balanceInReferenceCurrency"),
   ).toHaveText("0.00");
 
-  await page.goto(`/${seeded.accountBookId}/?tab=LIABILITY&mode=active`);
+  await page.goto(
+    `/${seeded.accountBookId}/accounts?tab=LIABILITY&mode=active`,
+  );
   await expect(
     page.getByRole("columnheader", { name: "Balance", exact: true }),
   ).toBeVisible();
@@ -164,7 +188,7 @@ test("balance column visibility and baseline values across tabs/modes", async ({
   ).toHaveText("0.00");
 
   await page.goto(
-    `/${seeded.accountBookId}/?tab=EQUITY-${encodeURIComponent("EXPENSE")}&mode=active`,
+    `/${seeded.accountBookId}/accounts?tab=EQUITY-${encodeURIComponent("EXPENSE")}&mode=active`,
   );
   await expect(
     page.getByRole("columnheader", { name: "Balance", exact: true }),
@@ -183,7 +207,7 @@ test("footer total stays blank when an account ref-currency balance is missing",
     counterAccountId: seeded.cashAccount.id,
   });
 
-  await page.goto(`/${seeded.accountBookId}/?tab=ASSET&mode=active`);
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
 
   const missingFxRow = agGridRowByText(page, missingFxAccount.name);
   await expect(missingFxRow).toBeVisible();

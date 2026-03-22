@@ -1,479 +1,209 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMemo } from "react";
 import {
-  createFileRoute,
-  useNavigate,
-  useRouter,
-} from "@tanstack/react-router";
-import { useCallback, useState } from "react";
-import {
-  Breadcrumbs,
+  Alert,
   Button,
+  Card,
   Container,
-  Tabs,
-  Title,
   Group,
+  Stack,
+  Text,
+  Title,
 } from "@mantine/core";
-import { IconArchive, IconPlus } from "@tabler/icons-react";
-import { useExpandedGroups } from "../../hooks/use-expanded-groups";
-import { ConfirmArchiveModal } from "../../components/confirm-archive-modal";
-import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
-import { EditAccountModal } from "../../components/edit-account-modal";
-import type {
-  AccountInitialValues,
-  TransformedFormValues,
-} from "../../components/edit-account-modal";
-import { EditAccountGroupModal } from "../../components/edit-account-group-modal";
-import type {
-  AccountGroupInitialValues,
-  AccountGroupTransformedFormValues,
-} from "../../components/edit-account-group-modal";
-import { ReorderGroupChildrenModal } from "../../components/reorder-group-children-modal";
-import { DataGrid } from "../../components/data-grid";
-import {
-  archiveAccount,
-  archiveAccountGroup,
-  createAccount,
-  createAccountGroup,
-  deleteAccount,
-  deleteAccountGroup,
-  reorderAccountTreeItems,
-  unarchiveAccount,
-  unarchiveAccountGroup,
-  updateAccount,
-  updateAccountGroup,
-} from "../../server/accounts";
-import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
-import {
-  REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
-  getEntityLabel,
-  type ReferenceCurrencyTotalFooterRow,
-  parseAccountsSearch,
-  tabs,
-  type TabValue,
-  type TreeRow,
-} from "./accounts-page-types";
-import { loadAccountsPageData } from "./accounts-page-loader";
-import {
-  useBalanceInReferenceCurrencyByGroupId,
-  useReferenceCurrencyBalanceTotal,
-  useRowsByParentKey,
-  useSelectedSiblingRows,
-} from "./accounts-page-data";
-import { useAccountTreeColumnDefs } from "./accounts-page-columns";
+import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
+import { AgCharts } from "ag-charts-react";
+import type { AgCartesianChartOptions } from "ag-charts-community";
+import { getDashboardIncomeExpenseOverview } from "../../server/dashboard";
 
 export const Route = createFileRoute("/$accountBookId/")({
-  validateSearch: parseAccountsSearch,
-  loaderDeps: ({ search }) => ({ mode: search.mode }),
-  loader: async ({ params: { accountBookId }, deps: { mode } }) => {
-    return loadAccountsPageData({ accountBookId, mode });
+  loader: async ({ params: { accountBookId } }) => {
+    return getDashboardIncomeExpenseOverview({ data: { accountBookId } });
   },
-  component: AccountsPage,
+  component: DashboardPage,
 });
 
-function AccountsPage() {
-  const { accountGroups, treeData, existingNodes, referenceCurrency } =
-    Route.useLoaderData();
+function DashboardPage() {
   const { accountBookId } = Route.useParams();
-  const { tab, mode } = Route.useSearch();
+  const overview = Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/" });
-  const router = useRouter();
-  const [createModalOpened, setCreateModalOpened] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<
-    { id: string; initialValues: AccountInitialValues } | undefined
-  >();
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [createGroupModalOpened, setCreateGroupModalOpened] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<
-    { id: string; initialValues: AccountGroupInitialValues } | undefined
-  >();
-  const [editGroupModalOpen, setEditGroupModalOpen] = useState(false);
-  const [archivingRow, setArchivingRow] = useState<
-    | { id: string; nodeType: "account" | "accountGroup"; name: string }
-    | undefined
-  >();
-  const [deletingRow, setDeletingRow] = useState<
-    | { id: string; nodeType: "account" | "accountGroup"; name: string }
-    | undefined
-  >();
-  const [reorderingRow, setReorderingRow] = useState<
-    { name: string; parentKey: string } | undefined
-  >();
 
-  const isEquityTab = tab.startsWith("EQUITY-");
-  const isArchivedMode = mode === "archived";
-
-  const storageKey = `cashfolio:expandedGroups:${accountBookId}:${mode}:${tab}`;
-  const { isGroupOpenByDefault, onRowGroupOpened } =
-    useExpandedGroups(storageKey);
-
-  const rowsByParentKey = useRowsByParentKey(treeData[tab]);
-  const selectedSiblingRows = useSelectedSiblingRows(
-    rowsByParentKey,
-    reorderingRow,
+  const currencyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("en-CH", {
+        style: "currency",
+        currency: overview.referenceCurrency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+    [overview.referenceCurrency],
   );
-  const balanceInReferenceCurrencyByGroupId =
-    useBalanceInReferenceCurrencyByGroupId(
-      rowsByParentKey,
-      treeData[tab],
-      !isEquityTab,
+
+  const compactNumberFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("en-CH", {
+        notation: "compact",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 1,
+      }),
+    [],
+  );
+
+  const totals = useMemo(() => {
+    const income = overview.points.reduce(
+      (sum, point) => sum + point.income,
+      0,
     );
-  const referenceCurrencyBalanceTotal = useReferenceCurrencyBalanceTotal(
-    treeData[tab],
-    !isEquityTab,
-  );
-  const pinnedBottomRowData: ReferenceCurrencyTotalFooterRow[] | undefined =
-    isEquityTab
-      ? undefined
-      : [
-          {
-            id: REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
-            rowType: "referenceCurrencyTotalFooter",
-            name: "Total",
-            balanceInReferenceCurrency: referenceCurrencyBalanceTotal,
+    const expense = overview.points.reduce(
+      (sum, point) => sum + point.expense,
+      0,
+    );
+    return {
+      income,
+      expense,
+      net: income - expense,
+    };
+  }, [overview.points]);
+
+  const hasBookings = overview.bookingsCount > 0;
+  const hasConvertedBookings = overview.convertedBookingsCount > 0;
+
+  const chartOptions = useMemo<AgCartesianChartOptions>(
+    () => ({
+      data: overview.points,
+      background: {
+        visible: false,
+      },
+      legend: {
+        position: "bottom",
+      },
+      series: [
+        {
+          type: "bar",
+          xKey: "monthLabel",
+          yKey: "income",
+          yName: "Income",
+          fill: "#339af0",
+          stroke: "#1c7ed6",
+        },
+        {
+          type: "bar",
+          xKey: "monthLabel",
+          yKey: "expense",
+          yName: "Expense",
+          fill: "#ff8787",
+          stroke: "#f03e3e",
+        },
+        {
+          type: "line",
+          xKey: "monthLabel",
+          yKey: "net",
+          yName: "Net Result",
+          stroke: "#0f766e",
+          strokeWidth: 3,
+          marker: {
+            size: 6,
+            itemStyler: ({ yValue }) => ({
+              fill: Number(yValue) < 0 ? "#c92a2a" : "#2b8a3e",
+              stroke: Number(yValue) < 0 ? "#c92a2a" : "#2b8a3e",
+            }),
           },
-        ];
-
-  const handleEditRow = useCallback((data: TreeRow) => {
-    if (data.nodeType === "account") {
-      setEditingAccount({
-        id: data.id,
-        initialValues: {
-          name: data.name,
-          type: data.type,
-          equityAccountSubtype: data.equityAccountSubtype,
-          groupId: data.groupId ?? undefined,
-          sortOrder: data.sortOrder ?? undefined,
-          unit: data.unit,
-          currency: data.currency,
-          cryptocurrency: data.cryptocurrency,
-          symbol: data.symbol,
-          tradeCurrency: data.tradeCurrency,
         },
-      });
-      setEditModalOpen(true);
-    } else if (data.nodeType === "accountGroup") {
-      setEditingGroup({
-        id: data.id,
-        initialValues: {
-          name: data.name,
-          type: data.type,
-          equityAccountSubtype: data.equityAccountSubtype,
-          parentGroupId: data.parentId,
-          sortOrder: data.sortOrder ?? undefined,
+      ],
+      axes: {
+        x: {
+          type: "category",
+          label: {
+            rotation: -30,
+          },
         },
-      });
-      setEditGroupModalOpen(true);
-    }
-  }, []);
-
-  const handleUnarchiveRow = useCallback(
-    async (row: TreeRow) => {
-      if (row.nodeType === "account") {
-        await unarchiveAccount({ data: { id: row.id, accountBookId } });
-      } else {
-        await unarchiveAccountGroup({ data: { id: row.id, accountBookId } });
-      }
-      router.invalidate();
-    },
-    [accountBookId, router],
+        y: {
+          type: "number",
+          label: {
+            formatter: ({ value }) =>
+              compactNumberFormatter.format(Number(value)),
+          },
+          crossLines: [
+            {
+              type: "line",
+              value: 0,
+              stroke: "#868e96",
+              strokeWidth: 1,
+              lineDash: [5, 5],
+            },
+          ],
+        },
+      },
+    }),
+    [compactNumberFormatter, overview.points],
   );
-
-  const columnDefs = useAccountTreeColumnDefs({
-    isArchivedMode,
-    isEquityTab,
-    rowsByParentKey,
-    referenceCurrency,
-    balanceInReferenceCurrencyByGroupId,
-    onEditRow: handleEditRow,
-    onUnarchiveRow: handleUnarchiveRow,
-    onArchiveRow: setArchivingRow,
-    onDeleteRow: setDeletingRow,
-    onReorderRow: setReorderingRow,
-  });
-
-  async function handleCreateAccount(values: TransformedFormValues) {
-    await createAccount({
-      data: {
-        accountBookId,
-        name: values.name!,
-        type: values.type,
-        equityAccountSubtype: values.equityAccountSubtype,
-        groupId: values.groupId,
-        sortOrder: values.sortOrder,
-        unit: values.unit,
-        currency: values.currency,
-        cryptocurrency: values.cryptocurrency,
-        symbol: values.symbol,
-        tradeCurrency: values.tradeCurrency,
-      },
-    });
-    setCreateModalOpened(false);
-    router.invalidate();
-  }
-
-  async function handleUpdateAccount(values: TransformedFormValues) {
-    if (!editingAccount) return;
-    await updateAccount({
-      data: {
-        id: editingAccount.id,
-        accountBookId,
-        name: values.name!,
-        type: values.type,
-        equityAccountSubtype: values.equityAccountSubtype,
-        groupId: values.groupId,
-        sortOrder: values.sortOrder,
-        unit: values.unit,
-        currency: values.currency,
-        cryptocurrency: values.cryptocurrency,
-        symbol: values.symbol,
-        tradeCurrency: values.tradeCurrency,
-      },
-    });
-    setEditModalOpen(false);
-    router.invalidate();
-  }
-
-  async function handleCreateGroup(values: AccountGroupTransformedFormValues) {
-    await createAccountGroup({
-      data: {
-        accountBookId,
-        name: values.name!,
-        type: values.type,
-        equityAccountSubtype: values.equityAccountSubtype,
-        parentGroupId: values.parentGroupId,
-        sortOrder: values.sortOrder,
-      },
-    });
-    setCreateGroupModalOpened(false);
-    router.invalidate();
-  }
-
-  async function handleDelete() {
-    if (!deletingRow) return;
-    if (deletingRow.nodeType === "account") {
-      await deleteAccount({ data: { id: deletingRow.id, accountBookId } });
-    } else {
-      await deleteAccountGroup({ data: { id: deletingRow.id, accountBookId } });
-    }
-    setDeletingRow(undefined);
-    router.invalidate();
-  }
-
-  async function handleArchive() {
-    if (!archivingRow) return;
-    if (archivingRow.nodeType === "account") {
-      await archiveAccount({ data: { id: archivingRow.id, accountBookId } });
-    } else {
-      await archiveAccountGroup({
-        data: { id: archivingRow.id, accountBookId },
-      });
-    }
-    setArchivingRow(undefined);
-    router.invalidate();
-  }
-
-  async function handleUpdateGroup(values: AccountGroupTransformedFormValues) {
-    if (!editingGroup) return;
-    await updateAccountGroup({
-      data: {
-        id: editingGroup.id,
-        accountBookId,
-        name: values.name!,
-        type: values.type,
-        equityAccountSubtype: values.equityAccountSubtype,
-        parentGroupId: values.parentGroupId,
-        sortOrder: values.sortOrder,
-      },
-    });
-    setEditGroupModalOpen(false);
-    router.invalidate();
-  }
-
-  async function handleReorderSiblings(
-    rows: { id: string; nodeType: "account" | "accountGroup" }[],
-  ) {
-    await reorderAccountTreeItems({
-      data: {
-        accountBookId,
-        updates: rows.map((row, i) => ({
-          id: row.id,
-          nodeType: row.nodeType,
-          sortOrder: i,
-        })),
-      },
-    });
-    router.invalidate();
-  }
 
   return (
     <Container fluid py="xl" px="xl">
-      <Group mb="lg" gap="md" justify="space-between" mih={36}>
-        {isArchivedMode ? (
-          <Breadcrumbs fz="h2" fw={700} lh="var(--mantine-h2-line-height)">
-            {getAccountsBreadcrumbSegments({
-              accountBookId,
-              tab,
-              mode: "archived",
-              archiveIsLink: false,
-            })}
-          </Breadcrumbs>
-        ) : (
-          <Title order={2}>Accounts</Title>
-        )}
-        {!isArchivedMode && (
-          <Group>
-            <Button
-              variant="default"
-              leftSection={<IconArchive size={16} />}
-              onClick={() =>
-                navigate({
-                  search: {
-                    tab,
-                    mode: "archived",
-                  },
-                })
-              }
-            >
-              Archive
-            </Button>
-            <Button
-              variant="default"
-              leftSection={<IconPlus size={16} />}
-              onClick={() => setCreateGroupModalOpened(true)}
-            >
-              Add Group
-            </Button>
-            <Button
-              leftSection={<IconPlus size={16} />}
-              onClick={() => setCreateModalOpened(true)}
-            >
-              Add Account
-            </Button>
-          </Group>
-        )}
+      <Group mb="lg" justify="space-between" align="center" mih={36}>
+        <Title order={2}>Dashboard</Title>
+        <Button
+          variant="default"
+          leftSection={<IconListDetails size={16} />}
+          onClick={() =>
+            navigate({
+              to: "/$accountBookId/accounts",
+              params: { accountBookId },
+              search: {
+                tab: "ASSET",
+                mode: "active",
+              },
+            })
+          }
+        >
+          Accounts
+        </Button>
       </Group>
 
-      <Tabs
-        value={tab}
-        onChange={(value) =>
-          navigate({ search: { tab: value as TabValue, mode } })
-        }
-      >
-        <Tabs.List mb="md">
-          {tabs.map((t) => (
-            <Tabs.Tab key={t.value} value={t.value}>
-              {t.label}
-            </Tabs.Tab>
-          ))}
-        </Tabs.List>
-      </Tabs>
+      <Card withBorder radius="md" p="lg">
+        <Stack gap="xs">
+          <Title order={4}>Income & Expense Overview</Title>
+          <Text c="dimmed" size="sm">
+            {overview.periodLabel} · Amounts shown in{" "}
+            {overview.referenceCurrency}
+          </Text>
+          <Group gap="xl">
+            <Text size="sm">
+              Income: {currencyFormatter.format(totals.income)}
+            </Text>
+            <Text size="sm">
+              Expense: {currencyFormatter.format(totals.expense)}
+            </Text>
+            <Text fw={600} size="sm">
+              Net: {currencyFormatter.format(totals.net)}
+            </Text>
+          </Group>
+        </Stack>
 
-      <DataGrid
-        containerStyle={{ height: "calc(100vh - 11rem)" }}
-        rowData={treeData[tab]}
-        columnDefs={columnDefs}
-        autoGroupColumnDef={{
-          headerName: "Name",
-          field: "name",
-          flex: 1,
-          filter: "agTextColumnFilter",
-          valueGetter: ({ data }) => data?.name,
-          cellRendererParams: {
-            suppressCount: true,
-          },
-        }}
-        treeData={true}
-        treeDataParentIdField="parentId"
-        pinnedBottomRowData={pinnedBottomRowData}
-        isGroupOpenByDefault={isGroupOpenByDefault}
-        onRowGroupOpened={onRowGroupOpened}
-        getRowId={({ data }) => data.id}
-        onRowDoubleClicked={(e) => {
-          if (e.data?.nodeType === "account") {
-            navigate({
-              to: "/$accountBookId/$accountId",
-              params: { accountBookId, accountId: e.data.id },
-            });
-          }
-        }}
-      />
+        {hasConvertedBookings ? (
+          <div style={{ marginTop: 20, height: 420 }}>
+            <AgCharts options={chartOptions} />
+          </div>
+        ) : (
+          <Text c="dimmed" mt="md">
+            {hasBookings
+              ? "Income or expense bookings were found, but none could be converted with the available metadata and rates."
+              : "No income or expense bookings found in the last 12 months."}
+          </Text>
+        )}
 
-      {!isArchivedMode && (
-        <>
-          <EditAccountModal
-            opened={createModalOpened}
-            onClose={() => setCreateModalOpened(false)}
-            accountGroups={accountGroups}
-            onSubmit={handleCreateAccount}
-            existingNodes={existingNodes}
-            typeDescriptor={tab}
-          />
-
-          <EditAccountModal
-            opened={editModalOpen}
-            onClose={() => setEditModalOpen(false)}
-            onExitTransitionEnd={() => setEditingAccount(undefined)}
-            accountGroups={accountGroups}
-            onSubmit={handleUpdateAccount}
-            initialValues={editingAccount?.initialValues}
-            existingNodes={existingNodes}
-            editingId={editingAccount?.id}
-            typeDescriptor={tab}
-          />
-
-          <EditAccountGroupModal
-            opened={createGroupModalOpened}
-            onClose={() => setCreateGroupModalOpened(false)}
-            accountGroups={accountGroups}
-            onSubmit={handleCreateGroup}
-            existingNodes={existingNodes}
-            typeDescriptor={tab}
-          />
-
-          <EditAccountGroupModal
-            opened={editGroupModalOpen}
-            onClose={() => setEditGroupModalOpen(false)}
-            onExitTransitionEnd={() => setEditingGroup(undefined)}
-            accountGroups={accountGroups}
-            onSubmit={handleUpdateGroup}
-            initialValues={editingGroup?.initialValues}
-            existingNodes={existingNodes}
-            editingId={editingGroup?.id}
-            typeDescriptor={tab}
-          />
-
-          <ConfirmDeleteModal
-            opened={!!deletingRow}
-            onClose={() => setDeletingRow(undefined)}
-            title={
-              deletingRow
-                ? `Delete ${getEntityLabel(deletingRow.nodeType)}`
-                : "Delete"
-            }
-            name={deletingRow?.name}
-            onConfirm={handleDelete}
-          />
-
-          <ConfirmArchiveModal
-            opened={!!archivingRow}
-            onClose={() => setArchivingRow(undefined)}
-            title={
-              archivingRow
-                ? `Archive ${getEntityLabel(archivingRow.nodeType)}`
-                : "Archive"
-            }
-            name={archivingRow?.name}
-            onConfirm={handleArchive}
-          />
-
-          <ReorderGroupChildrenModal
-            opened={!!reorderingRow}
-            onClose={() => setReorderingRow(undefined)}
-            rowName={reorderingRow?.name ?? ""}
-            initialRows={selectedSiblingRows}
-            onReorder={handleReorderSiblings}
-          />
-        </>
-      )}
+        {overview.skippedBookingsCount > 0 ? (
+          <Alert
+            mt="md"
+            variant="light"
+            color="yellow"
+            icon={<IconAlertTriangle size={16} />}
+            title="Partial data"
+          >
+            {overview.skippedBookingsCount} booking(s) were skipped because
+            required currency or conversion rate information was unavailable.
+          </Alert>
+        ) : null}
+      </Card>
     </Container>
   );
 }

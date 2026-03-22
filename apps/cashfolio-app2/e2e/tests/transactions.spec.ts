@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { Unit } from "../../src/.prisma-client/enums";
 import {
   agGridCellByColId,
@@ -11,26 +11,27 @@ import {
   resetAndSeedDatabase,
   type SeededData,
 } from "../support/db";
+import { openDialogFromButton } from "../support/ui";
 
 let seeded: SeededData;
 
-async function openCreateTransaction(page: Page) {
-  await page.getByRole("button", { name: "Add Split Transaction" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Add Transaction" }),
-  ).toBeVisible();
+async function openCreateTransaction(page: Page): Promise<Locator> {
+  return openDialogFromButton(page, {
+    buttonName: "Add Split Transaction",
+    dialogName: "Add Transaction",
+  });
 }
 
-async function openCreateSimpleTransaction(page: Page) {
-  await page.getByRole("button", { name: "Add Simple Transaction" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Add Simple Transaction" }),
-  ).toBeVisible();
+async function openCreateSimpleTransaction(page: Page): Promise<Locator> {
+  return openDialogFromButton(page, {
+    buttonName: "Add Simple Transaction",
+    dialogName: "Add Simple Transaction",
+  });
 }
 
-async function fillTransactionHeader(page: Page, description: string) {
-  await page.getByLabel("Date").fill("01.01.2026");
-  await page.getByLabel("Description").fill(description);
+async function fillTransactionHeader(dialog: Locator, description: string) {
+  await dialog.getByLabel("Date").fill("01.01.2026");
+  await dialog.getByLabel("Description").fill(description);
 }
 
 test.beforeAll(async () => {
@@ -42,16 +43,13 @@ test("create, edit, delete, and create multi-booking transaction", async ({
 }) => {
   await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
 
-  await openCreateTransaction(page);
-  await fillTransactionHeader(page, "E2E Transaction 1");
+  const createDialog = await openCreateTransaction(page);
+  await fillTransactionHeader(createDialog, "E2E Transaction 1");
   await setGridCellValue(page, 0, "credit", "100");
   await setGridCellValue(page, 1, "date", "01.01.2026");
   await setGridCellValue(page, 1, "account", seeded.savingsAccount.name);
   await setGridCellValue(page, 1, "debit", "100");
-  await page
-    .getByRole("dialog", { name: "Add Transaction" })
-    .getByRole("button", { name: "Create" })
-    .click();
+  await createDialog.getByRole("button", { name: "Create" }).click();
 
   const createdTransactionRow = agGridRowByText(page, "E2E Transaction 1");
   await expect(createdTransactionRow).toBeVisible();
@@ -82,8 +80,8 @@ test("create, edit, delete, and create multi-booking transaction", async ({
     0,
   );
 
-  await openCreateTransaction(page);
-  await fillTransactionHeader(page, "E2E Split Transaction");
+  const createSplitDialog = await openCreateTransaction(page);
+  await fillTransactionHeader(createSplitDialog, "E2E Split Transaction");
   await setGridCellValue(page, 0, "credit", "300");
   await setGridCellValue(page, 1, "date", "01.01.2026");
   await setGridCellValue(page, 1, "account", seeded.savingsAccount.name);
@@ -92,10 +90,7 @@ test("create, edit, delete, and create multi-booking transaction", async ({
   await setGridCellValue(page, 2, "date", "01.01.2026");
   await setGridCellValue(page, 2, "account", seeded.investmentsAccount.name);
   await setGridCellValue(page, 2, "debit", "200");
-  await page
-    .getByRole("dialog", { name: "Add Transaction" })
-    .getByRole("button", { name: "Create" })
-    .click();
+  await createSplitDialog.getByRole("button", { name: "Create" }).click();
 
   await expect(agGridRowByText(page, "E2E Split Transaction")).toBeVisible();
 
@@ -106,10 +101,7 @@ test("create, edit, delete, and create multi-booking transaction", async ({
 test("create simple transaction", async ({ page }) => {
   await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
 
-  await openCreateSimpleTransaction(page);
-  const simpleDialog = page.getByRole("dialog", {
-    name: "Add Simple Transaction",
-  });
+  const simpleDialog = await openCreateSimpleTransaction(page);
 
   await page.getByLabel("Date").fill("02.01.2026");
   await page.getByLabel("Description").fill("E2E Simple Transaction");
@@ -131,7 +123,7 @@ test("create simple transaction", async ({ page }) => {
 
   await expect(agGridRowByText(page, "E2E Simple Transaction")).toBeVisible();
 
-  await page.goto(`/${seeded.accountBookId}/?tab=ASSET&mode=active`);
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
   const cashRow = agGridRowByText(page, seeded.cashAccount.name);
   await expect(agGridCellByColId(cashRow, "balance")).toHaveText("-342.00");
 });
@@ -141,10 +133,7 @@ test("create security simple transaction preserves account metadata", async ({
 }) => {
   await page.goto(`/${seeded.accountBookId}/${seeded.securityAccount.id}`);
 
-  await openCreateSimpleTransaction(page);
-  const simpleDialog = page.getByRole("dialog", {
-    name: "Add Simple Transaction",
-  });
+  const simpleDialog = await openCreateSimpleTransaction(page);
 
   await page.getByLabel("Date").fill("03.01.2026");
   await page.getByLabel("Description").fill("E2E Security Simple Transaction");
