@@ -28,12 +28,73 @@ jobs:
 
       - name: Ensure Storybook iframe entrypoint
         run: |
+          set -euo pipefail
+
           STORYBOOK_DIR="apps/cashfolio-app2/storybook-static"
 
-          # Storybook 9 manager-only output may not include iframe.html by default.
-          # Chromatic validation expects both index.html and iframe.html.
-          if [ ! -f "$STORYBOOK_DIR/iframe.html" ] && [ -f "$STORYBOOK_DIR/index.html" ]; then
-            cp "$STORYBOOK_DIR/index.html" "$STORYBOOK_DIR/iframe.html"
+          # Storybook 9 may omit iframe.html in static output.
+          # Chromatic requires iframe.html + index.html to validate and extract stories.
+          if [ ! -f "$STORYBOOK_DIR/iframe.html" ]; then
+            MAIN_JS_FILE="$(basename "$(find "$STORYBOOK_DIR/client/assets" -maxdepth 1 -name 'main-*.js' | head -n 1)")"
+            MAIN_CSS_FILE="$(basename "$(find "$STORYBOOK_DIR/client/assets" -maxdepth 1 -name 'main-*.css' | head -n 1)")"
+
+            if [ -z "$MAIN_JS_FILE" ] || [ -z "$MAIN_CSS_FILE" ]; then
+              echo "Could not determine Storybook preview entry assets in $STORYBOOK_DIR/client/assets"
+              exit 1
+            fi
+
+            cat > "$STORYBOOK_DIR/iframe.html" <<EOF
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <script type="module" src="./client/vite-inject-mocker-entry.js"></script>
+              <meta charset="utf-8" />
+              <title>Storybook</title>
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
+              <base target="_parent" />
+              <link rel="stylesheet" href="./client/assets/$MAIN_CSS_FILE" />
+              <script>
+                window.CONFIG_TYPE = "PRODUCTION";
+                window.LOGLEVEL = "info";
+                window.FRAMEWORK_OPTIONS = {};
+                window.CHANNEL_OPTIONS = {};
+                window.FEATURES = {
+                  "argTypeTargetsV7": true,
+                  "legacyDecoratorFileOrder": false,
+                  "disallowImplicitActionsInRenderV8": true,
+                  "viewport": true,
+                  "highlight": true,
+                  "controls": true,
+                  "interactions": true,
+                  "actions": true,
+                  "backgrounds": true,
+                  "outline": true,
+                  "measure": true
+                };
+                window.DOCS_OPTIONS = { "defaultName": "Docs" };
+                window.TAGS_OPTIONS = {
+                  "dev-only": { "excludeFromDocsStories": true },
+                  "docs-only": { "excludeFromSidebar": true },
+                  "test-only": { "excludeFromSidebar": true, "excludeFromDocsStories": true }
+                };
+                window.module = undefined;
+                window.global = window;
+              </script>
+            </head>
+            <body>
+              <div class="sb-preparing-story sb-wrapper"></div>
+              <div class="sb-preparing-docs sb-wrapper"></div>
+              <div class="sb-nopreview sb-wrapper"></div>
+              <div class="sb-errordisplay sb-wrapper">
+                <h1 id="error-message"></h1>
+                <pre><code id="error-stack"></code></pre>
+              </div>
+              <div id="storybook-root"></div>
+              <div id="storybook-docs"></div>
+              <script type="module" src="./client/assets/$MAIN_JS_FILE"></script>
+            </body>
+          </html>
+          EOF
           fi
 
       - name: Publish Storybook to Chromatic
