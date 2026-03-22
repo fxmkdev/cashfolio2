@@ -23,8 +23,10 @@ paths are relative to that app directory.
 - `$accountBookId/$accountId.tsx` — ledger page for a single account
 - Route-local helper modules can live next to a route file when orchestration
   grows (for example, `$accountBookId/accounts-page-loader.ts`,
-  `$accountBookId/accounts-page-data.ts`, and
-  `$accountBookId/accounts-page-columns.tsx`).
+  `$accountBookId/accounts-page-data.ts`,
+  `$accountBookId/accounts-page-columns.tsx`,
+  `$accountBookId/ledger-page-loader.ts`, and
+  `$accountBookId/ledger-page-columns.tsx`).
 
 ### Search Parameters
 
