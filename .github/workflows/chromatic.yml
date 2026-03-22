@@ -23,10 +23,12 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm --filter cashfolio-app2 prisma:generate
 
+      - name: Build Storybook
+        run: pnpm --filter cashfolio-app2 build-storybook
+
       - name: Publish Storybook to Chromatic
         uses: chromaui/action@v15
         with:
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-          workingDir: apps/cashfolio-app2
-          buildScriptName: build-storybook
+          storybookBuildDir: apps/cashfolio-app2/storybook-static
           exitZeroOnChanges: true
