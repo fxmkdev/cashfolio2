@@ -48,6 +48,9 @@ const preview: Preview = {
 
       const router = createRouter({
         routeTree: rootRoute.addChildren([rootStoryRoute, accountBookRoute]),
+        // Storybook renders stories inside /iframe.html, so links/routes must
+        // resolve relative to that base path.
+        basepath: "/iframe.html",
       });
 
       return (
