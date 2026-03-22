@@ -1,15 +1,17 @@
-export type DashboardPeriod = "12m" | "10y";
+import {
+  DASHBOARD_PERIOD_10Y,
+  DASHBOARD_PERIOD_12M,
+  DEFAULT_DASHBOARD_PERIOD,
+  isDashboardPeriod,
+  type DashboardPeriod,
+} from "../../shared/dashboard-period";
 
 export type DashboardSearch = {
   period?: DashboardPeriod;
 };
 
-export const DASHBOARD_PERIOD_12M: DashboardPeriod = "12m";
-export const DASHBOARD_PERIOD_10Y: DashboardPeriod = "10y";
-
-function isDashboardPeriod(value: unknown): value is DashboardPeriod {
-  return value === DASHBOARD_PERIOD_10Y || value === DASHBOARD_PERIOD_12M;
-}
+export { DASHBOARD_PERIOD_10Y, DASHBOARD_PERIOD_12M };
+export type { DashboardPeriod };
 
 export function parseDashboardSearch(
   search: Record<string, unknown>,
@@ -20,5 +22,5 @@ export function parseDashboardSearch(
 }
 
 export function getDashboardPeriod(search: DashboardSearch): DashboardPeriod {
-  return search.period ?? DASHBOARD_PERIOD_12M;
+  return search.period ?? DEFAULT_DASHBOARD_PERIOD;
 }

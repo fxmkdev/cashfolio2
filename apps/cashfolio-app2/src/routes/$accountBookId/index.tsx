@@ -17,6 +17,7 @@ import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
 import { AgCharts } from "ag-charts-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import { getDashboardIncomeExpenseOverview } from "../../server/dashboard";
+import { DASHBOARD_PERIOD_LABEL_BY_PERIOD } from "../../shared/dashboard-period";
 import {
   DASHBOARD_PERIOD_10Y,
   DASHBOARD_PERIOD_12M,
@@ -247,8 +248,14 @@ function DashboardPage() {
               value={selectedPeriod}
               onChange={handlePeriodChange}
               data={[
-                { label: "Last 12 months", value: DASHBOARD_PERIOD_12M },
-                { label: "Last 10 years", value: DASHBOARD_PERIOD_10Y },
+                {
+                  label: DASHBOARD_PERIOD_LABEL_BY_PERIOD[DASHBOARD_PERIOD_12M],
+                  value: DASHBOARD_PERIOD_12M,
+                },
+                {
+                  label: DASHBOARD_PERIOD_LABEL_BY_PERIOD[DASHBOARD_PERIOD_10Y],
+                  value: DASHBOARD_PERIOD_10Y,
+                },
               ]}
             />
           </Group>

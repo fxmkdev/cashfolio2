@@ -7,6 +7,12 @@ import {
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { prisma } from "../prisma.server";
 import {
+  DASHBOARD_NO_BOOKINGS_MESSAGE_BY_PERIOD,
+  DASHBOARD_PERIOD_10Y,
+  DASHBOARD_PERIOD_LABEL_BY_PERIOD,
+  type DashboardPeriod,
+} from "../shared/dashboard-period";
+import {
   getCryptocurrencyToCurrencyExchangeRate,
   getCurrencyExchangeRate,
   getSecurityToCurrencyExchangeRate,
@@ -17,11 +23,9 @@ type DashboardBucket = {
   expense: number;
 };
 
-type DashboardPeriod = "12m" | "10y";
-
 type DashboardPeriodConfig = {
-  periodLabel: "Last 12 months" | "Last 10 years";
-  noBookingsMessage: string;
+  periodLabel: (typeof DASHBOARD_PERIOD_LABEL_BY_PERIOD)[DashboardPeriod];
+  noBookingsMessage: (typeof DASHBOARD_NO_BOOKINGS_MESSAGE_BY_PERIOD)[DashboardPeriod];
   queryStart: Date;
   queryEndExclusive: Date;
   bucketStarts: Date[];
@@ -95,7 +99,7 @@ function getDashboardPeriodConfig(
 ): DashboardPeriodConfig {
   const currentMonthStart = startOfUtcMonth(now);
 
-  if (period === "10y") {
+  if (period === DASHBOARD_PERIOD_10Y) {
     const currentYearStart = startOfUtcYear(now);
     const startYear = currentYearStart.getUTCFullYear() - 9;
     const queryStart = new Date(Date.UTC(startYear, 0, 1));
@@ -105,9 +109,8 @@ function getDashboardPeriodConfig(
     );
 
     return {
-      periodLabel: "Last 10 years",
-      noBookingsMessage:
-        "No income or expense bookings found in the last 10 years.",
+      periodLabel: DASHBOARD_PERIOD_LABEL_BY_PERIOD[period],
+      noBookingsMessage: DASHBOARD_NO_BOOKINGS_MESSAGE_BY_PERIOD[period],
       queryStart,
       queryEndExclusive,
       bucketStarts,
@@ -123,9 +126,8 @@ function getDashboardPeriodConfig(
   );
 
   return {
-    periodLabel: "Last 12 months",
-    noBookingsMessage:
-      "No income or expense bookings found in the last 12 months.",
+    periodLabel: DASHBOARD_PERIOD_LABEL_BY_PERIOD[period],
+    noBookingsMessage: DASHBOARD_NO_BOOKINGS_MESSAGE_BY_PERIOD[period],
     queryStart,
     queryEndExclusive,
     bucketStarts,
