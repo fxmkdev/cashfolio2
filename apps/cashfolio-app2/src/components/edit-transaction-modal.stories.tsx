@@ -48,3 +48,14 @@ export const CancelInteraction: Story = {
     await expect(args.onClose).toHaveBeenCalled();
   },
 };
+
+export const CreateWithCustomSubmitLabel: Story = {
+  args: {
+    submitLabel: "Create",
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await expect(canvas.getByRole("button", { name: "Create" })).toBeVisible();
+  },
+};

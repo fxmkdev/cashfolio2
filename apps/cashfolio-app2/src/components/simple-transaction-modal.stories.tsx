@@ -65,3 +65,35 @@ export const ForcedDirectionDisablesToggle: Story = {
     ).toBeDisabled();
   },
 };
+
+export const EditModeWithSwitchToSplit: Story = {
+  args: {
+    initialValues: {
+      date: new Date("2026-01-15T00:00:00.000Z"),
+      description: "Coffee",
+      counterAccountId: "account-credit-card",
+      amount: 5.5,
+      direction: "CREDIT",
+    },
+    onSwitchToSplit: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+
+    await expect(body.getByRole("button", { name: "Save" })).toBeVisible();
+    await expect(
+      body.getByRole("button", { name: "Switch to split editor" }),
+    ).toBeVisible();
+
+    await userEvent.click(
+      body.getByRole("button", { name: "Switch to split editor" }),
+    );
+
+    await expect(args.onSwitchToSplit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        counterAccountId: "account-credit-card",
+        direction: "CREDIT",
+      }),
+    );
+  },
+};
