@@ -6,6 +6,7 @@ import {
   Card,
   Container,
   Group,
+  SegmentedControl,
   Stack,
   Text,
   Title,
@@ -16,16 +17,30 @@ import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
 import { AgCharts } from "ag-charts-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import { getDashboardIncomeExpenseOverview } from "../../server/dashboard";
+import {
+  DASHBOARD_PERIOD_10Y,
+  DASHBOARD_PERIOD_12M,
+  getDashboardPeriod,
+  type DashboardPeriod,
+  parseDashboardSearch,
+} from "./dashboard-page-types";
 
 export const Route = createFileRoute("/$accountBookId/")({
-  loader: async ({ params: { accountBookId } }) => {
-    return getDashboardIncomeExpenseOverview({ data: { accountBookId } });
+  validateSearch: parseDashboardSearch,
+  loaderDeps: ({ search }) => ({
+    period: getDashboardPeriod(search),
+  }),
+  loader: async ({ params: { accountBookId }, deps: { period } }) => {
+    return getDashboardIncomeExpenseOverview({
+      data: { accountBookId, period },
+    });
   },
   component: DashboardPage,
 });
 
 function DashboardPage() {
   const { accountBookId } = Route.useParams();
+  const selectedPeriod = getDashboardPeriod(Route.useSearch());
   const overview = Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/" });
   const theme = useMantineTheme();
@@ -105,7 +120,7 @@ function DashboardPage() {
       series: [
         {
           type: "bar",
-          xKey: "monthLabel",
+          xKey: "bucketLabel",
           yKey: "income",
           yName: "Income",
           fill: isDarkMode ? theme.colors.blue[4] : theme.colors.blue[6],
@@ -113,7 +128,7 @@ function DashboardPage() {
         },
         {
           type: "bar",
-          xKey: "monthLabel",
+          xKey: "bucketLabel",
           yKey: "expense",
           yName: "Expense",
           fill: isDarkMode ? theme.colors.red[4] : theme.colors.red[3],
@@ -121,7 +136,7 @@ function DashboardPage() {
         },
         {
           type: "line",
-          xKey: "monthLabel",
+          xKey: "bucketLabel",
           yKey: "net",
           yName: "Net Result",
           stroke: isDarkMode ? theme.colors.teal[3] : theme.colors.teal[8],
@@ -187,6 +202,20 @@ function DashboardPage() {
     ],
   );
 
+  function handlePeriodChange(value: string) {
+    const nextPeriod: DashboardPeriod =
+      value === DASHBOARD_PERIOD_10Y
+        ? DASHBOARD_PERIOD_10Y
+        : DASHBOARD_PERIOD_12M;
+
+    navigate({
+      search:
+        nextPeriod === DASHBOARD_PERIOD_10Y
+          ? { period: DASHBOARD_PERIOD_10Y }
+          : {},
+    });
+  }
+
   return (
     <Container fluid py="xl" px="xl">
       <Group mb="lg" justify="space-between" align="center" mih={36}>
@@ -211,7 +240,18 @@ function DashboardPage() {
 
       <Card withBorder radius="md" p="lg">
         <Stack gap="xs">
-          <Title order={4}>Income & Expense Overview</Title>
+          <Group justify="space-between" align="flex-end" gap="sm" wrap="wrap">
+            <Title order={4}>Income & Expense Overview</Title>
+            <SegmentedControl
+              size="xs"
+              value={selectedPeriod}
+              onChange={handlePeriodChange}
+              data={[
+                { label: "Last 12 months", value: DASHBOARD_PERIOD_12M },
+                { label: "Last 10 years", value: DASHBOARD_PERIOD_10Y },
+              ]}
+            />
+          </Group>
           <Text c="dimmed" size="sm">
             {overview.periodLabel} · Amounts shown in{" "}
             {overview.referenceCurrency}
@@ -237,7 +277,7 @@ function DashboardPage() {
           <Text c="dimmed" mt="md">
             {hasBookings
               ? "Income or expense bookings were found, but none could be converted with the available metadata and rates."
-              : "No income or expense bookings found in the last 12 months."}
+              : overview.noBookingsMessage}
           </Text>
         )}
 

@@ -81,8 +81,11 @@ Route-level logic that doesn't belong in components is extracted into hooks in
 - The v1 chart combines:
   - grouped absolute bars for Income and Expense
   - a signed Net line (`income - expense`) on the same axis
-- Data spans the last 12 months and is normalized to the account-book reference
-  currency.
+- Data is normalized to the account-book reference currency.
+- The period switch supports:
+  - **Last 12 months** with monthly buckets
+  - **Last 10 years** with yearly buckets (`currentYear - 9` through
+    `currentYear`; current year is year-to-date)
 - When conversion rates are unavailable for some bookings, the chart remains
   visible and a partial-data note is shown.
 

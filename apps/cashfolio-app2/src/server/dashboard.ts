@@ -17,6 +17,18 @@ type DashboardBucket = {
   expense: number;
 };
 
+type DashboardPeriod = "12m" | "10y";
+
+type DashboardPeriodConfig = {
+  periodLabel: "Last 12 months" | "Last 10 years";
+  noBookingsMessage: string;
+  queryStart: Date;
+  queryEndExclusive: Date;
+  bucketStarts: Date[];
+  toBucketKey: (date: Date) => string;
+  getBucketLabel: (date: Date) => string;
+};
+
 const MONTH_LABELS = [
   "Jan",
   "Feb",
@@ -47,31 +59,91 @@ function startOfUtcMonth(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
 }
 
+function startOfUtcYear(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+}
+
 function addUtcMonths(date: Date, amount: number): Date {
   return new Date(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + amount, 1),
   );
 }
 
+function addUtcYears(date: Date, amount: number): Date {
+  return new Date(Date.UTC(date.getUTCFullYear() + amount, 0, 1));
+}
+
 function getUtcMonthLabel(date: Date): string {
   return `${MONTH_LABELS[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+}
+
+function getUtcYearKey(date: Date): string {
+  return String(date.getUTCFullYear());
+}
+
+function getUtcYearLabel(date: Date): string {
+  return String(date.getUTCFullYear());
 }
 
 function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+function getDashboardPeriodConfig(
+  period: DashboardPeriod,
+  now: Date,
+): DashboardPeriodConfig {
+  const currentMonthStart = startOfUtcMonth(now);
+
+  if (period === "10y") {
+    const currentYearStart = startOfUtcYear(now);
+    const startYear = currentYearStart.getUTCFullYear() - 9;
+    const queryStart = new Date(Date.UTC(startYear, 0, 1));
+    const queryEndExclusive = addUtcMonths(currentMonthStart, 1);
+    const bucketStarts = Array.from({ length: 10 }, (_, index) =>
+      addUtcYears(queryStart, index),
+    );
+
+    return {
+      periodLabel: "Last 10 years",
+      noBookingsMessage:
+        "No income or expense bookings found in the last 10 years.",
+      queryStart,
+      queryEndExclusive,
+      bucketStarts,
+      toBucketKey: getUtcYearKey,
+      getBucketLabel: getUtcYearLabel,
+    };
+  }
+
+  const queryStart = addUtcMonths(currentMonthStart, -11);
+  const queryEndExclusive = addUtcMonths(currentMonthStart, 1);
+  const bucketStarts: Date[] = Array.from({ length: 12 }, (_, index) =>
+    addUtcMonths(queryStart, index),
+  );
+
+  return {
+    periodLabel: "Last 12 months",
+    noBookingsMessage:
+      "No income or expense bookings found in the last 12 months.",
+    queryStart,
+    queryEndExclusive,
+    bucketStarts,
+    toBucketKey: getUtcMonthKey,
+    getBucketLabel: getUtcMonthLabel,
+  };
+}
+
 export const getDashboardIncomeExpenseOverview = createServerFn({
   method: "GET",
 })
-  .inputValidator((data: { accountBookId: string }) => data)
+  .inputValidator(
+    (data: { accountBookId: string; period: DashboardPeriod }) => data,
+  )
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
-    const now = new Date();
-    const currentMonthStart = startOfUtcMonth(now);
-    const periodStart = addUtcMonths(currentMonthStart, -11);
-    const periodEnd = addUtcMonths(currentMonthStart, 1);
+    const periodConfig = getDashboardPeriodConfig(data.period, new Date());
 
     const [accountBook, bookings] = await Promise.all([
       prisma.accountBook.findUniqueOrThrow({
@@ -81,7 +153,10 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
       prisma.booking.findMany({
         where: {
           accountBookId: data.accountBookId,
-          date: { gte: periodStart, lt: periodEnd },
+          date: {
+            gte: periodConfig.queryStart,
+            lt: periodConfig.queryEndExclusive,
+          },
           account: {
             type: AccountType.EQUITY,
             equityAccountSubtype: {
@@ -105,14 +180,11 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
     ]);
 
     const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
-    const bucketsByMonthKey = new Map<string, DashboardBucket>();
-    const monthStarts: Date[] = Array.from({ length: 12 }, (_, index) =>
-      addUtcMonths(periodStart, index),
-    );
+    const bucketsByKey = new Map<string, DashboardBucket>();
 
-    for (const monthStart of monthStarts) {
-      const monthKey = getUtcMonthKey(monthStart);
-      bucketsByMonthKey.set(monthKey, {
+    for (const bucketStart of periodConfig.bucketStarts) {
+      const bucketKey = periodConfig.toBucketKey(bucketStart);
+      bucketsByKey.set(bucketKey, {
         income: 0,
         expense: 0,
       });
@@ -128,8 +200,8 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
     let convertedBookingsCount = 0;
 
     for (const booking of bookings) {
-      const monthKey = getUtcMonthKey(booking.date);
-      const bucket = bucketsByMonthKey.get(monthKey);
+      const bucketKey = periodConfig.toBucketKey(booking.date);
+      const bucket = bucketsByKey.get(bucketKey);
       if (!bucket) {
         continue;
       }
@@ -238,9 +310,9 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
       }
     }
 
-    const points = monthStarts.map((monthStart) => {
-      const monthKey = getUtcMonthKey(monthStart);
-      const bucket = bucketsByMonthKey.get(monthKey)!;
+    const points = periodConfig.bucketStarts.map((bucketStart) => {
+      const bucketKey = periodConfig.toBucketKey(bucketStart);
+      const bucket = bucketsByKey.get(bucketKey)!;
       const incomeSigned = round2(bucket.income);
       const expenseSigned = round2(bucket.expense);
       const income = round2(Math.abs(incomeSigned));
@@ -248,8 +320,8 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
       const net = round2(incomeSigned - expenseSigned);
 
       return {
-        monthStart: monthStart.toISOString(),
-        monthLabel: getUtcMonthLabel(monthStart),
+        bucketStart: bucketStart.toISOString(),
+        bucketLabel: periodConfig.getBucketLabel(bucketStart),
         income,
         expense,
         net,
@@ -257,7 +329,8 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
     });
 
     return {
-      periodLabel: "Last 12 months",
+      periodLabel: periodConfig.periodLabel,
+      noBookingsMessage: periodConfig.noBookingsMessage,
       referenceCurrency,
       bookingsCount: bookings.length,
       convertedBookingsCount,

@@ -27,6 +27,39 @@ test("dashboard is default account-book route and links to accounts", async ({
   await expect(
     page.getByRole("heading", { name: "Income & Expense Overview" }),
   ).toBeVisible();
+  await expect(
+    page.getByText("Last 12 months · Amounts shown in CHF"),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "No income or expense bookings found in the last 12 months.",
+    ),
+  ).toBeVisible();
+
+  await page.locator("label[for$='-10y']").click();
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}\\?period=10y$`),
+  );
+  await expect(
+    page.getByText("Last 10 years · Amounts shown in CHF"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No income or expense bookings found in the last 10 years."),
+  ).toBeVisible();
+
+  await page.reload();
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}\\?period=10y$`),
+  );
+  await expect(
+    page.getByText("Last 10 years · Amounts shown in CHF"),
+  ).toBeVisible();
+
+  await page.locator("label[for$='-12m']").click();
+  await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}$`));
+  await expect(
+    page.getByText("Last 12 months · Amounts shown in CHF"),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Accounts" }).click();
   await expect(page).toHaveURL(

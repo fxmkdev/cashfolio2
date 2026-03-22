@@ -19,7 +19,7 @@ paths are relative to that app directory.
   `GET /api/logto/callback`, `GET /api/logto/sign-up`,
   `POST /api/logto/sign-out`
 - `$accountBookId/index.tsx` — dashboard page with a monthly income/expense
-  chart (last 12 months)
+  chart and period switch (last 12 months or last 10 years)
 - `$accountBookId/accounts.tsx` — accounts page with tabs (one per account type:
   Asset, Liability, Income, Expense, Gain/Loss)
 - `$accountBookId/$accountId.tsx` — ledger page for a single account
@@ -39,6 +39,8 @@ paths are relative to that app directory.
     trees
 - `$accountBookId/$accountId.tsx` uses `transactionId?: string` to auto-scroll
   and highlight a booking row
+- `$accountBookId/index.tsx` uses `period: "12m" | "10y"` to switch the
+  dashboard overview between the default 12-month view and a 10-year view
 
 ### Loader Pattern
 
