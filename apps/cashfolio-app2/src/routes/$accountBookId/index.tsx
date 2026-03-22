@@ -78,7 +78,7 @@ function DashboardPage() {
   const tooltipSubtleTextColor = isDarkMode
     ? theme.colors.gray[3]
     : theme.colors.gray[7];
-  const tooltipBorderColor = isDarkMode
+  const themeBorderColor = isDarkMode
     ? theme.colors.dark[4]
     : theme.colors.gray[3];
 
@@ -92,7 +92,7 @@ function DashboardPage() {
         params: {
           textColor: chartTextColor,
           foregroundColor: chartTextColor,
-          borderColor: tooltipBorderColor,
+          borderColor: themeBorderColor,
           tooltipBackgroundColor,
           tooltipBorder: true,
           tooltipTextColor,
@@ -181,7 +181,7 @@ function DashboardPage() {
       overview.points,
       theme,
       tooltipBackgroundColor,
-      tooltipBorderColor,
+      themeBorderColor,
       tooltipSubtleTextColor,
       tooltipTextColor,
     ],
