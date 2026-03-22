@@ -211,7 +211,11 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
       );
     }
 
-    const bookingUnitFields = getBookingUnitFields(currentAccount);
+    const currentBookingUnitFields = getBookingUnitFields(currentAccount);
+    const counterBookingUnitFields =
+      counterAccount.type === AccountType.EQUITY
+        ? currentBookingUnitFields
+        : getBookingUnitFields(counterAccount);
 
     const currentValue =
       data.direction === "DEBIT" ? data.amount : -data.amount;
@@ -223,14 +227,14 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
           date: bookingDate.toISOString(),
           accountId: currentAccount.id,
           description: "",
-          ...bookingUnitFields,
+          ...currentBookingUnitFields,
           value: currentValue,
         },
         {
           date: bookingDate.toISOString(),
           accountId: counterAccount.id,
           description: "",
-          ...bookingUnitFields,
+          ...counterBookingUnitFields,
           value: -currentValue,
         },
       ],

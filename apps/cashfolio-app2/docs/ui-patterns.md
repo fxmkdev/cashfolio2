@@ -212,9 +212,11 @@ two-booking transactions from the ledger route
 - Always creates exactly 2 bookings:
   - current account booking
   - selected counter account booking
-- Both bookings use the current account's unit identifier
+- Both bookings must match the current account's unit identifier
 - If the selected account is equity, the equity booking still receives the
   current account's unit fields
+- If the selected account is asset/liability, each booking keeps its own account
+  unit metadata (including security `tradeCurrency`)
 - For equity account-type restrictions:
   - selecting an `INCOME` account forces `Debit` on the current account
   - selecting an `EXPENSE` account forces `Credit` on the current account
