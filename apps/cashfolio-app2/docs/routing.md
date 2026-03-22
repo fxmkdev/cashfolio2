@@ -43,7 +43,8 @@ paths are relative to that app directory.
 - Created with `createServerFn` from `@tanstack/react-start`
 - Pattern: `createServerFn({ method })` → `.inputValidator()` → `.handler()`
 - Server-only files use `.server.ts` suffix
-- Key files: `accounts.ts`, `ledger.ts`, `transactions.ts`
+- Key files: `accounts.ts` (barrel), `accounts-queries.ts`,
+  `accounts-mutations.ts`, `ledger.ts`, `transactions.ts`
 
 ### Auth & Authorization
 
