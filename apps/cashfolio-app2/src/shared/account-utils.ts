@@ -108,11 +108,13 @@ export function isBookingUnitCompatibleWithAccount(
   },
   account: UnitIdentifierSource,
 ): boolean {
+  const bookingIdentifier = getBookingUnitIdentifier(booking);
+  if (!bookingIdentifier) return false;
+
   if (!account.unit) return true;
 
-  const bookingIdentifier = getBookingUnitIdentifier(booking);
   const accountIdentifier = getAccountUnitIdentifier(account);
-  if (!bookingIdentifier || !accountIdentifier) return false;
+  if (!accountIdentifier) return false;
   return bookingIdentifier === accountIdentifier;
 }
 

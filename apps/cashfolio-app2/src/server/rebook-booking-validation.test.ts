@@ -61,6 +61,26 @@ describe("validateRebookBookingTarget", () => {
     ).toThrowError("Target account must use the same unit as the booking.");
   });
 
+  test("rejects incomplete source booking unit details even for unit-less target account", () => {
+    expect(() =>
+      validateRebookBookingTarget({
+        booking: createBooking({
+          unit: Unit.SECURITY,
+          currency: null,
+          symbol: "AAPL",
+          tradeCurrency: null,
+        }),
+        targetAccount: createTargetAccount({
+          unit: null,
+          currency: null,
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+        }),
+      }),
+    ).toThrowError("Source booking unit details are incomplete.");
+  });
+
   test("rejects sign-invalid rebook to expense account", () => {
     expect(() =>
       validateRebookBookingTarget({

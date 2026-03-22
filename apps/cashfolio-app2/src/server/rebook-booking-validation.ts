@@ -46,12 +46,12 @@ export function validateRebookBookingTarget(args: {
     );
   }
 
-  if (targetAccount.unit) {
-    const bookingUnitIdentifier = getBookingUnitIdentifier(booking);
-    if (!bookingUnitIdentifier) {
-      throw new Error("Source booking unit details are incomplete.");
-    }
+  const bookingUnitIdentifier = getBookingUnitIdentifier(booking);
+  if (!bookingUnitIdentifier) {
+    throw new Error("Source booking unit details are incomplete.");
+  }
 
+  if (targetAccount.unit) {
     const targetUnitIdentifier = getAccountUnitIdentifier(targetAccount);
     if (!targetUnitIdentifier) {
       throw new Error("Target account unit details are incomplete.");
