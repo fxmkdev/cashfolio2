@@ -5,7 +5,11 @@ import {
   agGridRowByText,
   clickRowAction,
 } from "../support/grid";
-import { resetAndSeedDatabase, type SeededData } from "../support/db";
+import {
+  resetAndSeedDatabase,
+  seedAssetAccountWithMissingReferenceBalance,
+  type SeededData,
+} from "../support/db";
 
 let seeded: SeededData;
 
@@ -169,4 +173,27 @@ test("balance column visibility and baseline values across tabs/modes", async ({
     page.getByRole("columnheader", { name: /^Balance \([A-Z]{3}\)$/ }),
   ).toHaveCount(0);
   await expect(page.locator(".ag-row-pinned")).toHaveCount(0);
+});
+
+test("footer total stays blank when an account ref-currency balance is missing", async ({
+  page,
+}) => {
+  const missingFxAccount = await seedAssetAccountWithMissingReferenceBalance({
+    accountBookId: seeded.accountBookId,
+    counterAccountId: seeded.cashAccount.id,
+  });
+
+  await page.goto(`/${seeded.accountBookId}/?tab=ASSET&mode=active`);
+
+  const missingFxRow = agGridRowByText(page, missingFxAccount.name);
+  await expect(missingFxRow).toBeVisible();
+  await expect(
+    agGridCellByColId(missingFxRow, "balanceInReferenceCurrency"),
+  ).toHaveText(/^\s*$/);
+
+  const footerRow = agGridPinnedBottomRow(page);
+  await expect(footerRow).toContainText("Total");
+  await expect(
+    agGridCellByColId(footerRow, "balanceInReferenceCurrency"),
+  ).toHaveText(/^\s*$/);
 });

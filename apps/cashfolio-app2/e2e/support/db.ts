@@ -290,6 +290,76 @@ export async function getTransactionBookingsByDescription(args: {
   }));
 }
 
+export async function seedAssetAccountWithMissingReferenceBalance(args: {
+  accountBookId: string;
+  counterAccountId: string;
+}) {
+  const assetRootGroup = await prisma.accountGroup.findFirstOrThrow({
+    where: {
+      accountBookId: args.accountBookId,
+      type: AccountType.ASSET,
+      parentGroupId: null,
+    },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true },
+  });
+
+  const account = await prisma.account.create({
+    data: {
+      id: createId(),
+      accountBookId: args.accountBookId,
+      name: "E2E Missing FX",
+      type: AccountType.ASSET,
+      groupId: assetRootGroup.id,
+      unit: Unit.CURRENCY,
+      currency: "XXX",
+      sortOrder: 999,
+    },
+    select: { id: true, name: true },
+  });
+
+  const transactionId = createId();
+  await prisma.transaction.create({
+    data: {
+      id: transactionId,
+      accountBookId: args.accountBookId,
+      description: "E2E Missing FX Seed",
+    },
+  });
+
+  const date = new Date("2026-01-02T00:00:00.000Z");
+  await prisma.booking.createMany({
+    data: [
+      {
+        id: createId(),
+        accountBookId: args.accountBookId,
+        transactionId,
+        accountId: account.id,
+        date,
+        description: "E2E Missing FX Seed",
+        unit: Unit.CURRENCY,
+        currency: "XXX",
+        value: 100,
+        sortOrder: 0,
+      },
+      {
+        id: createId(),
+        accountBookId: args.accountBookId,
+        transactionId,
+        accountId: args.counterAccountId,
+        date,
+        description: "E2E Missing FX Seed",
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        value: -100,
+        sortOrder: 1,
+      },
+    ],
+  });
+
+  return account;
+}
+
 export async function disconnectDb(): Promise<void> {
   await prisma.$disconnect();
 }
