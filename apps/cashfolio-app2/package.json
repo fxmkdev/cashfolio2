@@ -8,6 +8,8 @@
     "start": "vite preview",
     "typecheck": "tsc --noEmit",
     "format": "prettier --check .",
+    "pretest:unit": "pnpm prisma:generate",
+    "test:unit": "vitest run",
     "prisma:generate": "DATABASE_URL=dummy prisma generate",
     "e2e:install": "playwright install chromium",
     "e2e": "E2E_TEST_MODE=${E2E_TEST_MODE:-true} DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@127.0.0.1:5433/postgres?schema=public} BASE_URL=${BASE_URL:-http://127.0.0.1:4173} E2E_AUTH_BYPASS=${E2E_AUTH_BYPASS:-true} E2E_AUTH_EXTERNAL_ID=${E2E_AUTH_EXTERNAL_ID:-e2e-user} sh -c 'pnpm prisma:generate && pnpm exec prisma migrate deploy && playwright test'",
@@ -43,6 +45,7 @@
     "postcss-simple-vars": "^7.0.1",
     "prisma": "^7.5.0",
     "typescript": "^5.9.0",
-    "vite": "^7.0.0"
+    "vite": "^7.0.0",
+    "vitest": "^4.1.0"
   }
 }
