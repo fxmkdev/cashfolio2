@@ -39,6 +39,11 @@ need to be strictly Conventional Commit formatted.
   `infra`, `docs`, `cli`).
 - Keep descriptions concise, imperative, and behavior-focused.
 
+## Review Comment Workflow
+
+- After you address a pull request comment, resolve that conversation in the
+  PR.
+
 ## Documentation Expectations
 
 - Update relevant docs when introducing new behavior or conventions.
