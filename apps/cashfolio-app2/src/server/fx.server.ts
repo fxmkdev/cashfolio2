@@ -23,7 +23,12 @@ type CoinLayerHistoricalResponse = {
 };
 
 type MarketstackEodResponse = {
-  data?: Array<{ close?: number }>;
+  data?: Array<{
+    close?: number;
+    currency?: string;
+    exchange_currency?: string;
+    exchange?: unknown;
+  }>;
   error?: { code?: string | number; message?: string };
 };
 
@@ -131,6 +136,35 @@ function getMarketstackApiKey(): string | null {
     hasWarnedMissingMarketstackApiKey = true;
   }
   return apiKey ?? null;
+}
+
+function toNormalizedCurrencyCode(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toUpperCase();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function getMarketstackQuoteCurrency(point: {
+  currency?: string;
+  exchange_currency?: string;
+  exchange?: unknown;
+}): string | null {
+  const directCurrency =
+    toNormalizedCurrencyCode(point.currency) ??
+    toNormalizedCurrencyCode(point.exchange_currency);
+  if (directCurrency) return directCurrency;
+
+  if (point.exchange && typeof point.exchange === "object") {
+    const exchange = point.exchange as Record<string, unknown>;
+    return (
+      toNormalizedCurrencyCode(exchange.currency) ??
+      toNormalizedCurrencyCode(exchange.exchange_currency) ??
+      toNormalizedCurrencyCode(exchange.quote_currency) ??
+      toNormalizedCurrencyCode(exchange.currency_code)
+    );
+  }
+
+  return null;
 }
 
 async function getCachedRate(
@@ -455,7 +489,26 @@ async function fetchSecurityPriceFromMarketstack(
     throw new Error(`Marketstack request failed: ${data.error.message}`);
   }
 
-  const price = data.data?.[0]?.close;
+  const firstPricePoint = data.data?.[0];
+  if (!firstPricePoint) {
+    return null;
+  }
+
+  const quoteCurrency = getMarketstackQuoteCurrency(firstPricePoint);
+  if (quoteCurrency && quoteCurrency !== tradeCurrency) {
+    console.warn(
+      "Marketstack security quote currency mismatch; ignoring security price point.",
+      {
+        symbol,
+        tradeCurrency,
+        quoteCurrency,
+        date: toDayString(date),
+      },
+    );
+    return null;
+  }
+
+  const price = firstPricePoint.close;
   return typeof price === "number" ? price : null;
 }
 
