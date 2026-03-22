@@ -2,6 +2,7 @@ node_modules
 .vite
 .tanstack
 dist
+storybook-static
 src/.prisma-client
 .env
 playwright-report
