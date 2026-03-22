@@ -260,6 +260,10 @@ The shared `getUnitIdentifier({ unit, currency, cryptocurrency, symbol })` in
 `src/shared/account-utils.ts` produces these strings. Callers must guard that
 `unit` is set before calling it.
 
+For securities, unit identity intentionally uses only `symbol`. `tradeCurrency`
+is required for pricing and valuation flows, but it does not define the booking
+unit identity.
+
 ## AG Grid Column Types
 
 Defined in `src/components/column-types.tsx`:
