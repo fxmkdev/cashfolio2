@@ -9,6 +9,7 @@ import {
   Stack,
   Text,
   Title,
+  useComputedColorScheme,
 } from "@mantine/core";
 import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
 import { AgCharts } from "ag-charts-react";
@@ -26,6 +27,7 @@ function DashboardPage() {
   const { accountBookId } = Route.useParams();
   const overview = Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/" });
+  const isDarkMode = useComputedColorScheme() === "dark";
 
   const currencyFormatter = useMemo(
     () =>
@@ -73,6 +75,12 @@ function DashboardPage() {
       background: {
         visible: false,
       },
+      theme: {
+        params: {
+          textColor: isDarkMode ? "#fafafa" : "#09090b",
+          foregroundColor: isDarkMode ? "#fafafa" : "#09090b",
+        },
+      },
       legend: {
         position: "bottom",
       },
@@ -98,13 +106,13 @@ function DashboardPage() {
           xKey: "monthLabel",
           yKey: "net",
           yName: "Net Result",
-          stroke: "#0f766e",
+          stroke: isDarkMode ? "#2dd4bf" : "#0f766e",
           strokeWidth: 3,
           marker: {
             size: 6,
             itemStyler: ({ yValue }) => ({
-              fill: Number(yValue) < 0 ? "#c92a2a" : "#2b8a3e",
-              stroke: Number(yValue) < 0 ? "#c92a2a" : "#2b8a3e",
+              fill: Number(yValue) < 0 ? "#fa5252" : "#40c057",
+              stroke: Number(yValue) < 0 ? "#fa5252" : "#40c057",
             }),
           },
         },
@@ -126,7 +134,7 @@ function DashboardPage() {
             {
               type: "line",
               value: 0,
-              stroke: "#868e96",
+              stroke: isDarkMode ? "#adb5bd" : "#868e96",
               strokeWidth: 1,
               lineDash: [5, 5],
             },
@@ -134,7 +142,7 @@ function DashboardPage() {
         },
       },
     }),
-    [compactNumberFormatter, overview.points],
+    [compactNumberFormatter, isDarkMode, overview.points],
   );
 
   return (
