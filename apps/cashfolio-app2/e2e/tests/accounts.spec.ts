@@ -10,6 +10,7 @@ import {
   seedAssetAccountWithMissingReferenceBalance,
   type SeededData,
 } from "../support/db";
+import { openDialogFromButton } from "../support/ui";
 
 let seeded: SeededData;
 
@@ -39,20 +40,23 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
   const createdName = "E2E Asset Account";
   const updatedName = "E2E Asset Account Updated";
 
-  await page.getByRole("button", { name: "Add Account" }).click();
-  await page.getByLabel("Name").fill(createdName);
-  await page.getByRole("textbox", { name: "Currency" }).click();
+  const newAccountDialog = await openDialogFromButton(page, {
+    buttonName: "Add Account",
+    dialogName: "New Account",
+  });
+
+  await newAccountDialog.getByLabel("Name").fill(createdName);
+  await newAccountDialog.getByRole("textbox", { name: "Currency" }).click();
   await page.getByRole("option", { name: "CHF" }).first().click();
-  await page
-    .getByRole("dialog", { name: "New Account" })
-    .getByRole("button", { name: "Create" })
-    .click();
+  await newAccountDialog.getByRole("button", { name: "Create" }).click();
 
   const createdRow = agGridRowByText(page, createdName);
   await expect(createdRow).toBeVisible();
 
   await clickRowAction(createdRow, "Edit");
-  await page.getByLabel("Name").fill(updatedName);
+  const editDialog = page.getByRole("dialog", { name: "Edit Account" });
+  await expect(editDialog).toBeVisible();
+  await editDialog.getByLabel("Name").fill(updatedName);
   await page
     .getByRole("dialog", { name: "Edit Account" })
     .getByRole("button", { name: "Save" })
@@ -62,6 +66,8 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
   await expect(updatedRow).toBeVisible();
 
   await clickRowAction(updatedRow, "Archive");
+  const archiveDialog = page.getByRole("dialog", { name: "Archive Account" });
+  await expect(archiveDialog).toBeVisible();
   await page
     .getByRole("dialog", { name: "Archive Account" })
     .getByRole("button", { name: "Archive" })
@@ -201,7 +207,7 @@ test("footer total stays blank when an account ref-currency balance is missing",
     counterAccountId: seeded.cashAccount.id,
   });
 
-  await page.goto(`/${seeded.accountBookId}/?tab=ASSET&mode=active`);
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
 
   const missingFxRow = agGridRowByText(page, missingFxAccount.name);
   await expect(missingFxRow).toBeVisible();
