@@ -211,11 +211,14 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
       );
     }
 
-    const currentBookingUnitFields = getBookingUnitFields(currentAccount);
+    const currentBookingUnitFields = getBookingUnitFields(
+      currentAccount,
+      "current account",
+    );
     const counterBookingUnitFields =
       counterAccount.type === AccountType.EQUITY
         ? currentBookingUnitFields
-        : getBookingUnitFields(counterAccount);
+        : getBookingUnitFields(counterAccount, "counter account");
 
     const currentValue =
       data.direction === "DEBIT" ? data.amount : -data.amount;

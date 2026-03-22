@@ -169,7 +169,10 @@ export type SimpleUnitFields = {
   tradeCurrency: string | null;
 };
 
-export function getBookingUnitFields(account: SimpleUnitFields): {
+export function getBookingUnitFields(
+  account: SimpleUnitFields,
+  accountRole: "current account" | "counter account" = "current account",
+): {
   unit: Unit;
   currency?: string;
   cryptocurrency?: string;
@@ -177,18 +180,18 @@ export function getBookingUnitFields(account: SimpleUnitFields): {
   tradeCurrency?: string;
 } {
   if (!account.unit) {
-    throw new Error("Current account must define a unit.");
+    throw new Error(`${accountRole} must define a unit.`);
   }
 
   if (account.unit === Unit.CURRENCY) {
     if (!account.currency)
-      throw new Error("Current account currency is missing.");
+      throw new Error(`${accountRole} currency is missing.`);
     return { unit: Unit.CURRENCY, currency: account.currency };
   }
 
   if (account.unit === Unit.CRYPTOCURRENCY) {
     if (!account.cryptocurrency) {
-      throw new Error("Current account cryptocurrency is missing.");
+      throw new Error(`${accountRole} cryptocurrency is missing.`);
     }
     return {
       unit: Unit.CRYPTOCURRENCY,
@@ -197,10 +200,10 @@ export function getBookingUnitFields(account: SimpleUnitFields): {
   }
 
   if (!account.symbol) {
-    throw new Error("Current account symbol is missing.");
+    throw new Error(`${accountRole} symbol is missing.`);
   }
   if (!account.tradeCurrency) {
-    throw new Error("Current account trade currency is missing.");
+    throw new Error(`${accountRole} trade currency is missing.`);
   }
   return {
     unit: Unit.SECURITY,
