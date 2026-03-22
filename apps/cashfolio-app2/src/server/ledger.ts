@@ -72,6 +72,7 @@ export const getLedgerData = createServerFn({ method: "GET" })
         currency: true,
         cryptocurrency: true,
         symbol: true,
+        tradeCurrency: true,
         transactionId: true,
         transaction: {
           select: {
@@ -101,6 +102,7 @@ export const getLedgerData = createServerFn({ method: "GET" })
       currency: b.currency,
       cryptocurrency: b.cryptocurrency,
       symbol: b.symbol,
+      tradeCurrency: b.tradeCurrency,
       transactionId: b.transactionId,
       transactionDescription: b.transaction.description,
       counterpartyAccounts: [

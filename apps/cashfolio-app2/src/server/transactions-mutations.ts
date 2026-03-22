@@ -4,6 +4,7 @@ import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { isAfter, startOfDay } from "date-fns";
 import { getSimpleTransactionUnitIdentifier } from "../shared/account-utils";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
+import { validateRebookBookingTarget } from "./rebook-booking-validation";
 import {
   accountTypeMeta,
   buildTransactionCreateData,
@@ -15,6 +16,7 @@ import {
 import type {
   CreateSimpleTransactionInput,
   CreateTransactionInput,
+  RebookBookingInput,
 } from "./transactions-types";
 
 export const updateTransaction = createServerFn({ method: "POST" })
@@ -257,6 +259,94 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
     });
 
     return transaction;
+  });
+
+export const rebookBooking = createServerFn({ method: "POST" })
+  .inputValidator((data: RebookBookingInput) => data)
+  .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
+
+    const [booking, targetAccount] = await Promise.all([
+      prisma.booking.findUnique({
+        where: {
+          id_accountBookId: {
+            id: data.bookingId,
+            accountBookId: data.accountBookId,
+          },
+        },
+        select: {
+          id: true,
+          accountId: true,
+          unit: true,
+          currency: true,
+          cryptocurrency: true,
+          symbol: true,
+          tradeCurrency: true,
+          value: true,
+          transactionId: true,
+        },
+      }),
+      prisma.account.findUnique({
+        where: {
+          id_accountBookId: {
+            id: data.targetAccountId,
+            accountBookId: data.accountBookId,
+          },
+        },
+        select: {
+          id: true,
+          isActive: true,
+          unit: true,
+          currency: true,
+          cryptocurrency: true,
+          symbol: true,
+          tradeCurrency: true,
+          type: true,
+          equityAccountSubtype: true,
+        },
+      }),
+    ]);
+
+    if (!booking) {
+      throw new Error("Booking was not found.");
+    }
+    if (!targetAccount) {
+      throw new Error("Target account was not found.");
+    }
+
+    validateRebookBookingTarget({
+      booking: {
+        accountId: booking.accountId,
+        unit: booking.unit,
+        currency: booking.currency,
+        cryptocurrency: booking.cryptocurrency,
+        symbol: booking.symbol,
+        tradeCurrency: booking.tradeCurrency,
+        value: Number(booking.value),
+      },
+      targetAccount,
+    });
+
+    await prisma.booking.update({
+      where: {
+        id_accountBookId: {
+          id: booking.id,
+          accountBookId: data.accountBookId,
+        },
+      },
+      data: {
+        account: {
+          connect: {
+            id_accountBookId: {
+              id: targetAccount.id,
+              accountBookId: data.accountBookId,
+            },
+          },
+        },
+      },
+    });
+
+    return { transactionId: booking.transactionId };
   });
 
 export const deleteTransaction = createServerFn({ method: "POST" })

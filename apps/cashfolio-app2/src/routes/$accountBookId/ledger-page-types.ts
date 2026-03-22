@@ -36,6 +36,7 @@ export type LedgerRow = {
   currency: string | null;
   cryptocurrency: string | null;
   symbol: string | null;
+  tradeCurrency: string | null;
   debit: number | null;
   credit: number | null;
   balance: number | null;
