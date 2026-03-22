@@ -183,6 +183,8 @@ export type SimpleTransactionEditState =
       initialValues: null;
     };
 
+const TRANSACTION_BALANCE_TOLERANCE = 0.001;
+
 function ineligible(disabledReason: string): SimpleTransactionEditState {
   return {
     eligible: false,
@@ -290,6 +292,37 @@ export function deriveSimpleTransactionEditState(args: {
   const amount = hasDebit ? debit : credit;
   if (!Number.isFinite(amount) || amount <= 0) {
     return ineligible("Simple edit requires a positive amount.");
+  }
+
+  const counterDebit = counterBooking.debit ?? 0;
+  const counterCredit = counterBooking.credit ?? 0;
+  const counterHasDebit = counterDebit > 0;
+  const counterHasCredit = counterCredit > 0;
+  if (counterHasDebit === counterHasCredit) {
+    return ineligible(
+      "Simple edit requires exactly one non-zero side on the counter account booking.",
+    );
+  }
+
+  const counterAmount = counterHasDebit ? counterDebit : counterCredit;
+  if (!Number.isFinite(counterAmount) || counterAmount <= 0) {
+    return ineligible("Simple edit requires a positive counter amount.");
+  }
+
+  if (Math.abs(counterAmount - amount) > TRANSACTION_BALANCE_TOLERANCE) {
+    return ineligible(
+      "Simple edit requires matching amounts on both bookings.",
+    );
+  }
+
+  if (hasDebit === counterHasDebit) {
+    return ineligible("Simple edit requires one debit and one credit booking.");
+  }
+
+  const currentValue = hasDebit ? amount : -amount;
+  const counterValue = counterHasDebit ? counterAmount : -counterAmount;
+  if (Math.abs(currentValue + counterValue) > TRANSACTION_BALANCE_TOLERANCE) {
+    return ineligible("Simple edit requires balanced booking values.");
   }
 
   return {

@@ -331,16 +331,16 @@ test("eligible edit opens simple editor and ineligible edit opens split editor",
 
   await page.goto(`/${seeded.accountBookId}/${seeded.expenseAccount.id}`);
   await openEditTransaction(page, "E2E Editable Simple");
-  const expenseEditDialog = page.getByRole("dialog", {
+  const equityEditDialog = page.getByRole("dialog", {
     name: "Edit Transaction",
   });
   await expect(
-    expenseEditDialog.getByRole("button", { name: "Add booking" }),
+    equityEditDialog.getByRole("button", { name: "Add booking" }),
   ).toBeVisible();
   await expect(
-    expenseEditDialog.getByRole("button", { name: "Switch to split editor" }),
+    equityEditDialog.getByRole("button", { name: "Switch to split editor" }),
   ).toHaveCount(0);
-  await expenseEditDialog.getByRole("button", { name: "Cancel" }).click();
+  await equityEditDialog.getByRole("button", { name: "Cancel" }).click();
 
   await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
   await seedThreeBookingSplitTransaction({

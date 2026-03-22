@@ -137,4 +137,64 @@ describe("deriveSimpleTransactionEditState", () => {
     if (result.eligible) return;
     expect(result.disabledReason).toContain("booking descriptions");
   });
+
+  test("rejects transactions when booking amounts differ", () => {
+    const result = deriveSimpleTransactionEditState({
+      currentAccountId: "cash",
+      transaction: {
+        bookings: [
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            account: "cash",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            credit: 10,
+          },
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            account: "expense",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            debit: 9,
+          },
+        ],
+      },
+    });
+
+    expect(result.eligible).toBe(false);
+    if (result.eligible) return;
+    expect(result.disabledReason).toContain("matching amounts");
+  });
+
+  test("rejects transactions when booking sides are not opposite", () => {
+    const result = deriveSimpleTransactionEditState({
+      currentAccountId: "cash",
+      transaction: {
+        bookings: [
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            account: "cash",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            credit: 10,
+          },
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            account: "expense",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            credit: 10,
+          },
+        ],
+      },
+    });
+
+    expect(result.eligible).toBe(false);
+    if (result.eligible) return;
+    expect(result.disabledReason).toContain("one debit and one credit");
+  });
 });
