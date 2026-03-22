@@ -1,7 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import {
-  ActionIcon,
   Badge,
   Breadcrumbs,
   Button,
@@ -13,22 +12,10 @@ import {
 } from "@mantine/core";
 import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
 import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
-import { LinkAnchor } from "../../components/link-anchor";
-import {
-  getSimpleTransactionUnitIdentifier,
-  getTypeLabel,
-} from "../../shared/account-utils";
+import { getTypeLabel } from "../../shared/account-utils";
 import { useTransactionScroll } from "../../hooks/use-transaction-scroll";
-import {
-  IconBolt,
-  IconCashPlus,
-  IconPencil,
-  IconTrash,
-} from "@tabler/icons-react";
-import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
+import { IconBolt, IconCashPlus } from "@tabler/icons-react";
 import { DataGrid } from "../../components/data-grid";
-import { getAccountForLedger, getLedgerData } from "../../server/ledger";
-import { getAccounts } from "../../server/accounts";
 import {
   createSimpleTransaction,
   createTransaction,
@@ -42,110 +29,29 @@ import {
   Unit,
 } from "../../.prisma-client/enums";
 import {
-  DATE_COLUMN,
-  FORMATTED_NUMERIC_COLUMN,
-} from "../../components/column-types";
-import { format } from "date-fns";
-import {
   EditTransactionModal,
   type AccountOption,
 } from "../../components/edit-transaction-modal";
 import { SimpleTransactionModal } from "../../components/simple-transaction-modal";
+import { loadLedgerPageData } from "./ledger-page-loader";
+import { useLedgerColumnDefs } from "./ledger-page-columns";
+import {
+  buildLedgerRows,
+  createAccountOptions,
+  createCurrentAccountLabel,
+  getSimpleTransactionDisabledReason,
+  getSimpleTransactionUnitIdentifier,
+  getUnitLabel,
+} from "./ledger-page-data";
+import { parseLedgerSearch } from "./ledger-page-types";
 
 export const Route = createFileRoute("/$accountBookId/$accountId")({
-  validateSearch: (
-    search: Record<string, unknown>,
-  ): { transactionId?: string } => ({
-    transactionId:
-      typeof search.transactionId === "string"
-        ? search.transactionId
-        : undefined,
-  }),
+  validateSearch: parseLedgerSearch,
   loader: async ({ params: { accountBookId, accountId } }) => {
-    const [account, bookings, accounts] = await Promise.all([
-      getAccountForLedger({ data: { accountId, accountBookId } }),
-      getLedgerData({ data: { accountId, accountBookId } }),
-      getAccounts({ data: { accountBookId } }),
-    ]);
-    return { account, bookings, accounts };
+    return loadLedgerPageData({ accountBookId, accountId });
   },
   component: LedgerPage,
 });
-
-function shouldNegate(
-  type: AccountType,
-  equityAccountSubtype: EquityAccountSubtype | null,
-): boolean {
-  return (
-    type === AccountType.LIABILITY ||
-    (type === AccountType.EQUITY &&
-      equityAccountSubtype !== EquityAccountSubtype.EXPENSE)
-  );
-}
-
-function getUnitLabel(account: {
-  unit: Unit | null;
-  currency: string | null;
-  cryptocurrency: string | null;
-  tradeCurrency: string | null;
-}): string | null {
-  if (!account.unit) return null;
-  switch (account.unit) {
-    case Unit.CURRENCY:
-      return account.currency;
-    case Unit.SECURITY:
-      return account.tradeCurrency;
-    case Unit.CRYPTOCURRENCY:
-      return account.cryptocurrency;
-  }
-}
-
-type LedgerRow = {
-  id: string;
-  transactionId: string;
-  date: string;
-  counterpartyAccounts: { id: string; name: string }[];
-  description: string;
-  unit: Unit | null;
-  currency: string | null;
-  cryptocurrency: string | null;
-  symbol: string | null;
-  debit: number | null;
-  credit: number | null;
-  balance: number | null;
-};
-
-type LedgerAccountOptionSource = Awaited<
-  ReturnType<typeof getAccounts>
->[number];
-
-function toAccountOption(account: LedgerAccountOptionSource): AccountOption {
-  return {
-    label: [
-      getTypeLabel(account.type, account.equityAccountSubtype),
-      account.groupPath,
-      account.name,
-    ]
-      .filter(Boolean)
-      .join(" / "),
-    value: account.id,
-    unit: account.unit as Unit,
-    currency: account.currency,
-    cryptocurrency: account.cryptocurrency,
-    symbol: account.symbol,
-    tradeCurrency: account.tradeCurrency,
-    type: account.type as AccountType,
-    equityAccountSubtype:
-      account.equityAccountSubtype as EquityAccountSubtype | null,
-  };
-}
-
-function createAccountOptions(
-  accounts: LedgerAccountOptionSource[],
-  includeAccount: (account: LedgerAccountOptionSource) => boolean,
-): AccountOption[] {
-  return accounts.filter(includeAccount).map(toAccountOption);
-}
 
 function LedgerPage() {
   const { account, bookings, accounts } = Route.useLoaderData();
@@ -213,14 +119,7 @@ function LedgerPage() {
     [account.id, accounts, currentSimpleUnitIdentifier],
   );
   const currentAccountLabel = useMemo(
-    () =>
-      [
-        getTypeLabel(account.type, account.equityAccountSubtype),
-        account.groupPathSegments.join(" / "),
-        account.name,
-      ]
-        .filter(Boolean)
-        .join(" / "),
+    () => createCurrentAccountLabel(account),
     [account],
   );
 
@@ -323,189 +222,20 @@ function LedgerPage() {
     account.type === AccountType.EQUITY &&
     account.equityAccountSubtype === EquityAccountSubtype.EXPENSE;
 
-  const rows = useMemo<LedgerRow[]>(() => {
-    const negate = shouldNegate(account.type, account.equityAccountSubtype);
-    let balance = 0;
-
-    return bookings
-      .map((b) => {
-        const rawValue = Number(b.value);
-        const value = negate ? -rawValue : rawValue;
-        balance += value;
-
-        return {
-          id: b.id,
-          transactionId: b.transactionId,
-          date: format(new Date(b.date), "dd.MM.yyyy"),
-          counterpartyAccounts: b.counterpartyAccounts,
-          description: b.description || b.transactionDescription,
-          unit: b.unit,
-          currency: b.currency,
-          cryptocurrency: b.cryptocurrency,
-          symbol: b.symbol,
-          debit: negate
-            ? value < 0
-              ? -value
-              : null
-            : value > 0
-              ? value
-              : null,
-          credit: negate
-            ? value > 0
-              ? value
-              : null
-            : value < 0
-              ? -value
-              : null,
-          balance: isEquity ? null : balance,
-        };
-      })
-      .reverse();
-  }, [account, bookings, isEquity]);
-
-  const columnDefs = useMemo<ColDef<LedgerRow>[]>(
-    () => [
-      {
-        field: "date",
-        headerName: "Date",
-        width: 130,
-        type: DATE_COLUMN,
-      },
-      {
-        field: "counterpartyAccounts",
-        headerName: "Account(s)",
-        flex: 1,
-        cellRenderer: ({
-          value,
-          data,
-        }: ICellRendererParams<
-          LedgerRow,
-          LedgerRow["counterpartyAccounts"]
-        >) => {
-          if (!value || !data) return null;
-          return value.map((a, i) => (
-            <span key={a.id}>
-              {i > 0 && ", "}
-              <LinkAnchor
-                to="/$accountBookId/$accountId"
-                params={{ accountBookId, accountId: a.id }}
-                search={{ transactionId: data.transactionId }}
-                size="sm"
-              >
-                {a.name}
-              </LinkAnchor>
-            </span>
-          ));
-        },
-      },
-      {
-        field: "description",
-        headerName: "Description",
-        width: 400,
-        filter: "agTextColumnFilter",
-      },
-      ...(isEquity
-        ? [
-            {
-              colId: "unitIdentifier",
-              headerName: "Ccy./Symbol",
-              width: 130,
-              filter: true,
-              valueGetter: ({ data }: { data?: LedgerRow }) => {
-                if (!data) return null;
-                switch (data.unit) {
-                  case Unit.CURRENCY:
-                    return data.currency;
-                  case Unit.CRYPTOCURRENCY:
-                    return data.cryptocurrency;
-                  case Unit.SECURITY:
-                    return data.symbol;
-                  default:
-                    return null;
-                }
-              },
-            },
-          ]
-        : []),
-      ...(isIncome
-        ? []
-        : [
-            {
-              field: "debit" as const,
-              headerName: "Debit",
-              width: 130,
-              type: FORMATTED_NUMERIC_COLUMN,
-              filter: "agNumberColumnFilter",
-            },
-          ]),
-      ...(isExpense
-        ? []
-        : [
-            {
-              field: "credit" as const,
-              headerName: "Credit",
-              width: 130,
-              type: FORMATTED_NUMERIC_COLUMN,
-              filter: "agNumberColumnFilter",
-            },
-          ]),
-      ...(isEquity
-        ? []
-        : [
-            {
-              field: "balance" as const,
-              headerName: "Balance",
-              width: 130,
-              type: FORMATTED_NUMERIC_COLUMN,
-              filter: "agNumberColumnFilter",
-            },
-          ]),
-      {
-        colId: "actions",
-        headerName: "",
-        width: 80,
-        sortable: false,
-        filter: false,
-        resizable: false,
-        suppressHeaderMenuButton: true,
-        cellClass: "actions-cell",
-        cellRenderer: ({ data }: ICellRendererParams<LedgerRow>) => {
-          if (!data) return null;
-          return (
-            <Group gap={4} wrap="nowrap" h="100%" align="center">
-              <Tooltip label="Edit">
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  onClick={() => handleEditClick(data.transactionId)}
-                  aria-label="Edit"
-                >
-                  <IconPencil size={16} />
-                </ActionIcon>
-              </Tooltip>
-              <Tooltip label="Delete">
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  color="red"
-                  onClick={() =>
-                    setDeletingTransaction({
-                      id: data.transactionId,
-                      description: data.description,
-                    })
-                  }
-                  aria-label="Delete"
-                >
-                  <IconTrash size={16} />
-                </ActionIcon>
-              </Tooltip>
-            </Group>
-          );
-        },
-      },
-    ],
-    [accountBookId, handleEditClick, isEquity, isIncome, isExpense],
+  const rows = useMemo(
+    () => buildLedgerRows(account, bookings),
+    [account, bookings],
   );
+
+  const columnDefs = useLedgerColumnDefs({
+    accountBookId,
+    isEquity,
+    isIncome,
+    isExpense,
+    onEditClick: (value) => void handleEditClick(value),
+    onDeleteClick: (transactionId, description) =>
+      setDeletingTransaction({ id: transactionId, description }),
+  });
 
   const navigate = Route.useNavigate();
   const { pendingScrollRef, handleRowDataUpdated } = useTransactionScroll(
@@ -514,14 +244,11 @@ function LedgerPage() {
   );
 
   const unitLabel = getUnitLabel(account);
-  const simpleTransactionDisabledReason =
-    account.type !== AccountType.ASSET && account.type !== AccountType.LIABILITY
-      ? "Simple transactions are only available for asset and liability accounts."
-      : !currentSimpleUnitIdentifier
-        ? "Simple transactions require a current account with a complete unit."
-        : simpleCounterAccountOptions.length === 0
-          ? "No eligible account is available."
-          : null;
+  const simpleTransactionDisabledReason = getSimpleTransactionDisabledReason({
+    account,
+    currentSimpleUnitIdentifier,
+    simpleCounterAccountOptionsLength: simpleCounterAccountOptions.length,
+  });
 
   const backTab = (
     account.type === AccountType.EQUITY && account.equityAccountSubtype
