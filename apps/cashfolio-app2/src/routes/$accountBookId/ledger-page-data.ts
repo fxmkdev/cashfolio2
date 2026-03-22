@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import {
   AccountType,
   EquityAccountSubtype,
@@ -6,6 +6,7 @@ import {
 } from "../../.prisma-client/enums";
 import type { AccountOption } from "../../components/edit-transaction-modal";
 import {
+  getUnitIdentifier,
   getSimpleTransactionUnitIdentifier,
   getTypeLabel,
 } from "../../shared/account-utils";
@@ -140,6 +141,168 @@ export function getSimpleTransactionDisabledReason(args: {
     return "No eligible account is available.";
   }
   return null;
+}
+
+type SimpleDirection = "DEBIT" | "CREDIT";
+
+type EditTransactionBooking = {
+  date?: string;
+  account?: string;
+  description?: string;
+  unit?: Unit;
+  currency?: string;
+  cryptocurrency?: string;
+  symbol?: string;
+  tradeCurrency?: string;
+  debit?: number;
+  credit?: number;
+};
+
+export type EditTransactionData = {
+  description?: string;
+  bookings?: EditTransactionBooking[];
+};
+
+export type SimpleTransactionEditInitialValues = {
+  date: Date;
+  description: string;
+  counterAccountId: string;
+  amount: number;
+  direction: SimpleDirection;
+};
+
+export type SimpleTransactionEditState =
+  | {
+      eligible: true;
+      disabledReason: null;
+      initialValues: SimpleTransactionEditInitialValues;
+    }
+  | {
+      eligible: false;
+      disabledReason: string;
+      initialValues: null;
+    };
+
+function ineligible(disabledReason: string): SimpleTransactionEditState {
+  return {
+    eligible: false,
+    disabledReason,
+    initialValues: null,
+  };
+}
+
+function getBookingUnitIdentifier(
+  booking: EditTransactionBooking,
+): string | null {
+  if (!booking.unit) return null;
+
+  if (booking.unit === Unit.CURRENCY && !booking.currency) return null;
+  if (booking.unit === Unit.CRYPTOCURRENCY && !booking.cryptocurrency) {
+    return null;
+  }
+  if (
+    booking.unit === Unit.SECURITY &&
+    (!booking.symbol || !booking.tradeCurrency)
+  ) {
+    return null;
+  }
+
+  return getUnitIdentifier({
+    unit: booking.unit,
+    currency: booking.currency,
+    cryptocurrency: booking.cryptocurrency,
+    symbol: booking.symbol,
+  });
+}
+
+export function deriveSimpleTransactionEditState(args: {
+  transaction: EditTransactionData;
+  currentAccountId: string;
+}): SimpleTransactionEditState {
+  const bookings = args.transaction.bookings ?? [];
+
+  if (bookings.length !== 2) {
+    return ineligible("Simple edit requires exactly two bookings.");
+  }
+
+  const [first, second] = bookings;
+  const firstUnitIdentifier = getBookingUnitIdentifier(first);
+  const secondUnitIdentifier = getBookingUnitIdentifier(second);
+  if (!firstUnitIdentifier || !secondUnitIdentifier) {
+    return ineligible("Simple edit requires complete booking unit data.");
+  }
+  if (firstUnitIdentifier !== secondUnitIdentifier) {
+    return ineligible(
+      "Simple edit requires both bookings to use the same unit.",
+    );
+  }
+
+  if (
+    (first.description ?? "").trim() !== "" ||
+    (second.description ?? "").trim() !== ""
+  ) {
+    return ineligible(
+      "Simple edit only supports transactions with empty booking descriptions.",
+    );
+  }
+
+  if (!first.date || !second.date) {
+    return ineligible("Simple edit requires both bookings to have a date.");
+  }
+  const firstDate = new Date(first.date);
+  const secondDate = new Date(second.date);
+  if (isNaN(firstDate.getTime()) || isNaN(secondDate.getTime())) {
+    return ineligible("Simple edit requires valid booking dates.");
+  }
+  if (!isSameDay(firstDate, secondDate)) {
+    return ineligible(
+      "Simple edit requires both bookings to have the same date.",
+    );
+  }
+
+  const currentBookings = bookings.filter(
+    (booking) => booking.account === args.currentAccountId,
+  );
+  if (currentBookings.length !== 1) {
+    return ineligible(
+      "Simple edit requires exactly one booking on this account.",
+    );
+  }
+  const currentBooking = currentBookings[0];
+
+  const counterBooking = bookings.find(
+    (booking) => booking.account !== args.currentAccountId,
+  );
+  if (!counterBooking?.account) {
+    return ineligible("Simple edit requires a distinct counter account.");
+  }
+
+  const debit = currentBooking.debit ?? 0;
+  const credit = currentBooking.credit ?? 0;
+  const hasDebit = debit > 0;
+  const hasCredit = credit > 0;
+  if (hasDebit === hasCredit) {
+    return ineligible(
+      "Simple edit requires exactly one non-zero side on the current account booking.",
+    );
+  }
+
+  const amount = hasDebit ? debit : credit;
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return ineligible("Simple edit requires a positive amount.");
+  }
+
+  return {
+    eligible: true,
+    disabledReason: null,
+    initialValues: {
+      date: firstDate,
+      description: args.transaction.description ?? "",
+      counterAccountId: counterBooking.account,
+      amount,
+      direction: hasDebit ? "DEBIT" : "CREDIT",
+    },
+  };
 }
 
 export { getSimpleTransactionUnitIdentifier };
