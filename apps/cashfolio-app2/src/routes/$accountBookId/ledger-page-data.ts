@@ -209,6 +209,9 @@ function getBookingUnitIdentifier(
     return null;
   }
 
+  // Security unit identity intentionally follows symbol-level identity.
+  // tradeCurrency is required metadata for valuation/reporting, but it is not
+  // part of the unit-compatibility identity check.
   return getUnitIdentifier({
     unit: booking.unit,
     currency: booking.currency,

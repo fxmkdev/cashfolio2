@@ -6,6 +6,10 @@ import {
 } from "../.prisma-client/enums";
 import { isAfter, startOfDay } from "date-fns";
 import { getUnitIdentifier } from "../shared/account-utils";
+import {
+  getBookingUnitFields,
+  type BookingUnitFieldsSource,
+} from "../shared/booking-unit-fields";
 import type { CreateTransactionInput } from "./transactions-types";
 
 export function validateCreateTransaction(input: CreateTransactionInput) {
@@ -161,53 +165,6 @@ export function buildTransactionCreateData(input: CreateTransactionInput) {
   };
 }
 
-export type SimpleUnitFields = {
-  unit: Unit | null;
-  currency: string | null;
-  cryptocurrency: string | null;
-  symbol: string | null;
-  tradeCurrency: string | null;
-};
+export type SimpleUnitFields = BookingUnitFieldsSource;
 
-export function getBookingUnitFields(
-  account: SimpleUnitFields,
-  accountRole: "current account" | "counter account" = "current account",
-): {
-  unit: Unit;
-  currency?: string;
-  cryptocurrency?: string;
-  symbol?: string;
-  tradeCurrency?: string;
-} {
-  if (!account.unit) {
-    throw new Error(`${accountRole} must define a unit.`);
-  }
-
-  if (account.unit === Unit.CURRENCY) {
-    if (!account.currency)
-      throw new Error(`${accountRole} currency is missing.`);
-    return { unit: Unit.CURRENCY, currency: account.currency };
-  }
-
-  if (account.unit === Unit.CRYPTOCURRENCY) {
-    if (!account.cryptocurrency) {
-      throw new Error(`${accountRole} cryptocurrency is missing.`);
-    }
-    return {
-      unit: Unit.CRYPTOCURRENCY,
-      cryptocurrency: account.cryptocurrency,
-    };
-  }
-
-  if (!account.symbol) {
-    throw new Error(`${accountRole} symbol is missing.`);
-  }
-  if (!account.tradeCurrency) {
-    throw new Error(`${accountRole} trade currency is missing.`);
-  }
-  return {
-    unit: Unit.SECURITY,
-    symbol: account.symbol,
-    tradeCurrency: account.tradeCurrency,
-  };
-}
+export { getBookingUnitFields };
