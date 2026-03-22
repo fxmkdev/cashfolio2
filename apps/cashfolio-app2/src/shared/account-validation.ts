@@ -1,5 +1,8 @@
 import type { AccountType, Unit } from "../.prisma-client/enums";
-import type { AccountInput, AccountGroupInput } from "../server/accounts";
+import type {
+  AccountGroupInput,
+  AccountInput,
+} from "./account-validation-types";
 
 // Per-field validators return an error message string or null if valid.
 
