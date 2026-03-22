@@ -224,7 +224,7 @@ eligible edit of two-booking transactions from the ledger route
 (`src/routes/$accountBookId/$accountId.tsx`).
 
 - Create entrypoint:
-  - ledger toolbar exposes a single `Add Simple Transaction` button
+  - ledger toolbar exposes a single `Add Transaction` button
   - there is no separate `Add Split Transaction` toolbar button
   - users can switch one-way to split editor from the simple create dialog via
     `Switch to split editor`
