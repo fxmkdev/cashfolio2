@@ -259,6 +259,8 @@ export function deriveSimpleTransactionEditState(args: {
   if (isNaN(firstDate.getTime()) || isNaN(secondDate.getTime())) {
     return ineligible("Simple edit requires valid booking dates.");
   }
+  // Booking semantics are day-granular in this app; time-of-day is not
+  // significant for eligibility or editing behavior.
   if (!isSameDay(firstDate, secondDate)) {
     return ineligible(
       "Simple edit requires both bookings to have the same date.",
