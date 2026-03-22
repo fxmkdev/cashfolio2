@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   agGridCellByColId,
+  agGridPinnedBottomRow,
   agGridRowByText,
   clickRowAction,
 } from "../support/grid";
@@ -99,6 +100,11 @@ test("balance column visibility and baseline values across tabs/modes", async ({
   await expect(
     page.getByRole("columnheader", { name: /^Balance \([A-Z]{3}\)$/ }),
   ).toBeVisible();
+  const assetFooterRow = agGridPinnedBottomRow(page);
+  await expect(assetFooterRow).toContainText("Total");
+  await expect(
+    agGridCellByColId(assetFooterRow, "balanceInReferenceCurrency"),
+  ).toHaveText("0.00");
 
   const cashRow = agGridRowByText(page, seeded.cashAccount.name);
   await expect(agGridCellByColId(cashRow, "balance")).toHaveText("0.00");
@@ -134,6 +140,11 @@ test("balance column visibility and baseline values across tabs/modes", async ({
   await expect(
     page.getByRole("columnheader", { name: /^Balance \([A-Z]{3}\)$/ }),
   ).toBeVisible();
+  const archivedFooterRow = agGridPinnedBottomRow(page);
+  await expect(archivedFooterRow).toContainText("Total");
+  await expect(
+    agGridCellByColId(archivedFooterRow, "balanceInReferenceCurrency"),
+  ).toHaveText("0.00");
 
   await page.goto(`/${seeded.accountBookId}/?tab=LIABILITY&mode=active`);
   await expect(
@@ -142,6 +153,11 @@ test("balance column visibility and baseline values across tabs/modes", async ({
   await expect(
     page.getByRole("columnheader", { name: /^Balance \([A-Z]{3}\)$/ }),
   ).toBeVisible();
+  const liabilityFooterRow = agGridPinnedBottomRow(page);
+  await expect(liabilityFooterRow).toContainText("Total");
+  await expect(
+    agGridCellByColId(liabilityFooterRow, "balanceInReferenceCurrency"),
+  ).toHaveText("0.00");
 
   await page.goto(
     `/${seeded.accountBookId}/?tab=EQUITY-${encodeURIComponent("EXPENSE")}&mode=active`,
@@ -152,4 +168,5 @@ test("balance column visibility and baseline values across tabs/modes", async ({
   await expect(
     page.getByRole("columnheader", { name: /^Balance \([A-Z]{3}\)$/ }),
   ).toHaveCount(0);
+  await expect(page.locator(".ag-row-pinned")).toHaveCount(0);
 });

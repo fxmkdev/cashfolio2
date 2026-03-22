@@ -11,6 +11,10 @@ export function agGridCellByColId(row: Locator, colId: string): Locator {
   return row.locator(`[col-id="${colId}"]`).first();
 }
 
+export function agGridPinnedBottomRow(page: Page): Locator {
+  return page.locator(".ag-row-pinned").first();
+}
+
 export async function clickRowAction(
   row: Locator,
   actionLabel: "Edit" | "Delete" | "Archive" | "Unarchive",

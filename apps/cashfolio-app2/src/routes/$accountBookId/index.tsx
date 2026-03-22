@@ -43,7 +43,9 @@ import {
 } from "../../server/accounts";
 import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
 import {
+  REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
   getEntityLabel,
+  type ReferenceCurrencyTotalFooterRow,
   parseAccountsSearch,
   tabs,
   type TabValue,
@@ -52,6 +54,7 @@ import {
 import { loadAccountsPageData } from "./accounts-page-loader";
 import {
   useBalanceInReferenceCurrencyByGroupId,
+  useReferenceCurrencyBalanceTotal,
   useRowsByParentKey,
   useSelectedSiblingRows,
 } from "./accounts-page-data";
@@ -109,6 +112,20 @@ function AccountsPage() {
   );
   const balanceInReferenceCurrencyByGroupId =
     useBalanceInReferenceCurrencyByGroupId(rowsByParentKey, treeData[tab]);
+  const referenceCurrencyBalanceTotal = useReferenceCurrencyBalanceTotal(
+    treeData[tab],
+  );
+  const pinnedBottomRowData: ReferenceCurrencyTotalFooterRow[] | undefined =
+    isEquityTab
+      ? undefined
+      : [
+          {
+            id: REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
+            rowType: "referenceCurrencyTotalFooter",
+            name: "Total",
+            balanceInReferenceCurrency: referenceCurrencyBalanceTotal,
+          },
+        ];
 
   const handleEditRow = useCallback((data: TreeRow) => {
     if (data.nodeType === "account") {
@@ -361,6 +378,7 @@ function AccountsPage() {
         }}
         treeData={true}
         treeDataParentIdField="parentId"
+        pinnedBottomRowData={pinnedBottomRowData}
         isGroupOpenByDefault={isGroupOpenByDefault}
         onRowGroupOpened={onRowGroupOpened}
         getRowId={({ data }) => data.id}

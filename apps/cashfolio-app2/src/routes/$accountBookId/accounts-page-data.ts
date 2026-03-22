@@ -34,6 +34,22 @@ export function useSelectedSiblingRows(
   }, [rowsByParentKey, reorderingRow]);
 }
 
+export function useReferenceCurrencyBalanceTotal(
+  rows: TreeRow[],
+): number | null {
+  return useMemo(() => {
+    let sum = 0;
+
+    for (const row of rows) {
+      if (row.nodeType !== "account") continue;
+      if (row.balanceInReferenceCurrency == null) return null;
+      sum += row.balanceInReferenceCurrency;
+    }
+
+    return sum;
+  }, [rows]);
+}
+
 export function useBalanceInReferenceCurrencyByGroupId(
   rowsByParentKey: Map<string, TreeRow[]>,
   rows: TreeRow[],
