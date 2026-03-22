@@ -26,6 +26,16 @@ jobs:
       - name: Build Storybook
         run: pnpm --filter cashfolio-app2 build-storybook
 
+      - name: Ensure Storybook iframe entrypoint
+        run: |
+          STORYBOOK_DIR="apps/cashfolio-app2/storybook-static"
+
+          # Storybook 9 manager-only output may not include iframe.html by default.
+          # Chromatic validation expects both index.html and iframe.html.
+          if [ ! -f "$STORYBOOK_DIR/iframe.html" ] && [ -f "$STORYBOOK_DIR/index.html" ]; then
+            cp "$STORYBOOK_DIR/index.html" "$STORYBOOK_DIR/iframe.html"
+          fi
+
       - name: Publish Storybook to Chromatic
         uses: chromaui/action@v15
         with:
