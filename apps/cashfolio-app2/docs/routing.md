@@ -50,7 +50,9 @@ paths are relative to that app directory.
 - Located in `src/server/` (e.g. `src/server/accounts.ts`)
 - Created with `createServerFn` from `@tanstack/react-start`
 - Pattern: `createServerFn({ method })` → `.inputValidator()` → `.handler()`
-- Server-only files use `.server.ts` suffix
+- Server-only modules may use `.server.ts` suffix where helpful (for example
+  auth/session integration files), while domain server-function modules in
+  `src/server/` commonly use `.ts`
 - Key files: `accounts.ts` (barrel), `accounts-queries.ts`,
   `accounts-mutations.ts`, `dashboard.ts`, `ledger.ts`, `transactions.ts`
   (barrel), `transactions-queries.ts`, `transactions-mutations.ts`

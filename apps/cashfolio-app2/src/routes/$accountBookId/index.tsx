@@ -64,11 +64,8 @@ function DashboardPage() {
     };
   }, [overview.points]);
 
-  const hasAnyData = useMemo(
-    () =>
-      overview.points.some((point) => point.income > 0 || point.expense > 0),
-    [overview.points],
-  );
+  const hasBookings = overview.bookingsCount > 0;
+  const hasConvertedBookings = overview.convertedBookingsCount > 0;
 
   const chartOptions = useMemo<AgCartesianChartOptions>(
     () => ({
@@ -182,13 +179,15 @@ function DashboardPage() {
           </Group>
         </Stack>
 
-        {hasAnyData ? (
+        {hasConvertedBookings ? (
           <div style={{ marginTop: 20, height: 420 }}>
             <AgCharts options={chartOptions} />
           </div>
         ) : (
           <Text c="dimmed" mt="md">
-            No income or expense bookings found in the last 12 months.
+            {hasBookings
+              ? "Income or expense bookings were found, but none could be converted with the available metadata and rates."
+              : "No income or expense bookings found in the last 12 months."}
           </Text>
         )}
 

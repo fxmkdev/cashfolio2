@@ -13,7 +13,6 @@ import {
 } from "./fx.server";
 
 type DashboardBucket = {
-  monthStart: Date;
   income: number;
   expense: number;
 };
@@ -114,7 +113,6 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
     for (const monthStart of monthStarts) {
       const monthKey = getUtcMonthKey(monthStart);
       bucketsByMonthKey.set(monthKey, {
-        monthStart,
         income: 0,
         expense: 0,
       });
@@ -127,6 +125,7 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
       exchangeRatePromise: Promise<number | null>;
     }> = [];
     let skippedBookingsCount = 0;
+    let convertedBookingsCount = 0;
 
     for (const booking of bookings) {
       const monthKey = getUtcMonthKey(booking.date);
@@ -223,6 +222,7 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
         skippedBookingsCount += 1;
         continue;
       }
+      convertedBookingsCount += 1;
 
       const rawConvertedValue = Number(task.booking.value) * exchangeRate;
       if (
@@ -259,6 +259,8 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
     return {
       periodLabel: "Last 12 months",
       referenceCurrency,
+      bookingsCount: bookings.length,
+      convertedBookingsCount,
       skippedBookingsCount,
       points,
     };
