@@ -7,6 +7,11 @@ export type GroupBalanceAggregation = {
   hasMissingReferenceBalance: boolean;
 };
 
+const EMPTY_GROUP_BALANCE_AGGREGATION_BY_GROUP_ID = new Map<
+  string,
+  GroupBalanceAggregation
+>();
+
 export function useRowsByParentKey(rows: TreeRow[]): Map<string, TreeRow[]> {
   return useMemo(() => {
     const siblingRowsByParentKey = new Map<string, TreeRow[]>();
@@ -36,8 +41,11 @@ export function useSelectedSiblingRows(
 
 export function useReferenceCurrencyBalanceTotal(
   rows: TreeRow[],
+  enabled = true,
 ): number | null {
   return useMemo(() => {
+    if (!enabled) return null;
+
     let sum = 0;
 
     for (const row of rows) {
@@ -47,14 +55,19 @@ export function useReferenceCurrencyBalanceTotal(
     }
 
     return sum;
-  }, [rows]);
+  }, [enabled, rows]);
 }
 
 export function useBalanceInReferenceCurrencyByGroupId(
   rowsByParentKey: Map<string, TreeRow[]>,
   rows: TreeRow[],
+  enabled = true,
 ): Map<string, GroupBalanceAggregation> {
   return useMemo(() => {
+    if (!enabled) {
+      return EMPTY_GROUP_BALANCE_AGGREGATION_BY_GROUP_ID;
+    }
+
     const groupAggregationByGroupId = new Map<
       string,
       GroupBalanceAggregation
@@ -108,5 +121,5 @@ export function useBalanceInReferenceCurrencyByGroupId(
     }
 
     return groupAggregationByGroupId;
-  }, [rowsByParentKey, rows]);
+  }, [enabled, rowsByParentKey, rows]);
 }

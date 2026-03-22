@@ -12,7 +12,7 @@ export function agGridCellByColId(row: Locator, colId: string): Locator {
 }
 
 export function agGridPinnedBottomRow(page: Page): Locator {
-  return page.locator(".ag-row-pinned").first();
+  return page.locator(".ag-floating-bottom .ag-row-pinned").first();
 }
 
 export async function clickRowAction(

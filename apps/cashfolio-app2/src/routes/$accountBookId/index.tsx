@@ -111,9 +111,14 @@ function AccountsPage() {
     reorderingRow,
   );
   const balanceInReferenceCurrencyByGroupId =
-    useBalanceInReferenceCurrencyByGroupId(rowsByParentKey, treeData[tab]);
+    useBalanceInReferenceCurrencyByGroupId(
+      rowsByParentKey,
+      treeData[tab],
+      !isEquityTab,
+    );
   const referenceCurrencyBalanceTotal = useReferenceCurrencyBalanceTotal(
     treeData[tab],
+    !isEquityTab,
   );
   const pinnedBottomRowData: ReferenceCurrencyTotalFooterRow[] | undefined =
     isEquityTab
