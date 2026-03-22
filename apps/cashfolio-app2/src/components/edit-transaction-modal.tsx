@@ -107,6 +107,7 @@ function isEditableCell(params: CellClassParams) {
 
 export function EditTransactionModal({
   initialValues,
+  submitLabel,
   accounts,
   currentAccountId,
   onClose,
@@ -116,6 +117,7 @@ export function EditTransactionModal({
     description?: string;
     bookings?: Omit<BookingValues, "key">[];
   };
+  submitLabel?: string;
   accounts: AccountOption[];
   currentAccountId: string;
   onClose: () => void;
@@ -690,7 +692,9 @@ export function EditTransactionModal({
             <Button variant="subtle" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">{initialValues ? "Save" : "Create"}</Button>
+            <Button type="submit">
+              {submitLabel ?? (initialValues ? "Save" : "Create")}
+            </Button>
           </Group>
         </Group>
       </Stack>
