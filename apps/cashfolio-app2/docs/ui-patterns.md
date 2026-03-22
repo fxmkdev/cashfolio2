@@ -251,8 +251,11 @@ two-booking transactions from the ledger route
 
 ### Form Root Validation
 
-- All bookings must have the same unit
-- Debit/credit must balance (sum difference < 0.001)
+- UI validation in `EditTransactionModal` requires all bookings to use the same
+  unit
+- UI validation requires debit/credit to balance (sum difference < 0.001)
+- Server validation intentionally allows multi-unit transactions; it enforces
+  sum-to-zero only when all bookings share the same unit identifier
 
 ### Unit Identifier Pattern
 

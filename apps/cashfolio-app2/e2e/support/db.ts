@@ -46,6 +46,7 @@ export type SeededData = {
   investmentsAccount: { id: string; name: string };
   cryptoAccount: { id: string; name: string };
   securityAccount: { id: string; name: string };
+  securityCounterAccount: { id: string; name: string };
   expenseAccount: { id: string; name: string };
 };
 
@@ -194,6 +195,20 @@ export async function resetAndSeedDatabase(): Promise<SeededData> {
     },
   });
 
+  const securityCounterAccount = await prisma.account.create({
+    data: {
+      id: createId(),
+      accountBookId: accountBook.id,
+      name: "E2E Security Counter",
+      type: AccountType.ASSET,
+      groupId: assetRoot.id,
+      unit: Unit.SECURITY,
+      symbol: "AAPL",
+      tradeCurrency: "EUR",
+      sortOrder: 5,
+    },
+  });
+
   const expenseAccount = await prisma.account.create({
     data: {
       id: createId(),
@@ -231,11 +246,48 @@ export async function resetAndSeedDatabase(): Promise<SeededData> {
       id: securityAccount.id,
       name: securityAccount.name,
     },
+    securityCounterAccount: {
+      id: securityCounterAccount.id,
+      name: securityCounterAccount.name,
+    },
     expenseAccount: {
       id: expenseAccount.id,
       name: expenseAccount.name,
     },
   };
+}
+
+export async function getTransactionBookingsByDescription(args: {
+  accountBookId: string;
+  description: string;
+}): Promise<
+  Array<{
+    accountId: string;
+    unit: Unit;
+    symbol: string | null;
+    tradeCurrency: string | null;
+    value: number;
+  }>
+> {
+  const transaction = await prisma.transaction.findFirstOrThrow({
+    where: {
+      accountBookId: args.accountBookId,
+      description: args.description,
+    },
+    include: {
+      bookings: {
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      },
+    },
+  });
+
+  return transaction.bookings.map((booking) => ({
+    accountId: booking.accountId,
+    unit: booking.unit,
+    symbol: booking.symbol,
+    tradeCurrency: booking.tradeCurrency,
+    value: Number(booking.value),
+  }));
 }
 
 export async function disconnectDb(): Promise<void> {

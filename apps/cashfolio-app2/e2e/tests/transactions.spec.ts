@@ -1,11 +1,16 @@
 import { expect, test, type Page } from "@playwright/test";
+import { Unit } from "../../src/.prisma-client/enums";
 import {
   agGridCellByColId,
   agGridRowByText,
   clickRowAction,
   setGridCellValue,
 } from "../support/grid";
-import { resetAndSeedDatabase, type SeededData } from "../support/db";
+import {
+  getTransactionBookingsByDescription,
+  resetAndSeedDatabase,
+  type SeededData,
+} from "../support/db";
 
 let seeded: SeededData;
 
@@ -129,4 +134,52 @@ test("create simple transaction", async ({ page }) => {
   await page.goto(`/${seeded.accountBookId}/?tab=ASSET&mode=active`);
   const cashRow = agGridRowByText(page, seeded.cashAccount.name);
   await expect(agGridCellByColId(cashRow, "balance")).toHaveText("-342.00");
+});
+
+test("create security simple transaction preserves account metadata", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/${seeded.securityAccount.id}`);
+
+  await openCreateSimpleTransaction(page);
+  const simpleDialog = page.getByRole("dialog", {
+    name: "Add Simple Transaction",
+  });
+
+  await page.getByLabel("Date").fill("03.01.2026");
+  await page.getByLabel("Description").fill("E2E Security Simple Transaction");
+  await page.getByRole("textbox", { name: "Counter account" }).click();
+  await page
+    .getByRole("option", { name: seeded.securityCounterAccount.name })
+    .first()
+    .click();
+  await page.getByLabel("Amount").fill("3");
+  await simpleDialog.getByRole("button", { name: "Create" }).click();
+
+  await expect(
+    agGridRowByText(page, "E2E Security Simple Transaction"),
+  ).toBeVisible();
+
+  const bookings = await getTransactionBookingsByDescription({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Security Simple Transaction",
+  });
+  expect(bookings).toHaveLength(2);
+
+  const bookingByAccountId = new Map(
+    bookings.map((booking) => [booking.accountId, booking]),
+  );
+  const currentBooking = bookingByAccountId.get(seeded.securityAccount.id);
+  const counterBooking = bookingByAccountId.get(
+    seeded.securityCounterAccount.id,
+  );
+
+  expect(currentBooking).toBeDefined();
+  expect(counterBooking).toBeDefined();
+  expect(currentBooking?.unit).toBe(Unit.SECURITY);
+  expect(counterBooking?.unit).toBe(Unit.SECURITY);
+  expect(currentBooking?.symbol).toBe("AAPL");
+  expect(counterBooking?.symbol).toBe("AAPL");
+  expect(currentBooking?.tradeCurrency).toBe("USD");
+  expect(counterBooking?.tradeCurrency).toBe("EUR");
 });
