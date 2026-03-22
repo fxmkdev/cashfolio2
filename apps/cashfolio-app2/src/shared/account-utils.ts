@@ -44,6 +44,7 @@ export function getUnitIdentifier(booking: {
   currency?: string;
   cryptocurrency?: string;
   symbol?: string;
+  tradeCurrency?: string;
 }): string {
   switch (booking.unit) {
     case Unit.CURRENCY:
@@ -51,7 +52,7 @@ export function getUnitIdentifier(booking: {
     case Unit.CRYPTOCURRENCY:
       return `crypto:${booking.cryptocurrency}`;
     case Unit.SECURITY:
-      return `security:${booking.symbol}`;
+      return `security:${booking.symbol}:${booking.tradeCurrency}`;
   }
 }
 

@@ -35,8 +35,10 @@ export function validateCreateTransaction(input: CreateTransactionInput) {
       errors.push(`Booking ${i}: currency is required.`);
     } else if (b.unit === Unit.CRYPTOCURRENCY && !b.cryptocurrency) {
       errors.push(`Booking ${i}: cryptocurrency is required.`);
-    } else if (b.unit === Unit.SECURITY && !b.symbol) {
-      errors.push(`Booking ${i}: symbol is required.`);
+    } else if (b.unit === Unit.SECURITY && (!b.symbol || !b.tradeCurrency)) {
+      errors.push(
+        `Booking ${i}: symbol and trade currency are required for security bookings.`,
+      );
     }
 
     if (b.value === 0) {
