@@ -267,13 +267,14 @@ function LedgerPage() {
           candidate.id !== account.id &&
           isBookingUnitCompatibleWithAccount(bookingUnit, candidate),
       )
+      .toSorted((a, b) =>
+        `${a.groupPath} / ${a.name}`.localeCompare(
+          `${b.groupPath} / ${b.name}`,
+        ),
+      )
       .map((candidate) => ({
         value: candidate.id,
-        label: [
-          getTypeLabel(candidate.type, candidate.equityAccountSubtype),
-          candidate.groupPath,
-          candidate.name,
-        ]
+        label: [candidate.groupPath, candidate.name]
           .filter(Boolean)
           .join(" / "),
       }));

@@ -152,6 +152,7 @@ test("rebook booking to another compatible account", async ({ page }) => {
   const targetAccountInput = rebookDialog.getByRole("textbox", {
     name: "Target account",
   });
+  await expect(targetAccountInput).toHaveValue("");
   await targetAccountInput.click();
   await expect(
     page
@@ -164,8 +165,11 @@ test("rebook booking to another compatible account", async ({ page }) => {
   await expect(
     page.getByRole("option", { name: new RegExp(seeded.cryptoAccount.name) }),
   ).toHaveCount(0);
-  await targetAccountInput.press("Escape");
-  await rebookDialog.getByRole("button", { name: "Rebook" }).click();
+  await page
+    .getByRole("option", { name: new RegExp(seeded.investmentsAccount.name) })
+    .first()
+    .click();
+  await targetAccountInput.press("Enter");
   await expect(rebookDialog).toBeHidden();
 
   const bookings = await getTransactionBookingsByDescription({

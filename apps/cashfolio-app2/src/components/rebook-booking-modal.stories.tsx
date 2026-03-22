@@ -21,7 +21,14 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("textbox", { name: "Target account" }),
+    ).toHaveValue("");
+  },
+};
 
 export const NoEligibleTarget: Story = {
   args: {
@@ -37,8 +44,16 @@ export const NoEligibleTarget: Story = {
 export const SubmitAndCancel: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const targetAccountInput = canvas.getByRole("textbox", {
+      name: "Target account",
+    });
 
-    await userEvent.click(canvas.getByRole("button", { name: "Rebook" }));
+    await userEvent.click(targetAccountInput);
+    await userEvent.click(
+      await body.findByRole("option", { name: "Savings (CHF)" }),
+    );
+    await userEvent.type(targetAccountInput, "{enter}");
     await expect(args.onSubmit).toHaveBeenCalledWith({
       targetAccountId: "account-savings",
     });

@@ -1,5 +1,5 @@
 import { Button, Group, Select, Stack, Text } from "@mantine/core";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 
 export type RebookTargetOption = {
   value: string;
@@ -17,12 +17,14 @@ export function RebookBookingModal({
   onClose: () => void;
   onSubmit: (values: { targetAccountId: string }) => Promise<void>;
 }) {
+  const formRef = useRef<HTMLFormElement>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [targetAccountId, setTargetAccountId] = useState<string | null>(null);
+  const [dropdownOpened, setDropdownOpened] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
-    setTargetAccountId(targetAccounts[0]?.value ?? null);
+    setTargetAccountId(null);
     setValidationError(null);
     setSubmitError(null);
   }, [targetAccounts]);
@@ -36,7 +38,9 @@ export function RebookBookingModal({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const selectedTargetAccountId = targetAccountId ?? targetAccounts[0]?.value;
+    if (noEligibleAccountReason) return;
+
+    const selectedTargetAccountId = targetAccountId;
     if (!selectedTargetAccountId) {
       setValidationError("Target account is required");
       return;
@@ -55,15 +59,28 @@ export function RebookBookingModal({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form ref={formRef} onSubmit={handleSubmit}>
       <Stack gap="md">
         <Select
           label="Target account"
           placeholder="Select target account"
           searchable
           data={targetAccounts}
+          data-autofocus
           value={targetAccountId}
-          onChange={setTargetAccountId}
+          onChange={(value) => {
+            setTargetAccountId(value);
+            setValidationError(null);
+            setSubmitError(null);
+          }}
+          onDropdownOpen={() => setDropdownOpened(true)}
+          onDropdownClose={() => setDropdownOpened(false)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !dropdownOpened) {
+              event.preventDefault();
+              formRef.current?.requestSubmit();
+            }
+          }}
           disabled={!!noEligibleAccountReason}
         />
 
