@@ -10,6 +10,7 @@ import {
   Text,
   Title,
   useComputedColorScheme,
+  useMantineTheme,
 } from "@mantine/core";
 import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
 import { AgCharts } from "ag-charts-react";
@@ -27,6 +28,7 @@ function DashboardPage() {
   const { accountBookId } = Route.useParams();
   const overview = Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/" });
+  const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
 
   const currencyFormatter = useMemo(
@@ -77,8 +79,8 @@ function DashboardPage() {
       },
       theme: {
         params: {
-          textColor: isDarkMode ? "#fafafa" : "#09090b",
-          foregroundColor: isDarkMode ? "#fafafa" : "#09090b",
+          textColor: isDarkMode ? theme.colors.dark[0] : theme.black,
+          foregroundColor: isDarkMode ? theme.colors.dark[0] : theme.black,
         },
       },
       legend: {
@@ -90,29 +92,43 @@ function DashboardPage() {
           xKey: "monthLabel",
           yKey: "income",
           yName: "Income",
-          fill: "#339af0",
-          stroke: "#1c7ed6",
+          fill: isDarkMode ? theme.colors.blue[4] : theme.colors.blue[6],
+          stroke: isDarkMode ? theme.colors.blue[3] : theme.colors.blue[7],
         },
         {
           type: "bar",
           xKey: "monthLabel",
           yKey: "expense",
           yName: "Expense",
-          fill: "#ff8787",
-          stroke: "#f03e3e",
+          fill: isDarkMode ? theme.colors.red[4] : theme.colors.red[3],
+          stroke: isDarkMode ? theme.colors.red[3] : theme.colors.red[7],
         },
         {
           type: "line",
           xKey: "monthLabel",
           yKey: "net",
           yName: "Net Result",
-          stroke: isDarkMode ? "#2dd4bf" : "#0f766e",
+          stroke: isDarkMode ? theme.colors.teal[3] : theme.colors.teal[8],
           strokeWidth: 3,
           marker: {
             size: 6,
             itemStyler: ({ yValue }) => ({
-              fill: Number(yValue) < 0 ? "#fa5252" : "#40c057",
-              stroke: Number(yValue) < 0 ? "#fa5252" : "#40c057",
+              fill:
+                Number(yValue) < 0
+                  ? isDarkMode
+                    ? theme.colors.red[4]
+                    : theme.colors.red[7]
+                  : isDarkMode
+                    ? theme.colors.green[4]
+                    : theme.colors.green[7],
+              stroke:
+                Number(yValue) < 0
+                  ? isDarkMode
+                    ? theme.colors.red[4]
+                    : theme.colors.red[7]
+                  : isDarkMode
+                    ? theme.colors.green[4]
+                    : theme.colors.green[7],
             }),
           },
         },
@@ -134,7 +150,7 @@ function DashboardPage() {
             {
               type: "line",
               value: 0,
-              stroke: isDarkMode ? "#adb5bd" : "#868e96",
+              stroke: isDarkMode ? theme.colors.gray[4] : theme.colors.gray[6],
               strokeWidth: 1,
               lineDash: [5, 5],
             },
@@ -142,7 +158,7 @@ function DashboardPage() {
         },
       },
     }),
-    [compactNumberFormatter, isDarkMode, overview.points],
+    [compactNumberFormatter, isDarkMode, overview.points, theme],
   );
 
   return (
