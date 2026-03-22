@@ -24,7 +24,7 @@ jobs:
         run: pnpm --filter cashfolio-app2 prisma:generate
 
       - name: Publish Storybook to Chromatic
-        uses: chromaui/action@v1
+        uses: chromaui/action@v15
         with:
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
           workingDir: apps/cashfolio-app2
