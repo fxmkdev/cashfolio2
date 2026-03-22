@@ -51,6 +51,7 @@ export function getUnitIdentifier(booking: {
     case Unit.CRYPTOCURRENCY:
       return `crypto:${booking.cryptocurrency}`;
     case Unit.SECURITY:
+      // Security unit identity is symbol-based; trade currency affects pricing only.
       return `security:${booking.symbol}`;
   }
 }
@@ -73,5 +74,6 @@ export function getSimpleTransactionUnitIdentifier(account: {
   }
 
   if (!account.symbol || !account.tradeCurrency) return null;
-  return `security:${account.symbol}:${account.tradeCurrency}`;
+  // Security compatibility is symbol-based; tradeCurrency is required metadata.
+  return `security:${account.symbol}`;
 }

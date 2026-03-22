@@ -17,13 +17,13 @@ paths are relative to that app directory.
 `src/shared/account-utils.ts` contains pure utility functions used across
 routes, components, and server functions:
 
-| Function                                                        | Purpose                                                                                                       |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `getTypeLabel(type, equityAccountSubtype)`                      | Human-readable label for an account type (e.g. `"Income"`, `"Asset"`)                                         |
-| `isIncomeAccount(acct)`                                         | True when account is `EQUITY / INCOME`                                                                        |
-| `isExpenseAccount(acct)`                                        | True when account is `EQUITY / EXPENSE`                                                                       |
-| `getUnitIdentifier({ unit, currency, cryptocurrency, symbol })` | Canonical string key for a booking's unit (`"currency:CHF"`, `"crypto:BTC"`, `"security:AAPL"`)               |
-| `getSimpleTransactionUnitIdentifier({ ... })`                   | Canonical key for simple-flow account compatibility (`"currency:CHF"`, `"crypto:BTC"`, `"security:AAPL:USD"`) |
+| Function                                                        | Purpose                                                                                                                                                                          |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getTypeLabel(type, equityAccountSubtype)`                      | Human-readable label for an account type (e.g. `"Income"`, `"Asset"`)                                                                                                            |
+| `isIncomeAccount(acct)`                                         | True when account is `EQUITY / INCOME`                                                                                                                                           |
+| `isExpenseAccount(acct)`                                        | True when account is `EQUITY / EXPENSE`                                                                                                                                          |
+| `getUnitIdentifier({ unit, currency, cryptocurrency, symbol })` | Canonical string key for a booking's unit (`"currency:CHF"`, `"crypto:BTC"`, `"security:AAPL"`)                                                                                  |
+| `getSimpleTransactionUnitIdentifier({ ... })`                   | Canonical key for simple-flow account compatibility (`"currency:CHF"`, `"crypto:BTC"`, `"security:AAPL"`); for securities, `tradeCurrency` is still required as pricing metadata |
 
 ## Custom Hooks (`src/hooks/`)
 
@@ -212,9 +212,11 @@ two-booking transactions from the ledger route
 - Always creates exactly 2 bookings:
   - current account booking
   - selected counter account booking
-- Both bookings use the current account's unit identifier
+- Both bookings must match the current account's unit identifier
 - If the selected account is equity, the equity booking still receives the
   current account's unit fields
+- If the selected account is asset/liability, each booking keeps its own account
+  unit metadata (including security `tradeCurrency`)
 - For equity account-type restrictions:
   - selecting an `INCOME` account forces `Debit` on the current account
   - selecting an `EXPENSE` account forces `Credit` on the current account
@@ -225,6 +227,8 @@ two-booking transactions from the ledger route
   - selected account must be active
   - `ASSET`/`LIABILITY` options must match the current account unit identifier
   - all active `EQUITY` accounts are available
+  - for security units, compatibility is symbol-based (trade currency is not
+    part of unit identity)
 - Server-side validation re-checks all constraints before creation
 
 ### Conditional Editability Affordance
@@ -247,18 +251,28 @@ two-booking transactions from the ledger route
 
 ### Form Root Validation
 
-- All bookings must have the same unit
-- Debit/credit must balance (sum difference < 0.001)
+- UI validation in `EditTransactionModal` requires all bookings to use the same
+  unit
+- UI validation requires debit/credit to balance (sum difference < 0.001)
+- Server validation intentionally allows multi-unit transactions; it enforces
+  sum-to-zero only when all bookings share the same unit identifier
 
 ### Unit Identifier Pattern
 
 Bookings are grouped by a unit identifier string: `currency:${code}`,
-`crypto:${symbol}`, or `security:${symbol}`. Only one unit identifier is allowed
-per transaction.
+`crypto:${symbol}`, or `security:${symbol}`.
+
+In the UI transaction form, only one unit identifier is allowed per transaction.
+Server-side validation intentionally allows multi-unit transactions and only
+enforces sum-to-zero when all bookings share the same unit identifier.
 
 The shared `getUnitIdentifier({ unit, currency, cryptocurrency, symbol })` in
 `src/shared/account-utils.ts` produces these strings. Callers must guard that
 `unit` is set before calling it.
+
+For securities, unit identity intentionally uses only `symbol`. `tradeCurrency`
+is required for pricing and valuation flows, but it does not define the booking
+unit identity.
 
 ## AG Grid Column Types
 
