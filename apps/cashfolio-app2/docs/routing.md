@@ -43,7 +43,8 @@ paths are relative to that app directory.
 - Created with `createServerFn` from `@tanstack/react-start`
 - Pattern: `createServerFn({ method })` → `.inputValidator()` → `.handler()`
 - Server-only files use `.server.ts` suffix
-- Key files: `accounts.ts`, `ledger.ts`, `transactions.ts`
+- Key files: `accounts.ts` (barrel), `accounts-queries.ts`,
+  `accounts-mutations.ts`, `ledger.ts`, `transactions.ts`
 
 ### Auth & Authorization
 
@@ -57,8 +58,9 @@ paths are relative to that app directory.
 
 ### Account Status Actions
 
-`src/server/accounts.ts` contains status-changing server functions used by
-`$accountBookId/index.tsx`:
+The status-changing server functions used by `$accountBookId/index.tsx` are
+implemented in `src/server/accounts-mutations.ts` and re-exported via
+`src/server/accounts.ts`:
 
 - `archiveAccount`
 - `archiveAccountGroup`
@@ -71,16 +73,17 @@ functions.
 
 ### Reorder Pattern
 
-`reorderAccountTreeItems` (in `accounts.ts`) issues a batch of Prisma updates
-inside a transaction to update `sortOrder` values after reordering sibling rows
-in the reorder modal.
+`reorderAccountTreeItems` (implemented in `accounts-mutations.ts`, re-exported
+from `accounts.ts`) issues a batch of Prisma updates inside a transaction to
+update `sortOrder` values after reordering sibling rows in the reorder modal.
 
 ### Account List FX Reference Balance
 
 - The account list route (`$accountBookId/index.tsx`) renders `Balance` and
   `Balance (<referenceCurrency>)` columns.
-- Reference-currency conversion is resolved server-side in
-  `src/server/accounts.ts`, using `src/server/fx.server.ts`.
+- Reference-currency conversion and account/group reference-balance assembly are
+  implemented in `src/server/accounts-queries.ts` (re-exported via
+  `src/server/accounts.ts`), using `src/server/fx.server.ts`.
 - Currency FX rates are requested from currencylayer historical API and cached
   in Redis TimeSeries keys (`fx:currencylayer:USD:<TARGET_CURRENCY>`).
 - Cryptocurrency USD prices are requested from coinlayer historical API and
