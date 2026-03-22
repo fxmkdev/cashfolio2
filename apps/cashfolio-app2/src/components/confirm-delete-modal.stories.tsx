@@ -22,12 +22,12 @@ export const Default: Story = {};
 
 export const Interactions: Story = {
   play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
 
-    await userEvent.click(canvas.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(body.getByRole("button", { name: "Cancel" }));
     await expect(args.onClose).toHaveBeenCalled();
 
-    await userEvent.click(canvas.getByRole("button", { name: "Delete" }));
+    await userEvent.click(body.getByRole("button", { name: "Delete" }));
     await expect(args.onConfirm).toHaveBeenCalled();
   },
 };

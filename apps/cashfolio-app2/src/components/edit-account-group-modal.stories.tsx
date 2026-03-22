@@ -36,9 +36,9 @@ export const Edit: Story = {
 
 export const ValidationSmoke: Story = {
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
 
-    await userEvent.click(canvas.getByRole("button", { name: "Create" }));
-    await expect(canvas.getByText("Name is required")).toBeInTheDocument();
+    await userEvent.click(body.getByRole("button", { name: "Create" }));
+    await expect(body.getByText("Name is required")).toBeInTheDocument();
   },
 };

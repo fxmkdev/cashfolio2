@@ -25,22 +25,22 @@ export const Default: Story = {};
 
 export const ToggleDirectionAndSubmit: Story = {
   play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
 
-    await userEvent.type(canvas.getByRole("textbox", { name: "Amount" }), "99");
+    await userEvent.type(body.getByRole("textbox", { name: "Amount" }), "99");
 
-    const counterAccountInput = canvas.getByRole("textbox", {
+    const counterAccountInput = body.getByRole("textbox", {
       name: "Counter account",
     });
     await userEvent.click(counterAccountInput);
     await userEvent.click(
-      await canvas.findByRole("option", { name: "Credit Card (CHF)" }),
+      await body.findByRole("option", { name: "Credit Card (CHF)" }),
     );
 
     await userEvent.click(
-      canvas.getByRole("button", { name: "Swap debit/credit direction" }),
+      body.getByRole("button", { name: "Swap debit/credit direction" }),
     );
-    await userEvent.click(canvas.getByRole("button", { name: "Create" }));
+    await userEvent.click(body.getByRole("button", { name: "Create" }));
 
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ direction: "CREDIT" }),
@@ -50,18 +50,18 @@ export const ToggleDirectionAndSubmit: Story = {
 
 export const ForcedDirectionDisablesToggle: Story = {
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
 
-    const counterAccountInput = canvas.getByRole("textbox", {
+    const counterAccountInput = body.getByRole("textbox", {
       name: "Counter account",
     });
     await userEvent.click(counterAccountInput);
     await userEvent.click(
-      await canvas.findByRole("option", { name: "Salary (Income)" }),
+      await body.findByRole("option", { name: "Salary (Income)" }),
     );
 
     await expect(
-      canvas.getByRole("button", { name: "Swap debit/credit direction" }),
+      body.getByRole("button", { name: "Swap debit/credit direction" }),
     ).toBeDisabled();
   },
 };

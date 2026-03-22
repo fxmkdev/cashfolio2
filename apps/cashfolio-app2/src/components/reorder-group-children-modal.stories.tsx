@@ -23,9 +23,9 @@ export const Default: Story = {};
 
 export const CloseInteraction: Story = {
   play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
 
-    await userEvent.click(canvas.getByRole("button", { name: "Close" }));
+    await userEvent.click(body.getByRole("button", { name: "Close" }));
     await expect(args.onClose).toHaveBeenCalled();
   },
 };
