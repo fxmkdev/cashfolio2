@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
-import { Unit } from "../.prisma-client/enums";
+import type { Unit } from "../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 
 export const getTransaction = createServerFn({ method: "GET" })
