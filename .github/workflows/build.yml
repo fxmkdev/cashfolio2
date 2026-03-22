@@ -277,6 +277,10 @@ jobs:
             echo "COINLAYER_API_KEY secret is required for crypto conversion in preview apps."
             exit 1
           fi
+          if [ -z "${MARKETSTACK_API_KEY:-}" ]; then
+            echo "MARKETSTACK_API_KEY secret is required for security conversion in preview apps."
+            exit 1
+          fi
           if [ -z "${STAGING_REDIS_URL:-}" ]; then
             echo "STAGING_REDIS_URL secret is required so preview apps use shared staging Redis cache."
             exit 1
@@ -289,11 +293,13 @@ jobs:
             SESSION_SECRET="${{ steps.session-secret.outputs.value }}" \
             CURRENCYLAYER_API_KEY="${CURRENCYLAYER_API_KEY}" \
             COINLAYER_API_KEY="${COINLAYER_API_KEY}" \
+            MARKETSTACK_API_KEY="${MARKETSTACK_API_KEY}" \
             REDIS_URL="${STAGING_REDIS_URL}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           CURRENCYLAYER_API_KEY: ${{ secrets.CURRENCYLAYER_API_KEY }}
           COINLAYER_API_KEY: ${{ secrets.COINLAYER_API_KEY }}
+          MARKETSTACK_API_KEY: ${{ secrets.MARKETSTACK_API_KEY }}
           STAGING_REDIS_URL: ${{ secrets.STAGING_REDIS_URL }}
       - name: Prepare Fly configuration file
         run: |

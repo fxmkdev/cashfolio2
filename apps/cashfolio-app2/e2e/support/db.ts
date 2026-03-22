@@ -45,6 +45,7 @@ export type SeededData = {
   savingsAccount: { id: string; name: string };
   investmentsAccount: { id: string; name: string };
   cryptoAccount: { id: string; name: string };
+  securityAccount: { id: string; name: string };
   expenseAccount: { id: string; name: string };
 };
 
@@ -179,6 +180,20 @@ export async function resetAndSeedDatabase(): Promise<SeededData> {
     },
   });
 
+  const securityAccount = await prisma.account.create({
+    data: {
+      id: createId(),
+      accountBookId: accountBook.id,
+      name: "E2E Security",
+      type: AccountType.ASSET,
+      groupId: assetRoot.id,
+      unit: Unit.SECURITY,
+      symbol: "AAPL",
+      tradeCurrency: "USD",
+      sortOrder: 4,
+    },
+  });
+
   const expenseAccount = await prisma.account.create({
     data: {
       id: createId(),
@@ -211,6 +226,10 @@ export async function resetAndSeedDatabase(): Promise<SeededData> {
     cryptoAccount: {
       id: cryptoAccount.id,
       name: cryptoAccount.name,
+    },
+    securityAccount: {
+      id: securityAccount.id,
+      name: securityAccount.name,
     },
     expenseAccount: {
       id: expenseAccount.id,
