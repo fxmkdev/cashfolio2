@@ -258,13 +258,14 @@ function LedgerPageStoryHarness({
   );
 }
 
-const meta = {
+const meta: Meta<typeof LedgerPageView> = {
   title: "Routes/LedgerPageView",
-} satisfies Meta;
+  component: LedgerPageView,
+};
 
 export default meta;
 
-type Story = StoryObj;
+type Story = StoryObj<typeof meta>;
 
 export const HappyPath: Story = {
   render: () => <LedgerPageStoryHarness />,

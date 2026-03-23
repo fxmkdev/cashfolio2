@@ -457,13 +457,14 @@ function AccountsPageStoryHarness({
   );
 }
 
-const meta = {
+const meta: Meta<typeof AccountsPageView> = {
   title: "Routes/AccountsPageView",
-} satisfies Meta;
+  component: AccountsPageView,
+};
 
 export default meta;
 
-type Story = StoryObj;
+type Story = StoryObj<typeof meta>;
 
 export const ActiveHappyPath: Story = {
   render: () => <AccountsPageStoryHarness initialMode="active" />,
