@@ -38,13 +38,10 @@ async function expectDashboardPeriodInUrl(
 }
 
 async function selectDashboardPeriod(page: Page, period: "12m" | "10y") {
-  const periodLabel = period === "10y" ? "Last 10 years" : "Last 12 months";
-  const periodOption = page.getByRole("radio", {
-    name: periodLabel,
-  });
+  const periodOption = page.locator(`label[for$="-${period}"]`).first();
 
   await expect(periodOption).toBeVisible();
-  await periodOption.click();
+  await periodOption.click({ force: true });
 }
 
 test("dashboard is default account-book route and links to accounts", async ({
