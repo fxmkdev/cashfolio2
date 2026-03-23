@@ -1,9 +1,25 @@
 import { Button, Group, Stack, Text } from "@mantine/core";
 import { nprogress } from "@mantine/nprogress";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useEffect, useRef } from "react";
 import { NavigationLoadingBar } from "./navigation-loading-bar";
 
 function NavigationLoadingBarPreview() {
+  const completeTimeoutRef = useRef<number | undefined>(undefined);
+
+  function clearPendingCompleteTimeout() {
+    if (completeTimeoutRef.current === undefined) return;
+
+    window.clearTimeout(completeTimeoutRef.current);
+    completeTimeoutRef.current = undefined;
+  }
+
+  useEffect(() => {
+    return () => {
+      clearPendingCompleteTimeout();
+    };
+  }, []);
+
   return (
     <Stack gap="sm" py="md">
       <NavigationLoadingBar />
@@ -16,6 +32,7 @@ function NavigationLoadingBarPreview() {
           size="xs"
           variant="default"
           onClick={() => {
+            clearPendingCompleteTimeout();
             nprogress.start();
           }}
         >
@@ -25,6 +42,7 @@ function NavigationLoadingBarPreview() {
           size="xs"
           variant="default"
           onClick={() => {
+            clearPendingCompleteTimeout();
             nprogress.complete();
           }}
         >
@@ -33,8 +51,10 @@ function NavigationLoadingBarPreview() {
         <Button
           size="xs"
           onClick={() => {
+            clearPendingCompleteTimeout();
             nprogress.start();
-            window.setTimeout(() => {
+            completeTimeoutRef.current = window.setTimeout(() => {
+              completeTimeoutRef.current = undefined;
               nprogress.complete();
             }, 1000);
           }}
