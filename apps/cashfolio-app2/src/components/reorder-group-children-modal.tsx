@@ -24,6 +24,10 @@ export function ReorderGroupChildrenModal({
 }) {
   const [rows, setRows] = useState<ReorderGroupChildRow[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const handleClose = () => {
+    if (isSaving) return;
+    onClose();
+  };
 
   useEffect(() => {
     if (!opened) return;
@@ -72,7 +76,15 @@ export function ReorderGroupChildrenModal({
   const gridHeight = Math.min(Math.max(rows.length * 38 + 2, 120), 360);
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Reorder Siblings" size="md">
+    <Modal
+      opened={opened}
+      onClose={handleClose}
+      title="Reorder Siblings"
+      size="md"
+      closeOnEscape={!isSaving}
+      closeOnClickOutside={!isSaving}
+      withCloseButton={!isSaving}
+    >
       <Stack gap="md">
         <Text c="dimmed" size="sm">
           {`Siblings of ${rowName}`}
@@ -91,7 +103,9 @@ export function ReorderGroupChildrenModal({
           />
         </div>
         <Group justify="flex-end">
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={handleClose} loading={isSaving} disabled={isSaving}>
+            Close
+          </Button>
         </Group>
       </Stack>
     </Modal>

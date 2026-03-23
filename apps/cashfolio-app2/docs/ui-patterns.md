@@ -30,10 +30,11 @@ routes, components, and server functions:
 Route-level logic that doesn't belong in components is extracted into hooks in
 `src/hooks/`:
 
-| Hook                   | File                        | Purpose                                                  |
-| ---------------------- | --------------------------- | -------------------------------------------------------- |
-| `useExpandedGroups`    | `use-expanded-groups.ts`    | Persist/restore expanded group state via sessionStorage  |
-| `useTransactionScroll` | `use-transaction-scroll.ts` | Scroll-to and flash a transaction row on the ledger grid |
+| Hook                   | File                         | Purpose                                                                   |
+| ---------------------- | ---------------------------- | ------------------------------------------------------------------------- |
+| `useExpandedGroups`    | `use-expanded-groups.ts`     | Persist/restore expanded group state via sessionStorage                   |
+| `useTransactionScroll` | `use-transaction-scroll.ts`  | Scroll-to and flash a transaction row on the ledger grid                  |
+| `useDialogSubmitState` | `use-dialog-submit-state.ts` | Reusable async-submit guard with in-flight state and optional parent sync |
 
 ## Modal Pattern
 
@@ -44,6 +45,25 @@ Route-level logic that doesn't belong in components is extracted into hooks in
   "New Account") while closing
 - **`forceUpdate` reducer**: triggers a re-render after programmatic
   `setFieldValue` calls on uncontrolled forms
+
+## Async Dialog Submission Pattern
+
+All async dialogs should use `useDialogSubmitState` to provide predictable
+submit UX and prevent duplicate requests.
+
+- Use `runSubmit(async () => { ... })` in the submit path so button clicks and
+  Enter-key submits share the same in-flight guard.
+- While submitting:
+  - primary action uses `loading` and `disabled`
+  - cancel/secondary actions are disabled
+  - modal closing is locked via `closeOnEscape={false}`,
+    `closeOnClickOutside={false}`, `withCloseButton={false}`, and guarded
+    `onClose`
+- For dialogs rendered inside a parent-owned `<Modal>`, pass
+  `onSubmittingChange` from the child form component so the parent can lock
+  close behavior while the request is in flight.
+- Confirm dialogs (`ConfirmDeleteModal`, `ConfirmArchiveModal`) should await
+  async `onConfirm` handlers through the same guard pattern.
 
 ## Action Icons
 

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, fn, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { SimpleTransactionModal } from "./simple-transaction-modal";
 import { accountOptions } from "./storybook-fixtures";
 
@@ -95,5 +95,37 @@ export const EditModeWithSwitchToSplit: Story = {
         direction: "CREDIT",
       }),
     );
+  },
+};
+
+export const EnterSubmitPendingGuard: Story = {
+  args: {
+    onSubmit: fn(
+      async () => await new Promise((resolve) => setTimeout(resolve, 150)),
+    ),
+  },
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+
+    await userEvent.type(body.getByRole("textbox", { name: "Amount" }), "99");
+
+    const counterAccountInput = body.getByRole("textbox", {
+      name: "Counter account",
+    });
+    await userEvent.click(counterAccountInput);
+    await userEvent.click(
+      await body.findByRole("option", { name: "Credit Card (CHF)" }),
+    );
+
+    const descriptionInput = body.getByRole("textbox", { name: "Description" });
+    await userEvent.type(descriptionInput, "{enter}{enter}");
+
+    const submitButton = body.getByRole("button", { name: "Create" });
+    await expect(submitButton).toBeDisabled();
+    await expect(submitButton).toHaveAttribute("data-loading");
+    await expect(args.onSubmit).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => expect(submitButton).not.toBeDisabled());
+    await expect(submitButton).not.toHaveAttribute("data-loading");
   },
 };

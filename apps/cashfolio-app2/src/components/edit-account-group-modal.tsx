@@ -15,6 +15,7 @@ import {
   validateAccountGroupName,
   validateAccountGroupParentGroupId,
 } from "../shared/account-validation";
+import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 import type { ExistingNode } from "./edit-account-modal";
 
 type FormValues = {
@@ -79,6 +80,7 @@ export function EditAccountGroupModal({
 }) {
   const isEdit = !!initialValues;
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
+  const { isSubmitting, runSubmit } = useDialogSubmitState();
   const descendantGroupIds = useMemo(() => {
     if (!editingId || !existingNodes) return new Set<string>();
 
@@ -151,17 +153,27 @@ export function EditAccountGroupModal({
 
   const { type, equityAccountSubtype } =
     form.getTransformedValues() as AccountGroupTransformedFormValues;
+  const handleClose = () => {
+    if (isSubmitting) return;
+    onClose();
+  };
+
   return (
     <Modal
       opened={opened}
-      onClose={onClose}
+      onClose={handleClose}
       onExitTransitionEnd={onExitTransitionEnd}
+      closeOnEscape={!isSubmitting}
+      closeOnClickOutside={!isSubmitting}
+      withCloseButton={!isSubmitting}
       title={isEdit ? "Edit Group" : "New Group"}
       size="lg"
     >
       <form
         onSubmit={form.onSubmit((values) =>
-          onSubmit(values as AccountGroupTransformedFormValues),
+          runSubmit(() =>
+            onSubmit(values as AccountGroupTransformedFormValues),
+          ),
         )}
       >
         <Stack gap="xl">
@@ -244,10 +256,19 @@ export function EditAccountGroupModal({
             </Grid.Col>
           </Grid>
           <Group justify="end">
-            <Button variant="subtle" onClick={() => onClose()}>
+            <Button
+              variant="subtle"
+              onClick={handleClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button variant="filled" type="submit">
+            <Button
+              variant="filled"
+              type="submit"
+              loading={isSubmitting}
+              disabled={isSubmitting}
+            >
               {isEdit ? "Save" : "Create"}
             </Button>
           </Group>

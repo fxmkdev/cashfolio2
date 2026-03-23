@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, fn, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { RebookBookingModal } from "./rebook-booking-modal";
 
 const targetAccounts = [
@@ -61,5 +61,34 @@ export const SubmitAndCancel: Story = {
 
     await userEvent.click(canvas.getByRole("button", { name: "Cancel" }));
     await expect(args.onClose).toHaveBeenCalled();
+  },
+};
+
+export const EnterSubmitPendingGuard: Story = {
+  args: {
+    onSubmit: fn(
+      async () => await new Promise((resolve) => setTimeout(resolve, 150)),
+    ),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const targetAccountInput = canvas.getByRole("textbox", {
+      name: "Target account",
+    });
+
+    await userEvent.click(targetAccountInput);
+    await userEvent.click(
+      await body.findByRole("option", { name: "Savings (CHF)" }),
+    );
+    await userEvent.type(targetAccountInput, "{enter}{enter}");
+
+    const submitButton = canvas.getByRole("button", { name: "Rebook" });
+    await expect(submitButton).toBeDisabled();
+    await expect(submitButton).toHaveAttribute("data-loading");
+    await expect(args.onSubmit).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => expect(submitButton).not.toBeDisabled());
+    await expect(submitButton).not.toHaveAttribute("data-loading");
   },
 };

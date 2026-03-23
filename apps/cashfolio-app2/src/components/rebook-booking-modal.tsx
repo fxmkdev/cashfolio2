@@ -1,5 +1,6 @@
 import { Button, Group, Select, Stack, Text } from "@mantine/core";
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 
 export type RebookTargetOption = {
   value: string;
@@ -10,13 +11,18 @@ export function RebookBookingModal({
   targetAccounts,
   disabledReason,
   onClose,
+  onSubmittingChange,
   onSubmit,
 }: {
   targetAccounts: RebookTargetOption[];
   disabledReason?: string | null;
   onClose: () => void;
+  onSubmittingChange?: (isSubmitting: boolean) => void;
   onSubmit: (values: { targetAccountId: string }) => Promise<void>;
 }) {
+  const { isSubmitting, runSubmit } = useDialogSubmitState({
+    onSubmittingChange,
+  });
   const formRef = useRef<HTMLFormElement>(null);
   const selectedTargetAccountIdRef = useRef<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -51,13 +57,15 @@ export function RebookBookingModal({
     setValidationError(null);
     setSubmitError(null);
 
-    try {
-      await onSubmit({ targetAccountId: selectedTargetAccountId });
-    } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : "Failed to rebook booking.",
-      );
-    }
+    await runSubmit(async () => {
+      try {
+        await onSubmit({ targetAccountId: selectedTargetAccountId });
+      } catch (error) {
+        setSubmitError(
+          error instanceof Error ? error.message : "Failed to rebook booking.",
+        );
+      }
+    });
   }
 
   return (
@@ -86,7 +94,7 @@ export function RebookBookingModal({
             event.preventDefault();
             formRef.current?.requestSubmit();
           }}
-          disabled={!!noEligibleAccountReason}
+          disabled={isSubmitting || !!noEligibleAccountReason}
         />
 
         {validationError && (
@@ -108,10 +116,14 @@ export function RebookBookingModal({
         )}
 
         <Group justify="end">
-          <Button variant="subtle" onClick={onClose}>
+          <Button variant="subtle" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" disabled={!!noEligibleAccountReason}>
+          <Button
+            type="submit"
+            loading={isSubmitting}
+            disabled={isSubmitting || !!noEligibleAccountReason}
+          >
             Rebook
           </Button>
         </Group>
