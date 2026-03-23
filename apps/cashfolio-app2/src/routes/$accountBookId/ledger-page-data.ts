@@ -89,6 +89,7 @@ export function buildLedgerRows(
       return {
         id: booking.id,
         transactionId: booking.transactionId,
+        bookingValue: rawValue,
         date: format(new Date(booking.date), "dd.MM.yyyy"),
         counterpartyAccounts: booking.counterpartyAccounts,
         description: booking.description || booking.transactionDescription,
@@ -96,6 +97,7 @@ export function buildLedgerRows(
         currency: booking.currency,
         cryptocurrency: booking.cryptocurrency,
         symbol: booking.symbol,
+        tradeCurrency: booking.tradeCurrency,
         debit: negate ? (value < 0 ? -value : null) : value > 0 ? value : null,
         credit: negate ? (value > 0 ? value : null) : value < 0 ? -value : null,
         balance: isEquity ? null : balance,

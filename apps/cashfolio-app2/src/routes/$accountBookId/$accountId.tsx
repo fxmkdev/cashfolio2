@@ -12,7 +12,12 @@ import {
 } from "@mantine/core";
 import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
 import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
-import { getTypeLabel } from "../../shared/account-utils";
+import {
+  getBookingUnitIdentifier,
+  getTypeLabel,
+  isBookingValueCompatibleWithAccountType,
+  isBookingUnitCompatibleWithAccount,
+} from "../../shared/account-utils";
 import { useTransactionScroll } from "../../hooks/use-transaction-scroll";
 import { IconBolt, IconCashPlus } from "@tabler/icons-react";
 import { DataGrid } from "../../components/data-grid";
@@ -21,6 +26,7 @@ import {
   createTransaction,
   deleteTransaction,
   getTransaction,
+  rebookBooking,
   updateTransaction,
 } from "../../server/transactions";
 import {
@@ -33,6 +39,7 @@ import {
   type AccountOption,
 } from "../../components/edit-transaction-modal";
 import { SimpleTransactionModal } from "../../components/simple-transaction-modal";
+import { RebookBookingModal } from "../../components/rebook-booking-modal";
 import { loadLedgerPageData } from "./ledger-page-loader";
 import { useLedgerColumnDefs } from "./ledger-page-columns";
 import {
@@ -69,6 +76,22 @@ function LedgerPage() {
   const [deletingTransaction, setDeletingTransaction] = useState<
     { id: string; description: string } | undefined
   >();
+  const [rebooking, setRebooking] = useState<
+    | {
+        bookingId: string;
+        transactionId: string;
+        bookingValue: number;
+        bookingUnit: {
+          unit: Unit | null;
+          currency: string | null;
+          cryptocurrency: string | null;
+          symbol: string | null;
+          tradeCurrency: string | null;
+        };
+      }
+    | undefined
+  >();
+  const [rebookModalOpened, setRebookModalOpened] = useState(false);
   const router = useRouter();
 
   const accountOptions = useMemo<AccountOption[]>(
@@ -214,6 +237,90 @@ function LedgerPage() {
     router.invalidate();
   }
 
+  const handleRebookClick = useCallback(
+    (args: {
+      bookingId: string;
+      transactionId: string;
+      bookingValue: number;
+      bookingUnit: {
+        unit: Unit | null;
+        currency: string | null;
+        cryptocurrency: string | null;
+        symbol: string | null;
+        tradeCurrency: string | null;
+      };
+    }) => {
+      setRebooking(args);
+      setRebookModalOpened(true);
+    },
+    [],
+  );
+
+  const hasCompleteBookingUnit = useMemo(() => {
+    if (!rebooking || rebooking.bookingUnit.unit == null) return false;
+
+    const bookingUnitIdentifier = getBookingUnitIdentifier({
+      unit: rebooking.bookingUnit.unit,
+      currency: rebooking.bookingUnit.currency,
+      cryptocurrency: rebooking.bookingUnit.cryptocurrency,
+      symbol: rebooking.bookingUnit.symbol,
+      tradeCurrency: rebooking.bookingUnit.tradeCurrency,
+    });
+
+    return bookingUnitIdentifier != null;
+  }, [rebooking]);
+
+  const rebookTargetAccountOptions = useMemo(() => {
+    if (
+      !rebooking ||
+      rebooking.bookingUnit.unit == null ||
+      !hasCompleteBookingUnit
+    ) {
+      return [];
+    }
+
+    const bookingUnit = {
+      ...rebooking.bookingUnit,
+      unit: rebooking.bookingUnit.unit,
+    };
+
+    const eligibleAccountIds = new Set(
+      accounts
+        .filter(
+          (candidate) =>
+            candidate.isActive &&
+            candidate.id !== account.id &&
+            isBookingUnitCompatibleWithAccount(bookingUnit, candidate) &&
+            isBookingValueCompatibleWithAccountType(
+              rebooking.bookingValue,
+              candidate,
+            ),
+        )
+        .map((candidate) => candidate.id),
+    );
+
+    return accountOptions
+      .filter((option) => eligibleAccountIds.has(option.value))
+      .toSorted((a, b) => a.label.localeCompare(b.label))
+      .map((option) => ({ value: option.value, label: option.label }));
+  }, [account.id, accountOptions, accounts, hasCompleteBookingUnit, rebooking]);
+
+  async function handleRebookBooking(values: { targetAccountId: string }) {
+    if (!rebooking) return;
+
+    await rebookBooking({
+      data: {
+        accountBookId,
+        bookingId: rebooking.bookingId,
+        targetAccountId: values.targetAccountId,
+      },
+    });
+
+    setRebookModalOpened(false);
+    pendingScrollRef.current = rebooking.transactionId;
+    router.invalidate();
+  }
+
   const isEquity = account.type === AccountType.EQUITY;
   const isIncome =
     account.type === AccountType.EQUITY &&
@@ -240,6 +347,7 @@ function LedgerPage() {
     isIncome,
     isExpense,
     onEditClick: handleEditClick,
+    onRebookClick: handleRebookClick,
     onDeleteClick: handleDeleteClick,
   });
 
@@ -371,6 +479,29 @@ function LedgerPage() {
             currentAccountId={account.id}
             onClose={() => setEditModalOpened(false)}
             onSubmit={handleUpdateTransaction}
+          />
+        )}
+      </Modal>
+
+      <Modal
+        opened={rebookModalOpened}
+        onClose={() => setRebookModalOpened(false)}
+        title="Rebook Booking"
+        size="md"
+        onExitTransitionEnd={() => {
+          setRebooking(undefined);
+        }}
+      >
+        {rebooking && (
+          <RebookBookingModal
+            targetAccounts={rebookTargetAccountOptions}
+            disabledReason={
+              !hasCompleteBookingUnit
+                ? "This booking has incomplete unit data and cannot be rebooked."
+                : undefined
+            }
+            onClose={() => setRebookModalOpened(false)}
+            onSubmit={handleRebookBooking}
           />
         )}
       </Modal>

@@ -1,6 +1,10 @@
 import { useMemo } from "react";
 import { ActionIcon, Group, Tooltip } from "@mantine/core";
-import { IconPencil, IconTrash } from "@tabler/icons-react";
+import {
+  IconPencil,
+  IconSquareArrowRight,
+  IconTrash,
+} from "@tabler/icons-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { Unit } from "../../.prisma-client/enums";
 import {
@@ -16,6 +20,18 @@ export function useLedgerColumnDefs(args: {
   isIncome: boolean;
   isExpense: boolean;
   onEditClick: (transactionId: string) => void;
+  onRebookClick: (args: {
+    bookingId: string;
+    transactionId: string;
+    bookingValue: number;
+    bookingUnit: {
+      unit: Unit | null;
+      currency: string | null;
+      cryptocurrency: string | null;
+      symbol: string | null;
+      tradeCurrency: string | null;
+    };
+  }) => void;
   onDeleteClick: (transactionId: string, description: string) => void;
 }): ColDef<LedgerRow>[] {
   const {
@@ -24,6 +40,7 @@ export function useLedgerColumnDefs(args: {
     isIncome,
     isExpense,
     onEditClick,
+    onRebookClick,
     onDeleteClick,
   } = args;
 
@@ -127,7 +144,7 @@ export function useLedgerColumnDefs(args: {
       {
         colId: "actions",
         headerName: "",
-        width: 80,
+        width: 120,
         sortable: false,
         filter: false,
         resizable: false,
@@ -145,6 +162,30 @@ export function useLedgerColumnDefs(args: {
                   aria-label="Edit"
                 >
                   <IconPencil size={16} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Rebook">
+                <ActionIcon
+                  variant="subtle"
+                  size="sm"
+                  color="blue"
+                  onClick={() =>
+                    onRebookClick({
+                      bookingId: data.id,
+                      transactionId: data.transactionId,
+                      bookingValue: data.bookingValue,
+                      bookingUnit: {
+                        unit: data.unit,
+                        currency: data.currency,
+                        cryptocurrency: data.cryptocurrency,
+                        symbol: data.symbol,
+                        tradeCurrency: data.tradeCurrency,
+                      },
+                    })
+                  }
+                  aria-label="Rebook"
+                >
+                  <IconSquareArrowRight size={16} />
                 </ActionIcon>
               </Tooltip>
               <Tooltip label="Delete">
@@ -165,6 +206,14 @@ export function useLedgerColumnDefs(args: {
         },
       },
     ],
-    [accountBookId, isEquity, isIncome, isExpense, onEditClick, onDeleteClick],
+    [
+      accountBookId,
+      isEquity,
+      isIncome,
+      isExpense,
+      onEditClick,
+      onRebookClick,
+      onDeleteClick,
+    ],
   );
 }

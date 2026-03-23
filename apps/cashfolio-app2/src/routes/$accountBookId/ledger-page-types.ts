@@ -29,6 +29,7 @@ export type LedgerAccountOptionSource = Awaited<
 export type LedgerRow = {
   id: string;
   transactionId: string;
+  bookingValue: number;
   date: string;
   counterpartyAccounts: { id: string; name: string }[];
   description: string;
@@ -36,6 +37,7 @@ export type LedgerRow = {
   currency: string | null;
   cryptocurrency: string | null;
   symbol: string | null;
+  tradeCurrency: string | null;
   debit: number | null;
   credit: number | null;
   balance: number | null;

@@ -39,6 +39,30 @@ export function isExpenseAccount(
   );
 }
 
+export function isBookingValueCompatibleWithAccountType(
+  value: number,
+  account: {
+    type: AccountType;
+    equityAccountSubtype?: EquityAccountSubtype | null;
+  },
+): boolean {
+  if (
+    account.type === AccountType.EQUITY &&
+    account.equityAccountSubtype === EquityAccountSubtype.INCOME
+  ) {
+    return value <= 0;
+  }
+
+  if (
+    account.type === AccountType.EQUITY &&
+    account.equityAccountSubtype === EquityAccountSubtype.EXPENSE
+  ) {
+    return value >= 0;
+  }
+
+  return true;
+}
+
 export function getUnitIdentifier(booking: {
   unit: Unit;
   currency?: string;
@@ -56,24 +80,70 @@ export function getUnitIdentifier(booking: {
   }
 }
 
-export function getSimpleTransactionUnitIdentifier(account: {
+type UnitIdentifierSource = {
   unit: Unit | null;
   currency?: string | null;
   cryptocurrency?: string | null;
   symbol?: string | null;
   tradeCurrency?: string | null;
-}): string | null {
-  if (!account.unit) return null;
+};
 
-  if (account.unit === Unit.CURRENCY) {
-    return account.currency ? `currency:${account.currency}` : null;
+function getCompatibleUnitIdentifier(
+  source: UnitIdentifierSource,
+): string | null {
+  if (!source.unit) return null;
+
+  if (source.unit === Unit.CURRENCY) {
+    return source.currency ? `currency:${source.currency}` : null;
   }
 
-  if (account.unit === Unit.CRYPTOCURRENCY) {
-    return account.cryptocurrency ? `crypto:${account.cryptocurrency}` : null;
+  if (source.unit === Unit.CRYPTOCURRENCY) {
+    return source.cryptocurrency ? `crypto:${source.cryptocurrency}` : null;
   }
 
-  if (!account.symbol || !account.tradeCurrency) return null;
+  if (!source.symbol || !source.tradeCurrency) return null;
   // Security compatibility is symbol-based; tradeCurrency is required metadata.
-  return `security:${account.symbol}`;
+  return `security:${source.symbol}`;
+}
+
+export function getAccountUnitIdentifier(
+  account: UnitIdentifierSource,
+): string | null {
+  return getCompatibleUnitIdentifier(account);
+}
+
+export function getBookingUnitIdentifier(booking: {
+  unit: Unit;
+  currency?: string | null;
+  cryptocurrency?: string | null;
+  symbol?: string | null;
+  tradeCurrency?: string | null;
+}): string | null {
+  return getCompatibleUnitIdentifier(booking);
+}
+
+export function isBookingUnitCompatibleWithAccount(
+  booking: {
+    unit: Unit;
+    currency?: string | null;
+    cryptocurrency?: string | null;
+    symbol?: string | null;
+    tradeCurrency?: string | null;
+  },
+  account: UnitIdentifierSource,
+): boolean {
+  const bookingIdentifier = getBookingUnitIdentifier(booking);
+  if (!bookingIdentifier) return false;
+
+  if (!account.unit) return true;
+
+  const accountIdentifier = getAccountUnitIdentifier(account);
+  if (!accountIdentifier) return false;
+  return bookingIdentifier === accountIdentifier;
+}
+
+export function getSimpleTransactionUnitIdentifier(
+  account: UnitIdentifierSource,
+): string | null {
+  return getAccountUnitIdentifier(account);
 }

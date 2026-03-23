@@ -25,3 +25,9 @@ export type CreateSimpleTransactionInput = {
   amount: number;
   direction: "DEBIT" | "CREDIT";
 };
+
+export type RebookBookingInput = {
+  accountBookId: string;
+  bookingId: string;
+  targetAccountId: string;
+};

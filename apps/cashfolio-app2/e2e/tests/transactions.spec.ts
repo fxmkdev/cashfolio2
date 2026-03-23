@@ -128,6 +128,73 @@ test("create simple transaction", async ({ page }) => {
   await expect(agGridCellByColId(cashRow, "balance")).toHaveText("-342.00");
 });
 
+test("rebook booking to another compatible account", async ({ page }) => {
+  await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
+
+  const simpleDialog = await openCreateSimpleTransaction(page);
+  await page.getByLabel("Date").fill("04.01.2026");
+  await page.getByLabel("Description").fill("E2E Rebook Transaction");
+  await page.getByRole("textbox", { name: "Counter account" }).click();
+  await page
+    .getByRole("option", { name: new RegExp(seeded.savingsAccount.name) })
+    .first()
+    .click();
+  await simpleDialog
+    .getByRole("button", { name: "Swap debit/credit direction" })
+    .click();
+  await page.getByLabel("Amount").fill("100");
+  await simpleDialog.getByRole("button", { name: "Create" }).click();
+
+  const transactionRow = agGridRowByText(page, "E2E Rebook Transaction");
+  await expect(transactionRow).toBeVisible();
+
+  await clickRowAction(transactionRow, "Rebook");
+  const rebookDialog = page.getByRole("dialog", { name: "Rebook Booking" });
+  await expect(rebookDialog).toBeVisible();
+
+  const targetAccountInput = rebookDialog.getByRole("textbox", {
+    name: "Target account",
+  });
+  await expect(targetAccountInput).toHaveValue("");
+  await targetAccountInput.click();
+  await expect(
+    page
+      .getByRole("option", { name: new RegExp(seeded.investmentsAccount.name) })
+      .first(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("option", { name: new RegExp(seeded.cashAccount.name) }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("option", { name: new RegExp(seeded.cryptoAccount.name) }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("option", { name: new RegExp(seeded.expenseAccount.name) }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("option", { name: new RegExp(seeded.investmentsAccount.name) })
+    .first()
+    .click();
+  await targetAccountInput.press("Enter");
+  await expect(rebookDialog).toBeHidden();
+
+  const bookings = await getTransactionBookingsByDescription({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Rebook Transaction",
+  });
+
+  expect(bookings).toHaveLength(2);
+  expect(
+    bookings.some((booking) => booking.accountId === seeded.cashAccount.id),
+  ).toBe(false);
+  expect(bookings.every((booking) => booking.unit === Unit.CURRENCY)).toBe(
+    true,
+  );
+  expect(
+    bookings.map((booking) => booking.value).sort((a, b) => a - b),
+  ).toEqual([-100, 100]);
+});
+
 test("create security simple transaction preserves account metadata", async ({
   page,
 }) => {
