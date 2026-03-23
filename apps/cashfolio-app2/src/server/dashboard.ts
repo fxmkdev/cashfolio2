@@ -10,6 +10,8 @@ import {
   DASHBOARD_NO_BOOKINGS_MESSAGE_BY_PERIOD,
   DASHBOARD_PERIOD_10Y,
   DASHBOARD_PERIOD_LABEL_BY_PERIOD,
+  DEFAULT_DASHBOARD_PERIOD,
+  isDashboardPeriod,
   type DashboardPeriod,
 } from "../shared/dashboard-period";
 import {
@@ -140,7 +142,12 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
   method: "GET",
 })
   .inputValidator(
-    (data: { accountBookId: string; period: DashboardPeriod }) => data,
+    (data: { accountBookId: string; period: unknown }) => ({
+      accountBookId: data.accountBookId,
+      period: isDashboardPeriod(data.period)
+        ? data.period
+        : DEFAULT_DASHBOARD_PERIOD,
+    }),
   )
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
