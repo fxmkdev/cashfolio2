@@ -13,6 +13,7 @@ import { isAfter, parse, startOfDay } from "date-fns";
 import { useEffect } from "react";
 import { IconArrowRight } from "@tabler/icons-react";
 import { isExpenseAccount, isIncomeAccount } from "../shared/account-utils";
+import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 import type { AccountOption } from "./edit-transaction-modal";
 import { FormattedNumberInput } from "./formatted-number-input";
 
@@ -49,6 +50,7 @@ export function SimpleTransactionModal({
   submitLabel,
   onSwitchToSplit,
   onClose,
+  onSubmittingChange,
   onSubmit,
 }: {
   currentAccount: {
@@ -60,6 +62,7 @@ export function SimpleTransactionModal({
   submitLabel?: string;
   onSwitchToSplit?: (draft: SimpleTransactionDraftValues) => void;
   onClose: () => void;
+  onSubmittingChange?: (isSubmitting: boolean) => void;
   onSubmit: (values: {
     date: string;
     description: string;
@@ -69,6 +72,9 @@ export function SimpleTransactionModal({
   }) => Promise<void>;
 }) {
   const today = startOfDay(new Date());
+  const { isSubmitting, runSubmit } = useDialogSubmitState({
+    onSubmittingChange,
+  });
 
   const form = useForm({
     mode: "controlled",
@@ -147,16 +153,20 @@ export function SimpleTransactionModal({
   return (
     <form
       onSubmit={(event) =>
-        form.onSubmit(async (values) => {
-          const date = values.date ?? today;
-          await onSubmit({
-            date: date.toISOString(),
-            description: values.description,
-            counterAccountId: values.counterAccountId,
-            amount: Number(values.amount),
-            direction: forcedDirection ?? values.direction,
-          });
-        }, console.error)(event)
+        form.onSubmit(
+          (values) =>
+            runSubmit(async () => {
+              const date = values.date ?? today;
+              await onSubmit({
+                date: date.toISOString(),
+                description: values.description,
+                counterAccountId: values.counterAccountId,
+                amount: Number(values.amount),
+                direction: forcedDirection ?? values.direction,
+              });
+            }),
+          console.error,
+        )(event)
       }
     >
       <Stack gap="md">
@@ -166,11 +176,13 @@ export function SimpleTransactionModal({
             dateParser={(value) => parse(value, "dd.MM.yyyy", new Date())}
             label="Date"
             w={180}
+            disabled={isSubmitting}
             {...form.getInputProps("date")}
           />
           <TextInput
             label="Description"
             flex={1}
+            disabled={isSubmitting}
             {...form.getInputProps("description")}
           />
           <FormattedNumberInput
@@ -180,6 +192,7 @@ export function SimpleTransactionModal({
             hideControls
             locale="en-CH"
             w={220}
+            disabled={isSubmitting}
             {...form.getInputProps("amount")}
           />
         </Group>
@@ -201,7 +214,7 @@ export function SimpleTransactionModal({
                 mt={24}
                 variant="default"
                 size="lg"
-                disabled={forcedDirection !== null}
+                disabled={isSubmitting || forcedDirection !== null}
                 onClick={() =>
                   form.setFieldValue(
                     "direction",
@@ -231,6 +244,7 @@ export function SimpleTransactionModal({
             }))}
             searchable
             style={{ flex: "1 1 16rem" }}
+            disabled={isSubmitting}
             {...form.getInputProps("counterAccountId")}
           />
         </Group>
@@ -241,6 +255,7 @@ export function SimpleTransactionModal({
               type="button"
               variant="default"
               mr="auto"
+              disabled={isSubmitting}
               onClick={() =>
                 onSwitchToSplit({
                   date: form.values.date ?? null,
@@ -254,10 +269,10 @@ export function SimpleTransactionModal({
               Switch to split editor
             </Button>
           )}
-          <Button variant="subtle" onClick={onClose}>
+          <Button variant="subtle" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit">
+          <Button type="submit" loading={isSubmitting} disabled={isSubmitting}>
             {submitLabel ?? (initialValues ? "Save" : "Create")}
           </Button>
         </Group>

@@ -47,6 +47,7 @@ import { getNumberFormatSymbols } from "./formatted-number-input";
 import { DateInput } from "@mantine/dates";
 import { formRootRule, isNotEmpty, useForm } from "@mantine/form";
 import { isAfter, isSameDay, min, parse, startOfDay } from "date-fns";
+import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 
 export type AccountOption = {
   label: string;
@@ -111,6 +112,7 @@ export function EditTransactionModal({
   accounts,
   currentAccountId,
   onClose,
+  onSubmittingChange,
   onSubmit,
 }: {
   initialValues?: {
@@ -121,6 +123,7 @@ export function EditTransactionModal({
   accounts: AccountOption[];
   currentAccountId: string;
   onClose: () => void;
+  onSubmittingChange?: (isSubmitting: boolean) => void;
   onSubmit: (values: {
     description: string;
     bookings: {
@@ -139,6 +142,9 @@ export function EditTransactionModal({
 }) {
   const { thousandSeparator, decimalSeparator } =
     getNumberFormatSymbols("en-CH");
+  const { isSubmitting, runSubmit } = useDialogSubmitState({
+    onSubmittingChange,
+  });
 
   const today = startOfDay(new Date());
 
@@ -327,7 +333,8 @@ export function EditTransactionModal({
           headerName: "",
           editable: false,
           width: 40,
-          rowDrag: ({ data, node }) => !node.rowPinned && Boolean(data),
+          rowDrag: ({ data, node }) =>
+            !isSubmitting && !node.rowPinned && Boolean(data),
         },
         {
           field: "date",
@@ -492,7 +499,7 @@ export function EditTransactionModal({
                   color="red"
                   size="md"
                   variant="subtle"
-                  disabled={!!deleteDisabledReason}
+                  disabled={isSubmitting || !!deleteDisabledReason}
                   onClick={() => {
                     if (context.onDelete) {
                       context.onDelete(data.key);
@@ -507,32 +514,38 @@ export function EditTransactionModal({
           },
         },
       ] as ColDef[],
-    [accounts],
+    [accounts, isSubmitting],
   );
 
   return (
     <form
       onSubmit={(e) => {
         gridRef.current?.api.stopEditing();
-        form.onSubmit(async (values) => {
-          await onSubmit({
-            description: values.description ?? "",
-            bookings: values.bookings.map((b) => ({
-              date:
-                b.date && typeof b.date === "object" && "toISOString" in b.date
-                  ? (b.date as Date).toISOString()
-                  : String(b.date ?? ""),
-              accountId: b.account ?? "",
-              description: b.description ?? "",
-              unit: b.unit!,
-              currency: b.currency ?? undefined,
-              cryptocurrency: b.cryptocurrency ?? undefined,
-              symbol: b.symbol ?? undefined,
-              tradeCurrency: b.tradeCurrency ?? undefined,
-              value: b.debit ? b.debit : -(b.credit ?? 0),
-            })),
-          });
-        }, console.error)(e);
+        form.onSubmit(
+          (values) =>
+            runSubmit(() =>
+              onSubmit({
+                description: values.description ?? "",
+                bookings: values.bookings.map((b) => ({
+                  date:
+                    b.date &&
+                    typeof b.date === "object" &&
+                    "toISOString" in b.date
+                      ? (b.date as Date).toISOString()
+                      : String(b.date ?? ""),
+                  accountId: b.account ?? "",
+                  description: b.description ?? "",
+                  unit: b.unit!,
+                  currency: b.currency ?? undefined,
+                  cryptocurrency: b.cryptocurrency ?? undefined,
+                  symbol: b.symbol ?? undefined,
+                  tradeCurrency: b.tradeCurrency ?? undefined,
+                  value: b.debit ? b.debit : -(b.credit ?? 0),
+                })),
+              }),
+            ),
+          console.error,
+        )(e);
       }}
     >
       <Stack gap="md">
@@ -557,17 +570,21 @@ export function EditTransactionModal({
                 </Tooltip>
               </Group>
             }
+            disabled={isSubmitting}
             {...form.getInputProps("date")}
           />
           <TextInput
             label="Description"
             {...form.getInputProps("description")}
+            disabled={isSubmitting}
             flex="1"
           />
           <Button
+            type="button"
             mt={24.8}
             variant="default"
             leftSection={<IconTablePlus size={16} />}
+            disabled={isSubmitting}
             onClick={() => onAdd()}
           >
             Add booking
@@ -585,7 +602,7 @@ export function EditTransactionModal({
           animateRows
           onRowDragEnd={onRowDragEnd}
           defaultColDef={{
-            editable: true,
+            editable: !isSubmitting,
             resizable: false,
             sortable: false,
             suppressHeaderMenuButton: true,
@@ -674,6 +691,7 @@ export function EditTransactionModal({
             canDelete: form.values.bookings.length <= 2,
             lockedBookingKey,
             onDelete: (key: string) => {
+              if (isSubmitting) return;
               const index = form.values.bookings.findIndex(
                 (b) => b.key === key,
               );
@@ -684,15 +702,20 @@ export function EditTransactionModal({
             },
             startDate: form.values.date,
             form,
+            isSubmitting,
           }}
         />
 
         <Group justify="end">
           <Group>
-            <Button variant="subtle" onClick={onClose}>
+            <Button variant="subtle" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit">
+            <Button
+              type="submit"
+              loading={isSubmitting}
+              disabled={isSubmitting}
+            >
               {submitLabel ?? (initialValues ? "Save" : "Create")}
             </Button>
           </Group>

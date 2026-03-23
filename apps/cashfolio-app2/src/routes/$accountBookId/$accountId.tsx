@@ -219,6 +219,9 @@ function LedgerPage() {
   const [modalOpened, setModalOpened] = useState(false);
   const [simpleModalOpened, setSimpleModalOpened] = useState(false);
   const [editModalOpened, setEditModalOpened] = useState(false);
+  const [isCreateSplitSubmitting, setIsCreateSplitSubmitting] = useState(false);
+  const [isSimpleSubmitting, setIsSimpleSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [createSplitInitialValues, setCreateSplitInitialValues] = useState<
     SplitModalInitialValues | undefined
   >();
@@ -251,6 +254,7 @@ function LedgerPage() {
     | undefined
   >();
   const [rebookModalOpened, setRebookModalOpened] = useState(false);
+  const [isRebookSubmitting, setIsRebookSubmitting] = useState(false);
   const router = useRouter();
 
   const allAccountOptions = useMemo<AccountOption[]>(
@@ -745,15 +749,25 @@ function LedgerPage() {
 
       <Modal
         opened={simpleModalOpened}
-        onClose={() => setSimpleModalOpened(false)}
+        onClose={() => {
+          if (isSimpleSubmitting) return;
+          setSimpleModalOpened(false);
+        }}
         title="Add Transaction"
         size="xl"
+        closeOnEscape={!isSimpleSubmitting}
+        closeOnClickOutside={!isSimpleSubmitting}
+        withCloseButton={!isSimpleSubmitting}
       >
         <SimpleTransactionModal
           currentAccount={{ id: account.id, label: currentAccountLabel }}
           accounts={simpleCounterAccountOptions}
           onSwitchToSplit={handleSwitchCreateToSplit}
-          onClose={() => setSimpleModalOpened(false)}
+          onClose={() => {
+            if (isSimpleSubmitting) return;
+            setSimpleModalOpened(false);
+          }}
+          onSubmittingChange={setIsSimpleSubmitting}
           onSubmit={handleCreateSimpleTransaction}
         />
       </Modal>
@@ -761,11 +775,15 @@ function LedgerPage() {
       <Modal
         opened={modalOpened}
         onClose={() => {
+          if (isCreateSplitSubmitting) return;
           setModalOpened(false);
           setCreateSplitInitialValues(undefined);
         }}
         title="Add Transaction"
         size="100%"
+        closeOnEscape={!isCreateSplitSubmitting}
+        closeOnClickOutside={!isCreateSplitSubmitting}
+        withCloseButton={!isCreateSplitSubmitting}
       >
         <EditTransactionModal
           initialValues={createSplitInitialValues}
@@ -773,18 +791,26 @@ function LedgerPage() {
           accounts={accountOptions}
           currentAccountId={account.id}
           onClose={() => {
+            if (isCreateSplitSubmitting) return;
             setModalOpened(false);
             setCreateSplitInitialValues(undefined);
           }}
+          onSubmittingChange={setIsCreateSplitSubmitting}
           onSubmit={handleCreateTransaction}
         />
       </Modal>
 
       <Modal
         opened={editModalOpened}
-        onClose={() => setEditModalOpened(false)}
+        onClose={() => {
+          if (isEditSubmitting) return;
+          setEditModalOpened(false);
+        }}
         title="Edit Transaction"
         size={editMode === "SIMPLE" ? "xl" : "100%"}
+        closeOnEscape={!isEditSubmitting}
+        closeOnClickOutside={!isEditSubmitting}
+        withCloseButton={!isEditSubmitting}
         onExitTransitionEnd={() => {
           setEditingTransactionId(undefined);
           setEditingTransactionData(undefined);
@@ -801,7 +827,11 @@ function LedgerPage() {
             initialValues={editingSimpleInitialValues}
             submitLabel="Save"
             onSwitchToSplit={handleSwitchToSplit}
-            onClose={() => setEditModalOpened(false)}
+            onClose={() => {
+              if (isEditSubmitting) return;
+              setEditModalOpened(false);
+            }}
+            onSubmittingChange={setIsEditSubmitting}
             onSubmit={handleUpdateSimpleTransaction}
           />
         ) : editingTransactionData ? (
@@ -809,7 +839,11 @@ function LedgerPage() {
             initialValues={editingTransactionData}
             accounts={editAccountOptions}
             currentAccountId={account.id}
-            onClose={() => setEditModalOpened(false)}
+            onClose={() => {
+              if (isEditSubmitting) return;
+              setEditModalOpened(false);
+            }}
+            onSubmittingChange={setIsEditSubmitting}
             onSubmit={handleUpdateTransaction}
           />
         ) : null}
@@ -817,9 +851,15 @@ function LedgerPage() {
 
       <Modal
         opened={rebookModalOpened}
-        onClose={() => setRebookModalOpened(false)}
+        onClose={() => {
+          if (isRebookSubmitting) return;
+          setRebookModalOpened(false);
+        }}
         title="Rebook Booking"
         size="md"
+        closeOnEscape={!isRebookSubmitting}
+        closeOnClickOutside={!isRebookSubmitting}
+        withCloseButton={!isRebookSubmitting}
         onExitTransitionEnd={() => {
           setRebooking(undefined);
         }}
@@ -832,7 +872,11 @@ function LedgerPage() {
                 ? "This booking has incomplete unit data and cannot be rebooked."
                 : undefined
             }
-            onClose={() => setRebookModalOpened(false)}
+            onClose={() => {
+              if (isRebookSubmitting) return;
+              setRebookModalOpened(false);
+            }}
+            onSubmittingChange={setIsRebookSubmitting}
             onSubmit={handleRebookBooking}
           />
         )}

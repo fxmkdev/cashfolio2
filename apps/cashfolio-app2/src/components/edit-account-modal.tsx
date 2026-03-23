@@ -26,6 +26,7 @@ import {
   validateAccountSymbol,
   validateAccountTradeCurrency,
 } from "../shared/account-validation";
+import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 
 type FormValues = {
   name?: string;
@@ -112,6 +113,7 @@ export function EditAccountModal({
 }) {
   const isEdit = !!initialValues;
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
+  const { isSubmitting, runSubmit } = useDialogSubmitState();
   const form = useForm<FormValues>({
     mode: "uncontrolled",
     initialValues: initialValues
@@ -189,17 +191,25 @@ export function EditAccountModal({
 
   const { unit, type, equityAccountSubtype } =
     form.getTransformedValues() as TransformedFormValues;
+  const handleClose = () => {
+    if (isSubmitting) return;
+    onClose();
+  };
+
   return (
     <Modal
       opened={opened}
-      onClose={onClose}
+      onClose={handleClose}
       onExitTransitionEnd={onExitTransitionEnd}
+      closeOnEscape={!isSubmitting}
+      closeOnClickOutside={!isSubmitting}
+      withCloseButton={!isSubmitting}
       title={isEdit ? "Edit Account" : "New Account"}
       size="lg"
     >
       <form
         onSubmit={form.onSubmit((values) =>
-          onSubmit(values as TransformedFormValues),
+          runSubmit(() => onSubmit(values as TransformedFormValues)),
         )}
       >
         <Stack gap="xl">
@@ -343,10 +353,19 @@ export function EditAccountModal({
             )}
           </Grid>
           <Group justify="end">
-            <Button variant="subtle" onClick={() => onClose()}>
+            <Button
+              variant="subtle"
+              onClick={handleClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button variant="filled" type="submit">
+            <Button
+              variant="filled"
+              type="submit"
+              loading={isSubmitting}
+              disabled={isSubmitting}
+            >
               {isEdit ? "Save" : "Create"}
             </Button>
           </Group>
