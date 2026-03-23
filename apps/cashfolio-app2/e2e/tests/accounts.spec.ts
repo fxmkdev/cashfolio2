@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import {
   agGridCellByColId,
   agGridPinnedBottomRow,
@@ -18,6 +18,69 @@ test.beforeAll(async () => {
   seeded = await resetAndSeedDatabase();
 });
 
+async function expectDashboardPeriodInUrl(
+  page: Page,
+  accountBookId: string,
+  period: "12m" | "10y",
+) {
+  await expect
+    .poll(
+      () => {
+        const url = new URL(page.url());
+        return {
+          pathname: url.pathname.replace(/\/$/, ""),
+          period: url.searchParams.get("period"),
+        };
+      },
+      { timeout: 15_000 },
+    )
+    .toEqual({
+      pathname: `/${accountBookId}`,
+      period: period === "10y" ? "10y" : null,
+    });
+}
+
+async function selectDashboardPeriod(page: Page, period: "12m" | "10y") {
+  await page.evaluate((nextPeriod) => {
+    const inputs = Array.from(
+      document.querySelectorAll<HTMLInputElement>(
+        `input[type="radio"][value="${nextPeriod}"]`,
+      ),
+    );
+
+    if (inputs.length === 0) {
+      throw new Error(`Dashboard period radio not found for: ${nextPeriod}`);
+    }
+
+    for (const input of inputs) {
+      if (!input.id) {
+        continue;
+      }
+      const label = document.querySelector(
+        `label[for="${CSS.escape(input.id)}"]`,
+      );
+      if (!(label instanceof HTMLElement)) {
+        continue;
+      }
+
+      const style = window.getComputedStyle(label);
+      const rect = label.getBoundingClientRect();
+      const isVisible =
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        rect.width > 0 &&
+        rect.height > 0;
+
+      if (isVisible) {
+        label.click();
+        return;
+      }
+    }
+
+    inputs[0].click();
+  }, period);
+}
+
 test("dashboard is default account-book route and links to accounts", async ({
   page,
 }) => {
@@ -26,6 +89,35 @@ test("dashboard is default account-book route and links to accounts", async ({
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Income & Expense Overview" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Last 12 months · Amounts shown in CHF"),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "No income or expense bookings found in the last 12 months.",
+    ),
+  ).toBeVisible();
+
+  await selectDashboardPeriod(page, "10y");
+  await expectDashboardPeriodInUrl(page, seeded.accountBookId, "10y");
+  await expect(
+    page.getByText("Last 10 years · Amounts shown in CHF"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No income or expense bookings found in the last 10 years."),
+  ).toBeVisible();
+
+  await page.reload();
+  await expectDashboardPeriodInUrl(page, seeded.accountBookId, "10y");
+  await expect(
+    page.getByText("Last 10 years · Amounts shown in CHF"),
+  ).toBeVisible();
+
+  await selectDashboardPeriod(page, "12m");
+  await expectDashboardPeriodInUrl(page, seeded.accountBookId, "12m");
+  await expect(
+    page.getByText("Last 12 months · Amounts shown in CHF"),
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Accounts" }).click();
