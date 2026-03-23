@@ -90,6 +90,10 @@ export type LedgerPageViewProps = {
   simpleModalOpened: boolean;
   splitModalOpened: boolean;
   editModalOpened: boolean;
+  isSimpleSubmitting: boolean;
+  isCreateSplitSubmitting: boolean;
+  isEditSubmitting: boolean;
+  isRebookSubmitting: boolean;
   editMode: EditMode;
   createSplitInitialValues?: SplitModalInitialValues;
   editingTransactionData?: {
@@ -110,15 +114,18 @@ export type LedgerPageViewProps = {
   onRowDataUpdated: AgGridReactProps<LedgerRow>["onRowDataUpdated"];
   onAddTransactionClick: () => void;
   onCloseSimpleModal: () => void;
+  onSimpleSubmittingChange: (isSubmitting: boolean) => void;
   onSwitchCreateToSplit: (draft: SimpleTransactionDraftValues) => void;
   onSubmitCreateSimpleTransaction: (
     values: SimpleTransactionValues,
   ) => Promise<void>;
   onCloseSplitModal: () => void;
+  onCreateSplitSubmittingChange: (isSubmitting: boolean) => void;
   onSubmitCreateTransaction: (
     values: TransactionMutationValues,
   ) => Promise<void>;
   onCloseEditModal: () => void;
+  onEditSubmittingChange: (isSubmitting: boolean) => void;
   onEditModalExitTransitionEnd: () => void;
   onSwitchToSplit: (draft: SimpleTransactionDraftValues) => void;
   onSubmitUpdateSimpleTransaction: (
@@ -128,6 +135,7 @@ export type LedgerPageViewProps = {
     values: TransactionMutationValues,
   ) => Promise<void>;
   onCloseRebookModal: () => void;
+  onRebookSubmittingChange: (isSubmitting: boolean) => void;
   onRebookModalExitTransitionEnd: () => void;
   onSubmitRebookBooking: (values: { targetAccountId: string }) => Promise<void>;
   onCloseDeleteModal: () => void;
@@ -146,6 +154,10 @@ export function LedgerPageView({
   simpleModalOpened,
   splitModalOpened,
   editModalOpened,
+  isSimpleSubmitting,
+  isCreateSplitSubmitting,
+  isEditSubmitting,
+  isRebookSubmitting,
   editMode,
   createSplitInitialValues,
   editingTransactionData,
@@ -162,16 +174,20 @@ export function LedgerPageView({
   onRowDataUpdated,
   onAddTransactionClick,
   onCloseSimpleModal,
+  onSimpleSubmittingChange,
   onSwitchCreateToSplit,
   onSubmitCreateSimpleTransaction,
   onCloseSplitModal,
+  onCreateSplitSubmittingChange,
   onSubmitCreateTransaction,
   onCloseEditModal,
+  onEditSubmittingChange,
   onEditModalExitTransitionEnd,
   onSwitchToSplit,
   onSubmitUpdateSimpleTransaction,
   onSubmitUpdateTransaction,
   onCloseRebookModal,
+  onRebookSubmittingChange,
   onRebookModalExitTransitionEnd,
   onSubmitRebookBooking,
   onCloseDeleteModal,
@@ -239,40 +255,66 @@ export function LedgerPageView({
 
       <Modal
         opened={simpleModalOpened}
-        onClose={onCloseSimpleModal}
+        onClose={() => {
+          if (isSimpleSubmitting) return;
+          onCloseSimpleModal();
+        }}
         title="Add Transaction"
         size="xl"
+        closeOnEscape={!isSimpleSubmitting}
+        closeOnClickOutside={!isSimpleSubmitting}
+        withCloseButton={!isSimpleSubmitting}
       >
         <SimpleTransactionModal
           currentAccount={{ id: account.id, label: currentAccountLabel }}
           accounts={simpleCounterAccountOptions}
           onSwitchToSplit={onSwitchCreateToSplit}
-          onClose={onCloseSimpleModal}
+          onClose={() => {
+            if (isSimpleSubmitting) return;
+            onCloseSimpleModal();
+          }}
+          onSubmittingChange={onSimpleSubmittingChange}
           onSubmit={onSubmitCreateSimpleTransaction}
         />
       </Modal>
 
       <Modal
         opened={splitModalOpened}
-        onClose={onCloseSplitModal}
+        onClose={() => {
+          if (isCreateSplitSubmitting) return;
+          onCloseSplitModal();
+        }}
         title="Add Transaction"
         size="100%"
+        closeOnEscape={!isCreateSplitSubmitting}
+        closeOnClickOutside={!isCreateSplitSubmitting}
+        withCloseButton={!isCreateSplitSubmitting}
       >
         <EditTransactionModal
           initialValues={createSplitInitialValues}
           submitLabel="Create"
           accounts={accountOptions}
           currentAccountId={account.id}
-          onClose={onCloseSplitModal}
+          onClose={() => {
+            if (isCreateSplitSubmitting) return;
+            onCloseSplitModal();
+          }}
+          onSubmittingChange={onCreateSplitSubmittingChange}
           onSubmit={onSubmitCreateTransaction}
         />
       </Modal>
 
       <Modal
         opened={editModalOpened}
-        onClose={onCloseEditModal}
+        onClose={() => {
+          if (isEditSubmitting) return;
+          onCloseEditModal();
+        }}
         title="Edit Transaction"
         size={editMode === "SIMPLE" ? "xl" : "100%"}
+        closeOnEscape={!isEditSubmitting}
+        closeOnClickOutside={!isEditSubmitting}
+        withCloseButton={!isEditSubmitting}
         onExitTransitionEnd={onEditModalExitTransitionEnd}
       >
         {editingTransactionData &&
@@ -284,7 +326,11 @@ export function LedgerPageView({
             initialValues={editingSimpleInitialValues}
             submitLabel="Save"
             onSwitchToSplit={onSwitchToSplit}
-            onClose={onCloseEditModal}
+            onClose={() => {
+              if (isEditSubmitting) return;
+              onCloseEditModal();
+            }}
+            onSubmittingChange={onEditSubmittingChange}
             onSubmit={onSubmitUpdateSimpleTransaction}
           />
         ) : editingTransactionData ? (
@@ -292,7 +338,11 @@ export function LedgerPageView({
             initialValues={editingTransactionData}
             accounts={editAccountOptions}
             currentAccountId={account.id}
-            onClose={onCloseEditModal}
+            onClose={() => {
+              if (isEditSubmitting) return;
+              onCloseEditModal();
+            }}
+            onSubmittingChange={onEditSubmittingChange}
             onSubmit={onSubmitUpdateTransaction}
           />
         ) : null}
@@ -300,9 +350,15 @@ export function LedgerPageView({
 
       <Modal
         opened={rebookModalOpened}
-        onClose={onCloseRebookModal}
+        onClose={() => {
+          if (isRebookSubmitting) return;
+          onCloseRebookModal();
+        }}
         title="Rebook Booking"
         size="md"
+        closeOnEscape={!isRebookSubmitting}
+        closeOnClickOutside={!isRebookSubmitting}
+        withCloseButton={!isRebookSubmitting}
         onExitTransitionEnd={onRebookModalExitTransitionEnd}
       >
         {rebooking && (
@@ -313,7 +369,11 @@ export function LedgerPageView({
                 ? "This booking has incomplete unit data and cannot be rebooked."
                 : undefined
             }
-            onClose={onCloseRebookModal}
+            onClose={() => {
+              if (isRebookSubmitting) return;
+              onCloseRebookModal();
+            }}
+            onSubmittingChange={onRebookSubmittingChange}
             onSubmit={onSubmitRebookBooking}
           />
         )}

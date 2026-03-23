@@ -175,6 +175,9 @@ function LedgerPage() {
   const [modalOpened, setModalOpened] = useState(false);
   const [simpleModalOpened, setSimpleModalOpened] = useState(false);
   const [editModalOpened, setEditModalOpened] = useState(false);
+  const [isCreateSplitSubmitting, setIsCreateSplitSubmitting] = useState(false);
+  const [isSimpleSubmitting, setIsSimpleSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [createSplitInitialValues, setCreateSplitInitialValues] = useState<
     SplitModalInitialValues | undefined
   >();
@@ -193,6 +196,7 @@ function LedgerPage() {
   >();
   const [rebooking, setRebooking] = useState<RebookingState | undefined>();
   const [rebookModalOpened, setRebookModalOpened] = useState(false);
+  const [isRebookSubmitting, setIsRebookSubmitting] = useState(false);
   const router = useRouter();
 
   const allAccountOptions = useMemo<AccountOption[]>(
@@ -631,6 +635,10 @@ function LedgerPage() {
       simpleModalOpened={simpleModalOpened}
       splitModalOpened={modalOpened}
       editModalOpened={editModalOpened}
+      isSimpleSubmitting={isSimpleSubmitting}
+      isCreateSplitSubmitting={isCreateSplitSubmitting}
+      isEditSubmitting={isEditSubmitting}
+      isRebookSubmitting={isRebookSubmitting}
       editMode={editMode}
       createSplitInitialValues={createSplitInitialValues}
       editingTransactionData={editingTransactionData}
@@ -654,14 +662,17 @@ function LedgerPage() {
         setSimpleModalOpened(true);
       }}
       onCloseSimpleModal={() => setSimpleModalOpened(false)}
+      onSimpleSubmittingChange={setIsSimpleSubmitting}
       onSwitchCreateToSplit={handleSwitchCreateToSplit}
       onSubmitCreateSimpleTransaction={handleCreateSimpleTransaction}
       onCloseSplitModal={() => {
         setModalOpened(false);
         setCreateSplitInitialValues(undefined);
       }}
+      onCreateSplitSubmittingChange={setIsCreateSplitSubmitting}
       onSubmitCreateTransaction={handleCreateTransaction}
       onCloseEditModal={() => setEditModalOpened(false)}
+      onEditSubmittingChange={setIsEditSubmitting}
       onEditModalExitTransitionEnd={() => {
         setEditingTransactionId(undefined);
         setEditingTransactionData(undefined);
@@ -672,6 +683,7 @@ function LedgerPage() {
       onSubmitUpdateSimpleTransaction={handleUpdateSimpleTransaction}
       onSubmitUpdateTransaction={handleUpdateTransaction}
       onCloseRebookModal={() => setRebookModalOpened(false)}
+      onRebookSubmittingChange={setIsRebookSubmitting}
       onRebookModalExitTransitionEnd={() => {
         setRebooking(undefined);
       }}

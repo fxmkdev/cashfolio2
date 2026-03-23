@@ -4,6 +4,7 @@ import {
   Card,
   Container,
   Group,
+  SegmentedControl,
   Stack,
   Text,
   Title,
@@ -15,14 +16,24 @@ import { AgCharts } from "ag-charts-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import { useMemo } from "react";
 import type { getDashboardIncomeExpenseOverview } from "../../server/dashboard";
+import { DASHBOARD_PERIOD_LABEL_BY_PERIOD } from "../../shared/dashboard-period";
+import {
+  DASHBOARD_PERIOD_10Y,
+  DASHBOARD_PERIOD_12M,
+  type DashboardPeriod,
+} from "./dashboard-page-types";
 
 export type DashboardPageViewProps = {
   overview: Awaited<ReturnType<typeof getDashboardIncomeExpenseOverview>>;
+  selectedPeriod: DashboardPeriod;
+  onPeriodChange: (period: DashboardPeriod) => void;
   onNavigateToAccounts: () => void;
 };
 
 export function DashboardPageView({
   overview,
+  selectedPeriod,
+  onPeriodChange,
   onNavigateToAccounts,
 }: DashboardPageViewProps) {
   const theme = useMantineTheme();
@@ -102,7 +113,7 @@ export function DashboardPageView({
       series: [
         {
           type: "bar",
-          xKey: "monthLabel",
+          xKey: "bucketLabel",
           yKey: "income",
           yName: "Income",
           fill: isDarkMode ? theme.colors.blue[4] : theme.colors.blue[6],
@@ -110,7 +121,7 @@ export function DashboardPageView({
         },
         {
           type: "bar",
-          xKey: "monthLabel",
+          xKey: "bucketLabel",
           yKey: "expense",
           yName: "Expense",
           fill: isDarkMode ? theme.colors.red[4] : theme.colors.red[3],
@@ -118,7 +129,7 @@ export function DashboardPageView({
         },
         {
           type: "line",
-          xKey: "monthLabel",
+          xKey: "bucketLabel",
           yKey: "net",
           yName: "Net Result",
           stroke: isDarkMode ? theme.colors.teal[3] : theme.colors.teal[8],
@@ -199,7 +210,30 @@ export function DashboardPageView({
 
       <Card withBorder radius="md" p="lg">
         <Stack gap="xs">
-          <Title order={4}>Income & Expense Overview</Title>
+          <Group justify="space-between" align="flex-end" gap="sm" wrap="wrap">
+            <Title order={4}>Income & Expense Overview</Title>
+            <SegmentedControl
+              size="xs"
+              value={selectedPeriod}
+              onChange={(value) =>
+                onPeriodChange(
+                  value === DASHBOARD_PERIOD_10Y
+                    ? DASHBOARD_PERIOD_10Y
+                    : DASHBOARD_PERIOD_12M,
+                )
+              }
+              data={[
+                {
+                  label: DASHBOARD_PERIOD_LABEL_BY_PERIOD[DASHBOARD_PERIOD_12M],
+                  value: DASHBOARD_PERIOD_12M,
+                },
+                {
+                  label: DASHBOARD_PERIOD_LABEL_BY_PERIOD[DASHBOARD_PERIOD_10Y],
+                  value: DASHBOARD_PERIOD_10Y,
+                },
+              ]}
+            />
+          </Group>
           <Text c="dimmed" size="sm">
             {overview.periodLabel} · Amounts shown in{" "}
             {overview.referenceCurrency}
@@ -225,7 +259,7 @@ export function DashboardPageView({
           <Text c="dimmed" mt="md">
             {hasBookings
               ? "Income or expense bookings were found, but none could be converted with the available metadata and rates."
-              : "No income or expense bookings found in the last 12 months."}
+              : overview.noBookingsMessage}
           </Text>
         )}
 

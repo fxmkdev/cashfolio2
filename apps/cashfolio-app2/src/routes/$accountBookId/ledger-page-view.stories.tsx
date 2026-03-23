@@ -106,6 +106,10 @@ function LedgerPageStoryHarness({
     useState(startWithSimpleModal);
   const [splitModalOpened, setSplitModalOpened] = useState(startWithSplitModal);
   const [editModalOpened, setEditModalOpened] = useState(startWithEditModal);
+  const [isSimpleSubmitting, setIsSimpleSubmitting] = useState(false);
+  const [isCreateSplitSubmitting, setIsCreateSplitSubmitting] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+  const [isRebookSubmitting, setIsRebookSubmitting] = useState(false);
   const [editMode, setEditMode] = useState<EditMode>("SPLIT");
   const [rebookModalOpened, setRebookModalOpened] = useState(false);
   const [editingTransactionData, setEditingTransactionData] = useState<
@@ -175,6 +179,10 @@ function LedgerPageStoryHarness({
         simpleModalOpened={simpleModalOpened}
         splitModalOpened={splitModalOpened}
         editModalOpened={editModalOpened}
+        isSimpleSubmitting={isSimpleSubmitting}
+        isCreateSplitSubmitting={isCreateSplitSubmitting}
+        isEditSubmitting={isEditSubmitting}
+        isRebookSubmitting={isRebookSubmitting}
         editMode={editMode}
         createSplitInitialValues={createSplitInitialValues}
         editingTransactionData={editingTransactionData}
@@ -196,6 +204,7 @@ function LedgerPageStoryHarness({
           setSimpleModalOpened(true);
         }}
         onCloseSimpleModal={() => setSimpleModalOpened(false)}
+        onSimpleSubmittingChange={setIsSimpleSubmitting}
         onSwitchCreateToSplit={() => {
           setSimpleModalOpened(false);
           setSplitModalOpened(true);
@@ -206,12 +215,14 @@ function LedgerPageStoryHarness({
           setSimpleModalOpened(false);
         }}
         onCloseSplitModal={() => setSplitModalOpened(false)}
+        onCreateSplitSubmittingChange={setIsCreateSplitSubmitting}
         onSubmitCreateTransaction={async (
           _values: TransactionMutationValues,
         ) => {
           setSplitModalOpened(false);
         }}
         onCloseEditModal={() => setEditModalOpened(false)}
+        onEditSubmittingChange={setIsEditSubmitting}
         onEditModalExitTransitionEnd={() => {
           setEditingTransactionData(undefined);
           setEditingSimpleInitialValues(undefined);
@@ -232,6 +243,7 @@ function LedgerPageStoryHarness({
           setEditModalOpened(false);
         }}
         onCloseRebookModal={() => setRebookModalOpened(false)}
+        onRebookSubmittingChange={setIsRebookSubmitting}
         onRebookModalExitTransitionEnd={() => setRebooking(undefined)}
         onSubmitRebookBooking={async () => {
           setRebookModalOpened(false);

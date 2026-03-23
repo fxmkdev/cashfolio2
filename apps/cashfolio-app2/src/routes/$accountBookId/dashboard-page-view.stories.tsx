@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Box, Text } from "@mantine/core";
+import { useState } from "react";
 import { expect, fn, userEvent, within } from "storybook/test";
+import { DASHBOARD_PERIOD_12M } from "../../shared/dashboard-period";
 import {
   DashboardPageView,
   type DashboardPageViewProps,
@@ -9,28 +11,30 @@ import {
 
 const baseOverview: DashboardPageViewProps["overview"] = {
   periodLabel: "Last 12 months",
+  noBookingsMessage:
+    "No income or expense bookings found in the last 12 months.",
   referenceCurrency: "CHF",
   bookingsCount: 24,
   convertedBookingsCount: 24,
   skippedBookingsCount: 0,
   points: [
     {
-      monthStart: "2025-11-01T00:00:00.000Z",
-      monthLabel: "Nov 2025",
+      bucketStart: "2025-11-01T00:00:00.000Z",
+      bucketLabel: "Nov 2025",
       income: 7600,
       expense: 4200,
       net: 3400,
     },
     {
-      monthStart: "2025-12-01T00:00:00.000Z",
-      monthLabel: "Dec 2025",
+      bucketStart: "2025-12-01T00:00:00.000Z",
+      bucketLabel: "Dec 2025",
       income: 7400,
       expense: 4500,
       net: 2900,
     },
     {
-      monthStart: "2026-01-01T00:00:00.000Z",
-      monthLabel: "Jan 2026",
+      bucketStart: "2026-01-01T00:00:00.000Z",
+      bucketLabel: "Jan 2026",
       income: 7800,
       expense: 5000,
       net: 2800,
@@ -40,6 +44,8 @@ const baseOverview: DashboardPageViewProps["overview"] = {
 
 function DashboardRouteSmokeHarness() {
   const navigate = useNavigate();
+  const [selectedPeriod, setSelectedPeriod] =
+    useState<DashboardPageViewProps["selectedPeriod"]>(DASHBOARD_PERIOD_12M);
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -48,6 +54,8 @@ function DashboardRouteSmokeHarness() {
     <Box>
       <DashboardPageView
         overview={baseOverview}
+        selectedPeriod={selectedPeriod}
+        onPeriodChange={setSelectedPeriod}
         onNavigateToAccounts={() =>
           navigate({
             to: "/$accountBookId/accounts",
@@ -66,6 +74,8 @@ const meta = {
   component: DashboardPageView,
   args: {
     overview: baseOverview,
+    selectedPeriod: DASHBOARD_PERIOD_12M,
+    onPeriodChange: fn(),
     onNavigateToAccounts: fn(),
   },
 } satisfies Meta<typeof DashboardPageView>;
