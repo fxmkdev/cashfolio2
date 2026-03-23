@@ -225,7 +225,9 @@ test("rebook booking to another compatible account", async ({ page }) => {
   await page.getByLabel("Description").fill("E2E Rebook Transaction");
   await simpleDialog.getByRole("textbox", { name: "Counter account" }).click();
   await page
-    .getByRole("option", { name: accountOptionNameRegex(seeded.savingsAccount.name) })
+    .getByRole("option", {
+      name: accountOptionNameRegex(seeded.savingsAccount.name),
+    })
     .first()
     .click();
   await simpleDialog
