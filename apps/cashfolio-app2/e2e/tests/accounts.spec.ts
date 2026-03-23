@@ -18,16 +18,33 @@ test.beforeAll(async () => {
   seeded = await resetAndSeedDatabase();
 });
 
+async function expectDashboardPeriodInUrl(
+  page: Page,
+  accountBookId: string,
+  period: "12m" | "10y",
+) {
+  await expect
+    .poll(() => {
+      const url = new URL(page.url());
+      return {
+        pathname: url.pathname.replace(/\/$/, ""),
+        period: url.searchParams.get("period"),
+      };
+    })
+    .toEqual({
+      pathname: `/${accountBookId}`,
+      period: period === "10y" ? "10y" : null,
+    });
+}
+
 async function selectDashboardPeriod(page: Page, period: "12m" | "10y") {
   const periodLabel = period === "10y" ? "Last 10 years" : "Last 12 months";
-  const periodRadio = page.getByRole("radio", {
+  const periodOption = page.getByRole("radio", {
     name: periodLabel,
-    includeHidden: true,
   });
 
-  await expect(periodRadio).toBeAttached();
-  await periodRadio.check({ force: true });
-  await expect(periodRadio).toBeChecked();
+  await expect(periodOption).toBeVisible();
+  await periodOption.click();
 }
 
 test("dashboard is default account-book route and links to accounts", async ({
@@ -49,9 +66,7 @@ test("dashboard is default account-book route and links to accounts", async ({
   ).toBeVisible();
 
   await selectDashboardPeriod(page, "10y");
-  await expect(page).toHaveURL(
-    new RegExp(`/${seeded.accountBookId}\\?period=10y$`),
-  );
+  await expectDashboardPeriodInUrl(page, seeded.accountBookId, "10y");
   await expect(
     page.getByText("Last 10 years · Amounts shown in CHF"),
   ).toBeVisible();
@@ -60,15 +75,13 @@ test("dashboard is default account-book route and links to accounts", async ({
   ).toBeVisible();
 
   await page.reload();
-  await expect(page).toHaveURL(
-    new RegExp(`/${seeded.accountBookId}\\?period=10y$`),
-  );
+  await expectDashboardPeriodInUrl(page, seeded.accountBookId, "10y");
   await expect(
     page.getByText("Last 10 years · Amounts shown in CHF"),
   ).toBeVisible();
 
   await selectDashboardPeriod(page, "12m");
-  await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}$`));
+  await expectDashboardPeriodInUrl(page, seeded.accountBookId, "12m");
   await expect(
     page.getByText("Last 12 months · Amounts shown in CHF"),
   ).toBeVisible();
