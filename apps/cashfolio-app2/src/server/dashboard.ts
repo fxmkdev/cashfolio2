@@ -141,14 +141,12 @@ function getDashboardPeriodConfig(
 export const getDashboardIncomeExpenseOverview = createServerFn({
   method: "GET",
 })
-  .inputValidator(
-    (data: { accountBookId: string; period: unknown }) => ({
-      accountBookId: data.accountBookId,
-      period: isDashboardPeriod(data.period)
-        ? data.period
-        : DEFAULT_DASHBOARD_PERIOD,
-    }),
-  )
+  .inputValidator((data: { accountBookId: string; period: unknown }) => ({
+    accountBookId: data.accountBookId,
+    period: isDashboardPeriod(data.period)
+      ? data.period
+      : DEFAULT_DASHBOARD_PERIOD,
+  }))
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
