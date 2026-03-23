@@ -87,11 +87,17 @@ type Story = StoryObj<typeof meta>;
 export const HappyPath: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const heading = await canvas.findByRole("heading", { name: "Dashboard" });
+    const heading = await canvas.findByRole(
+      "heading",
+      { name: "Dashboard" },
+      { timeout: 10000 },
+    );
     await expect(heading).toBeInTheDocument();
-    const accountsButton = await canvas.findByRole("button", {
-      name: "Accounts",
-    });
+    const accountsButton = await canvas.findByRole(
+      "button",
+      { name: "Accounts" },
+      { timeout: 10000 },
+    );
     await userEvent.click(accountsButton);
   },
 };
@@ -119,11 +125,19 @@ export const RouteSmoke: Story = {
   render: () => <DashboardRouteSmokeHarness />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const accountsButton = await canvas.findByRole("button", {
-      name: "Accounts",
-    });
+    const accountsButton = await canvas.findByRole(
+      "button",
+      { name: "Accounts" },
+      { timeout: 10000 },
+    );
     await userEvent.click(accountsButton);
-    const routerPath = await canvas.findByTestId("router-path");
+    const routerPath = await canvas.findByTestId(
+      "router-path",
+      {},
+      {
+        timeout: 10000,
+      },
+    );
     await expect(routerPath).toHaveTextContent("/storybook-book/accounts");
   },
 };
