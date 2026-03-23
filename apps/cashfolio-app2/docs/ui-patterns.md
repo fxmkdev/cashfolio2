@@ -217,16 +217,29 @@ with split bookings:
 - **Booking row reordering**: enabled via AG Grid row drag in both create and
   edit flows
 
-## Simple Transaction Creation
+## Simple Transaction Creation / Editing
 
-`src/components/simple-transaction-modal.tsx` handles quick creation of
-two-booking transactions from the ledger route
+`src/components/simple-transaction-modal.tsx` handles quick creation and
+eligible edit of two-booking transactions from the ledger route
 (`src/routes/$accountBookId/$accountId.tsx`).
+
+- Create entrypoint:
+  - ledger toolbar exposes a single `Add Transaction` button
+  - there is no separate `Add Split Transaction` toolbar button
+  - users can switch one-way to split editor from the simple create dialog via
+    `Switch to split editor`
+  - switch carries over current simple-form draft values into split form
 
 - Entry fields:
   - date, description, and amount (first row)
   - current account (read-only), direction toggle action icon, and counter
     account (second row)
+- On transaction edit:
+  - the row action remains a single `Edit` action
+  - if the transaction is simple-edit eligible, the edit modal opens in simple
+    mode first
+  - users can switch one-way to split editor via `Switch to split editor`
+  - switch carries over current simple-form draft values into split form
 - Always creates exactly 2 bookings:
   - current account booking
   - selected counter account booking
@@ -247,6 +260,12 @@ two-booking transactions from the ledger route
   - all active `EQUITY` accounts are available
   - for security units, compatibility is symbol-based (trade currency is not
     part of unit identity)
+- Simple-edit eligibility (strict, lossless):
+  - exactly 2 bookings
+  - both bookings share the same unit identifier
+  - both bookings share the same day
+  - both booking descriptions are empty
+  - exactly one booking belongs to the current ledger account
 - Server-side validation re-checks all constraints before creation
 
 ### Conditional Editability Affordance

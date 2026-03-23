@@ -9,29 +9,103 @@ import {
 import {
   getTransactionBookingsByDescription,
   resetAndSeedDatabase,
+  seedThreeBookingSplitTransaction,
   type SeededData,
 } from "../support/db";
-import { openDialogFromButton } from "../support/ui";
 
 let seeded: SeededData;
 
-async function openCreateTransaction(page: Page): Promise<Locator> {
-  return openDialogFromButton(page, {
-    buttonName: "Add Split Transaction",
-    dialogName: "Add Transaction",
+function simpleCreateDialog(page: Page): Locator {
+  return page.getByRole("dialog", { name: "Add Transaction" }).filter({
+    has: page.getByRole("button", { name: "Switch to split editor" }),
   });
 }
 
-async function openCreateSimpleTransaction(page: Page): Promise<Locator> {
-  return openDialogFromButton(page, {
-    buttonName: "Add Simple Transaction",
-    dialogName: "Add Simple Transaction",
+function splitCreateDialog(page: Page): Locator {
+  return page.getByRole("dialog", { name: "Add Transaction" }).filter({
+    has: page.getByRole("button", { name: "Add booking" }),
   });
+}
+
+async function opensWithin(
+  locator: Locator,
+  timeout: number,
+): Promise<boolean> {
+  try {
+    await expect(locator).toBeVisible({ timeout });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function openAddTransactionDialog(
+  page: Page,
+): Promise<"SIMPLE" | "SPLIT"> {
+  const button = page.getByRole("button", { name: "Add Transaction" });
+  await expect(button).toBeVisible();
+
+  const simpleDialog = simpleCreateDialog(page);
+  const splitDialog = splitCreateDialog(page);
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await button.click();
+    if (await opensWithin(simpleDialog, 1500)) {
+      return "SIMPLE";
+    }
+    if (await opensWithin(splitDialog, 1500)) {
+      return "SPLIT";
+    }
+  }
+
+  await expect(simpleDialog.or(splitDialog)).toBeVisible();
+  return (await simpleDialog.isVisible()) ? "SIMPLE" : "SPLIT";
+}
+
+async function openCreateTransaction(page: Page): Promise<Locator> {
+  const openedVariant = await openAddTransactionDialog(page);
+  const splitDialog = splitCreateDialog(page);
+  if (openedVariant === "SPLIT") {
+    await expect(splitDialog).toBeVisible();
+    return splitDialog;
+  }
+
+  const simpleDialog = simpleCreateDialog(page);
+  await simpleDialog
+    .getByRole("button", { name: "Switch to split editor" })
+    .click();
+  await expect(simpleDialog).toHaveCount(0);
+  await expect(splitDialog).toBeVisible();
+  return splitDialog;
+}
+
+async function openCreateSimpleTransaction(page: Page): Promise<Locator> {
+  const openedVariant = await openAddTransactionDialog(page);
+  expect(openedVariant).toBe("SIMPLE");
+  const simpleDialog = simpleCreateDialog(page);
+  await expect(simpleDialog).toBeVisible();
+  return simpleDialog;
 }
 
 async function fillTransactionHeader(dialog: Locator, description: string) {
   await dialog.getByLabel("Date").fill("01.01.2026");
   await dialog.getByLabel("Description").fill(description);
+}
+
+async function openEditTransaction(page: Page, description: string) {
+  const row = agGridRowByText(page, description);
+  await clickRowAction(row, "Edit");
+  await expect(
+    page.getByRole("heading", { name: "Edit Transaction" }),
+  ).toBeVisible();
+}
+
+function assetAccountOptionLabel(name: string): string {
+  return `Asset / Assets / ${name}`;
+}
+
+function accountOptionNameRegex(name: string): RegExp {
+  return new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 }
 
 test.beforeAll(async () => {
@@ -47,7 +121,12 @@ test("create, edit, delete, and create multi-booking transaction", async ({
   await fillTransactionHeader(createDialog, "E2E Transaction 1");
   await setGridCellValue(page, 0, "credit", "100");
   await setGridCellValue(page, 1, "date", "01.01.2026");
-  await setGridCellValue(page, 1, "account", seeded.savingsAccount.name);
+  await setGridCellValue(
+    page,
+    1,
+    "account",
+    assetAccountOptionLabel(seeded.savingsAccount.name),
+  );
   await setGridCellValue(page, 1, "debit", "100");
   await createDialog.getByRole("button", { name: "Create" }).click();
 
@@ -84,11 +163,21 @@ test("create, edit, delete, and create multi-booking transaction", async ({
   await fillTransactionHeader(createSplitDialog, "E2E Split Transaction");
   await setGridCellValue(page, 0, "credit", "300");
   await setGridCellValue(page, 1, "date", "01.01.2026");
-  await setGridCellValue(page, 1, "account", seeded.savingsAccount.name);
+  await setGridCellValue(
+    page,
+    1,
+    "account",
+    assetAccountOptionLabel(seeded.savingsAccount.name),
+  );
   await setGridCellValue(page, 1, "debit", "100");
   await page.getByRole("button", { name: "Add booking" }).click();
   await setGridCellValue(page, 2, "date", "01.01.2026");
-  await setGridCellValue(page, 2, "account", seeded.investmentsAccount.name);
+  await setGridCellValue(
+    page,
+    2,
+    "account",
+    assetAccountOptionLabel(seeded.investmentsAccount.name),
+  );
   await setGridCellValue(page, 2, "debit", "200");
   await createSplitDialog.getByRole("button", { name: "Create" }).click();
 
@@ -105,7 +194,7 @@ test("create simple transaction", async ({ page }) => {
 
   await page.getByLabel("Date").fill("02.01.2026");
   await page.getByLabel("Description").fill("E2E Simple Transaction");
-  await page.getByRole("textbox", { name: "Counter account" }).click();
+  await simpleDialog.getByRole("textbox", { name: "Counter account" }).click();
   await page
     .getByRole("option", { name: /E2E Expense/ })
     .first()
@@ -134,9 +223,11 @@ test("rebook booking to another compatible account", async ({ page }) => {
   const simpleDialog = await openCreateSimpleTransaction(page);
   await page.getByLabel("Date").fill("04.01.2026");
   await page.getByLabel("Description").fill("E2E Rebook Transaction");
-  await page.getByRole("textbox", { name: "Counter account" }).click();
+  await simpleDialog.getByRole("textbox", { name: "Counter account" }).click();
   await page
-    .getByRole("option", { name: new RegExp(seeded.savingsAccount.name) })
+    .getByRole("option", {
+      name: accountOptionNameRegex(seeded.savingsAccount.name),
+    })
     .first()
     .click();
   await simpleDialog
@@ -159,20 +250,30 @@ test("rebook booking to another compatible account", async ({ page }) => {
   await targetAccountInput.click();
   await expect(
     page
-      .getByRole("option", { name: new RegExp(seeded.investmentsAccount.name) })
+      .getByRole("option", {
+        name: accountOptionNameRegex(seeded.investmentsAccount.name),
+      })
       .first(),
   ).toBeVisible();
   await expect(
-    page.getByRole("option", { name: new RegExp(seeded.cashAccount.name) }),
+    page.getByRole("option", {
+      name: accountOptionNameRegex(seeded.cashAccount.name),
+    }),
   ).toHaveCount(0);
   await expect(
-    page.getByRole("option", { name: new RegExp(seeded.cryptoAccount.name) }),
+    page.getByRole("option", {
+      name: accountOptionNameRegex(seeded.cryptoAccount.name),
+    }),
   ).toHaveCount(0);
   await expect(
-    page.getByRole("option", { name: new RegExp(seeded.expenseAccount.name) }),
+    page.getByRole("option", {
+      name: accountOptionNameRegex(seeded.expenseAccount.name),
+    }),
   ).toHaveCount(0);
   await page
-    .getByRole("option", { name: new RegExp(seeded.investmentsAccount.name) })
+    .getByRole("option", {
+      name: accountOptionNameRegex(seeded.investmentsAccount.name),
+    })
     .first()
     .click();
   await targetAccountInput.press("Enter");
@@ -195,6 +296,136 @@ test("rebook booking to another compatible account", async ({ page }) => {
   ).toEqual([-100, 100]);
 });
 
+test("eligible edit opens simple editor and ineligible edit opens split editor", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
+
+  await openCreateSimpleTransaction(page);
+  const simpleCreateDialog = page.getByRole("dialog", {
+    name: "Add Transaction",
+  });
+  await page.getByLabel("Date").fill("04.01.2026");
+  await page.getByLabel("Description").fill("E2E Editable Simple");
+  await simpleCreateDialog
+    .getByRole("textbox", { name: "Counter account" })
+    .click();
+  await page
+    .getByRole("option", {
+      name: accountOptionNameRegex(seeded.expenseAccount.name),
+    })
+    .first()
+    .click();
+  await page.getByLabel("Amount").fill("20");
+  await simpleCreateDialog.getByRole("button", { name: "Create" }).click();
+
+  await openEditTransaction(page, "E2E Editable Simple");
+  const simpleEditDialog = page.getByRole("dialog", {
+    name: "Edit Transaction",
+  });
+  await expect(
+    simpleEditDialog.getByRole("button", { name: "Switch to split editor" }),
+  ).toBeVisible();
+  await expect(
+    simpleEditDialog.getByRole("textbox", { name: "Counter account" }),
+  ).toBeVisible();
+  await simpleEditDialog.getByRole("button", { name: "Save" }).click();
+
+  await page.goto(`/${seeded.accountBookId}/${seeded.expenseAccount.id}`);
+  await openEditTransaction(page, "E2E Editable Simple");
+  const expenseEditDialog = page.getByRole("dialog", {
+    name: "Edit Transaction",
+  });
+  await expect(
+    expenseEditDialog.getByRole("button", { name: "Add booking" }),
+  ).toBeVisible();
+  await expect(
+    expenseEditDialog.getByRole("button", { name: "Switch to split editor" }),
+  ).toHaveCount(0);
+  await expenseEditDialog.getByRole("button", { name: "Cancel" }).click();
+
+  await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
+  await seedThreeBookingSplitTransaction({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Ineligible Split",
+    currentAccountId: seeded.cashAccount.id,
+    debitAccountIds: [seeded.savingsAccount.id, seeded.investmentsAccount.id],
+    date: "2026-01-04T00:00:00.000Z",
+  });
+  await page.reload();
+
+  await openEditTransaction(page, "E2E Ineligible Split");
+  const splitEditDialog = page.getByRole("dialog", {
+    name: "Edit Transaction",
+  });
+  await expect(
+    splitEditDialog.getByRole("button", { name: "Add booking" }),
+  ).toBeVisible();
+  await splitEditDialog.getByRole("button", { name: "Cancel" }).click();
+});
+
+test("switch from simple edit to split carries over edited values", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
+
+  await openCreateSimpleTransaction(page);
+  const simpleCreateDialog = page.getByRole("dialog", {
+    name: "Add Transaction",
+  });
+  await page.getByLabel("Date").fill("05.01.2026");
+  await page.getByLabel("Description").fill("E2E Carry Switch");
+  await simpleCreateDialog
+    .getByRole("textbox", { name: "Counter account" })
+    .click();
+  await page
+    .getByRole("option", {
+      name: accountOptionNameRegex(seeded.expenseAccount.name),
+    })
+    .first()
+    .click();
+  await page.getByLabel("Amount").fill("15");
+  await simpleCreateDialog.getByRole("button", { name: "Create" }).click();
+
+  await openEditTransaction(page, "E2E Carry Switch");
+  const editDialog = page.getByRole("dialog", {
+    name: "Edit Transaction",
+  });
+
+  await editDialog.getByLabel("Description").fill("E2E Carry Switch Updated");
+  await editDialog.getByLabel("Amount").fill("55");
+  await editDialog
+    .getByRole("button", { name: "Switch to split editor" })
+    .click();
+
+  await expect(
+    editDialog.getByRole("button", { name: "Add booking" }),
+  ).toBeVisible();
+  await expect(editDialog.getByLabel("Description")).toHaveValue(
+    "E2E Carry Switch Updated",
+  );
+
+  const firstRow = editDialog
+    .locator('.ag-center-cols-container .ag-row[row-index="0"]')
+    .first();
+  await expect(agGridCellByColId(firstRow, "credit")).toContainText("55.00");
+
+  await editDialog.getByRole("button", { name: "Save" }).click();
+  await expect(agGridRowByText(page, "E2E Carry Switch Updated")).toBeVisible();
+
+  const bookings = await getTransactionBookingsByDescription({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Carry Switch Updated",
+  });
+  expect(bookings).toHaveLength(2);
+
+  const bookingByAccountId = new Map(
+    bookings.map((booking) => [booking.accountId, booking]),
+  );
+  expect(bookingByAccountId.get(seeded.cashAccount.id)?.value).toBe(-55);
+  expect(bookingByAccountId.get(seeded.expenseAccount.id)?.value).toBe(55);
+});
+
 test("create security simple transaction preserves account metadata", async ({
   page,
 }) => {
@@ -204,9 +435,11 @@ test("create security simple transaction preserves account metadata", async ({
 
   await page.getByLabel("Date").fill("03.01.2026");
   await page.getByLabel("Description").fill("E2E Security Simple Transaction");
-  await page.getByRole("textbox", { name: "Counter account" }).click();
+  await simpleDialog.getByRole("textbox", { name: "Counter account" }).click();
   await page
-    .getByRole("option", { name: seeded.securityCounterAccount.name })
+    .getByRole("option", {
+      name: accountOptionNameRegex(seeded.securityCounterAccount.name),
+    })
     .first()
     .click();
   await page.getByLabel("Amount").fill("3");

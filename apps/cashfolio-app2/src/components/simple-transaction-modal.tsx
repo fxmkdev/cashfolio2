@@ -16,11 +16,27 @@ import { isExpenseAccount, isIncomeAccount } from "../shared/account-utils";
 import type { AccountOption } from "./edit-transaction-modal";
 import { FormattedNumberInput } from "./formatted-number-input";
 
-type Direction = "DEBIT" | "CREDIT";
+export type SimpleTransactionDirection = "DEBIT" | "CREDIT";
+
+export type SimpleTransactionInitialValues = {
+  date: Date;
+  description: string;
+  counterAccountId: string;
+  amount: number;
+  direction: SimpleTransactionDirection;
+};
+
+export type SimpleTransactionDraftValues = {
+  date: Date | null;
+  description: string;
+  counterAccountId: string;
+  amount: string | number | undefined;
+  direction: SimpleTransactionDirection;
+};
 
 function getForcedDirection(
   account: AccountOption | undefined,
-): Direction | null {
+): SimpleTransactionDirection | null {
   if (isIncomeAccount(account)) return "DEBIT";
   if (isExpenseAccount(account)) return "CREDIT";
   return null;
@@ -29,6 +45,9 @@ function getForcedDirection(
 export function SimpleTransactionModal({
   currentAccount,
   accounts,
+  initialValues,
+  submitLabel,
+  onSwitchToSplit,
   onClose,
   onSubmit,
 }: {
@@ -37,13 +56,16 @@ export function SimpleTransactionModal({
     label: string;
   };
   accounts: AccountOption[];
+  initialValues?: SimpleTransactionInitialValues;
+  submitLabel?: string;
+  onSwitchToSplit?: (draft: SimpleTransactionDraftValues) => void;
   onClose: () => void;
   onSubmit: (values: {
     date: string;
     description: string;
     counterAccountId: string;
     amount: number;
-    direction: Direction;
+    direction: SimpleTransactionDirection;
   }) => Promise<void>;
 }) {
   const today = startOfDay(new Date());
@@ -51,11 +73,13 @@ export function SimpleTransactionModal({
   const form = useForm({
     mode: "controlled",
     initialValues: {
-      date: today,
-      description: "",
-      counterAccountId: "",
-      amount: undefined as string | number | undefined,
-      direction: "DEBIT" as Direction,
+      date: initialValues?.date ?? today,
+      description: initialValues?.description ?? "",
+      counterAccountId: initialValues?.counterAccountId ?? "",
+      amount:
+        initialValues?.amount ?? (undefined as string | number | undefined),
+      direction:
+        initialValues?.direction ?? ("DEBIT" as SimpleTransactionDirection),
     },
     validate: {
       date: (value) => {
@@ -212,10 +236,30 @@ export function SimpleTransactionModal({
         </Group>
 
         <Group justify="end">
+          {onSwitchToSplit && (
+            <Button
+              type="button"
+              variant="default"
+              mr="auto"
+              onClick={() =>
+                onSwitchToSplit({
+                  date: form.values.date ?? null,
+                  description: form.values.description,
+                  counterAccountId: form.values.counterAccountId,
+                  amount: form.values.amount,
+                  direction: forcedDirection ?? form.values.direction,
+                })
+              }
+            >
+              Switch to split editor
+            </Button>
+          )}
           <Button variant="subtle" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit">Create</Button>
+          <Button type="submit">
+            {submitLabel ?? (initialValues ? "Save" : "Create")}
+          </Button>
         </Group>
       </Stack>
     </form>

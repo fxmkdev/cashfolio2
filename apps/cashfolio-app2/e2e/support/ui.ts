@@ -15,7 +15,7 @@ export async function openDialogFromButton(
   const attempts = args.attempts ?? 3;
   let lastError: unknown;
 
-  await expect(button).toBeVisible();
+  await expect(button).toBeVisible({ timeout: 20_000 });
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     await button.click();

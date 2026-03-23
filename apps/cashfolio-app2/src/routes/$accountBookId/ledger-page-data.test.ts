@@ -1,0 +1,200 @@
+import { describe, expect, test } from "vitest";
+import { Unit } from "../../.prisma-client/enums";
+import { deriveSimpleTransactionEditState } from "./ledger-page-data";
+
+describe("deriveSimpleTransactionEditState", () => {
+  test("returns simple initial values for an eligible transaction", () => {
+    const result = deriveSimpleTransactionEditState({
+      currentAccountId: "cash",
+      transaction: {
+        description: "Groceries",
+        bookings: [
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            account: "cash",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            debit: undefined,
+            credit: 42,
+          },
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            account: "expense",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            debit: 42,
+            credit: undefined,
+          },
+        ],
+      },
+    });
+
+    expect(result.eligible).toBe(true);
+    if (!result.eligible) return;
+
+    expect(result.initialValues.counterAccountId).toBe("expense");
+    expect(result.initialValues.amount).toBe(42);
+    expect(result.initialValues.direction).toBe("CREDIT");
+    expect(result.initialValues.description).toBe("Groceries");
+  });
+
+  test("rejects transactions with more than two bookings", () => {
+    const result = deriveSimpleTransactionEditState({
+      currentAccountId: "cash",
+      transaction: {
+        bookings: [
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            account: "cash",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            debit: 10,
+          },
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            account: "expense",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            credit: 7,
+          },
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            account: "savings",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            credit: 3,
+          },
+        ],
+      },
+    });
+
+    expect(result.eligible).toBe(false);
+    if (result.eligible) return;
+    expect(result.disabledReason).toContain("exactly two bookings");
+  });
+
+  test("rejects transactions with different booking dates", () => {
+    const result = deriveSimpleTransactionEditState({
+      currentAccountId: "cash",
+      transaction: {
+        bookings: [
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            account: "cash",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            debit: 10,
+          },
+          {
+            date: "2026-01-11T00:00:00.000Z",
+            account: "expense",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            credit: 10,
+          },
+        ],
+      },
+    });
+
+    expect(result.eligible).toBe(false);
+    if (result.eligible) return;
+    expect(result.disabledReason).toContain("same date");
+  });
+
+  test("rejects transactions with booking descriptions", () => {
+    const result = deriveSimpleTransactionEditState({
+      currentAccountId: "cash",
+      transaction: {
+        bookings: [
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            account: "cash",
+            description: "Cash leg",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            debit: 10,
+          },
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            account: "expense",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            credit: 10,
+          },
+        ],
+      },
+    });
+
+    expect(result.eligible).toBe(false);
+    if (result.eligible) return;
+    expect(result.disabledReason).toContain("booking descriptions");
+  });
+
+  test("rejects transactions when booking amounts differ", () => {
+    const result = deriveSimpleTransactionEditState({
+      currentAccountId: "cash",
+      transaction: {
+        bookings: [
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            account: "cash",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            credit: 10,
+          },
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            account: "expense",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            debit: 9,
+          },
+        ],
+      },
+    });
+
+    expect(result.eligible).toBe(false);
+    if (result.eligible) return;
+    expect(result.disabledReason).toContain("matching amounts");
+  });
+
+  test("rejects transactions when booking sides are not opposite", () => {
+    const result = deriveSimpleTransactionEditState({
+      currentAccountId: "cash",
+      transaction: {
+        bookings: [
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            account: "cash",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            credit: 10,
+          },
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            account: "expense",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            credit: 10,
+          },
+        ],
+      },
+    });
+
+    expect(result.eligible).toBe(false);
+    if (result.eligible) return;
+    expect(result.disabledReason).toContain("one debit and one credit");
+  });
+});

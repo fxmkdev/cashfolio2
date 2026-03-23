@@ -18,8 +18,12 @@ import {
   isBookingValueCompatibleWithAccountType,
   isBookingUnitCompatibleWithAccount,
 } from "../../shared/account-utils";
+import {
+  getBookingUnitFields,
+  type BookingUnitFieldsSource,
+} from "../../shared/booking-unit-fields";
 import { useTransactionScroll } from "../../hooks/use-transaction-scroll";
-import { IconBolt, IconCashPlus } from "@tabler/icons-react";
+import { IconBolt } from "@tabler/icons-react";
 import { DataGrid } from "../../components/data-grid";
 import {
   createSimpleTransaction,
@@ -37,8 +41,13 @@ import {
 import {
   EditTransactionModal,
   type AccountOption,
+  type BookingValues,
 } from "../../components/edit-transaction-modal";
-import { SimpleTransactionModal } from "../../components/simple-transaction-modal";
+import {
+  SimpleTransactionModal,
+  type SimpleTransactionDirection,
+  type SimpleTransactionDraftValues,
+} from "../../components/simple-transaction-modal";
 import { RebookBookingModal } from "../../components/rebook-booking-modal";
 import { loadLedgerPageData } from "./ledger-page-loader";
 import { useLedgerColumnDefs } from "./ledger-page-columns";
@@ -46,11 +55,154 @@ import {
   buildLedgerRows,
   createAccountOptions,
   createCurrentAccountLabel,
+  deriveSimpleTransactionEditState,
   getSimpleTransactionDisabledReason,
   getSimpleTransactionUnitIdentifier,
+  type SimpleTransactionEditInitialValues,
   getUnitLabel,
 } from "./ledger-page-data";
 import { parseLedgerSearch } from "./ledger-page-types";
+
+type TransactionBookingInput = {
+  date: string;
+  accountId: string;
+  description: string;
+  unit: Unit;
+  currency?: string;
+  cryptocurrency?: string;
+  symbol?: string;
+  tradeCurrency?: string;
+  value: number;
+};
+
+type TransactionMutationValues = {
+  description: string;
+  bookings: TransactionBookingInput[];
+};
+
+type SplitModalInitialValues = {
+  description?: string;
+  bookings?: Omit<BookingValues, "key">[];
+};
+
+type SimpleTransactionValues = {
+  date: string;
+  description: string;
+  counterAccountId: string;
+  amount: number;
+  direction: SimpleTransactionDirection;
+};
+
+type EditMode = "SIMPLE" | "SPLIT";
+
+function buildSimpleTransactionValues(args: {
+  values: SimpleTransactionValues;
+  currentAccount: { id: string } & BookingUnitFieldsSource;
+  counterAccount: AccountOption;
+}): TransactionMutationValues {
+  const currentUnitFields = getBookingUnitFields(
+    args.currentAccount,
+    "current account",
+  );
+  const counterUnitFields =
+    args.counterAccount.type === AccountType.EQUITY
+      ? currentUnitFields
+      : getBookingUnitFields(args.counterAccount, "counter account");
+
+  const currentValue =
+    args.values.direction === "DEBIT"
+      ? args.values.amount
+      : -args.values.amount;
+
+  return {
+    description: args.values.description,
+    bookings: [
+      {
+        date: args.values.date,
+        accountId: args.currentAccount.id,
+        description: "",
+        ...currentUnitFields,
+        value: currentValue,
+      },
+      {
+        date: args.values.date,
+        accountId: args.values.counterAccountId,
+        description: "",
+        ...counterUnitFields,
+        value: -currentValue,
+      },
+    ],
+  };
+}
+
+function normalizeSimpleDraft(args: {
+  draft: SimpleTransactionDraftValues;
+  fallback: SimpleTransactionEditInitialValues;
+}): SimpleTransactionValues {
+  const amount = Number(args.draft.amount);
+  const nextAmount =
+    Number.isFinite(amount) && amount > 0 ? amount : args.fallback.amount;
+
+  const date =
+    args.draft.date && !isNaN(args.draft.date.getTime())
+      ? args.draft.date
+      : args.fallback.date;
+
+  return {
+    date: date.toISOString(),
+    description: args.draft.description,
+    counterAccountId:
+      args.draft.counterAccountId || args.fallback.counterAccountId,
+    amount: nextAmount,
+    direction: args.draft.direction ?? args.fallback.direction,
+  };
+}
+
+function toEditTransactionData(
+  id: string,
+  description: string,
+  bookings: TransactionBookingInput[],
+): Awaited<ReturnType<typeof getTransaction>> {
+  const splitBookings = bookings.map((booking) => ({
+    date: booking.date,
+    account: booking.accountId,
+    description: booking.description,
+    unit: booking.unit,
+    currency: booking.currency,
+    cryptocurrency: booking.cryptocurrency,
+    symbol: booking.symbol,
+    tradeCurrency: booking.tradeCurrency,
+    debit: booking.value > 0 ? booking.value : undefined,
+    credit: booking.value < 0 ? -booking.value : undefined,
+  }));
+
+  return {
+    id,
+    description,
+    bookings: splitBookings,
+  };
+}
+
+function toCreateSplitInitialValues(
+  description: string,
+  bookings: TransactionBookingInput[],
+): SplitModalInitialValues {
+  return {
+    description,
+    bookings: bookings.map((booking) => ({
+      date: booking.date,
+      account: booking.accountId,
+      description: booking.description,
+      unit: booking.unit,
+      currency: booking.currency,
+      cryptocurrency: booking.cryptocurrency,
+      symbol: booking.symbol,
+      tradeCurrency: booking.tradeCurrency,
+      debit: booking.value > 0 ? booking.value : undefined,
+      credit: booking.value < 0 ? -booking.value : undefined,
+    })),
+  };
+}
 
 export const Route = createFileRoute("/$accountBookId/$accountId")({
   validateSearch: parseLedgerSearch,
@@ -67,11 +219,18 @@ function LedgerPage() {
   const [modalOpened, setModalOpened] = useState(false);
   const [simpleModalOpened, setSimpleModalOpened] = useState(false);
   const [editModalOpened, setEditModalOpened] = useState(false);
+  const [createSplitInitialValues, setCreateSplitInitialValues] = useState<
+    SplitModalInitialValues | undefined
+  >();
+  const [editMode, setEditMode] = useState<EditMode>("SPLIT");
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | undefined
   >();
   const [editingTransactionData, setEditingTransactionData] = useState<
     Awaited<ReturnType<typeof getTransaction>> | undefined
+  >();
+  const [editingSimpleInitialValues, setEditingSimpleInitialValues] = useState<
+    SimpleTransactionEditInitialValues | undefined
   >();
   const [deletingTransaction, setDeletingTransaction] = useState<
     { id: string; description: string } | undefined
@@ -93,6 +252,11 @@ function LedgerPage() {
   >();
   const [rebookModalOpened, setRebookModalOpened] = useState(false);
   const router = useRouter();
+
+  const allAccountOptions = useMemo<AccountOption[]>(
+    () => createAccountOptions(accounts, () => true),
+    [accounts],
+  );
 
   const accountOptions = useMemo<AccountOption[]>(
     () => createAccountOptions(accounts, (a) => a.isActive),
@@ -141,40 +305,71 @@ function LedgerPage() {
       ),
     [account.id, accounts, currentSimpleUnitIdentifier],
   );
+
+  const simpleTransactionDisabledReason = getSimpleTransactionDisabledReason({
+    account,
+    currentSimpleUnitIdentifier,
+    simpleCounterAccountOptionsLength: simpleCounterAccountOptions.length,
+  });
+
   const currentAccountLabel = useMemo(
     () => createCurrentAccountLabel(account),
     [account],
   );
 
-  async function handleCreateTransaction(values: {
-    description: string;
-    bookings: {
-      date: string;
-      accountId: string;
-      description: string;
-      unit: Unit;
-      currency?: string;
-      cryptocurrency?: string;
-      symbol?: string;
-      tradeCurrency?: string;
-      value: number;
-    }[];
-  }) {
+  const currentAccountOption = useMemo<AccountOption>(
+    () => ({
+      label: currentAccountLabel,
+      value: account.id,
+      unit: account.unit as Unit,
+      currency: account.currency ?? undefined,
+      cryptocurrency: account.cryptocurrency ?? undefined,
+      symbol: account.symbol ?? undefined,
+      tradeCurrency: account.tradeCurrency ?? undefined,
+      type: account.type,
+      equityAccountSubtype: account.equityAccountSubtype,
+    }),
+    [account, currentAccountLabel],
+  );
+
+  const editSimpleCounterAccountOptions = useMemo<AccountOption[]>(() => {
+    if (!editingSimpleInitialValues) return simpleCounterAccountOptions;
+
+    const selectedCounterAccountId =
+      editingSimpleInitialValues.counterAccountId;
+    if (
+      simpleCounterAccountOptions.some(
+        (option) => option.value === selectedCounterAccountId,
+      )
+    ) {
+      return simpleCounterAccountOptions;
+    }
+
+    const selectedCounterAccount = allAccountOptions.find(
+      (option) => option.value === selectedCounterAccountId,
+    );
+    if (!selectedCounterAccount) return simpleCounterAccountOptions;
+
+    return [selectedCounterAccount, ...simpleCounterAccountOptions];
+  }, [
+    allAccountOptions,
+    editingSimpleInitialValues,
+    simpleCounterAccountOptions,
+  ]);
+
+  async function handleCreateTransaction(values: TransactionMutationValues) {
     const transaction = await createTransaction({
       data: { accountBookId, ...values },
     });
     setModalOpened(false);
+    setCreateSplitInitialValues(undefined);
     pendingScrollRef.current = transaction.id;
     router.invalidate();
   }
 
-  async function handleCreateSimpleTransaction(values: {
-    date: string;
-    description: string;
-    counterAccountId: string;
-    amount: number;
-    direction: "DEBIT" | "CREDIT";
-  }) {
+  async function handleCreateSimpleTransaction(
+    values: SimpleTransactionValues,
+  ) {
     const transaction = await createSimpleTransaction({
       data: {
         accountBookId,
@@ -187,32 +382,72 @@ function LedgerPage() {
     router.invalidate();
   }
 
+  function handleSwitchCreateToSplit(draft: SimpleTransactionDraftValues) {
+    const normalized = normalizeSimpleDraft({
+      draft,
+      fallback: {
+        date: new Date(),
+        description: "",
+        counterAccountId: simpleCounterAccountOptions[0]?.value ?? "",
+        amount: 1,
+        direction: "DEBIT",
+      },
+    });
+    const counterAccount = allAccountOptions.find(
+      (option) => option.value === normalized.counterAccountId,
+    );
+    if (!counterAccount) {
+      throw new Error("Counter account was not found.");
+    }
+
+    const payload = buildSimpleTransactionValues({
+      values: normalized,
+      currentAccount: {
+        id: currentAccountOption.value,
+        unit: currentAccountOption.unit,
+        currency: currentAccountOption.currency,
+        cryptocurrency: currentAccountOption.cryptocurrency,
+        symbol: currentAccountOption.symbol,
+        tradeCurrency: currentAccountOption.tradeCurrency,
+      },
+      counterAccount,
+    });
+
+    setCreateSplitInitialValues(
+      toCreateSplitInitialValues(payload.description, payload.bookings),
+    );
+    setSimpleModalOpened(false);
+    setModalOpened(true);
+  }
+
   const handleEditClick = useCallback(
     async function handleEditClick(transactionId: string) {
       const data = await getTransaction({
         data: { transactionId, accountBookId },
       });
+      const simpleEditState = deriveSimpleTransactionEditState({
+        transaction: data,
+        currentAccountId: account.id,
+      });
+
       setEditingTransactionId(transactionId);
       setEditingTransactionData(data);
+      if (
+        simpleEditState.eligible &&
+        simpleTransactionDisabledReason === null
+      ) {
+        setEditMode("SIMPLE");
+        setEditingSimpleInitialValues(simpleEditState.initialValues);
+      } else {
+        setEditMode("SPLIT");
+        setEditingSimpleInitialValues(undefined);
+      }
       setEditModalOpened(true);
     },
-    [accountBookId],
+    [account.id, accountBookId, simpleTransactionDisabledReason],
   );
 
-  async function handleUpdateTransaction(values: {
-    description: string;
-    bookings: {
-      date: string;
-      accountId: string;
-      description: string;
-      unit: Unit;
-      currency?: string;
-      cryptocurrency?: string;
-      symbol?: string;
-      tradeCurrency?: string;
-      value: number;
-    }[];
-  }) {
+  async function handleUpdateTransaction(values: TransactionMutationValues) {
     await updateTransaction({
       data: {
         accountBookId,
@@ -223,6 +458,82 @@ function LedgerPage() {
     setEditModalOpened(false);
     pendingScrollRef.current = editingTransactionId;
     router.invalidate();
+  }
+
+  async function handleUpdateSimpleTransaction(
+    values: SimpleTransactionValues,
+  ) {
+    const counterAccount = allAccountOptions.find(
+      (option) => option.value === values.counterAccountId,
+    );
+    if (!counterAccount) {
+      throw new Error("Counter account was not found.");
+    }
+
+    const payload = buildSimpleTransactionValues({
+      values,
+      currentAccount: {
+        id: currentAccountOption.value,
+        unit: currentAccountOption.unit,
+        currency: currentAccountOption.currency,
+        cryptocurrency: currentAccountOption.cryptocurrency,
+        symbol: currentAccountOption.symbol,
+        tradeCurrency: currentAccountOption.tradeCurrency,
+      },
+      counterAccount,
+    });
+
+    await updateTransaction({
+      data: {
+        accountBookId,
+        transactionId: editingTransactionId!,
+        ...payload,
+      },
+    });
+
+    setEditModalOpened(false);
+    pendingScrollRef.current = editingTransactionId;
+    router.invalidate();
+  }
+
+  function handleSwitchToSplit(draft: SimpleTransactionDraftValues) {
+    if (!editingSimpleInitialValues || !editingTransactionData) {
+      return;
+    }
+
+    const normalized = normalizeSimpleDraft({
+      draft,
+      fallback: editingSimpleInitialValues,
+    });
+    const counterAccount = allAccountOptions.find(
+      (option) => option.value === normalized.counterAccountId,
+    );
+    if (!counterAccount) {
+      throw new Error("Counter account was not found.");
+    }
+
+    const payload = buildSimpleTransactionValues({
+      values: normalized,
+      currentAccount: {
+        id: currentAccountOption.value,
+        unit: currentAccountOption.unit,
+        currency: currentAccountOption.currency,
+        cryptocurrency: currentAccountOption.cryptocurrency,
+        symbol: currentAccountOption.symbol,
+        tradeCurrency: currentAccountOption.tradeCurrency,
+      },
+      counterAccount,
+    });
+
+    setEditingTransactionData({
+      ...editingTransactionData,
+      ...toEditTransactionData(
+        editingTransactionData.id,
+        payload.description,
+        payload.bookings,
+      ),
+    });
+    setEditMode("SPLIT");
   }
 
   async function handleDeleteTransaction() {
@@ -358,11 +669,6 @@ function LedgerPage() {
   );
 
   const unitLabel = getUnitLabel(account);
-  const simpleTransactionDisabledReason = getSimpleTransactionDisabledReason({
-    account,
-    currentSimpleUnitIdentifier,
-    simpleCounterAccountOptionsLength: simpleCounterAccountOptions.length,
-  });
 
   const backTab = (
     account.type === AccountType.EQUITY && account.equityAccountSubtype
@@ -400,25 +706,28 @@ function LedgerPage() {
         </Group>
         <Group gap="sm">
           <Tooltip
-            label={simpleTransactionDisabledReason ?? "Quick two-booking entry"}
+            label={
+              simpleTransactionDisabledReason
+                ? `${simpleTransactionDisabledReason} Split editor will open instead.`
+                : "Quick two-booking entry"
+            }
           >
             <span>
               <Button
                 leftSection={<IconBolt size={16} />}
-                onClick={() => setSimpleModalOpened(true)}
-                disabled={!!simpleTransactionDisabledReason}
+                onClick={() => {
+                  setCreateSplitInitialValues(undefined);
+                  if (simpleTransactionDisabledReason) {
+                    setModalOpened(true);
+                    return;
+                  }
+                  setSimpleModalOpened(true);
+                }}
               >
-                Add Simple Transaction
+                Add Transaction
               </Button>
             </span>
           </Tooltip>
-          <Button
-            leftSection={<IconCashPlus size={16} />}
-            variant="default"
-            onClick={() => setModalOpened(true)}
-          >
-            Add Split Transaction
-          </Button>
         </Group>
       </Group>
 
@@ -437,12 +746,13 @@ function LedgerPage() {
       <Modal
         opened={simpleModalOpened}
         onClose={() => setSimpleModalOpened(false)}
-        title="Add Simple Transaction"
+        title="Add Transaction"
         size="xl"
       >
         <SimpleTransactionModal
           currentAccount={{ id: account.id, label: currentAccountLabel }}
           accounts={simpleCounterAccountOptions}
+          onSwitchToSplit={handleSwitchCreateToSplit}
           onClose={() => setSimpleModalOpened(false)}
           onSubmit={handleCreateSimpleTransaction}
         />
@@ -450,14 +760,22 @@ function LedgerPage() {
 
       <Modal
         opened={modalOpened}
-        onClose={() => setModalOpened(false)}
+        onClose={() => {
+          setModalOpened(false);
+          setCreateSplitInitialValues(undefined);
+        }}
         title="Add Transaction"
         size="100%"
       >
         <EditTransactionModal
+          initialValues={createSplitInitialValues}
+          submitLabel="Create"
           accounts={accountOptions}
           currentAccountId={account.id}
-          onClose={() => setModalOpened(false)}
+          onClose={() => {
+            setModalOpened(false);
+            setCreateSplitInitialValues(undefined);
+          }}
           onSubmit={handleCreateTransaction}
         />
       </Modal>
@@ -466,13 +784,27 @@ function LedgerPage() {
         opened={editModalOpened}
         onClose={() => setEditModalOpened(false)}
         title="Edit Transaction"
-        size="100%"
+        size={editMode === "SIMPLE" ? "xl" : "100%"}
         onExitTransitionEnd={() => {
           setEditingTransactionId(undefined);
           setEditingTransactionData(undefined);
+          setEditingSimpleInitialValues(undefined);
+          setEditMode("SPLIT");
         }}
       >
-        {editingTransactionData && (
+        {editingTransactionData &&
+        editMode === "SIMPLE" &&
+        editingSimpleInitialValues ? (
+          <SimpleTransactionModal
+            currentAccount={{ id: account.id, label: currentAccountLabel }}
+            accounts={editSimpleCounterAccountOptions}
+            initialValues={editingSimpleInitialValues}
+            submitLabel="Save"
+            onSwitchToSplit={handleSwitchToSplit}
+            onClose={() => setEditModalOpened(false)}
+            onSubmit={handleUpdateSimpleTransaction}
+          />
+        ) : editingTransactionData ? (
           <EditTransactionModal
             initialValues={editingTransactionData}
             accounts={editAccountOptions}
@@ -480,7 +812,7 @@ function LedgerPage() {
             onClose={() => setEditModalOpened(false)}
             onSubmit={handleUpdateTransaction}
           />
-        )}
+        ) : null}
       </Modal>
 
       <Modal

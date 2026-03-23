@@ -290,6 +290,59 @@ export async function getTransactionBookingsByDescription(args: {
   }));
 }
 
+export async function seedThreeBookingSplitTransaction(args: {
+  accountBookId: string;
+  description: string;
+  currentAccountId: string;
+  debitAccountIds: [string, string];
+  date?: string;
+}) {
+  const transactionId = createId();
+  const bookingDate = new Date(args.date ?? "2026-01-04T00:00:00.000Z");
+
+  await prisma.transaction.create({
+    data: {
+      id: transactionId,
+      accountBookId: args.accountBookId,
+      description: args.description,
+      bookings: {
+        create: [
+          {
+            id: createId(),
+            accountId: args.currentAccountId,
+            date: bookingDate,
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: -300,
+            sortOrder: 0,
+          },
+          {
+            id: createId(),
+            accountId: args.debitAccountIds[0],
+            date: bookingDate,
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: 100,
+            sortOrder: 1,
+          },
+          {
+            id: createId(),
+            accountId: args.debitAccountIds[1],
+            date: bookingDate,
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: 200,
+            sortOrder: 2,
+          },
+        ],
+      },
+    },
+  });
+}
+
 export async function seedAssetAccountWithMissingReferenceBalance(args: {
   accountBookId: string;
   counterAccountId: string;
