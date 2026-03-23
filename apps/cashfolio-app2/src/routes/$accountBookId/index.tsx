@@ -213,7 +213,7 @@ function DashboardPage() {
       search:
         nextPeriod === DASHBOARD_PERIOD_10Y
           ? { period: DASHBOARD_PERIOD_10Y }
-          : {},
+          : { period: undefined },
     });
   }
 
