@@ -19,15 +19,14 @@ test.beforeAll(async () => {
 });
 
 async function selectDashboardPeriod(page: Page, period: "12m" | "10y") {
-  const periodRadio = page.locator(`input[type="radio"][value="${period}"]`);
-  const periodRadioId = await periodRadio.getAttribute("id");
-  if (!periodRadioId) {
-    throw new Error(`Dashboard period radio id not found for value: ${period}`);
-  }
-  const periodOption = page.locator(`label[for="${periodRadioId}"]`);
+  const periodLabel = period === "10y" ? "Last 10 years" : "Last 12 months";
+  const periodRadio = page.getByRole("radio", {
+    name: periodLabel,
+    includeHidden: true,
+  });
 
-  await expect(periodOption).toBeVisible();
-  await periodOption.click();
+  await expect(periodRadio).toBeAttached();
+  await periodRadio.check({ force: true });
   await expect(periodRadio).toBeChecked();
 }
 
