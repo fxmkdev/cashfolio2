@@ -85,7 +85,7 @@ Route-level logic that doesn't belong in components is extracted into hooks in
 - The period switch supports:
   - **Last 12 months** with monthly buckets
   - **Last 10 years** with yearly buckets (`currentYear - 9` through
-    `currentYear`; current year is year-to-date)
+    `currentYear`; current year is year-to-date up to now)
 - When conversion rates are unavailable for some bookings, the chart remains
   visible and a partial-data note is shown.
 
