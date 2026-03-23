@@ -19,15 +19,14 @@ test.beforeAll(async () => {
 });
 
 async function selectDashboardPeriod(page: Page, period: "12m" | "10y") {
-  await page.evaluate((value) => {
-    const input = document.querySelector<HTMLInputElement>(
-      `input[type="radio"][value="${value}"]`,
-    );
-    if (!input) {
-      throw new Error(`Dashboard period input not found for value: ${value}`);
-    }
-    input.click();
-  }, period);
+  const periodLabel = period === "10y" ? "Last 10 years" : "Last 12 months";
+  const periodRadio = page.getByRole("radio", {
+    name: periodLabel,
+    includeHidden: true,
+  });
+
+  await expect(periodRadio).toBeAttached();
+  await periodRadio.check({ force: true });
 }
 
 test("dashboard is default account-book route and links to accounts", async ({
