@@ -2,3 +2,4 @@
 // All packages except `@mantine/hooks` require styles imports
 import "@mantine/core/styles.css";
 import "@mantine/dates/styles.css";
+import "@mantine/nprogress/styles.css";

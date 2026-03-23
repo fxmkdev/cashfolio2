@@ -42,6 +42,18 @@ paths are relative to that app directory.
 - `$accountBookId/index.tsx` uses `period: "12m" | "10y"` to switch the
   dashboard overview between the default 12-month view and a 10-year view
 
+### Global Navigation Progress
+
+- Global top loading bar is rendered in `src/routes/__root.tsx` via
+  `NavigationLoadingBar`
+- Implementation lives in `src/components/navigation-loading-bar.tsx` and uses
+  `@mantine/nprogress` + `useRouterState`
+- The progress bar tracks URL transitions only
+  (`state.isTransitioning && state.isLoading`), including search-param
+  navigations (for example, dashboard period switching)
+- It intentionally does not run for same-URL refetches triggered via
+  `router.invalidate()` after mutations
+
 ### Loader Pattern
 
 - Use `Promise.all()` to fetch multiple server functions in parallel within
