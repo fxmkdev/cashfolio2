@@ -53,7 +53,10 @@ function DashboardRouteSmokeHarness() {
   return (
     <Box>
       <DashboardPageView
-        overview={baseOverview}
+        overview={{
+          ...baseOverview,
+          convertedBookingsCount: 0,
+        }}
         selectedPeriod={selectedPeriod}
         onPeriodChange={setSelectedPeriod}
         onNavigateToAccounts={() =>
@@ -85,6 +88,12 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const HappyPath: Story = {
+  args: {
+    overview: {
+      ...baseOverview,
+      convertedBookingsCount: 0,
+    },
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const heading = await canvas.findByRole(
