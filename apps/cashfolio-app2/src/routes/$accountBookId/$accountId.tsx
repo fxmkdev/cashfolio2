@@ -49,7 +49,7 @@ import {
   type TransactionBookingInput,
   type TransactionMutationValues,
 } from "./ledger-page-view";
-import { parseLedgerSearch } from "./ledger-page-types";
+import { parseLedgerSearch, type LedgerRow } from "./ledger-page-types";
 
 function buildSimpleTransactionValues(args: {
   values: SimpleTransactionValues;
@@ -609,10 +609,8 @@ function LedgerPage() {
   });
 
   const navigate = Route.useNavigate();
-  const { pendingScrollRef, handleRowDataUpdated } = useTransactionScroll(
-    transactionId,
-    navigate,
-  );
+  const { pendingScrollRef, handleRowDataUpdated } =
+    useTransactionScroll<LedgerRow>(transactionId, navigate);
 
   const unitLabel = getUnitLabel(account);
 
@@ -652,7 +650,7 @@ function LedgerPage() {
       simpleCounterAccountOptions={simpleCounterAccountOptions}
       editSimpleCounterAccountOptions={editSimpleCounterAccountOptions}
       rebookTargetAccountOptions={rebookTargetAccountOptions}
-      onRowDataUpdated={(event) => handleRowDataUpdated(event as never)}
+      onRowDataUpdated={handleRowDataUpdated}
       onAddTransactionClick={() => {
         setCreateSplitInitialValues(undefined);
         if (simpleTransactionDisabledReason) {
