@@ -49,8 +49,8 @@ paths are relative to that app directory.
 - Implementation lives in `src/components/navigation-loading-bar.tsx` and uses
   `@mantine/nprogress` + `useRouterState`
 - The progress bar tracks URL transitions only
-  (`state.isTransitioning && state.isLoading`), including search-param
-  navigations (for example, dashboard period switching)
+  (`state.isLoading && state.location.href !== state.resolvedLocation.href`),
+  including search-param navigations (for example, dashboard period switching)
 - It intentionally does not run for same-URL refetches triggered via
   `router.invalidate()` after mutations
 

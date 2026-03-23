@@ -6,7 +6,14 @@ const START_DELAY_MS = 120;
 
 export function NavigationLoadingBar() {
   const isRouteLoadPending = useRouterState({
-    select: (state) => state.isTransitioning && state.isLoading,
+    select: (state) => {
+      const resolvedHref = state.resolvedLocation?.href;
+      return (
+        state.isLoading &&
+        resolvedHref !== undefined &&
+        state.location.href !== resolvedHref
+      );
+    },
   });
 
   const startTimeoutRef = useRef<number | undefined>(undefined);
