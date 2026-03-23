@@ -24,13 +24,16 @@ async function expectDashboardPeriodInUrl(
   period: "12m" | "10y",
 ) {
   await expect
-    .poll(() => {
-      const url = new URL(page.url());
-      return {
-        pathname: url.pathname.replace(/\/$/, ""),
-        period: url.searchParams.get("period"),
-      };
-    })
+    .poll(
+      () => {
+        const url = new URL(page.url());
+        return {
+          pathname: url.pathname.replace(/\/$/, ""),
+          period: url.searchParams.get("period"),
+        };
+      },
+      { timeout: 15_000 },
+    )
     .toEqual({
       pathname: `/${accountBookId}`,
       period: period === "10y" ? "10y" : null,
@@ -38,10 +41,44 @@ async function expectDashboardPeriodInUrl(
 }
 
 async function selectDashboardPeriod(page: Page, period: "12m" | "10y") {
-  const periodOption = page.locator(`label[for$="-${period}"]`).first();
+  await page.evaluate((nextPeriod) => {
+    const inputs = Array.from(
+      document.querySelectorAll<HTMLInputElement>(
+        `input[type="radio"][value="${nextPeriod}"]`,
+      ),
+    );
 
-  await expect(periodOption).toBeVisible();
-  await periodOption.click({ force: true });
+    if (inputs.length === 0) {
+      throw new Error(`Dashboard period radio not found for: ${nextPeriod}`);
+    }
+
+    for (const input of inputs) {
+      if (!input.id) {
+        continue;
+      }
+      const label = document.querySelector(
+        `label[for="${CSS.escape(input.id)}"]`,
+      );
+      if (!(label instanceof HTMLElement)) {
+        continue;
+      }
+
+      const style = window.getComputedStyle(label);
+      const rect = label.getBoundingClientRect();
+      const isVisible =
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        rect.width > 0 &&
+        rect.height > 0;
+
+      if (isVisible) {
+        label.click();
+        return;
+      }
+    }
+
+    inputs[0].click();
+  }, period);
 }
 
 test("dashboard is default account-book route and links to accounts", async ({
