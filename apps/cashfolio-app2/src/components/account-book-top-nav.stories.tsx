@@ -27,11 +27,15 @@ export const AccountsActive: Story = {
 export const RendersAnchorTabs: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(
-      canvas.getByRole("link", { name: "Dashboard" }),
-    ).toHaveAttribute("href", "/storybook-book");
-    await expect(
-      canvas.getByRole("link", { name: "Accounts" }),
-    ).toHaveAttribute("href", "/storybook-book/accounts?tab=ASSET&mode=active");
+    const dashboardTab = canvas.getByRole("tab", { name: "Dashboard" });
+    const accountsTab = canvas.getByRole("tab", { name: "Accounts" });
+
+    await expect(dashboardTab).toHaveAttribute("href", "/storybook-book");
+    await expect(accountsTab).toHaveAttribute(
+      "href",
+      "/storybook-book/accounts?tab=ASSET&mode=active",
+    );
+    await expect(dashboardTab.tagName).toBe("A");
+    await expect(accountsTab.tagName).toBe("A");
   },
 };
