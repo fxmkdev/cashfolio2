@@ -11,6 +11,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
+import { AccountBookTopNav } from "../../components/account-book-top-nav";
 import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
 import {
   getBookingUnitIdentifier,
@@ -679,16 +680,24 @@ function LedgerPage() {
       ? `EQUITY-${account.equityAccountSubtype}`
       : account.type
   ) as "ASSET" | "LIABILITY" | `EQUITY-${EquityAccountSubtype}`;
+  const backMode = account.isActive ? "active" : "archived";
+  const accountsHref = `/${accountBookId}/accounts?tab=${encodeURIComponent(backTab)}&mode=${backMode}`;
 
   return (
     <Container fluid py="xl" px="xl">
+      <AccountBookTopNav
+        activeView="accounts"
+        dashboardHref={`/${accountBookId}`}
+        accountsHref={accountsHref}
+      />
+
       <Group mb="lg" gap="md" justify="space-between">
         <Group gap="md">
           <Breadcrumbs fz="h2" fw={700}>
             {getAccountsBreadcrumbSegments({
               accountBookId,
               tab: backTab,
-              mode: account.isActive ? "active" : "archived",
+              mode: backMode,
             })}
             <Text fz="inherit" fw="inherit">
               {getTypeLabel(account.type, account.equityAccountSubtype)}

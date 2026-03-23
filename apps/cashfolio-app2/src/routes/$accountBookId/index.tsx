@@ -2,7 +2,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
 import {
   Alert,
-  Button,
   Card,
   Container,
   Group,
@@ -13,9 +12,10 @@ import {
   useComputedColorScheme,
   useMantineTheme,
 } from "@mantine/core";
-import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
+import { IconAlertTriangle } from "@tabler/icons-react";
 import { AgCharts } from "ag-charts-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
+import { AccountBookTopNav } from "../../components/account-book-top-nav";
 import { getDashboardIncomeExpenseOverview } from "../../server/dashboard";
 import { DASHBOARD_PERIOD_LABEL_BY_PERIOD } from "../../shared/dashboard-period";
 import {
@@ -219,24 +219,14 @@ function DashboardPage() {
 
   return (
     <Container fluid py="xl" px="xl">
+      <AccountBookTopNav
+        activeView="dashboard"
+        dashboardHref={`/${accountBookId}`}
+        accountsHref={`/${accountBookId}/accounts?tab=ASSET&mode=active`}
+      />
+
       <Group mb="lg" justify="space-between" align="center" mih={36}>
         <Title order={2}>Dashboard</Title>
-        <Button
-          variant="default"
-          leftSection={<IconListDetails size={16} />}
-          onClick={() =>
-            navigate({
-              to: "/$accountBookId/accounts",
-              params: { accountBookId },
-              search: {
-                tab: "ASSET",
-                mode: "active",
-              },
-            })
-          }
-        >
-          Accounts
-        </Button>
       </Group>
 
       <Card withBorder radius="md" p="lg">

@@ -81,7 +81,7 @@ async function selectDashboardPeriod(page: Page, period: "12m" | "10y") {
   }, period);
 }
 
-test("dashboard is default account-book route and links to accounts", async ({
+test("dashboard is default account-book route and links via top nav", async ({
   page,
 }) => {
   await page.goto(`/${seeded.accountBookId}`);
@@ -120,10 +120,30 @@ test("dashboard is default account-book route and links to accounts", async ({
     page.getByText("Last 12 months · Amounts shown in CHF"),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Accounts" }).click();
+  const dashboardTab = page.getByRole("tab", { name: "Dashboard" });
+  const accountsTab = page.getByRole("tab", { name: "Accounts" });
+
+  await expect(dashboardTab).toHaveAttribute(
+    "href",
+    `/${seeded.accountBookId}`,
+  );
+  await expect(accountsTab).toHaveAttribute(
+    "href",
+    `/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`,
+  );
+
+  await accountsTab.click();
   await expect(page).toHaveURL(
     new RegExp(`/${seeded.accountBookId}/accounts\\?tab=ASSET&mode=active$`),
   );
+
+  const dashboardTabOnAccounts = page.getByRole("tab", { name: "Dashboard" });
+  await expect(dashboardTabOnAccounts).toHaveAttribute(
+    "href",
+    `/${seeded.accountBookId}`,
+  );
+  await dashboardTabOnAccounts.click();
+  await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}$`));
 });
 
 test("create, edit, archive, and unarchive account", async ({ page }) => {
@@ -177,8 +197,17 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "Add Transaction" }),
   ).toBeVisible();
-  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=archived`);
-  await expect(archivedRow).toBeVisible();
+  const accountsTabOnArchivedLedger = page.getByRole("tab", {
+    name: "Accounts",
+  });
+  await expect(accountsTabOnArchivedLedger).toHaveAttribute(
+    "href",
+    `/${seeded.accountBookId}/accounts?tab=ASSET&mode=archived`,
+  );
+  await accountsTabOnArchivedLedger.click();
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}/accounts\\?tab=ASSET&mode=archived$`),
+  );
 
   await clickRowAction(archivedRow, "Unarchive");
   await expect(agGridRowByText(page, updatedName)).toHaveCount(0);
@@ -201,6 +230,16 @@ test("navigate from accounts grid to ledger", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "Add Transaction" }),
   ).toBeVisible();
+
+  const accountsTabOnLedger = page.getByRole("tab", { name: "Accounts" });
+  await expect(accountsTabOnLedger).toHaveAttribute(
+    "href",
+    `/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`,
+  );
+  await accountsTabOnLedger.click();
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}/accounts\\?tab=ASSET&mode=active$`),
+  );
 });
 
 test("balance column visibility and baseline values across tabs/modes", async ({

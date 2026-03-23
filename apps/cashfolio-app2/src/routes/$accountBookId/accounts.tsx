@@ -12,11 +12,8 @@ import {
   Title,
   Group,
 } from "@mantine/core";
-import {
-  IconArchive,
-  IconLayoutDashboard,
-  IconPlus,
-} from "@tabler/icons-react";
+import { IconArchive, IconPlus } from "@tabler/icons-react";
+import { AccountBookTopNav } from "../../components/account-book-top-nav";
 import { useExpandedGroups } from "../../hooks/use-expanded-groups";
 import { ConfirmArchiveModal } from "../../components/confirm-archive-modal";
 import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
@@ -310,6 +307,12 @@ function AccountsPage() {
 
   return (
     <Container fluid py="xl" px="xl">
+      <AccountBookTopNav
+        activeView="accounts"
+        dashboardHref={`/${accountBookId}`}
+        accountsHref={`/${accountBookId}/accounts?tab=${encodeURIComponent(tab)}&mode=${mode}`}
+      />
+
       <Group mb="lg" gap="md" justify="space-between" mih={36}>
         {isArchivedMode ? (
           <Breadcrumbs fz="h2" fw={700} lh="var(--mantine-h2-line-height)">
@@ -324,18 +327,6 @@ function AccountsPage() {
           <Title order={2}>Accounts</Title>
         )}
         <Group>
-          <Button
-            variant="default"
-            leftSection={<IconLayoutDashboard size={16} />}
-            onClick={() =>
-              navigate({
-                to: "/$accountBookId",
-                params: { accountBookId },
-              })
-            }
-          >
-            Dashboard
-          </Button>
           {!isArchivedMode && (
             <>
               <Button

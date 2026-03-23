@@ -12,6 +12,18 @@ paths are relative to that app directory.
   should look like Mantine anchors. Avoid `Anchor` + `component={Link}` with
   casts.
 
+## Top Navigation Pattern
+
+- Use `AccountBookTopNav` (`src/components/account-book-top-nav.tsx`) on all
+  account-book routes: dashboard (`/$accountBookId/`), accounts
+  (`/$accountBookId/accounts`), and ledger (`/$accountBookId/$accountId`).
+- `AccountBookTopNav` uses Mantine `Tabs` with `variant="pills"` and shows
+  `Cashfolio` text plus `Dashboard`/`Accounts` navigation tabs.
+- Navigation tabs must render as anchor elements with `href` attributes for
+  accessibility and link semantics.
+- Ledger pages should derive the `Accounts` target from current account context
+  (matching account type tab and active/archived mode).
+
 ## Shared Utilities (`src/shared/`)
 
 `src/shared/account-utils.ts` contains pure utility functions used across
