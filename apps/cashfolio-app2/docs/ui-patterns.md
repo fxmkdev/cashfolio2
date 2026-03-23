@@ -30,11 +30,28 @@ routes, components, and server functions:
 Route-level logic that doesn't belong in components is extracted into hooks in
 `src/hooks/`:
 
-| Hook                   | File                         | Purpose                                                                   |
-| ---------------------- | ---------------------------- | ------------------------------------------------------------------------- |
-| `useExpandedGroups`    | `use-expanded-groups.ts`     | Persist/restore expanded group state via sessionStorage                   |
-| `useTransactionScroll` | `use-transaction-scroll.ts`  | Scroll-to and flash a transaction row on the ledger grid                  |
-| `useDialogSubmitState` | `use-dialog-submit-state.ts` | Reusable async-submit guard with in-flight state and optional parent sync |
+| Hook                   | File                        | Purpose                                                  |
+| ---------------------- | --------------------------- | -------------------------------------------------------- |
+| `useExpandedGroups`    | `use-expanded-groups.ts`    | Persist/restore expanded group state via sessionStorage  |
+| `useTransactionScroll` | `use-transaction-scroll.ts` | Scroll-to and flash a transaction row on the ledger grid |
+
+## Route Page View Pattern
+
+Route files in `src/routes/` should act as orchestration containers and keep
+render trees in extracted `*PageView` components.
+
+- Route containers keep:
+  - `createFileRoute` config (`loader`, `validateSearch`)
+  - route hooks (`Route.useLoaderData`, `Route.useParams`, route navigation)
+  - server mutations and router invalidation
+  - state/derived data orchestration
+- Extracted view components keep:
+  - route-visible JSX trees (headers, grids, modals, actions)
+  - typed prop contracts for data and UI callbacks
+- Storybook:
+  - create stories for each `*PageView` (happy path, empty/partial/modal states)
+  - keep one lightweight route smoke story to validate router path/search/link
+    integration
 
 ## Modal Pattern
 
@@ -45,25 +62,6 @@ Route-level logic that doesn't belong in components is extracted into hooks in
   "New Account") while closing
 - **`forceUpdate` reducer**: triggers a re-render after programmatic
   `setFieldValue` calls on uncontrolled forms
-
-## Async Dialog Submission Pattern
-
-All async dialogs should use `useDialogSubmitState` to provide predictable
-submit UX and prevent duplicate requests.
-
-- Use `runSubmit(async () => { ... })` in the submit path so button clicks and
-  Enter-key submits share the same in-flight guard.
-- While submitting:
-  - primary action uses `loading` and `disabled`
-  - cancel/secondary actions are disabled
-  - modal closing is locked via `closeOnEscape={false}`,
-    `closeOnClickOutside={false}`, `withCloseButton={false}`, and guarded
-    `onClose`
-- For dialogs rendered inside a parent-owned `<Modal>`, pass
-  `onSubmittingChange` from the child form component so the parent can lock
-  close behavior while the request is in flight.
-- Confirm dialogs (`ConfirmDeleteModal`, `ConfirmArchiveModal`) should await
-  async `onConfirm` handlers through the same guard pattern.
 
 ## Action Icons
 
@@ -101,11 +99,8 @@ submit UX and prevent duplicate requests.
 - The v1 chart combines:
   - grouped absolute bars for Income and Expense
   - a signed Net line (`income - expense`) on the same axis
-- Data is normalized to the account-book reference currency.
-- The period switch supports:
-  - **Last 12 months** with monthly buckets
-  - **Last 10 years** with yearly buckets (`currentYear - 9` through
-    `currentYear`; current year is year-to-date up to now)
+- Data spans the last 12 months and is normalized to the account-book reference
+  currency.
 - When conversion rates are unavailable for some bookings, the chart remains
   visible and a partial-data note is shown.
 

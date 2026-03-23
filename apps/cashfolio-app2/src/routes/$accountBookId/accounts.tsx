@@ -4,34 +4,15 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
-import {
-  Breadcrumbs,
-  Button,
-  Container,
-  Tabs,
-  Title,
-  Group,
-} from "@mantine/core";
-import {
-  IconArchive,
-  IconLayoutDashboard,
-  IconPlus,
-} from "@tabler/icons-react";
 import { useExpandedGroups } from "../../hooks/use-expanded-groups";
-import { ConfirmArchiveModal } from "../../components/confirm-archive-modal";
-import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
-import { EditAccountModal } from "../../components/edit-account-modal";
 import type {
   AccountInitialValues,
   TransformedFormValues,
 } from "../../components/edit-account-modal";
-import { EditAccountGroupModal } from "../../components/edit-account-group-modal";
 import type {
   AccountGroupInitialValues,
   AccountGroupTransformedFormValues,
 } from "../../components/edit-account-group-modal";
-import { ReorderGroupChildrenModal } from "../../components/reorder-group-children-modal";
-import { DataGrid } from "../../components/data-grid";
 import {
   archiveAccount,
   archiveAccountGroup,
@@ -45,10 +26,8 @@ import {
   updateAccount,
   updateAccountGroup,
 } from "../../server/accounts";
-import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
 import {
   REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
-  getEntityLabel,
   type ReferenceCurrencyTotalFooterRow,
   parseAccountsSearch,
   tabs,
@@ -63,6 +42,7 @@ import {
   useSelectedSiblingRows,
 } from "./accounts-page-data";
 import { useAccountTreeColumnDefs } from "./accounts-page-columns";
+import { AccountsPageView } from "./accounts-page-view";
 
 export const Route = createFileRoute("/$accountBookId/accounts")({
   validateSearch: parseAccountsSearch,
@@ -309,189 +289,69 @@ function AccountsPage() {
   }
 
   return (
-    <Container fluid py="xl" px="xl">
-      <Group mb="lg" gap="md" justify="space-between" mih={36}>
-        {isArchivedMode ? (
-          <Breadcrumbs fz="h2" fw={700} lh="var(--mantine-h2-line-height)">
-            {getAccountsBreadcrumbSegments({
-              accountBookId,
-              tab,
-              mode: "archived",
-              archiveIsLink: false,
-            })}
-          </Breadcrumbs>
-        ) : (
-          <Title order={2}>Accounts</Title>
-        )}
-        <Group>
-          <Button
-            variant="default"
-            leftSection={<IconLayoutDashboard size={16} />}
-            onClick={() =>
-              navigate({
-                to: "/$accountBookId",
-                params: { accountBookId },
-              })
-            }
-          >
-            Dashboard
-          </Button>
-          {!isArchivedMode && (
-            <>
-              <Button
-                variant="default"
-                leftSection={<IconArchive size={16} />}
-                onClick={() =>
-                  navigate({
-                    search: {
-                      tab,
-                      mode: "archived",
-                    },
-                  })
-                }
-              >
-                Archive
-              </Button>
-              <Button
-                variant="default"
-                leftSection={<IconPlus size={16} />}
-                onClick={() => setCreateGroupModalOpened(true)}
-              >
-                Add Group
-              </Button>
-              <Button
-                leftSection={<IconPlus size={16} />}
-                onClick={() => setCreateModalOpened(true)}
-              >
-                Add Account
-              </Button>
-            </>
-          )}
-        </Group>
-      </Group>
-
-      <Tabs
-        value={tab}
-        onChange={(value) =>
-          navigate({ search: { tab: value as TabValue, mode } })
-        }
-      >
-        <Tabs.List mb="md">
-          {tabs.map((t) => (
-            <Tabs.Tab key={t.value} value={t.value}>
-              {t.label}
-            </Tabs.Tab>
-          ))}
-        </Tabs.List>
-      </Tabs>
-
-      <DataGrid
-        containerStyle={{ height: "calc(100vh - 11rem)" }}
-        rowData={treeData[tab]}
-        columnDefs={columnDefs}
-        autoGroupColumnDef={{
-          headerName: "Name",
-          field: "name",
-          flex: 1,
-          filter: "agTextColumnFilter",
-          valueGetter: ({ data }) => data?.name,
-          cellRendererParams: {
-            suppressCount: true,
+    <AccountsPageView
+      accountBookId={accountBookId}
+      tab={tab}
+      mode={mode}
+      tabs={tabs}
+      accountGroups={accountGroups}
+      existingNodes={existingNodes}
+      rows={treeData[tab]}
+      columnDefs={columnDefs}
+      pinnedBottomRowData={pinnedBottomRowData}
+      isGroupOpenByDefault={isGroupOpenByDefault}
+      onRowGroupOpened={onRowGroupOpened}
+      createModalOpened={createModalOpened}
+      editModalOpen={editModalOpen}
+      createGroupModalOpened={createGroupModalOpened}
+      editGroupModalOpen={editGroupModalOpen}
+      editingAccount={editingAccount}
+      editingGroup={editingGroup}
+      deletingRow={deletingRow}
+      archivingRow={archivingRow}
+      reorderingRow={reorderingRow}
+      selectedSiblingRows={selectedSiblingRows}
+      onNavigateDashboard={() =>
+        navigate({
+          to: "/$accountBookId",
+          params: { accountBookId },
+        })
+      }
+      onNavigateArchive={() =>
+        navigate({
+          search: {
+            tab,
+            mode: "archived",
           },
-        }}
-        treeData={true}
-        treeDataParentIdField="parentId"
-        pinnedBottomRowData={pinnedBottomRowData}
-        isGroupOpenByDefault={isGroupOpenByDefault}
-        onRowGroupOpened={onRowGroupOpened}
-        getRowId={({ data }) => data.id}
-        onRowDoubleClicked={(e) => {
-          if (e.data?.nodeType === "account") {
-            navigate({
-              to: "/$accountBookId/$accountId",
-              params: { accountBookId, accountId: e.data.id },
-            });
-          }
-        }}
-      />
-
-      {!isArchivedMode && (
-        <>
-          <EditAccountModal
-            opened={createModalOpened}
-            onClose={() => setCreateModalOpened(false)}
-            accountGroups={accountGroups}
-            onSubmit={handleCreateAccount}
-            existingNodes={existingNodes}
-            typeDescriptor={tab}
-          />
-
-          <EditAccountModal
-            opened={editModalOpen}
-            onClose={() => setEditModalOpen(false)}
-            onExitTransitionEnd={() => setEditingAccount(undefined)}
-            accountGroups={accountGroups}
-            onSubmit={handleUpdateAccount}
-            initialValues={editingAccount?.initialValues}
-            existingNodes={existingNodes}
-            editingId={editingAccount?.id}
-            typeDescriptor={tab}
-          />
-
-          <EditAccountGroupModal
-            opened={createGroupModalOpened}
-            onClose={() => setCreateGroupModalOpened(false)}
-            accountGroups={accountGroups}
-            onSubmit={handleCreateGroup}
-            existingNodes={existingNodes}
-            typeDescriptor={tab}
-          />
-
-          <EditAccountGroupModal
-            opened={editGroupModalOpen}
-            onClose={() => setEditGroupModalOpen(false)}
-            onExitTransitionEnd={() => setEditingGroup(undefined)}
-            accountGroups={accountGroups}
-            onSubmit={handleUpdateGroup}
-            initialValues={editingGroup?.initialValues}
-            existingNodes={existingNodes}
-            editingId={editingGroup?.id}
-            typeDescriptor={tab}
-          />
-
-          <ConfirmDeleteModal
-            opened={!!deletingRow}
-            onClose={() => setDeletingRow(undefined)}
-            title={
-              deletingRow
-                ? `Delete ${getEntityLabel(deletingRow.nodeType)}`
-                : "Delete"
-            }
-            name={deletingRow?.name}
-            onConfirm={handleDelete}
-          />
-
-          <ConfirmArchiveModal
-            opened={!!archivingRow}
-            onClose={() => setArchivingRow(undefined)}
-            title={
-              archivingRow
-                ? `Archive ${getEntityLabel(archivingRow.nodeType)}`
-                : "Archive"
-            }
-            name={archivingRow?.name}
-            onConfirm={handleArchive}
-          />
-
-          <ReorderGroupChildrenModal
-            opened={!!reorderingRow}
-            onClose={() => setReorderingRow(undefined)}
-            rowName={reorderingRow?.name ?? ""}
-            initialRows={selectedSiblingRows}
-            onReorder={handleReorderSiblings}
-          />
-        </>
-      )}
-    </Container>
+        })
+      }
+      onTabChange={(nextTab) =>
+        navigate({ search: { tab: nextTab as TabValue, mode } })
+      }
+      onOpenCreateGroup={() => setCreateGroupModalOpened(true)}
+      onOpenCreateAccount={() => setCreateModalOpened(true)}
+      onOpenLedger={(nextAccountId) =>
+        navigate({
+          to: "/$accountBookId/$accountId",
+          params: { accountBookId, accountId: nextAccountId },
+        })
+      }
+      onCloseCreateAccount={() => setCreateModalOpened(false)}
+      onSubmitCreateAccount={handleCreateAccount}
+      onCloseEditAccount={() => setEditModalOpen(false)}
+      onClearEditingAccount={() => setEditingAccount(undefined)}
+      onSubmitUpdateAccount={handleUpdateAccount}
+      onCloseCreateGroup={() => setCreateGroupModalOpened(false)}
+      onSubmitCreateGroup={handleCreateGroup}
+      onCloseEditGroup={() => setEditGroupModalOpen(false)}
+      onClearEditingGroup={() => setEditingGroup(undefined)}
+      onSubmitUpdateGroup={handleUpdateGroup}
+      onCloseDelete={() => setDeletingRow(undefined)}
+      onConfirmDelete={handleDelete}
+      onCloseArchive={() => setArchivingRow(undefined)}
+      onConfirmArchive={handleArchive}
+      onCloseReorder={() => setReorderingRow(undefined)}
+      onReorderSiblings={handleReorderSiblings}
+    />
   );
 }
