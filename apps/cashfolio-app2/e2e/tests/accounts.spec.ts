@@ -20,13 +20,7 @@ test.beforeAll(async () => {
 
 async function selectDashboardPeriod(page: Page, period: "12m" | "10y") {
   const periodLabel = period === "10y" ? "Last 10 years" : "Last 12 months";
-  const periodRadio = page.getByRole("radio", {
-    name: periodLabel,
-    includeHidden: true,
-  });
-
-  await expect(periodRadio).toBeAttached();
-  await periodRadio.check({ force: true });
+  await page.getByText(periodLabel, { exact: true }).click();
 }
 
 test("dashboard is default account-book route and links to accounts", async ({
