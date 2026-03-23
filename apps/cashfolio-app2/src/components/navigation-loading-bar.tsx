@@ -5,19 +5,30 @@ import { NavigationProgress, nprogress } from "@mantine/nprogress";
 const START_DELAY_MS = 120;
 
 export function NavigationLoadingBar() {
-  const isRouteLoadPending = useRouterState({
-    select: (state) => {
-      const resolvedHref = state.resolvedLocation?.href;
-      return (
-        state.isLoading &&
-        resolvedHref !== undefined &&
-        state.location.href !== resolvedHref
-      );
-    },
+  const { href, isLoading } = useRouterState({
+    select: (state) => ({
+      href: state.location.href,
+      isLoading: state.isLoading,
+    }),
   });
+  const lastSettledHrefRef = useRef<string | undefined>(undefined);
+  const isRouteLoadPending =
+    isLoading &&
+    lastSettledHrefRef.current !== undefined &&
+    href !== lastSettledHrefRef.current;
 
   const startTimeoutRef = useRef<number | undefined>(undefined);
   const progressStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (lastSettledHrefRef.current === undefined) {
+      lastSettledHrefRef.current = href;
+    }
+
+    if (!isLoading) {
+      lastSettledHrefRef.current = href;
+    }
+  }, [href, isLoading]);
 
   useEffect(() => {
     if (isRouteLoadPending) {
