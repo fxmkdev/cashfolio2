@@ -193,7 +193,12 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
         take: DASHBOARD_BOOKINGS_PAGE_SIZE,
         ...(nextBookingIdCursor
           ? {
-              cursor: { id: nextBookingIdCursor },
+              cursor: {
+                id_accountBookId: {
+                  id: nextBookingIdCursor,
+                  accountBookId: data.accountBookId,
+                },
+              },
               skip: 1,
             }
           : {}),
