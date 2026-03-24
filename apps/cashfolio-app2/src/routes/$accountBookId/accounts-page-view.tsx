@@ -196,7 +196,15 @@ export function AccountsPageView({
         </Group>
       </Group>
 
-      <Tabs value={tab} onChange={(value) => onTabChange(value as TabValue)}>
+      <Tabs
+        value={tab}
+        onChange={(value) => {
+          if (value === null) {
+            return;
+          }
+          onTabChange(value as TabValue);
+        }}
+      >
         <Tabs.List mb="md">
           {tabs.map((t) => (
             <Tabs.Tab key={t.value} value={t.value}>

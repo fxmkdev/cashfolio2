@@ -474,13 +474,18 @@ export const ArchivedMode: Story = {
   render: () => <AccountsPageStoryHarness initialMode="archived" />,
 };
 
-export const ModalStates: Story = {
+export const CreateModalOpen: Story = {
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
       startWithCreateModal={true}
-      startWithEditModal={true}
     />
+  ),
+};
+
+export const EditModalOpen: Story = {
+  render: () => (
+    <AccountsPageStoryHarness initialMode="active" startWithEditModal={true} />
   ),
 };
 

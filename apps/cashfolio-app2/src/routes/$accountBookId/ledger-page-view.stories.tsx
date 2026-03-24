@@ -265,14 +265,16 @@ export const HappyPath: Story = {
   render: () => <LedgerPageStoryHarness />,
 };
 
-export const ModalStates: Story = {
-  render: () => (
-    <LedgerPageStoryHarness
-      startWithSimpleModal={true}
-      startWithSplitModal={true}
-      startWithEditModal={true}
-    />
-  ),
+export const SimpleModalState: Story = {
+  render: () => <LedgerPageStoryHarness startWithSimpleModal={true} />,
+};
+
+export const SplitModalState: Story = {
+  render: () => <LedgerPageStoryHarness startWithSplitModal={true} />,
+};
+
+export const EditModalState: Story = {
+  render: () => <LedgerPageStoryHarness startWithEditModal={true} />,
 };
 
 export const RouteSmoke: Story = {
