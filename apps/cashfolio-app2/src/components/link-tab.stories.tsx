@@ -51,7 +51,7 @@ export const SelectedLiability: Story = {
 export const RendersHref: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const assetTabLink = canvas.getByRole("link", { name: "Asset" });
+    const assetTabLink = canvas.getByRole("tab", { name: "Asset" });
 
     await expect(assetTabLink).toHaveAttribute(
       "href",
