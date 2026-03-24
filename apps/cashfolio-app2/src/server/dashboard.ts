@@ -19,7 +19,7 @@ import {
   getCurrencyExchangeRate,
   getSecurityToCurrencyExchangeRate,
 } from "./fx.server";
-import { getAccountTreeDataInternal } from "./accounts-queries";
+import { getAccountTreeData } from "./accounts";
 import { buildAssetAllocationFromTreeRows } from "./dashboard-asset-allocation";
 
 type DashboardBucket = {
@@ -154,14 +154,13 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
     const periodConfig = getDashboardPeriodConfig(data.period, new Date());
-    const assetTreeData = await getAccountTreeDataInternal({
+    const assetTreeData = await getAccountTreeData({
       data: {
         accountBookId: data.accountBookId,
         type: AccountType.ASSET,
         accountState: "active",
         includeReferenceBalances: true,
       },
-      skipAuthorization: true,
     });
 
     const referenceCurrency = assetTreeData.referenceCurrency;
