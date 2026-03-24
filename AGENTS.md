@@ -16,6 +16,13 @@ file and the linked docs are for `apps/cashfolio-app2`.
 - Use `pnpm` as package manager.
 - Keep changes focused and minimal; avoid unrelated refactors.
 - Keep docs in sync when introducing new patterns or conventions.
+- TanStack Start route filenames often contain `$` (for route params). In shell
+  commands, always treat these paths as literals to avoid variable expansion.
+  - Prefer wrapping such paths in single quotes, e.g.
+    `cat 'apps/cashfolio-app2/src/routes/accounts/$accountId.tsx'`.
+  - Or escape the `$` as `\$` when quoting is awkward.
+  - For git commands, use `--` before paths, e.g.
+    `git add -- 'apps/cashfolio-app2/src/routes/accounts/$accountId.tsx'`.
 - Pull request titles must follow Conventional Commits because GitHub squash
   merge is configured to use the PR title as the commit on `main`.
   - Format: `<type>(optional-scope): <description>`
