@@ -287,13 +287,12 @@ function AccountsPageStoryHarness({
     select: (state) => state.location.search,
   });
   const tab: TabValue =
-    routeSmoke &&
     typeof routeSearch.tab === "string" &&
     tabs.some((candidate) => candidate.value === routeSearch.tab)
       ? (routeSearch.tab as TabValue)
       : tabState;
   const mode: AccountsMode =
-    routeSmoke && routeSearch.mode === "archived" ? "archived" : modeState;
+    routeSearch.mode === "archived" ? "archived" : modeState;
 
   const rows = useMemo(() => getRowsFor({ mode, tab }), [mode, tab]);
   const rowsByParentKey = useRowsByParentKey(rows);
