@@ -31,7 +31,6 @@ import {
   type ReferenceCurrencyTotalFooterRow,
   parseAccountsSearch,
   tabs,
-  type TabValue,
   type TreeRow,
 } from "./accounts-page-types";
 import { loadAccountsPageData } from "./accounts-page-loader";
@@ -311,23 +310,6 @@ function AccountsPage() {
       archivingRow={archivingRow}
       reorderingRow={reorderingRow}
       selectedSiblingRows={selectedSiblingRows}
-      onNavigateDashboard={() =>
-        navigate({
-          to: "/$accountBookId",
-          params: { accountBookId },
-        })
-      }
-      onNavigateArchive={() =>
-        navigate({
-          search: {
-            tab,
-            mode: "archived",
-          },
-        })
-      }
-      onTabChange={(nextTab) =>
-        navigate({ search: { tab: nextTab as TabValue, mode } })
-      }
       onOpenCreateGroup={() => setCreateGroupModalOpened(true)}
       onOpenCreateAccount={() => setCreateModalOpened(true)}
       onOpenLedger={(nextAccountId) =>

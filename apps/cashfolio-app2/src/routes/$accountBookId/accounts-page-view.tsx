@@ -12,6 +12,8 @@ import {
   IconPlus,
 } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
+import { LinkButton } from "../../components/link-button";
+import { LinkTab } from "../../components/link-tab";
 import type { AccountGroupInitialValues } from "../../components/edit-account-group-modal";
 import {
   EditAccountGroupModal,
@@ -69,9 +71,6 @@ export type AccountsPageViewProps = {
   archivingRow?: RowTarget;
   reorderingRow?: { name: string; parentKey: string };
   selectedSiblingRows: ReorderGroupChildRow[];
-  onNavigateDashboard: () => void;
-  onNavigateArchive: () => void;
-  onTabChange: (tab: TabValue) => void;
   onOpenCreateGroup: () => void;
   onOpenCreateAccount: () => void;
   onOpenLedger: (accountId: string) => void;
@@ -121,9 +120,6 @@ export function AccountsPageView({
   archivingRow,
   reorderingRow,
   selectedSiblingRows,
-  onNavigateDashboard,
-  onNavigateArchive,
-  onTabChange,
   onOpenCreateGroup,
   onOpenCreateAccount,
   onOpenLedger,
@@ -162,22 +158,25 @@ export function AccountsPageView({
           <Title order={2}>Accounts</Title>
         )}
         <Group>
-          <Button
+          <LinkButton
             variant="default"
             leftSection={<IconLayoutDashboard size={16} />}
-            onClick={onNavigateDashboard}
+            to="/$accountBookId"
+            params={{ accountBookId }}
           >
             Dashboard
-          </Button>
+          </LinkButton>
           {!isArchivedMode && (
             <>
-              <Button
+              <LinkButton
                 variant="default"
                 leftSection={<IconArchive size={16} />}
-                onClick={onNavigateArchive}
+                to="/$accountBookId/accounts"
+                params={{ accountBookId }}
+                search={{ tab, mode: "archived" }}
               >
                 Archive
-              </Button>
+              </LinkButton>
               <Button
                 variant="default"
                 leftSection={<IconPlus size={16} />}
@@ -196,20 +195,18 @@ export function AccountsPageView({
         </Group>
       </Group>
 
-      <Tabs
-        value={tab}
-        onChange={(value) => {
-          if (value === null) {
-            return;
-          }
-          onTabChange(value as TabValue);
-        }}
-      >
+      <Tabs value={tab}>
         <Tabs.List mb="md">
           {tabs.map((t) => (
-            <Tabs.Tab key={t.value} value={t.value}>
+            <LinkTab
+              key={t.value}
+              value={t.value}
+              to="/$accountBookId/accounts"
+              params={{ accountBookId }}
+              search={{ tab: t.value, mode }}
+            >
               {t.label}
-            </Tabs.Tab>
+            </LinkTab>
           ))}
         </Tabs.List>
       </Tabs>
