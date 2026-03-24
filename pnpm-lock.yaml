@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@tanstack/start-server-core@1.167.1>h3-v2': npm:h3@2.0.1-rc.18
+  '@tanstack/start-server-core>h3-v2': npm:h3@2.0.1-rc.18
   '@tanstack/start-server-core@1.167.3>h3-v2': npm:h3@2.0.1-rc.18
 
 importers:

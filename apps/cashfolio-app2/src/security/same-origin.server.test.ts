@@ -53,6 +53,20 @@ describe("ensureSameOriginRequest", () => {
     expectForbidden(request);
   });
 
+  test("rejects request when Origin is missing and Referer origin is cross-origin", () => {
+    const request = createRequest({
+      referer: "https://attacker.example/accounts?tab=ASSET",
+    });
+    expectForbidden(request);
+  });
+
+  test("rejects request when Origin is missing and Referer is invalid", () => {
+    const request = createRequest({
+      referer: "::not-a-valid-url::",
+    });
+    expectForbidden(request);
+  });
+
   test("rejects request when both Origin and Referer are missing", () => {
     const request = createRequest();
     expectForbidden(request);
