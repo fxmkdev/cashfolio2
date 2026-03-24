@@ -6,6 +6,7 @@ settings:
 
 overrides:
   '@tanstack/start-server-core@1.167.1>h3-v2': npm:h3@2.0.1-rc.18
+  '@tanstack/start-server-core@1.167.3>h3-v2': npm:h3@2.0.1-rc.18
 
 importers:
 
@@ -3368,8 +3369,8 @@ packages:
   graphmatch@1.1.1:
     resolution: {integrity: sha512-5ykVn/EXM1hF0XCaWh05VbYvEiOL2lY1kBxZtaYsyvjp7cmWOU1XsAdfQBwClraEofXDT197lFbXOEVMHpvQOg==}
 
-  h3@2.0.1-rc.16:
-    resolution: {integrity: sha512-h+pjvyujdo9way8qj6FUbhaQcHlR8FEq65EhTX9ViT5pK8aLj68uFl4hBkF+hsTJAH+H1END2Yv6hTIsabGfag==}
+  h3@2.0.1-rc.18:
+    resolution: {integrity: sha512-2EdYEOIJwZHfhfdxvqZsmmUz4tgwzQSuzre+l50j+voHJV4m7j3zw2lYLgHoyfkCF9EAZcaH4ea0zH/hgcs9Yg==}
     engines: {node: '>=20.11.1'}
     hasBin: true
     peerDependencies:
@@ -7444,7 +7445,7 @@ snapshots:
       '@tanstack/router-core': 1.168.3
       '@tanstack/start-client-core': 1.167.3
       '@tanstack/start-storage-context': 1.166.17
-      h3-v2: h3@2.0.1-rc.16
+      h3-v2: h3@2.0.1-rc.18
       seroval: 1.5.1
     transitivePeerDependencies:
       - crossws
@@ -8876,7 +8877,7 @@ snapshots:
 
   graphmatch@1.1.1: {}
 
-  h3@2.0.1-rc.16:
+  h3@2.0.1-rc.18:
     dependencies:
       rou3: 0.8.1
       srvx: 0.11.12
