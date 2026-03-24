@@ -120,7 +120,7 @@ test("dashboard is default account-book route and links to accounts", async ({
     page.getByText("Last 12 months · Amounts shown in CHF"),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Accounts" }).click();
+  await page.getByRole("link", { name: "Accounts" }).click();
   await expect(page).toHaveURL(
     new RegExp(`/${seeded.accountBookId}/accounts\\?tab=ASSET&mode=active$`),
   );
@@ -166,10 +166,7 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
     .click();
   await expect(agGridRowByText(page, updatedName)).toHaveCount(0);
 
-  await page
-    .getByRole("button", { name: "Archive" })
-    .filter({ hasText: "Archive" })
-    .click();
+  await page.getByRole("link", { name: "Archive" }).click();
   const archivedRow = agGridRowByText(page, updatedName);
   await expect(archivedRow).toBeVisible();
 
@@ -248,10 +245,7 @@ test("balance column visibility and baseline values across tabs/modes", async ({
     agGridCellByColId(assetsGroupRow, "balanceInReferenceCurrency"),
   ).toHaveText("0.00");
 
-  await page
-    .getByRole("button", { name: "Archive" })
-    .filter({ hasText: "Archive" })
-    .click();
+  await page.getByRole("link", { name: "Archive" }).click();
   await expect(
     page.getByRole("columnheader", { name: "Balance", exact: true }),
   ).toBeVisible();
