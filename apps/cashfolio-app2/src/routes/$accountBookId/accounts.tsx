@@ -3,7 +3,7 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useExpandedGroups } from "../../hooks/use-expanded-groups";
 import type {
   AccountInitialValues,
@@ -20,6 +20,7 @@ import {
   createAccountGroup,
   deleteAccount,
   deleteAccountGroup,
+  getAccountTreeData,
   reorderAccountTreeItems,
   unarchiveAccount,
   unarchiveAccountGroup,
@@ -28,6 +29,7 @@ import {
 } from "../../server/accounts";
 import {
   REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
+  getTabDefinition,
   type ReferenceCurrencyTotalFooterRow,
   parseAccountsSearch,
   tabs,
@@ -45,20 +47,25 @@ import { AccountsPageView } from "./accounts-page-view";
 
 export const Route = createFileRoute("/$accountBookId/accounts")({
   validateSearch: parseAccountsSearch,
-  loaderDeps: ({ search }) => ({ mode: search.mode }),
-  loader: async ({ params: { accountBookId }, deps: { mode } }) => {
-    return loadAccountsPageData({ accountBookId, mode });
+  loaderDeps: ({ search }) => ({ mode: search.mode, tab: search.tab }),
+  loader: async ({ params: { accountBookId }, deps: { mode, tab } }) => {
+    return loadAccountsPageData({ accountBookId, mode, tab });
   },
   component: AccountsPage,
 });
 
 function AccountsPage() {
-  const { accountGroups, treeData, existingNodes, referenceCurrency } =
-    Route.useLoaderData();
+  const {
+    accountGroups,
+    rows: loaderRows,
+    existingNodes,
+    referenceCurrency,
+  } = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const { tab, mode } = Route.useSearch();
   const navigate = useNavigate({ from: "/$accountBookId/accounts" });
   const router = useRouter();
+  const [rows, setRows] = useState(loaderRows);
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [editingAccount, setEditingAccount] = useState<
     { id: string; initialValues: AccountInitialValues } | undefined
@@ -84,23 +91,57 @@ function AccountsPage() {
   const isEquityTab = tab.startsWith("EQUITY-");
   const isArchivedMode = mode === "archived";
 
+  useEffect(() => {
+    setRows(loaderRows);
+  }, [loaderRows]);
+
+  useEffect(() => {
+    if (isEquityTab) {
+      return;
+    }
+
+    const tabDefinition = getTabDefinition(tab);
+    let active = true;
+    void getAccountTreeData({
+      data: {
+        accountBookId,
+        accountState: isArchivedMode ? "inactive" : "active",
+        type: tabDefinition.type,
+        ...("equityAccountSubtype" in tabDefinition
+          ? { equityAccountSubtype: tabDefinition.equityAccountSubtype }
+          : undefined),
+        includeReferenceBalances: true,
+      },
+    })
+      .then((treeData) => {
+        if (!active) return;
+        setRows(treeData.rows);
+      })
+      .catch((error) => {
+        console.error(
+          "Unable to load reference-currency balances for accounts tab",
+          error,
+        );
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [accountBookId, isArchivedMode, isEquityTab, tab]);
+
   const storageKey = `cashfolio:expandedGroups:${accountBookId}:${mode}:${tab}`;
   const { isGroupOpenByDefault, onRowGroupOpened } =
     useExpandedGroups(storageKey);
 
-  const rowsByParentKey = useRowsByParentKey(treeData[tab]);
+  const rowsByParentKey = useRowsByParentKey(rows);
   const selectedSiblingRows = useSelectedSiblingRows(
     rowsByParentKey,
     reorderingRow,
   );
   const balanceInReferenceCurrencyByGroupId =
-    useBalanceInReferenceCurrencyByGroupId(
-      rowsByParentKey,
-      treeData[tab],
-      !isEquityTab,
-    );
+    useBalanceInReferenceCurrencyByGroupId(rowsByParentKey, rows, !isEquityTab);
   const referenceCurrencyBalanceTotal = useReferenceCurrencyBalanceTotal(
-    treeData[tab],
+    rows,
     !isEquityTab,
   );
   const pinnedBottomRowData: ReferenceCurrencyTotalFooterRow[] | undefined =
@@ -295,7 +336,7 @@ function AccountsPage() {
       tabs={tabs}
       accountGroups={accountGroups}
       existingNodes={existingNodes}
-      rows={treeData[tab]}
+      rows={rows}
       columnDefs={columnDefs}
       pinnedBottomRowData={pinnedBottomRowData}
       isGroupOpenByDefault={isGroupOpenByDefault}

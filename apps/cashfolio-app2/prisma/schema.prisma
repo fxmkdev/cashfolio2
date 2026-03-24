@@ -112,6 +112,8 @@ model AccountGroup {
   updatedAt DateTime @updatedAt
 
   @@id([id, accountBookId])
+  @@index([accountBookId, type, equityAccountSubtype, isActive])
+  @@index([accountBookId, parentGroupId, isActive])
 }
 
 model Account {
@@ -140,6 +142,8 @@ model Account {
   updatedAt DateTime @updatedAt
 
   @@id([id, accountBookId])
+  @@index([accountBookId, isActive, type, equityAccountSubtype])
+  @@index([accountBookId, groupId, isActive])
 }
 
 model Transaction {
@@ -181,4 +185,5 @@ model Booking {
   accountBookId String
 
   @@id([id, accountBookId])
+  @@index([accountBookId, accountId])
 }
