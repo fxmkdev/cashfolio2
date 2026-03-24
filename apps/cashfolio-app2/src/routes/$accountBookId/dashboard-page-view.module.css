@@ -1,0 +1,8 @@
+.chartContainer {
+  margin-top: 20px;
+  height: 420px;
+}
+
+.chartContainer :global(.ag-charts-overlay) {
+  color: var(--mantine-color-dimmed);
+}

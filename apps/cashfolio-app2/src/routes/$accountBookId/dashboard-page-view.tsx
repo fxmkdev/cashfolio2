@@ -22,6 +22,7 @@ import {
   DASHBOARD_PERIOD_12M,
   type DashboardPeriod,
 } from "./dashboard-page-types";
+import classes from "./dashboard-page-view.module.css";
 
 export type DashboardPageViewProps = {
   overview: Awaited<ReturnType<typeof getDashboardIncomeExpenseOverview>>;
@@ -252,7 +253,7 @@ export function DashboardPageView({
         </Stack>
 
         {hasConvertedBookings ? (
-          <div style={{ marginTop: 20, height: 420 }}>
+          <div className={classes.chartContainer}>
             <AgCharts options={chartOptions} />
           </div>
         ) : (
