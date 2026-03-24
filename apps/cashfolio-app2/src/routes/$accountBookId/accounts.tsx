@@ -45,6 +45,48 @@ import {
 import { useAccountTreeColumnDefs } from "./accounts-page-columns";
 import { AccountsPageView } from "./accounts-page-view";
 
+function mergeRowsPreservingReferenceBalances(
+  previousRows: TreeRow[],
+  nextRows: TreeRow[],
+): TreeRow[] {
+  const previousRowById = new Map(previousRows.map((row) => [row.id, row]));
+
+  return nextRows.map((row) => {
+    if (row.balanceInReferenceCurrency != null) {
+      return row;
+    }
+
+    const previousRow = previousRowById.get(row.id);
+    if (!previousRow || previousRow.balanceInReferenceCurrency == null) {
+      return row;
+    }
+
+    return {
+      ...row,
+      balanceInReferenceCurrency: previousRow.balanceInReferenceCurrency,
+    };
+  });
+}
+
+function mergeReferenceBalancesIntoRows(
+  rows: TreeRow[],
+  referenceRows: TreeRow[],
+): TreeRow[] {
+  const referenceRowById = new Map(referenceRows.map((row) => [row.id, row]));
+
+  return rows.map((row) => {
+    const referenceRow = referenceRowById.get(row.id);
+    if (!referenceRow) {
+      return row;
+    }
+
+    return {
+      ...row,
+      balanceInReferenceCurrency: referenceRow.balanceInReferenceCurrency,
+    };
+  });
+}
+
 export const Route = createFileRoute("/$accountBookId/accounts")({
   validateSearch: parseAccountsSearch,
   loaderDeps: ({ search }) => ({ mode: search.mode, tab: search.tab }),
@@ -92,7 +134,9 @@ function AccountsPage() {
   const isArchivedMode = mode === "archived";
 
   useEffect(() => {
-    setRows(loaderRows);
+    setRows((previousRows) =>
+      mergeRowsPreservingReferenceBalances(previousRows, loaderRows),
+    );
   }, [loaderRows]);
 
   useEffect(() => {
@@ -115,7 +159,9 @@ function AccountsPage() {
     })
       .then((treeData) => {
         if (!active) return;
-        setRows(treeData.rows);
+        setRows((previousRows) =>
+          mergeReferenceBalancesIntoRows(previousRows, treeData.rows),
+        );
       })
       .catch((error) => {
         console.error(
@@ -127,7 +173,7 @@ function AccountsPage() {
     return () => {
       active = false;
     };
-  }, [accountBookId, isArchivedMode, isEquityTab, tab]);
+  }, [accountBookId, isArchivedMode, isEquityTab, loaderRows, tab]);
 
   const storageKey = `cashfolio:expandedGroups:${accountBookId}:${mode}:${tab}`;
   const { isGroupOpenByDefault, onRowGroupOpened } =

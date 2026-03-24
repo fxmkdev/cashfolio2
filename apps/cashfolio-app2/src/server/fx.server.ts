@@ -548,10 +548,12 @@ async function getRateWithBacktracking(args: {
   backtrackedFallbackCacheKey: string;
   date: Date;
   fetchRate: (date: Date) => Promise<FetchRateResult>;
+  stopOnExplicitNoData?: boolean;
 }): Promise<number | null> {
   const requestedTimestamp = toSeriesTimestamp(args.date);
   const key = args.seriesKey;
   const backtrackedFallbackCacheKey = args.backtrackedFallbackCacheKey;
+  const stopOnExplicitNoData = args.stopOnExplicitNoData ?? true;
 
   const cached = await getCachedRate(key, requestedTimestamp);
   if (cached?.timestamp === requestedTimestamp) {
@@ -564,9 +566,13 @@ async function getRateWithBacktracking(args: {
   );
   if (cachedBacktrackedFallback) {
     if (cachedBacktrackedFallback.kind === "noData") {
-      return null;
+      if (stopOnExplicitNoData) {
+        return null;
+      }
+      await clearBacktrackedFallbackFromCache(backtrackedFallbackCacheKey);
+    } else {
+      return cachedBacktrackedFallback.rate;
     }
-    return cachedBacktrackedFallback.rate;
   }
 
   let requestedDate = toUtcDay(args.date);
@@ -584,12 +590,16 @@ async function getRateWithBacktracking(args: {
 
     const fetchedRate = await args.fetchRate(requestedDate);
     if (fetchedRate === NO_DATA_FETCH_RESULT) {
-      await storeBacktrackedFallbackInCache(
-        backtrackedFallbackCacheKey,
-        { kind: "noData" },
-        BACKTRACKED_NO_DATA_FALLBACK_TTL_SECONDS,
-      );
-      return null;
+      if (stopOnExplicitNoData) {
+        await storeBacktrackedFallbackInCache(
+          backtrackedFallbackCacheKey,
+          { kind: "noData" },
+          BACKTRACKED_NO_DATA_FALLBACK_TTL_SECONDS,
+        );
+        return null;
+      }
+      requestedDate = subUtcDay(requestedDate);
+      continue;
     }
 
     if (typeof fetchedRate === "number") {
@@ -685,6 +695,7 @@ async function getSecurityPrice(
     date,
     fetchRate: (targetDate) =>
       fetchSecurityPriceFromMarketstack(symbol, tradeCurrency, targetDate),
+    stopOnExplicitNoData: false,
   });
 }
 
