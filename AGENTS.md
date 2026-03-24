@@ -67,6 +67,8 @@ pnpm --filter cashfolio-app2 prisma:generate  # Regenerate Prisma client (DATABA
 - Run `pnpm --filter cashfolio-app2 typecheck` before finishing code changes.
 - Run `pnpm --filter cashfolio-app2 format` when touching formatting-sensitive
   files.
+- Run `pnpm --filter cashfolio-app2 e2e` for changes that bear a significant
+  risk of breaking the application.
 - If Prisma schema/client changes, run
   `pnpm --filter cashfolio-app2 prisma:generate`.
 - Update relevant docs in `docs/` (shared) or app-local `docs/` folders when
