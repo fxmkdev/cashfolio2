@@ -11,6 +11,24 @@ paths are relative to that app directory.
 - Use `LinkAnchor` from `src/components/link-anchor.tsx` for in-app links that
   should look like Mantine anchors. Avoid `Anchor` + `component={Link}` with
   casts.
+- Use `LinkButton` from `src/components/link-button.tsx` when a navigation
+  control should look like a Mantine button.
+- Use `LinkTab` from `src/components/link-tab.tsx` for tab-like navigation that
+  changes route/search state.
+
+## Navigation Link Pattern
+
+- If an element navigates to another page (including route-search state such as
+  the accounts list `tab`/`mode`), render it as a TanStack link (an `<a>`), not
+  as a button with an `onClick` navigation handler.
+- Use:
+  - `LinkAnchor` for text links/breadcrumbs
+  - `LinkButton` for button-styled navigation actions (for example "Dashboard",
+    "Archive", "Accounts")
+  - `LinkTab` for route-driven tab navigation (for example Asset/Liability/etc.
+    on the accounts list)
+- Keep real `<Button onClick={...}>` controls for non-navigation actions only
+  (submit, open modal, mutate data, etc.).
 
 ## Shared Utilities (`src/shared/`)
 

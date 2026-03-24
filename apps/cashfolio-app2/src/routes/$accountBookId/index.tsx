@@ -29,6 +29,7 @@ function DashboardPage() {
 
   return (
     <DashboardPageView
+      accountBookId={accountBookId}
       overview={overview}
       selectedPeriod={selectedPeriod}
       onPeriodChange={(nextPeriod: DashboardPeriod) =>
@@ -37,16 +38,6 @@ function DashboardPage() {
             nextPeriod === DASHBOARD_PERIOD_10Y
               ? { period: DASHBOARD_PERIOD_10Y }
               : { period: undefined },
-        })
-      }
-      onNavigateToAccounts={() =>
-        navigate({
-          to: "/$accountBookId/accounts",
-          params: { accountBookId },
-          search: {
-            tab: "ASSET",
-            mode: "active",
-          },
         })
       }
     />

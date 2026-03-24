@@ -1,6 +1,5 @@
 import {
   Alert,
-  Button,
   Card,
   Container,
   Group,
@@ -15,6 +14,7 @@ import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
 import { AgCharts } from "ag-charts-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import { useMemo } from "react";
+import { LinkButton } from "../../components/link-button";
 import type { getDashboardIncomeExpenseOverview } from "../../server/dashboard";
 import { DASHBOARD_PERIOD_LABEL_BY_PERIOD } from "../../shared/dashboard-period";
 import {
@@ -25,17 +25,17 @@ import {
 import classes from "./dashboard-page-view.module.css";
 
 export type DashboardPageViewProps = {
+  accountBookId: string;
   overview: Awaited<ReturnType<typeof getDashboardIncomeExpenseOverview>>;
   selectedPeriod: DashboardPeriod;
   onPeriodChange: (period: DashboardPeriod) => void;
-  onNavigateToAccounts: () => void;
 };
 
 export function DashboardPageView({
+  accountBookId,
   overview,
   selectedPeriod,
   onPeriodChange,
-  onNavigateToAccounts,
 }: DashboardPageViewProps) {
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
@@ -200,13 +200,15 @@ export function DashboardPageView({
     <Container fluid py="xl" px="xl">
       <Group mb="lg" justify="space-between" align="center" mih={36}>
         <Title order={2}>Dashboard</Title>
-        <Button
+        <LinkButton
           variant="default"
           leftSection={<IconListDetails size={16} />}
-          onClick={onNavigateToAccounts}
+          to="/$accountBookId/accounts"
+          params={{ accountBookId }}
+          search={{ tab: "ASSET", mode: "active" }}
         >
           Accounts
-        </Button>
+        </LinkButton>
       </Group>
 
       <Card withBorder radius="md" p="lg">

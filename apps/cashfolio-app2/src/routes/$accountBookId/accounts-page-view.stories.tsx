@@ -240,8 +240,8 @@ function AccountsPageStoryHarness({
   startWithEditModal?: boolean;
   routeSmoke?: boolean;
 }) {
-  const [tab, setTab] = useState<TabValue>(initialTab);
-  const [mode, setMode] = useState<AccountsMode>(initialMode);
+  const [tabState, setTabState] = useState<TabValue>(initialTab);
+  const [modeState, setModeState] = useState<AccountsMode>(initialMode);
   const [createModalOpened, setCreateModalOpened] =
     useState(startWithCreateModal);
   const [createGroupModalOpened, setCreateGroupModalOpened] = useState(false);
@@ -283,9 +283,16 @@ function AccountsPageStoryHarness({
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const search = useRouterState({
+  const routeSearch = useRouterState({
     select: (state) => state.location.search,
   });
+  const tab: TabValue =
+    typeof routeSearch.tab === "string" &&
+    tabs.some((candidate) => candidate.value === routeSearch.tab)
+      ? (routeSearch.tab as TabValue)
+      : tabState;
+  const mode: AccountsMode =
+    routeSearch.mode === "archived" ? "archived" : modeState;
 
   const rows = useMemo(() => getRowsFor({ mode, tab }), [mode, tab]);
   const rowsByParentKey = useRowsByParentKey(rows);
@@ -341,7 +348,7 @@ function AccountsPageStoryHarness({
       }
     },
     onUnarchiveRow: async () => {
-      setMode("active");
+      setModeState("active");
     },
     onArchiveRow: setArchivingRow,
     onDeleteRow: setDeletingRow,
@@ -375,34 +382,6 @@ function AccountsPageStoryHarness({
         archivingRow={archivingRow}
         reorderingRow={reorderingRow}
         selectedSiblingRows={selectedSiblingRows}
-        onNavigateDashboard={() => {
-          if (routeSmoke) {
-            navigate({
-              to: "/$accountBookId",
-              params: { accountBookId: "storybook-book" },
-            });
-          }
-        }}
-        onNavigateArchive={() => {
-          setMode("archived");
-          if (routeSmoke) {
-            navigate({
-              to: "/$accountBookId/accounts",
-              params: { accountBookId: "storybook-book" },
-              search: { tab, mode: "archived" },
-            });
-          }
-        }}
-        onTabChange={(nextTab) => {
-          setTab(nextTab);
-          if (routeSmoke) {
-            navigate({
-              to: "/$accountBookId/accounts",
-              params: { accountBookId: "storybook-book" },
-              search: { tab: nextTab, mode },
-            });
-          }
-        }}
         onOpenCreateGroup={() => setCreateGroupModalOpened(true)}
         onOpenCreateAccount={() => setCreateModalOpened(true)}
         onOpenLedger={(nextAccountId) => {
@@ -450,7 +429,7 @@ function AccountsPageStoryHarness({
       {routeSmoke ? (
         <>
           <Text data-testid="router-path">{pathname}</Text>
-          <Text data-testid="router-search">{JSON.stringify(search)}</Text>
+          <Text data-testid="router-search">{JSON.stringify(routeSearch)}</Text>
         </>
       ) : null}
     </Box>
@@ -495,7 +474,7 @@ export const RouteSmoke: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Dashboard" }));
+    await userEvent.click(canvas.getByRole("link", { name: "Dashboard" }));
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
       "/storybook-book",
     );
