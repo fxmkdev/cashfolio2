@@ -33,12 +33,12 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
       where: { accountBookId: data.accountBookId },
       select: { id: true, name: true, parentGroupId: true },
     });
-    const getGroupPathSegments = createGroupPathSegmentsResolver(allGroups);
+    const resolveGroupPathSegments = createGroupPathSegmentsResolver(allGroups);
 
     const { groupId, ...rest } = account;
     return {
       ...rest,
-      groupPathSegments: groupId ? getGroupPathSegments(groupId) : [],
+      groupPathSegments: groupId ? resolveGroupPathSegments(groupId) : [],
     };
   });
 
