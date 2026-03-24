@@ -522,7 +522,7 @@ async function fetchSecurityPriceFromMarketstack(
 
   const firstPricePoint = data.data?.[0];
   if (!firstPricePoint) {
-    return NO_DATA_FETCH_RESULT;
+    return null;
   }
 
   const quoteCurrency = getMarketstackQuoteCurrency(firstPricePoint);
