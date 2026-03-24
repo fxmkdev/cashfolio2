@@ -11,6 +11,15 @@ import {
   hasInactiveAncestorGroup,
 } from "./accounts-helpers";
 import type { AccountGroupInput, AccountInput } from "./accounts-types";
+import {
+  accountTypeRequiresZeroBalanceForArchive,
+  getAccountArchiveAvailability,
+  getAccountDeleteAvailability,
+  getAccountUnarchiveAvailability,
+  getGroupArchiveAvailability,
+  getGroupDeleteAvailability,
+  getGroupUnarchiveAvailability,
+} from "./account-tree-rules";
 
 export const createAccount = createServerFn({ method: "POST" })
   .inputValidator((data: AccountInput) => data)
@@ -170,8 +179,9 @@ export const deleteAccount = createServerFn({ method: "POST" })
     const bookingCount = await prisma.booking.count({
       where: { accountId: data.id, accountBookId: data.accountBookId },
     });
-    if (bookingCount > 0) {
-      throw new Error("Cannot delete account with bookings");
+    const deleteAvailability = getAccountDeleteAvailability(bookingCount > 0);
+    if (!deleteAvailability.enabled) {
+      throw new Error(deleteAvailability.disabledReason);
     }
     await prisma.account.delete({
       where: {
@@ -205,16 +215,13 @@ export const deleteAccountGroup = createServerFn({ method: "POST" })
       accountBook.cryptoHoldingGainLossAccountGroupId,
       accountBook.fxHoldingGainLossAccountGroupId,
     ].includes(data.id);
-    if (isReferencedByAccountBook) {
-      throw new Error(
-        "Cannot delete group that is used as a holding gain/loss group",
-      );
-    }
-    if (childAccounts > 0) {
-      throw new Error("Cannot delete group that contains accounts");
-    }
-    if (childGroups > 0) {
-      throw new Error("Cannot delete group that contains sub-groups");
+    const deleteAvailability = getGroupDeleteAvailability({
+      hasChildAccounts: childAccounts > 0,
+      hasChildGroups: childGroups > 0,
+      isReferencedByAccountBook,
+    });
+    if (!deleteAvailability.enabled) {
+      throw new Error(deleteAvailability.disabledReason);
     }
     await prisma.accountGroup.delete({
       where: {
@@ -236,14 +243,20 @@ export const archiveAccount = createServerFn({ method: "POST" })
 
     if (!account.isActive) return;
 
-    if (account.type === "ASSET" || account.type === "LIABILITY") {
+    let hasZeroBalance = true;
+    if (accountTypeRequiresZeroBalanceForArchive(account.type)) {
       const balance = await prisma.booking.aggregate({
         where: { accountId: data.id, accountBookId: data.accountBookId },
         _sum: { value: true },
       });
-      if (Number(balance._sum.value ?? 0) !== 0) {
-        throw new Error("Cannot archive account because its balance is not 0");
-      }
+      hasZeroBalance = Number(balance._sum.value ?? 0) === 0;
+    }
+    const archiveAvailability = getAccountArchiveAvailability({
+      isActive: account.isActive,
+      hasZeroBalance,
+    });
+    if (!archiveAvailability.enabled) {
+      throw new Error(archiveAvailability.disabledReason);
     }
 
     await prisma.account.update({
@@ -284,15 +297,13 @@ export const archiveAccountGroup = createServerFn({ method: "POST" })
       }),
     ]);
 
-    if (activeChildAccounts > 0) {
-      throw new Error(
-        "Cannot archive group because it contains active accounts",
-      );
-    }
-    if (activeChildGroups > 0) {
-      throw new Error(
-        "Cannot archive group because it contains active sub-groups",
-      );
+    const archiveAvailability = getGroupArchiveAvailability({
+      isActive: group.isActive,
+      hasActiveChildAccounts: activeChildAccounts > 0,
+      hasActiveChildGroups: activeChildGroups > 0,
+    });
+    if (!archiveAvailability.enabled) {
+      throw new Error(archiveAvailability.disabledReason);
     }
 
     await prisma.accountGroup.update({
@@ -317,10 +328,12 @@ export const unarchiveAccount = createServerFn({ method: "POST" })
     if (account.isActive) return;
 
     const groupById = await getGroupHierarchy(data.accountBookId);
-    if (hasInactiveAncestorGroup(account.groupId, groupById)) {
-      throw new Error(
-        "Cannot unarchive account because its parent group is archived",
-      );
+    const unarchiveAvailability = getAccountUnarchiveAvailability({
+      isActive: account.isActive,
+      hasInactiveAncestor: hasInactiveAncestorGroup(account.groupId, groupById),
+    });
+    if (!unarchiveAvailability.enabled) {
+      throw new Error(unarchiveAvailability.disabledReason);
     }
 
     await prisma.account.update({
@@ -345,10 +358,15 @@ export const unarchiveAccountGroup = createServerFn({ method: "POST" })
     if (group.isActive) return;
 
     const groupById = await getGroupHierarchy(data.accountBookId);
-    if (hasInactiveAncestorGroup(group.parentGroupId, groupById)) {
-      throw new Error(
-        "Cannot unarchive group because its parent group is archived",
-      );
+    const unarchiveAvailability = getGroupUnarchiveAvailability({
+      isActive: group.isActive,
+      hasInactiveAncestor: hasInactiveAncestorGroup(
+        group.parentGroupId,
+        groupById,
+      ),
+    });
+    if (!unarchiveAvailability.enabled) {
+      throw new Error(unarchiveAvailability.disabledReason);
     }
 
     await prisma.accountGroup.update({

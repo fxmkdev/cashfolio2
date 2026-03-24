@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
+import { createGroupPathSegmentsResolver } from "./accounts-helpers";
 
 export const getAccountForLedger = createServerFn({ method: "GET" })
   .inputValidator((data: { accountId: string; accountBookId: string }) => data)
@@ -32,15 +33,7 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
       where: { accountBookId: data.accountBookId },
       select: { id: true, name: true, parentGroupId: true },
     });
-
-    function getGroupPathSegments(groupId: string): string[] {
-      const group = allGroups.find((g) => g.id === groupId);
-      if (!group) return [];
-      const parentSegments = group.parentGroupId
-        ? getGroupPathSegments(group.parentGroupId)
-        : [];
-      return [...parentSegments, group.name];
-    }
+    const getGroupPathSegments = createGroupPathSegmentsResolver(allGroups);
 
     const { groupId, ...rest } = account;
     return {
