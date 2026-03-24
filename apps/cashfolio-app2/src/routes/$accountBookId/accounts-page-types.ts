@@ -27,6 +27,10 @@ export const tabs = [
 export type TabValue = (typeof tabs)[number]["value"];
 export type AccountsMode = "active" | "archived";
 
+export function getTabDefinition(tabValue: TabValue) {
+  return tabs.find((tab) => tab.value === tabValue) ?? tabs[0];
+}
+
 export type TreeRow = Awaited<
   ReturnType<typeof getAccountTreeData>
 >["rows"][number];

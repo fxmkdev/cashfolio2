@@ -22,6 +22,8 @@ paths are relative to that app directory.
   chart and period switch (last 12 months or last 10 years)
 - `$accountBookId/accounts.tsx` — accounts page with tabs (one per account type:
   Asset, Liability, Income, Expense, Gain/Loss)
+  - Loader data is tab-scoped: only the selected tab is fetched in the route
+    loader critical path.
 - `$accountBookId/$accountId.tsx` — ledger page for a single account
 - Route-local helper modules can live next to a route file when orchestration
   grows (for example, `$accountBookId/accounts-page-loader.ts`,
@@ -106,6 +108,11 @@ update `sortOrder` values after reordering sibling rows in the reorder modal.
 
 - The account list route (`$accountBookId/accounts.tsx`) renders `Balance` and
   `Balance (<referenceCurrency>)` columns.
+- Initial page load requests account tree data with
+  `includeReferenceBalances: false` to avoid blocking first paint on external FX
+  lookups.
+- The route then lazily hydrates `Balance (<referenceCurrency>)` in the
+  background for non-equity tabs.
 - Reference-currency conversion and account/group reference-balance assembly are
   implemented in `src/server/accounts-queries.ts` (re-exported via
   `src/server/accounts.ts`), using `src/server/fx.server.ts`.

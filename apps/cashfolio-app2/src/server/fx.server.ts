@@ -9,6 +9,8 @@ const MARKETSTACK_RATE_LIMIT_RETRY_DELAY_MS = 1_000;
 const MARKETSTACK_RATE_LIMIT_MAX_RETRIES = 3;
 const FX_SERIES_RETENTION_MS = 10 * 365 * 24 * 60 * 60 * 1000;
 const BACKTRACKED_FALLBACK_TTL_SECONDS = 60 * 60;
+const BACKTRACKED_NO_DATA_FALLBACK_TTL_SECONDS = 5 * 60;
+const NO_DATA_FETCH_RESULT = Symbol("fx-no-data-fetch-result");
 
 type CurrencyLayerHistoricalResponse = {
   success: boolean;
@@ -37,10 +39,22 @@ type CachedRateResult = {
   timestamp: number;
 };
 
-type BacktrackedFallbackCacheEntry = {
+type BacktrackedRateFallbackCacheEntry = {
+  kind: "rate";
   rate: number;
   sourceTimestamp: number;
 };
+
+type BacktrackedNoDataFallbackCacheEntry = {
+  kind: "noData";
+};
+
+type BacktrackedFallbackCacheEntry =
+  | BacktrackedRateFallbackCacheEntry
+  | BacktrackedNoDataFallbackCacheEntry;
+
+type NoDataFetchResult = typeof NO_DATA_FETCH_RESULT;
+type FetchRateResult = number | null | NoDataFetchResult;
 
 let hasWarnedMissingCurrencyLayerApiKey = false;
 let hasWarnedMissingCoinLayerApiKey = false;
@@ -227,20 +241,40 @@ async function getBacktrackedFallbackFromCache(
     const rawValue = await redis.get(key);
     if (!rawValue) return null;
 
-    const parsed = JSON.parse(
-      rawValue,
-    ) as Partial<BacktrackedFallbackCacheEntry>;
-    if (
-      typeof parsed.rate !== "number" ||
-      typeof parsed.sourceTimestamp !== "number"
-    ) {
-      return null;
+    const parsed = JSON.parse(rawValue) as {
+      kind?: unknown;
+      rate?: unknown;
+      sourceTimestamp?: unknown;
+    };
+    if (parsed.kind === "noData") {
+      return { kind: "noData" };
     }
 
-    return {
-      rate: parsed.rate,
-      sourceTimestamp: parsed.sourceTimestamp,
-    };
+    if (
+      parsed.kind === "rate" &&
+      typeof parsed.rate === "number" &&
+      typeof parsed.sourceTimestamp === "number"
+    ) {
+      return {
+        kind: "rate",
+        rate: parsed.rate,
+        sourceTimestamp: parsed.sourceTimestamp,
+      };
+    }
+
+    // Backward compatibility for previously stored entries without a `kind`.
+    if (
+      typeof parsed.rate === "number" &&
+      typeof parsed.sourceTimestamp === "number"
+    ) {
+      return {
+        kind: "rate",
+        rate: parsed.rate,
+        sourceTimestamp: parsed.sourceTimestamp,
+      };
+    }
+
+    return null;
   } catch (error) {
     if (!hasWarnedFxFallbackCacheReadFailure) {
       console.warn(
@@ -256,16 +290,13 @@ async function getBacktrackedFallbackFromCache(
 async function storeBacktrackedFallbackInCache(
   key: string,
   entry: BacktrackedFallbackCacheEntry,
+  ttlSeconds = BACKTRACKED_FALLBACK_TTL_SECONDS,
 ): Promise<void> {
   try {
     const redis = await getRedisClient();
     if (!redis) return;
 
-    await redis.setEx(
-      key,
-      BACKTRACKED_FALLBACK_TTL_SECONDS,
-      JSON.stringify(entry),
-    );
+    await redis.setEx(key, ttlSeconds, JSON.stringify(entry));
   } catch (error) {
     if (!hasWarnedFxFallbackCacheWriteFailure) {
       console.warn(
@@ -311,7 +342,7 @@ function isNoDataProviderError(error?: {
 async function fetchUsdToCurrencyRateFromCurrencyLayer(
   targetCurrency: string,
   date: Date,
-): Promise<number | null> {
+): Promise<FetchRateResult> {
   const apiKey = getCurrencyLayerApiKey();
   if (!apiKey) return null;
 
@@ -354,7 +385,7 @@ async function fetchUsdToCurrencyRateFromCurrencyLayer(
   const data = (await response.json()) as CurrencyLayerHistoricalResponse;
   if (!data.success) {
     if (isNoDataProviderError(data.error)) {
-      return null;
+      return NO_DATA_FETCH_RESULT;
     }
 
     throw new Error(
@@ -369,7 +400,7 @@ async function fetchUsdToCurrencyRateFromCurrencyLayer(
 async function fetchUsdPerCryptocurrencyRateFromCoinLayer(
   cryptocurrency: string,
   date: Date,
-): Promise<number | null> {
+): Promise<FetchRateResult> {
   const apiKey = getCoinLayerApiKey();
   if (!apiKey) return null;
 
@@ -408,7 +439,7 @@ async function fetchUsdPerCryptocurrencyRateFromCoinLayer(
   const data = (await response.json()) as CoinLayerHistoricalResponse;
   if (!data.success) {
     if (isNoDataProviderError(data.error)) {
-      return null;
+      return NO_DATA_FETCH_RESULT;
     }
 
     throw new Error(
@@ -425,7 +456,7 @@ async function fetchSecurityPriceFromMarketstack(
   tradeCurrency: string,
   date: Date,
   retryCount = 0,
-): Promise<number | null> {
+): Promise<FetchRateResult> {
   const apiKey = getMarketstackApiKey();
   if (!apiKey) return null;
 
@@ -484,7 +515,7 @@ async function fetchSecurityPriceFromMarketstack(
       errorInfo.includes("no result") ||
       errorInfo.includes("did not return any results")
     ) {
-      return null;
+      return NO_DATA_FETCH_RESULT;
     }
     throw new Error(`Marketstack request failed: ${data.error.message}`);
   }
@@ -516,11 +547,13 @@ async function getRateWithBacktracking(args: {
   seriesKey: string;
   backtrackedFallbackCacheKey: string;
   date: Date;
-  fetchRate: (date: Date) => Promise<number | null>;
+  fetchRate: (date: Date) => Promise<FetchRateResult>;
+  stopOnExplicitNoData?: boolean;
 }): Promise<number | null> {
   const requestedTimestamp = toSeriesTimestamp(args.date);
   const key = args.seriesKey;
   const backtrackedFallbackCacheKey = args.backtrackedFallbackCacheKey;
+  const stopOnExplicitNoData = args.stopOnExplicitNoData ?? true;
 
   const cached = await getCachedRate(key, requestedTimestamp);
   if (cached?.timestamp === requestedTimestamp) {
@@ -532,7 +565,14 @@ async function getRateWithBacktracking(args: {
     backtrackedFallbackCacheKey,
   );
   if (cachedBacktrackedFallback) {
-    return cachedBacktrackedFallback.rate;
+    if (cachedBacktrackedFallback.kind === "noData") {
+      if (stopOnExplicitNoData) {
+        return null;
+      }
+      await clearBacktrackedFallbackFromCache(backtrackedFallbackCacheKey);
+    } else {
+      return cachedBacktrackedFallback.rate;
+    }
   }
 
   let requestedDate = toUtcDay(args.date);
@@ -541,6 +581,7 @@ async function getRateWithBacktracking(args: {
     if (cached && currentTimestamp <= cached.timestamp) {
       // We already have the newest known cached point at-or-before this day.
       await storeBacktrackedFallbackInCache(backtrackedFallbackCacheKey, {
+        kind: "rate",
         rate: cached.rate,
         sourceTimestamp: cached.timestamp,
       });
@@ -548,7 +589,20 @@ async function getRateWithBacktracking(args: {
     }
 
     const fetchedRate = await args.fetchRate(requestedDate);
-    if (fetchedRate != null) {
+    if (fetchedRate === NO_DATA_FETCH_RESULT) {
+      if (stopOnExplicitNoData) {
+        await storeBacktrackedFallbackInCache(
+          backtrackedFallbackCacheKey,
+          { kind: "noData" },
+          BACKTRACKED_NO_DATA_FALLBACK_TTL_SECONDS,
+        );
+        return null;
+      }
+      requestedDate = subUtcDay(requestedDate);
+      continue;
+    }
+
+    if (typeof fetchedRate === "number") {
       try {
         await storeCachedRate(
           key,
@@ -565,6 +619,7 @@ async function getRateWithBacktracking(args: {
 
       if (currentTimestamp < requestedTimestamp) {
         await storeBacktrackedFallbackInCache(backtrackedFallbackCacheKey, {
+          kind: "rate",
           rate: fetchedRate,
           sourceTimestamp: currentTimestamp,
         });
@@ -579,6 +634,7 @@ async function getRateWithBacktracking(args: {
 
   if (cached) {
     await storeBacktrackedFallbackInCache(backtrackedFallbackCacheKey, {
+      kind: "rate",
       rate: cached.rate,
       sourceTimestamp: cached.timestamp,
     });
@@ -639,6 +695,7 @@ async function getSecurityPrice(
     date,
     fetchRate: (targetDate) =>
       fetchSecurityPriceFromMarketstack(symbol, tradeCurrency, targetDate),
+    stopOnExplicitNoData: false,
   });
 }
 
