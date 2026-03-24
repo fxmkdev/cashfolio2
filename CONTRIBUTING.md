@@ -33,6 +33,15 @@ Recommended types:
 Commits inside a pull request can stay descriptive for review flow and do not
 need to be strictly Conventional Commit formatted.
 
+## Pull Request Description Workflow
+
+- Prefer `gh pr create --body-file <path>` over `--body` to avoid shell
+  escaping/newline formatting issues in PR descriptions.
+- Prefer `gh pr edit --body-file <path>` for updates.
+- If `gh pr edit` fails with a GraphQL error mentioning `projectCards`
+  deprecation, update the body through REST:
+  `gh api -X PATCH repos/<owner>/<repo>/pulls/<number> -f body="$(cat <path>)"`.
+
 ## Scope Guidance
 
 - Use app or area scope when helpful (`cashfolio-app2`, `cashfolio-app`,
