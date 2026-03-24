@@ -23,8 +23,9 @@ Redis cache note:
   instance is provisioned).
 
 When a PR is closed, CI deletes the corresponding Fly app, Neon branch (via
-`neondatabase/delete-branch-action`), and GitHub preview environment
-(`preview-pr-<PR_NUMBER>`).
+`neondatabase/delete-branch-action`).
+
+Dynamic preview CI does not create or use GitHub environments.
 
 Neon branch lifecycle notes:
 
@@ -37,9 +38,8 @@ Neon branch lifecycle notes:
 
 ## Required GitHub configuration
 
-Dynamic preview jobs create one GitHub environment per PR
-(`preview-pr-<PR_NUMBER>`) and read configuration from repository or
-organization scope (global), not from environment-scoped secrets/variables.
+Dynamic preview jobs read configuration from repository or organization scope
+(global), not from environment-scoped secrets/variables.
 
 ### Secrets
 
