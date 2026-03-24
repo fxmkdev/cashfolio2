@@ -3,6 +3,11 @@
     "@fxmk/releaser": "0.5.0",
     "prettier": "3.8.1"
   },
+  "pnpm": {
+    "overrides": {
+      "@tanstack/start-server-core@1.167.1>h3-v2": "npm:h3@2.0.1-rc.18"
+    }
+  },
   "scripts": {
     "cashfolio": "pnpm --filter cli start"
   },

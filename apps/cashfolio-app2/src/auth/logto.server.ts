@@ -4,6 +4,7 @@ import LogtoClient, {
   type LogtoConfig,
 } from "@logto/node";
 import { getCookie, setCookie } from "@tanstack/react-start/server";
+import { ensureSameOriginRequest } from "../security/same-origin.server";
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -115,35 +116,6 @@ export async function handleLogtoSignInCallback(request: Request) {
     status: 302,
     headers: { Location: "/" },
   });
-}
-
-function ensureSameOriginRequest(request: Request) {
-  const { baseUrl } = getRuntimeConfig();
-  const expectedOrigin = new URL(baseUrl).origin;
-  const requestOrigin = request.headers.get("origin");
-
-  if (requestOrigin) {
-    if (requestOrigin !== expectedOrigin) {
-      throw new Response("Forbidden", { status: 403 });
-    }
-    return;
-  }
-
-  const referer = request.headers.get("referer");
-  if (!referer) {
-    throw new Response("Forbidden", { status: 403 });
-  }
-
-  let refererOrigin = "";
-  try {
-    refererOrigin = new URL(referer).origin;
-  } catch {
-    throw new Response("Forbidden", { status: 403 });
-  }
-
-  if (refererOrigin !== expectedOrigin) {
-    throw new Response("Forbidden", { status: 403 });
-  }
 }
 
 export async function handleLogtoSignOut(request: Request) {
