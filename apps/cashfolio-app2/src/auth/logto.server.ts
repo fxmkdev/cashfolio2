@@ -120,7 +120,7 @@ export async function handleLogtoSignInCallback(request: Request) {
 
 export async function handleLogtoSignOut(request: Request) {
   const { baseUrl } = getRuntimeConfig();
-  ensureSameOriginRequest(request);
+  ensureSameOriginRequest(request, { baseUrl });
 
   let navigateToUrl = "/";
 
