@@ -36,6 +36,24 @@ Route-level logic that doesn't belong in components is extracted into hooks in
 | `useTransactionScroll` | `use-transaction-scroll.ts`  | Scroll-to and flash a transaction row on the ledger grid                  |
 | `useDialogSubmitState` | `use-dialog-submit-state.ts` | Reusable async-submit guard with in-flight state and optional parent sync |
 
+## Route Page View Pattern
+
+Route files in `src/routes/` should act as orchestration containers and keep
+render trees in extracted `*PageView` components.
+
+- Route containers keep:
+  - `createFileRoute` config (`loader`, `validateSearch`)
+  - route hooks (`Route.useLoaderData`, `Route.useParams`, route navigation)
+  - server mutations and router invalidation
+  - state/derived data orchestration
+- Extracted view components keep:
+  - route-visible JSX trees (headers, grids, modals, actions)
+  - typed prop contracts for data and UI callbacks
+- Storybook:
+  - create stories for each `*PageView` (happy path, empty/partial/modal states)
+  - keep one lightweight route smoke story to validate router path/search/link
+    integration
+
 ## Modal Pattern
 
 `EditAccountModal` and `EditAccountGroupModal` share these conventions:

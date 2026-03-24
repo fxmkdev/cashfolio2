@@ -1,14 +1,12 @@
 import { useCallback, useRef } from "react";
 import type { IRowNode, RowDataUpdatedEvent } from "ag-grid-enterprise";
 
-type Row = { transactionId: string };
-
 type NavigateFn = (opts: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
   replace: boolean;
 }) => void;
 
-export function useTransactionScroll(
+export function useTransactionScroll<Row extends { transactionId: string }>(
   transactionId: string | undefined,
   navigate: NavigateFn,
 ) {
