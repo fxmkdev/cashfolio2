@@ -34,9 +34,14 @@ function getTopLevelGroupId(
   groupById: Map<string, AssetAllocationTreeRow>,
 ): string {
   let currentGroupId = groupId;
+  const visited = new Set<string>([currentGroupId]);
   let parentGroupId = groupById.get(currentGroupId)?.parentId;
 
   while (parentGroupId && groupById.has(parentGroupId)) {
+    if (visited.has(parentGroupId)) {
+      break;
+    }
+    visited.add(parentGroupId);
     currentGroupId = parentGroupId;
     parentGroupId = groupById.get(currentGroupId)?.parentId;
   }
