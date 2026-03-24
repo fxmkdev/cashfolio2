@@ -240,8 +240,8 @@ function AccountsPageStoryHarness({
   startWithEditModal?: boolean;
   routeSmoke?: boolean;
 }) {
-  const [tab] = useState<TabValue>(initialTab);
-  const [mode, setMode] = useState<AccountsMode>(initialMode);
+  const [tabState, setTabState] = useState<TabValue>(initialTab);
+  const [modeState, setModeState] = useState<AccountsMode>(initialMode);
   const [createModalOpened, setCreateModalOpened] =
     useState(startWithCreateModal);
   const [createGroupModalOpened, setCreateGroupModalOpened] = useState(false);
@@ -283,9 +283,17 @@ function AccountsPageStoryHarness({
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const search = useRouterState({
+  const routeSearch = useRouterState({
     select: (state) => state.location.search,
   });
+  const tab: TabValue =
+    routeSmoke &&
+    typeof routeSearch.tab === "string" &&
+    tabs.some((candidate) => candidate.value === routeSearch.tab)
+      ? (routeSearch.tab as TabValue)
+      : tabState;
+  const mode: AccountsMode =
+    routeSmoke && routeSearch.mode === "archived" ? "archived" : modeState;
 
   const rows = useMemo(() => getRowsFor({ mode, tab }), [mode, tab]);
   const rowsByParentKey = useRowsByParentKey(rows);
@@ -341,7 +349,7 @@ function AccountsPageStoryHarness({
       }
     },
     onUnarchiveRow: async () => {
-      setMode("active");
+      setModeState("active");
     },
     onArchiveRow: setArchivingRow,
     onDeleteRow: setDeletingRow,
@@ -422,7 +430,7 @@ function AccountsPageStoryHarness({
       {routeSmoke ? (
         <>
           <Text data-testid="router-path">{pathname}</Text>
-          <Text data-testid="router-search">{JSON.stringify(search)}</Text>
+          <Text data-testid="router-search">{JSON.stringify(routeSearch)}</Text>
         </>
       ) : null}
     </Box>
