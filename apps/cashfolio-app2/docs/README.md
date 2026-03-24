@@ -28,6 +28,18 @@ Run interaction tests (with Storybook dev server running on port `6006`):
 pnpm --filter cashfolio-app2 test-storybook
 ```
 
+### Storybook Coverage Guideline
+
+- Keep Storybook **up-to-date and complete** for UI changes.
+- When adding or changing UI components, update existing stories or add new
+  stories in `src/**/*.stories.tsx` in the same PR.
+- Include key states and important interaction paths, not only the default happy
+  path.
+- Before finishing, ensure Storybook is healthy:
+  - `pnpm --filter cashfolio-app2 build-storybook`
+  - run `pnpm --filter cashfolio-app2 test-storybook` when interaction behavior
+    or story play functions changed.
+
 Chromatic publishing:
 
 - Workflow: `.github/workflows/chromatic.yml`
