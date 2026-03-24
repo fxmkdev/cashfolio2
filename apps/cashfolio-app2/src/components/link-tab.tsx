@@ -3,10 +3,10 @@ import { createLink } from "@tanstack/react-router";
 import { forwardRef, type ComponentPropsWithoutRef } from "react";
 
 const TabLinkBase = forwardRef<
-  HTMLButtonElement,
-  TabsTabProps & ComponentPropsWithoutRef<"a">
+  HTMLAnchorElement,
+  Omit<TabsTabProps, "component"> & ComponentPropsWithoutRef<"a">
 >(function TabLinkBase(props, ref) {
-  return <Tabs.Tab ref={ref} component="a" {...props} />;
+  return <Tabs.Tab ref={ref as never} {...props} component="a" />;
 });
 
 export const LinkTab = createLink(TabLinkBase);

@@ -4,9 +4,9 @@ import { forwardRef, type ComponentPropsWithoutRef } from "react";
 
 const ButtonLinkBase = forwardRef<
   HTMLAnchorElement,
-  ButtonProps & ComponentPropsWithoutRef<"a">
+  Omit<ButtonProps, "component"> & ComponentPropsWithoutRef<"a">
 >(function ButtonLinkBase(props, ref) {
-  return <Button ref={ref} component="a" {...props} />;
+  return <Button ref={ref} {...props} component="a" />;
 });
 
 export const LinkButton = createLink(ButtonLinkBase);
