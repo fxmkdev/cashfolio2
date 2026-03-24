@@ -9,6 +9,7 @@ import {
   editTransactionInitialValues,
 } from "../../components/storybook-fixtures";
 import { useLedgerColumnDefs } from "./ledger-page-columns";
+import type { SimpleTransactionEditInitialValues } from "./ledger-page-data";
 import {
   LedgerPageView,
   type EditMode,
@@ -124,14 +125,7 @@ function LedgerPageStoryHarness({
       : undefined,
   );
   const [editingSimpleInitialValues, setEditingSimpleInitialValues] = useState<
-    | {
-        date: Date;
-        description: string;
-        counterAccountId: string;
-        amount: number;
-        direction: "DEBIT" | "CREDIT";
-      }
-    | undefined
+    SimpleTransactionEditInitialValues | undefined
   >();
   const [deletingTransaction, setDeletingTransaction] = useState<
     { id: string; description: string } | undefined
