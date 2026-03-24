@@ -11,7 +11,19 @@ import {
   getCurrencyExchangeRate,
   getSecurityToCurrencyExchangeRate,
 } from "./fx.server";
-import { getGroupPath, hasInactiveAncestorGroup } from "./accounts-helpers";
+import {
+  createGroupPathResolver,
+  hasInactiveAncestorGroup,
+} from "./accounts-helpers";
+import {
+  accountTypeRequiresZeroBalanceForArchive,
+  getAccountArchiveAvailability,
+  getAccountDeleteAvailability,
+  getAccountUnarchiveAvailability,
+  getGroupArchiveAvailability,
+  getGroupDeleteAvailability,
+  getGroupUnarchiveAvailability,
+} from "./account-tree-rules";
 
 type AccountState = "active" | "inactive";
 
@@ -36,10 +48,11 @@ async function getAccountGroupsInternal(accountBookId: string) {
     where: { accountBookId, isActive: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
+  const resolveGroupPath = createGroupPathResolver(groups);
   return groups
     .map((g) => ({
       value: g.id,
-      label: getGroupPath(g.id, groups),
+      label: resolveGroupPath(g.id),
       type: g.type,
       equityAccountSubtype: g.equityAccountSubtype,
     }))
@@ -352,14 +365,23 @@ async function getAccountTreeDataInternal(args: {
       }
 
       const hasBookings = (bookingCountByAccountId.get(a.id) ?? 0) > 0;
-      const requiresZeroBalance = a.type === "ASSET" || a.type === "LIABILITY";
+      const requiresZeroBalance = accountTypeRequiresZeroBalanceForArchive(
+        a.type,
+      );
       const hasZeroBalance = !requiresZeroBalance || rawBalance === 0;
       const hasInactiveAncestor = hasInactiveAncestorGroup(
         a.groupId,
         groupById,
       );
-      const archivable = a.isActive && hasZeroBalance;
-      const unarchivable = !a.isActive && !hasInactiveAncestor;
+      const deleteAvailability = getAccountDeleteAvailability(hasBookings);
+      const archiveAvailability = getAccountArchiveAvailability({
+        isActive: a.isActive,
+        hasZeroBalance,
+      });
+      const unarchiveAvailability = getAccountUnarchiveAvailability({
+        isActive: a.isActive,
+        hasInactiveAncestor,
+      });
       const displayBalance =
         a.type === "ASSET"
           ? rawBalance
@@ -392,22 +414,12 @@ async function getAccountTreeDataInternal(args: {
         isActive: a.isActive,
         groupId: a.groupId ?? undefined,
         sortOrder: a.sortOrder,
-        deletable: !hasBookings,
-        deleteDisabledReason: hasBookings
-          ? "Cannot delete account because it has bookings"
-          : undefined,
-        archivable,
-        archiveDisabledReason: !a.isActive
-          ? "Account is already archived"
-          : hasZeroBalance
-            ? undefined
-            : "Cannot archive account because its balance is not 0",
-        unarchivable,
-        unarchiveDisabledReason: a.isActive
-          ? "Account is already active"
-          : hasInactiveAncestor
-            ? "Cannot unarchive account because its parent group is archived"
-            : undefined,
+        deletable: deleteAvailability.enabled,
+        deleteDisabledReason: deleteAvailability.disabledReason,
+        archivable: archiveAvailability.enabled,
+        archiveDisabledReason: archiveAvailability.disabledReason,
+        unarchivable: unarchiveAvailability.enabled,
+        unarchiveDisabledReason: unarchiveAvailability.disabledReason,
       };
     }),
   );
@@ -477,11 +489,20 @@ async function getAccountTreeDataInternal(args: {
       groupById,
     );
     const isReferencedByAccountBook = referencedByAccountBook.has(ag.id);
-    const deletable =
-      !hasChildAccounts && !hasChildGroups && !isReferencedByAccountBook;
-    const archivable =
-      ag.isActive && !hasActiveChildAccounts && !hasActiveChildGroups;
-    const unarchivable = !ag.isActive && !hasInactiveAncestor;
+    const deleteAvailability = getGroupDeleteAvailability({
+      hasChildAccounts,
+      hasChildGroups,
+      isReferencedByAccountBook,
+    });
+    const archiveAvailability = getGroupArchiveAvailability({
+      isActive: ag.isActive,
+      hasActiveChildAccounts,
+      hasActiveChildGroups,
+    });
+    const unarchiveAvailability = getGroupUnarchiveAvailability({
+      isActive: ag.isActive,
+      hasInactiveAncestor,
+    });
     return {
       id: ag.id,
       nodeType: "accountGroup" as "account" | "accountGroup",
@@ -499,28 +520,12 @@ async function getAccountTreeDataInternal(args: {
       isActive: ag.isActive,
       groupId: ag.id,
       sortOrder: ag.sortOrder,
-      deletable,
-      deleteDisabledReason: isReferencedByAccountBook
-        ? "Cannot delete group because it is used as a holding gain/loss group"
-        : hasChildAccounts
-          ? "Cannot delete group because it contains accounts"
-          : hasChildGroups
-            ? "Cannot delete group because it contains sub-groups"
-            : undefined,
-      archivable,
-      archiveDisabledReason: !ag.isActive
-        ? "Group is already archived"
-        : hasActiveChildAccounts
-          ? "Cannot archive group because it contains active accounts"
-          : hasActiveChildGroups
-            ? "Cannot archive group because it contains active sub-groups"
-            : undefined,
-      unarchivable,
-      unarchiveDisabledReason: ag.isActive
-        ? "Group is already active"
-        : hasInactiveAncestor
-          ? "Cannot unarchive group because its parent group is archived"
-          : undefined,
+      deletable: deleteAvailability.enabled,
+      deleteDisabledReason: deleteAvailability.disabledReason,
+      archivable: archiveAvailability.enabled,
+      archiveDisabledReason: archiveAvailability.disabledReason,
+      unarchivable: unarchiveAvailability.enabled,
+      unarchiveDisabledReason: unarchiveAvailability.disabledReason,
     };
   });
 
@@ -556,10 +561,11 @@ export const getAccounts = createServerFn({ method: "GET" })
         where: { accountBookId: data.accountBookId },
       }),
     ]);
+    const resolveGroupPath = createGroupPathResolver(allGroups);
     return accounts
       .map((a) => ({
         ...a,
-        groupPath: a.groupId ? getGroupPath(a.groupId, allGroups) : "",
+        groupPath: a.groupId ? resolveGroupPath(a.groupId) : "",
       }))
       .toSorted((a, b) =>
         `${a.groupPath} / ${a.name}`.localeCompare(

@@ -1,15 +1,67 @@
 import { prisma } from "../prisma.server";
 
-export function getGroupPath(
+type GroupPathNode = {
+  id: string;
+  name: string;
+  parentGroupId: string | null;
+};
+
+type GroupPathSegmentsResolver = (groupId: string) => string[];
+
+function createUnknownGroupPath(groupId: string): string[] {
+  return [`Unknown group ${groupId}`];
+}
+
+export function createGroupPathSegmentsResolver(
+  groups: GroupPathNode[],
+): GroupPathSegmentsResolver {
+  const groupById = new Map(groups.map((group) => [group.id, group]));
+  const pathSegmentsByGroupId = new Map<string, string[]>();
+  const resolvingGroupIds = new Set<string>();
+
+  const resolveSegments: GroupPathSegmentsResolver = (groupId) => {
+    const cachedSegments = pathSegmentsByGroupId.get(groupId);
+    if (cachedSegments) {
+      return [...cachedSegments];
+    }
+
+    if (resolvingGroupIds.has(groupId)) {
+      return createUnknownGroupPath(groupId);
+    }
+
+    const group = groupById.get(groupId);
+    if (!group) {
+      return createUnknownGroupPath(groupId);
+    }
+
+    resolvingGroupIds.add(groupId);
+    const parentSegments = group.parentGroupId
+      ? resolveSegments(group.parentGroupId)
+      : [];
+    resolvingGroupIds.delete(groupId);
+
+    const segments = [...parentSegments, group.name];
+    pathSegmentsByGroupId.set(groupId, segments);
+    return [...segments];
+  };
+
+  return resolveSegments;
+}
+
+export function createGroupPathResolver(groups: GroupPathNode[]) {
+  const resolveSegments = createGroupPathSegmentsResolver(groups);
+  return (groupId: string): string => resolveSegments(groupId).join(" / ");
+}
+
+export function getGroupPath(groupId: string, groups: GroupPathNode[]): string {
+  return createGroupPathResolver(groups)(groupId);
+}
+
+export function getGroupPathSegments(
   groupId: string,
-  groups: { id: string; name: string; parentGroupId: string | null }[],
-): string {
-  const group = groups.find((g) => g.id === groupId);
-  if (!group) return `Unknown group ${groupId}`;
-  const prefix = group.parentGroupId
-    ? `${getGroupPath(group.parentGroupId, groups)} / `
-    : "";
-  return prefix + group.name;
+  groups: GroupPathNode[],
+): string[] {
+  return createGroupPathSegmentsResolver(groups)(groupId);
 }
 
 export type GroupHierarchyNode = {
