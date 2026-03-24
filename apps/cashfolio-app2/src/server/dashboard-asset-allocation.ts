@@ -124,22 +124,22 @@ export function buildAssetAllocationFromTreeRows(args: {
     });
   }
 
-  const items = Array.from(itemById.values())
-    .sort((a, b) => b.amount - a.amount)
-    .map((item) => ({
-      ...item,
-      amount: round2(item.amount),
-    }));
-  const totalIncludedAmount = round2(
-    items.reduce((sum, item) => sum + item.amount, 0),
+  const rawItems = Array.from(itemById.values()).sort(
+    (a, b) => b.amount - a.amount,
   );
+  const totalIncludedAmountRaw = rawItems.reduce(
+    (sum, item) => sum + item.amount,
+    0,
+  );
+  const totalIncludedAmount = round2(totalIncludedAmountRaw);
 
-  const itemsWithPercentages = items.map((item) => ({
+  const itemsWithPercentages = rawItems.map((item) => ({
     ...item,
+    amount: round2(item.amount),
     percentage:
-      totalIncludedAmount <= 0
+      totalIncludedAmountRaw <= 0
         ? 0
-        : round2((item.amount / totalIncludedAmount) * 100),
+        : round2((item.amount / totalIncludedAmountRaw) * 100),
   }));
 
   return {

@@ -160,6 +160,7 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
         type: AccountType.ASSET,
         accountState: "active",
         includeReferenceBalances: true,
+        includeActionAvailability: false,
       },
     });
 

@@ -193,4 +193,36 @@ describe("buildAssetAllocationFromTreeRows", () => {
     expect(allocation.items[0]?.percentage).toBe(66.67);
     expect(allocation.items[1]?.percentage).toBe(33.33);
   });
+
+  it("computes percentages from unrounded amounts", () => {
+    const allocation = buildAssetAllocationFromTreeRows({
+      referenceCurrency: "CHF",
+      rows: [
+        {
+          id: "account-small-a",
+          name: "Small A",
+          nodeType: "account",
+          parentId: undefined,
+          groupId: undefined,
+          balanceInReferenceCurrency: 0.004,
+        },
+        {
+          id: "account-small-b",
+          name: "Small B",
+          nodeType: "account",
+          parentId: undefined,
+          groupId: undefined,
+          balanceInReferenceCurrency: 0.006,
+        },
+      ],
+    });
+
+    expect(allocation.totalIncludedAmount).toBe(0.01);
+    expect(allocation.items[0]?.label).toBe("Small B");
+    expect(allocation.items[0]?.amount).toBe(0.01);
+    expect(allocation.items[0]?.percentage).toBe(60);
+    expect(allocation.items[1]?.label).toBe("Small A");
+    expect(allocation.items[1]?.amount).toBe(0);
+    expect(allocation.items[1]?.percentage).toBe(40);
+  });
 });
