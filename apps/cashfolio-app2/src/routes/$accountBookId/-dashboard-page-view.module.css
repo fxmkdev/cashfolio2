@@ -3,6 +3,36 @@
   height: 420px;
 }
 
+.assetAllocationContent {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: minmax(280px, 420px) minmax(220px, 1fr);
+  gap: 20px;
+  align-items: center;
+}
+
+.assetAllocationChartContainer {
+  height: 360px;
+}
+
+.assetAllocationTotal {
+  border-top: 1px solid var(--mantine-color-default-border);
+}
+
+@media (max-width: 900px) {
+  .assetAllocationContent {
+    grid-template-columns: 1fr;
+  }
+
+  .assetAllocationChartContainer {
+    height: 320px;
+  }
+}
+
 .chartContainer :global(.ag-charts-overlay) {
+  color: var(--mantine-color-dimmed);
+}
+
+.assetAllocationChartContainer :global(.ag-charts-overlay) {
   color: var(--mantine-color-dimmed);
 }

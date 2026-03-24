@@ -40,6 +40,42 @@ const baseOverview: DashboardPageViewProps["overview"] = {
       net: 2800,
     },
   ],
+  assetAllocation: {
+    referenceCurrency: "CHF",
+    totalIncludedAmount: 125000,
+    items: [
+      {
+        id: "group:group-cash",
+        label: "Cash",
+        amount: 50000,
+        percentage: 40,
+        kind: "group",
+      },
+      {
+        id: "group:group-securities",
+        label: "Securities",
+        amount: 43750,
+        percentage: 35,
+        kind: "group",
+      },
+      {
+        id: "group:group-crypto",
+        label: "Crypto",
+        amount: 25000,
+        percentage: 20,
+        kind: "group",
+      },
+      {
+        id: "account:account-wallet",
+        label: "Private Wallet",
+        amount: 6250,
+        percentage: 5,
+        kind: "ungroupedAccount",
+      },
+    ],
+    skippedMissingReferenceBalanceCount: 0,
+    skippedNonPositiveCount: 0,
+  },
 };
 
 function DashboardRouteSmokeHarness() {
@@ -119,6 +155,26 @@ export const PartialData: Story = {
     overview: {
       ...baseOverview,
       skippedBookingsCount: 3,
+      assetAllocation: {
+        ...baseOverview.assetAllocation,
+        skippedMissingReferenceBalanceCount: 2,
+        skippedNonPositiveCount: 1,
+      },
+    },
+  },
+};
+
+export const AssetAllocationEmpty: Story = {
+  args: {
+    overview: {
+      ...baseOverview,
+      assetAllocation: {
+        referenceCurrency: "CHF",
+        totalIncludedAmount: 0,
+        items: [],
+        skippedMissingReferenceBalanceCount: 0,
+        skippedNonPositiveCount: 0,
+      },
     },
   },
 };

@@ -134,9 +134,12 @@ submit UX and prevent duplicate requests.
 
 - Dashboard route (`src/routes/$accountBookId/index.tsx`) is the default entry
   for an account book.
-- The v1 chart combines:
-  - grouped absolute bars for Income and Expense
-  - a signed Net line (`income - expense`) on the same axis
+- The dashboard currently renders two widgets:
+  - **Income & Expense Overview** chart combining:
+    - grouped absolute bars for Income and Expense
+    - a signed Net line (`income - expense`) on the same axis
+  - **Asset Allocation** donut based on current active asset balances
+    (independent from the 12m/10y period switch)
 - Data is normalized to the account-book reference currency.
 - The period switch supports:
   - **Last 12 months** with monthly buckets
@@ -144,6 +147,12 @@ submit UX and prevent duplicate requests.
     `currentYear`; current year is year-to-date up to now)
 - When conversion rates are unavailable for some bookings, the chart remains
   visible and a partial-data note is shown.
+- Asset allocation inclusion rules:
+  - include positive, convertible balances only
+  - roll grouped accounts up to their top-level asset group
+  - include ungrouped asset accounts as individual slices
+  - exclude missing-reference and non-positive balances, and show a partial-data
+    note when exclusions happen
 
 ## Accounts List Columns
 

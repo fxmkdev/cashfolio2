@@ -19,6 +19,8 @@ import {
   getCurrencyExchangeRate,
   getSecurityToCurrencyExchangeRate,
 } from "./fx.server";
+import { getAccountTreeDataInternal } from "./accounts-queries";
+import { buildAssetAllocationFromTreeRows } from "./dashboard-asset-allocation";
 
 type DashboardBucket = {
   income: number;
@@ -152,12 +154,21 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
     const periodConfig = getDashboardPeriodConfig(data.period, new Date());
-    const accountBook = await prisma.accountBook.findUniqueOrThrow({
-      where: { id: data.accountBookId },
-      select: { referenceCurrency: true },
+    const assetTreeData = await getAccountTreeDataInternal({
+      data: {
+        accountBookId: data.accountBookId,
+        type: AccountType.ASSET,
+        accountState: "active",
+        includeReferenceBalances: true,
+      },
+      skipAuthorization: true,
     });
 
-    const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
+    const referenceCurrency = assetTreeData.referenceCurrency;
+    const assetAllocation = buildAssetAllocationFromTreeRows({
+      rows: assetTreeData.rows,
+      referenceCurrency,
+    });
     const bucketsByKey = new Map<string, DashboardBucket>();
 
     for (const bucketStart of periodConfig.bucketStarts) {
@@ -372,5 +383,6 @@ export const getDashboardIncomeExpenseOverview = createServerFn({
       convertedBookingsCount,
       skippedBookingsCount,
       points,
+      assetAllocation,
     };
   });

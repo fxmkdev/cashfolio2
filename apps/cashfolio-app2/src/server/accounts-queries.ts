@@ -321,7 +321,7 @@ async function getExistingNodesInternal(accountBookId: string) {
   ];
 }
 
-async function getAccountTreeDataInternal(args: {
+export async function getAccountTreeDataInternal(args: {
   data: AccountTreeDataInput;
   skipAuthorization?: boolean;
 }) {
