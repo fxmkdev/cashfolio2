@@ -4,6 +4,7 @@ import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { isAfter, startOfDay } from "date-fns";
 import { getSimpleTransactionUnitIdentifier } from "../shared/account-utils";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
+import { ensureSameOriginRequestFromServerContext } from "../security/same-origin.server";
 import { validateRebookBookingTarget } from "./rebook-booking-validation";
 import {
   accountTypeMeta,
@@ -24,6 +25,7 @@ export const updateTransaction = createServerFn({ method: "POST" })
     (data: CreateTransactionInput & { transactionId: string }) => data,
   )
   .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     validateCreateTransaction(data);
     await validateAccountTypeBookings(data.bookings, data.accountBookId);
@@ -76,6 +78,7 @@ export const updateTransaction = createServerFn({ method: "POST" })
 export const createTransaction = createServerFn({ method: "POST" })
   .inputValidator((data: CreateTransactionInput) => data)
   .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     validateCreateTransaction(data);
     await validateAccountTypeBookings(data.bookings, data.accountBookId);
@@ -90,6 +93,7 @@ export const createTransaction = createServerFn({ method: "POST" })
 export const createSimpleTransaction = createServerFn({ method: "POST" })
   .inputValidator((data: CreateSimpleTransactionInput) => data)
   .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
     if (!Number.isFinite(data.amount) || data.amount <= 0) {
@@ -264,6 +268,7 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
 export const rebookBooking = createServerFn({ method: "POST" })
   .inputValidator((data: RebookBookingInput) => data)
   .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
     const [booking, targetAccount] = await Promise.all([
@@ -354,6 +359,7 @@ export const deleteTransaction = createServerFn({ method: "POST" })
     (data: { transactionId: string; accountBookId: string }) => data,
   )
   .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     await prisma.transaction.delete({
       where: {

@@ -5,6 +5,7 @@ import {
   validateAccountGroupInput,
 } from "../shared/account-validation";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
+import { ensureSameOriginRequestFromServerContext } from "../security/same-origin.server";
 import {
   ensureNoGroupCycle,
   getGroupHierarchy,
@@ -24,6 +25,7 @@ import {
 export const createAccount = createServerFn({ method: "POST" })
   .inputValidator((data: AccountInput) => data)
   .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const siblingNames = (
       await prisma.account.findMany({
@@ -56,6 +58,7 @@ export const createAccount = createServerFn({ method: "POST" })
 export const updateAccount = createServerFn({ method: "POST" })
   .inputValidator((data: AccountInput & { id: string }) => data)
   .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const siblingNames = (
       await prisma.account.findMany({
@@ -101,6 +104,7 @@ export const updateAccount = createServerFn({ method: "POST" })
 export const createAccountGroup = createServerFn({ method: "POST" })
   .inputValidator((data: AccountGroupInput) => data)
   .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const siblingNames = (
       await prisma.accountGroup.findMany({
@@ -128,6 +132,7 @@ export const createAccountGroup = createServerFn({ method: "POST" })
 export const updateAccountGroup = createServerFn({ method: "POST" })
   .inputValidator((data: AccountGroupInput & { id: string }) => data)
   .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const [siblingGroups, groupById] = await Promise.all([
       prisma.accountGroup.findMany({
@@ -175,6 +180,7 @@ export const updateAccountGroup = createServerFn({ method: "POST" })
 export const deleteAccount = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const bookingCount = await prisma.booking.count({
       where: { accountId: data.id, accountBookId: data.accountBookId },
@@ -193,6 +199,7 @@ export const deleteAccount = createServerFn({ method: "POST" })
 export const deleteAccountGroup = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const [childAccounts, childGroups, accountBook] = await Promise.all([
       prisma.account.count({
@@ -233,6 +240,7 @@ export const deleteAccountGroup = createServerFn({ method: "POST" })
 export const archiveAccount = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const account = await prisma.account.findUniqueOrThrow({
       where: {
@@ -270,6 +278,7 @@ export const archiveAccount = createServerFn({ method: "POST" })
 export const archiveAccountGroup = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const group = await prisma.accountGroup.findUniqueOrThrow({
       where: {
@@ -317,6 +326,7 @@ export const archiveAccountGroup = createServerFn({ method: "POST" })
 export const unarchiveAccount = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const account = await prisma.account.findUniqueOrThrow({
       where: {
@@ -347,6 +357,7 @@ export const unarchiveAccount = createServerFn({ method: "POST" })
 export const unarchiveAccountGroup = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const group = await prisma.accountGroup.findUniqueOrThrow({
       where: {
@@ -389,6 +400,7 @@ export const reorderAccountTreeItems = createServerFn({ method: "POST" })
     }) => data,
   )
   .handler(async ({ data }) => {
+    ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     await prisma.$transaction(
       data.updates.map((u) =>

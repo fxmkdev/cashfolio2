@@ -82,6 +82,17 @@ paths are relative to that app directory.
 - Account-book authorization guard: `src/account-books/functions.server.ts`
 - All account/ledger/transaction server functions enforce account-book access
   before querying/updating data
+- Same-origin request guard for mutation handlers lives in
+  `src/security/same-origin.server.ts` and is applied to account and transaction
+  `POST` server functions to reduce CSRF risk.
+
+### Dependency Security Note
+
+- Root `package.json` pins `h3` via `pnpm.overrides` to address transitive
+  security advisories while `@tanstack/start-server-core` still references
+  `h3@2.0.1-rc.16`.
+- Remove this override once TanStack Start upgrades its transitive `h3`
+  dependency to a patched release.
 
 ### Account Status Actions
 
