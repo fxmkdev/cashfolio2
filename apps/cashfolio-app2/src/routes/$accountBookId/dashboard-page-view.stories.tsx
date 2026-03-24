@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
 import { Box, Text } from "@mantine/core";
 import { useState } from "react";
 import { expect, fn, userEvent, within } from "storybook/test";
@@ -43,7 +43,6 @@ const baseOverview: DashboardPageViewProps["overview"] = {
 };
 
 function DashboardRouteSmokeHarness() {
-  const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] =
     useState<DashboardPageViewProps["selectedPeriod"]>(DASHBOARD_PERIOD_12M);
   const pathname = useRouterState({
@@ -53,19 +52,13 @@ function DashboardRouteSmokeHarness() {
   return (
     <Box>
       <DashboardPageView
+        accountBookId="storybook-book"
         overview={{
           ...baseOverview,
           convertedBookingsCount: 0,
         }}
         selectedPeriod={selectedPeriod}
         onPeriodChange={setSelectedPeriod}
-        onNavigateToAccounts={() =>
-          navigate({
-            to: "/$accountBookId/accounts",
-            params: { accountBookId: "storybook-book" },
-            search: { tab: "ASSET", mode: "active" },
-          })
-        }
       />
       <Text data-testid="router-path">{pathname}</Text>
     </Box>
@@ -76,10 +69,10 @@ const meta = {
   title: "Routes/DashboardPageView",
   component: DashboardPageView,
   args: {
+    accountBookId: "storybook-book",
     overview: baseOverview,
     selectedPeriod: DASHBOARD_PERIOD_12M,
     onPeriodChange: fn(),
-    onNavigateToAccounts: fn(),
   },
 } satisfies Meta<typeof DashboardPageView>;
 
@@ -102,12 +95,12 @@ export const HappyPath: Story = {
       { timeout: 10000 },
     );
     await expect(heading).toBeInTheDocument();
-    const accountsButton = await canvas.findByRole(
-      "button",
+    const accountsLink = await canvas.findByRole(
+      "link",
       { name: "Accounts" },
       { timeout: 10000 },
     );
-    await userEvent.click(accountsButton);
+    await userEvent.click(accountsLink);
   },
 };
 
@@ -131,15 +124,21 @@ export const PartialData: Story = {
 };
 
 export const RouteSmoke: Story = {
+  args: {
+    accountBookId: "storybook-book",
+    overview: baseOverview,
+    selectedPeriod: DASHBOARD_PERIOD_12M,
+    onPeriodChange: fn(),
+  },
   render: () => <DashboardRouteSmokeHarness />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const accountsButton = await canvas.findByRole(
-      "button",
+    const accountsLink = await canvas.findByRole(
+      "link",
       { name: "Accounts" },
       { timeout: 10000 },
     );
-    await userEvent.click(accountsButton);
+    await userEvent.click(accountsLink);
     const routerPath = await canvas.findByTestId(
       "router-path",
       {},
