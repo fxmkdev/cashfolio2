@@ -3,7 +3,7 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useExpandedGroups } from "../../hooks/use-expanded-groups";
 import type {
   AccountInitialValues,
@@ -45,48 +45,6 @@ import {
 import { useAccountTreeColumnDefs } from "./accounts-page-columns";
 import { AccountsPageView } from "./accounts-page-view";
 
-function mergeRowsPreservingReferenceBalances(
-  previousRows: TreeRow[],
-  nextRows: TreeRow[],
-): TreeRow[] {
-  const previousRowById = new Map(previousRows.map((row) => [row.id, row]));
-
-  return nextRows.map((row) => {
-    if (row.balanceInReferenceCurrency != null) {
-      return row;
-    }
-
-    const previousRow = previousRowById.get(row.id);
-    if (!previousRow || previousRow.balanceInReferenceCurrency == null) {
-      return row;
-    }
-
-    return {
-      ...row,
-      balanceInReferenceCurrency: previousRow.balanceInReferenceCurrency,
-    };
-  });
-}
-
-function mergeReferenceBalancesIntoRows(
-  rows: TreeRow[],
-  referenceRows: TreeRow[],
-): TreeRow[] {
-  const referenceRowById = new Map(referenceRows.map((row) => [row.id, row]));
-
-  return rows.map((row) => {
-    const referenceRow = referenceRowById.get(row.id);
-    if (!referenceRow) {
-      return row;
-    }
-
-    return {
-      ...row,
-      balanceInReferenceCurrency: referenceRow.balanceInReferenceCurrency,
-    };
-  });
-}
-
 export const Route = createFileRoute("/$accountBookId/accounts")({
   validateSearch: parseAccountsSearch,
   loaderDeps: ({ search }) => ({ mode: search.mode, tab: search.tab }),
@@ -107,7 +65,9 @@ function AccountsPage() {
   const { tab, mode } = Route.useSearch();
   const navigate = useNavigate({ from: "/$accountBookId/accounts" });
   const router = useRouter();
-  const [rows, setRows] = useState(loaderRows);
+  const [referenceBalanceByRowId, setReferenceBalanceByRowId] = useState(
+    () => new Map<string, number | null>(),
+  );
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [editingAccount, setEditingAccount] = useState<
     { id: string; initialValues: AccountInitialValues } | undefined
@@ -132,12 +92,42 @@ function AccountsPage() {
 
   const isEquityTab = tab.startsWith("EQUITY-");
   const isArchivedMode = mode === "archived";
+  const loaderRowIdsKey = useMemo(
+    () => loaderRows.map((row) => row.id).join("|"),
+    [loaderRows],
+  );
+
+  const rows = useMemo(
+    () =>
+      loaderRows.map((row) => {
+        if (!referenceBalanceByRowId.has(row.id)) {
+          return row;
+        }
+        const referenceBalance = referenceBalanceByRowId.get(row.id) ?? null;
+        if (referenceBalance === row.balanceInReferenceCurrency) {
+          return row;
+        }
+        return {
+          ...row,
+          balanceInReferenceCurrency: referenceBalance,
+        };
+      }),
+    [loaderRows, referenceBalanceByRowId],
+  );
 
   useEffect(() => {
-    setRows((previousRows) =>
-      mergeRowsPreservingReferenceBalances(previousRows, loaderRows),
-    );
-  }, [loaderRows]);
+    setReferenceBalanceByRowId((previous) => {
+      if (previous.size === 0) return previous;
+      const next = new Map<string, number | null>();
+      const rowIds = new Set(loaderRows.map((row) => row.id));
+      for (const [rowId, balance] of previous.entries()) {
+        if (rowIds.has(rowId)) {
+          next.set(rowId, balance);
+        }
+      }
+      return next;
+    });
+  }, [loaderRowIdsKey]);
 
   useEffect(() => {
     if (isEquityTab) {
@@ -159,9 +149,13 @@ function AccountsPage() {
     })
       .then((treeData) => {
         if (!active) return;
-        setRows((previousRows) =>
-          mergeReferenceBalancesIntoRows(previousRows, treeData.rows),
-        );
+        setReferenceBalanceByRowId((previous) => {
+          const next = new Map(previous);
+          for (const row of treeData.rows) {
+            next.set(row.id, row.balanceInReferenceCurrency);
+          }
+          return next;
+        });
       })
       .catch((error) => {
         console.error(
@@ -173,7 +167,7 @@ function AccountsPage() {
     return () => {
       active = false;
     };
-  }, [accountBookId, isArchivedMode, isEquityTab, loaderRows, tab]);
+  }, [accountBookId, isArchivedMode, isEquityTab, loaderRowIdsKey, tab]);
 
   const storageKey = `cashfolio:expandedGroups:${accountBookId}:${mode}:${tab}`;
   const { isGroupOpenByDefault, onRowGroupOpened } =
