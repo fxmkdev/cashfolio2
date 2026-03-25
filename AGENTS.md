@@ -62,8 +62,8 @@ pnpm --filter cashfolio-app2 prisma:generate  # Regenerate Prisma client (DATABA
 - Keep currency/crypto constants in `src/currencies.ts` and
   `src/cryptocurrencies.ts`.
 - In `src/routes/`, any non-route file must be prefixed with `-` (for example,
-  `src/routes/$accountBookId/-ledger-page-view.tsx`) so TanStack Router skips
-  it during route-tree generation.
+  `src/routes/$accountBookId/-ledger-page-view.tsx`) so TanStack Router skips it
+  during route-tree generation.
 
 ## Quality Checklist
 
