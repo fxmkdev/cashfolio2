@@ -648,7 +648,6 @@ async function getAccountReferenceBalancesInternal(args: {
       symbol: true,
       tradeCurrency: true,
     },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
 
   const assetAndLiabilityAccountIds = accounts
