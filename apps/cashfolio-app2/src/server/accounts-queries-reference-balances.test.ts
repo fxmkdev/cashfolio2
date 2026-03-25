@@ -1,6 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountType, Unit } from "../.prisma-client/enums";
 
+const createServerFn = vi.hoisted(() =>
+  vi.fn(() => {
+    let validate: ((data: unknown) => unknown) | undefined;
+    const chain = {
+      inputValidator: vi.fn((validator: (data: unknown) => unknown) => {
+        validate = validator;
+        return chain;
+      }),
+      handler: vi.fn((handler: ({ data }: { data: unknown }) => unknown) => {
+        return async ({ data }: { data: unknown }) => {
+          const validatedData = validate ? validate(data) : data;
+          return handler({ data: validatedData });
+        };
+      }),
+    };
+    return chain;
+  }),
+);
+
 const ensureAuthorizedForAccountBookId = vi.hoisted(() => vi.fn());
 const getCurrencyExchangeRate = vi.hoisted(() => vi.fn());
 const getCryptocurrencyToCurrencyExchangeRate = vi.hoisted(() => vi.fn());
@@ -22,6 +41,10 @@ vi.mock("../prisma.server", () => ({
   prisma,
 }));
 
+vi.mock("@tanstack/react-start", () => ({
+  createServerFn,
+}));
+
 vi.mock("../account-books/functions.server", () => ({
   ensureAuthorizedForAccountBookId,
 }));
@@ -32,9 +55,9 @@ vi.mock("./fx.server", () => ({
   getSecurityToCurrencyExchangeRate,
 }));
 
-import { getAccountReferenceBalancesInternal } from "./accounts-queries";
+import { getAccountReferenceBalances } from "./accounts-queries";
 
-describe("getAccountReferenceBalancesInternal", () => {
+describe("getAccountReferenceBalances", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -50,7 +73,7 @@ describe("getAccountReferenceBalancesInternal", () => {
   });
 
   it("filters accounts by selected tab and mode", async () => {
-    await getAccountReferenceBalancesInternal({
+    await getAccountReferenceBalances({
       data: {
         accountBookId: "book-1",
         accountState: "inactive",
@@ -118,7 +141,7 @@ describe("getAccountReferenceBalancesInternal", () => {
     );
     getSecurityToCurrencyExchangeRate.mockResolvedValue(null);
 
-    const result = await getAccountReferenceBalancesInternal({
+    const result = await getAccountReferenceBalances({
       data: {
         accountBookId: "book-2",
         accountState: "active",

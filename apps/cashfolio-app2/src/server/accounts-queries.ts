@@ -621,7 +621,7 @@ async function getAccountTreeDataInternal(args: {
   };
 }
 
-export async function getAccountReferenceBalancesInternal(args: {
+async function getAccountReferenceBalancesInternal(args: {
   data: AccountReferenceBalancesInput;
   skipAuthorization?: boolean;
 }) {
