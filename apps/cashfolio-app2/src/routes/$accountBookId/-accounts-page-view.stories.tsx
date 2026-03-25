@@ -313,6 +313,7 @@ function AccountsPageStoryHarness({
     isEquityTab,
     rowsByParentKey,
     referenceCurrency: "CHF",
+    isReferenceBalancesLoading: false,
     balanceInReferenceCurrencyByGroupId,
     onEditRow: (row) => {
       if (row.nodeType === "account") {

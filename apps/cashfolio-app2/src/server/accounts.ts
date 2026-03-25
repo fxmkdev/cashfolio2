@@ -2,6 +2,7 @@ export type { AccountGroupInput, AccountInput } from "./accounts-types";
 
 export {
   getAccountsPageData,
+  getAccountReferenceBalances,
   getAccountGroups,
   getAccounts,
   getExistingNodes,

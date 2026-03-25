@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Loader } from "@mantine/core";
 import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
 import { Unit } from "../../.prisma-client/enums";
 import { FORMATTED_NUMERIC_COLUMN } from "../../components/column-types";
@@ -15,12 +16,14 @@ import {
   type RowTarget,
   type TreeRow,
 } from "./-accounts-page-types";
+import { shouldShowReferenceBalanceLoadingIndicator } from "./reference-balance-loading";
 
 export function useAccountTreeColumnDefs(params: {
   isArchivedMode: boolean;
   isEquityTab: boolean;
   rowsByParentKey: Map<string, TreeRow[]>;
   referenceCurrency: string;
+  isReferenceBalancesLoading: boolean;
   balanceInReferenceCurrencyByGroupId: Map<string, GroupBalanceAggregation>;
   onEditRow: (row: TreeRow) => void;
   onUnarchiveRow: (row: TreeRow) => Promise<void>;
@@ -33,6 +36,7 @@ export function useAccountTreeColumnDefs(params: {
     isEquityTab,
     rowsByParentKey,
     referenceCurrency,
+    isReferenceBalancesLoading,
     balanceInReferenceCurrencyByGroupId,
     onEditRow,
     onUnarchiveRow,
@@ -124,6 +128,26 @@ export function useAccountTreeColumnDefs(params: {
                 }
                 return groupAggregation.sum;
               },
+              cellRenderer: ({
+                data,
+                value,
+                formatValue,
+              }: ICellRendererParams<AccountsGridRow, number | null>) => {
+                if (!data) return null;
+
+                if (
+                  shouldShowReferenceBalanceLoadingIndicator({
+                    data,
+                    isReferenceBalancesLoading,
+                    balanceInReferenceCurrencyByGroupId,
+                  })
+                ) {
+                  return <Loader type="dots" size="xs" />;
+                }
+
+                if (value == null) return null;
+                return formatValue?.(value) ?? value.toString();
+              },
             } satisfies ColDef<AccountsGridRow>,
           ]
         : []),
@@ -185,6 +209,7 @@ export function useAccountTreeColumnDefs(params: {
       isEquityTab,
       rowsByParentKey,
       referenceCurrency,
+      isReferenceBalancesLoading,
       balanceInReferenceCurrencyByGroupId,
       onEditRow,
       onUnarchiveRow,

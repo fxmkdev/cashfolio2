@@ -27,7 +27,7 @@ import {
   createAccountGroup,
   deleteAccount,
   deleteAccountGroup,
-  getAccountTreeData,
+  getAccountReferenceBalances,
   reorderAccountTreeItems,
   unarchiveAccount,
   unarchiveAccountGroup,
@@ -50,6 +50,7 @@ import {
   useSelectedSiblingRows,
 } from "./-accounts-page-data";
 import { useAccountTreeColumnDefs } from "./-accounts-page-columns";
+import { REFERENCE_BALANCES_LOADING_DELAY_MS } from "./reference-balance-loading";
 
 const AccountsPageView = lazy(async () => {
   const module = await import("./-accounts-page-view");
@@ -79,6 +80,10 @@ function AccountsPage() {
   const [referenceBalanceByRowId, setReferenceBalanceByRowId] = useState(
     () => new Map<string, number | null>(),
   );
+  const [isReferenceBalancesLoading, setIsReferenceBalancesLoading] =
+    useState(false);
+  const [showReferenceBalancesLoading, setShowReferenceBalancesLoading] =
+    useState(false);
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [editingAccount, setEditingAccount] = useState<
     { id: string; initialValues: AccountInitialValues } | undefined
@@ -103,10 +108,6 @@ function AccountsPage() {
 
   const isEquityTab = tab.startsWith("EQUITY-");
   const isArchivedMode = mode === "archived";
-  const loaderRowIdsKey = useMemo(
-    () => loaderRows.map((row) => row.id).join("|"),
-    [loaderRows],
-  );
 
   const rows = useMemo(
     () =>
@@ -127,27 +128,19 @@ function AccountsPage() {
   );
 
   useEffect(() => {
-    setReferenceBalanceByRowId((previous) => {
-      if (previous.size === 0) return previous;
-      const next = new Map<string, number | null>();
-      const rowIds = new Set(loaderRows.map((row) => row.id));
-      for (const [rowId, balance] of previous.entries()) {
-        if (rowIds.has(rowId)) {
-          next.set(rowId, balance);
-        }
-      }
-      return next;
-    });
-  }, [loaderRowIdsKey]);
+    setReferenceBalanceByRowId(new Map());
+  }, [accountBookId, loaderRows, mode, tab]);
 
   useEffect(() => {
     if (isEquityTab) {
+      setIsReferenceBalancesLoading(false);
       return;
     }
 
     const tabDefinition = getTabDefinition(tab);
     let active = true;
-    void getAccountTreeData({
+    setIsReferenceBalancesLoading(true);
+    void getAccountReferenceBalances({
       data: {
         accountBookId,
         accountState: isArchivedMode ? "inactive" : "active",
@@ -155,30 +148,49 @@ function AccountsPage() {
         ...("equityAccountSubtype" in tabDefinition
           ? { equityAccountSubtype: tabDefinition.equityAccountSubtype }
           : undefined),
-        includeReferenceBalances: true,
       },
     })
-      .then((treeData) => {
+      .then((referenceBalanceData) => {
         if (!active) return;
-        setReferenceBalanceByRowId((previous) => {
-          const next = new Map(previous);
-          for (const row of treeData.rows) {
-            next.set(row.id, row.balanceInReferenceCurrency);
-          }
-          return next;
-        });
+        setReferenceBalanceByRowId(
+          new Map(
+            referenceBalanceData.rows.map((row) => [
+              row.id,
+              row.balanceInReferenceCurrency,
+            ]),
+          ),
+        );
       })
       .catch((error) => {
         console.error(
           "Unable to load reference-currency balances for accounts tab",
           error,
         );
+      })
+      .finally(() => {
+        if (!active) return;
+        setIsReferenceBalancesLoading(false);
       });
 
     return () => {
       active = false;
     };
-  }, [accountBookId, isArchivedMode, isEquityTab, loaderRowIdsKey, tab]);
+  }, [accountBookId, isArchivedMode, isEquityTab, loaderRows, tab]);
+
+  useEffect(() => {
+    if (!isReferenceBalancesLoading) {
+      setShowReferenceBalancesLoading(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowReferenceBalancesLoading(true);
+    }, REFERENCE_BALANCES_LOADING_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isReferenceBalancesLoading]);
 
   const storageKey = `cashfolio:expandedGroups:${accountBookId}:${mode}:${tab}`;
   const { isGroupOpenByDefault, onRowGroupOpened } =
@@ -257,6 +269,7 @@ function AccountsPage() {
     isEquityTab,
     rowsByParentKey,
     referenceCurrency,
+    isReferenceBalancesLoading: showReferenceBalancesLoading,
     balanceInReferenceCurrencyByGroupId,
     onEditRow: handleEditRow,
     onUnarchiveRow: handleUnarchiveRow,
