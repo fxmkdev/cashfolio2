@@ -34,16 +34,16 @@ import {
   parseAccountsSearch,
   tabs,
   type TreeRow,
-} from "./accounts-page-types";
-import { loadAccountsPageData } from "./accounts-page-loader";
+} from "./-accounts-page-types";
+import { loadAccountsPageData } from "./-accounts-page-loader";
 import {
   useBalanceInReferenceCurrencyByGroupId,
   useReferenceCurrencyBalanceTotal,
   useRowsByParentKey,
   useSelectedSiblingRows,
-} from "./accounts-page-data";
-import { useAccountTreeColumnDefs } from "./accounts-page-columns";
-import { AccountsPageView } from "./accounts-page-view";
+} from "./-accounts-page-data";
+import { useAccountTreeColumnDefs } from "./-accounts-page-columns";
+import { AccountsPageView } from "./-accounts-page-view";
 
 export const Route = createFileRoute("/$accountBookId/accounts")({
   validateSearch: parseAccountsSearch,

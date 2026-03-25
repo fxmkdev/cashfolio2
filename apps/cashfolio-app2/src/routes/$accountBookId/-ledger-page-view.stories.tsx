@@ -8,8 +8,8 @@ import {
   accountOptions as baseAccountOptions,
   editTransactionInitialValues,
 } from "../../components/storybook-fixtures";
-import { useLedgerColumnDefs } from "./ledger-page-columns";
-import type { SimpleTransactionEditInitialValues } from "./ledger-page-data";
+import { useLedgerColumnDefs } from "./-ledger-page-columns";
+import type { SimpleTransactionEditInitialValues } from "./-ledger-page-data";
 import {
   LedgerPageView,
   type EditMode,
@@ -18,8 +18,8 @@ import {
   type SimpleTransactionValues,
   type SplitModalInitialValues,
   type TransactionMutationValues,
-} from "./ledger-page-view";
-import type { LedgerRow } from "./ledger-page-types";
+} from "./-ledger-page-view";
+import type { LedgerRow } from "./-ledger-page-types";
 
 const account = {
   id: "account-checking",

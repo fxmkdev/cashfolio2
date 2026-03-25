@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   getDashboardPeriod,
   parseDashboardSearch,
-} from "./dashboard-page-types";
+} from "./-dashboard-page-types";
 
 describe("parseDashboardSearch", () => {
   test("returns 12m for valid period 12m", () => {

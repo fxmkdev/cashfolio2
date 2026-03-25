@@ -6,7 +6,7 @@ import {
   ActiveAccountTreeActionsCell,
   ArchivedAccountTreeActionsCell,
 } from "../../components/account-tree-actions-cells";
-import type { GroupBalanceAggregation } from "./accounts-page-data";
+import type { GroupBalanceAggregation } from "./-accounts-page-data";
 import {
   ROOT_PARENT_KEY,
   isReferenceCurrencyTotalFooterRow,
@@ -14,7 +14,7 @@ import {
   toRowTarget,
   type RowTarget,
   type TreeRow,
-} from "./accounts-page-types";
+} from "./-accounts-page-types";
 
 export function useAccountTreeColumnDefs(params: {
   isArchivedMode: boolean;

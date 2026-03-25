@@ -21,8 +21,8 @@ import {
   DASHBOARD_PERIOD_10Y,
   DASHBOARD_PERIOD_12M,
   type DashboardPeriod,
-} from "./dashboard-page-types";
-import classes from "./dashboard-page-view.module.css";
+} from "./-dashboard-page-types";
+import classes from "./-dashboard-page-view.module.css";
 
 export type DashboardPageViewProps = {
   accountBookId: string;

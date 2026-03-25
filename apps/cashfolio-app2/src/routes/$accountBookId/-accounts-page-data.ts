@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ROOT_PARENT_KEY, type TreeRow } from "./accounts-page-types";
+import { ROOT_PARENT_KEY, type TreeRow } from "./-accounts-page-types";
 
 export type GroupBalanceAggregation = {
   sum: number;

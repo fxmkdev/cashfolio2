@@ -15,7 +15,7 @@ import type {
   LedgerAccountOptionSource,
   LedgerBookings,
   LedgerRow,
-} from "./ledger-page-types";
+} from "./-ledger-page-types";
 
 function shouldNegate(
   type: AccountType,

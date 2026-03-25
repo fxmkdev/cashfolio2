@@ -7,7 +7,7 @@ vi.mock("../../server/accounts", () => ({
   getAccountsPageData,
 }));
 
-import { loadAccountsPageData } from "./accounts-page-loader";
+import { loadAccountsPageData } from "./-accounts-page-loader";
 
 describe("loadAccountsPageData", () => {
   const mockResult = {
