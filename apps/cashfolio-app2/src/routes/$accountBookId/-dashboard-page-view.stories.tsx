@@ -7,7 +7,7 @@ import { DASHBOARD_PERIOD_12M } from "../../shared/dashboard-period";
 import {
   DashboardPageView,
   type DashboardPageViewProps,
-} from "./dashboard-page-view";
+} from "./-dashboard-page-view";
 
 const baseOverview: DashboardPageViewProps["overview"] = {
   periodLabel: "Last 12 months",

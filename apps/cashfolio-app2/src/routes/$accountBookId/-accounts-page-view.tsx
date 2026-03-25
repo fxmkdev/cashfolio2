@@ -32,15 +32,15 @@ import {
   ReorderGroupChildrenModal,
   type ReorderGroupChildRow,
 } from "../../components/reorder-group-children-modal";
-import { getEntityLabel } from "./accounts-page-types";
+import { getEntityLabel } from "./-accounts-page-types";
 import type {
   AccountsGridRow,
   AccountsMode,
   ReferenceCurrencyTotalFooterRow,
   TabValue,
   TreeRow,
-} from "./accounts-page-types";
-import type { loadAccountsPageData } from "./accounts-page-loader";
+} from "./-accounts-page-types";
+import type { loadAccountsPageData } from "./-accounts-page-loader";
 
 type AccountsPageLoaderData = Awaited<ReturnType<typeof loadAccountsPageData>>;
 type RowTarget = {

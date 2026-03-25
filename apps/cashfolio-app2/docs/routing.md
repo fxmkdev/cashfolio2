@@ -25,12 +25,13 @@ paths are relative to that app directory.
   - Loader data is tab-scoped: only the selected tab is fetched in the route
     loader critical path.
 - `$accountBookId/$accountId.tsx` — ledger page for a single account
-- Route-local helper modules can live next to a route file when orchestration
-  grows (for example, `$accountBookId/accounts-page-loader.ts`,
-  `$accountBookId/accounts-page-data.ts`,
-  `$accountBookId/accounts-page-columns.tsx`,
-  `$accountBookId/ledger-page-loader.ts`, and
-  `$accountBookId/ledger-page-columns.tsx`).
+- Route-local helper files can live next to a route file when orchestration
+  grows, but they must be prefixed with `-` so TanStack Router ignores them.
+  For example: `$accountBookId/-accounts-page-loader.ts`,
+  `$accountBookId/-accounts-page-data.ts`,
+  `$accountBookId/-accounts-page-columns.tsx`,
+  `$accountBookId/-ledger-page-loader.ts`, and
+  `$accountBookId/-ledger-page-columns.tsx`.
 
 ### Search Parameters
 

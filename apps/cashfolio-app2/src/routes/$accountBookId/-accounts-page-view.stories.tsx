@@ -10,24 +10,24 @@ import type {
   TransformedFormValues,
 } from "../../components/edit-account-modal";
 import type { ReorderGroupChildRow } from "../../components/reorder-group-children-modal";
-import { useAccountTreeColumnDefs } from "./accounts-page-columns";
+import { useAccountTreeColumnDefs } from "./-accounts-page-columns";
 import {
   useBalanceInReferenceCurrencyByGroupId,
   useReferenceCurrencyBalanceTotal,
   useRowsByParentKey,
   useSelectedSiblingRows,
-} from "./accounts-page-data";
+} from "./-accounts-page-data";
 import {
   AccountsPageView,
   type AccountsPageViewProps,
-} from "./accounts-page-view";
+} from "./-accounts-page-view";
 import {
   REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
   type AccountsMode,
   tabs,
   type TabValue,
   type TreeRow,
-} from "./accounts-page-types";
+} from "./-accounts-page-types";
 
 function createGroupRow(args: {
   id: string;

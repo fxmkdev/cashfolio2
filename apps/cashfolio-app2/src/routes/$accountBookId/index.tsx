@@ -1,12 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { getDashboardIncomeExpenseOverview } from "../../server/dashboard";
-import { DashboardPageView } from "./dashboard-page-view";
+import { DashboardPageView } from "./-dashboard-page-view";
 import {
   DASHBOARD_PERIOD_10Y,
   getDashboardPeriod,
   parseDashboardSearch,
   type DashboardPeriod,
-} from "./dashboard-page-types";
+} from "./-dashboard-page-types";
 
 export const Route = createFileRoute("/$accountBookId/")({
   validateSearch: parseDashboardSearch,

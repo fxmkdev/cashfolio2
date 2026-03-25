@@ -12,7 +12,7 @@ import {
   FORMATTED_NUMERIC_COLUMN,
 } from "../../components/column-types";
 import { LinkAnchor } from "../../components/link-anchor";
-import type { LedgerRow } from "./ledger-page-types";
+import type { LedgerRow } from "./-ledger-page-types";
 
 export function useLedgerColumnDefs(args: {
   accountBookId: string;

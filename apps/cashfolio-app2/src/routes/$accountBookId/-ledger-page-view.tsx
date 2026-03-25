@@ -26,10 +26,10 @@ import {
 } from "../../components/simple-transaction-modal";
 import type { Unit } from "../../.prisma-client/enums";
 import { getTypeLabel } from "../../shared/account-utils";
-import type { TabValue } from "./accounts-page-types";
-import type { SimpleTransactionEditInitialValues } from "./ledger-page-data";
-import type { loadLedgerPageData } from "./ledger-page-loader";
-import type { LedgerRow } from "./ledger-page-types";
+import type { TabValue } from "./-accounts-page-types";
+import type { SimpleTransactionEditInitialValues } from "./-ledger-page-data";
+import type { loadLedgerPageData } from "./-ledger-page-loader";
+import type { LedgerRow } from "./-ledger-page-types";
 
 type LedgerPageLoaderData = Awaited<ReturnType<typeof loadLedgerPageData>>;
 
