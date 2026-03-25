@@ -281,7 +281,8 @@ function AccountsPage() {
     isEquityTab,
     rowsByParentKey,
     referenceCurrency,
-    isReferenceBalancesLoading: showReferenceBalancesLoading,
+    isReferenceBalancesLoading:
+      isReferenceBalancesLoading && showReferenceBalancesLoading,
     balanceInReferenceCurrencyByGroupId,
     onEditRow: handleEditRow,
     onUnarchiveRow: handleUnarchiveRow,
