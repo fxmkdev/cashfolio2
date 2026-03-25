@@ -108,6 +108,18 @@ function AccountsPage() {
 
   const isEquityTab = tab.startsWith("EQUITY-");
   const isArchivedMode = mode === "archived";
+  const loaderRowsStateKey = useMemo(
+    () =>
+      loaderRows
+        .map(
+          (row) =>
+            `${row.id}|${row.name}|${row.parentId ?? ""}|${row.sortOrder ?? ""}|${
+              row.balanceInReferenceCurrency ?? ""
+            }`,
+        )
+        .join("::"),
+    [loaderRows],
+  );
 
   const rows = useMemo(
     () =>
@@ -129,7 +141,7 @@ function AccountsPage() {
 
   useEffect(() => {
     setReferenceBalanceByRowId(new Map());
-  }, [accountBookId, loaderRows, mode, tab]);
+  }, [accountBookId, loaderRowsStateKey, mode, tab]);
 
   useEffect(() => {
     if (isEquityTab) {
@@ -175,7 +187,7 @@ function AccountsPage() {
     return () => {
       active = false;
     };
-  }, [accountBookId, isArchivedMode, isEquityTab, loaderRows, tab]);
+  }, [accountBookId, isArchivedMode, isEquityTab, loaderRowsStateKey, tab]);
 
   useEffect(() => {
     if (!isReferenceBalancesLoading) {
