@@ -226,6 +226,7 @@ export function AccountsPageView({
           filter: "agTextColumnFilter",
           valueGetter: ({ data }) => data?.name,
           cellRendererParams: {
+            checkbox: false,
             suppressCount: true,
           },
         }}
