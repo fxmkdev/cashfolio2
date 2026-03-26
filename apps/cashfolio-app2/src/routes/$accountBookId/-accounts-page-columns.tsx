@@ -46,6 +46,8 @@ export function useAccountTreeColumnDefs(params: {
   } = params;
   const rowsByParentKeyRef = useRef(rowsByParentKey);
   rowsByParentKeyRef.current = rowsByParentKey;
+  const isReferenceBalancesLoadingRef = useRef(isReferenceBalancesLoading);
+  isReferenceBalancesLoadingRef.current = isReferenceBalancesLoading;
   const balanceInReferenceCurrencyByGroupIdRef = useRef(
     balanceInReferenceCurrencyByGroupId,
   );
@@ -145,7 +147,8 @@ export function useAccountTreeColumnDefs(params: {
                 if (
                   shouldShowReferenceBalanceLoadingIndicator({
                     data,
-                    isReferenceBalancesLoading,
+                    isReferenceBalancesLoading:
+                      isReferenceBalancesLoadingRef.current,
                     balanceInReferenceCurrencyByGroupId:
                       balanceInReferenceCurrencyByGroupIdRef.current,
                   })
@@ -216,7 +219,6 @@ export function useAccountTreeColumnDefs(params: {
       isArchivedMode,
       isEquityTab,
       referenceCurrency,
-      isReferenceBalancesLoading,
       onEditRow,
       onUnarchiveRow,
       onArchiveRow,

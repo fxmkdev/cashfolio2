@@ -59,6 +59,7 @@ export type AccountsPageViewProps = {
   rows: TreeRow[];
   columnDefs: NonNullable<AgGridReactProps<AccountsGridRow>["columnDefs"]>;
   pinnedBottomRowData?: ReferenceCurrencyTotalFooterRow[];
+  onGridReady?: AgGridReactProps<AccountsGridRow>["onGridReady"];
   isGroupOpenByDefault: AgGridReactProps<AccountsGridRow>["isGroupOpenByDefault"];
   onRowGroupOpened: AgGridReactProps<AccountsGridRow>["onRowGroupOpened"];
   createModalOpened: boolean;
@@ -108,6 +109,7 @@ export function AccountsPageView({
   rows,
   columnDefs,
   pinnedBottomRowData,
+  onGridReady,
   isGroupOpenByDefault,
   onRowGroupOpened,
   createModalOpened,
@@ -228,6 +230,7 @@ export function AccountsPageView({
         treeData={true}
         treeDataParentIdField="parentId"
         pinnedBottomRowData={pinnedBottomRowData}
+        onGridReady={onGridReady}
         isGroupOpenByDefault={isGroupOpenByDefault}
         onRowGroupOpened={onRowGroupOpened}
         getRowId={({ data }) => data.id}

@@ -3,12 +3,14 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
+import type { AgGridReactProps } from "ag-grid-react";
 import {
   Suspense,
   lazy,
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useExpandedGroups } from "../../hooks/use-expanded-groups";
@@ -36,6 +38,7 @@ import {
 } from "../../server/accounts";
 import {
   REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
+  type AccountsGridRow,
   getTabDefinition,
   type ReferenceCurrencyTotalFooterRow,
   parseAccountsSearch,
@@ -105,6 +108,12 @@ function AccountsPage() {
   const [reorderingRow, setReorderingRow] = useState<
     { name: string; parentKey: string } | undefined
   >();
+  const gridApiRef = useRef<
+    | Parameters<
+        NonNullable<AgGridReactProps<AccountsGridRow>["onGridReady"]>
+      >[0]["api"]
+    | null
+  >(null);
 
   const isEquityTab = tab.startsWith("EQUITY-");
   const isArchivedMode = mode === "archived";
@@ -219,6 +228,8 @@ function AccountsPage() {
     rows,
     !isEquityTab,
   );
+  const shouldShowReferenceBalancesLoading =
+    isReferenceBalancesLoading && showReferenceBalancesLoading;
   const pinnedBottomRowData: ReferenceCurrencyTotalFooterRow[] | undefined =
     isEquityTab
       ? undefined
@@ -230,6 +241,23 @@ function AccountsPage() {
             balanceInReferenceCurrency: referenceCurrencyBalanceTotal,
           },
         ];
+  const handleGridReady = useCallback<
+    NonNullable<AgGridReactProps<AccountsGridRow>["onGridReady"]>
+  >((event) => {
+    gridApiRef.current = event.api;
+  }, []);
+
+  useEffect(() => {
+    gridApiRef.current?.refreshCells({
+      columns: ["balanceInReferenceCurrency"],
+      force: true,
+      suppressFlash: true,
+    });
+  }, [
+    rows,
+    balanceInReferenceCurrencyByGroupId,
+    shouldShowReferenceBalancesLoading,
+  ]);
 
   const handleEditRow = useCallback((data: TreeRow) => {
     if (data.nodeType === "account") {
@@ -281,8 +309,7 @@ function AccountsPage() {
     isEquityTab,
     rowsByParentKey,
     referenceCurrency,
-    isReferenceBalancesLoading:
-      isReferenceBalancesLoading && showReferenceBalancesLoading,
+    isReferenceBalancesLoading: shouldShowReferenceBalancesLoading,
     balanceInReferenceCurrencyByGroupId,
     onEditRow: handleEditRow,
     onUnarchiveRow: handleUnarchiveRow,
@@ -417,6 +444,7 @@ function AccountsPage() {
         rows={rows}
         columnDefs={columnDefs}
         pinnedBottomRowData={pinnedBottomRowData}
+        onGridReady={handleGridReady}
         isGroupOpenByDefault={isGroupOpenByDefault}
         onRowGroupOpened={onRowGroupOpened}
         createModalOpened={createModalOpened}
