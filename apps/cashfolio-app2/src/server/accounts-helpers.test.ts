@@ -1,7 +1,19 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
+
+const findMany = vi.hoisted(() => vi.fn());
+
+vi.mock("../prisma.server", () => ({
+  prisma: {
+    accountGroup: {
+      findMany,
+    },
+  },
+}));
+
 import {
   createGroupPathResolver,
   createGroupPathSegmentsResolver,
+  getGroupHierarchy,
   getGroupPath,
 } from "./accounts-helpers";
 
@@ -45,5 +57,29 @@ describe("group path helpers", () => {
       { id: "b", name: "B", parentGroupId: "a" },
     ]);
     expect(resolvePath("a")).toBe("Unknown group a / B / A");
+  });
+
+  test("loads group hierarchy from prisma", async () => {
+    findMany.mockResolvedValueOnce([
+      { id: "assets", parentGroupId: null, isActive: true },
+      { id: "bank", parentGroupId: "assets", isActive: true },
+    ]);
+
+    const result = await getGroupHierarchy("book-1");
+
+    expect(findMany).toHaveBeenCalledWith({
+      where: { accountBookId: "book-1" },
+      select: { id: true, parentGroupId: true, isActive: true },
+    });
+    expect(result.get("assets")).toEqual({
+      id: "assets",
+      parentGroupId: null,
+      isActive: true,
+    });
+    expect(result.get("bank")).toEqual({
+      id: "bank",
+      parentGroupId: "assets",
+      isActive: true,
+    });
   });
 });
