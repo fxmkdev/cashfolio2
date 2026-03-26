@@ -9,9 +9,9 @@ paths are relative to that app directory.
   for connection pooling; stores in `global.__db__` in development to avoid
   connection exhaustion during hot reload
 - Custom Prisma configuration in `prisma.config.ts` at the app root
-- `prisma generate` works without `DATABASE_URL`; config provides a
-  generate-only fallback URL so unit-test and Storybook workflows do not need
-  manual env setup
+- `prisma generate` works without `DATABASE_URL`; datasource URL in
+  `prisma.config.ts` is optional and only required by DB-connecting Prisma
+  commands
 
 ## Models
 
