@@ -213,6 +213,9 @@ export function AccountsPageView({
 
       <DataGrid
         containerStyle={{ height: "calc(100vh - 11rem)" }}
+        // Work around the AG Grid React + React 19 crash path observed in CI.
+        // Source: ag-grid-community GridOptions `renderingMode?: 'default' | 'legacy'`
+        // (`node_modules/.pnpm/ag-grid-community@35.1.0/.../dist/types/src/entities/gridOptions.d.ts`).
         renderingMode="legacy"
         rowData={rows}
         columnDefs={columnDefs}
