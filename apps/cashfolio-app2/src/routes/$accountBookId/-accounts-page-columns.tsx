@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { Loader } from "@mantine/core";
 import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
 import { Unit } from "../../.prisma-client/enums";
@@ -44,6 +44,13 @@ export function useAccountTreeColumnDefs(params: {
     onDeleteRow,
     onReorderRow,
   } = params;
+  const rowsByParentKeyRef = useRef(rowsByParentKey);
+  rowsByParentKeyRef.current = rowsByParentKey;
+  const balanceInReferenceCurrencyByGroupIdRef = useRef(
+    balanceInReferenceCurrencyByGroupId,
+  );
+  balanceInReferenceCurrencyByGroupIdRef.current =
+    balanceInReferenceCurrencyByGroupId;
 
   return useMemo<ColDef<AccountsGridRow>[]>(
     () => [
@@ -118,7 +125,7 @@ export function useAccountTreeColumnDefs(params: {
                   return data.balanceInReferenceCurrency;
                 }
                 const groupAggregation =
-                  balanceInReferenceCurrencyByGroupId.get(data.id);
+                  balanceInReferenceCurrencyByGroupIdRef.current.get(data.id);
                 if (
                   !groupAggregation ||
                   !groupAggregation.hasAccountDescendants ||
@@ -139,7 +146,8 @@ export function useAccountTreeColumnDefs(params: {
                   shouldShowReferenceBalanceLoadingIndicator({
                     data,
                     isReferenceBalancesLoading,
-                    balanceInReferenceCurrencyByGroupId,
+                    balanceInReferenceCurrencyByGroupId:
+                      balanceInReferenceCurrencyByGroupIdRef.current,
                   })
                 ) {
                   return <Loader type="dots" size="xs" />;
@@ -176,7 +184,7 @@ export function useAccountTreeColumnDefs(params: {
 
           const parentKey = data.parentId ?? ROOT_PARENT_KEY;
           const siblingCount =
-            (rowsByParentKey.get(parentKey)?.length ?? 0) - 1;
+            (rowsByParentKeyRef.current.get(parentKey)?.length ?? 0) - 1;
           const hasSiblings = siblingCount >= 1;
           const reorderLabel = hasSiblings
             ? "Reorder siblings"
@@ -207,10 +215,8 @@ export function useAccountTreeColumnDefs(params: {
     [
       isArchivedMode,
       isEquityTab,
-      rowsByParentKey,
       referenceCurrency,
       isReferenceBalancesLoading,
-      balanceInReferenceCurrencyByGroupId,
       onEditRow,
       onUnarchiveRow,
       onArchiveRow,
