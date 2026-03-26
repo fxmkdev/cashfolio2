@@ -15,6 +15,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup
+        # TODO(#104): webplatform setup action still references actions/setup-node@v4.
         uses: felixmokross/webplatform/.github/actions/setup@main
 
       - name: Install dependencies

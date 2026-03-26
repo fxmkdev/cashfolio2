@@ -26,6 +26,7 @@ env:
 jobs:
   version:
     name: "Generate version"
+    # TODO(#104): webplatform export.version still uses Node 20-era actions transitively.
     uses: felixmokross/webplatform/.github/workflows/export.version.yml@main
 
   deploy:
