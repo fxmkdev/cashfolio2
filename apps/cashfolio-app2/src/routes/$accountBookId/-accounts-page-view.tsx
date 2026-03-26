@@ -213,6 +213,7 @@ export function AccountsPageView({
 
       <DataGrid
         containerStyle={{ height: "calc(100vh - 11rem)" }}
+        renderingMode="legacy"
         rowData={rows}
         columnDefs={columnDefs}
         autoGroupColumnDef={{
