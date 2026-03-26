@@ -123,19 +123,7 @@ export function useAccountTreeColumnDefs(params: {
                 if (isReferenceCurrencyTotalFooterRow(data)) {
                   return data.balanceInReferenceCurrency;
                 }
-                if (data.nodeType === "account") {
-                  return data.balanceInReferenceCurrency;
-                }
-                const groupAggregation =
-                  balanceInReferenceCurrencyByGroupIdRef.current.get(data.id);
-                if (
-                  !groupAggregation ||
-                  !groupAggregation.hasAccountDescendants ||
-                  groupAggregation.hasMissingReferenceBalance
-                ) {
-                  return null;
-                }
-                return groupAggregation.sum;
+                return data.balanceInReferenceCurrency;
               },
               cellRenderer: ({
                 data,

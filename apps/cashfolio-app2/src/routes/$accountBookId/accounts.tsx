@@ -3,16 +3,7 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import type { AgGridReactProps } from "ag-grid-react";
-import {
-  Suspense,
-  lazy,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useExpandedGroups } from "../../hooks/use-expanded-groups";
 import type {
   AccountInitialValues,
@@ -38,7 +29,6 @@ import {
 } from "../../server/accounts";
 import {
   REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
-  type AccountsGridRow,
   getTabDefinition,
   type ReferenceCurrencyTotalFooterRow,
   parseAccountsSearch,
@@ -53,12 +43,8 @@ import {
   useSelectedSiblingRows,
 } from "./-accounts-page-data";
 import { useAccountTreeColumnDefs } from "./-accounts-page-columns";
+import { AccountsPageView } from "./-accounts-page-view";
 import { REFERENCE_BALANCES_LOADING_DELAY_MS } from "./reference-balance-loading";
-
-const AccountsPageView = lazy(async () => {
-  const module = await import("./-accounts-page-view");
-  return { default: module.AccountsPageView };
-});
 
 export const Route = createFileRoute("/$accountBookId/accounts")({
   validateSearch: parseAccountsSearch,
@@ -108,12 +94,6 @@ function AccountsPage() {
   const [reorderingRow, setReorderingRow] = useState<
     { name: string; parentKey: string } | undefined
   >();
-  const gridApiRef = useRef<
-    | Parameters<
-        NonNullable<AgGridReactProps<AccountsGridRow>["onGridReady"]>
-      >[0]["api"]
-    | null
-  >(null);
 
   const isEquityTab = tab.startsWith("EQUITY-");
   const isArchivedMode = mode === "archived";
@@ -130,7 +110,7 @@ function AccountsPage() {
     [loaderRows],
   );
 
-  const rows = useMemo(
+  const rowsWithAccountReferenceBalances = useMemo(
     () =>
       loaderRows.map((row) => {
         if (!referenceBalanceByRowId.has(row.id)) {
@@ -217,13 +197,48 @@ function AccountsPage() {
   const { isGroupOpenByDefault, onRowGroupOpened } =
     useExpandedGroups(storageKey);
 
+  const rowsByParentKeyForGroupAggregation = useRowsByParentKey(
+    rowsWithAccountReferenceBalances,
+  );
+  const balanceInReferenceCurrencyByGroupId =
+    useBalanceInReferenceCurrencyByGroupId(
+      rowsByParentKeyForGroupAggregation,
+      rowsWithAccountReferenceBalances,
+      !isEquityTab,
+    );
+  const rows = useMemo(
+    () =>
+      rowsWithAccountReferenceBalances.map((row) => {
+        if (row.nodeType !== "accountGroup") {
+          return row;
+        }
+
+        const groupAggregation = balanceInReferenceCurrencyByGroupId.get(
+          row.id,
+        );
+        const computedReferenceBalance =
+          !groupAggregation ||
+          !groupAggregation.hasAccountDescendants ||
+          groupAggregation.hasMissingReferenceBalance
+            ? null
+            : groupAggregation.sum;
+
+        if (row.balanceInReferenceCurrency === computedReferenceBalance) {
+          return row;
+        }
+
+        return {
+          ...row,
+          balanceInReferenceCurrency: computedReferenceBalance,
+        };
+      }),
+    [rowsWithAccountReferenceBalances, balanceInReferenceCurrencyByGroupId],
+  );
   const rowsByParentKey = useRowsByParentKey(rows);
   const selectedSiblingRows = useSelectedSiblingRows(
     rowsByParentKey,
     reorderingRow,
   );
-  const balanceInReferenceCurrencyByGroupId =
-    useBalanceInReferenceCurrencyByGroupId(rowsByParentKey, rows, !isEquityTab);
   const referenceCurrencyBalanceTotal = useReferenceCurrencyBalanceTotal(
     rows,
     !isEquityTab,
@@ -241,23 +256,6 @@ function AccountsPage() {
             balanceInReferenceCurrency: referenceCurrencyBalanceTotal,
           },
         ];
-  const handleGridReady = useCallback<
-    NonNullable<AgGridReactProps<AccountsGridRow>["onGridReady"]>
-  >((event) => {
-    gridApiRef.current = event.api;
-  }, []);
-
-  useEffect(() => {
-    gridApiRef.current?.refreshCells({
-      columns: ["balanceInReferenceCurrency"],
-      force: true,
-      suppressFlash: true,
-    });
-  }, [
-    rows,
-    balanceInReferenceCurrencyByGroupId,
-    shouldShowReferenceBalancesLoading,
-  ]);
 
   const handleEditRow = useCallback((data: TreeRow) => {
     if (data.nodeType === "account") {
@@ -433,55 +431,52 @@ function AccountsPage() {
   }
 
   return (
-    <Suspense fallback={null}>
-      <AccountsPageView
-        accountBookId={accountBookId}
-        tab={tab}
-        mode={mode}
-        tabs={tabs}
-        accountGroups={accountGroups}
-        existingNodes={existingNodes}
-        rows={rows}
-        columnDefs={columnDefs}
-        pinnedBottomRowData={pinnedBottomRowData}
-        onGridReady={handleGridReady}
-        isGroupOpenByDefault={isGroupOpenByDefault}
-        onRowGroupOpened={onRowGroupOpened}
-        createModalOpened={createModalOpened}
-        editModalOpen={editModalOpen}
-        createGroupModalOpened={createGroupModalOpened}
-        editGroupModalOpen={editGroupModalOpen}
-        editingAccount={editingAccount}
-        editingGroup={editingGroup}
-        deletingRow={deletingRow}
-        archivingRow={archivingRow}
-        reorderingRow={reorderingRow}
-        selectedSiblingRows={selectedSiblingRows}
-        onOpenCreateGroup={() => setCreateGroupModalOpened(true)}
-        onOpenCreateAccount={() => setCreateModalOpened(true)}
-        onOpenLedger={(nextAccountId) =>
-          navigate({
-            to: "/$accountBookId/$accountId",
-            params: { accountBookId, accountId: nextAccountId },
-          })
-        }
-        onCloseCreateAccount={() => setCreateModalOpened(false)}
-        onSubmitCreateAccount={handleCreateAccount}
-        onCloseEditAccount={() => setEditModalOpen(false)}
-        onClearEditingAccount={() => setEditingAccount(undefined)}
-        onSubmitUpdateAccount={handleUpdateAccount}
-        onCloseCreateGroup={() => setCreateGroupModalOpened(false)}
-        onSubmitCreateGroup={handleCreateGroup}
-        onCloseEditGroup={() => setEditGroupModalOpen(false)}
-        onClearEditingGroup={() => setEditingGroup(undefined)}
-        onSubmitUpdateGroup={handleUpdateGroup}
-        onCloseDelete={() => setDeletingRow(undefined)}
-        onConfirmDelete={handleDelete}
-        onCloseArchive={() => setArchivingRow(undefined)}
-        onConfirmArchive={handleArchive}
-        onCloseReorder={() => setReorderingRow(undefined)}
-        onReorderSiblings={handleReorderSiblings}
-      />
-    </Suspense>
+    <AccountsPageView
+      accountBookId={accountBookId}
+      tab={tab}
+      mode={mode}
+      tabs={tabs}
+      accountGroups={accountGroups}
+      existingNodes={existingNodes}
+      rows={rows}
+      columnDefs={columnDefs}
+      pinnedBottomRowData={pinnedBottomRowData}
+      isGroupOpenByDefault={isGroupOpenByDefault}
+      onRowGroupOpened={onRowGroupOpened}
+      createModalOpened={createModalOpened}
+      editModalOpen={editModalOpen}
+      createGroupModalOpened={createGroupModalOpened}
+      editGroupModalOpen={editGroupModalOpen}
+      editingAccount={editingAccount}
+      editingGroup={editingGroup}
+      deletingRow={deletingRow}
+      archivingRow={archivingRow}
+      reorderingRow={reorderingRow}
+      selectedSiblingRows={selectedSiblingRows}
+      onOpenCreateGroup={() => setCreateGroupModalOpened(true)}
+      onOpenCreateAccount={() => setCreateModalOpened(true)}
+      onOpenLedger={(nextAccountId) =>
+        navigate({
+          to: "/$accountBookId/$accountId",
+          params: { accountBookId, accountId: nextAccountId },
+        })
+      }
+      onCloseCreateAccount={() => setCreateModalOpened(false)}
+      onSubmitCreateAccount={handleCreateAccount}
+      onCloseEditAccount={() => setEditModalOpen(false)}
+      onClearEditingAccount={() => setEditingAccount(undefined)}
+      onSubmitUpdateAccount={handleUpdateAccount}
+      onCloseCreateGroup={() => setCreateGroupModalOpened(false)}
+      onSubmitCreateGroup={handleCreateGroup}
+      onCloseEditGroup={() => setEditGroupModalOpen(false)}
+      onClearEditingGroup={() => setEditingGroup(undefined)}
+      onSubmitUpdateGroup={handleUpdateGroup}
+      onCloseDelete={() => setDeletingRow(undefined)}
+      onConfirmDelete={handleDelete}
+      onCloseArchive={() => setArchivingRow(undefined)}
+      onConfirmArchive={handleArchive}
+      onCloseReorder={() => setReorderingRow(undefined)}
+      onReorderSiblings={handleReorderSiblings}
+    />
   );
 }
