@@ -16,4 +16,4 @@ GitHub timeline from the warning:
 - Node 24 becomes default on June 2, 2026
 - Node 20 is removed from runners on September 16, 2026
 
-Until #104 is resolved, workflow files include `TODO(#104)` markers on steps that still depend on these actions.
+Use issue #104 as the single tracking place for these remaining dependencies.

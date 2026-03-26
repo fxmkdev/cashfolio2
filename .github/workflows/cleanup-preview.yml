@@ -16,7 +16,6 @@ jobs:
       contents: read
     steps:
       - name: Set up flyctl
-        # TODO(#104): remove once superfly/flyctl-actions ships a Node 24 runtime.
         uses: superfly/flyctl-actions/setup-flyctl@master
         with:
           version: ${{ env.FLYCTL_VERSION }}
@@ -47,7 +46,6 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       - name: Delete Neon branch
         id: delete-neon-branch
-        # TODO(#104): this composite action currently uses actions/setup-node@v4 internally.
         uses: neondatabase/delete-branch-action@v3
         continue-on-error: true
         with:

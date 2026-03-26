@@ -39,7 +39,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
       - name: Set up flyctl
-        # TODO(#104): remove once superfly/flyctl-actions ships a Node 24 runtime.
         uses: superfly/flyctl-actions/setup-flyctl@master
         with:
           version: ${{ env.FLYCTL_VERSION }}
@@ -128,7 +127,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
       - name: Set up flyctl
-        # TODO(#104): remove once superfly/flyctl-actions ships a Node 24 runtime.
         uses: superfly/flyctl-actions/setup-flyctl@master
         with:
           version: ${{ env.FLYCTL_VERSION }}
