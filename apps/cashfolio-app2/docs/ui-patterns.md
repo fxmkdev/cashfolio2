@@ -244,6 +244,12 @@ bookings for a single account in chronological order.
   deduplicated
 - **Navigation**: Double-click an account row on the accounts list to open its
   ledger; back link returns to accounts list
+- **Ledger/chart switch**: Asset and liability ledgers show a top-right
+  segmented switch (`Ledger` / `Chart`) using real TanStack links (`<a>`), not
+  click-handler navigation
+- **Chart route**: `src/routes/$accountBookId/$accountId/chart.tsx` renders a
+  daily closing balance line chart in the account's native unit with
+  `en-CH`-formatted values
 
 ## Validation Pattern
 

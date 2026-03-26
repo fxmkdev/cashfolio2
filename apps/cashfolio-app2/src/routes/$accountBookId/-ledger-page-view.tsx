@@ -24,6 +24,7 @@ import {
   type SimpleTransactionDirection,
   type SimpleTransactionDraftValues,
 } from "../../components/simple-transaction-modal";
+import type { ReactNode } from "react";
 import type { Unit } from "../../.prisma-client/enums";
 import { getTypeLabel } from "../../shared/account-utils";
 import type { TabValue } from "./-accounts-page-types";
@@ -111,6 +112,7 @@ export type LedgerPageViewProps = {
   simpleCounterAccountOptions: AccountOption[];
   editSimpleCounterAccountOptions: AccountOption[];
   rebookTargetAccountOptions: { value: string; label: string }[];
+  viewSwitcher?: ReactNode;
   onRowDataUpdated: AgGridReactProps<LedgerRow>["onRowDataUpdated"];
   onAddTransactionClick: () => void;
   onCloseSimpleModal: () => void;
@@ -171,6 +173,7 @@ export function LedgerPageView({
   simpleCounterAccountOptions,
   editSimpleCounterAccountOptions,
   rebookTargetAccountOptions,
+  viewSwitcher,
   onRowDataUpdated,
   onAddTransactionClick,
   onCloseSimpleModal,
@@ -222,6 +225,7 @@ export function LedgerPageView({
           )}
         </Group>
         <Group gap="sm">
+          {viewSwitcher}
           <Tooltip
             label={
               simpleTransactionDisabledReason

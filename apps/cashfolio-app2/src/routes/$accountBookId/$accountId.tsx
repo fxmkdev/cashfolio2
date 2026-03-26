@@ -1,5 +1,5 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { Suspense, lazy, useCallback, useMemo, useState } from "react";
+import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
+import { useCallback, useMemo, useState } from "react";
 import {
   getBookingUnitIdentifier,
   isBookingValueCompatibleWithAccountType,
@@ -41,6 +41,7 @@ import {
   getUnitLabel,
 } from "./-ledger-page-data";
 import {
+  LedgerPageView,
   type EditMode,
   type RebookingState,
   type SimpleTransactionValues,
@@ -49,11 +50,7 @@ import {
   type TransactionMutationValues,
 } from "./-ledger-page-view";
 import { parseLedgerSearch, type LedgerRow } from "./-ledger-page-types";
-
-const LedgerPageView = lazy(async () => {
-  const module = await import("./-ledger-page-view");
-  return { default: module.LedgerPageView };
-});
+import { LedgerViewSegmentedControl } from "./-ledger-view-segmented-control";
 
 function buildSimpleTransactionValues(args: {
   values: SimpleTransactionValues;
@@ -169,10 +166,14 @@ export const Route = createFileRoute("/$accountBookId/$accountId")({
   loader: async ({ params: { accountBookId, accountId } }) => {
     return loadLedgerPageData({ accountBookId, accountId });
   },
-  component: LedgerPage,
+  component: LedgerLayout,
 });
 
-function LedgerPage() {
+function LedgerLayout() {
+  return <Outlet />;
+}
+
+export function LedgerPageContent() {
   const { account, bookings, accounts } = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const { transactionId } = Route.useSearch();
@@ -583,6 +584,9 @@ function LedgerPage() {
   }
 
   const isEquity = account.type === AccountType.EQUITY;
+  const isBalanceChartAvailable =
+    account.type === AccountType.ASSET ||
+    account.type === AccountType.LIABILITY;
   const isIncome =
     account.type === AccountType.EQUITY &&
     account.equityAccountSubtype === EquityAccountSubtype.INCOME;
@@ -625,75 +629,82 @@ function LedgerPage() {
   ) as "ASSET" | "LIABILITY" | `EQUITY-${EquityAccountSubtype}`;
 
   return (
-    <Suspense fallback={null}>
-      <LedgerPageView
-        accountBookId={accountBookId}
-        backTab={backTab}
-        account={account}
-        rows={rows}
-        columnDefs={columnDefs}
-        currentAccountLabel={currentAccountLabel}
-        unitLabel={unitLabel}
-        simpleTransactionDisabledReason={simpleTransactionDisabledReason}
-        simpleModalOpened={simpleModalOpened}
-        splitModalOpened={modalOpened}
-        editModalOpened={editModalOpened}
-        isSimpleSubmitting={isSimpleSubmitting}
-        isCreateSplitSubmitting={isCreateSplitSubmitting}
-        isEditSubmitting={isEditSubmitting}
-        isRebookSubmitting={isRebookSubmitting}
-        editMode={editMode}
-        createSplitInitialValues={createSplitInitialValues}
-        editingTransactionData={editingTransactionData}
-        editingSimpleInitialValues={editingSimpleInitialValues}
-        deletingTransaction={deletingTransaction}
-        rebooking={rebooking}
-        rebookModalOpened={rebookModalOpened}
-        hasCompleteBookingUnit={hasCompleteBookingUnit}
-        accountOptions={accountOptions}
-        editAccountOptions={editAccountOptions}
-        simpleCounterAccountOptions={simpleCounterAccountOptions}
-        editSimpleCounterAccountOptions={editSimpleCounterAccountOptions}
-        rebookTargetAccountOptions={rebookTargetAccountOptions}
-        onRowDataUpdated={handleRowDataUpdated}
-        onAddTransactionClick={() => {
-          setCreateSplitInitialValues(undefined);
-          if (simpleTransactionDisabledReason) {
-            setModalOpened(true);
-            return;
-          }
-          setSimpleModalOpened(true);
-        }}
-        onCloseSimpleModal={() => setSimpleModalOpened(false)}
-        onSimpleSubmittingChange={setIsSimpleSubmitting}
-        onSwitchCreateToSplit={handleSwitchCreateToSplit}
-        onSubmitCreateSimpleTransaction={handleCreateSimpleTransaction}
-        onCloseSplitModal={() => {
-          setModalOpened(false);
-          setCreateSplitInitialValues(undefined);
-        }}
-        onCreateSplitSubmittingChange={setIsCreateSplitSubmitting}
-        onSubmitCreateTransaction={handleCreateTransaction}
-        onCloseEditModal={() => setEditModalOpened(false)}
-        onEditSubmittingChange={setIsEditSubmitting}
-        onEditModalExitTransitionEnd={() => {
-          setEditingTransactionId(undefined);
-          setEditingTransactionData(undefined);
-          setEditingSimpleInitialValues(undefined);
-          setEditMode("SPLIT");
-        }}
-        onSwitchToSplit={handleSwitchToSplit}
-        onSubmitUpdateSimpleTransaction={handleUpdateSimpleTransaction}
-        onSubmitUpdateTransaction={handleUpdateTransaction}
-        onCloseRebookModal={() => setRebookModalOpened(false)}
-        onRebookSubmittingChange={setIsRebookSubmitting}
-        onRebookModalExitTransitionEnd={() => {
-          setRebooking(undefined);
-        }}
-        onSubmitRebookBooking={handleRebookBooking}
-        onCloseDeleteModal={() => setDeletingTransaction(undefined)}
-        onConfirmDeleteTransaction={handleDeleteTransaction}
-      />
-    </Suspense>
+    <LedgerPageView
+      accountBookId={accountBookId}
+      backTab={backTab}
+      account={account}
+      rows={rows}
+      columnDefs={columnDefs}
+      currentAccountLabel={currentAccountLabel}
+      unitLabel={unitLabel}
+      simpleTransactionDisabledReason={simpleTransactionDisabledReason}
+      simpleModalOpened={simpleModalOpened}
+      splitModalOpened={modalOpened}
+      editModalOpened={editModalOpened}
+      isSimpleSubmitting={isSimpleSubmitting}
+      isCreateSplitSubmitting={isCreateSplitSubmitting}
+      isEditSubmitting={isEditSubmitting}
+      isRebookSubmitting={isRebookSubmitting}
+      editMode={editMode}
+      createSplitInitialValues={createSplitInitialValues}
+      editingTransactionData={editingTransactionData}
+      editingSimpleInitialValues={editingSimpleInitialValues}
+      deletingTransaction={deletingTransaction}
+      rebooking={rebooking}
+      rebookModalOpened={rebookModalOpened}
+      hasCompleteBookingUnit={hasCompleteBookingUnit}
+      accountOptions={accountOptions}
+      editAccountOptions={editAccountOptions}
+      simpleCounterAccountOptions={simpleCounterAccountOptions}
+      editSimpleCounterAccountOptions={editSimpleCounterAccountOptions}
+      rebookTargetAccountOptions={rebookTargetAccountOptions}
+      viewSwitcher={
+        isBalanceChartAvailable ? (
+          <LedgerViewSegmentedControl
+            accountBookId={accountBookId}
+            accountId={account.id}
+            view="ledger"
+          />
+        ) : undefined
+      }
+      onRowDataUpdated={handleRowDataUpdated}
+      onAddTransactionClick={() => {
+        setCreateSplitInitialValues(undefined);
+        if (simpleTransactionDisabledReason) {
+          setModalOpened(true);
+          return;
+        }
+        setSimpleModalOpened(true);
+      }}
+      onCloseSimpleModal={() => setSimpleModalOpened(false)}
+      onSimpleSubmittingChange={setIsSimpleSubmitting}
+      onSwitchCreateToSplit={handleSwitchCreateToSplit}
+      onSubmitCreateSimpleTransaction={handleCreateSimpleTransaction}
+      onCloseSplitModal={() => {
+        setModalOpened(false);
+        setCreateSplitInitialValues(undefined);
+      }}
+      onCreateSplitSubmittingChange={setIsCreateSplitSubmitting}
+      onSubmitCreateTransaction={handleCreateTransaction}
+      onCloseEditModal={() => setEditModalOpened(false)}
+      onEditSubmittingChange={setIsEditSubmitting}
+      onEditModalExitTransitionEnd={() => {
+        setEditingTransactionId(undefined);
+        setEditingTransactionData(undefined);
+        setEditingSimpleInitialValues(undefined);
+        setEditMode("SPLIT");
+      }}
+      onSwitchToSplit={handleSwitchToSplit}
+      onSubmitUpdateSimpleTransaction={handleUpdateSimpleTransaction}
+      onSubmitUpdateTransaction={handleUpdateTransaction}
+      onCloseRebookModal={() => setRebookModalOpened(false)}
+      onRebookSubmittingChange={setIsRebookSubmitting}
+      onRebookModalExitTransitionEnd={() => {
+        setRebooking(undefined);
+      }}
+      onSubmitRebookBooking={handleRebookBooking}
+      onCloseDeleteModal={() => setDeletingTransaction(undefined)}
+      onConfirmDeleteTransaction={handleDeleteTransaction}
+    />
   );
 }
