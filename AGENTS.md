@@ -46,7 +46,7 @@ pnpm --filter cashfolio-app2 dev              # Start dev server
 pnpm --filter cashfolio-app2 build            # Production build
 pnpm --filter cashfolio-app2 typecheck        # tsc --noEmit
 pnpm --filter cashfolio-app2 format           # Prettier check
-pnpm --filter cashfolio-app2 prisma:generate  # Regenerate Prisma client (DATABASE_URL=dummy prisma generate)
+pnpm --filter cashfolio-app2 prisma:generate  # Regenerate Prisma client (no DATABASE_URL required)
 ```
 
 ## cashfolio-app2 Working Conventions
