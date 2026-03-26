@@ -44,7 +44,7 @@ import {
 } from "./-accounts-page-data";
 import { useAccountTreeColumnDefs } from "./-accounts-page-columns";
 import { AccountsPageView } from "./-accounts-page-view";
-import { REFERENCE_BALANCES_LOADING_DELAY_MS } from "./reference-balance-loading";
+import { REFERENCE_BALANCES_LOADING_DELAY_MS } from "./-reference-balance-loading";
 
 export const Route = createFileRoute("/$accountBookId/accounts")({
   validateSearch: parseAccountsSearch,

@@ -1,8 +1,8 @@
-import type { GroupBalanceAggregation } from "./accounts-page-data";
+import type { GroupBalanceAggregation } from "./-accounts-page-data";
 import {
   isReferenceCurrencyTotalFooterRow,
   type AccountsGridRow,
-} from "./accounts-page-types";
+} from "./-accounts-page-types";
 
 export const REFERENCE_BALANCES_LOADING_DELAY_MS = 120;
 

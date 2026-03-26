@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { AccountType, Unit } from "../../.prisma-client/enums";
-import type { GroupBalanceAggregation } from "./accounts-page-data";
-import type { AccountsGridRow } from "./accounts-page-types";
+import type { GroupBalanceAggregation } from "./-accounts-page-data";
+import type { AccountsGridRow } from "./-accounts-page-types";
 import {
   REFERENCE_BALANCES_LOADING_DELAY_MS,
   shouldShowReferenceBalanceLoadingIndicator,
-} from "./reference-balance-loading";
+} from "./-reference-balance-loading";
 
 function createAccountRow(
   balanceInReferenceCurrency: number | null,

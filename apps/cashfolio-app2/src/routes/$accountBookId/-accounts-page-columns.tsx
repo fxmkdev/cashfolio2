@@ -16,7 +16,7 @@ import {
   type RowTarget,
   type TreeRow,
 } from "./-accounts-page-types";
-import { shouldShowReferenceBalanceLoadingIndicator } from "./reference-balance-loading";
+import { shouldShowReferenceBalanceLoadingIndicator } from "./-reference-balance-loading";
 
 export function useAccountTreeColumnDefs(params: {
   isArchivedMode: boolean;
