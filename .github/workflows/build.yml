@@ -160,55 +160,14 @@ jobs:
       preview_url: ${{ steps.names.outputs.preview_url }}
       neon_branch_name: ${{ steps.names.outputs.neon_branch_name }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
       - name: Resolve preview resource names
         id: names
-        run: |
-          set -euo pipefail
-
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          HEAD_REF="${{ github.event.pull_request.head.ref }}"
-          BRANCH_TAIL="${HEAD_REF##*/}"
-
-          BRANCH_TAIL_SLUG="$(printf '%s' "$BRANCH_TAIL" \
-            | tr '[:upper:]' '[:lower:]' \
-            | sed -E 's/[^a-z0-9-]+/-/g; s/-+/-/g; s/^-+//; s/-+$//')"
-          if [ -z "$BRANCH_TAIL_SLUG" ]; then
-            BRANCH_TAIL_SLUG="branch"
-          fi
-
-          PREFIX="cashfolio-app2-pr-${PR_NUMBER}-"
-          MAX_SUFFIX_LEN=$((63 - ${#PREFIX}))
-          if [ "$MAX_SUFFIX_LEN" -lt 1 ]; then
-            echo "Computed max suffix length is invalid (${MAX_SUFFIX_LEN}) for prefix ${PREFIX}" >&2
-            exit 1
-          fi
-
-          SUFFIX="$BRANCH_TAIL_SLUG"
-          if [ "${#SUFFIX}" -gt "$MAX_SUFFIX_LEN" ]; then
-            HASH="$(printf '%s' "$BRANCH_TAIL_SLUG" | sha1sum | cut -c1-6)"
-            KEEP_LEN=$((MAX_SUFFIX_LEN - 7))
-            if [ "$KEEP_LEN" -lt 1 ]; then
-              KEEP_LEN=1
-            fi
-
-            TRIMMED_SUFFIX="${BRANCH_TAIL_SLUG:0:$KEEP_LEN}"
-            TRIMMED_SUFFIX="$(printf '%s' "$TRIMMED_SUFFIX" | sed -E 's/-+$//')"
-            if [ -z "$TRIMMED_SUFFIX" ]; then
-              TRIMMED_SUFFIX="b"
-            fi
-
-            SUFFIX="${TRIMMED_SUFFIX}-${HASH}"
-          fi
-
-          FLY_APP="cashfolio-app2-pr-${PR_NUMBER}-${SUFFIX}"
-          PREVIEW_HOSTNAME="${FLY_APP}.fly.dev"
-          PREVIEW_URL="https://${PREVIEW_HOSTNAME}/"
-          NEON_BRANCH_NAME="pr-${PR_NUMBER}-${SUFFIX}-cashfolio-app2"
-
-          echo "fly_app=${FLY_APP}" >> "$GITHUB_OUTPUT"
-          echo "preview_hostname=${PREVIEW_HOSTNAME}" >> "$GITHUB_OUTPUT"
-          echo "preview_url=${PREVIEW_URL}" >> "$GITHUB_OUTPUT"
-          echo "neon_branch_name=${NEON_BRANCH_NAME}" >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/resolve-preview-names
+        with:
+          pr_number: ${{ github.event.pull_request.number }}
+          head_ref: ${{ github.event.pull_request.head.ref }}
 
   deploy-preview:
     name: Deploy to preview
