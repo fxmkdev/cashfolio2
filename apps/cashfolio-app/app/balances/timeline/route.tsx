@@ -93,6 +93,10 @@ export default function Route() {
     getTheme() === "dark"
       ? "oklch(87.1% 0.006 286.286)"
       : "oklch(55.2% 0.016 285.938)";
+  const balanceTooltipRenderer = (params: any) => ({
+    title: format(params.datum.date, "dd MMM yyyy"),
+    data: [{ label: params.yName, value: formatMoney(params.yValue as number) }],
+  });
 
   return (
     <>
@@ -126,9 +130,7 @@ export default function Route() {
                   marker: { enabled: true },
                   interpolation: { type: "smooth" },
                   tooltip: {
-                    renderer: (params) => ({
-                      heading: format(params.datum.date, "dd MMM yyyy"),
-                    }),
+                    renderer: balanceTooltipRenderer,
                   },
                 },
                 {
@@ -139,9 +141,7 @@ export default function Route() {
                   marker: { enabled: true },
                   interpolation: { type: "smooth" },
                   tooltip: {
-                    renderer: (params) => ({
-                      heading: format(params.datum.date, "dd MMM yyyy"),
-                    }),
+                    renderer: balanceTooltipRenderer,
                   },
                 },
                 {
@@ -152,9 +152,7 @@ export default function Route() {
                   marker: { enabled: true },
                   interpolation: { type: "smooth" },
                   tooltip: {
-                    renderer: (params) => ({
-                      heading: format(params.datum.date, "dd MMM yyyy"),
-                    }),
+                    renderer: balanceTooltipRenderer,
                   },
                 },
               ],
