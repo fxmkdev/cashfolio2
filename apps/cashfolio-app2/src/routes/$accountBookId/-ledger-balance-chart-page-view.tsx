@@ -175,7 +175,7 @@ export function LedgerBalanceChartPageView({
 
         {points.length > 0 ? (
           <div className={classes.chartContainer}>
-            <AgCharts options={chartOptions} />
+            <AgCharts options={chartOptions} className={classes.chart} />
           </div>
         ) : (
           <Text c="dimmed" mt="md">
