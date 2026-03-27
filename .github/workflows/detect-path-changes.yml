@@ -1,0 +1,43 @@
+name: Detect Path Changes
+
+on:
+  workflow_call:
+    outputs:
+      cashfolio_app2:
+        description: "Whether cashfolio-app2 related paths changed"
+        value: ${{ jobs.changes.outputs.cashfolio_app2 }}
+      cli:
+        description: "Whether CLI related paths changed"
+        value: ${{ jobs.changes.outputs.cli }}
+
+jobs:
+  changes:
+    name: "Detect changed paths"
+    runs-on: ubuntu-latest
+    outputs:
+      cashfolio_app2: ${{ steps.filter.outputs.cashfolio_app2 }}
+      cli: ${{ steps.filter.outputs.cli }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Filter changed files
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            cashfolio_app2:
+              - 'apps/cashfolio-app2/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - '.github/workflows/build.yml'
+              - '.github/workflows/chromatic.yml'
+              - '.github/workflows/detect-path-changes.yml'
+              - '.github/actions/resolve-preview-names/**'
+            cli:
+              - 'tools/cli/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - '.github/workflows/build.yml'
+              - '.github/workflows/detect-path-changes.yml'
