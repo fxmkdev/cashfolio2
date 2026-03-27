@@ -175,7 +175,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - cashfolio-app2-build-push
-      - cashfolio-app2-e2e
       - cashfolio-app2-typecheck
       - cashfolio-app2-format
       - resolve-preview-names
