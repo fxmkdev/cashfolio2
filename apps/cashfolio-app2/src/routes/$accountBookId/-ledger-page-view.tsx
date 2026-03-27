@@ -225,7 +225,6 @@ export function LedgerPageView({
           )}
         </Group>
         <Group gap="sm">
-          {viewSwitcher}
           <Tooltip
             label={
               simpleTransactionDisabledReason
@@ -242,6 +241,7 @@ export function LedgerPageView({
               </Button>
             </span>
           </Tooltip>
+          {viewSwitcher}
         </Group>
       </Group>
 
