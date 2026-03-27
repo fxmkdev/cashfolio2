@@ -43,6 +43,7 @@ jobs:
               - 'pnpm-workspace.yaml'
               - 'package.json'
               - '.github/workflows/build.yml'
+              - '.github/actions/resolve-preview-names/**'
             cli:
               - 'tools/cli/**'
               - 'pnpm-lock.yaml'
