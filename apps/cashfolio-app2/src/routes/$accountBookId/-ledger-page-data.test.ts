@@ -406,6 +406,7 @@ describe("createLedgerBalanceFormatter", () => {
       unit: Unit.CURRENCY,
       currency: "CHF",
       cryptocurrency: null,
+      symbol: null,
       tradeCurrency: null,
     });
 
