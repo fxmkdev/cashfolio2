@@ -12,5 +12,7 @@ apps/cashfolio-app
 docs
 infra
 # Re-include Redis infra assets needed by infra/cashfolio-redis/Dockerfile builds.
+!infra/
+!infra/cashfolio-redis/
 !infra/cashfolio-redis/**
 tools
