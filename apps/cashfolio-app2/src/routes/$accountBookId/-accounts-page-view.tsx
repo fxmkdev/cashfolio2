@@ -223,6 +223,11 @@ export function AccountsPageView({
         // teardown crashes in AG Grid's group cell renderer path.
         // See AG Grid React GridOptions docs for `reactiveCustomComponents`.
         reactiveCustomComponents={false}
+        rowSelection={{
+          mode: "singleRow",
+          checkboxes: false,
+          enableClickSelection: false,
+        }}
         rowData={rows}
         columnDefs={columnDefs}
         autoGroupColumnDef={{
