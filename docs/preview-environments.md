@@ -1,7 +1,7 @@
 # Preview environments
 
-This repository uses dynamic preview deployments: one deployment per pull
-request for `cashfolio-app2`.
+This repository uses dynamic preview deployments for `cashfolio-app2`: each
+push/update to a pull request branch triggers a new deployment.
 
 ## Dynamic preview behavior
 
