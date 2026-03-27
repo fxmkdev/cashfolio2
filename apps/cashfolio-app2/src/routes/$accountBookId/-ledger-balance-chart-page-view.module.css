@@ -1,6 +1,20 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 8rem);
+}
+
+.chartCard {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .chartContainer {
   margin-top: 20px;
-  height: 420px;
+  flex: 1;
+  min-height: 0;
 }
 
 .chartContainer :global(.ag-charts-overlay) {

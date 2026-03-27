@@ -129,7 +129,7 @@ export function LedgerBalanceChartPageView({
   );
 
   return (
-    <Container fluid py="xl" px="xl">
+    <Container fluid py="xl" px="xl" className={classes.page}>
       <Group mb="lg" gap="md" justify="space-between">
         <Group gap="md">
           <Breadcrumbs fz="h2" fw={700}>
@@ -160,7 +160,7 @@ export function LedgerBalanceChartPageView({
         <Group gap="sm">{viewSwitcher}</Group>
       </Group>
 
-      <Card withBorder radius="md" p="lg">
+      <Card withBorder radius="md" p="lg" className={classes.chartCard}>
         <Stack gap="xs">
           <Text fw={600}>Balance</Text>
           <Text c="dimmed" size="sm">
