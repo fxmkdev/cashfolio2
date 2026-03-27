@@ -23,6 +23,7 @@ paths are relative to that app directory.
   `renderingMode="legacy"` and `reactiveCustomComponents={false}`.
 - Keep group-cell selection checkboxes disabled via
   `autoGroupColumnDef.cellRendererParams.checkbox = false` on that grid.
+- Keep `rowSelection.checkboxes = false` on that grid as well.
 - Source:
   [AG Grid React GridOptions](https://www.ag-grid.com/react-data-grid/grid-options/)
   (`renderingMode`, `reactiveCustomComponents`) and AG Grid type definitions for

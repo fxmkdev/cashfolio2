@@ -217,6 +217,11 @@ export function AccountsPageView({
         containerStyle={{ height: "calc(100vh - 11rem)" }}
         renderingMode="legacy"
         reactiveCustomComponents={false}
+        rowSelection={{
+          mode: "singleRow",
+          checkboxes: false,
+          enableClickSelection: false,
+        }}
         rowData={rows}
         columnDefs={columnDefs}
         autoGroupColumnDef={{
