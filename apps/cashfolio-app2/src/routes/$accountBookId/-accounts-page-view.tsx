@@ -215,19 +215,8 @@ export function AccountsPageView({
 
       <DataGrid
         containerStyle={{ height: "calc(100vh - 11rem)" }}
-        // Work around an AG Grid React + React 19 crash path observed in CI.
-        // See AG Grid React GridOptions docs for `renderingMode`:
-        // https://www.ag-grid.com/react-data-grid/grid-options/
         renderingMode="legacy"
-        // Keep framework components non-reactive for this grid to avoid React 19
-        // teardown crashes in AG Grid's group cell renderer path.
-        // See AG Grid React GridOptions docs for `reactiveCustomComponents`.
         reactiveCustomComponents={false}
-        rowSelection={{
-          mode: "singleRow",
-          checkboxes: false,
-          enableClickSelection: false,
-        }}
         rowData={rows}
         columnDefs={columnDefs}
         autoGroupColumnDef={{
@@ -237,6 +226,7 @@ export function AccountsPageView({
           filter: "agTextColumnFilter",
           valueGetter: ({ data }) => data?.name,
           cellRendererParams: {
+            checkbox: false,
             suppressCount: true,
           },
         }}
