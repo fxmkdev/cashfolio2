@@ -1,6 +1,6 @@
 # Preview environments
 
-This repository uses dynamic preview environments: one environment per pull
+This repository uses dynamic preview deployments: one deployment per pull
 request for `cashfolio-app2`.
 
 ## Dynamic preview behavior
@@ -25,7 +25,14 @@ Redis cache note:
 When a PR is closed, CI deletes the corresponding Fly app, Neon branch (via
 `neondatabase/delete-branch-action`).
 
-Dynamic preview CI does not create or use GitHub environments.
+Dynamic preview CI uses a single GitHub environment:
+
+- `preview-cashfolio-app` for all app preview deployments (with dynamic
+  `environment_url` per PR)
+
+Redis is shared and not deployed as part of dynamic PR preview. Redis deploys
+remain manual from `main` via `.github/workflows/deploy.yml` using the existing
+environment naming pattern (`<environment>-cashfolio-redis`).
 
 Neon branch lifecycle notes:
 
@@ -38,8 +45,8 @@ Neon branch lifecycle notes:
 
 ## Required GitHub configuration
 
-Dynamic preview jobs read configuration from repository or organization scope
-(global), not from environment-scoped secrets/variables.
+Dynamic preview jobs can read configuration from the `preview-cashfolio-app`
+environment (recommended) or from repository/organization scope.
 
 ### Secrets
 

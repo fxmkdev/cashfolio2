@@ -194,8 +194,12 @@ jobs:
       - cashfolio-app2-format
     permissions:
       contents: read
+      deployments: write
       pull-requests: write
       issues: write
+    environment:
+      name: preview-cashfolio-app
+      url: ${{ format('https://cashfolio-app2-pr-{0}.fly.dev/', github.event.pull_request.number) }}
     concurrency:
       group: preview-pr-${{ github.event.pull_request.number }}
       cancel-in-progress: true
@@ -433,4 +437,5 @@ jobs:
       version_with_sha: ${{ needs.version.outputs.version_with_sha }}
       sha: ${{ needs.version.outputs.sha }}
       environment: staging
+      deploy-cashfolio-redis: false
     secrets: inherit
