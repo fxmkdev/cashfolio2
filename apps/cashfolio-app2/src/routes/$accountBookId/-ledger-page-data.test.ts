@@ -25,11 +25,11 @@ function createLedgerAccount(type: AccountType): LedgerAccount {
 }
 
 function createLedgerBookings(
-  entries: Array<{ date: string; value: number }>,
+  entries: Array<{ date: Date; value: number }>,
 ): LedgerBookings {
   return entries.map((entry, index) => ({
     id: `booking-${index + 1}`,
-    date: new Date(entry.date),
+    date: new Date(entry.date.getTime()),
     description: "",
     value: entry.value,
     unit: Unit.CURRENCY,
@@ -41,6 +41,15 @@ function createLedgerBookings(
     transactionDescription: "",
     counterpartyAccounts: [],
   }));
+}
+
+function localDate(
+  year: number,
+  monthIndex: number,
+  day: number,
+  hour: number = 0,
+): Date {
+  return new Date(year, monthIndex, day, hour, 0, 0, 0);
 }
 
 describe("getUnitLabel", () => {
@@ -255,18 +264,18 @@ describe("deriveSimpleTransactionEditState", () => {
 });
 
 describe("buildLedgerBalanceChartPoints", () => {
-  const fixedToday = new Date("2026-01-11T12:00:00.000Z");
+  const fixedToday = localDate(2026, 0, 11, 12);
 
   test("builds running daily closing balances for asset accounts", () => {
     const points = buildLedgerBalanceChartPoints(
       createLedgerAccount(AccountType.ASSET),
       createLedgerBookings([
         {
-          date: "2026-01-10T09:00:00.000Z",
+          date: localDate(2026, 0, 10, 9),
           value: 100,
         },
         {
-          date: "2026-01-11T09:00:00.000Z",
+          date: localDate(2026, 0, 11, 9),
           value: -40,
         },
       ]),
@@ -275,13 +284,13 @@ describe("buildLedgerBalanceChartPoints", () => {
 
     expect(points).toEqual([
       {
-        date: new Date("2026-01-10T00:00:00"),
+        date: localDate(2026, 0, 10, 0),
         dateKey: "2026-01-10",
         dateLabel: "10.01.2026",
         balance: 100,
       },
       {
-        date: new Date("2026-01-11T00:00:00"),
+        date: localDate(2026, 0, 11, 0),
         dateKey: "2026-01-11",
         dateLabel: "11.01.2026",
         balance: 60,
@@ -294,11 +303,11 @@ describe("buildLedgerBalanceChartPoints", () => {
       createLedgerAccount(AccountType.LIABILITY),
       createLedgerBookings([
         {
-          date: "2026-01-10T09:00:00.000Z",
+          date: localDate(2026, 0, 10, 9),
           value: -100,
         },
         {
-          date: "2026-01-11T09:00:00.000Z",
+          date: localDate(2026, 0, 11, 9),
           value: 20,
         },
       ]),
@@ -307,13 +316,13 @@ describe("buildLedgerBalanceChartPoints", () => {
 
     expect(points).toEqual([
       {
-        date: new Date("2026-01-10T00:00:00"),
+        date: localDate(2026, 0, 10, 0),
         dateKey: "2026-01-10",
         dateLabel: "10.01.2026",
         balance: 100,
       },
       {
-        date: new Date("2026-01-11T00:00:00"),
+        date: localDate(2026, 0, 11, 0),
         dateKey: "2026-01-11",
         dateLabel: "11.01.2026",
         balance: 80,
@@ -326,19 +335,19 @@ describe("buildLedgerBalanceChartPoints", () => {
       createLedgerAccount(AccountType.ASSET),
       createLedgerBookings([
         {
-          date: "2026-01-10T09:00:00.000Z",
+          date: localDate(2026, 0, 10, 9),
           value: 100,
         },
         {
-          date: "2026-01-10T12:00:00.000Z",
+          date: localDate(2026, 0, 10, 12),
           value: -10,
         },
         {
-          date: "2026-01-10T15:00:00.000Z",
+          date: localDate(2026, 0, 10, 15),
           value: -15,
         },
         {
-          date: "2026-01-11T09:00:00.000Z",
+          date: localDate(2026, 0, 11, 9),
           value: 5,
         },
       ]),
@@ -347,13 +356,13 @@ describe("buildLedgerBalanceChartPoints", () => {
 
     expect(points).toEqual([
       {
-        date: new Date("2026-01-10T00:00:00"),
+        date: localDate(2026, 0, 10, 0),
         dateKey: "2026-01-10",
         dateLabel: "10.01.2026",
         balance: 75,
       },
       {
-        date: new Date("2026-01-11T00:00:00"),
+        date: localDate(2026, 0, 11, 0),
         dateKey: "2026-01-11",
         dateLabel: "11.01.2026",
         balance: 80,
@@ -376,22 +385,22 @@ describe("buildLedgerBalanceChartPoints", () => {
       createLedgerAccount(AccountType.ASSET),
       createLedgerBookings([
         {
-          date: "2026-01-10T09:00:00.000Z",
+          date: localDate(2026, 0, 10, 9),
           value: 100,
         },
       ]),
-      new Date("2026-01-12T12:00:00.000Z"),
+      localDate(2026, 0, 12, 12),
     );
 
     expect(points).toEqual([
       {
-        date: new Date("2026-01-10T00:00:00"),
+        date: localDate(2026, 0, 10, 0),
         dateKey: "2026-01-10",
         dateLabel: "10.01.2026",
         balance: 100,
       },
       {
-        date: new Date("2026-01-12T00:00:00"),
+        date: localDate(2026, 0, 12, 0),
         dateKey: "2026-01-12",
         dateLabel: "12.01.2026",
         balance: 100,

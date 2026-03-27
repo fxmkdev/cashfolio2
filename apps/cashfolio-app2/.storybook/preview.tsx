@@ -58,12 +58,19 @@ const preview: Preview = {
         component: () => <Story />,
       });
 
+      const accountLedgerChartRoute = createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/$accountBookId/$accountId/chart",
+        component: () => <Story />,
+      });
+
       const router = createRouter({
         routeTree: rootRoute.addChildren([
           rootStoryRoute,
           accountBookRoute,
           accountBookAccountsRoute,
           accountLedgerRoute,
+          accountLedgerChartRoute,
         ]),
         // Storybook renders stories inside /iframe.html, so links/routes must
         // resolve relative to that base path.
