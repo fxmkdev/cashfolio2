@@ -150,6 +150,25 @@ jobs:
       - name: Run typecheck in cli
         run: pnpm --filter cli typecheck
 
+  resolve-preview-names:
+    name: Resolve preview resource names
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    outputs:
+      fly_app: ${{ steps.names.outputs.fly_app }}
+      preview_hostname: ${{ steps.names.outputs.preview_hostname }}
+      preview_url: ${{ steps.names.outputs.preview_url }}
+      neon_branch_name: ${{ steps.names.outputs.neon_branch_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Resolve preview resource names
+        id: names
+        uses: ./.github/actions/resolve-preview-names
+        with:
+          pr_number: ${{ github.event.pull_request.number }}
+          head_ref: ${{ github.event.pull_request.head.ref }}
+
   deploy-preview:
     name: Deploy to preview
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
@@ -159,6 +178,7 @@ jobs:
       - cashfolio-app2-e2e
       - cashfolio-app2-typecheck
       - cashfolio-app2-format
+      - resolve-preview-names
     permissions:
       contents: read
       deployments: write
@@ -166,19 +186,21 @@ jobs:
       issues: write
     environment:
       name: preview-cashfolio-app
-      url: ${{ format('https://cashfolio-app2-pr-{0}.fly.dev/', github.event.pull_request.number) }}
+      url: ${{ needs.resolve-preview-names.outputs.preview_url }}
     concurrency:
       group: preview-pr-${{ github.event.pull_request.number }}
       cancel-in-progress: true
     env:
-      FLY_APP: cashfolio-app2-pr-${{ github.event.pull_request.number }}
-      PREVIEW_HOSTNAME: cashfolio-app2-pr-${{ github.event.pull_request.number }}.fly.dev
-      PREVIEW_URL: https://cashfolio-app2-pr-${{ github.event.pull_request.number }}.fly.dev/
-      NEON_BRANCH_NAME: pr-${{ github.event.pull_request.number }}-cashfolio-app2
       CASHFOLIO_APP2_IMAGE: ${{ needs.cashfolio-app2-build-push.outputs.image }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+      - name: Resolve preview resource names
+        run: |
+          echo "FLY_APP=${{ needs.resolve-preview-names.outputs.fly_app }}" >> "$GITHUB_ENV"
+          echo "PREVIEW_HOSTNAME=${{ needs.resolve-preview-names.outputs.preview_hostname }}" >> "$GITHUB_ENV"
+          echo "PREVIEW_URL=${{ needs.resolve-preview-names.outputs.preview_url }}" >> "$GITHUB_ENV"
+          echo "NEON_BRANCH_NAME=${{ needs.resolve-preview-names.outputs.neon_branch_name }}" >> "$GITHUB_ENV"
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
         with:

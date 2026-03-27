@@ -8,13 +8,22 @@ push/update to a pull request branch triggers a new deployment.
 On pull requests (non-forks), CI now:
 
 1. Builds and pushes the `cashfolio-app2` image
-2. Creates or reuses a Neon branch named `pr-<PR_NUMBER>-cashfolio-app2` from
-   production using `neondatabase/create-branch-action`
-3. Creates or reuses a Fly app named `cashfolio-app2-pr-<PR_NUMBER>`
+2. Creates or reuses a Neon branch named
+   `pr-<PR_NUMBER>-<BRANCH_TAIL_SLUG>-cashfolio-app2` from production using
+   `neondatabase/create-branch-action`
+3. Creates or reuses a Fly app named
+   `cashfolio-app2-pr-<PR_NUMBER>-<BRANCH_TAIL_SLUG>`
 4. Sets Fly secrets (`DATABASE_URL`, `LOGTO_APP_SECRET`, `SESSION_SECRET`), with
    `SESSION_SECRET` generated per deploy in CI
-5. Deploys the PR image to `https://cashfolio-app2-pr-<PR_NUMBER>.fly.dev/`
+5. Deploys the PR image to
+   `https://cashfolio-app2-pr-<PR_NUMBER>-<BRANCH_TAIL_SLUG>.fly.dev/`
 6. Posts/updates a PR comment with the dynamic preview URL
+
+`<BRANCH_TAIL_SLUG>` is derived from the last segment of the PR branch name
+(`head.ref`): lowercased, non-`[a-z0-9-]` characters replaced with `-`,
+consecutive dashes collapsed, and leading/trailing dashes trimmed (fallback:
+`branch`). If the slug is too long for Fly's 63-character app-label limit, CI
+truncates it and appends `-<6-char-sha1>` for stable uniqueness.
 
 Redis cache note:
 

@@ -15,46 +15,88 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
         with:
           version: ${{ env.FLYCTL_VERSION }}
       - name: Resolve preview resource names
         id: names
-        run: |
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          echo "fly_app=cashfolio-app2-pr-${PR_NUMBER}" >> "$GITHUB_OUTPUT"
-          echo "neon_branch_name=pr-${PR_NUMBER}-cashfolio-app2" >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/resolve-preview-names
+        with:
+          pr_number: ${{ github.event.pull_request.number }}
+          head_ref: ${{ github.event.pull_request.head.ref }}
       - name: Delete Fly app
         run: |
           set -euo pipefail
 
-          FLY_APP="${{ steps.names.outputs.fly_app }}"
-          if fly_status_output="$(flyctl status --app "$FLY_APP" 2>&1)"; then
-            echo "Destroying Fly app ${FLY_APP}"
-            flyctl apps destroy "$FLY_APP" --yes
-          else
-            if printf '%s\n' "$fly_status_output" | grep -qiE 'could not find app|app not found'; then
-              echo "Fly app ${FLY_APP} does not exist, skipping"
-            else
-              echo "Failed to check status of Fly app ${FLY_APP}:"
-              printf '%s\n' "$fly_status_output"
-              exit 1
+          delete_fly_app_if_exists() {
+            local app_name="$1"
+            local fly_status_output=""
+
+            if fly_status_output="$(flyctl status --app "$app_name" 2>&1)"; then
+              echo "Destroying Fly app ${app_name}"
+              flyctl apps destroy "$app_name" --yes
+              return 0
             fi
+
+            if printf '%s\n' "$fly_status_output" | grep -qiE 'could not find app|app not found|unknown app'; then
+              echo "Fly app ${app_name} does not exist, skipping"
+              return 2
+            fi
+
+            echo "Failed to check status of Fly app ${app_name}:"
+            printf '%s\n' "$fly_status_output"
+            return 1
+          }
+
+          FLY_APP_NEW="${{ steps.names.outputs.fly_app }}"
+          FLY_APP_LEGACY="${{ steps.names.outputs.fly_app_legacy }}"
+
+          new_delete_result=0
+          delete_fly_app_if_exists "$FLY_APP_NEW" || new_delete_result="$?"
+          if [ "$new_delete_result" -eq 1 ]; then
+            exit 1
+          fi
+
+          echo "Trying legacy Fly app name ${FLY_APP_LEGACY}"
+          legacy_delete_result=0
+          delete_fly_app_if_exists "$FLY_APP_LEGACY" || legacy_delete_result="$?"
+          if [ "$legacy_delete_result" -eq 1 ]; then
+            exit 1
+          fi
+
+          if [ "$new_delete_result" -eq 2 ] && [ "$legacy_delete_result" -eq 2 ]; then
+            echo "No Fly preview app found for this PR, nothing to delete"
           fi
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-      - name: Delete Neon branch
-        id: delete-neon-branch
+      - name: Delete Neon branch (new name)
+        id: delete-neon-branch-new
         uses: neondatabase/delete-branch-action@v3
         continue-on-error: true
         with:
           project_id: ${{ vars.NEON_PROJECT_ID }}
           branch: ${{ steps.names.outputs.neon_branch_name }}
           api_key: ${{ secrets.NEON_API_KEY }}
-      - name: Warn if Neon branch deletion failed
-        if: steps.delete-neon-branch.outcome == 'failure'
+      - name: Delete Neon branch (legacy name)
+        id: delete-neon-branch-legacy
+        uses: neondatabase/delete-branch-action@v3
+        continue-on-error: true
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch: ${{ steps.names.outputs.neon_branch_legacy }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+      - name: Warn if new Neon branch deletion failed
+        if: steps.delete-neon-branch-new.outcome == 'failure'
         run: |
           echo "::warning::Failed to delete Neon branch ${NEON_BRANCH_NAME}. It may already be expired or there may be a Neon API/permission issue. Branches are created with a 14-day expiration fallback."
         env:
           NEON_BRANCH_NAME: ${{ steps.names.outputs.neon_branch_name }}
+      - name: Warn if legacy Neon branch deletion failed
+        if: steps.delete-neon-branch-legacy.outcome == 'failure'
+        run: |
+          echo "::warning::Failed to delete legacy Neon branch ${NEON_BRANCH_NAME}. It may already be expired or there may be a Neon API/permission issue."
+        env:
+          NEON_BRANCH_NAME: ${{ steps.names.outputs.neon_branch_legacy }}
