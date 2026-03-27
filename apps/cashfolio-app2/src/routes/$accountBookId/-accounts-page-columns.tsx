@@ -207,8 +207,6 @@ export function useAccountTreeColumnDefs(params: {
       isArchivedMode,
       isEquityTab,
       referenceCurrency,
-      isReferenceBalancesLoading,
-      balanceInReferenceCurrencyByGroupId,
       onEditRow,
       onUnarchiveRow,
       onArchiveRow,

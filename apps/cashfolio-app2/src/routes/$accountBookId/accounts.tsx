@@ -3,7 +3,8 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { GridApi, GridReadyEvent } from "ag-grid-enterprise";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useExpandedGroups } from "../../hooks/use-expanded-groups";
 import type {
   AccountInitialValues,
@@ -29,6 +30,7 @@ import {
 } from "../../server/accounts";
 import {
   REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
+  type AccountsGridRow,
   getTabDefinition,
   type ReferenceCurrencyTotalFooterRow,
   parseAccountsSearch,
@@ -66,6 +68,7 @@ function AccountsPage() {
   const { tab, mode } = Route.useSearch();
   const navigate = useNavigate({ from: "/$accountBookId/accounts" });
   const router = useRouter();
+  const gridApiRef = useRef<GridApi<AccountsGridRow> | null>(null);
   const [referenceBalanceByRowId, setReferenceBalanceByRowId] = useState(
     () => new Map<string, number | null>(),
   );
@@ -249,6 +252,14 @@ function AccountsPage() {
   );
   const shouldShowReferenceBalancesLoading =
     isReferenceBalancesLoading && showReferenceBalancesLoading;
+
+  useEffect(() => {
+    gridApiRef.current?.refreshCells({
+      columns: ["balanceInReferenceCurrency"],
+      force: true,
+    });
+  }, [shouldShowReferenceBalancesLoading]);
+
   const pinnedBottomRowData: ReferenceCurrencyTotalFooterRow[] | undefined =
     isEquityTab
       ? undefined
@@ -304,6 +315,13 @@ function AccountsPage() {
       router.invalidate();
     },
     [accountBookId, router],
+  );
+
+  const handleGridReady = useCallback(
+    (event: GridReadyEvent<AccountsGridRow>) => {
+      gridApiRef.current = event.api;
+    },
+    [],
   );
 
   const columnDefs = useAccountTreeColumnDefs({
@@ -444,6 +462,7 @@ function AccountsPage() {
       existingNodes={existingNodes}
       rows={rows}
       columnDefs={columnDefs}
+      onGridReady={handleGridReady}
       pinnedBottomRowData={pinnedBottomRowData}
       isGroupOpenByDefault={isGroupOpenByDefault}
       onRowGroupOpened={onRowGroupOpened}
