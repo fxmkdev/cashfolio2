@@ -41,44 +41,16 @@ async function expectDashboardPeriodInUrl(
 }
 
 async function selectDashboardPeriod(page: Page, period: "12m" | "10y") {
-  await page.evaluate((nextPeriod) => {
-    const inputs = Array.from(
-      document.querySelectorAll<HTMLInputElement>(
-        `input[type="radio"][value="${nextPeriod}"]`,
-      ),
-    );
+  const input = page
+    .locator(`[role="radiogroup"] input[type="radio"][value="${period}"]`)
+    .first();
 
-    if (inputs.length === 0) {
-      throw new Error(`Dashboard period radio not found for: ${nextPeriod}`);
-    }
+  if ((await input.count()) === 0) {
+    throw new Error(`Dashboard period radio not found for: ${period}`);
+  }
 
-    for (const input of inputs) {
-      if (!input.id) {
-        continue;
-      }
-      const label = document.querySelector(
-        `label[for="${CSS.escape(input.id)}"]`,
-      );
-      if (!(label instanceof HTMLElement)) {
-        continue;
-      }
-
-      const style = window.getComputedStyle(label);
-      const rect = label.getBoundingClientRect();
-      const isVisible =
-        style.display !== "none" &&
-        style.visibility !== "hidden" &&
-        rect.width > 0 &&
-        rect.height > 0;
-
-      if (isVisible) {
-        label.click();
-        return;
-      }
-    }
-
-    inputs[0].click();
-  }, period);
+  await input.check({ force: true });
+  await expect(input).toBeChecked();
 }
 
 test("dashboard is default account-book route and links to accounts", async ({
