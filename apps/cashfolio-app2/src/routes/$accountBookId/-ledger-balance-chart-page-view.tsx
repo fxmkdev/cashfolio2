@@ -93,8 +93,13 @@ export function LedgerBalanceChartPageView({
               const point = datum as LedgerBalanceChartPoint;
 
               return {
-                title: point.dateLabel,
-                content: formatBalance(point.balance),
+                heading: point.dateLabel,
+                data: [
+                  {
+                    label: "Balance",
+                    value: formatBalance(point.balance),
+                  },
+                ],
               };
             },
           },
