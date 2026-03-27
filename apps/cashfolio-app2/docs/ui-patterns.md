@@ -164,6 +164,9 @@ submit UX and prevent duplicate requests.
 - Balances are displayed in each account's own unit/currency; no conversion.
 - Liability balances are sign-adjusted for display (same direction as ledger
   display conventions).
+- For right-aligned numeric columns, loading and placeholder content inside
+  cells must also be right-aligned (for example dotted loaders in
+  `Balance (<referenceCurrency>)` cells).
 
 ## Action Availability Pattern
 

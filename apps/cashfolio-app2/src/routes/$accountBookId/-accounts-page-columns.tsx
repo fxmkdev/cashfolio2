@@ -141,7 +141,6 @@ export function useAccountTreeColumnDefs(params: {
                       balanceInReferenceCurrencyByGroupIdRef.current,
                   })
                 ) {
-                  // Keep the loader aligned with right-aligned numeric values.
                   return (
                     <div
                       style={{
