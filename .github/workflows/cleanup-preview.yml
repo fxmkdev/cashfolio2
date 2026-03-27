@@ -22,39 +22,118 @@ jobs:
       - name: Resolve preview resource names
         id: names
         run: |
+          set -euo pipefail
+
           PR_NUMBER="${{ github.event.pull_request.number }}"
-          echo "fly_app=cashfolio-app2-pr-${PR_NUMBER}" >> "$GITHUB_OUTPUT"
-          echo "neon_branch_name=pr-${PR_NUMBER}-cashfolio-app2" >> "$GITHUB_OUTPUT"
+          HEAD_REF="${{ github.event.pull_request.head.ref }}"
+          BRANCH_TAIL="${HEAD_REF##*/}"
+
+          BRANCH_TAIL_SLUG="$(printf '%s' "$BRANCH_TAIL" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9-]+/-/g; s/-+/-/g; s/^-+//; s/-+$//')"
+          if [ -z "$BRANCH_TAIL_SLUG" ]; then
+            BRANCH_TAIL_SLUG="branch"
+          fi
+
+          PREFIX="cashfolio-app2-pr-${PR_NUMBER}-"
+          MAX_SUFFIX_LEN=$((63 - ${#PREFIX}))
+          if [ "$MAX_SUFFIX_LEN" -lt 1 ]; then
+            echo "Computed max suffix length is invalid (${MAX_SUFFIX_LEN}) for prefix ${PREFIX}" >&2
+            exit 1
+          fi
+
+          SUFFIX="$BRANCH_TAIL_SLUG"
+          if [ "${#SUFFIX}" -gt "$MAX_SUFFIX_LEN" ]; then
+            HASH="$(printf '%s' "$BRANCH_TAIL_SLUG" | sha1sum | cut -c1-6)"
+            KEEP_LEN=$((MAX_SUFFIX_LEN - 7))
+            if [ "$KEEP_LEN" -lt 1 ]; then
+              KEEP_LEN=1
+            fi
+
+            TRIMMED_SUFFIX="${BRANCH_TAIL_SLUG:0:$KEEP_LEN}"
+            TRIMMED_SUFFIX="$(printf '%s' "$TRIMMED_SUFFIX" | sed -E 's/-+$//')"
+            if [ -z "$TRIMMED_SUFFIX" ]; then
+              TRIMMED_SUFFIX="b"
+            fi
+
+            SUFFIX="${TRIMMED_SUFFIX}-${HASH}"
+          fi
+
+          echo "fly_app_new=cashfolio-app2-pr-${PR_NUMBER}-${SUFFIX}" >> "$GITHUB_OUTPUT"
+          echo "fly_app_legacy=cashfolio-app2-pr-${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "neon_branch_new=pr-${PR_NUMBER}-${SUFFIX}-cashfolio-app2" >> "$GITHUB_OUTPUT"
+          echo "neon_branch_legacy=pr-${PR_NUMBER}-cashfolio-app2" >> "$GITHUB_OUTPUT"
       - name: Delete Fly app
         run: |
           set -euo pipefail
 
-          FLY_APP="${{ steps.names.outputs.fly_app }}"
-          if fly_status_output="$(flyctl status --app "$FLY_APP" 2>&1)"; then
-            echo "Destroying Fly app ${FLY_APP}"
-            flyctl apps destroy "$FLY_APP" --yes
-          else
-            if printf '%s\n' "$fly_status_output" | grep -qiE 'could not find app|app not found'; then
-              echo "Fly app ${FLY_APP} does not exist, skipping"
-            else
-              echo "Failed to check status of Fly app ${FLY_APP}:"
-              printf '%s\n' "$fly_status_output"
+          delete_fly_app_if_exists() {
+            local app_name="$1"
+            local fly_status_output=""
+
+            if fly_status_output="$(flyctl status --app "$app_name" 2>&1)"; then
+              echo "Destroying Fly app ${app_name}"
+              flyctl apps destroy "$app_name" --yes
+              return 0
+            fi
+
+            if printf '%s\n' "$fly_status_output" | grep -qiE 'could not find app|app not found|unknown app'; then
+              echo "Fly app ${app_name} does not exist, skipping"
+              return 2
+            fi
+
+            echo "Failed to check status of Fly app ${app_name}:"
+            printf '%s\n' "$fly_status_output"
+            return 1
+          }
+
+          FLY_APP_NEW="${{ steps.names.outputs.fly_app_new }}"
+          FLY_APP_LEGACY="${{ steps.names.outputs.fly_app_legacy }}"
+
+          delete_result=0
+          delete_fly_app_if_exists "$FLY_APP_NEW" || delete_result="$?"
+          if [ "$delete_result" -eq 1 ]; then
+            exit 1
+          fi
+
+          if [ "$delete_result" -eq 2 ]; then
+            echo "Trying legacy Fly app name ${FLY_APP_LEGACY}"
+            legacy_delete_result=0
+            delete_fly_app_if_exists "$FLY_APP_LEGACY" || legacy_delete_result="$?"
+            if [ "$legacy_delete_result" -eq 1 ]; then
               exit 1
+            fi
+            if [ "$legacy_delete_result" -eq 2 ]; then
+              echo "No Fly preview app found for this PR, nothing to delete"
             fi
           fi
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-      - name: Delete Neon branch
-        id: delete-neon-branch
+      - name: Delete Neon branch (new name)
+        id: delete-neon-branch-new
         uses: neondatabase/delete-branch-action@v3
         continue-on-error: true
         with:
           project_id: ${{ vars.NEON_PROJECT_ID }}
-          branch: ${{ steps.names.outputs.neon_branch_name }}
+          branch: ${{ steps.names.outputs.neon_branch_new }}
           api_key: ${{ secrets.NEON_API_KEY }}
-      - name: Warn if Neon branch deletion failed
-        if: steps.delete-neon-branch.outcome == 'failure'
+      - name: Delete Neon branch (legacy name)
+        id: delete-neon-branch-legacy
+        uses: neondatabase/delete-branch-action@v3
+        continue-on-error: true
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch: ${{ steps.names.outputs.neon_branch_legacy }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+      - name: Warn if new Neon branch deletion failed
+        if: steps.delete-neon-branch-new.outcome == 'failure'
         run: |
           echo "::warning::Failed to delete Neon branch ${NEON_BRANCH_NAME}. It may already be expired or there may be a Neon API/permission issue. Branches are created with a 14-day expiration fallback."
         env:
-          NEON_BRANCH_NAME: ${{ steps.names.outputs.neon_branch_name }}
+          NEON_BRANCH_NAME: ${{ steps.names.outputs.neon_branch_new }}
+      - name: Warn if legacy Neon branch deletion failed
+        if: steps.delete-neon-branch-legacy.outcome == 'failure'
+        run: |
+          echo "::warning::Failed to delete legacy Neon branch ${NEON_BRANCH_NAME}. It may already be expired or there may be a Neon API/permission issue."
+        env:
+          NEON_BRANCH_NAME: ${{ steps.names.outputs.neon_branch_legacy }}
