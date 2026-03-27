@@ -163,13 +163,10 @@ export function buildLedgerBalanceChartPoints(
   return points;
 }
 
-type BalanceFormatterAccount = {
-  unit: Unit | null;
-  currency: string | null;
-  cryptocurrency: string | null;
-  symbol: string | null;
-  tradeCurrency: string | null;
-};
+type BalanceFormatterAccount = Pick<
+  LedgerAccount,
+  "unit" | "currency" | "cryptocurrency" | "symbol" | "tradeCurrency"
+>;
 
 export function createLedgerBalanceFormatter(account: BalanceFormatterAccount) {
   if (account.unit === Unit.CURRENCY && account.currency) {

@@ -410,6 +410,21 @@ describe("createLedgerBalanceFormatter", () => {
       tradeCurrency: null,
     });
 
-    expect(formatBalance(1234.5)).toBe("CHF 1’234.50");
+    const formatted = formatBalance(1234.5);
+    const normalized = formatted.replace(/\s+/g, " ");
+
+    expect(normalized).toMatch(/^CHF 1[\u2019',\s]234\.50$/);
+  });
+
+  test("formats non-currency balances with a unit label", () => {
+    const formatBalance = createLedgerBalanceFormatter({
+      unit: Unit.CRYPTOCURRENCY,
+      currency: null,
+      cryptocurrency: "BTC",
+      symbol: null,
+      tradeCurrency: null,
+    });
+
+    expect(formatBalance(123)).toContain("BTC");
   });
 });

@@ -41,6 +41,7 @@ function LedgerChartPage() {
     [
       account.currency,
       account.cryptocurrency,
+      account.symbol,
       account.tradeCurrency,
       account.unit,
     ],
