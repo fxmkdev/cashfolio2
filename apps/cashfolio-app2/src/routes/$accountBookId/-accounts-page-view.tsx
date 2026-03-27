@@ -219,6 +219,11 @@ export function AccountsPageView({
         // Source: ag-grid-community GridOptions `renderingMode?: 'default' | 'legacy'`
         // (`node_modules/.pnpm/ag-grid-community@35.1.0/.../dist/types/src/entities/gridOptions.d.ts`).
         renderingMode="legacy"
+        // Keep framework components non-reactive for this grid to avoid React 19
+        // teardown crashes in AG Grid's group cell renderer path.
+        // Source: Grid option `reactiveCustomComponents` (default true) in
+        // `ag-grid-community/dist/types/src/gridOptionsDefault.d.ts`.
+        reactiveCustomComponents={false}
         rowData={rows}
         columnDefs={columnDefs}
         autoGroupColumnDef={{
