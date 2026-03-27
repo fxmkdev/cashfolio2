@@ -217,13 +217,7 @@ export default function Route() {
     period.granularity === "quarter"
       ? {
           renderer: (params: any) => ({
-            title: format(params.datum.date, "QQQ yyyy"),
-            data: [
-              {
-                label: params.yName,
-                value: formatMoney(params.yValue as number),
-              },
-            ],
+            heading: format(params.datum.date, "QQQ yyyy"),
           }),
         }
       : undefined;
