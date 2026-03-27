@@ -141,7 +141,18 @@ export function useAccountTreeColumnDefs(params: {
                       balanceInReferenceCurrencyByGroupIdRef.current,
                   })
                 ) {
-                  return <Loader type="dots" size="xs" />;
+                  // Keep the loader aligned with right-aligned numeric values.
+                  return (
+                    <div
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      <Loader type="dots" size="xs" />
+                    </div>
+                  );
                 }
 
                 if (value == null) return null;
