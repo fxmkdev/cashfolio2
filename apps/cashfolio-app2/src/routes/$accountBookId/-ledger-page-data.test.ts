@@ -1,6 +1,23 @@
 import { describe, expect, test } from "vitest";
 import { Unit } from "../../.prisma-client/enums";
-import { deriveSimpleTransactionEditState } from "./-ledger-page-data";
+import {
+  deriveSimpleTransactionEditState,
+  getUnitLabel,
+} from "./-ledger-page-data";
+
+describe("getUnitLabel", () => {
+  test("returns security symbol for security units", () => {
+    expect(
+      getUnitLabel({
+        unit: Unit.SECURITY,
+        currency: null,
+        cryptocurrency: null,
+        symbol: "VWCE",
+        tradeCurrency: "USD",
+      }),
+    ).toBe("VWCE");
+  });
+});
 
 describe("deriveSimpleTransactionEditState", () => {
   test("returns simple initial values for an eligible transaction", () => {
