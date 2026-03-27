@@ -117,6 +117,7 @@ export type LedgerBalanceChartPoint = {
 export function buildLedgerBalanceChartPoints(
   account: LedgerAccount,
   bookings: LedgerBookings,
+  today: Date = new Date(),
 ): LedgerBalanceChartPoint[] {
   const negate = shouldNegate(account.type, account.equityAccountSubtype);
   let balance = 0;
@@ -141,6 +142,19 @@ export function buildLedgerBalanceChartPoints(
       dateLabel,
       balance,
     });
+  }
+
+  const lastPoint = points[points.length - 1];
+  if (lastPoint) {
+    const todayKey = format(today, "yyyy-MM-dd");
+
+    if (lastPoint.dateKey < todayKey) {
+      points.push({
+        dateKey: todayKey,
+        dateLabel: format(today, "dd.MM.yyyy"),
+        balance: lastPoint.balance,
+      });
+    }
   }
 
   return points;
