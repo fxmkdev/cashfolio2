@@ -42,6 +42,15 @@ export function LedgerBalanceChartPageView({
 }: LedgerBalanceChartPageViewProps) {
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
+  const dateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-CH", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }),
+    [],
+  );
 
   const chartTextColor = isDarkMode ? theme.colors.dark[0] : theme.black;
   const tooltipBackgroundColor = isDarkMode
@@ -78,7 +87,7 @@ export function LedgerBalanceChartPageView({
       series: [
         {
           type: "line",
-          xKey: "dateLabel",
+          xKey: "date",
           yKey: "balance",
           yName: "Balance",
           stroke: isDarkMode ? theme.colors.teal[3] : theme.colors.teal[8],
@@ -107,9 +116,10 @@ export function LedgerBalanceChartPageView({
       ],
       axes: {
         x: {
-          type: "category",
+          type: "time",
           label: {
             rotation: -30,
+            formatter: ({ value }) => dateFormatter.format(new Date(value)),
           },
         },
         y: {
@@ -122,6 +132,7 @@ export function LedgerBalanceChartPageView({
     }),
     [
       chartTextColor,
+      dateFormatter,
       formatBalance,
       isDarkMode,
       points,

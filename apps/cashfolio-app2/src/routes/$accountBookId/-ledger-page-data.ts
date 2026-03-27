@@ -109,6 +109,7 @@ export function buildLedgerRows(
 }
 
 export type LedgerBalanceChartPoint = {
+  date: Date;
   dateKey: string;
   dateLabel: string;
   balance: number;
@@ -138,6 +139,7 @@ export function buildLedgerBalanceChartPoints(
     }
 
     points.push({
+      date: new Date(`${dateKey}T00:00:00`),
       dateKey,
       dateLabel,
       balance,
@@ -150,6 +152,7 @@ export function buildLedgerBalanceChartPoints(
 
     if (lastPoint.dateKey < todayKey) {
       points.push({
+        date: new Date(`${todayKey}T00:00:00`),
         dateKey: todayKey,
         dateLabel: format(today, "dd.MM.yyyy"),
         balance: lastPoint.balance,

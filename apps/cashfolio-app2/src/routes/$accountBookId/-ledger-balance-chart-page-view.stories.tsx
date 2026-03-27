@@ -36,11 +36,13 @@ function LedgerBalanceChartPageStoryHarness({
         unitLabel="CHF"
         points={[
           {
+            date: new Date("2026-01-10T00:00:00"),
             dateKey: "2026-01-10",
             dateLabel: "10.01.2026",
             balance: 1000,
           },
           {
+            date: new Date("2026-01-15T00:00:00"),
             dateKey: "2026-01-15",
             dateLabel: "15.01.2026",
             balance: 915.5,
