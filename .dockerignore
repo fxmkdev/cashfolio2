@@ -1,0 +1,14 @@
+.git
+.github
+**/node_modules
+**/.pnpm-store
+**/dist
+**/storybook-static
+**/playwright-report
+**/test-results
+
+# Keep Docker build context focused on cashfolio-app2 image inputs.
+apps/cashfolio-app
+docs
+infra
+tools

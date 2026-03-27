@@ -3,7 +3,14 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useExpandedGroups } from "../../hooks/use-expanded-groups";
 import type {
   AccountInitialValues,
@@ -43,7 +50,11 @@ import {
   useSelectedSiblingRows,
 } from "./-accounts-page-data";
 import { useAccountTreeColumnDefs } from "./-accounts-page-columns";
-import { AccountsPageView } from "./-accounts-page-view";
+
+const AccountsPageView = lazy(async () => {
+  const module = await import("./-accounts-page-view");
+  return { default: module.AccountsPageView };
+});
 
 export const Route = createFileRoute("/$accountBookId/accounts")({
   validateSearch: parseAccountsSearch,
@@ -369,52 +380,54 @@ function AccountsPage() {
   }
 
   return (
-    <AccountsPageView
-      accountBookId={accountBookId}
-      tab={tab}
-      mode={mode}
-      tabs={tabs}
-      accountGroups={accountGroups}
-      existingNodes={existingNodes}
-      rows={rows}
-      columnDefs={columnDefs}
-      pinnedBottomRowData={pinnedBottomRowData}
-      isGroupOpenByDefault={isGroupOpenByDefault}
-      onRowGroupOpened={onRowGroupOpened}
-      createModalOpened={createModalOpened}
-      editModalOpen={editModalOpen}
-      createGroupModalOpened={createGroupModalOpened}
-      editGroupModalOpen={editGroupModalOpen}
-      editingAccount={editingAccount}
-      editingGroup={editingGroup}
-      deletingRow={deletingRow}
-      archivingRow={archivingRow}
-      reorderingRow={reorderingRow}
-      selectedSiblingRows={selectedSiblingRows}
-      onOpenCreateGroup={() => setCreateGroupModalOpened(true)}
-      onOpenCreateAccount={() => setCreateModalOpened(true)}
-      onOpenLedger={(nextAccountId) =>
-        navigate({
-          to: "/$accountBookId/$accountId",
-          params: { accountBookId, accountId: nextAccountId },
-        })
-      }
-      onCloseCreateAccount={() => setCreateModalOpened(false)}
-      onSubmitCreateAccount={handleCreateAccount}
-      onCloseEditAccount={() => setEditModalOpen(false)}
-      onClearEditingAccount={() => setEditingAccount(undefined)}
-      onSubmitUpdateAccount={handleUpdateAccount}
-      onCloseCreateGroup={() => setCreateGroupModalOpened(false)}
-      onSubmitCreateGroup={handleCreateGroup}
-      onCloseEditGroup={() => setEditGroupModalOpen(false)}
-      onClearEditingGroup={() => setEditingGroup(undefined)}
-      onSubmitUpdateGroup={handleUpdateGroup}
-      onCloseDelete={() => setDeletingRow(undefined)}
-      onConfirmDelete={handleDelete}
-      onCloseArchive={() => setArchivingRow(undefined)}
-      onConfirmArchive={handleArchive}
-      onCloseReorder={() => setReorderingRow(undefined)}
-      onReorderSiblings={handleReorderSiblings}
-    />
+    <Suspense fallback={null}>
+      <AccountsPageView
+        accountBookId={accountBookId}
+        tab={tab}
+        mode={mode}
+        tabs={tabs}
+        accountGroups={accountGroups}
+        existingNodes={existingNodes}
+        rows={rows}
+        columnDefs={columnDefs}
+        pinnedBottomRowData={pinnedBottomRowData}
+        isGroupOpenByDefault={isGroupOpenByDefault}
+        onRowGroupOpened={onRowGroupOpened}
+        createModalOpened={createModalOpened}
+        editModalOpen={editModalOpen}
+        createGroupModalOpened={createGroupModalOpened}
+        editGroupModalOpen={editGroupModalOpen}
+        editingAccount={editingAccount}
+        editingGroup={editingGroup}
+        deletingRow={deletingRow}
+        archivingRow={archivingRow}
+        reorderingRow={reorderingRow}
+        selectedSiblingRows={selectedSiblingRows}
+        onOpenCreateGroup={() => setCreateGroupModalOpened(true)}
+        onOpenCreateAccount={() => setCreateModalOpened(true)}
+        onOpenLedger={(nextAccountId) =>
+          navigate({
+            to: "/$accountBookId/$accountId",
+            params: { accountBookId, accountId: nextAccountId },
+          })
+        }
+        onCloseCreateAccount={() => setCreateModalOpened(false)}
+        onSubmitCreateAccount={handleCreateAccount}
+        onCloseEditAccount={() => setEditModalOpen(false)}
+        onClearEditingAccount={() => setEditingAccount(undefined)}
+        onSubmitUpdateAccount={handleUpdateAccount}
+        onCloseCreateGroup={() => setCreateGroupModalOpened(false)}
+        onSubmitCreateGroup={handleCreateGroup}
+        onCloseEditGroup={() => setEditGroupModalOpen(false)}
+        onClearEditingGroup={() => setEditingGroup(undefined)}
+        onSubmitUpdateGroup={handleUpdateGroup}
+        onCloseDelete={() => setDeletingRow(undefined)}
+        onConfirmDelete={handleDelete}
+        onCloseArchive={() => setArchivingRow(undefined)}
+        onConfirmArchive={handleArchive}
+        onCloseReorder={() => setReorderingRow(undefined)}
+        onReorderSiblings={handleReorderSiblings}
+      />
+    </Suspense>
   );
 }

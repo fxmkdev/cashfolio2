@@ -23,10 +23,40 @@ jobs:
     with:
       release: ${{ inputs.release }}
 
+  changes:
+    name: "Detect changed paths"
+    runs-on: ubuntu-latest
+    outputs:
+      cashfolio_app2: ${{ steps.filter.outputs.cashfolio_app2 }}
+      cli: ${{ steps.filter.outputs.cli }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Filter changed files
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            cashfolio_app2:
+              - 'apps/cashfolio-app2/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - '.github/workflows/build.yml'
+            cli:
+              - 'tools/cli/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - '.github/workflows/build.yml'
+
   cashfolio-app2-build-push:
     name: "cashfolio-app2: Build and Push"
     runs-on: ubuntu-latest
-    needs: [version]
+    needs: [version, changes]
+    if:
+      ${{ github.event_name != 'pull_request' ||
+      needs.changes.outputs.cashfolio_app2 == 'true' }}
     outputs:
       image: ${{ steps.image-name.outputs.image }}
     steps:
@@ -65,6 +95,10 @@ jobs:
   cashfolio-app2-e2e:
     name: "cashfolio-app2: E2E"
     runs-on: ubuntu-latest
+    needs: [changes]
+    if:
+      ${{ github.event_name != 'pull_request' ||
+      needs.changes.outputs.cashfolio_app2 == 'true' }}
     services:
       postgres:
         image: postgres:17
@@ -75,10 +109,8 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d cashfolio"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd "pg_isready -U postgres -d cashfolio" --health-interval
+          10s --health-timeout 5s --health-retries 5
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cashfolio?schema=public
       BASE_URL: http://127.0.0.1:4173
@@ -91,12 +123,12 @@ jobs:
         uses: felixmokross/webplatform/.github/actions/setup@main
       - name: Install dependencies
         run: pnpm --filter cashfolio-app2 install
-      - name: Generate Prisma Client
-        run: pnpm --filter cashfolio-app2 prisma:generate
       - name: Migrate test database
         run: pnpm --filter cashfolio-app2 exec prisma migrate deploy
       - name: Install Playwright browser
-        run: pnpm --filter cashfolio-app2 exec playwright install --with-deps chromium
+        run:
+          pnpm --filter cashfolio-app2 exec playwright install --with-deps
+          chromium
       - name: Run e2e tests
         run: pnpm --filter cashfolio-app2 e2e:ci
       - name: Upload Playwright artifacts
@@ -112,6 +144,10 @@ jobs:
   cashfolio-app2-typecheck:
     name: "cashfolio-app2: Typecheck"
     runs-on: ubuntu-latest
+    needs: [changes]
+    if:
+      ${{ github.event_name != 'pull_request' ||
+      needs.changes.outputs.cashfolio_app2 == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -127,6 +163,10 @@ jobs:
   cashfolio-app2-format:
     name: "cashfolio-app2: Format"
     runs-on: ubuntu-latest
+    needs: [changes]
+    if:
+      ${{ github.event_name != 'pull_request' ||
+      needs.changes.outputs.cashfolio_app2 == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -140,6 +180,10 @@ jobs:
   cli-typecheck:
     name: "cli: Typecheck"
     runs-on: ubuntu-latest
+    needs: [changes]
+    if:
+      ${{ github.event_name != 'pull_request' || needs.changes.outputs.cli ==
+      'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -152,9 +196,13 @@ jobs:
 
   deploy-preview:
     name: Deploy to preview
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+    if:
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.fork == false &&
+      needs.changes.outputs.cashfolio_app2 == 'true'
     runs-on: ubuntu-latest
     needs:
+      - changes
       - cashfolio-app2-build-push
       - cashfolio-app2-e2e
       - cashfolio-app2-typecheck
@@ -166,15 +214,21 @@ jobs:
       issues: write
     environment:
       name: preview-cashfolio-app
-      url: ${{ format('https://cashfolio-app2-pr-{0}.fly.dev/', github.event.pull_request.number) }}
+      url:
+        ${{ format('https://cashfolio-app2-pr-{0}.fly.dev/',
+        github.event.pull_request.number) }}
     concurrency:
       group: preview-pr-${{ github.event.pull_request.number }}
       cancel-in-progress: true
     env:
       FLY_APP: cashfolio-app2-pr-${{ github.event.pull_request.number }}
-      PREVIEW_HOSTNAME: cashfolio-app2-pr-${{ github.event.pull_request.number }}.fly.dev
-      PREVIEW_URL: https://cashfolio-app2-pr-${{ github.event.pull_request.number }}.fly.dev/
-      NEON_BRANCH_NAME: pr-${{ github.event.pull_request.number }}-cashfolio-app2
+      PREVIEW_HOSTNAME:
+        cashfolio-app2-pr-${{ github.event.pull_request.number }}.fly.dev
+      PREVIEW_URL:
+        https://cashfolio-app2-pr-${{ github.event.pull_request.number
+        }}.fly.dev/
+      NEON_BRANCH_NAME:
+        pr-${{ github.event.pull_request.number }}-cashfolio-app2
       CASHFOLIO_APP2_IMAGE: ${{ needs.cashfolio-app2-build-push.outputs.image }}
     steps:
       - name: Checkout
@@ -184,7 +238,9 @@ jobs:
         with:
           version: ${{ env.FLYCTL_VERSION }}
       - name: Set Neon branch expiration date
-        run: echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+        run:
+          echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')"
+          >> "$GITHUB_ENV"
       - name: Create or reuse Neon branch
         id: neon
         uses: neondatabase/create-branch-action@v6

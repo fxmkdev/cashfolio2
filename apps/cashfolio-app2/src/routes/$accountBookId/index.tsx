@@ -1,12 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Suspense, lazy } from "react";
 import { getDashboardIncomeExpenseOverview } from "../../server/dashboard";
-import { DashboardPageView } from "./-dashboard-page-view";
 import {
   DASHBOARD_PERIOD_10Y,
   getDashboardPeriod,
   parseDashboardSearch,
   type DashboardPeriod,
 } from "./-dashboard-page-types";
+
+const DashboardPageView = lazy(async () => {
+  const module = await import("./-dashboard-page-view");
+  return { default: module.DashboardPageView };
+});
 
 export const Route = createFileRoute("/$accountBookId/")({
   validateSearch: parseDashboardSearch,
@@ -28,18 +33,20 @@ function DashboardPage() {
   const navigate = useNavigate({ from: "/$accountBookId/" });
 
   return (
-    <DashboardPageView
-      accountBookId={accountBookId}
-      overview={overview}
-      selectedPeriod={selectedPeriod}
-      onPeriodChange={(nextPeriod: DashboardPeriod) =>
-        navigate({
-          search:
-            nextPeriod === DASHBOARD_PERIOD_10Y
-              ? { period: DASHBOARD_PERIOD_10Y }
-              : { period: undefined },
-        })
-      }
-    />
+    <Suspense fallback={null}>
+      <DashboardPageView
+        accountBookId={accountBookId}
+        overview={overview}
+        selectedPeriod={selectedPeriod}
+        onPeriodChange={(nextPeriod: DashboardPeriod) =>
+          navigate({
+            search:
+              nextPeriod === DASHBOARD_PERIOD_10Y
+                ? { period: DASHBOARD_PERIOD_10Y }
+                : { period: undefined },
+          })
+        }
+      />
+    </Suspense>
   );
 }

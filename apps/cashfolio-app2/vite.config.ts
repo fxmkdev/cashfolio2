@@ -23,6 +23,26 @@ if (baseUrl) {
 
 export default defineConfig({
   plugins: [tanstackStart()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (
+            id.includes("ag-grid-enterprise") ||
+            id.includes("ag-grid-react")
+          ) {
+            return "ag-grid";
+          }
+          if (
+            id.includes("ag-charts-community") ||
+            id.includes("ag-charts-react")
+          ) {
+            return "ag-charts";
+          }
+        },
+      },
+    },
+  },
   preview: {
     allowedHosts: [...previewAllowedHosts],
   },
