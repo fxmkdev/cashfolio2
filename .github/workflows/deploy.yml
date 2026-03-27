@@ -28,9 +28,47 @@ jobs:
     name: "Generate version"
     uses: felixmokross/webplatform/.github/workflows/export.version.yml@main
 
-  deploy:
-    name: Deploy
-    if: github.event_name != 'pull_request'
+  cashfolio-redis-build-push:
+    name: "cashfolio-redis: Build and Push"
+    runs-on: ubuntu-latest
+    if: ${{ inputs.deploy-cashfolio-redis }}
+    needs:
+      - version
+    steps:
+      - name: Ensure redis deploy is only triggered from main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "cashfolio-redis deploys are allowed only from main."
+            exit 1
+          fi
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: ${{ env.FLYCTL_VERSION }}
+      - name: Get cashfolio-redis image name
+        id: image-name
+        run: |
+          IMAGE_NAME=${{ vars.FLY_CASHFOLIO_REDIS_STAGING_APP }}
+          IMAGE_TAG=v${{ needs.version.outputs.version_with_sha }}
+          echo "image_name=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+      - name: Build and push cashfolio-redis Docker image
+        run: |
+          flyctl deploy \
+            --app ${{ steps.image-name.outputs.image_name }} \
+            --config infra/cashfolio-redis/fly.build.toml \
+            --build-only \
+            --image-label ${{ steps.image-name.outputs.image_tag }} \
+            --label org.opencontainers.image.version=${{ steps.image-name.outputs.image_tag }} \
+            --push \
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  deploy-app:
+    name: "cashfolio-app2: Deploy"
+    if: ${{ inputs.deploy-cashfolio-app2 }}
     needs:
       - version
     uses: ./.github/workflows/deploy-version.yml
@@ -38,6 +76,21 @@ jobs:
       version_with_sha: ${{ needs.version.outputs.version_with_sha }}
       sha: ${{ needs.version.outputs.sha }}
       environment: ${{ inputs.environment }}
-      deploy-cashfolio-app2: ${{ inputs.deploy-cashfolio-app2 }}
-      deploy-cashfolio-redis: ${{ inputs.deploy-cashfolio-redis }}
+      deploy-cashfolio-app2: true
+      deploy-cashfolio-redis: false
+    secrets: inherit
+
+  deploy-redis:
+    name: "cashfolio-redis: Deploy"
+    if: ${{ inputs.deploy-cashfolio-redis && needs.cashfolio-redis-build-push.result == 'success' }}
+    needs:
+      - version
+      - cashfolio-redis-build-push
+    uses: ./.github/workflows/deploy-version.yml
+    with:
+      version_with_sha: ${{ needs.version.outputs.version_with_sha }}
+      sha: ${{ needs.version.outputs.sha }}
+      environment: ${{ inputs.environment }}
+      deploy-cashfolio-app2: false
+      deploy-cashfolio-redis: true
     secrets: inherit
