@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useCallback, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useMemo, useState } from "react";
 import {
   getBookingUnitIdentifier,
   isBookingValueCompatibleWithAccountType,
@@ -41,7 +41,6 @@ import {
   getUnitLabel,
 } from "./-ledger-page-data";
 import {
-  LedgerPageView,
   type EditMode,
   type RebookingState,
   type SimpleTransactionValues,
@@ -50,6 +49,11 @@ import {
   type TransactionMutationValues,
 } from "./-ledger-page-view";
 import { parseLedgerSearch, type LedgerRow } from "./-ledger-page-types";
+
+const LedgerPageView = lazy(async () => {
+  const module = await import("./-ledger-page-view");
+  return { default: module.LedgerPageView };
+});
 
 function buildSimpleTransactionValues(args: {
   values: SimpleTransactionValues;
@@ -621,73 +625,75 @@ function LedgerPage() {
   ) as "ASSET" | "LIABILITY" | `EQUITY-${EquityAccountSubtype}`;
 
   return (
-    <LedgerPageView
-      accountBookId={accountBookId}
-      backTab={backTab}
-      account={account}
-      rows={rows}
-      columnDefs={columnDefs}
-      currentAccountLabel={currentAccountLabel}
-      unitLabel={unitLabel}
-      simpleTransactionDisabledReason={simpleTransactionDisabledReason}
-      simpleModalOpened={simpleModalOpened}
-      splitModalOpened={modalOpened}
-      editModalOpened={editModalOpened}
-      isSimpleSubmitting={isSimpleSubmitting}
-      isCreateSplitSubmitting={isCreateSplitSubmitting}
-      isEditSubmitting={isEditSubmitting}
-      isRebookSubmitting={isRebookSubmitting}
-      editMode={editMode}
-      createSplitInitialValues={createSplitInitialValues}
-      editingTransactionData={editingTransactionData}
-      editingSimpleInitialValues={editingSimpleInitialValues}
-      deletingTransaction={deletingTransaction}
-      rebooking={rebooking}
-      rebookModalOpened={rebookModalOpened}
-      hasCompleteBookingUnit={hasCompleteBookingUnit}
-      accountOptions={accountOptions}
-      editAccountOptions={editAccountOptions}
-      simpleCounterAccountOptions={simpleCounterAccountOptions}
-      editSimpleCounterAccountOptions={editSimpleCounterAccountOptions}
-      rebookTargetAccountOptions={rebookTargetAccountOptions}
-      onRowDataUpdated={handleRowDataUpdated}
-      onAddTransactionClick={() => {
-        setCreateSplitInitialValues(undefined);
-        if (simpleTransactionDisabledReason) {
-          setModalOpened(true);
-          return;
-        }
-        setSimpleModalOpened(true);
-      }}
-      onCloseSimpleModal={() => setSimpleModalOpened(false)}
-      onSimpleSubmittingChange={setIsSimpleSubmitting}
-      onSwitchCreateToSplit={handleSwitchCreateToSplit}
-      onSubmitCreateSimpleTransaction={handleCreateSimpleTransaction}
-      onCloseSplitModal={() => {
-        setModalOpened(false);
-        setCreateSplitInitialValues(undefined);
-      }}
-      onCreateSplitSubmittingChange={setIsCreateSplitSubmitting}
-      onSubmitCreateTransaction={handleCreateTransaction}
-      onCloseEditModal={() => setEditModalOpened(false)}
-      onEditSubmittingChange={setIsEditSubmitting}
-      onEditModalExitTransitionEnd={() => {
-        setEditingTransactionId(undefined);
-        setEditingTransactionData(undefined);
-        setEditingSimpleInitialValues(undefined);
-        setEditMode("SPLIT");
-      }}
-      onSwitchToSplit={handleSwitchToSplit}
-      onSubmitUpdateSimpleTransaction={handleUpdateSimpleTransaction}
-      onSubmitUpdateTransaction={handleUpdateTransaction}
-      onCloseRebookModal={() => setRebookModalOpened(false)}
-      onRebookSubmittingChange={setIsRebookSubmitting}
-      onRebookModalExitTransitionEnd={() => {
-        setRebooking(undefined);
-      }}
-      onSubmitRebookBooking={handleRebookBooking}
-      onCloseDeleteModal={() => setDeletingTransaction(undefined)}
-      onConfirmDeleteTransaction={handleDeleteTransaction}
-    />
+    <Suspense fallback={null}>
+      <LedgerPageView
+        accountBookId={accountBookId}
+        backTab={backTab}
+        account={account}
+        rows={rows}
+        columnDefs={columnDefs}
+        currentAccountLabel={currentAccountLabel}
+        unitLabel={unitLabel}
+        simpleTransactionDisabledReason={simpleTransactionDisabledReason}
+        simpleModalOpened={simpleModalOpened}
+        splitModalOpened={modalOpened}
+        editModalOpened={editModalOpened}
+        isSimpleSubmitting={isSimpleSubmitting}
+        isCreateSplitSubmitting={isCreateSplitSubmitting}
+        isEditSubmitting={isEditSubmitting}
+        isRebookSubmitting={isRebookSubmitting}
+        editMode={editMode}
+        createSplitInitialValues={createSplitInitialValues}
+        editingTransactionData={editingTransactionData}
+        editingSimpleInitialValues={editingSimpleInitialValues}
+        deletingTransaction={deletingTransaction}
+        rebooking={rebooking}
+        rebookModalOpened={rebookModalOpened}
+        hasCompleteBookingUnit={hasCompleteBookingUnit}
+        accountOptions={accountOptions}
+        editAccountOptions={editAccountOptions}
+        simpleCounterAccountOptions={simpleCounterAccountOptions}
+        editSimpleCounterAccountOptions={editSimpleCounterAccountOptions}
+        rebookTargetAccountOptions={rebookTargetAccountOptions}
+        onRowDataUpdated={handleRowDataUpdated}
+        onAddTransactionClick={() => {
+          setCreateSplitInitialValues(undefined);
+          if (simpleTransactionDisabledReason) {
+            setModalOpened(true);
+            return;
+          }
+          setSimpleModalOpened(true);
+        }}
+        onCloseSimpleModal={() => setSimpleModalOpened(false)}
+        onSimpleSubmittingChange={setIsSimpleSubmitting}
+        onSwitchCreateToSplit={handleSwitchCreateToSplit}
+        onSubmitCreateSimpleTransaction={handleCreateSimpleTransaction}
+        onCloseSplitModal={() => {
+          setModalOpened(false);
+          setCreateSplitInitialValues(undefined);
+        }}
+        onCreateSplitSubmittingChange={setIsCreateSplitSubmitting}
+        onSubmitCreateTransaction={handleCreateTransaction}
+        onCloseEditModal={() => setEditModalOpened(false)}
+        onEditSubmittingChange={setIsEditSubmitting}
+        onEditModalExitTransitionEnd={() => {
+          setEditingTransactionId(undefined);
+          setEditingTransactionData(undefined);
+          setEditingSimpleInitialValues(undefined);
+          setEditMode("SPLIT");
+        }}
+        onSwitchToSplit={handleSwitchToSplit}
+        onSubmitUpdateSimpleTransaction={handleUpdateSimpleTransaction}
+        onSubmitUpdateTransaction={handleUpdateTransaction}
+        onCloseRebookModal={() => setRebookModalOpened(false)}
+        onRebookSubmittingChange={setIsRebookSubmitting}
+        onRebookModalExitTransitionEnd={() => {
+          setRebooking(undefined);
+        }}
+        onSubmitRebookBooking={handleRebookBooking}
+        onCloseDeleteModal={() => setDeletingTransaction(undefined)}
+        onConfirmDeleteTransaction={handleDeleteTransaction}
+      />
+    </Suspense>
   );
 }

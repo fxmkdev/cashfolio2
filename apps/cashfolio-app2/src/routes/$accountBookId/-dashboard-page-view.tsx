@@ -15,6 +15,7 @@ import { AgCharts } from "ag-charts-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import { useMemo } from "react";
 import { LinkButton } from "../../components/link-button";
+import { ensureChartModulesRegistered } from "../../ag-chart-modules";
 import type { getDashboardIncomeExpenseOverview } from "../../server/dashboard";
 import { DASHBOARD_PERIOD_LABEL_BY_PERIOD } from "../../shared/dashboard-period";
 import {
@@ -23,6 +24,8 @@ import {
   type DashboardPeriod,
 } from "./-dashboard-page-types";
 import classes from "./-dashboard-page-view.module.css";
+
+ensureChartModulesRegistered();
 
 export type DashboardPageViewProps = {
   accountBookId: string;
