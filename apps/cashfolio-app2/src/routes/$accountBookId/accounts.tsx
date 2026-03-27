@@ -102,18 +102,22 @@ function AccountsPage() {
   const isArchivedMode = mode === "archived";
   const loaderRowsStateKey = useMemo(
     () =>
-      loaderRows
-        .map(
-          (row) =>
-            `${row.id}|${row.nodeType}|${row.name}|${row.parentId ?? ""}|${
-              row.sortOrder ?? ""
-            }|${row.balance ?? ""}|${row.unit ?? ""}|${row.currency ?? ""}|${
-              row.tradeCurrency ?? ""
-            }|${row.cryptocurrency ?? ""}|${row.symbol ?? ""}|${
-              row.balanceInReferenceCurrency ?? ""
-            }`,
-        )
-        .join("::"),
+      JSON.stringify(
+        loaderRows.map((row) => [
+          row.id,
+          row.nodeType,
+          row.name,
+          row.parentId ?? "",
+          row.sortOrder ?? "",
+          row.balance ?? "",
+          row.unit ?? "",
+          row.currency ?? "",
+          row.tradeCurrency ?? "",
+          row.cryptocurrency ?? "",
+          row.symbol ?? "",
+          row.balanceInReferenceCurrency ?? "",
+        ]),
+      ),
     [loaderRows],
   );
 
