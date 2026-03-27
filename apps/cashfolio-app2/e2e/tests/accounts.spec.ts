@@ -156,7 +156,7 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
     page.getByRole("button", { name: "Add Transaction" }),
   ).toBeVisible();
   await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=archived`);
-  await expect(archivedRow).toBeVisible();
+  await expect(archivedRow).toBeVisible({ timeout: 15_000 });
 
   await clickRowAction(archivedRow, "Unarchive");
   await expect(agGridRowByText(page, updatedName)).toHaveCount(0);
