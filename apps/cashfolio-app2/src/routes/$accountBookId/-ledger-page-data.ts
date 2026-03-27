@@ -32,6 +32,7 @@ export function getUnitLabel(account: {
   unit: Unit | null;
   currency: string | null;
   cryptocurrency: string | null;
+  symbol: string | null;
   tradeCurrency: string | null;
 }): string | null {
   if (!account.unit) return null;
@@ -39,7 +40,7 @@ export function getUnitLabel(account: {
     case Unit.CURRENCY:
       return account.currency;
     case Unit.SECURITY:
-      return account.tradeCurrency;
+      return account.symbol;
     case Unit.CRYPTOCURRENCY:
       return account.cryptocurrency;
   }
