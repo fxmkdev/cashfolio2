@@ -17,13 +17,17 @@ RUN corepack enable pnpm
 FROM base AS build
 
 # Install packages needed to build node modules
-RUN apt-get update -qq && \
+RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=apt-lists,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3
 
 # Install node modules
 COPY --link package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --link apps/cashfolio-app2/package.json apps/cashfolio-app2/
-RUN pnpm --filter cashfolio-app2 install --prod=false --frozen-lockfile
+RUN pnpm config set store-dir /pnpm/store
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store,sharing=locked \
+    pnpm --filter cashfolio-app2 install --prod=false --frozen-lockfile
 
 # Copy application code
 COPY --link apps/cashfolio-app2 apps/cashfolio-app2
@@ -36,7 +40,9 @@ RUN pnpm --filter cashfolio-app2 build
 FROM base
 
 # Install openssl needed to run Prisma
-RUN apt-get update -qq && \
+RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=apt-lists,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update -qq && \
     apt-get install --no-install-recommends -y openssl
 
 # Copy built application
