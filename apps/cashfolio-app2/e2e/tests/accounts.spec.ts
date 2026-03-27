@@ -41,15 +41,23 @@ async function expectDashboardPeriodInUrl(
 }
 
 async function selectDashboardPeriod(page: Page, period: "12m" | "10y") {
-  const input = page
-    .locator(`[role="radiogroup"] input[type="radio"][value="${period}"]`)
+  const periodLabel = period === "10y" ? "Last 10 years" : "Last 12 months";
+  const radioGroup = page.getByRole("radiogroup").first();
+  const input = radioGroup
+    .locator(`input[type="radio"][value="${period}"]`)
     .first();
 
   if ((await input.count()) === 0) {
     throw new Error(`Dashboard period radio not found for: ${period}`);
   }
 
-  await input.check({ force: true });
+  const optionLabel = radioGroup
+    .locator("label")
+    .filter({ hasText: periodLabel })
+    .first();
+
+  await expect(optionLabel).toBeVisible();
+  await optionLabel.click();
   await expect(input).toBeChecked();
 }
 
