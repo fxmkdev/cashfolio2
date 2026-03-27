@@ -12,12 +12,15 @@ import {
 import { AgCharts } from "ag-charts-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import { useMemo, type ReactNode } from "react";
+import { ensureChartModulesRegistered } from "../../ag-chart-modules";
 import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
 import { getTypeLabel } from "../../shared/account-utils";
 import type { TabValue } from "./-accounts-page-types";
 import type { LedgerBalanceChartPoint } from "./-ledger-page-data";
 import type { loadLedgerPageData } from "./-ledger-page-loader";
 import classes from "./-ledger-balance-chart-page-view.module.css";
+
+ensureChartModulesRegistered();
 
 type LedgerPageLoaderData = Awaited<ReturnType<typeof loadLedgerPageData>>;
 
