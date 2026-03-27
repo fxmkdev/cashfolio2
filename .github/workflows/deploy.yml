@@ -66,9 +66,23 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-  deploy:
-    name: Deploy
-    if: ${{ github.event_name != 'pull_request' && needs.version.result == 'success' && (needs.cashfolio-redis-build-push.result == 'success' || needs.cashfolio-redis-build-push.result == 'skipped') }}
+  deploy-app:
+    name: "cashfolio-app2: Deploy"
+    if: ${{ inputs.deploy-cashfolio-app2 }}
+    needs:
+      - version
+    uses: ./.github/workflows/deploy-version.yml
+    with:
+      version_with_sha: ${{ needs.version.outputs.version_with_sha }}
+      sha: ${{ needs.version.outputs.sha }}
+      environment: ${{ inputs.environment }}
+      deploy-cashfolio-app2: true
+      deploy-cashfolio-redis: false
+    secrets: inherit
+
+  deploy-redis:
+    name: "cashfolio-redis: Deploy"
+    if: ${{ inputs.deploy-cashfolio-redis && needs.cashfolio-redis-build-push.result == 'success' }}
     needs:
       - version
       - cashfolio-redis-build-push
@@ -77,6 +91,6 @@ jobs:
       version_with_sha: ${{ needs.version.outputs.version_with_sha }}
       sha: ${{ needs.version.outputs.sha }}
       environment: ${{ inputs.environment }}
-      deploy-cashfolio-app2: ${{ inputs.deploy-cashfolio-app2 }}
-      deploy-cashfolio-redis: ${{ inputs.deploy-cashfolio-redis }}
+      deploy-cashfolio-app2: false
+      deploy-cashfolio-redis: true
     secrets: inherit

@@ -32,7 +32,9 @@ Dynamic preview CI uses a single GitHub environment:
 
 Redis is shared and not deployed as part of dynamic PR preview. Redis deploys
 remain manual from `main` via `.github/workflows/deploy.yml` using the existing
-environment naming pattern (`<environment>-cashfolio-redis`).
+environment naming pattern (`<environment>-cashfolio-redis`). The manual deploy
+workflow runs app and Redis deployment as separate jobs, so app-only deploys do
+not depend on Redis image build/push.
 
 Neon branch lifecycle notes:
 
