@@ -102,7 +102,11 @@ function AccountsPage() {
       loaderRows
         .map(
           (row) =>
-            `${row.id}|${row.name}|${row.parentId ?? ""}|${row.sortOrder ?? ""}|${
+            `${row.id}|${row.nodeType}|${row.name}|${row.parentId ?? ""}|${
+              row.sortOrder ?? ""
+            }|${row.balance ?? ""}|${row.unit ?? ""}|${row.currency ?? ""}|${
+              row.tradeCurrency ?? ""
+            }|${row.cryptocurrency ?? ""}|${row.symbol ?? ""}|${
               row.balanceInReferenceCurrency ?? ""
             }`,
         )
