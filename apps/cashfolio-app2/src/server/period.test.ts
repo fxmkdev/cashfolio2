@@ -178,7 +178,7 @@ describe("transaction period inclusion", () => {
 });
 
 describe("computeHoldingGainLossForEventSeries", () => {
-  test("matches legacy balance-before-event rate-diff behavior", () => {
+  test("uses the same sign convention as transaction gain/loss", () => {
     const gainLoss = computeHoldingGainLossForEventSeries({
       initialBalance: 1000,
       initialRate: 1.2,
@@ -188,9 +188,9 @@ describe("computeHoldingGainLossForEventSeries", () => {
       ],
     });
 
-    // event 1: -(1000 * (1.1 - 1.2)) = +100
-    // event 2: -(1200 * (1.05 - 1.1)) = +60
-    expect(gainLoss).toBeCloseTo(160, 10);
+    // event 1: 1000 * (1.1 - 1.2) = -100
+    // event 2: 1200 * (1.05 - 1.1) = -60
+    expect(gainLoss).toBeCloseTo(-160, 10);
   });
 });
 

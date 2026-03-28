@@ -688,7 +688,7 @@ export function computeHoldingGainLossForEventSeries(args: {
 
   for (const event of args.events) {
     const rateDiff = event.rate - previousRate;
-    gainLoss += -(balance * rateDiff);
+    gainLoss += balance * rateDiff;
     balance += event.balanceDelta;
     previousRate = event.rate;
   }
@@ -951,7 +951,7 @@ export const getPeriodOverview = createServerFn({
             });
           }
         } else {
-          explicitGainLoss += convertedValue;
+          explicitGainLoss += -convertedValue;
         }
       }
 
