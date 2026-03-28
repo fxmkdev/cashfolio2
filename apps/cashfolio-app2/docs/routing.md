@@ -33,11 +33,22 @@ paths are relative to that app directory.
   ledgers (daily closing native-unit balance)
 - Route-local helper files can live next to a route file when orchestration
   grows, but they must be prefixed with `-` so TanStack Router ignores them. For
-  example: `$accountBookId/-accounts-page-loader.ts`,
-  `$accountBookId/-accounts-page-data.ts`,
-  `$accountBookId/-accounts-page-columns.tsx`,
-  `$accountBookId/-ledger-page-loader.ts`, and
-  `$accountBookId/-ledger-page-columns.tsx`.
+  example:
+  - accounts route modules:
+    - `$accountBookId/-accounts-page-loader.ts`
+    - `$accountBookId/-accounts-page-controller.ts`
+    - `$accountBookId/-accounts-page-data.ts`
+    - `$accountBookId/-accounts-page-modal-state.ts`
+    - `$accountBookId/-accounts-page-reference-balances.ts`
+    - `$accountBookId/-accounts-page-columns.tsx`
+  - ledger route modules:
+    - `$accountBookId/-ledger-page-loader.ts`
+    - `$accountBookId/-ledger-page-controller.ts`
+    - `$accountBookId/-ledger-page-account-options.ts`
+    - `$accountBookId/-ledger-page-edit-flow.ts`
+    - `$accountBookId/-ledger-page-rebook-flow.ts`
+    - `$accountBookId/-ledger-page-transaction-utils.ts`
+    - `$accountBookId/-ledger-page-columns.tsx`
 
 ### Search Parameters
 
@@ -80,7 +91,10 @@ paths are relative to that app directory.
   `src/server/` commonly use `.ts`
 - Key files: `accounts.ts` (barrel), `accounts-queries.ts`,
   `accounts-mutations.ts`, `dashboard.ts`, `ledger.ts`, `transactions.ts`
-  (barrel), `transactions-queries.ts`, `transactions-mutations.ts`
+  (barrel), `transactions-queries.ts`, `transactions-mutations.ts`,
+  `valuation.server.ts`, and valuation internals in `src/server/valuation/`
+  (`providers.ts`, `cache.ts`, `backtracking.ts`, `keys.ts`, `types.ts`,
+  `date-utils.ts`, `constants.ts`)
 
 ### Auth & Authorization
 
@@ -128,6 +142,12 @@ update `sortOrder` values after reordering sibling rows in the reorder modal.
 
 - The account list route (`$accountBookId/accounts.tsx`) renders `Balance` and
   `Balance (<referenceCurrency>)` columns.
+- Route orchestration for this page is in
+  `src/routes/$accountBookId/-accounts-page-controller.ts`, with focused helpers
+  in:
+  - `-accounts-page-modal-state.ts` (modal/edit/delete/archive/reorder state)
+  - `-accounts-page-reference-balances.ts` (lazy reference-balance hydration and
+    delayed loading indicator state)
 - Initial page load requests account tree data with
   `includeReferenceBalances: false` to avoid blocking first paint on external
   valuation lookups.
