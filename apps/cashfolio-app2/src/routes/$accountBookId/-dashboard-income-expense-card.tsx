@@ -40,7 +40,10 @@ export function DashboardIncomeExpenseCard({
 }: DashboardIncomeExpenseCardProps) {
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
-  const colors = getDashboardChartThemeColors({ theme, isDarkMode });
+  const colors = useMemo(
+    () => getDashboardChartThemeColors({ theme, isDarkMode }),
+    [theme, isDarkMode],
+  );
   const hasBookings = overview.bookingsCount > 0;
   const hasConvertedBookings = overview.convertedBookingsCount > 0;
 

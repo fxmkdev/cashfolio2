@@ -53,7 +53,10 @@ export function DashboardAssetAllocationCard({
 }: DashboardAssetAllocationCardProps) {
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
-  const colors = getDashboardChartThemeColors({ theme, isDarkMode });
+  const colors = useMemo(
+    () => getDashboardChartThemeColors({ theme, isDarkMode }),
+    [theme, isDarkMode],
+  );
   const hasItems = assetAllocation.items.length > 0;
   const hasPartialData =
     assetAllocation.skippedMissingReferenceBalanceCount > 0 ||

@@ -16,6 +16,7 @@ import {
   hasInactiveAncestorGroup,
 } from "./accounts-helpers";
 import {
+  type ActionAvailability,
   accountTypeRequiresZeroBalanceForArchive,
   getAccountArchiveAvailability,
   getAccountDeleteAvailability,
@@ -60,6 +61,16 @@ type AccountReferenceBalanceSource = {
   symbol: string | null;
   tradeCurrency: string | null;
 };
+
+const ACTION_AVAILABILITY_NOT_REQUESTED_REASON =
+  "Action availability not requested";
+
+function unavailableActionAvailability(): ActionAvailability {
+  return {
+    enabled: false,
+    disabledReason: ACTION_AVAILABILITY_NOT_REQUESTED_REASON,
+  };
+}
 
 function getAccountsWhereClause(args: {
   accountBookId: string;
@@ -480,19 +491,19 @@ async function getAccountTreeDataInternal(args: {
     const hasInactiveAncestor = hasInactiveAncestorGroup(a.groupId, groupById);
     const deleteAvailability = includeActionAvailability
       ? getAccountDeleteAvailability(hasBookings)
-      : { enabled: false, disabledReason: undefined };
+      : unavailableActionAvailability();
     const archiveAvailability = includeActionAvailability
       ? getAccountArchiveAvailability({
           isActive: a.isActive,
           hasZeroBalance,
         })
-      : { enabled: false, disabledReason: undefined };
+      : unavailableActionAvailability();
     const unarchiveAvailability = includeActionAvailability
       ? getAccountUnarchiveAvailability({
           isActive: a.isActive,
           hasInactiveAncestor,
         })
-      : { enabled: false, disabledReason: undefined };
+      : unavailableActionAvailability();
     const displayBalance =
       a.type === "ASSET"
         ? rawBalance
@@ -598,20 +609,20 @@ async function getAccountTreeDataInternal(args: {
           hasChildGroups,
           isReferencedByAccountBook,
         })
-      : { enabled: false, disabledReason: undefined };
+      : unavailableActionAvailability();
     const archiveAvailability = includeActionAvailability
       ? getGroupArchiveAvailability({
           isActive: ag.isActive,
           hasActiveChildAccounts,
           hasActiveChildGroups,
         })
-      : { enabled: false, disabledReason: undefined };
+      : unavailableActionAvailability();
     const unarchiveAvailability = includeActionAvailability
       ? getGroupUnarchiveAvailability({
           isActive: ag.isActive,
           hasInactiveAncestor,
         })
-      : { enabled: false, disabledReason: undefined };
+      : unavailableActionAvailability();
     return {
       id: ag.id,
       nodeType: "accountGroup" as "account" | "accountGroup",
