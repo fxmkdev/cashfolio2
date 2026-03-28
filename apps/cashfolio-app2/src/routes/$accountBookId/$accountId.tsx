@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
 import { Suspense, lazy, useCallback, useMemo, useState } from "react";
 import {
   getBookingUnitIdentifier,
@@ -49,6 +49,7 @@ import {
   type TransactionMutationValues,
 } from "./-ledger-page-view";
 import { parseLedgerSearch, type LedgerRow } from "./-ledger-page-types";
+import { LedgerViewSegmentedControl } from "./-ledger-view-segmented-control";
 
 const LedgerPageView = lazy(async () => {
   const module = await import("./-ledger-page-view");
@@ -169,10 +170,14 @@ export const Route = createFileRoute("/$accountBookId/$accountId")({
   loader: async ({ params: { accountBookId, accountId } }) => {
     return loadLedgerPageData({ accountBookId, accountId });
   },
-  component: LedgerPage,
+  component: LedgerLayout,
 });
 
-function LedgerPage() {
+function LedgerLayout() {
+  return <Outlet />;
+}
+
+export function LedgerPageContent() {
   const { account, bookings, accounts } = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const { transactionId } = Route.useSearch();
@@ -583,6 +588,9 @@ function LedgerPage() {
   }
 
   const isEquity = account.type === AccountType.EQUITY;
+  const isBalanceChartAvailable =
+    account.type === AccountType.ASSET ||
+    account.type === AccountType.LIABILITY;
   const isIncome =
     account.type === AccountType.EQUITY &&
     account.equityAccountSubtype === EquityAccountSubtype.INCOME;
@@ -655,6 +663,15 @@ function LedgerPage() {
         simpleCounterAccountOptions={simpleCounterAccountOptions}
         editSimpleCounterAccountOptions={editSimpleCounterAccountOptions}
         rebookTargetAccountOptions={rebookTargetAccountOptions}
+        viewSwitcher={
+          isBalanceChartAvailable ? (
+            <LedgerViewSegmentedControl
+              accountBookId={accountBookId}
+              accountId={account.id}
+              view="ledger"
+            />
+          ) : undefined
+        }
         onRowDataUpdated={handleRowDataUpdated}
         onAddTransactionClick={() => {
           setCreateSplitInitialValues(undefined);

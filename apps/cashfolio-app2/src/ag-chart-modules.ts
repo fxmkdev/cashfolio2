@@ -6,6 +6,7 @@ import {
   LineSeriesModule,
   ModuleRegistry,
   NumberAxisModule,
+  TimeAxisModule,
 } from "ag-charts-community";
 
 let chartModulesRegistered = false;
@@ -16,6 +17,7 @@ const CHART_MODULES = [
   BarSeriesModule,
   LineSeriesModule,
   CategoryAxisModule,
+  TimeAxisModule,
   NumberAxisModule,
 ];
 

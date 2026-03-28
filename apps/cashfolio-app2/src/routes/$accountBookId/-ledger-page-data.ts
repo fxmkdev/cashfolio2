@@ -108,6 +108,90 @@ export function buildLedgerRows(
     .reverse();
 }
 
+export type LedgerBalanceChartPoint = {
+  date: Date;
+  dateKey: string;
+  dateLabel: string;
+  balance: number;
+};
+
+export function buildLedgerBalanceChartPoints(
+  account: LedgerAccount,
+  bookings: LedgerBookings,
+  today: Date = new Date(),
+): LedgerBalanceChartPoint[] {
+  const negate = shouldNegate(account.type, account.equityAccountSubtype);
+  let balance = 0;
+  const points: LedgerBalanceChartPoint[] = [];
+
+  for (const booking of bookings) {
+    const value = negate ? -Number(booking.value) : Number(booking.value);
+    balance += value;
+
+    const date = new Date(booking.date);
+    const dateKey = format(date, "yyyy-MM-dd");
+    const dateLabel = format(date, "dd.MM.yyyy");
+    const lastPoint = points[points.length - 1];
+
+    if (lastPoint && lastPoint.dateKey === dateKey) {
+      lastPoint.balance = balance;
+      continue;
+    }
+
+    points.push({
+      date: new Date(`${dateKey}T00:00:00`),
+      dateKey,
+      dateLabel,
+      balance,
+    });
+  }
+
+  const lastPoint = points[points.length - 1];
+  if (lastPoint) {
+    const todayKey = format(today, "yyyy-MM-dd");
+
+    if (lastPoint.dateKey < todayKey) {
+      points.push({
+        date: new Date(`${todayKey}T00:00:00`),
+        dateKey: todayKey,
+        dateLabel: format(today, "dd.MM.yyyy"),
+        balance: lastPoint.balance,
+      });
+    }
+  }
+
+  return points;
+}
+
+type BalanceFormatterAccount = Pick<
+  LedgerAccount,
+  "unit" | "currency" | "cryptocurrency" | "symbol" | "tradeCurrency"
+>;
+
+export function createLedgerBalanceFormatter(account: BalanceFormatterAccount) {
+  if (account.unit === Unit.CURRENCY && account.currency) {
+    const currencyFormatter = new Intl.NumberFormat("en-CH", {
+      style: "currency",
+      currency: account.currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+    return (value: number) => currencyFormatter.format(value);
+  }
+
+  const numberFormatter = new Intl.NumberFormat("en-CH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  const unitLabel = getUnitLabel(account);
+
+  return (value: number) => {
+    const formattedValue = numberFormatter.format(value);
+    return unitLabel ? `${formattedValue} ${unitLabel}` : formattedValue;
+  };
+}
+
 export function createCurrentAccountLabel(account: LedgerAccount): string {
   return [
     getTypeLabel(account.type, account.equityAccountSubtype),

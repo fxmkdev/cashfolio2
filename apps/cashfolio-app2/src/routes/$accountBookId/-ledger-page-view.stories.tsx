@@ -20,6 +20,7 @@ import {
   type TransactionMutationValues,
 } from "./-ledger-page-view";
 import type { LedgerRow } from "./-ledger-page-types";
+import { LedgerViewSegmentedControl } from "./-ledger-view-segmented-control";
 
 const account = {
   id: "account-checking",
@@ -192,6 +193,13 @@ function LedgerPageStoryHarness({
         rebookTargetAccountOptions={[
           { value: "account-groceries", label: "Groceries (Expense)" },
         ]}
+        viewSwitcher={
+          <LedgerViewSegmentedControl
+            accountBookId="storybook-book"
+            accountId="account-checking"
+            view="ledger"
+          />
+        }
         onRowDataUpdated={() => undefined}
         onAddTransactionClick={() => {
           setSplitModalOpened(false);
@@ -281,9 +289,9 @@ export const RouteSmoke: Story = {
   render: () => <LedgerPageStoryHarness routeSmoke={true} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("link", { name: "Accounts" }));
+    await userEvent.click(canvas.getByRole("link", { name: "Chart" }));
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-book/accounts",
+      "/storybook-book/account-checking/chart",
     );
   },
 };

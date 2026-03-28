@@ -1,0 +1,28 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+.chartCard {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.chartContainer {
+  margin-top: 20px;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.chart {
+  flex: 1;
+  min-height: 0;
+}
+
+.chartContainer :global(.ag-charts-overlay) {
+  color: var(--mantine-color-dimmed);
+}

@@ -24,7 +24,11 @@ paths are relative to that app directory.
   Asset, Liability, Income, Expense, Gain/Loss)
   - Loader data is tab-scoped: only the selected tab is fetched in the route
     loader critical path.
-- `$accountBookId/$accountId.tsx` — ledger page for a single account
+- `$accountBookId/$accountId.tsx` — ledger layout route (loads ledger data and
+  provides shared search params for child routes)
+- `$accountBookId/$accountId/index.tsx` — ledger page for a single account
+- `$accountBookId/$accountId/chart.tsx` — balance chart view for asset/liability
+  ledgers (daily closing native-unit balance)
 - Route-local helper files can live next to a route file when orchestration
   grows, but they must be prefixed with `-` so TanStack Router ignores them. For
   example: `$accountBookId/-accounts-page-loader.ts`,
@@ -42,6 +46,8 @@ paths are relative to that app directory.
     trees
 - `$accountBookId/$accountId.tsx` uses `transactionId?: string` to auto-scroll
   and highlight a booking row
+- `$accountBookId/$accountId/chart.tsx` intentionally has no search params; the
+  ledger/chart switch does not carry `transactionId`
 - `$accountBookId/index.tsx` uses `period: "12m" | "10y"` to switch the
   dashboard overview between the default 12-month view and a 10-year view
 
