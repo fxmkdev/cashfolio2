@@ -70,12 +70,8 @@ export function DashboardAssetAllocationCard({
     [assetAllocation.items, currencyFormatter, percentageFormatter],
   );
   const totalIncludedAmountLabel = useMemo(
-    () =>
-      new Intl.NumberFormat("en-CH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(assetAllocation.totalIncludedAmount),
-    [assetAllocation.totalIncludedAmount],
+    () => currencyFormatter.format(assetAllocation.totalIncludedAmount),
+    [assetAllocation.totalIncludedAmount, currencyFormatter],
   );
   const chartSeries = useMemo<
     AgDonutSeriesOptions<AssetAllocationChartDatum>[]
@@ -86,27 +82,17 @@ export function DashboardAssetAllocationCard({
         angleKey: "percentage",
         calloutLabelKey: "label",
         sectorLabelKey: "percentageLabel",
-        innerRadiusRatio: 0.68,
-        // Keep donut radius stable so the inner total label remains visible.
+        innerRadiusRatio: 0.7,
+        outerRadiusRatio: 0.95,
         calloutLabel: {
-          avoidCollisions: false,
+          minAngle: 10,
         },
         innerLabels: [
-          {
-            text: "Total",
-            color: colors.tooltipSubtleTextColor,
-            fontSize: 11,
-          },
-          {
-            text: assetAllocation.referenceCurrency,
-            color: colors.tooltipSubtleTextColor,
-            fontSize: 10,
-          },
           {
             text: totalIncludedAmountLabel,
             color: colors.chartTextColor,
             fontWeight: 600,
-            fontSize: 13,
+            fontSize: 18,
           },
         ],
         tooltip: {
@@ -134,7 +120,7 @@ export function DashboardAssetAllocationCard({
         },
       },
     ],
-    [assetAllocation.referenceCurrency, colors, totalIncludedAmountLabel],
+    [colors, totalIncludedAmountLabel],
   );
   const chartOptions = useMemo<AgPolarChartOptions<AssetAllocationChartDatum>>(
     () => ({
