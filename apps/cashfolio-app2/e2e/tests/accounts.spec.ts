@@ -368,6 +368,12 @@ test("dashboard asset allocation donut renders for positive top-level asset grou
   });
 
   await page.goto(`/${seeded.accountBookId}`);
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}/accounts\\?tab=ASSET&mode=active$`),
+  );
+  await page.getByRole("link", { name: "Dashboard" }).click();
+  await expectDashboardPeriodInUrl(page, seeded.accountBookId, "12m");
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
   const assetAllocationCard = page.getByTestId(
     "dashboard-asset-allocation-card",
