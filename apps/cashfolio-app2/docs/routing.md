@@ -33,11 +33,22 @@ paths are relative to that app directory.
   ledgers (daily closing native-unit balance)
 - Route-local helper files can live next to a route file when orchestration
   grows, but they must be prefixed with `-` so TanStack Router ignores them. For
-  example: `$accountBookId/-accounts-page-loader.ts`,
-  `$accountBookId/-accounts-page-data.ts`,
-  `$accountBookId/-accounts-page-columns.tsx`,
-  `$accountBookId/-ledger-page-loader.ts`, and
-  `$accountBookId/-ledger-page-columns.tsx`.
+  example:
+  - accounts route modules:
+    - `$accountBookId/-accounts-page-loader.ts`
+    - `$accountBookId/-accounts-page-controller.ts`
+    - `$accountBookId/-accounts-page-data.ts`
+    - `$accountBookId/-accounts-page-modal-state.ts`
+    - `$accountBookId/-accounts-page-reference-balances.ts`
+    - `$accountBookId/-accounts-page-columns.tsx`
+  - ledger route modules:
+    - `$accountBookId/-ledger-page-loader.ts`
+    - `$accountBookId/-ledger-page-controller.ts`
+    - `$accountBookId/-ledger-page-account-options.ts`
+    - `$accountBookId/-ledger-page-edit-flow.ts`
+    - `$accountBookId/-ledger-page-rebook-flow.ts`
+    - `$accountBookId/-ledger-page-transaction-utils.ts`
+    - `$accountBookId/-ledger-page-columns.tsx`
 
 ### Search Parameters
 
@@ -80,7 +91,10 @@ paths are relative to that app directory.
   `src/server/` commonly use `.ts`
 - Key files: `accounts.ts` (barrel), `accounts-queries.ts`,
   `accounts-mutations.ts`, `dashboard.ts`, `ledger.ts`, `transactions.ts`
-  (barrel), `transactions-queries.ts`, `transactions-mutations.ts`
+  (barrel), `transactions-queries.ts`, `transactions-mutations.ts`,
+  `valuation.server.ts`, and valuation internals in `src/server/valuation/`
+  (`providers.ts`, `cache.ts`, `backtracking.ts`, `keys.ts`, `types.ts`,
+  `date-utils.ts`, `constants.ts`)
 
 ### Auth & Authorization
 
@@ -124,24 +138,31 @@ functions.
 from `accounts.ts`) issues a batch of Prisma updates inside a transaction to
 update `sortOrder` values after reordering sibling rows in the reorder modal.
 
-### Account List FX Reference Balance
+### Account List Valuation Reference Balance
 
 - The account list route (`$accountBookId/accounts.tsx`) renders `Balance` and
   `Balance (<referenceCurrency>)` columns.
+- Route orchestration for this page is in
+  `src/routes/$accountBookId/-accounts-page-controller.ts`, with focused helpers
+  in:
+  - `-accounts-page-modal-state.ts` (modal/edit/delete/archive/reorder state)
+  - `-accounts-page-reference-balances.ts` (lazy reference-balance hydration and
+    delayed loading indicator state)
 - Initial page load requests account tree data with
-  `includeReferenceBalances: false` to avoid blocking first paint on external FX
-  lookups.
+  `includeReferenceBalances: false` to avoid blocking first paint on external
+  valuation lookups.
 - The route then lazily hydrates `Balance (<referenceCurrency>)` in the
   background for non-equity tabs.
 - Reference-currency conversion and account/group reference-balance assembly are
   implemented in `src/server/accounts-queries.ts` (re-exported via
-  `src/server/accounts.ts`), using `src/server/fx.server.ts`.
-- Currency FX rates are requested from currencylayer historical API and cached
-  in Redis TimeSeries keys (`fx:currencylayer:USD:<TARGET_CURRENCY>`).
+  `src/server/accounts.ts`), using `src/server/valuation.server.ts`.
+- Currency valuation rates are requested from currencylayer historical API and
+  cached in Redis TimeSeries keys
+  (`valuation:currencylayer:USD:<TARGET_CURRENCY>`).
 - Cryptocurrency USD prices are requested from coinlayer historical API and
-  cached in Redis TimeSeries keys (`fx:coinlayer:USD:<CRYPTO_SYMBOL>`).
+  cached in Redis TimeSeries keys (`valuation:coinlayer:USD:<CRYPTO_SYMBOL>`).
 - Security EOD close prices are requested from marketstack API and cached in
-  Redis TimeSeries keys (`fx:marketstack:<SYMBOL>:<TRADE_CURRENCY>`).
+  Redis TimeSeries keys (`valuation:marketstack:<SYMBOL>:<TRADE_CURRENCY>`).
 - When an exact date is not available, the newest available prior rate is used
   (first from cache, otherwise by historical API backtracking).
 - Ref-currency balances are populated for `Unit.CURRENCY`,
@@ -163,7 +184,7 @@ Required runtime env vars for this feature:
   support (for example, Redis Stack)
 
 `REDIS_URL` should point to the shared staging Redis (with RedisTimeSeries
-support) when preview and staging should share FX cache entries.
+support) when preview and staging should share valuation cache entries.
 
 Dynamic PR preview deployment (`.github/workflows/build.yml`) sets:
 

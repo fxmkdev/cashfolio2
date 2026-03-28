@@ -12,7 +12,7 @@ export async function getRedisClient(): Promise<RedisClient | null> {
   if (!redisUrl) {
     if (!hasWarnedMissingRedisUrl) {
       console.warn(
-        "REDIS_URL is not set; FX rates will not be cached in Redis TimeSeries.",
+        "REDIS_URL is not set; valuation rates will not be cached in Redis TimeSeries.",
       );
       hasWarnedMissingRedisUrl = true;
     }
@@ -34,7 +34,7 @@ export async function getRedisClient(): Promise<RedisClient | null> {
       } catch (error) {
         if (!hasWarnedRedisUnavailable) {
           console.warn(
-            "Unable to connect to Redis; continuing without FX cache.",
+            "Unable to connect to Redis; continuing without valuation cache.",
             error,
           );
           hasWarnedRedisUnavailable = true;

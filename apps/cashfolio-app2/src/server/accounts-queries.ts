@@ -10,7 +10,7 @@ import {
   getCryptocurrencyToCurrencyExchangeRate,
   getCurrencyExchangeRate,
   getSecurityToCurrencyExchangeRate,
-} from "./fx.server";
+} from "./valuation.server";
 import {
   createGroupPathResolver,
   hasInactiveAncestorGroup,
@@ -25,6 +25,7 @@ import {
   getGroupDeleteAvailability,
   getGroupUnarchiveAvailability,
 } from "./account-tree-rules";
+import { computeRawBalanceInReferenceCurrency } from "./accounts-reference-balance";
 
 type AccountState = "active" | "inactive";
 
@@ -131,130 +132,99 @@ async function getDisplayBalanceInReferenceCurrencyByAccountId(args: {
     Promise<number | null>
   >();
   const exchangeRateBySecurity = new Map<string, Promise<number | null>>();
+  const getCurrencyToReferenceRate = (sourceCurrency: string) => {
+    const normalizedSourceCurrency = sourceCurrency.toUpperCase();
+    const existingPromise = exchangeRateBySourceCurrency.get(
+      normalizedSourceCurrency,
+    );
+    if (existingPromise) {
+      return existingPromise;
+    }
+
+    const exchangeRatePromise = (async () => {
+      if (normalizedSourceCurrency === "USD") {
+        return getUsdToReferenceRate();
+      }
+
+      const [usdToReferenceRate, sourceToUsdRate] = await Promise.all([
+        getUsdToReferenceRate(),
+        getCurrencyExchangeRate({
+          sourceCurrency: normalizedSourceCurrency,
+          targetCurrency: "USD",
+          date: today,
+        }),
+      ]);
+      if (usdToReferenceRate == null || sourceToUsdRate == null) {
+        return null;
+      }
+      return sourceToUsdRate * usdToReferenceRate;
+    })();
+    exchangeRateBySourceCurrency.set(
+      normalizedSourceCurrency,
+      exchangeRatePromise,
+    );
+    return exchangeRatePromise;
+  };
+  const getCryptocurrencyToReferenceRate = (cryptocurrency: string) => {
+    const normalizedCryptocurrency = cryptocurrency.toUpperCase();
+    const existingPromise = exchangeRateByCryptocurrency.get(
+      normalizedCryptocurrency,
+    );
+    if (existingPromise) {
+      return existingPromise;
+    }
+
+    const exchangeRatePromise = getCryptocurrencyToCurrencyExchangeRate({
+      cryptocurrency: normalizedCryptocurrency,
+      targetCurrency: referenceCurrency,
+      date: today,
+    });
+    exchangeRateByCryptocurrency.set(
+      normalizedCryptocurrency,
+      exchangeRatePromise,
+    );
+    return exchangeRatePromise;
+  };
+  const getSecurityToReferenceRate = (
+    symbol: string,
+    tradeCurrency: string,
+  ) => {
+    const normalizedSymbol = symbol.toUpperCase();
+    const normalizedTradeCurrency = tradeCurrency.toUpperCase();
+    const securityKey = `${normalizedSymbol}:${normalizedTradeCurrency}:${referenceCurrency}`;
+    const existingPromise = exchangeRateBySecurity.get(securityKey);
+    if (existingPromise) {
+      return existingPromise;
+    }
+
+    const exchangeRatePromise = getSecurityToCurrencyExchangeRate({
+      symbol: normalizedSymbol,
+      tradeCurrency: normalizedTradeCurrency,
+      targetCurrency: referenceCurrency,
+      date: today,
+    });
+    exchangeRateBySecurity.set(securityKey, exchangeRatePromise);
+    return exchangeRatePromise;
+  };
 
   return new Map(
     await Promise.all(
       accounts.map(async (account) => {
         const rawBalance = rawBalanceByAccountId.get(account.id) ?? 0;
-        let rawBalanceInReferenceCurrency: number | null = null;
-        const isAssetOrLiability =
-          account.type === "ASSET" || account.type === "LIABILITY";
-        const shouldComputeCurrencyReferenceBalance =
-          isAssetOrLiability &&
-          account.unit === "CURRENCY" &&
-          Boolean(account.currency);
-        const shouldComputeCryptocurrencyReferenceBalance =
-          isAssetOrLiability &&
-          account.unit === "CRYPTOCURRENCY" &&
-          Boolean(account.cryptocurrency);
-        const shouldComputeSecurityReferenceBalance =
-          isAssetOrLiability &&
-          account.unit === "SECURITY" &&
-          Boolean(account.symbol) &&
-          Boolean(account.tradeCurrency);
-
-        if (shouldComputeCurrencyReferenceBalance && account.currency) {
-          const sourceCurrency = account.currency.toUpperCase();
-          if (rawBalance === 0) {
-            rawBalanceInReferenceCurrency = 0;
-          } else if (sourceCurrency === referenceCurrency) {
-            rawBalanceInReferenceCurrency = rawBalance;
-          } else {
-            const existingPromise =
-              exchangeRateBySourceCurrency.get(sourceCurrency);
-            const exchangeRatePromise =
-              existingPromise ??
-              (async () => {
-                if (sourceCurrency === "USD") {
-                  return getUsdToReferenceRate();
-                }
-
-                const [usdToReferenceRate, sourceToUsdRate] = await Promise.all(
-                  [
-                    getUsdToReferenceRate(),
-                    getCurrencyExchangeRate({
-                      sourceCurrency,
-                      targetCurrency: "USD",
-                      date: today,
-                    }),
-                  ],
-                );
-                if (usdToReferenceRate == null || sourceToUsdRate == null) {
-                  return null;
-                }
-                return sourceToUsdRate * usdToReferenceRate;
-              })();
-            if (!existingPromise) {
-              exchangeRateBySourceCurrency.set(
-                sourceCurrency,
-                exchangeRatePromise,
-              );
-            }
-
-            const exchangeRate = await exchangeRatePromise;
-            if (exchangeRate != null) {
-              rawBalanceInReferenceCurrency = rawBalance * exchangeRate;
-            }
-          }
-        } else if (
-          shouldComputeCryptocurrencyReferenceBalance &&
-          account.cryptocurrency
-        ) {
-          const cryptocurrency = account.cryptocurrency.toUpperCase();
-          if (rawBalance === 0) {
-            rawBalanceInReferenceCurrency = 0;
-          } else {
-            const existingPromise =
-              exchangeRateByCryptocurrency.get(cryptocurrency);
-            const exchangeRatePromise =
-              existingPromise ??
-              getCryptocurrencyToCurrencyExchangeRate({
-                cryptocurrency,
-                targetCurrency: referenceCurrency,
-                date: today,
-              });
-            if (!existingPromise) {
-              exchangeRateByCryptocurrency.set(
-                cryptocurrency,
-                exchangeRatePromise,
-              );
-            }
-
-            const exchangeRate = await exchangeRatePromise;
-            if (exchangeRate != null) {
-              rawBalanceInReferenceCurrency = rawBalance * exchangeRate;
-            }
-          }
-        } else if (
-          shouldComputeSecurityReferenceBalance &&
-          account.symbol &&
-          account.tradeCurrency
-        ) {
-          const symbol = account.symbol.toUpperCase();
-          const tradeCurrency = account.tradeCurrency.toUpperCase();
-          if (rawBalance === 0) {
-            rawBalanceInReferenceCurrency = 0;
-          } else {
-            const securityKey = `${symbol}:${tradeCurrency}:${referenceCurrency}`;
-            const existingPromise = exchangeRateBySecurity.get(securityKey);
-            const exchangeRatePromise =
-              existingPromise ??
-              getSecurityToCurrencyExchangeRate({
-                symbol,
-                tradeCurrency,
-                targetCurrency: referenceCurrency,
-                date: today,
-              });
-            if (!existingPromise) {
-              exchangeRateBySecurity.set(securityKey, exchangeRatePromise);
-            }
-
-            const exchangeRate = await exchangeRatePromise;
-            if (exchangeRate != null) {
-              rawBalanceInReferenceCurrency = rawBalance * exchangeRate;
-            }
-          }
-        }
+        const rawBalanceInReferenceCurrency =
+          await computeRawBalanceInReferenceCurrency({
+            type: account.type,
+            unit: account.unit,
+            currency: account.currency,
+            cryptocurrency: account.cryptocurrency,
+            symbol: account.symbol,
+            tradeCurrency: account.tradeCurrency,
+            rawBalance,
+            referenceCurrency,
+            getCurrencyToReferenceRate,
+            getCryptocurrencyToReferenceRate,
+            getSecurityToReferenceRate,
+          });
 
         const displayBalanceInReferenceCurrency =
           rawBalanceInReferenceCurrency == null

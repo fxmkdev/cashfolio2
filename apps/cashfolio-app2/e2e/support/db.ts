@@ -361,7 +361,7 @@ export async function seedAssetAccountWithMissingReferenceBalance(args: {
     data: {
       id: createId(),
       accountBookId: args.accountBookId,
-      name: "E2E Missing FX",
+      name: "E2E Missing Valuation",
       type: AccountType.ASSET,
       groupId: assetRootGroup.id,
       unit: Unit.CURRENCY,
@@ -376,7 +376,7 @@ export async function seedAssetAccountWithMissingReferenceBalance(args: {
     data: {
       id: transactionId,
       accountBookId: args.accountBookId,
-      description: "E2E Missing FX Seed",
+      description: "E2E Missing Valuation Seed",
     },
   });
 
@@ -389,7 +389,7 @@ export async function seedAssetAccountWithMissingReferenceBalance(args: {
         transactionId,
         accountId: account.id,
         date,
-        description: "E2E Missing FX Seed",
+        description: "E2E Missing Valuation Seed",
         unit: Unit.CURRENCY,
         currency: "XXX",
         value: 100,
@@ -401,7 +401,7 @@ export async function seedAssetAccountWithMissingReferenceBalance(args: {
         transactionId,
         accountId: args.counterAccountId,
         date,
-        description: "E2E Missing FX Seed",
+        description: "E2E Missing Valuation Seed",
         unit: Unit.CURRENCY,
         currency: "CHF",
         value: -100,

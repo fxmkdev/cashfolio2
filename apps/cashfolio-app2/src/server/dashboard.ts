@@ -18,7 +18,7 @@ import {
   getCryptocurrencyToCurrencyExchangeRate,
   getCurrencyExchangeRate,
   getSecurityToCurrencyExchangeRate,
-} from "./fx.server";
+} from "./valuation.server";
 import { getAccountTreeData } from "./accounts";
 import { buildAssetAllocationFromTreeRows } from "./dashboard-asset-allocation";
 

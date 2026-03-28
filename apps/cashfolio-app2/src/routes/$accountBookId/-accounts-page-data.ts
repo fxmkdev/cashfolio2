@@ -63,63 +63,74 @@ export function useBalanceInReferenceCurrencyByGroupId(
   rows: TreeRow[],
   enabled = true,
 ): Map<string, GroupBalanceAggregation> {
-  return useMemo(() => {
-    if (!enabled) {
-      return EMPTY_GROUP_BALANCE_AGGREGATION_BY_GROUP_ID;
+  return useMemo(
+    () =>
+      calculateBalanceInReferenceCurrencyByGroupId(
+        rowsByParentKey,
+        rows,
+        enabled,
+      ),
+    [enabled, rowsByParentKey, rows],
+  );
+}
+
+export function calculateBalanceInReferenceCurrencyByGroupId(
+  rowsByParentKey: Map<string, TreeRow[]>,
+  rows: TreeRow[],
+  enabled = true,
+): Map<string, GroupBalanceAggregation> {
+  if (!enabled) {
+    return EMPTY_GROUP_BALANCE_AGGREGATION_BY_GROUP_ID;
+  }
+
+  const groupAggregationByGroupId = new Map<string, GroupBalanceAggregation>();
+
+  const calculateGroupAggregation = (
+    groupId: string,
+  ): GroupBalanceAggregation => {
+    const cachedAggregation = groupAggregationByGroupId.get(groupId);
+    if (cachedAggregation) {
+      return cachedAggregation;
     }
 
-    const groupAggregationByGroupId = new Map<
-      string,
-      GroupBalanceAggregation
-    >();
+    let sum = 0;
+    let hasAccountDescendants = false;
+    let hasMissingReferenceBalance = false;
+    const children = rowsByParentKey.get(groupId) ?? [];
 
-    const calculateGroupAggregation = (
-      groupId: string,
-    ): GroupBalanceAggregation => {
-      const cachedAggregation = groupAggregationByGroupId.get(groupId);
-      if (cachedAggregation) {
-        return cachedAggregation;
-      }
-
-      let sum = 0;
-      let hasAccountDescendants = false;
-      let hasMissingReferenceBalance = false;
-      const children = rowsByParentKey.get(groupId) ?? [];
-
-      for (const child of children) {
-        if (child.nodeType === "account") {
-          hasAccountDescendants = true;
-          if (child.balanceInReferenceCurrency == null) {
-            hasMissingReferenceBalance = true;
-          } else {
-            sum += child.balanceInReferenceCurrency;
-          }
-          continue;
+    for (const child of children) {
+      if (child.nodeType === "account") {
+        hasAccountDescendants = true;
+        if (child.balanceInReferenceCurrency == null) {
+          hasMissingReferenceBalance = true;
+        } else {
+          sum += child.balanceInReferenceCurrency;
         }
-
-        const childAggregation = calculateGroupAggregation(child.id);
-        sum += childAggregation.sum;
-        hasAccountDescendants =
-          hasAccountDescendants || childAggregation.hasAccountDescendants;
-        hasMissingReferenceBalance =
-          hasMissingReferenceBalance ||
-          childAggregation.hasMissingReferenceBalance;
+        continue;
       }
 
-      const aggregation: GroupBalanceAggregation = {
-        sum,
-        hasAccountDescendants,
-        hasMissingReferenceBalance,
-      };
-      groupAggregationByGroupId.set(groupId, aggregation);
-      return aggregation;
-    };
-
-    for (const row of rows) {
-      if (row.nodeType !== "accountGroup") continue;
-      calculateGroupAggregation(row.id);
+      const childAggregation = calculateGroupAggregation(child.id);
+      sum += childAggregation.sum;
+      hasAccountDescendants =
+        hasAccountDescendants || childAggregation.hasAccountDescendants;
+      hasMissingReferenceBalance =
+        hasMissingReferenceBalance ||
+        childAggregation.hasMissingReferenceBalance;
     }
 
-    return groupAggregationByGroupId;
-  }, [enabled, rowsByParentKey, rows]);
+    const aggregation: GroupBalanceAggregation = {
+      sum,
+      hasAccountDescendants,
+      hasMissingReferenceBalance,
+    };
+    groupAggregationByGroupId.set(groupId, aggregation);
+    return aggregation;
+  };
+
+  for (const row of rows) {
+    if (row.nodeType !== "accountGroup") continue;
+    calculateGroupAggregation(row.id);
+  }
+
+  return groupAggregationByGroupId;
 }

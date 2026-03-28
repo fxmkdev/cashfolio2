@@ -49,7 +49,7 @@ vi.mock("../account-books/functions.server", () => ({
   ensureAuthorizedForAccountBookId,
 }));
 
-vi.mock("./fx.server", () => ({
+vi.mock("./valuation.server", () => ({
   getCurrencyExchangeRate,
   getCryptocurrencyToCurrencyExchangeRate,
   getSecurityToCurrencyExchangeRate,
