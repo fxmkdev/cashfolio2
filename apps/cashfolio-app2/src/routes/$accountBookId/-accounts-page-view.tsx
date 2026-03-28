@@ -215,8 +215,6 @@ export function AccountsPageView({
 
       <DataGrid
         containerStyle={{ height: "calc(100vh - 11rem)" }}
-        renderingMode="legacy"
-        reactiveCustomComponents={false}
         rowData={rows}
         columnDefs={columnDefs}
         autoGroupColumnDef={{
@@ -226,7 +224,6 @@ export function AccountsPageView({
           filter: "agTextColumnFilter",
           valueGetter: ({ data }) => data?.name,
           cellRendererParams: {
-            checkbox: false,
             suppressCount: true,
           },
         }}

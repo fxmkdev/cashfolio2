@@ -247,8 +247,6 @@ export function LedgerPageView({
 
       <DataGrid
         containerStyle={{ height: "calc(100vh - 8rem)" }}
-        renderingMode="legacy"
-        reactiveCustomComponents={false}
         rowData={rows}
         columnDefs={columnDefs}
         defaultColDef={{

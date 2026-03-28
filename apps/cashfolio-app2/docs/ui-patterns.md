@@ -16,20 +16,6 @@ paths are relative to that app directory.
 - Use `LinkTab` from `src/components/link-tab.tsx` for tab-like navigation that
   changes route/search state.
 
-## AG Grid Rendering Stability
-
-- For route-level account grids
-  (`src/routes/$accountBookId/-accounts-page-view.tsx` and
-  `src/routes/$accountBookId/-ledger-page-view.tsx`), keep
-  `renderingMode="legacy"` and `reactiveCustomComponents={false}`.
-- Keep group-cell selection checkboxes disabled via
-  `autoGroupColumnDef.cellRendererParams.checkbox = false` on the accounts tree
-  grid.
-- Source:
-  [AG Grid React GridOptions](https://www.ag-grid.com/react-data-grid/grid-options/)
-  (`renderingMode`, `reactiveCustomComponents`) and AG Grid type definitions for
-  group cell params (`checkbox`).
-
 ## Navigation Link Pattern
 
 - If an element navigates to another page (including route-search state such as

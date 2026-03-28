@@ -63,6 +63,7 @@ const meta = {
         rowData={rows}
         columnDefs={columns}
         getRowId={({ data }) => data.id}
+        rowSelection="single"
       />
     </Box>
   ),

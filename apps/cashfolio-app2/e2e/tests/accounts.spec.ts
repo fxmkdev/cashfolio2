@@ -43,9 +43,23 @@ async function expectDashboardPeriodInUrl(
 
 async function selectDashboardPeriod(page: Page, period: "12m" | "10y") {
   const periodLabel = period === "10y" ? "Last 10 years" : "Last 12 months";
-  const radio = page.getByRole("radio", { name: periodLabel }).first();
-  await expect(radio).toBeVisible();
-  await radio.check();
+  const radioGroup = page.getByRole("radiogroup").first();
+  const input = radioGroup
+    .locator(`input[type="radio"][value="${period}"]`)
+    .first();
+
+  if ((await input.count()) === 0) {
+    throw new Error(`Dashboard period radio not found for: ${period}`);
+  }
+
+  const optionLabel = radioGroup
+    .locator("label")
+    .filter({ hasText: periodLabel })
+    .first();
+
+  await expect(optionLabel).toBeVisible();
+  await optionLabel.click();
+  await expect(input).toBeChecked();
 }
 
 test("dashboard is default account-book route and links to accounts", async ({
@@ -135,6 +149,13 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
 
   await page.getByRole("link", { name: "Archive" }).click();
   const archivedRow = agGridRowByText(page, updatedName);
+  await expect(archivedRow).toBeVisible();
+
+  await archivedRow.dblclick();
+  await expect(
+    page.getByRole("button", { name: "Add Transaction" }),
+  ).toBeVisible();
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=archived`);
   await expect(archivedRow).toBeVisible();
 
   await clickRowAction(archivedRow, "Unarchive");
