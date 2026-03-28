@@ -8,6 +8,7 @@ import {
 import {
   resetAndSeedDatabase,
   seedAssetAccountWithMissingReferenceBalance,
+  seedThreeBookingSplitTransaction,
   type SeededData,
 } from "../support/db";
 import { openDialogFromButton } from "../support/ui";
@@ -286,4 +287,43 @@ test("footer total stays blank when an account ref-currency balance is missing",
   await expect(
     agGridCellByColId(footerRow, "balanceInReferenceCurrency"),
   ).toHaveText(/^\s*$/);
+});
+
+test("asset ledger segmented links open chart and render a visible chart", async ({
+  page,
+}) => {
+  await seedThreeBookingSplitTransaction({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Chart Seed",
+    currentAccountId: seeded.cashAccount.id,
+    debitAccountIds: [seeded.savingsAccount.id, seeded.investmentsAccount.id],
+    date: "2026-01-07T00:00:00.000Z",
+  });
+
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
+
+  const cashRow = agGridRowByText(page, seeded.cashAccount.name);
+  await expect(cashRow).toBeVisible();
+  await cashRow.dblclick();
+
+  await expect(page.getByRole("link", { name: "Chart" })).toBeVisible();
+  await page.getByRole("link", { name: "Chart" }).click();
+
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}/${seeded.cashAccount.id}/chart$`),
+  );
+  await expect(
+    page.getByText("No bookings available for this account yet."),
+  ).toHaveCount(0);
+
+  const chartCanvas = page.locator(".ag-charts-wrapper canvas").first();
+  await expect(chartCanvas).toBeVisible();
+
+  await page.getByRole("link", { name: "Ledger" }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}/${seeded.cashAccount.id}$`),
+  );
+  await expect(
+    page.getByRole("button", { name: "Add Transaction" }),
+  ).toBeVisible();
 });
