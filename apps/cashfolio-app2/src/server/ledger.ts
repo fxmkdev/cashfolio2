@@ -190,6 +190,98 @@ export const getLedgerData = createServerFn({ method: "GET" })
     };
   });
 
+export const getLedgerReferenceBalanceChartData = createServerFn({
+  method: "GET",
+})
+  .inputValidator((data: { accountId: string; accountBookId: string }) => data)
+  .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
+
+    const account = await prisma.account.findUniqueOrThrow({
+      where: {
+        id_accountBookId: {
+          id: data.accountId,
+          accountBookId: data.accountBookId,
+        },
+      },
+      select: {
+        type: true,
+        accountBook: {
+          select: {
+            referenceCurrency: true,
+          },
+        },
+      },
+    });
+
+    const referenceCurrency =
+      account.accountBook.referenceCurrency.toUpperCase();
+    const isAssetOrLiability =
+      account.type === AccountType.ASSET ||
+      account.type === AccountType.LIABILITY;
+
+    if (!isAssetOrLiability) {
+      return {
+        referenceCurrency,
+        convertedBookingValues: [] as Array<{
+          bookingId: string;
+          convertedValue: number | null;
+        }>,
+      };
+    }
+
+    const bookings = await prisma.booking.findMany({
+      where: {
+        accountBookId: data.accountBookId,
+        accountId: data.accountId,
+      },
+      orderBy: [
+        { date: "asc" },
+        { transaction: { createdAt: "asc" } },
+        { id: "asc" },
+      ],
+      select: {
+        id: true,
+        date: true,
+        value: true,
+        unit: true,
+        currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
+      },
+    });
+
+    const negate = account.type === AccountType.LIABILITY;
+    const exchangeRateByKey = new Map<string, Promise<number | null>>();
+    const convertedValues = await mapWithConcurrencyLimit(
+      bookings,
+      LEDGER_REFERENCE_CONVERSION_CONCURRENCY,
+      (booking) =>
+        booking.unit
+          ? convertBookingValueToReference({
+              value: negate ? -Number(booking.value) : Number(booking.value),
+              unit: booking.unit,
+              currency: booking.currency,
+              cryptocurrency: booking.cryptocurrency,
+              symbol: booking.symbol,
+              tradeCurrency: booking.tradeCurrency,
+              date: booking.date,
+              referenceCurrency,
+              exchangeRateByKey,
+            })
+          : Promise.resolve<number | null>(null),
+    );
+
+    return {
+      referenceCurrency,
+      convertedBookingValues: bookings.map((booking, index) => ({
+        bookingId: booking.id,
+        convertedValue: convertedValues[index] ?? null,
+      })),
+    };
+  });
+
 export const getLedgerPeriodBounds = createServerFn({ method: "GET" })
   .inputValidator((data: { accountBookId: string }) => data)
   .handler(async ({ data }) => {

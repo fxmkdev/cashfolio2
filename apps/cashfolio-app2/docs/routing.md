@@ -37,7 +37,8 @@ Related docs:
   and provides shared search params for child routes)
 - `$accountBookId/$accountId/index.tsx` - ledger page for a single account
 - `$accountBookId/$accountId/chart/route.tsx` - balance chart view for
-  asset/liability ledgers (daily closing native-unit balance)
+  asset/liability ledgers (daily closing native-unit balance plus
+  reference-currency balance on a secondary y-axis)
 - Route-local helper files live inside the owning route folder and are prefixed
   with `-` so TanStack Router ignores them. For example:
   - accounts route modules:
@@ -84,3 +85,8 @@ Related docs:
 
 - Use `Promise.all()` to fetch multiple server functions in parallel within
   loaders
+- Chart-specific data loading can stay local to chart routes when data
+  requirements are heavier than the base ledger route. For example,
+  `$accountBookId/$accountId/chart/route.tsx` loads reference-currency booking
+  conversions through `getLedgerReferenceBalanceChartData` so the ledger table
+  route avoids external FX/price lookups.

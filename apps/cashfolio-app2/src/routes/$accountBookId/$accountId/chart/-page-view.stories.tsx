@@ -40,18 +40,29 @@ function LedgerBalanceChartPageStoryHarness({
             dateKey: "2026-01-10",
             dateLabel: "10.01.2026",
             balance: 1000,
+            balanceInReferenceCurrency: 1085.4,
           },
           {
             date: new Date("2026-01-15T00:00:00"),
             dateKey: "2026-01-15",
             dateLabel: "15.01.2026",
             balance: 915.5,
+            balanceInReferenceCurrency: 994.7,
           },
         ]}
         formatBalance={(value) =>
           new Intl.NumberFormat("en-CH", {
             style: "currency",
             currency: "CHF",
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }).format(value)
+        }
+        referenceCurrency="USD"
+        formatBalanceInReferenceCurrency={(value) =>
+          new Intl.NumberFormat("en-CH", {
+            style: "currency",
+            currency: "USD",
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           }).format(value)

@@ -417,6 +417,105 @@ describe("buildLedgerBalanceChartPoints", () => {
       },
     ]);
   });
+
+  test("builds a reference-currency running balance when converted booking values are provided", () => {
+    const bookings = createLedgerBookings([
+      {
+        date: localDate(2026, 0, 10, 9),
+        value: 100,
+      },
+      {
+        date: localDate(2026, 0, 11, 9),
+        value: -40,
+      },
+    ]);
+
+    const points = buildLedgerBalanceChartPoints(
+      createLedgerAccount(AccountType.ASSET),
+      bookings,
+      fixedToday,
+      new Map([
+        [bookings[0].id, 108],
+        [bookings[1].id, -43.2],
+      ]),
+    );
+
+    expect(points).toEqual([
+      {
+        date: localDate(2026, 0, 10, 0),
+        dateKey: "2026-01-10",
+        dateLabel: "10.01.2026",
+        balance: 100,
+        balanceInReferenceCurrency: 108,
+      },
+      {
+        date: localDate(2026, 0, 11, 0),
+        dateKey: "2026-01-11",
+        dateLabel: "11.01.2026",
+        balance: 60,
+        balanceInReferenceCurrency: 64.8,
+      },
+    ]);
+  });
+
+  test("keeps the reference-currency balance unavailable after a missing conversion", () => {
+    const bookings = createLedgerBookings([
+      {
+        date: localDate(2026, 0, 10, 9),
+        value: 100,
+      },
+      {
+        date: localDate(2026, 0, 11, 9),
+        value: -40,
+      },
+      {
+        date: localDate(2026, 0, 12, 9),
+        value: 20,
+      },
+    ]);
+
+    const points = buildLedgerBalanceChartPoints(
+      createLedgerAccount(AccountType.ASSET),
+      bookings,
+      localDate(2026, 0, 13, 12),
+      new Map([
+        [bookings[0].id, 108],
+        [bookings[1].id, null],
+        [bookings[2].id, 21],
+      ]),
+    );
+
+    expect(points).toEqual([
+      {
+        date: localDate(2026, 0, 10, 0),
+        dateKey: "2026-01-10",
+        dateLabel: "10.01.2026",
+        balance: 100,
+        balanceInReferenceCurrency: 108,
+      },
+      {
+        date: localDate(2026, 0, 11, 0),
+        dateKey: "2026-01-11",
+        dateLabel: "11.01.2026",
+        balance: 60,
+        balanceInReferenceCurrency: null,
+      },
+      {
+        date: localDate(2026, 0, 12, 0),
+        dateKey: "2026-01-12",
+        dateLabel: "12.01.2026",
+        balance: 80,
+        balanceInReferenceCurrency: null,
+      },
+      {
+        date: localDate(2026, 0, 13, 0),
+        dateKey: "2026-01-13",
+        dateLabel: "13.01.2026",
+        balance: 80,
+        balanceInReferenceCurrency: null,
+      },
+    ]);
+  });
 });
 
 describe("buildLedgerRows", () => {

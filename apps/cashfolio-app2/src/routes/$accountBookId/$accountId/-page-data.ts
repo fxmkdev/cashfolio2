@@ -163,20 +163,33 @@ export type LedgerBalanceChartPoint = {
   dateKey: string;
   dateLabel: string;
   balance: number;
+  balanceInReferenceCurrency?: number | null;
 };
 
 export function buildLedgerBalanceChartPoints(
   account: LedgerAccount,
   bookings: LedgerBookings,
   today: Date = new Date(),
+  convertedBookingValueById?: ReadonlyMap<string, number | null>,
 ): LedgerBalanceChartPoint[] {
   const negate = shouldNegate(account.type, account.equityAccountSubtype);
   let balance = 0;
+  let balanceInReferenceCurrency: number | null = convertedBookingValueById
+    ? 0
+    : null;
   const points: LedgerBalanceChartPoint[] = [];
 
   for (const booking of bookings) {
     const value = negate ? -Number(booking.value) : Number(booking.value);
     balance += value;
+    if (convertedBookingValueById) {
+      const convertedValue = convertedBookingValueById.get(booking.id) ?? null;
+      if (balanceInReferenceCurrency != null && convertedValue != null) {
+        balanceInReferenceCurrency += convertedValue;
+      } else {
+        balanceInReferenceCurrency = null;
+      }
+    }
 
     const date = new Date(booking.date);
     const dateKey = format(date, "yyyy-MM-dd");
@@ -185,6 +198,9 @@ export function buildLedgerBalanceChartPoints(
 
     if (lastPoint && lastPoint.dateKey === dateKey) {
       lastPoint.balance = balance;
+      if (convertedBookingValueById) {
+        lastPoint.balanceInReferenceCurrency = balanceInReferenceCurrency;
+      }
       continue;
     }
 
@@ -193,6 +209,9 @@ export function buildLedgerBalanceChartPoints(
       dateKey,
       dateLabel,
       balance,
+      ...(convertedBookingValueById
+        ? { balanceInReferenceCurrency }
+        : undefined),
     });
   }
 
@@ -206,6 +225,12 @@ export function buildLedgerBalanceChartPoints(
         dateKey: todayKey,
         dateLabel: format(today, "dd.MM.yyyy"),
         balance: lastPoint.balance,
+        ...(convertedBookingValueById
+          ? {
+              balanceInReferenceCurrency:
+                lastPoint.balanceInReferenceCurrency ?? null,
+            }
+          : undefined),
       });
     }
   }

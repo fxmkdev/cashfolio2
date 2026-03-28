@@ -269,8 +269,10 @@ for ledger child routes.
   segmented switch (`Ledger` / `Chart`) using real TanStack links (`<a>`), not
   click-handler navigation
 - **Chart route**: `src/routes/$accountBookId/$accountId/chart.tsx` renders a
-  daily closing balance line chart in the account's native unit with
-  `en-CH`-formatted values
+  daily closing balance line chart in the account's native unit and in the
+  account-book reference currency on a secondary y-axis, with `en-CH`-formatted
+  values. Reference-currency conversions use the shared FX/price cache flow in
+  `src/server/fx.server.ts`.
 
 ## Validation Pattern
 

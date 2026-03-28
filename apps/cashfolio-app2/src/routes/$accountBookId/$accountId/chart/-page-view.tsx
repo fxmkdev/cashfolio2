@@ -31,6 +31,8 @@ export type LedgerBalanceChartPageViewProps = {
   unitLabel: string | null;
   points: LedgerBalanceChartPoint[];
   formatBalance: (value: number) => string;
+  referenceCurrency: string;
+  formatBalanceInReferenceCurrency: (value: number) => string;
   viewSwitcher: ReactNode;
 };
 
@@ -41,6 +43,8 @@ export function LedgerBalanceChartPageView({
   unitLabel,
   points,
   formatBalance,
+  referenceCurrency,
+  formatBalanceInReferenceCurrency,
   viewSwitcher,
 }: LedgerBalanceChartPageViewProps) {
   const theme = useMantineTheme();
@@ -66,6 +70,19 @@ export function LedgerBalanceChartPageView({
   const themeBorderColor = isDarkMode
     ? theme.colors.dark[4]
     : theme.colors.gray[3];
+  const hasReferenceCurrencySeries = useMemo(
+    () =>
+      points.some(
+        (point) => typeof point.balanceInReferenceCurrency === "number",
+      ),
+    [points],
+  );
+  const hasReferenceCurrencyGaps = useMemo(
+    () =>
+      hasReferenceCurrencySeries &&
+      points.some((point) => point.balanceInReferenceCurrency == null),
+    [hasReferenceCurrencySeries, points],
+  );
 
   const chartOptions = useMemo<AgCartesianChartOptions>(
     () => ({
@@ -85,7 +102,8 @@ export function LedgerBalanceChartPageView({
         },
       },
       legend: {
-        enabled: false,
+        enabled: hasReferenceCurrencySeries,
+        position: "bottom",
       },
       series: [
         {
@@ -116,6 +134,58 @@ export function LedgerBalanceChartPageView({
             },
           },
         },
+        ...(hasReferenceCurrencySeries
+          ? [
+              {
+                type: "line" as const,
+                xKey: "date",
+                yKey: "balanceInReferenceCurrency",
+                yName: `Balance (${referenceCurrency})`,
+                yKeyAxis: "reference",
+                stroke: isDarkMode
+                  ? theme.colors.indigo[4]
+                  : theme.colors.indigo[7],
+                strokeWidth: 3,
+                marker: {
+                  size: 4,
+                  fill: isDarkMode
+                    ? theme.colors.indigo[3]
+                    : theme.colors.indigo[6],
+                  stroke: isDarkMode
+                    ? theme.colors.indigo[4]
+                    : theme.colors.indigo[7],
+                },
+                tooltip: {
+                  renderer: (params: { datum: unknown }) => {
+                    const point = params.datum as LedgerBalanceChartPoint;
+                    if (point.balanceInReferenceCurrency == null) {
+                      return {
+                        heading: point.dateLabel,
+                        data: [
+                          {
+                            label: `Balance (${referenceCurrency})`,
+                            value: "Unavailable",
+                          },
+                        ],
+                      };
+                    }
+
+                    return {
+                      heading: point.dateLabel,
+                      data: [
+                        {
+                          label: `Balance (${referenceCurrency})`,
+                          value: formatBalanceInReferenceCurrency(
+                            point.balanceInReferenceCurrency,
+                          ),
+                        },
+                      ],
+                    };
+                  },
+                },
+              },
+            ]
+          : []),
       ],
       axes: {
         x: {
@@ -127,18 +197,37 @@ export function LedgerBalanceChartPageView({
         },
         y: {
           type: "number",
+          position: "left",
           label: {
             formatter: ({ value }) => formatBalance(Number(value)),
           },
         },
+        ...(hasReferenceCurrencySeries
+          ? {
+              reference: {
+                type: "number",
+                position: "right",
+                label: {
+                  formatter: ({ value }: { value: number | string }) =>
+                    formatBalanceInReferenceCurrency(Number(value)),
+                },
+                gridLine: {
+                  enabled: false,
+                },
+              },
+            }
+          : undefined),
       },
     }),
     [
       chartTextColor,
       dateFormatter,
       formatBalance,
+      formatBalanceInReferenceCurrency,
+      hasReferenceCurrencySeries,
       isDarkMode,
       points,
+      referenceCurrency,
       theme,
       themeBorderColor,
       tooltipBackgroundColor,
@@ -176,8 +265,16 @@ export function LedgerBalanceChartPageView({
         <Stack gap="xs">
           <Text fw={600}>Balance</Text>
           <Text c="dimmed" size="sm">
-            Daily closing balance{unitLabel ? ` in ${unitLabel}` : ""}
+            Daily closing balance
+            {unitLabel ? ` in ${unitLabel}` : ""}
+            {hasReferenceCurrencySeries ? ` and ${referenceCurrency}` : ""}
           </Text>
+          {hasReferenceCurrencyGaps ? (
+            <Text c="dimmed" size="xs">
+              Some points in {referenceCurrency} are unavailable because no rate
+              or price was found for one or more bookings.
+            </Text>
+          ) : null}
         </Stack>
 
         {points.length > 0 ? (
