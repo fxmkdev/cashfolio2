@@ -36,7 +36,7 @@ async function expectDashboardPeriodInUrl(
       { timeout: 15_000 },
     )
     .toEqual({
-      pathname: `/${accountBookId}`,
+      pathname: `/${accountBookId}/dashboard`,
       period: period === "10y" ? "10y" : null,
     });
 }
@@ -69,10 +69,17 @@ async function selectDashboardPeriod(page: Page, period: "12m" | "10y") {
   await expect(input).toBeChecked();
 }
 
-test("dashboard is default account-book route and links to accounts", async ({
+test("accounts is default account-book route and dashboard links to accounts", async ({
   page,
 }) => {
   await page.goto(`/${seeded.accountBookId}`);
+
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}/accounts\\?tab=ASSET&mode=active$`),
+  );
+  await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Dashboard" }).click();
 
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
   await expect(
