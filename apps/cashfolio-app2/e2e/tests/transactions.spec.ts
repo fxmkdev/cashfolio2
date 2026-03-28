@@ -250,11 +250,15 @@ test("counterparty account link highlights the matching booking row", async ({
 
   const targetRow = agGridRowByText(page, description);
   await expect(targetRow).toBeVisible();
-  await expect(
-    targetRow
-      .locator(".ag-cell-data-changed, .ag-cell-data-changed-animation")
-      .first(),
-  ).toBeVisible();
+  const targetRowHandle = await targetRow.elementHandle();
+  expect(targetRowHandle).not.toBeNull();
+  await page.waitForFunction(
+    (row: HTMLElement | null) =>
+      !!row?.querySelector(
+        ".ag-cell-data-changed, .ag-cell-data-changed-animation",
+      ),
+    targetRowHandle,
+  );
 });
 
 test("rebook booking to another compatible account", async ({ page }) => {
