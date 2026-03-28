@@ -18,7 +18,9 @@ paths are relative to that app directory.
 - `api/logto/$action.tsx` — auth endpoints: `GET /api/logto/sign-in`,
   `GET /api/logto/callback`, `GET /api/logto/sign-up`,
   `POST /api/logto/sign-out`
-- `$accountBookId/index.tsx` — dashboard page with a monthly income/expense
+- `$accountBookId/index.tsx` — index redirect route that forwards to
+  `$accountBookId/accounts`
+- `$accountBookId/dashboard.tsx` — dashboard page with a monthly income/expense
   chart and period switch (last 12 months or last 10 years)
 - `$accountBookId/accounts.tsx` — accounts page with tabs (one per account type:
   Asset, Liability, Income, Expense, Gain/Loss)
@@ -48,7 +50,7 @@ paths are relative to that app directory.
   and highlight a booking row
 - `$accountBookId/$accountId/chart.tsx` intentionally has no search params; the
   ledger/chart switch does not carry `transactionId`
-- `$accountBookId/index.tsx` uses `period: "12m" | "10y"` to switch the
+- `$accountBookId/dashboard.tsx` uses `period: "12m" | "10y"` to switch the
   dashboard overview between the default 12-month view and a 10-year view
 
 ### Global Navigation Progress
