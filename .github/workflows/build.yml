@@ -91,8 +91,6 @@ jobs:
         uses: felixmokross/webplatform/.github/actions/setup@main
       - name: Install dependencies
         run: pnpm --filter cashfolio-app2 install
-      - name: Generate Prisma Client
-        run: pnpm --filter cashfolio-app2 prisma:generate
       - name: Migrate test database
         run: pnpm --filter cashfolio-app2 exec prisma migrate deploy
       - name: Install Playwright browser
