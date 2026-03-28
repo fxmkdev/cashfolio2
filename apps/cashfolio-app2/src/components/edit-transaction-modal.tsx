@@ -1,110 +1,41 @@
-import type {
-  CellClassParams,
-  ColDef,
-  RowDragEndEvent,
-} from "ag-grid-enterprise";
-import { currencies } from "../currencies";
-import { cryptocurrencies } from "../cryptocurrencies";
-import {
-  isIncomeAccount,
-  isExpenseAccount,
-  getUnitIdentifier,
-} from "../shared/account-utils";
-import { useCallback, useMemo, useRef } from "react";
-import {
-  ActionIcon,
-  Box,
-  Button,
-  Group,
-  Stack,
-  TextInput,
-  ThemeIcon,
-  Tooltip,
-} from "@mantine/core";
-import {
-  AccountType,
-  EquityAccountSubtype,
-  Unit,
-} from "../.prisma-client/enums";
-import {
-  IconInfoCircle,
-  IconTablePlus,
-  IconTrash,
-  IconX,
-} from "@tabler/icons-react";
-import {
-  DATE_COLUMN,
-  FORMATTED_NUMERIC_COLUMN,
-  SELECT_COLUMN,
-  TEXT_COLUMN,
-} from "./column-types";
-import { DataGrid } from "./data-grid";
-import type { AgGridReact, CustomCellRendererProps } from "ag-grid-react";
-import { createId } from "@paralleldrive/cuid2";
-import { sum } from "../utils";
-import { numericFormatter } from "react-number-format";
-import { getNumberFormatSymbols } from "./formatted-number-input";
+import type { RowDragEndEvent } from "ag-grid-enterprise";
+import type { AgGridReact } from "ag-grid-react";
+import { Button, Group, Stack, TextInput, Tooltip } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { formRootRule, isNotEmpty, useForm } from "@mantine/form";
-import { isAfter, isSameDay, min, parse, startOfDay } from "date-fns";
+import { IconInfoCircle, IconTablePlus } from "@tabler/icons-react";
+import { createId } from "@paralleldrive/cuid2";
+import { isAfter, parse, startOfDay } from "date-fns";
+import { numericFormatter } from "react-number-format";
+import { useCallback, useMemo, useRef } from "react";
+import { Unit } from "../.prisma-client/enums";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
+import {
+  getUnitIdentifier,
+  isExpenseAccount,
+  isIncomeAccount,
+} from "../shared/account-utils";
+import { sum } from "../utils";
+import { DataGrid } from "./data-grid";
+import {
+  createEditTransactionColumnDefs,
+  isEditableCell,
+} from "./edit-transaction-modal-columns";
+import type {
+  AccountOption,
+  BookingValues,
+} from "./edit-transaction-modal-types";
+import {
+  createTransactionFormInitialValues,
+  toTransactionSubmitBookings,
+} from "./edit-transaction-modal-values";
+import { getNumberFormatSymbols } from "./formatted-number-input";
 
-export type AccountOption = {
-  label: string;
-  value: string;
-  unit: Unit;
-  currency?: string | null;
-  cryptocurrency?: string | null;
-  symbol?: string | null;
-  tradeCurrency?: string | null;
-  type: AccountType;
-  equityAccountSubtype?: EquityAccountSubtype | null;
-};
-
-export type BookingValues = {
-  key: string;
-  date?: string;
-  account?: string;
-  description?: string;
-  unit?: Unit;
-  currency?: string;
-  cryptocurrency?: string;
-  symbol?: string;
-  tradeCurrency?: string;
-  debit?: number;
-  credit?: number;
-};
-
-export type TransactionFormValues = {
-  date?: Date;
-  description?: string;
-  bookings: BookingValues[];
-};
-
-const currencyOptions = Object.keys(currencies).map((code) => ({
-  label: code,
-  value: code,
-}));
-
-const cryptocurrencyOptions = Object.keys(cryptocurrencies).map((code) => ({
-  label: code,
-  value: code,
-}));
-
-function isEditableCell(params: CellClassParams) {
-  const { colDef, node } = params;
-  if (node.rowPinned || !params.data) return false;
-
-  if (typeof colDef.editable === "function") {
-    return colDef.editable(params as any);
-  }
-
-  if (typeof colDef.editable === "boolean") {
-    return colDef.editable;
-  }
-
-  return true;
-}
+export type {
+  AccountOption,
+  BookingValues,
+  TransactionFormValues,
+} from "./edit-transaction-modal-types";
 
 export function EditTransactionModal({
   initialValues,
@@ -145,39 +76,16 @@ export function EditTransactionModal({
   const { isSubmitting, runSubmit } = useDialogSubmitState({
     onSubmittingChange,
   });
-
   const today = startOfDay(new Date());
-
   const currentAccount = accounts.find((a) => a.value === currentAccountId);
 
   const form = useForm({
     mode: "uncontrolled",
-    initialValues: {
-      date:
-        initialValues?.bookings && initialValues.bookings.length > 0
-          ? min(
-              initialValues.bookings
-                .map((d) => d.date as string)
-                .filter((d) => !!d),
-            )
-          : undefined,
-      description: initialValues?.description,
-      bookings: initialValues?.bookings?.map((b) => ({
-        ...b,
-        key: createId(),
-      })) ?? [
-        {
-          key: createId(),
-          account: currentAccountId,
-          unit: currentAccount?.unit,
-          currency: currentAccount?.currency ?? undefined,
-          cryptocurrency: currentAccount?.cryptocurrency ?? undefined,
-          symbol: currentAccount?.symbol ?? undefined,
-          tradeCurrency: currentAccount?.tradeCurrency ?? undefined,
-        } as BookingValues,
-        { key: createId() } as BookingValues,
-      ],
-    },
+    initialValues: createTransactionFormInitialValues({
+      initialValues,
+      currentAccountId,
+      currentAccount,
+    }),
     onValuesChange: ({ date }, { date: previousDate }) => {
       if (date !== previousDate) {
         for (let i = 0; i < form.values.bookings.length; i++) {
@@ -188,20 +96,21 @@ export function EditTransactionModal({
     validate: {
       date: (value) => {
         if (!value) return "Date is required";
-        if (isAfter(startOfDay(value), today))
+        if (isAfter(startOfDay(value), today)) {
           return "Date cannot be in the future";
+        }
         return null;
       },
       bookings: {
         [formRootRule]: (bookings) => {
           for (const booking of bookings) {
             if (!booking.account) continue;
-            const acct = accounts.find((a) => a.value === booking.account);
-            if (!acct) continue;
-            if (isIncomeAccount(acct) && booking.debit !== undefined) {
+            const account = accounts.find((a) => a.value === booking.account);
+            if (!account) continue;
+            if (isIncomeAccount(account) && booking.debit !== undefined) {
               return "Income accounts cannot have debit entries.";
             }
-            if (isExpenseAccount(acct) && booking.credit !== undefined) {
+            if (isExpenseAccount(account) && booking.credit !== undefined) {
               return "Expense accounts cannot have credit entries.";
             }
           }
@@ -209,15 +118,16 @@ export function EditTransactionModal({
           const unitIdentifiers = new Set(
             bookings
               .filter(
-                (b): b is BookingValues & { unit: Unit } => b.unit != null,
+                (booking): booking is BookingValues & { unit: Unit } =>
+                  booking.unit != null,
               )
-              .map((b) => getUnitIdentifier(b)),
+              .map((booking) => getUnitIdentifier(booking)),
           );
           if (unitIdentifiers.size !== 1) return null;
 
           const difference =
-            sum(bookings.map((b) => b.debit ?? 0)) -
-            sum(bookings.map((b) => b.credit ?? 0));
+            sum(bookings.map((booking) => booking.debit ?? 0)) -
+            sum(bookings.map((booking) => booking.credit ?? 0));
           return Math.abs(difference) > 0.001
             ? `Transaction is not balanced; debits and credits differ by ${numericFormatter(
                 difference.toString(),
@@ -231,8 +141,9 @@ export function EditTransactionModal({
         },
         date: (value) => {
           if (!value) return "Date is required";
-          if (isAfter(startOfDay(new Date(value)), today))
+          if (isAfter(startOfDay(new Date(value)), today)) {
             return "Date cannot be in the future";
+          }
           return null;
         },
         account: isNotEmpty("Account is required"),
@@ -266,7 +177,7 @@ export function EditTransactionModal({
 
   const lockedBookingKey = useMemo(() => {
     const first = form.values.bookings.find(
-      (b) => b.account === currentAccountId,
+      (booking) => booking.account === currentAccountId,
     );
     return first?.key;
   }, [form.values.bookings, currentAccountId]);
@@ -282,7 +193,7 @@ export function EditTransactionModal({
 
       if (displayOrderKeys.length !== form.values.bookings.length) return;
 
-      const currentKeys = form.values.bookings.map((b) => b.key);
+      const currentKeys = form.values.bookings.map((booking) => booking.key);
       if (!currentKeys.every((key) => displayOrderKeys.includes(key))) return;
 
       const hasChanged = displayOrderKeys.some(
@@ -290,10 +201,12 @@ export function EditTransactionModal({
       );
       if (!hasChanged) return;
 
-      const bookingByKey = new Map(form.values.bookings.map((b) => [b.key, b]));
+      const bookingByKey = new Map(
+        form.values.bookings.map((booking) => [booking.key, booking]),
+      );
       const reorderedBookings = displayOrderKeys
         .map((key) => bookingByKey.get(key))
-        .filter((b): b is BookingValues => Boolean(b));
+        .filter((booking): booking is BookingValues => Boolean(booking));
 
       if (reorderedBookings.length !== form.values.bookings.length) return;
       form.setFieldValue("bookings", reorderedBookings);
@@ -303,249 +216,27 @@ export function EditTransactionModal({
 
   const columnDefs = useMemo(
     () =>
-      [
-        {
-          editable: false,
-          width: 0,
-          colSpan: (params) => (params.data ? 1 : 8),
-          cellRendererSelector: (params) => {
-            if (!params.data) {
-              return {
-                component: ({ context }: CustomCellRendererProps) => {
-                  if (!context.status) return null;
-                  return (
-                    <Group align="center" h="100%" gap="xs">
-                      <ThemeIcon variant="light" size="sm" color="red">
-                        <IconX size={14} />
-                      </ThemeIcon>
-                      <Box>{context.status}</Box>
-                    </Group>
-                  );
-                },
-              };
-            }
-
-            return undefined;
-          },
-        },
-        {
-          colId: "drag",
-          headerName: "",
-          editable: false,
-          width: 40,
-          rowDrag: ({ data, node }) =>
-            !isSubmitting && !node.rowPinned && Boolean(data),
-        },
-        {
-          field: "date",
-          type: DATE_COLUMN,
-          cellDataType: "dateString",
-          width: 118,
-          cellStyle: ({ value, context }: CellClassParams) =>
-            isSameDay(value, context.startDate)
-              ? { color: "var(--mantine-color-dimmed)" }
-              : { color: "var(--mantine-color-yellow-text)", fontWeight: 600 },
-          cellEditorParams: ({ context }: any) => ({
-            startDate: context.startDate,
-          }),
-        },
-        {
-          field: "account",
-          type: SELECT_COLUMN,
-          context: { options: accounts },
-          minWidth: 150,
-          flex: 1,
-          editable: ({ data, context }) =>
-            data?.key !== context.lockedBookingKey,
-          cellStyle: ({ context, node }: CellClassParams) =>
-            context.form.errors[`bookings.${node.rowIndex}.account`]
-              ? { borderColor: "var(--mantine-color-error)" }
-              : { borderColor: "transparent" },
-        },
-        {
-          field: "description",
-          type: TEXT_COLUMN,
-          width: 150,
-        },
-        {
-          field: "unit",
-          type: SELECT_COLUMN,
-          editable: ({ data }) => {
-            if (!data?.account) return true;
-            const acct = accounts.find((a) => a.value === data.account);
-            return !acct?.unit;
-          },
-          width: 120,
-          context: {
-            options: [
-              { label: "Currency", value: Unit.CURRENCY },
-              { label: "Crypto", value: Unit.CRYPTOCURRENCY },
-              { label: "Security", value: Unit.SECURITY },
-            ],
-          },
-        },
-        {
-          colId: "ccy",
-          headerName: "Ccy.",
-          type: SELECT_COLUMN,
-          editable: ({ data }) => {
-            if (!data?.account) return true;
-            const acct = accounts.find((a) => a.value === data.account);
-            return !acct?.unit;
-          },
-          width: 90,
-          valueFormatter: ({ value }: { value: unknown }) =>
-            (value as string) ?? "",
-          valueGetter: ({ data }: { data?: BookingValues }) => {
-            if (!data) return null;
-            switch (data.unit) {
-              case Unit.CURRENCY:
-                return data.currency ?? null;
-              case Unit.CRYPTOCURRENCY:
-                return data.cryptocurrency ?? null;
-              case Unit.SECURITY:
-                return data.tradeCurrency ?? null;
-              default:
-                return null;
-            }
-          },
-          cellEditorParams: ({ data }: { data?: BookingValues }) => ({
-            options:
-              data?.unit === Unit.CRYPTOCURRENCY
-                ? cryptocurrencyOptions
-                : currencyOptions,
-          }),
-          valueSetter: ({
-            data,
-            newValue,
-          }: {
-            data: BookingValues;
-            newValue: string | null;
-          }) => {
-            switch (data.unit) {
-              case Unit.CURRENCY:
-                data.currency = newValue ?? undefined;
-                break;
-              case Unit.CRYPTOCURRENCY:
-                data.cryptocurrency = newValue ?? undefined;
-                break;
-              case Unit.SECURITY:
-                data.tradeCurrency = newValue ?? undefined;
-                break;
-            }
-            return true;
-          },
-        },
-        {
-          field: "symbol",
-          headerName: "Symbol",
-          type: TEXT_COLUMN,
-          editable: ({ data }) => {
-            if (data?.unit !== Unit.SECURITY) return false;
-            if (!data?.account) return true;
-            const acct = accounts.find((a) => a.value === data.account);
-            return !acct?.unit;
-          },
-          width: 90,
-        },
-        {
-          field: "debit",
-          type: FORMATTED_NUMERIC_COLUMN,
-          aggFunc: "sum",
-          width: 105,
-          editable: ({ data }) => {
-            if (!data?.account) return true;
-            const acct = accounts.find((a) => a.value === data.account);
-            return !isIncomeAccount(acct);
-          },
-          cellStyle: ({ context, node }: CellClassParams) =>
-            context.form.errors[`bookings.${node.rowIndex}.debit`]
-              ? { borderColor: "var(--mantine-color-error)" }
-              : { borderColor: "transparent" },
-        },
-        {
-          field: "credit",
-          type: FORMATTED_NUMERIC_COLUMN,
-          aggFunc: "sum",
-          width: 105,
-          editable: ({ data }) => {
-            if (!data?.account) return true;
-            const acct = accounts.find((a) => a.value === data.account);
-            return !isExpenseAccount(acct);
-          },
-          tooltipValueGetter: ({ context, node }) =>
-            context.form.errors[`bookings.${node?.rowIndex}.credit`],
-          cellStyle: ({ context, node }) =>
-            context.form.errors[`bookings.${node?.rowIndex}.credit`]
-              ? { borderColor: "var(--mantine-color-error)" }
-              : { borderColor: "transparent" },
-        },
-        {
-          editable: false,
-          width: 60,
-          cellClass: "actions-cell",
-          cellRenderer: ({ data, context }: CustomCellRendererProps) => {
-            if (!data) return;
-            const deleteDisabledReason =
-              data.key === context.lockedBookingKey
-                ? "Current account booking cannot be deleted"
-                : context.canDelete
-                  ? "At least 2 bookings are required"
-                  : null;
-            return (
-              <Tooltip label={deleteDisabledReason ?? "Delete booking"}>
-                <ActionIcon
-                  mt={4}
-                  color="red"
-                  size="md"
-                  variant="subtle"
-                  disabled={isSubmitting || !!deleteDisabledReason}
-                  onClick={() => {
-                    if (context.onDelete) {
-                      context.onDelete(data.key);
-                    }
-                  }}
-                  aria-label="Delete booking"
-                >
-                  <IconTrash size={16} />
-                </ActionIcon>
-              </Tooltip>
-            );
-          },
-        },
-      ] as ColDef[],
+      createEditTransactionColumnDefs({
+        accounts,
+        isSubmitting,
+      }),
     [accounts, isSubmitting],
   );
 
   return (
     <form
-      onSubmit={(e) => {
+      onSubmit={(event) => {
         gridRef.current?.api.stopEditing();
         form.onSubmit(
           (values) =>
             runSubmit(() =>
               onSubmit({
                 description: values.description ?? "",
-                bookings: values.bookings.map((b) => ({
-                  date:
-                    b.date &&
-                    typeof b.date === "object" &&
-                    "toISOString" in b.date
-                      ? (b.date as Date).toISOString()
-                      : String(b.date ?? ""),
-                  accountId: b.account ?? "",
-                  description: b.description ?? "",
-                  unit: b.unit!,
-                  currency: b.currency ?? undefined,
-                  cryptocurrency: b.cryptocurrency ?? undefined,
-                  symbol: b.symbol ?? undefined,
-                  tradeCurrency: b.tradeCurrency ?? undefined,
-                  value: b.debit ? b.debit : -(b.credit ?? 0),
-                })),
+                bookings: toTransactionSubmitBookings(values.bookings),
               }),
             ),
           console.error,
-        )(e);
+        )(event);
       }}
     >
       <Stack gap="md">
@@ -614,44 +305,44 @@ export function EditTransactionModal({
               },
             },
           }}
-          onCellValueChanged={(e) => {
-            if (e.rowIndex == null) return;
+          onCellValueChanged={(event) => {
+            if (event.rowIndex == null) return;
 
-            if (e.colDef.colId === "ccy") {
-              const booking = form.values.bookings[e.rowIndex];
+            if (event.colDef.colId === "ccy") {
+              const booking = form.values.bookings[event.rowIndex];
               switch (booking?.unit) {
                 case Unit.CURRENCY:
                   form.setFieldValue(
-                    `bookings.${e.rowIndex}.currency`,
-                    e.newValue,
+                    `bookings.${event.rowIndex}.currency`,
+                    event.newValue,
                   );
                   break;
                 case Unit.CRYPTOCURRENCY:
                   form.setFieldValue(
-                    `bookings.${e.rowIndex}.cryptocurrency`,
-                    e.newValue,
+                    `bookings.${event.rowIndex}.cryptocurrency`,
+                    event.newValue,
                   );
                   break;
                 case Unit.SECURITY:
                   form.setFieldValue(
-                    `bookings.${e.rowIndex}.tradeCurrency`,
-                    e.newValue,
+                    `bookings.${event.rowIndex}.tradeCurrency`,
+                    event.newValue,
                   );
                   break;
               }
             } else {
               form.setFieldValue(
-                `bookings.${e.rowIndex}.${e.colDef.field}`,
-                e.newValue,
+                `bookings.${event.rowIndex}.${event.colDef.field}`,
+                event.newValue,
               );
             }
 
-            if (e.colDef.field === "account") {
-              const currentBooking = form.values.bookings[e.rowIndex];
+            if (event.colDef.field === "account") {
+              const currentBooking = form.values.bookings[event.rowIndex];
               if (!currentBooking) return;
 
               const selectedAccount = accounts.find(
-                (a) => a.value === e.newValue,
+                (account) => account.value === event.newValue,
               );
               if (selectedAccount) {
                 const clearDebit = isIncomeAccount(selectedAccount);
@@ -659,7 +350,7 @@ export function EditTransactionModal({
 
                 const nextBooking: BookingValues = {
                   ...currentBooking,
-                  account: e.newValue ?? undefined,
+                  account: event.newValue ?? undefined,
                   unit: selectedAccount.unit,
                   currency: selectedAccount.currency ?? undefined,
                   cryptocurrency: selectedAccount.cryptocurrency ?? undefined,
@@ -669,18 +360,21 @@ export function EditTransactionModal({
                   credit: clearCredit ? undefined : currentBooking.credit,
                 };
 
-                form.setFieldValue(`bookings.${e.rowIndex}`, nextBooking);
+                form.setFieldValue(`bookings.${event.rowIndex}`, nextBooking);
 
-                const rowNode = e.api.getRowNode(e.data.key);
+                const rowNode = event.api.getRowNode(event.data.key);
                 if (rowNode) {
                   rowNode.setData(nextBooking);
                 }
               }
             }
 
-            if (e.colDef.field === "debit" || e.colDef.field === "credit") {
+            if (
+              event.colDef.field === "debit" ||
+              event.colDef.field === "credit"
+            ) {
               form.setFieldValue(
-                `bookings.${e.rowIndex}.${e.colDef.field === "credit" ? "debit" : "credit"}`,
+                `bookings.${event.rowIndex}.${event.colDef.field === "credit" ? "debit" : "credit"}`,
                 undefined,
               );
             }
@@ -693,10 +387,12 @@ export function EditTransactionModal({
             onDelete: (key: string) => {
               if (isSubmitting) return;
               const index = form.values.bookings.findIndex(
-                (b) => b.key === key,
+                (booking) => booking.key === key,
               );
 
-              if (index === -1) throw new Error("Booking not found");
+              if (index === -1) {
+                throw new Error("Booking not found");
+              }
 
               form.removeListItem("bookings", index);
             },

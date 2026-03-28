@@ -25,6 +25,7 @@ import {
   getGroupDeleteAvailability,
   getGroupUnarchiveAvailability,
 } from "./account-tree-rules";
+import { computeRawBalanceInReferenceCurrency } from "./accounts-reference-balance";
 
 type AccountState = "active" | "inactive";
 
