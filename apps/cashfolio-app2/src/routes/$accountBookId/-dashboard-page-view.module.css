@@ -3,6 +3,29 @@
   height: 420px;
 }
 
+.assetAllocationContent {
+  margin-top: 20px;
+  width: 100%;
+}
+
+.assetAllocationChartContainer {
+  height: clamp(420px, 55vh, 640px);
+  min-height: 420px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+@media (max-width: 900px) {
+  .assetAllocationChartContainer {
+    height: 360px;
+    min-height: 360px;
+  }
+}
+
 .chartContainer :global(.ag-charts-overlay) {
+  color: var(--mantine-color-dimmed);
+}
+
+.assetAllocationChartContainer :global(.ag-charts-overlay) {
   color: var(--mantine-color-dimmed);
 }

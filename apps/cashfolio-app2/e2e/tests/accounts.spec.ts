@@ -7,6 +7,7 @@ import {
 } from "../support/grid";
 import {
   resetAndSeedDatabase,
+  seedDashboardAssetAllocationBalances,
   seedAssetAccountWithMissingReferenceBalance,
   seedThreeBookingSplitTransaction,
   type SeededData,
@@ -355,4 +356,42 @@ test("asset ledger segmented links open chart and render a visible chart", async
   } finally {
     page.off("console", handleConsole);
   }
+});
+
+test("dashboard asset allocation donut renders for positive top-level asset groups", async ({
+  page,
+}) => {
+  await seedDashboardAssetAllocationBalances({
+    accountBookId: seeded.accountBookId,
+    primaryAssetAccountId: seeded.cashAccount.id,
+    counterAccountId: seeded.expenseAccount.id,
+  });
+
+  await page.goto(`/${seeded.accountBookId}`);
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}/accounts\\?tab=ASSET&mode=active$`),
+  );
+  await page.getByRole("link", { name: "Dashboard" }).click();
+  await expectDashboardPeriodInUrl(page, seeded.accountBookId, "12m");
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+
+  const assetAllocationCard = page.getByTestId(
+    "dashboard-asset-allocation-card",
+  );
+
+  await expect(assetAllocationCard).toBeVisible();
+  await expect(
+    assetAllocationCard.getByText(
+      "No positive, convertible asset balances are available for allocation.",
+    ),
+  ).toHaveCount(0);
+  await expect(
+    assetAllocationCard.locator(".ag-charts-no-data-overlay"),
+  ).toHaveCount(0);
+  await expect(assetAllocationCard.getByText("No data to display")).toHaveCount(
+    0,
+  );
+
+  const chartCanvas = assetAllocationCard.locator("canvas").first();
+  await expect(chartCanvas).toBeVisible();
 });

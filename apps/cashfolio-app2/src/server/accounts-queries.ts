@@ -16,6 +16,7 @@ import {
   hasInactiveAncestorGroup,
 } from "./accounts-helpers";
 import {
+  type ActionAvailability,
   accountTypeRequiresZeroBalanceForArchive,
   getAccountArchiveAvailability,
   getAccountDeleteAvailability,
@@ -33,6 +34,7 @@ type AccountTreeDataInput = {
   equityAccountSubtype?: EquityAccountSubtype;
   accountState?: AccountState;
   includeReferenceBalances?: boolean;
+  includeActionAvailability?: boolean;
 };
 
 type AccountReferenceBalancesInput = {
@@ -59,6 +61,16 @@ type AccountReferenceBalanceSource = {
   symbol: string | null;
   tradeCurrency: string | null;
 };
+
+const ACTION_AVAILABILITY_NOT_REQUESTED_REASON =
+  "Action availability not requested";
+
+function unavailableActionAvailability(): ActionAvailability {
+  return {
+    enabled: false,
+    disabledReason: ACTION_AVAILABILITY_NOT_REQUESTED_REASON,
+  };
+}
 
 function getAccountsWhereClause(args: {
   accountBookId: string;
@@ -332,6 +344,7 @@ async function getAccountTreeDataInternal(args: {
   }
   const accountState = data.accountState ?? "active";
   const includeReferenceBalances = data.includeReferenceBalances ?? true;
+  const includeActionAvailability = data.includeActionAvailability ?? true;
 
   const [accounts, accountGroups] = await Promise.all([
     prisma.account.findMany({
@@ -374,14 +387,16 @@ async function getAccountTreeDataInternal(args: {
     activeAccountsForGroup,
     activeGroupsForParent,
   ] = await Promise.all([
-    prisma.booking.groupBy({
-      by: ["accountId"],
-      where: {
-        accountBookId: data.accountBookId,
-        accountId: { in: accounts.map((a) => a.id) },
-      },
-      _count: true,
-    }),
+    includeActionAvailability
+      ? prisma.booking.groupBy({
+          by: ["accountId"],
+          where: {
+            accountBookId: data.accountBookId,
+            accountId: { in: accounts.map((a) => a.id) },
+          },
+          _count: true,
+        })
+      : Promise.resolve([]),
     assetAndLiabilityAccountIds.length > 0
       ? prisma.booking.groupBy({
           by: ["accountId"],
@@ -401,37 +416,45 @@ async function getAccountTreeDataInternal(args: {
         fxHoldingGainLossAccountGroupId: true,
       },
     }),
-    prisma.account.groupBy({
-      by: ["groupId"],
-      where: { accountBookId: data.accountBookId },
-      _count: true,
-    }),
-    prisma.accountGroup.groupBy({
-      by: ["parentGroupId"],
-      where: {
-        accountBookId: data.accountBookId,
-        parentGroupId: { not: null },
-      },
-      _count: true,
-    }),
-    prisma.account.groupBy({
-      by: ["groupId"],
-      where: {
-        accountBookId: data.accountBookId,
-        groupId: { not: null },
-        isActive: true,
-      },
-      _count: true,
-    }),
-    prisma.accountGroup.groupBy({
-      by: ["parentGroupId"],
-      where: {
-        accountBookId: data.accountBookId,
-        parentGroupId: { not: null },
-        isActive: true,
-      },
-      _count: true,
-    }),
+    includeActionAvailability
+      ? prisma.account.groupBy({
+          by: ["groupId"],
+          where: { accountBookId: data.accountBookId },
+          _count: true,
+        })
+      : Promise.resolve([]),
+    includeActionAvailability
+      ? prisma.accountGroup.groupBy({
+          by: ["parentGroupId"],
+          where: {
+            accountBookId: data.accountBookId,
+            parentGroupId: { not: null },
+          },
+          _count: true,
+        })
+      : Promise.resolve([]),
+    includeActionAvailability
+      ? prisma.account.groupBy({
+          by: ["groupId"],
+          where: {
+            accountBookId: data.accountBookId,
+            groupId: { not: null },
+            isActive: true,
+          },
+          _count: true,
+        })
+      : Promise.resolve([]),
+    includeActionAvailability
+      ? prisma.accountGroup.groupBy({
+          by: ["parentGroupId"],
+          where: {
+            accountBookId: data.accountBookId,
+            parentGroupId: { not: null },
+            isActive: true,
+          },
+          _count: true,
+        })
+      : Promise.resolve([]),
   ]);
 
   const bookingCountByAccountId = new Map(
@@ -466,15 +489,21 @@ async function getAccountTreeDataInternal(args: {
     );
     const hasZeroBalance = !requiresZeroBalance || rawBalance === 0;
     const hasInactiveAncestor = hasInactiveAncestorGroup(a.groupId, groupById);
-    const deleteAvailability = getAccountDeleteAvailability(hasBookings);
-    const archiveAvailability = getAccountArchiveAvailability({
-      isActive: a.isActive,
-      hasZeroBalance,
-    });
-    const unarchiveAvailability = getAccountUnarchiveAvailability({
-      isActive: a.isActive,
-      hasInactiveAncestor,
-    });
+    const deleteAvailability = includeActionAvailability
+      ? getAccountDeleteAvailability(hasBookings)
+      : unavailableActionAvailability();
+    const archiveAvailability = includeActionAvailability
+      ? getAccountArchiveAvailability({
+          isActive: a.isActive,
+          hasZeroBalance,
+        })
+      : unavailableActionAvailability();
+    const unarchiveAvailability = includeActionAvailability
+      ? getAccountUnarchiveAvailability({
+          isActive: a.isActive,
+          hasInactiveAncestor,
+        })
+      : unavailableActionAvailability();
     const displayBalance =
       a.type === "ASSET"
         ? rawBalance
@@ -483,7 +512,6 @@ async function getAccountTreeDataInternal(args: {
           : null;
     const displayBalanceInReferenceCurrency =
       displayBalanceInReferenceCurrencyByAccountId.get(a.id) ?? null;
-
     return {
       id: a.id,
       nodeType: "account" as "account" | "accountGroup",
@@ -575,20 +603,26 @@ async function getAccountTreeDataInternal(args: {
       groupById,
     );
     const isReferencedByAccountBook = referencedByAccountBook.has(ag.id);
-    const deleteAvailability = getGroupDeleteAvailability({
-      hasChildAccounts,
-      hasChildGroups,
-      isReferencedByAccountBook,
-    });
-    const archiveAvailability = getGroupArchiveAvailability({
-      isActive: ag.isActive,
-      hasActiveChildAccounts,
-      hasActiveChildGroups,
-    });
-    const unarchiveAvailability = getGroupUnarchiveAvailability({
-      isActive: ag.isActive,
-      hasInactiveAncestor,
-    });
+    const deleteAvailability = includeActionAvailability
+      ? getGroupDeleteAvailability({
+          hasChildAccounts,
+          hasChildGroups,
+          isReferencedByAccountBook,
+        })
+      : unavailableActionAvailability();
+    const archiveAvailability = includeActionAvailability
+      ? getGroupArchiveAvailability({
+          isActive: ag.isActive,
+          hasActiveChildAccounts,
+          hasActiveChildGroups,
+        })
+      : unavailableActionAvailability();
+    const unarchiveAvailability = includeActionAvailability
+      ? getGroupUnarchiveAvailability({
+          isActive: ag.isActive,
+          hasInactiveAncestor,
+        })
+      : unavailableActionAvailability();
     return {
       id: ag.id,
       nodeType: "accountGroup" as "account" | "accountGroup",

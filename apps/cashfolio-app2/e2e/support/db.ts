@@ -413,6 +413,92 @@ export async function seedAssetAccountWithMissingReferenceBalance(args: {
   return account;
 }
 
+export async function seedDashboardAssetAllocationBalances(args: {
+  accountBookId: string;
+  primaryAssetAccountId: string;
+  counterAccountId: string;
+}) {
+  const topLevelGroup = await prisma.accountGroup.create({
+    data: {
+      id: createId(),
+      accountBookId: args.accountBookId,
+      name: "E2E Brokerage",
+      type: AccountType.ASSET,
+      sortOrder: 10,
+    },
+    select: { id: true, name: true },
+  });
+
+  const topLevelGroupAccount = await prisma.account.create({
+    data: {
+      id: createId(),
+      accountBookId: args.accountBookId,
+      name: "E2E Brokerage Cash",
+      type: AccountType.ASSET,
+      groupId: topLevelGroup.id,
+      unit: Unit.CURRENCY,
+      currency: "CHF",
+      sortOrder: 0,
+    },
+    select: { id: true },
+  });
+
+  const transactionId = createId();
+  await prisma.transaction.create({
+    data: {
+      id: transactionId,
+      accountBookId: args.accountBookId,
+      description: "E2E Dashboard Allocation Seed",
+    },
+  });
+
+  const date = new Date("2026-01-03T00:00:00.000Z");
+  await prisma.booking.createMany({
+    data: [
+      {
+        id: createId(),
+        accountBookId: args.accountBookId,
+        transactionId,
+        accountId: args.primaryAssetAccountId,
+        date,
+        description: "E2E Dashboard Allocation Seed",
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        value: 200,
+        sortOrder: 0,
+      },
+      {
+        id: createId(),
+        accountBookId: args.accountBookId,
+        transactionId,
+        accountId: topLevelGroupAccount.id,
+        date,
+        description: "E2E Dashboard Allocation Seed",
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        value: 100,
+        sortOrder: 1,
+      },
+      {
+        id: createId(),
+        accountBookId: args.accountBookId,
+        transactionId,
+        accountId: args.counterAccountId,
+        date,
+        description: "E2E Dashboard Allocation Seed",
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        value: -300,
+        sortOrder: 2,
+      },
+    ],
+  });
+
+  return {
+    topLevelGroupName: topLevelGroup.name,
+  };
+}
+
 export async function disconnectDb(): Promise<void> {
   await prisma.$disconnect();
 }
