@@ -40,10 +40,10 @@ function DashboardPage() {
         selectedPeriod={selectedPeriod}
         onPeriodChange={(nextPeriod: DashboardPeriod) =>
           navigate({
-            search:
+            search: () =>
               nextPeriod === DASHBOARD_PERIOD_10Y
                 ? { period: DASHBOARD_PERIOD_10Y }
-                : { period: undefined },
+                : {},
           })
         }
       />
