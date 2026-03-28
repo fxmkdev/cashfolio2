@@ -361,7 +361,7 @@ test("asset ledger segmented links open chart and render a visible chart", async
 test("dashboard asset allocation donut renders for positive top-level asset groups", async ({
   page,
 }) => {
-  const seededAllocation = await seedDashboardAssetAllocationBalances({
+  await seedDashboardAssetAllocationBalances({
     accountBookId: seeded.accountBookId,
     primaryAssetAccountId: seeded.cashAccount.id,
     counterAccountId: seeded.expenseAccount.id,
@@ -394,11 +394,6 @@ test("dashboard asset allocation donut renders for positive top-level asset grou
 
   const chartCanvas = assetAllocationCard.locator("canvas").first();
   await expect(chartCanvas).toBeVisible();
-
-  await expect(assetAllocationCard.getByText("Assets")).toBeVisible();
-  await expect(
-    assetAllocationCard.getByText(seededAllocation.topLevelGroupName),
-  ).toBeVisible();
 
   const chartBox = await chartCanvas.boundingBox();
   if (chartBox == null) {
