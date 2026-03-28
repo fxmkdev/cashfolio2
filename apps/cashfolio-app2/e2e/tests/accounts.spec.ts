@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
 import {
   agGridCellByColId,
   agGridPinnedBottomRow,
@@ -292,6 +292,16 @@ test("footer total stays blank when an account ref-currency balance is missing",
 test("asset ledger segmented links open chart and render a visible chart", async ({
   page,
 }) => {
+  const agChartsErrors: string[] = [];
+  const handleConsole = (message: ConsoleMessage) => {
+    if (message.type() !== "error") return;
+    const text = message.text();
+    if (!text.includes("AG Charts")) return;
+    agChartsErrors.push(text);
+  };
+
+  page.on("console", handleConsole);
+
   await seedThreeBookingSplitTransaction({
     accountBookId: seeded.accountBookId,
     description: "E2E Chart Seed",
@@ -300,30 +310,35 @@ test("asset ledger segmented links open chart and render a visible chart", async
     date: "2026-01-07T00:00:00.000Z",
   });
 
-  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
+  try {
+    await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
 
-  const cashRow = agGridRowByText(page, seeded.cashAccount.name);
-  await expect(cashRow).toBeVisible();
-  await cashRow.dblclick();
+    const cashRow = agGridRowByText(page, seeded.cashAccount.name);
+    await expect(cashRow).toBeVisible();
+    await cashRow.dblclick();
 
-  await expect(page.getByRole("link", { name: "Chart" })).toBeVisible();
-  await page.getByRole("link", { name: "Chart" }).click();
+    await expect(page.getByRole("link", { name: "Chart" })).toBeVisible();
+    await page.getByRole("link", { name: "Chart" }).click();
 
-  await expect(page).toHaveURL(
-    new RegExp(`/${seeded.accountBookId}/${seeded.cashAccount.id}/chart$`),
-  );
-  await expect(
-    page.getByText("No bookings available for this account yet."),
-  ).toHaveCount(0);
+    await expect(page).toHaveURL(
+      new RegExp(`/${seeded.accountBookId}/${seeded.cashAccount.id}/chart$`),
+    );
+    await expect(
+      page.getByText("No bookings available for this account yet."),
+    ).toHaveCount(0);
 
-  const chartCanvas = page.locator(".ag-charts-wrapper canvas").first();
-  await expect(chartCanvas).toBeVisible();
+    const chartCanvas = page.locator(".ag-charts-wrapper canvas").first();
+    await expect(chartCanvas).toBeVisible();
+    await expect(agChartsErrors).toEqual([]);
 
-  await page.getByRole("link", { name: "Ledger" }).click();
-  await expect(page).toHaveURL(
-    new RegExp(`/${seeded.accountBookId}/${seeded.cashAccount.id}$`),
-  );
-  await expect(
-    page.getByRole("button", { name: "Add Transaction" }),
-  ).toBeVisible();
+    await page.getByRole("link", { name: "Ledger" }).click();
+    await expect(page).toHaveURL(
+      new RegExp(`/${seeded.accountBookId}/${seeded.cashAccount.id}$`),
+    );
+    await expect(
+      page.getByRole("button", { name: "Add Transaction" }),
+    ).toBeVisible();
+  } finally {
+    page.off("console", handleConsole);
+  }
 });
