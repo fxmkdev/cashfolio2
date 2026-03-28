@@ -236,7 +236,7 @@ export function createEditTransactionColumnDefs(args: {
         const deleteDisabledReason =
           data.key === context.lockedBookingKey
             ? "Current account booking cannot be deleted"
-            : context.canDelete
+            : context.deleteDisabled
               ? "At least 2 bookings are required"
               : null;
         return (

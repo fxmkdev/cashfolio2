@@ -382,7 +382,7 @@ export function EditTransactionModal({
           grandTotalRow="pinnedBottom"
           context={{
             status: form.isValid("bookings") ? null : form.errors.bookings,
-            canDelete: form.values.bookings.length <= 2,
+            deleteDisabled: form.values.bookings.length <= 2,
             lockedBookingKey,
             onDelete: (key: string) => {
               if (isSubmitting) return;
