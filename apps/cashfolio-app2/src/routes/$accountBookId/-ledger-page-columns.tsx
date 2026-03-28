@@ -55,7 +55,7 @@ export function useLedgerColumnDefs(args: {
       {
         field: "counterpartyAccounts",
         headerName: "Account(s)",
-        flex: 1,
+        width: 220,
         cellRenderer: ({
           value,
           data,
@@ -82,7 +82,8 @@ export function useLedgerColumnDefs(args: {
       {
         field: "description",
         headerName: "Description",
-        width: 400,
+        minWidth: 280,
+        flex: 1,
         filter: "agTextColumnFilter",
       },
       ...(isEquity
