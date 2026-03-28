@@ -1,14 +1,8 @@
 import type { GridApi, GridReadyEvent } from "ag-grid-enterprise";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useExpandedGroups } from "../../hooks/use-expanded-groups";
-import type {
-  AccountInitialValues,
-  TransformedFormValues,
-} from "../../components/edit-account-modal";
-import type {
-  AccountGroupInitialValues,
-  AccountGroupTransformedFormValues,
-} from "../../components/edit-account-group-modal";
+import type { TransformedFormValues } from "../../components/edit-account-modal";
+import type { AccountGroupTransformedFormValues } from "../../components/edit-account-group-modal";
 import {
   archiveAccount,
   archiveAccountGroup,
@@ -16,7 +10,6 @@ import {
   createAccountGroup,
   deleteAccount,
   deleteAccountGroup,
-  getAccountReferenceBalances,
   reorderAccountTreeItems,
   unarchiveAccount,
   unarchiveAccountGroup,
@@ -26,7 +19,6 @@ import {
 import {
   REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
   type AccountsGridRow,
-  getTabDefinition,
   tabs,
   type ReferenceCurrencyTotalFooterRow,
   type TreeRow,
@@ -37,11 +29,12 @@ import {
   useRowsByParentKey,
   useSelectedSiblingRows,
 } from "./-accounts-page-data";
-import { useAccountTreeColumnDefs } from "./-accounts-page-columns";
 import {
-  REFERENCE_BALANCES_LOADING_DELAY_MS,
-  getImmediateReferenceBalance,
-} from "./-reference-balance-loading";
+  type RowTarget,
+  useAccountsPageModalState,
+} from "./-accounts-page-modal-state";
+import { useAccountsReferenceBalanceRows } from "./-accounts-page-reference-balances";
+import { useAccountTreeColumnDefs } from "./-accounts-page-columns";
 import type { loadAccountsPageData } from "./-accounts-page-loader";
 import type { AccountsPageViewProps } from "./-accounts-page-view";
 
@@ -61,19 +54,13 @@ type AccountsMutationApi = {
   reorderAccountTreeItems: typeof reorderAccountTreeItems;
 };
 
-type RowTarget = {
-  id: string;
-  nodeType: "account" | "accountGroup";
-  name: string;
-};
-
 type AccountsMutationState = {
-  getEditingAccount: () =>
-    | { id: string; initialValues: AccountInitialValues }
-    | undefined;
-  getEditingGroup: () =>
-    | { id: string; initialValues: AccountGroupInitialValues }
-    | undefined;
+  getEditingAccount: () => ReturnType<
+    typeof useAccountsPageModalState
+  >["editingAccount"];
+  getEditingGroup: () => ReturnType<
+    typeof useAccountsPageModalState
+  >["editingGroup"];
   getDeletingRow: () => RowTarget | undefined;
   getArchivingRow: () => RowTarget | undefined;
   setCreateModalOpened: (opened: boolean) => void;
@@ -268,162 +255,19 @@ export function useAccountsPageController(args: {
   } = args.loaderData;
 
   const gridApiRef = useRef<GridApi<AccountsGridRow> | null>(null);
-  const [referenceBalanceByRowId, setReferenceBalanceByRowId] = useState(
-    () => new Map<string, number | null>(),
-  );
-  const [isReferenceBalancesLoading, setIsReferenceBalancesLoading] =
-    useState(false);
-  const [showReferenceBalancesLoading, setShowReferenceBalancesLoading] =
-    useState(false);
-  const [createModalOpened, setCreateModalOpened] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<
-    { id: string; initialValues: AccountInitialValues } | undefined
-  >();
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [createGroupModalOpened, setCreateGroupModalOpened] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<
-    { id: string; initialValues: AccountGroupInitialValues } | undefined
-  >();
-  const [editGroupModalOpen, setEditGroupModalOpen] = useState(false);
-  const [archivingRow, setArchivingRow] = useState<RowTarget | undefined>();
-  const [deletingRow, setDeletingRow] = useState<RowTarget | undefined>();
-  const [reorderingRow, setReorderingRow] = useState<
-    { name: string; parentKey: string } | undefined
-  >();
-
-  const isEquityTab = args.tab.startsWith("EQUITY-");
+  const modalState = useAccountsPageModalState();
   const isArchivedMode = args.mode === "archived";
-  const loaderRowsWithImmediateReferenceBalances = useMemo(
-    () =>
-      loaderRows.map((row) => {
-        const immediateReferenceBalance = getImmediateReferenceBalance({
-          data: row,
-          referenceCurrency,
-        });
-        if (
-          immediateReferenceBalance == null ||
-          row.balanceInReferenceCurrency === immediateReferenceBalance
-        ) {
-          return row;
-        }
-        return {
-          ...row,
-          balanceInReferenceCurrency: immediateReferenceBalance,
-        };
-      }),
-    [loaderRows, referenceCurrency],
-  );
-  const loaderRowsStateKey = useMemo(
-    () =>
-      JSON.stringify(
-        loaderRowsWithImmediateReferenceBalances.map((row) => [
-          row.id,
-          row.nodeType,
-          row.name,
-          row.parentId ?? "",
-          row.sortOrder ?? "",
-          row.balance ?? "",
-          row.unit ?? "",
-          row.currency ?? "",
-          row.tradeCurrency ?? "",
-          row.cryptocurrency ?? "",
-          row.symbol ?? "",
-          row.balanceInReferenceCurrency ?? "",
-        ]),
-      ),
-    [loaderRowsWithImmediateReferenceBalances],
-  );
-
-  const rowsWithAccountReferenceBalances = useMemo(
-    () =>
-      loaderRowsWithImmediateReferenceBalances.map((row) => {
-        if (!referenceBalanceByRowId.has(row.id)) {
-          return row;
-        }
-        const referenceBalance = referenceBalanceByRowId.get(row.id) ?? null;
-        if (referenceBalance === row.balanceInReferenceCurrency) {
-          return row;
-        }
-        return {
-          ...row,
-          balanceInReferenceCurrency: referenceBalance,
-        };
-      }),
-    [loaderRowsWithImmediateReferenceBalances, referenceBalanceByRowId],
-  );
-
-  useEffect(() => {
-    setReferenceBalanceByRowId(new Map());
-  }, [args.accountBookId, args.mode, args.tab, loaderRowsStateKey]);
-
-  useEffect(() => {
-    if (isEquityTab) {
-      setIsReferenceBalancesLoading(false);
-      return;
-    }
-
-    const tabDefinition = getTabDefinition(args.tab);
-    let active = true;
-    setIsReferenceBalancesLoading(true);
-
-    void getAccountReferenceBalances({
-      data: {
-        accountBookId: args.accountBookId,
-        accountState: isArchivedMode ? "inactive" : "active",
-        type: tabDefinition.type,
-        ...("equityAccountSubtype" in tabDefinition
-          ? { equityAccountSubtype: tabDefinition.equityAccountSubtype }
-          : undefined),
-      },
-    })
-      .then((referenceBalanceData) => {
-        if (!active) return;
-
-        setReferenceBalanceByRowId(
-          new Map(
-            referenceBalanceData.rows.map((row) => [
-              row.id,
-              row.balanceInReferenceCurrency,
-            ]),
-          ),
-        );
-      })
-      .catch((error) => {
-        console.error(
-          "Unable to load reference-currency balances for accounts tab",
-          error,
-        );
-      })
-      .finally(() => {
-        if (!active) return;
-        setIsReferenceBalancesLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [
-    args.accountBookId,
-    args.tab,
-    isArchivedMode,
+  const {
     isEquityTab,
-    loaderRowsStateKey,
-  ]);
-
-  useEffect(() => {
-    if (!isReferenceBalancesLoading) {
-      setShowReferenceBalancesLoading(false);
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setShowReferenceBalancesLoading(true);
-    }, REFERENCE_BALANCES_LOADING_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [isReferenceBalancesLoading]);
+    rowsWithAccountReferenceBalances,
+    shouldShowReferenceBalancesLoading,
+  } = useAccountsReferenceBalanceRows({
+    accountBookId: args.accountBookId,
+    tab: args.tab,
+    mode: args.mode,
+    referenceCurrency,
+    rows: loaderRows,
+  });
 
   const storageKey = `cashfolio:expandedGroups:${args.accountBookId}:${args.mode}:${args.tab}`;
   const { isGroupOpenByDefault, onRowGroupOpened } =
@@ -469,14 +313,12 @@ export function useAccountsPageController(args: {
   const rowsByParentKey = useRowsByParentKey(rows);
   const selectedSiblingRows = useSelectedSiblingRows(
     rowsByParentKey,
-    reorderingRow,
+    modalState.reorderingRow,
   );
   const referenceCurrencyBalanceTotal = useReferenceCurrencyBalanceTotal(
     rows,
     !isEquityTab,
   );
-  const shouldShowReferenceBalancesLoading =
-    isReferenceBalancesLoading && showReferenceBalancesLoading;
 
   useEffect(() => {
     gridApiRef.current?.refreshCells({
@@ -503,54 +345,20 @@ export function useAccountsPageController(args: {
     [],
   );
 
-  const handleEditRow = useCallback((data: TreeRow) => {
-    if (data.nodeType === "account") {
-      setEditingAccount({
-        id: data.id,
-        initialValues: {
-          name: data.name,
-          type: data.type,
-          equityAccountSubtype: data.equityAccountSubtype,
-          groupId: data.groupId ?? undefined,
-          sortOrder: data.sortOrder ?? undefined,
-          unit: data.unit,
-          currency: data.currency,
-          cryptocurrency: data.cryptocurrency,
-          symbol: data.symbol,
-          tradeCurrency: data.tradeCurrency,
-        },
-      });
-      setEditModalOpen(true);
-      return;
-    }
-
-    setEditingGroup({
-      id: data.id,
-      initialValues: {
-        name: data.name,
-        type: data.type,
-        equityAccountSubtype: data.equityAccountSubtype,
-        parentGroupId: data.parentId,
-        sortOrder: data.sortOrder ?? undefined,
-      },
-    });
-    setEditGroupModalOpen(true);
-  }, []);
-
   const actions = createAccountsMutationActions({
     accountBookId: args.accountBookId,
     invalidate: args.invalidate,
     state: {
-      getEditingAccount: () => editingAccount,
-      getEditingGroup: () => editingGroup,
-      getDeletingRow: () => deletingRow,
-      getArchivingRow: () => archivingRow,
-      setCreateModalOpened,
-      setEditModalOpen,
-      setCreateGroupModalOpened,
-      setEditGroupModalOpen,
-      setDeletingRow,
-      setArchivingRow,
+      getEditingAccount: () => modalState.editingAccount,
+      getEditingGroup: () => modalState.editingGroup,
+      getDeletingRow: () => modalState.deletingRow,
+      getArchivingRow: () => modalState.archivingRow,
+      setCreateModalOpened: modalState.setCreateModalOpened,
+      setEditModalOpen: modalState.setEditModalOpen,
+      setCreateGroupModalOpened: modalState.setCreateGroupModalOpened,
+      setEditGroupModalOpen: modalState.setEditGroupModalOpen,
+      setDeletingRow: modalState.setDeletingRow,
+      setArchivingRow: modalState.setArchivingRow,
     },
   });
 
@@ -561,11 +369,11 @@ export function useAccountsPageController(args: {
     referenceCurrency,
     isReferenceBalancesLoading: shouldShowReferenceBalancesLoading,
     balanceInReferenceCurrencyByGroupId,
-    onEditRow: handleEditRow,
+    onEditRow: modalState.handleEditRow,
     onUnarchiveRow: actions.handleUnarchiveRow,
-    onArchiveRow: setArchivingRow,
-    onDeleteRow: setDeletingRow,
-    onReorderRow: setReorderingRow,
+    onArchiveRow: modalState.setArchivingRow,
+    onDeleteRow: modalState.setDeletingRow,
+    onReorderRow: modalState.setReorderingRow,
   });
 
   return {
@@ -581,34 +389,34 @@ export function useAccountsPageController(args: {
     pinnedBottomRowData,
     isGroupOpenByDefault,
     onRowGroupOpened,
-    createModalOpened,
-    editModalOpen,
-    createGroupModalOpened,
-    editGroupModalOpen,
-    editingAccount,
-    editingGroup,
-    deletingRow,
-    archivingRow,
-    reorderingRow,
+    createModalOpened: modalState.createModalOpened,
+    editModalOpen: modalState.editModalOpen,
+    createGroupModalOpened: modalState.createGroupModalOpened,
+    editGroupModalOpen: modalState.editGroupModalOpen,
+    editingAccount: modalState.editingAccount,
+    editingGroup: modalState.editingGroup,
+    deletingRow: modalState.deletingRow,
+    archivingRow: modalState.archivingRow,
+    reorderingRow: modalState.reorderingRow,
     selectedSiblingRows,
-    onOpenCreateGroup: () => setCreateGroupModalOpened(true),
-    onOpenCreateAccount: () => setCreateModalOpened(true),
+    onOpenCreateGroup: () => modalState.setCreateGroupModalOpened(true),
+    onOpenCreateAccount: () => modalState.setCreateModalOpened(true),
     onOpenLedger: args.onOpenLedger,
-    onCloseCreateAccount: () => setCreateModalOpened(false),
+    onCloseCreateAccount: () => modalState.setCreateModalOpened(false),
     onSubmitCreateAccount: actions.handleCreateAccount,
-    onCloseEditAccount: () => setEditModalOpen(false),
-    onClearEditingAccount: () => setEditingAccount(undefined),
+    onCloseEditAccount: () => modalState.setEditModalOpen(false),
+    onClearEditingAccount: () => modalState.setEditingAccount(undefined),
     onSubmitUpdateAccount: actions.handleUpdateAccount,
-    onCloseCreateGroup: () => setCreateGroupModalOpened(false),
+    onCloseCreateGroup: () => modalState.setCreateGroupModalOpened(false),
     onSubmitCreateGroup: actions.handleCreateGroup,
-    onCloseEditGroup: () => setEditGroupModalOpen(false),
-    onClearEditingGroup: () => setEditingGroup(undefined),
+    onCloseEditGroup: () => modalState.setEditGroupModalOpen(false),
+    onClearEditingGroup: () => modalState.setEditingGroup(undefined),
     onSubmitUpdateGroup: actions.handleUpdateGroup,
-    onCloseDelete: () => setDeletingRow(undefined),
+    onCloseDelete: () => modalState.setDeletingRow(undefined),
     onConfirmDelete: actions.handleDelete,
-    onCloseArchive: () => setArchivingRow(undefined),
+    onCloseArchive: () => modalState.setArchivingRow(undefined),
     onConfirmArchive: actions.handleArchive,
-    onCloseReorder: () => setReorderingRow(undefined),
+    onCloseReorder: () => modalState.setReorderingRow(undefined),
     onReorderSiblings: actions.handleReorderSiblings,
   };
 }

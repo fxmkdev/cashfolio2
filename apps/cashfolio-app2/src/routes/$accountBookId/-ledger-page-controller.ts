@@ -1,16 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
-import {
-  AccountType,
-  EquityAccountSubtype,
-  Unit,
-} from "../../.prisma-client/enums";
-import type { AccountOption } from "../../components/edit-transaction-modal";
+import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import type { SimpleTransactionDraftValues } from "../../components/simple-transaction-modal";
-import {
-  getBookingUnitIdentifier,
-  isBookingValueCompatibleWithAccountType,
-  isBookingUnitCompatibleWithAccount,
-} from "../../shared/account-utils";
 import {
   createSimpleTransaction,
   createTransaction,
@@ -20,23 +10,20 @@ import {
   updateTransaction,
 } from "../../server/transactions";
 import { useLedgerColumnDefs } from "./-ledger-page-columns";
+import { useLedgerAccountOptions } from "./-ledger-page-account-options";
 import {
   buildLedgerRows,
-  createAccountOptions,
-  createCurrentAccountLabel,
   deriveSimpleTransactionEditState,
-  getSimpleTransactionDisabledReason,
-  getSimpleTransactionUnitIdentifier,
-  type SimpleTransactionEditInitialValues,
   getUnitLabel,
+  type SimpleTransactionEditInitialValues,
 } from "./-ledger-page-data";
 import {
-  buildSimpleTransactionValues,
-  normalizeSimpleDraft,
-  toCreateSplitInitialValues,
-  toEditTransactionData,
-} from "./-ledger-page-transaction-utils";
+  createEditTransactionPatchFromSimpleDraft,
+  createSplitInitialValuesFromSimpleDraft,
+  createUpdateTransactionPayloadFromSimpleValues,
+} from "./-ledger-page-edit-flow";
 import type { loadLedgerPageData } from "./-ledger-page-loader";
+import { useLedgerRebookFlow } from "./-ledger-page-rebook-flow";
 import {
   type EditMode,
   type LedgerPageViewProps,
@@ -206,109 +193,21 @@ export function useLedgerPageController(args: {
   const [rebookModalOpened, setRebookModalOpened] = useState(false);
   const [isRebookSubmitting, setIsRebookSubmitting] = useState(false);
 
-  const allAccountOptions = useMemo<AccountOption[]>(
-    () => createAccountOptions(accounts, () => true),
-    [accounts],
-  );
-
-  const accountOptions = useMemo<AccountOption[]>(
-    () => createAccountOptions(accounts, (a) => a.isActive),
-    [accounts],
-  );
-
-  const editAccountOptions = useMemo<AccountOption[]>(() => {
-    if (!editingTransactionData) return accountOptions;
-
-    const selectedAccountIds = new Set([
-      account.id,
-      ...editingTransactionData.bookings
-        .map((b) => b.account)
-        .filter((id): id is string => Boolean(id)),
-    ]);
-
-    return createAccountOptions(
-      accounts,
-      (a) => a.isActive || selectedAccountIds.has(a.id),
-    );
-  }, [account.id, accountOptions, accounts, editingTransactionData]);
-
-  const currentSimpleUnitIdentifier = useMemo(
-    () => getSimpleTransactionUnitIdentifier(account),
-    [account],
-  );
-
-  const simpleCounterAccountOptions = useMemo<AccountOption[]>(
-    () =>
-      createAccountOptions(
-        accounts,
-        (candidate) =>
-          candidate.isActive &&
-          candidate.id !== account.id &&
-          (candidate.type === AccountType.EQUITY ||
-            ((candidate.type === AccountType.ASSET ||
-              candidate.type === AccountType.LIABILITY) &&
-              currentSimpleUnitIdentifier !== null &&
-              getSimpleTransactionUnitIdentifier({
-                unit: candidate.unit,
-                currency: candidate.currency,
-                cryptocurrency: candidate.cryptocurrency,
-                symbol: candidate.symbol,
-                tradeCurrency: candidate.tradeCurrency,
-              }) === currentSimpleUnitIdentifier)),
-      ),
-    [account.id, accounts, currentSimpleUnitIdentifier],
-  );
-
-  const simpleTransactionDisabledReason = getSimpleTransactionDisabledReason({
-    account,
-    currentSimpleUnitIdentifier,
-    simpleCounterAccountOptionsLength: simpleCounterAccountOptions.length,
-  });
-
-  const currentAccountLabel = useMemo(
-    () => createCurrentAccountLabel(account),
-    [account],
-  );
-
-  const currentAccountOption = useMemo<AccountOption>(
-    () => ({
-      label: currentAccountLabel,
-      value: account.id,
-      unit: account.unit as Unit,
-      currency: account.currency ?? undefined,
-      cryptocurrency: account.cryptocurrency ?? undefined,
-      symbol: account.symbol ?? undefined,
-      tradeCurrency: account.tradeCurrency ?? undefined,
-      type: account.type,
-      equityAccountSubtype: account.equityAccountSubtype,
-    }),
-    [account, currentAccountLabel],
-  );
-
-  const editSimpleCounterAccountOptions = useMemo<AccountOption[]>(() => {
-    if (!editingSimpleInitialValues) return simpleCounterAccountOptions;
-
-    const selectedCounterAccountId =
-      editingSimpleInitialValues.counterAccountId;
-    if (
-      simpleCounterAccountOptions.some(
-        (option) => option.value === selectedCounterAccountId,
-      )
-    ) {
-      return simpleCounterAccountOptions;
-    }
-
-    const selectedCounterAccount = allAccountOptions.find(
-      (option) => option.value === selectedCounterAccountId,
-    );
-    if (!selectedCounterAccount) return simpleCounterAccountOptions;
-
-    return [selectedCounterAccount, ...simpleCounterAccountOptions];
-  }, [
+  const {
     allAccountOptions,
-    editingSimpleInitialValues,
+    accountOptions,
+    editAccountOptions,
     simpleCounterAccountOptions,
-  ]);
+    currentAccountLabel,
+    currentAccountOption,
+    editSimpleCounterAccountOptions,
+    simpleTransactionDisabledReason,
+  } = useLedgerAccountOptions({
+    account,
+    accounts,
+    editingTransactionData,
+    editingSimpleInitialValues,
+  });
 
   const actions = createLedgerMutationActions({
     accountBookId: args.accountBookId,
@@ -328,39 +227,29 @@ export function useLedgerPageController(args: {
     },
   });
 
+  const currentAccountForSimpleTransaction = {
+    id: currentAccountOption.value,
+    unit: currentAccountOption.unit,
+    currency: currentAccountOption.currency,
+    cryptocurrency: currentAccountOption.cryptocurrency,
+    symbol: currentAccountOption.symbol,
+    tradeCurrency: currentAccountOption.tradeCurrency,
+  };
+
   const handleSwitchCreateToSplit = (draft: SimpleTransactionDraftValues) => {
-    const normalized = normalizeSimpleDraft({
-      draft,
-      fallback: {
-        date: new Date(),
-        description: "",
-        counterAccountId: simpleCounterAccountOptions[0]?.value ?? "",
-        amount: 1,
-        direction: "DEBIT",
-      },
-    });
-    const counterAccount = allAccountOptions.find(
-      (option) => option.value === normalized.counterAccountId,
-    );
-    if (!counterAccount) {
-      throw new Error("Counter account was not found.");
-    }
-
-    const payload = buildSimpleTransactionValues({
-      values: normalized,
-      currentAccount: {
-        id: currentAccountOption.value,
-        unit: currentAccountOption.unit,
-        currency: currentAccountOption.currency,
-        cryptocurrency: currentAccountOption.cryptocurrency,
-        symbol: currentAccountOption.symbol,
-        tradeCurrency: currentAccountOption.tradeCurrency,
-      },
-      counterAccount,
-    });
-
     setCreateSplitInitialValues(
-      toCreateSplitInitialValues(payload.description, payload.bookings),
+      createSplitInitialValuesFromSimpleDraft({
+        draft,
+        fallback: {
+          date: new Date(),
+          description: "",
+          counterAccountId: simpleCounterAccountOptions[0]?.value ?? "",
+          amount: 1,
+          direction: "DEBIT",
+        },
+        allAccountOptions,
+        currentAccount: currentAccountForSimpleTransaction,
+      }),
     );
     setSimpleModalOpened(false);
     setModalOpened(true);
@@ -399,24 +288,10 @@ export function useLedgerPageController(args: {
     const editingId = editingTransactionId;
     if (!editingId) return;
 
-    const counterAccount = allAccountOptions.find(
-      (option) => option.value === values.counterAccountId,
-    );
-    if (!counterAccount) {
-      throw new Error("Counter account was not found.");
-    }
-
-    const payload = buildSimpleTransactionValues({
+    const payload = createUpdateTransactionPayloadFromSimpleValues({
       values,
-      currentAccount: {
-        id: currentAccountOption.value,
-        unit: currentAccountOption.unit,
-        currency: currentAccountOption.currency,
-        cryptocurrency: currentAccountOption.cryptocurrency,
-        symbol: currentAccountOption.symbol,
-        tradeCurrency: currentAccountOption.tradeCurrency,
-      },
-      counterAccount,
+      allAccountOptions,
+      currentAccount: currentAccountForSimpleTransaction,
     });
 
     await actions.updateTransaction({
@@ -437,37 +312,15 @@ export function useLedgerPageController(args: {
       return;
     }
 
-    const normalized = normalizeSimpleDraft({
-      draft,
-      fallback: editingSimpleInitialValues,
-    });
-    const counterAccount = allAccountOptions.find(
-      (option) => option.value === normalized.counterAccountId,
-    );
-    if (!counterAccount) {
-      throw new Error("Counter account was not found.");
-    }
-
-    const payload = buildSimpleTransactionValues({
-      values: normalized,
-      currentAccount: {
-        id: currentAccountOption.value,
-        unit: currentAccountOption.unit,
-        currency: currentAccountOption.currency,
-        cryptocurrency: currentAccountOption.cryptocurrency,
-        symbol: currentAccountOption.symbol,
-        tradeCurrency: currentAccountOption.tradeCurrency,
-      },
-      counterAccount,
-    });
-
     setEditingTransactionData({
       ...editingTransactionData,
-      ...toEditTransactionData(
-        editingTransactionData.id,
-        payload.description,
-        payload.bookings,
-      ),
+      ...createEditTransactionPatchFromSimpleDraft({
+        draft,
+        fallback: editingSimpleInitialValues,
+        allAccountOptions,
+        currentAccount: currentAccountForSimpleTransaction,
+        transactionId: editingTransactionData.id,
+      }),
     });
     setEditMode("SPLIT");
   };
@@ -477,54 +330,13 @@ export function useLedgerPageController(args: {
     setRebookModalOpened(true);
   }, []);
 
-  const hasCompleteBookingUnit = useMemo(() => {
-    if (!rebooking || rebooking.bookingUnit.unit == null) return false;
-
-    const bookingUnitIdentifier = getBookingUnitIdentifier({
-      unit: rebooking.bookingUnit.unit,
-      currency: rebooking.bookingUnit.currency,
-      cryptocurrency: rebooking.bookingUnit.cryptocurrency,
-      symbol: rebooking.bookingUnit.symbol,
-      tradeCurrency: rebooking.bookingUnit.tradeCurrency,
+  const { hasCompleteBookingUnit, rebookTargetAccountOptions } =
+    useLedgerRebookFlow({
+      rebooking,
+      currentAccountId: account.id,
+      accounts,
+      accountOptions,
     });
-
-    return bookingUnitIdentifier != null;
-  }, [rebooking]);
-
-  const rebookTargetAccountOptions = useMemo(() => {
-    if (
-      !rebooking ||
-      rebooking.bookingUnit.unit == null ||
-      !hasCompleteBookingUnit
-    ) {
-      return [];
-    }
-
-    const bookingUnit = {
-      ...rebooking.bookingUnit,
-      unit: rebooking.bookingUnit.unit,
-    };
-
-    const eligibleAccountIds = new Set(
-      accounts
-        .filter(
-          (candidate) =>
-            candidate.isActive &&
-            candidate.id !== account.id &&
-            isBookingUnitCompatibleWithAccount(bookingUnit, candidate) &&
-            isBookingValueCompatibleWithAccountType(
-              rebooking.bookingValue,
-              candidate,
-            ),
-        )
-        .map((candidate) => candidate.id),
-    );
-
-    return accountOptions
-      .filter((option) => eligibleAccountIds.has(option.value))
-      .toSorted((a, b) => a.label.localeCompare(b.label))
-      .map((option) => ({ value: option.value, label: option.label }));
-  }, [account.id, accountOptions, accounts, hasCompleteBookingUnit, rebooking]);
 
   const isEquity = account.type === AccountType.EQUITY;
   const isIncome =
