@@ -154,5 +154,50 @@ describe("getAccountReferenceBalances", () => {
       { id: "liability-usd", balanceInReferenceCurrency: -4.5 },
       { id: "asset-security", balanceInReferenceCurrency: null },
     ]);
+
+    expect(getCurrencyExchangeRate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceCurrency: "USD",
+        targetCurrency: "CHF",
+      }),
+    );
+    expect(getCurrencyExchangeRate).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceCurrency: "USD",
+        targetCurrency: "USD",
+      }),
+    );
+  });
+
+  it("does not fetch USD->reference FX when no account needs conversion", async () => {
+    prisma.account.findMany.mockResolvedValue([
+      {
+        id: "asset-chf",
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      },
+    ]);
+    prisma.booking.groupBy.mockResolvedValue([
+      { accountId: "asset-chf", _sum: { value: 10 } },
+    ]);
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+    });
+
+    const result = await getAccountReferenceBalances({
+      data: {
+        accountBookId: "book-3",
+        accountState: "active",
+      },
+    });
+
+    expect(result.rows).toEqual([
+      { id: "asset-chf", balanceInReferenceCurrency: 10 },
+    ]);
+    expect(getCurrencyExchangeRate).not.toHaveBeenCalled();
   });
 });

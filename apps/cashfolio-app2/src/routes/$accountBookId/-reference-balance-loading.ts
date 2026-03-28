@@ -4,7 +4,7 @@ import {
   type AccountsGridRow,
 } from "./-accounts-page-types";
 
-export const REFERENCE_BALANCES_LOADING_DELAY_MS = 120;
+export const REFERENCE_BALANCES_LOADING_DELAY_MS = 100;
 
 export function shouldShowReferenceBalanceLoadingIndicator(args: {
   data: AccountsGridRow | undefined;

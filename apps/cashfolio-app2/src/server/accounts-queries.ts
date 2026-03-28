@@ -94,14 +94,22 @@ async function getDisplayBalanceInReferenceCurrencyByAccountId(args: {
   }
 
   const today = new Date();
-  const usdToReferenceRatePromise =
-    referenceCurrency === "USD"
-      ? Promise.resolve(1)
-      : getCurrencyExchangeRate({
-          sourceCurrency: "USD",
-          targetCurrency: referenceCurrency,
-          date: today,
-        });
+  let usdToReferenceRatePromise: Promise<number | null> | null = null;
+  const getUsdToReferenceRate = () => {
+    if (referenceCurrency === "USD") {
+      return Promise.resolve(1);
+    }
+
+    if (!usdToReferenceRatePromise) {
+      usdToReferenceRatePromise = getCurrencyExchangeRate({
+        sourceCurrency: "USD",
+        targetCurrency: referenceCurrency,
+        date: today,
+      });
+    }
+
+    return usdToReferenceRatePromise;
+  };
   const exchangeRateBySourceCurrency = new Map<
     string,
     Promise<number | null>
@@ -145,9 +153,13 @@ async function getDisplayBalanceInReferenceCurrencyByAccountId(args: {
             const exchangeRatePromise =
               existingPromise ??
               (async () => {
+                if (sourceCurrency === "USD") {
+                  return getUsdToReferenceRate();
+                }
+
                 const [usdToReferenceRate, sourceToUsdRate] = await Promise.all(
                   [
-                    usdToReferenceRatePromise,
+                    getUsdToReferenceRate(),
                     getCurrencyExchangeRate({
                       sourceCurrency,
                       targetCurrency: "USD",

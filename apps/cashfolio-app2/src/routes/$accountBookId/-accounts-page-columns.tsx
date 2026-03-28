@@ -145,8 +145,10 @@ export function useAccountTreeColumnDefs(params: {
                     <div
                       style={{
                         width: "100%",
+                        height: "100%",
                         display: "flex",
                         justifyContent: "flex-end",
+                        alignItems: "center",
                       }}
                     >
                       <Loader type="dots" size="xs" />

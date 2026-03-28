@@ -64,8 +64,8 @@ function createGroupRow(): AccountsGridRow {
 }
 
 describe("reference-balance-loading", () => {
-  it("uses a 120ms delay to avoid loader flicker", () => {
-    expect(REFERENCE_BALANCES_LOADING_DELAY_MS).toBe(120);
+  it("uses a 100ms delay to avoid loader flicker", () => {
+    expect(REFERENCE_BALANCES_LOADING_DELAY_MS).toBe(100);
   });
 
   it("shows loader for unresolved account values while loading", () => {
