@@ -163,7 +163,7 @@ export function AccountsPageView({
           <LinkButton
             variant="default"
             leftSection={<IconLayoutDashboard size={16} />}
-            to="/$accountBookId"
+            to="/$accountBookId/dashboard"
             params={{ accountBookId }}
           >
             Dashboard

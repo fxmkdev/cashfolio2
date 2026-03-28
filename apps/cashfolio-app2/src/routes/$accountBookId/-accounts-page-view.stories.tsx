@@ -477,7 +477,7 @@ export const RouteSmoke: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("link", { name: "Dashboard" }));
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-book",
+      "/storybook-book/dashboard",
     );
   },
 };
