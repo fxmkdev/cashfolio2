@@ -18,11 +18,13 @@ paths are relative to that app directory.
 
 ## AG Grid Rendering Stability
 
-- For the accounts page grid
-  (`src/routes/$accountBookId/-accounts-page-view.tsx`), keep
+- For route-level account grids
+  (`src/routes/$accountBookId/-accounts-page-view.tsx` and
+  `src/routes/$accountBookId/-ledger-page-view.tsx`), keep
   `renderingMode="legacy"` and `reactiveCustomComponents={false}`.
 - Keep group-cell selection checkboxes disabled via
-  `autoGroupColumnDef.cellRendererParams.checkbox = false` on that grid.
+  `autoGroupColumnDef.cellRendererParams.checkbox = false` on the accounts tree
+  grid.
 - Source:
   [AG Grid React GridOptions](https://www.ag-grid.com/react-data-grid/grid-options/)
   (`renderingMode`, `reactiveCustomComponents`) and AG Grid type definitions for
