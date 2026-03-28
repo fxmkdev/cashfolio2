@@ -79,7 +79,7 @@ export function DashboardAssetAllocationCard({
     () => [
       {
         type: "donut",
-        angleKey: "percentage",
+        angleKey: "amount",
         calloutLabelKey: "label",
         sectorLabelKey: "percentageLabel",
         innerRadiusRatio: 0.7,

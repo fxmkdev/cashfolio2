@@ -190,8 +190,8 @@ describe("buildAssetAllocationFromTreeRows", () => {
     });
 
     expect(allocation.totalIncludedAmount).toBe(225);
-    expect(allocation.items[0]?.percentage).toBe(66.67);
-    expect(allocation.items[1]?.percentage).toBe(33.33);
+    expect(allocation.items[0]?.percentage).toBeCloseTo(66.67, 2);
+    expect(allocation.items[1]?.percentage).toBeCloseTo(33.33, 2);
   });
 
   it("computes percentages from unrounded amounts", () => {
@@ -217,12 +217,40 @@ describe("buildAssetAllocationFromTreeRows", () => {
       ],
     });
 
-    expect(allocation.totalIncludedAmount).toBe(0.01);
+    expect(allocation.totalIncludedAmount).toBeCloseTo(0.01, 10);
     expect(allocation.items[0]?.label).toBe("Small B");
-    expect(allocation.items[0]?.amount).toBe(0.01);
+    expect(allocation.items[0]?.amount).toBeCloseTo(0.01, 10);
     expect(allocation.items[0]?.percentage).toBe(60);
     expect(allocation.items[1]?.label).toBe("Small A");
-    expect(allocation.items[1]?.amount).toBe(0);
+    expect(allocation.items[1]?.amount).toBeCloseTo(0, 10);
     expect(allocation.items[1]?.percentage).toBe(40);
+  });
+
+  it("keeps displayed total consistent with rounded item amounts", () => {
+    const allocation = buildAssetAllocationFromTreeRows({
+      referenceCurrency: "CHF",
+      rows: [
+        {
+          id: "account-a",
+          name: "A",
+          nodeType: "account",
+          parentId: undefined,
+          groupId: undefined,
+          balanceInReferenceCurrency: 0.005,
+        },
+        {
+          id: "account-b",
+          name: "B",
+          nodeType: "account",
+          parentId: undefined,
+          groupId: undefined,
+          balanceInReferenceCurrency: 0.005,
+        },
+      ],
+    });
+
+    expect(allocation.items[0]?.amount).toBeCloseTo(0.01, 10);
+    expect(allocation.items[1]?.amount).toBeCloseTo(0.01, 10);
+    expect(allocation.totalIncludedAmount).toBeCloseTo(0.02, 10);
   });
 });

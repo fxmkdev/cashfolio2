@@ -131,7 +131,6 @@ export function buildAssetAllocationFromTreeRows(args: {
     (sum, item) => sum + item.amount,
     0,
   );
-  const totalIncludedAmount = round2(totalIncludedAmountRaw);
 
   const itemsWithPercentages = rawItems.map((item) => ({
     ...item,
@@ -141,6 +140,9 @@ export function buildAssetAllocationFromTreeRows(args: {
         ? 0
         : round2((item.amount / totalIncludedAmountRaw) * 100),
   }));
+  const totalIncludedAmount = round2(
+    itemsWithPercentages.reduce((sum, item) => sum + item.amount, 0),
+  );
 
   return {
     referenceCurrency,
