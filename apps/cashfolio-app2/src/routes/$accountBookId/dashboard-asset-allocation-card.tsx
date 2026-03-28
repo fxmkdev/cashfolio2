@@ -22,6 +22,7 @@ type AssetAllocation = Awaited<
 
 type AssetAllocationChartDatum = AssetAllocation["items"][number] & {
   percentageLabel: string;
+  chartAngleValue: number;
 };
 
 export type DashboardAssetAllocationCardProps = {
@@ -62,6 +63,7 @@ export function DashboardAssetAllocationCard({
       assetAllocation.items.map((item) => ({
         ...item,
         percentageLabel: `${percentageFormatter.format(item.percentage)}%`,
+        chartAngleValue: item.amount > 0 ? item.amount : item.percentage,
       })),
     [assetAllocation.items, percentageFormatter],
   );
@@ -88,7 +90,7 @@ export function DashboardAssetAllocationCard({
       series: [
         {
           type: "donut",
-          angleKey: "amount",
+          angleKey: "chartAngleValue",
           calloutLabelKey: "label",
           sectorLabelKey: "percentageLabel",
           innerRadiusRatio: 0.6,
@@ -117,8 +119,7 @@ export function DashboardAssetAllocationCard({
               {assetAllocation.items.map((item) => (
                 <Group key={item.id} justify="space-between" gap="sm">
                   <Text size="sm">
-                    {item.label} ({percentageFormatter.format(item.percentage)}
-                    %)
+                    {`${item.label} (${percentageFormatter.format(item.percentage)}%)`}
                   </Text>
                   <Text size="sm" fw={500}>
                     {currencyFormatter.format(item.amount)}
