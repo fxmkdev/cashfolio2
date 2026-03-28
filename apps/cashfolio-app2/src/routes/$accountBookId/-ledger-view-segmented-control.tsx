@@ -28,8 +28,11 @@ function SegmentLabel(props: {
         display: "flex",
         height: "100%",
         justifyContent: "center",
+        pointerEvents: "auto",
+        position: "relative",
         textDecoration: "none",
         width: "100%",
+        zIndex: 1,
       }}
     >
       {label}
@@ -47,6 +50,11 @@ export function LedgerViewSegmentedControl({
       size="xs"
       value={view}
       readOnly
+      styles={{
+        innerLabel: {
+          pointerEvents: "none",
+        },
+      }}
       data={[
         {
           value: "ledger",
