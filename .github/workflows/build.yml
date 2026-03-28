@@ -275,6 +275,7 @@ jobs:
 
           flyctl secrets set \
             --app "$FLY_APP" \
+            --stage \
             DATABASE_URL="${{ steps.neon.outputs.db_url }}" \
             LOGTO_APP_SECRET="${{ secrets.LOGTO_APP_SECRET }}" \
             SESSION_SECRET="${{ steps.session-secret.outputs.value }}" \
