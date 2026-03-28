@@ -46,7 +46,10 @@ import {
 } from "./-accounts-page-data";
 import { useAccountTreeColumnDefs } from "./-accounts-page-columns";
 import { AccountsPageView } from "./-accounts-page-view";
-import { REFERENCE_BALANCES_LOADING_DELAY_MS } from "./-reference-balance-loading";
+import {
+  REFERENCE_BALANCES_LOADING_DELAY_MS,
+  getImmediateReferenceBalance,
+} from "./-reference-balance-loading";
 
 export const Route = createFileRoute("/$accountBookId/accounts")({
   validateSearch: parseAccountsSearch,
@@ -100,10 +103,30 @@ function AccountsPage() {
 
   const isEquityTab = tab.startsWith("EQUITY-");
   const isArchivedMode = mode === "archived";
+  const loaderRowsWithImmediateReferenceBalances = useMemo(
+    () =>
+      loaderRows.map((row) => {
+        const immediateReferenceBalance = getImmediateReferenceBalance({
+          data: row,
+          referenceCurrency,
+        });
+        if (
+          immediateReferenceBalance == null ||
+          row.balanceInReferenceCurrency === immediateReferenceBalance
+        ) {
+          return row;
+        }
+        return {
+          ...row,
+          balanceInReferenceCurrency: immediateReferenceBalance,
+        };
+      }),
+    [loaderRows, referenceCurrency],
+  );
   const loaderRowsStateKey = useMemo(
     () =>
       JSON.stringify(
-        loaderRows.map((row) => [
+        loaderRowsWithImmediateReferenceBalances.map((row) => [
           row.id,
           row.nodeType,
           row.name,
@@ -118,12 +141,12 @@ function AccountsPage() {
           row.balanceInReferenceCurrency ?? "",
         ]),
       ),
-    [loaderRows],
+    [loaderRowsWithImmediateReferenceBalances],
   );
 
   const rowsWithAccountReferenceBalances = useMemo(
     () =>
-      loaderRows.map((row) => {
+      loaderRowsWithImmediateReferenceBalances.map((row) => {
         if (!referenceBalanceByRowId.has(row.id)) {
           return row;
         }
@@ -136,7 +159,7 @@ function AccountsPage() {
           balanceInReferenceCurrency: referenceBalance,
         };
       }),
-    [loaderRows, referenceBalanceByRowId],
+    [loaderRowsWithImmediateReferenceBalances, referenceBalanceByRowId],
   );
 
   useEffect(() => {

@@ -4,6 +4,7 @@ import type { GroupBalanceAggregation } from "./-accounts-page-data";
 import type { AccountsGridRow } from "./-accounts-page-types";
 import {
   REFERENCE_BALANCES_LOADING_DELAY_MS,
+  getImmediateReferenceBalance,
   shouldShowReferenceBalanceLoadingIndicator,
 } from "./-reference-balance-loading";
 
@@ -66,6 +67,25 @@ function createGroupRow(): AccountsGridRow {
 describe("reference-balance-loading", () => {
   it("uses a 100ms delay to avoid loader flicker", () => {
     expect(REFERENCE_BALANCES_LOADING_DELAY_MS).toBe(100);
+  });
+
+  it("returns immediate value for same-currency account rows", () => {
+    expect(
+      getImmediateReferenceBalance({
+        data: createAccountRow(10),
+        referenceCurrency: "CHF",
+      }),
+    ).toBe(10);
+
+    expect(
+      getImmediateReferenceBalance({
+        data: {
+          ...createAccountRow(10),
+          currency: "USD",
+        },
+        referenceCurrency: "CHF",
+      }),
+    ).toBeUndefined();
   });
 
   it("shows loader for unresolved account values while loading", () => {

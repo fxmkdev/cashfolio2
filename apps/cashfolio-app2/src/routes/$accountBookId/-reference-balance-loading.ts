@@ -1,3 +1,4 @@
+import { Unit } from "../../.prisma-client/enums";
 import type { GroupBalanceAggregation } from "./-accounts-page-data";
 import {
   isReferenceCurrencyTotalFooterRow,
@@ -5,6 +6,27 @@ import {
 } from "./-accounts-page-types";
 
 export const REFERENCE_BALANCES_LOADING_DELAY_MS = 100;
+
+export function getImmediateReferenceBalance(args: {
+  data: AccountsGridRow;
+  referenceCurrency: string;
+}): number | undefined {
+  const { data, referenceCurrency } = args;
+
+  if (isReferenceCurrencyTotalFooterRow(data) || data.nodeType !== "account") {
+    return undefined;
+  }
+
+  if (
+    data.unit !== Unit.CURRENCY ||
+    !data.currency ||
+    data.currency !== referenceCurrency
+  ) {
+    return undefined;
+  }
+
+  return data.balance ?? undefined;
+}
 
 export function shouldShowReferenceBalanceLoadingIndicator(args: {
   data: AccountsGridRow | undefined;
