@@ -13,7 +13,7 @@ import {
 import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
 import { AgCharts } from "ag-charts-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LinkButton } from "../../components/link-button";
 import { ensureChartModulesRegistered } from "../../ag-chart-modules";
 import type { getDashboardIncomeExpenseOverview } from "../../server/dashboard";
@@ -40,8 +40,13 @@ export function DashboardPageView({
   selectedPeriod,
   onPeriodChange,
 }: DashboardPageViewProps) {
+  const [isHydrated, setIsHydrated] = useState(false);
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   const currencyFormatter = useMemo(
     () =>
@@ -221,6 +226,7 @@ export function DashboardPageView({
             <SegmentedControl
               size="xs"
               value={selectedPeriod}
+              disabled={!isHydrated}
               onChange={(value) =>
                 onPeriodChange(
                   value === DASHBOARD_PERIOD_10Y

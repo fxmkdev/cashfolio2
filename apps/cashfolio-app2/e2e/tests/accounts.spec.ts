@@ -43,7 +43,7 @@ async function expectDashboardPeriodInUrl(
 
 async function selectDashboardPeriod(page: Page, period: "12m" | "10y") {
   const periodLabel = period === "10y" ? "Last 10 years" : "Last 12 months";
-  const radioGroup = page.getByRole("radiogroup").first();
+  const radioGroup = page.locator('[role="radiogroup"]:visible').first();
   const input = radioGroup
     .locator(`input[type="radio"][value="${period}"]`)
     .first();
@@ -57,7 +57,14 @@ async function selectDashboardPeriod(page: Page, period: "12m" | "10y") {
     .filter({ hasText: periodLabel })
     .first();
 
+  await expect(radioGroup).toBeVisible();
+  await expect(input).toBeEnabled();
   await expect(optionLabel).toBeVisible();
+
+  if (await input.isChecked()) {
+    return;
+  }
+
   await optionLabel.click();
   await expect(input).toBeChecked();
 }
