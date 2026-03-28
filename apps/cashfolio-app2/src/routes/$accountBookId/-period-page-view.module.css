@@ -1,0 +1,21 @@
+.periodSelectorRow {
+  flex-wrap: wrap;
+}
+
+.chartContainer {
+  margin-top: 20px;
+  width: 100%;
+  height: clamp(420px, 58vh, 680px);
+  min-height: 420px;
+}
+
+.chartContainer :global(.ag-charts-overlay) {
+  color: var(--mantine-color-dimmed);
+}
+
+@media (max-width: 900px) {
+  .chartContainer {
+    height: 360px;
+    min-height: 360px;
+  }
+}

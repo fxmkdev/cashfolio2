@@ -475,6 +475,14 @@ export const RouteSmoke: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("link", { name: "Period" }),
+    ).toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("link", { name: "Period" }));
+    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
+      "/storybook-book/period",
+    );
+
     await userEvent.click(canvas.getByRole("link", { name: "Dashboard" }));
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
       "/storybook-book/dashboard",

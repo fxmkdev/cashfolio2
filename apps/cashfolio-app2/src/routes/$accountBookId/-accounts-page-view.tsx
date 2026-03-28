@@ -8,6 +8,7 @@ import {
 } from "@mantine/core";
 import {
   IconArchive,
+  IconCalendarMonth,
   IconLayoutDashboard,
   IconPlus,
 } from "@tabler/icons-react";
@@ -167,6 +168,14 @@ export function AccountsPageView({
             params={{ accountBookId }}
           >
             Dashboard
+          </LinkButton>
+          <LinkButton
+            variant="default"
+            leftSection={<IconCalendarMonth size={16} />}
+            to="/$accountBookId/period"
+            params={{ accountBookId }}
+          >
+            Period
           </LinkButton>
           {!isArchivedMode && (
             <>
