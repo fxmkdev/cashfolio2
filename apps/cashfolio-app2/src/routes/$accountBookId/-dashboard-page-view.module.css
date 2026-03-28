@@ -5,27 +5,18 @@
 
 .assetAllocationContent {
   margin-top: 20px;
-  display: grid;
-  grid-template-columns: minmax(280px, 420px) minmax(220px, 1fr);
-  gap: 20px;
-  align-items: center;
 }
 
 .assetAllocationChartContainer {
-  height: 360px;
-}
-
-.assetAllocationTotal {
-  border-top: 1px solid var(--mantine-color-default-border);
+  height: 500px;
+  max-width: 680px;
+  margin: 0 auto;
 }
 
 @media (max-width: 900px) {
-  .assetAllocationContent {
-    grid-template-columns: 1fr;
-  }
-
   .assetAllocationChartContainer {
-    height: 320px;
+    height: 380px;
+    max-width: 100%;
   }
 }
 

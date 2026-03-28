@@ -1,7 +1,6 @@
 import {
   Alert,
   Card,
-  Group,
   Stack,
   Text,
   Title,
@@ -10,7 +9,10 @@ import {
 } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { AgCharts } from "ag-charts-react";
-import type { AgChartOptions } from "ag-charts-community";
+import type {
+  AgDonutSeriesOptions,
+  AgPolarChartOptions,
+} from "ag-charts-community";
 import { useMemo } from "react";
 import type { getDashboardIncomeExpenseOverview } from "../../server/dashboard";
 import { getDashboardChartThemeColors } from "./dashboard-chart-theme";
@@ -22,7 +24,7 @@ type AssetAllocation = Awaited<
 
 type AssetAllocationChartDatum = AssetAllocation["items"][number] & {
   percentageLabel: string;
-  chartAngleValue: number;
+  amountLabel: string;
 };
 
 export type DashboardAssetAllocationCardProps = {
@@ -63,11 +65,78 @@ export function DashboardAssetAllocationCard({
       assetAllocation.items.map((item) => ({
         ...item,
         percentageLabel: `${percentageFormatter.format(item.percentage)}%`,
-        chartAngleValue: item.amount > 0 ? item.amount : item.percentage,
+        amountLabel: currencyFormatter.format(item.amount),
       })),
-    [assetAllocation.items, percentageFormatter],
+    [assetAllocation.items, currencyFormatter, percentageFormatter],
   );
-  const chartOptions = useMemo<AgChartOptions>(
+  const totalIncludedAmountLabel = useMemo(
+    () =>
+      new Intl.NumberFormat("en-CH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(assetAllocation.totalIncludedAmount),
+    [assetAllocation.totalIncludedAmount],
+  );
+  const chartSeries = useMemo<
+    AgDonutSeriesOptions<AssetAllocationChartDatum>[]
+  >(
+    () => [
+      {
+        type: "donut",
+        angleKey: "percentage",
+        calloutLabelKey: "label",
+        sectorLabelKey: "percentageLabel",
+        innerRadiusRatio: 0.68,
+        // Keep donut radius stable so the inner total label remains visible.
+        calloutLabel: {
+          avoidCollisions: false,
+        },
+        innerLabels: [
+          {
+            text: "Total",
+            color: colors.tooltipSubtleTextColor,
+            fontSize: 11,
+          },
+          {
+            text: assetAllocation.referenceCurrency,
+            color: colors.tooltipSubtleTextColor,
+            fontSize: 10,
+          },
+          {
+            text: totalIncludedAmountLabel,
+            color: colors.chartTextColor,
+            fontWeight: 600,
+            fontSize: 13,
+          },
+        ],
+        tooltip: {
+          renderer: ({ datum }) => {
+            const item = datum as AssetAllocationChartDatum;
+
+            return {
+              heading: item.label,
+              data: [
+                {
+                  label: "Share",
+                  value: item.percentageLabel,
+                },
+                {
+                  label: "Amount",
+                  value: item.amountLabel,
+                },
+                {
+                  label: "Total",
+                  value: totalIncludedAmountLabel,
+                },
+              ],
+            };
+          },
+        },
+      },
+    ],
+    [assetAllocation.referenceCurrency, colors, totalIncludedAmountLabel],
+  );
+  const chartOptions = useMemo<AgPolarChartOptions<AssetAllocationChartDatum>>(
     () => ({
       data: chartData,
       background: {
@@ -87,17 +156,9 @@ export function DashboardAssetAllocationCard({
       legend: {
         enabled: false,
       },
-      series: [
-        {
-          type: "donut",
-          angleKey: "chartAngleValue",
-          calloutLabelKey: "label",
-          sectorLabelKey: "percentageLabel",
-          innerRadiusRatio: 0.6,
-        },
-      ],
+      series: chartSeries,
     }),
-    [chartData, colors],
+    [chartData, chartSeries, colors],
   );
 
   return (
@@ -114,35 +175,6 @@ export function DashboardAssetAllocationCard({
             <div className={classes.assetAllocationChartContainer}>
               <AgCharts options={chartOptions} />
             </div>
-
-            <Stack gap="xs" justify="center">
-              {assetAllocation.items.map((item) => (
-                <Group key={item.id} justify="space-between" gap="sm">
-                  <Text size="sm">
-                    {`${item.label} (${percentageFormatter.format(item.percentage)}%)`}
-                  </Text>
-                  <Text size="sm" fw={500}>
-                    {currencyFormatter.format(item.amount)}
-                  </Text>
-                </Group>
-              ))}
-
-              <Group
-                justify="space-between"
-                mt="xs"
-                pt="xs"
-                className={classes.assetAllocationTotal}
-              >
-                <Text fw={600} size="sm">
-                  Total included
-                </Text>
-                <Text fw={600} size="sm">
-                  {currencyFormatter.format(
-                    assetAllocation.totalIncludedAmount,
-                  )}
-                </Text>
-              </Group>
-            </Stack>
           </div>
         ) : (
           <Text c="dimmed" mt="md">
