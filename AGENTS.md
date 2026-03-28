@@ -29,6 +29,8 @@ file and the linked docs are for `apps/cashfolio-app2`.
   - Example: `feat(cashfolio-app2): add archived-account unarchive action`
   - Use descriptive commits inside the PR for review clarity; the PR title is
     the canonical squash commit message.
+- After you address a pull request review comment, resolve that conversation in
+  the PR.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution guidelines.
 
