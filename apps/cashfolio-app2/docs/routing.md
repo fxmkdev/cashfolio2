@@ -124,24 +124,25 @@ functions.
 from `accounts.ts`) issues a batch of Prisma updates inside a transaction to
 update `sortOrder` values after reordering sibling rows in the reorder modal.
 
-### Account List FX Reference Balance
+### Account List Valuation Reference Balance
 
 - The account list route (`$accountBookId/accounts.tsx`) renders `Balance` and
   `Balance (<referenceCurrency>)` columns.
 - Initial page load requests account tree data with
-  `includeReferenceBalances: false` to avoid blocking first paint on external FX
-  lookups.
+  `includeReferenceBalances: false` to avoid blocking first paint on external
+  valuation lookups.
 - The route then lazily hydrates `Balance (<referenceCurrency>)` in the
   background for non-equity tabs.
 - Reference-currency conversion and account/group reference-balance assembly are
   implemented in `src/server/accounts-queries.ts` (re-exported via
-  `src/server/accounts.ts`), using `src/server/fx.server.ts`.
-- Currency FX rates are requested from currencylayer historical API and cached
-  in Redis TimeSeries keys (`fx:currencylayer:USD:<TARGET_CURRENCY>`).
+  `src/server/accounts.ts`), using `src/server/valuation.server.ts`.
+- Currency valuation rates are requested from currencylayer historical API and
+  cached in Redis TimeSeries keys
+  (`valuation:currencylayer:USD:<TARGET_CURRENCY>`).
 - Cryptocurrency USD prices are requested from coinlayer historical API and
-  cached in Redis TimeSeries keys (`fx:coinlayer:USD:<CRYPTO_SYMBOL>`).
+  cached in Redis TimeSeries keys (`valuation:coinlayer:USD:<CRYPTO_SYMBOL>`).
 - Security EOD close prices are requested from marketstack API and cached in
-  Redis TimeSeries keys (`fx:marketstack:<SYMBOL>:<TRADE_CURRENCY>`).
+  Redis TimeSeries keys (`valuation:marketstack:<SYMBOL>:<TRADE_CURRENCY>`).
 - When an exact date is not available, the newest available prior rate is used
   (first from cache, otherwise by historical API backtracking).
 - Ref-currency balances are populated for `Unit.CURRENCY`,
@@ -163,7 +164,7 @@ Required runtime env vars for this feature:
   support (for example, Redis Stack)
 
 `REDIS_URL` should point to the shared staging Redis (with RedisTimeSeries
-support) when preview and staging should share FX cache entries.
+support) when preview and staging should share valuation cache entries.
 
 Dynamic PR preview deployment (`.github/workflows/build.yml`) sets:
 

@@ -1,10 +1,10 @@
 import { getRedisClient } from "../../redis.server";
-import { FX_SERIES_RETENTION_MS } from "./constants";
+import { VALUATION_SERIES_RETENTION_MS } from "./constants";
 import type { BacktrackedFallbackCacheEntry, CachedRateResult } from "./types";
 
-let hasWarnedFxCacheReadFailure = false;
-let hasWarnedFxFallbackCacheReadFailure = false;
-let hasWarnedFxFallbackCacheWriteFailure = false;
+let hasWarnedValuationCacheReadFailure = false;
+let hasWarnedValuationFallbackCacheReadFailure = false;
+let hasWarnedValuationFallbackCacheWriteFailure = false;
 
 export async function getCachedRate(
   key: string,
@@ -31,12 +31,12 @@ export async function getCachedRate(
 
     return { rate: latestEntry.value, timestamp: latestEntry.timestamp };
   } catch (error) {
-    if (!hasWarnedFxCacheReadFailure) {
+    if (!hasWarnedValuationCacheReadFailure) {
       console.warn(
-        "Failed to read FX rate from Redis cache; continuing with API lookup.",
+        "Failed to read valuation rate from Redis cache; continuing with API lookup.",
         error,
       );
-      hasWarnedFxCacheReadFailure = true;
+      hasWarnedValuationCacheReadFailure = true;
     }
     return null;
   }
@@ -52,7 +52,7 @@ export async function storeCachedRate(
 
   await redis.ts.add(key, timestamp, rate, {
     ON_DUPLICATE: "LAST",
-    RETENTION: FX_SERIES_RETENTION_MS,
+    RETENTION: VALUATION_SERIES_RETENTION_MS,
   });
 }
 
@@ -101,12 +101,12 @@ export async function getBacktrackedFallbackFromCache(
 
     return null;
   } catch (error) {
-    if (!hasWarnedFxFallbackCacheReadFailure) {
+    if (!hasWarnedValuationFallbackCacheReadFailure) {
       console.warn(
-        "Failed to read backtracked FX fallback from Redis cache; continuing without fallback cache.",
+        "Failed to read backtracked valuation fallback from Redis cache; continuing without fallback cache.",
         error,
       );
-      hasWarnedFxFallbackCacheReadFailure = true;
+      hasWarnedValuationFallbackCacheReadFailure = true;
     }
     return null;
   }
@@ -123,12 +123,12 @@ export async function storeBacktrackedFallbackInCache(
 
     await redis.setEx(key, ttlSeconds, JSON.stringify(entry));
   } catch (error) {
-    if (!hasWarnedFxFallbackCacheWriteFailure) {
+    if (!hasWarnedValuationFallbackCacheWriteFailure) {
       console.warn(
-        "Failed to store backtracked FX fallback in Redis cache.",
+        "Failed to store backtracked valuation fallback in Redis cache.",
         error,
       );
-      hasWarnedFxFallbackCacheWriteFailure = true;
+      hasWarnedValuationFallbackCacheWriteFailure = true;
     }
   }
 }
@@ -141,12 +141,12 @@ export async function clearBacktrackedFallbackFromCache(
     if (!redis) return;
     await redis.del(key);
   } catch (error) {
-    if (!hasWarnedFxFallbackCacheWriteFailure) {
+    if (!hasWarnedValuationFallbackCacheWriteFailure) {
       console.warn(
-        "Failed to clear backtracked FX fallback from Redis cache.",
+        "Failed to clear backtracked valuation fallback from Redis cache.",
         error,
       );
-      hasWarnedFxFallbackCacheWriteFailure = true;
+      hasWarnedValuationFallbackCacheWriteFailure = true;
     }
   }
 }

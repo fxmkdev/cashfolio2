@@ -37,8 +37,8 @@ describe("getRateWithBacktracking", () => {
 
     const result = await getRateWithBacktracking(
       {
-        seriesKey: "fx:key",
-        backtrackedFallbackCacheKey: "fx:fallback:key",
+        seriesKey: "valuation:key",
+        backtrackedFallbackCacheKey: "valuation:fallback:key",
         date: requestedDate,
         fetchRate,
       },
@@ -48,7 +48,7 @@ describe("getRateWithBacktracking", () => {
     expect(result).toBe(1.234);
     expect(fetchRate).not.toHaveBeenCalled();
     expect(deps.clearBacktrackedFallbackFromCache).toHaveBeenCalledWith(
-      "fx:fallback:key",
+      "valuation:fallback:key",
     );
   });
 
@@ -64,8 +64,8 @@ describe("getRateWithBacktracking", () => {
 
     const result = await getRateWithBacktracking(
       {
-        seriesKey: "fx:key",
-        backtrackedFallbackCacheKey: "fx:fallback:key",
+        seriesKey: "valuation:key",
+        backtrackedFallbackCacheKey: "valuation:fallback:key",
         date: new Date("2026-03-28T00:00:00.000Z"),
         fetchRate,
       },
@@ -102,8 +102,8 @@ describe("getRateWithBacktracking", () => {
 
     const firstResult = await getRateWithBacktracking(
       {
-        seriesKey: "fx:key",
-        backtrackedFallbackCacheKey: "fx:fallback:key",
+        seriesKey: "valuation:key",
+        backtrackedFallbackCacheKey: "valuation:fallback:key",
         date: requestedDate,
         fetchRate,
       },
@@ -116,8 +116,8 @@ describe("getRateWithBacktracking", () => {
     const secondFetchRate = vi.fn().mockResolvedValue(999);
     const secondResult = await getRateWithBacktracking(
       {
-        seriesKey: "fx:key",
-        backtrackedFallbackCacheKey: "fx:fallback:key",
+        seriesKey: "valuation:key",
+        backtrackedFallbackCacheKey: "valuation:fallback:key",
         date: requestedDate,
         fetchRate: secondFetchRate,
       },
@@ -134,8 +134,8 @@ describe("getRateWithBacktracking", () => {
 
     const result = await getRateWithBacktracking(
       {
-        seriesKey: "fx:key",
-        backtrackedFallbackCacheKey: "fx:fallback:key",
+        seriesKey: "valuation:key",
+        backtrackedFallbackCacheKey: "valuation:fallback:key",
         date: new Date("2026-03-28T00:00:00.000Z"),
         fetchRate,
       },
@@ -144,7 +144,7 @@ describe("getRateWithBacktracking", () => {
 
     expect(result).toBeNull();
     expect(deps.storeBacktrackedFallbackInCache).toHaveBeenCalledWith(
-      "fx:fallback:key",
+      "valuation:fallback:key",
       { kind: "noData" },
       300,
     );

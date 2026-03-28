@@ -5,7 +5,7 @@ import {
 } from "./providers";
 import { NO_DATA_FETCH_RESULT } from "./types";
 
-describe("FX provider helpers", () => {
+describe("Valuation provider helpers", () => {
   test("treats marketstack quote-currency mismatch as unusable data", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 

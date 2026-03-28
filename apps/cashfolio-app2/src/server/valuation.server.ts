@@ -1,6 +1,6 @@
-import { BASE_CURRENCY } from "./fx/constants";
-import { toSeriesTimestamp } from "./fx/date-utils";
-import { getRateWithBacktracking } from "./fx/backtracking";
+import { BASE_CURRENCY } from "./valuation/constants";
+import { toSeriesTimestamp } from "./valuation/date-utils";
+import { getRateWithBacktracking } from "./valuation/backtracking";
 import {
   getCryptocurrencyBacktrackedFallbackCacheKey,
   getCryptocurrencyRedisSeriesKey,
@@ -8,12 +8,12 @@ import {
   getCurrencyRedisSeriesKey,
   getSecurityBacktrackedFallbackCacheKey,
   getSecurityRedisSeriesKey,
-} from "./fx/keys";
+} from "./valuation/keys";
 import {
   fetchSecurityPriceFromMarketstack,
   fetchUsdPerCryptocurrencyRateFromCoinLayer,
   fetchUsdToCurrencyRateFromCurrencyLayer,
-} from "./fx/providers";
+} from "./valuation/providers";
 
 async function getUsdToCurrencyRate(
   targetCurrency: string,
@@ -93,7 +93,7 @@ export async function getCurrencyExchangeRate(args: {
     return usdToTargetRate / usdToSourceRate;
   } catch (error) {
     console.error(
-      `Unable to retrieve FX rate for ${sourceCurrency} -> ${targetCurrency}`,
+      `Unable to retrieve valuation rate for ${sourceCurrency} -> ${targetCurrency}`,
       error,
     );
     return null;
@@ -120,7 +120,7 @@ export async function getCryptocurrencyToCurrencyExchangeRate(args: {
     return cryptoToUsdRate * usdToTargetRate;
   } catch (error) {
     console.error(
-      `Unable to retrieve FX rate for ${cryptocurrency} -> ${targetCurrency}`,
+      `Unable to retrieve valuation rate for ${cryptocurrency} -> ${targetCurrency}`,
       error,
     );
     return null;

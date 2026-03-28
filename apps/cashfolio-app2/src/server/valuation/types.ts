@@ -39,7 +39,7 @@ export type BacktrackedFallbackCacheEntry =
   | BacktrackedRateFallbackCacheEntry
   | BacktrackedNoDataFallbackCacheEntry;
 
-export const NO_DATA_FETCH_RESULT = Symbol("fx-no-data-fetch-result");
+export const NO_DATA_FETCH_RESULT = Symbol("valuation-no-data-fetch-result");
 
 export type NoDataFetchResult = typeof NO_DATA_FETCH_RESULT;
 export type FetchRateResult = number | null | NoDataFetchResult;

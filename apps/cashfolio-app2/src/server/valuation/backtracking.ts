@@ -135,7 +135,7 @@ export async function getRateWithBacktracking(
         );
       } catch (error) {
         console.error(
-          "Failed to cache FX rate",
+          "Failed to cache valuation rate",
           { key, requestedDate: requestedDate.toISOString() },
           error,
         );
