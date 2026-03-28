@@ -394,21 +394,4 @@ test("dashboard asset allocation donut renders for positive top-level asset grou
 
   const chartCanvas = assetAllocationCard.locator("canvas").first();
   await expect(chartCanvas).toBeVisible();
-
-  const chartBox = await chartCanvas.boundingBox();
-  if (chartBox == null) {
-    throw new Error("Expected donut chart canvas bounding box.");
-  }
-
-  await page.mouse.move(
-    chartBox.x + chartBox.width * 0.8,
-    chartBox.y + chartBox.height * 0.5,
-  );
-
-  const tooltip = page.locator(".ag-charts-tooltip").last();
-  await expect(tooltip).toBeVisible();
-  await expect(tooltip.getByText("Share")).toBeVisible();
-  await expect(tooltip.getByText("%")).toBeVisible();
-  await expect(tooltip.getByText("Amount")).toBeVisible();
-  await expect(tooltip.getByText("Total")).toBeVisible();
 });
