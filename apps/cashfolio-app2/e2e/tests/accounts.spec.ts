@@ -7,6 +7,7 @@ import {
 } from "../support/grid";
 import {
   resetAndSeedDatabase,
+  seedDashboardAssetAllocationBalances,
   seedAssetAccountWithMissingReferenceBalance,
   seedThreeBookingSplitTransaction,
   type SeededData,
@@ -355,4 +356,58 @@ test("asset ledger segmented links open chart and render a visible chart", async
   } finally {
     page.off("console", handleConsole);
   }
+});
+
+test("dashboard asset allocation donut renders for positive top-level asset groups", async ({
+  page,
+}) => {
+  const seededAllocation = await seedDashboardAssetAllocationBalances({
+    accountBookId: seeded.accountBookId,
+    primaryAssetAccountId: seeded.cashAccount.id,
+    counterAccountId: seeded.expenseAccount.id,
+  });
+
+  await page.goto(`/${seeded.accountBookId}`);
+
+  const assetAllocationCard = page.locator(".mantine-Card-root").filter({
+    has: page.getByRole("heading", { name: "Asset Allocation" }),
+  });
+
+  await expect(assetAllocationCard).toBeVisible();
+  await expect(
+    assetAllocationCard.getByText(
+      "No positive, convertible asset balances are available for allocation.",
+    ),
+  ).toHaveCount(0);
+  await expect(
+    assetAllocationCard.locator(".ag-charts-no-data-overlay"),
+  ).toHaveCount(0);
+  await expect(assetAllocationCard.getByText("No data to display")).toHaveCount(
+    0,
+  );
+
+  const chartCanvas = assetAllocationCard.locator("canvas").first();
+  await expect(chartCanvas).toBeVisible();
+
+  await expect(assetAllocationCard.getByText("Assets")).toBeVisible();
+  await expect(
+    assetAllocationCard.getByText(seededAllocation.topLevelGroupName),
+  ).toBeVisible();
+
+  const chartBox = await chartCanvas.boundingBox();
+  if (chartBox == null) {
+    throw new Error("Expected donut chart canvas bounding box.");
+  }
+
+  await page.mouse.move(
+    chartBox.x + chartBox.width * 0.8,
+    chartBox.y + chartBox.height * 0.5,
+  );
+
+  const tooltip = page.locator(".ag-charts-tooltip").last();
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip.getByText("Share")).toBeVisible();
+  await expect(tooltip.getByText("%")).toBeVisible();
+  await expect(tooltip.getByText("Amount")).toBeVisible();
+  await expect(tooltip.getByText("Total")).toBeVisible();
 });
