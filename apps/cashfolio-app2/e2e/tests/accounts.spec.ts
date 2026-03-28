@@ -369,9 +369,9 @@ test("dashboard asset allocation donut renders for positive top-level asset grou
 
   await page.goto(`/${seeded.accountBookId}`);
 
-  const assetAllocationCard = page.locator(".mantine-Card-root").filter({
-    has: page.getByRole("heading", { name: "Asset Allocation" }),
-  });
+  const assetAllocationCard = page.getByTestId(
+    "dashboard-asset-allocation-card",
+  );
 
   await expect(assetAllocationCard).toBeVisible();
   await expect(

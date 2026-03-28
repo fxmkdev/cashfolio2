@@ -148,7 +148,12 @@ export function DashboardAssetAllocationCard({
   );
 
   return (
-    <Card withBorder radius="md" p="lg">
+    <Card
+      withBorder
+      radius="md"
+      p="lg"
+      data-testid="dashboard-asset-allocation-card"
+    >
       <Stack gap="xs">
         <Title order={4}>Asset Allocation</Title>
         <Text c="dimmed" size="sm">
