@@ -217,6 +217,50 @@ test("create simple transaction", async ({ page }) => {
   await expect(agGridCellByColId(cashRow, "balance")).toHaveText("-342.00");
 });
 
+test("counterparty account link highlights the matching booking row", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
+
+  const description = "E2E Counterparty Highlight";
+  const simpleDialog = await openCreateSimpleTransaction(page);
+  await page.getByLabel("Date").fill("03.01.2026");
+  await page.getByLabel("Description").fill(description);
+  await simpleDialog.getByRole("textbox", { name: "Counter account" }).click();
+  await page
+    .getByRole("option", {
+      name: accountOptionNameRegex(seeded.savingsAccount.name),
+    })
+    .first()
+    .click();
+  await page.getByLabel("Amount").fill("77");
+  await simpleDialog.getByRole("button", { name: "Create" }).click();
+
+  const sourceRow = agGridRowByText(page, description);
+  await expect(sourceRow).toBeVisible();
+
+  await agGridCellByColId(sourceRow, "counterpartyAccounts")
+    .getByRole("link", { name: seeded.savingsAccount.name })
+    .first()
+    .click();
+
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}/${seeded.savingsAccount.id}`),
+  );
+
+  const targetRow = agGridRowByText(page, description);
+  await expect(targetRow).toBeVisible();
+  const targetRowHandle = await targetRow.elementHandle();
+  expect(targetRowHandle).not.toBeNull();
+  await page.waitForFunction(
+    (row: HTMLElement | null) =>
+      !!row?.querySelector(
+        ".ag-cell-data-changed, .ag-cell-data-changed-animation",
+      ),
+    targetRowHandle,
+  );
+});
+
 test("rebook booking to another compatible account", async ({ page }) => {
   await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
 
