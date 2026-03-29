@@ -39,7 +39,7 @@ export function parseExplicitMonthPeriod(
   if (!match) return null;
 
   const year = Number(match[1]);
-  if (year < 100) return null;
+  if (year < 1000) return null;
   const monthOneBased = Number(match[2]);
   if (monthOneBased < 1 || monthOneBased > 12) {
     return null;

@@ -34,6 +34,7 @@ describe("normalizePeriodValue", () => {
     expect(normalizePeriodValue("0099")).toBe(DEFAULT_PERIOD_VALUE);
     expect(normalizePeriodValue("0100")).toBe(DEFAULT_PERIOD_VALUE);
     expect(normalizePeriodValue("0099-01")).toBe(DEFAULT_PERIOD_VALUE);
+    expect(normalizePeriodValue("0100-01")).toBe(DEFAULT_PERIOD_VALUE);
     expect(normalizePeriodValue("not-valid")).toBe(DEFAULT_PERIOD_VALUE);
     expect(normalizePeriodValue(null)).toBe(DEFAULT_PERIOD_VALUE);
   });

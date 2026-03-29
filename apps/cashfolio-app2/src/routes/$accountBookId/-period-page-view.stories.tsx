@@ -218,3 +218,24 @@ export const RouteSmoke: Story = {
     );
   },
 };
+
+export const BreakdownToggleSmoke: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const incomeOption = await canvas.findByRole("radio", { name: "Income" });
+    await userEvent.click(incomeOption);
+    await expect(incomeOption).toBeChecked();
+    await expect(
+      canvas.getByRole("heading", { name: "Income Breakdown" }),
+    ).toBeInTheDocument();
+
+    const barOption = await canvas.findByRole("radio", { name: "Bar" });
+    await userEvent.click(barOption);
+    await expect(barOption).toBeChecked();
+
+    await expect(
+      canvas.getByText("Top-level income groups for the selected period"),
+    ).toBeInTheDocument();
+  },
+};
