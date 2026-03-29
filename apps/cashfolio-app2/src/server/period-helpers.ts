@@ -130,18 +130,13 @@ function resolveGroupPathToRoot(args: {
   return path;
 }
 
-function getTopLevelGroupBelowRoot(args: {
+function getTopLevelGroup(args: {
   groupId: string;
   groupById: Map<string, PeriodGroupNode>;
 }): PeriodGroupNode | null {
   const path = resolveGroupPathToRoot(args);
   if (path.length === 0) return null;
-
-  if (path.length === 1) {
-    return path[0];
-  }
-
-  return path[path.length - 2];
+  return path[path.length - 1] ?? null;
 }
 
 export function createExpenseBucket(args: {
@@ -151,7 +146,7 @@ export function createExpenseBucket(args: {
   groupById: Map<string, PeriodGroupNode>;
 }): ExpenseBucket {
   if (args.groupId) {
-    const topLevelGroup = getTopLevelGroupBelowRoot({
+    const topLevelGroup = getTopLevelGroup({
       groupId: args.groupId,
       groupById: args.groupById,
     });

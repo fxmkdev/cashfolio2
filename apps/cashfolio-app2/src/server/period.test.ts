@@ -253,7 +253,7 @@ describe("expense breakdown grouping", () => {
     ],
   ]);
 
-  test("buckets by top-level group below root", () => {
+  test("buckets by top-level root group", () => {
     expect(
       createExpenseBucket({
         accountId: "account-rent",
@@ -262,8 +262,8 @@ describe("expense breakdown grouping", () => {
         groupById,
       }),
     ).toEqual({
-      id: "group:housing",
-      label: "Housing",
+      id: "group:expenses",
+      label: "Expenses",
       kind: "group",
     });
   });
