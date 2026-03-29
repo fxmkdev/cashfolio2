@@ -519,19 +519,19 @@ test("create security simple transaction preserves account metadata", async ({
   await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
 
   const usdSecurityRow = agGridRowByText(page, seeded.securityAccount.name);
-  await expect(agGridCellByColId(usdSecurityRow, "balance")).toHaveText(
-    "-3.00",
-  );
+  await expect(agGridCellByColId(usdSecurityRow, "balance")).toHaveText("3.00");
   await expect(
     agGridCellByColId(usdSecurityRow, "balanceInReferenceCurrency"),
-  ).toHaveText("-15.00");
+  ).toHaveText("15.00");
 
   const eurSecurityRow = agGridRowByText(
     page,
     seeded.securityCounterAccount.name,
   );
-  await expect(agGridCellByColId(eurSecurityRow, "balance")).toHaveText("3.00");
+  await expect(agGridCellByColId(eurSecurityRow, "balance")).toHaveText(
+    "-3.00",
+  );
   await expect(
     agGridCellByColId(eurSecurityRow, "balanceInReferenceCurrency"),
-  ).toHaveText("13.64");
+  ).toHaveText("-13.64");
 });

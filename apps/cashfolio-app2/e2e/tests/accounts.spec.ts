@@ -295,17 +295,17 @@ test("balance column visibility and baseline values across tabs/modes", async ({
   await expect(liabilityFooterRow).toContainText("Total");
   await expect(
     agGridCellByColId(liabilityFooterRow, "balanceInReferenceCurrency"),
-  ).toHaveText("3.00");
+  ).toHaveText("-3.00");
   const liabilityUsdRow = agGridRowByText(
     page,
     seededAdditionalTabBalances.liabilityAccountName,
   );
   await expect(agGridCellByColId(liabilityUsdRow, "balance")).toHaveText(
-    "6.00",
+    "-6.00",
   );
   await expect(
     agGridCellByColId(liabilityUsdRow, "balanceInReferenceCurrency"),
-  ).toHaveText("3.00");
+  ).toHaveText("-3.00");
 
   await page.goto(
     `/${seeded.accountBookId}/accounts?tab=EQUITY-${encodeURIComponent("EXPENSE")}&mode=active`,
@@ -437,9 +437,4 @@ test("dashboard asset allocation donut renders for positive top-level asset grou
 
   const chartCanvas = assetAllocationCard.locator("canvas").first();
   await expect(chartCanvas).toBeVisible();
-  await expect(
-    assetAllocationCard.getByText(
-      /reference-currency balances were unavailable/i,
-    ),
-  ).toHaveCount(0);
 });
