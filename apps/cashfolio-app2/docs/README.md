@@ -2,7 +2,9 @@
 
 Architecture and implementation patterns for `apps/cashfolio-app2`.
 
-- [Routing and server functions](routing.md)
+- [Routing](routing.md)
+- [Server functions](server-functions.md)
+- [Account list valuation and reference balances](valuation-reference-balances.md)
 - [Database and Prisma](database.md)
 - [UI patterns](ui-patterns.md)
 - [Testing (E2E)](testing.md)
