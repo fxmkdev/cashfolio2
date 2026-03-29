@@ -79,6 +79,11 @@ type StatCardProps = {
 
 type BreakdownType = "expense" | "income";
 type BreakdownChartType = "donut" | "bar";
+type BreakdownBarDatum = {
+  label: string;
+  amountLabel: string;
+  percentageLabel: string;
+} & Record<string, number | null | string>;
 
 function getMonthBoundsForYear(args: {
   year: number;
@@ -248,6 +253,29 @@ export function PeriodPageView({
     [],
   );
   const barSeriesName = selectedBreakdown === "expense" ? "Expense" : "Income";
+  const barSeriesKeys = useMemo(
+    () => chartData.map((_, index) => `amount_${index}`),
+    [chartData],
+  );
+  const barChartData = useMemo<BreakdownBarDatum[]>(
+    () =>
+      chartData.map((item, itemIndex) => {
+        const row: BreakdownBarDatum = {
+          label: item.label,
+          amountLabel: item.amountLabel,
+          percentageLabel: item.percentageLabel,
+        };
+
+        for (const key of barSeriesKeys) {
+          row[key] = null;
+        }
+
+        row[barSeriesKeys[itemIndex]] = item.amount;
+
+        return row;
+      }),
+    [barSeriesKeys, chartData],
+  );
 
   const donutSeries = useMemo<AgDonutSeriesOptions<BreakdownDatum>[]>(
     () => [
@@ -323,7 +351,7 @@ export function PeriodPageView({
   );
   const barChartOptions = useMemo<AgCartesianChartOptions>(
     () => ({
-      data: chartData,
+      data: barChartData,
       background: {
         visible: false,
       },
@@ -341,38 +369,36 @@ export function PeriodPageView({
       legend: {
         enabled: false,
       },
-      series: [
-        {
-          type: "bar",
-          direction: "vertical",
-          xKey: "label",
-          yKey: "amount",
-          yName: barSeriesName,
-          tooltip: {
-            renderer: ({ datum }) => {
-              const item = datum as BreakdownDatum;
+      series: barSeriesKeys.map((key) => ({
+        type: "bar",
+        direction: "vertical",
+        xKey: "label",
+        yKey: key,
+        yName: barSeriesName,
+        tooltip: {
+          renderer: ({ datum }) => {
+            const item = datum as BreakdownBarDatum;
 
-              return {
-                heading: item.label,
-                data: [
-                  {
-                    label: "Share",
-                    value: item.percentageLabel,
-                  },
-                  {
-                    label: "Amount",
-                    value: item.amountLabel,
-                  },
-                  {
-                    label: "Total",
-                    value: totalBreakdownAmountLabel,
-                  },
-                ],
-              };
-            },
+            return {
+              heading: item.label,
+              data: [
+                {
+                  label: "Share",
+                  value: item.percentageLabel,
+                },
+                {
+                  label: "Amount",
+                  value: item.amountLabel,
+                },
+                {
+                  label: "Total",
+                  value: totalBreakdownAmountLabel,
+                },
+              ],
+            };
           },
         },
-      ],
+      })),
       axes: {
         x: {
           type: "category",
@@ -391,8 +417,9 @@ export function PeriodPageView({
     }),
     [
       amountCompactFormatter,
+      barChartData,
+      barSeriesKeys,
       barSeriesName,
-      chartData,
       colors,
       totalBreakdownAmountLabel,
     ],
