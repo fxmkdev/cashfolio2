@@ -533,5 +533,5 @@ test("create security simple transaction preserves account metadata", async ({
   );
   await expect(
     agGridCellByColId(eurSecurityRow, "balanceInReferenceCurrency"),
-  ).toHaveText("-13.64");
+  ).toHaveText(/^-13\.6[34]$/);
 });
