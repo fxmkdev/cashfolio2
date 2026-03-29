@@ -65,11 +65,10 @@ Backtracking uses two Redis key families with different purposes:
     - `{ "kind": "rate", "rate": <number>, "sourceTimestamp": <timestamp> }`
     - `{ "kind": "noData" }`
   - TTL: 1 hour.
-  - Lifecycle: cleared when a direct/exact cached value satisfies the request
-    or when the requested day is resolved without needing a fallback.
+  - Lifecycle: cleared when a direct/exact cached value satisfies the request or
+    when the requested day is resolved without needing a fallback.
 
-- Miss-attempt cooldown keys:
-  `valuation:miss-cooldown:<seriesKey>:<timestamp>`
+- Miss-attempt cooldown keys: `valuation:miss-cooldown:<seriesKey>:<timestamp>`
   - Purpose: avoid repeated provider requests for the same probed day after a
     miss (`null` or explicit no-data) during backtracking.
   - Stored value: sentinel `"1"`.
