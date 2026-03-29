@@ -10,6 +10,7 @@ import {
   Stack,
   Text,
   Title,
+  VisuallyHidden,
   useComputedColorScheme,
   useMantineTheme,
 } from "@mantine/core";
@@ -573,17 +574,6 @@ export function PeriodPageView({
               <Flex gap="xs" wrap="wrap" justify="flex-end">
                 <SegmentedControl
                   size="xs"
-                  value={selectedBreakdown}
-                  onChange={(value) =>
-                    setSelectedBreakdown(value as BreakdownType)
-                  }
-                  data={[
-                    { label: "Expense", value: "expense" },
-                    { label: "Income", value: "income" },
-                  ]}
-                />
-                <SegmentedControl
-                  size="xs"
                   aria-label="Breakdown chart type"
                   value={selectedChartType}
                   onChange={(value) =>
@@ -592,22 +582,33 @@ export function PeriodPageView({
                   data={[
                     {
                       label: (
-                        <Group gap={6} wrap="nowrap">
+                        <Group gap={0} wrap="nowrap">
                           <IconChartDonut size={14} />
-                          <Text size="xs">Donut</Text>
+                          <VisuallyHidden>Donut chart</VisuallyHidden>
                         </Group>
                       ),
                       value: "donut",
                     },
                     {
                       label: (
-                        <Group gap={6} wrap="nowrap">
+                        <Group gap={0} wrap="nowrap">
                           <IconChartBar size={14} />
-                          <Text size="xs">Bar</Text>
+                          <VisuallyHidden>Bar chart</VisuallyHidden>
                         </Group>
                       ),
                       value: "bar",
                     },
+                  ]}
+                />
+                <SegmentedControl
+                  size="xs"
+                  value={selectedBreakdown}
+                  onChange={(value) =>
+                    setSelectedBreakdown(value as BreakdownType)
+                  }
+                  data={[
+                    { label: "Expense", value: "expense" },
+                    { label: "Income", value: "income" },
                   ]}
                 />
               </Flex>
