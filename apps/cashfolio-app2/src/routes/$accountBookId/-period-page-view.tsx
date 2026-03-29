@@ -247,16 +247,6 @@ export function PeriodPageView({
       }),
     [],
   );
-  const barSeriesColor =
-    selectedBreakdown === "expense"
-      ? {
-          fill: colors.expenseFillColor,
-          stroke: colors.expenseStrokeColor,
-        }
-      : {
-          fill: colors.incomeFillColor,
-          stroke: colors.incomeStrokeColor,
-        };
   const barSeriesName = selectedBreakdown === "expense" ? "Expense" : "Income";
 
   const donutSeries = useMemo<AgDonutSeriesOptions<BreakdownDatum>[]>(
@@ -358,8 +348,6 @@ export function PeriodPageView({
           xKey: "label",
           yKey: "amount",
           yName: barSeriesName,
-          fill: barSeriesColor.fill,
-          stroke: barSeriesColor.stroke,
           tooltip: {
             renderer: ({ datum }) => {
               const item = datum as BreakdownDatum;
@@ -403,8 +391,6 @@ export function PeriodPageView({
     }),
     [
       amountCompactFormatter,
-      barSeriesColor.fill,
-      barSeriesColor.stroke,
       barSeriesName,
       chartData,
       colors,
