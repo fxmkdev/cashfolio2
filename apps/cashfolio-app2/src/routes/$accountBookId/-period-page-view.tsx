@@ -2,6 +2,7 @@ import {
   Alert,
   Box,
   Card,
+  Center,
   Container,
   Flex,
   Group,
@@ -168,18 +169,7 @@ function ChartTypeIconLabel({
   return (
     <>
       <VisuallyHidden>{screenReaderLabel}</VisuallyHidden>
-      <Box
-        component="span"
-        aria-hidden
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 16,
-          height: 16,
-          lineHeight: 1,
-        }}
-      >
+      <Box component="span" aria-hidden>
         {children}
       </Box>
     </>
@@ -365,6 +355,7 @@ export function PeriodPageView({
   const donutChartOptions = useMemo<AgPolarChartOptions<BreakdownDatum>>(
     () => ({
       data: chartData,
+      height: 500,
       background: {
         visible: false,
       },
@@ -389,6 +380,7 @@ export function PeriodPageView({
   const barChartOptions = useMemo<AgCartesianChartOptions>(
     () => ({
       data: barChartData,
+      height: 500,
       background: {
         visible: false,
       },
@@ -624,9 +616,9 @@ export function PeriodPageView({
           <Stack gap="sm">
             <Group justify="space-between" align="center">
               <Title order={4}>{breakdownTitle}</Title>
-              <Flex gap="xs" wrap="wrap" justify="flex-end">
+              <Flex gap="md" wrap="wrap" justify="flex-end">
                 <SegmentedControl
-                  size="xs"
+                  size="sm"
                   aria-label="Breakdown chart type"
                   value={selectedChartType}
                   onChange={(value) =>
@@ -635,24 +627,26 @@ export function PeriodPageView({
                   data={[
                     {
                       label: (
-                        <ChartTypeIconLabel screenReaderLabel="Donut chart">
+                        <Center style={{ gap: 6 }}>
                           <IconChartDonut size={16} />
-                        </ChartTypeIconLabel>
+                          Donut
+                        </Center>
                       ),
                       value: "donut",
                     },
                     {
                       label: (
-                        <ChartTypeIconLabel screenReaderLabel="Bar chart">
+                        <Center style={{ gap: 6 }}>
                           <IconChartBar size={16} />
-                        </ChartTypeIconLabel>
+                          Bar
+                        </Center>
                       ),
                       value: "bar",
                     },
                   ]}
                 />
                 <SegmentedControl
-                  size="xs"
+                  size="sm"
                   value={selectedBreakdown}
                   onChange={(value) =>
                     setSelectedBreakdown(value as BreakdownType)
