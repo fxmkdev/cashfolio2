@@ -163,6 +163,9 @@ update `sortOrder` values after reordering sibling rows in the reorder modal.
   cached in Redis TimeSeries keys (`valuation:coinlayer:USD:<CRYPTO_SYMBOL>`).
 - Security EOD close prices are requested from marketstack API and cached in
   Redis TimeSeries keys (`valuation:marketstack:<SYMBOL>:<TRADE_CURRENCY>`).
+- Non-positive security close prices (for example `0`) are treated as missing
+  provider data, logged as warnings, and are not persisted to the permanent
+  TimeSeries cache.
 - Backtracking first consults cached exact/prior rates; when the requested day
   is newer than the latest guaranteed historical publish window, the provider
   call is skipped and cached prior data is reused immediately.
@@ -170,6 +173,9 @@ update `sortOrder` values after reordering sibling rows in the reorder modal.
   fetchable date" calculation (before 00:05 UTC, treat the latest guaranteed day
   as two UTC days back). This cutoff is treated as optimistic and not guaranteed
   for every provider/day.
+- A single latest-fetchable cutoff decision is computed once per top-level
+  valuation request and reused across nested/parallel provider lookups to avoid
+  mixed cutoff decisions around the publication boundary.
 - When an exact date is not available, the newest available prior rate is used
   (first from cache, otherwise by historical API backtracking), and in-flight
   provider fetches are deduplicated per series/day.
