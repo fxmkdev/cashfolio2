@@ -2,14 +2,18 @@ import {
   BACKTRACKED_FALLBACK_TTL_SECONDS,
   BACKTRACKED_NO_DATA_FALLBACK_TTL_SECONDS,
   MAX_BACKTRACK_DAYS,
+  MISSED_ATTEMPT_COOLDOWN_TTL_SECONDS,
 } from "./constants";
 import { subUtcDay, toSeriesTimestamp, toUtcDay } from "./date-utils";
 import {
   clearBacktrackedFallbackFromCache,
+  clearMissedAttemptForSeriesTimestamp,
   getBacktrackedFallbackFromCache,
   getCachedRate,
+  hasRecentMissedAttemptForSeriesTimestamp,
   storeBacktrackedFallbackInCache,
   storeCachedRate,
+  storeMissedAttemptForSeriesTimestamp,
 } from "./cache";
 import type {
   BacktrackedFallbackCacheEntry,
@@ -31,6 +35,7 @@ type RateWithBacktrackingDeps = {
   maxBacktrackDays: number;
   backtrackedFallbackTtlSeconds: number;
   backtrackedNoDataFallbackTtlSeconds: number;
+  missedAttemptCooldownTtlSeconds: number;
   toSeriesTimestamp: (date: Date) => number;
   toUtcDay: (date: Date) => Date;
   subUtcDay: (date: Date) => Date;
@@ -52,12 +57,26 @@ type RateWithBacktrackingDeps = {
     ttlSeconds: number,
   ) => Promise<void>;
   clearBacktrackedFallbackFromCache: (key: string) => Promise<void>;
+  hasRecentMissedAttemptForSeriesTimestamp: (
+    seriesKey: string,
+    timestamp: number,
+  ) => Promise<boolean>;
+  storeMissedAttemptForSeriesTimestamp: (args: {
+    seriesKey: string;
+    timestamp: number;
+    ttlSeconds: number;
+  }) => Promise<void>;
+  clearMissedAttemptForSeriesTimestamp: (
+    seriesKey: string,
+    timestamp: number,
+  ) => Promise<void>;
 };
 
 const defaultDeps: RateWithBacktrackingDeps = {
   maxBacktrackDays: MAX_BACKTRACK_DAYS,
   backtrackedFallbackTtlSeconds: BACKTRACKED_FALLBACK_TTL_SECONDS,
   backtrackedNoDataFallbackTtlSeconds: BACKTRACKED_NO_DATA_FALLBACK_TTL_SECONDS,
+  missedAttemptCooldownTtlSeconds: MISSED_ATTEMPT_COOLDOWN_TTL_SECONDS,
   toSeriesTimestamp,
   toUtcDay,
   subUtcDay,
@@ -66,6 +85,9 @@ const defaultDeps: RateWithBacktrackingDeps = {
   getBacktrackedFallbackFromCache,
   storeBacktrackedFallbackInCache,
   clearBacktrackedFallbackFromCache,
+  hasRecentMissedAttemptForSeriesTimestamp,
+  storeMissedAttemptForSeriesTimestamp,
+  clearMissedAttemptForSeriesTimestamp,
 };
 
 const inFlightProviderFetchByKey = new Map<string, Promise<FetchRateResult>>();
@@ -161,6 +183,16 @@ export async function getRateWithBacktracking(
       return cached.rate;
     }
 
+    const hasRecentMissedAttempt =
+      await deps.hasRecentMissedAttemptForSeriesTimestamp(
+        key,
+        currentTimestamp,
+      );
+    if (hasRecentMissedAttempt) {
+      requestedDate = deps.subUtcDay(requestedDate);
+      continue;
+    }
+
     const fetchedRate = await fetchRateWithInFlightDedup({
       seriesKey: key,
       timestamp: currentTimestamp,
@@ -168,6 +200,11 @@ export async function getRateWithBacktracking(
       fetchRate: args.fetchRate,
     });
     if (fetchedRate === NO_DATA_FETCH_RESULT) {
+      await deps.storeMissedAttemptForSeriesTimestamp({
+        seriesKey: key,
+        timestamp: currentTimestamp,
+        ttlSeconds: deps.missedAttemptCooldownTtlSeconds,
+      });
       if (stopOnExplicitNoData) {
         await deps.storeBacktrackedFallbackInCache(
           backtrackedFallbackCacheKey,
@@ -211,8 +248,16 @@ export async function getRateWithBacktracking(
         );
       }
 
+      await deps.clearMissedAttemptForSeriesTimestamp(key, currentTimestamp);
+
       return fetchedRate;
     }
+
+    await deps.storeMissedAttemptForSeriesTimestamp({
+      seriesKey: key,
+      timestamp: currentTimestamp,
+      ttlSeconds: deps.missedAttemptCooldownTtlSeconds,
+    });
 
     requestedDate = deps.subUtcDay(requestedDate);
   }

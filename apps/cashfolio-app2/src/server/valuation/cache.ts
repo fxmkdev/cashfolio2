@@ -5,6 +5,15 @@ import type { BacktrackedFallbackCacheEntry, CachedRateResult } from "./types";
 let hasWarnedValuationCacheReadFailure = false;
 let hasWarnedValuationFallbackCacheReadFailure = false;
 let hasWarnedValuationFallbackCacheWriteFailure = false;
+let hasWarnedValuationMissCooldownCacheReadFailure = false;
+let hasWarnedValuationMissCooldownCacheWriteFailure = false;
+
+function getMissedAttemptCooldownCacheKey(
+  seriesKey: string,
+  timestamp: number,
+): string {
+  return `valuation:miss-cooldown:${seriesKey}:${timestamp}`;
+}
 
 export async function getCachedRate(
   key: string,
@@ -147,6 +156,75 @@ export async function clearBacktrackedFallbackFromCache(
         error,
       );
       hasWarnedValuationFallbackCacheWriteFailure = true;
+    }
+  }
+}
+
+export async function hasRecentMissedAttemptForSeriesTimestamp(
+  seriesKey: string,
+  timestamp: number,
+): Promise<boolean> {
+  try {
+    const redis = await getRedisClient();
+    if (!redis) return false;
+
+    const missKey = getMissedAttemptCooldownCacheKey(seriesKey, timestamp);
+    const exists = await redis.exists(missKey);
+    return exists === 1;
+  } catch (error) {
+    if (!hasWarnedValuationMissCooldownCacheReadFailure) {
+      console.warn(
+        "Failed to read valuation miss-attempt cooldown from Redis cache; continuing without cooldown cache.",
+        error,
+      );
+      hasWarnedValuationMissCooldownCacheReadFailure = true;
+    }
+    return false;
+  }
+}
+
+export async function storeMissedAttemptForSeriesTimestamp(args: {
+  seriesKey: string;
+  timestamp: number;
+  ttlSeconds: number;
+}): Promise<void> {
+  try {
+    const redis = await getRedisClient();
+    if (!redis) return;
+
+    const missKey = getMissedAttemptCooldownCacheKey(
+      args.seriesKey,
+      args.timestamp,
+    );
+    await redis.setEx(missKey, args.ttlSeconds, "1");
+  } catch (error) {
+    if (!hasWarnedValuationMissCooldownCacheWriteFailure) {
+      console.warn(
+        "Failed to store valuation miss-attempt cooldown in Redis cache.",
+        error,
+      );
+      hasWarnedValuationMissCooldownCacheWriteFailure = true;
+    }
+  }
+}
+
+export async function clearMissedAttemptForSeriesTimestamp(
+  seriesKey: string,
+  timestamp: number,
+): Promise<void> {
+  try {
+    const redis = await getRedisClient();
+    if (!redis) return;
+
+    const missKey = getMissedAttemptCooldownCacheKey(seriesKey, timestamp);
+    await redis.del(missKey);
+  } catch (error) {
+    if (!hasWarnedValuationMissCooldownCacheWriteFailure) {
+      console.warn(
+        "Failed to clear valuation miss-attempt cooldown in Redis cache.",
+        error,
+      );
+      hasWarnedValuationMissCooldownCacheWriteFailure = true;
     }
   }
 }

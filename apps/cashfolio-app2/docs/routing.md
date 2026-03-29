@@ -168,10 +168,15 @@ update `sortOrder` values after reordering sibling rows in the reorder modal.
   call is skipped and cached prior data is reused immediately.
 - Historical fetches use a 00:05 UTC publish cutoff and 1-day lag for "latest
   fetchable date" calculation (before 00:05 UTC, treat the latest guaranteed day
-  as two UTC days back).
+  as two UTC days back). This cutoff is treated as optimistic and not guaranteed
+  for every provider/day.
 - When an exact date is not available, the newest available prior rate is used
   (first from cache, otherwise by historical API backtracking), and in-flight
   provider fetches are deduplicated per series/day.
+- Backtracking also writes per-series/per-day miss-attempt cooldown keys in
+  Redis for 1 hour when providers return explicit no-data or missing-rate
+  responses, to avoid repeated provider calls for the same day while data is
+  still unavailable.
 - Ref-currency balances are populated for `Unit.CURRENCY`,
   `Unit.CRYPTOCURRENCY`, and `Unit.SECURITY` accounts.
 - For `Unit.SECURITY`, account `Balance` is treated as quantity and converted as
