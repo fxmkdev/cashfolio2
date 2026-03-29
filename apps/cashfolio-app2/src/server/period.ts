@@ -400,6 +400,10 @@ export const getPeriodOverview = createServerFn({
       string,
       ExpenseBreakdownAccumulatorItem
     >();
+    const incomeAmountByBucketId = new Map<
+      string,
+      ExpenseBreakdownAccumulatorItem
+    >();
 
     let nextBookingIdCursor: string | undefined;
 
@@ -496,6 +500,25 @@ export const getPeriodOverview = createServerFn({
           booking.account.equityAccountSubtype === EquityAccountSubtype.INCOME
         ) {
           totalIncome += -convertedValue;
+
+          const incomeBucket = createExpenseBucket({
+            accountId: booking.account.id,
+            accountName: booking.account.name,
+            groupId: booking.account.groupId,
+            groupById,
+          });
+
+          const existingBucket = incomeAmountByBucketId.get(incomeBucket.id);
+          if (existingBucket) {
+            existingBucket.amount += -convertedValue;
+          } else {
+            incomeAmountByBucketId.set(incomeBucket.id, {
+              id: incomeBucket.id,
+              label: incomeBucket.label,
+              kind: incomeBucket.kind,
+              amount: -convertedValue,
+            });
+          }
         } else if (
           booking.account.equityAccountSubtype === EquityAccountSubtype.EXPENSE
         ) {
@@ -798,6 +821,9 @@ export const getPeriodOverview = createServerFn({
     const expenseBreakdown = buildExpenseBreakdownItems(
       Array.from(expenseAmountByBucketId.values()),
     );
+    const incomeBreakdown = buildExpenseBreakdownItems(
+      Array.from(incomeAmountByBucketId.values()),
+    );
 
     const currentDay = startOfUtcDay(new Date());
     const availableYears = buildAvailableYears({
@@ -841,6 +867,10 @@ export const getPeriodOverview = createServerFn({
       expenseBreakdown: {
         totalAmount: expenseBreakdown.totalAmount,
         items: expenseBreakdown.items,
+      },
+      incomeBreakdown: {
+        totalAmount: incomeBreakdown.totalAmount,
+        items: incomeBreakdown.items,
       },
     };
   });

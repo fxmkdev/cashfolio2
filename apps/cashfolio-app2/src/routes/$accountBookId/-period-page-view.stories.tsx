@@ -76,6 +76,32 @@ const baseOverview: PeriodPageViewProps["overview"] = {
       },
     ],
   },
+  incomeBreakdown: {
+    totalAmount: 8000,
+    items: [
+      {
+        id: "group:salary",
+        label: "Salary",
+        kind: "group",
+        amount: 6200,
+        percentage: 77.5,
+      },
+      {
+        id: "group:investments",
+        label: "Investments",
+        kind: "group",
+        amount: 1300,
+        percentage: 16.3,
+      },
+      {
+        id: "account:account-other-income",
+        label: "Other Income",
+        kind: "account",
+        amount: 500,
+        percentage: 6.3,
+      },
+    ],
+  },
 };
 
 function PeriodRouteSmokeHarness() {
@@ -147,6 +173,7 @@ export const NoExpenseData: Story = {
         totalAmount: 0,
         items: [],
       },
+      incomeBreakdown: baseOverview.incomeBreakdown,
       stats: {
         ...baseOverview.stats,
         totalExpenses: 0,

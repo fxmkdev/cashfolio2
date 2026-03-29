@@ -4,6 +4,7 @@ import {
   Container,
   Group,
   NativeSelect,
+  SegmentedControl,
   SimpleGrid,
   Stack,
   Text,
@@ -17,7 +18,7 @@ import type {
   AgDonutSeriesOptions,
   AgPolarChartOptions,
 } from "ag-charts-community";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ensureChartModulesRegistered } from "../../ag-chart-modules";
 import { LinkButton } from "../../components/link-button";
 import type { getPeriodOverview } from "../../server/period";
@@ -57,11 +58,10 @@ export type PeriodPageViewProps = {
   onPeriodChange: (nextPeriodValue: string) => void;
 };
 
-type ExpenseBreakdownDatum =
-  PeriodOverview["expenseBreakdown"]["items"][number] & {
-    amountLabel: string;
-    percentageLabel: string;
-  };
+type BreakdownDatum = PeriodOverview["expenseBreakdown"]["items"][number] & {
+  amountLabel: string;
+  percentageLabel: string;
+};
 
 type StatCardProps = {
   label: string;
@@ -142,6 +142,9 @@ export function PeriodPageView({
   selectedPeriodValue,
   onPeriodChange,
 }: PeriodPageViewProps) {
+  const [selectedBreakdown, setSelectedBreakdown] = useState<
+    "expense" | "income"
+  >("expense");
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
   const colors = useMemo(
@@ -189,24 +192,43 @@ export function PeriodPageView({
     [maxDate, minBookingDate, overview.selectedYear],
   );
 
-  const chartData = useMemo<ExpenseBreakdownDatum[]>(
+  const activeBreakdown = useMemo(
     () =>
-      overview.expenseBreakdown.items.map((item) => ({
+      selectedBreakdown === "expense"
+        ? overview.expenseBreakdown
+        : overview.incomeBreakdown,
+    [overview.expenseBreakdown, overview.incomeBreakdown, selectedBreakdown],
+  );
+
+  const breakdownTitle =
+    selectedBreakdown === "expense" ? "Expense Breakdown" : "Income Breakdown";
+  const breakdownSubtitle =
+    selectedBreakdown === "expense"
+      ? "Top-level expense groups for the selected period"
+      : "Top-level income groups for the selected period";
+  const emptyBreakdownMessage =
+    selectedBreakdown === "expense"
+      ? "No expense bookings were found for this period."
+      : "No income bookings were found for this period.";
+
+  const chartData = useMemo<BreakdownDatum[]>(
+    () =>
+      activeBreakdown.items.map((item) => ({
         ...item,
         amountLabel: currencyFormatter.format(item.amount),
         percentageLabel: `${percentageFormatter.format(item.percentage)}%`,
       })),
-    [currencyFormatter, overview.expenseBreakdown.items, percentageFormatter],
+    [activeBreakdown.items, currencyFormatter, percentageFormatter],
   );
 
-  const totalExpenseAmountLabel = useMemo(
-    () => currencyFormatter.format(overview.expenseBreakdown.totalAmount),
-    [currencyFormatter, overview.expenseBreakdown.totalAmount],
+  const totalBreakdownAmountLabel = useMemo(
+    () => currencyFormatter.format(activeBreakdown.totalAmount),
+    [activeBreakdown.totalAmount, currencyFormatter],
   );
 
-  const hasExpenseBreakdown = chartData.length > 0;
+  const hasBreakdown = chartData.length > 0;
 
-  const donutSeries = useMemo<AgDonutSeriesOptions<ExpenseBreakdownDatum>[]>(
+  const donutSeries = useMemo<AgDonutSeriesOptions<BreakdownDatum>[]>(
     () => [
       {
         type: "donut",
@@ -220,7 +242,7 @@ export function PeriodPageView({
         },
         innerLabels: [
           {
-            text: totalExpenseAmountLabel,
+            text: totalBreakdownAmountLabel,
             color: colors.chartTextColor,
             fontWeight: 600,
             fontSize: 18,
@@ -228,7 +250,7 @@ export function PeriodPageView({
         ],
         tooltip: {
           renderer: ({ datum }) => {
-            const item = datum as ExpenseBreakdownDatum;
+            const item = datum as BreakdownDatum;
 
             return {
               heading: item.label,
@@ -243,7 +265,7 @@ export function PeriodPageView({
                 },
                 {
                   label: "Total",
-                  value: totalExpenseAmountLabel,
+                  value: totalBreakdownAmountLabel,
                 },
               ],
             };
@@ -251,10 +273,10 @@ export function PeriodPageView({
         },
       },
     ],
-    [colors.chartTextColor, totalExpenseAmountLabel],
+    [colors.chartTextColor, totalBreakdownAmountLabel],
   );
 
-  const chartOptions = useMemo<AgPolarChartOptions<ExpenseBreakdownDatum>>(
+  const chartOptions = useMemo<AgPolarChartOptions<BreakdownDatum>>(
     () => ({
       data: chartData,
       background: {
@@ -434,18 +456,30 @@ export function PeriodPageView({
 
         <Card withBorder radius="md" p="lg">
           <Stack gap="sm">
-            <Title order={4}>Expense Breakdown</Title>
+            <Group justify="space-between" align="center">
+              <Title order={4}>{breakdownTitle}</Title>
+              <SegmentedControl
+                value={selectedBreakdown}
+                onChange={(value) =>
+                  setSelectedBreakdown(value as "expense" | "income")
+                }
+                data={[
+                  { label: "Expense", value: "expense" },
+                  { label: "Income", value: "income" },
+                ]}
+              />
+            </Group>
             <Text c="dimmed" size="sm">
-              Top-level expense groups for the selected period
+              {breakdownSubtitle}
             </Text>
 
-            {hasExpenseBreakdown ? (
+            {hasBreakdown ? (
               <div className={classes.chartContainer}>
                 <AgCharts options={chartOptions} />
               </div>
             ) : (
               <Text c="dimmed" mt="md">
-                No expense bookings were found for this period.
+                {emptyBreakdownMessage}
               </Text>
             )}
           </Stack>
