@@ -1,0 +1,12 @@
+.periodSelectorRow {
+  flex-wrap: wrap;
+}
+
+.chartContainer {
+  margin-top: 20px;
+  width: 100%;
+}
+
+.chartContainer :global(.ag-charts-overlay) {
+  color: var(--mantine-color-dimmed);
+}

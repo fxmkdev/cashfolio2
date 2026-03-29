@@ -52,6 +52,12 @@ const preview: Preview = {
         component: () => <Story />,
       });
 
+      const accountBookPeriodRoute = createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/$accountBookId/period",
+        component: () => <Story />,
+      });
+
       const accountLedgerRoute = createRoute({
         getParentRoute: () => rootRoute,
         path: "/$accountBookId/$accountId",
@@ -69,6 +75,7 @@ const preview: Preview = {
           rootStoryRoute,
           accountBookRoute,
           accountBookAccountsRoute,
+          accountBookPeriodRoute,
           accountLedgerRoute,
           accountLedgerChartRoute,
         ]),
