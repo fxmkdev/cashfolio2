@@ -30,9 +30,22 @@ function getLatestFetchableHistoricalDate(now = new Date()): Date {
   });
 }
 
+type ValuationLookupContext = {
+  latestFetchableDate: Date;
+};
+
+function createValuationLookupContext(
+  now = new Date(),
+): ValuationLookupContext {
+  return {
+    latestFetchableDate: getLatestFetchableHistoricalDate(now),
+  };
+}
+
 async function getUsdToCurrencyRate(
   targetCurrency: string,
   date: Date,
+  context: ValuationLookupContext,
 ): Promise<number | null> {
   if (targetCurrency === BASE_CURRENCY) {
     return 1;
@@ -45,7 +58,7 @@ async function getUsdToCurrencyRate(
       toSeriesTimestamp(date),
     ),
     date,
-    latestFetchableDate: getLatestFetchableHistoricalDate(),
+    latestFetchableDate: context.latestFetchableDate,
     fetchRate: (targetDate) =>
       fetchUsdToCurrencyRateFromCurrencyLayer(targetCurrency, targetDate),
   });
@@ -54,6 +67,7 @@ async function getUsdToCurrencyRate(
 async function getUsdPerCryptocurrencyRate(
   cryptocurrency: string,
   date: Date,
+  context: ValuationLookupContext,
 ): Promise<number | null> {
   return getRateWithBacktracking({
     seriesKey: getCryptocurrencyRedisSeriesKey(cryptocurrency),
@@ -62,7 +76,7 @@ async function getUsdPerCryptocurrencyRate(
       toSeriesTimestamp(date),
     ),
     date,
-    latestFetchableDate: getLatestFetchableHistoricalDate(),
+    latestFetchableDate: context.latestFetchableDate,
     fetchRate: (targetDate) =>
       fetchUsdPerCryptocurrencyRateFromCoinLayer(cryptocurrency, targetDate),
   });
@@ -72,6 +86,7 @@ async function getSecurityPrice(
   symbol: string,
   tradeCurrency: string,
   date: Date,
+  context: ValuationLookupContext,
 ): Promise<number | null> {
   return getRateWithBacktracking({
     seriesKey: getSecurityRedisSeriesKey(symbol, tradeCurrency),
@@ -81,18 +96,21 @@ async function getSecurityPrice(
       toSeriesTimestamp(date),
     ),
     date,
-    latestFetchableDate: getLatestFetchableHistoricalDate(),
+    latestFetchableDate: context.latestFetchableDate,
     fetchRate: (targetDate) =>
       fetchSecurityPriceFromMarketstack(symbol, tradeCurrency, targetDate),
     stopOnExplicitNoData: false,
   });
 }
 
-export async function getCurrencyExchangeRate(args: {
-  sourceCurrency: string;
-  targetCurrency: string;
-  date: Date;
-}): Promise<number | null> {
+async function getCurrencyExchangeRateWithContext(
+  args: {
+    sourceCurrency: string;
+    targetCurrency: string;
+    date: Date;
+  },
+  context: ValuationLookupContext,
+): Promise<number | null> {
   const sourceCurrency = args.sourceCurrency.toUpperCase();
   const targetCurrency = args.targetCurrency.toUpperCase();
   if (sourceCurrency === targetCurrency) {
@@ -101,8 +119,8 @@ export async function getCurrencyExchangeRate(args: {
 
   try {
     const [usdToTargetRate, usdToSourceRate] = await Promise.all([
-      getUsdToCurrencyRate(targetCurrency, args.date),
-      getUsdToCurrencyRate(sourceCurrency, args.date),
+      getUsdToCurrencyRate(targetCurrency, args.date, context),
+      getUsdToCurrencyRate(sourceCurrency, args.date, context),
     ]);
     if (usdToTargetRate == null || usdToSourceRate == null) {
       return null;
@@ -118,6 +136,15 @@ export async function getCurrencyExchangeRate(args: {
   }
 }
 
+export async function getCurrencyExchangeRate(args: {
+  sourceCurrency: string;
+  targetCurrency: string;
+  date: Date;
+}): Promise<number | null> {
+  const context = createValuationLookupContext();
+  return getCurrencyExchangeRateWithContext(args, context);
+}
+
 export async function getCryptocurrencyToCurrencyExchangeRate(args: {
   cryptocurrency: string;
   targetCurrency: string;
@@ -125,11 +152,12 @@ export async function getCryptocurrencyToCurrencyExchangeRate(args: {
 }): Promise<number | null> {
   const cryptocurrency = args.cryptocurrency.toUpperCase();
   const targetCurrency = args.targetCurrency.toUpperCase();
+  const context = createValuationLookupContext();
 
   try {
     const [usdToTargetRate, cryptoToUsdRate] = await Promise.all([
-      getUsdToCurrencyRate(targetCurrency, args.date),
-      getUsdPerCryptocurrencyRate(cryptocurrency, args.date),
+      getUsdToCurrencyRate(targetCurrency, args.date, context),
+      getUsdPerCryptocurrencyRate(cryptocurrency, args.date, context),
     ]);
     if (usdToTargetRate == null || cryptoToUsdRate == null) {
       return null;
@@ -154,15 +182,19 @@ export async function getSecurityToCurrencyExchangeRate(args: {
   const symbol = args.symbol.toUpperCase();
   const tradeCurrency = args.tradeCurrency.toUpperCase();
   const targetCurrency = args.targetCurrency.toUpperCase();
+  const context = createValuationLookupContext();
 
   try {
     const [securityPrice, tradeToTargetRate] = await Promise.all([
-      getSecurityPrice(symbol, tradeCurrency, args.date),
-      getCurrencyExchangeRate({
-        sourceCurrency: tradeCurrency,
-        targetCurrency,
-        date: args.date,
-      }),
+      getSecurityPrice(symbol, tradeCurrency, args.date, context),
+      getCurrencyExchangeRateWithContext(
+        {
+          sourceCurrency: tradeCurrency,
+          targetCurrency,
+          date: args.date,
+        },
+        context,
+      ),
     ]);
     if (securityPrice == null || tradeToTargetRate == null) {
       return null;
