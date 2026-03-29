@@ -45,6 +45,15 @@ Required env vars:
 
 When bypass is disabled, app auth behavior remains unchanged.
 
+## Valuation Provider Mocks in E2E
+
+- When `E2E_TEST_MODE=true`, server-side external valuation calls
+  (`currencylayer`, `coinlayer`, `marketstack`) are intercepted by MSW node
+  handlers in `src/server/valuation/e2e-provider-mocks.server.ts`.
+- This keeps E2E deterministic and avoids external provider traffic while still
+  exercising valuation conversion logic end-to-end.
+- The mocked rates/prices are fixed values intended for assertion stability.
+
 ## Database Lifecycle
 
 - Tests run against PostgreSQL.

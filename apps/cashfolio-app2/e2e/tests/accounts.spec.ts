@@ -9,6 +9,7 @@ import {
   resetAndSeedDatabase,
   seedDashboardAssetAllocationBalances,
   seedAssetAccountWithMissingReferenceBalance,
+  seedNonZeroConvertibleAssetBalances,
   seedThreeBookingSplitTransaction,
   type SeededData,
 } from "../support/db";
@@ -394,4 +395,36 @@ test("dashboard asset allocation donut renders for positive top-level asset grou
 
   const chartCanvas = assetAllocationCard.locator("canvas").first();
   await expect(chartCanvas).toBeVisible();
+});
+
+test("accounts reference balances use mocked provider rates for non-zero balances", async ({
+  page,
+}) => {
+  const seededBalances = await seedNonZeroConvertibleAssetBalances({
+    accountBookId: seeded.accountBookId,
+    counterAccountId: seeded.cashAccount.id,
+  });
+
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
+
+  const usdRow = agGridRowByText(page, seededBalances.usdAccountName);
+  await expect(usdRow).toBeVisible();
+  await expect(agGridCellByColId(usdRow, "balance")).toHaveText("10.00");
+  await expect(
+    agGridCellByColId(usdRow, "balanceInReferenceCurrency"),
+  ).toHaveText("5.00");
+
+  const cryptoRow = agGridRowByText(page, seededBalances.cryptoAccountName);
+  await expect(cryptoRow).toBeVisible();
+  await expect(agGridCellByColId(cryptoRow, "balance")).toHaveText("2.00");
+  await expect(
+    agGridCellByColId(cryptoRow, "balanceInReferenceCurrency"),
+  ).toHaveText("200.00");
+
+  const securityRow = agGridRowByText(page, seededBalances.securityAccountName);
+  await expect(securityRow).toBeVisible();
+  await expect(agGridCellByColId(securityRow, "balance")).toHaveText("3.00");
+  await expect(
+    agGridCellByColId(securityRow, "balanceInReferenceCurrency"),
+  ).toHaveText("15.00");
 });

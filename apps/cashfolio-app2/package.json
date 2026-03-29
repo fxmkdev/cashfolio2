@@ -51,6 +51,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "chromatic": "^16.0.0",
+    "msw": "^2.12.14",
     "postcss": "^8.5.8",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",

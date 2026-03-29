@@ -499,6 +499,158 @@ export async function seedDashboardAssetAllocationBalances(args: {
   };
 }
 
+export async function seedNonZeroConvertibleAssetBalances(args: {
+  accountBookId: string;
+  counterAccountId: string;
+}) {
+  const assetRootGroup = await prisma.accountGroup.findFirstOrThrow({
+    where: {
+      accountBookId: args.accountBookId,
+      type: AccountType.ASSET,
+      parentGroupId: null,
+    },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true },
+  });
+
+  const usdAccount = await prisma.account.create({
+    data: {
+      id: createId(),
+      accountBookId: args.accountBookId,
+      name: "E2E USD Cash",
+      type: AccountType.ASSET,
+      groupId: assetRootGroup.id,
+      unit: Unit.CURRENCY,
+      currency: "USD",
+      sortOrder: 980,
+    },
+    select: { id: true, name: true },
+  });
+
+  const cryptoAccount = await prisma.account.create({
+    data: {
+      id: createId(),
+      accountBookId: args.accountBookId,
+      name: "E2E BTC Wallet",
+      type: AccountType.ASSET,
+      groupId: assetRootGroup.id,
+      unit: Unit.CRYPTOCURRENCY,
+      cryptocurrency: "BTC",
+      sortOrder: 981,
+    },
+    select: { id: true, name: true },
+  });
+
+  const securityAccount = await prisma.account.create({
+    data: {
+      id: createId(),
+      accountBookId: args.accountBookId,
+      name: "E2E AAPL Holdings",
+      type: AccountType.ASSET,
+      groupId: assetRootGroup.id,
+      unit: Unit.SECURITY,
+      symbol: "AAPL",
+      tradeCurrency: "USD",
+      sortOrder: 982,
+    },
+    select: { id: true, name: true },
+  });
+
+  const transactionId = createId();
+  await prisma.transaction.create({
+    data: {
+      id: transactionId,
+      accountBookId: args.accountBookId,
+      description: "E2E Convertible Asset Balances Seed",
+    },
+  });
+
+  const date = new Date("2026-01-03T00:00:00.000Z");
+  await prisma.booking.createMany({
+    data: [
+      {
+        id: createId(),
+        accountBookId: args.accountBookId,
+        transactionId,
+        accountId: usdAccount.id,
+        date,
+        description: "E2E Convertible Asset Balances Seed",
+        unit: Unit.CURRENCY,
+        currency: "USD",
+        value: 10,
+        sortOrder: 0,
+      },
+      {
+        id: createId(),
+        accountBookId: args.accountBookId,
+        transactionId,
+        accountId: cryptoAccount.id,
+        date,
+        description: "E2E Convertible Asset Balances Seed",
+        unit: Unit.CRYPTOCURRENCY,
+        cryptocurrency: "BTC",
+        value: 2,
+        sortOrder: 1,
+      },
+      {
+        id: createId(),
+        accountBookId: args.accountBookId,
+        transactionId,
+        accountId: securityAccount.id,
+        date,
+        description: "E2E Convertible Asset Balances Seed",
+        unit: Unit.SECURITY,
+        symbol: "AAPL",
+        tradeCurrency: "USD",
+        value: 3,
+        sortOrder: 2,
+      },
+      {
+        id: createId(),
+        accountBookId: args.accountBookId,
+        transactionId,
+        accountId: args.counterAccountId,
+        date,
+        description: "E2E Convertible Asset Balances Seed",
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        value: -10,
+        sortOrder: 3,
+      },
+      {
+        id: createId(),
+        accountBookId: args.accountBookId,
+        transactionId,
+        accountId: args.counterAccountId,
+        date,
+        description: "E2E Convertible Asset Balances Seed",
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        value: -2,
+        sortOrder: 4,
+      },
+      {
+        id: createId(),
+        accountBookId: args.accountBookId,
+        transactionId,
+        accountId: args.counterAccountId,
+        date,
+        description: "E2E Convertible Asset Balances Seed",
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        value: -3,
+        sortOrder: 5,
+      },
+    ],
+  });
+
+  return {
+    usdAccountName: usdAccount.name,
+    cryptoAccountName: cryptoAccount.name,
+    securityAccountName: securityAccount.name,
+  };
+}
+
 export async function disconnectDb(): Promise<void> {
   await prisma.$disconnect();
 }
