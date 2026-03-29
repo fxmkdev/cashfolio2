@@ -81,6 +81,8 @@ pnpm --filter cashfolio-app2 prisma:generate  # Regenerate Prisma client (no DAT
 
 ## Architecture References
 
-- [Routing and server functions](apps/cashfolio-app2/docs/routing.md)
+- [Routing](apps/cashfolio-app2/docs/routing.md)
+- [Server functions](apps/cashfolio-app2/docs/server-functions.md)
+- [Account list valuation and reference balances](apps/cashfolio-app2/docs/valuation-reference-balances.md)
 - [Database and Prisma](apps/cashfolio-app2/docs/database.md)
 - [UI patterns](apps/cashfolio-app2/docs/ui-patterns.md)

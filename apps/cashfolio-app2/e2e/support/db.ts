@@ -6,6 +6,10 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../../src/.prisma-client/enums";
+import {
+  seedNonZeroConvertibleArchivedAndLiabilityBalancesWithPrisma,
+  seedNonZeroConvertibleAssetBalancesWithPrisma,
+} from "./valuation-balance-seeds";
 
 const databaseUrl =
   process.env.DATABASE_URL ??
@@ -497,6 +501,28 @@ export async function seedDashboardAssetAllocationBalances(args: {
   return {
     topLevelGroupName: topLevelGroup.name,
   };
+}
+
+export async function seedNonZeroConvertibleAssetBalances(args: {
+  accountBookId: string;
+  counterAccountId: string;
+}) {
+  return seedNonZeroConvertibleAssetBalancesWithPrisma({
+    prisma,
+    accountBookId: args.accountBookId,
+    counterAccountId: args.counterAccountId,
+  });
+}
+
+export async function seedNonZeroConvertibleArchivedAndLiabilityBalances(args: {
+  accountBookId: string;
+  counterAccountId: string;
+}) {
+  return seedNonZeroConvertibleArchivedAndLiabilityBalancesWithPrisma({
+    prisma,
+    accountBookId: args.accountBookId,
+    counterAccountId: args.counterAccountId,
+  });
 }
 
 export async function disconnectDb(): Promise<void> {

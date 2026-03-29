@@ -38,3 +38,10 @@ export function getSecurityBacktrackedFallbackCacheKey(
 ): string {
   return `valuation:marketstack:fallback:${symbol}:${tradeCurrency}:${requestedTimestamp}`;
 }
+
+export function getMissedAttemptCooldownCacheKey(
+  seriesKey: string,
+  timestamp: number,
+): string {
+  return `valuation:miss-cooldown:${seriesKey}:${timestamp}`;
+}

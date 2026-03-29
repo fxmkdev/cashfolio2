@@ -6,7 +6,8 @@ function createDeps() {
   return {
     maxBacktrackDays: 3,
     backtrackedFallbackTtlSeconds: 3600,
-    backtrackedNoDataFallbackTtlSeconds: 300,
+    backtrackedNoDataFallbackTtlSeconds: 3600,
+    missedAttemptCooldownTtlSeconds: 3600,
     toSeriesTimestamp: (date: Date) =>
       Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
     toUtcDay: (date: Date) =>
@@ -19,6 +20,9 @@ function createDeps() {
     getBacktrackedFallbackFromCache: vi.fn().mockResolvedValue(null),
     storeBacktrackedFallbackInCache: vi.fn().mockResolvedValue(undefined),
     clearBacktrackedFallbackFromCache: vi.fn().mockResolvedValue(undefined),
+    hasRecentMissedAttemptForSeriesTimestamp: vi.fn().mockResolvedValue(false),
+    storeMissedAttemptForSeriesTimestamp: vi.fn().mockResolvedValue(undefined),
+    clearMissedAttemptForSeriesTimestamp: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -146,7 +150,169 @@ describe("getRateWithBacktracking", () => {
     expect(deps.storeBacktrackedFallbackInCache).toHaveBeenCalledWith(
       "valuation:fallback:key",
       { kind: "noData" },
-      300,
+      3600,
     );
+    expect(deps.storeMissedAttemptForSeriesTimestamp).toHaveBeenCalledWith({
+      seriesKey: "valuation:key",
+      timestamp: Date.UTC(2026, 2, 28),
+      ttlSeconds: 3600,
+    });
+  });
+
+  test("skips provider call for days with active miss-attempt cooldown", async () => {
+    const deps = createDeps();
+    deps.hasRecentMissedAttemptForSeriesTimestamp.mockResolvedValueOnce(true);
+    const fetchRate = vi.fn().mockResolvedValue(0.91);
+
+    const result = await getRateWithBacktracking(
+      {
+        seriesKey: "valuation:key",
+        backtrackedFallbackCacheKey: "valuation:fallback:key",
+        date: new Date("2026-03-28T00:00:00.000Z"),
+        fetchRate,
+      },
+      deps,
+    );
+
+    expect(result).toBe(0.91);
+    expect(fetchRate).toHaveBeenCalledTimes(1);
+    expect(fetchRate).toHaveBeenCalledWith(
+      new Date("2026-03-27T00:00:00.000Z"),
+    );
+  });
+
+  test("stores miss-attempt cooldown for null provider result", async () => {
+    const deps = createDeps();
+    const fetchRate = vi
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(0.91);
+
+    const result = await getRateWithBacktracking(
+      {
+        seriesKey: "valuation:key",
+        backtrackedFallbackCacheKey: "valuation:fallback:key",
+        date: new Date("2026-03-28T00:00:00.000Z"),
+        fetchRate,
+      },
+      deps,
+    );
+
+    expect(result).toBe(0.91);
+    expect(deps.storeMissedAttemptForSeriesTimestamp).toHaveBeenCalledWith({
+      seriesKey: "valuation:key",
+      timestamp: Date.UTC(2026, 2, 28),
+      ttlSeconds: 3600,
+    });
+  });
+
+  test("clears miss-attempt cooldown for fetched numeric rate", async () => {
+    const deps = createDeps();
+    const requestedDate = new Date("2026-03-28T00:00:00.000Z");
+    const fetchRate = vi.fn().mockResolvedValue(0.91);
+
+    const result = await getRateWithBacktracking(
+      {
+        seriesKey: "valuation:key",
+        backtrackedFallbackCacheKey: "valuation:fallback:key",
+        date: requestedDate,
+        fetchRate,
+      },
+      deps,
+    );
+
+    expect(result).toBe(0.91);
+    expect(deps.clearMissedAttemptForSeriesTimestamp).toHaveBeenCalledWith(
+      "valuation:key",
+      Date.UTC(2026, 2, 28),
+    );
+  });
+
+  test("returns cached backtracked rate without provider call when requested day is not fetchable yet", async () => {
+    const deps = createDeps();
+    const requestedDate = new Date("2026-03-28T10:00:00.000Z");
+    const latestFetchableDate = new Date("2026-03-27T00:00:00.000Z");
+    deps.getCachedRate.mockResolvedValueOnce({
+      rate: 1.5,
+      timestamp: deps.toSeriesTimestamp(latestFetchableDate),
+    });
+    const fetchRate = vi.fn().mockResolvedValue(999);
+
+    const result = await getRateWithBacktracking(
+      {
+        seriesKey: "valuation:key",
+        backtrackedFallbackCacheKey: "valuation:fallback:key",
+        date: requestedDate,
+        latestFetchableDate,
+        fetchRate,
+      },
+      deps,
+    );
+
+    expect(result).toBe(1.5);
+    expect(fetchRate).not.toHaveBeenCalled();
+    expect(deps.clearBacktrackedFallbackFromCache).toHaveBeenCalledWith(
+      "valuation:fallback:key",
+    );
+  });
+
+  test("starts backtracking from latest fetchable date when requested day is not yet published", async () => {
+    const deps = createDeps();
+    const requestedDate = new Date("2026-03-28T10:00:00.000Z");
+    const latestFetchableDate = new Date("2026-03-27T00:00:00.000Z");
+    const fetchRate = vi.fn().mockResolvedValue(0.91);
+
+    const result = await getRateWithBacktracking(
+      {
+        seriesKey: "valuation:key",
+        backtrackedFallbackCacheKey: "valuation:fallback:key",
+        date: requestedDate,
+        latestFetchableDate,
+        fetchRate,
+      },
+      deps,
+    );
+
+    expect(result).toBe(0.91);
+    expect(fetchRate).toHaveBeenCalledTimes(1);
+    expect(fetchRate).toHaveBeenCalledWith(latestFetchableDate);
+  });
+
+  test("deduplicates in-flight provider fetches for the same series/date", async () => {
+    const deps = createDeps();
+    const requestedDate = new Date("2026-03-28T10:00:00.000Z");
+    const fetchRate = vi
+      .fn()
+      .mockImplementation(
+        async () =>
+          await new Promise<number>((resolve) =>
+            setTimeout(() => resolve(1.23), 10),
+          ),
+      );
+
+    const [firstResult, secondResult] = await Promise.all([
+      getRateWithBacktracking(
+        {
+          seriesKey: "valuation:key",
+          backtrackedFallbackCacheKey: "valuation:fallback:key-1",
+          date: requestedDate,
+          fetchRate,
+        },
+        deps,
+      ),
+      getRateWithBacktracking(
+        {
+          seriesKey: "valuation:key",
+          backtrackedFallbackCacheKey: "valuation:fallback:key-2",
+          date: requestedDate,
+          fetchRate,
+        },
+        deps,
+      ),
+    ]);
+
+    expect(firstResult).toBe(1.23);
+    expect(secondResult).toBe(1.23);
+    expect(fetchRate).toHaveBeenCalledTimes(1);
   });
 });

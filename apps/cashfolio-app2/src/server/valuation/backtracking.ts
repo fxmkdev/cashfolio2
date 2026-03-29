@@ -2,14 +2,18 @@ import {
   BACKTRACKED_FALLBACK_TTL_SECONDS,
   BACKTRACKED_NO_DATA_FALLBACK_TTL_SECONDS,
   MAX_BACKTRACK_DAYS,
+  MISSED_ATTEMPT_COOLDOWN_TTL_SECONDS,
 } from "./constants";
 import { subUtcDay, toSeriesTimestamp, toUtcDay } from "./date-utils";
 import {
   clearBacktrackedFallbackFromCache,
+  clearMissedAttemptForSeriesTimestamp,
   getBacktrackedFallbackFromCache,
   getCachedRate,
+  hasRecentMissedAttemptForSeriesTimestamp,
   storeBacktrackedFallbackInCache,
   storeCachedRate,
+  storeMissedAttemptForSeriesTimestamp,
 } from "./cache";
 import type {
   BacktrackedFallbackCacheEntry,
@@ -22,6 +26,7 @@ export type RateWithBacktrackingInput = {
   seriesKey: string;
   backtrackedFallbackCacheKey: string;
   date: Date;
+  latestFetchableDate?: Date;
   fetchRate: (date: Date) => Promise<FetchRateResult>;
   stopOnExplicitNoData?: boolean;
 };
@@ -30,6 +35,7 @@ type RateWithBacktrackingDeps = {
   maxBacktrackDays: number;
   backtrackedFallbackTtlSeconds: number;
   backtrackedNoDataFallbackTtlSeconds: number;
+  missedAttemptCooldownTtlSeconds: number;
   toSeriesTimestamp: (date: Date) => number;
   toUtcDay: (date: Date) => Date;
   subUtcDay: (date: Date) => Date;
@@ -51,12 +57,26 @@ type RateWithBacktrackingDeps = {
     ttlSeconds: number,
   ) => Promise<void>;
   clearBacktrackedFallbackFromCache: (key: string) => Promise<void>;
+  hasRecentMissedAttemptForSeriesTimestamp: (
+    seriesKey: string,
+    timestamp: number,
+  ) => Promise<boolean>;
+  storeMissedAttemptForSeriesTimestamp: (args: {
+    seriesKey: string;
+    timestamp: number;
+    ttlSeconds: number;
+  }) => Promise<void>;
+  clearMissedAttemptForSeriesTimestamp: (
+    seriesKey: string,
+    timestamp: number,
+  ) => Promise<void>;
 };
 
 const defaultDeps: RateWithBacktrackingDeps = {
   maxBacktrackDays: MAX_BACKTRACK_DAYS,
   backtrackedFallbackTtlSeconds: BACKTRACKED_FALLBACK_TTL_SECONDS,
   backtrackedNoDataFallbackTtlSeconds: BACKTRACKED_NO_DATA_FALLBACK_TTL_SECONDS,
+  missedAttemptCooldownTtlSeconds: MISSED_ATTEMPT_COOLDOWN_TTL_SECONDS,
   toSeriesTimestamp,
   toUtcDay,
   subUtcDay,
@@ -65,19 +85,67 @@ const defaultDeps: RateWithBacktrackingDeps = {
   getBacktrackedFallbackFromCache,
   storeBacktrackedFallbackInCache,
   clearBacktrackedFallbackFromCache,
+  hasRecentMissedAttemptForSeriesTimestamp,
+  storeMissedAttemptForSeriesTimestamp,
+  clearMissedAttemptForSeriesTimestamp,
 };
+
+const inFlightProviderFetchByKey = new Map<string, Promise<FetchRateResult>>();
+
+function getInFlightProviderFetchKey(
+  seriesKey: string,
+  timestamp: number,
+): string {
+  return `${seriesKey}:${timestamp}`;
+}
+
+async function fetchRateWithInFlightDedup(args: {
+  seriesKey: string;
+  timestamp: number;
+  date: Date;
+  fetchRate: (date: Date) => Promise<FetchRateResult>;
+}): Promise<FetchRateResult> {
+  const inFlightKey = getInFlightProviderFetchKey(
+    args.seriesKey,
+    args.timestamp,
+  );
+  const existingPromise = inFlightProviderFetchByKey.get(inFlightKey);
+  if (existingPromise) {
+    return existingPromise;
+  }
+
+  let fetchPromise: Promise<FetchRateResult>;
+  fetchPromise = args.fetchRate(args.date).finally(() => {
+    if (inFlightProviderFetchByKey.get(inFlightKey) === fetchPromise) {
+      inFlightProviderFetchByKey.delete(inFlightKey);
+    }
+  });
+
+  inFlightProviderFetchByKey.set(inFlightKey, fetchPromise);
+  return fetchPromise;
+}
 
 export async function getRateWithBacktracking(
   args: RateWithBacktrackingInput,
   deps: RateWithBacktrackingDeps = defaultDeps,
 ): Promise<number | null> {
   const requestedTimestamp = deps.toSeriesTimestamp(args.date);
+  const latestFetchableTimestamp = args.latestFetchableDate
+    ? Math.min(
+        requestedTimestamp,
+        deps.toSeriesTimestamp(args.latestFetchableDate),
+      )
+    : requestedTimestamp;
   const key = args.seriesKey;
   const backtrackedFallbackCacheKey = args.backtrackedFallbackCacheKey;
   const stopOnExplicitNoData = args.stopOnExplicitNoData ?? true;
 
   const cached = await deps.getCachedRate(key, requestedTimestamp);
   if (cached?.timestamp === requestedTimestamp) {
+    await deps.clearBacktrackedFallbackFromCache(backtrackedFallbackCacheKey);
+    return cached.rate;
+  }
+  if (cached && latestFetchableTimestamp <= cached.timestamp) {
     await deps.clearBacktrackedFallbackFromCache(backtrackedFallbackCacheKey);
     return cached.rate;
   }
@@ -96,7 +164,10 @@ export async function getRateWithBacktracking(
     }
   }
 
-  let requestedDate = deps.toUtcDay(args.date);
+  let requestedDate =
+    latestFetchableTimestamp < requestedTimestamp
+      ? new Date(latestFetchableTimestamp)
+      : deps.toUtcDay(args.date);
   for (let i = 0; i <= deps.maxBacktrackDays; i++) {
     const currentTimestamp = deps.toSeriesTimestamp(requestedDate);
     if (cached && currentTimestamp <= cached.timestamp) {
@@ -112,8 +183,28 @@ export async function getRateWithBacktracking(
       return cached.rate;
     }
 
-    const fetchedRate = await args.fetchRate(requestedDate);
+    const hasRecentMissedAttempt =
+      await deps.hasRecentMissedAttemptForSeriesTimestamp(
+        key,
+        currentTimestamp,
+      );
+    if (hasRecentMissedAttempt) {
+      requestedDate = deps.subUtcDay(requestedDate);
+      continue;
+    }
+
+    const fetchedRate = await fetchRateWithInFlightDedup({
+      seriesKey: key,
+      timestamp: currentTimestamp,
+      date: requestedDate,
+      fetchRate: args.fetchRate,
+    });
     if (fetchedRate === NO_DATA_FETCH_RESULT) {
+      await deps.storeMissedAttemptForSeriesTimestamp({
+        seriesKey: key,
+        timestamp: currentTimestamp,
+        ttlSeconds: deps.missedAttemptCooldownTtlSeconds,
+      });
       if (stopOnExplicitNoData) {
         await deps.storeBacktrackedFallbackInCache(
           backtrackedFallbackCacheKey,
@@ -157,8 +248,16 @@ export async function getRateWithBacktracking(
         );
       }
 
+      await deps.clearMissedAttemptForSeriesTimestamp(key, currentTimestamp);
+
       return fetchedRate;
     }
+
+    await deps.storeMissedAttemptForSeriesTimestamp({
+      seriesKey: key,
+      timestamp: currentTimestamp,
+      ttlSeconds: deps.missedAttemptCooldownTtlSeconds,
+    });
 
     requestedDate = deps.subUtcDay(requestedDate);
   }
