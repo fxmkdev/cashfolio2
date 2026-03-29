@@ -86,6 +86,11 @@ type BreakdownBarDatum = {
   percentageLabel: string;
 } & Record<string, number | null | string>;
 
+type BreakdownBarSeriesDefinition = {
+  key: string;
+  label: string;
+};
+
 function getMonthBoundsForYear(args: {
   year: number;
   minBookingDate: Date | null;
@@ -281,9 +286,12 @@ export function PeriodPageView({
       }),
     [],
   );
-  const barSeriesName = selectedBreakdown === "expense" ? "Expense" : "Income";
-  const barSeriesKeys = useMemo(
-    () => chartData.map((_, index) => `amount_${index}`),
+  const barSeriesDefinitions = useMemo<BreakdownBarSeriesDefinition[]>(
+    () =>
+      chartData.map((item, index) => ({
+        key: `amount_${index}`,
+        label: item.label,
+      })),
     [chartData],
   );
   const barChartData = useMemo<BreakdownBarDatum[]>(
@@ -295,15 +303,15 @@ export function PeriodPageView({
           percentageLabel: item.percentageLabel,
         };
 
-        for (const key of barSeriesKeys) {
-          row[key] = null;
+        for (const seriesDefinition of barSeriesDefinitions) {
+          row[seriesDefinition.key] = null;
         }
 
-        row[barSeriesKeys[itemIndex]] = item.amount;
+        row[barSeriesDefinitions[itemIndex].key] = item.amount;
 
         return row;
       }),
-    [barSeriesKeys, chartData],
+    [barSeriesDefinitions, chartData],
   );
 
   const donutSeries = useMemo<AgDonutSeriesOptions<BreakdownDatum>[]>(
@@ -396,14 +404,18 @@ export function PeriodPageView({
         },
       },
       legend: {
-        enabled: false,
+        enabled: true,
+        position: "bottom",
       },
-      series: barSeriesKeys.map((key) => ({
+      series: barSeriesDefinitions.map((seriesDefinition) => ({
         type: "bar",
         direction: "vertical",
+        grouped: false,
+        widthRatio: 0.72,
         xKey: "label",
-        yKey: key,
-        yName: barSeriesName,
+        yKey: seriesDefinition.key,
+        yName: seriesDefinition.label,
+        legendItemName: seriesDefinition.label,
         tooltip: {
           renderer: ({ datum }) => {
             const item = datum as BreakdownBarDatum;
@@ -447,8 +459,7 @@ export function PeriodPageView({
     [
       amountCompactFormatter,
       barChartData,
-      barSeriesKeys,
-      barSeriesName,
+      barSeriesDefinitions,
       colors,
       totalBreakdownAmountLabel,
     ],
