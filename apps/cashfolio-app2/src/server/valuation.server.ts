@@ -1,5 +1,12 @@
-import { BASE_CURRENCY } from "./valuation/constants";
-import { toSeriesTimestamp } from "./valuation/date-utils";
+import {
+  BASE_CURRENCY,
+  HISTORICAL_DATA_AVAILABLE_AT_UTC_MINUTE,
+  HISTORICAL_DATA_DAY_LAG,
+} from "./valuation/constants";
+import {
+  getLatestGuaranteedHistoricalUtcDay,
+  toSeriesTimestamp,
+} from "./valuation/date-utils";
 import { getRateWithBacktracking } from "./valuation/backtracking";
 import {
   getCryptocurrencyBacktrackedFallbackCacheKey,
@@ -14,6 +21,14 @@ import {
   fetchUsdPerCryptocurrencyRateFromCoinLayer,
   fetchUsdToCurrencyRateFromCurrencyLayer,
 } from "./valuation/providers";
+
+function getLatestFetchableHistoricalDate(now = new Date()): Date {
+  return getLatestGuaranteedHistoricalUtcDay({
+    now,
+    historicalDataDayLag: HISTORICAL_DATA_DAY_LAG,
+    historicalDataAvailableAtUtcMinute: HISTORICAL_DATA_AVAILABLE_AT_UTC_MINUTE,
+  });
+}
 
 async function getUsdToCurrencyRate(
   targetCurrency: string,
@@ -30,6 +45,7 @@ async function getUsdToCurrencyRate(
       toSeriesTimestamp(date),
     ),
     date,
+    latestFetchableDate: getLatestFetchableHistoricalDate(),
     fetchRate: (targetDate) =>
       fetchUsdToCurrencyRateFromCurrencyLayer(targetCurrency, targetDate),
   });
@@ -46,6 +62,7 @@ async function getUsdPerCryptocurrencyRate(
       toSeriesTimestamp(date),
     ),
     date,
+    latestFetchableDate: getLatestFetchableHistoricalDate(),
     fetchRate: (targetDate) =>
       fetchUsdPerCryptocurrencyRateFromCoinLayer(cryptocurrency, targetDate),
   });
@@ -64,6 +81,7 @@ async function getSecurityPrice(
       toSeriesTimestamp(date),
     ),
     date,
+    latestFetchableDate: getLatestFetchableHistoricalDate(),
     fetchRate: (targetDate) =>
       fetchSecurityPriceFromMarketstack(symbol, tradeCurrency, targetDate),
     stopOnExplicitNoData: false,

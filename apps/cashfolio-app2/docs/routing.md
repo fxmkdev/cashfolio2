@@ -163,8 +163,15 @@ update `sortOrder` values after reordering sibling rows in the reorder modal.
   cached in Redis TimeSeries keys (`valuation:coinlayer:USD:<CRYPTO_SYMBOL>`).
 - Security EOD close prices are requested from marketstack API and cached in
   Redis TimeSeries keys (`valuation:marketstack:<SYMBOL>:<TRADE_CURRENCY>`).
+- Backtracking first consults cached exact/prior rates; when the requested day
+  is newer than the latest guaranteed historical publish window, the provider
+  call is skipped and cached prior data is reused immediately.
+- Historical fetches use a 00:05 UTC publish cutoff and 1-day lag for "latest
+  fetchable date" calculation (before 00:05 UTC, treat the latest guaranteed day
+  as two UTC days back).
 - When an exact date is not available, the newest available prior rate is used
-  (first from cache, otherwise by historical API backtracking).
+  (first from cache, otherwise by historical API backtracking), and in-flight
+  provider fetches are deduplicated per series/day.
 - Ref-currency balances are populated for `Unit.CURRENCY`,
   `Unit.CRYPTOCURRENCY`, and `Unit.SECURITY` accounts.
 - For `Unit.SECURITY`, account `Balance` is treated as quantity and converted as

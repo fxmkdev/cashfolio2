@@ -149,4 +149,92 @@ describe("getRateWithBacktracking", () => {
       300,
     );
   });
+
+  test("returns cached backtracked rate without provider call when requested day is not fetchable yet", async () => {
+    const deps = createDeps();
+    const requestedDate = new Date("2026-03-28T10:00:00.000Z");
+    const latestFetchableDate = new Date("2026-03-27T00:00:00.000Z");
+    deps.getCachedRate.mockResolvedValueOnce({
+      rate: 1.5,
+      timestamp: deps.toSeriesTimestamp(latestFetchableDate),
+    });
+    const fetchRate = vi.fn().mockResolvedValue(999);
+
+    const result = await getRateWithBacktracking(
+      {
+        seriesKey: "valuation:key",
+        backtrackedFallbackCacheKey: "valuation:fallback:key",
+        date: requestedDate,
+        latestFetchableDate,
+        fetchRate,
+      },
+      deps,
+    );
+
+    expect(result).toBe(1.5);
+    expect(fetchRate).not.toHaveBeenCalled();
+    expect(deps.clearBacktrackedFallbackFromCache).toHaveBeenCalledWith(
+      "valuation:fallback:key",
+    );
+  });
+
+  test("starts backtracking from latest fetchable date when requested day is not yet published", async () => {
+    const deps = createDeps();
+    const requestedDate = new Date("2026-03-28T10:00:00.000Z");
+    const latestFetchableDate = new Date("2026-03-27T00:00:00.000Z");
+    const fetchRate = vi.fn().mockResolvedValue(0.91);
+
+    const result = await getRateWithBacktracking(
+      {
+        seriesKey: "valuation:key",
+        backtrackedFallbackCacheKey: "valuation:fallback:key",
+        date: requestedDate,
+        latestFetchableDate,
+        fetchRate,
+      },
+      deps,
+    );
+
+    expect(result).toBe(0.91);
+    expect(fetchRate).toHaveBeenCalledTimes(1);
+    expect(fetchRate).toHaveBeenCalledWith(latestFetchableDate);
+  });
+
+  test("deduplicates in-flight provider fetches for the same series/date", async () => {
+    const deps = createDeps();
+    const requestedDate = new Date("2026-03-28T10:00:00.000Z");
+    const fetchRate = vi
+      .fn()
+      .mockImplementation(
+        async () =>
+          await new Promise<number>((resolve) =>
+            setTimeout(() => resolve(1.23), 10),
+          ),
+      );
+
+    const [firstResult, secondResult] = await Promise.all([
+      getRateWithBacktracking(
+        {
+          seriesKey: "valuation:key",
+          backtrackedFallbackCacheKey: "valuation:fallback:key-1",
+          date: requestedDate,
+          fetchRate,
+        },
+        deps,
+      ),
+      getRateWithBacktracking(
+        {
+          seriesKey: "valuation:key",
+          backtrackedFallbackCacheKey: "valuation:fallback:key-2",
+          date: requestedDate,
+          fetchRate,
+        },
+        deps,
+      ),
+    ]);
+
+    expect(firstResult).toBe(1.23);
+    expect(secondResult).toBe(1.23);
+    expect(fetchRate).toHaveBeenCalledTimes(1);
+  });
 });

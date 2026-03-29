@@ -22,6 +22,7 @@ export type RateWithBacktrackingInput = {
   seriesKey: string;
   backtrackedFallbackCacheKey: string;
   date: Date;
+  latestFetchableDate?: Date;
   fetchRate: (date: Date) => Promise<FetchRateResult>;
   stopOnExplicitNoData?: boolean;
 };
@@ -67,17 +68,62 @@ const defaultDeps: RateWithBacktrackingDeps = {
   clearBacktrackedFallbackFromCache,
 };
 
+const inFlightProviderFetchByKey = new Map<string, Promise<FetchRateResult>>();
+
+function getInFlightProviderFetchKey(
+  seriesKey: string,
+  timestamp: number,
+): string {
+  return `${seriesKey}:${timestamp}`;
+}
+
+async function fetchRateWithInFlightDedup(args: {
+  seriesKey: string;
+  timestamp: number;
+  date: Date;
+  fetchRate: (date: Date) => Promise<FetchRateResult>;
+}): Promise<FetchRateResult> {
+  const inFlightKey = getInFlightProviderFetchKey(
+    args.seriesKey,
+    args.timestamp,
+  );
+  const existingPromise = inFlightProviderFetchByKey.get(inFlightKey);
+  if (existingPromise) {
+    return existingPromise;
+  }
+
+  let fetchPromise: Promise<FetchRateResult>;
+  fetchPromise = args.fetchRate(args.date).finally(() => {
+    if (inFlightProviderFetchByKey.get(inFlightKey) === fetchPromise) {
+      inFlightProviderFetchByKey.delete(inFlightKey);
+    }
+  });
+
+  inFlightProviderFetchByKey.set(inFlightKey, fetchPromise);
+  return fetchPromise;
+}
+
 export async function getRateWithBacktracking(
   args: RateWithBacktrackingInput,
   deps: RateWithBacktrackingDeps = defaultDeps,
 ): Promise<number | null> {
   const requestedTimestamp = deps.toSeriesTimestamp(args.date);
+  const latestFetchableTimestamp = args.latestFetchableDate
+    ? Math.min(
+        requestedTimestamp,
+        deps.toSeriesTimestamp(args.latestFetchableDate),
+      )
+    : requestedTimestamp;
   const key = args.seriesKey;
   const backtrackedFallbackCacheKey = args.backtrackedFallbackCacheKey;
   const stopOnExplicitNoData = args.stopOnExplicitNoData ?? true;
 
   const cached = await deps.getCachedRate(key, requestedTimestamp);
   if (cached?.timestamp === requestedTimestamp) {
+    await deps.clearBacktrackedFallbackFromCache(backtrackedFallbackCacheKey);
+    return cached.rate;
+  }
+  if (cached && latestFetchableTimestamp <= cached.timestamp) {
     await deps.clearBacktrackedFallbackFromCache(backtrackedFallbackCacheKey);
     return cached.rate;
   }
@@ -96,7 +142,10 @@ export async function getRateWithBacktracking(
     }
   }
 
-  let requestedDate = deps.toUtcDay(args.date);
+  let requestedDate =
+    latestFetchableTimestamp < requestedTimestamp
+      ? new Date(latestFetchableTimestamp)
+      : deps.toUtcDay(args.date);
   for (let i = 0; i <= deps.maxBacktrackDays; i++) {
     const currentTimestamp = deps.toSeriesTimestamp(requestedDate);
     if (cached && currentTimestamp <= cached.timestamp) {
@@ -112,7 +161,12 @@ export async function getRateWithBacktracking(
       return cached.rate;
     }
 
-    const fetchedRate = await args.fetchRate(requestedDate);
+    const fetchedRate = await fetchRateWithInFlightDedup({
+      seriesKey: key,
+      timestamp: currentTimestamp,
+      date: requestedDate,
+      fetchRate: args.fetchRate,
+    });
     if (fetchedRate === NO_DATA_FETCH_RESULT) {
       if (stopOnExplicitNoData) {
         await deps.storeBacktrackedFallbackInCache(
