@@ -131,7 +131,24 @@ export function parseMarketstackEodResponse(args: {
   }
 
   const price = firstPricePoint.close;
-  return typeof price === "number" ? price : null;
+  if (typeof price !== "number" || !Number.isFinite(price)) {
+    return null;
+  }
+
+  if (price <= 0) {
+    console.warn(
+      "Marketstack security close price is non-positive; treating as missing data.",
+      {
+        symbol,
+        tradeCurrency,
+        closePrice: price,
+        date: toDayString(date),
+      },
+    );
+    return null;
+  }
+
+  return price;
 }
 
 export async function fetchUsdToCurrencyRateFromCurrencyLayer(

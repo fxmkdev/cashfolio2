@@ -41,6 +41,31 @@ describe("Valuation provider helpers", () => {
     expect(result).toBe(NO_DATA_FETCH_RESULT);
   });
 
+  test("treats non-positive marketstack close prices as missing data", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const result = parseMarketstackEodResponse({
+      response: {
+        data: [{ close: 0 }],
+      },
+      symbol: "AAPL",
+      tradeCurrency: "USD",
+      date: new Date("2026-03-28T00:00:00.000Z"),
+    });
+
+    expect(result).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(
+      "Marketstack security close price is non-positive; treating as missing data.",
+      expect.objectContaining({
+        symbol: "AAPL",
+        tradeCurrency: "USD",
+        closePrice: 0,
+        date: "2026-03-28",
+      }),
+    );
+    warnSpy.mockRestore();
+  });
+
   test("detects no-data style provider errors", () => {
     expect(
       isNoDataProviderError({ code: 106, info: "No data available" }),
