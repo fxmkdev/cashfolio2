@@ -1,5 +1,6 @@
 import { getRedisClient } from "../../redis.server";
 import { VALUATION_SERIES_RETENTION_MS } from "./constants";
+import { getMissedAttemptCooldownCacheKey } from "./keys";
 import type { BacktrackedFallbackCacheEntry, CachedRateResult } from "./types";
 
 let hasWarnedValuationCacheReadFailure = false;
@@ -7,13 +8,6 @@ let hasWarnedValuationFallbackCacheReadFailure = false;
 let hasWarnedValuationFallbackCacheWriteFailure = false;
 let hasWarnedValuationMissCooldownCacheReadFailure = false;
 let hasWarnedValuationMissCooldownCacheWriteFailure = false;
-
-function getMissedAttemptCooldownCacheKey(
-  seriesKey: string,
-  timestamp: number,
-): string {
-  return `valuation:miss-cooldown:${seriesKey}:${timestamp}`;
-}
 
 export async function getCachedRate(
   key: string,
