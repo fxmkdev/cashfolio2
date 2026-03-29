@@ -7,6 +7,14 @@ import {
   MARKETSTACK_TIMEOUT_MS,
 } from "./constants";
 import { toDayString } from "./date-utils";
+import { getProviderApiKey } from "./provider-api-key";
+import {
+  getProviderBaseContext,
+  logProviderInfo,
+  logProviderWarn,
+  toSafeProviderErrorMessage,
+  type ProviderLogContext,
+} from "./provider-logging";
 import type {
   CoinLayerHistoricalResponse,
   CurrencyLayerHistoricalResponse,
@@ -15,111 +23,28 @@ import type {
 } from "./types";
 import { NO_DATA_FETCH_RESULT } from "./types";
 
-type ProviderName = "currencylayer" | "coinlayer" | "marketstack";
-type ProviderLogContextValue = string | number | boolean | null | undefined;
-type ProviderLogContext = Record<string, ProviderLogContextValue>;
-
-let hasWarnedMissingCurrencyLayerApiKey = false;
-let hasWarnedMissingCoinLayerApiKey = false;
-let hasWarnedMissingMarketstackApiKey = false;
-
-function getE2EMockedProviderApiKey(): string | null {
-  if (process.env.E2E_TEST_MODE !== "true") {
-    return null;
-  }
-  return "e2e-mocked-provider-key";
-}
-
-function sanitizeProviderLogText(value: string): string {
-  return value
-    .replace(/(access_key=)[^&\s]+/gi, "$1[redacted]")
-    .replace(/(api[_-]?key=)[^&\s]+/gi, "$1[redacted]")
-    .replace(/(token=)[^&\s]+/gi, "$1[redacted]")
-    .replace(/(bearer\s+)[^\s]+/gi, "$1[redacted]");
-}
-
-function sanitizeProviderLogContext(
-  context: ProviderLogContext,
-): ProviderLogContext {
-  return Object.fromEntries(
-    Object.entries(context).map(([key, value]) => [
-      key,
-      typeof value === "string" ? sanitizeProviderLogText(value) : value,
-    ]),
-  );
-}
-
-function toSafeErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return sanitizeProviderLogText(error.message);
-  }
-  return sanitizeProviderLogText(String(error));
-}
-
-function logProviderInfo(message: string, context: ProviderLogContext): void {
-  console.info(message, sanitizeProviderLogContext(context));
-}
-
-function logProviderWarn(message: string, context: ProviderLogContext): void {
-  console.warn(message, sanitizeProviderLogContext(context));
-}
-
-function getProviderBaseContext(args: {
-  provider: ProviderName;
-  date: Date;
-}): ProviderLogContext {
-  return {
-    provider: args.provider,
-    date: toDayString(args.date),
-  };
-}
-
 function getCurrencyLayerApiKey(): string | null {
-  const apiKey = process.env.CURRENCYLAYER_API_KEY?.trim();
-  if (apiKey) return apiKey;
-
-  const e2eMockedApiKey = getE2EMockedProviderApiKey();
-  if (e2eMockedApiKey) return e2eMockedApiKey;
-
-  if (!apiKey && !hasWarnedMissingCurrencyLayerApiKey) {
-    console.warn(
+  return getProviderApiKey({
+    envVarName: "CURRENCYLAYER_API_KEY",
+    missingKeyWarning:
       "CURRENCYLAYER_API_KEY is not set; reference-currency conversion will be unavailable when account currency differs.",
-    );
-    hasWarnedMissingCurrencyLayerApiKey = true;
-  }
-  return null;
+  });
 }
 
 function getCoinLayerApiKey(): string | null {
-  const apiKey = process.env.COINLAYER_API_KEY?.trim();
-  if (apiKey) return apiKey;
-
-  const e2eMockedApiKey = getE2EMockedProviderApiKey();
-  if (e2eMockedApiKey) return e2eMockedApiKey;
-
-  if (!apiKey && !hasWarnedMissingCoinLayerApiKey) {
-    console.warn(
+  return getProviderApiKey({
+    envVarName: "COINLAYER_API_KEY",
+    missingKeyWarning:
       "COINLAYER_API_KEY is not set; cryptocurrency reference conversion will be unavailable.",
-    );
-    hasWarnedMissingCoinLayerApiKey = true;
-  }
-  return null;
+  });
 }
 
 function getMarketstackApiKey(): string | null {
-  const apiKey = process.env.MARKETSTACK_API_KEY?.trim();
-  if (apiKey) return apiKey;
-
-  const e2eMockedApiKey = getE2EMockedProviderApiKey();
-  if (e2eMockedApiKey) return e2eMockedApiKey;
-
-  if (!apiKey && !hasWarnedMissingMarketstackApiKey) {
-    console.warn(
+  return getProviderApiKey({
+    envVarName: "MARKETSTACK_API_KEY",
+    missingKeyWarning:
       "MARKETSTACK_API_KEY is not set; security reference conversion will be unavailable.",
-    );
-    hasWarnedMissingMarketstackApiKey = true;
-  }
-  return null;
+  });
 }
 
 export function isNoDataProviderError(error?: {
@@ -252,7 +177,7 @@ export async function fetchUsdToCurrencyRateFromCurrencyLayer(
     logProviderWarn("Valuation provider request failed", {
       ...requestContext,
       outcome: "requestError",
-      error: toSafeErrorMessage(error),
+      error: toSafeProviderErrorMessage(error),
     });
     throw error;
   } finally {
@@ -339,7 +264,7 @@ export async function fetchUsdPerCryptocurrencyRateFromCoinLayer(
     logProviderWarn("Valuation provider request failed", {
       ...requestContext,
       outcome: "requestError",
-      error: toSafeErrorMessage(error),
+      error: toSafeProviderErrorMessage(error),
     });
     throw error;
   } finally {
@@ -428,7 +353,7 @@ export async function fetchSecurityPriceFromMarketstack(
     logProviderWarn("Valuation provider request failed", {
       ...requestContext,
       outcome: "requestError",
-      error: toSafeErrorMessage(error),
+      error: toSafeProviderErrorMessage(error),
     });
     throw error;
   } finally {
