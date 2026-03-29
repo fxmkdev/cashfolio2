@@ -21,6 +21,7 @@ import { useMemo } from "react";
 import { ensureChartModulesRegistered } from "../../ag-chart-modules";
 import { LinkButton } from "../../components/link-button";
 import type { getPeriodOverview } from "../../server/period";
+import { formatMonthPeriodValue } from "../../shared/period";
 import {
   PERIOD_PRESET_LAST_MONTH,
   PERIOD_PRESET_LAST_YEAR,
@@ -67,10 +68,6 @@ type StatCardProps = {
   value: string;
   valueColor: "green" | "red";
 };
-
-function formatMonthPeriodValue(year: number, month: number): string {
-  return `${String(year).padStart(4, "0")}-${String(month + 1).padStart(2, "0")}`;
-}
 
 function getMonthBoundsForYear(args: {
   year: number;

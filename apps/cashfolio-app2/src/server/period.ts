@@ -971,36 +971,35 @@ export const getPeriodOverview = createServerFn({
         isMultiUnitTransaction(transaction.bookings),
       );
 
-      const transactionTasks = multiUnitTransactions.map((transaction) => ({
-        conversionPromises: transaction.bookings.map((booking) =>
-          convertBookingValueToReference({
-            value: Number(booking.value),
-            unit: booking.unit,
-            currency: booking.currency,
-            cryptocurrency: booking.cryptocurrency,
-            symbol: booking.symbol,
-            tradeCurrency: booking.tradeCurrency,
-            date: booking.date,
-            referenceCurrency,
-            exchangeRateByKey,
-          }),
+      const convertedValuesPerTransaction = await Promise.all(
+        multiUnitTransactions.map((transaction) =>
+          Promise.all(
+            transaction.bookings.map((booking) =>
+              convertBookingValueToReference({
+                value: Number(booking.value),
+                unit: booking.unit,
+                currency: booking.currency,
+                cryptocurrency: booking.cryptocurrency,
+                symbol: booking.symbol,
+                tradeCurrency: booking.tradeCurrency,
+                date: booking.date,
+                referenceCurrency,
+                exchangeRateByKey,
+              }),
+            ),
+          ),
         ),
-      }));
-
-      await Promise.all(
-        transactionTasks.flatMap((task) => task.conversionPromises),
       );
 
-      for (const task of transactionTasks) {
-        const convertedValues = await Promise.all(task.conversionPromises);
+      for (const convertedValues of convertedValuesPerTransaction) {
         const nonNullConvertedValues = convertedValues.filter(
           (convertedValue): convertedValue is number => convertedValue != null,
         );
-        const failedConversion =
-          nonNullConvertedValues.length !== convertedValues.length;
+        const failedConversionsCount =
+          convertedValues.length - nonNullConvertedValues.length;
 
-        if (failedConversion) {
-          skippedBookingsCount += 1;
+        if (failedConversionsCount > 0) {
+          skippedBookingsCount += failedConversionsCount;
           continue;
         }
 

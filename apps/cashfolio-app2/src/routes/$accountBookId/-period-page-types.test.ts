@@ -20,6 +20,7 @@ describe("isPeriodSearchValue", () => {
   });
 
   test("rejects invalid values", () => {
+    expect(isPeriodSearchValue("0099")).toBe(false);
     expect(isPeriodSearchValue("2026-13")).toBe(false);
     expect(isPeriodSearchValue("2026-00")).toBe(false);
     expect(isPeriodSearchValue("bad")).toBe(false);
