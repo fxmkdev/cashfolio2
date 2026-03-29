@@ -22,9 +22,9 @@ import {
 } from "../shared/period";
 import {
   buildAvailableYears,
-  buildExpenseBreakdownItems,
+  buildBreakdownItems,
   computeHoldingGainLossForEventSeries,
-  createExpenseBucket,
+  createBreakdownBucket,
   filterConvertibleHoldingAccounts,
   getHoldingEventDateMap,
   isMultiUnitTransaction,
@@ -52,9 +52,9 @@ export {
 };
 export type { PeriodPresetValue };
 export {
-  buildExpenseBreakdownItems,
+  buildBreakdownItems,
   computeHoldingGainLossForEventSeries,
-  createExpenseBucket,
+  createBreakdownBucket,
   isMultiUnitTransaction,
   shouldIncludeTransactionForPeriod,
 };
@@ -501,7 +501,7 @@ export const getPeriodOverview = createServerFn({
         ) {
           totalIncome += -convertedValue;
 
-          const incomeBucket = createExpenseBucket({
+          const incomeBucket = createBreakdownBucket({
             accountId: booking.account.id,
             accountName: booking.account.name,
             groupId: booking.account.groupId,
@@ -524,7 +524,7 @@ export const getPeriodOverview = createServerFn({
         ) {
           totalExpenses += convertedValue;
 
-          const expenseBucket = createExpenseBucket({
+          const expenseBucket = createBreakdownBucket({
             accountId: booking.account.id,
             accountName: booking.account.name,
             groupId: booking.account.groupId,
@@ -818,10 +818,10 @@ export const getPeriodOverview = createServerFn({
     const savings = totalIncome - totalExpenses;
     const totalReturn = savings + gainsLosses;
 
-    const expenseBreakdown = buildExpenseBreakdownItems(
+    const expenseBreakdown = buildBreakdownItems(
       Array.from(expenseAmountByBucketId.values()),
     );
-    const incomeBreakdown = buildExpenseBreakdownItems(
+    const incomeBreakdown = buildBreakdownItems(
       Array.from(incomeAmountByBucketId.values()),
     );
 

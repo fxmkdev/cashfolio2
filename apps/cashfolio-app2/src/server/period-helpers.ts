@@ -6,7 +6,7 @@ export type PeriodGroupNode = {
   parentGroupId: string | null;
 };
 
-type ExpenseBucket = {
+type BreakdownBucket = {
   id: string;
   label: string;
   kind: "group" | "account";
@@ -139,12 +139,12 @@ function getTopLevelGroup(args: {
   return path[path.length - 1] ?? null;
 }
 
-export function createExpenseBucket(args: {
+export function createBreakdownBucket(args: {
   accountId: string;
   accountName: string;
   groupId: string | null;
   groupById: Map<string, PeriodGroupNode>;
-}): ExpenseBucket {
+}): BreakdownBucket {
   if (args.groupId) {
     const topLevelGroup = getTopLevelGroup({
       groupId: args.groupId,
@@ -167,9 +167,7 @@ export function createExpenseBucket(args: {
   };
 }
 
-export function buildExpenseBreakdownItems(
-  items: ExpenseBreakdownAccumulatorItem[],
-): {
+export function buildBreakdownItems(items: ExpenseBreakdownAccumulatorItem[]): {
   totalAmount: number;
   items: Array<{
     id: string;

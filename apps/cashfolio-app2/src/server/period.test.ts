@@ -13,9 +13,9 @@ vi.mock("./valuation.server", () => ({
 import { Unit } from "../.prisma-client/enums";
 import {
   DEFAULT_PERIOD_VALUE,
-  buildExpenseBreakdownItems,
+  buildBreakdownItems,
   computeHoldingGainLossForEventSeries,
-  createExpenseBucket,
+  createBreakdownBucket,
   isMultiUnitTransaction,
   normalizePeriodValue,
   resolvePeriodSelection,
@@ -32,6 +32,7 @@ describe("normalizePeriodValue", () => {
 
   test("falls back to default for unsupported values", () => {
     expect(normalizePeriodValue("0099")).toBe(DEFAULT_PERIOD_VALUE);
+    expect(normalizePeriodValue("0100")).toBe(DEFAULT_PERIOD_VALUE);
     expect(normalizePeriodValue("0099-01")).toBe(DEFAULT_PERIOD_VALUE);
     expect(normalizePeriodValue("not-valid")).toBe(DEFAULT_PERIOD_VALUE);
     expect(normalizePeriodValue(null)).toBe(DEFAULT_PERIOD_VALUE);
@@ -255,7 +256,7 @@ describe("expense breakdown grouping", () => {
 
   test("buckets by top-level root group", () => {
     expect(
-      createExpenseBucket({
+      createBreakdownBucket({
         accountId: "account-rent",
         accountName: "Rent Account",
         groupId: "rent",
@@ -270,7 +271,7 @@ describe("expense breakdown grouping", () => {
 
   test("falls back to account bucket when group cannot be resolved", () => {
     expect(
-      createExpenseBucket({
+      createBreakdownBucket({
         accountId: "account-misc",
         accountName: "Misc",
         groupId: "missing-group",
@@ -284,7 +285,7 @@ describe("expense breakdown grouping", () => {
   });
 
   test("keeps only positive-net buckets and computes percentages", () => {
-    const breakdown = buildExpenseBreakdownItems([
+    const breakdown = buildBreakdownItems([
       {
         id: "group:housing",
         label: "Housing",

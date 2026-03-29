@@ -1,6 +1,5 @@
 import {
   Alert,
-  Box,
   Card,
   Center,
   Container,
@@ -12,7 +11,6 @@ import {
   Stack,
   Text,
   Title,
-  VisuallyHidden,
   useComputedColorScheme,
   useMantineTheme,
 } from "@mantine/core";
@@ -28,7 +26,7 @@ import type {
   AgDonutSeriesOptions,
   AgPolarChartOptions,
 } from "ag-charts-community";
-import { type ReactNode, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ensureChartModulesRegistered } from "../../ag-chart-modules";
 import { LinkButton } from "../../components/link-button";
 import type { getPeriodOverview } from "../../server/period";
@@ -156,23 +154,6 @@ function StatCard({ label, value, valueColor }: StatCardProps) {
         </Text>
       </Stack>
     </Card>
-  );
-}
-
-function ChartTypeIconLabel({
-  children,
-  screenReaderLabel,
-}: {
-  children: ReactNode;
-  screenReaderLabel: string;
-}) {
-  return (
-    <>
-      <VisuallyHidden>{screenReaderLabel}</VisuallyHidden>
-      <Box component="span" aria-hidden>
-        {children}
-      </Box>
-    </>
   );
 }
 

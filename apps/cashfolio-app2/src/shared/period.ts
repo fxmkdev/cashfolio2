@@ -59,7 +59,7 @@ export function parseExplicitYearPeriod(
   const match = PERIOD_YEAR_REGEX.exec(value);
   if (!match) return null;
   const year = Number(match[1]);
-  if (year < 100) return null;
+  if (year < 1000) return null;
   return {
     year,
     value: String(year).padStart(4, "0"),
