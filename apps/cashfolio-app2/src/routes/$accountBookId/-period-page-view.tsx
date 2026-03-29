@@ -1,5 +1,6 @@
 import {
   Alert,
+  Box,
   Card,
   Container,
   Flex,
@@ -26,7 +27,7 @@ import type {
   AgDonutSeriesOptions,
   AgPolarChartOptions,
 } from "ag-charts-community";
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { ensureChartModulesRegistered } from "../../ag-chart-modules";
 import { LinkButton } from "../../components/link-button";
 import type { getPeriodOverview } from "../../server/period";
@@ -149,6 +150,34 @@ function StatCard({ label, value, valueColor }: StatCardProps) {
         </Text>
       </Stack>
     </Card>
+  );
+}
+
+function ChartTypeIconLabel({
+  children,
+  screenReaderLabel,
+}: {
+  children: ReactNode;
+  screenReaderLabel: string;
+}) {
+  return (
+    <>
+      <VisuallyHidden>{screenReaderLabel}</VisuallyHidden>
+      <Box
+        component="span"
+        aria-hidden
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 16,
+          height: 16,
+          lineHeight: 1,
+        }}
+      >
+        {children}
+      </Box>
+    </>
   );
 }
 
@@ -595,19 +624,17 @@ export function PeriodPageView({
                   data={[
                     {
                       label: (
-                        <>
-                          <VisuallyHidden>Donut chart</VisuallyHidden>
-                          <IconChartDonut size={16} aria-hidden />
-                        </>
+                        <ChartTypeIconLabel screenReaderLabel="Donut chart">
+                          <IconChartDonut size={16} />
+                        </ChartTypeIconLabel>
                       ),
                       value: "donut",
                     },
                     {
                       label: (
-                        <>
-                          <VisuallyHidden>Bar chart</VisuallyHidden>
-                          <IconChartBar size={16} aria-hidden />
-                        </>
+                        <ChartTypeIconLabel screenReaderLabel="Bar chart">
+                          <IconChartBar size={16} />
+                        </ChartTypeIconLabel>
                       ),
                       value: "bar",
                     },
