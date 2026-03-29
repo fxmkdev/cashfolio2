@@ -84,6 +84,20 @@ describe("resolvePeriodSelection", () => {
     expect(selection.periodSpecifier).toBe("month");
   });
 
+  test("clamps explicit month to current month when no bookings exist", () => {
+    const selection = resolvePeriodSelection({
+      periodValue: "2000-01",
+      now: new Date("2026-03-28T00:00:00.000Z"),
+      firstBookingDate: null,
+    });
+
+    expect(selection.year).toBe(2026);
+    expect(selection.month).toBe(2);
+    expect(selection.from.toISOString()).toBe("2026-03-01T00:00:00.000Z");
+    expect(selection.to.toISOString()).toBe("2026-03-27T00:00:00.000Z");
+    expect(selection.periodSpecifier).toBe("month");
+  });
+
   test("uses natural year end for historical years", () => {
     const selection = resolvePeriodSelection({
       periodValue: "2025",
@@ -92,6 +106,19 @@ describe("resolvePeriodSelection", () => {
 
     expect(selection.from.toISOString()).toBe("2025-01-01T00:00:00.000Z");
     expect(selection.to.toISOString()).toBe("2025-12-31T00:00:00.000Z");
+    expect(selection.periodSpecifier).toBe("year");
+  });
+
+  test("clamps explicit year to current year when no bookings exist", () => {
+    const selection = resolvePeriodSelection({
+      periodValue: "2000",
+      now: new Date("2026-03-28T00:00:00.000Z"),
+      firstBookingDate: null,
+    });
+
+    expect(selection.year).toBe(2026);
+    expect(selection.from.toISOString()).toBe("2026-01-01T00:00:00.000Z");
+    expect(selection.to.toISOString()).toBe("2026-03-27T00:00:00.000Z");
     expect(selection.periodSpecifier).toBe("year");
   });
 

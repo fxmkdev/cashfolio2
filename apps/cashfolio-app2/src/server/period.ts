@@ -191,7 +191,7 @@ function normalizePeriodBase(args: {
 function clampExplicitSelectionToBounds(args: {
   base: NormalizedPeriodBase;
   now: Date;
-  firstBookingDate: Date | null;
+  firstBookingDate: Date | null | undefined;
 }): NormalizedPeriodBase {
   const { base, now, firstBookingDate } = args;
 
@@ -201,6 +201,7 @@ function clampExplicitSelectionToBounds(args: {
 
   const currentYear = now.getUTCFullYear();
   const currentMonth = now.getUTCMonth();
+  const hasNoBookings = firstBookingDate === null;
   const firstBookingDay = firstBookingDate
     ? startOfUtcDay(firstBookingDate)
     : null;
@@ -210,7 +211,9 @@ function clampExplicitSelectionToBounds(args: {
     const monthIndex = base.year * 12 + month;
     const minMonthIndex = firstBookingDay
       ? firstBookingDay.getUTCFullYear() * 12 + firstBookingDay.getUTCMonth()
-      : monthIndex;
+      : hasNoBookings
+        ? currentYear * 12 + currentMonth
+        : monthIndex;
     const maxMonthIndex = currentYear * 12 + currentMonth;
 
     const clampedMonthIndex = Math.min(
@@ -229,7 +232,9 @@ function clampExplicitSelectionToBounds(args: {
 
   const minYear = firstBookingDay
     ? firstBookingDay.getUTCFullYear()
-    : base.year;
+    : hasNoBookings
+      ? currentYear
+      : base.year;
   return {
     ...base,
     year: Math.min(Math.max(base.year, minYear), currentYear),
@@ -252,17 +257,21 @@ export function resolvePeriodSelection(args: {
 }): NormalizedPeriodSelection {
   const now = startOfUtcDay(args.now ?? new Date());
   const normalizedPeriodValue = normalizePeriodValue(args.periodValue);
+  const firstBookingDateForClamping =
+    args.firstBookingDate === undefined
+      ? undefined
+      : args.firstBookingDate
+        ? startOfUtcDay(args.firstBookingDate)
+        : null;
   const base = clampExplicitSelectionToBounds({
     base: normalizePeriodBase({ periodValue: normalizedPeriodValue, now }),
     now,
-    firstBookingDate: args.firstBookingDate ?? null,
+    firstBookingDate: firstBookingDateForClamping,
   });
 
   const currentYear = now.getUTCFullYear();
   const currentMonth = now.getUTCMonth();
-  const firstBookingDate = args.firstBookingDate
-    ? startOfUtcDay(args.firstBookingDate)
-    : null;
+  const firstBookingDate = firstBookingDateForClamping ?? null;
 
   const year = base.year;
   const month = base.month;
