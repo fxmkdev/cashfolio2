@@ -17,6 +17,23 @@ const SECURITY_PRICE_BY_SYMBOL: Record<string, number> = {
   MSFT: 12,
 };
 
+const E2E_VALUATION_PROVIDER_HOSTS = new Set([
+  "api.currencylayer.com",
+  "api.coinlayer.com",
+  "api.marketstack.com",
+]);
+
+function enforceHandledValuationProviderRequests(request: Request): void {
+  const host = new URL(request.url).host.toLowerCase();
+  if (!E2E_VALUATION_PROVIDER_HOSTS.has(host)) {
+    return;
+  }
+
+  throw new Error(
+    `Unhandled E2E valuation provider request: ${request.method} ${request.url}`,
+  );
+}
+
 const e2eValuationProviderServer = setupServer(
   http.get("https://api.currencylayer.com/historical", ({ request }) => {
     const url = new URL(request.url);
@@ -96,7 +113,11 @@ export function ensureE2EValuationProviderMocksEnabled(): void {
     return;
   }
 
-  e2eValuationProviderServer.listen({ onUnhandledRequest: "bypass" });
+  e2eValuationProviderServer.listen({
+    onUnhandledRequest(request) {
+      enforceHandledValuationProviderRequests(request);
+    },
+  });
   hasStartedE2EValuationProviderMocks = true;
 
   process.once("exit", () => {
