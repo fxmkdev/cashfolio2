@@ -2,6 +2,7 @@ import {
   Alert,
   Card,
   Container,
+  Flex,
   Group,
   NativeSelect,
   SegmentedControl,
@@ -12,9 +13,15 @@ import {
   useComputedColorScheme,
   useMantineTheme,
 } from "@mantine/core";
-import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
+import {
+  IconAlertTriangle,
+  IconChartBar,
+  IconChartDonut,
+  IconListDetails,
+} from "@tabler/icons-react";
 import { AgCharts } from "ag-charts-react";
 import type {
+  AgCartesianChartOptions,
   AgDonutSeriesOptions,
   AgPolarChartOptions,
 } from "ag-charts-community";
@@ -68,6 +75,9 @@ type StatCardProps = {
   value: string;
   valueColor: "green" | "red";
 };
+
+type BreakdownType = "expense" | "income";
+type BreakdownChartType = "donut" | "bar";
 
 function getMonthBoundsForYear(args: {
   year: number;
@@ -142,9 +152,10 @@ export function PeriodPageView({
   selectedPeriodValue,
   onPeriodChange,
 }: PeriodPageViewProps) {
-  const [selectedBreakdown, setSelectedBreakdown] = useState<
-    "expense" | "income"
-  >("expense");
+  const [selectedBreakdown, setSelectedBreakdown] =
+    useState<BreakdownType>("expense");
+  const [selectedChartType, setSelectedChartType] =
+    useState<BreakdownChartType>("donut");
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
   const colors = useMemo(
@@ -227,6 +238,25 @@ export function PeriodPageView({
   );
 
   const hasBreakdown = chartData.length > 0;
+  const amountCompactFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("en-CH", {
+        notation: "compact",
+        maximumFractionDigits: 1,
+      }),
+    [],
+  );
+  const barSeriesColor =
+    selectedBreakdown === "expense"
+      ? {
+          fill: colors.expenseFillColor,
+          stroke: colors.expenseStrokeColor,
+        }
+      : {
+          fill: colors.incomeFillColor,
+          stroke: colors.incomeStrokeColor,
+        };
+  const barSeriesName = selectedBreakdown === "expense" ? "Expense" : "Income";
 
   const donutSeries = useMemo<AgDonutSeriesOptions<BreakdownDatum>[]>(
     () => [
@@ -276,7 +306,7 @@ export function PeriodPageView({
     [colors.chartTextColor, totalBreakdownAmountLabel],
   );
 
-  const chartOptions = useMemo<AgPolarChartOptions<BreakdownDatum>>(
+  const donutChartOptions = useMemo<AgPolarChartOptions<BreakdownDatum>>(
     () => ({
       data: chartData,
       background: {
@@ -300,6 +330,88 @@ export function PeriodPageView({
     }),
     [chartData, colors, donutSeries],
   );
+  const barChartOptions = useMemo<AgCartesianChartOptions>(
+    () => ({
+      data: chartData,
+      background: {
+        visible: false,
+      },
+      theme: {
+        params: {
+          textColor: colors.chartTextColor,
+          foregroundColor: colors.chartTextColor,
+          borderColor: colors.themeBorderColor,
+          tooltipBackgroundColor: colors.tooltipBackgroundColor,
+          tooltipBorder: true,
+          tooltipTextColor: colors.tooltipTextColor,
+          tooltipSubtleTextColor: colors.tooltipSubtleTextColor,
+        },
+      },
+      legend: {
+        enabled: false,
+      },
+      series: [
+        {
+          type: "bar",
+          direction: "vertical",
+          xKey: "label",
+          yKey: "amount",
+          yName: barSeriesName,
+          fill: barSeriesColor.fill,
+          stroke: barSeriesColor.stroke,
+          tooltip: {
+            renderer: ({ datum }) => {
+              const item = datum as BreakdownDatum;
+
+              return {
+                heading: item.label,
+                data: [
+                  {
+                    label: "Share",
+                    value: item.percentageLabel,
+                  },
+                  {
+                    label: "Amount",
+                    value: item.amountLabel,
+                  },
+                  {
+                    label: "Total",
+                    value: totalBreakdownAmountLabel,
+                  },
+                ],
+              };
+            },
+          },
+        },
+      ],
+      axes: {
+        x: {
+          type: "category",
+          label: {
+            rotation: -25,
+          },
+        },
+        y: {
+          type: "number",
+          label: {
+            formatter: ({ value }) =>
+              amountCompactFormatter.format(Number(value)),
+          },
+        },
+      },
+    }),
+    [
+      amountCompactFormatter,
+      barSeriesColor.fill,
+      barSeriesColor.stroke,
+      barSeriesName,
+      chartData,
+      colors,
+      totalBreakdownAmountLabel,
+    ],
+  );
+  const chartOptions =
+    selectedChartType === "donut" ? donutChartOptions : barChartOptions;
 
   const statCards: StatCardProps[] = [
     {
@@ -458,16 +570,47 @@ export function PeriodPageView({
           <Stack gap="sm">
             <Group justify="space-between" align="center">
               <Title order={4}>{breakdownTitle}</Title>
-              <SegmentedControl
-                value={selectedBreakdown}
-                onChange={(value) =>
-                  setSelectedBreakdown(value as "expense" | "income")
-                }
-                data={[
-                  { label: "Expense", value: "expense" },
-                  { label: "Income", value: "income" },
-                ]}
-              />
+              <Flex gap="xs" wrap="wrap" justify="flex-end">
+                <SegmentedControl
+                  size="xs"
+                  value={selectedBreakdown}
+                  onChange={(value) =>
+                    setSelectedBreakdown(value as BreakdownType)
+                  }
+                  data={[
+                    { label: "Expense", value: "expense" },
+                    { label: "Income", value: "income" },
+                  ]}
+                />
+                <SegmentedControl
+                  size="xs"
+                  aria-label="Breakdown chart type"
+                  value={selectedChartType}
+                  onChange={(value) =>
+                    setSelectedChartType(value as BreakdownChartType)
+                  }
+                  data={[
+                    {
+                      label: (
+                        <Group gap={6} wrap="nowrap">
+                          <IconChartDonut size={14} />
+                          <Text size="xs">Donut</Text>
+                        </Group>
+                      ),
+                      value: "donut",
+                    },
+                    {
+                      label: (
+                        <Group gap={6} wrap="nowrap">
+                          <IconChartBar size={14} />
+                          <Text size="xs">Bar</Text>
+                        </Group>
+                      ),
+                      value: "bar",
+                    },
+                  ]}
+                />
+              </Flex>
             </Group>
             <Text c="dimmed" size="sm">
               {breakdownSubtitle}
