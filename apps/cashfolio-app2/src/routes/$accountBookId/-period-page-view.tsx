@@ -461,8 +461,8 @@ export function PeriodPageView({
               icon={<IconAlertTriangle size={16} />}
               title="Partial data"
             >
-              {overview.skippedBookingsCount} booking conversion(s) were skipped
-              because valuation data was unavailable.
+              {overview.skippedBookingsCount} valuation-related item(s) were
+              skipped because valuation data was unavailable.
             </Alert>
           ) : null}
         </Card>

@@ -184,6 +184,25 @@ describe("transaction period inclusion", () => {
         },
       ]),
     ).toBe(false);
+
+    expect(
+      isMultiUnitTransaction([
+        {
+          unit: Unit.SECURITY,
+          currency: null,
+          cryptocurrency: null,
+          symbol: "AAPL",
+          tradeCurrency: "USD",
+        },
+        {
+          unit: Unit.SECURITY,
+          currency: null,
+          cryptocurrency: null,
+          symbol: "AAPL",
+          tradeCurrency: "CHF",
+        },
+      ]),
+    ).toBe(true);
   });
 });
 

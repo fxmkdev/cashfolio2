@@ -356,7 +356,10 @@ function getBookingUnitIdentifier(booking: MultiUnitBooking): string | null {
       ? `crypto:${booking.cryptocurrency.toUpperCase()}`
       : null;
   }
-  return booking.symbol ? `security:${booking.symbol.toUpperCase()}` : null;
+  if (!booking.symbol || !booking.tradeCurrency) {
+    return null;
+  }
+  return `security:${booking.symbol.toUpperCase()}:${booking.tradeCurrency.toUpperCase()}`;
 }
 
 export function isMultiUnitTransaction(bookings: MultiUnitBooking[]): boolean {
@@ -1111,11 +1114,8 @@ export const getPeriodOverview = createServerFn({
           Array.from(holdingEventDateMap.values()),
         );
 
-        const eventsForSeries: HoldingGainLossSeriesEvent[] = [];
-        let accountConvertible = true;
-
-        for (const event of sortedEvents) {
-          const eventRate = await getUnitToReferenceExchangeRate({
+        const eventRatePromises = sortedEvents.map((event) =>
+          getUnitToReferenceExchangeRate({
             unit: account.unit,
             currency: account.currency,
             cryptocurrency: account.cryptocurrency,
@@ -1124,23 +1124,24 @@ export const getPeriodOverview = createServerFn({
             date: event.date,
             referenceCurrency,
             exchangeRateByKey,
-          });
+          }),
+        );
+        const eventRates = await Promise.all(eventRatePromises);
+        const nonNullEventRates = eventRates.filter(
+          (eventRate): eventRate is number => eventRate != null,
+        );
 
-          if (eventRate == null) {
-            skippedBookingsCount += 1;
-            accountConvertible = false;
-            break;
-          }
-
-          eventsForSeries.push({
-            rate: eventRate,
-            balanceDelta: event.balanceDelta,
-          });
-        }
-
-        if (!accountConvertible) {
+        if (nonNullEventRates.length !== eventRates.length) {
+          skippedBookingsCount += 1;
           continue;
         }
+
+        const eventsForSeries: HoldingGainLossSeriesEvent[] = sortedEvents.map(
+          (event, index) => ({
+            rate: nonNullEventRates[index]!,
+            balanceDelta: event.balanceDelta,
+          }),
+        );
 
         holdingGainLoss += computeHoldingGainLossForEventSeries({
           initialBalance,
