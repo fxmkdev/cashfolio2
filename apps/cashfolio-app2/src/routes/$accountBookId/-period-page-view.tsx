@@ -568,19 +568,19 @@ export function PeriodPageView({
                   data={[
                     {
                       label: (
-                        <Group gap={0} wrap="nowrap">
-                          <IconChartDonut size={14} />
+                        <>
                           <VisuallyHidden>Donut chart</VisuallyHidden>
-                        </Group>
+                          <IconChartDonut size={16} aria-hidden />
+                        </>
                       ),
                       value: "donut",
                     },
                     {
                       label: (
-                        <Group gap={0} wrap="nowrap">
-                          <IconChartBar size={14} />
+                        <>
                           <VisuallyHidden>Bar chart</VisuallyHidden>
-                        </Group>
+                          <IconChartBar size={16} aria-hidden />
+                        </>
                       ),
                       value: "bar",
                     },
