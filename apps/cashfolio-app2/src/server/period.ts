@@ -657,7 +657,7 @@ export const getPeriodOverview = createServerFn({
             where: {
               accountBookId: data.accountBookId,
               accountId: { in: holdingAccountIds },
-              date: { lte: initialHoldingDate },
+              date: { lt: queryStart },
             },
             _sum: { value: true },
           }),
@@ -707,75 +707,87 @@ export const getPeriodOverview = createServerFn({
         }
       }
 
-      for (const account of holdingAccountsResolved) {
-        const initialBalance =
-          initialHoldingBalanceByAccountId.get(account.id) ?? 0;
-        const periodBookings = holdingBookingsByAccountId.get(account.id) ?? [];
+      const holdingResults = await Promise.all(
+        holdingAccountsResolved.map(async (account) => {
+          const initialBalance =
+            initialHoldingBalanceByAccountId.get(account.id) ?? 0;
+          const periodBookings =
+            holdingBookingsByAccountId.get(account.id) ?? [];
 
-        if (initialBalance === 0 && periodBookings.length === 0) {
-          continue;
-        }
+          if (initialBalance === 0 && periodBookings.length === 0) {
+            return { skippedCount: 0, gainLossContribution: 0 };
+          }
 
-        const initialRate = await getUnitToReferenceExchangeRate({
-          unit: account.unit,
-          currency: account.currency,
-          cryptocurrency: account.cryptocurrency,
-          symbol: account.symbol,
-          tradeCurrency: account.tradeCurrency,
-          date: initialHoldingDate,
-          referenceCurrency,
-          exchangeRateByKey,
-        });
-
-        if (initialRate == null) {
-          skippedBookingsCount += 1;
-          continue;
-        }
-
-        const holdingEventDateMap = getHoldingEventDateMap({
-          bookings: periodBookings,
-          periodEnd: selection.to,
-        });
-
-        const sortedEvents = sortHoldingEventsAscending(
-          Array.from(holdingEventDateMap.values()),
-        );
-
-        const eventRatePromises = sortedEvents.map((event) =>
-          getUnitToReferenceExchangeRate({
+          const initialRate = await getUnitToReferenceExchangeRate({
             unit: account.unit,
             currency: account.currency,
             cryptocurrency: account.cryptocurrency,
             symbol: account.symbol,
             tradeCurrency: account.tradeCurrency,
-            date: event.date,
+            date: initialHoldingDate,
             referenceCurrency,
             exchangeRateByKey,
-          }),
-        );
-        const eventRates = await Promise.all(eventRatePromises);
-        const nonNullEventRates = eventRates.filter(
-          (eventRate): eventRate is number => eventRate != null,
-        );
+          });
 
-        if (nonNullEventRates.length !== eventRates.length) {
-          skippedBookingsCount += 1;
-          continue;
-        }
+          if (initialRate == null) {
+            return { skippedCount: 1, gainLossContribution: 0 };
+          }
 
-        const eventsForSeries: HoldingGainLossSeriesEvent[] = sortedEvents.map(
-          (event, index) => ({
-            rate: nonNullEventRates[index]!,
-            balanceDelta: event.balanceDelta,
-          }),
-        );
+          const holdingEventDateMap = getHoldingEventDateMap({
+            bookings: periodBookings,
+            periodEnd: selection.to,
+          });
 
-        holdingGainLoss += computeHoldingGainLossForEventSeries({
-          initialBalance,
-          initialRate,
-          events: eventsForSeries,
-        });
-      }
+          const sortedEvents = sortHoldingEventsAscending(
+            Array.from(holdingEventDateMap.values()),
+          );
+
+          const eventRatePromises = sortedEvents.map((event) =>
+            getUnitToReferenceExchangeRate({
+              unit: account.unit,
+              currency: account.currency,
+              cryptocurrency: account.cryptocurrency,
+              symbol: account.symbol,
+              tradeCurrency: account.tradeCurrency,
+              date: event.date,
+              referenceCurrency,
+              exchangeRateByKey,
+            }),
+          );
+          const eventRates = await Promise.all(eventRatePromises);
+          const nonNullEventRates = eventRates.filter(
+            (eventRate): eventRate is number => eventRate != null,
+          );
+
+          if (nonNullEventRates.length !== eventRates.length) {
+            return { skippedCount: 1, gainLossContribution: 0 };
+          }
+
+          const eventsForSeries: HoldingGainLossSeriesEvent[] =
+            sortedEvents.map((event, index) => ({
+              rate: nonNullEventRates[index]!,
+              balanceDelta: event.balanceDelta,
+            }));
+
+          return {
+            skippedCount: 0,
+            gainLossContribution: computeHoldingGainLossForEventSeries({
+              initialBalance,
+              initialRate,
+              events: eventsForSeries,
+            }),
+          };
+        }),
+      );
+
+      holdingGainLoss += holdingResults.reduce(
+        (sum, result) => sum + result.gainLossContribution,
+        0,
+      );
+      skippedBookingsCount += holdingResults.reduce(
+        (sum, result) => sum + result.skippedCount,
+        0,
+      );
     }
 
     const gainsLosses =
