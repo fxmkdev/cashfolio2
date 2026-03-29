@@ -208,4 +208,41 @@ describe("Valuation provider helpers", () => {
       process.env.MARKETSTACK_API_KEY = originalMarketstackApiKey;
     }
   });
+
+  test("uses e2e fallback API key when provider keys are unset", async () => {
+    const originalCurrencyLayerApiKey = process.env.CURRENCYLAYER_API_KEY;
+    const originalE2ETestMode = process.env.E2E_TEST_MODE;
+    delete process.env.CURRENCYLAYER_API_KEY;
+    process.env.E2E_TEST_MODE = "true";
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          success: true,
+          quotes: { USDCHF: 0.9 },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const result = await fetchUsdToCurrencyRateFromCurrencyLayer(
+      "CHF",
+      new Date("2026-03-28T00:00:00.000Z"),
+    );
+
+    expect(result).toBe(0.9);
+    expect(fetchSpy).toHaveBeenCalledOnce();
+
+    fetchSpy.mockRestore();
+    if (originalCurrencyLayerApiKey == null) {
+      delete process.env.CURRENCYLAYER_API_KEY;
+    } else {
+      process.env.CURRENCYLAYER_API_KEY = originalCurrencyLayerApiKey;
+    }
+    if (originalE2ETestMode == null) {
+      delete process.env.E2E_TEST_MODE;
+    } else {
+      process.env.E2E_TEST_MODE = originalE2ETestMode;
+    }
+  });
 });

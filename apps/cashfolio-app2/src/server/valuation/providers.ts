@@ -23,6 +23,13 @@ let hasWarnedMissingCurrencyLayerApiKey = false;
 let hasWarnedMissingCoinLayerApiKey = false;
 let hasWarnedMissingMarketstackApiKey = false;
 
+function getE2EMockedProviderApiKey(): string | null {
+  if (process.env.E2E_TEST_MODE !== "true") {
+    return null;
+  }
+  return "e2e-mocked-provider-key";
+}
+
 function sanitizeProviderLogText(value: string): string {
   return value
     .replace(/(access_key=)[^&\s]+/gi, "$1[redacted]")
@@ -69,35 +76,50 @@ function getProviderBaseContext(args: {
 
 function getCurrencyLayerApiKey(): string | null {
   const apiKey = process.env.CURRENCYLAYER_API_KEY?.trim();
+  if (apiKey) return apiKey;
+
+  const e2eMockedApiKey = getE2EMockedProviderApiKey();
+  if (e2eMockedApiKey) return e2eMockedApiKey;
+
   if (!apiKey && !hasWarnedMissingCurrencyLayerApiKey) {
     console.warn(
       "CURRENCYLAYER_API_KEY is not set; reference-currency conversion will be unavailable when account currency differs.",
     );
     hasWarnedMissingCurrencyLayerApiKey = true;
   }
-  return apiKey ?? null;
+  return null;
 }
 
 function getCoinLayerApiKey(): string | null {
   const apiKey = process.env.COINLAYER_API_KEY?.trim();
+  if (apiKey) return apiKey;
+
+  const e2eMockedApiKey = getE2EMockedProviderApiKey();
+  if (e2eMockedApiKey) return e2eMockedApiKey;
+
   if (!apiKey && !hasWarnedMissingCoinLayerApiKey) {
     console.warn(
       "COINLAYER_API_KEY is not set; cryptocurrency reference conversion will be unavailable.",
     );
     hasWarnedMissingCoinLayerApiKey = true;
   }
-  return apiKey ?? null;
+  return null;
 }
 
 function getMarketstackApiKey(): string | null {
   const apiKey = process.env.MARKETSTACK_API_KEY?.trim();
+  if (apiKey) return apiKey;
+
+  const e2eMockedApiKey = getE2EMockedProviderApiKey();
+  if (e2eMockedApiKey) return e2eMockedApiKey;
+
   if (!apiKey && !hasWarnedMissingMarketstackApiKey) {
     console.warn(
       "MARKETSTACK_API_KEY is not set; security reference conversion will be unavailable.",
     );
     hasWarnedMissingMarketstackApiKey = true;
   }
-  return apiKey ?? null;
+  return null;
 }
 
 export function isNoDataProviderError(error?: {

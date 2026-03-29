@@ -50,6 +50,8 @@ When bypass is disabled, app auth behavior remains unchanged.
 - When `E2E_TEST_MODE=true`, server-side external valuation calls
   (`currencylayer`, `coinlayer`, `marketstack`) are intercepted by MSW node
   handlers in `src/server/valuation/e2e-provider-mocks.server.ts`.
+- In E2E mode, provider API-key checks also use a deterministic internal
+  fallback key so no external provider secrets are required for these flows.
 - This keeps E2E deterministic and avoids external provider traffic while still
   exercising valuation conversion logic end-to-end.
 - The mocked rates/prices are fixed values intended for assertion stability.

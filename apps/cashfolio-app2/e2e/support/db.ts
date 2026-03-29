@@ -651,6 +651,137 @@ export async function seedNonZeroConvertibleAssetBalances(args: {
   };
 }
 
+export async function seedNonZeroConvertibleArchivedAndLiabilityBalances(args: {
+  accountBookId: string;
+  counterAccountId: string;
+}) {
+  const assetRootGroup = await prisma.accountGroup.findFirstOrThrow({
+    where: {
+      accountBookId: args.accountBookId,
+      type: AccountType.ASSET,
+      parentGroupId: null,
+    },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true },
+  });
+
+  const liabilityRootGroup = await prisma.accountGroup.findFirstOrThrow({
+    where: {
+      accountBookId: args.accountBookId,
+      type: AccountType.LIABILITY,
+      parentGroupId: null,
+    },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true },
+  });
+
+  const archivedUsdAssetAccount = await prisma.account.create({
+    data: {
+      id: createId(),
+      accountBookId: args.accountBookId,
+      name: "E2E Archived USD Cash",
+      type: AccountType.ASSET,
+      groupId: assetRootGroup.id,
+      unit: Unit.CURRENCY,
+      currency: "USD",
+      isActive: false,
+      sortOrder: 983,
+    },
+    select: { id: true, name: true },
+  });
+
+  const liabilityUsdAccount = await prisma.account.create({
+    data: {
+      id: createId(),
+      accountBookId: args.accountBookId,
+      name: "E2E Liability USD",
+      type: AccountType.LIABILITY,
+      groupId: liabilityRootGroup.id,
+      unit: Unit.CURRENCY,
+      currency: "USD",
+      sortOrder: 0,
+    },
+    select: { id: true, name: true },
+  });
+
+  const archivedSeedTransactionId = createId();
+  await prisma.transaction.create({
+    data: {
+      id: archivedSeedTransactionId,
+      accountBookId: args.accountBookId,
+      description: "E2E Archived Convertible Balance Seed",
+    },
+  });
+
+  const liabilitySeedTransactionId = createId();
+  await prisma.transaction.create({
+    data: {
+      id: liabilitySeedTransactionId,
+      accountBookId: args.accountBookId,
+      description: "E2E Liability Convertible Balance Seed",
+    },
+  });
+
+  const date = new Date("2026-01-03T00:00:00.000Z");
+  await prisma.booking.createMany({
+    data: [
+      {
+        id: createId(),
+        accountBookId: args.accountBookId,
+        transactionId: archivedSeedTransactionId,
+        accountId: archivedUsdAssetAccount.id,
+        date,
+        description: "E2E Archived Convertible Balance Seed",
+        unit: Unit.CURRENCY,
+        currency: "USD",
+        value: 8,
+        sortOrder: 0,
+      },
+      {
+        id: createId(),
+        accountBookId: args.accountBookId,
+        transactionId: archivedSeedTransactionId,
+        accountId: args.counterAccountId,
+        date,
+        description: "E2E Archived Convertible Balance Seed",
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        value: -8,
+        sortOrder: 1,
+      },
+      {
+        id: createId(),
+        accountBookId: args.accountBookId,
+        transactionId: liabilitySeedTransactionId,
+        accountId: liabilityUsdAccount.id,
+        date,
+        description: "E2E Liability Convertible Balance Seed",
+        unit: Unit.CURRENCY,
+        currency: "USD",
+        value: 6,
+        sortOrder: 0,
+      },
+      {
+        id: createId(),
+        accountBookId: args.accountBookId,
+        transactionId: liabilitySeedTransactionId,
+        accountId: args.counterAccountId,
+        date,
+        description: "E2E Liability Convertible Balance Seed",
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        value: -6,
+        sortOrder: 1,
+      },
+    ],
+  });
+
+  return {
+    archivedAssetAccountName: archivedUsdAssetAccount.name,
+    liabilityAccountName: liabilityUsdAccount.name,
+  };
+}
+
 export async function disconnectDb(): Promise<void> {
   await prisma.$disconnect();
 }
