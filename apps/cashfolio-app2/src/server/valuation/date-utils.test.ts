@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { getLatestGuaranteedHistoricalUtcDay } from "./date-utils";
+import { getLatestAssumedAvailableHistoricalUtcDay } from "./date-utils";
 
-describe("getLatestGuaranteedHistoricalUtcDay", () => {
+describe("getLatestAssumedAvailableHistoricalUtcDay", () => {
   test("returns two days back before publication cutoff", () => {
-    const result = getLatestGuaranteedHistoricalUtcDay({
+    const result = getLatestAssumedAvailableHistoricalUtcDay({
       now: new Date("2026-03-29T00:04:59.000Z"),
       historicalDataDayLag: 1,
       historicalDataAvailableAtUtcMinute: 5,
@@ -13,12 +13,12 @@ describe("getLatestGuaranteedHistoricalUtcDay", () => {
   });
 
   test("returns previous day at and after publication cutoff", () => {
-    const atCutoff = getLatestGuaranteedHistoricalUtcDay({
+    const atCutoff = getLatestAssumedAvailableHistoricalUtcDay({
       now: new Date("2026-03-29T00:05:00.000Z"),
       historicalDataDayLag: 1,
       historicalDataAvailableAtUtcMinute: 5,
     });
-    const afterCutoff = getLatestGuaranteedHistoricalUtcDay({
+    const afterCutoff = getLatestAssumedAvailableHistoricalUtcDay({
       now: new Date("2026-03-29T13:45:00.000Z"),
       historicalDataDayLag: 1,
       historicalDataAvailableAtUtcMinute: 5,

@@ -56,11 +56,11 @@ Related docs:
 ## Backtracking and Publish Window
 
 - Backtracking first consults cached exact/prior rates; when the requested day
-  is newer than the latest guaranteed historical publish window, the provider
-  call is skipped and cached prior data is reused immediately.
+  is newer than the latest assumed-available historical publish window, the
+  provider call is skipped and cached prior data is reused immediately.
 - Historical fetches use a 00:05 UTC publish cutoff and 1-day lag for "latest
-  fetchable date" calculation (before 00:05 UTC, treat the latest guaranteed day
-  as two UTC days back).
+  fetchable date" calculation (before 00:05 UTC, treat the latest
+  assumed-available day as two UTC days back).
 - The 00:05 UTC cutoff is treated as an optimistic boundary, not guaranteed
   provider availability for every provider/day.
 - A single latest-fetchable cutoff decision is computed once per top-level

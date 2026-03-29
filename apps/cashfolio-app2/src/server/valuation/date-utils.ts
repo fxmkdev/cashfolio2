@@ -23,7 +23,7 @@ export function subUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() - days * MILLISECONDS_PER_DAY);
 }
 
-export function getLatestGuaranteedHistoricalUtcDay(args: {
+export function getLatestAssumedAvailableHistoricalUtcDay(args: {
   now: Date;
   historicalDataDayLag: number;
   historicalDataAvailableAtUtcMinute: number;

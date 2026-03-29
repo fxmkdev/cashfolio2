@@ -4,7 +4,7 @@ import {
   HISTORICAL_DATA_DAY_LAG,
 } from "./valuation/constants";
 import {
-  getLatestGuaranteedHistoricalUtcDay,
+  getLatestAssumedAvailableHistoricalUtcDay,
   toSeriesTimestamp,
 } from "./valuation/date-utils";
 import { getRateWithBacktracking } from "./valuation/backtracking";
@@ -23,7 +23,7 @@ import {
 } from "./valuation/providers";
 
 function getLatestFetchableHistoricalDate(now = new Date()): Date {
-  return getLatestGuaranteedHistoricalUtcDay({
+  return getLatestAssumedAvailableHistoricalUtcDay({
     now,
     historicalDataDayLag: HISTORICAL_DATA_DAY_LAG,
     historicalDataAvailableAtUtcMinute: HISTORICAL_DATA_AVAILABLE_AT_UTC_MINUTE,

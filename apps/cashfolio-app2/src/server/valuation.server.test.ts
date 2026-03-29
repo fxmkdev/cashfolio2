@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const getRateWithBacktracking = vi.hoisted(() => vi.fn());
-const getLatestGuaranteedHistoricalUtcDay = vi.hoisted(() => vi.fn());
+const getLatestAssumedAvailableHistoricalUtcDay = vi.hoisted(() => vi.fn());
 
 vi.mock("./valuation/backtracking", () => ({
   getRateWithBacktracking,
@@ -14,7 +14,7 @@ vi.mock("./valuation/date-utils", async () => {
 
   return {
     ...actual,
-    getLatestGuaranteedHistoricalUtcDay,
+    getLatestAssumedAvailableHistoricalUtcDay,
   };
 });
 
@@ -26,7 +26,7 @@ import {
 describe("valuation server lookup context", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getLatestGuaranteedHistoricalUtcDay.mockReturnValue(
+    getLatestAssumedAvailableHistoricalUtcDay.mockReturnValue(
       new Date("2026-03-28T00:00:00.000Z"),
     );
     getRateWithBacktracking.mockResolvedValue(1);
@@ -40,7 +40,7 @@ describe("valuation server lookup context", () => {
     });
 
     expect(result).toBe(1);
-    expect(getLatestGuaranteedHistoricalUtcDay).toHaveBeenCalledTimes(1);
+    expect(getLatestAssumedAvailableHistoricalUtcDay).toHaveBeenCalledTimes(1);
     expect(getRateWithBacktracking).toHaveBeenCalledTimes(2);
 
     const latestFetchableDates = getRateWithBacktracking.mock.calls.map(
@@ -64,7 +64,7 @@ describe("valuation server lookup context", () => {
     });
 
     expect(result).toBe(1);
-    expect(getLatestGuaranteedHistoricalUtcDay).toHaveBeenCalledTimes(1);
+    expect(getLatestAssumedAvailableHistoricalUtcDay).toHaveBeenCalledTimes(1);
     expect(getRateWithBacktracking).toHaveBeenCalledTimes(3);
 
     const latestFetchableDates = getRateWithBacktracking.mock.calls.map(
