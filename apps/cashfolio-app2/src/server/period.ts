@@ -7,27 +7,38 @@ import {
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { prisma } from "../prisma.server";
 import {
+  DEFAULT_PERIOD_VALUE,
+  formatMonthPeriodValue,
+  isSupportedPeriodValue,
+  normalizePeriodValue,
+  parseExplicitMonthPeriod,
+  parseExplicitYearPeriod,
+  PERIOD_PRESET_LAST_MONTH,
+  PERIOD_PRESET_LAST_YEAR,
+  PERIOD_PRESET_MTD,
+  PERIOD_PRESET_VALUES,
+  PERIOD_PRESET_YTD,
+  type PeriodPresetValue,
+} from "../shared/period";
+import {
   getCryptocurrencyToCurrencyExchangeRate,
   getCurrencyExchangeRate,
   getSecurityToCurrencyExchangeRate,
 } from "./valuation.server";
 
-export const PERIOD_PRESET_MTD = "mtd";
-export const PERIOD_PRESET_YTD = "ytd";
-export const PERIOD_PRESET_LAST_MONTH = "last-month";
-export const PERIOD_PRESET_LAST_YEAR = "last-year";
-
-export const PERIOD_PRESET_VALUES = [
-  PERIOD_PRESET_MTD,
-  PERIOD_PRESET_YTD,
+export {
+  DEFAULT_PERIOD_VALUE,
+  isSupportedPeriodValue,
+  normalizePeriodValue,
   PERIOD_PRESET_LAST_MONTH,
   PERIOD_PRESET_LAST_YEAR,
-] as const;
+  PERIOD_PRESET_MTD,
+  PERIOD_PRESET_VALUES,
+  PERIOD_PRESET_YTD,
+};
+export type { PeriodPresetValue };
 
-export type PeriodPresetValue = (typeof PERIOD_PRESET_VALUES)[number];
 export type PeriodSpecifier = PeriodPresetValue | "month" | "year";
-
-export const DEFAULT_PERIOD_VALUE: PeriodPresetValue = PERIOD_PRESET_LAST_MONTH;
 
 const MONTH_NAMES = [
   "January",
@@ -47,19 +58,6 @@ const MONTH_NAMES = [
 const ONE_EXCHANGE_RATE_PROMISE: Promise<number | null> = Promise.resolve(1);
 const EQUITY_BOOKINGS_PAGE_SIZE = 1_000;
 const TRANSACTIONS_PAGE_SIZE = 200;
-const PERIOD_MONTH_REGEX = /^(\d{4})-(\d{2})$/;
-const PERIOD_YEAR_REGEX = /^(\d{4})$/;
-
-type NormalizedExplicitMonthPeriod = {
-  year: number;
-  month: number; // 0-based
-  value: string;
-};
-
-type NormalizedExplicitYearPeriod = {
-  year: number;
-  value: string;
-};
 
 type NormalizedPeriodBase = {
   granularity: "month" | "year";
@@ -157,80 +155,6 @@ function addUtcMonths(date: Date, months: number): Date {
   return new Date(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1),
   );
-}
-
-function formatMonthPeriodValue(year: number, month: number): string {
-  return `${String(year).padStart(4, "0")}-${String(month + 1).padStart(2, "0")}`;
-}
-
-function parseExplicitMonthPeriod(
-  value: string,
-): NormalizedExplicitMonthPeriod | null {
-  const match = PERIOD_MONTH_REGEX.exec(value);
-  if (!match) return null;
-
-  const year = Number(match[1]);
-  const monthOneBased = Number(match[2]);
-  if (monthOneBased < 1 || monthOneBased > 12) {
-    return null;
-  }
-
-  const month = monthOneBased - 1;
-  return {
-    year,
-    month,
-    value: formatMonthPeriodValue(year, month),
-  };
-}
-
-function parseExplicitYearPeriod(
-  value: string,
-): NormalizedExplicitYearPeriod | null {
-  const match = PERIOD_YEAR_REGEX.exec(value);
-  if (!match) return null;
-  const year = Number(match[1]);
-  return {
-    year,
-    value: String(year).padStart(4, "0"),
-  };
-}
-
-export function isSupportedPeriodValue(value: unknown): value is string {
-  if (typeof value !== "string") return false;
-  const normalized = value.trim().toLowerCase();
-
-  if ((PERIOD_PRESET_VALUES as readonly string[]).includes(normalized)) {
-    return true;
-  }
-
-  return (
-    parseExplicitMonthPeriod(normalized) != null ||
-    parseExplicitYearPeriod(normalized) != null
-  );
-}
-
-export function normalizePeriodValue(value: unknown): string {
-  if (typeof value !== "string") {
-    return DEFAULT_PERIOD_VALUE;
-  }
-
-  const normalized = value.trim().toLowerCase();
-
-  if ((PERIOD_PRESET_VALUES as readonly string[]).includes(normalized)) {
-    return normalized;
-  }
-
-  const explicitMonth = parseExplicitMonthPeriod(normalized);
-  if (explicitMonth) {
-    return explicitMonth.value;
-  }
-
-  const explicitYear = parseExplicitYearPeriod(normalized);
-  if (explicitYear) {
-    return explicitYear.value;
-  }
-
-  return DEFAULT_PERIOD_VALUE;
 }
 
 function normalizePeriodBase(args: {
@@ -395,6 +319,10 @@ export function resolvePeriodSelection(args: {
     from = new Date(Date.UTC(year, startMonth, 1));
     const isCurrentYear = year === currentYear;
     to = isCurrentYear ? addUtcDays(now, -1) : endOfUtcYear(year);
+  }
+
+  if (to < from) {
+    to = from;
   }
 
   const periodValue =
@@ -903,8 +831,9 @@ export const getPeriodOverview = createServerFn({
       bookingsCount += bookingsPage.length;
       nextBookingIdCursor = bookingsPage[bookingsPage.length - 1].id;
 
-      for (const booking of bookingsPage) {
-        const convertedValue = await convertBookingValueToReference({
+      const conversionTasks = bookingsPage.map((booking) => ({
+        booking,
+        convertedValuePromise: convertBookingValueToReference({
           value: Number(booking.value),
           unit: booking.unit,
           currency: booking.currency,
@@ -914,7 +843,16 @@ export const getPeriodOverview = createServerFn({
           date: booking.date,
           referenceCurrency,
           exchangeRateByKey,
-        });
+        }),
+      }));
+
+      const convertedValues = await Promise.all(
+        conversionTasks.map((task) => task.convertedValuePromise),
+      );
+
+      for (let index = 0; index < conversionTasks.length; index += 1) {
+        const booking = conversionTasks[index]!.booking;
+        const convertedValue = convertedValues[index];
 
         if (convertedValue == null) {
           skippedBookingsCount += 1;
@@ -1026,26 +964,13 @@ export const getPeriodOverview = createServerFn({
       nextTransactionIdCursor =
         transactionsPage[transactionsPage.length - 1].id;
 
-      for (const transaction of transactionsPage) {
-        if (!isMultiUnitTransaction(transaction.bookings)) {
-          continue;
-        }
+      const multiUnitTransactions = transactionsPage.filter((transaction) =>
+        isMultiUnitTransaction(transaction.bookings),
+      );
 
-        if (
-          !shouldIncludeTransactionForPeriod({
-            bookingDates: transaction.bookings.map((booking) => booking.date),
-            periodStart: queryStart,
-            periodEndExclusive: queryEndExclusive,
-          })
-        ) {
-          continue;
-        }
-
-        let transactionContribution = 0;
-        let transactionConvertible = true;
-
-        for (const booking of transaction.bookings) {
-          const convertedValue = await convertBookingValueToReference({
+      const transactionTasks = multiUnitTransactions.map((transaction) => ({
+        conversionPromises: transaction.bookings.map((booking) =>
+          convertBookingValueToReference({
             value: Number(booking.value),
             unit: booking.unit,
             currency: booking.currency,
@@ -1055,23 +980,32 @@ export const getPeriodOverview = createServerFn({
             date: booking.date,
             referenceCurrency,
             exchangeRateByKey,
-          });
+          }),
+        ),
+      }));
 
-          if (convertedValue == null) {
-            transactionConvertible = false;
-            skippedBookingsCount += 1;
-            break;
-          }
+      await Promise.all(
+        transactionTasks.flatMap((task) => task.conversionPromises),
+      );
 
-          convertedBookingsCount += 1;
-          transactionContribution += convertedValue;
-        }
+      for (const task of transactionTasks) {
+        const convertedValues = await Promise.all(task.conversionPromises);
+        const nonNullConvertedValues = convertedValues.filter(
+          (convertedValue): convertedValue is number => convertedValue != null,
+        );
+        const failedConversion =
+          nonNullConvertedValues.length !== convertedValues.length;
 
-        if (!transactionConvertible) {
+        if (failedConversion) {
+          skippedBookingsCount += 1;
           continue;
         }
 
-        transactionGainLoss += transactionContribution;
+        convertedBookingsCount += nonNullConvertedValues.length;
+        transactionGainLoss += nonNullConvertedValues.reduce(
+          (sum, convertedValue) => sum + convertedValue,
+          0,
+        );
       }
 
       if (transactionsPage.length < TRANSACTIONS_PAGE_SIZE) {

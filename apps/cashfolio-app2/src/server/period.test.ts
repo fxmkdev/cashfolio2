@@ -48,6 +48,16 @@ describe("resolvePeriodSelection", () => {
     expect(selection.periodSpecifier).toBe("mtd");
   });
 
+  test("clamps current period to a non-inverted range on the first day", () => {
+    const selection = resolvePeriodSelection({
+      periodValue: "mtd",
+      now: new Date("2026-03-01T10:00:00.000Z"),
+    });
+
+    expect(selection.from.toISOString()).toBe("2026-03-01T00:00:00.000Z");
+    expect(selection.to.toISOString()).toBe("2026-03-01T00:00:00.000Z");
+  });
+
   test("uses yesterday cutoff for current year (YTD)", () => {
     const selection = resolvePeriodSelection({
       periodValue: "ytd",
