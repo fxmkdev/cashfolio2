@@ -53,6 +53,36 @@ Related docs:
   Redis for 1 hour to avoid repeated provider calls for the same day while data
   is still unavailable.
 
+## Redis Backtracking Caches
+
+Backtracking uses two Redis key families with different purposes:
+
+- Backtracked fallback cache keys:
+  `valuation:<provider>:fallback:<series-parts>:<requestedTimestamp>`
+  - Purpose: memoize the result for a specific requested day when backtracking
+    had to reuse older data or explicit no-data.
+  - Stored value: JSON entry with either:
+    - `{ "kind": "rate", "rate": <number>, "sourceTimestamp": <timestamp> }`
+    - `{ "kind": "noData" }`
+  - TTL: 1 hour.
+  - Lifecycle: cleared when a direct/exact cached value satisfies the request
+    or when the requested day is resolved without needing a fallback.
+
+- Miss-attempt cooldown keys:
+  `valuation:miss-cooldown:<seriesKey>:<timestamp>`
+  - Purpose: avoid repeated provider requests for the same probed day after a
+    miss (`null` or explicit no-data) during backtracking.
+  - Stored value: sentinel `"1"`.
+  - TTL: 1 hour.
+  - Lifecycle: cleared when a numeric rate is fetched for that series/timestamp.
+
+Both caches are intentional and complementary:
+
+- Fallback cache is request-targeted (`requestedTimestamp` in key) and speeds up
+  repeated lookups for the same requested day.
+- Miss-cooldown is probe-targeted (`seriesKey + timestamp`) and suppresses
+  repeated misses across different requests that backtrack through the same day.
+
 ## Backtracking and Publish Window
 
 - Backtracking first consults cached exact/prior rates; when the requested day
