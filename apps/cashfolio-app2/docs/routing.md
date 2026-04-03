@@ -7,6 +7,7 @@ Related docs:
 
 - [Server functions](server-functions.md)
 - [Account list valuation and reference balances](valuation-reference-balances.md)
+- [Valuation caching](valuation-caching.md)
 
 ## TanStack Router
 
