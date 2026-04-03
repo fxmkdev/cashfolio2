@@ -39,11 +39,13 @@ Exchange-rate entry points:
 
 ## Caching Layers
 
-There are three effective layers:
+There are five complementary layers:
 
 1. Request-local Promise memoization
 2. Redis TimeSeries daily rates
-3. Redis fallback string cache for backtracked results and explicit no-data
+3. Redis fallback key-value cache for backtracked results and explicit no-data
+4. Redis miss-attempt cooldown cache for day-level misses
+5. In-process in-flight provider fetch deduplication (per series/day)
 
 ```mermaid
 flowchart LR
@@ -52,10 +54,13 @@ flowchart LR
   C --> D["getRateWithBacktracking(...)"]
   D --> E["Redis TimeSeries daily series"]
   D --> F["Redis fallback key-value entries"]
-  D --> G["Provider APIs"]
+  D --> H["Redis miss-attempt cooldown entries"]
+  D --> I["In-flight provider dedup map"]
+  I --> G["Provider APIs"]
   G --> D
   E --> D
   F --> D
+  H --> D
 ```
 
 ## Request-Local Memoization
@@ -72,6 +77,31 @@ This deduplicates identical lookups during a single server-function execution.
     do not need an explicit date.
 
 This layer is in-memory only and is cleared after each request.
+
+## Historical Publish Window
+
+Implementation:
+
+- `src/server/valuation.server.ts`
+- `src/server/valuation/date-utils.ts`
+- `src/server/valuation/constants.ts`
+
+Valuation lookups compute one shared `latestFetchableDate` per top-level request
+and pass it into all nested lookups. This avoids mixed decisions near daily
+provider publication boundaries.
+
+Defaults:
+
+- `HISTORICAL_DATA_DAY_LAG = 1`
+- `HISTORICAL_DATA_AVAILABLE_AT_UTC_MINUTE = 5`
+
+Meaning:
+
+- at/after `00:05 UTC`, latest assumed-available day is `today - 1 day`
+- before `00:05 UTC`, latest assumed-available day is `today - 2 days`
+
+If a request date is newer than this cutoff, backtracking starts from the cutoff
+instead of probing future-unavailable days.
 
 ## Redis TimeSeries Cache (Primary Historical Cache)
 
@@ -122,10 +152,30 @@ repeating API backtracking for near-term repeated requests.
 - `{ kind: "rate", rate, sourceTimestamp }`
   - TTL: `BACKTRACKED_FALLBACK_TTL_SECONDS = 3600` (1 hour)
 - `{ kind: "noData" }`
-  - TTL: `BACKTRACKED_NO_DATA_FALLBACK_TTL_SECONDS = 300` (5 minutes)
+  - TTL: `BACKTRACKED_NO_DATA_FALLBACK_TTL_SECONDS = 3600` (1 hour)
 
 Backward compatibility is preserved for older entries missing `kind` (treated as
 `rate` entries when `rate` and `sourceTimestamp` are present).
+
+## Redis Miss-Attempt Cooldown Cache
+
+Implementation: `src/server/valuation/cache.ts`
+(`hasRecentMissedAttemptForSeriesTimestamp`,
+`storeMissedAttemptForSeriesTimestamp`,
+`clearMissedAttemptForSeriesTimestamp`)
+
+This cache suppresses repeated provider calls for a series/day that recently
+returned no usable result during backtracking.
+
+- key format:
+  - `valuation:miss-cooldown:<SERIES_KEY>:<TIMESTAMP>`
+- value:
+  - sentinel `"1"`
+- TTL:
+  - `MISSED_ATTEMPT_COOLDOWN_TTL_SECONDS = 3600` (1 hour)
+- lifecycle:
+  - written when provider result is `NO_DATA_FETCH_RESULT` or `null`
+  - cleared when a numeric rate is successfully fetched for that day
 
 ## Core Lookup Algorithm
 
@@ -135,76 +185,90 @@ Implementation: `src/server/valuation/backtracking.ts`
 Behavior for a request date:
 
 1. Normalize to UTC day timestamp.
-2. Try TimeSeries cache.
-3. If exact-day hit:
+2. Clamp probing start date to `min(requestedDate, latestFetchableDate)`.
+3. Try TimeSeries cache.
+4. If exact-day hit:
    - clear stale fallback key
    - return rate
-4. If fallback key exists:
+5. If cached prior point is already new enough for the clamped start date:
+   - clear stale fallback key
+   - return cached prior rate
+6. If fallback key exists:
    - `kind: "rate"`: return cached fallback rate
    - `kind: "noData"`:
      - return `null` when `stopOnExplicitNoData = true`
      - otherwise clear fallback and continue
-5. Backtrack day-by-day up to `MAX_BACKTRACK_DAYS` (30):
+7. Backtrack day-by-day up to `MAX_BACKTRACK_DAYS` (30):
    - if an older cached TimeSeries point is now in range, reuse and store
      fallback `kind: "rate"`
-   - otherwise call provider `fetchRate(date)`
+   - if miss-cooldown key exists for that day, skip provider call and continue
+   - otherwise call provider via in-flight dedup map (`series + timestamp`)
    - on numeric rate:
      - store in TimeSeries
-     - if backtracked day is older than requested day, store fallback
+     - clear miss-cooldown key for that day
+     - if backtracked day is older than requested day, store fallback rate
      - if exact day, clear fallback
      - return rate
    - on explicit no-data sentinel:
+     - store miss-cooldown key for that day
      - usually store fallback `kind: "noData"` and return `null`
-     - for securities only (`stopOnExplicitNoData = false`), keep backtracking
-   - on `null`, keep backtracking
-6. If loop ends and an older cached TimeSeries point exists, store fallback and
+     - for securities only (`stopOnExplicitNoData = false`), continue
+   - on `null`:
+     - store miss-cooldown key for that day
+     - continue backtracking
+8. If loop ends and an older cached TimeSeries point exists, store fallback and
    return it.
-7. Otherwise return `null`.
+9. Otherwise return `null`.
 
 ```mermaid
-sequenceDiagram
-  participant C as "Caller"
-  participant B as "getRateWithBacktracking"
-  participant TS as "Redis TimeSeries"
-  participant FB as "Redis fallback key"
-  participant P as "Provider"
-
-  C->>B: "request(date)"
-  B->>TS: "getCachedRate(seriesKey, requestedTimestamp)"
-  alt "Exact cached hit"
-    TS-->>B: "{ rate, timestamp=requested }"
-    B->>FB: "DEL fallbackKey"
-    B-->>C: "rate"
-  else "No exact hit"
-    TS-->>B: "null or older cached point"
-    B->>FB: "GET fallbackKey"
-    alt "Fallback rate exists"
-      FB-->>B: "{ kind: rate }"
-      B-->>C: "rate"
-    else "Fallback noData exists"
-      FB-->>B: "{ kind: noData }"
-      alt "stopOnExplicitNoData=true"
-        B-->>C: "null"
-      else "stopOnExplicitNoData=false"
-        B->>FB: "DEL fallbackKey"
-        loop "up to 30 backtrack days"
-          B->>P: "fetchRate(day)"
-          P-->>B: "number | null | NO_DATA"
-        end
-      end
-    else "No fallback"
-      FB-->>B: "null"
-      loop "up to 30 backtrack days"
-        B->>P: "fetchRate(day)"
-        P-->>B: "number | null | NO_DATA"
-      end
-    end
-  end
+flowchart TD
+  A["Request valuation for day D"] --> B["Compute requestedTimestamp"]
+  B --> C["Clamp to latestFetchableDate"]
+  C --> D["Read TimeSeries cache"]
+  D --> E{"Exact day cached?"}
+  E -->|Yes| F["Clear fallback key and return rate"]
+  E -->|No| G{"Cached prior point covers clamped day?"}
+  G -->|Yes| H["Clear fallback key and return cached prior rate"]
+  G -->|No| I["Check fallback key"]
+  I --> J{"Fallback hit?"}
+  J -->|Rate| K["Return fallback rate"]
+  J -->|NoData + stop| L["Return null"]
+  J -->|NoData + continue or miss| M["Backtracking loop"]
+  M --> N{"Miss cooldown key exists?"}
+  N -->|Yes| O["Skip provider call and step back 1 day"]
+  N -->|No| P["Fetch provider via in-flight dedup map"]
+  P --> Q{"Result type"}
+  Q -->|Number| R["Store TimeSeries, clear miss cooldown, update/clear fallback, return"]
+  Q -->|NoData| S["Store miss cooldown; fallback noData or continue"]
+  Q -->|Null| T["Store miss cooldown and continue"]
+  O --> M
+  S --> M
+  T --> M
 ```
+
+## In-Flight Provider Dedup
+
+Implementation: `src/server/valuation/backtracking.ts`
+(`inFlightProviderFetchByKey`)
+
+Within a server process, provider calls are deduplicated by:
+
+- key: `<seriesKey>:<timestamp>`
+- behavior: concurrent requests for the same key await the same Promise
+- cleanup: key is removed when the Promise settles
+
+This is separate from request-local memoization and helps when multiple requests
+hit the same uncached day concurrently.
 
 ## Provider Semantics and Cache Impact
 
-Implementation: `src/server/valuation/providers.ts`
+Implementation:
+
+- `src/server/valuation/providers.ts`
+- `src/server/valuation/provider-response-parsers.ts`
+- `src/server/valuation/provider-logging.ts`
+
+Provider behavior:
 
 - Currencylayer (`fetchUsdToCurrencyRateFromCurrencyLayer`)
   - returns USD->target currency rate
@@ -216,7 +280,10 @@ Implementation: `src/server/valuation/providers.ts`
   - returns security close in account trade currency
   - retries `429` up to 3 times with 1-second delay
   - explicit no-data is mapped to `NO_DATA_FETCH_RESULT`
-  - quote-currency mismatch is treated as unusable (`null`, not explicit no-data)
+  - quote-currency mismatch is treated as unusable (`null`)
+  - non-positive close prices are treated as unusable (`null`)
+
+Provider calls are logged with sanitized context so API keys are never logged.
 
 ## Conversion Formulas (After Cached Lookup)
 
@@ -256,9 +323,12 @@ Defined in `src/server/valuation/constants.ts`:
 
 - `BASE_CURRENCY = "USD"`
 - `MAX_BACKTRACK_DAYS = 30`
+- `HISTORICAL_DATA_DAY_LAG = 1`
+- `HISTORICAL_DATA_AVAILABLE_AT_UTC_MINUTE = 5`
 - `VALUATION_SERIES_RETENTION_MS = 10 years`
 - `BACKTRACKED_FALLBACK_TTL_SECONDS = 3600`
-- `BACKTRACKED_NO_DATA_FALLBACK_TTL_SECONDS = 300`
+- `BACKTRACKED_NO_DATA_FALLBACK_TTL_SECONDS = 3600`
+- `MISSED_ATTEMPT_COOLDOWN_TTL_SECONDS = 3600`
 - Request timeouts (ms):
   - `CURRENCYLAYER_TIMEOUT_MS = 10000`
   - `COINLAYER_TIMEOUT_MS = 10000`
@@ -280,7 +350,8 @@ Implementation: `src/redis.server.ts`
 Implementation: `src/server/valuation/cache.ts`
 
 - Cache read failures degrade to provider lookups.
-- Fallback cache write/delete failures are logged and ignored.
+- Fallback cache read/write/delete failures are logged and ignored.
+- Miss-cooldown cache read/write/delete failures are logged and ignored.
 - Warnings are throttled with in-process boolean guards to avoid log spam.
 
 ### Provider/API failures
@@ -305,6 +376,8 @@ warning.
 
 - Do not edit key formats casually. Existing cache history and fallback keys
   depend on stable naming in `src/server/valuation/keys.ts`.
+- Keep `latestFetchableDate` logic (`getLatestAssumedAvailableHistoricalUtcDay`)
+  aligned with provider publish behavior.
 - Keep date handling on UTC day boundaries (`toSeriesTimestamp`, `toUtcDay`).
 - If tuning backtrack or TTL constants, update:
   - `src/server/valuation/constants.ts`
