@@ -62,7 +62,7 @@ documented in [Valuation caching](valuation-caching.md), under:
 
 - `Redis Fallback Cache (Backtracking Shortcut)`
 - `Redis Miss-Attempt Cooldown Cache`
-- `Cache Contrast (TimeSeries vs Fallback vs Miss-Cooldown)`
+- `How The Three Caches Differ`
 
 ## Backtracking and Publish Window
 

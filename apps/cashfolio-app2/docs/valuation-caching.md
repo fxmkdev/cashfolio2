@@ -176,7 +176,7 @@ returned no usable result during backtracking.
   - written when provider result is `NO_DATA_FETCH_RESULT` or `null`
   - cleared when a numeric rate is successfully fetched for that day
 
-## Cache Contrast (TimeSeries vs Fallback vs Miss-Cooldown)
+## How The Three Caches Differ
 
 - TimeSeries cache:
   - Stores persistent daily numeric rates per valuation series.
