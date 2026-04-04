@@ -178,15 +178,17 @@ returned no usable result during backtracking.
 
 ## How The Three Caches Differ
 
-- TimeSeries cache:
-  - Stores persistent daily numeric rates per valuation series.
-  - Answers: "Do we already have an exact/prior historical rate to use?"
-- Fallback cache:
-  - Stores a short-lived result for one requested day (`rate` or `noData`).
-  - Answers: "For this requested day, what should we return right now?"
-- Miss-cooldown cache:
-  - Stores a short-lived "recent miss" marker for one probed series/day.
-  - Answers: "Should we skip retrying this provider day for now?"
+| Cache         | Main purpose                                              | Key scope                       | Stored value                               | Lifetime                    |
+| ------------- | --------------------------------------------------------- | ------------------------------- | ------------------------------------------ | --------------------------- |
+| TimeSeries    | Historical price/rate source of truth                     | `series + day timestamp`        | Numeric daily rate                         | Long retention (`10 years`) |
+| Fallback      | Fast answer for one requested day after backtracking      | `series + requested timestamp`  | `{ kind: "rate" }` or `{ kind: "noData" }` | Short TTL (`1 hour`)        |
+| Miss-cooldown | Prevent repeated failed provider calls for one probed day | `series + probed day timestamp` | Sentinel `"1"` (recent miss marker)        | Short TTL (`1 hour`)        |
+
+Plain-language summary:
+
+- TimeSeries answers: "What historical numeric rates do we have?"
+- Fallback answers: "What should we return for this requested day right now?"
+- Miss-cooldown answers: "Should we skip retrying this provider day for now?"
 
 ## Core Lookup Algorithm
 
