@@ -161,8 +161,7 @@ Backward compatibility is preserved for older entries missing `kind` (treated as
 
 Implementation: `src/server/valuation/cache.ts`
 (`hasRecentMissedAttemptForSeriesTimestamp`,
-`storeMissedAttemptForSeriesTimestamp`,
-`clearMissedAttemptForSeriesTimestamp`)
+`storeMissedAttemptForSeriesTimestamp`, `clearMissedAttemptForSeriesTimestamp`)
 
 This cache suppresses repeated provider calls for a series/day that recently
 returned no usable result during backtracking.
