@@ -369,8 +369,9 @@ Required for full valuation behavior:
 - `MARKETSTACK_API_KEY`
 - `REDIS_URL` (Redis with TimeSeries support)
 
-Without provider keys, related conversions return `null` and log a one-time
-warning.
+Without provider keys in normal runtime, related conversions return `null` and
+log a one-time warning. In `E2E_TEST_MODE=true`, provider key lookup uses a
+special mocked key path for test flows.
 
 ## Practical Notes for Contributors
 
