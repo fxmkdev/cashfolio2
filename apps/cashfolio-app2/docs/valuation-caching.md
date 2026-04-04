@@ -47,15 +47,6 @@ There are five complementary layers:
 4. Redis miss-attempt cooldown cache for day-level misses
 5. In-process in-flight provider fetch deduplication (per series/day)
 
-At a glance, the three Redis cache families serve different purposes:
-
-- TimeSeries cache: persistent historical rate store used for exact-day and
-  prior-day hits.
-- Fallback cache: short-lived answer cache for one requested day (`rate` or
-  `noData`) so repeated requests can return immediately.
-- Miss-cooldown cache: short-lived retry-suppression marker for one series/day
-  after a miss, to avoid repeated failed provider calls.
-
 ```mermaid
 flowchart LR
   A["Accounts and Dashboard server functions"] --> B["Request-local Promise maps"]
