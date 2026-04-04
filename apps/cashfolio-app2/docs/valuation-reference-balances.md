@@ -33,71 +33,42 @@ Related docs:
 - Reference-currency conversion and account/group reference-balance assembly are
   implemented in `src/server/accounts-queries.ts` (re-exported via
   `src/server/accounts.ts`), using `src/server/valuation.server.ts`.
-- Currency valuation rates are requested from currencylayer historical API and
-  cached in Redis TimeSeries keys
-  (`valuation:currencylayer:USD:<TARGET_CURRENCY>`).
-- Cryptocurrency USD prices are requested from coinlayer historical API and
-  cached in Redis TimeSeries keys (`valuation:coinlayer:USD:<CRYPTO_SYMBOL>`).
-- Security EOD close prices are requested from marketstack API and cached in
-  Redis TimeSeries keys (`valuation:marketstack:<SYMBOL>:<TRADE_CURRENCY>`).
-- Provider calls are logged for observability with sanitized URLs so access
-  tokens/API keys are never written to logs.
+- Canonical provider/cache internals (provider responsibilities, key formats,
+  logging sanitization, and cache behavior) are documented in
+  [Valuation caching](valuation-caching.md), especially:
+  - `Caching Layers`
+  - `Provider Semantics and Cache Impact`
+  - `How The Three Caches Differ`
 
 ## Data Quality Guardrails
 
-- Non-positive security close prices (for example `0`) are treated as missing
-  provider data, logged as warnings, and are not persisted to the permanent
-  TimeSeries cache.
-- When provider responses contain explicit no-data or missing-rate results,
-  valuation backtracking writes per-series/per-day miss-attempt cooldown keys in
-  Redis for 1 hour to avoid repeated provider calls for the same day while data
-  is still unavailable.
+- Canonical guardrails for provider data quality (for example non-positive
+  market prices and no-data/miss cooldown handling) are documented in
+  [Valuation caching](valuation-caching.md), under:
+  - `Provider Semantics and Cache Impact`
+  - `Core Lookup Algorithm`
 
 ## Redis Backtracking Caches
 
-Backtracking uses two Redis key families with different purposes:
+Backtracking uses both fallback and miss-cooldown Redis cache families.
 
-- Backtracked fallback cache keys:
-  `valuation:<provider>:fallback:<series-parts>:<requestedTimestamp>`
-  - Purpose: memoize the result for a specific requested day when backtracking
-    had to reuse older data or explicit no-data.
-  - Stored value: JSON entry with either:
-    - `{ "kind": "rate", "rate": <number>, "sourceTimestamp": <timestamp> }`
-    - `{ "kind": "noData" }`
-  - TTL: 1 hour.
-  - Lifecycle: cleared when a direct/exact cached value satisfies the request or
-    when the requested day is resolved without needing a fallback.
+Canonical definitions, key formats, and a concise three-cache contrast are
+documented in [Valuation caching](valuation-caching.md), under:
 
-- Miss-attempt cooldown keys: `valuation:miss-cooldown:<seriesKey>:<timestamp>`
-  - Purpose: avoid repeated provider requests for the same probed day after a
-    miss (`null` or explicit no-data) during backtracking.
-  - Stored value: sentinel `"1"`.
-  - TTL: 1 hour.
-  - Lifecycle: cleared when a numeric rate is fetched for that series/timestamp.
-
-Both caches are intentional and complementary:
-
-- Fallback cache is request-targeted (`requestedTimestamp` in key) and speeds up
-  repeated lookups for the same requested day.
-- Miss-cooldown is probe-targeted (`seriesKey + timestamp`) and suppresses
-  repeated misses across different requests that backtrack through the same day.
+- `Redis Fallback Cache (Backtracking Shortcut)`
+- `Redis Miss-Attempt Cooldown Cache`
+- `How The Three Caches Differ`
 
 ## Backtracking and Publish Window
 
-- Backtracking first consults cached exact/prior rates; when the requested day
-  is newer than the latest assumed-available historical publish window, the
-  provider call is skipped and cached prior data is reused immediately.
-- Historical fetches use a 00:05 UTC publish cutoff and 1-day lag for "latest
-  fetchable date" calculation (before 00:05 UTC, treat the latest
-  assumed-available day as two UTC days back).
-- The 00:05 UTC cutoff is treated as an optimistic boundary, not guaranteed
-  provider availability for every provider/day.
-- A single latest-fetchable cutoff decision is computed once per top-level
-  valuation request and reused across nested/parallel provider lookups to avoid
-  mixed cutoff decisions around the publication boundary.
-- When an exact date is not available, the newest available prior rate is used
-  (first from cache, otherwise by historical API backtracking), and in-flight
-  provider fetches are deduplicated per series/day.
+Account-list reference-balance hydration uses the same valuation publish-window
+and backtracking behavior as the shared valuation engine.
+
+Canonical behavior is documented in [Valuation caching](valuation-caching.md),
+under:
+
+- `Historical Publish Window`
+- `Core Lookup Algorithm`
 
 ## Reference-Balance Rules
 
