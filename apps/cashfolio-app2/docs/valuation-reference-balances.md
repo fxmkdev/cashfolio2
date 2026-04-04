@@ -57,12 +57,12 @@ Related docs:
 
 Backtracking uses both fallback and miss-cooldown Redis cache families.
 
-Canonical definitions, key formats, and the fallback-vs-miss-cooldown difference
-are documented in [Valuation caching](valuation-caching.md), under:
+Canonical definitions, key formats, and a concise three-cache contrast are
+documented in [Valuation caching](valuation-caching.md), under:
 
 - `Redis Fallback Cache (Backtracking Shortcut)`
 - `Redis Miss-Attempt Cooldown Cache`
-- `Fallback vs Miss-Cooldown`
+- `Cache Contrast (TimeSeries vs Fallback vs Miss-Cooldown)`
 
 ## Backtracking and Publish Window
 
