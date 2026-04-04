@@ -176,6 +176,20 @@ returned no usable result during backtracking.
   - written when provider result is `NO_DATA_FETCH_RESULT` or `null`
   - cleared when a numeric rate is successfully fetched for that day
 
+## Fallback vs Miss-Cooldown
+
+Both caches are intentional and complementary:
+
+- Fallback cache is request-targeted (`requestedTimestamp` in key) and speeds up
+  repeated lookups for the same requested day by storing a reusable result.
+- Miss-cooldown cache is probe-targeted (`seriesKey + timestamp`) and suppresses
+  repeated failed provider calls for the same probed day.
+
+Simple framing:
+
+- Fallback cache answers: "What should we return?"
+- Miss-cooldown answers: "Should we retry this provider day right now?"
+
 ## Core Lookup Algorithm
 
 Implementation: `src/server/valuation/backtracking.ts`
