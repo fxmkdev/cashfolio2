@@ -1,6 +1,5 @@
 import {
   Badge,
-  Breadcrumbs,
   Card,
   Container,
   Group,
@@ -13,7 +12,8 @@ import { AgCharts } from "ag-charts-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import { useMemo, type ReactNode } from "react";
 import { ensureChartModulesRegistered } from "../../ag-chart-modules";
-import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
+import { AccountPathHeading } from "../../components/account-path-heading";
+import { TopPageHeader } from "../../components/top-page-header";
 import { getTypeLabel } from "../../shared/account-utils";
 import type { TabValue } from "./-accounts-page-types";
 import type { LedgerBalanceChartPoint } from "./-ledger-page-data";
@@ -149,35 +149,28 @@ export function LedgerBalanceChartPageView({
 
   return (
     <Container fluid py="xl" px="xl" className={classes.page}>
-      <Group mb="lg" gap="md" justify="space-between">
-        <Group gap="md">
-          <Breadcrumbs fz="h2" fw={700}>
-            {getAccountsBreadcrumbSegments({
-              accountBookId,
-              tab: backTab,
-              mode: account.isActive ? "active" : "archived",
-            })}
-            <Text fz="inherit" fw="inherit">
-              {getTypeLabel(account.type, account.equityAccountSubtype)}
-            </Text>
-            {account.groupPathSegments.map((segment) => (
-              <Text key={segment} fz="inherit" fw="inherit">
-                {segment}
-              </Text>
-            ))}
-            <Text fz="inherit" fw="inherit">
-              {account.name}
-            </Text>
-          </Breadcrumbs>
-          {unitLabel && (
+      <TopPageHeader
+        heading={
+          <AccountPathHeading
+            accountBookId={accountBookId}
+            tab={backTab}
+            mode={account.isActive ? "active" : "archived"}
+            extraSegments={[
+              getTypeLabel(account.type, account.equityAccountSubtype),
+              ...account.groupPathSegments,
+              account.name,
+            ]}
+          />
+        }
+        headingAccessory={
+          unitLabel ? (
             <Badge size="lg" color="gray">
               {unitLabel}
             </Badge>
-          )}
-        </Group>
-
-        <Group gap="sm">{viewSwitcher}</Group>
-      </Group>
+          ) : undefined
+        }
+        actions={<Group gap="sm">{viewSwitcher}</Group>}
+      />
 
       <Card withBorder radius="md" p="lg" className={classes.chartCard}>
         <Stack gap="xs">

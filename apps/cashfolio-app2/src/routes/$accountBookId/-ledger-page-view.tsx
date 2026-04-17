@@ -1,29 +1,21 @@
 import { IconBolt } from "@tabler/icons-react";
-import {
-  Badge,
-  Breadcrumbs,
-  Button,
-  Container,
-  Group,
-  Modal,
-  Text,
-  Tooltip,
-} from "@mantine/core";
+import { Badge, Button, Container, Group, Modal, Tooltip } from "@mantine/core";
 import type { AgGridReactProps } from "ag-grid-react";
 import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
 import { DataGrid } from "../../components/data-grid";
+import { AccountPathHeading } from "../../components/account-path-heading";
 import {
   EditTransactionModal,
   type AccountOption,
   type BookingValues,
 } from "../../components/edit-transaction-modal";
-import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
 import { RebookBookingModal } from "../../components/rebook-booking-modal";
 import {
   SimpleTransactionModal,
   type SimpleTransactionDirection,
   type SimpleTransactionDraftValues,
 } from "../../components/simple-transaction-modal";
+import { TopPageHeader } from "../../components/top-page-header";
 import type { ReactNode } from "react";
 import type { Unit } from "../../.prisma-client/enums";
 import { getTypeLabel } from "../../shared/account-utils";
@@ -198,52 +190,48 @@ export function LedgerPageView({
 }: LedgerPageViewProps) {
   return (
     <Container fluid py="xl" px="xl">
-      <Group mb="lg" gap="md" justify="space-between">
-        <Group gap="md">
-          <Breadcrumbs fz="h2" fw={700}>
-            {getAccountsBreadcrumbSegments({
-              accountBookId,
-              tab: backTab,
-              mode: account.isActive ? "active" : "archived",
-            })}
-            <Text fz="inherit" fw="inherit">
-              {getTypeLabel(account.type, account.equityAccountSubtype)}
-            </Text>
-            {account.groupPathSegments.map((segment) => (
-              <Text key={segment} fz="inherit" fw="inherit">
-                {segment}
-              </Text>
-            ))}
-            <Text fz="inherit" fw="inherit">
-              {account.name}
-            </Text>
-          </Breadcrumbs>
-          {unitLabel && (
+      <TopPageHeader
+        heading={
+          <AccountPathHeading
+            accountBookId={accountBookId}
+            tab={backTab}
+            mode={account.isActive ? "active" : "archived"}
+            extraSegments={[
+              getTypeLabel(account.type, account.equityAccountSubtype),
+              ...account.groupPathSegments,
+              account.name,
+            ]}
+          />
+        }
+        headingAccessory={
+          unitLabel ? (
             <Badge size="lg" color="gray">
               {unitLabel}
             </Badge>
-          )}
-        </Group>
-        <Group gap="sm">
-          <Tooltip
-            label={
-              simpleTransactionDisabledReason
-                ? `${simpleTransactionDisabledReason} Split editor will open instead.`
-                : "Quick two-booking entry"
-            }
-          >
-            <span>
-              <Button
-                leftSection={<IconBolt size={16} />}
-                onClick={onAddTransactionClick}
-              >
-                Add Transaction
-              </Button>
-            </span>
-          </Tooltip>
-          {viewSwitcher}
-        </Group>
-      </Group>
+          ) : undefined
+        }
+        actions={
+          <Group gap="sm">
+            <Tooltip
+              label={
+                simpleTransactionDisabledReason
+                  ? `${simpleTransactionDisabledReason} Split editor will open instead.`
+                  : "Quick two-booking entry"
+              }
+            >
+              <span>
+                <Button
+                  leftSection={<IconBolt size={16} />}
+                  onClick={onAddTransactionClick}
+                >
+                  Add Transaction
+                </Button>
+              </span>
+            </Tooltip>
+            {viewSwitcher}
+          </Group>
+        }
+      />
 
       <DataGrid
         containerStyle={{ height: "calc(100vh - 8rem)" }}
