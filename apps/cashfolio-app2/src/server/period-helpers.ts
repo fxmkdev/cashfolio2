@@ -19,6 +19,21 @@ export type ExpenseBreakdownAccumulatorItem = {
   amount: number;
 };
 
+export type BreakdownHierarchyNode = {
+  id: string;
+  label: string;
+  kind: "group" | "account";
+  amount: number;
+  children: BreakdownHierarchyNode[];
+};
+
+export type BreakdownHierarchyAccumulatorItem = {
+  accountId: string;
+  accountName: string;
+  groupId: string | null;
+  amount: number;
+};
+
 export type HoldingEvent = {
   date: Date;
   balanceDelta: number;
@@ -194,6 +209,139 @@ export function buildBreakdownItems(items: ExpenseBreakdownAccumulatorItem[]): {
     ),
     items: sortedItems,
   };
+}
+
+type MutableBreakdownHierarchyNode = {
+  id: string;
+  label: string;
+  kind: "group" | "account";
+  amount: number;
+  childrenById: Map<string, MutableBreakdownHierarchyNode>;
+};
+
+function createMutableBreakdownHierarchyNode(args: {
+  id: string;
+  label: string;
+  kind: "group" | "account";
+}): MutableBreakdownHierarchyNode {
+  return {
+    id: args.id,
+    label: args.label,
+    kind: args.kind,
+    amount: 0,
+    childrenById: new Map(),
+  };
+}
+
+function getOrCreateMutableBreakdownHierarchyNode(args: {
+  nodeId: string;
+  label: string;
+  kind: "group" | "account";
+  childrenById: Map<string, MutableBreakdownHierarchyNode>;
+}): MutableBreakdownHierarchyNode {
+  const existing = args.childrenById.get(args.nodeId);
+  if (existing) {
+    return existing;
+  }
+
+  const created = createMutableBreakdownHierarchyNode({
+    id: args.nodeId,
+    label: args.label,
+    kind: args.kind,
+  });
+  args.childrenById.set(args.nodeId, created);
+  return created;
+}
+
+function finalizeBreakdownHierarchyNodes(
+  childrenById: Map<string, MutableBreakdownHierarchyNode>,
+): BreakdownHierarchyNode[] {
+  const nodes: BreakdownHierarchyNode[] = [];
+
+  for (const node of childrenById.values()) {
+    if (node.kind === "account") {
+      const roundedAmount = round2(node.amount);
+      if (roundedAmount <= 0) {
+        continue;
+      }
+
+      nodes.push({
+        id: node.id,
+        label: node.label,
+        kind: node.kind,
+        amount: roundedAmount,
+        children: [],
+      });
+      continue;
+    }
+
+    const children = finalizeBreakdownHierarchyNodes(node.childrenById);
+    const roundedAmount = round2(node.amount);
+
+    if (roundedAmount <= 0) {
+      continue;
+    }
+
+    nodes.push({
+      id: node.id,
+      label: node.label,
+      kind: node.kind,
+      amount: roundedAmount,
+      children,
+    });
+  }
+
+  nodes.sort(
+    (a, b) =>
+      b.amount - a.amount ||
+      a.label.localeCompare(b.label, "en") ||
+      a.id.localeCompare(b.id),
+  );
+
+  return nodes;
+}
+
+export function buildBreakdownHierarchy(args: {
+  items: BreakdownHierarchyAccumulatorItem[];
+  groupById: Map<string, PeriodGroupNode>;
+}): BreakdownHierarchyNode[] {
+  const rootChildrenById = new Map<string, MutableBreakdownHierarchyNode>();
+
+  for (const item of args.items) {
+    if (item.amount === 0) {
+      continue;
+    }
+
+    const groupPath = item.groupId
+      ? resolveGroupPathToRoot({
+          groupId: item.groupId,
+          groupById: args.groupById,
+        }).reverse()
+      : [];
+
+    let currentChildrenById = rootChildrenById;
+
+    for (const group of groupPath) {
+      const groupNode = getOrCreateMutableBreakdownHierarchyNode({
+        nodeId: `group:${group.id}`,
+        label: group.name,
+        kind: "group",
+        childrenById: currentChildrenById,
+      });
+      groupNode.amount += item.amount;
+      currentChildrenById = groupNode.childrenById;
+    }
+
+    const accountNode = getOrCreateMutableBreakdownHierarchyNode({
+      nodeId: `account:${item.accountId}`,
+      label: item.accountName,
+      kind: "account",
+      childrenById: currentChildrenById,
+    });
+    accountNode.amount += item.amount;
+  }
+
+  return finalizeBreakdownHierarchyNodes(rootChildrenById);
 }
 
 export function computeHoldingGainLossForEventSeries(args: {

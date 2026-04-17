@@ -166,6 +166,19 @@ submit UX and prevent duplicate requests.
   - exclude missing-reference and non-positive balances, and show a partial-data
     note when exclusions happen
 
+## Period Breakdown Drill-Down Pattern
+
+- Period route (`src/routes/$accountBookId/period.tsx`) supports drill-down in
+  Expense/Income charts (both donut and bar).
+- Double-clicking a chart node drills into group children; account leaves are
+  informational and do not drill.
+- Keep drill state local to the page and scoped per breakdown type
+  (Expense/Income), preserving each side when toggling.
+- Show an `Up` action and breadcrumb context (`All Expenses` / `All Income` ->
+  group path) directly above the chart.
+- Reset drill state to root when period selection changes; clamp stale paths to
+  the nearest valid ancestor when refreshed data no longer contains a node.
+
 ## Accounts List Columns
 
 - Non-equity tabs (`ASSET`, `LIABILITY`) render `Ccy.`, `Symbol`, `Balance`, and

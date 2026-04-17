@@ -13,6 +13,7 @@ vi.mock("./valuation.server", () => ({
 import { Unit } from "../.prisma-client/enums";
 import {
   DEFAULT_PERIOD_VALUE,
+  buildBreakdownHierarchy,
   buildBreakdownItems,
   computeHoldingGainLossForEventSeries,
   createBreakdownBucket,
@@ -344,5 +345,172 @@ describe("expense breakdown grouping", () => {
       id: "group:food",
       percentage: 36.67,
     });
+  });
+});
+
+describe("breakdown hierarchy", () => {
+  const groupById = new Map([
+    [
+      "expenses",
+      {
+        id: "expenses",
+        name: "Expenses",
+        parentGroupId: null,
+      },
+    ],
+    [
+      "housing",
+      {
+        id: "housing",
+        name: "Housing",
+        parentGroupId: "expenses",
+      },
+    ],
+    [
+      "rent",
+      {
+        id: "rent",
+        name: "Rent",
+        parentGroupId: "housing",
+      },
+    ],
+    [
+      "food",
+      {
+        id: "food",
+        name: "Food",
+        parentGroupId: "expenses",
+      },
+    ],
+  ]);
+
+  test("builds nested hierarchy from group ancestry", () => {
+    const hierarchy = buildBreakdownHierarchy({
+      items: [
+        {
+          accountId: "account-rent",
+          accountName: "Rent",
+          groupId: "rent",
+          amount: 1500,
+        },
+      ],
+      groupById,
+    });
+
+    expect(hierarchy).toEqual([
+      {
+        id: "group:expenses",
+        label: "Expenses",
+        kind: "group",
+        amount: 1500,
+        children: [
+          {
+            id: "group:housing",
+            label: "Housing",
+            kind: "group",
+            amount: 1500,
+            children: [
+              {
+                id: "group:rent",
+                label: "Rent",
+                kind: "group",
+                amount: 1500,
+                children: [
+                  {
+                    id: "account:account-rent",
+                    label: "Rent",
+                    kind: "account",
+                    amount: 1500,
+                    children: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+  });
+
+  test("includes ungrouped accounts at root", () => {
+    const hierarchy = buildBreakdownHierarchy({
+      items: [
+        {
+          accountId: "account-rent",
+          accountName: "Rent",
+          groupId: "rent",
+          amount: 900,
+        },
+        {
+          accountId: "account-misc",
+          accountName: "Misc",
+          groupId: null,
+          amount: 100,
+        },
+      ],
+      groupById,
+    });
+
+    expect(hierarchy.map((item) => item.id)).toEqual([
+      "group:expenses",
+      "account:account-misc",
+    ]);
+  });
+
+  test("prunes non-positive branches after account-level accumulation", () => {
+    const hierarchy = buildBreakdownHierarchy({
+      items: [
+        {
+          accountId: "account-rent",
+          accountName: "Rent",
+          groupId: "rent",
+          amount: 1000,
+        },
+        {
+          accountId: "account-refund",
+          accountName: "Refund",
+          groupId: "rent",
+          amount: -1000,
+        },
+      ],
+      groupById,
+    });
+
+    expect(hierarchy).toEqual([]);
+  });
+
+  test("orders siblings by descending amount with deterministic tie-breakers", () => {
+    const hierarchy = buildBreakdownHierarchy({
+      items: [
+        {
+          accountId: "account-food",
+          accountName: "Food Account",
+          groupId: "food",
+          amount: 100,
+        },
+        {
+          accountId: "account-rent",
+          accountName: "Rent Account",
+          groupId: "rent",
+          amount: 300,
+        },
+        {
+          accountId: "account-travel",
+          accountName: "Travel",
+          groupId: null,
+          amount: 100,
+        },
+      ],
+      groupById,
+    });
+
+    expect(hierarchy.map((item) => item.id)).toEqual([
+      "group:expenses",
+      "account:account-travel",
+    ]);
+    expect(hierarchy[0]?.children.map((item) => item.id)).toEqual([
+      "group:housing",
+      "group:food",
+    ]);
   });
 });

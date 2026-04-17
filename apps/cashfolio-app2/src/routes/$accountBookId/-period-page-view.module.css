@@ -39,6 +39,18 @@
   white-space: nowrap;
 }
 
+.breakdownContextRow {
+  margin-top: 4px;
+}
+
+.breadcrumbButton {
+  cursor: pointer;
+}
+
+.breadcrumbButton:hover {
+  text-decoration: underline;
+}
+
 .chartContainer {
   margin-top: 20px;
   width: 100%;
