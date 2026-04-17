@@ -1,3 +1,9 @@
+.periodTopSection {
+  width: 100%;
+  max-width: 1000px;
+  margin-inline: auto;
+}
+
 .periodSelectorRow {
   flex-wrap: nowrap;
   min-width: 0;

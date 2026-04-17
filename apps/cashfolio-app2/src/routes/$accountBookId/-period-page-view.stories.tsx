@@ -259,6 +259,20 @@ export const HappyPath: Story = {
   },
 };
 
+export const TopSectionLayoutSmoke: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const topSection = await canvas.findByTestId("period-top-section");
+    await expect(topSection).toBeInTheDocument();
+    await expect(
+      within(topSection).getByRole("button", { name: "Select period" }),
+    ).toBeInTheDocument();
+    await expect(
+      within(topSection).queryByRole("heading", { name: "Expense Breakdown" }),
+    ).not.toBeInTheDocument();
+  },
+};
+
 export const NoExpenseData: Story = {
   args: {
     overview: {

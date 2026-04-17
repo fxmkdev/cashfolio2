@@ -601,96 +601,105 @@ export function PeriodPageView({
       />
 
       <Stack gap="lg">
-        <Card withBorder radius="md" p="lg">
-          <Stack gap="sm">
-            <Group justify="space-between" align="center">
-              <Text fw={600}>Period: {overview.selectedPeriodLabel}</Text>
-              <Text c="dimmed" size="sm">
-                Amounts shown in {overview.referenceCurrency}
-              </Text>
-            </Group>
-
-            <Group gap="sm" wrap="nowrap" className={classes.periodSelectorRow}>
-              <SegmentedControl
-                size="sm"
-                aria-label="Period mode"
-                value={periodMode}
-                onChange={handlePeriodModeChange}
-                className={classes.periodModeControl}
-                data={[
-                  { label: "Month", value: "month" },
-                  { label: "Year", value: "year" },
-                ]}
-              />
-              <Group
-                gap="xs"
-                wrap="nowrap"
-                className={classes.periodPickerControlRow}
-              >
-                <ActionIcon
-                  variant="default"
-                  size="input-sm"
-                  aria-label="Previous period"
-                  disabled={!canGoToPreviousPeriod}
-                  onClick={() => handlePeriodStep(-1)}
-                >
-                  <IconChevronLeft size={16} />
-                </ActionIcon>
-                <Popover
-                  opened={pickerOpened}
-                  onChange={setPickerOpened}
-                  position="bottom-start"
-                  withArrow
-                  withinPortal={false}
-                >
-                  <Popover.Target>
-                    <Button
-                      variant="default"
-                      justify="space-between"
-                      rightSection={<IconChevronDown size={16} />}
-                      onClick={() => setPickerOpened((opened) => !opened)}
-                      className={classes.periodPickerTrigger}
-                      aria-label="Select period"
-                    >
-                      {overview.selectedPeriodLabel}
-                    </Button>
-                  </Popover.Target>
-                  <Popover.Dropdown p="xs">
-                    {periodMode === "month" ? (
-                      <MonthPicker
-                        data-testid="period-month-picker"
-                        value={formatMonthPeriodValue(
-                          overview.selectedYear,
-                          selectedMonth,
-                        )}
-                        onChange={handleMonthPickerChange}
-                        minDate={minMonthPickerDate}
-                        maxDate={maxMonthPickerDate}
-                      />
-                    ) : (
-                      <YearPicker
-                        data-testid="period-year-picker"
-                        value={`${String(overview.selectedYear).padStart(4, "0")}-01-01`}
-                        onChange={handleYearPickerChange}
-                        minDate={minYearPickerDate}
-                        maxDate={maxYearPickerDate}
-                      />
-                    )}
-                  </Popover.Dropdown>
-                </Popover>
-                <ActionIcon
-                  variant="default"
-                  size="input-sm"
-                  aria-label="Next period"
-                  disabled={!canGoToNextPeriod}
-                  onClick={() => handlePeriodStep(1)}
-                >
-                  <IconChevronRight size={16} />
-                </ActionIcon>
+        <div
+          className={classes.periodTopSection}
+          data-testid="period-top-section"
+        >
+          <Card withBorder radius="md" p="lg">
+            <Stack gap="sm">
+              <Group justify="space-between" align="center">
+                <Text fw={600}>Period: {overview.selectedPeriodLabel}</Text>
+                <Text c="dimmed" size="sm">
+                  Amounts shown in {overview.referenceCurrency}
+                </Text>
               </Group>
-            </Group>
-          </Stack>
-        </Card>
+
+              <Group
+                gap="sm"
+                wrap="nowrap"
+                className={classes.periodSelectorRow}
+              >
+                <SegmentedControl
+                  size="sm"
+                  aria-label="Period mode"
+                  value={periodMode}
+                  onChange={handlePeriodModeChange}
+                  className={classes.periodModeControl}
+                  data={[
+                    { label: "Month", value: "month" },
+                    { label: "Year", value: "year" },
+                  ]}
+                />
+                <Group
+                  gap="xs"
+                  wrap="nowrap"
+                  className={classes.periodPickerControlRow}
+                >
+                  <ActionIcon
+                    variant="default"
+                    size="input-sm"
+                    aria-label="Previous period"
+                    disabled={!canGoToPreviousPeriod}
+                    onClick={() => handlePeriodStep(-1)}
+                  >
+                    <IconChevronLeft size={16} />
+                  </ActionIcon>
+                  <Popover
+                    opened={pickerOpened}
+                    onChange={setPickerOpened}
+                    position="bottom-start"
+                    withArrow
+                    withinPortal={false}
+                  >
+                    <Popover.Target>
+                      <Button
+                        variant="default"
+                        justify="space-between"
+                        rightSection={<IconChevronDown size={16} />}
+                        onClick={() => setPickerOpened((opened) => !opened)}
+                        className={classes.periodPickerTrigger}
+                        aria-label="Select period"
+                      >
+                        {overview.selectedPeriodLabel}
+                      </Button>
+                    </Popover.Target>
+                    <Popover.Dropdown p="xs">
+                      {periodMode === "month" ? (
+                        <MonthPicker
+                          data-testid="period-month-picker"
+                          value={formatMonthPeriodValue(
+                            overview.selectedYear,
+                            selectedMonth,
+                          )}
+                          onChange={handleMonthPickerChange}
+                          minDate={minMonthPickerDate}
+                          maxDate={maxMonthPickerDate}
+                        />
+                      ) : (
+                        <YearPicker
+                          data-testid="period-year-picker"
+                          value={`${String(overview.selectedYear).padStart(4, "0")}-01-01`}
+                          onChange={handleYearPickerChange}
+                          minDate={minYearPickerDate}
+                          maxDate={maxYearPickerDate}
+                        />
+                      )}
+                    </Popover.Dropdown>
+                  </Popover>
+                  <ActionIcon
+                    variant="default"
+                    size="input-sm"
+                    aria-label="Next period"
+                    disabled={!canGoToNextPeriod}
+                    onClick={() => handlePeriodStep(1)}
+                  >
+                    <IconChevronRight size={16} />
+                  </ActionIcon>
+                </Group>
+              </Group>
+            </Stack>
+          </Card>
+        </div>
 
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 5 }} spacing="lg">
           {statCards.map((card) => (
