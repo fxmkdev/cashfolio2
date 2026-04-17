@@ -524,9 +524,5 @@ export const BreakdownToggleSmoke: Story = {
     const barOption = await canvas.findByRole("radio", { name: "Bar" });
     await userEvent.click(barOption);
     await expect(barOption).toBeChecked();
-
-    await expect(
-      canvas.getByText("Top-level income groups for the selected period"),
-    ).toBeInTheDocument();
   },
 };

@@ -308,12 +308,6 @@ export function PeriodPageView({
       selectedBreakdown,
     ],
   );
-  const breakdownSubtitle =
-    drillState.clampedPath.length === 0
-      ? selectedBreakdown === "expense"
-        ? "Top-level expense groups for the selected period"
-        : "Top-level income groups for the selected period"
-      : `Inside ${drillState.breadcrumbs[drillState.breadcrumbs.length - 1]?.label}`;
   const emptyBreakdownMessage =
     selectedBreakdown === "expense"
       ? "No expense bookings were found for this period."
@@ -445,31 +439,18 @@ export function PeriodPageView({
         tooltip: {
           renderer: ({ datum }) => {
             const item = datum as BreakdownDatum;
-            const data = [
-              {
-                label: "Share",
-                value: item.percentageLabel,
-              },
-              {
-                label: "Amount",
-                value: item.amountLabel,
-              },
-              {
-                label: "Total",
-                value: totalBreakdownAmountLabel,
-              },
-            ];
-
-            if (item.isDrillable) {
-              data.push({
-                label: "Action",
-                value: "Double-click to drill down",
-              });
-            }
-
             return {
-              heading: item.label,
-              data,
+              title: item.label,
+              data: [
+                {
+                  label: "Amount",
+                  value: item.amountLabel,
+                },
+                {
+                  label: "Share",
+                  value: item.percentageLabel,
+                },
+              ],
             };
           },
         },
@@ -542,31 +523,18 @@ export function PeriodPageView({
         tooltip: {
           renderer: ({ datum }) => {
             const item = datum as BreakdownBarDatum;
-            const data = [
-              {
-                label: "Share",
-                value: item.percentageLabel,
-              },
-              {
-                label: "Amount",
-                value: item.amountLabel,
-              },
-              {
-                label: "Total",
-                value: totalBreakdownAmountLabel,
-              },
-            ];
-
-            if (item.isDrillable) {
-              data.push({
-                label: "Action",
-                value: "Double-click to drill down",
-              });
-            }
-
             return {
-              heading: item.label,
-              data,
+              title: item.label,
+              data: [
+                {
+                  label: "Amount",
+                  value: item.amountLabel,
+                },
+                {
+                  label: "Share",
+                  value: item.percentageLabel,
+                },
+              ],
             };
           },
         },
@@ -598,7 +566,6 @@ export function PeriodPageView({
       barSeriesDefinitions,
       colors,
       handleNodeDoubleClick,
-      totalBreakdownAmountLabel,
     ],
   );
   const chartOptions =
@@ -805,9 +772,6 @@ export function PeriodPageView({
                 />
               </Flex>
             </Group>
-            <Text c="dimmed" size="sm">
-              {breakdownSubtitle}
-            </Text>
             <Group
               justify="space-between"
               align="center"
