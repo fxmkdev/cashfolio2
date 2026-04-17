@@ -60,6 +60,8 @@ need to be strictly Conventional Commit formatted.
 
 ## Review Comment Workflow
 
+- If the current thread already has an open pull request, push newly applied
+  changes to that PR branch unless explicitly instructed otherwise.
 - After you address a pull request comment, resolve that conversation in the
   PR.
 
