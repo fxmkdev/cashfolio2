@@ -1,35 +1,16 @@
 import {
   Alert,
-  Breadcrumbs,
-  Button,
   Card,
-  Center,
   Container,
-  Flex,
   Group,
-  NativeSelect,
-  SegmentedControl,
   SimpleGrid,
   Stack,
   Text,
   Title,
-  UnstyledButton,
   useComputedColorScheme,
   useMantineTheme,
 } from "@mantine/core";
-import {
-  IconAlertTriangle,
-  IconArrowUp,
-  IconChartBar,
-  IconChartDonut,
-  IconListDetails,
-} from "@tabler/icons-react";
-import { AgCharts } from "ag-charts-react";
-import type {
-  AgCartesianChartOptions,
-  AgDonutSeriesOptions,
-  AgPolarChartOptions,
-} from "ag-charts-community";
+import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ensureChartModulesRegistered } from "../../ag-chart-modules";
 import { LinkButton } from "../../components/link-button";
@@ -41,14 +22,18 @@ import {
   getBreakdownDrillState,
   isBreakdownNodeDrillable,
 } from "./-period-breakdown-drill";
+import { PeriodBreakdownCard } from "./-period-breakdown-card";
 import {
-  PERIOD_PRESET_LAST_MONTH,
-  PERIOD_PRESET_LAST_YEAR,
-  PERIOD_PRESET_MTD,
-  PERIOD_PRESET_YTD,
-} from "./-period-page-types";
+  type PeriodBreakdownChartDatum,
+  type PeriodBreakdownNodeDatum,
+  usePeriodBreakdownChartOptions,
+} from "./-period-breakdown-chart-options";
+import {
+  type BreakdownChartType,
+  type BreakdownType,
+} from "./-period-breakdown-types";
+import { PeriodSelectorRow } from "./-period-selector-row";
 import { getDashboardChartThemeColors } from "./-dashboard-chart-theme";
-import classes from "./-period-page-view.module.css";
 
 ensureChartModulesRegistered();
 
@@ -80,37 +65,10 @@ export type PeriodPageViewProps = {
   ) => void;
 };
 
-type BreakdownDatum = {
-  id: string;
-  label: string;
-  kind: "group" | "account";
-  amount: number;
-  percentage: number;
-  isDrillable: boolean;
-  amountLabel: string;
-  percentageLabel: string;
-};
-
 type StatCardProps = {
   label: string;
   value: string;
   valueColor: "green" | "red";
-};
-
-type BreakdownType = "expense" | "income";
-type BreakdownChartType = "donut" | "bar";
-type BreakdownBarDatum = {
-  id: string;
-  kind: "group" | "account";
-  isDrillable: boolean;
-  label: string;
-  amountLabel: string;
-  percentageLabel: string;
-} & Record<string, number | null | string | boolean>;
-
-type BreakdownBarSeriesDefinition = {
-  key: string;
-  label: string;
 };
 
 function arePathsEqual(left: string[], right: string[]): boolean {
@@ -321,7 +279,7 @@ export function PeriodPageView({
     [drillState.currentNodes],
   );
 
-  const chartData = useMemo<BreakdownDatum[]>(
+  const chartData = useMemo<PeriodBreakdownChartDatum[]>(
     () =>
       drillState.currentNodes.map((item) => {
         const percentage =
@@ -366,7 +324,7 @@ export function PeriodPageView({
     [drillPathByBreakdown, onDrillPathByBreakdownChange, selectedBreakdown],
   );
   const handleNodeDoubleClick = useCallback(
-    (datum: BreakdownDatum | BreakdownBarDatum) => {
+    (datum: PeriodBreakdownNodeDatum) => {
       if (
         datum.kind !== "group" ||
         !datum.isDrillable ||
@@ -379,199 +337,76 @@ export function PeriodPageView({
     },
     [drillState.clampedPath, updateSelectedBreakdownPath],
   );
-  const amountCompactFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat("en-CH", {
-        notation: "compact",
-        maximumFractionDigits: 1,
-      }),
-    [],
-  );
-  const barSeriesDefinitions = useMemo<BreakdownBarSeriesDefinition[]>(
-    () =>
-      chartData.map((item, index) => ({
-        key: `amount_${index}`,
-        label: item.label,
-      })),
-    [chartData],
-  );
-  const barChartData = useMemo<BreakdownBarDatum[]>(
-    () =>
-      chartData.map((item, itemIndex) => {
-        const row: BreakdownBarDatum = {
-          id: item.id,
-          kind: item.kind,
-          isDrillable: item.isDrillable,
-          label: item.label,
-          amountLabel: item.amountLabel,
-          percentageLabel: item.percentageLabel,
-        };
+  const chartOptions = usePeriodBreakdownChartOptions({
+    chartData,
+    selectedChartType,
+    colors,
+    totalBreakdownAmountLabel,
+    onNodeDoubleClick: handleNodeDoubleClick,
+  });
+  const handlePeriodSpecifierChange = useCallback(
+    (value: string) => {
+      if (value === "month") {
+        const monthValue =
+          overview.selectedGranularity === "month"
+            ? formatMonthPeriodValue(
+                overview.selectedYear,
+                overview.selectedMonth ?? 0,
+              )
+            : overview.currentMonthValue;
+        onPeriodChange(monthValue);
+        return;
+      }
 
-        for (const seriesDefinition of barSeriesDefinitions) {
-          row[seriesDefinition.key] = null;
-        }
+      if (value === "year") {
+        const yearValue =
+          overview.selectedGranularity === "year"
+            ? String(overview.selectedYear)
+            : overview.currentYearValue;
+        onPeriodChange(yearValue);
+        return;
+      }
 
-        row[barSeriesDefinitions[itemIndex].key] = item.amount;
-
-        return row;
-      }),
-    [barSeriesDefinitions, chartData],
-  );
-
-  const donutSeries = useMemo<AgDonutSeriesOptions<BreakdownDatum>[]>(
-    () => [
-      {
-        type: "donut",
-        angleKey: "amount",
-        calloutLabelKey: "label",
-        sectorLabelKey: "percentageLabel",
-        innerRadiusRatio: 0.7,
-        outerRadiusRatio: 0.95,
-        calloutLabel: {
-          minAngle: 10,
-        },
-        innerLabels: [
-          {
-            text: totalBreakdownAmountLabel,
-            color: colors.chartTextColor,
-            fontWeight: 600,
-            fontSize: 18,
-          },
-        ],
-        tooltip: {
-          renderer: ({ datum }) => {
-            const item = datum as BreakdownDatum;
-            return {
-              heading: item.label,
-              data: [
-                {
-                  label: "Amount",
-                  value: item.amountLabel,
-                },
-                {
-                  label: "Share",
-                  value: item.percentageLabel,
-                },
-              ],
-            };
-          },
-        },
-        listeners: {
-          seriesNodeDoubleClick: ({ datum }) => {
-            handleNodeDoubleClick(datum as BreakdownDatum);
-          },
-        },
-      },
-    ],
-    [colors.chartTextColor, handleNodeDoubleClick, totalBreakdownAmountLabel],
-  );
-
-  const donutChartOptions = useMemo<AgPolarChartOptions<BreakdownDatum>>(
-    () => ({
-      data: chartData,
-      height: 500,
-      background: {
-        visible: false,
-      },
-      theme: {
-        params: {
-          textColor: colors.chartTextColor,
-          foregroundColor: colors.chartTextColor,
-          borderColor: colors.themeBorderColor,
-          tooltipBackgroundColor: colors.tooltipBackgroundColor,
-          tooltipBorder: true,
-          tooltipTextColor: colors.tooltipTextColor,
-          tooltipSubtleTextColor: colors.tooltipSubtleTextColor,
-        },
-      },
-      legend: {
-        position: "bottom",
-      },
-      series: donutSeries,
-    }),
-    [chartData, colors, donutSeries],
-  );
-  const barChartOptions = useMemo<AgCartesianChartOptions>(
-    () => ({
-      data: barChartData,
-      height: 500,
-      background: {
-        visible: false,
-      },
-      theme: {
-        params: {
-          textColor: colors.chartTextColor,
-          foregroundColor: colors.chartTextColor,
-          borderColor: colors.themeBorderColor,
-          tooltipBackgroundColor: colors.tooltipBackgroundColor,
-          tooltipBorder: true,
-          tooltipTextColor: colors.tooltipTextColor,
-          tooltipSubtleTextColor: colors.tooltipSubtleTextColor,
-        },
-      },
-      legend: {
-        enabled: true,
-        position: "bottom",
-      },
-      series: barSeriesDefinitions.map((seriesDefinition) => ({
-        type: "bar",
-        direction: "vertical",
-        grouped: false,
-        widthRatio: 0.72,
-        xKey: "label",
-        yKey: seriesDefinition.key,
-        yName: seriesDefinition.label,
-        legendItemName: seriesDefinition.label,
-        tooltip: {
-          renderer: ({ datum }) => {
-            const item = datum as BreakdownBarDatum;
-            return {
-              heading: item.label,
-              data: [
-                {
-                  label: "Amount",
-                  value: item.amountLabel,
-                },
-                {
-                  label: "Share",
-                  value: item.percentageLabel,
-                },
-              ],
-            };
-          },
-        },
-        listeners: {
-          seriesNodeDoubleClick: ({ datum }) => {
-            handleNodeDoubleClick(datum as BreakdownBarDatum);
-          },
-        },
-      })),
-      axes: {
-        x: {
-          type: "category",
-          label: {
-            rotation: -25,
-          },
-        },
-        y: {
-          type: "number",
-          label: {
-            formatter: ({ value }) =>
-              amountCompactFormatter.format(Number(value)),
-          },
-        },
-      },
-    }),
+      onPeriodChange(value);
+    },
     [
-      amountCompactFormatter,
-      barChartData,
-      barSeriesDefinitions,
-      colors,
-      handleNodeDoubleClick,
+      onPeriodChange,
+      overview.currentMonthValue,
+      overview.currentYearValue,
+      overview.selectedGranularity,
+      overview.selectedMonth,
+      overview.selectedYear,
     ],
   );
-  const chartOptions =
-    selectedChartType === "donut" ? donutChartOptions : barChartOptions;
+  const handleYearChange = useCallback(
+    (nextYear: number) => {
+      if (overview.selectedPeriodSpecifier === "year") {
+        onPeriodChange(String(nextYear));
+        return;
+      }
+
+      const nextMonth = clampMonth({
+        year: nextYear,
+        month: selectedMonth,
+        minBookingDate,
+        maxDate,
+      });
+      onPeriodChange(formatMonthPeriodValue(nextYear, nextMonth));
+    },
+    [
+      maxDate,
+      minBookingDate,
+      onPeriodChange,
+      overview.selectedPeriodSpecifier,
+      selectedMonth,
+    ],
+  );
+  const handleMonthChange = useCallback(
+    (nextMonth: number) => {
+      onPeriodChange(formatMonthPeriodValue(overview.selectedYear, nextMonth));
+    },
+    [onPeriodChange, overview.selectedYear],
+  );
 
   const statCards: StatCardProps[] = [
     {
@@ -628,92 +463,16 @@ export function PeriodPageView({
               </Text>
             </Group>
 
-            <Group align="end" gap="sm" className={classes.periodSelectorRow}>
-              <NativeSelect
-                label="Period"
-                value={overview.selectedPeriodSpecifier}
-                onChange={(event) => {
-                  const value = event.currentTarget.value;
-
-                  if (value === "month") {
-                    const monthValue =
-                      overview.selectedGranularity === "month"
-                        ? formatMonthPeriodValue(
-                            overview.selectedYear,
-                            overview.selectedMonth ?? 0,
-                          )
-                        : overview.currentMonthValue;
-                    onPeriodChange(monthValue);
-                    return;
-                  }
-
-                  if (value === "year") {
-                    const yearValue =
-                      overview.selectedGranularity === "year"
-                        ? String(overview.selectedYear)
-                        : overview.currentYearValue;
-                    onPeriodChange(yearValue);
-                    return;
-                  }
-
-                  onPeriodChange(value);
-                }}
-              >
-                <optgroup label="Monthly">
-                  <option value={PERIOD_PRESET_MTD}>Month to Date</option>
-                  <option value={PERIOD_PRESET_LAST_MONTH}>Last Month</option>
-                  <option value="month">Select Month…</option>
-                </optgroup>
-                <optgroup label="Yearly">
-                  <option value={PERIOD_PRESET_YTD}>Year to Date</option>
-                  <option value={PERIOD_PRESET_LAST_YEAR}>Last Year</option>
-                  <option value="year">Select Year…</option>
-                </optgroup>
-              </NativeSelect>
-
-              <NativeSelect
-                label="Year"
-                disabled={
-                  overview.selectedPeriodSpecifier !== "month" &&
-                  overview.selectedPeriodSpecifier !== "year"
-                }
-                value={String(overview.selectedYear)}
-                onChange={(event) => {
-                  const nextYear = Number(event.currentTarget.value);
-
-                  if (overview.selectedPeriodSpecifier === "year") {
-                    onPeriodChange(String(nextYear));
-                    return;
-                  }
-
-                  const nextMonth = clampMonth({
-                    year: nextYear,
-                    month: selectedMonth,
-                    minBookingDate,
-                    maxDate,
-                  });
-                  onPeriodChange(formatMonthPeriodValue(nextYear, nextMonth));
-                }}
-                data={overview.availableYears.map((year) => ({
-                  value: String(year),
-                  label: String(year),
-                }))}
-              />
-
-              {overview.selectedPeriodSpecifier === "month" ? (
-                <NativeSelect
-                  label="Month"
-                  value={String(selectedMonth)}
-                  onChange={(event) => {
-                    const nextMonth = Number(event.currentTarget.value);
-                    onPeriodChange(
-                      formatMonthPeriodValue(overview.selectedYear, nextMonth),
-                    );
-                  }}
-                  data={monthOptions}
-                />
-              ) : null}
-            </Group>
+            <PeriodSelectorRow
+              selectedPeriodSpecifier={overview.selectedPeriodSpecifier}
+              selectedYear={overview.selectedYear}
+              selectedMonth={selectedMonth}
+              monthOptions={monthOptions}
+              availableYears={overview.availableYears}
+              onPeriodSpecifierChange={handlePeriodSpecifierChange}
+              onYearChange={handleYearChange}
+              onMonthChange={handleMonthChange}
+            />
           </Stack>
         </Card>
 
@@ -728,157 +487,34 @@ export function PeriodPageView({
           ))}
         </SimpleGrid>
 
-        <Card withBorder radius="md" p="lg">
-          <Stack gap="sm">
-            <Group justify="space-between" align="center">
-              <Title order={4}>{breakdownTitle}</Title>
-              <Flex gap="md" wrap="wrap" justify="flex-end">
-                <SegmentedControl
-                  size="sm"
-                  aria-label="Breakdown chart type"
-                  value={selectedChartType}
-                  onChange={(value) =>
-                    setSelectedChartType(value as BreakdownChartType)
-                  }
-                  data={[
-                    {
-                      label: (
-                        <Center style={{ gap: 6 }}>
-                          <IconChartDonut size={16} />
-                          Donut
-                        </Center>
-                      ),
-                      value: "donut",
-                    },
-                    {
-                      label: (
-                        <Center style={{ gap: 6 }}>
-                          <IconChartBar size={16} />
-                          Bar
-                        </Center>
-                      ),
-                      value: "bar",
-                    },
-                  ]}
-                />
-                <SegmentedControl
-                  size="sm"
-                  value={selectedBreakdown}
-                  onChange={(value) =>
-                    setSelectedBreakdown(value as BreakdownType)
-                  }
-                  data={[
-                    { label: "Expense", value: "expense" },
-                    { label: "Income", value: "income" },
-                  ]}
-                />
-              </Flex>
-            </Group>
-            <Group
-              justify="space-between"
-              align="center"
-              gap="xs"
-              className={classes.breakdownContextRow}
-            >
-              <Group gap="xs" wrap="wrap">
-                <Button
-                  variant="default"
-                  size="compact-sm"
-                  leftSection={<IconArrowUp size={14} />}
-                  disabled={drillState.clampedPath.length === 0}
-                  onClick={() => {
-                    updateSelectedBreakdownPath(
-                      drillState.clampedPath.slice(
-                        0,
-                        drillState.clampedPath.length - 1,
-                      ),
-                    );
-                  }}
-                >
-                  Up
-                </Button>
-
-                <Breadcrumbs>
-                  {drillState.breadcrumbs.map((breadcrumb, breadcrumbIndex) => {
-                    const isCurrent =
-                      breadcrumbIndex === drillState.breadcrumbs.length - 1;
-                    const nextPath =
-                      breadcrumb.id == null
-                        ? []
-                        : drillState.clampedPath.slice(0, breadcrumbIndex);
-
-                    if (isCurrent) {
-                      return (
-                        <Text
-                          key={breadcrumb.id ?? "root"}
-                          fw={600}
-                          fz="sm"
-                          lh="inherit"
-                        >
-                          {breadcrumb.label}
-                        </Text>
-                      );
-                    }
-
-                    return (
-                      <UnstyledButton
-                        key={breadcrumb.id ?? "root"}
-                        className={classes.breadcrumbButton}
-                        onClick={() => {
-                          updateSelectedBreakdownPath(nextPath);
-                        }}
-                      >
-                        <Text fz="sm" c="blue.7" lh="inherit">
-                          {breadcrumb.label}
-                        </Text>
-                      </UnstyledButton>
-                    );
-                  })}
-                </Breadcrumbs>
-              </Group>
-
-              <Text c="dimmed" size="xs">
-                Double-click a group to drill down.
-              </Text>
-            </Group>
-
-            {hasBreakdownAmountDiscrepancy ? (
+        <PeriodBreakdownCard
+          selectedBreakdown={selectedBreakdown}
+          selectedChartType={selectedChartType}
+          breakdownTitle={breakdownTitle}
+          breadcrumbs={drillState.breadcrumbs}
+          clampedPath={drillState.clampedPath}
+          hasBreakdownAmountDiscrepancy={hasBreakdownAmountDiscrepancy}
+          hasBreakdown={hasBreakdown}
+          emptyBreakdownMessage={emptyBreakdownMessage}
+          chartOptions={chartOptions}
+          onSelectedBreakdownChange={setSelectedBreakdown}
+          onSelectedChartTypeChange={setSelectedChartType}
+          onDrillPathChange={updateSelectedBreakdownPath}
+          footer={
+            overview.skippedBookingsCount > 0 ? (
               <Alert
+                mt="md"
                 variant="light"
                 color="yellow"
                 icon={<IconAlertTriangle size={16} />}
-                title="Adjusted totals in this view"
+                title="Partial data"
               >
-                Hidden non-positive child accounts are excluded from drill-down
-                rows. Parent totals can therefore differ slightly from the sum
-                of visible children.
+                {overview.skippedBookingsCount} valuation-related item(s) were
+                skipped because valuation data was unavailable.
               </Alert>
-            ) : null}
-
-            {hasBreakdown ? (
-              <div className={classes.chartContainer}>
-                <AgCharts options={chartOptions} />
-              </div>
-            ) : (
-              <Text c="dimmed" mt="md">
-                {emptyBreakdownMessage}
-              </Text>
-            )}
-          </Stack>
-
-          {overview.skippedBookingsCount > 0 ? (
-            <Alert
-              mt="md"
-              variant="light"
-              color="yellow"
-              icon={<IconAlertTriangle size={16} />}
-              title="Partial data"
-            >
-              {overview.skippedBookingsCount} valuation-related item(s) were
-              skipped because valuation data was unavailable.
-            </Alert>
-          ) : null}
-        </Card>
+            ) : null
+          }
+        />
       </Stack>
 
       {selectedPeriodValue !== overview.selectedPeriodValue ? (

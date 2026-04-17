@@ -372,7 +372,13 @@ export function buildBreakdownHierarchyWithMeta(args: {
     accountNode.amount += item.amount;
   }
 
-  return finalizeBreakdownHierarchyNodes(rootChildrenById);
+  const { hierarchy, hasHiddenAmountDiscrepancy } =
+    finalizeBreakdownHierarchyNodes(rootChildrenById);
+
+  return {
+    hierarchy,
+    hasHiddenAmountDiscrepancy,
+  };
 }
 
 export function buildBreakdownHierarchy(args: {

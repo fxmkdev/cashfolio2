@@ -1,5 +1,7 @@
 import {
   Alert,
+  Breadcrumbs,
+  Button,
   Card,
   Center,
   Flex,
@@ -8,46 +10,54 @@ import {
   Stack,
   Text,
   Title,
+  UnstyledButton,
 } from "@mantine/core";
 import {
   IconAlertTriangle,
+  IconArrowUp,
   IconChartBar,
   IconChartDonut,
 } from "@tabler/icons-react";
 import { AgCharts } from "ag-charts-react";
+import type { ReactNode } from "react";
+import type { BreakdownBreadcrumb } from "./-period-breakdown-drill";
 import type {
-  AgCartesianChartOptions,
-  AgPolarChartOptions,
-} from "ag-charts-community";
+  BreakdownChartType,
+  BreakdownType,
+} from "./-period-breakdown-types";
+import type { PeriodBreakdownChartOptions } from "./-period-breakdown-chart-options";
 import classes from "./-period-page-view.module.css";
-
-export type BreakdownType = "expense" | "income";
-export type BreakdownChartType = "donut" | "bar";
 
 type PeriodBreakdownCardProps = {
   selectedBreakdown: BreakdownType;
-  onSelectedBreakdownChange: (nextValue: BreakdownType) => void;
   selectedChartType: BreakdownChartType;
-  onSelectedChartTypeChange: (nextValue: BreakdownChartType) => void;
   breakdownTitle: string;
-  breakdownSubtitle: string;
-  emptyBreakdownMessage: string;
+  breadcrumbs: BreakdownBreadcrumb[];
+  clampedPath: string[];
+  hasBreakdownAmountDiscrepancy: boolean;
   hasBreakdown: boolean;
-  chartOptions: AgPolarChartOptions | AgCartesianChartOptions;
-  skippedBookingsCount: number;
+  emptyBreakdownMessage: string;
+  chartOptions: PeriodBreakdownChartOptions;
+  onSelectedBreakdownChange: (value: BreakdownType) => void;
+  onSelectedChartTypeChange: (value: BreakdownChartType) => void;
+  onDrillPathChange: (nextPath: string[]) => void;
+  footer?: ReactNode;
 };
 
 export function PeriodBreakdownCard({
   selectedBreakdown,
-  onSelectedBreakdownChange,
   selectedChartType,
-  onSelectedChartTypeChange,
   breakdownTitle,
-  breakdownSubtitle,
-  emptyBreakdownMessage,
+  breadcrumbs,
+  clampedPath,
+  hasBreakdownAmountDiscrepancy,
   hasBreakdown,
+  emptyBreakdownMessage,
   chartOptions,
-  skippedBookingsCount,
+  onSelectedBreakdownChange,
+  onSelectedChartTypeChange,
+  onDrillPathChange,
+  footer,
 }: PeriodBreakdownCardProps) {
   return (
     <Card withBorder radius="md" p="lg">
@@ -59,11 +69,9 @@ export function PeriodBreakdownCard({
               size="sm"
               aria-label="Breakdown chart type"
               value={selectedChartType}
-              onChange={(value) => {
-                if (value === "donut" || value === "bar") {
-                  onSelectedChartTypeChange(value);
-                }
-              }}
+              onChange={(value) =>
+                onSelectedChartTypeChange(value as BreakdownChartType)
+              }
               data={[
                 {
                   label: (
@@ -88,11 +96,9 @@ export function PeriodBreakdownCard({
             <SegmentedControl
               size="sm"
               value={selectedBreakdown}
-              onChange={(value) => {
-                if (value === "expense" || value === "income") {
-                  onSelectedBreakdownChange(value);
-                }
-              }}
+              onChange={(value) =>
+                onSelectedBreakdownChange(value as BreakdownType)
+              }
               data={[
                 { label: "Expense", value: "expense" },
                 { label: "Income", value: "income" },
@@ -100,9 +106,81 @@ export function PeriodBreakdownCard({
             />
           </Flex>
         </Group>
-        <Text c="dimmed" size="sm">
-          {breakdownSubtitle}
-        </Text>
+
+        <Group
+          justify="space-between"
+          align="center"
+          gap="xs"
+          className={classes.breakdownContextRow}
+        >
+          <Group gap="xs" wrap="wrap">
+            <Button
+              variant="default"
+              size="compact-sm"
+              leftSection={<IconArrowUp size={14} />}
+              disabled={clampedPath.length === 0}
+              onClick={() => {
+                onDrillPathChange(clampedPath.slice(0, clampedPath.length - 1));
+              }}
+            >
+              Up
+            </Button>
+
+            <Breadcrumbs>
+              {breadcrumbs.map((breadcrumb, breadcrumbIndex) => {
+                const isCurrent = breadcrumbIndex === breadcrumbs.length - 1;
+                const nextPath =
+                  breadcrumb.id == null
+                    ? []
+                    : clampedPath.slice(0, breadcrumbIndex);
+
+                if (isCurrent) {
+                  return (
+                    <Text
+                      key={breadcrumb.id ?? "root"}
+                      fw={600}
+                      fz="sm"
+                      lh="inherit"
+                    >
+                      {breadcrumb.label}
+                    </Text>
+                  );
+                }
+
+                return (
+                  <UnstyledButton
+                    key={breadcrumb.id ?? "root"}
+                    className={classes.breadcrumbButton}
+                    onClick={() => {
+                      onDrillPathChange(nextPath);
+                    }}
+                  >
+                    <Text fz="sm" c="blue.7" lh="inherit">
+                      {breadcrumb.label}
+                    </Text>
+                  </UnstyledButton>
+                );
+              })}
+            </Breadcrumbs>
+          </Group>
+
+          <Text c="dimmed" size="xs">
+            Double-click a group to drill down.
+          </Text>
+        </Group>
+
+        {hasBreakdownAmountDiscrepancy ? (
+          <Alert
+            variant="light"
+            color="yellow"
+            icon={<IconAlertTriangle size={16} />}
+            title="Adjusted totals in this view"
+          >
+            Hidden non-positive child accounts are excluded from drill-down
+            rows. Parent totals can therefore differ slightly from the sum of
+            visible children.
+          </Alert>
+        ) : null}
 
         {hasBreakdown ? (
           <div className={classes.chartContainer}>
@@ -114,19 +192,7 @@ export function PeriodBreakdownCard({
           </Text>
         )}
       </Stack>
-
-      {skippedBookingsCount > 0 ? (
-        <Alert
-          mt="md"
-          variant="light"
-          color="yellow"
-          icon={<IconAlertTriangle size={16} />}
-          title="Partial data"
-        >
-          {skippedBookingsCount} valuation-related item(s) were skipped because
-          valuation data was unavailable.
-        </Alert>
-      ) : null}
+      {footer}
     </Card>
   );
 }
