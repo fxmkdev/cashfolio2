@@ -1,12 +1,13 @@
 .periodTopSection {
   width: 100%;
-  max-width: 1000px;
+  max-width: 820px;
   margin-inline: auto;
 }
 
 .periodSelectorRow {
   flex-wrap: nowrap;
   min-width: 0;
+  justify-content: flex-start;
 }
 
 .periodModeControl {
@@ -14,12 +15,14 @@
 }
 
 .periodPickerControlRow {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
 }
 
 .periodPickerTrigger {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
+  inline-size: clamp(12rem, 36vw, 22rem);
+  max-inline-size: 100%;
   min-width: 0;
 }
 

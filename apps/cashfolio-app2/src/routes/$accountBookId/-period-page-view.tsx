@@ -649,7 +649,6 @@ export function PeriodPageView({
                     onChange={setPickerOpened}
                     position="bottom-start"
                     withArrow
-                    withinPortal={false}
                   >
                     <Popover.Target>
                       <Button
