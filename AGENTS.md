@@ -29,6 +29,13 @@ file and the linked docs are for `apps/cashfolio-app2`.
   - Example: `feat(cashfolio-app2): add archived-account unarchive action`
   - Use descriptive commits inside the PR for review clarity; the PR title is
     the canonical squash commit message.
+- When submitting a pull request, create (or update) a `PR Feedback Watch`
+  Codex heartbeat automation with a 5-minute interval so new review feedback is
+  surfaced promptly; see [CONTRIBUTING.md](CONTRIBUTING.md) for where to create
+  this automation.
+- When the current Codex/chat thread already has an open pull request, push any
+  newly applied changes to that PR branch unless explicitly instructed
+  otherwise.
 - After you address a pull request review comment, resolve that conversation in
   the PR.
 
