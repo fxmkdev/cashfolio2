@@ -29,6 +29,7 @@ import type {
 import { useMemo, useState } from "react";
 import { ensureChartModulesRegistered } from "../../ag-chart-modules";
 import { LinkButton } from "../../components/link-button";
+import { TopPageHeader } from "../../components/top-page-header";
 import type { getPeriodOverview } from "../../server/period";
 import { formatMonthPeriodValue } from "../../shared/period";
 import {
@@ -470,18 +471,20 @@ export function PeriodPageView({
 
   return (
     <Container fluid py="xl" px="xl">
-      <Group mb="lg" justify="space-between" align="center" mih={36}>
-        <Title order={2}>Period</Title>
-        <LinkButton
-          variant="default"
-          leftSection={<IconListDetails size={16} />}
-          to="/$accountBookId/accounts"
-          params={{ accountBookId }}
-          search={{ tab: "ASSET", mode: "active" }}
-        >
-          Accounts
-        </LinkButton>
-      </Group>
+      <TopPageHeader
+        heading={<Title order={2}>Period</Title>}
+        actions={
+          <LinkButton
+            variant="default"
+            leftSection={<IconListDetails size={16} />}
+            to="/$accountBookId/accounts"
+            params={{ accountBookId }}
+            search={{ tab: "ASSET", mode: "active" }}
+          >
+            Accounts
+          </LinkButton>
+        }
+      />
 
       <Stack gap="lg">
         <Card withBorder radius="md" p="lg">

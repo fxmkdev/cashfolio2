@@ -109,11 +109,23 @@ submit UX and prevent duplicate requests.
 - Tooltip `openDelay` is configured globally in `src/theme.ts` (default 500ms) —
   do not override per-instance unless necessary
 
+## Top Page Header Pattern
+
+- Use `TopPageHeader` (`src/components/top-page-header.tsx`) for page-level
+  headers on account-book routes.
+- Keep layout props centralized in `TopPageHeader`: `mb="lg"`,
+  `justify="space-between"`, `align="center"`, `mih={36}`.
+- Pass heading content through `heading`, optional badges/chips through
+  `headingAccessory`, and page actions through `actions`.
+
 ## Breadcrumbs Pattern
 
 - Use `getAccountsBreadcrumbSegments`
   (`src/components/accounts-breadcrumb-segments.tsx`) for the shared leading
   segments on account routes.
+- Prefer `AccountPathHeading` (`src/components/account-path-heading.tsx`) when
+  rendering account-route headings so breadcrumb typography stays aligned with
+  `h2` titles.
 - Use `LinkAnchor` for breadcrumb links; do not compose Mantine `Anchor` with
   router `Link` manually.
 - Keep breadcrumb typography consistent by setting heading styles on

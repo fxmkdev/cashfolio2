@@ -1,8 +1,9 @@
-import { Container, Group, Stack, Title } from "@mantine/core";
+import { Container, Stack, Title } from "@mantine/core";
 import { IconListDetails } from "@tabler/icons-react";
 import { useMemo } from "react";
 import { ensureChartModulesRegistered } from "../../ag-chart-modules";
 import { LinkButton } from "../../components/link-button";
+import { TopPageHeader } from "../../components/top-page-header";
 import type { getDashboardIncomeExpenseOverview } from "../../server/dashboard";
 import type { DashboardPeriod } from "./-dashboard-page-types";
 import { DashboardAssetAllocationCard } from "./-dashboard-asset-allocation-card";
@@ -53,18 +54,20 @@ export function DashboardPageView({
 
   return (
     <Container fluid py="xl" px="xl">
-      <Group mb="lg" justify="space-between" align="center" mih={36}>
-        <Title order={2}>Dashboard</Title>
-        <LinkButton
-          variant="default"
-          leftSection={<IconListDetails size={16} />}
-          to="/$accountBookId/accounts"
-          params={{ accountBookId }}
-          search={{ tab: "ASSET", mode: "active" }}
-        >
-          Accounts
-        </LinkButton>
-      </Group>
+      <TopPageHeader
+        heading={<Title order={2}>Dashboard</Title>}
+        actions={
+          <LinkButton
+            variant="default"
+            leftSection={<IconListDetails size={16} />}
+            to="/$accountBookId/accounts"
+            params={{ accountBookId }}
+            search={{ tab: "ASSET", mode: "active" }}
+          >
+            Accounts
+          </LinkButton>
+        }
+      />
 
       <Stack gap="lg">
         <DashboardIncomeExpenseCard

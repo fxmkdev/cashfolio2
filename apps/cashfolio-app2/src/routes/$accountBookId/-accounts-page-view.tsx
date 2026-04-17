@@ -1,11 +1,4 @@
-import {
-  Breadcrumbs,
-  Button,
-  Container,
-  Group,
-  Tabs,
-  Title,
-} from "@mantine/core";
+import { Button, Container, Group, Tabs, Title } from "@mantine/core";
 import {
   IconArchive,
   IconCalendarMonth,
@@ -15,6 +8,8 @@ import {
 import type { AgGridReactProps } from "ag-grid-react";
 import { LinkButton } from "../../components/link-button";
 import { LinkTab } from "../../components/link-tab";
+import { AccountPathHeading } from "../../components/account-path-heading";
+import { TopPageHeader } from "../../components/top-page-header";
 import type { AccountGroupInitialValues } from "../../components/edit-account-group-modal";
 import {
   EditAccountGroupModal,
@@ -28,7 +23,6 @@ import {
 import { ConfirmArchiveModal } from "../../components/confirm-archive-modal";
 import { ConfirmDeleteModal } from "../../components/confirm-delete-modal";
 import { DataGrid } from "../../components/data-grid";
-import { getAccountsBreadcrumbSegments } from "../../components/accounts-breadcrumb-segments";
 import {
   ReorderGroupChildrenModal,
   type ReorderGroupChildRow,
@@ -147,64 +141,66 @@ export function AccountsPageView({
 
   return (
     <Container fluid py="xl" px="xl">
-      <Group mb="lg" gap="md" justify="space-between" mih={36}>
-        {isArchivedMode ? (
-          <Breadcrumbs fz="h2" fw={700} lh="var(--mantine-h2-line-height)">
-            {getAccountsBreadcrumbSegments({
-              accountBookId,
-              tab,
-              mode: "archived",
-              archiveIsLink: false,
-            })}
-          </Breadcrumbs>
-        ) : (
-          <Title order={2}>Accounts</Title>
-        )}
-        <Group>
-          <LinkButton
-            variant="default"
-            leftSection={<IconLayoutDashboard size={16} />}
-            to="/$accountBookId/dashboard"
-            params={{ accountBookId }}
-          >
-            Dashboard
-          </LinkButton>
-          <LinkButton
-            variant="default"
-            leftSection={<IconCalendarMonth size={16} />}
-            to="/$accountBookId/period"
-            params={{ accountBookId }}
-          >
-            Period
-          </LinkButton>
-          {!isArchivedMode && (
-            <>
-              <LinkButton
-                variant="default"
-                leftSection={<IconArchive size={16} />}
-                to="/$accountBookId/accounts"
-                params={{ accountBookId }}
-                search={{ tab, mode: "archived" }}
-              >
-                Archive
-              </LinkButton>
-              <Button
-                variant="default"
-                leftSection={<IconPlus size={16} />}
-                onClick={onOpenCreateGroup}
-              >
-                Add Group
-              </Button>
-              <Button
-                leftSection={<IconPlus size={16} />}
-                onClick={onOpenCreateAccount}
-              >
-                Add Account
-              </Button>
-            </>
-          )}
-        </Group>
-      </Group>
+      <TopPageHeader
+        heading={
+          isArchivedMode ? (
+            <AccountPathHeading
+              accountBookId={accountBookId}
+              tab={tab}
+              mode="archived"
+              archiveIsLink={false}
+            />
+          ) : (
+            <Title order={2}>Accounts</Title>
+          )
+        }
+        actions={
+          <Group>
+            <LinkButton
+              variant="default"
+              leftSection={<IconLayoutDashboard size={16} />}
+              to="/$accountBookId/dashboard"
+              params={{ accountBookId }}
+            >
+              Dashboard
+            </LinkButton>
+            <LinkButton
+              variant="default"
+              leftSection={<IconCalendarMonth size={16} />}
+              to="/$accountBookId/period"
+              params={{ accountBookId }}
+            >
+              Period
+            </LinkButton>
+            {!isArchivedMode && (
+              <>
+                <LinkButton
+                  variant="default"
+                  leftSection={<IconArchive size={16} />}
+                  to="/$accountBookId/accounts"
+                  params={{ accountBookId }}
+                  search={{ tab, mode: "archived" }}
+                >
+                  Archive
+                </LinkButton>
+                <Button
+                  variant="default"
+                  leftSection={<IconPlus size={16} />}
+                  onClick={onOpenCreateGroup}
+                >
+                  Add Group
+                </Button>
+                <Button
+                  leftSection={<IconPlus size={16} />}
+                  onClick={onOpenCreateAccount}
+                >
+                  Add Account
+                </Button>
+              </>
+            )}
+          </Group>
+        }
+      />
 
       <Tabs value={tab}>
         <Tabs.List mb="md">
