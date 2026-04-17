@@ -45,9 +45,18 @@ pnpm --filter cashfolio-app2 test-storybook
 
 Chromatic publishing:
 
-- Workflow: `.github/workflows/chromatic.yml`
-- Trigger: every branch push and manual `workflow_dispatch`
+- Workflow: `.github/workflows/build.yml` (`cashfolio-app2: Publish Storybook`
+  job)
+- Trigger: trusted pull requests (same repository), pushes to `main`, and manual
+  `workflow_dispatch`
 - Behavior: publish-only (`exitZeroOnChanges` + `exitOnceUploaded` +
   `autoAcceptChanges`) so CI does not block on visual/component review results
   and does not require baseline acceptance
+- Pull requests from forks skip Storybook publishing to avoid exposing
+  `CHROMATIC_PROJECT_TOKEN`
+- For trusted pull requests, GitHub Environment `preview-cashfolio-storybook`
+  uses Chromatic `storybookUrl` so PRs have a native deployment link to the
+  latest Storybook preview
+- For pushes to `main` (and manual workflow runs), GitHub Environment
+  `staging-cashfolio-storybook` is used with the same Chromatic deployment URL
 - Required secret: `CHROMATIC_PROJECT_TOKEN`
