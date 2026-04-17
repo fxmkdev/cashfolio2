@@ -122,22 +122,20 @@ export function PeriodPageView({
     [],
   );
 
-  const minBookingDate = overview.minBookingDate
-    ? new Date(overview.minBookingDate)
-    : null;
-  const maxDate = new Date(overview.maxDate);
   const periodSelectorModel = useMemo(
     () =>
       buildPeriodSelectorModel({
         selectedGranularity: overview.selectedGranularity,
         selectedYear: overview.selectedYear,
         selectedMonth: overview.selectedMonth,
-        minBookingDate,
-        maxDate,
+        minBookingDate: overview.minBookingDate
+          ? new Date(overview.minBookingDate)
+          : null,
+        maxDate: new Date(overview.maxDate),
       }),
     [
-      maxDate,
-      minBookingDate,
+      overview.maxDate,
+      overview.minBookingDate,
       overview.selectedGranularity,
       overview.selectedMonth,
       overview.selectedYear,
