@@ -57,4 +57,6 @@ Chromatic publishing:
 - For trusted pull requests, GitHub Environment `preview-cashfolio-storybook`
   uses Chromatic `storybookUrl` so PRs have a native deployment link to the
   latest Storybook preview
+- For pushes to `main` (and manual workflow runs), GitHub Environment
+  `staging-cashfolio-storybook` is used with the same Chromatic deployment URL
 - Required secret: `CHROMATIC_PROJECT_TOKEN`

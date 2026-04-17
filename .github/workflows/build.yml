@@ -156,7 +156,7 @@ jobs:
       contents: read
       deployments: write
     environment:
-      name: preview-cashfolio-storybook
+      name: ${{ github.event_name == 'pull_request' && 'preview-cashfolio-storybook' || 'staging-cashfolio-storybook' }}
       url: ${{ steps.publish-chromatic.outputs.storybookUrl }}
     concurrency:
       group: storybook-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('ref-{0}', github.ref) }}
