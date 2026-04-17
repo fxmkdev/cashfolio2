@@ -148,6 +148,42 @@ jobs:
       - name: Run typecheck in cli
         run: pnpm --filter cli typecheck
 
+  storybook-publish:
+    name: "cashfolio-app2: Publish Storybook"
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    environment:
+      name: preview-cashfolio-storybook
+      url: ${{ steps.publish-chromatic.outputs.storybookUrl }}
+    concurrency:
+      group: storybook-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('ref-{0}', github.ref) }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Setup
+        uses: felixmokross/webplatform/.github/actions/setup@main
+      - name: Install dependencies
+        run: pnpm --filter cashfolio-app2 install
+      - name: Generate Prisma Client
+        run: pnpm --filter cashfolio-app2 prisma:generate
+      - name: Build Storybook
+        run: pnpm --filter cashfolio-app2 build-storybook
+      - name: Publish Storybook to Chromatic
+        id: publish-chromatic
+        uses: chromaui/action@v16
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          storybookBuildDir: apps/cashfolio-app2/storybook-static
+          exitZeroOnChanges: true
+          exitOnceUploaded: true
+          autoAcceptChanges: true
+
   resolve-preview-names:
     name: Resolve preview resource names
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
