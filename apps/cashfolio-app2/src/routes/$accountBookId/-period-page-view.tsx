@@ -73,7 +73,11 @@ export type PeriodPageViewProps = {
   accountBookId: string;
   overview: PeriodOverview;
   selectedPeriodValue: string;
+  drillPathByBreakdown: Record<BreakdownType, string[]>;
   onPeriodChange: (nextPeriodValue: string) => void;
+  onDrillPathByBreakdownChange: (
+    nextPathByBreakdown: Record<BreakdownType, string[]>,
+  ) => void;
 };
 
 type BreakdownDatum = {
@@ -194,7 +198,9 @@ export function PeriodPageView({
   accountBookId,
   overview,
   selectedPeriodValue,
+  drillPathByBreakdown,
   onPeriodChange,
+  onDrillPathByBreakdownChange,
 }: PeriodPageViewProps) {
   const [selectedBreakdown, setSelectedBreakdown] =
     useState<BreakdownType>("expense");
@@ -254,44 +260,35 @@ export function PeriodPageView({
         : overview.incomeBreakdown,
     [overview.expenseBreakdown, overview.incomeBreakdown, selectedBreakdown],
   );
-  const [drillPathByBreakdown, setDrillPathByBreakdown] = useState<
-    Record<BreakdownType, string[]>
-  >({
-    expense: [],
-    income: [],
-  });
 
   useEffect(() => {
-    setDrillPathByBreakdown({
-      expense: [],
-      income: [],
+    const nextExpensePath = clampBreakdownPath({
+      hierarchy: overview.expenseBreakdown.hierarchy,
+      path: drillPathByBreakdown.expense,
     });
-  }, [overview.selectedPeriodValue]);
-
-  useEffect(() => {
-    setDrillPathByBreakdown((previousPaths) => {
-      const nextExpensePath = clampBreakdownPath({
-        hierarchy: overview.expenseBreakdown.hierarchy,
-        path: previousPaths.expense,
-      });
-      const nextIncomePath = clampBreakdownPath({
-        hierarchy: overview.incomeBreakdown.hierarchy,
-        path: previousPaths.income,
-      });
-
-      if (
-        arePathsEqual(nextExpensePath, previousPaths.expense) &&
-        arePathsEqual(nextIncomePath, previousPaths.income)
-      ) {
-        return previousPaths;
-      }
-
-      return {
-        expense: nextExpensePath,
-        income: nextIncomePath,
-      };
+    const nextIncomePath = clampBreakdownPath({
+      hierarchy: overview.incomeBreakdown.hierarchy,
+      path: drillPathByBreakdown.income,
     });
-  }, [overview.expenseBreakdown.hierarchy, overview.incomeBreakdown.hierarchy]);
+
+    if (
+      arePathsEqual(nextExpensePath, drillPathByBreakdown.expense) &&
+      arePathsEqual(nextIncomePath, drillPathByBreakdown.income)
+    ) {
+      return;
+    }
+
+    onDrillPathByBreakdownChange({
+      expense: nextExpensePath,
+      income: nextIncomePath,
+    });
+  }, [
+    drillPathByBreakdown.expense,
+    drillPathByBreakdown.income,
+    onDrillPathByBreakdownChange,
+    overview.expenseBreakdown.hierarchy,
+    overview.incomeBreakdown.hierarchy,
+  ]);
 
   const breakdownTitle =
     selectedBreakdown === "expense" ? "Expense Breakdown" : "Income Breakdown";
@@ -365,12 +362,12 @@ export function PeriodPageView({
   const hasBreakdown = chartData.length > 0;
   const updateSelectedBreakdownPath = useCallback(
     (nextPath: string[]) => {
-      setDrillPathByBreakdown((previousPaths) => ({
-        ...previousPaths,
+      onDrillPathByBreakdownChange({
+        ...drillPathByBreakdown,
         [selectedBreakdown]: nextPath,
-      }));
+      });
     },
-    [selectedBreakdown],
+    [drillPathByBreakdown, onDrillPathByBreakdownChange, selectedBreakdown],
   );
   const handleNodeDoubleClick = useCallback(
     (datum: BreakdownDatum | BreakdownBarDatum) => {

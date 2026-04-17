@@ -350,6 +350,12 @@ const baseOverview: PeriodPageViewProps["overview"] = {
 function PeriodRouteSmokeHarness() {
   const [selectedPeriodValue, setSelectedPeriodValue] =
     useState<string>(DEFAULT_PERIOD_VALUE);
+  const [drillPathByBreakdown, setDrillPathByBreakdown] = useState<
+    Record<"expense" | "income", string[]>
+  >({
+    expense: [],
+    income: [],
+  });
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -360,7 +366,9 @@ function PeriodRouteSmokeHarness() {
         accountBookId="storybook-book"
         overview={deriveOverviewFromSelectedPeriodValue(selectedPeriodValue)}
         selectedPeriodValue={selectedPeriodValue}
+        drillPathByBreakdown={drillPathByBreakdown}
         onPeriodChange={setSelectedPeriodValue}
+        onDrillPathByBreakdownChange={setDrillPathByBreakdown}
       />
       <Text data-testid="router-path">{pathname}</Text>
       <Text data-testid="selected-period">{selectedPeriodValue}</Text>
@@ -375,7 +383,12 @@ const meta = {
     accountBookId: "storybook-book",
     overview: baseOverview,
     selectedPeriodValue: DEFAULT_PERIOD_VALUE,
+    drillPathByBreakdown: {
+      expense: [],
+      income: [],
+    },
     onPeriodChange: fn(),
+    onDrillPathByBreakdownChange: fn(),
   },
 } satisfies Meta<typeof PeriodPageView>;
 
