@@ -48,7 +48,7 @@ need to be strictly Conventional Commit formatted.
   named `PR Feedback Watch` with a 5-minute interval.
 - Create/update this in the Codex app as a thread heartbeat automation attached
   to the PR conversation thread.
-- The automation should watch your open PRs for new review comments, requested
+- The automation should watch this PR for new review comments, requested
   changes, and unresolved review threads, then alert with a concise summary and
   links.
 
