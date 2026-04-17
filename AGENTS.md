@@ -30,8 +30,9 @@ file and the linked docs are for `apps/cashfolio-app2`.
   - Use descriptive commits inside the PR for review clarity; the PR title is
     the canonical squash commit message.
 - When submitting a pull request, create (or update) a `PR Feedback Watch`
-  heartbeat automation with a 5-minute interval so new review feedback is
-  surfaced promptly.
+  Codex heartbeat automation with a 5-minute interval so new review feedback is
+  surfaced promptly; see [CONTRIBUTING.md](CONTRIBUTING.md) for where to create
+  this automation.
 - After you address a pull request review comment, resolve that conversation in
   the PR.
 
