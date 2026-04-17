@@ -42,6 +42,14 @@ need to be strictly Conventional Commit formatted.
   deprecation, update the body through REST:
   `gh api -X PATCH repos/<owner>/<repo>/pulls/<number> -f body="$(cat <path>)"`.
 
+## PR Feedback Watch Automation
+
+- When you submit a pull request, create or update a Codex heartbeat automation
+  named `PR Feedback Watch` with a 5-minute interval.
+- The automation should watch your open PRs for new review comments, requested
+  changes, and unresolved review threads, then alert with a concise summary and
+  links.
+
 ## Scope Guidance
 
 - Use app or area scope when helpful (`cashfolio-app2`, `cashfolio-app`,
