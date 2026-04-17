@@ -46,6 +46,8 @@ need to be strictly Conventional Commit formatted.
 
 - When you submit a pull request, create or update a Codex heartbeat automation
   named `PR Feedback Watch` with a 5-minute interval.
+- Use the Codex app for this repository's chat/automation workflow. If you do
+  not have access yet, ask a maintainer for workspace onboarding details.
 - Create/update this in the Codex app as a thread heartbeat automation attached
   to the PR conversation thread.
 - The automation should watch this PR for new review comments, requested
@@ -60,8 +62,9 @@ need to be strictly Conventional Commit formatted.
 
 ## Review Comment Workflow
 
-- If the current thread already has an open pull request, push newly applied
-  changes to that PR branch unless explicitly instructed otherwise.
+- If the current Codex/chat thread is linked to an open pull request, push
+  newly applied changes to that PR branch unless explicitly instructed
+  otherwise.
 - After you address a pull request comment, resolve that conversation in the
   PR.
 

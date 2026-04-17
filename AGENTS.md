@@ -33,8 +33,9 @@ file and the linked docs are for `apps/cashfolio-app2`.
   Codex heartbeat automation with a 5-minute interval so new review feedback is
   surfaced promptly; see [CONTRIBUTING.md](CONTRIBUTING.md) for where to create
   this automation.
-- When a thread already has an open pull request, push any newly applied
-  changes to that PR branch unless explicitly instructed otherwise.
+- When the current Codex/chat thread already has an open pull request, push any
+  newly applied changes to that PR branch unless explicitly instructed
+  otherwise.
 - After you address a pull request review comment, resolve that conversation in
   the PR.
 
