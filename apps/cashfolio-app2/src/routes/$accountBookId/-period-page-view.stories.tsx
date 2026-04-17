@@ -3,8 +3,115 @@ import { Box, Text } from "@mantine/core";
 import { useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import { expect, fn, userEvent, within } from "storybook/test";
-import { DEFAULT_PERIOD_VALUE, PERIOD_PRESET_YTD } from "./-period-page-types";
+import {
+  formatMonthPeriodValue,
+  parseExplicitMonthPeriod,
+  parseExplicitYearPeriod,
+} from "../../shared/period";
+import {
+  DEFAULT_PERIOD_VALUE,
+  PERIOD_PRESET_LAST_MONTH,
+  PERIOD_PRESET_LAST_YEAR,
+  PERIOD_PRESET_MTD,
+  PERIOD_PRESET_YTD,
+} from "./-period-page-types";
 import { PeriodPageView, type PeriodPageViewProps } from "./-period-page-view";
+
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+function deriveOverviewFromSelectedPeriodValue(
+  selectedPeriodValue: string,
+): PeriodPageViewProps["overview"] {
+  const maxDate = new Date(baseOverview.maxDate);
+  const currentYear = maxDate.getUTCFullYear();
+  const currentMonth = maxDate.getUTCMonth();
+  const lastMonthDate = new Date(Date.UTC(currentYear, currentMonth - 1, 1));
+
+  const explicitMonth = parseExplicitMonthPeriod(selectedPeriodValue);
+  if (explicitMonth) {
+    return {
+      ...baseOverview,
+      selectedPeriodValue: explicitMonth.value,
+      selectedPeriodSpecifier: "month",
+      selectedPeriodLabel: `${MONTH_NAMES[explicitMonth.month]} ${explicitMonth.year}`,
+      selectedGranularity: "month",
+      selectedYear: explicitMonth.year,
+      selectedMonth: explicitMonth.month,
+    };
+  }
+
+  const explicitYear = parseExplicitYearPeriod(selectedPeriodValue);
+  if (explicitYear) {
+    return {
+      ...baseOverview,
+      selectedPeriodValue: explicitYear.value,
+      selectedPeriodSpecifier: "year",
+      selectedPeriodLabel: explicitYear.value,
+      selectedGranularity: "year",
+      selectedYear: explicitYear.year,
+      selectedMonth: null,
+    };
+  }
+
+  if (selectedPeriodValue === PERIOD_PRESET_MTD) {
+    return {
+      ...baseOverview,
+      selectedPeriodValue: PERIOD_PRESET_MTD,
+      selectedPeriodSpecifier: "mtd",
+      selectedPeriodLabel: `${MONTH_NAMES[currentMonth]} ${currentYear}`,
+      selectedGranularity: "month",
+      selectedYear: currentYear,
+      selectedMonth: currentMonth,
+    };
+  }
+
+  if (selectedPeriodValue === PERIOD_PRESET_YTD) {
+    return {
+      ...baseOverview,
+      selectedPeriodValue: PERIOD_PRESET_YTD,
+      selectedPeriodSpecifier: "ytd",
+      selectedPeriodLabel: String(currentYear),
+      selectedGranularity: "year",
+      selectedYear: currentYear,
+      selectedMonth: null,
+    };
+  }
+
+  if (selectedPeriodValue === PERIOD_PRESET_LAST_YEAR) {
+    return {
+      ...baseOverview,
+      selectedPeriodValue: PERIOD_PRESET_LAST_YEAR,
+      selectedPeriodSpecifier: "last-year",
+      selectedPeriodLabel: String(currentYear - 1),
+      selectedGranularity: "year",
+      selectedYear: currentYear - 1,
+      selectedMonth: null,
+    };
+  }
+
+  return {
+    ...baseOverview,
+    selectedPeriodValue: PERIOD_PRESET_LAST_MONTH,
+    selectedPeriodSpecifier: "last-month",
+    selectedPeriodLabel: `${MONTH_NAMES[lastMonthDate.getUTCMonth()]} ${lastMonthDate.getUTCFullYear()}`,
+    selectedGranularity: "month",
+    selectedYear: lastMonthDate.getUTCFullYear(),
+    selectedMonth: lastMonthDate.getUTCMonth(),
+  };
+}
 
 const baseOverview: PeriodPageViewProps["overview"] = {
   selectedPeriodValue: DEFAULT_PERIOD_VALUE,
@@ -115,20 +222,7 @@ function PeriodRouteSmokeHarness() {
     <Box>
       <PeriodPageView
         accountBookId="storybook-book"
-        overview={{
-          ...baseOverview,
-          selectedPeriodValue,
-          selectedPeriodSpecifier:
-            selectedPeriodValue === PERIOD_PRESET_YTD ? "ytd" : "last-month",
-          selectedPeriodLabel:
-            selectedPeriodValue === PERIOD_PRESET_YTD
-              ? "2026"
-              : "February 2026",
-          selectedGranularity:
-            selectedPeriodValue === PERIOD_PRESET_YTD ? "year" : "month",
-          selectedYear: 2026,
-          selectedMonth: selectedPeriodValue === PERIOD_PRESET_YTD ? null : 1,
-        }}
+        overview={deriveOverviewFromSelectedPeriodValue(selectedPeriodValue)}
         selectedPeriodValue={selectedPeriodValue}
         onPeriodChange={setSelectedPeriodValue}
       />
@@ -197,16 +291,48 @@ export const RouteSmoke: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    const yearToDateOption = await canvas.findByRole("option", {
-      name: "Year to Date",
-    });
-    await userEvent.selectOptions(
-      canvas.getByLabelText("Period"),
-      yearToDateOption,
+    const yearModeOption = await canvas.findByRole("radio", { name: "Year" });
+    await userEvent.click(yearModeOption);
+    await expect(canvas.getByTestId("selected-period")).toHaveTextContent(
+      "2026",
+    );
+    await expect(
+      canvas.getByRole("button", { name: "Next period" }),
+    ).toBeDisabled();
+
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Previous period" }),
+    );
+    await expect(canvas.getByTestId("selected-period")).toHaveTextContent(
+      "2025",
     );
 
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Select period" }),
+    );
+    const yearPicker = await canvas.findByTestId("period-year-picker");
+    await userEvent.click(
+      within(yearPicker).getByRole("button", { name: "2024" }),
+    );
     await expect(canvas.getByTestId("selected-period")).toHaveTextContent(
-      PERIOD_PRESET_YTD,
+      "2024",
+    );
+
+    const monthModeOption = await canvas.findByRole("radio", { name: "Month" });
+    await userEvent.click(monthModeOption);
+    await expect(canvas.getByTestId("selected-period")).toHaveTextContent(
+      "2024-12",
+    );
+
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Select period" }),
+    );
+    const monthPicker = await canvas.findByTestId("period-month-picker");
+    await userEvent.click(
+      within(monthPicker).getByRole("button", { name: /Nov/i }),
+    );
+    await expect(canvas.getByTestId("selected-period")).toHaveTextContent(
+      formatMonthPeriodValue(2024, 10),
     );
 
     const accountsLink = await canvas.findByRole("link", {

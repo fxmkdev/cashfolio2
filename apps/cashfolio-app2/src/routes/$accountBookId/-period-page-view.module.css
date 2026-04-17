@@ -1,5 +1,31 @@
 .periodSelectorRow {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.periodModeControl {
+  flex: 0 0 auto;
+}
+
+.periodPickerControlRow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.periodPickerTrigger {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.periodPickerTrigger :global(.mantine-Button-inner) {
+  width: 100%;
+  min-width: 0;
+}
+
+.periodPickerTrigger :global(.mantine-Button-label) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chartContainer {
