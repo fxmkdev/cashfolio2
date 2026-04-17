@@ -176,8 +176,10 @@ submit UX and prevent duplicate requests.
   (Expense/Income), preserving each side when toggling.
 - Show an `Up` action and breadcrumb context (`All Expenses` / `All Income` ->
   group path) directly above the chart.
-- Reset drill state to root when period selection changes; clamp stale paths to
-  the nearest valid ancestor when refreshed data no longer contains a node.
+- Persist drill paths in route search params (`expensePath` / `incomePath`) so
+  browser back/forward and period changes keep the current drill context.
+- Clamp stale paths to the nearest valid ancestor when refreshed data no longer
+  contains a node.
 
 ## Accounts List Columns
 

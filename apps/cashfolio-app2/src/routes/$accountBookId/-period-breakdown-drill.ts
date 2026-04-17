@@ -1,10 +1,6 @@
-export type BreakdownHierarchyNode = {
-  id: string;
-  label: string;
-  kind: "group" | "account";
-  amount: number;
-  children: BreakdownHierarchyNode[];
-};
+import type { BreakdownHierarchyNode } from "../../shared/breakdown-hierarchy";
+
+export type { BreakdownHierarchyNode };
 
 export type BreakdownBreadcrumb = {
   id: string | null;

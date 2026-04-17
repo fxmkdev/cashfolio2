@@ -1,4 +1,8 @@
 import { Unit } from "../.prisma-client/enums";
+import type {
+  BreakdownHierarchyNode,
+  BreakdownNodeKind,
+} from "../shared/breakdown-hierarchy";
 
 export type PeriodGroupNode = {
   id: string;
@@ -9,22 +13,14 @@ export type PeriodGroupNode = {
 type BreakdownBucket = {
   id: string;
   label: string;
-  kind: "group" | "account";
+  kind: BreakdownNodeKind;
 };
 
 export type ExpenseBreakdownAccumulatorItem = {
   id: string;
   label: string;
-  kind: "group" | "account";
+  kind: BreakdownNodeKind;
   amount: number;
-};
-
-export type BreakdownHierarchyNode = {
-  id: string;
-  label: string;
-  kind: "group" | "account";
-  amount: number;
-  children: BreakdownHierarchyNode[];
 };
 
 export type BreakdownHierarchyAccumulatorItem = {
@@ -214,7 +210,7 @@ export function buildBreakdownItems(items: ExpenseBreakdownAccumulatorItem[]): {
 type MutableBreakdownHierarchyNode = {
   id: string;
   label: string;
-  kind: "group" | "account";
+  kind: BreakdownNodeKind;
   amount: number;
   childrenById: Map<string, MutableBreakdownHierarchyNode>;
 };
@@ -222,7 +218,7 @@ type MutableBreakdownHierarchyNode = {
 function createMutableBreakdownHierarchyNode(args: {
   id: string;
   label: string;
-  kind: "group" | "account";
+  kind: BreakdownNodeKind;
 }): MutableBreakdownHierarchyNode {
   return {
     id: args.id,
@@ -236,7 +232,7 @@ function createMutableBreakdownHierarchyNode(args: {
 function getOrCreateMutableBreakdownHierarchyNode(args: {
   nodeId: string;
   label: string;
-  kind: "group" | "account";
+  kind: BreakdownNodeKind;
   childrenById: Map<string, MutableBreakdownHierarchyNode>;
 }): MutableBreakdownHierarchyNode {
   const existing = args.childrenById.get(args.nodeId);
@@ -255,13 +251,16 @@ function getOrCreateMutableBreakdownHierarchyNode(args: {
 
 function finalizeBreakdownHierarchyNodes(
   childrenById: Map<string, MutableBreakdownHierarchyNode>,
-): BreakdownHierarchyNode[] {
+): {
+  hierarchy: BreakdownHierarchyNode[];
+  hasHiddenAmountDiscrepancy: boolean;
+} {
   const nodes: BreakdownHierarchyNode[] = [];
+  let hasHiddenAmountDiscrepancy = false;
 
   for (const node of childrenById.values()) {
     if (node.kind === "account") {
-      const roundedAmount = round2(node.amount);
-      if (roundedAmount <= 0) {
+      if (node.amount <= 0) {
         continue;
       }
 
@@ -269,17 +268,29 @@ function finalizeBreakdownHierarchyNodes(
         id: node.id,
         label: node.label,
         kind: node.kind,
-        amount: roundedAmount,
+        amount: round2(node.amount),
         children: [],
       });
       continue;
     }
 
-    const children = finalizeBreakdownHierarchyNodes(node.childrenById);
+    const {
+      hierarchy: children,
+      hasHiddenAmountDiscrepancy: childDiscrepancy,
+    } = finalizeBreakdownHierarchyNodes(node.childrenById);
+    hasHiddenAmountDiscrepancy ||= childDiscrepancy;
+
     const roundedAmount = round2(node.amount);
+    const displayedChildrenAmount = round2(
+      children.reduce((sum, child) => sum + child.amount, 0),
+    );
 
     if (roundedAmount <= 0) {
       continue;
+    }
+
+    if (displayedChildrenAmount !== roundedAmount) {
+      hasHiddenAmountDiscrepancy = true;
     }
 
     nodes.push({
@@ -298,13 +309,19 @@ function finalizeBreakdownHierarchyNodes(
       a.id.localeCompare(b.id),
   );
 
-  return nodes;
+  return {
+    hierarchy: nodes,
+    hasHiddenAmountDiscrepancy,
+  };
 }
 
-export function buildBreakdownHierarchy(args: {
+export function buildBreakdownHierarchyWithMeta(args: {
   items: BreakdownHierarchyAccumulatorItem[];
   groupById: Map<string, PeriodGroupNode>;
-}): BreakdownHierarchyNode[] {
+}): {
+  hierarchy: BreakdownHierarchyNode[];
+  hasHiddenAmountDiscrepancy: boolean;
+} {
   const rootChildrenById = new Map<string, MutableBreakdownHierarchyNode>();
 
   for (const item of args.items) {
@@ -342,6 +359,13 @@ export function buildBreakdownHierarchy(args: {
   }
 
   return finalizeBreakdownHierarchyNodes(rootChildrenById);
+}
+
+export function buildBreakdownHierarchy(args: {
+  items: BreakdownHierarchyAccumulatorItem[];
+  groupById: Map<string, PeriodGroupNode>;
+}): BreakdownHierarchyNode[] {
+  return buildBreakdownHierarchyWithMeta(args).hierarchy;
 }
 
 export function computeHoldingGainLossForEventSeries(args: {

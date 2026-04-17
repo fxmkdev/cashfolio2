@@ -21,8 +21,9 @@ import {
   type PeriodPresetValue,
 } from "../shared/period";
 import {
-  buildBreakdownHierarchy,
   buildAvailableYears,
+  buildBreakdownHierarchy,
+  buildBreakdownHierarchyWithMeta,
   buildBreakdownItems,
   computeHoldingGainLossForEventSeries,
   createBreakdownBucket,
@@ -816,11 +817,17 @@ export const getPeriodOverview = createServerFn({
     const savings = totalIncome - totalExpenses;
     const totalReturn = savings + gainsLosses;
 
-    const expenseBreakdownHierarchy = buildBreakdownHierarchy({
+    const {
+      hierarchy: expenseBreakdownHierarchy,
+      hasHiddenAmountDiscrepancy: expenseBreakdownHasHiddenAmountDiscrepancy,
+    } = buildBreakdownHierarchyWithMeta({
       items: Array.from(expenseAmountByAccountId.values()),
       groupById,
     });
-    const incomeBreakdownHierarchy = buildBreakdownHierarchy({
+    const {
+      hierarchy: incomeBreakdownHierarchy,
+      hasHiddenAmountDiscrepancy: incomeBreakdownHasHiddenAmountDiscrepancy,
+    } = buildBreakdownHierarchyWithMeta({
       items: Array.from(incomeAmountByAccountId.values()),
       groupById,
     });
@@ -884,11 +891,13 @@ export const getPeriodOverview = createServerFn({
         totalAmount: expenseBreakdown.totalAmount,
         items: expenseBreakdown.items,
         hierarchy: expenseBreakdownHierarchy,
+        hasHiddenAmountDiscrepancy: expenseBreakdownHasHiddenAmountDiscrepancy,
       },
       incomeBreakdown: {
         totalAmount: incomeBreakdown.totalAmount,
         items: incomeBreakdown.items,
         hierarchy: incomeBreakdownHierarchy,
+        hasHiddenAmountDiscrepancy: incomeBreakdownHasHiddenAmountDiscrepancy,
       },
     };
   });

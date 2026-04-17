@@ -22,6 +22,7 @@ import {
   resolvePeriodSelection,
   shouldIncludeTransactionForPeriod,
 } from "./period";
+import { buildBreakdownHierarchyWithMeta } from "./period-helpers";
 
 describe("normalizePeriodValue", () => {
   test("normalizes valid values", () => {
@@ -511,6 +512,61 @@ describe("breakdown hierarchy", () => {
     expect(hierarchy[0]?.children.map((item) => item.id)).toEqual([
       "group:housing",
       "group:food",
+    ]);
+  });
+
+  test("flags hidden amount discrepancies when pruned leaves affect parent totals", () => {
+    const result = buildBreakdownHierarchyWithMeta({
+      items: [
+        {
+          accountId: "account-rent",
+          accountName: "Rent",
+          groupId: "rent",
+          amount: 100,
+        },
+        {
+          accountId: "account-refund",
+          accountName: "Refund",
+          groupId: "rent",
+          amount: -20,
+        },
+      ],
+      groupById,
+    });
+
+    expect(result.hasHiddenAmountDiscrepancy).toBe(true);
+    expect(result.hierarchy).toEqual([
+      {
+        id: "group:expenses",
+        label: "Expenses",
+        kind: "group",
+        amount: 80,
+        children: [
+          {
+            id: "group:housing",
+            label: "Housing",
+            kind: "group",
+            amount: 80,
+            children: [
+              {
+                id: "group:rent",
+                label: "Rent",
+                kind: "group",
+                amount: 80,
+                children: [
+                  {
+                    id: "account:account-rent",
+                    label: "Rent",
+                    kind: "account",
+                    amount: 100,
+                    children: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
     ]);
   });
 });

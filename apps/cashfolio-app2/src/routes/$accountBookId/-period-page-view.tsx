@@ -354,6 +354,8 @@ export function PeriodPageView({
   );
 
   const hasBreakdown = chartData.length > 0;
+  const hasBreakdownAmountDiscrepancy =
+    activeBreakdown.hasHiddenAmountDiscrepancy;
   const updateSelectedBreakdownPath = useCallback(
     (nextPath: string[]) => {
       onDrillPathByBreakdownChange({
@@ -440,7 +442,7 @@ export function PeriodPageView({
           renderer: ({ datum }) => {
             const item = datum as BreakdownDatum;
             return {
-              title: item.label,
+              heading: item.label,
               data: [
                 {
                   label: "Amount",
@@ -524,7 +526,7 @@ export function PeriodPageView({
           renderer: ({ datum }) => {
             const item = datum as BreakdownBarDatum;
             return {
-              title: item.label,
+              heading: item.label,
               data: [
                 {
                   label: "Amount",
@@ -839,6 +841,19 @@ export function PeriodPageView({
                 Double-click a group to drill down.
               </Text>
             </Group>
+
+            {hasBreakdownAmountDiscrepancy ? (
+              <Alert
+                variant="light"
+                color="yellow"
+                icon={<IconAlertTriangle size={16} />}
+                title="Adjusted totals in this view"
+              >
+                Hidden non-positive child accounts are excluded from drill-down
+                rows. Parent totals can therefore differ slightly from the sum
+                of visible children.
+              </Alert>
+            ) : null}
 
             {hasBreakdown ? (
               <div className={classes.chartContainer}>
