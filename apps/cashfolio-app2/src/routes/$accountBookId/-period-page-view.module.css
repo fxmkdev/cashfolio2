@@ -16,14 +16,14 @@
 }
 
 .periodPickerControlRow {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   min-width: 0;
 }
 
 .periodPickerTrigger {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   inline-size: clamp(10rem, 20vw, 13rem);
-  min-inline-size: 12rem;
+  min-inline-size: 0;
   max-inline-size: 100%;
   min-width: 0;
 }

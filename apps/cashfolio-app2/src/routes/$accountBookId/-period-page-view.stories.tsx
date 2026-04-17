@@ -265,7 +265,7 @@ export const TopSectionLayoutSmoke: Story = {
     const topSection = await canvas.findByTestId("period-top-section");
     await expect(topSection).toBeInTheDocument();
     await expect(
-      within(topSection).getByRole("button", { name: "Select period" }),
+      within(topSection).getByTestId("period-picker-trigger"),
     ).toBeInTheDocument();
     await expect(
       within(topSection).queryByRole("heading", { name: "Expense Breakdown" }),
@@ -321,9 +321,7 @@ export const RouteSmoke: Story = {
       "2025",
     );
 
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Select period" }),
-    );
+    await userEvent.click(canvas.getByTestId("period-picker-trigger"));
     const yearPicker = await canvas.findByTestId("period-year-picker");
     await userEvent.click(
       within(yearPicker).getByRole("button", { name: "2024" }),
@@ -338,9 +336,7 @@ export const RouteSmoke: Story = {
       "2024-12",
     );
 
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Select period" }),
-    );
+    await userEvent.click(canvas.getByTestId("period-picker-trigger"));
     const monthPicker = await canvas.findByTestId("period-month-picker");
     await userEvent.click(
       within(monthPicker).getByRole("button", { name: /Nov/i }),

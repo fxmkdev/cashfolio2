@@ -642,6 +642,7 @@ export function PeriodPageView({
                         rightSection={<IconChevronDown size={16} />}
                         onClick={() => setPickerOpened((opened) => !opened)}
                         className={classes.periodPickerTrigger}
+                        data-testid="period-picker-trigger"
                       >
                         {overview.selectedPeriodLabel}
                       </Button>
