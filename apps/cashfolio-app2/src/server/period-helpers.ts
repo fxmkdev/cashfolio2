@@ -254,16 +254,22 @@ function finalizeBreakdownHierarchyNodes(
 ): {
   hierarchy: BreakdownHierarchyNode[];
   hasHiddenAmountDiscrepancy: boolean;
+  rawDisplayedAmount: number;
+  prunedNodeCount: number;
 } {
   const nodes: BreakdownHierarchyNode[] = [];
   let hasHiddenAmountDiscrepancy = false;
+  let rawDisplayedAmount = 0;
+  let prunedNodeCount = 0;
 
   for (const node of childrenById.values()) {
     if (node.kind === "account") {
       if (node.amount <= 0) {
+        prunedNodeCount += 1;
         continue;
       }
 
+      rawDisplayedAmount += node.amount;
       nodes.push({
         id: node.id,
         label: node.label,
@@ -277,22 +283,28 @@ function finalizeBreakdownHierarchyNodes(
     const {
       hierarchy: children,
       hasHiddenAmountDiscrepancy: childDiscrepancy,
+      rawDisplayedAmount: rawDisplayedChildrenAmount,
+      prunedNodeCount: prunedChildNodeCount,
     } = finalizeBreakdownHierarchyNodes(node.childrenById);
     hasHiddenAmountDiscrepancy ||= childDiscrepancy;
+    prunedNodeCount += prunedChildNodeCount;
 
     const roundedAmount = round2(node.amount);
-    const displayedChildrenAmount = round2(
-      children.reduce((sum, child) => sum + child.amount, 0),
-    );
+    const roundedDisplayedChildrenAmount = round2(rawDisplayedChildrenAmount);
 
     if (roundedAmount <= 0) {
+      prunedNodeCount += 1;
       continue;
     }
 
-    if (displayedChildrenAmount !== roundedAmount) {
+    if (
+      prunedChildNodeCount > 0 &&
+      roundedDisplayedChildrenAmount !== roundedAmount
+    ) {
       hasHiddenAmountDiscrepancy = true;
     }
 
+    rawDisplayedAmount += node.amount;
     nodes.push({
       id: node.id,
       label: node.label,
@@ -312,6 +324,8 @@ function finalizeBreakdownHierarchyNodes(
   return {
     hierarchy: nodes,
     hasHiddenAmountDiscrepancy,
+    rawDisplayedAmount,
+    prunedNodeCount,
   };
 }
 

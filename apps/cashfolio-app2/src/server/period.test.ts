@@ -569,4 +569,26 @@ describe("breakdown hierarchy", () => {
       },
     ]);
   });
+
+  test("does not flag discrepancies caused only by rounding distribution", () => {
+    const result = buildBreakdownHierarchyWithMeta({
+      items: [
+        {
+          accountId: "account-a",
+          accountName: "A",
+          groupId: "rent",
+          amount: 0.005,
+        },
+        {
+          accountId: "account-b",
+          accountName: "B",
+          groupId: "rent",
+          amount: 0.005,
+        },
+      ],
+      groupById,
+    });
+
+    expect(result.hasHiddenAmountDiscrepancy).toBe(false);
+  });
 });
