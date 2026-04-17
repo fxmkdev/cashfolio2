@@ -43,21 +43,6 @@ import classes from "./-period-page-view.module.css";
 
 ensureChartModulesRegistered();
 
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-] as const;
-
 type PeriodOverview = Awaited<ReturnType<typeof getPeriodOverview>>;
 
 export type PeriodPageViewProps = {
@@ -657,7 +642,6 @@ export function PeriodPageView({
                         rightSection={<IconChevronDown size={16} />}
                         onClick={() => setPickerOpened((opened) => !opened)}
                         className={classes.periodPickerTrigger}
-                        aria-label="Select period"
                       >
                         {overview.selectedPeriodLabel}
                       </Button>
