@@ -11,18 +11,25 @@ import {
   useMantineTheme,
 } from "@mantine/core";
 import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
+import type {
+  AgCartesianChartOptions,
+  AgWaterfallSeriesItemStylerParams,
+  AgWaterfallSeriesOptions,
+} from "ag-charts-community";
+import { AgCharts } from "ag-charts-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ensureChartModulesRegistered } from "../../ag-chart-modules";
 import { LinkButton } from "../../components/link-button";
 import { TopPageHeader } from "../../components/top-page-header";
 import type { getPeriodOverview } from "../../server/period";
 import { formatMonthPeriodValue } from "../../shared/period";
+import { getDashboardChartThemeColors } from "./-dashboard-chart-theme";
+import { PeriodBreakdownCard } from "./-period-breakdown-card";
 import {
   clampBreakdownPath,
   getBreakdownDrillState,
   isBreakdownNodeDrillable,
 } from "./-period-breakdown-drill";
-import { PeriodBreakdownCard } from "./-period-breakdown-card";
 import {
   type PeriodBreakdownChartDatum,
   type PeriodBreakdownNodeDatum,
@@ -32,7 +39,6 @@ import {
   type BreakdownChartType,
   type BreakdownType,
 } from "./-period-breakdown-types";
-import { getDashboardChartThemeColors } from "./-dashboard-chart-theme";
 import classes from "./-period-page-view.module.css";
 import {
   buildPeriodSelectorModel,
@@ -63,6 +69,27 @@ type StatCardProps = {
   value: string;
   valueColor: "green" | "red";
 };
+
+type StatCardData = StatCardProps & {
+  id: string;
+};
+
+type WaterfallDatum = {
+  label: string;
+  amount: number;
+};
+
+type WaterfallTotalDatum = {
+  isTotal: boolean;
+};
+
+function isWaterfallTotalDatum(datum: unknown): datum is WaterfallTotalDatum {
+  if (typeof datum !== "object" || datum === null || !("isTotal" in datum)) {
+    return false;
+  }
+
+  return typeof datum.isTotal === "boolean";
+}
 
 function arePathsEqual(left: string[], right: string[]): boolean {
   if (left.length !== right.length) {
@@ -111,6 +138,14 @@ export function PeriodPageView({
   const colors = useMemo(
     () => getDashboardChartThemeColors({ theme, isDarkMode }),
     [theme, isDarkMode],
+  );
+  const waterfallPalette = useMemo(
+    () => ({
+      positive: isDarkMode ? theme.colors.green[5] : theme.colors.green[6],
+      negative: isDarkMode ? theme.colors.red[5] : theme.colors.red[6],
+      total: isDarkMode ? theme.colors.blue[4] : theme.colors.blue[6],
+    }),
+    [isDarkMode, theme],
   );
 
   const currencyFormatter = useMemo(
@@ -192,7 +227,7 @@ export function PeriodPageView({
   ]);
 
   const breakdownTitle =
-    selectedBreakdown === "expense" ? "Expense Breakdown" : "Income Breakdown";
+    selectedBreakdown === "expense" ? "Expenses Breakdown" : "Income Breakdown";
   const breakdownRootLabel =
     selectedBreakdown === "expense" ? "All Expenses" : "All Income";
   const drillState = useMemo(
@@ -211,8 +246,21 @@ export function PeriodPageView({
   );
   const emptyBreakdownMessage =
     selectedBreakdown === "expense"
-      ? "No expense bookings were found for this period."
-      : "No income bookings were found for this period.";
+      ? "No expenses were found for this period."
+      : "No income was found for this period.";
+  const breakdownSubtitle = useMemo(() => {
+    const isTopLevel = drillState.clampedPath.length === 0;
+
+    if (isTopLevel) {
+      return selectedBreakdown === "expense"
+        ? "Top-level groups for expenses in the selected period"
+        : "Top-level groups for income in the selected period";
+    }
+
+    return selectedBreakdown === "expense"
+      ? "Drilled expense groups in the selected period"
+      : "Drilled income groups in the selected period";
+  }, [drillState.clampedPath.length, selectedBreakdown]);
   const currentBreakdownLevelTotalAmount = useMemo(
     () =>
       drillState.currentNodes.reduce(
@@ -301,6 +349,199 @@ export function PeriodPageView({
     totalBreakdownAmountLabel,
     onNodeDoubleClick: handleNodeDoubleClick,
   });
+
+  const amountCompactFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("en-CH", {
+        notation: "compact",
+        maximumFractionDigits: 1,
+      }),
+    [],
+  );
+  const gainsLossesLabel = overview.stats.gainsLosses >= 0 ? "Gains" : "Losses";
+  const waterfallData = useMemo<WaterfallDatum[]>(
+    () => [
+      {
+        label: "Income",
+        amount: overview.stats.income,
+      },
+      {
+        label: "Expenses",
+        amount: -overview.stats.expenses,
+      },
+      {
+        label: gainsLossesLabel,
+        amount: overview.stats.gainsLosses,
+      },
+    ],
+    [
+      gainsLossesLabel,
+      overview.stats.expenses,
+      overview.stats.gainsLosses,
+      overview.stats.income,
+    ],
+  );
+  const waterfallAmountByLabel = useMemo<Record<string, number>>(() => {
+    const [incomeDatum, expensesDatum, gainsLossesDatum] = waterfallData;
+    const savingsAmount = incomeDatum.amount + expensesDatum.amount;
+    const totalReturnAmount = savingsAmount + gainsLossesDatum.amount;
+
+    return {
+      [incomeDatum.label]: incomeDatum.amount,
+      [expensesDatum.label]: expensesDatum.amount,
+      [gainsLossesDatum.label]: gainsLossesDatum.amount,
+      Savings: savingsAmount,
+      "Total Return": totalReturnAmount,
+    };
+  }, [waterfallData]);
+  const waterfallSeries = useMemo<AgWaterfallSeriesOptions<WaterfallDatum>>(
+    () => ({
+      type: "waterfall",
+      xKey: "label",
+      yKey: "amount",
+      yName: "Amount",
+      widthRatio: 0.72,
+      totals: [
+        {
+          totalType: "subtotal",
+          index: 1,
+          axisLabel: "Savings",
+        },
+        {
+          totalType: "total",
+          index: 2,
+          axisLabel: "Total Return",
+        },
+      ],
+      item: {
+        positive: {
+          fill: waterfallPalette.positive,
+          stroke: waterfallPalette.positive,
+        },
+        negative: {
+          fill: waterfallPalette.negative,
+          stroke: waterfallPalette.negative,
+        },
+      },
+      subtotal: {
+        fill: waterfallPalette.total,
+        stroke: waterfallPalette.total,
+      },
+      total: {
+        fill: waterfallPalette.total,
+        stroke: waterfallPalette.total,
+      },
+      itemStyler: (
+        params: AgWaterfallSeriesItemStylerParams<WaterfallDatum>,
+      ) => {
+        if (isWaterfallTotalDatum(params.datum) && params.datum.isTotal) {
+          return {
+            fill: waterfallPalette.total,
+            stroke: waterfallPalette.total,
+          };
+        }
+
+        return undefined;
+      },
+      tooltip: {
+        renderer: ({ datum }) => {
+          const label = String(datum.label);
+          const amount = waterfallAmountByLabel[label] ?? 0;
+
+          return {
+            heading: label,
+            data: [
+              {
+                label: "Total",
+                value: currencyFormatter.format(amount),
+              },
+            ],
+          };
+        },
+      },
+    }),
+    [currencyFormatter, waterfallAmountByLabel, waterfallPalette],
+  );
+  const waterfallChartOptions = useMemo<AgCartesianChartOptions>(
+    () => ({
+      data: waterfallData,
+      height: 420,
+      background: {
+        visible: false,
+      },
+      theme: {
+        params: {
+          textColor: colors.chartTextColor,
+          foregroundColor: colors.chartTextColor,
+          borderColor: colors.themeBorderColor,
+          tooltipBackgroundColor: colors.tooltipBackgroundColor,
+          tooltipBorder: true,
+          tooltipTextColor: colors.tooltipTextColor,
+          tooltipSubtleTextColor: colors.tooltipSubtleTextColor,
+        },
+      },
+      legend: {
+        enabled: false,
+      },
+      series: [waterfallSeries],
+      axes: {
+        x: {
+          type: "category",
+        },
+        y: {
+          type: "number",
+          label: {
+            formatter: ({ value }) =>
+              amountCompactFormatter.format(Number(value)),
+          },
+          crossLines: [
+            {
+              type: "line",
+              value: 0,
+              stroke: colors.zeroLineColor,
+              strokeWidth: 1,
+              lineDash: [5, 5],
+            },
+          ],
+        },
+      },
+    }),
+    [amountCompactFormatter, colors, waterfallData, waterfallSeries],
+  );
+
+  const statCards: StatCardData[] = [
+    {
+      id: "totalReturn",
+      label: "Total Return",
+      value: currencyFormatter.format(overview.stats.totalReturn),
+      valueColor: overview.stats.totalReturn >= 0 ? "green" : "red",
+    },
+    {
+      id: "savings",
+      label: "Savings",
+      value: currencyFormatter.format(overview.stats.savings),
+      valueColor: overview.stats.savings >= 0 ? "green" : "red",
+    },
+    {
+      id: "income",
+      label: "Income",
+      value: currencyFormatter.format(overview.stats.income),
+      valueColor: "green" as const,
+    },
+    {
+      id: "expenses",
+      label: "Expenses",
+      value: currencyFormatter.format(overview.stats.expenses),
+      valueColor: "red" as const,
+    },
+    {
+      id: "gainsLosses",
+      label: gainsLossesLabel,
+      value: currencyFormatter.format(overview.stats.gainsLosses),
+      valueColor: overview.stats.gainsLosses >= 0 ? "green" : "red",
+    },
+  ];
+
   const handlePeriodModeChange = (nextMode: string) => {
     setPickerOpened(false);
     const nextPeriodValue = getPeriodModeChangeValue({
@@ -352,34 +593,6 @@ export function PeriodPageView({
     setPickerOpened(false);
   };
 
-  const statCards: StatCardProps[] = [
-    {
-      label: "Total Return",
-      value: currencyFormatter.format(overview.stats.totalReturn),
-      valueColor: overview.stats.totalReturn >= 0 ? "green" : "red",
-    },
-    {
-      label: "Savings",
-      value: currencyFormatter.format(overview.stats.savings),
-      valueColor: overview.stats.savings >= 0 ? "green" : "red",
-    },
-    {
-      label: "Total Income",
-      value: currencyFormatter.format(overview.stats.totalIncome),
-      valueColor: "green" as const,
-    },
-    {
-      label: "Total Expenses",
-      value: currencyFormatter.format(overview.stats.totalExpenses),
-      valueColor: "red" as const,
-    },
-    {
-      label: "Gains / Losses",
-      value: currencyFormatter.format(overview.stats.gainsLosses),
-      valueColor: overview.stats.gainsLosses >= 0 ? "green" : "red",
-    },
-  ];
-
   return (
     <Container fluid py="xl" px="xl">
       <TopPageHeader
@@ -429,7 +642,7 @@ export function PeriodPageView({
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 5 }} spacing="lg">
           {statCards.map((card) => (
             <StatCard
-              key={card.label}
+              key={card.id}
               label={card.label}
               value={card.value}
               valueColor={card.valueColor}
@@ -437,10 +650,23 @@ export function PeriodPageView({
           ))}
         </SimpleGrid>
 
+        <Card withBorder radius="md" p="lg">
+          <Stack gap="sm">
+            <Title order={4}>Contribution to Total Return</Title>
+            <Text c="dimmed" size="sm">
+              How Income, Expenses, and {gainsLossesLabel} lead to Total Return
+            </Text>
+            <div className={classes.chartContainer}>
+              <AgCharts options={waterfallChartOptions} />
+            </div>
+          </Stack>
+        </Card>
+
         <PeriodBreakdownCard
           selectedBreakdown={selectedBreakdown}
           selectedChartType={selectedChartType}
           breakdownTitle={breakdownTitle}
+          breakdownSubtitle={breakdownSubtitle}
           breadcrumbs={drillState.breadcrumbs}
           clampedPath={drillState.clampedPath}
           hasBreakdownAmountDiscrepancy={hasBreakdownAmountDiscrepancy}

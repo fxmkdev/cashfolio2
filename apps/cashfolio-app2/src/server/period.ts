@@ -403,8 +403,8 @@ export const getPeriodOverview = createServerFn({
     let convertedBookingsCount = 0;
     let skippedBookingsCount = 0;
 
-    let totalIncome = 0;
-    let totalExpenses = 0;
+    let income = 0;
+    let expenses = 0;
     let explicitGainLoss = 0;
 
     const expenseAmountByAccountId = new Map<
@@ -511,7 +511,7 @@ export const getPeriodOverview = createServerFn({
           booking.account.equityAccountSubtype === EquityAccountSubtype.INCOME
         ) {
           const incomeAmount = -convertedValue;
-          totalIncome += incomeAmount;
+          income += incomeAmount;
 
           const existingItem = incomeAmountByAccountId.get(booking.account.id);
           if (existingItem) {
@@ -528,7 +528,7 @@ export const getPeriodOverview = createServerFn({
           booking.account.equityAccountSubtype === EquityAccountSubtype.EXPENSE
         ) {
           const expenseAmount = convertedValue;
-          totalExpenses += expenseAmount;
+          expenses += expenseAmount;
 
           const existingItem = expenseAmountByAccountId.get(booking.account.id);
           if (existingItem) {
@@ -814,8 +814,12 @@ export const getPeriodOverview = createServerFn({
 
     const gainsLosses =
       explicitGainLoss + transactionGainLoss + holdingGainLoss;
-    const savings = totalIncome - totalExpenses;
-    const totalReturn = savings + gainsLosses;
+
+    const roundedIncome = round2(income);
+    const roundedExpenses = round2(expenses);
+    const roundedGainsLosses = round2(gainsLosses);
+    const roundedSavings = round2(roundedIncome - roundedExpenses);
+    const roundedTotalReturn = round2(roundedSavings + roundedGainsLosses);
 
     const {
       hierarchy: expenseBreakdownHierarchy,
@@ -880,11 +884,11 @@ export const getPeriodOverview = createServerFn({
       convertedBookingsCount,
       skippedBookingsCount,
       stats: {
-        totalReturn: round2(totalReturn),
-        savings: round2(savings),
-        totalIncome: round2(totalIncome),
-        totalExpenses: round2(totalExpenses),
-        gainsLosses: round2(gainsLosses),
+        totalReturn: roundedTotalReturn,
+        savings: roundedSavings,
+        income: roundedIncome,
+        expenses: roundedExpenses,
+        gainsLosses: roundedGainsLosses,
         explicitGainLoss: round2(explicitGainLoss),
         transactionGainLoss: round2(transactionGainLoss),
         holdingGainLoss: round2(holdingGainLoss),

@@ -10,6 +10,7 @@ import {
   TimeAxisModule,
   PolarChartModule,
 } from "ag-charts-community";
+import { WaterfallSeriesModule } from "ag-charts-enterprise";
 
 let chartModulesRegistered = false;
 
@@ -23,6 +24,7 @@ const CHART_MODULES = [
   NumberAxisModule,
   PolarChartModule,
   DonutSeriesModule,
+  WaterfallSeriesModule,
 ];
 
 export function ensureChartModulesRegistered() {

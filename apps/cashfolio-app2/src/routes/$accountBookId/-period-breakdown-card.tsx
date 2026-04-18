@@ -20,18 +20,19 @@ import {
 } from "@tabler/icons-react";
 import { AgCharts } from "ag-charts-react";
 import type { ReactNode } from "react";
+import type { PeriodBreakdownChartOptions } from "./-period-breakdown-chart-options";
 import type { BreakdownBreadcrumb } from "./-period-breakdown-drill";
 import type {
   BreakdownChartType,
   BreakdownType,
 } from "./-period-breakdown-types";
-import type { PeriodBreakdownChartOptions } from "./-period-breakdown-chart-options";
 import classes from "./-period-page-view.module.css";
 
 type PeriodBreakdownCardProps = {
   selectedBreakdown: BreakdownType;
   selectedChartType: BreakdownChartType;
   breakdownTitle: string;
+  breakdownSubtitle: string;
   breadcrumbs: BreakdownBreadcrumb[];
   clampedPath: string[];
   hasBreakdownAmountDiscrepancy: boolean;
@@ -56,6 +57,7 @@ export function PeriodBreakdownCard({
   selectedBreakdown,
   selectedChartType,
   breakdownTitle,
+  breakdownSubtitle,
   breadcrumbs,
   clampedPath,
   hasBreakdownAmountDiscrepancy,
@@ -113,12 +115,16 @@ export function PeriodBreakdownCard({
                 }
               }}
               data={[
-                { label: "Expense", value: "expense" },
+                { label: "Expenses", value: "expense" },
                 { label: "Income", value: "income" },
               ]}
             />
           </Flex>
         </Group>
+
+        <Text c="dimmed" size="sm">
+          {breakdownSubtitle}
+        </Text>
 
         <Group
           justify="space-between"

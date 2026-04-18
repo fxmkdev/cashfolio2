@@ -190,6 +190,9 @@ importers:
       ag-charts-community:
         specifier: ^13.2.1
         version: 13.2.1
+      ag-charts-enterprise:
+        specifier: ^13.2.1
+        version: 13.2.1
       ag-charts-react:
         specifier: ^13.2.1
         version: 13.2.1(react@19.2.5)
@@ -8876,7 +8879,6 @@ snapshots:
     dependencies:
       ag-charts-community: 13.1.0
       ag-charts-core: 13.1.0
-    optional: true
 
   ag-charts-enterprise@13.2.1:
     dependencies:

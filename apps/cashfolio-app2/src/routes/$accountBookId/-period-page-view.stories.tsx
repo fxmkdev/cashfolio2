@@ -15,6 +15,7 @@ import {
   PERIOD_PRESET_MTD,
   PERIOD_PRESET_YTD,
 } from "./-period-page-types";
+import type { BreakdownType } from "./-period-breakdown-types";
 import { PeriodPageView, type PeriodPageViewProps } from "./-period-page-view";
 
 const MONTH_NAMES = [
@@ -136,8 +137,8 @@ const baseOverview: PeriodPageViewProps["overview"] = {
   stats: {
     totalReturn: 4200,
     savings: 2500,
-    totalIncome: 8000,
-    totalExpenses: 5500,
+    income: 8000,
+    expenses: 5500,
     gainsLosses: 1700,
     explicitGainLoss: 1200,
     transactionGainLoss: 300,
@@ -355,7 +356,7 @@ function PeriodRouteSmokeHarness() {
   const [selectedPeriodValue, setSelectedPeriodValue] =
     useState<string>(DEFAULT_PERIOD_VALUE);
   const [drillPathByBreakdown, setDrillPathByBreakdown] = useState<
-    Record<"expense" | "income", string[]>
+    Record<BreakdownType, string[]>
   >({
     expense: [],
     income: [],
@@ -409,6 +410,14 @@ export const HappyPath: Story = {
       { timeout: 10000 },
     );
     await expect(heading).toBeInTheDocument();
+    await expect(
+      canvas.getByRole("heading", { name: "Contribution to Total Return" }),
+    ).toBeInTheDocument();
+    await expect(canvas.queryByText("Total Income")).not.toBeInTheDocument();
+    await expect(canvas.queryByText("Total Expenses")).not.toBeInTheDocument();
+    await expect(canvas.queryByText("Gains / Losses")).not.toBeInTheDocument();
+    await expect(canvas.getByRole("radio", { name: "Expenses" })).toBeChecked();
+    await expect(canvas.getByText("Gains")).toBeInTheDocument();
   },
 };
 
@@ -421,7 +430,7 @@ export const TopSectionLayoutSmoke: Story = {
       within(topSection).getByTestId("period-picker-trigger"),
     ).toBeInTheDocument();
     await expect(
-      within(topSection).queryByRole("heading", { name: "Expense Breakdown" }),
+      within(topSection).queryByRole("heading", { name: "Expenses Breakdown" }),
     ).not.toBeInTheDocument();
   },
 };
@@ -440,9 +449,32 @@ export const NoExpenseData: Story = {
       incomeBreakdown: baseOverview.incomeBreakdown,
       stats: {
         ...baseOverview.stats,
-        totalExpenses: 0,
+        expenses: 0,
+        savings: baseOverview.stats.income,
+        totalReturn: baseOverview.stats.income + baseOverview.stats.gainsLosses,
       },
     },
+  },
+};
+
+export const LossesKpiLabel: Story = {
+  args: {
+    overview: {
+      ...baseOverview,
+      stats: {
+        ...baseOverview.stats,
+        totalReturn: 800,
+        gainsLosses: -1700,
+        explicitGainLoss: -1200,
+        transactionGainLoss: -300,
+        holdingGainLoss: -200,
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("Losses")).toBeInTheDocument();
+    await expect(canvas.queryByText("Gains")).not.toBeInTheDocument();
   },
 };
 
@@ -515,20 +547,34 @@ export const BreakdownToggleSmoke: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    const upButton = await canvas.findByRole("button", { name: "Up" });
-    await expect(upButton).toBeDisabled();
-    await expect(canvas.getByText("All Expenses")).toBeInTheDocument();
-
     const incomeOption = await canvas.findByRole("radio", { name: "Income" });
     await userEvent.click(incomeOption);
     await expect(incomeOption).toBeChecked();
     await expect(
       canvas.getByRole("heading", { name: "Income Breakdown" }),
     ).toBeInTheDocument();
-    await expect(canvas.getByText("All Income")).toBeInTheDocument();
 
     const barOption = await canvas.findByRole("radio", { name: "Bar" });
     await userEvent.click(barOption);
     await expect(barOption).toBeChecked();
+
+    await expect(
+      canvas.getByText("Top-level groups for income in the selected period"),
+    ).toBeInTheDocument();
+  },
+};
+
+export const DrilledBreakdownSubtitle: Story = {
+  args: {
+    drillPathByBreakdown: {
+      expense: ["group:housing"],
+      income: [],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByText("Drilled expense groups in the selected period"),
+    ).toBeInTheDocument();
   },
 };

@@ -157,6 +157,7 @@ export function DashboardIncomeExpenseCard({
           <Title order={4}>Income & Expense Overview</Title>
           <SegmentedControl
             size="xs"
+            aria-label="Dashboard period"
             value={selectedPeriod}
             onChange={(value) =>
               onPeriodChange(
