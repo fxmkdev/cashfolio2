@@ -410,8 +410,19 @@ export const HappyPath: Story = {
       { timeout: 10000 },
     );
     await expect(heading).toBeInTheDocument();
+    const analysisSection = await canvas.findByTestId(
+      "period-analysis-section",
+    );
+    await expect(analysisSection).toBeInTheDocument();
     await expect(
-      canvas.getByRole("heading", { name: "Contribution to Total Return" }),
+      within(analysisSection).getByRole("heading", {
+        name: "Contribution to Total Return",
+      }),
+    ).toBeInTheDocument();
+    await expect(
+      within(analysisSection).getByRole("heading", {
+        name: "Expenses Breakdown",
+      }),
     ).toBeInTheDocument();
     await expect(canvas.queryByText("Total Income")).not.toBeInTheDocument();
     await expect(canvas.queryByText("Total Expenses")).not.toBeInTheDocument();

@@ -70,7 +70,7 @@ export function PeriodBreakdownCard({
   footer,
 }: PeriodBreakdownCardProps) {
   return (
-    <Card withBorder radius="md" p="lg">
+    <Card withBorder radius="md" p="md">
       <Stack gap="sm">
         <Group justify="space-between" align="center">
           <Title order={4}>{breakdownTitle}</Title>
