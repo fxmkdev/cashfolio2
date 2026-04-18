@@ -3,6 +3,7 @@ import type {
   AgDonutSeriesOptions,
   AgPolarChartOptions,
 } from "ag-charts-community";
+import { _Theme } from "ag-charts-community";
 import { useMemo } from "react";
 import type { DashboardChartThemeColors } from "./-dashboard-chart-theme";
 import type { BreakdownChartType } from "./-period-breakdown-types";
@@ -24,18 +25,22 @@ export type PeriodBreakdownChartOptions =
   | AgPolarChartOptions<PeriodBreakdownChartDatum>
   | AgCartesianChartOptions;
 
-const BREAKDOWN_PALETTE = [
-  { fill: "#5090dc", stroke: "#2f64a8" },
-  { fill: "#ffa03a", stroke: "#c06f1d" },
-  { fill: "#459d55", stroke: "#2e6f3a" },
-  { fill: "#d14a61", stroke: "#923040" },
-  { fill: "#8f6aa8", stroke: "#634779" },
-  { fill: "#5aa2ae", stroke: "#3b7279" },
-  { fill: "#f2cf5b", stroke: "#ba9840" },
-  { fill: "#b3bf2f", stroke: "#7f8a1f" },
-  { fill: "#f58370", stroke: "#b55e50" },
-  { fill: "#9f6f55", stroke: "#704d39" },
-] as const;
+const defaultChartTheme = _Theme.getChartTheme(undefined);
+const defaultPaletteFills = defaultChartTheme.palette.fills;
+const defaultPaletteStrokes = defaultChartTheme.palette.strokes;
+
+function getDefaultPaletteColor(index: number) {
+  if (defaultPaletteFills.length === 0) {
+    return undefined;
+  }
+
+  return {
+    fill: defaultPaletteFills[index % defaultPaletteFills.length],
+    stroke:
+      defaultPaletteStrokes[index % defaultPaletteStrokes.length] ??
+      defaultPaletteFills[index % defaultPaletteFills.length],
+  };
+}
 
 function buildBreakdownTooltipData(args: {
   label: string;
@@ -79,10 +84,12 @@ export function usePeriodBreakdownChartOptions(args: {
   const colorByDatumId = useMemo(
     () =>
       new Map(
-        args.chartData.map((datum, index) => [
-          datum.id,
-          BREAKDOWN_PALETTE[index % BREAKDOWN_PALETTE.length],
-        ]),
+        args.chartData
+          .map((datum, index) => [datum.id, getDefaultPaletteColor(index)])
+          .filter(
+            (entry): entry is [string, { fill: string; stroke: string }] =>
+              entry[1] !== undefined,
+          ),
       ),
     [args.chartData],
   );
@@ -109,8 +116,6 @@ export function usePeriodBreakdownChartOptions(args: {
         calloutLabel: {
           minAngle: 10,
         },
-        fills: BREAKDOWN_PALETTE.map((color) => color.fill),
-        strokes: BREAKDOWN_PALETTE.map((color) => color.stroke),
         innerLabels: [
           {
             text: args.totalBreakdownAmountLabel,
