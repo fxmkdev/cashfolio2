@@ -191,10 +191,11 @@ export function PeriodPageView({
     [],
   );
 
-  const minBookingDate = overview.minBookingDate
-    ? new Date(overview.minBookingDate)
-    : null;
-  const maxDate = new Date(overview.maxDate);
+  const minBookingDate = useMemo(
+    () => (overview.minBookingDate ? new Date(overview.minBookingDate) : null),
+    [overview.minBookingDate],
+  );
+  const maxDate = useMemo(() => new Date(overview.maxDate), [overview.maxDate]);
 
   const selectedMonth =
     overview.selectedGranularity === "month" && overview.selectedMonth != null
