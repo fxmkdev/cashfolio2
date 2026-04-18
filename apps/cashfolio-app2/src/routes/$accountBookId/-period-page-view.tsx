@@ -228,10 +228,6 @@ export function PeriodPageView({
 
   const breakdownTitle =
     selectedBreakdown === "expense" ? "Expenses Breakdown" : "Income Breakdown";
-  const breakdownSubtitle =
-    selectedBreakdown === "expense"
-      ? "Top-level groups for expenses in the selected period"
-      : "Top-level groups for income in the selected period";
   const breakdownRootLabel =
     selectedBreakdown === "expense" ? "All Expenses" : "All Income";
   const drillState = useMemo(
@@ -252,6 +248,19 @@ export function PeriodPageView({
     selectedBreakdown === "expense"
       ? "No expenses were found for this period."
       : "No income was found for this period.";
+  const breakdownSubtitle = useMemo(() => {
+    const isTopLevel = drillState.clampedPath.length === 0;
+
+    if (isTopLevel) {
+      return selectedBreakdown === "expense"
+        ? "Top-level groups for expenses in the selected period"
+        : "Top-level groups for income in the selected period";
+    }
+
+    return selectedBreakdown === "expense"
+      ? "Drilled expense groups in the selected period"
+      : "Drilled income groups in the selected period";
+  }, [drillState.clampedPath.length, selectedBreakdown]);
   const currentBreakdownLevelTotalAmount = useMemo(
     () =>
       drillState.currentNodes.reduce(

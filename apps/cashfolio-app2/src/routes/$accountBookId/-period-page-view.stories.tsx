@@ -563,3 +563,18 @@ export const BreakdownToggleSmoke: Story = {
     ).toBeInTheDocument();
   },
 };
+
+export const DrilledBreakdownSubtitle: Story = {
+  args: {
+    drillPathByBreakdown: {
+      expense: ["group:housing"],
+      income: [],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByText("Drilled expense groups in the selected period"),
+    ).toBeInTheDocument();
+  },
+};

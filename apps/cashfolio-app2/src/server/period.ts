@@ -814,14 +814,12 @@ export const getPeriodOverview = createServerFn({
 
     const gainsLosses =
       explicitGainLoss + transactionGainLoss + holdingGainLoss;
-    const savings = income - expenses;
-    const totalReturn = savings + gainsLosses;
 
     const roundedIncome = round2(income);
     const roundedExpenses = round2(expenses);
     const roundedGainsLosses = round2(gainsLosses);
-    const roundedSavings = round2(savings);
-    const roundedTotalReturn = round2(totalReturn);
+    const roundedSavings = round2(roundedIncome - roundedExpenses);
+    const roundedTotalReturn = round2(roundedSavings + roundedGainsLosses);
 
     const {
       hierarchy: expenseBreakdownHierarchy,
