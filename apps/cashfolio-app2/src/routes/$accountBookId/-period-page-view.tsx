@@ -32,25 +32,18 @@ import {
   type BreakdownChartType,
   type BreakdownType,
 } from "./-period-breakdown-types";
-import { PeriodSelectorRow } from "./-period-selector-row";
 import { getDashboardChartThemeColors } from "./-dashboard-chart-theme";
+import classes from "./-period-page-view.module.css";
+import {
+  buildPeriodSelectorModel,
+  getMonthPickerValue,
+  getPeriodModeChangeValue,
+  getPeriodStepValue,
+  getYearPickerValue,
+} from "./-period-selector-model";
+import { PeriodSelectorCard } from "./-period-selector-card";
 
 ensureChartModulesRegistered();
-
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-] as const;
 
 type PeriodOverview = Awaited<ReturnType<typeof getPeriodOverview>>;
 
@@ -85,58 +78,6 @@ function arePathsEqual(left: string[], right: string[]): boolean {
   return true;
 }
 
-function getMonthBoundsForYear(args: {
-  year: number;
-  minBookingDate: Date | null;
-  maxDate: Date;
-}): { minMonth: number; maxMonth: number } {
-  const { year, minBookingDate, maxDate } = args;
-
-  let minMonth = 0;
-  let maxMonth = 11;
-
-  if (minBookingDate && minBookingDate.getUTCFullYear() === year) {
-    minMonth = minBookingDate.getUTCMonth();
-  }
-
-  if (maxDate.getUTCFullYear() === year) {
-    maxMonth = maxDate.getUTCMonth();
-  }
-
-  return {
-    minMonth,
-    maxMonth,
-  };
-}
-
-function buildMonthOptions(args: {
-  year: number;
-  minBookingDate: Date | null;
-  maxDate: Date;
-}): Array<{ value: string; label: string }> {
-  const { minMonth, maxMonth } = getMonthBoundsForYear(args);
-  const options: Array<{ value: string; label: string }> = [];
-
-  for (let month = maxMonth; month >= minMonth; month -= 1) {
-    options.push({
-      value: String(month),
-      label: MONTH_NAMES[month],
-    });
-  }
-
-  return options;
-}
-
-function clampMonth(args: {
-  year: number;
-  month: number;
-  minBookingDate: Date | null;
-  maxDate: Date;
-}): number {
-  const { minMonth, maxMonth } = getMonthBoundsForYear(args);
-  return Math.min(Math.max(args.month, minMonth), maxMonth);
-}
-
 function StatCard({ label, value, valueColor }: StatCardProps) {
   return (
     <Card withBorder radius="md" p="lg">
@@ -164,6 +105,7 @@ export function PeriodPageView({
     useState<BreakdownType>("expense");
   const [selectedChartType, setSelectedChartType] =
     useState<BreakdownChartType>("donut");
+  const [pickerOpened, setPickerOpened] = useState(false);
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
   const colors = useMemo(
@@ -191,26 +133,26 @@ export function PeriodPageView({
     [],
   );
 
-  const minBookingDate = useMemo(
-    () => (overview.minBookingDate ? new Date(overview.minBookingDate) : null),
-    [overview.minBookingDate],
-  );
-  const maxDate = useMemo(() => new Date(overview.maxDate), [overview.maxDate]);
-
-  const selectedMonth =
-    overview.selectedGranularity === "month" && overview.selectedMonth != null
-      ? overview.selectedMonth
-      : maxDate.getUTCMonth();
-
-  const monthOptions = useMemo(
+  const periodSelectorModel = useMemo(
     () =>
-      buildMonthOptions({
-        year: overview.selectedYear,
-        minBookingDate,
-        maxDate,
+      buildPeriodSelectorModel({
+        selectedGranularity: overview.selectedGranularity,
+        selectedYear: overview.selectedYear,
+        selectedMonth: overview.selectedMonth,
+        minBookingDate: overview.minBookingDate
+          ? new Date(overview.minBookingDate)
+          : null,
+        maxDate: new Date(overview.maxDate),
       }),
-    [maxDate, minBookingDate, overview.selectedYear],
+    [
+      overview.maxDate,
+      overview.minBookingDate,
+      overview.selectedGranularity,
+      overview.selectedMonth,
+      overview.selectedYear,
+    ],
   );
+  const periodMode = periodSelectorModel.periodMode;
 
   const activeBreakdown = useMemo(
     () =>
@@ -359,69 +301,56 @@ export function PeriodPageView({
     totalBreakdownAmountLabel,
     onNodeDoubleClick: handleNodeDoubleClick,
   });
-  const handlePeriodSpecifierChange = useCallback(
-    (value: string) => {
-      if (value === "month") {
-        const monthValue =
-          overview.selectedGranularity === "month"
-            ? formatMonthPeriodValue(
-                overview.selectedYear,
-                overview.selectedMonth ?? 0,
-              )
-            : overview.currentMonthValue;
-        onPeriodChange(monthValue);
-        return;
-      }
+  const handlePeriodModeChange = (nextMode: string) => {
+    setPickerOpened(false);
+    const nextPeriodValue = getPeriodModeChangeValue({
+      nextMode,
+      periodMode,
+      selectedYear: overview.selectedYear,
+      selectedYearMaxMonth:
+        periodSelectorModel.selectedYearMonthBounds.maxMonth,
+    });
+    if (!nextPeriodValue) {
+      return;
+    }
+    onPeriodChange(nextPeriodValue);
+  };
 
-      if (value === "year") {
-        const yearValue =
-          overview.selectedGranularity === "year"
-            ? String(overview.selectedYear)
-            : overview.currentYearValue;
-        onPeriodChange(yearValue);
-        return;
-      }
+  const handlePeriodStep = (step: -1 | 1) => {
+    setPickerOpened(false);
+    const nextPeriodValue = getPeriodStepValue({
+      periodMode,
+      step,
+      selectedMonthIndex: periodSelectorModel.selectedMonthIndex,
+      minMonthIndex: periodSelectorModel.minMonthIndex,
+      maxMonthIndex: periodSelectorModel.maxMonthIndex,
+      selectedYear: overview.selectedYear,
+      minYear: periodSelectorModel.minYear,
+      maxYear: periodSelectorModel.maxYear,
+    });
+    if (!nextPeriodValue) {
+      return;
+    }
+    onPeriodChange(nextPeriodValue);
+  };
 
-      onPeriodChange(value);
-    },
-    [
-      onPeriodChange,
-      overview.currentMonthValue,
-      overview.currentYearValue,
-      overview.selectedGranularity,
-      overview.selectedMonth,
-      overview.selectedYear,
-    ],
-  );
-  const handleYearChange = useCallback(
-    (nextYear: number) => {
-      if (overview.selectedPeriodSpecifier === "year") {
-        onPeriodChange(String(nextYear));
-        return;
-      }
+  const handleMonthPickerChange = (nextValue: string | null) => {
+    const nextPeriodValue = getMonthPickerValue(nextValue);
+    if (!nextPeriodValue) {
+      return;
+    }
+    onPeriodChange(nextPeriodValue);
+    setPickerOpened(false);
+  };
 
-      const nextMonth = clampMonth({
-        year: nextYear,
-        month: selectedMonth,
-        minBookingDate,
-        maxDate,
-      });
-      onPeriodChange(formatMonthPeriodValue(nextYear, nextMonth));
-    },
-    [
-      maxDate,
-      minBookingDate,
-      onPeriodChange,
-      overview.selectedPeriodSpecifier,
-      selectedMonth,
-    ],
-  );
-  const handleMonthChange = useCallback(
-    (nextMonth: number) => {
-      onPeriodChange(formatMonthPeriodValue(overview.selectedYear, nextMonth));
-    },
-    [onPeriodChange, overview.selectedYear],
-  );
+  const handleYearPickerChange = (nextValue: string | null) => {
+    const nextPeriodValue = getYearPickerValue(nextValue);
+    if (!nextPeriodValue) {
+      return;
+    }
+    onPeriodChange(nextPeriodValue);
+    setPickerOpened(false);
+  };
 
   const statCards: StatCardProps[] = [
     {
@@ -469,27 +398,33 @@ export function PeriodPageView({
       />
 
       <Stack gap="lg">
-        <Card withBorder radius="md" p="lg">
-          <Stack gap="sm">
-            <Group justify="space-between" align="center">
-              <Text fw={600}>Period: {overview.selectedPeriodLabel}</Text>
-              <Text c="dimmed" size="sm">
-                Amounts shown in {overview.referenceCurrency}
-              </Text>
-            </Group>
-
-            <PeriodSelectorRow
-              selectedPeriodSpecifier={overview.selectedPeriodSpecifier}
-              selectedYear={overview.selectedYear}
-              selectedMonth={selectedMonth}
-              monthOptions={monthOptions}
-              availableYears={overview.availableYears}
-              onPeriodSpecifierChange={handlePeriodSpecifierChange}
-              onYearChange={handleYearChange}
-              onMonthChange={handleMonthChange}
-            />
-          </Stack>
-        </Card>
+        <div
+          className={classes.periodTopSection}
+          data-testid="period-top-section"
+        >
+          <PeriodSelectorCard
+            selectedPeriodLabel={overview.selectedPeriodLabel}
+            referenceCurrency={overview.referenceCurrency}
+            periodMode={periodMode}
+            pickerOpened={pickerOpened}
+            onPickerOpenedChange={setPickerOpened}
+            canGoToPreviousPeriod={periodSelectorModel.canGoToPreviousPeriod}
+            canGoToNextPeriod={periodSelectorModel.canGoToNextPeriod}
+            onPeriodModeChange={handlePeriodModeChange}
+            onPeriodStep={handlePeriodStep}
+            selectedMonthValue={formatMonthPeriodValue(
+              overview.selectedYear,
+              periodSelectorModel.selectedMonth,
+            )}
+            selectedYearValue={`${String(overview.selectedYear).padStart(4, "0")}-01-01`}
+            minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
+            maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
+            minYearPickerDate={periodSelectorModel.minYearPickerDate}
+            maxYearPickerDate={periodSelectorModel.maxYearPickerDate}
+            onMonthPickerChange={handleMonthPickerChange}
+            onYearPickerChange={handleYearPickerChange}
+          />
+        </div>
 
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 5 }} spacing="lg">
           {statCards.map((card) => (
