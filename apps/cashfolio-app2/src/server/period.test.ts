@@ -480,6 +480,22 @@ describe("breakdown hierarchy", () => {
     expect(hierarchy).toEqual([]);
   });
 
+  test("prunes tiny positive accounts that round to zero", () => {
+    const hierarchy = buildBreakdownHierarchy({
+      items: [
+        {
+          accountId: "account-tiny",
+          accountName: "Tiny",
+          groupId: "rent",
+          amount: 0.004,
+        },
+      ],
+      groupById,
+    });
+
+    expect(hierarchy).toEqual([]);
+  });
+
   test("orders siblings by descending amount with deterministic tie-breakers", () => {
     const hierarchy = buildBreakdownHierarchy({
       items: [
@@ -572,6 +588,51 @@ describe("breakdown hierarchy", () => {
           },
         ],
       },
+    ]);
+  });
+
+  test("returns discrepancy node IDs in deterministic sorted order", () => {
+    const customGroupById = new Map([
+      [
+        "z-root",
+        {
+          id: "z-root",
+          name: "Z Root",
+          parentGroupId: null,
+        },
+      ],
+      [
+        "a-child",
+        {
+          id: "a-child",
+          name: "A Child",
+          parentGroupId: "z-root",
+        },
+      ],
+    ]);
+
+    const result = buildBreakdownHierarchyWithMeta({
+      items: [
+        {
+          accountId: "positive",
+          accountName: "Positive",
+          groupId: "a-child",
+          amount: 100,
+        },
+        {
+          accountId: "negative",
+          accountName: "Negative",
+          groupId: "a-child",
+          amount: -25,
+        },
+      ],
+      groupById: customGroupById,
+    });
+
+    expect(result.hasHiddenAmountDiscrepancy).toBe(true);
+    expect(result.hiddenAmountDiscrepancyNodeIds).toEqual([
+      "group:a-child",
+      "group:z-root",
     ]);
   });
 

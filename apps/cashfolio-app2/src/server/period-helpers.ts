@@ -265,7 +265,9 @@ function finalizeBreakdownHierarchyNodes(
 
   for (const node of childrenById.values()) {
     if (node.kind === "account") {
-      if (node.amount <= 0) {
+      const roundedAmount = round2(node.amount);
+
+      if (roundedAmount <= 0) {
         prunedNodeCount += 1;
         continue;
       }
@@ -275,7 +277,7 @@ function finalizeBreakdownHierarchyNodes(
         id: node.id,
         label: node.label,
         kind: node.kind,
-        amount: round2(node.amount),
+        amount: roundedAmount,
         children: [],
       });
       continue;
@@ -393,7 +395,7 @@ export function buildBreakdownHierarchyWithMeta(args: {
     hasHiddenAmountDiscrepancy,
     hiddenAmountDiscrepancyNodeIds: Array.from(
       hiddenAmountDiscrepancyNodeIdsInSubtree,
-    ),
+    ).sort((a, b) => a.localeCompare(b, "en")),
   };
 }
 
