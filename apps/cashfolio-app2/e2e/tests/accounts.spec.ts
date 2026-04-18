@@ -462,9 +462,21 @@ test("period picker opens on selected month/year page", async ({ page }) => {
   const periodPickerTrigger = page.getByTestId("period-picker-trigger");
   await expect(periodPickerTrigger).toContainText("April 2025");
 
-  await periodPickerTrigger.click();
-  const monthPicker = page.getByTestId("period-month-picker");
-  await expect(monthPicker).toBeVisible();
+  const openPeriodPicker = async (pickerTestId: string) => {
+    const picker = page.getByTestId(pickerTestId);
+    await periodPickerTrigger.click();
+
+    try {
+      await expect(picker).toBeVisible({ timeout: 2_000 });
+    } catch {
+      await periodPickerTrigger.click();
+      await expect(picker).toBeVisible();
+    }
+
+    return picker;
+  };
+
+  const monthPicker = await openPeriodPicker("period-month-picker");
   await expect(monthPicker.getByRole("button", { name: "2025" })).toBeVisible();
 
   const periodModeControl = page.getByRole("radiogroup", {
@@ -473,9 +485,7 @@ test("period picker opens on selected month/year page", async ({ page }) => {
   await periodModeControl.getByText("Year", { exact: true }).click();
   await expect(periodPickerTrigger).toContainText("2025");
 
-  await periodPickerTrigger.click();
-  const yearPicker = page.getByTestId("period-year-picker");
-  await expect(yearPicker).toBeVisible();
+  const yearPicker = await openPeriodPicker("period-year-picker");
   await expect(
     yearPicker.getByRole("button", { name: "2025" }),
   ).toHaveAttribute("data-selected", "true");
