@@ -3,8 +3,6 @@ import { Suspense, lazy } from "react";
 import { getPeriodOverview } from "../../server/period";
 import {
   DEFAULT_PERIOD_VALUE,
-  formatBreakdownPathSearchValue,
-  getBreakdownPathByType,
   getPeriodValue,
   parsePeriodSearch,
 } from "./-period-page-types";
@@ -32,9 +30,7 @@ export const Route = createFileRoute("/$accountBookId/period")({
 
 function PeriodPage() {
   const { accountBookId } = Route.useParams();
-  const search = Route.useSearch();
-  const selectedPeriodValue = getPeriodValue(search);
-  const drillPathByBreakdown = getBreakdownPathByType(search);
+  const selectedPeriodValue = getPeriodValue(Route.useSearch());
   const overview = Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/period" });
 
@@ -44,29 +40,12 @@ function PeriodPage() {
         accountBookId={accountBookId}
         overview={overview}
         selectedPeriodValue={selectedPeriodValue}
-        drillPathByBreakdown={drillPathByBreakdown}
         onPeriodChange={(nextPeriodValue) =>
           navigate({
-            search: (previousSearch) => ({
-              ...previousSearch,
-              period:
-                nextPeriodValue === DEFAULT_PERIOD_VALUE
-                  ? undefined
-                  : nextPeriodValue,
-            }),
-          })
-        }
-        onDrillPathByBreakdownChange={(nextPathByBreakdown) =>
-          navigate({
-            search: (previousSearch) => ({
-              ...previousSearch,
-              expensePath: formatBreakdownPathSearchValue(
-                nextPathByBreakdown.expense,
-              ),
-              incomePath: formatBreakdownPathSearchValue(
-                nextPathByBreakdown.income,
-              ),
-            }),
+            search: () =>
+              nextPeriodValue === DEFAULT_PERIOD_VALUE
+                ? {}
+                : { period: nextPeriodValue },
           })
         }
       />

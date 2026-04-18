@@ -136,8 +136,8 @@ const baseOverview: PeriodPageViewProps["overview"] = {
   stats: {
     totalReturn: 4200,
     savings: 2500,
-    totalIncome: 8000,
-    totalExpenses: 5500,
+    income: 8000,
+    expenses: 5500,
     gainsLosses: 1700,
     explicitGainLoss: 1200,
     transactionGainLoss: 300,
@@ -145,8 +145,6 @@ const baseOverview: PeriodPageViewProps["overview"] = {
   },
   expenseBreakdown: {
     totalAmount: 5500,
-    hasHiddenAmountDiscrepancy: false,
-    hiddenAmountDiscrepancyNodeIds: [],
     items: [
       {
         id: "group:housing",
@@ -184,101 +182,9 @@ const baseOverview: PeriodPageViewProps["overview"] = {
         percentage: 10,
       },
     ],
-    hierarchy: [
-      {
-        id: "group:housing",
-        label: "Housing",
-        kind: "group",
-        amount: 1900,
-        children: [
-          {
-            id: "account:account-rent",
-            label: "Rent",
-            kind: "account",
-            amount: 1600,
-            children: [],
-          },
-          {
-            id: "account:account-utilities",
-            label: "Utilities",
-            kind: "account",
-            amount: 300,
-            children: [],
-          },
-        ],
-      },
-      {
-        id: "group:food",
-        label: "Food",
-        kind: "group",
-        amount: 1400,
-        children: [
-          {
-            id: "account:account-groceries",
-            label: "Groceries",
-            kind: "account",
-            amount: 900,
-            children: [],
-          },
-          {
-            id: "account:account-dining",
-            label: "Dining",
-            kind: "account",
-            amount: 500,
-            children: [],
-          },
-        ],
-      },
-      {
-        id: "group:transport",
-        label: "Transportation",
-        kind: "group",
-        amount: 950,
-        children: [
-          {
-            id: "account:account-transit",
-            label: "Transit",
-            kind: "account",
-            amount: 550,
-            children: [],
-          },
-          {
-            id: "account:account-fuel",
-            label: "Fuel",
-            kind: "account",
-            amount: 400,
-            children: [],
-          },
-        ],
-      },
-      {
-        id: "account:account-subscriptions",
-        label: "Subscriptions",
-        kind: "account",
-        amount: 700,
-        children: [],
-      },
-      {
-        id: "group:other",
-        label: "Other",
-        kind: "group",
-        amount: 550,
-        children: [
-          {
-            id: "account:account-other-expense",
-            label: "Other Expense",
-            kind: "account",
-            amount: 550,
-            children: [],
-          },
-        ],
-      },
-    ],
   },
   incomeBreakdown: {
     totalAmount: 8000,
-    hasHiddenAmountDiscrepancy: false,
-    hiddenAmountDiscrepancyNodeIds: [],
     items: [
       {
         id: "group:salary",
@@ -302,64 +208,12 @@ const baseOverview: PeriodPageViewProps["overview"] = {
         percentage: 6.3,
       },
     ],
-    hierarchy: [
-      {
-        id: "group:salary",
-        label: "Salary",
-        kind: "group",
-        amount: 6200,
-        children: [
-          {
-            id: "account:account-main-salary",
-            label: "Main Salary",
-            kind: "account",
-            amount: 6200,
-            children: [],
-          },
-        ],
-      },
-      {
-        id: "group:investments",
-        label: "Investments",
-        kind: "group",
-        amount: 1300,
-        children: [
-          {
-            id: "account:account-dividends",
-            label: "Dividends",
-            kind: "account",
-            amount: 900,
-            children: [],
-          },
-          {
-            id: "account:account-interest",
-            label: "Interest",
-            kind: "account",
-            amount: 400,
-            children: [],
-          },
-        ],
-      },
-      {
-        id: "account:account-other-income",
-        label: "Other Income",
-        kind: "account",
-        amount: 500,
-        children: [],
-      },
-    ],
   },
 };
 
 function PeriodRouteSmokeHarness() {
   const [selectedPeriodValue, setSelectedPeriodValue] =
     useState<string>(DEFAULT_PERIOD_VALUE);
-  const [drillPathByBreakdown, setDrillPathByBreakdown] = useState<
-    Record<"expense" | "income", string[]>
-  >({
-    expense: [],
-    income: [],
-  });
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -370,9 +224,7 @@ function PeriodRouteSmokeHarness() {
         accountBookId="storybook-book"
         overview={deriveOverviewFromSelectedPeriodValue(selectedPeriodValue)}
         selectedPeriodValue={selectedPeriodValue}
-        drillPathByBreakdown={drillPathByBreakdown}
         onPeriodChange={setSelectedPeriodValue}
-        onDrillPathByBreakdownChange={setDrillPathByBreakdown}
       />
       <Text data-testid="router-path">{pathname}</Text>
       <Text data-testid="selected-period">{selectedPeriodValue}</Text>
@@ -387,12 +239,7 @@ const meta = {
     accountBookId: "storybook-book",
     overview: baseOverview,
     selectedPeriodValue: DEFAULT_PERIOD_VALUE,
-    drillPathByBreakdown: {
-      expense: [],
-      income: [],
-    },
     onPeriodChange: fn(),
-    onDrillPathByBreakdownChange: fn(),
   },
 } satisfies Meta<typeof PeriodPageView>;
 
@@ -409,6 +256,14 @@ export const HappyPath: Story = {
       { timeout: 10000 },
     );
     await expect(heading).toBeInTheDocument();
+    await expect(
+      canvas.getByRole("heading", { name: "Contribution to Total Return" }),
+    ).toBeInTheDocument();
+    await expect(canvas.queryByText("Total Income")).not.toBeInTheDocument();
+    await expect(canvas.queryByText("Total Expenses")).not.toBeInTheDocument();
+    await expect(canvas.queryByText("Gains / Losses")).not.toBeInTheDocument();
+    await expect(canvas.getByRole("radio", { name: "Expenses" })).toBeChecked();
+    await expect(canvas.getByText("Gains")).toBeInTheDocument();
   },
 };
 
@@ -432,17 +287,37 @@ export const NoExpenseData: Story = {
       ...baseOverview,
       expenseBreakdown: {
         totalAmount: 0,
-        hasHiddenAmountDiscrepancy: false,
-        hiddenAmountDiscrepancyNodeIds: [],
         items: [],
-        hierarchy: [],
       },
       incomeBreakdown: baseOverview.incomeBreakdown,
       stats: {
         ...baseOverview.stats,
-        totalExpenses: 0,
+        expenses: 0,
+        savings: baseOverview.stats.income,
+        totalReturn: baseOverview.stats.income + baseOverview.stats.gainsLosses,
       },
     },
+  },
+};
+
+export const LossesKpiLabel: Story = {
+  args: {
+    overview: {
+      ...baseOverview,
+      stats: {
+        ...baseOverview.stats,
+        totalReturn: 800,
+        gainsLosses: -1700,
+        explicitGainLoss: -1200,
+        transactionGainLoss: -300,
+        holdingGainLoss: -200,
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("Losses")).toBeInTheDocument();
+    await expect(canvas.queryByText("Gains")).not.toBeInTheDocument();
   },
 };
 
@@ -515,20 +390,19 @@ export const BreakdownToggleSmoke: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    const upButton = await canvas.findByRole("button", { name: "Up" });
-    await expect(upButton).toBeDisabled();
-    await expect(canvas.getByText("All Expenses")).toBeInTheDocument();
-
     const incomeOption = await canvas.findByRole("radio", { name: "Income" });
     await userEvent.click(incomeOption);
     await expect(incomeOption).toBeChecked();
     await expect(
       canvas.getByRole("heading", { name: "Income Breakdown" }),
     ).toBeInTheDocument();
-    await expect(canvas.getByText("All Income")).toBeInTheDocument();
 
     const barOption = await canvas.findByRole("radio", { name: "Bar" });
     await userEvent.click(barOption);
     await expect(barOption).toBeChecked();
+
+    await expect(
+      canvas.getByText("Top-level groups for income in the selected period"),
+    ).toBeInTheDocument();
   },
 };

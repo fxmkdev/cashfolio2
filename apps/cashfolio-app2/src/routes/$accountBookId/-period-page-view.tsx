@@ -1,8 +1,6 @@
 import {
-  Alert,
   Card,
   Container,
-  Group,
   SimpleGrid,
   Stack,
   Text,
@@ -10,29 +8,26 @@ import {
   useComputedColorScheme,
   useMantineTheme,
 } from "@mantine/core";
-import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { IconListDetails } from "@tabler/icons-react";
+import type {
+  AgCartesianChartOptions,
+  AgDonutSeriesOptions,
+  AgPolarChartOptions,
+  AgWaterfallSeriesOptions,
+} from "ag-charts-community";
+import { AgCharts } from "ag-charts-react";
+import { useMemo, useState } from "react";
 import { ensureChartModulesRegistered } from "../../ag-chart-modules";
 import { LinkButton } from "../../components/link-button";
 import { TopPageHeader } from "../../components/top-page-header";
 import type { getPeriodOverview } from "../../server/period";
 import { formatMonthPeriodValue } from "../../shared/period";
-import {
-  clampBreakdownPath,
-  getBreakdownDrillState,
-  isBreakdownNodeDrillable,
-} from "./-period-breakdown-drill";
-import { PeriodBreakdownCard } from "./-period-breakdown-card";
-import {
-  type PeriodBreakdownChartDatum,
-  type PeriodBreakdownNodeDatum,
-  usePeriodBreakdownChartOptions,
-} from "./-period-breakdown-chart-options";
-import {
-  type BreakdownChartType,
-  type BreakdownType,
-} from "./-period-breakdown-types";
 import { getDashboardChartThemeColors } from "./-dashboard-chart-theme";
+import {
+  BreakdownChartType,
+  BreakdownType,
+  PeriodBreakdownCard,
+} from "./-period-breakdown-card";
 import classes from "./-period-page-view.module.css";
 import {
   buildPeriodSelectorModel,
@@ -51,11 +46,12 @@ export type PeriodPageViewProps = {
   accountBookId: string;
   overview: PeriodOverview;
   selectedPeriodValue: string;
-  drillPathByBreakdown: Record<BreakdownType, string[]>;
   onPeriodChange: (nextPeriodValue: string) => void;
-  onDrillPathByBreakdownChange: (
-    nextPathByBreakdown: Record<BreakdownType, string[]>,
-  ) => void;
+};
+
+type BreakdownDatum = PeriodOverview["expenseBreakdown"]["items"][number] & {
+  amountLabel: string;
+  percentageLabel: string;
 };
 
 type StatCardProps = {
@@ -63,20 +59,20 @@ type StatCardProps = {
   value: string;
   valueColor: "green" | "red";
 };
+type BreakdownBarDatum = {
+  label: string;
+  amountLabel: string;
+  percentageLabel: string;
+} & Record<string, number | null | string>;
+type WaterfallDatum = {
+  label: string;
+  amount: number;
+};
 
-function arePathsEqual(left: string[], right: string[]): boolean {
-  if (left.length !== right.length) {
-    return false;
-  }
-
-  for (let index = 0; index < left.length; index += 1) {
-    if (left[index] !== right[index]) {
-      return false;
-    }
-  }
-
-  return true;
-}
+type BreakdownBarSeriesDefinition = {
+  key: string;
+  label: string;
+};
 
 function StatCard({ label, value, valueColor }: StatCardProps) {
   return (
@@ -97,9 +93,7 @@ export function PeriodPageView({
   accountBookId,
   overview,
   selectedPeriodValue,
-  drillPathByBreakdown,
   onPeriodChange,
-  onDrillPathByBreakdownChange,
 }: PeriodPageViewProps) {
   const [selectedBreakdown, setSelectedBreakdown] =
     useState<BreakdownType>("expense");
@@ -111,6 +105,14 @@ export function PeriodPageView({
   const colors = useMemo(
     () => getDashboardChartThemeColors({ theme, isDarkMode }),
     [theme, isDarkMode],
+  );
+  const waterfallPalette = useMemo(
+    () => ({
+      positive: isDarkMode ? theme.colors.green[5] : theme.colors.green[6],
+      negative: isDarkMode ? theme.colors.red[5] : theme.colors.red[6],
+      total: isDarkMode ? theme.colors.blue[4] : theme.colors.blue[6],
+    }),
+    [isDarkMode, theme],
   );
 
   const currencyFormatter = useMemo(
@@ -162,145 +164,400 @@ export function PeriodPageView({
     [overview.expenseBreakdown, overview.incomeBreakdown, selectedBreakdown],
   );
 
-  useEffect(() => {
-    const nextExpensePath = clampBreakdownPath({
-      hierarchy: overview.expenseBreakdown.hierarchy,
-      path: drillPathByBreakdown.expense,
-    });
-    const nextIncomePath = clampBreakdownPath({
-      hierarchy: overview.incomeBreakdown.hierarchy,
-      path: drillPathByBreakdown.income,
-    });
-
-    if (
-      arePathsEqual(nextExpensePath, drillPathByBreakdown.expense) &&
-      arePathsEqual(nextIncomePath, drillPathByBreakdown.income)
-    ) {
-      return;
-    }
-
-    onDrillPathByBreakdownChange({
-      expense: nextExpensePath,
-      income: nextIncomePath,
-    });
-  }, [
-    drillPathByBreakdown.expense,
-    drillPathByBreakdown.income,
-    onDrillPathByBreakdownChange,
-    overview.expenseBreakdown.hierarchy,
-    overview.incomeBreakdown.hierarchy,
-  ]);
-
   const breakdownTitle =
-    selectedBreakdown === "expense" ? "Expense Breakdown" : "Income Breakdown";
-  const breakdownRootLabel =
-    selectedBreakdown === "expense" ? "All Expenses" : "All Income";
-  const drillState = useMemo(
-    () =>
-      getBreakdownDrillState({
-        hierarchy: activeBreakdown.hierarchy,
-        path: drillPathByBreakdown[selectedBreakdown],
-        rootLabel: breakdownRootLabel,
-      }),
-    [
-      activeBreakdown.hierarchy,
-      breakdownRootLabel,
-      drillPathByBreakdown,
-      selectedBreakdown,
-    ],
-  );
+    selectedBreakdown === "expense" ? "Expenses Breakdown" : "Income Breakdown";
+  const breakdownSubtitle =
+    selectedBreakdown === "expense"
+      ? "Top-level groups for expenses in the selected period"
+      : "Top-level groups for income in the selected period";
   const emptyBreakdownMessage =
     selectedBreakdown === "expense"
-      ? "No expense bookings were found for this period."
+      ? "No expenses were found for this period."
       : "No income bookings were found for this period.";
-  const currentBreakdownLevelTotalAmount = useMemo(
-    () =>
-      drillState.currentNodes.reduce(
-        (sum, breakdownNode) => sum + breakdownNode.amount,
-        0,
-      ),
-    [drillState.currentNodes],
-  );
 
-  const chartData = useMemo<PeriodBreakdownChartDatum[]>(
+  const chartData = useMemo<BreakdownDatum[]>(
     () =>
-      drillState.currentNodes.map((item) => {
-        const percentage =
-          currentBreakdownLevelTotalAmount <= 0
-            ? 0
-            : (item.amount / currentBreakdownLevelTotalAmount) * 100;
-
-        return {
-          id: item.id,
-          label: item.label,
-          kind: item.kind,
-          amount: item.amount,
-          percentage,
-          isDrillable: isBreakdownNodeDrillable(item),
-          amountLabel: currencyFormatter.format(item.amount),
-          percentageLabel: `${percentageFormatter.format(percentage)}%`,
-        };
-      }),
-    [
-      currentBreakdownLevelTotalAmount,
-      currencyFormatter,
-      drillState.currentNodes,
-      percentageFormatter,
-    ],
+      activeBreakdown.items.map((item) => ({
+        ...item,
+        amountLabel: currencyFormatter.format(item.amount),
+        percentageLabel: `${percentageFormatter.format(item.percentage)}%`,
+      })),
+    [activeBreakdown.items, currencyFormatter, percentageFormatter],
   );
 
   const totalBreakdownAmountLabel = useMemo(
-    () => currencyFormatter.format(currentBreakdownLevelTotalAmount),
-    [currentBreakdownLevelTotalAmount, currencyFormatter],
+    () => currencyFormatter.format(activeBreakdown.totalAmount),
+    [activeBreakdown.totalAmount, currencyFormatter],
   );
 
   const hasBreakdown = chartData.length > 0;
-  const currentBreakdownNodeId =
-    drillState.currentPathNodes[drillState.currentPathNodes.length - 1]?.id ??
-    null;
-  const hasBreakdownAmountDiscrepancy = useMemo(() => {
-    if (currentBreakdownNodeId == null) {
-      return activeBreakdown.hasHiddenAmountDiscrepancy;
-    }
-
-    return activeBreakdown.hiddenAmountDiscrepancyNodeIds.includes(
-      currentBreakdownNodeId,
-    );
-  }, [
-    activeBreakdown.hasHiddenAmountDiscrepancy,
-    activeBreakdown.hiddenAmountDiscrepancyNodeIds,
-    currentBreakdownNodeId,
-  ]);
-  const updateSelectedBreakdownPath = useCallback(
-    (nextPath: string[]) => {
-      onDrillPathByBreakdownChange({
-        ...drillPathByBreakdown,
-        [selectedBreakdown]: nextPath,
-      });
-    },
-    [drillPathByBreakdown, onDrillPathByBreakdownChange, selectedBreakdown],
+  const amountCompactFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("en-CH", {
+        notation: "compact",
+        maximumFractionDigits: 1,
+      }),
+    [],
   );
-  const handleNodeDoubleClick = useCallback(
-    (datum: PeriodBreakdownNodeDatum) => {
-      if (
-        datum.kind !== "group" ||
-        !datum.isDrillable ||
-        drillState.clampedPath.includes(datum.id)
-      ) {
-        return;
-      }
-
-      updateSelectedBreakdownPath([...drillState.clampedPath, datum.id]);
-    },
-    [drillState.clampedPath, updateSelectedBreakdownPath],
+  const barSeriesDefinitions = useMemo<BreakdownBarSeriesDefinition[]>(
+    () =>
+      chartData.map((item, index) => ({
+        key: `amount_${index}`,
+        label: item.label,
+      })),
+    [chartData],
   );
-  const chartOptions = usePeriodBreakdownChartOptions({
-    chartData,
-    selectedChartType,
-    colors,
-    totalBreakdownAmountLabel,
-    onNodeDoubleClick: handleNodeDoubleClick,
-  });
+  const barChartData = useMemo<BreakdownBarDatum[]>(
+    () =>
+      chartData.map((item, itemIndex) => {
+        const row: BreakdownBarDatum = {
+          label: item.label,
+          amountLabel: item.amountLabel,
+          percentageLabel: item.percentageLabel,
+        };
+
+        for (const seriesDefinition of barSeriesDefinitions) {
+          row[seriesDefinition.key] = null;
+        }
+
+        row[barSeriesDefinitions[itemIndex].key] = item.amount;
+
+        return row;
+      }),
+    [barSeriesDefinitions, chartData],
+  );
+
+  const donutSeries = useMemo<AgDonutSeriesOptions<BreakdownDatum>[]>(
+    () => [
+      {
+        type: "donut",
+        angleKey: "amount",
+        calloutLabelKey: "label",
+        sectorLabelKey: "percentageLabel",
+        innerRadiusRatio: 0.7,
+        outerRadiusRatio: 0.95,
+        calloutLabel: {
+          minAngle: 10,
+        },
+        innerLabels: [
+          {
+            text: totalBreakdownAmountLabel,
+            color: colors.chartTextColor,
+            fontWeight: 600,
+            fontSize: 18,
+          },
+        ],
+        tooltip: {
+          renderer: ({ datum }) => {
+            const item = datum as BreakdownDatum;
+
+            return {
+              heading: item.label,
+              data: [
+                {
+                  label: "Share",
+                  value: item.percentageLabel,
+                },
+                {
+                  label: "Amount",
+                  value: item.amountLabel,
+                },
+                {
+                  label: "Total",
+                  value: totalBreakdownAmountLabel,
+                },
+              ],
+            };
+          },
+        },
+      },
+    ],
+    [colors.chartTextColor, totalBreakdownAmountLabel],
+  );
+
+  const donutChartOptions = useMemo<AgPolarChartOptions<BreakdownDatum>>(
+    () => ({
+      data: chartData,
+      height: 500,
+      background: {
+        visible: false,
+      },
+      theme: {
+        params: {
+          textColor: colors.chartTextColor,
+          foregroundColor: colors.chartTextColor,
+          borderColor: colors.themeBorderColor,
+          tooltipBackgroundColor: colors.tooltipBackgroundColor,
+          tooltipBorder: true,
+          tooltipTextColor: colors.tooltipTextColor,
+          tooltipSubtleTextColor: colors.tooltipSubtleTextColor,
+        },
+      },
+      legend: {
+        position: "bottom",
+      },
+      series: donutSeries,
+    }),
+    [chartData, colors, donutSeries],
+  );
+  const barChartOptions = useMemo<AgCartesianChartOptions>(
+    () => ({
+      data: barChartData,
+      height: 500,
+      background: {
+        visible: false,
+      },
+      theme: {
+        params: {
+          textColor: colors.chartTextColor,
+          foregroundColor: colors.chartTextColor,
+          borderColor: colors.themeBorderColor,
+          tooltipBackgroundColor: colors.tooltipBackgroundColor,
+          tooltipBorder: true,
+          tooltipTextColor: colors.tooltipTextColor,
+          tooltipSubtleTextColor: colors.tooltipSubtleTextColor,
+        },
+      },
+      legend: {
+        enabled: true,
+        position: "bottom",
+      },
+      series: barSeriesDefinitions.map((seriesDefinition) => ({
+        type: "bar",
+        direction: "vertical",
+        grouped: false,
+        widthRatio: 0.72,
+        xKey: "label",
+        yKey: seriesDefinition.key,
+        yName: seriesDefinition.label,
+        legendItemName: seriesDefinition.label,
+        tooltip: {
+          renderer: ({ datum }) => {
+            const item = datum as BreakdownBarDatum;
+
+            return {
+              heading: item.label,
+              data: [
+                {
+                  label: "Share",
+                  value: item.percentageLabel,
+                },
+                {
+                  label: "Amount",
+                  value: item.amountLabel,
+                },
+                {
+                  label: "Total",
+                  value: totalBreakdownAmountLabel,
+                },
+              ],
+            };
+          },
+        },
+      })),
+      axes: {
+        x: {
+          type: "category",
+          label: {
+            rotation: -25,
+          },
+        },
+        y: {
+          type: "number",
+          label: {
+            formatter: ({ value }) =>
+              amountCompactFormatter.format(Number(value)),
+          },
+        },
+      },
+    }),
+    [
+      amountCompactFormatter,
+      barChartData,
+      barSeriesDefinitions,
+      colors,
+      totalBreakdownAmountLabel,
+    ],
+  );
+  const chartOptions =
+    selectedChartType === "donut" ? donutChartOptions : barChartOptions;
+  const gainsLossesLabel = overview.stats.gainsLosses >= 0 ? "Gains" : "Losses";
+  const waterfallData = useMemo<WaterfallDatum[]>(
+    () => [
+      {
+        label: "Income",
+        amount: overview.stats.income,
+      },
+      {
+        label: "Expenses",
+        amount: -overview.stats.expenses,
+      },
+      {
+        label: gainsLossesLabel,
+        amount: overview.stats.gainsLosses,
+      },
+    ],
+    [
+      gainsLossesLabel,
+      overview.stats.expenses,
+      overview.stats.gainsLosses,
+      overview.stats.income,
+    ],
+  );
+  const waterfallAmountByLabel = useMemo<Record<string, number>>(() => {
+    const [incomeDatum, expensesDatum, gainsLossesDatum] = waterfallData;
+    const savingsAmount = incomeDatum.amount + expensesDatum.amount;
+    const totalReturnAmount = savingsAmount + gainsLossesDatum.amount;
+
+    return {
+      [incomeDatum.label]: incomeDatum.amount,
+      [expensesDatum.label]: expensesDatum.amount,
+      [gainsLossesDatum.label]: gainsLossesDatum.amount,
+      Savings: savingsAmount,
+      "Total Return": totalReturnAmount,
+    };
+  }, [waterfallData]);
+  const waterfallSeries = useMemo<AgWaterfallSeriesOptions<WaterfallDatum>>(
+    () => ({
+      type: "waterfall",
+      xKey: "label",
+      yKey: "amount",
+      yName: "Amount",
+      widthRatio: 0.72,
+      totals: [
+        {
+          totalType: "subtotal",
+          index: 1,
+          axisLabel: "Savings",
+        },
+        {
+          totalType: "total",
+          index: 2,
+          axisLabel: "Total Return",
+        },
+      ],
+      line: {
+        stroke: colors.zeroLineColor,
+        strokeWidth: 1,
+      },
+      item: {
+        positive: {
+          fill: waterfallPalette.positive,
+          stroke: waterfallPalette.positive,
+        },
+        negative: {
+          fill: waterfallPalette.negative,
+          stroke: waterfallPalette.negative,
+        },
+        total: {
+          fill: waterfallPalette.total,
+          stroke: waterfallPalette.total,
+        },
+      },
+      tooltip: {
+        renderer: (params) => {
+          const label = String(params.datum[params.xKey]);
+          const amount =
+            waterfallAmountByLabel[label] ?? Number(params.datum[params.yKey]);
+
+          return {
+            heading: label,
+            data: [
+              {
+                label:
+                  params.itemType === "total" || params.itemType === "subtotal"
+                    ? "Total"
+                    : "Change",
+                value: currencyFormatter.format(amount),
+              },
+            ],
+          };
+        },
+      },
+    }),
+    [colors, currencyFormatter, waterfallAmountByLabel, waterfallPalette],
+  );
+  const waterfallChartOptions = useMemo<
+    AgCartesianChartOptions<WaterfallDatum>
+  >(
+    () => ({
+      data: waterfallData,
+      height: 320,
+      background: {
+        visible: false,
+      },
+      theme: {
+        params: {
+          textColor: colors.chartTextColor,
+          foregroundColor: colors.chartTextColor,
+          borderColor: colors.themeBorderColor,
+          tooltipBackgroundColor: colors.tooltipBackgroundColor,
+          tooltipBorder: true,
+          tooltipTextColor: colors.tooltipTextColor,
+          tooltipSubtleTextColor: colors.tooltipSubtleTextColor,
+        },
+      },
+      legend: {
+        enabled: false,
+      },
+      series: [waterfallSeries],
+      axes: {
+        x: {
+          type: "category",
+          label: {
+            autoRotate: false,
+            rotation: 0,
+          },
+        },
+        y: {
+          type: "number",
+          label: {
+            formatter: ({ value }) =>
+              amountCompactFormatter.format(Number(value)),
+          },
+          crossLines: [
+            {
+              type: "line",
+              value: 0,
+              stroke: colors.zeroLineColor,
+              strokeWidth: 1,
+              lineDash: [5, 5],
+            },
+          ],
+        },
+      },
+    }),
+    [amountCompactFormatter, colors, waterfallData, waterfallSeries],
+  );
+
+  const statCards: StatCardProps[] = [
+    {
+      label: "Total Return",
+      value: currencyFormatter.format(overview.stats.totalReturn),
+      valueColor: overview.stats.totalReturn >= 0 ? "green" : "red",
+    },
+    {
+      label: "Savings",
+      value: currencyFormatter.format(overview.stats.savings),
+      valueColor: overview.stats.savings >= 0 ? "green" : "red",
+    },
+    {
+      label: "Income",
+      value: currencyFormatter.format(overview.stats.income),
+      valueColor: "green" as const,
+    },
+    {
+      label: "Expenses",
+      value: currencyFormatter.format(overview.stats.expenses),
+      valueColor: "red" as const,
+    },
+    {
+      label: gainsLossesLabel,
+      value: currencyFormatter.format(overview.stats.gainsLosses),
+      valueColor: overview.stats.gainsLosses >= 0 ? "green" : "red",
+    },
+  ];
+
   const handlePeriodModeChange = (nextMode: string) => {
     setPickerOpened(false);
     const nextPeriodValue = getPeriodModeChangeValue({
@@ -351,34 +608,6 @@ export function PeriodPageView({
     onPeriodChange(nextPeriodValue);
     setPickerOpened(false);
   };
-
-  const statCards: StatCardProps[] = [
-    {
-      label: "Total Return",
-      value: currencyFormatter.format(overview.stats.totalReturn),
-      valueColor: overview.stats.totalReturn >= 0 ? "green" : "red",
-    },
-    {
-      label: "Savings",
-      value: currencyFormatter.format(overview.stats.savings),
-      valueColor: overview.stats.savings >= 0 ? "green" : "red",
-    },
-    {
-      label: "Total Income",
-      value: currencyFormatter.format(overview.stats.totalIncome),
-      valueColor: "green" as const,
-    },
-    {
-      label: "Total Expenses",
-      value: currencyFormatter.format(overview.stats.totalExpenses),
-      valueColor: "red" as const,
-    },
-    {
-      label: "Gains / Losses",
-      value: currencyFormatter.format(overview.stats.gainsLosses),
-      valueColor: overview.stats.gainsLosses >= 0 ? "green" : "red",
-    },
-  ];
 
   return (
     <Container fluid py="xl" px="xl">
@@ -436,34 +665,28 @@ export function PeriodPageView({
             />
           ))}
         </SimpleGrid>
-
+        <Card withBorder radius="md" p="lg">
+          <Stack gap="sm">
+            <Title order={4}>Contribution to Total Return</Title>
+            <Text c="dimmed" size="sm">
+              How Income, Expenses, and {gainsLossesLabel} lead to Total Return
+            </Text>
+            <div className={classes.chartContainer}>
+              <AgCharts options={waterfallChartOptions} />
+            </div>
+          </Stack>
+        </Card>
         <PeriodBreakdownCard
           selectedBreakdown={selectedBreakdown}
-          selectedChartType={selectedChartType}
-          breakdownTitle={breakdownTitle}
-          breadcrumbs={drillState.breadcrumbs}
-          clampedPath={drillState.clampedPath}
-          hasBreakdownAmountDiscrepancy={hasBreakdownAmountDiscrepancy}
-          hasBreakdown={hasBreakdown}
-          emptyBreakdownMessage={emptyBreakdownMessage}
-          chartOptions={chartOptions}
           onSelectedBreakdownChange={setSelectedBreakdown}
+          selectedChartType={selectedChartType}
           onSelectedChartTypeChange={setSelectedChartType}
-          onDrillPathChange={updateSelectedBreakdownPath}
-          footer={
-            overview.skippedBookingsCount > 0 ? (
-              <Alert
-                mt="md"
-                variant="light"
-                color="yellow"
-                icon={<IconAlertTriangle size={16} />}
-                title="Partial data"
-              >
-                {overview.skippedBookingsCount} valuation-related item(s) were
-                skipped because valuation data was unavailable.
-              </Alert>
-            ) : null
-          }
+          breakdownTitle={breakdownTitle}
+          breakdownSubtitle={breakdownSubtitle}
+          emptyBreakdownMessage={emptyBreakdownMessage}
+          hasBreakdown={hasBreakdown}
+          chartOptions={chartOptions}
+          skippedBookingsCount={overview.skippedBookingsCount}
         />
       </Stack>
 

@@ -22,8 +22,6 @@ import {
 } from "../shared/period";
 import {
   buildAvailableYears,
-  buildBreakdownHierarchy,
-  buildBreakdownHierarchyWithMeta,
   buildBreakdownItems,
   computeHoldingGainLossForEventSeries,
   createBreakdownBucket,
@@ -33,8 +31,9 @@ import {
   round2,
   shouldIncludeTransactionForPeriod,
   sortHoldingEventsAscending,
-  type BreakdownHierarchyAccumulatorItem,
+  type ExpenseBreakdownAccumulatorItem,
   type HoldingGainLossSeriesEvent,
+  type PeriodGroupNode,
 } from "./period-helpers";
 import {
   convertBookingValueToReference,
@@ -53,7 +52,6 @@ export {
 };
 export type { PeriodPresetValue };
 export {
-  buildBreakdownHierarchy,
   buildBreakdownItems,
   computeHoldingGainLossForEventSeries,
   createBreakdownBucket,
@@ -403,17 +401,17 @@ export const getPeriodOverview = createServerFn({
     let convertedBookingsCount = 0;
     let skippedBookingsCount = 0;
 
-    let totalIncome = 0;
-    let totalExpenses = 0;
+    let income = 0;
+    let expenses = 0;
     let explicitGainLoss = 0;
 
-    const expenseAmountByAccountId = new Map<
+    const expenseAmountByBucketId = new Map<
       string,
-      BreakdownHierarchyAccumulatorItem
+      ExpenseBreakdownAccumulatorItem
     >();
-    const incomeAmountByAccountId = new Map<
+    const incomeAmountByBucketId = new Map<
       string,
-      BreakdownHierarchyAccumulatorItem
+      ExpenseBreakdownAccumulatorItem
     >();
 
     let nextBookingIdCursor: string | undefined;
@@ -510,35 +508,47 @@ export const getPeriodOverview = createServerFn({
         if (
           booking.account.equityAccountSubtype === EquityAccountSubtype.INCOME
         ) {
-          const incomeAmount = -convertedValue;
-          totalIncome += incomeAmount;
+          income += -convertedValue;
 
-          const existingItem = incomeAmountByAccountId.get(booking.account.id);
-          if (existingItem) {
-            existingItem.amount += incomeAmount;
+          const incomeBucket = createBreakdownBucket({
+            accountId: booking.account.id,
+            accountName: booking.account.name,
+            groupId: booking.account.groupId,
+            groupById,
+          });
+
+          const existingBucket = incomeAmountByBucketId.get(incomeBucket.id);
+          if (existingBucket) {
+            existingBucket.amount += -convertedValue;
           } else {
-            incomeAmountByAccountId.set(booking.account.id, {
-              accountId: booking.account.id,
-              accountName: booking.account.name,
-              groupId: booking.account.groupId,
-              amount: incomeAmount,
+            incomeAmountByBucketId.set(incomeBucket.id, {
+              id: incomeBucket.id,
+              label: incomeBucket.label,
+              kind: incomeBucket.kind,
+              amount: -convertedValue,
             });
           }
         } else if (
           booking.account.equityAccountSubtype === EquityAccountSubtype.EXPENSE
         ) {
-          const expenseAmount = convertedValue;
-          totalExpenses += expenseAmount;
+          expenses += convertedValue;
 
-          const existingItem = expenseAmountByAccountId.get(booking.account.id);
-          if (existingItem) {
-            existingItem.amount += expenseAmount;
+          const expenseBucket = createBreakdownBucket({
+            accountId: booking.account.id,
+            accountName: booking.account.name,
+            groupId: booking.account.groupId,
+            groupById,
+          });
+
+          const existingBucket = expenseAmountByBucketId.get(expenseBucket.id);
+          if (existingBucket) {
+            existingBucket.amount += convertedValue;
           } else {
-            expenseAmountByAccountId.set(booking.account.id, {
-              accountId: booking.account.id,
-              accountName: booking.account.name,
-              groupId: booking.account.groupId,
-              amount: expenseAmount,
+            expenseAmountByBucketId.set(expenseBucket.id, {
+              id: expenseBucket.id,
+              label: expenseBucket.label,
+              kind: expenseBucket.kind,
+              amount: convertedValue,
             });
           }
         } else {
@@ -812,42 +822,19 @@ export const getPeriodOverview = createServerFn({
       );
     }
 
-    const gainsLosses =
-      explicitGainLoss + transactionGainLoss + holdingGainLoss;
-    const savings = totalIncome - totalExpenses;
-    const totalReturn = savings + gainsLosses;
+    const roundedIncome = round2(income);
+    const roundedExpenses = round2(expenses);
+    const roundedGainsLosses = round2(
+      explicitGainLoss + transactionGainLoss + holdingGainLoss,
+    );
+    const roundedSavings = round2(roundedIncome - roundedExpenses);
+    const roundedTotalReturn = round2(roundedSavings + roundedGainsLosses);
 
-    const {
-      hierarchy: expenseBreakdownHierarchy,
-      hasHiddenAmountDiscrepancy: expenseBreakdownHasHiddenAmountDiscrepancy,
-      hiddenAmountDiscrepancyNodeIds: expenseBreakdownDiscrepancyNodeIds,
-    } = buildBreakdownHierarchyWithMeta({
-      items: Array.from(expenseAmountByAccountId.values()),
-      groupById,
-    });
-    const {
-      hierarchy: incomeBreakdownHierarchy,
-      hasHiddenAmountDiscrepancy: incomeBreakdownHasHiddenAmountDiscrepancy,
-      hiddenAmountDiscrepancyNodeIds: incomeBreakdownDiscrepancyNodeIds,
-    } = buildBreakdownHierarchyWithMeta({
-      items: Array.from(incomeAmountByAccountId.values()),
-      groupById,
-    });
     const expenseBreakdown = buildBreakdownItems(
-      expenseBreakdownHierarchy.map((node) => ({
-        id: node.id,
-        label: node.label,
-        kind: node.kind,
-        amount: node.amount,
-      })),
+      Array.from(expenseAmountByBucketId.values()),
     );
     const incomeBreakdown = buildBreakdownItems(
-      incomeBreakdownHierarchy.map((node) => ({
-        id: node.id,
-        label: node.label,
-        kind: node.kind,
-        amount: node.amount,
-      })),
+      Array.from(incomeAmountByBucketId.values()),
     );
 
     const currentDay = startOfUtcDay(new Date());
@@ -880,11 +867,11 @@ export const getPeriodOverview = createServerFn({
       convertedBookingsCount,
       skippedBookingsCount,
       stats: {
-        totalReturn: round2(totalReturn),
-        savings: round2(savings),
-        totalIncome: round2(totalIncome),
-        totalExpenses: round2(totalExpenses),
-        gainsLosses: round2(gainsLosses),
+        totalReturn: roundedTotalReturn,
+        savings: roundedSavings,
+        income: roundedIncome,
+        expenses: roundedExpenses,
+        gainsLosses: roundedGainsLosses,
         explicitGainLoss: round2(explicitGainLoss),
         transactionGainLoss: round2(transactionGainLoss),
         holdingGainLoss: round2(holdingGainLoss),
@@ -892,16 +879,10 @@ export const getPeriodOverview = createServerFn({
       expenseBreakdown: {
         totalAmount: expenseBreakdown.totalAmount,
         items: expenseBreakdown.items,
-        hierarchy: expenseBreakdownHierarchy,
-        hasHiddenAmountDiscrepancy: expenseBreakdownHasHiddenAmountDiscrepancy,
-        hiddenAmountDiscrepancyNodeIds: expenseBreakdownDiscrepancyNodeIds,
       },
       incomeBreakdown: {
         totalAmount: incomeBreakdown.totalAmount,
         items: incomeBreakdown.items,
-        hierarchy: incomeBreakdownHierarchy,
-        hasHiddenAmountDiscrepancy: incomeBreakdownHasHiddenAmountDiscrepancy,
-        hiddenAmountDiscrepancyNodeIds: incomeBreakdownDiscrepancyNodeIds,
       },
     };
   });
