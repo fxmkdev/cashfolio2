@@ -117,7 +117,7 @@ export function usePeriodBreakdownChartOptions(args: {
   >(
     () => ({
       data: args.chartData,
-      height: 500,
+      height: 440,
       background: {
         visible: false,
       },
@@ -134,7 +134,7 @@ export function usePeriodBreakdownChartOptions(args: {
 
   const barChartOptions = useMemo<AgCartesianChartOptions>(
     () => ({
-      height: 500,
+      height: 440,
       background: {
         visible: false,
       },

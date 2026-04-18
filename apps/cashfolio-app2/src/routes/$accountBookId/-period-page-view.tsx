@@ -465,7 +465,7 @@ export function PeriodPageView({
   const waterfallChartOptions = useMemo<AgCartesianChartOptions>(
     () => ({
       data: waterfallData,
-      height: 420,
+      height: 360,
       background: {
         visible: false,
       },
@@ -652,47 +652,54 @@ export function PeriodPageView({
           ))}
         </SimpleGrid>
 
-        <Card withBorder radius="md" p="lg">
-          <Stack gap="sm">
-            <Title order={4}>Contribution to Total Return</Title>
-            <Text c="dimmed" size="sm">
-              How Income, Expenses, and {gainsLossesLabel} lead to Total Return
-            </Text>
-            <div className={classes.chartContainer}>
-              <AgCharts options={waterfallChartOptions} />
-            </div>
-          </Stack>
-        </Card>
+        <SimpleGrid
+          cols={{ base: 1, lg: 2 }}
+          spacing="lg"
+          data-testid="period-analysis-section"
+        >
+          <Card withBorder radius="md" p="md">
+            <Stack gap="sm">
+              <Title order={4}>Contribution to Total Return</Title>
+              <Text c="dimmed" size="sm">
+                How Income, Expenses, and {gainsLossesLabel} lead to Total
+                Return
+              </Text>
+              <div className={classes.chartContainer}>
+                <AgCharts options={waterfallChartOptions} />
+              </div>
+            </Stack>
+          </Card>
 
-        <PeriodBreakdownCard
-          selectedBreakdown={selectedBreakdown}
-          selectedChartType={selectedChartType}
-          breakdownTitle={breakdownTitle}
-          breakdownSubtitle={breakdownSubtitle}
-          breadcrumbs={drillState.breadcrumbs}
-          clampedPath={drillState.clampedPath}
-          hasBreakdownAmountDiscrepancy={hasBreakdownAmountDiscrepancy}
-          hasBreakdown={hasBreakdown}
-          emptyBreakdownMessage={emptyBreakdownMessage}
-          chartOptions={chartOptions}
-          onSelectedBreakdownChange={setSelectedBreakdown}
-          onSelectedChartTypeChange={setSelectedChartType}
-          onDrillPathChange={updateSelectedBreakdownPath}
-          footer={
-            overview.skippedBookingsCount > 0 ? (
-              <Alert
-                mt="md"
-                variant="light"
-                color="yellow"
-                icon={<IconAlertTriangle size={16} />}
-                title="Partial data"
-              >
-                {overview.skippedBookingsCount} valuation-related item(s) were
-                skipped because valuation data was unavailable.
-              </Alert>
-            ) : null
-          }
-        />
+          <PeriodBreakdownCard
+            selectedBreakdown={selectedBreakdown}
+            selectedChartType={selectedChartType}
+            breakdownTitle={breakdownTitle}
+            breakdownSubtitle={breakdownSubtitle}
+            breadcrumbs={drillState.breadcrumbs}
+            clampedPath={drillState.clampedPath}
+            hasBreakdownAmountDiscrepancy={hasBreakdownAmountDiscrepancy}
+            hasBreakdown={hasBreakdown}
+            emptyBreakdownMessage={emptyBreakdownMessage}
+            chartOptions={chartOptions}
+            onSelectedBreakdownChange={setSelectedBreakdown}
+            onSelectedChartTypeChange={setSelectedChartType}
+            onDrillPathChange={updateSelectedBreakdownPath}
+            footer={
+              overview.skippedBookingsCount > 0 ? (
+                <Alert
+                  mt="md"
+                  variant="light"
+                  color="yellow"
+                  icon={<IconAlertTriangle size={16} />}
+                  title="Partial data"
+                >
+                  {overview.skippedBookingsCount} valuation-related item(s) were
+                  skipped because valuation data was unavailable.
+                </Alert>
+              ) : null
+            }
+          />
+        </SimpleGrid>
       </Stack>
 
       {selectedPeriodValue !== overview.selectedPeriodValue ? (
