@@ -3,7 +3,6 @@ import type {
   AgDonutSeriesOptions,
   AgPolarChartOptions,
 } from "ag-charts-community";
-import { _Theme } from "ag-charts-community";
 import { useMemo } from "react";
 import type { DashboardChartThemeColors } from "./-dashboard-chart-theme";
 import type { BreakdownChartType } from "./-period-breakdown-types";
@@ -24,23 +23,6 @@ export type PeriodBreakdownNodeDatum = PeriodBreakdownChartDatum;
 export type PeriodBreakdownChartOptions =
   | AgPolarChartOptions<PeriodBreakdownChartDatum>
   | AgCartesianChartOptions;
-
-const defaultChartTheme = _Theme.getChartTheme(undefined);
-const defaultPaletteFills = defaultChartTheme.palette.fills;
-const defaultPaletteStrokes = defaultChartTheme.palette.strokes;
-
-function getDefaultPaletteColor(index: number) {
-  if (defaultPaletteFills.length === 0) {
-    return undefined;
-  }
-
-  return {
-    fill: defaultPaletteFills[index % defaultPaletteFills.length],
-    stroke:
-      defaultPaletteStrokes[index % defaultPaletteStrokes.length] ??
-      defaultPaletteFills[index % defaultPaletteFills.length],
-  };
-}
 
 function buildBreakdownTooltipData(args: {
   label: string;
@@ -81,18 +63,6 @@ export function usePeriodBreakdownChartOptions(args: {
   totalBreakdownAmountLabel: string;
   onNodeDoubleClick: (datum: PeriodBreakdownNodeDatum) => void;
 }): PeriodBreakdownChartOptions {
-  const colorByDatumId = useMemo(
-    () =>
-      new Map(
-        args.chartData
-          .map((datum, index) => [datum.id, getDefaultPaletteColor(index)])
-          .filter(
-            (entry): entry is [string, { fill: string; stroke: string }] =>
-              entry[1] !== undefined,
-          ),
-      ),
-    [args.chartData],
-  );
   const amountCompactFormatter = useMemo(
     () =>
       new Intl.NumberFormat("en-CH", {
@@ -164,7 +134,6 @@ export function usePeriodBreakdownChartOptions(args: {
 
   const barChartOptions = useMemo<AgCartesianChartOptions>(
     () => ({
-      data: args.chartData,
       height: 500,
       background: {
         visible: false,
@@ -176,39 +145,26 @@ export function usePeriodBreakdownChartOptions(args: {
         enabled: false,
         position: "bottom",
       },
-      series: [
-        {
-          type: "bar",
-          direction: "vertical",
-          grouped: false,
-          widthRatio: 0.72,
-          xKey: "label",
-          yKey: "amount",
-          yName: "Amount",
-          itemStyler: ({ datum }) => {
-            const color = colorByDatumId.get(
-              (datum as PeriodBreakdownChartDatum).id,
-            );
-            if (!color) {
-              return {};
-            }
-
-            return {
-              fill: color.fill,
-              stroke: color.stroke,
-            };
-          },
-          tooltip: {
-            renderer: ({ datum }) =>
-              buildBreakdownTooltipData(datum as PeriodBreakdownChartDatum),
-          },
-          listeners: {
-            seriesNodeDoubleClick: ({ datum }) => {
-              args.onNodeDoubleClick(datum as PeriodBreakdownChartDatum);
-            },
+      series: args.chartData.map((datum) => ({
+        type: "bar" as const,
+        data: [datum],
+        direction: "vertical" as const,
+        grouped: false,
+        widthRatio: 0.72,
+        xKey: "label" as const,
+        yKey: "amount" as const,
+        yName: "Amount",
+        showInLegend: false,
+        tooltip: {
+          renderer: ({ datum }: { datum: PeriodBreakdownChartDatum }) =>
+            buildBreakdownTooltipData(datum),
+        },
+        listeners: {
+          seriesNodeDoubleClick: ({ datum }) => {
+            args.onNodeDoubleClick(datum as PeriodBreakdownChartDatum);
           },
         },
-      ],
+      })),
       axes: {
         x: {
           type: "category",
@@ -229,7 +185,6 @@ export function usePeriodBreakdownChartOptions(args: {
       amountCompactFormatter,
       args.colors,
       args.chartData,
-      colorByDatumId,
       args.onNodeDoubleClick,
     ],
   );
