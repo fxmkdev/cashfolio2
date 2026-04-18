@@ -38,6 +38,10 @@ file and the linked docs are for `apps/cashfolio-app2`.
   otherwise.
 - After you address a pull request review comment, resolve that conversation in
   the PR.
+- `tools/importer` is deprecated and no longer maintained. Do not upgrade or
+  refactor it unless explicitly requested.
+- Keep `@types/node` aligned with the current runtime major (Node 24). Do not
+  upgrade to Node 25+ typings until the runtime migration is planned.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution guidelines.
 
