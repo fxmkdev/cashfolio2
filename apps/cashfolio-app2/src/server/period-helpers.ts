@@ -254,11 +254,12 @@ function finalizeBreakdownHierarchyNodes(
 ): {
   hierarchy: BreakdownHierarchyNode[];
   hasHiddenAmountDiscrepancy: boolean;
+  hiddenAmountDiscrepancyNodeIdsInSubtree: Set<string>;
   rawDisplayedAmount: number;
   prunedNodeCount: number;
 } {
   const nodes: BreakdownHierarchyNode[] = [];
-  let hasHiddenAmountDiscrepancy = false;
+  const hiddenAmountDiscrepancyNodeIdsInSubtree = new Set<string>();
   let rawDisplayedAmount = 0;
   let prunedNodeCount = 0;
 
@@ -282,11 +283,11 @@ function finalizeBreakdownHierarchyNodes(
 
     const {
       hierarchy: children,
-      hasHiddenAmountDiscrepancy: childDiscrepancy,
+      hasHiddenAmountDiscrepancy: hasChildDiscrepancy,
+      hiddenAmountDiscrepancyNodeIdsInSubtree: childDiscrepancyNodeIds,
       rawDisplayedAmount: rawDisplayedChildrenAmount,
       prunedNodeCount: prunedChildNodeCount,
     } = finalizeBreakdownHierarchyNodes(node.childrenById);
-    hasHiddenAmountDiscrepancy ||= childDiscrepancy;
     prunedNodeCount += prunedChildNodeCount;
 
     const roundedAmount = round2(node.amount);
@@ -301,7 +302,13 @@ function finalizeBreakdownHierarchyNodes(
       prunedChildNodeCount > 0 &&
       roundedDisplayedChildrenAmount !== roundedAmount
     ) {
-      hasHiddenAmountDiscrepancy = true;
+      hiddenAmountDiscrepancyNodeIdsInSubtree.add(node.id);
+    } else if (hasChildDiscrepancy) {
+      hiddenAmountDiscrepancyNodeIdsInSubtree.add(node.id);
+    }
+
+    for (const nodeId of childDiscrepancyNodeIds) {
+      hiddenAmountDiscrepancyNodeIdsInSubtree.add(nodeId);
     }
 
     rawDisplayedAmount += node.amount;
@@ -323,7 +330,9 @@ function finalizeBreakdownHierarchyNodes(
 
   return {
     hierarchy: nodes,
-    hasHiddenAmountDiscrepancy,
+    hasHiddenAmountDiscrepancy:
+      hiddenAmountDiscrepancyNodeIdsInSubtree.size > 0,
+    hiddenAmountDiscrepancyNodeIdsInSubtree,
     rawDisplayedAmount,
     prunedNodeCount,
   };
@@ -335,6 +344,7 @@ export function buildBreakdownHierarchyWithMeta(args: {
 }): {
   hierarchy: BreakdownHierarchyNode[];
   hasHiddenAmountDiscrepancy: boolean;
+  hiddenAmountDiscrepancyNodeIds: string[];
 } {
   const rootChildrenById = new Map<string, MutableBreakdownHierarchyNode>();
 
@@ -372,12 +382,18 @@ export function buildBreakdownHierarchyWithMeta(args: {
     accountNode.amount += item.amount;
   }
 
-  const { hierarchy, hasHiddenAmountDiscrepancy } =
-    finalizeBreakdownHierarchyNodes(rootChildrenById);
+  const {
+    hierarchy,
+    hasHiddenAmountDiscrepancy,
+    hiddenAmountDiscrepancyNodeIdsInSubtree,
+  } = finalizeBreakdownHierarchyNodes(rootChildrenById);
 
   return {
     hierarchy,
     hasHiddenAmountDiscrepancy,
+    hiddenAmountDiscrepancyNodeIds: Array.from(
+      hiddenAmountDiscrepancyNodeIdsInSubtree,
+    ),
   };
 }
 

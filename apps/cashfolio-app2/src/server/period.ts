@@ -820,6 +820,7 @@ export const getPeriodOverview = createServerFn({
     const {
       hierarchy: expenseBreakdownHierarchy,
       hasHiddenAmountDiscrepancy: expenseBreakdownHasHiddenAmountDiscrepancy,
+      hiddenAmountDiscrepancyNodeIds: expenseBreakdownDiscrepancyNodeIds,
     } = buildBreakdownHierarchyWithMeta({
       items: Array.from(expenseAmountByAccountId.values()),
       groupById,
@@ -827,6 +828,7 @@ export const getPeriodOverview = createServerFn({
     const {
       hierarchy: incomeBreakdownHierarchy,
       hasHiddenAmountDiscrepancy: incomeBreakdownHasHiddenAmountDiscrepancy,
+      hiddenAmountDiscrepancyNodeIds: incomeBreakdownDiscrepancyNodeIds,
     } = buildBreakdownHierarchyWithMeta({
       items: Array.from(incomeAmountByAccountId.values()),
       groupById,
@@ -892,12 +894,14 @@ export const getPeriodOverview = createServerFn({
         items: expenseBreakdown.items,
         hierarchy: expenseBreakdownHierarchy,
         hasHiddenAmountDiscrepancy: expenseBreakdownHasHiddenAmountDiscrepancy,
+        hiddenAmountDiscrepancyNodeIds: expenseBreakdownDiscrepancyNodeIds,
       },
       incomeBreakdown: {
         totalAmount: incomeBreakdown.totalAmount,
         items: incomeBreakdown.items,
         hierarchy: incomeBreakdownHierarchy,
         hasHiddenAmountDiscrepancy: incomeBreakdownHasHiddenAmountDiscrepancy,
+        hiddenAmountDiscrepancyNodeIds: incomeBreakdownDiscrepancyNodeIds,
       },
     };
   });

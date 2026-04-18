@@ -535,6 +535,11 @@ describe("breakdown hierarchy", () => {
     });
 
     expect(result.hasHiddenAmountDiscrepancy).toBe(true);
+    expect(result.hiddenAmountDiscrepancyNodeIds).toEqual([
+      "group:expenses",
+      "group:housing",
+      "group:rent",
+    ]);
     expect(result.hierarchy).toEqual([
       {
         id: "group:expenses",
@@ -590,5 +595,6 @@ describe("breakdown hierarchy", () => {
     });
 
     expect(result.hasHiddenAmountDiscrepancy).toBe(false);
+    expect(result.hiddenAmountDiscrepancyNodeIds).toEqual([]);
   });
 });

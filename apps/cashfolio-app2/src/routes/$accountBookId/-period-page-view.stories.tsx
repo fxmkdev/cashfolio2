@@ -146,6 +146,7 @@ const baseOverview: PeriodPageViewProps["overview"] = {
   expenseBreakdown: {
     totalAmount: 5500,
     hasHiddenAmountDiscrepancy: false,
+    hiddenAmountDiscrepancyNodeIds: [],
     items: [
       {
         id: "group:housing",
@@ -277,6 +278,7 @@ const baseOverview: PeriodPageViewProps["overview"] = {
   incomeBreakdown: {
     totalAmount: 8000,
     hasHiddenAmountDiscrepancy: false,
+    hiddenAmountDiscrepancyNodeIds: [],
     items: [
       {
         id: "group:salary",
@@ -431,6 +433,7 @@ export const NoExpenseData: Story = {
       expenseBreakdown: {
         totalAmount: 0,
         hasHiddenAmountDiscrepancy: false,
+        hiddenAmountDiscrepancyNodeIds: [],
         items: [],
         hierarchy: [],
       },

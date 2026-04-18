@@ -18,23 +18,7 @@ export type PeriodBreakdownChartDatum = {
   percentageLabel: string;
 };
 
-type PeriodBreakdownBarSeriesDefinition = {
-  key: string;
-  label: string;
-};
-
-type PeriodBreakdownBarDatum = {
-  id: string;
-  kind: "group" | "account";
-  isDrillable: boolean;
-  label: string;
-  amountLabel: string;
-  percentageLabel: string;
-} & Record<string, number | null | string | boolean>;
-
-export type PeriodBreakdownNodeDatum =
-  | PeriodBreakdownChartDatum
-  | PeriodBreakdownBarDatum;
+export type PeriodBreakdownNodeDatum = PeriodBreakdownChartDatum;
 
 export type PeriodBreakdownChartOptions =
   | AgPolarChartOptions<PeriodBreakdownChartDatum>
@@ -86,38 +70,6 @@ export function usePeriodBreakdownChartOptions(args: {
         maximumFractionDigits: 1,
       }),
     [],
-  );
-
-  const barSeriesDefinitions = useMemo<PeriodBreakdownBarSeriesDefinition[]>(
-    () =>
-      args.chartData.map((item, index) => ({
-        key: `amount_${index}`,
-        label: item.label,
-      })),
-    [args.chartData],
-  );
-
-  const barChartData = useMemo<PeriodBreakdownBarDatum[]>(
-    () =>
-      args.chartData.map((item, itemIndex) => {
-        const row: PeriodBreakdownBarDatum = {
-          id: item.id,
-          kind: item.kind,
-          isDrillable: item.isDrillable,
-          label: item.label,
-          amountLabel: item.amountLabel,
-          percentageLabel: item.percentageLabel,
-        };
-
-        for (const seriesDefinition of barSeriesDefinitions) {
-          row[seriesDefinition.key] = null;
-        }
-
-        row[barSeriesDefinitions[itemIndex].key] = item.amount;
-
-        return row;
-      }),
-    [barSeriesDefinitions, args.chartData],
   );
 
   const donutSeries = useMemo<
@@ -182,7 +134,7 @@ export function usePeriodBreakdownChartOptions(args: {
 
   const barChartOptions = useMemo<AgCartesianChartOptions>(
     () => ({
-      data: barChartData,
+      data: args.chartData,
       height: 500,
       background: {
         visible: false,
@@ -191,28 +143,29 @@ export function usePeriodBreakdownChartOptions(args: {
         params: buildCommonChartThemeParams(args.colors),
       },
       legend: {
-        enabled: true,
+        enabled: false,
         position: "bottom",
       },
-      series: barSeriesDefinitions.map((seriesDefinition) => ({
-        type: "bar",
-        direction: "vertical",
-        grouped: false,
-        widthRatio: 0.72,
-        xKey: "label",
-        yKey: seriesDefinition.key,
-        yName: seriesDefinition.label,
-        legendItemName: seriesDefinition.label,
-        tooltip: {
-          renderer: ({ datum }) =>
-            buildBreakdownTooltipData(datum as PeriodBreakdownBarDatum),
-        },
-        listeners: {
-          seriesNodeDoubleClick: ({ datum }) => {
-            args.onNodeDoubleClick(datum as PeriodBreakdownBarDatum);
+      series: [
+        {
+          type: "bar",
+          direction: "vertical",
+          grouped: false,
+          widthRatio: 0.72,
+          xKey: "label",
+          yKey: "amount",
+          yName: "Amount",
+          tooltip: {
+            renderer: ({ datum }) =>
+              buildBreakdownTooltipData(datum as PeriodBreakdownChartDatum),
+          },
+          listeners: {
+            seriesNodeDoubleClick: ({ datum }) => {
+              args.onNodeDoubleClick(datum as PeriodBreakdownChartDatum);
+            },
           },
         },
-      })),
+      ],
       axes: {
         x: {
           type: "category",
@@ -231,9 +184,8 @@ export function usePeriodBreakdownChartOptions(args: {
     }),
     [
       amountCompactFormatter,
-      barChartData,
-      barSeriesDefinitions,
       args.colors,
+      args.chartData,
       args.onNodeDoubleClick,
     ],
   );

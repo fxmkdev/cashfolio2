@@ -312,8 +312,22 @@ export function PeriodPageView({
   );
 
   const hasBreakdown = chartData.length > 0;
-  const hasBreakdownAmountDiscrepancy =
-    activeBreakdown.hasHiddenAmountDiscrepancy;
+  const currentBreakdownNodeId =
+    drillState.currentPathNodes[drillState.currentPathNodes.length - 1]?.id ??
+    null;
+  const hasBreakdownAmountDiscrepancy = useMemo(() => {
+    if (currentBreakdownNodeId == null) {
+      return activeBreakdown.hasHiddenAmountDiscrepancy;
+    }
+
+    return activeBreakdown.hiddenAmountDiscrepancyNodeIds.includes(
+      currentBreakdownNodeId,
+    );
+  }, [
+    activeBreakdown.hasHiddenAmountDiscrepancy,
+    activeBreakdown.hiddenAmountDiscrepancyNodeIds,
+    currentBreakdownNodeId,
+  ]);
   const updateSelectedBreakdownPath = useCallback(
     (nextPath: string[]) => {
       onDrillPathByBreakdownChange({
