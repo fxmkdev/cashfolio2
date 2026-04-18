@@ -1,4 +1,8 @@
 import { Unit } from "../.prisma-client/enums";
+import type {
+  BreakdownHierarchyNode,
+  BreakdownNodeKind,
+} from "../shared/breakdown-hierarchy";
 
 export type PeriodGroupNode = {
   id: string;
@@ -9,13 +13,20 @@ export type PeriodGroupNode = {
 type BreakdownBucket = {
   id: string;
   label: string;
-  kind: "group" | "account";
+  kind: BreakdownNodeKind;
 };
 
 export type ExpenseBreakdownAccumulatorItem = {
   id: string;
   label: string;
-  kind: "group" | "account";
+  kind: BreakdownNodeKind;
+  amount: number;
+};
+
+export type BreakdownHierarchyAccumulatorItem = {
+  accountId: string;
+  accountName: string;
+  groupId: string | null;
   amount: number;
 };
 
@@ -194,6 +205,210 @@ export function buildBreakdownItems(items: ExpenseBreakdownAccumulatorItem[]): {
     ),
     items: sortedItems,
   };
+}
+
+type MutableBreakdownHierarchyNode = {
+  id: string;
+  label: string;
+  kind: BreakdownNodeKind;
+  amount: number;
+  childrenById: Map<string, MutableBreakdownHierarchyNode>;
+};
+
+function createMutableBreakdownHierarchyNode(args: {
+  id: string;
+  label: string;
+  kind: BreakdownNodeKind;
+}): MutableBreakdownHierarchyNode {
+  return {
+    id: args.id,
+    label: args.label,
+    kind: args.kind,
+    amount: 0,
+    childrenById: new Map(),
+  };
+}
+
+function getOrCreateMutableBreakdownHierarchyNode(args: {
+  nodeId: string;
+  label: string;
+  kind: BreakdownNodeKind;
+  childrenById: Map<string, MutableBreakdownHierarchyNode>;
+}): MutableBreakdownHierarchyNode {
+  const existing = args.childrenById.get(args.nodeId);
+  if (existing) {
+    return existing;
+  }
+
+  const created = createMutableBreakdownHierarchyNode({
+    id: args.nodeId,
+    label: args.label,
+    kind: args.kind,
+  });
+  args.childrenById.set(args.nodeId, created);
+  return created;
+}
+
+function finalizeBreakdownHierarchyNodes(
+  childrenById: Map<string, MutableBreakdownHierarchyNode>,
+): {
+  hierarchy: BreakdownHierarchyNode[];
+  hasHiddenAmountDiscrepancy: boolean;
+  hiddenAmountDiscrepancyNodeIdsInSubtree: Set<string>;
+  rawDisplayedAmount: number;
+  prunedNodeCount: number;
+} {
+  const nodes: BreakdownHierarchyNode[] = [];
+  const hiddenAmountDiscrepancyNodeIdsInSubtree = new Set<string>();
+  let rawDisplayedAmount = 0;
+  let prunedNodeCount = 0;
+
+  for (const node of childrenById.values()) {
+    if (node.kind === "account") {
+      const roundedAmount = round2(node.amount);
+
+      if (roundedAmount <= 0) {
+        prunedNodeCount += 1;
+        continue;
+      }
+
+      rawDisplayedAmount += node.amount;
+      nodes.push({
+        id: node.id,
+        label: node.label,
+        kind: node.kind,
+        amount: roundedAmount,
+        children: [],
+      });
+      continue;
+    }
+
+    const {
+      hierarchy: children,
+      hasHiddenAmountDiscrepancy: hasChildDiscrepancy,
+      hiddenAmountDiscrepancyNodeIdsInSubtree: childDiscrepancyNodeIds,
+      rawDisplayedAmount: rawDisplayedChildrenAmount,
+      prunedNodeCount: prunedChildNodeCount,
+    } = finalizeBreakdownHierarchyNodes(node.childrenById);
+    prunedNodeCount += prunedChildNodeCount;
+
+    const roundedAmount = round2(node.amount);
+    const roundedDisplayedChildrenAmount = round2(rawDisplayedChildrenAmount);
+
+    if (roundedAmount <= 0) {
+      prunedNodeCount += 1;
+      continue;
+    }
+
+    if (children.length === 0) {
+      prunedNodeCount += 1;
+      continue;
+    }
+
+    if (
+      prunedChildNodeCount > 0 &&
+      roundedDisplayedChildrenAmount !== roundedAmount
+    ) {
+      hiddenAmountDiscrepancyNodeIdsInSubtree.add(node.id);
+    } else if (hasChildDiscrepancy) {
+      hiddenAmountDiscrepancyNodeIdsInSubtree.add(node.id);
+    }
+
+    for (const nodeId of childDiscrepancyNodeIds) {
+      hiddenAmountDiscrepancyNodeIdsInSubtree.add(nodeId);
+    }
+
+    rawDisplayedAmount += node.amount;
+    nodes.push({
+      id: node.id,
+      label: node.label,
+      kind: node.kind,
+      amount: roundedAmount,
+      children,
+    });
+  }
+
+  nodes.sort(
+    (a, b) =>
+      b.amount - a.amount ||
+      a.label.localeCompare(b.label, "en") ||
+      a.id.localeCompare(b.id),
+  );
+
+  return {
+    hierarchy: nodes,
+    hasHiddenAmountDiscrepancy:
+      hiddenAmountDiscrepancyNodeIdsInSubtree.size > 0,
+    hiddenAmountDiscrepancyNodeIdsInSubtree,
+    rawDisplayedAmount,
+    prunedNodeCount,
+  };
+}
+
+export function buildBreakdownHierarchyWithMeta(args: {
+  items: BreakdownHierarchyAccumulatorItem[];
+  groupById: Map<string, PeriodGroupNode>;
+}): {
+  hierarchy: BreakdownHierarchyNode[];
+  hasHiddenAmountDiscrepancy: boolean;
+  hiddenAmountDiscrepancyNodeIds: string[];
+} {
+  const rootChildrenById = new Map<string, MutableBreakdownHierarchyNode>();
+
+  for (const item of args.items) {
+    if (item.amount === 0) {
+      continue;
+    }
+
+    const groupPath = item.groupId
+      ? resolveGroupPathToRoot({
+          groupId: item.groupId,
+          groupById: args.groupById,
+        }).reverse()
+      : [];
+
+    let currentChildrenById = rootChildrenById;
+
+    for (const group of groupPath) {
+      const groupNode = getOrCreateMutableBreakdownHierarchyNode({
+        nodeId: `group:${group.id}`,
+        label: group.name,
+        kind: "group",
+        childrenById: currentChildrenById,
+      });
+      groupNode.amount += item.amount;
+      currentChildrenById = groupNode.childrenById;
+    }
+
+    const accountNode = getOrCreateMutableBreakdownHierarchyNode({
+      nodeId: `account:${item.accountId}`,
+      label: item.accountName,
+      kind: "account",
+      childrenById: currentChildrenById,
+    });
+    accountNode.amount += item.amount;
+  }
+
+  const {
+    hierarchy,
+    hasHiddenAmountDiscrepancy,
+    hiddenAmountDiscrepancyNodeIdsInSubtree,
+  } = finalizeBreakdownHierarchyNodes(rootChildrenById);
+
+  return {
+    hierarchy,
+    hasHiddenAmountDiscrepancy,
+    hiddenAmountDiscrepancyNodeIds: Array.from(
+      hiddenAmountDiscrepancyNodeIdsInSubtree,
+    ).sort((a, b) => a.localeCompare(b, "en")),
+  };
+}
+
+export function buildBreakdownHierarchy(args: {
+  items: BreakdownHierarchyAccumulatorItem[];
+  groupById: Map<string, PeriodGroupNode>;
+}): BreakdownHierarchyNode[] {
+  return buildBreakdownHierarchyWithMeta(args).hierarchy;
 }
 
 export function computeHoldingGainLossForEventSeries(args: {
