@@ -44,6 +44,14 @@ type PeriodBreakdownCardProps = {
   footer?: ReactNode;
 };
 
+function isBreakdownChartType(value: string): value is BreakdownChartType {
+  return value === "donut" || value === "bar";
+}
+
+function isBreakdownType(value: string): value is BreakdownType {
+  return value === "expense" || value === "income";
+}
+
 export function PeriodBreakdownCard({
   selectedBreakdown,
   selectedChartType,
@@ -69,9 +77,11 @@ export function PeriodBreakdownCard({
               size="sm"
               aria-label="Breakdown chart type"
               value={selectedChartType}
-              onChange={(value) =>
-                onSelectedChartTypeChange(value as BreakdownChartType)
-              }
+              onChange={(value) => {
+                if (isBreakdownChartType(value)) {
+                  onSelectedChartTypeChange(value);
+                }
+              }}
               data={[
                 {
                   label: (
@@ -95,10 +105,13 @@ export function PeriodBreakdownCard({
             />
             <SegmentedControl
               size="sm"
+              aria-label="Breakdown type"
               value={selectedBreakdown}
-              onChange={(value) =>
-                onSelectedBreakdownChange(value as BreakdownType)
-              }
+              onChange={(value) => {
+                if (isBreakdownType(value)) {
+                  onSelectedBreakdownChange(value);
+                }
+              }}
               data={[
                 { label: "Expense", value: "expense" },
                 { label: "Income", value: "income" },
