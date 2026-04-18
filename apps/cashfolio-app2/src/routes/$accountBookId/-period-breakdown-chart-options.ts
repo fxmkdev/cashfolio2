@@ -24,6 +24,19 @@ export type PeriodBreakdownChartOptions =
   | AgPolarChartOptions<PeriodBreakdownChartDatum>
   | AgCartesianChartOptions;
 
+const BREAKDOWN_PALETTE = [
+  { fill: "#5090dc", stroke: "#2f64a8" },
+  { fill: "#ffa03a", stroke: "#c06f1d" },
+  { fill: "#459d55", stroke: "#2e6f3a" },
+  { fill: "#d14a61", stroke: "#923040" },
+  { fill: "#8f6aa8", stroke: "#634779" },
+  { fill: "#5aa2ae", stroke: "#3b7279" },
+  { fill: "#f2cf5b", stroke: "#ba9840" },
+  { fill: "#b3bf2f", stroke: "#7f8a1f" },
+  { fill: "#f58370", stroke: "#b55e50" },
+  { fill: "#9f6f55", stroke: "#704d39" },
+] as const;
+
 function buildBreakdownTooltipData(args: {
   label: string;
   amountLabel: string;
@@ -63,6 +76,16 @@ export function usePeriodBreakdownChartOptions(args: {
   totalBreakdownAmountLabel: string;
   onNodeDoubleClick: (datum: PeriodBreakdownNodeDatum) => void;
 }): PeriodBreakdownChartOptions {
+  const colorByDatumId = useMemo(
+    () =>
+      new Map(
+        args.chartData.map((datum, index) => [
+          datum.id,
+          BREAKDOWN_PALETTE[index % BREAKDOWN_PALETTE.length],
+        ]),
+      ),
+    [args.chartData],
+  );
   const amountCompactFormatter = useMemo(
     () =>
       new Intl.NumberFormat("en-CH", {
@@ -86,6 +109,8 @@ export function usePeriodBreakdownChartOptions(args: {
         calloutLabel: {
           minAngle: 10,
         },
+        fills: BREAKDOWN_PALETTE.map((color) => color.fill),
+        strokes: BREAKDOWN_PALETTE.map((color) => color.stroke),
         innerLabels: [
           {
             text: args.totalBreakdownAmountLabel,
@@ -155,6 +180,19 @@ export function usePeriodBreakdownChartOptions(args: {
           xKey: "label",
           yKey: "amount",
           yName: "Amount",
+          itemStyler: ({ datum }) => {
+            const color = colorByDatumId.get(
+              (datum as PeriodBreakdownChartDatum).id,
+            );
+            if (!color) {
+              return {};
+            }
+
+            return {
+              fill: color.fill,
+              stroke: color.stroke,
+            };
+          },
           tooltip: {
             renderer: ({ datum }) =>
               buildBreakdownTooltipData(datum as PeriodBreakdownChartDatum),
@@ -186,6 +224,7 @@ export function usePeriodBreakdownChartOptions(args: {
       amountCompactFormatter,
       args.colors,
       args.chartData,
+      colorByDatumId,
       args.onNodeDoubleClick,
     ],
   );
