@@ -59,6 +59,9 @@ type StatCardProps = {
   value: string;
   valueColor: "green" | "red";
 };
+type StatCardData = StatCardProps & {
+  id: string;
+};
 type BreakdownBarDatum = {
   label: string;
   amountLabel: string;
@@ -173,7 +176,7 @@ export function PeriodPageView({
   const emptyBreakdownMessage =
     selectedBreakdown === "expense"
       ? "No expenses were found for this period."
-      : "No income bookings were found for this period.";
+      : "No income was found for this period.";
 
   const chartData = useMemo<BreakdownDatum[]>(
     () =>
@@ -530,28 +533,33 @@ export function PeriodPageView({
     [amountCompactFormatter, colors, waterfallData, waterfallSeries],
   );
 
-  const statCards: StatCardProps[] = [
+  const statCards: StatCardData[] = [
     {
+      id: "totalReturn",
       label: "Total Return",
       value: currencyFormatter.format(overview.stats.totalReturn),
       valueColor: overview.stats.totalReturn >= 0 ? "green" : "red",
     },
     {
+      id: "savings",
       label: "Savings",
       value: currencyFormatter.format(overview.stats.savings),
       valueColor: overview.stats.savings >= 0 ? "green" : "red",
     },
     {
+      id: "income",
       label: "Income",
       value: currencyFormatter.format(overview.stats.income),
       valueColor: "green" as const,
     },
     {
+      id: "expenses",
       label: "Expenses",
       value: currencyFormatter.format(overview.stats.expenses),
       valueColor: "red" as const,
     },
     {
+      id: "gainsLosses",
       label: gainsLossesLabel,
       value: currencyFormatter.format(overview.stats.gainsLosses),
       valueColor: overview.stats.gainsLosses >= 0 ? "green" : "red",
@@ -658,7 +666,7 @@ export function PeriodPageView({
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 5 }} spacing="lg">
           {statCards.map((card) => (
             <StatCard
-              key={card.label}
+              key={card.id}
               label={card.label}
               value={card.value}
               valueColor={card.valueColor}
