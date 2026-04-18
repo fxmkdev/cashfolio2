@@ -439,6 +439,45 @@ test("period page shows KPI waterfall and updated income/expenses wording", asyn
   ).toBeVisible();
 });
 
+test("period picker opens on selected month/year page", async ({ page }) => {
+  await seedThreeBookingSplitTransaction({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Period Min Date Seed",
+    currentAccountId: seeded.cashAccount.id,
+    debitAccountIds: [seeded.savingsAccount.id, seeded.expenseAccount.id],
+    date: "2017-01-07T00:00:00.000Z",
+  });
+
+  await seedThreeBookingSplitTransaction({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Period Selected Date Seed",
+    currentAccountId: seeded.cashAccount.id,
+    debitAccountIds: [seeded.savingsAccount.id, seeded.expenseAccount.id],
+    date: "2025-04-07T00:00:00.000Z",
+  });
+
+  await page.goto(`/${seeded.accountBookId}/period?period=2025-04`);
+  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+
+  const periodPickerTrigger = page.getByTestId("period-picker-trigger");
+  await expect(periodPickerTrigger).toContainText("April 2025");
+
+  await periodPickerTrigger.click();
+  const monthPicker = page.getByTestId("period-month-picker");
+  await expect(monthPicker).toBeVisible();
+  await expect(monthPicker.getByRole("button", { name: "2025" })).toBeVisible();
+
+  await page.getByRole("radio", { name: "Year" }).click();
+  await expect(periodPickerTrigger).toContainText("2025");
+
+  await periodPickerTrigger.click();
+  const yearPicker = page.getByTestId("period-year-picker");
+  await expect(yearPicker).toBeVisible();
+  await expect(
+    yearPicker.getByRole("button", { name: "2025" }),
+  ).toHaveAttribute("data-selected", "true");
+});
+
 test("dashboard asset allocation donut renders for positive top-level asset groups", async ({
   page,
 }) => {
