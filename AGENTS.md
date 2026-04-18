@@ -50,7 +50,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution guidelines.
 - Shared workspace docs: `docs/`
 - App-specific architecture docs:
   - `apps/cashfolio-app2/docs/`
-  - `apps/cashfolio-app/docs/` (legacy app-local docs)
+  - `apps/cashfolio-app/docs/` (deprecated legacy app-local docs)
 
 ## Development Commands
 

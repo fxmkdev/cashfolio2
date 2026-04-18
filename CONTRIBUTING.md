@@ -56,7 +56,8 @@ need to be strictly Conventional Commit formatted.
 
 ## Scope Guidance
 
-- Use app or area scope when helpful (`cashfolio-app2`, `cashfolio-app`,
+- Use app or area scope when helpful (`cashfolio-app2`, `cashfolio-app`
+  [deprecated legacy app],
   `infra`, `docs`, `cli`).
 - Keep descriptions concise, imperative, and behavior-focused.
 
