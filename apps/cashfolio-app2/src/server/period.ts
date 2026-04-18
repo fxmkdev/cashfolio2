@@ -22,6 +22,8 @@ import {
 } from "../shared/period";
 import {
   buildAvailableYears,
+  buildBreakdownHierarchy,
+  buildBreakdownHierarchyWithMeta,
   buildBreakdownItems,
   computeHoldingGainLossForEventSeries,
   createBreakdownBucket,
@@ -31,9 +33,8 @@ import {
   round2,
   shouldIncludeTransactionForPeriod,
   sortHoldingEventsAscending,
-  type ExpenseBreakdownAccumulatorItem,
+  type BreakdownHierarchyAccumulatorItem,
   type HoldingGainLossSeriesEvent,
-  type PeriodGroupNode,
 } from "./period-helpers";
 import {
   convertBookingValueToReference,
@@ -52,6 +53,7 @@ export {
 };
 export type { PeriodPresetValue };
 export {
+  buildBreakdownHierarchy,
   buildBreakdownItems,
   computeHoldingGainLossForEventSeries,
   createBreakdownBucket,
@@ -405,13 +407,13 @@ export const getPeriodOverview = createServerFn({
     let expenses = 0;
     let explicitGainLoss = 0;
 
-    const expenseAmountByBucketId = new Map<
+    const expenseAmountByAccountId = new Map<
       string,
-      ExpenseBreakdownAccumulatorItem
+      BreakdownHierarchyAccumulatorItem
     >();
-    const incomeAmountByBucketId = new Map<
+    const incomeAmountByAccountId = new Map<
       string,
-      ExpenseBreakdownAccumulatorItem
+      BreakdownHierarchyAccumulatorItem
     >();
 
     let nextBookingIdCursor: string | undefined;
@@ -508,47 +510,35 @@ export const getPeriodOverview = createServerFn({
         if (
           booking.account.equityAccountSubtype === EquityAccountSubtype.INCOME
         ) {
-          income += -convertedValue;
+          const incomeAmount = -convertedValue;
+          income += incomeAmount;
 
-          const incomeBucket = createBreakdownBucket({
-            accountId: booking.account.id,
-            accountName: booking.account.name,
-            groupId: booking.account.groupId,
-            groupById,
-          });
-
-          const existingBucket = incomeAmountByBucketId.get(incomeBucket.id);
-          if (existingBucket) {
-            existingBucket.amount += -convertedValue;
+          const existingItem = incomeAmountByAccountId.get(booking.account.id);
+          if (existingItem) {
+            existingItem.amount += incomeAmount;
           } else {
-            incomeAmountByBucketId.set(incomeBucket.id, {
-              id: incomeBucket.id,
-              label: incomeBucket.label,
-              kind: incomeBucket.kind,
-              amount: -convertedValue,
+            incomeAmountByAccountId.set(booking.account.id, {
+              accountId: booking.account.id,
+              accountName: booking.account.name,
+              groupId: booking.account.groupId,
+              amount: incomeAmount,
             });
           }
         } else if (
           booking.account.equityAccountSubtype === EquityAccountSubtype.EXPENSE
         ) {
-          expenses += convertedValue;
+          const expenseAmount = convertedValue;
+          expenses += expenseAmount;
 
-          const expenseBucket = createBreakdownBucket({
-            accountId: booking.account.id,
-            accountName: booking.account.name,
-            groupId: booking.account.groupId,
-            groupById,
-          });
-
-          const existingBucket = expenseAmountByBucketId.get(expenseBucket.id);
-          if (existingBucket) {
-            existingBucket.amount += convertedValue;
+          const existingItem = expenseAmountByAccountId.get(booking.account.id);
+          if (existingItem) {
+            existingItem.amount += expenseAmount;
           } else {
-            expenseAmountByBucketId.set(expenseBucket.id, {
-              id: expenseBucket.id,
-              label: expenseBucket.label,
-              kind: expenseBucket.kind,
-              amount: convertedValue,
+            expenseAmountByAccountId.set(booking.account.id, {
+              accountId: booking.account.id,
+              accountName: booking.account.name,
+              groupId: booking.account.groupId,
+              amount: expenseAmount,
             });
           }
         } else {
@@ -830,11 +820,37 @@ export const getPeriodOverview = createServerFn({
     const roundedSavings = round2(roundedIncome - roundedExpenses);
     const roundedTotalReturn = round2(roundedSavings + roundedGainsLosses);
 
+    const {
+      hierarchy: expenseBreakdownHierarchy,
+      hasHiddenAmountDiscrepancy: expenseBreakdownHasHiddenAmountDiscrepancy,
+      hiddenAmountDiscrepancyNodeIds: expenseBreakdownDiscrepancyNodeIds,
+    } = buildBreakdownHierarchyWithMeta({
+      items: Array.from(expenseAmountByAccountId.values()),
+      groupById,
+    });
+    const {
+      hierarchy: incomeBreakdownHierarchy,
+      hasHiddenAmountDiscrepancy: incomeBreakdownHasHiddenAmountDiscrepancy,
+      hiddenAmountDiscrepancyNodeIds: incomeBreakdownDiscrepancyNodeIds,
+    } = buildBreakdownHierarchyWithMeta({
+      items: Array.from(incomeAmountByAccountId.values()),
+      groupById,
+    });
     const expenseBreakdown = buildBreakdownItems(
-      Array.from(expenseAmountByBucketId.values()),
+      expenseBreakdownHierarchy.map((node) => ({
+        id: node.id,
+        label: node.label,
+        kind: node.kind,
+        amount: node.amount,
+      })),
     );
     const incomeBreakdown = buildBreakdownItems(
-      Array.from(incomeAmountByBucketId.values()),
+      incomeBreakdownHierarchy.map((node) => ({
+        id: node.id,
+        label: node.label,
+        kind: node.kind,
+        amount: node.amount,
+      })),
     );
 
     const currentDay = startOfUtcDay(new Date());
@@ -879,10 +895,16 @@ export const getPeriodOverview = createServerFn({
       expenseBreakdown: {
         totalAmount: expenseBreakdown.totalAmount,
         items: expenseBreakdown.items,
+        hierarchy: expenseBreakdownHierarchy,
+        hasHiddenAmountDiscrepancy: expenseBreakdownHasHiddenAmountDiscrepancy,
+        hiddenAmountDiscrepancyNodeIds: expenseBreakdownDiscrepancyNodeIds,
       },
       incomeBreakdown: {
         totalAmount: incomeBreakdown.totalAmount,
         items: incomeBreakdown.items,
+        hierarchy: incomeBreakdownHierarchy,
+        hasHiddenAmountDiscrepancy: incomeBreakdownHasHiddenAmountDiscrepancy,
+        hiddenAmountDiscrepancyNodeIds: incomeBreakdownDiscrepancyNodeIds,
       },
     };
   });

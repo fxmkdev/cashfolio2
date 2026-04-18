@@ -39,6 +39,25 @@
   white-space: nowrap;
 }
 
+.breakdownContextRow {
+  margin-top: 4px;
+}
+
+.breadcrumbButton {
+  cursor: pointer;
+}
+
+.breadcrumbButton:hover {
+  text-decoration: underline;
+}
+
+.breadcrumbButton:focus-visible {
+  text-decoration: underline;
+  outline: 2px solid var(--mantine-color-blue-6);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .chartContainer {
   margin-top: 20px;
   width: 100%;

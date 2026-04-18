@@ -1,6 +1,8 @@
 import {
+  Alert,
   Card,
   Container,
+  Group,
   SimpleGrid,
   Stack,
   Text,
@@ -8,26 +10,34 @@ import {
   useComputedColorScheme,
   useMantineTheme,
 } from "@mantine/core";
-import { IconListDetails } from "@tabler/icons-react";
+import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
 import type {
   AgCartesianChartOptions,
-  AgDonutSeriesOptions,
-  AgPolarChartOptions,
   AgWaterfallSeriesOptions,
 } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ensureChartModulesRegistered } from "../../ag-chart-modules";
 import { LinkButton } from "../../components/link-button";
 import { TopPageHeader } from "../../components/top-page-header";
 import type { getPeriodOverview } from "../../server/period";
 import { formatMonthPeriodValue } from "../../shared/period";
 import { getDashboardChartThemeColors } from "./-dashboard-chart-theme";
+import { PeriodBreakdownCard } from "./-period-breakdown-card";
 import {
-  BreakdownChartType,
-  BreakdownType,
-  PeriodBreakdownCard,
-} from "./-period-breakdown-card";
+  clampBreakdownPath,
+  getBreakdownDrillState,
+  isBreakdownNodeDrillable,
+} from "./-period-breakdown-drill";
+import {
+  type PeriodBreakdownChartDatum,
+  type PeriodBreakdownNodeDatum,
+  usePeriodBreakdownChartOptions,
+} from "./-period-breakdown-chart-options";
+import {
+  type BreakdownChartType,
+  type BreakdownType,
+} from "./-period-breakdown-types";
 import classes from "./-period-page-view.module.css";
 import {
   buildPeriodSelectorModel,
@@ -46,12 +56,11 @@ export type PeriodPageViewProps = {
   accountBookId: string;
   overview: PeriodOverview;
   selectedPeriodValue: string;
+  drillPathByBreakdown: Record<BreakdownType, string[]>;
   onPeriodChange: (nextPeriodValue: string) => void;
-};
-
-type BreakdownDatum = PeriodOverview["expenseBreakdown"]["items"][number] & {
-  amountLabel: string;
-  percentageLabel: string;
+  onDrillPathByBreakdownChange: (
+    nextPathByBreakdown: Record<BreakdownType, string[]>,
+  ) => void;
 };
 
 type StatCardProps = {
@@ -59,23 +68,29 @@ type StatCardProps = {
   value: string;
   valueColor: "green" | "red";
 };
+
 type StatCardData = StatCardProps & {
   id: string;
 };
-type BreakdownBarDatum = {
-  label: string;
-  amountLabel: string;
-  percentageLabel: string;
-} & Record<string, number | null | string>;
+
 type WaterfallDatum = {
   label: string;
   amount: number;
 };
 
-type BreakdownBarSeriesDefinition = {
-  key: string;
-  label: string;
-};
+function arePathsEqual(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 function StatCard({ label, value, valueColor }: StatCardProps) {
   return (
@@ -96,7 +111,9 @@ export function PeriodPageView({
   accountBookId,
   overview,
   selectedPeriodValue,
+  drillPathByBreakdown,
   onPeriodChange,
+  onDrillPathByBreakdownChange,
 }: PeriodPageViewProps) {
   const [selectedBreakdown, setSelectedBreakdown] =
     useState<BreakdownType>("expense");
@@ -167,33 +184,150 @@ export function PeriodPageView({
     [overview.expenseBreakdown, overview.incomeBreakdown, selectedBreakdown],
   );
 
+  useEffect(() => {
+    const nextExpensePath = clampBreakdownPath({
+      hierarchy: overview.expenseBreakdown.hierarchy,
+      path: drillPathByBreakdown.expense,
+    });
+    const nextIncomePath = clampBreakdownPath({
+      hierarchy: overview.incomeBreakdown.hierarchy,
+      path: drillPathByBreakdown.income,
+    });
+
+    if (
+      arePathsEqual(nextExpensePath, drillPathByBreakdown.expense) &&
+      arePathsEqual(nextIncomePath, drillPathByBreakdown.income)
+    ) {
+      return;
+    }
+
+    onDrillPathByBreakdownChange({
+      expense: nextExpensePath,
+      income: nextIncomePath,
+    });
+  }, [
+    drillPathByBreakdown.expense,
+    drillPathByBreakdown.income,
+    onDrillPathByBreakdownChange,
+    overview.expenseBreakdown.hierarchy,
+    overview.incomeBreakdown.hierarchy,
+  ]);
+
   const breakdownTitle =
     selectedBreakdown === "expense" ? "Expenses Breakdown" : "Income Breakdown";
   const breakdownSubtitle =
     selectedBreakdown === "expense"
       ? "Top-level groups for expenses in the selected period"
       : "Top-level groups for income in the selected period";
+  const breakdownRootLabel =
+    selectedBreakdown === "expense" ? "All Expenses" : "All Income";
+  const drillState = useMemo(
+    () =>
+      getBreakdownDrillState({
+        hierarchy: activeBreakdown.hierarchy,
+        path: drillPathByBreakdown[selectedBreakdown],
+        rootLabel: breakdownRootLabel,
+      }),
+    [
+      activeBreakdown.hierarchy,
+      breakdownRootLabel,
+      drillPathByBreakdown,
+      selectedBreakdown,
+    ],
+  );
   const emptyBreakdownMessage =
     selectedBreakdown === "expense"
       ? "No expenses were found for this period."
       : "No income was found for this period.";
-
-  const chartData = useMemo<BreakdownDatum[]>(
+  const currentBreakdownLevelTotalAmount = useMemo(
     () =>
-      activeBreakdown.items.map((item) => ({
-        ...item,
-        amountLabel: currencyFormatter.format(item.amount),
-        percentageLabel: `${percentageFormatter.format(item.percentage)}%`,
-      })),
-    [activeBreakdown.items, currencyFormatter, percentageFormatter],
+      drillState.currentNodes.reduce(
+        (sum, breakdownNode) => sum + breakdownNode.amount,
+        0,
+      ),
+    [drillState.currentNodes],
+  );
+
+  const chartData = useMemo<PeriodBreakdownChartDatum[]>(
+    () =>
+      drillState.currentNodes.map((item) => {
+        const percentage =
+          currentBreakdownLevelTotalAmount <= 0
+            ? 0
+            : (item.amount / currentBreakdownLevelTotalAmount) * 100;
+
+        return {
+          id: item.id,
+          label: item.label,
+          kind: item.kind,
+          amount: item.amount,
+          percentage,
+          isDrillable: isBreakdownNodeDrillable(item),
+          amountLabel: currencyFormatter.format(item.amount),
+          percentageLabel: `${percentageFormatter.format(percentage)}%`,
+        };
+      }),
+    [
+      currentBreakdownLevelTotalAmount,
+      currencyFormatter,
+      drillState.currentNodes,
+      percentageFormatter,
+    ],
   );
 
   const totalBreakdownAmountLabel = useMemo(
-    () => currencyFormatter.format(activeBreakdown.totalAmount),
-    [activeBreakdown.totalAmount, currencyFormatter],
+    () => currencyFormatter.format(currentBreakdownLevelTotalAmount),
+    [currentBreakdownLevelTotalAmount, currencyFormatter],
   );
 
   const hasBreakdown = chartData.length > 0;
+  const currentBreakdownNodeId =
+    drillState.currentPathNodes[drillState.currentPathNodes.length - 1]?.id ??
+    null;
+  const hasBreakdownAmountDiscrepancy = useMemo(() => {
+    if (currentBreakdownNodeId == null) {
+      return activeBreakdown.hasHiddenAmountDiscrepancy;
+    }
+
+    return activeBreakdown.hiddenAmountDiscrepancyNodeIds.includes(
+      currentBreakdownNodeId,
+    );
+  }, [
+    activeBreakdown.hasHiddenAmountDiscrepancy,
+    activeBreakdown.hiddenAmountDiscrepancyNodeIds,
+    currentBreakdownNodeId,
+  ]);
+  const updateSelectedBreakdownPath = useCallback(
+    (nextPath: string[]) => {
+      onDrillPathByBreakdownChange({
+        ...drillPathByBreakdown,
+        [selectedBreakdown]: nextPath,
+      });
+    },
+    [drillPathByBreakdown, onDrillPathByBreakdownChange, selectedBreakdown],
+  );
+  const handleNodeDoubleClick = useCallback(
+    (datum: PeriodBreakdownNodeDatum) => {
+      if (
+        datum.kind !== "group" ||
+        !datum.isDrillable ||
+        drillState.clampedPath.includes(datum.id)
+      ) {
+        return;
+      }
+
+      updateSelectedBreakdownPath([...drillState.clampedPath, datum.id]);
+    },
+    [drillState.clampedPath, updateSelectedBreakdownPath],
+  );
+  const chartOptions = usePeriodBreakdownChartOptions({
+    chartData,
+    selectedChartType,
+    colors,
+    totalBreakdownAmountLabel,
+    onNodeDoubleClick: handleNodeDoubleClick,
+  });
+
   const amountCompactFormatter = useMemo(
     () =>
       new Intl.NumberFormat("en-CH", {
@@ -202,188 +336,6 @@ export function PeriodPageView({
       }),
     [],
   );
-  const barSeriesDefinitions = useMemo<BreakdownBarSeriesDefinition[]>(
-    () =>
-      chartData.map((item, index) => ({
-        key: `amount_${index}`,
-        label: item.label,
-      })),
-    [chartData],
-  );
-  const barChartData = useMemo<BreakdownBarDatum[]>(
-    () =>
-      chartData.map((item, itemIndex) => {
-        const row: BreakdownBarDatum = {
-          label: item.label,
-          amountLabel: item.amountLabel,
-          percentageLabel: item.percentageLabel,
-        };
-
-        for (const seriesDefinition of barSeriesDefinitions) {
-          row[seriesDefinition.key] = null;
-        }
-
-        row[barSeriesDefinitions[itemIndex].key] = item.amount;
-
-        return row;
-      }),
-    [barSeriesDefinitions, chartData],
-  );
-
-  const donutSeries = useMemo<AgDonutSeriesOptions<BreakdownDatum>[]>(
-    () => [
-      {
-        type: "donut",
-        angleKey: "amount",
-        calloutLabelKey: "label",
-        sectorLabelKey: "percentageLabel",
-        innerRadiusRatio: 0.7,
-        outerRadiusRatio: 0.95,
-        calloutLabel: {
-          minAngle: 10,
-        },
-        innerLabels: [
-          {
-            text: totalBreakdownAmountLabel,
-            color: colors.chartTextColor,
-            fontWeight: 600,
-            fontSize: 18,
-          },
-        ],
-        tooltip: {
-          renderer: ({ datum }) => {
-            const item = datum as BreakdownDatum;
-
-            return {
-              heading: item.label,
-              data: [
-                {
-                  label: "Share",
-                  value: item.percentageLabel,
-                },
-                {
-                  label: "Amount",
-                  value: item.amountLabel,
-                },
-                {
-                  label: "Total",
-                  value: totalBreakdownAmountLabel,
-                },
-              ],
-            };
-          },
-        },
-      },
-    ],
-    [colors.chartTextColor, totalBreakdownAmountLabel],
-  );
-
-  const donutChartOptions = useMemo<AgPolarChartOptions<BreakdownDatum>>(
-    () => ({
-      data: chartData,
-      height: 500,
-      background: {
-        visible: false,
-      },
-      theme: {
-        params: {
-          textColor: colors.chartTextColor,
-          foregroundColor: colors.chartTextColor,
-          borderColor: colors.themeBorderColor,
-          tooltipBackgroundColor: colors.tooltipBackgroundColor,
-          tooltipBorder: true,
-          tooltipTextColor: colors.tooltipTextColor,
-          tooltipSubtleTextColor: colors.tooltipSubtleTextColor,
-        },
-      },
-      legend: {
-        position: "bottom",
-      },
-      series: donutSeries,
-    }),
-    [chartData, colors, donutSeries],
-  );
-  const barChartOptions = useMemo<AgCartesianChartOptions>(
-    () => ({
-      data: barChartData,
-      height: 500,
-      background: {
-        visible: false,
-      },
-      theme: {
-        params: {
-          textColor: colors.chartTextColor,
-          foregroundColor: colors.chartTextColor,
-          borderColor: colors.themeBorderColor,
-          tooltipBackgroundColor: colors.tooltipBackgroundColor,
-          tooltipBorder: true,
-          tooltipTextColor: colors.tooltipTextColor,
-          tooltipSubtleTextColor: colors.tooltipSubtleTextColor,
-        },
-      },
-      legend: {
-        enabled: true,
-        position: "bottom",
-      },
-      series: barSeriesDefinitions.map((seriesDefinition) => ({
-        type: "bar",
-        direction: "vertical",
-        grouped: false,
-        widthRatio: 0.72,
-        xKey: "label",
-        yKey: seriesDefinition.key,
-        yName: seriesDefinition.label,
-        legendItemName: seriesDefinition.label,
-        tooltip: {
-          renderer: ({ datum }) => {
-            const item = datum as BreakdownBarDatum;
-
-            return {
-              heading: item.label,
-              data: [
-                {
-                  label: "Share",
-                  value: item.percentageLabel,
-                },
-                {
-                  label: "Amount",
-                  value: item.amountLabel,
-                },
-                {
-                  label: "Total",
-                  value: totalBreakdownAmountLabel,
-                },
-              ],
-            };
-          },
-        },
-      })),
-      axes: {
-        x: {
-          type: "category",
-          label: {
-            rotation: -25,
-          },
-        },
-        y: {
-          type: "number",
-          label: {
-            formatter: ({ value }) =>
-              amountCompactFormatter.format(Number(value)),
-          },
-        },
-      },
-    }),
-    [
-      amountCompactFormatter,
-      barChartData,
-      barSeriesDefinitions,
-      colors,
-      totalBreakdownAmountLabel,
-    ],
-  );
-  const chartOptions =
-    selectedChartType === "donut" ? donutChartOptions : barChartOptions;
   const gainsLossesLabel = overview.stats.gainsLosses >= 0 ? "Gains" : "Losses";
   const waterfallData = useMemo<WaterfallDatum[]>(
     () => [
@@ -439,10 +391,6 @@ export function PeriodPageView({
           axisLabel: "Total Return",
         },
       ],
-      line: {
-        stroke: colors.zeroLineColor,
-        strokeWidth: 1,
-      },
       item: {
         positive: {
           fill: waterfallPalette.positive,
@@ -452,25 +400,35 @@ export function PeriodPageView({
           fill: waterfallPalette.negative,
           stroke: waterfallPalette.negative,
         },
-        total: {
-          fill: waterfallPalette.total,
-          stroke: waterfallPalette.total,
-        },
+      },
+      subtotal: {
+        fill: waterfallPalette.total,
+        stroke: waterfallPalette.total,
+      },
+      total: {
+        fill: waterfallPalette.total,
+        stroke: waterfallPalette.total,
+      },
+      itemStyler: (params: any) => {
+        if (params.datum && "isTotal" in params.datum && params.datum.isTotal) {
+          return {
+            fill: waterfallPalette.total,
+            stroke: waterfallPalette.total,
+          };
+        }
+
+        return undefined;
       },
       tooltip: {
-        renderer: (params) => {
-          const label = String(params.datum[params.xKey]);
-          const amount =
-            waterfallAmountByLabel[label] ?? Number(params.datum[params.yKey]);
+        renderer: ({ datum }) => {
+          const label = String(datum.label);
+          const amount = waterfallAmountByLabel[label] ?? 0;
 
           return {
             heading: label,
             data: [
               {
-                label:
-                  params.itemType === "total" || params.itemType === "subtotal"
-                    ? "Total"
-                    : "Change",
+                label: "Total",
                 value: currencyFormatter.format(amount),
               },
             ],
@@ -478,14 +436,12 @@ export function PeriodPageView({
         },
       },
     }),
-    [colors, currencyFormatter, waterfallAmountByLabel, waterfallPalette],
+    [currencyFormatter, waterfallAmountByLabel, waterfallPalette],
   );
-  const waterfallChartOptions = useMemo<
-    AgCartesianChartOptions<WaterfallDatum>
-  >(
+  const waterfallChartOptions = useMemo<AgCartesianChartOptions>(
     () => ({
       data: waterfallData,
-      height: 320,
+      height: 420,
       background: {
         visible: false,
       },
@@ -507,10 +463,6 @@ export function PeriodPageView({
       axes: {
         x: {
           type: "category",
-          label: {
-            autoRotate: false,
-            rotation: 0,
-          },
         },
         y: {
           type: "number",
@@ -673,6 +625,7 @@ export function PeriodPageView({
             />
           ))}
         </SimpleGrid>
+
         <Card withBorder radius="md" p="lg">
           <Stack gap="sm">
             <Title order={4}>Contribution to Total Return</Title>
@@ -684,17 +637,35 @@ export function PeriodPageView({
             </div>
           </Stack>
         </Card>
+
         <PeriodBreakdownCard
           selectedBreakdown={selectedBreakdown}
-          onSelectedBreakdownChange={setSelectedBreakdown}
           selectedChartType={selectedChartType}
-          onSelectedChartTypeChange={setSelectedChartType}
           breakdownTitle={breakdownTitle}
           breakdownSubtitle={breakdownSubtitle}
-          emptyBreakdownMessage={emptyBreakdownMessage}
+          breadcrumbs={drillState.breadcrumbs}
+          clampedPath={drillState.clampedPath}
+          hasBreakdownAmountDiscrepancy={hasBreakdownAmountDiscrepancy}
           hasBreakdown={hasBreakdown}
+          emptyBreakdownMessage={emptyBreakdownMessage}
           chartOptions={chartOptions}
-          skippedBookingsCount={overview.skippedBookingsCount}
+          onSelectedBreakdownChange={setSelectedBreakdown}
+          onSelectedChartTypeChange={setSelectedChartType}
+          onDrillPathChange={updateSelectedBreakdownPath}
+          footer={
+            overview.skippedBookingsCount > 0 ? (
+              <Alert
+                mt="md"
+                variant="light"
+                color="yellow"
+                icon={<IconAlertTriangle size={16} />}
+                title="Partial data"
+              >
+                {overview.skippedBookingsCount} valuation-related item(s) were
+                skipped because valuation data was unavailable.
+              </Alert>
+            ) : null
+          }
         />
       </Stack>
 
