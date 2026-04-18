@@ -628,7 +628,7 @@ export function PeriodPageView({
             selectedMonthValue={formatMonthPeriodValue(
               overview.selectedYear,
               periodSelectorModel.selectedMonth,
-            )}
+            ) + "-01"}
             selectedYearValue={`${String(overview.selectedYear).padStart(4, "0")}-01-01`}
             minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
             maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}

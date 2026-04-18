@@ -115,6 +115,7 @@ export function PeriodSelectorCard({
                   <MonthPicker
                     data-testid="period-month-picker"
                     value={selectedMonthValue}
+                    defaultDate={selectedMonthValue}
                     onChange={onMonthPickerChange}
                     minDate={minMonthPickerDate}
                     maxDate={maxMonthPickerDate}
@@ -123,6 +124,7 @@ export function PeriodSelectorCard({
                   <YearPicker
                     data-testid="period-year-picker"
                     value={selectedYearValue}
+                    defaultDate={selectedYearValue}
                     onChange={onYearPickerChange}
                     minDate={minYearPickerDate}
                     maxDate={maxYearPickerDate}
