@@ -1,5 +1,42 @@
+.periodTopSection {
+  align-self: center;
+  width: 100%;
+  max-width: 640px;
+  margin-inline: auto;
+}
+
 .periodSelectorRow {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
+  justify-content: center;
+}
+
+.periodModeControl {
+  flex: 0 0 auto;
+}
+
+.periodPickerControlRow {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.periodPickerTrigger {
+  flex: 0 1 auto;
+  inline-size: clamp(10rem, 20vw, 13rem);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  min-width: 0;
+}
+
+.periodPickerTrigger :global(.mantine-Button-inner) {
+  width: 100%;
+  min-width: 0;
+}
+
+.periodPickerTrigger :global(.mantine-Button-label) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chartContainer {

@@ -1,12 +1,6 @@
 import {
-  Alert,
   Card,
-  Center,
   Container,
-  Flex,
-  Group,
-  NativeSelect,
-  SegmentedControl,
   SimpleGrid,
   Stack,
   Text,
@@ -14,13 +8,7 @@ import {
   useComputedColorScheme,
   useMantineTheme,
 } from "@mantine/core";
-import {
-  IconAlertTriangle,
-  IconChartBar,
-  IconChartDonut,
-  IconListDetails,
-} from "@tabler/icons-react";
-import { AgCharts } from "ag-charts-react";
+import { IconListDetails } from "@tabler/icons-react";
 import type {
   AgCartesianChartOptions,
   AgDonutSeriesOptions,
@@ -32,31 +20,23 @@ import { LinkButton } from "../../components/link-button";
 import { TopPageHeader } from "../../components/top-page-header";
 import type { getPeriodOverview } from "../../server/period";
 import { formatMonthPeriodValue } from "../../shared/period";
-import {
-  PERIOD_PRESET_LAST_MONTH,
-  PERIOD_PRESET_LAST_YEAR,
-  PERIOD_PRESET_MTD,
-  PERIOD_PRESET_YTD,
-} from "./-period-page-types";
 import { getDashboardChartThemeColors } from "./-dashboard-chart-theme";
+import {
+  BreakdownChartType,
+  BreakdownType,
+  PeriodBreakdownCard,
+} from "./-period-breakdown-card";
 import classes from "./-period-page-view.module.css";
+import {
+  buildPeriodSelectorModel,
+  getMonthPickerValue,
+  getPeriodModeChangeValue,
+  getPeriodStepValue,
+  getYearPickerValue,
+} from "./-period-selector-model";
+import { PeriodSelectorCard } from "./-period-selector-card";
 
 ensureChartModulesRegistered();
-
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-] as const;
 
 type PeriodOverview = Awaited<ReturnType<typeof getPeriodOverview>>;
 
@@ -78,8 +58,6 @@ type StatCardProps = {
   valueColor: "green" | "red";
 };
 
-type BreakdownType = "expense" | "income";
-type BreakdownChartType = "donut" | "bar";
 type BreakdownBarDatum = {
   label: string;
   amountLabel: string;
@@ -90,58 +68,6 @@ type BreakdownBarSeriesDefinition = {
   key: string;
   label: string;
 };
-
-function getMonthBoundsForYear(args: {
-  year: number;
-  minBookingDate: Date | null;
-  maxDate: Date;
-}): { minMonth: number; maxMonth: number } {
-  const { year, minBookingDate, maxDate } = args;
-
-  let minMonth = 0;
-  let maxMonth = 11;
-
-  if (minBookingDate && minBookingDate.getUTCFullYear() === year) {
-    minMonth = minBookingDate.getUTCMonth();
-  }
-
-  if (maxDate.getUTCFullYear() === year) {
-    maxMonth = maxDate.getUTCMonth();
-  }
-
-  return {
-    minMonth,
-    maxMonth,
-  };
-}
-
-function buildMonthOptions(args: {
-  year: number;
-  minBookingDate: Date | null;
-  maxDate: Date;
-}): Array<{ value: string; label: string }> {
-  const { minMonth, maxMonth } = getMonthBoundsForYear(args);
-  const options: Array<{ value: string; label: string }> = [];
-
-  for (let month = maxMonth; month >= minMonth; month -= 1) {
-    options.push({
-      value: String(month),
-      label: MONTH_NAMES[month],
-    });
-  }
-
-  return options;
-}
-
-function clampMonth(args: {
-  year: number;
-  month: number;
-  minBookingDate: Date | null;
-  maxDate: Date;
-}): number {
-  const { minMonth, maxMonth } = getMonthBoundsForYear(args);
-  return Math.min(Math.max(args.month, minMonth), maxMonth);
-}
 
 function StatCard({ label, value, valueColor }: StatCardProps) {
   return (
@@ -168,6 +94,7 @@ export function PeriodPageView({
     useState<BreakdownType>("expense");
   const [selectedChartType, setSelectedChartType] =
     useState<BreakdownChartType>("donut");
+  const [pickerOpened, setPickerOpened] = useState(false);
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
   const colors = useMemo(
@@ -195,25 +122,26 @@ export function PeriodPageView({
     [],
   );
 
-  const minBookingDate = overview.minBookingDate
-    ? new Date(overview.minBookingDate)
-    : null;
-  const maxDate = new Date(overview.maxDate);
-
-  const selectedMonth =
-    overview.selectedGranularity === "month" && overview.selectedMonth != null
-      ? overview.selectedMonth
-      : maxDate.getUTCMonth();
-
-  const monthOptions = useMemo(
+  const periodSelectorModel = useMemo(
     () =>
-      buildMonthOptions({
-        year: overview.selectedYear,
-        minBookingDate,
-        maxDate,
+      buildPeriodSelectorModel({
+        selectedGranularity: overview.selectedGranularity,
+        selectedYear: overview.selectedYear,
+        selectedMonth: overview.selectedMonth,
+        minBookingDate: overview.minBookingDate
+          ? new Date(overview.minBookingDate)
+          : null,
+        maxDate: new Date(overview.maxDate),
       }),
-    [maxDate, minBookingDate, overview.selectedYear],
+    [
+      overview.maxDate,
+      overview.minBookingDate,
+      overview.selectedGranularity,
+      overview.selectedMonth,
+      overview.selectedYear,
+    ],
   );
+  const periodMode = periodSelectorModel.periodMode;
 
   const activeBreakdown = useMemo(
     () =>
@@ -469,6 +397,57 @@ export function PeriodPageView({
     },
   ];
 
+  const handlePeriodModeChange = (nextMode: string) => {
+    setPickerOpened(false);
+    const nextPeriodValue = getPeriodModeChangeValue({
+      nextMode,
+      periodMode,
+      selectedYear: overview.selectedYear,
+      selectedYearMaxMonth:
+        periodSelectorModel.selectedYearMonthBounds.maxMonth,
+    });
+    if (!nextPeriodValue) {
+      return;
+    }
+    onPeriodChange(nextPeriodValue);
+  };
+
+  const handlePeriodStep = (step: -1 | 1) => {
+    setPickerOpened(false);
+    const nextPeriodValue = getPeriodStepValue({
+      periodMode,
+      step,
+      selectedMonthIndex: periodSelectorModel.selectedMonthIndex,
+      minMonthIndex: periodSelectorModel.minMonthIndex,
+      maxMonthIndex: periodSelectorModel.maxMonthIndex,
+      selectedYear: overview.selectedYear,
+      minYear: periodSelectorModel.minYear,
+      maxYear: periodSelectorModel.maxYear,
+    });
+    if (!nextPeriodValue) {
+      return;
+    }
+    onPeriodChange(nextPeriodValue);
+  };
+
+  const handleMonthPickerChange = (nextValue: string | null) => {
+    const nextPeriodValue = getMonthPickerValue(nextValue);
+    if (!nextPeriodValue) {
+      return;
+    }
+    onPeriodChange(nextPeriodValue);
+    setPickerOpened(false);
+  };
+
+  const handleYearPickerChange = (nextValue: string | null) => {
+    const nextPeriodValue = getYearPickerValue(nextValue);
+    if (!nextPeriodValue) {
+      return;
+    }
+    onPeriodChange(nextPeriodValue);
+    setPickerOpened(false);
+  };
+
   return (
     <Container fluid py="xl" px="xl">
       <TopPageHeader
@@ -487,103 +466,33 @@ export function PeriodPageView({
       />
 
       <Stack gap="lg">
-        <Card withBorder radius="md" p="lg">
-          <Stack gap="sm">
-            <Group justify="space-between" align="center">
-              <Text fw={600}>Period: {overview.selectedPeriodLabel}</Text>
-              <Text c="dimmed" size="sm">
-                Amounts shown in {overview.referenceCurrency}
-              </Text>
-            </Group>
-
-            <Group align="end" gap="sm" className={classes.periodSelectorRow}>
-              <NativeSelect
-                label="Period"
-                value={overview.selectedPeriodSpecifier}
-                onChange={(event) => {
-                  const value = event.currentTarget.value;
-
-                  if (value === "month") {
-                    const monthValue =
-                      overview.selectedGranularity === "month"
-                        ? formatMonthPeriodValue(
-                            overview.selectedYear,
-                            overview.selectedMonth ?? 0,
-                          )
-                        : overview.currentMonthValue;
-                    onPeriodChange(monthValue);
-                    return;
-                  }
-
-                  if (value === "year") {
-                    const yearValue =
-                      overview.selectedGranularity === "year"
-                        ? String(overview.selectedYear)
-                        : overview.currentYearValue;
-                    onPeriodChange(yearValue);
-                    return;
-                  }
-
-                  onPeriodChange(value);
-                }}
-              >
-                <optgroup label="Monthly">
-                  <option value={PERIOD_PRESET_MTD}>Month to Date</option>
-                  <option value={PERIOD_PRESET_LAST_MONTH}>Last Month</option>
-                  <option value="month">Select Month…</option>
-                </optgroup>
-                <optgroup label="Yearly">
-                  <option value={PERIOD_PRESET_YTD}>Year to Date</option>
-                  <option value={PERIOD_PRESET_LAST_YEAR}>Last Year</option>
-                  <option value="year">Select Year…</option>
-                </optgroup>
-              </NativeSelect>
-
-              <NativeSelect
-                label="Year"
-                disabled={
-                  overview.selectedPeriodSpecifier !== "month" &&
-                  overview.selectedPeriodSpecifier !== "year"
-                }
-                value={String(overview.selectedYear)}
-                onChange={(event) => {
-                  const nextYear = Number(event.currentTarget.value);
-
-                  if (overview.selectedPeriodSpecifier === "year") {
-                    onPeriodChange(String(nextYear));
-                    return;
-                  }
-
-                  const nextMonth = clampMonth({
-                    year: nextYear,
-                    month: selectedMonth,
-                    minBookingDate,
-                    maxDate,
-                  });
-                  onPeriodChange(formatMonthPeriodValue(nextYear, nextMonth));
-                }}
-                data={overview.availableYears.map((year) => ({
-                  value: String(year),
-                  label: String(year),
-                }))}
-              />
-
-              {overview.selectedPeriodSpecifier === "month" ? (
-                <NativeSelect
-                  label="Month"
-                  value={String(selectedMonth)}
-                  onChange={(event) => {
-                    const nextMonth = Number(event.currentTarget.value);
-                    onPeriodChange(
-                      formatMonthPeriodValue(overview.selectedYear, nextMonth),
-                    );
-                  }}
-                  data={monthOptions}
-                />
-              ) : null}
-            </Group>
-          </Stack>
-        </Card>
+        <div
+          className={classes.periodTopSection}
+          data-testid="period-top-section"
+        >
+          <PeriodSelectorCard
+            selectedPeriodLabel={overview.selectedPeriodLabel}
+            referenceCurrency={overview.referenceCurrency}
+            periodMode={periodMode}
+            pickerOpened={pickerOpened}
+            onPickerOpenedChange={setPickerOpened}
+            canGoToPreviousPeriod={periodSelectorModel.canGoToPreviousPeriod}
+            canGoToNextPeriod={periodSelectorModel.canGoToNextPeriod}
+            onPeriodModeChange={handlePeriodModeChange}
+            onPeriodStep={handlePeriodStep}
+            selectedMonthValue={formatMonthPeriodValue(
+              overview.selectedYear,
+              periodSelectorModel.selectedMonth,
+            )}
+            selectedYearValue={`${String(overview.selectedYear).padStart(4, "0")}-01-01`}
+            minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
+            maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
+            minYearPickerDate={periodSelectorModel.minYearPickerDate}
+            maxYearPickerDate={periodSelectorModel.maxYearPickerDate}
+            onMonthPickerChange={handleMonthPickerChange}
+            onYearPickerChange={handleYearPickerChange}
+          />
+        </div>
 
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 5 }} spacing="lg">
           {statCards.map((card) => (
@@ -596,80 +505,18 @@ export function PeriodPageView({
           ))}
         </SimpleGrid>
 
-        <Card withBorder radius="md" p="lg">
-          <Stack gap="sm">
-            <Group justify="space-between" align="center">
-              <Title order={4}>{breakdownTitle}</Title>
-              <Flex gap="md" wrap="wrap" justify="flex-end">
-                <SegmentedControl
-                  size="sm"
-                  aria-label="Breakdown chart type"
-                  value={selectedChartType}
-                  onChange={(value) =>
-                    setSelectedChartType(value as BreakdownChartType)
-                  }
-                  data={[
-                    {
-                      label: (
-                        <Center style={{ gap: 6 }}>
-                          <IconChartDonut size={16} />
-                          Donut
-                        </Center>
-                      ),
-                      value: "donut",
-                    },
-                    {
-                      label: (
-                        <Center style={{ gap: 6 }}>
-                          <IconChartBar size={16} />
-                          Bar
-                        </Center>
-                      ),
-                      value: "bar",
-                    },
-                  ]}
-                />
-                <SegmentedControl
-                  size="sm"
-                  value={selectedBreakdown}
-                  onChange={(value) =>
-                    setSelectedBreakdown(value as BreakdownType)
-                  }
-                  data={[
-                    { label: "Expense", value: "expense" },
-                    { label: "Income", value: "income" },
-                  ]}
-                />
-              </Flex>
-            </Group>
-            <Text c="dimmed" size="sm">
-              {breakdownSubtitle}
-            </Text>
-
-            {hasBreakdown ? (
-              <div className={classes.chartContainer}>
-                <AgCharts options={chartOptions} />
-              </div>
-            ) : (
-              <Text c="dimmed" mt="md">
-                {emptyBreakdownMessage}
-              </Text>
-            )}
-          </Stack>
-
-          {overview.skippedBookingsCount > 0 ? (
-            <Alert
-              mt="md"
-              variant="light"
-              color="yellow"
-              icon={<IconAlertTriangle size={16} />}
-              title="Partial data"
-            >
-              {overview.skippedBookingsCount} valuation-related item(s) were
-              skipped because valuation data was unavailable.
-            </Alert>
-          ) : null}
-        </Card>
+        <PeriodBreakdownCard
+          selectedBreakdown={selectedBreakdown}
+          onSelectedBreakdownChange={setSelectedBreakdown}
+          selectedChartType={selectedChartType}
+          onSelectedChartTypeChange={setSelectedChartType}
+          breakdownTitle={breakdownTitle}
+          breakdownSubtitle={breakdownSubtitle}
+          emptyBreakdownMessage={emptyBreakdownMessage}
+          hasBreakdown={hasBreakdown}
+          chartOptions={chartOptions}
+          skippedBookingsCount={overview.skippedBookingsCount}
+        />
       </Stack>
 
       {selectedPeriodValue !== overview.selectedPeriodValue ? (
