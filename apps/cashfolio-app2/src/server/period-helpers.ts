@@ -300,6 +300,11 @@ function finalizeBreakdownHierarchyNodes(
       continue;
     }
 
+    if (children.length === 0) {
+      prunedNodeCount += 1;
+      continue;
+    }
+
     if (
       prunedChildNodeCount > 0 &&
       roundedDisplayedChildrenAmount !== roundedAmount

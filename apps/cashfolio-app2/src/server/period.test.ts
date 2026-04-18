@@ -496,6 +496,30 @@ describe("breakdown hierarchy", () => {
     expect(hierarchy).toEqual([]);
   });
 
+  test("prunes groups that have no visible children after leaf pruning", () => {
+    const result = buildBreakdownHierarchyWithMeta({
+      items: [
+        {
+          accountId: "account-tiny-a",
+          accountName: "Tiny A",
+          groupId: "rent",
+          amount: 0.004,
+        },
+        {
+          accountId: "account-tiny-b",
+          accountName: "Tiny B",
+          groupId: "rent",
+          amount: 0.004,
+        },
+      ],
+      groupById,
+    });
+
+    expect(result.hierarchy).toEqual([]);
+    expect(result.hasHiddenAmountDiscrepancy).toBe(false);
+    expect(result.hiddenAmountDiscrepancyNodeIds).toEqual([]);
+  });
+
   test("orders siblings by descending amount with deterministic tie-breakers", () => {
     const hierarchy = buildBreakdownHierarchy({
       items: [
@@ -634,6 +658,60 @@ describe("breakdown hierarchy", () => {
       "group:a-child",
       "group:z-root",
     ]);
+  });
+
+  test("keeps visible groups and flags discrepancy when rounded-to-zero children are hidden", () => {
+    const result = buildBreakdownHierarchyWithMeta({
+      items: [
+        {
+          accountId: "account-food",
+          accountName: "Food",
+          groupId: "food",
+          amount: 10,
+        },
+        {
+          accountId: "account-tiny-a",
+          accountName: "Tiny A",
+          groupId: "rent",
+          amount: 0.004,
+        },
+        {
+          accountId: "account-tiny-b",
+          accountName: "Tiny B",
+          groupId: "rent",
+          amount: 0.004,
+        },
+      ],
+      groupById,
+    });
+
+    expect(result.hierarchy).toEqual([
+      {
+        id: "group:expenses",
+        label: "Expenses",
+        kind: "group",
+        amount: 10.01,
+        children: [
+          {
+            id: "group:food",
+            label: "Food",
+            kind: "group",
+            amount: 10,
+            children: [
+              {
+                id: "account:account-food",
+                label: "Food",
+                kind: "account",
+                amount: 10,
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+    expect(result.hasHiddenAmountDiscrepancy).toBe(true);
+    expect(result.hiddenAmountDiscrepancyNodeIds).toEqual(["group:expenses"]);
   });
 
   test("does not flag discrepancies caused only by rounding distribution", () => {

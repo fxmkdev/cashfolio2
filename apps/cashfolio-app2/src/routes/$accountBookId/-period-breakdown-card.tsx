@@ -189,9 +189,9 @@ export function PeriodBreakdownCard({
             icon={<IconAlertTriangle size={16} />}
             title="Adjusted totals in this view"
           >
-            Hidden non-positive child accounts are excluded from drill-down
-            rows. Parent totals can therefore differ slightly from the sum of
-            visible children.
+            Hidden non-positive or rounded-to-zero child accounts are excluded
+            from drill-down rows. Parent totals can therefore differ slightly
+            from the sum of visible children.
           </Alert>
         ) : null}
 
