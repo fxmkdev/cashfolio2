@@ -467,7 +467,10 @@ test("period picker opens on selected month/year page", async ({ page }) => {
   await expect(monthPicker).toBeVisible();
   await expect(monthPicker.getByRole("button", { name: "2025" })).toBeVisible();
 
-  await page.getByRole("radio", { name: "Year" }).click();
+  const periodModeControl = page.getByRole("radiogroup", {
+    name: "Period mode",
+  });
+  await periodModeControl.getByText("Year", { exact: true }).click();
   await expect(periodPickerTrigger).toContainText("2025");
 
   await periodPickerTrigger.click();
