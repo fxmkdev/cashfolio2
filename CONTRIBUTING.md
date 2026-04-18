@@ -60,6 +60,14 @@ need to be strictly Conventional Commit formatted.
   `infra`, `docs`, `cli`).
 - Keep descriptions concise, imperative, and behavior-focused.
 
+## Runtime and Typings Policy
+
+- `tools/importer` is deprecated and no longer maintained. Avoid routine
+  dependency/tooling upgrades there unless explicitly requested.
+- `apps/cashfolio-app` is deprecated and no longer maintained. Avoid routine
+  dependency/tooling upgrades there unless explicitly requested.
+- Keep `@types/node` on the Node 24 line until runtime migration is scheduled.
+
 ## Review Comment Workflow
 
 - If the current Codex/chat thread is linked to an open pull request, push
