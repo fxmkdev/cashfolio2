@@ -13,6 +13,7 @@ import {
 import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
 import type {
   AgCartesianChartOptions,
+  AgWaterfallSeriesItemStylerParams,
   AgWaterfallSeriesOptions,
 } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
@@ -77,6 +78,18 @@ type WaterfallDatum = {
   label: string;
   amount: number;
 };
+
+type WaterfallTotalDatum = {
+  isTotal: boolean;
+};
+
+function isWaterfallTotalDatum(datum: unknown): datum is WaterfallTotalDatum {
+  if (typeof datum !== "object" || datum === null || !("isTotal" in datum)) {
+    return false;
+  }
+
+  return typeof datum.isTotal === "boolean";
+}
 
 function arePathsEqual(left: string[], right: string[]): boolean {
   if (left.length !== right.length) {
@@ -409,8 +422,10 @@ export function PeriodPageView({
         fill: waterfallPalette.total,
         stroke: waterfallPalette.total,
       },
-      itemStyler: (params: any) => {
-        if (params.datum && "isTotal" in params.datum && params.datum.isTotal) {
+      itemStyler: (
+        params: AgWaterfallSeriesItemStylerParams<WaterfallDatum>,
+      ) => {
+        if (isWaterfallTotalDatum(params.datum) && params.datum.isTotal) {
           return {
             fill: waterfallPalette.total,
             stroke: waterfallPalette.total,
