@@ -103,7 +103,7 @@ export function EditAccountGroupModal({
     return descendants;
   }, [editingId, existingNodes]);
 
-  const form = useForm<FormValues>({
+  const form = useForm<FormValues, AccountGroupTransformedFormValues>({
     mode: "uncontrolled",
     initialValues: initialValues
       ? toFormValues(initialValues)
@@ -151,8 +151,7 @@ export function EditAccountGroupModal({
     }
   }, [opened, initialValues]);
 
-  const { type, equityAccountSubtype } =
-    form.getTransformedValues() as AccountGroupTransformedFormValues;
+  const { type, equityAccountSubtype } = form.getTransformedValues();
   const handleClose = () => {
     if (isSubmitting) return;
     onClose();
@@ -170,11 +169,7 @@ export function EditAccountGroupModal({
       size="lg"
     >
       <form
-        onSubmit={form.onSubmit((values) =>
-          runSubmit(() =>
-            onSubmit(values as AccountGroupTransformedFormValues),
-          ),
-        )}
+        onSubmit={form.onSubmit((values) => runSubmit(() => onSubmit(values)))}
       >
         <Stack gap="xl">
           <Grid>

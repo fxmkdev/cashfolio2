@@ -5,7 +5,7 @@ paths are relative to that app directory.
 
 ## Mantine
 
-- **Mantine 8** for all UI components, forms (`@mantine/form`), and theming
+- **Mantine 9** for all UI components, forms (`@mantine/form`), and theming
 - **AG Grid Enterprise** wrapped in `src/components/data-grid.tsx` with tree
   data support
 - Use `LinkAnchor` from `src/components/link-anchor.tsx` for in-app links that
