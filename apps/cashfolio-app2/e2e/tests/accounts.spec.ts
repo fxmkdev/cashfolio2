@@ -439,6 +439,58 @@ test("period page shows KPI waterfall and updated income/expenses wording", asyn
   ).toBeVisible();
 });
 
+test("period picker opens on selected month/year page", async ({ page }) => {
+  await seedThreeBookingSplitTransaction({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Period Min Date Seed",
+    currentAccountId: seeded.cashAccount.id,
+    debitAccountIds: [seeded.savingsAccount.id, seeded.expenseAccount.id],
+    date: "2017-01-07T00:00:00.000Z",
+  });
+
+  await seedThreeBookingSplitTransaction({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Period Selected Date Seed",
+    currentAccountId: seeded.cashAccount.id,
+    debitAccountIds: [seeded.savingsAccount.id, seeded.expenseAccount.id],
+    date: "2025-04-07T00:00:00.000Z",
+  });
+
+  await page.goto(`/${seeded.accountBookId}/period?period=2025-04`);
+  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+
+  const periodPickerTrigger = page.getByTestId("period-picker-trigger");
+  await expect(periodPickerTrigger).toContainText("April 2025");
+
+  const openPeriodPicker = async (pickerTestId: string) => {
+    const picker = page.getByTestId(pickerTestId);
+    await periodPickerTrigger.click();
+
+    try {
+      await expect(picker).toBeVisible({ timeout: 2_000 });
+    } catch {
+      await periodPickerTrigger.click();
+      await expect(picker).toBeVisible();
+    }
+
+    return picker;
+  };
+
+  const monthPicker = await openPeriodPicker("period-month-picker");
+  await expect(monthPicker.getByRole("button", { name: "2025" })).toBeVisible();
+
+  const periodModeControl = page.getByRole("radiogroup", {
+    name: "Period mode",
+  });
+  await periodModeControl.getByText("Year", { exact: true }).click();
+  await expect(periodPickerTrigger).toContainText("2025");
+
+  const yearPicker = await openPeriodPicker("period-year-picker");
+  await expect(
+    yearPicker.getByRole("button", { name: "2025" }),
+  ).toHaveAttribute("data-selected", "true");
+});
+
 test("dashboard asset allocation donut renders for positive top-level asset groups", async ({
   page,
 }) => {
