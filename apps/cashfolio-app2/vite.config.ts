@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 
@@ -23,6 +24,11 @@ if (baseUrl) {
 
 export default defineConfig({
   plugins: [tanstackStart()],
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+  },
   preview: {
     allowedHosts: [...previewAllowedHosts],
   },

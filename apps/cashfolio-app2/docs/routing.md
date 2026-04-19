@@ -26,49 +26,48 @@ Related docs:
   `POST /api/logto/sign-out`
 - `$accountBookId/index.tsx` - index redirect route that forwards to
   `$accountBookId/accounts`
-- `$accountBookId/dashboard.tsx` - dashboard page with a monthly income/expense
-  chart and period switch (last 12 months or last 10 years)
-- `$accountBookId/accounts.tsx` - accounts page with tabs (one per account type:
-  Asset, Liability, Income, Expense, Gain/Loss)
+- `$accountBookId/dashboard/route.tsx` - dashboard page with a monthly
+  income/expense chart and period switch (last 12 months or last 10 years)
+- `$accountBookId/accounts/route.tsx` - accounts page with tabs (one per account
+  type: Asset, Liability, Income, Expense, Gain/Loss)
   - Loader data is tab-scoped: only the selected tab is fetched in the route
     loader critical path.
-- `$accountBookId/$accountId.tsx` - ledger layout route (loads ledger data and
-  provides shared search params for child routes)
+- `$accountBookId/$accountId/route.tsx` - ledger layout route (loads ledger data
+  and provides shared search params for child routes)
 - `$accountBookId/$accountId/index.tsx` - ledger page for a single account
-- `$accountBookId/$accountId/chart.tsx` - balance chart view for asset/liability
-  ledgers (daily closing native-unit balance)
-- Route-local helper files can live next to a route file when orchestration
-  grows, but they must be prefixed with `-` so TanStack Router ignores them. For
-  example:
+- `$accountBookId/$accountId/chart/route.tsx` - balance chart view for
+  asset/liability ledgers (daily closing native-unit balance)
+- Route-local helper files live inside the owning route folder and are prefixed
+  with `-` so TanStack Router ignores them. For example:
   - accounts route modules:
-    - `$accountBookId/-accounts-page-loader.ts`
-    - `$accountBookId/-accounts-page-controller.ts`
-    - `$accountBookId/-accounts-page-data.ts`
-    - `$accountBookId/-accounts-page-modal-state.ts`
-    - `$accountBookId/-accounts-page-reference-balances.ts`
-    - `$accountBookId/-accounts-page-columns.tsx`
+    - `$accountBookId/accounts/-page-loader.ts`
+    - `$accountBookId/accounts/-page-controller.ts`
+    - `$accountBookId/accounts/-page-data.ts`
+    - `$accountBookId/accounts/-page-modal-state.ts`
+    - `$accountBookId/accounts/-page-reference-balances.ts`
+    - `$accountBookId/accounts/-page-columns.tsx`
   - ledger route modules:
-    - `$accountBookId/-ledger-page-loader.ts`
-    - `$accountBookId/-ledger-page-controller.ts`
-    - `$accountBookId/-ledger-page-account-options.ts`
-    - `$accountBookId/-ledger-page-edit-flow.ts`
-    - `$accountBookId/-ledger-page-rebook-flow.ts`
-    - `$accountBookId/-ledger-page-transaction-utils.ts`
-    - `$accountBookId/-ledger-page-columns.tsx`
+    - `$accountBookId/$accountId/-page-loader.ts`
+    - `$accountBookId/$accountId/-page-controller.ts`
+    - `$accountBookId/$accountId/-page-account-options.ts`
+    - `$accountBookId/$accountId/-page-edit-flow.ts`
+    - `$accountBookId/$accountId/-page-rebook-flow.ts`
+    - `$accountBookId/$accountId/-page-transaction-utils.ts`
+    - `$accountBookId/$accountId/-page-columns.tsx`
 
 ### Search Parameters
 
 - Routes use `validateSearch` to define typed, validated search parameters
-- `$accountBookId/accounts.tsx` uses:
+- `$accountBookId/accounts/route.tsx` uses:
   - `tab: TabValue` to track the active account type tab
   - `mode: "active" | "archived"` to switch between active and archived account
     trees
-- `$accountBookId/$accountId.tsx` uses `transactionId?: string` to auto-scroll
-  and highlight a booking row
-- `$accountBookId/$accountId/chart.tsx` intentionally has no search params; the
-  ledger/chart switch does not carry `transactionId`
-- `$accountBookId/dashboard.tsx` uses `period: "12m" | "10y"` to switch the
-  dashboard overview between the default 12-month view and a 10-year view
+- `$accountBookId/$accountId/route.tsx` uses `transactionId?: string` to
+  auto-scroll and highlight a booking row
+- `$accountBookId/$accountId/chart/route.tsx` intentionally has no search
+  params; the ledger/chart switch does not carry `transactionId`
+- `$accountBookId/dashboard/route.tsx` uses `period: "12m" | "10y"` to switch
+  the dashboard overview between the default 12-month view and a 10-year view
 
 ### Global Navigation Progress
 
