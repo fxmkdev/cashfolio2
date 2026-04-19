@@ -2,7 +2,6 @@ import { Button, Container, Group, Tabs, Title } from "@mantine/core";
 import {
   IconArchive,
   IconCalendarMonth,
-  IconLayoutDashboard,
   IconListDetails,
   IconPlus,
 } from "@tabler/icons-react";
@@ -157,14 +156,6 @@ export function AccountsPageView({
         }
         actions={
           <Group>
-            <LinkButton
-              variant="default"
-              leftSection={<IconLayoutDashboard size={16} />}
-              to="/$accountBookId"
-              params={{ accountBookId }}
-            >
-              Dashboard
-            </LinkButton>
             <LinkButton
               variant="default"
               leftSection={<IconListDetails size={16} />}

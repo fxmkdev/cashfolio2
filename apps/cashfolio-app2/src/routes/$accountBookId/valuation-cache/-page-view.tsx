@@ -12,7 +12,7 @@ import {
 } from "@mantine/core";
 import {
   IconAlertTriangle,
-  IconLayoutDashboard,
+  IconCalendarMonth,
   IconListDetails,
 } from "@tabler/icons-react";
 import type {
@@ -438,11 +438,11 @@ export function ValuationCachePageView({
             </LinkButton>
             <LinkButton
               variant="default"
-              leftSection={<IconLayoutDashboard size={16} />}
-              to="/$accountBookId"
+              leftSection={<IconCalendarMonth size={16} />}
+              to="/$accountBookId/period"
               params={{ accountBookId }}
             >
-              Dashboard
+              Period
             </LinkButton>
           </Group>
         }
