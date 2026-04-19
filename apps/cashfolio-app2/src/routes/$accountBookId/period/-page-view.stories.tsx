@@ -427,8 +427,28 @@ export const HappyPath: Story = {
     await expect(canvas.queryByText("Total Income")).not.toBeInTheDocument();
     await expect(canvas.queryByText("Total Expenses")).not.toBeInTheDocument();
     await expect(canvas.queryByText("Gains / Losses")).not.toBeInTheDocument();
+    const savingsCard = await canvas.findByTestId("period-stat-card-savings");
+    await expect(within(savingsCard).getByText("31.3%")).toBeInTheDocument();
     await expect(canvas.getByRole("radio", { name: "Expenses" })).toBeChecked();
     await expect(canvas.getByText("Gains")).toBeInTheDocument();
+  },
+};
+
+export const ZeroIncomeSavingsRate: Story = {
+  args: {
+    overview: {
+      ...baseOverview,
+      stats: {
+        ...baseOverview.stats,
+        income: 0,
+        savings: 0,
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const savingsCard = await canvas.findByTestId("period-stat-card-savings");
+    await expect(within(savingsCard).getByText("—")).toBeInTheDocument();
   },
 };
 
