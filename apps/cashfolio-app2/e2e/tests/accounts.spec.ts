@@ -81,20 +81,22 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
   accountId: string;
   period: string;
 }) {
-  const breakdownChartTypeControl = args.page.getByRole("radiogroup", {
-    name: "Breakdown chart type",
-  });
-  await breakdownChartTypeControl
-    .locator("label")
-    .filter({ hasText: "Bar" })
-    .first()
-    .click({ force: true });
-
   const breakdownCard = args.page
     .getByRole("heading", { name: "Expenses Breakdown" })
     .locator(
       "xpath=ancestor::*[self::section or self::article or self::div][.//canvas][1]",
     );
+
+  const breakdownFigure = breakdownCard.getByRole("figure", {
+    name: /chart, 1 series/i,
+  });
+  await expect(breakdownFigure).toBeVisible();
+
+  const chartDatumNode = breakdownFigure
+    .getByRole("img", { name: /; Amount;/ })
+    .first();
+  await expect(chartDatumNode).toBeVisible();
+
   const chartSurface = breakdownCard.locator(".ag-charts-series-area").first();
   await expect(chartSurface).toBeVisible();
 
@@ -113,32 +115,42 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
     [0.5, 0.55],
   ];
 
+  const tryExpectLedgerNavigation = async () => {
+    await expect
+      .poll(
+        () => {
+          const url = new URL(args.page.url());
+          return (
+            url.pathname === expectedPath &&
+            url.searchParams.get("period") === args.period
+          );
+        },
+        { timeout: 1_500 },
+      )
+      .toBe(true);
+  };
+
   for (const [relativeX, relativeY] of clickTargets) {
-    const x = Math.round(chartBounds.width * relativeX);
-    const y = Math.round(chartBounds.height * relativeY);
-
-    await chartSurface.dblclick({
-      position: { x, y },
-      timeout: 5_000,
-      force: true,
-    });
-
     try {
-      await expect
-        .poll(
-          () => {
-            const url = new URL(args.page.url());
-            return (
-              url.pathname === expectedPath &&
-              url.searchParams.get("period") === args.period
-            );
-          },
-          { timeout: 1_500 },
-        )
-        .toBe(true);
+      await chartDatumNode.dblclick({ timeout: 5_000, force: true });
+      await tryExpectLedgerNavigation();
       return;
     } catch {
-      // Try the next coordinate if the previous click missed the bar.
+      // Fall back to coordinate-based double click if the datum node interaction missed.
+    }
+
+    try {
+      const x = Math.round(chartBounds.width * relativeX);
+      const y = Math.round(chartBounds.height * relativeY);
+      await chartSurface.dblclick({
+        position: { x, y },
+        timeout: 5_000,
+        force: true,
+      });
+      await tryExpectLedgerNavigation();
+      return;
+    } catch {
+      // Try the next coordinate if the previous click missed the active chart node.
     }
   }
 
