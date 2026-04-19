@@ -22,8 +22,7 @@ export async function loadLedgerPageData(args: {
         accountId: args.accountId,
         accountBookId: args.accountBookId,
         period: isPeriodFilterAllowed ? args.period : undefined,
-        includeReferenceValues:
-          isPeriodFilterAllowed && typeof args.period === "string",
+        includeReferenceValues: isPeriodFilterAllowed,
       },
     }),
     getAccounts({ data: { accountBookId: args.accountBookId } }),

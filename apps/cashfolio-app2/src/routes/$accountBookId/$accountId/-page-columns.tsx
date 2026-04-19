@@ -135,7 +135,7 @@ export function useLedgerColumnDefs(args: {
               filter: "agNumberColumnFilter",
             },
           ]),
-      ...(isEquity && hasPeriodFilter && !isIncome
+      ...(isEquity && !isIncome
         ? [
             {
               field: "referenceDebit" as const,
@@ -148,7 +148,7 @@ export function useLedgerColumnDefs(args: {
             },
           ]
         : []),
-      ...(isEquity && hasPeriodFilter && !isExpense
+      ...(isEquity && !isExpense
         ? [
             {
               field: "referenceCredit" as const,
