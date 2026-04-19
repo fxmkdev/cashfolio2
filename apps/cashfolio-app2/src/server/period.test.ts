@@ -266,6 +266,39 @@ describe("computeEndOfPeriodBalanceStats", () => {
       }),
     );
   });
+
+  test("does not count missing-unit accounts without raw balance as skipped", async () => {
+    const periodEnd = new Date("2026-02-28T00:00:00.000Z");
+    const convertBalanceToReference = vi.fn(
+      async (input: { value: number }) => input.value,
+    );
+
+    const result = await computeEndOfPeriodBalanceStats({
+      accounts: [
+        {
+          id: "asset-missing-unit-no-balance",
+          type: AccountType.ASSET,
+          unit: null,
+          currency: null,
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+        },
+      ],
+      rawBalanceByAccountId: new Map(),
+      periodEnd,
+      referenceCurrency: "CHF",
+      convertBalanceToReference,
+    });
+
+    expect(result).toEqual({
+      assets: 0,
+      liabilities: 0,
+      netWorth: 0,
+      skippedCount: 0,
+    });
+    expect(convertBalanceToReference).not.toHaveBeenCalled();
+  });
 });
 
 describe("transaction period inclusion", () => {

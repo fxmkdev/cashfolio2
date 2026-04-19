@@ -361,34 +361,51 @@ export async function computeEndOfPeriodBalanceStats(args: {
   let liabilities = 0;
   let skippedCount = 0;
 
-  for (const account of args.accounts) {
-    const rawBalance = args.rawBalanceByAccountId.get(account.id) ?? 0;
+  const conversionResults = await Promise.all(
+    args.accounts.map(async (account) => {
+      const hasRawBalance = args.rawBalanceByAccountId.has(account.id);
+      const rawBalance = args.rawBalanceByAccountId.get(account.id) ?? 0;
 
-    if (account.unit == null) {
-      skippedCount += 1;
+      if (account.unit == null) {
+        return {
+          accountType: account.type,
+          convertedBalance: null as number | null,
+          skipped: rawBalance !== 0 || hasRawBalance,
+        };
+      }
+
+      const convertedBalance = await args.convertBalanceToReference({
+        value: rawBalance,
+        unit: account.unit,
+        currency: account.currency,
+        cryptocurrency: account.cryptocurrency,
+        symbol: account.symbol,
+        tradeCurrency: account.tradeCurrency,
+        date: args.periodEnd,
+        referenceCurrency: args.referenceCurrency,
+      });
+
+      return {
+        accountType: account.type,
+        convertedBalance,
+        skipped:
+          convertedBalance == null && (rawBalance !== 0 || hasRawBalance),
+      };
+    }),
+  );
+
+  for (const conversionResult of conversionResults) {
+    if (conversionResult.skipped || conversionResult.convertedBalance == null) {
+      if (conversionResult.skipped) {
+        skippedCount += 1;
+      }
       continue;
     }
 
-    const convertedBalance = await args.convertBalanceToReference({
-      value: rawBalance,
-      unit: account.unit,
-      currency: account.currency,
-      cryptocurrency: account.cryptocurrency,
-      symbol: account.symbol,
-      tradeCurrency: account.tradeCurrency,
-      date: args.periodEnd,
-      referenceCurrency: args.referenceCurrency,
-    });
-
-    if (convertedBalance == null) {
-      skippedCount += 1;
-      continue;
-    }
-
-    if (account.type === AccountType.ASSET) {
-      assets += convertedBalance;
-    } else if (account.type === AccountType.LIABILITY) {
-      liabilities += -convertedBalance;
+    if (conversionResult.accountType === AccountType.ASSET) {
+      assets += conversionResult.convertedBalance;
+    } else if (conversionResult.accountType === AccountType.LIABILITY) {
+      liabilities += -conversionResult.convertedBalance;
     }
   }
 
