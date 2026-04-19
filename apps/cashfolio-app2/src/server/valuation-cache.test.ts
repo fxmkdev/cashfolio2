@@ -66,14 +66,11 @@ describe("valuation-cache server functions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
-      referenceCurrency: "CHF",
-    });
     prisma.account.findMany.mockResolvedValue([]);
     getRedisClient.mockResolvedValue(null);
   });
 
-  it("deduplicates units, normalizes casing, excludes reference currency, and includes all account states", async () => {
+  it("deduplicates units, normalizes casing, includes reference currency, and includes all account states", async () => {
     prisma.account.findMany.mockResolvedValue([
       {
         unit: Unit.CURRENCY,
@@ -159,6 +156,12 @@ describe("valuation-cache server functions", () => {
 
     expect(result).toEqual({
       currencyUnits: [
+        {
+          unitType: "CURRENCY",
+          label: "CHF",
+          unitKey: "currency:CHF",
+          currency: "CHF",
+        },
         {
           unitType: "CURRENCY",
           label: "EUR",
@@ -301,5 +304,50 @@ describe("valuation-cache server functions", () => {
     expect(getCurrencyExchangeRate).not.toHaveBeenCalled();
     expect(getCryptocurrencyToCurrencyExchangeRate).not.toHaveBeenCalled();
     expect(getSecurityToCurrencyExchangeRate).not.toHaveBeenCalled();
+  });
+
+  it("returns a 400 response when unitType is invalid", async () => {
+    await expect(
+      getValuationCacheSeries({
+        data: {
+          accountBookId: "book-5",
+          unitType: "INVALID",
+        } as unknown as Parameters<typeof getValuationCacheSeries>[0]["data"],
+      }),
+    ).rejects.toMatchObject({
+      status: 400,
+    });
+  });
+
+  it("logs cache series read failures only once while returning non-fatal empty data", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const redis = {
+      exists: vi.fn().mockResolvedValue(1),
+      ts: {
+        range: vi.fn().mockRejectedValue(new Error("read failed")),
+      },
+    };
+    getRedisClient.mockResolvedValue(redis);
+
+    const firstResult = await getValuationCacheSeries({
+      data: {
+        accountBookId: "book-6",
+        unitType: "CRYPTOCURRENCY",
+        cryptocurrency: "BTC",
+      },
+    });
+    const secondResult = await getValuationCacheSeries({
+      data: {
+        accountBookId: "book-6",
+        unitType: "CRYPTOCURRENCY",
+        cryptocurrency: "BTC",
+      },
+    });
+
+    expect(firstResult).toEqual({ cacheAvailable: false, points: [] });
+    expect(secondResult).toEqual({ cacheAvailable: false, points: [] });
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+
+    warnSpy.mockRestore();
   });
 });

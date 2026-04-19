@@ -1,4 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
+import {
+  isValuationUnitTab,
+  type ValuationUnitTab,
+} from "../shared/valuation-unit-tabs";
 import { Unit } from "../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { prisma } from "../prisma.server";
@@ -9,8 +13,6 @@ import {
   getCurrencyRedisSeriesKey,
   getSecurityRedisSeriesKey,
 } from "./valuation/keys";
-
-export type ValuationUnitTab = "CURRENCY" | "CRYPTOCURRENCY" | "SECURITY";
 
 export type ValuationCacheUnitRow = {
   unitType: ValuationUnitTab;
@@ -52,44 +54,67 @@ type GetValuationCacheSeriesInput = {
   tradeCurrency?: string;
 };
 
+let hasWarnedValuationCacheSeriesReadFailure = false;
+
 function normalizeUnitCode(value: string | null | undefined): string | null {
   if (!value) return null;
   const normalized = value.trim().toUpperCase();
   return normalized.length > 0 ? normalized : null;
 }
 
-function getSeriesKey(input: GetValuationCacheSeriesInput): string {
-  if (input.unitType === "CURRENCY") {
-    const currency = normalizeUnitCode(input.currency);
-    if (!currency) {
-      throw new Response("Currency is required for CURRENCY series.", {
-        status: 400,
-      });
-    }
-    return getCurrencyRedisSeriesKey(currency);
-  }
-
-  if (input.unitType === "CRYPTOCURRENCY") {
-    const cryptocurrency = normalizeUnitCode(input.cryptocurrency);
-    if (!cryptocurrency) {
-      throw new Response(
-        "Cryptocurrency is required for CRYPTOCURRENCY series.",
-        { status: 400 },
-      );
-    }
-    return getCryptocurrencyRedisSeriesKey(cryptocurrency);
-  }
-
-  const symbol = normalizeUnitCode(input.symbol);
-  const tradeCurrency = normalizeUnitCode(input.tradeCurrency);
-  if (!symbol || !tradeCurrency) {
+function validateGetValuationCacheSeriesInput(
+  data: GetValuationCacheSeriesInput,
+): GetValuationCacheSeriesInput {
+  const unitType = (data as { unitType?: unknown }).unitType;
+  if (!isValuationUnitTab(unitType)) {
     throw new Response(
-      "Symbol and tradeCurrency are required for SECURITY series.",
+      "Invalid unitType. Expected CURRENCY, CRYPTOCURRENCY, or SECURITY.",
       { status: 400 },
     );
   }
 
-  return getSecurityRedisSeriesKey(symbol, tradeCurrency);
+  return data;
+}
+
+function getSeriesKey(input: GetValuationCacheSeriesInput): string {
+  switch (input.unitType) {
+    case "CURRENCY": {
+      const currency = normalizeUnitCode(input.currency);
+      if (!currency) {
+        throw new Response("Currency is required for CURRENCY series.", {
+          status: 400,
+        });
+      }
+      return getCurrencyRedisSeriesKey(currency);
+    }
+    case "CRYPTOCURRENCY": {
+      const cryptocurrency = normalizeUnitCode(input.cryptocurrency);
+      if (!cryptocurrency) {
+        throw new Response(
+          "Cryptocurrency is required for CRYPTOCURRENCY series.",
+          { status: 400 },
+        );
+      }
+      return getCryptocurrencyRedisSeriesKey(cryptocurrency);
+    }
+    case "SECURITY": {
+      const symbol = normalizeUnitCode(input.symbol);
+      const tradeCurrency = normalizeUnitCode(input.tradeCurrency);
+      if (!symbol || !tradeCurrency) {
+        throw new Response(
+          "Symbol and tradeCurrency are required for SECURITY series.",
+          { status: 400 },
+        );
+      }
+
+      return getSecurityRedisSeriesKey(symbol, tradeCurrency);
+    }
+    default:
+      throw new Response(
+        "Invalid unitType. Expected CURRENCY, CRYPTOCURRENCY, or SECURITY.",
+        { status: 400 },
+      );
+  }
 }
 
 function toSortedUnits(unitsByKey: Map<string, ValuationCacheUnitRow>) {
@@ -103,24 +128,16 @@ export const getValuationCacheUnits = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
-    const [accountBook, accounts] = await Promise.all([
-      prisma.accountBook.findUniqueOrThrow({
-        where: { id: data.accountBookId },
-        select: { referenceCurrency: true },
-      }),
-      prisma.account.findMany({
-        where: { accountBookId: data.accountBookId },
-        select: {
-          unit: true,
-          currency: true,
-          cryptocurrency: true,
-          symbol: true,
-          tradeCurrency: true,
-        },
-      }),
-    ]);
-
-    const referenceCurrency = normalizeUnitCode(accountBook.referenceCurrency);
+    const accounts = await prisma.account.findMany({
+      where: { accountBookId: data.accountBookId },
+      select: {
+        unit: true,
+        currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
+      },
+    });
     const currencyUnitsByKey = new Map<string, ValuationCacheUnitRow>();
     const cryptocurrencyUnitsByKey = new Map<string, ValuationCacheUnitRow>();
     const securityUnitsByKey = new Map<string, ValuationCacheUnitRow>();
@@ -128,7 +145,7 @@ export const getValuationCacheUnits = createServerFn({ method: "GET" })
     for (const account of accounts) {
       if (account.unit === Unit.CURRENCY) {
         const currency = normalizeUnitCode(account.currency);
-        if (!currency || currency === referenceCurrency) {
+        if (!currency) {
           continue;
         }
 
@@ -190,7 +207,7 @@ export const getValuationCacheUnits = createServerFn({ method: "GET" })
   });
 
 export const getValuationCacheSeries = createServerFn({ method: "GET" })
-  .inputValidator((data: GetValuationCacheSeriesInput) => data)
+  .inputValidator(validateGetValuationCacheSeriesInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
@@ -226,10 +243,13 @@ export const getValuationCacheSeries = createServerFn({ method: "GET" })
         points,
       } satisfies ValuationCacheSeriesResponse;
     } catch (error) {
-      console.warn("Failed to read valuation cache TimeSeries data.", {
-        seriesKey,
-        error,
-      });
+      if (!hasWarnedValuationCacheSeriesReadFailure) {
+        console.warn("Failed to read valuation cache TimeSeries data.", {
+          seriesKey,
+          error,
+        });
+        hasWarnedValuationCacheSeriesReadFailure = true;
+      }
       return {
         cacheAvailable: false,
         points: [],

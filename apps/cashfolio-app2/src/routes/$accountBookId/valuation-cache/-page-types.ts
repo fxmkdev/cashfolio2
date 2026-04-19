@@ -1,4 +1,10 @@
-export type ValuationUnitTab = "CURRENCY" | "CRYPTOCURRENCY" | "SECURITY";
+import {
+  VALUATION_UNIT_TABS,
+  isValuationUnitTab,
+  type ValuationUnitTab,
+} from "../../../shared/valuation-unit-tabs";
+
+export type { ValuationUnitTab };
 
 export type ValuationCacheSearch = {
   tab?: ValuationUnitTab;
@@ -7,15 +13,15 @@ export type ValuationCacheSearch = {
 export const valuationUnitTabs: readonly {
   value: ValuationUnitTab;
   label: string;
-}[] = [
-  { value: "CURRENCY", label: "Currency" },
-  { value: "CRYPTOCURRENCY", label: "Cryptocurrency" },
-  { value: "SECURITY", label: "Security" },
-] as const;
-
-function isValuationUnitTab(value: unknown): value is ValuationUnitTab {
-  return valuationUnitTabs.some((tab) => tab.value === value);
-}
+}[] = VALUATION_UNIT_TABS.map((tab) => ({
+  value: tab,
+  label:
+    tab === "CURRENCY"
+      ? "Currency"
+      : tab === "CRYPTOCURRENCY"
+        ? "Cryptocurrency"
+        : "Security",
+}));
 
 export function parseValuationCacheSearch(
   search: Record<string, unknown>,
