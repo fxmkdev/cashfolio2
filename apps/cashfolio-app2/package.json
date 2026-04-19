@@ -6,7 +6,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "start": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "pnpm prisma:generate && tsc --noEmit",
     "format": "prettier --check .",
     "pretest:unit": "pnpm prisma:generate",
     "test:unit": "vitest run",
