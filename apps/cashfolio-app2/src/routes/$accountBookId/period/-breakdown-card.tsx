@@ -1,8 +1,12 @@
 import { Flex, SegmentedControl } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { PeriodBreakdownChartOptions } from "./-breakdown-chart-options";
+import { BreakdownTable } from "./-breakdown-table";
 import { ChartTypeSegmentedControl } from "./-chart-type-segmented-control";
-import type { BreakdownBreadcrumb } from "./-breakdown-drill";
+import type {
+  BreakdownBreadcrumb,
+  BreakdownHierarchyNode,
+} from "./-breakdown-drill";
 import type { BreakdownChartType, BreakdownType } from "./-breakdown-types";
 import { DrilldownCardShell } from "./-drilldown-card-shell";
 
@@ -16,10 +20,12 @@ type PeriodBreakdownCardProps = {
   hasBreakdownAmountDiscrepancy: boolean;
   hasBreakdown: boolean;
   emptyBreakdownMessage: string;
+  breakdownHierarchy: BreakdownHierarchyNode[];
   chartOptions: PeriodBreakdownChartOptions;
   onSelectedBreakdownChange: (value: BreakdownType) => void;
   onSelectedChartTypeChange: (value: BreakdownChartType) => void;
   onDrillPathChange: (nextPath: string[]) => void;
+  onBreakdownAccountDoubleClick: (accountId: string) => void;
   onChartContainerDoubleClick?: (() => void) | null;
   footer?: ReactNode;
 };
@@ -38,13 +44,18 @@ export function PeriodBreakdownCard({
   hasBreakdownAmountDiscrepancy,
   hasBreakdown,
   emptyBreakdownMessage,
+  breakdownHierarchy,
   chartOptions,
   onSelectedBreakdownChange,
   onSelectedChartTypeChange,
   onDrillPathChange,
+  onBreakdownAccountDoubleClick,
   onChartContainerDoubleClick,
   footer,
 }: PeriodBreakdownCardProps) {
+  const isTableView = selectedChartType === "table";
+  const hasTableBreakdown = breakdownHierarchy.length > 0;
+
   const controls = (
     <Flex gap="md" wrap="wrap" justify="flex-end">
       <ChartTypeSegmentedControl
@@ -76,12 +87,24 @@ export function PeriodBreakdownCard({
       breadcrumbs={breadcrumbs}
       clampedPath={clampedPath}
       hasAmountDiscrepancy={hasBreakdownAmountDiscrepancy}
-      hasData={hasBreakdown}
+      hasData={isTableView ? hasTableBreakdown : hasBreakdown}
       emptyMessage={emptyBreakdownMessage}
+      displayMode={isTableView ? "table" : "chart"}
       chartOptions={chartOptions}
+      tableContent={
+        isTableView ? (
+          <BreakdownTable
+            hierarchy={breakdownHierarchy}
+            valueHeaderName="Amount"
+            onAccountDoubleClick={onBreakdownAccountDoubleClick}
+          />
+        ) : null
+      }
       chartContainerTestId="period-breakdown-chart"
+      tableContainerTestId="period-breakdown-table"
       onDrillPathChange={onDrillPathChange}
       onChartContainerDoubleClick={onChartContainerDoubleClick}
+      showDrillControls={!isTableView}
       drillHint="Double-click a group to drill down, or an account to open ledger."
       headerControls={controls}
       footer={footer}

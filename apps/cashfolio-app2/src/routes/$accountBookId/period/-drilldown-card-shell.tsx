@@ -24,10 +24,14 @@ type DrilldownCardShellProps = {
   hasAmountDiscrepancy: boolean;
   hasData: boolean;
   emptyMessage: string;
-  chartOptions: PeriodBreakdownChartOptions;
+  displayMode: "chart" | "table";
+  chartOptions?: PeriodBreakdownChartOptions;
+  tableContent?: ReactNode;
   chartContainerTestId?: string;
+  tableContainerTestId?: string;
   onDrillPathChange: (nextPath: string[]) => void;
   onChartContainerDoubleClick?: (() => void) | null;
+  showDrillControls?: boolean;
   headerControls?: ReactNode;
   footer?: ReactNode;
   drillHint?: string;
@@ -41,10 +45,14 @@ export function DrilldownCardShell({
   hasAmountDiscrepancy,
   hasData,
   emptyMessage,
+  displayMode,
   chartOptions,
+  tableContent,
   chartContainerTestId,
+  tableContainerTestId,
   onDrillPathChange,
   onChartContainerDoubleClick,
+  showDrillControls = true,
   headerControls,
   footer,
   drillHint = "Double-click a group to drill down.",
@@ -61,67 +69,71 @@ export function DrilldownCardShell({
           {subtitle}
         </Text>
 
-        <Group
-          justify="space-between"
-          align="center"
-          gap="xs"
-          className={classes.breakdownContextRow}
-        >
-          <Group gap="xs" wrap="wrap">
-            <Button
-              variant="default"
-              size="compact-sm"
-              leftSection={<IconArrowUp size={14} />}
-              disabled={clampedPath.length === 0}
-              onClick={() => {
-                onDrillPathChange(clampedPath.slice(0, clampedPath.length - 1));
-              }}
-            >
-              Up
-            </Button>
-
-            <Breadcrumbs>
-              {breadcrumbs.map((breadcrumb, breadcrumbIndex) => {
-                const isCurrent = breadcrumbIndex === breadcrumbs.length - 1;
-                const nextPath =
-                  breadcrumb.id == null
-                    ? []
-                    : clampedPath.slice(0, breadcrumbIndex);
-
-                if (isCurrent) {
-                  return (
-                    <Text
-                      key={breadcrumb.id ?? "root"}
-                      fw={600}
-                      fz="sm"
-                      lh="inherit"
-                    >
-                      {breadcrumb.label}
-                    </Text>
+        {showDrillControls ? (
+          <Group
+            justify="space-between"
+            align="center"
+            gap="xs"
+            className={classes.breakdownContextRow}
+          >
+            <Group gap="xs" wrap="wrap">
+              <Button
+                variant="default"
+                size="compact-sm"
+                leftSection={<IconArrowUp size={14} />}
+                disabled={clampedPath.length === 0}
+                onClick={() => {
+                  onDrillPathChange(
+                    clampedPath.slice(0, clampedPath.length - 1),
                   );
-                }
+                }}
+              >
+                Up
+              </Button>
 
-                return (
-                  <UnstyledButton
-                    key={breadcrumb.id ?? "root"}
-                    className={classes.breadcrumbButton}
-                    onClick={() => {
-                      onDrillPathChange(nextPath);
-                    }}
-                  >
-                    <Text fz="sm" c="blue.7" lh="inherit">
-                      {breadcrumb.label}
-                    </Text>
-                  </UnstyledButton>
-                );
-              })}
-            </Breadcrumbs>
+              <Breadcrumbs>
+                {breadcrumbs.map((breadcrumb, breadcrumbIndex) => {
+                  const isCurrent = breadcrumbIndex === breadcrumbs.length - 1;
+                  const nextPath =
+                    breadcrumb.id == null
+                      ? []
+                      : clampedPath.slice(0, breadcrumbIndex);
+
+                  if (isCurrent) {
+                    return (
+                      <Text
+                        key={breadcrumb.id ?? "root"}
+                        fw={600}
+                        fz="sm"
+                        lh="inherit"
+                      >
+                        {breadcrumb.label}
+                      </Text>
+                    );
+                  }
+
+                  return (
+                    <UnstyledButton
+                      key={breadcrumb.id ?? "root"}
+                      className={classes.breadcrumbButton}
+                      onClick={() => {
+                        onDrillPathChange(nextPath);
+                      }}
+                    >
+                      <Text fz="sm" c="blue.7" lh="inherit">
+                        {breadcrumb.label}
+                      </Text>
+                    </UnstyledButton>
+                  );
+                })}
+              </Breadcrumbs>
+            </Group>
+
+            <Text c="dimmed" size="xs">
+              {drillHint}
+            </Text>
           </Group>
-
-          <Text c="dimmed" size="xs">
-            {drillHint}
-          </Text>
-        </Group>
+        ) : null}
 
         {hasAmountDiscrepancy ? (
           <Alert
@@ -137,13 +149,22 @@ export function DrilldownCardShell({
         ) : null}
 
         {hasData ? (
-          <div
-            className={classes.chartContainer}
-            data-testid={chartContainerTestId}
-            onDoubleClick={onChartContainerDoubleClick ?? undefined}
-          >
-            <AgCharts options={chartOptions} />
-          </div>
+          displayMode === "chart" ? (
+            <div
+              className={classes.chartContainer}
+              data-testid={chartContainerTestId}
+              onDoubleClick={onChartContainerDoubleClick ?? undefined}
+            >
+              {chartOptions ? <AgCharts options={chartOptions} /> : null}
+            </div>
+          ) : (
+            <div
+              className={classes.chartContainer}
+              data-testid={tableContainerTestId}
+            >
+              {tableContent}
+            </div>
+          )
         ) : (
           <Text c="dimmed" mt="md">
             {emptyMessage}

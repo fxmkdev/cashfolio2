@@ -1,8 +1,12 @@
 import { Flex, SegmentedControl } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { PeriodBreakdownChartOptions } from "./-breakdown-chart-options";
+import { BreakdownTable } from "./-breakdown-table";
 import { ChartTypeSegmentedControl } from "./-chart-type-segmented-control";
-import type { BreakdownBreadcrumb } from "./-breakdown-drill";
+import type {
+  BreakdownBreadcrumb,
+  BreakdownHierarchyNode,
+} from "./-breakdown-drill";
 import type {
   AllocationBreakdownType,
   BreakdownChartType,
@@ -19,6 +23,7 @@ type PeriodAllocationBreakdownCardProps = {
   hasBreakdownAmountDiscrepancy: boolean;
   hasBreakdown: boolean;
   emptyBreakdownMessage: string;
+  breakdownHierarchy: BreakdownHierarchyNode[];
   chartOptions: PeriodBreakdownChartOptions;
   onSelectedBreakdownChange: (value: AllocationBreakdownType) => void;
   onSelectedChartTypeChange: (value: BreakdownChartType) => void;
@@ -42,12 +47,16 @@ export function PeriodAllocationBreakdownCard({
   hasBreakdownAmountDiscrepancy,
   hasBreakdown,
   emptyBreakdownMessage,
+  breakdownHierarchy,
   chartOptions,
   onSelectedBreakdownChange,
   onSelectedChartTypeChange,
   onDrillPathChange,
   footer,
 }: PeriodAllocationBreakdownCardProps) {
+  const isTableView = selectedChartType === "table";
+  const hasTableBreakdown = breakdownHierarchy.length > 0;
+
   return (
     <DrilldownCardShell
       title={breakdownTitle}
@@ -55,10 +64,22 @@ export function PeriodAllocationBreakdownCard({
       breadcrumbs={breadcrumbs}
       clampedPath={clampedPath}
       hasAmountDiscrepancy={hasBreakdownAmountDiscrepancy}
-      hasData={hasBreakdown}
+      hasData={isTableView ? hasTableBreakdown : hasBreakdown}
       emptyMessage={emptyBreakdownMessage}
+      displayMode={isTableView ? "table" : "chart"}
       chartOptions={chartOptions}
+      tableContent={
+        isTableView ? (
+          <BreakdownTable
+            hierarchy={breakdownHierarchy}
+            valueHeaderName="Balance"
+          />
+        ) : null
+      }
+      chartContainerTestId="period-allocation-breakdown-chart"
+      tableContainerTestId="period-allocation-breakdown-table"
       onDrillPathChange={onDrillPathChange}
+      showDrillControls={!isTableView}
       headerControls={
         <Flex gap="md" wrap="wrap" justify="flex-end">
           <ChartTypeSegmentedControl
