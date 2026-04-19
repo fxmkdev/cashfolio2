@@ -708,6 +708,11 @@ export const BreakdownToggleSmoke: Story = {
     });
     await userEvent.click(barOption);
     await expect(barOption).toBeChecked();
+    await expect(
+      within(breakdownChartTypeControl).getByRole("radio", {
+        name: "Table",
+      }),
+    ).toBeInTheDocument();
 
     await expect(
       canvas.getByText("Top-level groups for income in the selected period"),
@@ -743,6 +748,79 @@ export const AllocationToggleSmoke: Story = {
     );
     await userEvent.click(allocationBarOption);
     await expect(allocationBarOption).toBeChecked();
+    await expect(
+      within(allocationChartTypeControl).getByRole("radio", {
+        name: "Table",
+      }),
+    ).toBeInTheDocument();
+  },
+};
+
+export const BreakdownTableModeSmoke: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const breakdownChartTypeControl = await canvas.findByLabelText(
+      "Breakdown chart type",
+    );
+    const tableOption = within(breakdownChartTypeControl).getByRole("radio", {
+      name: "Table",
+    });
+    await userEvent.click(tableOption);
+    await expect(tableOption).toBeChecked();
+    await expect(
+      canvas.getByTestId("period-breakdown-table"),
+    ).toBeInTheDocument();
+    await expect(
+      canvas.queryByTestId("period-breakdown-chart"),
+    ).not.toBeInTheDocument();
+  },
+};
+
+export const AllocationTableModeSmoke: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const allocationChartTypeControl = await canvas.findByLabelText(
+      "Allocation chart type",
+    );
+    const tableOption = within(allocationChartTypeControl).getByRole("radio", {
+      name: "Table",
+    });
+    await userEvent.click(tableOption);
+    await expect(tableOption).toBeChecked();
+    await expect(
+      canvas.getByTestId("period-allocation-breakdown-table"),
+    ).toBeInTheDocument();
+    await expect(
+      canvas.queryByTestId("period-allocation-breakdown-chart"),
+    ).not.toBeInTheDocument();
+  },
+};
+
+export const BreakdownTableDoubleClickSmoke: Story = {
+  args: {
+    onBreakdownAccountDoubleClick: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+
+    const breakdownChartTypeControl = await canvas.findByLabelText(
+      "Breakdown chart type",
+    );
+    await userEvent.click(
+      within(breakdownChartTypeControl).getByRole("radio", {
+        name: "Table",
+      }),
+    );
+
+    await userEvent.dblClick(canvas.getByText("Housing"));
+    await expect(args.onBreakdownAccountDoubleClick).not.toHaveBeenCalled();
+
+    await userEvent.dblClick(canvas.getByText("Subscriptions"));
+    await expect(args.onBreakdownAccountDoubleClick).toHaveBeenCalledWith(
+      "account-subscriptions",
+    );
   },
 };
 

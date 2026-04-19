@@ -1,5 +1,5 @@
 import { Center, SegmentedControl } from "@mantine/core";
-import { IconChartBar, IconChartDonut } from "@tabler/icons-react";
+import { IconChartBar, IconChartDonut, IconTable } from "@tabler/icons-react";
 import type { BreakdownChartType } from "./-breakdown-types";
 
 type ChartTypeSegmentedControlProps = {
@@ -9,7 +9,7 @@ type ChartTypeSegmentedControlProps = {
 };
 
 function isBreakdownChartType(value: string): value is BreakdownChartType {
-  return value === "donut" || value === "bar";
+  return value === "donut" || value === "bar" || value === "table";
 }
 
 export function ChartTypeSegmentedControl({
@@ -45,6 +45,15 @@ export function ChartTypeSegmentedControl({
             </Center>
           ),
           value: "bar",
+        },
+        {
+          label: (
+            <Center style={{ gap: 6 }}>
+              <IconTable size={16} />
+              Table
+            </Center>
+          ),
+          value: "table",
         },
       ]}
     />

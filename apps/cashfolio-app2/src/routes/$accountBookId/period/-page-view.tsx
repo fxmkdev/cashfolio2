@@ -990,6 +990,7 @@ export function PeriodPageView({
               }
               hasBreakdown={hasAllocationBreakdown}
               emptyBreakdownMessage={emptyAllocationBreakdownMessage}
+              breakdownHierarchy={activeAllocationBreakdown.hierarchy}
               chartOptions={allocationChartOptions}
               onSelectedBreakdownChange={setSelectedAllocationBreakdown}
               onSelectedChartTypeChange={setSelectedAllocationChartType}
@@ -1022,10 +1023,12 @@ export function PeriodPageView({
                 hasBreakdownAmountDiscrepancy={hasBreakdownAmountDiscrepancy}
                 hasBreakdown={hasBreakdown}
                 emptyBreakdownMessage={emptyBreakdownMessage}
+                breakdownHierarchy={activeBreakdown.hierarchy}
                 chartOptions={chartOptions}
                 onSelectedBreakdownChange={setSelectedBreakdown}
                 onSelectedChartTypeChange={setSelectedChartType}
                 onDrillPathChange={updateSelectedBreakdownPath}
+                onBreakdownAccountDoubleClick={onBreakdownAccountDoubleClick}
                 onChartContainerDoubleClick={handleChartContainerDoubleClick}
                 footer={
                   overview.skippedBookingsCount > 0 ? (

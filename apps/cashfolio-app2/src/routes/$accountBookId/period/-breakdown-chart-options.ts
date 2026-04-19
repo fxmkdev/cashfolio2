@@ -189,7 +189,5 @@ export function usePeriodBreakdownChartOptions(args: {
     ],
   );
 
-  return args.selectedChartType === "donut"
-    ? donutChartOptions
-    : barChartOptions;
+  return args.selectedChartType === "bar" ? barChartOptions : donutChartOptions;
 }
