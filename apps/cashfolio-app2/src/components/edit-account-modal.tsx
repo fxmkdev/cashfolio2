@@ -125,7 +125,10 @@ export function EditAccountModal({
   const isEdit = !!initialValues;
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const { isSubmitting, runSubmit } = useDialogSubmitState();
-  const form = useForm<FormValues>({
+  const form = useForm<
+    FormValues,
+    (values: FormValues) => TransformedFormValues
+  >({
     mode: "uncontrolled",
     initialValues: initialValues
       ? toFormValues(initialValues)
@@ -172,7 +175,7 @@ export function EditAccountModal({
         ),
     },
     transformValues: transformAccountValues,
-    onValuesChange: (values, previous) => {
+    onValuesChange: (values: FormValues, previous: FormValues) => {
       if (values.unit !== previous.unit) {
         forceUpdate();
       }
