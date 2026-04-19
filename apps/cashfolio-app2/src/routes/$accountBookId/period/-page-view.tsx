@@ -69,6 +69,7 @@ type StatCardProps = {
   value: string;
   valueColor: "green" | "red";
   secondaryValue?: string;
+  testId?: string;
 };
 
 type StatCardData = StatCardProps & {
@@ -106,9 +107,15 @@ function arePathsEqual(left: string[], right: string[]): boolean {
   return true;
 }
 
-function StatCard({ label, value, valueColor, secondaryValue }: StatCardProps) {
+function StatCard({
+  label,
+  value,
+  valueColor,
+  secondaryValue,
+  testId,
+}: StatCardProps) {
   return (
-    <Card withBorder radius="md" p="lg">
+    <Card withBorder radius="md" p="lg" data-testid={testId}>
       <Stack gap={4} align="center">
         <Text c="dimmed" fw={600} ta="center">
           {label}
@@ -376,7 +383,7 @@ export function PeriodPageView({
   const gainsLossesLabel = overview.stats.gainsLosses >= 0 ? "Gains" : "Losses";
   const savingsRateLabel = useMemo(() => {
     if (overview.stats.income === 0) {
-      return "N/A";
+      return "—";
     }
 
     const savingsRateRatio = overview.stats.savings / overview.stats.income;
@@ -673,6 +680,7 @@ export function PeriodPageView({
               value={card.value}
               valueColor={card.valueColor}
               secondaryValue={card.secondaryValue}
+              testId={`period-stat-card-${card.id}`}
             />
           ))}
         </SimpleGrid>
