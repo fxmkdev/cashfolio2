@@ -30,6 +30,10 @@ export type AccountGroupTransformedFormValues = FormValues & {
   equityAccountSubtype?: EquityAccountSubtype;
 };
 
+type TransformValues = (
+  values: FormValues,
+) => AccountGroupTransformedFormValues;
+
 export type AccountGroupInitialValues = {
   name: string;
   type: AccountType;
@@ -103,7 +107,7 @@ export function EditAccountGroupModal({
     return descendants;
   }, [editingId, existingNodes]);
 
-  const form = useForm<FormValues, AccountGroupTransformedFormValues>({
+  const form = useForm<FormValues, TransformValues>({
     mode: "uncontrolled",
     initialValues: initialValues
       ? toFormValues(initialValues)
@@ -127,7 +131,7 @@ export function EditAccountGroupModal({
           descendantGroupIds,
         }),
     },
-    transformValues: (values) => {
+    transformValues: (values: FormValues) => {
       const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
         []) as [AccountType, EquityAccountSubtype?];
 

@@ -45,6 +45,8 @@ export type TransformedFormValues = FormValues & {
   equityAccountSubtype?: EquityAccountSubtype;
 };
 
+type TransformValues = (values: FormValues) => TransformedFormValues;
+
 export type AccountInitialValues = {
   name: string;
   type: AccountType;
@@ -114,7 +116,7 @@ export function EditAccountModal({
   const isEdit = !!initialValues;
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const { isSubmitting, runSubmit } = useDialogSubmitState();
-  const form = useForm<FormValues, TransformedFormValues>({
+  const form = useForm<FormValues, TransformValues>({
     mode: "uncontrolled",
     initialValues: initialValues
       ? toFormValues(initialValues)
@@ -160,7 +162,7 @@ export function EditAccountModal({
           values.typeDescriptor as AccountType,
         ),
     },
-    transformValues: (values) => {
+    transformValues: (values: FormValues) => {
       const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
         []) as [AccountType, EquityAccountSubtype?];
 
