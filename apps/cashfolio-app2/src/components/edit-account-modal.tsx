@@ -172,6 +172,7 @@ export function EditAccountModal({
         ),
     },
     transformValues: transformAccountValues,
+    transformValues: transformAccountValues,
     onValuesChange: (values, previous) => {
       if (values.unit !== previous.unit) {
         forceUpdate();
