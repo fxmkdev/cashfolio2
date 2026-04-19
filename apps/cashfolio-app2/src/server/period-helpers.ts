@@ -241,8 +241,11 @@ export function buildPeriodEndAllocationBreakdown(args: {
         ? item.convertedBalanceInReferenceCurrency
         : -item.convertedBalanceInReferenceCurrency;
 
-    if (displayAmount <= 0) {
+    if (displayAmount < 0) {
       skippedNonPositiveCount += 1;
+      continue;
+    }
+    if (displayAmount === 0) {
       continue;
     }
 

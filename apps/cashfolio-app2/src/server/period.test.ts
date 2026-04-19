@@ -1032,7 +1032,7 @@ describe("buildPeriodEndAllocationBreakdown", () => {
       },
     ]);
     expect(result.skippedMissingReferenceBalanceCount).toBe(1);
-    expect(result.skippedNonPositiveCount).toBe(2);
+    expect(result.skippedNonPositiveCount).toBe(1);
   });
 
   test("propagates discrepancy metadata for hidden rounded children", () => {
