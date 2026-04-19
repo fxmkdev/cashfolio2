@@ -7,7 +7,7 @@ import { IconInfoCircle, IconTablePlus } from "@tabler/icons-react";
 import { createId } from "@paralleldrive/cuid2";
 import { isAfter, parse, startOfDay } from "date-fns";
 import { numericFormatter } from "react-number-format";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Unit } from "../.prisma-client/enums";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 import {
@@ -222,6 +222,10 @@ export function EditTransactionModal({
       }),
     [accounts, isSubmitting],
   );
+
+  useEffect(() => {
+    form.validateField("bookings");
+  }, [form, form.values.bookings]);
 
   return (
     <form

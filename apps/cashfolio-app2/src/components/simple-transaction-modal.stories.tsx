@@ -29,7 +29,7 @@ export const ToggleDirectionAndSubmit: Story = {
 
     await userEvent.type(body.getByRole("textbox", { name: "Amount" }), "99");
 
-    const counterAccountInput = body.getByRole("textbox", {
+    const counterAccountInput = body.getByRole("combobox", {
       name: "Counter account",
     });
     await userEvent.click(counterAccountInput);
@@ -52,7 +52,7 @@ export const ForcedDirectionDisablesToggle: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
 
-    const counterAccountInput = body.getByRole("textbox", {
+    const counterAccountInput = body.getByRole("combobox", {
       name: "Counter account",
     });
     await userEvent.click(counterAccountInput);
@@ -109,7 +109,7 @@ export const EnterSubmitPendingGuard: Story = {
 
     await userEvent.type(body.getByRole("textbox", { name: "Amount" }), "99");
 
-    const counterAccountInput = body.getByRole("textbox", {
+    const counterAccountInput = body.getByRole("combobox", {
       name: "Counter account",
     });
     await userEvent.click(counterAccountInput);
