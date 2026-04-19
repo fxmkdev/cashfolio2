@@ -1,23 +1,9 @@
 import { Unit } from "@/.prisma-client/enums";
 import {
-  parseExplicitMonthPeriod,
-  parseExplicitYearPeriod,
+  formatExplicitPeriodSelectionLabel,
+  normalizeExplicitPeriodValue,
+  parseExplicitPeriodSelection,
 } from "@/shared/period";
-
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-] as const;
 
 export type LedgerSearch = { transactionId?: string; period?: string };
 
@@ -30,23 +16,7 @@ export type LedgerExplicitPeriodSelection = {
 };
 
 export function normalizeLedgerPeriodValue(value: unknown): string | undefined {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-
-  const normalized = value.trim().toLowerCase();
-
-  const explicitMonth = parseExplicitMonthPeriod(normalized);
-  if (explicitMonth) {
-    return explicitMonth.value;
-  }
-
-  const explicitYear = parseExplicitYearPeriod(normalized);
-  if (explicitYear) {
-    return explicitYear.value;
-  }
-
-  return undefined;
+  return normalizeExplicitPeriodValue(value);
 }
 
 export function parseLedgerExplicitPeriod(
@@ -56,29 +26,18 @@ export function parseLedgerExplicitPeriod(
     return null;
   }
 
-  const explicitMonth = parseExplicitMonthPeriod(periodValue);
-  if (explicitMonth) {
-    return {
-      value: explicitMonth.value,
-      granularity: "month",
-      year: explicitMonth.year,
-      month: explicitMonth.month,
-      label: `${MONTH_NAMES[explicitMonth.month]} ${explicitMonth.year}`,
-    };
+  const explicitPeriodSelection = parseExplicitPeriodSelection(periodValue);
+  if (!explicitPeriodSelection) {
+    return null;
   }
 
-  const explicitYear = parseExplicitYearPeriod(periodValue);
-  if (explicitYear) {
-    return {
-      value: explicitYear.value,
-      granularity: "year",
-      year: explicitYear.year,
-      month: null,
-      label: explicitYear.value,
-    };
-  }
-
-  return null;
+  return {
+    value: explicitPeriodSelection.value,
+    granularity: explicitPeriodSelection.granularity,
+    year: explicitPeriodSelection.year,
+    month: explicitPeriodSelection.month,
+    label: formatExplicitPeriodSelectionLabel(explicitPeriodSelection),
+  };
 }
 
 export function parseLedgerSearch(

@@ -2,8 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import {
-  parseExplicitMonthPeriod,
-  parseExplicitYearPeriod,
+  getExplicitPeriodDateRange,
+  normalizeExplicitPeriodValue,
+  parseExplicitPeriodSelection,
+  type ExplicitPeriodSelection,
 } from "../shared/period";
 import { createGroupPathSegmentsResolver } from "./accounts-helpers";
 
@@ -51,12 +53,14 @@ export const getLedgerData = createServerFn({ method: "GET" })
     (data: { accountId: string; accountBookId: string; period?: unknown }) => ({
       accountId: data.accountId,
       accountBookId: data.accountBookId,
-      period: normalizeLedgerPeriodValue(data.period),
+      period: parseExplicitLedgerPeriodSelection(data.period),
     }),
   )
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
-    const periodRange = data.period ? toPeriodDateRange(data.period) : null;
+    const periodRange = data.period
+      ? getExplicitPeriodDateRange(data.period)
+      : null;
     const bookings = await prisma.booking.findMany({
       where: {
         accountId: data.accountId,
@@ -144,49 +148,15 @@ export const getLedgerPeriodBounds = createServerFn({ method: "GET" })
     };
   });
 
-function normalizeLedgerPeriodValue(value: unknown): string | undefined {
-  if (typeof value !== "string") {
+function parseExplicitLedgerPeriodSelection(
+  value: unknown,
+): ExplicitPeriodSelection | undefined {
+  const normalizedPeriodValue = normalizeExplicitPeriodValue(value);
+  if (!normalizedPeriodValue) {
     return undefined;
   }
 
-  const normalized = value.trim().toLowerCase();
-
-  const explicitMonth = parseExplicitMonthPeriod(normalized);
-  if (explicitMonth) {
-    return explicitMonth.value;
-  }
-
-  const explicitYear = parseExplicitYearPeriod(normalized);
-  if (explicitYear) {
-    return explicitYear.value;
-  }
-
-  return undefined;
-}
-
-function toPeriodDateRange(periodValue: string): {
-  from: Date;
-  toExclusive: Date;
-} {
-  const explicitMonth = parseExplicitMonthPeriod(periodValue);
-  if (explicitMonth) {
-    return {
-      from: new Date(Date.UTC(explicitMonth.year, explicitMonth.month, 1)),
-      toExclusive: new Date(
-        Date.UTC(explicitMonth.year, explicitMonth.month + 1, 1),
-      ),
-    };
-  }
-
-  const explicitYear = parseExplicitYearPeriod(periodValue);
-  if (!explicitYear) {
-    throw new Error("Unsupported ledger period");
-  }
-
-  return {
-    from: new Date(Date.UTC(explicitYear.year, 0, 1)),
-    toExclusive: new Date(Date.UTC(explicitYear.year + 1, 0, 1)),
-  };
+  return parseExplicitPeriodSelection(normalizedPeriodValue) ?? undefined;
 }
 
 function startOfUtcDay(date: Date): Date {

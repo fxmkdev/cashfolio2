@@ -49,13 +49,15 @@ export function LedgerPageContent() {
   const { transactionId, period } = Route.useSearch();
   const router = useRouter();
   const [pickerOpened, setPickerOpened] = useState(false);
+  const isPeriodFilterAvailable =
+    loaderData.account.type === AccountType.EQUITY;
 
   const navigate = Route.useNavigate();
   const { pendingScrollRef, handleRowDataUpdated } =
     useTransactionScroll<LedgerRow>(transactionId, navigate);
   const selectedPeriod = useMemo(
-    () => parseLedgerExplicitPeriod(period),
-    [period],
+    () => (isPeriodFilterAvailable ? parseLedgerExplicitPeriod(period) : null),
+    [isPeriodFilterAvailable, period],
   );
   const maxDate = useMemo(
     () => new Date(loaderData.periodBounds.maxDate),
@@ -82,7 +84,7 @@ export function LedgerPageContent() {
       }),
     [maxDate, minBookingDate, periodMode, selectedMonth, selectedYear],
   );
-  const hasPeriodFilter = selectedPeriod != null;
+  const hasPeriodFilter = isPeriodFilterAvailable && selectedPeriod != null;
   const setPeriodFilter = (nextPeriodValue: string | undefined) => {
     navigate({
       search: (previousSearch) => ({
@@ -113,82 +115,84 @@ export function LedgerPageContent() {
         accountBookId={accountBookId}
         {...viewProps}
         periodFilterControls={
-          <LedgerPeriodFilterCard
-            hasPeriodFilter={hasPeriodFilter}
-            periodMode={periodMode}
-            selectedPeriodLabel={selectedPeriod?.label ?? "All periods"}
-            pickerOpened={pickerOpened}
-            onPickerOpenedChange={setPickerOpened}
-            canGoToPreviousPeriod={
-              hasPeriodFilter && periodSelectorModel.canGoToPreviousPeriod
-            }
-            canGoToNextPeriod={
-              hasPeriodFilter && periodSelectorModel.canGoToNextPeriod
-            }
-            onPeriodModeChange={(nextMode) => {
-              setPickerOpened(false);
-              const nextPeriodValue = getPeriodModeChangeValue({
-                nextMode,
-                periodMode,
-                selectedYear,
-                selectedYearMaxMonth:
-                  periodSelectorModel.selectedYearMonthBounds.maxMonth,
-              });
-              if (!nextPeriodValue) {
-                return;
+          isPeriodFilterAvailable ? (
+            <LedgerPeriodFilterCard
+              hasPeriodFilter={hasPeriodFilter}
+              periodMode={periodMode}
+              selectedPeriodLabel={selectedPeriod?.label ?? "All periods"}
+              pickerOpened={pickerOpened}
+              onPickerOpenedChange={setPickerOpened}
+              canGoToPreviousPeriod={
+                hasPeriodFilter && periodSelectorModel.canGoToPreviousPeriod
               }
-              setPeriodFilter(nextPeriodValue);
-            }}
-            onPeriodStep={(step) => {
-              if (!hasPeriodFilter) {
-                return;
+              canGoToNextPeriod={
+                hasPeriodFilter && periodSelectorModel.canGoToNextPeriod
               }
+              onPeriodModeChange={(nextMode) => {
+                setPickerOpened(false);
+                const nextPeriodValue = getPeriodModeChangeValue({
+                  nextMode,
+                  periodMode,
+                  selectedYear,
+                  selectedYearMaxMonth:
+                    periodSelectorModel.selectedYearMonthBounds.maxMonth,
+                });
+                if (!nextPeriodValue) {
+                  return;
+                }
+                setPeriodFilter(nextPeriodValue);
+              }}
+              onPeriodStep={(step) => {
+                if (!hasPeriodFilter) {
+                  return;
+                }
 
-              setPickerOpened(false);
-              const nextPeriodValue = getPeriodStepValue({
-                periodMode,
-                step,
-                selectedMonthIndex: periodSelectorModel.selectedMonthIndex,
-                minMonthIndex: periodSelectorModel.minMonthIndex,
-                maxMonthIndex: periodSelectorModel.maxMonthIndex,
-                selectedYear,
-                minYear: periodSelectorModel.minYear,
-                maxYear: periodSelectorModel.maxYear,
-              });
-              if (!nextPeriodValue) {
-                return;
+                setPickerOpened(false);
+                const nextPeriodValue = getPeriodStepValue({
+                  periodMode,
+                  step,
+                  selectedMonthIndex: periodSelectorModel.selectedMonthIndex,
+                  minMonthIndex: periodSelectorModel.minMonthIndex,
+                  maxMonthIndex: periodSelectorModel.maxMonthIndex,
+                  selectedYear,
+                  minYear: periodSelectorModel.minYear,
+                  maxYear: periodSelectorModel.maxYear,
+                });
+                if (!nextPeriodValue) {
+                  return;
+                }
+                setPeriodFilter(nextPeriodValue);
+              }}
+              selectedMonthValue={
+                formatMonthPeriodValue(selectedYear, selectedMonth) + "-01"
               }
-              setPeriodFilter(nextPeriodValue);
-            }}
-            selectedMonthValue={
-              formatMonthPeriodValue(selectedYear, selectedMonth) + "-01"
-            }
-            selectedYearValue={`${String(selectedYear).padStart(4, "0")}-01-01`}
-            minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
-            maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
-            minYearPickerDate={periodSelectorModel.minYearPickerDate}
-            maxYearPickerDate={periodSelectorModel.maxYearPickerDate}
-            onMonthPickerChange={(nextValue) => {
-              const nextPeriodValue = getMonthPickerValue(nextValue);
-              if (!nextPeriodValue) {
-                return;
-              }
-              setPeriodFilter(nextPeriodValue);
-              setPickerOpened(false);
-            }}
-            onYearPickerChange={(nextValue) => {
-              const nextPeriodValue = getYearPickerValue(nextValue);
-              if (!nextPeriodValue) {
-                return;
-              }
-              setPeriodFilter(nextPeriodValue);
-              setPickerOpened(false);
-            }}
-            onClearFilter={() => {
-              setPickerOpened(false);
-              setPeriodFilter(undefined);
-            }}
-          />
+              selectedYearValue={`${String(selectedYear).padStart(4, "0")}-01-01`}
+              minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
+              maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
+              minYearPickerDate={periodSelectorModel.minYearPickerDate}
+              maxYearPickerDate={periodSelectorModel.maxYearPickerDate}
+              onMonthPickerChange={(nextValue) => {
+                const nextPeriodValue = getMonthPickerValue(nextValue);
+                if (!nextPeriodValue) {
+                  return;
+                }
+                setPeriodFilter(nextPeriodValue);
+                setPickerOpened(false);
+              }}
+              onYearPickerChange={(nextValue) => {
+                const nextPeriodValue = getYearPickerValue(nextValue);
+                if (!nextPeriodValue) {
+                  return;
+                }
+                setPeriodFilter(nextPeriodValue);
+                setPickerOpened(false);
+              }}
+              onClearFilter={() => {
+                setPickerOpened(false);
+                setPeriodFilter(undefined);
+              }}
+            />
+          ) : undefined
         }
         viewSwitcher={
           isBalanceChartAvailable ? (

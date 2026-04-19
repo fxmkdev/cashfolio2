@@ -1,3 +1,4 @@
+import { AccountType } from "@/.prisma-client/enums";
 import { getAccounts } from "@/server/accounts";
 import {
   getAccountForLedger,
@@ -10,15 +11,17 @@ export async function loadLedgerPageData(args: {
   accountId: string;
   period?: string;
 }) {
-  const [account, bookings, accounts, periodBounds] = await Promise.all([
-    getAccountForLedger({
-      data: { accountId: args.accountId, accountBookId: args.accountBookId },
-    }),
+  const account = await getAccountForLedger({
+    data: { accountId: args.accountId, accountBookId: args.accountBookId },
+  });
+  const isPeriodFilterAllowed = account.type === AccountType.EQUITY;
+
+  const [bookings, accounts, periodBounds] = await Promise.all([
     getLedgerData({
       data: {
         accountId: args.accountId,
         accountBookId: args.accountBookId,
-        period: args.period,
+        period: isPeriodFilterAllowed ? args.period : undefined,
       },
     }),
     getAccounts({ data: { accountBookId: args.accountBookId } }),
