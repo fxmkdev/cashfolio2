@@ -149,7 +149,7 @@ function LedgerPageStoryHarness({
   const [rebooking, setRebooking] = useState<RebookingState | undefined>();
   const [pickerOpened, setPickerOpened] = useState(false);
 
-  const navigate = useNavigate({ from: "/$accountBookId/$accountId/" });
+  const navigate = useNavigate({ from: "/$accountBookId/$accountId" });
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });

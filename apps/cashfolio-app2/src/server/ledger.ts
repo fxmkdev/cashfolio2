@@ -10,6 +10,8 @@ import {
 import { createGroupPathSegmentsResolver } from "./accounts-helpers";
 import { convertBookingValueToReference } from "./period-conversion";
 
+const LEDGER_REFERENCE_CONVERSION_CONCURRENCY = 12;
+
 export const getAccountForLedger = createServerFn({ method: "GET" })
   .inputValidator((data: { accountId: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
@@ -129,8 +131,10 @@ export const getLedgerData = createServerFn({ method: "GET" })
     const exchangeRateByKey = new Map<string, Promise<number | null>>();
     const convertedValuesInReferenceCurrency =
       data.includeReferenceValues && referenceCurrency
-        ? await Promise.all(
-            bookings.map((booking) =>
+        ? await mapWithConcurrencyLimit(
+            bookings,
+            LEDGER_REFERENCE_CONVERSION_CONCURRENCY,
+            (booking) =>
               booking.unit
                 ? convertBookingValueToReference({
                     value: Number(booking.value),
@@ -144,7 +148,6 @@ export const getLedgerData = createServerFn({ method: "GET" })
                     exchangeRateByKey,
                   })
                 : Promise.resolve<number | null>(null),
-            ),
           )
         : null;
 
@@ -207,4 +210,30 @@ function startOfUtcDay(date: Date): Date {
   return new Date(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
   );
+}
+
+async function mapWithConcurrencyLimit<TInput, TOutput>(
+  items: readonly TInput[],
+  concurrencyLimit: number,
+  mapper: (item: TInput, index: number) => Promise<TOutput>,
+): Promise<TOutput[]> {
+  if (items.length === 0) {
+    return [];
+  }
+
+  const results = new Array<TOutput>(items.length);
+  const workerCount = Math.min(Math.max(1, concurrencyLimit), items.length);
+  let nextIndex = 0;
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < items.length) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
+        results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+      }
+    }),
+  );
+
+  return results;
 }
