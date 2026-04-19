@@ -68,6 +68,7 @@ type StatCardProps = {
   label: string;
   value: string;
   valueColor: "green" | "red";
+  secondaryValue?: string;
 };
 
 type StatCardData = StatCardProps & {
@@ -105,7 +106,7 @@ function arePathsEqual(left: string[], right: string[]): boolean {
   return true;
 }
 
-function StatCard({ label, value, valueColor }: StatCardProps) {
+function StatCard({ label, value, valueColor, secondaryValue }: StatCardProps) {
   return (
     <Card withBorder radius="md" p="lg">
       <Stack gap={4} align="center">
@@ -115,6 +116,11 @@ function StatCard({ label, value, valueColor }: StatCardProps) {
         <Text fw={700} fz="xl" c={valueColor}>
           {value}
         </Text>
+        {secondaryValue ? (
+          <Text c="dimmed" fw={500} fz="sm" ta="center">
+            {secondaryValue}
+          </Text>
+        ) : null}
       </Stack>
     </Card>
   );
@@ -163,6 +169,15 @@ export function PeriodPageView({
     () =>
       new Intl.NumberFormat("en-CH", {
         minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      }),
+    [],
+  );
+  const savingsRateFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("en-CH", {
+        style: "percent",
+        minimumFractionDigits: 0,
         maximumFractionDigits: 1,
       }),
     [],
@@ -359,6 +374,14 @@ export function PeriodPageView({
     [],
   );
   const gainsLossesLabel = overview.stats.gainsLosses >= 0 ? "Gains" : "Losses";
+  const savingsRateLabel = useMemo(() => {
+    if (overview.stats.income === 0) {
+      return "Savings rate: —";
+    }
+
+    const savingsRateRatio = overview.stats.savings / overview.stats.income;
+    return `Savings rate: ${savingsRateFormatter.format(savingsRateRatio)}`;
+  }, [overview.stats.income, overview.stats.savings, savingsRateFormatter]);
   const waterfallData = useMemo<WaterfallDatum[]>(
     () => [
       {
@@ -521,6 +544,7 @@ export function PeriodPageView({
       label: "Savings",
       value: currencyFormatter.format(overview.stats.savings),
       valueColor: overview.stats.savings >= 0 ? "green" : "red",
+      secondaryValue: savingsRateLabel,
     },
     {
       id: "income",
