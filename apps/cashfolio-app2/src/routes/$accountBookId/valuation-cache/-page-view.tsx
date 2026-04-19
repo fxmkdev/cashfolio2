@@ -449,69 +449,75 @@ export function ValuationCachePageView({
         </Tabs.List>
       </Tabs>
 
-      <Card withBorder radius="md" p="lg">
-        <Stack gap={4}>
-          <Text fw={600}>Units</Text>
-          <Text c="dimmed" size="sm">
-            Unique units in this account book ({selectedTab.toLowerCase()}).
-          </Text>
-        </Stack>
-
-        {activeRows.length === 0 ? (
-          <Text c="dimmed" mt="md">
-            No units found for this tab.
-          </Text>
-        ) : (
-          <div className={classes.gridContainer}>
-            <DataGrid
-              rowData={activeRows}
-              columnDefs={gridColumns}
-              rowSelection="single"
-              onGridReady={handleGridReady}
-              onFirstDataRendered={handleFirstDataRendered}
-              onSelectionChanged={handleSelectionChanged}
-              getRowId={({ data }) => data.unitKey}
-            />
-          </div>
-        )}
-      </Card>
-
-      <Card withBorder radius="md" p="lg" className={classes.chartCard}>
-        <Stack gap={4}>
-          <Text fw={600}>Cached Price/Rate History</Text>
-          {selectedUnit ? (
+      <div className={classes.contentLayout}>
+        <Card withBorder radius="md" p="lg" className={classes.unitsCard}>
+          <Stack gap={4}>
+            <Text fw={600}>Units</Text>
             <Text c="dimmed" size="sm">
-              {selectedUnit.label}
+              Unique units in this account book ({selectedTab.toLowerCase()}).
+            </Text>
+          </Stack>
+
+          {activeRows.length === 0 ? (
+            <Text c="dimmed" mt="md">
+              No units found for this tab.
             </Text>
           ) : (
-            <Text c="dimmed" size="sm">
-              Select a unit to display its cached history.
-            </Text>
+            <div className={classes.gridContainer}>
+              <DataGrid
+                rowData={activeRows}
+                columnDefs={gridColumns}
+                rowSelection="single"
+                onGridReady={handleGridReady}
+                onFirstDataRendered={handleFirstDataRendered}
+                onSelectionChanged={handleSelectionChanged}
+                getRowId={({ data }) => data.unitKey}
+              />
+            </div>
           )}
-        </Stack>
+        </Card>
 
-        {!selectedUnit ? (
-          <Text c="dimmed" mt="md">
-            No unit selected.
-          </Text>
-        ) : seriesState.loading ? (
-          <Text c="dimmed" mt="md">
-            Loading cached series...
-          </Text>
-        ) : !seriesState.cacheAvailable ? (
-          <Alert mt="md" color="yellow" icon={<IconAlertTriangle size={16} />}>
-            Cache is currently unavailable. Showing no cached history.
-          </Alert>
-        ) : chartData.length === 0 ? (
-          <Text c="dimmed" mt="md">
-            No cached prices/rates found for this unit.
-          </Text>
-        ) : (
-          <div className={classes.chartContainer}>
-            <AgCharts options={chartOptions} className={classes.chart} />
-          </div>
-        )}
-      </Card>
+        <Card withBorder radius="md" p="lg" className={classes.chartCard}>
+          <Stack gap={4}>
+            <Text fw={600}>Cached Price/Rate History</Text>
+            {selectedUnit ? (
+              <Text c="dimmed" size="sm">
+                {selectedUnit.label}
+              </Text>
+            ) : (
+              <Text c="dimmed" size="sm">
+                Select a unit to display its cached history.
+              </Text>
+            )}
+          </Stack>
+
+          {!selectedUnit ? (
+            <Text c="dimmed" mt="md">
+              No unit selected.
+            </Text>
+          ) : seriesState.loading ? (
+            <Text c="dimmed" mt="md">
+              Loading cached series...
+            </Text>
+          ) : !seriesState.cacheAvailable ? (
+            <Alert
+              mt="md"
+              color="yellow"
+              icon={<IconAlertTriangle size={16} />}
+            >
+              Cache is currently unavailable. Showing no cached history.
+            </Alert>
+          ) : chartData.length === 0 ? (
+            <Text c="dimmed" mt="md">
+              No cached prices/rates found for this unit.
+            </Text>
+          ) : (
+            <div className={classes.chartContainer}>
+              <AgCharts options={chartOptions} className={classes.chart} />
+            </div>
+          )}
+        </Card>
+      </div>
     </Container>
   );
 }
