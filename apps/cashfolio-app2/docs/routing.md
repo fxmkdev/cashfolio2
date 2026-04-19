@@ -30,6 +30,9 @@ Related docs:
   type: Asset, Liability, Income, Expense, Gain/Loss)
   - Loader data is tab-scoped: only the selected tab is fetched in the route
     loader critical path.
+- `$accountBookId/valuation-cache/route.tsx` - valuation cache explorer page
+  with tabs for Currency, Cryptocurrency, and Security; shows deduplicated unit
+  rows and cached TimeSeries history charts (no live provider lookups)
 - `$accountBookId/$accountId/route.tsx` - ledger layout route (loads ledger data
   and provides shared search params for child routes)
 - `$accountBookId/$accountId/index.tsx` - ledger page for a single account

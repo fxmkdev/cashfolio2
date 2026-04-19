@@ -1,0 +1,27 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.gridContainer {
+  margin-top: 12px;
+  height: 320px;
+}
+
+.chartCard {
+  margin-top: 16px;
+}
+
+.chartContainer {
+  margin-top: 12px;
+  min-height: 320px;
+}
+
+.chart {
+  min-height: 320px;
+}
+
+.chartContainer :global(.ag-charts-overlay) {
+  color: var(--mantine-color-dimmed);
+}
