@@ -26,9 +26,17 @@ export async function loadLedgerPageData(args: {
       },
     }),
     getAccounts({ data: { accountBookId: args.accountBookId } }),
-    getLedgerPeriodBounds({
-      data: { accountId: args.accountId, accountBookId: args.accountBookId },
-    }),
+    isPeriodFilterAllowed
+      ? getLedgerPeriodBounds({
+          data: {
+            accountId: args.accountId,
+            accountBookId: args.accountBookId,
+          },
+        })
+      : Promise.resolve({
+          minBookingDate: null,
+          maxDate: startOfUtcDay(new Date()).toISOString(),
+        }),
   ]);
 
   return {
@@ -38,4 +46,10 @@ export async function loadLedgerPageData(args: {
     accounts,
     periodBounds,
   };
+}
+
+function startOfUtcDay(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
 }

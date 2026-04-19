@@ -75,6 +75,73 @@ function isIgnorableAgChartsError(message: string): boolean {
   );
 }
 
+async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
+  page: Page;
+  accountBookId: string;
+  accountId: string;
+  period: string;
+}) {
+  const breakdownChartTypeControl = args.page.getByRole("radiogroup", {
+    name: "Breakdown chart type",
+  });
+  await breakdownChartTypeControl.getByRole("radio", { name: "Bar" }).click();
+
+  const breakdownCard = args.page
+    .getByRole("heading", { name: "Expenses Breakdown" })
+    .locator(
+      "xpath=ancestor::*[self::section or self::article or self::div][.//canvas][1]",
+    );
+  const chartCanvas = breakdownCard.locator("canvas").first();
+  await expect(chartCanvas).toBeVisible();
+
+  const chartBounds = await chartCanvas.boundingBox();
+  if (!chartBounds) {
+    throw new Error("Breakdown chart canvas bounds were not available.");
+  }
+
+  const expectedPath = `/${args.accountBookId}/${args.accountId}`;
+  const clickTargets: Array<[number, number]> = [
+    [0.5, 0.25],
+    [0.5, 0.35],
+    [0.5, 0.45],
+    [0.45, 0.35],
+    [0.55, 0.35],
+    [0.5, 0.55],
+  ];
+
+  for (const [relativeX, relativeY] of clickTargets) {
+    const x = Math.round(chartBounds.width * relativeX);
+    const y = Math.round(chartBounds.height * relativeY);
+
+    await chartCanvas.dblclick({
+      position: { x, y },
+      timeout: 5_000,
+    });
+
+    try {
+      await expect
+        .poll(
+          () => {
+            const url = new URL(args.page.url());
+            return (
+              url.pathname === expectedPath &&
+              url.searchParams.get("period") === args.period
+            );
+          },
+          { timeout: 1_500 },
+        )
+        .toBe(true);
+      return;
+    } catch {
+      // Try the next coordinate if the previous click missed the bar.
+    }
+  }
+
+  throw new Error(
+    "Could not trigger account-leaf drilldown from the period breakdown chart.",
+  );
+}
+
 test("accounts is default account-book route and dashboard links to accounts", async ({
   page,
 }) => {
@@ -472,6 +539,54 @@ test("period page shows KPI waterfall and updated income/expenses wording", asyn
   const liabilities = await parseStatCardAmount("Liabilities");
 
   expect(Math.abs(netWorth - (assets - liabilities))).toBeLessThan(0.01);
+});
+
+test("period breakdown account leaf drilldown opens ledger with period filter", async ({
+  page,
+}) => {
+  const period = "2026-04";
+  const seedDescription = "E2E Period Ledger Drilldown Seed";
+
+  await seedThreeBookingSplitTransaction({
+    accountBookId: seeded.accountBookId,
+    description: seedDescription,
+    currentAccountId: seeded.cashAccount.id,
+    debitAccountIds: [seeded.expenseAccount.id, seeded.savingsAccount.id],
+    date: "2026-04-07T00:00:00.000Z",
+  });
+
+  await page.goto(
+    `/${seeded.accountBookId}/period?period=${period}&expensePath=${encodeURIComponent(`group:${seeded.expenseGroupId}`)}`,
+  );
+
+  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+  await expect(
+    page.getByText(
+      "Double-click a group to drill down, or an account to open ledger.",
+    ),
+  ).toBeVisible();
+
+  await doubleClickBreakdownLeafUntilLedgerNavigation({
+    page,
+    accountBookId: seeded.accountBookId,
+    accountId: seeded.expenseAccount.id,
+    period,
+  });
+
+  await expect
+    .poll(() => {
+      const url = new URL(page.url());
+      return {
+        path: url.pathname,
+        period: url.searchParams.get("period"),
+      };
+    })
+    .toEqual({
+      path: `/${seeded.accountBookId}/${seeded.expenseAccount.id}`,
+      period,
+    });
+  await expect(page.getByText("Showing entries for April 2026")).toBeVisible();
+  await expect(agGridRowByText(page, seedDescription)).toBeVisible();
 });
 
 test("period picker opens on selected month/year page", async ({ page }) => {
