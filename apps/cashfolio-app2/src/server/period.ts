@@ -388,7 +388,7 @@ export async function computeEndOfPeriodBalanceStats(args: {
     if (account.type === AccountType.ASSET) {
       assets += convertedBalance;
     } else if (account.type === AccountType.LIABILITY) {
-      liabilities += convertedBalance;
+      liabilities += -convertedBalance;
     }
   }
 

@@ -172,7 +172,7 @@ describe("computeEndOfPeriodBalanceStats", () => {
       ],
       rawBalanceByAccountId: new Map([
         ["asset-chf", 100],
-        ["liability-usd", 40],
+        ["liability-usd", -40],
       ]),
       periodEnd,
       referenceCurrency: "CHF",
@@ -244,7 +244,7 @@ describe("computeEndOfPeriodBalanceStats", () => {
       ],
       rawBalanceByAccountId: new Map([
         ["asset-ok", 50],
-        ["liability-ok", 10],
+        ["liability-ok", -10],
         ["asset-missing-unit", 20],
         ["asset-no-rate", 5],
       ]),
