@@ -224,11 +224,11 @@ export function buildPeriodEndAllocationBreakdown(args: {
   hasHiddenAmountDiscrepancy: boolean;
   hiddenAmountDiscrepancyNodeIds: string[];
   skippedMissingReferenceBalanceCount: number;
-  skippedNonPositiveCount: number;
+  skippedNegativeCount: number;
 } {
   const breakdownItems: BreakdownHierarchyAccumulatorItem[] = [];
   let skippedMissingReferenceBalanceCount = 0;
-  let skippedNonPositiveCount = 0;
+  let skippedNegativeCount = 0;
 
   for (const item of args.items) {
     if (item.convertedBalanceInReferenceCurrency == null) {
@@ -242,7 +242,7 @@ export function buildPeriodEndAllocationBreakdown(args: {
         : -item.convertedBalanceInReferenceCurrency;
 
     if (displayAmount < 0) {
-      skippedNonPositiveCount += 1;
+      skippedNegativeCount += 1;
       continue;
     }
     if (displayAmount === 0) {
@@ -281,7 +281,7 @@ export function buildPeriodEndAllocationBreakdown(args: {
     hasHiddenAmountDiscrepancy,
     hiddenAmountDiscrepancyNodeIds,
     skippedMissingReferenceBalanceCount,
-    skippedNonPositiveCount,
+    skippedNegativeCount,
   };
 }
 

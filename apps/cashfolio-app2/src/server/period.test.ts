@@ -984,7 +984,7 @@ describe("buildPeriodEndAllocationBreakdown", () => {
       },
     ]);
     expect(result.skippedMissingReferenceBalanceCount).toBe(0);
-    expect(result.skippedNonPositiveCount).toBe(0);
+    expect(result.skippedNegativeCount).toBe(0);
   });
 
   test("tracks missing conversion and non-positive exclusions", () => {
@@ -1032,7 +1032,7 @@ describe("buildPeriodEndAllocationBreakdown", () => {
       },
     ]);
     expect(result.skippedMissingReferenceBalanceCount).toBe(1);
-    expect(result.skippedNonPositiveCount).toBe(1);
+    expect(result.skippedNegativeCount).toBe(1);
   });
 
   test("propagates discrepancy metadata for hidden rounded children", () => {

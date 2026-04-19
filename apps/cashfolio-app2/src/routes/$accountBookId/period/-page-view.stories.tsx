@@ -347,7 +347,7 @@ const baseOverview: PeriodPageViewProps["overview"] = {
     hasHiddenAmountDiscrepancy: false,
     hiddenAmountDiscrepancyNodeIds: [],
     skippedMissingReferenceBalanceCount: 1,
-    skippedNonPositiveCount: 1,
+    skippedNegativeCount: 1,
     items: [
       {
         id: "group:investments",
@@ -409,7 +409,7 @@ const baseOverview: PeriodPageViewProps["overview"] = {
     hasHiddenAmountDiscrepancy: false,
     hiddenAmountDiscrepancyNodeIds: [],
     skippedMissingReferenceBalanceCount: 0,
-    skippedNonPositiveCount: 1,
+    skippedNegativeCount: 1,
     items: [
       {
         id: "group:debt",

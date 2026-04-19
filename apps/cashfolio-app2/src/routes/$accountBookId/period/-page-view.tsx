@@ -125,14 +125,14 @@ function formatAccountCountWithVerb(count: number): string {
 
 function getAllocationPartialDataNotes(args: {
   skippedMissingReferenceBalanceCount: number;
-  skippedNonPositiveCount: number;
+  skippedNegativeCount: number;
 }) {
   return [
     args.skippedMissingReferenceBalanceCount > 0
       ? `${formatAccountCountWithVerb(args.skippedMissingReferenceBalanceCount)} skipped because reference-currency balances were unavailable.`
       : null,
-    args.skippedNonPositiveCount > 0
-      ? `With negative balances, ${formatAccountCountWithVerb(args.skippedNonPositiveCount)} excluded from allocation.`
+    args.skippedNegativeCount > 0
+      ? `With negative balances, ${formatAccountCountWithVerb(args.skippedNegativeCount)} excluded from allocation.`
       : null,
   ]
     .filter((value): value is string => value != null)
@@ -602,11 +602,11 @@ export function PeriodPageView({
   });
   const hasAllocationPartialData =
     activeAllocationBreakdown.skippedMissingReferenceBalanceCount > 0 ||
-    activeAllocationBreakdown.skippedNonPositiveCount > 0;
+    activeAllocationBreakdown.skippedNegativeCount > 0;
   const allocationPartialDataNotes = getAllocationPartialDataNotes({
     skippedMissingReferenceBalanceCount:
       activeAllocationBreakdown.skippedMissingReferenceBalanceCount,
-    skippedNonPositiveCount: activeAllocationBreakdown.skippedNonPositiveCount,
+    skippedNegativeCount: activeAllocationBreakdown.skippedNegativeCount,
   });
 
   const amountCompactFormatter = useMemo(
