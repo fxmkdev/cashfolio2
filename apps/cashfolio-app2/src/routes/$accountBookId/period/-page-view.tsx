@@ -182,6 +182,8 @@ export function PeriodPageView({
     useState<AllocationBreakdownType>("asset");
   const [selectedChartType, setSelectedChartType] =
     useState<BreakdownChartType>("donut");
+  const [selectedAllocationChartType, setSelectedAllocationChartType] =
+    useState<BreakdownChartType>("donut");
   const [pickerOpened, setPickerOpened] = useState(false);
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
@@ -593,7 +595,7 @@ export function PeriodPageView({
   );
   const allocationChartOptions = usePeriodBreakdownChartOptions({
     chartData: allocationChartData,
-    selectedChartType: "donut",
+    selectedChartType: selectedAllocationChartType,
     colors,
     totalBreakdownAmountLabel: totalAllocationAmountLabel,
     onNodeDoubleClick: handleAllocationNodeDoubleClick,
@@ -972,6 +974,7 @@ export function PeriodPageView({
 
             <PeriodAllocationBreakdownCard
               selectedBreakdown={selectedAllocationBreakdown}
+              selectedChartType={selectedAllocationChartType}
               breakdownTitle={allocationBreakdownTitle}
               breakdownSubtitle={`${allocationBreakdownSubtitle} · Amounts shown in ${overview.referenceCurrency}`}
               breadcrumbs={allocationDrillState.breadcrumbs}
@@ -983,6 +986,7 @@ export function PeriodPageView({
               emptyBreakdownMessage={emptyAllocationBreakdownMessage}
               chartOptions={allocationChartOptions}
               onSelectedBreakdownChange={setSelectedAllocationBreakdown}
+              onSelectedChartTypeChange={setSelectedAllocationChartType}
               onDrillPathChange={updateSelectedAllocationBreakdownPath}
               footer={
                 hasAllocationPartialData ? (

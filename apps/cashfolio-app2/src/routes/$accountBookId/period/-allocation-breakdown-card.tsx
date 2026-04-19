@@ -1,12 +1,17 @@
-import { SegmentedControl } from "@mantine/core";
+import { Flex, SegmentedControl } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { PeriodBreakdownChartOptions } from "./-breakdown-chart-options";
+import { ChartTypeSegmentedControl } from "./-chart-type-segmented-control";
 import type { BreakdownBreadcrumb } from "./-breakdown-drill";
-import type { AllocationBreakdownType } from "./-breakdown-types";
+import type {
+  AllocationBreakdownType,
+  BreakdownChartType,
+} from "./-breakdown-types";
 import { DrilldownCardShell } from "./-drilldown-card-shell";
 
 type PeriodAllocationBreakdownCardProps = {
   selectedBreakdown: AllocationBreakdownType;
+  selectedChartType: BreakdownChartType;
   breakdownTitle: string;
   breakdownSubtitle: string;
   breadcrumbs: BreakdownBreadcrumb[];
@@ -16,6 +21,7 @@ type PeriodAllocationBreakdownCardProps = {
   emptyBreakdownMessage: string;
   chartOptions: PeriodBreakdownChartOptions;
   onSelectedBreakdownChange: (value: AllocationBreakdownType) => void;
+  onSelectedChartTypeChange: (value: BreakdownChartType) => void;
   onDrillPathChange: (nextPath: string[]) => void;
   footer?: ReactNode;
 };
@@ -28,6 +34,7 @@ function isAllocationBreakdownType(
 
 export function PeriodAllocationBreakdownCard({
   selectedBreakdown,
+  selectedChartType,
   breakdownTitle,
   breakdownSubtitle,
   breadcrumbs,
@@ -37,6 +44,7 @@ export function PeriodAllocationBreakdownCard({
   emptyBreakdownMessage,
   chartOptions,
   onSelectedBreakdownChange,
+  onSelectedChartTypeChange,
   onDrillPathChange,
   footer,
 }: PeriodAllocationBreakdownCardProps) {
@@ -52,20 +60,27 @@ export function PeriodAllocationBreakdownCard({
       chartOptions={chartOptions}
       onDrillPathChange={onDrillPathChange}
       headerControls={
-        <SegmentedControl
-          size="sm"
-          aria-label="Allocation type"
-          value={selectedBreakdown}
-          onChange={(value) => {
-            if (isAllocationBreakdownType(value)) {
-              onSelectedBreakdownChange(value);
-            }
-          }}
-          data={[
-            { label: "Assets", value: "asset" },
-            { label: "Liabilities", value: "liability" },
-          ]}
-        />
+        <Flex gap="md" wrap="wrap" justify="flex-end">
+          <ChartTypeSegmentedControl
+            ariaLabel="Allocation chart type"
+            value={selectedChartType}
+            onChange={onSelectedChartTypeChange}
+          />
+          <SegmentedControl
+            size="sm"
+            aria-label="Allocation type"
+            value={selectedBreakdown}
+            onChange={(value) => {
+              if (isAllocationBreakdownType(value)) {
+                onSelectedBreakdownChange(value);
+              }
+            }}
+            data={[
+              { label: "Assets", value: "asset" },
+              { label: "Liabilities", value: "liability" },
+            ]}
+          />
+        </Flex>
       }
       footer={footer}
     />

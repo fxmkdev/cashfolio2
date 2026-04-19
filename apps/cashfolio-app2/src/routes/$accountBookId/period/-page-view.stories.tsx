@@ -700,7 +700,12 @@ export const BreakdownToggleSmoke: Story = {
       canvas.getByRole("heading", { name: "Income Breakdown" }),
     ).toBeInTheDocument();
 
-    const barOption = await canvas.findByRole("radio", { name: "Bar" });
+    const breakdownChartTypeControl = await canvas.findByLabelText(
+      "Breakdown chart type",
+    );
+    const barOption = within(breakdownChartTypeControl).getByRole("radio", {
+      name: "Bar",
+    });
     await userEvent.click(barOption);
     await expect(barOption).toBeChecked();
 
@@ -726,6 +731,18 @@ export const AllocationToggleSmoke: Story = {
     await expect(
       canvas.getByText(/Top-level liability groups as of period end/i),
     ).toBeInTheDocument();
+
+    const allocationChartTypeControl = await canvas.findByLabelText(
+      "Allocation chart type",
+    );
+    const allocationBarOption = within(allocationChartTypeControl).getByRole(
+      "radio",
+      {
+        name: "Bar",
+      },
+    );
+    await userEvent.click(allocationBarOption);
+    await expect(allocationBarOption).toBeChecked();
   },
 };
 
