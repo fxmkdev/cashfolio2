@@ -70,7 +70,7 @@ describe("valuation-cache server functions", () => {
     getRedisClient.mockResolvedValue(null);
   });
 
-  it("deduplicates units, normalizes casing, includes reference currency, and includes all account states", async () => {
+  it("deduplicates units, normalizes casing, and includes all account states", async () => {
     prisma.account.findMany.mockResolvedValue([
       {
         unit: Unit.CURRENCY,
