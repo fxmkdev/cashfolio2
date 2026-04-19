@@ -85,12 +85,30 @@ export function buildLedgerRows(
   const isEquity = account.type === AccountType.EQUITY;
   const hasPeriodFilter = options?.hasPeriodFilter ?? false;
   let balance = 0;
+  let equityReferenceBalance = 0;
+  let equityReferenceBalanceHasGap = false;
 
   return bookings
     .map((booking) => {
       const rawValue = Number(booking.value);
       const value = negate ? -rawValue : rawValue;
       balance += value;
+
+      const rawReferenceValue = booking.valueInReferenceCurrency;
+      const referenceValue =
+        rawReferenceValue == null
+          ? null
+          : negate
+            ? -rawReferenceValue
+            : rawReferenceValue;
+
+      if (isEquity && hasPeriodFilter) {
+        if (referenceValue == null) {
+          equityReferenceBalanceHasGap = true;
+        } else if (!equityReferenceBalanceHasGap) {
+          equityReferenceBalance += referenceValue;
+        }
+      }
 
       return {
         id: booking.id,
@@ -106,7 +124,34 @@ export function buildLedgerRows(
         tradeCurrency: booking.tradeCurrency,
         debit: negate ? (value < 0 ? -value : null) : value > 0 ? value : null,
         credit: negate ? (value > 0 ? value : null) : value < 0 ? -value : null,
-        balance: isEquity && !hasPeriodFilter ? null : balance,
+        referenceDebit:
+          referenceValue == null
+            ? null
+            : negate
+              ? referenceValue < 0
+                ? -referenceValue
+                : null
+              : referenceValue > 0
+                ? referenceValue
+                : null,
+        referenceCredit:
+          referenceValue == null
+            ? null
+            : negate
+              ? referenceValue > 0
+                ? referenceValue
+                : null
+              : referenceValue < 0
+                ? -referenceValue
+                : null,
+        balance:
+          isEquity && !hasPeriodFilter
+            ? null
+            : isEquity
+              ? equityReferenceBalanceHasGap
+                ? null
+                : equityReferenceBalance
+              : balance,
       };
     })
     .reverse();

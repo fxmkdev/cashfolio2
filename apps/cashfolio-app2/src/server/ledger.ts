@@ -8,6 +8,7 @@ import {
   type ExplicitPeriodSelection,
 } from "../shared/period";
 import { createGroupPathSegmentsResolver } from "./accounts-helpers";
+import { convertBookingValueToReference } from "./period-conversion";
 
 export const getAccountForLedger = createServerFn({ method: "GET" })
   .inputValidator((data: { accountId: string; accountBookId: string }) => data)
@@ -50,10 +51,16 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
 
 export const getLedgerData = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { accountId: string; accountBookId: string; period?: unknown }) => ({
+    (data: {
+      accountId: string;
+      accountBookId: string;
+      period?: unknown;
+      includeReferenceValues?: unknown;
+    }) => ({
       accountId: data.accountId,
       accountBookId: data.accountBookId,
       period: parseExplicitLedgerPeriodSelection(data.period),
+      includeReferenceValues: data.includeReferenceValues === true,
     }),
   )
   .handler(async ({ data }) => {
@@ -61,72 +68,109 @@ export const getLedgerData = createServerFn({ method: "GET" })
     const periodRange = data.period
       ? getExplicitPeriodDateRange(data.period)
       : null;
-    const bookings = await prisma.booking.findMany({
-      where: {
-        accountId: data.accountId,
-        accountBookId: data.accountBookId,
-        ...(periodRange
-          ? {
-              date: {
-                gte: periodRange.from,
-                lt: periodRange.toExclusive,
-              },
-            }
-          : {}),
-      },
-      orderBy: [
-        { date: "asc" },
-        { transaction: { createdAt: "asc" } },
-        { id: "asc" },
-      ],
-      select: {
-        id: true,
-        date: true,
-        description: true,
-        value: true,
-        unit: true,
-        currency: true,
-        cryptocurrency: true,
-        symbol: true,
-        tradeCurrency: true,
-        transactionId: true,
-        transaction: {
-          select: {
-            description: true,
-            bookings: {
-              where: {
-                accountId: { not: data.accountId },
-              },
-              orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-              select: {
-                account: {
-                  select: { id: true, name: true },
+    const [bookings, referenceCurrency] = await Promise.all([
+      prisma.booking.findMany({
+        where: {
+          accountId: data.accountId,
+          accountBookId: data.accountBookId,
+          ...(periodRange
+            ? {
+                date: {
+                  gte: periodRange.from,
+                  lt: periodRange.toExclusive,
+                },
+              }
+            : {}),
+        },
+        orderBy: [
+          { date: "asc" },
+          { transaction: { createdAt: "asc" } },
+          { id: "asc" },
+        ],
+        select: {
+          id: true,
+          date: true,
+          description: true,
+          value: true,
+          unit: true,
+          currency: true,
+          cryptocurrency: true,
+          symbol: true,
+          tradeCurrency: true,
+          transactionId: true,
+          transaction: {
+            select: {
+              description: true,
+              bookings: {
+                where: {
+                  accountId: { not: data.accountId },
+                },
+                orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+                select: {
+                  account: {
+                    select: { id: true, name: true },
+                  },
                 },
               },
             },
           },
         },
-      },
-    });
+      }),
+      data.includeReferenceValues
+        ? prisma.accountBook
+            .findUniqueOrThrow({
+              where: { id: data.accountBookId },
+              select: { referenceCurrency: true },
+            })
+            .then((accountBook) => accountBook.referenceCurrency.toUpperCase())
+        : Promise.resolve<string | null>(null),
+    ]);
 
-    return bookings.map((b) => ({
-      id: b.id,
-      date: b.date,
-      description: b.description,
-      value: Number(b.value),
-      unit: b.unit,
-      currency: b.currency,
-      cryptocurrency: b.cryptocurrency,
-      symbol: b.symbol,
-      tradeCurrency: b.tradeCurrency,
-      transactionId: b.transactionId,
-      transactionDescription: b.transaction.description,
-      counterpartyAccounts: [
-        ...new Map(
-          b.transaction.bookings.map((sb) => [sb.account.id, sb.account]),
-        ).values(),
-      ],
-    }));
+    const exchangeRateByKey = new Map<string, Promise<number | null>>();
+    const convertedValuesInReferenceCurrency =
+      data.includeReferenceValues && referenceCurrency
+        ? await Promise.all(
+            bookings.map((booking) =>
+              booking.unit
+                ? convertBookingValueToReference({
+                    value: Number(booking.value),
+                    unit: booking.unit,
+                    currency: booking.currency,
+                    cryptocurrency: booking.cryptocurrency,
+                    symbol: booking.symbol,
+                    tradeCurrency: booking.tradeCurrency,
+                    date: booking.date,
+                    referenceCurrency,
+                    exchangeRateByKey,
+                  })
+                : Promise.resolve<number | null>(null),
+            ),
+          )
+        : null;
+
+    return {
+      referenceCurrency,
+      bookings: bookings.map((b, index) => ({
+        id: b.id,
+        date: b.date,
+        description: b.description,
+        value: Number(b.value),
+        valueInReferenceCurrency:
+          convertedValuesInReferenceCurrency?.[index] ?? null,
+        unit: b.unit,
+        currency: b.currency,
+        cryptocurrency: b.cryptocurrency,
+        symbol: b.symbol,
+        tradeCurrency: b.tradeCurrency,
+        transactionId: b.transactionId,
+        transactionDescription: b.transaction.description,
+        counterpartyAccounts: [
+          ...new Map(
+            b.transaction.bookings.map((sb) => [sb.account.id, sb.account]),
+          ).values(),
+        ],
+      })),
+    };
   });
 
 export const getLedgerPeriodBounds = createServerFn({ method: "GET" })

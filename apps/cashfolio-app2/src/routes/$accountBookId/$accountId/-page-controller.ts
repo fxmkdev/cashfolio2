@@ -365,6 +365,7 @@ export function useLedgerPageController(args: {
   const columnDefs = useLedgerColumnDefs({
     accountBookId: args.accountBookId,
     hasPeriodFilter: args.hasPeriodFilter,
+    referenceCurrency: args.loaderData.referenceCurrency,
     isEquity,
     isIncome,
     isExpense,

@@ -58,9 +58,8 @@ type LedgerServerModule = typeof import("@/server/ledger");
 export type LedgerAccount = Awaited<
   ReturnType<LedgerServerModule["getAccountForLedger"]>
 >;
-export type LedgerBookings = Awaited<
-  ReturnType<LedgerServerModule["getLedgerData"]>
->;
+type LedgerData = Awaited<ReturnType<LedgerServerModule["getLedgerData"]>>;
+export type LedgerBookings = LedgerData["bookings"];
 export type LedgerAccountOptionSource = Awaited<
   ReturnType<AccountsServerModule["getAccounts"]>
 >[number];
@@ -79,5 +78,7 @@ export type LedgerRow = {
   tradeCurrency: string | null;
   debit: number | null;
   credit: number | null;
+  referenceDebit: number | null;
+  referenceCredit: number | null;
   balance: number | null;
 };

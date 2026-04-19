@@ -60,6 +60,8 @@ const rows: LedgerRow[] = [
     tradeCurrency: null,
     debit: null,
     credit: 84.5,
+    referenceDebit: null,
+    referenceCredit: null,
     balance: 915.5,
   },
   {
@@ -76,6 +78,8 @@ const rows: LedgerRow[] = [
     tradeCurrency: null,
     debit: 1000,
     credit: null,
+    referenceDebit: null,
+    referenceCredit: null,
     balance: 1000,
   },
 ];
@@ -191,6 +195,7 @@ function LedgerPageStoryHarness({
   const columnDefs = useLedgerColumnDefs({
     accountBookId: "storybook-book",
     hasPeriodFilter,
+    referenceCurrency: null,
     isEquity: false,
     isIncome: false,
     isExpense: false,

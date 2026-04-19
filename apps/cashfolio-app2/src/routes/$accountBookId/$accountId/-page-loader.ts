@@ -16,12 +16,14 @@ export async function loadLedgerPageData(args: {
   });
   const isPeriodFilterAllowed = account.type === AccountType.EQUITY;
 
-  const [bookings, accounts, periodBounds] = await Promise.all([
+  const [ledgerData, accounts, periodBounds] = await Promise.all([
     getLedgerData({
       data: {
         accountId: args.accountId,
         accountBookId: args.accountBookId,
         period: isPeriodFilterAllowed ? args.period : undefined,
+        includeReferenceValues:
+          isPeriodFilterAllowed && typeof args.period === "string",
       },
     }),
     getAccounts({ data: { accountBookId: args.accountBookId } }),
@@ -30,5 +32,11 @@ export async function loadLedgerPageData(args: {
     }),
   ]);
 
-  return { account, bookings, accounts, periodBounds };
+  return {
+    account,
+    bookings: ledgerData.bookings,
+    referenceCurrency: ledgerData.referenceCurrency,
+    accounts,
+    periodBounds,
+  };
 }
