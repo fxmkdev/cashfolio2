@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   DEFAULT_PERIOD_VALUE,
   formatBreakdownPathSearchValue,
+  getAllocationBreakdownPathByType,
   getBreakdownPathByType,
   getPeriodValue,
   isPeriodSearchValue,
@@ -40,11 +41,15 @@ describe("parsePeriodSearch", () => {
       period: "ytd",
       expensePath: undefined,
       incomePath: undefined,
+      assetPath: undefined,
+      liabilityPath: undefined,
     });
     expect(parsePeriodSearch({ period: "2026-02" })).toEqual({
       period: "2026-02",
       expensePath: undefined,
       incomePath: undefined,
+      assetPath: undefined,
+      liabilityPath: undefined,
     });
   });
 
@@ -53,6 +58,8 @@ describe("parsePeriodSearch", () => {
       period: "last-month",
       expensePath: undefined,
       incomePath: undefined,
+      assetPath: undefined,
+      liabilityPath: undefined,
     });
   });
 
@@ -62,11 +69,15 @@ describe("parsePeriodSearch", () => {
         period: "2026-02",
         expensePath: " group:a ,, group:b ",
         incomePath: "group:i1,group:i2",
+        assetPath: " group:assets ",
+        liabilityPath: "group:liabilities ",
       }),
     ).toEqual({
       period: "2026-02",
       expensePath: "group:a,group:b",
       incomePath: "group:i1,group:i2",
+      assetPath: "group:assets",
+      liabilityPath: "group:liabilities",
     });
   });
 
@@ -75,6 +86,8 @@ describe("parsePeriodSearch", () => {
       period: undefined,
       expensePath: undefined,
       incomePath: undefined,
+      assetPath: undefined,
+      liabilityPath: undefined,
     });
   });
 });
@@ -113,6 +126,20 @@ describe("breakdown path helpers", () => {
     ).toEqual({
       expense: ["group:e1", "group:e2"],
       income: ["group:i1"],
+    });
+  });
+
+  test("extracts drill paths by allocation type", () => {
+    expect(
+      getAllocationBreakdownPathByType(
+        parsePeriodSearch({
+          assetPath: "group:a1,group:a2",
+          liabilityPath: "group:l1",
+        }),
+      ),
+    ).toEqual({
+      asset: ["group:a1", "group:a2"],
+      liability: ["group:l1"],
     });
   });
 });

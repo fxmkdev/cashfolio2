@@ -16,7 +16,10 @@ import {
   PERIOD_PRESET_MTD,
   PERIOD_PRESET_YTD,
 } from "./-page-types";
-import type { BreakdownType } from "./-breakdown-types";
+import type {
+  AllocationBreakdownType,
+  BreakdownType,
+} from "./-breakdown-types";
 import { PeriodPageView, type PeriodPageViewProps } from "./-page-view";
 
 function deriveOverviewFromSelectedPeriodValue(
@@ -339,6 +342,108 @@ const baseOverview: PeriodPageViewProps["overview"] = {
       },
     ],
   },
+  assetBreakdown: {
+    totalAmount: 25000,
+    hasHiddenAmountDiscrepancy: false,
+    hiddenAmountDiscrepancyNodeIds: [],
+    skippedMissingReferenceBalanceCount: 1,
+    skippedNonPositiveCount: 1,
+    items: [
+      {
+        id: "group:investments",
+        label: "Investments",
+        kind: "group",
+        amount: 15000,
+        percentage: 60,
+      },
+      {
+        id: "group:cash",
+        label: "Cash",
+        kind: "group",
+        amount: 10000,
+        percentage: 40,
+      },
+    ],
+    hierarchy: [
+      {
+        id: "group:investments",
+        label: "Investments",
+        kind: "group",
+        amount: 15000,
+        children: [
+          {
+            id: "account:account-etf",
+            label: "ETF Portfolio",
+            kind: "account",
+            amount: 12000,
+            children: [],
+          },
+          {
+            id: "account:account-stocks",
+            label: "Stocks",
+            kind: "account",
+            amount: 3000,
+            children: [],
+          },
+        ],
+      },
+      {
+        id: "group:cash",
+        label: "Cash",
+        kind: "group",
+        amount: 10000,
+        children: [
+          {
+            id: "account:account-checking",
+            label: "Checking",
+            kind: "account",
+            amount: 10000,
+            children: [],
+          },
+        ],
+      },
+    ],
+  },
+  liabilityBreakdown: {
+    totalAmount: 5400,
+    hasHiddenAmountDiscrepancy: false,
+    hiddenAmountDiscrepancyNodeIds: [],
+    skippedMissingReferenceBalanceCount: 0,
+    skippedNonPositiveCount: 1,
+    items: [
+      {
+        id: "group:debt",
+        label: "Debt",
+        kind: "group",
+        amount: 5400,
+        percentage: 100,
+      },
+    ],
+    hierarchy: [
+      {
+        id: "group:debt",
+        label: "Debt",
+        kind: "group",
+        amount: 5400,
+        children: [
+          {
+            id: "account:account-credit-card",
+            label: "Credit Card",
+            kind: "account",
+            amount: 1400,
+            children: [],
+          },
+          {
+            id: "account:account-personal-loan",
+            label: "Personal Loan",
+            kind: "account",
+            amount: 4000,
+            children: [],
+          },
+        ],
+      },
+    ],
+  },
 };
 
 function PeriodRouteSmokeHarness() {
@@ -350,6 +455,11 @@ function PeriodRouteSmokeHarness() {
     expense: [],
     income: [],
   });
+  const [drillPathByAllocationBreakdown, setDrillPathByAllocationBreakdown] =
+    useState<Record<AllocationBreakdownType, string[]>>({
+      asset: [],
+      liability: [],
+    });
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -361,9 +471,13 @@ function PeriodRouteSmokeHarness() {
         overview={deriveOverviewFromSelectedPeriodValue(selectedPeriodValue)}
         selectedPeriodValue={selectedPeriodValue}
         drillPathByBreakdown={drillPathByBreakdown}
+        drillPathByAllocationBreakdown={drillPathByAllocationBreakdown}
         onPeriodChange={setSelectedPeriodValue}
         onDrillPathByBreakdownChange={setDrillPathByBreakdown}
         onBreakdownAccountDoubleClick={() => undefined}
+        onDrillPathByAllocationBreakdownChange={
+          setDrillPathByAllocationBreakdown
+        }
       />
       <Text data-testid="router-path">{pathname}</Text>
       <Text data-testid="selected-period">{selectedPeriodValue}</Text>
@@ -382,9 +496,14 @@ const meta = {
       expense: [],
       income: [],
     },
+    drillPathByAllocationBreakdown: {
+      asset: [],
+      liability: [],
+    },
     onPeriodChange: fn(),
     onDrillPathByBreakdownChange: fn(),
     onBreakdownAccountDoubleClick: fn(),
+    onDrillPathByAllocationBreakdownChange: fn(),
   },
 } satisfies Meta<typeof PeriodPageView>;
 
@@ -413,6 +532,11 @@ export const HappyPath: Story = {
     await expect(
       within(analysisSection).getByRole("heading", {
         name: "Expenses Breakdown",
+      }),
+    ).toBeInTheDocument();
+    await expect(
+      within(analysisSection).getByRole("heading", {
+        name: "Assets Allocation",
       }),
     ).toBeInTheDocument();
     await expect(canvas.queryByText("Total Income")).not.toBeInTheDocument();
@@ -586,6 +710,25 @@ export const BreakdownToggleSmoke: Story = {
   },
 };
 
+export const AllocationToggleSmoke: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const liabilitiesOption = await canvas.findByRole("radio", {
+      name: "Liabilities",
+    });
+    await userEvent.click(liabilitiesOption);
+    await expect(liabilitiesOption).toBeChecked();
+    await expect(
+      canvas.getByRole("heading", { name: "Liabilities Allocation" }),
+    ).toBeInTheDocument();
+
+    await expect(
+      canvas.getByText(/Top-level liability groups as of period end/i),
+    ).toBeInTheDocument();
+  },
+};
+
 export const DrilledBreakdownSubtitle: Story = {
   args: {
     drillPathByBreakdown: {
@@ -597,6 +740,21 @@ export const DrilledBreakdownSubtitle: Story = {
     const canvas = within(canvasElement);
     await expect(
       canvas.getByText("Drilled expense groups in the selected period"),
+    ).toBeInTheDocument();
+  },
+};
+
+export const DrilledAllocationSubtitle: Story = {
+  args: {
+    drillPathByAllocationBreakdown: {
+      asset: ["group:investments"],
+      liability: [],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByText(/Drilled asset groups as of period end/i),
     ).toBeInTheDocument();
   },
 };

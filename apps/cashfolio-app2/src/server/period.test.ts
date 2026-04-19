@@ -24,7 +24,10 @@ import {
   resolvePeriodSelection,
   shouldIncludeTransactionForPeriod,
 } from "./period";
-import { buildBreakdownHierarchyWithMeta } from "./period-helpers";
+import {
+  buildBreakdownHierarchyWithMeta,
+  buildPeriodEndAllocationBreakdown,
+} from "./period-helpers";
 
 describe("normalizePeriodValue", () => {
   test("normalizes valid values", () => {
@@ -933,5 +936,144 @@ describe("breakdown hierarchy", () => {
 
     expect(result.hasHiddenAmountDiscrepancy).toBe(false);
     expect(result.hiddenAmountDiscrepancyNodeIds).toEqual([]);
+  });
+});
+
+describe("buildPeriodEndAllocationBreakdown", () => {
+  const groupById = new Map([
+    [
+      "assets",
+      {
+        id: "assets",
+        name: "Assets",
+        parentGroupId: null,
+      },
+    ],
+    [
+      "liabilities",
+      {
+        id: "liabilities",
+        name: "Liabilities",
+        parentGroupId: null,
+      },
+    ],
+  ]);
+
+  test("applies liability display sign convention", () => {
+    const result = buildPeriodEndAllocationBreakdown({
+      items: [
+        {
+          accountId: "liability-card",
+          accountName: "Credit Card",
+          groupId: "liabilities",
+          accountType: AccountType.LIABILITY,
+          convertedBalanceInReferenceCurrency: -1200.5,
+        },
+      ],
+      groupById,
+    });
+
+    expect(result.totalAmount).toBe(1200.5);
+    expect(result.items).toEqual([
+      {
+        id: "group:liabilities",
+        label: "Liabilities",
+        kind: "group",
+        amount: 1200.5,
+        percentage: 100,
+      },
+    ]);
+    expect(result.skippedMissingReferenceBalanceCount).toBe(0);
+    expect(result.skippedNonPositiveCount).toBe(0);
+  });
+
+  test("tracks missing conversion and non-positive exclusions", () => {
+    const result = buildPeriodEndAllocationBreakdown({
+      items: [
+        {
+          accountId: "asset-missing",
+          accountName: "Missing",
+          groupId: "assets",
+          accountType: AccountType.ASSET,
+          convertedBalanceInReferenceCurrency: null,
+        },
+        {
+          accountId: "asset-zero",
+          accountName: "Zero",
+          groupId: "assets",
+          accountType: AccountType.ASSET,
+          convertedBalanceInReferenceCurrency: 0,
+        },
+        {
+          accountId: "liability-not-outstanding",
+          accountName: "Not Outstanding",
+          groupId: "liabilities",
+          accountType: AccountType.LIABILITY,
+          convertedBalanceInReferenceCurrency: 25,
+        },
+        {
+          accountId: "asset-visible",
+          accountName: "Visible",
+          groupId: "assets",
+          accountType: AccountType.ASSET,
+          convertedBalanceInReferenceCurrency: 100,
+        },
+      ],
+      groupById,
+    });
+
+    expect(result.items).toEqual([
+      {
+        id: "group:assets",
+        label: "Assets",
+        kind: "group",
+        amount: 100,
+        percentage: 100,
+      },
+    ]);
+    expect(result.skippedMissingReferenceBalanceCount).toBe(1);
+    expect(result.skippedNonPositiveCount).toBe(2);
+  });
+
+  test("propagates discrepancy metadata for hidden rounded children", () => {
+    const result = buildPeriodEndAllocationBreakdown({
+      items: [
+        {
+          accountId: "asset-main",
+          accountName: "Main",
+          groupId: "assets",
+          accountType: AccountType.ASSET,
+          convertedBalanceInReferenceCurrency: 100.002,
+        },
+        {
+          accountId: "asset-tiny",
+          accountName: "Tiny",
+          groupId: "assets",
+          accountType: AccountType.ASSET,
+          convertedBalanceInReferenceCurrency: 0.004,
+        },
+      ],
+      groupById,
+    });
+
+    expect(result.hasHiddenAmountDiscrepancy).toBe(true);
+    expect(result.hiddenAmountDiscrepancyNodeIds).toEqual(["group:assets"]);
+    expect(result.hierarchy).toEqual([
+      {
+        id: "group:assets",
+        label: "Assets",
+        kind: "group",
+        amount: 100.01,
+        children: [
+          {
+            id: "account:asset-main",
+            label: "Main",
+            kind: "account",
+            amount: 100,
+            children: [],
+          },
+        ],
+      },
+    ]);
   });
 });
