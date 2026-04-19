@@ -132,7 +132,7 @@ function getAllocationPartialDataNotes(args: {
       ? `${formatAccountCountWithVerb(args.skippedMissingReferenceBalanceCount)} skipped because reference-currency balances were unavailable.`
       : null,
     args.skippedNonPositiveCount > 0
-      ? `With non-positive balances, ${formatAccountCountWithVerb(args.skippedNonPositiveCount)} excluded from allocation.`
+      ? `With negative balances, ${formatAccountCountWithVerb(args.skippedNonPositiveCount)} excluded from allocation.`
       : null,
   ]
     .filter((value): value is string => value != null)
