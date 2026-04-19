@@ -338,7 +338,7 @@ export const getPeriodOverview = createServerFn({
     });
 
     const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
-    const [minBookingDateAggregate, allAccountGroups, holdingAccounts] =
+    const [minBookingDateAggregate, allAccountGroups, assetLiabilityAccounts] =
       await Promise.all([
         prisma.booking.aggregate({
           where: { accountBookId: data.accountBookId },
@@ -358,13 +358,10 @@ export const getPeriodOverview = createServerFn({
             type: {
               in: [AccountType.ASSET, AccountType.LIABILITY],
             },
-            NOT: {
-              unit: Unit.CURRENCY,
-              currency: referenceCurrency,
-            },
           },
           select: {
             id: true,
+            type: true,
             unit: true,
             currency: true,
             cryptocurrency: true,
@@ -375,7 +372,7 @@ export const getPeriodOverview = createServerFn({
       ]);
 
     const holdingAccountsResolved = filterConvertibleHoldingAccounts(
-      holdingAccounts,
+      assetLiabilityAccounts,
       referenceCurrency,
     );
 
@@ -398,6 +395,23 @@ export const getPeriodOverview = createServerFn({
     );
 
     const exchangeRateByKey = new Map<string, Promise<number | null>>();
+    const assetLiabilityAccountIds = assetLiabilityAccounts.map(
+      (account) => account.id,
+    );
+    const endOfPeriodRawBalanceByAccountId = new Map(
+      (assetLiabilityAccountIds.length > 0
+        ? await prisma.booking.groupBy({
+            by: ["accountId"],
+            where: {
+              accountBookId: data.accountBookId,
+              accountId: { in: assetLiabilityAccountIds },
+              date: { lte: selection.to },
+            },
+            _sum: { value: true },
+          })
+        : []
+      ).map((balance) => [balance.accountId, Number(balance._sum.value ?? 0)]),
+    );
 
     let bookingsCount = 0;
     let convertedBookingsCount = 0;
@@ -820,6 +834,57 @@ export const getPeriodOverview = createServerFn({
     const roundedGainsLosses = round2(gainsLosses);
     const roundedSavings = round2(roundedIncome - roundedExpenses);
     const roundedTotalReturn = round2(roundedSavings + roundedGainsLosses);
+    const endOfPeriodConvertedBalances = await Promise.all(
+      assetLiabilityAccounts.map(async (account) => {
+        const rawBalance =
+          endOfPeriodRawBalanceByAccountId.get(account.id) ?? 0;
+
+        if (account.unit == null) {
+          return null;
+        }
+
+        const convertedBalance = await convertBookingValueToReference({
+          value: rawBalance,
+          unit: account.unit,
+          currency: account.currency,
+          cryptocurrency: account.cryptocurrency,
+          symbol: account.symbol,
+          tradeCurrency: account.tradeCurrency,
+          date: selection.to,
+          referenceCurrency,
+          exchangeRateByKey,
+        });
+
+        if (convertedBalance == null) {
+          return null;
+        }
+
+        return {
+          type: account.type,
+          convertedBalance,
+        };
+      }),
+    );
+    let endOfPeriodAssets = 0;
+    let endOfPeriodLiabilities = 0;
+
+    for (const convertedBalanceEntry of endOfPeriodConvertedBalances) {
+      if (!convertedBalanceEntry) {
+        continue;
+      }
+
+      if (convertedBalanceEntry.type === AccountType.ASSET) {
+        endOfPeriodAssets += convertedBalanceEntry.convertedBalance;
+      } else {
+        endOfPeriodLiabilities += convertedBalanceEntry.convertedBalance;
+      }
+    }
+
+    const roundedEndOfPeriodAssets = round2(endOfPeriodAssets);
+    const roundedEndOfPeriodLiabilities = round2(endOfPeriodLiabilities);
+    const roundedEndOfPeriodNetWorth = round2(
+      roundedEndOfPeriodAssets - roundedEndOfPeriodLiabilities,
+    );
 
     const {
       hierarchy: expenseBreakdownHierarchy,
@@ -889,6 +954,9 @@ export const getPeriodOverview = createServerFn({
         income: roundedIncome,
         expenses: roundedExpenses,
         gainsLosses: roundedGainsLosses,
+        endOfPeriodNetWorth: roundedEndOfPeriodNetWorth,
+        endOfPeriodAssets: roundedEndOfPeriodAssets,
+        endOfPeriodLiabilities: roundedEndOfPeriodLiabilities,
         explicitGainLoss: round2(explicitGainLoss),
         transactionGainLoss: round2(transactionGainLoss),
         holdingGainLoss: round2(holdingGainLoss),
