@@ -5,6 +5,7 @@ import { useState } from "react";
 import { expect, fn, userEvent, within } from "storybook/test";
 import {
   formatMonthPeriodValue,
+  PERIOD_MONTH_NAMES,
   parseExplicitMonthPeriod,
   parseExplicitYearPeriod,
 } from "@/shared/period";
@@ -17,21 +18,6 @@ import {
 } from "./-page-types";
 import type { BreakdownType } from "./-breakdown-types";
 import { PeriodPageView, type PeriodPageViewProps } from "./-page-view";
-
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-] as const;
 
 function deriveOverviewFromSelectedPeriodValue(
   selectedPeriodValue: string,
@@ -47,7 +33,7 @@ function deriveOverviewFromSelectedPeriodValue(
       ...baseOverview,
       selectedPeriodValue: explicitMonth.value,
       selectedPeriodSpecifier: "month",
-      selectedPeriodLabel: `${MONTH_NAMES[explicitMonth.month]} ${explicitMonth.year}`,
+      selectedPeriodLabel: `${PERIOD_MONTH_NAMES[explicitMonth.month]} ${explicitMonth.year}`,
       selectedGranularity: "month",
       selectedYear: explicitMonth.year,
       selectedMonth: explicitMonth.month,
@@ -72,7 +58,7 @@ function deriveOverviewFromSelectedPeriodValue(
       ...baseOverview,
       selectedPeriodValue: PERIOD_PRESET_MTD,
       selectedPeriodSpecifier: "mtd",
-      selectedPeriodLabel: `${MONTH_NAMES[currentMonth]} ${currentYear}`,
+      selectedPeriodLabel: `${PERIOD_MONTH_NAMES[currentMonth]} ${currentYear}`,
       selectedGranularity: "month",
       selectedYear: currentYear,
       selectedMonth: currentMonth,
@@ -107,7 +93,7 @@ function deriveOverviewFromSelectedPeriodValue(
     ...baseOverview,
     selectedPeriodValue: PERIOD_PRESET_LAST_MONTH,
     selectedPeriodSpecifier: "last-month",
-    selectedPeriodLabel: `${MONTH_NAMES[lastMonthDate.getUTCMonth()]} ${lastMonthDate.getUTCFullYear()}`,
+    selectedPeriodLabel: `${PERIOD_MONTH_NAMES[lastMonthDate.getUTCMonth()]} ${lastMonthDate.getUTCFullYear()}`,
     selectedGranularity: "month",
     selectedYear: lastMonthDate.getUTCFullYear(),
     selectedMonth: lastMonthDate.getUTCMonth(),

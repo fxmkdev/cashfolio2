@@ -3,6 +3,14 @@ import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { AccountType } from "@/.prisma-client/enums";
 import { useTransactionScroll } from "@/hooks/use-transaction-scroll";
 import { formatMonthPeriodValue } from "@/shared/period";
+import {
+  buildPeriodSelectorModel,
+  getMonthPickerValue,
+  getPeriodModeChangeValue,
+  getPeriodStepValue,
+  getYearPickerValue,
+  type PeriodMode,
+} from "@/shared/period-selector-model";
 import { loadLedgerPageData } from "./-page-loader";
 import { useLedgerPageController } from "./-page-controller";
 import { LedgerPeriodFilterCard } from "./-period-filter-card";
@@ -12,14 +20,6 @@ import {
   type LedgerRow,
 } from "./-page-types";
 import { LedgerViewSegmentedControl } from "./-view-segmented-control";
-import {
-  buildPeriodSelectorModel,
-  getMonthPickerValue,
-  getPeriodModeChangeValue,
-  getPeriodStepValue,
-  getYearPickerValue,
-  type PeriodMode,
-} from "../period/-selector-model";
 
 const LedgerPageView = lazy(async () => {
   const module = await import("./-page-view");

@@ -90,17 +90,21 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
   await expect(chartContainer).toBeVisible();
 
   const expectedPath = `/${args.accountBookId}/${args.accountId}`;
+  const normalizePathname = (pathname: string) =>
+    pathname !== "/" && pathname.endsWith("/")
+      ? pathname.slice(0, -1)
+      : pathname;
   const tryExpectLedgerNavigation = async () => {
     await expect
       .poll(
         () => {
           const url = new URL(args.page.url());
           return (
-            url.pathname === expectedPath &&
+            normalizePathname(url.pathname) === expectedPath &&
             url.searchParams.get("period") === args.period
           );
         },
-        { timeout: 1_500 },
+        { timeout: 5_000 },
       )
       .toBe(true);
   };

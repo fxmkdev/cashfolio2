@@ -1,6 +1,6 @@
 const PERIOD_MONTH_REGEX = /^(\d{4})-(\d{2})$/;
 const PERIOD_YEAR_REGEX = /^(\d{4})$/;
-const PERIOD_MONTH_NAMES = [
+export const PERIOD_MONTH_NAMES = [
   "January",
   "February",
   "March",
@@ -123,13 +123,18 @@ export function parseExplicitPeriodSelection(
 export function normalizeExplicitPeriodValue(
   value: unknown,
 ): string | undefined {
+  return parseExplicitPeriodSelectionFromUnknown(value)?.value;
+}
+
+export function parseExplicitPeriodSelectionFromUnknown(
+  value: unknown,
+): ExplicitPeriodSelection | undefined {
   if (typeof value !== "string") {
     return undefined;
   }
 
   const normalized = value.trim().toLowerCase();
-  const explicitPeriodSelection = parseExplicitPeriodSelection(normalized);
-  return explicitPeriodSelection?.value;
+  return parseExplicitPeriodSelection(normalized) ?? undefined;
 }
 
 export function formatExplicitPeriodSelectionLabel(

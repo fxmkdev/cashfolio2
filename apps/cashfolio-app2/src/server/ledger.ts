@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
+import { startOfUtcDay } from "../shared/date";
 import {
   getExplicitPeriodDateRange,
-  normalizeExplicitPeriodValue,
-  parseExplicitPeriodSelection,
+  parseExplicitPeriodSelectionFromUnknown,
   type ExplicitPeriodSelection,
 } from "../shared/period";
 import { createGroupPathSegmentsResolver } from "./accounts-helpers";
@@ -62,7 +62,7 @@ export const getLedgerData = createServerFn({ method: "GET" })
       accountId: data.accountId,
       accountBookId: data.accountBookId,
       period: parseExplicitLedgerPeriodSelection(data.period),
-      includeReferenceValues: data.includeReferenceValues === true,
+      includeReferenceValues: toBoolean(data.includeReferenceValues),
     }),
   )
   .handler(async ({ data }) => {
@@ -128,28 +128,28 @@ export const getLedgerData = createServerFn({ method: "GET" })
         : Promise.resolve<string | null>(null),
     ]);
 
-    const exchangeRateByKey = new Map<string, Promise<number | null>>();
-    const convertedValuesInReferenceCurrency =
-      data.includeReferenceValues && referenceCurrency
-        ? await mapWithConcurrencyLimit(
-            bookings,
-            LEDGER_REFERENCE_CONVERSION_CONCURRENCY,
-            (booking) =>
-              booking.unit
-                ? convertBookingValueToReference({
-                    value: Number(booking.value),
-                    unit: booking.unit,
-                    currency: booking.currency,
-                    cryptocurrency: booking.cryptocurrency,
-                    symbol: booking.symbol,
-                    tradeCurrency: booking.tradeCurrency,
-                    date: booking.date,
-                    referenceCurrency,
-                    exchangeRateByKey,
-                  })
-                : Promise.resolve<number | null>(null),
-          )
-        : null;
+    let convertedValuesInReferenceCurrency: Array<number | null> | null = null;
+    if (data.includeReferenceValues && referenceCurrency) {
+      const exchangeRateByKey = new Map<string, Promise<number | null>>();
+      convertedValuesInReferenceCurrency = await mapWithConcurrencyLimit(
+        bookings,
+        LEDGER_REFERENCE_CONVERSION_CONCURRENCY,
+        (booking) =>
+          booking.unit
+            ? convertBookingValueToReference({
+                value: Number(booking.value),
+                unit: booking.unit,
+                currency: booking.currency,
+                cryptocurrency: booking.cryptocurrency,
+                symbol: booking.symbol,
+                tradeCurrency: booking.tradeCurrency,
+                date: booking.date,
+                referenceCurrency,
+                exchangeRateByKey,
+              })
+            : Promise.resolve<number | null>(null),
+      );
+    }
 
     return {
       referenceCurrency,
@@ -198,18 +198,11 @@ export const getLedgerPeriodBounds = createServerFn({ method: "GET" })
 function parseExplicitLedgerPeriodSelection(
   value: unknown,
 ): ExplicitPeriodSelection | undefined {
-  const normalizedPeriodValue = normalizeExplicitPeriodValue(value);
-  if (!normalizedPeriodValue) {
-    return undefined;
-  }
-
-  return parseExplicitPeriodSelection(normalizedPeriodValue) ?? undefined;
+  return parseExplicitPeriodSelectionFromUnknown(value);
 }
 
-function startOfUtcDay(date: Date): Date {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-  );
+function toBoolean(value: unknown): boolean {
+  return value === true || value === "true";
 }
 
 async function mapWithConcurrencyLimit<TInput, TOutput>(

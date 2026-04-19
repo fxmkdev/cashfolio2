@@ -11,6 +11,7 @@ import {
   formatMonthPeriodValue,
   isSupportedPeriodValue,
   normalizePeriodValue,
+  PERIOD_MONTH_NAMES,
   parseExplicitMonthPeriod,
   parseExplicitYearPeriod,
   PERIOD_PRESET_LAST_MONTH,
@@ -62,21 +63,6 @@ export {
 };
 
 export type PeriodSpecifier = PeriodPresetValue | "month" | "year";
-
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-] as const;
 
 const EQUITY_BOOKINGS_PAGE_SIZE = 1_000;
 const TRANSACTIONS_PAGE_SIZE = 200;
@@ -263,7 +249,7 @@ function clampExplicitSelectionToBounds(args: {
 function buildPeriodLabel(base: NormalizedPeriodBase): string {
   if (base.granularity === "month") {
     const month = base.month ?? 0;
-    return `${MONTH_NAMES[month]} ${base.year}`;
+    return `${PERIOD_MONTH_NAMES[month]} ${base.year}`;
   }
 
   return String(base.year);

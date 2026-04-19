@@ -15,7 +15,7 @@ import {
   IconChevronRight,
   IconX,
 } from "@tabler/icons-react";
-import type { PeriodMode } from "../period/-selector-model";
+import type { PeriodMode } from "@/shared/period-selector-model";
 
 type LedgerPeriodFilterCardProps = {
   hasPeriodFilter: boolean;

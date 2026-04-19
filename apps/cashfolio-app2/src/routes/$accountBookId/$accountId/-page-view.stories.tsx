@@ -9,10 +9,6 @@ import {
   editTransactionInitialValues,
 } from "@/components/storybook-fixtures";
 import { formatMonthPeriodValue } from "@/shared/period";
-import { useLedgerColumnDefs } from "./-page-columns";
-import type { SimpleTransactionEditInitialValues } from "./-page-data";
-import { LedgerPeriodFilterCard } from "./-period-filter-card";
-import { parseLedgerExplicitPeriod, type LedgerRow } from "./-page-types";
 import {
   buildPeriodSelectorModel,
   getMonthPickerValue,
@@ -20,7 +16,11 @@ import {
   getPeriodStepValue,
   getYearPickerValue,
   type PeriodMode,
-} from "../period/-selector-model";
+} from "@/shared/period-selector-model";
+import { useLedgerColumnDefs } from "./-page-columns";
+import type { SimpleTransactionEditInitialValues } from "./-page-data";
+import { LedgerPeriodFilterCard } from "./-period-filter-card";
+import { parseLedgerExplicitPeriod, type LedgerRow } from "./-page-types";
 import {
   LedgerPageView,
   type EditMode,
@@ -32,7 +32,7 @@ import {
 } from "./-page-view";
 import { LedgerViewSegmentedControl } from "./-view-segmented-control";
 
-const account = {
+const assetAccount = {
   id: "account-checking",
   name: "Checking",
   isActive: true,
@@ -110,12 +110,14 @@ const createSplitInitialValues: SplitModalInitialValues = {
 function LedgerPageStoryHarness({
   routeSmoke = false,
   includePeriodFilterControls = false,
+  accountType = AccountType.ASSET,
   startWithSimpleModal = false,
   startWithSplitModal = false,
   startWithEditModal = false,
 }: {
   routeSmoke?: boolean;
   includePeriodFilterControls?: boolean;
+  accountType?: AccountType;
   startWithSimpleModal?: boolean;
   startWithSplitModal?: boolean;
   startWithEditModal?: boolean;
@@ -191,6 +193,16 @@ function LedgerPageStoryHarness({
     [maxDate, minBookingDate, periodMode, selectedMonth, selectedYear],
   );
   const hasPeriodFilter = selectedPeriod != null;
+  const account =
+    accountType === AccountType.EQUITY
+      ? {
+          ...assetAccount,
+          id: "account-equity",
+          name: "Retained Earnings",
+          type: AccountType.EQUITY,
+          groupPathSegments: ["Equity"],
+        }
+      : assetAccount;
 
   const setPeriodFilter = (nextPeriodValue: string | undefined) => {
     navigate({
@@ -205,7 +217,7 @@ function LedgerPageStoryHarness({
     accountBookId: "storybook-book",
     hasPeriodFilter,
     referenceCurrency: null,
-    isEquity: false,
+    isEquity: accountType === AccountType.EQUITY,
     isIncome: false,
     isExpense: false,
     onEditClick: (transactionId) => {
@@ -468,6 +480,7 @@ export const PeriodFilterRouteSmoke: Story = {
     <LedgerPageStoryHarness
       routeSmoke={true}
       includePeriodFilterControls={true}
+      accountType={AccountType.EQUITY}
     />
   ),
   play: async ({ canvasElement }) => {

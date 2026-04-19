@@ -1,4 +1,5 @@
 import { AccountType } from "@/.prisma-client/enums";
+import { startOfUtcDay } from "@/shared/date";
 import { getAccounts } from "@/server/accounts";
 import {
   getAccountForLedger,
@@ -11,9 +12,13 @@ export async function loadLedgerPageData(args: {
   accountId: string;
   period?: string;
 }) {
-  const account = await getAccountForLedger({
+  const accountPromise = getAccountForLedger({
     data: { accountId: args.accountId, accountBookId: args.accountBookId },
   });
+  const accountsPromise = getAccounts({
+    data: { accountBookId: args.accountBookId },
+  });
+  const account = await accountPromise;
   const isPeriodFilterAllowed = account.type === AccountType.EQUITY;
 
   const [ledgerData, accounts, periodBounds] = await Promise.all([
@@ -25,7 +30,7 @@ export async function loadLedgerPageData(args: {
         includeReferenceValues: isPeriodFilterAllowed,
       },
     }),
-    getAccounts({ data: { accountBookId: args.accountBookId } }),
+    accountsPromise,
     isPeriodFilterAllowed
       ? getLedgerPeriodBounds({
           data: {
@@ -46,10 +51,4 @@ export async function loadLedgerPageData(args: {
     accounts,
     periodBounds,
   };
-}
-
-function startOfUtcDay(date: Date): Date {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-  );
 }
