@@ -79,6 +79,7 @@ export function PeriodBreakdownCard({
       hasData={hasBreakdown}
       emptyMessage={emptyBreakdownMessage}
       chartOptions={chartOptions}
+      chartContainerTestId="period-breakdown-chart"
       onDrillPathChange={onDrillPathChange}
       onChartContainerDoubleClick={onChartContainerDoubleClick}
       drillHint="Double-click a group to drill down, or an account to open ledger."

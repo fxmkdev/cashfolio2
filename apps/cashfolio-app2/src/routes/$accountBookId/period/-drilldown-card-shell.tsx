@@ -25,6 +25,7 @@ type DrilldownCardShellProps = {
   hasData: boolean;
   emptyMessage: string;
   chartOptions: PeriodBreakdownChartOptions;
+  chartContainerTestId?: string;
   onDrillPathChange: (nextPath: string[]) => void;
   onChartContainerDoubleClick?: (() => void) | null;
   headerControls?: ReactNode;
@@ -41,6 +42,7 @@ export function DrilldownCardShell({
   hasData,
   emptyMessage,
   chartOptions,
+  chartContainerTestId,
   onDrillPathChange,
   onChartContainerDoubleClick,
   headerControls,
@@ -137,6 +139,7 @@ export function DrilldownCardShell({
         {hasData ? (
           <div
             className={classes.chartContainer}
+            data-testid={chartContainerTestId}
             onDoubleClick={onChartContainerDoubleClick ?? undefined}
           >
             <AgCharts options={chartOptions} />
