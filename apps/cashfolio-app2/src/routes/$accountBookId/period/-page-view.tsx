@@ -672,6 +672,7 @@ export function PeriodPageView({
               label={card.label}
               value={card.value}
               valueColor={card.valueColor}
+              secondaryValue={card.secondaryValue}
             />
           ))}
         </SimpleGrid>
