@@ -37,24 +37,24 @@ Related docs:
 - `$accountBookId/$accountId/index.tsx` - ledger page for a single account
 - `$accountBookId/$accountId/chart.tsx` - balance chart view for asset/liability
   ledgers (daily closing native-unit balance)
-- Route-local helper files can live next to a route file when orchestration
-  grows, but they must be prefixed with `-` so TanStack Router ignores them. For
-  example:
+- Route-local helper files can live near route files when orchestration grows.
+  Keep them under `-$domain` subfolders (for example `-accounts`, `-ledger`) and
+  prefix file names with `-` so TanStack Router ignores them. For example:
   - accounts route modules:
-    - `$accountBookId/-accounts-page-loader.ts`
-    - `$accountBookId/-accounts-page-controller.ts`
-    - `$accountBookId/-accounts-page-data.ts`
-    - `$accountBookId/-accounts-page-modal-state.ts`
-    - `$accountBookId/-accounts-page-reference-balances.ts`
-    - `$accountBookId/-accounts-page-columns.tsx`
+    - `$accountBookId/-accounts/-accounts-page-loader.ts`
+    - `$accountBookId/-accounts/-accounts-page-controller.ts`
+    - `$accountBookId/-accounts/-accounts-page-data.ts`
+    - `$accountBookId/-accounts/-accounts-page-modal-state.ts`
+    - `$accountBookId/-accounts/-accounts-page-reference-balances.ts`
+    - `$accountBookId/-accounts/-accounts-page-columns.tsx`
   - ledger route modules:
-    - `$accountBookId/-ledger-page-loader.ts`
-    - `$accountBookId/-ledger-page-controller.ts`
-    - `$accountBookId/-ledger-page-account-options.ts`
-    - `$accountBookId/-ledger-page-edit-flow.ts`
-    - `$accountBookId/-ledger-page-rebook-flow.ts`
-    - `$accountBookId/-ledger-page-transaction-utils.ts`
-    - `$accountBookId/-ledger-page-columns.tsx`
+    - `$accountBookId/-ledger/-ledger-page-loader.ts`
+    - `$accountBookId/-ledger/-ledger-page-controller.ts`
+    - `$accountBookId/-ledger/-ledger-page-account-options.ts`
+    - `$accountBookId/-ledger/-ledger-page-edit-flow.ts`
+    - `$accountBookId/-ledger/-ledger-page-rebook-flow.ts`
+    - `$accountBookId/-ledger/-ledger-page-transaction-utils.ts`
+    - `$accountBookId/-ledger/-ledger-page-columns.tsx`
 
 ### Search Parameters
 

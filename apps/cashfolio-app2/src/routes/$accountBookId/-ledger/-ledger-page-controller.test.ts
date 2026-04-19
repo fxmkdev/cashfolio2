@@ -1,0 +1,391 @@
+import { describe, expect, test, vi } from "vitest";
+import { Unit } from "../../../.prisma-client/enums";
+
+vi.mock("../../server/transactions", () => ({
+  createSimpleTransaction: vi.fn(),
+  createTransaction: vi.fn(),
+  deleteTransaction: vi.fn(),
+  getTransaction: vi.fn(),
+  rebookBooking: vi.fn(),
+  updateTransaction: vi.fn(),
+}));
+
+import { createLedgerMutationActions } from "./-ledger-page-controller";
+
+function createActions(args: {
+  state: unknown;
+  api: unknown;
+  invalidate: () => void;
+  pendingScrollRef: { current: string | undefined };
+}) {
+  return createLedgerMutationActions({
+    accountBookId: "book-1",
+    accountId: "account-1",
+    invalidate: args.invalidate,
+    state: args.state as Parameters<
+      typeof createLedgerMutationActions
+    >[0]["state"],
+    pendingScrollRef: args.pendingScrollRef,
+    api: args.api as Parameters<typeof createLedgerMutationActions>[0]["api"],
+  });
+}
+
+describe("createLedgerMutationActions", () => {
+  test("creates split transaction, closes modal state, invalidates, and schedules scroll", async () => {
+    const invalidate = vi.fn();
+    const pendingScrollRef: { current: string | undefined } = {
+      current: undefined,
+    };
+
+    let editingTransactionId: string | undefined;
+    let deletingTransaction: { id: string; description: string } | undefined;
+    let rebooking:
+      | {
+          bookingId: string;
+          transactionId: string;
+          bookingValue: number;
+          bookingUnit: {
+            unit: Unit | null;
+            currency: string | null;
+            cryptocurrency: string | null;
+            symbol: string | null;
+            tradeCurrency: string | null;
+          };
+        }
+      | undefined;
+
+    const state = {
+      getEditingTransactionId: () => editingTransactionId,
+      getDeletingTransaction: () => deletingTransaction,
+      getRebooking: () => rebooking,
+      setModalOpened: vi.fn(),
+      setSimpleModalOpened: vi.fn(),
+      setEditModalOpened: vi.fn(),
+      setCreateSplitInitialValues: vi.fn(),
+      setDeletingTransaction: vi.fn((value) => {
+        deletingTransaction = value;
+      }),
+      setRebookModalOpened: vi.fn(),
+    };
+
+    const api = {
+      createSimpleTransaction: vi.fn().mockResolvedValue({ id: "tx-simple" }),
+      createTransaction: vi.fn().mockResolvedValue({ id: "tx-new" }),
+      updateTransaction: vi.fn().mockResolvedValue(undefined),
+      deleteTransaction: vi.fn().mockResolvedValue(undefined),
+      getTransaction: vi.fn(),
+      rebookBooking: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const actions = createActions({
+      invalidate,
+      state,
+      pendingScrollRef,
+      api,
+    });
+
+    await actions.handleCreateTransaction({
+      description: "Groceries",
+      bookings: [
+        {
+          date: "2026-01-10T00:00:00.000Z",
+          accountId: "account-1",
+          description: "",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: undefined,
+          symbol: undefined,
+          tradeCurrency: undefined,
+          value: -20,
+        },
+        {
+          date: "2026-01-10T00:00:00.000Z",
+          accountId: "expense-1",
+          description: "",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: undefined,
+          symbol: undefined,
+          tradeCurrency: undefined,
+          value: 20,
+        },
+      ],
+    });
+
+    expect(api.createTransaction).toHaveBeenCalledWith({
+      data: {
+        accountBookId: "book-1",
+        description: "Groceries",
+        bookings: [
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            accountId: "account-1",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: undefined,
+            symbol: undefined,
+            tradeCurrency: undefined,
+            value: -20,
+          },
+          {
+            date: "2026-01-10T00:00:00.000Z",
+            accountId: "expense-1",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: undefined,
+            symbol: undefined,
+            tradeCurrency: undefined,
+            value: 20,
+          },
+        ],
+      },
+    });
+    expect(state.setModalOpened).toHaveBeenCalledWith(false);
+    expect(state.setCreateSplitInitialValues).toHaveBeenCalledWith(undefined);
+    expect(pendingScrollRef.current).toBe("tx-new");
+    expect(invalidate).toHaveBeenCalledOnce();
+  });
+
+  test("updates transaction only when an editing transaction id exists", async () => {
+    const invalidate = vi.fn();
+    const pendingScrollRef: { current: string | undefined } = {
+      current: undefined,
+    };
+
+    let editingTransactionId: string | undefined = undefined;
+
+    const state = {
+      getEditingTransactionId: () => editingTransactionId,
+      getDeletingTransaction: () => undefined,
+      getRebooking: () => undefined,
+      setModalOpened: vi.fn(),
+      setSimpleModalOpened: vi.fn(),
+      setEditModalOpened: vi.fn(),
+      setCreateSplitInitialValues: vi.fn(),
+      setDeletingTransaction: vi.fn(),
+      setRebookModalOpened: vi.fn(),
+    };
+
+    const api = {
+      createSimpleTransaction: vi.fn().mockResolvedValue({ id: "tx-simple" }),
+      createTransaction: vi.fn().mockResolvedValue({ id: "tx-new" }),
+      updateTransaction: vi.fn().mockResolvedValue(undefined),
+      deleteTransaction: vi.fn().mockResolvedValue(undefined),
+      getTransaction: vi.fn(),
+      rebookBooking: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const actions = createActions({
+      invalidate,
+      state,
+      pendingScrollRef,
+      api,
+    });
+
+    await actions.handleUpdateTransaction({
+      description: "No-op",
+      bookings: [],
+    });
+
+    expect(api.updateTransaction).not.toHaveBeenCalled();
+    expect(invalidate).not.toHaveBeenCalled();
+
+    editingTransactionId = "tx-edit";
+
+    await actions.handleUpdateTransaction({
+      description: "Updated",
+      bookings: [
+        {
+          date: "2026-01-11T00:00:00.000Z",
+          accountId: "account-1",
+          description: "",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: undefined,
+          symbol: undefined,
+          tradeCurrency: undefined,
+          value: 10,
+        },
+      ],
+    });
+
+    expect(api.updateTransaction).toHaveBeenCalledWith({
+      data: {
+        accountBookId: "book-1",
+        transactionId: "tx-edit",
+        description: "Updated",
+        bookings: [
+          {
+            date: "2026-01-11T00:00:00.000Z",
+            accountId: "account-1",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: undefined,
+            symbol: undefined,
+            tradeCurrency: undefined,
+            value: 10,
+          },
+        ],
+      },
+    });
+    expect(state.setEditModalOpened).toHaveBeenCalledWith(false);
+    expect(pendingScrollRef.current).toBe("tx-edit");
+    expect(invalidate).toHaveBeenCalledOnce();
+  });
+
+  test("creates simple transaction and closes simple modal", async () => {
+    const invalidate = vi.fn();
+    const pendingScrollRef: { current: string | undefined } = {
+      current: undefined,
+    };
+
+    const state = {
+      getEditingTransactionId: () => undefined,
+      getDeletingTransaction: () => undefined,
+      getRebooking: () => undefined,
+      setModalOpened: vi.fn(),
+      setSimpleModalOpened: vi.fn(),
+      setEditModalOpened: vi.fn(),
+      setCreateSplitInitialValues: vi.fn(),
+      setDeletingTransaction: vi.fn(),
+      setRebookModalOpened: vi.fn(),
+    };
+
+    const api = {
+      createSimpleTransaction: vi.fn().mockResolvedValue({ id: "tx-simple" }),
+      createTransaction: vi.fn().mockResolvedValue({ id: "tx-new" }),
+      updateTransaction: vi.fn().mockResolvedValue(undefined),
+      deleteTransaction: vi.fn().mockResolvedValue(undefined),
+      getTransaction: vi.fn(),
+      rebookBooking: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const actions = createActions({
+      invalidate,
+      state,
+      pendingScrollRef,
+      api,
+    });
+
+    await actions.handleCreateSimpleTransaction({
+      date: "2026-01-10T00:00:00.000Z",
+      description: "Snack",
+      counterAccountId: "expense-1",
+      amount: 5,
+      direction: "CREDIT",
+    });
+
+    expect(api.createSimpleTransaction).toHaveBeenCalledWith({
+      data: {
+        accountBookId: "book-1",
+        accountId: "account-1",
+        date: "2026-01-10T00:00:00.000Z",
+        description: "Snack",
+        counterAccountId: "expense-1",
+        amount: 5,
+        direction: "CREDIT",
+      },
+    });
+    expect(state.setSimpleModalOpened).toHaveBeenCalledWith(false);
+    expect(pendingScrollRef.current).toBe("tx-simple");
+    expect(invalidate).toHaveBeenCalledOnce();
+  });
+
+  test("rebooks and deletes with state reset + invalidation", async () => {
+    const invalidate = vi.fn();
+    const pendingScrollRef: { current: string | undefined } = {
+      current: undefined,
+    };
+
+    let deletingTransaction: { id: string; description: string } | undefined = {
+      id: "tx-delete",
+      description: "Old",
+    };
+    let rebooking:
+      | {
+          bookingId: string;
+          transactionId: string;
+          bookingValue: number;
+          bookingUnit: {
+            unit: Unit | null;
+            currency: string | null;
+            cryptocurrency: string | null;
+            symbol: string | null;
+            tradeCurrency: string | null;
+          };
+        }
+      | undefined = {
+      bookingId: "booking-1",
+      transactionId: "tx-rebook",
+      bookingValue: 10,
+      bookingUnit: {
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      },
+    };
+
+    const state = {
+      getEditingTransactionId: () => undefined,
+      getDeletingTransaction: () => deletingTransaction,
+      getRebooking: () => rebooking,
+      setModalOpened: vi.fn(),
+      setSimpleModalOpened: vi.fn(),
+      setEditModalOpened: vi.fn(),
+      setCreateSplitInitialValues: vi.fn(),
+      setDeletingTransaction: vi.fn((value) => {
+        deletingTransaction = value;
+      }),
+      setRebookModalOpened: vi.fn((opened: boolean) => {
+        if (!opened) {
+          rebooking = undefined;
+        }
+      }),
+    };
+
+    const api = {
+      createSimpleTransaction: vi.fn().mockResolvedValue({ id: "tx-simple" }),
+      createTransaction: vi.fn().mockResolvedValue({ id: "tx-new" }),
+      updateTransaction: vi.fn().mockResolvedValue(undefined),
+      deleteTransaction: vi.fn().mockResolvedValue(undefined),
+      getTransaction: vi.fn(),
+      rebookBooking: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const actions = createActions({
+      invalidate,
+      state,
+      pendingScrollRef,
+      api,
+    });
+
+    await actions.handleRebookBooking({ targetAccountId: "account-2" });
+
+    expect(api.rebookBooking).toHaveBeenCalledWith({
+      data: {
+        accountBookId: "book-1",
+        bookingId: "booking-1",
+        targetAccountId: "account-2",
+      },
+    });
+    expect(state.setRebookModalOpened).toHaveBeenCalledWith(false);
+    expect(pendingScrollRef.current).toBe("tx-rebook");
+
+    await actions.handleDeleteTransaction();
+
+    expect(api.deleteTransaction).toHaveBeenCalledWith({
+      data: {
+        transactionId: "tx-delete",
+        accountBookId: "book-1",
+      },
+    });
+    expect(state.setDeletingTransaction).toHaveBeenCalledWith(undefined);
+    expect(deletingTransaction).toBeUndefined();
+    expect(invalidate).toHaveBeenCalledTimes(2);
+  });
+});
