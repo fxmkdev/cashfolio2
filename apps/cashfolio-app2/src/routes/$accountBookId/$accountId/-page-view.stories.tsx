@@ -300,9 +300,15 @@ function LedgerPageStoryHarness({
                 setPeriodFilter(nextPeriodValue);
               }}
               selectedMonthValue={
-                formatMonthPeriodValue(selectedYear, selectedMonth) + "-01"
+                hasPeriodFilter
+                  ? formatMonthPeriodValue(selectedYear, selectedMonth) + "-01"
+                  : null
               }
-              selectedYearValue={`${String(selectedYear).padStart(4, "0")}-01-01`}
+              selectedYearValue={
+                hasPeriodFilter
+                  ? `${String(selectedYear).padStart(4, "0")}-01-01`
+                  : null
+              }
               minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
               maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
               minYearPickerDate={periodSelectorModel.minYearPickerDate}
