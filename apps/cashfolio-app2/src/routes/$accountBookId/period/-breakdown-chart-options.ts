@@ -4,7 +4,7 @@ import type {
   AgPolarChartOptions,
 } from "ag-charts-community";
 import { useMemo } from "react";
-import type { DashboardChartThemeColors } from "../../../shared/dashboard-chart-theme";
+import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import type { BreakdownChartType } from "./-breakdown-types";
 
 export type PeriodBreakdownChartDatum = {

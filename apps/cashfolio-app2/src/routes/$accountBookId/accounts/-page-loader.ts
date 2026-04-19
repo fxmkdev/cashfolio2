@@ -1,4 +1,4 @@
-import { getAccountsPageData } from "../../../server/accounts";
+import { getAccountsPageData } from "@/server/accounts";
 import type { AccountsMode, TabValue } from "./-page-types";
 import { getTabDefinition } from "./-page-types";
 

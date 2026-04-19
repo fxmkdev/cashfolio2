@@ -3,11 +3,11 @@ import { useRouterState } from "@tanstack/react-router";
 import { Box, Text } from "@mantine/core";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
-import { AccountType, Unit } from "../../../.prisma-client/enums";
+import { AccountType, Unit } from "@/.prisma-client/enums";
 import {
   accountOptions as baseAccountOptions,
   editTransactionInitialValues,
-} from "../../../components/storybook-fixtures";
+} from "@/components/storybook-fixtures";
 import { useLedgerColumnDefs } from "./-page-columns";
 import type { SimpleTransactionEditInitialValues } from "./-page-data";
 import {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { AccountType, Unit } from "../../../.prisma-client/enums";
+import { AccountType, Unit } from "@/.prisma-client/enums";
 import {
   buildLedgerBalanceChartPoints,
   createLedgerBalanceFormatter,

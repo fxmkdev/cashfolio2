@@ -4,7 +4,7 @@ import {
   DEFAULT_DASHBOARD_PERIOD,
   isDashboardPeriod,
   type DashboardPeriod,
-} from "../../../shared/dashboard-period";
+} from "@/shared/dashboard-period";
 
 export type DashboardSearch = {
   period?: DashboardPeriod;

@@ -1,5 +1,5 @@
-import { getAccounts } from "../../../server/accounts";
-import { getAccountForLedger, getLedgerData } from "../../../server/ledger";
+import { getAccounts } from "@/server/accounts";
+import { getAccountForLedger, getLedgerData } from "@/server/ledger";
 
 export async function loadLedgerPageData(args: {
   accountBookId: string;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getAccountReferenceBalances } from "../../../server/accounts";
+import { getAccountReferenceBalances } from "@/server/accounts";
 import {
   type AccountsMode,
   getTabDefinition,

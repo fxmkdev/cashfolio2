@@ -3,7 +3,7 @@ import { useRouterState } from "@tanstack/react-router";
 import { Box, Text } from "@mantine/core";
 import { useState } from "react";
 import { expect, fn, userEvent, within } from "storybook/test";
-import { DASHBOARD_PERIOD_12M } from "../../../shared/dashboard-period";
+import { DASHBOARD_PERIOD_12M } from "@/shared/dashboard-period";
 import { DashboardPageView, type DashboardPageViewProps } from "./-page-view";
 
 const baseOverview: DashboardPageViewProps["overview"] = {

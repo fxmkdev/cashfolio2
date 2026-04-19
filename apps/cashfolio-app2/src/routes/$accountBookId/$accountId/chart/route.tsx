@@ -1,6 +1,6 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { AccountType } from "../../../../.prisma-client/enums";
+import { AccountType } from "@/.prisma-client/enums";
 import {
   buildLedgerBalanceChartPoints,
   createLedgerBalanceFormatter,

@@ -13,14 +13,14 @@ import { IconAlertTriangle } from "@tabler/icons-react";
 import { AgCharts } from "ag-charts-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import { useMemo } from "react";
-import type { getDashboardIncomeExpenseOverview } from "../../../server/dashboard";
-import { DASHBOARD_PERIOD_LABEL_BY_PERIOD } from "../../../shared/dashboard-period";
+import type { getDashboardIncomeExpenseOverview } from "@/server/dashboard";
+import { DASHBOARD_PERIOD_LABEL_BY_PERIOD } from "@/shared/dashboard-period";
 import {
   DASHBOARD_PERIOD_10Y,
   DASHBOARD_PERIOD_12M,
   type DashboardPeriod,
 } from "./-page-types";
-import { getDashboardChartThemeColors } from "../../../shared/dashboard-chart-theme";
+import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import classes from "./-page-view.module.css";
 
 export type DashboardIncomeExpenseCardProps = {

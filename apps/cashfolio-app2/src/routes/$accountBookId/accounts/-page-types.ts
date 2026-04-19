@@ -1,9 +1,6 @@
-import {
-  AccountType,
-  EquityAccountSubtype,
-} from "../../../.prisma-client/enums";
-import type { getAccountTreeData } from "../../../server/accounts";
-import type { TabValue } from "../../../shared/account-tabs";
+import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
+import type { getAccountTreeData } from "@/server/accounts";
+import type { TabValue } from "@/shared/account-tabs";
 
 export const tabs = [
   { value: "ASSET", label: "Asset", type: AccountType.ASSET },

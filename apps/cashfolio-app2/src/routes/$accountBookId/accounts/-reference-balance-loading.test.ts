@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AccountType, Unit } from "../../../.prisma-client/enums";
+import { AccountType, Unit } from "@/.prisma-client/enums";
 import type { GroupBalanceAggregation } from "./-page-data";
 import type { AccountsGridRow } from "./-page-types";
 import {

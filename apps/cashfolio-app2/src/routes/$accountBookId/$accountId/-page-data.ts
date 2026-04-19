@@ -3,13 +3,13 @@ import {
   AccountType,
   EquityAccountSubtype,
   Unit,
-} from "../../../.prisma-client/enums";
-import type { AccountOption } from "../../../components/edit-transaction-modal";
+} from "@/.prisma-client/enums";
+import type { AccountOption } from "@/components/edit-transaction-modal";
 import {
   getUnitIdentifier,
   getSimpleTransactionUnitIdentifier,
   getTypeLabel,
-} from "../../../shared/account-utils";
+} from "@/shared/account-utils";
 import type {
   LedgerAccount,
   LedgerAccountOptionSource,

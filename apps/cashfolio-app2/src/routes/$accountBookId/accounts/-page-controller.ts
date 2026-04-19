@@ -1,8 +1,8 @@
 import type { GridApi, GridReadyEvent } from "ag-grid-enterprise";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { useExpandedGroups } from "../../../hooks/use-expanded-groups";
-import type { TransformedFormValues } from "../../../components/edit-account-modal";
-import type { AccountGroupTransformedFormValues } from "../../../components/edit-account-group-modal";
+import { useExpandedGroups } from "@/hooks/use-expanded-groups";
+import type { TransformedFormValues } from "@/components/edit-account-modal";
+import type { AccountGroupTransformedFormValues } from "@/components/edit-account-group-modal";
 import {
   archiveAccount,
   archiveAccountGroup,
@@ -15,7 +15,7 @@ import {
   unarchiveAccountGroup,
   updateAccount,
   updateAccountGroup,
-} from "../../../server/accounts";
+} from "@/server/accounts";
 import {
   REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
   type AccountsGridRow,

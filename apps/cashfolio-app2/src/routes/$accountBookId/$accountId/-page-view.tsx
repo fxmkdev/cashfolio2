@@ -1,25 +1,25 @@
 import { IconBolt } from "@tabler/icons-react";
 import { Badge, Button, Container, Group, Modal, Tooltip } from "@mantine/core";
 import type { AgGridReactProps } from "ag-grid-react";
-import { ConfirmDeleteModal } from "../../../components/confirm-delete-modal";
-import { DataGrid } from "../../../components/data-grid";
-import { AccountPathHeading } from "../../../components/account-path-heading";
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import { DataGrid } from "@/components/data-grid";
+import { AccountPathHeading } from "@/components/account-path-heading";
 import {
   EditTransactionModal,
   type AccountOption,
   type BookingValues,
-} from "../../../components/edit-transaction-modal";
-import { RebookBookingModal } from "../../../components/rebook-booking-modal";
+} from "@/components/edit-transaction-modal";
+import { RebookBookingModal } from "@/components/rebook-booking-modal";
 import {
   SimpleTransactionModal,
   type SimpleTransactionDirection,
   type SimpleTransactionDraftValues,
-} from "../../../components/simple-transaction-modal";
-import { TopPageHeader } from "../../../components/top-page-header";
+} from "@/components/simple-transaction-modal";
+import { TopPageHeader } from "@/components/top-page-header";
 import type { ReactNode } from "react";
-import type { Unit } from "../../../.prisma-client/enums";
-import { getTypeLabel } from "../../../shared/account-utils";
-import type { TabValue } from "../../../shared/account-tabs";
+import type { Unit } from "@/.prisma-client/enums";
+import { getTypeLabel } from "@/shared/account-utils";
+import type { TabValue } from "@/shared/account-tabs";
 import type { SimpleTransactionEditInitialValues } from "./-page-data";
 import type { loadLedgerPageData } from "./-page-loader";
 import type { LedgerRow } from "./-page-types";

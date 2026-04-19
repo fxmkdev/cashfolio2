@@ -14,8 +14,8 @@ import type {
   AgPolarChartOptions,
 } from "ag-charts-community";
 import { useMemo } from "react";
-import type { getDashboardIncomeExpenseOverview } from "../../../server/dashboard";
-import { getDashboardChartThemeColors } from "../../../shared/dashboard-chart-theme";
+import type { getDashboardIncomeExpenseOverview } from "@/server/dashboard";
+import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import classes from "./-page-view.module.css";
 
 type AssetAllocation = Awaited<

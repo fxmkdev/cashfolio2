@@ -1,5 +1,5 @@
 import { SegmentedControl } from "@mantine/core";
-import { LinkAnchor } from "../../../components/link-anchor";
+import { LinkAnchor } from "@/components/link-anchor";
 
 type LedgerView = "ledger" | "chart";
 

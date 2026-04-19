@@ -18,12 +18,12 @@ import type {
 } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ensureChartModulesRegistered } from "../../../ag-chart-modules";
-import { LinkButton } from "../../../components/link-button";
-import { TopPageHeader } from "../../../components/top-page-header";
-import type { getPeriodOverview } from "../../../server/period";
-import { getDashboardChartThemeColors } from "../../../shared/dashboard-chart-theme";
-import { formatMonthPeriodValue } from "../../../shared/period";
+import { ensureChartModulesRegistered } from "@/ag-chart-modules";
+import { LinkButton } from "@/components/link-button";
+import { TopPageHeader } from "@/components/top-page-header";
+import type { getPeriodOverview } from "@/server/period";
+import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
+import { formatMonthPeriodValue } from "@/shared/period";
 import { PeriodBreakdownCard } from "./-breakdown-card";
 import {
   clampBreakdownPath,

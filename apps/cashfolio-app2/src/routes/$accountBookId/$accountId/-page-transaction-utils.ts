@@ -1,13 +1,13 @@
-import { AccountType } from "../../../.prisma-client/enums";
-import type { AccountOption } from "../../../components/edit-transaction-modal";
+import { AccountType } from "@/.prisma-client/enums";
+import type { AccountOption } from "@/components/edit-transaction-modal";
 import type {
   SimpleTransactionDraftValues,
   SimpleTransactionDirection,
-} from "../../../components/simple-transaction-modal";
+} from "@/components/simple-transaction-modal";
 import {
   getBookingUnitFields,
   type BookingUnitFieldsSource,
-} from "../../../shared/booking-unit-fields";
+} from "@/shared/booking-unit-fields";
 import type {
   SimpleTransactionValues,
   SplitModalInitialValues,

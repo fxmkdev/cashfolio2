@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
-import { getPeriodOverview } from "../../../server/period";
+import { getPeriodOverview } from "@/server/period";
 import {
   DEFAULT_PERIOD_VALUE,
   formatBreakdownPathSearchValue,

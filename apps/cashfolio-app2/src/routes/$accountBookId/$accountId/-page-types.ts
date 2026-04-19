@@ -1,4 +1,4 @@
-import { Unit } from "../../../.prisma-client/enums";
+import { Unit } from "@/.prisma-client/enums";
 
 export type LedgerSearch = { transactionId?: string };
 
@@ -13,8 +13,8 @@ export function parseLedgerSearch(
   };
 }
 
-type AccountsServerModule = typeof import("../../../server/accounts");
-type LedgerServerModule = typeof import("../../../server/ledger");
+type AccountsServerModule = typeof import("@/server/accounts");
+type LedgerServerModule = typeof import("@/server/ledger");
 
 export type LedgerAccount = Awaited<
   ReturnType<LedgerServerModule["getAccountForLedger"]>

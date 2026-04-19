@@ -1,10 +1,10 @@
 import { Container, Stack, Title } from "@mantine/core";
 import { IconListDetails } from "@tabler/icons-react";
 import { useMemo } from "react";
-import { ensureChartModulesRegistered } from "../../../ag-chart-modules";
-import { LinkButton } from "../../../components/link-button";
-import { TopPageHeader } from "../../../components/top-page-header";
-import type { getDashboardIncomeExpenseOverview } from "../../../server/dashboard";
+import { ensureChartModulesRegistered } from "@/ag-chart-modules";
+import { LinkButton } from "@/components/link-button";
+import { TopPageHeader } from "@/components/top-page-header";
+import type { getDashboardIncomeExpenseOverview } from "@/server/dashboard";
 import type { DashboardPeriod } from "./-page-types";
 import { DashboardAssetAllocationCard } from "./-asset-allocation-card";
 import { DashboardIncomeExpenseCard } from "./-income-expense-card";

@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { Unit } from "../../../.prisma-client/enums";
+import { Unit } from "@/.prisma-client/enums";
 
 vi.mock("../../server/transactions", () => ({
   createSimpleTransaction: vi.fn(),

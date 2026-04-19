@@ -1,8 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  AccountType,
-  EquityAccountSubtype,
-} from "../../../.prisma-client/enums";
+import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 
 const getAccountsPageData = vi.hoisted(() => vi.fn());
 

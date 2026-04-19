@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { AccountType, Unit } from "../../../.prisma-client/enums";
-import type { AccountOption } from "../../../components/edit-transaction-modal";
-import { getSimpleTransactionUnitIdentifier } from "../../../shared/account-utils";
+import { AccountType, Unit } from "@/.prisma-client/enums";
+import type { AccountOption } from "@/components/edit-transaction-modal";
+import { getSimpleTransactionUnitIdentifier } from "@/shared/account-utils";
 import {
   createAccountOptions,
   createCurrentAccountLabel,

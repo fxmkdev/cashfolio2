@@ -1,4 +1,4 @@
-import { Unit } from "../../../.prisma-client/enums";
+import { Unit } from "@/.prisma-client/enums";
 import type { GroupBalanceAggregation } from "./-page-data";
 import {
   isReferenceCurrencyTotalFooterRow,

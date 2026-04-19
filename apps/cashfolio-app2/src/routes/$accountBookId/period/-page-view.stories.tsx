@@ -7,7 +7,7 @@ import {
   formatMonthPeriodValue,
   parseExplicitMonthPeriod,
   parseExplicitYearPeriod,
-} from "../../../shared/period";
+} from "@/shared/period";
 import {
   DEFAULT_PERIOD_VALUE,
   PERIOD_PRESET_LAST_MONTH,

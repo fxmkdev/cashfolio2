@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useRouterState } from "@tanstack/react-router";
 import { Box, Text } from "@mantine/core";
 import { expect, userEvent, within } from "storybook/test";
-import { AccountType, Unit } from "../../../../.prisma-client/enums";
+import { AccountType, Unit } from "@/.prisma-client/enums";
 import { LedgerBalanceChartPageView } from "./-page-view";
 import { LedgerViewSegmentedControl } from "../-view-segmented-control";
 

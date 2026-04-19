@@ -6,27 +6,27 @@ import {
   IconPlus,
 } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
-import { LinkButton } from "../../../components/link-button";
-import { LinkTab } from "../../../components/link-tab";
-import { AccountPathHeading } from "../../../components/account-path-heading";
-import { TopPageHeader } from "../../../components/top-page-header";
-import type { AccountGroupInitialValues } from "../../../components/edit-account-group-modal";
+import { LinkButton } from "@/components/link-button";
+import { LinkTab } from "@/components/link-tab";
+import { AccountPathHeading } from "@/components/account-path-heading";
+import { TopPageHeader } from "@/components/top-page-header";
+import type { AccountGroupInitialValues } from "@/components/edit-account-group-modal";
 import {
   EditAccountGroupModal,
   type AccountGroupTransformedFormValues,
-} from "../../../components/edit-account-group-modal";
-import type { AccountInitialValues } from "../../../components/edit-account-modal";
+} from "@/components/edit-account-group-modal";
+import type { AccountInitialValues } from "@/components/edit-account-modal";
 import {
   EditAccountModal,
   type TransformedFormValues,
-} from "../../../components/edit-account-modal";
-import { ConfirmArchiveModal } from "../../../components/confirm-archive-modal";
-import { ConfirmDeleteModal } from "../../../components/confirm-delete-modal";
-import { DataGrid } from "../../../components/data-grid";
+} from "@/components/edit-account-modal";
+import { ConfirmArchiveModal } from "@/components/confirm-archive-modal";
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import { DataGrid } from "@/components/data-grid";
 import {
   ReorderGroupChildrenModal,
   type ReorderGroupChildRow,
-} from "../../../components/reorder-group-children-modal";
+} from "@/components/reorder-group-children-modal";
 import { getEntityLabel } from "./-page-types";
 import type {
   AccountsGridRow,

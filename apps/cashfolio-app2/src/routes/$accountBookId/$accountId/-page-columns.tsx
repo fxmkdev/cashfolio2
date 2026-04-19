@@ -6,12 +6,12 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
-import { Unit } from "../../../.prisma-client/enums";
+import { Unit } from "@/.prisma-client/enums";
 import {
   DATE_COLUMN,
   FORMATTED_NUMERIC_COLUMN,
-} from "../../../components/column-types";
-import { LinkAnchor } from "../../../components/link-anchor";
+} from "@/components/column-types";
+import { LinkAnchor } from "@/components/link-anchor";
 import type { LedgerRow } from "./-page-types";
 
 export function useLedgerColumnDefs(args: {

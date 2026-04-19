@@ -1,4 +1,4 @@
-import { formatMonthPeriodValue } from "../../../shared/period";
+import { formatMonthPeriodValue } from "@/shared/period";
 
 export type PeriodMode = "month" | "year";
 

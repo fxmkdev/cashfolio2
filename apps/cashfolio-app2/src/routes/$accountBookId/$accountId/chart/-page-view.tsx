@@ -11,11 +11,11 @@ import {
 import { AgCharts } from "ag-charts-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import { useMemo, type ReactNode } from "react";
-import { ensureChartModulesRegistered } from "../../../../ag-chart-modules";
-import { AccountPathHeading } from "../../../../components/account-path-heading";
-import { TopPageHeader } from "../../../../components/top-page-header";
-import { getTypeLabel } from "../../../../shared/account-utils";
-import type { TabValue } from "../../../../shared/account-tabs";
+import { ensureChartModulesRegistered } from "@/ag-chart-modules";
+import { AccountPathHeading } from "@/components/account-path-heading";
+import { TopPageHeader } from "@/components/top-page-header";
+import { getTypeLabel } from "@/shared/account-utils";
+import type { TabValue } from "@/shared/account-tabs";
 import type { LedgerBalanceChartPoint } from "../-page-data";
 import type { loadLedgerPageData } from "../-page-loader";
 import classes from "./-page-view.module.css";

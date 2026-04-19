@@ -1,9 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
-import {
-  AccountType,
-  EquityAccountSubtype,
-} from "../../../.prisma-client/enums";
-import type { SimpleTransactionDraftValues } from "../../../components/simple-transaction-modal";
+import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
+import type { SimpleTransactionDraftValues } from "@/components/simple-transaction-modal";
 import {
   createSimpleTransaction,
   createTransaction,
@@ -11,7 +8,7 @@ import {
   getTransaction,
   rebookBooking,
   updateTransaction,
-} from "../../../server/transactions";
+} from "@/server/transactions";
 import { useLedgerColumnDefs } from "./-page-columns";
 import { useLedgerAccountOptions } from "./-page-account-options";
 import {

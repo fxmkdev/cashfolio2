@@ -1,10 +1,10 @@
 import { useMemo } from "react";
-import type { AccountOption } from "../../../components/edit-transaction-modal";
+import type { AccountOption } from "@/components/edit-transaction-modal";
 import {
   getBookingUnitIdentifier,
   isBookingUnitCompatibleWithAccount,
   isBookingValueCompatibleWithAccountType,
-} from "../../../shared/account-utils";
+} from "@/shared/account-utils";
 import type { LedgerAccountOptionSource } from "./-page-types";
 import type { RebookingState } from "./-page-view";
 

@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
-import { getDashboardIncomeExpenseOverview } from "../../../server/dashboard";
+import { getDashboardIncomeExpenseOverview } from "@/server/dashboard";
 import {
   DASHBOARD_PERIOD_10Y,
   getDashboardPeriod,

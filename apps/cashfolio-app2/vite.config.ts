@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 
@@ -23,6 +24,11 @@ if (baseUrl) {
 
 export default defineConfig({
   plugins: [tanstackStart()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "src"),
+    },
+  },
   preview: {
     allowedHosts: [...previewAllowedHosts],
   },

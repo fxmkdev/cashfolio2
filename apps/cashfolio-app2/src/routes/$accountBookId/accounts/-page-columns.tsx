@@ -1,12 +1,12 @@
 import { useMemo, useRef } from "react";
 import { Loader } from "@mantine/core";
 import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
-import { Unit } from "../../../.prisma-client/enums";
-import { FORMATTED_NUMERIC_COLUMN } from "../../../components/column-types";
+import { Unit } from "@/.prisma-client/enums";
+import { FORMATTED_NUMERIC_COLUMN } from "@/components/column-types";
 import {
   ActiveAccountTreeActionsCell,
   ArchivedAccountTreeActionsCell,
-} from "../../../components/account-tree-actions-cells";
+} from "@/components/account-tree-actions-cells";
 import type { GroupBalanceAggregation } from "./-page-data";
 import {
   ROOT_PARENT_KEY,
