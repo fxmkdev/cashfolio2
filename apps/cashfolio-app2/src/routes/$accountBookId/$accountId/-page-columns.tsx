@@ -142,7 +142,7 @@ export function useLedgerColumnDefs(args: {
               headerName: referenceCurrency
                 ? `Debit (${referenceCurrency})`
                 : "Debit (Ref)",
-              width: 130,
+              width: 150,
               type: FORMATTED_NUMERIC_COLUMN,
               filter: "agNumberColumnFilter",
             },
@@ -155,7 +155,7 @@ export function useLedgerColumnDefs(args: {
               headerName: referenceCurrency
                 ? `Credit (${referenceCurrency})`
                 : "Credit (Ref)",
-              width: 130,
+              width: 150,
               type: FORMATTED_NUMERIC_COLUMN,
               filter: "agNumberColumnFilter",
             },
@@ -170,7 +170,7 @@ export function useLedgerColumnDefs(args: {
                 isEquity && hasPeriodFilter && referenceCurrency
                   ? `Balance (${referenceCurrency})`
                   : "Balance",
-              width: 130,
+              width: 150,
               type: FORMATTED_NUMERIC_COLUMN,
               filter: "agNumberColumnFilter",
             },

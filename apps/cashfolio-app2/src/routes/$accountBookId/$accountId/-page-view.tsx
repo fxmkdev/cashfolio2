@@ -198,7 +198,7 @@ export function LedgerPageView({
       style={{
         display: "flex",
         flexDirection: "column",
-        height: "calc(100vh - 8rem)",
+        height: "100vh",
         minHeight: 0,
       }}
     >
