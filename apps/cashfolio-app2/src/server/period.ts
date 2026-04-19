@@ -363,14 +363,13 @@ export async function computeEndOfPeriodBalanceStats(args: {
 
   const conversionResults = await Promise.all(
     args.accounts.map(async (account) => {
-      const hasRawBalance = args.rawBalanceByAccountId.has(account.id);
       const rawBalance = args.rawBalanceByAccountId.get(account.id) ?? 0;
 
       if (account.unit == null) {
         return {
           accountType: account.type,
           convertedBalance: null as number | null,
-          skipped: rawBalance !== 0 || hasRawBalance,
+          skipped: rawBalance !== 0,
         };
       }
 
@@ -388,8 +387,7 @@ export async function computeEndOfPeriodBalanceStats(args: {
       return {
         accountType: account.type,
         convertedBalance,
-        skipped:
-          convertedBalance == null && (rawBalance !== 0 || hasRawBalance),
+        skipped: convertedBalance == null && rawBalance !== 0,
       };
     }),
   );
