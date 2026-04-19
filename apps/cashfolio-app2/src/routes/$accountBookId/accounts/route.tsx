@@ -4,12 +4,12 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
-import { parseAccountsSearch } from "./-accounts-page-types";
-import { loadAccountsPageData } from "./-accounts-page-loader";
-import { useAccountsPageController } from "./-accounts-page-controller";
+import { parseAccountsSearch } from "./-page-types";
+import { loadAccountsPageData } from "./-page-loader";
+import { useAccountsPageController } from "./-page-controller";
 
 const AccountsPageView = lazy(async () => {
-  const module = await import("./-accounts-page-view");
+  const module = await import("./-page-view");
   return { default: module.AccountsPageView };
 });
 

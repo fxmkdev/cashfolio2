@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AccountType, Unit } from "../../../.prisma-client/enums";
-import type { GroupBalanceAggregation } from "./-accounts-page-data";
-import type { AccountsGridRow } from "./-accounts-page-types";
+import type { GroupBalanceAggregation } from "./-page-data";
+import type { AccountsGridRow } from "./-page-types";
 import {
   REFERENCE_BALANCES_LOADING_DELAY_MS,
   getImmediateReferenceBalance,

@@ -7,10 +7,10 @@ import {
   getBreakdownPathByType,
   getPeriodValue,
   parsePeriodSearch,
-} from "./-period-page-types";
+} from "./-page-types";
 
 const PeriodPageView = lazy(async () => {
-  const module = await import("./-period-page-view");
+  const module = await import("./-page-view");
   return { default: module.PeriodPageView };
 });
 

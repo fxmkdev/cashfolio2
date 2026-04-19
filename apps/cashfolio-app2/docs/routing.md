@@ -35,25 +35,25 @@ Related docs:
 - `$accountBookId/$accountId/route.tsx` - ledger layout route (loads ledger data
   and provides shared search params for child routes)
 - `$accountBookId/$accountId/index.tsx` - ledger page for a single account
-- `$accountBookId/$accountId/chart.tsx` - balance chart view for asset/liability
-  ledgers (daily closing native-unit balance)
+- `$accountBookId/$accountId/chart/route.tsx` - balance chart view for
+  asset/liability ledgers (daily closing native-unit balance)
 - Route-local helper files live inside the owning route folder and are prefixed
   with `-` so TanStack Router ignores them. For example:
   - accounts route modules:
-    - `$accountBookId/accounts/-accounts-page-loader.ts`
-    - `$accountBookId/accounts/-accounts-page-controller.ts`
-    - `$accountBookId/accounts/-accounts-page-data.ts`
-    - `$accountBookId/accounts/-accounts-page-modal-state.ts`
-    - `$accountBookId/accounts/-accounts-page-reference-balances.ts`
-    - `$accountBookId/accounts/-accounts-page-columns.tsx`
+    - `$accountBookId/accounts/-page-loader.ts`
+    - `$accountBookId/accounts/-page-controller.ts`
+    - `$accountBookId/accounts/-page-data.ts`
+    - `$accountBookId/accounts/-page-modal-state.ts`
+    - `$accountBookId/accounts/-page-reference-balances.ts`
+    - `$accountBookId/accounts/-page-columns.tsx`
   - ledger route modules:
-    - `$accountBookId/$accountId/-ledger-page-loader.ts`
-    - `$accountBookId/$accountId/-ledger-page-controller.ts`
-    - `$accountBookId/$accountId/-ledger-page-account-options.ts`
-    - `$accountBookId/$accountId/-ledger-page-edit-flow.ts`
-    - `$accountBookId/$accountId/-ledger-page-rebook-flow.ts`
-    - `$accountBookId/$accountId/-ledger-page-transaction-utils.ts`
-    - `$accountBookId/$accountId/-ledger-page-columns.tsx`
+    - `$accountBookId/$accountId/-page-loader.ts`
+    - `$accountBookId/$accountId/-page-controller.ts`
+    - `$accountBookId/$accountId/-page-account-options.ts`
+    - `$accountBookId/$accountId/-page-edit-flow.ts`
+    - `$accountBookId/$accountId/-page-rebook-flow.ts`
+    - `$accountBookId/$accountId/-page-transaction-utils.ts`
+    - `$accountBookId/$accountId/-page-columns.tsx`
 
 ### Search Parameters
 
@@ -64,8 +64,8 @@ Related docs:
     trees
 - `$accountBookId/$accountId/route.tsx` uses `transactionId?: string` to
   auto-scroll and highlight a booking row
-- `$accountBookId/$accountId/chart.tsx` intentionally has no search params; the
-  ledger/chart switch does not carry `transactionId`
+- `$accountBookId/$accountId/chart/route.tsx` intentionally has no search
+  params; the ledger/chart switch does not carry `transactionId`
 - `$accountBookId/dashboard/route.tsx` uses `period: "12m" | "10y"` to switch
   the dashboard overview between the default 12-month view and a 10-year view
 

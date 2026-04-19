@@ -1,9 +1,9 @@
 import { Unit } from "../../../.prisma-client/enums";
-import type { GroupBalanceAggregation } from "./-accounts-page-data";
+import type { GroupBalanceAggregation } from "./-page-data";
 import {
   isReferenceCurrencyTotalFooterRow,
   type AccountsGridRow,
-} from "./-accounts-page-types";
+} from "./-page-types";
 
 export const REFERENCE_BALANCES_LOADING_DELAY_MS = 100;
 

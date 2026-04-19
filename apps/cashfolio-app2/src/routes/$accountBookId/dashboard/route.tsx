@@ -6,10 +6,10 @@ import {
   getDashboardPeriod,
   parseDashboardSearch,
   type DashboardPeriod,
-} from "./-dashboard-page-types";
+} from "./-page-types";
 
 const DashboardPageView = lazy(async () => {
-  const module = await import("./-dashboard-page-view");
+  const module = await import("./-page-view");
   return { default: module.DashboardPageView };
 });
 

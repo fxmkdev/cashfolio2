@@ -2,13 +2,13 @@ import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { AccountType } from "../../../.prisma-client/enums";
 import { useTransactionScroll } from "../../../hooks/use-transaction-scroll";
-import { loadLedgerPageData } from "./-ledger-page-loader";
-import { useLedgerPageController } from "./-ledger-page-controller";
-import { parseLedgerSearch, type LedgerRow } from "./-ledger-page-types";
-import { LedgerViewSegmentedControl } from "./-ledger-view-segmented-control";
+import { loadLedgerPageData } from "./-page-loader";
+import { useLedgerPageController } from "./-page-controller";
+import { parseLedgerSearch, type LedgerRow } from "./-page-types";
+import { LedgerViewSegmentedControl } from "./-view-segmented-control";
 
 const LedgerPageView = lazy(async () => {
-  const module = await import("./-ledger-page-view");
+  const module = await import("./-page-view");
   return { default: module.LedgerPageView };
 });
 
