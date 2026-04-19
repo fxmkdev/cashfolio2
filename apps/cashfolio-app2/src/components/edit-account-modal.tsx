@@ -45,8 +45,6 @@ export type TransformedFormValues = FormValues & {
   equityAccountSubtype?: EquityAccountSubtype;
 };
 
-type TransformValues = (values: FormValues) => TransformedFormValues;
-
 export type AccountInitialValues = {
   name: string;
   type: AccountType;
@@ -116,7 +114,7 @@ export function EditAccountModal({
   const isEdit = !!initialValues;
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const { isSubmitting, runSubmit } = useDialogSubmitState();
-  const form = useForm<FormValues, TransformValues>({
+  const form = useForm<FormValues>({
     mode: "uncontrolled",
     initialValues: initialValues
       ? toFormValues(initialValues)
@@ -191,7 +189,8 @@ export function EditAccountModal({
     }
   }, [opened, initialValues]);
 
-  const { unit, type, equityAccountSubtype } = form.getTransformedValues();
+  const { unit, type, equityAccountSubtype } =
+    form.getTransformedValues() as TransformedFormValues;
   const handleClose = () => {
     if (isSubmitting) return;
     onClose();
@@ -209,7 +208,9 @@ export function EditAccountModal({
       size="lg"
     >
       <form
-        onSubmit={form.onSubmit((values) => runSubmit(() => onSubmit(values)))}
+        onSubmit={form.onSubmit((values) =>
+          runSubmit(() => onSubmit(values as TransformedFormValues)),
+        )}
       >
         <Stack gap="xl">
           <Grid>
