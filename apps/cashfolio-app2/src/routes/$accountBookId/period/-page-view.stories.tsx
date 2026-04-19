@@ -377,6 +377,7 @@ function PeriodRouteSmokeHarness() {
         drillPathByBreakdown={drillPathByBreakdown}
         onPeriodChange={setSelectedPeriodValue}
         onDrillPathByBreakdownChange={setDrillPathByBreakdown}
+        onBreakdownAccountDoubleClick={() => undefined}
       />
       <Text data-testid="router-path">{pathname}</Text>
       <Text data-testid="selected-period">{selectedPeriodValue}</Text>
@@ -397,6 +398,7 @@ const meta = {
     },
     onPeriodChange: fn(),
     onDrillPathByBreakdownChange: fn(),
+    onBreakdownAccountDoubleClick: fn(),
   },
 } satisfies Meta<typeof PeriodPageView>;
 

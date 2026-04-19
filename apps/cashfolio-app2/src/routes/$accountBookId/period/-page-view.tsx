@@ -30,6 +30,8 @@ import {
   getBreakdownDrillState,
   isBreakdownNodeDrillable,
 } from "./-breakdown-drill";
+  parseBreakdownAccountId,
+} from "./-breakdown-drill";
 import {
   type PeriodBreakdownChartDatum,
   type PeriodBreakdownNodeDatum,
@@ -62,6 +64,7 @@ export type PeriodPageViewProps = {
   onDrillPathByBreakdownChange: (
     nextPathByBreakdown: Record<BreakdownType, string[]>,
   ) => void;
+  onBreakdownAccountDoubleClick: (accountId: string) => void;
 };
 
 type StatCardProps = {
@@ -140,6 +143,7 @@ export function PeriodPageView({
   drillPathByBreakdown,
   onPeriodChange,
   onDrillPathByBreakdownChange,
+  onBreakdownAccountDoubleClick,
 }: PeriodPageViewProps) {
   const [selectedBreakdown, setSelectedBreakdown] =
     useState<BreakdownType>("expense");
@@ -352,17 +356,27 @@ export function PeriodPageView({
   );
   const handleNodeDoubleClick = useCallback(
     (datum: PeriodBreakdownNodeDatum) => {
-      if (
-        datum.kind !== "group" ||
-        !datum.isDrillable ||
-        drillState.clampedPath.includes(datum.id)
-      ) {
+      if (datum.kind === "group") {
+        if (!datum.isDrillable || drillState.clampedPath.includes(datum.id)) {
+          return;
+        }
+
+        updateSelectedBreakdownPath([...drillState.clampedPath, datum.id]);
         return;
       }
 
-      updateSelectedBreakdownPath([...drillState.clampedPath, datum.id]);
+      const accountId = parseBreakdownAccountId(datum.id);
+      if (!accountId) {
+        return;
+      }
+
+      onBreakdownAccountDoubleClick(accountId);
     },
-    [drillState.clampedPath, updateSelectedBreakdownPath],
+    [
+      drillState.clampedPath,
+      onBreakdownAccountDoubleClick,
+      updateSelectedBreakdownPath,
+    ],
   );
   const chartOptions = usePeriodBreakdownChartOptions({
     chartData,

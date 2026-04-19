@@ -7,10 +7,21 @@ export type BreakdownBreadcrumb = {
   label: string;
 };
 
+const ACCOUNT_BREAKDOWN_NODE_PREFIX = "account:";
+
 export function isBreakdownNodeDrillable(
   node: BreakdownHierarchyNode,
 ): boolean {
   return node.kind === "group" && node.children.length > 0;
+}
+
+export function parseBreakdownAccountId(nodeId: string): string | null {
+  if (!nodeId.startsWith(ACCOUNT_BREAKDOWN_NODE_PREFIX)) {
+    return null;
+  }
+
+  const accountId = nodeId.slice(ACCOUNT_BREAKDOWN_NODE_PREFIX.length).trim();
+  return accountId.length > 0 ? accountId : null;
 }
 
 export function clampBreakdownPath(args: {

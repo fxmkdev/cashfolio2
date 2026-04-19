@@ -77,9 +77,13 @@ export function createAccountOptions(
 export function buildLedgerRows(
   account: LedgerAccount,
   bookings: LedgerBookings,
+  options?: {
+    hasPeriodFilter?: boolean;
+  },
 ): LedgerRow[] {
   const negate = shouldNegate(account.type, account.equityAccountSubtype);
   const isEquity = account.type === AccountType.EQUITY;
+  const hasPeriodFilter = options?.hasPeriodFilter ?? false;
   let balance = 0;
 
   return bookings
@@ -102,7 +106,7 @@ export function buildLedgerRows(
         tradeCurrency: booking.tradeCurrency,
         debit: negate ? (value < 0 ? -value : null) : value > 0 ? value : null,
         credit: negate ? (value > 0 ? value : null) : value < 0 ? -value : null,
-        balance: isEquity ? null : balance,
+        balance: isEquity && !hasPeriodFilter ? null : balance,
       };
     })
     .reverse();

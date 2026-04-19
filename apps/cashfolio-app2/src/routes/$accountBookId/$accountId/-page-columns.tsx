@@ -16,6 +16,7 @@ import type { LedgerRow } from "./-page-types";
 
 export function useLedgerColumnDefs(args: {
   accountBookId: string;
+  hasPeriodFilter: boolean;
   isEquity: boolean;
   isIncome: boolean;
   isExpense: boolean;
@@ -36,6 +37,7 @@ export function useLedgerColumnDefs(args: {
 }): ColDef<LedgerRow>[] {
   const {
     accountBookId,
+    hasPeriodFilter,
     isEquity,
     isIncome,
     isExpense,
@@ -131,7 +133,7 @@ export function useLedgerColumnDefs(args: {
               filter: "agNumberColumnFilter",
             },
           ]),
-      ...(isEquity
+      ...(isEquity && !hasPeriodFilter
         ? []
         : [
             {
@@ -209,6 +211,7 @@ export function useLedgerColumnDefs(args: {
     ],
     [
       accountBookId,
+      hasPeriodFilter,
       isEquity,
       isIncome,
       isExpense,

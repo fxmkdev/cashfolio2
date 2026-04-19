@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { getPeriodOverview } from "@/server/period";
+import { formatMonthPeriodValue } from "@/shared/period";
 import {
   DEFAULT_PERIOD_VALUE,
   formatBreakdownPathSearchValue,
@@ -37,6 +38,10 @@ function PeriodPage() {
   const drillPathByBreakdown = getBreakdownPathByType(search);
   const overview = Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/period" });
+  const explicitLedgerPeriodValue =
+    overview.selectedGranularity === "month" && overview.selectedMonth != null
+      ? formatMonthPeriodValue(overview.selectedYear, overview.selectedMonth)
+      : String(overview.selectedYear).padStart(4, "0");
 
   return (
     <Suspense fallback={null}>
@@ -67,6 +72,15 @@ function PeriodPage() {
                 nextPathByBreakdown.income,
               ),
             }),
+          })
+        }
+        onBreakdownAccountDoubleClick={(accountId) =>
+          navigate({
+            to: "/$accountBookId/$accountId",
+            params: { accountBookId, accountId },
+            search: {
+              period: explicitLedgerPeriodValue,
+            },
           })
         }
       />

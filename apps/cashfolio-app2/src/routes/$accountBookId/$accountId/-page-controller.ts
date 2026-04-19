@@ -159,6 +159,7 @@ export function createLedgerMutationActions(args: {
 export function useLedgerPageController(args: {
   loaderData: LedgerPageLoaderData;
   accountBookId: string;
+  hasPeriodFilter: boolean;
   pendingScrollRef: { current: string | undefined };
   invalidate: () => void;
 }): Omit<
@@ -354,12 +355,16 @@ export function useLedgerPageController(args: {
   );
 
   const rows = useMemo(
-    () => buildLedgerRows(account, bookings),
-    [account, bookings],
+    () =>
+      buildLedgerRows(account, bookings, {
+        hasPeriodFilter: args.hasPeriodFilter,
+      }),
+    [account, args.hasPeriodFilter, bookings],
   );
 
   const columnDefs = useLedgerColumnDefs({
     accountBookId: args.accountBookId,
+    hasPeriodFilter: args.hasPeriodFilter,
     isEquity,
     isIncome,
     isExpense,

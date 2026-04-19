@@ -139,6 +139,7 @@ function LedgerPageStoryHarness({
 
   const columnDefs = useLedgerColumnDefs({
     accountBookId: "storybook-book",
+    hasPeriodFilter: false,
     isEquity: false,
     isIncome: false,
     isExpense: false,

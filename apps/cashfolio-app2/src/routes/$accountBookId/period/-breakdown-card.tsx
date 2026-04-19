@@ -181,7 +181,7 @@ export function PeriodBreakdownCard({
           </Group>
 
           <Text c="dimmed" size="xs">
-            Double-click a group to drill down.
+            Double-click a group to drill down, or an account to open ledger.
           </Text>
         </Group>
 

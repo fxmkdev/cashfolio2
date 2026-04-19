@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 import {
+  buildLedgerRows,
   buildLedgerBalanceChartPoints,
   createLedgerBalanceFormatter,
   deriveSimpleTransactionEditState,
@@ -405,6 +406,54 @@ describe("buildLedgerBalanceChartPoints", () => {
         dateLabel: "12.01.2026",
         balance: 100,
       },
+    ]);
+  });
+});
+
+describe("buildLedgerRows", () => {
+  test("keeps equity balance empty when period filter is not active", () => {
+    const rows = buildLedgerRows(
+      createLedgerAccount(AccountType.EQUITY),
+      createLedgerBookings([
+        {
+          date: localDate(2026, 0, 10, 9),
+          value: 100,
+        },
+      ]),
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        balance: null,
+      }),
+    ]);
+  });
+
+  test("shows running equity balance when period filter is active", () => {
+    const rows = buildLedgerRows(
+      createLedgerAccount(AccountType.EQUITY),
+      createLedgerBookings([
+        {
+          date: localDate(2026, 0, 10, 9),
+          value: 100,
+        },
+        {
+          date: localDate(2026, 0, 11, 9),
+          value: -40,
+        },
+      ]),
+      { hasPeriodFilter: true },
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        date: "11.01.2026",
+        balance: -60,
+      }),
+      expect.objectContaining({
+        date: "10.01.2026",
+        balance: -100,
+      }),
     ]);
   });
 });

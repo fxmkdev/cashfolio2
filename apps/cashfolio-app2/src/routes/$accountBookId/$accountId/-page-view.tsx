@@ -104,6 +104,7 @@ export type LedgerPageViewProps = {
   simpleCounterAccountOptions: AccountOption[];
   editSimpleCounterAccountOptions: AccountOption[];
   rebookTargetAccountOptions: { value: string; label: string }[];
+  periodFilterControls?: ReactNode;
   viewSwitcher?: ReactNode;
   onRowDataUpdated: AgGridReactProps<LedgerRow>["onRowDataUpdated"];
   onAddTransactionClick: () => void;
@@ -165,6 +166,7 @@ export function LedgerPageView({
   simpleCounterAccountOptions,
   editSimpleCounterAccountOptions,
   rebookTargetAccountOptions,
+  periodFilterControls,
   viewSwitcher,
   onRowDataUpdated,
   onAddTransactionClick,
@@ -232,6 +234,8 @@ export function LedgerPageView({
           </Group>
         }
       />
+
+      {periodFilterControls}
 
       <DataGrid
         containerStyle={{ height: "calc(100vh - 8rem)" }}
