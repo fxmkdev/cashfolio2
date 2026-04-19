@@ -86,33 +86,24 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
     .locator(
       "xpath=ancestor::*[self::section or self::article or self::div][.//canvas][1]",
     );
+  const chartCanvas = breakdownCard.locator("canvas").first();
+  await expect(chartCanvas).toBeVisible();
 
-  const breakdownFigure = breakdownCard.getByRole("figure", {
-    name: /chart, 1 series/i,
-  });
-  await expect(breakdownFigure).toBeVisible();
-
-  const chartDatumNode = breakdownFigure
-    .getByRole("img", { name: /; Amount;/ })
-    .first();
-  await expect(chartDatumNode).toBeVisible();
-
-  const chartSurface = breakdownCard.locator(".ag-charts-series-area").first();
-  await expect(chartSurface).toBeVisible();
-
-  const chartBounds = await chartSurface.boundingBox();
+  const chartBounds = await chartCanvas.boundingBox();
   if (!chartBounds) {
-    throw new Error("Breakdown chart surface bounds were not available.");
+    throw new Error("Breakdown chart canvas bounds were not available.");
   }
 
   const expectedPath = `/${args.accountBookId}/${args.accountId}`;
   const clickTargets: Array<[number, number]> = [
-    [0.5, 0.25],
-    [0.5, 0.35],
-    [0.5, 0.45],
-    [0.45, 0.35],
-    [0.55, 0.35],
-    [0.5, 0.55],
+    [0.5, 0.24],
+    [0.67, 0.34],
+    [0.73, 0.5],
+    [0.67, 0.66],
+    [0.5, 0.76],
+    [0.33, 0.66],
+    [0.27, 0.5],
+    [0.33, 0.34],
   ];
 
   const tryExpectLedgerNavigation = async () => {
@@ -132,21 +123,9 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
 
   for (const [relativeX, relativeY] of clickTargets) {
     try {
-      await chartDatumNode.dblclick({ timeout: 5_000, force: true });
-      await tryExpectLedgerNavigation();
-      return;
-    } catch {
-      // Fall back to coordinate-based double click if the datum node interaction missed.
-    }
-
-    try {
-      const x = Math.round(chartBounds.width * relativeX);
-      const y = Math.round(chartBounds.height * relativeY);
-      await chartSurface.dblclick({
-        position: { x, y },
-        timeout: 5_000,
-        force: true,
-      });
+      const x = Math.round(chartBounds.x + chartBounds.width * relativeX);
+      const y = Math.round(chartBounds.y + chartBounds.height * relativeY);
+      await args.page.mouse.dblclick(x, y);
       await tryExpectLedgerNavigation();
       return;
     } catch {
