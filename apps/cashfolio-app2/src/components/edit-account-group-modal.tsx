@@ -141,7 +141,6 @@ export function EditAccountGroupModal({
         }),
     },
     transformValues: transformAccountGroupValues,
-    transformValues: transformAccountGroupValues,
   });
 
   useEffect(() => {
