@@ -123,6 +123,12 @@ function formatAccountCountWithVerb(count: number): string {
   return `${count} ${accountLabel} ${verb}`;
 }
 
+function formatAccountCount(count: number): string {
+  const accountLabel = count === 1 ? "account" : "accounts";
+
+  return `${count} ${accountLabel}`;
+}
+
 function getAllocationPartialDataNotes(args: {
   skippedMissingReferenceBalanceCount: number;
   skippedNegativeCount: number;
@@ -132,7 +138,7 @@ function getAllocationPartialDataNotes(args: {
       ? `${formatAccountCountWithVerb(args.skippedMissingReferenceBalanceCount)} skipped because reference-currency balances were unavailable.`
       : null,
     args.skippedNegativeCount > 0
-      ? `With negative balances, ${formatAccountCountWithVerb(args.skippedNegativeCount)} excluded from allocation.`
+      ? `${formatAccountCount(args.skippedNegativeCount)} with negative balances ${args.skippedNegativeCount === 1 ? "was" : "were"} excluded from allocation.`
       : null,
   ]
     .filter((value): value is string => value != null)
