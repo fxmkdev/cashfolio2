@@ -95,12 +95,12 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
     .locator(
       "xpath=ancestor::*[self::section or self::article or self::div][.//canvas][1]",
     );
-  const chartCanvas = breakdownCard.locator("canvas").first();
-  await expect(chartCanvas).toBeVisible();
+  const chartSurface = breakdownCard.locator(".ag-charts-series-area").first();
+  await expect(chartSurface).toBeVisible();
 
-  const chartBounds = await chartCanvas.boundingBox();
+  const chartBounds = await chartSurface.boundingBox();
   if (!chartBounds) {
-    throw new Error("Breakdown chart canvas bounds were not available.");
+    throw new Error("Breakdown chart surface bounds were not available.");
   }
 
   const expectedPath = `/${args.accountBookId}/${args.accountId}`;
@@ -117,9 +117,10 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
     const x = Math.round(chartBounds.width * relativeX);
     const y = Math.round(chartBounds.height * relativeY);
 
-    await chartCanvas.dblclick({
+    await chartSurface.dblclick({
       position: { x, y },
       timeout: 5_000,
+      force: true,
     });
 
     try {
