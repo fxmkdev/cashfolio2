@@ -439,7 +439,7 @@ export function ValuationCachePageView({
             <LinkButton
               variant="default"
               leftSection={<IconLayoutDashboard size={16} />}
-              to="/$accountBookId/dashboard"
+              to="/$accountBookId"
               params={{ accountBookId }}
             >
               Dashboard
