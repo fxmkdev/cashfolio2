@@ -18,6 +18,8 @@ export type PeriodSearch = {
   period?: string;
   expensePath?: string;
   incomePath?: string;
+  assetPath?: string;
+  liabilityPath?: string;
 };
 
 export function isPeriodSearchValue(value: unknown): value is string {
@@ -50,6 +52,8 @@ export function parsePeriodSearch(
       : undefined,
     expensePath: normalizeBreakdownPathSearchValue(search.expensePath),
     incomePath: normalizeBreakdownPathSearchValue(search.incomePath),
+    assetPath: normalizeBreakdownPathSearchValue(search.assetPath),
+    liabilityPath: normalizeBreakdownPathSearchValue(search.liabilityPath),
   };
 }
 
@@ -84,5 +88,15 @@ export function getBreakdownPathByType(search: PeriodSearch): {
   return {
     expense: parseBreakdownPathSearchValue(search.expensePath),
     income: parseBreakdownPathSearchValue(search.incomePath),
+  };
+}
+
+export function getAllocationBreakdownPathByType(search: PeriodSearch): {
+  asset: string[];
+  liability: string[];
+} {
+  return {
+    asset: parseBreakdownPathSearchValue(search.assetPath),
+    liability: parseBreakdownPathSearchValue(search.liabilityPath),
   };
 }

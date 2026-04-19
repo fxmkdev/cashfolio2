@@ -2,6 +2,7 @@ import {
   Alert,
   Card,
   Container,
+  Grid,
   Group,
   SimpleGrid,
   Stack,
@@ -24,6 +25,7 @@ import { TopPageHeader } from "@/components/top-page-header";
 import type { getPeriodOverview } from "@/server/period";
 import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import { formatMonthPeriodValue } from "@/shared/period";
+import { PeriodAllocationBreakdownCard } from "./-allocation-breakdown-card";
 import { PeriodBreakdownCard } from "./-breakdown-card";
 import {
   clampBreakdownPath,
@@ -37,6 +39,7 @@ import {
   usePeriodBreakdownChartOptions,
 } from "./-breakdown-chart-options";
 import {
+  type AllocationBreakdownType,
   type BreakdownChartType,
   type BreakdownType,
 } from "./-breakdown-types";
@@ -59,11 +62,15 @@ export type PeriodPageViewProps = {
   overview: PeriodOverview;
   selectedPeriodValue: string;
   drillPathByBreakdown: Record<BreakdownType, string[]>;
+  drillPathByAllocationBreakdown: Record<AllocationBreakdownType, string[]>;
   onPeriodChange: (nextPeriodValue: string) => void;
   onDrillPathByBreakdownChange: (
     nextPathByBreakdown: Record<BreakdownType, string[]>,
   ) => void;
   onBreakdownAccountDoubleClick: (accountId: string) => void;
+  onDrillPathByAllocationBreakdownChange: (
+    nextPathByBreakdown: Record<AllocationBreakdownType, string[]>,
+  ) => void;
 };
 
 type StatCardProps = {
@@ -109,6 +116,35 @@ function arePathsEqual(left: string[], right: string[]): boolean {
   return true;
 }
 
+function formatAccountCountWithVerb(count: number): string {
+  const accountLabel = count === 1 ? "account" : "accounts";
+  const verb = count === 1 ? "was" : "were";
+
+  return `${count} ${accountLabel} ${verb}`;
+}
+
+function formatAccountCount(count: number): string {
+  const accountLabel = count === 1 ? "account" : "accounts";
+
+  return `${count} ${accountLabel}`;
+}
+
+function getAllocationPartialDataNotes(args: {
+  skippedMissingReferenceBalanceCount: number;
+  skippedNegativeCount: number;
+}) {
+  return [
+    args.skippedMissingReferenceBalanceCount > 0
+      ? `${formatAccountCountWithVerb(args.skippedMissingReferenceBalanceCount)} skipped because reference-currency balances were unavailable.`
+      : null,
+    args.skippedNegativeCount > 0
+      ? `${formatAccountCount(args.skippedNegativeCount)} with negative balances ${args.skippedNegativeCount === 1 ? "was" : "were"} excluded from allocation.`
+      : null,
+  ]
+    .filter((value): value is string => value != null)
+    .join(" ");
+}
+
 function StatCard({
   label,
   value,
@@ -140,13 +176,19 @@ export function PeriodPageView({
   overview,
   selectedPeriodValue,
   drillPathByBreakdown,
+  drillPathByAllocationBreakdown,
   onPeriodChange,
   onDrillPathByBreakdownChange,
   onBreakdownAccountDoubleClick,
+  onDrillPathByAllocationBreakdownChange,
 }: PeriodPageViewProps) {
   const [selectedBreakdown, setSelectedBreakdown] =
     useState<BreakdownType>("expense");
+  const [selectedAllocationBreakdown, setSelectedAllocationBreakdown] =
+    useState<AllocationBreakdownType>("asset");
   const [selectedChartType, setSelectedChartType] =
+    useState<BreakdownChartType>("donut");
+  const [selectedAllocationChartType, setSelectedAllocationChartType] =
     useState<BreakdownChartType>("donut");
   const [pickerOpened, setPickerOpened] = useState(false);
   const theme = useMantineTheme();
@@ -221,6 +263,17 @@ export function PeriodPageView({
         : overview.incomeBreakdown,
     [overview.expenseBreakdown, overview.incomeBreakdown, selectedBreakdown],
   );
+  const activeAllocationBreakdown = useMemo(
+    () =>
+      selectedAllocationBreakdown === "asset"
+        ? overview.assetBreakdown
+        : overview.liabilityBreakdown,
+    [
+      overview.assetBreakdown,
+      overview.liabilityBreakdown,
+      selectedAllocationBreakdown,
+    ],
+  );
 
   useEffect(() => {
     const nextExpensePath = clampBreakdownPath({
@@ -249,6 +302,34 @@ export function PeriodPageView({
     onDrillPathByBreakdownChange,
     overview.expenseBreakdown.hierarchy,
     overview.incomeBreakdown.hierarchy,
+  ]);
+  useEffect(() => {
+    const nextAssetPath = clampBreakdownPath({
+      hierarchy: overview.assetBreakdown.hierarchy,
+      path: drillPathByAllocationBreakdown.asset,
+    });
+    const nextLiabilityPath = clampBreakdownPath({
+      hierarchy: overview.liabilityBreakdown.hierarchy,
+      path: drillPathByAllocationBreakdown.liability,
+    });
+
+    if (
+      arePathsEqual(nextAssetPath, drillPathByAllocationBreakdown.asset) &&
+      arePathsEqual(nextLiabilityPath, drillPathByAllocationBreakdown.liability)
+    ) {
+      return;
+    }
+
+    onDrillPathByAllocationBreakdownChange({
+      asset: nextAssetPath,
+      liability: nextLiabilityPath,
+    });
+  }, [
+    drillPathByAllocationBreakdown.asset,
+    drillPathByAllocationBreakdown.liability,
+    onDrillPathByAllocationBreakdownChange,
+    overview.assetBreakdown.hierarchy,
+    overview.liabilityBreakdown.hierarchy,
   ]);
 
   const breakdownTitle =
@@ -396,6 +477,143 @@ export function PeriodPageView({
       }
     };
   }, [chartData, handleNodeDoubleClick]);
+
+  const allocationBreakdownTitle =
+    selectedAllocationBreakdown === "asset"
+      ? "Assets Allocation"
+      : "Liabilities Allocation";
+  const allocationBreakdownRootLabel =
+    selectedAllocationBreakdown === "asset" ? "All Assets" : "All Liabilities";
+  const allocationDrillState = useMemo(
+    () =>
+      getBreakdownDrillState({
+        hierarchy: activeAllocationBreakdown.hierarchy,
+        path: drillPathByAllocationBreakdown[selectedAllocationBreakdown],
+        rootLabel: allocationBreakdownRootLabel,
+      }),
+    [
+      activeAllocationBreakdown.hierarchy,
+      allocationBreakdownRootLabel,
+      drillPathByAllocationBreakdown,
+      selectedAllocationBreakdown,
+    ],
+  );
+  const allocationBreakdownSubtitle = useMemo(() => {
+    const isTopLevel = allocationDrillState.clampedPath.length === 0;
+    const groupLevelLabel =
+      selectedAllocationBreakdown === "asset"
+        ? "asset groups"
+        : "liability groups";
+
+    return isTopLevel
+      ? `Top-level ${groupLevelLabel} as of period end`
+      : `Drilled ${groupLevelLabel} as of period end`;
+  }, [allocationDrillState.clampedPath.length, selectedAllocationBreakdown]);
+  const emptyAllocationBreakdownMessage =
+    selectedAllocationBreakdown === "asset"
+      ? "No positive, convertible asset balances were found as of period end."
+      : "No positive, convertible liability balances were found as of period end.";
+  const currentAllocationLevelTotalAmount = useMemo(
+    () =>
+      allocationDrillState.currentNodes.reduce(
+        (sum, breakdownNode) => sum + breakdownNode.amount,
+        0,
+      ),
+    [allocationDrillState.currentNodes],
+  );
+  const allocationChartData = useMemo<PeriodBreakdownChartDatum[]>(
+    () =>
+      allocationDrillState.currentNodes.map((item) => {
+        const percentage =
+          currentAllocationLevelTotalAmount <= 0
+            ? 0
+            : (item.amount / currentAllocationLevelTotalAmount) * 100;
+
+        return {
+          id: item.id,
+          label: item.label,
+          kind: item.kind,
+          amount: item.amount,
+          percentage,
+          isDrillable: isBreakdownNodeDrillable(item),
+          amountLabel: currencyFormatter.format(item.amount),
+          percentageLabel: `${percentageFormatter.format(percentage)}%`,
+        };
+      }),
+    [
+      allocationDrillState.currentNodes,
+      currencyFormatter,
+      currentAllocationLevelTotalAmount,
+      percentageFormatter,
+    ],
+  );
+  const totalAllocationAmountLabel = useMemo(
+    () => currencyFormatter.format(currentAllocationLevelTotalAmount),
+    [currentAllocationLevelTotalAmount, currencyFormatter],
+  );
+  const hasAllocationBreakdown = allocationChartData.length > 0;
+  const currentAllocationBreakdownNodeId =
+    allocationDrillState.currentPathNodes[
+      allocationDrillState.currentPathNodes.length - 1
+    ]?.id ?? null;
+  const hasAllocationBreakdownAmountDiscrepancy = useMemo(() => {
+    if (currentAllocationBreakdownNodeId == null) {
+      return activeAllocationBreakdown.hasHiddenAmountDiscrepancy;
+    }
+
+    return activeAllocationBreakdown.hiddenAmountDiscrepancyNodeIds.includes(
+      currentAllocationBreakdownNodeId,
+    );
+  }, [
+    activeAllocationBreakdown.hasHiddenAmountDiscrepancy,
+    activeAllocationBreakdown.hiddenAmountDiscrepancyNodeIds,
+    currentAllocationBreakdownNodeId,
+  ]);
+  const updateSelectedAllocationBreakdownPath = useCallback(
+    (nextPath: string[]) => {
+      onDrillPathByAllocationBreakdownChange({
+        ...drillPathByAllocationBreakdown,
+        [selectedAllocationBreakdown]: nextPath,
+      });
+    },
+    [
+      drillPathByAllocationBreakdown,
+      onDrillPathByAllocationBreakdownChange,
+      selectedAllocationBreakdown,
+    ],
+  );
+  const handleAllocationNodeDoubleClick = useCallback(
+    (datum: PeriodBreakdownNodeDatum) => {
+      if (
+        datum.kind !== "group" ||
+        !datum.isDrillable ||
+        allocationDrillState.clampedPath.includes(datum.id)
+      ) {
+        return;
+      }
+
+      updateSelectedAllocationBreakdownPath([
+        ...allocationDrillState.clampedPath,
+        datum.id,
+      ]);
+    },
+    [allocationDrillState.clampedPath, updateSelectedAllocationBreakdownPath],
+  );
+  const allocationChartOptions = usePeriodBreakdownChartOptions({
+    chartData: allocationChartData,
+    selectedChartType: selectedAllocationChartType,
+    colors,
+    totalBreakdownAmountLabel: totalAllocationAmountLabel,
+    onNodeDoubleClick: handleAllocationNodeDoubleClick,
+  });
+  const hasAllocationPartialData =
+    activeAllocationBreakdown.skippedMissingReferenceBalanceCount > 0 ||
+    activeAllocationBreakdown.skippedNegativeCount > 0;
+  const allocationPartialDataNotes = getAllocationPartialDataNotes({
+    skippedMissingReferenceBalanceCount:
+      activeAllocationBreakdown.skippedMissingReferenceBalanceCount,
+    skippedNegativeCount: activeAllocationBreakdown.skippedNegativeCount,
+  });
 
   const amountCompactFormatter = useMemo(
     () =>
@@ -745,55 +963,88 @@ export function PeriodPageView({
           </SimpleGrid>
         </Stack>
 
-        <SimpleGrid
-          cols={{ base: 1, lg: 2 }}
-          spacing="lg"
-          data-testid="period-analysis-section"
-        >
-          <Card withBorder radius="md" p="md">
-            <Stack gap="sm">
-              <Title order={4}>Contribution to Total Return</Title>
-              <Text c="dimmed" size="sm">
-                How Income, Expenses, and {gainsLossesLabel} lead to Total
-                Return
-              </Text>
-              <div className={classes.chartContainer}>
-                <AgCharts options={waterfallChartOptions} />
-              </div>
-            </Stack>
-          </Card>
+        <Stack gap="lg" data-testid="period-analysis-section">
+          <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg">
+            <Card withBorder radius="md" p="md">
+              <Stack gap="sm">
+                <Title order={4}>Contribution to Total Return</Title>
+                <Text c="dimmed" size="sm">
+                  How Income, Expenses, and {gainsLossesLabel} lead to Total
+                  Return
+                </Text>
+                <div className={classes.chartContainer}>
+                  <AgCharts options={waterfallChartOptions} />
+                </div>
+              </Stack>
+            </Card>
 
-          <PeriodBreakdownCard
-            selectedBreakdown={selectedBreakdown}
-            selectedChartType={selectedChartType}
-            breakdownTitle={breakdownTitle}
-            breakdownSubtitle={breakdownSubtitle}
-            breadcrumbs={drillState.breadcrumbs}
-            clampedPath={drillState.clampedPath}
-            hasBreakdownAmountDiscrepancy={hasBreakdownAmountDiscrepancy}
-            hasBreakdown={hasBreakdown}
-            emptyBreakdownMessage={emptyBreakdownMessage}
-            chartOptions={chartOptions}
-            onSelectedBreakdownChange={setSelectedBreakdown}
-            onSelectedChartTypeChange={setSelectedChartType}
-            onDrillPathChange={updateSelectedBreakdownPath}
-            onChartContainerDoubleClick={handleChartContainerDoubleClick}
-            footer={
-              overview.skippedBookingsCount > 0 ? (
-                <Alert
-                  mt="md"
-                  variant="light"
-                  color="yellow"
-                  icon={<IconAlertTriangle size={16} />}
-                  title="Partial data"
-                >
-                  {overview.skippedBookingsCount} valuation-related item(s) were
-                  skipped because valuation data was unavailable.
-                </Alert>
-              ) : null
-            }
-          />
-        </SimpleGrid>
+            <PeriodAllocationBreakdownCard
+              selectedBreakdown={selectedAllocationBreakdown}
+              selectedChartType={selectedAllocationChartType}
+              breakdownTitle={allocationBreakdownTitle}
+              breakdownSubtitle={`${allocationBreakdownSubtitle} · Amounts shown in ${overview.referenceCurrency}`}
+              breadcrumbs={allocationDrillState.breadcrumbs}
+              clampedPath={allocationDrillState.clampedPath}
+              hasBreakdownAmountDiscrepancy={
+                hasAllocationBreakdownAmountDiscrepancy
+              }
+              hasBreakdown={hasAllocationBreakdown}
+              emptyBreakdownMessage={emptyAllocationBreakdownMessage}
+              chartOptions={allocationChartOptions}
+              onSelectedBreakdownChange={setSelectedAllocationBreakdown}
+              onSelectedChartTypeChange={setSelectedAllocationChartType}
+              onDrillPathChange={updateSelectedAllocationBreakdownPath}
+              footer={
+                hasAllocationPartialData ? (
+                  <Alert
+                    mt="md"
+                    variant="light"
+                    color="yellow"
+                    icon={<IconAlertTriangle size={16} />}
+                    title="Partial data"
+                  >
+                    {allocationPartialDataNotes}
+                  </Alert>
+                ) : null
+              }
+            />
+          </SimpleGrid>
+
+          <Grid gap="lg">
+            <Grid.Col span={{ base: 12, lg: 6 }}>
+              <PeriodBreakdownCard
+                selectedBreakdown={selectedBreakdown}
+                selectedChartType={selectedChartType}
+                breakdownTitle={breakdownTitle}
+                breakdownSubtitle={breakdownSubtitle}
+                breadcrumbs={drillState.breadcrumbs}
+                clampedPath={drillState.clampedPath}
+                hasBreakdownAmountDiscrepancy={hasBreakdownAmountDiscrepancy}
+                hasBreakdown={hasBreakdown}
+                emptyBreakdownMessage={emptyBreakdownMessage}
+                chartOptions={chartOptions}
+                onSelectedBreakdownChange={setSelectedBreakdown}
+                onSelectedChartTypeChange={setSelectedChartType}
+                onDrillPathChange={updateSelectedBreakdownPath}
+                onChartContainerDoubleClick={handleChartContainerDoubleClick}
+                footer={
+                  overview.skippedBookingsCount > 0 ? (
+                    <Alert
+                      mt="md"
+                      variant="light"
+                      color="yellow"
+                      icon={<IconAlertTriangle size={16} />}
+                      title="Partial data"
+                    >
+                      {overview.skippedBookingsCount} valuation-related item(s)
+                      were skipped because valuation data was unavailable.
+                    </Alert>
+                  ) : null
+                }
+              />
+            </Grid.Col>
+          </Grid>
+        </Stack>
       </Stack>
 
       {selectedPeriodValue !== overview.selectedPeriodValue ? (

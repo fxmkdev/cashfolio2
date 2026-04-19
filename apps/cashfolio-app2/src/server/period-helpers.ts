@@ -1,4 +1,4 @@
-import { Unit } from "../.prisma-client/enums";
+import { AccountType, Unit } from "../.prisma-client/enums";
 import { startOfUtcDay } from "../shared/date";
 import type {
   BreakdownHierarchyNode,
@@ -199,6 +199,89 @@ export function buildBreakdownItems(items: ExpenseBreakdownAccumulatorItem[]): {
       sortedItems.reduce((sum, item) => sum + item.amount, 0),
     ),
     items: sortedItems,
+  };
+}
+
+export function buildPeriodEndAllocationBreakdown(args: {
+  items: Array<{
+    accountId: string;
+    accountName: string;
+    groupId: string | null;
+    accountType: "ASSET" | "LIABILITY";
+    convertedBalanceInReferenceCurrency: number | null;
+  }>;
+  groupById: Map<string, PeriodGroupNode>;
+}): {
+  totalAmount: number;
+  items: Array<{
+    id: string;
+    label: string;
+    kind: "group" | "account";
+    amount: number;
+    percentage: number;
+  }>;
+  hierarchy: BreakdownHierarchyNode[];
+  hasHiddenAmountDiscrepancy: boolean;
+  hiddenAmountDiscrepancyNodeIds: string[];
+  skippedMissingReferenceBalanceCount: number;
+  skippedNegativeCount: number;
+} {
+  const breakdownItems: BreakdownHierarchyAccumulatorItem[] = [];
+  let skippedMissingReferenceBalanceCount = 0;
+  let skippedNegativeCount = 0;
+
+  for (const item of args.items) {
+    if (item.convertedBalanceInReferenceCurrency == null) {
+      skippedMissingReferenceBalanceCount += 1;
+      continue;
+    }
+
+    const displayAmount =
+      item.accountType === AccountType.ASSET
+        ? item.convertedBalanceInReferenceCurrency
+        : -item.convertedBalanceInReferenceCurrency;
+
+    if (displayAmount < 0) {
+      skippedNegativeCount += 1;
+      continue;
+    }
+    if (displayAmount === 0) {
+      continue;
+    }
+
+    breakdownItems.push({
+      accountId: item.accountId,
+      accountName: item.accountName,
+      groupId: item.groupId,
+      amount: displayAmount,
+    });
+  }
+
+  const {
+    hierarchy,
+    hasHiddenAmountDiscrepancy,
+    hiddenAmountDiscrepancyNodeIds,
+  } = buildBreakdownHierarchyWithMeta({
+    items: breakdownItems,
+    groupById: args.groupById,
+  });
+  const topLevelBreakdown = buildBreakdownItems(
+    hierarchy.map((node) => ({
+      id: node.id,
+      label: node.label,
+      kind: node.kind,
+      amount: node.amount,
+    })),
+  );
+
+  return {
+    totalAmount: topLevelBreakdown.totalAmount,
+    items: topLevelBreakdown.items,
+    hierarchy,
+    hasHiddenAmountDiscrepancy,
+    hiddenAmountDiscrepancyNodeIds,
+    skippedMissingReferenceBalanceCount,
+    skippedNegativeCount,
   };
 }
 

@@ -3,11 +3,14 @@ import type { ReactNode } from "react";
 import type { PeriodBreakdownChartOptions } from "./-breakdown-chart-options";
 import { ChartTypeSegmentedControl } from "./-chart-type-segmented-control";
 import type { BreakdownBreadcrumb } from "./-breakdown-drill";
-import type { BreakdownChartType, BreakdownType } from "./-breakdown-types";
+import type {
+  AllocationBreakdownType,
+  BreakdownChartType,
+} from "./-breakdown-types";
 import { DrilldownCardShell } from "./-drilldown-card-shell";
 
-type PeriodBreakdownCardProps = {
-  selectedBreakdown: BreakdownType;
+type PeriodAllocationBreakdownCardProps = {
+  selectedBreakdown: AllocationBreakdownType;
   selectedChartType: BreakdownChartType;
   breakdownTitle: string;
   breakdownSubtitle: string;
@@ -17,18 +20,19 @@ type PeriodBreakdownCardProps = {
   hasBreakdown: boolean;
   emptyBreakdownMessage: string;
   chartOptions: PeriodBreakdownChartOptions;
-  onSelectedBreakdownChange: (value: BreakdownType) => void;
+  onSelectedBreakdownChange: (value: AllocationBreakdownType) => void;
   onSelectedChartTypeChange: (value: BreakdownChartType) => void;
   onDrillPathChange: (nextPath: string[]) => void;
-  onChartContainerDoubleClick?: (() => void) | null;
   footer?: ReactNode;
 };
 
-function isBreakdownType(value: string): value is BreakdownType {
-  return value === "expense" || value === "income";
+function isAllocationBreakdownType(
+  value: string,
+): value is AllocationBreakdownType {
+  return value === "asset" || value === "liability";
 }
 
-export function PeriodBreakdownCard({
+export function PeriodAllocationBreakdownCard({
   selectedBreakdown,
   selectedChartType,
   breakdownTitle,
@@ -42,33 +46,8 @@ export function PeriodBreakdownCard({
   onSelectedBreakdownChange,
   onSelectedChartTypeChange,
   onDrillPathChange,
-  onChartContainerDoubleClick,
   footer,
-}: PeriodBreakdownCardProps) {
-  const controls = (
-    <Flex gap="md" wrap="wrap" justify="flex-end">
-      <ChartTypeSegmentedControl
-        ariaLabel="Breakdown chart type"
-        value={selectedChartType}
-        onChange={onSelectedChartTypeChange}
-      />
-      <SegmentedControl
-        size="sm"
-        aria-label="Breakdown type"
-        value={selectedBreakdown}
-        onChange={(value) => {
-          if (isBreakdownType(value)) {
-            onSelectedBreakdownChange(value);
-          }
-        }}
-        data={[
-          { label: "Expenses", value: "expense" },
-          { label: "Income", value: "income" },
-        ]}
-      />
-    </Flex>
-  );
-
+}: PeriodAllocationBreakdownCardProps) {
   return (
     <DrilldownCardShell
       title={breakdownTitle}
@@ -79,11 +58,30 @@ export function PeriodBreakdownCard({
       hasData={hasBreakdown}
       emptyMessage={emptyBreakdownMessage}
       chartOptions={chartOptions}
-      chartContainerTestId="period-breakdown-chart"
       onDrillPathChange={onDrillPathChange}
-      onChartContainerDoubleClick={onChartContainerDoubleClick}
-      drillHint="Double-click a group to drill down, or an account to open ledger."
-      headerControls={controls}
+      headerControls={
+        <Flex gap="md" wrap="wrap" justify="flex-end">
+          <ChartTypeSegmentedControl
+            ariaLabel="Allocation chart type"
+            value={selectedChartType}
+            onChange={onSelectedChartTypeChange}
+          />
+          <SegmentedControl
+            size="sm"
+            aria-label="Allocation type"
+            value={selectedBreakdown}
+            onChange={(value) => {
+              if (isAllocationBreakdownType(value)) {
+                onSelectedBreakdownChange(value);
+              }
+            }}
+            data={[
+              { label: "Assets", value: "asset" },
+              { label: "Liabilities", value: "liability" },
+            ]}
+          />
+        </Flex>
+      }
       footer={footer}
     />
   );
