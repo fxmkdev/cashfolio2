@@ -10,13 +10,15 @@ vi.mock("./valuation.server", () => ({
   getCryptocurrencyToCurrencyExchangeRate: vi.fn(),
   getSecurityToCurrencyExchangeRate: vi.fn(),
 }));
-import { Unit } from "../.prisma-client/enums";
+import { AccountType, Unit } from "../.prisma-client/enums";
 import {
+  computeEndOfPeriodBalanceStats,
   DEFAULT_PERIOD_VALUE,
   buildBreakdownHierarchy,
   buildBreakdownItems,
   computeHoldingGainLossForEventSeries,
   createBreakdownBucket,
+  getPeriodEndExclusive,
   isMultiUnitTransaction,
   normalizePeriodValue,
   resolvePeriodSelection,
@@ -133,6 +135,202 @@ describe("resolvePeriodSelection", () => {
 
     expect(selection.from.toISOString()).toBe("2026-05-01T00:00:00.000Z");
     expect(selection.to.toISOString()).toBe("2026-11-14T00:00:00.000Z");
+  });
+});
+
+describe("getPeriodEndExclusive", () => {
+  test("returns the start of the next UTC day", () => {
+    const result = getPeriodEndExclusive(new Date("2026-02-28T13:45:00.000Z"));
+
+    expect(result.toISOString()).toBe("2026-03-01T00:00:00.000Z");
+  });
+});
+
+describe("computeEndOfPeriodBalanceStats", () => {
+  test("computes net worth as assets minus liabilities", async () => {
+    const periodEnd = new Date("2026-02-28T00:00:00.000Z");
+    const result = await computeEndOfPeriodBalanceStats({
+      accounts: [
+        {
+          id: "asset-chf",
+          type: AccountType.ASSET,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+        },
+        {
+          id: "liability-usd",
+          type: AccountType.LIABILITY,
+          unit: Unit.CURRENCY,
+          currency: "USD",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+        },
+      ],
+      rawBalanceByAccountId: new Map([
+        ["asset-chf", 100],
+        ["liability-usd", -40],
+      ]),
+      periodEnd,
+      referenceCurrency: "CHF",
+      convertBalanceToReference: async (input) => {
+        if (input.currency === "USD") {
+          return input.value * 2;
+        }
+        return input.value;
+      },
+    });
+
+    expect(result).toEqual({
+      assets: 100,
+      liabilities: 80,
+      netWorth: 20,
+      skippedCount: 0,
+    });
+  });
+
+  test("counts skipped conversions for missing unit metadata and null conversions", async () => {
+    const periodEnd = new Date("2026-02-28T00:00:00.000Z");
+    const convertBalanceToReference = vi.fn(
+      async (input: { value: number; symbol: string | null; date: Date }) => {
+        if (input.symbol === "NO_RATE") {
+          return null;
+        }
+        return input.value;
+      },
+    );
+
+    const result = await computeEndOfPeriodBalanceStats({
+      accounts: [
+        {
+          id: "asset-ok",
+          type: AccountType.ASSET,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+        },
+        {
+          id: "liability-ok",
+          type: AccountType.LIABILITY,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+        },
+        {
+          id: "asset-missing-unit",
+          type: AccountType.ASSET,
+          unit: null,
+          currency: null,
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+        },
+        {
+          id: "asset-no-rate",
+          type: AccountType.ASSET,
+          unit: Unit.SECURITY,
+          currency: null,
+          cryptocurrency: null,
+          symbol: "NO_RATE",
+          tradeCurrency: "USD",
+        },
+      ],
+      rawBalanceByAccountId: new Map([
+        ["asset-ok", 50],
+        ["liability-ok", -10],
+        ["asset-missing-unit", 20],
+        ["asset-no-rate", 5],
+      ]),
+      periodEnd,
+      referenceCurrency: "CHF",
+      convertBalanceToReference,
+    });
+
+    expect(result).toEqual({
+      assets: 50,
+      liabilities: 10,
+      netWorth: 40,
+      skippedCount: 2,
+    });
+    expect(convertBalanceToReference).toHaveBeenCalledTimes(3);
+    expect(convertBalanceToReference).toHaveBeenCalledWith(
+      expect.objectContaining({
+        date: periodEnd,
+      }),
+    );
+  });
+
+  test("does not count missing-unit accounts without raw balance as skipped", async () => {
+    const periodEnd = new Date("2026-02-28T00:00:00.000Z");
+    const convertBalanceToReference = vi.fn(
+      async (input: { value: number }) => input.value,
+    );
+
+    const result = await computeEndOfPeriodBalanceStats({
+      accounts: [
+        {
+          id: "asset-missing-unit-no-balance",
+          type: AccountType.ASSET,
+          unit: null,
+          currency: null,
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+        },
+      ],
+      rawBalanceByAccountId: new Map(),
+      periodEnd,
+      referenceCurrency: "CHF",
+      convertBalanceToReference,
+    });
+
+    expect(result).toEqual({
+      assets: 0,
+      liabilities: 0,
+      netWorth: 0,
+      skippedCount: 0,
+    });
+    expect(convertBalanceToReference).not.toHaveBeenCalled();
+  });
+
+  test("does not count missing-unit accounts with zero net raw balance as skipped", async () => {
+    const periodEnd = new Date("2026-02-28T00:00:00.000Z");
+    const convertBalanceToReference = vi.fn(
+      async (input: { value: number }) => input.value,
+    );
+
+    const result = await computeEndOfPeriodBalanceStats({
+      accounts: [
+        {
+          id: "asset-missing-unit-zero-net",
+          type: AccountType.ASSET,
+          unit: null,
+          currency: null,
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+        },
+      ],
+      rawBalanceByAccountId: new Map([["asset-missing-unit-zero-net", 0]]),
+      periodEnd,
+      referenceCurrency: "CHF",
+      convertBalanceToReference,
+    });
+
+    expect(result).toEqual({
+      assets: 0,
+      liabilities: 0,
+      netWorth: 0,
+      skippedCount: 0,
+    });
+    expect(convertBalanceToReference).not.toHaveBeenCalled();
   });
 });
 

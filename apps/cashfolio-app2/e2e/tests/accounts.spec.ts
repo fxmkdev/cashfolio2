@@ -437,6 +437,41 @@ test("period page shows KPI waterfall and updated income/expenses wording", asyn
       /How Income, Expenses, and (Gains|Losses) lead to Total Return/,
     ),
   ).toBeVisible();
+
+  const endOfPeriodSection = page
+    .locator(
+      "xpath=//div[.//*[normalize-space()='As of period end (last day)']]",
+    )
+    .first();
+  await expect(endOfPeriodSection).toBeVisible();
+
+  const parseStatCardAmount = async (label: string) => {
+    const card = endOfPeriodSection
+      .locator(
+        `xpath=.//div[contains(@class,"mantine-Card-root")][.//*[normalize-space()="${label}"]]`,
+      )
+      .first();
+    await expect(card).toBeVisible();
+
+    const valueText = (await card.locator("p").nth(1).innerText()).trim();
+    const numericMatch = valueText.match(/-?\d[\d'’]*(?:[.,]\d+)?/);
+    if (!numericMatch) {
+      throw new Error(`Could not parse stat amount from "${valueText}"`);
+    }
+
+    const parsedMagnitude = Number(
+      numericMatch[0].replace(/[’']/g, "").replace(",", "."),
+    );
+    const isNegative = valueText.includes("-") || valueText.includes("−");
+
+    return isNegative ? -Math.abs(parsedMagnitude) : parsedMagnitude;
+  };
+
+  const netWorth = await parseStatCardAmount("Net Worth");
+  const assets = await parseStatCardAmount("Assets");
+  const liabilities = await parseStatCardAmount("Liabilities");
+
+  expect(Math.abs(netWorth - (assets - liabilities))).toBeLessThan(0.01);
 });
 
 test("period picker opens on selected month/year page", async ({ page }) => {

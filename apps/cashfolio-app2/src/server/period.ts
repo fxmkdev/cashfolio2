@@ -95,6 +95,23 @@ type NormalizedPeriodSelection = NormalizedPeriodBase & {
   label: string;
 };
 
+type EndOfPeriodBalanceAccount = {
+  id: string;
+  type: AccountType;
+  unit: Unit | null;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  tradeCurrency: string | null;
+};
+
+type EndOfPeriodBalanceStats = {
+  assets: number;
+  liabilities: number;
+  netWorth: number;
+  skippedCount: number;
+};
+
 function startOfUtcDay(date: Date): Date {
   return new Date(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
@@ -320,6 +337,84 @@ export function resolvePeriodSelection(args: {
   };
 }
 
+export function getPeriodEndExclusive(periodEnd: Date): Date {
+  return addUtcDays(startOfUtcDay(periodEnd), 1);
+}
+
+export async function computeEndOfPeriodBalanceStats(args: {
+  accounts: EndOfPeriodBalanceAccount[];
+  rawBalanceByAccountId: Map<string, number>;
+  periodEnd: Date;
+  referenceCurrency: string;
+  convertBalanceToReference: (input: {
+    value: number;
+    unit: Unit;
+    currency: string | null;
+    cryptocurrency: string | null;
+    symbol: string | null;
+    tradeCurrency: string | null;
+    date: Date;
+    referenceCurrency: string;
+  }) => Promise<number | null>;
+}): Promise<EndOfPeriodBalanceStats> {
+  let assets = 0;
+  let liabilities = 0;
+  let skippedCount = 0;
+
+  const conversionResults = await Promise.all(
+    args.accounts.map(async (account) => {
+      const rawBalance = args.rawBalanceByAccountId.get(account.id) ?? 0;
+
+      if (account.unit == null) {
+        return {
+          accountType: account.type,
+          convertedBalance: null as number | null,
+          skipped: rawBalance !== 0,
+        };
+      }
+
+      const convertedBalance = await args.convertBalanceToReference({
+        value: rawBalance,
+        unit: account.unit,
+        currency: account.currency,
+        cryptocurrency: account.cryptocurrency,
+        symbol: account.symbol,
+        tradeCurrency: account.tradeCurrency,
+        date: args.periodEnd,
+        referenceCurrency: args.referenceCurrency,
+      });
+
+      return {
+        accountType: account.type,
+        convertedBalance,
+        skipped: convertedBalance == null && rawBalance !== 0,
+      };
+    }),
+  );
+
+  for (const conversionResult of conversionResults) {
+    if (conversionResult.skipped || conversionResult.convertedBalance == null) {
+      if (conversionResult.skipped) {
+        skippedCount += 1;
+      }
+      continue;
+    }
+
+    if (conversionResult.accountType === AccountType.ASSET) {
+      assets += conversionResult.convertedBalance;
+    } else if (conversionResult.accountType === AccountType.LIABILITY) {
+      liabilities += -conversionResult.convertedBalance;
+    }
+  }
+
+  return {
+    assets,
+    liabilities,
+    netWorth: assets - liabilities,
+    skippedCount,
+  };
+}
+
 export const getPeriodOverview = createServerFn({
   method: "GET",
 })
@@ -338,7 +433,7 @@ export const getPeriodOverview = createServerFn({
     });
 
     const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
-    const [minBookingDateAggregate, allAccountGroups, holdingAccounts] =
+    const [minBookingDateAggregate, allAccountGroups, assetLiabilityAccounts] =
       await Promise.all([
         prisma.booking.aggregate({
           where: { accountBookId: data.accountBookId },
@@ -358,13 +453,10 @@ export const getPeriodOverview = createServerFn({
             type: {
               in: [AccountType.ASSET, AccountType.LIABILITY],
             },
-            NOT: {
-              unit: Unit.CURRENCY,
-              currency: referenceCurrency,
-            },
           },
           select: {
             id: true,
+            type: true,
             unit: true,
             currency: true,
             cryptocurrency: true,
@@ -375,7 +467,7 @@ export const getPeriodOverview = createServerFn({
       ]);
 
     const holdingAccountsResolved = filterConvertibleHoldingAccounts(
-      holdingAccounts,
+      assetLiabilityAccounts,
       referenceCurrency,
     );
 
@@ -390,7 +482,7 @@ export const getPeriodOverview = createServerFn({
     });
 
     const queryStart = selection.from;
-    const queryEndExclusive = addUtcDays(startOfUtcDay(selection.to), 1);
+    const queryEndExclusive = getPeriodEndExclusive(selection.to);
     const initialHoldingDate = addUtcDays(queryStart, -1);
 
     const groupById = new Map(
@@ -398,6 +490,23 @@ export const getPeriodOverview = createServerFn({
     );
 
     const exchangeRateByKey = new Map<string, Promise<number | null>>();
+    const assetLiabilityAccountIds = assetLiabilityAccounts.map(
+      (account) => account.id,
+    );
+    const endOfPeriodRawBalanceByAccountId = new Map(
+      (assetLiabilityAccountIds.length > 0
+        ? await prisma.booking.groupBy({
+            by: ["accountId"],
+            where: {
+              accountBookId: data.accountBookId,
+              accountId: { in: assetLiabilityAccountIds },
+              date: { lt: queryEndExclusive },
+            },
+            _sum: { value: true },
+          })
+        : []
+      ).map((balance) => [balance.accountId, Number(balance._sum.value ?? 0)]),
+    );
 
     let bookingsCount = 0;
     let convertedBookingsCount = 0;
@@ -820,6 +929,24 @@ export const getPeriodOverview = createServerFn({
     const roundedGainsLosses = round2(gainsLosses);
     const roundedSavings = round2(roundedIncome - roundedExpenses);
     const roundedTotalReturn = round2(roundedSavings + roundedGainsLosses);
+    const endOfPeriodBalanceStats = await computeEndOfPeriodBalanceStats({
+      accounts: assetLiabilityAccounts,
+      rawBalanceByAccountId: endOfPeriodRawBalanceByAccountId,
+      periodEnd: selection.to,
+      referenceCurrency,
+      convertBalanceToReference: async (input) =>
+        convertBookingValueToReference({
+          ...input,
+          exchangeRateByKey,
+        }),
+    });
+    skippedBookingsCount += endOfPeriodBalanceStats.skippedCount;
+
+    const roundedEndOfPeriodAssets = round2(endOfPeriodBalanceStats.assets);
+    const roundedEndOfPeriodLiabilities = round2(
+      endOfPeriodBalanceStats.liabilities,
+    );
+    const roundedEndOfPeriodNetWorth = round2(endOfPeriodBalanceStats.netWorth);
 
     const {
       hierarchy: expenseBreakdownHierarchy,
@@ -889,6 +1016,9 @@ export const getPeriodOverview = createServerFn({
         income: roundedIncome,
         expenses: roundedExpenses,
         gainsLosses: roundedGainsLosses,
+        endOfPeriodNetWorth: roundedEndOfPeriodNetWorth,
+        endOfPeriodAssets: roundedEndOfPeriodAssets,
+        endOfPeriodLiabilities: roundedEndOfPeriodLiabilities,
         explicitGainLoss: round2(explicitGainLoss),
         transactionGainLoss: round2(transactionGainLoss),
         holdingGainLoss: round2(holdingGainLoss),

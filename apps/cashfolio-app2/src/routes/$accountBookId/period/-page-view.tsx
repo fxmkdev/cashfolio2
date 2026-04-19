@@ -572,6 +572,26 @@ export function PeriodPageView({
       valueColor: overview.stats.gainsLosses >= 0 ? "green" : "red",
     },
   ];
+  const endOfPeriodStatCards: StatCardData[] = [
+    {
+      id: "endOfPeriodNetWorth",
+      label: "Net Worth",
+      value: currencyFormatter.format(overview.stats.endOfPeriodNetWorth),
+      valueColor: overview.stats.endOfPeriodNetWorth >= 0 ? "green" : "red",
+    },
+    {
+      id: "endOfPeriodAssets",
+      label: "Assets",
+      value: currencyFormatter.format(overview.stats.endOfPeriodAssets),
+      valueColor: overview.stats.endOfPeriodAssets >= 0 ? "green" : "red",
+    },
+    {
+      id: "endOfPeriodLiabilities",
+      label: "Liabilities",
+      value: currencyFormatter.format(overview.stats.endOfPeriodLiabilities),
+      valueColor: overview.stats.endOfPeriodLiabilities > 0 ? "red" : "green",
+    },
+  ];
 
   const handlePeriodModeChange = (nextMode: string) => {
     setPickerOpened(false);
@@ -684,6 +704,21 @@ export function PeriodPageView({
             />
           ))}
         </SimpleGrid>
+        <Stack gap="xs">
+          <Text c="dimmed" size="sm" ta="center">
+            As of period end (last day)
+          </Text>
+          <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg">
+            {endOfPeriodStatCards.map((card) => (
+              <StatCard
+                key={card.id}
+                label={card.label}
+                value={card.value}
+                valueColor={card.valueColor}
+              />
+            ))}
+          </SimpleGrid>
+        </Stack>
 
         <SimpleGrid
           cols={{ base: 1, lg: 2 }}
