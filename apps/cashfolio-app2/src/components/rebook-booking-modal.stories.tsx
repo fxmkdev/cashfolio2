@@ -25,7 +25,7 @@ export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByRole("textbox", { name: "Target account" }),
+      canvas.getByRole("combobox", { name: "Target account" }),
     ).toHaveValue("");
   },
 };
@@ -45,7 +45,7 @@ export const SubmitAndCancel: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    const targetAccountInput = canvas.getByRole("textbox", {
+    const targetAccountInput = canvas.getByRole("combobox", {
       name: "Target account",
     });
 
@@ -73,7 +73,7 @@ export const EnterSubmitPendingGuard: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    const targetAccountInput = canvas.getByRole("textbox", {
+    const targetAccountInput = canvas.getByRole("combobox", {
       name: "Target account",
     });
 

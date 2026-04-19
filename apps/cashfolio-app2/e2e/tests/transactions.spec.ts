@@ -194,7 +194,7 @@ test("create simple transaction", async ({ page }) => {
 
   await page.getByLabel("Date").fill("02.01.2026");
   await page.getByLabel("Description").fill("E2E Simple Transaction");
-  await simpleDialog.getByRole("textbox", { name: "Counter account" }).click();
+  await simpleDialog.getByRole("combobox", { name: "Counter account" }).click();
   await page
     .getByRole("option", { name: /E2E Expense/ })
     .first()
@@ -226,7 +226,7 @@ test("counterparty account link highlights the matching booking row", async ({
   const simpleDialog = await openCreateSimpleTransaction(page);
   await page.getByLabel("Date").fill("03.01.2026");
   await page.getByLabel("Description").fill(description);
-  await simpleDialog.getByRole("textbox", { name: "Counter account" }).click();
+  await simpleDialog.getByRole("combobox", { name: "Counter account" }).click();
   await page
     .getByRole("option", {
       name: accountOptionNameRegex(seeded.savingsAccount.name),
@@ -267,7 +267,7 @@ test("rebook booking to another compatible account", async ({ page }) => {
   const simpleDialog = await openCreateSimpleTransaction(page);
   await page.getByLabel("Date").fill("04.01.2026");
   await page.getByLabel("Description").fill("E2E Rebook Transaction");
-  await simpleDialog.getByRole("textbox", { name: "Counter account" }).click();
+  await simpleDialog.getByRole("combobox", { name: "Counter account" }).click();
   await page
     .getByRole("option", {
       name: accountOptionNameRegex(seeded.savingsAccount.name),
@@ -287,7 +287,7 @@ test("rebook booking to another compatible account", async ({ page }) => {
   const rebookDialog = page.getByRole("dialog", { name: "Rebook Booking" });
   await expect(rebookDialog).toBeVisible();
 
-  const targetAccountInput = rebookDialog.getByRole("textbox", {
+  const targetAccountInput = rebookDialog.getByRole("combobox", {
     name: "Target account",
   });
   await expect(targetAccountInput).toHaveValue("");
@@ -352,7 +352,7 @@ test("eligible edit opens simple editor and ineligible edit opens split editor",
   await page.getByLabel("Date").fill("04.01.2026");
   await page.getByLabel("Description").fill("E2E Editable Simple");
   await simpleCreateDialog
-    .getByRole("textbox", { name: "Counter account" })
+    .getByRole("combobox", { name: "Counter account" })
     .click();
   await page
     .getByRole("option", {
@@ -371,7 +371,7 @@ test("eligible edit opens simple editor and ineligible edit opens split editor",
     simpleEditDialog.getByRole("button", { name: "Switch to split editor" }),
   ).toBeVisible();
   await expect(
-    simpleEditDialog.getByRole("textbox", { name: "Counter account" }),
+    simpleEditDialog.getByRole("combobox", { name: "Counter account" }),
   ).toBeVisible();
   await simpleEditDialog.getByRole("button", { name: "Save" }).click();
 
@@ -420,7 +420,7 @@ test("switch from simple edit to split carries over edited values", async ({
   await page.getByLabel("Date").fill("05.01.2026");
   await page.getByLabel("Description").fill("E2E Carry Switch");
   await simpleCreateDialog
-    .getByRole("textbox", { name: "Counter account" })
+    .getByRole("combobox", { name: "Counter account" })
     .click();
   await page
     .getByRole("option", {
@@ -479,7 +479,7 @@ test("create security simple transaction preserves account metadata", async ({
 
   await page.getByLabel("Date").fill("03.01.2026");
   await page.getByLabel("Description").fill("E2E Security Simple Transaction");
-  await simpleDialog.getByRole("textbox", { name: "Counter account" }).click();
+  await simpleDialog.getByRole("combobox", { name: "Counter account" }).click();
   await page
     .getByRole("option", {
       name: accountOptionNameRegex(seeded.securityCounterAccount.name),

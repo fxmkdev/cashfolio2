@@ -7,7 +7,7 @@ import { IconInfoCircle, IconTablePlus } from "@tabler/icons-react";
 import { createId } from "@paralleldrive/cuid2";
 import { isAfter, parse, startOfDay } from "date-fns";
 import { numericFormatter } from "react-number-format";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Unit } from "../.prisma-client/enums";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 import {
@@ -223,6 +223,10 @@ export function EditTransactionModal({
     [accounts, isSubmitting],
   );
 
+  useEffect(() => {
+    form.validateField("bookings");
+  }, [form, form.values.bookings]);
+
   return (
     <form
       onSubmit={(event) => {
@@ -381,7 +385,7 @@ export function EditTransactionModal({
           }}
           grandTotalRow="pinnedBottom"
           context={{
-            status: form.isValid("bookings") ? null : form.errors.bookings,
+            status: form.errors.bookings ?? null,
             deleteDisabled: form.values.bookings.length <= 2,
             lockedBookingKey,
             onDelete: (key: string) => {

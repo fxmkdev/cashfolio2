@@ -139,7 +139,7 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
   });
 
   await newAccountDialog.getByLabel("Name").fill(createdName);
-  await newAccountDialog.getByRole("textbox", { name: "Currency" }).click();
+  await newAccountDialog.getByRole("combobox", { name: "Currency" }).click();
   await page.getByRole("option", { name: "CHF" }).first().click();
   await newAccountDialog.getByRole("button", { name: "Create" }).click();
 
