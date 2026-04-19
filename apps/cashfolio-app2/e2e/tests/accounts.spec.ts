@@ -84,7 +84,7 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
   const breakdownCard = args.page
     .getByRole("heading", { name: "Expenses Breakdown" })
     .locator(
-      "xpath=ancestor::*[self::section or self::article or self::div][.//*[@aria-label='Breakdown chart type']][1]",
+      "xpath=ancestor::*[self::section or self::article or self::div][.//*[@aria-label='Breakdown chart type'] and .//canvas][1]",
     );
   const chartCanvas = breakdownCard.locator("canvas").first();
   await expect(chartCanvas).toBeVisible();
