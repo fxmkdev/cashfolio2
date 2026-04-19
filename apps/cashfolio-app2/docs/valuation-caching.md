@@ -27,8 +27,6 @@ Primary consumers:
 - `src/server/accounts-queries.ts`
   - account tree reference balances
   - `getAccountReferenceBalances` lazy hydration endpoint
-- `src/server/dashboard.ts`
-  - historical booking conversion for income/expense charts
 
 Exchange-rate entry points:
 
@@ -49,7 +47,7 @@ There are five complementary layers:
 
 ```mermaid
 flowchart LR
-  A["Accounts and Dashboard server functions"] --> B["Request-local Promise maps"]
+  A["Accounts server functions"] --> B["Request-local Promise maps"]
   B --> C["valuation.server.ts"]
   C --> D["getRateWithBacktracking(...)"]
   D --> E["Redis TimeSeries daily series"]
@@ -67,10 +65,6 @@ flowchart LR
 
 This deduplicates identical lookups during a single server-function execution.
 
-- `src/server/dashboard.ts`
-  - Uses `exchangeRateByKey: Map<string, Promise<number | null>>`
-  - Keys include source, target, and booking date (`YYYY-MM-DD`) so repeated
-    bookings on the same date reuse one in-flight lookup.
 - `src/server/accounts-queries.ts`
   - Uses per-request maps for currencies, cryptocurrencies, and securities.
   - For account reference balances, all lookups use `today`, so memoization keys

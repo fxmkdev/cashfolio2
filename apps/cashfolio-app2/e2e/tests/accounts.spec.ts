@@ -7,7 +7,6 @@ import {
 } from "../support/grid";
 import {
   resetAndSeedDatabase,
-  seedDashboardAssetAllocationBalances,
   seedAssetAccountWithMissingReferenceBalance,
   seedNonZeroConvertibleArchivedAndLiabilityBalances,
   seedNonZeroConvertibleAssetBalances,
@@ -21,45 +20,6 @@ let seeded: SeededData;
 test.beforeAll(async () => {
   seeded = await resetAndSeedDatabase();
 });
-
-async function expectDashboardPeriodInUrl(
-  page: Page,
-  accountBookId: string,
-  period: "12m" | "10y",
-) {
-  await expect
-    .poll(
-      () => {
-        const url = new URL(page.url());
-        return {
-          pathname: url.pathname.replace(/\/$/, ""),
-          period: url.searchParams.get("period"),
-        };
-      },
-      { timeout: 15_000 },
-    )
-    .toEqual({
-      pathname: `/${accountBookId}/dashboard`,
-      period: period === "10y" ? "10y" : null,
-    });
-}
-
-async function selectDashboardPeriod(page: Page, period: "12m" | "10y") {
-  const periodLabel = period === "10y" ? "Last 10 years" : "Last 12 months";
-  const dashboardCard = page
-    .getByRole("heading", { name: "Income & Expense Overview" })
-    .locator(
-      'xpath=ancestor::*[self::section or self::article or self::div][.//*[@role="radiogroup"]][1]',
-    );
-  const radioGroup = dashboardCard.getByRole("radiogroup", {
-    name: "Dashboard period",
-  });
-  const optionTrigger = radioGroup.getByText(periodLabel, { exact: true });
-
-  await expect(radioGroup).toBeVisible();
-  await expect(optionTrigger).toBeVisible();
-  await optionTrigger.click();
-}
 
 function isIgnorableAgChartsError(message: string): boolean {
   const normalizedMessage = message.replace(/\s+/g, " ").trim();
@@ -124,7 +84,7 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
   );
 }
 
-test("accounts is default account-book route and dashboard links to accounts", async ({
+test("accounts is default account-book route and links to period", async ({
   page,
 }) => {
   await page.goto(`/${seeded.accountBookId}`);
@@ -134,41 +94,9 @@ test("accounts is default account-book route and dashboard links to accounts", a
   );
   await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Dashboard" }).click();
-
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Income & Expense Overview" }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Last 12 months · Amounts shown in CHF"),
-  ).toBeVisible();
-  await expect(
-    page.getByText(
-      "No income or expense bookings found in the last 12 months.",
-    ),
-  ).toBeVisible();
-
-  await selectDashboardPeriod(page, "10y");
-  await expectDashboardPeriodInUrl(page, seeded.accountBookId, "10y");
-  await expect(
-    page.getByText("Last 10 years · Amounts shown in CHF"),
-  ).toBeVisible();
-  await expect(
-    page.getByText("No income or expense bookings found in the last 10 years."),
-  ).toBeVisible();
-
-  await page.reload();
-  await expectDashboardPeriodInUrl(page, seeded.accountBookId, "10y");
-  await expect(
-    page.getByText("Last 10 years · Amounts shown in CHF"),
-  ).toBeVisible();
-
-  await page.goto(`/${seeded.accountBookId}/dashboard`);
-  await expectDashboardPeriodInUrl(page, seeded.accountBookId, "12m");
-  await expect(
-    page.getByText("Last 12 months · Amounts shown in CHF"),
-  ).toBeVisible();
+  await page.getByRole("link", { name: "Period" }).click();
+  await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/period$`));
+  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
 
   await page.getByRole("link", { name: "Accounts" }).click();
   await expect(page).toHaveURL(
@@ -621,47 +549,4 @@ test("period picker opens on selected month/year page", async ({ page }) => {
   await expect(
     yearPicker.getByRole("button", { name: "2025" }),
   ).toHaveAttribute("data-selected", "true");
-});
-
-test("dashboard asset allocation donut renders for positive top-level asset groups", async ({
-  page,
-}) => {
-  await seedNonZeroConvertibleAssetBalances({
-    accountBookId: seeded.accountBookId,
-    counterAccountId: seeded.expenseAccount.id,
-  });
-
-  await seedDashboardAssetAllocationBalances({
-    accountBookId: seeded.accountBookId,
-    primaryAssetAccountId: seeded.cashAccount.id,
-    counterAccountId: seeded.expenseAccount.id,
-  });
-
-  await page.goto(`/${seeded.accountBookId}`);
-  await expect(page).toHaveURL(
-    new RegExp(`/${seeded.accountBookId}/accounts\\?tab=ASSET&mode=active$`),
-  );
-  await page.getByRole("link", { name: "Dashboard" }).click();
-  await expectDashboardPeriodInUrl(page, seeded.accountBookId, "12m");
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-
-  const assetAllocationCard = page.getByTestId(
-    "dashboard-asset-allocation-card",
-  );
-
-  await expect(assetAllocationCard).toBeVisible();
-  await expect(
-    assetAllocationCard.getByText(
-      "No positive, convertible asset balances are available for allocation.",
-    ),
-  ).toHaveCount(0);
-  await expect(
-    assetAllocationCard.locator(".ag-charts-no-data-overlay"),
-  ).toHaveCount(0);
-  await expect(assetAllocationCard.getByText("No data to display")).toHaveCount(
-    0,
-  );
-
-  const chartCanvas = assetAllocationCard.locator("canvas").first();
-  await expect(chartCanvas).toBeVisible();
 });
