@@ -1,19 +1,54 @@
+import { AccountType } from "@/.prisma-client/enums";
+import { startOfUtcDay } from "@/shared/date";
 import { getAccounts } from "@/server/accounts";
-import { getAccountForLedger, getLedgerData } from "@/server/ledger";
+import {
+  getAccountForLedger,
+  getLedgerData,
+  getLedgerPeriodBounds,
+} from "@/server/ledger";
 
 export async function loadLedgerPageData(args: {
   accountBookId: string;
   accountId: string;
+  period?: string;
 }) {
-  const [account, bookings, accounts] = await Promise.all([
-    getAccountForLedger({
-      data: { accountId: args.accountId, accountBookId: args.accountBookId },
-    }),
+  const accountPromise = getAccountForLedger({
+    data: { accountId: args.accountId, accountBookId: args.accountBookId },
+  });
+  const accountsPromise = getAccounts({
+    data: { accountBookId: args.accountBookId },
+  });
+  const account = await accountPromise;
+  const isPeriodFilterAllowed = account.type === AccountType.EQUITY;
+
+  const [ledgerData, accounts, periodBounds] = await Promise.all([
     getLedgerData({
-      data: { accountId: args.accountId, accountBookId: args.accountBookId },
+      data: {
+        accountId: args.accountId,
+        accountBookId: args.accountBookId,
+        period: isPeriodFilterAllowed ? args.period : undefined,
+        includeReferenceValues: isPeriodFilterAllowed,
+      },
     }),
-    getAccounts({ data: { accountBookId: args.accountBookId } }),
+    accountsPromise,
+    isPeriodFilterAllowed
+      ? getLedgerPeriodBounds({
+          data: {
+            accountId: args.accountId,
+            accountBookId: args.accountBookId,
+          },
+        })
+      : Promise.resolve({
+          minBookingDate: null,
+          maxDate: startOfUtcDay(new Date()).toISOString(),
+        }),
   ]);
 
-  return { account, bookings, accounts };
+  return {
+    account,
+    bookings: ledgerData.bookings,
+    referenceCurrency: ledgerData.referenceCurrency,
+    accounts,
+    periodBounds,
+  };
 }

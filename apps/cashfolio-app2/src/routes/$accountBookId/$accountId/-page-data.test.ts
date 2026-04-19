@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 import {
+  buildLedgerRows,
   buildLedgerBalanceChartPoints,
   createLedgerBalanceFormatter,
   deriveSimpleTransactionEditState,
@@ -25,13 +26,18 @@ function createLedgerAccount(type: AccountType): LedgerAccount {
 }
 
 function createLedgerBookings(
-  entries: Array<{ date: Date; value: number }>,
+  entries: Array<{
+    date: Date;
+    value: number;
+    valueInReferenceCurrency?: number | null;
+  }>,
 ): LedgerBookings {
   return entries.map((entry, index) => ({
     id: `booking-${index + 1}`,
     date: new Date(entry.date.getTime()),
     description: "",
     value: entry.value,
+    valueInReferenceCurrency: entry.valueInReferenceCurrency ?? entry.value,
     unit: Unit.CURRENCY,
     currency: "CHF",
     cryptocurrency: null,
@@ -405,6 +411,94 @@ describe("buildLedgerBalanceChartPoints", () => {
         dateLabel: "12.01.2026",
         balance: 100,
       },
+    ]);
+  });
+});
+
+describe("buildLedgerRows", () => {
+  test("keeps equity balance empty when period filter is not active", () => {
+    const rows = buildLedgerRows(
+      createLedgerAccount(AccountType.EQUITY),
+      createLedgerBookings([
+        {
+          date: localDate(2026, 0, 10, 9),
+          value: 100,
+        },
+      ]),
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        balance: null,
+      }),
+    ]);
+  });
+
+  test("shows converted equity debit/credit and running balance when period filter is active", () => {
+    const rows = buildLedgerRows(
+      createLedgerAccount(AccountType.EQUITY),
+      createLedgerBookings([
+        {
+          date: localDate(2026, 0, 10, 9),
+          value: 100,
+          valueInReferenceCurrency: 150,
+        },
+        {
+          date: localDate(2026, 0, 11, 9),
+          value: -40,
+          valueInReferenceCurrency: -40,
+        },
+      ]),
+      { hasPeriodFilter: true },
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        date: "11.01.2026",
+        referenceDebit: null,
+        referenceCredit: 40,
+        balance: -110,
+      }),
+      expect.objectContaining({
+        date: "10.01.2026",
+        referenceDebit: 150,
+        referenceCredit: null,
+        balance: -150,
+      }),
+    ]);
+  });
+
+  test("keeps converted equity balance empty when a booking conversion is unavailable", () => {
+    const rows = buildLedgerRows(
+      createLedgerAccount(AccountType.EQUITY),
+      createLedgerBookings([
+        {
+          date: localDate(2026, 0, 10, 9),
+          value: 100,
+          valueInReferenceCurrency: 150,
+        },
+        {
+          date: localDate(2026, 0, 11, 9),
+          value: -40,
+          valueInReferenceCurrency: null,
+        },
+      ]),
+      { hasPeriodFilter: true },
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        date: "11.01.2026",
+        referenceDebit: null,
+        referenceCredit: null,
+        balance: null,
+      }),
+      expect.objectContaining({
+        date: "10.01.2026",
+        referenceDebit: 150,
+        referenceCredit: null,
+        balance: -150,
+      }),
     ]);
   });
 });

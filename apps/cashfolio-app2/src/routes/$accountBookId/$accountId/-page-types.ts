@@ -1,6 +1,44 @@
 import { Unit } from "@/.prisma-client/enums";
+import {
+  formatExplicitPeriodSelectionLabel,
+  normalizeExplicitPeriodValue,
+  parseExplicitPeriodSelection,
+} from "@/shared/period";
 
-export type LedgerSearch = { transactionId?: string };
+export type LedgerSearch = { transactionId?: string; period?: string };
+
+export type LedgerExplicitPeriodSelection = {
+  value: string;
+  granularity: "month" | "year";
+  year: number;
+  month: number | null;
+  label: string;
+};
+
+export function normalizeLedgerPeriodValue(value: unknown): string | undefined {
+  return normalizeExplicitPeriodValue(value);
+}
+
+export function parseLedgerExplicitPeriod(
+  periodValue: string | undefined,
+): LedgerExplicitPeriodSelection | null {
+  if (!periodValue) {
+    return null;
+  }
+
+  const explicitPeriodSelection = parseExplicitPeriodSelection(periodValue);
+  if (!explicitPeriodSelection) {
+    return null;
+  }
+
+  return {
+    value: explicitPeriodSelection.value,
+    granularity: explicitPeriodSelection.granularity,
+    year: explicitPeriodSelection.year,
+    month: explicitPeriodSelection.month,
+    label: formatExplicitPeriodSelectionLabel(explicitPeriodSelection),
+  };
+}
 
 export function parseLedgerSearch(
   search: Record<string, unknown>,
@@ -10,6 +48,7 @@ export function parseLedgerSearch(
       typeof search.transactionId === "string"
         ? search.transactionId
         : undefined,
+    period: normalizeLedgerPeriodValue(search.period),
   };
 }
 
@@ -19,9 +58,8 @@ type LedgerServerModule = typeof import("@/server/ledger");
 export type LedgerAccount = Awaited<
   ReturnType<LedgerServerModule["getAccountForLedger"]>
 >;
-export type LedgerBookings = Awaited<
-  ReturnType<LedgerServerModule["getLedgerData"]>
->;
+type LedgerData = Awaited<ReturnType<LedgerServerModule["getLedgerData"]>>;
+export type LedgerBookings = LedgerData["bookings"];
 export type LedgerAccountOptionSource = Awaited<
   ReturnType<AccountsServerModule["getAccounts"]>
 >[number];
@@ -40,5 +78,7 @@ export type LedgerRow = {
   tradeCurrency: string | null;
   debit: number | null;
   credit: number | null;
+  referenceDebit: number | null;
+  referenceCredit: number | null;
   balance: number | null;
 };

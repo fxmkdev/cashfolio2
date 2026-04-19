@@ -77,6 +77,17 @@ function toFormValues(initial: AccountInitialValues): FormValues {
   };
 }
 
+function transformAccountValues(values: FormValues): TransformedFormValues {
+  const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
+    []) as [AccountType, EquityAccountSubtype?];
+
+  return {
+    ...values,
+    type,
+    ...(type === AccountType.EQUITY ? { equityAccountSubtype } : undefined),
+  };
+}
+
 export type ExistingNode = {
   id: string;
   name: string;
@@ -114,7 +125,7 @@ export function EditAccountModal({
   const isEdit = !!initialValues;
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const { isSubmitting, runSubmit } = useDialogSubmitState();
-  const form = useForm<FormValues, TransformedFormValues>({
+  const form = useForm<FormValues>({
     mode: "uncontrolled",
     initialValues: initialValues
       ? toFormValues(initialValues)
@@ -160,16 +171,7 @@ export function EditAccountModal({
           values.typeDescriptor as AccountType,
         ),
     },
-    transformValues: (values) => {
-      const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
-        []) as [AccountType, EquityAccountSubtype?];
-
-      return {
-        ...values,
-        type,
-        ...(type === AccountType.EQUITY ? { equityAccountSubtype } : undefined),
-      };
-    },
+    transformValues: transformAccountValues,
     onValuesChange: (values, previous) => {
       if (values.unit !== previous.unit) {
         forceUpdate();
@@ -189,7 +191,9 @@ export function EditAccountModal({
     }
   }, [opened, initialValues]);
 
-  const { unit, type, equityAccountSubtype } = form.getTransformedValues();
+  const { unit, type, equityAccountSubtype } = transformAccountValues(
+    form.getValues(),
+  );
   const handleClose = () => {
     if (isSubmitting) return;
     onClose();
@@ -207,7 +211,9 @@ export function EditAccountModal({
       size="lg"
     >
       <form
-        onSubmit={form.onSubmit((values) => runSubmit(() => onSubmit(values)))}
+        onSubmit={form.onSubmit((values) =>
+          runSubmit(() => onSubmit(transformAccountValues(values))),
+        )}
       >
         <Stack gap="xl">
           <Grid>

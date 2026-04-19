@@ -39,6 +39,7 @@ type PeriodBreakdownCardProps = {
   onSelectedBreakdownChange: (value: BreakdownType) => void;
   onSelectedChartTypeChange: (value: BreakdownChartType) => void;
   onDrillPathChange: (nextPath: string[]) => void;
+  onChartContainerDoubleClick?: (() => void) | null;
   footer?: ReactNode;
 };
 
@@ -64,6 +65,7 @@ export function PeriodBreakdownCard({
   onSelectedBreakdownChange,
   onSelectedChartTypeChange,
   onDrillPathChange,
+  onChartContainerDoubleClick,
   footer,
 }: PeriodBreakdownCardProps) {
   return (
@@ -181,7 +183,7 @@ export function PeriodBreakdownCard({
           </Group>
 
           <Text c="dimmed" size="xs">
-            Double-click a group to drill down.
+            Double-click a group to drill down, or an account to open ledger.
           </Text>
         </Group>
 
@@ -199,7 +201,11 @@ export function PeriodBreakdownCard({
         ) : null}
 
         {hasBreakdown ? (
-          <div className={classes.chartContainer}>
+          <div
+            className={classes.chartContainer}
+            data-testid="period-breakdown-chart"
+            onDoubleClick={onChartContainerDoubleClick ?? undefined}
+          >
             <AgCharts options={chartOptions} />
           </div>
         ) : (

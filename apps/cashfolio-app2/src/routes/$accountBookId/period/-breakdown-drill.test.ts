@@ -3,6 +3,7 @@ import {
   clampBreakdownPath,
   getBreakdownDrillState,
   isBreakdownNodeDrillable,
+  parseBreakdownAccountId,
   type BreakdownHierarchyNode,
 } from "./-breakdown-drill";
 
@@ -122,5 +123,16 @@ describe("isBreakdownNodeDrillable", () => {
         children: [],
       }),
     ).toBe(false);
+  });
+});
+
+describe("parseBreakdownAccountId", () => {
+  test("parses account node ids", () => {
+    expect(parseBreakdownAccountId("account:acc-1")).toBe("acc-1");
+  });
+
+  test("rejects non-account ids and empty account ids", () => {
+    expect(parseBreakdownAccountId("group:expenses")).toBeNull();
+    expect(parseBreakdownAccountId("account:")).toBeNull();
   });
 });

@@ -1,5 +1,19 @@
 const PERIOD_MONTH_REGEX = /^(\d{4})-(\d{2})$/;
 const PERIOD_YEAR_REGEX = /^(\d{4})$/;
+export const PERIOD_MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
 
 export const PERIOD_PRESET_MTD = "mtd";
 export const PERIOD_PRESET_YTD = "ytd";
@@ -27,6 +41,20 @@ export type ExplicitYearPeriod = {
   year: number;
   value: string;
 };
+
+export type ExplicitPeriodSelection =
+  | {
+      granularity: "month";
+      year: number;
+      month: number;
+      value: string;
+    }
+  | {
+      granularity: "year";
+      year: number;
+      month: null;
+      value: string;
+    };
 
 export function formatMonthPeriodValue(year: number, month: number): string {
   return `${String(year).padStart(4, "0")}-${String(month + 1).padStart(2, "0")}`;
@@ -63,6 +91,78 @@ export function parseExplicitYearPeriod(
   return {
     year,
     value: String(year).padStart(4, "0"),
+  };
+}
+
+export function parseExplicitPeriodSelection(
+  value: string,
+): ExplicitPeriodSelection | null {
+  const explicitMonth = parseExplicitMonthPeriod(value);
+  if (explicitMonth) {
+    return {
+      granularity: "month",
+      year: explicitMonth.year,
+      month: explicitMonth.month,
+      value: explicitMonth.value,
+    };
+  }
+
+  const explicitYear = parseExplicitYearPeriod(value);
+  if (explicitYear) {
+    return {
+      granularity: "year",
+      year: explicitYear.year,
+      month: null,
+      value: explicitYear.value,
+    };
+  }
+
+  return null;
+}
+
+export function normalizeExplicitPeriodValue(
+  value: unknown,
+): string | undefined {
+  return parseExplicitPeriodSelectionFromUnknown(value)?.value;
+}
+
+export function parseExplicitPeriodSelectionFromUnknown(
+  value: unknown,
+): ExplicitPeriodSelection | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return parseExplicitPeriodSelection(normalized) ?? undefined;
+}
+
+export function formatExplicitPeriodSelectionLabel(
+  selection: ExplicitPeriodSelection,
+): string {
+  if (selection.granularity === "month") {
+    return `${PERIOD_MONTH_NAMES[selection.month]} ${selection.year}`;
+  }
+
+  return selection.value;
+}
+
+export function getExplicitPeriodDateRange(
+  selection: ExplicitPeriodSelection,
+): {
+  from: Date;
+  toExclusive: Date;
+} {
+  if (selection.granularity === "month") {
+    return {
+      from: new Date(Date.UTC(selection.year, selection.month, 1)),
+      toExclusive: new Date(Date.UTC(selection.year, selection.month + 1, 1)),
+    };
+  }
+
+  return {
+    from: new Date(Date.UTC(selection.year, 0, 1)),
+    toExclusive: new Date(Date.UTC(selection.year + 1, 0, 1)),
   };
 }
 

@@ -104,6 +104,7 @@ export type LedgerPageViewProps = {
   simpleCounterAccountOptions: AccountOption[];
   editSimpleCounterAccountOptions: AccountOption[];
   rebookTargetAccountOptions: { value: string; label: string }[];
+  periodFilterControls?: ReactNode;
   viewSwitcher?: ReactNode;
   onRowDataUpdated: AgGridReactProps<LedgerRow>["onRowDataUpdated"];
   onAddTransactionClick: () => void;
@@ -165,6 +166,7 @@ export function LedgerPageView({
   simpleCounterAccountOptions,
   editSimpleCounterAccountOptions,
   rebookTargetAccountOptions,
+  periodFilterControls,
   viewSwitcher,
   onRowDataUpdated,
   onAddTransactionClick,
@@ -189,7 +191,17 @@ export function LedgerPageView({
   onConfirmDeleteTransaction,
 }: LedgerPageViewProps) {
   return (
-    <Container fluid py="xl" px="xl">
+    <Container
+      fluid
+      py="xl"
+      px="xl"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        minHeight: 0,
+      }}
+    >
       <TopPageHeader
         heading={
           <AccountPathHeading
@@ -233,8 +245,10 @@ export function LedgerPageView({
         }
       />
 
+      {periodFilterControls}
+
       <DataGrid
-        containerStyle={{ height: "calc(100vh - 8rem)" }}
+        containerStyle={{ flex: 1, minHeight: 0 }}
         rowData={rows}
         columnDefs={columnDefs}
         defaultColDef={{

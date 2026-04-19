@@ -52,6 +52,19 @@ function toFormValues(initial: AccountGroupInitialValues): FormValues {
   };
 }
 
+function transformAccountGroupValues(
+  values: FormValues,
+): AccountGroupTransformedFormValues {
+  const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
+    []) as [AccountType, EquityAccountSubtype?];
+
+  return {
+    ...values,
+    type,
+    ...(type === AccountType.EQUITY ? { equityAccountSubtype } : undefined),
+  };
+}
+
 export function EditAccountGroupModal({
   opened,
   onClose,
@@ -103,7 +116,7 @@ export function EditAccountGroupModal({
     return descendants;
   }, [editingId, existingNodes]);
 
-  const form = useForm<FormValues, AccountGroupTransformedFormValues>({
+  const form = useForm<FormValues>({
     mode: "uncontrolled",
     initialValues: initialValues
       ? toFormValues(initialValues)
@@ -127,16 +140,7 @@ export function EditAccountGroupModal({
           descendantGroupIds,
         }),
     },
-    transformValues: (values) => {
-      const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
-        []) as [AccountType, EquityAccountSubtype?];
-
-      return {
-        ...values,
-        type,
-        ...(type === AccountType.EQUITY ? { equityAccountSubtype } : undefined),
-      };
-    },
+    transformValues: transformAccountGroupValues,
   });
 
   useEffect(() => {
@@ -151,7 +155,9 @@ export function EditAccountGroupModal({
     }
   }, [opened, initialValues]);
 
-  const { type, equityAccountSubtype } = form.getTransformedValues();
+  const { type, equityAccountSubtype } = transformAccountGroupValues(
+    form.getValues(),
+  );
   const handleClose = () => {
     if (isSubmitting) return;
     onClose();
@@ -169,7 +175,9 @@ export function EditAccountGroupModal({
       size="lg"
     >
       <form
-        onSubmit={form.onSubmit((values) => runSubmit(() => onSubmit(values)))}
+        onSubmit={form.onSubmit((values) =>
+          runSubmit(() => onSubmit(transformAccountGroupValues(values))),
+        )}
       >
         <Stack gap="xl">
           <Grid>

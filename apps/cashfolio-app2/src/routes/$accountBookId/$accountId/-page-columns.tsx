@@ -16,6 +16,8 @@ import type { LedgerRow } from "./-page-types";
 
 export function useLedgerColumnDefs(args: {
   accountBookId: string;
+  hasPeriodFilter: boolean;
+  referenceCurrency: string | null;
   isEquity: boolean;
   isIncome: boolean;
   isExpense: boolean;
@@ -36,6 +38,8 @@ export function useLedgerColumnDefs(args: {
 }): ColDef<LedgerRow>[] {
   const {
     accountBookId,
+    hasPeriodFilter,
+    referenceCurrency,
     isEquity,
     isIncome,
     isExpense,
@@ -131,13 +135,42 @@ export function useLedgerColumnDefs(args: {
               filter: "agNumberColumnFilter",
             },
           ]),
-      ...(isEquity
+      ...(isEquity && !isIncome
+        ? [
+            {
+              field: "referenceDebit" as const,
+              headerName: referenceCurrency
+                ? `Debit (${referenceCurrency})`
+                : "Debit (Ref)",
+              width: 150,
+              type: FORMATTED_NUMERIC_COLUMN,
+              filter: "agNumberColumnFilter",
+            },
+          ]
+        : []),
+      ...(isEquity && !isExpense
+        ? [
+            {
+              field: "referenceCredit" as const,
+              headerName: referenceCurrency
+                ? `Credit (${referenceCurrency})`
+                : "Credit (Ref)",
+              width: 150,
+              type: FORMATTED_NUMERIC_COLUMN,
+              filter: "agNumberColumnFilter",
+            },
+          ]
+        : []),
+      ...(isEquity && !hasPeriodFilter
         ? []
         : [
             {
               field: "balance" as const,
-              headerName: "Balance",
-              width: 130,
+              headerName:
+                isEquity && hasPeriodFilter && referenceCurrency
+                  ? `Balance (${referenceCurrency})`
+                  : "Balance",
+              width: 150,
               type: FORMATTED_NUMERIC_COLUMN,
               filter: "agNumberColumnFilter",
             },
@@ -209,6 +242,8 @@ export function useLedgerColumnDefs(args: {
     ],
     [
       accountBookId,
+      hasPeriodFilter,
+      referenceCurrency,
       isEquity,
       isIncome,
       isExpense,
