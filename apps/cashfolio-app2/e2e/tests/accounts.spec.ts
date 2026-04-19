@@ -101,10 +101,6 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
     throw new Error("Breakdown chart bounds were not available.");
   }
 
-  const chartDatumNode = breakdownCard
-    .getByRole("img", { name: /Amount;/ })
-    .first();
-
   const expectedPath = `/${args.accountBookId}/${args.accountId}`;
   const tryExpectLedgerNavigation = async () => {
     await expect
@@ -122,21 +118,15 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
   };
 
   const clickTargets: Array<[number, number]> = [
-    [0.5, 0.24],
-    [0.5, 0.35],
-    [0.5, 0.46],
-    [0.45, 0.35],
-    [0.55, 0.35],
-    [0.5, 0.56],
+    [0.5, 0.8],
+    [0.5, 0.7],
+    [0.5, 0.6],
+    [0.5, 0.5],
+    [0.45, 0.7],
+    [0.55, 0.7],
   ];
 
   for (const [relativeX, relativeY] of clickTargets) {
-    try {
-      await chartDatumNode.dblclick({ timeout: 1_000, force: true });
-    } catch {
-      // Fall back to coordinate-based click when chart accessibility nodes are unavailable.
-    }
-
     try {
       const x = Math.round(chartBounds.x + chartBounds.width * relativeX);
       const y = Math.round(chartBounds.y + chartBounds.height * relativeY);
