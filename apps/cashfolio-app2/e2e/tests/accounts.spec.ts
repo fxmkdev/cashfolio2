@@ -84,7 +84,9 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
   const breakdownChartTypeControl = args.page.getByRole("radiogroup", {
     name: "Breakdown chart type",
   });
-  await breakdownChartTypeControl.getByText("Bar", { exact: true }).click();
+  await breakdownChartTypeControl
+    .getByRole("radio", { name: "Bar" })
+    .check({ force: true });
 
   const breakdownCard = args.page
     .getByRole("heading", { name: "Expenses Breakdown" })
