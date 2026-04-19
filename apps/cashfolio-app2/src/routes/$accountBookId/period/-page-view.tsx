@@ -376,11 +376,11 @@ export function PeriodPageView({
   const gainsLossesLabel = overview.stats.gainsLosses >= 0 ? "Gains" : "Losses";
   const savingsRateLabel = useMemo(() => {
     if (overview.stats.income === 0) {
-      return "Savings rate: —";
+      return "N/A";
     }
 
     const savingsRateRatio = overview.stats.savings / overview.stats.income;
-    return `Savings rate: ${savingsRateFormatter.format(savingsRateRatio)}`;
+    return savingsRateFormatter.format(savingsRateRatio);
   }, [overview.stats.income, overview.stats.savings, savingsRateFormatter]);
   const waterfallData = useMemo<WaterfallDatum[]>(
     () => [

@@ -427,7 +427,7 @@ export const HappyPath: Story = {
     await expect(canvas.queryByText("Total Income")).not.toBeInTheDocument();
     await expect(canvas.queryByText("Total Expenses")).not.toBeInTheDocument();
     await expect(canvas.queryByText("Gains / Losses")).not.toBeInTheDocument();
-    await expect(canvas.getByText(/Savings rate:/)).toBeInTheDocument();
+    await expect(canvas.getByText("31.3%")).toBeInTheDocument();
     await expect(canvas.getByRole("radio", { name: "Expenses" })).toBeChecked();
     await expect(canvas.getByText("Gains")).toBeInTheDocument();
   },
