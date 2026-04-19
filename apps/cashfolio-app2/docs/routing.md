@@ -26,8 +26,6 @@ Related docs:
   `POST /api/logto/sign-out`
 - `$accountBookId/index.tsx` - index redirect route that forwards to
   `$accountBookId/accounts`
-- `$accountBookId/dashboard/route.tsx` - dashboard page with a monthly
-  income/expense chart and period switch (last 12 months or last 10 years)
 - `$accountBookId/accounts/route.tsx` - accounts page with tabs (one per account
   type: Asset, Liability, Income, Expense, Gain/Loss)
   - Loader data is tab-scoped: only the selected tab is fetched in the route
@@ -66,8 +64,6 @@ Related docs:
   auto-scroll and highlight a booking row
 - `$accountBookId/$accountId/chart/route.tsx` intentionally has no search
   params; the ledger/chart switch does not carry `transactionId`
-- `$accountBookId/dashboard/route.tsx` uses `period: "12m" | "10y"` to switch
-  the dashboard overview between the default 12-month view and a 10-year view
 
 ### Global Navigation Progress
 
@@ -77,7 +73,7 @@ Related docs:
   `@mantine/nprogress` + `useRouterState`
 - The progress bar tracks URL transitions only (loading while
   `state.location.href` differs from the last settled URL), including same-route
-  search-param navigations (for example, dashboard period switching)
+  search-param navigations (for example, period preset switching)
 - It intentionally does not run for same-URL refetches triggered via
   `router.invalidate()` after mutations
 

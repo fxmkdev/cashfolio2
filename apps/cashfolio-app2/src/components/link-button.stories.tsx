@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import { IconLayoutDashboard } from "@tabler/icons-react";
+import { IconCalendarMonth } from "@tabler/icons-react";
 import { LinkButton } from "./link-button";
 
 const meta = {
@@ -9,7 +9,7 @@ const meta = {
   args: {
     children: "Open Accounts",
     variant: "default",
-    leftSection: <IconLayoutDashboard size={16} />,
+    leftSection: <IconCalendarMonth size={16} />,
     to: "/$accountBookId/accounts",
     params: { accountBookId: "storybook-book" } as never,
     search: { tab: "ASSET", mode: "active" } as never,

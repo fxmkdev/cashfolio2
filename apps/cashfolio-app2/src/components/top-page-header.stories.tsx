@@ -19,7 +19,7 @@ type Story = StoryObj<typeof meta>;
 export const TitleHeading: Story = {
   render: () => (
     <TopPageHeader
-      heading={<Title order={2}>Dashboard</Title>}
+      heading={<Title order={2}>Period</Title>}
       actions={
         <Button variant="default" leftSection={<IconListDetails size={16} />}>
           Accounts

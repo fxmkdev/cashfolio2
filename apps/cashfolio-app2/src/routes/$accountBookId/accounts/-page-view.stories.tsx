@@ -479,10 +479,5 @@ export const RouteSmoke: Story = {
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
       "/storybook-book/period",
     );
-
-    await userEvent.click(canvas.getByRole("link", { name: "Dashboard" }));
-    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-book/dashboard",
-    );
   },
 };

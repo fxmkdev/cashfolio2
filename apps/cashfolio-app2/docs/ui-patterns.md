@@ -23,7 +23,7 @@ paths are relative to that app directory.
   as a button with an `onClick` navigation handler.
 - Use:
   - `LinkAnchor` for text links/breadcrumbs
-  - `LinkButton` for button-styled navigation actions (for example "Dashboard",
+  - `LinkButton` for button-styled navigation actions (for example "Period",
     "Archive", "Accounts")
   - `LinkTab` for route-driven tab navigation (for example Asset/Liability/etc.
     on the accounts list)
@@ -141,30 +141,6 @@ submit UX and prevent duplicate requests.
   segments, then account name.
 - Breadcrumb links should point to `/$accountBookId/accounts` and preserve the
   current `tab` and desired `mode` in route search params.
-
-## Dashboard Chart Pattern
-
-- Dashboard route (`src/routes/$accountBookId/index.tsx`) is the default entry
-  for an account book.
-- The dashboard currently renders two widgets:
-  - **Income & Expense Overview** chart combining:
-    - grouped absolute bars for Income and Expense
-    - a signed Net line (`income - expense`) on the same axis
-  - **Asset Allocation** donut based on current active asset balances
-    (independent from the 12m/10y period switch)
-- Data is normalized to the account-book reference currency.
-- The period switch supports:
-  - **Last 12 months** with monthly buckets
-  - **Last 10 years** with yearly buckets (`currentYear - 9` through
-    `currentYear`; current year is year-to-date up to now)
-- When conversion rates are unavailable for some bookings, the chart remains
-  visible and a partial-data note is shown.
-- Asset allocation inclusion rules:
-  - include positive, convertible balances only
-  - roll grouped accounts up to their top-level asset group
-  - include ungrouped asset accounts as individual slices
-  - exclude missing-reference and non-positive balances, and show a partial-data
-    note when exclusions happen
 
 ## Period Breakdown Drill-Down Pattern
 

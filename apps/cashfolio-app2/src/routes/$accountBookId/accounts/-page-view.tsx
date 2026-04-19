@@ -1,10 +1,5 @@
 import { Button, Container, Group, Tabs, Title } from "@mantine/core";
-import {
-  IconArchive,
-  IconCalendarMonth,
-  IconLayoutDashboard,
-  IconPlus,
-} from "@tabler/icons-react";
+import { IconArchive, IconCalendarMonth, IconPlus } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
 import { LinkButton } from "@/components/link-button";
 import { LinkTab } from "@/components/link-tab";
@@ -156,14 +151,6 @@ export function AccountsPageView({
         }
         actions={
           <Group>
-            <LinkButton
-              variant="default"
-              leftSection={<IconLayoutDashboard size={16} />}
-              to="/$accountBookId/dashboard"
-              params={{ accountBookId }}
-            >
-              Dashboard
-            </LinkButton>
             <LinkButton
               variant="default"
               leftSection={<IconCalendarMonth size={16} />}

@@ -22,9 +22,8 @@ Related docs:
 ## Core Modules
 
 - Key files: `accounts.ts` (barrel), `accounts-queries.ts`,
-  `accounts-mutations.ts`, `dashboard.ts`, `ledger.ts`, `transactions.ts`
-  (barrel), `transactions-queries.ts`, `transactions-mutations.ts`,
-  `valuation.server.ts`
+  `accounts-mutations.ts`, `ledger.ts`, `transactions.ts` (barrel),
+  `transactions-queries.ts`, `transactions-mutations.ts`, `valuation.server.ts`
 - Valuation internals live in `src/server/valuation/`: `providers.ts`,
   `cache.ts`, `backtracking.ts`, `keys.ts`, `types.ts`, `date-utils.ts`,
   `constants.ts`
