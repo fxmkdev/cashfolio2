@@ -1,4 +1,6 @@
-export const BASE_CURRENCY = "USD";
+import { VALUATION_BASE_CURRENCY } from "../../shared/valuation-base-currency";
+
+export const BASE_CURRENCY = VALUATION_BASE_CURRENCY;
 export const MAX_BACKTRACK_DAYS = 30;
 export const HISTORICAL_DATA_DAY_LAG = 1;
 export const HISTORICAL_DATA_AVAILABLE_AT_UTC_MINUTE = 5;

@@ -1,0 +1,41 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.contentLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.unitsCard,
+.chartCard {
+  display: flex;
+  flex-direction: column;
+}
+
+.gridContainer {
+  margin-top: 12px;
+  height: 320px;
+}
+
+.chartContainer {
+  margin-top: 12px;
+  min-height: 320px;
+}
+
+.chart {
+  min-height: 320px;
+}
+
+@media (min-width: 50rem) {
+  .contentLayout {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  }
+}
+
+.chartContainer :global(.ag-charts-overlay) {
+  color: var(--mantine-color-dimmed);
+}

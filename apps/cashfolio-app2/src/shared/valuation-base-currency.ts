@@ -1,0 +1,1 @@
+export const VALUATION_BASE_CURRENCY = "USD";
