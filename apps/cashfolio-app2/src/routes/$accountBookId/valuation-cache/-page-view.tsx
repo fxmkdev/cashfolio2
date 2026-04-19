@@ -36,6 +36,7 @@ import {
   type ValuationCacheUnitsResponse,
   type ValuationCacheUnitRow,
 } from "@/server/valuation-cache";
+import { VALUATION_BASE_CURRENCY } from "@/shared/valuation-base-currency";
 import {
   getRowsForValuationUnitTab,
   resolveSelectedUnit,
@@ -63,6 +64,18 @@ type SeriesState = {
   selectedUnitKey: string | null;
   points: ValuationCacheSeriesPoint[];
 };
+
+function getCachedSeriesContextText(tab: ValuationUnitTab): string {
+  if (tab === "CURRENCY") {
+    return `Currency cache values are ${VALUATION_BASE_CURRENCY} -> selected currency rates (valuation base currency, not account-book reference currency).`;
+  }
+
+  if (tab === "CRYPTOCURRENCY") {
+    return `Cryptocurrency cache values are prices in ${VALUATION_BASE_CURRENCY} per coin (valuation base currency, not account-book reference currency).`;
+  }
+
+  return "Security cache values are prices in each security's trade currency.";
+}
 
 function getColumnsForTab(
   tab: ValuationUnitTab,
@@ -403,6 +416,10 @@ export function ValuationCachePageView({
     () => getColumnsForTab(selectedTab),
     [selectedTab],
   );
+  const seriesContextText = useMemo(
+    () => getCachedSeriesContextText(selectedTab),
+    [selectedTab],
+  );
 
   return (
     <Container fluid py="xl" px="xl" className={classes.page}>
@@ -489,6 +506,9 @@ export function ValuationCachePageView({
                 Select a unit to display its cached history.
               </Text>
             )}
+            <Text c="dimmed" size="sm">
+              {seriesContextText}
+            </Text>
           </Stack>
 
           {!selectedUnit ? (
