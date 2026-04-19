@@ -352,13 +352,13 @@ async function computeEndOfPeriodBalanceStatsWithConvertedBalances(args: {
       const rawBalance = args.rawBalanceByAccountId.get(account.id) ?? 0;
 
       if (account.unit == null) {
-      return {
-        accountId: account.id,
-        accountType: account.type,
-        convertedBalance: null as number | null,
-        skipped: rawBalance !== 0,
-      };
-    }
+        return {
+          accountId: account.id,
+          accountType: account.type,
+          convertedBalance: null as number | null,
+          skipped: rawBalance !== 0,
+        };
+      }
 
       const convertedBalance = await args.convertBalanceToReference({
         value: rawBalance,
@@ -425,9 +425,8 @@ export async function computeEndOfPeriodBalanceStats(args: {
     referenceCurrency: string;
   }) => Promise<number | null>;
 }): Promise<EndOfPeriodBalanceStats> {
-  const result = await computeEndOfPeriodBalanceStatsWithConvertedBalances(
-    args,
-  );
+  const result =
+    await computeEndOfPeriodBalanceStatsWithConvertedBalances(args);
 
   return {
     assets: result.assets,
@@ -955,16 +954,16 @@ export const getPeriodOverview = createServerFn({
     const roundedTotalReturn = round2(roundedSavings + roundedGainsLosses);
     const endOfPeriodBalanceStats =
       await computeEndOfPeriodBalanceStatsWithConvertedBalances({
-      accounts: assetLiabilityAccounts,
-      rawBalanceByAccountId: endOfPeriodRawBalanceByAccountId,
-      periodEnd: selection.to,
-      referenceCurrency,
-      convertBalanceToReference: async (input) =>
-        convertBookingValueToReference({
-          ...input,
-          exchangeRateByKey,
-        }),
-    });
+        accounts: assetLiabilityAccounts,
+        rawBalanceByAccountId: endOfPeriodRawBalanceByAccountId,
+        periodEnd: selection.to,
+        referenceCurrency,
+        convertBalanceToReference: async (input) =>
+          convertBookingValueToReference({
+            ...input,
+            exchangeRateByKey,
+          }),
+      });
     skippedBookingsCount += endOfPeriodBalanceStats.skippedCount;
 
     const roundedEndOfPeriodAssets = round2(endOfPeriodBalanceStats.assets);
@@ -973,15 +972,17 @@ export const getPeriodOverview = createServerFn({
     );
     const roundedEndOfPeriodNetWorth = round2(endOfPeriodBalanceStats.netWorth);
 
-    const convertedPeriodEndBalances = assetLiabilityAccounts.map((account) => ({
-      accountId: account.id,
-      accountName: account.name,
-      groupId: account.groupId,
-      accountType: account.type,
-      convertedBalanceInReferenceCurrency:
-        endOfPeriodBalanceStats.convertedBalanceByAccountId.get(account.id) ??
-        null,
-    }));
+    const convertedPeriodEndBalances = assetLiabilityAccounts.map(
+      (account) => ({
+        accountId: account.id,
+        accountName: account.name,
+        groupId: account.groupId,
+        accountType: account.type,
+        convertedBalanceInReferenceCurrency:
+          endOfPeriodBalanceStats.convertedBalanceByAccountId.get(account.id) ??
+          null,
+      }),
+    );
     const assetBreakdown = buildPeriodEndAllocationBreakdown({
       items: convertedPeriodEndBalances.filter(
         (
