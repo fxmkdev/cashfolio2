@@ -557,7 +557,7 @@ export function PeriodPageView({
     {
       id: "endOfPeriodLiabilities",
       label: "Liabilities",
-      value: currencyFormatter.format(overview.stats.endOfPeriodLiabilities),
+      value: currencyFormatter.format(-overview.stats.endOfPeriodLiabilities),
       valueColor: overview.stats.endOfPeriodLiabilities >= 0 ? "red" : "green",
     },
   ];
