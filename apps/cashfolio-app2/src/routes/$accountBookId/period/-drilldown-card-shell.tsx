@@ -26,6 +26,7 @@ type DrilldownCardShellProps = {
   emptyMessage: string;
   chartOptions: PeriodBreakdownChartOptions;
   onDrillPathChange: (nextPath: string[]) => void;
+  onChartContainerDoubleClick?: (() => void) | null;
   headerControls?: ReactNode;
   footer?: ReactNode;
   drillHint?: string;
@@ -41,6 +42,7 @@ export function DrilldownCardShell({
   emptyMessage,
   chartOptions,
   onDrillPathChange,
+  onChartContainerDoubleClick,
   headerControls,
   footer,
   drillHint = "Double-click a group to drill down.",
@@ -133,7 +135,10 @@ export function DrilldownCardShell({
         ) : null}
 
         {hasData ? (
-          <div className={classes.chartContainer}>
+          <div
+            className={classes.chartContainer}
+            onDoubleClick={onChartContainerDoubleClick ?? undefined}
+          >
             <AgCharts options={chartOptions} />
           </div>
         ) : (
