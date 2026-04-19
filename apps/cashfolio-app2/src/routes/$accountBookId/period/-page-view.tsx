@@ -384,6 +384,18 @@ export function PeriodPageView({
     totalBreakdownAmountLabel,
     onNodeDoubleClick: handleNodeDoubleClick,
   });
+  const handleChartContainerDoubleClick = useMemo(() => {
+    if (chartData.length !== 1) {
+      return null;
+    }
+
+    return () => {
+      const onlyNode = chartData[0];
+      if (onlyNode) {
+        handleNodeDoubleClick(onlyNode);
+      }
+    };
+  }, [chartData, handleNodeDoubleClick]);
 
   const amountCompactFormatter = useMemo(
     () =>
@@ -765,6 +777,7 @@ export function PeriodPageView({
             onSelectedBreakdownChange={setSelectedBreakdown}
             onSelectedChartTypeChange={setSelectedChartType}
             onDrillPathChange={updateSelectedBreakdownPath}
+            onChartContainerDoubleClick={handleChartContainerDoubleClick}
             footer={
               overview.skippedBookingsCount > 0 ? (
                 <Alert

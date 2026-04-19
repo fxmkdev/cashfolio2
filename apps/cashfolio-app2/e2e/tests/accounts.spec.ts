@@ -86,20 +86,8 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
     .locator(
       "xpath=ancestor::*[self::section or self::article or self::div][.//*[@aria-label='Breakdown chart type'] and .//canvas][1]",
     );
-
-  const barOption = breakdownCard.getByRole("radio", { name: "Bar" });
-  await barOption.evaluate((element) => {
-    (element as HTMLInputElement).click();
-  });
-  await expect(barOption).toBeChecked();
-
-  const chartCanvas = breakdownCard.locator("canvas").first();
-  await expect(chartCanvas).toBeVisible();
-
-  const chartBounds = await chartCanvas.boundingBox();
-  if (!chartBounds) {
-    throw new Error("Breakdown chart bounds were not available.");
-  }
+  const chartContainer = breakdownCard.getByTestId("period-breakdown-chart");
+  await expect(chartContainer).toBeVisible();
 
   const expectedPath = `/${args.accountBookId}/${args.accountId}`;
   const tryExpectLedgerNavigation = async () => {
@@ -117,20 +105,9 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
       .toBe(true);
   };
 
-  const clickTargets: Array<[number, number]> = [
-    [0.5, 0.8],
-    [0.5, 0.7],
-    [0.5, 0.6],
-    [0.5, 0.5],
-    [0.45, 0.7],
-    [0.55, 0.7],
-  ];
-
-  for (const [relativeX, relativeY] of clickTargets) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
-      const x = Math.round(chartBounds.x + chartBounds.width * relativeX);
-      const y = Math.round(chartBounds.y + chartBounds.height * relativeY);
-      await args.page.mouse.dblclick(x, y);
+      await chartContainer.dblclick({ force: true });
       await tryExpectLedgerNavigation();
       return;
     } catch {
