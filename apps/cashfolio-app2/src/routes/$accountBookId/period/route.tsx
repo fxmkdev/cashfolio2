@@ -1,16 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
-import { getPeriodOverview } from "../../server/period";
+import { getPeriodOverview } from "../../../server/period";
 import {
   DEFAULT_PERIOD_VALUE,
   formatBreakdownPathSearchValue,
   getBreakdownPathByType,
   getPeriodValue,
   parsePeriodSearch,
-} from "./-period/-period-page-types";
+} from "./-period-page-types";
 
 const PeriodPageView = lazy(async () => {
-  const module = await import("./-period/-period-page-view");
+  const module = await import("./-period-page-view");
   return { default: module.PeriodPageView };
 });
 

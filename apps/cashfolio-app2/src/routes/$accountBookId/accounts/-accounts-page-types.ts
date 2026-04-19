@@ -3,6 +3,7 @@ import {
   EquityAccountSubtype,
 } from "../../../.prisma-client/enums";
 import type { getAccountTreeData } from "../../../server/accounts";
+import type { TabValue } from "../../../shared/account-tabs";
 
 export const tabs = [
   { value: "ASSET", label: "Asset", type: AccountType.ASSET },
@@ -27,7 +28,7 @@ export const tabs = [
   },
 ] as const;
 
-export type TabValue = (typeof tabs)[number]["value"];
+export type { TabValue };
 export type AccountsMode = "active" | "archived";
 
 export function getTabDefinition(tabValue: TabValue) {

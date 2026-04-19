@@ -22,8 +22,8 @@ import { ensureChartModulesRegistered } from "../../../ag-chart-modules";
 import { LinkButton } from "../../../components/link-button";
 import { TopPageHeader } from "../../../components/top-page-header";
 import type { getPeriodOverview } from "../../../server/period";
+import { getDashboardChartThemeColors } from "../../../shared/dashboard-chart-theme";
 import { formatMonthPeriodValue } from "../../../shared/period";
-import { getDashboardChartThemeColors } from "../-dashboard/-dashboard-chart-theme";
 import { PeriodBreakdownCard } from "./-period-breakdown-card";
 import {
   clampBreakdownPath,

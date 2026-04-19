@@ -1,15 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
-import { getDashboardIncomeExpenseOverview } from "../../server/dashboard";
+import { getDashboardIncomeExpenseOverview } from "../../../server/dashboard";
 import {
   DASHBOARD_PERIOD_10Y,
   getDashboardPeriod,
   parseDashboardSearch,
   type DashboardPeriod,
-} from "./-dashboard/-dashboard-page-types";
+} from "./-dashboard-page-types";
 
 const DashboardPageView = lazy(async () => {
-  const module = await import("./-dashboard/-dashboard-page-view");
+  const module = await import("./-dashboard-page-view");
   return { default: module.DashboardPageView };
 });
 

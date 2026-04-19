@@ -1,17 +1,14 @@
 import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
-import { AccountType } from "../../.prisma-client/enums";
-import { useTransactionScroll } from "../../hooks/use-transaction-scroll";
-import { loadLedgerPageData } from "./-ledger/-ledger-page-loader";
-import { useLedgerPageController } from "./-ledger/-ledger-page-controller";
-import {
-  parseLedgerSearch,
-  type LedgerRow,
-} from "./-ledger/-ledger-page-types";
-import { LedgerViewSegmentedControl } from "./-ledger/-ledger-view-segmented-control";
+import { AccountType } from "../../../.prisma-client/enums";
+import { useTransactionScroll } from "../../../hooks/use-transaction-scroll";
+import { loadLedgerPageData } from "./-ledger-page-loader";
+import { useLedgerPageController } from "./-ledger-page-controller";
+import { parseLedgerSearch, type LedgerRow } from "./-ledger-page-types";
+import { LedgerViewSegmentedControl } from "./-ledger-view-segmented-control";
 
 const LedgerPageView = lazy(async () => {
-  const module = await import("./-ledger/-ledger-page-view");
+  const module = await import("./-ledger-page-view");
   return { default: module.LedgerPageView };
 });
 

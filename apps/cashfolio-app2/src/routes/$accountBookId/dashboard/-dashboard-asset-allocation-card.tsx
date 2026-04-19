@@ -15,7 +15,7 @@ import type {
 } from "ag-charts-community";
 import { useMemo } from "react";
 import type { getDashboardIncomeExpenseOverview } from "../../../server/dashboard";
-import { getDashboardChartThemeColors } from "./-dashboard-chart-theme";
+import { getDashboardChartThemeColors } from "../../../shared/dashboard-chart-theme";
 import classes from "./-dashboard-page-view.module.css";
 
 type AssetAllocation = Awaited<

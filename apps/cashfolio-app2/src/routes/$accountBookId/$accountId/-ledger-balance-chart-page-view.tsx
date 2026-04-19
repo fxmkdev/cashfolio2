@@ -15,7 +15,7 @@ import { ensureChartModulesRegistered } from "../../../ag-chart-modules";
 import { AccountPathHeading } from "../../../components/account-path-heading";
 import { TopPageHeader } from "../../../components/top-page-header";
 import { getTypeLabel } from "../../../shared/account-utils";
-import type { TabValue } from "../-accounts/-accounts-page-types";
+import type { TabValue } from "../../../shared/account-tabs";
 import type { LedgerBalanceChartPoint } from "./-ledger-page-data";
 import type { loadLedgerPageData } from "./-ledger-page-loader";
 import classes from "./-ledger-balance-chart-page-view.module.css";

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { LedgerPageContent } from "../$accountId";
+import { LedgerPageContent } from "./route";
 
 export const Route = createFileRoute("/$accountBookId/$accountId/")({
   component: LedgerIndexPage,

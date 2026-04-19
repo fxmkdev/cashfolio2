@@ -19,7 +19,7 @@ import { TopPageHeader } from "../../../components/top-page-header";
 import type { ReactNode } from "react";
 import type { Unit } from "../../../.prisma-client/enums";
 import { getTypeLabel } from "../../../shared/account-utils";
-import type { TabValue } from "../-accounts/-accounts-page-types";
+import type { TabValue } from "../../../shared/account-tabs";
 import type { SimpleTransactionEditInitialValues } from "./-ledger-page-data";
 import type { loadLedgerPageData } from "./-ledger-page-loader";
 import type { LedgerRow } from "./-ledger-page-types";

@@ -20,7 +20,7 @@ import {
   DASHBOARD_PERIOD_12M,
   type DashboardPeriod,
 } from "./-dashboard-page-types";
-import { getDashboardChartThemeColors } from "./-dashboard-chart-theme";
+import { getDashboardChartThemeColors } from "../../../shared/dashboard-chart-theme";
 import classes from "./-dashboard-page-view.module.css";
 
 export type DashboardIncomeExpenseCardProps = {
