@@ -29,6 +29,8 @@ type LedgerPeriodFilterCardProps = {
   onPeriodStep: (step: -1 | 1) => void;
   selectedMonthValue: string | null;
   selectedYearValue: string | null;
+  monthPickerDefaultValue: string;
+  yearPickerDefaultValue: string;
   minMonthPickerDate: Date;
   maxMonthPickerDate: Date;
   minYearPickerDate: Date;
@@ -50,6 +52,8 @@ export function LedgerPeriodFilterCard({
   onPeriodStep,
   selectedMonthValue,
   selectedYearValue,
+  monthPickerDefaultValue,
+  yearPickerDefaultValue,
   minMonthPickerDate,
   maxMonthPickerDate,
   minYearPickerDate,
@@ -103,7 +107,7 @@ export function LedgerPeriodFilterCard({
                 {periodMode === "month" ? (
                   <MonthPicker
                     value={selectedMonthValue}
-                    defaultDate={selectedMonthValue ?? undefined}
+                    defaultDate={monthPickerDefaultValue}
                     onChange={onMonthPickerChange}
                     minDate={minMonthPickerDate}
                     maxDate={maxMonthPickerDate}
@@ -111,7 +115,7 @@ export function LedgerPeriodFilterCard({
                 ) : (
                   <YearPicker
                     value={selectedYearValue}
-                    defaultDate={selectedYearValue ?? undefined}
+                    defaultDate={yearPickerDefaultValue}
                     onChange={onYearPickerChange}
                     minDate={minYearPickerDate}
                     maxDate={maxYearPickerDate}

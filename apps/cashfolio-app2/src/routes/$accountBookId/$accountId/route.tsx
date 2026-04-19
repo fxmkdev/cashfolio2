@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
-import { Suspense, lazy, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { AccountType } from "@/.prisma-client/enums";
 import { useTransactionScroll } from "@/hooks/use-transaction-scroll";
 import { formatMonthPeriodValue } from "@/shared/period";
@@ -18,6 +18,7 @@ import {
   getPeriodModeChangeValue,
   getPeriodStepValue,
   getYearPickerValue,
+  type PeriodMode,
 } from "../period/-selector-model";
 
 const LedgerPageView = lazy(async () => {
@@ -49,6 +50,8 @@ export function LedgerPageContent() {
   const { transactionId, period } = Route.useSearch();
   const router = useRouter();
   const [pickerOpened, setPickerOpened] = useState(false);
+  const [unfilteredPeriodMode, setUnfilteredPeriodMode] =
+    useState<PeriodMode>("month");
   const isPeriodFilterAvailable =
     loaderData.account.type === AccountType.EQUITY;
 
@@ -59,6 +62,12 @@ export function LedgerPageContent() {
     () => (isPeriodFilterAvailable ? parseLedgerExplicitPeriod(period) : null),
     [isPeriodFilterAvailable, period],
   );
+  useEffect(() => {
+    if (!selectedPeriod) {
+      return;
+    }
+    setUnfilteredPeriodMode(selectedPeriod.granularity);
+  }, [selectedPeriod]);
   const maxDate = useMemo(
     () => new Date(loaderData.periodBounds.maxDate),
     [loaderData.periodBounds.maxDate],
@@ -70,7 +79,7 @@ export function LedgerPageContent() {
         : null,
     [loaderData.periodBounds.minBookingDate],
   );
-  const periodMode = selectedPeriod?.granularity ?? "month";
+  const periodMode = selectedPeriod?.granularity ?? unfilteredPeriodMode;
   const selectedYear = selectedPeriod?.year ?? maxDate.getUTCFullYear();
   const selectedMonth = selectedPeriod?.month ?? maxDate.getUTCMonth();
   const periodSelectorModel = useMemo(
@@ -129,9 +138,15 @@ export function LedgerPageContent() {
                 hasPeriodFilter && periodSelectorModel.canGoToNextPeriod
               }
               onPeriodModeChange={(nextMode) => {
+                const nextPeriodMode = nextMode as PeriodMode;
+                if (!hasPeriodFilter) {
+                  setUnfilteredPeriodMode(nextPeriodMode);
+                  return;
+                }
+
                 setPickerOpened(false);
                 const nextPeriodValue = getPeriodModeChangeValue({
-                  nextMode,
+                  nextMode: nextPeriodMode,
                   periodMode,
                   selectedYear,
                   selectedYearMaxMonth:
@@ -173,6 +188,10 @@ export function LedgerPageContent() {
                   ? `${String(selectedYear).padStart(4, "0")}-01-01`
                   : null
               }
+              monthPickerDefaultValue={
+                formatMonthPeriodValue(selectedYear, selectedMonth) + "-01"
+              }
+              yearPickerDefaultValue={`${String(selectedYear).padStart(4, "0")}-01-01`}
               minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
               maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
               minYearPickerDate={periodSelectorModel.minYearPickerDate}

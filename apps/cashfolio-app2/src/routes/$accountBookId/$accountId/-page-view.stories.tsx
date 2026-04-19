@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Box, Text } from "@mantine/core";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 import {
@@ -19,6 +19,7 @@ import {
   getPeriodModeChangeValue,
   getPeriodStepValue,
   getYearPickerValue,
+  type PeriodMode,
 } from "../period/-selector-model";
 import {
   LedgerPageView,
@@ -148,6 +149,8 @@ function LedgerPageStoryHarness({
   >();
   const [rebooking, setRebooking] = useState<RebookingState | undefined>();
   const [pickerOpened, setPickerOpened] = useState(false);
+  const [unfilteredPeriodMode, setUnfilteredPeriodMode] =
+    useState<PeriodMode>("month");
 
   const navigate = useNavigate({ from: "/$accountBookId/$accountId" });
   const pathname = useRouterState({
@@ -162,12 +165,18 @@ function LedgerPageStoryHarness({
     () => parseLedgerExplicitPeriod(routeSearchPeriod),
     [routeSearchPeriod],
   );
+  useEffect(() => {
+    if (!selectedPeriod) {
+      return;
+    }
+    setUnfilteredPeriodMode(selectedPeriod.granularity);
+  }, [selectedPeriod]);
   const maxDate = useMemo(() => new Date("2026-03-28T00:00:00.000Z"), []);
   const minBookingDate = useMemo(
     () => new Date("2021-03-01T00:00:00.000Z"),
     [],
   );
-  const periodMode = selectedPeriod?.granularity ?? "month";
+  const periodMode = selectedPeriod?.granularity ?? unfilteredPeriodMode;
   const selectedYear = selectedPeriod?.year ?? maxDate.getUTCFullYear();
   const selectedMonth = selectedPeriod?.month ?? maxDate.getUTCMonth();
   const periodSelectorModel = useMemo(
@@ -265,9 +274,15 @@ function LedgerPageStoryHarness({
                 hasPeriodFilter && periodSelectorModel.canGoToNextPeriod
               }
               onPeriodModeChange={(nextMode) => {
+                const nextPeriodMode = nextMode as PeriodMode;
+                if (!hasPeriodFilter) {
+                  setUnfilteredPeriodMode(nextPeriodMode);
+                  return;
+                }
+
                 setPickerOpened(false);
                 const nextPeriodValue = getPeriodModeChangeValue({
-                  nextMode,
+                  nextMode: nextPeriodMode,
                   periodMode,
                   selectedYear,
                   selectedYearMaxMonth:
@@ -309,6 +324,10 @@ function LedgerPageStoryHarness({
                   ? `${String(selectedYear).padStart(4, "0")}-01-01`
                   : null
               }
+              monthPickerDefaultValue={
+                formatMonthPeriodValue(selectedYear, selectedMonth) + "-01"
+              }
+              yearPickerDefaultValue={`${String(selectedYear).padStart(4, "0")}-01-01`}
               minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
               maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
               minYearPickerDate={periodSelectorModel.minYearPickerDate}
@@ -460,6 +479,16 @@ export const PeriodFilterRouteSmoke: Story = {
     await expect(
       canvas.getByRole("button", { name: "Clear filter" }),
     ).toBeDisabled();
+
+    await userEvent.click(canvas.getByRole("radio", { name: "Year" }));
+    await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
+      "(none)",
+    );
+
+    await userEvent.click(canvas.getByRole("radio", { name: "Month" }));
+    await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
+      "(none)",
+    );
 
     await userEvent.click(canvas.getByRole("button", { name: "All periods" }));
     await userEvent.click(canvas.getByRole("button", { name: /Feb/i }));
