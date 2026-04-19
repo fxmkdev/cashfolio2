@@ -12,6 +12,7 @@ const meta = {
       label: "Checking (CHF)",
     },
     accounts: accountOptions,
+    openingBalancesBookingDate: new Date("2026-01-03T00:00:00.000Z"),
     onClose: fn(),
     onSubmit: fn(async () => undefined),
   },

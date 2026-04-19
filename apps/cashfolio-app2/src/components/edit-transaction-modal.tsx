@@ -14,6 +14,7 @@ import {
   getUnitIdentifier,
   isExpenseAccount,
   isIncomeAccount,
+  isOpeningBalancesAccount,
 } from "../shared/account-utils";
 import { sum } from "../utils";
 import { DataGrid } from "./data-grid";
@@ -37,10 +38,38 @@ export type {
   TransactionFormValues,
 } from "./edit-transaction-modal-types";
 
+function isSameUtcDay(a: Date, b: Date): boolean {
+  return (
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
+  );
+}
+
+function formatUtcDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function hasOpeningBalancesBooking(args: {
+  bookings: BookingValues[];
+  accounts: AccountOption[];
+}): boolean {
+  return args.bookings.some((booking) => {
+    if (!booking.account) {
+      return false;
+    }
+    const account = args.accounts.find(
+      (item) => item.value === booking.account,
+    );
+    return isOpeningBalancesAccount(account);
+  });
+}
+
 export function EditTransactionModal({
   initialValues,
   submitLabel,
   accounts,
+  openingBalancesBookingDate,
   currentAccountId,
   onClose,
   onSubmittingChange,
@@ -52,6 +81,7 @@ export function EditTransactionModal({
   };
   submitLabel?: string;
   accounts: AccountOption[];
+  openingBalancesBookingDate: Date;
   currentAccountId: string;
   onClose: () => void;
   onSubmittingChange?: (isSubmitting: boolean) => void;
@@ -89,13 +119,31 @@ export function EditTransactionModal({
     onValuesChange: ({ date }, { date: previousDate }) => {
       if (date !== previousDate) {
         for (let i = 0; i < form.values.bookings.length; i++) {
-          form.setFieldValue(`bookings.${i}.date`, date ?? undefined);
+          const booking = form.values.bookings[i];
+          const account = booking?.account
+            ? accounts.find((item) => item.value === booking.account)
+            : undefined;
+          form.setFieldValue(
+            `bookings.${i}.date`,
+            isOpeningBalancesAccount(account)
+              ? openingBalancesBookingDate
+              : (date ?? undefined),
+          );
         }
       }
     },
     validate: {
-      date: (value) => {
+      date: (value, values) => {
         if (!value) return "Date is required";
+        if (
+          hasOpeningBalancesBooking({
+            bookings: values.bookings,
+            accounts,
+          }) &&
+          !isSameUtcDay(value, openingBalancesBookingDate)
+        ) {
+          return `Opening Balances bookings must be dated ${formatUtcDate(openingBalancesBookingDate)}.`;
+        }
         if (isAfter(startOfDay(value), today)) {
           return "Date cannot be in the future";
         }
@@ -112,6 +160,13 @@ export function EditTransactionModal({
             }
             if (isExpenseAccount(account) && booking.credit !== undefined) {
               return "Expense accounts cannot have credit entries.";
+            }
+            if (
+              isOpeningBalancesAccount(account) &&
+              booking.date &&
+              !isSameUtcDay(new Date(booking.date), openingBalancesBookingDate)
+            ) {
+              return `Opening Balances bookings must be dated ${formatUtcDate(openingBalancesBookingDate)}.`;
             }
           }
 
@@ -218,10 +273,51 @@ export function EditTransactionModal({
     () =>
       createEditTransactionColumnDefs({
         accounts,
+        openingBalancesBookingDate,
         isSubmitting,
       }),
-    [accounts, isSubmitting],
+    [accounts, isSubmitting, openingBalancesBookingDate],
   );
+
+  const hasOpeningBalancesBookingInDraft = useMemo(
+    () =>
+      hasOpeningBalancesBooking({
+        bookings: form.values.bookings,
+        accounts,
+      }),
+    [accounts, form.values.bookings],
+  );
+
+  useEffect(() => {
+    if (
+      hasOpeningBalancesBookingInDraft &&
+      form.values.date &&
+      !isSameUtcDay(form.values.date, openingBalancesBookingDate)
+    ) {
+      form.setFieldValue("date", openingBalancesBookingDate);
+    }
+  }, [
+    form.values.date,
+    hasOpeningBalancesBookingInDraft,
+    openingBalancesBookingDate,
+  ]);
+
+  useEffect(() => {
+    for (let i = 0; i < form.values.bookings.length; i += 1) {
+      const booking = form.values.bookings[i];
+      if (!booking?.account || !booking.date) {
+        continue;
+      }
+
+      const account = accounts.find((item) => item.value === booking.account);
+      if (
+        isOpeningBalancesAccount(account) &&
+        !isSameUtcDay(new Date(booking.date), openingBalancesBookingDate)
+      ) {
+        form.setFieldValue(`bookings.${i}.date`, openingBalancesBookingDate);
+      }
+    }
+  }, [accounts, form.values.bookings, openingBalancesBookingDate]);
 
   useEffect(() => {
     form.validateField("bookings");
@@ -265,7 +361,7 @@ export function EditTransactionModal({
                 </Tooltip>
               </Group>
             }
-            disabled={isSubmitting}
+            disabled={isSubmitting || hasOpeningBalancesBookingInDraft}
             {...form.getInputProps("date")}
           />
           <TextInput
@@ -351,10 +447,14 @@ export function EditTransactionModal({
               if (selectedAccount) {
                 const clearDebit = isIncomeAccount(selectedAccount);
                 const clearCredit = isExpenseAccount(selectedAccount);
+                const nextDate = isOpeningBalancesAccount(selectedAccount)
+                  ? openingBalancesBookingDate
+                  : currentBooking.date;
 
                 const nextBooking: BookingValues = {
                   ...currentBooking,
                   account: event.newValue ?? undefined,
+                  date: nextDate,
                   unit: selectedAccount.unit,
                   currency: selectedAccount.currency ?? undefined,
                   cryptocurrency: selectedAccount.cryptocurrency ?? undefined,
@@ -401,6 +501,7 @@ export function EditTransactionModal({
               form.removeListItem("bookings", index);
             },
             startDate: form.values.date,
+            openingBalancesBookingDate,
             form,
             isSubmitting,
           }}

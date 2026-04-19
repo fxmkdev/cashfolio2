@@ -123,23 +123,29 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
       );
     }
 
-    const accounts = await prisma.account.findMany({
-      where: {
-        accountBookId: data.accountBookId,
-        id: { in: [data.accountId, data.counterAccountId] },
-      },
-      select: {
-        id: true,
-        type: true,
-        equityAccountSubtype: true,
-        unit: true,
-        currency: true,
-        cryptocurrency: true,
-        symbol: true,
-        tradeCurrency: true,
-        isActive: true,
-      },
-    });
+    const [accounts, accountBook] = await Promise.all([
+      prisma.account.findMany({
+        where: {
+          accountBookId: data.accountBookId,
+          id: { in: [data.accountId, data.counterAccountId] },
+        },
+        select: {
+          id: true,
+          type: true,
+          equityAccountSubtype: true,
+          unit: true,
+          currency: true,
+          cryptocurrency: true,
+          symbol: true,
+          tradeCurrency: true,
+          isActive: true,
+        },
+      }),
+      prisma.accountBook.findUniqueOrThrow({
+        where: { id: data.accountBookId },
+        select: { startDate: true },
+      }),
+    ]);
 
     const currentAccount = accounts.find(
       (account) => account.id === data.accountId,
@@ -256,7 +262,9 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
         accountTypeMeta(account),
       ]),
     );
-    validateAccountTypeBookingsWithAccounts(createInput.bookings, accountMap);
+    validateAccountTypeBookingsWithAccounts(createInput.bookings, accountMap, {
+      accountBookStartDate: accountBook.startDate,
+    });
 
     const transaction = await prisma.transaction.create({
       data: buildTransactionCreateData(createInput),
@@ -271,7 +279,7 @@ export const rebookBooking = createServerFn({ method: "POST" })
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
-    const [booking, targetAccount] = await Promise.all([
+    const [booking, targetAccount, accountBook] = await Promise.all([
       prisma.booking.findUnique({
         where: {
           id_accountBookId: {
@@ -281,6 +289,7 @@ export const rebookBooking = createServerFn({ method: "POST" })
         },
         select: {
           id: true,
+          date: true,
           accountId: true,
           unit: true,
           currency: true,
@@ -310,6 +319,10 @@ export const rebookBooking = createServerFn({ method: "POST" })
           equityAccountSubtype: true,
         },
       }),
+      prisma.accountBook.findUniqueOrThrow({
+        where: { id: data.accountBookId },
+        select: { startDate: true },
+      }),
     ]);
 
     if (!booking) {
@@ -322,6 +335,7 @@ export const rebookBooking = createServerFn({ method: "POST" })
     validateRebookBookingTarget({
       booking: {
         accountId: booking.accountId,
+        date: booking.date,
         unit: booking.unit,
         currency: booking.currency,
         cryptocurrency: booking.cryptocurrency,
@@ -330,6 +344,7 @@ export const rebookBooking = createServerFn({ method: "POST" })
         value: Number(booking.value),
       },
       targetAccount,
+      accountBookStartDate: accountBook.startDate,
     });
 
     await prisma.booking.update({

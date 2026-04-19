@@ -3,6 +3,7 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../.prisma-client/enums";
+import { startOfUtcDay } from "../shared/date";
 import {
   getAccountUnitIdentifier,
   getBookingUnitIdentifier,
@@ -11,6 +12,7 @@ import {
 
 export type RebookBookingValidationInput = {
   accountId: string;
+  date: Date;
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
@@ -34,8 +36,9 @@ export type RebookTargetAccountValidationInput = {
 export function validateRebookBookingTarget(args: {
   booking: RebookBookingValidationInput;
   targetAccount: RebookTargetAccountValidationInput;
+  accountBookStartDate?: Date;
 }) {
-  const { booking, targetAccount } = args;
+  const { booking, targetAccount, accountBookStartDate } = args;
 
   if (!targetAccount.isActive) {
     throw new Error("Target account must be active.");
@@ -78,4 +81,41 @@ export function validateRebookBookingTarget(args: {
       throw new Error("Expense accounts cannot have credit entries.");
     }
   }
+
+  if (
+    targetAccount.type === AccountType.EQUITY &&
+    targetAccount.equityAccountSubtype === EquityAccountSubtype.OPENING_BALANCES
+  ) {
+    if (!accountBookStartDate) {
+      throw new Error(
+        "Account book start date is required for opening-balance validation.",
+      );
+    }
+
+    const openingBalancesBookingDate =
+      getOpeningBalancesBookingDate(accountBookStartDate);
+
+    if (!isSameUtcDay(booking.date, openingBalancesBookingDate)) {
+      throw new Error(
+        `Opening Balances bookings must be dated ${formatUtcDate(openingBalancesBookingDate)}.`,
+      );
+    }
+  }
+}
+
+function getOpeningBalancesBookingDate(accountBookStartDate: Date): Date {
+  const startDate = startOfUtcDay(accountBookStartDate);
+  return new Date(startDate.getTime() - 24 * 60 * 60 * 1000);
+}
+
+function isSameUtcDay(a: Date, b: Date): boolean {
+  return (
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
+  );
+}
+
+function formatUtcDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
 }

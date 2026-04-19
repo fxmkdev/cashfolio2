@@ -22,6 +22,7 @@ beforeEach(async () => {
       id: createId(),
       name: "Test Account Book",
       referenceCurrency: "CHF",
+      startDate: new Date("2000-01-01T00:00:00.000Z"),
       groups: {
         create: [
           { name: "Assets", type: AccountType.ASSET },

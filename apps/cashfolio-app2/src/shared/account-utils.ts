@@ -10,11 +10,24 @@ export function getTypeLabel(
 ): string {
   if (type === AccountType.ASSET) return "Asset";
   if (type === AccountType.LIABILITY) return "Liability";
+  if (equityAccountSubtype === EquityAccountSubtype.OPENING_BALANCES)
+    return "Opening Balances";
   if (equityAccountSubtype === EquityAccountSubtype.INCOME) return "Income";
   if (equityAccountSubtype === EquityAccountSubtype.EXPENSE) return "Expense";
   if (equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS)
     return "Gain/Loss";
   return "Accounts";
+}
+
+export function isOpeningBalancesAccount(
+  acct:
+    | { type: AccountType; equityAccountSubtype?: EquityAccountSubtype | null }
+    | undefined,
+): boolean {
+  return (
+    acct?.type === AccountType.EQUITY &&
+    acct?.equityAccountSubtype === EquityAccountSubtype.OPENING_BALANCES
+  );
 }
 
 export function isIncomeAccount(

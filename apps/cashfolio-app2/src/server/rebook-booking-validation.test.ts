@@ -15,6 +15,7 @@ function createBooking(
 ): RebookBookingValidationInput {
   return {
     accountId: "source-account",
+    date: new Date("2026-01-01T00:00:00.000Z"),
     unit: Unit.CURRENCY,
     currency: "CHF",
     cryptocurrency: null,
@@ -110,6 +111,36 @@ describe("validateRebookBookingTarget", () => {
           symbol: "AAPL",
           tradeCurrency: "EUR",
         }),
+      }),
+    ).not.toThrow();
+  });
+
+  test("rejects rebook to opening-balances account on non-opening day", () => {
+    expect(() =>
+      validateRebookBookingTarget({
+        booking: createBooking({ date: new Date("2026-01-02T00:00:00.000Z") }),
+        targetAccount: createTargetAccount({
+          type: AccountType.EQUITY,
+          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+        }),
+        accountBookStartDate: new Date("2026-01-04T12:34:00.000Z"),
+      }),
+    ).toThrowError("Opening Balances bookings must be dated 2026-01-03.");
+  });
+
+  test("accepts rebook to opening-balances account on opening day", () => {
+    expect(() =>
+      validateRebookBookingTarget({
+        booking: createBooking({ date: new Date("2026-01-03T14:00:00.000Z") }),
+        targetAccount: createTargetAccount({
+          type: AccountType.EQUITY,
+          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+        }),
+        accountBookStartDate: new Date("2026-01-04T12:34:00.000Z"),
       }),
     ).not.toThrow();
   });

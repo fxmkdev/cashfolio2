@@ -6,6 +6,7 @@ import {
 } from "../.prisma-client/enums";
 import { isAfter, startOfDay } from "date-fns";
 import { getUnitIdentifier } from "../shared/account-utils";
+import { startOfUtcDay } from "../shared/date";
 import {
   getBookingUnitFields,
   type BookingUnitFieldsSource,
@@ -68,20 +69,28 @@ export function validateCreateTransaction(input: CreateTransactionInput) {
 }
 
 export async function validateAccountTypeBookings(
-  bookings: { accountId: string; value: number }[],
+  bookings: { accountId: string; value: number; date: string | Date }[],
   accountBookId: string,
 ) {
   const accountIds = bookings.map((b) => b.accountId).filter(Boolean);
   if (accountIds.length === 0) return;
 
-  const accounts = await prisma.account.findMany({
-    where: { id: { in: accountIds }, accountBookId },
-    select: { id: true, type: true, equityAccountSubtype: true },
-  });
+  const [accounts, accountBook] = await Promise.all([
+    prisma.account.findMany({
+      where: { id: { in: accountIds }, accountBookId },
+      select: { id: true, type: true, equityAccountSubtype: true },
+    }),
+    prisma.accountBook.findUniqueOrThrow({
+      where: { id: accountBookId },
+      select: { startDate: true },
+    }),
+  ]);
   const accountMap = new Map(
     accounts.map((account) => [account.id, accountTypeMeta(account)]),
   );
-  validateAccountTypeBookingsWithAccounts(bookings, accountMap);
+  validateAccountTypeBookingsWithAccounts(bookings, accountMap, {
+    accountBookStartDate: accountBook.startDate,
+  });
 }
 
 export type AccountTypeMeta = {
@@ -103,9 +112,21 @@ export function accountTypeMeta(account: {
 }
 
 export function validateAccountTypeBookingsWithAccounts(
-  bookings: { accountId: string; value: number }[],
+  bookings: { accountId: string; value: number; date: string | Date }[],
   accountMap: Map<string, AccountTypeMeta>,
+  options?: {
+    accountBookStartDate?: Date;
+  },
 ) {
+  const openingBalancesBookingDate =
+    options?.accountBookStartDate != null
+      ? getOpeningBalancesBookingDate(options.accountBookStartDate)
+      : null;
+  const openingBalancesBookingDateLabel =
+    openingBalancesBookingDate != null
+      ? formatUtcDate(openingBalancesBookingDate)
+      : null;
+
   const errors: string[] = [];
   for (let i = 0; i < bookings.length; i++) {
     const b = bookings[i];
@@ -127,11 +148,53 @@ export function validateAccountTypeBookingsWithAccounts(
     ) {
       errors.push(`Booking ${i}: Expense accounts cannot have credit entries.`);
     }
+
+    if (
+      account.type === AccountType.EQUITY &&
+      account.equityAccountSubtype === EquityAccountSubtype.OPENING_BALANCES
+    ) {
+      if (!openingBalancesBookingDate || !openingBalancesBookingDateLabel) {
+        errors.push(
+          `Booking ${i}: Account book start date is required for opening-balance validation.`,
+        );
+        continue;
+      }
+
+      const bookingDate = new Date(b.date);
+      if (isNaN(bookingDate.getTime())) {
+        errors.push(`Booking ${i}: invalid date.`);
+        continue;
+      }
+
+      const bookingDay = startOfUtcDay(bookingDate);
+      if (!isSameUtcDay(bookingDay, openingBalancesBookingDate)) {
+        errors.push(
+          `Booking ${i}: Opening Balances bookings must be dated ${openingBalancesBookingDateLabel}.`,
+        );
+      }
+    }
   }
 
   if (errors.length > 0) {
     throw new Error(errors.join(" "));
   }
+}
+
+function getOpeningBalancesBookingDate(accountBookStartDate: Date): Date {
+  const startDate = startOfUtcDay(accountBookStartDate);
+  return new Date(startDate.getTime() - 24 * 60 * 60 * 1000);
+}
+
+function isSameUtcDay(a: Date, b: Date): boolean {
+  return (
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
+  );
+}
+
+function formatUtcDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
 }
 
 export function buildTransactionCreateData(input: CreateTransactionInput) {

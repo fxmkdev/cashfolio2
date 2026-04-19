@@ -19,7 +19,8 @@ paths are relative to that app directory.
 
 - `AccountBook` — top-level container; holds references to gain/loss account
   groups (`securityHoldingGainLossAccountGroupId`,
-  `cryptoHoldingGainLossAccountGroupId`, `fxHoldingGainLossAccountGroupId`)
+  `cryptoHoldingGainLossAccountGroupId`, `fxHoldingGainLossAccountGroupId`) and
+  required `startDate`
 - `AccountGroup` — hierarchical via self-referencing `parentGroupId`; has
   `type`, `equityAccountSubtype`, `isActive`, `sortOrder`
 - `Account` — belongs to a group; has `type`, `equityAccountSubtype`,
@@ -41,7 +42,7 @@ paths are relative to that app directory.
 ## Enums
 
 - `AccountType`: `ASSET`, `LIABILITY`, `EQUITY`
-- `EquityAccountSubtype`: `INCOME`, `EXPENSE`, `GAIN_LOSS`
+- `EquityAccountSubtype`: `INCOME`, `EXPENSE`, `GAIN_LOSS`, `OPENING_BALANCES`
 - `Unit`: `CURRENCY`, `CRYPTOCURRENCY`, `SECURITY`
 - `UserRole`: `ADMIN`
 

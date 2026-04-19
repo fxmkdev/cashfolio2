@@ -18,6 +18,12 @@ export async function action({ request }: ActionFunctionArgs) {
       id: createId(),
       name: "New Account Book",
       referenceCurrency: values.referenceCurrency,
+      startDate: (() => {
+        const now = new Date();
+        return new Date(
+          Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+        );
+      })(),
       groups: {
         create: [
           { name: "Assets", type: "ASSET" },

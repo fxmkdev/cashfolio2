@@ -12,7 +12,11 @@ import { useForm } from "@mantine/form";
 import { isAfter, parse, startOfDay } from "date-fns";
 import { useEffect } from "react";
 import { IconArrowRight } from "@tabler/icons-react";
-import { isExpenseAccount, isIncomeAccount } from "../shared/account-utils";
+import {
+  isExpenseAccount,
+  isIncomeAccount,
+  isOpeningBalancesAccount,
+} from "../shared/account-utils";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 import type { AccountOption } from "./edit-transaction-modal";
 import { FormattedNumberInput } from "./formatted-number-input";
@@ -46,6 +50,7 @@ function getForcedDirection(
 export function SimpleTransactionModal({
   currentAccount,
   accounts,
+  openingBalancesBookingDate,
   initialValues,
   submitLabel,
   onSwitchToSplit,
@@ -58,6 +63,7 @@ export function SimpleTransactionModal({
     label: string;
   };
   accounts: AccountOption[];
+  openingBalancesBookingDate: Date;
   initialValues?: SimpleTransactionInitialValues;
   submitLabel?: string;
   onSwitchToSplit?: (draft: SimpleTransactionDraftValues) => void;
@@ -88,9 +94,18 @@ export function SimpleTransactionModal({
         initialValues?.direction ?? ("DEBIT" as SimpleTransactionDirection),
     },
     validate: {
-      date: (value) => {
+      date: (value, values) => {
         if (!value) return "Date is required";
         if (isNaN(value.getTime())) return "Date is invalid";
+        const selectedCounterAccount = accounts.find(
+          (account) => account.value === values.counterAccountId,
+        );
+        if (
+          isOpeningBalancesAccount(selectedCounterAccount) &&
+          !isSameUtcDay(value, openingBalancesBookingDate)
+        ) {
+          return `Opening Balances bookings must be dated ${formatUtcDate(openingBalancesBookingDate)}.`;
+        }
         if (isAfter(startOfDay(value), today)) {
           return "Date cannot be in the future";
         }
@@ -136,6 +151,8 @@ export function SimpleTransactionModal({
   const selectedAccount = accounts.find(
     (account) => account.value === form.values.counterAccountId,
   );
+  const isOpeningBalancesCounterAccount =
+    isOpeningBalancesAccount(selectedAccount);
   const forcedDirection = getForcedDirection(selectedAccount);
   const forcedDirectionReason =
     forcedDirection === "DEBIT"
@@ -149,6 +166,20 @@ export function SimpleTransactionModal({
       form.setFieldValue("direction", forcedDirection);
     }
   }, [forcedDirection, form.values.direction]);
+
+  useEffect(() => {
+    if (
+      isOpeningBalancesCounterAccount &&
+      form.values.date &&
+      !isSameUtcDay(form.values.date, openingBalancesBookingDate)
+    ) {
+      form.setFieldValue("date", openingBalancesBookingDate);
+    }
+  }, [
+    form.values.date,
+    isOpeningBalancesCounterAccount,
+    openingBalancesBookingDate,
+  ]);
 
   return (
     <form
@@ -176,7 +207,7 @@ export function SimpleTransactionModal({
             dateParser={(value) => parse(value, "dd.MM.yyyy", new Date())}
             label="Date"
             w={180}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isOpeningBalancesCounterAccount}
             {...form.getInputProps("date")}
           />
           <TextInput
@@ -279,4 +310,16 @@ export function SimpleTransactionModal({
       </Stack>
     </form>
   );
+}
+
+function isSameUtcDay(a: Date, b: Date): boolean {
+  return (
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
+  );
+}
+
+function formatUtcDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
 }

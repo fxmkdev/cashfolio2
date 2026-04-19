@@ -228,6 +228,15 @@ export function EditAccountGroupModal({
                       },
                     ],
                   },
+                  {
+                    group: "System Accounts",
+                    items: [
+                      {
+                        value: `${AccountType.EQUITY}-${EquityAccountSubtype.OPENING_BALANCES}`,
+                        label: "Opening Balances",
+                      },
+                    ],
+                  },
                 ]}
                 {...form.getInputProps("typeDescriptor")}
               />

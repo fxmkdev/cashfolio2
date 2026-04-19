@@ -1,5 +1,4 @@
 import { AccountType } from "@/.prisma-client/enums";
-import { startOfUtcDay } from "@/shared/date";
 import { getAccounts } from "@/server/accounts";
 import {
   getAccountForLedger,
@@ -31,17 +30,12 @@ export async function loadLedgerPageData(args: {
       },
     }),
     accountsPromise,
-    isPeriodFilterAllowed
-      ? getLedgerPeriodBounds({
-          data: {
-            accountId: args.accountId,
-            accountBookId: args.accountBookId,
-          },
-        })
-      : Promise.resolve({
-          minBookingDate: null,
-          maxDate: startOfUtcDay(new Date()).toISOString(),
-        }),
+    getLedgerPeriodBounds({
+      data: {
+        accountId: args.accountId,
+        accountBookId: args.accountBookId,
+      },
+    }),
   ]);
 
   return {

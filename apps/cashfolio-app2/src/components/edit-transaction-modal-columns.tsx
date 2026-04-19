@@ -5,7 +5,11 @@ import { IconTrash, IconX } from "@tabler/icons-react";
 import { Unit } from "../.prisma-client/enums";
 import { currencies } from "../currencies";
 import { cryptocurrencies } from "../cryptocurrencies";
-import { isExpenseAccount, isIncomeAccount } from "../shared/account-utils";
+import {
+  isExpenseAccount,
+  isIncomeAccount,
+  isOpeningBalancesAccount,
+} from "../shared/account-utils";
 import { isSameDay } from "date-fns";
 import {
   DATE_COLUMN,
@@ -45,6 +49,7 @@ export function isEditableCell(params: CellClassParams) {
 
 export function createEditTransactionColumnDefs(args: {
   accounts: AccountOption[];
+  openingBalancesBookingDate: Date;
   isSubmitting: boolean;
 }): ColDef[] {
   const { accounts, isSubmitting } = args;
@@ -87,6 +92,11 @@ export function createEditTransactionColumnDefs(args: {
       type: DATE_COLUMN,
       cellDataType: "dateString",
       width: 118,
+      editable: ({ data }) => {
+        if (!data?.account) return true;
+        const account = accounts.find((item) => item.value === data.account);
+        return !isOpeningBalancesAccount(account);
+      },
       cellStyle: ({ value, context }: CellClassParams) => {
         const isStartDate = isSameDay(value as Date, context.startDate as Date);
         return isStartDate
