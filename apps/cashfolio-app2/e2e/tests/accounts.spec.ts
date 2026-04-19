@@ -93,10 +93,10 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
   });
   await expect(barOption).toBeChecked();
 
-  const chartSurface = breakdownCard.locator(".ag-charts-series-area").first();
-  await expect(chartSurface).toBeVisible();
+  const chartCanvas = breakdownCard.locator("canvas").first();
+  await expect(chartCanvas).toBeVisible();
 
-  const chartBounds = await chartSurface.boundingBox();
+  const chartBounds = await chartCanvas.boundingBox();
   if (!chartBounds) {
     throw new Error("Breakdown chart bounds were not available.");
   }
