@@ -352,11 +352,13 @@ async function computeEndOfPeriodBalanceStatsWithConvertedBalances(args: {
       const rawBalance = args.rawBalanceByAccountId.get(account.id) ?? 0;
 
       if (account.unit == null) {
+        const normalizedConvertedBalance = rawBalance === 0 ? 0 : null;
+
         return {
           accountId: account.id,
           accountType: account.type,
-          convertedBalance: null as number | null,
-          skipped: rawBalance !== 0,
+          convertedBalance: normalizedConvertedBalance,
+          skipped: normalizedConvertedBalance == null,
         };
       }
 
@@ -371,11 +373,14 @@ async function computeEndOfPeriodBalanceStatsWithConvertedBalances(args: {
         referenceCurrency: args.referenceCurrency,
       });
 
+      const normalizedConvertedBalance =
+        convertedBalance ?? (rawBalance === 0 ? 0 : null);
+
       return {
         accountId: account.id,
         accountType: account.type,
-        convertedBalance,
-        skipped: convertedBalance == null && rawBalance !== 0,
+        convertedBalance: normalizedConvertedBalance,
+        skipped: normalizedConvertedBalance == null && rawBalance !== 0,
       };
     }),
   );

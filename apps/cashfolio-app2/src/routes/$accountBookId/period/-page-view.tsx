@@ -115,16 +115,23 @@ function arePathsEqual(left: string[], right: string[]): boolean {
   return true;
 }
 
+function formatAccountCountWithVerb(count: number): string {
+  const accountLabel = count === 1 ? "account" : "accounts";
+  const verb = count === 1 ? "was" : "were";
+
+  return `${count} ${accountLabel} ${verb}`;
+}
+
 function getAllocationPartialDataNotes(args: {
   skippedMissingReferenceBalanceCount: number;
   skippedNonPositiveCount: number;
 }) {
   return [
     args.skippedMissingReferenceBalanceCount > 0
-      ? `${args.skippedMissingReferenceBalanceCount} account(s) were skipped because reference-currency balances were unavailable.`
+      ? `${formatAccountCountWithVerb(args.skippedMissingReferenceBalanceCount)} skipped because reference-currency balances were unavailable.`
       : null,
     args.skippedNonPositiveCount > 0
-      ? `${args.skippedNonPositiveCount} account(s) with non-positive balances were excluded from allocation.`
+      ? `${formatAccountCountWithVerb(args.skippedNonPositiveCount)} with non-positive balances excluded from allocation.`
       : null,
   ]
     .filter((value): value is string => value != null)
