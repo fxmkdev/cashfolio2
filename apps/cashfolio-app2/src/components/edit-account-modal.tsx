@@ -125,10 +125,7 @@ export function EditAccountModal({
   const isEdit = !!initialValues;
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const { isSubmitting, runSubmit } = useDialogSubmitState();
-  const form = useForm<
-    FormValues,
-    (values: FormValues) => TransformedFormValues
-  >({
+  const form = useForm<FormValues, TransformedFormValues>({
     mode: "uncontrolled",
     initialValues: initialValues
       ? toFormValues(initialValues)

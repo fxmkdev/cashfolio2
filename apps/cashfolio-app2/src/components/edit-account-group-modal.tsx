@@ -116,10 +116,7 @@ export function EditAccountGroupModal({
     return descendants;
   }, [editingId, existingNodes]);
 
-  const form = useForm<
-    FormValues,
-    (values: FormValues) => AccountGroupTransformedFormValues
-  >({
+  const form = useForm<FormValues, AccountGroupTransformedFormValues>({
     mode: "uncontrolled",
     initialValues: initialValues
       ? toFormValues(initialValues)
