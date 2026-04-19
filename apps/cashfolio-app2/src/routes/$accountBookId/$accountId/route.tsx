@@ -5,9 +5,11 @@ import { useTransactionScroll } from "@/hooks/use-transaction-scroll";
 import { formatMonthPeriodValue } from "@/shared/period";
 import {
   buildPeriodSelectorModel,
+  getMonthBoundsForYear,
   getMonthPickerValue,
   getPeriodModeChangeValue,
   getPeriodStepValue,
+  getYearBounds,
   getYearPickerValue,
   type PeriodMode,
 } from "@/shared/period-selector-model";
@@ -58,16 +60,6 @@ export function LedgerPageContent() {
   const navigate = Route.useNavigate();
   const { pendingScrollRef, handleRowDataUpdated } =
     useTransactionScroll<LedgerRow>(transactionId, navigate);
-  const selectedPeriod = useMemo(
-    () => (isPeriodFilterAvailable ? parseLedgerExplicitPeriod(period) : null),
-    [isPeriodFilterAvailable, period],
-  );
-  useEffect(() => {
-    if (!selectedPeriod) {
-      return;
-    }
-    setUnfilteredPeriodMode(selectedPeriod.granularity);
-  }, [selectedPeriod]);
   const maxDate = useMemo(
     () => new Date(loaderData.periodBounds.maxDate),
     [loaderData.periodBounds.maxDate],
@@ -79,6 +71,55 @@ export function LedgerPageContent() {
         : null,
     [loaderData.periodBounds.minBookingDate],
   );
+  const rawSelectedPeriod = useMemo(
+    () => (isPeriodFilterAvailable ? parseLedgerExplicitPeriod(period) : null),
+    [isPeriodFilterAvailable, period],
+  );
+  const clampedPeriodValue = useMemo(() => {
+    if (!rawSelectedPeriod) {
+      return null;
+    }
+    return clampLedgerExplicitPeriodToBounds({
+      selectedPeriod: rawSelectedPeriod,
+      minBookingDate,
+      maxDate,
+    });
+  }, [maxDate, minBookingDate, rawSelectedPeriod]);
+  const selectedPeriod = useMemo(
+    () =>
+      clampedPeriodValue ? parseLedgerExplicitPeriod(clampedPeriodValue) : null,
+    [clampedPeriodValue],
+  );
+  useEffect(() => {
+    if (!selectedPeriod) {
+      return;
+    }
+    setUnfilteredPeriodMode(selectedPeriod.granularity);
+  }, [selectedPeriod]);
+  const setPeriodFilter = (nextPeriodValue: string | undefined) => {
+    navigate({
+      search: (previousSearch) => ({
+        ...previousSearch,
+        period: nextPeriodValue,
+        transactionId: undefined,
+      }),
+    });
+  };
+  useEffect(() => {
+    if (!isPeriodFilterAvailable || !period || !rawSelectedPeriod) {
+      return;
+    }
+    if (!clampedPeriodValue || period === clampedPeriodValue) {
+      return;
+    }
+    setPeriodFilter(clampedPeriodValue);
+  }, [
+    clampedPeriodValue,
+    isPeriodFilterAvailable,
+    period,
+    rawSelectedPeriod,
+    setPeriodFilter,
+  ]);
   const periodMode = selectedPeriod?.granularity ?? unfilteredPeriodMode;
   const selectedYear = selectedPeriod?.year ?? maxDate.getUTCFullYear();
   const selectedMonth = selectedPeriod?.month ?? maxDate.getUTCMonth();
@@ -94,15 +135,6 @@ export function LedgerPageContent() {
     [maxDate, minBookingDate, periodMode, selectedMonth, selectedYear],
   );
   const hasPeriodFilter = isPeriodFilterAvailable && selectedPeriod != null;
-  const setPeriodFilter = (nextPeriodValue: string | undefined) => {
-    navigate({
-      search: (previousSearch) => ({
-        ...previousSearch,
-        period: nextPeriodValue,
-        transactionId: undefined,
-      }),
-    });
-  };
 
   const viewProps = useLedgerPageController({
     loaderData,
@@ -232,4 +264,30 @@ export function LedgerPageContent() {
       />
     </Suspense>
   );
+}
+
+function clampLedgerExplicitPeriodToBounds(args: {
+  selectedPeriod: NonNullable<ReturnType<typeof parseLedgerExplicitPeriod>>;
+  minBookingDate: Date | null;
+  maxDate: Date;
+}): string {
+  const { selectedPeriod, minBookingDate, maxDate } = args;
+  const { minYear, maxYear } = getYearBounds({ minBookingDate, maxDate });
+  const clampedYear = Math.min(Math.max(selectedPeriod.year, minYear), maxYear);
+
+  if (selectedPeriod.granularity === "year") {
+    return String(clampedYear).padStart(4, "0");
+  }
+
+  const { minMonth, maxMonth } = getMonthBoundsForYear({
+    year: clampedYear,
+    minBookingDate,
+    maxDate,
+  });
+  const clampedMonth = Math.min(
+    Math.max(selectedPeriod.month ?? maxMonth, minMonth),
+    maxMonth,
+  );
+
+  return formatMonthPeriodValue(clampedYear, clampedMonth);
 }

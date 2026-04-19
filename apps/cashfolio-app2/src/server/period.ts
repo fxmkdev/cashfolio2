@@ -21,6 +21,7 @@ import {
   PERIOD_PRESET_YTD,
   type PeriodPresetValue,
 } from "../shared/period";
+import { startOfUtcDay } from "../shared/date";
 import {
   buildAvailableYears,
   buildBreakdownHierarchy,
@@ -97,12 +98,6 @@ type EndOfPeriodBalanceStats = {
   netWorth: number;
   skippedCount: number;
 };
-
-function startOfUtcDay(date: Date): Date {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-  );
-}
 
 function startOfUtcMonth(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));

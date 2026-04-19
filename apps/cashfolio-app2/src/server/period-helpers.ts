@@ -1,4 +1,5 @@
 import { Unit } from "../.prisma-client/enums";
+import { startOfUtcDay } from "../shared/date";
 import type {
   BreakdownHierarchyNode,
   BreakdownNodeKind,
@@ -50,12 +51,6 @@ type MultiUnitBooking = {
 
 function toDateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
-}
-
-function startOfUtcDay(date: Date): Date {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-  );
 }
 
 export function round2(value: number): number {

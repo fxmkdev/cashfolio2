@@ -52,6 +52,19 @@ function toFormValues(initial: AccountGroupInitialValues): FormValues {
   };
 }
 
+function transformAccountGroupValues(
+  values: FormValues,
+): AccountGroupTransformedFormValues {
+  const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
+    []) as [AccountType, EquityAccountSubtype?];
+
+  return {
+    ...values,
+    type,
+    ...(type === AccountType.EQUITY ? { equityAccountSubtype } : undefined),
+  };
+}
+
 export function EditAccountGroupModal({
   opened,
   onClose,
@@ -127,16 +140,7 @@ export function EditAccountGroupModal({
           descendantGroupIds,
         }),
     },
-    transformValues: (values: FormValues) => {
-      const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
-        []) as [AccountType, EquityAccountSubtype?];
-
-      return {
-        ...values,
-        type,
-        ...(type === AccountType.EQUITY ? { equityAccountSubtype } : undefined),
-      };
-    },
+    transformValues: transformAccountGroupValues,
   });
 
   useEffect(() => {
@@ -151,8 +155,9 @@ export function EditAccountGroupModal({
     }
   }, [opened, initialValues]);
 
-  const { type, equityAccountSubtype } =
-    form.getTransformedValues() as AccountGroupTransformedFormValues;
+  const { type, equityAccountSubtype } = transformAccountGroupValues(
+    form.getValues(),
+  );
   const handleClose = () => {
     if (isSubmitting) return;
     onClose();
@@ -171,9 +176,7 @@ export function EditAccountGroupModal({
     >
       <form
         onSubmit={form.onSubmit((values) =>
-          runSubmit(() =>
-            onSubmit(values as AccountGroupTransformedFormValues),
-          ),
+          runSubmit(() => onSubmit(transformAccountGroupValues(values))),
         )}
       >
         <Stack gap="xl">

@@ -77,6 +77,17 @@ function toFormValues(initial: AccountInitialValues): FormValues {
   };
 }
 
+function transformAccountValues(values: FormValues): TransformedFormValues {
+  const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
+    []) as [AccountType, EquityAccountSubtype?];
+
+  return {
+    ...values,
+    type,
+    ...(type === AccountType.EQUITY ? { equityAccountSubtype } : undefined),
+  };
+}
+
 export type ExistingNode = {
   id: string;
   name: string;
@@ -160,16 +171,7 @@ export function EditAccountModal({
           values.typeDescriptor as AccountType,
         ),
     },
-    transformValues: (values: FormValues) => {
-      const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
-        []) as [AccountType, EquityAccountSubtype?];
-
-      return {
-        ...values,
-        type,
-        ...(type === AccountType.EQUITY ? { equityAccountSubtype } : undefined),
-      };
-    },
+    transformValues: transformAccountValues,
     onValuesChange: (values, previous) => {
       if (values.unit !== previous.unit) {
         forceUpdate();
@@ -189,8 +191,9 @@ export function EditAccountModal({
     }
   }, [opened, initialValues]);
 
-  const { unit, type, equityAccountSubtype } =
-    form.getTransformedValues() as TransformedFormValues;
+  const { unit, type, equityAccountSubtype } = transformAccountValues(
+    form.getValues(),
+  );
   const handleClose = () => {
     if (isSubmitting) return;
     onClose();
@@ -209,7 +212,7 @@ export function EditAccountModal({
     >
       <form
         onSubmit={form.onSubmit((values) =>
-          runSubmit(() => onSubmit(values as TransformedFormValues)),
+          runSubmit(() => onSubmit(transformAccountValues(values))),
         )}
       >
         <Stack gap="xl">
