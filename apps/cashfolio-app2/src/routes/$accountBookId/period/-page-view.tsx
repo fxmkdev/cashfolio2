@@ -2,6 +2,7 @@ import {
   Alert,
   Card,
   Container,
+  Grid,
   Group,
   SimpleGrid,
   Stack,
@@ -954,84 +955,86 @@ export function PeriodPageView({
           </SimpleGrid>
         </Stack>
 
-        <SimpleGrid
-          cols={{ base: 1, lg: 2, xl: 3 }}
-          spacing="lg"
-          data-testid="period-analysis-section"
-        >
-          <Card withBorder radius="md" p="md">
-            <Stack gap="sm">
-              <Title order={4}>Contribution to Total Return</Title>
-              <Text c="dimmed" size="sm">
-                How Income, Expenses, and {gainsLossesLabel} lead to Total
-                Return
-              </Text>
-              <div className={classes.chartContainer}>
-                <AgCharts options={waterfallChartOptions} />
-              </div>
-            </Stack>
-          </Card>
+        <Stack gap="lg" data-testid="period-analysis-section">
+          <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg">
+            <Card withBorder radius="md" p="md">
+              <Stack gap="sm">
+                <Title order={4}>Contribution to Total Return</Title>
+                <Text c="dimmed" size="sm">
+                  How Income, Expenses, and {gainsLossesLabel} lead to Total
+                  Return
+                </Text>
+                <div className={classes.chartContainer}>
+                  <AgCharts options={waterfallChartOptions} />
+                </div>
+              </Stack>
+            </Card>
 
-          <PeriodBreakdownCard
-            selectedBreakdown={selectedBreakdown}
-            selectedChartType={selectedChartType}
-            breakdownTitle={breakdownTitle}
-            breakdownSubtitle={breakdownSubtitle}
-            breadcrumbs={drillState.breadcrumbs}
-            clampedPath={drillState.clampedPath}
-            hasBreakdownAmountDiscrepancy={hasBreakdownAmountDiscrepancy}
-            hasBreakdown={hasBreakdown}
-            emptyBreakdownMessage={emptyBreakdownMessage}
-            chartOptions={chartOptions}
-            onSelectedBreakdownChange={setSelectedBreakdown}
-            onSelectedChartTypeChange={setSelectedChartType}
-            onDrillPathChange={updateSelectedBreakdownPath}
-            onChartContainerDoubleClick={handleChartContainerDoubleClick}
-            footer={
-              overview.skippedBookingsCount > 0 ? (
-                <Alert
-                  mt="md"
-                  variant="light"
-                  color="yellow"
-                  icon={<IconAlertTriangle size={16} />}
-                  title="Partial data"
-                >
-                  {overview.skippedBookingsCount} valuation-related item(s) were
-                  skipped because valuation data was unavailable.
-                </Alert>
-              ) : null
-            }
-          />
+            <PeriodAllocationBreakdownCard
+              selectedBreakdown={selectedAllocationBreakdown}
+              breakdownTitle={allocationBreakdownTitle}
+              breakdownSubtitle={`${allocationBreakdownSubtitle} · Amounts shown in ${overview.referenceCurrency}`}
+              breadcrumbs={allocationDrillState.breadcrumbs}
+              clampedPath={allocationDrillState.clampedPath}
+              hasBreakdownAmountDiscrepancy={
+                hasAllocationBreakdownAmountDiscrepancy
+              }
+              hasBreakdown={hasAllocationBreakdown}
+              emptyBreakdownMessage={emptyAllocationBreakdownMessage}
+              chartOptions={allocationChartOptions}
+              onSelectedBreakdownChange={setSelectedAllocationBreakdown}
+              onDrillPathChange={updateSelectedAllocationBreakdownPath}
+              footer={
+                hasAllocationPartialData ? (
+                  <Alert
+                    mt="md"
+                    variant="light"
+                    color="yellow"
+                    icon={<IconAlertTriangle size={16} />}
+                    title="Partial data"
+                  >
+                    {allocationPartialDataNotes}
+                  </Alert>
+                ) : null
+              }
+            />
+          </SimpleGrid>
 
-          <PeriodAllocationBreakdownCard
-            selectedBreakdown={selectedAllocationBreakdown}
-            breakdownTitle={allocationBreakdownTitle}
-            breakdownSubtitle={`${allocationBreakdownSubtitle} · Amounts shown in ${overview.referenceCurrency}`}
-            breadcrumbs={allocationDrillState.breadcrumbs}
-            clampedPath={allocationDrillState.clampedPath}
-            hasBreakdownAmountDiscrepancy={
-              hasAllocationBreakdownAmountDiscrepancy
-            }
-            hasBreakdown={hasAllocationBreakdown}
-            emptyBreakdownMessage={emptyAllocationBreakdownMessage}
-            chartOptions={allocationChartOptions}
-            onSelectedBreakdownChange={setSelectedAllocationBreakdown}
-            onDrillPathChange={updateSelectedAllocationBreakdownPath}
-            footer={
-              hasAllocationPartialData ? (
-                <Alert
-                  mt="md"
-                  variant="light"
-                  color="yellow"
-                  icon={<IconAlertTriangle size={16} />}
-                  title="Partial data"
-                >
-                  {allocationPartialDataNotes}
-                </Alert>
-              ) : null
-            }
-          />
-        </SimpleGrid>
+          <Grid gap="lg">
+            <Grid.Col span={{ base: 12, lg: 6 }}>
+              <PeriodBreakdownCard
+                selectedBreakdown={selectedBreakdown}
+                selectedChartType={selectedChartType}
+                breakdownTitle={breakdownTitle}
+                breakdownSubtitle={breakdownSubtitle}
+                breadcrumbs={drillState.breadcrumbs}
+                clampedPath={drillState.clampedPath}
+                hasBreakdownAmountDiscrepancy={hasBreakdownAmountDiscrepancy}
+                hasBreakdown={hasBreakdown}
+                emptyBreakdownMessage={emptyBreakdownMessage}
+                chartOptions={chartOptions}
+                onSelectedBreakdownChange={setSelectedBreakdown}
+                onSelectedChartTypeChange={setSelectedChartType}
+                onDrillPathChange={updateSelectedBreakdownPath}
+                onChartContainerDoubleClick={handleChartContainerDoubleClick}
+                footer={
+                  overview.skippedBookingsCount > 0 ? (
+                    <Alert
+                      mt="md"
+                      variant="light"
+                      color="yellow"
+                      icon={<IconAlertTriangle size={16} />}
+                      title="Partial data"
+                    >
+                      {overview.skippedBookingsCount} valuation-related item(s)
+                      were skipped because valuation data was unavailable.
+                    </Alert>
+                  ) : null
+                }
+              />
+            </Grid.Col>
+          </Grid>
+        </Stack>
       </Stack>
 
       {selectedPeriodValue !== overview.selectedPeriodValue ? (
