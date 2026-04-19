@@ -45,6 +45,7 @@ function assertSafeResetTarget() {
 export type SeededData = {
   accountBookId: string;
   userExternalId: string;
+  equityGroupId: string;
   expenseGroupId: string;
   cashAccount: { id: string; name: string };
   savingsAccount: { id: string; name: string };
@@ -231,6 +232,7 @@ export async function resetAndSeedDatabase(): Promise<SeededData> {
   return {
     accountBookId: accountBook.id,
     userExternalId: DEFAULT_EXTERNAL_ID,
+    equityGroupId: equityRoot.id,
     expenseGroupId: expenseGroup.id,
     cashAccount: {
       id: cashAccount.id,

@@ -567,7 +567,7 @@ test("period breakdown account leaf drilldown opens ledger with period filter", 
   });
 
   await page.goto(
-    `/${seeded.accountBookId}/period?period=${period}&expensePath=${encodeURIComponent(`group:${seeded.expenseGroupId}`)}`,
+    `/${seeded.accountBookId}/period?period=${period}&expensePath=${encodeURIComponent(`group:${seeded.equityGroupId},group:${seeded.expenseGroupId}`)}`,
   );
 
   await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
