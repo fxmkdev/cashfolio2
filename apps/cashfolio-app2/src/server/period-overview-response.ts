@@ -6,6 +6,7 @@ import {
   buildBreakdownItems,
   buildGainsLossesUnitBreakdownHierarchy,
   buildPeriodEndAllocationBreakdown,
+  createGainsLossesUnitBreakdownAccumulator,
   round2,
   type GainsLossesUnitBreakdownAccumulator,
   type PeriodGroupNode,
@@ -42,7 +43,7 @@ export function buildPeriodOverviewResponse(args: {
   bookingsCount: number;
   convertedBookingsCount: number;
   skippedBookingsCount: number;
-  gainsLossesUnitBreakdownAccumulator: GainsLossesUnitBreakdownAccumulator;
+  gainsLossesUnitBreakdownAccumulator?: GainsLossesUnitBreakdownAccumulator;
 }) {
   const { income, expenses, explicitGainLoss } = args.equityAggregation;
   const gainsLosses = args.isBeforeAccountBookStart
@@ -62,7 +63,9 @@ export function buildPeriodOverviewResponse(args: {
     args.endOfPeriodBalanceStats.netWorth,
   );
   const gainsLossesBreakdown = buildGainsLossesUnitBreakdownHierarchy({
-    accumulator: args.gainsLossesUnitBreakdownAccumulator,
+    accumulator:
+      args.gainsLossesUnitBreakdownAccumulator ??
+      createGainsLossesUnitBreakdownAccumulator(),
   });
 
   const convertedPeriodEndBalances = args.assetLiabilityAccounts.map(

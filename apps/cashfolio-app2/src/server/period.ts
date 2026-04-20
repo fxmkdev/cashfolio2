@@ -397,7 +397,10 @@ export const getPeriodOverview = createServerFn({
           })),
         );
 
-        for (const { transaction, convertedValues } of convertedValuesPerTransaction) {
+        for (const {
+          transaction,
+          convertedValues,
+        } of convertedValuesPerTransaction) {
           const nonNullConvertedValues = convertedValues.filter(
             (convertedValue): convertedValue is number =>
               convertedValue != null,
