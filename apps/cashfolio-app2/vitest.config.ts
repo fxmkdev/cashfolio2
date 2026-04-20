@@ -13,6 +13,7 @@ export default defineConfig({
     exclude: ["e2e/**", "dist/**"],
     env: {
       DATABASE_URL:
+        process.env.DATABASE_URL ??
         "postgresql://postgres:postgres@127.0.0.1:5433/postgres?schema=public",
     },
     coverage: {
