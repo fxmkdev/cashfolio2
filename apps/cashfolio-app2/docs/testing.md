@@ -32,9 +32,8 @@ pnpm --filter cashfolio-app2 coverage:ratchet
 pnpm --filter cashfolio-app2 test:unit:coverage:ratchet
 ```
 
-Coverage artifacts are generated under `coverage/` (HTML + lcov + text summary
-
-- JSON summary).
+Coverage artifacts are generated under `coverage/` (HTML + lcov + text summary +
+JSON summary).
 
 Coverage ratchet behavior:
 
