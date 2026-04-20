@@ -24,13 +24,9 @@ import {
   computeHoldingGainLossForEventSeries,
   createBreakdownBucket,
   filterConvertibleHoldingAccounts,
-  getHoldingEventDateMap,
   isMultiUnitTransaction,
   round2,
   shouldIncludeTransactionForPeriod,
-  sortHoldingEventsAscending,
-  type BreakdownHierarchyAccumulatorItem,
-  type HoldingGainLossSeriesEvent,
 } from "./period-helpers";
 import {
   convertBookingValueToReference,
@@ -46,6 +42,12 @@ import {
   computeEndOfPeriodBalanceStatsWithConvertedBalances,
   type EndOfPeriodBalanceAccount,
 } from "./period-balance-stats";
+import {
+  accumulateConvertedEquityBooking,
+  createPeriodOverviewEquityAggregation,
+  summarizeMultiUnitTransactionConvertedValues,
+} from "./period-overview-aggregation";
+import { computeHoldingAccountGainLoss } from "./period-overview-holdings";
 
 export {
   DEFAULT_PERIOD_VALUE,
@@ -173,18 +175,7 @@ export const getPeriodOverview = createServerFn({
     let convertedBookingsCount = 0;
     let skippedBookingsCount = 0;
 
-    let income = 0;
-    let expenses = 0;
-    let explicitGainLoss = 0;
-
-    const expenseAmountByAccountId = new Map<
-      string,
-      BreakdownHierarchyAccumulatorItem
-    >();
-    const incomeAmountByAccountId = new Map<
-      string,
-      BreakdownHierarchyAccumulatorItem
-    >();
+    const equityAggregation = createPeriodOverviewEquityAggregation();
 
     let nextBookingIdCursor: string | undefined;
     let transactionGainLoss = 0;
@@ -279,49 +270,11 @@ export const getPeriodOverview = createServerFn({
           }
 
           convertedBookingsCount += 1;
-
-          if (
-            booking.account.equityAccountSubtype === EquityAccountSubtype.INCOME
-          ) {
-            const incomeAmount = -convertedValue;
-            income += incomeAmount;
-
-            const existingItem = incomeAmountByAccountId.get(
-              booking.account.id,
-            );
-            if (existingItem) {
-              existingItem.amount += incomeAmount;
-            } else {
-              incomeAmountByAccountId.set(booking.account.id, {
-                accountId: booking.account.id,
-                accountName: booking.account.name,
-                groupId: booking.account.groupId,
-                amount: incomeAmount,
-              });
-            }
-          } else if (
-            booking.account.equityAccountSubtype ===
-            EquityAccountSubtype.EXPENSE
-          ) {
-            const expenseAmount = convertedValue;
-            expenses += expenseAmount;
-
-            const existingItem = expenseAmountByAccountId.get(
-              booking.account.id,
-            );
-            if (existingItem) {
-              existingItem.amount += expenseAmount;
-            } else {
-              expenseAmountByAccountId.set(booking.account.id, {
-                accountId: booking.account.id,
-                accountName: booking.account.name,
-                groupId: booking.account.groupId,
-                amount: expenseAmount,
-              });
-            }
-          } else {
-            explicitGainLoss += -convertedValue;
-          }
+          accumulateConvertedEquityBooking({
+            booking,
+            convertedValue,
+            aggregation: equityAggregation,
+          });
         }
 
         if (bookingsPage.length < EQUITY_BOOKINGS_PAGE_SIZE) {
@@ -430,23 +383,11 @@ export const getPeriodOverview = createServerFn({
         );
 
         for (const convertedValues of convertedValuesPerTransaction) {
-          const nonNullConvertedValues = convertedValues.filter(
-            (convertedValue): convertedValue is number =>
-              convertedValue != null,
-          );
-          const failedConversionsCount =
-            convertedValues.length - nonNullConvertedValues.length;
-
-          if (failedConversionsCount > 0) {
-            skippedBookingsCount += failedConversionsCount;
-            continue;
-          }
-
-          convertedBookingsCount += nonNullConvertedValues.length;
-          transactionGainLoss += nonNullConvertedValues.reduce(
-            (sum, convertedValue) => sum + convertedValue,
-            0,
-          );
+          const transactionContribution =
+            summarizeMultiUnitTransactionConvertedValues(convertedValues);
+          skippedBookingsCount += transactionContribution.skippedCount;
+          convertedBookingsCount += transactionContribution.convertedCount;
+          transactionGainLoss += transactionContribution.gainLossContribution;
         }
 
         if (transactionsPage.length < TRANSACTIONS_PAGE_SIZE) {
@@ -522,70 +463,19 @@ export const getPeriodOverview = createServerFn({
               initialHoldingBalanceByAccountId.get(account.id) ?? 0;
             const periodBookings =
               holdingBookingsByAccountId.get(account.id) ?? [];
-
-            if (initialBalance === 0 && periodBookings.length === 0) {
-              return { skippedCount: 0, gainLossContribution: 0 };
-            }
-
-            const initialRate = await getUnitToReferenceExchangeRate({
-              unit: account.unit,
-              currency: account.currency,
-              cryptocurrency: account.cryptocurrency,
-              symbol: account.symbol,
-              tradeCurrency: account.tradeCurrency,
-              date: initialHoldingDate,
-              referenceCurrency,
-              exchangeRateByKey,
-            });
-
-            if (initialRate == null) {
-              return { skippedCount: 1, gainLossContribution: 0 };
-            }
-
-            const holdingEventDateMap = getHoldingEventDateMap({
-              bookings: periodBookings,
+            return computeHoldingAccountGainLoss({
+              account,
+              initialBalance,
+              periodBookings,
+              initialRateDate: initialHoldingDate,
               periodEnd: selection.to,
+              resolveRate: (input) =>
+                getUnitToReferenceExchangeRate({
+                  ...input,
+                  referenceCurrency,
+                  exchangeRateByKey,
+                }),
             });
-
-            const sortedEvents = sortHoldingEventsAscending(
-              Array.from(holdingEventDateMap.values()),
-            );
-
-            const eventRatePromises = sortedEvents.map((event) =>
-              getUnitToReferenceExchangeRate({
-                unit: account.unit,
-                currency: account.currency,
-                cryptocurrency: account.cryptocurrency,
-                symbol: account.symbol,
-                tradeCurrency: account.tradeCurrency,
-                date: event.date,
-                referenceCurrency,
-                exchangeRateByKey,
-              }),
-            );
-            const eventRates = await Promise.all(eventRatePromises);
-            const nonNullEventRates = eventRates.filter(
-              (eventRate): eventRate is number => eventRate != null,
-            );
-
-            if (nonNullEventRates.length !== eventRates.length) {
-              return { skippedCount: 1, gainLossContribution: 0 };
-            }
-
-            const eventsForSeries: HoldingGainLossSeriesEvent[] =
-              sortedEvents.map((event, index) => ({
-                rate: nonNullEventRates[index]!,
-                balanceDelta: event.balanceDelta,
-              }));
-
-            return {
-              skippedCount: 0,
-              gainLossContribution: computeHoldingGainLossForEventSeries({
-                initialBalance,
-                initialRate,
-                events: eventsForSeries,
-              }),
-            };
           }),
         );
 
@@ -600,6 +490,7 @@ export const getPeriodOverview = createServerFn({
       }
     }
 
+    const { income, expenses, explicitGainLoss } = equityAggregation;
     const gainsLosses = isBeforeAccountBookStart
       ? 0
       : explicitGainLoss + transactionGainLoss + holdingGainLoss;
@@ -666,7 +557,7 @@ export const getPeriodOverview = createServerFn({
       hasHiddenAmountDiscrepancy: expenseBreakdownHasHiddenAmountDiscrepancy,
       hiddenAmountDiscrepancyNodeIds: expenseBreakdownDiscrepancyNodeIds,
     } = buildBreakdownHierarchyWithMeta({
-      items: Array.from(expenseAmountByAccountId.values()),
+      items: Array.from(equityAggregation.expenseAmountByAccountId.values()),
       groupById,
     });
     const {
@@ -674,7 +565,7 @@ export const getPeriodOverview = createServerFn({
       hasHiddenAmountDiscrepancy: incomeBreakdownHasHiddenAmountDiscrepancy,
       hiddenAmountDiscrepancyNodeIds: incomeBreakdownDiscrepancyNodeIds,
     } = buildBreakdownHierarchyWithMeta({
-      items: Array.from(incomeAmountByAccountId.values()),
+      items: Array.from(equityAggregation.incomeAmountByAccountId.values()),
       groupById,
     });
     const expenseBreakdown = buildBreakdownItems(
