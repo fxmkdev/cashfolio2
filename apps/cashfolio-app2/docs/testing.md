@@ -1,16 +1,45 @@
-# Testing (E2E)
+# Testing
 
 Scope: This document describes `apps/cashfolio-app2`. Unless noted otherwise,
 paths are relative to that app directory.
 
-## Framework
+## Testing Pyramid
+
+- **Unit tests (base layer)**: fast, deterministic logic tests with Vitest.
+- **Integration tests (middle layer)**: multi-module server/controller behavior
+  covered by Vitest suites in `src/**`.
+- **E2E tests (top layer)**: user journeys and browser-level behavior with
+  Playwright.
+- **Storybook interaction tests**: component-level UI interaction validation via
+  Storybook test runner.
+
+## Unit and Integration (Vitest)
+
+- Framework: **Vitest** (`vitest.config.ts`)
+- Test files: `src/**/*.test.ts`
+- Runtime: Node test environment
+- Prisma client is generated before unit test runs via `pretest:unit`.
+- Coverage output is report-only (no CI threshold gate yet) and published as CI
+  artifacts.
+
+Commands:
+
+```bash
+pnpm --filter cashfolio-app2 prisma:generate
+pnpm --filter cashfolio-app2 test:unit
+pnpm --filter cashfolio-app2 test:unit:coverage
+```
+
+Coverage artifacts are generated under `coverage/` (HTML + lcov + text summary).
+
+## E2E (Playwright)
 
 - E2E tests use **Playwright** with **Chromium**.
 - Playwright config: `playwright.config.ts`
 - Tests: `e2e/tests/`
 - DB/setup helpers: `e2e/support/`
 
-## Query Priority
+### Query Priority
 
 When writing Playwright tests, follow Testing Library query priority:
 https://testing-library.com/docs/queries/about#priority
@@ -33,7 +62,7 @@ Guidelines:
 - When adding a new `data-testid`, document briefly in the test why higher
   priority queries were not sufficient.
 
-## Auth in E2E
+### Auth in E2E
 
 E2E runs use a test-only auth bypass in `src/auth/functions.server.ts`.
 
@@ -45,7 +74,7 @@ Required env vars:
 
 When bypass is disabled, app auth behavior remains unchanged.
 
-## Valuation Provider Mocks in E2E
+### Valuation Provider Mocks in E2E
 
 - When `E2E_TEST_MODE=true`, server-side external valuation calls
   (`currencylayer`, `coinlayer`, `marketstack`) are intercepted by MSW node
@@ -58,7 +87,7 @@ When bypass is disabled, app auth behavior remains unchanged.
   exercising valuation conversion logic end-to-end.
 - The mocked rates/prices are fixed values intended for assertion stability.
 
-## Database Lifecycle
+### Database Lifecycle
 
 - Tests run against PostgreSQL.
 - Each spec file runs a full DB reset + seed in `beforeAll()`.
@@ -68,13 +97,7 @@ When bypass is disabled, app auth behavior remains unchanged.
   - root account groups
   - baseline asset/expense accounts used in core transaction flows
 
-## Commands
-
-Prerequisite for a fresh checkout:
-
-```bash
-pnpm --filter cashfolio-app2 prisma:generate
-```
+Commands:
 
 ```bash
 pnpm --filter cashfolio-app2 e2e:install
@@ -86,10 +109,23 @@ Default local DB URL fallback for e2e is:
 
 `postgresql://postgres:postgres@127.0.0.1:5433/postgres?schema=public`
 
-## CI Execution Model
+## Storybook Interaction Tests
 
-- App is built and served inside CI (`vite build` + `vite preview` via
-  Playwright `webServer`).
-- Postgres runs as a CI service container.
-- Prisma migrations are applied in CI before e2e starts.
-- Tests target only localhost app and CI-local Postgres.
+Run Storybook tests against local Storybook server:
+
+```bash
+pnpm --filter cashfolio-app2 storybook
+pnpm --filter cashfolio-app2 test-storybook
+```
+
+## CI Quality Gates
+
+Current CI gates for `cashfolio-app2`:
+
+- `typecheck`
+- `format`
+- `unit + coverage` (coverage is report-only)
+- `e2e`
+
+CI stores Playwright and unit coverage artifacts for troubleshooting and trend
+tracking.

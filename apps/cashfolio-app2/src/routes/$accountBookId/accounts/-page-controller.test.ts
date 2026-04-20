@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 
-vi.mock("../../server/accounts", () => ({
+vi.mock("@/server/accounts", () => ({
   archiveAccount: vi.fn(),
   archiveAccountGroup: vi.fn(),
   createAccount: vi.fn(),

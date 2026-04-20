@@ -6,28 +6,18 @@ import type {
   Unit,
 } from "../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
+import { createGroupPathResolver } from "./accounts-helpers";
 import {
-  getCryptocurrencyToCurrencyExchangeRate,
-  getCurrencyExchangeRate,
-  getSecurityToCurrencyExchangeRate,
-} from "./valuation.server";
+  type AccountState,
+  getAccountsWhereClause,
+  getDisplayBalanceInReferenceCurrencyByAccountId,
+} from "./accounts-queries-reference-balances";
 import {
-  createGroupPathResolver,
-  hasInactiveAncestorGroup,
-} from "./accounts-helpers";
-import {
-  type ActionAvailability,
-  accountTypeRequiresZeroBalanceForArchive,
-  getAccountArchiveAvailability,
-  getAccountDeleteAvailability,
-  getAccountUnarchiveAvailability,
-  getGroupArchiveAvailability,
-  getGroupDeleteAvailability,
-  getGroupUnarchiveAvailability,
-} from "./account-tree-rules";
-import { computeRawBalanceInReferenceCurrency } from "./accounts-reference-balance";
-
-type AccountState = "active" | "inactive";
+  buildAccountRows,
+  buildGroupRows,
+  filterGroupsForAccountState,
+  sortAccountTreeRows,
+} from "./accounts-tree-rows";
 
 type AccountTreeDataInput = {
   accountBookId: string;
@@ -52,194 +42,6 @@ type ExistingNode = {
   parentId?: string;
   groupId?: string;
 };
-
-type AccountReferenceBalanceSource = {
-  id: string;
-  type: AccountType;
-  unit: Unit | null;
-  currency: string | null;
-  cryptocurrency: string | null;
-  symbol: string | null;
-  tradeCurrency: string | null;
-};
-
-const ACTION_AVAILABILITY_NOT_REQUESTED_REASON =
-  "Action availability not requested";
-
-function unavailableActionAvailability(): ActionAvailability {
-  return {
-    enabled: false,
-    disabledReason: ACTION_AVAILABILITY_NOT_REQUESTED_REASON,
-  };
-}
-
-function getAccountsWhereClause(args: {
-  accountBookId: string;
-  accountState: AccountState;
-  type?: AccountType;
-  equityAccountSubtype?: EquityAccountSubtype;
-}) {
-  return {
-    accountBookId: args.accountBookId,
-    isActive: args.accountState === "active",
-    type: args.type,
-    ...(args.equityAccountSubtype
-      ? { equityAccountSubtype: args.equityAccountSubtype }
-      : undefined),
-  };
-}
-
-async function getDisplayBalanceInReferenceCurrencyByAccountId(args: {
-  accounts: AccountReferenceBalanceSource[];
-  rawBalanceByAccountId: Map<string, number>;
-  referenceCurrency: string;
-  includeReferenceBalances: boolean;
-}): Promise<Map<string, number | null>> {
-  const {
-    accounts,
-    rawBalanceByAccountId,
-    referenceCurrency,
-    includeReferenceBalances,
-  } = args;
-
-  if (!includeReferenceBalances) {
-    return new Map(accounts.map((account) => [account.id, null] as const));
-  }
-
-  const today = new Date();
-  let usdToReferenceRatePromise: Promise<number | null> | null = null;
-  const getUsdToReferenceRate = () => {
-    if (referenceCurrency === "USD") {
-      return Promise.resolve(1);
-    }
-
-    if (!usdToReferenceRatePromise) {
-      usdToReferenceRatePromise = getCurrencyExchangeRate({
-        sourceCurrency: "USD",
-        targetCurrency: referenceCurrency,
-        date: today,
-      });
-    }
-
-    return usdToReferenceRatePromise;
-  };
-  const exchangeRateBySourceCurrency = new Map<
-    string,
-    Promise<number | null>
-  >();
-  const exchangeRateByCryptocurrency = new Map<
-    string,
-    Promise<number | null>
-  >();
-  const exchangeRateBySecurity = new Map<string, Promise<number | null>>();
-  const getCurrencyToReferenceRate = (sourceCurrency: string) => {
-    const normalizedSourceCurrency = sourceCurrency.toUpperCase();
-    const existingPromise = exchangeRateBySourceCurrency.get(
-      normalizedSourceCurrency,
-    );
-    if (existingPromise) {
-      return existingPromise;
-    }
-
-    const exchangeRatePromise = (async () => {
-      if (normalizedSourceCurrency === "USD") {
-        return getUsdToReferenceRate();
-      }
-
-      const [usdToReferenceRate, sourceToUsdRate] = await Promise.all([
-        getUsdToReferenceRate(),
-        getCurrencyExchangeRate({
-          sourceCurrency: normalizedSourceCurrency,
-          targetCurrency: "USD",
-          date: today,
-        }),
-      ]);
-      if (usdToReferenceRate == null || sourceToUsdRate == null) {
-        return null;
-      }
-      return sourceToUsdRate * usdToReferenceRate;
-    })();
-    exchangeRateBySourceCurrency.set(
-      normalizedSourceCurrency,
-      exchangeRatePromise,
-    );
-    return exchangeRatePromise;
-  };
-  const getCryptocurrencyToReferenceRate = (cryptocurrency: string) => {
-    const normalizedCryptocurrency = cryptocurrency.toUpperCase();
-    const existingPromise = exchangeRateByCryptocurrency.get(
-      normalizedCryptocurrency,
-    );
-    if (existingPromise) {
-      return existingPromise;
-    }
-
-    const exchangeRatePromise = getCryptocurrencyToCurrencyExchangeRate({
-      cryptocurrency: normalizedCryptocurrency,
-      targetCurrency: referenceCurrency,
-      date: today,
-    });
-    exchangeRateByCryptocurrency.set(
-      normalizedCryptocurrency,
-      exchangeRatePromise,
-    );
-    return exchangeRatePromise;
-  };
-  const getSecurityToReferenceRate = (
-    symbol: string,
-    tradeCurrency: string,
-  ) => {
-    const normalizedSymbol = symbol.toUpperCase();
-    const normalizedTradeCurrency = tradeCurrency.toUpperCase();
-    const securityKey = `${normalizedSymbol}:${normalizedTradeCurrency}:${referenceCurrency}`;
-    const existingPromise = exchangeRateBySecurity.get(securityKey);
-    if (existingPromise) {
-      return existingPromise;
-    }
-
-    const exchangeRatePromise = getSecurityToCurrencyExchangeRate({
-      symbol: normalizedSymbol,
-      tradeCurrency: normalizedTradeCurrency,
-      targetCurrency: referenceCurrency,
-      date: today,
-    });
-    exchangeRateBySecurity.set(securityKey, exchangeRatePromise);
-    return exchangeRatePromise;
-  };
-
-  return new Map(
-    await Promise.all(
-      accounts.map(async (account) => {
-        const rawBalance = rawBalanceByAccountId.get(account.id) ?? 0;
-        const rawBalanceInReferenceCurrency =
-          await computeRawBalanceInReferenceCurrency({
-            type: account.type,
-            unit: account.unit,
-            currency: account.currency,
-            cryptocurrency: account.cryptocurrency,
-            symbol: account.symbol,
-            tradeCurrency: account.tradeCurrency,
-            rawBalance,
-            referenceCurrency,
-            getCurrencyToReferenceRate,
-            getCryptocurrencyToReferenceRate,
-            getSecurityToReferenceRate,
-          });
-
-        const displayBalanceInReferenceCurrency =
-          rawBalanceInReferenceCurrency == null
-            ? null
-            : account.type === "ASSET"
-              ? rawBalanceInReferenceCurrency
-              : account.type === "LIABILITY"
-                ? -rawBalanceInReferenceCurrency
-                : null;
-
-        return [account.id, displayBalanceInReferenceCurrency] as const;
-      }),
-    ),
-  );
-}
 
 async function getAccountGroupsInternal(accountBookId: string) {
   const groups = await prisma.accountGroup.findMany({
@@ -434,6 +236,20 @@ async function getAccountTreeDataInternal(args: {
     accountBalances.map((b) => [b.accountId, Number(b._sum.value ?? 0)]),
   );
   const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
+  const normalizedAccounts = accounts.map((account) => ({
+    id: account.id,
+    name: account.name,
+    type: account.type,
+    equityAccountSubtype: account.equityAccountSubtype,
+    unit: account.unit as Unit | null,
+    currency: account.currency as string | null,
+    cryptocurrency: account.cryptocurrency as string | null,
+    symbol: account.symbol as string | null,
+    tradeCurrency: account.tradeCurrency as string | null,
+    groupId: account.groupId,
+    isActive: account.isActive,
+    sortOrder: account.sortOrder,
+  }));
   const displayBalanceInReferenceCurrencyByAccountId =
     await getDisplayBalanceInReferenceCurrencyByAccountId({
       accounts: accounts.map((account) => ({
@@ -450,89 +266,27 @@ async function getAccountTreeDataInternal(args: {
       includeReferenceBalances,
     });
 
-  const accountRows = accounts.map((a) => {
-    const rawBalance = rawBalanceByAccountId.get(a.id) ?? 0;
-
-    const hasBookings = (bookingCountByAccountId.get(a.id) ?? 0) > 0;
-    const requiresZeroBalance = accountTypeRequiresZeroBalanceForArchive(
-      a.type,
-    );
-    const hasZeroBalance = !requiresZeroBalance || rawBalance === 0;
-    const hasInactiveAncestor = hasInactiveAncestorGroup(a.groupId, groupById);
-    const deleteAvailability = includeActionAvailability
-      ? getAccountDeleteAvailability(hasBookings)
-      : unavailableActionAvailability();
-    const archiveAvailability = includeActionAvailability
-      ? getAccountArchiveAvailability({
-          isActive: a.isActive,
-          hasZeroBalance,
-        })
-      : unavailableActionAvailability();
-    const unarchiveAvailability = includeActionAvailability
-      ? getAccountUnarchiveAvailability({
-          isActive: a.isActive,
-          hasInactiveAncestor,
-        })
-      : unavailableActionAvailability();
-    const displayBalance =
-      a.type === "ASSET"
-        ? rawBalance
-        : a.type === "LIABILITY"
-          ? -rawBalance
-          : null;
-    const displayBalanceInReferenceCurrency =
-      displayBalanceInReferenceCurrencyByAccountId.get(a.id) ?? null;
-    return {
-      id: a.id,
-      nodeType: "account" as "account" | "accountGroup",
-      name: a.name,
-      type: a.type,
-      equityAccountSubtype: a.equityAccountSubtype,
-      unit: a.unit as Unit | null,
-      currency: a.currency as string | null,
-      cryptocurrency: a.cryptocurrency as string | null,
-      symbol: a.symbol as string | null,
-      tradeCurrency: a.tradeCurrency as string | null,
-      balance: displayBalance as number | null,
-      balanceInReferenceCurrency: displayBalanceInReferenceCurrency,
-      parentId: a.groupId ?? undefined,
-      isActive: a.isActive,
-      groupId: a.groupId ?? undefined,
-      sortOrder: a.sortOrder,
-      deletable: deleteAvailability.enabled,
-      deleteDisabledReason: deleteAvailability.disabledReason,
-      archivable: archiveAvailability.enabled,
-      archiveDisabledReason: archiveAvailability.disabledReason,
-      unarchivable: unarchiveAvailability.enabled,
-      unarchiveDisabledReason: unarchiveAvailability.disabledReason,
-    };
+  const accountRows = buildAccountRows({
+    accounts: normalizedAccounts,
+    rawBalanceByAccountId,
+    displayBalanceInReferenceCurrencyByAccountId,
+    bookingCountByAccountId,
+    groupById,
+    includeActionAvailability,
   });
-
-  let filteredGroups = accountGroups.filter((g) => g.isActive);
-  if (accountState === "inactive") {
-    const groupsById = new Map(accountGroups.map((g) => [g.id, g]));
-    const groupsToInclude = new Set<string>();
-
-    for (const group of accountGroups) {
-      if (!group.isActive) {
-        let currentGroupId: string | null = group.id;
-        while (currentGroupId) {
-          groupsToInclude.add(currentGroupId);
-          currentGroupId =
-            groupsById.get(currentGroupId)?.parentGroupId ?? null;
-        }
-      }
-    }
-    for (const account of accounts) {
-      let currentGroupId = account.groupId;
-      while (currentGroupId) {
-        groupsToInclude.add(currentGroupId);
-        currentGroupId = groupsById.get(currentGroupId)?.parentGroupId ?? null;
-      }
-    }
-
-    filteredGroups = accountGroups.filter((g) => groupsToInclude.has(g.id));
-  }
+  const filteredGroups = filterGroupsForAccountState({
+    accountState,
+    accountGroups: accountGroups.map((group) => ({
+      id: group.id,
+      name: group.name,
+      type: group.type,
+      equityAccountSubtype: group.equityAccountSubtype,
+      parentGroupId: group.parentGroupId,
+      isActive: group.isActive,
+      sortOrder: group.sortOrder,
+    })),
+    accounts: normalizedAccounts,
+  });
 
   const referencedByAccountBook = new Set(
     [
@@ -545,7 +299,8 @@ async function getAccountTreeDataInternal(args: {
   const accountCountByGroupId = new Set(
     allAccountsForGroup
       .filter((a) => a._count > 0 && a.groupId)
-      .map((a) => a.groupId),
+      .map((a) => a.groupId)
+      .filter((groupId): groupId is string => groupId != null),
   );
   const groupsWithChildren = new Set(
     allGroupsForParent
@@ -555,7 +310,8 @@ async function getAccountTreeDataInternal(args: {
   const groupsWithActiveAccounts = new Set(
     activeAccountsForGroup
       .filter((a) => a._count > 0 && a.groupId)
-      .map((a) => a.groupId),
+      .map((a) => a.groupId)
+      .filter((groupId): groupId is string => groupId != null),
   );
   const groupsWithActiveChildGroups = new Set(
     activeGroupsForParent
@@ -563,74 +319,18 @@ async function getAccountTreeDataInternal(args: {
       .map((g) => g.parentGroupId!),
   );
 
-  const groupRows = filteredGroups.map((ag) => {
-    const hasChildAccounts = accountCountByGroupId.has(ag.id);
-    const hasChildGroups = groupsWithChildren.has(ag.id);
-    const hasActiveChildAccounts = groupsWithActiveAccounts.has(ag.id);
-    const hasActiveChildGroups = groupsWithActiveChildGroups.has(ag.id);
-    const hasInactiveAncestor = hasInactiveAncestorGroup(
-      ag.parentGroupId,
-      groupById,
-    );
-    const isReferencedByAccountBook = referencedByAccountBook.has(ag.id);
-    const deleteAvailability = includeActionAvailability
-      ? getGroupDeleteAvailability({
-          hasChildAccounts,
-          hasChildGroups,
-          isReferencedByAccountBook,
-        })
-      : unavailableActionAvailability();
-    const archiveAvailability = includeActionAvailability
-      ? getGroupArchiveAvailability({
-          isActive: ag.isActive,
-          hasActiveChildAccounts,
-          hasActiveChildGroups,
-        })
-      : unavailableActionAvailability();
-    const unarchiveAvailability = includeActionAvailability
-      ? getGroupUnarchiveAvailability({
-          isActive: ag.isActive,
-          hasInactiveAncestor,
-        })
-      : unavailableActionAvailability();
-    return {
-      id: ag.id,
-      nodeType: "accountGroup" as "account" | "accountGroup",
-      name: ag.name,
-      type: ag.type,
-      equityAccountSubtype: ag.equityAccountSubtype,
-      unit: null as Unit | null,
-      currency: null as string | null,
-      cryptocurrency: null as string | null,
-      symbol: null as string | null,
-      tradeCurrency: null as string | null,
-      balance: null as number | null,
-      balanceInReferenceCurrency: null as number | null,
-      parentId: ag.parentGroupId ?? undefined,
-      isActive: ag.isActive,
-      groupId: ag.id,
-      sortOrder: ag.sortOrder,
-      deletable: deleteAvailability.enabled,
-      deleteDisabledReason: deleteAvailability.disabledReason,
-      archivable: archiveAvailability.enabled,
-      archiveDisabledReason: archiveAvailability.disabledReason,
-      unarchivable: unarchiveAvailability.enabled,
-      unarchiveDisabledReason: unarchiveAvailability.disabledReason,
-    };
+  const groupRows = buildGroupRows({
+    groups: filteredGroups,
+    groupById,
+    includeActionAvailability,
+    referencedByAccountBook,
+    groupsWithChildAccounts: accountCountByGroupId,
+    groupsWithChildGroups: groupsWithChildren,
+    groupsWithActiveChildAccounts: groupsWithActiveAccounts,
+    groupsWithActiveChildGroups: groupsWithActiveChildGroups,
   });
 
-  const allRows = [...accountRows, ...groupRows];
-  allRows.sort((a, b) => {
-    const parentA = a.parentId ?? "";
-    const parentB = b.parentId ?? "";
-    if (parentA !== parentB) return parentA.localeCompare(parentB);
-    if (a.sortOrder !== b.sortOrder) {
-      if (a.sortOrder == null) return 1;
-      if (b.sortOrder == null) return -1;
-      return a.sortOrder - b.sortOrder;
-    }
-    return a.name.localeCompare(b.name);
-  });
+  const allRows = sortAccountTreeRows([...accountRows, ...groupRows]);
   return {
     referenceCurrency: accountBook.referenceCurrency.toUpperCase(),
     rows: allRows,

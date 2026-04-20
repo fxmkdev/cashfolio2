@@ -451,6 +451,23 @@ test("period page shows KPI waterfall and updated income/expenses wording", asyn
   expect(Math.abs(netWorth - (assets - liabilities))).toBeLessThan(0.01);
 });
 
+test("period allocation shows partial-data warning when valuation is missing", async ({
+  page,
+}) => {
+  await seedAssetAccountWithMissingReferenceBalance({
+    accountBookId: seeded.accountBookId,
+    counterAccountId: seeded.cashAccount.id,
+  });
+
+  await page.goto(`/${seeded.accountBookId}/period`);
+  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+  await expect(
+    page.getByText(
+      /skipped because reference-currency balances were unavailable\./,
+    ),
+  ).toBeVisible();
+});
+
 test("period breakdown account leaf drilldown opens ledger with period filter", async ({
   page,
 }) => {
