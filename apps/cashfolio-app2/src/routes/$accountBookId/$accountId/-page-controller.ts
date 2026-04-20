@@ -245,7 +245,7 @@ export function useLedgerPageController(args: {
           date: new Date(),
           description: "",
           counterAccountId: simpleCounterAccountOptions[0]?.value ?? "",
-          amount: 1,
+          amount: 0,
           direction: "DEBIT",
         },
         allAccountOptions,
