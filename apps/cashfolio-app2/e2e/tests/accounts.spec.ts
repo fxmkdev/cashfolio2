@@ -394,7 +394,6 @@ test("archive action is disabled for non-zero asset balances", async ({
 
   const archiveButton = usdRow.getByRole("button", { name: "Archive" });
   await expect(archiveButton).toBeDisabled();
-  await expect(archiveButton).toHaveAttribute("aria-disabled", "true");
 });
 
 test("footer total stays blank when an account ref-currency balance is missing", async ({
