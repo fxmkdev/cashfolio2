@@ -28,6 +28,7 @@ import {
 
 const OPENING_BALANCES_ACCOUNT_NAME = "Opening Balances";
 const OPENING_BALANCES_DATE_RANGE_MS = 24 * 60 * 60 * 1000;
+const OPENING_BALANCE_EPSILON = 0.000001;
 
 function normalizeOpeningBalanceTarget(
   openingBalance: number | null | undefined,
@@ -115,85 +116,311 @@ async function applyOpeningBalanceTarget(args: {
     openingBalancesBookingDate.getTime() + OPENING_BALANCES_DATE_RANGE_MS,
   );
 
-  const openingBalanceAggregate = await args.tx.booking.aggregate({
-    where: {
-      accountBookId: args.accountBookId,
-      accountId: args.account.id,
-      date: {
-        gte: openingBalancesBookingDate,
-        lt: openingBalancesBookingDateNext,
+  const existingOpeningBalanceTransactions = await args.tx.transaction.findMany(
+    {
+      where: {
+        accountBookId: args.accountBookId,
+        AND: [
+          {
+            bookings: {
+              some: {
+                accountId: args.account.id,
+                date: {
+                  gte: openingBalancesBookingDate,
+                  lt: openingBalancesBookingDateNext,
+                },
+              },
+            },
+          },
+          {
+            bookings: {
+              some: {
+                date: {
+                  gte: openingBalancesBookingDate,
+                  lt: openingBalancesBookingDateNext,
+                },
+                account: {
+                  type: AccountType.EQUITY,
+                  equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+                },
+              },
+            },
+          },
+        ],
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: {
+        id: true,
+        bookings: {
+          where: {
+            date: {
+              gte: openingBalancesBookingDate,
+              lt: openingBalancesBookingDateNext,
+            },
+          },
+          select: {
+            id: true,
+            accountId: true,
+            account: {
+              select: {
+                id: true,
+                type: true,
+                equityAccountSubtype: true,
+              },
+            },
+          },
+        },
       },
     },
-    _sum: { value: true },
-  });
-  const currentRawOpeningBalance = Number(
-    openingBalanceAggregate._sum.value ?? 0,
   );
   const targetRawOpeningBalance =
     args.account.type === AccountType.ASSET
       ? normalizedOpeningBalance
       : -normalizedOpeningBalance;
-  const openingBalanceDelta =
-    targetRawOpeningBalance - currentRawOpeningBalance;
-  if (Math.abs(openingBalanceDelta) <= 0.000001) {
-    return;
-  }
+  const hasTargetOpeningBalance =
+    Math.abs(targetRawOpeningBalance) > OPENING_BALANCE_EPSILON;
 
-  const openingBalancesAccountId = await getOrCreateOpeningBalancesAccountId(
-    args.tx,
-    args.accountBookId,
-  );
   const bookingUnitFields = getBookingUnitFields(
     args.account,
     "account opening balance",
   );
+  const description = `Opening balance adjustment: ${args.account.name}`;
 
-  await args.tx.transaction.create({
-    data: {
-      description: `Opening balance adjustment: ${args.account.name}`,
-      accountBookId: args.accountBookId,
-      bookings: {
-        create: [
-          {
-            date: openingBalancesBookingDate,
-            description: "",
-            account: {
-              connect: {
-                id_accountBookId: {
-                  id: args.account.id,
-                  accountBookId: args.accountBookId,
+  if (existingOpeningBalanceTransactions.length === 0) {
+    if (!hasTargetOpeningBalance) {
+      return;
+    }
+
+    const openingBalancesAccountId = await getOrCreateOpeningBalancesAccountId(
+      args.tx,
+      args.accountBookId,
+    );
+    await args.tx.transaction.create({
+      data: {
+        description,
+        accountBookId: args.accountBookId,
+        bookings: {
+          create: [
+            {
+              date: openingBalancesBookingDate,
+              description: "",
+              account: {
+                connect: {
+                  id_accountBookId: {
+                    id: args.account.id,
+                    accountBookId: args.accountBookId,
+                  },
                 },
               },
+              ...bookingUnitFields,
+              value: targetRawOpeningBalance,
+              sortOrder: 0,
+              accountBook: {
+                connect: { id: args.accountBookId },
+              },
             },
-            ...bookingUnitFields,
-            value: openingBalanceDelta,
-            sortOrder: 0,
-            accountBook: {
-              connect: { id: args.accountBookId },
+            {
+              date: openingBalancesBookingDate,
+              description: "",
+              account: {
+                connect: {
+                  id_accountBookId: {
+                    id: openingBalancesAccountId,
+                    accountBookId: args.accountBookId,
+                  },
+                },
+              },
+              ...bookingUnitFields,
+              value: -targetRawOpeningBalance,
+              sortOrder: 1,
+              accountBook: {
+                connect: { id: args.accountBookId },
+              },
+            },
+          ],
+        },
+      },
+    });
+    return;
+  }
+
+  const canonicalTransaction = existingOpeningBalanceTransactions[0]!;
+  const accountBooking = canonicalTransaction.bookings.find(
+    (booking) => booking.accountId === args.account.id,
+  );
+  const openingBalancesBooking = canonicalTransaction.bookings.find(
+    (booking) =>
+      booking.account.type === AccountType.EQUITY &&
+      booking.account.equityAccountSubtype ===
+        EquityAccountSubtype.OPENING_BALANCES,
+  );
+  const transactionsToDelete = existingOpeningBalanceTransactions
+    .slice(1)
+    .map((transaction) => transaction.id);
+
+  if (!accountBooking || !openingBalancesBooking) {
+    await args.tx.transaction.deleteMany({
+      where: {
+        accountBookId: args.accountBookId,
+        id: {
+          in: existingOpeningBalanceTransactions.map(
+            (transaction) => transaction.id,
+          ),
+        },
+      },
+    });
+
+    if (!hasTargetOpeningBalance) {
+      return;
+    }
+
+    const openingBalancesAccountId = await getOrCreateOpeningBalancesAccountId(
+      args.tx,
+      args.accountBookId,
+    );
+    await args.tx.transaction.create({
+      data: {
+        description,
+        accountBookId: args.accountBookId,
+        bookings: {
+          create: [
+            {
+              date: openingBalancesBookingDate,
+              description: "",
+              account: {
+                connect: {
+                  id_accountBookId: {
+                    id: args.account.id,
+                    accountBookId: args.accountBookId,
+                  },
+                },
+              },
+              ...bookingUnitFields,
+              value: targetRawOpeningBalance,
+              sortOrder: 0,
+              accountBook: {
+                connect: { id: args.accountBookId },
+              },
+            },
+            {
+              date: openingBalancesBookingDate,
+              description: "",
+              account: {
+                connect: {
+                  id_accountBookId: {
+                    id: openingBalancesAccountId,
+                    accountBookId: args.accountBookId,
+                  },
+                },
+              },
+              ...bookingUnitFields,
+              value: -targetRawOpeningBalance,
+              sortOrder: 1,
+              accountBook: {
+                connect: { id: args.accountBookId },
+              },
+            },
+          ],
+        },
+      },
+    });
+    return;
+  }
+
+  if (!hasTargetOpeningBalance) {
+    await args.tx.transaction.deleteMany({
+      where: {
+        accountBookId: args.accountBookId,
+        id: {
+          in: existingOpeningBalanceTransactions.map(
+            (transaction) => transaction.id,
+          ),
+        },
+      },
+    });
+    return;
+  }
+
+  const extraBookingIdsOnCanonical = canonicalTransaction.bookings
+    .filter(
+      (booking) =>
+        booking.id !== accountBooking.id &&
+        booking.id !== openingBalancesBooking.id,
+    )
+    .map((booking) => booking.id);
+
+  await args.tx.transaction.update({
+    where: {
+      id_accountBookId: {
+        id: canonicalTransaction.id,
+        accountBookId: args.accountBookId,
+      },
+    },
+    data: {
+      description,
+      bookings: {
+        update: [
+          {
+            where: {
+              id_accountBookId: {
+                id: accountBooking.id,
+                accountBookId: args.accountBookId,
+              },
+            },
+            data: {
+              date: openingBalancesBookingDate,
+              description: "",
+              ...bookingUnitFields,
+              value: targetRawOpeningBalance,
+              sortOrder: 0,
+              account: {
+                connect: {
+                  id_accountBookId: {
+                    id: args.account.id,
+                    accountBookId: args.accountBookId,
+                  },
+                },
+              },
             },
           },
           {
-            date: openingBalancesBookingDate,
-            description: "",
-            account: {
-              connect: {
-                id_accountBookId: {
-                  id: openingBalancesAccountId,
-                  accountBookId: args.accountBookId,
-                },
+            where: {
+              id_accountBookId: {
+                id: openingBalancesBooking.id,
+                accountBookId: args.accountBookId,
               },
             },
-            ...bookingUnitFields,
-            value: -openingBalanceDelta,
-            sortOrder: 1,
-            accountBook: {
-              connect: { id: args.accountBookId },
+            data: {
+              date: openingBalancesBookingDate,
+              description: "",
+              ...bookingUnitFields,
+              value: -targetRawOpeningBalance,
+              sortOrder: 1,
             },
           },
         ],
       },
     },
   });
+
+  if (extraBookingIdsOnCanonical.length > 0) {
+    await args.tx.booking.deleteMany({
+      where: {
+        accountBookId: args.accountBookId,
+        transactionId: canonicalTransaction.id,
+        id: { in: extraBookingIdsOnCanonical },
+      },
+    });
+  }
+
+  if (transactionsToDelete.length > 0) {
+    await args.tx.transaction.deleteMany({
+      where: {
+        accountBookId: args.accountBookId,
+        id: { in: transactionsToDelete },
+      },
+    });
+  }
 }
 
 export const createAccount = createServerFn({ method: "POST" })
