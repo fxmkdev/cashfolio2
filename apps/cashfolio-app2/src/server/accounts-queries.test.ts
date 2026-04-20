@@ -60,7 +60,7 @@ vi.mock("./valuation.server", () => ({
   getSecurityToCurrencyExchangeRate,
 }));
 
-import { getAccountTreeData } from "./accounts-queries";
+import { getAccountsPageData, getAccountTreeData } from "./accounts-queries";
 
 describe("getAccountTreeData", () => {
   beforeEach(() => {
@@ -275,5 +275,48 @@ describe("getAccountTreeData", () => {
     expect(result.rows.map((row) => row.id)).toEqual(
       expect.arrayContaining(["group-root", "group-child", "asset-archived"]),
     );
+  });
+});
+
+describe("getAccountsPageData", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    prisma.account.findMany.mockResolvedValue([]);
+    prisma.account.groupBy.mockResolvedValue([]);
+    prisma.accountGroup.findMany.mockResolvedValue([]);
+    prisma.accountGroup.groupBy.mockResolvedValue([]);
+    prisma.booking.groupBy.mockResolvedValue([]);
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-08T00:00:00.000Z"),
+      securityHoldingGainLossAccountGroupId: null,
+      cryptoHoldingGainLossAccountGroupId: null,
+      fxHoldingGainLossAccountGroupId: null,
+    });
+
+    getCurrencyExchangeRate.mockResolvedValue(1);
+    getCryptocurrencyToCurrencyExchangeRate.mockResolvedValue(null);
+    getSecurityToCurrencyExchangeRate.mockResolvedValue(null);
+  });
+
+  it("authorizes once and skips active-only page helpers for inactive state", async () => {
+    const result = await getAccountsPageData({
+      data: {
+        accountBookId: "book-3",
+        accountState: "inactive",
+      },
+    });
+
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledTimes(1);
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-3");
+    expect(prisma.account.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      accountGroups: [],
+      existingNodes: [],
+      referenceCurrency: "CHF",
+      rows: [],
+    });
   });
 });
