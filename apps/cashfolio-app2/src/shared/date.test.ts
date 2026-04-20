@@ -61,19 +61,26 @@ describe("shared/date", () => {
       new Date("2026-04-20T00:00:00.000Z"),
     );
     const fromIsoString = normalizeDateInputValue("2026-04-20T00:00:00.000Z");
+    const fromYyyyMmDd = normalizeDateInputValue("2026-04-20");
 
     expect(fromDate?.toISOString()).toBe("2026-04-20T00:00:00.000Z");
     expect(fromIsoString?.toISOString()).toBe("2026-04-20T00:00:00.000Z");
+    expect(fromYyyyMmDd).not.toBeNull();
+    expect(fromYyyyMmDd && !isNaN(fromYyyyMmDd.getTime())).toBe(true);
   });
 
   test("normalizeDateInputValue parses display-format strings and rejects invalid values", () => {
     const parsed = normalizeDateInputValue("20.04.2026");
     const invalid = normalizeDateInputValue("not-a-date");
     const empty = normalizeDateInputValue("  ");
+    const ambiguous = normalizeDateInputValue("04/20/2026");
+    const impossibleCalendarDate = normalizeDateInputValue("31.02.2026");
 
     expect(parsed).not.toBeNull();
     expect(parsed && !isNaN(parsed.getTime())).toBe(true);
     expect(invalid).toBeNull();
     expect(empty).toBeNull();
+    expect(ambiguous).toBeNull();
+    expect(impossibleCalendarDate).toBeNull();
   });
 });
