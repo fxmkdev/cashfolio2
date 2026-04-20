@@ -100,7 +100,16 @@ async function selectSegmentedControlOption(
     return;
   }
 
-  await option.check({ force: true });
+  await option.focus();
+  await option.press("Space");
+
+  if (!(await option.isChecked())) {
+    await option.evaluate((input) => {
+      (input as HTMLInputElement).click();
+    });
+  }
+
+  await expect(option).toBeChecked();
 }
 
 type PeriodPageSessionState = {
