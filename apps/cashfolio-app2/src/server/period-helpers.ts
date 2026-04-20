@@ -196,6 +196,9 @@ export function buildTransactionGainsLossesContributions(args: {
     (sum, contribution) => sum + contribution.amount,
     0,
   );
+  if (round2(transactionTotalAmount) === 0) {
+    return [];
+  }
 
   const contributionsWithoutReferenceCurrency = rawContributions.filter(
     (contribution) =>

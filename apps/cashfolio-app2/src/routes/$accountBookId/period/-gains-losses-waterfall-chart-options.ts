@@ -49,7 +49,6 @@ export function useGainsLossesWaterfallChartOptions(args: {
     total: string;
   };
   totalAxisLabel: string;
-  totalAmount: number;
   onNodeDoubleClick: (datum: GainsLossesBreakdownChartDatum) => void;
 }): AgCartesianChartOptions {
   const amountCompactFormatter = useMemo(
@@ -60,16 +59,24 @@ export function useGainsLossesWaterfallChartOptions(args: {
       }),
     [],
   );
+  const totalAmount = useMemo(
+    () =>
+      args.chartData.reduce(
+        (totalAmount, datum) => totalAmount + datum.amount,
+        0,
+      ),
+    [args.chartData],
+  );
   const amountByLabel = useMemo(() => {
     const map = new Map<string, number>();
 
     for (const datum of args.chartData) {
       map.set(datum.label, datum.amount);
     }
-    map.set(args.totalAxisLabel, args.totalAmount);
+    map.set(args.totalAxisLabel, totalAmount);
 
     return map;
-  }, [args.chartData, args.totalAmount, args.totalAxisLabel]);
+  }, [args.chartData, args.totalAxisLabel, totalAmount]);
   const waterfallSeries = useMemo<
     AgWaterfallSeriesOptions<GainsLossesBreakdownChartDatum>
   >(

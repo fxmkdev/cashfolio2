@@ -626,6 +626,35 @@ describe("gains/losses unit breakdown", () => {
       },
     ]);
   });
+
+  test("returns no transaction attribution when net gain/loss is zero", () => {
+    const contributions = buildTransactionGainsLossesContributions({
+      bookings: [
+        {
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+        },
+        {
+          unit: Unit.CURRENCY,
+          currency: "USD",
+          cryptocurrency: null,
+          symbol: null,
+        },
+        {
+          unit: Unit.CURRENCY,
+          currency: "EUR",
+          cryptocurrency: null,
+          symbol: null,
+        },
+      ],
+      convertedValues: [-100, 60, 40],
+      referenceCurrency: "CHF",
+    });
+
+    expect(contributions).toEqual([]);
+  });
 });
 
 describe("expense breakdown grouping", () => {

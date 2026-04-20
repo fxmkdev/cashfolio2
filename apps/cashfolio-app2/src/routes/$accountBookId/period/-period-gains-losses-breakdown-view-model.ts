@@ -95,14 +95,13 @@ export function usePeriodGainsLossesBreakdownViewModel(args: {
     [gainsLossesBreakdownDrillState.currentNodes],
   );
 
-  const hasGainsLossesBreakdown = gainsLossesBreakdownChartData.length > 0;
+  const hasGainsLossesBreakdown = gainsLossesBreakdownChartData.some(
+    (datum) => datum.amount !== 0,
+  );
 
   const gainsLossesTotalAxisLabel = gainsLossesBreakdownCurrentPathNode
     ? `Total ${gainsLossesBreakdownCurrentPathNode.label}`
     : "Total Gains/Losses";
-
-  const gainsLossesTotalAmount =
-    gainsLossesBreakdownCurrentPathNode?.amount ?? overview.stats.gainsLosses;
 
   const updateGainsLossesBreakdownPath = useCallback(
     (nextPath: string[]) => {
@@ -137,7 +136,6 @@ export function usePeriodGainsLossesBreakdownViewModel(args: {
     currencyFormatter,
     waterfallPalette,
     totalAxisLabel: gainsLossesTotalAxisLabel,
-    totalAmount: gainsLossesTotalAmount,
     onNodeDoubleClick: handleGainsLossesNodeDoubleClick,
   });
 
