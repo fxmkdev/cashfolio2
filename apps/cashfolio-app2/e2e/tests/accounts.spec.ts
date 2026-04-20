@@ -595,6 +595,14 @@ test("period page persists card state, drill state, and table expansion across r
   await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
   await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
 
+  const breakdownTypeControl = page.getByRole("radiogroup", {
+    name: "Breakdown type",
+  });
+  await breakdownTypeControl.getByRole("radio", { name: "Expenses" }).click();
+
+  const breakdownChartTypeControl = page.getByLabelText("Breakdown chart type");
+  await breakdownChartTypeControl.getByRole("radio", { name: "Donut" }).click();
+
   const breakdownChart = page.getByTestId("period-breakdown-chart");
   await expect(breakdownChart).toBeVisible();
   await breakdownChart.dblclick({ force: true });
@@ -602,7 +610,6 @@ test("period page persists card state, drill state, and table expansion across r
     page.getByText("Drilled expense groups in the selected period"),
   ).toBeVisible();
 
-  const breakdownChartTypeControl = page.getByLabelText("Breakdown chart type");
   await breakdownChartTypeControl.getByRole("radio", { name: "Table" }).click();
   await expect(page.getByTestId("period-breakdown-table")).toBeVisible();
 
@@ -612,9 +619,6 @@ test("period page persists card state, drill state, and table expansion across r
     0,
   );
 
-  const breakdownTypeControl = page.getByRole("radiogroup", {
-    name: "Breakdown type",
-  });
   await breakdownTypeControl.getByRole("radio", { name: "Income" }).click();
   await expect(
     page.getByRole("heading", { name: "Income Breakdown" }),
