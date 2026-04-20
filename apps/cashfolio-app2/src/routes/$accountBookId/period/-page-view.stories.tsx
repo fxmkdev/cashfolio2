@@ -827,6 +827,10 @@ export const BreakdownTableDoubleClickSmoke: Story = {
     await expect(args.onBreakdownAccountDoubleClick).toHaveBeenCalledWith(
       "account-subscriptions",
     );
+    await expect(args.onBreakdownAccountDoubleClick).toHaveBeenCalledTimes(1);
+
+    await userEvent.dblClick(canvas.getByText("Total"));
+    await expect(args.onBreakdownAccountDoubleClick).toHaveBeenCalledTimes(1);
   },
 };
 

@@ -76,7 +76,15 @@ export function BreakdownTable({
       treeData={true}
       treeDataParentIdField="parentId"
       pinnedBottomRowData={pinnedBottomRowData}
-      getRowId={({ data }) => data?.id ?? ""}
+      getRowId={({ data }) => {
+        if (!data) {
+          throw new Error(
+            "BreakdownTable row is missing data. Row IDs must be stable and non-empty.",
+          );
+        }
+
+        return data.id;
+      }}
       onRowDoubleClicked={(event) => {
         if (!onAccountDoubleClick || !event.data) {
           return;
