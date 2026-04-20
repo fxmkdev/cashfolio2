@@ -1,13 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
 import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
-import type { Prisma } from "../.prisma-client/client";
+import { Prisma } from "../.prisma-client/client";
 import {
   validateAccountInput,
   validateAccountGroupInput,
 } from "../shared/account-validation";
 import { getBookingUnitFields } from "../shared/booking-unit-fields";
-import { getOpeningBalancesBookingDate, startOfUtcDay } from "../shared/date";
+import { getOpeningBalancesBookingDate, getUtcDayRange } from "../shared/date";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { ensureSameOriginRequestFromServerContext } from "../security/same-origin.server";
 import {
@@ -27,7 +27,6 @@ import {
 } from "./account-tree-rules";
 
 const OPENING_BALANCES_ACCOUNT_NAME = "Opening Balances";
-const OPENING_BALANCES_DATE_RANGE_MS = 24 * 60 * 60 * 1000;
 const OPENING_BALANCE_EPSILON = 0.000001;
 
 function normalizeOpeningBalanceTarget(
@@ -44,6 +43,19 @@ function normalizeOpeningBalanceTarget(
     throw new Error("Opening balance is invalid.");
   }
   return value;
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return error.code === "P2002";
+  }
+
+  if (typeof error !== "object" || error == null) {
+    return false;
+  }
+
+  const maybeCode = (error as { code?: unknown }).code;
+  return maybeCode === "P2002";
 }
 
 async function getOrCreateOpeningBalancesAccountId(
@@ -63,16 +75,35 @@ async function getOrCreateOpeningBalancesAccountId(
     return existing.id;
   }
 
-  const created = await tx.account.create({
-    data: {
-      name: OPENING_BALANCES_ACCOUNT_NAME,
-      type: AccountType.EQUITY,
-      equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-      accountBookId,
-    },
-    select: { id: true },
-  });
-  return created.id;
+  try {
+    const created = await tx.account.create({
+      data: {
+        name: OPENING_BALANCES_ACCOUNT_NAME,
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+        accountBookId,
+      },
+      select: { id: true },
+    });
+    return created.id;
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      const concurrentlyCreated = await tx.account.findFirst({
+        where: {
+          accountBookId,
+          type: AccountType.EQUITY,
+          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+        },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: { id: true },
+      });
+      if (concurrentlyCreated) {
+        return concurrentlyCreated.id;
+      }
+    }
+
+    throw error;
+  }
 }
 
 async function applyOpeningBalanceTarget(args: {
@@ -109,12 +140,10 @@ async function applyOpeningBalanceTarget(args: {
     where: { id: args.accountBookId },
     select: { startDate: true },
   });
-  const openingBalancesBookingDate = startOfUtcDay(
-    getOpeningBalancesBookingDate(accountBook.startDate),
+  const openingBalancesBookingDate = getOpeningBalancesBookingDate(
+    accountBook.startDate,
   );
-  const openingBalancesBookingDateNext = new Date(
-    openingBalancesBookingDate.getTime() + OPENING_BALANCES_DATE_RANGE_MS,
-  );
+  const openingBalanceDateRange = getUtcDayRange(openingBalancesBookingDate);
 
   const existingOpeningBalanceTransactions = await args.tx.transaction.findMany(
     {
@@ -126,8 +155,8 @@ async function applyOpeningBalanceTarget(args: {
               some: {
                 accountId: args.account.id,
                 date: {
-                  gte: openingBalancesBookingDate,
-                  lt: openingBalancesBookingDateNext,
+                  gte: openingBalanceDateRange.start,
+                  lt: openingBalanceDateRange.endExclusive,
                 },
               },
             },
@@ -136,8 +165,8 @@ async function applyOpeningBalanceTarget(args: {
             bookings: {
               some: {
                 date: {
-                  gte: openingBalancesBookingDate,
-                  lt: openingBalancesBookingDateNext,
+                  gte: openingBalanceDateRange.start,
+                  lt: openingBalanceDateRange.endExclusive,
                 },
                 account: {
                   type: AccountType.EQUITY,
@@ -154,8 +183,8 @@ async function applyOpeningBalanceTarget(args: {
         bookings: {
           where: {
             date: {
-              gte: openingBalancesBookingDate,
-              lt: openingBalancesBookingDateNext,
+              gte: openingBalanceDateRange.start,
+              lt: openingBalanceDateRange.endExclusive,
             },
           },
           select: {

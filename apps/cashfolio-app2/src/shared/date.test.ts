@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 import {
   formatUtcDate,
+  getUtcDayRange,
   getOpeningBalancesBookingDate,
+  MILLISECONDS_PER_DAY,
   isSameUtcDay,
   startOfUtcDay,
 } from "./date";
@@ -19,6 +21,16 @@ describe("shared/date", () => {
     );
 
     expect(result.toISOString()).toBe("2026-04-19T00:00:00.000Z");
+  });
+
+  test("getUtcDayRange returns [start, next day) in UTC", () => {
+    const range = getUtcDayRange(new Date("2026-04-20T17:42:11.123Z"));
+
+    expect(range.start.toISOString()).toBe("2026-04-20T00:00:00.000Z");
+    expect(range.endExclusive.toISOString()).toBe("2026-04-21T00:00:00.000Z");
+    expect(range.endExclusive.getTime() - range.start.getTime()).toBe(
+      MILLISECONDS_PER_DAY,
+    );
   });
 
   test("isSameUtcDay compares by UTC day boundaries", () => {

@@ -20,6 +20,7 @@ export function useLedgerColumnDefs(args: {
   hasPeriodFilter: boolean;
   referenceCurrency: string | null;
   isEquity: boolean;
+  isOpeningBalances: boolean;
   isIncome: boolean;
   isExpense: boolean;
   onEditClick: (transactionId: string) => void;
@@ -42,6 +43,7 @@ export function useLedgerColumnDefs(args: {
     hasPeriodFilter,
     referenceCurrency,
     isEquity,
+    isOpeningBalances,
     isIncome,
     isExpense,
     onEditClick,
@@ -136,7 +138,7 @@ export function useLedgerColumnDefs(args: {
               filter: "agNumberColumnFilter",
             },
           ]),
-      ...(isEquity && !isIncome
+      ...(isEquity && !isOpeningBalances && !isIncome
         ? [
             {
               field: "referenceDebit" as const,
@@ -149,7 +151,7 @@ export function useLedgerColumnDefs(args: {
             },
           ]
         : []),
-      ...(isEquity && !isExpense
+      ...(isEquity && !isOpeningBalances && !isExpense
         ? [
             {
               field: "referenceCredit" as const,
@@ -280,6 +282,7 @@ export function useLedgerColumnDefs(args: {
       hasPeriodFilter,
       referenceCurrency,
       isEquity,
+      isOpeningBalances,
       isIncome,
       isExpense,
       onEditClick,

@@ -346,6 +346,9 @@ export function useLedgerPageController(args: {
   const isExpense =
     account.type === AccountType.EQUITY &&
     account.equityAccountSubtype === EquityAccountSubtype.EXPENSE;
+  const isOpeningBalances =
+    account.type === AccountType.EQUITY &&
+    account.equityAccountSubtype === EquityAccountSubtype.OPENING_BALANCES;
 
   const handleDeleteClick = useCallback(
     (transactionId: string, description: string) => {
@@ -367,6 +370,7 @@ export function useLedgerPageController(args: {
     hasPeriodFilter: args.hasPeriodFilter,
     referenceCurrency: args.loaderData.referenceCurrency,
     isEquity,
+    isOpeningBalances,
     isIncome,
     isExpense,
     onEditClick: handleEditClick,

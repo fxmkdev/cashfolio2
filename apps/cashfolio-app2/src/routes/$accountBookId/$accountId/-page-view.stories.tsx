@@ -220,6 +220,7 @@ function LedgerPageStoryHarness({
     hasPeriodFilter,
     referenceCurrency: null,
     isEquity: accountType === AccountType.EQUITY,
+    isOpeningBalances: false,
     isIncome: false,
     isExpense: false,
     onEditClick: (transactionId) => {

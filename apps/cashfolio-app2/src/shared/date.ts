@@ -4,7 +4,18 @@ export function startOfUtcDay(date: Date): Date {
   );
 }
 
-const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+export const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+
+export function getUtcDayRange(date: Date): {
+  start: Date;
+  endExclusive: Date;
+} {
+  const start = startOfUtcDay(date);
+  return {
+    start,
+    endExclusive: new Date(start.getTime() + MILLISECONDS_PER_DAY),
+  };
+}
 
 export function getOpeningBalancesBookingDate(
   accountBookStartDate: Date,

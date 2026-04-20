@@ -101,6 +101,8 @@ describe("updateAccount opening balance management", () => {
       symbol: null,
       tradeCurrency: null,
     });
+    tx.account.findFirst.mockResolvedValue(null);
+    tx.account.create.mockResolvedValue({ id: "opening-account" });
     tx.accountBook.findUniqueOrThrow.mockResolvedValue({
       startDate: new Date("2026-01-10T00:00:00.000Z"),
     });
@@ -239,5 +241,48 @@ describe("updateAccount opening balance management", () => {
     });
     expect(tx.transaction.update).not.toHaveBeenCalled();
     expect(tx.transaction.create).not.toHaveBeenCalled();
+  });
+
+  it("reuses concurrently created opening-balances account on unique conflict", async () => {
+    tx.transaction.findMany.mockResolvedValue([]);
+    tx.account.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: "opening-account-concurrent" });
+    tx.account.create.mockRejectedValueOnce({ code: "P2002" });
+
+    await updateAccount({
+      data: {
+        id: "account-1",
+        accountBookId: "book-1",
+        name: "Cash",
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        openingBalance: 250,
+      },
+    });
+
+    expect(tx.account.create).toHaveBeenCalledTimes(1);
+    expect(tx.transaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          bookings: expect.objectContaining({
+            create: expect.arrayContaining([
+              expect.objectContaining({
+                account: {
+                  connect: {
+                    id_accountBookId: {
+                      id: "opening-account-concurrent",
+                      accountBookId: "book-1",
+                    },
+                  },
+                },
+                value: -250,
+              }),
+            ]),
+          }),
+        }),
+      }),
+    );
   });
 });
