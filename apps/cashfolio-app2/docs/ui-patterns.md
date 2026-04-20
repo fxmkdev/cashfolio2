@@ -268,12 +268,12 @@ for ledger child routes.
 - **Ledger/chart switch**: Asset and liability ledgers show a top-right
   segmented switch (`Ledger` / `Chart`) using real TanStack links (`<a>`), not
   click-handler navigation
-- **Chart route**: `src/routes/$accountBookId/$accountId/chart/route.tsx` renders a
-  daily closing balance line chart in the account's native unit and in the
-  account-book reference currency on a secondary y-axis, with `en-CH`-formatted
-  values. Reference-currency conversions use the shared period conversion helper
-  (`src/server/period-conversion.ts`) backed by valuation providers/caching
-  (`src/server/valuation.server.ts`).
+- **Chart route**: `src/routes/$accountBookId/$accountId/chart/route.tsx`
+  renders a daily closing balance line chart in the account's native unit and in
+  the account-book reference currency on a secondary y-axis, with
+  `en-CH`-formatted values. Reference-currency conversions use the shared period
+  conversion helper (`src/server/period-conversion.ts`) backed by valuation
+  providers/caching (`src/server/valuation.server.ts`).
 
 ## Validation Pattern
 
