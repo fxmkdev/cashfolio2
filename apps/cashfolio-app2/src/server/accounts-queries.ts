@@ -6,11 +6,9 @@ import type {
   Unit,
 } from "../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
-import { getOpeningBalancesBookingDate, getUtcDayRange } from "../shared/date";
 import { createGroupPathResolver } from "./accounts-helpers";
 import {
   type AccountState,
-  getAccountsWhereClause,
   getDisplayBalanceInReferenceCurrencyByAccountId,
 } from "./accounts-queries-reference-balances";
 import {
@@ -19,6 +17,11 @@ import {
   filterGroupsForAccountState,
   sortAccountTreeRows,
 } from "./accounts-tree-rows";
+import {
+  fetchAccountReferenceBalancesQueryData,
+  fetchAccountTreeQueryData,
+} from "./accounts-queries-tree-data";
+import { buildAccountTreeGroupActionAvailabilitySets } from "./accounts-tree-action-availability";
 
 type AccountTreeDataInput = {
   accountBookId: string;
@@ -119,145 +122,31 @@ async function getAccountTreeDataInternal(args: {
   const includeReferenceBalances = data.includeReferenceBalances ?? true;
   const includeActionAvailability = data.includeActionAvailability ?? true;
 
-  const [accounts, accountGroups] = await Promise.all([
-    prisma.account.findMany({
-      where: getAccountsWhereClause({
-        accountBookId: data.accountBookId,
-        accountState,
-        type: data.type,
-        equityAccountSubtype: data.equityAccountSubtype,
-      }),
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    }),
-    prisma.accountGroup.findMany({
-      where: {
-        accountBookId: data.accountBookId,
-        type: data.type,
-        ...(data.equityAccountSubtype
-          ? {
-              OR: [
-                { equityAccountSubtype: data.equityAccountSubtype },
-                { equityAccountSubtype: null },
-              ],
-            }
-          : undefined),
-      },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    }),
-  ]);
-  const groupById = new Map(accountGroups.map((g) => [g.id, g]));
-
-  const assetAndLiabilityAccountIds = accounts
-    .filter((a) => a.type === "ASSET" || a.type === "LIABILITY")
-    .map((a) => a.id);
-
-  const [
-    bookingCounts,
-    accountBalances,
+  const {
+    accounts,
+    accountGroups,
+    groupById,
     accountBook,
+    rawBalanceByAccountId,
+    openingRawBalanceByAccountId,
+    bookingCounts,
     allAccountsForGroup,
     allGroupsForParent,
     activeAccountsForGroup,
     activeGroupsForParent,
-  ] = await Promise.all([
-    includeActionAvailability
-      ? prisma.booking.groupBy({
-          by: ["accountId"],
-          where: {
-            accountBookId: data.accountBookId,
-            accountId: { in: accounts.map((a) => a.id) },
-          },
-          _count: true,
-        })
-      : Promise.resolve([]),
-    assetAndLiabilityAccountIds.length > 0
-      ? prisma.booking.groupBy({
-          by: ["accountId"],
-          where: {
-            accountBookId: data.accountBookId,
-            accountId: { in: assetAndLiabilityAccountIds },
-          },
-          _sum: { value: true },
-        })
-      : Promise.resolve([]),
-    prisma.accountBook.findUniqueOrThrow({
-      where: { id: data.accountBookId },
-      select: {
-        referenceCurrency: true,
-        startDate: true,
-        securityHoldingGainLossAccountGroupId: true,
-        cryptoHoldingGainLossAccountGroupId: true,
-        fxHoldingGainLossAccountGroupId: true,
-      },
-    }),
-    includeActionAvailability
-      ? prisma.account.groupBy({
-          by: ["groupId"],
-          where: { accountBookId: data.accountBookId },
-          _count: true,
-        })
-      : Promise.resolve([]),
-    includeActionAvailability
-      ? prisma.accountGroup.groupBy({
-          by: ["parentGroupId"],
-          where: {
-            accountBookId: data.accountBookId,
-            parentGroupId: { not: null },
-          },
-          _count: true,
-        })
-      : Promise.resolve([]),
-    includeActionAvailability
-      ? prisma.account.groupBy({
-          by: ["groupId"],
-          where: {
-            accountBookId: data.accountBookId,
-            groupId: { not: null },
-            isActive: true,
-          },
-          _count: true,
-        })
-      : Promise.resolve([]),
-    includeActionAvailability
-      ? prisma.accountGroup.groupBy({
-          by: ["parentGroupId"],
-          where: {
-            accountBookId: data.accountBookId,
-            parentGroupId: { not: null },
-            isActive: true,
-          },
-          _count: true,
-        })
-      : Promise.resolve([]),
-  ]);
+  } = await fetchAccountTreeQueryData({
+    accountBookId: data.accountBookId,
+    accountState,
+    type: data.type,
+    equityAccountSubtype: data.equityAccountSubtype,
+    includeActionAvailability,
+  });
 
   const bookingCountByAccountId = new Map(
-    bookingCounts.map((b) => [b.accountId, b._count]),
-  );
-  const rawBalanceByAccountId = new Map(
-    accountBalances.map((b) => [b.accountId, Number(b._sum.value ?? 0)]),
-  );
-  const openingBalanceDate = getOpeningBalancesBookingDate(
-    accountBook.startDate,
-  );
-  const openingBalanceRange = getUtcDayRange(openingBalanceDate);
-  const openingBalanceSums =
-    assetAndLiabilityAccountIds.length > 0
-      ? await prisma.booking.groupBy({
-          by: ["accountId"],
-          where: {
-            accountBookId: data.accountBookId,
-            accountId: { in: assetAndLiabilityAccountIds },
-            date: {
-              gte: openingBalanceRange.start,
-              lt: openingBalanceRange.endExclusive,
-            },
-          },
-          _sum: { value: true },
-        })
-      : [];
-  const openingRawBalanceByAccountId = new Map(
-    openingBalanceSums.map((b) => [b.accountId, Number(b._sum.value ?? 0)]),
+    bookingCounts.map((bookingCount) => [
+      bookingCount.accountId,
+      bookingCount._count,
+    ]),
   );
   const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
   const normalizedAccounts = accounts.map((account) => ({
@@ -313,46 +202,28 @@ async function getAccountTreeDataInternal(args: {
     accounts: normalizedAccounts,
   });
 
-  const referencedByAccountBook = new Set(
-    [
-      accountBook.securityHoldingGainLossAccountGroupId,
-      accountBook.cryptoHoldingGainLossAccountGroupId,
-      accountBook.fxHoldingGainLossAccountGroupId,
-    ].filter(Boolean) as string[],
-  );
-
-  const accountCountByGroupId = new Set(
-    allAccountsForGroup
-      .filter((a) => a._count > 0 && a.groupId)
-      .map((a) => a.groupId)
-      .filter((groupId): groupId is string => groupId != null),
-  );
-  const groupsWithChildren = new Set(
-    allGroupsForParent
-      .filter((g) => g._count > 0 && g.parentGroupId)
-      .map((g) => g.parentGroupId!),
-  );
-  const groupsWithActiveAccounts = new Set(
-    activeAccountsForGroup
-      .filter((a) => a._count > 0 && a.groupId)
-      .map((a) => a.groupId)
-      .filter((groupId): groupId is string => groupId != null),
-  );
-  const groupsWithActiveChildGroups = new Set(
-    activeGroupsForParent
-      .filter((g) => g._count > 0 && g.parentGroupId)
-      .map((g) => g.parentGroupId!),
-  );
+  const groupActionAvailabilitySets =
+    buildAccountTreeGroupActionAvailabilitySets({
+      accountBook,
+      allAccountsForGroup,
+      allGroupsForParent,
+      activeAccountsForGroup,
+      activeGroupsForParent,
+    });
 
   const groupRows = buildGroupRows({
     groups: filteredGroups,
     groupById,
     includeActionAvailability,
-    referencedByAccountBook,
-    groupsWithChildAccounts: accountCountByGroupId,
-    groupsWithChildGroups: groupsWithChildren,
-    groupsWithActiveChildAccounts: groupsWithActiveAccounts,
-    groupsWithActiveChildGroups: groupsWithActiveChildGroups,
+    referencedByAccountBook:
+      groupActionAvailabilitySets.referencedByAccountBook,
+    groupsWithChildAccounts:
+      groupActionAvailabilitySets.groupsWithChildAccounts,
+    groupsWithChildGroups: groupActionAvailabilitySets.groupsWithChildGroups,
+    groupsWithActiveChildAccounts:
+      groupActionAvailabilitySets.groupsWithActiveChildAccounts,
+    groupsWithActiveChildGroups:
+      groupActionAvailabilitySets.groupsWithActiveChildGroups,
   });
 
   const allRows = sortAccountTreeRows([...accountRows, ...groupRows]);
@@ -373,55 +244,13 @@ async function getAccountReferenceBalancesInternal(args: {
   }
   const accountState = data.accountState ?? "active";
 
-  const accounts = await prisma.account.findMany({
-    where: getAccountsWhereClause({
+  const { accounts, rawBalanceByAccountId, referenceCurrency } =
+    await fetchAccountReferenceBalancesQueryData({
       accountBookId: data.accountBookId,
       accountState,
       type: data.type,
       equityAccountSubtype: data.equityAccountSubtype,
-    }),
-    select: {
-      id: true,
-      type: true,
-      unit: true,
-      currency: true,
-      cryptocurrency: true,
-      symbol: true,
-      tradeCurrency: true,
-    },
-  });
-
-  const assetAndLiabilityAccountIds = accounts
-    .filter(
-      (account) => account.type === "ASSET" || account.type === "LIABILITY",
-    )
-    .map((account) => account.id);
-
-  const [accountBalances, accountBook] = await Promise.all([
-    assetAndLiabilityAccountIds.length > 0
-      ? prisma.booking.groupBy({
-          by: ["accountId"],
-          where: {
-            accountBookId: data.accountBookId,
-            accountId: { in: assetAndLiabilityAccountIds },
-          },
-          _sum: { value: true },
-        })
-      : Promise.resolve([]),
-    prisma.accountBook.findUniqueOrThrow({
-      where: { id: data.accountBookId },
-      select: {
-        referenceCurrency: true,
-      },
-    }),
-  ]);
-  const rawBalanceByAccountId = new Map(
-    accountBalances.map((balance) => [
-      balance.accountId,
-      Number(balance._sum.value ?? 0),
-    ]),
-  );
-  const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
+    });
   const displayBalanceInReferenceCurrencyByAccountId =
     await getDisplayBalanceInReferenceCurrencyByAccountId({
       accounts: accounts.map((account) => ({
