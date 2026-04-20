@@ -13,7 +13,10 @@ import {
   getYearPickerValue,
   type PeriodMode,
 } from "@/shared/period-selector-model";
-import { loadLedgerPageData } from "./-page-loader";
+import {
+  isLedgerPeriodFilterAvailable,
+  loadLedgerPageData,
+} from "./-page-loader";
 import { useLedgerPageController } from "./-page-controller";
 import { LedgerPeriodFilterCard } from "./-period-filter-card";
 import {
@@ -54,8 +57,9 @@ export function LedgerPageContent() {
   const [pickerOpened, setPickerOpened] = useState(false);
   const [unfilteredPeriodMode, setUnfilteredPeriodMode] =
     useState<PeriodMode>("month");
-  const isPeriodFilterAvailable =
-    loaderData.account.type === AccountType.EQUITY;
+  const isPeriodFilterAvailable = isLedgerPeriodFilterAvailable(
+    loaderData.account,
+  );
 
   const navigate = Route.useNavigate();
   const { pendingScrollRef, handleRowDataUpdated } =

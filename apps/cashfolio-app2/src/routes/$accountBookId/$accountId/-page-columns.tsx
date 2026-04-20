@@ -13,12 +13,14 @@ import {
 } from "@/components/column-types";
 import { LinkAnchor } from "@/components/link-anchor";
 import type { LedgerRow } from "./-page-types";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/opening-balances";
 
 export function useLedgerColumnDefs(args: {
   accountBookId: string;
   hasPeriodFilter: boolean;
   referenceCurrency: string | null;
   isEquity: boolean;
+  isOpeningBalances: boolean;
   isIncome: boolean;
   isExpense: boolean;
   onEditClick: (transactionId: string) => void;
@@ -41,6 +43,7 @@ export function useLedgerColumnDefs(args: {
     hasPeriodFilter,
     referenceCurrency,
     isEquity,
+    isOpeningBalances,
     isIncome,
     isExpense,
     onEditClick,
@@ -135,7 +138,7 @@ export function useLedgerColumnDefs(args: {
               filter: "agNumberColumnFilter",
             },
           ]),
-      ...(isEquity && !isIncome
+      ...(isEquity && !isOpeningBalances && !isIncome
         ? [
             {
               field: "referenceDebit" as const,
@@ -148,7 +151,7 @@ export function useLedgerColumnDefs(args: {
             },
           ]
         : []),
-      ...(isEquity && !isExpense
+      ...(isEquity && !isOpeningBalances && !isExpense
         ? [
             {
               field: "referenceCredit" as const,
@@ -186,54 +189,88 @@ export function useLedgerColumnDefs(args: {
         cellClass: "actions-cell",
         cellRenderer: ({ data }: ICellRendererParams<LedgerRow>) => {
           if (!data) return null;
+          const isOpeningBalancesTransaction =
+            data.isOpeningBalancesTransaction;
           return (
             <Group gap={4} wrap="nowrap" h="100%" align="center">
-              <Tooltip label="Edit">
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  onClick={() => onEditClick(data.transactionId)}
-                  aria-label="Edit"
-                >
-                  <IconPencil size={16} />
-                </ActionIcon>
+              <Tooltip
+                label={
+                  isOpeningBalancesTransaction
+                    ? OPENING_BALANCES_MANAGEMENT_MESSAGE
+                    : "Edit"
+                }
+              >
+                <span style={{ display: "inline-flex" }}>
+                  <ActionIcon
+                    variant="subtle"
+                    size="sm"
+                    disabled={isOpeningBalancesTransaction}
+                    onClick={() => {
+                      if (isOpeningBalancesTransaction) return;
+                      onEditClick(data.transactionId);
+                    }}
+                    aria-label="Edit"
+                  >
+                    <IconPencil size={16} />
+                  </ActionIcon>
+                </span>
               </Tooltip>
-              <Tooltip label="Rebook">
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  color="blue"
-                  onClick={() =>
-                    onRebookClick({
-                      bookingId: data.id,
-                      transactionId: data.transactionId,
-                      bookingValue: data.bookingValue,
-                      bookingUnit: {
-                        unit: data.unit,
-                        currency: data.currency,
-                        cryptocurrency: data.cryptocurrency,
-                        symbol: data.symbol,
-                        tradeCurrency: data.tradeCurrency,
-                      },
-                    })
-                  }
-                  aria-label="Rebook"
-                >
-                  <IconSquareArrowRight size={16} />
-                </ActionIcon>
+              <Tooltip
+                label={
+                  isOpeningBalancesTransaction
+                    ? OPENING_BALANCES_MANAGEMENT_MESSAGE
+                    : "Rebook"
+                }
+              >
+                <span style={{ display: "inline-flex" }}>
+                  <ActionIcon
+                    variant="subtle"
+                    size="sm"
+                    color="blue"
+                    disabled={isOpeningBalancesTransaction}
+                    onClick={() => {
+                      if (isOpeningBalancesTransaction) return;
+                      onRebookClick({
+                        bookingId: data.id,
+                        transactionId: data.transactionId,
+                        bookingValue: data.bookingValue,
+                        bookingUnit: {
+                          unit: data.unit,
+                          currency: data.currency,
+                          cryptocurrency: data.cryptocurrency,
+                          symbol: data.symbol,
+                          tradeCurrency: data.tradeCurrency,
+                        },
+                      });
+                    }}
+                    aria-label="Rebook"
+                  >
+                    <IconSquareArrowRight size={16} />
+                  </ActionIcon>
+                </span>
               </Tooltip>
-              <Tooltip label="Delete">
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  color="red"
-                  onClick={() =>
-                    onDeleteClick(data.transactionId, data.description)
-                  }
-                  aria-label="Delete"
-                >
-                  <IconTrash size={16} />
-                </ActionIcon>
+              <Tooltip
+                label={
+                  isOpeningBalancesTransaction
+                    ? OPENING_BALANCES_MANAGEMENT_MESSAGE
+                    : "Delete"
+                }
+              >
+                <span style={{ display: "inline-flex" }}>
+                  <ActionIcon
+                    variant="subtle"
+                    size="sm"
+                    color="red"
+                    disabled={isOpeningBalancesTransaction}
+                    onClick={() => {
+                      if (isOpeningBalancesTransaction) return;
+                      onDeleteClick(data.transactionId, data.description);
+                    }}
+                    aria-label="Delete"
+                  >
+                    <IconTrash size={16} />
+                  </ActionIcon>
+                </span>
               </Tooltip>
             </Group>
           );
@@ -245,6 +282,7 @@ export function useLedgerColumnDefs(args: {
       hasPeriodFilter,
       referenceCurrency,
       isEquity,
+      isOpeningBalances,
       isIncome,
       isExpense,
       onEditClick,

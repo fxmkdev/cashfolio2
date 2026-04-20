@@ -1,9 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
+import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
+import { Prisma } from "../.prisma-client/client";
 import {
   validateAccountInput,
   validateAccountGroupInput,
 } from "../shared/account-validation";
+import { getBookingUnitFields } from "../shared/booking-unit-fields";
+import { getOpeningBalancesBookingDate, getUtcDayRange } from "../shared/date";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { ensureSameOriginRequestFromServerContext } from "../security/same-origin.server";
 import {
@@ -22,6 +26,432 @@ import {
   getGroupUnarchiveAvailability,
 } from "./account-tree-rules";
 
+const OPENING_BALANCES_ACCOUNT_NAME = "Opening Balances";
+const OPENING_BALANCE_EPSILON = 0.000001;
+
+function normalizeOpeningBalanceTarget(
+  openingBalance: number | null | undefined,
+): number | undefined {
+  if (openingBalance === undefined) {
+    return undefined;
+  }
+  if (openingBalance === null) {
+    return 0;
+  }
+  const value = Number(openingBalance);
+  if (!Number.isFinite(value)) {
+    throw new Error("Opening balance is invalid.");
+  }
+  return value;
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return error.code === "P2002";
+  }
+
+  if (typeof error !== "object" || error == null) {
+    return false;
+  }
+
+  const maybeCode = (error as { code?: unknown }).code;
+  return maybeCode === "P2002";
+}
+
+async function getOrCreateOpeningBalancesAccountId(
+  tx: Prisma.TransactionClient,
+  accountBookId: string,
+): Promise<string> {
+  const existing = await tx.account.findFirst({
+    where: {
+      accountBookId,
+      type: AccountType.EQUITY,
+      equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: { id: true },
+  });
+  if (existing) {
+    return existing.id;
+  }
+
+  try {
+    const created = await tx.account.create({
+      data: {
+        name: OPENING_BALANCES_ACCOUNT_NAME,
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+        accountBookId,
+      },
+      select: { id: true },
+    });
+    return created.id;
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      const concurrentlyCreated = await tx.account.findFirst({
+        where: {
+          accountBookId,
+          type: AccountType.EQUITY,
+          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+        },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: { id: true },
+      });
+      if (concurrentlyCreated) {
+        return concurrentlyCreated.id;
+      }
+    }
+
+    throw error;
+  }
+}
+
+async function applyOpeningBalanceTarget(args: {
+  tx: Prisma.TransactionClient;
+  accountBookId: string;
+  account: {
+    id: string;
+    name: string;
+    type: AccountType;
+    unit: Parameters<typeof getBookingUnitFields>[0]["unit"];
+    currency: Parameters<typeof getBookingUnitFields>[0]["currency"];
+    cryptocurrency: Parameters<
+      typeof getBookingUnitFields
+    >[0]["cryptocurrency"];
+    symbol: Parameters<typeof getBookingUnitFields>[0]["symbol"];
+    tradeCurrency: Parameters<typeof getBookingUnitFields>[0]["tradeCurrency"];
+  };
+  openingBalance: number | null | undefined;
+}) {
+  const normalizedOpeningBalance = normalizeOpeningBalanceTarget(
+    args.openingBalance,
+  );
+  if (normalizedOpeningBalance === undefined) {
+    return;
+  }
+  if (
+    args.account.type !== AccountType.ASSET &&
+    args.account.type !== AccountType.LIABILITY
+  ) {
+    return;
+  }
+
+  const accountBook = await args.tx.accountBook.findUniqueOrThrow({
+    where: { id: args.accountBookId },
+    select: { startDate: true },
+  });
+  const openingBalancesBookingDate = getOpeningBalancesBookingDate(
+    accountBook.startDate,
+  );
+  const openingBalanceDateRange = getUtcDayRange(openingBalancesBookingDate);
+
+  const existingOpeningBalanceTransactions = await args.tx.transaction.findMany(
+    {
+      where: {
+        accountBookId: args.accountBookId,
+        AND: [
+          {
+            bookings: {
+              some: {
+                accountId: args.account.id,
+                date: {
+                  gte: openingBalanceDateRange.start,
+                  lt: openingBalanceDateRange.endExclusive,
+                },
+              },
+            },
+          },
+          {
+            bookings: {
+              some: {
+                date: {
+                  gte: openingBalanceDateRange.start,
+                  lt: openingBalanceDateRange.endExclusive,
+                },
+                account: {
+                  type: AccountType.EQUITY,
+                  equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+                },
+              },
+            },
+          },
+        ],
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: {
+        id: true,
+        bookings: {
+          where: {
+            date: {
+              gte: openingBalanceDateRange.start,
+              lt: openingBalanceDateRange.endExclusive,
+            },
+          },
+          select: {
+            id: true,
+            accountId: true,
+            account: {
+              select: {
+                id: true,
+                type: true,
+                equityAccountSubtype: true,
+              },
+            },
+          },
+        },
+      },
+    },
+  );
+  const targetRawOpeningBalance =
+    args.account.type === AccountType.ASSET
+      ? normalizedOpeningBalance
+      : -normalizedOpeningBalance;
+  const hasTargetOpeningBalance =
+    Math.abs(targetRawOpeningBalance) > OPENING_BALANCE_EPSILON;
+
+  const bookingUnitFields = getBookingUnitFields(
+    args.account,
+    "account opening balance",
+  );
+  const description = `Opening balance adjustment: ${args.account.name}`;
+
+  if (existingOpeningBalanceTransactions.length === 0) {
+    if (!hasTargetOpeningBalance) {
+      return;
+    }
+
+    const openingBalancesAccountId = await getOrCreateOpeningBalancesAccountId(
+      args.tx,
+      args.accountBookId,
+    );
+    await args.tx.transaction.create({
+      data: {
+        description,
+        accountBookId: args.accountBookId,
+        bookings: {
+          create: [
+            {
+              date: openingBalancesBookingDate,
+              description: "",
+              account: {
+                connect: {
+                  id_accountBookId: {
+                    id: args.account.id,
+                    accountBookId: args.accountBookId,
+                  },
+                },
+              },
+              ...bookingUnitFields,
+              value: targetRawOpeningBalance,
+              sortOrder: 0,
+              accountBook: {
+                connect: { id: args.accountBookId },
+              },
+            },
+            {
+              date: openingBalancesBookingDate,
+              description: "",
+              account: {
+                connect: {
+                  id_accountBookId: {
+                    id: openingBalancesAccountId,
+                    accountBookId: args.accountBookId,
+                  },
+                },
+              },
+              ...bookingUnitFields,
+              value: -targetRawOpeningBalance,
+              sortOrder: 1,
+              accountBook: {
+                connect: { id: args.accountBookId },
+              },
+            },
+          ],
+        },
+      },
+    });
+    return;
+  }
+
+  const canonicalTransaction = existingOpeningBalanceTransactions[0]!;
+  const accountBooking = canonicalTransaction.bookings.find(
+    (booking) => booking.accountId === args.account.id,
+  );
+  const openingBalancesBooking = canonicalTransaction.bookings.find(
+    (booking) =>
+      booking.account.type === AccountType.EQUITY &&
+      booking.account.equityAccountSubtype ===
+        EquityAccountSubtype.OPENING_BALANCES,
+  );
+  const transactionsToDelete = existingOpeningBalanceTransactions
+    .slice(1)
+    .map((transaction) => transaction.id);
+
+  if (!accountBooking || !openingBalancesBooking) {
+    await args.tx.transaction.deleteMany({
+      where: {
+        accountBookId: args.accountBookId,
+        id: {
+          in: existingOpeningBalanceTransactions.map(
+            (transaction) => transaction.id,
+          ),
+        },
+      },
+    });
+
+    if (!hasTargetOpeningBalance) {
+      return;
+    }
+
+    const openingBalancesAccountId = await getOrCreateOpeningBalancesAccountId(
+      args.tx,
+      args.accountBookId,
+    );
+    await args.tx.transaction.create({
+      data: {
+        description,
+        accountBookId: args.accountBookId,
+        bookings: {
+          create: [
+            {
+              date: openingBalancesBookingDate,
+              description: "",
+              account: {
+                connect: {
+                  id_accountBookId: {
+                    id: args.account.id,
+                    accountBookId: args.accountBookId,
+                  },
+                },
+              },
+              ...bookingUnitFields,
+              value: targetRawOpeningBalance,
+              sortOrder: 0,
+              accountBook: {
+                connect: { id: args.accountBookId },
+              },
+            },
+            {
+              date: openingBalancesBookingDate,
+              description: "",
+              account: {
+                connect: {
+                  id_accountBookId: {
+                    id: openingBalancesAccountId,
+                    accountBookId: args.accountBookId,
+                  },
+                },
+              },
+              ...bookingUnitFields,
+              value: -targetRawOpeningBalance,
+              sortOrder: 1,
+              accountBook: {
+                connect: { id: args.accountBookId },
+              },
+            },
+          ],
+        },
+      },
+    });
+    return;
+  }
+
+  if (!hasTargetOpeningBalance) {
+    await args.tx.transaction.deleteMany({
+      where: {
+        accountBookId: args.accountBookId,
+        id: {
+          in: existingOpeningBalanceTransactions.map(
+            (transaction) => transaction.id,
+          ),
+        },
+      },
+    });
+    return;
+  }
+
+  const extraBookingIdsOnCanonical = canonicalTransaction.bookings
+    .filter(
+      (booking) =>
+        booking.id !== accountBooking.id &&
+        booking.id !== openingBalancesBooking.id,
+    )
+    .map((booking) => booking.id);
+
+  await args.tx.transaction.update({
+    where: {
+      id_accountBookId: {
+        id: canonicalTransaction.id,
+        accountBookId: args.accountBookId,
+      },
+    },
+    data: {
+      description,
+      bookings: {
+        update: [
+          {
+            where: {
+              id_accountBookId: {
+                id: accountBooking.id,
+                accountBookId: args.accountBookId,
+              },
+            },
+            data: {
+              date: openingBalancesBookingDate,
+              description: "",
+              ...bookingUnitFields,
+              value: targetRawOpeningBalance,
+              sortOrder: 0,
+              account: {
+                connect: {
+                  id_accountBookId: {
+                    id: args.account.id,
+                    accountBookId: args.accountBookId,
+                  },
+                },
+              },
+            },
+          },
+          {
+            where: {
+              id_accountBookId: {
+                id: openingBalancesBooking.id,
+                accountBookId: args.accountBookId,
+              },
+            },
+            data: {
+              date: openingBalancesBookingDate,
+              description: "",
+              ...bookingUnitFields,
+              value: -targetRawOpeningBalance,
+              sortOrder: 1,
+            },
+          },
+        ],
+      },
+    },
+  });
+
+  if (extraBookingIdsOnCanonical.length > 0) {
+    await args.tx.booking.deleteMany({
+      where: {
+        accountBookId: args.accountBookId,
+        transactionId: canonicalTransaction.id,
+        id: { in: extraBookingIdsOnCanonical },
+      },
+    });
+  }
+
+  if (transactionsToDelete.length > 0) {
+    await args.tx.transaction.deleteMany({
+      where: {
+        accountBookId: args.accountBookId,
+        id: { in: transactionsToDelete },
+      },
+    });
+  }
+}
+
 export const createAccount = createServerFn({ method: "POST" })
   .inputValidator((data: AccountInput) => data)
   .handler(async ({ data }) => {
@@ -37,20 +467,40 @@ export const createAccount = createServerFn({ method: "POST" })
       })
     ).map((a) => a.name);
     validateAccountInput(data, siblingNames);
-    const account = await prisma.account.create({
-      data: {
-        name: data.name,
-        type: data.type,
-        equityAccountSubtype: data.equityAccountSubtype,
-        groupId: data.groupId ?? null,
-        sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : null,
-        unit: data.unit,
-        currency: data.currency,
-        cryptocurrency: data.cryptocurrency,
-        symbol: data.symbol,
-        tradeCurrency: data.tradeCurrency,
+    const account = await prisma.$transaction(async (tx) => {
+      const createdAccount = await tx.account.create({
+        data: {
+          name: data.name,
+          type: data.type,
+          equityAccountSubtype: data.equityAccountSubtype,
+          groupId: data.groupId ?? null,
+          sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : null,
+          unit: data.unit,
+          currency: data.currency,
+          cryptocurrency: data.cryptocurrency,
+          symbol: data.symbol,
+          tradeCurrency: data.tradeCurrency,
+          accountBookId: data.accountBookId,
+        },
+      });
+
+      await applyOpeningBalanceTarget({
+        tx,
         accountBookId: data.accountBookId,
-      },
+        account: {
+          id: createdAccount.id,
+          name: createdAccount.name,
+          type: createdAccount.type,
+          unit: createdAccount.unit,
+          currency: createdAccount.currency,
+          cryptocurrency: createdAccount.cryptocurrency,
+          symbol: createdAccount.symbol,
+          tradeCurrency: createdAccount.tradeCurrency,
+        },
+        openingBalance: data.openingBalance,
+      });
+
+      return createdAccount;
     });
     return account;
   });
@@ -83,20 +533,40 @@ export const updateAccount = createServerFn({ method: "POST" })
     ) {
       throw new Error("Account type cannot be changed");
     }
-    const account = await prisma.account.update({
-      where: {
-        id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
-      },
-      data: {
-        name: data.name,
-        groupId: data.groupId ?? null,
-        sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : null,
-        unit: data.unit,
-        currency: data.currency,
-        cryptocurrency: data.cryptocurrency,
-        symbol: data.symbol,
-        tradeCurrency: data.tradeCurrency,
-      },
+    const account = await prisma.$transaction(async (tx) => {
+      const updatedAccount = await tx.account.update({
+        where: {
+          id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
+        },
+        data: {
+          name: data.name,
+          groupId: data.groupId ?? null,
+          sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : null,
+          unit: data.unit,
+          currency: data.currency,
+          cryptocurrency: data.cryptocurrency,
+          symbol: data.symbol,
+          tradeCurrency: data.tradeCurrency,
+        },
+      });
+
+      await applyOpeningBalanceTarget({
+        tx,
+        accountBookId: data.accountBookId,
+        account: {
+          id: updatedAccount.id,
+          name: updatedAccount.name,
+          type: updatedAccount.type,
+          unit: updatedAccount.unit,
+          currency: updatedAccount.currency,
+          cryptocurrency: updatedAccount.cryptocurrency,
+          symbol: updatedAccount.symbol,
+          tradeCurrency: updatedAccount.tradeCurrency,
+        },
+        openingBalance: data.openingBalance,
+      });
+
+      return updatedAccount;
     });
     return account;
   });

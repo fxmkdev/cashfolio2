@@ -105,6 +105,7 @@ export function createAccountsMutationActions(args: {
           cryptocurrency: values.cryptocurrency,
           symbol: values.symbol,
           tradeCurrency: values.tradeCurrency,
+          openingBalance: values.openingBalance,
         },
       });
       args.state.setCreateModalOpened(false);
@@ -129,6 +130,7 @@ export function createAccountsMutationActions(args: {
           cryptocurrency: values.cryptocurrency,
           symbol: values.symbol,
           tradeCurrency: values.tradeCurrency,
+          openingBalance: values.openingBalance,
         },
       });
       args.state.setEditModalOpen(false);

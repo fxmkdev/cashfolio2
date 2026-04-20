@@ -59,6 +59,7 @@ const rows: LedgerRow[] = [
     cryptocurrency: null,
     symbol: null,
     tradeCurrency: null,
+    isOpeningBalancesTransaction: false,
     debit: null,
     credit: 84.5,
     referenceDebit: null,
@@ -77,6 +78,7 @@ const rows: LedgerRow[] = [
     cryptocurrency: null,
     symbol: null,
     tradeCurrency: null,
+    isOpeningBalancesTransaction: false,
     debit: 1000,
     credit: null,
     referenceDebit: null,
@@ -218,6 +220,7 @@ function LedgerPageStoryHarness({
     hasPeriodFilter,
     referenceCurrency: null,
     isEquity: accountType === AccountType.EQUITY,
+    isOpeningBalances: false,
     isIncome: false,
     isExpense: false,
     onEditClick: (transactionId) => {
@@ -248,6 +251,7 @@ function LedgerPageStoryHarness({
         columnDefs={columnDefs}
         currentAccountLabel="Asset / Cash / Checking"
         unitLabel="CHF"
+        accountBookStartDate={new Date("2026-01-04T00:00:00.000Z")}
         simpleTransactionDisabledReason={null}
         simpleModalOpened={simpleModalOpened}
         splitModalOpened={splitModalOpened}

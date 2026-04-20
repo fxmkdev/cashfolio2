@@ -346,6 +346,9 @@ export function useLedgerPageController(args: {
   const isExpense =
     account.type === AccountType.EQUITY &&
     account.equityAccountSubtype === EquityAccountSubtype.EXPENSE;
+  const isOpeningBalances =
+    account.type === AccountType.EQUITY &&
+    account.equityAccountSubtype === EquityAccountSubtype.OPENING_BALANCES;
 
   const handleDeleteClick = useCallback(
     (transactionId: string, description: string) => {
@@ -367,6 +370,7 @@ export function useLedgerPageController(args: {
     hasPeriodFilter: args.hasPeriodFilter,
     referenceCurrency: args.loaderData.referenceCurrency,
     isEquity,
+    isOpeningBalances,
     isIncome,
     isExpense,
     onEditClick: handleEditClick,
@@ -375,6 +379,9 @@ export function useLedgerPageController(args: {
   });
 
   const unitLabel = getUnitLabel(account);
+  const accountBookStartDate = new Date(
+    args.loaderData.periodBounds.minBookingDate,
+  );
 
   const backTab = (
     account.type === AccountType.EQUITY && account.equityAccountSubtype
@@ -389,6 +396,7 @@ export function useLedgerPageController(args: {
     columnDefs,
     currentAccountLabel,
     unitLabel,
+    accountBookStartDate,
     simpleTransactionDisabledReason,
     simpleModalOpened,
     splitModalOpened: modalOpened,

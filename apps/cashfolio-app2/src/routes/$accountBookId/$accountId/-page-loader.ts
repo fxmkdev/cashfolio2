@@ -1,11 +1,20 @@
-import { AccountType } from "@/.prisma-client/enums";
-import { startOfUtcDay } from "@/shared/date";
+import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import { getAccounts } from "@/server/accounts";
 import {
   getAccountForLedger,
   getLedgerData,
   getLedgerPeriodBounds,
 } from "@/server/ledger";
+
+export function isLedgerPeriodFilterAvailable(account: {
+  type: AccountType;
+  equityAccountSubtype: EquityAccountSubtype | null;
+}) {
+  return (
+    account.type === AccountType.EQUITY &&
+    account.equityAccountSubtype !== EquityAccountSubtype.OPENING_BALANCES
+  );
+}
 
 export async function loadLedgerPageData(args: {
   accountBookId: string;
@@ -19,7 +28,7 @@ export async function loadLedgerPageData(args: {
     data: { accountBookId: args.accountBookId },
   });
   const account = await accountPromise;
-  const isPeriodFilterAllowed = account.type === AccountType.EQUITY;
+  const isPeriodFilterAllowed = isLedgerPeriodFilterAvailable(account);
 
   const [ledgerData, accounts, periodBounds] = await Promise.all([
     getLedgerData({
@@ -31,17 +40,11 @@ export async function loadLedgerPageData(args: {
       },
     }),
     accountsPromise,
-    isPeriodFilterAllowed
-      ? getLedgerPeriodBounds({
-          data: {
-            accountId: args.accountId,
-            accountBookId: args.accountBookId,
-          },
-        })
-      : Promise.resolve({
-          minBookingDate: null,
-          maxDate: startOfUtcDay(new Date()).toISOString(),
-        }),
+    getLedgerPeriodBounds({
+      data: {
+        accountBookId: args.accountBookId,
+      },
+    }),
   ]);
 
   return {

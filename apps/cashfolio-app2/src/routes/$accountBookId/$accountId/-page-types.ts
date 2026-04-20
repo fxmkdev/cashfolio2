@@ -76,6 +76,7 @@ export type LedgerRow = {
   cryptocurrency: string | null;
   symbol: string | null;
   tradeCurrency: string | null;
+  isOpeningBalancesTransaction: boolean;
   debit: number | null;
   credit: number | null;
   referenceDebit: number | null;

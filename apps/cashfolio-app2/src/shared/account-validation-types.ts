@@ -16,6 +16,7 @@ export type AccountInput = {
   cryptocurrency?: string;
   symbol?: string;
   tradeCurrency?: string;
+  openingBalance?: number | null;
 };
 
 export type AccountGroupInput = {

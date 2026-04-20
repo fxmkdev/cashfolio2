@@ -21,6 +21,7 @@ enum AccountType {
 
 enum EquityAccountSubtype {
   GAIN_LOSS
+  OPENING_BALANCES
   INCOME
   EXPENSE
 }
@@ -63,6 +64,7 @@ model AccountBook {
   id                String @default(cuid())
   name              String
   referenceCurrency String
+  startDate         DateTime
 
   securityHoldingGainLossAccountGroupId String?
   securityHoldingGainLossAccountGroup   AccountGroup? @relation("security-holding-gain-loss", fields: [securityHoldingGainLossAccountGroupId, id], references: [id, accountBookId], onDelete: Restrict)

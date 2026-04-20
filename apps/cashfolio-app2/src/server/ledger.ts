@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
-import { startOfUtcDay } from "../shared/date";
+import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
+import { getOpeningBalancesBookingDate, startOfUtcDay } from "../shared/date";
 import {
   getExplicitPeriodDateRange,
   parseExplicitPeriodSelectionFromUnknown,
@@ -104,13 +105,15 @@ export const getLedgerData = createServerFn({ method: "GET" })
             select: {
               description: true,
               bookings: {
-                where: {
-                  accountId: { not: data.accountId },
-                },
                 orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
                 select: {
                   account: {
-                    select: { id: true, name: true },
+                    select: {
+                      id: true,
+                      name: true,
+                      type: true,
+                      equityAccountSubtype: true,
+                    },
                   },
                 },
               },
@@ -169,29 +172,41 @@ export const getLedgerData = createServerFn({ method: "GET" })
         transactionDescription: b.transaction.description,
         counterpartyAccounts: [
           ...new Map(
-            b.transaction.bookings.map((sb) => [sb.account.id, sb.account]),
+            b.transaction.bookings
+              .filter((sb) => sb.account.id !== data.accountId)
+              .map((sb) => [
+                sb.account.id,
+                { id: sb.account.id, name: sb.account.name },
+              ]),
           ).values(),
         ],
+        isOpeningBalancesTransaction: b.transaction.bookings.some(
+          (sb) =>
+            sb.account.type === AccountType.EQUITY &&
+            sb.account.equityAccountSubtype ===
+              EquityAccountSubtype.OPENING_BALANCES,
+        ),
       })),
     };
   });
 
 export const getLedgerPeriodBounds = createServerFn({ method: "GET" })
-  .inputValidator((data: { accountId: string; accountBookId: string }) => data)
+  .inputValidator((data: { accountBookId: string }) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
-    const minBookingDateAggregate = await prisma.booking.aggregate({
-      where: {
-        accountId: data.accountId,
-        accountBookId: data.accountBookId,
-      },
-      _min: { date: true },
+    const accountBook = await prisma.accountBook.findUniqueOrThrow({
+      where: { id: data.accountBookId },
+      select: { startDate: true },
     });
     const currentDay = startOfUtcDay(new Date());
+    const accountBookStartDate = startOfUtcDay(accountBook.startDate);
+    const openingBalancesBookingDate =
+      getOpeningBalancesBookingDate(accountBookStartDate);
 
     return {
-      minBookingDate: minBookingDateAggregate._min.date?.toISOString() ?? null,
+      minBookingDate: accountBookStartDate.toISOString(),
       maxDate: currentDay.toISOString(),
+      openingBalancesBookingDate: openingBalancesBookingDate.toISOString(),
     };
   });
 

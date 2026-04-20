@@ -234,7 +234,9 @@ submit UX and prevent duplicate requests.
 ## Type Descriptor Pattern
 
 Account/group types are represented in form selects as composite strings:
-`"ASSET" | "LIABILITY" | "EQUITY-INCOME" | "EQUITY-EXPENSE" | "EQUITY-GAIN_LOSS"`
+`"ASSET" | "LIABILITY" | "EQUITY-INCOME" | "EQUITY-EXPENSE" | "EQUITY-GAIN_LOSS" | "EQUITY-OPENING_BALANCES"`
+
+`EQUITY-OPENING_BALANCES` is system-managed and not available as a creation tab.
 
 The form's `transformValues` splits these into separate `type` and
 `equityAccountSubtype` fields. The type is always derived from the currently

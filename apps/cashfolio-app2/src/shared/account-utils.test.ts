@@ -5,6 +5,8 @@ import {
   Unit,
 } from "../.prisma-client/enums";
 import {
+  getTypeLabel,
+  isOpeningBalancesAccount,
   isBookingUnitCompatibleWithAccount,
   isBookingValueCompatibleWithAccountType,
 } from "./account-utils";
@@ -79,5 +81,36 @@ describe("isBookingValueCompatibleWithAccountType", () => {
         equityAccountSubtype: null,
       }),
     ).toBe(true);
+  });
+});
+
+describe("getTypeLabel", () => {
+  test("returns opening-balances label for opening subtype", () => {
+    expect(
+      getTypeLabel(AccountType.EQUITY, EquityAccountSubtype.OPENING_BALANCES),
+    ).toBe("Opening Balances");
+  });
+});
+
+describe("isOpeningBalancesAccount", () => {
+  test("returns true only for equity opening-balances accounts", () => {
+    expect(
+      isOpeningBalancesAccount({
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+      }),
+    ).toBe(true);
+    expect(
+      isOpeningBalancesAccount({
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+      }),
+    ).toBe(false);
+    expect(
+      isOpeningBalancesAccount({
+        type: AccountType.ASSET,
+        equityAccountSubtype: null,
+      }),
+    ).toBe(false);
   });
 });

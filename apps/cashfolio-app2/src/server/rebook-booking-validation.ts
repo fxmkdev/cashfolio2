@@ -3,14 +3,18 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../.prisma-client/enums";
+import { isBefore } from "date-fns";
+import { formatUtcDate, startOfUtcDay } from "../shared/date";
 import {
   getAccountUnitIdentifier,
   getBookingUnitIdentifier,
   isBookingValueCompatibleWithAccountType,
 } from "../shared/account-utils";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
 
 export type RebookBookingValidationInput = {
   accountId: string;
+  date: Date;
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
@@ -34,8 +38,15 @@ export type RebookTargetAccountValidationInput = {
 export function validateRebookBookingTarget(args: {
   booking: RebookBookingValidationInput;
   targetAccount: RebookTargetAccountValidationInput;
+  accountBookStartDate?: Date;
+  sourceTransactionContainsOpeningBalancesBooking?: boolean;
 }) {
-  const { booking, targetAccount } = args;
+  const {
+    booking,
+    targetAccount,
+    accountBookStartDate,
+    sourceTransactionContainsOpeningBalancesBooking,
+  } = args;
 
   if (!targetAccount.isActive) {
     throw new Error("Target account must be active.");
@@ -44,6 +55,31 @@ export function validateRebookBookingTarget(args: {
   if (booking.accountId === targetAccount.id) {
     throw new Error(
       "Target account must be different from the current account.",
+    );
+  }
+
+  if (sourceTransactionContainsOpeningBalancesBooking) {
+    throw new Error(OPENING_BALANCES_MANAGEMENT_MESSAGE);
+  }
+
+  if (
+    targetAccount.type === AccountType.EQUITY &&
+    targetAccount.equityAccountSubtype === EquityAccountSubtype.OPENING_BALANCES
+  ) {
+    throw new Error(OPENING_BALANCES_MANAGEMENT_MESSAGE);
+  }
+
+  if (!accountBookStartDate) {
+    throw new Error(
+      "Account book start date is required for date-range validation.",
+    );
+  }
+
+  const bookingDay = startOfUtcDay(booking.date);
+  const accountBookStartDay = startOfUtcDay(accountBookStartDate);
+  if (isBefore(bookingDay, accountBookStartDay)) {
+    throw new Error(
+      `Date cannot be before account book start date (${formatUtcDate(accountBookStartDay)}).`,
     );
   }
 

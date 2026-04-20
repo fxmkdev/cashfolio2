@@ -14,7 +14,10 @@ import {
   getUnitIdentifier,
   isExpenseAccount,
   isIncomeAccount,
+  isOpeningBalancesAccount,
 } from "../shared/account-utils";
+import { formatUtcDate, startOfUtcDay } from "../shared/date";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
 import { sum } from "../utils";
 import { DataGrid } from "./data-grid";
 import {
@@ -41,6 +44,7 @@ export function EditTransactionModal({
   initialValues,
   submitLabel,
   accounts,
+  accountBookStartDate,
   currentAccountId,
   onClose,
   onSubmittingChange,
@@ -52,6 +56,7 @@ export function EditTransactionModal({
   };
   submitLabel?: string;
   accounts: AccountOption[];
+  accountBookStartDate: Date;
   currentAccountId: string;
   onClose: () => void;
   onSubmittingChange?: (isSubmitting: boolean) => void;
@@ -77,6 +82,8 @@ export function EditTransactionModal({
     onSubmittingChange,
   });
   const today = startOfDay(new Date());
+  const accountBookStartDay = startOfUtcDay(accountBookStartDate);
+  const accountBookStartDateLabel = formatUtcDate(accountBookStartDay);
   const currentAccount = accounts.find((a) => a.value === currentAccountId);
 
   const form = useForm({
@@ -96,6 +103,9 @@ export function EditTransactionModal({
     validate: {
       date: (value) => {
         if (!value) return "Date is required";
+        if (startOfUtcDay(value) < accountBookStartDay) {
+          return `Date cannot be before account book start date (${accountBookStartDateLabel}).`;
+        }
         if (isAfter(startOfDay(value), today)) {
           return "Date cannot be in the future";
         }
@@ -112,6 +122,9 @@ export function EditTransactionModal({
             }
             if (isExpenseAccount(account) && booking.credit !== undefined) {
               return "Expense accounts cannot have credit entries.";
+            }
+            if (isOpeningBalancesAccount(account)) {
+              return OPENING_BALANCES_MANAGEMENT_MESSAGE;
             }
           }
 
@@ -141,7 +154,11 @@ export function EditTransactionModal({
         },
         date: (value) => {
           if (!value) return "Date is required";
-          if (isAfter(startOfDay(new Date(value)), today)) {
+          const bookingDate = new Date(value);
+          if (startOfUtcDay(bookingDate) < accountBookStartDay) {
+            return `Date cannot be before account book start date (${accountBookStartDateLabel}).`;
+          }
+          if (isAfter(startOfDay(bookingDate), today)) {
             return "Date cannot be in the future";
           }
           return null;
@@ -219,8 +236,9 @@ export function EditTransactionModal({
       createEditTransactionColumnDefs({
         accounts,
         isSubmitting,
+        accountBookStartDate: accountBookStartDay,
       }),
-    [accounts, isSubmitting],
+    [accountBookStartDay, accounts, isSubmitting],
   );
 
   useEffect(() => {
@@ -266,6 +284,7 @@ export function EditTransactionModal({
               </Group>
             }
             disabled={isSubmitting}
+            minDate={accountBookStartDay}
             {...form.getInputProps("date")}
           />
           <TextInput
@@ -355,6 +374,7 @@ export function EditTransactionModal({
                 const nextBooking: BookingValues = {
                   ...currentBooking,
                   account: event.newValue ?? undefined,
+                  date: currentBooking.date,
                   unit: selectedAccount.unit,
                   currency: selectedAccount.currency ?? undefined,
                   cryptocurrency: selectedAccount.cryptocurrency ?? undefined,
@@ -401,6 +421,7 @@ export function EditTransactionModal({
               form.removeListItem("bookings", index);
             },
             startDate: form.values.date,
+            accountBookStartDate: accountBookStartDay,
             form,
             isSubmitting,
           }}

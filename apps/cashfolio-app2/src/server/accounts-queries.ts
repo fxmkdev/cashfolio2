@@ -6,6 +6,7 @@ import type {
   Unit,
 } from "../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
+import { getOpeningBalancesBookingDate, getUtcDayRange } from "../shared/date";
 import { createGroupPathResolver } from "./accounts-helpers";
 import {
   type AccountState,
@@ -183,6 +184,7 @@ async function getAccountTreeDataInternal(args: {
       where: { id: data.accountBookId },
       select: {
         referenceCurrency: true,
+        startDate: true,
         securityHoldingGainLossAccountGroupId: true,
         cryptoHoldingGainLossAccountGroupId: true,
         fxHoldingGainLossAccountGroupId: true,
@@ -235,6 +237,28 @@ async function getAccountTreeDataInternal(args: {
   const rawBalanceByAccountId = new Map(
     accountBalances.map((b) => [b.accountId, Number(b._sum.value ?? 0)]),
   );
+  const openingBalanceDate = getOpeningBalancesBookingDate(
+    accountBook.startDate,
+  );
+  const openingBalanceRange = getUtcDayRange(openingBalanceDate);
+  const openingBalanceSums =
+    assetAndLiabilityAccountIds.length > 0
+      ? await prisma.booking.groupBy({
+          by: ["accountId"],
+          where: {
+            accountBookId: data.accountBookId,
+            accountId: { in: assetAndLiabilityAccountIds },
+            date: {
+              gte: openingBalanceRange.start,
+              lt: openingBalanceRange.endExclusive,
+            },
+          },
+          _sum: { value: true },
+        })
+      : [];
+  const openingRawBalanceByAccountId = new Map(
+    openingBalanceSums.map((b) => [b.accountId, Number(b._sum.value ?? 0)]),
+  );
   const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
   const normalizedAccounts = accounts.map((account) => ({
     id: account.id,
@@ -269,6 +293,7 @@ async function getAccountTreeDataInternal(args: {
   const accountRows = buildAccountRows({
     accounts: normalizedAccounts,
     rawBalanceByAccountId,
+    openingRawBalanceByAccountId,
     displayBalanceInReferenceCurrencyByAccountId,
     bookingCountByAccountId,
     groupById,

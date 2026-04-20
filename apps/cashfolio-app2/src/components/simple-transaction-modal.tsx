@@ -12,8 +12,14 @@ import { useForm } from "@mantine/form";
 import { isAfter, parse, startOfDay } from "date-fns";
 import { useEffect } from "react";
 import { IconArrowRight } from "@tabler/icons-react";
-import { isExpenseAccount, isIncomeAccount } from "../shared/account-utils";
+import {
+  isExpenseAccount,
+  isIncomeAccount,
+  isOpeningBalancesAccount,
+} from "../shared/account-utils";
+import { formatUtcDate, startOfUtcDay } from "../shared/date";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
 import type { AccountOption } from "./edit-transaction-modal";
 import { FormattedNumberInput } from "./formatted-number-input";
 
@@ -46,6 +52,7 @@ function getForcedDirection(
 export function SimpleTransactionModal({
   currentAccount,
   accounts,
+  accountBookStartDate,
   initialValues,
   submitLabel,
   onSwitchToSplit,
@@ -58,6 +65,7 @@ export function SimpleTransactionModal({
     label: string;
   };
   accounts: AccountOption[];
+  accountBookStartDate: Date;
   initialValues?: SimpleTransactionInitialValues;
   submitLabel?: string;
   onSwitchToSplit?: (draft: SimpleTransactionDraftValues) => void;
@@ -72,6 +80,8 @@ export function SimpleTransactionModal({
   }) => Promise<void>;
 }) {
   const today = startOfDay(new Date());
+  const accountBookStartDay = startOfUtcDay(accountBookStartDate);
+  const accountBookStartDateLabel = formatUtcDate(accountBookStartDay);
   const { isSubmitting, runSubmit } = useDialogSubmitState({
     onSubmittingChange,
   });
@@ -88,9 +98,12 @@ export function SimpleTransactionModal({
         initialValues?.direction ?? ("DEBIT" as SimpleTransactionDirection),
     },
     validate: {
-      date: (value) => {
+      date: (value, values) => {
         if (!value) return "Date is required";
         if (isNaN(value.getTime())) return "Date is invalid";
+        if (startOfUtcDay(value) < accountBookStartDay) {
+          return `Date cannot be before account book start date (${accountBookStartDateLabel}).`;
+        }
         if (isAfter(startOfDay(value), today)) {
           return "Date cannot be in the future";
         }
@@ -103,6 +116,9 @@ export function SimpleTransactionModal({
           (account) => account.value === value,
         );
         if (!counterAccount) return "Counter account is required";
+        if (isOpeningBalancesAccount(counterAccount)) {
+          return OPENING_BALANCES_MANAGEMENT_MESSAGE;
+        }
 
         const effectiveDirection =
           getForcedDirection(counterAccount) ?? values.direction;
@@ -176,6 +192,7 @@ export function SimpleTransactionModal({
             dateParser={(value) => parse(value, "dd.MM.yyyy", new Date())}
             label="Date"
             w={180}
+            minDate={accountBookStartDay}
             disabled={isSubmitting}
             {...form.getInputProps("date")}
           />

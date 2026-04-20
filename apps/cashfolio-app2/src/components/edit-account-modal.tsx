@@ -27,12 +27,14 @@ import {
   validateAccountTradeCurrency,
 } from "../shared/account-validation";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
+import { FormattedNumberInput } from "./formatted-number-input";
 
 type FormValues = {
   name?: string;
   typeDescriptor?: "ASSET" | "LIABILITY" | `EQUITY-${EquityAccountSubtype}`;
   groupId?: string;
   sortOrder?: number;
+  openingBalance?: number | string;
   unit: Unit;
   currency?: string;
   cryptocurrency?: string;
@@ -40,9 +42,10 @@ type FormValues = {
   tradeCurrency?: string;
 };
 
-export type TransformedFormValues = FormValues & {
+export type TransformedFormValues = Omit<FormValues, "openingBalance"> & {
   type: AccountType;
   equityAccountSubtype?: EquityAccountSubtype;
+  openingBalance?: number | null;
 };
 
 export type AccountInitialValues = {
@@ -56,6 +59,7 @@ export type AccountInitialValues = {
   cryptocurrency?: string | null;
   symbol?: string | null;
   tradeCurrency?: string | null;
+  openingBalance?: number | null;
 };
 
 function toFormValues(initial: AccountInitialValues): FormValues {
@@ -69,6 +73,7 @@ function toFormValues(initial: AccountInitialValues): FormValues {
     typeDescriptor,
     groupId: initial.groupId ?? undefined,
     sortOrder: initial.sortOrder ?? undefined,
+    openingBalance: initial.openingBalance ?? undefined,
     unit: initial.unit ?? Unit.CURRENCY,
     currency: initial.currency ?? undefined,
     cryptocurrency: initial.cryptocurrency ?? undefined,
@@ -80,10 +85,15 @@ function toFormValues(initial: AccountInitialValues): FormValues {
 function transformAccountValues(values: FormValues): TransformedFormValues {
   const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
     []) as [AccountType, EquityAccountSubtype?];
+  const openingBalance =
+    values.openingBalance == null || values.openingBalance === ""
+      ? null
+      : Number(values.openingBalance);
 
   return {
     ...values,
     type,
+    openingBalance,
     ...(type === AccountType.EQUITY ? { equityAccountSubtype } : undefined),
   };
 }
@@ -144,6 +154,20 @@ export function EditAccountModal({
       },
       typeDescriptor: isNotEmpty("Type is required"),
       groupId: () => null,
+      openingBalance: (value, values) => {
+        if (
+          values.typeDescriptor !== AccountType.ASSET &&
+          values.typeDescriptor !== AccountType.LIABILITY
+        ) {
+          return null;
+        }
+        if (value == null || value === "") {
+          return null;
+        }
+        return Number.isFinite(Number(value))
+          ? null
+          : "Opening balance is invalid";
+      },
       unit: (value, values) =>
         validateAccountUnit(value, values.typeDescriptor as AccountType),
       currency: (value, values) =>
@@ -211,9 +235,7 @@ export function EditAccountModal({
       size="lg"
     >
       <form
-        onSubmit={form.onSubmit((values) =>
-          runSubmit(() => onSubmit(transformAccountValues(values))),
-        )}
+        onSubmit={form.onSubmit((values) => runSubmit(() => onSubmit(values)))}
       >
         <Stack gap="xl">
           <Grid>
@@ -264,6 +286,15 @@ export function EditAccountModal({
                       },
                     ],
                   },
+                  {
+                    group: "System Accounts",
+                    items: [
+                      {
+                        value: `${AccountType.EQUITY}-${EquityAccountSubtype.OPENING_BALANCES}`,
+                        label: "Opening Balances",
+                      },
+                    ],
+                  },
                 ]}
                 {...form.getInputProps("typeDescriptor")}
               />
@@ -294,8 +325,21 @@ export function EditAccountModal({
             {(
               [AccountType.ASSET, AccountType.LIABILITY] as AccountType[]
             ).includes(type) && (
+              <Grid.Col span={3}>
+                <FormattedNumberInput
+                  label="Opening Balance"
+                  decimalScale={2}
+                  locale="en-CH"
+                  hideControls
+                  {...form.getInputProps("openingBalance")}
+                />
+              </Grid.Col>
+            )}
+            {(
+              [AccountType.ASSET, AccountType.LIABILITY] as AccountType[]
+            ).includes(type) && (
               <>
-                <Grid.Col span={6}>
+                <Grid.Col span={3}>
                   <Select
                     label="Unit"
                     withAsterisk

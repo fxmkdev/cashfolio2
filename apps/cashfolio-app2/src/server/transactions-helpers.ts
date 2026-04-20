@@ -4,12 +4,14 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../.prisma-client/enums";
-import { isAfter, startOfDay } from "date-fns";
+import { isAfter, isBefore, startOfDay } from "date-fns";
 import { getUnitIdentifier } from "../shared/account-utils";
+import { formatUtcDate, startOfUtcDay } from "../shared/date";
 import {
   getBookingUnitFields,
   type BookingUnitFieldsSource,
 } from "../shared/booking-unit-fields";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
 import type { CreateTransactionInput } from "./transactions-types";
 
 export function validateCreateTransaction(input: CreateTransactionInput) {
@@ -68,20 +70,28 @@ export function validateCreateTransaction(input: CreateTransactionInput) {
 }
 
 export async function validateAccountTypeBookings(
-  bookings: { accountId: string; value: number }[],
+  bookings: { accountId: string; value: number; date: string | Date }[],
   accountBookId: string,
 ) {
   const accountIds = bookings.map((b) => b.accountId).filter(Boolean);
   if (accountIds.length === 0) return;
 
-  const accounts = await prisma.account.findMany({
-    where: { id: { in: accountIds }, accountBookId },
-    select: { id: true, type: true, equityAccountSubtype: true },
-  });
+  const [accounts, accountBook] = await Promise.all([
+    prisma.account.findMany({
+      where: { id: { in: accountIds }, accountBookId },
+      select: { id: true, type: true, equityAccountSubtype: true },
+    }),
+    prisma.accountBook.findUniqueOrThrow({
+      where: { id: accountBookId },
+      select: { startDate: true },
+    }),
+  ]);
   const accountMap = new Map(
     accounts.map((account) => [account.id, accountTypeMeta(account)]),
   );
-  validateAccountTypeBookingsWithAccounts(bookings, accountMap);
+  validateAccountTypeBookingsWithAccounts(bookings, accountMap, {
+    accountBookStartDate: accountBook.startDate,
+  });
 }
 
 export type AccountTypeMeta = {
@@ -103,9 +113,19 @@ export function accountTypeMeta(account: {
 }
 
 export function validateAccountTypeBookingsWithAccounts(
-  bookings: { accountId: string; value: number }[],
+  bookings: { accountId: string; value: number; date: string | Date }[],
   accountMap: Map<string, AccountTypeMeta>,
+  options?: {
+    accountBookStartDate?: Date;
+  },
 ) {
+  const accountBookStartDate =
+    options?.accountBookStartDate != null
+      ? startOfUtcDay(options.accountBookStartDate)
+      : null;
+  const accountBookStartDateLabel =
+    accountBookStartDate != null ? formatUtcDate(accountBookStartDate) : null;
+
   const errors: string[] = [];
   for (let i = 0; i < bookings.length; i++) {
     const b = bookings[i];
@@ -126,6 +146,31 @@ export function validateAccountTypeBookingsWithAccounts(
       b.value < 0
     ) {
       errors.push(`Booking ${i}: Expense accounts cannot have credit entries.`);
+    }
+
+    if (
+      account.type === AccountType.EQUITY &&
+      account.equityAccountSubtype === EquityAccountSubtype.OPENING_BALANCES
+    ) {
+      errors.push(`Booking ${i}: ${OPENING_BALANCES_MANAGEMENT_MESSAGE}`);
+      continue;
+    }
+
+    if (!accountBookStartDate || !accountBookStartDateLabel) {
+      continue;
+    }
+
+    const bookingDate = new Date(b.date);
+    if (isNaN(bookingDate.getTime())) {
+      errors.push(`Booking ${i}: invalid date.`);
+      continue;
+    }
+
+    const bookingDay = startOfUtcDay(bookingDate);
+    if (isBefore(bookingDay, accountBookStartDate)) {
+      errors.push(
+        `Booking ${i}: Date cannot be before account book start date (${accountBookStartDateLabel}).`,
+      );
     }
   }
 

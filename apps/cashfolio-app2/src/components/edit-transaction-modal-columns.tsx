@@ -5,7 +5,11 @@ import { IconTrash, IconX } from "@tabler/icons-react";
 import { Unit } from "../.prisma-client/enums";
 import { currencies } from "../currencies";
 import { cryptocurrencies } from "../cryptocurrencies";
-import { isExpenseAccount, isIncomeAccount } from "../shared/account-utils";
+import {
+  isExpenseAccount,
+  isIncomeAccount,
+  isOpeningBalancesAccount,
+} from "../shared/account-utils";
 import { isSameDay } from "date-fns";
 import {
   DATE_COLUMN,
@@ -46,8 +50,9 @@ export function isEditableCell(params: CellClassParams) {
 export function createEditTransactionColumnDefs(args: {
   accounts: AccountOption[];
   isSubmitting: boolean;
+  accountBookStartDate: Date;
 }): ColDef[] {
-  const { accounts, isSubmitting } = args;
+  const { accounts, isSubmitting, accountBookStartDate } = args;
 
   return [
     {
@@ -87,14 +92,23 @@ export function createEditTransactionColumnDefs(args: {
       type: DATE_COLUMN,
       cellDataType: "dateString",
       width: 118,
+      editable: ({ data }) => {
+        if (!data?.account) return true;
+        const account = accounts.find((item) => item.value === data.account);
+        return !isOpeningBalancesAccount(account);
+      },
       cellStyle: ({ value, context }: CellClassParams) => {
         const isStartDate = isSameDay(value as Date, context.startDate as Date);
         return isStartDate
           ? { color: "var(--mantine-color-dimmed)", fontWeight: 400 }
           : { color: "var(--mantine-color-yellow-text)", fontWeight: 600 };
       },
-      cellEditorParams: ({ context }: { context: { startDate?: Date } }) => ({
-        startDate: context.startDate,
+      cellEditorParams: ({
+        context,
+      }: {
+        context: { accountBookStartDate?: Date };
+      }) => ({
+        startDate: context.accountBookStartDate ?? accountBookStartDate,
       }),
     },
     {

@@ -79,6 +79,7 @@ export type LedgerPageViewProps = {
   columnDefs: NonNullable<AgGridReactProps<LedgerRow>["columnDefs"]>;
   currentAccountLabel: string;
   unitLabel: string | null;
+  accountBookStartDate: Date;
   simpleTransactionDisabledReason: string | null;
   simpleModalOpened: boolean;
   splitModalOpened: boolean;
@@ -145,6 +146,7 @@ export function LedgerPageView({
   columnDefs,
   currentAccountLabel,
   unitLabel,
+  accountBookStartDate,
   simpleTransactionDisabledReason,
   simpleModalOpened,
   splitModalOpened,
@@ -274,6 +276,7 @@ export function LedgerPageView({
         <SimpleTransactionModal
           currentAccount={{ id: account.id, label: currentAccountLabel }}
           accounts={simpleCounterAccountOptions}
+          accountBookStartDate={accountBookStartDate}
           onSwitchToSplit={onSwitchCreateToSplit}
           onClose={() => {
             if (isSimpleSubmitting) return;
@@ -301,6 +304,7 @@ export function LedgerPageView({
           submitLabel="Create"
           accounts={accountOptions}
           currentAccountId={account.id}
+          accountBookStartDate={accountBookStartDate}
           onClose={() => {
             if (isCreateSplitSubmitting) return;
             onCloseSplitModal();
@@ -330,6 +334,7 @@ export function LedgerPageView({
             currentAccount={{ id: account.id, label: currentAccountLabel }}
             accounts={editSimpleCounterAccountOptions}
             initialValues={editingSimpleInitialValues}
+            accountBookStartDate={accountBookStartDate}
             submitLabel="Save"
             onSwitchToSplit={onSwitchToSplit}
             onClose={() => {
@@ -344,6 +349,7 @@ export function LedgerPageView({
             initialValues={editingTransactionData}
             accounts={editAccountOptions}
             currentAccountId={account.id}
+            accountBookStartDate={accountBookStartDate}
             onClose={() => {
               if (isEditSubmitting) return;
               onCloseEditModal();

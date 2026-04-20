@@ -1,7 +1,10 @@
 import { useMemo } from "react";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 import type { AccountOption } from "@/components/edit-transaction-modal";
-import { getSimpleTransactionUnitIdentifier } from "@/shared/account-utils";
+import {
+  getSimpleTransactionUnitIdentifier,
+  isOpeningBalancesAccount,
+} from "@/shared/account-utils";
 import {
   createAccountOptions,
   createCurrentAccountLabel,
@@ -23,12 +26,20 @@ export function useLedgerAccountOptions(args: {
   editingSimpleInitialValues: SimpleTransactionEditInitialValues | undefined;
 }) {
   const allAccountOptions = useMemo<AccountOption[]>(
-    () => createAccountOptions(args.accounts, () => true),
+    () =>
+      createAccountOptions(
+        args.accounts,
+        (account) => !isOpeningBalancesAccount(account),
+      ),
     [args.accounts],
   );
 
   const accountOptions = useMemo<AccountOption[]>(
-    () => createAccountOptions(args.accounts, (a) => a.isActive),
+    () =>
+      createAccountOptions(
+        args.accounts,
+        (account) => account.isActive && !isOpeningBalancesAccount(account),
+      ),
     [args.accounts],
   );
 
@@ -44,7 +55,9 @@ export function useLedgerAccountOptions(args: {
 
     return createAccountOptions(
       args.accounts,
-      (account) => account.isActive || selectedAccountIds.has(account.id),
+      (account) =>
+        !isOpeningBalancesAccount(account) &&
+        (account.isActive || selectedAccountIds.has(account.id)),
     );
   }, [
     accountOptions,
@@ -65,6 +78,7 @@ export function useLedgerAccountOptions(args: {
         (candidate) =>
           candidate.isActive &&
           candidate.id !== args.account.id &&
+          !isOpeningBalancesAccount(candidate) &&
           (candidate.type === AccountType.EQUITY ||
             ((candidate.type === AccountType.ASSET ||
               candidate.type === AccountType.LIABILITY) &&
