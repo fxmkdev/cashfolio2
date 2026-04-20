@@ -73,6 +73,7 @@ describe("getAccountTreeData", () => {
     prisma.booking.groupBy.mockResolvedValue([]);
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
       referenceCurrency: "CHF",
+      startDate: new Date("2026-01-08T00:00:00.000Z"),
       securityHoldingGainLossAccountGroupId: null,
       cryptoHoldingGainLossAccountGroupId: null,
       fxHoldingGainLossAccountGroupId: null,
@@ -125,10 +126,15 @@ describe("getAccountTreeData", () => {
         sortOrder: 0,
       },
     ]);
-    prisma.booking.groupBy.mockResolvedValue([
-      { accountId: "asset-1", _sum: { value: 10 } },
-      { accountId: "liability-1", _sum: { value: 5 } },
-    ]);
+    prisma.booking.groupBy
+      .mockResolvedValueOnce([
+        { accountId: "asset-1", _sum: { value: 10 } },
+        { accountId: "liability-1", _sum: { value: 5 } },
+      ])
+      .mockResolvedValueOnce([
+        { accountId: "asset-1", _sum: { value: 8 } },
+        { accountId: "liability-1", _sum: { value: 2 } },
+      ]);
 
     const result = await getAccountTreeData({
       data: {
@@ -149,6 +155,7 @@ describe("getAccountTreeData", () => {
     expect(assetRow).toMatchObject({
       balance: 10,
       balanceInReferenceCurrency: null,
+      openingBalance: 8,
       deletable: false,
       deleteDisabledReason: "Action availability not requested",
       archivable: false,
@@ -159,6 +166,7 @@ describe("getAccountTreeData", () => {
     expect(liabilityRow).toMatchObject({
       balance: -5,
       balanceInReferenceCurrency: null,
+      openingBalance: -2,
     });
     expect(groupRow).toMatchObject({
       nodeType: "accountGroup",
@@ -209,9 +217,13 @@ describe("getAccountTreeData", () => {
       .mockResolvedValueOnce([{ accountId: "asset-archived", _count: 1 }])
       .mockResolvedValueOnce([
         { accountId: "asset-archived", _sum: { value: 5 } },
+      ])
+      .mockResolvedValueOnce([
+        { accountId: "asset-archived", _sum: { value: 2 } },
       ]);
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
       referenceCurrency: "CHF",
+      startDate: new Date("2026-01-08T00:00:00.000Z"),
       securityHoldingGainLossAccountGroupId: "group-root",
       cryptoHoldingGainLossAccountGroupId: null,
       fxHoldingGainLossAccountGroupId: null,
@@ -237,6 +249,7 @@ describe("getAccountTreeData", () => {
     expect(accountRow).toMatchObject({
       isActive: false,
       balance: 5,
+      openingBalance: 2,
       deletable: false,
       deleteDisabledReason: "Cannot delete account because it has bookings",
       archivable: false,

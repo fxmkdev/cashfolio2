@@ -1,11 +1,27 @@
-import { describe, expect, test, vi } from "vitest";
-import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../.prisma-client/enums";
+const prisma = vi.hoisted(() => ({
+  account: {
+    findMany: vi.fn(),
+  },
+  accountBook: {
+    findUniqueOrThrow: vi.fn(),
+  },
+}));
 vi.mock("../prisma.server", () => ({
-  prisma: {},
+  prisma,
 }));
 import {
+  accountTypeMeta,
+  buildTransactionCreateData,
+  validateAccountTypeBookings,
   validateAccountTypeBookingsWithAccounts,
   type AccountTypeMeta,
+  validateCreateTransaction,
 } from "./transactions-helpers";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
 
@@ -48,7 +64,233 @@ function createAccountMap(
   return base;
 }
 
-describe("validateAccountTypeBookingsWithAccounts", () => {
+describe("transactions helpers", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    prisma.account.findMany.mockResolvedValue([]);
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      startDate: new Date("2026-01-03T00:00:00.000Z"),
+    });
+  });
+
+  test("requires at least two bookings for transaction creation", () => {
+    expect(() =>
+      validateCreateTransaction({
+        accountBookId: "book-1",
+        description: "single booking",
+        bookings: [
+          {
+            date: "2026-01-03T00:00:00.000Z",
+            accountId: "asset-1",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: 100,
+          },
+        ],
+      }),
+    ).toThrow("At least two bookings are required.");
+  });
+
+  test("requires balancing sum for bookings in the same unit", () => {
+    expect(() =>
+      validateCreateTransaction({
+        accountBookId: "book-1",
+        description: "unbalanced",
+        bookings: [
+          {
+            date: "2026-01-03T00:00:00.000Z",
+            accountId: "asset-1",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: 120,
+          },
+          {
+            date: "2026-01-03T00:00:00.000Z",
+            accountId: "equity-1",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: -100,
+          },
+        ],
+      }),
+    ).toThrow("The sum of all bookings must be zero.");
+  });
+
+  test("allows mixed-unit simple transfers without enforcing sum-to-zero", () => {
+    expect(() =>
+      validateCreateTransaction({
+        accountBookId: "book-1",
+        description: "mixed units",
+        bookings: [
+          {
+            date: "2026-01-03T00:00:00.000Z",
+            accountId: "asset-1",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: 120,
+          },
+          {
+            date: "2026-01-03T00:00:00.000Z",
+            accountId: "crypto-1",
+            description: "",
+            unit: Unit.CRYPTOCURRENCY,
+            cryptocurrency: "BTC",
+            value: -90,
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
+
+  test("rejects invalid booking dates and missing unit metadata", () => {
+    expect(() =>
+      validateCreateTransaction({
+        accountBookId: "book-1",
+        description: "validation errors",
+        bookings: [
+          {
+            date: "2999-01-03T00:00:00.000Z",
+            accountId: "asset-1",
+            description: "",
+            unit: Unit.CURRENCY,
+            value: 120,
+          },
+          {
+            date: "invalid-date",
+            accountId: "asset-2",
+            description: "",
+            unit: Unit.SECURITY,
+            symbol: "AAPL",
+            value: -120,
+          },
+        ],
+      }),
+    ).toThrow(
+      "Booking 0: date cannot be in the future. Booking 0: currency is required. Booking 1: invalid date. Booking 1: symbol and trade currency are required for security bookings.",
+    );
+  });
+
+  test("builds nested transaction create payload with stable sort order", () => {
+    const result = buildTransactionCreateData({
+      accountBookId: "book-1",
+      description: "new transaction",
+      bookings: [
+        {
+          date: "2026-01-03T00:00:00.000Z",
+          accountId: "asset-1",
+          description: "first",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          value: 50,
+        },
+        {
+          date: "2026-01-03T00:00:00.000Z",
+          accountId: "equity-1",
+          description: "second",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          value: -50,
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      description: "new transaction",
+      accountBookId: "book-1",
+      bookings: {
+        create: [
+          {
+            description: "first",
+            value: 50,
+            sortOrder: 0,
+            account: {
+              connect: {
+                id_accountBookId: {
+                  id: "asset-1",
+                  accountBookId: "book-1",
+                },
+              },
+            },
+          },
+          {
+            description: "second",
+            value: -50,
+            sortOrder: 1,
+            account: {
+              connect: {
+                id_accountBookId: {
+                  id: "equity-1",
+                  accountBookId: "book-1",
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+  });
+
+  test("loads account metadata when validating account type booking rules", async () => {
+    prisma.account.findMany.mockResolvedValue([
+      {
+        id: "income",
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.INCOME,
+      },
+    ]);
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      startDate: new Date("2026-01-03T00:00:00.000Z"),
+    });
+
+    await expect(
+      validateAccountTypeBookings(
+        [
+          {
+            accountId: "income",
+            value: 100,
+            date: "2026-01-03T00:00:00.000Z",
+          },
+        ],
+        "book-1",
+      ),
+    ).rejects.toThrow("Income accounts cannot have debit entries.");
+
+    expect(prisma.account.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ["income"] }, accountBookId: "book-1" },
+      select: { id: true, type: true, equityAccountSubtype: true },
+    });
+    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
+      where: { id: "book-1" },
+      select: { startDate: true },
+    });
+  });
+
+  test("skips account lookups for empty account lists", async () => {
+    await expect(validateAccountTypeBookings([], "book-1")).resolves.toBe(
+      undefined,
+    );
+    expect(prisma.account.findMany).not.toHaveBeenCalled();
+    expect(prisma.accountBook.findUniqueOrThrow).not.toHaveBeenCalled();
+  });
+
+  test("maps account type metadata without altering values", () => {
+    expect(
+      accountTypeMeta({
+        id: "account-1",
+        type: AccountType.LIABILITY,
+        equityAccountSubtype: null,
+      }),
+    ).toEqual({
+      id: "account-1",
+      type: AccountType.LIABILITY,
+      equityAccountSubtype: null,
+    });
+  });
+
   test("keeps income/expense sign rules unchanged", () => {
     expect(() =>
       validateAccountTypeBookingsWithAccounts(
