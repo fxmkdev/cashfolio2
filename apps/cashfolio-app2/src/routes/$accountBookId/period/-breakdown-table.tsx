@@ -5,8 +5,12 @@ import { DataGrid } from "@/components/data-grid";
 import type { BreakdownHierarchyNode } from "./-breakdown-drill";
 import { parseBreakdownAccountId } from "./-breakdown-drill";
 import {
-  type BreakdownTableRow,
+  BREAKDOWN_TOTAL_FOOTER_ROW_ID,
+  type BreakdownGridRow,
+  type BreakdownTotalFooterRow,
   flattenBreakdownHierarchyRows,
+  isBreakdownTotalFooterRow,
+  sumTopLevelBreakdownHierarchyAmount,
 } from "./-breakdown-table-rows";
 
 type BreakdownTableProps = {
@@ -24,8 +28,19 @@ export function BreakdownTable({
     () => flattenBreakdownHierarchyRows(hierarchy),
     [hierarchy],
   );
+  const pinnedBottomRowData = useMemo<BreakdownTotalFooterRow[]>(
+    () => [
+      {
+        id: BREAKDOWN_TOTAL_FOOTER_ROW_ID,
+        rowType: "breakdownTotalFooter",
+        name: "Total",
+        value: sumTopLevelBreakdownHierarchyAmount(hierarchy),
+      },
+    ],
+    [hierarchy],
+  );
 
-  const columnDefs = useMemo<ColDef<BreakdownTableRow>[]>(
+  const columnDefs = useMemo<ColDef<BreakdownGridRow>[]>(
     () => [
       {
         field: "value",
@@ -52,7 +67,7 @@ export function BreakdownTable({
         field: "name",
         flex: 1,
         filter: "agTextColumnFilter",
-        valueGetter: ({ data }: { data: BreakdownTableRow | undefined }) =>
+        valueGetter: ({ data }: { data: BreakdownGridRow | undefined }) =>
           data?.name,
         cellRendererParams: {
           suppressCount: true,
@@ -60,9 +75,25 @@ export function BreakdownTable({
       }}
       treeData={true}
       treeDataParentIdField="parentId"
-      getRowId={({ data }) => data.id}
+      pinnedBottomRowData={pinnedBottomRowData}
+      getRowId={({ data }) => {
+        if (!data) {
+          throw new Error(
+            "BreakdownTable row is missing data. Row IDs must be stable and non-empty.",
+          );
+        }
+
+        return data.id;
+      }}
       onRowDoubleClicked={(event) => {
-        if (!onAccountDoubleClick || event.data?.kind !== "account") {
+        if (!onAccountDoubleClick || !event.data) {
+          return;
+        }
+
+        if (
+          isBreakdownTotalFooterRow(event.data) ||
+          event.data.kind !== "account"
+        ) {
           return;
         }
 

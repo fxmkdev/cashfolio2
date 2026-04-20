@@ -1,6 +1,8 @@
 import type { BreakdownNodeKind } from "@/shared/breakdown-hierarchy";
 import type { BreakdownHierarchyNode } from "./-breakdown-drill";
 
+export const BREAKDOWN_TOTAL_FOOTER_ROW_ID = "__breakdown_total_footer__";
+
 export type BreakdownTableRow = {
   id: string;
   parentId: string | undefined;
@@ -8,6 +10,21 @@ export type BreakdownTableRow = {
   kind: BreakdownNodeKind;
   value: number;
 };
+
+export type BreakdownTotalFooterRow = {
+  id: typeof BREAKDOWN_TOTAL_FOOTER_ROW_ID;
+  rowType: "breakdownTotalFooter";
+  name: "Total";
+  value: number;
+};
+
+export type BreakdownGridRow = BreakdownTableRow | BreakdownTotalFooterRow;
+
+export function isBreakdownTotalFooterRow(
+  row: BreakdownGridRow | undefined,
+): row is BreakdownTotalFooterRow {
+  return !!row && "rowType" in row && row.rowType === "breakdownTotalFooter";
+}
 
 export function flattenBreakdownHierarchyRows(
   hierarchy: BreakdownHierarchyNode[],
@@ -35,4 +52,10 @@ export function flattenBreakdownHierarchyRows(
 
   appendRows(hierarchy, undefined);
   return rows;
+}
+
+export function sumTopLevelBreakdownHierarchyAmount(
+  hierarchy: BreakdownHierarchyNode[],
+): number {
+  return hierarchy.reduce((sum, node) => sum + node.amount, 0);
 }
