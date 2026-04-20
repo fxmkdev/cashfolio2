@@ -178,7 +178,7 @@ async function computeTransferClearingBalance(args: {
     ) {
       const transaction = transactionsPage[transactionIndex]!;
       const convertedValues = convertedValuesPerTransaction[transactionIndex]!;
-      const failedConversionsCount = convertedValues.reduce(
+      const failedConversionsCount = convertedValues.reduce<number>(
         (count, convertedValue) => count + (convertedValue == null ? 1 : 0),
         0,
       );
