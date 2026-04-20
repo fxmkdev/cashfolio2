@@ -4,7 +4,6 @@ import { ensureAuthorizedForAccountBookId } from "../account-books/functions.ser
 import { prisma } from "../prisma.server";
 import {
   DEFAULT_PERIOD_VALUE,
-  formatMonthPeriodValue,
   isSupportedPeriodValue,
   normalizePeriodValue,
   PERIOD_PRESET_LAST_MONTH,
@@ -16,16 +15,12 @@ import {
 } from "../shared/period";
 import { startOfUtcDay } from "../shared/date";
 import {
-  buildAvailableYears,
   buildBreakdownHierarchy,
-  buildBreakdownHierarchyWithMeta,
   buildBreakdownItems,
-  buildPeriodEndAllocationBreakdown,
   computeHoldingGainLossForEventSeries,
   createBreakdownBucket,
   filterConvertibleHoldingAccounts,
   isMultiUnitTransaction,
-  round2,
   shouldIncludeTransactionForPeriod,
 } from "./period-helpers";
 import {
@@ -48,6 +43,7 @@ import {
   summarizeMultiUnitTransactionConvertedValues,
 } from "./period-overview-aggregation";
 import { computeHoldingAccountGainLoss } from "./period-overview-holdings";
+import { buildPeriodOverviewResponse } from "./period-overview-response";
 
 export {
   DEFAULT_PERIOD_VALUE,
@@ -490,16 +486,6 @@ export const getPeriodOverview = createServerFn({
       }
     }
 
-    const { income, expenses, explicitGainLoss } = equityAggregation;
-    const gainsLosses = isBeforeAccountBookStart
-      ? 0
-      : explicitGainLoss + transactionGainLoss + holdingGainLoss;
-
-    const roundedIncome = round2(income);
-    const roundedExpenses = round2(expenses);
-    const roundedGainsLosses = round2(gainsLosses);
-    const roundedSavings = round2(roundedIncome - roundedExpenses);
-    const roundedTotalReturn = round2(roundedSavings + roundedGainsLosses);
     const endOfPeriodBalanceStats =
       await computeEndOfPeriodBalanceStatsWithConvertedBalances({
         accounts: assetLiabilityAccounts,
@@ -514,134 +500,21 @@ export const getPeriodOverview = createServerFn({
       });
     skippedBookingsCount += endOfPeriodBalanceStats.skippedCount;
 
-    const roundedEndOfPeriodAssets = round2(endOfPeriodBalanceStats.assets);
-    const roundedEndOfPeriodLiabilities = round2(
-      endOfPeriodBalanceStats.liabilities,
-    );
-    const roundedEndOfPeriodNetWorth = round2(endOfPeriodBalanceStats.netWorth);
-
-    const convertedPeriodEndBalances = assetLiabilityAccounts.map(
-      (account) => ({
-        accountId: account.id,
-        accountName: account.name,
-        groupId: account.groupId,
-        accountType: account.type,
-        convertedBalanceInReferenceCurrency:
-          endOfPeriodBalanceStats.convertedBalanceByAccountId.get(account.id) ??
-          null,
-      }),
-    );
-    const assetBreakdown = buildPeriodEndAllocationBreakdown({
-      items: convertedPeriodEndBalances.filter(
-        (
-          item,
-        ): item is (typeof convertedPeriodEndBalances)[number] & {
-          accountType: "ASSET";
-        } => item.accountType === AccountType.ASSET,
-      ),
-      groupById,
-    });
-    const liabilityBreakdown = buildPeriodEndAllocationBreakdown({
-      items: convertedPeriodEndBalances.filter(
-        (
-          item,
-        ): item is (typeof convertedPeriodEndBalances)[number] & {
-          accountType: "LIABILITY";
-        } => item.accountType === AccountType.LIABILITY,
-      ),
-      groupById,
-    });
-
-    const {
-      hierarchy: expenseBreakdownHierarchy,
-      hasHiddenAmountDiscrepancy: expenseBreakdownHasHiddenAmountDiscrepancy,
-      hiddenAmountDiscrepancyNodeIds: expenseBreakdownDiscrepancyNodeIds,
-    } = buildBreakdownHierarchyWithMeta({
-      items: Array.from(equityAggregation.expenseAmountByAccountId.values()),
-      groupById,
-    });
-    const {
-      hierarchy: incomeBreakdownHierarchy,
-      hasHiddenAmountDiscrepancy: incomeBreakdownHasHiddenAmountDiscrepancy,
-      hiddenAmountDiscrepancyNodeIds: incomeBreakdownDiscrepancyNodeIds,
-    } = buildBreakdownHierarchyWithMeta({
-      items: Array.from(equityAggregation.incomeAmountByAccountId.values()),
-      groupById,
-    });
-    const expenseBreakdown = buildBreakdownItems(
-      expenseBreakdownHierarchy.map((node) => ({
-        id: node.id,
-        label: node.label,
-        kind: node.kind,
-        amount: node.amount,
-      })),
-    );
-    const incomeBreakdown = buildBreakdownItems(
-      incomeBreakdownHierarchy.map((node) => ({
-        id: node.id,
-        label: node.label,
-        kind: node.kind,
-        amount: node.amount,
-      })),
-    );
-
     const currentDay = startOfUtcDay(new Date());
-    const availableYears = buildAvailableYears({
-      firstBookingDate: minPeriodDate,
-      now: currentDay,
-    });
-
-    return {
-      selectedPeriodValue: selection.periodValue,
-      selectedPeriodSpecifier: selection.periodSpecifier,
-      selectedPeriodLabel: selection.label,
-      selectedGranularity: selection.granularity,
-      selectedYear: selection.year,
-      selectedMonth: selection.month,
-      periodDateRange: {
-        from: selection.from.toISOString(),
-        to: selection.to.toISOString(),
-      },
-      minBookingDate: minPeriodDate.toISOString(),
-      maxDate: currentDay.toISOString(),
-      availableYears,
-      currentMonthValue: formatMonthPeriodValue(
-        currentDay.getUTCFullYear(),
-        currentDay.getUTCMonth(),
-      ),
-      currentYearValue: String(currentDay.getUTCFullYear()),
+    return buildPeriodOverviewResponse({
+      selection,
+      minPeriodDate,
+      currentDay,
       referenceCurrency,
+      groupById,
+      assetLiabilityAccounts,
+      equityAggregation,
+      transactionGainLoss,
+      holdingGainLoss,
+      isBeforeAccountBookStart,
+      endOfPeriodBalanceStats,
       bookingsCount,
       convertedBookingsCount,
       skippedBookingsCount,
-      stats: {
-        totalReturn: roundedTotalReturn,
-        savings: roundedSavings,
-        income: roundedIncome,
-        expenses: roundedExpenses,
-        gainsLosses: roundedGainsLosses,
-        endOfPeriodNetWorth: roundedEndOfPeriodNetWorth,
-        endOfPeriodAssets: roundedEndOfPeriodAssets,
-        endOfPeriodLiabilities: roundedEndOfPeriodLiabilities,
-        explicitGainLoss: round2(explicitGainLoss),
-        transactionGainLoss: round2(transactionGainLoss),
-        holdingGainLoss: round2(holdingGainLoss),
-      },
-      expenseBreakdown: {
-        totalAmount: expenseBreakdown.totalAmount,
-        items: expenseBreakdown.items,
-        hierarchy: expenseBreakdownHierarchy,
-        hasHiddenAmountDiscrepancy: expenseBreakdownHasHiddenAmountDiscrepancy,
-        hiddenAmountDiscrepancyNodeIds: expenseBreakdownDiscrepancyNodeIds,
-      },
-      incomeBreakdown: {
-        totalAmount: incomeBreakdown.totalAmount,
-        items: incomeBreakdown.items,
-        hierarchy: incomeBreakdownHierarchy,
-        hasHiddenAmountDiscrepancy: incomeBreakdownHasHiddenAmountDiscrepancy,
-        hiddenAmountDiscrepancyNodeIds: incomeBreakdownDiscrepancyNodeIds,
-      },
-      assetBreakdown,
-      liabilityBreakdown,
-    };
+    });
   });
