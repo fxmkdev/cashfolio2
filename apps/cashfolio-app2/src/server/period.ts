@@ -18,6 +18,7 @@ import {
   buildBreakdownHierarchy,
   buildBreakdownItems,
   addGainsLossesUnitContribution,
+  buildTransactionGainsLossesContributions,
   computeHoldingGainLossForEventSeries,
   createBreakdownBucket,
   createGainsLossesUnitBreakdownAccumulator,
@@ -42,7 +43,6 @@ import {
 import {
   accumulateConvertedEquityBooking,
   createPeriodOverviewEquityAggregation,
-  summarizeMultiUnitTransactionConvertedValues,
 } from "./period-overview-aggregation";
 import { computeHoldingAccountGainLoss } from "./period-overview-holdings";
 import { buildPeriodOverviewResponse } from "./period-overview-response";
@@ -398,36 +398,46 @@ export const getPeriodOverview = createServerFn({
         );
 
         for (const { transaction, convertedValues } of convertedValuesPerTransaction) {
-          const transactionContribution =
-            summarizeMultiUnitTransactionConvertedValues(convertedValues);
-          skippedBookingsCount += transactionContribution.skippedCount;
-          convertedBookingsCount += transactionContribution.convertedCount;
-          transactionGainLoss += transactionContribution.gainLossContribution;
+          const nonNullConvertedValues = convertedValues.filter(
+            (convertedValue): convertedValue is number =>
+              convertedValue != null,
+          );
+          const failedConversionsCount =
+            convertedValues.length - nonNullConvertedValues.length;
 
-          if (transactionContribution.skippedCount > 0) {
+          if (failedConversionsCount > 0) {
+            skippedBookingsCount += failedConversionsCount;
             continue;
           }
 
-          for (
-            let bookingIndex = 0;
-            bookingIndex < transaction.bookings.length;
-            bookingIndex += 1
-          ) {
-            const booking = transaction.bookings[bookingIndex];
-            const convertedValue = convertedValues[bookingIndex];
-            if (convertedValue == null || booking == null) {
-              continue;
-            }
+          convertedBookingsCount += nonNullConvertedValues.length;
+          const transactionConvertedValues = convertedValues.map(
+            (convertedValue) => convertedValue!,
+          );
+          const transactionGainLossContribution =
+            transactionConvertedValues.reduce(
+              (sum, convertedValue) => sum + convertedValue,
+              0,
+            );
+          const transactionAttributedContributions =
+            buildTransactionGainsLossesContributions({
+              bookings: transaction.bookings,
+              convertedValues: transactionConvertedValues,
+              referenceCurrency,
+            });
 
+          for (const contribution of transactionAttributedContributions) {
             addGainsLossesUnitContribution({
               accumulator: gainsLossesUnitBreakdownAccumulator,
-              unit: booking.unit,
-              currency: booking.currency,
-              cryptocurrency: booking.cryptocurrency,
-              symbol: booking.symbol,
-              amount: convertedValue,
+              unit: contribution.unit,
+              currency: contribution.currency,
+              cryptocurrency: contribution.cryptocurrency,
+              symbol: contribution.symbol,
+              amount: contribution.amount,
             });
           }
+
+          transactionGainLoss += transactionGainLossContribution;
         }
 
         if (transactionsPage.length < TRANSACTIONS_PAGE_SIZE) {

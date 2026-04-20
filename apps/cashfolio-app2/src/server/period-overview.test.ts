@@ -370,6 +370,62 @@ describe("getPeriodOverview", () => {
     expect(getUnitToReferenceExchangeRate).not.toHaveBeenCalled();
   });
 
+  it("excludes reference-currency contributors from FX breakdown while keeping gains/losses totals consistent", async () => {
+    vi.setSystemTime(new Date("2026-03-10T12:00:00.000Z"));
+    prisma.transaction.findMany
+      .mockResolvedValueOnce([
+        {
+          id: "tx-1",
+          bookings: [
+            {
+              date: new Date("2026-02-10T00:00:00.000Z"),
+              value: -107,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+            },
+            {
+              date: new Date("2026-02-10T00:00:00.000Z"),
+              value: 100,
+              unit: Unit.CURRENCY,
+              currency: "USD",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+            },
+          ],
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    convertBookingValueToReference.mockImplementation(async ({ value }) => {
+      if (value === 100) {
+        return 110;
+      }
+      return value;
+    });
+
+    const result = await getPeriodOverview({
+      data: { accountBookId: "book-3", period: "2026-02" },
+    });
+
+    expect(result.stats.transactionGainLoss).toBe(3);
+    expect(result.stats.gainsLosses).toBe(3);
+    expect(result.stats.totalReturn).toBe(3);
+
+    const fxGroup = result.gainsLossesBreakdown.hierarchy.find(
+      (group) => group.label === "FX",
+    );
+    expect(fxGroup?.amount).toBeCloseTo(3, 10);
+    expect(fxGroup?.children).toHaveLength(1);
+    expect(fxGroup?.children[0]?.id).toBe("account:fx:USD");
+    expect(fxGroup?.children[0]?.label).toBe("USD");
+    expect(fxGroup?.children[0]?.amount).toBeCloseTo(3, 10);
+    expect(fxGroup?.children.map((item) => item.label)).not.toContain("CHF");
+  });
+
   it("ignores unsupported period values in input and falls back to default", async () => {
     vi.setSystemTime(new Date("2026-05-10T10:00:00.000Z"));
 

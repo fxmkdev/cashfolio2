@@ -29,6 +29,7 @@ import {
   buildBreakdownHierarchyWithMeta,
   buildPeriodEndAllocationBreakdown,
   buildGainsLossesUnitBreakdownHierarchy,
+  buildTransactionGainsLossesContributions,
   createGainsLossesUnitBreakdownAccumulator,
 } from "./period-helpers";
 
@@ -556,6 +557,37 @@ describe("gains/losses unit breakdown", () => {
     expect(
       breakdown.hierarchy.reduce((sum, item) => sum + item.amount, 0),
     ).toBe(breakdown.totalAmount);
+  });
+
+  test("attributes multi-unit transaction gain/loss without reference-currency FX contributors", () => {
+    const contributions = buildTransactionGainsLossesContributions({
+      bookings: [
+        {
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+        },
+        {
+          unit: Unit.CURRENCY,
+          currency: "USD",
+          cryptocurrency: null,
+          symbol: null,
+        },
+      ],
+      convertedValues: [-107, 110],
+      referenceCurrency: "CHF",
+    });
+
+    expect(contributions).toEqual([
+      {
+        unit: Unit.CURRENCY,
+        currency: "USD",
+        cryptocurrency: null,
+        symbol: null,
+        amount: 3,
+      },
+    ]);
   });
 });
 

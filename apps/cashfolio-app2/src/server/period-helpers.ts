@@ -47,6 +47,14 @@ export type GainsLossesUnitBreakdownAccumulator = {
   securityBySymbol: Map<string, number>;
 };
 
+export type GainsLossesUnitContribution = {
+  unit: Unit;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  amount: number;
+};
+
 type MultiUnitBooking = {
   unit: Unit;
   currency: string | null;
@@ -139,6 +147,105 @@ export function addGainsLossesUnitContribution(args: {
     code: normalizedSymbol,
     amount: args.amount,
   });
+}
+
+function isReferenceCurrencyContribution(args: {
+  unit: Unit;
+  currency: string | null;
+  referenceCurrency: string;
+}): boolean {
+  if (args.unit !== Unit.CURRENCY || args.currency == null) {
+    return false;
+  }
+
+  return args.currency.toUpperCase() === args.referenceCurrency.toUpperCase();
+}
+
+export function buildTransactionGainsLossesContributions(args: {
+  bookings: Array<{
+    unit: Unit;
+    currency: string | null;
+    cryptocurrency: string | null;
+    symbol: string | null;
+  }>;
+  convertedValues: number[];
+  referenceCurrency: string;
+}): GainsLossesUnitContribution[] {
+  if (args.bookings.length !== args.convertedValues.length) {
+    return [];
+  }
+
+  const rawContributions = args.bookings.map((booking, index) => ({
+    unit: booking.unit,
+    currency: booking.currency,
+    cryptocurrency: booking.cryptocurrency,
+    symbol: booking.symbol,
+    amount: args.convertedValues[index]!,
+  }));
+  const transactionTotalAmount = rawContributions.reduce(
+    (sum, contribution) => sum + contribution.amount,
+    0,
+  );
+
+  const contributionsWithoutReferenceCurrency = rawContributions.filter(
+    (contribution) =>
+      !isReferenceCurrencyContribution({
+        unit: contribution.unit,
+        currency: contribution.currency,
+        referenceCurrency: args.referenceCurrency,
+      }),
+  );
+
+  if (contributionsWithoutReferenceCurrency.length === 0) {
+    return [];
+  }
+
+  const nonReferenceAmount = contributionsWithoutReferenceCurrency.reduce(
+    (sum, contribution) => sum + contribution.amount,
+    0,
+  );
+  const balancingAmount = transactionTotalAmount - nonReferenceAmount;
+
+  if (balancingAmount === 0) {
+    return contributionsWithoutReferenceCurrency;
+  }
+
+  let targetIndex = 0;
+  let targetAbsoluteAmount = -1;
+  for (
+    let contributionIndex = 0;
+    contributionIndex < contributionsWithoutReferenceCurrency.length;
+    contributionIndex += 1
+  ) {
+    const contribution =
+      contributionsWithoutReferenceCurrency[contributionIndex];
+    if (contribution == null) {
+      continue;
+    }
+
+    const contributionAbsoluteAmount = Math.abs(contribution.amount);
+    if (contributionAbsoluteAmount > targetAbsoluteAmount) {
+      targetAbsoluteAmount = contributionAbsoluteAmount;
+      targetIndex = contributionIndex;
+    }
+  }
+
+  const targetContribution =
+    contributionsWithoutReferenceCurrency[targetIndex] ??
+    contributionsWithoutReferenceCurrency[0];
+
+  if (!targetContribution) {
+    return contributionsWithoutReferenceCurrency;
+  }
+
+  return contributionsWithoutReferenceCurrency.map((contribution, index) =>
+    index === targetIndex
+      ? {
+          ...contribution,
+          amount: contribution.amount + balancingAmount,
+        }
+      : contribution,
+  );
 }
 
 function sortContributorEntries(
