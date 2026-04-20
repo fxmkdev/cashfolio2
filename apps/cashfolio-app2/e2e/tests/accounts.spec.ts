@@ -600,7 +600,9 @@ test("period page persists card state, drill state, and table expansion across r
   });
   await breakdownTypeControl.getByText("Expenses", { exact: true }).click();
 
-  const breakdownChartTypeControl = page.getByLabelText("Breakdown chart type");
+  const breakdownChartTypeControl = page.getByRole("radiogroup", {
+    name: "Breakdown chart type",
+  });
   await breakdownChartTypeControl.getByText("Donut", { exact: true }).click();
 
   const breakdownChart = page.getByTestId("period-breakdown-chart");
@@ -629,9 +631,9 @@ test("period page persists card state, drill state, and table expansion across r
   });
   await allocationTypeControl.getByText("Liabilities", { exact: true }).click();
 
-  const allocationChartTypeControl = page.getByLabelText(
-    "Allocation chart type",
-  );
+  const allocationChartTypeControl = page.getByRole("radiogroup", {
+    name: "Allocation chart type",
+  });
   await allocationChartTypeControl.getByText("Bar", { exact: true }).click();
   await expect(
     allocationChartTypeControl.getByRole("radio", { name: "Bar" }),
