@@ -399,6 +399,26 @@ describe("getPeriodOverview", () => {
 
   it("adds positive transfer-clearing balances to end-of-period assets and allocation", async () => {
     vi.setSystemTime(new Date("2026-03-10T12:00:00.000Z"));
+    prisma.accountGroup.findMany.mockResolvedValue([
+      {
+        id: "assets-a",
+        name: "Assets A",
+        parentGroupId: null,
+        type: AccountType.ASSET,
+      },
+      {
+        id: "assets-b",
+        name: "Assets B",
+        parentGroupId: null,
+        type: AccountType.ASSET,
+      },
+      {
+        id: "liabilities-a",
+        name: "Liabilities A",
+        parentGroupId: null,
+        type: AccountType.LIABILITY,
+      },
+    ]);
     prisma.transaction.findMany
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
@@ -434,14 +454,13 @@ describe("getPeriodOverview", () => {
     expect(result.stats.endOfPeriodAssets).toBe(200);
     expect(result.stats.endOfPeriodLiabilities).toBe(0);
     expect(result.stats.endOfPeriodNetWorth).toBe(200);
-    expect(result.assetBreakdown.items).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          label: "Transfer Clearing",
-          amount: 200,
-        }),
-      ]),
-    );
+    expect(result.assetBreakdown.items).toEqual([
+      expect.objectContaining({
+        id: "account:virtual:transfer-clearing",
+        label: "Transfer Clearing",
+        amount: 200,
+      }),
+    ]);
     expect(getBreakdownLabels(result.assetBreakdown.hierarchy)).toContain(
       "Transfer Clearing",
     );
