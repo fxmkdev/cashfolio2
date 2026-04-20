@@ -287,6 +287,7 @@ export const getPeriodOverview = createServerFn({
               cryptocurrency: booking.cryptocurrency,
               symbol: booking.symbol,
               amount: -convertedValue,
+              referenceCurrency,
             });
           }
         }
@@ -437,6 +438,7 @@ export const getPeriodOverview = createServerFn({
               cryptocurrency: contribution.cryptocurrency,
               symbol: contribution.symbol,
               amount: contribution.amount,
+              referenceCurrency,
             });
           }
 
@@ -553,6 +555,7 @@ export const getPeriodOverview = createServerFn({
             cryptocurrency: result.account.cryptocurrency,
             symbol: result.account.symbol,
             amount: result.gainLossContribution,
+            referenceCurrency,
           });
         }
         skippedBookingsCount += holdingResults.reduce(

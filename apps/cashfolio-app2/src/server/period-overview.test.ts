@@ -426,6 +426,55 @@ describe("getPeriodOverview", () => {
     expect(fxGroup?.children.map((item) => item.label)).not.toContain("CHF");
   });
 
+  it("does not attribute explicit reference-currency gain/loss bookings to FX contributors", async () => {
+    vi.setSystemTime(new Date("2026-03-10T12:00:00.000Z"));
+    let hasReturnedEquityPage = false;
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (args.where?.account?.type === AccountType.EQUITY) {
+        if (hasReturnedEquityPage) {
+          return Promise.resolve([]);
+        }
+        hasReturnedEquityPage = true;
+
+        return Promise.resolve([
+          {
+            id: "booking-gain-loss-chf",
+            date: new Date("2026-02-10T00:00:00.000Z"),
+            value: -20,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            account: {
+              id: "gainloss-1",
+              name: "Gain/Loss",
+              groupId: null,
+              equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+            },
+          },
+        ]);
+      }
+
+      return Promise.resolve([]);
+    });
+    prisma.transaction.findMany.mockResolvedValue([]);
+
+    const result = await getPeriodOverview({
+      data: { accountBookId: "book-4", period: "2026-02" },
+    });
+
+    expect(result.stats.explicitGainLoss).toBe(20);
+    expect(result.stats.gainsLosses).toBe(20);
+    expect(result.gainsLossesBreakdown.totalAmount).toBe(20);
+
+    const fxGroup = result.gainsLossesBreakdown.hierarchy.find(
+      (group) => group.label === "FX",
+    );
+    expect(fxGroup?.amount).toBe(0);
+    expect(fxGroup?.children).toEqual([]);
+  });
+
   it("ignores unsupported period values in input and falls back to default", async () => {
     vi.setSystemTime(new Date("2026-05-10T10:00:00.000Z"));
 

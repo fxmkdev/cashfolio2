@@ -506,6 +506,43 @@ describe("gains/losses unit breakdown", () => {
     expect(breakdown.totalAmount).toBe(110);
   });
 
+  test("excludes reference-currency contributions from FX attribution", () => {
+    const accumulator = createGainsLossesUnitBreakdownAccumulator();
+
+    addGainsLossesUnitContribution({
+      accumulator,
+      unit: Unit.CURRENCY,
+      currency: "CHF",
+      cryptocurrency: null,
+      symbol: null,
+      amount: 25,
+      referenceCurrency: "chf",
+    });
+    addGainsLossesUnitContribution({
+      accumulator,
+      unit: Unit.CURRENCY,
+      currency: "USD",
+      cryptocurrency: null,
+      symbol: null,
+      amount: 12,
+      referenceCurrency: "CHF",
+    });
+
+    const breakdown = buildGainsLossesUnitBreakdownHierarchy({ accumulator });
+    const fxGroup = breakdown.hierarchy[0];
+
+    expect(fxGroup?.children).toEqual([
+      {
+        id: "account:fx:USD",
+        label: "USD",
+        kind: "account",
+        amount: 12,
+        children: [],
+      },
+    ]);
+    expect(fxGroup?.amount).toBe(12);
+  });
+
   test("groups security contributions by symbol only and keeps totals aligned", () => {
     const accumulator = createGainsLossesUnitBreakdownAccumulator();
 

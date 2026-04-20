@@ -104,6 +104,7 @@ export function addGainsLossesUnitContribution(args: {
   cryptocurrency: string | null;
   symbol: string | null;
   amount: number;
+  referenceCurrency?: string;
 }) {
   if (args.amount === 0) {
     return;
@@ -112,6 +113,15 @@ export function addGainsLossesUnitContribution(args: {
   if (args.unit === Unit.CURRENCY) {
     const normalizedCurrency = normalizeUnitCode(args.currency);
     if (!normalizedCurrency) {
+      return;
+    }
+    const normalizedReferenceCurrency = normalizeUnitCode(
+      args.referenceCurrency ?? null,
+    );
+    if (
+      normalizedReferenceCurrency != null &&
+      normalizedCurrency === normalizedReferenceCurrency
+    ) {
       return;
     }
 
