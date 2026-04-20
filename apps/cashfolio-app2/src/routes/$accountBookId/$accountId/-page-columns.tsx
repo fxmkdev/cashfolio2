@@ -247,18 +247,28 @@ export function useLedgerColumnDefs(args: {
                   </ActionIcon>
                 </span>
               </Tooltip>
-              <Tooltip label="Delete">
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  color="red"
-                  onClick={() =>
-                    onDeleteClick(data.transactionId, data.description)
-                  }
-                  aria-label="Delete"
-                >
-                  <IconTrash size={16} />
-                </ActionIcon>
+              <Tooltip
+                label={
+                  isOpeningBalancesTransaction
+                    ? OPENING_BALANCES_MANAGEMENT_MESSAGE
+                    : "Delete"
+                }
+              >
+                <span style={{ display: "inline-flex" }}>
+                  <ActionIcon
+                    variant="subtle"
+                    size="sm"
+                    color="red"
+                    disabled={isOpeningBalancesTransaction}
+                    onClick={() => {
+                      if (isOpeningBalancesTransaction) return;
+                      onDeleteClick(data.transactionId, data.description);
+                    }}
+                    aria-label="Delete"
+                  >
+                    <IconTrash size={16} />
+                  </ActionIcon>
+                </span>
               </Tooltip>
             </Group>
           );

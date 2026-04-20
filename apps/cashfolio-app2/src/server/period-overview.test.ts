@@ -132,7 +132,7 @@ describe("getPeriodOverview", () => {
     expect(prisma.transaction.findMany).not.toHaveBeenCalled();
   });
 
-  it("excludes opening-balance transactions in transaction and holding contribution queries", async () => {
+  it("excludes opening-balance transactions for transaction contributions without filtering holding balances", async () => {
     vi.setSystemTime(new Date("2026-03-10T12:00:00.000Z"));
     prisma.account.findMany.mockResolvedValue([
       {
@@ -153,12 +153,7 @@ describe("getPeriodOverview", () => {
       }
       return Promise.resolve([]);
     });
-    prisma.booking.groupBy.mockImplementation((args) => {
-      if (args.where?.transaction) {
-        return Promise.resolve([]);
-      }
-      return Promise.resolve([]);
-    });
+    prisma.booking.groupBy.mockResolvedValue([]);
 
     await getPeriodOverview({
       data: { accountBookId: "book-2", period: "2026-02" },
@@ -184,45 +179,21 @@ describe("getPeriodOverview", () => {
     );
 
     const holdingBalanceGroupByCall = prisma.booking.groupBy.mock.calls.find(
-      ([args]) => args.where?.transaction,
+      ([args]) =>
+        Array.isArray(args.where?.accountId?.in) &&
+        args.where.accountId.in.includes("asset-holding") &&
+        args.where?.date?.lt,
     );
     expect(holdingBalanceGroupByCall).toBeTruthy();
-    expect(holdingBalanceGroupByCall?.[0]).toEqual(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          transaction: {
-            bookings: {
-              none: {
-                account: {
-                  type: AccountType.EQUITY,
-                  equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-                },
-              },
-            },
-          },
-        }),
-      }),
-    );
+    expect(holdingBalanceGroupByCall?.[0].where?.transaction).toBeUndefined();
 
     const holdingBookingsFindManyCall = prisma.booking.findMany.mock.calls.find(
-      ([args]) => args.where?.transaction,
+      ([args]) =>
+        Array.isArray(args.where?.accountId?.in) &&
+        args.where.accountId.in.includes("asset-holding") &&
+        args.where?.date?.gte,
     );
     expect(holdingBookingsFindManyCall).toBeTruthy();
-    expect(holdingBookingsFindManyCall?.[0]).toEqual(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          transaction: {
-            bookings: {
-              none: {
-                account: {
-                  type: AccountType.EQUITY,
-                  equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-                },
-              },
-            },
-          },
-        }),
-      }),
-    );
+    expect(holdingBookingsFindManyCall?.[0].where?.transaction).toBeUndefined();
   });
 });

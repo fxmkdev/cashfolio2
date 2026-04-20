@@ -467,17 +467,6 @@ export const getPeriodOverview = createServerFn({
                 accountBookId: data.accountBookId,
                 accountId: { in: holdingAccountIds },
                 date: { lt: queryStart },
-                transaction: {
-                  bookings: {
-                    none: {
-                      account: {
-                        type: AccountType.EQUITY,
-                        equityAccountSubtype:
-                          EquityAccountSubtype.OPENING_BALANCES,
-                      },
-                    },
-                  },
-                },
               },
               _sum: { value: true },
             }),
@@ -488,17 +477,6 @@ export const getPeriodOverview = createServerFn({
                 date: {
                   gte: queryStart,
                   lt: queryEndExclusive,
-                },
-                transaction: {
-                  bookings: {
-                    none: {
-                      account: {
-                        type: AccountType.EQUITY,
-                        equityAccountSubtype:
-                          EquityAccountSubtype.OPENING_BALANCES,
-                      },
-                    },
-                  },
                 },
               },
               orderBy: [{ accountId: "asc" }, { date: "asc" }, { id: "asc" }],

@@ -403,6 +403,19 @@ export const deleteTransaction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    const openingBookingCount = await prisma.booking.count({
+      where: {
+        accountBookId: data.accountBookId,
+        transactionId: data.transactionId,
+        account: {
+          type: AccountType.EQUITY,
+          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+        },
+      },
+    });
+    if (openingBookingCount > 0) {
+      throw new Error(OPENING_BALANCES_MANAGEMENT_MESSAGE);
+    }
     await prisma.transaction.delete({
       where: {
         id_accountBookId: {
