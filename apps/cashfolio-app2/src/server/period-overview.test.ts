@@ -466,7 +466,7 @@ describe("getPeriodOverview", () => {
 
     expect(result.stats.explicitGainLoss).toBe(20);
     expect(result.stats.gainsLosses).toBe(20);
-    expect(result.gainsLossesBreakdown.totalAmount).toBe(20);
+    expect(result.gainsLossesBreakdown.totalAmount).toBe(0);
 
     const fxGroup = result.gainsLossesBreakdown.hierarchy.find(
       (group) => group.label === "FX",

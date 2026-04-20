@@ -190,7 +190,7 @@ export function buildPeriodOverviewResponse(args: {
       hiddenAmountDiscrepancyNodeIds: incomeBreakdownDiscrepancyNodeIds,
     },
     gainsLossesBreakdown: {
-      totalAmount: roundedGainsLosses,
+      totalAmount: round2(gainsLossesBreakdown.totalAmount),
       hierarchy: gainsLossesBreakdown.hierarchy,
     },
     assetBreakdown,
