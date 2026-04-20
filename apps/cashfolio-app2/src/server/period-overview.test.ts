@@ -104,7 +104,7 @@ describe("getPeriodOverview", () => {
     vi.useRealTimers();
   });
 
-  it("derives min period date from accountBook.startDate and zeroes return contributions before start", async () => {
+  it("uses accountBook.startDate as the first selectable period floor", async () => {
     vi.setSystemTime(new Date("2026-01-08T12:00:00.000Z"));
     prisma.booking.groupBy.mockResolvedValueOnce([
       { accountId: "asset-chf", _sum: { value: 100 } },
@@ -115,7 +115,7 @@ describe("getPeriodOverview", () => {
     });
 
     expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-1");
-    expect(result.minBookingDate).toBe("2026-01-07T00:00:00.000Z");
+    expect(result.minBookingDate).toBe("2026-01-08T00:00:00.000Z");
     expect(result.stats.totalReturn).toBe(0);
     expect(result.stats.savings).toBe(0);
     expect(result.stats.income).toBe(0);

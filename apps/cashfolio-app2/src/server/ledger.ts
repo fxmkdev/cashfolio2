@@ -180,26 +180,18 @@ export const getLedgerPeriodBounds = createServerFn({ method: "GET" })
   .inputValidator((data: { accountId: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
-    const [minBookingDateAggregate, accountBook] = await Promise.all([
-      prisma.booking.aggregate({
-        where: {
-          accountId: data.accountId,
-          accountBookId: data.accountBookId,
-        },
-        _min: { date: true },
-      }),
-      prisma.accountBook.findUniqueOrThrow({
-        where: { id: data.accountBookId },
-        select: { startDate: true },
-      }),
-    ]);
+    const accountBook = await prisma.accountBook.findUniqueOrThrow({
+      where: { id: data.accountBookId },
+      select: { startDate: true },
+    });
     const currentDay = startOfUtcDay(new Date());
+    const accountBookStartDate = startOfUtcDay(accountBook.startDate);
     const openingBalancesBookingDate = new Date(
-      startOfUtcDay(accountBook.startDate).getTime() - 24 * 60 * 60 * 1000,
+      accountBookStartDate.getTime() - 24 * 60 * 60 * 1000,
     );
 
     return {
-      minBookingDate: minBookingDateAggregate._min.date?.toISOString() ?? null,
+      minBookingDate: accountBookStartDate.toISOString(),
       maxDate: currentDay.toISOString(),
       openingBalancesBookingDate: openingBalancesBookingDate.toISOString(),
     };

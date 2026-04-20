@@ -133,7 +133,7 @@ export const getPeriodOverview = createServerFn({
     );
 
     const accountBookStartDate = startOfUtcDay(accountBook.startDate);
-    const minPeriodDate = addUtcDays(accountBookStartDate, -1);
+    const minPeriodDate = accountBookStartDate;
 
     const selection = resolvePeriodSelection({
       periodValue: data.period,
