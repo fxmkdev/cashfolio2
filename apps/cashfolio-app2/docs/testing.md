@@ -19,8 +19,8 @@ paths are relative to that app directory.
 - Test files: `src/**/*.test.ts`
 - Runtime: Node test environment
 - Prisma client is generated before unit test runs via `pretest:unit`.
-- Coverage output is report-only (no CI threshold gate yet) and published as CI
-  artifacts.
+- Coverage output is published as CI artifacts, and a baseline ratchet prevents
+  regressions versus the current baseline.
 
 Commands:
 
@@ -28,9 +28,24 @@ Commands:
 pnpm --filter cashfolio-app2 prisma:generate
 pnpm --filter cashfolio-app2 test:unit
 pnpm --filter cashfolio-app2 test:unit:coverage
+pnpm --filter cashfolio-app2 coverage:ratchet
+pnpm --filter cashfolio-app2 test:unit:coverage:ratchet
 ```
 
-Coverage artifacts are generated under `coverage/` (HTML + lcov + text summary).
+Coverage artifacts are generated under `coverage/`:
+
+- HTML report
+- lcov report
+- text summary
+- JSON summary (`coverage-summary.json`)
+
+Coverage ratchet behavior:
+
+- Baseline is tracked in `coverage-baseline.json`.
+- CI runs `test:unit:coverage:ratchet`, which fails if any of
+  `statements`/`branches`/`functions`/`lines` drops below the baseline.
+- When you intentionally improve coverage, update `coverage-baseline.json` in
+  the same PR so future changes are measured from the improved baseline.
 
 ## E2E (Playwright)
 
@@ -124,7 +139,7 @@ Current CI gates for `cashfolio-app2`:
 
 - `typecheck`
 - `format`
-- `unit + coverage` (coverage is report-only)
+- `unit + coverage` with coverage-ratchet enforcement
 - `e2e`
 
 CI stores Playwright and unit coverage artifacts for troubleshooting and trend

@@ -118,8 +118,8 @@ jobs:
         run: pnpm --filter cashfolio-app2 install
       - name: Generate Prisma Client
         run: pnpm --filter cashfolio-app2 prisma:generate
-      - name: Run unit tests with coverage
-        run: pnpm --filter cashfolio-app2 test:unit:coverage
+      - name: Run unit tests with coverage ratchet
+        run: pnpm --filter cashfolio-app2 test:unit:coverage:ratchet
       - name: Upload unit coverage artifacts
         if: always()
         uses: actions/upload-artifact@v7

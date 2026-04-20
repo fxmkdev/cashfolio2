@@ -36,8 +36,8 @@ file and the linked docs are for `apps/cashfolio-app2`.
   the PR.
 - `tools/importer` is deprecated and no longer maintained. Do not upgrade or
   refactor it unless explicitly requested.
-- `apps/cashfolio-app` is deprecated and no longer maintained. Do not upgrade
-  or refactor it unless explicitly requested.
+- `apps/cashfolio-app` is deprecated and no longer maintained. Do not upgrade or
+  refactor it unless explicitly requested.
 - Keep `@types/node` aligned with the current runtime major (Node 24). Do not
   upgrade to Node 25+ typings until the runtime migration is planned.
 
@@ -56,6 +56,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution guidelines.
 pnpm --filter cashfolio-app2 dev              # Start dev server
 pnpm --filter cashfolio-app2 build            # Production build
 pnpm --filter cashfolio-app2 typecheck        # tsc --noEmit
+pnpm --filter cashfolio-app2 test:unit        # Run unit/integration tests
+pnpm --filter cashfolio-app2 test:unit:coverage:ratchet # Run coverage + enforce no-regression baseline
 pnpm --filter cashfolio-app2 format           # Prettier check
 pnpm --filter cashfolio-app2 prisma:generate  # Regenerate Prisma client (no DATABASE_URL required)
 ```
@@ -79,6 +81,9 @@ pnpm --filter cashfolio-app2 prisma:generate  # Regenerate Prisma client (no DAT
 ## Quality Checklist
 
 - Run `pnpm --filter cashfolio-app2 typecheck` before finishing code changes.
+- Run `pnpm --filter cashfolio-app2 test:unit` before finishing code changes.
+- Run `pnpm --filter cashfolio-app2 test:unit:coverage:ratchet` when touching
+  tested app logic, so local checks align with CI coverage gating.
 - Run `pnpm --filter cashfolio-app2 format` when touching formatting-sensitive
   files.
 - Run `pnpm --filter cashfolio-app2 e2e` for changes that bear a significant

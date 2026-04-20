@@ -43,6 +43,8 @@ export async function seedNonZeroConvertibleAssetBalancesWithPrisma(args: {
   accountBookId: string;
   counterAccountId: string;
 }) {
+  const seedSuffix = createId().slice(0, 6);
+
   const assetRootGroupId = await findTopLevelGroupId({
     prisma: args.prisma,
     accountBookId: args.accountBookId,
@@ -53,7 +55,7 @@ export async function seedNonZeroConvertibleAssetBalancesWithPrisma(args: {
     data: {
       id: createId(),
       accountBookId: args.accountBookId,
-      name: "E2E USD Cash",
+      name: `E2E USD Cash ${seedSuffix}`,
       type: AccountType.ASSET,
       groupId: assetRootGroupId,
       unit: Unit.CURRENCY,
@@ -67,7 +69,7 @@ export async function seedNonZeroConvertibleAssetBalancesWithPrisma(args: {
     data: {
       id: createId(),
       accountBookId: args.accountBookId,
-      name: "E2E BTC Wallet",
+      name: `E2E BTC Wallet ${seedSuffix}`,
       type: AccountType.ASSET,
       groupId: assetRootGroupId,
       unit: Unit.CRYPTOCURRENCY,
@@ -81,7 +83,7 @@ export async function seedNonZeroConvertibleAssetBalancesWithPrisma(args: {
     data: {
       id: createId(),
       accountBookId: args.accountBookId,
-      name: "E2E AAPL Holdings",
+      name: `E2E AAPL Holdings ${seedSuffix}`,
       type: AccountType.ASSET,
       groupId: assetRootGroupId,
       unit: Unit.SECURITY,
@@ -188,6 +190,8 @@ export async function seedNonZeroConvertibleArchivedAndLiabilityBalancesWithPris
   accountBookId: string;
   counterAccountId: string;
 }) {
+  const seedSuffix = createId().slice(0, 6);
+
   const [assetRootGroupId, liabilityRootGroupId] = await Promise.all([
     findTopLevelGroupId({
       prisma: args.prisma,
@@ -205,7 +209,7 @@ export async function seedNonZeroConvertibleArchivedAndLiabilityBalancesWithPris
     data: {
       id: createId(),
       accountBookId: args.accountBookId,
-      name: "E2E Archived USD Cash",
+      name: `E2E Archived USD Cash ${seedSuffix}`,
       type: AccountType.ASSET,
       groupId: assetRootGroupId,
       unit: Unit.CURRENCY,
@@ -220,7 +224,7 @@ export async function seedNonZeroConvertibleArchivedAndLiabilityBalancesWithPris
     data: {
       id: createId(),
       accountBookId: args.accountBookId,
-      name: "E2E Liability USD",
+      name: `E2E Liability USD ${seedSuffix}`,
       type: AccountType.LIABILITY,
       groupId: liabilityRootGroupId,
       unit: Unit.CURRENCY,
