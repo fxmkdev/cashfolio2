@@ -598,10 +598,10 @@ test("period page persists card state, drill state, and table expansion across r
   const breakdownTypeControl = page.getByRole("radiogroup", {
     name: "Breakdown type",
   });
-  await breakdownTypeControl.getByRole("radio", { name: "Expenses" }).click();
+  await breakdownTypeControl.getByText("Expenses", { exact: true }).click();
 
   const breakdownChartTypeControl = page.getByLabelText("Breakdown chart type");
-  await breakdownChartTypeControl.getByRole("radio", { name: "Donut" }).click();
+  await breakdownChartTypeControl.getByText("Donut", { exact: true }).click();
 
   const breakdownChart = page.getByTestId("period-breakdown-chart");
   await expect(breakdownChart).toBeVisible();
@@ -610,7 +610,7 @@ test("period page persists card state, drill state, and table expansion across r
     page.getByText("Drilled expense groups in the selected period"),
   ).toBeVisible();
 
-  await breakdownChartTypeControl.getByRole("radio", { name: "Table" }).click();
+  await breakdownChartTypeControl.getByText("Table", { exact: true }).click();
   await expect(page.getByTestId("period-breakdown-table")).toBeVisible();
 
   const breakdownTable = page.getByTestId("period-breakdown-table");
@@ -619,7 +619,7 @@ test("period page persists card state, drill state, and table expansion across r
     0,
   );
 
-  await breakdownTypeControl.getByRole("radio", { name: "Income" }).click();
+  await breakdownTypeControl.getByText("Income", { exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Income Breakdown" }),
   ).toBeVisible();
@@ -627,14 +627,12 @@ test("period page persists card state, drill state, and table expansion across r
   const allocationTypeControl = page.getByRole("radiogroup", {
     name: "Allocation type",
   });
-  await allocationTypeControl
-    .getByRole("radio", { name: "Liabilities" })
-    .click();
+  await allocationTypeControl.getByText("Liabilities", { exact: true }).click();
 
   const allocationChartTypeControl = page.getByLabelText(
     "Allocation chart type",
   );
-  await allocationChartTypeControl.getByRole("radio", { name: "Bar" }).click();
+  await allocationChartTypeControl.getByText("Bar", { exact: true }).click();
   await expect(
     allocationChartTypeControl.getByRole("radio", { name: "Bar" }),
   ).toBeChecked();
@@ -655,7 +653,7 @@ test("period page persists card state, drill state, and table expansion across r
     allocationChartTypeControl.getByRole("radio", { name: "Bar" }),
   ).toBeChecked();
 
-  await breakdownTypeControl.getByRole("radio", { name: "Expenses" }).click();
+  await breakdownTypeControl.getByText("Expenses", { exact: true }).click();
   await expect(
     page.getByText("Drilled expense groups in the selected period"),
   ).toBeVisible();
