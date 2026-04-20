@@ -768,8 +768,10 @@ export const BreakdownTableModeSmoke: Story = {
     });
     await userEvent.click(tableOption);
     await expect(tableOption).toBeChecked();
+    const breakdownTable = canvas.getByTestId("period-breakdown-table");
+    await expect(breakdownTable).toBeInTheDocument();
     await expect(
-      canvas.getByTestId("period-breakdown-table"),
+      await within(breakdownTable).findByText("Total"),
     ).toBeInTheDocument();
     await expect(
       canvas.queryByTestId("period-breakdown-chart"),
@@ -789,8 +791,12 @@ export const AllocationTableModeSmoke: Story = {
     });
     await userEvent.click(tableOption);
     await expect(tableOption).toBeChecked();
+    const allocationTable = canvas.getByTestId(
+      "period-allocation-breakdown-table",
+    );
+    await expect(allocationTable).toBeInTheDocument();
     await expect(
-      canvas.getByTestId("period-allocation-breakdown-table"),
+      await within(allocationTable).findByText("Total"),
     ).toBeInTheDocument();
     await expect(
       canvas.queryByTestId("period-allocation-breakdown-chart"),
