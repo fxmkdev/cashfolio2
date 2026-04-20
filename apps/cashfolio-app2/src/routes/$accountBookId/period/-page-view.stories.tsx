@@ -18,6 +18,26 @@ import {
 } from "./-page-types";
 import { PeriodPageView, type PeriodPageViewProps } from "./-page-view";
 
+const STORYBOOK_ACCOUNT_BOOK_ID = "storybook-book";
+
+function clearPeriodStorySessionStorage(accountBookId: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const storageKeys = [
+    `cashfolio:periodPageState:${accountBookId}`,
+    `cashfolio:periodExpandedGroups:${accountBookId}:breakdown:expense`,
+    `cashfolio:periodExpandedGroups:${accountBookId}:breakdown:income`,
+    `cashfolio:periodExpandedGroups:${accountBookId}:allocation:asset`,
+    `cashfolio:periodExpandedGroups:${accountBookId}:allocation:liability`,
+  ];
+
+  for (const storageKey of storageKeys) {
+    window.sessionStorage.removeItem(storageKey);
+  }
+}
+
 function deriveOverviewFromSelectedPeriodValue(
   selectedPeriodValue: string,
 ): PeriodPageViewProps["overview"] {
@@ -452,7 +472,7 @@ function PeriodRouteSmokeHarness() {
   return (
     <Box>
       <PeriodPageView
-        accountBookId="storybook-book"
+        accountBookId={STORYBOOK_ACCOUNT_BOOK_ID}
         overview={deriveOverviewFromSelectedPeriodValue(selectedPeriodValue)}
         selectedPeriodValue={selectedPeriodValue}
         onPeriodChange={setSelectedPeriodValue}
@@ -467,8 +487,17 @@ function PeriodRouteSmokeHarness() {
 const meta = {
   title: "Routes/PeriodPageView",
   component: PeriodPageView,
+  decorators: [
+    (Story, context) => {
+      clearPeriodStorySessionStorage(
+        context.args.accountBookId ?? STORYBOOK_ACCOUNT_BOOK_ID,
+      );
+
+      return <Story />;
+    },
+  ],
   args: {
-    accountBookId: "storybook-book",
+    accountBookId: STORYBOOK_ACCOUNT_BOOK_ID,
     overview: baseOverview,
     selectedPeriodValue: DEFAULT_PERIOD_VALUE,
     onPeriodChange: fn(),

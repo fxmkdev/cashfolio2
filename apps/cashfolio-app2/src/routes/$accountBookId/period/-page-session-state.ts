@@ -148,7 +148,11 @@ export function usePeriodPageSessionState(accountBookId: string) {
       return;
     }
 
-    sessionStorage.setItem(storageKey, JSON.stringify(state));
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(state));
+    } catch {
+      // Ignore storage persistence failures so the page still functions.
+    }
   }, [isHydrated, state, storageKey]);
 
   const setSelectedBreakdown = useCallback((nextValue: BreakdownType) => {
