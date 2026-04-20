@@ -18,11 +18,13 @@ import type { getPeriodOverview } from "@/server/period";
 import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import { formatMonthPeriodValue } from "@/shared/period";
 import { PeriodAllocationBreakdownCard } from "./-allocation-breakdown-card";
-import { ContributionChartCard } from "./-contribution-chart-card";
 import { PeriodBreakdownCard } from "./-breakdown-card";
 import { clampBreakdownPath } from "./-breakdown-drill";
+import { ContributionChartCard } from "./-contribution-chart-card";
+import { PeriodGainsLossesBreakdownCard } from "./-gains-losses-breakdown-card";
 import { usePeriodAllocationBreakdownViewModel } from "./-period-allocation-breakdown-view-model";
 import { usePeriodBreakdownViewModel } from "./-period-breakdown-view-model";
+import { usePeriodGainsLossesBreakdownViewModel } from "./-period-gains-losses-breakdown-view-model";
 import { buildPeriodPageStats } from "./-period-page-stats";
 import { PeriodStatsCardsSection } from "./-period-stats-cards";
 import { usePeriodPageSessionState } from "./-page-session-state";
@@ -76,12 +78,14 @@ export function PeriodPageView({
     selectedAllocationChartType,
     drillPathByBreakdown,
     drillPathByAllocationBreakdown,
+    drillPathByGainsLossesBreakdown,
     setSelectedBreakdown,
     setSelectedChartType,
     setSelectedAllocationBreakdown,
     setSelectedAllocationChartType,
     setDrillPathByBreakdown,
     setDrillPathByAllocationBreakdown,
+    setDrillPathByGainsLossesBreakdown,
   } = usePeriodPageSessionState(accountBookId);
   const [pickerOpened, setPickerOpened] = useState(false);
   const theme = useMantineTheme();
@@ -177,6 +181,7 @@ export function PeriodPageView({
     overview.incomeBreakdown.hierarchy,
     setDrillPathByBreakdown,
   ]);
+
   useEffect(() => {
     const nextAssetPath = clampBreakdownPath({
       hierarchy: overview.assetBreakdown.hierarchy,
@@ -205,6 +210,24 @@ export function PeriodPageView({
     overview.liabilityBreakdown.hierarchy,
     setDrillPathByAllocationBreakdown,
   ]);
+
+  useEffect(() => {
+    const nextGainsLossesPath = clampBreakdownPath({
+      hierarchy: overview.gainsLossesBreakdown.hierarchy,
+      path: drillPathByGainsLossesBreakdown,
+    });
+
+    if (arePathsEqual(nextGainsLossesPath, drillPathByGainsLossesBreakdown)) {
+      return;
+    }
+
+    setDrillPathByGainsLossesBreakdown(nextGainsLossesPath);
+  }, [
+    drillPathByGainsLossesBreakdown,
+    overview.gainsLossesBreakdown.hierarchy,
+    setDrillPathByGainsLossesBreakdown,
+  ]);
+
   const breakdown = usePeriodBreakdownViewModel({
     accountBookId,
     overview,
@@ -228,6 +251,15 @@ export function PeriodPageView({
     currencyFormatter,
     percentageFormatter,
     colors,
+  });
+
+  const gainsLossesBreakdown = usePeriodGainsLossesBreakdownViewModel({
+    overview,
+    drillPathByGainsLossesBreakdown,
+    setDrillPathByGainsLossesBreakdown,
+    currencyFormatter,
+    colors,
+    waterfallPalette,
   });
 
   const { gainsLossesLabel, statCards, endOfPeriodStatCards } =
@@ -432,6 +464,28 @@ export function PeriodPageView({
                       were skipped because valuation data was unavailable.
                     </Alert>
                   ) : null
+                }
+              />
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, lg: 6 }}>
+              <PeriodGainsLossesBreakdownCard
+                title="Gains/Losses Breakdown"
+                subtitle={gainsLossesBreakdown.gainsLossesBreakdownSubtitle}
+                breadcrumbs={
+                  gainsLossesBreakdown.gainsLossesBreakdownDrillState
+                    .breadcrumbs
+                }
+                clampedPath={
+                  gainsLossesBreakdown.gainsLossesBreakdownDrillState
+                    .clampedPath
+                }
+                hasBreakdown={gainsLossesBreakdown.hasGainsLossesBreakdown}
+                emptyBreakdownMessage="No gains/losses contributions were found for this period."
+                chartOptions={
+                  gainsLossesBreakdown.gainsLossesBreakdownChartOptions
+                }
+                onDrillPathChange={
+                  gainsLossesBreakdown.updateGainsLossesBreakdownPath
                 }
               />
             </Grid.Col>

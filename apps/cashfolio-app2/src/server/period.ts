@@ -17,8 +17,10 @@ import { startOfUtcDay } from "../shared/date";
 import {
   buildBreakdownHierarchy,
   buildBreakdownItems,
+  addGainsLossesUnitContribution,
   computeHoldingGainLossForEventSeries,
   createBreakdownBucket,
+  createGainsLossesUnitBreakdownAccumulator,
   filterConvertibleHoldingAccounts,
   isMultiUnitTransaction,
   shouldIncludeTransactionForPeriod,
@@ -172,6 +174,8 @@ export const getPeriodOverview = createServerFn({
     let skippedBookingsCount = 0;
 
     const equityAggregation = createPeriodOverviewEquityAggregation();
+    const gainsLossesUnitBreakdownAccumulator =
+      createGainsLossesUnitBreakdownAccumulator();
 
     let nextBookingIdCursor: string | undefined;
     let transactionGainLoss = 0;
@@ -271,6 +275,20 @@ export const getPeriodOverview = createServerFn({
             convertedValue,
             aggregation: equityAggregation,
           });
+
+          if (
+            booking.account.equityAccountSubtype ===
+            EquityAccountSubtype.GAIN_LOSS
+          ) {
+            addGainsLossesUnitContribution({
+              accumulator: gainsLossesUnitBreakdownAccumulator,
+              unit: booking.unit,
+              currency: booking.currency,
+              cryptocurrency: booking.cryptocurrency,
+              symbol: booking.symbol,
+              amount: -convertedValue,
+            });
+          }
         }
 
         if (bookingsPage.length < EQUITY_BOOKINGS_PAGE_SIZE) {
@@ -359,8 +377,9 @@ export const getPeriodOverview = createServerFn({
         );
 
         const convertedValuesPerTransaction = await Promise.all(
-          multiUnitTransactions.map((transaction) =>
-            Promise.all(
+          multiUnitTransactions.map(async (transaction) => ({
+            transaction,
+            convertedValues: await Promise.all(
               transaction.bookings.map((booking) =>
                 convertBookingValueToReference({
                   value: Number(booking.value),
@@ -375,15 +394,40 @@ export const getPeriodOverview = createServerFn({
                 }),
               ),
             ),
-          ),
+          })),
         );
 
-        for (const convertedValues of convertedValuesPerTransaction) {
+        for (const { transaction, convertedValues } of convertedValuesPerTransaction) {
           const transactionContribution =
             summarizeMultiUnitTransactionConvertedValues(convertedValues);
           skippedBookingsCount += transactionContribution.skippedCount;
           convertedBookingsCount += transactionContribution.convertedCount;
           transactionGainLoss += transactionContribution.gainLossContribution;
+
+          if (transactionContribution.skippedCount > 0) {
+            continue;
+          }
+
+          for (
+            let bookingIndex = 0;
+            bookingIndex < transaction.bookings.length;
+            bookingIndex += 1
+          ) {
+            const booking = transaction.bookings[bookingIndex];
+            const convertedValue = convertedValues[bookingIndex];
+            if (convertedValue == null || booking == null) {
+              continue;
+            }
+
+            addGainsLossesUnitContribution({
+              accumulator: gainsLossesUnitBreakdownAccumulator,
+              unit: booking.unit,
+              currency: booking.currency,
+              cryptocurrency: booking.cryptocurrency,
+              symbol: booking.symbol,
+              amount: convertedValue,
+            });
+          }
         }
 
         if (transactionsPage.length < TRANSACTIONS_PAGE_SIZE) {
@@ -459,7 +503,7 @@ export const getPeriodOverview = createServerFn({
               initialHoldingBalanceByAccountId.get(account.id) ?? 0;
             const periodBookings =
               holdingBookingsByAccountId.get(account.id) ?? [];
-            return computeHoldingAccountGainLoss({
+            const result = await computeHoldingAccountGainLoss({
               account,
               initialBalance,
               periodBookings,
@@ -472,6 +516,11 @@ export const getPeriodOverview = createServerFn({
                   exchangeRateByKey,
                 }),
             });
+
+            return {
+              account,
+              ...result,
+            };
           }),
         );
 
@@ -479,6 +528,20 @@ export const getPeriodOverview = createServerFn({
           (sum, result) => sum + result.gainLossContribution,
           0,
         );
+        for (const result of holdingResults) {
+          if (result.skippedCount > 0 || result.gainLossContribution === 0) {
+            continue;
+          }
+
+          addGainsLossesUnitContribution({
+            accumulator: gainsLossesUnitBreakdownAccumulator,
+            unit: result.account.unit,
+            currency: result.account.currency,
+            cryptocurrency: result.account.cryptocurrency,
+            symbol: result.account.symbol,
+            amount: result.gainLossContribution,
+          });
+        }
         skippedBookingsCount += holdingResults.reduce(
           (sum, result) => sum + result.skippedCount,
           0,
@@ -516,5 +579,6 @@ export const getPeriodOverview = createServerFn({
       bookingsCount,
       convertedBookingsCount,
       skippedBookingsCount,
+      gainsLossesUnitBreakdownAccumulator,
     });
   });

@@ -128,6 +128,10 @@ describe("getPeriodOverview", () => {
     expect(result.stats.endOfPeriodNetWorth).toBe(100);
     expect(result.expenseBreakdown.items).toEqual([]);
     expect(result.incomeBreakdown.items).toEqual([]);
+    expect(result.gainsLossesBreakdown.totalAmount).toBe(0);
+    expect(
+      result.gainsLossesBreakdown.hierarchy.map((item) => item.label),
+    ).toEqual(["FX", "Cryptocurrency", "Security"]);
     expect(prisma.transaction.findMany).not.toHaveBeenCalled();
   });
 

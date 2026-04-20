@@ -25,8 +25,11 @@ import {
   shouldIncludeTransactionForPeriod,
 } from "./period";
 import {
+  addGainsLossesUnitContribution,
   buildBreakdownHierarchyWithMeta,
   buildPeriodEndAllocationBreakdown,
+  buildGainsLossesUnitBreakdownHierarchy,
+  createGainsLossesUnitBreakdownAccumulator,
 } from "./period-helpers";
 
 describe("normalizePeriodValue", () => {
@@ -454,6 +457,105 @@ describe("computeHoldingGainLossForEventSeries", () => {
     // event 1: 1000 * (1.1 - 1.2) = -100
     // event 2: 1200 * (1.05 - 1.1) = -60
     expect(gainLoss).toBeCloseTo(-160, 10);
+  });
+});
+
+describe("gains/losses unit breakdown", () => {
+  test("aggregates explicit, transaction, and holding contributions by unit", () => {
+    const accumulator = createGainsLossesUnitBreakdownAccumulator();
+
+    // Explicit gain/loss booking (FX)
+    addGainsLossesUnitContribution({
+      accumulator,
+      unit: Unit.CURRENCY,
+      currency: "usd",
+      cryptocurrency: null,
+      symbol: null,
+      amount: 120,
+    });
+    // Transaction gain/loss booking (crypto)
+    addGainsLossesUnitContribution({
+      accumulator,
+      unit: Unit.CRYPTOCURRENCY,
+      currency: null,
+      cryptocurrency: "btc",
+      symbol: null,
+      amount: -30,
+    });
+    // Holding gain/loss account (security)
+    addGainsLossesUnitContribution({
+      accumulator,
+      unit: Unit.SECURITY,
+      currency: null,
+      cryptocurrency: null,
+      symbol: "AAPL",
+      amount: 20,
+    });
+
+    const breakdown = buildGainsLossesUnitBreakdownHierarchy({ accumulator });
+
+    expect(breakdown.hierarchy.map((item) => item.label)).toEqual([
+      "FX",
+      "Cryptocurrency",
+      "Security",
+    ]);
+    expect(breakdown.hierarchy.map((item) => item.amount)).toEqual([
+      120, -30, 20,
+    ]);
+    expect(breakdown.totalAmount).toBe(110);
+  });
+
+  test("groups security contributions by symbol only and keeps totals aligned", () => {
+    const accumulator = createGainsLossesUnitBreakdownAccumulator();
+
+    addGainsLossesUnitContribution({
+      accumulator,
+      unit: Unit.SECURITY,
+      currency: null,
+      cryptocurrency: null,
+      symbol: "aapl",
+      amount: 15,
+    });
+    addGainsLossesUnitContribution({
+      accumulator,
+      unit: Unit.SECURITY,
+      currency: null,
+      cryptocurrency: null,
+      symbol: "AAPL",
+      amount: -4,
+    });
+    addGainsLossesUnitContribution({
+      accumulator,
+      unit: Unit.SECURITY,
+      currency: null,
+      cryptocurrency: null,
+      symbol: "MSFT",
+      amount: 5,
+    });
+
+    const breakdown = buildGainsLossesUnitBreakdownHierarchy({ accumulator });
+    const securityGroup = breakdown.hierarchy[2];
+
+    expect(securityGroup?.children).toEqual([
+      {
+        id: "account:security:AAPL",
+        label: "AAPL",
+        kind: "account",
+        amount: 11,
+        children: [],
+      },
+      {
+        id: "account:security:MSFT",
+        label: "MSFT",
+        kind: "account",
+        amount: 5,
+        children: [],
+      },
+    ]);
+    expect(securityGroup?.amount).toBe(16);
+    expect(
+      breakdown.hierarchy.reduce((sum, item) => sum + item.amount, 0),
+    ).toBe(breakdown.totalAmount);
   });
 });
 

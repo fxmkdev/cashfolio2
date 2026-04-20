@@ -7,6 +7,7 @@ import type {
 
 type DrillPathByBreakdown = Record<BreakdownType, string[]>;
 type DrillPathByAllocationBreakdown = Record<AllocationBreakdownType, string[]>;
+type DrillPathByGainsLossesBreakdown = string[];
 type DrillPathByBreakdownUpdater =
   | DrillPathByBreakdown
   | ((previousValue: DrillPathByBreakdown) => DrillPathByBreakdown);
@@ -15,6 +16,11 @@ type DrillPathByAllocationBreakdownUpdater =
   | ((
       previousValue: DrillPathByAllocationBreakdown,
     ) => DrillPathByAllocationBreakdown);
+type DrillPathByGainsLossesBreakdownUpdater =
+  | DrillPathByGainsLossesBreakdown
+  | ((
+      previousValue: DrillPathByGainsLossesBreakdown,
+    ) => DrillPathByGainsLossesBreakdown);
 
 type PeriodPageSessionState = {
   selectedBreakdown: BreakdownType;
@@ -23,6 +29,7 @@ type PeriodPageSessionState = {
   selectedAllocationChartType: BreakdownChartType;
   drillPathByBreakdown: DrillPathByBreakdown;
   drillPathByAllocationBreakdown: DrillPathByAllocationBreakdown;
+  drillPathByGainsLossesBreakdown: DrillPathByGainsLossesBreakdown;
 };
 
 function isBreakdownType(value: unknown): value is BreakdownType {
@@ -63,6 +70,7 @@ function getDefaultPeriodPageSessionState(): PeriodPageSessionState {
       asset: [],
       liability: [],
     },
+    drillPathByGainsLossesBreakdown: [],
   };
 }
 
@@ -112,6 +120,9 @@ function parseStoredPeriodPageSessionState(
       asset: normalizeDrillPath(drillPathByAllocationBreakdown.asset),
       liability: normalizeDrillPath(drillPathByAllocationBreakdown.liability),
     },
+    drillPathByGainsLossesBreakdown: normalizeDrillPath(
+      stored.drillPathByGainsLossesBreakdown,
+    ),
   };
 }
 
@@ -237,6 +248,23 @@ export function usePeriodPageSessionState(accountBookId: string) {
     [],
   );
 
+  const setDrillPathByGainsLossesBreakdown = useCallback(
+    (nextValue: DrillPathByGainsLossesBreakdownUpdater) => {
+      setState((previousState) => ({
+        ...previousState,
+        drillPathByGainsLossesBreakdown: (() => {
+          const resolvedValue =
+            typeof nextValue === "function"
+              ? nextValue(previousState.drillPathByGainsLossesBreakdown)
+              : nextValue;
+
+          return normalizeDrillPath(resolvedValue);
+        })(),
+      }));
+    },
+    [],
+  );
+
   return {
     selectedBreakdown: state.selectedBreakdown,
     selectedChartType: state.selectedChartType,
@@ -244,11 +272,13 @@ export function usePeriodPageSessionState(accountBookId: string) {
     selectedAllocationChartType: state.selectedAllocationChartType,
     drillPathByBreakdown: state.drillPathByBreakdown,
     drillPathByAllocationBreakdown: state.drillPathByAllocationBreakdown,
+    drillPathByGainsLossesBreakdown: state.drillPathByGainsLossesBreakdown,
     setSelectedBreakdown,
     setSelectedChartType,
     setSelectedAllocationBreakdown,
     setSelectedAllocationChartType,
     setDrillPathByBreakdown,
     setDrillPathByAllocationBreakdown,
+    setDrillPathByGainsLossesBreakdown,
   };
 }

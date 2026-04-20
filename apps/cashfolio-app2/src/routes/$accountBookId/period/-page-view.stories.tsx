@@ -358,6 +358,70 @@ const baseOverview: PeriodPageViewProps["overview"] = {
       },
     ],
   },
+  gainsLossesBreakdown: {
+    totalAmount: 1700,
+    hierarchy: [
+      {
+        id: "group:gains-losses:fx",
+        label: "FX",
+        kind: "group",
+        amount: 650,
+        children: [
+          {
+            id: "account:fx:USD",
+            label: "USD",
+            kind: "account",
+            amount: 400,
+            children: [],
+          },
+          {
+            id: "account:fx:EUR",
+            label: "EUR",
+            kind: "account",
+            amount: 250,
+            children: [],
+          },
+        ],
+      },
+      {
+        id: "group:gains-losses:cryptocurrency",
+        label: "Cryptocurrency",
+        kind: "group",
+        amount: 700,
+        children: [
+          {
+            id: "account:crypto:BTC",
+            label: "BTC",
+            kind: "account",
+            amount: 700,
+            children: [],
+          },
+        ],
+      },
+      {
+        id: "group:gains-losses:security",
+        label: "Security",
+        kind: "group",
+        amount: 350,
+        children: [
+          {
+            id: "account:security:AAPL",
+            label: "AAPL",
+            kind: "account",
+            amount: 300,
+            children: [],
+          },
+          {
+            id: "account:security:MSFT",
+            label: "MSFT",
+            kind: "account",
+            amount: 50,
+            children: [],
+          },
+        ],
+      },
+    ],
+  },
   assetBreakdown: {
     totalAmount: 25000,
     hasHiddenAmountDiscrepancy: false,
@@ -537,6 +601,11 @@ export const HappyPath: Story = {
         name: "Assets Allocation",
       }),
     ).toBeInTheDocument();
+    await expect(
+      within(analysisSection).getByRole("heading", {
+        name: "Gains/Losses Breakdown",
+      }),
+    ).toBeInTheDocument();
     await expect(canvas.queryByText("Total Income")).not.toBeInTheDocument();
     await expect(canvas.queryByText("Total Expenses")).not.toBeInTheDocument();
     await expect(canvas.queryByText("Gains / Losses")).not.toBeInTheDocument();
@@ -612,6 +681,63 @@ export const LossesKpiLabel: Story = {
         explicitGainLoss: -1200,
         transactionGainLoss: -300,
         holdingGainLoss: -200,
+      },
+      gainsLossesBreakdown: {
+        totalAmount: -1700,
+        hierarchy: [
+          {
+            id: "group:gains-losses:fx",
+            label: "FX",
+            kind: "group",
+            amount: -700,
+            children: [
+              {
+                id: "account:fx:USD",
+                label: "USD",
+                kind: "account",
+                amount: -450,
+                children: [],
+              },
+              {
+                id: "account:fx:EUR",
+                label: "EUR",
+                kind: "account",
+                amount: -250,
+                children: [],
+              },
+            ],
+          },
+          {
+            id: "group:gains-losses:cryptocurrency",
+            label: "Cryptocurrency",
+            kind: "group",
+            amount: -500,
+            children: [
+              {
+                id: "account:crypto:BTC",
+                label: "BTC",
+                kind: "account",
+                amount: -500,
+                children: [],
+              },
+            ],
+          },
+          {
+            id: "group:gains-losses:security",
+            label: "Security",
+            kind: "group",
+            amount: -500,
+            children: [
+              {
+                id: "account:security:AAPL",
+                label: "AAPL",
+                kind: "account",
+                amount: -500,
+                children: [],
+              },
+            ],
+          },
+        ],
       },
     },
   },

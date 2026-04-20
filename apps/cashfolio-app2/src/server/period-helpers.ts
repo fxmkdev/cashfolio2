@@ -41,6 +41,12 @@ export type HoldingGainLossSeriesEvent = {
   balanceDelta: number;
 };
 
+export type GainsLossesUnitBreakdownAccumulator = {
+  fxByCurrency: Map<string, number>;
+  cryptocurrencyByCode: Map<string, number>;
+  securityBySymbol: Map<string, number>;
+};
+
 type MultiUnitBooking = {
   unit: Unit;
   currency: string | null;
@@ -53,8 +59,174 @@ function toDateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+function normalizeUnitCode(value: string | null): string | null {
+  if (value == null) {
+    return null;
+  }
+
+  const normalizedValue = value.trim().toUpperCase();
+  return normalizedValue.length > 0 ? normalizedValue : null;
+}
+
+function addAmountByUnitCode(args: {
+  amountByCode: Map<string, number>;
+  code: string;
+  amount: number;
+}) {
+  const previousAmount = args.amountByCode.get(args.code) ?? 0;
+  args.amountByCode.set(args.code, previousAmount + args.amount);
+}
+
 export function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+export function createGainsLossesUnitBreakdownAccumulator(): GainsLossesUnitBreakdownAccumulator {
+  return {
+    fxByCurrency: new Map(),
+    cryptocurrencyByCode: new Map(),
+    securityBySymbol: new Map(),
+  };
+}
+
+export function addGainsLossesUnitContribution(args: {
+  accumulator: GainsLossesUnitBreakdownAccumulator;
+  unit: Unit;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  amount: number;
+}) {
+  if (args.amount === 0) {
+    return;
+  }
+
+  if (args.unit === Unit.CURRENCY) {
+    const normalizedCurrency = normalizeUnitCode(args.currency);
+    if (!normalizedCurrency) {
+      return;
+    }
+
+    addAmountByUnitCode({
+      amountByCode: args.accumulator.fxByCurrency,
+      code: normalizedCurrency,
+      amount: args.amount,
+    });
+    return;
+  }
+
+  if (args.unit === Unit.CRYPTOCURRENCY) {
+    const normalizedCryptocurrency = normalizeUnitCode(args.cryptocurrency);
+    if (!normalizedCryptocurrency) {
+      return;
+    }
+
+    addAmountByUnitCode({
+      amountByCode: args.accumulator.cryptocurrencyByCode,
+      code: normalizedCryptocurrency,
+      amount: args.amount,
+    });
+    return;
+  }
+
+  const normalizedSymbol = normalizeUnitCode(args.symbol);
+  if (!normalizedSymbol) {
+    return;
+  }
+
+  addAmountByUnitCode({
+    amountByCode: args.accumulator.securityBySymbol,
+    code: normalizedSymbol,
+    amount: args.amount,
+  });
+}
+
+function sortContributorEntries(
+  left: [string, number],
+  right: [string, number],
+): number {
+  const leftAbsoluteAmount = Math.abs(left[1]);
+  const rightAbsoluteAmount = Math.abs(right[1]);
+
+  return (
+    rightAbsoluteAmount - leftAbsoluteAmount ||
+    left[0].localeCompare(right[0], "en")
+  );
+}
+
+function buildGainsLossesChildNodes(args: {
+  idPrefix: string;
+  amountByCode: Map<string, number>;
+}): BreakdownHierarchyNode[] {
+  return Array.from(args.amountByCode.entries())
+    .filter(([, amount]) => amount !== 0)
+    .sort(sortContributorEntries)
+    .map(([code, amount]) => ({
+      id: `account:${args.idPrefix}:${code}`,
+      label: code,
+      kind: "account",
+      amount,
+      children: [],
+    }));
+}
+
+export function buildGainsLossesUnitBreakdownHierarchy(args: {
+  accumulator: GainsLossesUnitBreakdownAccumulator;
+}): {
+  totalAmount: number;
+  hierarchy: BreakdownHierarchyNode[];
+} {
+  const fxChildren = buildGainsLossesChildNodes({
+    idPrefix: "fx",
+    amountByCode: args.accumulator.fxByCurrency,
+  });
+  const cryptocurrencyChildren = buildGainsLossesChildNodes({
+    idPrefix: "crypto",
+    amountByCode: args.accumulator.cryptocurrencyByCode,
+  });
+  const securityChildren = buildGainsLossesChildNodes({
+    idPrefix: "security",
+    amountByCode: args.accumulator.securityBySymbol,
+  });
+
+  const fxAmount = fxChildren.reduce((sum, item) => sum + item.amount, 0);
+  const cryptocurrencyAmount = cryptocurrencyChildren.reduce(
+    (sum, item) => sum + item.amount,
+    0,
+  );
+  const securityAmount = securityChildren.reduce(
+    (sum, item) => sum + item.amount,
+    0,
+  );
+
+  const hierarchy: BreakdownHierarchyNode[] = [
+    {
+      id: "group:gains-losses:fx",
+      label: "FX",
+      kind: "group",
+      amount: fxAmount,
+      children: fxChildren,
+    },
+    {
+      id: "group:gains-losses:cryptocurrency",
+      label: "Cryptocurrency",
+      kind: "group",
+      amount: cryptocurrencyAmount,
+      children: cryptocurrencyChildren,
+    },
+    {
+      id: "group:gains-losses:security",
+      label: "Security",
+      kind: "group",
+      amount: securityAmount,
+      children: securityChildren,
+    },
+  ];
+
+  return {
+    totalAmount: hierarchy.reduce((sum, item) => sum + item.amount, 0),
+    hierarchy,
+  };
 }
 
 function getBookingUnitIdentifier(booking: MultiUnitBooking): string | null {

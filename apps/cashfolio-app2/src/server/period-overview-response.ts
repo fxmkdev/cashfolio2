@@ -4,8 +4,10 @@ import {
   buildAvailableYears,
   buildBreakdownHierarchyWithMeta,
   buildBreakdownItems,
+  buildGainsLossesUnitBreakdownHierarchy,
   buildPeriodEndAllocationBreakdown,
   round2,
+  type GainsLossesUnitBreakdownAccumulator,
   type PeriodGroupNode,
 } from "./period-helpers";
 import type { PeriodOverviewEquityAggregation } from "./period-overview-aggregation";
@@ -40,6 +42,7 @@ export function buildPeriodOverviewResponse(args: {
   bookingsCount: number;
   convertedBookingsCount: number;
   skippedBookingsCount: number;
+  gainsLossesUnitBreakdownAccumulator: GainsLossesUnitBreakdownAccumulator;
 }) {
   const { income, expenses, explicitGainLoss } = args.equityAggregation;
   const gainsLosses = args.isBeforeAccountBookStart
@@ -58,6 +61,9 @@ export function buildPeriodOverviewResponse(args: {
   const roundedEndOfPeriodNetWorth = round2(
     args.endOfPeriodBalanceStats.netWorth,
   );
+  const gainsLossesBreakdown = buildGainsLossesUnitBreakdownHierarchy({
+    accumulator: args.gainsLossesUnitBreakdownAccumulator,
+  });
 
   const convertedPeriodEndBalances = args.assetLiabilityAccounts.map(
     (account) => ({
@@ -179,6 +185,10 @@ export function buildPeriodOverviewResponse(args: {
       hierarchy: incomeBreakdownHierarchy,
       hasHiddenAmountDiscrepancy: incomeBreakdownHasHiddenAmountDiscrepancy,
       hiddenAmountDiscrepancyNodeIds: incomeBreakdownDiscrepancyNodeIds,
+    },
+    gainsLossesBreakdown: {
+      totalAmount: roundedGainsLosses,
+      hierarchy: gainsLossesBreakdown.hierarchy,
     },
     assetBreakdown,
     liabilityBreakdown,

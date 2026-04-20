@@ -39,6 +39,53 @@ const hierarchy: BreakdownHierarchyNode[] = [
     ],
   },
 ];
+const gainsLossesHierarchy: BreakdownHierarchyNode[] = [
+  {
+    id: "group:gains-losses:fx",
+    label: "FX",
+    kind: "group",
+    amount: 250,
+    children: [
+      {
+        id: "account:fx:USD",
+        label: "USD",
+        kind: "account",
+        amount: 250,
+        children: [],
+      },
+    ],
+  },
+  {
+    id: "group:gains-losses:cryptocurrency",
+    label: "Cryptocurrency",
+    kind: "group",
+    amount: -100,
+    children: [
+      {
+        id: "account:crypto:BTC",
+        label: "BTC",
+        kind: "account",
+        amount: -100,
+        children: [],
+      },
+    ],
+  },
+  {
+    id: "group:gains-losses:security",
+    label: "Security",
+    kind: "group",
+    amount: 75,
+    children: [
+      {
+        id: "account:security:AAPL",
+        label: "AAPL",
+        kind: "account",
+        amount: 75,
+        children: [],
+      },
+    ],
+  },
+];
 
 describe("clampBreakdownPath", () => {
   test("keeps valid group path", () => {
@@ -88,6 +135,29 @@ describe("getBreakdownDrillState", () => {
         label: "Rent",
         kind: "account",
         amount: 300,
+        children: [],
+      },
+    ]);
+  });
+
+  test("supports gains/losses one-level drill with breadcrumb updates", () => {
+    const state = getBreakdownDrillState({
+      hierarchy: gainsLossesHierarchy,
+      path: ["group:gains-losses:security"],
+      rootLabel: "All Gains/Losses",
+    });
+
+    expect(state.clampedPath).toEqual(["group:gains-losses:security"]);
+    expect(state.breadcrumbs).toEqual([
+      { id: null, label: "All Gains/Losses" },
+      { id: "group:gains-losses:security", label: "Security" },
+    ]);
+    expect(state.currentNodes).toEqual([
+      {
+        id: "account:security:AAPL",
+        label: "AAPL",
+        kind: "account",
+        amount: 75,
         children: [],
       },
     ]);
