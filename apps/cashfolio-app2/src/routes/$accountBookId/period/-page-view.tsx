@@ -32,14 +32,10 @@ import {
   usePeriodBreakdownChartOptions,
 } from "./-breakdown-chart-options";
 import {
-  type AllocationBreakdownType,
-  type BreakdownChartType,
-  type BreakdownType,
-} from "./-breakdown-types";
-import {
   PeriodStatsCardsSection,
   type StatCardData,
 } from "./-period-stats-cards";
+import { usePeriodPageSessionState } from "./-page-session-state";
 import classes from "./-page-view.module.css";
 import {
   buildPeriodSelectorModel,
@@ -58,16 +54,8 @@ export type PeriodPageViewProps = {
   accountBookId: string;
   overview: PeriodOverview;
   selectedPeriodValue: string;
-  drillPathByBreakdown: Record<BreakdownType, string[]>;
-  drillPathByAllocationBreakdown: Record<AllocationBreakdownType, string[]>;
   onPeriodChange: (nextPeriodValue: string) => void;
-  onDrillPathByBreakdownChange: (
-    nextPathByBreakdown: Record<BreakdownType, string[]>,
-  ) => void;
   onBreakdownAccountDoubleClick: (accountId: string) => void;
-  onDrillPathByAllocationBreakdownChange: (
-    nextPathByBreakdown: Record<AllocationBreakdownType, string[]>,
-  ) => void;
 };
 
 function arePathsEqual(left: string[], right: string[]): boolean {
@@ -117,21 +105,23 @@ export function PeriodPageView({
   accountBookId,
   overview,
   selectedPeriodValue,
-  drillPathByBreakdown,
-  drillPathByAllocationBreakdown,
   onPeriodChange,
-  onDrillPathByBreakdownChange,
   onBreakdownAccountDoubleClick,
-  onDrillPathByAllocationBreakdownChange,
 }: PeriodPageViewProps) {
-  const [selectedBreakdown, setSelectedBreakdown] =
-    useState<BreakdownType>("expense");
-  const [selectedAllocationBreakdown, setSelectedAllocationBreakdown] =
-    useState<AllocationBreakdownType>("asset");
-  const [selectedChartType, setSelectedChartType] =
-    useState<BreakdownChartType>("donut");
-  const [selectedAllocationChartType, setSelectedAllocationChartType] =
-    useState<BreakdownChartType>("donut");
+  const {
+    selectedBreakdown,
+    selectedChartType,
+    selectedAllocationBreakdown,
+    selectedAllocationChartType,
+    drillPathByBreakdown,
+    drillPathByAllocationBreakdown,
+    setSelectedBreakdown,
+    setSelectedChartType,
+    setSelectedAllocationBreakdown,
+    setSelectedAllocationChartType,
+    setDrillPathByBreakdown,
+    setDrillPathByAllocationBreakdown,
+  } = usePeriodPageSessionState(accountBookId);
   const [pickerOpened, setPickerOpened] = useState(false);
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
@@ -234,16 +224,16 @@ export function PeriodPageView({
       return;
     }
 
-    onDrillPathByBreakdownChange({
+    setDrillPathByBreakdown({
       expense: nextExpensePath,
       income: nextIncomePath,
     });
   }, [
     drillPathByBreakdown.expense,
     drillPathByBreakdown.income,
-    onDrillPathByBreakdownChange,
     overview.expenseBreakdown.hierarchy,
     overview.incomeBreakdown.hierarchy,
+    setDrillPathByBreakdown,
   ]);
   useEffect(() => {
     const nextAssetPath = clampBreakdownPath({
@@ -262,20 +252,21 @@ export function PeriodPageView({
       return;
     }
 
-    onDrillPathByAllocationBreakdownChange({
+    setDrillPathByAllocationBreakdown({
       asset: nextAssetPath,
       liability: nextLiabilityPath,
     });
   }, [
     drillPathByAllocationBreakdown.asset,
     drillPathByAllocationBreakdown.liability,
-    onDrillPathByAllocationBreakdownChange,
     overview.assetBreakdown.hierarchy,
     overview.liabilityBreakdown.hierarchy,
+    setDrillPathByAllocationBreakdown,
   ]);
 
   const breakdownTitle =
     selectedBreakdown === "expense" ? "Expenses Breakdown" : "Income Breakdown";
+  const breakdownTableExpandedGroupsStorageKey = `cashfolio:periodExpandedGroups:${accountBookId}:breakdown:${selectedBreakdown}`;
   const breakdownRootLabel =
     selectedBreakdown === "expense" ? "All Expenses" : "All Income";
   const drillState = useMemo(
@@ -369,12 +360,12 @@ export function PeriodPageView({
   ]);
   const updateSelectedBreakdownPath = useCallback(
     (nextPath: string[]) => {
-      onDrillPathByBreakdownChange({
+      setDrillPathByBreakdown({
         ...drillPathByBreakdown,
         [selectedBreakdown]: nextPath,
       });
     },
-    [drillPathByBreakdown, onDrillPathByBreakdownChange, selectedBreakdown],
+    [drillPathByBreakdown, selectedBreakdown, setDrillPathByBreakdown],
   );
   const handleNodeDoubleClick = useCallback(
     (datum: PeriodBreakdownNodeDatum) => {
@@ -424,6 +415,7 @@ export function PeriodPageView({
     selectedAllocationBreakdown === "asset"
       ? "Assets Allocation"
       : "Liabilities Allocation";
+  const allocationTableExpandedGroupsStorageKey = `cashfolio:periodExpandedGroups:${accountBookId}:allocation:${selectedAllocationBreakdown}`;
   const allocationBreakdownRootLabel =
     selectedAllocationBreakdown === "asset" ? "All Assets" : "All Liabilities";
   const allocationDrillState = useMemo(
@@ -513,15 +505,15 @@ export function PeriodPageView({
   ]);
   const updateSelectedAllocationBreakdownPath = useCallback(
     (nextPath: string[]) => {
-      onDrillPathByAllocationBreakdownChange({
+      setDrillPathByAllocationBreakdown({
         ...drillPathByAllocationBreakdown,
         [selectedAllocationBreakdown]: nextPath,
       });
     },
     [
       drillPathByAllocationBreakdown,
-      onDrillPathByAllocationBreakdownChange,
       selectedAllocationBreakdown,
+      setDrillPathByAllocationBreakdown,
     ],
   );
   const handleAllocationNodeDoubleClick = useCallback(
@@ -738,6 +730,9 @@ export function PeriodPageView({
             <PeriodAllocationBreakdownCard
               selectedBreakdown={selectedAllocationBreakdown}
               selectedChartType={selectedAllocationChartType}
+              tableExpandedGroupsStorageKey={
+                allocationTableExpandedGroupsStorageKey
+              }
               breakdownTitle={allocationBreakdownTitle}
               breakdownSubtitle={`${allocationBreakdownSubtitle} · Amounts shown in ${overview.referenceCurrency}`}
               breadcrumbs={allocationDrillState.breadcrumbs}
@@ -773,6 +768,9 @@ export function PeriodPageView({
               <PeriodBreakdownCard
                 selectedBreakdown={selectedBreakdown}
                 selectedChartType={selectedChartType}
+                tableExpandedGroupsStorageKey={
+                  breakdownTableExpandedGroupsStorageKey
+                }
                 breakdownTitle={breakdownTitle}
                 breakdownSubtitle={breakdownSubtitle}
                 breadcrumbs={drillState.breadcrumbs}

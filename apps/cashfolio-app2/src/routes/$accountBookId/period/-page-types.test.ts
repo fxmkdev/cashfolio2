@@ -1,12 +1,8 @@
 import { describe, expect, test } from "vitest";
 import {
   DEFAULT_PERIOD_VALUE,
-  formatBreakdownPathSearchValue,
-  getAllocationBreakdownPathByType,
-  getBreakdownPathByType,
   getPeriodValue,
   isPeriodSearchValue,
-  parseBreakdownPathSearchValue,
   parsePeriodSearch,
 } from "./-page-types";
 
@@ -39,55 +35,35 @@ describe("parsePeriodSearch", () => {
   test("keeps valid period values", () => {
     expect(parsePeriodSearch({ period: "ytd" })).toEqual({
       period: "ytd",
-      expensePath: undefined,
-      incomePath: undefined,
-      assetPath: undefined,
-      liabilityPath: undefined,
     });
     expect(parsePeriodSearch({ period: "2026-02" })).toEqual({
       period: "2026-02",
-      expensePath: undefined,
-      incomePath: undefined,
-      assetPath: undefined,
-      liabilityPath: undefined,
     });
   });
 
   test("normalizes case and trims whitespace", () => {
     expect(parsePeriodSearch({ period: "  LAST-MONTH " })).toEqual({
       period: "last-month",
-      expensePath: undefined,
-      incomePath: undefined,
-      assetPath: undefined,
-      liabilityPath: undefined,
     });
   });
 
-  test("normalizes drill paths", () => {
+  test("ignores legacy drill-path values", () => {
     expect(
       parsePeriodSearch({
         period: "2026-02",
-        expensePath: " group:a ,, group:b ",
-        incomePath: "group:i1,group:i2",
-        assetPath: " group:assets ",
-        liabilityPath: "group:liabilities ",
+        expensePath: "group:a,group:b",
+        incomePath: "group:i1",
+        assetPath: "group:a1",
+        liabilityPath: "group:l1",
       }),
     ).toEqual({
       period: "2026-02",
-      expensePath: "group:a,group:b",
-      incomePath: "group:i1,group:i2",
-      assetPath: "group:assets",
-      liabilityPath: "group:liabilities",
     });
   });
 
   test("drops invalid values", () => {
     expect(parsePeriodSearch({ period: "unexpected" })).toEqual({
       period: undefined,
-      expensePath: undefined,
-      incomePath: undefined,
-      assetPath: undefined,
-      liabilityPath: undefined,
     });
   });
 });
@@ -99,47 +75,5 @@ describe("getPeriodValue", () => {
 
   test("returns provided value when valid", () => {
     expect(getPeriodValue(parsePeriodSearch({ period: "2026" }))).toBe("2026");
-  });
-});
-
-describe("breakdown path helpers", () => {
-  test("parses and formats drill path values", () => {
-    expect(parseBreakdownPathSearchValue(undefined)).toEqual([]);
-    expect(parseBreakdownPathSearchValue("group:a,group:b")).toEqual([
-      "group:a",
-      "group:b",
-    ]);
-    expect(formatBreakdownPathSearchValue([])).toBe(undefined);
-    expect(formatBreakdownPathSearchValue(["group:a", "group:b"])).toBe(
-      "group:a,group:b",
-    );
-  });
-
-  test("extracts drill paths by breakdown type", () => {
-    expect(
-      getBreakdownPathByType(
-        parsePeriodSearch({
-          expensePath: "group:e1,group:e2",
-          incomePath: "group:i1",
-        }),
-      ),
-    ).toEqual({
-      expense: ["group:e1", "group:e2"],
-      income: ["group:i1"],
-    });
-  });
-
-  test("extracts drill paths by allocation type", () => {
-    expect(
-      getAllocationBreakdownPathByType(
-        parsePeriodSearch({
-          assetPath: "group:a1,group:a2",
-          liabilityPath: "group:l1",
-        }),
-      ),
-    ).toEqual({
-      asset: ["group:a1", "group:a2"],
-      liability: ["group:l1"],
-    });
   });
 });

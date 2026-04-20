@@ -84,6 +84,57 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
   );
 }
 
+type PeriodPageSessionState = {
+  selectedBreakdown: "expense" | "income";
+  selectedChartType: "donut" | "bar" | "table";
+  selectedAllocationBreakdown: "asset" | "liability";
+  selectedAllocationChartType: "donut" | "bar" | "table";
+  drillPathByBreakdown: {
+    expense: string[];
+    income: string[];
+  };
+  drillPathByAllocationBreakdown: {
+    asset: string[];
+    liability: string[];
+  };
+};
+
+function createPeriodPageSessionState(
+  overrides: Partial<PeriodPageSessionState> = {},
+): PeriodPageSessionState {
+  return {
+    selectedBreakdown: overrides.selectedBreakdown ?? "expense",
+    selectedChartType: overrides.selectedChartType ?? "donut",
+    selectedAllocationBreakdown:
+      overrides.selectedAllocationBreakdown ?? "asset",
+    selectedAllocationChartType:
+      overrides.selectedAllocationChartType ?? "donut",
+    drillPathByBreakdown: {
+      expense: overrides.drillPathByBreakdown?.expense ?? [],
+      income: overrides.drillPathByBreakdown?.income ?? [],
+    },
+    drillPathByAllocationBreakdown: {
+      asset: overrides.drillPathByAllocationBreakdown?.asset ?? [],
+      liability: overrides.drillPathByAllocationBreakdown?.liability ?? [],
+    },
+  };
+}
+
+async function seedPeriodPageSessionState(args: {
+  page: Page;
+  accountBookId: string;
+  state: PeriodPageSessionState;
+}) {
+  const key = `cashfolio:periodPageState:${args.accountBookId}`;
+
+  await args.page.addInitScript(
+    ({ scriptKey, scriptState }) => {
+      window.sessionStorage.setItem(scriptKey, JSON.stringify(scriptState));
+    },
+    { scriptKey: key, scriptState: args.state },
+  );
+}
+
 test("accounts is default account-book route and links to period", async ({
   page,
 }) => {
@@ -482,9 +533,21 @@ test("period breakdown account leaf drilldown opens ledger with period filter", 
     date: "2026-04-07T00:00:00.000Z",
   });
 
-  await page.goto(
-    `/${seeded.accountBookId}/period?period=${period}&expensePath=${encodeURIComponent(`group:${seeded.equityGroupId},group:${seeded.expenseGroupId}`)}`,
-  );
+  await seedPeriodPageSessionState({
+    page,
+    accountBookId: seeded.accountBookId,
+    state: createPeriodPageSessionState({
+      drillPathByBreakdown: {
+        expense: [
+          `group:${seeded.equityGroupId}`,
+          `group:${seeded.expenseGroupId}`,
+        ],
+        income: [],
+      },
+    }),
+  });
+
+  await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
 
   await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
   await expect(
@@ -514,6 +577,87 @@ test("period breakdown account leaf drilldown opens ledger with period filter", 
     });
   await expect(page.getByText("Showing entries for April 2026")).toBeVisible();
   await expect(agGridRowByText(page, seedDescription)).toBeVisible();
+});
+
+test("period page persists card state, drill state, and table expansion across refresh", async ({
+  page,
+}) => {
+  const period = "2026-05";
+
+  await seedThreeBookingSplitTransaction({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Period Persistence Seed",
+    currentAccountId: seeded.cashAccount.id,
+    debitAccountIds: [seeded.expenseAccount.id, seeded.savingsAccount.id],
+    date: "2026-05-07T00:00:00.000Z",
+  });
+
+  await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
+  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+
+  const breakdownChart = page.getByTestId("period-breakdown-chart");
+  await expect(breakdownChart).toBeVisible();
+  await breakdownChart.dblclick({ force: true });
+  await expect(
+    page.getByText("Drilled expense groups in the selected period"),
+  ).toBeVisible();
+
+  const breakdownChartTypeControl = page.getByLabelText("Breakdown chart type");
+  await breakdownChartTypeControl.getByRole("radio", { name: "Table" }).click();
+  await expect(page.getByTestId("period-breakdown-table")).toBeVisible();
+
+  const breakdownTable = page.getByTestId("period-breakdown-table");
+  await breakdownTable.locator(".ag-group-expanded").first().click();
+  await expect(agGridRowByText(page, seeded.expenseAccount.name)).toHaveCount(
+    0,
+  );
+
+  const breakdownTypeControl = page.getByRole("radiogroup", {
+    name: "Breakdown type",
+  });
+  await breakdownTypeControl.getByRole("radio", { name: "Income" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Income Breakdown" }),
+  ).toBeVisible();
+
+  const allocationTypeControl = page.getByRole("radiogroup", {
+    name: "Allocation type",
+  });
+  await allocationTypeControl
+    .getByRole("radio", { name: "Liabilities" })
+    .click();
+
+  const allocationChartTypeControl = page.getByLabelText(
+    "Allocation chart type",
+  );
+  await allocationChartTypeControl.getByRole("radio", { name: "Bar" }).click();
+  await expect(
+    allocationChartTypeControl.getByRole("radio", { name: "Bar" }),
+  ).toBeChecked();
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+
+  await expect(
+    breakdownTypeControl.getByRole("radio", { name: "Income" }),
+  ).toBeChecked();
+  await expect(
+    breakdownChartTypeControl.getByRole("radio", { name: "Table" }),
+  ).toBeChecked();
+  await expect(
+    allocationTypeControl.getByRole("radio", { name: "Liabilities" }),
+  ).toBeChecked();
+  await expect(
+    allocationChartTypeControl.getByRole("radio", { name: "Bar" }),
+  ).toBeChecked();
+
+  await breakdownTypeControl.getByRole("radio", { name: "Expenses" }).click();
+  await expect(
+    page.getByText("Drilled expense groups in the selected period"),
+  ).toBeVisible();
+  await expect(agGridRowByText(page, seeded.expenseAccount.name)).toHaveCount(
+    0,
+  );
 });
 
 test("period picker opens on selected month/year page", async ({ page }) => {

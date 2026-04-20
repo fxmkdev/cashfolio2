@@ -16,10 +16,6 @@ import {
   PERIOD_PRESET_MTD,
   PERIOD_PRESET_YTD,
 } from "./-page-types";
-import type {
-  AllocationBreakdownType,
-  BreakdownType,
-} from "./-breakdown-types";
 import { PeriodPageView, type PeriodPageViewProps } from "./-page-view";
 
 function deriveOverviewFromSelectedPeriodValue(
@@ -449,17 +445,6 @@ const baseOverview: PeriodPageViewProps["overview"] = {
 function PeriodRouteSmokeHarness() {
   const [selectedPeriodValue, setSelectedPeriodValue] =
     useState<string>(DEFAULT_PERIOD_VALUE);
-  const [drillPathByBreakdown, setDrillPathByBreakdown] = useState<
-    Record<BreakdownType, string[]>
-  >({
-    expense: [],
-    income: [],
-  });
-  const [drillPathByAllocationBreakdown, setDrillPathByAllocationBreakdown] =
-    useState<Record<AllocationBreakdownType, string[]>>({
-      asset: [],
-      liability: [],
-    });
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -470,14 +455,8 @@ function PeriodRouteSmokeHarness() {
         accountBookId="storybook-book"
         overview={deriveOverviewFromSelectedPeriodValue(selectedPeriodValue)}
         selectedPeriodValue={selectedPeriodValue}
-        drillPathByBreakdown={drillPathByBreakdown}
-        drillPathByAllocationBreakdown={drillPathByAllocationBreakdown}
         onPeriodChange={setSelectedPeriodValue}
-        onDrillPathByBreakdownChange={setDrillPathByBreakdown}
         onBreakdownAccountDoubleClick={() => undefined}
-        onDrillPathByAllocationBreakdownChange={
-          setDrillPathByAllocationBreakdown
-        }
       />
       <Text data-testid="router-path">{pathname}</Text>
       <Text data-testid="selected-period">{selectedPeriodValue}</Text>
@@ -492,18 +471,8 @@ const meta = {
     accountBookId: "storybook-book",
     overview: baseOverview,
     selectedPeriodValue: DEFAULT_PERIOD_VALUE,
-    drillPathByBreakdown: {
-      expense: [],
-      income: [],
-    },
-    drillPathByAllocationBreakdown: {
-      asset: [],
-      liability: [],
-    },
     onPeriodChange: fn(),
-    onDrillPathByBreakdownChange: fn(),
     onBreakdownAccountDoubleClick: fn(),
-    onDrillPathByAllocationBreakdownChange: fn(),
   },
 } satisfies Meta<typeof PeriodPageView>;
 
@@ -831,35 +800,5 @@ export const BreakdownTableDoubleClickSmoke: Story = {
 
     await userEvent.dblClick(canvas.getByText("Total"));
     await expect(args.onBreakdownAccountDoubleClick).toHaveBeenCalledTimes(1);
-  },
-};
-
-export const DrilledBreakdownSubtitle: Story = {
-  args: {
-    drillPathByBreakdown: {
-      expense: ["group:housing"],
-      income: [],
-    },
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(
-      canvas.getByText("Drilled expense groups in the selected period"),
-    ).toBeInTheDocument();
-  },
-};
-
-export const DrilledAllocationSubtitle: Story = {
-  args: {
-    drillPathByAllocationBreakdown: {
-      asset: ["group:investments"],
-      liability: [],
-    },
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(
-      canvas.getByText(/Drilled asset groups as of period end/i),
-    ).toBeInTheDocument();
   },
 };

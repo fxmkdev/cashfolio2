@@ -152,8 +152,10 @@ submit UX and prevent duplicate requests.
   (Expense/Income), preserving each side when toggling.
 - Show an `Up` action and breadcrumb context (`All Expenses` / `All Income` ->
   group path) directly above the chart.
-- Persist drill paths in route search params (`expensePath` / `incomePath`) so
-  browser back/forward and period changes keep the current drill context.
+- Persist Period card state in `sessionStorage` (chart/table view, breakdown
+  side toggle, drill paths, and table expand/collapse), scoped by
+  `accountBookId`.
+- Keep only the selected period (`period`) in route search params.
 - Clamp stale paths to the nearest valid ancestor when refreshed data no longer
   contains a node.
 

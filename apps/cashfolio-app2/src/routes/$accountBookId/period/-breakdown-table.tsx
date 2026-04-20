@@ -2,6 +2,7 @@ import type { ColDef } from "ag-grid-enterprise";
 import { useMemo } from "react";
 import { FORMATTED_NUMERIC_COLUMN } from "@/components/column-types";
 import { DataGrid } from "@/components/data-grid";
+import { useExpandedGroups } from "@/hooks/use-expanded-groups";
 import type { BreakdownHierarchyNode } from "./-breakdown-drill";
 import { parseBreakdownAccountId } from "./-breakdown-drill";
 import {
@@ -17,12 +18,14 @@ type BreakdownTableProps = {
   hierarchy: BreakdownHierarchyNode[];
   valueHeaderName: string;
   onAccountDoubleClick?: (accountId: string) => void;
+  expandedGroupsStorageKey?: string;
 };
 
 export function BreakdownTable({
   hierarchy,
   valueHeaderName,
   onAccountDoubleClick,
+  expandedGroupsStorageKey,
 }: BreakdownTableProps) {
   const rowData = useMemo(
     () => flattenBreakdownHierarchyRows(hierarchy),
@@ -38,6 +41,9 @@ export function BreakdownTable({
       },
     ],
     [hierarchy],
+  );
+  const { isGroupOpenByDefault, onRowGroupOpened } = useExpandedGroups(
+    expandedGroupsStorageKey ?? "",
   );
 
   const columnDefs = useMemo<ColDef<BreakdownGridRow>[]>(
@@ -85,6 +91,10 @@ export function BreakdownTable({
 
         return data.id;
       }}
+      isGroupOpenByDefault={
+        expandedGroupsStorageKey ? isGroupOpenByDefault : undefined
+      }
+      onRowGroupOpened={expandedGroupsStorageKey ? onRowGroupOpened : undefined}
       onRowDoubleClicked={(event) => {
         if (!onAccountDoubleClick || !event.data) {
           return;
