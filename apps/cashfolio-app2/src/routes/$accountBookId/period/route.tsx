@@ -4,9 +4,6 @@ import { getPeriodOverview } from "@/server/period";
 import { formatMonthPeriodValue } from "@/shared/period";
 import {
   DEFAULT_PERIOD_VALUE,
-  formatBreakdownPathSearchValue,
-  getAllocationBreakdownPathByType,
-  getBreakdownPathByType,
   getPeriodValue,
   parsePeriodSearch,
 } from "./-page-types";
@@ -36,9 +33,6 @@ function PeriodPage() {
   const { accountBookId } = Route.useParams();
   const search = Route.useSearch();
   const selectedPeriodValue = getPeriodValue(search);
-  const drillPathByBreakdown = getBreakdownPathByType(search);
-  const drillPathByAllocationBreakdown =
-    getAllocationBreakdownPathByType(search);
   const overview = Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/period" });
   const explicitLedgerPeriodValue =
@@ -52,8 +46,6 @@ function PeriodPage() {
         accountBookId={accountBookId}
         overview={overview}
         selectedPeriodValue={selectedPeriodValue}
-        drillPathByBreakdown={drillPathByBreakdown}
-        drillPathByAllocationBreakdown={drillPathByAllocationBreakdown}
         onPeriodChange={(nextPeriodValue) =>
           navigate({
             search: (previousSearch) => ({
@@ -65,19 +57,6 @@ function PeriodPage() {
             }),
           })
         }
-        onDrillPathByBreakdownChange={(nextPathByBreakdown) =>
-          navigate({
-            search: (previousSearch) => ({
-              ...previousSearch,
-              expensePath: formatBreakdownPathSearchValue(
-                nextPathByBreakdown.expense,
-              ),
-              incomePath: formatBreakdownPathSearchValue(
-                nextPathByBreakdown.income,
-              ),
-            }),
-          })
-        }
         onBreakdownAccountDoubleClick={(accountId) =>
           navigate({
             to: "/$accountBookId/$accountId",
@@ -85,19 +64,6 @@ function PeriodPage() {
             search: {
               period: explicitLedgerPeriodValue,
             },
-          })
-        }
-        onDrillPathByAllocationBreakdownChange={(nextPathByBreakdown) =>
-          navigate({
-            search: (previousSearch) => ({
-              ...previousSearch,
-              assetPath: formatBreakdownPathSearchValue(
-                nextPathByBreakdown.asset,
-              ),
-              liabilityPath: formatBreakdownPathSearchValue(
-                nextPathByBreakdown.liability,
-              ),
-            }),
           })
         }
       />

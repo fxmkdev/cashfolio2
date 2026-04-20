@@ -13,6 +13,7 @@ import { DrilldownCardShell } from "./-drilldown-card-shell";
 type PeriodBreakdownCardProps = {
   selectedBreakdown: BreakdownType;
   selectedChartType: BreakdownChartType;
+  tableExpandedGroupsStorageKey?: string;
   breakdownTitle: string;
   breakdownSubtitle: string;
   breadcrumbs: BreakdownBreadcrumb[];
@@ -37,6 +38,7 @@ function isBreakdownType(value: string): value is BreakdownType {
 export function PeriodBreakdownCard({
   selectedBreakdown,
   selectedChartType,
+  tableExpandedGroupsStorageKey,
   breakdownTitle,
   breakdownSubtitle,
   breadcrumbs,
@@ -97,6 +99,7 @@ export function PeriodBreakdownCard({
             hierarchy={breakdownHierarchy}
             valueHeaderName="Amount"
             onAccountDoubleClick={onBreakdownAccountDoubleClick}
+            expandedGroupsStorageKey={tableExpandedGroupsStorageKey}
           />
         ) : null
       }

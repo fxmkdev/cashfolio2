@@ -4,16 +4,53 @@ import type {
   RowGroupOpenedEvent,
 } from "ag-grid-enterprise";
 
+function parseStoredExpandedIds(stored: string): string[] | null {
+  try {
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) {
+      return null;
+    }
+
+    return parsed.filter((item): item is string => typeof item === "string");
+  } catch {
+    return null;
+  }
+}
+
 export function useExpandedGroups(storageKey: string) {
   const storageKeyRef = useRef(storageKey);
   storageKeyRef.current = storageKey;
 
   const isGroupOpenByDefault = useCallback(
     (params: IsGroupOpenByDefaultParams) => {
-      const stored = sessionStorage.getItem(storageKeyRef.current);
-      if (stored == null) return params.rowNode.level === 0;
-      const expandedIds: string[] = JSON.parse(stored);
-      return expandedIds.includes(params.rowNode.key!);
+      const defaultIsOpen = params.rowNode.level === 0;
+      let stored: string | null = null;
+      try {
+        stored = sessionStorage.getItem(storageKeyRef.current);
+      } catch {
+        return defaultIsOpen;
+      }
+
+      if (stored == null) {
+        return defaultIsOpen;
+      }
+
+      const expandedIds = parseStoredExpandedIds(stored);
+      if (expandedIds == null) {
+        try {
+          sessionStorage.removeItem(storageKeyRef.current);
+        } catch {
+          // Ignore storage cleanup failures.
+        }
+        return defaultIsOpen;
+      }
+
+      const rowKey = params.rowNode.key;
+      if (rowKey == null) {
+        return defaultIsOpen;
+      }
+
+      return expandedIds.includes(rowKey);
     },
     [],
   );
@@ -25,7 +62,15 @@ export function useExpandedGroups(storageKey: string) {
         expandedIds.push(node.key);
       }
     });
-    sessionStorage.setItem(storageKeyRef.current, JSON.stringify(expandedIds));
+
+    try {
+      sessionStorage.setItem(
+        storageKeyRef.current,
+        JSON.stringify(expandedIds),
+      );
+    } catch {
+      // Ignore storage persistence failures.
+    }
   }, []);
 
   return { isGroupOpenByDefault, onRowGroupOpened };
