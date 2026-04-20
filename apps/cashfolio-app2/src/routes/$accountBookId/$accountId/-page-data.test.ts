@@ -37,7 +37,10 @@ function createLedgerBookings(
     date: new Date(entry.date.getTime()),
     description: "",
     value: entry.value,
-    valueInReferenceCurrency: entry.valueInReferenceCurrency ?? entry.value,
+    valueInReferenceCurrency:
+      entry.valueInReferenceCurrency === undefined
+        ? entry.value
+        : entry.valueInReferenceCurrency,
     unit: Unit.CURRENCY,
     currency: "CHF",
     cryptocurrency: null,

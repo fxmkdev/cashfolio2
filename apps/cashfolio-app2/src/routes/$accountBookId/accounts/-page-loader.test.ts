@@ -3,7 +3,7 @@ import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 
 const getAccountsPageData = vi.hoisted(() => vi.fn());
 
-vi.mock("../../server/accounts", () => ({
+vi.mock("@/server/accounts", () => ({
   getAccountsPageData,
 }));
 

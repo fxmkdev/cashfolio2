@@ -75,10 +75,8 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d cashfolio"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd "pg_isready -U postgres -d cashfolio" --health-interval
+          10s --health-timeout 5s --health-retries 5
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cashfolio?schema=public
       BASE_URL: http://127.0.0.1:4173
@@ -94,7 +92,8 @@ jobs:
       - name: Migrate test database
         run: pnpm --filter cashfolio-app2 exec prisma migrate deploy
       - name: Install Playwright browser
-        run: pnpm --filter cashfolio-app2 exec playwright install --with-deps chromium
+        run: |
+          pnpm --filter cashfolio-app2 exec playwright install --with-deps chromium
       - name: Run e2e tests
         run: pnpm --filter cashfolio-app2 e2e:ci
       - name: Upload Playwright artifacts
@@ -105,6 +104,28 @@ jobs:
           path: |
             apps/cashfolio-app2/playwright-report
             apps/cashfolio-app2/test-results
+          if-no-files-found: ignore
+
+  cashfolio-app2-unit:
+    name: "cashfolio-app2: Unit + Coverage"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup
+        uses: felixmokross/webplatform/.github/actions/setup@main
+      - name: Install dependencies
+        run: pnpm --filter cashfolio-app2 install
+      - name: Generate Prisma Client
+        run: pnpm --filter cashfolio-app2 prisma:generate
+      - name: Run unit tests with coverage
+        run: pnpm --filter cashfolio-app2 test:unit:coverage
+      - name: Upload unit coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cashfolio-app2-unit-coverage
+          path: apps/cashfolio-app2/coverage
           if-no-files-found: ignore
 
   cashfolio-app2-typecheck:
@@ -150,16 +171,23 @@ jobs:
 
   storybook-publish:
     name: "cashfolio-app2: Publish Storybook"
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false)
+    if: >-
+      github.event_name == 'workflow_dispatch' || github.ref ==
+      'refs/heads/main' || (github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.fork == false)
     runs-on: ubuntu-latest
     permissions:
       contents: read
       deployments: write
     environment:
-      name: ${{ github.event_name == 'pull_request' && 'preview-cashfolio-storybook' || 'staging-cashfolio-storybook' }}
+      name: >-
+        ${{ github.event_name == 'pull_request' && 'preview-cashfolio-storybook'
+        || 'staging-cashfolio-storybook' }}
       url: ${{ steps.publish-chromatic.outputs.storybookUrl }}
     concurrency:
-      group: storybook-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('ref-{0}', github.ref) }}
+      group: >-
+        storybook-${{ github.event_name == 'pull_request' && format('pr-{0}',
+        github.event.pull_request.number) || format('ref-{0}', github.ref) }}
       cancel-in-progress: true
     steps:
       - name: Checkout
@@ -186,7 +214,9 @@ jobs:
 
   resolve-preview-names:
     name: Resolve preview resource names
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.fork == false
     runs-on: ubuntu-latest
     outputs:
       fly_app: ${{ steps.names.outputs.fly_app }}
@@ -205,10 +235,13 @@ jobs:
 
   deploy-preview:
     name: Deploy to preview
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.fork == false
     runs-on: ubuntu-latest
     needs:
       - cashfolio-app2-build-push
+      - cashfolio-app2-unit
       - cashfolio-app2-typecheck
       - cashfolio-app2-format
       - resolve-preview-names
@@ -239,7 +272,8 @@ jobs:
         with:
           version: ${{ env.FLYCTL_VERSION }}
       - name: Set Neon branch expiration date
-        run: echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+        run: |
+          echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
       - name: Create or reuse Neon branch
         id: neon
         uses: neondatabase/create-branch-action@v6
@@ -450,6 +484,7 @@ jobs:
     needs:
       - version
       - cashfolio-app2-build-push
+      - cashfolio-app2-unit
       - cashfolio-app2-e2e
       - cashfolio-app2-typecheck
       - cashfolio-app2-format

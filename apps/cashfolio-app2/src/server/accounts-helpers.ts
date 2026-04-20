@@ -1,5 +1,3 @@
-import { prisma } from "../prisma.server";
-
 type GroupPathNode = {
   id: string;
   name: string;
@@ -87,6 +85,7 @@ export function hasInactiveAncestorGroup(
 export async function getGroupHierarchy(
   accountBookId: string,
 ): Promise<Map<string, GroupHierarchyNode>> {
+  const { prisma } = await import("../prisma.server");
   const groups = await prisma.accountGroup.findMany({
     where: { accountBookId },
     select: { id: true, parentGroupId: true, isActive: true },

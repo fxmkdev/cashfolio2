@@ -1,9 +1,7 @@
 import {
   Alert,
-  Card,
   Container,
   Grid,
-  Group,
   SimpleGrid,
   Stack,
   Text,
@@ -12,12 +10,6 @@ import {
   useMantineTheme,
 } from "@mantine/core";
 import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
-import type {
-  AgCartesianChartOptions,
-  AgWaterfallSeriesItemStylerParams,
-  AgWaterfallSeriesOptions,
-} from "ag-charts-community";
-import { AgCharts } from "ag-charts-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
 import { LinkButton } from "@/components/link-button";
@@ -26,6 +18,7 @@ import type { getPeriodOverview } from "@/server/period";
 import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import { formatMonthPeriodValue } from "@/shared/period";
 import { PeriodAllocationBreakdownCard } from "./-allocation-breakdown-card";
+import { ContributionChartCard } from "./-contribution-chart-card";
 import { PeriodBreakdownCard } from "./-breakdown-card";
 import {
   clampBreakdownPath,
@@ -43,6 +36,10 @@ import {
   type BreakdownChartType,
   type BreakdownType,
 } from "./-breakdown-types";
+import {
+  PeriodStatsCardsSection,
+  type StatCardData,
+} from "./-period-stats-cards";
 import classes from "./-page-view.module.css";
 import {
   buildPeriodSelectorModel,
@@ -72,35 +69,6 @@ export type PeriodPageViewProps = {
     nextPathByBreakdown: Record<AllocationBreakdownType, string[]>,
   ) => void;
 };
-
-type StatCardProps = {
-  label: string;
-  value: string;
-  valueColor: "green" | "red";
-  secondaryValue?: string;
-  testId?: string;
-};
-
-type StatCardData = StatCardProps & {
-  id: string;
-};
-
-type WaterfallDatum = {
-  label: string;
-  amount: number;
-};
-
-type WaterfallTotalDatum = {
-  isTotal: boolean;
-};
-
-function isWaterfallTotalDatum(datum: unknown): datum is WaterfallTotalDatum {
-  if (typeof datum !== "object" || datum === null || !("isTotal" in datum)) {
-    return false;
-  }
-
-  return typeof datum.isTotal === "boolean";
-}
 
 function arePathsEqual(left: string[], right: string[]): boolean {
   if (left.length !== right.length) {
@@ -143,32 +111,6 @@ function getAllocationPartialDataNotes(args: {
   ]
     .filter((value): value is string => value != null)
     .join(" ");
-}
-
-function StatCard({
-  label,
-  value,
-  valueColor,
-  secondaryValue,
-  testId,
-}: StatCardProps) {
-  return (
-    <Card withBorder radius="md" p="lg" data-testid={testId}>
-      <Stack gap={4} align="center">
-        <Text c="dimmed" fw={600} ta="center">
-          {label}
-        </Text>
-        <Text fw={700} fz="xl" c={valueColor}>
-          {value}
-        </Text>
-        {secondaryValue ? (
-          <Text c="dimmed" fw={500} fz="sm" ta="center">
-            {secondaryValue}
-          </Text>
-        ) : null}
-      </Stack>
-    </Card>
-  );
 }
 
 export function PeriodPageView({
@@ -615,14 +557,6 @@ export function PeriodPageView({
     skippedNegativeCount: activeAllocationBreakdown.skippedNegativeCount,
   });
 
-  const amountCompactFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat("en-CH", {
-        notation: "compact",
-        maximumFractionDigits: 1,
-      }),
-    [],
-  );
   const gainsLossesLabel = overview.stats.gainsLosses >= 0 ? "Gains" : "Losses";
   const savingsRateLabel = useMemo(() => {
     if (overview.stats.income === 0) {
@@ -632,155 +566,6 @@ export function PeriodPageView({
     const savingsRateRatio = overview.stats.savings / overview.stats.income;
     return savingsRateFormatter.format(savingsRateRatio);
   }, [overview.stats.income, overview.stats.savings, savingsRateFormatter]);
-  const waterfallData = useMemo<WaterfallDatum[]>(
-    () => [
-      {
-        label: "Income",
-        amount: overview.stats.income,
-      },
-      {
-        label: "Expenses",
-        amount: -overview.stats.expenses,
-      },
-      {
-        label: gainsLossesLabel,
-        amount: overview.stats.gainsLosses,
-      },
-    ],
-    [
-      gainsLossesLabel,
-      overview.stats.expenses,
-      overview.stats.gainsLosses,
-      overview.stats.income,
-    ],
-  );
-  const waterfallAmountByLabel = useMemo<Record<string, number>>(() => {
-    const [incomeDatum, expensesDatum, gainsLossesDatum] = waterfallData;
-    const savingsAmount = incomeDatum.amount + expensesDatum.amount;
-    const totalReturnAmount = savingsAmount + gainsLossesDatum.amount;
-
-    return {
-      [incomeDatum.label]: incomeDatum.amount,
-      [expensesDatum.label]: expensesDatum.amount,
-      [gainsLossesDatum.label]: gainsLossesDatum.amount,
-      Savings: savingsAmount,
-      "Total Return": totalReturnAmount,
-    };
-  }, [waterfallData]);
-  const waterfallSeries = useMemo<AgWaterfallSeriesOptions<WaterfallDatum>>(
-    () => ({
-      type: "waterfall",
-      xKey: "label",
-      yKey: "amount",
-      yName: "Amount",
-      widthRatio: 0.72,
-      totals: [
-        {
-          totalType: "subtotal",
-          index: 1,
-          axisLabel: "Savings",
-        },
-        {
-          totalType: "total",
-          index: 2,
-          axisLabel: "Total Return",
-        },
-      ],
-      item: {
-        positive: {
-          fill: waterfallPalette.positive,
-          stroke: waterfallPalette.positive,
-        },
-        negative: {
-          fill: waterfallPalette.negative,
-          stroke: waterfallPalette.negative,
-        },
-      },
-      subtotal: {
-        fill: waterfallPalette.total,
-        stroke: waterfallPalette.total,
-      },
-      total: {
-        fill: waterfallPalette.total,
-        stroke: waterfallPalette.total,
-      },
-      itemStyler: (
-        params: AgWaterfallSeriesItemStylerParams<WaterfallDatum>,
-      ) => {
-        if (isWaterfallTotalDatum(params.datum) && params.datum.isTotal) {
-          return {
-            fill: waterfallPalette.total,
-            stroke: waterfallPalette.total,
-          };
-        }
-
-        return undefined;
-      },
-      tooltip: {
-        renderer: ({ datum }) => {
-          const label = String(datum.label);
-          const amount = waterfallAmountByLabel[label] ?? 0;
-
-          return {
-            heading: label,
-            data: [
-              {
-                label: "Total",
-                value: currencyFormatter.format(amount),
-              },
-            ],
-          };
-        },
-      },
-    }),
-    [currencyFormatter, waterfallAmountByLabel, waterfallPalette],
-  );
-  const waterfallChartOptions = useMemo<AgCartesianChartOptions>(
-    () => ({
-      data: waterfallData,
-      height: 360,
-      background: {
-        visible: false,
-      },
-      theme: {
-        params: {
-          textColor: colors.chartTextColor,
-          foregroundColor: colors.chartTextColor,
-          borderColor: colors.themeBorderColor,
-          tooltipBackgroundColor: colors.tooltipBackgroundColor,
-          tooltipBorder: true,
-          tooltipTextColor: colors.tooltipTextColor,
-          tooltipSubtleTextColor: colors.tooltipSubtleTextColor,
-        },
-      },
-      legend: {
-        enabled: false,
-      },
-      series: [waterfallSeries],
-      axes: {
-        x: {
-          type: "category",
-        },
-        y: {
-          type: "number",
-          label: {
-            formatter: ({ value }) =>
-              amountCompactFormatter.format(Number(value)),
-          },
-          crossLines: [
-            {
-              type: "line",
-              value: 0,
-              stroke: colors.zeroLineColor,
-              strokeWidth: 1,
-              lineDash: [5, 5],
-            },
-          ],
-        },
-      },
-    }),
-    [amountCompactFormatter, colors, waterfallData, waterfallSeries],
-  );
 
   const statCards: StatCardData[] = [
     {
@@ -935,48 +720,20 @@ export function PeriodPageView({
           />
         </div>
 
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 5 }} spacing="lg">
-          {statCards.map((card) => (
-            <StatCard
-              key={card.id}
-              label={card.label}
-              value={card.value}
-              valueColor={card.valueColor}
-              secondaryValue={card.secondaryValue}
-              testId={`period-stat-card-${card.id}`}
-            />
-          ))}
-        </SimpleGrid>
-        <Stack gap="xs">
-          <Text c="dimmed" size="sm" ta="center">
-            As of period end (last day)
-          </Text>
-          <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg">
-            {endOfPeriodStatCards.map((card) => (
-              <StatCard
-                key={card.id}
-                label={card.label}
-                value={card.value}
-                valueColor={card.valueColor}
-              />
-            ))}
-          </SimpleGrid>
-        </Stack>
+        <PeriodStatsCardsSection
+          statCards={statCards}
+          endOfPeriodStatCards={endOfPeriodStatCards}
+        />
 
         <Stack gap="lg" data-testid="period-analysis-section">
           <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg">
-            <Card withBorder radius="md" p="md">
-              <Stack gap="sm">
-                <Title order={4}>Contribution to Total Return</Title>
-                <Text c="dimmed" size="sm">
-                  How Income, Expenses, and {gainsLossesLabel} lead to Total
-                  Return
-                </Text>
-                <div className={classes.chartContainer}>
-                  <AgCharts options={waterfallChartOptions} />
-                </div>
-              </Stack>
-            </Card>
+            <ContributionChartCard
+              gainsLossesLabel={gainsLossesLabel}
+              stats={overview.stats}
+              currencyFormatter={currencyFormatter}
+              colors={colors}
+              waterfallPalette={waterfallPalette}
+            />
 
             <PeriodAllocationBreakdownCard
               selectedBreakdown={selectedAllocationBreakdown}
