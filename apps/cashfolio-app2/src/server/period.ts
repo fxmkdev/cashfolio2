@@ -178,11 +178,10 @@ async function computeTransferClearingBalance(args: {
     ) {
       const transaction = transactionsPage[transactionIndex]!;
       const convertedValues = convertedValuesPerTransaction[transactionIndex]!;
-      const nonNullConvertedValues = convertedValues.filter(
-        (convertedValue): convertedValue is number => convertedValue != null,
+      const failedConversionsCount = convertedValues.reduce(
+        (count, convertedValue) => count + (convertedValue == null ? 1 : 0),
+        0,
       );
-      const failedConversionsCount =
-        convertedValues.length - nonNullConvertedValues.length;
 
       if (failedConversionsCount > 0) {
         skippedBookingsCount += failedConversionsCount;
