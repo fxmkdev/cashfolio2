@@ -8,6 +8,7 @@ import {
   getBookingUnitFields,
   type BookingUnitFieldsSource,
 } from "@/shared/booking-unit-fields";
+import { normalizeDateInputValue } from "@/shared/date";
 import type {
   SimpleTransactionValues,
   SplitModalInitialValues,
@@ -71,10 +72,7 @@ export function normalizeSimpleDraft(args: {
   const nextAmount =
     Number.isFinite(amount) && amount > 0 ? amount : args.fallback.amount;
 
-  const date =
-    args.draft.date && !isNaN(args.draft.date.getTime())
-      ? args.draft.date
-      : args.fallback.date;
+  const date = normalizeDateInputValue(args.draft.date) ?? args.fallback.date;
 
   return {
     date: date.toISOString(),

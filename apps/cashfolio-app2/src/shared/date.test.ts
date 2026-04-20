@@ -4,6 +4,7 @@ import {
   getUtcDayRange,
   getOpeningBalancesBookingDate,
   MILLISECONDS_PER_DAY,
+  normalizeDateInputValue,
   isSameUtcDay,
   startOfUtcDay,
 } from "./date";
@@ -53,5 +54,31 @@ describe("shared/date", () => {
     expect(formatUtcDate(new Date("2026-04-20T17:42:11.123Z"))).toBe(
       "2026-04-20",
     );
+  });
+
+  test("normalizeDateInputValue accepts Date instances and ISO strings", () => {
+    const fromDate = normalizeDateInputValue(
+      new Date("2026-04-20T00:00:00.000Z"),
+    );
+    const fromIsoString = normalizeDateInputValue("2026-04-20T00:00:00.000Z");
+    const fromYyyyMmDd = normalizeDateInputValue("2026-04-20");
+
+    expect(fromDate?.toISOString()).toBe("2026-04-20T00:00:00.000Z");
+    expect(fromIsoString?.toISOString()).toBe("2026-04-20T00:00:00.000Z");
+    expect(fromYyyyMmDd?.toISOString()).toBe("2026-04-20T00:00:00.000Z");
+  });
+
+  test("normalizeDateInputValue parses display-format strings and rejects invalid values", () => {
+    const parsed = normalizeDateInputValue("20.04.2026");
+    const invalid = normalizeDateInputValue("not-a-date");
+    const empty = normalizeDateInputValue("  ");
+    const ambiguous = normalizeDateInputValue("04/20/2026");
+    const impossibleCalendarDate = normalizeDateInputValue("31.02.2026");
+
+    expect(parsed?.toISOString()).toBe("2026-04-20T00:00:00.000Z");
+    expect(invalid).toBeNull();
+    expect(empty).toBeNull();
+    expect(ambiguous).toBeNull();
+    expect(impossibleCalendarDate).toBeNull();
   });
 });

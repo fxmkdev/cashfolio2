@@ -470,6 +470,46 @@ test("switch from simple edit to split carries over edited values", async ({
   expect(bookingByAccountId.get(seeded.expenseAccount.id)?.value).toBe(55);
 });
 
+test("create flow: changing date before switching to split still allows split create", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
+
+  const simpleDialog = await openCreateSimpleTransaction(page);
+  await simpleDialog.getByLabel("Date").fill("06.01.2026");
+  await simpleDialog.getByLabel("Description").fill("E2E Create Date Switch");
+  await simpleDialog.getByRole("combobox", { name: "Counter account" }).click();
+  await page
+    .getByRole("option", {
+      name: accountOptionNameRegex(seeded.expenseAccount.name),
+    })
+    .first()
+    .click();
+  await simpleDialog.getByLabel("Amount").fill("22");
+
+  await simpleDialog
+    .getByRole("button", { name: "Switch to split editor" })
+    .click();
+
+  const splitDialog = splitCreateDialog(page);
+  await expect(splitDialog).toBeVisible();
+  await expect(splitDialog.getByLabel("Description")).toHaveValue(
+    "E2E Create Date Switch",
+  );
+
+  await splitDialog.getByLabel("Date").fill("07.01.2026");
+
+  const splitRow0 = splitDialog
+    .locator('.ag-center-cols-container .ag-row[row-index="0"]')
+    .first();
+  await expect(agGridCellByColId(splitRow0, "date")).toContainText(
+    "07.01.2026",
+  );
+
+  await splitDialog.getByRole("button", { name: "Create" }).click();
+  await expect(agGridRowByText(page, "E2E Create Date Switch")).toBeVisible();
+});
+
 test("create security simple transaction preserves account metadata", async ({
   page,
 }) => {

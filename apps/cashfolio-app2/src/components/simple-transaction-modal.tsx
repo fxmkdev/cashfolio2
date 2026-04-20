@@ -17,7 +17,11 @@ import {
   isIncomeAccount,
   isOpeningBalancesAccount,
 } from "../shared/account-utils";
-import { formatUtcDate, startOfUtcDay } from "../shared/date";
+import {
+  formatUtcDate,
+  normalizeDateInputValue,
+  startOfUtcDay,
+} from "../shared/date";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
 import type { AccountOption } from "./edit-transaction-modal";
@@ -34,7 +38,7 @@ export type SimpleTransactionInitialValues = {
 };
 
 export type SimpleTransactionDraftValues = {
-  date: Date | null;
+  date: Date | string | null;
   description: string;
   counterAccountId: string;
   amount: string | number | undefined;
@@ -99,12 +103,14 @@ export function SimpleTransactionModal({
     },
     validate: {
       date: (value, values) => {
-        if (!value) return "Date is required";
-        if (isNaN(value.getTime())) return "Date is invalid";
-        if (startOfUtcDay(value) < accountBookStartDay) {
+        const date = normalizeDateInputValue(value);
+        if (!date) {
+          return value ? "Date is invalid" : "Date is required";
+        }
+        if (startOfUtcDay(date) < accountBookStartDay) {
           return `Date cannot be before account book start date (${accountBookStartDateLabel}).`;
         }
-        if (isAfter(startOfDay(value), today)) {
+        if (isAfter(startOfDay(date), today)) {
           return "Date cannot be in the future";
         }
         return null;
@@ -172,7 +178,7 @@ export function SimpleTransactionModal({
         form.onSubmit(
           (values) =>
             runSubmit(async () => {
-              const date = values.date ?? today;
+              const date = normalizeDateInputValue(values.date) ?? today;
               await onSubmit({
                 date: date.toISOString(),
                 description: values.description,
@@ -275,7 +281,7 @@ export function SimpleTransactionModal({
               disabled={isSubmitting}
               onClick={() =>
                 onSwitchToSplit({
-                  date: form.values.date ?? null,
+                  date: normalizeDateInputValue(form.values.date),
                   description: form.values.description,
                   counterAccountId: form.values.counterAccountId,
                   amount: form.values.amount,
