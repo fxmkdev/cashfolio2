@@ -198,7 +198,7 @@ export function useLedgerColumnDefs(args: {
                     : "Edit"
                 }
               >
-                <span>
+                <span style={{ display: "inline-flex" }}>
                   <ActionIcon
                     variant="subtle"
                     size="sm"
@@ -220,7 +220,7 @@ export function useLedgerColumnDefs(args: {
                     : "Rebook"
                 }
               >
-                <span>
+                <span style={{ display: "inline-flex" }}>
                   <ActionIcon
                     variant="subtle"
                     size="sm"
