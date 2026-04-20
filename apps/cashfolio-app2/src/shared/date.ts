@@ -1,4 +1,4 @@
-import { format, parse, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
 
 export function startOfUtcDay(date: Date): Date {
   return new Date(
@@ -50,41 +50,44 @@ export function normalizeDateInputValue(
   const trimmed = value.trim();
   if (!trimmed) return null;
 
-  const acceptedFormats: Array<{
-    matches: (input: string) => boolean;
-    parse: (input: string) => Date;
-    normalize?: (parsed: Date) => string;
-  }> = [
-    {
-      matches: (input) => /^\d{2}\.\d{2}\.\d{4}$/.test(input),
-      parse: (input) => parse(input, "dd.MM.yyyy", new Date()),
-      normalize: (parsed) => format(parsed, "dd.MM.yyyy"),
-    },
-    {
-      matches: (input) => /^\d{4}-\d{2}-\d{2}$/.test(input),
-      parse: (input) => parse(input, "yyyy-MM-dd", new Date()),
-      normalize: (parsed) => format(parsed, "yyyy-MM-dd"),
-    },
-    {
-      matches: (input) =>
-        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(?:\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/.test(
-          input,
-        ),
-      parse: (input) => parseISO(input),
-    },
-  ];
+  const swissDateMatch = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(trimmed);
+  if (swissDateMatch) {
+    const day = Number(swissDateMatch[1]);
+    const month = Number(swissDateMatch[2]);
+    const year = Number(swissDateMatch[3]);
+    return createUtcDateFromParts({ year, month, day });
+  }
 
-  for (const format of acceptedFormats) {
-    if (!format.matches(trimmed)) continue;
+  const isoDateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  if (isoDateMatch) {
+    const year = Number(isoDateMatch[1]);
+    const month = Number(isoDateMatch[2]);
+    const day = Number(isoDateMatch[3]);
+    return createUtcDateFromParts({ year, month, day });
+  }
 
-    const parsed = format.parse(trimmed);
-    if (!isNaN(parsed.getTime())) {
-      if (format.normalize && format.normalize(parsed) !== trimmed) {
-        return null;
-      }
-      return parsed;
-    }
+  if (
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(?:\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/.test(
+      trimmed,
+    )
+  ) {
+    const parsed = parseISO(trimmed);
+    return isNaN(parsed.getTime()) ? null : parsed;
   }
 
   return null;
+}
+
+function createUtcDateFromParts(args: {
+  year: number;
+  month: number;
+  day: number;
+}): Date | null {
+  const result = new Date(Date.UTC(args.year, args.month - 1, args.day));
+  const isExactMatch =
+    result.getUTCFullYear() === args.year &&
+    result.getUTCMonth() === args.month - 1 &&
+    result.getUTCDate() === args.day;
+
+  return isExactMatch ? result : null;
 }
