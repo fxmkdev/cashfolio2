@@ -188,4 +188,5 @@ model Booking {
 
   @@id([id, accountBookId])
   @@index([accountBookId, accountId])
+  @@index([accountBookId, date, transactionId])
 }
