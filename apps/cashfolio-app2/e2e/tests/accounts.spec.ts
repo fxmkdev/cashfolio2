@@ -16,6 +16,7 @@ import {
   seedAssetAccountWithMissingReferenceBalance,
   seedNonZeroConvertibleArchivedAndLiabilityBalances,
   seedNonZeroConvertibleAssetBalances,
+  seedStraddlingTransferTransaction,
   seedThreeBookingSplitTransaction,
   type SeededData,
 } from "../support/db";
@@ -161,6 +162,35 @@ async function seedPeriodPageSessionState(args: {
     },
     { scriptKey: key, scriptState: args.state },
   );
+}
+
+async function parseEndOfPeriodStatAmount(page: Page, label: string) {
+  const endOfPeriodSection = page
+    .locator(
+      "xpath=//div[.//*[normalize-space()='As of period end (last day)']]",
+    )
+    .first();
+  await expect(endOfPeriodSection).toBeVisible();
+
+  const card = endOfPeriodSection
+    .locator(
+      `xpath=.//div[contains(@class,"mantine-Card-root")][.//*[normalize-space()="${label}"]]`,
+    )
+    .first();
+  await expect(card).toBeVisible();
+
+  const valueText = (await card.locator("p").nth(1).innerText()).trim();
+  const numericMatch = valueText.match(/-?\d[\d'’]*(?:[.,]\d+)?/);
+  if (!numericMatch) {
+    throw new Error(`Could not parse stat amount from "${valueText}"`);
+  }
+
+  const parsedMagnitude = Number(
+    numericMatch[0].replace(/[’']/g, "").replace(",", "."),
+  );
+  const isNegative = valueText.includes("-") || valueText.includes("−");
+
+  return isNegative ? -Math.abs(parsedMagnitude) : parsedMagnitude;
 }
 
 test("accounts is default account-book route and links to period", async ({
@@ -512,40 +542,57 @@ test("period page shows KPI waterfall and updated income/expenses wording", asyn
     ),
   ).toBeVisible();
 
-  const endOfPeriodSection = page
-    .locator(
-      "xpath=//div[.//*[normalize-space()='As of period end (last day)']]",
-    )
-    .first();
-  await expect(endOfPeriodSection).toBeVisible();
-
-  const parseStatCardAmount = async (label: string) => {
-    const card = endOfPeriodSection
-      .locator(
-        `xpath=.//div[contains(@class,"mantine-Card-root")][.//*[normalize-space()="${label}"]]`,
-      )
-      .first();
-    await expect(card).toBeVisible();
-
-    const valueText = (await card.locator("p").nth(1).innerText()).trim();
-    const numericMatch = valueText.match(/-?\d[\d'’]*(?:[.,]\d+)?/);
-    if (!numericMatch) {
-      throw new Error(`Could not parse stat amount from "${valueText}"`);
-    }
-
-    const parsedMagnitude = Number(
-      numericMatch[0].replace(/[’']/g, "").replace(",", "."),
-    );
-    const isNegative = valueText.includes("-") || valueText.includes("−");
-
-    return isNegative ? -Math.abs(parsedMagnitude) : parsedMagnitude;
-  };
-
-  const netWorth = await parseStatCardAmount("Net Worth");
-  const assets = await parseStatCardAmount("Assets");
-  const liabilities = await parseStatCardAmount("Liabilities");
+  const netWorth = await parseEndOfPeriodStatAmount(page, "Net Worth");
+  const assets = await parseEndOfPeriodStatAmount(page, "Assets");
+  const liabilities = await parseEndOfPeriodStatAmount(page, "Liabilities");
 
   expect(Math.abs(netWorth - (assets - liabilities))).toBeLessThan(0.01);
+});
+
+test("period page includes transfer-clearing funds in stats and allocation", async ({
+  page,
+}) => {
+  const period = "2026-02";
+
+  await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
+  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+
+  const assetsBefore = await parseEndOfPeriodStatAmount(page, "Assets");
+  const liabilitiesBefore = await parseEndOfPeriodStatAmount(
+    page,
+    "Liabilities",
+  );
+  const netWorthBefore = await parseEndOfPeriodStatAmount(page, "Net Worth");
+
+  await seedStraddlingTransferTransaction({
+    accountBookId: seeded.accountBookId,
+    sourceAccountId: seeded.cashAccount.id,
+    destinationAccountId: seeded.savingsAccount.id,
+    amount: 123.45,
+  });
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+
+  const assetsAfter = await parseEndOfPeriodStatAmount(page, "Assets");
+  const liabilitiesAfter = await parseEndOfPeriodStatAmount(
+    page,
+    "Liabilities",
+  );
+  const netWorthAfter = await parseEndOfPeriodStatAmount(page, "Net Worth");
+
+  expect(Math.abs(assetsAfter - assetsBefore)).toBeLessThan(0.01);
+  expect(Math.abs(liabilitiesAfter - liabilitiesBefore)).toBeLessThan(0.01);
+  expect(Math.abs(netWorthAfter - netWorthBefore)).toBeLessThan(0.01);
+
+  const allocationChartTypeControl = page.getByRole("radiogroup", {
+    name: "Allocation chart type",
+  });
+  await selectSegmentedControlOption(allocationChartTypeControl, "Table");
+
+  const allocationTable = page.getByTestId("period-allocation-breakdown-table");
+  await expect(allocationTable).toBeVisible();
+  await expect(allocationTable).toContainText("Transfer Clearing");
 });
 
 test("period allocation shows partial-data warning when valuation is missing", async ({

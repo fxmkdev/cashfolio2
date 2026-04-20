@@ -79,6 +79,7 @@ describe("period overview response", () => {
       bookingsCount: 3,
       convertedBookingsCount: 3,
       skippedBookingsCount: 0,
+      transferClearingBalance: 0,
     });
 
     expect(response.stats).toMatchObject({
@@ -170,6 +171,7 @@ describe("period overview response", () => {
       bookingsCount: 5,
       convertedBookingsCount: 5,
       skippedBookingsCount: 0,
+      transferClearingBalance: 0,
     });
 
     expect(response.stats).toMatchObject({
@@ -186,5 +188,77 @@ describe("period overview response", () => {
     expect(response.liabilityBreakdown.totalAmount).toBe(40);
     expect(response.incomeBreakdown.totalAmount).toBe(120);
     expect(response.expenseBreakdown.totalAmount).toBe(20);
+  });
+
+  it("adds transfer clearing as a top-level asset account and adjusts stats", () => {
+    const response = buildPeriodOverviewResponse({
+      selection: createSelection(),
+      minPeriodDate: new Date("2025-01-01T00:00:00.000Z"),
+      currentDay: new Date("2026-02-01T00:00:00.000Z"),
+      referenceCurrency: "CHF",
+      groupById: new Map(),
+      assetLiabilityAccounts: [],
+      equityAggregation: createPeriodOverviewEquityAggregation(),
+      transactionGainLoss: 0,
+      holdingGainLoss: 0,
+      isBeforeAccountBookStart: false,
+      endOfPeriodBalanceStats: {
+        assets: 10,
+        liabilities: 4,
+        netWorth: 6,
+        convertedBalanceByAccountId: new Map(),
+      },
+      bookingsCount: 0,
+      convertedBookingsCount: 0,
+      skippedBookingsCount: 0,
+      transferClearingBalance: 5,
+    });
+
+    expect(response.stats.endOfPeriodAssets).toBe(15);
+    expect(response.stats.endOfPeriodLiabilities).toBe(4);
+    expect(response.stats.endOfPeriodNetWorth).toBe(11);
+    expect(response.assetBreakdown.items).toEqual([
+      expect.objectContaining({
+        id: "account:virtual:transfer-clearing",
+        label: "Transfer Clearing",
+        amount: 5,
+      }),
+    ]);
+  });
+
+  it("adds transfer clearing as a top-level liability account and adjusts stats", () => {
+    const response = buildPeriodOverviewResponse({
+      selection: createSelection(),
+      minPeriodDate: new Date("2025-01-01T00:00:00.000Z"),
+      currentDay: new Date("2026-02-01T00:00:00.000Z"),
+      referenceCurrency: "CHF",
+      groupById: new Map(),
+      assetLiabilityAccounts: [],
+      equityAggregation: createPeriodOverviewEquityAggregation(),
+      transactionGainLoss: 0,
+      holdingGainLoss: 0,
+      isBeforeAccountBookStart: false,
+      endOfPeriodBalanceStats: {
+        assets: 10,
+        liabilities: 4,
+        netWorth: 6,
+        convertedBalanceByAccountId: new Map(),
+      },
+      bookingsCount: 0,
+      convertedBookingsCount: 0,
+      skippedBookingsCount: 0,
+      transferClearingBalance: -3,
+    });
+
+    expect(response.stats.endOfPeriodAssets).toBe(10);
+    expect(response.stats.endOfPeriodLiabilities).toBe(7);
+    expect(response.stats.endOfPeriodNetWorth).toBe(3);
+    expect(response.liabilityBreakdown.items).toEqual([
+      expect.objectContaining({
+        id: "account:virtual:transfer-clearing",
+        label: "Transfer Clearing",
+        amount: 3,
+      }),
+    ]);
   });
 });

@@ -352,6 +352,55 @@ export async function seedThreeBookingSplitTransaction(args: {
   });
 }
 
+export async function seedStraddlingTransferTransaction(args: {
+  accountBookId: string;
+  sourceAccountId: string;
+  destinationAccountId: string;
+  amount: number;
+  debitDate?: string;
+  creditDate?: string;
+  description?: string;
+}) {
+  const transactionId = createId();
+  const description = args.description ?? "E2E Transfer Clearing Seed";
+  const debitDate = new Date(args.debitDate ?? "2026-02-28T00:00:00.000Z");
+  const creditDate = new Date(args.creditDate ?? "2026-03-02T00:00:00.000Z");
+
+  await prisma.transaction.create({
+    data: {
+      id: transactionId,
+      accountBookId: args.accountBookId,
+      description,
+      bookings: {
+        create: [
+          {
+            id: createId(),
+            accountId: args.sourceAccountId,
+            date: debitDate,
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: -args.amount,
+            sortOrder: 0,
+          },
+          {
+            id: createId(),
+            accountId: args.destinationAccountId,
+            date: creditDate,
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: args.amount,
+            sortOrder: 1,
+          },
+        ],
+      },
+    },
+  });
+
+  return { description };
+}
+
 export async function seedAssetAccountWithMissingReferenceBalance(args: {
   accountBookId: string;
   counterAccountId: string;

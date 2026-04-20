@@ -71,9 +71,157 @@ export {
 
 const EQUITY_BOOKINGS_PAGE_SIZE = 1_000;
 const TRANSACTIONS_PAGE_SIZE = 200;
-
 function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+async function computeTransferClearingBalance(args: {
+  accountBookId: string;
+  periodEndExclusive: Date;
+  referenceCurrency: string;
+  exchangeRateByKey: Map<string, Promise<number | null>>;
+}): Promise<{
+  balance: number;
+  convertedBookingsCount: number;
+  skippedBookingsCount: number;
+}> {
+  let balance = 0;
+  let convertedBookingsCount = 0;
+  let skippedBookingsCount = 0;
+  let nextTransactionIdCursor: string | undefined;
+
+  while (true) {
+    const transactionsPage = await prisma.transaction.findMany({
+      where: {
+        accountBookId: args.accountBookId,
+        AND: [
+          {
+            bookings: {
+              some: {
+                date: {
+                  lt: args.periodEndExclusive,
+                },
+              },
+            },
+          },
+          {
+            bookings: {
+              some: {
+                date: {
+                  gte: args.periodEndExclusive,
+                },
+              },
+            },
+          },
+        ],
+      },
+      orderBy: { id: "asc" },
+      take: TRANSACTIONS_PAGE_SIZE,
+      ...(nextTransactionIdCursor
+        ? {
+            cursor: {
+              id_accountBookId: {
+                id: nextTransactionIdCursor,
+                accountBookId: args.accountBookId,
+              },
+            },
+            skip: 1,
+          }
+        : {}),
+      select: {
+        id: true,
+        bookings: {
+          select: {
+            date: true,
+            value: true,
+            unit: true,
+            currency: true,
+            cryptocurrency: true,
+            symbol: true,
+            tradeCurrency: true,
+          },
+          orderBy: [{ date: "asc" }, { id: "asc" }],
+        },
+      },
+    });
+
+    if (transactionsPage.length === 0) {
+      break;
+    }
+
+    nextTransactionIdCursor = transactionsPage[transactionsPage.length - 1].id;
+
+    const convertedValuesPerTransaction = await Promise.all(
+      transactionsPage.map((transaction) =>
+        Promise.all(
+          transaction.bookings.map((booking) =>
+            convertBookingValueToReference({
+              value: Number(booking.value),
+              unit: booking.unit,
+              currency: booking.currency,
+              cryptocurrency: booking.cryptocurrency,
+              symbol: booking.symbol,
+              tradeCurrency: booking.tradeCurrency,
+              date: booking.date,
+              referenceCurrency: args.referenceCurrency,
+              exchangeRateByKey: args.exchangeRateByKey,
+            }),
+          ),
+        ),
+      ),
+    );
+
+    for (
+      let transactionIndex = 0;
+      transactionIndex < transactionsPage.length;
+      transactionIndex += 1
+    ) {
+      const transaction = transactionsPage[transactionIndex]!;
+      const convertedValues = convertedValuesPerTransaction[transactionIndex]!;
+      const nonNullConvertedValues = convertedValues.filter(
+        (convertedValue): convertedValue is number => convertedValue != null,
+      );
+      const failedConversionsCount =
+        convertedValues.length - nonNullConvertedValues.length;
+
+      if (failedConversionsCount > 0) {
+        skippedBookingsCount += failedConversionsCount;
+        continue;
+      }
+
+      convertedBookingsCount += convertedValues.length;
+
+      let convertedTransactionTotal = 0;
+      let postPeriodEndConvertedTotal = 0;
+
+      for (
+        let bookingIndex = 0;
+        bookingIndex < transaction.bookings.length;
+        bookingIndex += 1
+      ) {
+        const booking = transaction.bookings[bookingIndex]!;
+        const convertedValue = convertedValues[bookingIndex]!;
+        convertedTransactionTotal += convertedValue;
+
+        if (booking.date >= args.periodEndExclusive) {
+          postPeriodEndConvertedTotal += convertedValue;
+        }
+      }
+
+      const completionValue = -convertedTransactionTotal;
+      balance += postPeriodEndConvertedTotal + completionValue;
+    }
+
+    if (transactionsPage.length < TRANSACTIONS_PAGE_SIZE) {
+      break;
+    }
+  }
+
+  return {
+    balance,
+    convertedBookingsCount,
+    skippedBookingsCount,
+  };
 }
 
 export const getPeriodOverview = createServerFn({
@@ -145,9 +293,15 @@ export const getPeriodOverview = createServerFn({
     const initialHoldingDate = addUtcDays(queryStart, -1);
 
     const groupById = new Map(
-      allAccountGroups.map((group) => [group.id, group]),
+      allAccountGroups.map((group) => [
+        group.id,
+        {
+          id: group.id,
+          name: group.name,
+          parentGroupId: group.parentGroupId,
+        },
+      ]),
     );
-
     const exchangeRateByKey = new Map<string, Promise<number | null>>();
     const assetLiabilityAccountIds = assetLiabilityAccounts.map(
       (account) => account.id,
@@ -176,6 +330,7 @@ export const getPeriodOverview = createServerFn({
     let nextBookingIdCursor: string | undefined;
     let transactionGainLoss = 0;
     let holdingGainLoss = 0;
+    let transferClearingBalance = 0;
 
     if (!isBeforeAccountBookStart) {
       while (true) {
@@ -391,6 +546,19 @@ export const getPeriodOverview = createServerFn({
         }
       }
 
+      const transferClearingBalanceResult =
+        await computeTransferClearingBalance({
+          accountBookId: data.accountBookId,
+          periodEndExclusive: queryEndExclusive,
+          referenceCurrency,
+          exchangeRateByKey,
+        });
+      transferClearingBalance = transferClearingBalanceResult.balance;
+      convertedBookingsCount +=
+        transferClearingBalanceResult.convertedBookingsCount;
+      skippedBookingsCount +=
+        transferClearingBalanceResult.skippedBookingsCount;
+
       const holdingAccountIds = holdingAccountsResolved.map(
         (account) => account.id,
       );
@@ -516,5 +684,6 @@ export const getPeriodOverview = createServerFn({
       bookingsCount,
       convertedBookingsCount,
       skippedBookingsCount,
+      transferClearingBalance,
     });
   });

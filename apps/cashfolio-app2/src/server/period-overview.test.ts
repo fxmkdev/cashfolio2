@@ -66,6 +66,22 @@ vi.mock("./period-conversion", () => ({
 
 import { DEFAULT_PERIOD_VALUE, getPeriodOverview } from "./period";
 
+type BreakdownNode = {
+  label: string;
+  children: BreakdownNode[];
+};
+
+function getBreakdownLabels(nodes: BreakdownNode[]): string[] {
+  const labels: string[] = [];
+
+  for (const node of nodes) {
+    labels.push(node.label);
+    labels.push(...getBreakdownLabels(node.children));
+  }
+
+  return labels;
+}
+
 describe("getPeriodOverview", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -285,54 +301,56 @@ describe("getPeriodOverview", () => {
         },
       },
     ]);
-    prisma.transaction.findMany.mockResolvedValue([
-      {
-        id: "tx-skip",
-        bookings: [
-          {
-            date: new Date("2026-01-15T00:00:00.000Z"),
-            value: 5,
-            unit: Unit.CURRENCY,
-            currency: "CHF",
-            cryptocurrency: null,
-            symbol: null,
-            tradeCurrency: null,
-          },
-          {
-            date: new Date("2026-01-15T00:00:00.000Z"),
-            value: -4,
-            unit: Unit.CURRENCY,
-            currency: "USD",
-            cryptocurrency: null,
-            symbol: null,
-            tradeCurrency: null,
-          },
-        ],
-      },
-      {
-        id: "tx-convert",
-        bookings: [
-          {
-            date: new Date("2026-01-16T00:00:00.000Z"),
-            value: 6,
-            unit: Unit.CURRENCY,
-            currency: "CHF",
-            cryptocurrency: null,
-            symbol: null,
-            tradeCurrency: null,
-          },
-          {
-            date: new Date("2026-01-16T00:00:00.000Z"),
-            value: -5,
-            unit: Unit.CURRENCY,
-            currency: "USD",
-            cryptocurrency: null,
-            symbol: null,
-            tradeCurrency: null,
-          },
-        ],
-      },
-    ]);
+    prisma.transaction.findMany
+      .mockResolvedValueOnce([
+        {
+          id: "tx-skip",
+          bookings: [
+            {
+              date: new Date("2026-01-15T00:00:00.000Z"),
+              value: 5,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+            },
+            {
+              date: new Date("2026-01-15T00:00:00.000Z"),
+              value: -4,
+              unit: Unit.CURRENCY,
+              currency: "USD",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+            },
+          ],
+        },
+        {
+          id: "tx-convert",
+          bookings: [
+            {
+              date: new Date("2026-01-16T00:00:00.000Z"),
+              value: 6,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+            },
+            {
+              date: new Date("2026-01-16T00:00:00.000Z"),
+              value: -5,
+              unit: Unit.CURRENCY,
+              currency: "USD",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+            },
+          ],
+        },
+      ])
+      .mockResolvedValueOnce([]);
 
     convertBookingValueToReference.mockImplementation(async ({ value }) => {
       if (value === 60 || value === -4) {
@@ -377,5 +395,156 @@ describe("getPeriodOverview", () => {
     });
 
     expect(result.selectedPeriodValue).toBe(DEFAULT_PERIOD_VALUE);
+  });
+
+  it("adds positive transfer-clearing balances to end-of-period assets and allocation", async () => {
+    vi.setSystemTime(new Date("2026-03-10T12:00:00.000Z"));
+    prisma.transaction.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: "transfer-positive",
+          bookings: [
+            {
+              date: new Date("2026-02-28T00:00:00.000Z"),
+              value: -200,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+            },
+            {
+              date: new Date("2026-03-01T00:00:00.000Z"),
+              value: 200,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+            },
+          ],
+        },
+      ]);
+
+    const result = await getPeriodOverview({
+      data: { accountBookId: "book-transfer-positive", period: "2026-02" },
+    });
+
+    expect(result.stats.endOfPeriodAssets).toBe(200);
+    expect(result.stats.endOfPeriodLiabilities).toBe(0);
+    expect(result.stats.endOfPeriodNetWorth).toBe(200);
+    expect(result.assetBreakdown.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "Transfer Clearing",
+          amount: 200,
+        }),
+      ]),
+    );
+    expect(getBreakdownLabels(result.assetBreakdown.hierarchy)).toContain(
+      "Transfer Clearing",
+    );
+  });
+
+  it("adds negative transfer-clearing balances to end-of-period liabilities and allocation", async () => {
+    vi.setSystemTime(new Date("2026-03-10T12:00:00.000Z"));
+    prisma.transaction.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: "transfer-negative",
+          bookings: [
+            {
+              date: new Date("2026-02-28T00:00:00.000Z"),
+              value: 150,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+            },
+            {
+              date: new Date("2026-03-01T00:00:00.000Z"),
+              value: -150,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+            },
+          ],
+        },
+      ]);
+
+    const result = await getPeriodOverview({
+      data: { accountBookId: "book-transfer-negative", period: "2026-02" },
+    });
+
+    expect(result.stats.endOfPeriodAssets).toBe(0);
+    expect(result.stats.endOfPeriodLiabilities).toBe(150);
+    expect(result.stats.endOfPeriodNetWorth).toBe(-150);
+    expect(result.liabilityBreakdown.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "Transfer Clearing",
+          amount: 150,
+        }),
+      ]),
+    );
+    expect(getBreakdownLabels(result.liabilityBreakdown.hierarchy)).toContain(
+      "Transfer Clearing",
+    );
+  });
+
+  it("applies legacy completion logic for multi-unit transfer-clearing transactions", async () => {
+    vi.setSystemTime(new Date("2026-03-10T12:00:00.000Z"));
+    convertBookingValueToReference.mockImplementation(async ({ value }) => {
+      if (value === 1) {
+        return 250;
+      }
+      return value;
+    });
+    prisma.transaction.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: "transfer-multi-unit",
+          bookings: [
+            {
+              date: new Date("2026-02-28T00:00:00.000Z"),
+              value: -200,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+            },
+            {
+              date: new Date("2026-03-01T00:00:00.000Z"),
+              value: 1,
+              unit: Unit.CRYPTOCURRENCY,
+              currency: null,
+              cryptocurrency: "BTC",
+              symbol: null,
+              tradeCurrency: null,
+            },
+          ],
+        },
+      ]);
+
+    const result = await getPeriodOverview({
+      data: { accountBookId: "book-transfer-multi-unit", period: "2026-02" },
+    });
+
+    expect(result.stats.endOfPeriodAssets).toBe(200);
+    expect(result.assetBreakdown.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "Transfer Clearing",
+          amount: 200,
+        }),
+      ]),
+    );
   });
 });

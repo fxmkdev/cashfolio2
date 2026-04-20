@@ -25,6 +25,9 @@ type PeriodOverviewEndOfPeriodStats = {
   convertedBalanceByAccountId: Map<string, number | null>;
 };
 
+const TRANSFER_CLEARING_ACCOUNT_ID = "virtual:transfer-clearing";
+const TRANSFER_CLEARING_ACCOUNT_NAME = "Transfer Clearing";
+
 export function buildPeriodOverviewResponse(args: {
   selection: NormalizedPeriodSelection;
   minPeriodDate: Date;
@@ -40,6 +43,7 @@ export function buildPeriodOverviewResponse(args: {
   bookingsCount: number;
   convertedBookingsCount: number;
   skippedBookingsCount: number;
+  transferClearingBalance: number;
 }) {
   const { income, expenses, explicitGainLoss } = args.equityAggregation;
   const gainsLosses = args.isBeforeAccountBookStart
@@ -51,12 +55,26 @@ export function buildPeriodOverviewResponse(args: {
   const roundedGainsLosses = round2(gainsLosses);
   const roundedSavings = round2(roundedIncome - roundedExpenses);
   const roundedTotalReturn = round2(roundedSavings + roundedGainsLosses);
-  const roundedEndOfPeriodAssets = round2(args.endOfPeriodBalanceStats.assets);
+  const transferClearingAssetAmount =
+    args.transferClearingBalance > 0 ? args.transferClearingBalance : 0;
+  const transferClearingLiabilityAmount =
+    args.transferClearingBalance < 0 ? -args.transferClearingBalance : 0;
+  const endOfPeriodAssetsWithTransferClearing =
+    args.endOfPeriodBalanceStats.assets + transferClearingAssetAmount;
+  const endOfPeriodLiabilitiesWithTransferClearing =
+    args.endOfPeriodBalanceStats.liabilities + transferClearingLiabilityAmount;
+  const endOfPeriodNetWorthWithTransferClearing =
+    endOfPeriodAssetsWithTransferClearing -
+    endOfPeriodLiabilitiesWithTransferClearing;
+
+  const roundedEndOfPeriodAssets = round2(
+    endOfPeriodAssetsWithTransferClearing,
+  );
   const roundedEndOfPeriodLiabilities = round2(
-    args.endOfPeriodBalanceStats.liabilities,
+    endOfPeriodLiabilitiesWithTransferClearing,
   );
   const roundedEndOfPeriodNetWorth = round2(
-    args.endOfPeriodBalanceStats.netWorth,
+    endOfPeriodNetWorthWithTransferClearing,
   );
 
   const convertedPeriodEndBalances = args.assetLiabilityAccounts.map(
@@ -71,6 +89,23 @@ export function buildPeriodOverviewResponse(args: {
         ) ?? null,
     }),
   );
+  if (args.transferClearingBalance > 0) {
+    convertedPeriodEndBalances.push({
+      accountId: TRANSFER_CLEARING_ACCOUNT_ID,
+      accountName: TRANSFER_CLEARING_ACCOUNT_NAME,
+      groupId: null,
+      accountType: AccountType.ASSET,
+      convertedBalanceInReferenceCurrency: args.transferClearingBalance,
+    });
+  } else if (args.transferClearingBalance < 0) {
+    convertedPeriodEndBalances.push({
+      accountId: TRANSFER_CLEARING_ACCOUNT_ID,
+      accountName: TRANSFER_CLEARING_ACCOUNT_NAME,
+      groupId: null,
+      accountType: AccountType.LIABILITY,
+      convertedBalanceInReferenceCurrency: args.transferClearingBalance,
+    });
+  }
   const assetBreakdown = buildPeriodEndAllocationBreakdown({
     items: convertedPeriodEndBalances.filter(
       (
