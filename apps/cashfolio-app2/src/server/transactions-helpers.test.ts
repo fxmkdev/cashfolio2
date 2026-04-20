@@ -7,6 +7,7 @@ import {
   validateAccountTypeBookingsWithAccounts,
   type AccountTypeMeta,
 } from "./transactions-helpers";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
 
 function createAccountMap(
   overrides?: Partial<Record<string, AccountTypeMeta>>,
@@ -59,6 +60,9 @@ describe("validateAccountTypeBookingsWithAccounts", () => {
           },
         ],
         createAccountMap(),
+        {
+          accountBookStartDate: new Date("2026-01-03T00:00:00.000Z"),
+        },
       ),
     ).toThrow("Income accounts cannot have debit entries.");
 
@@ -72,18 +76,21 @@ describe("validateAccountTypeBookingsWithAccounts", () => {
           },
         ],
         createAccountMap(),
+        {
+          accountBookStartDate: new Date("2026-01-03T00:00:00.000Z"),
+        },
       ),
     ).toThrow("Expense accounts cannot have credit entries.");
   });
 
-  test("rejects opening-balance bookings on non-opening day", () => {
+  test("rejects opening-balance bookings through transaction APIs", () => {
     expect(() =>
       validateAccountTypeBookingsWithAccounts(
         [
           {
             accountId: "opening",
             value: -100,
-            date: "2026-01-02T00:00:00.000Z",
+            date: "2026-01-03T00:00:00.000Z",
           },
         ],
         createAccountMap(),
@@ -91,22 +98,35 @@ describe("validateAccountTypeBookingsWithAccounts", () => {
           accountBookStartDate: new Date("2026-01-04T16:00:00.000Z"),
         },
       ),
-    ).toThrow("Opening Balances bookings must be dated 2026-01-03.");
+    ).toThrow(OPENING_BALANCES_MANAGEMENT_MESSAGE);
   });
 
-  test("accepts opening-balance bookings on account-book start-date minus one day", () => {
+  test("rejects non-opening bookings before account-book start date", () => {
     expect(() =>
       validateAccountTypeBookingsWithAccounts(
         [
           {
-            accountId: "opening",
+            accountId: "income",
             value: -100,
             date: "2026-01-03T08:00:00.000Z",
           },
+        ],
+        createAccountMap(),
+        {
+          accountBookStartDate: new Date("2026-01-04T16:00:00.000Z"),
+        },
+      ),
+    ).toThrow("Date cannot be before account book start date (2026-01-04).");
+  });
+
+  test("accepts non-opening bookings on account-book start date", () => {
+    expect(() =>
+      validateAccountTypeBookingsWithAccounts(
+        [
           {
-            accountId: "opening",
-            value: 100,
-            date: "2026-01-03T08:00:00.000Z",
+            accountId: "income",
+            value: -100,
+            date: "2026-01-04T08:00:00.000Z",
           },
         ],
         createAccountMap(),

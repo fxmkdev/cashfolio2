@@ -5,6 +5,7 @@ import { isAfter, startOfDay } from "date-fns";
 import { getSimpleTransactionUnitIdentifier } from "../shared/account-utils";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { ensureSameOriginRequestFromServerContext } from "../security/same-origin.server";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
 import { validateRebookBookingTarget } from "./rebook-booking-validation";
 import {
   accountTypeMeta,
@@ -27,6 +28,20 @@ export const updateTransaction = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    const existingOpeningBookingCount = await prisma.booking.count({
+      where: {
+        accountBookId: data.accountBookId,
+        transactionId: data.transactionId,
+        account: {
+          type: AccountType.EQUITY,
+          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+        },
+      },
+    });
+    if (existingOpeningBookingCount > 0) {
+      throw new Error(OPENING_BALANCES_MANAGEMENT_MESSAGE);
+    }
+
     validateCreateTransaction(data);
     await validateAccountTypeBookings(data.bookings, data.accountBookId);
 
@@ -331,6 +346,16 @@ export const rebookBooking = createServerFn({ method: "POST" })
     if (!targetAccount) {
       throw new Error("Target account was not found.");
     }
+    const sourceTransactionOpeningBookingCount = await prisma.booking.count({
+      where: {
+        accountBookId: data.accountBookId,
+        transactionId: booking.transactionId,
+        account: {
+          type: AccountType.EQUITY,
+          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+        },
+      },
+    });
 
     validateRebookBookingTarget({
       booking: {
@@ -345,6 +370,8 @@ export const rebookBooking = createServerFn({ method: "POST" })
       },
       targetAccount,
       accountBookStartDate: accountBook.startDate,
+      sourceTransactionContainsOpeningBalancesBooking:
+        sourceTransactionOpeningBookingCount > 0,
     });
 
     await prisma.booking.update({

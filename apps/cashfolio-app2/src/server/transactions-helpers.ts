@@ -4,18 +4,14 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../.prisma-client/enums";
-import { isAfter, startOfDay } from "date-fns";
+import { isAfter, isBefore, startOfDay } from "date-fns";
 import { getUnitIdentifier } from "../shared/account-utils";
-import {
-  formatUtcDate,
-  getOpeningBalancesBookingDate,
-  isSameUtcDay,
-  startOfUtcDay,
-} from "../shared/date";
+import { formatUtcDate, startOfUtcDay } from "../shared/date";
 import {
   getBookingUnitFields,
   type BookingUnitFieldsSource,
 } from "../shared/booking-unit-fields";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
 import type { CreateTransactionInput } from "./transactions-types";
 
 export function validateCreateTransaction(input: CreateTransactionInput) {
@@ -123,14 +119,12 @@ export function validateAccountTypeBookingsWithAccounts(
     accountBookStartDate?: Date;
   },
 ) {
-  const openingBalancesBookingDate =
+  const accountBookStartDate =
     options?.accountBookStartDate != null
-      ? getOpeningBalancesBookingDate(options.accountBookStartDate)
+      ? startOfUtcDay(options.accountBookStartDate)
       : null;
-  const openingBalancesBookingDateLabel =
-    openingBalancesBookingDate != null
-      ? formatUtcDate(openingBalancesBookingDate)
-      : null;
+  const accountBookStartDateLabel =
+    accountBookStartDate != null ? formatUtcDate(accountBookStartDate) : null;
 
   const errors: string[] = [];
   for (let i = 0; i < bookings.length; i++) {
@@ -158,25 +152,25 @@ export function validateAccountTypeBookingsWithAccounts(
       account.type === AccountType.EQUITY &&
       account.equityAccountSubtype === EquityAccountSubtype.OPENING_BALANCES
     ) {
-      if (!openingBalancesBookingDate || !openingBalancesBookingDateLabel) {
-        errors.push(
-          `Booking ${i}: Account book start date is required for opening-balance validation.`,
-        );
-        continue;
-      }
+      errors.push(`Booking ${i}: ${OPENING_BALANCES_MANAGEMENT_MESSAGE}`);
+      continue;
+    }
 
-      const bookingDate = new Date(b.date);
-      if (isNaN(bookingDate.getTime())) {
-        errors.push(`Booking ${i}: invalid date.`);
-        continue;
-      }
+    if (!accountBookStartDate || !accountBookStartDateLabel) {
+      continue;
+    }
 
-      const bookingDay = startOfUtcDay(bookingDate);
-      if (!isSameUtcDay(bookingDay, openingBalancesBookingDate)) {
-        errors.push(
-          `Booking ${i}: Opening Balances bookings must be dated ${openingBalancesBookingDateLabel}.`,
-        );
-      }
+    const bookingDate = new Date(b.date);
+    if (isNaN(bookingDate.getTime())) {
+      errors.push(`Booking ${i}: invalid date.`);
+      continue;
+    }
+
+    const bookingDay = startOfUtcDay(bookingDate);
+    if (isBefore(bookingDay, accountBookStartDate)) {
+      errors.push(
+        `Booking ${i}: Date cannot be before account book start date (${accountBookStartDateLabel}).`,
+      );
     }
   }
 

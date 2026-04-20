@@ -375,8 +375,8 @@ export function useLedgerPageController(args: {
   });
 
   const unitLabel = getUnitLabel(account);
-  const openingBalancesBookingDate = new Date(
-    args.loaderData.periodBounds.openingBalancesBookingDate,
+  const accountBookStartDate = new Date(
+    args.loaderData.periodBounds.minBookingDate,
   );
 
   const backTab = (
@@ -392,7 +392,7 @@ export function useLedgerPageController(args: {
     columnDefs,
     currentAccountLabel,
     unitLabel,
-    openingBalancesBookingDate,
+    accountBookStartDate,
     simpleTransactionDisabledReason,
     simpleModalOpened,
     splitModalOpened: modalOpened,

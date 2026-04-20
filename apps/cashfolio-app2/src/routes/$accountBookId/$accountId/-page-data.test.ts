@@ -49,6 +49,7 @@ function createLedgerBookings(
     transactionId: `transaction-${index + 1}`,
     transactionDescription: "",
     counterpartyAccounts: [],
+    isOpeningBalancesTransaction: false,
   }));
 }
 

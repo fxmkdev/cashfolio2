@@ -13,6 +13,7 @@ import {
 } from "@/components/column-types";
 import { LinkAnchor } from "@/components/link-anchor";
 import type { LedgerRow } from "./-page-types";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/opening-balances";
 
 export function useLedgerColumnDefs(args: {
   accountBookId: string;
@@ -186,41 +187,65 @@ export function useLedgerColumnDefs(args: {
         cellClass: "actions-cell",
         cellRenderer: ({ data }: ICellRendererParams<LedgerRow>) => {
           if (!data) return null;
+          const isOpeningBalancesTransaction =
+            data.isOpeningBalancesTransaction;
           return (
             <Group gap={4} wrap="nowrap" h="100%" align="center">
-              <Tooltip label="Edit">
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  onClick={() => onEditClick(data.transactionId)}
-                  aria-label="Edit"
-                >
-                  <IconPencil size={16} />
-                </ActionIcon>
+              <Tooltip
+                label={
+                  isOpeningBalancesTransaction
+                    ? OPENING_BALANCES_MANAGEMENT_MESSAGE
+                    : "Edit"
+                }
+              >
+                <span>
+                  <ActionIcon
+                    variant="subtle"
+                    size="sm"
+                    disabled={isOpeningBalancesTransaction}
+                    onClick={() => {
+                      if (isOpeningBalancesTransaction) return;
+                      onEditClick(data.transactionId);
+                    }}
+                    aria-label="Edit"
+                  >
+                    <IconPencil size={16} />
+                  </ActionIcon>
+                </span>
               </Tooltip>
-              <Tooltip label="Rebook">
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  color="blue"
-                  onClick={() =>
-                    onRebookClick({
-                      bookingId: data.id,
-                      transactionId: data.transactionId,
-                      bookingValue: data.bookingValue,
-                      bookingUnit: {
-                        unit: data.unit,
-                        currency: data.currency,
-                        cryptocurrency: data.cryptocurrency,
-                        symbol: data.symbol,
-                        tradeCurrency: data.tradeCurrency,
-                      },
-                    })
-                  }
-                  aria-label="Rebook"
-                >
-                  <IconSquareArrowRight size={16} />
-                </ActionIcon>
+              <Tooltip
+                label={
+                  isOpeningBalancesTransaction
+                    ? OPENING_BALANCES_MANAGEMENT_MESSAGE
+                    : "Rebook"
+                }
+              >
+                <span>
+                  <ActionIcon
+                    variant="subtle"
+                    size="sm"
+                    color="blue"
+                    disabled={isOpeningBalancesTransaction}
+                    onClick={() => {
+                      if (isOpeningBalancesTransaction) return;
+                      onRebookClick({
+                        bookingId: data.id,
+                        transactionId: data.transactionId,
+                        bookingValue: data.bookingValue,
+                        bookingUnit: {
+                          unit: data.unit,
+                          currency: data.currency,
+                          cryptocurrency: data.cryptocurrency,
+                          symbol: data.symbol,
+                          tradeCurrency: data.tradeCurrency,
+                        },
+                      });
+                    }}
+                    aria-label="Rebook"
+                  >
+                    <IconSquareArrowRight size={16} />
+                  </ActionIcon>
+                </span>
               </Tooltip>
               <Tooltip label="Delete">
                 <ActionIcon

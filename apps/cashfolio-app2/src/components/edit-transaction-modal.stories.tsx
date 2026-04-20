@@ -19,7 +19,7 @@ const meta = {
   ],
   args: {
     accounts: accountOptions,
-    openingBalancesBookingDate: new Date("2026-01-03T00:00:00.000Z"),
+    accountBookStartDate: new Date("2026-01-04T00:00:00.000Z"),
     currentAccountId: "account-checking",
     onClose: fn(),
     onSubmit: fn(async () => undefined),

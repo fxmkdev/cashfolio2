@@ -95,6 +95,7 @@ describe("createAccountsMutationActions", () => {
       cryptocurrency: undefined,
       symbol: undefined,
       tradeCurrency: undefined,
+      openingBalance: undefined,
     });
 
     expect(api.createAccount).toHaveBeenCalledWith({
@@ -110,6 +111,7 @@ describe("createAccountsMutationActions", () => {
         cryptocurrency: undefined,
         symbol: undefined,
         tradeCurrency: undefined,
+        openingBalance: undefined,
       },
     });
     expect(state.setCreateModalOpened).toHaveBeenCalledWith(false);
@@ -164,6 +166,7 @@ describe("createAccountsMutationActions", () => {
       cryptocurrency: undefined,
       symbol: undefined,
       tradeCurrency: undefined,
+      openingBalance: undefined,
     });
 
     expect(api.updateAccount).not.toHaveBeenCalled();
@@ -199,6 +202,7 @@ describe("createAccountsMutationActions", () => {
         cryptocurrency: undefined,
         symbol: undefined,
         tradeCurrency: undefined,
+        openingBalance: undefined,
       },
     });
     expect(state.setEditModalOpen).toHaveBeenCalledWith(false);

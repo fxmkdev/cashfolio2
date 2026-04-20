@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
+import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { getOpeningBalancesBookingDate, startOfUtcDay } from "../shared/date";
 import {
   getExplicitPeriodDateRange,
@@ -104,13 +105,15 @@ export const getLedgerData = createServerFn({ method: "GET" })
             select: {
               description: true,
               bookings: {
-                where: {
-                  accountId: { not: data.accountId },
-                },
                 orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
                 select: {
                   account: {
-                    select: { id: true, name: true },
+                    select: {
+                      id: true,
+                      name: true,
+                      type: true,
+                      equityAccountSubtype: true,
+                    },
                   },
                 },
               },
@@ -169,9 +172,20 @@ export const getLedgerData = createServerFn({ method: "GET" })
         transactionDescription: b.transaction.description,
         counterpartyAccounts: [
           ...new Map(
-            b.transaction.bookings.map((sb) => [sb.account.id, sb.account]),
+            b.transaction.bookings
+              .filter((sb) => sb.account.id !== data.accountId)
+              .map((sb) => [
+                sb.account.id,
+                { id: sb.account.id, name: sb.account.name },
+              ]),
           ).values(),
         ],
+        isOpeningBalancesTransaction: b.transaction.bookings.some(
+          (sb) =>
+            sb.account.type === AccountType.EQUITY &&
+            sb.account.equityAccountSubtype ===
+              EquityAccountSubtype.OPENING_BALANCES,
+        ),
       })),
     };
   });

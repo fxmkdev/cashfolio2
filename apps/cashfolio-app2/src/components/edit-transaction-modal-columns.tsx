@@ -50,8 +50,9 @@ export function isEditableCell(params: CellClassParams) {
 export function createEditTransactionColumnDefs(args: {
   accounts: AccountOption[];
   isSubmitting: boolean;
+  accountBookStartDate: Date;
 }): ColDef[] {
-  const { accounts, isSubmitting } = args;
+  const { accounts, isSubmitting, accountBookStartDate } = args;
 
   return [
     {
@@ -102,8 +103,12 @@ export function createEditTransactionColumnDefs(args: {
           ? { color: "var(--mantine-color-dimmed)", fontWeight: 400 }
           : { color: "var(--mantine-color-yellow-text)", fontWeight: 600 };
       },
-      cellEditorParams: ({ context }: { context: { startDate?: Date } }) => ({
-        startDate: context.startDate,
+      cellEditorParams: ({
+        context,
+      }: {
+        context: { accountBookStartDate?: Date };
+      }) => ({
+        startDate: context.accountBookStartDate ?? accountBookStartDate,
       }),
     },
     {

@@ -3,16 +3,14 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../.prisma-client/enums";
-import {
-  formatUtcDate,
-  getOpeningBalancesBookingDate,
-  isSameUtcDay,
-} from "../shared/date";
+import { isBefore } from "date-fns";
+import { formatUtcDate, startOfUtcDay } from "../shared/date";
 import {
   getAccountUnitIdentifier,
   getBookingUnitIdentifier,
   isBookingValueCompatibleWithAccountType,
 } from "../shared/account-utils";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
 
 export type RebookBookingValidationInput = {
   accountId: string;
@@ -41,8 +39,14 @@ export function validateRebookBookingTarget(args: {
   booking: RebookBookingValidationInput;
   targetAccount: RebookTargetAccountValidationInput;
   accountBookStartDate?: Date;
+  sourceTransactionContainsOpeningBalancesBooking?: boolean;
 }) {
-  const { booking, targetAccount, accountBookStartDate } = args;
+  const {
+    booking,
+    targetAccount,
+    accountBookStartDate,
+    sourceTransactionContainsOpeningBalancesBooking,
+  } = args;
 
   if (!targetAccount.isActive) {
     throw new Error("Target account must be active.");
@@ -51,6 +55,31 @@ export function validateRebookBookingTarget(args: {
   if (booking.accountId === targetAccount.id) {
     throw new Error(
       "Target account must be different from the current account.",
+    );
+  }
+
+  if (sourceTransactionContainsOpeningBalancesBooking) {
+    throw new Error(OPENING_BALANCES_MANAGEMENT_MESSAGE);
+  }
+
+  if (
+    targetAccount.type === AccountType.EQUITY &&
+    targetAccount.equityAccountSubtype === EquityAccountSubtype.OPENING_BALANCES
+  ) {
+    throw new Error(OPENING_BALANCES_MANAGEMENT_MESSAGE);
+  }
+
+  if (!accountBookStartDate) {
+    throw new Error(
+      "Account book start date is required for date-range validation.",
+    );
+  }
+
+  const bookingDay = startOfUtcDay(booking.date);
+  const accountBookStartDay = startOfUtcDay(accountBookStartDate);
+  if (isBefore(bookingDay, accountBookStartDay)) {
+    throw new Error(
+      `Date cannot be before account book start date (${formatUtcDate(accountBookStartDay)}).`,
     );
   }
 
@@ -83,26 +112,6 @@ export function validateRebookBookingTarget(args: {
       targetAccount.equityAccountSubtype === EquityAccountSubtype.EXPENSE
     ) {
       throw new Error("Expense accounts cannot have credit entries.");
-    }
-  }
-
-  if (
-    targetAccount.type === AccountType.EQUITY &&
-    targetAccount.equityAccountSubtype === EquityAccountSubtype.OPENING_BALANCES
-  ) {
-    if (!accountBookStartDate) {
-      throw new Error(
-        "Account book start date is required for opening-balance validation.",
-      );
-    }
-
-    const openingBalancesBookingDate =
-      getOpeningBalancesBookingDate(accountBookStartDate);
-
-    if (!isSameUtcDay(booking.date, openingBalancesBookingDate)) {
-      throw new Error(
-        `Opening Balances bookings must be dated ${formatUtcDate(openingBalancesBookingDate)}.`,
-      );
     }
   }
 }

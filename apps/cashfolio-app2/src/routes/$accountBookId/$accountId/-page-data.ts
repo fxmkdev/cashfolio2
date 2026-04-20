@@ -122,6 +122,7 @@ export function buildLedgerRows(
         cryptocurrency: booking.cryptocurrency,
         symbol: booking.symbol,
         tradeCurrency: booking.tradeCurrency,
+        isOpeningBalancesTransaction: booking.isOpeningBalancesTransaction,
         debit: negate ? (value < 0 ? -value : null) : value > 0 ? value : null,
         credit: negate ? (value > 0 ? value : null) : value < 0 ? -value : null,
         referenceDebit:

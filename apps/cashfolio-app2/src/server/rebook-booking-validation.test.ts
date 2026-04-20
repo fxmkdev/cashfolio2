@@ -9,6 +9,7 @@ import {
   type RebookBookingValidationInput,
   type RebookTargetAccountValidationInput,
 } from "./rebook-booking-validation";
+import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
 
 function createBooking(
   overrides: Partial<RebookBookingValidationInput> = {},
@@ -49,6 +50,7 @@ describe("validateRebookBookingTarget", () => {
       validateRebookBookingTarget({
         booking: createBooking(),
         targetAccount: createTargetAccount({ isActive: false }),
+        accountBookStartDate: new Date("2026-01-01T00:00:00.000Z"),
       }),
     ).toThrowError("Target account must be active.");
   });
@@ -58,6 +60,7 @@ describe("validateRebookBookingTarget", () => {
       validateRebookBookingTarget({
         booking: createBooking({ currency: "CHF" }),
         targetAccount: createTargetAccount({ currency: "USD" }),
+        accountBookStartDate: new Date("2026-01-01T00:00:00.000Z"),
       }),
     ).toThrowError("Target account must use the same unit as the booking.");
   });
@@ -78,6 +81,7 @@ describe("validateRebookBookingTarget", () => {
           symbol: null,
           tradeCurrency: null,
         }),
+        accountBookStartDate: new Date("2026-01-01T00:00:00.000Z"),
       }),
     ).toThrowError("Source booking unit details are incomplete.");
   });
@@ -92,6 +96,7 @@ describe("validateRebookBookingTarget", () => {
           unit: Unit.CURRENCY,
           currency: "CHF",
         }),
+        accountBookStartDate: new Date("2026-01-01T00:00:00.000Z"),
       }),
     ).toThrowError("Expense accounts cannot have credit entries.");
   });
@@ -111,14 +116,15 @@ describe("validateRebookBookingTarget", () => {
           symbol: "AAPL",
           tradeCurrency: "EUR",
         }),
+        accountBookStartDate: new Date("2026-01-01T00:00:00.000Z"),
       }),
     ).not.toThrow();
   });
 
-  test("rejects rebook to opening-balances account on non-opening day", () => {
+  test("rejects rebook to opening-balances account", () => {
     expect(() =>
       validateRebookBookingTarget({
-        booking: createBooking({ date: new Date("2026-01-02T00:00:00.000Z") }),
+        booking: createBooking({ date: new Date("2026-01-04T00:00:00.000Z") }),
         targetAccount: createTargetAccount({
           type: AccountType.EQUITY,
           equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
@@ -127,21 +133,29 @@ describe("validateRebookBookingTarget", () => {
         }),
         accountBookStartDate: new Date("2026-01-04T12:34:00.000Z"),
       }),
-    ).toThrowError("Opening Balances bookings must be dated 2026-01-03.");
+    ).toThrowError(OPENING_BALANCES_MANAGEMENT_MESSAGE);
   });
 
-  test("accepts rebook to opening-balances account on opening day", () => {
+  test("rejects rebook when source transaction contains opening balances", () => {
     expect(() =>
       validateRebookBookingTarget({
-        booking: createBooking({ date: new Date("2026-01-03T14:00:00.000Z") }),
-        targetAccount: createTargetAccount({
-          type: AccountType.EQUITY,
-          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-          unit: Unit.CURRENCY,
-          currency: "CHF",
-        }),
+        booking: createBooking({ date: new Date("2026-01-04T14:00:00.000Z") }),
+        targetAccount: createTargetAccount({ currency: "CHF" }),
+        accountBookStartDate: new Date("2026-01-04T12:34:00.000Z"),
+        sourceTransactionContainsOpeningBalancesBooking: true,
+      }),
+    ).toThrowError(OPENING_BALANCES_MANAGEMENT_MESSAGE);
+  });
+
+  test("rejects rebook for bookings before account-book start date", () => {
+    expect(() =>
+      validateRebookBookingTarget({
+        booking: createBooking({ date: new Date("2026-01-02T14:00:00.000Z") }),
+        targetAccount: createTargetAccount({ currency: "CHF" }),
         accountBookStartDate: new Date("2026-01-04T12:34:00.000Z"),
       }),
-    ).not.toThrow();
+    ).toThrowError(
+      "Date cannot be before account book start date (2026-01-04).",
+    );
   });
 });

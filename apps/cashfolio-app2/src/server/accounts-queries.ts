@@ -6,6 +6,7 @@ import type {
   Unit,
 } from "../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
+import { getOpeningBalancesBookingDate, startOfUtcDay } from "../shared/date";
 import { createGroupPathResolver } from "./accounts-helpers";
 import {
   type AccountState,
@@ -42,6 +43,8 @@ type ExistingNode = {
   parentId?: string;
   groupId?: string;
 };
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 async function getAccountGroupsInternal(accountBookId: string) {
   const groups = await prisma.accountGroup.findMany({
@@ -183,6 +186,7 @@ async function getAccountTreeDataInternal(args: {
       where: { id: data.accountBookId },
       select: {
         referenceCurrency: true,
+        startDate: true,
         securityHoldingGainLossAccountGroupId: true,
         cryptoHoldingGainLossAccountGroupId: true,
         fxHoldingGainLossAccountGroupId: true,
@@ -235,6 +239,27 @@ async function getAccountTreeDataInternal(args: {
   const rawBalanceByAccountId = new Map(
     accountBalances.map((b) => [b.accountId, Number(b._sum.value ?? 0)]),
   );
+  const openingBalanceDate = startOfUtcDay(
+    getOpeningBalancesBookingDate(accountBook.startDate),
+  );
+  const openingBalanceSums =
+    assetAndLiabilityAccountIds.length > 0
+      ? await prisma.booking.groupBy({
+          by: ["accountId"],
+          where: {
+            accountBookId: data.accountBookId,
+            accountId: { in: assetAndLiabilityAccountIds },
+            date: {
+              gte: openingBalanceDate,
+              lt: new Date(openingBalanceDate.getTime() + ONE_DAY_MS),
+            },
+          },
+          _sum: { value: true },
+        })
+      : [];
+  const openingRawBalanceByAccountId = new Map(
+    openingBalanceSums.map((b) => [b.accountId, Number(b._sum.value ?? 0)]),
+  );
   const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
   const normalizedAccounts = accounts.map((account) => ({
     id: account.id,
@@ -269,6 +294,7 @@ async function getAccountTreeDataInternal(args: {
   const accountRows = buildAccountRows({
     accounts: normalizedAccounts,
     rawBalanceByAccountId,
+    openingRawBalanceByAccountId,
     displayBalanceInReferenceCurrencyByAccountId,
     bookingCountByAccountId,
     groupById,

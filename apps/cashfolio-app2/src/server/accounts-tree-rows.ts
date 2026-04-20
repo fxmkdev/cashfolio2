@@ -63,6 +63,7 @@ export type AccountTreeRow = {
   tradeCurrency: string | null;
   balance: number | null;
   balanceInReferenceCurrency: number | null;
+  openingBalance: number | null;
   parentId: string | undefined;
   isActive: boolean;
   groupId: string | undefined;
@@ -113,6 +114,7 @@ export function filterGroupsForAccountState(args: {
 export function buildAccountRows(args: {
   accounts: AccountTreeAccount[];
   rawBalanceByAccountId: Map<string, number>;
+  openingRawBalanceByAccountId: Map<string, number>;
   displayBalanceInReferenceCurrencyByAccountId: Map<string, number | null>;
   bookingCountByAccountId: Map<string, number>;
   groupById: Map<
@@ -156,6 +158,15 @@ export function buildAccountRows(args: {
           : null;
     const displayBalanceInReferenceCurrency =
       args.displayBalanceInReferenceCurrencyByAccountId.get(account.id) ?? null;
+    const openingRawBalance = args.openingRawBalanceByAccountId.get(account.id);
+    const displayOpeningBalance =
+      openingRawBalance == null
+        ? null
+        : account.type === "ASSET"
+          ? openingRawBalance
+          : account.type === "LIABILITY"
+            ? -openingRawBalance
+            : null;
     return {
       id: account.id,
       nodeType: "account",
@@ -169,6 +180,7 @@ export function buildAccountRows(args: {
       tradeCurrency: account.tradeCurrency,
       balance: displayBalance,
       balanceInReferenceCurrency: displayBalanceInReferenceCurrency,
+      openingBalance: displayOpeningBalance,
       parentId: account.groupId ?? undefined,
       isActive: account.isActive,
       groupId: account.groupId ?? undefined,
@@ -244,6 +256,7 @@ export function buildGroupRows(args: {
       tradeCurrency: null,
       balance: null,
       balanceInReferenceCurrency: null,
+      openingBalance: null,
       parentId: group.parentGroupId ?? undefined,
       isActive: group.isActive,
       groupId: group.id,
