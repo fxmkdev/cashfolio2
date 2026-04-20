@@ -1,4 +1,10 @@
-import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type ConsoleMessage,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 import {
   agGridCellByColId,
   agGridPinnedBottomRow,
@@ -82,6 +88,19 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
   throw new Error(
     "Could not trigger account-leaf drilldown from the period breakdown chart.",
   );
+}
+
+async function selectSegmentedControlOption(
+  control: Locator,
+  optionName: string,
+) {
+  const option = control.getByRole("radio", { name: optionName });
+
+  if (await option.isChecked()) {
+    return;
+  }
+
+  await option.check({ force: true });
 }
 
 type PeriodPageSessionState = {
@@ -598,12 +617,12 @@ test("period page persists card state, drill state, and table expansion across r
   const breakdownTypeControl = page.getByRole("radiogroup", {
     name: "Breakdown type",
   });
-  await breakdownTypeControl.getByText("Expenses", { exact: true }).click();
+  await selectSegmentedControlOption(breakdownTypeControl, "Expenses");
 
   const breakdownChartTypeControl = page.getByRole("radiogroup", {
     name: "Breakdown chart type",
   });
-  await breakdownChartTypeControl.getByText("Donut", { exact: true }).click();
+  await selectSegmentedControlOption(breakdownChartTypeControl, "Donut");
 
   const breakdownChart = page.getByTestId("period-breakdown-chart");
   await expect(breakdownChart).toBeVisible();
@@ -612,7 +631,7 @@ test("period page persists card state, drill state, and table expansion across r
     page.getByText("Drilled expense groups in the selected period"),
   ).toBeVisible();
 
-  await breakdownChartTypeControl.getByText("Table", { exact: true }).click();
+  await selectSegmentedControlOption(breakdownChartTypeControl, "Table");
   await expect(page.getByTestId("period-breakdown-table")).toBeVisible();
 
   const breakdownTable = page.getByTestId("period-breakdown-table");
@@ -621,7 +640,7 @@ test("period page persists card state, drill state, and table expansion across r
     0,
   );
 
-  await breakdownTypeControl.getByText("Income", { exact: true }).click();
+  await selectSegmentedControlOption(breakdownTypeControl, "Income");
   await expect(
     page.getByRole("heading", { name: "Income Breakdown" }),
   ).toBeVisible();
@@ -629,12 +648,12 @@ test("period page persists card state, drill state, and table expansion across r
   const allocationTypeControl = page.getByRole("radiogroup", {
     name: "Allocation type",
   });
-  await allocationTypeControl.getByText("Liabilities", { exact: true }).click();
+  await selectSegmentedControlOption(allocationTypeControl, "Liabilities");
 
   const allocationChartTypeControl = page.getByRole("radiogroup", {
     name: "Allocation chart type",
   });
-  await allocationChartTypeControl.getByText("Bar", { exact: true }).click();
+  await selectSegmentedControlOption(allocationChartTypeControl, "Bar");
   await expect(
     allocationChartTypeControl.getByRole("radio", { name: "Bar" }),
   ).toBeChecked();
@@ -655,7 +674,7 @@ test("period page persists card state, drill state, and table expansion across r
     allocationChartTypeControl.getByRole("radio", { name: "Bar" }),
   ).toBeChecked();
 
-  await breakdownTypeControl.getByText("Expenses", { exact: true }).click();
+  await selectSegmentedControlOption(breakdownTypeControl, "Expenses");
   await expect(
     page.getByText("Drilled expense groups in the selected period"),
   ).toBeVisible();
