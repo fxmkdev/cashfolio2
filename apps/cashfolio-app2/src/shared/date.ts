@@ -1,3 +1,5 @@
+import { parse } from "date-fns";
+
 export function startOfUtcDay(date: Date): Date {
   return new Date(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
@@ -34,4 +36,25 @@ export function isSameUtcDay(a: Date, b: Date): boolean {
 
 export function formatUtcDate(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+export function normalizeDateInputValue(
+  value: Date | string | null | undefined,
+): Date | null {
+  if (value == null) return null;
+
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const parsedFromDisplayFormat = parse(trimmed, "dd.MM.yyyy", new Date());
+  if (!isNaN(parsedFromDisplayFormat.getTime())) {
+    return parsedFromDisplayFormat;
+  }
+
+  const parsedWithNativeDate = new Date(trimmed);
+  return isNaN(parsedWithNativeDate.getTime()) ? null : parsedWithNativeDate;
 }

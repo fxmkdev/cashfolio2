@@ -16,7 +16,11 @@ import {
   isIncomeAccount,
   isOpeningBalancesAccount,
 } from "../shared/account-utils";
-import { formatUtcDate, startOfUtcDay } from "../shared/date";
+import {
+  formatUtcDate,
+  normalizeDateInputValue,
+  startOfUtcDay,
+} from "../shared/date";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
 import { sum } from "../utils";
 import { DataGrid } from "./data-grid";
@@ -95,18 +99,23 @@ export function EditTransactionModal({
     }),
     onValuesChange: ({ date }, { date: previousDate }) => {
       if (date !== previousDate) {
+        const normalizedDate = normalizeDateInputValue(date);
+        if (date != null && normalizedDate == null) return;
         for (let i = 0; i < form.values.bookings.length; i++) {
-          form.setFieldValue(`bookings.${i}.date`, date ?? undefined);
+          form.setFieldValue(`bookings.${i}.date`, normalizedDate ?? undefined);
         }
       }
     },
     validate: {
       date: (value) => {
-        if (!value) return "Date is required";
-        if (startOfUtcDay(value) < accountBookStartDay) {
+        const date = normalizeDateInputValue(value);
+        if (!date) {
+          return value ? "Date is invalid" : "Date is required";
+        }
+        if (startOfUtcDay(date) < accountBookStartDay) {
           return `Date cannot be before account book start date (${accountBookStartDateLabel}).`;
         }
-        if (isAfter(startOfDay(value), today)) {
+        if (isAfter(startOfDay(date), today)) {
           return "Date cannot be in the future";
         }
         return null;
@@ -153,8 +162,10 @@ export function EditTransactionModal({
             : null;
         },
         date: (value) => {
-          if (!value) return "Date is required";
-          const bookingDate = new Date(value);
+          const bookingDate = normalizeDateInputValue(value);
+          if (!bookingDate) {
+            return value ? "Date is invalid" : "Date is required";
+          }
           if (startOfUtcDay(bookingDate) < accountBookStartDay) {
             return `Date cannot be before account book start date (${accountBookStartDateLabel}).`;
           }
@@ -175,7 +186,7 @@ export function EditTransactionModal({
 
   function onAdd() {
     const newRow = {
-      date: form.values.date,
+      date: normalizeDateInputValue(form.values.date) ?? undefined,
       account: "",
       description: "",
       key: createId(),
