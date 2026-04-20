@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
-import { startOfUtcDay } from "../shared/date";
+import { getOpeningBalancesBookingDate, startOfUtcDay } from "../shared/date";
 import {
   getExplicitPeriodDateRange,
   parseExplicitPeriodSelectionFromUnknown,
@@ -177,7 +177,7 @@ export const getLedgerData = createServerFn({ method: "GET" })
   });
 
 export const getLedgerPeriodBounds = createServerFn({ method: "GET" })
-  .inputValidator((data: { accountId: string; accountBookId: string }) => data)
+  .inputValidator((data: { accountBookId: string }) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const accountBook = await prisma.accountBook.findUniqueOrThrow({
@@ -186,9 +186,8 @@ export const getLedgerPeriodBounds = createServerFn({ method: "GET" })
     });
     const currentDay = startOfUtcDay(new Date());
     const accountBookStartDate = startOfUtcDay(accountBook.startDate);
-    const openingBalancesBookingDate = new Date(
-      accountBookStartDate.getTime() - 24 * 60 * 60 * 1000,
-    );
+    const openingBalancesBookingDate =
+      getOpeningBalancesBookingDate(accountBookStartDate);
 
     return {
       minBookingDate: accountBookStartDate.toISOString(),

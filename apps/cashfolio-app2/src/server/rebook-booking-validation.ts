@@ -3,7 +3,11 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../.prisma-client/enums";
-import { startOfUtcDay } from "../shared/date";
+import {
+  formatUtcDate,
+  getOpeningBalancesBookingDate,
+  isSameUtcDay,
+} from "../shared/date";
 import {
   getAccountUnitIdentifier,
   getBookingUnitIdentifier,
@@ -101,21 +105,4 @@ export function validateRebookBookingTarget(args: {
       );
     }
   }
-}
-
-function getOpeningBalancesBookingDate(accountBookStartDate: Date): Date {
-  const startDate = startOfUtcDay(accountBookStartDate);
-  return new Date(startDate.getTime() - 24 * 60 * 60 * 1000);
-}
-
-function isSameUtcDay(a: Date, b: Date): boolean {
-  return (
-    a.getUTCFullYear() === b.getUTCFullYear() &&
-    a.getUTCMonth() === b.getUTCMonth() &&
-    a.getUTCDate() === b.getUTCDate()
-  );
-}
-
-function formatUtcDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
 }

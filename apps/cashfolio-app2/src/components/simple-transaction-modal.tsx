@@ -17,6 +17,7 @@ import {
   isIncomeAccount,
   isOpeningBalancesAccount,
 } from "../shared/account-utils";
+import { formatUtcDate, isSameUtcDay } from "../shared/date";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 import type { AccountOption } from "./edit-transaction-modal";
 import { FormattedNumberInput } from "./formatted-number-input";
@@ -310,16 +311,4 @@ export function SimpleTransactionModal({
       </Stack>
     </form>
   );
-}
-
-function isSameUtcDay(a: Date, b: Date): boolean {
-  return (
-    a.getUTCFullYear() === b.getUTCFullYear() &&
-    a.getUTCMonth() === b.getUTCMonth() &&
-    a.getUTCDate() === b.getUTCDate()
-  );
-}
-
-function formatUtcDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
 }

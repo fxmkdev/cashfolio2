@@ -16,6 +16,7 @@ import {
   isIncomeAccount,
   isOpeningBalancesAccount,
 } from "../shared/account-utils";
+import { formatUtcDate, isSameUtcDay } from "../shared/date";
 import { sum } from "../utils";
 import { DataGrid } from "./data-grid";
 import {
@@ -37,18 +38,6 @@ export type {
   BookingValues,
   TransactionFormValues,
 } from "./edit-transaction-modal-types";
-
-function isSameUtcDay(a: Date, b: Date): boolean {
-  return (
-    a.getUTCFullYear() === b.getUTCFullYear() &&
-    a.getUTCMonth() === b.getUTCMonth() &&
-    a.getUTCDate() === b.getUTCDate()
-  );
-}
-
-function formatUtcDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
 
 function hasOpeningBalancesBooking(args: {
   bookings: BookingValues[];
@@ -273,10 +262,9 @@ export function EditTransactionModal({
     () =>
       createEditTransactionColumnDefs({
         accounts,
-        openingBalancesBookingDate,
         isSubmitting,
       }),
-    [accounts, isSubmitting, openingBalancesBookingDate],
+    [accounts, isSubmitting],
   );
 
   const hasOpeningBalancesBookingInDraft = useMemo(

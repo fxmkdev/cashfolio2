@@ -49,7 +49,6 @@ export function isEditableCell(params: CellClassParams) {
 
 export function createEditTransactionColumnDefs(args: {
   accounts: AccountOption[];
-  openingBalancesBookingDate: Date;
   isSubmitting: boolean;
 }): ColDef[] {
   const { accounts, isSubmitting } = args;

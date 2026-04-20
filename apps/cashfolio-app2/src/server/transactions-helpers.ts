@@ -6,7 +6,12 @@ import {
 } from "../.prisma-client/enums";
 import { isAfter, startOfDay } from "date-fns";
 import { getUnitIdentifier } from "../shared/account-utils";
-import { startOfUtcDay } from "../shared/date";
+import {
+  formatUtcDate,
+  getOpeningBalancesBookingDate,
+  isSameUtcDay,
+  startOfUtcDay,
+} from "../shared/date";
 import {
   getBookingUnitFields,
   type BookingUnitFieldsSource,
@@ -178,23 +183,6 @@ export function validateAccountTypeBookingsWithAccounts(
   if (errors.length > 0) {
     throw new Error(errors.join(" "));
   }
-}
-
-function getOpeningBalancesBookingDate(accountBookStartDate: Date): Date {
-  const startDate = startOfUtcDay(accountBookStartDate);
-  return new Date(startDate.getTime() - 24 * 60 * 60 * 1000);
-}
-
-function isSameUtcDay(a: Date, b: Date): boolean {
-  return (
-    a.getUTCFullYear() === b.getUTCFullYear() &&
-    a.getUTCMonth() === b.getUTCMonth() &&
-    a.getUTCDate() === b.getUTCDate()
-  );
-}
-
-function formatUtcDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
 }
 
 export function buildTransactionCreateData(input: CreateTransactionInput) {

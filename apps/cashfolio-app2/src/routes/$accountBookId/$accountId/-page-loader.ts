@@ -42,7 +42,6 @@ export async function loadLedgerPageData(args: {
     accountsPromise,
     getLedgerPeriodBounds({
       data: {
-        accountId: args.accountId,
         accountBookId: args.accountBookId,
       },
     }),
