@@ -27,6 +27,7 @@ import {
   validateAccountTradeCurrency,
 } from "../shared/account-validation";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
+import { FormattedNumberInput } from "./formatted-number-input";
 
 type FormValues = {
   name?: string;
@@ -325,9 +326,10 @@ export function EditAccountModal({
               [AccountType.ASSET, AccountType.LIABILITY] as AccountType[]
             ).includes(type) && (
               <Grid.Col span={3}>
-                <NumberInput
+                <FormattedNumberInput
                   label="Opening Balance"
                   decimalScale={2}
+                  locale="en-CH"
                   hideControls
                   {...form.getInputProps("openingBalance")}
                 />
