@@ -1,0 +1,8 @@
+{
+  "metrics": {
+    "statements": { "pct": 59.79 },
+    "branches": { "pct": 52.78 },
+    "functions": { "pct": 51.52 },
+    "lines": { "pct": 60.93 }
+  }
+}

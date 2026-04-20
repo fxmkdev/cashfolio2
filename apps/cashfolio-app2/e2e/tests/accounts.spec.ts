@@ -378,6 +378,25 @@ test("balance column visibility and baseline values across tabs/modes", async ({
   await expect(page.locator(".ag-row-pinned")).toHaveCount(0);
 });
 
+test("archive action is disabled for non-zero asset balances", async ({
+  page,
+}) => {
+  const seededBalances = await seedNonZeroConvertibleAssetBalances({
+    accountBookId: seeded.accountBookId,
+    counterAccountId: seeded.cashAccount.id,
+  });
+
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
+
+  const usdRow = agGridRowByText(page, seededBalances.usdAccountName);
+  await expect(usdRow).toBeVisible();
+  await usdRow.hover();
+
+  const archiveButton = usdRow.getByRole("button", { name: "Archive" });
+  await expect(archiveButton).toBeDisabled();
+  await expect(archiveButton).toHaveAttribute("aria-disabled", "true");
+});
+
 test("footer total stays blank when an account ref-currency balance is missing", async ({
   page,
 }) => {

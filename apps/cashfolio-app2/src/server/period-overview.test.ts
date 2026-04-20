@@ -25,9 +25,8 @@ const createServerFn = vi.hoisted(() =>
 );
 
 const ensureAuthorizedForAccountBookId = vi.hoisted(() => vi.fn());
-const getCurrencyExchangeRate = vi.hoisted(() => vi.fn());
-const getCryptocurrencyToCurrencyExchangeRate = vi.hoisted(() => vi.fn());
-const getSecurityToCurrencyExchangeRate = vi.hoisted(() => vi.fn());
+const convertBookingValueToReference = vi.hoisted(() => vi.fn());
+const getUnitToReferenceExchangeRate = vi.hoisted(() => vi.fn());
 
 const prisma = vi.hoisted(() => ({
   accountBook: {
@@ -40,8 +39,8 @@ const prisma = vi.hoisted(() => ({
     findMany: vi.fn(),
   },
   booking: {
-    findMany: vi.fn(),
     groupBy: vi.fn(),
+    findMany: vi.fn(),
   },
   transaction: {
     findMany: vi.fn(),
@@ -60,13 +59,12 @@ vi.mock("../prisma.server", () => ({
   prisma,
 }));
 
-vi.mock("./valuation.server", () => ({
-  getCurrencyExchangeRate,
-  getCryptocurrencyToCurrencyExchangeRate,
-  getSecurityToCurrencyExchangeRate,
+vi.mock("./period-conversion", () => ({
+  convertBookingValueToReference,
+  getUnitToReferenceExchangeRate,
 }));
 
-import { getPeriodOverview } from "./period";
+import { DEFAULT_PERIOD_VALUE, getPeriodOverview } from "./period";
 
 describe("getPeriodOverview", () => {
   beforeEach(() => {
@@ -95,9 +93,10 @@ describe("getPeriodOverview", () => {
     prisma.booking.groupBy.mockResolvedValue([]);
     prisma.transaction.findMany.mockResolvedValue([]);
 
-    getCurrencyExchangeRate.mockResolvedValue(1);
-    getCryptocurrencyToCurrencyExchangeRate.mockResolvedValue(null);
-    getSecurityToCurrencyExchangeRate.mockResolvedValue(null);
+    convertBookingValueToReference.mockImplementation(
+      async ({ value }) => value,
+    );
+    getUnitToReferenceExchangeRate.mockResolvedValue(1);
   });
 
   afterEach(() => {
@@ -195,5 +194,188 @@ describe("getPeriodOverview", () => {
     );
     expect(holdingBookingsFindManyCall).toBeTruthy();
     expect(holdingBookingsFindManyCall?.[0].where?.transaction).toBeUndefined();
+  });
+
+  it("returns a zeroed overview when no bookings are present", async () => {
+    vi.setSystemTime(new Date("2026-05-10T10:00:00.000Z"));
+    prisma.account.findMany.mockResolvedValue([]);
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-empty",
+        period: "2026-01",
+      },
+    });
+
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-empty");
+    expect(result.selectedPeriodValue).toBe("2026-01");
+    expect(result.stats).toMatchObject({
+      totalReturn: 0,
+      savings: 0,
+      income: 0,
+      expenses: 0,
+      gainsLosses: 0,
+      endOfPeriodNetWorth: 0,
+      endOfPeriodAssets: 0,
+      endOfPeriodLiabilities: 0,
+    });
+    expect(result.bookingsCount).toBe(0);
+    expect(result.convertedBookingsCount).toBe(0);
+    expect(result.skippedBookingsCount).toBe(0);
+    expect(result.expenseBreakdown.items).toEqual([]);
+    expect(result.incomeBreakdown.items).toEqual([]);
+    expect(result.assetBreakdown.items).toEqual([]);
+    expect(result.liabilityBreakdown.items).toEqual([]);
+  });
+
+  it("tracks converted/skipped counts across equity and multi-unit transaction flows", async () => {
+    vi.setSystemTime(new Date("2026-05-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([]);
+    prisma.booking.findMany.mockResolvedValue([
+      {
+        id: "booking-income",
+        date: new Date("2026-01-10T00:00:00.000Z"),
+        value: -100,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+        account: {
+          id: "income-1",
+          name: "Income",
+          groupId: null,
+          equityAccountSubtype: EquityAccountSubtype.INCOME,
+        },
+      },
+      {
+        id: "booking-expense-no-rate",
+        date: new Date("2026-01-11T00:00:00.000Z"),
+        value: 60,
+        unit: Unit.CURRENCY,
+        currency: "XXX",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+        account: {
+          id: "expense-1",
+          name: "Expense",
+          groupId: null,
+          equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+        },
+      },
+      {
+        id: "booking-gain-loss",
+        date: new Date("2026-01-12T00:00:00.000Z"),
+        value: -20,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+        account: {
+          id: "gainloss-1",
+          name: "GainLoss",
+          groupId: null,
+          equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+        },
+      },
+    ]);
+    prisma.transaction.findMany.mockResolvedValue([
+      {
+        id: "tx-skip",
+        bookings: [
+          {
+            date: new Date("2026-01-15T00:00:00.000Z"),
+            value: 5,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+          {
+            date: new Date("2026-01-15T00:00:00.000Z"),
+            value: -4,
+            unit: Unit.CURRENCY,
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ],
+      },
+      {
+        id: "tx-convert",
+        bookings: [
+          {
+            date: new Date("2026-01-16T00:00:00.000Z"),
+            value: 6,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+          {
+            date: new Date("2026-01-16T00:00:00.000Z"),
+            value: -5,
+            unit: Unit.CURRENCY,
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ],
+      },
+    ]);
+
+    convertBookingValueToReference.mockImplementation(async ({ value }) => {
+      if (value === 60 || value === -4) {
+        return null;
+      }
+      return value;
+    });
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-1",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.bookingsCount).toBe(3);
+    expect(result.convertedBookingsCount).toBe(4);
+    expect(result.skippedBookingsCount).toBe(2);
+    expect(result.stats).toMatchObject({
+      income: 100,
+      expenses: 0,
+      explicitGainLoss: 20,
+      transactionGainLoss: 1,
+      gainsLosses: 21,
+      savings: 100,
+      totalReturn: 121,
+    });
+    expect(result.incomeBreakdown.totalAmount).toBe(100);
+    expect(result.expenseBreakdown.totalAmount).toBe(0);
+    expect(convertBookingValueToReference).toHaveBeenCalled();
+    expect(getUnitToReferenceExchangeRate).not.toHaveBeenCalled();
+  });
+
+  it("ignores unsupported period values in input and falls back to default", async () => {
+    vi.setSystemTime(new Date("2026-05-10T10:00:00.000Z"));
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-default-period",
+        period: "not-a-real-period",
+      },
+    });
+
+    expect(result.selectedPeriodValue).toBe(DEFAULT_PERIOD_VALUE);
   });
 });
