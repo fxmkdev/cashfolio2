@@ -1,10 +1,20 @@
-import { AccountType } from "@/.prisma-client/enums";
+import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import { getAccounts } from "@/server/accounts";
 import {
   getAccountForLedger,
   getLedgerData,
   getLedgerPeriodBounds,
 } from "@/server/ledger";
+
+export function isLedgerPeriodFilterAvailable(account: {
+  type: AccountType;
+  equityAccountSubtype: EquityAccountSubtype | null;
+}) {
+  return (
+    account.type === AccountType.EQUITY &&
+    account.equityAccountSubtype !== EquityAccountSubtype.OPENING_BALANCES
+  );
+}
 
 export async function loadLedgerPageData(args: {
   accountBookId: string;
@@ -18,7 +28,7 @@ export async function loadLedgerPageData(args: {
     data: { accountBookId: args.accountBookId },
   });
   const account = await accountPromise;
-  const isPeriodFilterAllowed = account.type === AccountType.EQUITY;
+  const isPeriodFilterAllowed = isLedgerPeriodFilterAvailable(account);
 
   const [ledgerData, accounts, periodBounds] = await Promise.all([
     getLedgerData({
