@@ -60,7 +60,7 @@ vi.mock("./valuation.server", () => ({
   getSecurityToCurrencyExchangeRate,
 }));
 
-import { getAccountTreeData } from "./accounts-queries";
+import { getAccountsPageData, getAccountTreeData } from "./accounts-queries";
 
 describe("getAccountTreeData", () => {
   beforeEach(() => {
@@ -275,5 +275,25 @@ describe("getAccountTreeData", () => {
     expect(result.rows.map((row) => row.id)).toEqual(
       expect.arrayContaining(["group-root", "group-child", "asset-archived"]),
     );
+  });
+
+  it("authorizes once and skips active-only page helpers for inactive state", async () => {
+    const result = await getAccountsPageData({
+      data: {
+        accountBookId: "book-3",
+        accountState: "inactive",
+      },
+    });
+
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledTimes(1);
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-3");
+    expect(prisma.account.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      accountGroups: [],
+      existingNodes: [],
+      referenceCurrency: "CHF",
+      rows: [],
+    });
   });
 });
