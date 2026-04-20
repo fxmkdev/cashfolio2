@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   AccountType,
   EquityAccountSubtype,
@@ -64,13 +64,21 @@ function createAccountMap(
   return base;
 }
 
+const FIXED_SYSTEM_TIME = new Date("2026-02-01T12:00:00.000Z");
+
 describe("transactions helpers", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(FIXED_SYSTEM_TIME);
     vi.clearAllMocks();
     prisma.account.findMany.mockResolvedValue([]);
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
       startDate: new Date("2026-01-03T00:00:00.000Z"),
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   test("requires at least two bookings for transaction creation", () => {

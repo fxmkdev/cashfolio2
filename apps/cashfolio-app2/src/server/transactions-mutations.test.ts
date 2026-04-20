@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AccountType,
   EquityAccountSubtype,
@@ -79,6 +79,7 @@ import type {
 } from "./transactions-types";
 
 const BASE_DATE = "2026-01-12T00:00:00.000Z";
+const FIXED_SYSTEM_TIME = new Date("2026-02-01T12:00:00.000Z");
 
 function createAssetAccount(id: string) {
   return {
@@ -155,6 +156,8 @@ function createTransactionInput(
 
 describe("transactions mutations", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(FIXED_SYSTEM_TIME);
     vi.clearAllMocks();
 
     prisma.booking.count.mockResolvedValue(0);
@@ -194,6 +197,10 @@ describe("transactions mutations", () => {
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
     prisma.$transaction.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("blocks deleting opening-balance transactions", async () => {
