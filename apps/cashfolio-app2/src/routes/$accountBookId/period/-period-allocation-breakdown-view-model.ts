@@ -18,6 +18,11 @@ import type {
 type PeriodOverview = Awaited<ReturnType<typeof getPeriodOverview>>;
 
 type DrillPathByAllocationBreakdown = Record<AllocationBreakdownType, string[]>;
+type DrillPathByAllocationBreakdownUpdater =
+  | DrillPathByAllocationBreakdown
+  | ((
+      previousValue: DrillPathByAllocationBreakdown,
+    ) => DrillPathByAllocationBreakdown);
 
 type AllocationPartialDataNotesArgs = {
   skippedMissingReferenceBalanceCount: number;
@@ -72,7 +77,7 @@ export function usePeriodAllocationBreakdownViewModel(args: {
   selectedAllocationChartType: BreakdownChartType;
   drillPathByAllocationBreakdown: DrillPathByAllocationBreakdown;
   setDrillPathByAllocationBreakdown: (
-    nextValue: DrillPathByAllocationBreakdown,
+    nextValue: DrillPathByAllocationBreakdownUpdater,
   ) => void;
   currencyFormatter: Intl.NumberFormat;
   percentageFormatter: Intl.NumberFormat;
@@ -200,16 +205,14 @@ export function usePeriodAllocationBreakdownViewModel(args: {
 
   const updateSelectedAllocationBreakdownPath = useCallback(
     (nextPath: string[]) => {
-      setDrillPathByAllocationBreakdown({
-        ...drillPathByAllocationBreakdown,
-        [selectedAllocationBreakdown]: nextPath,
-      });
+      setDrillPathByAllocationBreakdown(
+        (previousDrillPathByAllocationBreakdown) => ({
+          ...previousDrillPathByAllocationBreakdown,
+          [selectedAllocationBreakdown]: nextPath,
+        }),
+      );
     },
-    [
-      drillPathByAllocationBreakdown,
-      selectedAllocationBreakdown,
-      setDrillPathByAllocationBreakdown,
-    ],
+    [selectedAllocationBreakdown, setDrillPathByAllocationBreakdown],
   );
 
   const handleAllocationNodeDoubleClick = useCallback(

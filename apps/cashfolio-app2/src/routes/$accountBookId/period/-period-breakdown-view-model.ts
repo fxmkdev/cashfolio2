@@ -16,6 +16,9 @@ import type { BreakdownChartType, BreakdownType } from "./-breakdown-types";
 type PeriodOverview = Awaited<ReturnType<typeof getPeriodOverview>>;
 
 type DrillPathByBreakdown = Record<BreakdownType, string[]>;
+type DrillPathByBreakdownUpdater =
+  | DrillPathByBreakdown
+  | ((previousValue: DrillPathByBreakdown) => DrillPathByBreakdown);
 
 export type PeriodBreakdownViewModel = {
   activeBreakdown: PeriodOverview["expenseBreakdown"];
@@ -37,7 +40,7 @@ export function usePeriodBreakdownViewModel(args: {
   selectedBreakdown: BreakdownType;
   selectedChartType: BreakdownChartType;
   drillPathByBreakdown: DrillPathByBreakdown;
-  setDrillPathByBreakdown: (nextValue: DrillPathByBreakdown) => void;
+  setDrillPathByBreakdown: (nextValue: DrillPathByBreakdownUpdater) => void;
   currencyFormatter: Intl.NumberFormat;
   percentageFormatter: Intl.NumberFormat;
   colors: DashboardChartThemeColors;
@@ -160,12 +163,12 @@ export function usePeriodBreakdownViewModel(args: {
 
   const updateSelectedBreakdownPath = useCallback(
     (nextPath: string[]) => {
-      setDrillPathByBreakdown({
-        ...drillPathByBreakdown,
+      setDrillPathByBreakdown((previousDrillPathByBreakdown) => ({
+        ...previousDrillPathByBreakdown,
         [selectedBreakdown]: nextPath,
-      });
+      }));
     },
-    [drillPathByBreakdown, selectedBreakdown, setDrillPathByBreakdown],
+    [selectedBreakdown, setDrillPathByBreakdown],
   );
 
   const handleNodeDoubleClick = useCallback(
