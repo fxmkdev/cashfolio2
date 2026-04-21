@@ -7,6 +7,14 @@ import type {
 
 type DrillPathByBreakdown = Record<BreakdownType, string[]>;
 type DrillPathByAllocationBreakdown = Record<AllocationBreakdownType, string[]>;
+type DrillPathByBreakdownUpdater =
+  | DrillPathByBreakdown
+  | ((previousValue: DrillPathByBreakdown) => DrillPathByBreakdown);
+type DrillPathByAllocationBreakdownUpdater =
+  | DrillPathByAllocationBreakdown
+  | ((
+      previousValue: DrillPathByAllocationBreakdown,
+    ) => DrillPathByAllocationBreakdown);
 
 type PeriodPageSessionState = {
   selectedBreakdown: BreakdownType;
@@ -190,26 +198,40 @@ export function usePeriodPageSessionState(accountBookId: string) {
   );
 
   const setDrillPathByBreakdown = useCallback(
-    (nextValue: DrillPathByBreakdown) => {
+    (nextValue: DrillPathByBreakdownUpdater) => {
       setState((previousState) => ({
         ...previousState,
-        drillPathByBreakdown: {
-          expense: normalizeDrillPath(nextValue.expense),
-          income: normalizeDrillPath(nextValue.income),
-        },
+        drillPathByBreakdown: (() => {
+          const resolvedValue =
+            typeof nextValue === "function"
+              ? nextValue(previousState.drillPathByBreakdown)
+              : nextValue;
+
+          return {
+            expense: normalizeDrillPath(resolvedValue.expense),
+            income: normalizeDrillPath(resolvedValue.income),
+          };
+        })(),
       }));
     },
     [],
   );
 
   const setDrillPathByAllocationBreakdown = useCallback(
-    (nextValue: DrillPathByAllocationBreakdown) => {
+    (nextValue: DrillPathByAllocationBreakdownUpdater) => {
       setState((previousState) => ({
         ...previousState,
-        drillPathByAllocationBreakdown: {
-          asset: normalizeDrillPath(nextValue.asset),
-          liability: normalizeDrillPath(nextValue.liability),
-        },
+        drillPathByAllocationBreakdown: (() => {
+          const resolvedValue =
+            typeof nextValue === "function"
+              ? nextValue(previousState.drillPathByAllocationBreakdown)
+              : nextValue;
+
+          return {
+            asset: normalizeDrillPath(resolvedValue.asset),
+            liability: normalizeDrillPath(resolvedValue.liability),
+          };
+        })(),
       }));
     },
     [],
