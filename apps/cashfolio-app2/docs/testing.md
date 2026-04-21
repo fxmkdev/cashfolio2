@@ -29,6 +29,7 @@ pnpm --filter cashfolio-app2 prisma:generate
 pnpm --filter cashfolio-app2 test:unit
 pnpm --filter cashfolio-app2 test:unit:coverage
 pnpm --filter cashfolio-app2 coverage:ratchet
+pnpm --filter cashfolio-app2 coverage:ratchet:accept
 pnpm --filter cashfolio-app2 test:unit:coverage:ratchet
 ```
 
@@ -46,6 +47,13 @@ Coverage ratchet behavior:
   `statements`/`branches`/`functions`/`lines` drops below the baseline.
 - When you intentionally improve coverage, update `coverage-baseline.json` in
   the same PR so future changes are measured from the improved baseline.
+  Recommended workflow:
+
+```bash
+pnpm --filter cashfolio-app2 test:unit:coverage
+pnpm --filter cashfolio-app2 coverage:ratchet:accept
+pnpm --filter cashfolio-app2 coverage:ratchet
+```
 
 ## E2E (Playwright)
 
