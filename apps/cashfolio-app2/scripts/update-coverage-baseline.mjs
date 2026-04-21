@@ -1,31 +1,11 @@
-import { readFileSync, writeFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const thisFilePath = fileURLToPath(import.meta.url);
-const appRoot = path.resolve(path.dirname(thisFilePath), "..");
-const baselinePath = path.join(appRoot, "coverage-baseline.json");
-const coverageSummaryPath = path.join(
-  appRoot,
-  "coverage",
-  "coverage-summary.json",
-);
-
-const METRICS = ["statements", "branches", "functions", "lines"];
-
-function readJson(filePath) {
-  return JSON.parse(readFileSync(filePath, "utf8"));
-}
-
-function getMetricPct(source, metric, sourceName) {
-  const pct = source?.[metric]?.pct;
-
-  if (typeof pct !== "number" || Number.isNaN(pct)) {
-    throw new Error(`Missing numeric ${metric}.pct in ${sourceName}`);
-  }
-
-  return Number(pct.toFixed(2));
-}
+import { writeFileSync } from "node:fs";
+import {
+  baselinePath,
+  coverageSummaryPath,
+  getMetricPct,
+  METRICS,
+  readJson,
+} from "./coverage-ratchet-utils.mjs";
 
 const coverageSummary = readJson(coverageSummaryPath);
 
@@ -39,7 +19,15 @@ const nextBaseline = {
   metrics: Object.fromEntries(
     METRICS.map((metric) => [
       metric,
-      { pct: getMetricPct(coverageSummary.total, metric, "coverage-summary") },
+      {
+        pct: Number(
+          getMetricPct(
+            coverageSummary.total,
+            metric,
+            "coverage-summary.json",
+          ).toFixed(2),
+        ),
+      },
     ]),
   ),
 };
