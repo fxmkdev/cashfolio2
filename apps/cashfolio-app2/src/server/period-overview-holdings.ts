@@ -65,6 +65,177 @@ function isNearZero(value: number): boolean {
   return Math.abs(value) <= QUANTITY_EPSILON;
 }
 
+function isWithinPeriod(args: {
+  date: Date;
+  periodStart: Date;
+  periodEndExclusive: Date;
+}): boolean {
+  return args.date >= args.periodStart && args.date < args.periodEndExclusive;
+}
+
+function toHoldingUnitIdentifier(input: {
+  unit: Unit;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  tradeCurrency: string | null;
+}): string | null {
+  if (input.unit === "CURRENCY") {
+    return input.currency ? `currency:${input.currency.toUpperCase()}` : null;
+  }
+  if (input.unit === "CRYPTOCURRENCY") {
+    return input.cryptocurrency
+      ? `crypto:${input.cryptocurrency.toUpperCase()}`
+      : null;
+  }
+  return input.symbol && input.tradeCurrency
+    ? `security:${input.symbol.toUpperCase()}:${input.tradeCurrency.toUpperCase()}`
+    : null;
+}
+
+function getPositiveOpenQuantity(lots: HoldingLot[]): number {
+  return lots.reduce(
+    (sum, lot) => sum + (lot.quantity > 0 ? lot.quantity : 0),
+    0,
+  );
+}
+
+function drainTransferLots(args: {
+  lots: HoldingLot[];
+  quantity: number;
+}): HoldingLot[] {
+  const drainedLots: HoldingLot[] = [];
+  let remaining = args.quantity;
+
+  while (
+    remaining > QUANTITY_EPSILON &&
+    args.lots.length > 0 &&
+    args.lots[0]!.quantity > QUANTITY_EPSILON
+  ) {
+    const lot = args.lots[0]!;
+    const movedQuantity = Math.min(remaining, lot.quantity);
+
+    drainedLots.push({
+      quantity: movedQuantity,
+      unitCostInReference: lot.unitCostInReference,
+    });
+
+    lot.quantity -= movedQuantity;
+    remaining -= movedQuantity;
+
+    if (isNearZero(lot.quantity)) {
+      args.lots.shift();
+    }
+  }
+
+  return drainedLots;
+}
+
+function canApplyHoldingTransfer(args: {
+  stateByHoldingAccountId: Map<string, HoldingAccountState>;
+  holdingBookings: HoldingTransactionBooking[];
+}): boolean {
+  const netByAccountId = new Map<string, number>();
+  let netQuantity = 0;
+  let hasPositive = false;
+  let hasNegative = false;
+
+  for (const booking of args.holdingBookings) {
+    netByAccountId.set(
+      booking.accountId,
+      (netByAccountId.get(booking.accountId) ?? 0) + booking.value,
+    );
+    netQuantity += booking.value;
+    if (booking.value > QUANTITY_EPSILON) {
+      hasPositive = true;
+    } else if (booking.value < -QUANTITY_EPSILON) {
+      hasNegative = true;
+    }
+  }
+
+  if (!hasPositive || !hasNegative || !isNearZero(netQuantity)) {
+    return false;
+  }
+
+  for (const [accountId, netDelta] of netByAccountId) {
+    if (netDelta >= -QUANTITY_EPSILON) {
+      continue;
+    }
+
+    const state = args.stateByHoldingAccountId.get(accountId);
+    if (!state) {
+      return false;
+    }
+
+    if (getPositiveOpenQuantity(state.lots) + QUANTITY_EPSILON < -netDelta) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function applyHoldingTransferWithoutRealization(args: {
+  stateByHoldingAccountId: Map<string, HoldingAccountState>;
+  holdingBookings: HoldingTransactionBooking[];
+}) {
+  const transferPool: HoldingLot[] = [];
+
+  const sortedBookings = [...args.holdingBookings].sort((left, right) => {
+    const dateDiff = left.date.getTime() - right.date.getTime();
+    if (dateDiff !== 0) {
+      return dateDiff;
+    }
+    return left.id.localeCompare(right.id, "en");
+  });
+
+  const sourceBookings = sortedBookings.filter(
+    (booking) => booking.value < -QUANTITY_EPSILON,
+  );
+  const destinationBookings = sortedBookings.filter(
+    (booking) => booking.value > QUANTITY_EPSILON,
+  );
+
+  for (const booking of sourceBookings) {
+    const state = args.stateByHoldingAccountId.get(booking.accountId);
+    if (!state) {
+      continue;
+    }
+
+    transferPool.push(
+      ...drainTransferLots({
+        lots: state.lots,
+        quantity: Math.abs(booking.value),
+      }),
+    );
+  }
+
+  for (const booking of destinationBookings) {
+    const state = args.stateByHoldingAccountId.get(booking.accountId);
+    if (!state) {
+      continue;
+    }
+
+    let remaining = booking.value;
+    while (remaining > QUANTITY_EPSILON && transferPool.length > 0) {
+      const lot = transferPool[0]!;
+      const movedQuantity = Math.min(remaining, lot.quantity);
+
+      state.lots.push({
+        quantity: movedQuantity,
+        unitCostInReference: lot.unitCostInReference,
+      });
+
+      lot.quantity -= movedQuantity;
+      remaining -= movedQuantity;
+
+      if (isNearZero(lot.quantity)) {
+        transferPool.shift();
+      }
+    }
+  }
+}
+
 function buildResidualAllocationWeights(args: {
   holdingBookings: HoldingTransactionBooking[];
   holdingMarketValueByBookingId: Map<string, number>;
@@ -178,38 +349,51 @@ export async function initializeHoldingGainLossState(args: {
   const stateByHoldingAccountId = new Map<string, HoldingAccountState>();
   let skippedCount = 0;
 
-  for (const account of args.holdingAccounts) {
-    const lots: HoldingLot[] = [];
-    let skipped = false;
-    const initialBalance = args.initialBalanceByAccountId.get(account.id) ?? 0;
+  const initialStates = await Promise.all(
+    args.holdingAccounts.map(async (account) => {
+      const lots: HoldingLot[] = [];
+      let skipped = false;
+      let skippedIncrement = 0;
+      const initialBalance =
+        args.initialBalanceByAccountId.get(account.id) ?? 0;
 
-    if (!isNearZero(initialBalance)) {
-      const initialRate = await args.resolveRate({
-        unit: account.unit,
-        currency: account.currency,
-        cryptocurrency: account.cryptocurrency,
-        symbol: account.symbol,
-        tradeCurrency: account.tradeCurrency,
-        date: args.initialRateDate,
-      });
-
-      if (initialRate == null) {
-        skippedCount += 1;
-        skipped = true;
-      } else {
-        lots.push({
-          quantity: initialBalance,
-          unitCostInReference: initialRate,
+      if (!isNearZero(initialBalance)) {
+        const initialRate = await args.resolveRate({
+          unit: account.unit,
+          currency: account.currency,
+          cryptocurrency: account.cryptocurrency,
+          symbol: account.symbol,
+          tradeCurrency: account.tradeCurrency,
+          date: args.initialRateDate,
         });
-      }
-    }
 
-    stateByHoldingAccountId.set(account.id, {
-      account,
-      lots,
-      executionEvents: [],
-      skipped,
-    });
+        if (initialRate == null) {
+          skippedIncrement = 1;
+          skipped = true;
+        } else {
+          lots.push({
+            quantity: initialBalance,
+            unitCostInReference: initialRate,
+          });
+        }
+      }
+
+      return {
+        accountId: account.id,
+        state: {
+          account,
+          lots,
+          executionEvents: [],
+          skipped,
+        } satisfies HoldingAccountState,
+        skippedIncrement,
+      };
+    }),
+  );
+
+  for (const initialState of initialStates) {
+    stateByHoldingAccountId.set(initialState.accountId, initialState.state);
+    skippedCount += initialState.skippedIncrement;
   }
 
   return {
@@ -227,34 +411,82 @@ export async function applyHoldingTransactionsToGainLossState(args: {
   convertBookingToReference: HoldingBookingConverter;
 }) {
   for (const transaction of args.transactions) {
-    const inPeriodBookings = transaction.bookings.filter(
-      (booking) =>
-        booking.date >= args.periodStart &&
-        booking.date < args.periodEndExclusive,
+    const allNonExplicitBookings = transaction.bookings.filter(
+      (booking) => !isExplicitGainLossBooking(booking),
     );
 
-    if (inPeriodBookings.length === 0) {
+    if (allNonExplicitBookings.length === 0) {
       continue;
     }
 
-    const holdingBookings = inPeriodBookings.filter((booking) => {
+    const inPeriodHoldingBookings = allNonExplicitBookings.filter((booking) => {
+      if (
+        !isWithinPeriod({
+          date: booking.date,
+          periodStart: args.periodStart,
+          periodEndExclusive: args.periodEndExclusive,
+        })
+      ) {
+        return false;
+      }
       const state = args.state.stateByHoldingAccountId.get(booking.accountId);
       return state != null && !state.skipped;
     });
 
-    if (holdingBookings.length === 0) {
+    if (inPeriodHoldingBookings.length === 0) {
       continue;
     }
 
-    const holdingBookingIds = new Set(
-      holdingBookings.map((booking) => booking.id),
+    const allNonExplicitAreHolding = allNonExplicitBookings.every((booking) => {
+      const state = args.state.stateByHoldingAccountId.get(booking.accountId);
+      return state != null && !state.skipped;
+    });
+    const allNonExplicitInPeriod = allNonExplicitBookings.every((booking) =>
+      isWithinPeriod({
+        date: booking.date,
+        periodStart: args.periodStart,
+        periodEndExclusive: args.periodEndExclusive,
+      }),
     );
-    const counterpartBookings = inPeriodBookings.filter(
-      (booking) =>
-        !holdingBookingIds.has(booking.id) &&
-        !isExplicitGainLossBooking(booking),
+    const nonExplicitUnitIdentifiers = new Set(
+      allNonExplicitBookings.map((booking) =>
+        toHoldingUnitIdentifier({
+          unit: booking.unit,
+          currency: booking.currency,
+          cryptocurrency: booking.cryptocurrency,
+          symbol: booking.symbol,
+          tradeCurrency: booking.tradeCurrency,
+        }),
+      ),
     );
-    const bookingsToConvert = [...holdingBookings, ...counterpartBookings];
+    const isInternalHoldingTransfer =
+      allNonExplicitAreHolding &&
+      allNonExplicitInPeriod &&
+      nonExplicitUnitIdentifiers.size === 1 &&
+      !nonExplicitUnitIdentifiers.has(null) &&
+      canApplyHoldingTransfer({
+        stateByHoldingAccountId: args.state.stateByHoldingAccountId,
+        holdingBookings: inPeriodHoldingBookings,
+      });
+
+    if (isInternalHoldingTransfer) {
+      applyHoldingTransferWithoutRealization({
+        stateByHoldingAccountId: args.state.stateByHoldingAccountId,
+        holdingBookings: inPeriodHoldingBookings,
+      });
+      continue;
+    }
+
+    const inPeriodHoldingBookingIds = new Set(
+      inPeriodHoldingBookings.map((booking) => booking.id),
+    );
+    const counterpartBookings = allNonExplicitBookings.filter(
+      (booking) => !inPeriodHoldingBookingIds.has(booking.id),
+    );
+    const bookingsToConvert = [
+      ...inPeriodHoldingBookings,
+      ...counterpartBookings,
+    ];
 
     const convertedByBookingId = new Map<string, number | null>();
     const convertedValues = await Promise.all(
@@ -285,7 +517,7 @@ export async function applyHoldingTransactionsToGainLossState(args: {
     }
 
     if (
-      holdingBookings.some(
+      inPeriodHoldingBookings.some(
         (booking) => convertedByBookingId.get(booking.id) == null,
       )
     ) {
@@ -299,13 +531,13 @@ export async function applyHoldingTransactionsToGainLossState(args: {
       counterpartBookings.length === 0 || counterpartHasMissingConversions;
 
     const holdingMarketValueByBookingId = new Map<string, number>(
-      holdingBookings.map((booking) => [
+      inPeriodHoldingBookings.map((booking) => [
         booking.id,
         convertedByBookingId.get(booking.id) ?? 0,
       ]),
     );
     const residualAllocationWeights = buildResidualAllocationWeights({
-      holdingBookings,
+      holdingBookings: inPeriodHoldingBookings,
       holdingMarketValueByBookingId,
     });
 
@@ -315,7 +547,7 @@ export async function applyHoldingTransactionsToGainLossState(args: {
           (sum, booking) => sum + (convertedByBookingId.get(booking.id) ?? 0),
           0,
         );
-    const holdingMarketTotalInReference = holdingBookings.reduce(
+    const holdingMarketTotalInReference = inPeriodHoldingBookings.reduce(
       (sum, booking) =>
         sum + (holdingMarketValueByBookingId.get(booking.id) ?? 0),
       0,
@@ -324,8 +556,8 @@ export async function applyHoldingTransactionsToGainLossState(args: {
       ? 0
       : counterpartTotalInReference - holdingMarketTotalInReference;
 
-    for (let index = 0; index < holdingBookings.length; index += 1) {
-      const booking = holdingBookings[index]!;
+    for (let index = 0; index < inPeriodHoldingBookings.length; index += 1) {
+      const booking = inPeriodHoldingBookings[index]!;
       const marketReferenceAmount =
         holdingMarketValueByBookingId.get(booking.id) ?? 0;
       const effectiveReferenceAmount = shouldUseMarketFallback

@@ -327,12 +327,6 @@ export const getPeriodOverview = createServerFn({
                       accountId: {
                         in: holdingAccountIds,
                       },
-                    },
-                  },
-                },
-                {
-                  bookings: {
-                    some: {
                       date: {
                         gte: queryStart,
                         lt: queryEndExclusive,
