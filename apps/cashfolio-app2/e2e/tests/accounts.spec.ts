@@ -508,7 +508,7 @@ test("period page shows KPI waterfall and updated income/expenses wording", asyn
 
   await expect(
     page.getByText(
-      /How Income, Expenses, and (Gains|Losses) lead to Total Return/,
+      /How Income, Expenses, Realised, and Unrealised lead to Total Return/,
     ),
   ).toBeVisible();
 
