@@ -543,6 +543,87 @@ describe("period overview holdings FIFO", () => {
     });
   });
 
+  it("preserves FIFO lot order for transferred lots in destination accounts", async () => {
+    const convertedByBookingId = new Map<string, number>([
+      ["h-destination-buy", 200],
+      ["c-destination-buy", -200],
+      ["h-destination-sell", -150],
+      ["c-destination-sell", 150],
+    ]);
+
+    const result = await computeHoldingGainLossSplit({
+      holdingAccounts: [...holdingAccounts],
+      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, 1]]),
+      transactions: [
+        {
+          bookings: [
+            createHoldingBooking({
+              id: "h-destination-buy",
+              accountId: SECOND_HOLDING_ACCOUNT_ID,
+              date: "2026-02-05T00:00:00.000Z",
+              value: 1,
+            }),
+            createCashBooking({
+              id: "c-destination-buy",
+              date: "2026-02-05T00:00:00.000Z",
+              value: -200,
+            }),
+          ],
+        },
+        {
+          bookings: [
+            createHoldingBooking({
+              id: "h-transfer-out-fifo-order",
+              accountId: HOLDING_ACCOUNT_ID,
+              date: "2026-02-10T00:00:00.000Z",
+              value: -1,
+            }),
+            createHoldingBooking({
+              id: "h-transfer-in-fifo-order",
+              accountId: SECOND_HOLDING_ACCOUNT_ID,
+              date: "2026-02-10T00:00:00.000Z",
+              value: 1,
+            }),
+          ],
+        },
+        {
+          bookings: [
+            createHoldingBooking({
+              id: "h-destination-sell",
+              accountId: SECOND_HOLDING_ACCOUNT_ID,
+              date: "2026-02-20T00:00:00.000Z",
+              value: -1,
+            }),
+            createCashBooking({
+              id: "c-destination-sell",
+              date: "2026-02-20T00:00:00.000Z",
+              value: 150,
+            }),
+          ],
+        },
+      ],
+      periodStart: new Date("2026-02-01T00:00:00.000Z"),
+      periodEndExclusive: new Date("2026-03-01T00:00:00.000Z"),
+      initialRateDate: new Date("2026-01-31T00:00:00.000Z"),
+      periodEnd: new Date("2026-02-28T00:00:00.000Z"),
+      resolveRate: vi.fn().mockImplementation(async ({ date }) => {
+        if (date.toISOString() === "2026-01-31T00:00:00.000Z") {
+          return 100;
+        }
+        return 200;
+      }),
+      convertBookingToReference: async (booking) =>
+        convertedByBookingId.get(booking.id) ?? null,
+    });
+
+    expect(result).toEqual({
+      realizedGainLoss: 50,
+      unrealizedGainLoss: 0,
+      convertedCount: 4,
+      skippedCount: 0,
+    });
+  });
+
   it("transfers short lots across accounts without realizing gain/loss", async () => {
     const convertedByBookingId = new Map<string, number>([
       ["h-short-transfer-out", 360],

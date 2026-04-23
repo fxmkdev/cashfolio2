@@ -1,6 +1,6 @@
 import {
-  AccountType,
-  EquityAccountSubtype,
+  type AccountType,
+  type EquityAccountSubtype,
   type Unit,
 } from "../.prisma-client/enums";
 
@@ -34,6 +34,7 @@ export type HoldingTransaction = {
 export type HoldingLot = {
   quantity: number;
   unitCostInReference: number;
+  acquisitionSortKey: string;
 };
 
 export type HoldingExecutionEvent = {

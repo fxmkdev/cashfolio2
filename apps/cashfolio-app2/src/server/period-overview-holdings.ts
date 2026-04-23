@@ -23,6 +23,13 @@ import type {
 
 export type { HoldingGainLossWorkingState };
 
+function toLotAcquisitionSortKey(args: {
+  date: Date;
+  bookingId: string;
+}): string {
+  return `${args.date.toISOString()}::${args.bookingId}`;
+}
+
 export async function initializeHoldingGainLossState(args: {
   holdingAccounts: HoldingRateConvertibleAccount[];
   initialBalanceByAccountId: Map<string, number>;
@@ -57,6 +64,10 @@ export async function initializeHoldingGainLossState(args: {
           lots.push({
             quantity: initialBalance,
             unitCostInReference: initialRate,
+            acquisitionSortKey: toLotAcquisitionSortKey({
+              date: args.initialRateDate,
+              bookingId: `opening:${account.id}`,
+            }),
           });
         }
       }
@@ -317,6 +328,10 @@ export async function finalizeHoldingGainLossState(args: {
         lots: state.lots,
         quantity: event.quantity,
         executionUnitPriceInReference,
+        acquisitionSortKey: toLotAcquisitionSortKey({
+          date: event.date,
+          bookingId: event.bookingId,
+        }),
       });
     }
 

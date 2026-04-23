@@ -71,6 +71,7 @@ function drainTransferLots(args: {
     drainedLots.push({
       quantity: movedQuantity,
       unitCostInReference: lot.unitCostInReference,
+      acquisitionSortKey: lot.acquisitionSortKey,
     });
 
     lot.quantity -= movedQuantity;
@@ -82,6 +83,23 @@ function drainTransferLots(args: {
   }
 
   return drainedLots;
+}
+
+function insertLotByAcquisitionOrder(args: {
+  lots: HoldingLot[];
+  lot: HoldingLot;
+}) {
+  const insertIndex = args.lots.findIndex(
+    (existingLot) =>
+      existingLot.acquisitionSortKey > args.lot.acquisitionSortKey,
+  );
+
+  if (insertIndex === -1) {
+    args.lots.push(args.lot);
+    return;
+  }
+
+  args.lots.splice(insertIndex, 0, args.lot);
 }
 
 export function resolveHoldingTransferDirection(args: {
@@ -214,9 +232,13 @@ export function applyHoldingTransferWithoutRealization(args: {
       const movedMagnitude = Math.min(remaining, Math.abs(lot.quantity));
       const movedQuantity = Math.sign(lot.quantity) * movedMagnitude;
 
-      state.lots.push({
-        quantity: movedQuantity,
-        unitCostInReference: lot.unitCostInReference,
+      insertLotByAcquisitionOrder({
+        lots: state.lots,
+        lot: {
+          quantity: movedQuantity,
+          unitCostInReference: lot.unitCostInReference,
+          acquisitionSortKey: lot.acquisitionSortKey,
+        },
       });
 
       lot.quantity -= movedQuantity;

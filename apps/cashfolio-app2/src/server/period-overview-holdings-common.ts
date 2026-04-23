@@ -62,6 +62,7 @@ export function applyExecutionToLots(args: {
   lots: HoldingLot[];
   quantity: number;
   executionUnitPriceInReference: number;
+  acquisitionSortKey: string;
 }): number {
   let realizedGainLoss = 0;
   let remainingQuantity = args.quantity;
@@ -99,6 +100,7 @@ export function applyExecutionToLots(args: {
     args.lots.push({
       quantity: remainingQuantity,
       unitCostInReference: args.executionUnitPriceInReference,
+      acquisitionSortKey: args.acquisitionSortKey,
     });
   }
 
