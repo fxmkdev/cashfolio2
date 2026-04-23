@@ -487,6 +487,50 @@ describe("period overview holdings FIFO", () => {
     });
   });
 
+  it("falls back to execution pricing when short-transfer source is insufficient", async () => {
+    const convertedByBookingId = new Map<string, number>([
+      ["h-short-transfer-out-insufficient", 400],
+      ["h-short-transfer-in-insufficient", -400],
+    ]);
+
+    const result = await computeHoldingGainLossSplit({
+      holdingAccounts: [...holdingAccounts],
+      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, -2]]),
+      transactions: [
+        {
+          bookings: [
+            createHoldingBooking({
+              id: "h-short-transfer-out-insufficient",
+              accountId: HOLDING_ACCOUNT_ID,
+              date: "2026-02-10T00:00:00.000Z",
+              value: 4,
+            }),
+            createHoldingBooking({
+              id: "h-short-transfer-in-insufficient",
+              accountId: SECOND_HOLDING_ACCOUNT_ID,
+              date: "2026-02-10T00:00:00.000Z",
+              value: -4,
+            }),
+          ],
+        },
+      ],
+      periodStart: new Date("2026-02-01T00:00:00.000Z"),
+      periodEndExclusive: new Date("2026-03-01T00:00:00.000Z"),
+      initialRateDate: new Date("2026-01-31T00:00:00.000Z"),
+      periodEnd: new Date("2026-02-28T00:00:00.000Z"),
+      resolveRate: vi.fn().mockResolvedValue(100),
+      convertBookingToReference: async (booking) =>
+        convertedByBookingId.get(booking.id) ?? null,
+    });
+
+    expect(result).toEqual({
+      realizedGainLoss: 0,
+      unrealizedGainLoss: 0,
+      convertedCount: 2,
+      skippedCount: 0,
+    });
+  });
+
   it("allocates residual by quantity when holding market values are zero", async () => {
     const convertedByBookingId = new Map<string, number>([
       ["h-a", 0],
