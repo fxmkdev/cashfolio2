@@ -67,6 +67,7 @@ export function buildPeriodPageStats(args: {
       label: gainsLossesLabel,
       value: currencyFormatter.format(overview.stats.gainsLosses),
       valueColor: overview.stats.gainsLosses >= 0 ? "green" : "red",
+      secondaryValue: `Realised ${currencyFormatter.format(overview.stats.realizedGainLoss)} · Unrealised ${currencyFormatter.format(overview.stats.unrealizedGainLoss)}`,
     },
   ];
 

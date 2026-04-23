@@ -20,7 +20,7 @@ function createSelection() {
 }
 
 describe("period overview response", () => {
-  it("keeps gains/losses zeroed before account-book start while preserving split metrics", () => {
+  it("keeps gains/losses zeroed before account-book start", () => {
     const equityAggregation = createPeriodOverviewEquityAggregation();
     accumulateConvertedEquityBooking({
       booking: {
@@ -67,8 +67,8 @@ describe("period overview response", () => {
       groupById: new Map(),
       assetLiabilityAccounts: [],
       equityAggregation,
-      transactionGainLoss: 12,
-      holdingGainLoss: 8,
+      realizedGainLoss: 12,
+      unrealizedGainLoss: 8,
       isBeforeAccountBookStart: true,
       endOfPeriodBalanceStats: {
         assets: 0,
@@ -88,8 +88,8 @@ describe("period overview response", () => {
       gainsLosses: 0,
       totalReturn: 60,
       explicitGainLoss: 20,
-      transactionGainLoss: 12,
-      holdingGainLoss: 8,
+      realizedGainLoss: 0,
+      unrealizedGainLoss: 0,
     });
     expect(response.currentMonthValue).toBe("2026-02");
     expect(response.availableYears).toEqual([2026]);
@@ -155,8 +155,8 @@ describe("period overview response", () => {
         },
       ],
       equityAggregation,
-      transactionGainLoss: 5,
-      holdingGainLoss: 15,
+      realizedGainLoss: 5,
+      unrealizedGainLoss: 15,
       isBeforeAccountBookStart: false,
       endOfPeriodBalanceStats: {
         assets: 100,
@@ -177,6 +177,8 @@ describe("period overview response", () => {
       expenses: 20,
       savings: 100,
       gainsLosses: 30,
+      realizedGainLoss: 15,
+      unrealizedGainLoss: 15,
       totalReturn: 130,
       endOfPeriodAssets: 100,
       endOfPeriodLiabilities: 40,

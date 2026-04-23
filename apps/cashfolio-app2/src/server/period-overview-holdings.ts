@@ -1,12 +1,13 @@
-import type { Unit } from "../.prisma-client/enums";
 import {
-  computeHoldingGainLossForEventSeries,
-  getHoldingEventDateMap,
-  sortHoldingEventsAscending,
-  type HoldingGainLossSeriesEvent,
-} from "./period-helpers";
+  AccountType,
+  EquityAccountSubtype,
+  type Unit,
+} from "../.prisma-client/enums";
+
+const QUANTITY_EPSILON = 1e-9;
 
 type HoldingRateConvertibleAccount = {
+  id: string;
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
@@ -14,10 +15,140 @@ type HoldingRateConvertibleAccount = {
   tradeCurrency: string | null;
 };
 
-export async function computeHoldingAccountGainLoss(args: {
+type HoldingTransactionBooking = {
+  id: string;
+  accountId: string;
+  date: Date;
+  value: number;
+  unit: Unit;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  tradeCurrency: string | null;
+  accountType: AccountType;
+  equityAccountSubtype: EquityAccountSubtype | null;
+};
+
+type HoldingTransaction = {
+  bookings: HoldingTransactionBooking[];
+};
+
+type HoldingLot = {
+  quantity: number;
+  unitCostInReference: number;
+};
+
+type HoldingExecutionEvent = {
+  bookingId: string;
+  date: Date;
+  quantity: number;
+  effectiveReferenceAmount: number;
+};
+
+type HoldingAccountState = {
   account: HoldingRateConvertibleAccount;
-  initialBalance: number;
-  periodBookings: Array<{ date: Date; value: number }>;
+  lots: HoldingLot[];
+  executionEvents: HoldingExecutionEvent[];
+  skipped: boolean;
+};
+
+function isExplicitGainLossBooking(
+  booking: HoldingTransactionBooking,
+): boolean {
+  return (
+    booking.accountType === AccountType.EQUITY &&
+    booking.equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS
+  );
+}
+
+function isNearZero(value: number): boolean {
+  return Math.abs(value) <= QUANTITY_EPSILON;
+}
+
+function buildResidualAllocationWeights(args: {
+  holdingBookings: HoldingTransactionBooking[];
+  holdingMarketValueByBookingId: Map<string, number>;
+}): number[] {
+  const valueWeights = args.holdingBookings.map((booking) =>
+    Math.abs(args.holdingMarketValueByBookingId.get(booking.id) ?? 0),
+  );
+  const totalValueWeight = valueWeights.reduce(
+    (sum, weight) => sum + weight,
+    0,
+  );
+
+  if (totalValueWeight > QUANTITY_EPSILON) {
+    return valueWeights.map((weight) => weight / totalValueWeight);
+  }
+
+  const quantityWeights = args.holdingBookings.map((booking) =>
+    Math.abs(booking.value),
+  );
+  const totalQuantityWeight = quantityWeights.reduce(
+    (sum, weight) => sum + weight,
+    0,
+  );
+
+  if (totalQuantityWeight > QUANTITY_EPSILON) {
+    return quantityWeights.map((weight) => weight / totalQuantityWeight);
+  }
+
+  return args.holdingBookings.map(() => 1 / args.holdingBookings.length);
+}
+
+function applyExecutionToLots(args: {
+  lots: HoldingLot[];
+  quantity: number;
+  executionUnitPriceInReference: number;
+}): number {
+  let realizedGainLoss = 0;
+  let remainingQuantity = args.quantity;
+
+  while (
+    !isNearZero(remainingQuantity) &&
+    args.lots.length > 0 &&
+    Math.sign(remainingQuantity) !== Math.sign(args.lots[0]!.quantity)
+  ) {
+    const lot = args.lots[0]!;
+    const closeQuantity = Math.min(
+      Math.abs(remainingQuantity),
+      Math.abs(lot.quantity),
+    );
+
+    if (lot.quantity > 0 && remainingQuantity < 0) {
+      realizedGainLoss +=
+        closeQuantity *
+        (args.executionUnitPriceInReference - lot.unitCostInReference);
+    } else if (lot.quantity < 0 && remainingQuantity > 0) {
+      realizedGainLoss +=
+        closeQuantity *
+        (lot.unitCostInReference - args.executionUnitPriceInReference);
+    }
+
+    lot.quantity -= Math.sign(lot.quantity) * closeQuantity;
+    remainingQuantity -= Math.sign(remainingQuantity) * closeQuantity;
+
+    if (isNearZero(lot.quantity)) {
+      args.lots.shift();
+    }
+  }
+
+  if (!isNearZero(remainingQuantity)) {
+    args.lots.push({
+      quantity: remainingQuantity,
+      unitCostInReference: args.executionUnitPriceInReference,
+    });
+  }
+
+  return realizedGainLoss;
+}
+
+export async function computeHoldingGainLossSplit(args: {
+  holdingAccounts: HoldingRateConvertibleAccount[];
+  initialBalanceByAccountId: Map<string, number>;
+  transactions: HoldingTransaction[];
+  periodStart: Date;
+  periodEndExclusive: Date;
   initialRateDate: Date;
   periodEnd: Date;
   resolveRate: (input: {
@@ -28,65 +159,243 @@ export async function computeHoldingAccountGainLoss(args: {
     tradeCurrency: string | null;
     date: Date;
   }) => Promise<number | null>;
+  convertBookingToReference: (booking: {
+    id: string;
+    value: number;
+    unit: Unit;
+    currency: string | null;
+    cryptocurrency: string | null;
+    symbol: string | null;
+    tradeCurrency: string | null;
+    date: Date;
+  }) => Promise<number | null>;
 }) {
-  if (args.initialBalance === 0 && args.periodBookings.length === 0) {
-    return { skippedCount: 0, gainLossContribution: 0 };
+  const stateByHoldingAccountId = new Map<string, HoldingAccountState>();
+  let skippedCount = 0;
+  let convertedCount = 0;
+
+  for (const account of args.holdingAccounts) {
+    const lots: HoldingLot[] = [];
+    let skipped = false;
+    const initialBalance = args.initialBalanceByAccountId.get(account.id) ?? 0;
+
+    if (!isNearZero(initialBalance)) {
+      const initialRate = await args.resolveRate({
+        unit: account.unit,
+        currency: account.currency,
+        cryptocurrency: account.cryptocurrency,
+        symbol: account.symbol,
+        tradeCurrency: account.tradeCurrency,
+        date: args.initialRateDate,
+      });
+
+      if (initialRate == null) {
+        skippedCount += 1;
+        skipped = true;
+      } else {
+        lots.push({
+          quantity: initialBalance,
+          unitCostInReference: initialRate,
+        });
+      }
+    }
+
+    stateByHoldingAccountId.set(account.id, {
+      account,
+      lots,
+      executionEvents: [],
+      skipped,
+    });
   }
 
-  const initialRate = await args.resolveRate({
-    unit: args.account.unit,
-    currency: args.account.currency,
-    cryptocurrency: args.account.cryptocurrency,
-    symbol: args.account.symbol,
-    tradeCurrency: args.account.tradeCurrency,
-    date: args.initialRateDate,
-  });
+  for (const transaction of args.transactions) {
+    const inPeriodBookings = transaction.bookings.filter(
+      (booking) =>
+        booking.date >= args.periodStart &&
+        booking.date < args.periodEndExclusive,
+    );
 
-  if (initialRate == null) {
-    return { skippedCount: 1, gainLossContribution: 0 };
+    if (inPeriodBookings.length === 0) {
+      continue;
+    }
+
+    const holdingBookings = inPeriodBookings.filter((booking) => {
+      const state = stateByHoldingAccountId.get(booking.accountId);
+      return state != null && !state.skipped;
+    });
+
+    if (holdingBookings.length === 0) {
+      continue;
+    }
+
+    const convertedByBookingId = new Map<string, number | null>();
+    const convertedValues = await Promise.all(
+      inPeriodBookings.map((booking) =>
+        args.convertBookingToReference({
+          id: booking.id,
+          value: booking.value,
+          unit: booking.unit,
+          currency: booking.currency,
+          cryptocurrency: booking.cryptocurrency,
+          symbol: booking.symbol,
+          tradeCurrency: booking.tradeCurrency,
+          date: booking.date,
+        }),
+      ),
+    );
+
+    for (let index = 0; index < inPeriodBookings.length; index += 1) {
+      const booking = inPeriodBookings[index]!;
+      const convertedValue = convertedValues[index];
+      convertedByBookingId.set(booking.id, convertedValue);
+
+      if (convertedValue == null) {
+        skippedCount += 1;
+      } else {
+        convertedCount += 1;
+      }
+    }
+
+    if (
+      holdingBookings.some(
+        (booking) => convertedByBookingId.get(booking.id) == null,
+      )
+    ) {
+      continue;
+    }
+
+    const holdingBookingIds = new Set(
+      holdingBookings.map((booking) => booking.id),
+    );
+    const counterpartBookings = inPeriodBookings.filter(
+      (booking) =>
+        !holdingBookingIds.has(booking.id) &&
+        !isExplicitGainLossBooking(booking),
+    );
+
+    const counterpartHasMissingConversions = counterpartBookings.some(
+      (booking) => convertedByBookingId.get(booking.id) == null,
+    );
+    const shouldUseMarketFallback =
+      counterpartBookings.length === 0 || counterpartHasMissingConversions;
+
+    const holdingMarketValueByBookingId = new Map<string, number>(
+      holdingBookings.map((booking) => [
+        booking.id,
+        convertedByBookingId.get(booking.id) ?? 0,
+      ]),
+    );
+    const residualAllocationWeights = buildResidualAllocationWeights({
+      holdingBookings,
+      holdingMarketValueByBookingId,
+    });
+
+    const counterpartTotalInReference = shouldUseMarketFallback
+      ? 0
+      : -counterpartBookings.reduce(
+          (sum, booking) => sum + (convertedByBookingId.get(booking.id) ?? 0),
+          0,
+        );
+    const holdingMarketTotalInReference = holdingBookings.reduce(
+      (sum, booking) =>
+        sum + (holdingMarketValueByBookingId.get(booking.id) ?? 0),
+      0,
+    );
+    const residualInReference = shouldUseMarketFallback
+      ? 0
+      : counterpartTotalInReference - holdingMarketTotalInReference;
+
+    for (let index = 0; index < holdingBookings.length; index += 1) {
+      const booking = holdingBookings[index]!;
+      const marketReferenceAmount =
+        holdingMarketValueByBookingId.get(booking.id) ?? 0;
+      const effectiveReferenceAmount = shouldUseMarketFallback
+        ? marketReferenceAmount
+        : marketReferenceAmount +
+          residualInReference * residualAllocationWeights[index]!;
+
+      const state = stateByHoldingAccountId.get(booking.accountId);
+      if (!state) {
+        continue;
+      }
+
+      state.executionEvents.push({
+        bookingId: booking.id,
+        date: booking.date,
+        quantity: booking.value,
+        effectiveReferenceAmount,
+      });
+    }
   }
 
-  const holdingEventDateMap = getHoldingEventDateMap({
-    bookings: args.periodBookings,
-    periodEnd: args.periodEnd,
-  });
-  const sortedEvents = sortHoldingEventsAscending(
-    Array.from(holdingEventDateMap.values()),
-  );
+  let realizedGainLoss = 0;
+  let unrealizedGainLoss = 0;
 
-  const eventRates = await Promise.all(
-    sortedEvents.map((event) =>
-      args.resolveRate({
-        unit: args.account.unit,
-        currency: args.account.currency,
-        cryptocurrency: args.account.cryptocurrency,
-        symbol: args.account.symbol,
-        tradeCurrency: args.account.tradeCurrency,
-        date: event.date,
-      }),
-    ),
-  );
-  const nonNullEventRates = eventRates.filter(
-    (eventRate): eventRate is number => eventRate != null,
-  );
+  for (const state of stateByHoldingAccountId.values()) {
+    if (state.skipped) {
+      continue;
+    }
 
-  if (nonNullEventRates.length !== eventRates.length) {
-    return { skippedCount: 1, gainLossContribution: 0 };
+    state.executionEvents.sort((left, right) => {
+      const dateDiff = left.date.getTime() - right.date.getTime();
+      if (dateDiff !== 0) {
+        return dateDiff;
+      }
+      return left.bookingId.localeCompare(right.bookingId, "en");
+    });
+
+    for (const event of state.executionEvents) {
+      if (isNearZero(event.quantity)) {
+        continue;
+      }
+
+      const executionUnitPriceInReference =
+        event.effectiveReferenceAmount / event.quantity;
+      if (!Number.isFinite(executionUnitPriceInReference)) {
+        skippedCount += 1;
+        continue;
+      }
+
+      realizedGainLoss += applyExecutionToLots({
+        lots: state.lots,
+        quantity: event.quantity,
+        executionUnitPriceInReference,
+      });
+    }
+
+    const openQuantity = state.lots.reduce(
+      (sum, lot) => sum + Math.abs(lot.quantity),
+      0,
+    );
+    if (openQuantity <= QUANTITY_EPSILON) {
+      continue;
+    }
+
+    const periodEndRate = await args.resolveRate({
+      unit: state.account.unit,
+      currency: state.account.currency,
+      cryptocurrency: state.account.cryptocurrency,
+      symbol: state.account.symbol,
+      tradeCurrency: state.account.tradeCurrency,
+      date: args.periodEnd,
+    });
+
+    if (periodEndRate == null) {
+      skippedCount += 1;
+      continue;
+    }
+
+    unrealizedGainLoss += state.lots.reduce(
+      (sum, lot) =>
+        sum + lot.quantity * (periodEndRate - lot.unitCostInReference),
+      0,
+    );
   }
-
-  const eventsForSeries: HoldingGainLossSeriesEvent[] = sortedEvents.map(
-    (event, index) => ({
-      rate: nonNullEventRates[index]!,
-      balanceDelta: event.balanceDelta,
-    }),
-  );
 
   return {
-    skippedCount: 0,
-    gainLossContribution: computeHoldingGainLossForEventSeries({
-      initialBalance: args.initialBalance,
-      initialRate,
-      events: eventsForSeries,
-    }),
+    realizedGainLoss,
+    unrealizedGainLoss,
+    convertedCount,
+    skippedCount,
   };
 }
