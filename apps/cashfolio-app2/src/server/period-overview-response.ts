@@ -33,8 +33,8 @@ export function buildPeriodOverviewResponse(args: {
   groupById: Map<string, PeriodGroupNode>;
   assetLiabilityAccounts: PeriodOverviewAssetLiabilityAccount[];
   equityAggregation: PeriodOverviewEquityAggregation;
-  transactionGainLoss: number;
-  holdingGainLoss: number;
+  realizedGainLoss: number;
+  unrealizedGainLoss: number;
   isBeforeAccountBookStart: boolean;
   endOfPeriodBalanceStats: PeriodOverviewEndOfPeriodStats;
   bookingsCount: number;
@@ -42,9 +42,13 @@ export function buildPeriodOverviewResponse(args: {
   skippedBookingsCount: number;
 }) {
   const { income, expenses, explicitGainLoss } = args.equityAggregation;
-  const gainsLosses = args.isBeforeAccountBookStart
+  const realizedGainLoss = args.isBeforeAccountBookStart
     ? 0
-    : explicitGainLoss + args.transactionGainLoss + args.holdingGainLoss;
+    : explicitGainLoss + args.realizedGainLoss;
+  const unrealizedGainLoss = args.isBeforeAccountBookStart
+    ? 0
+    : args.unrealizedGainLoss;
+  const gainsLosses = realizedGainLoss + unrealizedGainLoss;
 
   const roundedIncome = round2(income);
   const roundedExpenses = round2(expenses);
@@ -163,8 +167,8 @@ export function buildPeriodOverviewResponse(args: {
       endOfPeriodAssets: roundedEndOfPeriodAssets,
       endOfPeriodLiabilities: roundedEndOfPeriodLiabilities,
       explicitGainLoss: round2(explicitGainLoss),
-      transactionGainLoss: round2(args.transactionGainLoss),
-      holdingGainLoss: round2(args.holdingGainLoss),
+      realizedGainLoss: round2(realizedGainLoss),
+      unrealizedGainLoss: round2(unrealizedGainLoss),
     },
     expenseBreakdown: {
       totalAmount: expenseBreakdown.totalAmount,

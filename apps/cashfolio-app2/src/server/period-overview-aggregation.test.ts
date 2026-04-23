@@ -3,7 +3,6 @@ import { EquityAccountSubtype } from "../.prisma-client/enums";
 import {
   accumulateConvertedEquityBooking,
   createPeriodOverviewEquityAggregation,
-  summarizeMultiUnitTransactionConvertedValues,
 } from "./period-overview-aggregation";
 
 describe("period overview aggregation", () => {
@@ -73,23 +72,5 @@ describe("period overview aggregation", () => {
         amount: 40,
       },
     );
-  });
-
-  it("summarizes converted values for multi-unit transactions", () => {
-    expect(
-      summarizeMultiUnitTransactionConvertedValues([4, -3, 1]),
-    ).toMatchObject({
-      convertedCount: 3,
-      skippedCount: 0,
-      gainLossContribution: 2,
-    });
-
-    expect(
-      summarizeMultiUnitTransactionConvertedValues([4, null, -1]),
-    ).toMatchObject({
-      convertedCount: 0,
-      skippedCount: 1,
-      gainLossContribution: 0,
-    });
   });
 });

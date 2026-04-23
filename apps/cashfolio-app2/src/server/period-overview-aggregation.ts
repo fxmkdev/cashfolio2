@@ -80,30 +80,3 @@ export function accumulateConvertedEquityBooking(args: {
 
   args.aggregation.explicitGainLoss += -args.convertedValue;
 }
-
-export function summarizeMultiUnitTransactionConvertedValues(
-  convertedValues: Array<number | null>,
-) {
-  const nonNullConvertedValues = convertedValues.filter(
-    (convertedValue): convertedValue is number => convertedValue != null,
-  );
-  const failedConversionsCount =
-    convertedValues.length - nonNullConvertedValues.length;
-
-  if (failedConversionsCount > 0) {
-    return {
-      convertedCount: 0,
-      skippedCount: failedConversionsCount,
-      gainLossContribution: 0,
-    };
-  }
-
-  return {
-    convertedCount: nonNullConvertedValues.length,
-    skippedCount: 0,
-    gainLossContribution: nonNullConvertedValues.reduce(
-      (sum, convertedValue) => sum + convertedValue,
-      0,
-    ),
-  };
-}

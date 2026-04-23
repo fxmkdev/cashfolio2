@@ -17,6 +17,8 @@ describe("buildPeriodPageStats", () => {
           income: 0,
           expenses: 20,
           gainsLosses: 20,
+          realizedGainLoss: 13,
+          unrealizedGainLoss: 7,
           endOfPeriodNetWorth: 1000,
           endOfPeriodAssets: 1200,
           endOfPeriodLiabilities: 200,
@@ -41,6 +43,8 @@ describe("buildPeriodPageStats", () => {
           income: 100,
           expenses: 130,
           gainsLosses: -10,
+          realizedGainLoss: -7,
+          unrealizedGainLoss: -3,
           endOfPeriodNetWorth: -50,
           endOfPeriodAssets: 500,
           endOfPeriodLiabilities: 550,
@@ -61,6 +65,7 @@ describe("buildPeriodPageStats", () => {
     expect(gainsLossesCard).toMatchObject({
       label: "Losses",
       valueColor: "red",
+      secondaryValue: "Realised CHF:-7.00 · Unrealised CHF:-3.00",
     });
     expect(liabilitiesCard?.valueColor).toBe("red");
   });
