@@ -457,7 +457,26 @@ describe("getPeriodOverview", () => {
         tradeCurrency: "USD",
       },
     ]);
-    prisma.booking.findMany.mockResolvedValue([]);
+    prisma.booking.findMany
+      .mockResolvedValueOnce([
+        {
+          id: "booking-explicit-gain-loss",
+          date: new Date("2026-01-18T00:00:00.000Z"),
+          value: -5,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          account: {
+            id: "gainloss-1",
+            name: "GainLoss",
+            groupId: null,
+            equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+          },
+        },
+      ])
+      .mockResolvedValueOnce([]);
     prisma.booking.groupBy
       .mockResolvedValueOnce([
         { accountId: "asset-holding", _sum: { value: 3 } },
@@ -557,19 +576,37 @@ describe("getPeriodOverview", () => {
       },
     });
 
-    expect(result.convertedBookingsCount).toBe(4);
+    expect(result.convertedBookingsCount).toBe(5);
     expect(result.skippedBookingsCount).toBe(0);
     expect(result.stats).toMatchObject({
       income: 0,
       expenses: 0,
       savings: 0,
-      explicitGainLoss: 0,
-      realizedGainLoss: 20,
+      explicitGainLoss: 5,
+      realizedGainLoss: 25,
       unrealizedGainLoss: -30,
-      gainsLosses: -10,
-      totalReturn: -10,
+      gainsLosses: -5,
+      totalReturn: -5,
       endOfPeriodAssets: 390,
     });
+    const gainsLossesBreakdownTotal =
+      result.gainsLossesBreakdown.hierarchy.reduce(
+        (sum, unitTypeNode) => sum + unitTypeNode.totalGainLoss,
+        0,
+      );
+    expect(gainsLossesBreakdownTotal).toBe(result.stats.gainsLosses);
+    expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
+      {
+        label: "FX",
+        totalGainLoss: 5,
+      },
+      {
+        label: "Security",
+        realizedGainLoss: 20,
+        unrealizedGainLoss: -30,
+        totalGainLoss: -10,
+      },
+    ]);
     expect(getUnitToReferenceExchangeRate).toHaveBeenCalled();
   });
 

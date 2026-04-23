@@ -1,5 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { prisma } from "../prisma.server";
 import {
@@ -81,6 +85,85 @@ const TRANSACTIONS_PAGE_SIZE = 200;
 
 function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+type GainLossUnitContributionAccumulator = {
+  unit: Unit;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  tradeCurrency: string | null;
+  realizedGainLoss: number;
+  unrealizedGainLoss: number;
+};
+
+function normalizeGainLossCode(value: string | null): string {
+  if (typeof value !== "string") {
+    return "UNKNOWN";
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return "UNKNOWN";
+  }
+
+  return trimmed.toUpperCase();
+}
+
+function toGainLossUnitContributionKey(args: {
+  unit: Unit;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  tradeCurrency: string | null;
+}): string {
+  if (args.unit === Unit.CURRENCY) {
+    return `fx:${normalizeGainLossCode(args.currency)}`;
+  }
+  if (args.unit === Unit.CRYPTOCURRENCY) {
+    return `crypto:${normalizeGainLossCode(args.cryptocurrency)}`;
+  }
+  return `security:${normalizeGainLossCode(args.symbol)}:${normalizeGainLossCode(args.tradeCurrency)}`;
+}
+
+function accumulateGainLossUnitContribution(args: {
+  byKey: Map<string, GainLossUnitContributionAccumulator>;
+  unit: Unit;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  tradeCurrency: string | null;
+  realizedGainLoss: number;
+  unrealizedGainLoss: number;
+}) {
+  if (args.realizedGainLoss === 0 && args.unrealizedGainLoss === 0) {
+    return;
+  }
+
+  const key = toGainLossUnitContributionKey({
+    unit: args.unit,
+    currency: args.currency,
+    cryptocurrency: args.cryptocurrency,
+    symbol: args.symbol,
+    tradeCurrency: args.tradeCurrency,
+  });
+  const existing = args.byKey.get(key);
+
+  if (existing) {
+    existing.realizedGainLoss += args.realizedGainLoss;
+    existing.unrealizedGainLoss += args.unrealizedGainLoss;
+    return;
+  }
+
+  args.byKey.set(key, {
+    unit: args.unit,
+    currency: args.currency,
+    cryptocurrency: args.cryptocurrency,
+    symbol: args.symbol,
+    tradeCurrency: args.tradeCurrency,
+    realizedGainLoss: args.realizedGainLoss,
+    unrealizedGainLoss: args.unrealizedGainLoss,
+  });
 }
 
 export const getPeriodOverview = createServerFn({
@@ -204,6 +287,10 @@ export const getPeriodOverview = createServerFn({
     let skippedBookingsCount = 0;
 
     const equityAggregation = createPeriodOverviewEquityAggregation();
+    const gainsLossesUnitContributionByKey = new Map<
+      string,
+      GainLossUnitContributionAccumulator
+    >();
 
     let nextBookingIdCursor: string | undefined;
     let realizedGainLoss = 0;
@@ -303,6 +390,22 @@ export const getPeriodOverview = createServerFn({
             convertedValue,
             aggregation: equityAggregation,
           });
+
+          if (
+            booking.account.equityAccountSubtype ===
+            EquityAccountSubtype.GAIN_LOSS
+          ) {
+            accumulateGainLossUnitContribution({
+              byKey: gainsLossesUnitContributionByKey,
+              unit: booking.unit,
+              currency: booking.currency,
+              cryptocurrency: booking.cryptocurrency,
+              symbol: booking.symbol,
+              tradeCurrency: booking.tradeCurrency,
+              realizedGainLoss: -convertedValue,
+              unrealizedGainLoss: 0,
+            });
+          }
         }
 
         if (bookingsPage.length < EQUITY_BOOKINGS_PAGE_SIZE) {
@@ -471,6 +574,18 @@ export const getPeriodOverview = createServerFn({
               referenceCurrency,
               exchangeRateByKey,
             }),
+          onAccountGainLoss: (gainLossByAccount) => {
+            accumulateGainLossUnitContribution({
+              byKey: gainsLossesUnitContributionByKey,
+              unit: gainLossByAccount.unit,
+              currency: gainLossByAccount.currency,
+              cryptocurrency: gainLossByAccount.cryptocurrency,
+              symbol: gainLossByAccount.symbol,
+              tradeCurrency: gainLossByAccount.tradeCurrency,
+              realizedGainLoss: gainLossByAccount.realizedGainLoss,
+              unrealizedGainLoss: gainLossByAccount.unrealizedGainLoss,
+            });
+          },
         });
 
         realizedGainLoss += holdingGainLossSplit.realizedGainLoss;
@@ -541,5 +656,8 @@ export const getPeriodOverview = createServerFn({
       bookingsCount,
       convertedBookingsCount,
       skippedBookingsCount,
+      gainsLossesUnitContributions: Array.from(
+        gainsLossesUnitContributionByKey.values(),
+      ),
     });
   });

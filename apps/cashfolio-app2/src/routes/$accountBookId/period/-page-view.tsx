@@ -21,6 +21,7 @@ import { PeriodAllocationBreakdownCard } from "./-allocation-breakdown-card";
 import { ContributionChartCard } from "./-contribution-chart-card";
 import { PeriodBreakdownCard } from "./-breakdown-card";
 import { clampBreakdownPath } from "./-breakdown-drill";
+import { GainsLossesCard } from "./-gains-losses-card";
 import { usePeriodAllocationBreakdownViewModel } from "./-period-allocation-breakdown-view-model";
 import { usePeriodBreakdownViewModel } from "./-period-breakdown-view-model";
 import { buildPeriodPageStats } from "./-period-page-stats";
@@ -431,6 +432,13 @@ export function PeriodPageView({
                     </Alert>
                   ) : null
                 }
+              />
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, lg: 6 }}>
+              <GainsLossesCard
+                accountBookId={accountBookId}
+                referenceCurrency={overview.referenceCurrency}
+                hierarchy={overview.gainsLossesBreakdown.hierarchy}
               />
             </Grid.Col>
           </Grid>

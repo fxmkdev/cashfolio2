@@ -31,6 +31,7 @@ function clearPeriodStorySessionStorage(accountBookId: string) {
     `cashfolio:periodExpandedGroups:${accountBookId}:breakdown:income`,
     `cashfolio:periodExpandedGroups:${accountBookId}:allocation:asset`,
     `cashfolio:periodExpandedGroups:${accountBookId}:allocation:liability`,
+    `cashfolio:periodExpandedGroups:${accountBookId}:gains-losses`,
   ];
 
   for (const storageKey of storageKeys) {
@@ -460,6 +461,61 @@ const baseOverview: PeriodPageViewProps["overview"] = {
       },
     ],
   },
+  gainsLossesBreakdown: {
+    hierarchy: [
+      {
+        id: "unit-type:fx",
+        label: "FX",
+        realizedGainLoss: 200,
+        unrealizedGainLoss: 80,
+        totalGainLoss: 280,
+        children: [
+          {
+            id: "unit:fx:USD",
+            label: "USD",
+            realizedGainLoss: 200,
+            unrealizedGainLoss: 80,
+            totalGainLoss: 280,
+            children: [],
+          },
+        ],
+      },
+      {
+        id: "unit-type:security",
+        label: "Security",
+        realizedGainLoss: 1000,
+        unrealizedGainLoss: 100,
+        totalGainLoss: 1100,
+        children: [
+          {
+            id: "unit:security:AAPL:USD",
+            label: "AAPL (USD)",
+            realizedGainLoss: 1000,
+            unrealizedGainLoss: 100,
+            totalGainLoss: 1100,
+            children: [],
+          },
+        ],
+      },
+      {
+        id: "unit-type:cryptocurrency",
+        label: "Cryptocurrency",
+        realizedGainLoss: 300,
+        unrealizedGainLoss: 20,
+        totalGainLoss: 320,
+        children: [
+          {
+            id: "unit:crypto:BTC",
+            label: "BTC",
+            realizedGainLoss: 300,
+            unrealizedGainLoss: 20,
+            totalGainLoss: 320,
+            children: [],
+          },
+        ],
+      },
+    ],
+  },
 };
 
 function PeriodRouteSmokeHarness() {
@@ -537,9 +593,13 @@ export const HappyPath: Story = {
         name: "Assets Allocation",
       }),
     ).toBeInTheDocument();
+    await expect(
+      within(analysisSection).getByRole("heading", {
+        name: "Gains / Losses Breakdown",
+      }),
+    ).toBeInTheDocument();
     await expect(canvas.queryByText("Total Income")).not.toBeInTheDocument();
     await expect(canvas.queryByText("Total Expenses")).not.toBeInTheDocument();
-    await expect(canvas.queryByText("Gains / Losses")).not.toBeInTheDocument();
     const savingsCard = await canvas.findByTestId("period-stat-card-savings");
     await expect(within(savingsCard).getByText("31.3%")).toBeInTheDocument();
     await expect(canvas.getByRole("radio", { name: "Expenses" })).toBeChecked();

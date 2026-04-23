@@ -1,4 +1,4 @@
-import { AccountType } from "../.prisma-client/enums";
+import { AccountType, Unit } from "../.prisma-client/enums";
 import { formatMonthPeriodValue } from "../shared/period";
 import {
   buildAvailableYears,
@@ -25,6 +25,178 @@ type PeriodOverviewEndOfPeriodStats = {
   convertedBalanceByAccountId: Map<string, number | null>;
 };
 
+export type PeriodGainsLossesUnitContribution = {
+  unit: Unit;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  tradeCurrency: string | null;
+  realizedGainLoss: number;
+  unrealizedGainLoss: number;
+};
+
+export type PeriodGainsLossesBreakdownNode = {
+  id: string;
+  label: string;
+  realizedGainLoss: number;
+  unrealizedGainLoss: number;
+  totalGainLoss: number;
+  children: PeriodGainsLossesBreakdownNode[];
+};
+
+type UnitTypeDescriptor = {
+  id: "fx" | "security" | "cryptocurrency";
+  label: "FX" | "Security" | "Cryptocurrency";
+};
+
+const UNIT_TYPE_DESCRIPTORS: UnitTypeDescriptor[] = [
+  { id: "fx", label: "FX" },
+  { id: "security", label: "Security" },
+  { id: "cryptocurrency", label: "Cryptocurrency" },
+];
+
+function normalizeUppercaseCode(value: string | null): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  return trimmed.toUpperCase();
+}
+
+function getUnitTypeDescriptor(unit: Unit): UnitTypeDescriptor {
+  if (unit === Unit.CURRENCY) {
+    return UNIT_TYPE_DESCRIPTORS[0]!;
+  }
+  if (unit === Unit.SECURITY) {
+    return UNIT_TYPE_DESCRIPTORS[1]!;
+  }
+  return UNIT_TYPE_DESCRIPTORS[2]!;
+}
+
+function getUnitContributionDescriptor(
+  args: PeriodGainsLossesUnitContribution,
+): {
+  unitType: UnitTypeDescriptor;
+  unitId: string;
+  unitLabel: string;
+} {
+  if (args.unit === Unit.CURRENCY) {
+    const currency = normalizeUppercaseCode(args.currency) ?? "UNKNOWN";
+    return {
+      unitType: getUnitTypeDescriptor(args.unit),
+      unitId: `fx:${currency}`,
+      unitLabel: currency,
+    };
+  }
+
+  if (args.unit === Unit.CRYPTOCURRENCY) {
+    const cryptocurrency =
+      normalizeUppercaseCode(args.cryptocurrency) ?? "UNKNOWN";
+    return {
+      unitType: getUnitTypeDescriptor(args.unit),
+      unitId: `crypto:${cryptocurrency}`,
+      unitLabel: cryptocurrency,
+    };
+  }
+
+  const symbol = normalizeUppercaseCode(args.symbol) ?? "UNKNOWN";
+  const tradeCurrency = normalizeUppercaseCode(args.tradeCurrency) ?? "UNKNOWN";
+  return {
+    unitType: getUnitTypeDescriptor(args.unit),
+    unitId: `security:${symbol}:${tradeCurrency}`,
+    unitLabel: `${symbol} (${tradeCurrency})`,
+  };
+}
+
+function buildGainsLossesBreakdown(
+  contributions: PeriodGainsLossesUnitContribution[],
+): {
+  hierarchy: PeriodGainsLossesBreakdownNode[];
+} {
+  const byUnitId = new Map<
+    string,
+    {
+      unitTypeId: UnitTypeDescriptor["id"];
+      unitLabel: string;
+      realizedGainLoss: number;
+      unrealizedGainLoss: number;
+    }
+  >();
+
+  for (const contribution of contributions) {
+    if (
+      contribution.realizedGainLoss === 0 &&
+      contribution.unrealizedGainLoss === 0
+    ) {
+      continue;
+    }
+
+    const descriptor = getUnitContributionDescriptor(contribution);
+    const existing = byUnitId.get(descriptor.unitId);
+
+    if (existing) {
+      existing.realizedGainLoss += contribution.realizedGainLoss;
+      existing.unrealizedGainLoss += contribution.unrealizedGainLoss;
+      continue;
+    }
+
+    byUnitId.set(descriptor.unitId, {
+      unitTypeId: descriptor.unitType.id,
+      unitLabel: descriptor.unitLabel,
+      realizedGainLoss: contribution.realizedGainLoss,
+      unrealizedGainLoss: contribution.unrealizedGainLoss,
+    });
+  }
+
+  const hierarchy: PeriodGainsLossesBreakdownNode[] = [];
+
+  for (const unitType of UNIT_TYPE_DESCRIPTORS) {
+    const childNodes = Array.from(byUnitId.entries())
+      .filter(([, unitValue]) => unitValue.unitTypeId === unitType.id)
+      .sort((left, right) =>
+        left[1].unitLabel.localeCompare(right[1].unitLabel, "en"),
+      )
+      .map(([unitId, unitValue]) => ({
+        id: `unit:${unitId}`,
+        label: unitValue.unitLabel,
+        realizedGainLoss: unitValue.realizedGainLoss,
+        unrealizedGainLoss: unitValue.unrealizedGainLoss,
+        totalGainLoss:
+          unitValue.realizedGainLoss + unitValue.unrealizedGainLoss,
+        children: [],
+      }));
+
+    if (childNodes.length === 0) {
+      continue;
+    }
+
+    const realizedGainLoss = childNodes.reduce(
+      (sum, node) => sum + node.realizedGainLoss,
+      0,
+    );
+    const unrealizedGainLoss = childNodes.reduce(
+      (sum, node) => sum + node.unrealizedGainLoss,
+      0,
+    );
+
+    hierarchy.push({
+      id: `unit-type:${unitType.id}`,
+      label: unitType.label,
+      realizedGainLoss,
+      unrealizedGainLoss,
+      totalGainLoss: realizedGainLoss + unrealizedGainLoss,
+      children: childNodes,
+    });
+  }
+
+  return { hierarchy };
+}
+
 export function buildPeriodOverviewResponse(args: {
   selection: NormalizedPeriodSelection;
   minPeriodDate: Date;
@@ -40,6 +212,7 @@ export function buildPeriodOverviewResponse(args: {
   bookingsCount: number;
   convertedBookingsCount: number;
   skippedBookingsCount: number;
+  gainsLossesUnitContributions?: PeriodGainsLossesUnitContribution[];
 }) {
   const { income, expenses, explicitGainLoss } = args.equityAggregation;
   const realizedGainLoss = args.isBeforeAccountBookStart
@@ -133,6 +306,9 @@ export function buildPeriodOverviewResponse(args: {
     firstBookingDate: args.minPeriodDate,
     now: args.currentDay,
   });
+  const gainsLossesBreakdown = buildGainsLossesBreakdown(
+    args.gainsLossesUnitContributions ?? [],
+  );
 
   return {
     selectedPeriodValue: args.selection.periodValue,
@@ -186,5 +362,6 @@ export function buildPeriodOverviewResponse(args: {
     },
     assetBreakdown,
     liabilityBreakdown,
+    gainsLossesBreakdown,
   };
 }

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../.prisma-client/enums";
 import {
   accumulateConvertedEquityBooking,
   createPeriodOverviewEquityAggregation,
@@ -93,6 +97,7 @@ describe("period overview response", () => {
     });
     expect(response.currentMonthValue).toBe("2026-02");
     expect(response.availableYears).toEqual([2026]);
+    expect(response.gainsLossesBreakdown.hierarchy).toEqual([]);
   });
 
   it("assembles breakdowns and end-of-period stats from converted balances", () => {
@@ -170,6 +175,44 @@ describe("period overview response", () => {
       bookingsCount: 5,
       convertedBookingsCount: 5,
       skippedBookingsCount: 0,
+      gainsLossesUnitContributions: [
+        {
+          unit: Unit.CURRENCY,
+          currency: "usd",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          realizedGainLoss: 4,
+          unrealizedGainLoss: 1,
+        },
+        {
+          unit: Unit.CURRENCY,
+          currency: "USD",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          realizedGainLoss: 2,
+          unrealizedGainLoss: -1,
+        },
+        {
+          unit: Unit.SECURITY,
+          currency: null,
+          cryptocurrency: null,
+          symbol: "aapl",
+          tradeCurrency: "usd",
+          realizedGainLoss: 7,
+          unrealizedGainLoss: 8,
+        },
+        {
+          unit: Unit.CRYPTOCURRENCY,
+          currency: null,
+          cryptocurrency: "btc",
+          symbol: null,
+          tradeCurrency: null,
+          realizedGainLoss: 2,
+          unrealizedGainLoss: 7,
+        },
+      ],
     });
 
     expect(response.stats).toMatchObject({
@@ -188,5 +231,58 @@ describe("period overview response", () => {
     expect(response.liabilityBreakdown.totalAmount).toBe(40);
     expect(response.incomeBreakdown.totalAmount).toBe(120);
     expect(response.expenseBreakdown.totalAmount).toBe(20);
+    expect(response.gainsLossesBreakdown.hierarchy).toEqual([
+      {
+        id: "unit-type:fx",
+        label: "FX",
+        realizedGainLoss: 6,
+        unrealizedGainLoss: 0,
+        totalGainLoss: 6,
+        children: [
+          {
+            id: "unit:fx:USD",
+            label: "USD",
+            realizedGainLoss: 6,
+            unrealizedGainLoss: 0,
+            totalGainLoss: 6,
+            children: [],
+          },
+        ],
+      },
+      {
+        id: "unit-type:security",
+        label: "Security",
+        realizedGainLoss: 7,
+        unrealizedGainLoss: 8,
+        totalGainLoss: 15,
+        children: [
+          {
+            id: "unit:security:AAPL:USD",
+            label: "AAPL (USD)",
+            realizedGainLoss: 7,
+            unrealizedGainLoss: 8,
+            totalGainLoss: 15,
+            children: [],
+          },
+        ],
+      },
+      {
+        id: "unit-type:cryptocurrency",
+        label: "Cryptocurrency",
+        realizedGainLoss: 2,
+        unrealizedGainLoss: 7,
+        totalGainLoss: 9,
+        children: [
+          {
+            id: "unit:crypto:BTC",
+            label: "BTC",
+            realizedGainLoss: 2,
+            unrealizedGainLoss: 7,
+            totalGainLoss: 9,
+            children: [],
+          },
+        ],
+      },
+    ]);
   });
 });
