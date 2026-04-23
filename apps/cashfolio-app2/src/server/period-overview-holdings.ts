@@ -143,36 +143,40 @@ function applyExecutionToLots(args: {
   return realizedGainLoss;
 }
 
-export async function computeHoldingGainLossSplit(args: {
+type HoldingRateResolver = (input: {
+  unit: Unit;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  tradeCurrency: string | null;
+  date: Date;
+}) => Promise<number | null>;
+
+type HoldingBookingConverter = (booking: {
+  id: string;
+  value: number;
+  unit: Unit;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  tradeCurrency: string | null;
+  date: Date;
+}) => Promise<number | null>;
+
+export type HoldingGainLossWorkingState = {
+  stateByHoldingAccountId: Map<string, HoldingAccountState>;
+  skippedCount: number;
+  convertedCount: number;
+};
+
+export async function initializeHoldingGainLossState(args: {
   holdingAccounts: HoldingRateConvertibleAccount[];
   initialBalanceByAccountId: Map<string, number>;
-  transactions: HoldingTransaction[];
-  periodStart: Date;
-  periodEndExclusive: Date;
   initialRateDate: Date;
-  periodEnd: Date;
-  resolveRate: (input: {
-    unit: Unit;
-    currency: string | null;
-    cryptocurrency: string | null;
-    symbol: string | null;
-    tradeCurrency: string | null;
-    date: Date;
-  }) => Promise<number | null>;
-  convertBookingToReference: (booking: {
-    id: string;
-    value: number;
-    unit: Unit;
-    currency: string | null;
-    cryptocurrency: string | null;
-    symbol: string | null;
-    tradeCurrency: string | null;
-    date: Date;
-  }) => Promise<number | null>;
-}) {
+  resolveRate: HoldingRateResolver;
+}): Promise<HoldingGainLossWorkingState> {
   const stateByHoldingAccountId = new Map<string, HoldingAccountState>();
   let skippedCount = 0;
-  let convertedCount = 0;
 
   for (const account of args.holdingAccounts) {
     const lots: HoldingLot[] = [];
@@ -208,6 +212,20 @@ export async function computeHoldingGainLossSplit(args: {
     });
   }
 
+  return {
+    stateByHoldingAccountId,
+    skippedCount,
+    convertedCount: 0,
+  };
+}
+
+export async function applyHoldingTransactionsToGainLossState(args: {
+  state: HoldingGainLossWorkingState;
+  transactions: HoldingTransaction[];
+  periodStart: Date;
+  periodEndExclusive: Date;
+  convertBookingToReference: HoldingBookingConverter;
+}) {
   for (const transaction of args.transactions) {
     const inPeriodBookings = transaction.bookings.filter(
       (booking) =>
@@ -220,7 +238,7 @@ export async function computeHoldingGainLossSplit(args: {
     }
 
     const holdingBookings = inPeriodBookings.filter((booking) => {
-      const state = stateByHoldingAccountId.get(booking.accountId);
+      const state = args.state.stateByHoldingAccountId.get(booking.accountId);
       return state != null && !state.skipped;
     });
 
@@ -228,9 +246,19 @@ export async function computeHoldingGainLossSplit(args: {
       continue;
     }
 
+    const holdingBookingIds = new Set(
+      holdingBookings.map((booking) => booking.id),
+    );
+    const counterpartBookings = inPeriodBookings.filter(
+      (booking) =>
+        !holdingBookingIds.has(booking.id) &&
+        !isExplicitGainLossBooking(booking),
+    );
+    const bookingsToConvert = [...holdingBookings, ...counterpartBookings];
+
     const convertedByBookingId = new Map<string, number | null>();
     const convertedValues = await Promise.all(
-      inPeriodBookings.map((booking) =>
+      bookingsToConvert.map((booking) =>
         args.convertBookingToReference({
           id: booking.id,
           value: booking.value,
@@ -244,15 +272,15 @@ export async function computeHoldingGainLossSplit(args: {
       ),
     );
 
-    for (let index = 0; index < inPeriodBookings.length; index += 1) {
-      const booking = inPeriodBookings[index]!;
+    for (let index = 0; index < bookingsToConvert.length; index += 1) {
+      const booking = bookingsToConvert[index]!;
       const convertedValue = convertedValues[index];
       convertedByBookingId.set(booking.id, convertedValue);
 
       if (convertedValue == null) {
-        skippedCount += 1;
+        args.state.skippedCount += 1;
       } else {
-        convertedCount += 1;
+        args.state.convertedCount += 1;
       }
     }
 
@@ -263,15 +291,6 @@ export async function computeHoldingGainLossSplit(args: {
     ) {
       continue;
     }
-
-    const holdingBookingIds = new Set(
-      holdingBookings.map((booking) => booking.id),
-    );
-    const counterpartBookings = inPeriodBookings.filter(
-      (booking) =>
-        !holdingBookingIds.has(booking.id) &&
-        !isExplicitGainLossBooking(booking),
-    );
 
     const counterpartHasMissingConversions = counterpartBookings.some(
       (booking) => convertedByBookingId.get(booking.id) == null,
@@ -314,7 +333,7 @@ export async function computeHoldingGainLossSplit(args: {
         : marketReferenceAmount +
           residualInReference * residualAllocationWeights[index]!;
 
-      const state = stateByHoldingAccountId.get(booking.accountId);
+      const state = args.state.stateByHoldingAccountId.get(booking.accountId);
       if (!state) {
         continue;
       }
@@ -327,11 +346,19 @@ export async function computeHoldingGainLossSplit(args: {
       });
     }
   }
+}
 
+export async function finalizeHoldingGainLossState(args: {
+  state: HoldingGainLossWorkingState;
+  periodEnd: Date;
+  resolveRate: HoldingRateResolver;
+}) {
+  let skippedCount = args.state.skippedCount;
+  const convertedCount = args.state.convertedCount;
   let realizedGainLoss = 0;
   let unrealizedGainLoss = 0;
 
-  for (const state of stateByHoldingAccountId.values()) {
+  for (const state of args.state.stateByHoldingAccountId.values()) {
     if (state.skipped) {
       continue;
     }
@@ -398,4 +425,37 @@ export async function computeHoldingGainLossSplit(args: {
     convertedCount,
     skippedCount,
   };
+}
+
+export async function computeHoldingGainLossSplit(args: {
+  holdingAccounts: HoldingRateConvertibleAccount[];
+  initialBalanceByAccountId: Map<string, number>;
+  transactions: HoldingTransaction[];
+  periodStart: Date;
+  periodEndExclusive: Date;
+  initialRateDate: Date;
+  periodEnd: Date;
+  resolveRate: HoldingRateResolver;
+  convertBookingToReference: HoldingBookingConverter;
+}) {
+  const state = await initializeHoldingGainLossState({
+    holdingAccounts: args.holdingAccounts,
+    initialBalanceByAccountId: args.initialBalanceByAccountId,
+    initialRateDate: args.initialRateDate,
+    resolveRate: args.resolveRate,
+  });
+
+  await applyHoldingTransactionsToGainLossState({
+    state,
+    transactions: args.transactions,
+    periodStart: args.periodStart,
+    periodEndExclusive: args.periodEndExclusive,
+    convertBookingToReference: args.convertBookingToReference,
+  });
+
+  return finalizeHoldingGainLossState({
+    state,
+    periodEnd: args.periodEnd,
+    resolveRate: args.resolveRate,
+  });
 }

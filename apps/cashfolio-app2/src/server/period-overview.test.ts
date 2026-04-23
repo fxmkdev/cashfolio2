@@ -164,6 +164,15 @@ describe("getPeriodOverview", () => {
           AND: expect.arrayContaining([
             expect.objectContaining({
               bookings: {
+                some: {
+                  accountId: {
+                    in: ["asset-holding"],
+                  },
+                },
+              },
+            }),
+            expect.objectContaining({
+              bookings: {
                 none: {
                   account: {
                     type: AccountType.EQUITY,

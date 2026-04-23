@@ -1,9 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import {
-  AccountType,
-  EquityAccountSubtype,
-  Unit,
-} from "../.prisma-client/enums";
+import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { prisma } from "../prisma.server";
 import {
@@ -45,7 +41,11 @@ import {
   accumulateConvertedEquityBooking,
   createPeriodOverviewEquityAggregation,
 } from "./period-overview-aggregation";
-import { computeHoldingGainLossSplit } from "./period-overview-holdings";
+import {
+  applyHoldingTransactionsToGainLossState,
+  finalizeHoldingGainLossState,
+  initializeHoldingGainLossState,
+} from "./period-overview-holdings";
 import { buildPeriodOverviewResponse } from "./period-overview-response";
 
 export {
@@ -303,28 +303,33 @@ export const getPeriodOverview = createServerFn({
           ]),
         );
 
+        const holdingGainLossState = await initializeHoldingGainLossState({
+          holdingAccounts: holdingAccountsResolved,
+          initialBalanceByAccountId: initialHoldingBalanceByAccountId,
+          initialRateDate: initialHoldingDate,
+          resolveRate: (input) =>
+            getUnitToReferenceExchangeRate({
+              ...input,
+              referenceCurrency,
+              exchangeRateByKey,
+            }),
+        });
         let nextTransactionIdCursor: string | undefined;
-        const holdingTransactions: Array<{
-          bookings: Array<{
-            id: string;
-            accountId: string;
-            date: Date;
-            value: number;
-            unit: Unit;
-            currency: string | null;
-            cryptocurrency: string | null;
-            symbol: string | null;
-            tradeCurrency: string | null;
-            accountType: AccountType;
-            equityAccountSubtype: EquityAccountSubtype | null;
-          }>;
-        }> = [];
 
         while (true) {
           const transactionsPage = await prisma.transaction.findMany({
             where: {
               accountBookId: data.accountBookId,
               AND: [
+                {
+                  bookings: {
+                    some: {
+                      accountId: {
+                        in: holdingAccountIds,
+                      },
+                    },
+                  },
+                },
                 {
                   bookings: {
                     some: {
@@ -402,8 +407,9 @@ export const getPeriodOverview = createServerFn({
           nextTransactionIdCursor =
             transactionsPage[transactionsPage.length - 1].id;
 
-          for (const transaction of transactionsPage) {
-            holdingTransactions.push({
+          await applyHoldingTransactionsToGainLossState({
+            state: holdingGainLossState,
+            transactions: transactionsPage.map((transaction) => ({
               bookings: transaction.bookings.map((booking) => ({
                 id: booking.id,
                 accountId: booking.accountId,
@@ -417,31 +423,28 @@ export const getPeriodOverview = createServerFn({
                 accountType: booking.account.type,
                 equityAccountSubtype: booking.account.equityAccountSubtype,
               })),
-            });
-          }
+            })),
+            periodStart: queryStart,
+            periodEndExclusive: queryEndExclusive,
+            convertBookingToReference: ({ id: _id, ...booking }) =>
+              convertBookingValueToReference({
+                ...booking,
+                referenceCurrency,
+                exchangeRateByKey,
+              }),
+          });
 
           if (transactionsPage.length < TRANSACTIONS_PAGE_SIZE) {
             break;
           }
         }
 
-        const holdingGainLossSplit = await computeHoldingGainLossSplit({
-          holdingAccounts: holdingAccountsResolved,
-          initialBalanceByAccountId: initialHoldingBalanceByAccountId,
-          transactions: holdingTransactions,
-          periodStart: queryStart,
-          periodEndExclusive: queryEndExclusive,
-          initialRateDate: initialHoldingDate,
+        const holdingGainLossSplit = await finalizeHoldingGainLossState({
+          state: holdingGainLossState,
           periodEnd: selection.to,
           resolveRate: (input) =>
             getUnitToReferenceExchangeRate({
               ...input,
-              referenceCurrency,
-              exchangeRateByKey,
-            }),
-          convertBookingToReference: ({ id: _id, ...booking }) =>
-            convertBookingValueToReference({
-              ...booking,
               referenceCurrency,
               exchangeRateByKey,
             }),

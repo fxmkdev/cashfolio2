@@ -482,6 +482,8 @@ describe("period overview holdings FIFO", () => {
 
     expect(result.realizedGainLoss).toBe(20);
     expect(result.unrealizedGainLoss).toBe(0);
+    expect(result.convertedCount).toBe(2);
+    expect(result.skippedCount).toBe(0);
   });
 
   it("skips holding contribution when opening balance exists but initial rate is unavailable", async () => {
