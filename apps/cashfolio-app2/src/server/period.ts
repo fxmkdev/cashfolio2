@@ -1,5 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { prisma } from "../prisma.server";
 import {
@@ -46,6 +50,11 @@ import {
   finalizeHoldingGainLossState,
   initializeHoldingGainLossState,
 } from "./period-overview-holdings";
+import {
+  applyExecutionToLots,
+  isNearZero,
+  QUANTITY_EPSILON,
+} from "./period-overview-holdings-common";
 import { buildPeriodOverviewResponse } from "./period-overview-response";
 
 export {
@@ -74,9 +83,455 @@ export {
 
 const EQUITY_BOOKINGS_PAGE_SIZE = 1_000;
 const TRANSACTIONS_PAGE_SIZE = 200;
+const TRANSFER_CLEARING_BOOKINGS_PAGE_SIZE = 1_000;
+
+const TRANSFER_CLEARING_ROOT_GROUP_ID = "virtual:transfer-clearing";
+const TRANSFER_CLEARING_CURRENCY_GROUP_ID =
+  "virtual:transfer-clearing:currency";
+const TRANSFER_CLEARING_SECURITY_GROUP_ID =
+  "virtual:transfer-clearing:security";
+const TRANSFER_CLEARING_CRYPTOCURRENCY_GROUP_ID =
+  "virtual:transfer-clearing:cryptocurrency";
+
+type TransferClearingBooking = {
+  id: string;
+  date: Date;
+  value: number;
+  unit: Unit;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  tradeCurrency: string | null;
+};
+
+type TransferClearingUnitType = "currency" | "security" | "cryptocurrency";
+
+type TransferClearingUnitBucket = {
+  unitKey: string;
+  unitLabel: string;
+  unitType: TransferClearingUnitType;
+  unit: Unit;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  tradeCurrency: string | null;
+  isNonReferenceUnit: boolean;
+  rawBalance: number;
+  bookings: TransferClearingBooking[];
+};
+
+type TransferClearingVirtualGroup = {
+  id: string;
+  name: string;
+  parentGroupId: string | null;
+};
+
+type TransferClearingVirtualAccount = EndOfPeriodBalanceAccount & {
+  name: string;
+  groupId: string | null;
+};
 
 function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+function toTransferClearingLotSortKey(args: { date: Date; bookingId: string }) {
+  return `${args.date.toISOString()}::${args.bookingId}`;
+}
+
+function getTransferClearingUnitTypeGroupId(
+  unitType: TransferClearingUnitType,
+) {
+  if (unitType === "currency") {
+    return TRANSFER_CLEARING_CURRENCY_GROUP_ID;
+  }
+  if (unitType === "security") {
+    return TRANSFER_CLEARING_SECURITY_GROUP_ID;
+  }
+  return TRANSFER_CLEARING_CRYPTOCURRENCY_GROUP_ID;
+}
+
+function getTransferClearingUnitTypeLabel(unitType: TransferClearingUnitType) {
+  if (unitType === "currency") {
+    return "Currency";
+  }
+  if (unitType === "security") {
+    return "Security";
+  }
+  return "Cryptocurrency";
+}
+
+function toTransferClearingUnitDescriptor(args: {
+  booking: TransferClearingBooking;
+  referenceCurrency: string;
+}): Omit<TransferClearingUnitBucket, "rawBalance" | "bookings"> | null {
+  if (args.booking.unit === Unit.CURRENCY) {
+    if (!args.booking.currency) {
+      return null;
+    }
+    const normalizedCurrency = args.booking.currency.toUpperCase();
+    return {
+      unitKey: `currency:${normalizedCurrency}`,
+      unitLabel: normalizedCurrency,
+      unitType: "currency",
+      unit: Unit.CURRENCY,
+      currency: normalizedCurrency,
+      cryptocurrency: null,
+      symbol: null,
+      tradeCurrency: null,
+      isNonReferenceUnit: normalizedCurrency !== args.referenceCurrency,
+    };
+  }
+
+  if (args.booking.unit === Unit.SECURITY) {
+    if (!args.booking.symbol || !args.booking.tradeCurrency) {
+      return null;
+    }
+    const normalizedSymbol = args.booking.symbol.toUpperCase();
+    const normalizedTradeCurrency = args.booking.tradeCurrency.toUpperCase();
+    return {
+      unitKey: `security:${normalizedSymbol}:${normalizedTradeCurrency}`,
+      unitLabel: `${normalizedSymbol}:${normalizedTradeCurrency}`,
+      unitType: "security",
+      unit: Unit.SECURITY,
+      currency: null,
+      cryptocurrency: null,
+      symbol: normalizedSymbol,
+      tradeCurrency: normalizedTradeCurrency,
+      isNonReferenceUnit: true,
+    };
+  }
+
+  if (!args.booking.cryptocurrency) {
+    return null;
+  }
+  const normalizedCryptocurrency = args.booking.cryptocurrency.toUpperCase();
+  return {
+    unitKey: `crypto:${normalizedCryptocurrency}`,
+    unitLabel: normalizedCryptocurrency,
+    unitType: "cryptocurrency",
+    unit: Unit.CRYPTOCURRENCY,
+    currency: null,
+    cryptocurrency: normalizedCryptocurrency,
+    symbol: null,
+    tradeCurrency: null,
+    isNonReferenceUnit: true,
+  };
+}
+
+async function loadTransferClearingBookings(args: {
+  accountBookId: string;
+  periodEndExclusive: Date;
+}): Promise<TransferClearingBooking[]> {
+  const results: TransferClearingBooking[] = [];
+  let nextBookingIdCursor: string | undefined;
+
+  while (true) {
+    const bookingsPage = await prisma.booking.findMany({
+      where: {
+        accountBookId: args.accountBookId,
+        date: { lt: args.periodEndExclusive },
+        account: {
+          type: {
+            in: [AccountType.ASSET, AccountType.LIABILITY],
+          },
+        },
+        transaction: {
+          bookings: {
+            some: {
+              date: {
+                gte: args.periodEndExclusive,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { id: "asc" },
+      take: TRANSFER_CLEARING_BOOKINGS_PAGE_SIZE,
+      ...(nextBookingIdCursor
+        ? {
+            cursor: {
+              id_accountBookId: {
+                id: nextBookingIdCursor,
+                accountBookId: args.accountBookId,
+              },
+            },
+            skip: 1,
+          }
+        : {}),
+      select: {
+        id: true,
+        date: true,
+        value: true,
+        unit: true,
+        currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
+      },
+    });
+
+    if (bookingsPage.length === 0) {
+      break;
+    }
+
+    for (const booking of bookingsPage) {
+      results.push({
+        id: booking.id,
+        date: booking.date,
+        value: Number(booking.value),
+        unit: booking.unit,
+        currency: booking.currency,
+        cryptocurrency: booking.cryptocurrency,
+        symbol: booking.symbol,
+        tradeCurrency: booking.tradeCurrency,
+      });
+    }
+
+    nextBookingIdCursor = bookingsPage[bookingsPage.length - 1].id;
+    if (bookingsPage.length < TRANSFER_CLEARING_BOOKINGS_PAGE_SIZE) {
+      break;
+    }
+  }
+
+  return results;
+}
+
+function aggregateTransferClearingUnitBuckets(args: {
+  bookings: TransferClearingBooking[];
+  referenceCurrency: string;
+}): TransferClearingUnitBucket[] {
+  const unitBucketByKey = new Map<string, TransferClearingUnitBucket>();
+
+  for (const booking of args.bookings) {
+    const descriptor = toTransferClearingUnitDescriptor({
+      booking,
+      referenceCurrency: args.referenceCurrency,
+    });
+    if (!descriptor) {
+      continue;
+    }
+
+    const existing = unitBucketByKey.get(descriptor.unitKey);
+    if (existing) {
+      existing.rawBalance += booking.value;
+      existing.bookings.push(booking);
+      continue;
+    }
+
+    unitBucketByKey.set(descriptor.unitKey, {
+      ...descriptor,
+      rawBalance: booking.value,
+      bookings: [booking],
+    });
+  }
+
+  return Array.from(unitBucketByKey.values()).sort(
+    (left, right) =>
+      left.unitLabel.localeCompare(right.unitLabel, "en") ||
+      left.unitKey.localeCompare(right.unitKey, "en"),
+  );
+}
+
+function buildTransferClearingVirtualHierarchy(args: {
+  unitBuckets: TransferClearingUnitBucket[];
+}) {
+  const nonZeroBuckets = args.unitBuckets.filter(
+    (bucket) => !isNearZero(bucket.rawBalance),
+  );
+  if (nonZeroBuckets.length === 0) {
+    return {
+      virtualGroups: [] as TransferClearingVirtualGroup[],
+      virtualAccounts: [] as TransferClearingVirtualAccount[],
+      rawBalanceByVirtualAccountId: new Map<string, number>(),
+    };
+  }
+
+  const rootGroup: TransferClearingVirtualGroup = {
+    id: TRANSFER_CLEARING_ROOT_GROUP_ID,
+    name: "Transfer Clearing",
+    parentGroupId: null,
+  };
+  const virtualGroups: TransferClearingVirtualGroup[] = [rootGroup];
+
+  const presentUnitTypes = new Set(
+    nonZeroBuckets.map((bucket) => bucket.unitType),
+  );
+  const orderedUnitTypes: TransferClearingUnitType[] = [
+    "currency",
+    "security",
+    "cryptocurrency",
+  ];
+  for (const unitType of orderedUnitTypes) {
+    if (!presentUnitTypes.has(unitType)) {
+      continue;
+    }
+    virtualGroups.push({
+      id: getTransferClearingUnitTypeGroupId(unitType),
+      name: getTransferClearingUnitTypeLabel(unitType),
+      parentGroupId: TRANSFER_CLEARING_ROOT_GROUP_ID,
+    });
+  }
+
+  const virtualAccounts: TransferClearingVirtualAccount[] = [];
+  const rawBalanceByVirtualAccountId = new Map<string, number>();
+  for (const bucket of nonZeroBuckets) {
+    const accountId = `virtual:transfer-clearing:account:${bucket.unitKey}`;
+    virtualAccounts.push({
+      id: accountId,
+      name: bucket.unitLabel,
+      groupId: getTransferClearingUnitTypeGroupId(bucket.unitType),
+      type: bucket.rawBalance > 0 ? AccountType.ASSET : AccountType.LIABILITY,
+      unit: bucket.unit,
+      currency: bucket.currency,
+      cryptocurrency: bucket.cryptocurrency,
+      symbol: bucket.symbol,
+      tradeCurrency: bucket.tradeCurrency,
+    });
+    rawBalanceByVirtualAccountId.set(accountId, bucket.rawBalance);
+  }
+
+  return {
+    virtualGroups,
+    virtualAccounts,
+    rawBalanceByVirtualAccountId,
+  };
+}
+
+async function computeTransferClearingGainLossSplit(args: {
+  unitBuckets: TransferClearingUnitBucket[];
+  periodStart: Date;
+  periodEndExclusive: Date;
+  initialRateDate: Date;
+  periodEnd: Date;
+  resolveRate: (input: {
+    unit: Unit;
+    currency: string | null;
+    cryptocurrency: string | null;
+    symbol: string | null;
+    tradeCurrency: string | null;
+    date: Date;
+  }) => Promise<number | null>;
+  convertBookingToReference: (
+    booking: TransferClearingBooking,
+  ) => Promise<number | null>;
+}) {
+  let realizedGainLoss = 0;
+  let unrealizedGainLoss = 0;
+  let convertedCount = 0;
+  let skippedCount = 0;
+
+  for (const unitBucket of args.unitBuckets) {
+    if (!unitBucket.isNonReferenceUnit) {
+      continue;
+    }
+
+    const lots: Array<{
+      quantity: number;
+      unitCostInReference: number;
+      acquisitionSortKey: string;
+    }> = [];
+    const openingBalance = unitBucket.bookings
+      .filter((booking) => booking.date < args.periodStart)
+      .reduce((sum, booking) => sum + booking.value, 0);
+
+    if (!isNearZero(openingBalance)) {
+      const initialRate = await args.resolveRate({
+        unit: unitBucket.unit,
+        currency: unitBucket.currency,
+        cryptocurrency: unitBucket.cryptocurrency,
+        symbol: unitBucket.symbol,
+        tradeCurrency: unitBucket.tradeCurrency,
+        date: args.initialRateDate,
+      });
+      if (initialRate == null) {
+        skippedCount += 1;
+        continue;
+      }
+
+      lots.push({
+        quantity: openingBalance,
+        unitCostInReference: initialRate,
+        acquisitionSortKey: toTransferClearingLotSortKey({
+          date: args.initialRateDate,
+          bookingId: `opening:${unitBucket.unitKey}`,
+        }),
+      });
+    }
+
+    const inPeriodBookings = unitBucket.bookings
+      .filter(
+        (booking) =>
+          booking.date >= args.periodStart &&
+          booking.date < args.periodEndExclusive,
+      )
+      .sort((left, right) => {
+        const dateDiff = left.date.getTime() - right.date.getTime();
+        if (dateDiff !== 0) {
+          return dateDiff;
+        }
+        return left.id.localeCompare(right.id, "en");
+      });
+
+    for (const booking of inPeriodBookings) {
+      const convertedValue = await args.convertBookingToReference(booking);
+      if (convertedValue == null) {
+        skippedCount += 1;
+        continue;
+      }
+      convertedCount += 1;
+
+      const executionUnitPriceInReference = convertedValue / booking.value;
+      if (!Number.isFinite(executionUnitPriceInReference)) {
+        skippedCount += 1;
+        continue;
+      }
+
+      realizedGainLoss += applyExecutionToLots({
+        lots,
+        quantity: booking.value,
+        executionUnitPriceInReference,
+        acquisitionSortKey: toTransferClearingLotSortKey({
+          date: booking.date,
+          bookingId: booking.id,
+        }),
+      });
+    }
+
+    const openQuantity = lots.reduce(
+      (sum, lot) => sum + Math.abs(lot.quantity),
+      0,
+    );
+    if (openQuantity <= QUANTITY_EPSILON) {
+      continue;
+    }
+
+    const periodEndRate = await args.resolveRate({
+      unit: unitBucket.unit,
+      currency: unitBucket.currency,
+      cryptocurrency: unitBucket.cryptocurrency,
+      symbol: unitBucket.symbol,
+      tradeCurrency: unitBucket.tradeCurrency,
+      date: args.periodEnd,
+    });
+    if (periodEndRate == null) {
+      skippedCount += 1;
+      continue;
+    }
+
+    unrealizedGainLoss += lots.reduce(
+      (sum, lot) =>
+        sum + lot.quantity * (periodEndRate - lot.unitCostInReference),
+      0,
+    );
+  }
+
+  return {
+    realizedGainLoss,
+    unrealizedGainLoss,
+    convertedCount,
+    skippedCount,
+  };
 }
 
 export const getPeriodOverview = createServerFn({
@@ -98,7 +553,7 @@ export const getPeriodOverview = createServerFn({
     });
 
     const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
-    const [allAccountGroups, assetLiabilityAccounts] = await Promise.all([
+    const [allAccountGroups, baseAssetLiabilityAccounts] = await Promise.all([
       prisma.accountGroup.findMany({
         where: { accountBookId: data.accountBookId },
         select: {
@@ -129,7 +584,7 @@ export const getPeriodOverview = createServerFn({
     ]);
 
     const holdingAccountsResolved = filterConvertibleHoldingAccounts(
-      assetLiabilityAccounts,
+      baseAssetLiabilityAccounts,
       referenceCurrency,
     );
 
@@ -147,12 +602,8 @@ export const getPeriodOverview = createServerFn({
     const queryEndExclusive = getPeriodEndExclusive(selection.to);
     const initialHoldingDate = addUtcDays(queryStart, -1);
 
-    const groupById = new Map(
-      allAccountGroups.map((group) => [group.id, group]),
-    );
-
     const exchangeRateByKey = new Map<string, Promise<number | null>>();
-    const assetLiabilityAccountIds = assetLiabilityAccounts.map(
+    const assetLiabilityAccountIds = baseAssetLiabilityAccounts.map(
       (account) => account.id,
     );
     const endOfPeriodRawBalanceByAccountId = new Map(
@@ -169,6 +620,36 @@ export const getPeriodOverview = createServerFn({
         : []
       ).map((balance) => [balance.accountId, Number(balance._sum.value ?? 0)]),
     );
+    const transferClearingBookings = await loadTransferClearingBookings({
+      accountBookId: data.accountBookId,
+      periodEndExclusive: queryEndExclusive,
+    });
+    const transferClearingUnitBuckets = aggregateTransferClearingUnitBuckets({
+      bookings: transferClearingBookings,
+      referenceCurrency,
+    });
+    const {
+      virtualGroups: transferClearingVirtualGroups,
+      virtualAccounts: transferClearingVirtualAccounts,
+      rawBalanceByVirtualAccountId,
+    } = buildTransferClearingVirtualHierarchy({
+      unitBuckets: transferClearingUnitBuckets,
+    });
+
+    const groupById = new Map(
+      allAccountGroups.map((group) => [group.id, group]),
+    );
+    for (const virtualGroup of transferClearingVirtualGroups) {
+      groupById.set(virtualGroup.id, virtualGroup);
+    }
+
+    const assetLiabilityAccounts = [
+      ...baseAssetLiabilityAccounts,
+      ...transferClearingVirtualAccounts,
+    ];
+    for (const [accountId, rawBalance] of rawBalanceByVirtualAccountId) {
+      endOfPeriodRawBalanceByAccountId.set(accountId, rawBalance);
+    }
 
     let bookingsCount = 0;
     let convertedBookingsCount = 0;
@@ -449,6 +930,37 @@ export const getPeriodOverview = createServerFn({
         convertedBookingsCount += holdingGainLossSplit.convertedCount;
         skippedBookingsCount += holdingGainLossSplit.skippedCount;
       }
+
+      const transferClearingGainLossSplit =
+        await computeTransferClearingGainLossSplit({
+          unitBuckets: transferClearingUnitBuckets,
+          periodStart: queryStart,
+          periodEndExclusive: queryEndExclusive,
+          initialRateDate: initialHoldingDate,
+          periodEnd: selection.to,
+          resolveRate: (input) =>
+            getUnitToReferenceExchangeRate({
+              ...input,
+              referenceCurrency,
+              exchangeRateByKey,
+            }),
+          convertBookingToReference: (booking) =>
+            convertBookingValueToReference({
+              value: booking.value,
+              unit: booking.unit,
+              currency: booking.currency,
+              cryptocurrency: booking.cryptocurrency,
+              symbol: booking.symbol,
+              tradeCurrency: booking.tradeCurrency,
+              date: booking.date,
+              referenceCurrency,
+              exchangeRateByKey,
+            }),
+        });
+      realizedGainLoss += transferClearingGainLossSplit.realizedGainLoss;
+      unrealizedGainLoss += transferClearingGainLossSplit.unrealizedGainLoss;
+      convertedBookingsCount += transferClearingGainLossSplit.convertedCount;
+      skippedBookingsCount += transferClearingGainLossSplit.skippedCount;
     }
 
     const endOfPeriodBalanceStats =
