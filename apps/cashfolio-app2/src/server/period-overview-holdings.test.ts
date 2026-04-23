@@ -50,6 +50,28 @@ function createHoldingBooking(args: {
   } as const;
 }
 
+function createHoldingCurrencyBooking(args: {
+  id: string;
+  accountId: string;
+  date: string;
+  value: number;
+  currency: string;
+}) {
+  return {
+    id: args.id,
+    accountId: args.accountId,
+    date: new Date(args.date),
+    value: args.value,
+    unit: Unit.CURRENCY,
+    currency: args.currency,
+    cryptocurrency: null,
+    symbol: null,
+    tradeCurrency: null,
+    accountType: AccountType.ASSET,
+    equityAccountSubtype: null,
+  } as const;
+}
+
 function createCashBooking(args: { id: string; date: string; value: number }) {
   return {
     id: args.id,
@@ -387,6 +409,89 @@ describe("period overview holdings FIFO", () => {
       convertedCount: 2,
       skippedCount: 0,
     });
+  });
+
+  it("allocates all-holding residual for multi-unit exchanges", async () => {
+    const eurAccountId = "holding-eur";
+    const usdAccountId = "holding-usd";
+    const convertedByBookingId = new Map<string, number>([
+      ["h-sell-eur", -96],
+      ["h-buy-usd", 100],
+    ]);
+
+    const result = await computeHoldingGainLossSplit({
+      holdingAccounts: [
+        {
+          id: eurAccountId,
+          unit: Unit.CURRENCY,
+          currency: "EUR",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+        },
+        {
+          id: usdAccountId,
+          unit: Unit.CURRENCY,
+          currency: "USD",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+        },
+      ],
+      initialBalanceByAccountId: new Map([[eurAccountId, 80]]),
+      transactions: [
+        {
+          bookings: [
+            createHoldingCurrencyBooking({
+              id: "h-sell-eur",
+              accountId: eurAccountId,
+              date: "2026-02-10T00:00:00.000Z",
+              value: -80,
+              currency: "EUR",
+            }),
+            createHoldingCurrencyBooking({
+              id: "h-buy-usd",
+              accountId: usdAccountId,
+              date: "2026-02-10T00:00:00.000Z",
+              value: 100,
+              currency: "USD",
+            }),
+          ],
+        },
+      ],
+      periodStart: new Date("2026-02-01T00:00:00.000Z"),
+      periodEndExclusive: new Date("2026-03-01T00:00:00.000Z"),
+      initialRateDate: new Date("2026-01-31T00:00:00.000Z"),
+      periodEnd: new Date("2026-02-28T00:00:00.000Z"),
+      resolveRate: vi.fn().mockImplementation(async ({ date, currency }) => {
+        if (
+          currency === "EUR" &&
+          date.toISOString() === "2026-01-31T00:00:00.000Z"
+        ) {
+          return 1;
+        }
+        if (
+          currency === "USD" &&
+          date.toISOString() === "2026-02-28T00:00:00.000Z"
+        ) {
+          return 1;
+        }
+        if (
+          currency === "EUR" &&
+          date.toISOString() === "2026-02-28T00:00:00.000Z"
+        ) {
+          return 1;
+        }
+        return null;
+      }),
+      convertBookingToReference: async (booking) =>
+        convertedByBookingId.get(booking.id) ?? null,
+    });
+
+    expect(result.convertedCount).toBe(2);
+    expect(result.skippedCount).toBe(0);
+    expect(result.realizedGainLoss).toBeCloseTo(17.9591836735, 9);
+    expect(result.unrealizedGainLoss).toBeCloseTo(2.0408163265, 9);
   });
 
   it("transfers holding lots across accounts without realizing gain/loss", async () => {

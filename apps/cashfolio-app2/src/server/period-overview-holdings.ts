@@ -212,8 +212,21 @@ export async function applyHoldingTransactionsToGainLossState(args: {
     const counterpartHasMissingConversions = counterpartBookings.some(
       (booking) => convertedByBookingId.get(booking.id) == null,
     );
+    const hasPositiveHoldingBooking = inPeriodHoldingBookings.some(
+      (booking) => booking.value > QUANTITY_EPSILON,
+    );
+    const hasNegativeHoldingBooking = inPeriodHoldingBookings.some(
+      (booking) => booking.value < -QUANTITY_EPSILON,
+    );
+    const shouldAllocateAllHoldingResidual =
+      counterpartBookings.length === 0 &&
+      allNonExplicitAreHolding &&
+      nonExplicitUnitIdentifiers.size > 1 &&
+      hasPositiveHoldingBooking &&
+      hasNegativeHoldingBooking;
     const shouldUseMarketFallback =
-      counterpartBookings.length === 0 || counterpartHasMissingConversions;
+      counterpartHasMissingConversions ||
+      (counterpartBookings.length === 0 && !shouldAllocateAllHoldingResidual);
 
     const holdingMarketValueByBookingId = new Map<string, number>(
       inPeriodHoldingBookings.map((booking) => [
