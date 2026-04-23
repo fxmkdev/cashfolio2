@@ -32,6 +32,10 @@ function getRealizedUnrealizedLabel(args: {
   return `Realised ${realized} · Unrealised ${unrealized}`;
 }
 
+function getGainLossLabel(amount: number): string {
+  return amount >= 0 ? "Gain" : "Loss";
+}
+
 export function buildPeriodPageStats(args: {
   overview: PeriodOverview;
   currencyFormatter: Intl.NumberFormat;
@@ -39,7 +43,7 @@ export function buildPeriodPageStats(args: {
 }): PeriodPageStatsModel {
   const { overview, currencyFormatter, savingsRateFormatter } = args;
 
-  const gainsLossesLabel = overview.stats.gainsLosses >= 0 ? "Gains" : "Losses";
+  const gainsLossesLabel = getGainLossLabel(overview.stats.gainsLosses);
   const savingsRateLabel = getSavingsRateLabel({
     income: overview.stats.income,
     savings: overview.stats.savings,

@@ -543,7 +543,7 @@ export const HappyPath: Story = {
     const savingsCard = await canvas.findByTestId("period-stat-card-savings");
     await expect(within(savingsCard).getByText("31.3%")).toBeInTheDocument();
     await expect(canvas.getByRole("radio", { name: "Expenses" })).toBeChecked();
-    await expect(canvas.getByText("Gains")).toBeInTheDocument();
+    await expect(canvas.getByText("Gain")).toBeInTheDocument();
   },
 };
 
@@ -617,8 +617,8 @@ export const LossesKpiLabel: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("Losses")).toBeInTheDocument();
-    await expect(canvas.queryByText("Gains")).not.toBeInTheDocument();
+    await expect(canvas.getByText("Loss")).toBeInTheDocument();
+    await expect(canvas.queryByText("Gain")).not.toBeInTheDocument();
   },
 };
 

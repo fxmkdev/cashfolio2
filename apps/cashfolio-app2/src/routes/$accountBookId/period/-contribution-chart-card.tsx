@@ -27,7 +27,6 @@ type WaterfallTotalDatum = {
 export type ContributionChartStats = {
   income: number;
   expenses: number;
-  gainsLosses: number;
   realizedGainLoss: number;
   unrealizedGainLoss: number;
 };
@@ -46,9 +45,15 @@ function isWaterfallTotalDatum(datum: unknown): datum is WaterfallTotalDatum {
   return typeof datum.isTotal === "boolean";
 }
 
+function getGainLossLabel(amount: number): "Gain" | "Loss" {
+  return amount >= 0 ? "Gain" : "Loss";
+}
+
 export function buildContributionWaterfallModel(args: {
   stats: ContributionChartStats;
 }): ContributionWaterfallModel {
+  const realizedLabel = `Realised ${getGainLossLabel(args.stats.realizedGainLoss)}`;
+  const unrealizedLabel = `Unrealised ${getGainLossLabel(args.stats.unrealizedGainLoss)}`;
   const data: WaterfallDatum[] = [
     {
       label: "Income",
@@ -59,17 +64,18 @@ export function buildContributionWaterfallModel(args: {
       amount: -args.stats.expenses,
     },
     {
-      label: "Realised",
+      label: realizedLabel,
       amount: args.stats.realizedGainLoss,
     },
     {
-      label: "Unrealised",
+      label: unrealizedLabel,
       amount: args.stats.unrealizedGainLoss,
     },
   ];
   const [incomeDatum, expensesDatum, realizedDatum, unrealizedDatum] = data;
   const savingsAmount = incomeDatum.amount + expensesDatum.amount;
   const gainsLossesAmount = realizedDatum.amount + unrealizedDatum.amount;
+  const gainsLossesLabel = getGainLossLabel(gainsLossesAmount);
   const totalReturnAmount = savingsAmount + gainsLossesAmount;
 
   return {
@@ -80,7 +86,7 @@ export function buildContributionWaterfallModel(args: {
       [realizedDatum.label]: realizedDatum.amount,
       [unrealizedDatum.label]: unrealizedDatum.amount,
       Savings: savingsAmount,
-      "Gains/Losses": gainsLossesAmount,
+      [gainsLossesLabel]: gainsLossesAmount,
       "Total Return": totalReturnAmount,
     },
     totals: [
@@ -92,7 +98,7 @@ export function buildContributionWaterfallModel(args: {
       {
         totalType: "subtotal",
         index: 3,
-        axisLabel: "Gains/Losses",
+        axisLabel: gainsLossesLabel,
       },
       {
         totalType: "total",
@@ -104,7 +110,6 @@ export function buildContributionWaterfallModel(args: {
 }
 
 export function ContributionChartCard(args: {
-  gainsLossesLabel: string;
   stats: ContributionChartStats;
   currencyFormatter: Intl.NumberFormat;
   colors: DashboardChartThemeColors;

@@ -7,7 +7,6 @@ describe("buildContributionWaterfallModel", () => {
       stats: {
         income: 100,
         expenses: 40,
-        gainsLosses: 10,
         realizedGainLoss: 7,
         unrealizedGainLoss: 3,
       },
@@ -16,8 +15,8 @@ describe("buildContributionWaterfallModel", () => {
     expect(model.data).toEqual([
       { label: "Income", amount: 100 },
       { label: "Expenses", amount: -40 },
-      { label: "Realised", amount: 7 },
-      { label: "Unrealised", amount: 3 },
+      { label: "Realised Gain", amount: 7 },
+      { label: "Unrealised Gain", amount: 3 },
     ]);
   });
 
@@ -26,7 +25,6 @@ describe("buildContributionWaterfallModel", () => {
       stats: {
         income: 200,
         expenses: 140,
-        gainsLosses: -20,
         realizedGainLoss: -30,
         unrealizedGainLoss: 10,
       },
@@ -35,10 +33,10 @@ describe("buildContributionWaterfallModel", () => {
     expect(model.amountByLabel).toMatchObject({
       Income: 200,
       Expenses: -140,
-      Realised: -30,
-      Unrealised: 10,
+      "Realised Loss": -30,
+      "Unrealised Gain": 10,
       Savings: 60,
-      "Gains/Losses": -20,
+      Loss: -20,
       "Total Return": 40,
     });
   });
@@ -48,7 +46,6 @@ describe("buildContributionWaterfallModel", () => {
       stats: {
         income: 1,
         expenses: 1,
-        gainsLosses: 0,
         realizedGainLoss: 0,
         unrealizedGainLoss: 0,
       },
@@ -63,7 +60,7 @@ describe("buildContributionWaterfallModel", () => {
       {
         totalType: "subtotal",
         index: 3,
-        axisLabel: "Gains/Losses",
+        axisLabel: "Gain",
       },
       {
         totalType: "total",
