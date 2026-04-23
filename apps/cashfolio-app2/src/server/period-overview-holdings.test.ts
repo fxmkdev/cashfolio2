@@ -438,6 +438,55 @@ describe("period overview holdings FIFO", () => {
     });
   });
 
+  it("transfers short lots across accounts without realizing gain/loss", async () => {
+    const convertedByBookingId = new Map<string, number>([
+      ["h-short-transfer-out", 360],
+      ["h-short-transfer-in", -360],
+    ]);
+
+    const result = await computeHoldingGainLossSplit({
+      holdingAccounts: [...holdingAccounts],
+      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, -10]]),
+      transactions: [
+        {
+          bookings: [
+            createHoldingBooking({
+              id: "h-short-transfer-out",
+              accountId: HOLDING_ACCOUNT_ID,
+              date: "2026-02-10T00:00:00.000Z",
+              value: 4,
+            }),
+            createHoldingBooking({
+              id: "h-short-transfer-in",
+              accountId: SECOND_HOLDING_ACCOUNT_ID,
+              date: "2026-02-10T00:00:00.000Z",
+              value: -4,
+            }),
+          ],
+        },
+      ],
+      periodStart: new Date("2026-02-01T00:00:00.000Z"),
+      periodEndExclusive: new Date("2026-03-01T00:00:00.000Z"),
+      initialRateDate: new Date("2026-01-31T00:00:00.000Z"),
+      periodEnd: new Date("2026-02-28T00:00:00.000Z"),
+      resolveRate: vi.fn().mockImplementation(async ({ date }) => {
+        if (date.toISOString() === "2026-01-31T00:00:00.000Z") {
+          return 100;
+        }
+        return 90;
+      }),
+      convertBookingToReference: async (booking) =>
+        convertedByBookingId.get(booking.id) ?? null,
+    });
+
+    expect(result).toEqual({
+      realizedGainLoss: 0,
+      unrealizedGainLoss: 100,
+      convertedCount: 0,
+      skippedCount: 0,
+    });
+  });
+
   it("allocates residual by quantity when holding market values are zero", async () => {
     const convertedByBookingId = new Map<string, number>([
       ["h-a", 0],
