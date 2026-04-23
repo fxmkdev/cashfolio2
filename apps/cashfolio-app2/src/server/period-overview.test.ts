@@ -585,9 +585,9 @@ describe("getPeriodOverview", () => {
       },
     });
 
-    expect(result.stats.endOfPeriodAssets).toBe(102);
-    expect(result.stats.endOfPeriodLiabilities).toBe(5);
-    expect(result.stats.endOfPeriodNetWorth).toBe(97);
+    expect(result.stats.endOfPeriodAssets).toBe(5);
+    expect(result.stats.endOfPeriodLiabilities).toBe(102);
+    expect(result.stats.endOfPeriodNetWorth).toBe(-97);
 
     const assetRoot = findBreakdownNodeById(
       result.assetBreakdown.hierarchy,
@@ -600,6 +600,17 @@ describe("getPeriodOverview", () => {
 
     expect(assetRoot?.label).toBe("Transfer Clearing");
     expect(assetRoot?.children.map((child) => child.id)).toEqual(
+      expect.arrayContaining(["group:virtual:transfer-clearing:security"]),
+    );
+    expect(
+      findBreakdownNodeById(
+        result.assetBreakdown.hierarchy,
+        "account:virtual:transfer-clearing:account:security:AAPL:USD",
+      )?.label,
+    ).toBe("AAPL:USD");
+
+    expect(liabilityRoot?.label).toBe("Transfer Clearing");
+    expect(liabilityRoot?.children.map((child) => child.id)).toEqual(
       expect.arrayContaining([
         "group:virtual:transfer-clearing:currency",
         "group:virtual:transfer-clearing:cryptocurrency",
@@ -607,27 +618,16 @@ describe("getPeriodOverview", () => {
     );
     expect(
       findBreakdownNodeById(
-        result.assetBreakdown.hierarchy,
+        result.liabilityBreakdown.hierarchy,
         "account:virtual:transfer-clearing:account:currency:CHF",
       )?.label,
     ).toBe("CHF");
     expect(
       findBreakdownNodeById(
-        result.assetBreakdown.hierarchy,
+        result.liabilityBreakdown.hierarchy,
         "account:virtual:transfer-clearing:account:crypto:BTC",
       )?.label,
     ).toBe("BTC");
-
-    expect(liabilityRoot?.label).toBe("Transfer Clearing");
-    expect(liabilityRoot?.children.map((child) => child.id)).toEqual([
-      "group:virtual:transfer-clearing:security",
-    ]);
-    expect(
-      findBreakdownNodeById(
-        result.liabilityBreakdown.hierarchy,
-        "account:virtual:transfer-clearing:account:security:AAPL:USD",
-      )?.label,
-    ).toBe("AAPL:USD");
   });
 
   it("routes positive and negative transfer-clearing unit balances into asset and liability totals", async () => {
@@ -693,23 +693,23 @@ describe("getPeriodOverview", () => {
       },
     });
 
-    expect(result.stats.endOfPeriodAssets).toBe(100);
-    expect(result.stats.endOfPeriodLiabilities).toBe(80);
-    expect(result.stats.endOfPeriodNetWorth).toBe(20);
-    expect(result.assetBreakdown.totalAmount).toBe(100);
-    expect(result.liabilityBreakdown.totalAmount).toBe(80);
+    expect(result.stats.endOfPeriodAssets).toBe(80);
+    expect(result.stats.endOfPeriodLiabilities).toBe(100);
+    expect(result.stats.endOfPeriodNetWorth).toBe(-20);
+    expect(result.assetBreakdown.totalAmount).toBe(80);
+    expect(result.liabilityBreakdown.totalAmount).toBe(100);
     expect(
       findBreakdownNodeById(
         result.assetBreakdown.hierarchy,
-        "account:virtual:transfer-clearing:account:currency:CHF",
-      )?.amount,
-    ).toBe(100);
-    expect(
-      findBreakdownNodeById(
-        result.liabilityBreakdown.hierarchy,
         "account:virtual:transfer-clearing:account:currency:USD",
       )?.amount,
     ).toBe(80);
+    expect(
+      findBreakdownNodeById(
+        result.liabilityBreakdown.hierarchy,
+        "account:virtual:transfer-clearing:account:currency:CHF",
+      )?.amount,
+    ).toBe(100);
   });
 
   it("includes transfer-clearing balances even when qualifying bookings are outside the selected period window", async () => {
@@ -762,8 +762,8 @@ describe("getPeriodOverview", () => {
       },
     });
 
-    expect(result.stats.endOfPeriodAssets).toBe(100);
-    expect(result.assetBreakdown.totalAmount).toBe(100);
+    expect(result.stats.endOfPeriodLiabilities).toBe(100);
+    expect(result.liabilityBreakdown.totalAmount).toBe(100);
     expect(result.convertedBookingsCount).toBe(0);
     expect(result.stats.gainsLosses).toBe(0);
   });
@@ -863,11 +863,11 @@ describe("getPeriodOverview", () => {
 
     expect(result.convertedBookingsCount).toBe(2);
     expect(result.skippedBookingsCount).toBe(0);
-    expect(result.stats.realizedGainLoss).toBe(4);
-    expect(result.stats.unrealizedGainLoss).toBe(21);
-    expect(result.stats.gainsLosses).toBe(25);
-    expect(result.stats.totalReturn).toBe(25);
-    expect(result.stats.endOfPeriodAssets).toBe(36);
+    expect(result.stats.realizedGainLoss).toBe(-4);
+    expect(result.stats.unrealizedGainLoss).toBe(-21);
+    expect(result.stats.gainsLosses).toBe(-25);
+    expect(result.stats.totalReturn).toBe(-25);
+    expect(result.stats.endOfPeriodLiabilities).toBe(36);
   });
 
   it("tracks skipped counts when transfer-clearing conversions or rates are unavailable", async () => {
@@ -934,7 +934,7 @@ describe("getPeriodOverview", () => {
       },
     });
 
-    expect(result.stats.endOfPeriodAssets).toBe(10);
+    expect(result.stats.endOfPeriodLiabilities).toBe(10);
     expect(result.stats.gainsLosses).toBe(0);
     expect(result.convertedBookingsCount).toBe(0);
     expect(result.skippedBookingsCount).toBe(3);

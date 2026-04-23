@@ -376,19 +376,20 @@ function buildTransferClearingVirtualHierarchy(args: {
   const virtualAccounts: TransferClearingVirtualAccount[] = [];
   const rawBalanceByVirtualAccountId = new Map<string, number>();
   for (const bucket of nonZeroBuckets) {
+    const clearingRawBalance = -bucket.rawBalance;
     const accountId = `virtual:transfer-clearing:account:${bucket.unitKey}`;
     virtualAccounts.push({
       id: accountId,
       name: bucket.unitLabel,
       groupId: getTransferClearingUnitTypeGroupId(bucket.unitType),
-      type: bucket.rawBalance > 0 ? AccountType.ASSET : AccountType.LIABILITY,
+      type: clearingRawBalance > 0 ? AccountType.ASSET : AccountType.LIABILITY,
       unit: bucket.unit,
       currency: bucket.currency,
       cryptocurrency: bucket.cryptocurrency,
       symbol: bucket.symbol,
       tradeCurrency: bucket.tradeCurrency,
     });
-    rawBalanceByVirtualAccountId.set(accountId, bucket.rawBalance);
+    rawBalanceByVirtualAccountId.set(accountId, clearingRawBalance);
   }
 
   return {
@@ -431,9 +432,10 @@ async function computeTransferClearingGainLossSplit(args: {
       unitCostInReference: number;
       acquisitionSortKey: string;
     }> = [];
-    const openingBalance = unitBucket.bookings
+    const openingPostedBalance = unitBucket.bookings
       .filter((booking) => booking.date < args.periodStart)
       .reduce((sum, booking) => sum + booking.value, 0);
+    const openingBalance = -openingPostedBalance;
 
     if (!isNearZero(openingBalance)) {
       const initialRate = await args.resolveRate({
@@ -481,7 +483,10 @@ async function computeTransferClearingGainLossSplit(args: {
       }
       convertedCount += 1;
 
-      const executionUnitPriceInReference = convertedValue / booking.value;
+      const clearingQuantity = -booking.value;
+      const clearingReferenceAmount = -convertedValue;
+      const executionUnitPriceInReference =
+        clearingReferenceAmount / clearingQuantity;
       if (!Number.isFinite(executionUnitPriceInReference)) {
         skippedCount += 1;
         continue;
@@ -489,7 +494,7 @@ async function computeTransferClearingGainLossSplit(args: {
 
       realizedGainLoss += applyExecutionToLots({
         lots,
-        quantity: booking.value,
+        quantity: clearingQuantity,
         executionUnitPriceInReference,
         acquisitionSortKey: toTransferClearingLotSortKey({
           date: booking.date,
