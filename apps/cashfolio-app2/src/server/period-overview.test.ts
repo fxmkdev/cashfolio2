@@ -351,12 +351,23 @@ describe("getPeriodOverview", () => {
       if (isTransferClearingBookingQuery(args)) {
         return Promise.resolve([]);
       }
+      if (args.where?.transactionId === "tx-explicit") {
+        return Promise.resolve([
+          {
+            accountId: "asset-counterpart",
+            account: {
+              name: "Cash",
+            },
+          },
+        ]);
+      }
       if (!isEquityBookingQuery(args)) {
         return Promise.resolve([]);
       }
       return Promise.resolve([
         {
           id: "booking-income",
+          transactionId: "tx-income",
           date: new Date("2026-01-10T00:00:00.000Z"),
           value: -100,
           unit: Unit.CURRENCY,
@@ -373,6 +384,7 @@ describe("getPeriodOverview", () => {
         },
         {
           id: "booking-expense-no-rate",
+          transactionId: "tx-expense",
           date: new Date("2026-01-11T00:00:00.000Z"),
           value: 60,
           unit: Unit.CURRENCY,
@@ -389,6 +401,7 @@ describe("getPeriodOverview", () => {
         },
         {
           id: "booking-gain-loss",
+          transactionId: "tx-explicit",
           date: new Date("2026-01-12T00:00:00.000Z"),
           value: -20,
           unit: Unit.CURRENCY,
@@ -457,10 +470,30 @@ describe("getPeriodOverview", () => {
         tradeCurrency: "USD",
       },
     ]);
-    prisma.booking.findMany
-      .mockResolvedValueOnce([
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (args.where?.transactionId === "tx-explicit") {
+        return Promise.resolve([
+          {
+            accountId: "asset-cash",
+            account: {
+              name: "Cash",
+            },
+          },
+        ]);
+      }
+      if (!isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (args.cursor) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([
         {
           id: "booking-explicit-gain-loss",
+          transactionId: "tx-explicit",
           date: new Date("2026-01-18T00:00:00.000Z"),
           value: -5,
           unit: Unit.CURRENCY,
@@ -475,8 +508,8 @@ describe("getPeriodOverview", () => {
             equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
           },
         },
-      ])
-      .mockResolvedValueOnce([]);
+      ]);
+    });
     prisma.booking.groupBy
       .mockResolvedValueOnce([
         { accountId: "asset-holding", _sum: { value: 3 } },
@@ -597,17 +630,92 @@ describe("getPeriodOverview", () => {
     expect(gainsLossesBreakdownTotal).toBe(result.stats.gainsLosses);
     expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
       {
-        label: "Reference Currency",
-        totalGainLoss: 5,
-      },
-      {
         label: "Security",
         realizedGainLoss: 20,
         unrealizedGainLoss: -30,
         totalGainLoss: -10,
+        children: [
+          {
+            label: "AAPL (USD)",
+            totalGainLoss: -10,
+            children: [{ label: "AAPL", totalGainLoss: -10 }],
+          },
+        ],
+      },
+      {
+        label: "Explicit G/L",
+        totalGainLoss: 5,
+        children: [{ label: "Cash", totalGainLoss: 5 }],
       },
     ]);
     expect(getUnitToReferenceExchangeRate).toHaveBeenCalled();
+  });
+
+  it("throws when an explicit gain/loss booking has multiple non-equity counterpart accounts", async () => {
+    vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (args.where?.transactionId === "tx-explicit") {
+        return Promise.resolve([
+          {
+            accountId: "asset-cash-1",
+            account: {
+              name: "Cash 1",
+            },
+          },
+          {
+            accountId: "asset-cash-2",
+            account: {
+              name: "Cash 2",
+            },
+          },
+        ]);
+      }
+      if (!isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (args.cursor) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([
+        {
+          id: "booking-explicit-gain-loss",
+          transactionId: "tx-explicit",
+          date: new Date("2026-01-18T00:00:00.000Z"),
+          value: -5,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          account: {
+            id: "gainloss-1",
+            name: "GainLoss",
+            groupId: null,
+            equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+          },
+        },
+      ]);
+    });
+    prisma.booking.groupBy.mockResolvedValue([]);
+
+    await expect(
+      getPeriodOverview({
+        data: {
+          accountBookId: "book-invalid-explicit",
+          period: "2026-01",
+        },
+      }),
+    ).rejects.toThrow(
+      "expected exactly one distinct non-equity counterpart account",
+    );
   });
 
   it("builds grouped virtual transfer clearing hierarchy for mixed units", async () => {
@@ -952,6 +1060,36 @@ describe("getPeriodOverview", () => {
     expect(result.stats.gainsLosses).toBe(-25);
     expect(result.stats.totalReturn).toBe(-25);
     expect(result.stats.endOfPeriodLiabilities).toBe(36);
+    expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
+      {
+        label: "FX",
+        realizedGainLoss: -4,
+        unrealizedGainLoss: -21,
+        totalGainLoss: -25,
+        children: [
+          {
+            label: "USD",
+            realizedGainLoss: -4,
+            unrealizedGainLoss: -21,
+            totalGainLoss: -25,
+            children: [
+              {
+                label: "USD",
+                realizedGainLoss: -4,
+                unrealizedGainLoss: -21,
+                totalGainLoss: -25,
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+    expect(
+      result.gainsLossesBreakdown.hierarchy.reduce(
+        (sum, node) => sum + node.totalGainLoss,
+        0,
+      ),
+    ).toBe(result.stats.gainsLosses);
   });
 
   it("tracks skipped counts when transfer-clearing conversions or rates are unavailable", async () => {

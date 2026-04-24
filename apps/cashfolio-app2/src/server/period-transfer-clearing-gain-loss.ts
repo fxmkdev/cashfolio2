@@ -27,6 +27,17 @@ export async function computeTransferClearingGainLossSplit(args: {
   convertBookingToReference: (
     booking: TransferClearingBooking,
   ) => Promise<number | null>;
+  onUnitGainLoss?: (gainLossByUnit: {
+    unitKey: TransferClearingUnitBucket["unitKey"];
+    unitLabel: TransferClearingUnitBucket["unitLabel"];
+    unit: TransferClearingUnitBucket["unit"];
+    currency: TransferClearingUnitBucket["currency"];
+    cryptocurrency: TransferClearingUnitBucket["cryptocurrency"];
+    symbol: TransferClearingUnitBucket["symbol"];
+    tradeCurrency: TransferClearingUnitBucket["tradeCurrency"];
+    realizedGainLoss: number;
+    unrealizedGainLoss: number;
+  }) => void;
 }) {
   let realizedGainLoss = 0;
   let unrealizedGainLoss = 0;
@@ -37,6 +48,8 @@ export async function computeTransferClearingGainLossSplit(args: {
     if (!unitBucket.isNonReferenceUnit) {
       continue;
     }
+    let unitRealizedGainLoss = 0;
+    let unitUnrealizedGainLoss = 0;
 
     const lots: Array<{
       quantity: number;
@@ -118,7 +131,7 @@ export async function computeTransferClearingGainLossSplit(args: {
       }
       convertedCount += 1;
 
-      realizedGainLoss += applyExecutionToLots({
+      const bookingRealizedGainLoss = applyExecutionToLots({
         lots,
         quantity: clearingQuantity,
         executionUnitPriceInReference,
@@ -127,34 +140,52 @@ export async function computeTransferClearingGainLossSplit(args: {
           bookingId: booking.id,
         }),
       });
+      realizedGainLoss += bookingRealizedGainLoss;
+      unitRealizedGainLoss += bookingRealizedGainLoss;
     }
 
     const openQuantity = lots.reduce(
       (sum, lot) => sum + Math.abs(lot.quantity),
       0,
     );
-    if (openQuantity <= QUANTITY_EPSILON) {
-      continue;
+    if (openQuantity > QUANTITY_EPSILON) {
+      const periodEndRate = await args.resolveRate({
+        unit: unitBucket.unit,
+        currency: unitBucket.currency,
+        cryptocurrency: unitBucket.cryptocurrency,
+        symbol: unitBucket.symbol,
+        tradeCurrency: unitBucket.tradeCurrency,
+        date: args.periodEnd,
+      });
+      if (periodEndRate == null) {
+        skippedCount += 1;
+      } else {
+        const unitUnrealized = lots.reduce(
+          (sum, lot) =>
+            sum + lot.quantity * (periodEndRate - lot.unitCostInReference),
+          0,
+        );
+        unrealizedGainLoss += unitUnrealized;
+        unitUnrealizedGainLoss += unitUnrealized;
+      }
     }
 
-    const periodEndRate = await args.resolveRate({
-      unit: unitBucket.unit,
-      currency: unitBucket.currency,
-      cryptocurrency: unitBucket.cryptocurrency,
-      symbol: unitBucket.symbol,
-      tradeCurrency: unitBucket.tradeCurrency,
-      date: args.periodEnd,
-    });
-    if (periodEndRate == null) {
-      skippedCount += 1;
-      continue;
+    if (
+      args.onUnitGainLoss &&
+      (unitRealizedGainLoss !== 0 || unitUnrealizedGainLoss !== 0)
+    ) {
+      args.onUnitGainLoss({
+        unitKey: unitBucket.unitKey,
+        unitLabel: unitBucket.unitLabel,
+        unit: unitBucket.unit,
+        currency: unitBucket.currency,
+        cryptocurrency: unitBucket.cryptocurrency,
+        symbol: unitBucket.symbol,
+        tradeCurrency: unitBucket.tradeCurrency,
+        realizedGainLoss: unitRealizedGainLoss,
+        unrealizedGainLoss: unitUnrealizedGainLoss,
+      });
     }
-
-    unrealizedGainLoss += lots.reduce(
-      (sum, lot) =>
-        sum + lot.quantity * (periodEndRate - lot.unitCostInReference),
-      0,
-    );
   }
 
   return {

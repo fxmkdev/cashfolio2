@@ -294,6 +294,7 @@ export async function finalizeHoldingGainLossState(args: {
   periodEnd: Date;
   resolveRate: HoldingRateResolver;
   onAccountGainLoss?: (gainLossByAccount: {
+    accountId: HoldingRateConvertibleAccount["id"];
     unit: HoldingRateConvertibleAccount["unit"];
     currency: HoldingRateConvertibleAccount["currency"];
     cryptocurrency: HoldingRateConvertibleAccount["cryptocurrency"];
@@ -381,6 +382,7 @@ export async function finalizeHoldingGainLossState(args: {
         !isNearZero(accountUnrealizedGainLoss))
     ) {
       args.onAccountGainLoss({
+        accountId: state.account.id,
         unit: state.account.unit,
         currency: state.account.currency,
         cryptocurrency: state.account.cryptocurrency,

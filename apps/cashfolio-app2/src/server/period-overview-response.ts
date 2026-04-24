@@ -25,7 +25,10 @@ type PeriodOverviewEndOfPeriodStats = {
   convertedBalanceByAccountId: Map<string, number | null>;
 };
 
-export type PeriodGainsLossesUnitContribution = {
+export type PeriodGainsLossesContribution = {
+  sourceKind: "HOLDING" | "EXPLICIT";
+  accountId: string;
+  accountName: string;
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
@@ -45,15 +48,15 @@ export type PeriodGainsLossesBreakdownNode = {
 };
 
 type UnitTypeDescriptor = {
-  id: "reference-currency" | "fx" | "security" | "cryptocurrency";
-  label: "Reference Currency" | "FX" | "Security" | "Cryptocurrency";
+  id: "fx" | "security" | "cryptocurrency" | "explicit";
+  label: "FX" | "Security" | "Cryptocurrency" | "Explicit G/L";
 };
 
 const UNIT_TYPE_DESCRIPTORS: UnitTypeDescriptor[] = [
-  { id: "reference-currency", label: "Reference Currency" },
   { id: "fx", label: "FX" },
   { id: "security", label: "Security" },
   { id: "cryptocurrency", label: "Cryptocurrency" },
+  { id: "explicit", label: "Explicit G/L" },
 ];
 
 function normalizeUppercaseCode(value: string | null): string | null {
@@ -69,33 +72,33 @@ function normalizeUppercaseCode(value: string | null): string | null {
   return trimmed.toUpperCase();
 }
 
-function getNonReferenceUnitTypeDescriptor(unit: Unit): UnitTypeDescriptor {
+function getUnitTypeDescriptor(unit: Unit): UnitTypeDescriptor {
   if (unit === Unit.CURRENCY) {
-    return UNIT_TYPE_DESCRIPTORS[1]!;
+    return UNIT_TYPE_DESCRIPTORS[0]!;
   }
   if (unit === Unit.SECURITY) {
-    return UNIT_TYPE_DESCRIPTORS[2]!;
+    return UNIT_TYPE_DESCRIPTORS[1]!;
   }
-  return UNIT_TYPE_DESCRIPTORS[3]!;
+  return UNIT_TYPE_DESCRIPTORS[2]!;
 }
 
 function getUnitContributionDescriptor(
-  args: PeriodGainsLossesUnitContribution & { referenceCurrency: string },
+  args: PeriodGainsLossesContribution & { referenceCurrency: string },
 ): {
   unitType: UnitTypeDescriptor;
   unitId: string;
   unitLabel: string;
-} {
+} | null {
   if (args.unit === Unit.CURRENCY) {
     const currency = normalizeUppercaseCode(args.currency) ?? "UNKNOWN";
     const referenceCurrency =
       normalizeUppercaseCode(args.referenceCurrency) ?? "UNKNOWN";
-    const isReferenceCurrency = currency === referenceCurrency;
+    if (currency === referenceCurrency) {
+      return null;
+    }
     return {
-      unitType: isReferenceCurrency
-        ? UNIT_TYPE_DESCRIPTORS[0]!
-        : getNonReferenceUnitTypeDescriptor(args.unit),
-      unitId: `${isReferenceCurrency ? "reference-currency" : "fx"}:${currency}`,
+      unitType: getUnitTypeDescriptor(args.unit),
+      unitId: `fx:${currency}`,
       unitLabel: currency,
     };
   }
@@ -104,7 +107,7 @@ function getUnitContributionDescriptor(
     const cryptocurrency =
       normalizeUppercaseCode(args.cryptocurrency) ?? "UNKNOWN";
     return {
-      unitType: getNonReferenceUnitTypeDescriptor(args.unit),
+      unitType: getUnitTypeDescriptor(args.unit),
       unitId: `crypto:${cryptocurrency}`,
       unitLabel: cryptocurrency,
     };
@@ -113,23 +116,36 @@ function getUnitContributionDescriptor(
   const symbol = normalizeUppercaseCode(args.symbol) ?? "UNKNOWN";
   const tradeCurrency = normalizeUppercaseCode(args.tradeCurrency) ?? "UNKNOWN";
   return {
-    unitType: getNonReferenceUnitTypeDescriptor(args.unit),
+    unitType: getUnitTypeDescriptor(args.unit),
     unitId: `security:${symbol}:${tradeCurrency}`,
     unitLabel: `${symbol} (${tradeCurrency})`,
   };
 }
 
 function buildGainsLossesBreakdown(args: {
-  contributions: PeriodGainsLossesUnitContribution[];
+  contributions: PeriodGainsLossesContribution[];
   referenceCurrency: string;
 }): {
   hierarchy: PeriodGainsLossesBreakdownNode[];
 } {
-  const byUnitId = new Map<
+  type UnitContributionBucket = {
+    unitTypeId: UnitTypeDescriptor["id"];
+    unitLabel: string;
+    byAccountId: Map<
+      string,
+      {
+        accountName: string;
+        realizedGainLoss: number;
+        unrealizedGainLoss: number;
+      }
+    >;
+  };
+
+  const byUnitId = new Map<string, UnitContributionBucket>();
+  const explicitByAccountId = new Map<
     string,
     {
-      unitTypeId: UnitTypeDescriptor["id"];
-      unitLabel: string;
+      accountName: string;
       realizedGainLoss: number;
       unrealizedGainLoss: number;
     }
@@ -143,29 +159,60 @@ function buildGainsLossesBreakdown(args: {
       continue;
     }
 
+    if (contribution.sourceKind === "EXPLICIT") {
+      const explicitExisting = explicitByAccountId.get(contribution.accountId);
+      if (explicitExisting) {
+        explicitExisting.realizedGainLoss += contribution.realizedGainLoss;
+        explicitExisting.unrealizedGainLoss += contribution.unrealizedGainLoss;
+      } else {
+        explicitByAccountId.set(contribution.accountId, {
+          accountName: contribution.accountName,
+          realizedGainLoss: contribution.realizedGainLoss,
+          unrealizedGainLoss: contribution.unrealizedGainLoss,
+        });
+      }
+      continue;
+    }
+
     const descriptor = getUnitContributionDescriptor({
       ...contribution,
       referenceCurrency: args.referenceCurrency,
     });
-    const existing = byUnitId.get(descriptor.unitId);
-
-    if (existing) {
-      existing.realizedGainLoss += contribution.realizedGainLoss;
-      existing.unrealizedGainLoss += contribution.unrealizedGainLoss;
+    if (!descriptor) {
       continue;
     }
+    const existingUnit = byUnitId.get(descriptor.unitId);
+    const unitValue =
+      existingUnit ??
+      ({
+        unitTypeId: descriptor.unitType.id,
+        unitLabel: descriptor.unitLabel,
+        byAccountId: new Map(),
+      } satisfies UnitContributionBucket);
+    if (!existingUnit) {
+      byUnitId.set(descriptor.unitId, unitValue);
+    }
 
-    byUnitId.set(descriptor.unitId, {
-      unitTypeId: descriptor.unitType.id,
-      unitLabel: descriptor.unitLabel,
-      realizedGainLoss: contribution.realizedGainLoss,
-      unrealizedGainLoss: contribution.unrealizedGainLoss,
-    });
+    const existingAccount = unitValue.byAccountId.get(contribution.accountId);
+    if (existingAccount) {
+      existingAccount.realizedGainLoss += contribution.realizedGainLoss;
+      existingAccount.unrealizedGainLoss += contribution.unrealizedGainLoss;
+    } else {
+      unitValue.byAccountId.set(contribution.accountId, {
+        accountName: contribution.accountName,
+        realizedGainLoss: contribution.realizedGainLoss,
+        unrealizedGainLoss: contribution.unrealizedGainLoss,
+      });
+    }
   }
 
   const hierarchy: PeriodGainsLossesBreakdownNode[] = [];
 
   for (const unitType of UNIT_TYPE_DESCRIPTORS) {
+    if (unitType.id === "explicit") {
+      continue;
+    }
+
     const childNodes = Array.from(byUnitId.entries())
       .filter(([, unitValue]) => unitValue.unitTypeId === unitType.id)
       .sort((left, right) =>
@@ -174,11 +221,35 @@ function buildGainsLossesBreakdown(args: {
       .map(([unitId, unitValue]) => ({
         id: `unit:${unitId}`,
         label: unitValue.unitLabel,
-        realizedGainLoss: unitValue.realizedGainLoss,
-        unrealizedGainLoss: unitValue.unrealizedGainLoss,
-        totalGainLoss:
-          unitValue.realizedGainLoss + unitValue.unrealizedGainLoss,
-        children: [],
+        ...(() => {
+          const accountNodes = Array.from(unitValue.byAccountId.entries())
+            .sort((left, right) =>
+              left[1].accountName.localeCompare(right[1].accountName, "en"),
+            )
+            .map(([accountId, accountValue]) => ({
+              id: `unit-account:${unitId}:${accountId}`,
+              label: accountValue.accountName,
+              realizedGainLoss: accountValue.realizedGainLoss,
+              unrealizedGainLoss: accountValue.unrealizedGainLoss,
+              totalGainLoss:
+                accountValue.realizedGainLoss + accountValue.unrealizedGainLoss,
+              children: [],
+            }));
+          const realizedGainLoss = accountNodes.reduce(
+            (sum, node) => sum + node.realizedGainLoss,
+            0,
+          );
+          const unrealizedGainLoss = accountNodes.reduce(
+            (sum, node) => sum + node.unrealizedGainLoss,
+            0,
+          );
+          return {
+            realizedGainLoss,
+            unrealizedGainLoss,
+            totalGainLoss: realizedGainLoss + unrealizedGainLoss,
+            children: accountNodes,
+          };
+        })(),
       }));
 
     if (childNodes.length === 0) {
@@ -204,6 +275,39 @@ function buildGainsLossesBreakdown(args: {
     });
   }
 
+  const explicitChildren = Array.from(explicitByAccountId.entries())
+    .sort((left, right) =>
+      left[1].accountName.localeCompare(right[1].accountName, "en"),
+    )
+    .map(([accountId, accountValue]) => ({
+      id: `explicit-account:${accountId}`,
+      label: accountValue.accountName,
+      realizedGainLoss: accountValue.realizedGainLoss,
+      unrealizedGainLoss: accountValue.unrealizedGainLoss,
+      totalGainLoss:
+        accountValue.realizedGainLoss + accountValue.unrealizedGainLoss,
+      children: [],
+    }));
+
+  if (explicitChildren.length > 0) {
+    const realizedGainLoss = explicitChildren.reduce(
+      (sum, node) => sum + node.realizedGainLoss,
+      0,
+    );
+    const unrealizedGainLoss = explicitChildren.reduce(
+      (sum, node) => sum + node.unrealizedGainLoss,
+      0,
+    );
+    hierarchy.push({
+      id: "unit-type:explicit",
+      label: "Explicit G/L",
+      realizedGainLoss,
+      unrealizedGainLoss,
+      totalGainLoss: realizedGainLoss + unrealizedGainLoss,
+      children: explicitChildren,
+    });
+  }
+
   return { hierarchy };
 }
 
@@ -222,7 +326,7 @@ export function buildPeriodOverviewResponse(args: {
   bookingsCount: number;
   convertedBookingsCount: number;
   skippedBookingsCount: number;
-  gainsLossesUnitContributions?: PeriodGainsLossesUnitContribution[];
+  gainsLossesContributions?: PeriodGainsLossesContribution[];
 }) {
   const { income, expenses, explicitGainLoss } = args.equityAggregation;
   const realizedGainLoss = args.isBeforeAccountBookStart
@@ -317,7 +421,7 @@ export function buildPeriodOverviewResponse(args: {
     now: args.currentDay,
   });
   const gainsLossesBreakdown = buildGainsLossesBreakdown({
-    contributions: args.gainsLossesUnitContributions ?? [],
+    contributions: args.gainsLossesContributions ?? [],
     referenceCurrency: args.referenceCurrency,
   });
 

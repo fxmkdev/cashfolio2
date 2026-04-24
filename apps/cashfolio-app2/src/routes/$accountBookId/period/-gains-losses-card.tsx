@@ -21,7 +21,8 @@ export function GainsLossesCard({
       <Stack gap="sm">
         <Title order={4}>Gains / Losses Breakdown</Title>
         <Text c="dimmed" size="sm">
-          By unit type and unit in {referenceCurrency}
+          By unit type, unit, and account in {referenceCurrency}, with explicit
+          gains/losses shown separately
         </Text>
 
         {hasData ? (
