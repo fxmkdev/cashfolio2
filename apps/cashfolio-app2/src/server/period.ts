@@ -41,6 +41,12 @@ import {
   createPeriodOverviewEquityAggregation,
 } from "./period-overview-aggregation";
 import {
+  accumulateGainLossContribution,
+  resolveExplicitCounterpartNonEquityAccounts,
+  type ExplicitCounterpartAccount,
+  type GainLossContributionAccumulator,
+} from "./period-gains-losses-contributions";
+import {
   applyHoldingTransactionsToGainLossState,
   finalizeHoldingGainLossState,
   initializeHoldingGainLossState,
@@ -131,6 +137,9 @@ export const getPeriodOverview = createServerFn({
         },
       }),
     ]);
+    const assetLiabilityAccountNameById = new Map(
+      baseAssetLiabilityAccounts.map((account) => [account.id, account.name]),
+    );
 
     const holdingAccountsResolved = filterConvertibleHoldingAccounts(
       baseAssetLiabilityAccounts,
@@ -193,6 +202,9 @@ export const getPeriodOverview = createServerFn({
       ...baseAssetLiabilityAccounts,
       ...transferClearingVirtualAccounts,
     ];
+    for (const virtualAccount of transferClearingVirtualAccounts) {
+      assetLiabilityAccountNameById.set(virtualAccount.id, virtualAccount.name);
+    }
     // Intentionally keep posted real-account balances: virtual transfer-clearing
     // accounts represent the missing counterpart leg with opposite sign.
     for (const [accountId, rawBalance] of rawBalanceByVirtualAccountId) {
@@ -204,6 +216,14 @@ export const getPeriodOverview = createServerFn({
     let skippedBookingsCount = 0;
 
     const equityAggregation = createPeriodOverviewEquityAggregation();
+    const gainsLossesContributionByKey = new Map<
+      string,
+      GainLossContributionAccumulator
+    >();
+    const explicitCounterpartAccountByTransactionId = new Map<
+      string,
+      ExplicitCounterpartAccount
+    >();
 
     let nextBookingIdCursor: string | undefined;
     let realizedGainLoss = 0;
@@ -244,6 +264,7 @@ export const getPeriodOverview = createServerFn({
             : {}),
           select: {
             id: true,
+            transactionId: true,
             date: true,
             value: true,
             unit: true,
@@ -287,6 +308,29 @@ export const getPeriodOverview = createServerFn({
         const convertedValues = await Promise.all(
           conversionTasks.map((task) => task.convertedValuePromise),
         );
+        const explicitBookingsForCounterpartResolution: Array<{
+          transactionId: string;
+        }> = [];
+        for (let index = 0; index < conversionTasks.length; index += 1) {
+          const booking = conversionTasks[index]!.booking;
+          const convertedValue = convertedValues[index];
+          if (
+            convertedValue != null &&
+            booking.account.equityAccountSubtype ===
+              EquityAccountSubtype.GAIN_LOSS
+          ) {
+            explicitBookingsForCounterpartResolution.push({
+              transactionId: booking.transactionId,
+            });
+          }
+        }
+        if (explicitBookingsForCounterpartResolution.length > 0) {
+          await resolveExplicitCounterpartNonEquityAccounts({
+            accountBookId: data.accountBookId,
+            explicitBookings: explicitBookingsForCounterpartResolution,
+            byTransactionId: explicitCounterpartAccountByTransactionId,
+          });
+        }
 
         for (let index = 0; index < conversionTasks.length; index += 1) {
           const booking = conversionTasks[index]!.booking;
@@ -303,6 +347,35 @@ export const getPeriodOverview = createServerFn({
             convertedValue,
             aggregation: equityAggregation,
           });
+
+          if (
+            booking.account.equityAccountSubtype ===
+            EquityAccountSubtype.GAIN_LOSS
+          ) {
+            const counterpartAccount =
+              explicitCounterpartAccountByTransactionId.get(
+                booking.transactionId,
+              );
+            if (!counterpartAccount) {
+              throw new Error(
+                `Explicit gain/loss booking invariant violated for booking ${booking.id} in transaction ${booking.transactionId}: missing resolved counterpart account.`,
+              );
+            }
+
+            accumulateGainLossContribution({
+              byKey: gainsLossesContributionByKey,
+              sourceKind: "EXPLICIT",
+              accountId: counterpartAccount.id,
+              accountName: counterpartAccount.name,
+              unit: booking.unit,
+              currency: booking.currency,
+              cryptocurrency: booking.cryptocurrency,
+              symbol: booking.symbol,
+              tradeCurrency: booking.tradeCurrency,
+              realizedGainLoss: -convertedValue,
+              unrealizedGainLoss: 0,
+            });
+          }
         }
 
         if (bookingsPage.length < EQUITY_BOOKINGS_PAGE_SIZE) {
@@ -471,6 +544,24 @@ export const getPeriodOverview = createServerFn({
               referenceCurrency,
               exchangeRateByKey,
             }),
+          onAccountGainLoss: (gainLossByAccount) => {
+            accumulateGainLossContribution({
+              byKey: gainsLossesContributionByKey,
+              sourceKind: "HOLDING",
+              accountId: gainLossByAccount.accountId,
+              accountName:
+                assetLiabilityAccountNameById.get(
+                  gainLossByAccount.accountId,
+                ) ?? "Unknown account",
+              unit: gainLossByAccount.unit,
+              currency: gainLossByAccount.currency,
+              cryptocurrency: gainLossByAccount.cryptocurrency,
+              symbol: gainLossByAccount.symbol,
+              tradeCurrency: gainLossByAccount.tradeCurrency,
+              realizedGainLoss: gainLossByAccount.realizedGainLoss,
+              unrealizedGainLoss: gainLossByAccount.unrealizedGainLoss,
+            });
+          },
         });
 
         realizedGainLoss += holdingGainLossSplit.realizedGainLoss;
@@ -504,6 +595,24 @@ export const getPeriodOverview = createServerFn({
               referenceCurrency,
               exchangeRateByKey,
             }),
+          onUnitGainLoss: (gainLossByUnit) => {
+            const transferClearingAccountId = `virtual:transfer-clearing:account:${gainLossByUnit.unitKey}`;
+            accumulateGainLossContribution({
+              byKey: gainsLossesContributionByKey,
+              sourceKind: "HOLDING",
+              accountId: transferClearingAccountId,
+              accountName:
+                assetLiabilityAccountNameById.get(transferClearingAccountId) ??
+                gainLossByUnit.unitLabel,
+              unit: gainLossByUnit.unit,
+              currency: gainLossByUnit.currency,
+              cryptocurrency: gainLossByUnit.cryptocurrency,
+              symbol: gainLossByUnit.symbol,
+              tradeCurrency: gainLossByUnit.tradeCurrency,
+              realizedGainLoss: gainLossByUnit.realizedGainLoss,
+              unrealizedGainLoss: gainLossByUnit.unrealizedGainLoss,
+            });
+          },
         });
       realizedGainLoss += transferClearingGainLossSplit.realizedGainLoss;
       unrealizedGainLoss += transferClearingGainLossSplit.unrealizedGainLoss;
@@ -541,5 +650,8 @@ export const getPeriodOverview = createServerFn({
       bookingsCount,
       convertedBookingsCount,
       skippedBookingsCount,
+      gainsLossesContributions: Array.from(
+        gainsLossesContributionByKey.values(),
+      ),
     });
   });

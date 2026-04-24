@@ -491,7 +491,9 @@ test("period page shows KPI waterfall and updated income/expenses wording", asyn
 
   await expect(page.getByText("Total Income")).toHaveCount(0);
   await expect(page.getByText("Total Expenses")).toHaveCount(0);
-  await expect(page.getByText("Gains / Losses")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Gains / Losses Breakdown" }),
+  ).toBeVisible();
 
   await expect(page.getByText("Income").first()).toBeVisible();
   await expect(page.getByText("Expenses").first()).toBeVisible();

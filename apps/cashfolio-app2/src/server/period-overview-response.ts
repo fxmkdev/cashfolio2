@@ -1,4 +1,4 @@
-import { AccountType } from "../.prisma-client/enums";
+import { AccountType, Unit } from "../.prisma-client/enums";
 import { formatMonthPeriodValue } from "../shared/period";
 import {
   buildAvailableYears,
@@ -25,6 +25,305 @@ type PeriodOverviewEndOfPeriodStats = {
   convertedBalanceByAccountId: Map<string, number | null>;
 };
 
+export type PeriodGainsLossesContribution = {
+  sourceKind: "HOLDING" | "EXPLICIT";
+  accountId: string;
+  accountName: string;
+  unit: Unit;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  tradeCurrency: string | null;
+  realizedGainLoss: number;
+  unrealizedGainLoss: number;
+};
+
+export type PeriodGainsLossesBreakdownNode = {
+  id: string;
+  label: string;
+  realizedGainLoss: number;
+  unrealizedGainLoss: number;
+  totalGainLoss: number;
+  children: PeriodGainsLossesBreakdownNode[];
+};
+
+type UnitTypeDescriptor = {
+  id: "fx" | "security" | "cryptocurrency" | "explicit";
+  label: "FX" | "Security" | "Cryptocurrency" | "Explicit G/L";
+};
+
+const UNIT_TYPE_DESCRIPTORS: UnitTypeDescriptor[] = [
+  { id: "fx", label: "FX" },
+  { id: "security", label: "Security" },
+  { id: "cryptocurrency", label: "Cryptocurrency" },
+  { id: "explicit", label: "Explicit G/L" },
+];
+
+function normalizeUppercaseCode(value: string | null): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  return trimmed.toUpperCase();
+}
+
+function getUnitTypeDescriptor(unit: Unit): UnitTypeDescriptor {
+  if (unit === Unit.CURRENCY) {
+    return UNIT_TYPE_DESCRIPTORS[0]!;
+  }
+  if (unit === Unit.SECURITY) {
+    return UNIT_TYPE_DESCRIPTORS[1]!;
+  }
+  return UNIT_TYPE_DESCRIPTORS[2]!;
+}
+
+function getUnitContributionDescriptor(
+  args: PeriodGainsLossesContribution & { referenceCurrency: string },
+): {
+  unitType: UnitTypeDescriptor;
+  unitId: string;
+  unitLabel: string;
+} | null {
+  if (args.unit === Unit.CURRENCY) {
+    const currency = normalizeUppercaseCode(args.currency) ?? "UNKNOWN";
+    const referenceCurrency =
+      normalizeUppercaseCode(args.referenceCurrency) ?? "UNKNOWN";
+    if (currency === referenceCurrency) {
+      return null;
+    }
+    return {
+      unitType: getUnitTypeDescriptor(args.unit),
+      unitId: `fx:${currency}`,
+      unitLabel: currency,
+    };
+  }
+
+  if (args.unit === Unit.CRYPTOCURRENCY) {
+    const cryptocurrency =
+      normalizeUppercaseCode(args.cryptocurrency) ?? "UNKNOWN";
+    return {
+      unitType: getUnitTypeDescriptor(args.unit),
+      unitId: `crypto:${cryptocurrency}`,
+      unitLabel: cryptocurrency,
+    };
+  }
+
+  const symbol = normalizeUppercaseCode(args.symbol) ?? "UNKNOWN";
+  const tradeCurrency = normalizeUppercaseCode(args.tradeCurrency) ?? "UNKNOWN";
+  return {
+    unitType: getUnitTypeDescriptor(args.unit),
+    unitId: `security:${symbol}:${tradeCurrency}`,
+    unitLabel: `${symbol} (${tradeCurrency})`,
+  };
+}
+
+function toRoundedGainLossTotals(args: {
+  realizedGainLoss: number;
+  unrealizedGainLoss: number;
+}) {
+  const realizedGainLoss = round2(args.realizedGainLoss);
+  const unrealizedGainLoss = round2(args.unrealizedGainLoss);
+  return {
+    realizedGainLoss,
+    unrealizedGainLoss,
+    totalGainLoss: round2(realizedGainLoss + unrealizedGainLoss),
+  };
+}
+
+function buildGainsLossesBreakdown(args: {
+  contributions: PeriodGainsLossesContribution[];
+  referenceCurrency: string;
+}): {
+  hierarchy: PeriodGainsLossesBreakdownNode[];
+} {
+  type UnitContributionBucket = {
+    unitTypeId: UnitTypeDescriptor["id"];
+    unitLabel: string;
+    byAccountId: Map<
+      string,
+      {
+        accountName: string;
+        realizedGainLoss: number;
+        unrealizedGainLoss: number;
+      }
+    >;
+  };
+
+  const byUnitId = new Map<string, UnitContributionBucket>();
+  const explicitByAccountId = new Map<
+    string,
+    {
+      accountName: string;
+      realizedGainLoss: number;
+      unrealizedGainLoss: number;
+    }
+  >();
+
+  for (const contribution of args.contributions) {
+    if (
+      contribution.realizedGainLoss === 0 &&
+      contribution.unrealizedGainLoss === 0
+    ) {
+      continue;
+    }
+
+    if (contribution.sourceKind === "EXPLICIT") {
+      const explicitExisting = explicitByAccountId.get(contribution.accountId);
+      if (explicitExisting) {
+        explicitExisting.realizedGainLoss += contribution.realizedGainLoss;
+        explicitExisting.unrealizedGainLoss += contribution.unrealizedGainLoss;
+      } else {
+        explicitByAccountId.set(contribution.accountId, {
+          accountName: contribution.accountName,
+          realizedGainLoss: contribution.realizedGainLoss,
+          unrealizedGainLoss: contribution.unrealizedGainLoss,
+        });
+      }
+      continue;
+    }
+
+    const descriptor = getUnitContributionDescriptor({
+      ...contribution,
+      referenceCurrency: args.referenceCurrency,
+    });
+    if (!descriptor) {
+      continue;
+    }
+    const existingUnit = byUnitId.get(descriptor.unitId);
+    const unitValue =
+      existingUnit ??
+      ({
+        unitTypeId: descriptor.unitType.id,
+        unitLabel: descriptor.unitLabel,
+        byAccountId: new Map(),
+      } satisfies UnitContributionBucket);
+    if (!existingUnit) {
+      byUnitId.set(descriptor.unitId, unitValue);
+    }
+
+    const existingAccount = unitValue.byAccountId.get(contribution.accountId);
+    if (existingAccount) {
+      existingAccount.realizedGainLoss += contribution.realizedGainLoss;
+      existingAccount.unrealizedGainLoss += contribution.unrealizedGainLoss;
+    } else {
+      unitValue.byAccountId.set(contribution.accountId, {
+        accountName: contribution.accountName,
+        realizedGainLoss: contribution.realizedGainLoss,
+        unrealizedGainLoss: contribution.unrealizedGainLoss,
+      });
+    }
+  }
+
+  const hierarchy: PeriodGainsLossesBreakdownNode[] = [];
+
+  for (const unitType of UNIT_TYPE_DESCRIPTORS) {
+    if (unitType.id === "explicit") {
+      continue;
+    }
+
+    const childNodes = Array.from(byUnitId.entries())
+      .filter(([, unitValue]) => unitValue.unitTypeId === unitType.id)
+      .sort((left, right) =>
+        left[1].unitLabel.localeCompare(right[1].unitLabel, "en"),
+      )
+      .map(([unitId, unitValue]) => ({
+        id: `unit:${unitId}`,
+        label: unitValue.unitLabel,
+        ...(() => {
+          const accountNodes = Array.from(unitValue.byAccountId.entries())
+            .sort((left, right) =>
+              left[1].accountName.localeCompare(right[1].accountName, "en"),
+            )
+            .map(([accountId, accountValue]) => ({
+              id: `unit-account:${unitId}:${accountId}`,
+              label: accountValue.accountName,
+              ...toRoundedGainLossTotals({
+                realizedGainLoss: accountValue.realizedGainLoss,
+                unrealizedGainLoss: accountValue.unrealizedGainLoss,
+              }),
+              children: [],
+            }));
+          const roundedTotals = toRoundedGainLossTotals({
+            realizedGainLoss: accountNodes.reduce(
+              (sum, node) => sum + node.realizedGainLoss,
+              0,
+            ),
+            unrealizedGainLoss: accountNodes.reduce(
+              (sum, node) => sum + node.unrealizedGainLoss,
+              0,
+            ),
+          });
+          return {
+            ...roundedTotals,
+            children: accountNodes,
+          };
+        })(),
+      }));
+
+    if (childNodes.length === 0) {
+      continue;
+    }
+
+    const roundedTotals = toRoundedGainLossTotals({
+      realizedGainLoss: childNodes.reduce(
+        (sum, node) => sum + node.realizedGainLoss,
+        0,
+      ),
+      unrealizedGainLoss: childNodes.reduce(
+        (sum, node) => sum + node.unrealizedGainLoss,
+        0,
+      ),
+    });
+
+    hierarchy.push({
+      id: `unit-type:${unitType.id}`,
+      label: unitType.label,
+      ...roundedTotals,
+      children: childNodes,
+    });
+  }
+
+  const explicitChildren = Array.from(explicitByAccountId.entries())
+    .sort((left, right) =>
+      left[1].accountName.localeCompare(right[1].accountName, "en"),
+    )
+    .map(([accountId, accountValue]) => ({
+      id: `explicit-account:${accountId}`,
+      label: accountValue.accountName,
+      ...toRoundedGainLossTotals({
+        realizedGainLoss: accountValue.realizedGainLoss,
+        unrealizedGainLoss: accountValue.unrealizedGainLoss,
+      }),
+      children: [],
+    }));
+
+  if (explicitChildren.length > 0) {
+    const roundedTotals = toRoundedGainLossTotals({
+      realizedGainLoss: explicitChildren.reduce(
+        (sum, node) => sum + node.realizedGainLoss,
+        0,
+      ),
+      unrealizedGainLoss: explicitChildren.reduce(
+        (sum, node) => sum + node.unrealizedGainLoss,
+        0,
+      ),
+    });
+    hierarchy.push({
+      id: "unit-type:explicit",
+      label: "Explicit G/L",
+      ...roundedTotals,
+      children: explicitChildren,
+    });
+  }
+
+  return { hierarchy };
+}
+
 export function buildPeriodOverviewResponse(args: {
   selection: NormalizedPeriodSelection;
   minPeriodDate: Date;
@@ -40,6 +339,7 @@ export function buildPeriodOverviewResponse(args: {
   bookingsCount: number;
   convertedBookingsCount: number;
   skippedBookingsCount: number;
+  gainsLossesContributions?: PeriodGainsLossesContribution[];
 }) {
   const { income, expenses, explicitGainLoss } = args.equityAggregation;
   const realizedGainLoss = args.isBeforeAccountBookStart
@@ -133,6 +433,10 @@ export function buildPeriodOverviewResponse(args: {
     firstBookingDate: args.minPeriodDate,
     now: args.currentDay,
   });
+  const gainsLossesBreakdown = buildGainsLossesBreakdown({
+    contributions: args.gainsLossesContributions ?? [],
+    referenceCurrency: args.referenceCurrency,
+  });
 
   return {
     selectedPeriodValue: args.selection.periodValue,
@@ -186,5 +490,6 @@ export function buildPeriodOverviewResponse(args: {
     },
     assetBreakdown,
     liabilityBreakdown,
+    gainsLossesBreakdown,
   };
 }

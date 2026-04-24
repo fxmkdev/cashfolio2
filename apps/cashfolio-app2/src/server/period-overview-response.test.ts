@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../.prisma-client/enums";
 import {
   accumulateConvertedEquityBooking,
   createPeriodOverviewEquityAggregation,
@@ -93,6 +97,7 @@ describe("period overview response", () => {
     });
     expect(response.currentMonthValue).toBe("2026-02");
     expect(response.availableYears).toEqual([2026]);
+    expect(response.gainsLossesBreakdown.hierarchy).toEqual([]);
   });
 
   it("assembles breakdowns and end-of-period stats from converted balances", () => {
@@ -170,6 +175,80 @@ describe("period overview response", () => {
       bookingsCount: 5,
       convertedBookingsCount: 5,
       skippedBookingsCount: 0,
+      gainsLossesContributions: [
+        {
+          sourceKind: "HOLDING",
+          accountId: "account-usd-cash-1",
+          accountName: "USD Cash 1",
+          unit: Unit.CURRENCY,
+          currency: "usd",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          realizedGainLoss: 4,
+          unrealizedGainLoss: 1,
+        },
+        {
+          sourceKind: "HOLDING",
+          accountId: "account-usd-cash-2",
+          accountName: "USD Cash 2",
+          unit: Unit.CURRENCY,
+          currency: "USD",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          realizedGainLoss: 1,
+          unrealizedGainLoss: -1,
+        },
+        {
+          sourceKind: "HOLDING",
+          accountId: "account-chf-cash",
+          accountName: "CHF Cash",
+          unit: Unit.CURRENCY,
+          currency: "chf",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          realizedGainLoss: 3,
+          unrealizedGainLoss: 2,
+        },
+        {
+          sourceKind: "HOLDING",
+          accountId: "account-aapl",
+          accountName: "AAPL Trading",
+          unit: Unit.SECURITY,
+          currency: null,
+          cryptocurrency: null,
+          symbol: "aapl",
+          tradeCurrency: "usd",
+          realizedGainLoss: 1,
+          unrealizedGainLoss: 9,
+        },
+        {
+          sourceKind: "HOLDING",
+          accountId: "account-btc",
+          accountName: "BTC Wallet",
+          unit: Unit.CRYPTOCURRENCY,
+          currency: null,
+          cryptocurrency: "btc",
+          symbol: null,
+          tradeCurrency: null,
+          realizedGainLoss: -1,
+          unrealizedGainLoss: 6,
+        },
+        {
+          sourceKind: "EXPLICIT",
+          accountId: "account-fees",
+          accountName: "Fees Account",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          realizedGainLoss: 10,
+          unrealizedGainLoss: 0,
+        },
+      ],
     });
 
     expect(response.stats).toMatchObject({
@@ -188,5 +267,225 @@ describe("period overview response", () => {
     expect(response.liabilityBreakdown.totalAmount).toBe(40);
     expect(response.incomeBreakdown.totalAmount).toBe(120);
     expect(response.expenseBreakdown.totalAmount).toBe(20);
+    expect(response.gainsLossesBreakdown.hierarchy).toEqual([
+      {
+        id: "unit-type:fx",
+        label: "FX",
+        realizedGainLoss: 5,
+        unrealizedGainLoss: 0,
+        totalGainLoss: 5,
+        children: [
+          {
+            id: "unit:fx:USD",
+            label: "USD",
+            realizedGainLoss: 5,
+            unrealizedGainLoss: 0,
+            totalGainLoss: 5,
+            children: [
+              {
+                id: "unit-account:fx:USD:account-usd-cash-1",
+                label: "USD Cash 1",
+                realizedGainLoss: 4,
+                unrealizedGainLoss: 1,
+                totalGainLoss: 5,
+                children: [],
+              },
+              {
+                id: "unit-account:fx:USD:account-usd-cash-2",
+                label: "USD Cash 2",
+                realizedGainLoss: 1,
+                unrealizedGainLoss: -1,
+                totalGainLoss: 0,
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "unit-type:security",
+        label: "Security",
+        realizedGainLoss: 1,
+        unrealizedGainLoss: 9,
+        totalGainLoss: 10,
+        children: [
+          {
+            id: "unit:security:AAPL:USD",
+            label: "AAPL (USD)",
+            realizedGainLoss: 1,
+            unrealizedGainLoss: 9,
+            totalGainLoss: 10,
+            children: [
+              {
+                id: "unit-account:security:AAPL:USD:account-aapl",
+                label: "AAPL Trading",
+                realizedGainLoss: 1,
+                unrealizedGainLoss: 9,
+                totalGainLoss: 10,
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "unit-type:cryptocurrency",
+        label: "Cryptocurrency",
+        realizedGainLoss: -1,
+        unrealizedGainLoss: 6,
+        totalGainLoss: 5,
+        children: [
+          {
+            id: "unit:crypto:BTC",
+            label: "BTC",
+            realizedGainLoss: -1,
+            unrealizedGainLoss: 6,
+            totalGainLoss: 5,
+            children: [
+              {
+                id: "unit-account:crypto:BTC:account-btc",
+                label: "BTC Wallet",
+                realizedGainLoss: -1,
+                unrealizedGainLoss: 6,
+                totalGainLoss: 5,
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "unit-type:explicit",
+        label: "Explicit G/L",
+        realizedGainLoss: 10,
+        unrealizedGainLoss: 0,
+        totalGainLoss: 10,
+        children: [
+          {
+            id: "explicit-account:account-fees",
+            label: "Fees Account",
+            realizedGainLoss: 10,
+            unrealizedGainLoss: 0,
+            totalGainLoss: 10,
+            children: [],
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("rounds gains/losses breakdown node values to 2 decimals", () => {
+    const equityAggregation = createPeriodOverviewEquityAggregation();
+    accumulateConvertedEquityBooking({
+      booking: {
+        account: {
+          id: "gainloss-1",
+          name: "Gain/Loss",
+          groupId: null,
+          equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+        },
+      },
+      convertedValue: -0.335,
+      aggregation: equityAggregation,
+    });
+
+    const response = buildPeriodOverviewResponse({
+      selection: createSelection(),
+      minPeriodDate: new Date("2025-01-01T00:00:00.000Z"),
+      currentDay: new Date("2026-02-01T00:00:00.000Z"),
+      referenceCurrency: "CHF",
+      groupById: new Map(),
+      assetLiabilityAccounts: [],
+      equityAggregation,
+      realizedGainLoss: 4.444,
+      unrealizedGainLoss: -1.111,
+      isBeforeAccountBookStart: false,
+      endOfPeriodBalanceStats: {
+        assets: 0,
+        liabilities: 0,
+        netWorth: 0,
+        convertedBalanceByAccountId: new Map(),
+      },
+      bookingsCount: 1,
+      convertedBookingsCount: 1,
+      skippedBookingsCount: 0,
+      gainsLossesContributions: [
+        {
+          sourceKind: "HOLDING",
+          accountId: "account-usd-cash",
+          accountName: "USD Cash",
+          unit: Unit.CURRENCY,
+          currency: "USD",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          realizedGainLoss: 4.444,
+          unrealizedGainLoss: -1.111,
+        },
+        {
+          sourceKind: "EXPLICIT",
+          accountId: "account-fees",
+          accountName: "Fees Account",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          realizedGainLoss: 0.335,
+          unrealizedGainLoss: 0,
+        },
+      ],
+    });
+
+    expect(response.stats).toMatchObject({
+      realizedGainLoss: 4.78,
+      unrealizedGainLoss: -1.11,
+      gainsLosses: 3.67,
+    });
+    expect(response.gainsLossesBreakdown.hierarchy).toEqual([
+      {
+        id: "unit-type:fx",
+        label: "FX",
+        realizedGainLoss: 4.44,
+        unrealizedGainLoss: -1.11,
+        totalGainLoss: 3.33,
+        children: [
+          {
+            id: "unit:fx:USD",
+            label: "USD",
+            realizedGainLoss: 4.44,
+            unrealizedGainLoss: -1.11,
+            totalGainLoss: 3.33,
+            children: [
+              {
+                id: "unit-account:fx:USD:account-usd-cash",
+                label: "USD Cash",
+                realizedGainLoss: 4.44,
+                unrealizedGainLoss: -1.11,
+                totalGainLoss: 3.33,
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "unit-type:explicit",
+        label: "Explicit G/L",
+        realizedGainLoss: 0.34,
+        unrealizedGainLoss: 0,
+        totalGainLoss: 0.34,
+        children: [
+          {
+            id: "explicit-account:account-fees",
+            label: "Fees Account",
+            realizedGainLoss: 0.34,
+            unrealizedGainLoss: 0,
+            totalGainLoss: 0.34,
+            children: [],
+          },
+        ],
+      },
+    ]);
   });
 });

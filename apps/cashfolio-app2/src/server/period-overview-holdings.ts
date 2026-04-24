@@ -293,6 +293,16 @@ export async function finalizeHoldingGainLossState(args: {
   state: HoldingGainLossWorkingState;
   periodEnd: Date;
   resolveRate: HoldingRateResolver;
+  onAccountGainLoss?: (gainLossByAccount: {
+    accountId: HoldingRateConvertibleAccount["id"];
+    unit: HoldingRateConvertibleAccount["unit"];
+    currency: HoldingRateConvertibleAccount["currency"];
+    cryptocurrency: HoldingRateConvertibleAccount["cryptocurrency"];
+    symbol: HoldingRateConvertibleAccount["symbol"];
+    tradeCurrency: HoldingRateConvertibleAccount["tradeCurrency"];
+    realizedGainLoss: number;
+    unrealizedGainLoss: number;
+  }) => void;
 }) {
   let skippedCount = args.state.skippedCount;
   const convertedCount = args.state.convertedCount;
@@ -303,6 +313,9 @@ export async function finalizeHoldingGainLossState(args: {
     if (state.skipped) {
       continue;
     }
+
+    let accountRealizedGainLoss = 0;
+    let accountUnrealizedGainLoss = 0;
 
     state.executionEvents.sort((left, right) => {
       const dateDiff = left.date.getTime() - right.date.getTime();
@@ -324,7 +337,7 @@ export async function finalizeHoldingGainLossState(args: {
         continue;
       }
 
-      realizedGainLoss += applyExecutionToLots({
+      accountRealizedGainLoss += applyExecutionToLots({
         lots: state.lots,
         quantity: event.quantity,
         executionUnitPriceInReference,
@@ -339,29 +352,46 @@ export async function finalizeHoldingGainLossState(args: {
       (sum, lot) => sum + Math.abs(lot.quantity),
       0,
     );
-    if (openQuantity <= QUANTITY_EPSILON) {
-      continue;
+    if (openQuantity > QUANTITY_EPSILON) {
+      const periodEndRate = await args.resolveRate({
+        unit: state.account.unit,
+        currency: state.account.currency,
+        cryptocurrency: state.account.cryptocurrency,
+        symbol: state.account.symbol,
+        tradeCurrency: state.account.tradeCurrency,
+        date: args.periodEnd,
+      });
+
+      if (periodEndRate == null) {
+        skippedCount += 1;
+      } else {
+        accountUnrealizedGainLoss += state.lots.reduce(
+          (sum, lot) =>
+            sum + lot.quantity * (periodEndRate - lot.unitCostInReference),
+          0,
+        );
+      }
     }
 
-    const periodEndRate = await args.resolveRate({
-      unit: state.account.unit,
-      currency: state.account.currency,
-      cryptocurrency: state.account.cryptocurrency,
-      symbol: state.account.symbol,
-      tradeCurrency: state.account.tradeCurrency,
-      date: args.periodEnd,
-    });
+    realizedGainLoss += accountRealizedGainLoss;
+    unrealizedGainLoss += accountUnrealizedGainLoss;
 
-    if (periodEndRate == null) {
-      skippedCount += 1;
-      continue;
+    if (
+      args.onAccountGainLoss &&
+      (!isNearZero(accountRealizedGainLoss) ||
+        !isNearZero(accountUnrealizedGainLoss))
+    ) {
+      args.onAccountGainLoss({
+        accountId: state.account.id,
+        unit: state.account.unit,
+        currency: state.account.currency,
+        cryptocurrency: state.account.cryptocurrency,
+        symbol: state.account.symbol,
+        tradeCurrency: state.account.tradeCurrency,
+        realizedGainLoss: accountRealizedGainLoss,
+        unrealizedGainLoss: accountUnrealizedGainLoss,
+      });
     }
-
-    unrealizedGainLoss += state.lots.reduce(
-      (sum, lot) =>
-        sum + lot.quantity * (periodEndRate - lot.unitCostInReference),
-      0,
-    );
   }
 
   return {
