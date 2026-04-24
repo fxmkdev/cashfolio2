@@ -47,6 +47,13 @@ export function GainsLossesTable({
   const columnDefs = useMemo<ColDef<GainsLossesGridRow>[]>(
     () => [
       {
+        field: "totalGainLoss",
+        headerName: "Total",
+        width: 170,
+        type: FORMATTED_NUMERIC_COLUMN,
+        filter: "agNumberColumnFilter",
+      },
+      {
         field: "realizedGainLoss",
         headerName: "Realised",
         width: 170,
@@ -56,13 +63,6 @@ export function GainsLossesTable({
       {
         field: "unrealizedGainLoss",
         headerName: "Unrealised",
-        width: 170,
-        type: FORMATTED_NUMERIC_COLUMN,
-        filter: "agNumberColumnFilter",
-      },
-      {
-        field: "totalGainLoss",
-        headerName: "Total",
         width: 170,
         type: FORMATTED_NUMERIC_COLUMN,
         filter: "agNumberColumnFilter",
@@ -83,7 +83,9 @@ export function GainsLossesTable({
       autoGroupColumnDef={{
         headerName: "Unit",
         field: "name",
-        flex: 1,
+        width: 900,
+        minWidth: 900,
+        suppressSizeToFit: true,
         filter: "agTextColumnFilter",
         valueGetter: ({ data }: { data: GainsLossesGridRow | undefined }) =>
           data?.name,
