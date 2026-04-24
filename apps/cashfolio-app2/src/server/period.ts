@@ -476,12 +476,16 @@ async function computeTransferClearingGainLossSplit(args: {
       });
 
     for (const booking of inPeriodBookings) {
+      if (isNearZero(booking.value)) {
+        skippedCount += 1;
+        continue;
+      }
+
       const convertedValue = await args.convertBookingToReference(booking);
       if (convertedValue == null) {
         skippedCount += 1;
         continue;
       }
-      convertedCount += 1;
 
       const clearingQuantity = -booking.value;
       const clearingReferenceAmount = -convertedValue;
@@ -491,6 +495,7 @@ async function computeTransferClearingGainLossSplit(args: {
         skippedCount += 1;
         continue;
       }
+      convertedCount += 1;
 
       realizedGainLoss += applyExecutionToLots({
         lots,
@@ -652,6 +657,8 @@ export const getPeriodOverview = createServerFn({
       ...baseAssetLiabilityAccounts,
       ...transferClearingVirtualAccounts,
     ];
+    // Intentionally keep posted real-account balances: virtual transfer-clearing
+    // accounts represent the missing counterpart leg with opposite sign.
     for (const [accountId, rawBalance] of rawBalanceByVirtualAccountId) {
       endOfPeriodRawBalanceByAccountId.set(accountId, rawBalance);
     }

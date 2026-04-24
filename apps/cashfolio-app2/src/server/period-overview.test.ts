@@ -940,6 +940,109 @@ describe("getPeriodOverview", () => {
     expect(result.skippedBookingsCount).toBe(3);
   });
 
+  it("skips near-zero in-period transfer-clearing quantities before conversion", async () => {
+    vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2025-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([
+          {
+            id: "c-zero-in-period",
+            date: new Date("2026-01-10T00:00:00.000Z"),
+            value: 0,
+            unit: Unit.CURRENCY,
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-clearing-near-zero",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.convertedBookingsCount).toBe(0);
+    expect(result.skippedBookingsCount).toBe(1);
+    expect(convertBookingValueToReference).not.toHaveBeenCalled();
+  });
+
+  it("keeps net worth neutral for posted legs by using opposite-sign transfer clearing", async () => {
+    vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2025-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([
+      {
+        id: "asset-cash",
+        name: "Cash",
+        groupId: null,
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      },
+    ]);
+    prisma.booking.groupBy.mockResolvedValueOnce([
+      { accountId: "asset-cash", _sum: { value: -100 } },
+    ]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([
+          {
+            id: "c-cash-out",
+            date: new Date("2026-01-15T00:00:00.000Z"),
+            value: -100,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-clearing-neutral-net-worth",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.stats.endOfPeriodAssets).toBe(0);
+    expect(result.stats.endOfPeriodLiabilities).toBe(0);
+    expect(result.stats.endOfPeriodNetWorth).toBe(0);
+    expect(result.assetBreakdown.totalAmount).toBe(100);
+    expect(result.liabilityBreakdown.totalAmount).toBe(0);
+    expect(
+      findBreakdownNodeById(
+        result.assetBreakdown.hierarchy,
+        "account:virtual:transfer-clearing:account:currency:CHF",
+      )?.amount,
+    ).toBe(100);
+  });
+
   it("ignores unsupported period values in input and falls back to default", async () => {
     vi.setSystemTime(new Date("2026-05-10T10:00:00.000Z"));
 
