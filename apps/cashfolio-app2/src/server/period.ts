@@ -1,9 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import {
-  AccountType,
-  EquityAccountSubtype,
-  Unit,
-} from "../.prisma-client/enums";
+import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { prisma } from "../prisma.server";
 import {
@@ -44,7 +40,12 @@ import {
   accumulateConvertedEquityBooking,
   createPeriodOverviewEquityAggregation,
 } from "./period-overview-aggregation";
-import { isNearZero } from "./period-overview-holdings-common";
+import {
+  accumulateGainLossContribution,
+  resolveExplicitCounterpartNonEquityAccounts,
+  type ExplicitCounterpartAccount,
+  type GainLossContributionAccumulator,
+} from "./period-gains-losses-contributions";
 import {
   applyHoldingTransactionsToGainLossState,
   finalizeHoldingGainLossState,
@@ -86,221 +87,6 @@ const TRANSACTIONS_PAGE_SIZE = 200;
 
 function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
-}
-
-type GainLossContributionAccumulator = {
-  sourceKind: "HOLDING" | "EXPLICIT";
-  accountId: string;
-  accountName: string;
-  unit: Unit;
-  currency: string | null;
-  cryptocurrency: string | null;
-  symbol: string | null;
-  tradeCurrency: string | null;
-  realizedGainLoss: number;
-  unrealizedGainLoss: number;
-};
-
-type ExplicitCounterpartAccount = {
-  id: string;
-  name: string;
-};
-
-function normalizeGainLossCode(value: string | null): string {
-  if (typeof value !== "string") {
-    return "UNKNOWN";
-  }
-
-  const trimmed = value.trim();
-  if (trimmed.length === 0) {
-    return "UNKNOWN";
-  }
-
-  return trimmed.toUpperCase();
-}
-
-function toGainLossUnitContributionKey(args: {
-  unit: Unit;
-  currency: string | null;
-  cryptocurrency: string | null;
-  symbol: string | null;
-  tradeCurrency: string | null;
-}): string {
-  if (args.unit === Unit.CURRENCY) {
-    return `fx:${normalizeGainLossCode(args.currency)}`;
-  }
-  if (args.unit === Unit.CRYPTOCURRENCY) {
-    return `crypto:${normalizeGainLossCode(args.cryptocurrency)}`;
-  }
-  return `security:${normalizeGainLossCode(args.symbol)}:${normalizeGainLossCode(args.tradeCurrency)}`;
-}
-
-function toGainLossContributionKey(args: {
-  sourceKind: GainLossContributionAccumulator["sourceKind"];
-  accountId: string;
-  unit: Unit;
-  currency: string | null;
-  cryptocurrency: string | null;
-  symbol: string | null;
-  tradeCurrency: string | null;
-}): string {
-  if (args.sourceKind === "EXPLICIT") {
-    return `explicit:${args.accountId}`;
-  }
-
-  return `holding:${args.accountId}:${toGainLossUnitContributionKey({
-    unit: args.unit,
-    currency: args.currency,
-    cryptocurrency: args.cryptocurrency,
-    symbol: args.symbol,
-    tradeCurrency: args.tradeCurrency,
-  })}`;
-}
-
-function accumulateGainLossContribution(args: {
-  byKey: Map<string, GainLossContributionAccumulator>;
-  sourceKind: GainLossContributionAccumulator["sourceKind"];
-  accountId: string;
-  accountName: string;
-  unit: Unit;
-  currency: string | null;
-  cryptocurrency: string | null;
-  symbol: string | null;
-  tradeCurrency: string | null;
-  realizedGainLoss: number;
-  unrealizedGainLoss: number;
-}) {
-  const realizedGainLoss = isNearZero(args.realizedGainLoss)
-    ? 0
-    : args.realizedGainLoss;
-  const unrealizedGainLoss = isNearZero(args.unrealizedGainLoss)
-    ? 0
-    : args.unrealizedGainLoss;
-
-  if (realizedGainLoss === 0 && unrealizedGainLoss === 0) {
-    return;
-  }
-
-  const key = toGainLossContributionKey({
-    sourceKind: args.sourceKind,
-    accountId: args.accountId,
-    unit: args.unit,
-    currency: args.currency,
-    cryptocurrency: args.cryptocurrency,
-    symbol: args.symbol,
-    tradeCurrency: args.tradeCurrency,
-  });
-  const existing = args.byKey.get(key);
-
-  if (existing) {
-    existing.realizedGainLoss += realizedGainLoss;
-    existing.unrealizedGainLoss += unrealizedGainLoss;
-    if (
-      isNearZero(existing.realizedGainLoss) &&
-      isNearZero(existing.unrealizedGainLoss)
-    ) {
-      args.byKey.delete(key);
-      return;
-    }
-    return;
-  }
-
-  args.byKey.set(key, {
-    sourceKind: args.sourceKind,
-    accountId: args.accountId,
-    accountName: args.accountName,
-    unit: args.unit,
-    currency: args.currency,
-    cryptocurrency: args.cryptocurrency,
-    symbol: args.symbol,
-    tradeCurrency: args.tradeCurrency,
-    realizedGainLoss,
-    unrealizedGainLoss,
-  });
-}
-
-async function resolveExplicitCounterpartNonEquityAccounts(args: {
-  accountBookId: string;
-  explicitBookings: Array<{
-    transactionId: string;
-    bookingId: string;
-  }>;
-  byTransactionId: Map<string, ExplicitCounterpartAccount>;
-}) {
-  const missingExplicitBookings = args.explicitBookings.filter(
-    (booking) => !args.byTransactionId.has(booking.transactionId),
-  );
-  if (missingExplicitBookings.length === 0) {
-    return;
-  }
-  const missingTransactionIds = Array.from(
-    new Set(missingExplicitBookings.map((booking) => booking.transactionId)),
-  );
-  const bookingIdByTransactionId = new Map(
-    missingExplicitBookings.map((booking) => [
-      booking.transactionId,
-      booking.bookingId,
-    ]),
-  );
-
-  const counterpartBookings = await prisma.booking.findMany({
-    where: {
-      accountBookId: args.accountBookId,
-      transactionId: { in: missingTransactionIds },
-      account: {
-        type: {
-          in: [AccountType.ASSET, AccountType.LIABILITY],
-        },
-      },
-    },
-    select: {
-      transactionId: true,
-      accountId: true,
-      account: {
-        select: {
-          name: true,
-        },
-      },
-    },
-  });
-
-  const counterpartByTransactionId = new Map<string, Map<string, string>>();
-  for (const counterpartBooking of counterpartBookings) {
-    const byAccountId =
-      counterpartByTransactionId.get(counterpartBooking.transactionId) ??
-      new Map<string, string>();
-    byAccountId.set(
-      counterpartBooking.accountId,
-      counterpartBooking.account.name,
-    );
-    counterpartByTransactionId.set(
-      counterpartBooking.transactionId,
-      byAccountId,
-    );
-  }
-
-  for (const transactionId of missingTransactionIds) {
-    const counterpartByAccountId =
-      counterpartByTransactionId.get(transactionId) ??
-      new Map<string, string>();
-    const bookingId = bookingIdByTransactionId.get(transactionId) ?? "UNKNOWN";
-
-    if (counterpartByAccountId.size !== 1) {
-      throw new Error(
-        `Explicit gain/loss booking invariant violated for booking ${bookingId} in transaction ${transactionId}: expected exactly one distinct non-equity counterpart account, found ${counterpartByAccountId.size}.`,
-      );
-    }
-
-    const entry = counterpartByAccountId.entries().next().value;
-    if (!entry) {
-      throw new Error(
-        `Explicit gain/loss booking invariant violated for booking ${bookingId} in transaction ${transactionId}: missing counterpart account.`,
-      );
-    }
-
-    const [id, name] = entry;
-    args.byTransactionId.set(transactionId, { id, name });
-  }
 }
 
 export const getPeriodOverview = createServerFn({
@@ -524,7 +310,6 @@ export const getPeriodOverview = createServerFn({
         );
         const explicitBookingsForCounterpartResolution: Array<{
           transactionId: string;
-          bookingId: string;
         }> = [];
         for (let index = 0; index < conversionTasks.length; index += 1) {
           const booking = conversionTasks[index]!.booking;
@@ -536,7 +321,6 @@ export const getPeriodOverview = createServerFn({
           ) {
             explicitBookingsForCounterpartResolution.push({
               transactionId: booking.transactionId,
-              bookingId: booking.id,
             });
           }
         }

@@ -671,7 +671,7 @@ describe("getPeriodOverview", () => {
     expect(getUnitToReferenceExchangeRate).toHaveBeenCalled();
   });
 
-  it("throws when an explicit gain/loss booking has multiple non-equity counterpart accounts", async () => {
+  it("attributes explicit gain/loss bookings with multiple counterpart accounts to an unattributed bucket", async () => {
     vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
       referenceCurrency: "CHF",
@@ -728,16 +728,90 @@ describe("getPeriodOverview", () => {
     });
     prisma.booking.groupBy.mockResolvedValue([]);
 
-    await expect(
-      getPeriodOverview({
-        data: {
-          accountBookId: "book-invalid-explicit",
-          period: "2026-01",
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-invalid-explicit",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.stats.gainsLosses).toBe(5);
+    expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
+      {
+        label: "Explicit G/L",
+        totalGainLoss: 5,
+        children: [
+          {
+            label: "Unattributed (Multiple counterpart accounts)",
+            totalGainLoss: 5,
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("attributes explicit gain/loss bookings without counterpart accounts to an unattributed bucket", async () => {
+    vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (transactionFilterIncludes(args.where?.transactionId, "tx-explicit")) {
+        return Promise.resolve([]);
+      }
+      if (!isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (args.cursor) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([
+        {
+          id: "booking-explicit-gain-loss",
+          transactionId: "tx-explicit",
+          date: new Date("2026-01-18T00:00:00.000Z"),
+          value: -5,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          account: {
+            id: "gainloss-1",
+            name: "GainLoss",
+            groupId: null,
+            equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+          },
         },
-      }),
-    ).rejects.toThrow(
-      "expected exactly one distinct non-equity counterpart account",
-    );
+      ]);
+    });
+    prisma.booking.groupBy.mockResolvedValue([]);
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-missing-explicit-counterpart",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.stats.gainsLosses).toBe(5);
+    expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
+      {
+        label: "Explicit G/L",
+        totalGainLoss: 5,
+        children: [
+          {
+            label: "Unattributed (No counterpart account)",
+            totalGainLoss: 5,
+          },
+        ],
+      },
+    ]);
   });
 
   it("ignores near-zero explicit gain/loss contributions in the breakdown", async () => {
