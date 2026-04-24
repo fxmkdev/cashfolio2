@@ -122,6 +122,19 @@ function getUnitContributionDescriptor(
   };
 }
 
+function toRoundedGainLossTotals(args: {
+  realizedGainLoss: number;
+  unrealizedGainLoss: number;
+}) {
+  const realizedGainLoss = round2(args.realizedGainLoss);
+  const unrealizedGainLoss = round2(args.unrealizedGainLoss);
+  return {
+    realizedGainLoss,
+    unrealizedGainLoss,
+    totalGainLoss: round2(realizedGainLoss + unrealizedGainLoss),
+  };
+}
+
 function buildGainsLossesBreakdown(args: {
   contributions: PeriodGainsLossesContribution[];
   referenceCurrency: string;
@@ -229,24 +242,24 @@ function buildGainsLossesBreakdown(args: {
             .map(([accountId, accountValue]) => ({
               id: `unit-account:${unitId}:${accountId}`,
               label: accountValue.accountName,
-              realizedGainLoss: accountValue.realizedGainLoss,
-              unrealizedGainLoss: accountValue.unrealizedGainLoss,
-              totalGainLoss:
-                accountValue.realizedGainLoss + accountValue.unrealizedGainLoss,
+              ...toRoundedGainLossTotals({
+                realizedGainLoss: accountValue.realizedGainLoss,
+                unrealizedGainLoss: accountValue.unrealizedGainLoss,
+              }),
               children: [],
             }));
-          const realizedGainLoss = accountNodes.reduce(
-            (sum, node) => sum + node.realizedGainLoss,
-            0,
-          );
-          const unrealizedGainLoss = accountNodes.reduce(
-            (sum, node) => sum + node.unrealizedGainLoss,
-            0,
-          );
+          const roundedTotals = toRoundedGainLossTotals({
+            realizedGainLoss: accountNodes.reduce(
+              (sum, node) => sum + node.realizedGainLoss,
+              0,
+            ),
+            unrealizedGainLoss: accountNodes.reduce(
+              (sum, node) => sum + node.unrealizedGainLoss,
+              0,
+            ),
+          });
           return {
-            realizedGainLoss,
-            unrealizedGainLoss,
-            totalGainLoss: realizedGainLoss + unrealizedGainLoss,
+            ...roundedTotals,
             children: accountNodes,
           };
         })(),
@@ -256,21 +269,21 @@ function buildGainsLossesBreakdown(args: {
       continue;
     }
 
-    const realizedGainLoss = childNodes.reduce(
-      (sum, node) => sum + node.realizedGainLoss,
-      0,
-    );
-    const unrealizedGainLoss = childNodes.reduce(
-      (sum, node) => sum + node.unrealizedGainLoss,
-      0,
-    );
+    const roundedTotals = toRoundedGainLossTotals({
+      realizedGainLoss: childNodes.reduce(
+        (sum, node) => sum + node.realizedGainLoss,
+        0,
+      ),
+      unrealizedGainLoss: childNodes.reduce(
+        (sum, node) => sum + node.unrealizedGainLoss,
+        0,
+      ),
+    });
 
     hierarchy.push({
       id: `unit-type:${unitType.id}`,
       label: unitType.label,
-      realizedGainLoss,
-      unrealizedGainLoss,
-      totalGainLoss: realizedGainLoss + unrealizedGainLoss,
+      ...roundedTotals,
       children: childNodes,
     });
   }
@@ -282,28 +295,28 @@ function buildGainsLossesBreakdown(args: {
     .map(([accountId, accountValue]) => ({
       id: `explicit-account:${accountId}`,
       label: accountValue.accountName,
-      realizedGainLoss: accountValue.realizedGainLoss,
-      unrealizedGainLoss: accountValue.unrealizedGainLoss,
-      totalGainLoss:
-        accountValue.realizedGainLoss + accountValue.unrealizedGainLoss,
+      ...toRoundedGainLossTotals({
+        realizedGainLoss: accountValue.realizedGainLoss,
+        unrealizedGainLoss: accountValue.unrealizedGainLoss,
+      }),
       children: [],
     }));
 
   if (explicitChildren.length > 0) {
-    const realizedGainLoss = explicitChildren.reduce(
-      (sum, node) => sum + node.realizedGainLoss,
-      0,
-    );
-    const unrealizedGainLoss = explicitChildren.reduce(
-      (sum, node) => sum + node.unrealizedGainLoss,
-      0,
-    );
+    const roundedTotals = toRoundedGainLossTotals({
+      realizedGainLoss: explicitChildren.reduce(
+        (sum, node) => sum + node.realizedGainLoss,
+        0,
+      ),
+      unrealizedGainLoss: explicitChildren.reduce(
+        (sum, node) => sum + node.unrealizedGainLoss,
+        0,
+      ),
+    });
     hierarchy.push({
       id: "unit-type:explicit",
       label: "Explicit G/L",
-      realizedGainLoss,
-      unrealizedGainLoss,
-      totalGainLoss: realizedGainLoss + unrealizedGainLoss,
+      ...roundedTotals,
       children: explicitChildren,
     });
   }

@@ -373,4 +373,119 @@ describe("period overview response", () => {
       },
     ]);
   });
+
+  it("rounds gains/losses breakdown node values to 2 decimals", () => {
+    const equityAggregation = createPeriodOverviewEquityAggregation();
+    accumulateConvertedEquityBooking({
+      booking: {
+        account: {
+          id: "gainloss-1",
+          name: "Gain/Loss",
+          groupId: null,
+          equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+        },
+      },
+      convertedValue: -0.335,
+      aggregation: equityAggregation,
+    });
+
+    const response = buildPeriodOverviewResponse({
+      selection: createSelection(),
+      minPeriodDate: new Date("2025-01-01T00:00:00.000Z"),
+      currentDay: new Date("2026-02-01T00:00:00.000Z"),
+      referenceCurrency: "CHF",
+      groupById: new Map(),
+      assetLiabilityAccounts: [],
+      equityAggregation,
+      realizedGainLoss: 4.444,
+      unrealizedGainLoss: -1.111,
+      isBeforeAccountBookStart: false,
+      endOfPeriodBalanceStats: {
+        assets: 0,
+        liabilities: 0,
+        netWorth: 0,
+        convertedBalanceByAccountId: new Map(),
+      },
+      bookingsCount: 1,
+      convertedBookingsCount: 1,
+      skippedBookingsCount: 0,
+      gainsLossesContributions: [
+        {
+          sourceKind: "HOLDING",
+          accountId: "account-usd-cash",
+          accountName: "USD Cash",
+          unit: Unit.CURRENCY,
+          currency: "USD",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          realizedGainLoss: 4.444,
+          unrealizedGainLoss: -1.111,
+        },
+        {
+          sourceKind: "EXPLICIT",
+          accountId: "account-fees",
+          accountName: "Fees Account",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          realizedGainLoss: 0.335,
+          unrealizedGainLoss: 0,
+        },
+      ],
+    });
+
+    expect(response.stats).toMatchObject({
+      realizedGainLoss: 4.78,
+      unrealizedGainLoss: -1.11,
+      gainsLosses: 3.67,
+    });
+    expect(response.gainsLossesBreakdown.hierarchy).toEqual([
+      {
+        id: "unit-type:fx",
+        label: "FX",
+        realizedGainLoss: 4.44,
+        unrealizedGainLoss: -1.11,
+        totalGainLoss: 3.33,
+        children: [
+          {
+            id: "unit:fx:USD",
+            label: "USD",
+            realizedGainLoss: 4.44,
+            unrealizedGainLoss: -1.11,
+            totalGainLoss: 3.33,
+            children: [
+              {
+                id: "unit-account:fx:USD:account-usd-cash",
+                label: "USD Cash",
+                realizedGainLoss: 4.44,
+                unrealizedGainLoss: -1.11,
+                totalGainLoss: 3.33,
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "unit-type:explicit",
+        label: "Explicit G/L",
+        realizedGainLoss: 0.34,
+        unrealizedGainLoss: 0,
+        totalGainLoss: 0.34,
+        children: [
+          {
+            id: "explicit-account:account-fees",
+            label: "Fees Account",
+            realizedGainLoss: 0.34,
+            unrealizedGainLoss: 0,
+            totalGainLoss: 0.34,
+            children: [],
+          },
+        ],
+      },
+    ]);
+  });
 });
