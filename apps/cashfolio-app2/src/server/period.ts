@@ -475,13 +475,22 @@ async function computeTransferClearingGainLossSplit(args: {
         return left.id.localeCompare(right.id, "en");
       });
 
-    for (const booking of inPeriodBookings) {
-      if (isNearZero(booking.value)) {
-        skippedCount += 1;
-        continue;
-      }
+    const convertibleInPeriodBookings = inPeriodBookings.filter(
+      (booking) => !isNearZero(booking.value),
+    );
+    const convertedValues = await Promise.all(
+      convertibleInPeriodBookings.map((booking) =>
+        args.convertBookingToReference(booking),
+      ),
+    );
 
-      const convertedValue = await args.convertBookingToReference(booking);
+    for (
+      let bookingIndex = 0;
+      bookingIndex < convertibleInPeriodBookings.length;
+      bookingIndex += 1
+    ) {
+      const booking = convertibleInPeriodBookings[bookingIndex]!;
+      const convertedValue = convertedValues[bookingIndex];
       if (convertedValue == null) {
         skippedCount += 1;
         continue;

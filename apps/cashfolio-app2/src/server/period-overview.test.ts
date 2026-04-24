@@ -82,17 +82,64 @@ function isEquityBookingQuery(args: unknown): boolean {
 }
 
 function isTransferClearingBookingQuery(args: unknown): boolean {
-  return (
-    typeof args === "object" &&
-    args !== null &&
-    "where" in args &&
-    typeof args.where === "object" &&
-    args.where !== null &&
-    "transaction" in args.where &&
-    typeof args.where.transaction === "object" &&
-    args.where.transaction !== null &&
-    "bookings" in args.where.transaction
-  );
+  if (typeof args !== "object" || args === null || !("where" in args)) {
+    return false;
+  }
+
+  const where = args.where;
+  if (typeof where !== "object" || where === null) {
+    return false;
+  }
+  if (!("date" in where)) {
+    return false;
+  }
+  const date = where.date;
+  if (
+    typeof date !== "object" ||
+    date === null ||
+    !("lt" in date) ||
+    !(date.lt instanceof Date)
+  ) {
+    return false;
+  }
+
+  if (!("account" in where)) {
+    return false;
+  }
+  const account = where.account;
+  if (typeof account !== "object" || account === null || !("type" in account)) {
+    return false;
+  }
+  const accountType = account.type;
+  if (
+    typeof accountType !== "object" ||
+    accountType === null ||
+    !("in" in accountType) ||
+    !Array.isArray(accountType.in)
+  ) {
+    return false;
+  }
+
+  if (
+    !accountType.in.includes(AccountType.ASSET) ||
+    !accountType.in.includes(AccountType.LIABILITY)
+  ) {
+    return false;
+  }
+
+  if (!("transaction" in where)) {
+    return false;
+  }
+  const transaction = where.transaction;
+  if (
+    typeof transaction !== "object" ||
+    transaction === null ||
+    !("bookings" in transaction)
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 type BreakdownHierarchyTestNode = {
@@ -976,7 +1023,7 @@ describe("getPeriodOverview", () => {
     });
 
     expect(result.convertedBookingsCount).toBe(0);
-    expect(result.skippedBookingsCount).toBe(1);
+    expect(result.skippedBookingsCount).toBe(0);
     expect(convertBookingValueToReference).not.toHaveBeenCalled();
   });
 
