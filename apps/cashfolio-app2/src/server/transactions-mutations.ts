@@ -2,13 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
 import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { isAfter, startOfDay } from "date-fns";
-import {
-  getSimpleTransactionUnitIdentifier,
-  validateGainLossSimpleTransactionInvariant,
-} from "../shared/account-utils";
+import { getSimpleTransactionUnitIdentifier } from "../shared/account-utils";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { ensureSameOriginRequestFromServerContext } from "../security/same-origin.server";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
+import { validateRebookGainLossSimpleTransactionInvariant } from "./rebook-gain-loss-validation";
 import { validateRebookBookingTarget } from "./rebook-booking-validation";
 import {
   accountTypeMeta,
@@ -377,31 +375,12 @@ export const rebookBooking = createServerFn({ method: "POST" })
         sourceTransactionOpeningBookingCount > 0,
     });
 
-    const transactionBookings = await prisma.booking.findMany({
-      where: {
-        accountBookId: data.accountBookId,
-        transactionId: booking.transactionId,
-      },
-      select: {
-        id: true,
-        account: {
-          select: {
-            type: true,
-            equityAccountSubtype: true,
-          },
-        },
-      },
+    await validateRebookGainLossSimpleTransactionInvariant({
+      accountBookId: data.accountBookId,
+      transactionId: booking.transactionId,
+      bookingId: booking.id,
+      targetAccount,
     });
-    const gainLossInvariantError = validateGainLossSimpleTransactionInvariant(
-      transactionBookings.map((transactionBooking) =>
-        transactionBooking.id === booking.id
-          ? targetAccount
-          : transactionBooking.account,
-      ),
-    );
-    if (gainLossInvariantError) {
-      throw new Error(gainLossInvariantError);
-    }
 
     await prisma.booking.update({
       where: {

@@ -5,10 +5,8 @@ import {
   Unit,
 } from "../.prisma-client/enums";
 import { isAfter, isBefore, startOfDay } from "date-fns";
-import {
-  getUnitIdentifier,
-  validateGainLossSimpleTransactionInvariant,
-} from "../shared/account-utils";
+import { getUnitIdentifier } from "../shared/account-utils";
+import { validateGainLossSimpleTransactionInvariant } from "../shared/gain-loss-transaction-invariant";
 import { formatUtcDate, startOfUtcDay } from "../shared/date";
 import {
   getBookingUnitFields,

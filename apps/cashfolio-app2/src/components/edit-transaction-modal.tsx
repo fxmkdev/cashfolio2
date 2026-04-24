@@ -6,29 +6,21 @@ import { formRootRule, isNotEmpty, useForm } from "@mantine/form";
 import { IconInfoCircle, IconTablePlus } from "@tabler/icons-react";
 import { createId } from "@paralleldrive/cuid2";
 import { isAfter, parse, startOfDay } from "date-fns";
-import { numericFormatter } from "react-number-format";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Unit } from "../.prisma-client/enums";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
-import {
-  getUnitIdentifier,
-  isExpenseAccount,
-  validateGainLossSimpleTransactionInvariant,
-  isIncomeAccount,
-  isOpeningBalancesAccount,
-} from "../shared/account-utils";
+import { isExpenseAccount, isIncomeAccount } from "../shared/account-utils";
 import {
   formatUtcDate,
   normalizeDateInputValue,
   startOfUtcDay,
 } from "../shared/date";
-import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
-import { sum } from "../utils";
 import { DataGrid } from "./data-grid";
 import {
   createEditTransactionColumnDefs,
   isEditableCell,
 } from "./edit-transaction-modal-columns";
+import { validateEditTransactionBookingsRoot } from "./edit-transaction-modal-validation";
 import type {
   AccountOption,
   BookingValues,
@@ -122,63 +114,13 @@ export function EditTransactionModal({
         return null;
       },
       bookings: {
-        [formRootRule]: (bookings) => {
-          for (const booking of bookings) {
-            if (!booking.account) continue;
-            const account = accounts.find((a) => a.value === booking.account);
-            if (!account) continue;
-            if (isIncomeAccount(account) && booking.debit !== undefined) {
-              return "Income accounts cannot have debit entries.";
-            }
-            if (isExpenseAccount(account) && booking.credit !== undefined) {
-              return "Expense accounts cannot have credit entries.";
-            }
-            if (isOpeningBalancesAccount(account)) {
-              return OPENING_BALANCES_MANAGEMENT_MESSAGE;
-            }
-          }
-
-          const bookingAccounts = bookings
-            .map((booking) => {
-              if (!booking.account) return null;
-              return (
-                accounts.find((account) => account.value === booking.account) ??
-                null
-              );
-            })
-            .filter((account): account is AccountOption => account !== null);
-          if (bookingAccounts.length === bookings.length) {
-            const gainLossInvariantError =
-              validateGainLossSimpleTransactionInvariant(bookingAccounts);
-            if (gainLossInvariantError) {
-              return gainLossInvariantError;
-            }
-          }
-
-          const unitIdentifiers = new Set(
-            bookings
-              .filter(
-                (booking): booking is BookingValues & { unit: Unit } =>
-                  booking.unit != null,
-              )
-              .map((booking) => getUnitIdentifier(booking)),
-          );
-          if (unitIdentifiers.size !== 1) return null;
-
-          const difference =
-            sum(bookings.map((booking) => booking.debit ?? 0)) -
-            sum(bookings.map((booking) => booking.credit ?? 0));
-          return Math.abs(difference) > 0.001
-            ? `Transaction is not balanced; debits and credits differ by ${numericFormatter(
-                difference.toString(),
-                {
-                  thousandSeparator,
-                  decimalSeparator,
-                  decimalScale: 2,
-                },
-              )}.`
-            : null;
-        },
+        [formRootRule]: (bookings) =>
+          validateEditTransactionBookingsRoot({
+            bookings,
+            accounts,
+            thousandSeparator,
+            decimalSeparator,
+          }),
         date: (value) => {
           const bookingDate = normalizeDateInputValue(value);
           if (!bookingDate) {

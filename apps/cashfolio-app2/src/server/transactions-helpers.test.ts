@@ -24,7 +24,7 @@ import {
   validateCreateTransaction,
 } from "./transactions-helpers";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
-import { GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE } from "../shared/account-utils";
+import { GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE } from "../shared/gain-loss-transaction-invariant";
 
 function createAccountMap(
   overrides?: Partial<Record<string, AccountTypeMeta>>,

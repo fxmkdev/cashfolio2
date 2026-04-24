@@ -52,54 +52,6 @@ export function isExpenseAccount(
   );
 }
 
-export function isGainLossAccount(
-  acct:
-    | { type: AccountType; equityAccountSubtype?: EquityAccountSubtype | null }
-    | undefined,
-): boolean {
-  return (
-    acct?.type === AccountType.EQUITY &&
-    acct?.equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS
-  );
-}
-
-export const GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE =
-  "Gain/Loss equity bookings require a simple transaction with exactly one Gain/Loss booking and one asset or liability booking.";
-
-export function validateGainLossSimpleTransactionInvariant(
-  accounts: Array<{
-    type: AccountType;
-    equityAccountSubtype?: EquityAccountSubtype | null;
-  }>,
-): string | null {
-  const gainLossAccounts = accounts.filter((account) =>
-    isGainLossAccount(account),
-  );
-
-  if (gainLossAccounts.length === 0) {
-    return null;
-  }
-
-  if (accounts.length !== 2) {
-    return GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE;
-  }
-
-  if (gainLossAccounts.length !== 1) {
-    return GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE;
-  }
-
-  const otherAccount = accounts.find((account) => !isGainLossAccount(account));
-  if (
-    !otherAccount ||
-    (otherAccount.type !== AccountType.ASSET &&
-      otherAccount.type !== AccountType.LIABILITY)
-  ) {
-    return GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE;
-  }
-
-  return null;
-}
-
 export function isBookingValueCompatibleWithAccountType(
   value: number,
   account: {
