@@ -66,6 +66,106 @@ vi.mock("./period-conversion", () => ({
 
 import { DEFAULT_PERIOD_VALUE, getPeriodOverview } from "./period";
 
+function isEquityBookingQuery(args: unknown): boolean {
+  return (
+    typeof args === "object" &&
+    args !== null &&
+    "where" in args &&
+    typeof args.where === "object" &&
+    args.where !== null &&
+    "account" in args.where &&
+    typeof args.where.account === "object" &&
+    args.where.account !== null &&
+    "type" in args.where.account &&
+    args.where.account.type === AccountType.EQUITY
+  );
+}
+
+function isTransferClearingBookingQuery(args: unknown): boolean {
+  if (typeof args !== "object" || args === null || !("where" in args)) {
+    return false;
+  }
+
+  const where = args.where;
+  if (typeof where !== "object" || where === null) {
+    return false;
+  }
+  if (!("date" in where)) {
+    return false;
+  }
+  const date = where.date;
+  if (
+    typeof date !== "object" ||
+    date === null ||
+    !("lt" in date) ||
+    !(date.lt instanceof Date)
+  ) {
+    return false;
+  }
+
+  if (!("account" in where)) {
+    return false;
+  }
+  const account = where.account;
+  if (typeof account !== "object" || account === null || !("type" in account)) {
+    return false;
+  }
+  const accountType = account.type;
+  if (
+    typeof accountType !== "object" ||
+    accountType === null ||
+    !("in" in accountType) ||
+    !Array.isArray(accountType.in)
+  ) {
+    return false;
+  }
+
+  if (
+    !accountType.in.includes(AccountType.ASSET) ||
+    !accountType.in.includes(AccountType.LIABILITY)
+  ) {
+    return false;
+  }
+
+  if (!("transaction" in where)) {
+    return false;
+  }
+  const transaction = where.transaction;
+  if (
+    typeof transaction !== "object" ||
+    transaction === null ||
+    !("bookings" in transaction)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+type BreakdownHierarchyTestNode = {
+  id: string;
+  label: string;
+  amount: number;
+  children: BreakdownHierarchyTestNode[];
+};
+
+function findBreakdownNodeById(
+  nodes: BreakdownHierarchyTestNode[],
+  targetId: string,
+): BreakdownHierarchyTestNode | null {
+  for (const node of nodes) {
+    if (node.id === targetId) {
+      return node;
+    }
+
+    const inChildren = findBreakdownNodeById(node.children, targetId);
+    if (inChildren) {
+      return inChildren;
+    }
+  }
+  return null;
+}
+
 describe("getPeriodOverview", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -89,7 +189,15 @@ describe("getPeriodOverview", () => {
         tradeCurrency: null,
       },
     ]);
-    prisma.booking.findMany.mockResolvedValue([]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([]);
+    });
     prisma.booking.groupBy.mockResolvedValue([]);
     prisma.transaction.findMany.mockResolvedValue([]);
 
@@ -239,56 +347,64 @@ describe("getPeriodOverview", () => {
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
     prisma.account.findMany.mockResolvedValue([]);
-    prisma.booking.findMany.mockResolvedValue([
-      {
-        id: "booking-income",
-        date: new Date("2026-01-10T00:00:00.000Z"),
-        value: -100,
-        unit: Unit.CURRENCY,
-        currency: "CHF",
-        cryptocurrency: null,
-        symbol: null,
-        tradeCurrency: null,
-        account: {
-          id: "income-1",
-          name: "Income",
-          groupId: null,
-          equityAccountSubtype: EquityAccountSubtype.INCOME,
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (!isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([
+        {
+          id: "booking-income",
+          date: new Date("2026-01-10T00:00:00.000Z"),
+          value: -100,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          account: {
+            id: "income-1",
+            name: "Income",
+            groupId: null,
+            equityAccountSubtype: EquityAccountSubtype.INCOME,
+          },
         },
-      },
-      {
-        id: "booking-expense-no-rate",
-        date: new Date("2026-01-11T00:00:00.000Z"),
-        value: 60,
-        unit: Unit.CURRENCY,
-        currency: "XXX",
-        cryptocurrency: null,
-        symbol: null,
-        tradeCurrency: null,
-        account: {
-          id: "expense-1",
-          name: "Expense",
-          groupId: null,
-          equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+        {
+          id: "booking-expense-no-rate",
+          date: new Date("2026-01-11T00:00:00.000Z"),
+          value: 60,
+          unit: Unit.CURRENCY,
+          currency: "XXX",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          account: {
+            id: "expense-1",
+            name: "Expense",
+            groupId: null,
+            equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+          },
         },
-      },
-      {
-        id: "booking-gain-loss",
-        date: new Date("2026-01-12T00:00:00.000Z"),
-        value: -20,
-        unit: Unit.CURRENCY,
-        currency: "CHF",
-        cryptocurrency: null,
-        symbol: null,
-        tradeCurrency: null,
-        account: {
-          id: "gainloss-1",
-          name: "GainLoss",
-          groupId: null,
-          equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+        {
+          id: "booking-gain-loss",
+          date: new Date("2026-01-12T00:00:00.000Z"),
+          value: -20,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          account: {
+            id: "gainloss-1",
+            name: "GainLoss",
+            groupId: null,
+            equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+          },
         },
-      },
-    ]);
+      ]);
+    });
     convertBookingValueToReference.mockImplementation(async ({ value }) => {
       if (value === 60) {
         return null;
@@ -455,6 +571,523 @@ describe("getPeriodOverview", () => {
       endOfPeriodAssets: 390,
     });
     expect(getUnitToReferenceExchangeRate).toHaveBeenCalled();
+  });
+
+  it("builds grouped virtual transfer clearing hierarchy for mixed units", async () => {
+    vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([
+          {
+            id: "c-chf",
+            date: new Date("2026-01-05T00:00:00.000Z"),
+            value: 100,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+          {
+            id: "c-aapl",
+            date: new Date("2026-01-06T00:00:00.000Z"),
+            value: -5,
+            unit: Unit.SECURITY,
+            currency: null,
+            cryptocurrency: null,
+            symbol: "AAPL",
+            tradeCurrency: "USD",
+          },
+          {
+            id: "c-btc",
+            date: new Date("2026-01-07T00:00:00.000Z"),
+            value: 2,
+            unit: Unit.CRYPTOCURRENCY,
+            currency: null,
+            cryptocurrency: "BTC",
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+    convertBookingValueToReference.mockImplementation(
+      async ({ value }) => value,
+    );
+    getUnitToReferenceExchangeRate.mockResolvedValue(1);
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-mixed-clearing",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.stats.endOfPeriodAssets).toBe(5);
+    expect(result.stats.endOfPeriodLiabilities).toBe(102);
+    expect(result.stats.endOfPeriodNetWorth).toBe(-97);
+
+    const assetRoot = findBreakdownNodeById(
+      result.assetBreakdown.hierarchy,
+      "group:virtual:transfer-clearing",
+    );
+    const liabilityRoot = findBreakdownNodeById(
+      result.liabilityBreakdown.hierarchy,
+      "group:virtual:transfer-clearing",
+    );
+
+    expect(assetRoot?.label).toBe("Transfer Clearing");
+    expect(assetRoot?.children.map((child) => child.id)).toEqual(
+      expect.arrayContaining(["group:virtual:transfer-clearing:security"]),
+    );
+    expect(
+      findBreakdownNodeById(
+        result.assetBreakdown.hierarchy,
+        "account:virtual:transfer-clearing:account:security:AAPL:USD",
+      )?.label,
+    ).toBe("AAPL:USD");
+
+    expect(liabilityRoot?.label).toBe("Transfer Clearing");
+    expect(liabilityRoot?.children.map((child) => child.id)).toEqual(
+      expect.arrayContaining([
+        "group:virtual:transfer-clearing:currency",
+        "group:virtual:transfer-clearing:cryptocurrency",
+      ]),
+    );
+    expect(
+      findBreakdownNodeById(
+        result.liabilityBreakdown.hierarchy,
+        "account:virtual:transfer-clearing:account:currency:CHF",
+      )?.label,
+    ).toBe("CHF");
+    expect(
+      findBreakdownNodeById(
+        result.liabilityBreakdown.hierarchy,
+        "account:virtual:transfer-clearing:account:crypto:BTC",
+      )?.label,
+    ).toBe("BTC");
+  });
+
+  it("routes positive and negative transfer-clearing unit balances into asset and liability totals", async () => {
+    vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([
+          {
+            id: "c-chf",
+            date: new Date("2026-01-05T00:00:00.000Z"),
+            value: 100,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+          {
+            id: "c-usd",
+            date: new Date("2026-01-06T00:00:00.000Z"),
+            value: -40,
+            unit: Unit.CURRENCY,
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+    convertBookingValueToReference.mockImplementation(
+      async ({
+        value,
+        currency,
+      }: {
+        value: number;
+        currency: string | null;
+      }) => {
+        if (currency === "USD") {
+          return value * 2;
+        }
+        return value;
+      },
+    );
+    getUnitToReferenceExchangeRate.mockImplementation(
+      async ({ currency }: { currency: string | null }) =>
+        currency === "USD" ? 2 : 1,
+    );
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-sign-routing",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.stats.endOfPeriodAssets).toBe(80);
+    expect(result.stats.endOfPeriodLiabilities).toBe(100);
+    expect(result.stats.endOfPeriodNetWorth).toBe(-20);
+    expect(result.assetBreakdown.totalAmount).toBe(80);
+    expect(result.liabilityBreakdown.totalAmount).toBe(100);
+    expect(
+      findBreakdownNodeById(
+        result.assetBreakdown.hierarchy,
+        "account:virtual:transfer-clearing:account:currency:USD",
+      )?.amount,
+    ).toBe(80);
+    expect(
+      findBreakdownNodeById(
+        result.liabilityBreakdown.hierarchy,
+        "account:virtual:transfer-clearing:account:currency:CHF",
+      )?.amount,
+    ).toBe(100);
+  });
+
+  it("includes transfer-clearing balances even when qualifying bookings are outside the selected period window", async () => {
+    vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2025-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([
+          {
+            id: "c-usd-opening",
+            date: new Date("2025-12-20T00:00:00.000Z"),
+            value: 50,
+            unit: Unit.CURRENCY,
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+    convertBookingValueToReference.mockImplementation(
+      async ({
+        value,
+        currency,
+      }: {
+        value: number;
+        currency: string | null;
+      }) => {
+        if (currency === "USD") {
+          return value * 2;
+        }
+        return value;
+      },
+    );
+    getUnitToReferenceExchangeRate.mockResolvedValue(2);
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-outside-period",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.stats.endOfPeriodLiabilities).toBe(100);
+    expect(result.liabilityBreakdown.totalAmount).toBe(100);
+    expect(result.convertedBookingsCount).toBe(0);
+    expect(result.stats.gainsLosses).toBe(0);
+  });
+
+  it("includes non-reference transfer-clearing positions in realized and unrealized gains/losses", async () => {
+    vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2025-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([
+          {
+            id: "c-open-usd",
+            date: new Date("2025-12-20T00:00:00.000Z"),
+            value: 10,
+            unit: Unit.CURRENCY,
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+          {
+            id: "c-sell-usd",
+            date: new Date("2026-01-10T00:00:00.000Z"),
+            value: -4,
+            unit: Unit.CURRENCY,
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+          {
+            id: "c-buy-usd",
+            date: new Date("2026-01-15T00:00:00.000Z"),
+            value: 3,
+            unit: Unit.CURRENCY,
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+    convertBookingValueToReference.mockImplementation(
+      async ({
+        value,
+        currency,
+        date,
+      }: {
+        value: number;
+        currency: string | null;
+        date: Date;
+      }) => {
+        if (currency !== "USD") {
+          return value;
+        }
+        const dateKey = date.toISOString().slice(0, 10);
+        if (dateKey === "2026-01-10") {
+          return value * 2;
+        }
+        if (dateKey === "2026-01-15") {
+          return value * 3;
+        }
+        if (dateKey === "2026-01-31") {
+          return value * 4;
+        }
+        return value;
+      },
+    );
+    getUnitToReferenceExchangeRate.mockImplementation(
+      async ({ date }: { date: Date }) => {
+        const dateKey = date.toISOString().slice(0, 10);
+        if (dateKey === "2025-12-31") {
+          return 1;
+        }
+        if (dateKey === "2026-01-31") {
+          return 4;
+        }
+        return 1;
+      },
+    );
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-clearing-gain-loss",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.convertedBookingsCount).toBe(2);
+    expect(result.skippedBookingsCount).toBe(0);
+    expect(result.stats.realizedGainLoss).toBe(-4);
+    expect(result.stats.unrealizedGainLoss).toBe(-21);
+    expect(result.stats.gainsLosses).toBe(-25);
+    expect(result.stats.totalReturn).toBe(-25);
+    expect(result.stats.endOfPeriodLiabilities).toBe(36);
+  });
+
+  it("tracks skipped counts when transfer-clearing conversions or rates are unavailable", async () => {
+    vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2025-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([
+          {
+            id: "c-usd-opening",
+            date: new Date("2025-12-25T00:00:00.000Z"),
+            value: 5,
+            unit: Unit.CURRENCY,
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+          {
+            id: "c-btc-in-period",
+            date: new Date("2026-01-10T00:00:00.000Z"),
+            value: 2,
+            unit: Unit.CRYPTOCURRENCY,
+            currency: null,
+            cryptocurrency: "BTC",
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+    convertBookingValueToReference.mockImplementation(
+      async ({ value, unit }: { value: number; unit: Unit }) => {
+        if (unit === Unit.CRYPTOCURRENCY) {
+          return null;
+        }
+        return value * 2;
+      },
+    );
+    getUnitToReferenceExchangeRate.mockImplementation(
+      async ({ currency, date }: { currency: string | null; date: Date }) => {
+        if (
+          currency === "USD" &&
+          date.toISOString().slice(0, 10) === "2025-12-31"
+        ) {
+          return null;
+        }
+        return 2;
+      },
+    );
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-clearing-missing-rates",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.stats.endOfPeriodLiabilities).toBe(10);
+    expect(result.stats.gainsLosses).toBe(0);
+    expect(result.convertedBookingsCount).toBe(0);
+    expect(result.skippedBookingsCount).toBe(3);
+  });
+
+  it("skips near-zero in-period transfer-clearing quantities before conversion", async () => {
+    vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2025-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([
+          {
+            id: "c-zero-in-period",
+            date: new Date("2026-01-10T00:00:00.000Z"),
+            value: 0,
+            unit: Unit.CURRENCY,
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-clearing-near-zero",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.convertedBookingsCount).toBe(0);
+    expect(result.skippedBookingsCount).toBe(0);
+    expect(convertBookingValueToReference).not.toHaveBeenCalled();
+  });
+
+  it("keeps net worth neutral for posted legs by using opposite-sign transfer clearing", async () => {
+    vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2025-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([
+      {
+        id: "asset-cash",
+        name: "Cash",
+        groupId: null,
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      },
+    ]);
+    prisma.booking.groupBy.mockResolvedValueOnce([
+      { accountId: "asset-cash", _sum: { value: -100 } },
+    ]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([
+          {
+            id: "c-cash-out",
+            date: new Date("2026-01-15T00:00:00.000Z"),
+            value: -100,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-clearing-neutral-net-worth",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.stats.endOfPeriodAssets).toBe(0);
+    expect(result.stats.endOfPeriodLiabilities).toBe(0);
+    expect(result.stats.endOfPeriodNetWorth).toBe(0);
+    expect(result.assetBreakdown.totalAmount).toBe(100);
+    expect(result.liabilityBreakdown.totalAmount).toBe(0);
+    expect(
+      findBreakdownNodeById(
+        result.assetBreakdown.hierarchy,
+        "account:virtual:transfer-clearing:account:currency:CHF",
+      )?.amount,
+    ).toBe(100);
   });
 
   it("ignores unsupported period values in input and falls back to default", async () => {

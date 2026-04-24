@@ -35,7 +35,6 @@ import {
 import {
   computeEndOfPeriodBalanceStats,
   computeEndOfPeriodBalanceStatsWithConvertedBalances,
-  type EndOfPeriodBalanceAccount,
 } from "./period-balance-stats";
 import {
   accumulateConvertedEquityBooking,
@@ -46,6 +45,11 @@ import {
   finalizeHoldingGainLossState,
   initializeHoldingGainLossState,
 } from "./period-overview-holdings";
+import {
+  buildTransferClearingVirtualHierarchy,
+  computeTransferClearingGainLossSplit,
+  loadTransferClearingUnitBuckets,
+} from "./period-transfer-clearing";
 import { buildPeriodOverviewResponse } from "./period-overview-response";
 
 export {
@@ -98,7 +102,7 @@ export const getPeriodOverview = createServerFn({
     });
 
     const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
-    const [allAccountGroups, assetLiabilityAccounts] = await Promise.all([
+    const [allAccountGroups, baseAssetLiabilityAccounts] = await Promise.all([
       prisma.accountGroup.findMany({
         where: { accountBookId: data.accountBookId },
         select: {
@@ -129,7 +133,7 @@ export const getPeriodOverview = createServerFn({
     ]);
 
     const holdingAccountsResolved = filterConvertibleHoldingAccounts(
-      assetLiabilityAccounts,
+      baseAssetLiabilityAccounts,
       referenceCurrency,
     );
 
@@ -147,12 +151,8 @@ export const getPeriodOverview = createServerFn({
     const queryEndExclusive = getPeriodEndExclusive(selection.to);
     const initialHoldingDate = addUtcDays(queryStart, -1);
 
-    const groupById = new Map(
-      allAccountGroups.map((group) => [group.id, group]),
-    );
-
     const exchangeRateByKey = new Map<string, Promise<number | null>>();
-    const assetLiabilityAccountIds = assetLiabilityAccounts.map(
+    const assetLiabilityAccountIds = baseAssetLiabilityAccounts.map(
       (account) => account.id,
     );
     const endOfPeriodRawBalanceByAccountId = new Map(
@@ -169,6 +169,35 @@ export const getPeriodOverview = createServerFn({
         : []
       ).map((balance) => [balance.accountId, Number(balance._sum.value ?? 0)]),
     );
+    const transferClearingUnitBuckets = await loadTransferClearingUnitBuckets({
+      accountBookId: data.accountBookId,
+      periodEndExclusive: queryEndExclusive,
+      referenceCurrency,
+    });
+    const {
+      virtualGroups: transferClearingVirtualGroups,
+      virtualAccounts: transferClearingVirtualAccounts,
+      rawBalanceByVirtualAccountId,
+    } = buildTransferClearingVirtualHierarchy({
+      unitBuckets: transferClearingUnitBuckets,
+    });
+
+    const groupById = new Map(
+      allAccountGroups.map((group) => [group.id, group]),
+    );
+    for (const virtualGroup of transferClearingVirtualGroups) {
+      groupById.set(virtualGroup.id, virtualGroup);
+    }
+
+    const assetLiabilityAccounts = [
+      ...baseAssetLiabilityAccounts,
+      ...transferClearingVirtualAccounts,
+    ];
+    // Intentionally keep posted real-account balances: virtual transfer-clearing
+    // accounts represent the missing counterpart leg with opposite sign.
+    for (const [accountId, rawBalance] of rawBalanceByVirtualAccountId) {
+      endOfPeriodRawBalanceByAccountId.set(accountId, rawBalance);
+    }
 
     let bookingsCount = 0;
     let convertedBookingsCount = 0;
@@ -449,6 +478,37 @@ export const getPeriodOverview = createServerFn({
         convertedBookingsCount += holdingGainLossSplit.convertedCount;
         skippedBookingsCount += holdingGainLossSplit.skippedCount;
       }
+
+      const transferClearingGainLossSplit =
+        await computeTransferClearingGainLossSplit({
+          unitBuckets: transferClearingUnitBuckets,
+          periodStart: queryStart,
+          periodEndExclusive: queryEndExclusive,
+          initialRateDate: initialHoldingDate,
+          periodEnd: selection.to,
+          resolveRate: (input) =>
+            getUnitToReferenceExchangeRate({
+              ...input,
+              referenceCurrency,
+              exchangeRateByKey,
+            }),
+          convertBookingToReference: (booking) =>
+            convertBookingValueToReference({
+              value: booking.value,
+              unit: booking.unit,
+              currency: booking.currency,
+              cryptocurrency: booking.cryptocurrency,
+              symbol: booking.symbol,
+              tradeCurrency: booking.tradeCurrency,
+              date: booking.date,
+              referenceCurrency,
+              exchangeRateByKey,
+            }),
+        });
+      realizedGainLoss += transferClearingGainLossSplit.realizedGainLoss;
+      unrealizedGainLoss += transferClearingGainLossSplit.unrealizedGainLoss;
+      convertedBookingsCount += transferClearingGainLossSplit.convertedCount;
+      skippedBookingsCount += transferClearingGainLossSplit.skippedCount;
     }
 
     const endOfPeriodBalanceStats =
