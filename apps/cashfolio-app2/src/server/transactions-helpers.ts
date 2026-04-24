@@ -5,7 +5,10 @@ import {
   Unit,
 } from "../.prisma-client/enums";
 import { isAfter, isBefore, startOfDay } from "date-fns";
-import { getUnitIdentifier } from "../shared/account-utils";
+import {
+  getUnitIdentifier,
+  validateGainLossSimpleTransactionInvariant,
+} from "../shared/account-utils";
 import { formatUtcDate, startOfUtcDay } from "../shared/date";
 import {
   getBookingUnitFields,
@@ -127,6 +130,17 @@ export function validateAccountTypeBookingsWithAccounts(
     accountBookStartDate != null ? formatUtcDate(accountBookStartDate) : null;
 
   const errors: string[] = [];
+  const bookingAccounts = bookings
+    .map((booking) => accountMap.get(booking.accountId))
+    .filter((account): account is AccountTypeMeta => Boolean(account));
+  if (bookingAccounts.length === bookings.length) {
+    const gainLossInvariantError =
+      validateGainLossSimpleTransactionInvariant(bookingAccounts);
+    if (gainLossInvariantError) {
+      errors.push(gainLossInvariantError);
+    }
+  }
+
   for (let i = 0; i < bookings.length; i++) {
     const b = bookings[i];
     const account = accountMap.get(b.accountId);

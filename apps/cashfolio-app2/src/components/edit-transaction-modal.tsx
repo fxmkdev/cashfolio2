@@ -13,6 +13,7 @@ import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 import {
   getUnitIdentifier,
   isExpenseAccount,
+  validateGainLossSimpleTransactionInvariant,
   isIncomeAccount,
   isOpeningBalancesAccount,
 } from "../shared/account-utils";
@@ -134,6 +135,23 @@ export function EditTransactionModal({
             }
             if (isOpeningBalancesAccount(account)) {
               return OPENING_BALANCES_MANAGEMENT_MESSAGE;
+            }
+          }
+
+          const bookingAccounts = bookings
+            .map((booking) => {
+              if (!booking.account) return null;
+              return (
+                accounts.find((account) => account.value === booking.account) ??
+                null
+              );
+            })
+            .filter((account): account is AccountOption => account !== null);
+          if (bookingAccounts.length === bookings.length) {
+            const gainLossInvariantError =
+              validateGainLossSimpleTransactionInvariant(bookingAccounts);
+            if (gainLossInvariantError) {
+              return gainLossInvariantError;
             }
           }
 
