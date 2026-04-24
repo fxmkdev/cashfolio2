@@ -66,6 +66,24 @@ vi.mock("./period-conversion", () => ({
 
 import { DEFAULT_PERIOD_VALUE, getPeriodOverview } from "./period";
 
+function transactionFilterIncludes(
+  filter: unknown,
+  transactionId: string,
+): boolean {
+  if (filter === transactionId) {
+    return true;
+  }
+  if (
+    typeof filter === "object" &&
+    filter != null &&
+    "in" in filter &&
+    Array.isArray(filter.in)
+  ) {
+    return filter.in.includes(transactionId);
+  }
+  return false;
+}
+
 function isEquityBookingQuery(args: unknown): boolean {
   return (
     typeof args === "object" &&
@@ -351,9 +369,10 @@ describe("getPeriodOverview", () => {
       if (isTransferClearingBookingQuery(args)) {
         return Promise.resolve([]);
       }
-      if (args.where?.transactionId === "tx-explicit") {
+      if (transactionFilterIncludes(args.where?.transactionId, "tx-explicit")) {
         return Promise.resolve([
           {
+            transactionId: "tx-explicit",
             accountId: "asset-counterpart",
             account: {
               name: "Cash",
@@ -474,9 +493,10 @@ describe("getPeriodOverview", () => {
       if (isTransferClearingBookingQuery(args)) {
         return Promise.resolve([]);
       }
-      if (args.where?.transactionId === "tx-explicit") {
+      if (transactionFilterIncludes(args.where?.transactionId, "tx-explicit")) {
         return Promise.resolve([
           {
+            transactionId: "tx-explicit",
             accountId: "asset-cash",
             account: {
               name: "Cash",
@@ -662,15 +682,17 @@ describe("getPeriodOverview", () => {
       if (isTransferClearingBookingQuery(args)) {
         return Promise.resolve([]);
       }
-      if (args.where?.transactionId === "tx-explicit") {
+      if (transactionFilterIncludes(args.where?.transactionId, "tx-explicit")) {
         return Promise.resolve([
           {
+            transactionId: "tx-explicit",
             accountId: "asset-cash-1",
             account: {
               name: "Cash 1",
             },
           },
           {
+            transactionId: "tx-explicit",
             accountId: "asset-cash-2",
             account: {
               name: "Cash 2",
@@ -716,6 +738,181 @@ describe("getPeriodOverview", () => {
     ).rejects.toThrow(
       "expected exactly one distinct non-equity counterpart account",
     );
+  });
+
+  it("ignores near-zero explicit gain/loss contributions in the breakdown", async () => {
+    vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (isEquityBookingQuery(args)) {
+        if (args.cursor) {
+          return Promise.resolve([]);
+        }
+        return Promise.resolve([
+          {
+            id: "booking-explicit-gain-loss",
+            transactionId: "tx-explicit",
+            date: new Date("2026-01-18T00:00:00.000Z"),
+            value: -1,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            account: {
+              id: "gainloss-1",
+              name: "GainLoss",
+              groupId: null,
+              equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+            },
+          },
+        ]);
+      }
+
+      if (transactionFilterIncludes(args.where?.transactionId, "tx-explicit")) {
+        return Promise.resolve([
+          {
+            transactionId: "tx-explicit",
+            accountId: "asset-cash",
+            account: {
+              name: "Cash",
+            },
+          },
+        ]);
+      }
+
+      return Promise.resolve([]);
+    });
+    prisma.booking.groupBy.mockResolvedValue([]);
+    convertBookingValueToReference.mockImplementation(async ({ value }) => {
+      if (value === -1) {
+        return -1e-12;
+      }
+      return value;
+    });
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-near-zero-explicit",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.stats.gainsLosses).toBe(0);
+    expect(result.gainsLossesBreakdown.hierarchy).toEqual([]);
+  });
+
+  it("batches explicit counterpart account resolution per equity bookings page", async () => {
+    vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (isEquityBookingQuery(args)) {
+        if (args.cursor) {
+          return Promise.resolve([]);
+        }
+        return Promise.resolve([
+          {
+            id: "booking-explicit-1",
+            transactionId: "tx-explicit-1",
+            date: new Date("2026-01-10T00:00:00.000Z"),
+            value: -5,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            account: {
+              id: "gainloss-1",
+              name: "GainLoss",
+              groupId: null,
+              equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+            },
+          },
+          {
+            id: "booking-explicit-2",
+            transactionId: "tx-explicit-2",
+            date: new Date("2026-01-11T00:00:00.000Z"),
+            value: -7,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            account: {
+              id: "gainloss-1",
+              name: "GainLoss",
+              groupId: null,
+              equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+            },
+          },
+        ]);
+      }
+
+      if (
+        typeof args.where?.transactionId === "object" &&
+        args.where.transactionId != null &&
+        "in" in args.where.transactionId
+      ) {
+        return Promise.resolve([
+          {
+            transactionId: "tx-explicit-1",
+            accountId: "asset-cash-1",
+            account: {
+              name: "Cash 1",
+            },
+          },
+          {
+            transactionId: "tx-explicit-2",
+            accountId: "asset-cash-2",
+            account: {
+              name: "Cash 2",
+            },
+          },
+        ]);
+      }
+
+      return Promise.resolve([]);
+    });
+    prisma.booking.groupBy.mockResolvedValue([]);
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-batched-explicit",
+        period: "2026-01",
+      },
+    });
+
+    const counterpartLookupCalls = prisma.booking.findMany.mock.calls.filter(
+      ([args]) =>
+        typeof args.where?.transactionId === "object" &&
+        args.where.transactionId != null &&
+        "in" in args.where.transactionId,
+    );
+
+    expect(counterpartLookupCalls).toHaveLength(1);
+    expect(counterpartLookupCalls[0]?.[0].where?.transactionId).toMatchObject({
+      in: expect.arrayContaining(["tx-explicit-1", "tx-explicit-2"]),
+    });
+    expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
+      {
+        label: "Explicit G/L",
+        totalGainLoss: 12,
+      },
+    ]);
   });
 
   it("builds grouped virtual transfer clearing hierarchy for mixed units", async () => {

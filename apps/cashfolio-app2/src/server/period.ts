@@ -44,6 +44,7 @@ import {
   accumulateConvertedEquityBooking,
   createPeriodOverviewEquityAggregation,
 } from "./period-overview-aggregation";
+import { isNearZero } from "./period-overview-holdings-common";
 import {
   applyHoldingTransactionsToGainLossState,
   finalizeHoldingGainLossState,
@@ -98,6 +99,11 @@ type GainLossContributionAccumulator = {
   tradeCurrency: string | null;
   realizedGainLoss: number;
   unrealizedGainLoss: number;
+};
+
+type ExplicitCounterpartAccount = {
+  id: string;
+  name: string;
 };
 
 function normalizeGainLossCode(value: string | null): string {
@@ -164,7 +170,14 @@ function accumulateGainLossContribution(args: {
   realizedGainLoss: number;
   unrealizedGainLoss: number;
 }) {
-  if (args.realizedGainLoss === 0 && args.unrealizedGainLoss === 0) {
+  const realizedGainLoss = isNearZero(args.realizedGainLoss)
+    ? 0
+    : args.realizedGainLoss;
+  const unrealizedGainLoss = isNearZero(args.unrealizedGainLoss)
+    ? 0
+    : args.unrealizedGainLoss;
+
+  if (realizedGainLoss === 0 && unrealizedGainLoss === 0) {
     return;
   }
 
@@ -180,8 +193,15 @@ function accumulateGainLossContribution(args: {
   const existing = args.byKey.get(key);
 
   if (existing) {
-    existing.realizedGainLoss += args.realizedGainLoss;
-    existing.unrealizedGainLoss += args.unrealizedGainLoss;
+    existing.realizedGainLoss += realizedGainLoss;
+    existing.unrealizedGainLoss += unrealizedGainLoss;
+    if (
+      isNearZero(existing.realizedGainLoss) &&
+      isNearZero(existing.unrealizedGainLoss)
+    ) {
+      args.byKey.delete(key);
+      return;
+    }
     return;
   }
 
@@ -194,76 +214,93 @@ function accumulateGainLossContribution(args: {
     cryptocurrency: args.cryptocurrency,
     symbol: args.symbol,
     tradeCurrency: args.tradeCurrency,
-    realizedGainLoss: args.realizedGainLoss,
-    unrealizedGainLoss: args.unrealizedGainLoss,
+    realizedGainLoss,
+    unrealizedGainLoss,
   });
 }
 
-async function resolveExplicitCounterpartNonEquityAccount(args: {
+async function resolveExplicitCounterpartNonEquityAccounts(args: {
   accountBookId: string;
-  transactionId: string;
-  bookingId: string;
-  byTransactionId: Map<
-    string,
-    Promise<{
-      id: string;
-      name: string;
-    }>
-  >;
+  explicitBookings: Array<{
+    transactionId: string;
+    bookingId: string;
+  }>;
+  byTransactionId: Map<string, ExplicitCounterpartAccount>;
 }) {
-  const existing = args.byTransactionId.get(args.transactionId);
-  if (existing) {
-    return existing;
+  const missingExplicitBookings = args.explicitBookings.filter(
+    (booking) => !args.byTransactionId.has(booking.transactionId),
+  );
+  if (missingExplicitBookings.length === 0) {
+    return;
+  }
+  const missingTransactionIds = Array.from(
+    new Set(missingExplicitBookings.map((booking) => booking.transactionId)),
+  );
+  const bookingIdByTransactionId = new Map(
+    missingExplicitBookings.map((booking) => [
+      booking.transactionId,
+      booking.bookingId,
+    ]),
+  );
+
+  const counterpartBookings = await prisma.booking.findMany({
+    where: {
+      accountBookId: args.accountBookId,
+      transactionId: { in: missingTransactionIds },
+      account: {
+        type: {
+          in: [AccountType.ASSET, AccountType.LIABILITY],
+        },
+      },
+    },
+    select: {
+      transactionId: true,
+      accountId: true,
+      account: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  const counterpartByTransactionId = new Map<string, Map<string, string>>();
+  for (const counterpartBooking of counterpartBookings) {
+    const byAccountId =
+      counterpartByTransactionId.get(counterpartBooking.transactionId) ??
+      new Map<string, string>();
+    byAccountId.set(
+      counterpartBooking.accountId,
+      counterpartBooking.account.name,
+    );
+    counterpartByTransactionId.set(
+      counterpartBooking.transactionId,
+      byAccountId,
+    );
   }
 
-  const pending = prisma.booking
-    .findMany({
-      where: {
-        accountBookId: args.accountBookId,
-        transactionId: args.transactionId,
-        account: {
-          type: {
-            in: [AccountType.ASSET, AccountType.LIABILITY],
-          },
-        },
-      },
-      select: {
-        accountId: true,
-        account: {
-          select: {
-            name: true,
-          },
-        },
-      },
-    })
-    .then((counterpartBookings) => {
-      const counterpartByAccountId = new Map<string, string>();
-      for (const counterpartBooking of counterpartBookings) {
-        counterpartByAccountId.set(
-          counterpartBooking.accountId,
-          counterpartBooking.account.name,
-        );
-      }
+  for (const transactionId of missingTransactionIds) {
+    const counterpartByAccountId =
+      counterpartByTransactionId.get(transactionId) ??
+      new Map<string, string>();
+    const bookingId = bookingIdByTransactionId.get(transactionId) ?? "UNKNOWN";
 
-      if (counterpartByAccountId.size !== 1) {
-        throw new Error(
-          `Explicit gain/loss booking invariant violated for booking ${args.bookingId} in transaction ${args.transactionId}: expected exactly one distinct non-equity counterpart account, found ${counterpartByAccountId.size}.`,
-        );
-      }
+    if (counterpartByAccountId.size !== 1) {
+      throw new Error(
+        `Explicit gain/loss booking invariant violated for booking ${bookingId} in transaction ${transactionId}: expected exactly one distinct non-equity counterpart account, found ${counterpartByAccountId.size}.`,
+      );
+    }
 
-      const entry = counterpartByAccountId.entries().next().value;
-      if (!entry) {
-        throw new Error(
-          `Explicit gain/loss booking invariant violated for booking ${args.bookingId} in transaction ${args.transactionId}: missing counterpart account.`,
-        );
-      }
+    const entry = counterpartByAccountId.entries().next().value;
+    if (!entry) {
+      throw new Error(
+        `Explicit gain/loss booking invariant violated for booking ${bookingId} in transaction ${transactionId}: missing counterpart account.`,
+      );
+    }
 
-      const [id, name] = entry;
-      return { id, name };
-    });
-
-  args.byTransactionId.set(args.transactionId, pending);
-  return pending;
+    const [id, name] = entry;
+    args.byTransactionId.set(transactionId, { id, name });
+  }
 }
 
 export const getPeriodOverview = createServerFn({
@@ -399,10 +436,7 @@ export const getPeriodOverview = createServerFn({
     >();
     const explicitCounterpartAccountByTransactionId = new Map<
       string,
-      Promise<{
-        id: string;
-        name: string;
-      }>
+      ExplicitCounterpartAccount
     >();
 
     let nextBookingIdCursor: string | undefined;
@@ -488,6 +522,31 @@ export const getPeriodOverview = createServerFn({
         const convertedValues = await Promise.all(
           conversionTasks.map((task) => task.convertedValuePromise),
         );
+        const explicitBookingsForCounterpartResolution: Array<{
+          transactionId: string;
+          bookingId: string;
+        }> = [];
+        for (let index = 0; index < conversionTasks.length; index += 1) {
+          const booking = conversionTasks[index]!.booking;
+          const convertedValue = convertedValues[index];
+          if (
+            convertedValue != null &&
+            booking.account.equityAccountSubtype ===
+              EquityAccountSubtype.GAIN_LOSS
+          ) {
+            explicitBookingsForCounterpartResolution.push({
+              transactionId: booking.transactionId,
+              bookingId: booking.id,
+            });
+          }
+        }
+        if (explicitBookingsForCounterpartResolution.length > 0) {
+          await resolveExplicitCounterpartNonEquityAccounts({
+            accountBookId: data.accountBookId,
+            explicitBookings: explicitBookingsForCounterpartResolution,
+            byTransactionId: explicitCounterpartAccountByTransactionId,
+          });
+        }
 
         for (let index = 0; index < conversionTasks.length; index += 1) {
           const booking = conversionTasks[index]!.booking;
@@ -510,12 +569,14 @@ export const getPeriodOverview = createServerFn({
             EquityAccountSubtype.GAIN_LOSS
           ) {
             const counterpartAccount =
-              await resolveExplicitCounterpartNonEquityAccount({
-                accountBookId: data.accountBookId,
-                transactionId: booking.transactionId,
-                bookingId: booking.id,
-                byTransactionId: explicitCounterpartAccountByTransactionId,
-              });
+              explicitCounterpartAccountByTransactionId.get(
+                booking.transactionId,
+              );
+            if (!counterpartAccount) {
+              throw new Error(
+                `Explicit gain/loss booking invariant violated for booking ${booking.id} in transaction ${booking.transactionId}: missing resolved counterpart account.`,
+              );
+            }
 
             accumulateGainLossContribution({
               byKey: gainsLossesContributionByKey,
