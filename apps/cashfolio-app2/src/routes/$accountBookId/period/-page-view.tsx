@@ -230,12 +230,11 @@ export function PeriodPageView({
     colors,
   });
 
-  const { gainsLossesLabel, statCards, endOfPeriodStatCards } =
-    buildPeriodPageStats({
-      overview,
-      currencyFormatter,
-      savingsRateFormatter,
-    });
+  const { statCards, endOfPeriodStatCards } = buildPeriodPageStats({
+    overview,
+    currencyFormatter,
+    savingsRateFormatter,
+  });
 
   const handlePeriodModeChange = (nextMode: string) => {
     setPickerOpened(false);
@@ -344,7 +343,6 @@ export function PeriodPageView({
         <Stack gap="lg" data-testid="period-analysis-section">
           <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg">
             <ContributionChartCard
-              gainsLossesLabel={gainsLossesLabel}
               stats={overview.stats}
               currencyFormatter={currencyFormatter}
               colors={colors}
