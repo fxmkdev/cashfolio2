@@ -49,7 +49,9 @@ function getGainLossLabel(amount: number): "Gain" | "Loss" {
   return amount >= 0 ? "Gain" : "Loss";
 }
 
-function getGainLossTotalLabel(amount: number): "Gains (total)" | "Loss (total)" {
+function getGainLossTotalLabel(
+  amount: number,
+): "Gains (total)" | "Loss (total)" {
   return amount >= 0 ? "Gains (total)" : "Loss (total)";
 }
 
