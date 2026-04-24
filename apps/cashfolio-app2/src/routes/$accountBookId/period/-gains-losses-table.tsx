@@ -83,8 +83,7 @@ export function GainsLossesTable({
       autoGroupColumnDef={{
         headerName: "Unit",
         field: "name",
-        width: 900,
-        minWidth: 900,
+        width: 475,
         suppressSizeToFit: true,
         filter: "agTextColumnFilter",
         valueGetter: ({ data }: { data: GainsLossesGridRow | undefined }) =>
