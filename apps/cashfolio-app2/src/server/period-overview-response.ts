@@ -45,11 +45,12 @@ export type PeriodGainsLossesBreakdownNode = {
 };
 
 type UnitTypeDescriptor = {
-  id: "fx" | "security" | "cryptocurrency";
-  label: "FX" | "Security" | "Cryptocurrency";
+  id: "reference-currency" | "fx" | "security" | "cryptocurrency";
+  label: "Reference Currency" | "FX" | "Security" | "Cryptocurrency";
 };
 
 const UNIT_TYPE_DESCRIPTORS: UnitTypeDescriptor[] = [
+  { id: "reference-currency", label: "Reference Currency" },
   { id: "fx", label: "FX" },
   { id: "security", label: "Security" },
   { id: "cryptocurrency", label: "Cryptocurrency" },
@@ -68,18 +69,18 @@ function normalizeUppercaseCode(value: string | null): string | null {
   return trimmed.toUpperCase();
 }
 
-function getUnitTypeDescriptor(unit: Unit): UnitTypeDescriptor {
+function getNonReferenceUnitTypeDescriptor(unit: Unit): UnitTypeDescriptor {
   if (unit === Unit.CURRENCY) {
-    return UNIT_TYPE_DESCRIPTORS[0]!;
-  }
-  if (unit === Unit.SECURITY) {
     return UNIT_TYPE_DESCRIPTORS[1]!;
   }
-  return UNIT_TYPE_DESCRIPTORS[2]!;
+  if (unit === Unit.SECURITY) {
+    return UNIT_TYPE_DESCRIPTORS[2]!;
+  }
+  return UNIT_TYPE_DESCRIPTORS[3]!;
 }
 
 function getUnitContributionDescriptor(
-  args: PeriodGainsLossesUnitContribution,
+  args: PeriodGainsLossesUnitContribution & { referenceCurrency: string },
 ): {
   unitType: UnitTypeDescriptor;
   unitId: string;
@@ -87,9 +88,14 @@ function getUnitContributionDescriptor(
 } {
   if (args.unit === Unit.CURRENCY) {
     const currency = normalizeUppercaseCode(args.currency) ?? "UNKNOWN";
+    const referenceCurrency =
+      normalizeUppercaseCode(args.referenceCurrency) ?? "UNKNOWN";
+    const isReferenceCurrency = currency === referenceCurrency;
     return {
-      unitType: getUnitTypeDescriptor(args.unit),
-      unitId: `fx:${currency}`,
+      unitType: isReferenceCurrency
+        ? UNIT_TYPE_DESCRIPTORS[0]!
+        : getNonReferenceUnitTypeDescriptor(args.unit),
+      unitId: `${isReferenceCurrency ? "reference-currency" : "fx"}:${currency}`,
       unitLabel: currency,
     };
   }
@@ -98,7 +104,7 @@ function getUnitContributionDescriptor(
     const cryptocurrency =
       normalizeUppercaseCode(args.cryptocurrency) ?? "UNKNOWN";
     return {
-      unitType: getUnitTypeDescriptor(args.unit),
+      unitType: getNonReferenceUnitTypeDescriptor(args.unit),
       unitId: `crypto:${cryptocurrency}`,
       unitLabel: cryptocurrency,
     };
@@ -107,15 +113,16 @@ function getUnitContributionDescriptor(
   const symbol = normalizeUppercaseCode(args.symbol) ?? "UNKNOWN";
   const tradeCurrency = normalizeUppercaseCode(args.tradeCurrency) ?? "UNKNOWN";
   return {
-    unitType: getUnitTypeDescriptor(args.unit),
+    unitType: getNonReferenceUnitTypeDescriptor(args.unit),
     unitId: `security:${symbol}:${tradeCurrency}`,
     unitLabel: `${symbol} (${tradeCurrency})`,
   };
 }
 
-function buildGainsLossesBreakdown(
-  contributions: PeriodGainsLossesUnitContribution[],
-): {
+function buildGainsLossesBreakdown(args: {
+  contributions: PeriodGainsLossesUnitContribution[];
+  referenceCurrency: string;
+}): {
   hierarchy: PeriodGainsLossesBreakdownNode[];
 } {
   const byUnitId = new Map<
@@ -128,7 +135,7 @@ function buildGainsLossesBreakdown(
     }
   >();
 
-  for (const contribution of contributions) {
+  for (const contribution of args.contributions) {
     if (
       contribution.realizedGainLoss === 0 &&
       contribution.unrealizedGainLoss === 0
@@ -136,7 +143,10 @@ function buildGainsLossesBreakdown(
       continue;
     }
 
-    const descriptor = getUnitContributionDescriptor(contribution);
+    const descriptor = getUnitContributionDescriptor({
+      ...contribution,
+      referenceCurrency: args.referenceCurrency,
+    });
     const existing = byUnitId.get(descriptor.unitId);
 
     if (existing) {
@@ -306,9 +316,10 @@ export function buildPeriodOverviewResponse(args: {
     firstBookingDate: args.minPeriodDate,
     now: args.currentDay,
   });
-  const gainsLossesBreakdown = buildGainsLossesBreakdown(
-    args.gainsLossesUnitContributions ?? [],
-  );
+  const gainsLossesBreakdown = buildGainsLossesBreakdown({
+    contributions: args.gainsLossesUnitContributions ?? [],
+    referenceCurrency: args.referenceCurrency,
+  });
 
   return {
     selectedPeriodValue: args.selection.periodValue,

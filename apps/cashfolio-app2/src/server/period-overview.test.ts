@@ -597,7 +597,7 @@ describe("getPeriodOverview", () => {
     expect(gainsLossesBreakdownTotal).toBe(result.stats.gainsLosses);
     expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
       {
-        label: "FX",
+        label: "Reference Currency",
         totalGainLoss: 5,
       },
       {

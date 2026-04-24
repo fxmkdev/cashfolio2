@@ -195,6 +195,15 @@ describe("period overview response", () => {
           unrealizedGainLoss: -1,
         },
         {
+          unit: Unit.CURRENCY,
+          currency: "chf",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          realizedGainLoss: 3,
+          unrealizedGainLoss: 2,
+        },
+        {
           unit: Unit.SECURITY,
           currency: null,
           cryptocurrency: null,
@@ -232,6 +241,23 @@ describe("period overview response", () => {
     expect(response.incomeBreakdown.totalAmount).toBe(120);
     expect(response.expenseBreakdown.totalAmount).toBe(20);
     expect(response.gainsLossesBreakdown.hierarchy).toEqual([
+      {
+        id: "unit-type:reference-currency",
+        label: "Reference Currency",
+        realizedGainLoss: 3,
+        unrealizedGainLoss: 2,
+        totalGainLoss: 5,
+        children: [
+          {
+            id: "unit:reference-currency:CHF",
+            label: "CHF",
+            realizedGainLoss: 3,
+            unrealizedGainLoss: 2,
+            totalGainLoss: 5,
+            children: [],
+          },
+        ],
+      },
       {
         id: "unit-type:fx",
         label: "FX",
