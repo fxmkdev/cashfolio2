@@ -29,9 +29,12 @@ describe("buildPeriodPageStats", () => {
     });
 
     const savingsCard = result.statCards.find((card) => card.id === "savings");
+    const gainsLossesCard = result.statCards.find(
+      (card) => card.id === "gainsLosses",
+    );
 
     expect(savingsCard?.secondaryValue).toBe("—");
-    expect(result.gainsLossesLabel).toBe("Gain");
+    expect(gainsLossesCard?.label).toBe("Gain");
   });
 
   it("labels negative gains/losses as losses with red value", () => {
@@ -61,7 +64,6 @@ describe("buildPeriodPageStats", () => {
       (card) => card.id === "endOfPeriodLiabilities",
     );
 
-    expect(result.gainsLossesLabel).toBe("Loss");
     expect(gainsLossesCard).toMatchObject({
       label: "Loss",
       valueColor: "red",

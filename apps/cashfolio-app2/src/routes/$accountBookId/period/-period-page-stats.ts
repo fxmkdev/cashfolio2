@@ -4,7 +4,6 @@ import type { StatCardData } from "./-period-stats-cards";
 type PeriodOverview = Awaited<ReturnType<typeof getPeriodOverview>>;
 
 export type PeriodPageStatsModel = {
-  gainsLossesLabel: string;
   statCards: StatCardData[];
   endOfPeriodStatCards: StatCardData[];
 };
@@ -111,7 +110,6 @@ export function buildPeriodPageStats(args: {
   ];
 
   return {
-    gainsLossesLabel,
     statCards,
     endOfPeriodStatCards,
   };

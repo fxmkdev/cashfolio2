@@ -49,6 +49,10 @@ function getGainLossLabel(amount: number): "Gain" | "Loss" {
   return amount >= 0 ? "Gain" : "Loss";
 }
 
+function getGainLossTotalLabel(amount: number): "Gains (total)" | "Loss (total)" {
+  return amount >= 0 ? "Gains (total)" : "Loss (total)";
+}
+
 export function buildContributionWaterfallModel(args: {
   stats: ContributionChartStats;
 }): ContributionWaterfallModel {
@@ -75,7 +79,7 @@ export function buildContributionWaterfallModel(args: {
   const [incomeDatum, expensesDatum, realizedDatum, unrealizedDatum] = data;
   const savingsAmount = incomeDatum.amount + expensesDatum.amount;
   const gainsLossesAmount = realizedDatum.amount + unrealizedDatum.amount;
-  const gainsLossesLabel = getGainLossLabel(gainsLossesAmount);
+  const gainsLossesTotalLabel = getGainLossTotalLabel(gainsLossesAmount);
   const totalReturnAmount = savingsAmount + gainsLossesAmount;
 
   return {
@@ -86,7 +90,7 @@ export function buildContributionWaterfallModel(args: {
       [realizedDatum.label]: realizedDatum.amount,
       [unrealizedDatum.label]: unrealizedDatum.amount,
       Savings: savingsAmount,
-      [gainsLossesLabel]: gainsLossesAmount,
+      [gainsLossesTotalLabel]: gainsLossesAmount,
       "Total Return": totalReturnAmount,
     },
     totals: [
@@ -98,7 +102,7 @@ export function buildContributionWaterfallModel(args: {
       {
         totalType: "subtotal",
         index: 3,
-        axisLabel: gainsLossesLabel,
+        axisLabel: gainsLossesTotalLabel,
       },
       {
         totalType: "total",

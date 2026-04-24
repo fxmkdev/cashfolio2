@@ -36,7 +36,7 @@ describe("buildContributionWaterfallModel", () => {
       "Realised Loss": -30,
       "Unrealised Gain": 10,
       Savings: 60,
-      Loss: -20,
+      "Loss (total)": -20,
       "Total Return": 40,
     });
   });
@@ -60,7 +60,7 @@ describe("buildContributionWaterfallModel", () => {
       {
         totalType: "subtotal",
         index: 3,
-        axisLabel: "Gain",
+        axisLabel: "Gains (total)",
       },
       {
         totalType: "total",
