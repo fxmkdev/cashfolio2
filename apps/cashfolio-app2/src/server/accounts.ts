@@ -7,6 +7,7 @@ export {
   getAccounts,
   getExistingNodes,
   getAccountTreeData,
+  getGainLossEquityAccountId,
 } from "./accounts-queries";
 
 export {

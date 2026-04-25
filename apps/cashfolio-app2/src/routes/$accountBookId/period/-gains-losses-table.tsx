@@ -4,6 +4,7 @@ import { FORMATTED_NUMERIC_COLUMN } from "@/components/column-types";
 import { DataGrid } from "@/components/data-grid";
 import { useExpandedGroups } from "@/hooks/use-expanded-groups";
 import type { GainsLossesBreakdownNode } from "./-gains-losses-breakdown-types";
+import { isExplicitGainLossDrillRow } from "./-gains-losses-drill";
 import {
   GAINS_LOSSES_TOTAL_FOOTER_ROW_ID,
   type GainsLossesGridRow,
@@ -17,11 +18,13 @@ import {
 type GainsLossesTableProps = {
   hierarchy: GainsLossesBreakdownNode[];
   expandedGroupsStorageKey: string;
+  onExplicitGainLossDoubleClick?: () => void;
 };
 
 export function GainsLossesTable({
   hierarchy,
   expandedGroupsStorageKey,
+  onExplicitGainLossDoubleClick,
 }: GainsLossesTableProps) {
   const rowData = useMemo(
     () => flattenGainsLossesHierarchyRows(hierarchy),
@@ -92,6 +95,16 @@ export function GainsLossesTable({
       }}
       isGroupOpenByDefault={isGroupOpenByDefault}
       onRowGroupOpened={onRowGroupOpened}
+      onRowDoubleClicked={(event) => {
+        if (
+          !onExplicitGainLossDoubleClick ||
+          !isExplicitGainLossDrillRow(event.data)
+        ) {
+          return;
+        }
+
+        onExplicitGainLossDoubleClick();
+      }}
     />
   );
 }

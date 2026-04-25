@@ -1,14 +1,14 @@
 import { IconChartBar, IconTable } from "@tabler/icons-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import type { GainsLossesBreakdownNode } from "./-gains-losses-breakdown-types";
+import type { GainsLossesChartType } from "./-breakdown-types";
+import type { BreakdownBreadcrumb } from "./-breakdown-drill";
 import {
   ChartTypeSegmentedControl,
   type ChartTypeOption,
 } from "./-chart-type-segmented-control";
-import type { BreakdownBreadcrumb } from "./-breakdown-drill";
 import { DrilldownCardShell } from "./-drilldown-card-shell";
 import { GainsLossesTable } from "./-gains-losses-table";
-import type { GainsLossesChartType } from "./-breakdown-types";
 
 type GainsLossesCardProps = {
   selectedChartType: GainsLossesChartType;
@@ -23,6 +23,7 @@ type GainsLossesCardProps = {
   onSelectedChartTypeChange: (value: GainsLossesChartType) => void;
   onDrillPathChange: (nextPath: string[]) => void;
   onChartContainerDoubleClick?: (() => void) | null;
+  onExplicitGainLossDoubleClick?: () => void;
 };
 
 const GAINS_LOSSES_CHART_TYPE_OPTIONS = [
@@ -51,6 +52,7 @@ export function GainsLossesCard({
   onSelectedChartTypeChange,
   onDrillPathChange,
   onChartContainerDoubleClick,
+  onExplicitGainLossDoubleClick,
 }: GainsLossesCardProps) {
   const isTableView = selectedChartType === "table";
   const hasTableBreakdown = hierarchy.length > 0;
@@ -71,6 +73,7 @@ export function GainsLossesCard({
           <GainsLossesTable
             hierarchy={hierarchy}
             expandedGroupsStorageKey={tableExpandedGroupsStorageKey}
+            onExplicitGainLossDoubleClick={onExplicitGainLossDoubleClick}
           />
         ) : null
       }

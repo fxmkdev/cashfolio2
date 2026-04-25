@@ -4,6 +4,12 @@ import {
   isDrillTreeNodeDrillable,
 } from "./-breakdown-drill";
 import type { GainsLossesBreakdownNode } from "./-gains-losses-breakdown-types";
+import {
+  GAINS_LOSSES_TOTAL_FOOTER_ROW_ID,
+  type GainsLossesGridRow,
+} from "./-gains-losses-table-rows";
+
+const EXPLICIT_ACCOUNT_ROW_ID_PREFIX = "explicit-account:";
 
 export function isGainsLossesNodeDrillable(node: GainsLossesBreakdownNode) {
   return isDrillTreeNodeDrillable(node);
@@ -31,4 +37,14 @@ export function getGainsLossesDrillState(args: {
     rootLabel: args.rootLabel,
     isNodeDrillable: isGainsLossesNodeDrillable,
   });
+}
+
+export function isExplicitGainLossDrillRow(
+  row: GainsLossesGridRow | undefined,
+): boolean {
+  if (!row || row.id === GAINS_LOSSES_TOTAL_FOOTER_ROW_ID) {
+    return false;
+  }
+
+  return row.id.startsWith(EXPLICIT_ACCOUNT_ROW_ID_PREFIX);
 }

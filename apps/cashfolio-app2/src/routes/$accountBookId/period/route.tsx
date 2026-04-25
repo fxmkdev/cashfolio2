@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
+import { getGainLossEquityAccountId } from "@/server/accounts";
 import { getPeriodOverview } from "@/server/period";
 import { formatMonthPeriodValue } from "@/shared/period";
+import { hasExplicitGainLossGroup } from "./-gains-losses-explicit";
 import {
   DEFAULT_PERIOD_VALUE,
   getPeriodValue,
@@ -19,12 +21,23 @@ export const Route = createFileRoute("/$accountBookId/period")({
     period: getPeriodValue(search),
   }),
   loader: async ({ params: { accountBookId }, deps: { period } }) => {
-    return getPeriodOverview({
+    const overview = await getPeriodOverview({
       data: {
         accountBookId,
         period,
       },
     });
+    const gainLossEquityAccountId = hasExplicitGainLossGroup(
+      overview.gainsLossesBreakdown.hierarchy,
+    )
+      ? await getGainLossEquityAccountId({
+          data: {
+            accountBookId,
+          },
+        })
+      : null;
+
+    return { overview, gainLossEquityAccountId };
   },
   component: PeriodPage,
 });
@@ -33,7 +46,7 @@ function PeriodPage() {
   const { accountBookId } = Route.useParams();
   const search = Route.useSearch();
   const selectedPeriodValue = getPeriodValue(search);
-  const overview = Route.useLoaderData();
+  const { overview, gainLossEquityAccountId } = Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/period" });
   const explicitLedgerPeriodValue =
     overview.selectedGranularity === "month" && overview.selectedMonth != null
@@ -66,6 +79,19 @@ function PeriodPage() {
             },
           })
         }
+        onExplicitGainLossDoubleClick={() => {
+          if (!gainLossEquityAccountId) {
+            return;
+          }
+
+          navigate({
+            to: "/$accountBookId/$accountId",
+            params: { accountBookId, accountId: gainLossEquityAccountId },
+            search: {
+              period: explicitLedgerPeriodValue,
+            },
+          });
+        }}
       />
     </Suspense>
   );
