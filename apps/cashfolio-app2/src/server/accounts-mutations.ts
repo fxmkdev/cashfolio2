@@ -15,6 +15,10 @@ import {
   getGroupHierarchy,
   hasInactiveAncestorGroup,
 } from "./accounts-helpers";
+import {
+  assertNotSystemManagedGainLossAccount,
+  assertNotSystemManagedGainLossGroup,
+} from "./accounts-gain-loss-guards";
 import type { AccountGroupInput, AccountInput } from "./accounts-types";
 import {
   accountTypeRequiresZeroBalanceForArchive,
@@ -28,26 +32,6 @@ import {
 
 const OPENING_BALANCES_ACCOUNT_NAME = "Opening Balances";
 const OPENING_BALANCE_EPSILON = 0.000001;
-const GAIN_LOSS_ACCOUNT_MANAGEMENT_MESSAGE =
-  "Gain/Loss accounts are system-managed.";
-const GAIN_LOSS_GROUP_MANAGEMENT_MESSAGE =
-  "Gain/Loss groups are system-managed.";
-
-function isGainLossSubtype(
-  subtype: EquityAccountSubtype | null | undefined,
-): boolean {
-  return subtype === EquityAccountSubtype.GAIN_LOSS;
-}
-
-function isGainLossAccount(args: {
-  type: AccountType;
-  equityAccountSubtype?: EquityAccountSubtype | null;
-}): boolean {
-  return (
-    args.type === AccountType.EQUITY &&
-    isGainLossSubtype(args.equityAccountSubtype)
-  );
-}
 
 function normalizeOpeningBalanceTarget(
   openingBalance: number | null | undefined,
@@ -477,9 +461,7 @@ export const createAccount = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
-    if (isGainLossAccount(data)) {
-      throw new Error(GAIN_LOSS_ACCOUNT_MANAGEMENT_MESSAGE);
-    }
+    assertNotSystemManagedGainLossAccount(data);
     const siblingNames = (
       await prisma.account.findMany({
         where: {
@@ -533,6 +515,20 @@ export const updateAccount = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    const existing = await prisma.account.findUniqueOrThrow({
+      where: {
+        id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
+      },
+      select: { type: true, equityAccountSubtype: true },
+    });
+    assertNotSystemManagedGainLossAccount(existing);
+    if (
+      data.type !== existing.type ||
+      data.equityAccountSubtype !== (existing.equityAccountSubtype ?? undefined)
+    ) {
+      throw new Error("Account type cannot be changed");
+    }
+
     const siblingNames = (
       await prisma.account.findMany({
         where: {
@@ -544,21 +540,6 @@ export const updateAccount = createServerFn({ method: "POST" })
       })
     ).map((a) => a.name);
     validateAccountInput(data, siblingNames);
-    const existing = await prisma.account.findUniqueOrThrow({
-      where: {
-        id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
-      },
-      select: { type: true, equityAccountSubtype: true },
-    });
-    if (isGainLossAccount(existing)) {
-      throw new Error(GAIN_LOSS_ACCOUNT_MANAGEMENT_MESSAGE);
-    }
-    if (
-      data.type !== existing.type ||
-      data.equityAccountSubtype !== (existing.equityAccountSubtype ?? undefined)
-    ) {
-      throw new Error("Account type cannot be changed");
-    }
     const account = await prisma.$transaction(async (tx) => {
       const updatedAccount = await tx.account.update({
         where: {
@@ -602,9 +583,7 @@ export const createAccountGroup = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
-    if (isGainLossAccount(data)) {
-      throw new Error(GAIN_LOSS_GROUP_MANAGEMENT_MESSAGE);
-    }
+    assertNotSystemManagedGainLossGroup(data);
     const siblingNames = (
       await prisma.accountGroup.findMany({
         where: {
@@ -633,6 +612,20 @@ export const updateAccountGroup = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    const existing = await prisma.accountGroup.findUniqueOrThrow({
+      where: {
+        id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
+      },
+      select: { type: true, equityAccountSubtype: true },
+    });
+    assertNotSystemManagedGainLossGroup(existing);
+    if (
+      data.type !== existing.type ||
+      data.equityAccountSubtype !== (existing.equityAccountSubtype ?? undefined)
+    ) {
+      throw new Error("Group type cannot be changed");
+    }
+
     const [siblingGroups, groupById] = await Promise.all([
       prisma.accountGroup.findMany({
         where: {
@@ -651,21 +644,6 @@ export const updateAccountGroup = createServerFn({ method: "POST" })
       parentGroupId: data.parentGroupId,
       groupById,
     });
-    const existing = await prisma.accountGroup.findUniqueOrThrow({
-      where: {
-        id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
-      },
-      select: { type: true, equityAccountSubtype: true },
-    });
-    if (isGainLossAccount(existing)) {
-      throw new Error(GAIN_LOSS_GROUP_MANAGEMENT_MESSAGE);
-    }
-    if (
-      data.type !== existing.type ||
-      data.equityAccountSubtype !== (existing.equityAccountSubtype ?? undefined)
-    ) {
-      throw new Error("Group type cannot be changed");
-    }
     const group = await prisma.accountGroup.update({
       where: {
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
@@ -695,9 +673,7 @@ export const deleteAccount = createServerFn({ method: "POST" })
         where: { accountId: data.id, accountBookId: data.accountBookId },
       }),
     ]);
-    if (isGainLossAccount(account)) {
-      throw new Error(GAIN_LOSS_ACCOUNT_MANAGEMENT_MESSAGE);
-    }
+    assertNotSystemManagedGainLossAccount(account);
     const deleteAvailability = getAccountDeleteAvailability(bookingCount > 0);
     if (!deleteAvailability.enabled) {
       throw new Error(deleteAvailability.disabledReason);
@@ -731,9 +707,7 @@ export const deleteAccountGroup = createServerFn({ method: "POST" })
         where: { parentGroupId: data.id, accountBookId: data.accountBookId },
       }),
     ]);
-    if (isGainLossAccount(group)) {
-      throw new Error(GAIN_LOSS_GROUP_MANAGEMENT_MESSAGE);
-    }
+    assertNotSystemManagedGainLossGroup(group);
     const deleteAvailability = getGroupDeleteAvailability({
       hasChildAccounts: childAccounts > 0,
       hasChildGroups: childGroups > 0,
@@ -759,9 +733,7 @@ export const archiveAccount = createServerFn({ method: "POST" })
       },
       select: { type: true, equityAccountSubtype: true, isActive: true },
     });
-    if (isGainLossAccount(account)) {
-      throw new Error(GAIN_LOSS_ACCOUNT_MANAGEMENT_MESSAGE);
-    }
+    assertNotSystemManagedGainLossAccount(account);
 
     if (!account.isActive) return;
 
@@ -800,9 +772,7 @@ export const archiveAccountGroup = createServerFn({ method: "POST" })
       },
       select: { isActive: true, type: true, equityAccountSubtype: true },
     });
-    if (isGainLossAccount(group)) {
-      throw new Error(GAIN_LOSS_GROUP_MANAGEMENT_MESSAGE);
-    }
+    assertNotSystemManagedGainLossGroup(group);
 
     if (!group.isActive) return;
 
@@ -856,9 +826,7 @@ export const unarchiveAccount = createServerFn({ method: "POST" })
         equityAccountSubtype: true,
       },
     });
-    if (isGainLossAccount(account)) {
-      throw new Error(GAIN_LOSS_ACCOUNT_MANAGEMENT_MESSAGE);
-    }
+    assertNotSystemManagedGainLossAccount(account);
 
     if (account.isActive) return;
 
@@ -895,9 +863,7 @@ export const unarchiveAccountGroup = createServerFn({ method: "POST" })
         equityAccountSubtype: true,
       },
     });
-    if (isGainLossAccount(group)) {
-      throw new Error(GAIN_LOSS_GROUP_MANAGEMENT_MESSAGE);
-    }
+    assertNotSystemManagedGainLossGroup(group);
 
     if (group.isActive) return;
 

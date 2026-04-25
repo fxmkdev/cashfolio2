@@ -122,6 +122,8 @@ describe("accounts-mutations gain/loss guards", () => {
         },
       }),
     ).rejects.toThrow("Gain/Loss accounts are system-managed.");
+    expect(prisma.account.findMany).not.toHaveBeenCalled();
+    expect(validateAccountInput).not.toHaveBeenCalled();
   });
 
   it("rejects deleting and archiving gain/loss accounts", async () => {
@@ -177,6 +179,8 @@ describe("accounts-mutations gain/loss guards", () => {
         },
       }),
     ).rejects.toThrow("Gain/Loss groups are system-managed.");
+    expect(prisma.accountGroup.findMany).not.toHaveBeenCalled();
+    expect(validateAccountGroupInput).not.toHaveBeenCalled();
   });
 
   it("rejects deleting and archiving gain/loss groups", async () => {

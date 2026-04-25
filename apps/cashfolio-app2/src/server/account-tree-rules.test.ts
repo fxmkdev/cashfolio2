@@ -81,12 +81,12 @@ describe("group action availability", () => {
 
     expect(
       getGroupDeleteAvailability({
-        hasChildAccounts: true,
+        hasChildAccounts: false,
         hasChildGroups: true,
       }),
     ).toEqual({
       enabled: false,
-      disabledReason: "Cannot delete group because it contains accounts",
+      disabledReason: "Cannot delete group because it contains sub-groups",
     });
   });
 
