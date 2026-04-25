@@ -917,6 +917,153 @@ describe("getPeriodOverview", () => {
     expect(result.stats.endOfPeriodLiabilities).toBe(36);
   });
 
+  it("does not report gain/loss for a newly pending non-reference leg that is net-worth neutral at period end", async () => {
+    vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2025-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([
+      {
+        id: "asset-usd",
+        name: "USD Cash",
+        groupId: null,
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "USD",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      },
+    ]);
+    prisma.booking.groupBy
+      .mockResolvedValueOnce([
+        {
+          accountId: "asset-usd",
+          _sum: { value: 1 },
+        },
+      ])
+      .mockResolvedValueOnce([]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([
+          {
+            id: "pending-usd",
+            date: new Date("2026-01-15T00:00:00.000Z"),
+            value: 1,
+            unit: Unit.CURRENCY,
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+    prisma.transaction.findMany.mockReset();
+    prisma.transaction.findMany
+      .mockResolvedValueOnce([
+        {
+          id: "tx-pending",
+          bookings: [
+            {
+              id: "pending-usd",
+              accountId: "asset-usd",
+              date: new Date("2026-01-15T00:00:00.000Z"),
+              value: 1,
+              unit: Unit.CURRENCY,
+              currency: "USD",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+              account: {
+                type: AccountType.ASSET,
+                equityAccountSubtype: null,
+              },
+            },
+          ],
+        },
+      ])
+      .mockResolvedValueOnce([]);
+    convertBookingValueToReference.mockImplementation(
+      async ({
+        value,
+        currency,
+        date,
+      }: {
+        value: number;
+        currency: string | null;
+        date: Date;
+      }) => {
+        if (currency !== "USD") {
+          return value;
+        }
+        const dateKey = date.toISOString().slice(0, 10);
+        if (dateKey === "2026-01-15") {
+          return value * 100;
+        }
+        if (dateKey === "2026-01-31") {
+          return value * 101;
+        }
+        return value * 100;
+      },
+    );
+    getUnitToReferenceExchangeRate.mockImplementation(
+      async ({ date }: { date: Date }) => {
+        const dateKey = date.toISOString().slice(0, 10);
+        if (dateKey === "2026-01-31") {
+          return 101;
+        }
+        return 100;
+      },
+    );
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-pending-neutral",
+        period: "2026-01",
+      },
+    });
+    const firstTransactionWhere =
+      prisma.transaction.findMany.mock.calls[0]?.[0]?.where;
+    const firstTransactionWhereAnd = Array.isArray(firstTransactionWhere?.AND)
+      ? firstTransactionWhere.AND
+      : [];
+    const excludesFutureBookings = firstTransactionWhereAnd.some(
+      (condition: unknown) => {
+        if (typeof condition !== "object" || condition === null) {
+          return false;
+        }
+
+        const bookings = (condition as { bookings?: unknown }).bookings;
+        if (typeof bookings !== "object" || bookings === null) {
+          return false;
+        }
+
+        const none = (bookings as { none?: unknown }).none;
+        if (typeof none !== "object" || none === null) {
+          return false;
+        }
+
+        const date = (none as { date?: unknown }).date;
+        if (typeof date !== "object" || date === null) {
+          return false;
+        }
+
+        return (date as { gte?: unknown }).gte instanceof Date;
+      },
+    );
+
+    expect(excludesFutureBookings).toBe(false);
+    expect(result.stats.endOfPeriodNetWorth).toBe(0);
+    expect(result.stats.gainsLosses).toBe(0);
+    expect(result.stats.totalReturn).toBe(0);
+  });
+
   it("tracks skipped counts when transfer-clearing conversions or rates are unavailable", async () => {
     vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({

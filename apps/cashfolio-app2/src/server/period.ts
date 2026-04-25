@@ -366,15 +366,6 @@ export const getPeriodOverview = createServerFn({
                 {
                   bookings: {
                     none: {
-                      date: {
-                        gte: queryEndExclusive,
-                      },
-                    },
-                  },
-                },
-                {
-                  bookings: {
-                    none: {
                       account: {
                         type: AccountType.EQUITY,
                         equityAccountSubtype:
@@ -401,6 +392,14 @@ export const getPeriodOverview = createServerFn({
             select: {
               id: true,
               bookings: {
+                // Keep transaction-level selection broad so pending cross-period
+                // transactions are included, but feed only posted legs through
+                // the current period end into the holding gain/loss engine.
+                where: {
+                  date: {
+                    lt: queryEndExclusive,
+                  },
+                },
                 select: {
                   id: true,
                   accountId: true,
