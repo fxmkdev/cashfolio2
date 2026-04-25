@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
+import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { createGroupPathResolver } from "./accounts-helpers";
 import {
@@ -73,4 +74,21 @@ export const getAccountReferenceBalances = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     return queryAccountReferenceBalances(data);
+  });
+
+export const getGainLossEquityAccountId = createServerFn({ method: "GET" })
+  .inputValidator((data: { accountBookId: string }) => data)
+  .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
+    const account = await prisma.account.findFirst({
+      where: {
+        accountBookId: data.accountBookId,
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: { id: true },
+    });
+
+    return account?.id ?? null;
   });
