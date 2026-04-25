@@ -494,6 +494,12 @@ test("period page shows KPI waterfall and updated income/expenses wording", asyn
   await expect(
     page.getByRole("heading", { name: "Gains / Losses Breakdown" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Realised" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("columnheader", { name: "Unrealised" }),
+  ).toHaveCount(0);
 
   await expect(page.getByText("Income").first()).toBeVisible();
   await expect(page.getByText("Expenses").first()).toBeVisible();
@@ -510,7 +516,7 @@ test("period page shows KPI waterfall and updated income/expenses wording", asyn
 
   await expect(
     page.getByText(
-      /How Income, Expenses, and Gains \/ Losses lead to Total Return/,
+      /How Income, Expenses, and (Gain|Loss) lead to Total Return/,
     ),
   ).toBeVisible();
 

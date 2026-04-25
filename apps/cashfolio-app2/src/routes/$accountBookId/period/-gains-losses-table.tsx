@@ -53,20 +53,6 @@ export function GainsLossesTable({
         type: FORMATTED_NUMERIC_COLUMN,
         filter: "agNumberColumnFilter",
       },
-      {
-        field: "realizedGainLoss",
-        headerName: "Realised",
-        width: 170,
-        type: FORMATTED_NUMERIC_COLUMN,
-        filter: "agNumberColumnFilter",
-      },
-      {
-        field: "unrealizedGainLoss",
-        headerName: "Unrealised",
-        width: 170,
-        type: FORMATTED_NUMERIC_COLUMN,
-        filter: "agNumberColumnFilter",
-      },
     ],
     [],
   );

@@ -44,9 +44,14 @@ function isWaterfallTotalDatum(datum: unknown): datum is WaterfallTotalDatum {
   return typeof datum.isTotal === "boolean";
 }
 
+function getGainLossLabel(amount: number): "Gain" | "Loss" {
+  return amount >= 0 ? "Gain" : "Loss";
+}
+
 export function buildContributionWaterfallModel(args: {
   stats: ContributionChartStats;
 }): ContributionWaterfallModel {
+  const gainLossLabel = getGainLossLabel(args.stats.gainsLosses);
   const data: WaterfallDatum[] = [
     {
       label: "Income",
@@ -57,7 +62,7 @@ export function buildContributionWaterfallModel(args: {
       amount: -args.stats.expenses,
     },
     {
-      label: "Gains / Losses",
+      label: gainLossLabel,
       amount: args.stats.gainsLosses,
     },
   ];
@@ -110,6 +115,10 @@ export function ContributionChartCard(args: {
   const waterfallModel = useMemo(
     () => buildContributionWaterfallModel({ stats: args.stats }),
     [args.stats.expenses, args.stats.gainsLosses, args.stats.income],
+  );
+  const gainLossLabel = useMemo(
+    () => getGainLossLabel(args.stats.gainsLosses),
+    [args.stats.gainsLosses],
   );
   const waterfallSeries = useMemo<AgWaterfallSeriesOptions<WaterfallDatum>>(
     () => ({
@@ -220,7 +229,7 @@ export function ContributionChartCard(args: {
       <Stack gap="sm">
         <Title order={4}>Contribution to Total Return</Title>
         <Text c="dimmed" size="sm">
-          How Income, Expenses, and Gains / Losses lead to Total Return
+          How Income, Expenses, and {gainLossLabel} lead to Total Return
         </Text>
         <div className={classes.chartContainer}>
           <AgCharts options={waterfallChartOptions} />

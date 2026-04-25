@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildContributionWaterfallModel } from "./-contribution-chart-card";
 
 describe("buildContributionWaterfallModel", () => {
-  it("builds single gains/losses waterfall data in the expected order", () => {
+  it("uses a Gain label for non-negative gains/losses", () => {
     const model = buildContributionWaterfallModel({
       stats: {
         income: 100,
@@ -14,11 +14,11 @@ describe("buildContributionWaterfallModel", () => {
     expect(model.data).toEqual([
       { label: "Income", amount: 100 },
       { label: "Expenses", amount: -40 },
-      { label: "Gains / Losses", amount: 10 },
+      { label: "Gain", amount: 10 },
     ]);
   });
 
-  it("computes savings and total return amounts", () => {
+  it("uses a Loss label for negative gains/losses", () => {
     const model = buildContributionWaterfallModel({
       stats: {
         income: 200,
@@ -30,7 +30,7 @@ describe("buildContributionWaterfallModel", () => {
     expect(model.amountByLabel).toMatchObject({
       Income: 200,
       Expenses: -140,
-      "Gains / Losses": -20,
+      Loss: -20,
       Savings: 60,
       "Total Return": 40,
     });
