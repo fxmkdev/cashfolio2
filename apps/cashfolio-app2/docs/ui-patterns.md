@@ -262,6 +262,14 @@ for ledger child routes.
   Expense accounts hide the credit column; Equity (non-Expense) accounts hide
   the balance column
 - **Running balance**: Accumulated across all bookings in chronological order
+  (asset/liability period-filtered views are seeded from the pre-period all-time
+  balance so displayed balances stay all-time)
+- **Period filter**:
+  - available for asset, liability, and non-opening-balance equity accounts
+  - asset/liability bounds start at the account's first booking period (never
+    before account-book start)
+  - filtered asset/liability ledgers append a virtual `Balance carried forward`
+    row when prior bookings exist
 - **Counterparty names**: Derived from sibling bookings on the same transaction,
   deduplicated
 - **Navigation**: Double-click an account row on the accounts list to open its

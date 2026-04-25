@@ -17,7 +17,7 @@ export function resolvePeriodFilterMinBookingDate(args: {
     accountType === AccountType.LIABILITY
   ) {
     if (!firstAccountBookingDate) {
-      return null;
+      return accountBookMinBookingDate;
     }
     return firstAccountBookingDate < accountBookMinBookingDate
       ? accountBookMinBookingDate

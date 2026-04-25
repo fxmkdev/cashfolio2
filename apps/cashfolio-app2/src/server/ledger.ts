@@ -59,11 +59,13 @@ export const getLedgerData = createServerFn({ method: "GET" })
       accountBookId: string;
       period?: unknown;
       includeReferenceValues?: unknown;
+      includeFirstBookingDate?: unknown;
     }) => ({
       accountId: data.accountId,
       accountBookId: data.accountBookId,
       period: parseExplicitLedgerPeriodSelection(data.period),
       includeReferenceValues: toBoolean(data.includeReferenceValues),
+      includeFirstBookingDate: toBoolean(data.includeFirstBookingDate),
     }),
   )
   .handler(async ({ data }) => {
@@ -71,20 +73,20 @@ export const getLedgerData = createServerFn({ method: "GET" })
     const periodRange = data.period
       ? getExplicitPeriodDateRange(data.period)
       : null;
-    const firstBookingPromise = prisma.booking.findFirst({
-      where: {
-        accountId: data.accountId,
-        accountBookId: data.accountBookId,
-      },
-      orderBy: [
-        { date: "asc" },
-        { transaction: { createdAt: "asc" } },
-        { id: "asc" },
-      ],
-      select: {
-        date: true,
-      },
-    });
+    const firstBookingPromise = data.includeFirstBookingDate
+      ? prisma.booking.findFirst({
+          where: {
+            accountId: data.accountId,
+            accountBookId: data.accountBookId,
+          },
+          orderBy: [{ date: "asc" }, { id: "asc" }],
+          select: {
+            date: true,
+          },
+        })
+      : Promise.resolve<{
+          date: Date;
+        } | null>(null);
     const carryOverMetadataPromise = periodRange
       ? prisma.booking
           .aggregate({

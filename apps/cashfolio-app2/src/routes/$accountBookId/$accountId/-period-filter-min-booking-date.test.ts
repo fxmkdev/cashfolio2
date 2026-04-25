@@ -25,14 +25,14 @@ describe("resolvePeriodFilterMinBookingDate", () => {
     expect(result?.toISOString()).toBe("2026-01-01T00:00:00.000Z");
   });
 
-  test("returns null for asset/liability accounts without bookings", () => {
+  test("falls back to account-book start for asset/liability accounts without bookings", () => {
     const result = resolvePeriodFilterMinBookingDate({
       accountType: AccountType.ASSET,
       accountBookMinBookingDate: accountBookMinDate,
       firstAccountBookingDate: null,
     });
 
-    expect(result).toBeNull();
+    expect(result?.toISOString()).toBe("2026-01-01T00:00:00.000Z");
   });
 
   test("keeps equity behavior based on account-book start date", () => {

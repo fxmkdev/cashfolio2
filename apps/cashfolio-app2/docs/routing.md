@@ -63,10 +63,12 @@ Related docs:
   - `tab: TabValue` to track the active account type tab
   - `mode: "active" | "archived"` to switch between active and archived account
     trees
-- `$accountBookId/$accountId/route.tsx` uses `transactionId?: string` to
-  auto-scroll and highlight a booking row
+- `$accountBookId/$accountId/route.tsx` uses:
+  - `transactionId?: string` to auto-scroll and highlight a booking row
+  - `period?: string` for explicit month/year period filtering on supported
+    account types (asset, liability, and non-opening-balance equity)
 - `$accountBookId/$accountId/chart/route.tsx` intentionally has no search
-  params; the ledger/chart switch does not carry `transactionId`
+  params; the ledger/chart switch does not carry `transactionId` or `period`
 
 ### Global Navigation Progress
 

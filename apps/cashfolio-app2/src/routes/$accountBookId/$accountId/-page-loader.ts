@@ -33,6 +33,9 @@ export async function loadLedgerPageData(args: {
   const isPeriodFilterAllowed = isLedgerPeriodFilterAvailable(account);
   const shouldIncludeReferenceValues =
     isPeriodFilterAllowed && account.type === AccountType.EQUITY;
+  const shouldIncludeFirstBookingDate =
+    account.type === AccountType.ASSET ||
+    account.type === AccountType.LIABILITY;
 
   const [ledgerData, accounts, periodBounds] = await Promise.all([
     getLedgerData({
@@ -41,6 +44,7 @@ export async function loadLedgerPageData(args: {
         accountBookId: args.accountBookId,
         period: isPeriodFilterAllowed ? args.period : undefined,
         includeReferenceValues: shouldIncludeReferenceValues,
+        includeFirstBookingDate: shouldIncludeFirstBookingDate,
       },
     }),
     accountsPromise,
