@@ -202,7 +202,6 @@ export function buildGroupRows(args: {
     { id: string; parentGroupId: string | null; isActive: boolean }
   >;
   includeActionAvailability: boolean;
-  referencedByAccountBook: Set<string>;
   groupsWithChildAccounts: Set<string>;
   groupsWithChildGroups: Set<string>;
   groupsWithActiveChildAccounts: Set<string>;
@@ -219,14 +218,10 @@ export function buildGroupRows(args: {
       group.parentGroupId,
       args.groupById,
     );
-    const isReferencedByAccountBook = args.referencedByAccountBook.has(
-      group.id,
-    );
     const deleteAvailability = args.includeActionAvailability
       ? getGroupDeleteAvailability({
           hasChildAccounts,
           hasChildGroups,
-          isReferencedByAccountBook,
         })
       : unavailableActionAvailability();
     const archiveAvailability = args.includeActionAvailability

@@ -66,15 +66,6 @@ model AccountBook {
   referenceCurrency String
   startDate         DateTime
 
-  securityHoldingGainLossAccountGroupId String?
-  securityHoldingGainLossAccountGroup   AccountGroup? @relation("security-holding-gain-loss", fields: [securityHoldingGainLossAccountGroupId, id], references: [id, accountBookId], onDelete: Restrict)
-
-  cryptoHoldingGainLossAccountGroupId String?
-  cryptoHoldingGainLossAccountGroup   AccountGroup? @relation("crypto-holding-gain-loss", fields: [cryptoHoldingGainLossAccountGroupId, id], references: [id, accountBookId], onDelete: Restrict)
-
-  fxHoldingGainLossAccountGroupId String?
-  fxHoldingGainLossAccountGroup   AccountGroup? @relation("fx-holding-gain-loss", fields: [fxHoldingGainLossAccountGroupId, id], references: [id, accountBookId], onDelete: Restrict)
-
   groups       AccountGroup[]
   accounts     Account[]
   transactions Transaction[]
@@ -104,11 +95,6 @@ model AccountGroup {
 
   accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
   accountBookId String
-
-  // not needed as we are always within the same account book – but required by Prisma
-  securityHoldingGainLossAccountBooks AccountBook[] @relation("security-holding-gain-loss")
-  cryptoHoldingGainLossAccountBooks   AccountBook[] @relation("crypto-holding-gain-loss")
-  fxHoldingGainLossAccountBooks       AccountBook[] @relation("fx-holding-gain-loss")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -164,7 +164,6 @@ describe("buildAccountRows and buildGroupRows", () => {
       groups,
       groupById: createGroupHierarchyMap(groups),
       includeActionAvailability: false,
-      referencedByAccountBook: new Set<string>(),
       groupsWithChildAccounts: new Set(["root"]),
       groupsWithChildGroups: new Set<string>(),
       groupsWithActiveChildAccounts: new Set(["root"]),

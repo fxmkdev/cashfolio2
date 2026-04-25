@@ -1,9 +1,3 @@
-type AccountBookGroupReferences = {
-  securityHoldingGainLossAccountGroupId: string | null;
-  cryptoHoldingGainLossAccountGroupId: string | null;
-  fxHoldingGainLossAccountGroupId: string | null;
-};
-
 type GroupCountByGroupId = {
   groupId: string | null;
   _count: number;
@@ -15,7 +9,6 @@ type GroupCountByParentGroupId = {
 };
 
 export type AccountTreeGroupActionAvailabilitySets = {
-  referencedByAccountBook: Set<string>;
   groupsWithChildAccounts: Set<string>;
   groupsWithChildGroups: Set<string>;
   groupsWithActiveChildAccounts: Set<string>;
@@ -43,22 +36,12 @@ function getPositiveParentGroupIdSet(
 }
 
 export function buildAccountTreeGroupActionAvailabilitySets(args: {
-  accountBook: AccountBookGroupReferences;
   allAccountsForGroup: GroupCountByGroupId[];
   allGroupsForParent: GroupCountByParentGroupId[];
   activeAccountsForGroup: GroupCountByGroupId[];
   activeGroupsForParent: GroupCountByParentGroupId[];
 }): AccountTreeGroupActionAvailabilitySets {
-  const referencedByAccountBook = new Set(
-    [
-      args.accountBook.securityHoldingGainLossAccountGroupId,
-      args.accountBook.cryptoHoldingGainLossAccountGroupId,
-      args.accountBook.fxHoldingGainLossAccountGroupId,
-    ].filter((id): id is string => id != null),
-  );
-
   return {
-    referencedByAccountBook,
     groupsWithChildAccounts: getPositiveGroupIdSet(args.allAccountsForGroup),
     groupsWithChildGroups: getPositiveParentGroupIdSet(args.allGroupsForParent),
     groupsWithActiveChildAccounts: getPositiveGroupIdSet(

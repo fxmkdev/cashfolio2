@@ -13,8 +13,6 @@ const ACCOUNT_UNARCHIVE_ALREADY_ACTIVE_REASON = "Account is already active";
 const ACCOUNT_UNARCHIVE_PARENT_ARCHIVED_REASON =
   "Cannot unarchive account because its parent group is archived";
 
-const GROUP_DELETE_REFERENCED_REASON =
-  "Cannot delete group because it is used as a holding gain/loss group";
 const GROUP_DELETE_HAS_ACCOUNTS_REASON =
   "Cannot delete group because it contains accounts";
 const GROUP_DELETE_HAS_CHILD_GROUPS_REASON =
@@ -73,12 +71,8 @@ export function getAccountUnarchiveAvailability(params: {
 export function getGroupDeleteAvailability(params: {
   hasChildAccounts: boolean;
   hasChildGroups: boolean;
-  isReferencedByAccountBook: boolean;
 }): ActionAvailability {
-  const { hasChildAccounts, hasChildGroups, isReferencedByAccountBook } =
-    params;
-  if (isReferencedByAccountBook)
-    return disabled(GROUP_DELETE_REFERENCED_REASON);
+  const { hasChildAccounts, hasChildGroups } = params;
   if (hasChildAccounts) return disabled(GROUP_DELETE_HAS_ACCOUNTS_REASON);
   if (hasChildGroups) return disabled(GROUP_DELETE_HAS_CHILD_GROUPS_REASON);
   return enabled();

@@ -4,11 +4,6 @@ import { buildAccountTreeGroupActionAvailabilitySets } from "./accounts-tree-act
 describe("buildAccountTreeGroupActionAvailabilitySets", () => {
   it("builds distinct positive-count sets and ignores null ids", () => {
     const result = buildAccountTreeGroupActionAvailabilitySets({
-      accountBook: {
-        securityHoldingGainLossAccountGroupId: "group-security",
-        cryptoHoldingGainLossAccountGroupId: null,
-        fxHoldingGainLossAccountGroupId: "group-fx",
-      },
       allAccountsForGroup: [
         { groupId: "group-1", _count: 2 },
         { groupId: "group-zero", _count: 0 },
@@ -28,10 +23,6 @@ describe("buildAccountTreeGroupActionAvailabilitySets", () => {
       ],
     });
 
-    expect(Array.from(result.referencedByAccountBook).sort()).toEqual([
-      "group-fx",
-      "group-security",
-    ]);
     expect(Array.from(result.groupsWithChildAccounts).sort()).toEqual([
       "group-1",
     ]);

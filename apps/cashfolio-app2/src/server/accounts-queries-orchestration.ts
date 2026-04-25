@@ -201,7 +201,6 @@ export async function queryAccountTreeData(data: AccountTreeDataInput) {
 
   const groupActionAvailabilitySets =
     buildAccountTreeGroupActionAvailabilitySets({
-      accountBook,
       allAccountsForGroup,
       allGroupsForParent,
       activeAccountsForGroup,
@@ -212,8 +211,6 @@ export async function queryAccountTreeData(data: AccountTreeDataInput) {
     groups: filteredGroups,
     groupById,
     includeActionAvailability,
-    referencedByAccountBook:
-      groupActionAvailabilitySets.referencedByAccountBook,
     groupsWithChildAccounts:
       groupActionAvailabilitySets.groupsWithChildAccounts,
     groupsWithChildGroups: groupActionAvailabilitySets.groupsWithChildGroups,

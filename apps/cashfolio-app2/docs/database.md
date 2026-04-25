@@ -17,10 +17,7 @@ paths are relative to that app directory.
 
 **Core accounting models** (all use composite keys — see below):
 
-- `AccountBook` — top-level container; holds references to gain/loss account
-  groups (`securityHoldingGainLossAccountGroupId`,
-  `cryptoHoldingGainLossAccountGroupId`, `fxHoldingGainLossAccountGroupId`) and
-  required `startDate`
+- `AccountBook` — top-level container with required `startDate`
 - `AccountGroup` — hierarchical via self-referencing `parentGroupId`; has
   `type`, `equityAccountSubtype`, `isActive`, `sortOrder`
 - `Account` — belongs to a group; has `type`, `equityAccountSubtype`,

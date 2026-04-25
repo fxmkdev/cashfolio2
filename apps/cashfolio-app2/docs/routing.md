@@ -27,7 +27,7 @@ Related docs:
 - `$accountBookId/index.tsx` - index redirect route that forwards to
   `$accountBookId/accounts`
 - `$accountBookId/accounts/route.tsx` - accounts page with tabs (one per account
-  type: Asset, Liability, Income, Expense, Gain/Loss)
+  type: Asset, Liability, Income, Expense)
   - Loader data is tab-scoped: only the selected tab is fetched in the route
     loader critical path.
 - `$accountBookId/valuation-cache/route.tsx` - valuation cache explorer page
