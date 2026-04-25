@@ -2,6 +2,7 @@ import type {
   AgCartesianChartOptions,
   AgWaterfallSeriesItemStylerParams,
   AgWaterfallSeriesOptions,
+  AgWaterfallSeriesTooltipRendererParams,
 } from "ag-charts-community";
 import { useMemo } from "react";
 import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
@@ -11,16 +12,17 @@ import type {
   GainsLossesWaterfallTotal,
 } from "./-gains-losses-waterfall-model";
 
-type WaterfallTotalDatum = {
-  isTotal: boolean;
-};
-
-function isWaterfallTotalDatum(datum: unknown): datum is WaterfallTotalDatum {
-  if (typeof datum !== "object" || datum == null || !("isTotal" in datum)) {
-    return false;
+function toFiniteNumber(value: unknown, fallback = 0): number {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : fallback;
   }
 
-  return typeof datum.isTotal === "boolean";
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  return fallback;
 }
 
 export function useGainsLossesWaterfallChartOptions(args: {
@@ -47,6 +49,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
     currencyFormatter,
     onNodeDoubleClick,
   } = args;
+  const safeTotalGainLoss = toFiniteNumber(totalGainLoss);
   const amountCompactFormatter = useMemo(
     () =>
       new Intl.NumberFormat("en-CH", {
@@ -87,7 +90,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
       itemStyler: (
         params: AgWaterfallSeriesItemStylerParams<GainsLossesWaterfallDatum>,
       ) => {
-        if (isWaterfallTotalDatum(params.datum) && params.datum.isTotal) {
+        if (params.itemType === "total" || params.itemType === "subtotal") {
           return {
             fill: waterfallPalette.total,
             stroke: waterfallPalette.total,
@@ -97,26 +100,25 @@ export function useGainsLossesWaterfallChartOptions(args: {
         return undefined;
       },
       tooltip: {
-        renderer: ({ datum }) => {
-          if (isWaterfallTotalDatum(datum) && datum.isTotal) {
-            return {
-              heading: totalAxisLabel,
-              data: [
-                {
-                  label: "Total",
-                  value: currencyFormatter.format(totalGainLoss),
-                },
-              ],
-            };
-          }
+        renderer: (
+          params: AgWaterfallSeriesTooltipRendererParams<GainsLossesWaterfallDatum>,
+        ) => {
+          const { datum, itemType } = params;
+          const node = datum as Partial<GainsLossesWaterfallDatum>;
+          const isAggregateItem =
+            itemType === "total" || itemType === "subtotal";
+          const amount = isAggregateItem
+            ? safeTotalGainLoss
+            : toFiniteNumber(node.totalGainLoss);
 
-          const node = datum as GainsLossesWaterfallDatum;
           return {
-            heading: node.label,
+            heading: isAggregateItem
+              ? totalAxisLabel
+              : String(node.label ?? totalAxisLabel),
             data: [
               {
                 label: "Total",
-                value: currencyFormatter.format(node.totalGainLoss),
+                value: currencyFormatter.format(amount),
               },
             ],
           };
@@ -124,11 +126,21 @@ export function useGainsLossesWaterfallChartOptions(args: {
       },
       listeners: {
         seriesNodeDoubleClick: ({ datum }) => {
-          if (isWaterfallTotalDatum(datum) && datum.isTotal) {
+          const node = datum as Partial<GainsLossesWaterfallDatum>;
+          if (
+            typeof node.id !== "string" ||
+            typeof node.label !== "string" ||
+            typeof node.isDrillable !== "boolean"
+          ) {
             return;
           }
 
-          onNodeDoubleClick(datum as GainsLossesWaterfallDatum);
+          onNodeDoubleClick({
+            id: node.id,
+            label: node.label,
+            totalGainLoss: toFiniteNumber(node.totalGainLoss),
+            isDrillable: node.isDrillable,
+          });
         },
       },
     }),
@@ -136,7 +148,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
       currencyFormatter,
       onNodeDoubleClick,
       totalAxisLabel,
-      totalGainLoss,
+      safeTotalGainLoss,
       totals,
       waterfallPalette.negative,
       waterfallPalette.positive,
