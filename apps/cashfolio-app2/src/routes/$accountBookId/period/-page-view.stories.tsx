@@ -944,6 +944,117 @@ export const BreakdownTableDoubleClickSmoke: Story = {
   },
 };
 
+export const AllocationTableDoubleClickSmoke: Story = {
+  args: {
+    onBreakdownAccountDoubleClick: fn(),
+    overview: {
+      ...baseOverview,
+      assetBreakdown: {
+        ...baseOverview.assetBreakdown,
+        items: [
+          {
+            id: "group:investments",
+            label: "Investments",
+            kind: "group",
+            amount: 12000,
+            percentage: 48,
+          },
+          {
+            id: "account:account-allocation-test",
+            label: "Allocation Test Account",
+            kind: "account",
+            amount: 13000,
+            percentage: 52,
+          },
+        ],
+        hierarchy: [
+          {
+            id: "group:investments",
+            label: "Investments",
+            kind: "group",
+            amount: 12000,
+            children: [],
+          },
+          {
+            id: "account:account-allocation-test",
+            label: "Allocation Test Account",
+            kind: "account",
+            amount: 13000,
+            children: [],
+          },
+        ],
+      },
+    },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+
+    const allocationChartTypeControl = await canvas.findByLabelText(
+      "Allocation chart type",
+    );
+    await userEvent.click(
+      within(allocationChartTypeControl).getByRole("radio", {
+        name: "Table",
+      }),
+    );
+
+    await userEvent.dblClick(canvas.getByText("Investments"));
+    await expect(args.onBreakdownAccountDoubleClick).not.toHaveBeenCalled();
+
+    await userEvent.dblClick(canvas.getByText("Allocation Test Account"));
+    await expect(args.onBreakdownAccountDoubleClick).toHaveBeenCalledWith(
+      "account-allocation-test",
+    );
+    await expect(args.onBreakdownAccountDoubleClick).toHaveBeenCalledTimes(1);
+
+    await userEvent.dblClick(canvas.getByText("Total"));
+    await expect(args.onBreakdownAccountDoubleClick).toHaveBeenCalledTimes(1);
+  },
+};
+
+export const AllocationChartContainerDoubleClickSmoke: Story = {
+  args: {
+    onBreakdownAccountDoubleClick: fn(),
+    overview: {
+      ...baseOverview,
+      assetBreakdown: {
+        ...baseOverview.assetBreakdown,
+        items: [
+          {
+            id: "account:account-allocation-chart-only",
+            label: "Allocation Chart Account",
+            kind: "account",
+            amount: 25000,
+            percentage: 100,
+          },
+        ],
+        hierarchy: [
+          {
+            id: "account:account-allocation-chart-only",
+            label: "Allocation Chart Account",
+            kind: "account",
+            amount: 25000,
+            children: [],
+          },
+        ],
+      },
+    },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+
+    const allocationChart = await canvas.findByTestId(
+      "period-allocation-breakdown-chart",
+    );
+    await userEvent.dblClick(allocationChart);
+
+    await expect(args.onBreakdownAccountDoubleClick).toHaveBeenCalledWith(
+      "account-allocation-chart-only",
+    );
+    await expect(args.onBreakdownAccountDoubleClick).toHaveBeenCalledTimes(1);
+  },
+};
+
 export const GainsLossesToggleSmoke: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

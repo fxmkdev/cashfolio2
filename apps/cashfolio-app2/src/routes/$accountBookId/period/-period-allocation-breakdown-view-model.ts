@@ -4,6 +4,7 @@ import type { getPeriodOverview } from "@/server/period";
 import {
   getBreakdownDrillState,
   isBreakdownNodeDrillable,
+  parseBreakdownAccountId,
 } from "./-breakdown-drill";
 import {
   type PeriodBreakdownChartDatum,
@@ -66,6 +67,7 @@ export type PeriodAllocationBreakdownViewModel = {
   emptyAllocationBreakdownMessage: string;
   allocationChartOptions: ReturnType<typeof usePeriodBreakdownChartOptions>;
   updateSelectedAllocationBreakdownPath: (nextPath: string[]) => void;
+  handleAllocationChartContainerDoubleClick: (() => void) | null;
   hasAllocationPartialData: boolean;
   allocationPartialDataNotes: string;
 };
@@ -82,6 +84,7 @@ export function usePeriodAllocationBreakdownViewModel(args: {
   currencyFormatter: Intl.NumberFormat;
   percentageFormatter: Intl.NumberFormat;
   colors: DashboardChartThemeColors;
+  onBreakdownAccountDoubleClick: (accountId: string) => void;
 }): PeriodAllocationBreakdownViewModel {
   const {
     accountBookId,
@@ -93,6 +96,7 @@ export function usePeriodAllocationBreakdownViewModel(args: {
     currencyFormatter,
     percentageFormatter,
     colors,
+    onBreakdownAccountDoubleClick,
   } = args;
 
   const activeAllocationBreakdown = useMemo(
@@ -217,20 +221,33 @@ export function usePeriodAllocationBreakdownViewModel(args: {
 
   const handleAllocationNodeDoubleClick = useCallback(
     (datum: PeriodBreakdownNodeDatum) => {
-      if (
-        datum.kind !== "group" ||
-        !datum.isDrillable ||
-        allocationDrillState.clampedPath.includes(datum.id)
-      ) {
+      if (datum.kind === "group") {
+        if (
+          !datum.isDrillable ||
+          allocationDrillState.clampedPath.includes(datum.id)
+        ) {
+          return;
+        }
+
+        updateSelectedAllocationBreakdownPath([
+          ...allocationDrillState.clampedPath,
+          datum.id,
+        ]);
         return;
       }
 
-      updateSelectedAllocationBreakdownPath([
-        ...allocationDrillState.clampedPath,
-        datum.id,
-      ]);
+      const accountId = parseBreakdownAccountId(datum.id);
+      if (!accountId) {
+        return;
+      }
+
+      onBreakdownAccountDoubleClick(accountId);
     },
-    [allocationDrillState.clampedPath, updateSelectedAllocationBreakdownPath],
+    [
+      allocationDrillState.clampedPath,
+      onBreakdownAccountDoubleClick,
+      updateSelectedAllocationBreakdownPath,
+    ],
   );
 
   const allocationChartOptions = usePeriodBreakdownChartOptions({
@@ -240,6 +257,18 @@ export function usePeriodAllocationBreakdownViewModel(args: {
     totalBreakdownAmountLabel: totalAllocationAmountLabel,
     onNodeDoubleClick: handleAllocationNodeDoubleClick,
   });
+  const handleAllocationChartContainerDoubleClick = useMemo(() => {
+    if (allocationChartData.length !== 1) {
+      return null;
+    }
+
+    return () => {
+      const onlyNode = allocationChartData[0];
+      if (onlyNode) {
+        handleAllocationNodeDoubleClick(onlyNode);
+      }
+    };
+  }, [allocationChartData, handleAllocationNodeDoubleClick]);
 
   const hasAllocationPartialData =
     activeAllocationBreakdown.skippedMissingReferenceBalanceCount > 0 ||
@@ -267,6 +296,7 @@ export function usePeriodAllocationBreakdownViewModel(args: {
     emptyAllocationBreakdownMessage,
     allocationChartOptions,
     updateSelectedAllocationBreakdownPath,
+    handleAllocationChartContainerDoubleClick,
     hasAllocationPartialData,
     allocationPartialDataNotes,
   };

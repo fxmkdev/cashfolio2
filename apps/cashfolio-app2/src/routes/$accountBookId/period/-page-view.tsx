@@ -251,6 +251,7 @@ export function PeriodPageView({
     currencyFormatter,
     percentageFormatter,
     colors,
+    onBreakdownAccountDoubleClick,
   });
   const gainsLosses = usePeriodGainsLossesViewModel({
     accountBookId,
@@ -407,6 +408,10 @@ export function PeriodPageView({
               onSelectedChartTypeChange={setSelectedAllocationChartType}
               onDrillPathChange={
                 allocationBreakdown.updateSelectedAllocationBreakdownPath
+              }
+              onBreakdownAccountDoubleClick={onBreakdownAccountDoubleClick}
+              onChartContainerDoubleClick={
+                allocationBreakdown.handleAllocationChartContainerDoubleClick
               }
               footer={
                 allocationBreakdown.hasAllocationPartialData ? (
