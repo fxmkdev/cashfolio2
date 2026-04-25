@@ -30,6 +30,7 @@ function createLedgerBookings(
     date: Date;
     value: number;
     valueInReferenceCurrency?: number | null;
+    isOpeningBalancesTransaction?: boolean;
   }>,
 ): LedgerBookings {
   return entries.map((entry, index) => ({
@@ -49,7 +50,7 @@ function createLedgerBookings(
     transactionId: `transaction-${index + 1}`,
     transactionDescription: "",
     counterpartyAccounts: [],
-    isOpeningBalancesTransaction: false,
+    isOpeningBalancesTransaction: entry.isOpeningBalancesTransaction ?? false,
   }));
 }
 
@@ -502,6 +503,155 @@ describe("buildLedgerRows", () => {
         referenceDebit: 150,
         referenceCredit: null,
         balance: -150,
+      }),
+    ]);
+  });
+
+  test("seeds filtered asset balances from pre-period totals and appends a carry-over row", () => {
+    const rows = buildLedgerRows(
+      createLedgerAccount(AccountType.ASSET),
+      createLedgerBookings([
+        {
+          date: localDate(2026, 0, 10, 9),
+          value: -50,
+        },
+        {
+          date: localDate(2026, 0, 11, 9),
+          value: 30,
+        },
+      ]),
+      {
+        hasPeriodFilter: true,
+        balanceBeforePeriodRaw: 200,
+        hasBookingsBeforePeriod: true,
+      },
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        date: "11.01.2026",
+        balance: 180,
+      }),
+      expect.objectContaining({
+        date: "10.01.2026",
+        balance: 150,
+      }),
+      expect.objectContaining({
+        date: "",
+        description: "Balance carried forward",
+        debit: null,
+        credit: null,
+        referenceDebit: null,
+        referenceCredit: null,
+        balance: 200,
+        isVirtualCarryOver: true,
+      }),
+    ]);
+  });
+
+  test("seeds filtered liability balances from pre-period totals", () => {
+    const rows = buildLedgerRows(
+      createLedgerAccount(AccountType.LIABILITY),
+      createLedgerBookings([
+        {
+          date: localDate(2026, 0, 10, 9),
+          value: 20,
+        },
+      ]),
+      {
+        hasPeriodFilter: true,
+        balanceBeforePeriodRaw: -100,
+        hasBookingsBeforePeriod: true,
+      },
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        date: "10.01.2026",
+        balance: 80,
+      }),
+      expect.objectContaining({
+        date: "",
+        description: "Balance carried forward",
+        balance: 100,
+        isVirtualCarryOver: true,
+      }),
+    ]);
+  });
+
+  test("omits carry-over row when the selected period is the first period of the account", () => {
+    const rows = buildLedgerRows(
+      createLedgerAccount(AccountType.ASSET),
+      createLedgerBookings([
+        {
+          date: localDate(2026, 0, 10, 9),
+          value: 50,
+        },
+      ]),
+      {
+        hasPeriodFilter: true,
+        balanceBeforePeriodRaw: 0,
+        hasBookingsBeforePeriod: false,
+      },
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        date: "10.01.2026",
+        balance: 50,
+      }),
+    ]);
+  });
+
+  test("shows opening-balance booking instead of a virtual carry-over in first account-book period", () => {
+    const openingBalanceBooking = {
+      ...createLedgerBookings([
+        {
+          date: localDate(2025, 11, 31, 9),
+          value: 200,
+          isOpeningBalancesTransaction: true,
+        },
+      ])[0],
+      id: "opening-booking",
+      transactionId: "opening-transaction",
+    };
+    const rows = buildLedgerRows(
+      createLedgerAccount(AccountType.ASSET),
+      createLedgerBookings([
+        {
+          date: localDate(2026, 0, 10, 9),
+          value: -50,
+        },
+        {
+          date: localDate(2026, 0, 11, 9),
+          value: 30,
+        },
+      ]),
+      {
+        hasPeriodFilter: true,
+        balanceBeforePeriodRaw: 200,
+        hasBookingsBeforePeriod: true,
+        openingBalanceBookingBeforePeriod: openingBalanceBooking,
+        isFirstAccountBookPeriod: true,
+      },
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        date: "11.01.2026",
+        balance: 180,
+      }),
+      expect.objectContaining({
+        date: "10.01.2026",
+        balance: 150,
+      }),
+      expect.objectContaining({
+        id: "opening-booking",
+        transactionId: "opening-transaction",
+        date: "31.12.2025",
+        isOpeningBalancesTransaction: true,
+        balance: 200,
+        isVirtualCarryOver: false,
       }),
     ]);
   });

@@ -144,6 +144,7 @@ export function LedgerPageContent() {
     loaderData,
     accountBookId,
     hasPeriodFilter,
+    selectedPeriod,
     pendingScrollRef,
     invalidate: () => {
       router.invalidate();

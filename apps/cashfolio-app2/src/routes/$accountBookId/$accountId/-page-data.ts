@@ -79,16 +79,43 @@ export function buildLedgerRows(
   bookings: LedgerBookings,
   options?: {
     hasPeriodFilter?: boolean;
+    balanceBeforePeriodRaw?: number;
+    hasBookingsBeforePeriod?: boolean;
+    openingBalanceBookingBeforePeriod?: LedgerBookings[number] | null;
+    isFirstAccountBookPeriod?: boolean;
   },
 ): LedgerRow[] {
   const negate = shouldNegate(account.type, account.equityAccountSubtype);
   const isEquity = account.type === AccountType.EQUITY;
   const hasPeriodFilter = options?.hasPeriodFilter ?? false;
-  let balance = 0;
+  const balanceBeforePeriodRaw = Number(options?.balanceBeforePeriodRaw ?? 0);
+  const hasBookingsBeforePeriod = options?.hasBookingsBeforePeriod ?? false;
+  const openingBalanceBookingBeforePeriod =
+    options?.openingBalanceBookingBeforePeriod ?? null;
+  const isFirstAccountBookPeriod = options?.isFirstAccountBookPeriod ?? false;
+  const shouldUseOpeningBalanceBooking =
+    hasPeriodFilter &&
+    !isEquity &&
+    isFirstAccountBookPeriod &&
+    openingBalanceBookingBeforePeriod != null;
+  const baseBalanceBeforePeriod = negate
+    ? -balanceBeforePeriodRaw
+    : balanceBeforePeriodRaw;
+  let balance = hasPeriodFilter && !isEquity ? baseBalanceBeforePeriod : 0;
+  if (shouldUseOpeningBalanceBooking && openingBalanceBookingBeforePeriod) {
+    const openingBalanceValue = negate
+      ? -Number(openingBalanceBookingBeforePeriod.value)
+      : Number(openingBalanceBookingBeforePeriod.value);
+    balance -= openingBalanceValue;
+  }
+  const bookingsWithOpeningBalance =
+    shouldUseOpeningBalanceBooking && openingBalanceBookingBeforePeriod
+      ? ([openingBalanceBookingBeforePeriod, ...bookings] as LedgerBookings)
+      : bookings;
   let equityReferenceBalance = 0;
   let equityReferenceBalanceHasGap = false;
 
-  return bookings
+  const rows = bookingsWithOpeningBalance
     .map((booking) => {
       const rawValue = Number(booking.value);
       const value = negate ? -rawValue : rawValue;
@@ -153,9 +180,44 @@ export function buildLedgerRows(
                 ? null
                 : equityReferenceBalance
               : balance,
+        isVirtualCarryOver: false,
       };
     })
     .reverse();
+
+  const shouldAppendCarryOverRow =
+    hasPeriodFilter &&
+    !isEquity &&
+    !shouldUseOpeningBalanceBooking &&
+    hasBookingsBeforePeriod;
+
+  if (!shouldAppendCarryOverRow) {
+    return rows;
+  }
+
+  return [
+    ...rows,
+    {
+      id: "virtual-carry-over",
+      transactionId: "virtual-carry-over",
+      bookingValue: 0,
+      date: "",
+      counterpartyAccounts: [],
+      description: "Balance carried forward",
+      unit: account.unit,
+      currency: account.currency,
+      cryptocurrency: account.cryptocurrency,
+      symbol: account.symbol,
+      tradeCurrency: account.tradeCurrency,
+      isOpeningBalancesTransaction: false,
+      debit: null,
+      credit: null,
+      referenceDebit: null,
+      referenceCredit: null,
+      balance: baseBalanceBeforePeriod,
+      isVirtualCarryOver: true,
+    },
+  ];
 }
 
 export type LedgerBalanceChartPoint = {

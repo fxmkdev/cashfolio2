@@ -11,8 +11,10 @@ export function isLedgerPeriodFilterAvailable(account: {
   equityAccountSubtype: EquityAccountSubtype | null;
 }) {
   return (
-    account.type === AccountType.EQUITY &&
-    account.equityAccountSubtype !== EquityAccountSubtype.OPENING_BALANCES
+    account.type === AccountType.ASSET ||
+    account.type === AccountType.LIABILITY ||
+    (account.type === AccountType.EQUITY &&
+      account.equityAccountSubtype !== EquityAccountSubtype.OPENING_BALANCES)
   );
 }
 
@@ -29,6 +31,8 @@ export async function loadLedgerPageData(args: {
   });
   const account = await accountPromise;
   const isPeriodFilterAllowed = isLedgerPeriodFilterAvailable(account);
+  const shouldIncludeReferenceValues =
+    isPeriodFilterAllowed && account.type === AccountType.EQUITY;
 
   const [ledgerData, accounts, periodBounds] = await Promise.all([
     getLedgerData({
@@ -36,7 +40,7 @@ export async function loadLedgerPageData(args: {
         accountId: args.accountId,
         accountBookId: args.accountBookId,
         period: isPeriodFilterAllowed ? args.period : undefined,
-        includeReferenceValues: isPeriodFilterAllowed,
+        includeReferenceValues: shouldIncludeReferenceValues,
       },
     }),
     accountsPromise,
@@ -51,6 +55,10 @@ export async function loadLedgerPageData(args: {
     account,
     bookings: ledgerData.bookings,
     referenceCurrency: ledgerData.referenceCurrency,
+    balanceBeforePeriod: ledgerData.balanceBeforePeriod,
+    hasBookingsBeforePeriod: ledgerData.hasBookingsBeforePeriod,
+    openingBalanceBookingBeforePeriod:
+      ledgerData.openingBalanceBookingBeforePeriod,
     accounts,
     periodBounds,
   };
