@@ -1,4 +1,5 @@
 import type {
+  AgBarSeriesOptions,
   AgCartesianChartOptions,
   AgWaterfallSeriesItemStylerParams,
   AgWaterfallSeriesOptions,
@@ -156,6 +157,76 @@ export function useGainsLossesWaterfallChartOptions(args: {
     ],
   );
 
+  const singleBarSeries = useMemo<
+    AgBarSeriesOptions<GainsLossesWaterfallDatum>
+  >(
+    () => ({
+      type: "bar",
+      xKey: "label",
+      yKey: "totalGainLoss",
+      yName: "Gain / Loss",
+      widthRatio: 0.72,
+      itemStyler: ({ datum }) => {
+        const amount = toFiniteNumber(
+          (datum as Partial<GainsLossesWaterfallDatum>).totalGainLoss,
+        );
+        const fill =
+          amount >= 0 ? waterfallPalette.positive : waterfallPalette.negative;
+        return {
+          fill,
+          stroke: fill,
+        };
+      },
+      tooltip: {
+        renderer: ({ datum }) => {
+          const node = datum as Partial<GainsLossesWaterfallDatum>;
+          return {
+            heading: String(node.label ?? totalAxisLabel),
+            data: [
+              {
+                label: "Total",
+                value: currencyFormatter.format(
+                  toFiniteNumber(node.totalGainLoss),
+                ),
+              },
+            ],
+          };
+        },
+      },
+      listeners: {
+        seriesNodeDoubleClick: ({ datum }) => {
+          const node = datum as Partial<GainsLossesWaterfallDatum>;
+          if (
+            typeof node.id !== "string" ||
+            typeof node.label !== "string" ||
+            typeof node.isDrillable !== "boolean"
+          ) {
+            return;
+          }
+
+          onNodeDoubleClick({
+            id: node.id,
+            label: node.label,
+            totalGainLoss: toFiniteNumber(node.totalGainLoss),
+            isDrillable: node.isDrillable,
+          });
+        },
+      },
+    }),
+    [
+      currencyFormatter,
+      onNodeDoubleClick,
+      totalAxisLabel,
+      waterfallPalette.negative,
+      waterfallPalette.positive,
+    ],
+  );
+
+  const chartSeries = useMemo(
+    () => (chartData.length === 1 ? [singleBarSeries] : [waterfallSeries]),
+    [chartData.length, singleBarSeries, waterfallSeries],
+  );
+
   return useMemo(
     () => ({
       data: chartData,
@@ -169,7 +240,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
       legend: {
         enabled: false,
       },
-      series: [waterfallSeries],
+      series: chartSeries,
       axes: {
         x: {
           type: "category",
@@ -195,6 +266,6 @@ export function useGainsLossesWaterfallChartOptions(args: {
         },
       },
     }),
-    [amountCompactFormatter, chartData, colors, waterfallSeries],
+    [amountCompactFormatter, chartData, chartSeries, colors],
   );
 }
