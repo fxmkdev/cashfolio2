@@ -144,7 +144,8 @@ submit UX and prevent duplicate requests.
 
 ## Period Breakdown Drill-Down Pattern
 
-- Period route (`src/routes/$accountBookId/period.tsx`) supports drill-down in:
+- Period route (`src/routes/$accountBookId/period/route.tsx`) supports
+  drill-down in:
   - Expense/Income charts (`Donut`, `Bar`)
   - Gains/Losses chart (`Waterfall`)
 - Double-clicking a drillable chart node drills into its children.
