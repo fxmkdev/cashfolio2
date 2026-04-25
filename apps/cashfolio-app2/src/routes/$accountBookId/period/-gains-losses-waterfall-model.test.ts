@@ -111,4 +111,20 @@ describe("buildGainsLossesWaterfallModel", () => {
     expect(model.data.map((datum) => datum.totalGainLoss)).toEqual([12.5, 0]);
     expect(model.totalGainLoss).toBe(12.5);
   });
+
+  test("does not render synthetic total metadata for single-bar levels", () => {
+    const model = buildGainsLossesWaterfallModel({
+      nodes: [
+        {
+          id: "unit:fx:USD",
+          label: "USD",
+          totalGainLoss: 7,
+          children: [],
+        },
+      ] as unknown as GainsLossesBreakdownNode[],
+    });
+
+    expect(model.totals).toEqual([]);
+    expect(model.data).toHaveLength(1);
+  });
 });

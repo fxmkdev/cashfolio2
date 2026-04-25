@@ -80,7 +80,7 @@ export function buildGainsLossesWaterfallModel(args: {
   return {
     data,
     totals:
-      data.length > 0
+      data.length > 1
         ? [
             {
               totalType: "total",
