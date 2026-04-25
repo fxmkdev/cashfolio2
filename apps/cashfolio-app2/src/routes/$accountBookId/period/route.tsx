@@ -3,6 +3,7 @@ import { Suspense, lazy } from "react";
 import { getGainLossEquityAccountId } from "@/server/accounts";
 import { getPeriodOverview } from "@/server/period";
 import { formatMonthPeriodValue } from "@/shared/period";
+import { hasExplicitGainLossGroup } from "./-gains-losses-explicit";
 import {
   DEFAULT_PERIOD_VALUE,
   getPeriodValue,
@@ -20,19 +21,21 @@ export const Route = createFileRoute("/$accountBookId/period")({
     period: getPeriodValue(search),
   }),
   loader: async ({ params: { accountBookId }, deps: { period } }) => {
-    const [overview, gainLossEquityAccountId] = await Promise.all([
-      getPeriodOverview({
-        data: {
-          accountBookId,
-          period,
-        },
-      }),
-      getGainLossEquityAccountId({
-        data: {
-          accountBookId,
-        },
-      }),
-    ]);
+    const overview = await getPeriodOverview({
+      data: {
+        accountBookId,
+        period,
+      },
+    });
+    const gainLossEquityAccountId = hasExplicitGainLossGroup(
+      overview.gainsLossesBreakdown.hierarchy,
+    )
+      ? await getGainLossEquityAccountId({
+          data: {
+            accountBookId,
+          },
+        })
+      : null;
 
     return { overview, gainLossEquityAccountId };
   },
