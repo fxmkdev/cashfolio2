@@ -585,6 +585,7 @@ function PeriodRouteSmokeHarness() {
         selectedPeriodValue={selectedPeriodValue}
         onPeriodChange={setSelectedPeriodValue}
         onBreakdownAccountDoubleClick={() => undefined}
+        onGainLossUnitAccountDoubleClick={() => undefined}
       />
       <Text data-testid="router-path">{pathname}</Text>
       <Text data-testid="selected-period">{selectedPeriodValue}</Text>
@@ -610,6 +611,7 @@ const meta = {
     selectedPeriodValue: DEFAULT_PERIOD_VALUE,
     onPeriodChange: fn(),
     onBreakdownAccountDoubleClick: fn(),
+    onGainLossUnitAccountDoubleClick: fn(),
   },
 } satisfies Meta<typeof PeriodPageView>;
 

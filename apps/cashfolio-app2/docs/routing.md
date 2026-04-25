@@ -33,6 +33,11 @@ Related docs:
 - `$accountBookId/valuation-cache/route.tsx` - valuation cache explorer page
   with tabs for Currency, Cryptocurrency, and Security; shows deduplicated unit
   rows and cached TimeSeries history charts (no live provider lookups)
+- `$accountBookId/period/route.tsx` - period overview page with contribution,
+  allocation, and gains/losses breakdown cards
+- `$accountBookId/period/gains-losses/$accountId/route.tsx` - dedicated
+  gain/loss reconciliation page for unit-account drill-down (opened from
+  Gains/Losses Breakdown leaf rows)
 - `$accountBookId/$accountId/route.tsx` - ledger layout route (loads ledger data
   and provides shared search params for child routes)
 - `$accountBookId/$accountId/index.tsx` - ledger page for a single account
@@ -69,6 +74,9 @@ Related docs:
     account types (asset, liability, and non-opening-balance equity)
 - `$accountBookId/$accountId/chart/route.tsx` intentionally has no search
   params; the ledger/chart switch does not carry `transactionId` or `period`
+- `$accountBookId/period/route.tsx` and
+  `$accountBookId/period/gains-losses/$accountId/route.tsx` both use
+  `period?: string` with the same normalized period semantics
 
 ### Global Navigation Progress
 

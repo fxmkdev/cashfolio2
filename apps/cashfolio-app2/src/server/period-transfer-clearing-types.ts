@@ -3,6 +3,7 @@ import type { EndOfPeriodBalanceAccount } from "./period-balance-stats";
 
 export type TransferClearingBooking = {
   id: string;
+  transactionId?: string | null;
   date: Date;
   value: number;
   unit: Unit;

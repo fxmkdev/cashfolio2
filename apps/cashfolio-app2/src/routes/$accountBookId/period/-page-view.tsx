@@ -50,6 +50,7 @@ export type PeriodPageViewProps = {
   onPeriodChange: (nextPeriodValue: string) => void;
   onBreakdownAccountDoubleClick: (accountId: string) => void;
   onExplicitGainLossDoubleClick?: () => void;
+  onGainLossUnitAccountDoubleClick?: (accountId: string) => void;
 };
 
 function arePathsEqual(left: string[], right: string[]): boolean {
@@ -73,6 +74,7 @@ export function PeriodPageView({
   onPeriodChange,
   onBreakdownAccountDoubleClick,
   onExplicitGainLossDoubleClick,
+  onGainLossUnitAccountDoubleClick,
 }: PeriodPageViewProps) {
   const {
     selectedBreakdown,
@@ -487,6 +489,7 @@ export function PeriodPageView({
                   gainsLosses.handleChartContainerDoubleClick
                 }
                 onExplicitGainLossDoubleClick={onExplicitGainLossDoubleClick}
+                onUnitAccountDoubleClick={onGainLossUnitAccountDoubleClick}
               />
             </Grid.Col>
           </Grid>

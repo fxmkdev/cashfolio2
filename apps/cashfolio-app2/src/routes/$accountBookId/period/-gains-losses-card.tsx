@@ -24,6 +24,7 @@ type GainsLossesCardProps = {
   onDrillPathChange: (nextPath: string[]) => void;
   onChartContainerDoubleClick?: (() => void) | null;
   onExplicitGainLossDoubleClick?: () => void;
+  onUnitAccountDoubleClick?: (accountId: string) => void;
 };
 
 const GAINS_LOSSES_CHART_TYPE_OPTIONS = [
@@ -53,6 +54,7 @@ export function GainsLossesCard({
   onDrillPathChange,
   onChartContainerDoubleClick,
   onExplicitGainLossDoubleClick,
+  onUnitAccountDoubleClick,
 }: GainsLossesCardProps) {
   const isTableView = selectedChartType === "table";
   const hasTableBreakdown = hierarchy.length > 0;
@@ -74,6 +76,7 @@ export function GainsLossesCard({
             hierarchy={hierarchy}
             expandedGroupsStorageKey={tableExpandedGroupsStorageKey}
             onExplicitGainLossDoubleClick={onExplicitGainLossDoubleClick}
+            onUnitAccountDoubleClick={onUnitAccountDoubleClick}
           />
         ) : null
       }

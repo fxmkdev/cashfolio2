@@ -4,6 +4,12 @@ import {
   isNearZero,
   QUANTITY_EPSILON,
 } from "./period-overview-holdings-common";
+
+type TransferClearingGainLossSkippedReason =
+  | "missingInitialRate"
+  | "missingConversion"
+  | "invalidExecutionPrice"
+  | "missingPeriodEndRate";
 import {
   toTransferClearingLotSortKey,
   type TransferClearingBooking,
@@ -37,6 +43,32 @@ export async function computeTransferClearingGainLossSplit(args: {
     tradeCurrency: TransferClearingUnitBucket["tradeCurrency"];
     realizedGainLoss: number;
     unrealizedGainLoss: number;
+  }) => void;
+  onUnitExecutionEvent?: (event: {
+    unitKey: TransferClearingUnitBucket["unitKey"];
+    bookingId: string;
+    transactionId: string | null;
+    date: Date;
+    quantity: number;
+    effectiveReferenceAmount: number;
+    executionUnitPriceInReference: number;
+    realizedGainLossDelta: number;
+    runningRealizedGainLoss: number;
+  }) => void;
+  onUnitOpenLotValuation?: (lot: {
+    unitKey: TransferClearingUnitBucket["unitKey"];
+    acquisitionSortKey: string;
+    quantity: number;
+    unitCostInReference: number;
+    periodEndRate: number;
+    unrealizedGainLoss: number;
+  }) => void;
+  onSkippedItem?: (item: {
+    unitKey: TransferClearingUnitBucket["unitKey"];
+    bookingId?: string;
+    transactionId?: string | null;
+    reason: TransferClearingGainLossSkippedReason;
+    date: Date;
   }) => void;
 }) {
   let realizedGainLoss = 0;
@@ -73,6 +105,11 @@ export async function computeTransferClearingGainLossSplit(args: {
       });
       if (initialRate == null) {
         skippedCount += 1;
+        args.onSkippedItem?.({
+          unitKey: unitBucket.unitKey,
+          reason: "missingInitialRate",
+          date: args.initialRateDate,
+        });
         continue;
       }
 
@@ -118,6 +155,13 @@ export async function computeTransferClearingGainLossSplit(args: {
       const convertedValue = convertedValues[bookingIndex];
       if (convertedValue == null) {
         skippedCount += 1;
+        args.onSkippedItem?.({
+          unitKey: unitBucket.unitKey,
+          bookingId: booking.id,
+          transactionId: booking.transactionId ?? null,
+          reason: "missingConversion",
+          date: booking.date,
+        });
         continue;
       }
 
@@ -127,6 +171,13 @@ export async function computeTransferClearingGainLossSplit(args: {
         clearingReferenceAmount / clearingQuantity;
       if (!Number.isFinite(executionUnitPriceInReference)) {
         skippedCount += 1;
+        args.onSkippedItem?.({
+          unitKey: unitBucket.unitKey,
+          bookingId: booking.id,
+          transactionId: booking.transactionId ?? null,
+          reason: "invalidExecutionPrice",
+          date: booking.date,
+        });
         continue;
       }
       convertedCount += 1;
@@ -142,6 +193,17 @@ export async function computeTransferClearingGainLossSplit(args: {
       });
       realizedGainLoss += bookingRealizedGainLoss;
       unitRealizedGainLoss += bookingRealizedGainLoss;
+      args.onUnitExecutionEvent?.({
+        unitKey: unitBucket.unitKey,
+        bookingId: booking.id,
+        transactionId: booking.transactionId ?? null,
+        date: booking.date,
+        quantity: clearingQuantity,
+        effectiveReferenceAmount: clearingReferenceAmount,
+        executionUnitPriceInReference,
+        realizedGainLossDelta: bookingRealizedGainLoss,
+        runningRealizedGainLoss: unitRealizedGainLoss,
+      });
     }
 
     const openQuantity = lots.reduce(
@@ -159,12 +221,26 @@ export async function computeTransferClearingGainLossSplit(args: {
       });
       if (periodEndRate == null) {
         skippedCount += 1;
+        args.onSkippedItem?.({
+          unitKey: unitBucket.unitKey,
+          reason: "missingPeriodEndRate",
+          date: args.periodEnd,
+        });
       } else {
-        const unitUnrealized = lots.reduce(
-          (sum, lot) =>
-            sum + lot.quantity * (periodEndRate - lot.unitCostInReference),
-          0,
-        );
+        let unitUnrealized = 0;
+        for (const lot of lots) {
+          const lotUnrealizedGainLoss =
+            lot.quantity * (periodEndRate - lot.unitCostInReference);
+          unitUnrealized += lotUnrealizedGainLoss;
+          args.onUnitOpenLotValuation?.({
+            unitKey: unitBucket.unitKey,
+            acquisitionSortKey: lot.acquisitionSortKey,
+            quantity: lot.quantity,
+            unitCostInReference: lot.unitCostInReference,
+            periodEndRate,
+            unrealizedGainLoss: lotUnrealizedGainLoss,
+          });
+        }
         unrealizedGainLoss += unitUnrealized;
         unitUnrealizedGainLoss += unitUnrealized;
       }

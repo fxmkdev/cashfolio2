@@ -92,6 +92,18 @@ function PeriodPage() {
             },
           });
         }}
+        onGainLossUnitAccountDoubleClick={(accountId) =>
+          navigate({
+            to: "/$accountBookId/period/gains-losses/$accountId",
+            params: { accountBookId, accountId },
+            search: {
+              period:
+                selectedPeriodValue === DEFAULT_PERIOD_VALUE
+                  ? undefined
+                  : selectedPeriodValue,
+            },
+          })
+        }
       />
     </Suspense>
   );

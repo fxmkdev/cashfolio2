@@ -24,6 +24,30 @@ export type GainsLossesGridRow =
   | GainsLossesTableRow
   | GainsLossesTotalFooterRow;
 
+const UNIT_ACCOUNT_ROW_ID_PREFIX = "unit-account:";
+const UNIT_ROW_ID_PREFIX = "unit:";
+
+export function parseGainsLossesUnitAccountId(args: {
+  rowId: string;
+  parentId: string | undefined;
+}): string | null {
+  if (!args.rowId.startsWith(UNIT_ACCOUNT_ROW_ID_PREFIX)) {
+    return null;
+  }
+  if (!args.parentId || !args.parentId.startsWith(UNIT_ROW_ID_PREFIX)) {
+    return null;
+  }
+
+  const parentUnitId = args.parentId.slice(UNIT_ROW_ID_PREFIX.length);
+  const expectedPrefix = `${UNIT_ACCOUNT_ROW_ID_PREFIX}${parentUnitId}:`;
+  if (!args.rowId.startsWith(expectedPrefix)) {
+    return null;
+  }
+
+  const accountId = args.rowId.slice(expectedPrefix.length).trim();
+  return accountId.length > 0 ? accountId : null;
+}
+
 export function flattenGainsLossesHierarchyRows(
   hierarchy: GainsLossesBreakdownNode[],
 ): GainsLossesTableRow[] {
