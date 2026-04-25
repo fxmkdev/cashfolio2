@@ -79,6 +79,7 @@ export function GainsLossesCard({
       onDrillPathChange={onDrillPathChange}
       onChartContainerDoubleClick={onChartContainerDoubleClick}
       showDrillControls={!isTableView}
+      drillHint="Double-click a bar to drill down."
       headerControls={
         <ChartTypeSegmentedControl
           ariaLabel="Gains/losses chart type"
