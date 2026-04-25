@@ -1,61 +1,66 @@
 import { Center, SegmentedControl } from "@mantine/core";
 import { IconChartBar, IconChartDonut, IconTable } from "@tabler/icons-react";
+import type { ReactNode } from "react";
 import type { BreakdownChartType } from "./-breakdown-types";
 
-type ChartTypeSegmentedControlProps = {
-  ariaLabel: string;
-  value: BreakdownChartType;
-  onChange: (value: BreakdownChartType) => void;
+export type ChartTypeOption<TValue extends string> = {
+  value: TValue;
+  label: string;
+  icon: ReactNode;
 };
 
-function isBreakdownChartType(value: string): value is BreakdownChartType {
-  return value === "donut" || value === "bar" || value === "table";
-}
+export const DEFAULT_BREAKDOWN_CHART_TYPE_OPTIONS = [
+  {
+    value: "donut",
+    label: "Donut",
+    icon: <IconChartDonut size={16} />,
+  },
+  {
+    value: "bar",
+    label: "Bar",
+    icon: <IconChartBar size={16} />,
+  },
+  {
+    value: "table",
+    label: "Table",
+    icon: <IconTable size={16} />,
+  },
+] as const satisfies readonly ChartTypeOption<BreakdownChartType>[];
 
-export function ChartTypeSegmentedControl({
+type ChartTypeSegmentedControlProps<TValue extends string> = {
+  ariaLabel: string;
+  value: TValue;
+  options: readonly ChartTypeOption<TValue>[];
+  onChange: (value: TValue) => void;
+};
+
+export function ChartTypeSegmentedControl<TValue extends string>({
   ariaLabel,
   value,
+  options,
   onChange,
-}: ChartTypeSegmentedControlProps) {
+}: ChartTypeSegmentedControlProps<TValue>) {
+  const allowedValues = new Set<string>(options.map((option) => option.value));
+
   return (
     <SegmentedControl
       size="sm"
       aria-label={ariaLabel}
       value={value}
       onChange={(nextValue) => {
-        if (isBreakdownChartType(nextValue)) {
-          onChange(nextValue);
+        if (allowedValues.has(nextValue)) {
+          onChange(nextValue as TValue);
         }
       }}
-      data={[
-        {
-          label: (
-            <Center style={{ gap: 6 }}>
-              <IconChartDonut size={16} />
-              Donut
-            </Center>
-          ),
-          value: "donut",
-        },
-        {
-          label: (
-            <Center style={{ gap: 6 }}>
-              <IconChartBar size={16} />
-              Bar
-            </Center>
-          ),
-          value: "bar",
-        },
-        {
-          label: (
-            <Center style={{ gap: 6 }}>
-              <IconTable size={16} />
-              Table
-            </Center>
-          ),
-          value: "table",
-        },
-      ]}
+      data={options.map((option) => ({
+        value: option.value,
+        label: (
+          <Center style={{ gap: 6 }}>
+            {option.icon}
+            {option.label}
+          </Center>
+        ),
+      }))}
     />
   );
 }

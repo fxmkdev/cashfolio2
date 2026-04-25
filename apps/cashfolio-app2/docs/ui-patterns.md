@@ -144,20 +144,29 @@ submit UX and prevent duplicate requests.
 
 ## Period Breakdown Drill-Down Pattern
 
-- Period route (`src/routes/$accountBookId/period.tsx`) supports drill-down in
-  Expense/Income charts (both donut and bar).
-- Double-clicking a chart node drills into group children; account leaves are
-  informational and do not drill.
-- Keep drill state local to the page and scoped per breakdown type
-  (Expense/Income), preserving each side when toggling.
-- Show an `Up` action and breadcrumb context (`All Expenses` / `All Income` ->
-  group path) directly above the chart.
-- Persist Period card state in `sessionStorage` (chart/table view, breakdown
-  side toggle, drill paths, and table expand/collapse), scoped by
-  `accountBookId`.
+- Period route (`src/routes/$accountBookId/period.tsx`) supports drill-down in:
+  - Expense/Income charts (`Donut`, `Bar`)
+  - Gains/Losses chart (`Waterfall`)
+- Double-clicking a drillable chart node drills into its children.
+- Account leaves (or any node without children) are informational and do not
+  drill.
+- Keep drill state local to the page and scoped per card/type, preserving each
+  side/path when toggling chart mode or breakdown side.
+- Show an `Up` action and breadcrumb context (`All Expenses` / `All Income` /
+  `All Gains/Losses` -> group path) directly above chart views.
+- Persist Period card state in `sessionStorage`, scoped by `accountBookId`,
+  including:
+  - chart/table mode toggles
+  - breakdown side toggles
+  - per-card drill paths
+  - table expand/collapse state
+- Gains/Losses card persistence keys:
+  - `selectedGainsLossesChartType` (`"waterfall"` by default, `"table"` when
+    toggled)
+  - `drillPathByGainsLosses` (node-id path for current chart drill level)
 - Keep only the selected period (`period`) in route search params.
-- Clamp stale paths to the nearest valid ancestor when refreshed data no longer
-  contains a node.
+- Clamp stale drill paths to the nearest valid ancestor when refreshed data no
+  longer contains a node.
 
 ## Accounts List Columns
 

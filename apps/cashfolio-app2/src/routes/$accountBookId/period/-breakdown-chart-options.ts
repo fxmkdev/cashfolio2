@@ -44,7 +44,7 @@ function buildBreakdownTooltipData(args: {
   };
 }
 
-function buildCommonChartThemeParams(colors: DashboardChartThemeColors) {
+export function buildCommonChartThemeParams(colors: DashboardChartThemeColors) {
   return {
     textColor: colors.chartTextColor,
     foregroundColor: colors.chartTextColor,

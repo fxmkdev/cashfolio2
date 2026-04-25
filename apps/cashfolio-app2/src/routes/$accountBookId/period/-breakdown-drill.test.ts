@@ -1,8 +1,11 @@
 import { describe, expect, test } from "vitest";
 import {
   clampBreakdownPath,
+  clampDrillTreePath,
   getBreakdownDrillState,
+  getDrillTreeState,
   isBreakdownNodeDrillable,
+  isDrillTreeNodeDrillable,
   parseBreakdownAccountId,
   type BreakdownHierarchyNode,
 } from "./-breakdown-drill";
@@ -123,6 +126,79 @@ describe("isBreakdownNodeDrillable", () => {
         children: [],
       }),
     ).toBe(false);
+  });
+});
+
+describe("generic drill tree helpers", () => {
+  const genericHierarchy = [
+    {
+      id: "unit-type:fx",
+      label: "FX",
+      children: [
+        {
+          id: "unit:fx:USD",
+          label: "USD",
+          children: [
+            {
+              id: "account:usd-1",
+              label: "USD 1",
+              children: [],
+            },
+          ],
+        },
+      ],
+    },
+  ];
+
+  test("treats non-empty nodes as drillable", () => {
+    expect(isDrillTreeNodeDrillable(genericHierarchy[0]!)).toBe(true);
+    expect(isDrillTreeNodeDrillable(genericHierarchy[0]!.children[0]!)).toBe(
+      true,
+    );
+    expect(
+      isDrillTreeNodeDrillable(genericHierarchy[0]!.children[0]!.children[0]!),
+    ).toBe(false);
+  });
+
+  test("clamps generic paths using default drillability", () => {
+    expect(
+      clampDrillTreePath({
+        hierarchy: genericHierarchy,
+        path: ["unit-type:fx", "unit:fx:USD"],
+      }),
+    ).toEqual(["unit-type:fx", "unit:fx:USD"]);
+    expect(
+      clampDrillTreePath({
+        hierarchy: genericHierarchy,
+        path: ["unit-type:fx", "account:usd-1"],
+      }),
+    ).toEqual(["unit-type:fx"]);
+  });
+
+  test("returns breadcrumbs and current nodes for generic trees", () => {
+    const state = getDrillTreeState({
+      hierarchy: genericHierarchy,
+      path: ["unit-type:fx"],
+      rootLabel: "All Gains/Losses",
+    });
+
+    expect(state.breadcrumbs).toEqual([
+      { id: null, label: "All Gains/Losses" },
+      { id: "unit-type:fx", label: "FX" },
+    ]);
+    expect(state.currentNodes).toEqual([
+      {
+        id: "unit:fx:USD",
+        label: "USD",
+        children: [
+          {
+            id: "account:usd-1",
+            label: "USD 1",
+            children: [],
+          },
+        ],
+      },
+    ]);
   });
 });
 

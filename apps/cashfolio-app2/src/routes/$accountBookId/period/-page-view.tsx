@@ -22,8 +22,10 @@ import { ContributionChartCard } from "./-contribution-chart-card";
 import { PeriodBreakdownCard } from "./-breakdown-card";
 import { clampBreakdownPath } from "./-breakdown-drill";
 import { GainsLossesCard } from "./-gains-losses-card";
+import { clampGainsLossesPath } from "./-gains-losses-drill";
 import { usePeriodAllocationBreakdownViewModel } from "./-period-allocation-breakdown-view-model";
 import { usePeriodBreakdownViewModel } from "./-period-breakdown-view-model";
+import { usePeriodGainsLossesViewModel } from "./-period-gains-losses-view-model";
 import { buildPeriodPageStats } from "./-period-page-stats";
 import { PeriodStatsCardsSection } from "./-period-stats-cards";
 import { usePeriodPageSessionState } from "./-page-session-state";
@@ -75,14 +77,18 @@ export function PeriodPageView({
     selectedChartType,
     selectedAllocationBreakdown,
     selectedAllocationChartType,
+    selectedGainsLossesChartType,
     drillPathByBreakdown,
     drillPathByAllocationBreakdown,
+    drillPathByGainsLosses,
     setSelectedBreakdown,
     setSelectedChartType,
     setSelectedAllocationBreakdown,
     setSelectedAllocationChartType,
+    setSelectedGainsLossesChartType,
     setDrillPathByBreakdown,
     setDrillPathByAllocationBreakdown,
+    setDrillPathByGainsLosses,
   } = usePeriodPageSessionState(accountBookId);
   const [pickerOpened, setPickerOpened] = useState(false);
   const theme = useMantineTheme();
@@ -206,6 +212,22 @@ export function PeriodPageView({
     overview.liabilityBreakdown.hierarchy,
     setDrillPathByAllocationBreakdown,
   ]);
+  useEffect(() => {
+    const nextGainsLossesPath = clampGainsLossesPath({
+      hierarchy: overview.gainsLossesBreakdown.hierarchy,
+      path: drillPathByGainsLosses,
+    });
+
+    if (arePathsEqual(nextGainsLossesPath, drillPathByGainsLosses)) {
+      return;
+    }
+
+    setDrillPathByGainsLosses(nextGainsLossesPath);
+  }, [
+    drillPathByGainsLosses,
+    overview.gainsLossesBreakdown.hierarchy,
+    setDrillPathByGainsLosses,
+  ]);
   const breakdown = usePeriodBreakdownViewModel({
     accountBookId,
     overview,
@@ -229,6 +251,16 @@ export function PeriodPageView({
     currencyFormatter,
     percentageFormatter,
     colors,
+  });
+  const gainsLosses = usePeriodGainsLossesViewModel({
+    accountBookId,
+    gainsLossesBreakdownHierarchy: overview.gainsLossesBreakdown.hierarchy,
+    selectedGainsLossesChartType,
+    drillPathByGainsLosses,
+    setDrillPathByGainsLosses,
+    currencyFormatter,
+    colors,
+    waterfallPalette,
   });
 
   const { statCards, endOfPeriodStatCards } = buildPeriodPageStats({
@@ -436,9 +468,22 @@ export function PeriodPageView({
             </Grid.Col>
             <Grid.Col span={{ base: 12, lg: 6 }}>
               <GainsLossesCard
-                accountBookId={accountBookId}
-                referenceCurrency={overview.referenceCurrency}
+                selectedChartType={selectedGainsLossesChartType}
+                tableExpandedGroupsStorageKey={
+                  gainsLosses.gainsLossesTableExpandedGroupsStorageKey
+                }
+                subtitle={`${gainsLosses.gainsLossesSubtitle} · Amounts shown in ${overview.referenceCurrency}`}
+                breadcrumbs={gainsLosses.gainsLossesDrillState.breadcrumbs}
+                clampedPath={gainsLosses.gainsLossesDrillState.clampedPath}
+                hasGainsLosses={gainsLosses.hasGainsLosses}
+                emptyMessage={gainsLosses.emptyGainsLossesMessage}
                 hierarchy={overview.gainsLossesBreakdown.hierarchy}
+                chartOptions={gainsLosses.gainsLossesChartOptions}
+                onSelectedChartTypeChange={setSelectedGainsLossesChartType}
+                onDrillPathChange={gainsLosses.updateGainsLossesDrillPath}
+                onChartContainerDoubleClick={
+                  gainsLosses.handleChartContainerDoubleClick
+                }
               />
             </Grid.Col>
           </Grid>

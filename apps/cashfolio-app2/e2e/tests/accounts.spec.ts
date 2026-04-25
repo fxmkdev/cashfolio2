@@ -117,6 +117,7 @@ type PeriodPageSessionState = {
   selectedChartType: "donut" | "bar" | "table";
   selectedAllocationBreakdown: "asset" | "liability";
   selectedAllocationChartType: "donut" | "bar" | "table";
+  selectedGainsLossesChartType: "waterfall" | "table";
   drillPathByBreakdown: {
     expense: string[];
     income: string[];
@@ -125,6 +126,7 @@ type PeriodPageSessionState = {
     asset: string[];
     liability: string[];
   };
+  drillPathByGainsLosses: string[];
 };
 
 function createPeriodPageSessionState(
@@ -137,6 +139,8 @@ function createPeriodPageSessionState(
       overrides.selectedAllocationBreakdown ?? "asset",
     selectedAllocationChartType:
       overrides.selectedAllocationChartType ?? "donut",
+    selectedGainsLossesChartType:
+      overrides.selectedGainsLossesChartType ?? "waterfall",
     drillPathByBreakdown: {
       expense: overrides.drillPathByBreakdown?.expense ?? [],
       income: overrides.drillPathByBreakdown?.income ?? [],
@@ -145,6 +149,7 @@ function createPeriodPageSessionState(
       asset: overrides.drillPathByAllocationBreakdown?.asset ?? [],
       liability: overrides.drillPathByAllocationBreakdown?.liability ?? [],
     },
+    drillPathByGainsLosses: overrides.drillPathByGainsLosses ?? [],
   };
 }
 
@@ -687,6 +692,57 @@ test("period page persists card state, drill state, and table expansion across r
     allocationChartTypeControl.getByRole("radio", { name: "Bar" }),
   ).toBeChecked();
 
+  const gainsLossesChartTypeControl = page.getByRole("radiogroup", {
+    name: "Gains/losses chart type",
+  });
+  await selectSegmentedControlOption(gainsLossesChartTypeControl, "Table");
+  const gainsLossesTable = page.getByTestId(
+    "period-gains-losses-breakdown-table",
+  );
+  await expect(gainsLossesTable).toBeVisible();
+  const gainsLossesTopLevelRowId = await gainsLossesTable
+    .locator(".ag-center-cols-container .ag-row[row-id]:not(.ag-row-pinned)")
+    .first()
+    .getAttribute("row-id");
+  if (!gainsLossesTopLevelRowId || gainsLossesTopLevelRowId.length === 0) {
+    throw new Error(
+      "Expected at least one gains/losses top-level row to verify drill-path persistence.",
+    );
+  }
+  await selectSegmentedControlOption(gainsLossesChartTypeControl, "Waterfall");
+  await expect(
+    page.getByTestId("period-gains-losses-breakdown-chart"),
+  ).toBeVisible();
+  await page.evaluate(
+    ({ accountBookId, drillPathNodeId }) => {
+      const storageKey = `cashfolio:periodPageState:${accountBookId}`;
+      const existingState = (() => {
+        try {
+          const stored = window.sessionStorage.getItem(storageKey);
+          if (!stored) {
+            return {};
+          }
+          const parsed = JSON.parse(stored);
+          return typeof parsed === "object" && parsed !== null ? parsed : {};
+        } catch {
+          return {};
+        }
+      })();
+
+      window.sessionStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          ...existingState,
+          drillPathByGainsLosses: [drillPathNodeId],
+        }),
+      );
+    },
+    {
+      accountBookId: seeded.accountBookId,
+      drillPathNodeId: gainsLossesTopLevelRowId,
+    },
+  );
+
   await page.reload();
   await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
 
@@ -702,6 +758,33 @@ test("period page persists card state, drill state, and table expansion across r
   await expect(
     allocationChartTypeControl.getByRole("radio", { name: "Bar" }),
   ).toBeChecked();
+  await expect(
+    gainsLossesChartTypeControl.getByRole("radio", { name: "Waterfall" }),
+  ).toBeChecked();
+  await expect(
+    page.getByText("Drilled gains/losses in the selected period"),
+  ).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate((accountBookId) => {
+        const storageKey = `cashfolio:periodPageState:${accountBookId}`;
+        const stored = window.sessionStorage.getItem(storageKey);
+        if (!stored) {
+          return null;
+        }
+        try {
+          const parsed = JSON.parse(stored) as {
+            drillPathByGainsLosses?: unknown;
+          };
+          return Array.isArray(parsed.drillPathByGainsLosses)
+            ? parsed.drillPathByGainsLosses
+            : null;
+        } catch {
+          return null;
+        }
+      }, seeded.accountBookId),
+    )
+    .toEqual([gainsLossesTopLevelRowId]);
 
   await selectSegmentedControlOption(breakdownTypeControl, "Expenses");
   await expect(

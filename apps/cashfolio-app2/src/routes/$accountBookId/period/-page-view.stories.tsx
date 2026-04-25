@@ -943,3 +943,94 @@ export const BreakdownTableDoubleClickSmoke: Story = {
     await expect(args.onBreakdownAccountDoubleClick).toHaveBeenCalledTimes(1);
   },
 };
+
+export const GainsLossesToggleSmoke: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const gainsLossesChartTypeControl = await canvas.findByLabelText(
+      "Gains/losses chart type",
+    );
+    const tableOption = within(gainsLossesChartTypeControl).getByRole("radio", {
+      name: "Table",
+    });
+    await userEvent.click(tableOption);
+    await expect(tableOption).toBeChecked();
+    await expect(
+      canvas.getByTestId("period-gains-losses-breakdown-table"),
+    ).toBeInTheDocument();
+    await expect(
+      canvas.queryByTestId("period-gains-losses-breakdown-chart"),
+    ).not.toBeInTheDocument();
+
+    const waterfallOption = within(gainsLossesChartTypeControl).getByRole(
+      "radio",
+      {
+        name: "Waterfall",
+      },
+    );
+    await userEvent.click(waterfallOption);
+    await expect(waterfallOption).toBeChecked();
+    await expect(
+      canvas.getByTestId("period-gains-losses-breakdown-chart"),
+    ).toBeInTheDocument();
+  },
+};
+
+export const GainsLossesDrillSmoke: Story = {
+  args: {
+    overview: {
+      ...baseOverview,
+      gainsLossesBreakdown: {
+        hierarchy: [
+          {
+            id: "unit-type:fx",
+            label: "FX",
+            realizedGainLoss: 200,
+            unrealizedGainLoss: 80,
+            totalGainLoss: 280,
+            children: [
+              {
+                id: "unit:fx:USD",
+                label: "USD",
+                realizedGainLoss: 200,
+                unrealizedGainLoss: 80,
+                totalGainLoss: 280,
+                children: [
+                  {
+                    id: "unit-account:fx:USD:account-cash-usd-1",
+                    label: "Cash Account USD 1",
+                    realizedGainLoss: 120,
+                    unrealizedGainLoss: 40,
+                    totalGainLoss: 160,
+                    children: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const gainsLossesChart = await canvas.findByTestId(
+      "period-gains-losses-breakdown-chart",
+    );
+    await expect(
+      canvas.getByText(
+        "Top-level groups for gains/losses in the selected period",
+      ),
+    ).toBeInTheDocument();
+
+    await userEvent.dblClick(gainsLossesChart);
+    await expect(
+      canvas.getByText("Drilled gains/losses in the selected period"),
+    ).toBeInTheDocument();
+    await expect(canvas.getByText("FX")).toBeInTheDocument();
+
+    await userEvent.dblClick(gainsLossesChart);
+    await expect(canvas.getByText("USD")).toBeInTheDocument();
+  },
+};
