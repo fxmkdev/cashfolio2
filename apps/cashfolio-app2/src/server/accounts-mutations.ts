@@ -16,9 +16,9 @@ import {
   hasInactiveAncestorGroup,
 } from "./accounts-helpers";
 import {
-  assertNotSystemManagedGainLossAccount,
-  assertNotSystemManagedGainLossGroup,
-} from "./accounts-gain-loss-guards";
+  assertNoSystemManagedAccountSubtype,
+  assertNoSystemManagedGroupSubtype,
+} from "./accounts-system-managed-equity-guards";
 import type { AccountGroupInput, AccountInput } from "./accounts-types";
 import {
   accountTypeRequiresZeroBalanceForArchive,
@@ -461,7 +461,7 @@ export const createAccount = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
-    assertNotSystemManagedGainLossAccount(data);
+    assertNoSystemManagedAccountSubtype(data);
     const siblingNames = (
       await prisma.account.findMany({
         where: {
@@ -521,7 +521,7 @@ export const updateAccount = createServerFn({ method: "POST" })
       },
       select: { type: true, equityAccountSubtype: true },
     });
-    assertNotSystemManagedGainLossAccount(existing);
+    assertNoSystemManagedAccountSubtype(existing);
     if (
       data.type !== existing.type ||
       data.equityAccountSubtype !== (existing.equityAccountSubtype ?? undefined)
@@ -583,7 +583,7 @@ export const createAccountGroup = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
-    assertNotSystemManagedGainLossGroup(data);
+    assertNoSystemManagedGroupSubtype(data);
     const siblingNames = (
       await prisma.accountGroup.findMany({
         where: {
@@ -618,7 +618,7 @@ export const updateAccountGroup = createServerFn({ method: "POST" })
       },
       select: { type: true, equityAccountSubtype: true },
     });
-    assertNotSystemManagedGainLossGroup(existing);
+    assertNoSystemManagedGroupSubtype(existing);
     if (
       data.type !== existing.type ||
       data.equityAccountSubtype !== (existing.equityAccountSubtype ?? undefined)
@@ -673,7 +673,7 @@ export const deleteAccount = createServerFn({ method: "POST" })
         where: { accountId: data.id, accountBookId: data.accountBookId },
       }),
     ]);
-    assertNotSystemManagedGainLossAccount(account);
+    assertNoSystemManagedAccountSubtype(account);
     const deleteAvailability = getAccountDeleteAvailability(bookingCount > 0);
     if (!deleteAvailability.enabled) {
       throw new Error(deleteAvailability.disabledReason);
@@ -707,7 +707,7 @@ export const deleteAccountGroup = createServerFn({ method: "POST" })
         where: { parentGroupId: data.id, accountBookId: data.accountBookId },
       }),
     ]);
-    assertNotSystemManagedGainLossGroup(group);
+    assertNoSystemManagedGroupSubtype(group);
     const deleteAvailability = getGroupDeleteAvailability({
       hasChildAccounts: childAccounts > 0,
       hasChildGroups: childGroups > 0,
@@ -733,7 +733,7 @@ export const archiveAccount = createServerFn({ method: "POST" })
       },
       select: { type: true, equityAccountSubtype: true, isActive: true },
     });
-    assertNotSystemManagedGainLossAccount(account);
+    assertNoSystemManagedAccountSubtype(account);
 
     if (!account.isActive) return;
 
@@ -772,7 +772,7 @@ export const archiveAccountGroup = createServerFn({ method: "POST" })
       },
       select: { isActive: true, type: true, equityAccountSubtype: true },
     });
-    assertNotSystemManagedGainLossGroup(group);
+    assertNoSystemManagedGroupSubtype(group);
 
     if (!group.isActive) return;
 
@@ -826,7 +826,7 @@ export const unarchiveAccount = createServerFn({ method: "POST" })
         equityAccountSubtype: true,
       },
     });
-    assertNotSystemManagedGainLossAccount(account);
+    assertNoSystemManagedAccountSubtype(account);
 
     if (account.isActive) return;
 
@@ -863,7 +863,7 @@ export const unarchiveAccountGroup = createServerFn({ method: "POST" })
         equityAccountSubtype: true,
       },
     });
-    assertNotSystemManagedGainLossGroup(group);
+    assertNoSystemManagedGroupSubtype(group);
 
     if (group.isActive) return;
 

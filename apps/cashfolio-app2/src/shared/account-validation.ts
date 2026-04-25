@@ -30,6 +30,32 @@ function isAssetOrLiability(type?: AccountType): boolean {
   return type === "ASSET" || type === "LIABILITY";
 }
 
+function hasEquitySubtype(
+  subtype:
+    | AccountInput["equityAccountSubtype"]
+    | AccountGroupInput["equityAccountSubtype"],
+): boolean {
+  return subtype != null;
+}
+
+export function validateEquitySubtypeTypeCombination(
+  type?: AccountType,
+  equityAccountSubtype?: AccountInput["equityAccountSubtype"],
+): string | null {
+  if (!hasEquitySubtype(equityAccountSubtype)) return null;
+  if (type === "EQUITY") return null;
+  return "Equity subtype is only allowed for equity accounts";
+}
+
+export function validateGroupEquitySubtypeTypeCombination(
+  type?: AccountType,
+  equityAccountSubtype?: AccountGroupInput["equityAccountSubtype"],
+): string | null {
+  if (!hasEquitySubtype(equityAccountSubtype)) return null;
+  if (type === "EQUITY") return null;
+  return "Equity subtype is only allowed for equity groups";
+}
+
 export function validateAccountUnit(
   unit?: Unit,
   type?: AccountType,
@@ -116,6 +142,7 @@ export function validateAccountInput(
 ): void {
   const errors = [
     validateAccountName(data.name, siblingNames),
+    validateEquitySubtypeTypeCombination(data.type, data.equityAccountSubtype),
     validateAccountUnit(data.unit, data.type),
     validateAccountCurrency(data.currency, data.unit, data.type),
     validateAccountCryptocurrency(data.cryptocurrency, data.unit, data.type),
@@ -132,9 +159,13 @@ export function validateAccountGroupInput(
   data: AccountGroupInput,
   siblingNames?: string[],
 ): void {
-  const errors = [validateAccountGroupName(data.name, siblingNames)].filter(
-    Boolean,
-  );
+  const errors = [
+    validateAccountGroupName(data.name, siblingNames),
+    validateGroupEquitySubtypeTypeCombination(
+      data.type,
+      data.equityAccountSubtype,
+    ),
+  ].filter(Boolean);
 
   if (errors.length > 0) {
     throw new Error(errors[0]!);

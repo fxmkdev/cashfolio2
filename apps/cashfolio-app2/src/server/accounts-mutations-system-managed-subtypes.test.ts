@@ -82,7 +82,7 @@ import {
   updateAccountGroup,
 } from "./accounts-mutations";
 
-describe("accounts-mutations gain/loss guards", () => {
+describe("accounts-mutations system-managed subtype guards", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     prisma.account.findMany.mockResolvedValue([]);
@@ -105,6 +105,19 @@ describe("accounts-mutations gain/loss guards", () => {
     ).rejects.toThrow("Gain/Loss accounts are system-managed.");
   });
 
+  it("rejects creating opening balances accounts", async () => {
+    await expect(
+      createAccount({
+        data: {
+          accountBookId: "book-1",
+          name: "Opening Balances",
+          type: AccountType.EQUITY,
+          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+        },
+      }),
+    ).rejects.toThrow("Opening Balances accounts are system-managed.");
+  });
+
   it("rejects updating gain/loss accounts", async () => {
     prisma.account.findUniqueOrThrow.mockResolvedValueOnce({
       type: AccountType.EQUITY,
@@ -122,6 +135,27 @@ describe("accounts-mutations gain/loss guards", () => {
         },
       }),
     ).rejects.toThrow("Gain/Loss accounts are system-managed.");
+    expect(prisma.account.findMany).not.toHaveBeenCalled();
+    expect(validateAccountInput).not.toHaveBeenCalled();
+  });
+
+  it("rejects updating opening balances accounts", async () => {
+    prisma.account.findUniqueOrThrow.mockResolvedValueOnce({
+      type: AccountType.EQUITY,
+      equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+    });
+
+    await expect(
+      updateAccount({
+        data: {
+          id: "account-1",
+          accountBookId: "book-1",
+          name: "Opening Balances",
+          type: AccountType.EQUITY,
+          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+        },
+      }),
+    ).rejects.toThrow("Opening Balances accounts are system-managed.");
     expect(prisma.account.findMany).not.toHaveBeenCalled();
     expect(validateAccountInput).not.toHaveBeenCalled();
   });
@@ -149,6 +183,29 @@ describe("accounts-mutations gain/loss guards", () => {
     ).rejects.toThrow("Gain/Loss accounts are system-managed.");
   });
 
+  it("rejects deleting and archiving opening balances accounts", async () => {
+    prisma.account.findUniqueOrThrow.mockResolvedValue({
+      type: AccountType.EQUITY,
+      equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+      isActive: true,
+      groupId: null,
+    });
+
+    await expect(
+      deleteAccount({ data: { id: "account-1", accountBookId: "book-1" } }),
+    ).rejects.toThrow("Opening Balances accounts are system-managed.");
+
+    await expect(
+      archiveAccount({ data: { id: "account-1", accountBookId: "book-1" } }),
+    ).rejects.toThrow("Opening Balances accounts are system-managed.");
+
+    await expect(
+      unarchiveAccount({
+        data: { id: "account-1", accountBookId: "book-1" },
+      }),
+    ).rejects.toThrow("Opening Balances accounts are system-managed.");
+  });
+
   it("rejects creating gain/loss groups", async () => {
     await expect(
       createAccountGroup({
@@ -160,6 +217,43 @@ describe("accounts-mutations gain/loss guards", () => {
         },
       }),
     ).rejects.toThrow("Gain/Loss groups are system-managed.");
+  });
+
+  it("rejects creating opening balances groups", async () => {
+    await expect(
+      createAccountGroup({
+        data: {
+          accountBookId: "book-1",
+          name: "Opening Balances Group",
+          type: AccountType.EQUITY,
+          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+        },
+      }),
+    ).rejects.toThrow("Opening Balances groups are system-managed.");
+  });
+
+  it("rejects system-managed subtype even when type is not equity", async () => {
+    await expect(
+      createAccount({
+        data: {
+          accountBookId: "book-1",
+          name: "Invalid subtype account",
+          type: AccountType.ASSET,
+          equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+        },
+      }),
+    ).rejects.toThrow("Gain/Loss accounts are system-managed.");
+
+    await expect(
+      createAccountGroup({
+        data: {
+          accountBookId: "book-1",
+          name: "Invalid subtype group",
+          type: AccountType.LIABILITY,
+          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+        },
+      }),
+    ).rejects.toThrow("Opening Balances groups are system-managed.");
   });
 
   it("rejects updating gain/loss groups", async () => {
@@ -179,6 +273,27 @@ describe("accounts-mutations gain/loss guards", () => {
         },
       }),
     ).rejects.toThrow("Gain/Loss groups are system-managed.");
+    expect(prisma.accountGroup.findMany).not.toHaveBeenCalled();
+    expect(validateAccountGroupInput).not.toHaveBeenCalled();
+  });
+
+  it("rejects updating opening balances groups", async () => {
+    prisma.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
+      type: AccountType.EQUITY,
+      equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+    });
+
+    await expect(
+      updateAccountGroup({
+        data: {
+          id: "group-1",
+          accountBookId: "book-1",
+          name: "Opening Balances",
+          type: AccountType.EQUITY,
+          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+        },
+      }),
+    ).rejects.toThrow("Opening Balances groups are system-managed.");
     expect(prisma.accountGroup.findMany).not.toHaveBeenCalled();
     expect(validateAccountGroupInput).not.toHaveBeenCalled();
   });
@@ -206,5 +321,30 @@ describe("accounts-mutations gain/loss guards", () => {
         data: { id: "group-1", accountBookId: "book-1" },
       }),
     ).rejects.toThrow("Gain/Loss groups are system-managed.");
+  });
+
+  it("rejects deleting and archiving opening balances groups", async () => {
+    prisma.accountGroup.findUniqueOrThrow.mockResolvedValue({
+      type: AccountType.EQUITY,
+      equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+      isActive: true,
+      parentGroupId: null,
+    });
+
+    await expect(
+      deleteAccountGroup({ data: { id: "group-1", accountBookId: "book-1" } }),
+    ).rejects.toThrow("Opening Balances groups are system-managed.");
+
+    await expect(
+      archiveAccountGroup({
+        data: { id: "group-1", accountBookId: "book-1" },
+      }),
+    ).rejects.toThrow("Opening Balances groups are system-managed.");
+
+    await expect(
+      unarchiveAccountGroup({
+        data: { id: "group-1", accountBookId: "book-1" },
+      }),
+    ).rejects.toThrow("Opening Balances groups are system-managed.");
   });
 });

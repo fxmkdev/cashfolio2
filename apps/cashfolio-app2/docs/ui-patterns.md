@@ -236,7 +236,7 @@ submit UX and prevent duplicate requests.
 ## Type Descriptor Pattern
 
 Account/group types are represented in form selects as composite strings:
-`"ASSET" | "LIABILITY" | "EQUITY-INCOME" | "EQUITY-EXPENSE" | "EQUITY-OPENING_BALANCES"`
+`"ASSET" | "LIABILITY" | "EQUITY-INCOME" | "EQUITY-EXPENSE"`
 
 `EQUITY-GAIN_LOSS` and `EQUITY-OPENING_BALANCES` are system-managed and are not
 creation tabs.

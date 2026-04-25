@@ -1,9 +1,15 @@
 import { describe, expect, test } from "vitest";
-import { AccountType, Unit } from "../.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../.prisma-client/enums";
 import {
   validateAccountGroupInput,
   validateAccountGroupParentGroupId,
   validateAccountInput,
+  validateEquitySubtypeTypeCombination,
+  validateGroupEquitySubtypeTypeCombination,
   validateAccountTradeCurrency,
   validateAccountUnit,
 } from "./account-validation";
@@ -64,6 +70,21 @@ describe("validateAccountInput", () => {
 
     expect(() => validateAccountInput(valid)).not.toThrow();
   });
+
+  test("rejects non-equity account types that include an equity subtype", () => {
+    const invalid: AccountInput = {
+      accountBookId: "book-1",
+      name: "Invalid",
+      type: AccountType.ASSET,
+      equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+      unit: Unit.CURRENCY,
+      currency: "CHF",
+    };
+
+    expect(() => validateAccountInput(invalid)).toThrowError(
+      "Equity subtype is only allowed for equity accounts",
+    );
+  });
 });
 
 describe("validateAccountGroupParentGroupId", () => {
@@ -97,5 +118,48 @@ describe("validateAccountGroupInput", () => {
         ["assets"],
       ),
     ).toThrowError("A group with this name already exists");
+  });
+
+  test("rejects non-equity groups that include an equity subtype", () => {
+    expect(() =>
+      validateAccountGroupInput({
+        accountBookId: "book-1",
+        name: "Invalid group",
+        type: AccountType.ASSET,
+        equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+      }),
+    ).toThrowError("Equity subtype is only allowed for equity groups");
+  });
+});
+
+describe("equity subtype type-combination validators", () => {
+  test("allows subtype for equity accounts and groups", () => {
+    expect(
+      validateEquitySubtypeTypeCombination(
+        AccountType.EQUITY,
+        EquityAccountSubtype.INCOME,
+      ),
+    ).toBeNull();
+    expect(
+      validateGroupEquitySubtypeTypeCombination(
+        AccountType.EQUITY,
+        EquityAccountSubtype.EXPENSE,
+      ),
+    ).toBeNull();
+  });
+
+  test("rejects subtype on non-equity accounts and groups", () => {
+    expect(
+      validateEquitySubtypeTypeCombination(
+        AccountType.LIABILITY,
+        EquityAccountSubtype.GAIN_LOSS,
+      ),
+    ).toBe("Equity subtype is only allowed for equity accounts");
+    expect(
+      validateGroupEquitySubtypeTypeCombination(
+        AccountType.ASSET,
+        EquityAccountSubtype.OPENING_BALANCES,
+      ),
+    ).toBe("Equity subtype is only allowed for equity groups");
   });
 });
