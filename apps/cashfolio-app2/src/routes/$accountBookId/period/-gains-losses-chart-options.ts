@@ -26,8 +26,6 @@ function isWaterfallTotalDatum(datum: unknown): datum is WaterfallTotalDatum {
 export function useGainsLossesWaterfallChartOptions(args: {
   chartData: GainsLossesWaterfallDatum[];
   totals: GainsLossesWaterfallTotal[];
-  totalRealizedGainLoss: number;
-  totalUnrealizedGainLoss: number;
   totalGainLoss: number;
   totalAxisLabel: string;
   colors: DashboardChartThemeColors;
@@ -42,8 +40,6 @@ export function useGainsLossesWaterfallChartOptions(args: {
   const {
     chartData,
     totals,
-    totalRealizedGainLoss,
-    totalUnrealizedGainLoss,
     totalGainLoss,
     totalAxisLabel,
     colors,
@@ -67,7 +63,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
       type: "waterfall",
       xKey: "label",
       yKey: "totalGainLoss",
-      yName: "Total",
+      yName: "Gain / Loss",
       widthRatio: 0.72,
       totals,
       item: {
@@ -107,14 +103,6 @@ export function useGainsLossesWaterfallChartOptions(args: {
               heading: totalAxisLabel,
               data: [
                 {
-                  label: "Realised",
-                  value: currencyFormatter.format(totalRealizedGainLoss),
-                },
-                {
-                  label: "Unrealised",
-                  value: currencyFormatter.format(totalUnrealizedGainLoss),
-                },
-                {
                   label: "Total",
                   value: currencyFormatter.format(totalGainLoss),
                 },
@@ -126,14 +114,6 @@ export function useGainsLossesWaterfallChartOptions(args: {
           return {
             heading: node.label,
             data: [
-              {
-                label: "Realised",
-                value: currencyFormatter.format(node.realizedGainLoss),
-              },
-              {
-                label: "Unrealised",
-                value: currencyFormatter.format(node.unrealizedGainLoss),
-              },
               {
                 label: "Total",
                 value: currencyFormatter.format(node.totalGainLoss),
@@ -157,8 +137,6 @@ export function useGainsLossesWaterfallChartOptions(args: {
       onNodeDoubleClick,
       totalAxisLabel,
       totalGainLoss,
-      totalRealizedGainLoss,
-      totalUnrealizedGainLoss,
       totals,
       waterfallPalette.negative,
       waterfallPalette.positive,

@@ -60,8 +60,6 @@ describe("buildGainsLossesWaterfallModel", () => {
         axisLabel: "Total",
       },
     ]);
-    expect(model.totalRealizedGainLoss).toBe(6);
-    expect(model.totalUnrealizedGainLoss).toBe(-1);
     expect(model.totalGainLoss).toBe(5);
   });
 
@@ -87,9 +85,30 @@ describe("buildGainsLossesWaterfallModel", () => {
       ] satisfies GainsLossesBreakdownNode[],
     });
 
-    expect(model.totalRealizedGainLoss).toBe(-6);
-    expect(model.totalUnrealizedGainLoss).toBe(-1);
     expect(model.totalGainLoss).toBe(-7);
     expect(model.data.map((datum) => datum.totalGainLoss)).toEqual([-5, -2]);
+  });
+
+  test("falls back to finite totals when split values are missing or invalid", () => {
+    const model = buildGainsLossesWaterfallModel({
+      nodes: [
+        {
+          id: "unit-type:fx",
+          label: "FX",
+          gainLoss: "12.5",
+          children: [],
+        },
+        {
+          id: "unit-type:security",
+          label: "Security",
+          realizedGainLoss: "oops",
+          unrealizedGainLoss: undefined,
+          children: [],
+        },
+      ] as unknown as GainsLossesBreakdownNode[],
+    });
+
+    expect(model.data.map((datum) => datum.totalGainLoss)).toEqual([12.5, 0]);
+    expect(model.totalGainLoss).toBe(12.5);
   });
 });

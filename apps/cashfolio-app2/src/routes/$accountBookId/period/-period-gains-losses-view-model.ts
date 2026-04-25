@@ -98,8 +98,6 @@ export function usePeriodGainsLossesViewModel(args: {
   const gainsLossesChartOptions = useGainsLossesWaterfallChartOptions({
     chartData: waterfallModel.data,
     totals: waterfallModel.totals,
-    totalRealizedGainLoss: waterfallModel.totalRealizedGainLoss,
-    totalUnrealizedGainLoss: waterfallModel.totalUnrealizedGainLoss,
     totalGainLoss: waterfallModel.totalGainLoss,
     totalAxisLabel: waterfallModel.totalAxisLabel,
     colors,
