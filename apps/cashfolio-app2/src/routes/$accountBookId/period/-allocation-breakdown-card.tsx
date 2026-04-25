@@ -92,7 +92,7 @@ export function PeriodAllocationBreakdownCard({
       onDrillPathChange={onDrillPathChange}
       onChartContainerDoubleClick={onChartContainerDoubleClick}
       showDrillControls={!isTableView}
-      drillHint="Double-click a group to drill down, or an account to open ledger."
+      drillHint="Double-click a group to drill down, or an allocation account to open ledger."
       headerControls={
         <Flex gap="md" wrap="wrap" justify="flex-end">
           <ChartTypeSegmentedControl
