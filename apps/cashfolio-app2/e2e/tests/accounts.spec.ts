@@ -117,6 +117,7 @@ type PeriodPageSessionState = {
   selectedChartType: "donut" | "bar" | "table";
   selectedAllocationBreakdown: "asset" | "liability";
   selectedAllocationChartType: "donut" | "bar" | "table";
+  selectedGainsLossesChartType: "waterfall" | "table";
   drillPathByBreakdown: {
     expense: string[];
     income: string[];
@@ -125,6 +126,7 @@ type PeriodPageSessionState = {
     asset: string[];
     liability: string[];
   };
+  drillPathByGainsLosses: string[];
 };
 
 function createPeriodPageSessionState(
@@ -137,6 +139,8 @@ function createPeriodPageSessionState(
       overrides.selectedAllocationBreakdown ?? "asset",
     selectedAllocationChartType:
       overrides.selectedAllocationChartType ?? "donut",
+    selectedGainsLossesChartType:
+      overrides.selectedGainsLossesChartType ?? "waterfall",
     drillPathByBreakdown: {
       expense: overrides.drillPathByBreakdown?.expense ?? [],
       income: overrides.drillPathByBreakdown?.income ?? [],
@@ -145,6 +149,7 @@ function createPeriodPageSessionState(
       asset: overrides.drillPathByAllocationBreakdown?.asset ?? [],
       liability: overrides.drillPathByAllocationBreakdown?.liability ?? [],
     },
+    drillPathByGainsLosses: overrides.drillPathByGainsLosses ?? [],
   };
 }
 
@@ -630,14 +635,14 @@ test("period breakdown account leaf drilldown opens ledger with period filter", 
 test("period page persists card state, drill state, and table expansion across refresh", async ({
   page,
 }) => {
-  const period = "2026-05";
+  const period = "2026-04";
 
   await seedThreeBookingSplitTransaction({
     accountBookId: seeded.accountBookId,
     description: "E2E Period Persistence Seed",
     currentAccountId: seeded.cashAccount.id,
     debitAccountIds: [seeded.expenseAccount.id, seeded.savingsAccount.id],
-    date: "2026-05-07T00:00:00.000Z",
+    date: "2026-04-07T00:00:00.000Z",
   });
 
   await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
@@ -687,6 +692,18 @@ test("period page persists card state, drill state, and table expansion across r
     allocationChartTypeControl.getByRole("radio", { name: "Bar" }),
   ).toBeChecked();
 
+  const gainsLossesChartTypeControl = page.getByRole("radiogroup", {
+    name: "Gains/losses chart type",
+  });
+  await selectSegmentedControlOption(gainsLossesChartTypeControl, "Table");
+  await expect(
+    gainsLossesChartTypeControl.getByRole("radio", { name: "Table" }),
+  ).toBeChecked();
+  await selectSegmentedControlOption(gainsLossesChartTypeControl, "Waterfall");
+  await expect(
+    gainsLossesChartTypeControl.getByRole("radio", { name: "Waterfall" }),
+  ).toBeChecked();
+
   await page.reload();
   await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
 
@@ -701,6 +718,9 @@ test("period page persists card state, drill state, and table expansion across r
   ).toBeChecked();
   await expect(
     allocationChartTypeControl.getByRole("radio", { name: "Bar" }),
+  ).toBeChecked();
+  await expect(
+    gainsLossesChartTypeControl.getByRole("radio", { name: "Waterfall" }),
   ).toBeChecked();
 
   await selectSegmentedControlOption(breakdownTypeControl, "Expenses");

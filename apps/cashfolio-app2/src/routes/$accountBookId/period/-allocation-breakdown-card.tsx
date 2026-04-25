@@ -2,7 +2,10 @@ import { Flex, SegmentedControl } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { PeriodBreakdownChartOptions } from "./-breakdown-chart-options";
 import { BreakdownTable } from "./-breakdown-table";
-import { ChartTypeSegmentedControl } from "./-chart-type-segmented-control";
+import {
+  ChartTypeSegmentedControl,
+  DEFAULT_BREAKDOWN_CHART_TYPE_OPTIONS,
+} from "./-chart-type-segmented-control";
 import type {
   BreakdownBreadcrumb,
   BreakdownHierarchyNode,
@@ -88,6 +91,7 @@ export function PeriodAllocationBreakdownCard({
           <ChartTypeSegmentedControl
             ariaLabel="Allocation chart type"
             value={selectedChartType}
+            options={DEFAULT_BREAKDOWN_CHART_TYPE_OPTIONS}
             onChange={onSelectedChartTypeChange}
           />
           <SegmentedControl
