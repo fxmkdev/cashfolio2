@@ -32,7 +32,7 @@ import {
   type SplitModalInitialValues,
   type TransactionMutationValues,
 } from "./-page-view";
-import type { LedgerExplicitPeriodSelection, LedgerRow } from "./-page-types";
+import type { LedgerRow } from "./-page-types";
 
 type LedgerPageLoaderData = Awaited<ReturnType<typeof loadLedgerPageData>>;
 
@@ -160,7 +160,6 @@ export function useLedgerPageController(args: {
   loaderData: LedgerPageLoaderData;
   accountBookId: string;
   hasPeriodFilter: boolean;
-  selectedPeriod: LedgerExplicitPeriodSelection | null;
   pendingScrollRef: { current: string | undefined };
   invalidate: () => void;
 }): Omit<
@@ -358,37 +357,21 @@ export function useLedgerPageController(args: {
     [],
   );
 
-  const rows = useMemo(() => {
-    const accountBookStartDate = new Date(
-      args.loaderData.periodBounds.minBookingDate,
-    );
-    const selectedPeriod = args.selectedPeriod;
-    const isFirstAccountBookPeriod =
-      selectedPeriod == null
-        ? false
-        : selectedPeriod.granularity === "month"
-          ? selectedPeriod.year === accountBookStartDate.getUTCFullYear() &&
-            selectedPeriod.month === accountBookStartDate.getUTCMonth()
-          : selectedPeriod.year === accountBookStartDate.getUTCFullYear();
-
-    return buildLedgerRows(account, bookings, {
-      hasPeriodFilter: args.hasPeriodFilter,
-      balanceBeforePeriodRaw: args.loaderData.balanceBeforePeriod,
-      hasBookingsBeforePeriod: args.loaderData.hasBookingsBeforePeriod,
-      openingBalanceBookingBeforePeriod:
-        args.loaderData.openingBalanceBookingBeforePeriod,
-      isFirstAccountBookPeriod,
-    });
-  }, [
-    account,
-    args.hasPeriodFilter,
-    args.loaderData.balanceBeforePeriod,
-    args.loaderData.hasBookingsBeforePeriod,
-    args.loaderData.openingBalanceBookingBeforePeriod,
-    args.loaderData.periodBounds.minBookingDate,
-    args.selectedPeriod,
-    bookings,
-  ]);
+  const rows = useMemo(
+    () =>
+      buildLedgerRows(account, bookings, {
+        hasPeriodFilter: args.hasPeriodFilter,
+        balanceBeforePeriodRaw: args.loaderData.balanceBeforePeriod,
+        hasBookingsBeforePeriod: args.loaderData.hasBookingsBeforePeriod,
+      }),
+    [
+      account,
+      args.hasPeriodFilter,
+      args.loaderData.balanceBeforePeriod,
+      args.loaderData.hasBookingsBeforePeriod,
+      bookings,
+    ],
+  );
 
   const columnDefs = useLedgerColumnDefs({
     accountBookId: args.accountBookId,

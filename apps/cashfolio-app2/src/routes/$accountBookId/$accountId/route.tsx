@@ -25,6 +25,7 @@ import {
   type LedgerRow,
 } from "./-page-types";
 import { LedgerViewSegmentedControl } from "./-view-segmented-control";
+import { resolvePeriodFilterMinBookingDate } from "./-period-filter-min-booking-date";
 
 const LedgerPageView = lazy(async () => {
   const module = await import("./-page-view");
@@ -68,12 +69,32 @@ export function LedgerPageContent() {
     () => new Date(loaderData.periodBounds.maxDate),
     [loaderData.periodBounds.maxDate],
   );
-  const minBookingDate = useMemo(
+  const accountBookMinBookingDate = useMemo(
     () =>
       loaderData.periodBounds.minBookingDate
         ? new Date(loaderData.periodBounds.minBookingDate)
         : null,
     [loaderData.periodBounds.minBookingDate],
+  );
+  const firstAccountBookingDate = useMemo(
+    () =>
+      loaderData.firstBookingDate
+        ? new Date(loaderData.firstBookingDate)
+        : null,
+    [loaderData.firstBookingDate],
+  );
+  const minBookingDate = useMemo(
+    () =>
+      resolvePeriodFilterMinBookingDate({
+        accountType: loaderData.account.type,
+        accountBookMinBookingDate,
+        firstAccountBookingDate,
+      }),
+    [
+      accountBookMinBookingDate,
+      firstAccountBookingDate,
+      loaderData.account.type,
+    ],
   );
   const rawSelectedPeriod = useMemo(
     () => (isPeriodFilterAvailable ? parseLedgerExplicitPeriod(period) : null),
@@ -144,7 +165,6 @@ export function LedgerPageContent() {
     loaderData,
     accountBookId,
     hasPeriodFilter,
-    selectedPeriod,
     pendingScrollRef,
     invalidate: () => {
       router.invalidate();

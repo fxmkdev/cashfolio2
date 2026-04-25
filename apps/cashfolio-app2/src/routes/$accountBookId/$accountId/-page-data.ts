@@ -81,8 +81,6 @@ export function buildLedgerRows(
     hasPeriodFilter?: boolean;
     balanceBeforePeriodRaw?: number;
     hasBookingsBeforePeriod?: boolean;
-    openingBalanceBookingBeforePeriod?: LedgerBookings[number] | null;
-    isFirstAccountBookPeriod?: boolean;
   },
 ): LedgerRow[] {
   const negate = shouldNegate(account.type, account.equityAccountSubtype);
@@ -90,32 +88,14 @@ export function buildLedgerRows(
   const hasPeriodFilter = options?.hasPeriodFilter ?? false;
   const balanceBeforePeriodRaw = Number(options?.balanceBeforePeriodRaw ?? 0);
   const hasBookingsBeforePeriod = options?.hasBookingsBeforePeriod ?? false;
-  const openingBalanceBookingBeforePeriod =
-    options?.openingBalanceBookingBeforePeriod ?? null;
-  const isFirstAccountBookPeriod = options?.isFirstAccountBookPeriod ?? false;
-  const shouldUseOpeningBalanceBooking =
-    hasPeriodFilter &&
-    !isEquity &&
-    isFirstAccountBookPeriod &&
-    openingBalanceBookingBeforePeriod != null;
   const baseBalanceBeforePeriod = negate
     ? -balanceBeforePeriodRaw
     : balanceBeforePeriodRaw;
   let balance = hasPeriodFilter && !isEquity ? baseBalanceBeforePeriod : 0;
-  if (shouldUseOpeningBalanceBooking && openingBalanceBookingBeforePeriod) {
-    const openingBalanceValue = negate
-      ? -Number(openingBalanceBookingBeforePeriod.value)
-      : Number(openingBalanceBookingBeforePeriod.value);
-    balance -= openingBalanceValue;
-  }
-  const bookingsWithOpeningBalance =
-    shouldUseOpeningBalanceBooking && openingBalanceBookingBeforePeriod
-      ? ([openingBalanceBookingBeforePeriod, ...bookings] as LedgerBookings)
-      : bookings;
   let equityReferenceBalance = 0;
   let equityReferenceBalanceHasGap = false;
 
-  const rows = bookingsWithOpeningBalance
+  const rows = bookings
     .map((booking) => {
       const rawValue = Number(booking.value);
       const value = negate ? -rawValue : rawValue;
@@ -186,10 +166,7 @@ export function buildLedgerRows(
     .reverse();
 
   const shouldAppendCarryOverRow =
-    hasPeriodFilter &&
-    !isEquity &&
-    !shouldUseOpeningBalanceBooking &&
-    hasBookingsBeforePeriod;
+    hasPeriodFilter && !isEquity && hasBookingsBeforePeriod;
 
   if (!shouldAppendCarryOverRow) {
     return rows;

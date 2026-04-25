@@ -603,18 +603,7 @@ describe("buildLedgerRows", () => {
     ]);
   });
 
-  test("shows opening-balance booking instead of a virtual carry-over in first account-book period", () => {
-    const openingBalanceBooking = {
-      ...createLedgerBookings([
-        {
-          date: localDate(2025, 11, 31, 9),
-          value: 200,
-          isOpeningBalancesTransaction: true,
-        },
-      ])[0],
-      id: "opening-booking",
-      transactionId: "opening-transaction",
-    };
+  test("keeps showing carry-over in filtered rows when prior opening-balance bookings exist", () => {
     const rows = buildLedgerRows(
       createLedgerAccount(AccountType.ASSET),
       createLedgerBookings([
@@ -631,8 +620,6 @@ describe("buildLedgerRows", () => {
         hasPeriodFilter: true,
         balanceBeforePeriodRaw: 200,
         hasBookingsBeforePeriod: true,
-        openingBalanceBookingBeforePeriod: openingBalanceBooking,
-        isFirstAccountBookPeriod: true,
       },
     );
 
@@ -646,12 +633,14 @@ describe("buildLedgerRows", () => {
         balance: 150,
       }),
       expect.objectContaining({
-        id: "opening-booking",
-        transactionId: "opening-transaction",
-        date: "31.12.2025",
-        isOpeningBalancesTransaction: true,
+        date: "",
+        description: "Balance carried forward",
+        debit: null,
+        credit: null,
+        referenceDebit: null,
+        referenceCredit: null,
         balance: 200,
-        isVirtualCarryOver: false,
+        isVirtualCarryOver: true,
       }),
     ]);
   });

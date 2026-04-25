@@ -71,9 +71,23 @@ export const getLedgerData = createServerFn({ method: "GET" })
     const periodRange = data.period
       ? getExplicitPeriodDateRange(data.period)
       : null;
+    const firstBookingPromise = prisma.booking.findFirst({
+      where: {
+        accountId: data.accountId,
+        accountBookId: data.accountBookId,
+      },
+      orderBy: [
+        { date: "asc" },
+        { transaction: { createdAt: "asc" } },
+        { id: "asc" },
+      ],
+      select: {
+        date: true,
+      },
+    });
     const carryOverMetadataPromise = periodRange
-      ? Promise.all([
-          prisma.booking.aggregate({
+      ? prisma.booking
+          .aggregate({
             where: {
               accountId: data.accountId,
               accountBookId: data.accountBookId,
@@ -81,131 +95,80 @@ export const getLedgerData = createServerFn({ method: "GET" })
             },
             _sum: { value: true },
             _count: { _all: true },
-          }),
-          prisma.booking.findFirst({
-            where: {
-              accountId: data.accountId,
-              accountBookId: data.accountBookId,
-              date: { lt: periodRange.from },
-              transaction: {
-                bookings: {
-                  some: {
-                    account: {
-                      type: AccountType.EQUITY,
-                      equityAccountSubtype:
-                        EquityAccountSubtype.OPENING_BALANCES,
-                    },
+          })
+          .then((aggregateResult) => ({
+            balanceBeforePeriod: Number(aggregateResult._sum.value ?? 0),
+            hasBookingsBeforePeriod: aggregateResult._count._all > 0,
+          }))
+      : Promise.resolve({
+          balanceBeforePeriod: 0,
+          hasBookingsBeforePeriod: false,
+        });
+
+    const [bookings, referenceCurrency, carryOverMetadata, firstBooking] =
+      await Promise.all([
+        prisma.booking.findMany({
+          where: {
+            accountId: data.accountId,
+            accountBookId: data.accountBookId,
+            ...(periodRange
+              ? {
+                  date: {
+                    gte: periodRange.from,
+                    lt: periodRange.toExclusive,
                   },
-                },
-              },
-            },
-            orderBy: [
-              { date: "asc" },
-              { transaction: { createdAt: "asc" } },
-              { id: "asc" },
-            ],
-            select: {
-              id: true,
-              date: true,
-              description: true,
-              value: true,
-              unit: true,
-              currency: true,
-              cryptocurrency: true,
-              symbol: true,
-              tradeCurrency: true,
-              transactionId: true,
-              transaction: {
-                select: {
-                  description: true,
-                  bookings: {
-                    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-                    select: {
-                      account: {
-                        select: {
-                          id: true,
-                          name: true,
-                          type: true,
-                          equityAccountSubtype: true,
-                        },
+                }
+              : {}),
+          },
+          orderBy: [
+            { date: "asc" },
+            { transaction: { createdAt: "asc" } },
+            { id: "asc" },
+          ],
+          select: {
+            id: true,
+            date: true,
+            description: true,
+            value: true,
+            unit: true,
+            currency: true,
+            cryptocurrency: true,
+            symbol: true,
+            tradeCurrency: true,
+            transactionId: true,
+            transaction: {
+              select: {
+                description: true,
+                bookings: {
+                  orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+                  select: {
+                    account: {
+                      select: {
+                        id: true,
+                        name: true,
+                        type: true,
+                        equityAccountSubtype: true,
                       },
                     },
                   },
                 },
               },
             },
-          }),
-        ]).then(([aggregateResult, openingBalanceBookingBeforePeriod]) => ({
-          balanceBeforePeriod: Number(aggregateResult._sum.value ?? 0),
-          hasBookingsBeforePeriod: aggregateResult._count._all > 0,
-          openingBalanceBookingBeforePeriod,
-        }))
-      : Promise.resolve({
-          balanceBeforePeriod: 0,
-          hasBookingsBeforePeriod: false,
-          openingBalanceBookingBeforePeriod: null,
-        });
-
-    const [bookings, referenceCurrency, carryOverMetadata] = await Promise.all([
-      prisma.booking.findMany({
-        where: {
-          accountId: data.accountId,
-          accountBookId: data.accountBookId,
-          ...(periodRange
-            ? {
-                date: {
-                  gte: periodRange.from,
-                  lt: periodRange.toExclusive,
-                },
-              }
-            : {}),
-        },
-        orderBy: [
-          { date: "asc" },
-          { transaction: { createdAt: "asc" } },
-          { id: "asc" },
-        ],
-        select: {
-          id: true,
-          date: true,
-          description: true,
-          value: true,
-          unit: true,
-          currency: true,
-          cryptocurrency: true,
-          symbol: true,
-          tradeCurrency: true,
-          transactionId: true,
-          transaction: {
-            select: {
-              description: true,
-              bookings: {
-                orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-                select: {
-                  account: {
-                    select: {
-                      id: true,
-                      name: true,
-                      type: true,
-                      equityAccountSubtype: true,
-                    },
-                  },
-                },
-              },
-            },
           },
-        },
-      }),
-      data.includeReferenceValues
-        ? prisma.accountBook
-            .findUniqueOrThrow({
-              where: { id: data.accountBookId },
-              select: { referenceCurrency: true },
-            })
-            .then((accountBook) => accountBook.referenceCurrency.toUpperCase())
-        : Promise.resolve<string | null>(null),
-      carryOverMetadataPromise,
-    ]);
+        }),
+        data.includeReferenceValues
+          ? prisma.accountBook
+              .findUniqueOrThrow({
+                where: { id: data.accountBookId },
+                select: { referenceCurrency: true },
+              })
+              .then((accountBook) =>
+                accountBook.referenceCurrency.toUpperCase(),
+              )
+          : Promise.resolve<string | null>(null),
+        carryOverMetadataPromise,
+        firstBookingPromise,
+      ]);
 
     let convertedValuesInReferenceCurrency: Array<number | null> | null = null;
     if (data.includeReferenceValues && referenceCurrency) {
@@ -273,15 +236,9 @@ export const getLedgerData = createServerFn({ method: "GET" })
           convertedValuesInReferenceCurrency?.[index] ?? null,
         ),
       ),
+      firstBookingDate: firstBooking?.date.toISOString() ?? null,
       balanceBeforePeriod: carryOverMetadata.balanceBeforePeriod,
       hasBookingsBeforePeriod: carryOverMetadata.hasBookingsBeforePeriod,
-      openingBalanceBookingBeforePeriod:
-        carryOverMetadata.openingBalanceBookingBeforePeriod == null
-          ? null
-          : mapLedgerBooking(
-              carryOverMetadata.openingBalanceBookingBeforePeriod,
-              null,
-            ),
     };
   });
 

@@ -55,10 +55,9 @@ export async function loadLedgerPageData(args: {
     account,
     bookings: ledgerData.bookings,
     referenceCurrency: ledgerData.referenceCurrency,
+    firstBookingDate: ledgerData.firstBookingDate,
     balanceBeforePeriod: ledgerData.balanceBeforePeriod,
     hasBookingsBeforePeriod: ledgerData.hasBookingsBeforePeriod,
-    openingBalanceBookingBeforePeriod:
-      ledgerData.openingBalanceBookingBeforePeriod,
     accounts,
     periodBounds,
   };
