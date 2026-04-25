@@ -2,52 +2,46 @@ import { describe, expect, it } from "vitest";
 import { buildContributionWaterfallModel } from "./-contribution-chart-card";
 
 describe("buildContributionWaterfallModel", () => {
-  it("builds realized/unrealized waterfall data in the expected order", () => {
+  it("builds single gains/losses waterfall data in the expected order", () => {
     const model = buildContributionWaterfallModel({
       stats: {
         income: 100,
         expenses: 40,
-        realizedGainLoss: 7,
-        unrealizedGainLoss: 3,
+        gainsLosses: 10,
       },
     });
 
     expect(model.data).toEqual([
       { label: "Income", amount: 100 },
       { label: "Expenses", amount: -40 },
-      { label: "Realised Gain", amount: 7 },
-      { label: "Unrealised Gain", amount: 3 },
+      { label: "Gains / Losses", amount: 10 },
     ]);
   });
 
-  it("computes savings, gains/losses subtotal, and total return amounts", () => {
+  it("computes savings and total return amounts", () => {
     const model = buildContributionWaterfallModel({
       stats: {
         income: 200,
         expenses: 140,
-        realizedGainLoss: -30,
-        unrealizedGainLoss: 10,
+        gainsLosses: -20,
       },
     });
 
     expect(model.amountByLabel).toMatchObject({
       Income: 200,
       Expenses: -140,
-      "Realised Loss": -30,
-      "Unrealised Gain": 10,
+      "Gains / Losses": -20,
       Savings: 60,
-      "Loss (total)": -20,
       "Total Return": 40,
     });
   });
 
-  it("defines both subtotals and final total at the configured positions", () => {
+  it("defines savings subtotal and final total at the configured positions", () => {
     const model = buildContributionWaterfallModel({
       stats: {
         income: 1,
         expenses: 1,
-        realizedGainLoss: 0,
-        unrealizedGainLoss: 0,
+        gainsLosses: 0,
       },
     });
 
@@ -58,13 +52,8 @@ describe("buildContributionWaterfallModel", () => {
         axisLabel: "Savings",
       },
       {
-        totalType: "subtotal",
-        index: 3,
-        axisLabel: "Gains (total)",
-      },
-      {
         totalType: "total",
-        index: 3,
+        index: 2,
         axisLabel: "Total Return",
       },
     ]);

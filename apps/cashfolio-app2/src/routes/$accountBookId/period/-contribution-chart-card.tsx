@@ -27,8 +27,7 @@ type WaterfallTotalDatum = {
 export type ContributionChartStats = {
   income: number;
   expenses: number;
-  realizedGainLoss: number;
-  unrealizedGainLoss: number;
+  gainsLosses: number;
 };
 
 export type ContributionWaterfallModel = {
@@ -45,21 +44,9 @@ function isWaterfallTotalDatum(datum: unknown): datum is WaterfallTotalDatum {
   return typeof datum.isTotal === "boolean";
 }
 
-function getGainLossLabel(amount: number): "Gain" | "Loss" {
-  return amount >= 0 ? "Gain" : "Loss";
-}
-
-function getGainLossTotalLabel(
-  amount: number,
-): "Gains (total)" | "Loss (total)" {
-  return amount >= 0 ? "Gains (total)" : "Loss (total)";
-}
-
 export function buildContributionWaterfallModel(args: {
   stats: ContributionChartStats;
 }): ContributionWaterfallModel {
-  const realizedLabel = `Realised ${getGainLossLabel(args.stats.realizedGainLoss)}`;
-  const unrealizedLabel = `Unrealised ${getGainLossLabel(args.stats.unrealizedGainLoss)}`;
   const data: WaterfallDatum[] = [
     {
       label: "Income",
@@ -70,29 +57,21 @@ export function buildContributionWaterfallModel(args: {
       amount: -args.stats.expenses,
     },
     {
-      label: realizedLabel,
-      amount: args.stats.realizedGainLoss,
-    },
-    {
-      label: unrealizedLabel,
-      amount: args.stats.unrealizedGainLoss,
+      label: "Gains / Losses",
+      amount: args.stats.gainsLosses,
     },
   ];
-  const [incomeDatum, expensesDatum, realizedDatum, unrealizedDatum] = data;
+  const [incomeDatum, expensesDatum, gainsLossesDatum] = data;
   const savingsAmount = incomeDatum.amount + expensesDatum.amount;
-  const gainsLossesAmount = realizedDatum.amount + unrealizedDatum.amount;
-  const gainsLossesTotalLabel = getGainLossTotalLabel(gainsLossesAmount);
-  const totalReturnAmount = savingsAmount + gainsLossesAmount;
+  const totalReturnAmount = savingsAmount + gainsLossesDatum.amount;
 
   return {
     data,
     amountByLabel: {
       [incomeDatum.label]: incomeDatum.amount,
       [expensesDatum.label]: expensesDatum.amount,
-      [realizedDatum.label]: realizedDatum.amount,
-      [unrealizedDatum.label]: unrealizedDatum.amount,
+      [gainsLossesDatum.label]: gainsLossesDatum.amount,
       Savings: savingsAmount,
-      [gainsLossesTotalLabel]: gainsLossesAmount,
       "Total Return": totalReturnAmount,
     },
     totals: [
@@ -102,13 +81,8 @@ export function buildContributionWaterfallModel(args: {
         axisLabel: "Savings",
       },
       {
-        totalType: "subtotal",
-        index: 3,
-        axisLabel: gainsLossesTotalLabel,
-      },
-      {
         totalType: "total",
-        index: 3,
+        index: 2,
         axisLabel: "Total Return",
       },
     ],
@@ -135,12 +109,7 @@ export function ContributionChartCard(args: {
   );
   const waterfallModel = useMemo(
     () => buildContributionWaterfallModel({ stats: args.stats }),
-    [
-      args.stats.expenses,
-      args.stats.income,
-      args.stats.realizedGainLoss,
-      args.stats.unrealizedGainLoss,
-    ],
+    [args.stats.expenses, args.stats.gainsLosses, args.stats.income],
   );
   const waterfallSeries = useMemo<AgWaterfallSeriesOptions<WaterfallDatum>>(
     () => ({
@@ -251,7 +220,7 @@ export function ContributionChartCard(args: {
       <Stack gap="sm">
         <Title order={4}>Contribution to Total Return</Title>
         <Text c="dimmed" size="sm">
-          How Income, Expenses, Realised, and Unrealised lead to Total Return
+          How Income, Expenses, and Gains / Losses lead to Total Return
         </Text>
         <div className={classes.chartContainer}>
           <AgCharts options={waterfallChartOptions} />
