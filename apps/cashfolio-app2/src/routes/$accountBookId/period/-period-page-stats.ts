@@ -21,16 +21,6 @@ function getSavingsRateLabel(args: {
   return args.savingsRateFormatter.format(savingsRateRatio);
 }
 
-function getRealizedUnrealizedLabel(args: {
-  realizedGainLoss: number;
-  unrealizedGainLoss: number;
-  currencyFormatter: Intl.NumberFormat;
-}): string {
-  const realized = args.currencyFormatter.format(args.realizedGainLoss);
-  const unrealized = args.currencyFormatter.format(args.unrealizedGainLoss);
-  return `Realised ${realized} · Unrealised ${unrealized}`;
-}
-
 function getGainLossLabel(amount: number): string {
   return amount >= 0 ? "Gain" : "Loss";
 }
@@ -80,11 +70,6 @@ export function buildPeriodPageStats(args: {
       label: gainsLossesLabel,
       value: currencyFormatter.format(overview.stats.gainsLosses),
       valueColor: overview.stats.gainsLosses >= 0 ? "green" : "red",
-      secondaryValue: getRealizedUnrealizedLabel({
-        realizedGainLoss: overview.stats.realizedGainLoss,
-        unrealizedGainLoss: overview.stats.unrealizedGainLoss,
-        currencyFormatter,
-      }),
     },
   ];
 

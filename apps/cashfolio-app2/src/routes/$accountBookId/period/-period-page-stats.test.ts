@@ -67,8 +67,8 @@ describe("buildPeriodPageStats", () => {
     expect(gainsLossesCard).toMatchObject({
       label: "Loss",
       valueColor: "red",
-      secondaryValue: "Realised CHF:-7.00 · Unrealised CHF:-3.00",
     });
+    expect(gainsLossesCard?.secondaryValue).toBeUndefined();
     expect(liabilitiesCard?.valueColor).toBe("red");
   });
 });
