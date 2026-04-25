@@ -151,6 +151,11 @@ submit UX and prevent duplicate requests.
 - Double-clicking a drillable chart node drills into its children.
 - Account leaves (or any node without children) are informational and do not
   drill.
+- In Gains/Losses table mode, only explicit account leaf rows
+  (`explicit-account:*`) should navigate to the system-managed Gain/Loss equity
+  ledger for the selected period.
+- Keep the top-level explicit group row (`unit-type:explicit`) non-navigating
+  so double-click can continue to expand/collapse that group.
 - Keep drill state local to the page and scoped per card/type, preserving each
   side/path when toggling chart mode or breakdown side.
 - Show an `Up` action and breadcrumb context (`All Expenses` / `All Income` /

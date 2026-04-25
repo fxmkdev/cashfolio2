@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AccountType, Unit } from "../.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../.prisma-client/enums";
 
 const createServerFn = vi.hoisted(() =>
   vi.fn(() => {
@@ -29,6 +33,7 @@ const prisma = vi.hoisted(() => ({
   account: {
     findMany: vi.fn(),
     groupBy: vi.fn(),
+    findFirst: vi.fn(),
   },
   accountGroup: {
     findMany: vi.fn(),
@@ -60,7 +65,11 @@ vi.mock("./valuation.server", () => ({
   getSecurityToCurrencyExchangeRate,
 }));
 
-import { getAccountsPageData, getAccountTreeData } from "./accounts-queries";
+import {
+  getAccountsPageData,
+  getAccountTreeData,
+  getGainLossEquityAccountId,
+} from "./accounts-queries";
 
 describe("getAccountTreeData", () => {
   beforeEach(() => {
@@ -68,6 +77,7 @@ describe("getAccountTreeData", () => {
 
     prisma.account.findMany.mockResolvedValue([]);
     prisma.account.groupBy.mockResolvedValue([]);
+    prisma.account.findFirst.mockResolvedValue(null);
     prisma.accountGroup.findMany.mockResolvedValue([]);
     prisma.accountGroup.groupBy.mockResolvedValue([]);
     prisma.booking.groupBy.mockResolvedValue([]);
@@ -278,6 +288,7 @@ describe("getAccountsPageData", () => {
 
     prisma.account.findMany.mockResolvedValue([]);
     prisma.account.groupBy.mockResolvedValue([]);
+    prisma.account.findFirst.mockResolvedValue(null);
     prisma.accountGroup.findMany.mockResolvedValue([]);
     prisma.accountGroup.groupBy.mockResolvedValue([]);
     prisma.booking.groupBy.mockResolvedValue([]);
@@ -309,5 +320,49 @@ describe("getAccountsPageData", () => {
       referenceCurrency: "CHF",
       rows: [],
     });
+  });
+});
+
+describe("getGainLossEquityAccountId", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    prisma.account.findFirst.mockResolvedValue(null);
+  });
+
+  it("authorizes and returns the gain/loss equity account id when present", async () => {
+    prisma.account.findFirst.mockResolvedValue({ id: "gain-loss-1" });
+
+    const result = await getGainLossEquityAccountId({
+      data: {
+        accountBookId: "book-4",
+      },
+    });
+
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledTimes(1);
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-4");
+    expect(prisma.account.findFirst).toHaveBeenCalledWith({
+      where: {
+        accountBookId: "book-4",
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: { id: true },
+    });
+    expect(result).toBe("gain-loss-1");
+  });
+
+  it("returns null when no gain/loss equity account exists", async () => {
+    prisma.account.findFirst.mockResolvedValue(null);
+
+    const result = await getGainLossEquityAccountId({
+      data: {
+        accountBookId: "book-5",
+      },
+    });
+
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledTimes(1);
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-5");
+    expect(result).toBeNull();
   });
 });
