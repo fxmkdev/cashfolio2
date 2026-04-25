@@ -9,7 +9,6 @@ import {
   type GainsLossesGridRow,
 } from "./-gains-losses-table-rows";
 
-const EXPLICIT_UNIT_TYPE_ROW_ID = "unit-type:explicit";
 const EXPLICIT_ACCOUNT_ROW_ID_PREFIX = "explicit-account:";
 
 export function isGainsLossesNodeDrillable(node: GainsLossesBreakdownNode) {
@@ -47,8 +46,5 @@ export function isExplicitGainLossDrillRow(
     return false;
   }
 
-  return (
-    row.id === EXPLICIT_UNIT_TYPE_ROW_ID ||
-    row.id.startsWith(EXPLICIT_ACCOUNT_ROW_ID_PREFIX)
-  );
+  return row.id.startsWith(EXPLICIT_ACCOUNT_ROW_ID_PREFIX);
 }

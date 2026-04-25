@@ -103,7 +103,7 @@ describe("isGainsLossesNodeDrillable", () => {
 });
 
 describe("isExplicitGainLossDrillRow", () => {
-  test("returns true for explicit parent row", () => {
+  test("returns false for explicit parent group row", () => {
     expect(
       isExplicitGainLossDrillRow({
         id: "unit-type:explicit",
@@ -113,7 +113,7 @@ describe("isExplicitGainLossDrillRow", () => {
         unrealizedGainLoss: 0,
         totalGainLoss: 5,
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   test("returns true for explicit child row", () => {
