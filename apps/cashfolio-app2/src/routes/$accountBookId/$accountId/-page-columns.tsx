@@ -189,6 +189,7 @@ export function useLedgerColumnDefs(args: {
         cellClass: "actions-cell",
         cellRenderer: ({ data }: ICellRendererParams<LedgerRow>) => {
           if (!data) return null;
+          if (data.isVirtualCarryOver) return null;
           const isOpeningBalancesTransaction =
             data.isOpeningBalancesTransaction;
           return (

@@ -361,8 +361,16 @@ export function useLedgerPageController(args: {
     () =>
       buildLedgerRows(account, bookings, {
         hasPeriodFilter: args.hasPeriodFilter,
+        balanceBeforePeriodRaw: args.loaderData.balanceBeforePeriod,
+        hasBookingsBeforePeriod: args.loaderData.hasBookingsBeforePeriod,
       }),
-    [account, args.hasPeriodFilter, bookings],
+    [
+      account,
+      args.hasPeriodFilter,
+      args.loaderData.balanceBeforePeriod,
+      args.loaderData.hasBookingsBeforePeriod,
+      bookings,
+    ],
   );
 
   const columnDefs = useLedgerColumnDefs({

@@ -79,16 +79,23 @@ export function buildLedgerRows(
   bookings: LedgerBookings,
   options?: {
     hasPeriodFilter?: boolean;
+    balanceBeforePeriodRaw?: number;
+    hasBookingsBeforePeriod?: boolean;
   },
 ): LedgerRow[] {
   const negate = shouldNegate(account.type, account.equityAccountSubtype);
   const isEquity = account.type === AccountType.EQUITY;
   const hasPeriodFilter = options?.hasPeriodFilter ?? false;
-  let balance = 0;
+  const balanceBeforePeriodRaw = Number(options?.balanceBeforePeriodRaw ?? 0);
+  const hasBookingsBeforePeriod = options?.hasBookingsBeforePeriod ?? false;
+  const baseBalanceBeforePeriod = negate
+    ? -balanceBeforePeriodRaw
+    : balanceBeforePeriodRaw;
+  let balance = hasPeriodFilter && !isEquity ? baseBalanceBeforePeriod : 0;
   let equityReferenceBalance = 0;
   let equityReferenceBalanceHasGap = false;
 
-  return bookings
+  const rows = bookings
     .map((booking) => {
       const rawValue = Number(booking.value);
       const value = negate ? -rawValue : rawValue;
@@ -153,9 +160,41 @@ export function buildLedgerRows(
                 ? null
                 : equityReferenceBalance
               : balance,
+        isVirtualCarryOver: false,
       };
     })
     .reverse();
+
+  const shouldAppendCarryOverRow =
+    hasPeriodFilter && !isEquity && hasBookingsBeforePeriod;
+
+  if (!shouldAppendCarryOverRow) {
+    return rows;
+  }
+
+  return [
+    ...rows,
+    {
+      id: "virtual-carry-over",
+      transactionId: "virtual-carry-over",
+      bookingValue: 0,
+      date: "",
+      counterpartyAccounts: [],
+      description: "Balance carried forward",
+      unit: account.unit,
+      currency: account.currency,
+      cryptocurrency: account.cryptocurrency,
+      symbol: account.symbol,
+      tradeCurrency: account.tradeCurrency,
+      isOpeningBalancesTransaction: false,
+      debit: null,
+      credit: null,
+      referenceDebit: null,
+      referenceCredit: null,
+      balance: baseBalanceBeforePeriod,
+      isVirtualCarryOver: true,
+    },
+  ];
 }
 
 export type LedgerBalanceChartPoint = {

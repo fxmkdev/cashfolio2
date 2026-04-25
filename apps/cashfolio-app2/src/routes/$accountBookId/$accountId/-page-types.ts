@@ -82,4 +82,5 @@ export type LedgerRow = {
   referenceDebit: number | null;
   referenceCredit: number | null;
   balance: number | null;
+  isVirtualCarryOver?: boolean;
 };

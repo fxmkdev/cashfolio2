@@ -30,6 +30,7 @@ function createLedgerBookings(
     date: Date;
     value: number;
     valueInReferenceCurrency?: number | null;
+    isOpeningBalancesTransaction?: boolean;
   }>,
 ): LedgerBookings {
   return entries.map((entry, index) => ({
@@ -49,7 +50,7 @@ function createLedgerBookings(
     transactionId: `transaction-${index + 1}`,
     transactionDescription: "",
     counterpartyAccounts: [],
-    isOpeningBalancesTransaction: false,
+    isOpeningBalancesTransaction: entry.isOpeningBalancesTransaction ?? false,
   }));
 }
 
@@ -502,6 +503,144 @@ describe("buildLedgerRows", () => {
         referenceDebit: 150,
         referenceCredit: null,
         balance: -150,
+      }),
+    ]);
+  });
+
+  test("seeds filtered asset balances from pre-period totals and appends a carry-over row", () => {
+    const rows = buildLedgerRows(
+      createLedgerAccount(AccountType.ASSET),
+      createLedgerBookings([
+        {
+          date: localDate(2026, 0, 10, 9),
+          value: -50,
+        },
+        {
+          date: localDate(2026, 0, 11, 9),
+          value: 30,
+        },
+      ]),
+      {
+        hasPeriodFilter: true,
+        balanceBeforePeriodRaw: 200,
+        hasBookingsBeforePeriod: true,
+      },
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        date: "11.01.2026",
+        balance: 180,
+      }),
+      expect.objectContaining({
+        date: "10.01.2026",
+        balance: 150,
+      }),
+      expect.objectContaining({
+        date: "",
+        description: "Balance carried forward",
+        debit: null,
+        credit: null,
+        referenceDebit: null,
+        referenceCredit: null,
+        balance: 200,
+        isVirtualCarryOver: true,
+      }),
+    ]);
+  });
+
+  test("seeds filtered liability balances from pre-period totals", () => {
+    const rows = buildLedgerRows(
+      createLedgerAccount(AccountType.LIABILITY),
+      createLedgerBookings([
+        {
+          date: localDate(2026, 0, 10, 9),
+          value: 20,
+        },
+      ]),
+      {
+        hasPeriodFilter: true,
+        balanceBeforePeriodRaw: -100,
+        hasBookingsBeforePeriod: true,
+      },
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        date: "10.01.2026",
+        balance: 80,
+      }),
+      expect.objectContaining({
+        date: "",
+        description: "Balance carried forward",
+        balance: 100,
+        isVirtualCarryOver: true,
+      }),
+    ]);
+  });
+
+  test("omits carry-over row when the selected period is the first period of the account", () => {
+    const rows = buildLedgerRows(
+      createLedgerAccount(AccountType.ASSET),
+      createLedgerBookings([
+        {
+          date: localDate(2026, 0, 10, 9),
+          value: 50,
+        },
+      ]),
+      {
+        hasPeriodFilter: true,
+        balanceBeforePeriodRaw: 0,
+        hasBookingsBeforePeriod: false,
+      },
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        date: "10.01.2026",
+        balance: 50,
+      }),
+    ]);
+  });
+
+  test("keeps showing carry-over in filtered rows when prior opening-balance bookings exist", () => {
+    const rows = buildLedgerRows(
+      createLedgerAccount(AccountType.ASSET),
+      createLedgerBookings([
+        {
+          date: localDate(2026, 0, 10, 9),
+          value: -50,
+        },
+        {
+          date: localDate(2026, 0, 11, 9),
+          value: 30,
+        },
+      ]),
+      {
+        hasPeriodFilter: true,
+        balanceBeforePeriodRaw: 200,
+        hasBookingsBeforePeriod: true,
+      },
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        date: "11.01.2026",
+        balance: 180,
+      }),
+      expect.objectContaining({
+        date: "10.01.2026",
+        balance: 150,
+      }),
+      expect.objectContaining({
+        date: "",
+        description: "Balance carried forward",
+        debit: null,
+        credit: null,
+        referenceDebit: null,
+        referenceCredit: null,
+        balance: 200,
+        isVirtualCarryOver: true,
       }),
     ]);
   });
