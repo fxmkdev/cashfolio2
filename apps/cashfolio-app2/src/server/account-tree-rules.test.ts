@@ -73,23 +73,20 @@ describe("group action availability", () => {
       getGroupDeleteAvailability({
         hasChildAccounts: true,
         hasChildGroups: true,
-        isReferencedByAccountBook: true,
-      }),
-    ).toEqual({
-      enabled: false,
-      disabledReason:
-        "Cannot delete group because it is used as a holding gain/loss group",
-    });
-
-    expect(
-      getGroupDeleteAvailability({
-        hasChildAccounts: true,
-        hasChildGroups: true,
-        isReferencedByAccountBook: false,
       }),
     ).toEqual({
       enabled: false,
       disabledReason: "Cannot delete group because it contains accounts",
+    });
+
+    expect(
+      getGroupDeleteAvailability({
+        hasChildAccounts: false,
+        hasChildGroups: true,
+      }),
+    ).toEqual({
+      enabled: false,
+      disabledReason: "Cannot delete group because it contains sub-groups",
     });
   });
 

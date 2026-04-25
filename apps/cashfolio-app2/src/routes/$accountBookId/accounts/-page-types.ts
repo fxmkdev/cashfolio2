@@ -17,12 +17,6 @@ export const tabs = [
     type: AccountType.EQUITY,
     equityAccountSubtype: EquityAccountSubtype.EXPENSE,
   },
-  {
-    value: `EQUITY-${EquityAccountSubtype.GAIN_LOSS}`,
-    label: "Gain/Loss",
-    type: AccountType.EQUITY,
-    equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
-  },
 ] as const;
 
 export type { TabValue };

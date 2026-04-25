@@ -74,9 +74,6 @@ describe("getAccountTreeData", () => {
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-08T00:00:00.000Z"),
-      securityHoldingGainLossAccountGroupId: null,
-      cryptoHoldingGainLossAccountGroupId: null,
-      fxHoldingGainLossAccountGroupId: null,
     });
 
     getCurrencyExchangeRate.mockResolvedValue(1);
@@ -224,9 +221,6 @@ describe("getAccountTreeData", () => {
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-08T00:00:00.000Z"),
-      securityHoldingGainLossAccountGroupId: "group-root",
-      cryptoHoldingGainLossAccountGroupId: null,
-      fxHoldingGainLossAccountGroupId: null,
     });
     prisma.account.groupBy
       .mockResolvedValueOnce([{ groupId: "group-child", _count: 1 }])
@@ -262,7 +256,7 @@ describe("getAccountTreeData", () => {
       isActive: true,
       deletable: false,
       deleteDisabledReason:
-        "Cannot delete group because it is used as a holding gain/loss group",
+        "Cannot delete group because it contains sub-groups",
     });
     expect(childGroupRow).toMatchObject({
       isActive: false,
@@ -290,9 +284,6 @@ describe("getAccountsPageData", () => {
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-08T00:00:00.000Z"),
-      securityHoldingGainLossAccountGroupId: null,
-      cryptoHoldingGainLossAccountGroupId: null,
-      fxHoldingGainLossAccountGroupId: null,
     });
 
     getCurrencyExchangeRate.mockResolvedValue(1);

@@ -280,10 +280,6 @@ export function EditAccountModal({
                         value: `${AccountType.EQUITY}-${EquityAccountSubtype.EXPENSE}`,
                         label: "Expense",
                       },
-                      {
-                        value: `${AccountType.EQUITY}-${EquityAccountSubtype.GAIN_LOSS}`,
-                        label: "Gain/Loss",
-                      },
                     ],
                   },
                   {

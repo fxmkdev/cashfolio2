@@ -36,9 +36,6 @@ export type AccountTreeQueryGroup = {
 type AccountBookTreeMeta = {
   referenceCurrency: string;
   startDate: Date;
-  securityHoldingGainLossAccountGroupId: string | null;
-  cryptoHoldingGainLossAccountGroupId: string | null;
-  fxHoldingGainLossAccountGroupId: string | null;
 };
 
 export async function fetchAccountTreeQueryData(args: {
@@ -139,9 +136,6 @@ export async function fetchAccountTreeQueryData(args: {
       select: {
         referenceCurrency: true,
         startDate: true,
-        securityHoldingGainLossAccountGroupId: true,
-        cryptoHoldingGainLossAccountGroupId: true,
-        fxHoldingGainLossAccountGroupId: true,
       },
     }),
     args.includeActionAvailability

@@ -15,6 +15,10 @@ import {
   getGroupHierarchy,
   hasInactiveAncestorGroup,
 } from "./accounts-helpers";
+import {
+  assertNoSystemManagedAccountSubtype,
+  assertNoSystemManagedGroupSubtype,
+} from "./accounts-system-managed-equity-guards";
 import type { AccountGroupInput, AccountInput } from "./accounts-types";
 import {
   accountTypeRequiresZeroBalanceForArchive,
@@ -457,6 +461,7 @@ export const createAccount = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    assertNoSystemManagedAccountSubtype(data);
     const siblingNames = (
       await prisma.account.findMany({
         where: {
@@ -510,6 +515,20 @@ export const updateAccount = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    const existing = await prisma.account.findUniqueOrThrow({
+      where: {
+        id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
+      },
+      select: { type: true, equityAccountSubtype: true },
+    });
+    assertNoSystemManagedAccountSubtype(existing);
+    if (
+      data.type !== existing.type ||
+      data.equityAccountSubtype !== (existing.equityAccountSubtype ?? undefined)
+    ) {
+      throw new Error("Account type cannot be changed");
+    }
+
     const siblingNames = (
       await prisma.account.findMany({
         where: {
@@ -521,18 +540,6 @@ export const updateAccount = createServerFn({ method: "POST" })
       })
     ).map((a) => a.name);
     validateAccountInput(data, siblingNames);
-    const existing = await prisma.account.findUniqueOrThrow({
-      where: {
-        id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
-      },
-      select: { type: true, equityAccountSubtype: true },
-    });
-    if (
-      data.type !== existing.type ||
-      data.equityAccountSubtype !== (existing.equityAccountSubtype ?? undefined)
-    ) {
-      throw new Error("Account type cannot be changed");
-    }
     const account = await prisma.$transaction(async (tx) => {
       const updatedAccount = await tx.account.update({
         where: {
@@ -576,6 +583,7 @@ export const createAccountGroup = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    assertNoSystemManagedGroupSubtype(data);
     const siblingNames = (
       await prisma.accountGroup.findMany({
         where: {
@@ -604,6 +612,20 @@ export const updateAccountGroup = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
+    const existing = await prisma.accountGroup.findUniqueOrThrow({
+      where: {
+        id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
+      },
+      select: { type: true, equityAccountSubtype: true },
+    });
+    assertNoSystemManagedGroupSubtype(existing);
+    if (
+      data.type !== existing.type ||
+      data.equityAccountSubtype !== (existing.equityAccountSubtype ?? undefined)
+    ) {
+      throw new Error("Group type cannot be changed");
+    }
+
     const [siblingGroups, groupById] = await Promise.all([
       prisma.accountGroup.findMany({
         where: {
@@ -622,18 +644,6 @@ export const updateAccountGroup = createServerFn({ method: "POST" })
       parentGroupId: data.parentGroupId,
       groupById,
     });
-    const existing = await prisma.accountGroup.findUniqueOrThrow({
-      where: {
-        id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
-      },
-      select: { type: true, equityAccountSubtype: true },
-    });
-    if (
-      data.type !== existing.type ||
-      data.equityAccountSubtype !== (existing.equityAccountSubtype ?? undefined)
-    ) {
-      throw new Error("Group type cannot be changed");
-    }
     const group = await prisma.accountGroup.update({
       where: {
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
@@ -652,9 +662,18 @@ export const deleteAccount = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
-    const bookingCount = await prisma.booking.count({
-      where: { accountId: data.id, accountBookId: data.accountBookId },
-    });
+    const [account, bookingCount] = await Promise.all([
+      prisma.account.findUniqueOrThrow({
+        where: {
+          id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
+        },
+        select: { type: true, equityAccountSubtype: true },
+      }),
+      prisma.booking.count({
+        where: { accountId: data.id, accountBookId: data.accountBookId },
+      }),
+    ]);
+    assertNoSystemManagedAccountSubtype(account);
     const deleteAvailability = getAccountDeleteAvailability(bookingCount > 0);
     if (!deleteAvailability.enabled) {
       throw new Error(deleteAvailability.disabledReason);
@@ -671,31 +690,27 @@ export const deleteAccountGroup = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
-    const [childAccounts, childGroups, accountBook] = await Promise.all([
+    const [group, childAccounts, childGroups] = await Promise.all([
+      prisma.accountGroup.findUniqueOrThrow({
+        where: {
+          id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
+        },
+        select: {
+          type: true,
+          equityAccountSubtype: true,
+        },
+      }),
       prisma.account.count({
         where: { groupId: data.id, accountBookId: data.accountBookId },
       }),
       prisma.accountGroup.count({
         where: { parentGroupId: data.id, accountBookId: data.accountBookId },
       }),
-      prisma.accountBook.findUniqueOrThrow({
-        where: { id: data.accountBookId },
-        select: {
-          securityHoldingGainLossAccountGroupId: true,
-          cryptoHoldingGainLossAccountGroupId: true,
-          fxHoldingGainLossAccountGroupId: true,
-        },
-      }),
     ]);
-    const isReferencedByAccountBook = [
-      accountBook.securityHoldingGainLossAccountGroupId,
-      accountBook.cryptoHoldingGainLossAccountGroupId,
-      accountBook.fxHoldingGainLossAccountGroupId,
-    ].includes(data.id);
+    assertNoSystemManagedGroupSubtype(group);
     const deleteAvailability = getGroupDeleteAvailability({
       hasChildAccounts: childAccounts > 0,
       hasChildGroups: childGroups > 0,
-      isReferencedByAccountBook,
     });
     if (!deleteAvailability.enabled) {
       throw new Error(deleteAvailability.disabledReason);
@@ -716,8 +731,9 @@ export const archiveAccount = createServerFn({ method: "POST" })
       where: {
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
       },
-      select: { type: true, isActive: true },
+      select: { type: true, equityAccountSubtype: true, isActive: true },
     });
+    assertNoSystemManagedAccountSubtype(account);
 
     if (!account.isActive) return;
 
@@ -754,8 +770,9 @@ export const archiveAccountGroup = createServerFn({ method: "POST" })
       where: {
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
       },
-      select: { isActive: true },
+      select: { isActive: true, type: true, equityAccountSubtype: true },
     });
+    assertNoSystemManagedGroupSubtype(group);
 
     if (!group.isActive) return;
 
@@ -802,8 +819,14 @@ export const unarchiveAccount = createServerFn({ method: "POST" })
       where: {
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
       },
-      select: { isActive: true, groupId: true },
+      select: {
+        isActive: true,
+        groupId: true,
+        type: true,
+        equityAccountSubtype: true,
+      },
     });
+    assertNoSystemManagedAccountSubtype(account);
 
     if (account.isActive) return;
 
@@ -833,8 +856,14 @@ export const unarchiveAccountGroup = createServerFn({ method: "POST" })
       where: {
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
       },
-      select: { isActive: true, parentGroupId: true },
+      select: {
+        isActive: true,
+        parentGroupId: true,
+        type: true,
+        equityAccountSubtype: true,
+      },
     });
+    assertNoSystemManagedGroupSubtype(group);
 
     if (group.isActive) return;
 
