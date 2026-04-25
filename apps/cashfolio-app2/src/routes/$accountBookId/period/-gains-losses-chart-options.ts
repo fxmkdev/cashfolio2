@@ -240,6 +240,13 @@ export function useGainsLossesWaterfallChartOptions(args: {
       legend: {
         enabled: false,
       },
+      overlays: {
+        // Drilldown card shell already handles empty states. Keeping chart
+        // overlays disabled prevents false "No data to display" messages when
+        // AG Charts misclassifies transitional waterfall states.
+        noData: { enabled: false },
+        noVisibleSeries: { enabled: false },
+      },
       series: chartSeries,
       axes: {
         x: {
