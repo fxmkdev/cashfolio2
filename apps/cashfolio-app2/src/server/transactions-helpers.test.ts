@@ -24,6 +24,7 @@ import {
   validateCreateTransaction,
 } from "./transactions-helpers";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
+import { GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE } from "../shared/gain-loss-transaction-invariant";
 
 function createAccountMap(
   overrides?: Partial<Record<string, AccountTypeMeta>>,
@@ -51,6 +52,30 @@ function createAccountMap(
         id: "opening",
         type: AccountType.EQUITY,
         equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+      },
+    ],
+    [
+      "gain-loss",
+      {
+        id: "gain-loss",
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+      },
+    ],
+    [
+      "asset",
+      {
+        id: "asset",
+        type: AccountType.ASSET,
+        equityAccountSubtype: null,
+      },
+    ],
+    [
+      "liability",
+      {
+        id: "liability",
+        type: AccountType.LIABILITY,
+        equityAccountSubtype: null,
       },
     ],
   ]);
@@ -385,5 +410,102 @@ describe("transactions helpers", () => {
         },
       ),
     ).not.toThrow();
+  });
+
+  test("accepts gain/loss with one asset booking", () => {
+    expect(() =>
+      validateAccountTypeBookingsWithAccounts(
+        [
+          {
+            accountId: "gain-loss",
+            value: -100,
+            date: "2026-01-04T08:00:00.000Z",
+          },
+          {
+            accountId: "asset",
+            value: 100,
+            date: "2026-01-04T08:00:00.000Z",
+          },
+        ],
+        createAccountMap(),
+        {
+          accountBookStartDate: new Date("2026-01-04T16:00:00.000Z"),
+        },
+      ),
+    ).not.toThrow();
+  });
+
+  test("rejects gain/loss transactions with more than two bookings", () => {
+    expect(() =>
+      validateAccountTypeBookingsWithAccounts(
+        [
+          {
+            accountId: "gain-loss",
+            value: -100,
+            date: "2026-01-04T08:00:00.000Z",
+          },
+          {
+            accountId: "asset",
+            value: 40,
+            date: "2026-01-04T08:00:00.000Z",
+          },
+          {
+            accountId: "liability",
+            value: 60,
+            date: "2026-01-04T08:00:00.000Z",
+          },
+        ],
+        createAccountMap(),
+        {
+          accountBookStartDate: new Date("2026-01-04T16:00:00.000Z"),
+        },
+      ),
+    ).toThrow(GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE);
+  });
+
+  test("rejects gain/loss paired with non asset/liability account", () => {
+    expect(() =>
+      validateAccountTypeBookingsWithAccounts(
+        [
+          {
+            accountId: "gain-loss",
+            value: -100,
+            date: "2026-01-04T08:00:00.000Z",
+          },
+          {
+            accountId: "income",
+            value: -100,
+            date: "2026-01-04T08:00:00.000Z",
+          },
+        ],
+        createAccountMap(),
+        {
+          accountBookStartDate: new Date("2026-01-04T16:00:00.000Z"),
+        },
+      ),
+    ).toThrow(GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE);
+  });
+
+  test("rejects two gain/loss bookings", () => {
+    expect(() =>
+      validateAccountTypeBookingsWithAccounts(
+        [
+          {
+            accountId: "gain-loss",
+            value: -100,
+            date: "2026-01-04T08:00:00.000Z",
+          },
+          {
+            accountId: "gain-loss",
+            value: 100,
+            date: "2026-01-04T08:00:00.000Z",
+          },
+        ],
+        createAccountMap(),
+        {
+          accountBookStartDate: new Date("2026-01-04T16:00:00.000Z"),
+        },
+      ),
+    ).toThrow(GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE);
   });
 });

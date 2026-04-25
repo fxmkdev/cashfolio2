@@ -5,6 +5,7 @@ import {
   Unit,
 } from "../.prisma-client/enums";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
+import { GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE } from "../shared/gain-loss-transaction-invariant";
 
 const createServerFn = vi.hoisted(() =>
   vi.fn(() => {
@@ -32,6 +33,7 @@ const prisma = vi.hoisted(() => ({
   booking: {
     count: vi.fn(),
     deleteMany: vi.fn(),
+    findMany: vi.fn(),
     findUnique: vi.fn(),
     update: vi.fn(),
   },
@@ -154,6 +156,20 @@ function createTransactionInput(
   };
 }
 
+function createBookingType(
+  id: string,
+  type: AccountType,
+  equityAccountSubtype: EquityAccountSubtype | null,
+) {
+  return {
+    id,
+    account: {
+      type,
+      equityAccountSubtype,
+    },
+  };
+}
+
 describe("transactions mutations", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -173,6 +189,10 @@ describe("transactions mutations", () => {
       value: 120,
       transactionId: "tx-1",
     });
+    prisma.booking.findMany.mockResolvedValue([
+      createBookingType("booking-1", AccountType.ASSET, null),
+      createBookingType("booking-2", AccountType.LIABILITY, null),
+    ]);
     prisma.booking.update.mockResolvedValue({ id: "booking-1" });
     prisma.booking.deleteMany.mockResolvedValue({ count: 2 });
     prisma.transaction.create.mockResolvedValue({ id: "tx-created" });
@@ -370,6 +390,59 @@ describe("transactions mutations", () => {
     );
   });
 
+  it("rejects create transaction when gain/loss booking is not simple", async () => {
+    prisma.account.findMany.mockResolvedValueOnce([
+      {
+        id: "gain-loss-1",
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+      },
+      {
+        id: "asset-1",
+        type: AccountType.ASSET,
+        equityAccountSubtype: null,
+      },
+      {
+        id: "liability-1",
+        type: AccountType.LIABILITY,
+        equityAccountSubtype: null,
+      },
+    ]);
+
+    await expect(
+      createTransaction({
+        data: createTransactionInput({
+          bookings: [
+            {
+              date: BASE_DATE,
+              accountId: "gain-loss-1",
+              description: "",
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              value: -100,
+            },
+            {
+              date: BASE_DATE,
+              accountId: "asset-1",
+              description: "",
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              value: 40,
+            },
+            {
+              date: BASE_DATE,
+              accountId: "liability-1",
+              description: "",
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              value: 60,
+            },
+          ],
+        }),
+      }),
+    ).rejects.toThrow(GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE);
+  });
+
   it("blocks updates for opening-balance transactions", async () => {
     prisma.booking.count.mockResolvedValueOnce(2);
 
@@ -410,6 +483,51 @@ describe("transactions mutations", () => {
         },
       }),
     );
+  });
+
+  it("rejects update transaction when gain/loss booking is not simple", async () => {
+    prisma.account.findMany.mockResolvedValueOnce([
+      {
+        id: "gain-loss-1",
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+      },
+      {
+        id: "income-1",
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.INCOME,
+      },
+    ]);
+
+    await expect(
+      updateTransaction({
+        data: {
+          transactionId: "tx-regular",
+          ...createTransactionInput({
+            bookings: [
+              {
+                date: BASE_DATE,
+                accountId: "gain-loss-1",
+                description: "",
+                unit: Unit.CURRENCY,
+                currency: "CHF",
+                value: 100,
+              },
+              {
+                date: BASE_DATE,
+                accountId: "income-1",
+                description: "",
+                unit: Unit.CURRENCY,
+                currency: "CHF",
+                value: -100,
+              },
+            ],
+          }),
+        },
+      }),
+    ).rejects.toThrow(GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE);
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it("blocks rebook when source transaction contains opening-balance bookings", async () => {
@@ -457,5 +575,39 @@ describe("transactions mutations", () => {
         },
       },
     });
+  });
+
+  it("rejects rebook when resulting gain/loss transaction is not simple", async () => {
+    prisma.account.findUnique.mockResolvedValueOnce({
+      id: "target-expense",
+      isActive: true,
+      unit: Unit.CURRENCY,
+      currency: "CHF",
+      cryptocurrency: null,
+      symbol: null,
+      tradeCurrency: null,
+      type: AccountType.EQUITY,
+      equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+    });
+    prisma.booking.findMany.mockResolvedValueOnce([
+      createBookingType("booking-1", AccountType.ASSET, null),
+      createBookingType(
+        "booking-2",
+        AccountType.EQUITY,
+        EquityAccountSubtype.GAIN_LOSS,
+      ),
+    ]);
+
+    await expect(
+      rebookBooking({
+        data: {
+          accountBookId: "book-1",
+          bookingId: "booking-1",
+          targetAccountId: "target-expense",
+        },
+      }),
+    ).rejects.toThrow(GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE);
+
+    expect(prisma.booking.update).not.toHaveBeenCalled();
   });
 });

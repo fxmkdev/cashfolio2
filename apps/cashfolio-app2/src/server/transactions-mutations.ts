@@ -6,6 +6,7 @@ import { getSimpleTransactionUnitIdentifier } from "../shared/account-utils";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { ensureSameOriginRequestFromServerContext } from "../security/same-origin.server";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
+import { validateRebookGainLossSimpleTransactionInvariant } from "./rebook-gain-loss-validation";
 import { validateRebookBookingTarget } from "./rebook-booking-validation";
 import {
   accountTypeMeta,
@@ -372,6 +373,13 @@ export const rebookBooking = createServerFn({ method: "POST" })
       accountBookStartDate: accountBook.startDate,
       sourceTransactionContainsOpeningBalancesBooking:
         sourceTransactionOpeningBookingCount > 0,
+    });
+
+    await validateRebookGainLossSimpleTransactionInvariant({
+      accountBookId: data.accountBookId,
+      transactionId: booking.transactionId,
+      bookingId: booking.id,
+      targetAccount,
     });
 
     await prisma.booking.update({
