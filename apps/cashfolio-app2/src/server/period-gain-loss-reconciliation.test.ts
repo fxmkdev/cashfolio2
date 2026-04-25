@@ -184,6 +184,7 @@ describe("getPeriodGainLossReconciliation", () => {
         unitCostInReference: 100,
         periodEndRate: 130,
         unrealizedGainLoss: 180,
+        runningUnrealizedGainLoss: 180,
       },
     ]);
     expect(response?.diagnostics.skippedCount).toBe(0);
@@ -258,6 +259,7 @@ describe("getPeriodGainLossReconciliation", () => {
         unitCostInReference: 100,
         periodEndRate: 110,
         unrealizedGainLoss: 60,
+        runningUnrealizedGainLoss: 60,
       },
     ]);
   });

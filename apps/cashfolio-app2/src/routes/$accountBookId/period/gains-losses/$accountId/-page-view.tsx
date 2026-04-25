@@ -9,13 +9,15 @@ import {
   Title,
 } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
-import type { ColDef } from "ag-grid-enterprise";
+import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { useMemo } from "react";
 import { FORMATTED_NUMERIC_COLUMN } from "@/components/column-types";
 import { DataGrid } from "@/components/data-grid";
+import { LinkAnchor } from "@/components/link-anchor";
 import { LinkButton } from "@/components/link-button";
 import { TopPageHeader } from "@/components/top-page-header";
 import type { PeriodGainLossReconciliation } from "@/server/period-gain-loss-reconciliation";
+import { normalizeExplicitPeriodValue } from "@/shared/period";
 import { DEFAULT_PERIOD_VALUE } from "../../-page-types";
 
 type GainLossReconciliationPageViewProps = {
@@ -56,6 +58,8 @@ export function GainLossReconciliationPageView({
     () => buildCurrencyFormatter(reconciliation?.referenceCurrency ?? "CHF"),
     [reconciliation?.referenceCurrency],
   );
+  const targetAccountId = reconciliation?.target.accountId ?? null;
+  const ledgerPeriodValue = normalizeExplicitPeriodValue(selectedPeriodValue);
 
   const realizedColumns = useMemo<ColDef<RealizedEventRow>[]>(
     () => [
@@ -73,6 +77,29 @@ export function GainLossReconciliationPageView({
         headerName: "Transaction",
         field: "transactionId",
         width: 210,
+        cellRenderer: ({
+          value,
+        }: ICellRendererParams<RealizedEventRow, string | null>) => {
+          if (!value) {
+            return "—";
+          }
+          if (!targetAccountId || reconciliation?.target.isVirtual) {
+            return value;
+          }
+          return (
+            <LinkAnchor
+              to="/$accountBookId/$accountId"
+              params={{ accountBookId, accountId: targetAccountId }}
+              search={{
+                transactionId: value,
+                period: ledgerPeriodValue,
+              }}
+              size="sm"
+            >
+              {value}
+            </LinkAnchor>
+          );
+        },
       },
       {
         headerName: "Quantity",
@@ -93,19 +120,24 @@ export function GainLossReconciliationPageView({
         type: FORMATTED_NUMERIC_COLUMN,
       },
       {
-        headerName: "Realized Delta",
+        headerName: "Realised Delta",
         field: "realizedGainLossDelta",
         width: 160,
         type: FORMATTED_NUMERIC_COLUMN,
       },
       {
-        headerName: "Running Realized",
+        headerName: "Running Realised",
         field: "runningRealizedGainLoss",
         width: 180,
         type: FORMATTED_NUMERIC_COLUMN,
       },
     ],
-    [],
+    [
+      accountBookId,
+      ledgerPeriodValue,
+      reconciliation?.target.isVirtual,
+      targetAccountId,
+    ],
   );
 
   const openLotColumns = useMemo<ColDef<OpenLotRow>[]>(
@@ -139,9 +171,15 @@ export function GainLossReconciliationPageView({
         type: FORMATTED_NUMERIC_COLUMN,
       },
       {
-        headerName: "Unrealized",
+        headerName: "Unrealised",
         field: "unrealizedGainLoss",
         width: 160,
+        type: FORMATTED_NUMERIC_COLUMN,
+      },
+      {
+        headerName: "Running Unrealised",
+        field: "runningUnrealizedGainLoss",
+        width: 190,
         type: FORMATTED_NUMERIC_COLUMN,
       },
     ],
@@ -219,7 +257,7 @@ export function GainLossReconciliationPageView({
           <SimpleGrid cols={{ base: 1, md: 3 }}>
             <Card withBorder radius="md" p="md">
               <Text size="sm" c="dimmed">
-                Realized
+                Realised
               </Text>
               <Text fw={700} fz="xl">
                 {currencyFormatter.format(
@@ -229,7 +267,7 @@ export function GainLossReconciliationPageView({
             </Card>
             <Card withBorder radius="md" p="md">
               <Text size="sm" c="dimmed">
-                Unrealized
+                Unrealised
               </Text>
               <Text fw={700} fz="xl">
                 {currencyFormatter.format(
@@ -250,7 +288,7 @@ export function GainLossReconciliationPageView({
           <Card withBorder radius="md" p="md">
             <Stack gap="sm">
               <Group justify="space-between" align="center">
-                <Title order={4}>Realized Events</Title>
+                <Title order={4}>Realised Events</Title>
                 <Text size="sm" c="dimmed">
                   {reconciliation.realizedEvents.length} event(s)
                 </Text>
@@ -271,7 +309,7 @@ export function GainLossReconciliationPageView({
           <Card withBorder radius="md" p="md">
             <Stack gap="sm">
               <Group justify="space-between" align="center">
-                <Title order={4}>Unrealized Open Lots</Title>
+                <Title order={4}>Unrealised Open Lots</Title>
                 <Text size="sm" c="dimmed">
                   {reconciliation.unrealizedOpenLots.length} lot(s)
                 </Text>

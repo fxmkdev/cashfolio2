@@ -66,6 +66,7 @@ type GainLossReconciliationOpenLot = {
   unitCostInReference: number;
   periodEndRate: number;
   unrealizedGainLoss: number;
+  runningUnrealizedGainLoss: number;
 };
 
 export type PeriodGainLossReconciliation = {
@@ -226,6 +227,25 @@ function toEmptySummary() {
     unrealizedGainLoss: 0,
     totalGainLoss: 0,
   };
+}
+
+function addRunningUnrealizedGainLoss(
+  openLots: GainLossReconciliationOpenLot[],
+): GainLossReconciliationOpenLot[] {
+  const sortedOpenLots = [...openLots].sort((left, right) =>
+    left.acquisitionSortKey.localeCompare(right.acquisitionSortKey, "en"),
+  );
+  let runningUnrealizedGainLoss = 0;
+
+  return sortedOpenLots.map((openLot) => {
+    runningUnrealizedGainLoss = round2(
+      runningUnrealizedGainLoss + openLot.unrealizedGainLoss,
+    );
+    return {
+      ...openLot,
+      runningUnrealizedGainLoss,
+    };
+  });
 }
 
 async function buildRealAccountReconciliation(args: {
@@ -480,6 +500,7 @@ async function buildRealAccountReconciliation(args: {
         unitCostInReference: round2(lot.unitCostInReference),
         periodEndRate: round2(lot.periodEndRate),
         unrealizedGainLoss: round2(lot.unrealizedGainLoss),
+        runningUnrealizedGainLoss: 0,
       });
     },
     onSkippedItem: (item) => {
@@ -505,7 +526,7 @@ async function buildRealAccountReconciliation(args: {
     }),
     skippedCount: split.skippedCount,
     realizedEvents,
-    unrealizedOpenLots,
+    unrealizedOpenLots: addRunningUnrealizedGainLoss(unrealizedOpenLots),
     diagnostics,
   };
 }
@@ -603,6 +624,7 @@ async function buildTransferClearingReconciliation(args: {
         unitCostInReference: round2(lot.unitCostInReference),
         periodEndRate: round2(lot.periodEndRate),
         unrealizedGainLoss: round2(lot.unrealizedGainLoss),
+        runningUnrealizedGainLoss: 0,
       });
     },
     onSkippedItem: (item) => {
@@ -633,7 +655,7 @@ async function buildTransferClearingReconciliation(args: {
     }),
     skippedCount: split.skippedCount,
     realizedEvents,
-    unrealizedOpenLots,
+    unrealizedOpenLots: addRunningUnrealizedGainLoss(unrealizedOpenLots),
     diagnostics,
   };
 }
