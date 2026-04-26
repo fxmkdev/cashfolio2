@@ -16,13 +16,14 @@ export const Route = createFileRoute("/$accountBookId/timeline")({
 
 function TimelinePage() {
   const { accountBookId } = Route.useParams();
-  const { monthTimeline } = Route.useLoaderData();
+  const { monthTimeline, yearTimeline } = Route.useLoaderData();
 
   return (
     <Suspense fallback={null}>
       <TimelinePageView
         accountBookId={accountBookId}
         monthTimeline={monthTimeline}
+        yearTimeline={yearTimeline}
       />
     </Suspense>
   );
