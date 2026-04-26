@@ -1,9 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import {
-  AccountType,
-  EquityAccountSubtype,
-  Unit,
-} from "../.prisma-client/enums";
+import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { prisma } from "../prisma.server";
 import {
@@ -56,6 +52,7 @@ import {
   initializeHoldingGainLossState,
 } from "./period-overview-holdings";
 import { isNearZero } from "./period-overview-holdings-common";
+import { computeExecutionResidualRealization } from "./period-execution-residuals";
 import {
   buildTransferClearingVirtualHierarchy,
   loadTransferClearingUnitBuckets,
@@ -91,21 +88,6 @@ const TRANSACTIONS_PAGE_SIZE = 200;
 
 function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
-}
-
-function isNonReferenceExecutionBooking(args: {
-  unit: Unit;
-  currency: string | null;
-  referenceCurrency: string;
-}) {
-  if (args.unit === Unit.CURRENCY) {
-    return (
-      args.currency != null &&
-      args.currency.toUpperCase() !== args.referenceCurrency
-    );
-  }
-
-  return true;
 }
 
 export const getPeriodOverview = createServerFn({
@@ -209,6 +191,14 @@ export const getPeriodOverview = createServerFn({
     } = buildTransferClearingVirtualHierarchy({
       unitBuckets: transferClearingUnitBuckets,
     });
+    const transferClearingUnitLabelByHoldingAccountId = new Map(
+      transferClearingUnitBuckets
+        .filter((bucket) => bucket.isNonReferenceUnit)
+        .map((bucket) => [
+          `virtual:transfer-clearing:account:${bucket.unitKey}`,
+          bucket.unitLabel,
+        ]),
+    );
     const transferClearingHoldingAccounts = transferClearingUnitBuckets
       .filter((bucket) => bucket.isNonReferenceUnit)
       .map((bucket) => ({
@@ -234,18 +224,14 @@ export const getPeriodOverview = createServerFn({
     for (const virtualAccount of transferClearingVirtualAccounts) {
       assetLiabilityAccountNameById.set(virtualAccount.id, virtualAccount.name);
     }
-    for (const holdingAccount of transferClearingHoldingAccounts) {
-      if (!assetLiabilityAccountNameById.has(holdingAccount.id)) {
-        const unitBucket = transferClearingUnitBuckets.find(
-          (bucket) =>
-            `virtual:transfer-clearing:account:${bucket.unitKey}` ===
-            holdingAccount.id,
-        );
-        assetLiabilityAccountNameById.set(
-          holdingAccount.id,
-          unitBucket?.unitLabel ?? "Transfer clearing",
-        );
+    for (const [
+      holdingAccountId,
+      unitLabel,
+    ] of transferClearingUnitLabelByHoldingAccountId) {
+      if (assetLiabilityAccountNameById.has(holdingAccountId)) {
+        continue;
       }
+      assetLiabilityAccountNameById.set(holdingAccountId, unitLabel);
     }
     // Intentionally keep posted real-account balances: virtual transfer-clearing
     // accounts represent the missing counterpart leg with opposite sign.
@@ -683,238 +669,39 @@ export const getPeriodOverview = createServerFn({
         skippedBookingsCount += holdingGainLossSplit.skippedCount;
       }
 
-      let nextExecutionResidualTransactionIdCursor: string | undefined;
-      while (true) {
-        const transactionsPage = await prisma.transaction.findMany({
-          where: {
-            accountBookId: data.accountBookId,
-            AND: [
-              {
-                bookings: {
-                  some: {
-                    date: {
-                      gte: queryStart,
-                      lt: queryEndExclusive,
-                    },
-                  },
-                },
-              },
-              {
-                bookings: {
-                  none: {
-                    date: {
-                      gte: queryEndExclusive,
-                    },
-                  },
-                },
-              },
-              {
-                bookings: {
-                  none: {
-                    account: {
-                      type: AccountType.EQUITY,
-                      equityAccountSubtype:
-                        EquityAccountSubtype.OPENING_BALANCES,
-                    },
-                  },
-                },
-              },
-              {
-                bookings: {
-                  none: {
-                    account: {
-                      type: AccountType.EQUITY,
-                      equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
-                    },
-                  },
-                },
-              },
-            ],
-          },
-          orderBy: { id: "asc" },
-          take: TRANSACTIONS_PAGE_SIZE,
-          ...(nextExecutionResidualTransactionIdCursor
-            ? {
-                cursor: {
-                  id_accountBookId: {
-                    id: nextExecutionResidualTransactionIdCursor,
-                    accountBookId: data.accountBookId,
-                  },
-                },
-                skip: 1,
-              }
-            : {}),
-          select: {
-            id: true,
-            bookings: {
-              select: {
-                id: true,
-                accountId: true,
-                date: true,
-                value: true,
-                unit: true,
-                currency: true,
-                cryptocurrency: true,
-                symbol: true,
-                tradeCurrency: true,
-                account: {
-                  select: {
-                    name: true,
-                    type: true,
-                    equityAccountSubtype: true,
-                  },
-                },
-              },
-              orderBy: [{ date: "asc" }, { id: "asc" }],
-            },
-          },
-        });
-
-        if (transactionsPage.length === 0) {
-          break;
-        }
-
-        nextExecutionResidualTransactionIdCursor =
-          transactionsPage[transactionsPage.length - 1].id;
-
-        for (const transaction of transactionsPage) {
-          const nonExplicitBookings = transaction.bookings.filter(
-            (booking) =>
-              !(
-                booking.account.type === AccountType.EQUITY &&
-                booking.account.equityAccountSubtype ===
-                  EquityAccountSubtype.GAIN_LOSS
-              ),
-          );
-          if (nonExplicitBookings.length === 0) {
-            continue;
-          }
-
-          if (
-            !shouldIncludeTransactionForPeriod({
-              bookingDates: nonExplicitBookings.map((booking) => booking.date),
-              periodStart: queryStart,
-              periodEndExclusive: queryEndExclusive,
-            })
-          ) {
-            continue;
-          }
-
-          if (
-            !isMultiUnitTransaction(
-              nonExplicitBookings.map((booking) => ({
-                unit: booking.unit,
-                currency: booking.currency,
-                cryptocurrency: booking.cryptocurrency,
-                symbol: booking.symbol,
-                tradeCurrency: booking.tradeCurrency,
-              })),
-            )
-          ) {
-            continue;
-          }
-
-          const hasInPeriodHoldingBooking = nonExplicitBookings.some(
-            (booking) =>
-              holdingAccountIdSet.has(booking.accountId) &&
-              booking.date >= queryStart &&
-              booking.date < queryEndExclusive,
-          );
-          if (hasInPeriodHoldingBooking) {
-            continue;
-          }
-
-          const convertedValues = await Promise.all(
-            nonExplicitBookings.map((booking) =>
-              convertBookingValueToReference({
-                value: Number(booking.value),
-                unit: booking.unit,
-                currency: booking.currency,
-                cryptocurrency: booking.cryptocurrency,
-                symbol: booking.symbol,
-                tradeCurrency: booking.tradeCurrency,
-                date: booking.date,
-                referenceCurrency,
-                exchangeRateByKey,
-              }),
-            ),
-          );
-
-          let executionResidualInReference = 0;
-          const convertedByBookingId = new Map<string, number>();
-          let hasMissingConversion = false;
-
-          for (let index = 0; index < nonExplicitBookings.length; index += 1) {
-            const booking = nonExplicitBookings[index]!;
-            const convertedValue = convertedValues[index];
-
-            if (convertedValue == null) {
-              skippedBookingsCount += 1;
-              hasMissingConversion = true;
-              continue;
-            }
-
-            convertedBookingsCount += 1;
-            executionResidualInReference += convertedValue;
-            convertedByBookingId.set(booking.id, convertedValue);
-          }
-
-          if (hasMissingConversion) {
-            continue;
-          }
-
-          realizedGainLoss += executionResidualInReference;
-
-          const nonReferenceBookings = nonExplicitBookings.filter((booking) =>
-            isNonReferenceExecutionBooking({
-              unit: booking.unit,
-              currency: booking.currency,
+      const executionResidualRealization =
+        await computeExecutionResidualRealization({
+          accountBookId: data.accountBookId,
+          periodStart: queryStart,
+          periodEndExclusive: queryEndExclusive,
+          referenceCurrency,
+          trackedHoldingAccountIdSet: holdingAccountIdSet,
+          pageSize: TRANSACTIONS_PAGE_SIZE,
+          convertBookingToReference: (booking) =>
+            convertBookingValueToReference({
+              ...booking,
               referenceCurrency,
+              exchangeRateByKey,
             }),
-          );
-          if (nonReferenceBookings.length === 0) {
-            continue;
-          }
-
-          const attributionWeights = nonReferenceBookings.map((booking) =>
-            Math.abs(convertedByBookingId.get(booking.id) ?? 0),
-          );
-          const totalAttributionWeight = attributionWeights.reduce(
-            (sum, weight) => sum + weight,
-            0,
-          );
-
-          for (
-            let attributionIndex = 0;
-            attributionIndex < nonReferenceBookings.length;
-            attributionIndex += 1
-          ) {
-            const booking = nonReferenceBookings[attributionIndex]!;
-            const weight =
-              totalAttributionWeight > 0
-                ? attributionWeights[attributionIndex]! / totalAttributionWeight
-                : 1 / nonReferenceBookings.length;
-
+          onContribution: (contribution) => {
             accumulateGainLossContribution({
               byKey: gainsLossesContributionByKey,
               sourceKind: "HOLDING",
-              accountId: booking.accountId,
-              accountName: booking.account.name,
-              unit: booking.unit,
-              currency: booking.currency,
-              cryptocurrency: booking.cryptocurrency,
-              symbol: booking.symbol,
-              tradeCurrency: booking.tradeCurrency,
-              realizedGainLoss: executionResidualInReference * weight,
+              accountId: contribution.accountId,
+              accountName: contribution.accountName,
+              unit: contribution.unit,
+              currency: contribution.currency,
+              cryptocurrency: contribution.cryptocurrency,
+              symbol: contribution.symbol,
+              tradeCurrency: contribution.tradeCurrency,
+              realizedGainLoss: contribution.realizedGainLoss,
               unrealizedGainLoss: 0,
             });
-          }
-        }
-
-        if (transactionsPage.length < TRANSACTIONS_PAGE_SIZE) {
-          break;
-        }
-      }
+          },
+        });
+      realizedGainLoss += executionResidualRealization.realizedGainLoss;
+      convertedBookingsCount += executionResidualRealization.convertedCount;
+      skippedBookingsCount += executionResidualRealization.skippedCount;
     }
 
     const endOfPeriodBalanceStats =

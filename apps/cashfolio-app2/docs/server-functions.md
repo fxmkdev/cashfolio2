@@ -102,6 +102,34 @@ functions.
 from `accounts.ts`) issues a batch of Prisma updates inside a transaction to
 update `sortOrder` values after reordering sibling rows in the reorder modal.
 
+## Period Overview Gain/Loss
+
+The period overview server function (`src/server/period.ts`) keeps period
+gains/losses aligned with net-worth deltas by using a single tracked-account
+engine:
+
+- Tracked accounts include:
+  - non-reference real holding accounts
+  - non-reference virtual transfer-clearing holding accounts
+- Both real transactions and synthetic transfer-clearing transactions flow
+  through the same lot/FIFO pipeline in `src/server/period-overview-holdings.ts`
+- Explicit gain/loss remains separate from holdings realization:
+  - `stats.explicitGainLoss` includes explicit equity G/L bookings only
+  - `stats.realizedGainLoss` includes holdings realization and residual-only
+    execution reconciliation
+  - `stats.gainsLosses = explicit + realized + unrealized`
+
+Execution-residual reconciliation for eligible multi-unit income/expense
+transactions is isolated in `src/server/period-execution-residuals.ts`:
+
+- Candidate transactions are narrowed at query level to in-period income/expense
+  activity with no explicit G/L booking
+- Residual realization is skipped unless all non-explicit legs are in-period,
+  all required conversions succeed, and no tracked holding booking exists in the
+  transaction
+- Residual breakdown attribution is weighted across non-reference legs by
+  absolute converted amount
+
 ## Gain/Loss Reconciliation Explain Fields
 
 `getPeriodGainLossReconciliation` now includes event-level explain data for
