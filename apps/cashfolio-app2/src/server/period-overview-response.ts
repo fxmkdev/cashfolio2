@@ -332,11 +332,13 @@ export function buildPeriodOverviewResponse(args: {
   const { income, expenses, explicitGainLoss } = args.equityAggregation;
   const realizedGainLoss = args.isBeforeAccountBookStart
     ? 0
-    : explicitGainLoss + args.realizedGainLoss;
+    : args.realizedGainLoss;
   const unrealizedGainLoss = args.isBeforeAccountBookStart
     ? 0
     : args.unrealizedGainLoss;
-  const gainsLosses = realizedGainLoss + unrealizedGainLoss;
+  const gainsLosses = args.isBeforeAccountBookStart
+    ? 0
+    : explicitGainLoss + realizedGainLoss + unrealizedGainLoss;
 
   const roundedIncome = round2(income);
   const roundedExpenses = round2(expenses);
