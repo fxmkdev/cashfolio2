@@ -130,6 +130,15 @@ transactions is isolated in `src/server/period-execution-residuals.ts`:
 - Residual breakdown attribution is weighted across non-reference legs by
   absolute converted amount
 
+To keep `src/server/period.ts` focused as an orchestration entrypoint, the
+larger gain/loss subflows are split into dedicated modules:
+
+- `src/server/period-equity-bookings.ts` handles paged equity booking
+  conversion, equity aggregation, and explicit counterpart attribution
+- `src/server/period-holding-gain-loss.ts` handles tracked holding lot/FIFO
+  orchestration (real + transfer-clearing synthetic transactions) and residual
+  realization integration
+
 ## Gain/Loss Reconciliation Explain Fields
 
 `getPeriodGainLossReconciliation` now includes event-level explain data for
