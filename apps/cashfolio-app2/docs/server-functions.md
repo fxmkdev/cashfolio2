@@ -24,8 +24,8 @@ Related docs:
 - Key files: `accounts.ts` (barrel), `accounts-queries.ts`,
   `accounts-mutations.ts`, `dashboard.ts`, `ledger.ts`, `transactions.ts`
   (barrel), `transactions-queries.ts`, `transactions-mutations.ts`, `period.ts`,
-  `period-gain-loss-reconciliation.ts`, `valuation.server.ts`,
-  `valuation-cache.ts`
+  `period-gain-loss-reconciliation.ts`, `period-unit-format.ts`,
+  `valuation.server.ts`, `valuation-cache.ts`
 - Valuation internals live in `src/server/valuation/`: `providers.ts`,
   `cache.ts`, `backtracking.ts`, `keys.ts`, `types.ts`, `date-utils.ts`,
   `constants.ts`

@@ -33,7 +33,9 @@ Related docs:
 - `$accountBookId/valuation-cache/route.tsx` - valuation cache explorer page
   with tabs for Currency, Cryptocurrency, and Security; shows deduplicated unit
   rows and cached TimeSeries history charts (no live provider lookups)
-- `$accountBookId/period/route.tsx` - period overview page with contribution,
+- `$accountBookId/period/route.tsx` - period layout route with shared period
+  search validation and loader data used by nested period pages
+- `$accountBookId/period/index.tsx` - period overview page with contribution,
   allocation, and gains/losses breakdown cards
 - `$accountBookId/period/gains-losses/$accountId/route.tsx` - dedicated
   gain/loss reconciliation page for unit-account drill-down (opened from
@@ -60,6 +62,13 @@ Related docs:
     - `$accountBookId/$accountId/-page-rebook-flow.ts`
     - `$accountBookId/$accountId/-page-transaction-utils.ts`
     - `$accountBookId/$accountId/-page-columns.tsx`
+  - period gain/loss reconciliation modules:
+    - `$accountBookId/period/gains-losses/$accountId/-page-view.tsx`
+    - `$accountBookId/period/gains-losses/$accountId/-page-view-types.ts`
+    - `$accountBookId/period/gains-losses/$accountId/-page-view-formatters.ts`
+    - `$accountBookId/period/gains-losses/$accountId/-page-view-columns.tsx`
+    - `$accountBookId/period/gains-losses/$accountId/-realized-event-explain-drawer.tsx`
+    - `$accountBookId/period/gains-losses/$accountId/-reconciliation-stat-cards.tsx`
 
 ### Search Parameters
 
