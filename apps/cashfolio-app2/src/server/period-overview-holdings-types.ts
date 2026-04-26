@@ -38,11 +38,28 @@ export type HoldingLot = {
   acquisitionSortKey: string;
 };
 
+export type HoldingExecutionPricingSource =
+  | "directConversion"
+  | "residualAdjusted"
+  | "marketFallback";
+
+export type HoldingExecutionLotMatch = {
+  acquisitionSortKey: string;
+  matchedQuantity: number;
+  lotUnitCostInReference: number;
+  executionUnitPriceInReference: number;
+  realizedGainLossDelta: number;
+  runningRealizedGainLoss: number;
+};
+
 export type HoldingExecutionEvent = {
   bookingId: string;
   transactionId?: string | null;
   date: Date;
   quantity: number;
+  pricingSource: HoldingExecutionPricingSource;
+  marketReferenceAmount: number;
+  residualAllocationAmount: number;
   effectiveReferenceAmount: number;
 };
 

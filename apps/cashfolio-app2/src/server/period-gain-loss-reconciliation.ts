@@ -55,6 +55,23 @@ type GainLossReconciliationRealizedEvent = {
   executionUnitPriceInReference: number;
   realizedGainLossDelta: number;
   runningRealizedGainLoss: number;
+  lotMatches: GainLossReconciliationRealizedEventLotMatch[];
+  pricing: {
+    source: "directConversion" | "residualAdjusted" | "marketFallback";
+    marketReferenceAmount: number;
+    residualAllocationAmount: number;
+    effectiveReferenceAmount: number;
+  };
+  rounding: {
+    rawEffectiveReferenceAmount: number;
+    roundedEffectiveReferenceAmount: number;
+    rawExecutionUnitPriceInReference: number;
+    roundedExecutionUnitPriceInReference: number;
+    rawRealizedGainLossDelta: number;
+    roundedRealizedGainLossDelta: number;
+    rawRunningRealizedGainLoss: number;
+    roundedRunningRealizedGainLoss: number;
+  };
 };
 
 type GainLossReconciliationOpenLot = {
@@ -67,6 +84,18 @@ type GainLossReconciliationOpenLot = {
   periodEndRate: number;
   unrealizedGainLoss: number;
   runningUnrealizedGainLoss: number;
+};
+
+type GainLossReconciliationRealizedEventLotMatch = {
+  id: string;
+  acquisitionSortKey: string;
+  acquisitionDate: string;
+  acquisitionBookingId: string;
+  matchedQuantity: number;
+  lotUnitCostInReference: number;
+  executionUnitPriceInReference: number;
+  realizedGainLossDelta: number;
+  runningRealizedGainLoss: number;
 };
 
 export type PeriodGainLossReconciliation = {
@@ -188,6 +217,35 @@ function parseAcquisitionSortKey(sortKey: string): {
       : new Date(0).toISOString(),
     acquisitionBookingId: bookingId,
   };
+}
+
+function toRealizedEventLotMatches(args: {
+  bookingId: string;
+  lotMatches: Array<{
+    acquisitionSortKey: string;
+    matchedQuantity: number;
+    lotUnitCostInReference: number;
+    executionUnitPriceInReference: number;
+    realizedGainLossDelta: number;
+    runningRealizedGainLoss: number;
+  }>;
+}): GainLossReconciliationRealizedEventLotMatch[] {
+  return args.lotMatches.map((lotMatch, index) => {
+    const parsed = parseAcquisitionSortKey(lotMatch.acquisitionSortKey);
+    return {
+      id: `match:${args.bookingId}:${index + 1}`,
+      acquisitionSortKey: lotMatch.acquisitionSortKey,
+      acquisitionDate: parsed.acquisitionDate,
+      acquisitionBookingId: parsed.acquisitionBookingId,
+      matchedQuantity: round2(lotMatch.matchedQuantity),
+      lotUnitCostInReference: round2(lotMatch.lotUnitCostInReference),
+      executionUnitPriceInReference: round2(
+        lotMatch.executionUnitPriceInReference,
+      ),
+      realizedGainLossDelta: round2(lotMatch.realizedGainLossDelta),
+      runningRealizedGainLoss: round2(lotMatch.runningRealizedGainLoss),
+    };
+  });
 }
 
 function toVirtualTransferClearingAccountId(unitKey: string): string {
@@ -475,18 +533,46 @@ async function buildRealAccountReconciliation(args: {
         exchangeRateByKey,
       }),
     onAccountExecutionEvent: (event) => {
+      const roundedEffectiveReferenceAmount = round2(
+        event.effectiveReferenceAmount,
+      );
+      const roundedExecutionUnitPriceInReference = round2(
+        event.executionUnitPriceInReference,
+      );
+      const roundedRealizedGainLossDelta = round2(event.realizedGainLossDelta);
+      const roundedRunningRealizedGainLoss = round2(
+        event.runningRealizedGainLoss,
+      );
       realizedEvents.push({
         id: `event:${event.bookingId}`,
         date: event.date.toISOString(),
         bookingId: event.bookingId,
         transactionId: event.transactionId,
         quantity: event.quantity,
-        effectiveReferenceAmount: round2(event.effectiveReferenceAmount),
-        executionUnitPriceInReference: round2(
-          event.executionUnitPriceInReference,
-        ),
-        realizedGainLossDelta: round2(event.realizedGainLossDelta),
-        runningRealizedGainLoss: round2(event.runningRealizedGainLoss),
+        effectiveReferenceAmount: roundedEffectiveReferenceAmount,
+        executionUnitPriceInReference: roundedExecutionUnitPriceInReference,
+        realizedGainLossDelta: roundedRealizedGainLossDelta,
+        runningRealizedGainLoss: roundedRunningRealizedGainLoss,
+        lotMatches: toRealizedEventLotMatches({
+          bookingId: event.bookingId,
+          lotMatches: event.lotMatches,
+        }),
+        pricing: {
+          source: event.pricingSource,
+          marketReferenceAmount: round2(event.marketReferenceAmount),
+          residualAllocationAmount: round2(event.residualAllocationAmount),
+          effectiveReferenceAmount: roundedEffectiveReferenceAmount,
+        },
+        rounding: {
+          rawEffectiveReferenceAmount: event.effectiveReferenceAmount,
+          roundedEffectiveReferenceAmount,
+          rawExecutionUnitPriceInReference: event.executionUnitPriceInReference,
+          roundedExecutionUnitPriceInReference,
+          rawRealizedGainLossDelta: event.realizedGainLossDelta,
+          roundedRealizedGainLossDelta,
+          rawRunningRealizedGainLoss: event.runningRealizedGainLoss,
+          roundedRunningRealizedGainLoss,
+        },
       });
     },
     onAccountOpenLotValuation: (lot) => {
@@ -599,18 +685,46 @@ async function buildTransferClearingReconciliation(args: {
         exchangeRateByKey,
       }),
     onUnitExecutionEvent: (event) => {
+      const roundedEffectiveReferenceAmount = round2(
+        event.effectiveReferenceAmount,
+      );
+      const roundedExecutionUnitPriceInReference = round2(
+        event.executionUnitPriceInReference,
+      );
+      const roundedRealizedGainLossDelta = round2(event.realizedGainLossDelta);
+      const roundedRunningRealizedGainLoss = round2(
+        event.runningRealizedGainLoss,
+      );
       realizedEvents.push({
         id: `event:${event.bookingId}`,
         date: event.date.toISOString(),
         bookingId: event.bookingId,
         transactionId: event.transactionId,
         quantity: event.quantity,
-        effectiveReferenceAmount: round2(event.effectiveReferenceAmount),
-        executionUnitPriceInReference: round2(
-          event.executionUnitPriceInReference,
-        ),
-        realizedGainLossDelta: round2(event.realizedGainLossDelta),
-        runningRealizedGainLoss: round2(event.runningRealizedGainLoss),
+        effectiveReferenceAmount: roundedEffectiveReferenceAmount,
+        executionUnitPriceInReference: roundedExecutionUnitPriceInReference,
+        realizedGainLossDelta: roundedRealizedGainLossDelta,
+        runningRealizedGainLoss: roundedRunningRealizedGainLoss,
+        lotMatches: toRealizedEventLotMatches({
+          bookingId: event.bookingId,
+          lotMatches: event.lotMatches,
+        }),
+        pricing: {
+          source: event.pricingSource,
+          marketReferenceAmount: round2(event.marketReferenceAmount),
+          residualAllocationAmount: round2(event.residualAllocationAmount),
+          effectiveReferenceAmount: roundedEffectiveReferenceAmount,
+        },
+        rounding: {
+          rawEffectiveReferenceAmount: event.effectiveReferenceAmount,
+          roundedEffectiveReferenceAmount,
+          rawExecutionUnitPriceInReference: event.executionUnitPriceInReference,
+          roundedExecutionUnitPriceInReference,
+          rawRealizedGainLossDelta: event.realizedGainLossDelta,
+          roundedRealizedGainLossDelta,
+          rawRunningRealizedGainLoss: event.runningRealizedGainLoss,
+          roundedRunningRealizedGainLoss,
+        },
       });
     },
     onUnitOpenLotValuation: (lot) => {

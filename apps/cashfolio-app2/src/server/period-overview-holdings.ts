@@ -14,6 +14,7 @@ import {
 import type {
   HoldingAccountState,
   HoldingBookingConverter,
+  HoldingExecutionLotMatch,
   HoldingGainLossWorkingState,
   HoldingLot,
   HoldingRateConvertibleAccount,
@@ -298,10 +299,17 @@ export async function applyHoldingTransactionsToGainLossState(args: {
       const booking = inPeriodHoldingBookings[index]!;
       const marketReferenceAmount =
         holdingMarketValueByBookingId.get(booking.id) ?? 0;
+      const residualAllocationAmount = shouldUseMarketFallback
+        ? 0
+        : residualInReference * residualAllocationWeights[index]!;
       const effectiveReferenceAmount = shouldUseMarketFallback
         ? marketReferenceAmount
-        : marketReferenceAmount +
-          residualInReference * residualAllocationWeights[index]!;
+        : marketReferenceAmount + residualAllocationAmount;
+      const pricingSource = shouldUseMarketFallback
+        ? "marketFallback"
+        : isNearZero(residualAllocationAmount)
+          ? "directConversion"
+          : "residualAdjusted";
 
       const state = args.state.stateByHoldingAccountId.get(booking.accountId);
       if (!state) {
@@ -313,6 +321,9 @@ export async function applyHoldingTransactionsToGainLossState(args: {
         transactionId: booking.transactionId ?? null,
         date: booking.date,
         quantity: booking.value,
+        pricingSource,
+        marketReferenceAmount,
+        residualAllocationAmount,
         effectiveReferenceAmount,
       });
     }
@@ -339,10 +350,14 @@ export async function finalizeHoldingGainLossState(args: {
     transactionId: string | null;
     date: Date;
     quantity: number;
+    pricingSource: "directConversion" | "residualAdjusted" | "marketFallback";
+    marketReferenceAmount: number;
+    residualAllocationAmount: number;
     effectiveReferenceAmount: number;
     executionUnitPriceInReference: number;
     realizedGainLossDelta: number;
     runningRealizedGainLoss: number;
+    lotMatches: HoldingExecutionLotMatch[];
   }) => void;
   onAccountOpenLotValuation?: (lot: {
     accountId: string;
@@ -400,6 +415,7 @@ export async function finalizeHoldingGainLossState(args: {
         continue;
       }
 
+      const lotMatches: HoldingExecutionLotMatch[] = [];
       const realizedGainLossDelta = applyExecutionToLots({
         lots: state.lots,
         quantity: event.quantity,
@@ -408,6 +424,9 @@ export async function finalizeHoldingGainLossState(args: {
           date: event.date,
           bookingId: event.bookingId,
         }),
+        onLotMatched: (lotMatch) => {
+          lotMatches.push(lotMatch);
+        },
       });
       accountRealizedGainLoss += realizedGainLossDelta;
       args.onAccountExecutionEvent?.({
@@ -416,10 +435,14 @@ export async function finalizeHoldingGainLossState(args: {
         transactionId: event.transactionId ?? null,
         date: event.date,
         quantity: event.quantity,
+        pricingSource: event.pricingSource,
+        marketReferenceAmount: event.marketReferenceAmount,
+        residualAllocationAmount: event.residualAllocationAmount,
         effectiveReferenceAmount: event.effectiveReferenceAmount,
         executionUnitPriceInReference,
         realizedGainLossDelta,
         runningRealizedGainLoss: accountRealizedGainLoss,
+        lotMatches,
       });
     }
 

@@ -1,5 +1,6 @@
 import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import type {
+  HoldingExecutionLotMatch,
   HoldingLot,
   HoldingTransactionBooking,
 } from "./period-overview-holdings-types";
@@ -63,6 +64,7 @@ export function applyExecutionToLots(args: {
   quantity: number;
   executionUnitPriceInReference: number;
   acquisitionSortKey: string;
+  onLotMatched?: (match: HoldingExecutionLotMatch) => void;
 }): number {
   let realizedGainLoss = 0;
   let remainingQuantity = args.quantity;
@@ -73,20 +75,32 @@ export function applyExecutionToLots(args: {
     Math.sign(remainingQuantity) !== Math.sign(args.lots[0]!.quantity)
   ) {
     const lot = args.lots[0]!;
+    const lotAcquisitionSortKey = lot.acquisitionSortKey;
+    const lotUnitCostInReference = lot.unitCostInReference;
     const closeQuantity = Math.min(
       Math.abs(remainingQuantity),
       Math.abs(lot.quantity),
     );
+    let lotRealizedGainLossDelta = 0;
 
     if (lot.quantity > 0 && remainingQuantity < 0) {
-      realizedGainLoss +=
+      lotRealizedGainLossDelta =
         closeQuantity *
-        (args.executionUnitPriceInReference - lot.unitCostInReference);
+        (args.executionUnitPriceInReference - lotUnitCostInReference);
     } else if (lot.quantity < 0 && remainingQuantity > 0) {
-      realizedGainLoss +=
+      lotRealizedGainLossDelta =
         closeQuantity *
-        (lot.unitCostInReference - args.executionUnitPriceInReference);
+        (lotUnitCostInReference - args.executionUnitPriceInReference);
     }
+    realizedGainLoss += lotRealizedGainLossDelta;
+    args.onLotMatched?.({
+      acquisitionSortKey: lotAcquisitionSortKey,
+      matchedQuantity: closeQuantity,
+      lotUnitCostInReference,
+      executionUnitPriceInReference: args.executionUnitPriceInReference,
+      realizedGainLossDelta: lotRealizedGainLossDelta,
+      runningRealizedGainLoss: realizedGainLoss,
+    });
 
     lot.quantity -= Math.sign(lot.quantity) * closeQuantity;
     remainingQuantity -= Math.sign(remainingQuantity) * closeQuantity;

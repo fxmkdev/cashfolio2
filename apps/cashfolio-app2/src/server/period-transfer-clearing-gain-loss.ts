@@ -1,4 +1,5 @@
 import { Unit } from "../.prisma-client/enums";
+import type { HoldingExecutionLotMatch } from "./period-overview-holdings-types";
 import {
   applyExecutionToLots,
   isNearZero,
@@ -50,10 +51,14 @@ export async function computeTransferClearingGainLossSplit(args: {
     transactionId: string | null;
     date: Date;
     quantity: number;
+    pricingSource: "directConversion";
+    marketReferenceAmount: number;
+    residualAllocationAmount: number;
     effectiveReferenceAmount: number;
     executionUnitPriceInReference: number;
     realizedGainLossDelta: number;
     runningRealizedGainLoss: number;
+    lotMatches: HoldingExecutionLotMatch[];
   }) => void;
   onUnitOpenLotValuation?: (lot: {
     unitKey: TransferClearingUnitBucket["unitKey"];
@@ -182,6 +187,7 @@ export async function computeTransferClearingGainLossSplit(args: {
       }
       convertedCount += 1;
 
+      const lotMatches: HoldingExecutionLotMatch[] = [];
       const bookingRealizedGainLoss = applyExecutionToLots({
         lots,
         quantity: clearingQuantity,
@@ -190,6 +196,9 @@ export async function computeTransferClearingGainLossSplit(args: {
           date: booking.date,
           bookingId: booking.id,
         }),
+        onLotMatched: (lotMatch) => {
+          lotMatches.push(lotMatch);
+        },
       });
       realizedGainLoss += bookingRealizedGainLoss;
       unitRealizedGainLoss += bookingRealizedGainLoss;
@@ -199,10 +208,14 @@ export async function computeTransferClearingGainLossSplit(args: {
         transactionId: booking.transactionId ?? null,
         date: booking.date,
         quantity: clearingQuantity,
+        pricingSource: "directConversion",
+        marketReferenceAmount: clearingReferenceAmount,
+        residualAllocationAmount: 0,
         effectiveReferenceAmount: clearingReferenceAmount,
         executionUnitPriceInReference,
         realizedGainLossDelta: bookingRealizedGainLoss,
         runningRealizedGainLoss: unitRealizedGainLoss,
+        lotMatches,
       });
     }
 

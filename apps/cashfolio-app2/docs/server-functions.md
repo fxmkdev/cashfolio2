@@ -71,3 +71,16 @@ functions.
 `reorderAccountTreeItems` (implemented in `accounts-mutations.ts`, re-exported
 from `accounts.ts`) issues a batch of Prisma updates inside a transaction to
 update `sortOrder` values after reordering sibling rows in the reorder modal.
+
+## Gain/Loss Reconciliation Explain Fields
+
+`getPeriodGainLossReconciliation` now includes event-level explain data for
+`realizedEvents`:
+
+- `lotMatches[]`: consumed-lot attribution for each realised event
+  (`acquisitionSortKey/date/source`, matched quantity, lot cost, execution
+  price, per-lot delta, running event realised).
+- `pricing`: pricing-source metadata (`directConversion`, `residualAdjusted`,
+  `marketFallback`) plus market/residual/effective reference amounts.
+- `rounding`: raw vs rounded event values used by the reconciliation UI
+  explanation drawer.

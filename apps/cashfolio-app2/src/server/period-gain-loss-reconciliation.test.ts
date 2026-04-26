@@ -61,7 +61,7 @@ import { getPeriodGainLossReconciliation } from "./period-gain-loss-reconciliati
 
 describe("getPeriodGainLossReconciliation", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     vi.setSystemTime(new Date("2026-03-10T12:00:00.000Z"));
 
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
@@ -178,6 +178,38 @@ describe("getPeriodGainLossReconciliation", () => {
       totalGainLoss: 260,
     });
     expect(response?.realizedEvents).toHaveLength(2);
+    const sellEvent = response?.realizedEvents.find(
+      (event) => event.bookingId === "h-sell",
+    );
+    expect(sellEvent).toBeDefined();
+    expect(sellEvent?.pricing).toMatchObject({
+      source: "directConversion",
+      marketReferenceAmount: -480,
+      residualAllocationAmount: 0,
+      effectiveReferenceAmount: -480,
+    });
+    expect(sellEvent?.lotMatches).toMatchObject([
+      {
+        acquisitionBookingId: "h-buy",
+        matchedQuantity: 4,
+        lotUnitCostInReference: 100,
+        executionUnitPriceInReference: 120,
+        realizedGainLossDelta: 80,
+        runningRealizedGainLoss: 80,
+      },
+    ]);
+    expect(
+      sellEvent?.lotMatches.reduce(
+        (sum, lotMatch) => sum + lotMatch.realizedGainLossDelta,
+        0,
+      ),
+    ).toBe(sellEvent?.realizedGainLossDelta);
+    expect(sellEvent?.rounding.roundedRealizedGainLossDelta).toBe(
+      sellEvent?.realizedGainLossDelta,
+    );
+    expect(sellEvent?.rounding.roundedRunningRealizedGainLoss).toBe(
+      sellEvent?.runningRealizedGainLoss,
+    );
     expect(response?.unrealizedOpenLots).toMatchObject([
       {
         quantity: 6,
@@ -253,6 +285,24 @@ describe("getPeriodGainLossReconciliation", () => {
       totalGainLoss: 180,
     });
     expect(response?.realizedEvents).toHaveLength(1);
+    expect(response?.realizedEvents[0]).toMatchObject({
+      pricing: {
+        source: "directConversion",
+        marketReferenceAmount: -520,
+        residualAllocationAmount: 0,
+        effectiveReferenceAmount: -520,
+      },
+      lotMatches: [
+        {
+          acquisitionBookingId: "opening:security:AAPL:USD",
+          matchedQuantity: 4,
+          lotUnitCostInReference: 100,
+          executionUnitPriceInReference: 130,
+          realizedGainLossDelta: 120,
+          runningRealizedGainLoss: 120,
+        },
+      ],
+    });
     expect(response?.unrealizedOpenLots).toMatchObject([
       {
         quantity: 6,
@@ -262,6 +312,214 @@ describe("getPeriodGainLossReconciliation", () => {
         runningUnrealizedGainLoss: 60,
       },
     ]);
+  });
+
+  it("marks residual-adjusted event pricing metadata", async () => {
+    prisma.account.findFirst.mockResolvedValue({
+      id: "account-aapl",
+      name: "AAPL Trading",
+      unit: Unit.SECURITY,
+      currency: null,
+      cryptocurrency: null,
+      symbol: "AAPL",
+      tradeCurrency: "USD",
+    });
+    prisma.transaction.findMany
+      .mockResolvedValueOnce([
+        {
+          id: "tx-buy",
+          bookings: [
+            {
+              id: "h-buy",
+              accountId: "account-aapl",
+              date: new Date("2026-02-05T00:00:00.000Z"),
+              value: 10,
+              unit: Unit.SECURITY,
+              currency: null,
+              cryptocurrency: null,
+              symbol: "AAPL",
+              tradeCurrency: "USD",
+              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+            },
+            {
+              id: "c-buy",
+              accountId: "account-cash",
+              date: new Date("2026-02-05T00:00:00.000Z"),
+              value: -1000,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+            },
+          ],
+        },
+        {
+          id: "tx-sell",
+          bookings: [
+            {
+              id: "h-sell",
+              accountId: "account-aapl",
+              date: new Date("2026-02-12T00:00:00.000Z"),
+              value: -4,
+              unit: Unit.SECURITY,
+              currency: null,
+              cryptocurrency: null,
+              symbol: "AAPL",
+              tradeCurrency: "USD",
+              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+            },
+            {
+              id: "c-sell",
+              accountId: "account-cash",
+              date: new Date("2026-02-12T00:00:00.000Z"),
+              value: 500,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+            },
+          ],
+        },
+      ])
+      .mockResolvedValueOnce([]);
+    convertBookingValueToReference.mockImplementation(async ({ id }) => {
+      if (id === "h-buy") return 1000;
+      if (id === "c-buy") return -1000;
+      if (id === "h-sell") return -480;
+      if (id === "c-sell") return 500;
+      return null;
+    });
+    getUnitToReferenceExchangeRate.mockResolvedValue(130);
+
+    const response = await getPeriodGainLossReconciliation({
+      data: {
+        accountBookId: "book-1",
+        accountId: "account-aapl",
+        period: "2026-02",
+      },
+    });
+    expect(response).not.toBeNull();
+
+    const residualAdjustedEvent = response?.realizedEvents.find(
+      (event) => event.pricing.source === "residualAdjusted",
+    );
+    expect(residualAdjustedEvent?.pricing).toMatchObject({
+      source: "residualAdjusted",
+      marketReferenceAmount: -480,
+      residualAllocationAmount: -20,
+      effectiveReferenceAmount: -500,
+    });
+    expect(residualAdjustedEvent?.realizedGainLossDelta).toBe(100);
+  });
+
+  it("exposes raw and rounded realized-delta values consistently", async () => {
+    prisma.account.findFirst.mockResolvedValue({
+      id: "account-aapl",
+      name: "AAPL Trading",
+      unit: Unit.SECURITY,
+      currency: null,
+      cryptocurrency: null,
+      symbol: "AAPL",
+      tradeCurrency: "USD",
+    });
+    prisma.transaction.findMany
+      .mockResolvedValueOnce([
+        {
+          id: "tx-buy",
+          bookings: [
+            {
+              id: "h-buy",
+              accountId: "account-aapl",
+              date: new Date("2026-02-05T00:00:00.000Z"),
+              value: 3,
+              unit: Unit.SECURITY,
+              currency: null,
+              cryptocurrency: null,
+              symbol: "AAPL",
+              tradeCurrency: "USD",
+              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+            },
+            {
+              id: "c-buy",
+              accountId: "account-cash",
+              date: new Date("2026-02-05T00:00:00.000Z"),
+              value: -1000,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+            },
+          ],
+        },
+        {
+          id: "tx-sell",
+          bookings: [
+            {
+              id: "h-sell",
+              accountId: "account-aapl",
+              date: new Date("2026-02-12T00:00:00.000Z"),
+              value: -1,
+              unit: Unit.SECURITY,
+              currency: null,
+              cryptocurrency: null,
+              symbol: "AAPL",
+              tradeCurrency: "USD",
+              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+            },
+            {
+              id: "c-sell",
+              accountId: "account-cash",
+              date: new Date("2026-02-12T00:00:00.000Z"),
+              value: 400,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+            },
+          ],
+        },
+      ])
+      .mockResolvedValueOnce([]);
+    convertBookingValueToReference.mockImplementation(async ({ id }) => {
+      if (id === "h-buy") return 1000;
+      if (id === "c-buy") return -1000;
+      if (id === "h-sell") return -400;
+      if (id === "c-sell") return 400;
+      return null;
+    });
+    getUnitToReferenceExchangeRate.mockResolvedValue(350);
+
+    const response = await getPeriodGainLossReconciliation({
+      data: {
+        accountBookId: "book-1",
+        accountId: "account-aapl",
+        period: "2026-02",
+      },
+    });
+    expect(response).not.toBeNull();
+    const sellEvent = response?.realizedEvents.find(
+      (event) => event.bookingId === "h-sell",
+    );
+    expect(sellEvent).toBeDefined();
+    expect(sellEvent?.rounding.rawRealizedGainLossDelta).toBeCloseTo(
+      66.6666667,
+      6,
+    );
+    expect(sellEvent?.rounding.roundedRealizedGainLossDelta).toBe(66.67);
+    expect(sellEvent?.rounding.roundedRealizedGainLossDelta).toBe(
+      sellEvent?.realizedGainLossDelta,
+    );
+    expect(sellEvent?.rounding.roundedRunningRealizedGainLoss).toBe(
+      sellEvent?.runningRealizedGainLoss,
+    );
   });
 
   it("returns null for unsupported targets", async () => {
