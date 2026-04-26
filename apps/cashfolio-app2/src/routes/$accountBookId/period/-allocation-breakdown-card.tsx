@@ -32,6 +32,8 @@ type PeriodAllocationBreakdownCardProps = {
   onSelectedBreakdownChange: (value: AllocationBreakdownType) => void;
   onSelectedChartTypeChange: (value: BreakdownChartType) => void;
   onDrillPathChange: (nextPath: string[]) => void;
+  onBreakdownAccountDoubleClick: (accountId: string) => void;
+  onChartContainerDoubleClick?: (() => void) | null;
   footer?: ReactNode;
 };
 
@@ -57,6 +59,8 @@ export function PeriodAllocationBreakdownCard({
   onSelectedBreakdownChange,
   onSelectedChartTypeChange,
   onDrillPathChange,
+  onBreakdownAccountDoubleClick,
+  onChartContainerDoubleClick,
   footer,
 }: PeriodAllocationBreakdownCardProps) {
   const isTableView = selectedChartType === "table";
@@ -78,6 +82,7 @@ export function PeriodAllocationBreakdownCard({
           <BreakdownTable
             hierarchy={breakdownHierarchy}
             valueHeaderName="Balance"
+            onAccountDoubleClick={onBreakdownAccountDoubleClick}
             expandedGroupsStorageKey={tableExpandedGroupsStorageKey}
           />
         ) : null
@@ -85,7 +90,9 @@ export function PeriodAllocationBreakdownCard({
       chartContainerTestId="period-allocation-breakdown-chart"
       tableContainerTestId="period-allocation-breakdown-table"
       onDrillPathChange={onDrillPathChange}
+      onChartContainerDoubleClick={onChartContainerDoubleClick}
       showDrillControls={!isTableView}
+      drillHint="Double-click a group to drill down, or an allocation account to open ledger."
       headerControls={
         <Flex gap="md" wrap="wrap" justify="flex-end">
           <ChartTypeSegmentedControl

@@ -10,7 +10,7 @@ import {
   useMantineTheme,
 } from "@mantine/core";
 import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
 import { LinkButton } from "@/components/link-button";
 import { TopPageHeader } from "@/components/top-page-header";
@@ -242,6 +242,16 @@ export function PeriodPageView({
     colors,
     onBreakdownAccountDoubleClick,
   });
+  const onAllocationBreakdownAccountDoubleClick = useCallback(
+    (accountId: string) => {
+      if (accountId.startsWith("virtual:")) {
+        return;
+      }
+
+      onBreakdownAccountDoubleClick(accountId);
+    },
+    [onBreakdownAccountDoubleClick],
+  );
 
   const allocationBreakdown = usePeriodAllocationBreakdownViewModel({
     accountBookId,
@@ -253,6 +263,7 @@ export function PeriodPageView({
     currencyFormatter,
     percentageFormatter,
     colors,
+    onBreakdownAccountDoubleClick: onAllocationBreakdownAccountDoubleClick,
   });
   const gainsLosses = usePeriodGainsLossesViewModel({
     accountBookId,
@@ -409,6 +420,12 @@ export function PeriodPageView({
               onSelectedChartTypeChange={setSelectedAllocationChartType}
               onDrillPathChange={
                 allocationBreakdown.updateSelectedAllocationBreakdownPath
+              }
+              onBreakdownAccountDoubleClick={
+                onAllocationBreakdownAccountDoubleClick
+              }
+              onChartContainerDoubleClick={
+                allocationBreakdown.handleAllocationChartContainerDoubleClick
               }
               footer={
                 allocationBreakdown.hasAllocationPartialData ? (
