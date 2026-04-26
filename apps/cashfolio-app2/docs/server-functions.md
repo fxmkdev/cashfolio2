@@ -23,7 +23,8 @@ Related docs:
 
 - Key files: `accounts.ts` (barrel), `accounts-queries.ts`,
   `accounts-mutations.ts`, `dashboard.ts`, `ledger.ts`, `transactions.ts`
-  (barrel), `transactions-queries.ts`, `transactions-mutations.ts`,
+  (barrel), `transactions-queries.ts`, `transactions-mutations.ts`, `period.ts`,
+  `period-gain-loss-reconciliation.ts`, `period-unit-format.ts`,
   `valuation.server.ts`, `valuation-cache.ts`
 - Valuation internals live in `src/server/valuation/`: `providers.ts`,
   `cache.ts`, `backtracking.ts`, `keys.ts`, `types.ts`, `date-utils.ts`,
@@ -70,3 +71,16 @@ functions.
 `reorderAccountTreeItems` (implemented in `accounts-mutations.ts`, re-exported
 from `accounts.ts`) issues a batch of Prisma updates inside a transaction to
 update `sortOrder` values after reordering sibling rows in the reorder modal.
+
+## Gain/Loss Reconciliation Explain Fields
+
+`getPeriodGainLossReconciliation` now includes event-level explain data for
+`realizedEvents`:
+
+- `lotMatches[]`: consumed-lot attribution for each realised event
+  (`acquisitionSortKey/date/source`, matched quantity, lot cost, execution
+  price, per-lot delta, running event realised).
+- `pricing`: pricing-source metadata (`directConversion`, `residualAdjusted`,
+  `marketFallback`) plus market/residual/effective reference amounts.
+- `rounding`: raw vs rounded event values used by the reconciliation UI
+  explanation drawer.

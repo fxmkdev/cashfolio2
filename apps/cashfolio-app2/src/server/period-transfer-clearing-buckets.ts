@@ -107,6 +107,13 @@ async function loadTransferClearingBookings(args: {
         : {}),
       select: {
         id: true,
+        description: true,
+        transactionId: true,
+        transaction: {
+          select: {
+            description: true,
+          },
+        },
         date: true,
         value: true,
         unit: true,
@@ -124,6 +131,9 @@ async function loadTransferClearingBookings(args: {
     for (const booking of bookingsPage) {
       results.push({
         id: booking.id,
+        description: booking.description,
+        transactionDescription: booking.transaction?.description ?? null,
+        transactionId: booking.transactionId,
         date: booking.date,
         value: Number(booking.value),
         unit: booking.unit,

@@ -10,6 +10,7 @@ import {
   type GainsLossesGridRow,
   type GainsLossesTotalFooterRow,
   flattenGainsLossesHierarchyRows,
+  parseGainsLossesUnitAccountId,
   sumTopLevelRealizedGainLoss,
   sumTopLevelTotalGainLoss,
   sumTopLevelUnrealizedGainLoss,
@@ -19,12 +20,14 @@ type GainsLossesTableProps = {
   hierarchy: GainsLossesBreakdownNode[];
   expandedGroupsStorageKey: string;
   onExplicitGainLossDoubleClick?: () => void;
+  onUnitAccountDoubleClick?: (accountId: string) => void;
 };
 
 export function GainsLossesTable({
   hierarchy,
   expandedGroupsStorageKey,
   onExplicitGainLossDoubleClick,
+  onUnitAccountDoubleClick,
 }: GainsLossesTableProps) {
   const rowData = useMemo(
     () => flattenGainsLossesHierarchyRows(hierarchy),
@@ -96,14 +99,22 @@ export function GainsLossesTable({
       isGroupOpenByDefault={isGroupOpenByDefault}
       onRowGroupOpened={onRowGroupOpened}
       onRowDoubleClicked={(event) => {
-        if (
-          !onExplicitGainLossDoubleClick ||
-          !isExplicitGainLossDrillRow(event.data)
-        ) {
+        if (!event.data) {
           return;
         }
 
-        onExplicitGainLossDoubleClick();
+        const unitAccountId = parseGainsLossesUnitAccountId({
+          rowId: event.data.id,
+          parentId: event.data.parentId,
+        });
+        if (unitAccountId) {
+          onUnitAccountDoubleClick?.(unitAccountId);
+          return;
+        }
+
+        if (isExplicitGainLossDrillRow(event.data)) {
+          onExplicitGainLossDoubleClick?.();
+        }
       }}
     />
   );

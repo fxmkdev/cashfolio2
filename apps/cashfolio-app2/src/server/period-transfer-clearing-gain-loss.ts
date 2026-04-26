@@ -1,4 +1,6 @@
 import { Unit } from "../.prisma-client/enums";
+import type { HoldingGainLossSkippedReason } from "./period-overview-holdings";
+import type { HoldingExecutionLotMatch } from "./period-overview-holdings-types";
 import {
   applyExecutionToLots,
   isNearZero,
@@ -9,6 +11,8 @@ import {
   type TransferClearingBooking,
   type TransferClearingUnitBucket,
 } from "./period-transfer-clearing-types";
+
+type TransferClearingGainLossSkippedReason = HoldingGainLossSkippedReason;
 
 export async function computeTransferClearingGainLossSplit(args: {
   unitBuckets: TransferClearingUnitBucket[];
@@ -37,6 +41,40 @@ export async function computeTransferClearingGainLossSplit(args: {
     tradeCurrency: TransferClearingUnitBucket["tradeCurrency"];
     realizedGainLoss: number;
     unrealizedGainLoss: number;
+  }) => void;
+  onUnitExecutionEvent?: (event: {
+    unitKey: TransferClearingUnitBucket["unitKey"];
+    bookingId: string;
+    bookingDescription?: string | null;
+    transactionDescription?: string | null;
+    transactionId: string | null;
+    date: Date;
+    quantity: number;
+    pricingSource: "directConversion";
+    marketReferenceAmount: number;
+    residualAllocationAmount: number;
+    effectiveReferenceAmount: number;
+    executionUnitPriceInReference: number;
+    realizedGainLossDelta: number;
+    runningRealizedGainLoss: number;
+    lotMatches: HoldingExecutionLotMatch[];
+  }) => void;
+  onUnitOpenLotValuation?: (lot: {
+    unitKey: TransferClearingUnitBucket["unitKey"];
+    acquisitionSortKey: string;
+    quantity: number;
+    unitCostInReference: number;
+    periodEndRate: number;
+    unrealizedGainLoss: number;
+  }) => void;
+  onSkippedItem?: (item: {
+    unitKey: TransferClearingUnitBucket["unitKey"];
+    bookingId?: string;
+    bookingDescription?: string | null;
+    transactionDescription?: string | null;
+    transactionId?: string | null;
+    reason: TransferClearingGainLossSkippedReason;
+    date: Date;
   }) => void;
 }) {
   let realizedGainLoss = 0;
@@ -73,6 +111,11 @@ export async function computeTransferClearingGainLossSplit(args: {
       });
       if (initialRate == null) {
         skippedCount += 1;
+        args.onSkippedItem?.({
+          unitKey: unitBucket.unitKey,
+          reason: "missingInitialRate",
+          date: args.initialRateDate,
+        });
         continue;
       }
 
@@ -118,6 +161,15 @@ export async function computeTransferClearingGainLossSplit(args: {
       const convertedValue = convertedValues[bookingIndex];
       if (convertedValue == null) {
         skippedCount += 1;
+        args.onSkippedItem?.({
+          unitKey: unitBucket.unitKey,
+          bookingId: booking.id,
+          bookingDescription: booking.description,
+          transactionDescription: booking.transactionDescription,
+          transactionId: booking.transactionId ?? null,
+          reason: "missingConversion",
+          date: booking.date,
+        });
         continue;
       }
 
@@ -127,10 +179,20 @@ export async function computeTransferClearingGainLossSplit(args: {
         clearingReferenceAmount / clearingQuantity;
       if (!Number.isFinite(executionUnitPriceInReference)) {
         skippedCount += 1;
+        args.onSkippedItem?.({
+          unitKey: unitBucket.unitKey,
+          bookingId: booking.id,
+          bookingDescription: booking.description,
+          transactionDescription: booking.transactionDescription,
+          transactionId: booking.transactionId ?? null,
+          reason: "invalidExecutionPrice",
+          date: booking.date,
+        });
         continue;
       }
       convertedCount += 1;
 
+      let lotMatches: HoldingExecutionLotMatch[] | undefined;
       const bookingRealizedGainLoss = applyExecutionToLots({
         lots,
         quantity: clearingQuantity,
@@ -139,9 +201,36 @@ export async function computeTransferClearingGainLossSplit(args: {
           date: booking.date,
           bookingId: booking.id,
         }),
+        ...(args.onUnitExecutionEvent
+          ? {
+              onLotMatched: (lotMatch: HoldingExecutionLotMatch) => {
+                if (!lotMatches) {
+                  lotMatches = [];
+                }
+                lotMatches.push(lotMatch);
+              },
+            }
+          : {}),
       });
       realizedGainLoss += bookingRealizedGainLoss;
       unitRealizedGainLoss += bookingRealizedGainLoss;
+      args.onUnitExecutionEvent?.({
+        unitKey: unitBucket.unitKey,
+        bookingId: booking.id,
+        bookingDescription: booking.description,
+        transactionDescription: booking.transactionDescription,
+        transactionId: booking.transactionId ?? null,
+        date: booking.date,
+        quantity: clearingQuantity,
+        pricingSource: "directConversion",
+        marketReferenceAmount: clearingReferenceAmount,
+        residualAllocationAmount: 0,
+        effectiveReferenceAmount: clearingReferenceAmount,
+        executionUnitPriceInReference,
+        realizedGainLossDelta: bookingRealizedGainLoss,
+        runningRealizedGainLoss: unitRealizedGainLoss,
+        lotMatches: lotMatches ?? [],
+      });
     }
 
     const openQuantity = lots.reduce(
@@ -159,12 +248,26 @@ export async function computeTransferClearingGainLossSplit(args: {
       });
       if (periodEndRate == null) {
         skippedCount += 1;
+        args.onSkippedItem?.({
+          unitKey: unitBucket.unitKey,
+          reason: "missingPeriodEndRate",
+          date: args.periodEnd,
+        });
       } else {
-        const unitUnrealized = lots.reduce(
-          (sum, lot) =>
-            sum + lot.quantity * (periodEndRate - lot.unitCostInReference),
-          0,
-        );
+        let unitUnrealized = 0;
+        for (const lot of lots) {
+          const lotUnrealizedGainLoss =
+            lot.quantity * (periodEndRate - lot.unitCostInReference);
+          unitUnrealized += lotUnrealizedGainLoss;
+          args.onUnitOpenLotValuation?.({
+            unitKey: unitBucket.unitKey,
+            acquisitionSortKey: lot.acquisitionSortKey,
+            quantity: lot.quantity,
+            unitCostInReference: lot.unitCostInReference,
+            periodEndRate,
+            unrealizedGainLoss: lotUnrealizedGainLoss,
+          });
+        }
         unrealizedGainLoss += unitUnrealized;
         unitUnrealizedGainLoss += unitUnrealized;
       }

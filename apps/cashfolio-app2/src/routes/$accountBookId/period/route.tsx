@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { getGainLossEquityAccountId } from "@/server/accounts";
 import { getPeriodOverview } from "@/server/period";
@@ -39,10 +39,14 @@ export const Route = createFileRoute("/$accountBookId/period")({
 
     return { overview, gainLossEquityAccountId };
   },
-  component: PeriodPage,
+  component: PeriodLayout,
 });
 
-function PeriodPage() {
+function PeriodLayout() {
+  return <Outlet />;
+}
+
+export function PeriodPageContent() {
   const { accountBookId } = Route.useParams();
   const search = Route.useSearch();
   const selectedPeriodValue = getPeriodValue(search);
@@ -92,6 +96,18 @@ function PeriodPage() {
             },
           });
         }}
+        onGainLossUnitAccountDoubleClick={(accountId) =>
+          navigate({
+            to: "/$accountBookId/period/gains-losses/$accountId",
+            params: { accountBookId, accountId },
+            search: {
+              period:
+                selectedPeriodValue === DEFAULT_PERIOD_VALUE
+                  ? undefined
+                  : selectedPeriodValue,
+            },
+          })
+        }
       />
     </Suspense>
   );

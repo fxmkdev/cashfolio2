@@ -14,6 +14,7 @@ import {
 import type {
   HoldingAccountState,
   HoldingBookingConverter,
+  HoldingExecutionLotMatch,
   HoldingGainLossWorkingState,
   HoldingLot,
   HoldingRateConvertibleAccount,
@@ -22,6 +23,11 @@ import type {
 } from "./period-overview-holdings-types";
 
 export type { HoldingGainLossWorkingState };
+export type HoldingGainLossSkippedReason =
+  | "missingInitialRate"
+  | "missingConversion"
+  | "invalidExecutionPrice"
+  | "missingPeriodEndRate";
 
 function toLotAcquisitionSortKey(args: {
   date: Date;
@@ -35,6 +41,11 @@ export async function initializeHoldingGainLossState(args: {
   initialBalanceByAccountId: Map<string, number>;
   initialRateDate: Date;
   resolveRate: HoldingRateResolver;
+  onSkippedItem?: (item: {
+    accountId: string;
+    reason: HoldingGainLossSkippedReason;
+    date: Date;
+  }) => void;
 }): Promise<HoldingGainLossWorkingState> {
   const stateByHoldingAccountId = new Map<string, HoldingAccountState>();
   let skippedCount = 0;
@@ -60,6 +71,11 @@ export async function initializeHoldingGainLossState(args: {
         if (initialRate == null) {
           skippedIncrement = 1;
           skipped = true;
+          args.onSkippedItem?.({
+            accountId: account.id,
+            reason: "missingInitialRate",
+            date: args.initialRateDate,
+          });
         } else {
           lots.push({
             quantity: initialBalance,
@@ -103,6 +119,15 @@ export async function applyHoldingTransactionsToGainLossState(args: {
   periodStart: Date;
   periodEndExclusive: Date;
   convertBookingToReference: HoldingBookingConverter;
+  onSkippedItem?: (item: {
+    accountId: string;
+    bookingId: string;
+    bookingDescription?: string | null;
+    transactionDescription?: string | null;
+    transactionId: string | null;
+    reason: HoldingGainLossSkippedReason;
+    date: Date;
+  }) => void;
 }) {
   for (const transaction of args.transactions) {
     const allNonExplicitBookings = transaction.bookings.filter(
@@ -207,6 +232,15 @@ export async function applyHoldingTransactionsToGainLossState(args: {
 
       if (convertedValue == null) {
         args.state.skippedCount += 1;
+        args.onSkippedItem?.({
+          accountId: booking.accountId,
+          bookingId: booking.id,
+          bookingDescription: booking.description,
+          transactionDescription: booking.transactionDescription,
+          transactionId: booking.transactionId ?? null,
+          reason: "missingConversion",
+          date: booking.date,
+        });
       } else {
         args.state.convertedCount += 1;
       }
@@ -269,10 +303,17 @@ export async function applyHoldingTransactionsToGainLossState(args: {
       const booking = inPeriodHoldingBookings[index]!;
       const marketReferenceAmount =
         holdingMarketValueByBookingId.get(booking.id) ?? 0;
+      const residualAllocationAmount = shouldUseMarketFallback
+        ? 0
+        : residualInReference * residualAllocationWeights[index]!;
       const effectiveReferenceAmount = shouldUseMarketFallback
         ? marketReferenceAmount
-        : marketReferenceAmount +
-          residualInReference * residualAllocationWeights[index]!;
+        : marketReferenceAmount + residualAllocationAmount;
+      const pricingSource = shouldUseMarketFallback
+        ? "marketFallback"
+        : isNearZero(residualAllocationAmount)
+          ? "directConversion"
+          : "residualAdjusted";
 
       const state = args.state.stateByHoldingAccountId.get(booking.accountId);
       if (!state) {
@@ -281,8 +322,14 @@ export async function applyHoldingTransactionsToGainLossState(args: {
 
       state.executionEvents.push({
         bookingId: booking.id,
+        bookingDescription: booking.description,
+        transactionDescription: booking.transactionDescription,
+        transactionId: booking.transactionId ?? null,
         date: booking.date,
         quantity: booking.value,
+        pricingSource,
+        marketReferenceAmount,
+        residualAllocationAmount,
         effectiveReferenceAmount,
       });
     }
@@ -302,6 +349,40 @@ export async function finalizeHoldingGainLossState(args: {
     tradeCurrency: HoldingRateConvertibleAccount["tradeCurrency"];
     realizedGainLoss: number;
     unrealizedGainLoss: number;
+  }) => void;
+  onAccountExecutionEvent?: (event: {
+    accountId: string;
+    bookingId: string;
+    bookingDescription?: string | null;
+    transactionDescription?: string | null;
+    transactionId: string | null;
+    date: Date;
+    quantity: number;
+    pricingSource: "directConversion" | "residualAdjusted" | "marketFallback";
+    marketReferenceAmount: number;
+    residualAllocationAmount: number;
+    effectiveReferenceAmount: number;
+    executionUnitPriceInReference: number;
+    realizedGainLossDelta: number;
+    runningRealizedGainLoss: number;
+    lotMatches: HoldingExecutionLotMatch[];
+  }) => void;
+  onAccountOpenLotValuation?: (lot: {
+    accountId: string;
+    acquisitionSortKey: string;
+    quantity: number;
+    unitCostInReference: number;
+    periodEndRate: number;
+    unrealizedGainLoss: number;
+  }) => void;
+  onSkippedItem?: (item: {
+    accountId: string;
+    bookingId?: string;
+    bookingDescription?: string | null;
+    transactionDescription?: string | null;
+    transactionId?: string | null;
+    reason: HoldingGainLossSkippedReason;
+    date: Date;
   }) => void;
 }) {
   let skippedCount = args.state.skippedCount;
@@ -334,10 +415,20 @@ export async function finalizeHoldingGainLossState(args: {
         event.effectiveReferenceAmount / event.quantity;
       if (!Number.isFinite(executionUnitPriceInReference)) {
         skippedCount += 1;
+        args.onSkippedItem?.({
+          accountId: state.account.id,
+          bookingId: event.bookingId,
+          bookingDescription: event.bookingDescription,
+          transactionDescription: event.transactionDescription,
+          transactionId: event.transactionId ?? null,
+          reason: "invalidExecutionPrice",
+          date: event.date,
+        });
         continue;
       }
 
-      accountRealizedGainLoss += applyExecutionToLots({
+      let lotMatches: HoldingExecutionLotMatch[] | undefined;
+      const realizedGainLossDelta = applyExecutionToLots({
         lots: state.lots,
         quantity: event.quantity,
         executionUnitPriceInReference,
@@ -345,6 +436,34 @@ export async function finalizeHoldingGainLossState(args: {
           date: event.date,
           bookingId: event.bookingId,
         }),
+        ...(args.onAccountExecutionEvent
+          ? {
+              onLotMatched: (lotMatch: HoldingExecutionLotMatch) => {
+                if (!lotMatches) {
+                  lotMatches = [];
+                }
+                lotMatches.push(lotMatch);
+              },
+            }
+          : {}),
+      });
+      accountRealizedGainLoss += realizedGainLossDelta;
+      args.onAccountExecutionEvent?.({
+        accountId: state.account.id,
+        bookingId: event.bookingId,
+        bookingDescription: event.bookingDescription,
+        transactionDescription: event.transactionDescription,
+        transactionId: event.transactionId ?? null,
+        date: event.date,
+        quantity: event.quantity,
+        pricingSource: event.pricingSource,
+        marketReferenceAmount: event.marketReferenceAmount,
+        residualAllocationAmount: event.residualAllocationAmount,
+        effectiveReferenceAmount: event.effectiveReferenceAmount,
+        executionUnitPriceInReference,
+        realizedGainLossDelta,
+        runningRealizedGainLoss: accountRealizedGainLoss,
+        lotMatches: lotMatches ?? [],
       });
     }
 
@@ -364,12 +483,25 @@ export async function finalizeHoldingGainLossState(args: {
 
       if (periodEndRate == null) {
         skippedCount += 1;
+        args.onSkippedItem?.({
+          accountId: state.account.id,
+          reason: "missingPeriodEndRate",
+          date: args.periodEnd,
+        });
       } else {
-        accountUnrealizedGainLoss += state.lots.reduce(
-          (sum, lot) =>
-            sum + lot.quantity * (periodEndRate - lot.unitCostInReference),
-          0,
-        );
+        for (const lot of state.lots) {
+          const lotUnrealizedGainLoss =
+            lot.quantity * (periodEndRate - lot.unitCostInReference);
+          accountUnrealizedGainLoss += lotUnrealizedGainLoss;
+          args.onAccountOpenLotValuation?.({
+            accountId: state.account.id,
+            acquisitionSortKey: lot.acquisitionSortKey,
+            quantity: lot.quantity,
+            unitCostInReference: lot.unitCostInReference,
+            periodEndRate,
+            unrealizedGainLoss: lotUnrealizedGainLoss,
+          });
+        }
       }
     }
 
@@ -412,12 +544,31 @@ export async function computeHoldingGainLossSplit(args: {
   periodEnd: Date;
   resolveRate: HoldingRateResolver;
   convertBookingToReference: HoldingBookingConverter;
+  onAccountGainLoss?: Parameters<
+    typeof finalizeHoldingGainLossState
+  >[0]["onAccountGainLoss"];
+  onAccountExecutionEvent?: Parameters<
+    typeof finalizeHoldingGainLossState
+  >[0]["onAccountExecutionEvent"];
+  onAccountOpenLotValuation?: Parameters<
+    typeof finalizeHoldingGainLossState
+  >[0]["onAccountOpenLotValuation"];
+  onSkippedItem?: (item: {
+    accountId: string;
+    bookingId?: string;
+    bookingDescription?: string | null;
+    transactionDescription?: string | null;
+    transactionId?: string | null;
+    reason: HoldingGainLossSkippedReason;
+    date: Date;
+  }) => void;
 }) {
   const state = await initializeHoldingGainLossState({
     holdingAccounts: args.holdingAccounts,
     initialBalanceByAccountId: args.initialBalanceByAccountId,
     initialRateDate: args.initialRateDate,
     resolveRate: args.resolveRate,
+    onSkippedItem: args.onSkippedItem,
   });
 
   await applyHoldingTransactionsToGainLossState({
@@ -426,11 +577,16 @@ export async function computeHoldingGainLossSplit(args: {
     periodStart: args.periodStart,
     periodEndExclusive: args.periodEndExclusive,
     convertBookingToReference: args.convertBookingToReference,
+    onSkippedItem: args.onSkippedItem,
   });
 
   return finalizeHoldingGainLossState({
     state,
     periodEnd: args.periodEnd,
     resolveRate: args.resolveRate,
+    onAccountGainLoss: args.onAccountGainLoss,
+    onAccountExecutionEvent: args.onAccountExecutionEvent,
+    onAccountOpenLotValuation: args.onAccountOpenLotValuation,
+    onSkippedItem: args.onSkippedItem,
   });
 }
