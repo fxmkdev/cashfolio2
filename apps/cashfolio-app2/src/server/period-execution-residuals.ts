@@ -91,16 +91,6 @@ export async function computeExecutionResidualRealization(args: {
                   gte: args.periodStart,
                   lt: args.periodEndExclusive,
                 },
-              },
-            },
-          },
-          {
-            bookings: {
-              some: {
-                date: {
-                  gte: args.periodStart,
-                  lt: args.periodEndExclusive,
-                },
                 account: {
                   type: AccountType.EQUITY,
                   equityAccountSubtype: {

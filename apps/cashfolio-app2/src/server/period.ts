@@ -85,6 +85,7 @@ export {
 
 const EQUITY_BOOKINGS_PAGE_SIZE = 1_000;
 const TRANSACTIONS_PAGE_SIZE = 200;
+const TRANSFER_CLEARING_TRANSACTIONS_PAGE_SIZE = 200;
 
 function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
@@ -591,38 +592,18 @@ export const getPeriodOverview = createServerFn({
           }
         }
 
-        const transferClearingTransactions = transferClearingUnitBuckets
-          .filter((unitBucket) => unitBucket.isNonReferenceUnit)
-          .flatMap((unitBucket) =>
-            unitBucket.bookings
-              .filter(
-                (booking) =>
-                  booking.date >= queryStart &&
-                  booking.date < queryEndExclusive &&
-                  !isNearZero(booking.value),
-              )
-              .map((booking) => ({
-                bookings: [
-                  {
-                    id: booking.id,
-                    accountId: `virtual:transfer-clearing:account:${unitBucket.unitKey}`,
-                    date: booking.date,
-                    value: -booking.value,
-                    unit: booking.unit,
-                    currency: booking.currency,
-                    cryptocurrency: booking.cryptocurrency,
-                    symbol: booking.symbol,
-                    tradeCurrency: booking.tradeCurrency,
-                    accountType: AccountType.ASSET,
-                    equityAccountSubtype: null,
-                  },
-                ],
-              })),
-          );
-        if (transferClearingTransactions.length > 0) {
+        const transferClearingTransactionBatch: Parameters<
+          typeof applyHoldingTransactionsToGainLossState
+        >[0]["transactions"] = [];
+
+        const flushTransferClearingTransactionBatch = async () => {
+          if (transferClearingTransactionBatch.length === 0) {
+            return;
+          }
+
           await applyHoldingTransactionsToGainLossState({
             state: holdingGainLossState,
-            transactions: transferClearingTransactions,
+            transactions: transferClearingTransactionBatch,
             periodStart: queryStart,
             periodEndExclusive: queryEndExclusive,
             convertBookingToReference: ({ id: _id, ...booking }) =>
@@ -632,7 +613,52 @@ export const getPeriodOverview = createServerFn({
                 exchangeRateByKey,
               }),
           });
+          transferClearingTransactionBatch.length = 0;
+        };
+
+        for (const unitBucket of transferClearingUnitBuckets) {
+          if (!unitBucket.isNonReferenceUnit) {
+            continue;
+          }
+
+          const transferClearingHoldingAccountId = `virtual:transfer-clearing:account:${unitBucket.unitKey}`;
+          for (const booking of unitBucket.bookings) {
+            if (
+              booking.date < queryStart ||
+              booking.date >= queryEndExclusive ||
+              isNearZero(booking.value)
+            ) {
+              continue;
+            }
+
+            transferClearingTransactionBatch.push({
+              bookings: [
+                {
+                  id: booking.id,
+                  accountId: transferClearingHoldingAccountId,
+                  date: booking.date,
+                  value: -booking.value,
+                  unit: booking.unit,
+                  currency: booking.currency,
+                  cryptocurrency: booking.cryptocurrency,
+                  symbol: booking.symbol,
+                  tradeCurrency: booking.tradeCurrency,
+                  accountType: AccountType.ASSET,
+                  equityAccountSubtype: null,
+                },
+              ],
+            });
+
+            if (
+              transferClearingTransactionBatch.length >=
+              TRANSFER_CLEARING_TRANSACTIONS_PAGE_SIZE
+            ) {
+              await flushTransferClearingTransactionBatch();
+            }
+          }
         }
+
+        await flushTransferClearingTransactionBatch();
 
         const holdingGainLossSplit = await finalizeHoldingGainLossState({
           state: holdingGainLossState,
