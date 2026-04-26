@@ -41,24 +41,14 @@ export function NetWorthTrendCard(args: {
       })),
     [args.currencyFormatter, args.trend],
   );
-  const yDomain = useMemo(() => {
-    const netWorthValues = chartData.map((point) => point.netWorth);
-    const rawMin = Math.min(0, ...netWorthValues);
-    const rawMax = Math.max(0, ...netWorthValues);
-
-    if (rawMin !== rawMax) {
-      return {
-        min: rawMin,
-        max: rawMax,
-      };
-    }
-
-    const padding = rawMin === 0 ? 1 : Math.abs(rawMin) * 0.05;
-    return {
-      min: rawMin - padding,
-      max: rawMax + padding,
-    };
-  }, [chartData]);
+  const minNetWorth = useMemo(
+    () => Math.min(...chartData.map((point) => point.netWorth)),
+    [chartData],
+  );
+  const maxNetWorth = useMemo(
+    () => Math.max(...chartData.map((point) => point.netWorth)),
+    [chartData],
+  );
 
   const lineSeries = useMemo<AgLineSeriesOptions<NetWorthTrendChartDatum>>(
     () => ({
@@ -126,8 +116,8 @@ export function NetWorthTrendCard(args: {
         },
         y: {
           type: "number",
-          min: yDomain.min,
-          max: yDomain.max,
+          min: minNetWorth > 0 ? 0 : undefined,
+          max: maxNetWorth < 0 ? 0 : undefined,
           label: {
             formatter: ({ value }) =>
               amountCompactFormatter.format(Number(value)),
@@ -150,8 +140,8 @@ export function NetWorthTrendCard(args: {
       args.selectedGranularity,
       chartData,
       lineSeries,
-      yDomain.max,
-      yDomain.min,
+      maxNetWorth,
+      minNetWorth,
     ],
   );
 
