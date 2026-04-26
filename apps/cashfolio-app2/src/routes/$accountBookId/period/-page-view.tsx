@@ -2,6 +2,7 @@ import {
   Alert,
   Container,
   Grid,
+  Group,
   SimpleGrid,
   Stack,
   Text,
@@ -9,7 +10,11 @@ import {
   useComputedColorScheme,
   useMantineTheme,
 } from "@mantine/core";
-import { IconAlertTriangle, IconListDetails } from "@tabler/icons-react";
+import {
+  IconAlertTriangle,
+  IconChartBar,
+  IconListDetails,
+} from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
 import { LinkButton } from "@/components/link-button";
@@ -341,15 +346,25 @@ export function PeriodPageView({
       <TopPageHeader
         heading={<Title order={2}>Period</Title>}
         actions={
-          <LinkButton
-            variant="default"
-            leftSection={<IconListDetails size={16} />}
-            to="/$accountBookId/accounts"
-            params={{ accountBookId }}
-            search={{ tab: "ASSET", mode: "active" }}
-          >
-            Accounts
-          </LinkButton>
+          <Group gap="sm">
+            <LinkButton
+              variant="default"
+              leftSection={<IconListDetails size={16} />}
+              to="/$accountBookId/accounts"
+              params={{ accountBookId }}
+              search={{ tab: "ASSET", mode: "active" }}
+            >
+              Accounts
+            </LinkButton>
+            <LinkButton
+              variant="default"
+              leftSection={<IconChartBar size={16} />}
+              to="/$accountBookId/timeline"
+              params={{ accountBookId }}
+            >
+              Timeline
+            </LinkButton>
+          </Group>
         }
       />
 
