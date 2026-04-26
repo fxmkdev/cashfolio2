@@ -16,7 +16,7 @@ import {
 import {
   IconAlertTriangle,
   IconArrowLeft,
-  IconSquareArrowRight,
+  IconTable,
 } from "@tabler/icons-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { format } from "date-fns";
@@ -233,7 +233,7 @@ export function GainLossReconciliationPageView({
                       event.stopPropagation();
                     }}
                   >
-                    <IconSquareArrowRight size={16} />
+                    <IconTable size={16} />
                   </ActionIcon>
                 </span>
               </Tooltip>
