@@ -10,7 +10,6 @@ import {
   useMantineTheme,
 } from "@mantine/core";
 import { IconCalendarMonth, IconListDetails } from "@tabler/icons-react";
-import type { AgCartesianChartOptions } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
 import { useMemo } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
@@ -22,15 +21,13 @@ import {
   type TimelinePeriodMode,
   useTimelinePageSessionState,
 } from "./-page-session-state";
+import {
+  createTimelineChartOptions,
+  mapTimelinePointsToChartData,
+} from "./-chart-options";
 import classes from "./-page-view.module.css";
 
 ensureChartModulesRegistered();
-
-type TimelineChartDatum = {
-  periodValue: string;
-  periodLabel: string;
-  totalReturn: number;
-};
 
 export type TimelinePageViewProps = {
   accountBookId: string;
@@ -58,20 +55,6 @@ export function TimelinePageView({
     [theme, isDarkMode],
   );
 
-  const positiveFillColor = isDarkMode
-    ? theme.colors.green[5]
-    : theme.colors.green[6];
-  const negativeFillColor = isDarkMode
-    ? theme.colors.red[5]
-    : theme.colors.red[6];
-  const neutralFillColor = isDarkMode
-    ? theme.colors.gray[5]
-    : theme.colors.gray[6];
-  const currentPeriodBandFill = isDarkMode
-    ? theme.colors.gray[7]
-    : theme.colors.gray[2];
-  const currentPeriodBandFillOpacity = isDarkMode ? 0.2 : 0.45;
-
   const currencyFormatter = useMemo(
     () =>
       new Intl.NumberFormat("en-CH", {
@@ -92,121 +75,28 @@ export function TimelinePageView({
     [],
   );
 
-  const chartData = useMemo<TimelineChartDatum[]>(
-    () =>
-      activeTimeline.points.map((point) => ({
-        periodValue: point.periodValue,
-        periodLabel: point.periodLabel,
-        totalReturn: point.totalReturn,
-      })),
+  const chartData = useMemo(
+    () => mapTimelinePointsToChartData(activeTimeline.points),
     [activeTimeline.points],
   );
-  const currentPeriodLabel = chartData.at(-1)?.periodLabel;
 
-  const chartOptions = useMemo<AgCartesianChartOptions>(
-    () => ({
-      data: chartData,
-      background: {
-        visible: false,
-      },
-      theme: {
-        params: {
-          textColor: colors.chartTextColor,
-          foregroundColor: colors.chartTextColor,
-          borderColor: colors.themeBorderColor,
-          tooltipBackgroundColor: colors.tooltipBackgroundColor,
-          tooltipBorder: true,
-          tooltipTextColor: colors.tooltipTextColor,
-          tooltipSubtleTextColor: colors.tooltipSubtleTextColor,
-        },
-      },
-      legend: {
-        enabled: false,
-      },
-      series: [
-        {
-          type: "bar",
-          xKey: "periodLabel",
-          yKey: "totalReturn",
-          yName: "Total Return",
-          widthRatio: 0.72,
-          itemStyler: ({ datum }) => {
-            const totalReturn = (datum as TimelineChartDatum).totalReturn;
-            const fill =
-              totalReturn > 0
-                ? positiveFillColor
-                : totalReturn < 0
-                  ? negativeFillColor
-                  : neutralFillColor;
-
-            return {
-              fill,
-              stroke: fill,
-            };
-          },
-          tooltip: {
-            renderer: ({ datum }) => {
-              const point = datum as TimelineChartDatum;
-              return {
-                heading: point.periodLabel,
-                data: [
-                  {
-                    label: "Total Return",
-                    value: currencyFormatter.format(point.totalReturn),
-                  },
-                ],
-              };
-            },
-          },
-        },
-      ],
-      axes: {
-        x: {
-          type: "category",
-          crossLines: currentPeriodLabel
-            ? [
-                {
-                  type: "range",
-                  range: [currentPeriodLabel, currentPeriodLabel],
-                  fill: currentPeriodBandFill,
-                  fillOpacity: currentPeriodBandFillOpacity,
-                  strokeWidth: 0,
-                },
-              ]
-            : undefined,
-          label: {
-            rotation: -25,
-          },
-        },
-        y: {
-          type: "number",
-          label: {
-            formatter: ({ value }) =>
-              amountCompactFormatter.format(Number(value)),
-          },
-          crossLines: [
-            {
-              type: "line",
-              value: 0,
-              stroke: colors.zeroLineColor,
-              strokeWidth: 1,
-              lineDash: [5, 5],
-            },
-          ],
-        },
-      },
-    }),
+  const chartOptions = useMemo(
+    () =>
+      createTimelineChartOptions({
+        chartData,
+        amountCompactFormatter,
+        currencyFormatter,
+        colors,
+        theme,
+        isDarkMode,
+      }),
     [
       amountCompactFormatter,
       chartData,
       colors,
-      currentPeriodBandFill,
-      currentPeriodBandFillOpacity,
-      currentPeriodLabel,
       currencyFormatter,
-      negativeFillColor,
-      neutralFillColor,
-      positiveFillColor,
+      isDarkMode,
+      theme,
     ],
   );
 

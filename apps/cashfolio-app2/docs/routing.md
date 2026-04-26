@@ -42,6 +42,8 @@ Related docs:
   Gains/Losses Breakdown leaf rows)
 - `$accountBookId/timeline/route.tsx` - timeline page showing monthly/yearly
   total return history as a full-page bar chart
+  - Loader prefetches both granularities and the segmented mode toggles
+    instantly with session-persisted preference
 - `$accountBookId/$accountId/route.tsx` - ledger layout route (loads ledger data
   and provides shared search params for child routes)
 - `$accountBookId/$accountId/index.tsx` - ledger page for a single account
@@ -71,6 +73,11 @@ Related docs:
     - `$accountBookId/period/gains-losses/$accountId/-page-view-columns.tsx`
     - `$accountBookId/period/gains-losses/$accountId/-realized-event-explain-drawer.tsx`
     - `$accountBookId/period/gains-losses/$accountId/-reconciliation-stat-cards.tsx`
+  - timeline route modules:
+    - `$accountBookId/timeline/-page-loader.ts`
+    - `$accountBookId/timeline/-page-session-state.ts`
+    - `$accountBookId/timeline/-chart-options.ts`
+    - `$accountBookId/timeline/-page-view.tsx`
 
 ### Search Parameters
 
