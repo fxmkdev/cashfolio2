@@ -1,35 +1,43 @@
 import {
+  ActionIcon,
   Alert,
+  Badge,
   Card,
   Container,
-  Divider,
   Drawer,
   Group,
   SimpleGrid,
   Stack,
   Text,
   Title,
+  Tooltip,
 } from "@mantine/core";
-import { IconAlertTriangle } from "@tabler/icons-react";
-import type {
-  ColDef,
-  ICellRendererParams,
-  RowDoubleClickedEvent,
-} from "ag-grid-enterprise";
-import { useEffect, useMemo, useState } from "react";
-import { FORMATTED_NUMERIC_COLUMN } from "@/components/column-types";
+import { IconAlertTriangle, IconSquareArrowRight } from "@tabler/icons-react";
+import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
+import { format } from "date-fns";
+import { useMemo, useState } from "react";
+import {
+  DATE_COLUMN,
+  FORMATTED_NUMERIC_COLUMN,
+} from "@/components/column-types";
 import { DataGrid } from "@/components/data-grid";
-import { LinkAnchor } from "@/components/link-anchor";
-import { LinkButton } from "@/components/link-button";
 import { TopPageHeader } from "@/components/top-page-header";
 import type { PeriodGainLossReconciliation } from "@/server/period-gain-loss-reconciliation";
-import { normalizeExplicitPeriodValue } from "@/shared/period";
-import { DEFAULT_PERIOD_VALUE } from "../../-page-types";
+import {
+  buildPeriodSelectorModel,
+  getMonthPickerValue,
+  getPeriodModeChangeValue,
+  getPeriodStepValue,
+  getYearPickerValue,
+  type PeriodMode,
+} from "@/shared/period-selector-model";
+import { PeriodSelectorCard } from "../../-selector-card";
 
 type GainLossReconciliationPageViewProps = {
-  accountBookId: string;
   selectedPeriodValue: string;
   reconciliation: PeriodGainLossReconciliation | null;
+  onPeriodChange: (nextPeriodValue: string) => void;
+  onOpenEventTransaction: (transactionId: string) => void;
 };
 
 type RealizedEventRow = PeriodGainLossReconciliation["realizedEvents"][number];
@@ -47,45 +55,63 @@ function buildCurrencyFormatter(currency: string) {
   });
 }
 
-function isLinkEventTarget(event: unknown): boolean {
-  if (!(event instanceof MouseEvent)) {
-    return false;
-  }
-  return event.target instanceof Element && event.target.closest("a") != null;
+function formatDescription(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : "—";
 }
 
-function getPricingSourceLabel(source: RealizedEventRow["pricing"]["source"]) {
-  if (source === "directConversion") {
-    return "Direct conversion";
+function toEventSide(event: RealizedEventRow): "buy" | "sell" | "flat" {
+  if (event.quantity > 0) {
+    return "buy";
   }
-  if (source === "residualAdjusted") {
-    return "Residual-adjusted";
+  if (event.quantity < 0) {
+    return "sell";
   }
-  return "Market fallback";
+  return "flat";
+}
+
+function formatDateLabel(value: string) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    return "—";
+  }
+  return format(date, "dd.MM.yyyy");
+}
+
+function StatCard(args: {
+  label: string;
+  value: string;
+  valueColor: "green" | "red";
+}) {
+  return (
+    <Card withBorder radius="md" p="lg">
+      <Stack gap={4} align="center">
+        <Text c="dimmed" fw={600} ta="center">
+          {args.label}
+        </Text>
+        <Text fw={700} fz="xl" c={args.valueColor}>
+          {args.value}
+        </Text>
+      </Stack>
+    </Card>
+  );
 }
 
 export function GainLossReconciliationPageView({
-  accountBookId,
   selectedPeriodValue,
   reconciliation,
+  onPeriodChange,
+  onOpenEventTransaction,
 }: GainLossReconciliationPageViewProps) {
+  const [pickerOpened, setPickerOpened] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const backSearch =
-    selectedPeriodValue === DEFAULT_PERIOD_VALUE
-      ? { period: undefined }
-      : { period: selectedPeriodValue };
-
   const heading = reconciliation
     ? `${reconciliation.target.accountName} · ${reconciliation.target.unitLabel}`
     : "Gain/Loss Reconciliation";
-
   const currencyFormatter = useMemo(
     () => buildCurrencyFormatter(reconciliation?.referenceCurrency ?? "CHF"),
     [reconciliation?.referenceCurrency],
   );
-  const targetAccountId = reconciliation?.target.accountId ?? null;
-  const ledgerPeriodValue = normalizeExplicitPeriodValue(selectedPeriodValue);
-
   const selectedEvent = useMemo(
     () =>
       selectedEventId
@@ -95,51 +121,48 @@ export function GainLossReconciliationPageView({
         : null,
     [reconciliation?.realizedEvents, selectedEventId],
   );
-  useEffect(() => {
-    if (selectedEventId && !selectedEvent) {
-      setSelectedEventId(null);
-    }
-  }, [selectedEvent, selectedEventId]);
 
   const realizedColumns = useMemo<ColDef<RealizedEventRow>[]>(
     () => [
       {
+        headerName: "Side",
+        colId: "side",
+        width: 110,
+        cellRenderer: ({ data }: ICellRendererParams<RealizedEventRow>) => {
+          if (!data) {
+            return "—";
+          }
+          const side = toEventSide(data);
+          if (side === "flat") {
+            return <Badge variant="light">Flat</Badge>;
+          }
+          return (
+            <Badge color={side === "buy" ? "green" : "red"} variant="light">
+              {side === "buy" ? "Buy" : "Sell"}
+            </Badge>
+          );
+        },
+      },
+      {
         headerName: "Date",
         field: "date",
         width: 140,
+        type: DATE_COLUMN,
+        valueFormatter: ({ value }) => formatDateLabel(value),
       },
       {
         headerName: "Booking",
-        field: "bookingId",
-        width: 210,
+        field: "bookingDescription",
+        minWidth: 220,
+        flex: 1,
+        valueFormatter: ({ value }) => formatDescription(value),
       },
       {
         headerName: "Transaction",
-        field: "transactionId",
-        width: 210,
-        cellRenderer: ({
-          value,
-        }: ICellRendererParams<RealizedEventRow, string | null>) => {
-          if (!value) {
-            return "—";
-          }
-          if (!targetAccountId || reconciliation?.target.isVirtual) {
-            return value;
-          }
-          return (
-            <LinkAnchor
-              to="/$accountBookId/$accountId"
-              params={{ accountBookId, accountId: targetAccountId }}
-              search={{
-                transactionId: value,
-                period: ledgerPeriodValue,
-              }}
-              size="sm"
-            >
-              {value}
-            </LinkAnchor>
-          );
-        },
+        field: "transactionDescription",
+        minWidth: 220,
+        flex: 1,
+        valueFormatter: ({ value }) => formatDescription(value),
       },
       {
         headerName: "Quantity",
@@ -154,7 +177,7 @@ export function GainLossReconciliationPageView({
         type: FORMATTED_NUMERIC_COLUMN,
       },
       {
-        headerName: "Exec Price",
+        headerName: "Exec. Price",
         field: "executionUnitPriceInReference",
         width: 150,
         type: FORMATTED_NUMERIC_COLUMN,
@@ -171,13 +194,54 @@ export function GainLossReconciliationPageView({
         width: 180,
         type: FORMATTED_NUMERIC_COLUMN,
       },
+      {
+        colId: "actions",
+        headerName: "",
+        width: 84,
+        sortable: false,
+        filter: false,
+        resizable: false,
+        suppressHeaderMenuButton: true,
+        cellClass: "actions-cell",
+        cellRenderer: ({ data }: ICellRendererParams<RealizedEventRow>) => {
+          if (!data) {
+            return null;
+          }
+          const canOpenLedger =
+            !!data.transactionId && !reconciliation?.target.isVirtual;
+          const tooltipLabel = canOpenLedger
+            ? "Open in ledger"
+            : "No ledger transaction";
+          return (
+            <Group gap={4} wrap="nowrap" h="100%" align="center">
+              <Tooltip label={tooltipLabel}>
+                <span style={{ display: "inline-flex" }}>
+                  <ActionIcon
+                    variant="subtle"
+                    size="sm"
+                    disabled={!canOpenLedger}
+                    aria-label={tooltipLabel}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (!canOpenLedger || !data.transactionId) {
+                        return;
+                      }
+                      onOpenEventTransaction(data.transactionId);
+                    }}
+                    onDoubleClick={(event) => {
+                      event.stopPropagation();
+                    }}
+                  >
+                    <IconSquareArrowRight size={16} />
+                  </ActionIcon>
+                </span>
+              </Tooltip>
+            </Group>
+          );
+        },
+      },
     ],
-    [
-      accountBookId,
-      ledgerPeriodValue,
-      reconciliation?.target.isVirtual,
-      targetAccountId,
-    ],
+    [onOpenEventTransaction, reconciliation?.target.isVirtual],
   );
 
   const realizedLotMatchColumns = useMemo<ColDef<RealizedEventLotMatchRow>[]>(
@@ -186,11 +250,8 @@ export function GainLossReconciliationPageView({
         headerName: "Acquired",
         field: "acquisitionDate",
         width: 140,
-      },
-      {
-        headerName: "Source",
-        field: "acquisitionBookingId",
-        width: 220,
+        type: DATE_COLUMN,
+        valueFormatter: ({ value }) => formatDateLabel(value),
       },
       {
         headerName: "Matched Qty",
@@ -205,9 +266,9 @@ export function GainLossReconciliationPageView({
         type: FORMATTED_NUMERIC_COLUMN,
       },
       {
-        headerName: "Exec Price",
+        headerName: "Execution Price",
         field: "executionUnitPriceInReference",
-        width: 150,
+        width: 160,
         type: FORMATTED_NUMERIC_COLUMN,
       },
       {
@@ -232,11 +293,8 @@ export function GainLossReconciliationPageView({
         headerName: "Acquired",
         field: "acquisitionDate",
         width: 140,
-      },
-      {
-        headerName: "Source",
-        field: "acquisitionBookingId",
-        width: 220,
+        type: DATE_COLUMN,
+        valueFormatter: ({ value }) => formatDateLabel(value),
       },
       {
         headerName: "Quantity",
@@ -278,6 +336,8 @@ export function GainLossReconciliationPageView({
         headerName: "Date",
         field: "date",
         width: 140,
+        type: DATE_COLUMN,
+        valueFormatter: ({ value }) => formatDateLabel(value),
       },
       {
         headerName: "Reason",
@@ -291,84 +351,307 @@ export function GainLossReconciliationPageView({
       },
       {
         headerName: "Booking",
-        field: "bookingId",
-        width: 220,
+        field: "bookingDescription",
+        minWidth: 220,
+        valueFormatter: ({ value }) => formatDescription(value),
       },
       {
         headerName: "Transaction",
-        field: "transactionId",
-        width: 220,
+        field: "transactionDescription",
+        minWidth: 220,
+        valueFormatter: ({ value }) => formatDescription(value),
       },
     ],
     [],
   );
 
-  return (
-    <Container fluid py="xl" px="xl">
-      <TopPageHeader
-        heading={<Title order={2}>{heading}</Title>}
-        actions={
-          <LinkButton
-            to="/$accountBookId/period"
-            params={{ accountBookId }}
-            search={backSearch}
-            variant="light"
-          >
-            Back to Period
-          </LinkButton>
-        }
-      />
-
-      {!reconciliation ? (
+  if (!reconciliation) {
+    return (
+      <Container fluid py="xl" px="xl">
+        <TopPageHeader heading={<Title order={2}>{heading}</Title>} />
         <Alert color="yellow" variant="light" title="No reconciliation data">
           No gain/loss reconciliation is available for this account and period.
         </Alert>
-      ) : (
-        <>
-          <Stack gap="lg">
+      </Container>
+    );
+  }
+
+  const periodSelectorModel = buildPeriodSelectorModel({
+    selectedGranularity: reconciliation.selectedGranularity,
+    selectedYear: reconciliation.selectedYear,
+    selectedMonth: reconciliation.selectedMonth,
+    minBookingDate: reconciliation.periodBounds.minBookingDate
+      ? new Date(reconciliation.periodBounds.minBookingDate)
+      : null,
+    maxDate: new Date(reconciliation.periodBounds.maxDate),
+  });
+  const periodMode = periodSelectorModel.periodMode;
+  const handlePeriodModeChange = (nextMode: string) => {
+    setPickerOpened(false);
+    const nextPeriodValue = getPeriodModeChangeValue({
+      nextMode,
+      periodMode,
+      selectedYear: reconciliation.selectedYear,
+      selectedYearMaxMonth:
+        periodSelectorModel.selectedYearMonthBounds.maxMonth,
+    });
+    if (nextPeriodValue) {
+      onPeriodChange(nextPeriodValue);
+    }
+  };
+
+  const handlePeriodStep = (step: -1 | 1) => {
+    setPickerOpened(false);
+    const nextPeriodValue = getPeriodStepValue({
+      periodMode,
+      step,
+      selectedMonthIndex: periodSelectorModel.selectedMonthIndex,
+      minMonthIndex: periodSelectorModel.minMonthIndex,
+      maxMonthIndex: periodSelectorModel.maxMonthIndex,
+      selectedYear: reconciliation.selectedYear,
+      minYear: periodSelectorModel.minYear,
+      maxYear: periodSelectorModel.maxYear,
+    });
+    if (nextPeriodValue) {
+      onPeriodChange(nextPeriodValue);
+    }
+  };
+
+  return (
+    <Container fluid py="xl" px="xl">
+      <TopPageHeader heading={<Title order={2}>{heading}</Title>} />
+      <Stack gap="lg">
+        <PeriodSelectorCard
+          selectedPeriodLabel={reconciliation.selectedPeriodLabel}
+          referenceCurrency={reconciliation.referenceCurrency}
+          periodMode={periodMode as PeriodMode}
+          pickerOpened={pickerOpened}
+          onPickerOpenedChange={setPickerOpened}
+          canGoToPreviousPeriod={periodSelectorModel.canGoToPreviousPeriod}
+          canGoToNextPeriod={periodSelectorModel.canGoToNextPeriod}
+          onPeriodModeChange={handlePeriodModeChange}
+          onPeriodStep={handlePeriodStep}
+          selectedMonthValue={`${String(reconciliation.selectedYear).padStart(4, "0")}-${String((reconciliation.selectedMonth ?? 0) + 1).padStart(2, "0")}-01`}
+          selectedYearValue={`${String(reconciliation.selectedYear).padStart(4, "0")}-01-01`}
+          minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
+          maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
+          minYearPickerDate={periodSelectorModel.minYearPickerDate}
+          maxYearPickerDate={periodSelectorModel.maxYearPickerDate}
+          onMonthPickerChange={(nextValue) => {
+            const nextPeriodValue = getMonthPickerValue(nextValue);
+            if (!nextPeriodValue) {
+              return;
+            }
+            onPeriodChange(nextPeriodValue);
+            setPickerOpened(false);
+          }}
+          onYearPickerChange={(nextValue) => {
+            const nextPeriodValue = getYearPickerValue(nextValue);
+            if (!nextPeriodValue) {
+              return;
+            }
+            onPeriodChange(nextPeriodValue);
+            setPickerOpened(false);
+          }}
+        />
+
+        <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg">
+          <StatCard
+            label="Realised"
+            value={currencyFormatter.format(
+              reconciliation.summary.realizedGainLoss,
+            )}
+            valueColor={
+              reconciliation.summary.realizedGainLoss >= 0 ? "green" : "red"
+            }
+          />
+          <StatCard
+            label="Unrealised"
+            value={currencyFormatter.format(
+              reconciliation.summary.unrealizedGainLoss,
+            )}
+            valueColor={
+              reconciliation.summary.unrealizedGainLoss >= 0 ? "green" : "red"
+            }
+          />
+          <StatCard
+            label="Total"
+            value={currencyFormatter.format(
+              reconciliation.summary.totalGainLoss,
+            )}
+            valueColor={
+              reconciliation.summary.totalGainLoss >= 0 ? "green" : "red"
+            }
+          />
+        </SimpleGrid>
+
+        <Card withBorder radius="md" p="md">
+          <Stack gap="sm">
+            <Group justify="space-between" align="center">
+              <Title order={4}>Realised Events</Title>
+              <Text size="sm" c="dimmed">
+                {reconciliation.realizedEvents.length} event(s)
+              </Text>
+            </Group>
+            <Text size="xs" c="dimmed">
+              Double-click an event row to explain the realised delta.
+            </Text>
+            <div style={{ height: 360 }}>
+              <DataGrid
+                rowData={reconciliation.realizedEvents}
+                columnDefs={realizedColumns}
+                defaultColDef={{
+                  sortable: false,
+                  suppressHeaderMenuButton: true,
+                }}
+                onRowDoubleClicked={(event) => {
+                  if (!event.data) {
+                    return;
+                  }
+                  setSelectedEventId(event.data.id);
+                }}
+              />
+            </div>
+          </Stack>
+        </Card>
+
+        <Card withBorder radius="md" p="md">
+          <Stack gap="sm">
+            <Group justify="space-between" align="center">
+              <Title order={4}>Unrealised Open Lots</Title>
+              <Text size="sm" c="dimmed">
+                {reconciliation.unrealizedOpenLots.length} lot(s)
+              </Text>
+            </Group>
+            <div style={{ height: 320 }}>
+              <DataGrid
+                rowData={reconciliation.unrealizedOpenLots}
+                columnDefs={openLotColumns}
+                defaultColDef={{
+                  sortable: false,
+                  suppressHeaderMenuButton: true,
+                }}
+              />
+            </div>
+          </Stack>
+        </Card>
+
+        {reconciliation.diagnostics.skippedCount > 0 ? (
+          <Card withBorder radius="md" p="md">
+            <Stack gap="sm">
+              <Alert
+                variant="light"
+                color="yellow"
+                icon={<IconAlertTriangle size={16} />}
+                title="Partial data"
+              >
+                {reconciliation.diagnostics.skippedCount} valuation-related
+                item(s) were skipped because conversion or rate data was
+                unavailable.
+              </Alert>
+              <div style={{ height: 260 }}>
+                <DataGrid
+                  rowData={reconciliation.diagnostics.items}
+                  columnDefs={diagnosticsColumns}
+                  defaultColDef={{
+                    sortable: false,
+                    suppressHeaderMenuButton: true,
+                  }}
+                />
+              </div>
+            </Stack>
+          </Card>
+        ) : null}
+      </Stack>
+
+      <Drawer
+        opened={selectedEvent != null}
+        onClose={() => {
+          setSelectedEventId(null);
+        }}
+        position="right"
+        size="xl"
+        title="Explain Realised Delta"
+      >
+        {selectedEvent ? (
+          <Stack gap="md">
             <Card withBorder radius="md" p="md">
               <Stack gap="xs">
-                <Text fw={600}>Context</Text>
+                <Group justify="space-between" align="center">
+                  <Text fw={600}>
+                    {reconciliation.target.accountName} ·{" "}
+                    {reconciliation.target.unitLabel}
+                  </Text>
+                  <Badge
+                    color={
+                      toEventSide(selectedEvent) === "buy" ? "green" : "red"
+                    }
+                    variant="light"
+                  >
+                    {toEventSide(selectedEvent) === "buy" ? "Buy" : "Sell"}
+                  </Badge>
+                </Group>
                 <Text size="sm" c="dimmed">
-                  {reconciliation.selectedPeriodLabel} ·{" "}
-                  {reconciliation.referenceCurrency}
+                  {reconciliation.selectedPeriodLabel}
                 </Text>
-                <Text size="sm" c="dimmed">
-                  {reconciliation.target.isVirtual
-                    ? "Virtual transfer-clearing account"
-                    : "Real asset/liability account"}
+                <Text size="sm">
+                  Date: {formatDateLabel(selectedEvent.date)}
                 </Text>
               </Stack>
             </Card>
 
-            <SimpleGrid cols={{ base: 1, md: 3 }}>
+            <SimpleGrid cols={{ base: 1, sm: 2 }}>
               <Card withBorder radius="md" p="md">
                 <Text size="sm" c="dimmed">
-                  Realised
+                  Booking
                 </Text>
-                <Text fw={700} fz="xl">
+                <Text fw={700}>
+                  {formatDescription(selectedEvent.bookingDescription)}
+                </Text>
+              </Card>
+              <Card withBorder radius="md" p="md">
+                <Text size="sm" c="dimmed">
+                  Transaction
+                </Text>
+                <Text fw={700}>
+                  {formatDescription(selectedEvent.transactionDescription)}
+                </Text>
+              </Card>
+              <Card withBorder radius="md" p="md">
+                <Text size="sm" c="dimmed">
+                  Quantity
+                </Text>
+                <Text fw={700}>
+                  {selectedEvent.quantity.toLocaleString("en-CH")}
+                </Text>
+              </Card>
+              <Card withBorder radius="md" p="md">
+                <Text size="sm" c="dimmed">
+                  Effective Amount
+                </Text>
+                <Text fw={700}>
                   {currencyFormatter.format(
-                    reconciliation.summary.realizedGainLoss,
+                    selectedEvent.effectiveReferenceAmount,
                   )}
                 </Text>
               </Card>
               <Card withBorder radius="md" p="md">
                 <Text size="sm" c="dimmed">
-                  Unrealised
+                  Execution Price
                 </Text>
-                <Text fw={700} fz="xl">
+                <Text fw={700}>
                   {currencyFormatter.format(
-                    reconciliation.summary.unrealizedGainLoss,
+                    selectedEvent.executionUnitPriceInReference,
                   )}
                 </Text>
               </Card>
               <Card withBorder radius="md" p="md">
                 <Text size="sm" c="dimmed">
-                  Total
+                  Realised Delta
                 </Text>
-                <Text fw={700} fz="xl">
+                <Text fw={700}>
                   {currencyFormatter.format(
-                    reconciliation.summary.totalGainLoss,
+                    selectedEvent.realizedGainLossDelta,
                   )}
                 </Text>
               </Card>
@@ -376,270 +659,34 @@ export function GainLossReconciliationPageView({
 
             <Card withBorder radius="md" p="md">
               <Stack gap="sm">
-                <Group justify="space-between" align="center">
-                  <Title order={4}>Realised Events</Title>
-                  <Text size="sm" c="dimmed">
-                    {reconciliation.realizedEvents.length} event(s)
-                  </Text>
-                </Group>
-                <Text size="xs" c="dimmed">
-                  Double-click an event row to explain the realised delta.
-                </Text>
-                <div style={{ height: 360 }}>
-                  <DataGrid
-                    rowData={reconciliation.realizedEvents}
-                    columnDefs={realizedColumns}
-                    defaultColDef={{
-                      sortable: false,
-                      suppressHeaderMenuButton: true,
-                    }}
-                    onRowDoubleClicked={(
-                      event: RowDoubleClickedEvent<RealizedEventRow>,
-                    ) => {
-                      if (!event.data || isLinkEventTarget(event.event)) {
-                        return;
-                      }
-                      setSelectedEventId(event.data.id);
-                    }}
-                  />
-                </div>
-              </Stack>
-            </Card>
-
-            <Card withBorder radius="md" p="md">
-              <Stack gap="sm">
-                <Group justify="space-between" align="center">
-                  <Title order={4}>Unrealised Open Lots</Title>
-                  <Text size="sm" c="dimmed">
-                    {reconciliation.unrealizedOpenLots.length} lot(s)
-                  </Text>
-                </Group>
-                <div style={{ height: 320 }}>
-                  <DataGrid
-                    rowData={reconciliation.unrealizedOpenLots}
-                    columnDefs={openLotColumns}
-                    defaultColDef={{
-                      sortable: false,
-                      suppressHeaderMenuButton: true,
-                    }}
-                  />
-                </div>
-              </Stack>
-            </Card>
-
-            {reconciliation.diagnostics.skippedCount > 0 ? (
-              <Card withBorder radius="md" p="md">
-                <Stack gap="sm">
-                  <Alert
-                    variant="light"
-                    color="yellow"
-                    icon={<IconAlertTriangle size={16} />}
-                    title="Partial data"
-                  >
-                    {reconciliation.diagnostics.skippedCount} valuation-related
-                    item(s) were skipped because conversion or rate data was
-                    unavailable.
+                <Text fw={600}>Lot Matches</Text>
+                {selectedEvent.lotMatches.length === 0 ? (
+                  <Alert color="yellow" variant="light" title="No lot matches">
+                    No matched lots were captured for this event.
                   </Alert>
-                  <div style={{ height: 260 }}>
+                ) : (
+                  <div style={{ height: 280 }}>
                     <DataGrid
-                      rowData={reconciliation.diagnostics.items}
-                      columnDefs={diagnosticsColumns}
+                      rowData={selectedEvent.lotMatches}
+                      columnDefs={realizedLotMatchColumns}
                       defaultColDef={{
                         sortable: false,
                         suppressHeaderMenuButton: true,
                       }}
                     />
                   </div>
-                </Stack>
-              </Card>
-            ) : null}
-          </Stack>
-
-          <Drawer
-            opened={selectedEvent != null}
-            onClose={() => {
-              setSelectedEventId(null);
-            }}
-            position="right"
-            size="xl"
-            title="Explain Realised Delta"
-          >
-            {selectedEvent ? (
-              <Stack gap="md">
-                <Card withBorder radius="md" p="md">
-                  <Stack gap="xs">
-                    <Text fw={600}>
-                      {reconciliation.target.accountName} ·{" "}
-                      {reconciliation.target.unitLabel}
-                    </Text>
-                    <Text size="sm" c="dimmed">
-                      {reconciliation.selectedPeriodLabel}
-                    </Text>
-                    <Group gap="md">
-                      <Text size="sm">Date: {selectedEvent.date}</Text>
-                      <Text size="sm">Booking: {selectedEvent.bookingId}</Text>
-                      <Text size="sm">
-                        Transaction: {selectedEvent.transactionId ?? "—"}
-                      </Text>
-                    </Group>
-                  </Stack>
-                </Card>
-
-                <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                  <Card withBorder radius="md" p="md">
-                    <Text size="sm" c="dimmed">
-                      Quantity
-                    </Text>
-                    <Text fw={700}>
-                      {selectedEvent.quantity.toLocaleString("en-CH")}
-                    </Text>
-                  </Card>
-                  <Card withBorder radius="md" p="md">
-                    <Text size="sm" c="dimmed">
-                      Effective Amount
-                    </Text>
-                    <Text fw={700}>
-                      {currencyFormatter.format(
-                        selectedEvent.effectiveReferenceAmount,
-                      )}
-                    </Text>
-                  </Card>
-                  <Card withBorder radius="md" p="md">
-                    <Text size="sm" c="dimmed">
-                      Exec Price
-                    </Text>
-                    <Text fw={700}>
-                      {currencyFormatter.format(
-                        selectedEvent.executionUnitPriceInReference,
-                      )}
-                    </Text>
-                  </Card>
-                  <Card withBorder radius="md" p="md">
-                    <Text size="sm" c="dimmed">
-                      Realised Delta
-                    </Text>
-                    <Text fw={700}>
-                      {currencyFormatter.format(
-                        selectedEvent.realizedGainLossDelta,
-                      )}
-                    </Text>
-                  </Card>
-                </SimpleGrid>
-
-                <Card withBorder radius="md" p="md">
-                  <Stack gap="sm">
-                    <Text fw={600}>Lot Matches</Text>
-                    {selectedEvent.lotMatches.length === 0 ? (
-                      <Alert
-                        color="yellow"
-                        variant="light"
-                        title="No lot matches"
-                      >
-                        No matched lots were captured for this event.
-                      </Alert>
-                    ) : (
-                      <div style={{ height: 250 }}>
-                        <DataGrid
-                          rowData={selectedEvent.lotMatches}
-                          columnDefs={realizedLotMatchColumns}
-                          defaultColDef={{
-                            sortable: false,
-                            suppressHeaderMenuButton: true,
-                          }}
-                        />
-                      </div>
-                    )}
-                  </Stack>
-                </Card>
-
-                <Card withBorder radius="md" p="md">
-                  <Stack gap="xs">
-                    <Text fw={600}>Formula</Text>
-                    <Text ff="monospace" size="sm">
-                      Σ(lot deltas) ={" "}
-                      {currencyFormatter.format(
-                        selectedEvent.lotMatches.reduce(
-                          (sum, lotMatch) =>
-                            sum + lotMatch.realizedGainLossDelta,
-                          0,
-                        ),
-                      )}{" "}
-                      = Event realised delta{" "}
-                      {currencyFormatter.format(
-                        selectedEvent.realizedGainLossDelta,
-                      )}
-                    </Text>
-                  </Stack>
-                </Card>
-
-                <Card withBorder radius="md" p="md">
-                  <Stack gap="xs">
-                    <Text fw={600}>Conversion / Rate Notes</Text>
-                    <Text size="sm" c="dimmed">
-                      Pricing source:{" "}
-                      {getPricingSourceLabel(selectedEvent.pricing.source)}
-                    </Text>
-                    <Divider />
-                    <Text size="sm">
-                      Market reference amount:{" "}
-                      {currencyFormatter.format(
-                        selectedEvent.pricing.marketReferenceAmount,
-                      )}
-                    </Text>
-                    <Text size="sm">
-                      Residual allocation amount:{" "}
-                      {currencyFormatter.format(
-                        selectedEvent.pricing.residualAllocationAmount,
-                      )}
-                    </Text>
-                    <Text size="sm">
-                      Effective reference amount:{" "}
-                      {currencyFormatter.format(
-                        selectedEvent.pricing.effectiveReferenceAmount,
-                      )}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      {selectedEvent.pricing.source === "directConversion"
-                        ? "Effective amount comes directly from converted booking values."
-                        : selectedEvent.pricing.source === "residualAdjusted"
-                          ? "Effective amount includes residual allocation to reconcile counterpart conversions."
-                          : "Effective amount falls back to market conversion because direct counterpart conversion data was incomplete."}
-                    </Text>
-                  </Stack>
-                </Card>
-
-                <Card withBorder radius="md" p="md">
-                  <Stack gap="xs">
-                    <Text fw={600}>Rounding</Text>
-                    <Text size="sm">
-                      Realised delta raw{" "}
-                      {selectedEvent.rounding.rawRealizedGainLossDelta.toLocaleString(
-                        "en-CH",
-                      )}{" "}
-                      rounds to{" "}
-                      {selectedEvent.rounding.roundedRealizedGainLossDelta.toLocaleString(
-                        "en-CH",
-                      )}
-                      .
-                    </Text>
-                    <Text size="sm">
-                      Running realised raw{" "}
-                      {selectedEvent.rounding.rawRunningRealizedGainLoss.toLocaleString(
-                        "en-CH",
-                      )}{" "}
-                      rounds to{" "}
-                      {selectedEvent.rounding.roundedRunningRealizedGainLoss.toLocaleString(
-                        "en-CH",
-                      )}
-                      .
-                    </Text>
-                  </Stack>
-                </Card>
+                )}
               </Stack>
-            ) : null}
-          </Drawer>
-        </>
-      )}
+            </Card>
+          </Stack>
+        ) : null}
+      </Drawer>
+
+      {selectedPeriodValue !== reconciliation.selectedPeriodValue ? (
+        <Text c="dimmed" mt="sm" size="xs">
+          Showing nearest supported period for the requested value.
+        </Text>
+      ) : null}
     </Container>
   );
 }

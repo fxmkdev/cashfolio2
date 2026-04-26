@@ -122,6 +122,8 @@ export async function applyHoldingTransactionsToGainLossState(args: {
   onSkippedItem?: (item: {
     accountId: string;
     bookingId: string;
+    bookingDescription?: string | null;
+    transactionDescription?: string | null;
     transactionId: string | null;
     reason: HoldingGainLossSkippedReason;
     date: Date;
@@ -233,6 +235,8 @@ export async function applyHoldingTransactionsToGainLossState(args: {
         args.onSkippedItem?.({
           accountId: booking.accountId,
           bookingId: booking.id,
+          bookingDescription: booking.description,
+          transactionDescription: booking.transactionDescription,
           transactionId: booking.transactionId ?? null,
           reason: "missingConversion",
           date: booking.date,
@@ -318,6 +322,8 @@ export async function applyHoldingTransactionsToGainLossState(args: {
 
       state.executionEvents.push({
         bookingId: booking.id,
+        bookingDescription: booking.description,
+        transactionDescription: booking.transactionDescription,
         transactionId: booking.transactionId ?? null,
         date: booking.date,
         quantity: booking.value,
@@ -347,6 +353,8 @@ export async function finalizeHoldingGainLossState(args: {
   onAccountExecutionEvent?: (event: {
     accountId: string;
     bookingId: string;
+    bookingDescription?: string | null;
+    transactionDescription?: string | null;
     transactionId: string | null;
     date: Date;
     quantity: number;
@@ -370,6 +378,8 @@ export async function finalizeHoldingGainLossState(args: {
   onSkippedItem?: (item: {
     accountId: string;
     bookingId?: string;
+    bookingDescription?: string | null;
+    transactionDescription?: string | null;
     transactionId?: string | null;
     reason: HoldingGainLossSkippedReason;
     date: Date;
@@ -408,6 +418,8 @@ export async function finalizeHoldingGainLossState(args: {
         args.onSkippedItem?.({
           accountId: state.account.id,
           bookingId: event.bookingId,
+          bookingDescription: event.bookingDescription,
+          transactionDescription: event.transactionDescription,
           transactionId: event.transactionId ?? null,
           reason: "invalidExecutionPrice",
           date: event.date,
@@ -432,6 +444,8 @@ export async function finalizeHoldingGainLossState(args: {
       args.onAccountExecutionEvent?.({
         accountId: state.account.id,
         bookingId: event.bookingId,
+        bookingDescription: event.bookingDescription,
+        transactionDescription: event.transactionDescription,
         transactionId: event.transactionId ?? null,
         date: event.date,
         quantity: event.quantity,
@@ -535,6 +549,8 @@ export async function computeHoldingGainLossSplit(args: {
   onSkippedItem?: (item: {
     accountId: string;
     bookingId?: string;
+    bookingDescription?: string | null;
+    transactionDescription?: string | null;
     transactionId?: string | null;
     reason: HoldingGainLossSkippedReason;
     date: Date;

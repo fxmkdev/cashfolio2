@@ -48,6 +48,8 @@ export async function computeTransferClearingGainLossSplit(args: {
   onUnitExecutionEvent?: (event: {
     unitKey: TransferClearingUnitBucket["unitKey"];
     bookingId: string;
+    bookingDescription?: string | null;
+    transactionDescription?: string | null;
     transactionId: string | null;
     date: Date;
     quantity: number;
@@ -71,6 +73,8 @@ export async function computeTransferClearingGainLossSplit(args: {
   onSkippedItem?: (item: {
     unitKey: TransferClearingUnitBucket["unitKey"];
     bookingId?: string;
+    bookingDescription?: string | null;
+    transactionDescription?: string | null;
     transactionId?: string | null;
     reason: TransferClearingGainLossSkippedReason;
     date: Date;
@@ -163,6 +167,8 @@ export async function computeTransferClearingGainLossSplit(args: {
         args.onSkippedItem?.({
           unitKey: unitBucket.unitKey,
           bookingId: booking.id,
+          bookingDescription: booking.description,
+          transactionDescription: booking.transactionDescription,
           transactionId: booking.transactionId ?? null,
           reason: "missingConversion",
           date: booking.date,
@@ -179,6 +185,8 @@ export async function computeTransferClearingGainLossSplit(args: {
         args.onSkippedItem?.({
           unitKey: unitBucket.unitKey,
           bookingId: booking.id,
+          bookingDescription: booking.description,
+          transactionDescription: booking.transactionDescription,
           transactionId: booking.transactionId ?? null,
           reason: "invalidExecutionPrice",
           date: booking.date,
@@ -205,6 +213,8 @@ export async function computeTransferClearingGainLossSplit(args: {
       args.onUnitExecutionEvent?.({
         unitKey: unitBucket.unitKey,
         bookingId: booking.id,
+        bookingDescription: booking.description,
+        transactionDescription: booking.transactionDescription,
         transactionId: booking.transactionId ?? null,
         date: booking.date,
         quantity: clearingQuantity,

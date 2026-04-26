@@ -15,6 +15,8 @@ export type HoldingRateConvertibleAccount = {
 
 export type HoldingTransactionBooking = {
   id: string;
+  description?: string | null;
+  transactionDescription?: string | null;
   transactionId?: string | null;
   accountId: string;
   date: Date;
@@ -54,6 +56,8 @@ export type HoldingExecutionLotMatch = {
 
 export type HoldingExecutionEvent = {
   bookingId: string;
+  bookingDescription?: string | null;
+  transactionDescription?: string | null;
   transactionId?: string | null;
   date: Date;
   quantity: number;

@@ -41,7 +41,9 @@ type GainLossReconciliationDiagnostic = {
   reason: GainLossReconciliationDiagnosticReason;
   message: string;
   bookingId: string | null;
+  bookingDescription: string | null;
   transactionId: string | null;
+  transactionDescription: string | null;
   date: string;
 };
 
@@ -49,7 +51,9 @@ type GainLossReconciliationRealizedEvent = {
   id: string;
   date: string;
   bookingId: string;
+  bookingDescription: string | null;
   transactionId: string | null;
+  transactionDescription: string | null;
   quantity: number;
   effectiveReferenceAmount: number;
   executionUnitPriceInReference: number;
@@ -114,6 +118,13 @@ export type PeriodGainLossReconciliation = {
   selectedPeriodValue: string;
   selectedPeriodLabel: string;
   selectedPeriodSpecifier: string;
+  selectedGranularity: "month" | "year";
+  selectedYear: number;
+  selectedMonth: number | null;
+  periodBounds: {
+    minBookingDate: string | null;
+    maxDate: string;
+  };
   periodDateRange: {
     from: string;
     to: string;
@@ -184,14 +195,18 @@ function pushDiagnostic(
     reason: GainLossReconciliationDiagnosticReason;
     date: Date;
     bookingId?: string;
+    bookingDescription?: string | null;
     transactionId?: string | null;
+    transactionDescription?: string | null;
   },
 ) {
   diagnostics.push({
     reason: args.reason,
     message: getDiagnosticMessage(args.reason),
     bookingId: args.bookingId ?? null,
+    bookingDescription: args.bookingDescription ?? null,
     transactionId: args.transactionId ?? null,
+    transactionDescription: args.transactionDescription ?? null,
     date: args.date.toISOString(),
   });
 }
@@ -458,9 +473,11 @@ async function buildRealAccountReconciliation(args: {
         : {}),
       select: {
         id: true,
+        description: true,
         bookings: {
           select: {
             id: true,
+            description: true,
             accountId: true,
             date: true,
             value: true,
@@ -492,6 +509,8 @@ async function buildRealAccountReconciliation(args: {
       transactions: transactionsPage.map((transaction) => ({
         bookings: transaction.bookings.map((booking) => ({
           id: booking.id,
+          description: booking.description,
+          transactionDescription: transaction.description,
           transactionId: transaction.id,
           accountId: booking.accountId,
           date: booking.date,
@@ -547,7 +566,9 @@ async function buildRealAccountReconciliation(args: {
         id: `event:${event.bookingId}`,
         date: event.date.toISOString(),
         bookingId: event.bookingId,
+        bookingDescription: event.bookingDescription ?? null,
         transactionId: event.transactionId,
+        transactionDescription: event.transactionDescription ?? null,
         quantity: event.quantity,
         effectiveReferenceAmount: roundedEffectiveReferenceAmount,
         executionUnitPriceInReference: roundedExecutionUnitPriceInReference,
@@ -699,7 +720,9 @@ async function buildTransferClearingReconciliation(args: {
         id: `event:${event.bookingId}`,
         date: event.date.toISOString(),
         bookingId: event.bookingId,
+        bookingDescription: event.bookingDescription ?? null,
         transactionId: event.transactionId,
+        transactionDescription: event.transactionDescription ?? null,
         quantity: event.quantity,
         effectiveReferenceAmount: roundedEffectiveReferenceAmount,
         executionUnitPriceInReference: roundedExecutionUnitPriceInReference,
@@ -746,7 +769,9 @@ async function buildTransferClearingReconciliation(args: {
         reason: item.reason,
         date: item.date,
         bookingId: item.bookingId,
+        bookingDescription: item.bookingDescription,
         transactionId: item.transactionId,
+        transactionDescription: item.transactionDescription,
       });
     },
   });
@@ -797,9 +822,10 @@ export const getPeriodGainLossReconciliation = createServerFn({
 
     const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
     const accountBookStartDate = startOfUtcDay(accountBook.startDate);
+    const now = new Date();
     const selection = resolvePeriodSelection({
       periodValue: data.period,
-      now: new Date(),
+      now,
       firstBookingDate: accountBookStartDate,
     });
     const isBeforeAccountBookStart = selection.to < accountBookStartDate;
@@ -843,6 +869,15 @@ export const getPeriodGainLossReconciliation = createServerFn({
       selectedPeriodValue: selection.periodValue,
       selectedPeriodLabel: selection.label,
       selectedPeriodSpecifier: selection.periodSpecifier,
+      selectedGranularity: selection.granularity,
+      selectedYear: selection.year,
+      selectedMonth: selection.month,
+      periodBounds: {
+        minBookingDate: accountBookStartDate.toISOString(),
+        maxDate: startOfUtcDay(
+          new Date(now.getTime() - 24 * 60 * 60 * 1000),
+        ).toISOString(),
+      },
       periodDateRange: {
         from: selection.from.toISOString(),
         to: selection.to.toISOString(),

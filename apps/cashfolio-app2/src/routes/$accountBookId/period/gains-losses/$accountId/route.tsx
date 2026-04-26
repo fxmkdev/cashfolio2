@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { getPeriodGainLossReconciliation } from "@/server/period-gain-loss-reconciliation";
+import { formatMonthPeriodValue } from "@/shared/period";
+import { DEFAULT_PERIOD_VALUE } from "../../-page-types";
 import { getPeriodValue, parsePeriodSearch } from "../../-page-types";
 
 const GainLossReconciliationPageView = lazy(async () => {
@@ -27,16 +29,54 @@ export const Route = createFileRoute(
 });
 
 function GainLossReconciliationPage() {
-  const { accountBookId } = Route.useParams();
+  const { accountBookId, accountId } = Route.useParams();
   const selectedPeriodValue = getPeriodValue(Route.useSearch());
   const reconciliation = Route.useLoaderData();
+  const navigate = Route.useNavigate();
+  const explicitLedgerPeriodValue = reconciliation
+    ? reconciliation.selectedGranularity === "month" &&
+      reconciliation.selectedMonth != null
+      ? formatMonthPeriodValue(
+          reconciliation.selectedYear,
+          reconciliation.selectedMonth,
+        )
+      : String(reconciliation.selectedYear).padStart(4, "0")
+    : undefined;
 
   return (
     <Suspense fallback={null}>
       <GainLossReconciliationPageView
-        accountBookId={accountBookId}
         selectedPeriodValue={selectedPeriodValue}
         reconciliation={reconciliation}
+        onPeriodChange={(nextPeriodValue) => {
+          navigate({
+            to: "/$accountBookId/period/gains-losses/$accountId",
+            params: { accountBookId, accountId },
+            search: (previousSearch) => ({
+              ...previousSearch,
+              period:
+                nextPeriodValue === DEFAULT_PERIOD_VALUE
+                  ? undefined
+                  : nextPeriodValue,
+            }),
+          });
+        }}
+        onOpenEventTransaction={(transactionId) => {
+          if (!explicitLedgerPeriodValue) {
+            return;
+          }
+          navigate({
+            to: "/$accountBookId/$accountId",
+            params: {
+              accountBookId,
+              accountId,
+            },
+            search: {
+              period: explicitLedgerPeriodValue,
+              transactionId,
+            },
+          });
+        }}
       />
     </Suspense>
   );
