@@ -28,6 +28,7 @@ import {
   loadTransferClearingUnitBuckets,
   type TransferClearingUnitBucket,
 } from "./period-transfer-clearing";
+import { formatUnitLabel, normalizeUppercaseCode } from "./period-unit-format";
 
 const RECONCILIATION_TRANSACTIONS_PAGE_SIZE = 200;
 const VIRTUAL_TRANSFER_CLEARING_ACCOUNT_PREFIX =
@@ -141,35 +142,6 @@ export type PeriodGainLossReconciliation = {
     items: GainLossReconciliationDiagnostic[];
   };
 };
-
-function normalizeUppercaseCode(value: string | null): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const trimmed = value.trim();
-  if (trimmed.length === 0) {
-    return null;
-  }
-  return trimmed.toUpperCase();
-}
-
-function getUnitLabel(args: {
-  unit: Unit;
-  currency: string | null;
-  cryptocurrency: string | null;
-  symbol: string | null;
-  tradeCurrency: string | null;
-}): string {
-  if (args.unit === Unit.CURRENCY) {
-    return normalizeUppercaseCode(args.currency) ?? "UNKNOWN";
-  }
-  if (args.unit === Unit.CRYPTOCURRENCY) {
-    return normalizeUppercaseCode(args.cryptocurrency) ?? "UNKNOWN";
-  }
-  const symbol = normalizeUppercaseCode(args.symbol) ?? "UNKNOWN";
-  const tradeCurrency = normalizeUppercaseCode(args.tradeCurrency) ?? "UNKNOWN";
-  return `${symbol} (${tradeCurrency})`;
-}
 
 function getDiagnosticMessage(
   reason: GainLossReconciliationDiagnosticReason,
@@ -373,7 +345,7 @@ async function buildRealAccountReconciliation(args: {
         accountName: account.name,
         isVirtual: false,
         unit: targetAccount.unit,
-        unitLabel: getUnitLabel(targetAccount),
+        unitLabel: formatUnitLabel(targetAccount),
         currency: normalizeUppercaseCode(targetAccount.currency),
         cryptocurrency: normalizeUppercaseCode(targetAccount.cryptocurrency),
         symbol: normalizeUppercaseCode(targetAccount.symbol),
@@ -621,7 +593,7 @@ async function buildRealAccountReconciliation(args: {
       accountName: account.name,
       isVirtual: false,
       unit: targetAccount.unit,
-      unitLabel: getUnitLabel(targetAccount),
+      unitLabel: formatUnitLabel(targetAccount),
       currency: normalizeUppercaseCode(targetAccount.currency),
       cryptocurrency: normalizeUppercaseCode(targetAccount.cryptocurrency),
       symbol: normalizeUppercaseCode(targetAccount.symbol),
@@ -672,7 +644,7 @@ async function buildTransferClearingReconciliation(args: {
         accountName: targetBucket.unitLabel,
         isVirtual: true,
         unit: targetBucket.unit,
-        unitLabel: getUnitLabel(targetBucket),
+        unitLabel: formatUnitLabel(targetBucket),
         currency: normalizeUppercaseCode(targetBucket.currency),
         cryptocurrency: normalizeUppercaseCode(targetBucket.cryptocurrency),
         symbol: normalizeUppercaseCode(targetBucket.symbol),
@@ -782,7 +754,7 @@ async function buildTransferClearingReconciliation(args: {
       accountName: targetBucket.unitLabel,
       isVirtual: true,
       unit: targetBucket.unit,
-      unitLabel: getUnitLabel(targetBucket),
+      unitLabel: formatUnitLabel(targetBucket),
       currency: normalizeUppercaseCode(targetBucket.currency),
       cryptocurrency: normalizeUppercaseCode(targetBucket.cryptocurrency),
       symbol: normalizeUppercaseCode(targetBucket.symbol),

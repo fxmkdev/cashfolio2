@@ -9,6 +9,7 @@ import {
   type PeriodGroupNode,
 } from "./period-helpers";
 import type { PeriodOverviewEquityAggregation } from "./period-overview-aggregation";
+import { normalizeUppercaseCode } from "./period-unit-format";
 import type { NormalizedPeriodSelection } from "./period-selection";
 
 type PeriodOverviewAssetLiabilityAccount = {
@@ -58,19 +59,6 @@ const UNIT_TYPE_DESCRIPTORS: UnitTypeDescriptor[] = [
   { id: "cryptocurrency", label: "Cryptocurrency" },
   { id: "explicit", label: "Explicit G/L" },
 ];
-
-function normalizeUppercaseCode(value: string | null): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  if (trimmed.length === 0) {
-    return null;
-  }
-
-  return trimmed.toUpperCase();
-}
 
 function getUnitTypeDescriptor(unit: Unit): UnitTypeDescriptor {
   if (unit === Unit.CURRENCY) {
