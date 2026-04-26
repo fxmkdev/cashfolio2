@@ -1,5 +1,53 @@
-import { describe, expect, test } from "vitest";
-import { buildTimelinePeriodValues } from "./period-timeline";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+const createServerFn = vi.hoisted(() =>
+  vi.fn(() => {
+    let validate: ((data: unknown) => unknown) | undefined;
+    const chain = {
+      inputValidator: vi.fn((validator: (data: unknown) => unknown) => {
+        validate = validator;
+        return chain;
+      }),
+      handler: vi.fn((handler: ({ data }: { data: unknown }) => unknown) => {
+        return async ({ data }: { data: unknown }) => {
+          const validatedData = validate ? validate(data) : data;
+          return handler({ data: validatedData });
+        };
+      }),
+    };
+    return chain;
+  }),
+);
+
+const ensureAuthorizedForAccountBookId = vi.hoisted(() => vi.fn());
+const loadPeriodOverview = vi.hoisted(() => vi.fn());
+
+const prisma = vi.hoisted(() => ({
+  accountBook: {
+    findUniqueOrThrow: vi.fn(),
+  },
+}));
+
+vi.mock("@tanstack/react-start", () => ({
+  createServerFn,
+}));
+
+vi.mock("../account-books/functions.server", () => ({
+  ensureAuthorizedForAccountBookId,
+}));
+
+vi.mock("../prisma.server", () => ({
+  prisma,
+}));
+
+vi.mock("./period-overview.server", () => ({
+  loadPeriodOverview,
+}));
+
+import {
+  buildTimelinePeriodValues,
+  getPeriodTimeline,
+} from "./period-timeline";
 
 describe("buildTimelinePeriodValues", () => {
   test("builds monthly values from account-book start month to current month", () => {
@@ -30,5 +78,111 @@ describe("buildTimelinePeriodValues", () => {
         maxDate: new Date("2026-04-01T00:00:00.000Z"),
       }),
     ).toEqual([]);
+  });
+});
+
+describe("getPeriodTimeline", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-18T12:00:00.000Z"));
+
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "chf",
+      startDate: new Date("2026-01-05T00:00:00.000Z"),
+    });
+
+    loadPeriodOverview.mockImplementation(
+      async ({ period }: { period: string; accountBookId: string }) => ({
+        selectedPeriodValue: period,
+        selectedPeriodLabel: `Label ${period}`,
+        stats: {
+          totalReturn: period.length,
+        },
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("authorizes and builds monthly points from account-book start to current month", async () => {
+    const result = await getPeriodTimeline({
+      data: {
+        accountBookId: "book-1",
+        granularity: "month",
+      },
+    });
+
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-1");
+    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
+      where: { id: "book-1" },
+      select: {
+        referenceCurrency: true,
+        startDate: true,
+      },
+    });
+
+    expect(loadPeriodOverview).toHaveBeenCalledTimes(3);
+    expect(loadPeriodOverview).toHaveBeenNthCalledWith(1, {
+      accountBookId: "book-1",
+      period: "2026-01",
+    });
+    expect(loadPeriodOverview).toHaveBeenNthCalledWith(2, {
+      accountBookId: "book-1",
+      period: "2026-02",
+    });
+    expect(loadPeriodOverview).toHaveBeenNthCalledWith(3, {
+      accountBookId: "book-1",
+      period: "2026-03",
+    });
+
+    expect(result).toEqual({
+      referenceCurrency: "CHF",
+      points: [
+        {
+          periodValue: "2026-01",
+          periodLabel: "Label 2026-01",
+          totalReturn: 7,
+        },
+        {
+          periodValue: "2026-02",
+          periodLabel: "Label 2026-02",
+          totalReturn: 7,
+        },
+        {
+          periodValue: "2026-03",
+          periodLabel: "Label 2026-03",
+          totalReturn: 7,
+        },
+      ],
+    });
+  });
+
+  test("builds yearly timeline points for year granularity", async () => {
+    await getPeriodTimeline({
+      data: {
+        accountBookId: "book-2",
+        granularity: "year",
+      },
+    });
+
+    expect(loadPeriodOverview).toHaveBeenCalledTimes(1);
+    expect(loadPeriodOverview).toHaveBeenCalledWith({
+      accountBookId: "book-2",
+      period: "2026",
+    });
+  });
+
+  test("rejects unsupported granularity", async () => {
+    await expect(
+      getPeriodTimeline({
+        data: {
+          accountBookId: "book-1",
+          granularity: "quarter",
+        },
+      }),
+    ).rejects.toMatchObject({ status: 400 });
   });
 });
