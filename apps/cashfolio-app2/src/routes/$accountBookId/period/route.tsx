@@ -5,6 +5,10 @@ import { getPeriodOverview } from "@/server/period";
 import { formatMonthPeriodValue } from "@/shared/period";
 import { hasExplicitGainLossGroup } from "./-gains-losses-explicit";
 import {
+  buildNetWorthTrendWindow,
+  buildPeriodNetWorthTrendPoints,
+} from "./-net-worth-trend";
+import {
   DEFAULT_PERIOD_VALUE,
   getPeriodValue,
   parsePeriodSearch,
@@ -27,6 +31,36 @@ export const Route = createFileRoute("/$accountBookId/period")({
         period,
       },
     });
+    const trendWindow = buildNetWorthTrendWindow({
+      selectedGranularity: overview.selectedGranularity,
+      selectedYear: overview.selectedYear,
+      selectedMonth: overview.selectedMonth,
+      minBookingDate: overview.minBookingDate
+        ? new Date(overview.minBookingDate)
+        : null,
+    });
+    const priorNetWorthEntries = await Promise.all(
+      trendWindow
+        .filter((point) => point.isInRange && !point.isSelected)
+        .map(async (point) => {
+          const periodOverview = await getPeriodOverview({
+            data: {
+              accountBookId,
+              period: point.periodValue,
+            },
+          });
+          return [
+            point.periodValue,
+            periodOverview.stats.endOfPeriodNetWorth,
+          ] as const;
+        }),
+    );
+    const netWorthTrend = buildPeriodNetWorthTrendPoints({
+      window: trendWindow,
+      selectedNetWorth: overview.stats.endOfPeriodNetWorth,
+      netWorthByPeriodValue: new Map(priorNetWorthEntries),
+    });
+
     const gainLossEquityAccountId = hasExplicitGainLossGroup(
       overview.gainsLossesBreakdown.hierarchy,
     )
@@ -37,7 +71,7 @@ export const Route = createFileRoute("/$accountBookId/period")({
         })
       : null;
 
-    return { overview, gainLossEquityAccountId };
+    return { overview, gainLossEquityAccountId, netWorthTrend };
   },
   component: PeriodPage,
 });
@@ -46,7 +80,8 @@ function PeriodPage() {
   const { accountBookId } = Route.useParams();
   const search = Route.useSearch();
   const selectedPeriodValue = getPeriodValue(search);
-  const { overview, gainLossEquityAccountId } = Route.useLoaderData();
+  const { overview, gainLossEquityAccountId, netWorthTrend } =
+    Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/period" });
   const explicitLedgerPeriodValue =
     overview.selectedGranularity === "month" && overview.selectedMonth != null
@@ -58,6 +93,7 @@ function PeriodPage() {
       <PeriodPageView
         accountBookId={accountBookId}
         overview={overview}
+        netWorthTrend={netWorthTrend}
         selectedPeriodValue={selectedPeriodValue}
         onPeriodChange={(nextPeriodValue) =>
           navigate({

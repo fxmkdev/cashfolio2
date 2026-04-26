@@ -16,6 +16,10 @@ import {
   PERIOD_PRESET_MTD,
   PERIOD_PRESET_YTD,
 } from "./-page-types";
+import {
+  buildNetWorthTrendWindow,
+  buildPeriodNetWorthTrendPoints,
+} from "./-net-worth-trend";
 import { PeriodPageView, type PeriodPageViewProps } from "./-page-view";
 
 const STORYBOOK_ACCOUNT_BOOK_ID = "storybook-book";
@@ -570,18 +574,50 @@ const baseOverview: PeriodPageViewProps["overview"] = {
   },
 };
 
+function buildStoryNetWorthTrend(
+  overview: PeriodPageViewProps["overview"],
+): PeriodPageViewProps["netWorthTrend"] {
+  const window = buildNetWorthTrendWindow({
+    selectedGranularity: overview.selectedGranularity,
+    selectedYear: overview.selectedYear,
+    selectedMonth: overview.selectedMonth,
+    minBookingDate: overview.minBookingDate
+      ? new Date(overview.minBookingDate)
+      : null,
+  });
+  const netWorthByPeriodValue = new Map(
+    window
+      .filter((point) => point.isInRange && !point.isSelected)
+      .map((point, index) => {
+        const stepsAwayFromSelected = window.length - 1 - index;
+        return [
+          point.periodValue,
+          overview.stats.endOfPeriodNetWorth - stepsAwayFromSelected * 3500,
+        ] as const;
+      }),
+  );
+  return buildPeriodNetWorthTrendPoints({
+    window,
+    selectedNetWorth: overview.stats.endOfPeriodNetWorth,
+    netWorthByPeriodValue,
+  });
+}
+
 function PeriodRouteSmokeHarness() {
   const [selectedPeriodValue, setSelectedPeriodValue] =
     useState<string>(DEFAULT_PERIOD_VALUE);
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
+  const selectedOverview =
+    deriveOverviewFromSelectedPeriodValue(selectedPeriodValue);
 
   return (
     <Box>
       <PeriodPageView
         accountBookId={STORYBOOK_ACCOUNT_BOOK_ID}
-        overview={deriveOverviewFromSelectedPeriodValue(selectedPeriodValue)}
+        overview={selectedOverview}
+        netWorthTrend={buildStoryNetWorthTrend(selectedOverview)}
         selectedPeriodValue={selectedPeriodValue}
         onPeriodChange={setSelectedPeriodValue}
         onBreakdownAccountDoubleClick={() => undefined}
@@ -607,6 +643,7 @@ const meta = {
   args: {
     accountBookId: STORYBOOK_ACCOUNT_BOOK_ID,
     overview: baseOverview,
+    netWorthTrend: buildStoryNetWorthTrend(baseOverview),
     selectedPeriodValue: DEFAULT_PERIOD_VALUE,
     onPeriodChange: fn(),
     onBreakdownAccountDoubleClick: fn(),
@@ -648,6 +685,11 @@ export const HappyPath: Story = {
     await expect(
       within(analysisSection).getByRole("heading", {
         name: "Gains / Losses Breakdown",
+      }),
+    ).toBeInTheDocument();
+    await expect(
+      within(analysisSection).getByRole("heading", {
+        name: "Net Worth Trend",
       }),
     ).toBeInTheDocument();
     await expect(canvas.queryByText("Total Income")).not.toBeInTheDocument();

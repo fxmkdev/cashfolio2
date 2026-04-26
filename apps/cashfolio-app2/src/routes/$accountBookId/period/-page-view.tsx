@@ -23,6 +23,8 @@ import { PeriodBreakdownCard } from "./-breakdown-card";
 import { clampBreakdownPath } from "./-breakdown-drill";
 import { GainsLossesCard } from "./-gains-losses-card";
 import { clampGainsLossesPath } from "./-gains-losses-drill";
+import type { PeriodNetWorthTrendPoint } from "./-net-worth-trend";
+import { NetWorthTrendCard } from "./-net-worth-trend-card";
 import { usePeriodAllocationBreakdownViewModel } from "./-period-allocation-breakdown-view-model";
 import { usePeriodBreakdownViewModel } from "./-period-breakdown-view-model";
 import { usePeriodGainsLossesViewModel } from "./-period-gains-losses-view-model";
@@ -46,6 +48,7 @@ type PeriodOverview = Awaited<ReturnType<typeof getPeriodOverview>>;
 export type PeriodPageViewProps = {
   accountBookId: string;
   overview: PeriodOverview;
+  netWorthTrend: PeriodNetWorthTrendPoint[];
   selectedPeriodValue: string;
   onPeriodChange: (nextPeriodValue: string) => void;
   onBreakdownAccountDoubleClick: (accountId: string) => void;
@@ -69,6 +72,7 @@ function arePathsEqual(left: string[], right: string[]): boolean {
 export function PeriodPageView({
   accountBookId,
   overview,
+  netWorthTrend,
   selectedPeriodValue,
   onPeriodChange,
   onBreakdownAccountDoubleClick,
@@ -504,6 +508,18 @@ export function PeriodPageView({
                   gainsLosses.handleChartContainerDoubleClick
                 }
                 onExplicitGainLossDoubleClick={onExplicitGainLossDoubleClick}
+              />
+            </Grid.Col>
+          </Grid>
+
+          <Grid gap="lg">
+            <Grid.Col span={{ base: 12, lg: 6 }}>
+              <NetWorthTrendCard
+                trend={netWorthTrend}
+                selectedGranularity={overview.selectedGranularity}
+                referenceCurrency={overview.referenceCurrency}
+                colors={colors}
+                currencyFormatter={currencyFormatter}
               />
             </Grid.Col>
           </Grid>
