@@ -11,7 +11,9 @@ describe("formatExactNumericTooltipValue", () => {
     const localeParts = new Intl.NumberFormat("en-CH", {
       maximumFractionDigits: 20,
     }).formatToParts(value);
-    const groupSeparator = localeParts.find((part) => part.type === "group")?.value;
+    const groupSeparator = localeParts.find(
+      (part) => part.type === "group",
+    )?.value;
     const decimalSeparator = localeParts.find(
       (part) => part.type === "decimal",
     )?.value;
