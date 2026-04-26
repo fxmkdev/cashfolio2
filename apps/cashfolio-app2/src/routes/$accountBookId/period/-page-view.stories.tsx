@@ -1055,6 +1055,91 @@ export const AllocationChartContainerDoubleClickSmoke: Story = {
   },
 };
 
+export const AllocationTableVirtualAccountDoubleClickIgnoredSmoke: Story = {
+  args: {
+    onBreakdownAccountDoubleClick: fn(),
+    overview: {
+      ...baseOverview,
+      assetBreakdown: {
+        ...baseOverview.assetBreakdown,
+        items: [
+          {
+            id: "account:virtual:transfer-clearing:account:currency:CHF",
+            label: "Transfer Clearing (CHF)",
+            kind: "account",
+            amount: 25000,
+            percentage: 100,
+          },
+        ],
+        hierarchy: [
+          {
+            id: "account:virtual:transfer-clearing:account:currency:CHF",
+            label: "Transfer Clearing (CHF)",
+            kind: "account",
+            amount: 25000,
+            children: [],
+          },
+        ],
+      },
+    },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+
+    const allocationChartTypeControl = await canvas.findByLabelText(
+      "Allocation chart type",
+    );
+    await userEvent.click(
+      within(allocationChartTypeControl).getByRole("radio", {
+        name: "Table",
+      }),
+    );
+
+    await userEvent.dblClick(canvas.getByText("Transfer Clearing (CHF)"));
+    await expect(args.onBreakdownAccountDoubleClick).not.toHaveBeenCalled();
+  },
+};
+
+export const AllocationChartVirtualAccountDoubleClickIgnoredSmoke: Story = {
+  args: {
+    onBreakdownAccountDoubleClick: fn(),
+    overview: {
+      ...baseOverview,
+      assetBreakdown: {
+        ...baseOverview.assetBreakdown,
+        items: [
+          {
+            id: "account:virtual:transfer-clearing:account:currency:CHF",
+            label: "Transfer Clearing (CHF)",
+            kind: "account",
+            amount: 25000,
+            percentage: 100,
+          },
+        ],
+        hierarchy: [
+          {
+            id: "account:virtual:transfer-clearing:account:currency:CHF",
+            label: "Transfer Clearing (CHF)",
+            kind: "account",
+            amount: 25000,
+            children: [],
+          },
+        ],
+      },
+    },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+
+    const allocationChart = await canvas.findByTestId(
+      "period-allocation-breakdown-chart",
+    );
+    await userEvent.dblClick(allocationChart);
+
+    await expect(args.onBreakdownAccountDoubleClick).not.toHaveBeenCalled();
+  },
+};
+
 export const GainsLossesToggleSmoke: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
