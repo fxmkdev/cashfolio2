@@ -169,7 +169,7 @@ export const REALIZED_LOT_MATCH_COLUMNS: ColDef<RealizedEventLotMatchRow>[] = [
   },
   {
     headerName: "Running Event Realised",
-    field: "runningRealizedGainLoss",
+    field: "runningEventRealizedGainLoss",
     width: 190,
     type: FORMATTED_NUMERIC_COLUMN,
   },

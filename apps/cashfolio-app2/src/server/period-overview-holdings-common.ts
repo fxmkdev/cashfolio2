@@ -99,7 +99,7 @@ export function applyExecutionToLots(args: {
       lotUnitCostInReference,
       executionUnitPriceInReference: args.executionUnitPriceInReference,
       realizedGainLossDelta: lotRealizedGainLossDelta,
-      runningRealizedGainLoss: realizedGainLoss,
+      runningEventRealizedGainLoss: realizedGainLoss,
     });
 
     lot.quantity -= Math.sign(lot.quantity) * closeQuantity;

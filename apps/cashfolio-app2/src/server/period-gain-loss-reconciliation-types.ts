@@ -23,7 +23,7 @@ export type GainLossReconciliationRealizedEventLotMatch = {
   lotUnitCostInReference: number;
   executionUnitPriceInReference: number;
   realizedGainLossDelta: number;
-  runningRealizedGainLoss: number;
+  runningEventRealizedGainLoss: number;
 };
 
 export type GainLossReconciliationRealizedEvent = {
@@ -116,7 +116,7 @@ export type ReconciliationExecutionEventInput = {
     lotUnitCostInReference: number;
     executionUnitPriceInReference: number;
     realizedGainLossDelta: number;
-    runningRealizedGainLoss: number;
+    runningEventRealizedGainLoss: number;
   }>;
 };
 

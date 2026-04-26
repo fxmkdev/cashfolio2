@@ -200,7 +200,7 @@ describe("getPeriodGainLossReconciliation", () => {
         lotUnitCostInReference: 100,
         executionUnitPriceInReference: 120,
         realizedGainLossDelta: 80,
-        runningRealizedGainLoss: 80,
+        runningEventRealizedGainLoss: 80,
       },
     ]);
     expect(
@@ -304,7 +304,7 @@ describe("getPeriodGainLossReconciliation", () => {
           lotUnitCostInReference: 100,
           executionUnitPriceInReference: 130,
           realizedGainLossDelta: 120,
-          runningRealizedGainLoss: 120,
+          runningEventRealizedGainLoss: 120,
         },
       ],
     });

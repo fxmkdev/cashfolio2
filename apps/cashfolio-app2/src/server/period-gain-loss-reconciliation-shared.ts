@@ -86,7 +86,7 @@ function toRealizedEventLotMatches(args: {
     lotUnitCostInReference: number;
     executionUnitPriceInReference: number;
     realizedGainLossDelta: number;
-    runningRealizedGainLoss: number;
+    runningEventRealizedGainLoss: number;
   }>;
 }): GainLossReconciliationRealizedEventLotMatch[] {
   return args.lotMatches.map((lotMatch, index) => {
@@ -102,7 +102,9 @@ function toRealizedEventLotMatches(args: {
         lotMatch.executionUnitPriceInReference,
       ),
       realizedGainLossDelta: round2(lotMatch.realizedGainLossDelta),
-      runningRealizedGainLoss: round2(lotMatch.runningRealizedGainLoss),
+      runningEventRealizedGainLoss: round2(
+        lotMatch.runningEventRealizedGainLoss,
+      ),
     };
   });
 }

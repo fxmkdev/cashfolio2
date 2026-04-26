@@ -51,7 +51,7 @@ export type HoldingExecutionLotMatch = {
   lotUnitCostInReference: number;
   executionUnitPriceInReference: number;
   realizedGainLossDelta: number;
-  runningRealizedGainLoss: number;
+  runningEventRealizedGainLoss: number;
 };
 
 export type HoldingExecutionEvent = {
