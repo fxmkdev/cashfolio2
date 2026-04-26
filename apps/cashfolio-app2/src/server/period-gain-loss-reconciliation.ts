@@ -34,9 +34,7 @@ const RECONCILIATION_TRANSACTIONS_PAGE_SIZE = 200;
 const VIRTUAL_TRANSFER_CLEARING_ACCOUNT_PREFIX =
   "virtual:transfer-clearing:account:";
 
-type GainLossReconciliationDiagnosticReason =
-  | HoldingGainLossSkippedReason
-  | "missingTargetAccount";
+type GainLossReconciliationDiagnosticReason = HoldingGainLossSkippedReason;
 
 type GainLossReconciliationDiagnostic = {
   reason: GainLossReconciliationDiagnosticReason;
@@ -146,19 +144,20 @@ export type PeriodGainLossReconciliation = {
 function getDiagnosticMessage(
   reason: GainLossReconciliationDiagnosticReason,
 ): string {
-  if (reason === "missingInitialRate") {
-    return "Missing initial valuation rate for opening balance.";
+  switch (reason) {
+    case "missingInitialRate":
+      return "Missing initial valuation rate for opening balance.";
+    case "missingConversion":
+      return "Missing booking conversion into reference currency.";
+    case "invalidExecutionPrice":
+      return "Execution price could not be derived from converted values.";
+    case "missingPeriodEndRate":
+      return "Missing period-end valuation rate for open lots.";
+    default: {
+      const _exhaustiveCheck: never = reason;
+      return _exhaustiveCheck;
+    }
   }
-  if (reason === "missingConversion") {
-    return "Missing booking conversion into reference currency.";
-  }
-  if (reason === "invalidExecutionPrice") {
-    return "Execution price could not be derived from converted values.";
-  }
-  if (reason === "missingPeriodEndRate") {
-    return "Missing period-end valuation rate for open lots.";
-  }
-  return "Selected target account could not be resolved.";
 }
 
 function pushDiagnostic(

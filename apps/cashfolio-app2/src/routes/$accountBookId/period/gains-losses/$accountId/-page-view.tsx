@@ -209,11 +209,13 @@ export function GainLossReconciliationPageView({
           if (!data) {
             return null;
           }
-          const canOpenLedger =
-            !!data.transactionId && !reconciliation?.target.isVirtual;
+          const isVirtualTarget = !!reconciliation?.target.isVirtual;
+          const canOpenLedger = !!data.transactionId && !isVirtualTarget;
           const tooltipLabel = canOpenLedger
             ? "Open in ledger"
-            : "No ledger transaction";
+            : isVirtualTarget
+              ? "Virtual accounts have no ledger"
+              : "No ledger transaction";
           return (
             <Group gap={4} wrap="nowrap" h="100%" align="center">
               <Tooltip label={tooltipLabel}>
