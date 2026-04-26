@@ -9,10 +9,12 @@ import {
   useComputedColorScheme,
   useMantineTheme,
 } from "@mantine/core";
+import { IconCalendarMonth, IconListDetails } from "@tabler/icons-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
 import { useMemo } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
+import { LinkButton } from "@/components/link-button";
 import { TopPageHeader } from "@/components/top-page-header";
 import type { PeriodTimelineResponse } from "@/server/period-timeline";
 import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
@@ -64,6 +66,10 @@ export function TimelinePageView({
   const neutralFillColor = isDarkMode
     ? theme.colors.gray[5]
     : theme.colors.gray[6];
+  const currentPeriodBandFill = isDarkMode
+    ? theme.colors.gray[7]
+    : theme.colors.gray[2];
+  const currentPeriodBandFillOpacity = isDarkMode ? 0.2 : 0.45;
 
   const currencyFormatter = useMemo(
     () =>
@@ -94,6 +100,7 @@ export function TimelinePageView({
       })),
     [activeTimeline.points],
   );
+  const currentPeriodLabel = chartData.at(-1)?.periodLabel;
 
   const chartOptions = useMemo<AgCartesianChartOptions>(
     () => ({
@@ -155,6 +162,17 @@ export function TimelinePageView({
       axes: {
         x: {
           type: "category",
+          crossLines: currentPeriodLabel
+            ? [
+                {
+                  type: "range",
+                  range: [currentPeriodLabel, currentPeriodLabel],
+                  fill: currentPeriodBandFill,
+                  fillOpacity: currentPeriodBandFillOpacity,
+                  strokeWidth: 0,
+                },
+              ]
+            : undefined,
           label: {
             rotation: -25,
           },
@@ -181,6 +199,9 @@ export function TimelinePageView({
       amountCompactFormatter,
       chartData,
       colors,
+      currentPeriodBandFill,
+      currentPeriodBandFillOpacity,
+      currentPeriodLabel,
       currencyFormatter,
       negativeFillColor,
       neutralFillColor,
@@ -194,6 +215,23 @@ export function TimelinePageView({
         heading={<Title order={2}>Timeline</Title>}
         actions={
           <Group gap="sm">
+            <LinkButton
+              variant="default"
+              leftSection={<IconListDetails size={16} />}
+              to="/$accountBookId/accounts"
+              params={{ accountBookId }}
+              search={{ tab: "ASSET", mode: "active" }}
+            >
+              Accounts
+            </LinkButton>
+            <LinkButton
+              variant="default"
+              leftSection={<IconCalendarMonth size={16} />}
+              to="/$accountBookId/period"
+              params={{ accountBookId }}
+            >
+              Period
+            </LinkButton>
             <SegmentedControl
               value={periodMode}
               aria-label="Timeline period mode"
