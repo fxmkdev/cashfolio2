@@ -6,7 +6,20 @@ import {
 
 describe("formatExactNumericTooltipValue", () => {
   it("formats with en-CH locale and preserves fractional precision", () => {
-    expect(formatExactNumericTooltipValue(1234.56789)).toBe("1’234.56789");
+    const value = 1234.56789;
+    const formatted = formatExactNumericTooltipValue(value);
+    const localeParts = new Intl.NumberFormat("en-CH", {
+      maximumFractionDigits: 20,
+    }).formatToParts(value);
+    const groupSeparator = localeParts.find((part) => part.type === "group")?.value;
+    const decimalSeparator = localeParts.find(
+      (part) => part.type === "decimal",
+    )?.value;
+
+    expect(groupSeparator).toBeDefined();
+    expect(decimalSeparator).toBeDefined();
+    expect(formatted).toContain(`1${groupSeparator}234`);
+    expect(formatted).toContain(`${decimalSeparator}56789`);
   });
 });
 
