@@ -40,6 +40,8 @@ Related docs:
 - `$accountBookId/period/gains-losses/$accountId/route.tsx` - dedicated
   gain/loss reconciliation page for unit-account drill-down (opened from
   Gains/Losses Breakdown leaf rows)
+- `$accountBookId/timeline/route.tsx` - timeline page showing monthly/yearly
+  total return history as a full-page bar chart
 - `$accountBookId/$accountId/route.tsx` - ledger layout route (loads ledger data
   and provides shared search params for child routes)
 - `$accountBookId/$accountId/index.tsx` - ledger page for a single account
@@ -86,6 +88,8 @@ Related docs:
 - `$accountBookId/period/route.tsx` and
   `$accountBookId/period/gains-losses/$accountId/route.tsx` both use
   `period?: string` with the same normalized period semantics
+- `$accountBookId/timeline/route.tsx` intentionally has no search params;
+  timeline granularity (monthly/yearly) is persisted in session storage
 
 ### Global Navigation Progress
 

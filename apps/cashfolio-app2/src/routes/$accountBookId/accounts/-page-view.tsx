@@ -1,6 +1,7 @@
 import { Button, Container, Group, Tabs, Title } from "@mantine/core";
 import {
   IconArchive,
+  IconChartBar,
   IconCalendarMonth,
   IconListDetails,
   IconPlus,
@@ -171,6 +172,14 @@ export function AccountsPageView({
               params={{ accountBookId }}
             >
               Period
+            </LinkButton>
+            <LinkButton
+              variant="default"
+              leftSection={<IconChartBar size={16} />}
+              to="/$accountBookId/timeline"
+              params={{ accountBookId }}
+            >
+              Timeline
             </LinkButton>
             {!isArchivedMode && (
               <>
