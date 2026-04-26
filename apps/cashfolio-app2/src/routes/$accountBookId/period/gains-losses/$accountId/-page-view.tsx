@@ -151,13 +151,6 @@ export function GainLossReconciliationPageView({
         valueFormatter: ({ value }) => formatDateLabel(value),
       },
       {
-        headerName: "Booking",
-        field: "bookingDescription",
-        minWidth: 220,
-        flex: 1,
-        valueFormatter: ({ value }) => formatDescription(value),
-      },
-      {
         headerName: "Transaction",
         field: "transactionDescription",
         minWidth: 220,
@@ -601,14 +594,6 @@ export function GainLossReconciliationPageView({
             </Card>
 
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
-              <Card withBorder radius="md" p="md">
-                <Text size="sm" c="dimmed">
-                  Booking
-                </Text>
-                <Text fw={700}>
-                  {formatDescription(selectedEvent.bookingDescription)}
-                </Text>
-              </Card>
               <Card withBorder radius="md" p="md">
                 <Text size="sm" c="dimmed">
                   Transaction
