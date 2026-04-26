@@ -671,6 +671,531 @@ describe("getPeriodOverview", () => {
     expect(getUnitToReferenceExchangeRate).toHaveBeenCalled();
   });
 
+  it("includes execution residual for FX spending from reference-currency cash", async () => {
+    vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([
+      {
+        id: "asset-cash",
+        name: "Cash",
+        groupId: null,
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      },
+    ]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (!isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (args.cursor) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([
+        {
+          id: "booking-expense-usd",
+          transactionId: "tx-fx-expense",
+          date: new Date("2026-01-15T00:00:00.000Z"),
+          value: 100,
+          unit: Unit.CURRENCY,
+          currency: "USD",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          account: {
+            id: "expense-foreign",
+            name: "Travel USD",
+            groupId: null,
+            equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+          },
+        },
+      ]);
+    });
+    prisma.booking.groupBy.mockResolvedValueOnce([
+      { accountId: "asset-cash", _sum: { value: -100 } },
+    ]);
+    prisma.transaction.findMany.mockReset();
+    prisma.transaction.findMany.mockImplementation((args) => {
+      if (args.cursor) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([
+        {
+          id: "tx-fx-expense",
+          bookings: [
+            {
+              id: "booking-cash-chf",
+              accountId: "asset-cash",
+              date: new Date("2026-01-15T00:00:00.000Z"),
+              value: -100,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+              account: {
+                name: "Cash",
+                type: AccountType.ASSET,
+                equityAccountSubtype: null,
+              },
+            },
+            {
+              id: "booking-expense-usd",
+              accountId: "expense-foreign",
+              date: new Date("2026-01-15T00:00:00.000Z"),
+              value: 100,
+              unit: Unit.CURRENCY,
+              currency: "USD",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+              account: {
+                name: "Travel USD",
+                type: AccountType.EQUITY,
+                equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+              },
+            },
+          ],
+        },
+      ]);
+    });
+    convertBookingValueToReference.mockImplementation(
+      async ({
+        value,
+        currency,
+      }: {
+        value: number;
+        currency: string | null;
+      }) => (currency === "USD" ? value * 0.9 : value),
+    );
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-fx-expense",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.convertedBookingsCount).toBe(3);
+    expect(result.skippedBookingsCount).toBe(0);
+    expect(result.stats).toMatchObject({
+      income: 0,
+      expenses: 90,
+      savings: -90,
+      explicitGainLoss: 0,
+      realizedGainLoss: -10,
+      unrealizedGainLoss: 0,
+      gainsLosses: -10,
+      totalReturn: -100,
+      endOfPeriodNetWorth: -100,
+    });
+    expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
+      {
+        label: "FX",
+        totalGainLoss: -10,
+        children: [
+          {
+            label: "USD",
+            totalGainLoss: -10,
+            children: [{ label: "Travel USD", totalGainLoss: -10 }],
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("includes execution residual for FX income into reference-currency cash", async () => {
+    vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([
+      {
+        id: "asset-cash",
+        name: "Cash",
+        groupId: null,
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      },
+    ]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (!isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (args.cursor) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([
+        {
+          id: "booking-income-usd",
+          transactionId: "tx-fx-income",
+          date: new Date("2026-01-15T00:00:00.000Z"),
+          value: -100,
+          unit: Unit.CURRENCY,
+          currency: "USD",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          account: {
+            id: "income-foreign",
+            name: "Salary USD",
+            groupId: null,
+            equityAccountSubtype: EquityAccountSubtype.INCOME,
+          },
+        },
+      ]);
+    });
+    prisma.booking.groupBy.mockResolvedValueOnce([
+      { accountId: "asset-cash", _sum: { value: 100 } },
+    ]);
+    prisma.transaction.findMany.mockReset();
+    prisma.transaction.findMany.mockImplementation((args) => {
+      if (args.cursor) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([
+        {
+          id: "tx-fx-income",
+          bookings: [
+            {
+              id: "booking-cash-chf",
+              accountId: "asset-cash",
+              date: new Date("2026-01-15T00:00:00.000Z"),
+              value: 100,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+              account: {
+                name: "Cash",
+                type: AccountType.ASSET,
+                equityAccountSubtype: null,
+              },
+            },
+            {
+              id: "booking-income-usd",
+              accountId: "income-foreign",
+              date: new Date("2026-01-15T00:00:00.000Z"),
+              value: -100,
+              unit: Unit.CURRENCY,
+              currency: "USD",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+              account: {
+                name: "Salary USD",
+                type: AccountType.EQUITY,
+                equityAccountSubtype: EquityAccountSubtype.INCOME,
+              },
+            },
+          ],
+        },
+      ]);
+    });
+    convertBookingValueToReference.mockImplementation(
+      async ({
+        value,
+        currency,
+      }: {
+        value: number;
+        currency: string | null;
+      }) => (currency === "USD" ? value * 0.9 : value),
+    );
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-fx-income",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.convertedBookingsCount).toBe(3);
+    expect(result.skippedBookingsCount).toBe(0);
+    expect(result.stats).toMatchObject({
+      income: 90,
+      expenses: 0,
+      savings: 90,
+      explicitGainLoss: 0,
+      realizedGainLoss: 10,
+      unrealizedGainLoss: 0,
+      gainsLosses: 10,
+      totalReturn: 100,
+      endOfPeriodNetWorth: 100,
+    });
+    expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
+      {
+        label: "FX",
+        totalGainLoss: 10,
+        children: [
+          {
+            label: "USD",
+            totalGainLoss: 10,
+            children: [{ label: "Salary USD", totalGainLoss: 10 }],
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("excludes synthetic execution residuals for transactions with explicit gain/loss bookings", async () => {
+    vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([
+      {
+        id: "asset-cash",
+        name: "Cash",
+        groupId: null,
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      },
+    ]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (transactionFilterIncludes(args.where?.transactionId, "tx-explicit")) {
+        return Promise.resolve([
+          {
+            transactionId: "tx-explicit",
+            accountId: "asset-cash",
+            account: {
+              name: "Cash",
+            },
+          },
+        ]);
+      }
+      if (!isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (args.cursor) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([
+        {
+          id: "booking-expense-usd",
+          transactionId: "tx-explicit",
+          date: new Date("2026-01-15T00:00:00.000Z"),
+          value: 100,
+          unit: Unit.CURRENCY,
+          currency: "USD",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          account: {
+            id: "expense-foreign",
+            name: "Travel USD",
+            groupId: null,
+            equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+          },
+        },
+        {
+          id: "booking-explicit-loss",
+          transactionId: "tx-explicit",
+          date: new Date("2026-01-15T00:00:00.000Z"),
+          value: 10,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          account: {
+            id: "gainloss-1",
+            name: "GainLoss",
+            groupId: null,
+            equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+          },
+        },
+      ]);
+    });
+    prisma.booking.groupBy.mockResolvedValueOnce([
+      { accountId: "asset-cash", _sum: { value: -100 } },
+    ]);
+    prisma.transaction.findMany.mockReset();
+    prisma.transaction.findMany.mockImplementation(() => Promise.resolve([]));
+    convertBookingValueToReference.mockImplementation(
+      async ({
+        value,
+        currency,
+      }: {
+        value: number;
+        currency: string | null;
+      }) => (currency === "USD" ? value * 0.9 : value),
+    );
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-explicit-overlap",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.convertedBookingsCount).toBe(2);
+    expect(result.skippedBookingsCount).toBe(0);
+    expect(result.stats).toMatchObject({
+      income: 0,
+      expenses: 90,
+      savings: -90,
+      explicitGainLoss: -10,
+      realizedGainLoss: -10,
+      unrealizedGainLoss: 0,
+      gainsLosses: -10,
+      totalReturn: -100,
+      endOfPeriodNetWorth: -100,
+    });
+  });
+
+  it("skips synthetic execution residual realization when any booking conversion is missing", async () => {
+    vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([
+      {
+        id: "asset-cash",
+        name: "Cash",
+        groupId: null,
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      },
+    ]);
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (!isEquityBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (args.cursor) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([
+        {
+          id: "booking-expense-usd",
+          transactionId: "tx-missing-rate",
+          date: new Date("2026-01-15T00:00:00.000Z"),
+          value: 100,
+          unit: Unit.CURRENCY,
+          currency: "USD",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          account: {
+            id: "expense-foreign",
+            name: "Travel USD",
+            groupId: null,
+            equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+          },
+        },
+      ]);
+    });
+    prisma.booking.groupBy.mockResolvedValueOnce([
+      { accountId: "asset-cash", _sum: { value: -100 } },
+    ]);
+    prisma.transaction.findMany.mockReset();
+    prisma.transaction.findMany.mockImplementation((args) => {
+      if (args.cursor) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([
+        {
+          id: "tx-missing-rate",
+          bookings: [
+            {
+              id: "booking-cash-chf",
+              accountId: "asset-cash",
+              date: new Date("2026-01-15T00:00:00.000Z"),
+              value: -100,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+              account: {
+                name: "Cash",
+                type: AccountType.ASSET,
+                equityAccountSubtype: null,
+              },
+            },
+            {
+              id: "booking-expense-usd",
+              accountId: "expense-foreign",
+              date: new Date("2026-01-15T00:00:00.000Z"),
+              value: 100,
+              unit: Unit.CURRENCY,
+              currency: "USD",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+              account: {
+                name: "Travel USD",
+                type: AccountType.EQUITY,
+                equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+              },
+            },
+          ],
+        },
+      ]);
+    });
+    convertBookingValueToReference.mockImplementation(
+      async ({
+        value,
+        currency,
+      }: {
+        value: number;
+        currency: string | null;
+      }) => (currency === "USD" ? null : value),
+    );
+
+    const result = await getPeriodOverview({
+      data: {
+        accountBookId: "book-missing-rate",
+        period: "2026-01",
+      },
+    });
+
+    expect(result.convertedBookingsCount).toBe(1);
+    expect(result.skippedBookingsCount).toBe(2);
+    expect(result.stats).toMatchObject({
+      savings: 0,
+      realizedGainLoss: 0,
+      unrealizedGainLoss: 0,
+      gainsLosses: 0,
+      totalReturn: 0,
+      endOfPeriodNetWorth: -100,
+    });
+    expect(result.gainsLossesBreakdown.hierarchy).toEqual([]);
+  });
+
   it("attributes explicit gain/loss bookings with multiple counterpart accounts to an unattributed bucket", async () => {
     vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({

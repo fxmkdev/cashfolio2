@@ -1,5 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { prisma } from "../prisma.server";
 import {
@@ -87,6 +91,21 @@ const TRANSACTIONS_PAGE_SIZE = 200;
 
 function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+function isNonReferenceExecutionBooking(args: {
+  unit: Unit;
+  currency: string | null;
+  referenceCurrency: string;
+}) {
+  if (args.unit === Unit.CURRENCY) {
+    return (
+      args.currency != null &&
+      args.currency.toUpperCase() !== args.referenceCurrency
+    );
+  }
+
+  return true;
 }
 
 export const getPeriodOverview = createServerFn({
@@ -386,6 +405,7 @@ export const getPeriodOverview = createServerFn({
       const holdingAccountIds = holdingAccountsResolved.map(
         (account) => account.id,
       );
+      const holdingAccountIdSet = new Set(holdingAccountIds);
 
       if (holdingAccountIds.length > 0) {
         const initialHoldingBalances = await prisma.booking.groupBy({
@@ -568,6 +588,239 @@ export const getPeriodOverview = createServerFn({
         unrealizedGainLoss += holdingGainLossSplit.unrealizedGainLoss;
         convertedBookingsCount += holdingGainLossSplit.convertedCount;
         skippedBookingsCount += holdingGainLossSplit.skippedCount;
+      }
+
+      let nextExecutionResidualTransactionIdCursor: string | undefined;
+      while (true) {
+        const transactionsPage = await prisma.transaction.findMany({
+          where: {
+            accountBookId: data.accountBookId,
+            AND: [
+              {
+                bookings: {
+                  some: {
+                    date: {
+                      gte: queryStart,
+                      lt: queryEndExclusive,
+                    },
+                  },
+                },
+              },
+              {
+                bookings: {
+                  none: {
+                    date: {
+                      gte: queryEndExclusive,
+                    },
+                  },
+                },
+              },
+              {
+                bookings: {
+                  none: {
+                    account: {
+                      type: AccountType.EQUITY,
+                      equityAccountSubtype:
+                        EquityAccountSubtype.OPENING_BALANCES,
+                    },
+                  },
+                },
+              },
+              {
+                bookings: {
+                  none: {
+                    account: {
+                      type: AccountType.EQUITY,
+                      equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+                    },
+                  },
+                },
+              },
+            ],
+          },
+          orderBy: { id: "asc" },
+          take: TRANSACTIONS_PAGE_SIZE,
+          ...(nextExecutionResidualTransactionIdCursor
+            ? {
+                cursor: {
+                  id_accountBookId: {
+                    id: nextExecutionResidualTransactionIdCursor,
+                    accountBookId: data.accountBookId,
+                  },
+                },
+                skip: 1,
+              }
+            : {}),
+          select: {
+            id: true,
+            bookings: {
+              select: {
+                id: true,
+                accountId: true,
+                date: true,
+                value: true,
+                unit: true,
+                currency: true,
+                cryptocurrency: true,
+                symbol: true,
+                tradeCurrency: true,
+                account: {
+                  select: {
+                    name: true,
+                    type: true,
+                    equityAccountSubtype: true,
+                  },
+                },
+              },
+              orderBy: [{ date: "asc" }, { id: "asc" }],
+            },
+          },
+        });
+
+        if (transactionsPage.length === 0) {
+          break;
+        }
+
+        nextExecutionResidualTransactionIdCursor =
+          transactionsPage[transactionsPage.length - 1].id;
+
+        for (const transaction of transactionsPage) {
+          const nonExplicitBookings = transaction.bookings.filter(
+            (booking) =>
+              !(
+                booking.account.type === AccountType.EQUITY &&
+                booking.account.equityAccountSubtype ===
+                  EquityAccountSubtype.GAIN_LOSS
+              ),
+          );
+          if (nonExplicitBookings.length === 0) {
+            continue;
+          }
+
+          if (
+            !shouldIncludeTransactionForPeriod({
+              bookingDates: nonExplicitBookings.map((booking) => booking.date),
+              periodStart: queryStart,
+              periodEndExclusive: queryEndExclusive,
+            })
+          ) {
+            continue;
+          }
+
+          if (
+            !isMultiUnitTransaction(
+              nonExplicitBookings.map((booking) => ({
+                unit: booking.unit,
+                currency: booking.currency,
+                cryptocurrency: booking.cryptocurrency,
+                symbol: booking.symbol,
+                tradeCurrency: booking.tradeCurrency,
+              })),
+            )
+          ) {
+            continue;
+          }
+
+          const hasInPeriodHoldingBooking = nonExplicitBookings.some(
+            (booking) =>
+              holdingAccountIdSet.has(booking.accountId) &&
+              booking.date >= queryStart &&
+              booking.date < queryEndExclusive,
+          );
+          if (hasInPeriodHoldingBooking) {
+            continue;
+          }
+
+          const convertedValues = await Promise.all(
+            nonExplicitBookings.map((booking) =>
+              convertBookingValueToReference({
+                value: Number(booking.value),
+                unit: booking.unit,
+                currency: booking.currency,
+                cryptocurrency: booking.cryptocurrency,
+                symbol: booking.symbol,
+                tradeCurrency: booking.tradeCurrency,
+                date: booking.date,
+                referenceCurrency,
+                exchangeRateByKey,
+              }),
+            ),
+          );
+
+          let executionResidualInReference = 0;
+          const convertedByBookingId = new Map<string, number>();
+          let hasMissingConversion = false;
+
+          for (let index = 0; index < nonExplicitBookings.length; index += 1) {
+            const booking = nonExplicitBookings[index]!;
+            const convertedValue = convertedValues[index];
+
+            if (convertedValue == null) {
+              skippedBookingsCount += 1;
+              hasMissingConversion = true;
+              continue;
+            }
+
+            convertedBookingsCount += 1;
+            executionResidualInReference += convertedValue;
+            convertedByBookingId.set(booking.id, convertedValue);
+          }
+
+          if (hasMissingConversion) {
+            continue;
+          }
+
+          realizedGainLoss += executionResidualInReference;
+
+          const nonReferenceBookings = nonExplicitBookings.filter((booking) =>
+            isNonReferenceExecutionBooking({
+              unit: booking.unit,
+              currency: booking.currency,
+              referenceCurrency,
+            }),
+          );
+          if (nonReferenceBookings.length === 0) {
+            continue;
+          }
+
+          const attributionWeights = nonReferenceBookings.map((booking) =>
+            Math.abs(convertedByBookingId.get(booking.id) ?? 0),
+          );
+          const totalAttributionWeight = attributionWeights.reduce(
+            (sum, weight) => sum + weight,
+            0,
+          );
+
+          for (
+            let attributionIndex = 0;
+            attributionIndex < nonReferenceBookings.length;
+            attributionIndex += 1
+          ) {
+            const booking = nonReferenceBookings[attributionIndex]!;
+            const weight =
+              totalAttributionWeight > 0
+                ? attributionWeights[attributionIndex]! / totalAttributionWeight
+                : 1 / nonReferenceBookings.length;
+
+            accumulateGainLossContribution({
+              byKey: gainsLossesContributionByKey,
+              sourceKind: "HOLDING",
+              accountId: booking.accountId,
+              accountName: booking.account.name,
+              unit: booking.unit,
+              currency: booking.currency,
+              cryptocurrency: booking.cryptocurrency,
+              symbol: booking.symbol,
+              tradeCurrency: booking.tradeCurrency,
+              realizedGainLoss: executionResidualInReference * weight,
+              unrealizedGainLoss: 0,
+            });
+          }
+        }
+
+        if (transactionsPage.length < TRANSACTIONS_PAGE_SIZE) {
+          break;
+        }
       }
 
       const transferClearingGainLossSplit =
