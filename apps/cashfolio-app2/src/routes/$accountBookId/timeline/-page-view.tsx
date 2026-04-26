@@ -12,11 +12,14 @@ import {
 import { IconCalendarMonth, IconListDetails } from "@tabler/icons-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
 import { LinkButton } from "@/components/link-button";
+import {
+  getPeriodTimeline,
+  type PeriodTimelineResponse,
+} from "@/server/period-timeline";
 import { TopPageHeader } from "@/components/top-page-header";
-import type { PeriodTimelineResponse } from "@/server/period-timeline";
 import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import {
   type TimelinePeriodMode,
@@ -35,7 +38,6 @@ type TimelineChartDatum = {
 export type TimelinePageViewProps = {
   accountBookId: string;
   monthTimeline: PeriodTimelineResponse;
-  yearTimeline: PeriodTimelineResponse;
 };
 
 function isTimelinePeriodMode(value: string): value is TimelinePeriodMode {
@@ -45,11 +47,74 @@ function isTimelinePeriodMode(value: string): value is TimelinePeriodMode {
 export function TimelinePageView({
   accountBookId,
   monthTimeline,
-  yearTimeline,
 }: TimelinePageViewProps) {
   const { periodMode, setPeriodMode } =
     useTimelinePageSessionState(accountBookId);
+  const [yearTimeline, setYearTimeline] =
+    useState<PeriodTimelineResponse | null>(null);
+  const [isYearTimelineLoading, setIsYearTimelineLoading] = useState(false);
+  const [hasAttemptedYearTimelineLoad, setHasAttemptedYearTimelineLoad] =
+    useState(false);
+
+  useEffect(() => {
+    setYearTimeline(null);
+    setIsYearTimelineLoading(false);
+    setHasAttemptedYearTimelineLoad(false);
+  }, [accountBookId]);
+
+  useEffect(() => {
+    if (
+      periodMode !== "year" ||
+      yearTimeline != null ||
+      isYearTimelineLoading ||
+      hasAttemptedYearTimelineLoad
+    ) {
+      return;
+    }
+
+    let active = true;
+    setIsYearTimelineLoading(true);
+    setHasAttemptedYearTimelineLoad(true);
+
+    void getPeriodTimeline({
+      data: {
+        accountBookId,
+        granularity: "year",
+      },
+    })
+      .then((timeline) => {
+        if (!active) {
+          return;
+        }
+        setYearTimeline(timeline);
+      })
+      .catch((error) => {
+        if (!active) {
+          return;
+        }
+        console.error("Unable to load yearly timeline.", error);
+      })
+      .finally(() => {
+        if (!active) {
+          return;
+        }
+        setIsYearTimelineLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    accountBookId,
+    hasAttemptedYearTimelineLoad,
+    isYearTimelineLoading,
+    periodMode,
+    yearTimeline,
+  ]);
+
   const activeTimeline = periodMode === "year" ? yearTimeline : monthTimeline;
+  const activeReferenceCurrency =
+    activeTimeline?.referenceCurrency ?? monthTimeline.referenceCurrency;
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
   const colors = useMemo(
@@ -75,11 +140,11 @@ export function TimelinePageView({
     () =>
       new Intl.NumberFormat("en-CH", {
         style: "currency",
-        currency: activeTimeline.referenceCurrency,
+        currency: activeReferenceCurrency,
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }),
-    [activeTimeline.referenceCurrency],
+    [activeReferenceCurrency],
   );
 
   const amountCompactFormatter = useMemo(
@@ -93,12 +158,12 @@ export function TimelinePageView({
 
   const chartData = useMemo<TimelineChartDatum[]>(
     () =>
-      activeTimeline.points.map((point) => ({
+      (activeTimeline?.points ?? []).map((point) => ({
         periodValue: point.periodValue,
         periodLabel: point.periodLabel,
         totalReturn: point.totalReturn,
       })),
-    [activeTimeline.points],
+    [activeTimeline?.points],
   );
   const currentPeriodLabel = chartData.at(-1)?.periodLabel;
 
@@ -253,11 +318,21 @@ export function TimelinePageView({
         <Stack gap={4}>
           <Text fw={600}>Total Return by Period</Text>
           <Text c="dimmed" size="sm">
-            Amounts shown in {activeTimeline.referenceCurrency}
+            Amounts shown in {activeReferenceCurrency}
           </Text>
         </Stack>
 
-        {chartData.length === 0 ? (
+        {periodMode === "year" &&
+        isYearTimelineLoading &&
+        yearTimeline == null ? (
+          <Text c="dimmed" mt="md">
+            Loading yearly timeline...
+          </Text>
+        ) : periodMode === "year" && yearTimeline == null ? (
+          <Text c="dimmed" mt="md">
+            Unable to load yearly timeline right now.
+          </Text>
+        ) : chartData.length === 0 ? (
           <Text c="dimmed" mt="md">
             No periods available yet.
           </Text>

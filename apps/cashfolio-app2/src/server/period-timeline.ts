@@ -3,7 +3,7 @@ import { ensureAuthorizedForAccountBookId } from "../account-books/functions.ser
 import { prisma } from "../prisma.server";
 import { formatMonthPeriodValue } from "../shared/period";
 import { startOfUtcDay } from "../shared/date";
-import { getPeriodOverview } from "./period";
+import { loadPeriodOverview } from "./period";
 
 export type PeriodTimelineGranularity = "month" | "year";
 
@@ -22,8 +22,6 @@ type TimelineInput = {
   accountBookId: string;
   granularity: PeriodTimelineGranularity;
 };
-
-const TIMELINE_CONCURRENCY_LIMIT = 4;
 
 function toMonthIndex(year: number, month: number): number {
   return year * 12 + month;
@@ -87,32 +85,6 @@ export function buildTimelinePeriodValues(args: {
   return values;
 }
 
-async function mapWithConcurrencyLimit<TInput, TOutput>(
-  items: readonly TInput[],
-  concurrencyLimit: number,
-  mapper: (item: TInput, index: number) => Promise<TOutput>,
-): Promise<TOutput[]> {
-  if (items.length === 0) {
-    return [];
-  }
-
-  const results = new Array<TOutput>(items.length);
-  const workerCount = Math.min(Math.max(1, concurrencyLimit), items.length);
-  let nextIndex = 0;
-
-  await Promise.all(
-    Array.from({ length: workerCount }, async () => {
-      while (nextIndex < items.length) {
-        const currentIndex = nextIndex;
-        nextIndex += 1;
-        results[currentIndex] = await mapper(items[currentIndex], currentIndex);
-      }
-    }),
-  );
-
-  return results;
-}
-
 export const getPeriodTimeline = createServerFn({
   method: "GET",
 })
@@ -139,24 +111,19 @@ export const getPeriodTimeline = createServerFn({
       maxDate: new Date(),
     });
 
-    const points = await mapWithConcurrencyLimit(
-      periodValues,
-      TIMELINE_CONCURRENCY_LIMIT,
-      async (periodValue) => {
-        const overview = await getPeriodOverview({
-          data: {
-            accountBookId: data.accountBookId,
-            period: periodValue,
-          },
-        });
-
-        return {
-          periodValue: overview.selectedPeriodValue,
-          periodLabel: overview.selectedPeriodLabel,
-          totalReturn: overview.stats.totalReturn,
-        } satisfies PeriodTimelinePoint;
-      },
-    );
+    const points: PeriodTimelinePoint[] = [];
+    for (const periodValue of periodValues) {
+      const overview = await loadPeriodOverview({
+        accountBookId: data.accountBookId,
+        period: periodValue,
+        skipAuthorization: true,
+      });
+      points.push({
+        periodValue: overview.selectedPeriodValue,
+        periodLabel: overview.selectedPeriodLabel,
+        totalReturn: overview.stats.totalReturn,
+      });
+    }
 
     return {
       referenceCurrency: accountBook.referenceCurrency.toUpperCase(),
