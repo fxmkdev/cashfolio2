@@ -31,6 +31,7 @@ import {
   getYearPickerValue,
   type PeriodMode,
 } from "@/shared/period-selector-model";
+import periodClasses from "../../-page-view.module.css";
 import { PeriodSelectorCard } from "../../-selector-card";
 
 type GainLossReconciliationPageViewProps = {
@@ -414,39 +415,41 @@ export function GainLossReconciliationPageView({
     <Container fluid py="xl" px="xl">
       <TopPageHeader heading={<Title order={2}>{heading}</Title>} />
       <Stack gap="lg">
-        <PeriodSelectorCard
-          selectedPeriodLabel={reconciliation.selectedPeriodLabel}
-          referenceCurrency={reconciliation.referenceCurrency}
-          periodMode={periodMode as PeriodMode}
-          pickerOpened={pickerOpened}
-          onPickerOpenedChange={setPickerOpened}
-          canGoToPreviousPeriod={periodSelectorModel.canGoToPreviousPeriod}
-          canGoToNextPeriod={periodSelectorModel.canGoToNextPeriod}
-          onPeriodModeChange={handlePeriodModeChange}
-          onPeriodStep={handlePeriodStep}
-          selectedMonthValue={`${String(reconciliation.selectedYear).padStart(4, "0")}-${String((reconciliation.selectedMonth ?? 0) + 1).padStart(2, "0")}-01`}
-          selectedYearValue={`${String(reconciliation.selectedYear).padStart(4, "0")}-01-01`}
-          minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
-          maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
-          minYearPickerDate={periodSelectorModel.minYearPickerDate}
-          maxYearPickerDate={periodSelectorModel.maxYearPickerDate}
-          onMonthPickerChange={(nextValue) => {
-            const nextPeriodValue = getMonthPickerValue(nextValue);
-            if (!nextPeriodValue) {
-              return;
-            }
-            onPeriodChange(nextPeriodValue);
-            setPickerOpened(false);
-          }}
-          onYearPickerChange={(nextValue) => {
-            const nextPeriodValue = getYearPickerValue(nextValue);
-            if (!nextPeriodValue) {
-              return;
-            }
-            onPeriodChange(nextPeriodValue);
-            setPickerOpened(false);
-          }}
-        />
+        <div className={periodClasses.periodTopSection}>
+          <PeriodSelectorCard
+            selectedPeriodLabel={reconciliation.selectedPeriodLabel}
+            referenceCurrency={reconciliation.referenceCurrency}
+            periodMode={periodMode as PeriodMode}
+            pickerOpened={pickerOpened}
+            onPickerOpenedChange={setPickerOpened}
+            canGoToPreviousPeriod={periodSelectorModel.canGoToPreviousPeriod}
+            canGoToNextPeriod={periodSelectorModel.canGoToNextPeriod}
+            onPeriodModeChange={handlePeriodModeChange}
+            onPeriodStep={handlePeriodStep}
+            selectedMonthValue={`${String(reconciliation.selectedYear).padStart(4, "0")}-${String((reconciliation.selectedMonth ?? 0) + 1).padStart(2, "0")}-01`}
+            selectedYearValue={`${String(reconciliation.selectedYear).padStart(4, "0")}-01-01`}
+            minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
+            maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
+            minYearPickerDate={periodSelectorModel.minYearPickerDate}
+            maxYearPickerDate={periodSelectorModel.maxYearPickerDate}
+            onMonthPickerChange={(nextValue) => {
+              const nextPeriodValue = getMonthPickerValue(nextValue);
+              if (!nextPeriodValue) {
+                return;
+              }
+              onPeriodChange(nextPeriodValue);
+              setPickerOpened(false);
+            }}
+            onYearPickerChange={(nextValue) => {
+              const nextPeriodValue = getYearPickerValue(nextValue);
+              if (!nextPeriodValue) {
+                return;
+              }
+              onPeriodChange(nextPeriodValue);
+              setPickerOpened(false);
+            }}
+          />
+        </div>
 
         <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg">
           <StatCard
