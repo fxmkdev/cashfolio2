@@ -1,9 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
-import { prisma } from "../prisma.server";
 import { formatMonthPeriodValue } from "../shared/period";
 import { startOfUtcDay } from "../shared/date";
-import { loadPeriodOverview } from "./period";
 
 export type PeriodTimelineGranularity = "month" | "year";
 
@@ -95,6 +92,10 @@ export const getPeriodTimeline = createServerFn({
     }),
   )
   .handler(async ({ data }) => {
+    const { prisma } = await import("../prisma.server");
+    const { ensureAuthorizedForAccountBookId } =
+      await import("../account-books/functions.server");
+    const { loadPeriodOverview } = await import("./period-overview.server");
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
     const accountBook = await prisma.accountBook.findUniqueOrThrow({
@@ -116,7 +117,6 @@ export const getPeriodTimeline = createServerFn({
       const overview = await loadPeriodOverview({
         accountBookId: data.accountBookId,
         period: periodValue,
-        skipAuthorization: true,
       });
       points.push({
         periodValue: overview.selectedPeriodValue,
