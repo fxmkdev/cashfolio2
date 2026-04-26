@@ -353,6 +353,5 @@ export async function computePeriodHoldingGainLoss(args: {
     skippedCount:
       holdingGainLossSplit.skippedCount +
       executionResidualRealization.skippedCount,
-    trackedHoldingAccountIdSet: holdingAccountIdSet,
   };
 }

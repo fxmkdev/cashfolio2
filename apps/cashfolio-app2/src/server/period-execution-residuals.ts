@@ -107,6 +107,15 @@ export async function computeExecutionResidualRealization(args: {
             bookings: {
               none: {
                 date: {
+                  lt: args.periodStart,
+                },
+              },
+            },
+          },
+          {
+            bookings: {
+              none: {
+                date: {
                   gte: args.periodEndExclusive,
                 },
               },

@@ -72,7 +72,7 @@ export {
 
 const EQUITY_BOOKINGS_PAGE_SIZE = 1_000;
 const TRANSACTIONS_PAGE_SIZE = 200;
-const TRANSFER_CLEARING_TRANSACTIONS_PAGE_SIZE = 200;
+const TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE = 200;
 
 function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
@@ -266,7 +266,7 @@ export const getPeriodOverview = createServerFn({
         initialHoldingDate,
         referenceCurrency,
         transactionPageSize: TRANSACTIONS_PAGE_SIZE,
-        transferClearingBatchSize: TRANSFER_CLEARING_TRANSACTIONS_PAGE_SIZE,
+        transferClearingBatchSize: TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE,
         holdingAccounts: holdingAccountsResolved,
         transferClearingHoldingAccounts,
         transferClearingUnitBuckets,
