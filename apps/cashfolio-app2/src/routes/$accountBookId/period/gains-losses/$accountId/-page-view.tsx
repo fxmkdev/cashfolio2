@@ -2,6 +2,7 @@ import {
   ActionIcon,
   Alert,
   Badge,
+  Button,
   Card,
   Container,
   Drawer,
@@ -12,7 +13,11 @@ import {
   Title,
   Tooltip,
 } from "@mantine/core";
-import { IconAlertTriangle, IconSquareArrowRight } from "@tabler/icons-react";
+import {
+  IconAlertTriangle,
+  IconArrowLeft,
+  IconSquareArrowRight,
+} from "@tabler/icons-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
@@ -39,6 +44,7 @@ type GainLossReconciliationPageViewProps = {
   reconciliation: PeriodGainLossReconciliation | null;
   onPeriodChange: (nextPeriodValue: string) => void;
   onOpenEventTransaction: (transactionId: string) => void;
+  onBackToPeriod: () => void;
 };
 
 type RealizedEventRow = PeriodGainLossReconciliation["realizedEvents"][number];
@@ -103,6 +109,7 @@ export function GainLossReconciliationPageView({
   reconciliation,
   onPeriodChange,
   onOpenEventTransaction,
+  onBackToPeriod,
 }: GainLossReconciliationPageViewProps) {
   const [pickerOpened, setPickerOpened] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -362,7 +369,18 @@ export function GainLossReconciliationPageView({
   if (!reconciliation) {
     return (
       <Container fluid py="xl" px="xl">
-        <TopPageHeader heading={<Title order={2}>{heading}</Title>} />
+        <TopPageHeader
+          heading={<Title order={2}>{heading}</Title>}
+          actions={
+            <Button
+              variant="default"
+              leftSection={<IconArrowLeft size={16} />}
+              onClick={onBackToPeriod}
+            >
+              Back to Period
+            </Button>
+          }
+        />
         <Alert color="yellow" variant="light" title="No reconciliation data">
           No gain/loss reconciliation is available for this account and period.
         </Alert>
@@ -413,7 +431,18 @@ export function GainLossReconciliationPageView({
 
   return (
     <Container fluid py="xl" px="xl">
-      <TopPageHeader heading={<Title order={2}>{heading}</Title>} />
+      <TopPageHeader
+        heading={<Title order={2}>{heading}</Title>}
+        actions={
+          <Button
+            variant="default"
+            leftSection={<IconArrowLeft size={16} />}
+            onClick={onBackToPeriod}
+          >
+            Back to Period
+          </Button>
+        }
+      />
       <Stack gap="lg">
         <div className={periodClasses.periodTopSection}>
           <PeriodSelectorCard

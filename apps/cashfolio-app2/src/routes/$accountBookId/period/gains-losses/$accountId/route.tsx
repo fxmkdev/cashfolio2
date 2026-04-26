@@ -48,6 +48,20 @@ function GainLossReconciliationPage() {
       <GainLossReconciliationPageView
         selectedPeriodValue={selectedPeriodValue}
         reconciliation={reconciliation}
+        onBackToPeriod={() => {
+          const backPeriodValue =
+            reconciliation?.selectedPeriodValue ?? selectedPeriodValue;
+          navigate({
+            to: "/$accountBookId/period",
+            params: { accountBookId },
+            search: {
+              period:
+                backPeriodValue === DEFAULT_PERIOD_VALUE
+                  ? undefined
+                  : backPeriodValue,
+            },
+          });
+        }}
         onPeriodChange={(nextPeriodValue) => {
           navigate({
             to: "/$accountBookId/period/gains-losses/$accountId",
