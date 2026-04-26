@@ -874,9 +874,7 @@ export const getPeriodGainLossReconciliation = createServerFn({
       selectedMonth: selection.month,
       periodBounds: {
         minBookingDate: accountBookStartDate.toISOString(),
-        maxDate: startOfUtcDay(
-          new Date(now.getTime() - 24 * 60 * 60 * 1000),
-        ).toISOString(),
+        maxDate: startOfUtcDay(now).toISOString(),
       },
       periodDateRange: {
         from: selection.from.toISOString(),

@@ -561,11 +561,7 @@ export async function computeHoldingGainLossSplit(args: {
     initialBalanceByAccountId: args.initialBalanceByAccountId,
     initialRateDate: args.initialRateDate,
     resolveRate: args.resolveRate,
-    onSkippedItem: args.onSkippedItem
-      ? (item) => {
-          args.onSkippedItem?.(item);
-        }
-      : undefined,
+    onSkippedItem: args.onSkippedItem,
   });
 
   await applyHoldingTransactionsToGainLossState({
@@ -574,11 +570,7 @@ export async function computeHoldingGainLossSplit(args: {
     periodStart: args.periodStart,
     periodEndExclusive: args.periodEndExclusive,
     convertBookingToReference: args.convertBookingToReference,
-    onSkippedItem: args.onSkippedItem
-      ? (item) => {
-          args.onSkippedItem?.(item);
-        }
-      : undefined,
+    onSkippedItem: args.onSkippedItem,
   });
 
   return finalizeHoldingGainLossState({
@@ -588,10 +580,6 @@ export async function computeHoldingGainLossSplit(args: {
     onAccountGainLoss: args.onAccountGainLoss,
     onAccountExecutionEvent: args.onAccountExecutionEvent,
     onAccountOpenLotValuation: args.onAccountOpenLotValuation,
-    onSkippedItem: args.onSkippedItem
-      ? (item) => {
-          args.onSkippedItem?.(item);
-        }
-      : undefined,
+    onSkippedItem: args.onSkippedItem,
   });
 }

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountType, Unit } from "../.prisma-client/enums";
 
 const createServerFn = vi.hoisted(() =>
@@ -61,6 +61,7 @@ import { getPeriodGainLossReconciliation } from "./period-gain-loss-reconciliati
 
 describe("getPeriodGainLossReconciliation", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     vi.resetAllMocks();
     vi.setSystemTime(new Date("2026-03-10T12:00:00.000Z"));
 
@@ -72,6 +73,10 @@ describe("getPeriodGainLossReconciliation", () => {
     prisma.booking.findMany.mockResolvedValue([]);
     prisma.booking.groupBy.mockResolvedValue([]);
     prisma.transaction.findMany.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("returns full reconciliation for a real holding account", async () => {

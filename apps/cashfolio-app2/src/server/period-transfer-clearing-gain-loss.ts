@@ -1,21 +1,18 @@
 import { Unit } from "../.prisma-client/enums";
+import type { HoldingGainLossSkippedReason } from "./period-overview-holdings";
 import type { HoldingExecutionLotMatch } from "./period-overview-holdings-types";
 import {
   applyExecutionToLots,
   isNearZero,
   QUANTITY_EPSILON,
 } from "./period-overview-holdings-common";
-
-type TransferClearingGainLossSkippedReason =
-  | "missingInitialRate"
-  | "missingConversion"
-  | "invalidExecutionPrice"
-  | "missingPeriodEndRate";
 import {
   toTransferClearingLotSortKey,
   type TransferClearingBooking,
   type TransferClearingUnitBucket,
 } from "./period-transfer-clearing-types";
+
+type TransferClearingGainLossSkippedReason = HoldingGainLossSkippedReason;
 
 export async function computeTransferClearingGainLossSplit(args: {
   unitBuckets: TransferClearingUnitBucket[];

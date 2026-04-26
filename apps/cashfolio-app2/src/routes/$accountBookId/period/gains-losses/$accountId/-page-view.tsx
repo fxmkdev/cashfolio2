@@ -28,6 +28,7 @@ import {
 import { DataGrid } from "@/components/data-grid";
 import { TopPageHeader } from "@/components/top-page-header";
 import type { PeriodGainLossReconciliation } from "@/server/period-gain-loss-reconciliation";
+import { formatMonthPeriodValue } from "@/shared/period";
 import {
   buildPeriodSelectorModel,
   getMonthPickerValue,
@@ -455,7 +456,10 @@ export function GainLossReconciliationPageView({
             canGoToNextPeriod={periodSelectorModel.canGoToNextPeriod}
             onPeriodModeChange={handlePeriodModeChange}
             onPeriodStep={handlePeriodStep}
-            selectedMonthValue={`${String(reconciliation.selectedYear).padStart(4, "0")}-${String((reconciliation.selectedMonth ?? 0) + 1).padStart(2, "0")}-01`}
+            selectedMonthValue={`${formatMonthPeriodValue(
+              reconciliation.selectedYear,
+              periodSelectorModel.selectedMonth,
+            )}-01`}
             selectedYearValue={`${String(reconciliation.selectedYear).padStart(4, "0")}-01-01`}
             minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
             maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
