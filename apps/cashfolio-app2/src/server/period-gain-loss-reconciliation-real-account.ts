@@ -10,6 +10,7 @@ import {
   finalizeHoldingGainLossState,
   initializeHoldingGainLossState,
 } from "./period-overview-holdings";
+import { toHoldingUnitIdentifier } from "./period-overview-holdings-transfer";
 import {
   addRunningUnrealizedGainLoss,
   pushDiagnostic,
@@ -93,11 +94,58 @@ export async function buildRealAccountReconciliation(args: {
     };
   }
 
+  const siblingAccounts = await prisma.account.findMany({
+    where: {
+      accountBookId: args.accountBookId,
+      type: {
+        in: [AccountType.ASSET, AccountType.LIABILITY],
+      },
+    },
+    select: {
+      id: true,
+      unit: true,
+      currency: true,
+      cryptocurrency: true,
+      symbol: true,
+      tradeCurrency: true,
+    },
+  });
+  const siblingHoldingAccounts = filterConvertibleHoldingAccounts(
+    siblingAccounts,
+    args.referenceCurrency,
+  );
+  const targetUnitIdentifier = toHoldingUnitIdentifier({
+    unit: targetAccount.unit,
+    currency: targetAccount.currency,
+    cryptocurrency: targetAccount.cryptocurrency,
+    symbol: targetAccount.symbol,
+    tradeCurrency: targetAccount.tradeCurrency,
+  });
+  const trackedHoldingAccounts = siblingHoldingAccounts.filter(
+    (holdingAccount) =>
+      toHoldingUnitIdentifier({
+        unit: holdingAccount.unit,
+        currency: holdingAccount.currency,
+        cryptocurrency: holdingAccount.cryptocurrency,
+        symbol: holdingAccount.symbol,
+        tradeCurrency: holdingAccount.tradeCurrency,
+      }) === targetUnitIdentifier,
+  );
+  const targetTrackedHoldingAccounts =
+    trackedHoldingAccounts.length > 0
+      ? trackedHoldingAccounts
+      : [targetAccount];
+  const trackedHoldingAccountIds = targetTrackedHoldingAccounts.map(
+    (holdingAccount) => holdingAccount.id,
+  );
+
   const initialHoldingBalances = await prisma.booking.groupBy({
     by: ["accountId"],
     where: {
       accountBookId: args.accountBookId,
-      accountId: targetAccount.id,
+      accountId: {
+        in: trackedHoldingAccountIds,
+      },
       date: { lt: args.queryStart },
     },
     _sum: { value: true },
@@ -110,9 +158,12 @@ export async function buildRealAccountReconciliation(args: {
   );
 
   const exchangeRateByKey = new Map<string, Promise<number | null>>();
+  let targetSkippedCount = 0;
+  let targetRealizedGainLoss = 0;
+  let targetUnrealizedGainLoss = 0;
 
   const state = await initializeHoldingGainLossState({
-    holdingAccounts: [targetAccount],
+    holdingAccounts: targetTrackedHoldingAccounts,
     initialBalanceByAccountId: initialHoldingBalanceByAccountId,
     initialRateDate: args.initialHoldingDate,
     resolveRate: (input) =>
@@ -122,6 +173,10 @@ export async function buildRealAccountReconciliation(args: {
         exchangeRateByKey,
       }),
     onSkippedItem: (item) => {
+      if (item.accountId !== targetAccount.id) {
+        return;
+      }
+      targetSkippedCount += 1;
       pushDiagnostic(diagnostics, item);
     },
   });
@@ -239,6 +294,10 @@ export async function buildRealAccountReconciliation(args: {
           exchangeRateByKey,
         }),
       onSkippedItem: (item) => {
+        if (item.accountId !== targetAccount.id) {
+          return;
+        }
+        targetSkippedCount += 1;
         pushDiagnostic(diagnostics, item);
       },
     });
@@ -248,7 +307,7 @@ export async function buildRealAccountReconciliation(args: {
     }
   }
 
-  const split = await finalizeHoldingGainLossState({
+  await finalizeHoldingGainLossState({
     state,
     periodEnd: args.periodEnd,
     resolveRate: (input) =>
@@ -257,13 +316,30 @@ export async function buildRealAccountReconciliation(args: {
         referenceCurrency: args.referenceCurrency,
         exchangeRateByKey,
       }),
+    onAccountGainLoss: (gainLossByAccount) => {
+      if (gainLossByAccount.accountId !== targetAccount.id) {
+        return;
+      }
+      targetRealizedGainLoss += gainLossByAccount.realizedGainLoss;
+      targetUnrealizedGainLoss += gainLossByAccount.unrealizedGainLoss;
+    },
     onAccountExecutionEvent: (event) => {
+      if (event.accountId !== targetAccount.id) {
+        return;
+      }
       realizedEvents.push(toRoundedRealizedEvent(event));
     },
     onAccountOpenLotValuation: (lot) => {
+      if (lot.accountId !== targetAccount.id) {
+        return;
+      }
       unrealizedOpenLots.push(toRoundedOpenLot(lot));
     },
     onSkippedItem: (item) => {
+      if (item.accountId !== targetAccount.id) {
+        return;
+      }
+      targetSkippedCount += 1;
       pushDiagnostic(diagnostics, item);
     },
   });
@@ -281,10 +357,10 @@ export async function buildRealAccountReconciliation(args: {
       tradeCurrency: normalizeUppercaseCode(targetAccount.tradeCurrency),
     },
     summary: toSummary({
-      realizedGainLoss: split.realizedGainLoss,
-      unrealizedGainLoss: split.unrealizedGainLoss,
+      realizedGainLoss: targetRealizedGainLoss,
+      unrealizedGainLoss: targetUnrealizedGainLoss,
     }),
-    skippedCount: split.skippedCount,
+    skippedCount: targetSkippedCount,
     realizedEvents,
     unrealizedOpenLots: addRunningUnrealizedGainLoss(unrealizedOpenLots),
     diagnostics,

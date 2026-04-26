@@ -113,6 +113,9 @@ engine:
   - non-reference virtual transfer-clearing holding accounts
 - Both real transactions and synthetic transfer-clearing transactions flow
   through the same lot/FIFO pipeline in `src/server/period-overview-holdings.ts`
+- Same-unit mixed-period holding transfers are treated as non-realizing carry
+  adjustments, so in-period legs no longer create false realization when the
+  opposite leg sits outside the selected period.
 - Explicit gain/loss remains separate from holdings realization:
   - `stats.explicitGainLoss` includes explicit equity G/L bookings only
   - `stats.realizedGainLoss` includes holdings realization and residual-only
@@ -122,13 +125,18 @@ engine:
 Execution-residual reconciliation for eligible multi-unit income/expense
 transactions is isolated in `src/server/period-execution-residuals.ts`:
 
-- Candidate transactions are narrowed at query level to in-period income/expense
-  activity with no explicit G/L booking
-- Residual realization is skipped unless all non-explicit legs are in-period,
-  all required conversions succeed, and no tracked holding booking exists in the
-  transaction
+- Candidate transactions are narrowed at query level to completed (no
+  post-period legs) multi-unit transactions with at least one in-period booking
+  and at least one income/expense leg, while excluding explicit/opening balance
+  cases
+- Residual realization is skipped unless all required conversions succeed and no
+  in-period tracked holding booking exists in the transaction
 - Residual breakdown attribution is weighted across non-reference legs by
   absolute converted amount
+
+Transfer-clearing candidate loading now includes income/expense equity legs in
+addition to asset/liability legs. This keeps net-worth timing aligned when
+cross-period income/expense transactions remain partially posted at period end.
 
 To keep `src/server/period.ts` focused as an orchestration entrypoint, the
 larger gain/loss subflows are split into dedicated modules:
@@ -151,3 +159,10 @@ larger gain/loss subflows are split into dedicated modules:
   `marketFallback`) plus market/residual/effective reference amounts.
 - `rounding`: raw vs rounded event values used by the reconciliation UI
   explanation drawer.
+
+## Period Warning Surface
+
+When `skippedBookingsCount > 0`, the period page shows a top-level partial-data
+warning. This warning explicitly states strict `totalReturn == netWorth delta`
+checks may be incomplete for the selected period due to unavailable valuation
+data.

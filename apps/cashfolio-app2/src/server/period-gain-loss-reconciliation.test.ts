@@ -30,6 +30,7 @@ const prisma = vi.hoisted(() => ({
   },
   account: {
     findFirst: vi.fn(),
+    findMany: vi.fn(),
   },
   booking: {
     groupBy: vi.fn(),
@@ -73,6 +74,7 @@ describe("getPeriodGainLossReconciliation", () => {
     prisma.booking.findMany.mockResolvedValue([]);
     prisma.booking.groupBy.mockResolvedValue([]);
     prisma.transaction.findMany.mockResolvedValue([]);
+    prisma.account.findMany.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -224,6 +226,120 @@ describe("getPeriodGainLossReconciliation", () => {
         runningUnrealizedGainLoss: 180,
       },
     ]);
+    expect(response?.diagnostics.skippedCount).toBe(0);
+  });
+
+  it("keeps same-unit internal transfers non-realizing in real-account reconciliation", async () => {
+    prisma.account.findFirst.mockResolvedValue({
+      id: "account-aapl",
+      name: "AAPL Trading",
+      unit: Unit.SECURITY,
+      currency: null,
+      cryptocurrency: null,
+      symbol: "AAPL",
+      tradeCurrency: "USD",
+    });
+    prisma.account.findMany.mockResolvedValue([
+      {
+        id: "account-aapl",
+        unit: Unit.SECURITY,
+        currency: null,
+        cryptocurrency: null,
+        symbol: "AAPL",
+        tradeCurrency: "USD",
+      },
+      {
+        id: "account-aapl-2",
+        unit: Unit.SECURITY,
+        currency: null,
+        cryptocurrency: null,
+        symbol: "AAPL",
+        tradeCurrency: "USD",
+      },
+      {
+        id: "account-cash",
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      },
+    ]);
+    prisma.booking.groupBy.mockResolvedValue([
+      { accountId: "account-aapl", _sum: { value: 10 } },
+      { accountId: "account-aapl-2", _sum: { value: 0 } },
+    ]);
+    prisma.transaction.findMany
+      .mockResolvedValueOnce([
+        {
+          id: "tx-transfer",
+          description: "Internal transfer",
+          bookings: [
+            {
+              id: "h-transfer-out",
+              description: "Transfer out",
+              accountId: "account-aapl",
+              date: new Date("2026-02-12T00:00:00.000Z"),
+              value: -4,
+              unit: Unit.SECURITY,
+              currency: null,
+              cryptocurrency: null,
+              symbol: "AAPL",
+              tradeCurrency: "USD",
+              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+            },
+            {
+              id: "h-transfer-in",
+              description: "Transfer in",
+              accountId: "account-aapl-2",
+              date: new Date("2026-02-12T00:00:00.000Z"),
+              value: 4,
+              unit: Unit.SECURITY,
+              currency: null,
+              cryptocurrency: null,
+              symbol: "AAPL",
+              tradeCurrency: "USD",
+              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+            },
+          ],
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    getUnitToReferenceExchangeRate.mockImplementation(async ({ date }) => {
+      if (date.toISOString() === "2026-01-31T00:00:00.000Z") {
+        return 100;
+      }
+      if (date.toISOString() === "2026-02-28T00:00:00.000Z") {
+        return 110;
+      }
+      return null;
+    });
+
+    const response = await getPeriodGainLossReconciliation({
+      data: {
+        accountBookId: "book-1",
+        accountId: "account-aapl",
+        period: "2026-02",
+      },
+    });
+
+    expect(response).not.toBeNull();
+    expect(response?.summary).toEqual({
+      realizedGainLoss: 0,
+      unrealizedGainLoss: 60,
+      totalGainLoss: 60,
+    });
+    expect(response?.realizedEvents).toEqual([]);
+    expect(response?.unrealizedOpenLots).toMatchObject([
+      {
+        quantity: 6,
+        unitCostInReference: 100,
+        periodEndRate: 110,
+        unrealizedGainLoss: 60,
+      },
+    ]);
+    expect(convertBookingValueToReference).not.toHaveBeenCalled();
     expect(response?.diagnostics.skippedCount).toBe(0);
   });
 

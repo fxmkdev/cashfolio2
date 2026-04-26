@@ -19,11 +19,11 @@ import { computeExecutionResidualRealization } from "./period-execution-residual
 
 describe("computeExecutionResidualRealization", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     prisma.transaction.findMany.mockResolvedValue([]);
   });
 
-  it("skips realization when any non-explicit booking is outside the selected period", async () => {
+  it("converts cross-period completion candidates without realizing zero residuals", async () => {
     prisma.transaction.findMany
       .mockResolvedValueOnce([
         {
@@ -84,11 +84,96 @@ describe("computeExecutionResidualRealization", () => {
 
     expect(result).toMatchObject({
       realizedGainLoss: 0,
-      convertedCount: 0,
+      convertedCount: 2,
       skippedCount: 0,
     });
-    expect(convertBookingToReference).not.toHaveBeenCalled();
+    expect(convertBookingToReference).toHaveBeenCalledTimes(2);
     expect(contributions).toEqual([]);
+  });
+
+  it("realizes cross-period residuals in the completion period", async () => {
+    prisma.transaction.findMany
+      .mockResolvedValueOnce([
+        {
+          id: "tx-cross-period-completion",
+          bookings: [
+            {
+              id: "booking-expense-usd",
+              accountId: "expense-usd",
+              date: new Date("2026-01-31T00:00:00.000Z"),
+              value: 100,
+              unit: Unit.CURRENCY,
+              currency: "USD",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+              account: { name: "Travel USD" },
+            },
+            {
+              id: "booking-cash-chf",
+              accountId: "asset-cash",
+              date: new Date("2026-02-01T00:00:00.000Z"),
+              value: -90,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+              account: { name: "Cash" },
+            },
+          ],
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const contributions: Array<{
+      accountId: string;
+      realizedGainLoss: number;
+    }> = [];
+
+    const result = await computeExecutionResidualRealization({
+      accountBookId: "book-1",
+      periodStart: new Date("2026-02-01T00:00:00.000Z"),
+      periodEndExclusive: new Date("2026-03-01T00:00:00.000Z"),
+      referenceCurrency: "CHF",
+      trackedHoldingAccountIdSet: new Set<string>(),
+      pageSize: 100,
+      convertBookingToReference: async ({ currency, value, date }) => {
+        if (
+          currency === "USD" &&
+          value === 100 &&
+          date.toISOString() === "2026-01-31T00:00:00.000Z"
+        ) {
+          return 80;
+        }
+        if (
+          currency === "CHF" &&
+          value === -90 &&
+          date.toISOString() === "2026-02-01T00:00:00.000Z"
+        ) {
+          return -90;
+        }
+        return null;
+      },
+      onContribution: (contribution) => {
+        contributions.push({
+          accountId: contribution.accountId,
+          realizedGainLoss: contribution.realizedGainLoss,
+        });
+      },
+    });
+
+    expect(result).toMatchObject({
+      realizedGainLoss: -10,
+      convertedCount: 2,
+      skippedCount: 0,
+    });
+    expect(contributions).toEqual([
+      {
+        accountId: "expense-usd",
+        realizedGainLoss: -10,
+      },
+    ]);
   });
 
   it("queries only income/expense candidates and excludes explicit gain/loss bookings", async () => {
@@ -112,6 +197,16 @@ describe("computeExecutionResidualRealization", () => {
         expect.objectContaining({
           bookings: expect.objectContaining({
             some: expect.objectContaining({
+              date: {
+                gte: new Date("2026-01-01T00:00:00.000Z"),
+                lt: new Date("2026-02-01T00:00:00.000Z"),
+              },
+            }),
+          }),
+        }),
+        expect.objectContaining({
+          bookings: expect.objectContaining({
+            some: expect.objectContaining({
               account: {
                 type: AccountType.EQUITY,
                 equityAccountSubtype: {
@@ -123,15 +218,6 @@ describe("computeExecutionResidualRealization", () => {
               },
             }),
           }),
-        }),
-        expect.objectContaining({
-          bookings: {
-            none: {
-              date: {
-                lt: new Date("2026-01-01T00:00:00.000Z"),
-              },
-            },
-          },
         }),
         expect.objectContaining({
           bookings: {

@@ -1,4 +1,8 @@
-import { AccountType, Unit } from "../.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../.prisma-client/enums";
 import { prisma } from "../prisma.server";
 import {
   TRANSFER_CLEARING_BOOKINGS_PAGE_SIZE,
@@ -78,9 +82,19 @@ async function loadTransferClearingBookings(args: {
         accountBookId: args.accountBookId,
         date: { lt: args.periodEndExclusive },
         account: {
-          type: {
-            in: [AccountType.ASSET, AccountType.LIABILITY],
-          },
+          OR: [
+            {
+              type: {
+                in: [AccountType.ASSET, AccountType.LIABILITY],
+              },
+            },
+            {
+              type: AccountType.EQUITY,
+              equityAccountSubtype: {
+                in: [EquityAccountSubtype.INCOME, EquityAccountSubtype.EXPENSE],
+              },
+            },
+          ],
         },
         transaction: {
           bookings: {

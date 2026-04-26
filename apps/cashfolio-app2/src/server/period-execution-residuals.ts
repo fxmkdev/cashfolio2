@@ -91,6 +91,12 @@ export async function computeExecutionResidualRealization(args: {
                   gte: args.periodStart,
                   lt: args.periodEndExclusive,
                 },
+              },
+            },
+          },
+          {
+            bookings: {
+              some: {
                 account: {
                   type: AccountType.EQUITY,
                   equityAccountSubtype: {
@@ -99,15 +105,6 @@ export async function computeExecutionResidualRealization(args: {
                       EquityAccountSubtype.EXPENSE,
                     ],
                   },
-                },
-              },
-            },
-          },
-          {
-            bookings: {
-              none: {
-                date: {
-                  lt: args.periodStart,
                 },
               },
             },
@@ -207,17 +204,6 @@ export async function computeExecutionResidualRealization(args: {
         continue;
       }
 
-      const allNonExplicitInPeriod = nonExplicitBookings.every((booking) =>
-        isWithinPeriod({
-          date: booking.date,
-          periodStart: args.periodStart,
-          periodEndExclusive: args.periodEndExclusive,
-        }),
-      );
-      if (!allNonExplicitInPeriod) {
-        continue;
-      }
-
       if (
         !isMultiUnitTransaction(
           nonExplicitBookings.map((booking) => ({
@@ -232,8 +218,13 @@ export async function computeExecutionResidualRealization(args: {
         continue;
       }
 
-      const hasInPeriodHoldingBooking = nonExplicitBookings.some((booking) =>
-        args.trackedHoldingAccountIdSet.has(booking.accountId),
+      const hasInPeriodHoldingBooking = nonExplicitBookings.some(
+        (booking) =>
+          isWithinPeriod({
+            date: booking.date,
+            periodStart: args.periodStart,
+            periodEndExclusive: args.periodEndExclusive,
+          }) && args.trackedHoldingAccountIdSet.has(booking.accountId),
       );
       if (hasInPeriodHoldingBooking) {
         continue;

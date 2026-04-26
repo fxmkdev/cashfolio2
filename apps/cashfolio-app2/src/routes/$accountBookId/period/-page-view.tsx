@@ -36,6 +36,7 @@ import { usePeriodAllocationBreakdownViewModel } from "./-period-allocation-brea
 import { usePeriodBreakdownViewModel } from "./-period-breakdown-view-model";
 import { usePeriodGainsLossesViewModel } from "./-period-gains-losses-view-model";
 import { buildPeriodPageStats } from "./-period-page-stats";
+import { PeriodSkippedValuationWarning } from "./-page-warning";
 import { PeriodStatsCardsSection } from "./-period-stats-cards";
 import { usePeriodPageSessionState } from "./-page-session-state";
 import classes from "./-page-view.module.css";
@@ -411,6 +412,9 @@ export function PeriodPageView({
           statCards={statCards}
           endOfPeriodStatCards={endOfPeriodStatCards}
         />
+        <PeriodSkippedValuationWarning
+          skippedBookingsCount={overview.skippedBookingsCount}
+        />
 
         <Stack gap="lg" data-testid="period-analysis-section">
           <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="lg">
@@ -496,20 +500,6 @@ export function PeriodPageView({
                 onBreakdownAccountDoubleClick={onBreakdownAccountDoubleClick}
                 onChartContainerDoubleClick={
                   breakdown.handleChartContainerDoubleClick
-                }
-                footer={
-                  overview.skippedBookingsCount > 0 ? (
-                    <Alert
-                      mt="md"
-                      variant="light"
-                      color="yellow"
-                      icon={<IconAlertTriangle size={16} />}
-                      title="Partial data"
-                    >
-                      {overview.skippedBookingsCount} valuation-related item(s)
-                      were skipped because valuation data was unavailable.
-                    </Alert>
-                  ) : null
                 }
               />
             </Grid.Col>

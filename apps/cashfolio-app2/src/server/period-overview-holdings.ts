@@ -4,8 +4,10 @@ import {
   isExplicitGainLossBooking,
   isNearZero,
   isWithinPeriod,
+  toLotAcquisitionSortKey,
   QUANTITY_EPSILON,
 } from "./period-overview-holdings-common";
+import { applyMixedPeriodSameUnitHoldingTransfer } from "./period-overview-holdings-mixed-transfer";
 import {
   applyHoldingTransferWithoutRealization,
   resolveHoldingTransferDirection,
@@ -28,13 +30,6 @@ export type HoldingGainLossSkippedReason =
   | "missingConversion"
   | "invalidExecutionPrice"
   | "missingPeriodEndRate";
-
-function toLotAcquisitionSortKey(args: {
-  date: Date;
-  bookingId: string;
-}): string {
-  return `${args.date.toISOString()}::${args.bookingId}`;
-}
 
 export async function initializeHoldingGainLossState(args: {
   holdingAccounts: HoldingRateConvertibleAccount[];
@@ -195,6 +190,20 @@ export async function applyHoldingTransactionsToGainLossState(args: {
         holdingBookings: inPeriodHoldingBookings,
         direction: transferDirection,
       });
+      continue;
+    }
+
+    const handledAsMixedTransfer =
+      await applyMixedPeriodSameUnitHoldingTransfer({
+        state: args.state,
+        inPeriodHoldingBookings,
+        allNonExplicitAreHolding,
+        allNonExplicitInPeriod,
+        nonExplicitUnitIdentifiers,
+        convertBookingToReference: args.convertBookingToReference,
+        onSkippedItem: args.onSkippedItem,
+      });
+    if (handledAsMixedTransfer) {
       continue;
     }
 

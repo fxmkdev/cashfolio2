@@ -28,6 +28,13 @@ export function isWithinPeriod(args: {
   return args.date >= args.periodStart && args.date < args.periodEndExclusive;
 }
 
+export function toLotAcquisitionSortKey(args: {
+  date: Date;
+  bookingId: string;
+}): string {
+  return `${args.date.toISOString()}::${args.bookingId}`;
+}
+
 export function buildResidualAllocationWeights(args: {
   holdingBookings: HoldingTransactionBooking[];
   holdingMarketValueByBookingId: Map<string, number>;
