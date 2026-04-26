@@ -192,7 +192,7 @@ export async function computeTransferClearingGainLossSplit(args: {
       }
       convertedCount += 1;
 
-      const lotMatches: HoldingExecutionLotMatch[] = [];
+      let lotMatches: HoldingExecutionLotMatch[] | undefined;
       const bookingRealizedGainLoss = applyExecutionToLots({
         lots,
         quantity: clearingQuantity,
@@ -201,9 +201,16 @@ export async function computeTransferClearingGainLossSplit(args: {
           date: booking.date,
           bookingId: booking.id,
         }),
-        onLotMatched: (lotMatch) => {
-          lotMatches.push(lotMatch);
-        },
+        ...(args.onUnitExecutionEvent
+          ? {
+              onLotMatched: (lotMatch: HoldingExecutionLotMatch) => {
+                if (!lotMatches) {
+                  lotMatches = [];
+                }
+                lotMatches.push(lotMatch);
+              },
+            }
+          : {}),
       });
       realizedGainLoss += bookingRealizedGainLoss;
       unitRealizedGainLoss += bookingRealizedGainLoss;
@@ -222,7 +229,7 @@ export async function computeTransferClearingGainLossSplit(args: {
         executionUnitPriceInReference,
         realizedGainLossDelta: bookingRealizedGainLoss,
         runningRealizedGainLoss: unitRealizedGainLoss,
-        lotMatches,
+        lotMatches: lotMatches ?? [],
       });
     }
 

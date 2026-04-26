@@ -427,7 +427,7 @@ export async function finalizeHoldingGainLossState(args: {
         continue;
       }
 
-      const lotMatches: HoldingExecutionLotMatch[] = [];
+      let lotMatches: HoldingExecutionLotMatch[] | undefined;
       const realizedGainLossDelta = applyExecutionToLots({
         lots: state.lots,
         quantity: event.quantity,
@@ -436,9 +436,16 @@ export async function finalizeHoldingGainLossState(args: {
           date: event.date,
           bookingId: event.bookingId,
         }),
-        onLotMatched: (lotMatch) => {
-          lotMatches.push(lotMatch);
-        },
+        ...(args.onAccountExecutionEvent
+          ? {
+              onLotMatched: (lotMatch: HoldingExecutionLotMatch) => {
+                if (!lotMatches) {
+                  lotMatches = [];
+                }
+                lotMatches.push(lotMatch);
+              },
+            }
+          : {}),
       });
       accountRealizedGainLoss += realizedGainLossDelta;
       args.onAccountExecutionEvent?.({
@@ -456,7 +463,7 @@ export async function finalizeHoldingGainLossState(args: {
         executionUnitPriceInReference,
         realizedGainLossDelta,
         runningRealizedGainLoss: accountRealizedGainLoss,
-        lotMatches,
+        lotMatches: lotMatches ?? [],
       });
     }
 
