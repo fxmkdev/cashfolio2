@@ -3,6 +3,7 @@ import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import type { getPeriodOverview } from "@/server/period";
 import { useGainsLossesWaterfallChartOptions } from "./-gains-losses-chart-options";
 import { getGainsLossesDrillState } from "./-gains-losses-drill";
+import { parseGainsLossesUnitAccountId } from "./-gains-losses-table-rows";
 import { buildGainsLossesWaterfallModel } from "./-gains-losses-waterfall-model";
 import type { GainsLossesChartType } from "./-breakdown-types";
 
@@ -36,6 +37,7 @@ export function usePeriodGainsLossesViewModel(args: {
     negative: string;
     total: string;
   };
+  onUnitAccountDoubleClick?: (accountId: string) => void;
 }): PeriodGainsLossesViewModel {
   const {
     accountBookId,
@@ -46,6 +48,7 @@ export function usePeriodGainsLossesViewModel(args: {
     currencyFormatter,
     colors,
     waterfallPalette,
+    onUnitAccountDoubleClick,
   } = args;
   const gainsLossesTableExpandedGroupsStorageKey = `cashfolio:periodExpandedGroups:${accountBookId}:gains-losses`;
   const gainsLossesDrillState = useMemo(
@@ -81,6 +84,15 @@ export function usePeriodGainsLossesViewModel(args: {
   );
   const handleNodeDoubleClick = useCallback(
     (datum: (typeof waterfallModel)["data"][number]) => {
+      const accountId = parseGainsLossesUnitAccountId({
+        rowId: datum.id,
+        parentId: gainsLossesDrillState.clampedPath.at(-1),
+      });
+      if (accountId) {
+        onUnitAccountDoubleClick?.(accountId);
+        return;
+      }
+
       if (
         !datum.isDrillable ||
         gainsLossesDrillState.clampedPath.includes(datum.id)
@@ -93,7 +105,11 @@ export function usePeriodGainsLossesViewModel(args: {
         datum.id,
       ]);
     },
-    [gainsLossesDrillState.clampedPath, updateGainsLossesDrillPath],
+    [
+      gainsLossesDrillState.clampedPath,
+      onUnitAccountDoubleClick,
+      updateGainsLossesDrillPath,
+    ],
   );
   const gainsLossesChartOptions = useGainsLossesWaterfallChartOptions({
     chartData: waterfallModel.data,

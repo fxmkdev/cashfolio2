@@ -265,6 +265,7 @@ export function PeriodPageView({
     currencyFormatter,
     colors,
     waterfallPalette,
+    onUnitAccountDoubleClick: onGainLossUnitAccountDoubleClick,
   });
 
   const { statCards, endOfPeriodStatCards } = buildPeriodPageStats({
