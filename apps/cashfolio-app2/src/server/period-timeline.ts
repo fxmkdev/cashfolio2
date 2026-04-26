@@ -95,7 +95,8 @@ export const getPeriodTimeline = createServerFn({
     const { prisma } = await import("../prisma.server");
     const { ensureAuthorizedForAccountBookId } =
       await import("../account-books/functions.server");
-    const { loadPeriodOverview } = await import("./period-overview.server");
+    const { loadPeriodTimelinePoint } =
+      await import("./period-timeline-point.server");
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
     const accountBook = await prisma.accountBook.findUniqueOrThrow({
@@ -114,14 +115,14 @@ export const getPeriodTimeline = createServerFn({
 
     const points: PeriodTimelinePoint[] = [];
     for (const periodValue of periodValues) {
-      const overview = await loadPeriodOverview({
+      const point = await loadPeriodTimelinePoint({
         accountBookId: data.accountBookId,
         period: periodValue,
       });
       points.push({
-        periodValue: overview.selectedPeriodValue,
-        periodLabel: overview.selectedPeriodLabel,
-        totalReturn: overview.stats.totalReturn,
+        periodValue: point.selectedPeriodValue,
+        periodLabel: point.selectedPeriodLabel,
+        totalReturn: point.totalReturn,
       });
     }
 

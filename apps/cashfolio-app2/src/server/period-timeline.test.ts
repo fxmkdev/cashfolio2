@@ -20,7 +20,7 @@ const createServerFn = vi.hoisted(() =>
 );
 
 const ensureAuthorizedForAccountBookId = vi.hoisted(() => vi.fn());
-const loadPeriodOverview = vi.hoisted(() => vi.fn());
+const loadPeriodTimelinePoint = vi.hoisted(() => vi.fn());
 
 const prisma = vi.hoisted(() => ({
   accountBook: {
@@ -40,8 +40,8 @@ vi.mock("../prisma.server", () => ({
   prisma,
 }));
 
-vi.mock("./period-overview.server", () => ({
-  loadPeriodOverview,
+vi.mock("./period-timeline-point.server", () => ({
+  loadPeriodTimelinePoint,
 }));
 
 import {
@@ -92,13 +92,11 @@ describe("getPeriodTimeline", () => {
       startDate: new Date("2026-01-05T00:00:00.000Z"),
     });
 
-    loadPeriodOverview.mockImplementation(
+    loadPeriodTimelinePoint.mockImplementation(
       async ({ period }: { period: string; accountBookId: string }) => ({
         selectedPeriodValue: period,
         selectedPeriodLabel: `Label ${period}`,
-        stats: {
-          totalReturn: period.length,
-        },
+        totalReturn: period.length,
       }),
     );
   });
@@ -124,16 +122,16 @@ describe("getPeriodTimeline", () => {
       },
     });
 
-    expect(loadPeriodOverview).toHaveBeenCalledTimes(3);
-    expect(loadPeriodOverview).toHaveBeenNthCalledWith(1, {
+    expect(loadPeriodTimelinePoint).toHaveBeenCalledTimes(3);
+    expect(loadPeriodTimelinePoint).toHaveBeenNthCalledWith(1, {
       accountBookId: "book-1",
       period: "2026-01",
     });
-    expect(loadPeriodOverview).toHaveBeenNthCalledWith(2, {
+    expect(loadPeriodTimelinePoint).toHaveBeenNthCalledWith(2, {
       accountBookId: "book-1",
       period: "2026-02",
     });
-    expect(loadPeriodOverview).toHaveBeenNthCalledWith(3, {
+    expect(loadPeriodTimelinePoint).toHaveBeenNthCalledWith(3, {
       accountBookId: "book-1",
       period: "2026-03",
     });
@@ -168,8 +166,8 @@ describe("getPeriodTimeline", () => {
       },
     });
 
-    expect(loadPeriodOverview).toHaveBeenCalledTimes(1);
-    expect(loadPeriodOverview).toHaveBeenCalledWith({
+    expect(loadPeriodTimelinePoint).toHaveBeenCalledTimes(1);
+    expect(loadPeriodTimelinePoint).toHaveBeenCalledWith({
       accountBookId: "book-2",
       period: "2026",
     });

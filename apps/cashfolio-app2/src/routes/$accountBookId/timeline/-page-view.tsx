@@ -1,4 +1,6 @@
 import {
+  Alert,
+  Button,
   Card,
   Container,
   Group,
@@ -11,10 +13,13 @@ import {
 } from "@mantine/core";
 import { IconCalendarMonth, IconListDetails } from "@tabler/icons-react";
 import { AgCharts } from "ag-charts-react";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
 import { LinkButton } from "@/components/link-button";
-import type { PeriodTimelineResponse } from "@/server/period-timeline";
+import {
+  getPeriodTimeline,
+  type PeriodTimelineResponse,
+} from "@/server/period-timeline";
 import { TopPageHeader } from "@/components/top-page-header";
 import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import {
@@ -25,14 +30,22 @@ import {
   createTimelineChartOptions,
   mapTimelinePointsToChartData,
 } from "./-chart-options";
+import {
+  clearYearTimelineFetchError,
+  finishYearTimelineFetchFailure,
+  finishYearTimelineFetchSuccess,
+  getDefaultYearTimelineState,
+  shouldStartYearTimelineFetch,
+  startYearTimelineFetch,
+} from "./-year-timeline-state";
 import classes from "./-page-view.module.css";
 
 ensureChartModulesRegistered();
+const EMPTY_TIMELINE_POINTS: PeriodTimelineResponse["points"] = [];
 
 export type TimelinePageViewProps = {
   accountBookId: string;
   monthTimeline: PeriodTimelineResponse;
-  yearTimeline: PeriodTimelineResponse;
 };
 
 function isTimelinePeriodMode(value: string): value is TimelinePeriodMode {
@@ -42,12 +55,17 @@ function isTimelinePeriodMode(value: string): value is TimelinePeriodMode {
 export function TimelinePageView({
   accountBookId,
   monthTimeline,
-  yearTimeline,
 }: TimelinePageViewProps) {
   const { periodMode, setPeriodMode } =
     useTimelinePageSessionState(accountBookId);
-  const activeTimeline = periodMode === "year" ? yearTimeline : monthTimeline;
-  const activeReferenceCurrency = activeTimeline.referenceCurrency;
+  const [yearTimelineState, setYearTimelineState] = useState(
+    getDefaultYearTimelineState,
+  );
+  const yearFetchRequestIdRef = useRef(0);
+  const activeTimeline =
+    periodMode === "year" ? yearTimelineState.timeline : monthTimeline;
+  const activeReferenceCurrency =
+    activeTimeline?.referenceCurrency ?? monthTimeline.referenceCurrency;
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
   const colors = useMemo(
@@ -75,9 +93,79 @@ export function TimelinePageView({
     [],
   );
 
+  useEffect(() => {
+    yearFetchRequestIdRef.current += 1;
+    setYearTimelineState(getDefaultYearTimelineState());
+  }, [accountBookId]);
+
+  const fetchYearTimeline = useCallback(async () => {
+    let shouldFetch = false;
+    setYearTimelineState((previousState) => {
+      if (previousState.timeline != null || previousState.isLoading) {
+        return previousState;
+      }
+
+      shouldFetch = true;
+      return startYearTimelineFetch(previousState);
+    });
+
+    if (!shouldFetch) {
+      return;
+    }
+    yearFetchRequestIdRef.current += 1;
+    const requestId = yearFetchRequestIdRef.current;
+
+    try {
+      const yearTimeline = await getPeriodTimeline({
+        data: {
+          accountBookId,
+          granularity: "year",
+        },
+      });
+      setYearTimelineState((previousState) =>
+        requestId === yearFetchRequestIdRef.current
+          ? finishYearTimelineFetchSuccess({
+              state: previousState,
+              timeline: yearTimeline,
+            })
+          : previousState,
+      );
+    } catch (error) {
+      console.error("Unable to load yearly timeline", error);
+      setYearTimelineState((previousState) =>
+        requestId === yearFetchRequestIdRef.current
+          ? finishYearTimelineFetchFailure({
+              state: previousState,
+              error: "Unable to load yearly timeline. Please try again.",
+            })
+          : previousState,
+      );
+    }
+  }, [accountBookId]);
+
+  useEffect(() => {
+    if (
+      !shouldStartYearTimelineFetch({
+        periodMode,
+        state: yearTimelineState,
+      })
+    ) {
+      return;
+    }
+
+    void fetchYearTimeline();
+  }, [fetchYearTimeline, periodMode, yearTimelineState]);
+
+  const handleRetryYearTimelineFetch = useCallback(() => {
+    setYearTimelineState((previousState) =>
+      clearYearTimelineFetchError(previousState),
+    );
+  }, []);
+
+  const activeTimelinePoints = activeTimeline?.points ?? EMPTY_TIMELINE_POINTS;
   const chartData = useMemo(
-    () => mapTimelinePointsToChartData(activeTimeline.points),
-    [activeTimeline.points],
+    () => mapTimelinePointsToChartData(activeTimelinePoints),
+    [activeTimelinePoints],
   );
 
   const chartOptions = useMemo(
@@ -99,6 +187,14 @@ export function TimelinePageView({
       theme,
     ],
   );
+  const showYearTimelineLoading =
+    periodMode === "year" &&
+    yearTimelineState.timeline == null &&
+    yearTimelineState.isLoading;
+  const showYearTimelineError =
+    periodMode === "year" &&
+    yearTimelineState.timeline == null &&
+    yearTimelineState.error != null;
 
   return (
     <Container fluid py="xl" px="xl" className={classes.page}>
@@ -148,7 +244,26 @@ export function TimelinePageView({
           </Text>
         </Stack>
 
-        {chartData.length === 0 ? (
+        {showYearTimelineLoading ? (
+          <Text c="dimmed" mt="md">
+            Loading yearly timeline...
+          </Text>
+        ) : showYearTimelineError ? (
+          <Alert mt="md" color="red" title="Unable to load yearly timeline">
+            <Stack gap="sm">
+              <Text size="sm">{yearTimelineState.error}</Text>
+              <Group>
+                <Button
+                  size="xs"
+                  variant="light"
+                  onClick={handleRetryYearTimelineFetch}
+                >
+                  Retry
+                </Button>
+              </Group>
+            </Stack>
+          </Alert>
+        ) : chartData.length === 0 ? (
           <Text c="dimmed" mt="md">
             No periods available yet.
           </Text>
