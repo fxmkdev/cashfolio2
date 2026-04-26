@@ -89,6 +89,15 @@ export const getPeriodGainLossReconciliation = createServerFn({
       return null;
     }
 
+    const summaryRawRealizedGainLoss = details.realizedEvents.reduce(
+      (sum, event) => sum + event.rawRealizedGainLossDelta,
+      0,
+    );
+    const summaryRawUnrealizedGainLoss = details.unrealizedOpenLots.reduce(
+      (sum, openLot) => sum + openLot.rawUnrealizedGainLoss,
+      0,
+    );
+
     return {
       target: details.target,
       referenceCurrency,
@@ -107,6 +116,12 @@ export const getPeriodGainLossReconciliation = createServerFn({
         to: selection.to.toISOString(),
       },
       summary: details.summary,
+      summaryRaw: {
+        realizedGainLoss: summaryRawRealizedGainLoss,
+        unrealizedGainLoss: summaryRawUnrealizedGainLoss,
+        totalGainLoss:
+          summaryRawRealizedGainLoss + summaryRawUnrealizedGainLoss,
+      },
       realizedEvents: details.realizedEvents,
       unrealizedOpenLots: details.unrealizedOpenLots,
       diagnostics: {

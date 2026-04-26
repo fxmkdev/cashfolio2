@@ -490,6 +490,27 @@ data groups them hierarchically. Fields that don't apply to a node type are
 (defaults to `en-CH`). Used in `FORMATTED_NUMERIC_COLUMN` and
 `EditTransactionModal`.
 
+## Exact-Value Tooltip Pattern
+
+Display values remain rounded to 2 decimals for consistency, while hover
+tooltips expose exact raw values where available.
+
+- AG Grid numeric cells:
+  - `FORMATTED_NUMERIC_COLUMN` resolves tooltip values with this precedence:
+    1. row-level `__exactByField[colKey]`
+    2. raw numeric cell value
+    3. no tooltip
+  - Tooltip numbers use `en-CH` locale formatting with variable fraction digits
+    (no forced `2` decimals).
+  - Column-level tooltip overrides (for example validation errors) still take
+    precedence where explicitly defined.
+- Mantine value labels/cards:
+  - Use `ExactValueTooltip` (`src/components/exact-value-tooltip.tsx`) around
+    rendered value text.
+  - Use raw companion fields from server responses for tooltip labels (for
+    example `statsRaw`, reconciliation `summaryRaw`, and per-row raw numeric
+    companions).
+
 ## Session Storage for UI State
 
 Expanded group IDs are persisted in sessionStorage with the key

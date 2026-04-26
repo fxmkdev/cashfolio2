@@ -23,6 +23,18 @@ describe("buildPeriodPageStats", () => {
           endOfPeriodAssets: 1200,
           endOfPeriodLiabilities: 200,
         },
+        statsRaw: {
+          totalReturn: 100.001,
+          savings: 80.002,
+          income: 0,
+          expenses: 20.003,
+          gainsLosses: 20.004,
+          realizedGainLoss: 13.005,
+          unrealizedGainLoss: 7.006,
+          endOfPeriodNetWorth: 1000.007,
+          endOfPeriodAssets: 1200.008,
+          endOfPeriodLiabilities: 200.009,
+        },
       } as never,
       currencyFormatter: createFormatter("CHF"),
       savingsRateFormatter: createFormatter("PCT"),
@@ -52,6 +64,18 @@ describe("buildPeriodPageStats", () => {
           endOfPeriodAssets: 500,
           endOfPeriodLiabilities: 550,
         },
+        statsRaw: {
+          totalReturn: -5.1,
+          savings: -30.2,
+          income: 100.3,
+          expenses: 130.4,
+          gainsLosses: -10.5,
+          realizedGainLoss: -7.6,
+          unrealizedGainLoss: -3.7,
+          endOfPeriodNetWorth: -50.8,
+          endOfPeriodAssets: 500.9,
+          endOfPeriodLiabilities: 550.1,
+        },
       } as never,
       currencyFormatter: createFormatter("CHF"),
       savingsRateFormatter: createFormatter("PCT"),
@@ -67,6 +91,7 @@ describe("buildPeriodPageStats", () => {
     expect(gainsLossesCard).toMatchObject({
       label: "Loss",
       valueColor: "red",
+      exactValue: "CHF:-10.50",
     });
     expect(gainsLossesCard?.secondaryValue).toBeUndefined();
     expect(liabilitiesCard?.valueColor).toBe("red");

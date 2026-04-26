@@ -18,6 +18,68 @@ export const SELECT_COLUMN = "selectColumn";
 export const TEXT_COLUMN = "textColumn";
 export const DATE_COLUMN = "dateColumn";
 
+const exactTooltipNumberFormatter = new Intl.NumberFormat("en-CH", {
+  maximumFractionDigits: 20,
+});
+
+export type ExactValueByField = Record<string, number | null | undefined>;
+
+type RowWithExactValues = {
+  __exactByField?: ExactValueByField;
+};
+
+function getColumnExactValueFieldKey(colDef: {
+  colId?: unknown;
+  field?: unknown;
+}): string | null {
+  if (typeof colDef.colId === "string" && colDef.colId.length > 0) {
+    return colDef.colId;
+  }
+
+  if (typeof colDef.field === "string" && colDef.field.length > 0) {
+    return colDef.field;
+  }
+
+  return null;
+}
+
+function toFiniteTooltipValue(value: unknown): number | null {
+  if (typeof value !== "number") {
+    return null;
+  }
+
+  return Number.isFinite(value) ? value : null;
+}
+
+export function formatExactNumericTooltipValue(value: number): string {
+  return exactTooltipNumberFormatter.format(value);
+}
+
+export function resolveFormattedNumericTooltipLabel(args: {
+  colDef: {
+    colId?: unknown;
+    field?: unknown;
+  };
+  value: unknown;
+  data: RowWithExactValues | undefined;
+}): string | null {
+  const key = getColumnExactValueFieldKey(args.colDef);
+
+  if (key && args.data?.__exactByField && key in args.data.__exactByField) {
+    const exactValue = toFiniteTooltipValue(args.data.__exactByField[key]);
+    return exactValue != null
+      ? formatExactNumericTooltipValue(exactValue)
+      : null;
+  }
+
+  const rawValue = toFiniteTooltipValue(args.value);
+  if (rawValue == null) {
+    return null;
+  }
+
+  return formatExactNumericTooltipValue(rawValue);
+}
+
 export const columnTypes: AgGridReactProps["columnTypes"] = {
   [FORMATTED_NUMERIC_COLUMN]: {
     headerClass: "ag-right-aligned-header",
@@ -34,6 +96,15 @@ export const columnTypes: AgGridReactProps["columnTypes"] = {
           })
         : "";
     },
+    tooltipValueGetter: ({ colDef, value, data }) =>
+      resolveFormattedNumericTooltipLabel({
+        colDef: (colDef ?? {}) as {
+          colId?: unknown;
+          field?: unknown;
+        },
+        value,
+        data: (data as RowWithExactValues | undefined) ?? undefined,
+      }) ?? undefined,
     cellEditor: ({ value, onValueChange }: CustomCellEditorProps) => {
       const ref = useRef<HTMLInputElement>(null);
       useEffect(() => {

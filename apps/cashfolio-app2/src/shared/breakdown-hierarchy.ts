@@ -5,5 +5,6 @@ export type BreakdownHierarchyNode = {
   label: string;
   kind: BreakdownNodeKind;
   amount: number;
+  rawAmount?: number;
   children: BreakdownHierarchyNode[];
 };

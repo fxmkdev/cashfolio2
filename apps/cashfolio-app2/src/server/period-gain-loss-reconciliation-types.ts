@@ -20,10 +20,15 @@ export type GainLossReconciliationRealizedEventLotMatch = {
   acquisitionDate: string;
   acquisitionBookingId: string;
   matchedQuantity: number;
+  rawMatchedQuantity: number;
   lotUnitCostInReference: number;
+  rawLotUnitCostInReference: number;
   executionUnitPriceInReference: number;
+  rawExecutionUnitPriceInReference: number;
   realizedGainLossDelta: number;
+  rawRealizedGainLossDelta: number;
   runningEventRealizedGainLoss: number;
+  rawRunningEventRealizedGainLoss: number;
 };
 
 export type GainLossReconciliationRealizedEvent = {
@@ -34,10 +39,15 @@ export type GainLossReconciliationRealizedEvent = {
   transactionId: string | null;
   transactionDescription: string | null;
   quantity: number;
+  rawQuantity: number;
   effectiveReferenceAmount: number;
+  rawEffectiveReferenceAmount: number;
   executionUnitPriceInReference: number;
+  rawExecutionUnitPriceInReference: number;
   realizedGainLossDelta: number;
+  rawRealizedGainLossDelta: number;
   runningRealizedGainLoss: number;
+  rawRunningRealizedGainLoss: number;
   lotMatches: GainLossReconciliationRealizedEventLotMatch[];
   pricing: {
     source: "directConversion" | "residualAdjusted" | "marketFallback";
@@ -63,10 +73,15 @@ export type GainLossReconciliationOpenLot = {
   acquisitionDate: string;
   acquisitionBookingId: string;
   quantity: number;
+  rawQuantity: number;
   unitCostInReference: number;
+  rawUnitCostInReference: number;
   periodEndRate: number;
+  rawPeriodEndRate: number;
   unrealizedGainLoss: number;
+  rawUnrealizedGainLoss: number;
   runningUnrealizedGainLoss: number;
+  rawRunningUnrealizedGainLoss: number;
 };
 
 export type GainLossReconciliationTarget = {
@@ -146,6 +161,7 @@ export type PeriodGainLossReconciliation = {
     to: string;
   };
   summary: GainLossReconciliationSummary;
+  summaryRaw: GainLossReconciliationSummary;
   realizedEvents: GainLossReconciliationRealizedEvent[];
   unrealizedOpenLots: GainLossReconciliationOpenLot[];
   diagnostics: {

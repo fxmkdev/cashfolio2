@@ -153,8 +153,22 @@ const baseOverview: PeriodPageViewProps["overview"] = {
     realizedGainLoss: 1500,
     unrealizedGainLoss: 200,
   },
+  statsRaw: {
+    totalReturn: 4200.123456,
+    savings: 2500.654321,
+    income: 8000.987654,
+    expenses: 5500.333333,
+    gainsLosses: 1700.469135,
+    endOfPeriodNetWorth: 245_000.1234,
+    endOfPeriodAssets: 310_000.5678,
+    endOfPeriodLiabilities: 65_000.4444,
+    explicitGainLoss: 1200.2222,
+    realizedGainLoss: 1500.3333,
+    unrealizedGainLoss: 200.1358,
+  },
   expenseBreakdown: {
     totalAmount: 5500,
+    totalAmountRaw: 5500,
     hasHiddenAmountDiscrepancy: false,
     hiddenAmountDiscrepancyNodeIds: [],
     items: [
@@ -287,6 +301,7 @@ const baseOverview: PeriodPageViewProps["overview"] = {
   },
   incomeBreakdown: {
     totalAmount: 8000,
+    totalAmountRaw: 8000,
     hasHiddenAmountDiscrepancy: false,
     hiddenAmountDiscrepancyNodeIds: [],
     items: [
@@ -361,6 +376,7 @@ const baseOverview: PeriodPageViewProps["overview"] = {
   },
   assetBreakdown: {
     totalAmount: 25000,
+    totalAmountRaw: 25000,
     hasHiddenAmountDiscrepancy: false,
     hiddenAmountDiscrepancyNodeIds: [],
     skippedMissingReferenceBalanceCount: 1,
@@ -423,6 +439,7 @@ const baseOverview: PeriodPageViewProps["overview"] = {
   },
   liabilityBreakdown: {
     totalAmount: 5400,
+    totalAmountRaw: 5400,
     hasHiddenAmountDiscrepancy: false,
     hiddenAmountDiscrepancyNodeIds: [],
     skippedMissingReferenceBalanceCount: 0,
@@ -699,6 +716,7 @@ export const NoExpenseData: Story = {
       ...baseOverview,
       expenseBreakdown: {
         totalAmount: 0,
+        totalAmountRaw: 0,
         hasHiddenAmountDiscrepancy: false,
         hiddenAmountDiscrepancyNodeIds: [],
         items: [],

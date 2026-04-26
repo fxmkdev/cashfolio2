@@ -3,12 +3,15 @@ import type { BreakdownHierarchyNode } from "./-breakdown-drill";
 
 export const BREAKDOWN_TOTAL_FOOTER_ROW_ID = "__breakdown_total_footer__";
 
+type ExactValueByField = Record<string, number | null | undefined>;
+
 export type BreakdownTableRow = {
   id: string;
   parentId: string | undefined;
   name: string;
   kind: BreakdownNodeKind;
   value: number;
+  __exactByField?: ExactValueByField;
 };
 
 export type BreakdownTotalFooterRow = {
@@ -16,6 +19,7 @@ export type BreakdownTotalFooterRow = {
   rowType: "breakdownTotalFooter";
   name: "Total";
   value: number;
+  __exactByField?: ExactValueByField;
 };
 
 export type BreakdownGridRow = BreakdownTableRow | BreakdownTotalFooterRow;
@@ -42,6 +46,9 @@ export function flattenBreakdownHierarchyRows(
         name: node.label,
         kind: node.kind,
         value: node.amount,
+        __exactByField: {
+          value: node.rawAmount ?? node.amount,
+        },
       });
 
       if (node.children.length > 0) {
@@ -58,4 +65,13 @@ export function sumTopLevelBreakdownHierarchyAmount(
   hierarchy: BreakdownHierarchyNode[],
 ): number {
   return hierarchy.reduce((sum, node) => sum + node.amount, 0);
+}
+
+export function sumTopLevelBreakdownHierarchyRawAmount(
+  hierarchy: BreakdownHierarchyNode[],
+): number {
+  return hierarchy.reduce(
+    (sum, node) => sum + (node.rawAmount ?? node.amount),
+    0,
+  );
 }

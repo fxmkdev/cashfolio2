@@ -3,6 +3,9 @@ import type { GainsLossesBreakdownNode } from "./-gains-losses-breakdown-types";
 import {
   flattenGainsLossesHierarchyRows,
   parseGainsLossesUnitAccountId,
+  sumTopLevelRawRealizedGainLoss,
+  sumTopLevelRawTotalGainLoss,
+  sumTopLevelRawUnrealizedGainLoss,
   sumTopLevelRealizedGainLoss,
   sumTopLevelTotalGainLoss,
   sumTopLevelUnrealizedGainLoss,
@@ -73,7 +76,7 @@ describe("flattenGainsLossesHierarchyRows", () => {
       },
     ];
 
-    expect(flattenGainsLossesHierarchyRows(hierarchy)).toEqual([
+    expect(flattenGainsLossesHierarchyRows(hierarchy)).toMatchObject([
       {
         id: "unit-type:fx",
         parentId: undefined,
@@ -131,6 +134,12 @@ describe("flattenGainsLossesHierarchyRows", () => {
         totalGainLoss: 5,
       },
     ]);
+    const [firstRow] = flattenGainsLossesHierarchyRows(hierarchy);
+    expect(firstRow?.__exactByField).toEqual({
+      realizedGainLoss: 8,
+      unrealizedGainLoss: -1,
+      totalGainLoss: 7,
+    });
   });
 
   test("returns empty array for empty hierarchy", () => {
@@ -171,12 +180,18 @@ describe("top-level gains/losses sums", () => {
     expect(sumTopLevelRealizedGainLoss(hierarchy)).toBe(28);
     expect(sumTopLevelUnrealizedGainLoss(hierarchy)).toBe(-31);
     expect(sumTopLevelTotalGainLoss(hierarchy)).toBe(-3);
+    expect(sumTopLevelRawRealizedGainLoss(hierarchy)).toBe(28);
+    expect(sumTopLevelRawUnrealizedGainLoss(hierarchy)).toBe(-31);
+    expect(sumTopLevelRawTotalGainLoss(hierarchy)).toBe(-3);
   });
 
   test("returns zero for empty hierarchy", () => {
     expect(sumTopLevelRealizedGainLoss([])).toBe(0);
     expect(sumTopLevelUnrealizedGainLoss([])).toBe(0);
     expect(sumTopLevelTotalGainLoss([])).toBe(0);
+    expect(sumTopLevelRawRealizedGainLoss([])).toBe(0);
+    expect(sumTopLevelRawUnrealizedGainLoss([])).toBe(0);
+    expect(sumTopLevelRawTotalGainLoss([])).toBe(0);
   });
 });
 

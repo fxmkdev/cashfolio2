@@ -182,6 +182,11 @@ describe("getPeriodGainLossReconciliation", () => {
       unrealizedGainLoss: 180,
       totalGainLoss: 260,
     });
+    expect(response?.summaryRaw).toEqual({
+      realizedGainLoss: 80,
+      unrealizedGainLoss: 180,
+      totalGainLoss: 260,
+    });
     expect(response?.realizedEvents).toHaveLength(2);
     const sellEvent = response?.realizedEvents.find(
       (event) => event.bookingId === "h-sell",
@@ -197,10 +202,15 @@ describe("getPeriodGainLossReconciliation", () => {
       {
         acquisitionBookingId: "h-buy",
         matchedQuantity: 4,
+        rawMatchedQuantity: 4,
         lotUnitCostInReference: 100,
+        rawLotUnitCostInReference: 100,
         executionUnitPriceInReference: 120,
+        rawExecutionUnitPriceInReference: 120,
         realizedGainLossDelta: 80,
+        rawRealizedGainLossDelta: 80,
         runningEventRealizedGainLoss: 80,
+        rawRunningEventRealizedGainLoss: 80,
       },
     ]);
     expect(
@@ -218,10 +228,15 @@ describe("getPeriodGainLossReconciliation", () => {
     expect(response?.unrealizedOpenLots).toMatchObject([
       {
         quantity: 6,
+        rawQuantity: 6,
         unitCostInReference: 100,
+        rawUnitCostInReference: 100,
         periodEndRate: 130,
+        rawPeriodEndRate: 130,
         unrealizedGainLoss: 180,
+        rawUnrealizedGainLoss: 180,
         runningUnrealizedGainLoss: 180,
+        rawRunningUnrealizedGainLoss: 180,
       },
     ]);
     expect(response?.diagnostics.skippedCount).toBe(0);
@@ -289,6 +304,11 @@ describe("getPeriodGainLossReconciliation", () => {
       unrealizedGainLoss: 60,
       totalGainLoss: 180,
     });
+    expect(response?.summaryRaw).toEqual({
+      realizedGainLoss: 120,
+      unrealizedGainLoss: 60,
+      totalGainLoss: 180,
+    });
     expect(response?.realizedEvents).toHaveLength(1);
     expect(response?.realizedEvents[0]).toMatchObject({
       pricing: {
@@ -311,10 +331,15 @@ describe("getPeriodGainLossReconciliation", () => {
     expect(response?.unrealizedOpenLots).toMatchObject([
       {
         quantity: 6,
+        rawQuantity: 6,
         unitCostInReference: 100,
+        rawUnitCostInReference: 100,
         periodEndRate: 110,
+        rawPeriodEndRate: 110,
         unrealizedGainLoss: 60,
+        rawUnrealizedGainLoss: 60,
         runningUnrealizedGainLoss: 60,
+        rawRunningUnrealizedGainLoss: 60,
       },
     ]);
   });
@@ -521,6 +546,9 @@ describe("getPeriodGainLossReconciliation", () => {
     expect(sellEvent?.rounding.roundedRealizedGainLossDelta).toBe(66.67);
     expect(sellEvent?.rounding.roundedRealizedGainLossDelta).toBe(
       sellEvent?.realizedGainLossDelta,
+    );
+    expect(sellEvent?.rawRealizedGainLossDelta).toBe(
+      sellEvent?.rounding.rawRealizedGainLossDelta,
     );
     expect(sellEvent?.rounding.roundedRunningRealizedGainLoss).toBe(
       sellEvent?.runningRealizedGainLoss,

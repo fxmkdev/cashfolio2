@@ -263,11 +263,27 @@ describe("period overview response", () => {
       endOfPeriodLiabilities: 40,
       endOfPeriodNetWorth: 60,
     });
+    expect(response.statsRaw).toMatchObject({
+      income: 120,
+      expenses: 20,
+      savings: 100,
+      gainsLosses: 30,
+      realizedGainLoss: 15,
+      unrealizedGainLoss: 15,
+      totalReturn: 130,
+      endOfPeriodAssets: 100,
+      endOfPeriodLiabilities: 40,
+      endOfPeriodNetWorth: 60,
+    });
     expect(response.assetBreakdown.totalAmount).toBe(100);
+    expect(response.assetBreakdown.totalAmountRaw).toBe(100);
     expect(response.liabilityBreakdown.totalAmount).toBe(40);
+    expect(response.liabilityBreakdown.totalAmountRaw).toBe(40);
     expect(response.incomeBreakdown.totalAmount).toBe(120);
+    expect(response.incomeBreakdown.totalAmountRaw).toBe(120);
     expect(response.expenseBreakdown.totalAmount).toBe(20);
-    expect(response.gainsLossesBreakdown.hierarchy).toEqual([
+    expect(response.expenseBreakdown.totalAmountRaw).toBe(20);
+    expect(response.gainsLossesBreakdown.hierarchy).toMatchObject([
       {
         id: "unit-type:fx",
         label: "FX",
@@ -372,6 +388,11 @@ describe("period overview response", () => {
         ],
       },
     ]);
+    expect(response.gainsLossesBreakdown.hierarchy[0]).toMatchObject({
+      rawRealizedGainLoss: 5,
+      rawUnrealizedGainLoss: 0,
+      rawTotalGainLoss: 5,
+    });
   });
 
   it("rounds gains/losses breakdown node values to 2 decimals", () => {
@@ -442,7 +463,12 @@ describe("period overview response", () => {
       unrealizedGainLoss: -1.11,
       gainsLosses: 3.67,
     });
-    expect(response.gainsLossesBreakdown.hierarchy).toEqual([
+    expect(response.statsRaw).toMatchObject({
+      realizedGainLoss: 4.779,
+      unrealizedGainLoss: -1.111,
+      gainsLosses: 3.668,
+    });
+    expect(response.gainsLossesBreakdown.hierarchy).toMatchObject([
       {
         id: "unit-type:fx",
         label: "FX",
@@ -487,5 +513,10 @@ describe("period overview response", () => {
         ],
       },
     ]);
+    expect(response.gainsLossesBreakdown.hierarchy[0]).toMatchObject({
+      rawRealizedGainLoss: 4.444,
+      rawUnrealizedGainLoss: -1.111,
+      rawTotalGainLoss: 3.333,
+    });
   });
 });

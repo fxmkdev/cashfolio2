@@ -2,6 +2,8 @@ import type { GainsLossesBreakdownNode } from "./-gains-losses-breakdown-types";
 
 export const GAINS_LOSSES_TOTAL_FOOTER_ROW_ID = "__gains_losses_total_footer__";
 
+type ExactValueByField = Record<string, number | null | undefined>;
+
 export type GainsLossesTableRow = {
   id: string;
   parentId: string | undefined;
@@ -9,6 +11,7 @@ export type GainsLossesTableRow = {
   realizedGainLoss: number;
   unrealizedGainLoss: number;
   totalGainLoss: number;
+  __exactByField?: ExactValueByField;
 };
 
 export type GainsLossesTotalFooterRow = {
@@ -18,6 +21,7 @@ export type GainsLossesTotalFooterRow = {
   realizedGainLoss: number;
   unrealizedGainLoss: number;
   totalGainLoss: number;
+  __exactByField?: ExactValueByField;
 };
 
 export type GainsLossesGridRow =
@@ -65,6 +69,12 @@ export function flattenGainsLossesHierarchyRows(
         realizedGainLoss: node.realizedGainLoss,
         unrealizedGainLoss: node.unrealizedGainLoss,
         totalGainLoss: node.totalGainLoss,
+        __exactByField: {
+          realizedGainLoss: node.rawRealizedGainLoss ?? node.realizedGainLoss,
+          unrealizedGainLoss:
+            node.rawUnrealizedGainLoss ?? node.unrealizedGainLoss,
+          totalGainLoss: node.rawTotalGainLoss ?? node.totalGainLoss,
+        },
       });
 
       if (node.children.length > 0) {
@@ -83,14 +93,42 @@ export function sumTopLevelRealizedGainLoss(
   return hierarchy.reduce((sum, node) => sum + node.realizedGainLoss, 0);
 }
 
+export function sumTopLevelRawRealizedGainLoss(
+  hierarchy: GainsLossesBreakdownNode[],
+): number {
+  return hierarchy.reduce(
+    (sum, node) => sum + (node.rawRealizedGainLoss ?? node.realizedGainLoss),
+    0,
+  );
+}
+
 export function sumTopLevelUnrealizedGainLoss(
   hierarchy: GainsLossesBreakdownNode[],
 ): number {
   return hierarchy.reduce((sum, node) => sum + node.unrealizedGainLoss, 0);
 }
 
+export function sumTopLevelRawUnrealizedGainLoss(
+  hierarchy: GainsLossesBreakdownNode[],
+): number {
+  return hierarchy.reduce(
+    (sum, node) =>
+      sum + (node.rawUnrealizedGainLoss ?? node.unrealizedGainLoss),
+    0,
+  );
+}
+
 export function sumTopLevelTotalGainLoss(
   hierarchy: GainsLossesBreakdownNode[],
 ): number {
   return hierarchy.reduce((sum, node) => sum + node.totalGainLoss, 0);
+}
+
+export function sumTopLevelRawTotalGainLoss(
+  hierarchy: GainsLossesBreakdownNode[],
+): number {
+  return hierarchy.reduce(
+    (sum, node) => sum + (node.rawTotalGainLoss ?? node.totalGainLoss),
+    0,
+  );
 }

@@ -1,9 +1,11 @@
 import { Card, SimpleGrid, Stack, Text } from "@mantine/core";
+import { ExactValueTooltip } from "@/components/exact-value-tooltip";
 
 export type StatCardData = {
   id: string;
   label: string;
   value: string;
+  exactValue?: string;
   valueColor: "green" | "red";
   secondaryValue?: string;
 };
@@ -15,6 +17,7 @@ type StatCardProps = Omit<StatCardData, "id"> & {
 function StatCard({
   label,
   value,
+  exactValue,
   valueColor,
   secondaryValue,
   testId,
@@ -25,9 +28,11 @@ function StatCard({
         <Text c="dimmed" fw={600} ta="center">
           {label}
         </Text>
-        <Text fw={700} fz="xl" c={valueColor}>
-          {value}
-        </Text>
+        <ExactValueTooltip label={exactValue}>
+          <Text fw={700} fz="xl" c={valueColor}>
+            {value}
+          </Text>
+        </ExactValueTooltip>
         {secondaryValue ? (
           <Text c="dimmed" fw={500} fz="sm" ta="center">
             {secondaryValue}
@@ -50,6 +55,7 @@ export function PeriodStatsCardsSection(args: {
             key={card.id}
             label={card.label}
             value={card.value}
+            exactValue={card.exactValue}
             valueColor={card.valueColor}
             secondaryValue={card.secondaryValue}
             testId={`period-stat-card-${card.id}`}
@@ -66,6 +72,7 @@ export function PeriodStatsCardsSection(args: {
               key={card.id}
               label={card.label}
               value={card.value}
+              exactValue={card.exactValue}
               valueColor={card.valueColor}
             />
           ))}

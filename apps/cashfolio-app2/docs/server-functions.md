@@ -84,3 +84,22 @@ update `sortOrder` values after reordering sibling rows in the reorder modal.
   `marketFallback`) plus market/residual/effective reference amounts.
 - `rounding`: raw vs rounded event values used by the reconciliation UI
   explanation drawer.
+- `summaryRaw`: raw (unrounded) realised/unrealised/total values for tooltip
+  display while keeping `summary` as rounded 2-decimal display values.
+- Raw companions for displayed numeric fields are also returned alongside
+  rounded values (for example `rawEffectiveReferenceAmount`,
+  `rawExecutionUnitPriceInReference`, `rawRealizedGainLossDelta`,
+  `rawRunningRealizedGainLoss`, and equivalent raw fields on lot matches and
+  unrealised open lots).
+
+## Period Overview Raw Companions
+
+`getPeriodOverview` keeps rounded display-first fields and now also returns raw
+companions for exact-value tooltip UX:
+
+- `statsRaw` mirrors `stats` with unrounded values.
+- Breakdown totals include raw companions (`totalAmountRaw`) for expense,
+  income, asset, and liability sections.
+- Breakdown hierarchy nodes include `rawAmount` (alongside rounded `amount`).
+- Gains/losses hierarchy nodes include raw companions (`rawRealizedGainLoss`,
+  `rawUnrealizedGainLoss`, `rawTotalGainLoss`) alongside rounded values.

@@ -1,4 +1,5 @@
 import { AccountType, Unit } from "../.prisma-client/enums";
+import type { BreakdownHierarchyNode } from "../shared/breakdown-hierarchy";
 import { formatMonthPeriodValue } from "../shared/period";
 import {
   buildAvailableYears,
@@ -45,6 +46,9 @@ export type PeriodGainsLossesBreakdownNode = {
   realizedGainLoss: number;
   unrealizedGainLoss: number;
   totalGainLoss: number;
+  rawRealizedGainLoss?: number;
+  rawUnrealizedGainLoss?: number;
+  rawTotalGainLoss?: number;
   children: PeriodGainsLossesBreakdownNode[];
 };
 
@@ -121,6 +125,26 @@ function toRoundedGainLossTotals(args: {
     unrealizedGainLoss,
     totalGainLoss: round2(realizedGainLoss + unrealizedGainLoss),
   };
+}
+
+function toGainLossTotals(args: {
+  realizedGainLoss: number;
+  unrealizedGainLoss: number;
+}) {
+  const roundedTotals = toRoundedGainLossTotals(args);
+  return {
+    ...roundedTotals,
+    rawRealizedGainLoss: args.realizedGainLoss,
+    rawUnrealizedGainLoss: args.unrealizedGainLoss,
+    rawTotalGainLoss: args.realizedGainLoss + args.unrealizedGainLoss,
+  };
+}
+
+function sumHierarchyRawAmount(hierarchy: BreakdownHierarchyNode[]): number {
+  return hierarchy.reduce(
+    (sum, node) => sum + (node.rawAmount ?? node.amount),
+    0,
+  );
 }
 
 function buildGainsLossesBreakdown(args: {
@@ -230,24 +254,26 @@ function buildGainsLossesBreakdown(args: {
             .map(([accountId, accountValue]) => ({
               id: `unit-account:${unitId}:${accountId}`,
               label: accountValue.accountName,
-              ...toRoundedGainLossTotals({
+              ...toGainLossTotals({
                 realizedGainLoss: accountValue.realizedGainLoss,
                 unrealizedGainLoss: accountValue.unrealizedGainLoss,
               }),
               children: [],
             }));
-          const roundedTotals = toRoundedGainLossTotals({
+          const totals = toGainLossTotals({
             realizedGainLoss: accountNodes.reduce(
-              (sum, node) => sum + node.realizedGainLoss,
+              (sum, node) =>
+                sum + (node.rawRealizedGainLoss ?? node.realizedGainLoss),
               0,
             ),
             unrealizedGainLoss: accountNodes.reduce(
-              (sum, node) => sum + node.unrealizedGainLoss,
+              (sum, node) =>
+                sum + (node.rawUnrealizedGainLoss ?? node.unrealizedGainLoss),
               0,
             ),
           });
           return {
-            ...roundedTotals,
+            ...totals,
             children: accountNodes,
           };
         })(),
@@ -257,13 +283,15 @@ function buildGainsLossesBreakdown(args: {
       continue;
     }
 
-    const roundedTotals = toRoundedGainLossTotals({
+    const totals = toGainLossTotals({
       realizedGainLoss: childNodes.reduce(
-        (sum, node) => sum + node.realizedGainLoss,
+        (sum, node) =>
+          sum + (node.rawRealizedGainLoss ?? node.realizedGainLoss),
         0,
       ),
       unrealizedGainLoss: childNodes.reduce(
-        (sum, node) => sum + node.unrealizedGainLoss,
+        (sum, node) =>
+          sum + (node.rawUnrealizedGainLoss ?? node.unrealizedGainLoss),
         0,
       ),
     });
@@ -271,7 +299,7 @@ function buildGainsLossesBreakdown(args: {
     hierarchy.push({
       id: `unit-type:${unitType.id}`,
       label: unitType.label,
-      ...roundedTotals,
+      ...totals,
       children: childNodes,
     });
   }
@@ -283,7 +311,7 @@ function buildGainsLossesBreakdown(args: {
     .map(([accountId, accountValue]) => ({
       id: `explicit-account:${accountId}`,
       label: accountValue.accountName,
-      ...toRoundedGainLossTotals({
+      ...toGainLossTotals({
         realizedGainLoss: accountValue.realizedGainLoss,
         unrealizedGainLoss: accountValue.unrealizedGainLoss,
       }),
@@ -291,20 +319,22 @@ function buildGainsLossesBreakdown(args: {
     }));
 
   if (explicitChildren.length > 0) {
-    const roundedTotals = toRoundedGainLossTotals({
+    const totals = toGainLossTotals({
       realizedGainLoss: explicitChildren.reduce(
-        (sum, node) => sum + node.realizedGainLoss,
+        (sum, node) =>
+          sum + (node.rawRealizedGainLoss ?? node.realizedGainLoss),
         0,
       ),
       unrealizedGainLoss: explicitChildren.reduce(
-        (sum, node) => sum + node.unrealizedGainLoss,
+        (sum, node) =>
+          sum + (node.rawUnrealizedGainLoss ?? node.unrealizedGainLoss),
         0,
       ),
     });
     hierarchy.push({
       id: "unit-type:explicit",
       label: "Explicit G/L",
-      ...roundedTotals,
+      ...totals,
       children: explicitChildren,
     });
   }
@@ -350,6 +380,8 @@ export function buildPeriodOverviewResponse(args: {
   const roundedEndOfPeriodNetWorth = round2(
     args.endOfPeriodBalanceStats.netWorth,
   );
+  const rawSavings = income - expenses;
+  const rawTotalReturn = rawSavings + gainsLosses;
 
   const convertedPeriodEndBalances = args.assetLiabilityAccounts.map(
     (account) => ({
@@ -425,6 +457,18 @@ export function buildPeriodOverviewResponse(args: {
     contributions: args.gainsLossesContributions ?? [],
     referenceCurrency: args.referenceCurrency,
   });
+  const expenseBreakdownTotalAmountRaw = sumHierarchyRawAmount(
+    expenseBreakdownHierarchy,
+  );
+  const incomeBreakdownTotalAmountRaw = sumHierarchyRawAmount(
+    incomeBreakdownHierarchy,
+  );
+  const assetBreakdownTotalAmountRaw = sumHierarchyRawAmount(
+    assetBreakdown.hierarchy,
+  );
+  const liabilityBreakdownTotalAmountRaw = sumHierarchyRawAmount(
+    liabilityBreakdown.hierarchy,
+  );
 
   return {
     selectedPeriodValue: args.selection.periodValue,
@@ -462,8 +506,22 @@ export function buildPeriodOverviewResponse(args: {
       realizedGainLoss: round2(realizedGainLoss),
       unrealizedGainLoss: round2(unrealizedGainLoss),
     },
+    statsRaw: {
+      totalReturn: rawTotalReturn,
+      savings: rawSavings,
+      income,
+      expenses,
+      gainsLosses,
+      endOfPeriodNetWorth: args.endOfPeriodBalanceStats.netWorth,
+      endOfPeriodAssets: args.endOfPeriodBalanceStats.assets,
+      endOfPeriodLiabilities: args.endOfPeriodBalanceStats.liabilities,
+      explicitGainLoss,
+      realizedGainLoss,
+      unrealizedGainLoss,
+    },
     expenseBreakdown: {
       totalAmount: expenseBreakdown.totalAmount,
+      totalAmountRaw: expenseBreakdownTotalAmountRaw,
       items: expenseBreakdown.items,
       hierarchy: expenseBreakdownHierarchy,
       hasHiddenAmountDiscrepancy: expenseBreakdownHasHiddenAmountDiscrepancy,
@@ -471,13 +529,20 @@ export function buildPeriodOverviewResponse(args: {
     },
     incomeBreakdown: {
       totalAmount: incomeBreakdown.totalAmount,
+      totalAmountRaw: incomeBreakdownTotalAmountRaw,
       items: incomeBreakdown.items,
       hierarchy: incomeBreakdownHierarchy,
       hasHiddenAmountDiscrepancy: incomeBreakdownHasHiddenAmountDiscrepancy,
       hiddenAmountDiscrepancyNodeIds: incomeBreakdownDiscrepancyNodeIds,
     },
-    assetBreakdown,
-    liabilityBreakdown,
+    assetBreakdown: {
+      ...assetBreakdown,
+      totalAmountRaw: assetBreakdownTotalAmountRaw,
+    },
+    liabilityBreakdown: {
+      ...liabilityBreakdown,
+      totalAmountRaw: liabilityBreakdownTotalAmountRaw,
+    },
     gainsLossesBreakdown,
   };
 }

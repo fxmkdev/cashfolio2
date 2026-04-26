@@ -35,6 +35,49 @@ import type { RealizedEventRow } from "./-page-view-types";
 import { RealizedEventExplainDrawer } from "./-realized-event-explain-drawer";
 import { ReconciliationStatCards } from "./-reconciliation-stat-cards";
 
+type ExactValueByField = Record<string, number | null | undefined>;
+
+function addRealizedEventExactValues(
+  event: RealizedEventRow,
+): RealizedEventRow & { __exactByField: ExactValueByField } {
+  return {
+    ...event,
+    __exactByField: {
+      quantity: event.rawQuantity,
+      effectiveReferenceAmount: event.rawEffectiveReferenceAmount,
+      executionUnitPriceInReference: event.rawExecutionUnitPriceInReference,
+      realizedGainLossDelta: event.rawRealizedGainLossDelta,
+      runningRealizedGainLoss: event.rawRunningRealizedGainLoss,
+    },
+    lotMatches: event.lotMatches.map((lotMatch) => ({
+      ...lotMatch,
+      __exactByField: {
+        matchedQuantity: lotMatch.rawMatchedQuantity,
+        lotUnitCostInReference: lotMatch.rawLotUnitCostInReference,
+        executionUnitPriceInReference:
+          lotMatch.rawExecutionUnitPriceInReference,
+        realizedGainLossDelta: lotMatch.rawRealizedGainLossDelta,
+        runningEventRealizedGainLoss: lotMatch.rawRunningEventRealizedGainLoss,
+      },
+    })),
+  };
+}
+
+function addOpenLotExactValues(
+  lot: PeriodGainLossReconciliation["unrealizedOpenLots"][number],
+) {
+  return {
+    ...lot,
+    __exactByField: {
+      quantity: lot.rawQuantity,
+      unitCostInReference: lot.rawUnitCostInReference,
+      periodEndRate: lot.rawPeriodEndRate,
+      unrealizedGainLoss: lot.rawUnrealizedGainLoss,
+      runningUnrealizedGainLoss: lot.rawRunningUnrealizedGainLoss,
+    },
+  };
+}
+
 type GainLossReconciliationPageViewProps = {
   selectedPeriodValue: string;
   reconciliation: PeriodGainLossReconciliation | null;
@@ -102,15 +145,21 @@ export function GainLossReconciliationPageView({
       }),
     [onOpenEventTransaction, reconciliation.target.isVirtual],
   );
+  const realizedRows = useMemo(
+    () => reconciliation.realizedEvents.map(addRealizedEventExactValues),
+    [reconciliation.realizedEvents],
+  );
+  const unrealizedOpenLotRows = useMemo(
+    () => reconciliation.unrealizedOpenLots.map(addOpenLotExactValues),
+    [reconciliation.unrealizedOpenLots],
+  );
 
   const selectedEvent = useMemo<RealizedEventRow | null>(
     () =>
       selectedEventId
-        ? (reconciliation.realizedEvents.find(
-            (event) => event.id === selectedEventId,
-          ) ?? null)
+        ? (realizedRows.find((event) => event.id === selectedEventId) ?? null)
         : null,
-    [reconciliation.realizedEvents, selectedEventId],
+    [realizedRows, selectedEventId],
   );
 
   const handlePeriodModeChange = (nextMode: string) => {
@@ -192,6 +241,7 @@ export function GainLossReconciliationPageView({
 
         <ReconciliationStatCards
           summary={reconciliation.summary}
+          summaryRaw={reconciliation.summaryRaw}
           currencyFormatter={currencyFormatter}
         />
 
@@ -200,7 +250,7 @@ export function GainLossReconciliationPageView({
             <Group justify="space-between" align="center">
               <Title order={4}>Realised Events</Title>
               <Text size="sm" c="dimmed">
-                {reconciliation.realizedEvents.length} event(s)
+                {realizedRows.length} event(s)
               </Text>
             </Group>
             <Text size="xs" c="dimmed">
@@ -208,7 +258,7 @@ export function GainLossReconciliationPageView({
             </Text>
             <div style={{ height: 360 }}>
               <DataGrid
-                rowData={reconciliation.realizedEvents}
+                rowData={realizedRows}
                 columnDefs={realizedColumns}
                 defaultColDef={{
                   sortable: false,
@@ -230,12 +280,12 @@ export function GainLossReconciliationPageView({
             <Group justify="space-between" align="center">
               <Title order={4}>Unrealised Open Lots</Title>
               <Text size="sm" c="dimmed">
-                {reconciliation.unrealizedOpenLots.length} lot(s)
+                {unrealizedOpenLotRows.length} lot(s)
               </Text>
             </Group>
             <div style={{ height: 320 }}>
               <DataGrid
-                rowData={reconciliation.unrealizedOpenLots}
+                rowData={unrealizedOpenLotRows}
                 columnDefs={OPEN_LOT_COLUMNS}
                 defaultColDef={{
                   sortable: false,

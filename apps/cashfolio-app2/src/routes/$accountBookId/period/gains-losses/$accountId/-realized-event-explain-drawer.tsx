@@ -9,8 +9,13 @@ import {
   Text,
 } from "@mantine/core";
 import type { ColDef } from "ag-grid-enterprise";
+import { ExactValueTooltip } from "@/components/exact-value-tooltip";
 import { DataGrid } from "@/components/data-grid";
 import type { PeriodGainLossReconciliation } from "@/server/period-gain-loss-reconciliation";
+import {
+  formatExactNumber,
+  formatExactNumberWithFormatter,
+} from "@/shared/exact-value-format";
 import {
   formatDateLabel,
   formatDescription,
@@ -77,39 +82,64 @@ export function RealizedEventExplainDrawer(args: {
               <Text size="sm" c="dimmed">
                 Quantity
               </Text>
-              <Text fw={700}>
-                {args.selectedEvent.quantity.toLocaleString("en-CH")}
-              </Text>
+              <ExactValueTooltip
+                label={formatExactNumber(args.selectedEvent.rawQuantity)}
+              >
+                <Text fw={700}>
+                  {args.selectedEvent.quantity.toLocaleString("en-CH")}
+                </Text>
+              </ExactValueTooltip>
             </Card>
             <Card withBorder radius="md" p="md">
               <Text size="sm" c="dimmed">
                 Effective Amount
               </Text>
-              <Text fw={700}>
-                {args.currencyFormatter.format(
-                  args.selectedEvent.effectiveReferenceAmount,
-                )}
-              </Text>
+              <ExactValueTooltip
+                label={formatExactNumberWithFormatter({
+                  formatter: args.currencyFormatter,
+                  value: args.selectedEvent.rawEffectiveReferenceAmount,
+                })}
+              >
+                <Text fw={700}>
+                  {args.currencyFormatter.format(
+                    args.selectedEvent.effectiveReferenceAmount,
+                  )}
+                </Text>
+              </ExactValueTooltip>
             </Card>
             <Card withBorder radius="md" p="md">
               <Text size="sm" c="dimmed">
                 Execution Price
               </Text>
-              <Text fw={700}>
-                {args.currencyFormatter.format(
-                  args.selectedEvent.executionUnitPriceInReference,
-                )}
-              </Text>
+              <ExactValueTooltip
+                label={formatExactNumberWithFormatter({
+                  formatter: args.currencyFormatter,
+                  value: args.selectedEvent.rawExecutionUnitPriceInReference,
+                })}
+              >
+                <Text fw={700}>
+                  {args.currencyFormatter.format(
+                    args.selectedEvent.executionUnitPriceInReference,
+                  )}
+                </Text>
+              </ExactValueTooltip>
             </Card>
             <Card withBorder radius="md" p="md">
               <Text size="sm" c="dimmed">
                 Realised Delta
               </Text>
-              <Text fw={700}>
-                {args.currencyFormatter.format(
-                  args.selectedEvent.realizedGainLossDelta,
-                )}
-              </Text>
+              <ExactValueTooltip
+                label={formatExactNumberWithFormatter({
+                  formatter: args.currencyFormatter,
+                  value: args.selectedEvent.rawRealizedGainLossDelta,
+                })}
+              >
+                <Text fw={700}>
+                  {args.currencyFormatter.format(
+                    args.selectedEvent.realizedGainLossDelta,
+                  )}
+                </Text>
+              </ExactValueTooltip>
             </Card>
           </SimpleGrid>
 

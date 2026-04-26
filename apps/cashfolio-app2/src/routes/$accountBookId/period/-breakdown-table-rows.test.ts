@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   flattenBreakdownHierarchyRows,
   sumTopLevelBreakdownHierarchyAmount,
+  sumTopLevelBreakdownHierarchyRawAmount,
 } from "./-breakdown-table-rows";
 import type { BreakdownHierarchyNode } from "./-breakdown-drill";
 
@@ -47,7 +48,7 @@ describe("flattenBreakdownHierarchyRows", () => {
       },
     ];
 
-    expect(flattenBreakdownHierarchyRows(hierarchy)).toEqual([
+    expect(flattenBreakdownHierarchyRows(hierarchy)).toMatchObject([
       {
         id: "group:asset",
         parentId: undefined,
@@ -84,6 +85,8 @@ describe("flattenBreakdownHierarchyRows", () => {
         value: 100,
       },
     ]);
+    const [firstRow] = flattenBreakdownHierarchyRows(hierarchy);
+    expect(firstRow?.__exactByField).toEqual({ value: 1400 });
   });
 
   test("returns empty array for empty hierarchy", () => {
@@ -127,9 +130,11 @@ describe("sumTopLevelBreakdownHierarchyAmount", () => {
     ];
 
     expect(sumTopLevelBreakdownHierarchyAmount(hierarchy)).toBe(1500);
+    expect(sumTopLevelBreakdownHierarchyRawAmount(hierarchy)).toBe(1500);
   });
 
   test("returns zero for empty hierarchy", () => {
     expect(sumTopLevelBreakdownHierarchyAmount([])).toBe(0);
+    expect(sumTopLevelBreakdownHierarchyRawAmount([])).toBe(0);
   });
 });

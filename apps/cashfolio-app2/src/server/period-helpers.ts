@@ -356,6 +356,7 @@ function finalizeBreakdownHierarchyNodes(
         label: node.label,
         kind: node.kind,
         amount: roundedAmount,
+        rawAmount: node.amount,
         children: [],
       });
       continue;
@@ -402,6 +403,7 @@ function finalizeBreakdownHierarchyNodes(
       label: node.label,
       kind: node.kind,
       amount: roundedAmount,
+      rawAmount: node.amount,
       children,
     });
   }

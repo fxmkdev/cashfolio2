@@ -12,6 +12,7 @@ import {
   flattenBreakdownHierarchyRows,
   isBreakdownTotalFooterRow,
   sumTopLevelBreakdownHierarchyAmount,
+  sumTopLevelBreakdownHierarchyRawAmount,
 } from "./-breakdown-table-rows";
 
 type BreakdownTableProps = {
@@ -38,6 +39,9 @@ export function BreakdownTable({
         rowType: "breakdownTotalFooter",
         name: "Total",
         value: sumTopLevelBreakdownHierarchyAmount(hierarchy),
+        __exactByField: {
+          value: sumTopLevelBreakdownHierarchyRawAmount(hierarchy),
+        },
       },
     ],
     [hierarchy],

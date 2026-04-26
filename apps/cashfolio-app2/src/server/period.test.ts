@@ -599,7 +599,7 @@ describe("breakdown hierarchy", () => {
       groupById,
     });
 
-    expect(hierarchy).toEqual([
+    expect(hierarchy).toMatchObject([
       {
         id: "group:expenses",
         label: "Expenses",
@@ -781,7 +781,7 @@ describe("breakdown hierarchy", () => {
       "group:housing",
       "group:rent",
     ]);
-    expect(result.hierarchy).toEqual([
+    expect(result.hierarchy).toMatchObject([
       {
         id: "group:expenses",
         label: "Expenses",
@@ -886,7 +886,7 @@ describe("breakdown hierarchy", () => {
       groupById,
     });
 
-    expect(result.hierarchy).toEqual([
+    expect(result.hierarchy).toMatchObject([
       {
         id: "group:expenses",
         label: "Expenses",
@@ -1058,7 +1058,7 @@ describe("buildPeriodEndAllocationBreakdown", () => {
 
     expect(result.hasHiddenAmountDiscrepancy).toBe(true);
     expect(result.hiddenAmountDiscrepancyNodeIds).toEqual(["group:assets"]);
-    expect(result.hierarchy).toEqual([
+    expect(result.hierarchy).toMatchObject([
       {
         id: "group:assets",
         label: "Assets",

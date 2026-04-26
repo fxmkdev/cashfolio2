@@ -97,14 +97,19 @@ function toRealizedEventLotMatches(args: {
       acquisitionDate: parsed.acquisitionDate,
       acquisitionBookingId: parsed.acquisitionBookingId,
       matchedQuantity: round2(lotMatch.matchedQuantity),
+      rawMatchedQuantity: lotMatch.matchedQuantity,
       lotUnitCostInReference: round2(lotMatch.lotUnitCostInReference),
+      rawLotUnitCostInReference: lotMatch.lotUnitCostInReference,
       executionUnitPriceInReference: round2(
         lotMatch.executionUnitPriceInReference,
       ),
+      rawExecutionUnitPriceInReference: lotMatch.executionUnitPriceInReference,
       realizedGainLossDelta: round2(lotMatch.realizedGainLossDelta),
+      rawRealizedGainLossDelta: lotMatch.realizedGainLossDelta,
       runningEventRealizedGainLoss: round2(
         lotMatch.runningEventRealizedGainLoss,
       ),
+      rawRunningEventRealizedGainLoss: lotMatch.runningEventRealizedGainLoss,
     };
   });
 }
@@ -129,10 +134,15 @@ export function toRoundedRealizedEvent(
     transactionId: event.transactionId,
     transactionDescription: event.transactionDescription ?? null,
     quantity: event.quantity,
+    rawQuantity: event.quantity,
     effectiveReferenceAmount: roundedEffectiveReferenceAmount,
+    rawEffectiveReferenceAmount: event.effectiveReferenceAmount,
     executionUnitPriceInReference: roundedExecutionUnitPriceInReference,
+    rawExecutionUnitPriceInReference: event.executionUnitPriceInReference,
     realizedGainLossDelta: roundedRealizedGainLossDelta,
+    rawRealizedGainLossDelta: event.realizedGainLossDelta,
     runningRealizedGainLoss: roundedRunningRealizedGainLoss,
+    rawRunningRealizedGainLoss: event.runningRealizedGainLoss,
     lotMatches: toRealizedEventLotMatches({
       bookingId: event.bookingId,
       lotMatches: event.lotMatches,
@@ -166,10 +176,15 @@ export function toRoundedOpenLot(
     acquisitionDate: parsed.acquisitionDate,
     acquisitionBookingId: parsed.acquisitionBookingId,
     quantity: lot.quantity,
+    rawQuantity: lot.quantity,
     unitCostInReference: round2(lot.unitCostInReference),
+    rawUnitCostInReference: lot.unitCostInReference,
     periodEndRate: round2(lot.periodEndRate),
+    rawPeriodEndRate: lot.periodEndRate,
     unrealizedGainLoss: round2(lot.unrealizedGainLoss),
+    rawUnrealizedGainLoss: lot.unrealizedGainLoss,
     runningUnrealizedGainLoss: 0,
+    rawRunningUnrealizedGainLoss: 0,
   };
 }
 
@@ -201,14 +216,18 @@ export function addRunningUnrealizedGainLoss(
     left.acquisitionSortKey.localeCompare(right.acquisitionSortKey, "en"),
   );
   let runningUnrealizedGainLoss = 0;
+  let rawRunningUnrealizedGainLoss = 0;
 
   return sortedOpenLots.map((openLot) => {
     runningUnrealizedGainLoss = round2(
       runningUnrealizedGainLoss + openLot.unrealizedGainLoss,
     );
+    rawRunningUnrealizedGainLoss += openLot.rawUnrealizedGainLoss;
+
     return {
       ...openLot,
       runningUnrealizedGainLoss,
+      rawRunningUnrealizedGainLoss,
     };
   });
 }
