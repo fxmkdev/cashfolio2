@@ -2,11 +2,7 @@ import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { prisma } from "../prisma.server";
 import { normalizePeriodValue } from "../shared/period";
 import { startOfUtcDay } from "../shared/date";
-import {
-  filterConvertibleHoldingAccounts,
-  isMultiUnitTransaction,
-  shouldIncludeTransactionForPeriod,
-} from "./period-helpers";
+import { filterConvertibleHoldingAccounts } from "./period-helpers";
 import {
   convertBookingValueToReference,
   getUnitToReferenceExchangeRate,
