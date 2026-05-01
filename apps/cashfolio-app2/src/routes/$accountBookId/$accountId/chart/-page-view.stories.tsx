@@ -3,6 +3,10 @@ import { useRouterState } from "@tanstack/react-router";
 import { Box, Text } from "@mantine/core";
 import { expect, userEvent, within } from "storybook/test";
 import { AccountType, Unit } from "@/.prisma-client/enums";
+import {
+  createDisplayNumberFormatter,
+  getCurrencyDecimals,
+} from "@/shared/unit-format";
 import { LedgerBalanceChartPageView } from "./-page-view";
 import { LedgerViewSegmentedControl } from "../-view-segmented-control";
 
@@ -13,6 +17,12 @@ function LedgerBalanceChartPageStoryHarness({
 }) {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
+  });
+  const currencyFormatter = createDisplayNumberFormatter({
+    locale: "en-CH",
+    style: "currency",
+    currency: "CHF",
+    decimals: getCurrencyDecimals("CHF"),
   });
 
   return (
@@ -48,14 +58,7 @@ function LedgerBalanceChartPageStoryHarness({
             balance: 915.5,
           },
         ]}
-        formatBalance={(value) =>
-          new Intl.NumberFormat("en-CH", {
-            style: "currency",
-            currency: "CHF",
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          }).format(value)
-        }
+        formatBalance={(value) => currencyFormatter.format(value)}
         viewSwitcher={
           <LedgerViewSegmentedControl
             accountBookId="storybook-book"

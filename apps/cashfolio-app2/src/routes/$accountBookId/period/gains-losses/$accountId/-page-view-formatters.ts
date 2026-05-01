@@ -1,12 +1,16 @@
 import { format } from "date-fns";
+import {
+  createDisplayNumberFormatter,
+  getCurrencyDecimals,
+} from "@/shared/unit-format";
 import type { EventSide, RealizedEventRow } from "./-page-view-types";
 
 export function buildCurrencyFormatter(currency: string) {
-  return new Intl.NumberFormat("en-CH", {
+  return createDisplayNumberFormatter({
+    locale: "en-CH",
     style: "currency",
     currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    decimals: getCurrencyDecimals(currency),
   });
 }
 

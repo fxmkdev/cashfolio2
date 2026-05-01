@@ -76,7 +76,6 @@ export function validateEditTransactionBookingsRoot(args: {
         {
           thousandSeparator,
           decimalSeparator,
-          decimalScale: 2,
         },
       )}.`
     : null;

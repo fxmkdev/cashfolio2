@@ -17,6 +17,7 @@ import {
 type BreakdownTableProps = {
   hierarchy: BreakdownHierarchyNode[];
   valueHeaderName: string;
+  displayDecimals?: number;
   onAccountDoubleClick?: (accountId: string) => void;
   expandedGroupsStorageKey?: string;
 };
@@ -24,6 +25,7 @@ type BreakdownTableProps = {
 export function BreakdownTable({
   hierarchy,
   valueHeaderName,
+  displayDecimals = 2,
   onAccountDoubleClick,
   expandedGroupsStorageKey,
 }: BreakdownTableProps) {
@@ -53,10 +55,15 @@ export function BreakdownTable({
         headerName: valueHeaderName,
         width: 170,
         type: FORMATTED_NUMERIC_COLUMN,
+        context: {
+          formattedNumeric: {
+            getDisplayDecimals: () => displayDecimals,
+          },
+        },
         filter: "agNumberColumnFilter",
       },
     ],
-    [valueHeaderName],
+    [displayDecimals, valueHeaderName],
   );
 
   return (

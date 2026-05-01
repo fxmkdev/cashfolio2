@@ -210,7 +210,6 @@ export function SimpleTransactionModal({
           />
           <FormattedNumberInput
             label="Amount"
-            decimalScale={2}
             allowNegative={false}
             hideControls
             locale="en-CH"

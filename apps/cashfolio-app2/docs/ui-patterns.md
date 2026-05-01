@@ -426,6 +426,7 @@ unit identity.
 Defined in `src/components/column-types.tsx`:
 
 - `FORMATTED_NUMERIC_COLUMN` — right-aligned, `en-CH` locale number formatting
+  with unit-aware display precision
 - `SELECT_COLUMN` — searchable dropdown editor
 - `TEXT_COLUMN` — text input editor
 - `DATE_COLUMN` — date input with min/max constraints from context
@@ -487,8 +488,17 @@ data groups them hierarchically. Fields that don't apply to a node type are
 
 `src/components/formatted-number-input.tsx` wraps Mantine's `NumberInput` using
 `Intl.NumberFormat` to extract locale-specific thousand/decimal separators
-(defaults to `en-CH`). Used in `FORMATTED_NUMERIC_COLUMN` and
-`EditTransactionModal`.
+(defaults to `en-CH`).
+
+Precision behavior:
+
+- **Display contexts** enforce unit-aware precision via
+  `src/shared/unit-format.ts`:
+  - currencies: ISO 4217 minor units (with fallback to `2`)
+  - cryptocurrencies: Kraken `display_decimals` (with fallback to `8`)
+  - securities: `0` decimals
+- **Data-entry contexts** do not enforce decimal caps, so users can enter and
+  review full decimal precision from the stored numeric value.
 
 ## Session Storage for UI State
 

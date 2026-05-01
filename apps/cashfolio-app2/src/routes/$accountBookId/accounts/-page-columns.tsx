@@ -3,6 +3,7 @@ import { Loader } from "@mantine/core";
 import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
 import { Unit } from "@/.prisma-client/enums";
 import { FORMATTED_NUMERIC_COLUMN } from "@/components/column-types";
+import { getCurrencyDecimals } from "@/shared/unit-format";
 import {
   ActiveAccountTreeActionsCell,
   ArchivedAccountTreeActionsCell,
@@ -54,8 +55,11 @@ export function useAccountTreeColumnDefs(params: {
   balanceInReferenceCurrencyByGroupIdRef.current =
     balanceInReferenceCurrencyByGroupId;
 
-  return useMemo<ColDef<AccountsGridRow>[]>(
-    () => [
+  return useMemo<ColDef<AccountsGridRow>[]>(() => {
+    const referenceCurrencyDisplayDecimals =
+      getCurrencyDecimals(referenceCurrency);
+
+    return [
       ...(!isEquityTab
         ? [
             {
@@ -113,6 +117,11 @@ export function useAccountTreeColumnDefs(params: {
               headerName: `Balance (${referenceCurrency})`,
               width: 170,
               type: FORMATTED_NUMERIC_COLUMN,
+              context: {
+                formattedNumeric: {
+                  getDisplayDecimals: () => referenceCurrencyDisplayDecimals,
+                },
+              },
               filter: "agNumberColumnFilter",
               valueGetter: ({
                 data,
@@ -214,16 +223,15 @@ export function useAccountTreeColumnDefs(params: {
           );
         },
       } satisfies ColDef<AccountsGridRow>,
-    ],
-    [
-      isArchivedMode,
-      isEquityTab,
-      referenceCurrency,
-      onEditRow,
-      onUnarchiveRow,
-      onArchiveRow,
-      onDeleteRow,
-      onReorderRow,
-    ],
-  );
+    ];
+  }, [
+    isArchivedMode,
+    isEquityTab,
+    referenceCurrency,
+    onEditRow,
+    onUnarchiveRow,
+    onArchiveRow,
+    onDeleteRow,
+    onReorderRow,
+  ]);
 }

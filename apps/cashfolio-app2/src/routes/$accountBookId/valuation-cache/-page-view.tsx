@@ -36,6 +36,11 @@ import {
   type ValuationCacheUnitsResponse,
   type ValuationCacheUnitRow,
 } from "@/server/valuation-cache";
+import {
+  createDisplayNumberFormatter,
+  getCryptocurrencyDecimals,
+  getCurrencyDecimals,
+} from "@/shared/unit-format";
 import { VALUATION_BASE_CURRENCY } from "@/shared/valuation-base-currency";
 import {
   getRowsForValuationUnitTab,
@@ -301,14 +306,26 @@ export function ValuationCachePageView({
     [seriesState.points],
   );
 
-  const numberFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat("en-CH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 6,
-      }),
-    [],
-  );
+  const numberFormatter = useMemo(() => {
+    if (selectedUnit?.unitType === "CURRENCY") {
+      return createDisplayNumberFormatter({
+        locale: "en-CH",
+        decimals: getCurrencyDecimals(selectedUnit.currency),
+      });
+    }
+
+    if (selectedUnit?.unitType === "CRYPTOCURRENCY") {
+      return createDisplayNumberFormatter({
+        locale: "en-CH",
+        decimals: getCryptocurrencyDecimals(selectedUnit.cryptocurrency),
+      });
+    }
+
+    return createDisplayNumberFormatter({
+      locale: "en-CH",
+      decimals: 0,
+    });
+  }, [selectedUnit]);
 
   const dateFormatter = useMemo(
     () =>

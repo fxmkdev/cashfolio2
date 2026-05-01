@@ -212,6 +212,7 @@ export function createEditTransactionColumnDefs(args: {
     {
       field: "debit",
       type: FORMATTED_NUMERIC_COLUMN,
+      context: { formattedNumeric: { formattedNumericMode: "entry" } },
       aggFunc: "sum",
       width: 105,
       editable: ({ data }) => {
@@ -227,6 +228,7 @@ export function createEditTransactionColumnDefs(args: {
     {
       field: "credit",
       type: FORMATTED_NUMERIC_COLUMN,
+      context: { formattedNumeric: { formattedNumericMode: "entry" } },
       aggFunc: "sum",
       width: 105,
       editable: ({ data }) => {

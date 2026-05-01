@@ -12,6 +12,7 @@ import { GainsLossesTable } from "./-gains-losses-table";
 
 type GainsLossesCardProps = {
   selectedChartType: GainsLossesChartType;
+  displayDecimals: number;
   tableExpandedGroupsStorageKey: string;
   subtitle: string;
   breadcrumbs: BreakdownBreadcrumb[];
@@ -42,6 +43,7 @@ const GAINS_LOSSES_CHART_TYPE_OPTIONS = [
 
 export function GainsLossesCard({
   selectedChartType,
+  displayDecimals,
   tableExpandedGroupsStorageKey,
   subtitle,
   breadcrumbs,
@@ -74,6 +76,7 @@ export function GainsLossesCard({
         isTableView ? (
           <GainsLossesTable
             hierarchy={hierarchy}
+            displayDecimals={displayDecimals}
             expandedGroupsStorageKey={tableExpandedGroupsStorageKey}
             onExplicitGainLossDoubleClick={onExplicitGainLossDoubleClick}
             onUnitAccountDoubleClick={onUnitAccountDoubleClick}
