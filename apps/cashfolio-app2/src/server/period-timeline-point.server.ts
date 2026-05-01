@@ -53,8 +53,8 @@ export async function loadPeriodTimelinePoint(args: {
   });
 
   return {
-    selectedPeriodValue: loadedBaseData.selection.periodValue,
-    selectedPeriodLabel: loadedBaseData.selection.label,
+    selectedPeriodValue: selection.periodValue,
+    selectedPeriodLabel: selection.label,
     totalReturn,
   };
 }

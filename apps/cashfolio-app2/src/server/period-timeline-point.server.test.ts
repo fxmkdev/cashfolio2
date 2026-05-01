@@ -282,4 +282,78 @@ describe("loadPeriodTimelinePoint", () => {
     expect(finalizeHoldingGainLossState).not.toHaveBeenCalled();
     expect(computeTransferClearingGainLossSplit).toHaveBeenCalledTimes(1);
   });
+
+  test("includes holding gain/loss when convertible holding accounts exist", async () => {
+    prisma.account.findMany.mockImplementation(
+      async (args: { where?: unknown }) => {
+        const where = args.where as
+          | { type?: unknown; equityAccountSubtype?: unknown }
+          | undefined;
+
+        if (
+          where &&
+          typeof where.type === "object" &&
+          where.type != null &&
+          "in" in where.type
+        ) {
+          return [
+            {
+              id: "holding-1",
+              name: "AAPL",
+              groupId: null,
+              type: AccountType.ASSET,
+              unit: Unit.SECURITY,
+              currency: null,
+              cryptocurrency: null,
+              symbol: "AAPL",
+              tradeCurrency: "USD",
+            },
+          ];
+        }
+
+        return [];
+      },
+    );
+
+    prisma.transaction.findMany
+      .mockResolvedValueOnce([
+        {
+          id: "tx-1",
+          bookings: [
+            {
+              id: "booking-1",
+              accountId: "holding-1",
+              date: new Date("2026-02-10T00:00:00.000Z"),
+              value: 1,
+              unit: Unit.SECURITY,
+              currency: null,
+              cryptocurrency: null,
+              symbol: "AAPL",
+              tradeCurrency: "USD",
+              account: {
+                type: AccountType.ASSET,
+                equityAccountSubtype: null,
+              },
+            },
+          ],
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    finalizeHoldingGainLossState.mockResolvedValue({
+      realizedGainLoss: 7,
+      unrealizedGainLoss: 3,
+    });
+
+    const result = await loadPeriodTimelinePoint({
+      accountBookId: "book-holdings",
+      period: "2026-02",
+      context: createContext({
+        startDate: "2026-01-01T00:00:00.000Z",
+      }),
+    });
+
+    expect(result.totalReturn).toBe(10);
+    expect(finalizeHoldingGainLossState).toHaveBeenCalledTimes(1);
+  });
 });
