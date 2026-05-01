@@ -123,12 +123,13 @@ test("timeline deep link with invalid mode falls back to monthly", async ({
 test("timeline empty state is shown when no periods are available", async ({
   page,
 }) => {
-  const tomorrow = new Date();
-  tomorrow.setUTCHours(0, 0, 0, 0);
-  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const now = new Date();
+  const futureStartDate = new Date(
+    Date.UTC(now.getUTCFullYear() + 1, 0, 1, 0, 0, 0, 0),
+  );
 
   const emptyStateSeeded = await resetAndSeedDatabase({
-    accountBookStartDate: tomorrow,
+    accountBookStartDate: futureStartDate,
   });
 
   await page.goto(`/${emptyStateSeeded.accountBookId}/timeline`);
