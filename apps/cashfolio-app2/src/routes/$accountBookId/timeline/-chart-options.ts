@@ -1,26 +1,51 @@
 import type { MantineTheme } from "@mantine/core";
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
+import {
+  getExplicitPeriodDateRange,
+  parseExplicitPeriodSelection,
+} from "@/shared/period";
 import type { PeriodTimelineResponse } from "@/server/period-timeline";
+import type { TimelinePeriodMode } from "./-page-types";
+import {
+  getTimelineRangeButtons,
+  getTimelineRangeControlStyles,
+} from "./-range-controls";
 
 export type TimelineChartDatum = {
   periodValue: string;
   periodLabel: string;
+  periodStart: Date;
+  periodEndExclusive: Date;
   totalReturn: number;
 };
 
 export function mapTimelinePointsToChartData(
   points: PeriodTimelineResponse["points"],
 ): TimelineChartDatum[] {
-  return points.map((point) => ({
-    periodValue: point.periodValue,
-    periodLabel: point.periodLabel,
-    totalReturn: point.totalReturn,
-  }));
+  return points.flatMap((point) => {
+    const explicitPeriod = parseExplicitPeriodSelection(point.periodValue);
+    if (!explicitPeriod) {
+      return [];
+    }
+
+    const { from, toExclusive } = getExplicitPeriodDateRange(explicitPeriod);
+
+    return [
+      {
+        periodValue: point.periodValue,
+        periodLabel: point.periodLabel,
+        periodStart: from,
+        periodEndExclusive: toExclusive,
+        totalReturn: point.totalReturn,
+      },
+    ];
+  });
 }
 
 export function createTimelineChartOptions(args: {
   chartData: TimelineChartDatum[];
+  periodMode: TimelinePeriodMode;
   amountCompactFormatter: Intl.NumberFormat;
   currencyFormatter: Intl.NumberFormat;
   colors: DashboardChartThemeColors;
@@ -40,7 +65,13 @@ export function createTimelineChartOptions(args: {
     ? args.theme.colors.gray[7]
     : args.theme.colors.gray[2];
   const currentPeriodBandFillOpacity = args.isDarkMode ? 0.2 : 0.45;
-  const currentPeriodLabel = args.chartData.at(-1)?.periodLabel;
+  const currentPeriod = args.chartData.at(-1);
+  const rangeButtons = getTimelineRangeButtons(args.periodMode);
+  const rangeControlStyles = getTimelineRangeControlStyles(args);
+  const unitTimeAxisUnit =
+    args.periodMode === "year"
+      ? { unit: "year" as const, utc: true }
+      : { unit: "month" as const, utc: true };
 
   return {
     data: args.chartData,
@@ -61,10 +92,21 @@ export function createTimelineChartOptions(args: {
     legend: {
       enabled: false,
     },
+    navigator: {
+      enabled: true,
+      miniChart: {
+        enabled: false,
+      },
+    },
+    ranges: {
+      enabled: true,
+      buttons: rangeButtons,
+      ...rangeControlStyles,
+    },
     series: [
       {
         type: "bar",
-        xKey: "periodLabel",
+        xKey: "periodStart",
         yKey: "totalReturn",
         yName: "Total Return",
         widthRatio: 0.72,
@@ -100,12 +142,16 @@ export function createTimelineChartOptions(args: {
     ],
     axes: {
       x: {
-        type: "category",
-        crossLines: currentPeriodLabel
+        type: "unit-time",
+        unit: unitTimeAxisUnit,
+        crossLines: currentPeriod
           ? [
               {
                 type: "range",
-                range: [currentPeriodLabel, currentPeriodLabel],
+                range: [
+                  currentPeriod.periodStart,
+                  currentPeriod.periodEndExclusive,
+                ],
                 fill: currentPeriodBandFill,
                 fillOpacity: currentPeriodBandFillOpacity,
                 strokeWidth: 0,
@@ -114,6 +160,7 @@ export function createTimelineChartOptions(args: {
           : undefined,
         label: {
           rotation: -25,
+          format: args.periodMode === "year" ? "%Y" : "%b %Y",
         },
       },
       y: {

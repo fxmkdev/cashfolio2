@@ -10,14 +10,15 @@ import {
   useMantineTheme,
 } from "@mantine/core";
 import { IconCalendarMonth, IconListDetails } from "@tabler/icons-react";
+import type { AgChartInstance, AgChartOptions } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
 import { LinkButton } from "@/components/link-button";
 import type { PeriodTimelineResponse } from "@/server/period-timeline";
 import { TopPageHeader } from "@/components/top-page-header";
 import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
-import type { TimelinePeriodMode } from "./-page-types";
+import { isTimelinePeriodMode, type TimelinePeriodMode } from "./-page-types";
 import {
   createDisplayNumberFormatter,
   getCurrencyDecimals,
@@ -26,6 +27,7 @@ import {
   createTimelineChartOptions,
   mapTimelinePointsToChartData,
 } from "./-chart-options";
+import { getDefaultRangeButtonLabel } from "./-range-controls";
 import classes from "./-page-view.module.css";
 
 ensureChartModulesRegistered();
@@ -37,8 +39,33 @@ export type TimelinePageViewProps = {
   onModeChange: (mode: TimelinePeriodMode) => void;
 };
 
-function isTimelinePeriodMode(value: string): value is TimelinePeriodMode {
-  return value === "month" || value === "year";
+function findTimelineRangeButtons(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      ".ag-charts-range-buttons--buttons .ag-charts-toolbar__button",
+    ),
+  );
+}
+
+function clickRangeButtonByLabel(args: {
+  container: HTMLElement;
+  label: string;
+}): boolean {
+  const matchingButton = findTimelineRangeButtons(args.container).find(
+    (button) => {
+      const buttonLabel = button
+        .querySelector(".ag-charts-toolbar__label")
+        ?.textContent?.trim();
+      return buttonLabel === args.label;
+    },
+  );
+
+  if (!matchingButton) {
+    return false;
+  }
+
+  matchingButton.click();
+  return true;
 }
 
 export function TimelinePageView({
@@ -79,11 +106,18 @@ export function TimelinePageView({
     () => mapTimelinePointsToChartData(timeline.points),
     [timeline.points],
   );
+  const chartRef = useRef<AgChartInstance<AgChartOptions> | null>(null);
+  const appliedDefaultRangeModeRef = useRef<TimelinePeriodMode | null>(null);
+  const defaultRangeButtonLabel = useMemo(
+    () => getDefaultRangeButtonLabel(selectedMode),
+    [selectedMode],
+  );
 
   const chartOptions = useMemo(
     () =>
       createTimelineChartOptions({
         chartData,
+        periodMode: selectedMode,
         amountCompactFormatter,
         currencyFormatter,
         colors,
@@ -95,10 +129,58 @@ export function TimelinePageView({
       chartData,
       colors,
       currencyFormatter,
+      selectedMode,
       isDarkMode,
       theme,
     ],
   );
+
+  useEffect(() => {
+    if (chartData.length === 0) {
+      return;
+    }
+
+    if (appliedDefaultRangeModeRef.current === selectedMode) {
+      return;
+    }
+
+    let animationFrameId = 0;
+    const clickDefaultRangeButton = (attemptsLeft: number) => {
+      const chartElement = chartRef.current?.getOptions().container;
+      if (!(chartElement instanceof HTMLElement)) {
+        if (attemptsLeft > 0) {
+          animationFrameId = window.requestAnimationFrame(() =>
+            clickDefaultRangeButton(attemptsLeft - 1),
+          );
+        }
+        return;
+      }
+
+      if (
+        clickRangeButtonByLabel({
+          container: chartElement,
+          label: defaultRangeButtonLabel,
+        })
+      ) {
+        appliedDefaultRangeModeRef.current = selectedMode;
+        return;
+      }
+
+      if (attemptsLeft > 0) {
+        animationFrameId = window.requestAnimationFrame(() =>
+          clickDefaultRangeButton(attemptsLeft - 1),
+        );
+      }
+    };
+
+    // Wait one frame so AG Charts can mount range-controls toolbar elements.
+    animationFrameId = window.requestAnimationFrame(() =>
+      clickDefaultRangeButton(4),
+    );
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+    };
+  }, [chartData, defaultRangeButtonLabel, selectedMode]);
 
   return (
     <Container fluid py="xl" px="xl" className={classes.page}>
@@ -154,7 +236,11 @@ export function TimelinePageView({
           </Text>
         ) : (
           <div className={classes.chartContainer}>
-            <AgCharts options={chartOptions} className={classes.chart} />
+            <AgCharts
+              ref={chartRef}
+              options={chartOptions}
+              className={classes.chart}
+            />
           </div>
         )}
       </Card>
