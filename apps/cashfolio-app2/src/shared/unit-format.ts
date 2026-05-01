@@ -3,6 +3,12 @@ import { Unit } from "../.prisma-client/enums";
 const DEFAULT_CURRENCY_DISPLAY_DECIMALS = 2;
 const DEFAULT_CRYPTOCURRENCY_DISPLAY_DECIMALS = 8;
 const SECURITY_DISPLAY_DECIMALS = 0;
+const CRYPTOCURRENCY_SYMBOL_ALIASES: Record<string, string> = {
+  // Coinlayer uses BTC, while Kraken uses XBT.
+  BTC: "XBT",
+  // Coinlayer uses DOGE, while Kraken uses XDG.
+  DOGE: "XDG",
+};
 
 // Source: ISO 4217 List One (SIX maintenance agency), published 2026-01-01.
 // URL: https://www.six-group.com/dam/download/financial-information/data-center/iso-currrency/lists/list-one.xml
@@ -228,6 +234,8 @@ export const cryptocurrencyDisplayDecimals = {
   TRX: 6,
   USDT: 4,
   WINGS: 1,
+  XBT: 5,
+  XDG: 2,
   XLM: 5,
   XMR: 5,
   XRP: 5,
@@ -265,7 +273,10 @@ export function getCurrencyDecimals(
 export function getCryptocurrencyDecimals(
   cryptocurrency: string | null | undefined,
 ): number {
-  const normalized = normalizeCode(cryptocurrency);
+  const normalizedInput = normalizeCode(cryptocurrency);
+  const normalized = normalizedInput
+    ? (CRYPTOCURRENCY_SYMBOL_ALIASES[normalizedInput] ?? normalizedInput)
+    : null;
   if (!normalized) {
     return DEFAULT_CRYPTOCURRENCY_DISPLAY_DECIMALS;
   }

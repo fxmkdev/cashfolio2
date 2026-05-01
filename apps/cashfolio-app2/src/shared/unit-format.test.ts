@@ -23,7 +23,8 @@ describe("getCurrencyDecimals", () => {
 
 describe("getCryptocurrencyDecimals", () => {
   test("uses Kraken display_decimals where available", () => {
-    expect(getCryptocurrencyDecimals("BTC")).toBe(8);
+    expect(getCryptocurrencyDecimals("BTC")).toBe(5);
+    expect(getCryptocurrencyDecimals("DOGE")).toBe(2);
     expect(getCryptocurrencyDecimals("ETH")).toBe(5);
     expect(getCryptocurrencyDecimals("USDT")).toBe(4);
   });
