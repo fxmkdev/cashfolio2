@@ -46,9 +46,9 @@ Related docs:
     param), so refresh/direct navigation loads the requested view immediately
   - Viewport controls:
     - Uses AG Charts `navigator` + `ranges` controls.
-    - Uses `unit-time` x-axis in `src/routes/$accountBookId/timeline/-chart-options.ts`
-      so bar buckets remain discrete by period (month/year) while range
-      navigation still works.
+    - Uses `unit-time` x-axis in
+      `src/routes/$accountBookId/timeline/-chart-options.ts` so bar buckets
+      remain discrete by period (month/year) while range navigation still works.
     - Default ranges are monthly `1Y` and yearly `5Y` (see
       `getDefaultRangeButtonLabel` in
       `src/routes/$accountBookId/timeline/-chart-options.ts`).
