@@ -85,6 +85,23 @@ function transactionFilterIncludes(
 }
 
 function isEquityBookingQuery(args: unknown): boolean {
+  if (
+    typeof args === "object" &&
+    args !== null &&
+    "where" in args &&
+    typeof args.where === "object" &&
+    args.where !== null &&
+    "accountId" in args.where
+  ) {
+    const accountIdFilter = args.where.accountId;
+    return (
+      typeof accountIdFilter === "object" &&
+      accountIdFilter !== null &&
+      "in" in accountIdFilter &&
+      Array.isArray(accountIdFilter.in)
+    );
+  }
+
   return (
     typeof args === "object" &&
     args !== null &&
@@ -987,6 +1004,203 @@ describe("getPeriodOverview", () => {
         totalGainLoss: 12,
       },
     ]);
+  });
+
+  it("filters equity bookings via preloaded accountId list when available", async () => {
+    vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockImplementation((args) => {
+      if (args.where?.type === AccountType.EQUITY) {
+        return Promise.resolve([
+          {
+            id: "equity-gainloss",
+            name: "GainLoss",
+            groupId: null,
+            equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+          },
+        ]);
+      }
+
+      return Promise.resolve([]);
+    });
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isEquityBookingQuery(args)) {
+        if (args.cursor) {
+          return Promise.resolve([]);
+        }
+
+        return Promise.resolve([
+          {
+            id: "booking-explicit-1",
+            accountId: "equity-gainloss",
+            transactionId: "tx-explicit-1",
+            date: new Date("2026-01-10T00:00:00.000Z"),
+            value: -5,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ]);
+      }
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (
+        typeof args.where?.transactionId === "object" &&
+        args.where.transactionId != null &&
+        "in" in args.where.transactionId
+      ) {
+        return Promise.resolve([
+          {
+            transactionId: "tx-explicit-1",
+            accountId: "asset-cash-1",
+            account: {
+              name: "Cash 1",
+            },
+          },
+        ]);
+      }
+
+      return Promise.resolve([]);
+    });
+    prisma.booking.groupBy.mockResolvedValue([]);
+
+    await getPeriodOverview({
+      data: {
+        accountBookId: "book-account-id-filter",
+        period: "2026-01",
+      },
+    });
+
+    const firstEquityBookingsCall = prisma.booking.findMany.mock.calls.find(
+      ([args]) =>
+        "where" in args &&
+        typeof args.where === "object" &&
+        args.where !== null &&
+        "accountId" in args.where,
+    );
+    expect(firstEquityBookingsCall?.[0].where).toMatchObject({
+      accountId: {
+        in: ["equity-gainloss"],
+      },
+    });
+  });
+
+  it("batches explicit counterpart account resolution once across equity pages", async () => {
+    vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockImplementation((args) => {
+      if (args.where?.type === AccountType.EQUITY) {
+        return Promise.resolve([
+          {
+            id: "equity-gainloss",
+            name: "GainLoss",
+            groupId: null,
+            equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+          },
+        ]);
+      }
+
+      return Promise.resolve([]);
+    });
+    let equityPageCallCount = 0;
+    prisma.booking.findMany.mockImplementation((args) => {
+      if (isTransferClearingBookingQuery(args)) {
+        return Promise.resolve([]);
+      }
+      if (isEquityBookingQuery(args)) {
+        if (equityPageCallCount === 0) {
+          equityPageCallCount += 1;
+          return Promise.resolve(
+            Array.from({ length: 1_000 }, (_, index) => ({
+              id: `booking-explicit-page-1-${index + 1}`,
+              accountId: "equity-gainloss",
+              transactionId: "tx-explicit-1",
+              date: new Date("2026-01-10T00:00:00.000Z"),
+              value: -5,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+            })),
+          );
+        }
+
+        if (equityPageCallCount === 1) {
+          equityPageCallCount += 1;
+          return Promise.resolve([
+            {
+              id: "booking-explicit-2",
+              accountId: "equity-gainloss",
+              transactionId: "tx-explicit-2",
+              date: new Date("2026-01-11T00:00:00.000Z"),
+              value: -7,
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              cryptocurrency: null,
+              symbol: null,
+              tradeCurrency: null,
+            },
+          ]);
+        }
+
+        return Promise.resolve([]);
+      }
+
+      if (
+        typeof args.where?.transactionId === "object" &&
+        args.where.transactionId != null &&
+        "in" in args.where.transactionId
+      ) {
+        return Promise.resolve([
+          {
+            transactionId: "tx-explicit-1",
+            accountId: "asset-cash-1",
+            account: {
+              name: "Cash 1",
+            },
+          },
+          {
+            transactionId: "tx-explicit-2",
+            accountId: "asset-cash-2",
+            account: {
+              name: "Cash 2",
+            },
+          },
+        ]);
+      }
+
+      return Promise.resolve([]);
+    });
+    prisma.booking.groupBy.mockResolvedValue([]);
+
+    await getPeriodOverview({
+      data: {
+        accountBookId: "book-batched-explicit-multi-page",
+        period: "2026-01",
+      },
+    });
+
+    const counterpartLookupCalls = prisma.booking.findMany.mock.calls.filter(
+      ([args]) =>
+        typeof args.where?.transactionId === "object" &&
+        args.where.transactionId != null &&
+        "in" in args.where.transactionId,
+    );
+
+    expect(counterpartLookupCalls).toHaveLength(1);
+    expect(counterpartLookupCalls[0]?.[0].where?.transactionId).toMatchObject({
+      in: expect.arrayContaining(["tx-explicit-1", "tx-explicit-2"]),
+    });
   });
 
   it("builds grouped virtual transfer clearing hierarchy for mixed units", async () => {

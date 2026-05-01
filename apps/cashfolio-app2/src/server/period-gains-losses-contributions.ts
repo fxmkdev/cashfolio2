@@ -146,16 +146,14 @@ export function accumulateGainLossContribution(args: {
 
 export async function resolveExplicitCounterpartNonEquityAccounts(args: {
   accountBookId: string;
-  explicitBookings: Array<{
-    transactionId: string;
-  }>;
+  explicitTransactionIds: string[];
   byTransactionId: Map<string, ExplicitCounterpartAccount>;
 }) {
   const missingTransactionIds = Array.from(
     new Set(
-      args.explicitBookings
-        .map((booking) => booking.transactionId)
-        .filter((transactionId) => !args.byTransactionId.has(transactionId)),
+      args.explicitTransactionIds.filter(
+        (transactionId) => !args.byTransactionId.has(transactionId),
+      ),
     ),
   );
   if (missingTransactionIds.length === 0) {
