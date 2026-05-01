@@ -173,7 +173,6 @@ model Booking {
   accountBookId String
 
   @@id([id, accountBookId])
-  @@index([accountBookId, accountId])
   @@index([accountBookId, accountId, date])
   @@index([accountBookId, date])
   @@index([accountBookId, transactionId, date])

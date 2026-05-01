@@ -95,6 +95,7 @@ export async function loadPeriodEquityBookings(args: {
   equityAccountIds: string[];
   equityAccountById: Map<string, ResolvedEquityAccount>;
 }) {
+  const usesPreloadedEquityAccountFilter = args.equityAccountIds.length > 0;
   let nextBookingIdCursor: string | undefined;
   let bookingsCount = 0;
   let convertedBookingsCount = 0;
@@ -111,7 +112,7 @@ export async function loadPeriodEquityBookings(args: {
           gte: args.queryStart,
           lt: args.queryEndExclusive,
         },
-        ...(args.equityAccountIds.length > 0
+        ...(usesPreloadedEquityAccountFilter
           ? {
               accountId: {
                 in: args.equityAccountIds,
@@ -154,6 +155,18 @@ export async function loadPeriodEquityBookings(args: {
         cryptocurrency: true,
         symbol: true,
         tradeCurrency: true,
+        ...(usesPreloadedEquityAccountFilter
+          ? {}
+          : {
+              account: {
+                select: {
+                  id: true,
+                  name: true,
+                  groupId: true,
+                  equityAccountSubtype: true,
+                },
+              },
+            }),
       },
     });
 
