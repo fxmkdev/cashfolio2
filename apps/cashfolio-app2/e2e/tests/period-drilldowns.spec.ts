@@ -23,9 +23,7 @@ async function selectSegmentedControlOption(
   const option = control.getByRole("radio", { name: optionName });
 
   if (!(await option.isChecked())) {
-    await option.evaluate((input) => {
-      (input as HTMLInputElement).click();
-    });
+    await option.click({ force: true });
   }
 
   await expect(option).toBeChecked();
