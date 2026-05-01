@@ -51,7 +51,7 @@ Related docs:
       remain discrete by period (month/year) while range navigation still works.
     - Default ranges are monthly `1Y` and yearly `5Y` (see
       `getDefaultRangeButtonLabel` in
-      `src/routes/$accountBookId/timeline/-chart-options.ts`).
+      `src/routes/$accountBookId/timeline/-range-controls.ts`).
     - AG Charts (current app version: `13.2.1`) does not expose a public API to
       select a specific range-button as active. Setting zoom via
       `initialState`/`setState` updates the visible domain but may not mark the
@@ -93,6 +93,7 @@ Related docs:
     - `$accountBookId/timeline/-page-loader.ts`
     - `$accountBookId/timeline/-page-types.ts`
     - `$accountBookId/timeline/-page-navigation.ts`
+    - `$accountBookId/timeline/-range-controls.ts`
     - `$accountBookId/timeline/-chart-options.ts`
     - `$accountBookId/timeline/-page-view.tsx`
 

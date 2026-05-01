@@ -2,7 +2,6 @@ import type { MantineTheme } from "@mantine/core";
 import { describe, expect, test } from "vitest";
 import {
   createTimelineChartOptions,
-  getDefaultRangeButtonLabel,
   mapTimelinePointsToChartData,
 } from "./-chart-options";
 
@@ -128,11 +127,6 @@ describe("mapTimelinePointsToChartData", () => {
 });
 
 describe("createTimelineChartOptions", () => {
-  test("returns default range button labels by period mode", () => {
-    expect(getDefaultRangeButtonLabel("month")).toBe("1Y");
-    expect(getDefaultRangeButtonLabel("year")).toBe("5Y");
-  });
-
   test("enables navigator and monthly range controls", () => {
     const chartData = mapTimelinePointsToChartData([
       {

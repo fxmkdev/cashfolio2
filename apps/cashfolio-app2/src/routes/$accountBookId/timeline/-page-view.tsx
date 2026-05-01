@@ -21,9 +21,9 @@ import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import { isTimelinePeriodMode, type TimelinePeriodMode } from "./-page-types";
 import {
   createTimelineChartOptions,
-  getDefaultRangeButtonLabel,
   mapTimelinePointsToChartData,
 } from "./-chart-options";
+import { getDefaultRangeButtonLabel } from "./-range-controls";
 import classes from "./-page-view.module.css";
 
 ensureChartModulesRegistered();
@@ -34,6 +34,35 @@ export type TimelinePageViewProps = {
   timeline: PeriodTimelineResponse;
   onModeChange: (mode: TimelinePeriodMode) => void;
 };
+
+function findTimelineRangeButtons(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      ".ag-charts-range-buttons--buttons .ag-charts-toolbar__button",
+    ),
+  );
+}
+
+function clickRangeButtonByLabel(args: {
+  container: HTMLElement;
+  label: string;
+}): boolean {
+  const matchingButton = findTimelineRangeButtons(args.container).find(
+    (button) => {
+      const buttonLabel = button
+        .querySelector(".ag-charts-toolbar__label")
+        ?.textContent?.trim();
+      return buttonLabel === args.label;
+    },
+  );
+
+  if (!matchingButton) {
+    return false;
+  }
+
+  matchingButton.click();
+  return true;
+}
 
 export function TimelinePageView({
   accountBookId,
@@ -123,21 +152,12 @@ export function TimelinePageView({
         return;
       }
 
-      const rangeButtons = Array.from(
-        chartElement.querySelectorAll<HTMLElement>(
-          ".ag-charts-range-buttons--buttons .ag-charts-toolbar__button",
-        ),
-      );
-
-      const matchingButton = rangeButtons.find((button) => {
-        const label = button
-          .querySelector(".ag-charts-toolbar__label")
-          ?.textContent?.trim();
-        return label === defaultRangeButtonLabel;
-      });
-
-      if (matchingButton) {
-        matchingButton.click();
+      if (
+        clickRangeButtonByLabel({
+          container: chartElement,
+          label: defaultRangeButtonLabel,
+        })
+      ) {
         appliedDefaultRangeModeRef.current = selectedMode;
         return;
       }
