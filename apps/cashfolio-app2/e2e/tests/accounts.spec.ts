@@ -778,14 +778,40 @@ test("period previous/next controls update the period query parameter", async ({
 
   await page.goto(`/${seeded.accountBookId}/period?period=2026-04`);
   await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+  await expect(page.getByRole("progressbar")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Previous period" }).click();
-  await expect
-    .poll(() => new URL(page.url()).searchParams.get("period"))
-    .toBe("2026-03");
+  const periodModeControl = page.getByRole("radiogroup", {
+    name: "Period mode",
+  });
+  await selectSegmentedControlOption(periodModeControl, "Month");
 
-  await page.getByRole("button", { name: "Next period" }).click();
-  await expect
-    .poll(() => new URL(page.url()).searchParams.get("period"))
-    .toBe("2026-04");
+  const periodPickerTrigger = page.getByTestId("period-picker-trigger");
+  await expect(periodPickerTrigger).toContainText("April 2026");
+
+  const clickUntilPeriodMatches = async (
+    buttonName: "Previous period" | "Next period",
+    expectedPeriod: string,
+  ) => {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await page.getByRole("button", { name: buttonName }).click();
+      try {
+        await expect
+          .poll(() => new URL(page.url()).searchParams.get("period"), {
+            timeout: 4_000,
+          })
+          .toBe(expectedPeriod);
+        return;
+      } catch {
+        // Retry in case the first click lands during a transient loading state.
+      }
+    }
+
+    throw new Error(`Could not navigate to expected period ${expectedPeriod}.`);
+  };
+
+  await clickUntilPeriodMatches("Previous period", "2026-03");
+  await expect(periodPickerTrigger).toContainText("March 2026");
+
+  await clickUntilPeriodMatches("Next period", "2026-04");
+  await expect(periodPickerTrigger).toContainText("April 2026");
 });

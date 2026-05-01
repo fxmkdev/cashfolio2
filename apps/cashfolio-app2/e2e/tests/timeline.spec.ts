@@ -94,12 +94,13 @@ test("timeline deep link with yearly mode selects yearly on first load", async (
     .toBe("year");
 });
 
-test("timeline empty state is shown when no periods are available", async ({
+test("timeline shows chart data for the account-book period range", async ({
   page,
 }) => {
   await page.goto(`/${seeded.accountBookId}/timeline`);
   await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
-  await expect(page.getByText("No periods available yet.")).toBeVisible();
+  await expect(page.locator(".ag-charts-wrapper canvas").first()).toBeVisible();
+  await expect(page.getByText("No periods available yet.")).toHaveCount(0);
 });
 
 test("timeline deep link with invalid mode falls back to monthly", async ({
