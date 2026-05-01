@@ -133,11 +133,20 @@ test("period gains/losses table unit-account drilldown opens reconciliation page
     .first()
     .click();
 
-  await expect(page).toHaveURL(
-    new RegExp(
-      `/${seeded.accountBookId}/${seeded.securityAccount.id}\\?period=${period}&transactionId=${gainLossSeed.sellTransactionId}$`,
-    ),
-  );
+  await expect
+    .poll(() => {
+      const url = new URL(page.url());
+      return {
+        pathname: url.pathname,
+        period: url.searchParams.get("period"),
+        transactionId: url.searchParams.get("transactionId"),
+      };
+    })
+    .toEqual({
+      pathname: `/${seeded.accountBookId}/${seeded.securityAccount.id}`,
+      period,
+      transactionId: gainLossSeed.sellTransactionId,
+    });
   await expect(page.getByText(gainLossSeed.sellDescription)).toBeVisible();
 });
 
