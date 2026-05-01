@@ -1,4 +1,5 @@
 import { EquityAccountSubtype } from "../.prisma-client/enums";
+import { startOfUtcDay } from "../shared/date";
 import {
   convertBookingValueToReference,
   getUnitToReferenceExchangeRate,
@@ -35,7 +36,7 @@ export async function loadPeriodOverview(args: {
   const referenceCurrency = baseData.referenceCurrency;
   const selection = baseData.selection;
   const minPeriodDate = selection.minPeriodDate;
-  const currentDay = selection.currentDay;
+  const currentDay = startOfUtcDay(new Date());
   const queryStart = selection.from;
   const queryEndExclusive = selection.queryEndExclusive;
   const initialHoldingDate = selection.initialHoldingDate;

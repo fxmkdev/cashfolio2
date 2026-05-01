@@ -29,7 +29,6 @@ type PeriodBaseSelectionData = {
   initialHoldingDate: Date;
   isBeforeAccountBookStart: boolean;
   minPeriodDate: Date;
-  currentDay: Date;
 };
 
 type PeriodBaseAssetLiabilityAccount = {
@@ -578,7 +577,6 @@ export async function loadPeriodBaseDataUncached(args: {
       initialHoldingDate,
       isBeforeAccountBookStart,
       minPeriodDate: accountBookStartDate,
-      currentDay: startOfUtcDay(new Date()),
     },
     allAccountGroups,
     baseAssetLiabilityAccounts,

@@ -128,12 +128,35 @@ function isPresetPeriodValue(value: string): boolean {
   return (PERIOD_PRESET_VALUES as readonly string[]).includes(value);
 }
 
+function isCurrentExplicitPeriodValue(value: string): boolean {
+  const now = startOfUtcDay(new Date());
+  const monthMatch = /^(\d{4})-(\d{2})$/.exec(value);
+  if (monthMatch) {
+    const year = Number(monthMatch[1]);
+    const monthOneBased = Number(monthMatch[2]);
+    return (
+      year === now.getUTCFullYear() && monthOneBased === now.getUTCMonth() + 1
+    );
+  }
+
+  const yearMatch = /^(\d{4})$/.exec(value);
+  if (yearMatch) {
+    const year = Number(yearMatch[1]);
+    return year === now.getUTCFullYear();
+  }
+
+  return false;
+}
+
 function formatUtcDateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
 function getInflightPeriodKey(periodValue: string): string {
-  if (!isPresetPeriodValue(periodValue)) {
+  if (
+    !isPresetPeriodValue(periodValue) &&
+    !isCurrentExplicitPeriodValue(periodValue)
+  ) {
     return periodValue;
   }
 
@@ -145,6 +168,9 @@ async function resolvePeriodBaseCachePeriodKey(args: {
   periodValue: string;
 }): Promise<string> {
   if (!isPresetPeriodValue(args.periodValue)) {
+    if (isCurrentExplicitPeriodValue(args.periodValue)) {
+      return `${args.periodValue}:${formatUtcDateKey(startOfUtcDay(new Date()))}`;
+    }
     return args.periodValue;
   }
 

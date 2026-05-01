@@ -49,6 +49,10 @@ Related docs:
 - For preset periods (`mtd`, `ytd`, `last-month`, `last-year`), `periodCacheKey`
   uses resolved concrete ranges (`granularity:from:to`) to avoid key aliasing
   across day/month boundaries.
+- For explicit current periods (`YYYY-MM` for current month, `YYYY` for current
+  year), `periodCacheKey` includes a UTC-day suffix
+  (`{periodValue}:{YYYY-MM-DD}`) so day rollovers do not reuse stale cache
+  entries.
 - TTL: 24 hours. Mutating account/transaction server functions explicitly
   invalidate cache entries for the affected account book by advancing the
   generation.

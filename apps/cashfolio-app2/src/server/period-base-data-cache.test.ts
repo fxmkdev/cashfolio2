@@ -183,6 +183,27 @@ describe("period base-data cache", () => {
     );
   });
 
+  it("keys explicit current periods with a UTC-day discriminator", async () => {
+    await periodBaseCache.getOrLoadPeriodBaseData({
+      accountBookId: "book-1",
+      period: "2026-05",
+    });
+    const [firstKey] = redisClient.setEx.mock.calls[0] ?? [];
+    expect(firstKey).toContain(
+      "period:base:v1:preview-app-123:book-1:0:2026-05:2026-05-01",
+    );
+
+    vi.setSystemTime(new Date("2026-05-02T12:00:00.000Z"));
+    await periodBaseCache.getOrLoadPeriodBaseData({
+      accountBookId: "book-1",
+      period: "2026-05",
+    });
+    const [secondKey] = redisClient.setEx.mock.calls[1] ?? [];
+    expect(secondKey).toContain(
+      "period:base:v1:preview-app-123:book-1:0:2026-05:2026-05-02",
+    );
+  });
+
   it("does not perform extra account-book reads for month preset cache hits", async () => {
     await periodBaseCache.getOrLoadPeriodBaseData({
       accountBookId: "book-1",
