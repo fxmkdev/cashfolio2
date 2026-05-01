@@ -1,10 +1,4 @@
-import {
-  expect,
-  test,
-  type ConsoleMessage,
-  type Locator,
-  type Page,
-} from "@playwright/test";
+import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
 import {
   agGridCellByColId,
   agGridPinnedBottomRow,
@@ -19,6 +13,8 @@ import {
   seedThreeBookingSplitTransaction,
   type SeededData,
 } from "../support/db";
+import { clickPeriodStepUntilQueryMatches } from "../support/period-navigation";
+import { selectSegmentedControlOption } from "../support/segmented-control";
 import { openDialogFromButton } from "../support/ui";
 
 let seeded: SeededData;
@@ -88,28 +84,6 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
   throw new Error(
     "Could not trigger account-leaf drilldown from the period breakdown chart.",
   );
-}
-
-async function selectSegmentedControlOption(
-  control: Locator,
-  optionName: string,
-) {
-  const option = control.getByRole("radio", { name: optionName });
-
-  if (await option.isChecked()) {
-    return;
-  }
-
-  await option.focus();
-  await option.press("Space");
-
-  if (!(await option.isChecked())) {
-    await option.evaluate((input) => {
-      (input as HTMLInputElement).click();
-    });
-  }
-
-  await expect(option).toBeChecked();
 }
 
 type PeriodPageSessionState = {
@@ -782,4 +756,49 @@ test("period picker opens on selected month/year page", async ({ page }) => {
   await expect(
     yearPicker.getByRole("button", { name: "2025" }),
   ).toHaveAttribute("data-selected", "true");
+});
+
+test("period previous/next controls update the period query parameter", async ({
+  page,
+}) => {
+  await seedThreeBookingSplitTransaction({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Period Step March Seed",
+    currentAccountId: seeded.cashAccount.id,
+    debitAccountIds: [seeded.savingsAccount.id, seeded.expenseAccount.id],
+    date: "2026-03-07T00:00:00.000Z",
+  });
+
+  await seedThreeBookingSplitTransaction({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Period Step April Seed",
+    currentAccountId: seeded.cashAccount.id,
+    debitAccountIds: [seeded.savingsAccount.id, seeded.expenseAccount.id],
+    date: "2026-04-07T00:00:00.000Z",
+  });
+
+  await page.goto(`/${seeded.accountBookId}/period?period=2026-04`);
+  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+
+  const periodModeControl = page.getByRole("radiogroup", {
+    name: "Period mode",
+  });
+  await selectSegmentedControlOption(periodModeControl, "Month");
+
+  const periodPickerTrigger = page.getByTestId("period-picker-trigger");
+  await expect(periodPickerTrigger).toContainText("April 2026");
+
+  await clickPeriodStepUntilQueryMatches({
+    page,
+    buttonName: "Previous period",
+    expectedPeriod: "2026-03",
+  });
+  await expect(periodPickerTrigger).toContainText("March 2026");
+
+  await clickPeriodStepUntilQueryMatches({
+    page,
+    buttonName: "Next period",
+    expectedPeriod: "2026-04",
+  });
+  await expect(periodPickerTrigger).toContainText("April 2026");
 });
