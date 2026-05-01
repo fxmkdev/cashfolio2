@@ -96,7 +96,9 @@ test("period allocation table account drilldown opens ledger with selected perio
   await expect(
     page.getByText("Showing entries for January 2026"),
   ).toBeVisible();
-  await expect(page.getByText("E2E Convertible Asset Balances Seed")).toBeVisible();
+  await expect(
+    page.getByText("E2E Convertible Asset Balances Seed"),
+  ).toBeVisible();
 });
 
 test("period gains/losses table unit-account drilldown opens reconciliation page and event ledger link", async ({
