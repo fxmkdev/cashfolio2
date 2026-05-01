@@ -11,7 +11,9 @@ const CRYPTOCURRENCY_SYMBOL_ALIASES: Record<string, string> = {
 };
 
 // Source: ISO 4217 List One (SIX maintenance agency), published 2026-01-01.
-// URL: https://www.six-group.com/dam/download/financial-information/data-center/iso-currrency/lists/list-one.xml
+// Reference page: https://www.six-group.com/en/products-services/financial-information/data-standards.html
+// Direct file URL (SIX currently serves this path with triple "r"):
+// https://www.six-group.com/dam/download/financial-information/data-center/iso-currrency/lists/list-one.xml
 // This map intentionally covers the currencies present in src/currencies.ts where
 // the ISO list provides numeric minor units. Unsupported/non-ISO entries fall back
 // to DEFAULT_CURRENCY_DISPLAY_DECIMALS.
@@ -333,8 +335,4 @@ export function createDisplayNumberFormatter(args: {
     minimumFractionDigits: args.decimals,
     maximumFractionDigits: args.decimals,
   });
-}
-
-export function createEntryNumberFormatter(locale = "en-CH") {
-  return new Intl.NumberFormat(locale);
 }
