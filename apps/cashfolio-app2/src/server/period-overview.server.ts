@@ -12,16 +12,17 @@ import {
   resolvePeriodSelection,
 } from "./period-selection";
 import { computeEndOfPeriodBalanceStatsWithConvertedBalances } from "./period-balance-stats";
-import {
-  accumulateConvertedEquityBooking,
-  createPeriodOverviewEquityAggregation,
-} from "./period-overview-aggregation";
+import { createPeriodOverviewEquityAggregation } from "./period-overview-aggregation";
 import {
   accumulateGainLossContribution,
   resolveExplicitCounterpartNonEquityAccounts,
   type ExplicitCounterpartAccount,
   type GainLossContributionAccumulator,
 } from "./period-gains-losses-contributions";
+import {
+  type ConvertedExplicitEquityBooking,
+  loadPeriodEquityBookings,
+} from "./period-overview-equity-bookings";
 import {
   applyHoldingTransactionsToGainLossState,
   finalizeHoldingGainLossState,
@@ -34,7 +35,6 @@ import {
 } from "./period-transfer-clearing";
 import { buildPeriodOverviewResponse } from "./period-overview-response";
 
-const EQUITY_BOOKINGS_PAGE_SIZE = 1_000;
 const TRANSACTIONS_PAGE_SIZE = 200;
 
 function addUtcDays(date: Date, days: number): Date {
@@ -59,38 +59,62 @@ export async function loadPeriodOverview(args: {
   });
 
   const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
-  const [allAccountGroups, baseAssetLiabilityAccounts] = await Promise.all([
-    prisma.accountGroup.findMany({
-      where: { accountBookId: data.accountBookId },
-      select: {
-        id: true,
-        name: true,
-        parentGroupId: true,
-      },
-    }),
-    prisma.account.findMany({
-      where: {
-        accountBookId: data.accountBookId,
-        type: {
-          in: [AccountType.ASSET, AccountType.LIABILITY],
+  const [allAccountGroups, baseAssetLiabilityAccounts, equityAccounts] =
+    await Promise.all([
+      prisma.accountGroup.findMany({
+        where: { accountBookId: data.accountBookId },
+        select: {
+          id: true,
+          name: true,
+          parentGroupId: true,
         },
-      },
-      select: {
-        id: true,
-        name: true,
-        groupId: true,
-        type: true,
-        unit: true,
-        currency: true,
-        cryptocurrency: true,
-        symbol: true,
-        tradeCurrency: true,
-      },
-    }),
-  ]);
+      }),
+      prisma.account.findMany({
+        where: {
+          accountBookId: data.accountBookId,
+          type: {
+            in: [AccountType.ASSET, AccountType.LIABILITY],
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          groupId: true,
+          type: true,
+          unit: true,
+          currency: true,
+          cryptocurrency: true,
+          symbol: true,
+          tradeCurrency: true,
+        },
+      }),
+      prisma.account.findMany({
+        where: {
+          accountBookId: data.accountBookId,
+          type: AccountType.EQUITY,
+          equityAccountSubtype: {
+            in: [
+              EquityAccountSubtype.INCOME,
+              EquityAccountSubtype.EXPENSE,
+              EquityAccountSubtype.GAIN_LOSS,
+            ],
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          groupId: true,
+          equityAccountSubtype: true,
+        },
+      }),
+    ]);
   const assetLiabilityAccountNameById = new Map(
     baseAssetLiabilityAccounts.map((account) => [account.id, account.name]),
   );
+  const equityAccountById = new Map(
+    equityAccounts.map((account) => [account.id, account]),
+  );
+  const equityAccountIds = equityAccounts.map((account) => account.id);
 
   const holdingAccountsResolved = filterConvertibleHoldingAccounts(
     baseAssetLiabilityAccounts,
@@ -115,25 +139,31 @@ export async function loadPeriodOverview(args: {
   const assetLiabilityAccountIds = baseAssetLiabilityAccounts.map(
     (account) => account.id,
   );
+  const [endOfPeriodRawBalances, transferClearingUnitBuckets] =
+    await Promise.all([
+      assetLiabilityAccountIds.length > 0
+        ? prisma.booking.groupBy({
+            by: ["accountId"],
+            where: {
+              accountBookId: data.accountBookId,
+              accountId: { in: assetLiabilityAccountIds },
+              date: { lt: queryEndExclusive },
+            },
+            _sum: { value: true },
+          })
+        : Promise.resolve([]),
+      loadTransferClearingUnitBuckets({
+        accountBookId: data.accountBookId,
+        periodEndExclusive: queryEndExclusive,
+        referenceCurrency,
+      }),
+    ]);
   const endOfPeriodRawBalanceByAccountId = new Map(
-    (assetLiabilityAccountIds.length > 0
-      ? await prisma.booking.groupBy({
-          by: ["accountId"],
-          where: {
-            accountBookId: data.accountBookId,
-            accountId: { in: assetLiabilityAccountIds },
-            date: { lt: queryEndExclusive },
-          },
-          _sum: { value: true },
-        })
-      : []
-    ).map((balance) => [balance.accountId, Number(balance._sum.value ?? 0)]),
+    endOfPeriodRawBalances.map((balance) => [
+      balance.accountId,
+      Number(balance._sum.value ?? 0),
+    ]),
   );
-  const transferClearingUnitBuckets = await loadTransferClearingUnitBuckets({
-    accountBookId: data.accountBookId,
-    periodEndExclusive: queryEndExclusive,
-    referenceCurrency,
-  });
   const {
     virtualGroups: transferClearingVirtualGroups,
     virtualAccounts: transferClearingVirtualAccounts,
@@ -164,7 +194,7 @@ export async function loadPeriodOverview(args: {
   let convertedBookingsCount = 0;
   let skippedBookingsCount = 0;
 
-  const equityAggregation = createPeriodOverviewEquityAggregation();
+  let equityAggregation = createPeriodOverviewEquityAggregation();
   const gainsLossesContributionByKey = new Map<
     string,
     GainLossContributionAccumulator
@@ -173,163 +203,58 @@ export async function loadPeriodOverview(args: {
     string,
     ExplicitCounterpartAccount
   >();
-
-  let nextBookingIdCursor: string | undefined;
+  let explicitTransactionIds: string[] = [];
+  let explicitConvertedBookings: ConvertedExplicitEquityBooking[] = [];
   let realizedGainLoss = 0;
   let unrealizedGainLoss = 0;
 
   if (!isBeforeAccountBookStart) {
-    while (true) {
-      const bookingsPage = await prisma.booking.findMany({
-        where: {
-          accountBookId: data.accountBookId,
-          date: {
-            gte: queryStart,
-            lt: queryEndExclusive,
-          },
-          account: {
-            type: AccountType.EQUITY,
-            equityAccountSubtype: {
-              in: [
-                EquityAccountSubtype.INCOME,
-                EquityAccountSubtype.EXPENSE,
-                EquityAccountSubtype.GAIN_LOSS,
-              ],
-            },
-          },
-        },
-        orderBy: { id: "asc" },
-        take: EQUITY_BOOKINGS_PAGE_SIZE,
-        ...(nextBookingIdCursor
-          ? {
-              cursor: {
-                id_accountBookId: {
-                  id: nextBookingIdCursor,
-                  accountBookId: data.accountBookId,
-                },
-              },
-              skip: 1,
-            }
-          : {}),
-        select: {
-          id: true,
-          transactionId: true,
-          date: true,
-          value: true,
-          unit: true,
-          currency: true,
-          cryptocurrency: true,
-          symbol: true,
-          tradeCurrency: true,
-          account: {
-            select: {
-              id: true,
-              name: true,
-              groupId: true,
-              equityAccountSubtype: true,
-            },
-          },
-        },
+    const equityBookings = await loadPeriodEquityBookings({
+      accountBookId: data.accountBookId,
+      queryStart,
+      queryEndExclusive,
+      referenceCurrency,
+      exchangeRateByKey,
+      equityAccountIds,
+      equityAccountById,
+    });
+    equityAggregation = equityBookings.equityAggregation;
+    explicitTransactionIds = equityBookings.explicitTransactionIds;
+    explicitConvertedBookings = equityBookings.explicitConvertedBookings;
+    bookingsCount += equityBookings.bookingsCount;
+    convertedBookingsCount += equityBookings.convertedBookingsCount;
+    skippedBookingsCount += equityBookings.skippedBookingsCount;
+
+    if (explicitTransactionIds.length > 0) {
+      await resolveExplicitCounterpartNonEquityAccounts({
+        accountBookId: data.accountBookId,
+        explicitTransactionIds,
+        byTransactionId: explicitCounterpartAccountByTransactionId,
       });
-
-      if (bookingsPage.length === 0) {
-        break;
-      }
-
-      bookingsCount += bookingsPage.length;
-      nextBookingIdCursor = bookingsPage[bookingsPage.length - 1].id;
-
-      const conversionTasks = bookingsPage.map((booking) => ({
-        booking,
-        convertedValuePromise: convertBookingValueToReference({
-          value: Number(booking.value),
-          unit: booking.unit,
-          currency: booking.currency,
-          cryptocurrency: booking.cryptocurrency,
-          symbol: booking.symbol,
-          tradeCurrency: booking.tradeCurrency,
-          date: booking.date,
-          referenceCurrency,
-          exchangeRateByKey,
-        }),
-      }));
-
-      const convertedValues = await Promise.all(
-        conversionTasks.map((task) => task.convertedValuePromise),
+    }
+    for (const explicitBooking of explicitConvertedBookings) {
+      const counterpartAccount = explicitCounterpartAccountByTransactionId.get(
+        explicitBooking.transactionId,
       );
-      const explicitBookingsForCounterpartResolution: Array<{
-        transactionId: string;
-      }> = [];
-      for (let index = 0; index < conversionTasks.length; index += 1) {
-        const booking = conversionTasks[index]!.booking;
-        const convertedValue = convertedValues[index];
-        if (
-          convertedValue != null &&
-          booking.account.equityAccountSubtype ===
-            EquityAccountSubtype.GAIN_LOSS
-        ) {
-          explicitBookingsForCounterpartResolution.push({
-            transactionId: booking.transactionId,
-          });
-        }
-      }
-      if (explicitBookingsForCounterpartResolution.length > 0) {
-        await resolveExplicitCounterpartNonEquityAccounts({
-          accountBookId: data.accountBookId,
-          explicitBookings: explicitBookingsForCounterpartResolution,
-          byTransactionId: explicitCounterpartAccountByTransactionId,
-        });
+      if (!counterpartAccount) {
+        throw new Error(
+          `Explicit gain/loss booking invariant violated for booking ${explicitBooking.bookingId} in transaction ${explicitBooking.transactionId}: missing resolved counterpart account.`,
+        );
       }
 
-      for (let index = 0; index < conversionTasks.length; index += 1) {
-        const booking = conversionTasks[index]!.booking;
-        const convertedValue = convertedValues[index];
-
-        if (convertedValue == null) {
-          skippedBookingsCount += 1;
-          continue;
-        }
-
-        convertedBookingsCount += 1;
-        accumulateConvertedEquityBooking({
-          booking,
-          convertedValue,
-          aggregation: equityAggregation,
-        });
-
-        if (
-          booking.account.equityAccountSubtype ===
-          EquityAccountSubtype.GAIN_LOSS
-        ) {
-          const counterpartAccount =
-            explicitCounterpartAccountByTransactionId.get(
-              booking.transactionId,
-            );
-          if (!counterpartAccount) {
-            throw new Error(
-              `Explicit gain/loss booking invariant violated for booking ${booking.id} in transaction ${booking.transactionId}: missing resolved counterpart account.`,
-            );
-          }
-
-          accumulateGainLossContribution({
-            byKey: gainsLossesContributionByKey,
-            sourceKind: "EXPLICIT",
-            accountId: counterpartAccount.id,
-            accountName: counterpartAccount.name,
-            unit: booking.unit,
-            currency: booking.currency,
-            cryptocurrency: booking.cryptocurrency,
-            symbol: booking.symbol,
-            tradeCurrency: booking.tradeCurrency,
-            realizedGainLoss: -convertedValue,
-            unrealizedGainLoss: 0,
-          });
-        }
-      }
-
-      if (bookingsPage.length < EQUITY_BOOKINGS_PAGE_SIZE) {
-        break;
-      }
+      accumulateGainLossContribution({
+        byKey: gainsLossesContributionByKey,
+        sourceKind: "EXPLICIT",
+        accountId: counterpartAccount.id,
+        accountName: counterpartAccount.name,
+        unit: explicitBooking.unit,
+        currency: explicitBooking.currency,
+        cryptocurrency: explicitBooking.cryptocurrency,
+        symbol: explicitBooking.symbol,
+        tradeCurrency: explicitBooking.tradeCurrency,
+        realizedGainLoss: -explicitBooking.convertedValue,
+        unrealizedGainLoss: 0,
+      });
     }
 
     const holdingAccountIds = holdingAccountsResolved.map(
