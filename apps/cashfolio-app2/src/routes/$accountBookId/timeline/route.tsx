@@ -34,6 +34,7 @@ function TimelinePage() {
         timeline={timeline}
         onModeChange={(mode) =>
           navigate({
+            replace: true,
             search: (previousSearch) => ({
               ...previousSearch,
               mode,
