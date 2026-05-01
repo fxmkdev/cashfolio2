@@ -92,41 +92,38 @@ export const getPeriodTimeline = createServerFn({
     }),
   )
   .handler(async ({ data }) => {
-    const { prisma } = await import("../prisma.server");
     const { ensureAuthorizedForAccountBookId } =
       await import("../account-books/functions.server");
-    const { loadPeriodOverview } = await import("./period-overview.server");
+    const { loadPeriodTimelinePoint, loadPeriodTimelinePointContext } =
+      await import("./period-timeline-point.server");
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
-    const accountBook = await prisma.accountBook.findUniqueOrThrow({
-      where: { id: data.accountBookId },
-      select: {
-        referenceCurrency: true,
-        startDate: true,
-      },
+    const context = await loadPeriodTimelinePointContext({
+      accountBookId: data.accountBookId,
     });
 
     const periodValues = buildTimelinePeriodValues({
       granularity: data.granularity,
-      minDate: accountBook.startDate,
+      minDate: context.accountBookStartDate,
       maxDate: new Date(),
     });
 
     const points: PeriodTimelinePoint[] = [];
     for (const periodValue of periodValues) {
-      const overview = await loadPeriodOverview({
+      const point = await loadPeriodTimelinePoint({
         accountBookId: data.accountBookId,
         period: periodValue,
+        context,
       });
       points.push({
-        periodValue: overview.selectedPeriodValue,
-        periodLabel: overview.selectedPeriodLabel,
-        totalReturn: overview.stats.totalReturn,
+        periodValue: point.selectedPeriodValue,
+        periodLabel: point.selectedPeriodLabel,
+        totalReturn: point.totalReturn,
       });
     }
 
     return {
-      referenceCurrency: accountBook.referenceCurrency.toUpperCase(),
+      referenceCurrency: context.referenceCurrency,
       points,
     } satisfies PeriodTimelineResponse;
   });

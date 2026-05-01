@@ -2,32 +2,24 @@ import {
   getPeriodTimeline,
   type PeriodTimelineResponse,
 } from "@/server/period-timeline";
+import type { TimelinePeriodMode } from "./-page-types";
 
 export type TimelinePageLoaderData = {
-  monthTimeline: PeriodTimelineResponse;
-  yearTimeline: PeriodTimelineResponse;
+  timeline: PeriodTimelineResponse;
 };
 
 export async function loadTimelinePageData(args: {
   accountBookId: string;
+  mode: TimelinePeriodMode;
 }): Promise<TimelinePageLoaderData> {
-  const [monthTimeline, yearTimeline] = await Promise.all([
-    getPeriodTimeline({
-      data: {
-        accountBookId: args.accountBookId,
-        granularity: "month",
-      },
-    }),
-    getPeriodTimeline({
-      data: {
-        accountBookId: args.accountBookId,
-        granularity: "year",
-      },
-    }),
-  ]);
+  const timeline = await getPeriodTimeline({
+    data: {
+      accountBookId: args.accountBookId,
+      granularity: args.mode,
+    },
+  });
 
   return {
-    monthTimeline,
-    yearTimeline,
+    timeline,
   };
 }

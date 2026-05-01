@@ -17,10 +17,7 @@ import { LinkButton } from "@/components/link-button";
 import type { PeriodTimelineResponse } from "@/server/period-timeline";
 import { TopPageHeader } from "@/components/top-page-header";
 import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
-import {
-  type TimelinePeriodMode,
-  useTimelinePageSessionState,
-} from "./-page-session-state";
+import type { TimelinePeriodMode } from "./-page-types";
 import {
   createTimelineChartOptions,
   mapTimelinePointsToChartData,
@@ -31,8 +28,9 @@ ensureChartModulesRegistered();
 
 export type TimelinePageViewProps = {
   accountBookId: string;
-  monthTimeline: PeriodTimelineResponse;
-  yearTimeline: PeriodTimelineResponse;
+  selectedMode: TimelinePeriodMode;
+  timeline: PeriodTimelineResponse;
+  onModeChange: (mode: TimelinePeriodMode) => void;
 };
 
 function isTimelinePeriodMode(value: string): value is TimelinePeriodMode {
@@ -41,13 +39,11 @@ function isTimelinePeriodMode(value: string): value is TimelinePeriodMode {
 
 export function TimelinePageView({
   accountBookId,
-  monthTimeline,
-  yearTimeline,
+  selectedMode,
+  timeline,
+  onModeChange,
 }: TimelinePageViewProps) {
-  const { periodMode, setPeriodMode } =
-    useTimelinePageSessionState(accountBookId);
-  const activeTimeline = periodMode === "year" ? yearTimeline : monthTimeline;
-  const activeReferenceCurrency = activeTimeline.referenceCurrency;
+  const activeReferenceCurrency = timeline.referenceCurrency;
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
   const colors = useMemo(
@@ -76,8 +72,8 @@ export function TimelinePageView({
   );
 
   const chartData = useMemo(
-    () => mapTimelinePointsToChartData(activeTimeline.points),
-    [activeTimeline.points],
+    () => mapTimelinePointsToChartData(timeline.points),
+    [timeline.points],
   );
 
   const chartOptions = useMemo(
@@ -124,7 +120,7 @@ export function TimelinePageView({
               Period
             </LinkButton>
             <SegmentedControl
-              value={periodMode}
+              value={selectedMode}
               aria-label="Timeline period mode"
               data={[
                 { label: "Monthly", value: "month" },
@@ -132,7 +128,7 @@ export function TimelinePageView({
               ]}
               onChange={(nextMode) => {
                 if (isTimelinePeriodMode(nextMode)) {
-                  setPeriodMode(nextMode);
+                  onModeChange(nextMode);
                 }
               }}
             />

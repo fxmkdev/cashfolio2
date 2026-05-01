@@ -1,6 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { loadTimelinePageData } from "./-page-loader";
+import { buildTimelineModeNavigation } from "./-page-navigation";
+import { getTimelineMode, parseTimelineSearch } from "./-page-types";
 
 const TimelinePageView = lazy(async () => {
   const module = await import("./-page-view");
@@ -8,22 +10,30 @@ const TimelinePageView = lazy(async () => {
 });
 
 export const Route = createFileRoute("/$accountBookId/timeline")({
-  loader: async ({ params: { accountBookId } }) => {
-    return loadTimelinePageData({ accountBookId });
+  validateSearch: parseTimelineSearch,
+  loaderDeps: ({ search }) => ({
+    mode: getTimelineMode(search),
+  }),
+  loader: async ({ params: { accountBookId }, deps: { mode } }) => {
+    return loadTimelinePageData({ accountBookId, mode });
   },
   component: TimelinePage,
 });
 
 function TimelinePage() {
   const { accountBookId } = Route.useParams();
-  const { monthTimeline, yearTimeline } = Route.useLoaderData();
+  const search = Route.useSearch();
+  const selectedMode = getTimelineMode(search);
+  const { timeline } = Route.useLoaderData();
+  const navigate = useNavigate({ from: "/$accountBookId/timeline" });
 
   return (
     <Suspense fallback={null}>
       <TimelinePageView
         accountBookId={accountBookId}
-        monthTimeline={monthTimeline}
-        yearTimeline={yearTimeline}
+        selectedMode={selectedMode}
+        timeline={timeline}
+        onModeChange={(mode) => navigate(buildTimelineModeNavigation(mode))}
       />
     </Suspense>
   );

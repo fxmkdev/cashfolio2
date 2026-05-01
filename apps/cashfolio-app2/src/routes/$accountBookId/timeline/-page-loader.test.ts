@@ -13,7 +13,7 @@ describe("loadTimelinePageData", () => {
     mockedGetPeriodTimeline.mockReset();
   });
 
-  test("loads monthly and yearly timelines for the account book", async () => {
+  test("loads timeline for the selected mode", async () => {
     mockedGetPeriodTimeline.mockResolvedValueOnce({
       referenceCurrency: "CHF",
       points: [
@@ -24,50 +24,27 @@ describe("loadTimelinePageData", () => {
         },
       ],
     });
-    mockedGetPeriodTimeline.mockResolvedValueOnce({
-      referenceCurrency: "CHF",
-      points: [
-        {
-          periodValue: "2026",
-          periodLabel: "2026",
-          totalReturn: 120,
-        },
-      ],
+
+    const result = await loadTimelinePageData({
+      accountBookId: "book-1",
+      mode: "year",
     });
 
-    const result = await loadTimelinePageData({ accountBookId: "book-1" });
-
-    expect(mockedGetPeriodTimeline).toHaveBeenCalledTimes(2);
+    expect(mockedGetPeriodTimeline).toHaveBeenCalledTimes(1);
     expect(mockedGetPeriodTimeline).toHaveBeenNthCalledWith(1, {
-      data: {
-        accountBookId: "book-1",
-        granularity: "month",
-      },
-    });
-    expect(mockedGetPeriodTimeline).toHaveBeenNthCalledWith(2, {
       data: {
         accountBookId: "book-1",
         granularity: "year",
       },
     });
     expect(result).toEqual({
-      monthTimeline: {
+      timeline: {
         referenceCurrency: "CHF",
         points: [
           {
             periodValue: "2026-01",
             periodLabel: "January 2026",
             totalReturn: 10,
-          },
-        ],
-      },
-      yearTimeline: {
-        referenceCurrency: "CHF",
-        points: [
-          {
-            periodValue: "2026",
-            periodLabel: "2026",
-            totalReturn: 120,
           },
         ],
       },
