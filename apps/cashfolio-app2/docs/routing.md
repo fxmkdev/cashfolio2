@@ -41,7 +41,7 @@ Related docs:
   gain/loss reconciliation page for unit-account drill-down (opened from
   Gains/Losses Breakdown leaf rows)
 - `$accountBookId/timeline/route.tsx` - timeline page showing monthly/yearly
-  total return history as a full-page bar chart
+  metric history as a full-page bar chart with a metric segmented control
   - Loader fetches only the currently selected granularity (`mode` search
     param), so refresh/direct navigation loads the requested view immediately
   - Viewport controls:
@@ -118,6 +118,8 @@ Related docs:
 - `$accountBookId/timeline/route.tsx` uses:
   - `mode?: "month" | "year"` to select the timeline granularity (default:
     monthly)
+  - `metric?: "totalReturn" | "savings" | "income" | "expenses" | "gainsLosses"`
+    to select the displayed metric (default: total return)
 
 ### Global Navigation Progress
 

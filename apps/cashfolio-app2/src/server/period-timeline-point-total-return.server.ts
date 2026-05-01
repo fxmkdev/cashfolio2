@@ -20,7 +20,15 @@ import { computeTransferClearingGainLossSplit } from "./period-transfer-clearing
 
 const EQUITY_CONVERSION_BATCH_SIZE = 500;
 
-export async function loadPeriodTimelinePointTotalReturn(args: {
+export type PeriodTimelinePointMetrics = {
+  totalReturn: number;
+  savings: number;
+  income: number;
+  expenses: number;
+  gainsLosses: number;
+};
+
+export async function loadPeriodTimelinePointMetrics(args: {
   accountBookId: string;
   period?: unknown;
   baseData?: PeriodBaseData;
@@ -182,6 +190,13 @@ export async function loadPeriodTimelinePointTotalReturn(args: {
   const roundedExpenses = round2(expenses);
   const roundedGainsLosses = round2(gainsLosses);
   const roundedSavings = round2(roundedIncome - roundedExpenses);
+  const roundedTotalReturn = round2(roundedSavings + roundedGainsLosses);
 
-  return round2(roundedSavings + roundedGainsLosses);
+  return {
+    totalReturn: roundedTotalReturn,
+    savings: roundedSavings,
+    income: roundedIncome,
+    expenses: roundedExpenses,
+    gainsLosses: roundedGainsLosses,
+  } satisfies PeriodTimelinePointMetrics;
 }

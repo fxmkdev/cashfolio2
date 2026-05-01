@@ -5,7 +5,7 @@ import {
   loadPeriodTimelinePointContext,
   type PeriodTimelinePointContext,
 } from "./period-timeline-point-context.server";
-import { loadPeriodTimelinePointTotalReturn } from "./period-timeline-point-total-return.server";
+import { loadPeriodTimelinePointMetrics } from "./period-timeline-point-total-return.server";
 
 export { loadPeriodTimelinePointContext };
 export type { PeriodTimelinePointContext };
@@ -46,7 +46,7 @@ export async function loadPeriodTimelinePoint(args: {
     period: data.period,
   });
 
-  const totalReturn = await loadPeriodTimelinePointTotalReturn({
+  const metrics = await loadPeriodTimelinePointMetrics({
     accountBookId: data.accountBookId,
     period: data.period,
     baseData: loadedBaseData,
@@ -55,6 +55,6 @@ export async function loadPeriodTimelinePoint(args: {
   return {
     selectedPeriodValue: selection.periodValue,
     selectedPeriodLabel: selection.label,
-    totalReturn,
+    ...metrics,
   };
 }

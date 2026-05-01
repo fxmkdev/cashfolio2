@@ -210,7 +210,13 @@ describe("loadPeriodTimelinePoint", () => {
       }),
     });
 
-    expect(result.totalReturn).toBe(0);
+    expect(result).toMatchObject({
+      totalReturn: 0,
+      savings: 0,
+      income: 0,
+      expenses: 0,
+      gainsLosses: 0,
+    });
     expect(prisma.booking.findMany).not.toHaveBeenCalled();
     expect(prisma.booking.groupBy).not.toHaveBeenCalled();
     expect(prisma.transaction.findMany).not.toHaveBeenCalled();
@@ -237,7 +243,13 @@ describe("loadPeriodTimelinePoint", () => {
       }),
     });
 
-    expect(result.totalReturn).toBe(25);
+    expect(result).toMatchObject({
+      totalReturn: 25,
+      savings: 0,
+      income: 0,
+      expenses: 0,
+      gainsLosses: 25,
+    });
   });
 
   test("matches period-overview total-return semantics", async () => {
@@ -278,7 +290,13 @@ describe("loadPeriodTimelinePoint", () => {
       }),
     });
 
-    expect(result.totalReturn).toBe(138);
+    expect(result).toMatchObject({
+      totalReturn: 138,
+      savings: 100,
+      income: 120,
+      expenses: 20,
+      gainsLosses: 38,
+    });
     expect(finalizeHoldingGainLossState).not.toHaveBeenCalled();
     expect(computeTransferClearingGainLossSplit).toHaveBeenCalledTimes(1);
   });

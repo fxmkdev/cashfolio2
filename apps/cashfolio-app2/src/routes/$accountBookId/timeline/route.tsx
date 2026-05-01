@@ -1,8 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { loadTimelinePageData } from "./-page-loader";
-import { buildTimelineModeNavigation } from "./-page-navigation";
-import { getTimelineMode, parseTimelineSearch } from "./-page-types";
+import { buildTimelineSearchNavigation } from "./-page-navigation";
+import {
+  getTimelineMetric,
+  getTimelineMode,
+  parseTimelineSearch,
+} from "./-page-types";
 
 const TimelinePageView = lazy(async () => {
   const module = await import("./-page-view");
@@ -24,6 +28,7 @@ function TimelinePage() {
   const { accountBookId } = Route.useParams();
   const search = Route.useSearch();
   const selectedMode = getTimelineMode(search);
+  const selectedMetric = getTimelineMetric(search);
   const { timeline } = Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/timeline" });
 
@@ -32,8 +37,24 @@ function TimelinePage() {
       <TimelinePageView
         accountBookId={accountBookId}
         selectedMode={selectedMode}
+        selectedMetric={selectedMetric}
         timeline={timeline}
-        onModeChange={(mode) => navigate(buildTimelineModeNavigation(mode))}
+        onModeChange={(mode) =>
+          navigate(
+            buildTimelineSearchNavigation({
+              mode,
+              metric: selectedMetric,
+            }),
+          )
+        }
+        onMetricChange={(metric) =>
+          navigate(
+            buildTimelineSearchNavigation({
+              mode: selectedMode,
+              metric,
+            }),
+          )
+        }
       />
     </Suspense>
   );

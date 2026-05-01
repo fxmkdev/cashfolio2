@@ -18,11 +18,18 @@ import { LinkButton } from "@/components/link-button";
 import type { PeriodTimelineResponse } from "@/server/period-timeline";
 import { TopPageHeader } from "@/components/top-page-header";
 import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
-import { isTimelinePeriodMode, type TimelinePeriodMode } from "./-page-types";
 import {
   createDisplayNumberFormatter,
   getCurrencyDecimals,
 } from "@/shared/unit-format";
+import {
+  getTimelineMetricLabel,
+  isTimelineMetric,
+  isTimelinePeriodMode,
+  TIMELINE_METRIC_OPTIONS,
+  type TimelineMetric,
+  type TimelinePeriodMode,
+} from "./-page-types";
 import {
   createTimelineChartOptions,
   mapTimelinePointsToChartData,
@@ -35,8 +42,10 @@ ensureChartModulesRegistered();
 export type TimelinePageViewProps = {
   accountBookId: string;
   selectedMode: TimelinePeriodMode;
+  selectedMetric: TimelineMetric;
   timeline: PeriodTimelineResponse;
   onModeChange: (mode: TimelinePeriodMode) => void;
+  onMetricChange: (metric: TimelineMetric) => void;
 };
 
 function findTimelineRangeButtons(container: HTMLElement): HTMLElement[] {
@@ -71,8 +80,10 @@ function clickRangeButtonByLabel(args: {
 export function TimelinePageView({
   accountBookId,
   selectedMode,
+  selectedMetric,
   timeline,
   onModeChange,
+  onMetricChange,
 }: TimelinePageViewProps) {
   const activeReferenceCurrency = timeline.referenceCurrency;
   const theme = useMantineTheme();
@@ -118,6 +129,7 @@ export function TimelinePageView({
       createTimelineChartOptions({
         chartData,
         periodMode: selectedMode,
+        selectedMetric,
         amountCompactFormatter,
         currencyFormatter,
         colors,
@@ -130,6 +142,7 @@ export function TimelinePageView({
       colors,
       currencyFormatter,
       selectedMode,
+      selectedMetric,
       isDarkMode,
       theme,
     ],
@@ -223,12 +236,26 @@ export function TimelinePageView({
       />
 
       <Card withBorder radius="md" p="lg" className={classes.chartCard}>
-        <Stack gap={4}>
-          <Text fw={600}>Total Return by Period</Text>
-          <Text c="dimmed" size="sm">
-            Amounts shown in {activeReferenceCurrency}
-          </Text>
-        </Stack>
+        <Group justify="space-between" align="flex-start" wrap="wrap" gap="sm">
+          <Stack gap={4}>
+            <Text fw={600}>
+              {getTimelineMetricLabel(selectedMetric)} by Period
+            </Text>
+            <Text c="dimmed" size="sm">
+              Amounts shown in {activeReferenceCurrency}
+            </Text>
+          </Stack>
+          <SegmentedControl
+            value={selectedMetric}
+            aria-label="Timeline metric"
+            data={[...TIMELINE_METRIC_OPTIONS]}
+            onChange={(nextMetric) => {
+              if (isTimelineMetric(nextMetric)) {
+                onMetricChange(nextMetric);
+              }
+            }}
+          />
+        </Group>
 
         {chartData.length === 0 ? (
           <Text c="dimmed" mt="md">
