@@ -1,8 +1,4 @@
-import {
-  AccountType,
-  EquityAccountSubtype,
-  Unit,
-} from "../.prisma-client/enums";
+import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { prisma } from "../prisma.server";
 import { normalizePeriodValue } from "../shared/period";
 import { startOfUtcDay } from "../shared/date";
@@ -16,16 +12,17 @@ import {
   resolvePeriodSelection,
 } from "./period-selection";
 import { computeEndOfPeriodBalanceStatsWithConvertedBalances } from "./period-balance-stats";
-import {
-  accumulateConvertedEquityBooking,
-  createPeriodOverviewEquityAggregation,
-} from "./period-overview-aggregation";
+import { createPeriodOverviewEquityAggregation } from "./period-overview-aggregation";
 import {
   accumulateGainLossContribution,
   resolveExplicitCounterpartNonEquityAccounts,
   type ExplicitCounterpartAccount,
   type GainLossContributionAccumulator,
 } from "./period-gains-losses-contributions";
+import {
+  type ConvertedExplicitEquityBooking,
+  loadPeriodEquityBookings,
+} from "./period-overview-equity-bookings";
 import {
   applyHoldingTransactionsToGainLossState,
   finalizeHoldingGainLossState,
@@ -38,75 +35,10 @@ import {
 } from "./period-transfer-clearing";
 import { buildPeriodOverviewResponse } from "./period-overview-response";
 
-const EQUITY_BOOKINGS_PAGE_SIZE = 1_000;
 const TRANSACTIONS_PAGE_SIZE = 200;
 
 function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
-}
-
-function resolveEquityBookingAccountId(booking: {
-  accountId?: string;
-  account?: {
-    id?: string;
-  };
-}) {
-  const accountId = booking.accountId ?? booking.account?.id;
-  if (!accountId) {
-    throw new Error(
-      "Equity booking invariant violated: booking is missing accountId.",
-    );
-  }
-
-  return accountId;
-}
-
-function resolveEquityBookingAccount(
-  booking: {
-    accountId?: string;
-    account?: {
-      id?: string;
-      name?: string;
-      groupId?: string | null;
-      equityAccountSubtype?: EquityAccountSubtype | null;
-    };
-  },
-  equityAccountById: Map<
-    string,
-    {
-      id: string;
-      name: string;
-      groupId: string | null;
-      equityAccountSubtype: EquityAccountSubtype | null;
-    }
-  >,
-) {
-  const bookingAccountId = resolveEquityBookingAccountId(booking);
-  const mappedAccount = equityAccountById.get(bookingAccountId);
-  if (mappedAccount) {
-    return mappedAccount;
-  }
-
-  const fallbackAccount = booking.account;
-  if (
-    fallbackAccount &&
-    fallbackAccount.id &&
-    fallbackAccount.name &&
-    (fallbackAccount.equityAccountSubtype === EquityAccountSubtype.INCOME ||
-      fallbackAccount.equityAccountSubtype === EquityAccountSubtype.EXPENSE ||
-      fallbackAccount.equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS)
-  ) {
-    return {
-      id: fallbackAccount.id,
-      name: fallbackAccount.name,
-      groupId: fallbackAccount.groupId ?? null,
-      equityAccountSubtype: fallbackAccount.equityAccountSubtype,
-    };
-  }
-
-  throw new Error(
-    `Equity booking invariant violated for account ${bookingAccountId}: missing preloaded equity account metadata.`,
-  );
 }
 
 export async function loadPeriodOverview(args: {
@@ -262,7 +194,7 @@ export async function loadPeriodOverview(args: {
   let convertedBookingsCount = 0;
   let skippedBookingsCount = 0;
 
-  const equityAggregation = createPeriodOverviewEquityAggregation();
+  let equityAggregation = createPeriodOverviewEquityAggregation();
   const gainsLossesContributionByKey = new Map<
     string,
     GainLossContributionAccumulator
@@ -271,155 +203,32 @@ export async function loadPeriodOverview(args: {
     string,
     ExplicitCounterpartAccount
   >();
-  const explicitTransactionIds = new Set<string>();
-  const explicitConvertedBookings: Array<{
-    bookingId: string;
-    transactionId: string;
-    unit: Unit;
-    currency: string | null;
-    cryptocurrency: string | null;
-    symbol: string | null;
-    tradeCurrency: string | null;
-    convertedValue: number;
-  }> = [];
-
-  let nextBookingIdCursor: string | undefined;
+  let explicitTransactionIds: string[] = [];
+  let explicitConvertedBookings: ConvertedExplicitEquityBooking[] = [];
   let realizedGainLoss = 0;
   let unrealizedGainLoss = 0;
 
   if (!isBeforeAccountBookStart) {
-    while (true) {
-      const bookingsPage = await prisma.booking.findMany({
-        where: {
-          accountBookId: data.accountBookId,
-          date: {
-            gte: queryStart,
-            lt: queryEndExclusive,
-          },
-          ...(equityAccountIds.length > 0
-            ? {
-                accountId: {
-                  in: equityAccountIds,
-                },
-              }
-            : {
-                account: {
-                  type: AccountType.EQUITY,
-                  equityAccountSubtype: {
-                    in: [
-                      EquityAccountSubtype.INCOME,
-                      EquityAccountSubtype.EXPENSE,
-                      EquityAccountSubtype.GAIN_LOSS,
-                    ],
-                  },
-                },
-              }),
-        },
-        orderBy: { id: "asc" },
-        take: EQUITY_BOOKINGS_PAGE_SIZE,
-        ...(nextBookingIdCursor
-          ? {
-              cursor: {
-                id_accountBookId: {
-                  id: nextBookingIdCursor,
-                  accountBookId: data.accountBookId,
-                },
-              },
-              skip: 1,
-            }
-          : {}),
-        select: {
-          id: true,
-          accountId: true,
-          transactionId: true,
-          date: true,
-          value: true,
-          unit: true,
-          currency: true,
-          cryptocurrency: true,
-          symbol: true,
-          tradeCurrency: true,
-        },
-      });
+    const equityBookings = await loadPeriodEquityBookings({
+      accountBookId: data.accountBookId,
+      queryStart,
+      queryEndExclusive,
+      referenceCurrency,
+      exchangeRateByKey,
+      equityAccountIds,
+      equityAccountById,
+    });
+    equityAggregation = equityBookings.equityAggregation;
+    explicitTransactionIds = equityBookings.explicitTransactionIds;
+    explicitConvertedBookings = equityBookings.explicitConvertedBookings;
+    bookingsCount += equityBookings.bookingsCount;
+    convertedBookingsCount += equityBookings.convertedBookingsCount;
+    skippedBookingsCount += equityBookings.skippedBookingsCount;
 
-      if (bookingsPage.length === 0) {
-        break;
-      }
-
-      bookingsCount += bookingsPage.length;
-      nextBookingIdCursor = bookingsPage[bookingsPage.length - 1].id;
-
-      const conversionTasks = bookingsPage.map((booking) => ({
-        booking,
-        convertedValuePromise: convertBookingValueToReference({
-          value: Number(booking.value),
-          unit: booking.unit,
-          currency: booking.currency,
-          cryptocurrency: booking.cryptocurrency,
-          symbol: booking.symbol,
-          tradeCurrency: booking.tradeCurrency,
-          date: booking.date,
-          referenceCurrency,
-          exchangeRateByKey,
-        }),
-      }));
-
-      const convertedValues = await Promise.all(
-        conversionTasks.map((task) => task.convertedValuePromise),
-      );
-      for (let index = 0; index < conversionTasks.length; index += 1) {
-        const booking = conversionTasks[index]!.booking;
-        const convertedValue = convertedValues[index];
-
-        if (convertedValue == null) {
-          skippedBookingsCount += 1;
-          continue;
-        }
-
-        const equityAccount = resolveEquityBookingAccount(
-          booking,
-          equityAccountById,
-        );
-
-        convertedBookingsCount += 1;
-        accumulateConvertedEquityBooking({
-          booking: {
-            account: {
-              id: equityAccount.id,
-              name: equityAccount.name,
-              groupId: equityAccount.groupId,
-              equityAccountSubtype: equityAccount.equityAccountSubtype,
-            },
-          },
-          convertedValue,
-          aggregation: equityAggregation,
-        });
-
-        if (
-          equityAccount.equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS
-        ) {
-          explicitTransactionIds.add(booking.transactionId);
-          explicitConvertedBookings.push({
-            bookingId: booking.id,
-            transactionId: booking.transactionId,
-            unit: booking.unit,
-            currency: booking.currency,
-            cryptocurrency: booking.cryptocurrency,
-            symbol: booking.symbol,
-            tradeCurrency: booking.tradeCurrency,
-            convertedValue,
-          });
-        }
-      }
-
-      if (bookingsPage.length < EQUITY_BOOKINGS_PAGE_SIZE) {
-        break;
-      }
-    }
-    if (explicitTransactionIds.size > 0) {
+    if (explicitTransactionIds.length > 0) {
       await resolveExplicitCounterpartNonEquityAccounts({
         accountBookId: data.accountBookId,
-        explicitTransactionIds: Array.from(explicitTransactionIds),
+        explicitTransactionIds,
         byTransactionId: explicitCounterpartAccountByTransactionId,
       });
     }
