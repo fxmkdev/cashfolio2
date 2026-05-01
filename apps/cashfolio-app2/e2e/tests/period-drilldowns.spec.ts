@@ -52,8 +52,22 @@ test("period allocation table account drilldown opens ledger with selected perio
   await expect(usdRow).toBeVisible();
   await usdRow.dblclick();
 
-  await expect(page).toHaveURL(
-    new RegExp(`/${seeded.accountBookId}/[^/?]+\\?period=${period}$`),
+  await expect
+    .poll(() => {
+      const url = new URL(page.url());
+      return {
+        pathname: url.pathname,
+        period: url.searchParams.get("period"),
+      };
+    })
+    .toEqual({
+      pathname: expect.stringMatching(
+        new RegExp(`^/${seeded.accountBookId}/[^/]+$`),
+      ),
+      period,
+    });
+  expect(new URL(page.url()).pathname).not.toBe(
+    `/${seeded.accountBookId}/period`,
   );
   await expect(
     page.getByText("Showing entries for January 2026"),
