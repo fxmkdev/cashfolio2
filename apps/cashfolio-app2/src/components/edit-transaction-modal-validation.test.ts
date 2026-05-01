@@ -141,4 +141,32 @@ describe("validateEditTransactionBookingsRoot", () => {
 
     expect(result).toContain("Transaction is not balanced");
   });
+
+  test("formats balance difference without floating-point artifacts", () => {
+    const result = rootValidation(
+      [
+        {
+          key: "1",
+          account: "asset-1",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          debit: 0.3,
+        },
+        {
+          key: "2",
+          account: "asset-2",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          credit: 0,
+        },
+      ],
+      [
+        account("asset-1", AccountType.ASSET, null),
+        account("asset-2", AccountType.ASSET, null),
+      ],
+    );
+
+    expect(result).toContain("0.3");
+    expect(result).not.toContain("0.300000000000");
+  });
 });

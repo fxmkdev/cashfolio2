@@ -77,7 +77,7 @@ export function buildRealizedColumns(args: {
       type: FORMATTED_NUMERIC_COLUMN,
       context: {
         formattedNumeric: {
-          getDisplayDecimals: () => args.unitPriceDisplayDecimals,
+          getDisplayDecimals: () => args.referenceCurrencyDisplayDecimals,
         },
       },
     },
@@ -88,7 +88,7 @@ export function buildRealizedColumns(args: {
       type: FORMATTED_NUMERIC_COLUMN,
       context: {
         formattedNumeric: {
-          getDisplayDecimals: () => args.referenceCurrencyDisplayDecimals,
+          getDisplayDecimals: () => args.unitPriceDisplayDecimals,
         },
       },
     },
