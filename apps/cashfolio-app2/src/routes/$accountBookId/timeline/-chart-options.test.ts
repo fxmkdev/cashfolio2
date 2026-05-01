@@ -6,10 +6,48 @@ import {
 } from "./-chart-options";
 
 const mockTheme = {
+  primaryColor: "blue",
+  primaryShade: {
+    light: 6,
+    dark: 8,
+  },
+  white: "#ffffff",
+  black: "#000000",
   colors: {
+    blue: [
+      "#f0f4ff",
+      "#e0e7ff",
+      "#c7d2fe",
+      "",
+      "",
+      "",
+      "#2563eb",
+      "#1d4ed8",
+      "#1e40af",
+      "#172554",
+    ],
     green: ["", "", "", "", "", "#2f9e44", "#2b8a3e"],
     red: ["", "", "", "", "", "#f03e3e", "#e03131"],
-    gray: ["", "", "#e9ecef", "", "", "#868e96", "", "#343a40"],
+    gray: [
+      "#f8f9fa",
+      "#f1f3f5",
+      "#e9ecef",
+      "#dee2e6",
+      "#ced4da",
+      "#adb5bd",
+      "#868e96",
+      "#343a40",
+    ],
+    dark: [
+      "",
+      "",
+      "#6c757d",
+      "#495057",
+      "#3b3f44",
+      "#2f3338",
+      "#26292e",
+      "#1f2226",
+    ],
   },
 } as unknown as MantineTheme;
 
@@ -96,17 +134,49 @@ describe("createTimelineChartOptions", () => {
     expect(options.navigator).toEqual({
       enabled: true,
       miniChart: {
-        enabled: true,
+        enabled: false,
       },
     });
     expect(options.ranges).toEqual({
       enabled: true,
       buttons: [
-        { label: "6M", value: { unit: "month", step: 6 } },
         { label: "1Y", value: "year" },
+        { label: "6M", value: { unit: "month", step: 6 } },
         { label: "3Y", value: { unit: "year", step: 3 } },
         { label: "All", value: undefined },
       ],
+      fill: "#ffffff",
+      stroke: "#ced4da",
+      textColor: "#343a40",
+      active: {
+        fill: "#e0e7ff",
+        stroke: "#2563eb",
+        textColor: "#1d4ed8",
+      },
+      hover: {
+        fill: "#f8f9fa",
+        stroke: "#adb5bd",
+        textColor: "#000000",
+      },
+      disabled: {
+        fill: "#f1f3f5",
+        stroke: "#dee2e6",
+        textColor: "#adb5bd",
+      },
+    });
+    expect(options.initialState).toEqual({
+      zoom: {
+        rangeX: {
+          start: {
+            __type: "date",
+            value: new Date("2025-03-01T00:00:00.000Z").getTime(),
+          },
+          end: {
+            __type: "date",
+            value: new Date("2026-03-01T00:00:00.000Z").getTime(),
+          },
+        },
+      },
     });
     expect(options.axes?.x?.type).toBe("unit-time");
     expect(options.axes?.x).toMatchObject({
@@ -189,15 +259,47 @@ describe("createTimelineChartOptions", () => {
     expect(options.ranges).toEqual({
       enabled: true,
       buttons: [
-        { label: "3Y", value: { unit: "year", step: 3 } },
         { label: "5Y", value: { unit: "year", step: 5 } },
+        { label: "3Y", value: { unit: "year", step: 3 } },
         { label: "10Y", value: { unit: "year", step: 10 } },
         { label: "All", value: undefined },
       ],
+      fill: "#26292e",
+      stroke: "#495057",
+      textColor: "#e9ecef",
+      active: {
+        fill: "#1e40af",
+        stroke: "#1d4ed8",
+        textColor: "#ffffff",
+      },
+      hover: {
+        fill: "#2f3338",
+        stroke: "#6c757d",
+        textColor: "#ffffff",
+      },
+      disabled: {
+        fill: "#1f2226",
+        stroke: "#3b3f44",
+        textColor: "#868e96",
+      },
     });
     expect(options.axes?.x?.type).toBe("unit-time");
     expect(options.axes?.x).toMatchObject({
       unit: { unit: "year", utc: true },
+    });
+    expect(options.initialState).toEqual({
+      zoom: {
+        rangeX: {
+          start: {
+            __type: "date",
+            value: new Date("2020-01-01T00:00:00.000Z").getTime(),
+          },
+          end: {
+            __type: "date",
+            value: new Date("2025-01-01T00:00:00.000Z").getTime(),
+          },
+        },
+      },
     });
   });
 
@@ -218,5 +320,6 @@ describe("createTimelineChartOptions", () => {
     });
 
     expect(options.axes?.x?.crossLines).toBeUndefined();
+    expect(options.initialState).toBeUndefined();
   });
 });
