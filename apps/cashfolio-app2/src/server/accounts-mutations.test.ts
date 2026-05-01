@@ -28,6 +28,7 @@ const ensureAuthorizedForAccountBookId = vi.hoisted(() => vi.fn());
 const ensureSameOriginRequestFromServerContext = vi.hoisted(() => vi.fn());
 const validateAccountInput = vi.hoisted(() => vi.fn());
 const validateAccountGroupInput = vi.hoisted(() => vi.fn());
+const invalidatePeriodBaseDataCacheForAccountBook = vi.hoisted(() => vi.fn());
 
 const tx = vi.hoisted(() => ({
   account: {
@@ -76,6 +77,10 @@ vi.mock("../shared/account-validation", () => ({
 
 vi.mock("../prisma.server", () => ({
   prisma,
+}));
+
+vi.mock("./period-base-data-cache", () => ({
+  invalidatePeriodBaseDataCacheForAccountBook,
 }));
 
 import { updateAccount } from "./accounts-mutations";
@@ -192,6 +197,9 @@ describe("updateAccount opening balance management", () => {
       }),
     );
     expect(tx.transaction.create).not.toHaveBeenCalled();
+    expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
+      "book-1",
+    );
   });
 
   it("deletes opening-balance transactions when opening balance is removed", async () => {
@@ -241,6 +249,9 @@ describe("updateAccount opening balance management", () => {
     });
     expect(tx.transaction.update).not.toHaveBeenCalled();
     expect(tx.transaction.create).not.toHaveBeenCalled();
+    expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
+      "book-1",
+    );
   });
 
   it("reuses concurrently created opening-balances account on unique conflict", async () => {
@@ -283,6 +294,9 @@ describe("updateAccount opening balance management", () => {
           }),
         }),
       }),
+    );
+    expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
+      "book-1",
     );
   });
 });

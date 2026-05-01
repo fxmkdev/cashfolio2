@@ -29,6 +29,7 @@ import {
   getGroupDeleteAvailability,
   getGroupUnarchiveAvailability,
 } from "./account-tree-rules";
+import { invalidatePeriodBaseDataCacheForAccountBook } from "./period-base-data-cache";
 
 const OPENING_BALANCES_ACCOUNT_NAME = "Opening Balances";
 const OPENING_BALANCE_EPSILON = 0.000001;
@@ -507,6 +508,7 @@ export const createAccount = createServerFn({ method: "POST" })
 
       return createdAccount;
     });
+    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
     return account;
   });
 
@@ -575,6 +577,7 @@ export const updateAccount = createServerFn({ method: "POST" })
 
       return updatedAccount;
     });
+    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
     return account;
   });
 
@@ -604,6 +607,7 @@ export const createAccountGroup = createServerFn({ method: "POST" })
         accountBookId: data.accountBookId,
       },
     });
+    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
     return group;
   });
 
@@ -654,6 +658,7 @@ export const updateAccountGroup = createServerFn({ method: "POST" })
         sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : null,
       },
     });
+    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
     return group;
   });
 
@@ -683,6 +688,7 @@ export const deleteAccount = createServerFn({ method: "POST" })
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
       },
     });
+    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
   });
 
 export const deleteAccountGroup = createServerFn({ method: "POST" })
@@ -720,6 +726,7 @@ export const deleteAccountGroup = createServerFn({ method: "POST" })
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
       },
     });
+    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
   });
 
 export const archiveAccount = createServerFn({ method: "POST" })
@@ -759,6 +766,7 @@ export const archiveAccount = createServerFn({ method: "POST" })
       },
       data: { isActive: false },
     });
+    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
   });
 
 export const archiveAccountGroup = createServerFn({ method: "POST" })
@@ -808,6 +816,7 @@ export const archiveAccountGroup = createServerFn({ method: "POST" })
       },
       data: { isActive: false },
     });
+    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
   });
 
 export const unarchiveAccount = createServerFn({ method: "POST" })
@@ -845,6 +854,7 @@ export const unarchiveAccount = createServerFn({ method: "POST" })
       },
       data: { isActive: true },
     });
+    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
   });
 
 export const unarchiveAccountGroup = createServerFn({ method: "POST" })
@@ -885,6 +895,7 @@ export const unarchiveAccountGroup = createServerFn({ method: "POST" })
       },
       data: { isActive: true },
     });
+    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
   });
 
 export const reorderAccountTreeItems = createServerFn({ method: "POST" })
@@ -924,4 +935,5 @@ export const reorderAccountTreeItems = createServerFn({ method: "POST" })
             }),
       ),
     );
+    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
   });

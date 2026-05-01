@@ -28,6 +28,7 @@ const createServerFn = vi.hoisted(() =>
 
 const ensureAuthorizedForAccountBookId = vi.hoisted(() => vi.fn());
 const ensureSameOriginRequestFromServerContext = vi.hoisted(() => vi.fn());
+const invalidatePeriodBaseDataCacheForAccountBook = vi.hoisted(() => vi.fn());
 
 const prisma = vi.hoisted(() => ({
   booking: {
@@ -66,6 +67,9 @@ vi.mock("../security/same-origin.server", () => ({
 
 vi.mock("../prisma.server", () => ({
   prisma,
+}));
+vi.mock("./period-base-data-cache", () => ({
+  invalidatePeriodBaseDataCacheForAccountBook,
 }));
 
 import {
@@ -250,6 +254,9 @@ describe("transactions mutations", () => {
         },
       },
     });
+    expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
+      "book-1",
+    );
   });
 
   it("rejects simple transactions with invalid amount", async () => {
@@ -368,6 +375,9 @@ describe("transactions mutations", () => {
         }),
       }),
     );
+    expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
+      "book-1",
+    );
   });
 
   it("creates full transactions from validated booking payloads", async () => {
@@ -387,6 +397,9 @@ describe("transactions mutations", () => {
           description: "Transaction",
         }),
       }),
+    );
+    expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
+      "book-1",
     );
   });
 
@@ -483,6 +496,9 @@ describe("transactions mutations", () => {
         },
       }),
     );
+    expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
+      "book-1",
+    );
   });
 
   it("rejects update transaction when gain/loss booking is not simple", async () => {
@@ -575,6 +591,9 @@ describe("transactions mutations", () => {
         },
       },
     });
+    expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
+      "book-1",
+    );
   });
 
   it("rejects rebook when resulting gain/loss transaction is not simple", async () => {

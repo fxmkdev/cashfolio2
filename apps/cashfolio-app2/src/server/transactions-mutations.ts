@@ -16,6 +16,7 @@ import {
   validateAccountTypeBookingsWithAccounts,
   validateCreateTransaction,
 } from "./transactions-helpers";
+import { invalidatePeriodBaseDataCacheForAccountBook } from "./period-base-data-cache";
 import type {
   CreateSimpleTransactionInput,
   CreateTransactionInput,
@@ -89,6 +90,7 @@ export const updateTransaction = createServerFn({ method: "POST" })
         },
       }),
     ]);
+    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
   });
 
 export const createTransaction = createServerFn({ method: "POST" })
@@ -102,6 +104,7 @@ export const createTransaction = createServerFn({ method: "POST" })
     const transaction = await prisma.transaction.create({
       data: buildTransactionCreateData(data),
     });
+    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
 
     return transaction;
   });
@@ -285,6 +288,7 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
     const transaction = await prisma.transaction.create({
       data: buildTransactionCreateData(createInput),
     });
+    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
 
     return transaction;
   });
@@ -400,6 +404,7 @@ export const rebookBooking = createServerFn({ method: "POST" })
         },
       },
     });
+    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
 
     return { transactionId: booking.transactionId };
   });
@@ -432,4 +437,5 @@ export const deleteTransaction = createServerFn({ method: "POST" })
         },
       },
     });
+    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
   });
