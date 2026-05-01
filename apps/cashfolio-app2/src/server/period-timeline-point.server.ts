@@ -1,82 +1,20 @@
-import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
-import { prisma } from "../prisma.server";
-import { startOfUtcDay } from "../shared/date";
 import { normalizePeriodValue } from "../shared/period";
-import { filterConvertibleHoldingAccounts, round2 } from "./period-helpers";
-import {
-  convertBookingValueToReference,
-  getUnitToReferenceExchangeRate,
-} from "./period-conversion";
 import {
   getPeriodEndExclusive,
   resolvePeriodSelection,
 } from "./period-selection";
 import {
-  accumulateConvertedEquityBooking,
-  createPeriodOverviewEquityAggregation,
-} from "./period-overview-aggregation";
-import {
-  applyHoldingTransactionsToGainLossState,
-  finalizeHoldingGainLossState,
-  initializeHoldingGainLossState,
-} from "./period-overview-holdings";
-import {
-  computeTransferClearingGainLossSplit,
-  loadTransferClearingUnitBuckets,
-} from "./period-transfer-clearing";
-
-const EQUITY_BOOKINGS_PAGE_SIZE = 1_000;
-const TRANSACTIONS_PAGE_SIZE = 200;
+  loadPeriodTimelinePointContext,
+  type PeriodTimelinePointContext,
+} from "./period-timeline-point-context.server";
+import { loadPeriodTimelinePointTotalReturn } from "./period-timeline-point-total-return.server";
 
 function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
-export type PeriodTimelinePointContext = {
-  referenceCurrency: string;
-  accountBookStartDate: Date;
-  holdingAccountsResolved: ReturnType<typeof filterConvertibleHoldingAccounts>;
-};
-
-export async function loadPeriodTimelinePointContext(args: {
-  accountBookId: string;
-}): Promise<PeriodTimelinePointContext> {
-  const accountBook = await prisma.accountBook.findUniqueOrThrow({
-    where: { id: args.accountBookId },
-    select: {
-      referenceCurrency: true,
-      startDate: true,
-    },
-  });
-
-  const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
-  const baseAssetLiabilityAccounts = await prisma.account.findMany({
-    where: {
-      accountBookId: args.accountBookId,
-      type: {
-        in: [AccountType.ASSET, AccountType.LIABILITY],
-      },
-    },
-    select: {
-      id: true,
-      type: true,
-      unit: true,
-      currency: true,
-      cryptocurrency: true,
-      symbol: true,
-      tradeCurrency: true,
-    },
-  });
-
-  return {
-    referenceCurrency,
-    accountBookStartDate: startOfUtcDay(accountBook.startDate),
-    holdingAccountsResolved: filterConvertibleHoldingAccounts(
-      baseAssetLiabilityAccounts,
-      referenceCurrency,
-    ),
-  };
-}
+export { loadPeriodTimelinePointContext };
+export type { PeriodTimelinePointContext };
 
 export async function loadPeriodTimelinePoint(args: {
   accountBookId: string;
@@ -93,337 +31,25 @@ export async function loadPeriodTimelinePoint(args: {
     (await loadPeriodTimelinePointContext({
       accountBookId: data.accountBookId,
     }));
-  const { referenceCurrency, accountBookStartDate, holdingAccountsResolved } =
-    context;
   const selection = resolvePeriodSelection({
     periodValue: data.period,
     now: new Date(),
-    firstBookingDate: accountBookStartDate,
+    firstBookingDate: context.accountBookStartDate,
   });
-  const isBeforeAccountBookStart = selection.to < accountBookStartDate;
-
+  const isBeforeAccountBookStart = selection.to < context.accountBookStartDate;
   const queryStart = selection.from;
   const queryEndExclusive = getPeriodEndExclusive(selection.to);
   const initialHoldingDate = addUtcDays(queryStart, -1);
 
-  const exchangeRateByKey = new Map<string, Promise<number | null>>();
-  const equityAggregation = createPeriodOverviewEquityAggregation();
-  let realizedGainLoss = 0;
-  let unrealizedGainLoss = 0;
-
-  if (!isBeforeAccountBookStart) {
-    let nextBookingIdCursor: string | undefined;
-
-    while (true) {
-      const bookingsPage = await prisma.booking.findMany({
-        where: {
-          accountBookId: data.accountBookId,
-          date: {
-            gte: queryStart,
-            lt: queryEndExclusive,
-          },
-          account: {
-            type: AccountType.EQUITY,
-            equityAccountSubtype: {
-              in: [
-                EquityAccountSubtype.INCOME,
-                EquityAccountSubtype.EXPENSE,
-                EquityAccountSubtype.GAIN_LOSS,
-              ],
-            },
-          },
-        },
-        orderBy: { id: "asc" },
-        take: EQUITY_BOOKINGS_PAGE_SIZE,
-        ...(nextBookingIdCursor
-          ? {
-              cursor: {
-                id_accountBookId: {
-                  id: nextBookingIdCursor,
-                  accountBookId: data.accountBookId,
-                },
-              },
-              skip: 1,
-            }
-          : {}),
-        select: {
-          id: true,
-          value: true,
-          unit: true,
-          currency: true,
-          cryptocurrency: true,
-          symbol: true,
-          tradeCurrency: true,
-          date: true,
-          account: {
-            select: {
-              id: true,
-              name: true,
-              groupId: true,
-              equityAccountSubtype: true,
-            },
-          },
-        },
-      });
-
-      if (bookingsPage.length === 0) {
-        break;
-      }
-
-      nextBookingIdCursor = bookingsPage[bookingsPage.length - 1]?.id;
-      const convertedValues = await Promise.all(
-        bookingsPage.map((booking) =>
-          convertBookingValueToReference({
-            value: Number(booking.value),
-            unit: booking.unit,
-            currency: booking.currency,
-            cryptocurrency: booking.cryptocurrency,
-            symbol: booking.symbol,
-            tradeCurrency: booking.tradeCurrency,
-            date: booking.date,
-            referenceCurrency,
-            exchangeRateByKey,
-          }),
-        ),
-      );
-
-      for (let index = 0; index < bookingsPage.length; index += 1) {
-        const booking = bookingsPage[index]!;
-        const convertedValue = convertedValues[index];
-
-        if (convertedValue == null) {
-          continue;
-        }
-
-        accumulateConvertedEquityBooking({
-          booking,
-          convertedValue,
-          aggregation: equityAggregation,
-        });
-      }
-
-      if (bookingsPage.length < EQUITY_BOOKINGS_PAGE_SIZE) {
-        break;
-      }
-    }
-
-    const holdingAccountIds = holdingAccountsResolved.map(
-      (account) => account.id,
-    );
-
-    if (holdingAccountIds.length > 0) {
-      const initialHoldingBalances = await prisma.booking.groupBy({
-        by: ["accountId"],
-        where: {
-          accountBookId: data.accountBookId,
-          accountId: { in: holdingAccountIds },
-          date: { lt: queryStart },
-        },
-        _sum: { value: true },
-      });
-
-      const initialHoldingBalanceByAccountId = new Map(
-        initialHoldingBalances.map((balance) => [
-          balance.accountId,
-          Number(balance._sum.value ?? 0),
-        ]),
-      );
-
-      const holdingGainLossState = await initializeHoldingGainLossState({
-        holdingAccounts: holdingAccountsResolved,
-        initialBalanceByAccountId: initialHoldingBalanceByAccountId,
-        initialRateDate: initialHoldingDate,
-        resolveRate: (input) =>
-          getUnitToReferenceExchangeRate({
-            ...input,
-            referenceCurrency,
-            exchangeRateByKey,
-          }),
-      });
-      let nextTransactionIdCursor: string | undefined;
-
-      while (true) {
-        const transactionsPage = await prisma.transaction.findMany({
-          where: {
-            accountBookId: data.accountBookId,
-            AND: [
-              {
-                bookings: {
-                  some: {
-                    accountId: {
-                      in: holdingAccountIds,
-                    },
-                    date: {
-                      gte: queryStart,
-                      lt: queryEndExclusive,
-                    },
-                  },
-                },
-              },
-              {
-                bookings: {
-                  none: {
-                    date: {
-                      gte: queryEndExclusive,
-                    },
-                  },
-                },
-              },
-              {
-                bookings: {
-                  none: {
-                    account: {
-                      type: AccountType.EQUITY,
-                      equityAccountSubtype:
-                        EquityAccountSubtype.OPENING_BALANCES,
-                    },
-                  },
-                },
-              },
-            ],
-          },
-          orderBy: { id: "asc" },
-          take: TRANSACTIONS_PAGE_SIZE,
-          ...(nextTransactionIdCursor
-            ? {
-                cursor: {
-                  id_accountBookId: {
-                    id: nextTransactionIdCursor,
-                    accountBookId: data.accountBookId,
-                  },
-                },
-                skip: 1,
-              }
-            : {}),
-          select: {
-            id: true,
-            bookings: {
-              select: {
-                id: true,
-                accountId: true,
-                date: true,
-                value: true,
-                unit: true,
-                currency: true,
-                cryptocurrency: true,
-                symbol: true,
-                tradeCurrency: true,
-                account: {
-                  select: {
-                    type: true,
-                    equityAccountSubtype: true,
-                  },
-                },
-              },
-              orderBy: [{ date: "asc" }, { id: "asc" }],
-            },
-          },
-        });
-
-        if (transactionsPage.length === 0) {
-          break;
-        }
-
-        nextTransactionIdCursor =
-          transactionsPage[transactionsPage.length - 1]?.id;
-
-        await applyHoldingTransactionsToGainLossState({
-          state: holdingGainLossState,
-          transactions: transactionsPage.map((transaction) => ({
-            bookings: transaction.bookings.map((booking) => ({
-              id: booking.id,
-              accountId: booking.accountId,
-              date: booking.date,
-              value: Number(booking.value),
-              unit: booking.unit,
-              currency: booking.currency,
-              cryptocurrency: booking.cryptocurrency,
-              symbol: booking.symbol,
-              tradeCurrency: booking.tradeCurrency,
-              accountType: booking.account.type,
-              equityAccountSubtype: booking.account.equityAccountSubtype,
-            })),
-          })),
-          periodStart: queryStart,
-          periodEndExclusive: queryEndExclusive,
-          convertBookingToReference: ({ id: _id, ...booking }) =>
-            convertBookingValueToReference({
-              ...booking,
-              referenceCurrency,
-              exchangeRateByKey,
-            }),
-        });
-
-        if (transactionsPage.length < TRANSACTIONS_PAGE_SIZE) {
-          break;
-        }
-      }
-
-      const holdingGainLossSplit = await finalizeHoldingGainLossState({
-        state: holdingGainLossState,
-        periodEnd: selection.to,
-        resolveRate: (input) =>
-          getUnitToReferenceExchangeRate({
-            ...input,
-            referenceCurrency,
-            exchangeRateByKey,
-          }),
-      });
-
-      realizedGainLoss += holdingGainLossSplit.realizedGainLoss;
-      unrealizedGainLoss += holdingGainLossSplit.unrealizedGainLoss;
-    }
-
-    const transferClearingUnitBuckets = await loadTransferClearingUnitBuckets({
-      accountBookId: data.accountBookId,
-      periodEndExclusive: queryEndExclusive,
-      referenceCurrency,
-    });
-    const transferClearingGainLossSplit =
-      await computeTransferClearingGainLossSplit({
-        unitBuckets: transferClearingUnitBuckets,
-        periodStart: queryStart,
-        periodEndExclusive: queryEndExclusive,
-        initialRateDate: initialHoldingDate,
-        periodEnd: selection.to,
-        resolveRate: (input) =>
-          getUnitToReferenceExchangeRate({
-            ...input,
-            referenceCurrency,
-            exchangeRateByKey,
-          }),
-        convertBookingToReference: (booking) =>
-          convertBookingValueToReference({
-            value: booking.value,
-            unit: booking.unit,
-            currency: booking.currency,
-            cryptocurrency: booking.cryptocurrency,
-            symbol: booking.symbol,
-            tradeCurrency: booking.tradeCurrency,
-            date: booking.date,
-            referenceCurrency,
-            exchangeRateByKey,
-          }),
-      });
-
-    realizedGainLoss += transferClearingGainLossSplit.realizedGainLoss;
-    unrealizedGainLoss += transferClearingGainLossSplit.unrealizedGainLoss;
-  }
-
-  const { income, expenses, explicitGainLoss } = equityAggregation;
-  const effectiveRealizedGainLoss = isBeforeAccountBookStart
-    ? 0
-    : explicitGainLoss + realizedGainLoss;
-  const effectiveUnrealizedGainLoss = isBeforeAccountBookStart
-    ? 0
-    : unrealizedGainLoss;
-  const gainsLosses = effectiveRealizedGainLoss + effectiveUnrealizedGainLoss;
-
-  const roundedIncome = round2(income);
-  const roundedExpenses = round2(expenses);
-  const roundedGainsLosses = round2(gainsLosses);
-  const roundedSavings = round2(roundedIncome - roundedExpenses);
-  const totalReturn = round2(roundedSavings + roundedGainsLosses);
+  const totalReturn = await loadPeriodTimelinePointTotalReturn({
+    accountBookId: data.accountBookId,
+    queryStart,
+    queryEndExclusive,
+    periodEnd: selection.to,
+    initialHoldingDate,
+    context,
+    isBeforeAccountBookStart,
+  });
 
   return {
     selectedPeriodValue: selection.periodValue,

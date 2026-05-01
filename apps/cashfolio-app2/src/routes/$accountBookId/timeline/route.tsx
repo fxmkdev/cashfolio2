@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { loadTimelinePageData } from "./-page-loader";
+import { buildTimelineModeNavigation } from "./-page-navigation";
 import { getTimelineMode, parseTimelineSearch } from "./-page-types";
 
 const TimelinePageView = lazy(async () => {
@@ -32,15 +33,7 @@ function TimelinePage() {
         accountBookId={accountBookId}
         selectedMode={selectedMode}
         timeline={timeline}
-        onModeChange={(mode) =>
-          navigate({
-            replace: true,
-            search: (previousSearch) => ({
-              ...previousSearch,
-              mode,
-            }),
-          })
-        }
+        onModeChange={(mode) => navigate(buildTimelineModeNavigation(mode))}
       />
     </Suspense>
   );

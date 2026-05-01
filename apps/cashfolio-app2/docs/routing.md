@@ -76,6 +76,7 @@ Related docs:
   - timeline route modules:
     - `$accountBookId/timeline/-page-loader.ts`
     - `$accountBookId/timeline/-page-types.ts`
+    - `$accountBookId/timeline/-page-navigation.ts`
     - `$accountBookId/timeline/-chart-options.ts`
     - `$accountBookId/timeline/-page-view.tsx`
 
