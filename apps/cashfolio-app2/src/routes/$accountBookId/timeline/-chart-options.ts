@@ -44,16 +44,16 @@ export function mapTimelinePointsToChartData(
 function getRangeButtons(periodMode: TimelinePeriodMode): AgRangesButton[] {
   if (periodMode === "year") {
     return [
-      { label: "5Y", value: { unit: "year" as const, step: 5 } },
       { label: "3Y", value: { unit: "year" as const, step: 3 } },
+      { label: "5Y", value: { unit: "year" as const, step: 5 } },
       { label: "10Y", value: { unit: "year" as const, step: 10 } },
       { label: "All", value: undefined },
     ];
   }
 
   return [
-    { label: "1Y", value: "year" },
     { label: "6M", value: { unit: "month" as const, step: 6 } },
+    { label: "1Y", value: "year" },
     { label: "3Y", value: { unit: "year" as const, step: 3 } },
     { label: "All", value: undefined },
   ];
@@ -131,9 +131,10 @@ function getDefaultRangeX(args: {
   }
 
   const years = args.periodMode === "year" ? 5 : 1;
+  const anchor = latestPeriod.periodStart;
   return {
-    start: subYears(latestPeriod.periodEndExclusive, years),
-    end: latestPeriod.periodEndExclusive,
+    start: subYears(anchor, years),
+    end: anchor,
   };
 }
 

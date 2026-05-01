@@ -140,8 +140,8 @@ describe("createTimelineChartOptions", () => {
     expect(options.ranges).toEqual({
       enabled: true,
       buttons: [
-        { label: "1Y", value: "year" },
         { label: "6M", value: { unit: "month", step: 6 } },
+        { label: "1Y", value: "year" },
         { label: "3Y", value: { unit: "year", step: 3 } },
         { label: "All", value: undefined },
       ],
@@ -169,11 +169,11 @@ describe("createTimelineChartOptions", () => {
         rangeX: {
           start: {
             __type: "date",
-            value: new Date("2025-03-01T00:00:00.000Z").getTime(),
+            value: new Date("2025-02-01T00:00:00.000Z").getTime(),
           },
           end: {
             __type: "date",
-            value: new Date("2026-03-01T00:00:00.000Z").getTime(),
+            value: new Date("2026-02-01T00:00:00.000Z").getTime(),
           },
         },
       },
@@ -259,8 +259,8 @@ describe("createTimelineChartOptions", () => {
     expect(options.ranges).toEqual({
       enabled: true,
       buttons: [
-        { label: "5Y", value: { unit: "year", step: 5 } },
         { label: "3Y", value: { unit: "year", step: 3 } },
+        { label: "5Y", value: { unit: "year", step: 5 } },
         { label: "10Y", value: { unit: "year", step: 10 } },
         { label: "All", value: undefined },
       ],
@@ -292,11 +292,11 @@ describe("createTimelineChartOptions", () => {
         rangeX: {
           start: {
             __type: "date",
-            value: new Date("2020-01-01T00:00:00.000Z").getTime(),
+            value: new Date("2019-01-01T00:00:00.000Z").getTime(),
           },
           end: {
             __type: "date",
-            value: new Date("2025-01-01T00:00:00.000Z").getTime(),
+            value: new Date("2024-01-01T00:00:00.000Z").getTime(),
           },
         },
       },
