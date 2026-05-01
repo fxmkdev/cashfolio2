@@ -183,6 +183,39 @@ describe("period base-data cache", () => {
     );
   });
 
+  it("does not perform extra account-book reads for month preset cache hits", async () => {
+    await periodBaseCache.getOrLoadPeriodBaseData({
+      accountBookId: "book-1",
+      period: "mtd",
+    });
+    await periodBaseCache.getOrLoadPeriodBaseData({
+      accountBookId: "book-1",
+      period: "mtd",
+    });
+
+    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
+  });
+
+  it("deduplicates concurrent misses before awaiting cache-key/redis work", async () => {
+    redisClient.get.mockImplementation(async (key: string) => {
+      await Promise.resolve();
+      return redisState.kv.get(key) ?? null;
+    });
+
+    await Promise.all([
+      periodBaseCache.getOrLoadPeriodBaseData({
+        accountBookId: "book-1",
+        period: "2026-02",
+      }),
+      periodBaseCache.getOrLoadPeriodBaseData({
+        accountBookId: "book-1",
+        period: "2026-02",
+      }),
+    ]);
+
+    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
+  });
+
   it("switches generation after invalidation so old entries are not reused", async () => {
     redisState.kv.set(
       "period:base:v1:preview-app-123:book-1:0:month:2026-05-01:2026-05-01",
@@ -202,7 +235,7 @@ describe("period base-data cache", () => {
       period: "mtd",
     });
 
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(2);
+    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
     const [entryKey] = redisClient.setEx.mock.calls[0] ?? [];
     expect(entryKey).not.toContain(":0:month:2026-05-01:2026-05-01");
   });

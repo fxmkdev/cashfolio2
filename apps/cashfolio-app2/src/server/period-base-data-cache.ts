@@ -1,6 +1,11 @@
 import { prisma } from "../prisma.server";
 import { getRedisClient } from "../redis.server";
-import { normalizePeriodValue, PERIOD_PRESET_VALUES } from "../shared/period";
+import {
+  normalizePeriodValue,
+  PERIOD_PRESET_LAST_MONTH,
+  PERIOD_PRESET_MTD,
+  PERIOD_PRESET_VALUES,
+} from "../shared/period";
 import { startOfUtcDay } from "../shared/date";
 import { resolvePeriodSelection } from "./period-selection";
 import {
@@ -135,6 +140,20 @@ async function resolvePeriodBaseCachePeriodKey(args: {
     return args.periodValue;
   }
 
+  // Month presets are independent of the account-book start date.
+  // Derive keys directly so cache hits avoid an extra DB read.
+  if (
+    args.periodValue === PERIOD_PRESET_MTD ||
+    args.periodValue === PERIOD_PRESET_LAST_MONTH
+  ) {
+    const selection = resolvePeriodSelection({
+      periodValue: args.periodValue,
+      now: new Date(),
+    });
+
+    return `${selection.granularity}:${formatUtcDateKey(selection.from)}:${formatUtcDateKey(selection.to)}`;
+  }
+
   const accountBook = await prisma.accountBook.findUniqueOrThrow({
     where: { id: args.accountBookId },
     select: {
@@ -194,45 +213,45 @@ export async function getOrLoadPeriodBaseData(args: {
   }
 
   const cacheEnv = getCacheEnvOrThrowWhenRedisAvailable();
-  const periodCacheKey = await resolvePeriodBaseCachePeriodKey({
-    accountBookId: args.accountBookId,
-    periodValue,
-  });
-  const generation = await getPeriodBaseCacheGeneration({
-    cacheEnv,
-    accountBookId: args.accountBookId,
-    redis,
-  });
-  const entryKey = getPeriodBaseCacheEntryKey({
-    cacheEnv,
-    accountBookId: args.accountBookId,
-    generation,
-    periodCacheKey,
-  });
-
-  try {
-    const cached = await redis.get(entryKey);
-    if (cached) {
-      const parsed = JSON.parse(cached) as unknown;
-      return decodeDatesFromCache<PeriodBaseData>(parsed);
-    }
-  } catch (error) {
-    if (!hasWarnedPeriodBaseCacheReadFailure) {
-      console.warn(
-        "Failed to read period base-data cache entry; continuing uncached.",
-        error,
-      );
-      hasWarnedPeriodBaseCacheReadFailure = true;
-    }
-  }
-
-  const inflightKey = entryKey;
+  const inflightKey = `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:${cacheEnv}:${args.accountBookId}:inflight:${periodValue}`;
   const existingInflight = inflightByCacheKey.get(inflightKey);
   if (existingInflight) {
     return existingInflight;
   }
 
   const loadPromise = (async () => {
+    const periodCacheKey = await resolvePeriodBaseCachePeriodKey({
+      accountBookId: args.accountBookId,
+      periodValue,
+    });
+    const generation = await getPeriodBaseCacheGeneration({
+      cacheEnv,
+      accountBookId: args.accountBookId,
+      redis,
+    });
+    const entryKey = getPeriodBaseCacheEntryKey({
+      cacheEnv,
+      accountBookId: args.accountBookId,
+      generation,
+      periodCacheKey,
+    });
+
+    try {
+      const cached = await redis.get(entryKey);
+      if (cached) {
+        const parsed = JSON.parse(cached) as unknown;
+        return decodeDatesFromCache<PeriodBaseData>(parsed);
+      }
+    } catch (error) {
+      if (!hasWarnedPeriodBaseCacheReadFailure) {
+        console.warn(
+          "Failed to read period base-data cache entry; continuing uncached.",
+          error,
+        );
+        hasWarnedPeriodBaseCacheReadFailure = true;
+      }
+    }
+
     const loaded = await loadPeriodBaseDataUncached({
       accountBookId: args.accountBookId,
       period: periodValue,
