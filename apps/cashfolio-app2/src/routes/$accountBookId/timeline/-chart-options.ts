@@ -3,7 +3,6 @@ import type {
   AgCartesianChartOptions,
   AgRangesButton,
 } from "ag-charts-community";
-import { subYears } from "date-fns";
 import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import {
   getExplicitPeriodDateRange,
@@ -57,6 +56,12 @@ function getRangeButtons(periodMode: TimelinePeriodMode): AgRangesButton[] {
     { label: "3Y", value: { unit: "year" as const, step: 3 } },
     { label: "All", value: undefined },
   ];
+}
+
+export function getDefaultRangeButtonLabel(
+  periodMode: TimelinePeriodMode,
+): string {
+  return periodMode === "year" ? "5Y" : "1Y";
 }
 
 function getRangeControlStyles(args: {
@@ -121,23 +126,6 @@ function getRangeControlStyles(args: {
   };
 }
 
-function getDefaultRangeX(args: {
-  chartData: TimelineChartDatum[];
-  periodMode: TimelinePeriodMode;
-}) {
-  const latestPeriod = args.chartData.at(-1);
-  if (!latestPeriod) {
-    return undefined;
-  }
-
-  const years = args.periodMode === "year" ? 5 : 1;
-  const anchor = latestPeriod.periodStart;
-  return {
-    start: subYears(anchor, years),
-    end: anchor,
-  };
-}
-
 export function createTimelineChartOptions(args: {
   chartData: TimelineChartDatum[];
   periodMode: TimelinePeriodMode;
@@ -163,7 +151,6 @@ export function createTimelineChartOptions(args: {
   const currentPeriod = args.chartData.at(-1);
   const rangeButtons = getRangeButtons(args.periodMode);
   const rangeControlStyles = getRangeControlStyles(args);
-  const defaultRangeX = getDefaultRangeX(args);
   const unitTimeAxisUnit =
     args.periodMode === "year"
       ? { unit: "year" as const, utc: true }
@@ -199,22 +186,6 @@ export function createTimelineChartOptions(args: {
       buttons: rangeButtons,
       ...rangeControlStyles,
     },
-    initialState: defaultRangeX
-      ? {
-          zoom: {
-            rangeX: {
-              start: {
-                __type: "date",
-                value: defaultRangeX.start.getTime(),
-              },
-              end: {
-                __type: "date",
-                value: defaultRangeX.end.getTime(),
-              },
-            },
-          },
-        }
-      : undefined,
     series: [
       {
         type: "bar",

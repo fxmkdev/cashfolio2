@@ -2,6 +2,7 @@ import type { MantineTheme } from "@mantine/core";
 import { describe, expect, test } from "vitest";
 import {
   createTimelineChartOptions,
+  getDefaultRangeButtonLabel,
   mapTimelinePointsToChartData,
 } from "./-chart-options";
 
@@ -102,6 +103,11 @@ describe("mapTimelinePointsToChartData", () => {
 });
 
 describe("createTimelineChartOptions", () => {
+  test("returns default range button labels by period mode", () => {
+    expect(getDefaultRangeButtonLabel("month")).toBe("1Y");
+    expect(getDefaultRangeButtonLabel("year")).toBe("5Y");
+  });
+
   test("enables navigator and monthly range controls", () => {
     const chartData = mapTimelinePointsToChartData([
       {
@@ -164,20 +170,7 @@ describe("createTimelineChartOptions", () => {
         textColor: "#adb5bd",
       },
     });
-    expect(options.initialState).toEqual({
-      zoom: {
-        rangeX: {
-          start: {
-            __type: "date",
-            value: new Date("2025-02-01T00:00:00.000Z").getTime(),
-          },
-          end: {
-            __type: "date",
-            value: new Date("2026-02-01T00:00:00.000Z").getTime(),
-          },
-        },
-      },
-    });
+    expect(options.initialState).toBeUndefined();
     expect(options.axes?.x?.type).toBe("unit-time");
     expect(options.axes?.x).toMatchObject({
       unit: { unit: "month", utc: true },
@@ -287,20 +280,7 @@ describe("createTimelineChartOptions", () => {
     expect(options.axes?.x).toMatchObject({
       unit: { unit: "year", utc: true },
     });
-    expect(options.initialState).toEqual({
-      zoom: {
-        rangeX: {
-          start: {
-            __type: "date",
-            value: new Date("2019-01-01T00:00:00.000Z").getTime(),
-          },
-          end: {
-            __type: "date",
-            value: new Date("2024-01-01T00:00:00.000Z").getTime(),
-          },
-        },
-      },
-    });
+    expect(options.initialState).toBeUndefined();
   });
 
   test("omits period band highlight when data is empty", () => {
