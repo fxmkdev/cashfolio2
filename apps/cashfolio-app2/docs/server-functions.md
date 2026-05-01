@@ -33,15 +33,25 @@ Related docs:
 ## Period Base-Data Cache
 
 - Period overview and timeline use a shared Redis-backed **non-valuation**
-  base-data cache (`src/server/period-base-data-cache.ts`).
+  base-data cache (`src/server/period-base-data-cache.ts`) backed by an uncached
+  loader module (`src/server/period-base-data-loader.server.ts`).
 - Cached payload scope: DB-derived period inputs only (metadata, scoped raw
   bookings/transactions, raw balances, transfer-clearing buckets).
 - Excluded from cache payload: converted valuation outputs and exchange-rate
   results.
-- Redis key namespace includes deployment scope:
-  `period:base:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{periodValue}`.
+- Redis key namespace includes deployment scope and invalidation generation:
+  - Entry:
+    `period:base:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
+  - Index:
+    `period:base:index:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
+  - Generation pointer:
+    `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
+- For preset periods (`mtd`, `ytd`, `last-month`, `last-year`), `periodCacheKey`
+  uses resolved concrete ranges (`granularity:from:to`) to avoid key aliasing
+  across day/month boundaries.
 - TTL: 24 hours. Mutating account/transaction server functions explicitly
-  invalidate cache entries for the affected account book.
+  invalidate cache entries for the affected account book by advancing the
+  generation.
 - `PERIOD_BASE_CACHE_ENV` must be set when Redis caching is enabled. On Fly
   deployments this is set from `FLY_APP` to isolate multiple preview/staging
   deployments sharing one Redis instance.
