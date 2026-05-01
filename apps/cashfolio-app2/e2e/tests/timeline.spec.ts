@@ -76,3 +76,20 @@ test("timeline mode toggles update URL mode and keep history compact", async ({
   );
   await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
 });
+
+test("timeline deep link with yearly mode selects yearly on first load", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/timeline?mode=year`);
+  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
+
+  const periodModeControl = page.getByRole("radiogroup", {
+    name: "Timeline period mode",
+  });
+  await expect(
+    periodModeControl.getByRole("radio", { name: "Yearly" }),
+  ).toBeChecked();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("mode"))
+    .toBe("year");
+});
