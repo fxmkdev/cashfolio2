@@ -1,26 +1,66 @@
 import type { MantineTheme } from "@mantine/core";
-import type { AgCartesianChartOptions } from "ag-charts-community";
+import type {
+  AgCartesianChartOptions,
+  AgRangesButton,
+} from "ag-charts-community";
 import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
+import {
+  getExplicitPeriodDateRange,
+  parseExplicitPeriodSelection,
+} from "@/shared/period";
 import type { PeriodTimelineResponse } from "@/server/period-timeline";
+import type { TimelinePeriodMode } from "./-page-session-state";
 
 export type TimelineChartDatum = {
   periodValue: string;
   periodLabel: string;
+  periodStart: Date;
+  periodEndExclusive: Date;
   totalReturn: number;
 };
 
 export function mapTimelinePointsToChartData(
   points: PeriodTimelineResponse["points"],
 ): TimelineChartDatum[] {
-  return points.map((point) => ({
-    periodValue: point.periodValue,
-    periodLabel: point.periodLabel,
-    totalReturn: point.totalReturn,
-  }));
+  return points.map((point) => {
+    const explicitPeriod = parseExplicitPeriodSelection(point.periodValue);
+    if (!explicitPeriod) {
+      throw new Error(`Invalid timeline period value: ${point.periodValue}`);
+    }
+
+    const { from, toExclusive } = getExplicitPeriodDateRange(explicitPeriod);
+
+    return {
+      periodValue: point.periodValue,
+      periodLabel: point.periodLabel,
+      periodStart: from,
+      periodEndExclusive: toExclusive,
+      totalReturn: point.totalReturn,
+    };
+  });
+}
+
+function getRangeButtons(periodMode: TimelinePeriodMode): AgRangesButton[] {
+  if (periodMode === "year") {
+    return [
+      { label: "3Y", value: { unit: "year" as const, step: 3 } },
+      { label: "5Y", value: { unit: "year" as const, step: 5 } },
+      { label: "10Y", value: { unit: "year" as const, step: 10 } },
+      { label: "All", value: undefined },
+    ];
+  }
+
+  return [
+    { label: "6M", value: { unit: "month" as const, step: 6 } },
+    { label: "1Y", value: "year" },
+    { label: "3Y", value: { unit: "year" as const, step: 3 } },
+    { label: "All", value: undefined },
+  ];
 }
 
 export function createTimelineChartOptions(args: {
   chartData: TimelineChartDatum[];
+  periodMode: TimelinePeriodMode;
   amountCompactFormatter: Intl.NumberFormat;
   currencyFormatter: Intl.NumberFormat;
   colors: DashboardChartThemeColors;
@@ -40,7 +80,8 @@ export function createTimelineChartOptions(args: {
     ? args.theme.colors.gray[7]
     : args.theme.colors.gray[2];
   const currentPeriodBandFillOpacity = args.isDarkMode ? 0.2 : 0.45;
-  const currentPeriodLabel = args.chartData.at(-1)?.periodLabel;
+  const currentPeriod = args.chartData.at(-1);
+  const rangeButtons = getRangeButtons(args.periodMode);
 
   return {
     data: args.chartData,
@@ -61,10 +102,20 @@ export function createTimelineChartOptions(args: {
     legend: {
       enabled: false,
     },
+    navigator: {
+      enabled: true,
+      miniChart: {
+        enabled: true,
+      },
+    },
+    ranges: {
+      enabled: true,
+      buttons: rangeButtons,
+    },
     series: [
       {
         type: "bar",
-        xKey: "periodLabel",
+        xKey: "periodStart",
         yKey: "totalReturn",
         yName: "Total Return",
         widthRatio: 0.72,
@@ -100,12 +151,15 @@ export function createTimelineChartOptions(args: {
     ],
     axes: {
       x: {
-        type: "category",
-        crossLines: currentPeriodLabel
+        type: "time",
+        crossLines: currentPeriod
           ? [
               {
                 type: "range",
-                range: [currentPeriodLabel, currentPeriodLabel],
+                range: [
+                  currentPeriod.periodStart,
+                  currentPeriod.periodEndExclusive,
+                ],
                 fill: currentPeriodBandFill,
                 fillOpacity: currentPeriodBandFillOpacity,
                 strokeWidth: 0,
@@ -114,6 +168,7 @@ export function createTimelineChartOptions(args: {
           : undefined,
         label: {
           rotation: -25,
+          format: args.periodMode === "year" ? "%Y" : "%b %Y",
         },
       },
       y: {
