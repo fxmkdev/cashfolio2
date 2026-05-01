@@ -105,7 +105,7 @@ function resolveEquityBookingAccount(
   }
 
   throw new Error(
-    `Equity booking invariant violated for booking ${bookingAccountId}: missing preloaded equity account metadata.`,
+    `Equity booking invariant violated for account ${bookingAccountId}: missing preloaded equity account metadata.`,
   );
 }
 
@@ -275,7 +275,6 @@ export async function loadPeriodOverview(args: {
   const explicitConvertedBookings: Array<{
     bookingId: string;
     transactionId: string;
-    accountId: string;
     unit: Unit;
     currency: string | null;
     cryptocurrency: string | null;
@@ -371,32 +370,16 @@ export async function loadPeriodOverview(args: {
       for (let index = 0; index < conversionTasks.length; index += 1) {
         const booking = conversionTasks[index]!.booking;
         const convertedValue = convertedValues[index];
-        if (convertedValue == null) {
-          continue;
-        }
-        const equityAccount = resolveEquityBookingAccount(
-          booking,
-          equityAccountById,
-        );
-        const equitySubtype = equityAccount.equityAccountSubtype;
-        if (equitySubtype === EquityAccountSubtype.GAIN_LOSS) {
-          explicitTransactionIds.add(booking.transactionId);
-        }
-      }
-
-      for (let index = 0; index < conversionTasks.length; index += 1) {
-        const booking = conversionTasks[index]!.booking;
-        const convertedValue = convertedValues[index];
-        const bookingAccountId = resolveEquityBookingAccountId(booking);
-        const equityAccount = resolveEquityBookingAccount(
-          booking,
-          equityAccountById,
-        );
 
         if (convertedValue == null) {
           skippedBookingsCount += 1;
           continue;
         }
+
+        const equityAccount = resolveEquityBookingAccount(
+          booking,
+          equityAccountById,
+        );
 
         convertedBookingsCount += 1;
         accumulateConvertedEquityBooking({
@@ -415,10 +398,10 @@ export async function loadPeriodOverview(args: {
         if (
           equityAccount.equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS
         ) {
+          explicitTransactionIds.add(booking.transactionId);
           explicitConvertedBookings.push({
             bookingId: booking.id,
             transactionId: booking.transactionId,
-            accountId: bookingAccountId,
             unit: booking.unit,
             currency: booking.currency,
             cryptocurrency: booking.cryptocurrency,

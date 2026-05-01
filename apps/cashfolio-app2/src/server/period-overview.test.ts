@@ -94,11 +94,18 @@ function isEquityBookingQuery(args: unknown): boolean {
     "accountId" in args.where
   ) {
     const accountIdFilter = args.where.accountId;
+    const dateFilter = "date" in args.where ? args.where.date : undefined;
+
     return (
       typeof accountIdFilter === "object" &&
       accountIdFilter !== null &&
       "in" in accountIdFilter &&
-      Array.isArray(accountIdFilter.in)
+      Array.isArray(accountIdFilter.in) &&
+      "accountBookId" in args.where &&
+      typeof dateFilter === "object" &&
+      dateFilter !== null &&
+      "gte" in dateFilter &&
+      "lt" in dateFilter
     );
   }
 
