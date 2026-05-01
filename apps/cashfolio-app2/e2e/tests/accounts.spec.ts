@@ -13,6 +13,7 @@ import {
   seedThreeBookingSplitTransaction,
   type SeededData,
 } from "../support/db";
+import { clickPeriodStepUntilQueryMatches } from "../support/period-navigation";
 import { selectSegmentedControlOption } from "../support/segmented-control";
 import { openDialogFromButton } from "../support/ui";
 
@@ -787,37 +788,17 @@ test("period previous/next controls update the period query parameter", async ({
   const periodPickerTrigger = page.getByTestId("period-picker-trigger");
   await expect(periodPickerTrigger).toContainText("April 2026");
 
-  const clickUntilPeriodMatches = async (
-    buttonName: "Previous period" | "Next period",
-    expectedPeriod: string,
-  ) => {
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      const periodBeforeClick = new URL(page.url()).searchParams.get("period");
-      await page.getByRole("button", { name: buttonName }).click();
-      try {
-        await expect
-          .poll(() => new URL(page.url()).searchParams.get("period"), {
-            timeout: 4_000,
-          })
-          .toBe(expectedPeriod);
-        return;
-      } catch {
-        const periodAfterClick = new URL(page.url()).searchParams.get("period");
-        if (periodAfterClick !== periodBeforeClick) {
-          throw new Error(
-            `Clicked "${buttonName}" but period changed to "${periodAfterClick}" instead of "${expectedPeriod}".`,
-          );
-        }
-        // Retry only when click did not change the URL period at all.
-      }
-    }
-
-    throw new Error(`Could not navigate to expected period ${expectedPeriod}.`);
-  };
-
-  await clickUntilPeriodMatches("Previous period", "2026-03");
+  await clickPeriodStepUntilQueryMatches({
+    page,
+    buttonName: "Previous period",
+    expectedPeriod: "2026-03",
+  });
   await expect(periodPickerTrigger).toContainText("March 2026");
 
-  await clickUntilPeriodMatches("Next period", "2026-04");
+  await clickPeriodStepUntilQueryMatches({
+    page,
+    buttonName: "Next period",
+    expectedPeriod: "2026-04",
+  });
   await expect(periodPickerTrigger).toContainText("April 2026");
 });
