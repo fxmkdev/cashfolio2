@@ -30,6 +30,22 @@ Related docs:
   `cache.ts`, `backtracking.ts`, `keys.ts`, `types.ts`, `date-utils.ts`,
   `constants.ts`
 
+## Period Base-Data Cache
+
+- Period overview and timeline use a shared Redis-backed **non-valuation**
+  base-data cache (`src/server/period-base-data-cache.ts`).
+- Cached payload scope: DB-derived period inputs only (metadata, scoped raw
+  bookings/transactions, raw balances, transfer-clearing buckets).
+- Excluded from cache payload: converted valuation outputs and exchange-rate
+  results.
+- Redis key namespace includes deployment scope:
+  `period:base:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{periodValue}`.
+- TTL: 10 minutes. Mutating account/transaction server functions explicitly
+  invalidate cache entries for the affected account book.
+- `PERIOD_BASE_CACHE_ENV` must be set when Redis caching is enabled. On Fly
+  deployments this is set from `FLY_APP` to isolate multiple preview/staging
+  deployments sharing one Redis instance.
+
 ## Auth and Authorization
 
 - Logto integration uses `@logto/node` with `CookieStorage` in

@@ -60,6 +60,8 @@ Related docs:
       default by programmatically triggering the matching range button after the
       chart mounts. If AG Charts adds a public active-button API, prefer that
       and remove the DOM-trigger fallback.
+  - Period overview + timeline share a non-valuation Redis base-data cache with
+    deployment-scoped namespacing via `PERIOD_BASE_CACHE_ENV`.
 - `$accountBookId/$accountId/route.tsx` - ledger layout route (loads ledger data
   and provides shared search params for child routes)
 - `$accountBookId/$accountId/index.tsx` - ledger page for a single account

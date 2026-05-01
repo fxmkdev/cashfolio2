@@ -9,6 +9,9 @@ const prisma = vi.hoisted(() => ({
   accountBook: {
     findUniqueOrThrow: vi.fn(),
   },
+  accountGroup: {
+    findMany: vi.fn(),
+  },
   account: {
     findMany: vi.fn(),
   },
@@ -99,6 +102,7 @@ describe("loadPeriodTimelinePoint", () => {
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
+    prisma.accountGroup.findMany.mockResolvedValue([]);
     prisma.account.findMany.mockResolvedValue([]);
     prisma.booking.findMany.mockResolvedValue([]);
     prisma.booking.groupBy.mockResolvedValue([]);
@@ -285,8 +289,6 @@ describe("loadPeriodTimelinePoint", () => {
     });
 
     expect(result.totalReturn).toBe(148);
-    expect(prisma.booking.groupBy).toHaveBeenCalledTimes(1);
-    expect(prisma.transaction.findMany).toHaveBeenCalledTimes(1);
     expect(finalizeHoldingGainLossState).toHaveBeenCalledTimes(1);
     expect(computeTransferClearingGainLossSplit).toHaveBeenCalledTimes(1);
   });
