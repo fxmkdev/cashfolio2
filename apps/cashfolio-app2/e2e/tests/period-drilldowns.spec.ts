@@ -22,14 +22,17 @@ async function selectSegmentedControlOption(
 ) {
   const option = control.getByRole("radio", { name: optionName });
 
-  if (await option.isChecked()) {
-    return;
-  }
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    if (await option.isChecked()) {
+      return;
+    }
 
-  await option.focus();
-  await option.press("Space");
+    await control.getByText(optionName, { exact: true }).click();
 
-  if (!(await option.isChecked())) {
+    if (await option.isChecked()) {
+      return;
+    }
+
     await option.evaluate((input) => {
       (input as HTMLInputElement).click();
     });
@@ -53,7 +56,7 @@ test("period allocation table account drilldown opens ledger with selected perio
   page,
 }) => {
   const period = "2026-01";
-  await seedNonZeroConvertibleAssetBalances({
+  const seededBalances = await seedNonZeroConvertibleAssetBalances({
     accountBookId: seeded.accountBookId,
     counterAccountId: seeded.cashAccount.id,
   });
@@ -69,15 +72,18 @@ test("period allocation table account drilldown opens ledger with selected perio
   const allocationTable = page.getByTestId("period-allocation-breakdown-table");
   await expect(allocationTable).toBeVisible();
 
-  const cashRow = gridRowByText(allocationTable, seeded.cashAccount.name);
-  await expect(cashRow).toBeVisible();
-  await cashRow.dblclick();
+  const usdRow = gridRowByText(allocationTable, seededBalances.usdAccountName);
+  await expect(usdRow).toBeVisible();
+  await usdRow.dblclick();
 
   await expect(page).toHaveURL(
-    new RegExp(
-      `/${seeded.accountBookId}/${seeded.cashAccount.id}\\?period=${period}$`,
-    ),
+    new RegExp(`/${seeded.accountBookId}/[^/?]+\\?period=${period}$`),
   );
+  await expect(
+    page.getByRole("heading", {
+      name: new RegExp(seededBalances.usdAccountName),
+    }),
+  ).toBeVisible();
   await expect(
     page.getByText("Showing entries for January 2026"),
   ).toBeVisible();
@@ -153,7 +159,6 @@ test("period explicit gains/losses rows drill to gain/loss ledger", async ({
   const period = "2026-01";
   const explicitSeed = await seedExplicitGainLossDrilldownScenario({
     accountBookId: seeded.accountBookId,
-    equityRootGroupId: seeded.equityGroupId,
     counterAccountId: seeded.cashAccount.id,
   });
 
