@@ -530,34 +530,10 @@ export async function seedSecurityGainLossDrilldownScenario(args: {
 
 export async function seedExplicitGainLossDrilldownScenario(args: {
   accountBookId: string;
-  equityRootGroupId: string;
   counterAccountId: string;
   amount?: number;
 }) {
   const amount = args.amount ?? 25;
-
-  const gainLossGroup =
-    (await prisma.accountGroup.findFirst({
-      where: {
-        accountBookId: args.accountBookId,
-        type: AccountType.EQUITY,
-        equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
-      },
-      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-      select: { id: true },
-    })) ??
-    (await prisma.accountGroup.create({
-      data: {
-        id: createId(),
-        accountBookId: args.accountBookId,
-        name: "E2E Gain/Loss",
-        type: AccountType.EQUITY,
-        equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
-        parentGroupId: args.equityRootGroupId,
-        sortOrder: 90,
-      },
-      select: { id: true },
-    }));
 
   const gainLossAccount =
     (await prisma.account.findFirst({
@@ -576,7 +552,7 @@ export async function seedExplicitGainLossDrilldownScenario(args: {
         name: "E2E Gain/Loss Account",
         type: AccountType.EQUITY,
         equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
-        groupId: gainLossGroup.id,
+        groupId: null,
         unit: Unit.CURRENCY,
         currency: "CHF",
         sortOrder: 0,
