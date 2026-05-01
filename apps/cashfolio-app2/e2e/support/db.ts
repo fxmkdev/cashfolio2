@@ -56,7 +56,9 @@ export type SeededData = {
   expenseAccount: { id: string; name: string };
 };
 
-export async function resetAndSeedDatabase(): Promise<SeededData> {
+export async function resetAndSeedDatabase(args?: {
+  accountBookStartDate?: Date;
+}): Promise<SeededData> {
   assertSafeResetTarget();
 
   await prisma.$executeRawUnsafe(`
@@ -83,7 +85,8 @@ export async function resetAndSeedDatabase(): Promise<SeededData> {
       id: createId(),
       name: "E2E Account Book",
       referenceCurrency: "CHF",
-      startDate: new Date("2017-01-08T00:00:00.000Z"),
+      startDate:
+        args?.accountBookStartDate ?? new Date("2017-01-08T00:00:00.000Z"),
     },
   });
 
@@ -449,6 +452,23 @@ export async function seedSecurityGainLossDrilldownScenario(args: {
   securityAccountId: string;
   counterAccountId: string;
 }) {
+  const securityAccount = await prisma.account.findFirstOrThrow({
+    where: {
+      id: args.securityAccountId,
+      accountBookId: args.accountBookId,
+      unit: Unit.SECURITY,
+    },
+    select: {
+      symbol: true,
+      tradeCurrency: true,
+    },
+  });
+  if (!securityAccount.symbol || !securityAccount.tradeCurrency) {
+    throw new Error(
+      "Expected security account seed to have symbol and tradeCurrency.",
+    );
+  }
+
   const buyTransactionId = createId();
   const sellTransactionId = createId();
   const buyDescription = "E2E Security Gain/Loss Buy";
@@ -467,8 +487,8 @@ export async function seedSecurityGainLossDrilldownScenario(args: {
             date: new Date("2026-02-05T00:00:00.000Z"),
             description: buyDescription,
             unit: Unit.SECURITY,
-            symbol: "AAPL",
-            tradeCurrency: "USD",
+            symbol: securityAccount.symbol,
+            tradeCurrency: securityAccount.tradeCurrency,
             value: 10,
             sortOrder: 0,
           },
@@ -500,8 +520,8 @@ export async function seedSecurityGainLossDrilldownScenario(args: {
             date: new Date("2026-02-12T00:00:00.000Z"),
             description: sellDescription,
             unit: Unit.SECURITY,
-            symbol: "AAPL",
-            tradeCurrency: "USD",
+            symbol: securityAccount.symbol,
+            tradeCurrency: securityAccount.tradeCurrency,
             value: -4,
             sortOrder: 0,
           },

@@ -792,6 +792,7 @@ test("period previous/next controls update the period query parameter", async ({
     expectedPeriod: string,
   ) => {
     for (let attempt = 0; attempt < 3; attempt += 1) {
+      const periodBeforeClick = new URL(page.url()).searchParams.get("period");
       await page.getByRole("button", { name: buttonName }).click();
       try {
         await expect
@@ -801,7 +802,13 @@ test("period previous/next controls update the period query parameter", async ({
           .toBe(expectedPeriod);
         return;
       } catch {
-        // Retry in case the first click lands during a transient loading state.
+        const periodAfterClick = new URL(page.url()).searchParams.get("period");
+        if (periodAfterClick !== periodBeforeClick) {
+          throw new Error(
+            `Clicked "${buttonName}" but period changed to "${periodAfterClick}" instead of "${expectedPeriod}".`,
+          );
+        }
+        // Retry only when click did not change the URL period at all.
       }
     }
 
