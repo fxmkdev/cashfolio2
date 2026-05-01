@@ -30,7 +30,6 @@ export async function loadPeriodTimelinePointContext(args: {
     },
     select: {
       id: true,
-      type: true,
       unit: true,
       currency: true,
       cryptocurrency: true,

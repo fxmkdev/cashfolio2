@@ -16,4 +16,18 @@ describe("timeline page navigation", () => {
       q: "keep-me",
     });
   });
+
+  test("clears mode from URL when switching to default month mode", () => {
+    const navigation = buildTimelineModeNavigation("month");
+
+    expect(
+      navigation.search({
+        mode: "year",
+        q: "keep-me",
+      }),
+    ).toEqual({
+      mode: undefined,
+      q: "keep-me",
+    });
+  });
 });

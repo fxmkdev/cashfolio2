@@ -135,7 +135,6 @@ describe("loadPeriodTimelinePoint", () => {
     prisma.account.findMany.mockResolvedValue([
       {
         id: "holding-security",
-        type: AccountType.ASSET,
         unit: Unit.SECURITY,
         currency: null,
         cryptocurrency: null,
@@ -144,7 +143,6 @@ describe("loadPeriodTimelinePoint", () => {
       },
       {
         id: "cash-reference",
-        type: AccountType.ASSET,
         unit: Unit.CURRENCY,
         currency: "CHF",
         cryptocurrency: null,
@@ -153,7 +151,6 @@ describe("loadPeriodTimelinePoint", () => {
       },
       {
         id: "liability-foreign",
-        type: AccountType.LIABILITY,
         unit: Unit.CURRENCY,
         currency: "USD",
         cryptocurrency: null,
@@ -182,7 +179,6 @@ describe("loadPeriodTimelinePoint", () => {
       },
       select: {
         id: true,
-        type: true,
         unit: true,
         currency: true,
         cryptocurrency: true,
