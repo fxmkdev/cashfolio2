@@ -132,6 +132,14 @@ function formatUtcDateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+function getInflightPeriodKey(periodValue: string): string {
+  if (!isPresetPeriodValue(periodValue)) {
+    return periodValue;
+  }
+
+  return `${periodValue}:${formatUtcDateKey(startOfUtcDay(new Date()))}`;
+}
+
 async function resolvePeriodBaseCachePeriodKey(args: {
   accountBookId: string;
   periodValue: string;
@@ -203,23 +211,23 @@ export async function getOrLoadPeriodBaseData(args: {
   period?: unknown;
 }): Promise<PeriodBaseData> {
   const periodValue = normalizePeriodValue(args.period);
-
-  const redis = await getRedisClient();
-  if (!redis) {
-    return loadPeriodBaseDataUncached({
-      accountBookId: args.accountBookId,
-      period: periodValue,
-    });
-  }
-
-  const cacheEnv = getCacheEnvOrThrowWhenRedisAvailable();
-  const inflightKey = `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:${cacheEnv}:${args.accountBookId}:inflight:${periodValue}`;
+  const inflightPeriodKey = getInflightPeriodKey(periodValue);
+  const inflightKey = `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:inflight:${args.accountBookId}:${inflightPeriodKey}`;
   const existingInflight = inflightByCacheKey.get(inflightKey);
   if (existingInflight) {
     return existingInflight;
   }
 
   const loadPromise = (async () => {
+    const redis = await getRedisClient();
+    if (!redis) {
+      return loadPeriodBaseDataUncached({
+        accountBookId: args.accountBookId,
+        period: periodValue,
+      });
+    }
+
+    const cacheEnv = getCacheEnvOrThrowWhenRedisAvailable();
     const periodCacheKey = await resolvePeriodBaseCachePeriodKey({
       accountBookId: args.accountBookId,
       periodValue,
@@ -328,7 +336,7 @@ export async function invalidatePeriodBaseDataCacheForAccountBook(
     const nextGeneration = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     await redis.set(generationKey, nextGeneration);
 
-    const inflightPrefix = `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:${cacheEnv}:${accountBookId}:`;
+    const inflightPrefix = `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:inflight:${accountBookId}:`;
     for (const cacheKey of inflightByCacheKey.keys()) {
       if (cacheKey.startsWith(inflightPrefix)) {
         inflightByCacheKey.delete(cacheKey);

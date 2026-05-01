@@ -244,7 +244,7 @@ async function loadPeriodEquityBookingsRaw(args: {
           account.equityAccountSubtype !== EquityAccountSubtype.GAIN_LOSS)
       ) {
         throw new Error(
-          `Equity booking invariant violated for account ${booking.accountId}: missing preloaded equity account metadata.`,
+          `Equity booking invariant violated for account ${bookingAccountId}: missing preloaded equity account metadata.`,
         );
       }
 

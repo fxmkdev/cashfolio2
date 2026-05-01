@@ -216,6 +216,32 @@ describe("period base-data cache", () => {
     expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
   });
 
+  it("does not share inflight preset loads across UTC-day boundaries", async () => {
+    let releaseGet: (() => void) | undefined;
+    const getGate = new Promise<void>((resolve) => {
+      releaseGet = resolve;
+    });
+    redisClient.get.mockImplementation(async (key: string) => {
+      await getGate;
+      return redisState.kv.get(key) ?? null;
+    });
+
+    const first = periodBaseCache.getOrLoadPeriodBaseData({
+      accountBookId: "book-1",
+      period: "mtd",
+    });
+    vi.setSystemTime(new Date("2026-05-02T12:00:00.000Z"));
+    const second = periodBaseCache.getOrLoadPeriodBaseData({
+      accountBookId: "book-1",
+      period: "mtd",
+    });
+
+    releaseGet?.();
+    await Promise.all([first, second]);
+
+    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(2);
+  });
+
   it("switches generation after invalidation so old entries are not reused", async () => {
     redisState.kv.set(
       "period:base:v1:preview-app-123:book-1:0:month:2026-05-01:2026-05-01",
