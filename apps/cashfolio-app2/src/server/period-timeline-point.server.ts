@@ -32,17 +32,17 @@ function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
-export async function loadPeriodTimelinePoint(args: {
-  accountBookId: string;
-  period?: unknown;
-}) {
-  const data = {
-    accountBookId: args.accountBookId,
-    period: normalizePeriodValue(args.period),
-  };
+export type PeriodTimelinePointContext = {
+  referenceCurrency: string;
+  accountBookStartDate: Date;
+  holdingAccountsResolved: ReturnType<typeof filterConvertibleHoldingAccounts>;
+};
 
+export async function loadPeriodTimelinePointContext(args: {
+  accountBookId: string;
+}): Promise<PeriodTimelinePointContext> {
   const accountBook = await prisma.accountBook.findUniqueOrThrow({
-    where: { id: data.accountBookId },
+    where: { id: args.accountBookId },
     select: {
       referenceCurrency: true,
       startDate: true,
@@ -52,7 +52,7 @@ export async function loadPeriodTimelinePoint(args: {
   const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
   const baseAssetLiabilityAccounts = await prisma.account.findMany({
     where: {
-      accountBookId: data.accountBookId,
+      accountBookId: args.accountBookId,
       type: {
         in: [AccountType.ASSET, AccountType.LIABILITY],
       },
@@ -68,12 +68,33 @@ export async function loadPeriodTimelinePoint(args: {
     },
   });
 
-  const holdingAccountsResolved = filterConvertibleHoldingAccounts(
-    baseAssetLiabilityAccounts,
+  return {
     referenceCurrency,
-  );
+    accountBookStartDate: startOfUtcDay(accountBook.startDate),
+    holdingAccountsResolved: filterConvertibleHoldingAccounts(
+      baseAssetLiabilityAccounts,
+      referenceCurrency,
+    ),
+  };
+}
 
-  const accountBookStartDate = startOfUtcDay(accountBook.startDate);
+export async function loadPeriodTimelinePoint(args: {
+  accountBookId: string;
+  period?: unknown;
+  context?: PeriodTimelinePointContext;
+}) {
+  const data = {
+    accountBookId: args.accountBookId,
+    period: normalizePeriodValue(args.period),
+  };
+
+  const context =
+    args.context ??
+    (await loadPeriodTimelinePointContext({
+      accountBookId: data.accountBookId,
+    }));
+  const { referenceCurrency, accountBookStartDate, holdingAccountsResolved } =
+    context;
   const selection = resolvePeriodSelection({
     periodValue: data.period,
     now: new Date(),

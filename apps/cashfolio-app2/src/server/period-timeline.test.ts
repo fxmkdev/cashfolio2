@@ -21,12 +21,7 @@ const createServerFn = vi.hoisted(() =>
 
 const ensureAuthorizedForAccountBookId = vi.hoisted(() => vi.fn());
 const loadPeriodTimelinePoint = vi.hoisted(() => vi.fn());
-
-const prisma = vi.hoisted(() => ({
-  accountBook: {
-    findUniqueOrThrow: vi.fn(),
-  },
-}));
+const loadPeriodTimelinePointContext = vi.hoisted(() => vi.fn());
 
 vi.mock("@tanstack/react-start", () => ({
   createServerFn,
@@ -36,12 +31,9 @@ vi.mock("../account-books/functions.server", () => ({
   ensureAuthorizedForAccountBookId,
 }));
 
-vi.mock("../prisma.server", () => ({
-  prisma,
-}));
-
 vi.mock("./period-timeline-point.server", () => ({
   loadPeriodTimelinePoint,
+  loadPeriodTimelinePointContext,
 }));
 
 import {
@@ -87,9 +79,10 @@ describe("getPeriodTimeline", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-18T12:00:00.000Z"));
 
-    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
-      referenceCurrency: "chf",
-      startDate: new Date("2026-01-05T00:00:00.000Z"),
+    loadPeriodTimelinePointContext.mockResolvedValue({
+      referenceCurrency: "CHF",
+      accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
+      holdingAccountsResolved: [],
     });
 
     loadPeriodTimelinePoint.mockImplementation(
@@ -114,26 +107,38 @@ describe("getPeriodTimeline", () => {
     });
 
     expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-1");
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
-      where: { id: "book-1" },
-      select: {
-        referenceCurrency: true,
-        startDate: true,
-      },
+    expect(loadPeriodTimelinePointContext).toHaveBeenCalledTimes(1);
+    expect(loadPeriodTimelinePointContext).toHaveBeenCalledWith({
+      accountBookId: "book-1",
     });
 
     expect(loadPeriodTimelinePoint).toHaveBeenCalledTimes(3);
     expect(loadPeriodTimelinePoint).toHaveBeenNthCalledWith(1, {
       accountBookId: "book-1",
       period: "2026-01",
+      context: {
+        referenceCurrency: "CHF",
+        accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
+        holdingAccountsResolved: [],
+      },
     });
     expect(loadPeriodTimelinePoint).toHaveBeenNthCalledWith(2, {
       accountBookId: "book-1",
       period: "2026-02",
+      context: {
+        referenceCurrency: "CHF",
+        accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
+        holdingAccountsResolved: [],
+      },
     });
     expect(loadPeriodTimelinePoint).toHaveBeenNthCalledWith(3, {
       accountBookId: "book-1",
       period: "2026-03",
+      context: {
+        referenceCurrency: "CHF",
+        accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
+        holdingAccountsResolved: [],
+      },
     });
 
     expect(result).toEqual({
@@ -166,10 +171,19 @@ describe("getPeriodTimeline", () => {
       },
     });
 
+    expect(loadPeriodTimelinePointContext).toHaveBeenCalledTimes(1);
+    expect(loadPeriodTimelinePointContext).toHaveBeenCalledWith({
+      accountBookId: "book-2",
+    });
     expect(loadPeriodTimelinePoint).toHaveBeenCalledTimes(1);
     expect(loadPeriodTimelinePoint).toHaveBeenCalledWith({
       accountBookId: "book-2",
       period: "2026",
+      context: {
+        referenceCurrency: "CHF",
+        accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
+        holdingAccountsResolved: [],
+      },
     });
   });
 

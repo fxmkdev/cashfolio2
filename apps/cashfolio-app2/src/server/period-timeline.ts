@@ -92,24 +92,19 @@ export const getPeriodTimeline = createServerFn({
     }),
   )
   .handler(async ({ data }) => {
-    const { prisma } = await import("../prisma.server");
     const { ensureAuthorizedForAccountBookId } =
       await import("../account-books/functions.server");
-    const { loadPeriodTimelinePoint } =
+    const { loadPeriodTimelinePoint, loadPeriodTimelinePointContext } =
       await import("./period-timeline-point.server");
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
-    const accountBook = await prisma.accountBook.findUniqueOrThrow({
-      where: { id: data.accountBookId },
-      select: {
-        referenceCurrency: true,
-        startDate: true,
-      },
+    const context = await loadPeriodTimelinePointContext({
+      accountBookId: data.accountBookId,
     });
 
     const periodValues = buildTimelinePeriodValues({
       granularity: data.granularity,
-      minDate: accountBook.startDate,
+      minDate: context.accountBookStartDate,
       maxDate: new Date(),
     });
 
@@ -118,6 +113,7 @@ export const getPeriodTimeline = createServerFn({
       const point = await loadPeriodTimelinePoint({
         accountBookId: data.accountBookId,
         period: periodValue,
+        context,
       });
       points.push({
         periodValue: point.selectedPeriodValue,
@@ -127,7 +123,7 @@ export const getPeriodTimeline = createServerFn({
     }
 
     return {
-      referenceCurrency: accountBook.referenceCurrency.toUpperCase(),
+      referenceCurrency: context.referenceCurrency,
       points,
     } satisfies PeriodTimelineResponse;
   });
