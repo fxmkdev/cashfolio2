@@ -12,6 +12,10 @@ import {
   FORMATTED_NUMERIC_COLUMN,
 } from "@/components/column-types";
 import { LinkAnchor } from "@/components/link-anchor";
+import {
+  getCurrencyDecimals,
+  getUnitDisplayDecimals,
+} from "@/shared/unit-format";
 import type { LedgerRow } from "./-page-types";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/opening-balances";
 
@@ -51,8 +55,11 @@ export function useLedgerColumnDefs(args: {
     onDeleteClick,
   } = args;
 
-  return useMemo<ColDef<LedgerRow>[]>(
-    () => [
+  return useMemo<ColDef<LedgerRow>[]>(() => {
+    const referenceCurrencyDisplayDecimals =
+      getCurrencyDecimals(referenceCurrency);
+
+    return [
       {
         field: "date",
         headerName: "Date",
@@ -147,6 +154,11 @@ export function useLedgerColumnDefs(args: {
                 : "Debit (Ref)",
               width: 150,
               type: FORMATTED_NUMERIC_COLUMN,
+              context: {
+                formattedNumeric: {
+                  getDisplayDecimals: () => referenceCurrencyDisplayDecimals,
+                },
+              },
               filter: "agNumberColumnFilter",
             },
           ]
@@ -160,6 +172,11 @@ export function useLedgerColumnDefs(args: {
                 : "Credit (Ref)",
               width: 150,
               type: FORMATTED_NUMERIC_COLUMN,
+              context: {
+                formattedNumeric: {
+                  getDisplayDecimals: () => referenceCurrencyDisplayDecimals,
+                },
+              },
               filter: "agNumberColumnFilter",
             },
           ]
@@ -175,6 +192,22 @@ export function useLedgerColumnDefs(args: {
                   : "Balance",
               width: 150,
               type: FORMATTED_NUMERIC_COLUMN,
+              context: {
+                formattedNumeric: {
+                  getDisplayDecimals: ({
+                    data,
+                  }: {
+                    data: LedgerRow | undefined;
+                  }) =>
+                    isEquity && hasPeriodFilter
+                      ? referenceCurrencyDisplayDecimals
+                      : getUnitDisplayDecimals({
+                          unit: data?.unit ?? null,
+                          currency: data?.currency,
+                          cryptocurrency: data?.cryptocurrency,
+                        }),
+                },
+              },
               filter: "agNumberColumnFilter",
             },
           ]),
@@ -277,18 +310,17 @@ export function useLedgerColumnDefs(args: {
           );
         },
       },
-    ],
-    [
-      accountBookId,
-      hasPeriodFilter,
-      referenceCurrency,
-      isEquity,
-      isOpeningBalances,
-      isIncome,
-      isExpense,
-      onEditClick,
-      onRebookClick,
-      onDeleteClick,
-    ],
-  );
+    ];
+  }, [
+    accountBookId,
+    hasPeriodFilter,
+    referenceCurrency,
+    isEquity,
+    isOpeningBalances,
+    isIncome,
+    isExpense,
+    onEditClick,
+    onRebookClick,
+    onDeleteClick,
+  ]);
 }

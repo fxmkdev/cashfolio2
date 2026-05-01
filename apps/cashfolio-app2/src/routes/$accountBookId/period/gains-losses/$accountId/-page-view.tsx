@@ -26,14 +26,19 @@ import periodClasses from "../../-page-view.module.css";
 import { PeriodSelectorCard } from "../../-selector-card";
 import {
   buildRealizedColumns,
+  buildRealizedLotMatchColumns,
+  buildOpenLotColumns,
   DIAGNOSTICS_COLUMNS,
-  OPEN_LOT_COLUMNS,
-  REALIZED_LOT_MATCH_COLUMNS,
 } from "./-page-view-columns";
 import { buildCurrencyFormatter } from "./-page-view-formatters";
 import type { RealizedEventRow } from "./-page-view-types";
 import { RealizedEventExplainDrawer } from "./-realized-event-explain-drawer";
 import { ReconciliationStatCards } from "./-reconciliation-stat-cards";
+import {
+  createDisplayNumberFormatter,
+  getCurrencyDecimals,
+  getUnitDisplayDecimals,
+} from "@/shared/unit-format";
 
 type GainLossReconciliationPageViewProps = {
   selectedPeriodValue: string;
@@ -83,6 +88,26 @@ export function GainLossReconciliationPageView({
   const currencyFormatter = buildCurrencyFormatter(
     reconciliation.referenceCurrency,
   );
+  const referenceCurrencyDisplayDecimals = getCurrencyDecimals(
+    reconciliation.referenceCurrency,
+  );
+  const unitPriceDisplayDecimals = Math.max(
+    2,
+    referenceCurrencyDisplayDecimals,
+  );
+  const quantityDisplayDecimals = getUnitDisplayDecimals({
+    unit: reconciliation.target.unit,
+    currency: reconciliation.target.currency,
+    cryptocurrency: reconciliation.target.cryptocurrency,
+  });
+  const quantityFormatter = useMemo(
+    () =>
+      createDisplayNumberFormatter({
+        locale: "en-CH",
+        decimals: quantityDisplayDecimals,
+      }),
+    [quantityDisplayDecimals],
+  );
   const periodSelectorModel = buildPeriodSelectorModel({
     selectedGranularity: reconciliation.selectedGranularity,
     selectedYear: reconciliation.selectedYear,
@@ -98,9 +123,44 @@ export function GainLossReconciliationPageView({
     () =>
       buildRealizedColumns({
         isVirtualTarget: reconciliation.target.isVirtual,
+        quantityDisplayDecimals,
+        referenceCurrencyDisplayDecimals,
+        unitPriceDisplayDecimals,
         onOpenEventTransaction,
       }),
-    [onOpenEventTransaction, reconciliation.target.isVirtual],
+    [
+      onOpenEventTransaction,
+      quantityDisplayDecimals,
+      reconciliation.target.isVirtual,
+      referenceCurrencyDisplayDecimals,
+      unitPriceDisplayDecimals,
+    ],
+  );
+  const realizedLotMatchColumns = useMemo(
+    () =>
+      buildRealizedLotMatchColumns({
+        quantityDisplayDecimals,
+        referenceCurrencyDisplayDecimals,
+        unitPriceDisplayDecimals,
+      }),
+    [
+      quantityDisplayDecimals,
+      referenceCurrencyDisplayDecimals,
+      unitPriceDisplayDecimals,
+    ],
+  );
+  const openLotColumns = useMemo(
+    () =>
+      buildOpenLotColumns({
+        quantityDisplayDecimals,
+        referenceCurrencyDisplayDecimals,
+        unitPriceDisplayDecimals,
+      }),
+    [
+      quantityDisplayDecimals,
+      referenceCurrencyDisplayDecimals,
+      unitPriceDisplayDecimals,
+    ],
   );
 
   const selectedEvent = useMemo<RealizedEventRow | null>(
@@ -236,7 +296,7 @@ export function GainLossReconciliationPageView({
             <div style={{ height: 320 }}>
               <DataGrid
                 rowData={reconciliation.unrealizedOpenLots}
-                columnDefs={OPEN_LOT_COLUMNS}
+                columnDefs={openLotColumns}
                 defaultColDef={{
                   sortable: false,
                   suppressHeaderMenuButton: true,
@@ -282,7 +342,8 @@ export function GainLossReconciliationPageView({
         selectedEvent={selectedEvent}
         reconciliation={reconciliation}
         currencyFormatter={currencyFormatter}
-        realizedLotMatchColumns={REALIZED_LOT_MATCH_COLUMNS}
+        quantityFormatter={quantityFormatter}
+        realizedLotMatchColumns={realizedLotMatchColumns}
       />
 
       {selectedPeriodValue !== reconciliation.selectedPeriodValue ? (

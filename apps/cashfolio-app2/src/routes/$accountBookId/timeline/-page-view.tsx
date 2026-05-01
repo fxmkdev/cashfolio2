@@ -19,6 +19,10 @@ import { TopPageHeader } from "@/components/top-page-header";
 import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import type { TimelinePeriodMode } from "./-page-types";
 import {
+  createDisplayNumberFormatter,
+  getCurrencyDecimals,
+} from "@/shared/unit-format";
+import {
   createTimelineChartOptions,
   mapTimelinePointsToChartData,
 } from "./-chart-options";
@@ -53,11 +57,11 @@ export function TimelinePageView({
 
   const currencyFormatter = useMemo(
     () =>
-      new Intl.NumberFormat("en-CH", {
+      createDisplayNumberFormatter({
+        locale: "en-CH",
         style: "currency",
         currency: activeReferenceCurrency,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        decimals: getCurrencyDecimals(activeReferenceCurrency),
       }),
     [activeReferenceCurrency],
   );

@@ -26,6 +26,7 @@ type PeriodAllocationBreakdownCardProps = {
   clampedPath: string[];
   hasBreakdownAmountDiscrepancy: boolean;
   hasBreakdown: boolean;
+  displayDecimals: number;
   emptyBreakdownMessage: string;
   breakdownHierarchy: BreakdownHierarchyNode[];
   chartOptions: PeriodBreakdownChartOptions;
@@ -53,6 +54,7 @@ export function PeriodAllocationBreakdownCard({
   clampedPath,
   hasBreakdownAmountDiscrepancy,
   hasBreakdown,
+  displayDecimals,
   emptyBreakdownMessage,
   breakdownHierarchy,
   chartOptions,
@@ -82,6 +84,7 @@ export function PeriodAllocationBreakdownCard({
           <BreakdownTable
             hierarchy={breakdownHierarchy}
             valueHeaderName="Balance"
+            displayDecimals={displayDecimals}
             onAccountDoubleClick={onBreakdownAccountDoubleClick}
             expandedGroupsStorageKey={tableExpandedGroupsStorageKey}
           />

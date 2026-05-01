@@ -70,13 +70,13 @@ export function validateEditTransactionBookingsRoot(args: {
   const difference =
     sum(bookings.map((booking) => booking.debit ?? 0)) -
     sum(bookings.map((booking) => booking.credit ?? 0));
-  return Math.abs(difference) > 0.001
+  const normalizedDifference = Number(difference.toFixed(12));
+  return Math.abs(normalizedDifference) > 0.001
     ? `Transaction is not balanced; debits and credits differ by ${numericFormatter(
-        difference.toString(),
+        normalizedDifference.toString(),
         {
           thousandSeparator,
           decimalSeparator,
-          decimalScale: 2,
         },
       )}.`
     : null;

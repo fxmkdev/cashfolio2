@@ -8,6 +8,8 @@ import {
 import { parse } from "date-fns";
 import { useEffect, useRef, useState } from "react";
 import { numericFormatter } from "react-number-format";
+import { Unit } from "../.prisma-client/enums";
+import { getUnitDisplayDecimals } from "../shared/unit-format";
 import {
   FormattedNumberInput,
   getNumberFormatSymbols,
@@ -18,27 +20,106 @@ export const SELECT_COLUMN = "selectColumn";
 export const TEXT_COLUMN = "textColumn";
 export const DATE_COLUMN = "dateColumn";
 
+type FormattedNumericMode = "display" | "entry";
+
+type FormattedNumericColDefConfig = {
+  formattedNumericMode?: FormattedNumericMode;
+  getDisplayDecimals?: (params: {
+    data: unknown;
+    value: number | null | undefined;
+  }) => number;
+};
+
+function getFormattedNumericConfig(
+  colDef: unknown,
+): FormattedNumericColDefConfig {
+  if (typeof colDef !== "object" || colDef === null) {
+    return {};
+  }
+
+  const context = (colDef as { context?: unknown }).context;
+  if (typeof context !== "object" || context === null) {
+    return {};
+  }
+
+  return ((context as { formattedNumeric?: FormattedNumericColDefConfig })
+    .formattedNumeric ?? {}) as FormattedNumericColDefConfig;
+}
+
+function getDefaultDisplayDecimals(data: unknown): number {
+  if (
+    typeof data === "object" &&
+    data !== null &&
+    "unit" in data &&
+    (data as { unit?: unknown }).unit != null
+  ) {
+    const row = data as {
+      unit: Unit;
+      currency?: string | null;
+      cryptocurrency?: string | null;
+    };
+    return getUnitDisplayDecimals({
+      unit: row.unit,
+      currency: row.currency,
+      cryptocurrency: row.cryptocurrency,
+    });
+  }
+
+  return 2;
+}
+
 export const columnTypes: AgGridReactProps["columnTypes"] = {
   [FORMATTED_NUMERIC_COLUMN]: {
     headerClass: "ag-right-aligned-header",
     cellClass: "ag-right-aligned-cell",
-    valueFormatter: ({ value }) => {
+    valueFormatter: ({ value, data, colDef }) => {
       const { decimalSeparator, thousandSeparator } =
         getNumberFormatSymbols("en-CH");
-      return value != null
-        ? numericFormatter(value.toString(), {
-            thousandSeparator,
-            decimalSeparator,
-            decimalScale: 2,
-            fixedDecimalScale: true,
-          })
-        : "";
+      if (value == null) {
+        return "";
+      }
+
+      const config = getFormattedNumericConfig(colDef);
+      const mode = config.formattedNumericMode ?? "display";
+      if (mode === "entry") {
+        return numericFormatter(value.toString(), {
+          thousandSeparator,
+          decimalSeparator,
+        });
+      }
+
+      const decimals =
+        config.getDisplayDecimals?.({
+          data,
+          value: typeof value === "number" ? value : Number(value),
+        }) ?? getDefaultDisplayDecimals(data);
+
+      return numericFormatter(value.toString(), {
+        thousandSeparator,
+        decimalSeparator,
+        decimalScale: decimals,
+        fixedDecimalScale: true,
+      });
     },
-    cellEditor: ({ value, onValueChange }: CustomCellEditorProps) => {
+    cellEditor: ({
+      value,
+      onValueChange,
+      data,
+      colDef,
+    }: CustomCellEditorProps) => {
       const ref = useRef<HTMLInputElement>(null);
       useEffect(() => {
         ref.current?.select();
       }, []);
+
+      const config = getFormattedNumericConfig(colDef);
+      const mode = config.formattedNumericMode ?? "display";
+      const decimals =
+        config.getDisplayDecimals?.({
+          data,
+          value: typeof value === "number" ? value : Number(value),
+        }) ?? getDefaultDisplayDecimals(data);
+
       return (
         <FormattedNumberInput
           ref={ref}
@@ -46,6 +127,8 @@ export const columnTypes: AgGridReactProps["columnTypes"] = {
           variant="unstyled"
           px={12}
           locale="en-CH"
+          decimalScale={mode === "display" ? decimals : undefined}
+          fixedDecimalScale={false}
           value={value}
           onValueChange={({ floatValue }) => onValueChange(floatValue)}
         />

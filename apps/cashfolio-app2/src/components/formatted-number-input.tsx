@@ -8,7 +8,7 @@ export type FormattedNumberInputProps = ComponentPropsWithRef<
 };
 
 export function FormattedNumberInput({
-  locale = "en-US",
+  locale = "en-CH",
   ...props
 }: FormattedNumberInputProps) {
   const { thousandSeparator, decimalSeparator } = useMemo(

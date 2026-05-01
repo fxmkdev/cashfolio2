@@ -452,7 +452,7 @@ test("switch from simple edit to split carries over edited values", async ({
   const firstRow = editDialog
     .locator('.ag-center-cols-container .ag-row[row-index="0"]')
     .first();
-  await expect(agGridCellByColId(firstRow, "credit")).toContainText("55.00");
+  await expect(agGridCellByColId(firstRow, "credit")).toContainText("55");
 
   await editDialog.getByRole("button", { name: "Save" }).click();
   await expect(agGridRowByText(page, "E2E Carry Switch Updated")).toBeVisible();
@@ -559,7 +559,7 @@ test("create security simple transaction preserves account metadata", async ({
   await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
 
   const usdSecurityRow = agGridRowByText(page, seeded.securityAccount.name);
-  await expect(agGridCellByColId(usdSecurityRow, "balance")).toHaveText("3.00");
+  await expect(agGridCellByColId(usdSecurityRow, "balance")).toHaveText("3");
   await expect(
     agGridCellByColId(usdSecurityRow, "balanceInReferenceCurrency"),
   ).toHaveText("15.00");
@@ -568,9 +568,7 @@ test("create security simple transaction preserves account metadata", async ({
     page,
     seeded.securityCounterAccount.name,
   );
-  await expect(agGridCellByColId(eurSecurityRow, "balance")).toHaveText(
-    "-3.00",
-  );
+  await expect(agGridCellByColId(eurSecurityRow, "balance")).toHaveText("-3");
   await expect(
     agGridCellByColId(eurSecurityRow, "balanceInReferenceCurrency"),
   ).toHaveText(/^-13\.6[34]$/);

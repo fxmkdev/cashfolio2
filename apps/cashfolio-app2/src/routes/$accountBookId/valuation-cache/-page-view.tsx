@@ -36,6 +36,7 @@ import {
   type ValuationCacheUnitsResponse,
   type ValuationCacheUnitRow,
 } from "@/server/valuation-cache";
+import { createRateNumberFormatter } from "@/shared/unit-format";
 import { VALUATION_BASE_CURRENCY } from "@/shared/valuation-base-currency";
 import {
   getRowsForValuationUnitTab,
@@ -303,7 +304,8 @@ export function ValuationCachePageView({
 
   const numberFormatter = useMemo(
     () =>
-      new Intl.NumberFormat("en-CH", {
+      createRateNumberFormatter({
+        locale: "en-CH",
         minimumFractionDigits: 2,
         maximumFractionDigits: 6,
       }),

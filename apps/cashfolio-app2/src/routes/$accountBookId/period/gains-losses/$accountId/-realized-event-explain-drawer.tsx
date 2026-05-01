@@ -27,6 +27,7 @@ export function RealizedEventExplainDrawer(args: {
   selectedEvent: RealizedEventRow | null;
   reconciliation: PeriodGainLossReconciliation;
   currencyFormatter: Intl.NumberFormat;
+  quantityFormatter: Intl.NumberFormat;
   realizedLotMatchColumns: ColDef<RealizedEventLotMatchRow>[];
 }) {
   return (
@@ -78,7 +79,7 @@ export function RealizedEventExplainDrawer(args: {
                 Quantity
               </Text>
               <Text fw={700}>
-                {args.selectedEvent.quantity.toLocaleString("en-CH")}
+                {args.quantityFormatter.format(args.selectedEvent.quantity)}
               </Text>
             </Card>
             <Card withBorder radius="md" p="md">

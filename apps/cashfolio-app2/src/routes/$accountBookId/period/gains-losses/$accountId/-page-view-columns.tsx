@@ -20,6 +20,9 @@ import type {
 
 export function buildRealizedColumns(args: {
   isVirtualTarget: boolean;
+  quantityDisplayDecimals: number;
+  referenceCurrencyDisplayDecimals: number;
+  unitPriceDisplayDecimals: number;
   onOpenEventTransaction: (transactionId: string) => void;
 }): ColDef<RealizedEventRow>[] {
   return [
@@ -61,30 +64,55 @@ export function buildRealizedColumns(args: {
       field: "quantity",
       width: 140,
       type: FORMATTED_NUMERIC_COLUMN,
+      context: {
+        formattedNumeric: {
+          getDisplayDecimals: () => args.quantityDisplayDecimals,
+        },
+      },
     },
     {
       headerName: "Effective Amount",
       field: "effectiveReferenceAmount",
       width: 180,
       type: FORMATTED_NUMERIC_COLUMN,
+      context: {
+        formattedNumeric: {
+          getDisplayDecimals: () => args.referenceCurrencyDisplayDecimals,
+        },
+      },
     },
     {
       headerName: "Exec. Price",
       field: "executionUnitPriceInReference",
       width: 150,
       type: FORMATTED_NUMERIC_COLUMN,
+      context: {
+        formattedNumeric: {
+          getDisplayDecimals: () => args.unitPriceDisplayDecimals,
+        },
+      },
     },
     {
       headerName: "Realised Delta",
       field: "realizedGainLossDelta",
       width: 160,
       type: FORMATTED_NUMERIC_COLUMN,
+      context: {
+        formattedNumeric: {
+          getDisplayDecimals: () => args.referenceCurrencyDisplayDecimals,
+        },
+      },
     },
     {
       headerName: "Running Realised",
       field: "runningRealizedGainLoss",
       width: 180,
       type: FORMATTED_NUMERIC_COLUMN,
+      context: {
+        formattedNumeric: {
+          getDisplayDecimals: () => args.referenceCurrencyDisplayDecimals,
+        },
+      },
     },
     {
       colId: "actions",
@@ -135,85 +163,147 @@ export function buildRealizedColumns(args: {
   ];
 }
 
-export const REALIZED_LOT_MATCH_COLUMNS: ColDef<RealizedEventLotMatchRow>[] = [
-  {
-    headerName: "Acquired",
-    field: "acquisitionDate",
-    width: 140,
-    type: DATE_COLUMN,
-    valueFormatter: ({ value }) => formatDateLabel(value),
-  },
-  {
-    headerName: "Matched Qty",
-    field: "matchedQuantity",
-    width: 140,
-    type: FORMATTED_NUMERIC_COLUMN,
-  },
-  {
-    headerName: "Lot Unit Cost",
-    field: "lotUnitCostInReference",
-    width: 160,
-    type: FORMATTED_NUMERIC_COLUMN,
-  },
-  {
-    headerName: "Execution Price",
-    field: "executionUnitPriceInReference",
-    width: 160,
-    type: FORMATTED_NUMERIC_COLUMN,
-  },
-  {
-    headerName: "Lot Delta",
-    field: "realizedGainLossDelta",
-    width: 140,
-    type: FORMATTED_NUMERIC_COLUMN,
-  },
-  {
-    headerName: "Running Event Realised",
-    field: "runningEventRealizedGainLoss",
-    width: 190,
-    type: FORMATTED_NUMERIC_COLUMN,
-  },
-];
+export function buildRealizedLotMatchColumns(args: {
+  quantityDisplayDecimals: number;
+  referenceCurrencyDisplayDecimals: number;
+  unitPriceDisplayDecimals: number;
+}): ColDef<RealizedEventLotMatchRow>[] {
+  return [
+    {
+      headerName: "Acquired",
+      field: "acquisitionDate",
+      width: 140,
+      type: DATE_COLUMN,
+      valueFormatter: ({ value }) => formatDateLabel(value),
+    },
+    {
+      headerName: "Matched Qty",
+      field: "matchedQuantity",
+      width: 140,
+      type: FORMATTED_NUMERIC_COLUMN,
+      context: {
+        formattedNumeric: {
+          getDisplayDecimals: () => args.quantityDisplayDecimals,
+        },
+      },
+    },
+    {
+      headerName: "Lot Unit Cost",
+      field: "lotUnitCostInReference",
+      width: 160,
+      type: FORMATTED_NUMERIC_COLUMN,
+      context: {
+        formattedNumeric: {
+          getDisplayDecimals: () => args.unitPriceDisplayDecimals,
+        },
+      },
+    },
+    {
+      headerName: "Execution Price",
+      field: "executionUnitPriceInReference",
+      width: 160,
+      type: FORMATTED_NUMERIC_COLUMN,
+      context: {
+        formattedNumeric: {
+          getDisplayDecimals: () => args.unitPriceDisplayDecimals,
+        },
+      },
+    },
+    {
+      headerName: "Lot Delta",
+      field: "realizedGainLossDelta",
+      width: 140,
+      type: FORMATTED_NUMERIC_COLUMN,
+      context: {
+        formattedNumeric: {
+          getDisplayDecimals: () => args.referenceCurrencyDisplayDecimals,
+        },
+      },
+    },
+    {
+      headerName: "Running Event Realised",
+      field: "runningEventRealizedGainLoss",
+      width: 190,
+      type: FORMATTED_NUMERIC_COLUMN,
+      context: {
+        formattedNumeric: {
+          getDisplayDecimals: () => args.referenceCurrencyDisplayDecimals,
+        },
+      },
+    },
+  ];
+}
 
-export const OPEN_LOT_COLUMNS: ColDef<OpenLotRow>[] = [
-  {
-    headerName: "Acquired",
-    field: "acquisitionDate",
-    width: 140,
-    type: DATE_COLUMN,
-    valueFormatter: ({ value }) => formatDateLabel(value),
-  },
-  {
-    headerName: "Quantity",
-    field: "quantity",
-    width: 140,
-    type: FORMATTED_NUMERIC_COLUMN,
-  },
-  {
-    headerName: "Unit Cost",
-    field: "unitCostInReference",
-    width: 150,
-    type: FORMATTED_NUMERIC_COLUMN,
-  },
-  {
-    headerName: "Period-End Rate",
-    field: "periodEndRate",
-    width: 160,
-    type: FORMATTED_NUMERIC_COLUMN,
-  },
-  {
-    headerName: "Unrealised",
-    field: "unrealizedGainLoss",
-    width: 160,
-    type: FORMATTED_NUMERIC_COLUMN,
-  },
-  {
-    headerName: "Running Unrealised",
-    field: "runningUnrealizedGainLoss",
-    width: 190,
-    type: FORMATTED_NUMERIC_COLUMN,
-  },
-];
+export function buildOpenLotColumns(args: {
+  quantityDisplayDecimals: number;
+  referenceCurrencyDisplayDecimals: number;
+  unitPriceDisplayDecimals: number;
+}): ColDef<OpenLotRow>[] {
+  return [
+    {
+      headerName: "Acquired",
+      field: "acquisitionDate",
+      width: 140,
+      type: DATE_COLUMN,
+      valueFormatter: ({ value }) => formatDateLabel(value),
+    },
+    {
+      headerName: "Quantity",
+      field: "quantity",
+      width: 140,
+      type: FORMATTED_NUMERIC_COLUMN,
+      context: {
+        formattedNumeric: {
+          getDisplayDecimals: () => args.quantityDisplayDecimals,
+        },
+      },
+    },
+    {
+      headerName: "Unit Cost",
+      field: "unitCostInReference",
+      width: 150,
+      type: FORMATTED_NUMERIC_COLUMN,
+      context: {
+        formattedNumeric: {
+          getDisplayDecimals: () => args.unitPriceDisplayDecimals,
+        },
+      },
+    },
+    {
+      headerName: "Period-End Rate",
+      field: "periodEndRate",
+      width: 160,
+      type: FORMATTED_NUMERIC_COLUMN,
+      context: {
+        formattedNumeric: {
+          getDisplayDecimals: () => args.unitPriceDisplayDecimals,
+        },
+      },
+    },
+    {
+      headerName: "Unrealised",
+      field: "unrealizedGainLoss",
+      width: 160,
+      type: FORMATTED_NUMERIC_COLUMN,
+      context: {
+        formattedNumeric: {
+          getDisplayDecimals: () => args.referenceCurrencyDisplayDecimals,
+        },
+      },
+    },
+    {
+      headerName: "Running Unrealised",
+      field: "runningUnrealizedGainLoss",
+      width: 190,
+      type: FORMATTED_NUMERIC_COLUMN,
+      context: {
+        formattedNumeric: {
+          getDisplayDecimals: () => args.referenceCurrencyDisplayDecimals,
+        },
+      },
+    },
+  ];
+}
 
 export const DIAGNOSTICS_COLUMNS: ColDef<DiagnosticRow>[] = [
   {

@@ -306,13 +306,13 @@ test("balance column visibility and baseline values across tabs/modes", async ({
   ).toHaveText("5.00");
 
   const cryptoRow = agGridRowByText(page, seededBalances.cryptoAccountName);
-  await expect(agGridCellByColId(cryptoRow, "balance")).toHaveText("2.00");
+  await expect(agGridCellByColId(cryptoRow, "balance")).toHaveText("2.00000");
   await expect(
     agGridCellByColId(cryptoRow, "balanceInReferenceCurrency"),
   ).toHaveText("200.00");
 
   const securityRow = agGridRowByText(page, seededBalances.securityAccountName);
-  await expect(agGridCellByColId(securityRow, "balance")).toHaveText("3.00");
+  await expect(agGridCellByColId(securityRow, "balance")).toHaveText("3");
   await expect(
     agGridCellByColId(securityRow, "balanceInReferenceCurrency"),
   ).toHaveText("15.00");

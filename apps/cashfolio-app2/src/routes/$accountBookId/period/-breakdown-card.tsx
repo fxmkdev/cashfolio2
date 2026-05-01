@@ -23,6 +23,7 @@ type PeriodBreakdownCardProps = {
   clampedPath: string[];
   hasBreakdownAmountDiscrepancy: boolean;
   hasBreakdown: boolean;
+  displayDecimals: number;
   emptyBreakdownMessage: string;
   breakdownHierarchy: BreakdownHierarchyNode[];
   chartOptions: PeriodBreakdownChartOptions;
@@ -48,6 +49,7 @@ export function PeriodBreakdownCard({
   clampedPath,
   hasBreakdownAmountDiscrepancy,
   hasBreakdown,
+  displayDecimals,
   emptyBreakdownMessage,
   breakdownHierarchy,
   chartOptions,
@@ -102,6 +104,7 @@ export function PeriodBreakdownCard({
           <BreakdownTable
             hierarchy={breakdownHierarchy}
             valueHeaderName="Amount"
+            displayDecimals={displayDecimals}
             onAccountDoubleClick={onBreakdownAccountDoubleClick}
             expandedGroupsStorageKey={tableExpandedGroupsStorageKey}
           />

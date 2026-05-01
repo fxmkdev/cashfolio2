@@ -324,7 +324,6 @@ export function EditAccountModal({
               <Grid.Col span={3}>
                 <FormattedNumberInput
                   label="Opening Balance"
-                  decimalScale={2}
                   locale="en-CH"
                   hideControls
                   {...form.getInputProps("openingBalance")}

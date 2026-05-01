@@ -18,6 +18,7 @@ import {
 
 type GainsLossesTableProps = {
   hierarchy: GainsLossesBreakdownNode[];
+  displayDecimals?: number;
   expandedGroupsStorageKey: string;
   onExplicitGainLossDoubleClick?: () => void;
   onUnitAccountDoubleClick?: (accountId: string) => void;
@@ -25,6 +26,7 @@ type GainsLossesTableProps = {
 
 export function GainsLossesTable({
   hierarchy,
+  displayDecimals = 2,
   expandedGroupsStorageKey,
   onExplicitGainLossDoubleClick,
   onUnitAccountDoubleClick,
@@ -57,10 +59,15 @@ export function GainsLossesTable({
         headerName: "Total",
         width: 170,
         type: FORMATTED_NUMERIC_COLUMN,
+        context: {
+          formattedNumeric: {
+            getDisplayDecimals: () => displayDecimals,
+          },
+        },
         filter: "agNumberColumnFilter",
       },
     ],
-    [],
+    [displayDecimals],
   );
 
   return (

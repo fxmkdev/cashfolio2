@@ -22,6 +22,10 @@ import { TopPageHeader } from "@/components/top-page-header";
 import type { getPeriodOverview } from "@/server/period";
 import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import { formatMonthPeriodValue } from "@/shared/period";
+import {
+  createDisplayNumberFormatter,
+  getCurrencyDecimals,
+} from "@/shared/unit-format";
 import { PeriodAllocationBreakdownCard } from "./-allocation-breakdown-card";
 import { ContributionChartCard } from "./-contribution-chart-card";
 import { PeriodBreakdownCard } from "./-breakdown-card";
@@ -117,12 +121,16 @@ export function PeriodPageView({
 
   const currencyFormatter = useMemo(
     () =>
-      new Intl.NumberFormat("en-CH", {
+      createDisplayNumberFormatter({
+        locale: "en-CH",
         style: "currency",
         currency: overview.referenceCurrency,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        decimals: getCurrencyDecimals(overview.referenceCurrency),
       }),
+    [overview.referenceCurrency],
+  );
+  const referenceCurrencyDisplayDecimals = useMemo(
+    () => getCurrencyDecimals(overview.referenceCurrency),
     [overview.referenceCurrency],
   );
 
@@ -427,6 +435,7 @@ export function PeriodPageView({
                 allocationBreakdown.hasAllocationBreakdownAmountDiscrepancy
               }
               hasBreakdown={allocationBreakdown.hasAllocationBreakdown}
+              displayDecimals={referenceCurrencyDisplayDecimals}
               emptyBreakdownMessage={
                 allocationBreakdown.emptyAllocationBreakdownMessage
               }
@@ -477,6 +486,7 @@ export function PeriodPageView({
                   breakdown.hasBreakdownAmountDiscrepancy
                 }
                 hasBreakdown={breakdown.hasBreakdown}
+                displayDecimals={referenceCurrencyDisplayDecimals}
                 emptyBreakdownMessage={breakdown.emptyBreakdownMessage}
                 breakdownHierarchy={breakdown.activeBreakdown.hierarchy}
                 chartOptions={breakdown.chartOptions}
@@ -506,6 +516,7 @@ export function PeriodPageView({
             <Grid.Col span={{ base: 12, lg: 6 }}>
               <GainsLossesCard
                 selectedChartType={selectedGainsLossesChartType}
+                displayDecimals={referenceCurrencyDisplayDecimals}
                 tableExpandedGroupsStorageKey={
                   gainsLosses.gainsLossesTableExpandedGroupsStorageKey
                 }

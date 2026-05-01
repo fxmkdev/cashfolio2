@@ -10,6 +10,11 @@ import {
   getSimpleTransactionUnitIdentifier,
   getTypeLabel,
 } from "@/shared/account-utils";
+import {
+  createDisplayNumberFormatter,
+  getCurrencyDecimals,
+  getUnitDisplayDecimals,
+} from "@/shared/unit-format";
 import type {
   LedgerAccount,
   LedgerAccountOptionSource,
@@ -259,19 +264,23 @@ type BalanceFormatterAccount = Pick<
 
 export function createLedgerBalanceFormatter(account: BalanceFormatterAccount) {
   if (account.unit === Unit.CURRENCY && account.currency) {
-    const currencyFormatter = new Intl.NumberFormat("en-CH", {
+    const currencyFormatter = createDisplayNumberFormatter({
+      locale: "en-CH",
       style: "currency",
       currency: account.currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      decimals: getCurrencyDecimals(account.currency),
     });
 
     return (value: number) => currencyFormatter.format(value);
   }
 
-  const numberFormatter = new Intl.NumberFormat("en-CH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+  const numberFormatter = createDisplayNumberFormatter({
+    locale: "en-CH",
+    decimals: getUnitDisplayDecimals({
+      unit: account.unit,
+      currency: account.currency,
+      cryptocurrency: account.cryptocurrency,
+    }),
   });
   const unitLabel = getUnitLabel(account);
 

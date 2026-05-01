@@ -8,7 +8,6 @@ const meta = {
     label: "Amount",
     name: "amount",
     value: "1234.56",
-    decimalScale: 2,
     hideControls: true,
     locale: "en-CH",
   },
