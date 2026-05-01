@@ -25,9 +25,16 @@ async function selectSegmentedControlOption(
   if (!(await option.isChecked())) {
     await option.evaluate((input) => {
       const radio = input as HTMLInputElement;
-      radio.checked = true;
-      radio.dispatchEvent(new Event("input", { bubbles: true }));
-      radio.dispatchEvent(new Event("change", { bubbles: true }));
+      const label = document.querySelector(
+        `label[for="${CSS.escape(radio.id)}"]`,
+      ) as HTMLLabelElement | null;
+
+      if (label) {
+        label.click();
+        return;
+      }
+
+      radio.click();
     });
   }
 
