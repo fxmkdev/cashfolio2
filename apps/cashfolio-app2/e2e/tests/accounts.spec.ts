@@ -1,10 +1,4 @@
-import {
-  expect,
-  test,
-  type ConsoleMessage,
-  type Locator,
-  type Page,
-} from "@playwright/test";
+import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
 import {
   agGridCellByColId,
   agGridPinnedBottomRow,
@@ -19,6 +13,7 @@ import {
   seedThreeBookingSplitTransaction,
   type SeededData,
 } from "../support/db";
+import { selectSegmentedControlOption } from "../support/segmented-control";
 import { openDialogFromButton } from "../support/ui";
 
 let seeded: SeededData;
@@ -88,28 +83,6 @@ async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
   throw new Error(
     "Could not trigger account-leaf drilldown from the period breakdown chart.",
   );
-}
-
-async function selectSegmentedControlOption(
-  control: Locator,
-  optionName: string,
-) {
-  const option = control.getByRole("radio", { name: optionName });
-
-  if (await option.isChecked()) {
-    return;
-  }
-
-  await option.focus();
-  await option.press("Space");
-
-  if (!(await option.isChecked())) {
-    await option.evaluate((input) => {
-      (input as HTMLInputElement).click();
-    });
-  }
-
-  await expect(option).toBeChecked();
 }
 
 type PeriodPageSessionState = {

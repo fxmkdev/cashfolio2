@@ -1,29 +1,8 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { resetAndSeedDatabase, type SeededData } from "../support/db";
+import { selectSegmentedControlOption } from "../support/segmented-control";
 
 let seeded: SeededData;
-
-async function selectSegmentedControlOption(
-  control: Locator,
-  optionName: string,
-) {
-  const option = control.getByRole("radio", { name: optionName });
-
-  if (await option.isChecked()) {
-    return;
-  }
-
-  await option.focus();
-  await option.press("Space");
-
-  if (!(await option.isChecked())) {
-    await option.evaluate((input) => {
-      (input as HTMLInputElement).click();
-    });
-  }
-
-  await expect(option).toBeChecked();
-}
 
 test.beforeAll(async () => {
   seeded = await resetAndSeedDatabase();

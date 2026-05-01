@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import {
   resetAndSeedDatabase,
   seedExplicitGainLossDrilldownScenario,
@@ -6,53 +6,15 @@ import {
   seedSecurityGainLossDrilldownScenario,
   type SeededData,
 } from "../support/db";
+import { selectSegmentedControlOption } from "../support/segmented-control";
 
 let seeded: SeededData;
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 function gridRowByText(container: Locator, text: string): Locator {
   return container
     .locator(".ag-center-cols-container .ag-row")
     .filter({ hasText: text })
     .first();
-}
-
-async function selectSegmentedControlOption(
-  control: Locator,
-  optionName: string,
-) {
-  const option = control.getByRole("radio", { name: optionName });
-
-  if (await option.isChecked()) {
-    return;
-  }
-
-  await control.scrollIntoViewIfNeeded();
-  await option.focus();
-  await option.press("Space");
-
-  if (!(await option.isChecked())) {
-    const optionLabel = control
-      .locator("label")
-      .filter({
-        hasText: new RegExp(`^\\s*${escapeRegExp(optionName)}\\s*$`),
-      })
-      .first();
-
-    if ((await optionLabel.count()) > 0) {
-      await optionLabel.scrollIntoViewIfNeeded();
-      await optionLabel.click();
-    }
-  }
-
-  if (!(await option.isChecked())) {
-    await option.check({ force: true });
-  }
-
-  await expect(option).toBeChecked({ timeout: 15000 });
 }
 
 async function expandRowIfCollapsed(row: Locator) {
