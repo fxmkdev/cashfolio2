@@ -38,3 +38,41 @@ test("timeline page is reachable and persists selected period mode across refres
   await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/period$`));
   await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
 });
+
+test("timeline mode toggles update URL mode and keep history compact", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
+  await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Timeline" }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}/timeline$`),
+  );
+
+  const periodModeControl = page.getByRole("radiogroup", {
+    name: "Timeline period mode",
+  });
+
+  await selectSegmentedControlOption(periodModeControl, "Yearly");
+  await expect(
+    periodModeControl.getByRole("radio", { name: "Yearly" }),
+  ).toBeChecked();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("mode"))
+    .toBe("year");
+
+  await selectSegmentedControlOption(periodModeControl, "Monthly");
+  await expect(
+    periodModeControl.getByRole("radio", { name: "Monthly" }),
+  ).toBeChecked();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("mode"))
+    .toBeNull();
+
+  await page.goBack();
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}/accounts\\?tab=ASSET&mode=active$`),
+  );
+  await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+});
