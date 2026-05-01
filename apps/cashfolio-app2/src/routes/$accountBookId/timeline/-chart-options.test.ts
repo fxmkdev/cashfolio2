@@ -108,6 +108,10 @@ describe("createTimelineChartOptions", () => {
         { label: "All", value: undefined },
       ],
     });
+    expect(options.axes?.x?.type).toBe("unit-time");
+    expect(options.axes?.x).toMatchObject({
+      unit: { unit: "month", utc: true },
+    });
   });
 
   test("highlights the current period band using time bounds", () => {
@@ -190,6 +194,10 @@ describe("createTimelineChartOptions", () => {
         { label: "10Y", value: { unit: "year", step: 10 } },
         { label: "All", value: undefined },
       ],
+    });
+    expect(options.axes?.x?.type).toBe("unit-time");
+    expect(options.axes?.x).toMatchObject({
+      unit: { unit: "year", utc: true },
     });
   });
 

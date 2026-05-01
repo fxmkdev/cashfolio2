@@ -82,6 +82,10 @@ export function createTimelineChartOptions(args: {
   const currentPeriodBandFillOpacity = args.isDarkMode ? 0.2 : 0.45;
   const currentPeriod = args.chartData.at(-1);
   const rangeButtons = getRangeButtons(args.periodMode);
+  const unitTimeAxisUnit =
+    args.periodMode === "year"
+      ? { unit: "year" as const, utc: true }
+      : { unit: "month" as const, utc: true };
 
   return {
     data: args.chartData,
@@ -151,7 +155,8 @@ export function createTimelineChartOptions(args: {
     ],
     axes: {
       x: {
-        type: "time",
+        type: "unit-time",
+        unit: unitTimeAxisUnit,
         crossLines: currentPeriod
           ? [
               {

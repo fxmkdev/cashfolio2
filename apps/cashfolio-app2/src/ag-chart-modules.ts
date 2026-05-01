@@ -9,6 +9,7 @@ import {
   NumberAxisModule,
   TimeAxisModule,
   PolarChartModule,
+  UnitTimeAxisModule,
 } from "ag-charts-community";
 import {
   NavigatorModule,
@@ -25,6 +26,7 @@ const CHART_MODULES = [
   LineSeriesModule,
   CategoryAxisModule,
   TimeAxisModule,
+  UnitTimeAxisModule,
   NumberAxisModule,
   PolarChartModule,
   DonutSeriesModule,
