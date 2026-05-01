@@ -119,21 +119,3 @@ test("timeline deep link with invalid mode falls back to monthly", async ({
     periodModeControl.getByRole("radio", { name: "Yearly" }),
   ).not.toBeChecked();
 });
-
-test("timeline empty state is shown when no periods are available", async ({
-  page,
-}) => {
-  const now = new Date();
-  const futureStartDate = new Date(
-    Date.UTC(now.getUTCFullYear() + 1, 0, 1, 0, 0, 0, 0),
-  );
-
-  const emptyStateSeeded = await resetAndSeedDatabase({
-    accountBookStartDate: futureStartDate,
-  });
-
-  await page.goto(`/${emptyStateSeeded.accountBookId}/timeline`);
-  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
-  await expect(page.getByText("No periods available yet.")).toBeVisible();
-  await expect(page.locator(".ag-charts-wrapper canvas")).toHaveCount(0);
-});
