@@ -18,7 +18,7 @@ import { LinkButton } from "@/components/link-button";
 import type { PeriodTimelineResponse } from "@/server/period-timeline";
 import { TopPageHeader } from "@/components/top-page-header";
 import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
-import type { TimelinePeriodMode } from "./-page-types";
+import { isTimelinePeriodMode, type TimelinePeriodMode } from "./-page-types";
 import {
   createTimelineChartOptions,
   getDefaultRangeButtonLabel,
@@ -34,10 +34,6 @@ export type TimelinePageViewProps = {
   timeline: PeriodTimelineResponse;
   onModeChange: (mode: TimelinePeriodMode) => void;
 };
-
-function isTimelinePeriodMode(value: string): value is TimelinePeriodMode {
-  return value === "month" || value === "year";
-}
 
 export function TimelinePageView({
   accountBookId,
