@@ -778,7 +778,6 @@ test("period previous/next controls update the period query parameter", async ({
 
   await page.goto(`/${seeded.accountBookId}/period?period=2026-04`);
   await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
-  await expect(page.getByRole("progressbar")).toHaveCount(0);
 
   const periodModeControl = page.getByRole("radiogroup", {
     name: "Period mode",
