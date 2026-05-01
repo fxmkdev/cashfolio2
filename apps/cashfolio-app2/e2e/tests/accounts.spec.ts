@@ -756,3 +756,36 @@ test("period picker opens on selected month/year page", async ({ page }) => {
     yearPicker.getByRole("button", { name: "2025" }),
   ).toHaveAttribute("data-selected", "true");
 });
+
+test("period previous/next controls update the period query parameter", async ({
+  page,
+}) => {
+  await seedThreeBookingSplitTransaction({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Period Step March Seed",
+    currentAccountId: seeded.cashAccount.id,
+    debitAccountIds: [seeded.savingsAccount.id, seeded.expenseAccount.id],
+    date: "2026-03-07T00:00:00.000Z",
+  });
+
+  await seedThreeBookingSplitTransaction({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Period Step April Seed",
+    currentAccountId: seeded.cashAccount.id,
+    debitAccountIds: [seeded.savingsAccount.id, seeded.expenseAccount.id],
+    date: "2026-04-07T00:00:00.000Z",
+  });
+
+  await page.goto(`/${seeded.accountBookId}/period?period=2026-04`);
+  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Previous period" }).click();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("period"))
+    .toBe("2026-03");
+
+  await page.getByRole("button", { name: "Next period" }).click();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("period"))
+    .toBe("2026-04");
+});

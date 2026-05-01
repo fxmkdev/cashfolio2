@@ -93,3 +93,28 @@ test("timeline deep link with yearly mode selects yearly on first load", async (
     .poll(() => new URL(page.url()).searchParams.get("mode"))
     .toBe("year");
 });
+
+test("timeline empty state is shown when no periods are available", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/timeline`);
+  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
+  await expect(page.getByText("No periods available yet.")).toBeVisible();
+});
+
+test("timeline deep link with invalid mode falls back to monthly", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/timeline?mode=weekly`);
+  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
+
+  const periodModeControl = page.getByRole("radiogroup", {
+    name: "Timeline period mode",
+  });
+  await expect(
+    periodModeControl.getByRole("radio", { name: "Monthly" }),
+  ).toBeChecked();
+  await expect(
+    periodModeControl.getByRole("radio", { name: "Yearly" }),
+  ).not.toBeChecked();
+});
