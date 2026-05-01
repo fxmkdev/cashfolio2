@@ -1,7 +1,17 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { EquityAccountSubtype, Unit } from "../.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../.prisma-client/enums";
 
 const prisma = vi.hoisted(() => ({
+  accountBook: {
+    findUniqueOrThrow: vi.fn(),
+  },
+  account: {
+    findMany: vi.fn(),
+  },
   booking: {
     findMany: vi.fn(),
     groupBy: vi.fn(),
@@ -41,6 +51,7 @@ vi.mock("./period-transfer-clearing", () => ({
 
 import {
   loadPeriodTimelinePoint,
+  loadPeriodTimelinePointContext,
   type PeriodTimelinePointContext,
 } from "./period-timeline-point.server";
 
@@ -84,6 +95,11 @@ describe("loadPeriodTimelinePoint", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-15T12:00:00.000Z"));
 
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([]);
     prisma.booking.findMany.mockResolvedValue([]);
     prisma.booking.groupBy.mockResolvedValue([]);
     prisma.transaction.findMany.mockResolvedValue([]);
@@ -109,6 +125,78 @@ describe("loadPeriodTimelinePoint", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  test("builds normalized context and filters to convertible holding accounts", async () => {
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "chf",
+      startDate: new Date("2026-02-12T18:45:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([
+      {
+        id: "holding-security",
+        type: AccountType.ASSET,
+        unit: Unit.SECURITY,
+        currency: null,
+        cryptocurrency: null,
+        symbol: "AAPL",
+        tradeCurrency: "USD",
+      },
+      {
+        id: "cash-reference",
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      },
+      {
+        id: "liability-foreign",
+        type: AccountType.LIABILITY,
+        unit: Unit.CURRENCY,
+        currency: "USD",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      },
+    ]);
+
+    const result = await loadPeriodTimelinePointContext({
+      accountBookId: "book-ctx",
+    });
+
+    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
+      where: { id: "book-ctx" },
+      select: {
+        referenceCurrency: true,
+        startDate: true,
+      },
+    });
+    expect(prisma.account.findMany).toHaveBeenCalledWith({
+      where: {
+        accountBookId: "book-ctx",
+        type: {
+          in: [AccountType.ASSET, AccountType.LIABILITY],
+        },
+      },
+      select: {
+        id: true,
+        type: true,
+        unit: true,
+        currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
+      },
+    });
+    expect(result.referenceCurrency).toBe("CHF");
+    expect(result.accountBookStartDate.toISOString()).toBe(
+      "2026-02-12T00:00:00.000Z",
+    );
+    expect(result.holdingAccountsResolved.map((account) => account.id)).toEqual(
+      ["holding-security", "liability-foreign"],
+    );
   });
 
   test("zeros total return for periods before account-book start", async () => {
