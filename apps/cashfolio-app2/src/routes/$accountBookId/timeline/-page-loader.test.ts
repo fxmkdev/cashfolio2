@@ -13,7 +13,7 @@ describe("loadTimelinePageData", () => {
     mockedGetPeriodTimeline.mockReset();
   });
 
-  test("loads monthly timeline for the account book", async () => {
+  test("loads timeline for the selected mode", async () => {
     mockedGetPeriodTimeline.mockResolvedValueOnce({
       referenceCurrency: "CHF",
       points: [
@@ -25,17 +25,20 @@ describe("loadTimelinePageData", () => {
       ],
     });
 
-    const result = await loadTimelinePageData({ accountBookId: "book-1" });
+    const result = await loadTimelinePageData({
+      accountBookId: "book-1",
+      mode: "year",
+    });
 
     expect(mockedGetPeriodTimeline).toHaveBeenCalledTimes(1);
     expect(mockedGetPeriodTimeline).toHaveBeenNthCalledWith(1, {
       data: {
         accountBookId: "book-1",
-        granularity: "month",
+        granularity: "year",
       },
     });
     expect(result).toEqual({
-      monthTimeline: {
+      timeline: {
         referenceCurrency: "CHF",
         points: [
           {
