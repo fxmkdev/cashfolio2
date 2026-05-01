@@ -9,7 +9,7 @@ import {
   parseExplicitPeriodSelection,
 } from "@/shared/period";
 import type { PeriodTimelineResponse } from "@/server/period-timeline";
-import type { TimelinePeriodMode } from "./-page-session-state";
+import type { TimelinePeriodMode } from "./-page-types";
 
 export type TimelineChartDatum = {
   periodValue: string;

@@ -80,7 +80,7 @@ export function TimelinePageView({
     () =>
       createTimelineChartOptions({
         chartData,
-        periodMode,
+        periodMode: selectedMode,
         amountCompactFormatter,
         currencyFormatter,
         colors,
@@ -92,7 +92,7 @@ export function TimelinePageView({
       chartData,
       colors,
       currencyFormatter,
-      periodMode,
+      selectedMode,
       isDarkMode,
       theme,
     ],
