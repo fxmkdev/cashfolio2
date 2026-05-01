@@ -74,6 +74,7 @@ export function TimelinePageView({
     [timeline.points],
   );
   const chartRef = useRef<AgChartInstance<AgChartOptions> | null>(null);
+  const appliedDefaultRangeModeRef = useRef<TimelinePeriodMode | null>(null);
   const defaultRangeButtonLabel = useMemo(
     () => getDefaultRangeButtonLabel(selectedMode),
     [selectedMode],
@@ -106,6 +107,10 @@ export function TimelinePageView({
       return;
     }
 
+    if (appliedDefaultRangeModeRef.current === selectedMode) {
+      return;
+    }
+
     let animationFrameId = 0;
     const clickDefaultRangeButton = (attemptsLeft: number) => {
       const chartElement = chartRef.current?.getOptions().container;
@@ -133,6 +138,7 @@ export function TimelinePageView({
 
       if (matchingButton) {
         matchingButton.click();
+        appliedDefaultRangeModeRef.current = selectedMode;
         return;
       }
 
@@ -150,7 +156,7 @@ export function TimelinePageView({
     return () => {
       window.cancelAnimationFrame(animationFrameId);
     };
-  }, [chartData, defaultRangeButtonLabel]);
+  }, [chartData, defaultRangeButtonLabel, selectedMode]);
 
   return (
     <Container fluid py="xl" px="xl" className={classes.page}>

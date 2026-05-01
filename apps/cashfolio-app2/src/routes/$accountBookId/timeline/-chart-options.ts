@@ -22,21 +22,23 @@ export type TimelineChartDatum = {
 export function mapTimelinePointsToChartData(
   points: PeriodTimelineResponse["points"],
 ): TimelineChartDatum[] {
-  return points.map((point) => {
+  return points.flatMap((point) => {
     const explicitPeriod = parseExplicitPeriodSelection(point.periodValue);
     if (!explicitPeriod) {
-      throw new Error(`Invalid timeline period value: ${point.periodValue}`);
+      return [];
     }
 
     const { from, toExclusive } = getExplicitPeriodDateRange(explicitPeriod);
 
-    return {
-      periodValue: point.periodValue,
-      periodLabel: point.periodLabel,
-      periodStart: from,
-      periodEndExclusive: toExclusive,
-      totalReturn: point.totalReturn,
-    };
+    return [
+      {
+        periodValue: point.periodValue,
+        periodLabel: point.periodLabel,
+        periodStart: from,
+        periodEndExclusive: toExclusive,
+        totalReturn: point.totalReturn,
+      },
+    ];
   });
 }
 

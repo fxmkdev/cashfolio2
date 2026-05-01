@@ -100,6 +100,31 @@ describe("mapTimelinePointsToChartData", () => {
       },
     ]);
   });
+
+  test("skips points with invalid period values", () => {
+    expect(
+      mapTimelinePointsToChartData([
+        {
+          periodValue: "2026-01",
+          periodLabel: "January 2026",
+          totalReturn: 10,
+        },
+        {
+          periodValue: "invalid-period",
+          periodLabel: "Invalid",
+          totalReturn: 12,
+        },
+      ]),
+    ).toEqual([
+      {
+        periodValue: "2026-01",
+        periodLabel: "January 2026",
+        periodStart: new Date("2026-01-01T00:00:00.000Z"),
+        periodEndExclusive: new Date("2026-02-01T00:00:00.000Z"),
+        totalReturn: 10,
+      },
+    ]);
+  });
 });
 
 describe("createTimelineChartOptions", () => {
