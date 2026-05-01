@@ -17,7 +17,7 @@ import {
 import { loadTransferClearingUnitBuckets } from "./period-transfer-clearing";
 import type { TransferClearingUnitBucket } from "./period-transfer-clearing";
 
-const PERIOD_BASE_CACHE_TTL_SECONDS = 10 * 60;
+const PERIOD_BASE_CACHE_TTL_SECONDS = 24 * 60 * 60;
 const PERIOD_BASE_CACHE_MAX_SERIALIZED_BYTES = 2 * 1024 * 1024;
 
 const PERIOD_BASE_CACHE_ENTRY_PREFIX = "period:base:v1";

@@ -40,7 +40,7 @@ Related docs:
   results.
 - Redis key namespace includes deployment scope:
   `period:base:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{periodValue}`.
-- TTL: 10 minutes. Mutating account/transaction server functions explicitly
+- TTL: 24 hours. Mutating account/transaction server functions explicitly
   invalidate cache entries for the affected account book.
 - `PERIOD_BASE_CACHE_ENV` must be set when Redis caching is enabled. On Fly
   deployments this is set from `FLY_APP` to isolate multiple preview/staging
