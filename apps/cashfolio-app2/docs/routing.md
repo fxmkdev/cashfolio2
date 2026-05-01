@@ -44,6 +44,22 @@ Related docs:
   total return history as a full-page bar chart
   - Loader fetches only the currently selected granularity (`mode` search
     param), so refresh/direct navigation loads the requested view immediately
+  - Viewport controls:
+    - Uses AG Charts `navigator` + `ranges` controls.
+    - Uses `unit-time` x-axis in `src/routes/$accountBookId/timeline/-chart-options.ts`
+      so bar buckets remain discrete by period (month/year) while range
+      navigation still works.
+    - Default ranges are monthly `1Y` and yearly `5Y` (see
+      `getDefaultRangeButtonLabel` in
+      `src/routes/$accountBookId/timeline/-chart-options.ts`).
+    - AG Charts (current app version: `13.2.1`) does not expose a public API to
+      select a specific range-button as active. Setting zoom via
+      `initialState`/`setState` updates the visible domain but may not mark the
+      corresponding range button active.
+    - Therefore `src/routes/$accountBookId/timeline/-page-view.tsx` applies the
+      default by programmatically triggering the matching range button after the
+      chart mounts. If AG Charts adds a public active-button API, prefer that
+      and remove the DOM-trigger fallback.
 - `$accountBookId/$accountId/route.tsx` - ledger layout route (loads ledger data
   and provides shared search params for child routes)
 - `$accountBookId/$accountId/index.tsx` - ledger page for a single account
