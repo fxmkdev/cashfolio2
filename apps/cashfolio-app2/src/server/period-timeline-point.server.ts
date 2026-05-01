@@ -1,19 +1,11 @@
 import { normalizePeriodValue } from "../shared/period";
-import { startOfUtcDay } from "../shared/date";
 import { getOrLoadPeriodBaseData } from "./period-base-data-cache";
-import {
-  getPeriodEndExclusive,
-  resolvePeriodSelection,
-} from "./period-selection";
+import { resolvePeriodSelection } from "./period-selection";
 import {
   loadPeriodTimelinePointContext,
   type PeriodTimelinePointContext,
 } from "./period-timeline-point-context.server";
 import { loadPeriodTimelinePointTotalReturn } from "./period-timeline-point-total-return.server";
-
-function addUtcDays(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
-}
 
 export { loadPeriodTimelinePointContext };
 export type { PeriodTimelinePointContext };
@@ -54,37 +46,15 @@ export async function loadPeriodTimelinePoint(args: {
     period: data.period,
   });
 
-  const baseData = {
-    ...loadedBaseData,
-    referenceCurrency: context.referenceCurrency,
-    holdingAccountsResolved: context.holdingAccountsResolved,
-    selection: {
-      ...loadedBaseData.selection,
-      periodValue: selection.periodValue,
-      label: selection.label,
-      periodSpecifier: selection.periodSpecifier,
-      granularity: selection.granularity,
-      year: selection.year,
-      month: selection.month,
-      from: selection.from,
-      to: selection.to,
-      queryEndExclusive: getPeriodEndExclusive(selection.to),
-      initialHoldingDate: addUtcDays(selection.from, -1),
-      isBeforeAccountBookStart,
-      minPeriodDate: context.accountBookStartDate,
-      currentDay: startOfUtcDay(new Date()),
-    },
-  };
-
   const totalReturn = await loadPeriodTimelinePointTotalReturn({
     accountBookId: data.accountBookId,
     period: data.period,
-    baseData,
+    baseData: loadedBaseData,
   });
 
   return {
-    selectedPeriodValue: selection.periodValue,
-    selectedPeriodLabel: selection.label,
+    selectedPeriodValue: loadedBaseData.selection.periodValue,
+    selectedPeriodLabel: loadedBaseData.selection.label,
     totalReturn,
   };
 }

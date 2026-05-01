@@ -275,21 +275,11 @@ describe("loadPeriodTimelinePoint", () => {
       period: "2026-02",
       context: createContext({
         startDate: "2026-01-01T00:00:00.000Z",
-        holdingAccountsResolved: [
-          {
-            id: "holding-1",
-            unit: Unit.SECURITY,
-            currency: null,
-            cryptocurrency: null,
-            symbol: "AAPL",
-            tradeCurrency: "USD",
-          },
-        ],
       }),
     });
 
-    expect(result.totalReturn).toBe(148);
-    expect(finalizeHoldingGainLossState).toHaveBeenCalledTimes(1);
+    expect(result.totalReturn).toBe(138);
+    expect(finalizeHoldingGainLossState).not.toHaveBeenCalled();
     expect(computeTransferClearingGainLossSplit).toHaveBeenCalledTimes(1);
   });
 });

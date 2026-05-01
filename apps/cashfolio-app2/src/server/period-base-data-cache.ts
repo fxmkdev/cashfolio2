@@ -5,7 +5,7 @@ import {
 } from "../.prisma-client/enums";
 import { prisma } from "../prisma.server";
 import { getRedisClient } from "../redis.server";
-import { normalizePeriodValue } from "../shared/period";
+import { normalizePeriodValue, PERIOD_PRESET_VALUES } from "../shared/period";
 import { startOfUtcDay } from "../shared/date";
 import { resolveExplicitCounterpartNonEquityAccounts } from "./period-gains-losses-contributions";
 import { filterConvertibleHoldingAccounts } from "./period-helpers";
@@ -22,6 +22,7 @@ const PERIOD_BASE_CACHE_MAX_SERIALIZED_BYTES = 2 * 1024 * 1024;
 
 const PERIOD_BASE_CACHE_ENTRY_PREFIX = "period:base:v1";
 const PERIOD_BASE_CACHE_INDEX_PREFIX = "period:base:index:v1";
+const PERIOD_BASE_CACHE_GENERATION_PREFIX = "period:base:generation:v1";
 
 let hasWarnedPeriodBaseCacheReadFailure = false;
 let hasWarnedPeriodBaseCacheWriteFailure = false;
@@ -210,16 +211,85 @@ function getCacheEnvOrThrowWhenRedisAvailable(): string {
 function getPeriodBaseCacheEntryKey(args: {
   cacheEnv: string;
   accountBookId: string;
-  periodValue: string;
+  generation: string;
+  periodCacheKey: string;
 }) {
-  return `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:${args.cacheEnv}:${args.accountBookId}:${args.periodValue}`;
+  return `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:${args.cacheEnv}:${args.accountBookId}:${args.generation}:${args.periodCacheKey}`;
 }
 
 function getPeriodBaseCacheIndexKey(args: {
   cacheEnv: string;
   accountBookId: string;
+  generation: string;
 }) {
-  return `${PERIOD_BASE_CACHE_INDEX_PREFIX}:${args.cacheEnv}:${args.accountBookId}`;
+  return `${PERIOD_BASE_CACHE_INDEX_PREFIX}:${args.cacheEnv}:${args.accountBookId}:${args.generation}`;
+}
+
+function getPeriodBaseCacheGenerationKey(args: {
+  cacheEnv: string;
+  accountBookId: string;
+}) {
+  return `${PERIOD_BASE_CACHE_GENERATION_PREFIX}:${args.cacheEnv}:${args.accountBookId}`;
+}
+
+function isPresetPeriodValue(value: string): boolean {
+  return (PERIOD_PRESET_VALUES as readonly string[]).includes(value);
+}
+
+function formatUtcDateKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+async function resolvePeriodBaseCachePeriodKey(args: {
+  accountBookId: string;
+  periodValue: string;
+}): Promise<string> {
+  if (!isPresetPeriodValue(args.periodValue)) {
+    return args.periodValue;
+  }
+
+  const accountBook = await prisma.accountBook.findUniqueOrThrow({
+    where: { id: args.accountBookId },
+    select: {
+      startDate: true,
+    },
+  });
+
+  const selection = resolvePeriodSelection({
+    periodValue: args.periodValue,
+    now: new Date(),
+    firstBookingDate: startOfUtcDay(accountBook.startDate),
+  });
+
+  return `${selection.granularity}:${formatUtcDateKey(selection.from)}:${formatUtcDateKey(selection.to)}`;
+}
+
+async function getPeriodBaseCacheGeneration(args: {
+  cacheEnv: string;
+  accountBookId: string;
+  redis: NonNullable<Awaited<ReturnType<typeof getRedisClient>>>;
+}): Promise<string> {
+  const generationKey = getPeriodBaseCacheGenerationKey({
+    cacheEnv: args.cacheEnv,
+    accountBookId: args.accountBookId,
+  });
+
+  try {
+    const generation = await args.redis.get(generationKey);
+    if (generation && generation.trim().length > 0) {
+      return generation.trim();
+    }
+  } catch (error) {
+    if (!hasWarnedPeriodBaseCacheReadFailure) {
+      console.warn(
+        "Failed to read period base-data cache entry; continuing uncached.",
+        error,
+      );
+      hasWarnedPeriodBaseCacheReadFailure = true;
+    }
+  }
+
+  return "0";
 }
 
 async function loadPeriodEquityBookingsRaw(args: {
@@ -720,10 +790,20 @@ export async function getOrLoadPeriodBaseData(args: {
   }
 
   const cacheEnv = getCacheEnvOrThrowWhenRedisAvailable();
+  const periodCacheKey = await resolvePeriodBaseCachePeriodKey({
+    accountBookId: args.accountBookId,
+    periodValue,
+  });
+  const generation = await getPeriodBaseCacheGeneration({
+    cacheEnv,
+    accountBookId: args.accountBookId,
+    redis,
+  });
   const entryKey = getPeriodBaseCacheEntryKey({
     cacheEnv,
     accountBookId: args.accountBookId,
-    periodValue,
+    generation,
+    periodCacheKey,
   });
 
   try {
@@ -764,6 +844,7 @@ export async function getOrLoadPeriodBaseData(args: {
         const indexKey = getPeriodBaseCacheIndexKey({
           cacheEnv,
           accountBookId: args.accountBookId,
+          generation,
         });
         await redis.setEx(entryKey, PERIOD_BASE_CACHE_TTL_SECONDS, serialized);
         await redis.sAdd(indexKey, entryKey);
@@ -799,7 +880,17 @@ export async function invalidatePeriodBaseDataCacheForAccountBook(
   }
 
   const cacheEnv = getCacheEnvOrThrowWhenRedisAvailable();
+  const generation = await getPeriodBaseCacheGeneration({
+    cacheEnv,
+    accountBookId,
+    redis,
+  });
   const indexKey = getPeriodBaseCacheIndexKey({
+    cacheEnv,
+    accountBookId,
+    generation,
+  });
+  const generationKey = getPeriodBaseCacheGenerationKey({
     cacheEnv,
     accountBookId,
   });
@@ -811,6 +902,8 @@ export async function invalidatePeriodBaseDataCacheForAccountBook(
     } else {
       await redis.del(indexKey);
     }
+    const nextGeneration = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    await redis.set(generationKey, nextGeneration);
 
     const inflightPrefix = `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:${cacheEnv}:${accountBookId}:`;
     for (const cacheKey of inflightByCacheKey.keys()) {
