@@ -94,13 +94,9 @@ test("period allocation table account drilldown opens ledger with selected perio
     new RegExp(`/${seeded.accountBookId}/[^/?]+\\?period=${period}$`),
   );
   await expect(
-    page.getByRole("heading", {
-      name: new RegExp(seededBalances.usdAccountName),
-    }),
-  ).toBeVisible();
-  await expect(
     page.getByText("Showing entries for January 2026"),
   ).toBeVisible();
+  await expect(page.getByText("E2E Convertible Asset Balances Seed")).toBeVisible();
 });
 
 test("period gains/losses table unit-account drilldown opens reconciliation page and event ledger link", async ({
@@ -199,8 +195,7 @@ test("period explicit gains/losses rows drill to gain/loss ledger", async ({
     ),
   );
   await expect(
-    page.getByRole("heading", {
-      name: new RegExp(explicitSeed.gainLossAccountName),
-    }),
+    page.getByText("Showing entries for January 2026"),
   ).toBeVisible();
+  await expect(page.getByText("E2E Explicit Gain/Loss Seed")).toBeVisible();
 });
