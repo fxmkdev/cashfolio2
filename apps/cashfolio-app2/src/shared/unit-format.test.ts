@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { Unit } from "../.prisma-client/enums";
 import {
   createDisplayNumberFormatter,
+  createRateNumberFormatter,
   getCryptocurrencyDecimals,
   getCurrencyDecimals,
   getUnitDisplayDecimals,
@@ -65,5 +66,18 @@ describe("createDisplayNumberFormatter", () => {
     });
 
     expect(formatter.format(12.99)).toBe("13");
+  });
+});
+
+describe("createRateNumberFormatter", () => {
+  test("keeps useful fractional precision for rates", () => {
+    const formatter = createRateNumberFormatter({
+      locale: "en-CH",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6,
+    });
+
+    expect(formatter.format(0.0067891)).toBe("0.006789");
+    expect(formatter.format(12)).toBe("12.00");
   });
 });

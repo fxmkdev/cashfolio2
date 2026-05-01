@@ -17,7 +17,7 @@ const CRYPTOCURRENCY_SYMBOL_ALIASES: Record<string, string> = {
 // This map intentionally covers the currencies present in src/currencies.ts where
 // the ISO list provides numeric minor units. Unsupported/non-ISO entries fall back
 // to DEFAULT_CURRENCY_DISPLAY_DECIMALS.
-export const currencyDisplayDecimals = {
+const currencyDisplayDecimals = {
   AED: 2,
   AFN: 2,
   ALL: 2,
@@ -178,7 +178,7 @@ export const currencyDisplayDecimals = {
 // Endpoint: https://api.kraken.com/0/public/Assets
 // This map covers symbols present in src/cryptocurrencies.ts that Kraken exposes.
 // Uncovered symbols fall back to DEFAULT_CRYPTOCURRENCY_DISPLAY_DECIMALS.
-export const cryptocurrencyDisplayDecimals = {
+const cryptocurrencyDisplayDecimals = {
   ACT: 3,
   ADA: 6,
   ADX: 5,
@@ -334,5 +334,20 @@ export function createDisplayNumberFormatter(args: {
   return new Intl.NumberFormat(locale, {
     minimumFractionDigits: args.decimals,
     maximumFractionDigits: args.decimals,
+  });
+}
+
+export function createRateNumberFormatter(args?: {
+  locale?: string;
+  minimumFractionDigits?: number;
+  maximumFractionDigits?: number;
+}) {
+  const locale = args?.locale ?? "en-CH";
+  const minimumFractionDigits = args?.minimumFractionDigits ?? 2;
+  const maximumFractionDigits = args?.maximumFractionDigits ?? 6;
+
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits,
+    maximumFractionDigits,
   });
 }

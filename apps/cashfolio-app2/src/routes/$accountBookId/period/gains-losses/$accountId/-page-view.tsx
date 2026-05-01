@@ -91,6 +91,10 @@ export function GainLossReconciliationPageView({
   const referenceCurrencyDisplayDecimals = getCurrencyDecimals(
     reconciliation.referenceCurrency,
   );
+  const unitPriceDisplayDecimals = Math.max(
+    2,
+    referenceCurrencyDisplayDecimals,
+  );
   const quantityDisplayDecimals = getUnitDisplayDecimals({
     unit: reconciliation.target.unit,
     currency: reconciliation.target.currency,
@@ -121,6 +125,7 @@ export function GainLossReconciliationPageView({
         isVirtualTarget: reconciliation.target.isVirtual,
         quantityDisplayDecimals,
         referenceCurrencyDisplayDecimals,
+        unitPriceDisplayDecimals,
         onOpenEventTransaction,
       }),
     [
@@ -128,6 +133,7 @@ export function GainLossReconciliationPageView({
       quantityDisplayDecimals,
       reconciliation.target.isVirtual,
       referenceCurrencyDisplayDecimals,
+      unitPriceDisplayDecimals,
     ],
   );
   const realizedLotMatchColumns = useMemo(
@@ -135,16 +141,26 @@ export function GainLossReconciliationPageView({
       buildRealizedLotMatchColumns({
         quantityDisplayDecimals,
         referenceCurrencyDisplayDecimals,
+        unitPriceDisplayDecimals,
       }),
-    [quantityDisplayDecimals, referenceCurrencyDisplayDecimals],
+    [
+      quantityDisplayDecimals,
+      referenceCurrencyDisplayDecimals,
+      unitPriceDisplayDecimals,
+    ],
   );
   const openLotColumns = useMemo(
     () =>
       buildOpenLotColumns({
         quantityDisplayDecimals,
         referenceCurrencyDisplayDecimals,
+        unitPriceDisplayDecimals,
       }),
-    [quantityDisplayDecimals, referenceCurrencyDisplayDecimals],
+    [
+      quantityDisplayDecimals,
+      referenceCurrencyDisplayDecimals,
+      unitPriceDisplayDecimals,
+    ],
   );
 
   const selectedEvent = useMemo<RealizedEventRow | null>(

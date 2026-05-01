@@ -22,6 +22,7 @@ export function buildRealizedColumns(args: {
   isVirtualTarget: boolean;
   quantityDisplayDecimals: number;
   referenceCurrencyDisplayDecimals: number;
+  unitPriceDisplayDecimals: number;
   onOpenEventTransaction: (transactionId: string) => void;
 }): ColDef<RealizedEventRow>[] {
   return [
@@ -76,7 +77,7 @@ export function buildRealizedColumns(args: {
       type: FORMATTED_NUMERIC_COLUMN,
       context: {
         formattedNumeric: {
-          getDisplayDecimals: () => args.referenceCurrencyDisplayDecimals,
+          getDisplayDecimals: () => args.unitPriceDisplayDecimals,
         },
       },
     },
@@ -165,6 +166,7 @@ export function buildRealizedColumns(args: {
 export function buildRealizedLotMatchColumns(args: {
   quantityDisplayDecimals: number;
   referenceCurrencyDisplayDecimals: number;
+  unitPriceDisplayDecimals: number;
 }): ColDef<RealizedEventLotMatchRow>[] {
   return [
     {
@@ -192,7 +194,7 @@ export function buildRealizedLotMatchColumns(args: {
       type: FORMATTED_NUMERIC_COLUMN,
       context: {
         formattedNumeric: {
-          getDisplayDecimals: () => args.referenceCurrencyDisplayDecimals,
+          getDisplayDecimals: () => args.unitPriceDisplayDecimals,
         },
       },
     },
@@ -203,7 +205,7 @@ export function buildRealizedLotMatchColumns(args: {
       type: FORMATTED_NUMERIC_COLUMN,
       context: {
         formattedNumeric: {
-          getDisplayDecimals: () => args.referenceCurrencyDisplayDecimals,
+          getDisplayDecimals: () => args.unitPriceDisplayDecimals,
         },
       },
     },
@@ -235,6 +237,7 @@ export function buildRealizedLotMatchColumns(args: {
 export function buildOpenLotColumns(args: {
   quantityDisplayDecimals: number;
   referenceCurrencyDisplayDecimals: number;
+  unitPriceDisplayDecimals: number;
 }): ColDef<OpenLotRow>[] {
   return [
     {
@@ -262,7 +265,7 @@ export function buildOpenLotColumns(args: {
       type: FORMATTED_NUMERIC_COLUMN,
       context: {
         formattedNumeric: {
-          getDisplayDecimals: () => args.referenceCurrencyDisplayDecimals,
+          getDisplayDecimals: () => args.unitPriceDisplayDecimals,
         },
       },
     },
@@ -273,7 +276,7 @@ export function buildOpenLotColumns(args: {
       type: FORMATTED_NUMERIC_COLUMN,
       context: {
         formattedNumeric: {
-          getDisplayDecimals: () => args.referenceCurrencyDisplayDecimals,
+          getDisplayDecimals: () => args.unitPriceDisplayDecimals,
         },
       },
     },
