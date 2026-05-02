@@ -1,53 +1,82 @@
-import { AppShell, Burger, Divider, Group, Stack, Text } from "@mantine/core";
+import {
+  AppShell,
+  Burger,
+  Divider,
+  Group,
+  Stack,
+  Text,
+  useMantineTheme,
+} from "@mantine/core";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
-import { createFileRoute, Outlet, useMatchRoute } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  useRouterState,
+} from "@tanstack/react-router";
 import {
   IconCalendarMonth,
   IconChartBar,
   IconDatabase,
   IconListDetails,
 } from "@tabler/icons-react";
+import type { ReactNode } from "react";
 import { LinkNavLink } from "@/components/link-nav-link";
 
 export const Route = createFileRoute("/$accountBookId")({
   component: AccountBookLayout,
 });
 
+export type AccountBookSection =
+  | "accounts"
+  | "period"
+  | "timeline"
+  | "valuation-cache";
+
+export function getActiveSection(args: {
+  pathname: string;
+  accountBookId: string;
+}): AccountBookSection {
+  const segments = args.pathname.split("/").filter(Boolean);
+  if (segments[0] !== args.accountBookId) {
+    return "accounts";
+  }
+
+  const section = segments[1];
+  if (section === "period") return "period";
+  if (section === "timeline") return "timeline";
+  if (section === "valuation-cache") return "valuation-cache";
+  return "accounts";
+}
+
 function AccountBookLayout() {
   const { accountBookId } = Route.useParams();
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+
+  return (
+    <AccountBookShell accountBookId={accountBookId} pathname={pathname}>
+      <Outlet />
+    </AccountBookShell>
+  );
+}
+
+export type AccountBookShellProps = {
+  accountBookId: string;
+  pathname: string;
+  children: ReactNode;
+};
+
+export function AccountBookShell({
+  accountBookId,
+  pathname,
+  children,
+}: AccountBookShellProps) {
+  const theme = useMantineTheme();
   const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] =
     useDisclosure(false);
-  const isMobile = useMediaQuery("(max-width: 48em)");
-  const matchRoute = useMatchRoute();
-
-  const isAccountsActive = Boolean(
-    matchRoute({
-      to: "/$accountBookId/accounts",
-      params: { accountBookId },
-      fuzzy: false,
-    }),
-  );
-  const isPeriodActive = Boolean(
-    matchRoute({
-      to: "/$accountBookId/period",
-      params: { accountBookId },
-      fuzzy: true,
-    }),
-  );
-  const isTimelineActive = Boolean(
-    matchRoute({
-      to: "/$accountBookId/timeline",
-      params: { accountBookId },
-      fuzzy: false,
-    }),
-  );
-  const isValuationCacheActive = Boolean(
-    matchRoute({
-      to: "/$accountBookId/valuation-cache",
-      params: { accountBookId },
-      fuzzy: false,
-    }),
-  );
+  const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
+  const activeSection = getActiveSection({ pathname, accountBookId });
 
   return (
     <AppShell
@@ -86,7 +115,7 @@ function AccountBookLayout() {
             to="/$accountBookId/accounts"
             params={{ accountBookId }}
             search={{ tab: "ASSET", mode: "active" }}
-            active={isAccountsActive}
+            active={activeSection === "accounts"}
             onClick={closeMobile}
           />
           <LinkNavLink
@@ -94,7 +123,7 @@ function AccountBookLayout() {
             leftSection={<IconCalendarMonth size={16} />}
             to="/$accountBookId/period"
             params={{ accountBookId }}
-            active={isPeriodActive}
+            active={activeSection === "period"}
             onClick={closeMobile}
           />
           <LinkNavLink
@@ -102,7 +131,7 @@ function AccountBookLayout() {
             leftSection={<IconChartBar size={16} />}
             to="/$accountBookId/timeline"
             params={{ accountBookId }}
-            active={isTimelineActive}
+            active={activeSection === "timeline"}
             onClick={closeMobile}
           />
           <LinkNavLink
@@ -110,15 +139,13 @@ function AccountBookLayout() {
             leftSection={<IconDatabase size={16} />}
             to="/$accountBookId/valuation-cache"
             params={{ accountBookId }}
-            active={isValuationCacheActive}
+            active={activeSection === "valuation-cache"}
             onClick={closeMobile}
           />
         </Stack>
       </AppShell.Navbar>
 
-      <AppShell.Main>
-        <Outlet />
-      </AppShell.Main>
+      <AppShell.Main style={{ minHeight: 0 }}>{children}</AppShell.Main>
     </AppShell>
   );
 }

@@ -57,6 +57,16 @@ const preview: Preview = {
         path: "/$accountBookId/period",
         component: () => <Story />,
       });
+      const accountBookTimelineRoute = createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/$accountBookId/timeline",
+        component: () => <Story />,
+      });
+      const accountBookValuationCacheRoute = createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/$accountBookId/valuation-cache",
+        component: () => <Story />,
+      });
 
       const accountLedgerRoute = createRoute({
         getParentRoute: () => rootRoute,
@@ -76,6 +86,8 @@ const preview: Preview = {
           accountBookRoute,
           accountBookAccountsRoute,
           accountBookPeriodRoute,
+          accountBookTimelineRoute,
+          accountBookValuationCacheRoute,
           accountLedgerRoute,
           accountLedgerChartRoute,
         ]),

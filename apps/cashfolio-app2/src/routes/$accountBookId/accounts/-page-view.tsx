@@ -139,7 +139,17 @@ export function AccountsPageView({
   const isArchivedMode = mode === "archived";
 
   return (
-    <Container fluid py="xl" px="xl">
+    <Container
+      fluid
+      py="xl"
+      px="xl"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        minHeight: 0,
+      }}
+    >
       <TopPageHeader
         heading={
           isArchivedMode ? (
@@ -213,7 +223,7 @@ export function AccountsPageView({
       </Tabs>
 
       <DataGrid
-        containerStyle={{ height: "calc(100vh - 11rem)" }}
+        containerStyle={{ flex: 1, minHeight: 0 }}
         rowData={rows}
         columnDefs={columnDefs}
         autoGroupColumnDef={{

@@ -27,6 +27,10 @@ Related docs:
 - `$accountBookId/route.tsx` - shared account-book shell route using Mantine
   `AppShell` with left navbar navigation (Accounts, Period, Timeline, Valuation
   Cache) and mobile-only header burger toggle
+  - Uses the theme `sm` breakpoint as the shared source of truth for both navbar
+    collapse and header visibility.
+  - Keeps `Accounts` highlighted for account routes (`/$accountId` and
+    `/$accountId/chart`) as well as `/accounts`.
 - `$accountBookId/index.tsx` - index redirect route that forwards to
   `$accountBookId/accounts`
 - `$accountBookId/accounts/route.tsx` - accounts page with tabs (one per account

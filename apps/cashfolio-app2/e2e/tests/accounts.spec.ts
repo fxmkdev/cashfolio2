@@ -167,7 +167,7 @@ async function archiveAccountRow(args: { page: Page; name: string }) {
   await expect(agGridRowByText(args.page, args.name)).toHaveCount(0);
 }
 
-test("accounts is default account-book route and links to period", async ({
+test("account-book sidebar links navigate between key sections", async ({
   page,
 }) => {
   await page.goto(`/${seeded.accountBookId}`);
@@ -180,6 +180,20 @@ test("accounts is default account-book route and links to period", async ({
   await page.getByRole("link", { name: "Period" }).click();
   await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/period$`));
   await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Timeline" }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}/timeline$`),
+  );
+  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Valuation Cache" }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}/valuation-cache$`),
+  );
+  await expect(
+    page.getByRole("heading", { name: "Valuation Cache" }),
+  ).toBeVisible();
 
   await page.getByRole("link", { name: "Accounts" }).click();
   await expect(page).toHaveURL(
