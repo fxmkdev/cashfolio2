@@ -128,35 +128,6 @@ export const updateAccountBookSettings = createServerFn({ method: "POST" })
           },
         });
 
-        const firstNonOpeningBooking = await tx.booking.findFirst({
-          where: {
-            accountBookId: data.accountBookId,
-            transaction: {
-              bookings: {
-                none: {
-                  account: {
-                    type: AccountType.EQUITY,
-                    equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: [{ date: "asc" }, { id: "asc" }],
-          select: { date: true },
-        });
-
-        if (firstNonOpeningBooking) {
-          const firstNonOpeningBookingDay = startOfUtcDay(
-            firstNonOpeningBooking.date,
-          );
-          if (startDate > firstNonOpeningBookingDay) {
-            throw new Error(
-              `Start date cannot be after first non-opening booking date (${formatUtcDate(firstNonOpeningBookingDay)}).`,
-            );
-          }
-        }
-
         const referenceCurrencyChanged =
           currentAccountBook.referenceCurrency.toUpperCase() !==
           referenceCurrency;
@@ -166,6 +137,36 @@ export const updateAccountBookSettings = createServerFn({ method: "POST" })
         );
 
         if (startDateChanged) {
+          const firstNonOpeningBooking = await tx.booking.findFirst({
+            where: {
+              accountBookId: data.accountBookId,
+              transaction: {
+                bookings: {
+                  none: {
+                    account: {
+                      type: AccountType.EQUITY,
+                      equityAccountSubtype:
+                        EquityAccountSubtype.OPENING_BALANCES,
+                    },
+                  },
+                },
+              },
+            },
+            orderBy: [{ date: "asc" }, { id: "asc" }],
+            select: { date: true },
+          });
+
+          if (firstNonOpeningBooking) {
+            const firstNonOpeningBookingDay = startOfUtcDay(
+              firstNonOpeningBooking.date,
+            );
+            if (startDate > firstNonOpeningBookingDay) {
+              throw new Error(
+                `Start date cannot be after first non-opening booking date (${formatUtcDate(firstNonOpeningBookingDay)}).`,
+              );
+            }
+          }
+
           const openingBookingDate = getOpeningBalancesBookingDate(startDate);
           const openingTransactions = await tx.transaction.findMany({
             where: {

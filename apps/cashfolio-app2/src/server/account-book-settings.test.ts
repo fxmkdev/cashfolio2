@@ -144,6 +144,7 @@ describe("account-book settings server functions", () => {
 
     expect(ensureSameOriginRequestFromServerContext).toHaveBeenCalledTimes(1);
     expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-1");
+    expect(tx.booking.findFirst).not.toHaveBeenCalled();
     expect(tx.booking.updateMany).not.toHaveBeenCalled();
     expect(invalidatePeriodBaseDataCacheForAccountBook).not.toHaveBeenCalled();
     expect(result).toEqual({
@@ -346,7 +347,7 @@ describe("account-book settings server functions", () => {
         accountBookId: "book-1",
         name: "Updated Book",
         referenceCurrency: "CHF",
-        startDate: "2026-01-03",
+        startDate: "2026-01-02",
       },
     });
 
