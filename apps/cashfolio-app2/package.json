@@ -30,6 +30,7 @@
     "@mantine/dates": "^9.1.1",
     "@mantine/form": "^9.1.1",
     "@mantine/hooks": "^9.1.1",
+    "@mantine/notifications": "^9.1.1",
     "@mantine/nprogress": "^9.1.1",
     "@paralleldrive/cuid2": "^3.3.0",
     "@prisma/adapter-pg": "^7.8.0",

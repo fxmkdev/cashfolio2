@@ -7,6 +7,7 @@ vi.mock("@/server/home", () => ({
 }));
 
 import {
+  invalidateCachedUserAccountBooks,
   loadUserAccountBooksForAccountsRoute,
   resetCachedUserAccountBooksForTests,
 } from "./-account-book-options-loader";
@@ -64,6 +65,24 @@ describe("loadUserAccountBooksForAccountsRoute", () => {
     const result = await loadUserAccountBooksForAccountsRoute();
 
     expect(result).toEqual([{ id: "book-3", name: "Gamma" }]);
+    expect(getUserAccountBooks).toHaveBeenCalledTimes(2);
+  });
+
+  it("allows client-side cache invalidation between calls", async () => {
+    Object.defineProperty(globalThis, "window", {
+      value: {},
+      configurable: true,
+    });
+    getUserAccountBooks
+      .mockResolvedValueOnce([{ id: "book-1", name: "Alpha" }])
+      .mockResolvedValueOnce([{ id: "book-1", name: "Renamed" }]);
+
+    const first = await loadUserAccountBooksForAccountsRoute();
+    invalidateCachedUserAccountBooks();
+    const second = await loadUserAccountBooksForAccountsRoute();
+
+    expect(first).toEqual([{ id: "book-1", name: "Alpha" }]);
+    expect(second).toEqual([{ id: "book-1", name: "Renamed" }]);
     expect(getUserAccountBooks).toHaveBeenCalledTimes(2);
   });
 });
