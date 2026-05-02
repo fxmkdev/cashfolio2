@@ -18,19 +18,21 @@ In Codex, invoke with `$` mention syntax, for example:
 Codex auto-discovers local skills from `~/.codex/skills`. Keep the repo copy as source-of-truth, then symlink it locally:
 
 ```bash
+REPO_ROOT="$(git rev-parse --show-toplevel)"
 mkdir -p ~/.codex/skills
 ln -sfn \
-  /Users/felixmokross/.codex/worktrees/a0f0/cashfolio2/tools/codex/skills/self-review \
+  "$REPO_ROOT/tools/codex/skills/self-review" \
   ~/.codex/skills/self-review
 ```
 
 Alternative (copy instead of symlink):
 
 ```bash
+REPO_ROOT="$(git rev-parse --show-toplevel)"
 mkdir -p ~/.codex/skills
 rm -rf ~/.codex/skills/self-review
 cp -R \
-  /Users/felixmokross/.codex/worktrees/a0f0/cashfolio2/tools/codex/skills/self-review \
+  "$REPO_ROOT/tools/codex/skills/self-review" \
   ~/.codex/skills/self-review
 ```
 
