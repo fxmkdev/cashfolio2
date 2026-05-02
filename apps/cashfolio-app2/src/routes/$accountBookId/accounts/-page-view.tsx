@@ -11,6 +11,7 @@ import { LinkButton } from "@/components/link-button";
 import { LinkTab } from "@/components/link-tab";
 import { AccountPathHeading } from "@/components/account-path-heading";
 import { TopPageHeader } from "@/components/top-page-header";
+import type { UserAccountBookOption } from "@/server/home";
 import type { AccountGroupInitialValues } from "@/components/edit-account-group-modal";
 import {
   EditAccountGroupModal,
@@ -37,6 +38,7 @@ import type {
   TreeRow,
 } from "./-page-types";
 import type { loadAccountsPageData } from "./-page-loader";
+import { AccountBookSwitcherMenu } from "./-account-book-switcher-menu";
 
 type AccountsPageLoaderData = Awaited<ReturnType<typeof loadAccountsPageData>>;
 type RowTarget = {
@@ -47,6 +49,7 @@ type RowTarget = {
 
 export type AccountsPageViewProps = {
   accountBookId: string;
+  accountBooks: UserAccountBookOption[];
   tab: TabValue;
   mode: AccountsMode;
   tabs: readonly { value: TabValue; label: string }[];
@@ -97,6 +100,7 @@ export type AccountsPageViewProps = {
 
 export function AccountsPageView({
   accountBookId,
+  accountBooks,
   tab,
   mode,
   tabs,
@@ -181,6 +185,12 @@ export function AccountsPageView({
             >
               Timeline
             </LinkButton>
+            <AccountBookSwitcherMenu
+              accountBookId={accountBookId}
+              accountBooks={accountBooks}
+              tab={tab}
+              mode={mode}
+            />
             {!isArchivedMode && (
               <>
                 <LinkButton

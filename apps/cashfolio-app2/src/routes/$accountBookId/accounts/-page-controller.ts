@@ -36,6 +36,10 @@ import type { loadAccountsPageData } from "./-page-loader";
 import type { AccountsPageViewProps } from "./-page-view";
 
 type AccountsPageLoaderData = Awaited<ReturnType<typeof loadAccountsPageData>>;
+type AccountsPageControllerViewProps = Omit<
+  AccountsPageViewProps,
+  "accountBooks"
+>;
 
 type AccountsMutationApi = {
   createAccount: typeof createAccount;
@@ -245,7 +249,7 @@ export function useAccountsPageController(args: {
   mode: AccountsPageViewProps["mode"];
   invalidate: () => void;
   onOpenLedger: AccountsPageViewProps["onOpenLedger"];
-}): AccountsPageViewProps {
+}): AccountsPageControllerViewProps {
   const {
     accountGroups,
     rows: loaderRows,
