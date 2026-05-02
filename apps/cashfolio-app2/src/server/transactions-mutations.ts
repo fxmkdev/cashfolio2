@@ -3,6 +3,7 @@ import { prisma } from "../prisma.server";
 import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { isAfter, startOfDay } from "date-fns";
 import { getSimpleTransactionUnitIdentifier } from "../shared/account-utils";
+import { toMoneyNumber } from "../shared/money";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { ensureSameOriginRequestFromServerContext } from "../security/same-origin.server";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
@@ -371,7 +372,7 @@ export const rebookBooking = createServerFn({ method: "POST" })
         cryptocurrency: booking.cryptocurrency,
         symbol: booking.symbol,
         tradeCurrency: booking.tradeCurrency,
-        value: Number(booking.value),
+        value: toMoneyNumber(booking.value),
       },
       targetAccount,
       accountBookStartDate: accountBook.startDate,

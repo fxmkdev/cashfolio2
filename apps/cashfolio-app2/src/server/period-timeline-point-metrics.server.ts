@@ -1,4 +1,5 @@
 import { round2 } from "./period-helpers";
+import { moneyAdd, moneySum, toMoneyNumber } from "../shared/money";
 import {
   convertBookingValueToReference,
   getUnitToReferenceExchangeRate,
@@ -125,16 +126,23 @@ export async function loadPeriodTimelinePointMetrics(args: {
   });
 
   const { income, expenses, explicitGainLoss } = equityAggregation;
-  const gainsLosses =
-    explicitGainLoss +
-    holdingGainLossTotals.realizedGainLoss +
-    holdingGainLossTotals.unrealizedGainLoss;
+  const gainsLosses = toMoneyNumber(
+    moneySum([
+      explicitGainLoss,
+      holdingGainLossTotals.realizedGainLoss,
+      holdingGainLossTotals.unrealizedGainLoss,
+    ]),
+  );
 
   const roundedIncome = round2(income);
   const roundedExpenses = round2(expenses);
   const roundedGainsLosses = round2(gainsLosses);
-  const roundedSavings = round2(roundedIncome - roundedExpenses);
-  const roundedTotalReturn = round2(roundedSavings + roundedGainsLosses);
+  const roundedSavings = round2(
+    toMoneyNumber(moneyAdd(roundedIncome, -roundedExpenses)),
+  );
+  const roundedTotalReturn = round2(
+    toMoneyNumber(moneyAdd(roundedSavings, roundedGainsLosses)),
+  );
 
   return {
     totalReturn: roundedTotalReturn,

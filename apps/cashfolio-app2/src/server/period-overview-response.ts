@@ -8,6 +8,7 @@ import {
   round2,
   type PeriodGroupNode,
 } from "./period-helpers";
+import { moneyAdd, moneySum, toMoneyNumber } from "../shared/money";
 import type { PeriodOverviewEquityAggregation } from "./period-overview-aggregation";
 import { normalizeUppercaseCode } from "./period-unit-format";
 import type { NormalizedPeriodSelection } from "./period-selection";
@@ -119,7 +120,9 @@ function toRoundedGainLossTotals(args: {
   return {
     realizedGainLoss,
     unrealizedGainLoss,
-    totalGainLoss: round2(realizedGainLoss + unrealizedGainLoss),
+    totalGainLoss: round2(
+      toMoneyNumber(moneyAdd(realizedGainLoss, unrealizedGainLoss)),
+    ),
   };
 }
 
@@ -163,8 +166,18 @@ function buildGainsLossesBreakdown(args: {
     if (contribution.sourceKind === "EXPLICIT") {
       const explicitExisting = explicitByAccountId.get(contribution.accountId);
       if (explicitExisting) {
-        explicitExisting.realizedGainLoss += contribution.realizedGainLoss;
-        explicitExisting.unrealizedGainLoss += contribution.unrealizedGainLoss;
+        explicitExisting.realizedGainLoss = toMoneyNumber(
+          moneyAdd(
+            explicitExisting.realizedGainLoss,
+            contribution.realizedGainLoss,
+          ),
+        );
+        explicitExisting.unrealizedGainLoss = toMoneyNumber(
+          moneyAdd(
+            explicitExisting.unrealizedGainLoss,
+            contribution.unrealizedGainLoss,
+          ),
+        );
       } else {
         explicitByAccountId.set(contribution.accountId, {
           accountName: contribution.accountName,
@@ -196,8 +209,18 @@ function buildGainsLossesBreakdown(args: {
 
     const existingAccount = unitValue.byAccountId.get(contribution.accountId);
     if (existingAccount) {
-      existingAccount.realizedGainLoss += contribution.realizedGainLoss;
-      existingAccount.unrealizedGainLoss += contribution.unrealizedGainLoss;
+      existingAccount.realizedGainLoss = toMoneyNumber(
+        moneyAdd(
+          existingAccount.realizedGainLoss,
+          contribution.realizedGainLoss,
+        ),
+      );
+      existingAccount.unrealizedGainLoss = toMoneyNumber(
+        moneyAdd(
+          existingAccount.unrealizedGainLoss,
+          contribution.unrealizedGainLoss,
+        ),
+      );
     } else {
       unitValue.byAccountId.set(contribution.accountId, {
         accountName: contribution.accountName,
@@ -237,13 +260,11 @@ function buildGainsLossesBreakdown(args: {
               children: [],
             }));
           const roundedTotals = toRoundedGainLossTotals({
-            realizedGainLoss: accountNodes.reduce(
-              (sum, node) => sum + node.realizedGainLoss,
-              0,
+            realizedGainLoss: toMoneyNumber(
+              moneySum(accountNodes.map((node) => node.realizedGainLoss)),
             ),
-            unrealizedGainLoss: accountNodes.reduce(
-              (sum, node) => sum + node.unrealizedGainLoss,
-              0,
+            unrealizedGainLoss: toMoneyNumber(
+              moneySum(accountNodes.map((node) => node.unrealizedGainLoss)),
             ),
           });
           return {
@@ -258,13 +279,11 @@ function buildGainsLossesBreakdown(args: {
     }
 
     const roundedTotals = toRoundedGainLossTotals({
-      realizedGainLoss: childNodes.reduce(
-        (sum, node) => sum + node.realizedGainLoss,
-        0,
+      realizedGainLoss: toMoneyNumber(
+        moneySum(childNodes.map((node) => node.realizedGainLoss)),
       ),
-      unrealizedGainLoss: childNodes.reduce(
-        (sum, node) => sum + node.unrealizedGainLoss,
-        0,
+      unrealizedGainLoss: toMoneyNumber(
+        moneySum(childNodes.map((node) => node.unrealizedGainLoss)),
       ),
     });
 
@@ -292,13 +311,11 @@ function buildGainsLossesBreakdown(args: {
 
   if (explicitChildren.length > 0) {
     const roundedTotals = toRoundedGainLossTotals({
-      realizedGainLoss: explicitChildren.reduce(
-        (sum, node) => sum + node.realizedGainLoss,
-        0,
+      realizedGainLoss: toMoneyNumber(
+        moneySum(explicitChildren.map((node) => node.realizedGainLoss)),
       ),
-      unrealizedGainLoss: explicitChildren.reduce(
-        (sum, node) => sum + node.unrealizedGainLoss,
-        0,
+      unrealizedGainLoss: toMoneyNumber(
+        moneySum(explicitChildren.map((node) => node.unrealizedGainLoss)),
       ),
     });
     hierarchy.push({
@@ -338,13 +355,19 @@ export function buildPeriodOverviewResponse(args: {
     : args.unrealizedGainLoss;
   const gainsLosses = args.isBeforeAccountBookStart
     ? 0
-    : explicitGainLoss + realizedGainLoss + unrealizedGainLoss;
+    : toMoneyNumber(
+        moneySum([explicitGainLoss, realizedGainLoss, unrealizedGainLoss]),
+      );
 
   const roundedIncome = round2(income);
   const roundedExpenses = round2(expenses);
   const roundedGainsLosses = round2(gainsLosses);
-  const roundedSavings = round2(roundedIncome - roundedExpenses);
-  const roundedTotalReturn = round2(roundedSavings + roundedGainsLosses);
+  const roundedSavings = round2(
+    toMoneyNumber(moneyAdd(roundedIncome, -roundedExpenses)),
+  );
+  const roundedTotalReturn = round2(
+    toMoneyNumber(moneyAdd(roundedSavings, roundedGainsLosses)),
+  );
   const roundedEndOfPeriodAssets = round2(args.endOfPeriodBalanceStats.assets);
   const roundedEndOfPeriodLiabilities = round2(
     args.endOfPeriodBalanceStats.liabilities,

@@ -1,5 +1,6 @@
 import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { prisma } from "../prisma.server";
+import { moneyAdd, toMoneyNumber } from "../shared/money";
 import {
   convertBookingValueToReference,
   getUnitToReferenceExchangeRate,
@@ -153,7 +154,7 @@ export async function buildRealAccountReconciliation(args: {
   const initialHoldingBalanceByAccountId = new Map(
     initialHoldingBalances.map((balance) => [
       balance.accountId,
-      Number(balance._sum.value ?? 0),
+      toMoneyNumber(balance._sum.value ?? 0),
     ]),
   );
 
@@ -275,7 +276,7 @@ export async function buildRealAccountReconciliation(args: {
           transactionId: transaction.id,
           accountId: booking.accountId,
           date: booking.date,
-          value: Number(booking.value),
+          value: toMoneyNumber(booking.value),
           unit: booking.unit,
           currency: booking.currency,
           cryptocurrency: booking.cryptocurrency,
@@ -320,8 +321,15 @@ export async function buildRealAccountReconciliation(args: {
       if (gainLossByAccount.accountId !== targetAccount.id) {
         return;
       }
-      targetRealizedGainLoss += gainLossByAccount.realizedGainLoss;
-      targetUnrealizedGainLoss += gainLossByAccount.unrealizedGainLoss;
+      targetRealizedGainLoss = toMoneyNumber(
+        moneyAdd(targetRealizedGainLoss, gainLossByAccount.realizedGainLoss),
+      );
+      targetUnrealizedGainLoss = toMoneyNumber(
+        moneyAdd(
+          targetUnrealizedGainLoss,
+          gainLossByAccount.unrealizedGainLoss,
+        ),
+      );
     },
     onAccountExecutionEvent: (event) => {
       if (event.accountId !== targetAccount.id) {

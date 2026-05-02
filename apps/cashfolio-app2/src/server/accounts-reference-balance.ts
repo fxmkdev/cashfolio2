@@ -1,4 +1,5 @@
 import type { AccountType, Unit } from "../.prisma-client/enums";
+import { moneyIsZero, moneyMultiply, toMoneyNumber } from "../shared/money";
 
 export async function computeRawBalanceInReferenceCurrency(args: {
   type: AccountType;
@@ -25,7 +26,7 @@ export async function computeRawBalanceInReferenceCurrency(args: {
 
   if (args.unit === "CURRENCY") {
     if (!args.currency) return null;
-    if (args.rawBalance === 0) return 0;
+    if (moneyIsZero(args.rawBalance)) return 0;
 
     const sourceCurrency = args.currency.toUpperCase();
     if (sourceCurrency === args.referenceCurrency) {
@@ -33,28 +34,34 @@ export async function computeRawBalanceInReferenceCurrency(args: {
     }
 
     const exchangeRate = await args.getCurrencyToReferenceRate(sourceCurrency);
-    return exchangeRate == null ? null : args.rawBalance * exchangeRate;
+    return exchangeRate == null
+      ? null
+      : toMoneyNumber(moneyMultiply(args.rawBalance, exchangeRate));
   }
 
   if (args.unit === "CRYPTOCURRENCY") {
     if (!args.cryptocurrency) return null;
-    if (args.rawBalance === 0) return 0;
+    if (moneyIsZero(args.rawBalance)) return 0;
 
     const exchangeRate = await args.getCryptocurrencyToReferenceRate(
       args.cryptocurrency.toUpperCase(),
     );
-    return exchangeRate == null ? null : args.rawBalance * exchangeRate;
+    return exchangeRate == null
+      ? null
+      : toMoneyNumber(moneyMultiply(args.rawBalance, exchangeRate));
   }
 
   if (args.unit === "SECURITY") {
     if (!args.symbol || !args.tradeCurrency) return null;
-    if (args.rawBalance === 0) return 0;
+    if (moneyIsZero(args.rawBalance)) return 0;
 
     const exchangeRate = await args.getSecurityToReferenceRate(
       args.symbol.toUpperCase(),
       args.tradeCurrency.toUpperCase(),
     );
-    return exchangeRate == null ? null : args.rawBalance * exchangeRate;
+    return exchangeRate == null
+      ? null
+      : toMoneyNumber(moneyMultiply(args.rawBalance, exchangeRate));
   }
 
   return null;

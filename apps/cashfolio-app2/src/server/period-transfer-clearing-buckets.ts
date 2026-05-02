@@ -4,6 +4,7 @@ import {
   Unit,
 } from "../.prisma-client/enums";
 import { prisma } from "../prisma.server";
+import { moneyAdd, toMoneyNumber } from "../shared/money";
 import {
   TRANSFER_CLEARING_BOOKINGS_PAGE_SIZE,
   type TransferClearingBooking,
@@ -149,7 +150,7 @@ async function loadTransferClearingBookings(args: {
         transactionDescription: booking.transaction?.description ?? null,
         transactionId: booking.transactionId,
         date: booking.date,
-        value: Number(booking.value),
+        value: toMoneyNumber(booking.value),
         unit: booking.unit,
         currency: booking.currency,
         cryptocurrency: booking.cryptocurrency,
@@ -184,7 +185,9 @@ function aggregateTransferClearingUnitBuckets(args: {
 
     const existing = unitBucketByKey.get(descriptor.unitKey);
     if (existing) {
-      existing.rawBalance += booking.value;
+      existing.rawBalance = toMoneyNumber(
+        moneyAdd(existing.rawBalance, booking.value),
+      );
       existing.bookings.push(booking);
       continue;
     }

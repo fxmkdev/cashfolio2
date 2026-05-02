@@ -1,4 +1,10 @@
 import { AccountType, type Unit } from "../.prisma-client/enums";
+import {
+  moneyAdd,
+  moneyIsZero,
+  moneySubtract,
+  toMoneyNumber,
+} from "../shared/money";
 
 export type EndOfPeriodBalanceAccount = {
   id: string;
@@ -49,7 +55,7 @@ export async function computeEndOfPeriodBalanceStatsWithConvertedBalances(args: 
       const rawBalance = args.rawBalanceByAccountId.get(account.id) ?? 0;
 
       if (account.unit == null) {
-        const normalizedConvertedBalance = rawBalance === 0 ? 0 : null;
+        const normalizedConvertedBalance = moneyIsZero(rawBalance) ? 0 : null;
 
         return {
           accountId: account.id,
@@ -71,13 +77,13 @@ export async function computeEndOfPeriodBalanceStatsWithConvertedBalances(args: 
       });
 
       const normalizedConvertedBalance =
-        convertedBalance ?? (rawBalance === 0 ? 0 : null);
+        convertedBalance ?? (moneyIsZero(rawBalance) ? 0 : null);
 
       return {
         accountId: account.id,
         accountType: account.type,
         convertedBalance: normalizedConvertedBalance,
-        skipped: normalizedConvertedBalance == null && rawBalance !== 0,
+        skipped: normalizedConvertedBalance == null && !moneyIsZero(rawBalance),
       };
     }),
   );
@@ -96,16 +102,20 @@ export async function computeEndOfPeriodBalanceStatsWithConvertedBalances(args: 
     }
 
     if (conversionResult.accountType === AccountType.ASSET) {
-      assets += conversionResult.convertedBalance;
+      assets = toMoneyNumber(
+        moneyAdd(assets, conversionResult.convertedBalance),
+      );
     } else if (conversionResult.accountType === AccountType.LIABILITY) {
-      liabilities += -conversionResult.convertedBalance;
+      liabilities = toMoneyNumber(
+        moneySubtract(liabilities, conversionResult.convertedBalance),
+      );
     }
   }
 
   return {
     assets,
     liabilities,
-    netWorth: assets - liabilities,
+    netWorth: toMoneyNumber(moneySubtract(assets, liabilities)),
     skippedCount,
     convertedBalanceByAccountId,
   };

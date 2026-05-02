@@ -1,3 +1,5 @@
+import { moneySum, toMoneyNumber } from "./shared/money";
+
 export function sum(values: number[]): number {
-  return values.reduce<number>((prev, curr) => prev + curr, 0);
+  return toMoneyNumber(moneySum(values));
 }

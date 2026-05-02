@@ -4,6 +4,7 @@ import {
   Unit,
 } from "../.prisma-client/enums";
 import { prisma } from "../prisma.server";
+import { moneyAbs, moneyAdd, moneySum, toMoneyNumber } from "../shared/money";
 import { isMultiUnitTransaction } from "./period-helpers";
 import { isNearZero, isWithinPeriod } from "./period-overview-holdings-common";
 
@@ -181,7 +182,7 @@ export async function computeExecutionResidualRealization(args: {
           id: booking.id,
           accountId: booking.accountId,
           date: booking.date,
-          value: Number(booking.value),
+          value: toMoneyNumber(booking.value),
           unit: booking.unit,
           currency: booking.currency,
           cryptocurrency: booking.cryptocurrency,
@@ -251,7 +252,9 @@ export async function computeExecutionResidualRealization(args: {
         }
 
         convertedCount += 1;
-        executionResidualInReference += convertedValue;
+        executionResidualInReference = toMoneyNumber(
+          moneyAdd(executionResidualInReference, convertedValue),
+        );
         convertedByBookingId.set(booking.id, convertedValue);
       }
 
@@ -259,7 +262,9 @@ export async function computeExecutionResidualRealization(args: {
         continue;
       }
 
-      realizedGainLoss += executionResidualInReference;
+      realizedGainLoss = toMoneyNumber(
+        moneyAdd(realizedGainLoss, executionResidualInReference),
+      );
 
       const nonReferenceBookings = nonExplicitBookings.filter((booking) =>
         isNonReferenceExecutionBooking({
@@ -273,11 +278,10 @@ export async function computeExecutionResidualRealization(args: {
       }
 
       const attributionWeights = nonReferenceBookings.map((booking) =>
-        Math.abs(convertedByBookingId.get(booking.id) ?? 0),
+        toMoneyNumber(moneyAbs(convertedByBookingId.get(booking.id) ?? 0)),
       );
-      const totalAttributionWeight = attributionWeights.reduce(
-        (sum, weight) => sum + weight,
-        0,
+      const totalAttributionWeight = toMoneyNumber(
+        moneySum(attributionWeights),
       );
 
       for (

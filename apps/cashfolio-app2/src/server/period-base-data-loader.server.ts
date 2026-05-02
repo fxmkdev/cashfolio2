@@ -13,6 +13,7 @@ import {
   resolvePeriodSelection,
   type PeriodSpecifier,
 } from "./period-selection";
+import { toMoneyNumber } from "../shared/money";
 import { loadTransferClearingUnitBuckets } from "./period-transfer-clearing";
 import type { TransferClearingUnitBucket } from "./period-transfer-clearing";
 
@@ -251,7 +252,7 @@ async function loadPeriodEquityBookingsRaw(args: {
         equityAccountSubtype: account.equityAccountSubtype,
         transactionId: booking.transactionId,
         date: booking.date,
-        value: Number(booking.value),
+        value: toMoneyNumber(booking.value),
         unit: booking.unit,
         currency: booking.currency,
         cryptocurrency: booking.cryptocurrency,
@@ -369,7 +370,7 @@ async function loadPeriodHoldingTransactionsRaw(args: {
           id: booking.id,
           accountId: booking.accountId,
           date: booking.date,
-          value: Number(booking.value),
+          value: toMoneyNumber(booking.value),
           unit: booking.unit,
           currency: booking.currency,
           cryptocurrency: booking.cryptocurrency,
@@ -579,7 +580,7 @@ export async function loadPeriodBaseDataUncached(args: {
     holdingAccountsResolved,
     endOfPeriodRawBalances: endOfPeriodRawBalancesGrouped.map((row) => ({
       accountId: row.accountId,
-      rawBalance: Number(row._sum.value ?? 0),
+      rawBalance: toMoneyNumber(row._sum.value ?? 0),
     })),
     transferClearingUnitBuckets,
     equityBookings,
@@ -592,7 +593,7 @@ export async function loadPeriodBaseDataUncached(args: {
     })),
     initialHoldingBalances: initialHoldingBalancesGrouped.map((row) => ({
       accountId: row.accountId,
-      rawBalance: Number(row._sum.value ?? 0),
+      rawBalance: toMoneyNumber(row._sum.value ?? 0),
     })),
     holdingTransactions,
   };
