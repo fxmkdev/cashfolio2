@@ -16,6 +16,13 @@ describe("loadTimelinePageData", () => {
   test("loads timeline for the selected mode", async () => {
     mockedGetPeriodTimeline.mockResolvedValueOnce({
       referenceCurrency: "CHF",
+      openingBalancePoint: {
+        date: "2025-12-31T00:00:00.000Z",
+        label: "Opening Balance",
+        assets: 80,
+        liabilities: 20,
+        netWorth: 60,
+      },
       points: [
         {
           periodValue: "2026-01",
@@ -47,6 +54,13 @@ describe("loadTimelinePageData", () => {
     expect(result).toEqual({
       timeline: {
         referenceCurrency: "CHF",
+        openingBalancePoint: {
+          date: "2025-12-31T00:00:00.000Z",
+          label: "Opening Balance",
+          assets: 80,
+          liabilities: 20,
+          netWorth: 60,
+        },
         points: [
           {
             periodValue: "2026-01",

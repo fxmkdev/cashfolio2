@@ -37,6 +37,7 @@ import {
 import {
   createTimelineChartOptions,
   mapTimelinePointsToChartData,
+  prependOpeningBalanceChartDatum,
   rebaseTimelineChartDataCumulativeToVisibleRange,
   type TimelineVisibleRange,
 } from "./-chart-options";
@@ -119,9 +120,18 @@ export function TimelinePageView({
     [],
   );
 
-  const chartData = useMemo(
+  const baseChartData = useMemo(
     () => mapTimelinePointsToChartData(timeline.points),
     [timeline.points],
+  );
+  const chartData = useMemo(
+    () =>
+      prependOpeningBalanceChartDatum({
+        chartData: baseChartData,
+        selectedMetric,
+        openingBalancePoint: timeline.openingBalancePoint,
+      }),
+    [baseChartData, selectedMetric, timeline.openingBalancePoint],
   );
   const [visibleRangeX, setVisibleRangeX] =
     useState<TimelineVisibleRange | null>(null);

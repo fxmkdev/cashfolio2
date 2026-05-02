@@ -34,6 +34,9 @@ export type TimelineChartDatum = {
   cumulativeMetric: number;
 };
 
+export type TimelineOpeningBalancePoint =
+  PeriodTimelineResponse["openingBalancePoint"];
+
 export type TimelineVisibleRange = {
   start?: Date | string | number;
   end?: Date | string | number;
@@ -47,6 +50,16 @@ function isAreaTimelineMetric(
   metric: TimelineMetric,
 ): metric is AreaTimelineMetric {
   return (AREA_TIMELINE_METRICS as readonly string[]).includes(metric);
+}
+
+function addUtcDays(date: Date, days: number): Date {
+  return new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate() + days,
+    ),
+  );
 }
 
 function toRangeBoundaryTimestamp(
@@ -172,6 +185,58 @@ export function mapTimelinePointsToChartData(
       },
     ];
   });
+}
+
+export function prependOpeningBalanceChartDatum(args: {
+  chartData: TimelineChartDatum[];
+  selectedMetric: TimelineMetric;
+  openingBalancePoint?: TimelineOpeningBalancePoint | null;
+}): TimelineChartDatum[] {
+  if (!isAreaTimelineMetric(args.selectedMetric)) {
+    return args.chartData;
+  }
+
+  if (!args.openingBalancePoint) {
+    return args.chartData;
+  }
+
+  const openingDate = new Date(args.openingBalancePoint.date);
+  if (Number.isNaN(openingDate.getTime())) {
+    return args.chartData;
+  }
+
+  if (args.chartData.length > 0) {
+    const firstPointDate = args.chartData[0].periodStart;
+    if (openingDate.getTime() >= firstPointDate.getTime()) {
+      return args.chartData;
+    }
+  }
+
+  const openingDatum: TimelineChartDatum = {
+    periodValue: `opening-balance:${openingDate.toISOString().slice(0, 10)}`,
+    periodLabel: args.openingBalancePoint.label,
+    periodStart: openingDate,
+    periodEndExclusive: addUtcDays(openingDate, 1),
+    totalReturn: 0,
+    savings: 0,
+    income: 0,
+    expenses: 0,
+    gainsLosses: 0,
+    assets: args.openingBalancePoint.assets,
+    liabilities: args.openingBalancePoint.liabilities,
+    netWorth: args.openingBalancePoint.netWorth,
+    netWorthPositive:
+      args.openingBalancePoint.netWorth > 0
+        ? args.openingBalancePoint.netWorth
+        : null,
+    netWorthNegative:
+      args.openingBalancePoint.netWorth < 0
+        ? args.openingBalancePoint.netWorth
+        : null,
+    cumulativeMetric: 0,
+  };
+
+  return [openingDatum, ...args.chartData];
 }
 
 export function createTimelineChartOptions(args: {

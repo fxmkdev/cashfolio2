@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   createTimelineChartOptions,
   mapTimelinePointsToChartData,
+  prependOpeningBalanceChartDatum,
   rebaseTimelineChartDataCumulativeToVisibleRange,
 } from "./-chart-options";
 
@@ -206,6 +207,76 @@ describe("rebaseTimelineChartDataCumulativeToVisibleRange", () => {
         cumulativeMetric: 170,
       }),
     ]);
+  });
+});
+
+describe("prependOpeningBalanceChartDatum", () => {
+  test("prepends opening-balance point for area metrics", () => {
+    const chartData = mapTimelinePointsToChartData([
+      createTimelinePoint({
+        periodValue: "2026-01",
+        periodLabel: "January 2026",
+        totalReturn: 10,
+        savings: 7,
+        income: 11,
+        expenses: 4,
+        gainsLosses: 3,
+        assets: 120,
+        liabilities: 40,
+        netWorth: 80,
+      }),
+    ]);
+
+    const result = prependOpeningBalanceChartDatum({
+      chartData,
+      selectedMetric: "assets",
+      openingBalancePoint: {
+        date: "2025-12-31T00:00:00.000Z",
+        label: "Opening Balance",
+        assets: 100,
+        liabilities: 35,
+        netWorth: 65,
+      },
+    });
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        periodLabel: "Opening Balance",
+        periodStart: new Date("2025-12-31T00:00:00.000Z"),
+        assets: 100,
+        liabilities: 35,
+        netWorth: 65,
+      }),
+    );
+    expect(result).toHaveLength(2);
+  });
+
+  test("does not prepend opening-balance point for bar metrics", () => {
+    const chartData = mapTimelinePointsToChartData([
+      createTimelinePoint({
+        periodValue: "2026-01",
+        periodLabel: "January 2026",
+        totalReturn: 10,
+        savings: 7,
+        income: 11,
+        expenses: 4,
+        gainsLosses: 3,
+      }),
+    ]);
+
+    const result = prependOpeningBalanceChartDatum({
+      chartData,
+      selectedMetric: "savings",
+      openingBalancePoint: {
+        date: "2025-12-31T00:00:00.000Z",
+        label: "Opening Balance",
+        assets: 100,
+        liabilities: 35,
+        netWorth: 65,
+      },
+    });
+
+    expect(result).toEqual(chartData);
   });
 });
 
