@@ -10,6 +10,7 @@ import {
   mantineHtmlProps,
   useComputedColorScheme,
 } from "@mantine/core";
+import { Notifications } from "@mantine/notifications";
 import { NavigationLoadingBar } from "../components/navigation-loading-bar";
 import "../mantine";
 import { theme } from "../theme";
@@ -41,6 +42,7 @@ function RootComponent() {
       </head>
       <body>
         <MantineProvider theme={theme} defaultColorScheme="auto">
+          <Notifications />
           <NavigationLoadingBar />
           <AgThemeModeSynchronizer>
             <Outlet />
