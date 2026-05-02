@@ -1,5 +1,5 @@
 import { Button, Menu, type MenuItemProps } from "@mantine/core";
-import { IconCheck, IconChevronDown } from "@tabler/icons-react";
+import { IconCheck, IconChevronDown, IconSettings } from "@tabler/icons-react";
 import { createLink } from "@tanstack/react-router";
 import { forwardRef, type ComponentPropsWithoutRef } from "react";
 import type { UserAccountBookOption } from "@/server/home";
@@ -66,6 +66,14 @@ export function AccountBookSwitcherMenu({
             </LinkMenuItem>
           );
         })}
+        <Menu.Divider />
+        <LinkMenuItem
+          leftSection={<IconSettings size={16} />}
+          to="/$accountBookId/settings"
+          params={{ accountBookId }}
+        >
+          Settings
+        </LinkMenuItem>
         <Menu.Divider />
         <Menu.Item disabled>Create new account book</Menu.Item>
       </Menu.Dropdown>
