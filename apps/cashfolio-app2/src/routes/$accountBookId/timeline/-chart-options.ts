@@ -285,6 +285,7 @@ export function createTimelineChartOptions(args: {
     : args.theme.colors.gray[2];
   const currentPeriodBandFillOpacity = args.isDarkMode ? 0.2 : 0.45;
   const currentPeriod = args.chartData.at(-1);
+  const lastMetricDate = args.chartData.at(-1)?.periodMetricDate;
   const rangeButtons = getTimelineRangeButtons(args.periodMode);
   const rangeControlStyles = getTimelineRangeControlStyles(args);
   const selectedMetricLabel = getTimelineMetricLabel(args.selectedMetric);
@@ -518,6 +519,7 @@ export function createTimelineChartOptions(args: {
       x: {
         type: useRegularTimeAxis ? ("time" as const) : ("unit-time" as const),
         unit: useRegularTimeAxis ? undefined : unitTimeAxisUnit,
+        max: useRegularTimeAxis ? lastMetricDate : undefined,
         crossLines: currentPeriod
           ? [
               {

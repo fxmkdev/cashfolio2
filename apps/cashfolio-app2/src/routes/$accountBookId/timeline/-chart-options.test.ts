@@ -449,6 +449,7 @@ describe("createTimelineChartOptions", () => {
     expect(options.axes?.x).toMatchObject({
       type: "unit-time",
       unit: { unit: "month", utc: true },
+      max: undefined,
       crossLines: [
         expect.objectContaining({
           type: "range",
@@ -547,6 +548,7 @@ describe("createTimelineChartOptions", () => {
     expect(series).toHaveLength(1);
     expect(options.axes?.x).toMatchObject({
       type: "time",
+      max: new Date("2026-01-31T00:00:00.000Z"),
     });
     expect(series[0]).toMatchObject({
       type: "area",
