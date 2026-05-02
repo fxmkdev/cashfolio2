@@ -1,24 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const createServerFn = vi.hoisted(() =>
-  vi.fn(() => {
-    let validate: ((data: unknown) => unknown) | undefined;
-    const chain = {
-      inputValidator: vi.fn((validator: (data: unknown) => unknown) => {
-        validate = validator;
-        return chain;
-      }),
-      handler: vi.fn((handler: ({ data }: { data: unknown }) => unknown) => {
-        return async ({ data }: { data: unknown }) => {
-          const validatedData = validate ? validate(data) : data;
-          return handler({ data: validatedData });
-        };
-      }),
-    };
-    return chain;
-  }),
-);
-
 const convertBookingValueToReference = vi.hoisted(() => vi.fn());
 
 const prisma = vi.hoisted(() => ({
@@ -31,10 +12,6 @@ const prisma = vi.hoisted(() => ({
   booking: {
     groupBy: vi.fn(),
   },
-}));
-
-vi.mock("@tanstack/react-start", () => ({
-  createServerFn,
 }));
 
 vi.mock("../prisma.server", () => ({
@@ -54,7 +31,7 @@ vi.mock("../.prisma-client/enums", () => ({
   },
 }));
 
-import { loadOpeningBalanceNetWorthForPeriod } from "./period-opening-balance-net-worth";
+import { loadOpeningBalanceNetWorthForPeriod } from "./period-opening-balance-net-worth.server";
 
 describe("loadOpeningBalanceNetWorthForPeriod", () => {
   beforeEach(() => {
