@@ -9,6 +9,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  Navigate,
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
@@ -45,6 +46,17 @@ const preview: Preview = {
         path: "/$accountBookId",
         component: () => <Outlet />,
       });
+      const accountBookIndexRoute = createRoute({
+        getParentRoute: () => accountBookRoute,
+        path: "/",
+        component: () => (
+          <Navigate
+            to="/$accountBookId/accounts"
+            search={{ tab: "ASSET", mode: "active" }}
+            replace
+          />
+        ),
+      });
 
       const accountBookAccountsRoute = createRoute({
         getParentRoute: () => accountBookRoute,
@@ -71,6 +83,12 @@ const preview: Preview = {
       const accountLedgerRoute = createRoute({
         getParentRoute: () => accountBookRoute,
         path: "/$accountId",
+        component: () => <Outlet />,
+      });
+
+      const accountLedgerIndexRoute = createRoute({
+        getParentRoute: () => accountLedgerRoute,
+        path: "/",
         component: () => <Story />,
       });
 
@@ -84,11 +102,13 @@ const preview: Preview = {
         routeTree: rootRoute.addChildren([
           rootStoryRoute,
           accountBookRoute,
+          accountBookIndexRoute,
           accountBookAccountsRoute,
           accountBookPeriodRoute,
           accountBookTimelineRoute,
           accountBookValuationCacheRoute,
           accountLedgerRoute,
+          accountLedgerIndexRoute,
           accountLedgerChartRoute,
         ]),
         // Storybook renders stories inside /iframe.html, so links/routes must
