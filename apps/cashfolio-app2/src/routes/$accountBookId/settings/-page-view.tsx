@@ -11,7 +11,6 @@ import {
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
-import { parse } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import { IconCheck } from "@tabler/icons-react";
 import { LinkButton } from "@/components/link-button";
@@ -163,7 +162,7 @@ export function AccountBookSettingsPageView(args: {
 
           <DateInput
             valueFormat="DD.MM.YYYY"
-            dateParser={(value) => parse(value, "dd.MM.yyyy", new Date())}
+            dateParser={(value) => normalizeDateInputValue(value)}
             label="Start Date"
             withAsterisk
             maxDate={startOfUtcDay(new Date())}
