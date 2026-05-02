@@ -65,6 +65,8 @@ pnpm --filter cashfolio-app2 prisma:generate  # Regenerate Prisma client (no DAT
 - Use `@tabler/icons-react` for icons.
 - Use `@paralleldrive/cuid2` for unique IDs.
 - Use `date-fns` for date operations.
+- For server-side monetary math, use `decimal.js` to preserve precision (avoid
+  native `number` arithmetic for money values).
 - Use `react-number-format` for locale-aware number inputs.
 - Use `en-CH` locale for number formatting.
 - Keep currency/crypto constants in `src/currencies.ts` and
