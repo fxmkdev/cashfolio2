@@ -4,7 +4,7 @@ This directory contains versioned Codex skills for this repository.
 
 ## Available Skills
 
-- `self-review`: PR self-review quality gate for docs, PR description, code quality, tests/coverage, CI, and large-module splitting guidance.
+- `self-review`: PR self-review and remediation quality gate for docs, PR description, code quality, tests/coverage, CI, and large-module splitting guidance.
 
 ## Invoke a Skill
 
@@ -12,6 +12,7 @@ In Codex, invoke with `$` mention syntax, for example:
 
 - `$self-review self-review this PR before merge`
 - `$self-review run a pre-merge quality gate with docs, coverage, and CI checks`
+- `$self-review self-review this PR and implement the feasible findings before final readiness`
 
 ## Install for Auto-Discovery
 
@@ -43,7 +44,7 @@ Restart Codex after first install (or when changes are not picked up).
 The `self-review` skill expects:
 
 - `git` and a valid repo checkout
-- `gh` authenticated for PR/CI metadata (`gh auth status`)
+- `gh` authenticated for PR/CI metadata and PR description updates (`gh auth status`)
 - `pnpm` for project checks
 - network access for GitHub API-backed `gh` operations
 
