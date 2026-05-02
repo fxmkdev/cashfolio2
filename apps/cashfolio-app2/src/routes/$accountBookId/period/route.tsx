@@ -97,24 +97,26 @@ export const Route = createFileRoute("/$accountBookId/period")({
         period,
       },
     });
-    const gainLossEquityAccountId = hasExplicitGainLossGroup(
-      overview.gainsLossesBreakdown.hierarchy,
-    )
-      ? await getGainLossEquityAccountId({
-          data: {
-            accountBookId,
-          },
-        })
-      : null;
-    const netWorthReconciliation = await loadNetWorthReconciliationModel({
-      accountBookId,
-      selectedGranularity: overview.selectedGranularity,
-      selectedYear: overview.selectedYear,
-      selectedMonth: overview.selectedMonth,
-      minBookingDate: overview.minBookingDate,
-      currentNetWorth: overview.stats.endOfPeriodNetWorth,
-      totalReturn: overview.stats.totalReturn,
-    });
+    const [gainLossEquityAccountId, netWorthReconciliation] = await Promise.all(
+      [
+        hasExplicitGainLossGroup(overview.gainsLossesBreakdown.hierarchy)
+          ? getGainLossEquityAccountId({
+              data: {
+                accountBookId,
+              },
+            })
+          : Promise.resolve<string | null>(null),
+        loadNetWorthReconciliationModel({
+          accountBookId,
+          selectedGranularity: overview.selectedGranularity,
+          selectedYear: overview.selectedYear,
+          selectedMonth: overview.selectedMonth,
+          minBookingDate: overview.minBookingDate,
+          currentNetWorth: overview.stats.endOfPeriodNetWorth,
+          totalReturn: overview.stats.totalReturn,
+        }),
+      ],
+    );
 
     return { overview, gainLossEquityAccountId, netWorthReconciliation };
   },

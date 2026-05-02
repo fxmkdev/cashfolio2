@@ -1,11 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { normalizePeriodValue } from "../shared/period";
-
-export type OpeningBalanceNetWorthResult = {
-  openingBalanceNetWorth: number;
-  skippedCount: number;
-  periodStart: string;
-};
+import { type OpeningBalanceNetWorthResult } from "./period-opening-balance-net-worth.types";
 
 export const getOpeningBalanceNetWorthForPeriod = createServerFn({
   method: "GET",

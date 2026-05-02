@@ -8,15 +8,10 @@ import {
   type EndOfPeriodBalanceAccount,
 } from "./period-balance-stats";
 import { convertBookingValueToReference } from "./period-conversion";
+import { type OpeningBalanceNetWorthResult } from "./period-opening-balance-net-worth.types";
 import { buildTransferClearingVirtualHierarchy } from "./period-transfer-clearing";
 import { loadTransferClearingUnitBuckets } from "./period-transfer-clearing-buckets";
 import { resolvePeriodSelection } from "./period-selection";
-
-export type OpeningBalanceNetWorthResult = {
-  openingBalanceNetWorth: number;
-  skippedCount: number;
-  periodStart: string;
-};
 
 async function loadAssetLiabilityAccounts(args: {
   accountBookId: string;
