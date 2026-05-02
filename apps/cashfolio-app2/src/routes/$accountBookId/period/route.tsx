@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { getGainLossEquityAccountId } from "@/server/accounts";
+import { getPeriodEndNetWorth } from "@/server/period-end-net-worth";
 import { getOpeningBalanceNetWorthForPeriod } from "@/server/period-opening-balance-net-worth";
 import { getPeriodOverview } from "@/server/period";
 import { formatMonthPeriodValue } from "@/shared/period";
@@ -57,7 +58,7 @@ export const Route = createFileRoute("/$accountBookId/period")({
 
     let netWorthReconciliation: NetWorthReconciliationModel;
     if (previousPeriodValue) {
-      const previousOverview = await getPeriodOverview({
+      const previousPeriodNetWorth = await getPeriodEndNetWorth({
         data: {
           accountBookId,
           period: previousPeriodValue,
@@ -65,7 +66,7 @@ export const Route = createFileRoute("/$accountBookId/period")({
       });
 
       netWorthReconciliation = buildNetWorthReconciliationModel({
-        baselineNetWorth: previousOverview.stats.endOfPeriodNetWorth,
+        baselineNetWorth: previousPeriodNetWorth.endOfPeriodNetWorth,
         baselineSource: "previous-period",
         currentNetWorth: overview.stats.endOfPeriodNetWorth,
         totalReturn: overview.stats.totalReturn,

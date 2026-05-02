@@ -42,9 +42,7 @@ describe("getNetWorthReconciliationWarning", () => {
         },
         currencyFormatter: formatter,
       }),
-    ).toContain(
-      "does not match previous period net worth plus this period's total return",
-    );
+    ).toContain("does not match expected end-of-period net worth");
   });
 
   it("returns null when there is no mismatch", () => {

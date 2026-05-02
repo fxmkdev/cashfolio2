@@ -25,7 +25,7 @@ export function getNetWorthReconciliationWarning(args: {
       ? "previous period net worth"
       : "opening-balance net worth";
 
-  return `End-of-period net worth (${args.currencyFormatter.format(args.reconciliation.currentNetWorth)}) does not match ${baselineLabel} plus this period's total return (${args.currencyFormatter.format(args.reconciliation.expectedNetWorth)}). Difference: ${args.currencyFormatter.format(args.reconciliation.difference)}.`;
+  return `End-of-period net worth (${args.currencyFormatter.format(args.reconciliation.currentNetWorth)}) does not match expected end-of-period net worth (${args.currencyFormatter.format(args.reconciliation.expectedNetWorth)}) derived from ${baselineLabel} plus this period's total return. Difference: ${args.currencyFormatter.format(args.reconciliation.difference)}.`;
 }
 
 export function PeriodNetWorthReconciliationWarning(args: {
