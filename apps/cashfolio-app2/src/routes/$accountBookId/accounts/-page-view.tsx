@@ -5,6 +5,7 @@ import {
   IconCalendarMonth,
   IconListDetails,
   IconPlus,
+  IconSettings,
 } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
 import { LinkButton } from "@/components/link-button";
@@ -184,6 +185,14 @@ export function AccountsPageView({
               params={{ accountBookId }}
             >
               Timeline
+            </LinkButton>
+            <LinkButton
+              variant="default"
+              leftSection={<IconSettings size={16} />}
+              to="/$accountBookId/settings"
+              params={{ accountBookId }}
+            >
+              Settings
             </LinkButton>
             <AccountBookSwitcherMenu
               accountBookId={accountBookId}

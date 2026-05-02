@@ -36,6 +36,8 @@ Related docs:
 - `$accountBookId/valuation-cache/route.tsx` - valuation cache explorer page
   with tabs for Currency, Cryptocurrency, and Security; shows deduplicated unit
   rows and cached TimeSeries history charts (no live provider lookups)
+- `$accountBookId/settings/route.tsx` - account-book settings page for editing
+  account book name, reference currency, and start date
 - `$accountBookId/period/route.tsx` - period layout route with shared period
   search validation and loader data used by nested period pages
 - `$accountBookId/period/index.tsx` - period overview page with contribution,

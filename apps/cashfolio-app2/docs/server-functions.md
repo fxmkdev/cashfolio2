@@ -22,8 +22,9 @@ Related docs:
 ## Core Modules
 
 - Key files: `accounts.ts` (barrel), `accounts-queries.ts`,
-  `accounts-mutations.ts`, `dashboard.ts`, `ledger.ts`, `transactions.ts`
-  (barrel), `transactions-queries.ts`, `transactions-mutations.ts`, `period.ts`,
+  `accounts-mutations.ts`, `account-books.ts`, `account-book-settings.ts`,
+  `dashboard.ts`, `ledger.ts`, `transactions.ts` (barrel),
+  `transactions-queries.ts`, `transactions-mutations.ts`, `period.ts`,
   `period-gain-loss-reconciliation.ts`, `period-unit-format.ts`,
   `period-end-net-worth.ts`, `period-opening-balance-net-worth.ts`,
   `valuation.server.ts`, `valuation-cache.ts`
@@ -60,6 +61,12 @@ Related docs:
 - `PERIOD_BASE_CACHE_ENV` must be set when Redis caching is enabled. On Fly
   deployments this is set from `FLY_APP` to isolate multiple preview/staging
   deployments sharing one Redis instance.
+- `updateAccountBookSettings` (`src/server/account-book-settings.ts`) also
+  invalidates period base-data cache when `referenceCurrency` or `startDate`
+  changes.
+- When `startDate` changes via `updateAccountBookSettings`, all bookings in
+  transactions containing an `OPENING_BALANCES` booking are shifted to the day
+  before the new start date, preserving the opening-balance date invariant.
 
 ## Auth and Authorization
 

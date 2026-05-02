@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountBookIdIndexRouteImport } from './routes/$accountBookId/index'
 import { Route as AccountBookIdValuationCacheRouteRouteImport } from './routes/$accountBookId/valuation-cache/route'
 import { Route as AccountBookIdTimelineRouteRouteImport } from './routes/$accountBookId/timeline/route'
+import { Route as AccountBookIdSettingsRouteRouteImport } from './routes/$accountBookId/settings/route'
 import { Route as AccountBookIdPeriodRouteRouteImport } from './routes/$accountBookId/period/route'
 import { Route as AccountBookIdAccountsRouteRouteImport } from './routes/$accountBookId/accounts/route'
 import { Route as AccountBookIdAccountIdRouteRouteImport } from './routes/$accountBookId/$accountId/route'
@@ -42,6 +43,12 @@ const AccountBookIdTimelineRouteRoute =
   AccountBookIdTimelineRouteRouteImport.update({
     id: '/$accountBookId/timeline',
     path: '/$accountBookId/timeline',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AccountBookIdSettingsRouteRoute =
+  AccountBookIdSettingsRouteRouteImport.update({
+    id: '/$accountBookId/settings',
+    path: '/$accountBookId/settings',
     getParentRoute: () => rootRouteImport,
   } as any)
 const AccountBookIdPeriodRouteRoute =
@@ -97,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/$accountBookId/$accountId': typeof AccountBookIdAccountIdRouteRouteWithChildren
   '/$accountBookId/accounts': typeof AccountBookIdAccountsRouteRoute
   '/$accountBookId/period': typeof AccountBookIdPeriodRouteRouteWithChildren
+  '/$accountBookId/settings': typeof AccountBookIdSettingsRouteRoute
   '/$accountBookId/timeline': typeof AccountBookIdTimelineRouteRoute
   '/$accountBookId/valuation-cache': typeof AccountBookIdValuationCacheRouteRoute
   '/$accountBookId/': typeof AccountBookIdIndexRoute
@@ -109,6 +117,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$accountBookId/accounts': typeof AccountBookIdAccountsRouteRoute
+  '/$accountBookId/settings': typeof AccountBookIdSettingsRouteRoute
   '/$accountBookId/timeline': typeof AccountBookIdTimelineRouteRoute
   '/$accountBookId/valuation-cache': typeof AccountBookIdValuationCacheRouteRoute
   '/$accountBookId': typeof AccountBookIdIndexRoute
@@ -124,6 +133,7 @@ export interface FileRoutesById {
   '/$accountBookId/$accountId': typeof AccountBookIdAccountIdRouteRouteWithChildren
   '/$accountBookId/accounts': typeof AccountBookIdAccountsRouteRoute
   '/$accountBookId/period': typeof AccountBookIdPeriodRouteRouteWithChildren
+  '/$accountBookId/settings': typeof AccountBookIdSettingsRouteRoute
   '/$accountBookId/timeline': typeof AccountBookIdTimelineRouteRoute
   '/$accountBookId/valuation-cache': typeof AccountBookIdValuationCacheRouteRoute
   '/$accountBookId/': typeof AccountBookIdIndexRoute
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
     | '/$accountBookId/$accountId'
     | '/$accountBookId/accounts'
     | '/$accountBookId/period'
+    | '/$accountBookId/settings'
     | '/$accountBookId/timeline'
     | '/$accountBookId/valuation-cache'
     | '/$accountBookId/'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$accountBookId/accounts'
+    | '/$accountBookId/settings'
     | '/$accountBookId/timeline'
     | '/$accountBookId/valuation-cache'
     | '/$accountBookId'
@@ -166,6 +178,7 @@ export interface FileRouteTypes {
     | '/$accountBookId/$accountId'
     | '/$accountBookId/accounts'
     | '/$accountBookId/period'
+    | '/$accountBookId/settings'
     | '/$accountBookId/timeline'
     | '/$accountBookId/valuation-cache'
     | '/$accountBookId/'
@@ -181,6 +194,7 @@ export interface RootRouteChildren {
   AccountBookIdAccountIdRouteRoute: typeof AccountBookIdAccountIdRouteRouteWithChildren
   AccountBookIdAccountsRouteRoute: typeof AccountBookIdAccountsRouteRoute
   AccountBookIdPeriodRouteRoute: typeof AccountBookIdPeriodRouteRouteWithChildren
+  AccountBookIdSettingsRouteRoute: typeof AccountBookIdSettingsRouteRoute
   AccountBookIdTimelineRouteRoute: typeof AccountBookIdTimelineRouteRoute
   AccountBookIdValuationCacheRouteRoute: typeof AccountBookIdValuationCacheRouteRoute
   AccountBookIdIndexRoute: typeof AccountBookIdIndexRoute
@@ -215,6 +229,13 @@ declare module '@tanstack/react-router' {
       path: '/$accountBookId/timeline'
       fullPath: '/$accountBookId/timeline'
       preLoaderRoute: typeof AccountBookIdTimelineRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$accountBookId/settings': {
+      id: '/$accountBookId/settings'
+      path: '/$accountBookId/settings'
+      fullPath: '/$accountBookId/settings'
+      preLoaderRoute: typeof AccountBookIdSettingsRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$accountBookId/period': {
@@ -316,6 +337,7 @@ const rootRouteChildren: RootRouteChildren = {
     AccountBookIdAccountIdRouteRouteWithChildren,
   AccountBookIdAccountsRouteRoute: AccountBookIdAccountsRouteRoute,
   AccountBookIdPeriodRouteRoute: AccountBookIdPeriodRouteRouteWithChildren,
+  AccountBookIdSettingsRouteRoute: AccountBookIdSettingsRouteRoute,
   AccountBookIdTimelineRouteRoute: AccountBookIdTimelineRouteRoute,
   AccountBookIdValuationCacheRouteRoute: AccountBookIdValuationCacheRouteRoute,
   AccountBookIdIndexRoute: AccountBookIdIndexRoute,
