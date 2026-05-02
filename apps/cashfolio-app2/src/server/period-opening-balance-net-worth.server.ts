@@ -3,7 +3,10 @@ import { prisma } from "../prisma.server";
 import { addUtcDays, startOfUtcDay } from "../shared/date";
 import { toMoneyNumber } from "../shared/money";
 import { normalizePeriodValue } from "../shared/period";
-import { computeEndOfPeriodBalanceStats } from "./period-balance-stats";
+import {
+  computeEndOfPeriodBalanceStats,
+  type EndOfPeriodBalanceAccount,
+} from "./period-balance-stats";
 import { convertBookingValueToReference } from "./period-conversion";
 import { buildTransferClearingVirtualHierarchy } from "./period-transfer-clearing";
 import { loadTransferClearingUnitBuckets } from "./period-transfer-clearing-buckets";
@@ -14,6 +17,80 @@ export type OpeningBalanceNetWorthResult = {
   skippedCount: number;
   periodStart: string;
 };
+
+async function loadAssetLiabilityAccounts(args: {
+  accountBookId: string;
+}): Promise<EndOfPeriodBalanceAccount[]> {
+  return prisma.account.findMany({
+    where: {
+      accountBookId: args.accountBookId,
+      type: {
+        in: [AccountType.ASSET, AccountType.LIABILITY],
+      },
+    },
+    select: {
+      id: true,
+      type: true,
+      unit: true,
+      currency: true,
+      cryptocurrency: true,
+      symbol: true,
+      tradeCurrency: true,
+    },
+  });
+}
+
+async function loadRawBalanceByAccountIdBeforePeriodStart(args: {
+  accountBookId: string;
+  periodStart: Date;
+  accounts: EndOfPeriodBalanceAccount[];
+}): Promise<Map<string, number>> {
+  const rawBalanceByAccountId = new Map<string, number>();
+  if (args.accounts.length === 0) {
+    return rawBalanceByAccountId;
+  }
+
+  const groupedBalances = await prisma.booking.groupBy({
+    by: ["accountId"],
+    where: {
+      accountBookId: args.accountBookId,
+      accountId: {
+        in: args.accounts.map((account) => account.id),
+      },
+      date: {
+        lt: args.periodStart,
+      },
+    },
+    _sum: {
+      value: true,
+    },
+  });
+
+  for (const groupedBalance of groupedBalances) {
+    rawBalanceByAccountId.set(
+      groupedBalance.accountId,
+      toMoneyNumber(groupedBalance._sum.value ?? 0),
+    );
+  }
+
+  return rawBalanceByAccountId;
+}
+
+async function loadTransferClearingOpeningBaseline(args: {
+  accountBookId: string;
+  periodStart: Date;
+  referenceCurrency: string;
+}) {
+  const transferClearingUnitBuckets = await loadTransferClearingUnitBuckets({
+    accountBookId: args.accountBookId,
+    periodEndExclusive: args.periodStart,
+    referenceCurrency: args.referenceCurrency,
+  });
+
+  return buildTransferClearingVirtualHierarchy({
+    unitBuckets: transferClearingUnitBuckets,
+  });
+}
 
 export async function loadOpeningBalanceNetWorthForPeriod(args: {
   accountBookId: string;
@@ -41,60 +118,23 @@ export async function loadOpeningBalanceNetWorthForPeriod(args: {
   const periodStart = selection.from;
   const conversionDate = addUtcDays(periodStart, -1);
 
-  const accounts = await prisma.account.findMany({
-    where: {
-      accountBookId: args.accountBookId,
-      type: {
-        in: [AccountType.ASSET, AccountType.LIABILITY],
-      },
-    },
-    select: {
-      id: true,
-      type: true,
-      unit: true,
-      currency: true,
-      cryptocurrency: true,
-      symbol: true,
-      tradeCurrency: true,
-    },
+  const accounts = await loadAssetLiabilityAccounts({
+    accountBookId: args.accountBookId,
   });
-
-  const rawBalanceByAccountId = new Map<string, number>();
-  if (accounts.length > 0) {
-    const groupedBalances = await prisma.booking.groupBy({
-      by: ["accountId"],
-      where: {
-        accountBookId: args.accountBookId,
-        accountId: {
-          in: accounts.map((account) => account.id),
-        },
-        date: {
-          lt: periodStart,
-        },
-      },
-      _sum: {
-        value: true,
-      },
+  const rawBalanceByAccountId =
+    await loadRawBalanceByAccountIdBeforePeriodStart({
+      accountBookId: args.accountBookId,
+      periodStart,
+      accounts,
     });
 
-    for (const groupedBalance of groupedBalances) {
-      rawBalanceByAccountId.set(
-        groupedBalance.accountId,
-        toMoneyNumber(groupedBalance._sum.value ?? 0),
-      );
-    }
-  }
-
-  const transferClearingUnitBuckets = await loadTransferClearingUnitBuckets({
-    accountBookId: args.accountBookId,
-    periodEndExclusive: periodStart,
-    referenceCurrency,
-  });
   const {
     virtualAccounts: transferClearingVirtualAccounts,
     rawBalanceByVirtualAccountId,
-  } = buildTransferClearingVirtualHierarchy({
-    unitBuckets: transferClearingUnitBuckets,
+  } = await loadTransferClearingOpeningBaseline({
+    accountBookId: args.accountBookId,
+    periodStart,
+    referenceCurrency,
   });
   for (const [accountId, rawBalance] of rawBalanceByVirtualAccountId) {
     rawBalanceByAccountId.set(accountId, rawBalance);

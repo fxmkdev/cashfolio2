@@ -22,6 +22,69 @@ const PeriodPageView = lazy(async () => {
   return { default: module.PeriodPageView };
 });
 
+function getSelectedExplicitPeriodValue(args: {
+  selectedGranularity: "month" | "year";
+  selectedYear: number;
+  selectedMonth: number | null;
+}): string {
+  return args.selectedGranularity === "month" && args.selectedMonth != null
+    ? formatMonthPeriodValue(args.selectedYear, args.selectedMonth)
+    : String(args.selectedYear).padStart(4, "0");
+}
+
+async function loadNetWorthReconciliationModel(args: {
+  accountBookId: string;
+  selectedGranularity: "month" | "year";
+  selectedYear: number;
+  selectedMonth: number | null;
+  minBookingDate: string;
+  currentNetWorth: number;
+  totalReturn: number;
+}): Promise<NetWorthReconciliationModel> {
+  const minBookingDate = new Date(args.minBookingDate);
+  const previousPeriodValue = getPreviousPeriodValue({
+    selectedGranularity: args.selectedGranularity,
+    selectedYear: args.selectedYear,
+    selectedMonth: args.selectedMonth,
+    minBookingDate,
+  });
+
+  if (previousPeriodValue) {
+    const previousPeriodNetWorth = await getPeriodEndNetWorth({
+      data: {
+        accountBookId: args.accountBookId,
+        period: previousPeriodValue,
+      },
+    });
+
+    return buildNetWorthReconciliationModel({
+      baselineNetWorth: previousPeriodNetWorth.endOfPeriodNetWorth,
+      baselineSource: "previous-period",
+      currentNetWorth: args.currentNetWorth,
+      totalReturn: args.totalReturn,
+    });
+  }
+
+  const selectedExplicitPeriodValue = getSelectedExplicitPeriodValue({
+    selectedGranularity: args.selectedGranularity,
+    selectedYear: args.selectedYear,
+    selectedMonth: args.selectedMonth,
+  });
+  const openingBalance = await getOpeningBalanceNetWorthForPeriod({
+    data: {
+      accountBookId: args.accountBookId,
+      period: selectedExplicitPeriodValue,
+    },
+  });
+
+  return buildNetWorthReconciliationModel({
+    baselineNetWorth: openingBalance.openingBalanceNetWorth,
+    baselineSource: "opening-balance",
+    currentNetWorth: args.currentNetWorth,
+    totalReturn: args.totalReturn,
+  });
+}
+
 export const Route = createFileRoute("/$accountBookId/period")({
   validateSearch: parsePeriodSearch,
   loaderDeps: ({ search }) => ({
@@ -43,49 +106,15 @@ export const Route = createFileRoute("/$accountBookId/period")({
           },
         })
       : null;
-    const selectedExplicitPeriodValue =
-      overview.selectedGranularity === "month" && overview.selectedMonth != null
-        ? formatMonthPeriodValue(overview.selectedYear, overview.selectedMonth)
-        : String(overview.selectedYear).padStart(4, "0");
-
-    const minBookingDate = new Date(overview.minBookingDate);
-    const previousPeriodValue = getPreviousPeriodValue({
+    const netWorthReconciliation = await loadNetWorthReconciliationModel({
+      accountBookId,
       selectedGranularity: overview.selectedGranularity,
       selectedYear: overview.selectedYear,
       selectedMonth: overview.selectedMonth,
-      minBookingDate,
+      minBookingDate: overview.minBookingDate,
+      currentNetWorth: overview.stats.endOfPeriodNetWorth,
+      totalReturn: overview.stats.totalReturn,
     });
-
-    let netWorthReconciliation: NetWorthReconciliationModel;
-    if (previousPeriodValue) {
-      const previousPeriodNetWorth = await getPeriodEndNetWorth({
-        data: {
-          accountBookId,
-          period: previousPeriodValue,
-        },
-      });
-
-      netWorthReconciliation = buildNetWorthReconciliationModel({
-        baselineNetWorth: previousPeriodNetWorth.endOfPeriodNetWorth,
-        baselineSource: "previous-period",
-        currentNetWorth: overview.stats.endOfPeriodNetWorth,
-        totalReturn: overview.stats.totalReturn,
-      });
-    } else {
-      const openingBalance = await getOpeningBalanceNetWorthForPeriod({
-        data: {
-          accountBookId,
-          period: selectedExplicitPeriodValue,
-        },
-      });
-
-      netWorthReconciliation = buildNetWorthReconciliationModel({
-        baselineNetWorth: openingBalance.openingBalanceNetWorth,
-        baselineSource: "opening-balance",
-        currentNetWorth: overview.stats.endOfPeriodNetWorth,
-        totalReturn: overview.stats.totalReturn,
-      });
-    }
 
     return { overview, gainLossEquityAccountId, netWorthReconciliation };
   },
@@ -103,10 +132,11 @@ export function PeriodPageContent() {
   const { overview, gainLossEquityAccountId, netWorthReconciliation } =
     Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/period" });
-  const explicitLedgerPeriodValue =
-    overview.selectedGranularity === "month" && overview.selectedMonth != null
-      ? formatMonthPeriodValue(overview.selectedYear, overview.selectedMonth)
-      : String(overview.selectedYear).padStart(4, "0");
+  const explicitLedgerPeriodValue = getSelectedExplicitPeriodValue({
+    selectedGranularity: overview.selectedGranularity,
+    selectedYear: overview.selectedYear,
+    selectedMonth: overview.selectedMonth,
+  });
 
   return (
     <Suspense fallback={null}>

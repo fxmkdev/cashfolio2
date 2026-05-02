@@ -25,6 +25,7 @@ Related docs:
   `accounts-mutations.ts`, `dashboard.ts`, `ledger.ts`, `transactions.ts`
   (barrel), `transactions-queries.ts`, `transactions-mutations.ts`, `period.ts`,
   `period-gain-loss-reconciliation.ts`, `period-unit-format.ts`,
+  `period-end-net-worth.ts`, `period-opening-balance-net-worth.ts`,
   `valuation.server.ts`, `valuation-cache.ts`
 - Valuation internals live in `src/server/valuation/`: `providers.ts`,
   `cache.ts`, `backtracking.ts`, `keys.ts`, `types.ts`, `date-utils.ts`,
@@ -174,10 +175,10 @@ larger gain/loss subflows are split into dedicated modules:
 
 ## Period Warning Surface
 
-When `skippedBookingsCount > 0`, the period page shows a top-level partial-data
-warning. This warning explicitly states strict `totalReturn == netWorth delta`
-checks may be incomplete for the selected period due to unavailable valuation
-data.
+When `skippedBookingsCount > 0`, the period page shows a partial-data warning
+below the period selector. This warning explicitly states strict
+`totalReturn == netWorth delta` checks may be incomplete for the selected period
+due to unavailable valuation data.
 
 The period page also shows a net-worth reconciliation warning when
 `endOfPeriodNetWorth` does not match `baselineNetWorth + totalReturn` at cent
