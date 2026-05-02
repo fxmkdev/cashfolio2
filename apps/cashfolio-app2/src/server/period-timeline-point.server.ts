@@ -38,6 +38,10 @@ export async function loadPeriodTimelinePoint(args: {
       selectedPeriodValue: selection.periodValue,
       selectedPeriodLabel: selection.label,
       totalReturn: 0,
+      savings: 0,
+      income: 0,
+      expenses: 0,
+      gainsLosses: 0,
     };
   }
 
