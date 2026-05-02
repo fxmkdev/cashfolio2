@@ -8,7 +8,7 @@ import {
 } from "../support/grid";
 import {
   getTransactionBookingsByDescription,
-  resetAndSeedDatabase,
+  seedDatabase,
   seedThreeBookingSplitTransaction,
   type SeededData,
 } from "../support/db";
@@ -109,7 +109,7 @@ function accountOptionNameRegex(name: string): RegExp {
 }
 
 test.beforeAll(async () => {
-  seeded = await resetAndSeedDatabase();
+  seeded = await seedDatabase();
 });
 
 test("create, edit, delete, and create multi-booking transaction", async ({

@@ -20,10 +20,10 @@ const prisma = new PrismaClient({ adapter });
 
 const DEFAULT_EXTERNAL_ID = process.env.E2E_AUTH_EXTERNAL_ID ?? "e2e-user";
 
-function assertSafeResetTarget() {
+function assertSafeWriteTarget() {
   if (process.env.E2E_TEST_MODE !== "true") {
     throw new Error(
-      "Refusing e2e DB reset because E2E_TEST_MODE is not set to true.",
+      "Refusing e2e DB writes because E2E_TEST_MODE is not set to true.",
     );
   }
 
@@ -37,9 +37,27 @@ function assertSafeResetTarget() {
 
   if (!allowedHosts.has(parsedUrl.hostname) || !isAllowedDatabase) {
     throw new Error(
-      `Refusing e2e DB reset for DATABASE_URL host=${parsedUrl.hostname} db=${databaseName}.`,
+      `Refusing e2e DB writes for DATABASE_URL host=${parsedUrl.hostname} db=${databaseName}.`,
     );
   }
+}
+
+assertSafeWriteTarget();
+
+export async function resetDatabase(): Promise<void> {
+  assertSafeWriteTarget();
+
+  await prisma.$executeRaw`
+    TRUNCATE TABLE
+      "Booking",
+      "Transaction",
+      "Account",
+      "AccountGroup",
+      "UserAccountBookLink",
+      "AccountBook",
+      "User"
+    RESTART IDENTITY CASCADE
+  `;
 }
 
 export type SeededData = {
@@ -56,25 +74,31 @@ export type SeededData = {
   expenseAccount: { id: string; name: string };
 };
 
-export async function resetAndSeedDatabase(args?: {
+type SeededGroups = {
+  assetRootId: string;
+  equityGroupId: string;
+  expenseGroupId: string;
+};
+
+type SeededAccounts = {
+  cashAccount: { id: string; name: string };
+  savingsAccount: { id: string; name: string };
+  investmentsAccount: { id: string; name: string };
+  cryptoAccount: { id: string; name: string };
+  securityAccount: { id: string; name: string };
+  securityCounterAccount: { id: string; name: string };
+  expenseAccount: { id: string; name: string };
+};
+
+async function createSeedAccountBook(args?: {
   accountBookStartDate?: Date;
-}): Promise<SeededData> {
-  assertSafeResetTarget();
-
-  await prisma.$executeRawUnsafe(`
-    TRUNCATE TABLE
-      "Booking",
-      "Transaction",
-      "Account",
-      "AccountGroup",
-      "UserAccountBookLink",
-      "AccountBook",
-      "User"
-    RESTART IDENTITY CASCADE
-  `);
-
-  const user = await prisma.user.create({
-    data: {
+}): Promise<{ accountBookId: string }> {
+  const user = await prisma.user.upsert({
+    where: {
+      externalId: DEFAULT_EXTERNAL_ID,
+    },
+    update: {},
+    create: {
       id: createId(),
       externalId: DEFAULT_EXTERNAL_ID,
     },
@@ -97,10 +121,14 @@ export async function resetAndSeedDatabase(args?: {
     },
   });
 
+  return { accountBookId: accountBook.id };
+}
+
+async function createSeedGroups(accountBookId: string): Promise<SeededGroups> {
   const assetRoot = await prisma.accountGroup.create({
     data: {
       id: createId(),
-      accountBookId: accountBook.id,
+      accountBookId,
       name: "Assets",
       type: AccountType.ASSET,
       sortOrder: 0,
@@ -110,7 +138,7 @@ export async function resetAndSeedDatabase(args?: {
   await prisma.accountGroup.create({
     data: {
       id: createId(),
-      accountBookId: accountBook.id,
+      accountBookId,
       name: "Liabilities",
       type: AccountType.LIABILITY,
       sortOrder: 0,
@@ -120,7 +148,7 @@ export async function resetAndSeedDatabase(args?: {
   const equityRoot = await prisma.accountGroup.create({
     data: {
       id: createId(),
-      accountBookId: accountBook.id,
+      accountBookId,
       name: "Equity",
       type: AccountType.EQUITY,
       sortOrder: 0,
@@ -130,7 +158,7 @@ export async function resetAndSeedDatabase(args?: {
   const expenseGroup = await prisma.accountGroup.create({
     data: {
       id: createId(),
-      accountBookId: accountBook.id,
+      accountBookId,
       name: "E2E Expenses",
       type: AccountType.EQUITY,
       equityAccountSubtype: EquityAccountSubtype.EXPENSE,
@@ -139,13 +167,25 @@ export async function resetAndSeedDatabase(args?: {
     },
   });
 
+  return {
+    assetRootId: assetRoot.id,
+    equityGroupId: equityRoot.id,
+    expenseGroupId: expenseGroup.id,
+  };
+}
+
+async function createSeedAccounts(args: {
+  accountBookId: string;
+  assetRootId: string;
+  expenseGroupId: string;
+}): Promise<SeededAccounts> {
   const cashAccount = await prisma.account.create({
     data: {
       id: createId(),
-      accountBookId: accountBook.id,
+      accountBookId: args.accountBookId,
       name: "E2E Cash",
       type: AccountType.ASSET,
-      groupId: assetRoot.id,
+      groupId: args.assetRootId,
       unit: Unit.CURRENCY,
       currency: "CHF",
       sortOrder: 0,
@@ -155,10 +195,10 @@ export async function resetAndSeedDatabase(args?: {
   const savingsAccount = await prisma.account.create({
     data: {
       id: createId(),
-      accountBookId: accountBook.id,
+      accountBookId: args.accountBookId,
       name: "E2E Savings",
       type: AccountType.ASSET,
-      groupId: assetRoot.id,
+      groupId: args.assetRootId,
       unit: Unit.CURRENCY,
       currency: "CHF",
       sortOrder: 1,
@@ -168,10 +208,10 @@ export async function resetAndSeedDatabase(args?: {
   const investmentsAccount = await prisma.account.create({
     data: {
       id: createId(),
-      accountBookId: accountBook.id,
+      accountBookId: args.accountBookId,
       name: "E2E Investments",
       type: AccountType.ASSET,
-      groupId: assetRoot.id,
+      groupId: args.assetRootId,
       unit: Unit.CURRENCY,
       currency: "CHF",
       sortOrder: 2,
@@ -181,10 +221,10 @@ export async function resetAndSeedDatabase(args?: {
   const cryptoAccount = await prisma.account.create({
     data: {
       id: createId(),
-      accountBookId: accountBook.id,
+      accountBookId: args.accountBookId,
       name: "E2E Crypto",
       type: AccountType.ASSET,
-      groupId: assetRoot.id,
+      groupId: args.assetRootId,
       unit: Unit.CRYPTOCURRENCY,
       cryptocurrency: "BTC",
       sortOrder: 3,
@@ -194,10 +234,10 @@ export async function resetAndSeedDatabase(args?: {
   const securityAccount = await prisma.account.create({
     data: {
       id: createId(),
-      accountBookId: accountBook.id,
+      accountBookId: args.accountBookId,
       name: "E2E Security",
       type: AccountType.ASSET,
-      groupId: assetRoot.id,
+      groupId: args.assetRootId,
       unit: Unit.SECURITY,
       symbol: "AAPL",
       tradeCurrency: "USD",
@@ -208,10 +248,10 @@ export async function resetAndSeedDatabase(args?: {
   const securityCounterAccount = await prisma.account.create({
     data: {
       id: createId(),
-      accountBookId: accountBook.id,
+      accountBookId: args.accountBookId,
       name: "E2E Security Counter",
       type: AccountType.ASSET,
-      groupId: assetRoot.id,
+      groupId: args.assetRootId,
       unit: Unit.SECURITY,
       symbol: "AAPL",
       tradeCurrency: "EUR",
@@ -222,11 +262,11 @@ export async function resetAndSeedDatabase(args?: {
   const expenseAccount = await prisma.account.create({
     data: {
       id: createId(),
-      accountBookId: accountBook.id,
+      accountBookId: args.accountBookId,
       name: "E2E Expense",
       type: AccountType.EQUITY,
       equityAccountSubtype: EquityAccountSubtype.EXPENSE,
-      groupId: expenseGroup.id,
+      groupId: args.expenseGroupId,
       unit: Unit.CURRENCY,
       currency: "CHF",
       sortOrder: 0,
@@ -234,10 +274,6 @@ export async function resetAndSeedDatabase(args?: {
   });
 
   return {
-    accountBookId: accountBook.id,
-    userExternalId: DEFAULT_EXTERNAL_ID,
-    equityGroupId: equityRoot.id,
-    expenseGroupId: expenseGroup.id,
     cashAccount: {
       id: cashAccount.id,
       name: cashAccount.name,
@@ -266,6 +302,28 @@ export async function resetAndSeedDatabase(args?: {
       id: expenseAccount.id,
       name: expenseAccount.name,
     },
+  };
+}
+
+export async function seedDatabase(args?: {
+  accountBookStartDate?: Date;
+}): Promise<SeededData> {
+  assertSafeWriteTarget();
+
+  const { accountBookId } = await createSeedAccountBook(args);
+  const groups = await createSeedGroups(accountBookId);
+  const accounts = await createSeedAccounts({
+    accountBookId,
+    assetRootId: groups.assetRootId,
+    expenseGroupId: groups.expenseGroupId,
+  });
+
+  return {
+    accountBookId,
+    userExternalId: DEFAULT_EXTERNAL_ID,
+    equityGroupId: groups.equityGroupId,
+    expenseGroupId: groups.expenseGroupId,
+    ...accounts,
   };
 }
 

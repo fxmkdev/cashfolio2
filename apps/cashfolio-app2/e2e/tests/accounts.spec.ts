@@ -6,7 +6,7 @@ import {
   clickRowAction,
 } from "../support/grid";
 import {
-  resetAndSeedDatabase,
+  seedDatabase,
   seedAssetAccountWithMissingReferenceBalance,
   seedNonZeroConvertibleArchivedAndLiabilityBalances,
   seedNonZeroConvertibleAssetBalances,
@@ -20,7 +20,7 @@ import { openDialogFromButton } from "../support/ui";
 let seeded: SeededData;
 
 test.beforeAll(async () => {
-  seeded = await resetAndSeedDatabase();
+  seeded = await seedDatabase();
 });
 
 function isIgnorableAgChartsError(message: string): boolean {

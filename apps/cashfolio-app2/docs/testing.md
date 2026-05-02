@@ -113,7 +113,8 @@ When bypass is disabled, app auth behavior remains unchanged.
 ### Database Lifecycle
 
 - Tests run against PostgreSQL.
-- Each spec file runs a full DB reset + seed in `beforeAll()`.
+- The suite runs a one-time DB reset in Playwright global setup.
+- Each spec file seeds an isolated account-book-scoped dataset in `beforeAll()`.
 - Seeding creates:
   - a user with `E2E_AUTH_EXTERNAL_ID`
   - an account book and user-account-book link
@@ -127,6 +128,11 @@ pnpm --filter cashfolio-app2 e2e:install
 pnpm --filter cashfolio-app2 e2e
 pnpm --filter cashfolio-app2 e2e:ci
 ```
+
+`e2e:ci` supports:
+
+- `E2E_WORKERS` to control Playwright worker parallelism in CI.
+- `E2E_SHARD` to run a single Playwright shard (format: `index/total`).
 
 Default local DB URL fallback for e2e is:
 
@@ -148,7 +154,8 @@ Current CI gates for `cashfolio-app2`:
 - `typecheck`
 - `format`
 - `unit + coverage` with coverage-ratchet enforcement
-- `e2e`
+- `e2e` shards (`cashfolio-app2: E2E (Shard X/Y)`)
+- fixed required gate check (`cashfolio-app2: E2E Required`)
 
-CI stores Playwright and unit coverage artifacts for troubleshooting and trend
-tracking.
+CI stores Playwright reports, Playwright JSON timing output, and unit coverage
+artifacts for troubleshooting and trend tracking.

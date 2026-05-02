@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { resetAndSeedDatabase } from "../support/db";
+import { seedDatabase } from "../support/db";
 
 let accountBookId: string;
 
@@ -9,7 +9,7 @@ test.beforeAll(async () => {
     Date.UTC(now.getUTCFullYear() + 1, 0, 1, 0, 0, 0, 0),
   );
 
-  const seeded = await resetAndSeedDatabase({
+  const seeded = await seedDatabase({
     accountBookStartDate: futureStartDate,
   });
   accountBookId = seeded.accountBookId;
