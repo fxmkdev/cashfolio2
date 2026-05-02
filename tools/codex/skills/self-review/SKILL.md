@@ -1,11 +1,11 @@
 ---
 name: self-review
-description: Review the current pull request before merge with a strict quality gate. Use when asked to self-review this PR, run a pre-merge check, verify docs/test coverage/CI readiness, enforce repository coding guidelines and best practices, improve PR description quality, and split up large modules, components, and functions.
+description: Review and remediate the current pull request before merge with a strict quality gate. Use when asked to self-review this PR, run a pre-merge check, implement the most feasible findings, verify docs/test coverage/CI readiness, enforce repository coding guidelines and best practices, improve PR description quality, and split up large modules, components, and functions.
 ---
 
 # Self Review
 
-Perform a complete self-review for the current pull request and return a decision-ready report.
+Perform a complete self-review for the current pull request, implement the most feasible fixes, and return a decision-ready report.
 
 ## Inputs
 
@@ -21,55 +21,57 @@ Perform a complete self-review for the current pull request and return a decisio
    - Capture PR title, description, changed files, review status, and CI check summary.
    - If no PR exists, continue in "branch-only review" mode and explicitly mark PR-only checks as missing evidence.
 
-2. Validate docs freshness.
-   - Compare code changes against docs changes.
-   - Flag missing updates when behavior, APIs, workflows, commands, conventions, or operational expectations changed without corresponding docs updates.
-   - Validate docs placement: shared docs in `docs/`; app-specific docs near app code.
-
-3. Validate PR description quality.
-   - Ensure the PR description clearly includes:
+2. Collect review findings.
+   - Validate docs freshness against code changes.
+   - Validate PR description quality against required content:
      - problem/context
      - what changed
      - test evidence and commands run
      - risks and mitigations
      - follow-ups or known limitations
-   - If any section is weak or missing, provide an improved draft structure.
+   - Perform code-quality review using `AGENTS.md` and `CONTRIBUTING.md` conventions.
+   - Verify CI health for the PR head commit when available.
+   - Detect oversized units and split candidates using default heuristics:
+     - module/file over 400 LOC
+     - component over 200 LOC
+     - function over 60 LOC or obviously high branching complexity
 
-4. Perform code-quality review.
-   - Apply repository conventions from `AGENTS.md` and `CONTRIBUTING.md`.
-   - Check for correctness, maintainability, readability, naming clarity, cohesion, and avoidable complexity.
-   - Prioritize actionable findings over style nitpicks.
-   - Flag violated conventions explicitly (for example money arithmetic precision, route file naming conventions, generated-file edits, runtime typing policy, or missing doc updates).
+3. Classify findings before changes.
+   - Mark each finding as one of:
+     - `auto-fixable now` (safe, localized, high-confidence change)
+     - `needs larger change` (architecture tradeoffs, broad refactor, risky scope, or unclear intent)
+   - Prioritize applying the most feasible fixes across code, docs, tests, and config.
 
-5. Run tiered verification checks.
-   - Fast pass (always):
+4. Implement feasible fixes.
+   - Apply `auto-fixable now` items directly in-repo.
+   - Apply medium-complexity fixes when scope is bounded and confidence is high.
+   - If PR description quality is weak and PR access exists, update the PR description directly with improved structure and concrete content.
+   - Do not over-claim: leave `needs larger change` items unimplemented and keep them explicit in the final report.
+
+5. Run two-pass verification.
+   - First pass (baseline):
      - `pnpm --filter cashfolio-app2 typecheck`
      - `pnpm --filter cashfolio-app2 test:unit`
      - `pnpm --filter cashfolio-app2 format`
-   - Deep pass (when risk is higher, tested logic changed, or fast pass fails):
+   - Second pass (post-fix gate): rerun the same baseline checks after applied fixes.
+   - Deep pass (when tested logic changed, risk is higher, or baseline checks fail):
      - `pnpm --filter cashfolio-app2 test:unit:coverage:ratchet`
      - targeted broader checks as needed
      - suggest `pnpm --filter cashfolio-app2 e2e` when change risk is significant
    - Record exactly what ran, what did not run, and why.
 
-6. Verify CI health.
-   - Inspect GitHub checks for the PR head commit.
-   - If checks fail, summarize failing jobs and likely root causes.
-   - Provide concrete remediation steps and mark readiness as blocked until green.
+6. Re-evaluate readiness.
+   - Mark `Ready` only when all blockers are cleared and required checks are green.
+   - If any blocker remains (including CI failures, high-risk unimplemented findings, or missing critical evidence), mark `Not Ready` and provide concrete next steps.
 
-7. Detect oversized units and suggest splits.
-   - Flag candidates using default heuristics:
-     - module/file over 400 LOC
-     - component over 200 LOC
-     - function over 60 LOC or obviously high branching complexity
-   - Propose practical split boundaries (by responsibility, feature slice, or shared utility extraction).
-
-8. Produce the required report format.
+7. Produce the required report format.
    - Always output these sections in this order:
      - `Blockers`
      - `High`
      - `Medium`
      - `Low`
+     - `Applied Fixes`
+     - `Remaining Findings (Not Implemented Yet)`
      - `Checks Run`
      - `Missing Evidence`
      - `Ready/Not Ready`
@@ -79,6 +81,7 @@ Perform a complete self-review for the current pull request and return a decisio
 ## Output Rules
 
 - Do not hide uncertainty. If a check could not be run, list it in `Missing Evidence`.
-- Prefer direct, actionable recommendations over broad advice.
 - Separate facts from assumptions.
+- Distinguish clearly between findings that were fixed and findings that remain.
+- Prefer direct, actionable remediation over broad advice.
 - If no significant issues are found, still report residual risks and why the PR is ready.
