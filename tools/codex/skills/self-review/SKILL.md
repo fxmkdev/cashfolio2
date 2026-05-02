@@ -39,8 +39,9 @@ Perform a complete self-review for the current pull request, implement the most 
 3. Classify findings before changes.
    - Mark each finding as one of:
      - `auto-fixable now` (safe, localized, high-confidence change)
+     - `bounded fix` (medium complexity but constrained scope, clear rollback path, and high confidence after focused verification)
      - `needs larger change` (architecture tradeoffs, broad refactor, risky scope, or unclear intent)
-   - Prioritize applying the most feasible fixes across code, docs, tests, and config.
+   - Prioritize applying `auto-fixable now` and `bounded fix` items across code, docs, tests, and config.
 
 4. Run first-pass verification before changes.
    - First pass (baseline, pre-fix):
@@ -50,8 +51,10 @@ Perform a complete self-review for the current pull request, implement the most 
 
 5. Implement feasible fixes.
    - Apply `auto-fixable now` items directly in-repo.
-   - Apply medium-complexity fixes when scope is bounded and confidence is high.
+   - Apply `bounded fix` items when scope stays constrained and confidence remains high.
    - If PR description quality is weak and PR access exists, update the PR description directly with improved structure and concrete content.
+   - For PR description updates, prefer `gh pr edit --body-file <path>` to avoid shell escaping/newline issues. If `gh pr edit` fails with `projectCards` deprecation GraphQL errors, use the REST fallback:
+     `gh api -X PATCH repos/<owner>/<repo>/pulls/<number> -f body="$(cat <path>)"`.
    - Do not over-claim: leave `needs larger change` items unimplemented and keep them explicit in the final report.
 
 6. Run second-pass verification after fixes.
