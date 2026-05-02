@@ -102,6 +102,63 @@ functions.
 from `accounts.ts`) issues a batch of Prisma updates inside a transaction to
 update `sortOrder` values after reordering sibling rows in the reorder modal.
 
+## Period Overview Gain/Loss
+
+The canonical period gain/loss semantics are shared between:
+
+- `getPeriodOverview` (`src/server/period.ts`)
+- timeline metrics loading
+  (`src/server/period-timeline-point-metrics.server.ts`)
+
+Both loaders reuse the shared period base-data cache and shared gain/loss
+subflows while keeping their output work focused:
+
+- period overview computes the full response payload
+- timeline metrics compute only scalar series values
+
+The engine keeps period gains/losses aligned with net-worth deltas by using a
+single tracked-account flow:
+
+- Tracked accounts include:
+  - non-reference real holding accounts
+  - non-reference virtual transfer-clearing holding accounts
+- Both real transactions and synthetic transfer-clearing transactions flow
+  through the same lot/FIFO pipeline in `src/server/period-overview-holdings.ts`
+- Same-unit mixed-period holding transfers are treated as non-realizing carry
+  adjustments, so in-period legs no longer create false realization when the
+  opposite leg sits outside the selected period.
+- Explicit gain/loss remains separate from holdings realization:
+  - `stats.explicitGainLoss` includes explicit equity G/L bookings only
+  - `stats.realizedGainLoss` includes holdings realization and residual-only
+    execution reconciliation
+  - `stats.gainsLosses = explicit + realized + unrealized`
+
+Execution-residual reconciliation for eligible multi-unit income/expense
+transactions is isolated in `src/server/period-execution-residuals.ts`:
+
+- Candidate transactions are narrowed at query level to completed (no
+  post-period legs) multi-unit transactions with at least one in-period booking
+  and at least one income/expense leg, while excluding explicit/opening balance
+  cases
+- Residual realization is skipped unless all required conversions succeed and no
+  in-period tracked holding booking exists in the transaction
+- Residual breakdown attribution is weighted across non-reference legs by
+  absolute converted amount
+
+Transfer-clearing candidate loading now includes income/expense equity legs in
+addition to asset/liability legs. This keeps net-worth timing aligned when
+cross-period income/expense transactions remain partially posted at period end.
+
+To keep `src/server/period.ts` focused as an orchestration entrypoint, the
+larger gain/loss subflows are split into dedicated modules:
+
+- `src/server/period-equity-bookings.ts` handles paged equity booking conversion
+  from preloaded period base data, equity aggregation, and explicit counterpart
+  attribution
+- `src/server/period-holding-gain-loss.ts` handles tracked holding lot/FIFO
+  orchestration (real + transfer-clearing synthetic transactions) and residual
+  realization integration
+
 ## Gain/Loss Reconciliation Explain Fields
 
 `getPeriodGainLossReconciliation` now includes event-level explain data for
@@ -114,3 +171,10 @@ update `sortOrder` values after reordering sibling rows in the reorder modal.
   `marketFallback`) plus market/residual/effective reference amounts.
 - `rounding`: raw vs rounded event values used by the reconciliation UI
   explanation drawer.
+
+## Period Warning Surface
+
+When `skippedBookingsCount > 0`, the period page shows a top-level partial-data
+warning. This warning explicitly states strict `totalReturn == netWorth delta`
+checks may be incomplete for the selected period due to unavailable valuation
+data.

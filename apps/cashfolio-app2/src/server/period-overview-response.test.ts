@@ -256,8 +256,9 @@ describe("period overview response", () => {
       expenses: 20,
       savings: 100,
       gainsLosses: 30,
-      realizedGainLoss: 15,
+      realizedGainLoss: 5,
       unrealizedGainLoss: 15,
+      explicitGainLoss: 10,
       totalReturn: 130,
       endOfPeriodAssets: 100,
       endOfPeriodLiabilities: 40,
@@ -438,9 +439,10 @@ describe("period overview response", () => {
     });
 
     expect(response.stats).toMatchObject({
-      realizedGainLoss: 4.78,
+      realizedGainLoss: 4.44,
       unrealizedGainLoss: -1.11,
       gainsLosses: 3.67,
+      explicitGainLoss: 0.34,
     });
     expect(response.gainsLossesBreakdown.hierarchy).toEqual([
       {

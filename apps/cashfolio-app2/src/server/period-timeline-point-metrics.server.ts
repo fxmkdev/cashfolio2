@@ -4,21 +4,16 @@ import {
   getUnitToReferenceExchangeRate,
 } from "./period-conversion";
 import {
-  accumulateConvertedEquityBooking,
-  createPeriodOverviewEquityAggregation,
-} from "./period-overview-aggregation";
-import {
-  applyHoldingTransactionsToGainLossState,
-  finalizeHoldingGainLossState,
-  initializeHoldingGainLossState,
-} from "./period-overview-holdings";
-import {
   getOrLoadPeriodBaseData,
   type PeriodBaseData,
 } from "./period-base-data-cache";
-import { computeTransferClearingGainLossSplit } from "./period-transfer-clearing";
+import { computePeriodHoldingGainLoss } from "./period-holding-gain-loss";
+import { processPeriodEquityBookingsFromBaseData } from "./period-equity-bookings";
+import { createPeriodOverviewEquityAggregation } from "./period-overview-aggregation";
+import type { GainLossContributionAccumulator } from "./period-gains-losses-contributions";
 
-const EQUITY_CONVERSION_BATCH_SIZE = 500;
+const TRANSACTIONS_PAGE_SIZE = 200;
+const TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE = 200;
 
 export type PeriodTimelinePointMetrics = {
   totalReturn: number;
@@ -27,153 +22,6 @@ export type PeriodTimelinePointMetrics = {
   expenses: number;
   gainsLosses: number;
 };
-
-async function accumulateEquityMetrics(args: {
-  baseData: PeriodBaseData;
-  referenceCurrency: string;
-  exchangeRateByKey: Map<string, Promise<number | null>>;
-  aggregation: ReturnType<typeof createPeriodOverviewEquityAggregation>;
-}) {
-  for (
-    let startIndex = 0;
-    startIndex < args.baseData.equityBookings.length;
-    startIndex += EQUITY_CONVERSION_BATCH_SIZE
-  ) {
-    const batch = args.baseData.equityBookings.slice(
-      startIndex,
-      startIndex + EQUITY_CONVERSION_BATCH_SIZE,
-    );
-
-    const convertedValues = await Promise.all(
-      batch.map((booking) =>
-        convertBookingValueToReference({
-          value: booking.value,
-          unit: booking.unit,
-          currency: booking.currency,
-          cryptocurrency: booking.cryptocurrency,
-          symbol: booking.symbol,
-          tradeCurrency: booking.tradeCurrency,
-          date: booking.date,
-          referenceCurrency: args.referenceCurrency,
-          exchangeRateByKey: args.exchangeRateByKey,
-        }),
-      ),
-    );
-
-    for (let index = 0; index < batch.length; index += 1) {
-      const booking = batch[index]!;
-      const convertedValue = convertedValues[index];
-      if (convertedValue == null) {
-        continue;
-      }
-
-      accumulateConvertedEquityBooking({
-        booking: {
-          account: {
-            id: booking.accountId,
-            name: booking.accountName,
-            groupId: booking.accountGroupId,
-            equityAccountSubtype: booking.equityAccountSubtype,
-          },
-        },
-        convertedValue,
-        aggregation: args.aggregation,
-      });
-    }
-  }
-}
-
-async function loadHoldingGainLossSplit(args: {
-  baseData: PeriodBaseData;
-  referenceCurrency: string;
-  exchangeRateByKey: Map<string, Promise<number | null>>;
-}) {
-  if (args.baseData.holdingAccountsResolved.length === 0) {
-    return {
-      realizedGainLoss: 0,
-      unrealizedGainLoss: 0,
-    };
-  }
-
-  const selection = args.baseData.selection;
-  const initialHoldingBalanceByAccountId = new Map(
-    args.baseData.initialHoldingBalances.map((balance) => [
-      balance.accountId,
-      balance.rawBalance,
-    ]),
-  );
-
-  const holdingGainLossState = await initializeHoldingGainLossState({
-    holdingAccounts: args.baseData.holdingAccountsResolved,
-    initialBalanceByAccountId: initialHoldingBalanceByAccountId,
-    initialRateDate: selection.initialHoldingDate,
-    resolveRate: (input) =>
-      getUnitToReferenceExchangeRate({
-        ...input,
-        referenceCurrency: args.referenceCurrency,
-        exchangeRateByKey: args.exchangeRateByKey,
-      }),
-  });
-
-  await applyHoldingTransactionsToGainLossState({
-    state: holdingGainLossState,
-    transactions: args.baseData.holdingTransactions.map((transaction) => ({
-      bookings: transaction.bookings,
-    })),
-    periodStart: selection.from,
-    periodEndExclusive: selection.queryEndExclusive,
-    convertBookingToReference: ({ id: _id, ...booking }) =>
-      convertBookingValueToReference({
-        ...booking,
-        referenceCurrency: args.referenceCurrency,
-        exchangeRateByKey: args.exchangeRateByKey,
-      }),
-  });
-
-  return finalizeHoldingGainLossState({
-    state: holdingGainLossState,
-    periodEnd: selection.to,
-    resolveRate: (input) =>
-      getUnitToReferenceExchangeRate({
-        ...input,
-        referenceCurrency: args.referenceCurrency,
-        exchangeRateByKey: args.exchangeRateByKey,
-      }),
-  });
-}
-
-async function loadTransferClearingGainLossSplit(args: {
-  baseData: PeriodBaseData;
-  referenceCurrency: string;
-  exchangeRateByKey: Map<string, Promise<number | null>>;
-}) {
-  const selection = args.baseData.selection;
-  return computeTransferClearingGainLossSplit({
-    unitBuckets: args.baseData.transferClearingUnitBuckets,
-    periodStart: selection.from,
-    periodEndExclusive: selection.queryEndExclusive,
-    initialRateDate: selection.initialHoldingDate,
-    periodEnd: selection.to,
-    resolveRate: (input) =>
-      getUnitToReferenceExchangeRate({
-        ...input,
-        referenceCurrency: args.referenceCurrency,
-        exchangeRateByKey: args.exchangeRateByKey,
-      }),
-    convertBookingToReference: (booking) =>
-      convertBookingValueToReference({
-        value: booking.value,
-        unit: booking.unit,
-        currency: booking.currency,
-        cryptocurrency: booking.cryptocurrency,
-        symbol: booking.symbol,
-        tradeCurrency: booking.tradeCurrency,
-        date: booking.date,
-        referenceCurrency: args.referenceCurrency,
-        exchangeRateByKey: args.exchangeRateByKey,
-      }),
-  });
-}
 
 export async function loadPeriodTimelinePointMetrics(args: {
   accountBookId: string;
@@ -187,47 +35,100 @@ export async function loadPeriodTimelinePointMetrics(args: {
       period: args.period,
     }));
 
-  const referenceCurrency = baseData.referenceCurrency;
   const selection = baseData.selection;
-  const exchangeRateByKey = new Map<string, Promise<number | null>>();
-  const equityAggregation = createPeriodOverviewEquityAggregation();
-  let realizedGainLoss = 0;
-  let unrealizedGainLoss = 0;
-
-  if (!selection.isBeforeAccountBookStart) {
-    await accumulateEquityMetrics({
-      baseData,
-      referenceCurrency,
-      exchangeRateByKey,
-      aggregation: equityAggregation,
-    });
-
-    const holdingGainLossSplit = await loadHoldingGainLossSplit({
-      baseData,
-      referenceCurrency,
-      exchangeRateByKey,
-    });
-    realizedGainLoss += holdingGainLossSplit.realizedGainLoss;
-    unrealizedGainLoss += holdingGainLossSplit.unrealizedGainLoss;
-
-    const transferClearingGainLossSplit =
-      await loadTransferClearingGainLossSplit({
-        baseData,
-        referenceCurrency,
-        exchangeRateByKey,
-      });
-    realizedGainLoss += transferClearingGainLossSplit.realizedGainLoss;
-    unrealizedGainLoss += transferClearingGainLossSplit.unrealizedGainLoss;
+  if (selection.isBeforeAccountBookStart) {
+    return {
+      totalReturn: 0,
+      savings: 0,
+      income: 0,
+      expenses: 0,
+      gainsLosses: 0,
+    } satisfies PeriodTimelinePointMetrics;
   }
 
+  const referenceCurrency = baseData.referenceCurrency;
+  const exchangeRateByKey = new Map<string, Promise<number | null>>();
+  const equityAggregation = createPeriodOverviewEquityAggregation();
+  const gainsLossesContributionByKey = new Map<
+    string,
+    GainLossContributionAccumulator
+  >();
+
+  await processPeriodEquityBookingsFromBaseData({
+    equityBookings: baseData.equityBookings,
+    explicitCounterparts: baseData.explicitCounterparts,
+    equityAggregation,
+    gainsLossesContributionByKey,
+    convertBookingToReference: (booking) =>
+      convertBookingValueToReference({
+        ...booking,
+        referenceCurrency,
+        exchangeRateByKey,
+      }),
+  });
+
+  const transferClearingHoldingAccounts = baseData.transferClearingUnitBuckets
+    .filter((bucket) => bucket.isNonReferenceUnit)
+    .map((bucket) => ({
+      id: `virtual:transfer-clearing:account:${bucket.unitKey}`,
+      unit: bucket.unit,
+      currency: bucket.currency,
+      cryptocurrency: bucket.cryptocurrency,
+      symbol: bucket.symbol,
+      tradeCurrency: bucket.tradeCurrency,
+    }));
+
+  const assetLiabilityAccountNameById = new Map(
+    baseData.baseAssetLiabilityAccounts.map((account) => [
+      account.id,
+      account.name,
+    ]),
+  );
+  for (const bucket of baseData.transferClearingUnitBuckets) {
+    if (!bucket.isNonReferenceUnit) {
+      continue;
+    }
+    assetLiabilityAccountNameById.set(
+      `virtual:transfer-clearing:account:${bucket.unitKey}`,
+      bucket.unitLabel,
+    );
+  }
+
+  const holdingGainLossTotals = await computePeriodHoldingGainLoss({
+    accountBookId: args.accountBookId,
+    periodStart: selection.from,
+    periodEndExclusive: selection.queryEndExclusive,
+    periodEnd: selection.to,
+    initialHoldingDate: selection.initialHoldingDate,
+    referenceCurrency,
+    transactionPageSize: TRANSACTIONS_PAGE_SIZE,
+    transferClearingBatchSize: TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE,
+    holdingAccounts: baseData.holdingAccountsResolved,
+    transferClearingHoldingAccounts,
+    transferClearingUnitBuckets: baseData.transferClearingUnitBuckets,
+    assetLiabilityAccountNameById,
+    gainsLossesContributionByKey,
+    resolveRate: (input) =>
+      getUnitToReferenceExchangeRate({
+        ...input,
+        referenceCurrency,
+        exchangeRateByKey,
+      }),
+    convertBookingToReference: (booking) =>
+      convertBookingValueToReference({
+        ...booking,
+        referenceCurrency,
+        exchangeRateByKey,
+      }),
+    initialHoldingBalances: baseData.initialHoldingBalances,
+    holdingTransactions: baseData.holdingTransactions,
+  });
+
   const { income, expenses, explicitGainLoss } = equityAggregation;
-  const effectiveRealizedGainLoss = selection.isBeforeAccountBookStart
-    ? 0
-    : explicitGainLoss + realizedGainLoss;
-  const effectiveUnrealizedGainLoss = selection.isBeforeAccountBookStart
-    ? 0
-    : unrealizedGainLoss;
-  const gainsLosses = effectiveRealizedGainLoss + effectiveUnrealizedGainLoss;
+  const gainsLosses =
+    explicitGainLoss +
+    holdingGainLossTotals.realizedGainLoss +
+    holdingGainLossTotals.unrealizedGainLoss;
 
   const roundedIncome = round2(income);
   const roundedExpenses = round2(expenses);
