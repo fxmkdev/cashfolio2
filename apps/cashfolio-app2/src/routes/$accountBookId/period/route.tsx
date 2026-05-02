@@ -1,8 +1,14 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { getGainLossEquityAccountId } from "@/server/accounts";
+import { getOpeningBalanceNetWorthForPeriod } from "@/server/period-opening-balance-net-worth";
 import { getPeriodOverview } from "@/server/period";
 import { formatMonthPeriodValue } from "@/shared/period";
+import {
+  buildNetWorthReconciliationModel,
+  getPreviousPeriodValue,
+  type NetWorthReconciliationModel,
+} from "./-net-worth-reconciliation";
 import { hasExplicitGainLossGroup } from "./-gains-losses-explicit";
 import {
   DEFAULT_PERIOD_VALUE,
@@ -36,8 +42,51 @@ export const Route = createFileRoute("/$accountBookId/period")({
           },
         })
       : null;
+    const selectedExplicitPeriodValue =
+      overview.selectedGranularity === "month" && overview.selectedMonth != null
+        ? formatMonthPeriodValue(overview.selectedYear, overview.selectedMonth)
+        : String(overview.selectedYear).padStart(4, "0");
 
-    return { overview, gainLossEquityAccountId };
+    const minBookingDate = new Date(overview.minBookingDate);
+    const previousPeriodValue = getPreviousPeriodValue({
+      selectedGranularity: overview.selectedGranularity,
+      selectedYear: overview.selectedYear,
+      selectedMonth: overview.selectedMonth,
+      minBookingDate,
+    });
+
+    let netWorthReconciliation: NetWorthReconciliationModel;
+    if (previousPeriodValue) {
+      const previousOverview = await getPeriodOverview({
+        data: {
+          accountBookId,
+          period: previousPeriodValue,
+        },
+      });
+
+      netWorthReconciliation = buildNetWorthReconciliationModel({
+        baselineNetWorth: previousOverview.stats.endOfPeriodNetWorth,
+        baselineSource: "previous-period",
+        currentNetWorth: overview.stats.endOfPeriodNetWorth,
+        totalReturn: overview.stats.totalReturn,
+      });
+    } else {
+      const openingBalance = await getOpeningBalanceNetWorthForPeriod({
+        data: {
+          accountBookId,
+          period: selectedExplicitPeriodValue,
+        },
+      });
+
+      netWorthReconciliation = buildNetWorthReconciliationModel({
+        baselineNetWorth: openingBalance.openingBalanceNetWorth,
+        baselineSource: "opening-balance",
+        currentNetWorth: overview.stats.endOfPeriodNetWorth,
+        totalReturn: overview.stats.totalReturn,
+      });
+    }
+
+    return { overview, gainLossEquityAccountId, netWorthReconciliation };
   },
   component: PeriodLayout,
 });
@@ -50,7 +99,8 @@ export function PeriodPageContent() {
   const { accountBookId } = Route.useParams();
   const search = Route.useSearch();
   const selectedPeriodValue = getPeriodValue(search);
-  const { overview, gainLossEquityAccountId } = Route.useLoaderData();
+  const { overview, gainLossEquityAccountId, netWorthReconciliation } =
+    Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/period" });
   const explicitLedgerPeriodValue =
     overview.selectedGranularity === "month" && overview.selectedMonth != null
@@ -63,6 +113,7 @@ export function PeriodPageContent() {
         accountBookId={accountBookId}
         overview={overview}
         selectedPeriodValue={selectedPeriodValue}
+        netWorthReconciliation={netWorthReconciliation}
         onPeriodChange={(nextPeriodValue) =>
           navigate({
             search: (previousSearch) => ({

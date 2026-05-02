@@ -178,3 +178,9 @@ When `skippedBookingsCount > 0`, the period page shows a top-level partial-data
 warning. This warning explicitly states strict `totalReturn == netWorth delta`
 checks may be incomplete for the selected period due to unavailable valuation
 data.
+
+The period page also shows a net-worth reconciliation warning when
+`endOfPeriodNetWorth` does not match `baselineNetWorth + totalReturn` at cent
+precision. The baseline uses the previous period's end net worth when available,
+and falls back to opening-balance net worth derived from balances strictly
+before the current period start.
