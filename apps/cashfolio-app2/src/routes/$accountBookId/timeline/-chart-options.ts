@@ -1,5 +1,5 @@
 import type { MantineTheme } from "@mantine/core";
-import type { AgCartesianChartOptions } from "ag-charts-community";
+import type { AgCartesianChartOptions, AgZoomEvent } from "ag-charts-community";
 import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import {
   getExplicitPeriodDateRange,
@@ -26,12 +26,83 @@ export type TimelineChartDatum = {
   income: number;
   expenses: number;
   gainsLosses: number;
+  cumulativeMetric: number;
 };
+
+export type TimelineVisibleRange = {
+  start?: Date | string | number;
+  end?: Date | string | number;
+};
+
+function toRangeBoundaryTimestamp(
+  value: TimelineVisibleRange["start"],
+): number | null {
+  if (value == null) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  return null;
+}
+
+function getMetricValue(datum: TimelineChartDatum, metric: TimelineMetric): number {
+  return datum[metric] ?? 0;
+}
+
+export function rebaseTimelineChartDataCumulativeToVisibleRange(args: {
+  chartData: TimelineChartDatum[];
+  visibleRangeX: TimelineVisibleRange | null;
+  selectedMetric: TimelineMetric;
+}): TimelineChartDatum[] {
+  if (args.chartData.length === 0) {
+    return [];
+  }
+
+  const rangeStart = toRangeBoundaryTimestamp(args.visibleRangeX?.start);
+  const rangeEnd = toRangeBoundaryTimestamp(args.visibleRangeX?.end);
+  const firstVisibleIndex = args.chartData.findIndex((datum) => {
+    const periodStartTimestamp = datum.periodStart.getTime();
+    const periodEndExclusiveTimestamp = datum.periodEndExclusive.getTime();
+    const isAfterStart =
+      rangeStart == null || periodEndExclusiveTimestamp > rangeStart;
+    const isBeforeEnd = rangeEnd == null || periodStartTimestamp <= rangeEnd;
+    return isAfterStart && isBeforeEnd;
+  });
+  const rebaseStartIndex = firstVisibleIndex >= 0 ? firstVisibleIndex : 0;
+
+  let cumulativeMetric = 0;
+  return args.chartData.map((datum, index) => {
+    if (index < rebaseStartIndex) {
+      return {
+        ...datum,
+        cumulativeMetric: 0,
+      };
+    }
+
+    cumulativeMetric += getMetricValue(datum, args.selectedMetric);
+    return {
+      ...datum,
+      cumulativeMetric,
+    };
+  });
+}
 
 export function mapTimelinePointsToChartData(
   points: PeriodTimelineResponse["points"],
 ): TimelineChartDatum[] {
-  return points.flatMap((point) => {
+  const chartDataWithoutCumulative = points.flatMap((point) => {
     const explicitPeriod = parseExplicitPeriodSelection(point.periodValue);
     if (!explicitPeriod) {
       return [];
@@ -50,8 +121,15 @@ export function mapTimelinePointsToChartData(
         income: point.income,
         expenses: point.expenses,
         gainsLosses: point.gainsLosses,
+        cumulativeMetric: 0,
       },
     ];
+  });
+
+  return rebaseTimelineChartDataCumulativeToVisibleRange({
+    chartData: chartDataWithoutCumulative,
+    visibleRangeX: null,
+    selectedMetric: "totalReturn",
   });
 }
 
@@ -64,6 +142,7 @@ export function createTimelineChartOptions(args: {
   colors: DashboardChartThemeColors;
   theme: MantineTheme;
   isDarkMode: boolean;
+  onZoom?: (event: AgZoomEvent) => void;
 }): AgCartesianChartOptions {
   const positiveFillColor = args.isDarkMode
     ? args.theme.colors.green[5]
@@ -83,6 +162,7 @@ export function createTimelineChartOptions(args: {
   const rangeControlStyles = getTimelineRangeControlStyles(args);
   const selectedMetricLabel = getTimelineMetricLabel(args.selectedMetric);
   const selectedMetricKey = args.selectedMetric;
+  const cumulativeMetricLabel = `Cumulative ${selectedMetricLabel}`;
   const unitTimeAxisUnit =
     args.periodMode === "year"
       ? { unit: "year" as const, utc: true }
@@ -105,7 +185,7 @@ export function createTimelineChartOptions(args: {
       },
     },
     legend: {
-      enabled: false,
+      enabled: true,
     },
     navigator: {
       enabled: true,
@@ -118,6 +198,11 @@ export function createTimelineChartOptions(args: {
       buttons: rangeButtons,
       ...rangeControlStyles,
     },
+    listeners: args.onZoom
+      ? {
+          zoom: args.onZoom,
+        }
+      : undefined,
     series: [
       {
         type: "bar",
@@ -155,9 +240,40 @@ export function createTimelineChartOptions(args: {
               data: [
                 {
                   label: selectedMetricLabel,
-                  value: args.currencyFormatter.format(
-                    point[selectedMetricKey],
-                  ),
+                  value: args.currencyFormatter.format(point[selectedMetricKey]),
+                },
+              ],
+            };
+          },
+        },
+      },
+      {
+        type: "line",
+        xKey: "periodStart",
+        yKey: "cumulativeMetric",
+        yName: cumulativeMetricLabel,
+        stroke: args.isDarkMode
+          ? args.theme.colors.blue[2]
+          : args.theme.colors.blue[7],
+        strokeWidth: 3,
+        marker: {
+          size: 6,
+          fill: args.isDarkMode
+            ? args.theme.colors.blue[1]
+            : args.theme.colors.blue[6],
+          stroke: args.isDarkMode
+            ? args.theme.colors.blue[2]
+            : args.theme.colors.blue[7],
+        },
+        tooltip: {
+          renderer: ({ datum }) => {
+            const point = datum as TimelineChartDatum;
+            return {
+              heading: point.periodLabel,
+              data: [
+                {
+                  label: cumulativeMetricLabel,
+                  value: args.currencyFormatter.format(point.cumulativeMetric),
                 },
               ],
             };
