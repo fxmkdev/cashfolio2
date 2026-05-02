@@ -1,6 +1,6 @@
 import { AccountType } from "../.prisma-client/enums";
 import { prisma } from "../prisma.server";
-import { getOpeningBalancesBookingDate } from "../shared/date";
+import { getOpeningBalancesBookingDate, startOfUtcDay } from "../shared/date";
 import { computeEndOfPeriodBalanceStats } from "./period-balance-stats";
 import { round2 } from "./period-helpers";
 import { convertBookingValueToReference } from "./period-conversion";
@@ -22,51 +22,50 @@ export async function loadTimelineOpeningBalancePoint(args: {
   accountBookStartDate: Date;
   referenceCurrency: string;
 }): Promise<TimelineOpeningBalancePoint> {
-  const openingBalanceDate = getOpeningBalancesBookingDate(
-    args.accountBookStartDate,
-  );
+  const accountBookStartDate = startOfUtcDay(args.accountBookStartDate);
+  const openingBalanceDate =
+    getOpeningBalancesBookingDate(accountBookStartDate);
 
-  const [baseAssetLiabilityAccounts, endOfPeriodRawBalancesGrouped] =
-    await Promise.all([
-      prisma.account.findMany({
-        where: {
-          accountBookId: args.accountBookId,
-          type: {
-            in: [AccountType.ASSET, AccountType.LIABILITY],
-          },
-        },
-        select: {
-          id: true,
-          type: true,
-          unit: true,
-          currency: true,
-          cryptocurrency: true,
-          symbol: true,
-          tradeCurrency: true,
-        },
-      }),
-      prisma.booking.groupBy({
-        by: ["accountId"],
-        where: {
-          accountBookId: args.accountBookId,
-          account: {
-            type: {
-              in: [AccountType.ASSET, AccountType.LIABILITY],
+  const baseAssetLiabilityAccounts = await prisma.account.findMany({
+    where: {
+      accountBookId: args.accountBookId,
+      type: {
+        in: [AccountType.ASSET, AccountType.LIABILITY],
+      },
+    },
+    select: {
+      id: true,
+      type: true,
+      unit: true,
+      currency: true,
+      cryptocurrency: true,
+      symbol: true,
+      tradeCurrency: true,
+    },
+  });
+  const baseAssetLiabilityAccountIds = baseAssetLiabilityAccounts.map(
+    (account) => account.id,
+  );
+  const endOfPeriodRawBalancesGrouped =
+    baseAssetLiabilityAccountIds.length > 0
+      ? await prisma.booking.groupBy({
+          by: ["accountId"],
+          where: {
+            accountBookId: args.accountBookId,
+            accountId: { in: baseAssetLiabilityAccountIds },
+            date: {
+              lt: accountBookStartDate,
             },
           },
-          date: {
-            lt: args.accountBookStartDate,
+          _sum: {
+            value: true,
           },
-        },
-        _sum: {
-          value: true,
-        },
-      }),
-    ]);
+        })
+      : [];
 
   const transferClearingUnitBuckets = await loadTransferClearingUnitBuckets({
     accountBookId: args.accountBookId,
-    periodEndExclusive: args.accountBookStartDate,
+    periodEndExclusive: accountBookStartDate,
     referenceCurrency: args.referenceCurrency,
   });
 
