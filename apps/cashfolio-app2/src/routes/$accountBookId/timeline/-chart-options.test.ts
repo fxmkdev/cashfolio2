@@ -189,6 +189,43 @@ describe("rebaseTimelineChartDataCumulativeToVisibleRange", () => {
     ]);
   });
 
+  test("falls back to full-range cumulative values when range is invalid", () => {
+    const chartData = mapTimelinePointsToChartData([
+      {
+        periodValue: "2026-01",
+        periodLabel: "January 2026",
+        totalReturn: 5,
+        savings: 2,
+        income: 8,
+        expenses: 6,
+        gainsLosses: 3,
+      },
+      {
+        periodValue: "2026-02",
+        periodLabel: "February 2026",
+        totalReturn: 7,
+        savings: 1,
+        income: 7,
+        expenses: 6,
+        gainsLosses: 6,
+      },
+    ]);
+
+    expect(
+      rebaseTimelineChartDataCumulativeToVisibleRange({
+        chartData,
+        visibleRangeX: {
+          start: "not-a-date",
+          end: undefined,
+        },
+        selectedMetric: "savings",
+      }),
+    ).toEqual([
+      expect.objectContaining({ periodValue: "2026-01", cumulativeMetric: 2 }),
+      expect.objectContaining({ periodValue: "2026-02", cumulativeMetric: 3 }),
+    ]);
+  });
+
   test("treats partially overlapping periods as visible when rebasing", () => {
     const chartData = mapTimelinePointsToChartData([
       {
