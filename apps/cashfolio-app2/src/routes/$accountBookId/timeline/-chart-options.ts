@@ -57,7 +57,10 @@ function toRangeBoundaryTimestamp(
   return null;
 }
 
-function getMetricValue(datum: TimelineChartDatum, metric: TimelineMetric): number {
+function getMetricValue(
+  datum: TimelineChartDatum,
+  metric: TimelineMetric,
+): number {
   return datum[metric] ?? 0;
 }
 
@@ -240,7 +243,9 @@ export function createTimelineChartOptions(args: {
               data: [
                 {
                   label: selectedMetricLabel,
-                  value: args.currencyFormatter.format(point[selectedMetricKey]),
+                  value: args.currencyFormatter.format(
+                    point[selectedMetricKey],
+                  ),
                 },
               ],
             };

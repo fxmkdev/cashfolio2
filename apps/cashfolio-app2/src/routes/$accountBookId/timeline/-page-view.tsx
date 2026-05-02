@@ -141,11 +141,10 @@ export function TimelinePageView({
     [selectedMode],
   );
 
-  const handleChartZoom = useCallback(
-    (event: AgZoomEvent) => {
-      const nextRange = event.rangeX
-        ? { start: event.rangeX.start, end: event.rangeX.end }
-        : null;
+  const handleChartZoom = useCallback((event: AgZoomEvent) => {
+    const nextRange = event.rangeX
+      ? { start: event.rangeX.start, end: event.rangeX.end }
+      : null;
 
     setVisibleRangeX((previousRange) => {
       const previousStart = previousRange?.start?.valueOf();
