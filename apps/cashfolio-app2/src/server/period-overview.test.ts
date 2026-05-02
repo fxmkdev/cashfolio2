@@ -2041,7 +2041,7 @@ describe("getPeriodOverview", () => {
     expect(result.gainsLossesBreakdown.hierarchy).toEqual([]);
   });
 
-  it("batches explicit counterpart account resolution per equity bookings page", async () => {
+  it("batches explicit counterpart account resolution across explicit transactions in the period", async () => {
     vi.setSystemTime(new Date("2026-02-10T10:00:00.000Z"));
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
       referenceCurrency: "CHF",

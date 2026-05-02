@@ -172,9 +172,9 @@ export async function processPeriodEquityBookings(args: {
       const bookingAccount =
         booking.account ?? equityAccountById.get(booking.accountId);
       if (!bookingAccount) {
-        skippedCount += 1;
-        convertedCount -= 1;
-        continue;
+        throw new Error(
+          `Equity booking invariant violated for account ${booking.accountId}: missing preloaded equity account metadata.`,
+        );
       }
       accumulateConvertedEquityBooking({
         booking: {
