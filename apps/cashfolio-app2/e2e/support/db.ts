@@ -42,10 +42,12 @@ function assertSafeWriteTarget() {
   }
 }
 
+assertSafeWriteTarget();
+
 export async function resetDatabase(): Promise<void> {
   assertSafeWriteTarget();
 
-  await prisma.$executeRawUnsafe(`
+  await prisma.$executeRaw`
     TRUNCATE TABLE
       "Booking",
       "Transaction",
@@ -55,7 +57,7 @@ export async function resetDatabase(): Promise<void> {
       "AccountBook",
       "User"
     RESTART IDENTITY CASCADE
-  `);
+  `;
 }
 
 export type SeededData = {
