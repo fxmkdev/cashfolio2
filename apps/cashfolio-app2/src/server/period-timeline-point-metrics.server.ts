@@ -1,6 +1,10 @@
 import { round2 } from "./period-helpers";
 import { moneyAdd, moneySum, toMoneyNumber } from "../shared/money";
 import {
+  computeEndOfPeriodBalanceStats,
+  type EndOfPeriodBalanceStats,
+} from "./period-balance-stats";
+import {
   convertBookingValueToReference,
   getUnitToReferenceExchangeRate,
 } from "./period-conversion";
@@ -11,6 +15,9 @@ import {
 import { computePeriodHoldingGainLoss } from "./period-holding-gain-loss";
 import { processPeriodEquityBookingsFromBaseData } from "./period-equity-bookings";
 import { createPeriodOverviewEquityAggregation } from "./period-overview-aggregation";
+import {
+  buildTransferClearingVirtualHierarchy,
+} from "./period-transfer-clearing";
 import type { GainLossContributionAccumulator } from "./period-gains-losses-contributions";
 
 const TRANSACTIONS_PAGE_SIZE = 200;
@@ -22,7 +29,59 @@ export type PeriodTimelinePointMetrics = {
   income: number;
   expenses: number;
   gainsLosses: number;
+  assets: number;
+  liabilities: number;
+  netWorth: number;
 };
+
+function buildTransferClearingHoldingAccounts(args: {
+  transferClearingUnitBuckets: PeriodBaseData["transferClearingUnitBuckets"];
+}) {
+  return args.transferClearingUnitBuckets
+    .filter((bucket) => bucket.isNonReferenceUnit)
+    .map((bucket) => ({
+      id: `virtual:transfer-clearing:account:${bucket.unitKey}`,
+      unit: bucket.unit,
+      currency: bucket.currency,
+      cryptocurrency: bucket.cryptocurrency,
+      symbol: bucket.symbol,
+      tradeCurrency: bucket.tradeCurrency,
+    }));
+}
+
+async function loadEndOfPeriodBalanceStats(args: {
+  baseData: PeriodBaseData;
+  referenceCurrency: string;
+  exchangeRateByKey: Map<string, Promise<number | null>>;
+}): Promise<EndOfPeriodBalanceStats> {
+  const endOfPeriodRawBalanceByAccountId = new Map(
+    args.baseData.endOfPeriodRawBalances.map((balance) => [
+      balance.accountId,
+      balance.rawBalance,
+    ]),
+  );
+
+  const { virtualAccounts, rawBalanceByVirtualAccountId } =
+    buildTransferClearingVirtualHierarchy({
+      unitBuckets: args.baseData.transferClearingUnitBuckets,
+    });
+
+  for (const [accountId, rawBalance] of rawBalanceByVirtualAccountId) {
+    endOfPeriodRawBalanceByAccountId.set(accountId, rawBalance);
+  }
+
+  return computeEndOfPeriodBalanceStats({
+    accounts: [...args.baseData.baseAssetLiabilityAccounts, ...virtualAccounts],
+    rawBalanceByAccountId: endOfPeriodRawBalanceByAccountId,
+    periodEnd: args.baseData.selection.to,
+    referenceCurrency: args.referenceCurrency,
+    convertBalanceToReference: (input) =>
+      convertBookingValueToReference({
+        ...input,
+        exchangeRateByKey: args.exchangeRateByKey,
+      }),
+  });
+}
 
 export async function loadPeriodTimelinePointMetrics(args: {
   accountBookId: string;
@@ -44,6 +103,9 @@ export async function loadPeriodTimelinePointMetrics(args: {
       income: 0,
       expenses: 0,
       gainsLosses: 0,
+      assets: 0,
+      liabilities: 0,
+      netWorth: 0,
     } satisfies PeriodTimelinePointMetrics;
   }
 
@@ -68,16 +130,9 @@ export async function loadPeriodTimelinePointMetrics(args: {
       }),
   });
 
-  const transferClearingHoldingAccounts = baseData.transferClearingUnitBuckets
-    .filter((bucket) => bucket.isNonReferenceUnit)
-    .map((bucket) => ({
-      id: `virtual:transfer-clearing:account:${bucket.unitKey}`,
-      unit: bucket.unit,
-      currency: bucket.currency,
-      cryptocurrency: bucket.cryptocurrency,
-      symbol: bucket.symbol,
-      tradeCurrency: bucket.tradeCurrency,
-    }));
+  const transferClearingHoldingAccounts = buildTransferClearingHoldingAccounts({
+    transferClearingUnitBuckets: baseData.transferClearingUnitBuckets,
+  });
 
   const assetLiabilityAccountNameById = new Map(
     baseData.baseAssetLiabilityAccounts.map((account) => [
@@ -95,35 +150,42 @@ export async function loadPeriodTimelinePointMetrics(args: {
     );
   }
 
-  const holdingGainLossTotals = await computePeriodHoldingGainLoss({
-    accountBookId: args.accountBookId,
-    periodStart: selection.from,
-    periodEndExclusive: selection.queryEndExclusive,
-    periodEnd: selection.to,
-    initialHoldingDate: selection.initialHoldingDate,
-    referenceCurrency,
-    transactionPageSize: TRANSACTIONS_PAGE_SIZE,
-    transferClearingBatchSize: TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE,
-    holdingAccounts: baseData.holdingAccountsResolved,
-    transferClearingHoldingAccounts,
-    transferClearingUnitBuckets: baseData.transferClearingUnitBuckets,
-    assetLiabilityAccountNameById,
-    gainsLossesContributionByKey,
-    resolveRate: (input) =>
-      getUnitToReferenceExchangeRate({
-        ...input,
-        referenceCurrency,
-        exchangeRateByKey,
-      }),
-    convertBookingToReference: (booking) =>
-      convertBookingValueToReference({
-        ...booking,
-        referenceCurrency,
-        exchangeRateByKey,
-      }),
-    initialHoldingBalances: baseData.initialHoldingBalances,
-    holdingTransactions: baseData.holdingTransactions,
-  });
+  const [holdingGainLossTotals, endOfPeriodBalanceStats] = await Promise.all([
+    computePeriodHoldingGainLoss({
+      accountBookId: args.accountBookId,
+      periodStart: selection.from,
+      periodEndExclusive: selection.queryEndExclusive,
+      periodEnd: selection.to,
+      initialHoldingDate: selection.initialHoldingDate,
+      referenceCurrency,
+      transactionPageSize: TRANSACTIONS_PAGE_SIZE,
+      transferClearingBatchSize: TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE,
+      holdingAccounts: baseData.holdingAccountsResolved,
+      transferClearingHoldingAccounts,
+      transferClearingUnitBuckets: baseData.transferClearingUnitBuckets,
+      assetLiabilityAccountNameById,
+      gainsLossesContributionByKey,
+      resolveRate: (input) =>
+        getUnitToReferenceExchangeRate({
+          ...input,
+          referenceCurrency,
+          exchangeRateByKey,
+        }),
+      convertBookingToReference: (booking) =>
+        convertBookingValueToReference({
+          ...booking,
+          referenceCurrency,
+          exchangeRateByKey,
+        }),
+      initialHoldingBalances: baseData.initialHoldingBalances,
+      holdingTransactions: baseData.holdingTransactions,
+    }),
+    loadEndOfPeriodBalanceStats({
+      baseData,
+      referenceCurrency,
+      exchangeRateByKey,
+    }),
+  ]);
 
   const { income, expenses, explicitGainLoss } = equityAggregation;
   const gainsLosses = toMoneyNumber(
@@ -143,6 +205,9 @@ export async function loadPeriodTimelinePointMetrics(args: {
   const roundedTotalReturn = round2(
     toMoneyNumber(moneyAdd(roundedSavings, roundedGainsLosses)),
   );
+  const roundedAssets = round2(endOfPeriodBalanceStats.assets);
+  const roundedLiabilities = round2(endOfPeriodBalanceStats.liabilities);
+  const roundedNetWorth = round2(endOfPeriodBalanceStats.netWorth);
 
   return {
     totalReturn: roundedTotalReturn,
@@ -150,5 +215,8 @@ export async function loadPeriodTimelinePointMetrics(args: {
     income: roundedIncome,
     expenses: roundedExpenses,
     gainsLosses: roundedGainsLosses,
+    assets: roundedAssets,
+    liabilities: roundedLiabilities,
+    netWorth: roundedNetWorth,
   } satisfies PeriodTimelinePointMetrics;
 }

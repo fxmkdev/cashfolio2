@@ -26,6 +26,11 @@ export type TimelineChartDatum = {
   income: number;
   expenses: number;
   gainsLosses: number;
+  assets: number;
+  liabilities: number;
+  netWorth: number;
+  netWorthPositive: number | null;
+  netWorthNegative: number | null;
   cumulativeMetric: number;
 };
 
@@ -33,6 +38,16 @@ export type TimelineVisibleRange = {
   start?: Date | string | number;
   end?: Date | string | number;
 };
+
+const AREA_TIMELINE_METRICS = ["assets", "liabilities", "netWorth"] as const;
+type AreaTimelineMetric = (typeof AREA_TIMELINE_METRICS)[number];
+type BarTimelineMetric = Exclude<TimelineMetric, AreaTimelineMetric>;
+
+function isAreaTimelineMetric(
+  metric: TimelineMetric,
+): metric is AreaTimelineMetric {
+  return (AREA_TIMELINE_METRICS as readonly string[]).includes(metric);
+}
 
 function toRangeBoundaryTimestamp(
   value: TimelineVisibleRange["start"],
@@ -62,6 +77,30 @@ function getMetricValue(
   metric: TimelineMetric,
 ): number {
   return datum[metric] ?? 0;
+}
+
+function getAxisDomainForMetric(args: {
+  chartData: TimelineChartDatum[];
+  selectedMetric: TimelineMetric;
+}): { min?: number; max?: number } {
+  const values = args.chartData
+    .map((datum) => getMetricValue(datum, args.selectedMetric))
+    .filter((value) => Number.isFinite(value));
+
+  if (values.length === 0) {
+    return {};
+  }
+
+  let min = Math.min(0, ...values);
+  let max = Math.max(0, ...values);
+
+  if (min === max) {
+    const padding = min === 0 ? 1 : Math.max(1, Math.abs(min) * 0.05);
+    min -= padding;
+    max += padding;
+  }
+
+  return { min, max };
 }
 
 export function rebaseTimelineChartDataCumulativeToVisibleRange(args: {
@@ -124,6 +163,11 @@ export function mapTimelinePointsToChartData(
         income: point.income,
         expenses: point.expenses,
         gainsLosses: point.gainsLosses,
+        assets: point.assets,
+        liabilities: point.liabilities,
+        netWorth: point.netWorth,
+        netWorthPositive: point.netWorth > 0 ? point.netWorth : null,
+        netWorthNegative: point.netWorth < 0 ? point.netWorth : null,
         cumulativeMetric: 0,
       },
     ];
@@ -160,10 +204,187 @@ export function createTimelineChartOptions(args: {
   const selectedMetricLabel = getTimelineMetricLabel(args.selectedMetric);
   const selectedMetricKey = args.selectedMetric;
   const cumulativeMetricLabel = `Cumulative ${selectedMetricLabel}`;
+  const axisDomain = getAxisDomainForMetric({
+    chartData: args.chartData,
+    selectedMetric: selectedMetricKey,
+  });
   const unitTimeAxisUnit =
     args.periodMode === "year"
       ? { unit: "year" as const, utc: true }
       : { unit: "month" as const, utc: true };
+
+  const series = isAreaTimelineMetric(selectedMetricKey)
+    ? selectedMetricKey === "netWorth"
+      ? [
+          {
+            type: "area" as const,
+            xKey: "periodStart",
+            yKey: "netWorthPositive",
+            yName: selectedMetricLabel,
+            stroke: positiveFillColor,
+            fill: positiveFillColor,
+            fillOpacity: 0.4,
+            marker: {
+              enabled: false,
+            },
+            tooltip: {
+              renderer: ({ datum }: { datum: unknown }) => {
+                const point = datum as TimelineChartDatum;
+                return {
+                  heading: point.periodLabel,
+                  data: [
+                    {
+                      label: selectedMetricLabel,
+                      value: args.currencyFormatter.format(point.netWorth),
+                    },
+                  ],
+                };
+              },
+            },
+          },
+          {
+            type: "area" as const,
+            xKey: "periodStart",
+            yKey: "netWorthNegative",
+            yName: selectedMetricLabel,
+            stroke: negativeFillColor,
+            fill: negativeFillColor,
+            fillOpacity: 0.4,
+            marker: {
+              enabled: false,
+            },
+            tooltip: {
+              renderer: ({ datum }: { datum: unknown }) => {
+                const point = datum as TimelineChartDatum;
+                return {
+                  heading: point.periodLabel,
+                  data: [
+                    {
+                      label: selectedMetricLabel,
+                      value: args.currencyFormatter.format(point.netWorth),
+                    },
+                  ],
+                };
+              },
+            },
+          },
+        ]
+      : [
+          {
+            type: "area" as const,
+            xKey: "periodStart",
+            yKey: selectedMetricKey,
+            yName: selectedMetricLabel,
+            stroke:
+              selectedMetricKey === "assets"
+                ? positiveFillColor
+                : negativeFillColor,
+            fill:
+              selectedMetricKey === "assets"
+                ? positiveFillColor
+                : negativeFillColor,
+            fillOpacity: 0.4,
+            marker: {
+              enabled: false,
+            },
+            tooltip: {
+              renderer: ({ datum }: { datum: unknown }) => {
+                const point = datum as TimelineChartDatum;
+                return {
+                  heading: point.periodLabel,
+                  data: [
+                    {
+                      label: selectedMetricLabel,
+                      value: args.currencyFormatter.format(
+                        point[selectedMetricKey],
+                      ),
+                    },
+                  ],
+                };
+              },
+            },
+          },
+        ]
+    : [
+        {
+          type: "bar" as const,
+          xKey: "periodStart",
+          yKey: selectedMetricKey as BarTimelineMetric,
+          yName: selectedMetricLabel,
+          widthRatio: 0.72,
+          itemStyler: ({ datum }: { datum: unknown }) => {
+            if (args.selectedMetric === "expenses") {
+              return {
+                fill: negativeFillColor,
+                stroke: negativeFillColor,
+              };
+            }
+
+            const metricValue =
+              (datum as TimelineChartDatum)[selectedMetricKey] ?? 0;
+            const fill =
+              metricValue > 0
+                ? positiveFillColor
+                : metricValue < 0
+                  ? negativeFillColor
+                  : neutralFillColor;
+
+            return {
+              fill,
+              stroke: fill,
+            };
+          },
+          tooltip: {
+            renderer: ({ datum }: { datum: unknown }) => {
+              const point = datum as TimelineChartDatum;
+              return {
+                heading: point.periodLabel,
+                data: [
+                  {
+                    label: selectedMetricLabel,
+                    value: args.currencyFormatter.format(
+                      point[selectedMetricKey],
+                    ),
+                  },
+                ],
+              };
+            },
+          },
+        },
+        {
+          type: "line" as const,
+          xKey: "periodStart",
+          yKey: "cumulativeMetric",
+          yName: cumulativeMetricLabel,
+          stroke: args.isDarkMode
+            ? args.theme.colors.blue[2]
+            : args.theme.colors.blue[7],
+          strokeWidth: 3,
+          marker: {
+            size: 6,
+            fill: args.isDarkMode
+              ? args.theme.colors.blue[1]
+              : args.theme.colors.blue[6],
+            stroke: args.isDarkMode
+              ? args.theme.colors.blue[2]
+              : args.theme.colors.blue[7],
+          },
+          tooltip: {
+            renderer: ({ datum }: { datum: unknown }) => {
+              const point = datum as TimelineChartDatum;
+              return {
+                heading: point.periodLabel,
+                data: [
+                  {
+                    label: cumulativeMetricLabel,
+                    value: args.currencyFormatter.format(point.cumulativeMetric),
+                  },
+                ],
+              };
+            },
+          },
+        },
+      ];
 
   return {
     data: args.chartData,
@@ -200,86 +421,7 @@ export function createTimelineChartOptions(args: {
           zoom: args.onZoom,
         }
       : undefined,
-    series: [
-      {
-        type: "bar",
-        xKey: "periodStart",
-        yKey: selectedMetricKey,
-        yName: selectedMetricLabel,
-        widthRatio: 0.72,
-        itemStyler: ({ datum }) => {
-          if (args.selectedMetric === "expenses") {
-            return {
-              fill: negativeFillColor,
-              stroke: negativeFillColor,
-            };
-          }
-
-          const metricValue =
-            (datum as TimelineChartDatum)[selectedMetricKey] ?? 0;
-          const fill =
-            metricValue > 0
-              ? positiveFillColor
-              : metricValue < 0
-                ? negativeFillColor
-                : neutralFillColor;
-
-          return {
-            fill,
-            stroke: fill,
-          };
-        },
-        tooltip: {
-          renderer: ({ datum }) => {
-            const point = datum as TimelineChartDatum;
-            return {
-              heading: point.periodLabel,
-              data: [
-                {
-                  label: selectedMetricLabel,
-                  value: args.currencyFormatter.format(
-                    point[selectedMetricKey],
-                  ),
-                },
-              ],
-            };
-          },
-        },
-      },
-      {
-        type: "line",
-        xKey: "periodStart",
-        yKey: "cumulativeMetric",
-        yName: cumulativeMetricLabel,
-        stroke: args.isDarkMode
-          ? args.theme.colors.blue[2]
-          : args.theme.colors.blue[7],
-        strokeWidth: 3,
-        marker: {
-          size: 6,
-          fill: args.isDarkMode
-            ? args.theme.colors.blue[1]
-            : args.theme.colors.blue[6],
-          stroke: args.isDarkMode
-            ? args.theme.colors.blue[2]
-            : args.theme.colors.blue[7],
-        },
-        tooltip: {
-          renderer: ({ datum }) => {
-            const point = datum as TimelineChartDatum;
-            return {
-              heading: point.periodLabel,
-              data: [
-                {
-                  label: cumulativeMetricLabel,
-                  value: args.currencyFormatter.format(point.cumulativeMetric),
-                },
-              ],
-            };
-          },
-        },
-      },
-    ],
+    series,
     axes: {
       x: {
         type: "unit-time",
@@ -305,6 +447,8 @@ export function createTimelineChartOptions(args: {
       },
       y: {
         type: "number",
+        min: axisDomain.min,
+        max: axisDomain.max,
         label: {
           formatter: ({ value }) =>
             args.amountCompactFormatter.format(Number(value)),

@@ -94,6 +94,9 @@ describe("getPeriodTimeline", () => {
         income: period.length + 2,
         expenses: period.length + 3,
         gainsLosses: period.length + 4,
+        assets: period.length + 5,
+        liabilities: period.length + 6,
+        netWorth: period.length + 7,
       }),
     );
   });
@@ -156,6 +159,9 @@ describe("getPeriodTimeline", () => {
           income: 9,
           expenses: 10,
           gainsLosses: 11,
+          assets: 12,
+          liabilities: 13,
+          netWorth: 14,
         },
         {
           periodValue: "2026-02",
@@ -165,6 +171,9 @@ describe("getPeriodTimeline", () => {
           income: 9,
           expenses: 10,
           gainsLosses: 11,
+          assets: 12,
+          liabilities: 13,
+          netWorth: 14,
         },
         {
           periodValue: "2026-03",
@@ -174,6 +183,9 @@ describe("getPeriodTimeline", () => {
           income: 9,
           expenses: 10,
           gainsLosses: 11,
+          assets: 12,
+          liabilities: 13,
+          netWorth: 14,
         },
       ],
     });

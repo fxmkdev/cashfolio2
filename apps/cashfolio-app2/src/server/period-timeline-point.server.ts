@@ -42,6 +42,9 @@ export async function loadPeriodTimelinePoint(args: {
       income: 0,
       expenses: 0,
       gainsLosses: 0,
+      assets: 0,
+      liabilities: 0,
+      netWorth: 0,
     };
   }
 

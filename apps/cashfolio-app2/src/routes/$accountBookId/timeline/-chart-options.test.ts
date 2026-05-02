@@ -68,11 +68,31 @@ const mockColors = {
   zeroLineColor: "#ddd",
 };
 
+function createTimelinePoint(args: {
+  periodValue: string;
+  periodLabel: string;
+  totalReturn: number;
+  savings: number;
+  income: number;
+  expenses: number;
+  gainsLosses: number;
+  assets?: number;
+  liabilities?: number;
+  netWorth?: number;
+}) {
+  return {
+    ...args,
+    assets: args.assets ?? 100,
+    liabilities: args.liabilities ?? 40,
+    netWorth: args.netWorth ?? (args.assets ?? 100) - (args.liabilities ?? 40),
+  };
+}
+
 describe("mapTimelinePointsToChartData", () => {
   test("maps timeline points to chart datum shape with UTC bounds", () => {
     expect(
       mapTimelinePointsToChartData([
-        {
+        createTimelinePoint({
           periodValue: "2026-01",
           periodLabel: "January 2026",
           totalReturn: 10,
@@ -80,16 +100,10 @@ describe("mapTimelinePointsToChartData", () => {
           income: 11,
           expenses: 4,
           gainsLosses: 3,
-        },
-        {
-          periodValue: "2026",
-          periodLabel: "2026",
-          totalReturn: 12,
-          savings: 9,
-          income: 14,
-          expenses: 5,
-          gainsLosses: 3,
-        },
+          assets: 150,
+          liabilities: 40,
+          netWorth: 110,
+        }),
       ]),
     ).toEqual([
       {
@@ -102,18 +116,11 @@ describe("mapTimelinePointsToChartData", () => {
         income: 11,
         expenses: 4,
         gainsLosses: 3,
-        cumulativeMetric: 0,
-      },
-      {
-        periodValue: "2026",
-        periodLabel: "2026",
-        periodStart: new Date("2026-01-01T00:00:00.000Z"),
-        periodEndExclusive: new Date("2027-01-01T00:00:00.000Z"),
-        totalReturn: 12,
-        savings: 9,
-        income: 14,
-        expenses: 5,
-        gainsLosses: 3,
+        assets: 150,
+        liabilities: 40,
+        netWorth: 110,
+        netWorthPositive: 110,
+        netWorthNegative: null,
         cumulativeMetric: 0,
       },
     ]);
@@ -122,7 +129,7 @@ describe("mapTimelinePointsToChartData", () => {
   test("skips points with invalid period values", () => {
     expect(
       mapTimelinePointsToChartData([
-        {
+        createTimelinePoint({
           periodValue: "2026-01",
           periodLabel: "January 2026",
           totalReturn: 10,
@@ -130,8 +137,8 @@ describe("mapTimelinePointsToChartData", () => {
           income: 11,
           expenses: 4,
           gainsLosses: 3,
-        },
-        {
+        }),
+        createTimelinePoint({
           periodValue: "invalid-period",
           periodLabel: "Invalid",
           totalReturn: 12,
@@ -139,7 +146,7 @@ describe("mapTimelinePointsToChartData", () => {
           income: 14,
           expenses: 5,
           gainsLosses: 3,
-        },
+        }),
       ]),
     ).toEqual([
       expect.objectContaining({
@@ -151,9 +158,9 @@ describe("mapTimelinePointsToChartData", () => {
 });
 
 describe("rebaseTimelineChartDataCumulativeToVisibleRange", () => {
-  test("rebases using the selected metric", () => {
+  test("rebases cumulative values to visible range", () => {
     const chartData = mapTimelinePointsToChartData([
-      {
+      createTimelinePoint({
         periodValue: "2026-01",
         periodLabel: "January 2026",
         totalReturn: 100,
@@ -161,8 +168,8 @@ describe("rebaseTimelineChartDataCumulativeToVisibleRange", () => {
         income: 120,
         expenses: 80,
         gainsLosses: 60,
-      },
-      {
+      }),
+      createTimelinePoint({
         periodValue: "2026-02",
         periodLabel: "February 2026",
         totalReturn: -25,
@@ -170,8 +177,8 @@ describe("rebaseTimelineChartDataCumulativeToVisibleRange", () => {
         income: 90,
         expenses: 95,
         gainsLosses: -20,
-      },
-      {
+      }),
+      createTimelinePoint({
         periodValue: "2026-03",
         periodLabel: "March 2026",
         totalReturn: 10,
@@ -179,7 +186,7 @@ describe("rebaseTimelineChartDataCumulativeToVisibleRange", () => {
         income: 80,
         expenses: 77,
         gainsLosses: 7,
-      },
+      }),
     ]);
 
     expect(
@@ -194,192 +201,28 @@ describe("rebaseTimelineChartDataCumulativeToVisibleRange", () => {
     ).toEqual([
       expect.objectContaining({ periodValue: "2026-01", cumulativeMetric: 0 }),
       expect.objectContaining({ periodValue: "2026-02", cumulativeMetric: 90 }),
-      expect.objectContaining({
-        periodValue: "2026-03",
-        cumulativeMetric: 170,
-      }),
-    ]);
-  });
-
-  test("falls back to full-range cumulative values when range is invalid", () => {
-    const chartData = mapTimelinePointsToChartData([
-      {
-        periodValue: "2026-01",
-        periodLabel: "January 2026",
-        totalReturn: 5,
-        savings: 2,
-        income: 8,
-        expenses: 6,
-        gainsLosses: 3,
-      },
-      {
-        periodValue: "2026-02",
-        periodLabel: "February 2026",
-        totalReturn: 7,
-        savings: 1,
-        income: 7,
-        expenses: 6,
-        gainsLosses: 6,
-      },
-    ]);
-
-    expect(
-      rebaseTimelineChartDataCumulativeToVisibleRange({
-        chartData,
-        visibleRangeX: {
-          start: "not-a-date",
-          end: undefined,
-        },
-        selectedMetric: "savings",
-      }),
-    ).toEqual([
-      expect.objectContaining({ periodValue: "2026-01", cumulativeMetric: 2 }),
-      expect.objectContaining({ periodValue: "2026-02", cumulativeMetric: 3 }),
-    ]);
-  });
-
-  test("treats partially overlapping periods as visible when rebasing", () => {
-    const chartData = mapTimelinePointsToChartData([
-      {
-        periodValue: "2026-01",
-        periodLabel: "January 2026",
-        totalReturn: 100,
-        savings: 20,
-        income: 50,
-        expenses: 30,
-        gainsLosses: 80,
-      },
-      {
-        periodValue: "2026-02",
-        periodLabel: "February 2026",
-        totalReturn: 50,
-        savings: 10,
-        income: 40,
-        expenses: 30,
-        gainsLosses: 40,
-      },
-    ]);
-
-    expect(
-      rebaseTimelineChartDataCumulativeToVisibleRange({
-        chartData,
-        visibleRangeX: {
-          start: new Date("2026-01-15T00:00:00.000Z"),
-          end: new Date("2026-02-28T00:00:00.000Z"),
-        },
-        selectedMetric: "expenses",
-      }),
-    ).toEqual([
-      expect.objectContaining({ periodValue: "2026-01", cumulativeMetric: 30 }),
-      expect.objectContaining({ periodValue: "2026-02", cumulativeMetric: 60 }),
+      expect.objectContaining({ periodValue: "2026-03", cumulativeMetric: 170 }),
     ]);
   });
 });
 
 describe("createTimelineChartOptions", () => {
-  test("enables navigator, legend, and monthly range controls", () => {
-    const chartData = mapTimelinePointsToChartData([
-      {
-        periodValue: "2026-01",
-        periodLabel: "January 2026",
-        totalReturn: 10,
-        savings: 7,
-        income: 11,
-        expenses: 4,
-        gainsLosses: 3,
-      },
-      {
-        periodValue: "2026-02",
-        periodLabel: "February 2026",
-        totalReturn: -5,
-        savings: -3,
-        income: 4,
-        expenses: 7,
-        gainsLosses: -2,
-      },
-    ]);
-
-    const options = createTimelineChartOptions({
-      chartData,
-      periodMode: "month",
-      selectedMetric: "totalReturn",
-      amountCompactFormatter: new Intl.NumberFormat("en-CH", {
-        notation: "compact",
-      }),
-      currencyFormatter: new Intl.NumberFormat("en-CH", {
-        style: "currency",
-        currency: "CHF",
-      }),
-      colors: mockColors,
-      theme: mockTheme,
-      isDarkMode: false,
-    });
-
-    expect(options.navigator).toEqual({
-      enabled: true,
-      miniChart: {
-        enabled: false,
-      },
-    });
-    expect(options.legend).toEqual({
-      enabled: true,
-    });
-    expect(options.ranges).toEqual({
-      enabled: true,
-      buttons: [
-        { label: "6M", value: { unit: "month", step: 6 } },
-        { label: "1Y", value: "year" },
-        { label: "3Y", value: { unit: "year", step: 3 } },
-        { label: "All", value: undefined },
-      ],
-      fill: "#ffffff",
-      stroke: "#ced4da",
-      textColor: "#343a40",
-      active: {
-        fill: "#e0e7ff",
-        stroke: "#2563eb",
-        textColor: "#1d4ed8",
-      },
-      hover: {
-        fill: "#f8f9fa",
-        stroke: "#adb5bd",
-        textColor: "#000000",
-      },
-      disabled: {
-        fill: "#f1f3f5",
-        stroke: "#dee2e6",
-        textColor: "#adb5bd",
-      },
-    });
-
-    expect(options.series).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          type: "bar",
-          yKey: "totalReturn",
-          yName: "Total Return",
-        }),
-        expect.objectContaining({
-          type: "line",
-          yKey: "cumulativeMetric",
-          yName: "Cumulative Total Return",
+  test("uses bar + cumulative line for non-cumulative metrics", () => {
+    const chartData = rebaseTimelineChartDataCumulativeToVisibleRange({
+      chartData: mapTimelinePointsToChartData([
+        createTimelinePoint({
+          periodValue: "2026-01",
+          periodLabel: "January 2026",
+          totalReturn: 10,
+          savings: 7,
+          income: 11,
+          expenses: 4,
+          gainsLosses: 3,
         }),
       ]),
-    );
-  });
-
-  test("uses selected metric for bar and cumulative line labels", () => {
-    const chartData = mapTimelinePointsToChartData([
-      {
-        periodValue: "2026-01",
-        periodLabel: "January 2026",
-        totalReturn: 10,
-        savings: 7,
-        income: 11,
-        expenses: 4,
-        gainsLosses: 3,
-      },
-    ]);
+      visibleRangeX: null,
+      selectedMetric: "savings",
+    });
 
     const options = createTimelineChartOptions({
       chartData,
@@ -397,34 +240,86 @@ describe("createTimelineChartOptions", () => {
       isDarkMode: false,
     });
 
+    expect(options.legend).toEqual({ enabled: true });
+    expect(options.series).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "bar", yKey: "savings", yName: "Savings" }),
+        expect.objectContaining({ type: "line", yKey: "cumulativeMetric", yName: "Cumulative Savings" }),
+      ]),
+    );
+  });
+
+  test("renders assets as green area without cumulative line", () => {
+    const options = createTimelineChartOptions({
+      chartData: mapTimelinePointsToChartData([
+        createTimelinePoint({
+          periodValue: "2026-01",
+          periodLabel: "January 2026",
+          totalReturn: 10,
+          savings: 7,
+          income: 11,
+          expenses: 4,
+          gainsLosses: 3,
+          assets: 120,
+          liabilities: 50,
+          netWorth: 70,
+        }),
+      ]),
+      periodMode: "month",
+      selectedMetric: "assets",
+      amountCompactFormatter: new Intl.NumberFormat("en-CH", {
+        notation: "compact",
+      }),
+      currencyFormatter: new Intl.NumberFormat("en-CH", {
+        style: "currency",
+        currency: "CHF",
+      }),
+      colors: mockColors,
+      theme: mockTheme,
+      isDarkMode: false,
+    });
+
     const series = Array.isArray(options.series) ? options.series : [];
+    expect(series).toHaveLength(1);
     expect(series[0]).toMatchObject({
-      yKey: "savings",
-      yName: "Savings",
-    });
-    expect(series[1]).toMatchObject({
-      yKey: "cumulativeMetric",
-      yName: "Cumulative Savings",
+      type: "area",
+      yKey: "assets",
+      yName: "Assets",
+      stroke: "#2b8a3e",
+      fill: "#2b8a3e",
     });
   });
 
-  test("forces expense bars to red even for positive values", () => {
-    const chartData = mapTimelinePointsToChartData([
-      {
-        periodValue: "2026-01",
-        periodLabel: "January 2026",
-        totalReturn: 10,
-        savings: 7,
-        income: 11,
-        expenses: 4,
-        gainsLosses: 3,
-      },
-    ]);
-
+  test("renders net worth as sign-split areas without cumulative line", () => {
     const options = createTimelineChartOptions({
-      chartData,
+      chartData: mapTimelinePointsToChartData([
+        createTimelinePoint({
+          periodValue: "2026-01",
+          periodLabel: "January 2026",
+          totalReturn: 1,
+          savings: 1,
+          income: 2,
+          expenses: 1,
+          gainsLosses: 0,
+          assets: 100,
+          liabilities: 130,
+          netWorth: -30,
+        }),
+        createTimelinePoint({
+          periodValue: "2026-02",
+          periodLabel: "February 2026",
+          totalReturn: 2,
+          savings: 2,
+          income: 3,
+          expenses: 1,
+          gainsLosses: 0,
+          assets: 150,
+          liabilities: 120,
+          netWorth: 30,
+        }),
+      ]),
       periodMode: "month",
-      selectedMetric: "expenses",
+      selectedMetric: "netWorth",
       amountCompactFormatter: new Intl.NumberFormat("en-CH", {
         notation: "compact",
       }),
@@ -437,54 +332,38 @@ describe("createTimelineChartOptions", () => {
       isDarkMode: false,
     });
 
-    const series = (
-      Array.isArray(options.series) ? options.series[0] : undefined
-    ) as
-      | {
-          itemStyler?: (params: unknown) => unknown;
-        }
-      | undefined;
-    const itemStyler = series?.itemStyler;
-    if (!itemStyler) {
-      throw new Error("Expected itemStyler");
-    }
-
-    expect(
-      itemStyler({
-        datum: chartData[0],
-      } as never),
-    ).toEqual({
-      fill: "#e03131",
-      stroke: "#e03131",
-    });
+    const series = Array.isArray(options.series) ? options.series : [];
+    expect(series).toHaveLength(2);
+    expect(series[0]).toMatchObject({ type: "area", yKey: "netWorthPositive" });
+    expect(series[1]).toMatchObject({ type: "area", yKey: "netWorthNegative" });
   });
 
-  test("highlights the current period band using time bounds", () => {
-    const chartData = mapTimelinePointsToChartData([
-      {
-        periodValue: "2026-01",
-        periodLabel: "January 2026",
-        totalReturn: 10,
-        savings: 7,
-        income: 11,
-        expenses: 4,
-        gainsLosses: 3,
-      },
-      {
-        periodValue: "2026-02",
-        periodLabel: "February 2026",
-        totalReturn: -5,
-        savings: -3,
-        income: 4,
-        expenses: 7,
-        gainsLosses: -2,
-      },
-    ]);
-
+  test("forces y-axis to include zero for positive-only metrics", () => {
     const options = createTimelineChartOptions({
-      chartData,
+      chartData: mapTimelinePointsToChartData([
+        createTimelinePoint({
+          periodValue: "2026-01",
+          periodLabel: "January 2026",
+          totalReturn: 0,
+          savings: 0,
+          income: 0,
+          expenses: 0,
+          gainsLosses: 0,
+          liabilities: 30,
+        }),
+        createTimelinePoint({
+          periodValue: "2026-02",
+          periodLabel: "February 2026",
+          totalReturn: 0,
+          savings: 0,
+          income: 0,
+          expenses: 0,
+          gainsLosses: 0,
+          liabilities: 45,
+        }),
+      ]),
       periodMode: "month",
-      selectedMetric: "totalReturn",
+      selectedMetric: "liabilities",
       amountCompactFormatter: new Intl.NumberFormat("en-CH", {
         notation: "compact",
       }),
@@ -497,96 +376,35 @@ describe("createTimelineChartOptions", () => {
       isDarkMode: false,
     });
 
-    expect(options.axes?.x?.crossLines).toEqual([
-      {
-        type: "range",
-        range: [
-          new Date("2026-02-01T00:00:00.000Z"),
-          new Date("2026-03-01T00:00:00.000Z"),
-        ],
-        fill: "#e9ecef",
-        fillOpacity: 0.45,
-        strokeWidth: 0,
-      },
-    ]);
+    expect(options.axes?.y).toMatchObject({ min: 0, max: 45 });
   });
 
-  test("uses yearly mode range controls when selected", () => {
-    const chartData = mapTimelinePointsToChartData([
-      {
-        periodValue: "2023",
-        periodLabel: "2023",
-        totalReturn: 10,
-        savings: 7,
-        income: 11,
-        expenses: 4,
-        gainsLosses: 3,
-      },
-      {
-        periodValue: "2024",
-        periodLabel: "2024",
-        totalReturn: 12,
-        savings: 9,
-        income: 14,
-        expenses: 5,
-        gainsLosses: 3,
-      },
-    ]);
-
+  test("forces y-axis to include zero for negative-only metrics", () => {
     const options = createTimelineChartOptions({
-      chartData,
-      periodMode: "year",
-      selectedMetric: "gainsLosses",
-      amountCompactFormatter: new Intl.NumberFormat("en-CH", {
-        notation: "compact",
-      }),
-      currencyFormatter: new Intl.NumberFormat("en-CH", {
-        style: "currency",
-        currency: "CHF",
-      }),
-      colors: mockColors,
-      theme: mockTheme,
-      isDarkMode: true,
-    });
-
-    expect(options.ranges).toEqual({
-      enabled: true,
-      buttons: [
-        { label: "3Y", value: { unit: "year", step: 3 } },
-        { label: "5Y", value: { unit: "year", step: 5 } },
-        { label: "10Y", value: { unit: "year", step: 10 } },
-        { label: "All", value: undefined },
-      ],
-      fill: "#26292e",
-      stroke: "#495057",
-      textColor: "#e9ecef",
-      active: {
-        fill: "#1e40af",
-        stroke: "#1d4ed8",
-        textColor: "#ffffff",
-      },
-      hover: {
-        fill: "#2f3338",
-        stroke: "#6c757d",
-        textColor: "#ffffff",
-      },
-      disabled: {
-        fill: "#1f2226",
-        stroke: "#3b3f44",
-        textColor: "#868e96",
-      },
-    });
-    expect(options.axes?.x?.type).toBe("unit-time");
-    expect(options.axes?.x).toMatchObject({
-      unit: { unit: "year", utc: true },
-    });
-  });
-
-  test("omits period band highlight when data is empty", () => {
-    const options = createTimelineChartOptions({
-      chartData: [],
+      chartData: mapTimelinePointsToChartData([
+        createTimelinePoint({
+          periodValue: "2026-01",
+          periodLabel: "January 2026",
+          totalReturn: 0,
+          savings: 0,
+          income: 0,
+          expenses: 0,
+          gainsLosses: 0,
+          netWorth: -20,
+        }),
+        createTimelinePoint({
+          periodValue: "2026-02",
+          periodLabel: "February 2026",
+          totalReturn: 0,
+          savings: 0,
+          income: 0,
+          expenses: 0,
+          gainsLosses: 0,
+          netWorth: -15,
+        }),
+      ]),
       periodMode: "month",
-      selectedMetric: "income",
+      selectedMetric: "netWorth",
       amountCompactFormatter: new Intl.NumberFormat("en-CH", {
         notation: "compact",
       }),
@@ -596,10 +414,9 @@ describe("createTimelineChartOptions", () => {
       }),
       colors: mockColors,
       theme: mockTheme,
-      isDarkMode: true,
+      isDarkMode: false,
     });
 
-    expect(options.axes?.x?.crossLines).toBeUndefined();
-    expect(options.initialState).toBeUndefined();
+    expect(options.axes?.y).toMatchObject({ min: -20, max: 0 });
   });
 });

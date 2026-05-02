@@ -12,6 +12,9 @@ export type PeriodTimelinePoint = {
   income: number;
   expenses: number;
   gainsLosses: number;
+  assets: number;
+  liabilities: number;
+  netWorth: number;
 };
 
 export type PeriodTimelineResponse = {
@@ -127,6 +130,9 @@ export const getPeriodTimeline = createServerFn({
         income: point.income,
         expenses: point.expenses,
         gainsLosses: point.gainsLosses,
+        assets: point.assets,
+        liabilities: point.liabilities,
+        netWorth: point.netWorth,
       });
     }
 

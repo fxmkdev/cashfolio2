@@ -138,6 +138,9 @@ describe("loadPeriodTimelinePoint", () => {
       income: 50,
       expenses: 40,
       gainsLosses: 32,
+      assets: 140,
+      liabilities: 60,
+      netWorth: 80,
     });
   });
 
@@ -163,6 +166,9 @@ describe("loadPeriodTimelinePoint", () => {
       income: 0,
       expenses: 0,
       gainsLosses: 0,
+      assets: 0,
+      liabilities: 0,
+      netWorth: 0,
     });
     expect(getOrLoadPeriodBaseData).not.toHaveBeenCalled();
     expect(loadPeriodTimelinePointMetrics).not.toHaveBeenCalled();
@@ -198,6 +204,9 @@ describe("loadPeriodTimelinePoint", () => {
       income: 50,
       expenses: 40,
       gainsLosses: 32,
+      assets: 140,
+      liabilities: 60,
+      netWorth: 80,
     });
   });
 
