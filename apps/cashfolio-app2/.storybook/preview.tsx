@@ -49,13 +49,18 @@ const preview: Preview = {
       const accountBookIndexRoute = createRoute({
         getParentRoute: () => accountBookRoute,
         path: "/",
-        component: () => (
-          <Navigate
-            to="/$accountBookId/accounts"
-            search={{ tab: "ASSET", mode: "active" }}
-            replace
-          />
-        ),
+        component: () => {
+          const { accountBookId } = accountBookRoute.useParams();
+
+          return (
+            <Navigate
+              to="/$accountBookId/accounts"
+              params={{ accountBookId }}
+              search={{ tab: "ASSET", mode: "active" }}
+              replace
+            />
+          );
+        },
       });
 
       const accountBookAccountsRoute = createRoute({

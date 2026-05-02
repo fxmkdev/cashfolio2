@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { getActiveSection } from "./route";
+import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
+import { getAccountsLinkSearch, getActiveSection } from "./route";
 
 describe("getActiveSection", () => {
   it("marks accounts section as active for accounts, ledger, and chart paths", () => {
@@ -53,5 +54,54 @@ describe("getActiveSection", () => {
         accountBookId: "book-1",
       }),
     ).toBe("valuation-cache");
+  });
+});
+
+describe("getAccountsLinkSearch", () => {
+  it("preserves explicit accounts search context when tab/mode are in the URL", () => {
+    expect(
+      getAccountsLinkSearch({
+        locationSearch: { tab: "LIABILITY", mode: "archived" },
+        matches: [],
+      }),
+    ).toEqual({
+      tab: "LIABILITY",
+      mode: "archived",
+    });
+  });
+
+  it("derives accounts tab/mode from current ledger match when URL search has no accounts context", () => {
+    expect(
+      getAccountsLinkSearch({
+        locationSearch: {},
+        matches: [
+          {
+            routeId: "/$accountBookId/$accountId",
+            loaderData: {
+              account: {
+                type: AccountType.EQUITY,
+                equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+                isActive: false,
+              },
+            },
+          },
+        ],
+      }),
+    ).toEqual({
+      tab: "EQUITY-EXPENSE",
+      mode: "archived",
+    });
+  });
+
+  it("falls back to default accounts context when no valid context is available", () => {
+    expect(
+      getAccountsLinkSearch({
+        locationSearch: {},
+        matches: [],
+      }),
+    ).toEqual({
+      tab: "ASSET",
+      mode: "active",
+    });
   });
 });

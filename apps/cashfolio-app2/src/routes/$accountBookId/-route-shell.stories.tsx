@@ -30,6 +30,7 @@ function AccountBookShellSmokeHarness() {
     <AccountBookShell
       accountBookId={STORYBOOK_ACCOUNT_BOOK_ID}
       pathname={pathname}
+      accountsLinkSearch={{ tab: "ASSET", mode: "active" }}
     >
       <Box px="xl" py="xl">
         <Title order={2}>{getHeadingLabel(pathname)}</Title>
