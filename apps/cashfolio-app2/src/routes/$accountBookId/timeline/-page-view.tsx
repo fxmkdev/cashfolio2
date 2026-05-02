@@ -245,7 +245,13 @@ export function TimelinePageView({
   }, [accountBookId, selectedMode]);
 
   return (
-    <Container fluid py="xl" px="xl" className={classes.page}>
+    <Container
+      fluid
+      py="xl"
+      px="xl"
+      className={classes.page}
+      style={{ width: "100%", maxWidth: "none" }}
+    >
       <TopPageHeader
         heading={<Title order={2}>Timeline</Title>}
         actions={
