@@ -519,6 +519,7 @@ export function createTimelineChartOptions(args: {
       x: {
         type: useRegularTimeAxis ? ("time" as const) : ("unit-time" as const),
         unit: useRegularTimeAxis ? undefined : unitTimeAxisUnit,
+        nice: useRegularTimeAxis ? false : undefined,
         max: useRegularTimeAxis ? lastMetricDate : undefined,
         crossLines: currentPeriod
           ? [
