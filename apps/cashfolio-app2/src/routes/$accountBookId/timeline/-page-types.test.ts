@@ -28,10 +28,13 @@ describe("isTimelineMetric", () => {
     expect(isTimelineMetric("income")).toBe(true);
     expect(isTimelineMetric("expenses")).toBe(true);
     expect(isTimelineMetric("gainsLosses")).toBe(true);
+    expect(isTimelineMetric("assets")).toBe(true);
+    expect(isTimelineMetric("liabilities")).toBe(true);
+    expect(isTimelineMetric("netWorth")).toBe(true);
   });
 
   test("rejects unsupported values", () => {
-    expect(isTimelineMetric("netWorth")).toBe(false);
+    expect(isTimelineMetric("cashflow")).toBe(false);
     expect(isTimelineMetric(undefined)).toBe(false);
   });
 });
@@ -58,6 +61,15 @@ describe("parseTimelineSearch", () => {
     expect(parseTimelineSearch({ metric: "gainsLosses" })).toEqual({
       metric: "gainsLosses",
     });
+    expect(parseTimelineSearch({ metric: "assets" })).toEqual({
+      metric: "assets",
+    });
+    expect(parseTimelineSearch({ metric: "liabilities" })).toEqual({
+      metric: "liabilities",
+    });
+    expect(parseTimelineSearch({ metric: "netWorth" })).toEqual({
+      metric: "netWorth",
+    });
   });
 
   test("drops invalid mode values", () => {
@@ -70,7 +82,7 @@ describe("parseTimelineSearch", () => {
   });
 
   test("drops invalid metric values", () => {
-    expect(parseTimelineSearch({ metric: "netWorth" })).toEqual({
+    expect(parseTimelineSearch({ metric: "cashflow" })).toEqual({
       metric: undefined,
     });
   });

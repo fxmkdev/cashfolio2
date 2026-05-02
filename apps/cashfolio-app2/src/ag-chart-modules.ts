@@ -1,4 +1,5 @@
 import {
+  AreaSeriesModule,
   BarSeriesModule,
   CartesianChartModule,
   CategoryAxisModule,
@@ -22,6 +23,7 @@ let chartModulesRegistered = false;
 const CHART_MODULES = [
   CartesianChartModule,
   LegendModule,
+  AreaSeriesModule,
   BarSeriesModule,
   LineSeriesModule,
   CategoryAxisModule,

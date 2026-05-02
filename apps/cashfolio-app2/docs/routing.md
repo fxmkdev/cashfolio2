@@ -41,20 +41,22 @@ Related docs:
   gain/loss reconciliation page for unit-account drill-down (opened from
   Gains/Losses Breakdown leaf rows)
 - `$accountBookId/timeline/route.tsx` - timeline page showing monthly/yearly
-  metric history as a full-page bar + cumulative line chart (legend toggles each
-  series on/off)
-  - Includes a metric switcher (`totalReturn`, `savings`, `income`, `expenses`,
-    `gainsLosses`).
-  - Cumulative line rebases to the currently visible range so
-    navigator/range-button/zoom interactions update the running baseline for the
-    selected metric.
+  metric history as a full-page chart with metric-specific rendering:
+  - Flow metrics (`totalReturn`, `savings`, `income`, `expenses`, `gainsLosses`)
+    render as bar + cumulative line (legend toggles each series on/off)
+  - Balance metrics (`assets`, `liabilities`, `netWorth`) render as area charts:
+    assets (green), liabilities (red), net worth sign-split (green/red)
+  - Cumulative line rebases to the currently visible range for flow metrics so
+    navigator/range-button/zoom interactions update the running baseline.
   - Loader fetches only the currently selected granularity (`mode` search
     param), so refresh/direct navigation loads the requested view immediately
   - Viewport controls:
     - Uses AG Charts `navigator` + `ranges` controls.
-    - Uses `unit-time` x-axis in
-      `src/routes/$accountBookId/timeline/-chart-options.ts` so bar buckets
-      remain discrete by period (month/year) while range navigation still works.
+    - Uses mixed x-axis strategy in
+      `src/routes/$accountBookId/timeline/-chart-options.ts`:
+      - flow metrics use `unit-time` for discrete period buckets
+      - balance metrics use continuous `time` positioned at period-end dates
+        (with exact domain bounds via `nice: false`)
     - Default ranges are monthly `1Y` and yearly `5Y` (see
       `getDefaultRangeButtonLabel` in
       `src/routes/$accountBookId/timeline/-range-controls.ts`).
@@ -102,6 +104,7 @@ Related docs:
     - `$accountBookId/timeline/-page-types.ts`
     - `$accountBookId/timeline/-page-navigation.ts`
     - `$accountBookId/timeline/-range-controls.ts`
+    - `$accountBookId/timeline/-chart-data.ts`
     - `$accountBookId/timeline/-chart-options.ts`
     - `$accountBookId/timeline/-page-view.tsx`
 
@@ -124,7 +127,7 @@ Related docs:
 - `$accountBookId/timeline/route.tsx` uses:
   - `mode?: "month" | "year"` to select the timeline granularity (default:
     monthly)
-  - `metric?: "totalReturn" | "savings" | "income" | "expenses" | "gainsLosses"`
+  - `metric?: "totalReturn" | "savings" | "income" | "expenses" | "gainsLosses" | "assets" | "liabilities" | "netWorth"`
     to select the timeline metric (default: `totalReturn`)
 
 ### Global Navigation Progress

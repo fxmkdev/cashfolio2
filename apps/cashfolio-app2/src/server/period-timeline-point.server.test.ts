@@ -138,6 +138,9 @@ describe("loadPeriodTimelinePoint", () => {
       income: 50,
       expenses: 40,
       gainsLosses: 32,
+      assets: 140,
+      liabilities: 60,
+      netWorth: 80,
     });
   });
 
@@ -158,11 +161,15 @@ describe("loadPeriodTimelinePoint", () => {
 
     expect(result).toMatchObject({
       selectedPeriodValue: "2026-01",
+      selectedPeriodEnd: new Date("2026-01-09T00:00:00.000Z"),
       totalReturn: 0,
       savings: 0,
       income: 0,
       expenses: 0,
       gainsLosses: 0,
+      assets: 0,
+      liabilities: 0,
+      netWorth: 0,
     });
     expect(getOrLoadPeriodBaseData).not.toHaveBeenCalled();
     expect(loadPeriodTimelinePointMetrics).not.toHaveBeenCalled();
@@ -193,11 +200,15 @@ describe("loadPeriodTimelinePoint", () => {
     expect(result).toEqual({
       selectedPeriodValue: "2026-02",
       selectedPeriodLabel: "February 2026",
+      selectedPeriodEnd: new Date("2026-02-28T00:00:00.000Z"),
       totalReturn: 42,
       savings: 10,
       income: 50,
       expenses: 40,
       gainsLosses: 32,
+      assets: 140,
+      liabilities: 60,
+      netWorth: 80,
     });
   });
 

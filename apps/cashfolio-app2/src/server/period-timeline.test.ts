@@ -22,6 +22,7 @@ const createServerFn = vi.hoisted(() =>
 const ensureAuthorizedForAccountBookId = vi.hoisted(() => vi.fn());
 const loadPeriodTimelinePoint = vi.hoisted(() => vi.fn());
 const loadPeriodTimelinePointContext = vi.hoisted(() => vi.fn());
+const loadTimelineOpeningBalancePoint = vi.hoisted(() => vi.fn());
 
 vi.mock("@tanstack/react-start", () => ({
   createServerFn,
@@ -34,6 +35,10 @@ vi.mock("../account-books/functions.server", () => ({
 vi.mock("./period-timeline-point.server", () => ({
   loadPeriodTimelinePoint,
   loadPeriodTimelinePointContext,
+}));
+
+vi.mock("./period-timeline-opening-balance.server", () => ({
+  loadTimelineOpeningBalancePoint,
 }));
 
 import {
@@ -84,16 +89,32 @@ describe("getPeriodTimeline", () => {
       accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
       holdingAccountsResolved: [],
     });
+    loadTimelineOpeningBalancePoint.mockResolvedValue({
+      date: "2026-01-04T00:00:00.000Z",
+      label: "Opening Balance",
+      assets: 150,
+      liabilities: 40,
+      netWorth: 110,
+    });
 
     loadPeriodTimelinePoint.mockImplementation(
       async ({ period }: { period: string; accountBookId: string }) => ({
         selectedPeriodValue: period,
         selectedPeriodLabel: `Label ${period}`,
+        selectedPeriodEnd:
+          period === "2026-03"
+            ? new Date("2026-03-17T00:00:00.000Z")
+            : period === "2026-02"
+              ? new Date("2026-02-28T00:00:00.000Z")
+              : new Date("2026-01-31T00:00:00.000Z"),
         totalReturn: period.length,
         savings: period.length + 1,
         income: period.length + 2,
         expenses: period.length + 3,
         gainsLosses: period.length + 4,
+        assets: period.length + 5,
+        liabilities: period.length + 6,
+        netWorth: period.length + 7,
       }),
     );
   });
@@ -117,6 +138,12 @@ describe("getPeriodTimeline", () => {
     });
 
     expect(loadPeriodTimelinePoint).toHaveBeenCalledTimes(3);
+    expect(loadTimelineOpeningBalancePoint).toHaveBeenCalledTimes(1);
+    expect(loadTimelineOpeningBalancePoint).toHaveBeenCalledWith({
+      accountBookId: "book-1",
+      accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
+      referenceCurrency: "CHF",
+    });
     expect(loadPeriodTimelinePoint).toHaveBeenNthCalledWith(1, {
       accountBookId: "book-1",
       period: "2026-01",
@@ -147,33 +174,52 @@ describe("getPeriodTimeline", () => {
 
     expect(result).toEqual({
       referenceCurrency: "CHF",
+      openingBalancePoint: {
+        date: "2026-01-04T00:00:00.000Z",
+        label: "Opening Balance",
+        assets: 150,
+        liabilities: 40,
+        netWorth: 110,
+      },
       points: [
         {
           periodValue: "2026-01",
           periodLabel: "Label 2026-01",
+          periodEndDate: "2026-01-31T00:00:00.000Z",
           totalReturn: 7,
           savings: 8,
           income: 9,
           expenses: 10,
           gainsLosses: 11,
+          assets: 12,
+          liabilities: 13,
+          netWorth: 14,
         },
         {
           periodValue: "2026-02",
           periodLabel: "Label 2026-02",
+          periodEndDate: "2026-02-28T00:00:00.000Z",
           totalReturn: 7,
           savings: 8,
           income: 9,
           expenses: 10,
           gainsLosses: 11,
+          assets: 12,
+          liabilities: 13,
+          netWorth: 14,
         },
         {
           periodValue: "2026-03",
           periodLabel: "Label 2026-03",
+          periodEndDate: "2026-03-17T00:00:00.000Z",
           totalReturn: 7,
           savings: 8,
           income: 9,
           expenses: 10,
           gainsLosses: 11,
+          assets: 12,
+          liabilities: 13,
+          netWorth: 14,
         },
       ],
     });
@@ -192,6 +238,7 @@ describe("getPeriodTimeline", () => {
       accountBookId: "book-2",
     });
     expect(loadPeriodTimelinePoint).toHaveBeenCalledTimes(1);
+    expect(loadTimelineOpeningBalancePoint).toHaveBeenCalledTimes(1);
     expect(loadPeriodTimelinePoint).toHaveBeenCalledWith({
       accountBookId: "book-2",
       period: "2026",

@@ -16,15 +16,26 @@ describe("loadTimelinePageData", () => {
   test("loads timeline for the selected mode", async () => {
     mockedGetPeriodTimeline.mockResolvedValueOnce({
       referenceCurrency: "CHF",
+      openingBalancePoint: {
+        date: "2025-12-31T00:00:00.000Z",
+        label: "Opening Balance",
+        assets: 80,
+        liabilities: 20,
+        netWorth: 60,
+      },
       points: [
         {
           periodValue: "2026-01",
           periodLabel: "January 2026",
+          periodEndDate: "2026-01-31T00:00:00.000Z",
           totalReturn: 10,
           savings: 6,
           income: 12,
           expenses: 6,
           gainsLosses: 4,
+          assets: 100,
+          liabilities: 40,
+          netWorth: 60,
         },
       ],
     });
@@ -44,15 +55,26 @@ describe("loadTimelinePageData", () => {
     expect(result).toEqual({
       timeline: {
         referenceCurrency: "CHF",
+        openingBalancePoint: {
+          date: "2025-12-31T00:00:00.000Z",
+          label: "Opening Balance",
+          assets: 80,
+          liabilities: 20,
+          netWorth: 60,
+        },
         points: [
           {
             periodValue: "2026-01",
             periodLabel: "January 2026",
+            periodEndDate: "2026-01-31T00:00:00.000Z",
             totalReturn: 10,
             savings: 6,
             income: 12,
             expenses: 6,
             gainsLosses: 4,
+            assets: 100,
+            liabilities: 40,
+            netWorth: 60,
           },
         ],
       },

@@ -4,7 +4,10 @@ export type TimelineMetric =
   | "savings"
   | "income"
   | "expenses"
-  | "gainsLosses";
+  | "gainsLosses"
+  | "assets"
+  | "liabilities"
+  | "netWorth";
 
 export type TimelineSearch = {
   mode?: TimelinePeriodMode;
@@ -26,7 +29,10 @@ export function isTimelineMetric(value: unknown): value is TimelineMetric {
     value === "savings" ||
     value === "income" ||
     value === "expenses" ||
-    value === "gainsLosses"
+    value === "gainsLosses" ||
+    value === "assets" ||
+    value === "liabilities" ||
+    value === "netWorth"
   );
 }
 
@@ -39,6 +45,9 @@ export const TIMELINE_METRIC_OPTIONS: Array<{
   { value: "income", label: "Income" },
   { value: "expenses", label: "Expenses" },
   { value: "gainsLosses", label: "Gain/Loss" },
+  { value: "assets", label: "Assets" },
+  { value: "liabilities", label: "Liabilities" },
+  { value: "netWorth", label: "Net Worth" },
 ];
 
 export function getTimelineMetricLabel(metric: TimelineMetric): string {

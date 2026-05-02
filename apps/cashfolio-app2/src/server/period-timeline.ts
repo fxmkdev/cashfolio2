@@ -1,21 +1,29 @@
 import { createServerFn } from "@tanstack/react-start";
 import { formatMonthPeriodValue } from "../shared/period";
 import { startOfUtcDay } from "../shared/date";
+import type { TimelineOpeningBalancePoint } from "./period-timeline-opening-balance.server";
 
 export type PeriodTimelineGranularity = "month" | "year";
 
 export type PeriodTimelinePoint = {
   periodValue: string;
   periodLabel: string;
+  periodEndDate: string;
   totalReturn: number;
   savings: number;
   income: number;
   expenses: number;
   gainsLosses: number;
+  assets: number;
+  liabilities: number;
+  netWorth: number;
 };
+
+export type PeriodTimelineOpeningBalancePoint = TimelineOpeningBalancePoint;
 
 export type PeriodTimelineResponse = {
   referenceCurrency: string;
+  openingBalancePoint: PeriodTimelineOpeningBalancePoint;
   points: PeriodTimelinePoint[];
 };
 
@@ -100,10 +108,17 @@ export const getPeriodTimeline = createServerFn({
       await import("../account-books/functions.server");
     const { loadPeriodTimelinePoint, loadPeriodTimelinePointContext } =
       await import("./period-timeline-point.server");
+    const { loadTimelineOpeningBalancePoint } =
+      await import("./period-timeline-opening-balance.server");
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
     const context = await loadPeriodTimelinePointContext({
       accountBookId: data.accountBookId,
+    });
+    const openingBalancePoint = await loadTimelineOpeningBalancePoint({
+      accountBookId: data.accountBookId,
+      accountBookStartDate: context.accountBookStartDate,
+      referenceCurrency: context.referenceCurrency,
     });
 
     const periodValues = buildTimelinePeriodValues({
@@ -122,16 +137,21 @@ export const getPeriodTimeline = createServerFn({
       points.push({
         periodValue: point.selectedPeriodValue,
         periodLabel: point.selectedPeriodLabel,
+        periodEndDate: point.selectedPeriodEnd.toISOString(),
         totalReturn: point.totalReturn,
         savings: point.savings,
         income: point.income,
         expenses: point.expenses,
         gainsLosses: point.gainsLosses,
+        assets: point.assets,
+        liabilities: point.liabilities,
+        netWorth: point.netWorth,
       });
     }
 
     return {
       referenceCurrency: context.referenceCurrency,
+      openingBalancePoint,
       points,
     } satisfies PeriodTimelineResponse;
   });

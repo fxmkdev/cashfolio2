@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
+import { AccountType, Unit } from "../.prisma-client/enums";
 import type { PeriodBaseData } from "./period-base-data-cache";
 
 const getOrLoadPeriodBaseData = vi.hoisted(() => vi.fn());
@@ -29,8 +30,9 @@ import { loadPeriodTimelinePointMetrics } from "./period-timeline-point-metrics.
 function createBaseData(args?: {
   isBefore?: boolean;
   selection?: Partial<PeriodBaseData["selection"]>;
+  overrides?: Partial<PeriodBaseData>;
 }): PeriodBaseData {
-  return {
+  const baseData: PeriodBaseData = {
     accountBookId: "book-1",
     periodValue: "2026-02",
     referenceCurrency: "CHF",
@@ -59,6 +61,15 @@ function createBaseData(args?: {
     initialHoldingBalances: [],
     holdingTransactions: [],
   };
+
+  return {
+    ...baseData,
+    ...(args?.overrides ?? {}),
+    selection: {
+      ...baseData.selection,
+      ...(args?.overrides?.selection ?? {}),
+    },
+  };
 }
 
 describe("loadPeriodTimelinePointMetrics", () => {
@@ -78,6 +89,9 @@ describe("loadPeriodTimelinePointMetrics", () => {
       income: 0,
       expenses: 0,
       gainsLosses: 0,
+      assets: 0,
+      liabilities: 0,
+      netWorth: 0,
     });
     expect(processPeriodEquityBookingsFromBaseData).not.toHaveBeenCalled();
     expect(computePeriodHoldingGainLoss).not.toHaveBeenCalled();
@@ -132,6 +146,102 @@ describe("loadPeriodTimelinePointMetrics", () => {
       income: 120,
       expenses: 20,
       gainsLosses: 35,
+      assets: 0,
+      liabilities: 0,
+      netWorth: 0,
+    });
+  });
+
+  test("computes assets, liabilities, and net worth from end-of-period balances", async () => {
+    const baseData = createBaseData({
+      overrides: {
+        baseAssetLiabilityAccounts: [
+          {
+            id: "asset-1",
+            name: "Cash",
+            groupId: null,
+            type: AccountType.ASSET,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+          {
+            id: "liability-1",
+            name: "Credit Card",
+            groupId: null,
+            type: AccountType.LIABILITY,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ],
+        endOfPeriodRawBalances: [
+          { accountId: "asset-1", rawBalance: 200 },
+          { accountId: "liability-1", rawBalance: -70 },
+        ],
+        transferClearingUnitBuckets: [
+          {
+            unitKey: "currency:USD",
+            unitLabel: "USD",
+            unitType: "currency",
+            unit: Unit.CURRENCY,
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            isNonReferenceUnit: true,
+            rawBalance: -50,
+            bookings: [],
+          },
+        ],
+      },
+    });
+
+    getOrLoadPeriodBaseData.mockResolvedValue(baseData);
+    processPeriodEquityBookingsFromBaseData.mockImplementation(
+      async ({
+        equityAggregation,
+      }: {
+        equityAggregation: {
+          income: number;
+          expenses: number;
+          explicitGainLoss: number;
+        };
+      }) => {
+        equityAggregation.income = 0;
+        equityAggregation.expenses = 0;
+        equityAggregation.explicitGainLoss = 0;
+      },
+    );
+    computePeriodHoldingGainLoss.mockResolvedValue({
+      realizedGainLoss: 0,
+      unrealizedGainLoss: 0,
+      convertedCount: 0,
+      skippedCount: 0,
+    });
+    convertBookingValueToReference.mockImplementation(
+      async ({ value }: { value: number }) => value,
+    );
+    getUnitToReferenceExchangeRate.mockResolvedValue(1);
+
+    const result = await loadPeriodTimelinePointMetrics({
+      accountBookId: "book-1",
+      period: "2026-02",
+    });
+
+    expect(result).toEqual({
+      totalReturn: 0,
+      savings: 0,
+      income: 0,
+      expenses: 0,
+      gainsLosses: 0,
+      assets: 250,
+      liabilities: 70,
+      netWorth: 180,
     });
   });
 });
