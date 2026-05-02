@@ -128,7 +128,10 @@ test("period gains/losses table unit-account drilldown opens reconciliation page
     .first();
   await expect(realizedEventRow).toBeVisible();
   await realizedEventRow.hover();
-  await realizedEventRow
+  const realizedEventRowId = await realizedEventRow.getAttribute("row-id");
+  expect(realizedEventRowId).toBeTruthy();
+  await page
+    .locator(`.ag-row[row-id="${realizedEventRowId}"]`)
     .getByRole("button", { name: "Open in ledger" })
     .first()
     .click();
