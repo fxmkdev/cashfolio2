@@ -29,8 +29,8 @@ paths are relative to that app directory.
     on the accounts list)
 - Keep real `<Button onClick={...}>` controls for non-navigation actions only
   (submit, open modal, mutate data, etc.).
-- Exception: Mantine `Menu.Item` does not use `LinkButton`; route navigation
-  from menu entries may use an `onClick` handler that calls router navigation.
+- For Mantine `Menu.Item` navigation, use a TanStack link wrapper based on
+  `createLink(...)` so dropdown entries still render as real anchors.
 
 ## Shared Utilities (`src/shared/`)
 
