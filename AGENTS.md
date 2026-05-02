@@ -5,8 +5,7 @@ Guidance for coding agents and contributors working in this repository.
 This repository has multiple apps. This file includes:
 
 - repository-wide collaboration rules
-- app-specific conventions for `apps/cashfolio-app2` (the TanStack Start rewrite
-  of `cashfolio-app`)
+- app-specific conventions for `apps/cashfolio-app2`
 
 Unless explicitly stated otherwise, app-specific paths and conventions in this
 file and the linked docs are for `apps/cashfolio-app2`.
@@ -34,10 +33,6 @@ file and the linked docs are for `apps/cashfolio-app2`.
   otherwise.
 - After you address a pull request review comment, resolve that conversation in
   the PR.
-- `tools/importer` is deprecated and no longer maintained. Do not upgrade or
-  refactor it unless explicitly requested.
-- `apps/cashfolio-app` is deprecated and no longer maintained. Do not upgrade or
-  refactor it unless explicitly requested.
 - Keep `@types/node` aligned with the current runtime major (Node 24). Do not
   upgrade to Node 25+ typings until the runtime migration is planned.
 
@@ -48,7 +43,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution guidelines.
 - Shared workspace docs: `docs/`
 - App-specific architecture docs:
   - `apps/cashfolio-app2/docs/`
-  - `apps/cashfolio-app/docs/` (legacy app-local docs)
 
 ## Development Commands
 
