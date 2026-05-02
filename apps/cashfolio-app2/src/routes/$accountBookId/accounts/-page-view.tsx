@@ -13,6 +13,7 @@ import { LinkButton } from "@/components/link-button";
 import { LinkTab } from "@/components/link-tab";
 import { AccountPathHeading } from "@/components/account-path-heading";
 import { TopPageHeader } from "@/components/top-page-header";
+import type { UserAccountBookOption } from "@/server/home";
 import type { AccountGroupInitialValues } from "@/components/edit-account-group-modal";
 import {
   EditAccountGroupModal,
@@ -49,8 +50,7 @@ type RowTarget = {
 
 export type AccountsPageViewProps = {
   accountBookId: string;
-  accountBooks: AccountsPageLoaderData["accountBooks"];
-  currentAccountBookId: string;
+  accountBooks: UserAccountBookOption[];
   tab: TabValue;
   mode: AccountsMode;
   tabs: readonly { value: TabValue; label: string }[];
@@ -103,7 +103,6 @@ export type AccountsPageViewProps = {
 export function AccountsPageView({
   accountBookId,
   accountBooks,
-  currentAccountBookId,
   tab,
   mode,
   tabs,
@@ -148,8 +147,8 @@ export function AccountsPageView({
 }: AccountsPageViewProps) {
   const isArchivedMode = mode === "archived";
   const currentAccountBookName =
-    accountBooks.find((accountBook) => accountBook.id === currentAccountBookId)
-      ?.name ?? currentAccountBookId;
+    accountBooks.find((accountBook) => accountBook.id === accountBookId)
+      ?.name ?? accountBookId;
 
   return (
     <Container fluid py="xl" px="xl">
@@ -203,7 +202,7 @@ export function AccountsPageView({
               </Menu.Target>
               <Menu.Dropdown>
                 {accountBooks.map((accountBook) => {
-                  const isCurrentBook = accountBook.id === currentAccountBookId;
+                  const isCurrentBook = accountBook.id === accountBookId;
 
                   return (
                     <Menu.Item

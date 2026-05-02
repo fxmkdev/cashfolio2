@@ -365,7 +365,6 @@ function AccountsPageStoryHarness({
       <AccountsPageView
         accountBookId="storybook-book"
         accountBooks={accountBooks}
-        currentAccountBookId="storybook-book"
         tab={tab}
         mode={mode}
         tabs={tabs}

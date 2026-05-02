@@ -4,6 +4,7 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
+import { getUserAccountBooks, type UserAccountBookOption } from "@/server/home";
 import { parseAccountsSearch } from "./-page-types";
 import { loadAccountsPageData } from "./-page-loader";
 import { useAccountsPageController } from "./-page-controller";
@@ -13,11 +14,33 @@ const AccountsPageView = lazy(async () => {
   return { default: module.AccountsPageView };
 });
 
+let cachedAccountBooksPromise: Promise<UserAccountBookOption[]> | null = null;
+
+function loadUserAccountBooksForRoute() {
+  if (typeof window === "undefined") {
+    return getUserAccountBooks();
+  }
+
+  if (!cachedAccountBooksPromise) {
+    cachedAccountBooksPromise = getUserAccountBooks();
+  }
+
+  return cachedAccountBooksPromise;
+}
+
 export const Route = createFileRoute("/$accountBookId/accounts")({
   validateSearch: parseAccountsSearch,
   loaderDeps: ({ search }) => ({ mode: search.mode, tab: search.tab }),
   loader: async ({ params: { accountBookId }, deps: { mode, tab } }) => {
-    return loadAccountsPageData({ accountBookId, mode, tab });
+    const [accountsPageData, accountBooks] = await Promise.all([
+      loadAccountsPageData({ accountBookId, mode, tab }),
+      loadUserAccountBooksForRoute(),
+    ]);
+
+    return {
+      ...accountsPageData,
+      accountBooks,
+    };
   },
   component: AccountsPage,
 });
@@ -50,8 +73,11 @@ function AccountsPage() {
       <AccountsPageView
         {...viewProps}
         accountBooks={loaderData.accountBooks}
-        currentAccountBookId={accountBookId}
         onSelectAccountBook={(nextAccountBookId) => {
+          if (nextAccountBookId === accountBookId) {
+            return;
+          }
+
           navigate({
             to: "/$accountBookId",
             params: { accountBookId: nextAccountBookId },
