@@ -30,6 +30,9 @@ Related docs:
   type: Asset, Liability, Income, Expense)
   - Loader data is tab-scoped: only the selected tab is fetched in the route
     loader critical path.
+  - Account-book switcher options are loaded in parallel at route level and
+    memoized on the browser side, so tab/mode search changes do not repeatedly
+    refetch the same account-book list.
 - `$accountBookId/valuation-cache/route.tsx` - valuation cache explorer page
   with tabs for Currency, Cryptocurrency, and Security; shows deduplicated unit
   rows and cached TimeSeries history charts (no live provider lookups)
