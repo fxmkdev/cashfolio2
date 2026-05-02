@@ -1,6 +1,7 @@
 import type { MantineTheme } from "@mantine/core";
 import type { AgCartesianChartOptions, AgZoomEvent } from "ag-charts-community";
 import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
+import { addUtcDays } from "@/shared/date";
 import {
   getExplicitPeriodDateRange,
   parseExplicitPeriodSelection,
@@ -51,16 +52,6 @@ function isAreaTimelineMetric(
   metric: TimelineMetric,
 ): metric is AreaTimelineMetric {
   return (AREA_TIMELINE_METRICS as readonly string[]).includes(metric);
-}
-
-function addUtcDays(date: Date, days: number): Date {
-  return new Date(
-    Date.UTC(
-      date.getUTCFullYear(),
-      date.getUTCMonth(),
-      date.getUTCDate() + days,
-    ),
-  );
 }
 
 function toRangeBoundaryTimestamp(

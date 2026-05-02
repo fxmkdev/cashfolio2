@@ -1,6 +1,6 @@
 import { AccountType } from "../.prisma-client/enums";
 import { prisma } from "../prisma.server";
-import { addUtcDays } from "../shared/date";
+import { getOpeningBalancesBookingDate } from "../shared/date";
 import { computeEndOfPeriodBalanceStats } from "./period-balance-stats";
 import { round2 } from "./period-helpers";
 import { convertBookingValueToReference } from "./period-conversion";
@@ -22,7 +22,9 @@ export async function loadTimelineOpeningBalancePoint(args: {
   accountBookStartDate: Date;
   referenceCurrency: string;
 }): Promise<TimelineOpeningBalancePoint> {
-  const openingBalanceDate = addUtcDays(args.accountBookStartDate, -1);
+  const openingBalanceDate = getOpeningBalancesBookingDate(
+    args.accountBookStartDate,
+  );
 
   const [baseAssetLiabilityAccounts, endOfPeriodRawBalancesGrouped] =
     await Promise.all([

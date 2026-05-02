@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { formatMonthPeriodValue } from "../shared/period";
 import { startOfUtcDay } from "../shared/date";
+import type { TimelineOpeningBalancePoint } from "./period-timeline-opening-balance.server";
 
 export type PeriodTimelineGranularity = "month" | "year";
 
@@ -18,13 +19,7 @@ export type PeriodTimelinePoint = {
   netWorth: number;
 };
 
-export type PeriodTimelineOpeningBalancePoint = {
-  date: string;
-  label: string;
-  assets: number;
-  liabilities: number;
-  netWorth: number;
-};
+export type PeriodTimelineOpeningBalancePoint = TimelineOpeningBalancePoint;
 
 export type PeriodTimelineResponse = {
   referenceCurrency: string;
