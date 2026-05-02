@@ -361,7 +361,13 @@ function AccountsPageStoryHarness({
   });
 
   return (
-    <Box>
+    <Box
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "100dvh",
+      }}
+    >
       <AccountsPageView
         accountBookId="storybook-book"
         accountBooks={accountBooks}

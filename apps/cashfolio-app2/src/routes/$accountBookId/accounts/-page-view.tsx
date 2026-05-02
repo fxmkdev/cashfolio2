@@ -1,4 +1,4 @@
-import { Button, Container, Group, Tabs, Title } from "@mantine/core";
+import { Box, Button, Group, Tabs, Title } from "@mantine/core";
 import { IconArchive, IconPlus } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
 import { LinkButton } from "@/components/link-button";
@@ -139,8 +139,7 @@ export function AccountsPageView({
   const isArchivedMode = mode === "archived";
 
   return (
-    <Container
-      fluid
+    <Box
       py="xl"
       px="xl"
       style={{
@@ -148,7 +147,6 @@ export function AccountsPageView({
         flexDirection: "column",
         flex: 1,
         width: "100%",
-        maxWidth: "none",
         minHeight: 0,
       }}
     >
@@ -329,6 +327,6 @@ export function AccountsPageView({
         initialRows={selectedSiblingRows}
         onReorder={onReorderSiblings}
       />
-    </Container>
+    </Box>
   );
 }

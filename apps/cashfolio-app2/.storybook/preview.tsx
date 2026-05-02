@@ -43,40 +43,40 @@ const preview: Preview = {
       const accountBookRoute = createRoute({
         getParentRoute: () => rootRoute,
         path: "/$accountBookId",
-        component: () => <Story />,
+        component: () => <Outlet />,
       });
 
       const accountBookAccountsRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/$accountBookId/accounts",
+        getParentRoute: () => accountBookRoute,
+        path: "/accounts",
         component: () => <Story />,
       });
 
       const accountBookPeriodRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/$accountBookId/period",
+        getParentRoute: () => accountBookRoute,
+        path: "/period",
         component: () => <Story />,
       });
       const accountBookTimelineRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/$accountBookId/timeline",
+        getParentRoute: () => accountBookRoute,
+        path: "/timeline",
         component: () => <Story />,
       });
       const accountBookValuationCacheRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/$accountBookId/valuation-cache",
+        getParentRoute: () => accountBookRoute,
+        path: "/valuation-cache",
         component: () => <Story />,
       });
 
       const accountLedgerRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/$accountBookId/$accountId",
+        getParentRoute: () => accountBookRoute,
+        path: "/$accountId",
         component: () => <Story />,
       });
 
       const accountLedgerChartRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/$accountBookId/$accountId/chart",
+        getParentRoute: () => accountLedgerRoute,
+        path: "/chart",
         component: () => <Story />,
       });
 

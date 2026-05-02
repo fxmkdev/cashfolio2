@@ -1,6 +1,6 @@
 import {
+  Box,
   Card,
-  Container,
   Group,
   SegmentedControl,
   Stack,
@@ -245,13 +245,7 @@ export function TimelinePageView({
   }, [accountBookId, selectedMode]);
 
   return (
-    <Container
-      fluid
-      py="xl"
-      px="xl"
-      className={classes.page}
-      style={{ width: "100%", maxWidth: "none" }}
-    >
+    <Box py="xl" px="xl" className={classes.page} style={{ width: "100%" }}>
       <TopPageHeader
         heading={<Title order={2}>Timeline</Title>}
         actions={
@@ -309,6 +303,6 @@ export function TimelinePageView({
           </div>
         )}
       </Card>
-    </Container>
+    </Box>
   );
 }

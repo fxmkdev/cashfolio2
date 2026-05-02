@@ -1,13 +1,5 @@
-import {
-  AppShell,
-  Burger,
-  Divider,
-  Group,
-  Stack,
-  Text,
-  useMantineTheme,
-} from "@mantine/core";
-import { useDisclosure, useMediaQuery } from "@mantine/hooks";
+import { AppShell, Burger, Divider, Group, Stack, Text } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import {
   createFileRoute,
   Outlet,
@@ -72,18 +64,16 @@ export function AccountBookShell({
   pathname,
   children,
 }: AccountBookShellProps) {
-  const theme = useMantineTheme();
   const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] =
     useDisclosure(false);
-  const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
   const activeSection = getActiveSection({ pathname, accountBookId });
 
   return (
     <AppShell
       padding="md"
       header={{
-        height: 56,
-        collapsed: !isMobile,
+        height: { base: 56, sm: 0 },
+        collapsed: false,
       }}
       navbar={{
         width: 260,
@@ -91,7 +81,7 @@ export function AccountBookShell({
         collapsed: { mobile: !mobileOpened },
       }}
     >
-      <AppShell.Header>
+      <AppShell.Header hiddenFrom="sm">
         <Group h="100%" px="md" align="center">
           <Burger
             opened={mobileOpened}
@@ -149,8 +139,7 @@ export function AccountBookShell({
         style={{
           display: "flex",
           flexDirection: "column",
-          height:
-            "calc(100dvh - var(--app-shell-header-offset) - var(--mantine-spacing-md) - var(--mantine-spacing-md))",
+          flex: 1,
           minHeight: 0,
         }}
       >
