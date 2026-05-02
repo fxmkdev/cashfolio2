@@ -10,9 +10,13 @@ import {
   useMantineTheme,
 } from "@mantine/core";
 import { IconCalendarMonth, IconListDetails } from "@tabler/icons-react";
-import type { AgChartInstance, AgChartOptions } from "ag-charts-community";
+import type {
+  AgChartInstance,
+  AgChartOptions,
+  AgZoomEvent,
+} from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
 import { LinkButton } from "@/components/link-button";
 import type { PeriodTimelineResponse } from "@/server/period-timeline";
@@ -33,6 +37,8 @@ import {
 import {
   createTimelineChartOptions,
   mapTimelinePointsToChartData,
+  rebaseTimelineChartDataCumulativeToVisibleRange,
+  type TimelineVisibleRange,
 } from "./-chart-options";
 import { getDefaultRangeButtonLabel } from "./-range-controls";
 import classes from "./-page-view.module.css";
@@ -117,6 +123,17 @@ export function TimelinePageView({
     () => mapTimelinePointsToChartData(timeline.points),
     [timeline.points],
   );
+  const [visibleRangeX, setVisibleRangeX] =
+    useState<TimelineVisibleRange | null>(null);
+  const rebasedChartData = useMemo(
+    () =>
+      rebaseTimelineChartDataCumulativeToVisibleRange({
+        chartData,
+        visibleRangeX,
+        selectedMetric,
+      }),
+    [chartData, selectedMetric, visibleRangeX],
+  );
   const chartRef = useRef<AgChartInstance<AgChartOptions> | null>(null);
   const appliedDefaultRangeModeRef = useRef<TimelinePeriodMode | null>(null);
   const defaultRangeButtonLabel = useMemo(
@@ -124,10 +141,28 @@ export function TimelinePageView({
     [selectedMode],
   );
 
+  const handleChartZoom = useCallback((event: AgZoomEvent) => {
+    const nextRange = event.rangeX
+      ? { start: event.rangeX.start, end: event.rangeX.end }
+      : null;
+
+    setVisibleRangeX((previousRange) => {
+      const previousStart = previousRange?.start?.valueOf();
+      const previousEnd = previousRange?.end?.valueOf();
+      const nextStart = nextRange?.start?.valueOf();
+      const nextEnd = nextRange?.end?.valueOf();
+      if (previousStart === nextStart && previousEnd === nextEnd) {
+        return previousRange;
+      }
+
+      return nextRange;
+    });
+  }, []);
+
   const chartOptions = useMemo(
     () =>
       createTimelineChartOptions({
-        chartData,
+        chartData: rebasedChartData,
         periodMode: selectedMode,
         selectedMetric,
         amountCompactFormatter,
@@ -135,12 +170,14 @@ export function TimelinePageView({
         colors,
         theme,
         isDarkMode,
+        onZoom: handleChartZoom,
       }),
     [
       amountCompactFormatter,
-      chartData,
+      rebasedChartData,
       colors,
       currencyFormatter,
+      handleChartZoom,
       selectedMode,
       selectedMetric,
       isDarkMode,
@@ -149,7 +186,7 @@ export function TimelinePageView({
   );
 
   useEffect(() => {
-    if (chartData.length === 0) {
+    if (rebasedChartData.length === 0) {
       return;
     }
 
@@ -193,7 +230,11 @@ export function TimelinePageView({
     return () => {
       window.cancelAnimationFrame(animationFrameId);
     };
-  }, [chartData, defaultRangeButtonLabel, selectedMode]);
+  }, [defaultRangeButtonLabel, rebasedChartData, selectedMode]);
+
+  useEffect(() => {
+    setVisibleRangeX(null);
+  }, [accountBookId, selectedMode]);
 
   return (
     <Container fluid py="xl" px="xl" className={classes.page}>
@@ -257,7 +298,7 @@ export function TimelinePageView({
           />
         </Group>
 
-        {chartData.length === 0 ? (
+        {rebasedChartData.length === 0 ? (
           <Text c="dimmed" mt="md">
             No periods available yet.
           </Text>
