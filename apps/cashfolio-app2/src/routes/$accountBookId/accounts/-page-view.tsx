@@ -207,6 +207,11 @@ export function AccountsPageView({
                 </Button>
               </>
             )}
+            <form action="/api/logto/sign-out" method="post">
+              <Button type="submit" variant="default">
+                Logout
+              </Button>
+            </form>
           </Group>
         }
       />
