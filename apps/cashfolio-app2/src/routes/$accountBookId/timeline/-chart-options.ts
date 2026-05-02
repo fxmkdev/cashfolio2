@@ -338,7 +338,9 @@ export function createTimelineChartOptions(args: {
                 type: "range",
                 range: [
                   currentPeriod.periodStart,
-                  currentPeriod.periodEndExclusive,
+                  useRegularTimeAxis
+                    ? currentPeriod.periodMetricDate
+                    : currentPeriod.periodEndExclusive,
                 ],
                 fill: currentPeriodBandFill,
                 fillOpacity: currentPeriodBandFillOpacity,

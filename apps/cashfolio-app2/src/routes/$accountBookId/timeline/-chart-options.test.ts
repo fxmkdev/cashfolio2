@@ -586,6 +586,14 @@ describe("createTimelineChartOptions", () => {
       type: "time",
       nice: false,
       max: new Date("2026-01-31T00:00:00.000Z"),
+      crossLines: [
+        expect.objectContaining({
+          range: [
+            new Date("2026-01-01T00:00:00.000Z"),
+            new Date("2026-01-31T00:00:00.000Z"),
+          ],
+        }),
+      ],
     });
     expect(series[0]).toMatchObject({
       type: "area",
