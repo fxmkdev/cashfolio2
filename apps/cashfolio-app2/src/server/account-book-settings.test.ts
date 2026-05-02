@@ -72,6 +72,8 @@ import {
 describe("account-book settings server functions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-10T12:00:00.000Z"));
 
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
       id: "book-1",
@@ -326,9 +328,6 @@ describe("account-book settings server functions", () => {
   });
 
   it("rejects future start date", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-01-10T12:00:00.000Z"));
-
     await expect(
       updateAccountBookSettings({
         data: {
