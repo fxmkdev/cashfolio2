@@ -290,6 +290,36 @@ describe("account-book settings server functions", () => {
     expect(tx.accountBook.update).not.toHaveBeenCalled();
   });
 
+  it("rejects inherited object keys as reference currency", async () => {
+    await expect(
+      updateAccountBookSettings({
+        data: {
+          accountBookId: "book-1",
+          name: "Updated Book",
+          referenceCurrency: "toString",
+          startDate: "2026-01-03",
+        },
+      }),
+    ).rejects.toThrow("Reference currency is invalid.");
+
+    expect(tx.accountBook.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects missing start date as required", async () => {
+    await expect(
+      updateAccountBookSettings({
+        data: {
+          accountBookId: "book-1",
+          name: "Updated Book",
+          referenceCurrency: "CHF",
+          startDate: "",
+        },
+      }),
+    ).rejects.toThrow("Start date is required.");
+
+    expect(tx.accountBook.update).not.toHaveBeenCalled();
+  });
+
   it("rejects future start date", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-10T12:00:00.000Z"));

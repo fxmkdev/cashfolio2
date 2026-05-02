@@ -10,7 +10,7 @@ import {
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
-import { isAfter, parse, startOfDay } from "date-fns";
+import { parse } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import { LinkButton } from "@/components/link-button";
 import { TopPageHeader } from "@/components/top-page-header";
@@ -72,7 +72,7 @@ export function AccountBookSettingsPageView(args: {
         }
 
         const startDay = startOfUtcDay(startDate);
-        if (isAfter(startOfDay(startDay), startOfDay(new Date()))) {
+        if (startDay > startOfUtcDay(new Date())) {
           return "Start date cannot be in the future";
         }
 

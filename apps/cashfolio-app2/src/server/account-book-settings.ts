@@ -50,7 +50,7 @@ function normalizeReferenceCurrencyOrThrow(value: unknown): string {
     throw new Error("Reference currency is required.");
   }
 
-  if (!(normalized in currencies)) {
+  if (!Object.prototype.hasOwnProperty.call(currencies, normalized)) {
     throw new Error("Reference currency is invalid.");
   }
 
@@ -58,6 +58,14 @@ function normalizeReferenceCurrencyOrThrow(value: unknown): string {
 }
 
 function normalizeStartDateOrThrow(value: unknown): Date {
+  if (value == null) {
+    throw new Error("Start date is required.");
+  }
+
+  if (typeof value === "string" && value.trim().length === 0) {
+    throw new Error("Start date is required.");
+  }
+
   const normalizedInput =
     value instanceof Date || typeof value === "string" ? value : null;
   const parsed = normalizeDateInputValue(normalizedInput);
