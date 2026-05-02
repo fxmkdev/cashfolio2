@@ -41,12 +41,16 @@ export const TIMELINE_METRIC_OPTIONS: Array<{
   { value: "gainsLosses", label: "Gain/Loss" },
 ];
 
-const TIMELINE_METRIC_LABEL_BY_VALUE = Object.fromEntries(
-  TIMELINE_METRIC_OPTIONS.map((option) => [option.value, option.label]),
-) as Record<TimelineMetric, string>;
-
 export function getTimelineMetricLabel(metric: TimelineMetric): string {
-  return TIMELINE_METRIC_LABEL_BY_VALUE[metric];
+  const matchedMetric = TIMELINE_METRIC_OPTIONS.find(
+    (option) => option.value === metric,
+  );
+
+  if (matchedMetric) {
+    return matchedMetric.label;
+  }
+
+  throw new Error(`Unsupported timeline metric: ${metric}`);
 }
 
 export function parseTimelineSearch(
