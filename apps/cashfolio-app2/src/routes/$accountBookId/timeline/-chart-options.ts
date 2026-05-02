@@ -96,27 +96,32 @@ function getAxisDomainForMetric(args: {
   chartData: TimelineChartDatum[];
   selectedMetric: TimelineMetric;
 }): { min?: number; max?: number } {
-  const values = args.chartData.flatMap((datum) => {
-    const metricValue = getMetricValue(datum, args.selectedMetric);
-    if (isAreaTimelineMetric(args.selectedMetric)) {
-      return [metricValue];
-    }
-
-    return [metricValue, datum.cumulativeMetric];
-  });
+  const values = args.chartData.map((datum) =>
+    getMetricValue(datum, args.selectedMetric),
+  );
   const finiteValues = values.filter((value) => Number.isFinite(value));
 
   if (finiteValues.length === 0) {
     return {};
   }
 
+  if (!isAreaTimelineMetric(args.selectedMetric)) {
+    const min = Math.min(...finiteValues);
+    const max = Math.max(...finiteValues);
+    if (min >= 0) {
+      return { min: 0 };
+    }
+    if (max <= 0) {
+      return { max: 0 };
+    }
+    return {};
+  }
+
   let min = Math.min(0, ...finiteValues);
   let max = Math.max(0, ...finiteValues);
-
-  if (min === max) {
-    const padding = min === 0 ? 1 : Math.max(1, Math.abs(min) * 0.05);
-    min -= padding;
-    max += padding;
+  if (min === max && min === 0) {
+    min = -1;
+    max = 1;
   }
 
   return { min, max };

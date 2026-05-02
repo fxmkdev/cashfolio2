@@ -608,7 +608,7 @@ describe("createTimelineChartOptions", () => {
     });
   });
 
-  test("keeps cumulative line visible by including it in y-domain for bar metrics", () => {
+  test("keeps bar charts dynamic while clamping zero baseline for positive-only data", () => {
     const options = createTimelineChartOptions({
       chartData: [
         {
@@ -640,7 +640,8 @@ describe("createTimelineChartOptions", () => {
       isDarkMode: false,
     });
 
-    expect(options.axes?.y).toMatchObject({ min: 0, max: 250 });
+    expect(options.axes?.y).toMatchObject({ min: 0 });
+    expect(options.axes?.y).not.toMatchObject({ max: 250 });
   });
 
   test("forces y-axis to include zero for positive-only metrics", () => {
