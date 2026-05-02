@@ -1,55 +1,28 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import {
-  AccountType,
-  EquityAccountSubtype,
-  Unit,
-} from "../.prisma-client/enums";
+import { AccountType, Unit } from "../.prisma-client/enums";
 
 const prisma = vi.hoisted(() => ({
   accountBook: {
     findUniqueOrThrow: vi.fn(),
   },
-  accountGroup: {
-    findMany: vi.fn(),
-  },
   account: {
-    findMany: vi.fn(),
-  },
-  booking: {
-    findMany: vi.fn(),
-    groupBy: vi.fn(),
-  },
-  transaction: {
     findMany: vi.fn(),
   },
 }));
 
-const convertBookingValueToReference = vi.hoisted(() => vi.fn());
-const getUnitToReferenceExchangeRate = vi.hoisted(() => vi.fn());
-const initializeHoldingGainLossState = vi.hoisted(() => vi.fn());
-const applyHoldingTransactionsToGainLossState = vi.hoisted(() => vi.fn());
-const finalizeHoldingGainLossState = vi.hoisted(() => vi.fn());
-const loadTransferClearingUnitBuckets = vi.hoisted(() => vi.fn());
-const computeTransferClearingGainLossSplit = vi.hoisted(() => vi.fn());
+const getOrLoadPeriodBaseData = vi.hoisted(() => vi.fn());
+const loadPeriodTimelinePointMetrics = vi.hoisted(() => vi.fn());
 
 vi.mock("../prisma.server", () => ({
   prisma,
 }));
 
-vi.mock("./period-conversion", () => ({
-  convertBookingValueToReference,
-  getUnitToReferenceExchangeRate,
+vi.mock("./period-base-data-cache", () => ({
+  getOrLoadPeriodBaseData,
 }));
 
-vi.mock("./period-overview-holdings", () => ({
-  initializeHoldingGainLossState,
-  applyHoldingTransactionsToGainLossState,
-  finalizeHoldingGainLossState,
-}));
-
-vi.mock("./period-transfer-clearing", () => ({
-  loadTransferClearingUnitBuckets,
-  computeTransferClearingGainLossSplit,
+vi.mock("./period-timeline-point-metrics.server", () => ({
+  loadPeriodTimelinePointMetrics,
 }));
 
 import {
@@ -69,69 +42,10 @@ function createContext(args: {
   };
 }
 
-function createEquityBooking(args: {
-  id: string;
-  value: number;
-  subtype: EquityAccountSubtype;
-}) {
-  return {
-    id: args.id,
-    value: args.value,
-    unit: Unit.CURRENCY,
-    currency: "CHF",
-    cryptocurrency: null,
-    symbol: null,
-    tradeCurrency: null,
-    date: new Date("2026-02-10T00:00:00.000Z"),
-    account: {
-      id: `equity-${args.id}`,
-      name: `Equity ${args.id}`,
-      groupId: null,
-      equityAccountSubtype: args.subtype,
-    },
-  };
-}
-
-describe("loadPeriodTimelinePoint", () => {
+describe("loadPeriodTimelinePointContext", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-03-15T12:00:00.000Z"));
 
-    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
-      referenceCurrency: "CHF",
-      startDate: new Date("2026-01-01T00:00:00.000Z"),
-    });
-    prisma.accountGroup.findMany.mockResolvedValue([]);
-    prisma.account.findMany.mockResolvedValue([]);
-    prisma.booking.findMany.mockResolvedValue([]);
-    prisma.booking.groupBy.mockResolvedValue([]);
-    prisma.transaction.findMany.mockResolvedValue([]);
-
-    convertBookingValueToReference.mockImplementation(
-      async ({ value }) => value,
-    );
-    getUnitToReferenceExchangeRate.mockResolvedValue(1);
-
-    initializeHoldingGainLossState.mockResolvedValue({ state: "holding" });
-    applyHoldingTransactionsToGainLossState.mockResolvedValue(undefined);
-    finalizeHoldingGainLossState.mockResolvedValue({
-      realizedGainLoss: 0,
-      unrealizedGainLoss: 0,
-    });
-
-    loadTransferClearingUnitBuckets.mockResolvedValue([]);
-    computeTransferClearingGainLossSplit.mockResolvedValue({
-      realizedGainLoss: 0,
-      unrealizedGainLoss: 0,
-    });
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  test("builds normalized context and filters to convertible holding accounts", async () => {
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
       referenceCurrency: "chf",
       startDate: new Date("2026-02-12T18:45:00.000Z"),
@@ -162,7 +76,9 @@ describe("loadPeriodTimelinePoint", () => {
         tradeCurrency: null,
       },
     ]);
+  });
 
+  test("builds normalized context and filters to convertible holding accounts", async () => {
     const result = await loadPeriodTimelinePointContext({
       accountBookId: "book-ctx",
     });
@@ -198,6 +114,36 @@ describe("loadPeriodTimelinePoint", () => {
       ["holding-security", "liability-foreign"],
     );
   });
+});
+
+describe("loadPeriodTimelinePoint", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-15T12:00:00.000Z"));
+
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    prisma.account.findMany.mockResolvedValue([]);
+
+    getOrLoadPeriodBaseData.mockResolvedValue({
+      accountBookId: "book-1",
+      periodValue: "2026-02",
+    });
+    loadPeriodTimelinePointMetrics.mockResolvedValue({
+      totalReturn: 42,
+      savings: 10,
+      income: 50,
+      expenses: 40,
+      gainsLosses: 32,
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   test("zeros total return for periods before account-book start", async () => {
     vi.setSystemTime(new Date("2026-01-10T12:00:00.000Z"));
@@ -211,167 +157,78 @@ describe("loadPeriodTimelinePoint", () => {
     });
 
     expect(result).toMatchObject({
+      selectedPeriodValue: "2026-01",
       totalReturn: 0,
       savings: 0,
       income: 0,
       expenses: 0,
       gainsLosses: 0,
     });
-    expect(prisma.booking.findMany).not.toHaveBeenCalled();
-    expect(prisma.booking.groupBy).not.toHaveBeenCalled();
-    expect(prisma.transaction.findMany).not.toHaveBeenCalled();
-    expect(loadTransferClearingUnitBuckets).not.toHaveBeenCalled();
-    expect(computeTransferClearingGainLossSplit).not.toHaveBeenCalled();
+    expect(getOrLoadPeriodBaseData).not.toHaveBeenCalled();
+    expect(loadPeriodTimelinePointMetrics).not.toHaveBeenCalled();
   });
 
-  test("includes explicit gain/loss in total return", async () => {
-    prisma.booking.findMany
-      .mockResolvedValueOnce([
-        createEquityBooking({
-          id: "gainloss",
-          value: -25,
-          subtype: EquityAccountSubtype.GAIN_LOSS,
-        }),
-      ])
-      .mockResolvedValueOnce([]);
-
+  test("loads base data once and forwards it to timeline metrics loader", async () => {
     const result = await loadPeriodTimelinePoint({
-      accountBookId: "book-2",
+      accountBookId: "book-1",
       period: "2026-02",
       context: createContext({
         startDate: "2026-01-01T00:00:00.000Z",
       }),
     });
 
-    expect(result).toMatchObject({
-      totalReturn: 25,
-      savings: 0,
-      income: 0,
-      expenses: 0,
-      gainsLosses: 25,
-    });
-  });
-
-  test("matches period-overview total-return semantics", async () => {
-    prisma.booking.findMany
-      .mockResolvedValueOnce([
-        createEquityBooking({
-          id: "income",
-          value: -120,
-          subtype: EquityAccountSubtype.INCOME,
-        }),
-        createEquityBooking({
-          id: "expense",
-          value: 20,
-          subtype: EquityAccountSubtype.EXPENSE,
-        }),
-        createEquityBooking({
-          id: "explicit",
-          value: -30,
-          subtype: EquityAccountSubtype.GAIN_LOSS,
-        }),
-      ])
-      .mockResolvedValueOnce([]);
-
-    finalizeHoldingGainLossState.mockResolvedValue({
-      realizedGainLoss: 12,
-      unrealizedGainLoss: -2,
-    });
-    computeTransferClearingGainLossSplit.mockResolvedValue({
-      realizedGainLoss: 5,
-      unrealizedGainLoss: 3,
-    });
-
-    const result = await loadPeriodTimelinePoint({
-      accountBookId: "book-3",
+    expect(getOrLoadPeriodBaseData).toHaveBeenCalledWith({
+      accountBookId: "book-1",
       period: "2026-02",
-      context: createContext({
-        startDate: "2026-01-01T00:00:00.000Z",
-      }),
     });
-
-    expect(result).toMatchObject({
-      totalReturn: 138,
-      savings: 100,
-      income: 120,
-      expenses: 20,
-      gainsLosses: 38,
-    });
-    expect(finalizeHoldingGainLossState).not.toHaveBeenCalled();
-    expect(computeTransferClearingGainLossSplit).toHaveBeenCalledTimes(1);
-  });
-
-  test("includes holding gain/loss when convertible holding accounts exist", async () => {
-    prisma.account.findMany.mockImplementation(
-      async (args: { where?: unknown }) => {
-        const where = args.where as
-          | { type?: unknown; equityAccountSubtype?: unknown }
-          | undefined;
-
-        if (
-          where &&
-          typeof where.type === "object" &&
-          where.type != null &&
-          "in" in where.type
-        ) {
-          return [
-            {
-              id: "holding-1",
-              name: "AAPL",
-              groupId: null,
-              type: AccountType.ASSET,
-              unit: Unit.SECURITY,
-              currency: null,
-              cryptocurrency: null,
-              symbol: "AAPL",
-              tradeCurrency: "USD",
-            },
-          ];
-        }
-
-        return [];
+    expect(loadPeriodTimelinePointMetrics).toHaveBeenCalledWith({
+      accountBookId: "book-1",
+      period: "2026-02",
+      baseData: {
+        accountBookId: "book-1",
+        periodValue: "2026-02",
       },
-    );
-
-    prisma.transaction.findMany
-      .mockResolvedValueOnce([
-        {
-          id: "tx-1",
-          bookings: [
-            {
-              id: "booking-1",
-              accountId: "holding-1",
-              date: new Date("2026-02-10T00:00:00.000Z"),
-              value: 1,
-              unit: Unit.SECURITY,
-              currency: null,
-              cryptocurrency: null,
-              symbol: "AAPL",
-              tradeCurrency: "USD",
-              account: {
-                type: AccountType.ASSET,
-                equityAccountSubtype: null,
-              },
-            },
-          ],
-        },
-      ])
-      .mockResolvedValueOnce([]);
-
-    finalizeHoldingGainLossState.mockResolvedValue({
-      realizedGainLoss: 7,
-      unrealizedGainLoss: 3,
     });
 
-    const result = await loadPeriodTimelinePoint({
-      accountBookId: "book-holdings",
+    expect(result).toEqual({
+      selectedPeriodValue: "2026-02",
+      selectedPeriodLabel: "February 2026",
+      totalReturn: 42,
+      savings: 10,
+      income: 50,
+      expenses: 40,
+      gainsLosses: 32,
+    });
+  });
+
+  test("loads context when it is not provided", async () => {
+    await loadPeriodTimelinePoint({
+      accountBookId: "book-context",
       period: "2026-02",
-      context: createContext({
-        startDate: "2026-01-01T00:00:00.000Z",
-      }),
     });
 
-    expect(result.totalReturn).toBe(10);
-    expect(finalizeHoldingGainLossState).toHaveBeenCalledTimes(1);
+    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
+      where: { id: "book-context" },
+      select: {
+        referenceCurrency: true,
+        startDate: true,
+      },
+    });
+    expect(prisma.account.findMany).toHaveBeenCalledWith({
+      where: {
+        accountBookId: "book-context",
+        type: {
+          in: [AccountType.ASSET, AccountType.LIABILITY],
+        },
+      },
+      select: {
+        id: true,
+        unit: true,
+        currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
+      },
+    });
   });
 });

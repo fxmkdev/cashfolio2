@@ -3,6 +3,7 @@ import {
   toLotAcquisitionSortKey,
   QUANTITY_EPSILON,
 } from "./period-overview-holdings-common";
+import { toHoldingUnitIdentifier } from "./period-overview-holdings-transfer";
 import type {
   HoldingBookingConverter,
   HoldingGainLossWorkingState,
@@ -92,6 +93,44 @@ function toSortedBookings(
   });
 }
 
+function hasOpeningAcquisitionSortKey(acquisitionSortKey: string): boolean {
+  return acquisitionSortKey.includes("::opening:");
+}
+
+function resolveOpeningUnitCostInReference(args: {
+  state: HoldingGainLossWorkingState;
+  unitIdentifier: string | null;
+}): number | null {
+  if (!args.unitIdentifier) {
+    return null;
+  }
+
+  for (const accountState of args.state.stateByHoldingAccountId.values()) {
+    const accountUnitIdentifier = toHoldingUnitIdentifier({
+      unit: accountState.account.unit,
+      currency: accountState.account.currency,
+      cryptocurrency: accountState.account.cryptocurrency,
+      symbol: accountState.account.symbol,
+      tradeCurrency: accountState.account.tradeCurrency,
+    });
+
+    if (accountUnitIdentifier !== args.unitIdentifier) {
+      continue;
+    }
+
+    const openingLot = accountState.lots.find(
+      (lot) =>
+        hasOpeningAcquisitionSortKey(lot.acquisitionSortKey) &&
+        !isNearZero(lot.quantity),
+    );
+    if (openingLot) {
+      return openingLot.unitCostInReference;
+    }
+  }
+
+  return null;
+}
+
 export async function applyMixedPeriodSameUnitHoldingTransfer(args: {
   state: HoldingGainLossWorkingState;
   inPeriodHoldingBookings: HoldingTransactionBooking[];
@@ -162,6 +201,15 @@ export async function applyMixedPeriodSameUnitHoldingTransfer(args: {
     return true;
   }
 
+  const unitIdentifier =
+    args.nonExplicitUnitIdentifiers.size === 1
+      ? ([...args.nonExplicitUnitIdentifiers][0] ?? null)
+      : null;
+  const openingUnitCostInReference = resolveOpeningUnitCostInReference({
+    state: args.state,
+    unitIdentifier,
+  });
+
   for (const booking of toSortedBookings(args.inPeriodHoldingBookings)) {
     if (Math.abs(booking.value) <= QUANTITY_EPSILON) {
       continue;
@@ -194,10 +242,15 @@ export async function applyMixedPeriodSameUnitHoldingTransfer(args: {
       continue;
     }
 
+    const lotMovementUnitCostInReference =
+      booking.value > QUANTITY_EPSILON && openingUnitCostInReference != null
+        ? openingUnitCostInReference
+        : executionUnitPriceInReference;
+
     applyNonRealizingExecutionToLots({
       lots: accountState.lots,
       quantity: booking.value,
-      unitCostInReference: executionUnitPriceInReference,
+      unitCostInReference: lotMovementUnitCostInReference,
       acquisitionSortKey: toLotAcquisitionSortKey({
         date: booking.date,
         bookingId: booking.id,

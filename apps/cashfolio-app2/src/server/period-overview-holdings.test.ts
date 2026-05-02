@@ -768,6 +768,55 @@ describe("period overview holdings FIFO", () => {
     });
   });
 
+  it("uses opening unit basis for mixed-period same-unit carry-ins", async () => {
+    const convertedByBookingId = new Map<string, number>([["h-carry-in", 110]]);
+
+    const result = await computeHoldingGainLossSplit({
+      holdingAccounts: [...holdingAccounts],
+      initialBalanceByAccountId: new Map([
+        [HOLDING_ACCOUNT_ID, 0],
+        [SECOND_HOLDING_ACCOUNT_ID, 1],
+      ]),
+      transactions: [
+        {
+          bookings: [
+            createHoldingBooking({
+              id: "h-carry-out-before-period",
+              accountId: HOLDING_ACCOUNT_ID,
+              date: "2026-01-31T00:00:00.000Z",
+              value: -1,
+            }),
+            createHoldingBooking({
+              id: "h-carry-in",
+              accountId: SECOND_HOLDING_ACCOUNT_ID,
+              date: "2026-02-10T00:00:00.000Z",
+              value: 1,
+            }),
+          ],
+        },
+      ],
+      periodStart: new Date("2026-02-01T00:00:00.000Z"),
+      periodEndExclusive: new Date("2026-03-01T00:00:00.000Z"),
+      initialRateDate: new Date("2026-01-31T00:00:00.000Z"),
+      periodEnd: new Date("2026-02-28T00:00:00.000Z"),
+      resolveRate: vi.fn().mockImplementation(async ({ date }) => {
+        if (date.toISOString() === "2026-01-31T00:00:00.000Z") {
+          return 100;
+        }
+        return 120;
+      }),
+      convertBookingToReference: async (booking) =>
+        convertedByBookingId.get(booking.id) ?? null,
+    });
+
+    expect(result).toEqual({
+      realizedGainLoss: 0,
+      unrealizedGainLoss: 40,
+      convertedCount: 1,
+      skippedCount: 0,
+    });
+  });
+
   it("skips mixed-period same-unit holding transfers when carry conversion is missing", async () => {
     const result = await computeHoldingGainLossSplit({
       holdingAccounts: [...holdingAccounts],

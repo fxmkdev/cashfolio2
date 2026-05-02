@@ -104,9 +104,17 @@ update `sortOrder` values after reordering sibling rows in the reorder modal.
 
 ## Period Overview Gain/Loss
 
-The period overview server function (`src/server/period.ts`) keeps period
-gains/losses aligned with net-worth deltas by using a single tracked-account
-engine:
+The canonical period gain/loss engine lives in
+`src/server/period-overview.server.ts` and is used by both:
+
+- `getPeriodOverview` (`src/server/period.ts`)
+- timeline metrics loading (`src/server/period-timeline-point-metrics.server.ts`)
+
+This keeps period overview and timeline total-return semantics aligned while
+still reusing the shared period base-data cache.
+
+The engine keeps period gains/losses aligned with net-worth deltas by using a
+single tracked-account flow:
 
 - Tracked accounts include:
   - non-reference real holding accounts

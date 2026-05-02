@@ -35,6 +35,15 @@ export async function computePeriodHoldingGainLoss(args: {
   transferClearingUnitBuckets: TransferClearingUnitBucket[];
   assetLiabilityAccountNameById: Map<string, string>;
   gainsLossesContributionByKey: Map<string, GainLossContributionAccumulator>;
+  initialHoldingBalances?: Array<{
+    accountId: string;
+    rawBalance: number;
+  }>;
+  holdingTransactions?: Array<
+    HoldingTransaction & {
+      id?: string;
+    }
+  >;
   resolveRate: (input: {
     unit: Unit;
     currency: string | null;
@@ -69,7 +78,14 @@ export async function computePeriodHoldingGainLoss(args: {
 
   if (trackedHoldingAccounts.length > 0) {
     const initialHoldingBalanceByAccountId = new Map<string, number>();
-    if (holdingAccountIds.length > 0) {
+    if (args.initialHoldingBalances) {
+      for (const balance of args.initialHoldingBalances) {
+        initialHoldingBalanceByAccountId.set(
+          balance.accountId,
+          balance.rawBalance,
+        );
+      }
+    } else if (holdingAccountIds.length > 0) {
       const initialHoldingBalances = await prisma.booking.groupBy({
         by: ["accountId"],
         where: {
@@ -113,7 +129,18 @@ export async function computePeriodHoldingGainLoss(args: {
       resolveRate: args.resolveRate,
     });
 
-    if (holdingAccountIds.length > 0) {
+    if (args.holdingTransactions) {
+      await applyHoldingTransactionsToGainLossState({
+        state: holdingGainLossState,
+        transactions: args.holdingTransactions.map((transaction) => ({
+          bookings: transaction.bookings,
+        })),
+        periodStart: args.periodStart,
+        periodEndExclusive: args.periodEndExclusive,
+        convertBookingToReference: ({ id: _id, ...booking }) =>
+          args.convertBookingToReference(booking),
+      });
+    } else if (holdingAccountIds.length > 0) {
       let nextTransactionIdCursor: string | undefined;
 
       while (true) {
