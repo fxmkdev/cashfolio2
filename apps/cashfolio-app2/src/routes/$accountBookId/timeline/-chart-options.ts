@@ -248,6 +248,7 @@ export function createTimelineChartOptions(args: {
             xKey: "periodStart",
             yKey: "netWorthNegative",
             yName: selectedMetricLabel,
+            showInLegend: false,
             stroke: negativeFillColor,
             fill: negativeFillColor,
             fillOpacity: 0.4,

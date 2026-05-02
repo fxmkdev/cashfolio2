@@ -353,7 +353,11 @@ describe("createTimelineChartOptions", () => {
     const series = Array.isArray(options.series) ? options.series : [];
     expect(series).toHaveLength(2);
     expect(series[0]).toMatchObject({ type: "area", yKey: "netWorthPositive" });
-    expect(series[1]).toMatchObject({ type: "area", yKey: "netWorthNegative" });
+    expect(series[1]).toMatchObject({
+      type: "area",
+      yKey: "netWorthNegative",
+      showInLegend: false,
+    });
   });
 
   test("forces y-axis to include zero for positive-only metrics", () => {
