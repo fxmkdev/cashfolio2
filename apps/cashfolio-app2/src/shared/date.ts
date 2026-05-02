@@ -8,6 +8,10 @@ export function startOfUtcDay(date: Date): Date {
 
 export const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
+export function addUtcDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * MILLISECONDS_PER_DAY);
+}
+
 export function getUtcDayRange(date: Date): {
   start: Date;
   endExclusive: Date;

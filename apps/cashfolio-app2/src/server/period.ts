@@ -13,7 +13,7 @@ import {
   PERIOD_PRESET_YTD,
   type PeriodPresetValue,
 } from "../shared/period";
-import { startOfUtcDay } from "../shared/date";
+import { addUtcDays, startOfUtcDay } from "../shared/date";
 import {
   buildBreakdownHierarchy,
   buildBreakdownItems,
@@ -73,10 +73,6 @@ export {
 const EQUITY_BOOKINGS_PAGE_SIZE = 1_000;
 const TRANSACTIONS_PAGE_SIZE = 200;
 const TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE = 200;
-
-function addUtcDays(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
-}
 
 export const getPeriodOverview = createServerFn({
   method: "GET",

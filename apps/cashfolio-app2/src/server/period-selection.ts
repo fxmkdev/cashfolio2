@@ -11,7 +11,7 @@ import {
   PERIOD_PRESET_YTD,
   type PeriodPresetValue,
 } from "../shared/period";
-import { startOfUtcDay } from "../shared/date";
+import { addUtcDays, startOfUtcDay } from "../shared/date";
 
 export type PeriodSpecifier = PeriodPresetValue | "month" | "year";
 
@@ -39,10 +39,6 @@ function endOfUtcMonth(year: number, month: number): Date {
 
 function endOfUtcYear(year: number): Date {
   return new Date(Date.UTC(year, 12, 0));
-}
-
-function addUtcDays(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
 function addUtcMonths(date: Date, months: number): Date {

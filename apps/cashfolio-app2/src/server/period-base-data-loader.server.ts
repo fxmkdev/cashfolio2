@@ -5,7 +5,7 @@ import {
 } from "../.prisma-client/enums";
 import { prisma } from "../prisma.server";
 import { normalizePeriodValue } from "../shared/period";
-import { startOfUtcDay } from "../shared/date";
+import { addUtcDays, startOfUtcDay } from "../shared/date";
 import { resolveExplicitCounterpartNonEquityAccounts } from "./period-gains-losses-contributions";
 import { filterConvertibleHoldingAccounts } from "./period-helpers";
 import {
@@ -115,10 +115,6 @@ export type PeriodBaseData = {
   initialHoldingBalances: PeriodBaseInitialHoldingBalance[];
   holdingTransactions: PeriodBaseHoldingTransaction[];
 };
-
-function addUtcDays(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
-}
 
 async function loadPeriodEquityBookingsRaw(args: {
   accountBookId: string;

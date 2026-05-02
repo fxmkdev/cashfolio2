@@ -5,7 +5,7 @@ import {
 } from "../.prisma-client/enums";
 import { prisma } from "../prisma.server";
 import { isMultiUnitTransaction } from "./period-helpers";
-import { isNearZero } from "./period-overview-holdings-common";
+import { isNearZero, isWithinPeriod } from "./period-overview-holdings-common";
 
 type ExecutionResidualBooking = {
   id: string;
@@ -32,14 +32,6 @@ type ExecutionResidualContribution = {
   tradeCurrency: string | null;
   realizedGainLoss: number;
 };
-
-function isWithinPeriod(args: {
-  date: Date;
-  periodStart: Date;
-  periodEndExclusive: Date;
-}) {
-  return args.date >= args.periodStart && args.date < args.periodEndExclusive;
-}
 
 function isNonReferenceExecutionBooking(args: {
   unit: Unit;
