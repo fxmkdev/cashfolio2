@@ -13,6 +13,7 @@ import {
   finalizeHoldingGainLossState,
   initializeHoldingGainLossState,
 } from "./period-overview-holdings";
+import { moneySubtract, moneySum, toMoneyNumber } from "../shared/money";
 import { isNearZero } from "./period-overview-holdings-common";
 import type {
   HoldingRateConvertibleAccount,
@@ -98,7 +99,7 @@ export async function computePeriodHoldingGainLoss(args: {
       for (const balance of initialHoldingBalances) {
         initialHoldingBalanceByAccountId.set(
           balance.accountId,
-          Number(balance._sum.value ?? 0),
+          toMoneyNumber(balance._sum.value ?? 0),
         );
       }
     }
@@ -110,8 +111,10 @@ export async function computePeriodHoldingGainLoss(args: {
 
       const openingPostedBalance = unitBucket.bookings
         .filter((booking) => booking.date < args.periodStart)
-        .reduce((sum, booking) => sum + booking.value, 0);
-      const openingBalance = -openingPostedBalance;
+        .map((booking) => booking.value);
+      const openingBalance = toMoneyNumber(
+        moneySubtract(0, moneySum(openingPostedBalance)),
+      );
       if (isNearZero(openingBalance)) {
         continue;
       }
@@ -235,7 +238,7 @@ export async function computePeriodHoldingGainLoss(args: {
               id: booking.id,
               accountId: booking.accountId,
               date: booking.date,
-              value: Number(booking.value),
+              value: toMoneyNumber(booking.value),
               unit: booking.unit,
               currency: booking.currency,
               cryptocurrency: booking.cryptocurrency,

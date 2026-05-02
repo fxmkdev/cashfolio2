@@ -1,5 +1,15 @@
 import { AccountType, Unit } from "../.prisma-client/enums";
 import { startOfUtcDay } from "../shared/date";
+import {
+  moneyAdd,
+  moneyDivide,
+  moneyIsZero,
+  moneyMultiply,
+  moneyRound2,
+  moneySubtract,
+  moneySum,
+  toMoneyNumber,
+} from "../shared/money";
 import type {
   BreakdownHierarchyNode,
   BreakdownNodeKind,
@@ -54,7 +64,7 @@ function toDateKey(date: Date): string {
 }
 
 export function round2(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
+  return toMoneyNumber(moneyRound2(value));
 }
 
 function getBookingUnitIdentifier(booking: MultiUnitBooking): string | null {
@@ -184,19 +194,28 @@ export function buildBreakdownItems(items: ExpenseBreakdownAccumulatorItem[]): {
   }>;
 } {
   const positiveItems = items.filter((item) => item.amount > 0);
-  const totalRaw = positiveItems.reduce((sum, item) => sum + item.amount, 0);
+  const totalRaw = toMoneyNumber(
+    moneySum(positiveItems.map((item) => item.amount)),
+  );
 
   const sortedItems = positiveItems
     .map((item) => ({
       ...item,
       amount: round2(item.amount),
-      percentage: totalRaw <= 0 ? 0 : round2((item.amount / totalRaw) * 100),
+      percentage:
+        totalRaw <= 0
+          ? 0
+          : round2(
+              toMoneyNumber(
+                moneyMultiply(moneyDivide(item.amount, totalRaw), 100),
+              ),
+            ),
     }))
     .sort((a, b) => b.amount - a.amount);
 
   return {
     totalAmount: round2(
-      sortedItems.reduce((sum, item) => sum + item.amount, 0),
+      toMoneyNumber(moneySum(sortedItems.map((item) => item.amount))),
     ),
     items: sortedItems,
   };
@@ -245,7 +264,7 @@ export function buildPeriodEndAllocationBreakdown(args: {
       skippedNegativeCount += 1;
       continue;
     }
-    if (displayAmount === 0) {
+    if (moneyIsZero(displayAmount)) {
       continue;
     }
 
@@ -350,7 +369,9 @@ function finalizeBreakdownHierarchyNodes(
         continue;
       }
 
-      rawDisplayedAmount += node.amount;
+      rawDisplayedAmount = toMoneyNumber(
+        moneyAdd(rawDisplayedAmount, node.amount),
+      );
       nodes.push({
         id: node.id,
         label: node.label,
@@ -385,7 +406,7 @@ function finalizeBreakdownHierarchyNodes(
 
     if (
       prunedChildNodeCount > 0 &&
-      roundedDisplayedChildrenAmount !== roundedAmount
+      !moneyIsZero(moneySubtract(roundedDisplayedChildrenAmount, roundedAmount))
     ) {
       hiddenAmountDiscrepancyNodeIdsInSubtree.add(node.id);
     } else if (hasChildDiscrepancy) {
@@ -396,7 +417,9 @@ function finalizeBreakdownHierarchyNodes(
       hiddenAmountDiscrepancyNodeIdsInSubtree.add(nodeId);
     }
 
-    rawDisplayedAmount += node.amount;
+    rawDisplayedAmount = toMoneyNumber(
+      moneyAdd(rawDisplayedAmount, node.amount),
+    );
     nodes.push({
       id: node.id,
       label: node.label,
@@ -434,7 +457,7 @@ export function buildBreakdownHierarchyWithMeta(args: {
   const rootChildrenById = new Map<string, MutableBreakdownHierarchyNode>();
 
   for (const item of args.items) {
-    if (item.amount === 0) {
+    if (moneyIsZero(item.amount)) {
       continue;
     }
 
@@ -454,7 +477,7 @@ export function buildBreakdownHierarchyWithMeta(args: {
         kind: "group",
         childrenById: currentChildrenById,
       });
-      groupNode.amount += item.amount;
+      groupNode.amount = toMoneyNumber(moneyAdd(groupNode.amount, item.amount));
       currentChildrenById = groupNode.childrenById;
     }
 
@@ -464,7 +487,9 @@ export function buildBreakdownHierarchyWithMeta(args: {
       kind: "account",
       childrenById: currentChildrenById,
     });
-    accountNode.amount += item.amount;
+    accountNode.amount = toMoneyNumber(
+      moneyAdd(accountNode.amount, item.amount),
+    );
   }
 
   const {
@@ -499,9 +524,11 @@ export function computeHoldingGainLossForEventSeries(args: {
   let gainLoss = 0;
 
   for (const event of args.events) {
-    const rateDiff = event.rate - previousRate;
-    gainLoss += balance * rateDiff;
-    balance += event.balanceDelta;
+    const rateDiff = toMoneyNumber(moneySubtract(event.rate, previousRate));
+    gainLoss = toMoneyNumber(
+      moneyAdd(gainLoss, moneyMultiply(balance, rateDiff)),
+    );
+    balance = toMoneyNumber(moneyAdd(balance, event.balanceDelta));
     previousRate = event.rate;
   }
 
@@ -543,7 +570,9 @@ export function getHoldingEventDateMap(args: {
     const existing = eventByDateKey.get(dateKey);
 
     if (existing) {
-      existing.balanceDelta += booking.value;
+      existing.balanceDelta = toMoneyNumber(
+        moneyAdd(existing.balanceDelta, booking.value),
+      );
     } else {
       eventByDateKey.set(dateKey, {
         date,

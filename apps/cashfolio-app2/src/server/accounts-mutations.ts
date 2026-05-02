@@ -8,6 +8,7 @@ import {
 } from "../shared/account-validation";
 import { getBookingUnitFields } from "../shared/booking-unit-fields";
 import { getOpeningBalancesBookingDate, getUtcDayRange } from "../shared/date";
+import { moneyIsZero } from "../shared/money";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { ensureSameOriginRequestFromServerContext } from "../security/same-origin.server";
 import {
@@ -750,7 +751,7 @@ export const archiveAccount = createServerFn({ method: "POST" })
         where: { accountId: data.id, accountBookId: data.accountBookId },
         _sum: { value: true },
       });
-      hasZeroBalance = Number(balance._sum.value ?? 0) === 0;
+      hasZeroBalance = moneyIsZero(balance._sum.value ?? 0);
     }
     const archiveAvailability = getAccountArchiveAvailability({
       isActive: account.isActive,

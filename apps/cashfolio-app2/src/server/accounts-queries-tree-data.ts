@@ -1,5 +1,6 @@
 import { prisma } from "../prisma.server";
 import { getOpeningBalancesBookingDate, getUtcDayRange } from "../shared/date";
+import { toMoneyNumber } from "../shared/money";
 import type {
   AccountType,
   EquityAccountSubtype,
@@ -182,7 +183,7 @@ export async function fetchAccountTreeQueryData(args: {
   const rawBalanceByAccountId = new Map(
     accountBalances.map((balance) => [
       balance.accountId,
-      Number(balance._sum.value ?? 0),
+      toMoneyNumber(balance._sum.value ?? 0),
     ]),
   );
   const openingBalanceDate = getOpeningBalancesBookingDate(
@@ -207,7 +208,7 @@ export async function fetchAccountTreeQueryData(args: {
   const openingRawBalanceByAccountId = new Map(
     openingBalanceSums.map((balance) => [
       balance.accountId,
-      Number(balance._sum.value ?? 0),
+      toMoneyNumber(balance._sum.value ?? 0),
     ]),
   );
 
@@ -277,7 +278,7 @@ export async function fetchAccountReferenceBalancesQueryData(args: {
   const rawBalanceByAccountId = new Map(
     accountBalances.map((balance) => [
       balance.accountId,
-      Number(balance._sum.value ?? 0),
+      toMoneyNumber(balance._sum.value ?? 0),
     ]),
   );
 

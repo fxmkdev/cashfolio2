@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
 import type { Unit } from "../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
+import { toMoneyNumber } from "../shared/money";
 
 export const getTransaction = createServerFn({ method: "GET" })
   .inputValidator(
@@ -27,7 +28,7 @@ export const getTransaction = createServerFn({ method: "GET" })
       id: transaction.id,
       description: transaction.description,
       bookings: transaction.bookings.map((b) => {
-        const value = Number(b.value);
+        const value = toMoneyNumber(b.value);
         return {
           date: b.date.toISOString(),
           account: b.accountId,

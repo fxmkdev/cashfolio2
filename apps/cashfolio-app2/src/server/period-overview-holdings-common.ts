@@ -1,4 +1,12 @@
 import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
+import {
+  moneyAbs,
+  moneyAdd,
+  moneyMultiply,
+  moneySubtract,
+  moneySum,
+  toMoneyNumber,
+} from "../shared/money";
 import type {
   HoldingExecutionLotMatch,
   HoldingLot,
@@ -17,7 +25,7 @@ export function isExplicitGainLossBooking(
 }
 
 export function isNearZero(value: number): boolean {
-  return Math.abs(value) <= QUANTITY_EPSILON;
+  return !moneyAbs(value).gt(QUANTITY_EPSILON);
 }
 
 export function isWithinPeriod(args: {
@@ -40,24 +48,20 @@ export function buildResidualAllocationWeights(args: {
   holdingMarketValueByBookingId: Map<string, number>;
 }): number[] {
   const valueWeights = args.holdingBookings.map((booking) =>
-    Math.abs(args.holdingMarketValueByBookingId.get(booking.id) ?? 0),
+    toMoneyNumber(
+      moneyAbs(args.holdingMarketValueByBookingId.get(booking.id) ?? 0),
+    ),
   );
-  const totalValueWeight = valueWeights.reduce(
-    (sum, weight) => sum + weight,
-    0,
-  );
+  const totalValueWeight = toMoneyNumber(moneySum(valueWeights));
 
   if (totalValueWeight > QUANTITY_EPSILON) {
     return valueWeights.map((weight) => weight / totalValueWeight);
   }
 
   const quantityWeights = args.holdingBookings.map((booking) =>
-    Math.abs(booking.value),
+    toMoneyNumber(moneyAbs(booking.value)),
   );
-  const totalQuantityWeight = quantityWeights.reduce(
-    (sum, weight) => sum + weight,
-    0,
-  );
+  const totalQuantityWeight = toMoneyNumber(moneySum(quantityWeights));
 
   if (totalQuantityWeight > QUANTITY_EPSILON) {
     return quantityWeights.map((weight) => weight / totalQuantityWeight);
@@ -91,15 +95,29 @@ export function applyExecutionToLots(args: {
     let lotRealizedGainLossDelta = 0;
 
     if (lot.quantity > 0 && remainingQuantity < 0) {
-      lotRealizedGainLossDelta =
-        closeQuantity *
-        (args.executionUnitPriceInReference - lotUnitCostInReference);
+      lotRealizedGainLossDelta = toMoneyNumber(
+        moneyMultiply(
+          closeQuantity,
+          moneySubtract(
+            args.executionUnitPriceInReference,
+            lotUnitCostInReference,
+          ),
+        ),
+      );
     } else if (lot.quantity < 0 && remainingQuantity > 0) {
-      lotRealizedGainLossDelta =
-        closeQuantity *
-        (lotUnitCostInReference - args.executionUnitPriceInReference);
+      lotRealizedGainLossDelta = toMoneyNumber(
+        moneyMultiply(
+          closeQuantity,
+          moneySubtract(
+            lotUnitCostInReference,
+            args.executionUnitPriceInReference,
+          ),
+        ),
+      );
     }
-    realizedGainLoss += lotRealizedGainLossDelta;
+    realizedGainLoss = toMoneyNumber(
+      moneyAdd(realizedGainLoss, lotRealizedGainLossDelta),
+    );
     args.onLotMatched?.({
       acquisitionSortKey: lotAcquisitionSortKey,
       matchedQuantity: closeQuantity,
@@ -109,8 +127,15 @@ export function applyExecutionToLots(args: {
       runningEventRealizedGainLoss: realizedGainLoss,
     });
 
-    lot.quantity -= Math.sign(lot.quantity) * closeQuantity;
-    remainingQuantity -= Math.sign(remainingQuantity) * closeQuantity;
+    lot.quantity = toMoneyNumber(
+      moneySubtract(lot.quantity, Math.sign(lot.quantity) * closeQuantity),
+    );
+    remainingQuantity = toMoneyNumber(
+      moneySubtract(
+        remainingQuantity,
+        Math.sign(remainingQuantity) * closeQuantity,
+      ),
+    );
 
     if (isNearZero(lot.quantity)) {
       args.lots.shift();

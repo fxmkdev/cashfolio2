@@ -1,4 +1,5 @@
 import type { Unit } from "../.prisma-client/enums";
+import { moneyAbs, moneyAdd, toMoneyNumber } from "../shared/money";
 import {
   QUANTITY_EPSILON,
   isNearZero,
@@ -37,8 +38,12 @@ function getOpenQuantityByLotSign(args: {
 }): number {
   return args.lots.reduce(
     (sum, lot) =>
-      sum +
-      (Math.sign(lot.quantity) === args.lotSign ? Math.abs(lot.quantity) : 0),
+      toMoneyNumber(
+        moneyAdd(
+          sum,
+          Math.sign(lot.quantity) === args.lotSign ? moneyAbs(lot.quantity) : 0,
+        ),
+      ),
     0,
   );
 }
@@ -114,9 +119,11 @@ export function resolveHoldingTransferDirection(args: {
   for (const booking of args.holdingBookings) {
     netByAccountId.set(
       booking.accountId,
-      (netByAccountId.get(booking.accountId) ?? 0) + booking.value,
+      toMoneyNumber(
+        moneyAdd(netByAccountId.get(booking.accountId) ?? 0, booking.value),
+      ),
     );
-    netQuantity += booking.value;
+    netQuantity = toMoneyNumber(moneyAdd(netQuantity, booking.value));
     if (booking.value > QUANTITY_EPSILON) {
       hasPositive = true;
     } else if (booking.value < -QUANTITY_EPSILON) {

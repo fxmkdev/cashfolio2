@@ -1,4 +1,13 @@
 import { Unit } from "../.prisma-client/enums";
+import {
+  moneyAbs,
+  moneyAdd,
+  moneyDivide,
+  moneyMultiply,
+  moneySubtract,
+  moneySum,
+  toMoneyNumber,
+} from "../shared/money";
 import type { HoldingGainLossSkippedReason } from "./period-overview-holdings";
 import type { HoldingExecutionLotMatch } from "./period-overview-holdings-types";
 import {
@@ -97,8 +106,10 @@ export async function computeTransferClearingGainLossSplit(args: {
 
     const openingPostedBalance = unitBucket.bookings
       .filter((booking) => booking.date < args.periodStart)
-      .reduce((sum, booking) => sum + booking.value, 0);
-    const openingBalance = -openingPostedBalance;
+      .map((booking) => booking.value);
+    const openingBalance = toMoneyNumber(
+      moneySubtract(0, moneySum(openingPostedBalance)),
+    );
 
     if (!isNearZero(openingBalance)) {
       const initialRate = await args.resolveRate({
@@ -175,8 +186,9 @@ export async function computeTransferClearingGainLossSplit(args: {
 
       const clearingQuantity = -booking.value;
       const clearingReferenceAmount = -convertedValue;
-      const executionUnitPriceInReference =
-        clearingReferenceAmount / clearingQuantity;
+      const executionUnitPriceInReference = toMoneyNumber(
+        moneyDivide(clearingReferenceAmount, clearingQuantity),
+      );
       if (!Number.isFinite(executionUnitPriceInReference)) {
         skippedCount += 1;
         args.onSkippedItem?.({
@@ -212,8 +224,12 @@ export async function computeTransferClearingGainLossSplit(args: {
             }
           : {}),
       });
-      realizedGainLoss += bookingRealizedGainLoss;
-      unitRealizedGainLoss += bookingRealizedGainLoss;
+      realizedGainLoss = toMoneyNumber(
+        moneyAdd(realizedGainLoss, bookingRealizedGainLoss),
+      );
+      unitRealizedGainLoss = toMoneyNumber(
+        moneyAdd(unitRealizedGainLoss, bookingRealizedGainLoss),
+      );
       args.onUnitExecutionEvent?.({
         unitKey: unitBucket.unitKey,
         bookingId: booking.id,
@@ -234,7 +250,7 @@ export async function computeTransferClearingGainLossSplit(args: {
     }
 
     const openQuantity = lots.reduce(
-      (sum, lot) => sum + Math.abs(lot.quantity),
+      (sum, lot) => toMoneyNumber(moneyAdd(sum, moneyAbs(lot.quantity))),
       0,
     );
     if (openQuantity > QUANTITY_EPSILON) {
@@ -256,9 +272,15 @@ export async function computeTransferClearingGainLossSplit(args: {
       } else {
         let unitUnrealized = 0;
         for (const lot of lots) {
-          const lotUnrealizedGainLoss =
-            lot.quantity * (periodEndRate - lot.unitCostInReference);
-          unitUnrealized += lotUnrealizedGainLoss;
+          const lotUnrealizedGainLoss = toMoneyNumber(
+            moneyMultiply(
+              lot.quantity,
+              moneySubtract(periodEndRate, lot.unitCostInReference),
+            ),
+          );
+          unitUnrealized = toMoneyNumber(
+            moneyAdd(unitUnrealized, lotUnrealizedGainLoss),
+          );
           args.onUnitOpenLotValuation?.({
             unitKey: unitBucket.unitKey,
             acquisitionSortKey: lot.acquisitionSortKey,
@@ -268,14 +290,18 @@ export async function computeTransferClearingGainLossSplit(args: {
             unrealizedGainLoss: lotUnrealizedGainLoss,
           });
         }
-        unrealizedGainLoss += unitUnrealized;
-        unitUnrealizedGainLoss += unitUnrealized;
+        unrealizedGainLoss = toMoneyNumber(
+          moneyAdd(unrealizedGainLoss, unitUnrealized),
+        );
+        unitUnrealizedGainLoss = toMoneyNumber(
+          moneyAdd(unitUnrealizedGainLoss, unitUnrealized),
+        );
       }
     }
 
     if (
       args.onUnitGainLoss &&
-      (unitRealizedGainLoss !== 0 || unitUnrealizedGainLoss !== 0)
+      (!isNearZero(unitRealizedGainLoss) || !isNearZero(unitUnrealizedGainLoss))
     ) {
       args.onUnitGainLoss({
         unitKey: unitBucket.unitKey,

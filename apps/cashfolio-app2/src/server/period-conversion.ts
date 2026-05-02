@@ -4,6 +4,7 @@ import {
   getCurrencyExchangeRate,
   getSecurityToCurrencyExchangeRate,
 } from "./valuation.server";
+import { moneyMultiply, moneyIsZero, toMoneyNumber } from "../shared/money";
 
 type RateLookupInput = {
   unit: Unit;
@@ -106,7 +107,7 @@ export async function convertBookingValueToReference(args: {
   referenceCurrency: string;
   exchangeRateByKey: Map<string, Promise<number | null>>;
 }): Promise<number | null> {
-  if (args.value === 0) {
+  if (moneyIsZero(args.value)) {
     return 0;
   }
 
@@ -130,5 +131,5 @@ export async function convertBookingValueToReference(args: {
     return null;
   }
 
-  return args.value * exchangeRate;
+  return toMoneyNumber(moneyMultiply(args.value, exchangeRate));
 }

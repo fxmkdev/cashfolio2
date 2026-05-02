@@ -8,6 +8,7 @@ import {
   parseExplicitPeriodSelectionFromUnknown,
   type ExplicitPeriodSelection,
 } from "../shared/period";
+import { toMoneyNumber } from "../shared/money";
 import { createGroupPathSegmentsResolver } from "./accounts-helpers";
 import { convertBookingValueToReference } from "./period-conversion";
 
@@ -99,7 +100,7 @@ export const getLedgerData = createServerFn({ method: "GET" })
             _count: { _all: true },
           })
           .then((aggregateResult) => ({
-            balanceBeforePeriod: Number(aggregateResult._sum.value ?? 0),
+            balanceBeforePeriod: toMoneyNumber(aggregateResult._sum.value ?? 0),
             hasBookingsBeforePeriod: aggregateResult._count._all > 0,
           }))
       : Promise.resolve({
@@ -181,7 +182,7 @@ export const getLedgerData = createServerFn({ method: "GET" })
         (booking) =>
           booking.unit
             ? convertBookingValueToReference({
-                value: Number(booking.value),
+                value: toMoneyNumber(booking.value),
                 unit: booking.unit,
                 currency: booking.currency,
                 cryptocurrency: booking.cryptocurrency,
@@ -203,7 +204,7 @@ export const getLedgerData = createServerFn({ method: "GET" })
       id: booking.id,
       date: booking.date,
       description: booking.description,
-      value: Number(booking.value),
+      value: toMoneyNumber(booking.value),
       valueInReferenceCurrency,
       unit: booking.unit,
       currency: booking.currency,

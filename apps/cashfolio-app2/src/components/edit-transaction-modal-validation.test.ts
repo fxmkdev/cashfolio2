@@ -169,4 +169,39 @@ describe("validateEditTransactionBookingsRoot", () => {
     expect(result).toContain("0.3");
     expect(result).not.toContain("0.300000000000");
   });
+
+  test("treats 0.1 + 0.2 and 0.3 as balanced with strict decimal equality", () => {
+    const result = rootValidation(
+      [
+        {
+          key: "1",
+          account: "asset-1",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          debit: 0.1,
+        },
+        {
+          key: "2",
+          account: "asset-2",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          debit: 0.2,
+        },
+        {
+          key: "3",
+          account: "asset-3",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          credit: 0.3,
+        },
+      ],
+      [
+        account("asset-1", AccountType.ASSET, null),
+        account("asset-2", AccountType.ASSET, null),
+        account("asset-3", AccountType.ASSET, null),
+      ],
+    );
+
+    expect(result).toBeNull();
+  });
 });

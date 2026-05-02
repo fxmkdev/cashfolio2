@@ -4,6 +4,7 @@ import {
   Unit,
 } from "../.prisma-client/enums";
 import { prisma } from "../prisma.server";
+import { toMoneyNumber } from "../shared/money";
 import { convertBookingValueToReference } from "./period-conversion";
 import {
   accumulateConvertedEquityBooking,
@@ -180,7 +181,7 @@ export async function loadPeriodEquityBookings(args: {
     const conversionTasks = bookingsPage.map((booking) => ({
       booking,
       convertedValuePromise: convertBookingValueToReference({
-        value: Number(booking.value),
+        value: toMoneyNumber(booking.value),
         unit: booking.unit,
         currency: booking.currency,
         cryptocurrency: booking.cryptocurrency,

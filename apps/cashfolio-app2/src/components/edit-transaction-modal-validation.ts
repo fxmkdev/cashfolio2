@@ -5,9 +5,9 @@ import {
   isIncomeAccount,
   isOpeningBalancesAccount,
 } from "../shared/account-utils";
+import { moneyIsZero, moneySubtract, moneySum } from "../shared/money";
 import { validateGainLossSimpleTransactionInvariant } from "../shared/gain-loss-transaction-invariant";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
-import { sum } from "../utils";
 import { numericFormatter } from "react-number-format";
 import type {
   AccountOption,
@@ -67,13 +67,13 @@ export function validateEditTransactionBookingsRoot(args: {
   );
   if (unitIdentifiers.size !== 1) return null;
 
-  const difference =
-    sum(bookings.map((booking) => booking.debit ?? 0)) -
-    sum(bookings.map((booking) => booking.credit ?? 0));
-  const normalizedDifference = Number(difference.toFixed(12));
-  return Math.abs(normalizedDifference) > 0.001
+  const difference = moneySubtract(
+    moneySum(bookings.map((booking) => booking.debit ?? 0)),
+    moneySum(bookings.map((booking) => booking.credit ?? 0)),
+  );
+  return !moneyIsZero(difference)
     ? `Transaction is not balanced; debits and credits differ by ${numericFormatter(
-        normalizedDifference.toString(),
+        difference.toString(),
         {
           thousandSeparator,
           decimalSeparator,

@@ -1,4 +1,5 @@
 import { startOfUtcDay } from "../shared/date";
+import { moneyAdd, toMoneyNumber } from "../shared/money";
 import {
   convertBookingValueToReference,
   getUnitToReferenceExchangeRate,
@@ -171,8 +172,12 @@ export async function loadPeriodOverview(args: {
       holdingTransactions: baseData.holdingTransactions,
     });
 
-    realizedGainLoss += holdingGainLossTotals.realizedGainLoss;
-    unrealizedGainLoss += holdingGainLossTotals.unrealizedGainLoss;
+    realizedGainLoss = toMoneyNumber(
+      moneyAdd(realizedGainLoss, holdingGainLossTotals.realizedGainLoss),
+    );
+    unrealizedGainLoss = toMoneyNumber(
+      moneyAdd(unrealizedGainLoss, holdingGainLossTotals.unrealizedGainLoss),
+    );
     convertedBookingsCount += holdingGainLossTotals.convertedCount;
     skippedBookingsCount += holdingGainLossTotals.skippedCount;
   }
