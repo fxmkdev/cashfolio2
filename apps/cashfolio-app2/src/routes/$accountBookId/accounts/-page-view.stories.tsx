@@ -390,7 +390,6 @@ function AccountsPageStoryHarness({
         selectedSiblingRows={selectedSiblingRows}
         onOpenCreateGroup={() => setCreateGroupModalOpened(true)}
         onOpenCreateAccount={() => setCreateModalOpened(true)}
-        onSelectAccountBook={(_nextAccountBookId) => undefined}
         onOpenLedger={(nextAccountId) => {
           if (routeSmoke) {
             navigate({

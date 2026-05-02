@@ -1,17 +1,31 @@
-import { Button, Menu } from "@mantine/core";
+import { Button, Menu, type MenuItemProps } from "@mantine/core";
 import { IconCheck, IconChevronDown } from "@tabler/icons-react";
+import { createLink } from "@tanstack/react-router";
+import { forwardRef, type ComponentPropsWithoutRef } from "react";
 import type { UserAccountBookOption } from "@/server/home";
+import type { AccountsMode, TabValue } from "./-page-types";
+
+const MenuItemLinkBase = forwardRef<
+  HTMLAnchorElement,
+  Omit<MenuItemProps, "component"> & ComponentPropsWithoutRef<"a">
+>(function MenuItemLinkBase(props, ref) {
+  return <Menu.Item ref={ref} {...props} component="a" />;
+});
+
+const LinkMenuItem = createLink(MenuItemLinkBase);
 
 type AccountBookSwitcherMenuProps = {
   accountBookId: string;
   accountBooks: UserAccountBookOption[];
-  onSelectAccountBook: (accountBookId: string) => void;
+  tab: TabValue;
+  mode: AccountsMode;
 };
 
 export function AccountBookSwitcherMenu({
   accountBookId,
   accountBooks,
-  onSelectAccountBook,
+  tab,
+  mode,
 }: AccountBookSwitcherMenuProps) {
   const currentAccountBookName =
     accountBooks.find((accountBook) => accountBook.id === accountBookId)
@@ -28,16 +42,28 @@ export function AccountBookSwitcherMenu({
         {accountBooks.map((accountBook) => {
           const isCurrentBook = accountBook.id === accountBookId;
 
+          if (isCurrentBook) {
+            return (
+              <LinkMenuItem
+                key={accountBook.id}
+                leftSection={<IconCheck size={16} />}
+                to="/$accountBookId/accounts"
+                params={{ accountBookId }}
+                search={{ tab, mode }}
+              >
+                {accountBook.name}
+              </LinkMenuItem>
+            );
+          }
+
           return (
-            <Menu.Item
+            <LinkMenuItem
               key={accountBook.id}
-              leftSection={isCurrentBook ? <IconCheck size={16} /> : undefined}
-              onClick={() => {
-                onSelectAccountBook(accountBook.id);
-              }}
+              to="/$accountBookId"
+              params={{ accountBookId: accountBook.id }}
             >
               {accountBook.name}
-            </Menu.Item>
+            </LinkMenuItem>
           );
         })}
         <Menu.Divider />

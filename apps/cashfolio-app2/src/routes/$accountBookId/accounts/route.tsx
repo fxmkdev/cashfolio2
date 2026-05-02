@@ -56,20 +56,7 @@ function AccountsPage() {
 
   return (
     <Suspense fallback={null}>
-      <AccountsPageView
-        {...viewProps}
-        accountBooks={loaderData.accountBooks}
-        onSelectAccountBook={(nextAccountBookId) => {
-          if (nextAccountBookId === accountBookId) {
-            return;
-          }
-
-          navigate({
-            to: "/$accountBookId",
-            params: { accountBookId: nextAccountBookId },
-          });
-        }}
-      />
+      <AccountsPageView {...viewProps} accountBooks={loaderData.accountBooks} />
     </Suspense>
   );
 }

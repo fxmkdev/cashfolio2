@@ -73,7 +73,6 @@ export type AccountsPageViewProps = {
   selectedSiblingRows: ReorderGroupChildRow[];
   onOpenCreateGroup: () => void;
   onOpenCreateAccount: () => void;
-  onSelectAccountBook: (accountBookId: string) => void;
   onOpenLedger: (accountId: string) => void;
   onCloseCreateAccount: () => void;
   onSubmitCreateAccount: (values: TransformedFormValues) => Promise<void>;
@@ -125,7 +124,6 @@ export function AccountsPageView({
   selectedSiblingRows,
   onOpenCreateGroup,
   onOpenCreateAccount,
-  onSelectAccountBook,
   onOpenLedger,
   onCloseCreateAccount,
   onSubmitCreateAccount,
@@ -190,7 +188,8 @@ export function AccountsPageView({
             <AccountBookSwitcherMenu
               accountBookId={accountBookId}
               accountBooks={accountBooks}
-              onSelectAccountBook={onSelectAccountBook}
+              tab={tab}
+              mode={mode}
             />
             {!isArchivedMode && (
               <>
