@@ -104,15 +104,17 @@ update `sortOrder` values after reordering sibling rows in the reorder modal.
 
 ## Period Overview Gain/Loss
 
-The canonical period gain/loss engine lives in
-`src/server/period-overview.server.ts` and is used by both:
+The canonical period gain/loss semantics are shared between:
 
 - `getPeriodOverview` (`src/server/period.ts`)
 - timeline metrics loading
   (`src/server/period-timeline-point-metrics.server.ts`)
 
-This keeps period overview and timeline total-return semantics aligned while
-still reusing the shared period base-data cache.
+Both loaders reuse the shared period base-data cache and shared gain/loss
+subflows while keeping their output work focused:
+
+- period overview computes the full response payload
+- timeline metrics compute only scalar series values
 
 The engine keeps period gains/losses aligned with net-worth deltas by using a
 single tracked-account flow:
@@ -150,8 +152,9 @@ cross-period income/expense transactions remain partially posted at period end.
 To keep `src/server/period.ts` focused as an orchestration entrypoint, the
 larger gain/loss subflows are split into dedicated modules:
 
-- `src/server/period-equity-bookings.ts` handles paged equity booking
-  conversion, equity aggregation, and explicit counterpart attribution
+- `src/server/period-equity-bookings.ts` handles paged equity booking conversion
+  from preloaded period base data, equity aggregation, and explicit counterpart
+  attribution
 - `src/server/period-holding-gain-loss.ts` handles tracked holding lot/FIFO
   orchestration (real + transfer-clearing synthetic transactions) and residual
   realization integration
