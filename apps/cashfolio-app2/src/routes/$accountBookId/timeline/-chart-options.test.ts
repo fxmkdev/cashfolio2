@@ -513,21 +513,22 @@ describe("createTimelineChartOptions", () => {
   });
 
   test("renders assets as green area without cumulative line", () => {
+    const chartData = mapTimelinePointsToChartData([
+      createTimelinePoint({
+        periodValue: "2026-01",
+        periodLabel: "January 2026",
+        totalReturn: 10,
+        savings: 7,
+        income: 11,
+        expenses: 4,
+        gainsLosses: 3,
+        assets: 120,
+        liabilities: 50,
+        netWorth: 70,
+      }),
+    ]);
     const options = createTimelineChartOptions({
-      chartData: mapTimelinePointsToChartData([
-        createTimelinePoint({
-          periodValue: "2026-01",
-          periodLabel: "January 2026",
-          totalReturn: 10,
-          savings: 7,
-          income: 11,
-          expenses: 4,
-          gainsLosses: 3,
-          assets: 120,
-          liabilities: 50,
-          netWorth: 70,
-        }),
-      ]),
+      chartData,
       periodMode: "month",
       selectedMetric: "assets",
       amountCompactFormatter: new Intl.NumberFormat("en-CH", {
@@ -554,6 +555,16 @@ describe("createTimelineChartOptions", () => {
       stroke: "#2b8a3e",
       fill: "#2b8a3e",
     });
+
+    const areaSeries = series[0] as {
+      tooltip?: {
+        renderer?: (params: { datum: unknown }) => { heading: string };
+      };
+    };
+    const tooltip = areaSeries.tooltip?.renderer?.({
+      datum: chartData[0],
+    });
+    expect(tooltip?.heading).toBe("31.01.2026");
   });
 
   test("renders net worth as sign-split areas without cumulative line", () => {

@@ -265,6 +265,12 @@ export function createTimelineChartOptions(args: {
   isDarkMode: boolean;
   onZoom?: (event: AgZoomEvent) => void;
 }): AgCartesianChartOptions {
+  const pointDateFormatter = new Intl.DateTimeFormat("en-CH", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "UTC",
+  });
   const positiveFillColor = args.isDarkMode
     ? args.theme.colors.green[5]
     : args.theme.colors.green[6];
@@ -284,6 +290,8 @@ export function createTimelineChartOptions(args: {
   const selectedMetricLabel = getTimelineMetricLabel(args.selectedMetric);
   const selectedMetricKey = args.selectedMetric;
   const cumulativeMetricLabel = `Cumulative ${selectedMetricLabel}`;
+  const getAreaTooltipHeading = (datum: TimelineChartDatum) =>
+    pointDateFormatter.format(datum.periodMetricDate);
   const axisDomain = getAxisDomainForMetric({
     chartData: args.chartData,
     selectedMetric: selectedMetricKey,
@@ -312,7 +320,7 @@ export function createTimelineChartOptions(args: {
               renderer: ({ datum }: { datum: unknown }) => {
                 const point = datum as TimelineChartDatum;
                 return {
-                  heading: point.periodLabel,
+                  heading: getAreaTooltipHeading(point),
                   data: [
                     {
                       label: selectedMetricLabel,
@@ -339,7 +347,7 @@ export function createTimelineChartOptions(args: {
               renderer: ({ datum }: { datum: unknown }) => {
                 const point = datum as TimelineChartDatum;
                 return {
-                  heading: point.periodLabel,
+                  heading: getAreaTooltipHeading(point),
                   data: [
                     {
                       label: selectedMetricLabel,
@@ -373,7 +381,7 @@ export function createTimelineChartOptions(args: {
               renderer: ({ datum }: { datum: unknown }) => {
                 const point = datum as TimelineChartDatum;
                 return {
-                  heading: point.periodLabel,
+                  heading: getAreaTooltipHeading(point),
                   data: [
                     {
                       label: selectedMetricLabel,
