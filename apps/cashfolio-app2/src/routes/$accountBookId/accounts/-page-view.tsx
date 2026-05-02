@@ -147,6 +147,8 @@ export function AccountsPageView({
         display: "flex",
         flexDirection: "column",
         flex: 1,
+        width: "100%",
+        maxWidth: "none",
         minHeight: 0,
       }}
     >
