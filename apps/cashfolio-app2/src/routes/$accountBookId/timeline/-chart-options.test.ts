@@ -396,6 +396,41 @@ describe("prependOpeningBalanceChartDatum", () => {
 
     expect(result).toEqual(chartData);
   });
+
+  test("prepends opening balance when it is after periodStart but before period end", () => {
+    const chartData = mapTimelinePointsToChartData([
+      createTimelinePoint({
+        periodValue: "2026-01",
+        periodLabel: "January 2026",
+        periodEndDate: "2026-01-31T00:00:00.000Z",
+        totalReturn: 1,
+        savings: 1,
+        income: 1,
+        expenses: 0,
+        gainsLosses: 0,
+      }),
+    ]);
+
+    const result = prependOpeningBalanceChartDatum({
+      chartData,
+      selectedMetric: "assets",
+      openingBalancePoint: {
+        date: "2026-01-15T00:00:00.000Z",
+        label: "Opening Balance",
+        assets: 10,
+        liabilities: 5,
+        netWorth: 5,
+      },
+    });
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        periodLabel: "Opening Balance",
+        periodMetricDate: new Date("2026-01-15T00:00:00.000Z"),
+      }),
+    );
+    expect(result).toHaveLength(2);
+  });
 });
 
 describe("createTimelineChartOptions", () => {
