@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AccountBookIdRouteRouteImport } from './routes/$accountBookId/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountBookIdIndexRouteImport } from './routes/$accountBookId/index'
 import { Route as AccountBookIdValuationCacheRouteRouteImport } from './routes/$accountBookId/valuation-cache/route'
@@ -23,27 +24,32 @@ import { Route as ApiLogtoActionRouteImport } from './routes/api/logto/$action'
 import { Route as AccountBookIdAccountIdChartRouteRouteImport } from './routes/$accountBookId/$accountId/chart/route'
 import { Route as AccountBookIdPeriodGainsLossesAccountIdRouteRouteImport } from './routes/$accountBookId/period/gains-losses/$accountId/route'
 
+const AccountBookIdRouteRoute = AccountBookIdRouteRouteImport.update({
+  id: '/$accountBookId',
+  path: '/$accountBookId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountBookIdIndexRoute = AccountBookIdIndexRouteImport.update({
-  id: '/$accountBookId/',
-  path: '/$accountBookId/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => AccountBookIdRouteRoute,
 } as any)
 const AccountBookIdValuationCacheRouteRoute =
   AccountBookIdValuationCacheRouteRouteImport.update({
-    id: '/$accountBookId/valuation-cache',
-    path: '/$accountBookId/valuation-cache',
-    getParentRoute: () => rootRouteImport,
+    id: '/valuation-cache',
+    path: '/valuation-cache',
+    getParentRoute: () => AccountBookIdRouteRoute,
   } as any)
 const AccountBookIdTimelineRouteRoute =
   AccountBookIdTimelineRouteRouteImport.update({
-    id: '/$accountBookId/timeline',
-    path: '/$accountBookId/timeline',
-    getParentRoute: () => rootRouteImport,
+    id: '/timeline',
+    path: '/timeline',
+    getParentRoute: () => AccountBookIdRouteRoute,
   } as any)
 const AccountBookIdSettingsRouteRoute =
   AccountBookIdSettingsRouteRouteImport.update({
@@ -53,21 +59,21 @@ const AccountBookIdSettingsRouteRoute =
   } as any)
 const AccountBookIdPeriodRouteRoute =
   AccountBookIdPeriodRouteRouteImport.update({
-    id: '/$accountBookId/period',
-    path: '/$accountBookId/period',
-    getParentRoute: () => rootRouteImport,
+    id: '/period',
+    path: '/period',
+    getParentRoute: () => AccountBookIdRouteRoute,
   } as any)
 const AccountBookIdAccountsRouteRoute =
   AccountBookIdAccountsRouteRouteImport.update({
-    id: '/$accountBookId/accounts',
-    path: '/$accountBookId/accounts',
-    getParentRoute: () => rootRouteImport,
+    id: '/accounts',
+    path: '/accounts',
+    getParentRoute: () => AccountBookIdRouteRoute,
   } as any)
 const AccountBookIdAccountIdRouteRoute =
   AccountBookIdAccountIdRouteRouteImport.update({
-    id: '/$accountBookId/$accountId',
-    path: '/$accountBookId/$accountId',
-    getParentRoute: () => rootRouteImport,
+    id: '/$accountId',
+    path: '/$accountId',
+    getParentRoute: () => AccountBookIdRouteRoute,
   } as any)
 const AccountBookIdPeriodIndexRoute =
   AccountBookIdPeriodIndexRouteImport.update({
@@ -101,6 +107,7 @@ const AccountBookIdPeriodGainsLossesAccountIdRouteRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$accountBookId': typeof AccountBookIdRouteRouteWithChildren
   '/$accountBookId/$accountId': typeof AccountBookIdAccountIdRouteRouteWithChildren
   '/$accountBookId/accounts': typeof AccountBookIdAccountsRouteRoute
   '/$accountBookId/period': typeof AccountBookIdPeriodRouteRouteWithChildren
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$accountBookId': typeof AccountBookIdRouteRouteWithChildren
   '/$accountBookId/$accountId': typeof AccountBookIdAccountIdRouteRouteWithChildren
   '/$accountBookId/accounts': typeof AccountBookIdAccountsRouteRoute
   '/$accountBookId/period': typeof AccountBookIdPeriodRouteRouteWithChildren
@@ -147,6 +155,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$accountBookId'
     | '/$accountBookId/$accountId'
     | '/$accountBookId/accounts'
     | '/$accountBookId/period'
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/$accountBookId'
     | '/$accountBookId/$accountId'
     | '/$accountBookId/accounts'
     | '/$accountBookId/period'
@@ -191,18 +201,19 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AccountBookIdAccountIdRouteRoute: typeof AccountBookIdAccountIdRouteRouteWithChildren
-  AccountBookIdAccountsRouteRoute: typeof AccountBookIdAccountsRouteRoute
-  AccountBookIdPeriodRouteRoute: typeof AccountBookIdPeriodRouteRouteWithChildren
-  AccountBookIdSettingsRouteRoute: typeof AccountBookIdSettingsRouteRoute
-  AccountBookIdTimelineRouteRoute: typeof AccountBookIdTimelineRouteRoute
-  AccountBookIdValuationCacheRouteRoute: typeof AccountBookIdValuationCacheRouteRoute
-  AccountBookIdIndexRoute: typeof AccountBookIdIndexRoute
+  AccountBookIdRouteRoute: typeof AccountBookIdRouteRouteWithChildren
   ApiLogtoActionRoute: typeof ApiLogtoActionRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/$accountBookId': {
+      id: '/$accountBookId'
+      path: '/$accountBookId'
+      fullPath: '/$accountBookId'
+      preLoaderRoute: typeof AccountBookIdRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -212,24 +223,24 @@ declare module '@tanstack/react-router' {
     }
     '/$accountBookId/': {
       id: '/$accountBookId/'
-      path: '/$accountBookId'
+      path: '/'
       fullPath: '/$accountBookId/'
       preLoaderRoute: typeof AccountBookIdIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AccountBookIdRouteRoute
     }
     '/$accountBookId/valuation-cache': {
       id: '/$accountBookId/valuation-cache'
-      path: '/$accountBookId/valuation-cache'
+      path: '/valuation-cache'
       fullPath: '/$accountBookId/valuation-cache'
       preLoaderRoute: typeof AccountBookIdValuationCacheRouteRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AccountBookIdRouteRoute
     }
     '/$accountBookId/timeline': {
       id: '/$accountBookId/timeline'
-      path: '/$accountBookId/timeline'
+      path: '/timeline'
       fullPath: '/$accountBookId/timeline'
       preLoaderRoute: typeof AccountBookIdTimelineRouteRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AccountBookIdRouteRoute
     }
     '/$accountBookId/settings': {
       id: '/$accountBookId/settings'
@@ -240,24 +251,24 @@ declare module '@tanstack/react-router' {
     }
     '/$accountBookId/period': {
       id: '/$accountBookId/period'
-      path: '/$accountBookId/period'
+      path: '/period'
       fullPath: '/$accountBookId/period'
       preLoaderRoute: typeof AccountBookIdPeriodRouteRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AccountBookIdRouteRoute
     }
     '/$accountBookId/accounts': {
       id: '/$accountBookId/accounts'
-      path: '/$accountBookId/accounts'
+      path: '/accounts'
       fullPath: '/$accountBookId/accounts'
       preLoaderRoute: typeof AccountBookIdAccountsRouteRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AccountBookIdRouteRoute
     }
     '/$accountBookId/$accountId': {
       id: '/$accountBookId/$accountId'
-      path: '/$accountBookId/$accountId'
+      path: '/$accountId'
       fullPath: '/$accountBookId/$accountId'
       preLoaderRoute: typeof AccountBookIdAccountIdRouteRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AccountBookIdRouteRoute
     }
     '/$accountBookId/period/': {
       id: '/$accountBookId/period/'
@@ -331,8 +342,16 @@ const AccountBookIdPeriodRouteRouteWithChildren =
     AccountBookIdPeriodRouteRouteChildren,
   )
 
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+interface AccountBookIdRouteRouteChildren {
+  AccountBookIdAccountIdRouteRoute: typeof AccountBookIdAccountIdRouteRouteWithChildren
+  AccountBookIdAccountsRouteRoute: typeof AccountBookIdAccountsRouteRoute
+  AccountBookIdPeriodRouteRoute: typeof AccountBookIdPeriodRouteRouteWithChildren
+  AccountBookIdTimelineRouteRoute: typeof AccountBookIdTimelineRouteRoute
+  AccountBookIdValuationCacheRouteRoute: typeof AccountBookIdValuationCacheRouteRoute
+  AccountBookIdIndexRoute: typeof AccountBookIdIndexRoute
+}
+
+const AccountBookIdRouteRouteChildren: AccountBookIdRouteRouteChildren = {
   AccountBookIdAccountIdRouteRoute:
     AccountBookIdAccountIdRouteRouteWithChildren,
   AccountBookIdAccountsRouteRoute: AccountBookIdAccountsRouteRoute,
@@ -341,6 +360,14 @@ const rootRouteChildren: RootRouteChildren = {
   AccountBookIdTimelineRouteRoute: AccountBookIdTimelineRouteRoute,
   AccountBookIdValuationCacheRouteRoute: AccountBookIdValuationCacheRouteRoute,
   AccountBookIdIndexRoute: AccountBookIdIndexRoute,
+}
+
+const AccountBookIdRouteRouteWithChildren =
+  AccountBookIdRouteRoute._addFileChildren(AccountBookIdRouteRouteChildren)
+
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  AccountBookIdRouteRoute: AccountBookIdRouteRouteWithChildren,
   ApiLogtoActionRoute: ApiLogtoActionRoute,
 }
 export const routeTree = rootRouteImport

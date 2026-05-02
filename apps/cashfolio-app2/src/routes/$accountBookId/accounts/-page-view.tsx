@@ -1,11 +1,5 @@
 import { Button, Container, Group, Tabs, Title } from "@mantine/core";
-import {
-  IconArchive,
-  IconChartBar,
-  IconCalendarMonth,
-  IconListDetails,
-  IconPlus,
-} from "@tabler/icons-react";
+import { IconArchive, IconPlus } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
 import { LinkButton } from "@/components/link-button";
 import { LinkTab } from "@/components/link-tab";
@@ -161,30 +155,6 @@ export function AccountsPageView({
         }
         actions={
           <Group>
-            <LinkButton
-              variant="default"
-              leftSection={<IconListDetails size={16} />}
-              to="/$accountBookId/valuation-cache"
-              params={{ accountBookId }}
-            >
-              Valuation Cache
-            </LinkButton>
-            <LinkButton
-              variant="default"
-              leftSection={<IconCalendarMonth size={16} />}
-              to="/$accountBookId/period"
-              params={{ accountBookId }}
-            >
-              Period
-            </LinkButton>
-            <LinkButton
-              variant="default"
-              leftSection={<IconChartBar size={16} />}
-              to="/$accountBookId/timeline"
-              params={{ accountBookId }}
-            >
-              Timeline
-            </LinkButton>
             <AccountBookSwitcherMenu
               accountBookId={accountBookId}
               accountBooks={accountBooks}

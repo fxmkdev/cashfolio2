@@ -790,13 +790,8 @@ export const RouteSmoke: Story = {
     await expect(canvas.getByTestId("selected-period")).toHaveTextContent(
       formatMonthPeriodValue(2024, 10),
     );
-
-    const accountsLink = await canvas.findByRole("link", {
-      name: "Accounts",
-    });
-    await userEvent.click(accountsLink);
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-book/accounts",
+      "/storybook-book/period",
     );
   },
 };

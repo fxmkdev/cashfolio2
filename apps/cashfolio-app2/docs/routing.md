@@ -24,6 +24,9 @@ Related docs:
 - `api/logto/$action.tsx` - auth endpoints: `GET /api/logto/sign-in`,
   `GET /api/logto/callback`, `GET /api/logto/sign-up`,
   `POST /api/logto/sign-out`
+- `$accountBookId/route.tsx` - shared account-book shell route using Mantine
+  `AppShell` with left navbar navigation (Accounts, Period, Timeline, Valuation
+  Cache) and mobile-only header burger toggle
 - `$accountBookId/index.tsx` - index redirect route that forwards to
   `$accountBookId/accounts`
 - `$accountBookId/accounts/route.tsx` - accounts page with tabs (one per account

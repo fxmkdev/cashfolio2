@@ -522,11 +522,11 @@ export const RouteSmoke: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByRole("link", { name: "Period" }),
+      canvas.getByRole("link", { name: "Archive" }),
     ).toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("link", { name: "Period" }));
-    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-book/period",
+    await userEvent.click(canvas.getByRole("link", { name: "Archive" }));
+    await expect(canvas.getByTestId("router-search")).toHaveTextContent(
+      '"mode":"archived"',
     );
   },
 };
