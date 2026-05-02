@@ -145,7 +145,16 @@ export function AccountBookShell({
         </Stack>
       </AppShell.Navbar>
 
-      <AppShell.Main style={{ minHeight: 0 }}>{children}</AppShell.Main>
+      <AppShell.Main
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          minHeight:
+            "calc(100dvh - var(--app-shell-header-offset) - var(--mantine-spacing-md) * 2)",
+        }}
+      >
+        {children}
+      </AppShell.Main>
     </AppShell>
   );
 }
