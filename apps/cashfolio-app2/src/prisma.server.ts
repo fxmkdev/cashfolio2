@@ -13,7 +13,7 @@ declare global {
 // create a new connection to the DB with every change either.
 // in production we'll have a single connection to the DB.
 if (process.env.NODE_ENV === "production") {
-  prisma = getClient();
+  prisma = await getConnectedClient();
 } else {
   if (!global.__db__) {
     global.__db__ = getClient();
@@ -36,13 +36,13 @@ function getClient() {
   const adapter = new PrismaPg({ connectionString: databaseUrl.toString() });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const client = new (PrismaClient as any)({ adapter }) as PrismaClient;
-  if (process.env.NODE_ENV === "production") {
-    void client.$connect().catch((error) => {
-      console.error("❌ prisma initial connect failed", error);
-      process.exit(1);
-    });
-  }
 
+  return client;
+}
+
+async function getConnectedClient() {
+  const client = getClient();
+  await client.$connect();
   return client;
 }
 

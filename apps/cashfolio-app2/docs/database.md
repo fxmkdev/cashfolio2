@@ -10,9 +10,9 @@ paths are relative to that app directory.
   connection exhaustion during hot reload
 - Runtime bootstrap adds `connect_timeout=20` to `DATABASE_URL` when the query
   param is missing (without overriding an explicit value)
-- In production, Prisma performs an initial `$connect()` and exits the process
-  on failure so deployments do not stay healthy while the database is
-  unreachable
+- In production, `src/prisma.server.ts` awaits an initial Prisma `$connect()`
+  during module initialization so app startup fails before serving traffic when
+  the database is unreachable
 - Custom Prisma configuration in `prisma.config.ts` at the app root
 - `prisma generate` works without `DATABASE_URL`; `prisma.config.ts` allows a
   missing URL for generate, while non-generate Prisma commands require
