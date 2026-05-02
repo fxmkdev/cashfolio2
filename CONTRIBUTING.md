@@ -12,7 +12,7 @@ All pull request titles must follow Conventional Commits:
 Examples:
 
 - `feat(cashfolio-app2): add archived-account filters`
-- `fix(cashfolio-app): prevent duplicate booking IDs`
+- `fix(cashfolio-app2): prevent duplicate booking IDs`
 - `docs: clarify deployment prerequisites`
 - `chore(infra): bump flyctl version`
 
@@ -44,16 +44,12 @@ need to be strictly Conventional Commit formatted.
 
 ## Scope Guidance
 
-- Use app or area scope when helpful (`cashfolio-app2`, `cashfolio-app`,
-  `infra`, `docs`, `cli`).
+- Use app or area scope when helpful (`cashfolio-app2`, `infra`, `docs`,
+  `cli`).
 - Keep descriptions concise, imperative, and behavior-focused.
 
 ## Runtime and Typings Policy
 
-- `tools/importer` is deprecated and no longer maintained. Avoid routine
-  dependency/tooling upgrades there unless explicitly requested.
-- `apps/cashfolio-app` is deprecated and no longer maintained. Avoid routine
-  dependency/tooling upgrades there unless explicitly requested.
 - Keep `@types/node` on the Node 24 line until runtime migration is scheduled.
 
 ## Review Comment Workflow

@@ -14,7 +14,6 @@ This repository contains multiple Cashfolio applications and shared tooling.
     - [Routing and server functions](apps/cashfolio-app2/docs/routing.md)
     - [Database and Prisma](apps/cashfolio-app2/docs/database.md)
     - [UI patterns](apps/cashfolio-app2/docs/ui-patterns.md)
-  - `apps/cashfolio-app/docs/` (legacy app-local docs)
 
 ## Common Commands
 
