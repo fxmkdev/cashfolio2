@@ -1,6 +1,7 @@
 import { AccountType } from "../.prisma-client/enums";
 import { prisma } from "../prisma.server";
 import { getOpeningBalancesBookingDate, startOfUtcDay } from "../shared/date";
+import { toMoneyNumber } from "../shared/money";
 import { computeEndOfPeriodBalanceStats } from "./period-balance-stats";
 import { round2 } from "./period-helpers";
 import { convertBookingValueToReference } from "./period-conversion";
@@ -72,7 +73,7 @@ export async function loadTimelineOpeningBalancePoint(args: {
   const endOfPeriodRawBalanceByAccountId = new Map(
     endOfPeriodRawBalancesGrouped.map((balance) => [
       balance.accountId,
-      Number(balance._sum.value ?? 0),
+      toMoneyNumber(balance._sum.value ?? 0),
     ]),
   );
 

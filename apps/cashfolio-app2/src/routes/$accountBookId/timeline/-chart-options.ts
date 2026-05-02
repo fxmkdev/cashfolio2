@@ -30,6 +30,13 @@ type BarTimelineMetric = Exclude<
   "assets" | "liabilities" | "netWorth"
 >;
 
+const pointDateFormatter = new Intl.DateTimeFormat("en-CH", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  timeZone: "UTC",
+});
+
 function getAxisDomainForMetric(args: {
   chartData: TimelineChartDatum[];
   selectedMetric: TimelineMetric;
@@ -76,12 +83,6 @@ export function createTimelineChartOptions(args: {
   isDarkMode: boolean;
   onZoom?: (event: AgZoomEvent) => void;
 }): AgCartesianChartOptions {
-  const pointDateFormatter = new Intl.DateTimeFormat("en-CH", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    timeZone: "UTC",
-  });
   const positiveFillColor = args.isDarkMode
     ? args.theme.colors.green[5]
     : args.theme.colors.green[6];
