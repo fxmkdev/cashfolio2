@@ -32,6 +32,11 @@ export async function processPeriodEquityBookings(args: {
     date: Date;
   }) => Promise<number | null>;
 }) {
+  const trackedEquitySubtypes: EquityAccountSubtype[] = [
+    EquityAccountSubtype.INCOME,
+    EquityAccountSubtype.EXPENSE,
+    EquityAccountSubtype.GAIN_LOSS,
+  ];
   let bookingsCount = 0;
   let convertedCount = 0;
   let skippedCount = 0;
@@ -41,24 +46,61 @@ export async function processPeriodEquityBookings(args: {
     string,
     ExplicitCounterpartAccount
   >();
+  const explicitTransactionIdSet = new Set<string>();
+  const explicitContributionCandidates: Array<{
+    booking: {
+      id: string;
+      transactionId: string;
+      unit: Unit;
+      currency: string | null;
+      cryptocurrency: string | null;
+      symbol: string | null;
+      tradeCurrency: string | null;
+    };
+    convertedValue: number;
+  }> = [];
+
+  const equityAccounts = await prisma.account.findMany({
+    where: {
+      accountBookId: args.accountBookId,
+      type: AccountType.EQUITY,
+      equityAccountSubtype: {
+        in: trackedEquitySubtypes,
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      groupId: true,
+      equityAccountSubtype: true,
+    },
+  });
+  const equityAccountById = new Map(
+    equityAccounts.map((account) => [account.id, account]),
+  );
+  const equityAccountIds = equityAccounts.map((account) => account.id);
 
   while (true) {
     const bookingsPage = await prisma.booking.findMany({
       where: {
         accountBookId: args.accountBookId,
+        ...(equityAccountIds.length > 0
+          ? {
+              accountId: {
+                in: equityAccountIds,
+              },
+            }
+          : {
+              account: {
+                type: AccountType.EQUITY,
+                equityAccountSubtype: {
+                  in: trackedEquitySubtypes,
+                },
+              },
+            }),
         date: {
           gte: args.periodStart,
           lt: args.periodEndExclusive,
-        },
-        account: {
-          type: AccountType.EQUITY,
-          equityAccountSubtype: {
-            in: [
-              EquityAccountSubtype.INCOME,
-              EquityAccountSubtype.EXPENSE,
-              EquityAccountSubtype.GAIN_LOSS,
-            ],
-          },
         },
       },
       orderBy: { id: "asc" },
@@ -76,6 +118,7 @@ export async function processPeriodEquityBookings(args: {
         : {}),
       select: {
         id: true,
+        accountId: true,
         transactionId: true,
         date: true,
         value: true,
@@ -116,30 +159,6 @@ export async function processPeriodEquityBookings(args: {
       ),
     );
 
-    const explicitBookingsForCounterpartResolution: Array<{
-      transactionId: string;
-    }> = [];
-    for (let index = 0; index < bookingsPage.length; index += 1) {
-      const booking = bookingsPage[index]!;
-      const convertedValue = convertedValues[index];
-      if (
-        convertedValue != null &&
-        booking.account.equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS
-      ) {
-        explicitBookingsForCounterpartResolution.push({
-          transactionId: booking.transactionId,
-        });
-      }
-    }
-
-    if (explicitBookingsForCounterpartResolution.length > 0) {
-      await resolveExplicitCounterpartNonEquityAccounts({
-        accountBookId: args.accountBookId,
-        explicitBookings: explicitBookingsForCounterpartResolution,
-        byTransactionId: explicitCounterpartAccountByTransactionId,
-      });
-    }
-
     for (let index = 0; index < bookingsPage.length; index += 1) {
       const booking = bookingsPage[index]!;
       const convertedValue = convertedValues[index];
@@ -150,45 +169,78 @@ export async function processPeriodEquityBookings(args: {
       }
 
       convertedCount += 1;
+      const bookingAccount =
+        booking.account ?? equityAccountById.get(booking.accountId);
+      if (!bookingAccount) {
+        skippedCount += 1;
+        convertedCount -= 1;
+        continue;
+      }
       accumulateConvertedEquityBooking({
-        booking,
+        booking: {
+          account: bookingAccount,
+        },
         convertedValue,
         aggregation: args.equityAggregation,
       });
 
       if (
-        booking.account.equityAccountSubtype !== EquityAccountSubtype.GAIN_LOSS
+        bookingAccount.equityAccountSubtype !== EquityAccountSubtype.GAIN_LOSS
       ) {
         continue;
       }
 
-      const counterpartAccount = explicitCounterpartAccountByTransactionId.get(
-        booking.transactionId,
-      );
-      if (!counterpartAccount) {
-        throw new Error(
-          `Explicit gain/loss booking invariant violated for booking ${booking.id} in transaction ${booking.transactionId}: missing resolved counterpart account.`,
-        );
-      }
-
-      accumulateGainLossContribution({
-        byKey: args.gainsLossesContributionByKey,
-        sourceKind: "EXPLICIT",
-        accountId: counterpartAccount.id,
-        accountName: counterpartAccount.name,
-        unit: booking.unit,
-        currency: booking.currency,
-        cryptocurrency: booking.cryptocurrency,
-        symbol: booking.symbol,
-        tradeCurrency: booking.tradeCurrency,
-        realizedGainLoss: -convertedValue,
-        unrealizedGainLoss: 0,
+      explicitTransactionIdSet.add(booking.transactionId);
+      explicitContributionCandidates.push({
+        booking: {
+          id: booking.id,
+          transactionId: booking.transactionId,
+          unit: booking.unit,
+          currency: booking.currency,
+          cryptocurrency: booking.cryptocurrency,
+          symbol: booking.symbol,
+          tradeCurrency: booking.tradeCurrency,
+        },
+        convertedValue,
       });
     }
 
     if (bookingsPage.length < args.pageSize) {
       break;
     }
+  }
+
+  if (explicitTransactionIdSet.size > 0) {
+    await resolveExplicitCounterpartNonEquityAccounts({
+      accountBookId: args.accountBookId,
+      explicitTransactionIds: Array.from(explicitTransactionIdSet),
+      byTransactionId: explicitCounterpartAccountByTransactionId,
+    });
+  }
+
+  for (const candidate of explicitContributionCandidates) {
+    const counterpartAccount = explicitCounterpartAccountByTransactionId.get(
+      candidate.booking.transactionId,
+    );
+    if (!counterpartAccount) {
+      throw new Error(
+        `Explicit gain/loss booking invariant violated for booking ${candidate.booking.id} in transaction ${candidate.booking.transactionId}: missing resolved counterpart account.`,
+      );
+    }
+
+    accumulateGainLossContribution({
+      byKey: args.gainsLossesContributionByKey,
+      sourceKind: "EXPLICIT",
+      accountId: counterpartAccount.id,
+      accountName: counterpartAccount.name,
+      unit: candidate.booking.unit,
+      currency: candidate.booking.currency,
+      cryptocurrency: candidate.booking.cryptocurrency,
+      symbol: candidate.booking.symbol,
+      tradeCurrency: candidate.booking.tradeCurrency,
+      realizedGainLoss: -candidate.convertedValue,
+      unrealizedGainLoss: 0,
+    });
   }
 
   return {

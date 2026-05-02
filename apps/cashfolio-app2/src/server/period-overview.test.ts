@@ -2185,6 +2185,12 @@ describe("getPeriodOverview", () => {
             cryptocurrency: null,
             symbol: null,
             tradeCurrency: null,
+            account: {
+              id: "equity-gainloss",
+              name: "GainLoss",
+              groupId: null,
+              equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+            },
           },
         ]);
       }
@@ -2272,6 +2278,12 @@ describe("getPeriodOverview", () => {
               cryptocurrency: null,
               symbol: null,
               tradeCurrency: null,
+              account: {
+                id: "equity-gainloss",
+                name: "GainLoss",
+                groupId: null,
+                equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+              },
             })),
           );
         }
@@ -2290,6 +2302,12 @@ describe("getPeriodOverview", () => {
               cryptocurrency: null,
               symbol: null,
               tradeCurrency: null,
+              account: {
+                id: "equity-gainloss",
+                name: "GainLoss",
+                groupId: null,
+                equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+              },
             },
           ]);
         }
