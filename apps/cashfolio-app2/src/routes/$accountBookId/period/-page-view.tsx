@@ -384,11 +384,6 @@ export function PeriodPageView({
       />
 
       <Stack gap="lg">
-        <PeriodNetWorthReconciliationWarning
-          reconciliation={netWorthReconciliation}
-          currencyFormatter={currencyFormatter}
-        />
-
         <div
           className={classes.periodTopSection}
           data-testid="period-top-section"
@@ -418,6 +413,10 @@ export function PeriodPageView({
             onYearPickerChange={handleYearPickerChange}
           />
         </div>
+        <PeriodNetWorthReconciliationWarning
+          reconciliation={netWorthReconciliation}
+          currencyFormatter={currencyFormatter}
+        />
 
         <PeriodStatsCardsSection
           statCards={statCards}
