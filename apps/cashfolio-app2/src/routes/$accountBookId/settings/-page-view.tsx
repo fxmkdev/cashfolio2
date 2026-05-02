@@ -9,7 +9,7 @@ import {
   Title,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
-import { useForm } from "@mantine/form";
+import { type UseFormReturnType, useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { useEffect, useMemo, useState } from "react";
 import { IconCheck } from "@tabler/icons-react";
@@ -30,6 +30,92 @@ type AccountBookSettingsFormValues = {
   startDate: Date | string | null;
 };
 
+function getCurrencyOptions() {
+  return Object.entries(currencies)
+    .map(([code, label]) => ({
+      value: code,
+      label: `${code} - ${label}`,
+    }))
+    .sort((left, right) => left.value.localeCompare(right.value));
+}
+
+function validateStartDate(value: Date | string | null) {
+  const startDate = normalizeDateInputValue(value);
+  if (!startDate) {
+    return value ? "Start date is invalid" : "Start date is required";
+  }
+
+  const startDay = startOfUtcDay(startDate);
+  if (startDay > startOfUtcDay(new Date())) {
+    return "Start date cannot be in the future";
+  }
+
+  return null;
+}
+
+function showSettingsSavedNotification() {
+  notifications.show({
+    color: "green",
+    icon: <IconCheck size={16} />,
+    title: "Saved",
+    message: "Account book settings saved.",
+  });
+}
+
+function SettingsFormFields(args: {
+  form: UseFormReturnType<AccountBookSettingsFormValues>;
+  isSubmitting: boolean;
+  submitError: string | null;
+  currencyOptions: { value: string; label: string }[];
+}) {
+  return (
+    <Stack gap="md">
+      <TextInput
+        label="Account Book Name"
+        withAsterisk
+        disabled={args.isSubmitting}
+        {...args.form.getInputProps("name")}
+      />
+
+      <Select
+        label="Reference Currency"
+        withAsterisk
+        searchable
+        allowDeselect={false}
+        disabled={args.isSubmitting}
+        data={args.currencyOptions}
+        {...args.form.getInputProps("referenceCurrency")}
+      />
+
+      <DateInput
+        valueFormat="DD.MM.YYYY"
+        dateParser={(value) => normalizeDateInputValue(value)}
+        label="Start Date"
+        withAsterisk
+        maxDate={startOfUtcDay(new Date())}
+        disabled={args.isSubmitting}
+        {...args.form.getInputProps("startDate")}
+      />
+
+      {args.submitError && (
+        <Text size="sm" c="red">
+          {args.submitError}
+        </Text>
+      )}
+
+      <Group justify="end">
+        <Button
+          type="submit"
+          loading={args.isSubmitting}
+          disabled={args.isSubmitting}
+        >
+          Save
+        </Button>
+      </Group>
+    </Stack>
+  );
+}
+
 export function AccountBookSettingsPageView(args: {
   accountBookId: string;
   settings: AccountBookSettingsPageData;
@@ -43,16 +129,7 @@ export function AccountBookSettingsPageView(args: {
   const { isSubmitting, runSubmit } = useDialogSubmitState();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const currencyOptions = useMemo(
-    () =>
-      Object.entries(currencies)
-        .map(([code, label]) => ({
-          value: code,
-          label: `${code} - ${label}`,
-        }))
-        .sort((left, right) => left.value.localeCompare(right.value)),
-    [],
-  );
+  const currencyOptions = useMemo(() => getCurrencyOptions(), []);
 
   const form = useForm<AccountBookSettingsFormValues>({
     mode: "controlled",
@@ -66,19 +143,7 @@ export function AccountBookSettingsPageView(args: {
         value.trim().length === 0 ? "Account book name is required" : null,
       referenceCurrency: (value) =>
         value ? null : "Reference currency is required",
-      startDate: (value) => {
-        const startDate = normalizeDateInputValue(value);
-        if (!startDate) {
-          return value ? "Start date is invalid" : "Start date is required";
-        }
-
-        const startDay = startOfUtcDay(startDate);
-        if (startDay > startOfUtcDay(new Date())) {
-          return "Start date cannot be in the future";
-        }
-
-        return null;
-      },
+      startDate: validateStartDate,
     },
   });
 
@@ -126,12 +191,7 @@ export function AccountBookSettingsPageView(args: {
                 referenceCurrency,
                 startDate: startOfUtcDay(normalizedStartDate).toISOString(),
               });
-              notifications.show({
-                color: "green",
-                icon: <IconCheck size={16} />,
-                title: "Saved",
-                message: "Account book settings saved.",
-              });
+              showSettingsSavedNotification();
             } catch (error) {
               setSubmitError(
                 error instanceof Error
@@ -142,50 +202,12 @@ export function AccountBookSettingsPageView(args: {
           });
         })}
       >
-        <Stack gap="md">
-          <TextInput
-            label="Account Book Name"
-            withAsterisk
-            disabled={isSubmitting}
-            {...form.getInputProps("name")}
-          />
-
-          <Select
-            label="Reference Currency"
-            withAsterisk
-            searchable
-            allowDeselect={false}
-            disabled={isSubmitting}
-            data={currencyOptions}
-            {...form.getInputProps("referenceCurrency")}
-          />
-
-          <DateInput
-            valueFormat="DD.MM.YYYY"
-            dateParser={(value) => normalizeDateInputValue(value)}
-            label="Start Date"
-            withAsterisk
-            maxDate={startOfUtcDay(new Date())}
-            disabled={isSubmitting}
-            {...form.getInputProps("startDate")}
-          />
-
-          {submitError && (
-            <Text size="sm" c="red">
-              {submitError}
-            </Text>
-          )}
-
-          <Group justify="end">
-            <Button
-              type="submit"
-              loading={isSubmitting}
-              disabled={isSubmitting}
-            >
-              Save
-            </Button>
-          </Group>
-        </Stack>
+        <SettingsFormFields
+          form={form}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+          currencyOptions={currencyOptions}
+        />
       </form>
     </Container>
   );

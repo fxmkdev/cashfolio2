@@ -27,6 +27,24 @@ type UpdateAccountBookSettingsInput = {
   startDate: Date | string;
 };
 
+type AccountBookSettingsRecord = {
+  id: string;
+  name: string;
+  referenceCurrency: string;
+  startDate: Date;
+};
+
+function toAccountBookSettingsResponse(
+  record: AccountBookSettingsRecord,
+): AccountBookSettings {
+  return {
+    id: record.id,
+    name: record.name,
+    referenceCurrency: record.referenceCurrency.toUpperCase(),
+    startDate: startOfUtcDay(record.startDate).toISOString(),
+  };
+}
+
 function normalizeAccountBookNameOrThrow(value: unknown): string {
   if (typeof value !== "string") {
     throw new Error("Account book name is required.");
@@ -82,6 +100,137 @@ function normalizeStartDateOrThrow(value: unknown): Date {
   return startDate;
 }
 
+async function findFirstNonOpeningBookingDate(
+  tx: {
+    booking: {
+      findFirst: (args: {
+        where: {
+          accountBookId: string;
+          transaction: {
+            bookings: {
+              none: {
+                account: {
+                  type: AccountType;
+                  equityAccountSubtype: EquityAccountSubtype;
+                };
+              };
+            };
+          };
+        };
+        orderBy:
+          | { date: "asc" }[]
+          | { id: "asc" }[]
+          | [{ date: "asc" }, { id: "asc" }];
+        select: { date: true };
+      }) => Promise<{ date: Date } | null>;
+    };
+  },
+  accountBookId: string,
+): Promise<Date | null> {
+  const firstNonOpeningBooking = await tx.booking.findFirst({
+    where: {
+      accountBookId,
+      transaction: {
+        bookings: {
+          none: {
+            account: {
+              type: AccountType.EQUITY,
+              equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+            },
+          },
+        },
+      },
+    },
+    orderBy: [{ date: "asc" }, { id: "asc" }],
+    select: { date: true },
+  });
+
+  return firstNonOpeningBooking
+    ? startOfUtcDay(firstNonOpeningBooking.date)
+    : null;
+}
+
+function assertStartDateNotAfterFirstNonOpeningBooking(args: {
+  startDate: Date;
+  firstNonOpeningBookingDay: Date | null;
+}) {
+  if (!args.firstNonOpeningBookingDay) {
+    return;
+  }
+
+  if (args.startDate > args.firstNonOpeningBookingDay) {
+    throw new Error(
+      `Start date cannot be after first non-opening booking date (${formatUtcDate(args.firstNonOpeningBookingDay)}).`,
+    );
+  }
+}
+
+async function migrateOpeningTransactionsToDate(
+  tx: {
+    transaction: {
+      findMany: (args: {
+        where: {
+          accountBookId: string;
+          bookings: {
+            some: {
+              account: {
+                type: AccountType;
+                equityAccountSubtype: EquityAccountSubtype;
+              };
+            };
+          };
+        };
+        select: { id: true };
+      }) => Promise<{ id: string }[]>;
+    };
+    booking: {
+      updateMany: (args: {
+        where: {
+          accountBookId: string;
+          transactionId: { in: string[] };
+        };
+        data: { date: Date };
+      }) => Promise<unknown>;
+    };
+  },
+  args: {
+    accountBookId: string;
+    startDate: Date;
+  },
+) {
+  const openingBookingDate = getOpeningBalancesBookingDate(args.startDate);
+  const openingTransactions = await tx.transaction.findMany({
+    where: {
+      accountBookId: args.accountBookId,
+      bookings: {
+        some: {
+          account: {
+            type: AccountType.EQUITY,
+            equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+          },
+        },
+      },
+    },
+    select: { id: true },
+  });
+
+  if (openingTransactions.length === 0) {
+    return;
+  }
+
+  await tx.booking.updateMany({
+    where: {
+      accountBookId: args.accountBookId,
+      transactionId: {
+        in: openingTransactions.map((transaction) => transaction.id),
+      },
+    },
+    data: {
+      date: openingBookingDate,
+    },
+  });
+}
+
 export const getAccountBookSettings = createServerFn({ method: "GET" })
   .inputValidator((data: { accountBookId: string }) => data)
   .handler(async ({ data }): Promise<AccountBookSettings> => {
@@ -97,12 +246,7 @@ export const getAccountBookSettings = createServerFn({ method: "GET" })
       },
     });
 
-    return {
-      id: accountBook.id,
-      name: accountBook.name,
-      referenceCurrency: accountBook.referenceCurrency.toUpperCase(),
-      startDate: startOfUtcDay(accountBook.startDate).toISOString(),
-    };
+    return toAccountBookSettingsResponse(accountBook);
   });
 
 export const updateAccountBookSettings = createServerFn({ method: "POST" })
@@ -137,65 +281,16 @@ export const updateAccountBookSettings = createServerFn({ method: "POST" })
         );
 
         if (startDateChanged) {
-          const firstNonOpeningBooking = await tx.booking.findFirst({
-            where: {
-              accountBookId: data.accountBookId,
-              transaction: {
-                bookings: {
-                  none: {
-                    account: {
-                      type: AccountType.EQUITY,
-                      equityAccountSubtype:
-                        EquityAccountSubtype.OPENING_BALANCES,
-                    },
-                  },
-                },
-              },
-            },
-            orderBy: [{ date: "asc" }, { id: "asc" }],
-            select: { date: true },
+          const firstNonOpeningBookingDay =
+            await findFirstNonOpeningBookingDate(tx, data.accountBookId);
+          assertStartDateNotAfterFirstNonOpeningBooking({
+            startDate,
+            firstNonOpeningBookingDay,
           });
-
-          if (firstNonOpeningBooking) {
-            const firstNonOpeningBookingDay = startOfUtcDay(
-              firstNonOpeningBooking.date,
-            );
-            if (startDate > firstNonOpeningBookingDay) {
-              throw new Error(
-                `Start date cannot be after first non-opening booking date (${formatUtcDate(firstNonOpeningBookingDay)}).`,
-              );
-            }
-          }
-
-          const openingBookingDate = getOpeningBalancesBookingDate(startDate);
-          const openingTransactions = await tx.transaction.findMany({
-            where: {
-              accountBookId: data.accountBookId,
-              bookings: {
-                some: {
-                  account: {
-                    type: AccountType.EQUITY,
-                    equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-                  },
-                },
-              },
-            },
-            select: { id: true },
+          await migrateOpeningTransactionsToDate(tx, {
+            accountBookId: data.accountBookId,
+            startDate,
           });
-
-          if (openingTransactions.length > 0) {
-            await tx.booking.updateMany({
-              where: {
-                accountBookId: data.accountBookId,
-                transactionId: {
-                  in: openingTransactions.map((transaction) => transaction.id),
-                },
-              },
-              data: {
-                date: openingBookingDate,
-              },
-            });
-          }
         }
 
         const updated = await tx.accountBook.update({
@@ -224,10 +319,5 @@ export const updateAccountBookSettings = createServerFn({ method: "POST" })
       await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
     }
 
-    return {
-      id: updated.id,
-      name: updated.name,
-      referenceCurrency: updated.referenceCurrency.toUpperCase(),
-      startDate: startOfUtcDay(updated.startDate).toISOString(),
-    };
+    return toAccountBookSettingsResponse(updated);
   });
