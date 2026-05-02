@@ -4,12 +4,16 @@ const databaseUrl =
   process.env.DATABASE_URL ??
   "postgresql://postgres:postgres@127.0.0.1:5433/postgres?schema=public";
 const baseUrl = process.env.BASE_URL ?? "http://127.0.0.1:4173";
+const workers = process.env.CI
+  ? Number.parseInt(process.env.E2E_WORKERS ?? "2", 10)
+  : 1;
 
 export default defineConfig({
   testDir: "./e2e/tests",
+  globalSetup: "./e2e/global-setup.ts",
   globalTeardown: "./e2e/global-teardown.ts",
   fullyParallel: false,
-  workers: 1,
+  workers: Number.isFinite(workers) && workers > 0 ? workers : 1,
   retries: process.env.CI ? 1 : 0,
   timeout: 60_000,
   expect: {
@@ -17,16 +21,20 @@ export default defineConfig({
   },
   outputDir: "test-results",
   reporter: process.env.CI
-    ? [["line"], ["html", { outputFolder: "playwright-report", open: "never" }]]
+    ? [
+        ["line"],
+        ["html", { outputFolder: "playwright-report", open: "never" }],
+        ["json", { outputFile: "test-results/results.json" }],
+      ]
     : [
         ["list"],
         ["html", { outputFolder: "playwright-report", open: "never" }],
       ],
   use: {
     baseURL: baseUrl,
-    trace: "retain-on-failure",
+    trace: process.env.CI ? "on-first-retry" : "retain-on-failure",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    video: process.env.CI ? "on-first-retry" : "retain-on-failure",
   },
   webServer: {
     command:

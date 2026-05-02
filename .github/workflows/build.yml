@@ -82,6 +82,7 @@ jobs:
       BASE_URL: http://127.0.0.1:4173
       E2E_AUTH_BYPASS: "true"
       E2E_AUTH_EXTERNAL_ID: e2e-user
+      E2E_WORKERS: "2"
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -96,6 +97,13 @@ jobs:
           pnpm --filter cashfolio-app2 exec playwright install --with-deps chromium
       - name: Run e2e tests
         run: pnpm --filter cashfolio-app2 e2e:ci
+      - name: Upload Playwright timing artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cashfolio-app2-playwright-timings
+          path: apps/cashfolio-app2/test-results/results.json
+          if-no-files-found: ignore
       - name: Upload Playwright artifacts
         if: failure()
         uses: actions/upload-artifact@v7

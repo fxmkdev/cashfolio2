@@ -42,6 +42,22 @@ function assertSafeResetTarget() {
   }
 }
 
+export async function resetDatabase(): Promise<void> {
+  assertSafeResetTarget();
+
+  await prisma.$executeRawUnsafe(`
+    TRUNCATE TABLE
+      "Booking",
+      "Transaction",
+      "Account",
+      "AccountGroup",
+      "UserAccountBookLink",
+      "AccountBook",
+      "User"
+    RESTART IDENTITY CASCADE
+  `);
+}
+
 export type SeededData = {
   accountBookId: string;
   userExternalId: string;
@@ -61,20 +77,12 @@ export async function resetAndSeedDatabase(args?: {
 }): Promise<SeededData> {
   assertSafeResetTarget();
 
-  await prisma.$executeRawUnsafe(`
-    TRUNCATE TABLE
-      "Booking",
-      "Transaction",
-      "Account",
-      "AccountGroup",
-      "UserAccountBookLink",
-      "AccountBook",
-      "User"
-    RESTART IDENTITY CASCADE
-  `);
-
-  const user = await prisma.user.create({
-    data: {
+  const user = await prisma.user.upsert({
+    where: {
+      externalId: DEFAULT_EXTERNAL_ID,
+    },
+    update: {},
+    create: {
       id: createId(),
       externalId: DEFAULT_EXTERNAL_ID,
     },
