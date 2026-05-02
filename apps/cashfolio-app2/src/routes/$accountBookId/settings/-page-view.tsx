@@ -2,6 +2,7 @@ import {
   Button,
   Container,
   Group,
+  Notification,
   Select,
   Stack,
   Text,
@@ -12,6 +13,7 @@ import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { parse } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
+import { IconCheck } from "@tabler/icons-react";
 import { LinkButton } from "@/components/link-button";
 import { TopPageHeader } from "@/components/top-page-header";
 import { currencies } from "@/currencies";
@@ -41,6 +43,7 @@ export function AccountBookSettingsPageView(args: {
   const { accountBookId, settings } = args;
   const { isSubmitting, runSubmit } = useDialogSubmitState();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const currencyOptions = useMemo(
     () =>
@@ -89,6 +92,7 @@ export function AccountBookSettingsPageView(args: {
     });
     form.resetDirty();
     setSubmitError(null);
+    setSubmitSuccess(false);
   }, [settings]);
 
   return (
@@ -118,6 +122,7 @@ export function AccountBookSettingsPageView(args: {
           }
 
           setSubmitError(null);
+          setSubmitSuccess(false);
           await runSubmit(async () => {
             try {
               await args.onSubmit({
@@ -125,17 +130,30 @@ export function AccountBookSettingsPageView(args: {
                 referenceCurrency,
                 startDate: startOfUtcDay(normalizedStartDate).toISOString(),
               });
+              setSubmitSuccess(true);
             } catch (error) {
               setSubmitError(
                 error instanceof Error
                   ? error.message
                   : "Failed to save account book settings.",
               );
+              setSubmitSuccess(false);
             }
           });
         })}
       >
         <Stack gap="md">
+          {submitSuccess && (
+            <Notification
+              color="green"
+              icon={<IconCheck size={16} />}
+              withCloseButton
+              onClose={() => setSubmitSuccess(false)}
+            >
+              Account book settings saved.
+            </Notification>
+          )}
+
           <TextInput
             label="Account Book Name"
             withAsterisk

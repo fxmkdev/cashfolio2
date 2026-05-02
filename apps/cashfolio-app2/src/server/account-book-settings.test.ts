@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const createServerFn = vi.hoisted(() =>
   vi.fn(() => {
@@ -96,6 +96,10 @@ describe("account-book settings server functions", () => {
     tx.booking.findFirst.mockResolvedValue(null);
     tx.booking.updateMany.mockResolvedValue({ count: 0 });
     tx.transaction.findMany.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("loads account-book settings", async () => {
@@ -334,8 +338,6 @@ describe("account-book settings server functions", () => {
         },
       }),
     ).rejects.toThrow("Start date cannot be in the future.");
-
-    vi.useRealTimers();
   });
 
   it("queries first non-opening booking by excluding opening transactions", async () => {
