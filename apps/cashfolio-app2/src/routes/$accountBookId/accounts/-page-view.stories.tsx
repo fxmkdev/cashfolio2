@@ -204,6 +204,11 @@ const existingNodes: AccountsPageViewProps["existingNodes"] = [
   },
 ];
 
+const accountBooks: AccountsPageViewProps["accountBooks"] = [
+  { id: "storybook-book", name: "Storybook Book" },
+  { id: "storybook-alt-book", name: "Storybook Alt Book" },
+];
+
 function getRowsFor(args: { mode: AccountsMode; tab: TabValue }): TreeRow[] {
   if (args.tab !== "ASSET") return [];
   return args.mode === "archived" ? archivedAssetRows : activeAssetRows;
@@ -359,6 +364,8 @@ function AccountsPageStoryHarness({
     <Box>
       <AccountsPageView
         accountBookId="storybook-book"
+        accountBooks={accountBooks}
+        currentAccountBookId="storybook-book"
         tab={tab}
         mode={mode}
         tabs={tabs}
@@ -384,6 +391,7 @@ function AccountsPageStoryHarness({
         selectedSiblingRows={selectedSiblingRows}
         onOpenCreateGroup={() => setCreateGroupModalOpened(true)}
         onOpenCreateAccount={() => setCreateModalOpened(true)}
+        onSelectAccountBook={(_nextAccountBookId) => undefined}
         onOpenLedger={(nextAccountId) => {
           if (routeSmoke) {
             navigate({

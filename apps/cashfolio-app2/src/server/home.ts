@@ -2,6 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
 import { ensureUser } from "../users/functions.server";
 
+export type UserAccountBookOption = {
+  id: string;
+  name: string;
+};
+
 export const getFirstUserAccountBookId = createServerFn({
   method: "GET",
 }).handler(async () => {
@@ -13,4 +18,29 @@ export const getFirstUserAccountBookId = createServerFn({
   });
 
   return link?.accountBookId ?? null;
+});
+
+export const getUserAccountBooks = createServerFn({
+  method: "GET",
+}).handler(async (): Promise<UserAccountBookOption[]> => {
+  const user = await ensureUser();
+
+  const links = await prisma.userAccountBookLink.findMany({
+    where: { userId: user.id },
+    select: {
+      accountBook: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: {
+      accountBook: {
+        name: "asc",
+      },
+    },
+  });
+
+  return links.map((link) => link.accountBook);
 });

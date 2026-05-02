@@ -47,7 +47,17 @@ function AccountsPage() {
 
   return (
     <Suspense fallback={null}>
-      <AccountsPageView {...viewProps} />
+      <AccountsPageView
+        {...viewProps}
+        accountBooks={loaderData.accountBooks}
+        currentAccountBookId={accountBookId}
+        onSelectAccountBook={(nextAccountBookId) => {
+          navigate({
+            to: "/$accountBookId",
+            params: { accountBookId: nextAccountBookId },
+          });
+        }}
+      />
     </Suspense>
   );
 }

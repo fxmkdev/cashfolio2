@@ -1,8 +1,10 @@
-import { Button, Container, Group, Tabs, Title } from "@mantine/core";
+import { Button, Container, Group, Menu, Tabs, Title } from "@mantine/core";
 import {
   IconArchive,
   IconChartBar,
   IconCalendarMonth,
+  IconCheck,
+  IconChevronDown,
   IconListDetails,
   IconPlus,
 } from "@tabler/icons-react";
@@ -47,6 +49,8 @@ type RowTarget = {
 
 export type AccountsPageViewProps = {
   accountBookId: string;
+  accountBooks: AccountsPageLoaderData["accountBooks"];
+  currentAccountBookId: string;
   tab: TabValue;
   mode: AccountsMode;
   tabs: readonly { value: TabValue; label: string }[];
@@ -70,6 +74,7 @@ export type AccountsPageViewProps = {
   selectedSiblingRows: ReorderGroupChildRow[];
   onOpenCreateGroup: () => void;
   onOpenCreateAccount: () => void;
+  onSelectAccountBook: (accountBookId: string) => void;
   onOpenLedger: (accountId: string) => void;
   onCloseCreateAccount: () => void;
   onSubmitCreateAccount: (values: TransformedFormValues) => Promise<void>;
@@ -97,6 +102,8 @@ export type AccountsPageViewProps = {
 
 export function AccountsPageView({
   accountBookId,
+  accountBooks,
+  currentAccountBookId,
   tab,
   mode,
   tabs,
@@ -120,6 +127,7 @@ export function AccountsPageView({
   selectedSiblingRows,
   onOpenCreateGroup,
   onOpenCreateAccount,
+  onSelectAccountBook,
   onOpenLedger,
   onCloseCreateAccount,
   onSubmitCreateAccount,
@@ -139,6 +147,9 @@ export function AccountsPageView({
   onReorderSiblings,
 }: AccountsPageViewProps) {
   const isArchivedMode = mode === "archived";
+  const currentAccountBookName =
+    accountBooks.find((accountBook) => accountBook.id === currentAccountBookId)
+      ?.name ?? currentAccountBookId;
 
   return (
     <Container fluid py="xl" px="xl">
@@ -181,6 +192,37 @@ export function AccountsPageView({
             >
               Timeline
             </LinkButton>
+            <Menu position="bottom-end" withArrow>
+              <Menu.Target>
+                <Button
+                  variant="default"
+                  rightSection={<IconChevronDown size={16} />}
+                >
+                  {currentAccountBookName}
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                {accountBooks.map((accountBook) => {
+                  const isCurrentBook = accountBook.id === currentAccountBookId;
+
+                  return (
+                    <Menu.Item
+                      key={accountBook.id}
+                      leftSection={
+                        isCurrentBook ? <IconCheck size={16} /> : undefined
+                      }
+                      onClick={() => {
+                        onSelectAccountBook(accountBook.id);
+                      }}
+                    >
+                      {accountBook.name}
+                    </Menu.Item>
+                  );
+                })}
+                <Menu.Divider />
+                <Menu.Item disabled>Create new account book</Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
             {!isArchivedMode && (
               <>
                 <LinkButton

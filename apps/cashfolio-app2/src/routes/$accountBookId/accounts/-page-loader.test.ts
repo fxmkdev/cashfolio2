@@ -2,9 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 
 const getAccountsPageData = vi.hoisted(() => vi.fn());
+const getUserAccountBooks = vi.hoisted(() => vi.fn());
 
 vi.mock("@/server/accounts", () => ({
   getAccountsPageData,
+}));
+vi.mock("@/server/home", () => ({
+  getUserAccountBooks,
 }));
 
 import { loadAccountsPageData } from "./-page-loader";
@@ -16,10 +20,16 @@ describe("loadAccountsPageData", () => {
     referenceCurrency: "CHF",
     rows: [],
   };
+  const mockAccountBooks = [
+    { id: "book-1", name: "Alpha Book" },
+    { id: "book-2", name: "Beta Book" },
+  ];
 
   beforeEach(() => {
     getAccountsPageData.mockReset();
+    getUserAccountBooks.mockReset();
     getAccountsPageData.mockResolvedValue(mockResult);
+    getUserAccountBooks.mockResolvedValue(mockAccountBooks);
   });
 
   it("loads only the selected asset tab in active mode", async () => {
@@ -30,6 +40,7 @@ describe("loadAccountsPageData", () => {
     });
 
     expect(getAccountsPageData).toHaveBeenCalledTimes(1);
+    expect(getUserAccountBooks).toHaveBeenCalledTimes(1);
     expect(getAccountsPageData).toHaveBeenCalledWith({
       data: {
         accountBookId: "book-1",
@@ -37,7 +48,10 @@ describe("loadAccountsPageData", () => {
         type: AccountType.ASSET,
       },
     });
-    expect(result).toBe(mockResult);
+    expect(result).toEqual({
+      ...mockResult,
+      accountBooks: mockAccountBooks,
+    });
   });
 
   it("loads the selected equity subtype in archived mode", async () => {
@@ -56,5 +70,6 @@ describe("loadAccountsPageData", () => {
         equityAccountSubtype: EquityAccountSubtype.EXPENSE,
       },
     });
+    expect(getUserAccountBooks).toHaveBeenCalledTimes(1);
   });
 });
