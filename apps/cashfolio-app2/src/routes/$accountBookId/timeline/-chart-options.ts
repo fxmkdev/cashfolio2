@@ -92,20 +92,34 @@ function getMetricValue(
   return datum[metric] ?? 0;
 }
 
+function getNetWorthPositiveValue(netWorth: number): number | null {
+  return netWorth >= 0 ? netWorth : null;
+}
+
+function getNetWorthNegativeValue(netWorth: number): number | null {
+  return netWorth < 0 ? netWorth : null;
+}
+
 function getAxisDomainForMetric(args: {
   chartData: TimelineChartDatum[];
   selectedMetric: TimelineMetric;
 }): { min?: number; max?: number } {
-  const values = args.chartData
-    .map((datum) => getMetricValue(datum, args.selectedMetric))
-    .filter((value) => Number.isFinite(value));
+  const values = args.chartData.flatMap((datum) => {
+    const metricValue = getMetricValue(datum, args.selectedMetric);
+    if (isAreaTimelineMetric(args.selectedMetric)) {
+      return [metricValue];
+    }
 
-  if (values.length === 0) {
+    return [metricValue, datum.cumulativeMetric];
+  });
+  const finiteValues = values.filter((value) => Number.isFinite(value));
+
+  if (finiteValues.length === 0) {
     return {};
   }
 
-  let min = Math.min(0, ...values);
-  let max = Math.max(0, ...values);
+  let min = Math.min(0, ...finiteValues);
+  let max = Math.max(0, ...finiteValues);
 
   if (min === max) {
     const padding = min === 0 ? 1 : Math.max(1, Math.abs(min) * 0.05);
@@ -179,8 +193,8 @@ export function mapTimelinePointsToChartData(
         assets: point.assets,
         liabilities: point.liabilities,
         netWorth: point.netWorth,
-        netWorthPositive: point.netWorth > 0 ? point.netWorth : null,
-        netWorthNegative: point.netWorth < 0 ? point.netWorth : null,
+        netWorthPositive: getNetWorthPositiveValue(point.netWorth),
+        netWorthNegative: getNetWorthNegativeValue(point.netWorth),
         cumulativeMetric: 0,
       },
     ];
@@ -225,14 +239,12 @@ export function prependOpeningBalanceChartDatum(args: {
     assets: args.openingBalancePoint.assets,
     liabilities: args.openingBalancePoint.liabilities,
     netWorth: args.openingBalancePoint.netWorth,
-    netWorthPositive:
-      args.openingBalancePoint.netWorth > 0
-        ? args.openingBalancePoint.netWorth
-        : null,
-    netWorthNegative:
-      args.openingBalancePoint.netWorth < 0
-        ? args.openingBalancePoint.netWorth
-        : null,
+    netWorthPositive: getNetWorthPositiveValue(
+      args.openingBalancePoint.netWorth,
+    ),
+    netWorthNegative: getNetWorthNegativeValue(
+      args.openingBalancePoint.netWorth,
+    ),
     cumulativeMetric: 0,
   };
 
