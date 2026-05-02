@@ -262,6 +262,40 @@ describe("rebaseTimelineChartDataCumulativeToVisibleRange", () => {
       expect.objectContaining({ periodValue: "2026-02", cumulativeMetric: 60 }),
     ]);
   });
+
+  test("treats partially overlapping periods as visible when rebasing", () => {
+    const chartData = mapTimelinePointsToChartData([
+      {
+        periodValue: "2026-01",
+        periodLabel: "January 2026",
+        totalReturn: 100,
+      },
+      {
+        periodValue: "2026-02",
+        periodLabel: "February 2026",
+        totalReturn: 50,
+      },
+    ]);
+
+    expect(
+      rebaseTimelineChartDataCumulativeToVisibleRange({
+        chartData,
+        visibleRangeX: {
+          start: new Date("2026-01-15T00:00:00.000Z"),
+          end: new Date("2026-02-28T00:00:00.000Z"),
+        },
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        periodValue: "2026-01",
+        cumulativeTotalReturn: 100,
+      }),
+      expect.objectContaining({
+        periodValue: "2026-02",
+        cumulativeTotalReturn: 150,
+      }),
+    ]);
+  });
 });
 
 describe("createTimelineChartOptions", () => {

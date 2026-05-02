@@ -147,20 +147,18 @@ export function TimelinePageView({
         ? { start: event.rangeX.start, end: event.rangeX.end }
         : null;
 
-      setVisibleRangeX((previousRange) => {
-        const previousStart = previousRange?.start?.valueOf();
-        const previousEnd = previousRange?.end?.valueOf();
-        const nextStart = nextRange?.start?.valueOf();
-        const nextEnd = nextRange?.end?.valueOf();
-        if (previousStart === nextStart && previousEnd === nextEnd) {
-          return previousRange;
-        }
+    setVisibleRangeX((previousRange) => {
+      const previousStart = previousRange?.start?.valueOf();
+      const previousEnd = previousRange?.end?.valueOf();
+      const nextStart = nextRange?.start?.valueOf();
+      const nextEnd = nextRange?.end?.valueOf();
+      if (previousStart === nextStart && previousEnd === nextEnd) {
+        return previousRange;
+      }
 
-        return nextRange;
-      });
-    },
-    [],
-  );
+      return nextRange;
+    });
+  }, []);
 
   const chartOptions = useMemo(
     () =>
