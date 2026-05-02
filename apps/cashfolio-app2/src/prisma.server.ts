@@ -36,6 +36,12 @@ function getClient() {
   const adapter = new PrismaPg({ connectionString: databaseUrl.toString() });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const client = new (PrismaClient as any)({ adapter }) as PrismaClient;
+  if (process.env.NODE_ENV === "production") {
+    void client.$connect().catch((error) => {
+      console.error("❌ prisma initial connect failed", error);
+      process.exit(1);
+    });
+  }
 
   return client;
 }

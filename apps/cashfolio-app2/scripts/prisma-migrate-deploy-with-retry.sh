@@ -28,6 +28,14 @@ is_transient_reachability_error() {
   return 1
 }
 
+is_definitely_non_transient_reachability_error() {
+  if printf "%s" "$1" | grep -qiE "ENOTFOUND|EAI_NONAME|getaddrinfo|no such host|Name or service not known|failed to lookup address information"; then
+    return 0
+  fi
+
+  return 1
+}
+
 while [ "$ATTEMPT" -le "$MAX_ATTEMPTS" ]; do
   printf '{"event":"prisma_migrate_deploy_attempt","attempt":%s,"max":%s}\n' "$ATTEMPT" "$MAX_ATTEMPTS"
 
@@ -48,6 +56,11 @@ while [ "$ATTEMPT" -le "$MAX_ATTEMPTS" ]; do
 
   if ! is_transient_reachability_error "$OUTPUT"; then
     printf '{"event":"prisma_migrate_deploy_fail_fast","attempt":%s,"max":%s,"reason":"non_transient_error","exit_code":%s}\n' "$ATTEMPT" "$MAX_ATTEMPTS" "$STATUS"
+    exit "$STATUS"
+  fi
+
+  if is_definitely_non_transient_reachability_error "$OUTPUT"; then
+    printf '{"event":"prisma_migrate_deploy_fail_fast","attempt":%s,"max":%s,"reason":"non_transient_reachability","exit_code":%s}\n' "$ATTEMPT" "$MAX_ATTEMPTS" "$STATUS"
     exit "$STATUS"
   fi
 
