@@ -69,7 +69,7 @@ const mockColors = {
 };
 
 describe("mapTimelinePointsToChartData", () => {
-  test("maps timeline points to chart datum shape with UTC bounds and default cumulative total return", () => {
+  test("maps timeline points to chart datum shape with UTC bounds", () => {
     expect(
       mapTimelinePointsToChartData([
         {
@@ -102,7 +102,7 @@ describe("mapTimelinePointsToChartData", () => {
         income: 11,
         expenses: 4,
         gainsLosses: 3,
-        cumulativeMetric: 10,
+        cumulativeMetric: 0,
       },
       {
         periodValue: "2026",
@@ -114,7 +114,7 @@ describe("mapTimelinePointsToChartData", () => {
         income: 14,
         expenses: 5,
         gainsLosses: 3,
-        cumulativeMetric: 22,
+        cumulativeMetric: 0,
       },
     ]);
   });
@@ -144,7 +144,7 @@ describe("mapTimelinePointsToChartData", () => {
     ).toEqual([
       expect.objectContaining({
         periodValue: "2026-01",
-        cumulativeMetric: 10,
+        cumulativeMetric: 0,
       }),
     ]);
   });

@@ -234,7 +234,7 @@ export function TimelinePageView({
 
   useEffect(() => {
     setVisibleRangeX(null);
-  }, [selectedMode, timeline.points]);
+  }, [accountBookId, selectedMode]);
 
   return (
     <Container fluid py="xl" px="xl" className={classes.page}>

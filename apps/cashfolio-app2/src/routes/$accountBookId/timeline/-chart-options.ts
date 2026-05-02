@@ -105,7 +105,7 @@ export function rebaseTimelineChartDataCumulativeToVisibleRange(args: {
 export function mapTimelinePointsToChartData(
   points: PeriodTimelineResponse["points"],
 ): TimelineChartDatum[] {
-  const chartDataWithoutCumulative = points.flatMap((point) => {
+  return points.flatMap((point) => {
     const explicitPeriod = parseExplicitPeriodSelection(point.periodValue);
     if (!explicitPeriod) {
       return [];
@@ -127,12 +127,6 @@ export function mapTimelinePointsToChartData(
         cumulativeMetric: 0,
       },
     ];
-  });
-
-  return rebaseTimelineChartDataCumulativeToVisibleRange({
-    chartData: chartDataWithoutCumulative,
-    visibleRangeX: null,
-    selectedMetric: "totalReturn",
   });
 }
 
