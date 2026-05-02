@@ -124,6 +124,8 @@ Related docs:
 - `$accountBookId/timeline/route.tsx` uses:
   - `mode?: "month" | "year"` to select the timeline granularity (default:
     monthly)
+  - `metric?: "totalReturn" | "savings" | "income" | "expenses" | "gainsLosses"`
+    to select the timeline metric (default: `totalReturn`)
 
 ### Global Navigation Progress
 

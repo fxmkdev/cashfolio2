@@ -458,4 +458,148 @@ describe("createTimelineChartOptions", () => {
       stroke: "#e03131",
     });
   });
+
+  test("highlights the current period band using time bounds", () => {
+    const chartData = mapTimelinePointsToChartData([
+      {
+        periodValue: "2026-01",
+        periodLabel: "January 2026",
+        totalReturn: 10,
+        savings: 7,
+        income: 11,
+        expenses: 4,
+        gainsLosses: 3,
+      },
+      {
+        periodValue: "2026-02",
+        periodLabel: "February 2026",
+        totalReturn: -5,
+        savings: -3,
+        income: 4,
+        expenses: 7,
+        gainsLosses: -2,
+      },
+    ]);
+
+    const options = createTimelineChartOptions({
+      chartData,
+      periodMode: "month",
+      selectedMetric: "totalReturn",
+      amountCompactFormatter: new Intl.NumberFormat("en-CH", {
+        notation: "compact",
+      }),
+      currencyFormatter: new Intl.NumberFormat("en-CH", {
+        style: "currency",
+        currency: "CHF",
+      }),
+      colors: mockColors,
+      theme: mockTheme,
+      isDarkMode: false,
+    });
+
+    expect(options.axes?.x?.crossLines).toEqual([
+      {
+        type: "range",
+        range: [
+          new Date("2026-02-01T00:00:00.000Z"),
+          new Date("2026-03-01T00:00:00.000Z"),
+        ],
+        fill: "#e9ecef",
+        fillOpacity: 0.45,
+        strokeWidth: 0,
+      },
+    ]);
+  });
+
+  test("uses yearly mode range controls when selected", () => {
+    const chartData = mapTimelinePointsToChartData([
+      {
+        periodValue: "2023",
+        periodLabel: "2023",
+        totalReturn: 10,
+        savings: 7,
+        income: 11,
+        expenses: 4,
+        gainsLosses: 3,
+      },
+      {
+        periodValue: "2024",
+        periodLabel: "2024",
+        totalReturn: 12,
+        savings: 9,
+        income: 14,
+        expenses: 5,
+        gainsLosses: 3,
+      },
+    ]);
+
+    const options = createTimelineChartOptions({
+      chartData,
+      periodMode: "year",
+      selectedMetric: "gainsLosses",
+      amountCompactFormatter: new Intl.NumberFormat("en-CH", {
+        notation: "compact",
+      }),
+      currencyFormatter: new Intl.NumberFormat("en-CH", {
+        style: "currency",
+        currency: "CHF",
+      }),
+      colors: mockColors,
+      theme: mockTheme,
+      isDarkMode: true,
+    });
+
+    expect(options.ranges).toEqual({
+      enabled: true,
+      buttons: [
+        { label: "3Y", value: { unit: "year", step: 3 } },
+        { label: "5Y", value: { unit: "year", step: 5 } },
+        { label: "10Y", value: { unit: "year", step: 10 } },
+        { label: "All", value: undefined },
+      ],
+      fill: "#26292e",
+      stroke: "#495057",
+      textColor: "#e9ecef",
+      active: {
+        fill: "#1e40af",
+        stroke: "#1d4ed8",
+        textColor: "#ffffff",
+      },
+      hover: {
+        fill: "#2f3338",
+        stroke: "#6c757d",
+        textColor: "#ffffff",
+      },
+      disabled: {
+        fill: "#1f2226",
+        stroke: "#3b3f44",
+        textColor: "#868e96",
+      },
+    });
+    expect(options.axes?.x?.type).toBe("unit-time");
+    expect(options.axes?.x).toMatchObject({
+      unit: { unit: "year", utc: true },
+    });
+  });
+
+  test("omits period band highlight when data is empty", () => {
+    const options = createTimelineChartOptions({
+      chartData: [],
+      periodMode: "month",
+      selectedMetric: "income",
+      amountCompactFormatter: new Intl.NumberFormat("en-CH", {
+        notation: "compact",
+      }),
+      currencyFormatter: new Intl.NumberFormat("en-CH", {
+        style: "currency",
+        currency: "CHF",
+      }),
+      colors: mockColors,
+      theme: mockTheme,
+      isDarkMode: true,
+    });
+
+    expect(options.axes?.x?.crossLines).toBeUndefined();
+    expect(options.initialState).toBeUndefined();
+  });
 });
