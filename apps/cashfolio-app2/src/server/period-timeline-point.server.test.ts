@@ -161,6 +161,7 @@ describe("loadPeriodTimelinePoint", () => {
 
     expect(result).toMatchObject({
       selectedPeriodValue: "2026-01",
+      selectedPeriodEnd: new Date("2026-01-09T00:00:00.000Z"),
       totalReturn: 0,
       savings: 0,
       income: 0,
@@ -199,6 +200,7 @@ describe("loadPeriodTimelinePoint", () => {
     expect(result).toEqual({
       selectedPeriodValue: "2026-02",
       selectedPeriodLabel: "February 2026",
+      selectedPeriodEnd: new Date("2026-02-28T00:00:00.000Z"),
       totalReturn: 42,
       savings: 10,
       income: 50,

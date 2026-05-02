@@ -27,6 +27,7 @@ describe("loadTimelinePageData", () => {
         {
           periodValue: "2026-01",
           periodLabel: "January 2026",
+          periodEndDate: "2026-01-31T00:00:00.000Z",
           totalReturn: 10,
           savings: 6,
           income: 12,
@@ -65,6 +66,7 @@ describe("loadTimelinePageData", () => {
           {
             periodValue: "2026-01",
             periodLabel: "January 2026",
+            periodEndDate: "2026-01-31T00:00:00.000Z",
             totalReturn: 10,
             savings: 6,
             income: 12,

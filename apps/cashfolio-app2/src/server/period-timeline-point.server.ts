@@ -37,6 +37,7 @@ export async function loadPeriodTimelinePoint(args: {
     return {
       selectedPeriodValue: selection.periodValue,
       selectedPeriodLabel: selection.label,
+      selectedPeriodEnd: selection.to,
       totalReturn: 0,
       savings: 0,
       income: 0,
@@ -62,6 +63,7 @@ export async function loadPeriodTimelinePoint(args: {
   return {
     selectedPeriodValue: selection.periodValue,
     selectedPeriodLabel: selection.label,
+    selectedPeriodEnd: selection.to,
     ...metrics,
   };
 }

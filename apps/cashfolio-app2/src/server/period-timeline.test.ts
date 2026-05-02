@@ -101,6 +101,12 @@ describe("getPeriodTimeline", () => {
       async ({ period }: { period: string; accountBookId: string }) => ({
         selectedPeriodValue: period,
         selectedPeriodLabel: `Label ${period}`,
+        selectedPeriodEnd:
+          period === "2026-03"
+            ? new Date("2026-03-17T00:00:00.000Z")
+            : period === "2026-02"
+              ? new Date("2026-02-28T00:00:00.000Z")
+              : new Date("2026-01-31T00:00:00.000Z"),
         totalReturn: period.length,
         savings: period.length + 1,
         income: period.length + 2,
@@ -179,6 +185,7 @@ describe("getPeriodTimeline", () => {
         {
           periodValue: "2026-01",
           periodLabel: "Label 2026-01",
+          periodEndDate: "2026-01-31T00:00:00.000Z",
           totalReturn: 7,
           savings: 8,
           income: 9,
@@ -191,6 +198,7 @@ describe("getPeriodTimeline", () => {
         {
           periodValue: "2026-02",
           periodLabel: "Label 2026-02",
+          periodEndDate: "2026-02-28T00:00:00.000Z",
           totalReturn: 7,
           savings: 8,
           income: 9,
@@ -203,6 +211,7 @@ describe("getPeriodTimeline", () => {
         {
           periodValue: "2026-03",
           periodLabel: "Label 2026-03",
+          periodEndDate: "2026-03-17T00:00:00.000Z",
           totalReturn: 7,
           savings: 8,
           income: 9,

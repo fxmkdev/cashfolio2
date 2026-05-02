@@ -80,9 +80,28 @@ function createTimelinePoint(args: {
   assets?: number;
   liabilities?: number;
   netWorth?: number;
+  periodEndDate?: string;
 }) {
+  const inferPeriodEndDate = () => {
+    const monthMatch = /^(\d{4})-(\d{2})$/.exec(args.periodValue);
+    if (monthMatch) {
+      const year = Number(monthMatch[1]);
+      const monthZeroBased = Number(monthMatch[2]) - 1;
+      return new Date(Date.UTC(year, monthZeroBased + 1, 0)).toISOString();
+    }
+
+    const yearMatch = /^(\d{4})$/.exec(args.periodValue);
+    if (yearMatch) {
+      const year = Number(yearMatch[1]);
+      return new Date(Date.UTC(year, 11, 31)).toISOString();
+    }
+
+    return "1970-01-01T00:00:00.000Z";
+  };
+
   return {
     ...args,
+    periodEndDate: args.periodEndDate ?? inferPeriodEndDate(),
     assets: args.assets ?? 100,
     liabilities: args.liabilities ?? 40,
     netWorth: args.netWorth ?? (args.assets ?? 100) - (args.liabilities ?? 40),
@@ -112,6 +131,7 @@ describe("mapTimelinePointsToChartData", () => {
         periodLabel: "January 2026",
         periodStart: new Date("2026-01-01T00:00:00.000Z"),
         periodEndExclusive: new Date("2026-02-01T00:00:00.000Z"),
+        periodMetricDate: new Date("2026-01-31T00:00:00.000Z"),
         totalReturn: 10,
         savings: 7,
         income: 11,

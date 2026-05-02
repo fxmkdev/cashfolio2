@@ -21,6 +21,7 @@ export type TimelineChartDatum = {
   periodLabel: string;
   periodStart: Date;
   periodEndExclusive: Date;
+  periodMetricDate: Date;
   totalReturn: number;
   savings: number;
   income: number;
@@ -178,6 +179,10 @@ export function mapTimelinePointsToChartData(
     }
 
     const { from, toExclusive } = getExplicitPeriodDateRange(explicitPeriod);
+    const parsedPeriodEndDate = new Date(point.periodEndDate);
+    const periodMetricDate = Number.isNaN(parsedPeriodEndDate.getTime())
+      ? addUtcDays(toExclusive, -1)
+      : parsedPeriodEndDate;
 
     return [
       {
@@ -185,6 +190,7 @@ export function mapTimelinePointsToChartData(
         periodLabel: point.periodLabel,
         periodStart: from,
         periodEndExclusive: toExclusive,
+        periodMetricDate,
         totalReturn: point.totalReturn,
         savings: point.savings,
         income: point.income,
@@ -231,6 +237,7 @@ export function prependOpeningBalanceChartDatum(args: {
     periodLabel: args.openingBalancePoint.label,
     periodStart: openingDate,
     periodEndExclusive: addUtcDays(openingDate, 1),
+    periodMetricDate: openingDate,
     totalReturn: 0,
     savings: 0,
     income: 0,
@@ -296,7 +303,7 @@ export function createTimelineChartOptions(args: {
       ? [
           {
             type: "area" as const,
-            xKey: "periodStart",
+            xKey: "periodMetricDate",
             yKey: "netWorthPositive",
             yName: selectedMetricLabel,
             stroke: positiveFillColor,
@@ -322,7 +329,7 @@ export function createTimelineChartOptions(args: {
           },
           {
             type: "area" as const,
-            xKey: "periodStart",
+            xKey: "periodMetricDate",
             yKey: "netWorthNegative",
             yName: selectedMetricLabel,
             showInLegend: false,
@@ -351,7 +358,7 @@ export function createTimelineChartOptions(args: {
       : [
           {
             type: "area" as const,
-            xKey: "periodStart",
+            xKey: "periodMetricDate",
             yKey: selectedMetricKey,
             yName: selectedMetricLabel,
             stroke:

@@ -7,6 +7,7 @@ export type PeriodTimelineGranularity = "month" | "year";
 export type PeriodTimelinePoint = {
   periodValue: string;
   periodLabel: string;
+  periodEndDate: string;
   totalReturn: number;
   savings: number;
   income: number;
@@ -141,6 +142,7 @@ export const getPeriodTimeline = createServerFn({
       points.push({
         periodValue: point.selectedPeriodValue,
         periodLabel: point.selectedPeriodLabel,
+        periodEndDate: point.selectedPeriodEnd.toISOString(),
         totalReturn: point.totalReturn,
         savings: point.savings,
         income: point.income,
