@@ -26,6 +26,15 @@ Related docs:
   `POST /api/logto/sign-out`
 - `$accountBookId/index.tsx` - index redirect route that forwards to
   `$accountBookId/accounts`
+- `$accountBookId/route.tsx` - shared account-book AppShell layout for all
+  `/$accountBookId/*` routes
+  - Renders a persistent header with top navigation links to Accounts, Period,
+    Timeline, and Valuation Cache.
+  - Active nav behavior:
+    - `/$accountBookId/period*` => Period
+    - `/$accountBookId/timeline*` => Timeline
+    - `/$accountBookId/valuation-cache*` => Valuation Cache
+    - all remaining `/$accountBookId/*` routes => Accounts
 - `$accountBookId/accounts/route.tsx` - accounts page with tabs (one per account
   type: Asset, Liability, Income, Expense)
   - Loader data is tab-scoped: only the selected tab is fetched in the route
@@ -75,6 +84,8 @@ Related docs:
   asset/liability ledgers (daily closing native-unit balance)
 - Route-local helper files live inside the owning route folder and are prefixed
   with `-` so TanStack Router ignores them. For example:
+  - account-book layout modules:
+    - `$accountBookId/-top-navigation.ts`
   - accounts route modules:
     - `$accountBookId/accounts/-page-loader.ts`
     - `$accountBookId/accounts/-page-controller.ts`
