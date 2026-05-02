@@ -108,7 +108,8 @@ The canonical period gain/loss engine lives in
 `src/server/period-overview.server.ts` and is used by both:
 
 - `getPeriodOverview` (`src/server/period.ts`)
-- timeline metrics loading (`src/server/period-timeline-point-metrics.server.ts`)
+- timeline metrics loading
+  (`src/server/period-timeline-point-metrics.server.ts`)
 
 This keeps period overview and timeline total-return semantics aligned while
 still reusing the shared period base-data cache.
