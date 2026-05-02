@@ -42,29 +42,31 @@ Perform a complete self-review for the current pull request, implement the most 
      - `needs larger change` (architecture tradeoffs, broad refactor, risky scope, or unclear intent)
    - Prioritize applying the most feasible fixes across code, docs, tests, and config.
 
-4. Implement feasible fixes.
+4. Run first-pass verification before changes.
+   - First pass (baseline, pre-fix):
+     - `pnpm --filter cashfolio-app2 typecheck`
+     - `pnpm --filter cashfolio-app2 test:unit`
+     - `pnpm --filter cashfolio-app2 format`
+
+5. Implement feasible fixes.
    - Apply `auto-fixable now` items directly in-repo.
    - Apply medium-complexity fixes when scope is bounded and confidence is high.
    - If PR description quality is weak and PR access exists, update the PR description directly with improved structure and concrete content.
    - Do not over-claim: leave `needs larger change` items unimplemented and keep them explicit in the final report.
 
-5. Run two-pass verification.
-   - First pass (baseline):
-     - `pnpm --filter cashfolio-app2 typecheck`
-     - `pnpm --filter cashfolio-app2 test:unit`
-     - `pnpm --filter cashfolio-app2 format`
+6. Run second-pass verification after fixes.
    - Second pass (post-fix gate): rerun the same baseline checks after applied fixes.
-   - Deep pass (when tested logic changed, risk is higher, or baseline checks fail):
+   - Deep pass (when tested logic changed, risk is higher, or either pass fails):
      - `pnpm --filter cashfolio-app2 test:unit:coverage:ratchet`
      - targeted broader checks as needed
      - suggest `pnpm --filter cashfolio-app2 e2e` when change risk is significant
    - Record exactly what ran, what did not run, and why.
 
-6. Re-evaluate readiness.
+7. Re-evaluate readiness.
    - Mark `Ready` only when all blockers are cleared and required checks are green.
    - If any blocker remains (including CI failures, high-risk unimplemented findings, or missing critical evidence), mark `Not Ready` and provide concrete next steps.
 
-7. Produce the required report format.
+8. Produce the required report format.
    - Always output these sections in this order:
      - `Blockers`
      - `High`
