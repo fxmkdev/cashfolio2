@@ -5,6 +5,8 @@ import { toMoneyNumber } from "../shared/money";
 import { normalizePeriodValue } from "../shared/period";
 import { computeEndOfPeriodBalanceStats } from "./period-balance-stats";
 import { convertBookingValueToReference } from "./period-conversion";
+import { buildTransferClearingVirtualHierarchy } from "./period-transfer-clearing";
+import { loadTransferClearingUnitBuckets } from "./period-transfer-clearing-buckets";
 import { resolvePeriodSelection } from "./period-selection";
 
 export type OpeningBalanceNetWorthResult = {
@@ -30,6 +32,7 @@ export async function loadOpeningBalanceNetWorthForPeriod(args: {
   });
 
   const accountBookStartDate = startOfUtcDay(accountBook.startDate);
+  const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
   const selection = resolvePeriodSelection({
     periodValue: normalizedPeriodValue,
     now: new Date(),
@@ -82,12 +85,27 @@ export async function loadOpeningBalanceNetWorthForPeriod(args: {
     }
   }
 
+  const transferClearingUnitBuckets = await loadTransferClearingUnitBuckets({
+    accountBookId: args.accountBookId,
+    periodEndExclusive: periodStart,
+    referenceCurrency,
+  });
+  const {
+    virtualAccounts: transferClearingVirtualAccounts,
+    rawBalanceByVirtualAccountId,
+  } = buildTransferClearingVirtualHierarchy({
+    unitBuckets: transferClearingUnitBuckets,
+  });
+  for (const [accountId, rawBalance] of rawBalanceByVirtualAccountId) {
+    rawBalanceByAccountId.set(accountId, rawBalance);
+  }
+
   const exchangeRateByKey = new Map<string, Promise<number | null>>();
   const balanceStats = await computeEndOfPeriodBalanceStats({
-    accounts,
+    accounts: [...accounts, ...transferClearingVirtualAccounts],
     rawBalanceByAccountId,
     periodEnd: conversionDate,
-    referenceCurrency: accountBook.referenceCurrency,
+    referenceCurrency,
     convertBalanceToReference: (input) =>
       convertBookingValueToReference({
         ...input,

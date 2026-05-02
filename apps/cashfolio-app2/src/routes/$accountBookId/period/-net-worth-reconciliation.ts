@@ -4,6 +4,7 @@ import {
   moneyIsZero,
   moneyRound2,
   moneySubtract,
+  type MoneyInput,
   toMoneyNumber,
 } from "@/shared/money";
 
@@ -16,7 +17,7 @@ export type NetWorthReconciliationModel = {
   difference: number;
 };
 
-function roundToCents(value: number): number {
+function roundToCents(value: MoneyInput): number {
   return toMoneyNumber(moneyRound2(value));
 }
 
@@ -28,11 +29,11 @@ export function buildNetWorthReconciliationModel(args: {
 }): NetWorthReconciliationModel {
   const baselineNetWorth = roundToCents(args.baselineNetWorth);
   const expectedNetWorth = roundToCents(
-    toMoneyNumber(moneyAdd(baselineNetWorth, args.totalReturn)),
+    moneyAdd(baselineNetWorth, args.totalReturn),
   );
   const currentNetWorth = roundToCents(args.currentNetWorth);
   const difference = roundToCents(
-    toMoneyNumber(moneySubtract(currentNetWorth, expectedNetWorth)),
+    moneySubtract(currentNetWorth, expectedNetWorth),
   );
 
   return {

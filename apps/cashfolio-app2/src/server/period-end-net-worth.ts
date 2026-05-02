@@ -1,11 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { normalizePeriodValue } from "../shared/period";
-
-export type PeriodEndNetWorthResult = {
-  selectedPeriodValue: string;
-  endOfPeriodNetWorth: number;
-  skippedCount: number;
-};
+import { type PeriodEndNetWorthResult } from "./period-end-net-worth.types";
 
 export const getPeriodEndNetWorth = createServerFn({
   method: "GET",

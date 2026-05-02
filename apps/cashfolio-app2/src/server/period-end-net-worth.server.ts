@@ -3,17 +3,12 @@ import {
   computeEndOfPeriodBalanceStatsWithConvertedBalances,
   type EndOfPeriodBalanceAccount,
 } from "./period-balance-stats";
+import { type PeriodEndNetWorthResult } from "./period-end-net-worth.types";
 import {
   getOrLoadPeriodBaseData,
   type PeriodBaseData,
 } from "./period-base-data-cache";
 import { buildTransferClearingVirtualHierarchy } from "./period-transfer-clearing";
-
-export type PeriodEndNetWorthResult = {
-  selectedPeriodValue: string;
-  endOfPeriodNetWorth: number;
-  skippedCount: number;
-};
 
 export async function loadPeriodEndNetWorth(args: {
   accountBookId: string;

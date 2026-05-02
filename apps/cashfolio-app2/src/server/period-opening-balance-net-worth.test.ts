@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const convertBookingValueToReference = vi.hoisted(() => vi.fn());
+const loadTransferClearingUnitBuckets = vi.hoisted(() => vi.fn());
 
 const prisma = vi.hoisted(() => ({
   accountBook: {
@@ -21,6 +22,9 @@ vi.mock("../prisma.server", () => ({
 vi.mock("./period-conversion", () => ({
   convertBookingValueToReference,
 }));
+vi.mock("./period-transfer-clearing-buckets", () => ({
+  loadTransferClearingUnitBuckets,
+}));
 vi.mock("../.prisma-client/enums", () => ({
   AccountType: {
     ASSET: "ASSET",
@@ -39,7 +43,7 @@ describe("loadOpeningBalanceNetWorthForPeriod", () => {
     vi.setSystemTime(new Date("2026-03-15T12:00:00.000Z"));
 
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
-      referenceCurrency: "CHF",
+      referenceCurrency: "chf",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
     prisma.account.findMany.mockResolvedValue([
@@ -59,6 +63,7 @@ describe("loadOpeningBalanceNetWorthForPeriod", () => {
         _sum: { value: 100 },
       },
     ]);
+    loadTransferClearingUnitBuckets.mockResolvedValue([]);
     convertBookingValueToReference.mockImplementation(
       async ({ value }) => value,
     );
@@ -88,13 +93,45 @@ describe("loadOpeningBalanceNetWorthForPeriod", () => {
     expect(convertBookingValueToReference).toHaveBeenCalledWith(
       expect.objectContaining({
         date: new Date("2026-01-31T00:00:00.000Z"),
+        referenceCurrency: "CHF",
       }),
     );
+    expect(loadTransferClearingUnitBuckets).toHaveBeenCalledWith({
+      accountBookId: "book-1",
+      periodEndExclusive: new Date("2026-02-01T00:00:00.000Z"),
+      referenceCurrency: "CHF",
+    });
 
     expect(result).toMatchObject({
       openingBalanceNetWorth: 100,
       skippedCount: 0,
       periodStart: "2026-02-01T00:00:00.000Z",
     });
+  });
+
+  it("includes transfer-clearing virtual balances in opening baseline net worth", async () => {
+    loadTransferClearingUnitBuckets.mockResolvedValue([
+      {
+        unitKey: "currency:CHF",
+        unitLabel: "CHF",
+        unitType: "currency",
+        unit: "CURRENCY",
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+        isNonReferenceUnit: false,
+        rawBalance: 25,
+        bookings: [],
+      },
+    ]);
+
+    const result = await loadOpeningBalanceNetWorthForPeriod({
+      accountBookId: "book-1",
+      period: "2026-02",
+    });
+
+    expect(result.openingBalanceNetWorth).toBe(75);
+    expect(result.skippedCount).toBe(0);
   });
 });
