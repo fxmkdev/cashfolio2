@@ -120,6 +120,19 @@ jobs:
             apps/cashfolio-app2/test-results
           if-no-files-found: ignore
 
+  cashfolio-app2-e2e-required:
+    name: "cashfolio-app2: E2E Required"
+    runs-on: ubuntu-latest
+    needs: [cashfolio-app2-e2e]
+    if: ${{ always() }}
+    steps:
+      - name: Check matrix shard aggregate result
+        run: |
+          if [ "${{ needs.cashfolio-app2-e2e.result }}" != "success" ]; then
+            echo "E2E shards did not all succeed (result=${{ needs.cashfolio-app2-e2e.result }})."
+            exit 1
+          fi
+
   cashfolio-app2-unit:
     name: "cashfolio-app2: Unit + Coverage"
     runs-on: ubuntu-latest
@@ -499,7 +512,7 @@ jobs:
       - version
       - cashfolio-app2-build-push
       - cashfolio-app2-unit
-      - cashfolio-app2-e2e
+      - cashfolio-app2-e2e-required
       - cashfolio-app2-typecheck
       - cashfolio-app2-format
       - cli-typecheck

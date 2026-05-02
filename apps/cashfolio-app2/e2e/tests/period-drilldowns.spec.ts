@@ -1,6 +1,6 @@
 import { expect, test, type Locator } from "@playwright/test";
 import {
-  resetAndSeedDatabase,
+  seedDatabase,
   seedExplicitGainLossDrilldownScenario,
   seedNonZeroConvertibleAssetBalances,
   seedSecurityGainLossDrilldownScenario,
@@ -25,7 +25,7 @@ async function expandRowIfCollapsed(row: Locator) {
 }
 
 test.beforeAll(async () => {
-  seeded = await resetAndSeedDatabase();
+  seeded = await seedDatabase();
 });
 
 test("period allocation table account drilldown opens ledger with selected period", async ({

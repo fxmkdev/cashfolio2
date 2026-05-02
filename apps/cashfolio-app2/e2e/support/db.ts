@@ -20,10 +20,10 @@ const prisma = new PrismaClient({ adapter });
 
 const DEFAULT_EXTERNAL_ID = process.env.E2E_AUTH_EXTERNAL_ID ?? "e2e-user";
 
-function assertSafeResetTarget() {
+function assertSafeWriteTarget() {
   if (process.env.E2E_TEST_MODE !== "true") {
     throw new Error(
-      "Refusing e2e DB reset because E2E_TEST_MODE is not set to true.",
+      "Refusing e2e DB writes because E2E_TEST_MODE is not set to true.",
     );
   }
 
@@ -37,13 +37,13 @@ function assertSafeResetTarget() {
 
   if (!allowedHosts.has(parsedUrl.hostname) || !isAllowedDatabase) {
     throw new Error(
-      `Refusing e2e DB reset for DATABASE_URL host=${parsedUrl.hostname} db=${databaseName}.`,
+      `Refusing e2e DB writes for DATABASE_URL host=${parsedUrl.hostname} db=${databaseName}.`,
     );
   }
 }
 
 export async function resetDatabase(): Promise<void> {
-  assertSafeResetTarget();
+  assertSafeWriteTarget();
 
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
@@ -72,10 +72,10 @@ export type SeededData = {
   expenseAccount: { id: string; name: string };
 };
 
-export async function resetAndSeedDatabase(args?: {
+export async function seedDatabase(args?: {
   accountBookStartDate?: Date;
 }): Promise<SeededData> {
-  assertSafeResetTarget();
+  assertSafeWriteTarget();
 
   const user = await prisma.user.upsert({
     where: {

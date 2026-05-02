@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { resetAndSeedDatabase, type SeededData } from "../support/db";
+import { seedDatabase, type SeededData } from "../support/db";
 import { selectSegmentedControlOption } from "../support/segmented-control";
 
 let seeded: SeededData;
 
 test.beforeAll(async () => {
-  seeded = await resetAndSeedDatabase();
+  seeded = await seedDatabase();
 });
 
 test("timeline page is reachable and persists selected period mode across refresh", async ({
