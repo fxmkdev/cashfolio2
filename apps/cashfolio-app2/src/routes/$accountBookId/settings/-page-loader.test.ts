@@ -15,7 +15,7 @@ describe("loadAccountBookSettingsPageData", () => {
       id: "book-1",
       name: "My Book",
       referenceCurrency: "CHF",
-      startDate: new Date("2026-01-01T00:00:00.000Z"),
+      startDate: "2026-01-01T00:00:00.000Z",
     });
   });
 

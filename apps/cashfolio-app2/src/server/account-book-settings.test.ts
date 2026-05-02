@@ -121,7 +121,7 @@ describe("account-book settings server functions", () => {
       id: "book-1",
       name: "My Book",
       referenceCurrency: "CHF",
-      startDate: new Date("2026-01-03T00:00:00.000Z"),
+      startDate: "2026-01-03T00:00:00.000Z",
     });
   });
 
@@ -150,7 +150,7 @@ describe("account-book settings server functions", () => {
       id: "book-1",
       name: "Renamed",
       referenceCurrency: "CHF",
-      startDate: new Date("2026-01-03T00:00:00.000Z"),
+      startDate: "2026-01-03T00:00:00.000Z",
     });
   });
 
@@ -275,7 +275,7 @@ describe("account-book settings server functions", () => {
       id: "book-1",
       name: "Updated Book",
       referenceCurrency: "CHF",
-      startDate: new Date("2026-01-03T00:00:00.000Z"),
+      startDate: "2026-01-03T00:00:00.000Z",
     });
   });
 

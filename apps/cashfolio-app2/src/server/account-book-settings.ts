@@ -17,7 +17,7 @@ type AccountBookSettings = {
   id: string;
   name: string;
   referenceCurrency: string;
-  startDate: Date;
+  startDate: string;
 };
 
 type UpdateAccountBookSettingsInput = {
@@ -101,7 +101,7 @@ export const getAccountBookSettings = createServerFn({ method: "GET" })
       id: accountBook.id,
       name: accountBook.name,
       referenceCurrency: accountBook.referenceCurrency.toUpperCase(),
-      startDate: startOfUtcDay(accountBook.startDate),
+      startDate: startOfUtcDay(accountBook.startDate).toISOString(),
     };
   });
 
@@ -227,6 +227,6 @@ export const updateAccountBookSettings = createServerFn({ method: "POST" })
       id: updated.id,
       name: updated.name,
       referenceCurrency: updated.referenceCurrency.toUpperCase(),
-      startDate: startOfUtcDay(updated.startDate),
+      startDate: startOfUtcDay(updated.startDate).toISOString(),
     };
   });
