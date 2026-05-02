@@ -129,8 +129,10 @@ pnpm --filter cashfolio-app2 e2e
 pnpm --filter cashfolio-app2 e2e:ci
 ```
 
-`e2e:ci` supports `E2E_WORKERS` to control Playwright worker parallelism in CI
-(default: `2`).
+`e2e:ci` supports:
+
+- `E2E_WORKERS` to control Playwright worker parallelism in CI.
+- `E2E_SHARD` to run a single Playwright shard (format: `index/total`).
 
 Default local DB URL fallback for e2e is:
 
