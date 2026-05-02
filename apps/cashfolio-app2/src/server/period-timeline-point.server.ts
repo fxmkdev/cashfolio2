@@ -5,7 +5,7 @@ import {
   loadPeriodTimelinePointContext,
   type PeriodTimelinePointContext,
 } from "./period-timeline-point-context.server";
-import { loadPeriodTimelinePointMetrics } from "./period-timeline-point-total-return.server";
+import { loadPeriodTimelinePointMetrics } from "./period-timeline-point-metrics.server";
 
 export { loadPeriodTimelinePointContext };
 export type { PeriodTimelinePointContext };

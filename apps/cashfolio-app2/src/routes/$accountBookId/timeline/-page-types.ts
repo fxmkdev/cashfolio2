@@ -30,24 +30,20 @@ export function isTimelineMetric(value: unknown): value is TimelineMetric {
   );
 }
 
-export const TIMELINE_METRIC_OPTIONS = [
+export const TIMELINE_METRIC_OPTIONS: Array<{
+  value: TimelineMetric;
+  label: string;
+}> = [
   { value: "totalReturn", label: "Total Return" },
   { value: "savings", label: "Savings" },
   { value: "income", label: "Income" },
   { value: "expenses", label: "Expenses" },
   { value: "gainsLosses", label: "Gain/Loss" },
-] as const satisfies ReadonlyArray<{
-  value: TimelineMetric;
-  label: string;
-}>;
+];
 
-const TIMELINE_METRIC_LABEL_BY_VALUE: Record<TimelineMetric, string> = {
-  totalReturn: "Total Return",
-  savings: "Savings",
-  income: "Income",
-  expenses: "Expenses",
-  gainsLosses: "Gain/Loss",
-};
+const TIMELINE_METRIC_LABEL_BY_VALUE = Object.fromEntries(
+  TIMELINE_METRIC_OPTIONS.map((option) => [option.value, option.label]),
+) as Record<TimelineMetric, string>;
 
 export function getTimelineMetricLabel(metric: TimelineMetric): string {
   return TIMELINE_METRIC_LABEL_BY_VALUE[metric];

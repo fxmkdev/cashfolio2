@@ -248,7 +248,7 @@ export function TimelinePageView({
           <SegmentedControl
             value={selectedMetric}
             aria-label="Timeline metric"
-            data={[...TIMELINE_METRIC_OPTIONS]}
+            data={TIMELINE_METRIC_OPTIONS}
             onChange={(nextMetric) => {
               if (isTimelineMetric(nextMetric)) {
                 onMetricChange(nextMetric);
