@@ -244,6 +244,10 @@ describe("createTimelineChartOptions", () => {
     });
 
     expect(options.legend).toEqual({ enabled: true });
+    expect(options.axes?.x).toMatchObject({
+      type: "unit-time",
+      unit: { unit: "month", utc: true },
+    });
     expect(options.series).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -292,6 +296,9 @@ describe("createTimelineChartOptions", () => {
 
     const series = Array.isArray(options.series) ? options.series : [];
     expect(series).toHaveLength(1);
+    expect(options.axes?.x).toMatchObject({
+      type: "time",
+    });
     expect(series[0]).toMatchObject({
       type: "area",
       yKey: "assets",

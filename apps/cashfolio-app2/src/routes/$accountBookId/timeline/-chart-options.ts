@@ -208,6 +208,7 @@ export function createTimelineChartOptions(args: {
     chartData: args.chartData,
     selectedMetric: selectedMetricKey,
   });
+  const useRegularTimeAxis = isAreaTimelineMetric(selectedMetricKey);
   const unitTimeAxisUnit =
     args.periodMode === "year"
       ? { unit: "year" as const, utc: true }
@@ -426,8 +427,8 @@ export function createTimelineChartOptions(args: {
     series,
     axes: {
       x: {
-        type: "unit-time",
-        unit: unitTimeAxisUnit,
+        type: useRegularTimeAxis ? ("time" as const) : ("unit-time" as const),
+        unit: useRegularTimeAxis ? undefined : unitTimeAxisUnit,
         crossLines: currentPeriod
           ? [
               {
