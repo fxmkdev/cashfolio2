@@ -139,7 +139,8 @@ export function AccountBookShell({
         style={{
           display: "flex",
           flexDirection: "column",
-          flex: 1,
+          height:
+            "calc(100dvh - var(--app-shell-header-offset) - var(--mantine-spacing-md) - var(--mantine-spacing-md))",
           minHeight: 0,
         }}
       >
