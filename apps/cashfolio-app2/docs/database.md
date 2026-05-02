@@ -8,10 +8,19 @@ paths are relative to that app directory.
 - Prisma client singleton in `src/prisma.server.ts` — uses `PrismaPg` adapter
   for connection pooling; stores in `global.__db__` in development to avoid
   connection exhaustion during hot reload
+- Runtime bootstrap adds `connect_timeout=20` to `DATABASE_URL` when the query
+  param is missing (without overriding an explicit value)
+- In production, `src/prisma.server.ts` awaits an initial Prisma `$connect()`
+  during module initialization so app startup fails before serving traffic when
+  the database is unreachable
 - Custom Prisma configuration in `prisma.config.ts` at the app root
 - `prisma generate` works without `DATABASE_URL`; `prisma.config.ts` allows a
   missing URL for generate, while non-generate Prisma commands require
   `DATABASE_URL` via strict env validation
+- Fly deploys run migrations through
+  `scripts/prisma-migrate-deploy-with-retry.sh`, which retries likely transient
+  `P1001` reachability failures with backoff and fails fast for clearly
+  non-transient host/DNS resolution errors
 
 ## Models
 
