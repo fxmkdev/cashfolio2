@@ -15,9 +15,7 @@ import {
 import { computePeriodHoldingGainLoss } from "./period-holding-gain-loss";
 import { processPeriodEquityBookingsFromBaseData } from "./period-equity-bookings";
 import { createPeriodOverviewEquityAggregation } from "./period-overview-aggregation";
-import {
-  buildTransferClearingVirtualHierarchy,
-} from "./period-transfer-clearing";
+import { buildTransferClearingVirtualHierarchy } from "./period-transfer-clearing";
 import type { GainLossContributionAccumulator } from "./period-gains-losses-contributions";
 
 const TRANSACTIONS_PAGE_SIZE = 200;

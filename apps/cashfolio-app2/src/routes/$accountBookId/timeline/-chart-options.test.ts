@@ -201,7 +201,10 @@ describe("rebaseTimelineChartDataCumulativeToVisibleRange", () => {
     ).toEqual([
       expect.objectContaining({ periodValue: "2026-01", cumulativeMetric: 0 }),
       expect.objectContaining({ periodValue: "2026-02", cumulativeMetric: 90 }),
-      expect.objectContaining({ periodValue: "2026-03", cumulativeMetric: 170 }),
+      expect.objectContaining({
+        periodValue: "2026-03",
+        cumulativeMetric: 170,
+      }),
     ]);
   });
 });
@@ -243,8 +246,16 @@ describe("createTimelineChartOptions", () => {
     expect(options.legend).toEqual({ enabled: true });
     expect(options.series).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ type: "bar", yKey: "savings", yName: "Savings" }),
-        expect.objectContaining({ type: "line", yKey: "cumulativeMetric", yName: "Cumulative Savings" }),
+        expect.objectContaining({
+          type: "bar",
+          yKey: "savings",
+          yName: "Savings",
+        }),
+        expect.objectContaining({
+          type: "line",
+          yKey: "cumulativeMetric",
+          yName: "Cumulative Savings",
+        }),
       ]),
     );
   });

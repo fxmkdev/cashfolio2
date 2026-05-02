@@ -377,7 +377,9 @@ export function createTimelineChartOptions(args: {
                 data: [
                   {
                     label: cumulativeMetricLabel,
-                    value: args.currencyFormatter.format(point.cumulativeMetric),
+                    value: args.currencyFormatter.format(
+                      point.cumulativeMetric,
+                    ),
                   },
                 ],
               };

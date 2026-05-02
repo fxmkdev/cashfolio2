@@ -78,6 +78,9 @@ describe("loadPeriodTimelinePointMetrics", () => {
       income: 0,
       expenses: 0,
       gainsLosses: 0,
+      assets: 0,
+      liabilities: 0,
+      netWorth: 0,
     });
     expect(processPeriodEquityBookingsFromBaseData).not.toHaveBeenCalled();
     expect(computePeriodHoldingGainLoss).not.toHaveBeenCalled();
@@ -132,6 +135,9 @@ describe("loadPeriodTimelinePointMetrics", () => {
       income: 120,
       expenses: 20,
       gainsLosses: 35,
+      assets: 0,
+      liabilities: 0,
+      netWorth: 0,
     });
   });
 });
