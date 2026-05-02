@@ -1,6 +1,7 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { updateAccountBookSettings } from "@/server/account-books";
+import { invalidateCachedUserAccountBooks } from "../accounts/-account-book-options-loader";
 import { loadAccountBookSettingsPageData } from "./-page-loader";
 
 const AccountBookSettingsPageView = lazy(async () => {
@@ -35,7 +36,8 @@ function AccountBookSettingsPage() {
             },
           });
 
-          router.invalidate();
+          invalidateCachedUserAccountBooks();
+          await router.invalidate();
         }}
       />
     </Suspense>

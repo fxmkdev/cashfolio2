@@ -17,6 +17,10 @@ export function loadUserAccountBooksForAccountsRoute() {
   return cachedAccountBooksPromise;
 }
 
-export function resetCachedUserAccountBooksForTests() {
+export function invalidateCachedUserAccountBooks() {
   cachedAccountBooksPromise = null;
+}
+
+export function resetCachedUserAccountBooksForTests() {
+  invalidateCachedUserAccountBooks();
 }
