@@ -28,12 +28,14 @@ function getClient() {
   }
 
   const databaseUrl = new URL(DATABASE_URL);
+  if (!databaseUrl.searchParams.has("connect_timeout")) {
+    databaseUrl.searchParams.set("connect_timeout", "20");
+  }
   console.log(`🔌 setting up prisma client to ${databaseUrl.host}`);
 
-  const adapter = new PrismaPg({ connectionString: DATABASE_URL });
+  const adapter = new PrismaPg({ connectionString: databaseUrl.toString() });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const client = new (PrismaClient as any)({ adapter }) as PrismaClient;
-  client.$connect();
 
   return client;
 }
