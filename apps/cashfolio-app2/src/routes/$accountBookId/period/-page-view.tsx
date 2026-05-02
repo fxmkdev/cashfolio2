@@ -36,7 +36,11 @@ import { usePeriodAllocationBreakdownViewModel } from "./-period-allocation-brea
 import { usePeriodBreakdownViewModel } from "./-period-breakdown-view-model";
 import { usePeriodGainsLossesViewModel } from "./-period-gains-losses-view-model";
 import { buildPeriodPageStats } from "./-period-page-stats";
-import { PeriodSkippedValuationWarning } from "./-page-warning";
+import type { NetWorthReconciliationModel } from "./-net-worth-reconciliation";
+import {
+  PeriodNetWorthReconciliationWarning,
+  PeriodSkippedValuationWarning,
+} from "./-page-warning";
 import { PeriodStatsCardsSection } from "./-period-stats-cards";
 import { usePeriodPageSessionState } from "./-page-session-state";
 import classes from "./-page-view.module.css";
@@ -57,6 +61,7 @@ export type PeriodPageViewProps = {
   accountBookId: string;
   overview: PeriodOverview;
   selectedPeriodValue: string;
+  netWorthReconciliation?: NetWorthReconciliationModel | null;
   onPeriodChange: (nextPeriodValue: string) => void;
   onBreakdownAccountDoubleClick: (accountId: string) => void;
   onExplicitGainLossDoubleClick?: () => void;
@@ -81,6 +86,7 @@ export function PeriodPageView({
   accountBookId,
   overview,
   selectedPeriodValue,
+  netWorthReconciliation = null,
   onPeriodChange,
   onBreakdownAccountDoubleClick,
   onExplicitGainLossDoubleClick,
@@ -407,6 +413,10 @@ export function PeriodPageView({
             onYearPickerChange={handleYearPickerChange}
           />
         </div>
+        <PeriodNetWorthReconciliationWarning
+          reconciliation={netWorthReconciliation}
+          currencyFormatter={currencyFormatter}
+        />
 
         <PeriodStatsCardsSection
           statCards={statCards}
