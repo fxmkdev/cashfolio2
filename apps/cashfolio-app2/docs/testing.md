@@ -154,7 +154,8 @@ Current CI gates for `cashfolio-app2`:
 - `typecheck`
 - `format`
 - `unit + coverage` with coverage-ratchet enforcement
-- `e2e`
+- `e2e` shards (`cashfolio-app2: E2E (Shard X/Y)`)
+- fixed required gate check (`cashfolio-app2: E2E Required`)
 
 CI stores Playwright reports, Playwright JSON timing output, and unit coverage
 artifacts for troubleshooting and trend tracking.
