@@ -1,7 +1,10 @@
 import { describe, expect, test } from "vitest";
 import {
+  DEFAULT_TIMELINE_METRIC,
   DEFAULT_TIMELINE_MODE,
+  getTimelineMetric,
   getTimelineMode,
+  isTimelineMetric,
   isTimelinePeriodMode,
   parseTimelineSearch,
 } from "./-page-types";
@@ -18,10 +21,43 @@ describe("isTimelinePeriodMode", () => {
   });
 });
 
+describe("isTimelineMetric", () => {
+  test("accepts supported metric values", () => {
+    expect(isTimelineMetric("totalReturn")).toBe(true);
+    expect(isTimelineMetric("savings")).toBe(true);
+    expect(isTimelineMetric("income")).toBe(true);
+    expect(isTimelineMetric("expenses")).toBe(true);
+    expect(isTimelineMetric("gainsLosses")).toBe(true);
+  });
+
+  test("rejects unsupported values", () => {
+    expect(isTimelineMetric("netWorth")).toBe(false);
+    expect(isTimelineMetric(undefined)).toBe(false);
+  });
+});
+
 describe("parseTimelineSearch", () => {
   test("keeps valid mode values", () => {
     expect(parseTimelineSearch({ mode: "month" })).toEqual({ mode: "month" });
     expect(parseTimelineSearch({ mode: "year" })).toEqual({ mode: "year" });
+  });
+
+  test("keeps valid metric values", () => {
+    expect(parseTimelineSearch({ metric: "totalReturn" })).toEqual({
+      metric: "totalReturn",
+    });
+    expect(parseTimelineSearch({ metric: "savings" })).toEqual({
+      metric: "savings",
+    });
+    expect(parseTimelineSearch({ metric: "income" })).toEqual({
+      metric: "income",
+    });
+    expect(parseTimelineSearch({ metric: "expenses" })).toEqual({
+      metric: "expenses",
+    });
+    expect(parseTimelineSearch({ metric: "gainsLosses" })).toEqual({
+      metric: "gainsLosses",
+    });
   });
 
   test("drops invalid mode values", () => {
@@ -30,6 +66,12 @@ describe("parseTimelineSearch", () => {
     });
     expect(parseTimelineSearch({ mode: "quarter" })).toEqual({
       mode: undefined,
+    });
+  });
+
+  test("drops invalid metric values", () => {
+    expect(parseTimelineSearch({ metric: "netWorth" })).toEqual({
+      metric: undefined,
     });
   });
 });
@@ -41,5 +83,15 @@ describe("getTimelineMode", () => {
 
   test("falls back to default mode", () => {
     expect(getTimelineMode({})).toBe(DEFAULT_TIMELINE_MODE);
+  });
+});
+
+describe("getTimelineMetric", () => {
+  test("returns explicit metric when present", () => {
+    expect(getTimelineMetric({ metric: "income" })).toBe("income");
+  });
+
+  test("falls back to default metric", () => {
+    expect(getTimelineMetric({})).toBe(DEFAULT_TIMELINE_METRIC);
   });
 });

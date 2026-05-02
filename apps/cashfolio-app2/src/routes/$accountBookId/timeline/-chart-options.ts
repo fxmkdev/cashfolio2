@@ -6,7 +6,11 @@ import {
   parseExplicitPeriodSelection,
 } from "@/shared/period";
 import type { PeriodTimelineResponse } from "@/server/period-timeline";
-import type { TimelinePeriodMode } from "./-page-types";
+import {
+  getTimelineMetricLabel,
+  type TimelineMetric,
+  type TimelinePeriodMode,
+} from "./-page-types";
 import {
   getTimelineRangeButtons,
   getTimelineRangeControlStyles,
@@ -18,6 +22,10 @@ export type TimelineChartDatum = {
   periodStart: Date;
   periodEndExclusive: Date;
   totalReturn: number;
+  savings: number;
+  income: number;
+  expenses: number;
+  gainsLosses: number;
 };
 
 export function mapTimelinePointsToChartData(
@@ -38,6 +46,10 @@ export function mapTimelinePointsToChartData(
         periodStart: from,
         periodEndExclusive: toExclusive,
         totalReturn: point.totalReturn,
+        savings: point.savings,
+        income: point.income,
+        expenses: point.expenses,
+        gainsLosses: point.gainsLosses,
       },
     ];
   });
@@ -46,6 +58,7 @@ export function mapTimelinePointsToChartData(
 export function createTimelineChartOptions(args: {
   chartData: TimelineChartDatum[];
   periodMode: TimelinePeriodMode;
+  selectedMetric: TimelineMetric;
   amountCompactFormatter: Intl.NumberFormat;
   currencyFormatter: Intl.NumberFormat;
   colors: DashboardChartThemeColors;
@@ -68,6 +81,8 @@ export function createTimelineChartOptions(args: {
   const currentPeriod = args.chartData.at(-1);
   const rangeButtons = getTimelineRangeButtons(args.periodMode);
   const rangeControlStyles = getTimelineRangeControlStyles(args);
+  const selectedMetricLabel = getTimelineMetricLabel(args.selectedMetric);
+  const selectedMetricKey = args.selectedMetric;
   const unitTimeAxisUnit =
     args.periodMode === "year"
       ? { unit: "year" as const, utc: true }
@@ -107,15 +122,23 @@ export function createTimelineChartOptions(args: {
       {
         type: "bar",
         xKey: "periodStart",
-        yKey: "totalReturn",
-        yName: "Total Return",
+        yKey: selectedMetricKey,
+        yName: selectedMetricLabel,
         widthRatio: 0.72,
         itemStyler: ({ datum }) => {
-          const totalReturn = (datum as TimelineChartDatum).totalReturn;
+          if (args.selectedMetric === "expenses") {
+            return {
+              fill: negativeFillColor,
+              stroke: negativeFillColor,
+            };
+          }
+
+          const metricValue =
+            (datum as TimelineChartDatum)[selectedMetricKey] ?? 0;
           const fill =
-            totalReturn > 0
+            metricValue > 0
               ? positiveFillColor
-              : totalReturn < 0
+              : metricValue < 0
                 ? negativeFillColor
                 : neutralFillColor;
 
@@ -131,8 +154,10 @@ export function createTimelineChartOptions(args: {
               heading: point.periodLabel,
               data: [
                 {
-                  label: "Total Return",
-                  value: args.currencyFormatter.format(point.totalReturn),
+                  label: selectedMetricLabel,
+                  value: args.currencyFormatter.format(
+                    point[selectedMetricKey],
+                  ),
                 },
               ],
             };

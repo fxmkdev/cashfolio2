@@ -8,6 +8,10 @@ export type PeriodTimelinePoint = {
   periodValue: string;
   periodLabel: string;
   totalReturn: number;
+  savings: number;
+  income: number;
+  expenses: number;
+  gainsLosses: number;
 };
 
 export type PeriodTimelineResponse = {
@@ -119,6 +123,10 @@ export const getPeriodTimeline = createServerFn({
         periodValue: point.selectedPeriodValue,
         periodLabel: point.selectedPeriodLabel,
         totalReturn: point.totalReturn,
+        savings: point.savings,
+        income: point.income,
+        expenses: point.expenses,
+        gainsLosses: point.gainsLosses,
       });
     }
 
