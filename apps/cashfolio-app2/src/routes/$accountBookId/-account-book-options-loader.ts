@@ -2,7 +2,7 @@ import { getUserAccountBooks, type UserAccountBookOption } from "@/server/home";
 
 let cachedAccountBooksPromise: Promise<UserAccountBookOption[]> | null = null;
 
-export function loadUserAccountBooksForAccountsRoute() {
+export function loadUserAccountBooksForAccountBookRoute() {
   if (typeof window === "undefined") {
     return getUserAccountBooks();
   }

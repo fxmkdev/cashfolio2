@@ -1,4 +1,12 @@
-import { AppShell, Burger, Divider, Group, Stack, Text } from "@mantine/core";
+import {
+  AppShell,
+  Burger,
+  Button,
+  Divider,
+  Group,
+  Stack,
+  Text,
+} from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import {
   createFileRoute,
@@ -14,10 +22,14 @@ import {
 import type { ReactNode } from "react";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import { LinkNavLink } from "@/components/link-nav-link";
+import type { UserAccountBookOption } from "@/server/home";
 import type { TabValue } from "@/shared/account-tabs";
+import { loadUserAccountBooksForAccountBookRoute } from "./-account-book-options-loader";
+import { AccountBookSwitcherMenu } from "./-account-book-switcher-menu";
 import type { AccountsMode } from "./accounts/-page-types";
 
 export const Route = createFileRoute("/$accountBookId")({
+  loader: () => loadUserAccountBooksForAccountBookRoute(),
   component: AccountBookLayout,
 });
 
@@ -165,6 +177,7 @@ export function getAccountsLinkSearch(args: {
 }
 
 function AccountBookLayout() {
+  const accountBooks = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const { pathname, locationSearch, matches } = useRouterState({
     select: (state) => ({
@@ -185,6 +198,7 @@ function AccountBookLayout() {
     <AccountBookShell
       accountBookId={accountBookId}
       pathname={pathname}
+      accountBooks={accountBooks}
       accountsLinkSearch={accountsLinkSearch}
     >
       <Outlet />
@@ -195,6 +209,7 @@ function AccountBookLayout() {
 export type AccountBookShellProps = {
   accountBookId: string;
   pathname: string;
+  accountBooks: UserAccountBookOption[];
   accountsLinkSearch: AccountsLinkSearch;
   children: ReactNode;
 };
@@ -202,6 +217,7 @@ export type AccountBookShellProps = {
 export function AccountBookShell({
   accountBookId,
   pathname,
+  accountBooks,
   accountsLinkSearch,
   children,
 }: AccountBookShellProps) {
@@ -235,45 +251,69 @@ export function AccountBookShell({
       </AppShell.Header>
 
       <AppShell.Navbar p="sm">
-        <Stack gap="xs">
-          <Text size="sm" fw={600} c="dimmed" px="xs" pt="xs">
-            Account Book
-          </Text>
-          <Divider />
-          <LinkNavLink
-            label="Accounts"
-            leftSection={<IconListDetails size={16} />}
-            to="/$accountBookId/accounts"
-            params={{ accountBookId }}
-            search={accountsLinkSearch}
-            active={activeSection === "accounts"}
-            onClick={closeMobile}
-          />
-          <LinkNavLink
-            label="Period"
-            leftSection={<IconCalendarMonth size={16} />}
-            to="/$accountBookId/period"
-            params={{ accountBookId }}
-            active={activeSection === "period"}
-            onClick={closeMobile}
-          />
-          <LinkNavLink
-            label="Timeline"
-            leftSection={<IconChartBar size={16} />}
-            to="/$accountBookId/timeline"
-            params={{ accountBookId }}
-            active={activeSection === "timeline"}
-            onClick={closeMobile}
-          />
-          <LinkNavLink
-            label="Valuation Cache"
-            leftSection={<IconDatabase size={16} />}
-            to="/$accountBookId/valuation-cache"
-            params={{ accountBookId }}
-            active={activeSection === "valuation-cache"}
-            onClick={closeMobile}
-          />
-        </Stack>
+        <AppShell.Section grow>
+          <Stack gap="xs">
+            <Text size="sm" fw={600} c="dimmed" px="xs" pt="xs">
+              Account Book
+            </Text>
+            <Divider />
+            <LinkNavLink
+              label="Accounts"
+              leftSection={<IconListDetails size={16} />}
+              to="/$accountBookId/accounts"
+              params={{ accountBookId }}
+              search={accountsLinkSearch}
+              active={activeSection === "accounts"}
+              onClick={closeMobile}
+            />
+            <LinkNavLink
+              label="Period"
+              leftSection={<IconCalendarMonth size={16} />}
+              to="/$accountBookId/period"
+              params={{ accountBookId }}
+              active={activeSection === "period"}
+              onClick={closeMobile}
+            />
+            <LinkNavLink
+              label="Timeline"
+              leftSection={<IconChartBar size={16} />}
+              to="/$accountBookId/timeline"
+              params={{ accountBookId }}
+              active={activeSection === "timeline"}
+              onClick={closeMobile}
+            />
+            <LinkNavLink
+              label="Valuation Cache"
+              leftSection={<IconDatabase size={16} />}
+              to="/$accountBookId/valuation-cache"
+              params={{ accountBookId }}
+              active={activeSection === "valuation-cache"}
+              onClick={closeMobile}
+            />
+          </Stack>
+        </AppShell.Section>
+
+        <AppShell.Section>
+          <Stack gap="xs" pt="sm">
+            <Divider />
+            <AccountBookSwitcherMenu
+              accountBookId={accountBookId}
+              accountBooks={accountBooks}
+              accountsTab={accountsLinkSearch.tab}
+              accountsMode={accountsLinkSearch.mode}
+            />
+            <form action="/api/logto/sign-out" method="post">
+              <Button
+                type="submit"
+                variant="default"
+                fullWidth
+                onClick={closeMobile}
+              >
+                Sign out
+              </Button>
+            </form>
+          </Stack>
+        </AppShell.Section>
       </AppShell.Navbar>
 
       <AppShell.Main

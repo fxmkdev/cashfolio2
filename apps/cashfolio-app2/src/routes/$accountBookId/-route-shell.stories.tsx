@@ -29,6 +29,10 @@ function AccountBookShellSmokeHarness() {
   return (
     <AccountBookShell
       accountBookId={STORYBOOK_ACCOUNT_BOOK_ID}
+      accountBooks={[
+        { id: "storybook-book", name: "Storybook Book" },
+        { id: "storybook-alt-book", name: "Storybook Alt Book" },
+      ]}
       pathname={pathname}
       accountsLinkSearch={{ tab: "ASSET", mode: "active" }}
     >
@@ -82,5 +86,32 @@ export const RouteSmoke: Story = {
     await expect(
       canvas.getByRole("link", { name: "Accounts" }),
     ).toHaveAttribute("data-active", "true");
+    await expect(
+      canvas.getByRole("button", { name: "Storybook Book" }),
+    ).toBeInTheDocument();
+    await expect(
+      canvas.getByRole("button", { name: "Sign out" }),
+    ).toBeVisible();
+  },
+};
+
+export const MobileFooterControlsSmoke: Story = {
+  parameters: {
+    viewport: {
+      defaultViewport: "mobile1",
+    },
+  },
+  render: () => <AccountBookShellSmokeHarness />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Toggle navigation" }),
+    );
+    await expect(
+      canvas.getByRole("button", { name: "Storybook Book" }),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: "Sign out" }),
+    ).toBeVisible();
   },
 };

@@ -3,7 +3,7 @@ import { IconCheck, IconChevronDown, IconSettings } from "@tabler/icons-react";
 import { createLink } from "@tanstack/react-router";
 import { forwardRef, type ComponentPropsWithoutRef } from "react";
 import type { UserAccountBookOption } from "@/server/home";
-import type { AccountsMode, TabValue } from "./-page-types";
+import type { AccountsMode, TabValue } from "./accounts/-page-types";
 
 const MenuItemLinkBase = forwardRef<
   HTMLAnchorElement,
@@ -17,24 +17,28 @@ const LinkMenuItem = createLink(MenuItemLinkBase);
 type AccountBookSwitcherMenuProps = {
   accountBookId: string;
   accountBooks: UserAccountBookOption[];
-  tab: TabValue;
-  mode: AccountsMode;
+  accountsTab: TabValue;
+  accountsMode: AccountsMode;
 };
 
 export function AccountBookSwitcherMenu({
   accountBookId,
   accountBooks,
-  tab,
-  mode,
+  accountsTab,
+  accountsMode,
 }: AccountBookSwitcherMenuProps) {
   const currentAccountBookName =
     accountBooks.find((accountBook) => accountBook.id === accountBookId)
       ?.name ?? accountBookId;
 
   return (
-    <Menu position="bottom-end" withArrow>
+    <Menu position="top-end" withArrow>
       <Menu.Target>
-        <Button variant="default" rightSection={<IconChevronDown size={16} />}>
+        <Button
+          variant="default"
+          rightSection={<IconChevronDown size={16} />}
+          fullWidth
+        >
           {currentAccountBookName}
         </Button>
       </Menu.Target>
@@ -49,7 +53,7 @@ export function AccountBookSwitcherMenu({
                 leftSection={<IconCheck size={16} />}
                 to="/$accountBookId/accounts"
                 params={{ accountBookId }}
-                search={{ tab, mode }}
+                search={{ tab: accountsTab, mode: accountsMode }}
               >
                 {accountBook.name}
               </LinkMenuItem>

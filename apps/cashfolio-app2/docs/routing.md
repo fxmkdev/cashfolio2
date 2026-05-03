@@ -26,20 +26,20 @@ Related docs:
   `POST /api/logto/sign-out`
 - `$accountBookId/route.tsx` - shared account-book shell route using Mantine
   `AppShell` with left navbar navigation (Accounts, Period, Timeline, Valuation
-  Cache) and mobile-only header burger toggle
+  Cache), navbar footer actions (Account Book switcher + Sign out), and
+  mobile-only header burger toggle
   - Uses the theme `sm` breakpoint as the shared source of truth for both navbar
     collapse and header visibility.
   - Keeps `Accounts` highlighted for account routes (`/$accountId` and
     `/$accountId/chart`) as well as `/accounts`.
+  - Loads account-book switcher options at shell level and memoizes on the
+    browser side so nested route navigations can reuse the same list.
 - `$accountBookId/index.tsx` - index redirect route that forwards to
   `$accountBookId/accounts`
 - `$accountBookId/accounts/route.tsx` - accounts page with tabs (one per account
   type: Asset, Liability, Income, Expense)
   - Loader data is tab-scoped: only the selected tab is fetched in the route
     loader critical path.
-  - Account-book switcher options are loaded in parallel at route level and
-    memoized on the browser side, so tab/mode search changes do not repeatedly
-    refetch the same account-book list.
 - `$accountBookId/valuation-cache/route.tsx` - valuation cache explorer page
   with tabs for Currency, Cryptocurrency, and Security; shows deduplicated unit
   rows and cached TimeSeries history charts (no live provider lookups)

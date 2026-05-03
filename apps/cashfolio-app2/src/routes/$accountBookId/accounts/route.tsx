@@ -5,7 +5,6 @@ import {
 } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { parseAccountsSearch } from "./-page-types";
-import { loadUserAccountBooksForAccountsRoute } from "./-account-book-options-loader";
 import { loadAccountsPageData } from "./-page-loader";
 import { useAccountsPageController } from "./-page-controller";
 
@@ -18,15 +17,7 @@ export const Route = createFileRoute("/$accountBookId/accounts")({
   validateSearch: parseAccountsSearch,
   loaderDeps: ({ search }) => ({ mode: search.mode, tab: search.tab }),
   loader: async ({ params: { accountBookId }, deps: { mode, tab } }) => {
-    const [accountsPageData, accountBooks] = await Promise.all([
-      loadAccountsPageData({ accountBookId, mode, tab }),
-      loadUserAccountBooksForAccountsRoute(),
-    ]);
-
-    return {
-      ...accountsPageData,
-      accountBooks,
-    };
+    return loadAccountsPageData({ accountBookId, mode, tab });
   },
   component: AccountsPage,
 });
@@ -56,7 +47,7 @@ function AccountsPage() {
 
   return (
     <Suspense fallback={null}>
-      <AccountsPageView {...viewProps} accountBooks={loaderData.accountBooks} />
+      <AccountsPageView {...viewProps} />
     </Suspense>
   );
 }

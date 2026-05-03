@@ -204,11 +204,6 @@ const existingNodes: AccountsPageViewProps["existingNodes"] = [
   },
 ];
 
-const accountBooks: AccountsPageViewProps["accountBooks"] = [
-  { id: "storybook-book", name: "Storybook Book" },
-  { id: "storybook-alt-book", name: "Storybook Alt Book" },
-];
-
 function getRowsFor(args: { mode: AccountsMode; tab: TabValue }): TreeRow[] {
   if (args.tab !== "ASSET") return [];
   return args.mode === "archived" ? archivedAssetRows : activeAssetRows;
@@ -370,7 +365,6 @@ function AccountsPageStoryHarness({
     >
       <AccountsPageView
         accountBookId="storybook-book"
-        accountBooks={accountBooks}
         tab={tab}
         mode={mode}
         tabs={tabs}
