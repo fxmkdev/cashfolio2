@@ -1,11 +1,7 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { AccountType } from "@/.prisma-client/enums";
-import {
-  buildLedgerBalanceChartPoints,
-  createLedgerBalanceFormatter,
-  getUnitLabel,
-} from "../-page-data";
+import { createLedgerBalanceFormatter, getUnitLabel } from "../-page-data";
 import { Route as LedgerLayoutRoute } from "../route";
 import { LedgerBalanceChartPageView } from "./-page-view";
 import { LedgerViewSegmentedControl } from "../-view-segmented-control";
@@ -16,7 +12,7 @@ export const Route = createFileRoute("/$accountBookId/$accountId/chart")({
 
 function LedgerChartPage() {
   const { accountBookId, accountId } = LedgerLayoutRoute.useParams();
-  const { account, bookings } = LedgerLayoutRoute.useLoaderData();
+  const { account, balanceChartPoints } = LedgerLayoutRoute.useLoaderData();
 
   if (
     account.type !== AccountType.ASSET &&
@@ -31,10 +27,7 @@ function LedgerChartPage() {
     );
   }
 
-  const points = useMemo(
-    () => buildLedgerBalanceChartPoints(account, bookings),
-    [account, bookings],
-  );
+  const points = balanceChartPoints;
 
   const formatBalance = useMemo(
     () => createLedgerBalanceFormatter(account),

@@ -16,7 +16,7 @@ import { AccountPathHeading } from "@/components/account-path-heading";
 import { TopPageHeader } from "@/components/top-page-header";
 import { getTypeLabel } from "@/shared/account-utils";
 import type { TabValue } from "@/shared/account-tabs";
-import type { LedgerBalanceChartPoint } from "../-page-data";
+import type { LedgerBalanceChartPoint } from "../-page-types";
 import type { loadLedgerPageData } from "../-page-loader";
 import classes from "./-page-view.module.css";
 

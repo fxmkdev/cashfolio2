@@ -58,6 +58,8 @@ export async function loadLedgerPageData(args: {
   return {
     account,
     bookings: ledgerData.bookings,
+    rows: ledgerData.rows,
+    balanceChartPoints: ledgerData.balanceChartPoints,
     referenceCurrency: ledgerData.referenceCurrency,
     firstBookingDate: ledgerData.firstBookingDate,
     balanceBeforePeriod: ledgerData.balanceBeforePeriod,

@@ -12,7 +12,6 @@ import {
 import { useLedgerColumnDefs } from "./-page-columns";
 import { useLedgerAccountOptions } from "./-page-account-options";
 import {
-  buildLedgerRows,
   deriveSimpleTransactionEditState,
   getUnitLabel,
   type SimpleTransactionEditInitialValues,
@@ -166,7 +165,7 @@ export function useLedgerPageController(args: {
   LedgerPageViewProps,
   "accountBookId" | "onRowDataUpdated" | "viewSwitcher"
 > {
-  const { account, bookings, accounts } = args.loaderData;
+  const { account, accounts } = args.loaderData;
 
   const [modalOpened, setModalOpened] = useState(false);
   const [simpleModalOpened, setSimpleModalOpened] = useState(false);
@@ -357,21 +356,7 @@ export function useLedgerPageController(args: {
     [],
   );
 
-  const rows = useMemo(
-    () =>
-      buildLedgerRows(account, bookings, {
-        hasPeriodFilter: args.hasPeriodFilter,
-        balanceBeforePeriodRaw: args.loaderData.balanceBeforePeriod,
-        hasBookingsBeforePeriod: args.loaderData.hasBookingsBeforePeriod,
-      }),
-    [
-      account,
-      args.hasPeriodFilter,
-      args.loaderData.balanceBeforePeriod,
-      args.loaderData.hasBookingsBeforePeriod,
-      bookings,
-    ],
-  );
+  const rows = args.loaderData.rows;
 
   const columnDefs = useLedgerColumnDefs({
     accountBookId: args.accountBookId,
