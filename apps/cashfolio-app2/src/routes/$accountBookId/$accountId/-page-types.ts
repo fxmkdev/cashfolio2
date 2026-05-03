@@ -58,7 +58,6 @@ export type LedgerAccount = Awaited<
   ReturnType<LedgerServerModule["getAccountForLedger"]>
 >;
 type LedgerData = Awaited<ReturnType<LedgerServerModule["getLedgerData"]>>;
-export type LedgerBookings = LedgerData["bookings"];
 export type LedgerRows = LedgerData["rows"];
 export type LedgerBalanceChartPoint = LedgerData["balanceChartPoints"][number];
 export type LedgerAccountOptionSource = Awaited<

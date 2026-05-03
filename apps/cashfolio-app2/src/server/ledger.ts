@@ -314,12 +314,37 @@ export const getLedgerData = createServerFn({ method: "GET" })
       period?: unknown;
       includeReferenceValues?: unknown;
       includeFirstBookingDate?: unknown;
+      accountType?: unknown;
+      accountEquityAccountSubtype?: unknown;
+      accountUnit?: unknown;
+      accountCurrency?: unknown;
+      accountCryptocurrency?: unknown;
+      accountSymbol?: unknown;
+      accountTradeCurrency?: unknown;
     }) => ({
       accountId: data.accountId,
       accountBookId: data.accountBookId,
       period: parseExplicitLedgerPeriodSelection(data.period),
       includeReferenceValues: toBoolean(data.includeReferenceValues),
       includeFirstBookingDate: toBoolean(data.includeFirstBookingDate),
+      accountType: data.accountType as AccountType | undefined,
+      accountEquityAccountSubtype: data.accountEquityAccountSubtype as
+        | EquityAccountSubtype
+        | null
+        | undefined,
+      accountUnit: data.accountUnit as Unit | null | undefined,
+      accountCurrency:
+        typeof data.accountCurrency === "string" ? data.accountCurrency : null,
+      accountCryptocurrency:
+        typeof data.accountCryptocurrency === "string"
+          ? data.accountCryptocurrency
+          : null,
+      accountSymbol:
+        typeof data.accountSymbol === "string" ? data.accountSymbol : null,
+      accountTradeCurrency:
+        typeof data.accountTradeCurrency === "string"
+          ? data.accountTradeCurrency
+          : null,
     }),
   )
   .handler(async ({ data }) => {
@@ -327,23 +352,33 @@ export const getLedgerData = createServerFn({ method: "GET" })
     const periodRange = data.period
       ? getExplicitPeriodDateRange(data.period)
       : null;
-    const accountPromise = prisma.account.findUniqueOrThrow({
-      where: {
-        id_accountBookId: {
-          id: data.accountId,
-          accountBookId: data.accountBookId,
-        },
-      },
-      select: {
-        type: true,
-        equityAccountSubtype: true,
-        unit: true,
-        currency: true,
-        cryptocurrency: true,
-        symbol: true,
-        tradeCurrency: true,
-      },
-    });
+    const accountPromise: Promise<LedgerDerivedAccount> = data.accountType
+      ? Promise.resolve({
+          type: data.accountType,
+          equityAccountSubtype: data.accountEquityAccountSubtype ?? null,
+          unit: data.accountUnit ?? null,
+          currency: data.accountCurrency,
+          cryptocurrency: data.accountCryptocurrency,
+          symbol: data.accountSymbol,
+          tradeCurrency: data.accountTradeCurrency,
+        })
+      : prisma.account.findUniqueOrThrow({
+          where: {
+            id_accountBookId: {
+              id: data.accountId,
+              accountBookId: data.accountBookId,
+            },
+          },
+          select: {
+            type: true,
+            equityAccountSubtype: true,
+            unit: true,
+            currency: true,
+            cryptocurrency: true,
+            symbol: true,
+            tradeCurrency: true,
+          },
+        });
     const firstBookingPromise = data.includeFirstBookingDate
       ? prisma.booking.findFirst({
           where: {
@@ -522,7 +557,6 @@ export const getLedgerData = createServerFn({ method: "GET" })
 
     return {
       referenceCurrency,
-      bookings: mappedBookings,
       rows,
       balanceChartPoints,
       firstBookingDate: firstBooking?.date.toISOString() ?? null,
