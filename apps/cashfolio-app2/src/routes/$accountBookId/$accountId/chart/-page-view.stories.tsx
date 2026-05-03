@@ -26,7 +26,14 @@ function LedgerBalanceChartPageStoryHarness({
   });
 
   return (
-    <Box>
+    <Box
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100dvh",
+        minHeight: "100dvh",
+      }}
+    >
       <LedgerBalanceChartPageView
         accountBookId="storybook-book"
         backTab="ASSET"
