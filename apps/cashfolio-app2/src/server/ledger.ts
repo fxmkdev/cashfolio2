@@ -74,6 +74,13 @@ type LedgerBalanceChartPoint = {
   balance: number;
 };
 
+type LedgerDerivationContext = {
+  negate: boolean;
+  isEquity: boolean;
+  hasPeriodFilter: boolean;
+  hasBookingsBeforePeriod: boolean;
+};
+
 function shouldNegate(
   type: AccountType,
   equityAccountSubtype: EquityAccountSubtype | null,
@@ -85,31 +92,15 @@ function shouldNegate(
   );
 }
 
-export function deriveLedgerPresentationData(args: {
+function buildLedgerRowsFromBookings(args: {
   account: LedgerDerivedAccount;
   bookings: LedgerDerivedBooking[];
-  hasPeriodFilter: boolean;
-  balanceBeforePeriodRaw: number;
-  hasBookingsBeforePeriod: boolean;
-  today?: Date;
-}): {
-  rows: LedgerDerivedRow[];
-  balanceChartPoints: LedgerBalanceChartPoint[];
-} {
-  const {
-    account,
-    bookings,
-    hasPeriodFilter,
-    balanceBeforePeriodRaw,
-    hasBookingsBeforePeriod,
-  } = args;
-  const today = args.today ?? new Date();
-  const negate = shouldNegate(account.type, account.equityAccountSubtype);
-  const isEquity = account.type === AccountType.EQUITY;
-
-  const baseBalanceBeforePeriod = negate
-    ? toMoney(balanceBeforePeriodRaw).neg()
-    : toMoney(balanceBeforePeriodRaw);
+  context: LedgerDerivationContext;
+  baseBalanceBeforePeriod: ReturnType<typeof toMoney>;
+}): LedgerDerivedRow[] {
+  const { account, bookings, context, baseBalanceBeforePeriod } = args;
+  const { negate, isEquity, hasPeriodFilter, hasBookingsBeforePeriod } =
+    context;
 
   let runningBalance =
     hasPeriodFilter && !isEquity ? baseBalanceBeforePeriod : toMoney(0);
@@ -225,8 +216,18 @@ export function deriveLedgerPresentationData(args: {
     });
   }
 
+  return rows;
+}
+
+function buildLedgerBalanceChartPointsFromBookings(args: {
+  bookings: LedgerDerivedBooking[];
+  negate: boolean;
+  today: Date;
+}): LedgerBalanceChartPoint[] {
+  const { bookings, negate, today } = args;
   const balanceChartPoints: LedgerBalanceChartPoint[] = [];
   let chartBalance = toMoney(0);
+
   for (const booking of bookings) {
     const value = negate
       ? toMoney(booking.value).neg()
@@ -263,6 +264,50 @@ export function deriveLedgerPresentationData(args: {
       });
     }
   }
+
+  return balanceChartPoints;
+}
+
+export function deriveLedgerPresentationData(args: {
+  account: LedgerDerivedAccount;
+  bookings: LedgerDerivedBooking[];
+  hasPeriodFilter: boolean;
+  balanceBeforePeriodRaw: number;
+  hasBookingsBeforePeriod: boolean;
+  today?: Date;
+}): {
+  rows: LedgerDerivedRow[];
+  balanceChartPoints: LedgerBalanceChartPoint[];
+} {
+  const {
+    account,
+    bookings,
+    hasPeriodFilter,
+    balanceBeforePeriodRaw,
+    hasBookingsBeforePeriod,
+  } = args;
+  const today = args.today ?? new Date();
+  const context: LedgerDerivationContext = {
+    negate: shouldNegate(account.type, account.equityAccountSubtype),
+    isEquity: account.type === AccountType.EQUITY,
+    hasPeriodFilter,
+    hasBookingsBeforePeriod,
+  };
+  const baseBalanceBeforePeriod = context.negate
+    ? toMoney(balanceBeforePeriodRaw).neg()
+    : toMoney(balanceBeforePeriodRaw);
+
+  const rows = buildLedgerRowsFromBookings({
+    account,
+    bookings,
+    context,
+    baseBalanceBeforePeriod,
+  });
+  const balanceChartPoints = buildLedgerBalanceChartPointsFromBookings({
+    bookings,
+    negate: context.negate,
+    today,
+  });
 
   return { rows, balanceChartPoints };
 }
