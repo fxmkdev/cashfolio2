@@ -24,12 +24,16 @@ import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import { LinkNavLink } from "@/components/link-nav-link";
 import type { UserAccountBookOption } from "@/server/home";
 import type { TabValue } from "@/shared/account-tabs";
-import { loadUserAccountBooksForAccountBookRoute } from "./-account-book-options-loader";
 import { AccountBookSwitcherMenu } from "./-account-book-switcher-menu";
 import type { AccountsMode } from "./accounts/-page-types";
 
 export const Route = createFileRoute("/$accountBookId")({
-  loader: () => loadUserAccountBooksForAccountBookRoute(),
+  loader: async () => {
+    const { loadUserAccountBooksForAccountBookRoute } =
+      await import("./-account-book-options-loader");
+
+    return loadUserAccountBooksForAccountBookRoute();
+  },
   component: AccountBookLayout,
 });
 
