@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { format } from "date-fns";
 import { prisma } from "../prisma.server";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import {
@@ -68,7 +67,7 @@ type LedgerDerivedRow = {
 };
 
 type LedgerBalanceChartPoint = {
-  date: Date;
+  date: string;
   dateKey: string;
   dateLabel: string;
   balance: number;
@@ -90,6 +89,24 @@ function shouldNegate(
     (type === AccountType.EQUITY &&
       equityAccountSubtype !== EquityAccountSubtype.EXPENSE)
   );
+}
+
+function formatUtcDateKey(date: Date): string {
+  const year = String(date.getUTCFullYear()).padStart(4, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatUtcDateLabel(date: Date): string {
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const year = String(date.getUTCFullYear()).padStart(4, "0");
+  return `${day}.${month}.${year}`;
+}
+
+function toUtcMidnightIsoString(dateKey: string): string {
+  return `${dateKey}T00:00:00.000Z`;
 }
 
 function buildLedgerRowsFromBookings(args: {
@@ -137,7 +154,7 @@ function buildLedgerRowsFromBookings(args: {
       id: booking.id,
       transactionId: booking.transactionId,
       bookingValue: toMoneyNumber(rawValue),
-      date: format(booking.date, "dd.MM.yyyy"),
+      date: formatUtcDateLabel(booking.date),
       counterpartyAccounts: booking.counterpartyAccounts,
       description: booking.description || booking.transactionDescription || "",
       unit: booking.unit,
@@ -234,8 +251,8 @@ function buildLedgerBalanceChartPointsFromBookings(args: {
       : toMoney(booking.value);
     chartBalance = moneyAdd(chartBalance, value);
 
-    const dateKey = format(booking.date, "yyyy-MM-dd");
-    const dateLabel = format(booking.date, "dd.MM.yyyy");
+    const dateKey = formatUtcDateKey(booking.date);
+    const dateLabel = formatUtcDateLabel(booking.date);
     const lastPoint = balanceChartPoints[balanceChartPoints.length - 1];
     const balanceValue = toMoneyNumber(chartBalance);
 
@@ -245,7 +262,7 @@ function buildLedgerBalanceChartPointsFromBookings(args: {
     }
 
     balanceChartPoints.push({
-      date: new Date(`${dateKey}T00:00:00`),
+      date: toUtcMidnightIsoString(dateKey),
       dateKey,
       dateLabel,
       balance: balanceValue,
@@ -254,12 +271,12 @@ function buildLedgerBalanceChartPointsFromBookings(args: {
 
   const lastPoint = balanceChartPoints[balanceChartPoints.length - 1];
   if (lastPoint) {
-    const todayKey = format(today, "yyyy-MM-dd");
+    const todayKey = formatUtcDateKey(today);
     if (lastPoint.dateKey < todayKey) {
       balanceChartPoints.push({
-        date: new Date(`${todayKey}T00:00:00`),
+        date: toUtcMidnightIsoString(todayKey),
         dateKey: todayKey,
-        dateLabel: format(today, "dd.MM.yyyy"),
+        dateLabel: formatUtcDateLabel(today),
         balance: lastPoint.balance,
       });
     }
@@ -372,24 +389,7 @@ export const getLedgerData = createServerFn({ method: "GET" })
       period: parseExplicitLedgerPeriodSelection(data.period),
       includeReferenceValues: toBoolean(data.includeReferenceValues),
       includeFirstBookingDate: toBoolean(data.includeFirstBookingDate),
-      accountType: data.accountType as AccountType | undefined,
-      accountEquityAccountSubtype: data.accountEquityAccountSubtype as
-        | EquityAccountSubtype
-        | null
-        | undefined,
-      accountUnit: data.accountUnit as Unit | null | undefined,
-      accountCurrency:
-        typeof data.accountCurrency === "string" ? data.accountCurrency : null,
-      accountCryptocurrency:
-        typeof data.accountCryptocurrency === "string"
-          ? data.accountCryptocurrency
-          : null,
-      accountSymbol:
-        typeof data.accountSymbol === "string" ? data.accountSymbol : null,
-      accountTradeCurrency:
-        typeof data.accountTradeCurrency === "string"
-          ? data.accountTradeCurrency
-          : null,
+      accountContext: parseLedgerAccountContextFromInput(data),
     }),
   )
   .handler(async ({ data }) => {
@@ -397,15 +397,15 @@ export const getLedgerData = createServerFn({ method: "GET" })
     const periodRange = data.period
       ? getExplicitPeriodDateRange(data.period)
       : null;
-    const accountPromise: Promise<LedgerDerivedAccount> = data.accountType
+    const accountPromise: Promise<LedgerDerivedAccount> = data.accountContext
       ? Promise.resolve({
-          type: data.accountType,
-          equityAccountSubtype: data.accountEquityAccountSubtype ?? null,
-          unit: data.accountUnit ?? null,
-          currency: data.accountCurrency,
-          cryptocurrency: data.accountCryptocurrency,
-          symbol: data.accountSymbol,
-          tradeCurrency: data.accountTradeCurrency,
+          type: data.accountContext.type,
+          equityAccountSubtype: data.accountContext.equityAccountSubtype,
+          unit: data.accountContext.unit,
+          currency: data.accountContext.currency,
+          cryptocurrency: data.accountContext.cryptocurrency,
+          symbol: data.accountContext.symbol,
+          tradeCurrency: data.accountContext.tradeCurrency,
         })
       : prisma.account.findUniqueOrThrow({
           where: {
@@ -638,6 +638,82 @@ function parseExplicitLedgerPeriodSelection(
 
 function toBoolean(value: unknown): boolean {
   return value === true || value === "true";
+}
+
+function parseLedgerAccountContextFromInput(data: {
+  accountType?: unknown;
+  accountEquityAccountSubtype?: unknown;
+  accountUnit?: unknown;
+  accountCurrency?: unknown;
+  accountCryptocurrency?: unknown;
+  accountSymbol?: unknown;
+  accountTradeCurrency?: unknown;
+}): LedgerDerivedAccount | null {
+  const type = parseEnumValue(AccountType, data.accountType);
+  if (!type) {
+    return null;
+  }
+
+  const equityAccountSubtype = parseNullableEnumValue(
+    EquityAccountSubtype,
+    data.accountEquityAccountSubtype,
+  );
+  const unit = parseNullableEnumValue(Unit, data.accountUnit);
+  const currency = parseNullableString(data.accountCurrency);
+  const cryptocurrency = parseNullableString(data.accountCryptocurrency);
+  const symbol = parseNullableString(data.accountSymbol);
+  const tradeCurrency = parseNullableString(data.accountTradeCurrency);
+
+  if (
+    equityAccountSubtype === undefined ||
+    unit === undefined ||
+    currency === undefined ||
+    cryptocurrency === undefined ||
+    symbol === undefined ||
+    tradeCurrency === undefined
+  ) {
+    return null;
+  }
+
+  return {
+    type,
+    equityAccountSubtype,
+    unit,
+    currency,
+    cryptocurrency,
+    symbol,
+    tradeCurrency,
+  };
+}
+
+function parseEnumValue<T extends string>(
+  enumObject: Record<string, T>,
+  value: unknown,
+): T | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  return Object.values(enumObject).includes(value as T)
+    ? (value as T)
+    : undefined;
+}
+
+function parseNullableEnumValue<T extends string>(
+  enumObject: Record<string, T>,
+  value: unknown,
+): T | null | undefined {
+  if (value == null) {
+    return null;
+  }
+  return parseEnumValue(enumObject, value);
+}
+
+function parseNullableString(value: unknown): string | null | undefined {
+  if (value == null) {
+    return null;
+  }
+  return typeof value === "string" ? value : undefined;
 }
 
 async function mapWithConcurrencyLimit<TInput, TOutput>(

@@ -3,7 +3,10 @@ import { useMemo } from "react";
 import { AccountType } from "@/.prisma-client/enums";
 import { createLedgerBalanceFormatter, getUnitLabel } from "../-page-data";
 import { Route as LedgerLayoutRoute } from "../route";
-import { LedgerBalanceChartPageView } from "./-page-view";
+import {
+  LedgerBalanceChartPageView,
+  type LedgerBalanceChartRenderPoint,
+} from "./-page-view";
 import { LedgerViewSegmentedControl } from "../-view-segmented-control";
 
 export const Route = createFileRoute("/$accountBookId/$accountId/chart")({
@@ -27,7 +30,14 @@ function LedgerChartPage() {
     );
   }
 
-  const points = balanceChartPoints;
+  const points = useMemo<LedgerBalanceChartRenderPoint[]>(
+    () =>
+      balanceChartPoints.map((point) => ({
+        ...point,
+        date: new Date(point.date),
+      })),
+    [balanceChartPoints],
+  );
 
   const formatBalance = useMemo(
     () => createLedgerBalanceFormatter(account),

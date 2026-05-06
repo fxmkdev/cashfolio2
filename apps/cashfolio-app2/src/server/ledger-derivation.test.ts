@@ -186,19 +186,19 @@ describe("deriveLedgerPresentationData", () => {
 
     expect(result.balanceChartPoints).toEqual([
       {
-        date: localDate(2026, 0, 10, 0),
+        date: "2026-01-10T00:00:00.000Z",
         dateKey: "2026-01-10",
         dateLabel: "10.01.2026",
         balance: 75,
       },
       {
-        date: localDate(2026, 0, 11, 0),
+        date: "2026-01-11T00:00:00.000Z",
         dateKey: "2026-01-11",
         dateLabel: "11.01.2026",
         balance: 80,
       },
       {
-        date: localDate(2026, 0, 12, 0),
+        date: "2026-01-12T00:00:00.000Z",
         dateKey: "2026-01-12",
         dateLabel: "12.01.2026",
         balance: 80,
