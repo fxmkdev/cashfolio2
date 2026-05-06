@@ -79,6 +79,11 @@ const preview: Preview = {
         path: "/timeline",
         component: () => <Story />,
       });
+      const accountBookSettingsRoute = createRoute({
+        getParentRoute: () => accountBookRoute,
+        path: "/settings",
+        component: () => <Story />,
+      });
       const accountBookValuationCacheRoute = createRoute({
         getParentRoute: () => accountBookRoute,
         path: "/valuation-cache",
@@ -103,18 +108,25 @@ const preview: Preview = {
         component: () => <Story />,
       });
 
+      const accountLedgerRouteTree = accountLedgerRoute.addChildren([
+        accountLedgerIndexRoute,
+        accountLedgerChartRoute,
+      ]);
+
+      const accountBookRouteTree = accountBookRoute.addChildren([
+        accountBookIndexRoute,
+        accountBookAccountsRoute,
+        accountBookPeriodRoute,
+        accountBookTimelineRoute,
+        accountBookSettingsRoute,
+        accountBookValuationCacheRoute,
+        accountLedgerRouteTree,
+      ]);
+
       const router = createRouter({
         routeTree: rootRoute.addChildren([
           rootStoryRoute,
-          accountBookRoute,
-          accountBookIndexRoute,
-          accountBookAccountsRoute,
-          accountBookPeriodRoute,
-          accountBookTimelineRoute,
-          accountBookValuationCacheRoute,
-          accountLedgerRoute,
-          accountLedgerIndexRoute,
-          accountLedgerChartRoute,
+          accountBookRouteTree,
         ]),
         // Storybook renders stories inside /iframe.html, so links/routes must
         // resolve relative to that base path.

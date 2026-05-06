@@ -35,6 +35,7 @@ function AccountBookShellSmokeHarness() {
       ]}
       pathname={pathname}
       accountsLinkSearch={{ tab: "ASSET", mode: "active" }}
+      periodLinkSearch={{}}
     >
       <Box px="xl" py="xl">
         <Title order={2}>{getHeadingLabel(pathname)}</Title>

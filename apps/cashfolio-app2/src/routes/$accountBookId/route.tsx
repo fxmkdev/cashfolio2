@@ -23,9 +23,13 @@ import type { ReactNode } from "react";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import { LinkNavLink } from "@/components/link-nav-link";
 import type { UserAccountBookOption } from "@/server/home";
-import type { TabValue } from "@/shared/account-tabs";
 import { AccountBookSwitcherMenu } from "./-account-book-switcher-menu";
-import type { AccountsMode } from "./accounts/-page-types";
+import {
+  parseAccountsSearch,
+  tabs,
+  type AccountsMode,
+  type TabValue,
+} from "./accounts/-page-types";
 
 export const Route = createFileRoute("/$accountBookId")({
   loader: async () => {
@@ -40,6 +44,7 @@ export const Route = createFileRoute("/$accountBookId")({
 export type AccountBookSection =
   | "accounts"
   | "period"
+  | "settings"
   | "timeline"
   | "valuation-cache";
 
@@ -69,21 +74,22 @@ export function getActiveSection(args: {
 
   const section = segments[1];
   if (section === "period") return "period";
+  if (section === "settings") return "settings";
   if (section === "timeline") return "timeline";
   if (section === "valuation-cache") return "valuation-cache";
   return "accounts";
 }
 
 function parseAccountsTab(value: unknown): TabValue | null {
-  if (
-    value === "ASSET" ||
-    value === "LIABILITY" ||
-    value === "EQUITY-INCOME" ||
-    value === "EQUITY-EXPENSE"
-  ) {
-    return value;
-  }
-  return null;
+  return typeof value === "string" && tabs.some((tab) => tab.value === value)
+    ? (value as TabValue)
+    : null;
+}
+
+function getPeriodLinkSearch(search: Record<string, unknown>): {
+  period?: string;
+} {
+  return typeof search.period === "string" ? { period: search.period } : {};
 }
 
 function hasLedgerAccountLoaderData(value: unknown): value is {
@@ -150,20 +156,16 @@ export function getAccountsLinkSearch(args: {
   matches: readonly RouterMatchSnapshot[];
 }): AccountsLinkSearch {
   const tabFromSearch = parseAccountsTab(args.locationSearch.tab);
-  const modeFromSearch = args.locationSearch.mode;
-  if (
-    tabFromSearch &&
-    (modeFromSearch === "active" || modeFromSearch === "archived")
-  ) {
-    return {
+  if (tabFromSearch) {
+    return parseAccountsSearch({
       tab: tabFromSearch,
-      mode: modeFromSearch,
-    };
+      mode: args.locationSearch.mode,
+    });
   }
 
   for (let index = args.matches.length - 1; index >= 0; index -= 1) {
     const match = args.matches[index];
-    if (match.routeId !== "/$accountBookId/$accountId") {
+    if (match.routeId !== "/$accountId") {
       continue;
     }
 
@@ -197,6 +199,7 @@ function AccountBookLayout() {
     locationSearch,
     matches,
   });
+  const periodLinkSearch = getPeriodLinkSearch(locationSearch);
 
   return (
     <AccountBookShell
@@ -204,6 +207,7 @@ function AccountBookLayout() {
       pathname={pathname}
       accountBooks={accountBooks}
       accountsLinkSearch={accountsLinkSearch}
+      periodLinkSearch={periodLinkSearch}
     >
       <Outlet />
     </AccountBookShell>
@@ -215,6 +219,9 @@ export type AccountBookShellProps = {
   pathname: string;
   accountBooks: UserAccountBookOption[];
   accountsLinkSearch: AccountsLinkSearch;
+  periodLinkSearch: {
+    period?: string;
+  };
   children: ReactNode;
 };
 
@@ -223,6 +230,7 @@ export function AccountBookShell({
   pathname,
   accountBooks,
   accountsLinkSearch,
+  periodLinkSearch,
   children,
 }: AccountBookShellProps) {
   const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] =
@@ -275,6 +283,7 @@ export function AccountBookShell({
               leftSection={<IconCalendarMonth size={16} />}
               to="/$accountBookId/period"
               params={{ accountBookId }}
+              search={periodLinkSearch}
               active={activeSection === "period"}
               onClick={closeMobile}
             />

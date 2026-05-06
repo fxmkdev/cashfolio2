@@ -1,7 +1,12 @@
+import { fileURLToPath } from "node:url";
 import type { StorybookConfig } from "@storybook/react-vite";
 
 const TANSTACK_START_PLUGIN_PATTERN =
   /tanstack-(react-)?start|react-start|start-core/i;
+
+function toFilePath(relativePath: string) {
+  return fileURLToPath(new URL(relativePath, import.meta.url));
+}
 
 const config: StorybookConfig = {
   core: {
@@ -38,34 +43,25 @@ const config: StorybookConfig = {
         ...(viteConfig.resolve ?? {}),
         alias: {
           ...(viteConfig.resolve?.alias ?? {}),
-          "#tanstack-start-entry": new URL(
-            "./tanstack-start-entry.stub.ts",
-            import.meta.url,
-          ).pathname,
-          "#tanstack-router-entry": new URL(
+          "#tanstack-start-entry": toFilePath("./tanstack-start-entry.stub.ts"),
+          "#tanstack-router-entry": toFilePath(
             "./tanstack-router-entry.stub.ts",
-            import.meta.url,
-          ).pathname,
-          "#tanstack-start-plugin-adapters": new URL(
+          ),
+          "#tanstack-start-plugin-adapters": toFilePath(
             "./tanstack-start-plugin-adapters.stub.ts",
-            import.meta.url,
-          ).pathname,
-          "#tanstack-start-server-fn-resolver": new URL(
+          ),
+          "#tanstack-start-server-fn-resolver": toFilePath(
             "./tanstack-start-server-fn-resolver.stub.ts",
-            import.meta.url,
-          ).pathname,
-          "tanstack-start-manifest:v": new URL(
+          ),
+          "tanstack-start-manifest:v": toFilePath(
             "./tanstack-start-manifest.stub.ts",
-            import.meta.url,
-          ).pathname,
-          "tanstack-start-injected-head-scripts:v": new URL(
+          ),
+          "tanstack-start-injected-head-scripts:v": toFilePath(
             "./tanstack-start-injected-head-scripts.stub.ts",
-            import.meta.url,
-          ).pathname,
-          "@tanstack/start-storage-context": new URL(
+          ),
+          "@tanstack/start-storage-context": toFilePath(
             "./tanstack-start-storage-context.stub.ts",
-            import.meta.url,
-          ).pathname,
+          ),
         },
       },
     };

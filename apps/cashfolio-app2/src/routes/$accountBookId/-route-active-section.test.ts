@@ -55,6 +55,15 @@ describe("getActiveSection", () => {
       }),
     ).toBe("valuation-cache");
   });
+
+  it("marks settings section for settings route", () => {
+    expect(
+      getActiveSection({
+        pathname: "/book-1/settings",
+        accountBookId: "book-1",
+      }),
+    ).toBe("settings");
+  });
 });
 
 describe("getAccountsLinkSearch", () => {
@@ -76,7 +85,7 @@ describe("getAccountsLinkSearch", () => {
         locationSearch: {},
         matches: [
           {
-            routeId: "/$accountBookId/$accountId",
+            routeId: "/$accountId",
             loaderData: {
               account: {
                 type: AccountType.EQUITY,
@@ -90,6 +99,18 @@ describe("getAccountsLinkSearch", () => {
     ).toEqual({
       tab: "EQUITY-EXPENSE",
       mode: "archived",
+    });
+  });
+
+  it("keeps selected tab when mode is omitted and defaults mode to active", () => {
+    expect(
+      getAccountsLinkSearch({
+        locationSearch: { tab: "LIABILITY" },
+        matches: [],
+      }),
+    ).toEqual({
+      tab: "LIABILITY",
+      mode: "active",
     });
   });
 

@@ -53,9 +53,9 @@ const AccountBookIdTimelineRouteRoute =
   } as any)
 const AccountBookIdSettingsRouteRoute =
   AccountBookIdSettingsRouteRouteImport.update({
-    id: '/$accountBookId/settings',
-    path: '/$accountBookId/settings',
-    getParentRoute: () => rootRouteImport,
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AccountBookIdRouteRoute,
   } as any)
 const AccountBookIdPeriodRouteRoute =
   AccountBookIdPeriodRouteRouteImport.update({
@@ -244,10 +244,10 @@ declare module '@tanstack/react-router' {
     }
     '/$accountBookId/settings': {
       id: '/$accountBookId/settings'
-      path: '/$accountBookId/settings'
+      path: '/settings'
       fullPath: '/$accountBookId/settings'
       preLoaderRoute: typeof AccountBookIdSettingsRouteRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AccountBookIdRouteRoute
     }
     '/$accountBookId/period': {
       id: '/$accountBookId/period'
@@ -346,6 +346,7 @@ interface AccountBookIdRouteRouteChildren {
   AccountBookIdAccountIdRouteRoute: typeof AccountBookIdAccountIdRouteRouteWithChildren
   AccountBookIdAccountsRouteRoute: typeof AccountBookIdAccountsRouteRoute
   AccountBookIdPeriodRouteRoute: typeof AccountBookIdPeriodRouteRouteWithChildren
+  AccountBookIdSettingsRouteRoute: typeof AccountBookIdSettingsRouteRoute
   AccountBookIdTimelineRouteRoute: typeof AccountBookIdTimelineRouteRoute
   AccountBookIdValuationCacheRouteRoute: typeof AccountBookIdValuationCacheRouteRoute
   AccountBookIdIndexRoute: typeof AccountBookIdIndexRoute
