@@ -62,6 +62,10 @@ const config: StorybookConfig = {
             "./tanstack-start-injected-head-scripts.stub.ts",
             import.meta.url,
           ).pathname,
+          "@tanstack/start-storage-context": new URL(
+            "./tanstack-start-storage-context.stub.ts",
+            import.meta.url,
+          ).pathname,
         },
       },
     };
