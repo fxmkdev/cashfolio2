@@ -13,6 +13,14 @@ export const Route = createFileRoute("/$accountBookId/$accountId/chart")({
   component: LedgerChartPage,
 });
 
+function createLocalMidnightFromDateKey(dateKey: string): Date {
+  const [yearRaw, monthRaw, dayRaw] = dateKey.split("-");
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+  return new Date(year, month - 1, day);
+}
+
 function LedgerChartPage() {
   const { accountBookId, accountId } = LedgerLayoutRoute.useParams();
   const { account, balanceChartPoints } = LedgerLayoutRoute.useLoaderData();
@@ -34,7 +42,7 @@ function LedgerChartPage() {
     () =>
       balanceChartPoints.map((point) => ({
         ...point,
-        date: new Date(point.date),
+        date: createLocalMidnightFromDateKey(point.dateKey),
       })),
     [balanceChartPoints],
   );

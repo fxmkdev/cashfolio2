@@ -10,7 +10,10 @@ import {
 } from "../shared/period";
 import { toMoneyNumber } from "../shared/money";
 import { createGroupPathSegmentsResolver } from "./accounts-helpers";
-import { parseLedgerAccountContextFromInput } from "./ledger-account-context";
+import {
+  doesLedgerAccountContextMatchAccount,
+  parseLedgerAccountContextFromInput,
+} from "./ledger-account-context";
 import {
   deriveLedgerPresentationData,
   type LedgerDerivedAccount,
@@ -88,33 +91,35 @@ export const getLedgerData = createServerFn({ method: "GET" })
     const periodRange = data.period
       ? getExplicitPeriodDateRange(data.period)
       : null;
-    const accountPromise: Promise<LedgerDerivedAccount> = data.accountContext
-      ? Promise.resolve({
-          type: data.accountContext.type,
-          equityAccountSubtype: data.accountContext.equityAccountSubtype,
-          unit: data.accountContext.unit,
-          currency: data.accountContext.currency,
-          cryptocurrency: data.accountContext.cryptocurrency,
-          symbol: data.accountContext.symbol,
-          tradeCurrency: data.accountContext.tradeCurrency,
-        })
-      : prisma.account.findUniqueOrThrow({
-          where: {
-            id_accountBookId: {
-              id: data.accountId,
-              accountBookId: data.accountBookId,
-            },
+    const dbAccountPromise: Promise<LedgerDerivedAccount> =
+      prisma.account.findUniqueOrThrow({
+        where: {
+          id_accountBookId: {
+            id: data.accountId,
+            accountBookId: data.accountBookId,
           },
-          select: {
-            type: true,
-            equityAccountSubtype: true,
-            unit: true,
-            currency: true,
-            cryptocurrency: true,
-            symbol: true,
-            tradeCurrency: true,
-          },
-        });
+        },
+        select: {
+          type: true,
+          equityAccountSubtype: true,
+          unit: true,
+          currency: true,
+          cryptocurrency: true,
+          symbol: true,
+          tradeCurrency: true,
+        },
+      });
+    const accountContext = data.accountContext;
+    const accountPromise: Promise<LedgerDerivedAccount> = accountContext
+      ? dbAccountPromise.then((accountFromDb) =>
+          doesLedgerAccountContextMatchAccount({
+            accountContext,
+            account: accountFromDb,
+          })
+            ? accountContext
+            : accountFromDb,
+        )
+      : dbAccountPromise;
     const firstBookingPromise = data.includeFirstBookingDate
       ? prisma.booking.findFirst({
           where: {

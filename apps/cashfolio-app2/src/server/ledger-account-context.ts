@@ -51,6 +51,22 @@ export function parseLedgerAccountContextFromInput(data: {
   };
 }
 
+export function doesLedgerAccountContextMatchAccount(args: {
+  accountContext: LedgerDerivedAccount;
+  account: LedgerDerivedAccount;
+}): boolean {
+  const { accountContext, account } = args;
+  return (
+    accountContext.type === account.type &&
+    accountContext.equityAccountSubtype === account.equityAccountSubtype &&
+    accountContext.unit === account.unit &&
+    accountContext.currency === account.currency &&
+    accountContext.cryptocurrency === account.cryptocurrency &&
+    accountContext.symbol === account.symbol &&
+    accountContext.tradeCurrency === account.tradeCurrency
+  );
+}
+
 function parseEnumValue<T extends string>(
   enumObject: Record<string, T>,
   value: unknown,

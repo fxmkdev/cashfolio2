@@ -167,6 +167,39 @@ describe("deriveLedgerPresentationData", () => {
     ]);
   });
 
+  test("keeps balances null for equity rows when no period filter is active", () => {
+    const result = deriveLedgerPresentationData({
+      account: createAccount({ type: AccountType.EQUITY }),
+      bookings: createBookings([
+        {
+          date: utcDate(2026, 0, 10, 9),
+          value: 100,
+          valueInReferenceCurrency: 150,
+        },
+        {
+          date: utcDate(2026, 0, 11, 9),
+          value: -40,
+          valueInReferenceCurrency: -40,
+        },
+      ]),
+      hasPeriodFilter: false,
+      balanceBeforePeriodRaw: 0,
+      hasBookingsBeforePeriod: false,
+      today: utcDate(2026, 0, 11, 12),
+    });
+
+    expect(result.rows).toEqual([
+      expect.objectContaining({
+        date: "11.01.2026",
+        balance: null,
+      }),
+      expect.objectContaining({
+        date: "10.01.2026",
+        balance: null,
+      }),
+    ]);
+  });
+
   test("builds chart with end-of-day collapse and today extension", () => {
     const result = deriveLedgerPresentationData({
       account: createAccount({ type: AccountType.ASSET }),
