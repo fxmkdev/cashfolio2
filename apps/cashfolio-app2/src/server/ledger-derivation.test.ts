@@ -42,13 +42,13 @@ function createBookings(
   }));
 }
 
-function localDate(
+function utcDate(
   year: number,
   monthIndex: number,
   day: number,
   hour: number = 0,
 ): Date {
-  return new Date(year, monthIndex, day, hour, 0, 0, 0);
+  return new Date(Date.UTC(year, monthIndex, day, hour, 0, 0, 0));
 }
 
 describe("deriveLedgerPresentationData", () => {
@@ -56,13 +56,13 @@ describe("deriveLedgerPresentationData", () => {
     const result = deriveLedgerPresentationData({
       account: createAccount({ type: AccountType.ASSET }),
       bookings: createBookings([
-        { date: localDate(2026, 0, 10, 9), value: -50 },
-        { date: localDate(2026, 0, 11, 9), value: 30 },
+        { date: utcDate(2026, 0, 10, 9), value: -50 },
+        { date: utcDate(2026, 0, 11, 9), value: 30 },
       ]),
       hasPeriodFilter: true,
       balanceBeforePeriodRaw: 200,
       hasBookingsBeforePeriod: true,
-      today: localDate(2026, 0, 11, 12),
+      today: utcDate(2026, 0, 11, 12),
     });
 
     expect(result.rows).toEqual([
@@ -80,13 +80,11 @@ describe("deriveLedgerPresentationData", () => {
   test("seeds filtered liability balances from pre-period totals", () => {
     const result = deriveLedgerPresentationData({
       account: createAccount({ type: AccountType.LIABILITY }),
-      bookings: createBookings([
-        { date: localDate(2026, 0, 10, 9), value: 20 },
-      ]),
+      bookings: createBookings([{ date: utcDate(2026, 0, 10, 9), value: 20 }]),
       hasPeriodFilter: true,
       balanceBeforePeriodRaw: -100,
       hasBookingsBeforePeriod: true,
-      today: localDate(2026, 0, 11, 12),
+      today: utcDate(2026, 0, 11, 12),
     });
 
     expect(result.rows).toEqual([
@@ -104,12 +102,12 @@ describe("deriveLedgerPresentationData", () => {
       account: createAccount({ type: AccountType.EQUITY }),
       bookings: createBookings([
         {
-          date: localDate(2026, 0, 10, 9),
+          date: utcDate(2026, 0, 10, 9),
           value: 100,
           valueInReferenceCurrency: 150,
         },
         {
-          date: localDate(2026, 0, 11, 9),
+          date: utcDate(2026, 0, 11, 9),
           value: -40,
           valueInReferenceCurrency: -40,
         },
@@ -117,7 +115,7 @@ describe("deriveLedgerPresentationData", () => {
       hasPeriodFilter: true,
       balanceBeforePeriodRaw: 0,
       hasBookingsBeforePeriod: false,
-      today: localDate(2026, 0, 11, 12),
+      today: utcDate(2026, 0, 11, 12),
     });
 
     expect(result.rows).toEqual([
@@ -139,12 +137,12 @@ describe("deriveLedgerPresentationData", () => {
       account: createAccount({ type: AccountType.EQUITY }),
       bookings: createBookings([
         {
-          date: localDate(2026, 0, 10, 9),
+          date: utcDate(2026, 0, 10, 9),
           value: 100,
           valueInReferenceCurrency: 150,
         },
         {
-          date: localDate(2026, 0, 11, 9),
+          date: utcDate(2026, 0, 11, 9),
           value: -40,
           valueInReferenceCurrency: null,
         },
@@ -152,7 +150,7 @@ describe("deriveLedgerPresentationData", () => {
       hasPeriodFilter: true,
       balanceBeforePeriodRaw: 0,
       hasBookingsBeforePeriod: false,
-      today: localDate(2026, 0, 11, 12),
+      today: utcDate(2026, 0, 11, 12),
     });
 
     expect(result.rows).toEqual([
@@ -173,15 +171,15 @@ describe("deriveLedgerPresentationData", () => {
     const result = deriveLedgerPresentationData({
       account: createAccount({ type: AccountType.ASSET }),
       bookings: createBookings([
-        { date: localDate(2026, 0, 10, 9), value: 100 },
-        { date: localDate(2026, 0, 10, 12), value: -10 },
-        { date: localDate(2026, 0, 10, 15), value: -15 },
-        { date: localDate(2026, 0, 11, 9), value: 5 },
+        { date: utcDate(2026, 0, 10, 9), value: 100 },
+        { date: utcDate(2026, 0, 10, 12), value: -10 },
+        { date: utcDate(2026, 0, 10, 15), value: -15 },
+        { date: utcDate(2026, 0, 11, 9), value: 5 },
       ]),
       hasPeriodFilter: false,
       balanceBeforePeriodRaw: 0,
       hasBookingsBeforePeriod: false,
-      today: localDate(2026, 0, 12, 12),
+      today: utcDate(2026, 0, 12, 12),
     });
 
     expect(result.balanceChartPoints).toEqual([
@@ -210,13 +208,13 @@ describe("deriveLedgerPresentationData", () => {
     const result = deriveLedgerPresentationData({
       account: createAccount({ type: AccountType.ASSET }),
       bookings: createBookings([
-        { date: localDate(2026, 0, 10, 9), value: -8439.45 },
-        { date: localDate(2026, 0, 11, 9), value: 9311.0 },
+        { date: utcDate(2026, 0, 10, 9), value: -8439.45 },
+        { date: utcDate(2026, 0, 11, 9), value: 9311.0 },
       ]),
       hasPeriodFilter: false,
       balanceBeforePeriodRaw: 0,
       hasBookingsBeforePeriod: false,
-      today: localDate(2026, 0, 11, 12),
+      today: utcDate(2026, 0, 11, 12),
     });
 
     expect(result.rows[0]?.balance).toBe(871.55);

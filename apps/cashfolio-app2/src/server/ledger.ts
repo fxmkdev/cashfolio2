@@ -703,14 +703,20 @@ function parseNullableEnumValue<T extends string>(
   enumObject: Record<string, T>,
   value: unknown,
 ): T | null | undefined {
-  if (value == null) {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
     return null;
   }
   return parseEnumValue(enumObject, value);
 }
 
 function parseNullableString(value: unknown): string | null | undefined {
-  if (value == null) {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
     return null;
   }
   return typeof value === "string" ? value : undefined;
