@@ -142,6 +142,31 @@ async function seedPeriodPageSessionState(args: {
   );
 }
 
+async function createAssetAccount(args: { page: Page; name: string }) {
+  const dialog = await openDialogFromButton(args.page, {
+    buttonName: "Add Account",
+    dialogName: "New Account",
+  });
+  await dialog.getByLabel("Name").fill(args.name);
+  await dialog.getByRole("combobox", { name: "Currency" }).click();
+  await args.page.getByRole("option", { name: "CHF" }).first().click();
+  await dialog.getByRole("button", { name: "Create" }).click();
+}
+
+async function archiveAccountRow(args: { page: Page; name: string }) {
+  const row = agGridRowByText(args.page, args.name);
+  await expect(row).toBeVisible();
+  await clickRowAction(row, "Archive");
+  await expect(
+    args.page.getByRole("dialog", { name: "Archive Account" }),
+  ).toBeVisible();
+  await args.page
+    .getByRole("dialog", { name: "Archive Account" })
+    .getByRole("button", { name: "Archive" })
+    .click();
+  await expect(agGridRowByText(args.page, args.name)).toHaveCount(0);
+}
+
 test("accounts is default account-book route and links to period", async ({
   page,
 }) => {
@@ -167,18 +192,7 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
 
   const createdName = "E2E Asset Account";
   const updatedName = "E2E Asset Account Updated";
-  const siblingName = "E2E Archived Sibling";
-  const archivedUpdatedName = "E2E Asset Account Archived Updated";
-
-  const newAccountDialog = await openDialogFromButton(page, {
-    buttonName: "Add Account",
-    dialogName: "New Account",
-  });
-
-  await newAccountDialog.getByLabel("Name").fill(createdName);
-  await newAccountDialog.getByRole("combobox", { name: "Currency" }).click();
-  await page.getByRole("option", { name: "CHF" }).first().click();
-  await newAccountDialog.getByRole("button", { name: "Create" }).click();
+  await createAssetAccount({ page, name: createdName });
 
   const createdRow = agGridRowByText(page, createdName);
   await expect(createdRow).toBeVisible();
@@ -195,35 +209,7 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
   const updatedRow = agGridRowByText(page, updatedName);
   await expect(updatedRow).toBeVisible();
 
-  await clickRowAction(updatedRow, "Archive");
-  const archiveDialog = page.getByRole("dialog", { name: "Archive Account" });
-  await expect(archiveDialog).toBeVisible();
-  await page
-    .getByRole("dialog", { name: "Archive Account" })
-    .getByRole("button", { name: "Archive" })
-    .click();
-  await expect(agGridRowByText(page, updatedName)).toHaveCount(0);
-
-  const siblingDialog = await openDialogFromButton(page, {
-    buttonName: "Add Account",
-    dialogName: "New Account",
-  });
-  await siblingDialog.getByLabel("Name").fill(siblingName);
-  await siblingDialog.getByRole("combobox", { name: "Currency" }).click();
-  await page.getByRole("option", { name: "CHF" }).first().click();
-  await siblingDialog.getByRole("button", { name: "Create" }).click();
-
-  const siblingRow = agGridRowByText(page, siblingName);
-  await expect(siblingRow).toBeVisible();
-  await clickRowAction(siblingRow, "Archive");
-  await expect(
-    page.getByRole("dialog", { name: "Archive Account" }),
-  ).toBeVisible();
-  await page
-    .getByRole("dialog", { name: "Archive Account" })
-    .getByRole("button", { name: "Archive" })
-    .click();
-  await expect(agGridRowByText(page, siblingName)).toHaveCount(0);
+  await archiveAccountRow({ page, name: updatedName });
 
   await page.getByRole("link", { name: "Archive" }).click();
   const archivedRow = agGridRowByText(page, updatedName);
@@ -236,22 +222,49 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
   await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=archived`);
   await expect(archivedRow).toBeVisible();
 
-  await clickRowAction(archivedRow, "Edit");
+  await clickRowAction(archivedRow, "Unarchive");
+  await expect(agGridRowByText(page, updatedName)).toHaveCount(0);
+
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
+  const unarchivedRow = agGridRowByText(page, updatedName);
+  await expect(unarchivedRow).toBeVisible();
+});
+
+test("archived mode allows edit, reorder siblings, and delete", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
+
+  const primaryName = "E2E Archived Primary";
+  const siblingName = "E2E Archived Sibling";
+  const renamedPrimaryName = "E2E Archived Primary Updated";
+
+  await createAssetAccount({ page, name: primaryName });
+  await createAssetAccount({ page, name: siblingName });
+
+  await archiveAccountRow({ page, name: primaryName });
+  await archiveAccountRow({ page, name: siblingName });
+
+  await page.getByRole("link", { name: "Archive" }).click();
+
+  const archivedPrimaryRow = agGridRowByText(page, primaryName);
+  await expect(archivedPrimaryRow).toBeVisible();
+  await clickRowAction(archivedPrimaryRow, "Edit");
   await expect(
     page.getByRole("dialog", { name: "Edit Account" }),
   ).toBeVisible();
   await page
     .getByRole("dialog", { name: "Edit Account" })
     .getByLabel("Name")
-    .fill(archivedUpdatedName);
+    .fill(renamedPrimaryName);
   await page
     .getByRole("dialog", { name: "Edit Account" })
     .getByRole("button", { name: "Save" })
     .click();
 
-  const editedArchivedRow = agGridRowByText(page, archivedUpdatedName);
-  await expect(editedArchivedRow).toBeVisible();
-  await clickRowAction(editedArchivedRow, "Reorder siblings");
+  const renamedArchivedPrimaryRow = agGridRowByText(page, renamedPrimaryName);
+  await expect(renamedArchivedPrimaryRow).toBeVisible();
+  await clickRowAction(renamedArchivedPrimaryRow, "Reorder siblings");
   await expect(
     page.getByRole("dialog", { name: "Reorder Siblings" }),
   ).toBeVisible();
@@ -272,11 +285,11 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
     .click();
   await expect(agGridRowByText(page, siblingName)).toHaveCount(0);
 
-  await clickRowAction(editedArchivedRow, "Unarchive");
-  await expect(agGridRowByText(page, archivedUpdatedName)).toHaveCount(0);
+  await clickRowAction(renamedArchivedPrimaryRow, "Unarchive");
+  await expect(agGridRowByText(page, renamedPrimaryName)).toHaveCount(0);
 
   await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
-  const unarchivedRow = agGridRowByText(page, archivedUpdatedName);
+  const unarchivedRow = agGridRowByText(page, renamedPrimaryName);
   await expect(unarchivedRow).toBeVisible();
 });
 
