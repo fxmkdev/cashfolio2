@@ -174,7 +174,7 @@ export function useAccountTreeColumnDefs(params: {
       {
         colId: "actions",
         headerName: "",
-        width: isArchivedMode ? 50 : 145,
+        width: 145,
         sortable: false,
         filter: false,
         resizable: false,
@@ -184,16 +184,6 @@ export function useAccountTreeColumnDefs(params: {
           if (!data) return null;
           if (isReferenceCurrencyTotalFooterRow(data)) return null;
 
-          if (isArchivedMode) {
-            return (
-              <ArchivedAccountTreeActionsCell
-                unarchiveLabel={data.unarchiveDisabledReason ?? "Unarchive"}
-                unarchivable={data.unarchivable}
-                onUnarchive={() => void onUnarchiveRow(data)}
-              />
-            );
-          }
-
           const parentKey = data.parentId ?? ROOT_PARENT_KEY;
           const siblingCount =
             (rowsByParentKeyRef.current.get(parentKey)?.length ?? 0) - 1;
@@ -201,6 +191,28 @@ export function useAccountTreeColumnDefs(params: {
           const reorderLabel = hasSiblings
             ? "Reorder siblings"
             : "Cannot reorder because this row has no siblings";
+
+          if (isArchivedMode) {
+            return (
+              <ArchivedAccountTreeActionsCell
+                reorderEnabled={hasSiblings}
+                reorderLabel={reorderLabel}
+                deleteLabel={data.deleteDisabledReason ?? "Delete"}
+                unarchiveLabel={data.unarchiveDisabledReason ?? "Unarchive"}
+                deletable={data.deletable}
+                unarchivable={data.unarchivable}
+                onEdit={() => onEditRow(data)}
+                onDelete={() => onDeleteRow(toRowTarget(data))}
+                onReorder={() =>
+                  onReorderRow({
+                    name: data.name,
+                    parentKey,
+                  })
+                }
+                onUnarchive={() => void onUnarchiveRow(data)}
+              />
+            );
+          }
 
           return (
             <ActiveAccountTreeActionsCell

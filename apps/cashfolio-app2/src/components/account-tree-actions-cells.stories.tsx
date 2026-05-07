@@ -48,7 +48,14 @@ function StoryComponent({
         />
       ) : (
         <ArchivedAccountTreeActionsCell
+          reorderLabel="Reorder siblings"
+          reorderEnabled={reorderEnabled}
+          deleteLabel={deletable ? "Delete" : "Cannot delete this row"}
           unarchiveLabel={unarchivable ? "Unarchive" : "Cannot unarchive"}
+          deletable={deletable}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onReorder={onReorder}
           unarchivable={unarchivable}
           onUnarchive={onUnarchive}
         />
@@ -105,5 +112,26 @@ export const InteractionSmoke: Story = {
     await expect(args.onEdit).toHaveBeenCalled();
     await expect(args.onArchive).toHaveBeenCalled();
     await expect(args.onDelete).toHaveBeenCalled();
+  },
+};
+
+export const ArchivedInteractionSmoke: Story = {
+  args: {
+    variant: "archived",
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Reorder siblings" }),
+    );
+    await userEvent.click(canvas.getByRole("button", { name: "Edit" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Delete" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Unarchive" }));
+
+    await expect(args.onReorder).toHaveBeenCalled();
+    await expect(args.onEdit).toHaveBeenCalled();
+    await expect(args.onDelete).toHaveBeenCalled();
+    await expect(args.onUnarchive).toHaveBeenCalled();
   },
 };

@@ -17,7 +17,13 @@ export function agGridPinnedBottomRow(page: Page): Locator {
 
 export async function clickRowAction(
   row: Locator,
-  actionLabel: "Edit" | "Rebook" | "Delete" | "Archive" | "Unarchive",
+  actionLabel:
+    | "Edit"
+    | "Rebook"
+    | "Delete"
+    | "Archive"
+    | "Unarchive"
+    | "Reorder siblings",
 ) {
   await row.hover();
   await row.getByRole("button", { name: actionLabel }).click();

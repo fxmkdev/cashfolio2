@@ -8,16 +8,63 @@ import {
 } from "@tabler/icons-react";
 
 export function ArchivedAccountTreeActionsCell({
+  reorderLabel,
+  reorderEnabled = true,
+  deleteLabel,
+  deletable,
   unarchiveLabel,
+  onEdit,
+  onDelete,
+  onReorder,
   unarchivable,
   onUnarchive,
 }: {
+  reorderLabel?: string;
+  reorderEnabled?: boolean;
+  deleteLabel: string;
+  deletable: boolean;
   unarchiveLabel: string;
+  onEdit: () => void;
+  onDelete: () => void;
+  onReorder?: () => void;
   unarchivable: boolean;
   onUnarchive: () => void;
 }) {
   return (
     <Group gap={4} wrap="nowrap" h="100%" align="center">
+      <Tooltip label={reorderLabel ?? "Reorder siblings"}>
+        <ActionIcon
+          variant="subtle"
+          size="sm"
+          disabled={!reorderEnabled}
+          onClick={onReorder}
+          aria-label="Reorder siblings"
+        >
+          <IconArrowsSort size={16} />
+        </ActionIcon>
+      </Tooltip>
+      <Tooltip label="Edit">
+        <ActionIcon
+          variant="subtle"
+          size="sm"
+          onClick={onEdit}
+          aria-label="Edit"
+        >
+          <IconPencil size={16} />
+        </ActionIcon>
+      </Tooltip>
+      <Tooltip label={deleteLabel}>
+        <ActionIcon
+          variant="subtle"
+          size="sm"
+          color="red"
+          disabled={!deletable}
+          onClick={onDelete}
+          aria-label="Delete"
+        >
+          <IconTrash size={16} />
+        </ActionIcon>
+      </Tooltip>
       <Tooltip label={unarchiveLabel}>
         <ActionIcon
           variant="subtle"
