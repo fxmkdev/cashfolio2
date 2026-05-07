@@ -463,6 +463,7 @@ export const ArchivedModeActions: Story = {
   render: () => <AccountsPageStoryHarness initialMode="archived" />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
     const walletCell = canvas.getByText("Wallet");
     const walletRow = walletCell.closest(".ag-row");
     if (!walletRow) throw new Error("Could not resolve Wallet row");
@@ -471,7 +472,7 @@ export const ArchivedModeActions: Story = {
     await userEvent.click(
       walletRowQueries.getByRole("button", { name: "Edit" }),
     );
-    const editDialog = canvas.getByRole("dialog", { name: "Edit Account" });
+    const editDialog = body.getByRole("dialog", { name: "Edit Account" });
     await expect(editDialog).toBeInTheDocument();
     await userEvent.click(
       within(editDialog).getByRole("button", { name: "Save" }),
@@ -480,7 +481,7 @@ export const ArchivedModeActions: Story = {
     await userEvent.click(
       walletRowQueries.getByRole("button", { name: "Delete" }),
     );
-    const deleteDialog = canvas.getByRole("dialog", { name: "Delete account" });
+    const deleteDialog = body.getByRole("dialog", { name: "Delete account" });
     await expect(deleteDialog).toBeInTheDocument();
     await userEvent.click(
       within(deleteDialog).getByRole("button", { name: "Cancel" }),
@@ -489,7 +490,7 @@ export const ArchivedModeActions: Story = {
     await userEvent.click(
       walletRowQueries.getByRole("button", { name: "Reorder siblings" }),
     );
-    const reorderDialog = canvas.getByRole("dialog", {
+    const reorderDialog = body.getByRole("dialog", {
       name: "Reorder Siblings",
     });
     await expect(reorderDialog).toBeInTheDocument();
