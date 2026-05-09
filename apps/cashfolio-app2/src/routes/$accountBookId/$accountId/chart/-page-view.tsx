@@ -16,20 +16,25 @@ import { AccountPathHeading } from "@/components/account-path-heading";
 import { TopPageHeader } from "@/components/top-page-header";
 import { getTypeLabel } from "@/shared/account-utils";
 import type { TabValue } from "@/shared/account-tabs";
-import type { LedgerBalanceChartPoint } from "../-page-data";
 import type { loadLedgerPageData } from "../-page-loader";
 import classes from "./-page-view.module.css";
 
 ensureChartModulesRegistered();
 
 type LedgerPageLoaderData = Awaited<ReturnType<typeof loadLedgerPageData>>;
+export type LedgerBalanceChartRenderPoint = Omit<
+  LedgerPageLoaderData["balanceChartPoints"][number],
+  "date"
+> & {
+  date: Date;
+};
 
 export type LedgerBalanceChartPageViewProps = {
   accountBookId: string;
   backTab: TabValue;
   account: LedgerPageLoaderData["account"];
   unitLabel: string | null;
-  points: LedgerBalanceChartPoint[];
+  points: LedgerBalanceChartRenderPoint[];
   formatBalance: (value: number) => string;
   viewSwitcher: ReactNode;
 };
@@ -102,7 +107,7 @@ export function LedgerBalanceChartPageView({
           },
           tooltip: {
             renderer: ({ datum }) => {
-              const point = datum as LedgerBalanceChartPoint;
+              const point = datum as LedgerBalanceChartRenderPoint;
 
               return {
                 heading: point.dateLabel,

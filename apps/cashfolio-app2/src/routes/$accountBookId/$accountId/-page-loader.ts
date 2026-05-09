@@ -45,6 +45,13 @@ export async function loadLedgerPageData(args: {
         period: isPeriodFilterAllowed ? args.period : undefined,
         includeReferenceValues: shouldIncludeReferenceValues,
         includeFirstBookingDate: shouldIncludeFirstBookingDate,
+        accountType: account.type,
+        accountEquityAccountSubtype: account.equityAccountSubtype,
+        accountUnit: account.unit,
+        accountCurrency: account.currency,
+        accountCryptocurrency: account.cryptocurrency,
+        accountSymbol: account.symbol,
+        accountTradeCurrency: account.tradeCurrency,
       },
     }),
     accountsPromise,
@@ -57,7 +64,8 @@ export async function loadLedgerPageData(args: {
 
   return {
     account,
-    bookings: ledgerData.bookings,
+    rows: ledgerData.rows,
+    balanceChartPoints: ledgerData.balanceChartPoints,
     referenceCurrency: ledgerData.referenceCurrency,
     firstBookingDate: ledgerData.firstBookingDate,
     balanceBeforePeriod: ledgerData.balanceBeforePeriod,

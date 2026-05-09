@@ -1,4 +1,3 @@
-import { Unit } from "@/.prisma-client/enums";
 import {
   formatExplicitPeriodSelectionLabel,
   normalizeExplicitPeriodValue,
@@ -59,28 +58,10 @@ export type LedgerAccount = Awaited<
   ReturnType<LedgerServerModule["getAccountForLedger"]>
 >;
 type LedgerData = Awaited<ReturnType<LedgerServerModule["getLedgerData"]>>;
-export type LedgerBookings = LedgerData["bookings"];
+export type LedgerRows = LedgerData["rows"];
+export type LedgerBalanceChartPoint = LedgerData["balanceChartPoints"][number];
 export type LedgerAccountOptionSource = Awaited<
   ReturnType<AccountsServerModule["getAccounts"]>
 >[number];
 
-export type LedgerRow = {
-  id: string;
-  transactionId: string;
-  bookingValue: number;
-  date: string;
-  counterpartyAccounts: { id: string; name: string }[];
-  description: string;
-  unit: Unit | null;
-  currency: string | null;
-  cryptocurrency: string | null;
-  symbol: string | null;
-  tradeCurrency: string | null;
-  isOpeningBalancesTransaction: boolean;
-  debit: number | null;
-  credit: number | null;
-  referenceDebit: number | null;
-  referenceCredit: number | null;
-  balance: number | null;
-  isVirtualCarryOver?: boolean;
-};
+export type LedgerRow = LedgerRows[number];

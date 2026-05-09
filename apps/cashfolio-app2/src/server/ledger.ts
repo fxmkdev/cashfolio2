@@ -10,9 +10,18 @@ import {
 } from "../shared/period";
 import { toMoneyNumber } from "../shared/money";
 import { createGroupPathSegmentsResolver } from "./accounts-helpers";
+import {
+  doesLedgerAccountContextMatchAccount,
+  parseLedgerAccountContextFromInput,
+} from "./ledger-account-context";
+import {
+  deriveLedgerPresentationData,
+  type LedgerDerivedAccount,
+} from "./ledger-derivation";
 import { convertBookingValueToReference } from "./period-conversion";
 
 const LEDGER_REFERENCE_CONVERSION_CONCURRENCY = 12;
+export { deriveLedgerPresentationData } from "./ledger-derivation";
 
 export const getAccountForLedger = createServerFn({ method: "GET" })
   .inputValidator((data: { accountId: string; accountBookId: string }) => data)
@@ -61,12 +70,20 @@ export const getLedgerData = createServerFn({ method: "GET" })
       period?: unknown;
       includeReferenceValues?: unknown;
       includeFirstBookingDate?: unknown;
+      accountType?: unknown;
+      accountEquityAccountSubtype?: unknown;
+      accountUnit?: unknown;
+      accountCurrency?: unknown;
+      accountCryptocurrency?: unknown;
+      accountSymbol?: unknown;
+      accountTradeCurrency?: unknown;
     }) => ({
       accountId: data.accountId,
       accountBookId: data.accountBookId,
       period: parseExplicitLedgerPeriodSelection(data.period),
       includeReferenceValues: toBoolean(data.includeReferenceValues),
       includeFirstBookingDate: toBoolean(data.includeFirstBookingDate),
+      accountContext: parseLedgerAccountContextFromInput(data),
     }),
   )
   .handler(async ({ data }) => {
@@ -74,6 +91,35 @@ export const getLedgerData = createServerFn({ method: "GET" })
     const periodRange = data.period
       ? getExplicitPeriodDateRange(data.period)
       : null;
+    const dbAccountPromise: Promise<LedgerDerivedAccount> =
+      prisma.account.findUniqueOrThrow({
+        where: {
+          id_accountBookId: {
+            id: data.accountId,
+            accountBookId: data.accountBookId,
+          },
+        },
+        select: {
+          type: true,
+          equityAccountSubtype: true,
+          unit: true,
+          currency: true,
+          cryptocurrency: true,
+          symbol: true,
+          tradeCurrency: true,
+        },
+      });
+    const accountContext = data.accountContext;
+    const accountPromise: Promise<LedgerDerivedAccount> = accountContext
+      ? dbAccountPromise.then((accountFromDb) =>
+          doesLedgerAccountContextMatchAccount({
+            accountContext,
+            account: accountFromDb,
+          })
+            ? accountContext
+            : accountFromDb,
+        )
+      : dbAccountPromise;
     const firstBookingPromise = data.includeFirstBookingDate
       ? prisma.booking.findFirst({
           where: {
@@ -108,70 +154,74 @@ export const getLedgerData = createServerFn({ method: "GET" })
           hasBookingsBeforePeriod: false,
         });
 
-    const [bookings, referenceCurrency, carryOverMetadata, firstBooking] =
-      await Promise.all([
-        prisma.booking.findMany({
-          where: {
-            accountId: data.accountId,
-            accountBookId: data.accountBookId,
-            ...(periodRange
-              ? {
-                  date: {
-                    gte: periodRange.from,
-                    lt: periodRange.toExclusive,
-                  },
-                }
-              : {}),
-          },
-          orderBy: [
-            { date: "asc" },
-            { transaction: { createdAt: "asc" } },
-            { id: "asc" },
-          ],
-          select: {
-            id: true,
-            date: true,
-            description: true,
-            value: true,
-            unit: true,
-            currency: true,
-            cryptocurrency: true,
-            symbol: true,
-            tradeCurrency: true,
-            transactionId: true,
-            transaction: {
-              select: {
-                description: true,
-                bookings: {
-                  orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-                  select: {
-                    account: {
-                      select: {
-                        id: true,
-                        name: true,
-                        type: true,
-                        equityAccountSubtype: true,
-                      },
+    const [
+      account,
+      bookings,
+      referenceCurrency,
+      carryOverMetadata,
+      firstBooking,
+    ] = await Promise.all([
+      accountPromise,
+      prisma.booking.findMany({
+        where: {
+          accountId: data.accountId,
+          accountBookId: data.accountBookId,
+          ...(periodRange
+            ? {
+                date: {
+                  gte: periodRange.from,
+                  lt: periodRange.toExclusive,
+                },
+              }
+            : {}),
+        },
+        orderBy: [
+          { date: "asc" },
+          { transaction: { createdAt: "asc" } },
+          { id: "asc" },
+        ],
+        select: {
+          id: true,
+          date: true,
+          description: true,
+          value: true,
+          unit: true,
+          currency: true,
+          cryptocurrency: true,
+          symbol: true,
+          tradeCurrency: true,
+          transactionId: true,
+          transaction: {
+            select: {
+              description: true,
+              bookings: {
+                orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+                select: {
+                  account: {
+                    select: {
+                      id: true,
+                      name: true,
+                      type: true,
+                      equityAccountSubtype: true,
                     },
                   },
                 },
               },
             },
           },
-        }),
-        data.includeReferenceValues
-          ? prisma.accountBook
-              .findUniqueOrThrow({
-                where: { id: data.accountBookId },
-                select: { referenceCurrency: true },
-              })
-              .then((accountBook) =>
-                accountBook.referenceCurrency.toUpperCase(),
-              )
-          : Promise.resolve<string | null>(null),
-        carryOverMetadataPromise,
-        firstBookingPromise,
-      ]);
+        },
+      }),
+      data.includeReferenceValues
+        ? prisma.accountBook
+            .findUniqueOrThrow({
+              where: { id: data.accountBookId },
+              select: { referenceCurrency: true },
+            })
+            .then((accountBook) => accountBook.referenceCurrency.toUpperCase())
+        : Promise.resolve<string | null>(null),
+      carryOverMetadataPromise,
+      firstBookingPromise,
+    ]);
 
     let convertedValuesInReferenceCurrency: Array<number | null> | null = null;
     if (data.includeReferenceValues && referenceCurrency) {
@@ -231,14 +281,25 @@ export const getLedgerData = createServerFn({ method: "GET" })
       ),
     });
 
+    const mappedBookings = bookings.map((booking, index) =>
+      mapLedgerBooking(
+        booking,
+        convertedValuesInReferenceCurrency?.[index] ?? null,
+      ),
+    );
+
+    const { rows, balanceChartPoints } = deriveLedgerPresentationData({
+      account,
+      bookings: mappedBookings,
+      hasPeriodFilter: periodRange !== null,
+      balanceBeforePeriodRaw: carryOverMetadata.balanceBeforePeriod,
+      hasBookingsBeforePeriod: carryOverMetadata.hasBookingsBeforePeriod,
+    });
+
     return {
       referenceCurrency,
-      bookings: bookings.map((booking, index) =>
-        mapLedgerBooking(
-          booking,
-          convertedValuesInReferenceCurrency?.[index] ?? null,
-        ),
-      ),
+      rows,
+      balanceChartPoints,
       firstBookingDate: firstBooking?.date.toISOString() ?? null,
       balanceBeforePeriod: carryOverMetadata.balanceBeforePeriod,
       hasBookingsBeforePeriod: carryOverMetadata.hasBookingsBeforePeriod,

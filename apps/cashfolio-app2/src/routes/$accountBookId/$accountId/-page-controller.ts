@@ -1,18 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import type { SimpleTransactionDraftValues } from "@/components/simple-transaction-modal";
-import {
-  createSimpleTransaction,
-  createTransaction,
-  deleteTransaction,
-  getTransaction,
-  rebookBooking,
-  updateTransaction,
-} from "@/server/transactions";
 import { useLedgerColumnDefs } from "./-page-columns";
 import { useLedgerAccountOptions } from "./-page-account-options";
 import {
-  buildLedgerRows,
   deriveSimpleTransactionEditState,
   getUnitLabel,
   type SimpleTransactionEditInitialValues,
@@ -23,6 +14,10 @@ import {
   createUpdateTransactionPayloadFromSimpleValues,
 } from "./-page-edit-flow";
 import type { loadLedgerPageData } from "./-page-loader";
+import {
+  createLedgerMutationActions,
+  type LedgerTransactionApi,
+} from "./-page-mutation-actions";
 import { useLedgerRebookFlow } from "./-page-rebook-flow";
 import {
   type EditMode,
@@ -30,131 +25,9 @@ import {
   type RebookingState,
   type SimpleTransactionValues,
   type SplitModalInitialValues,
-  type TransactionMutationValues,
 } from "./-page-view";
-import type { LedgerRow } from "./-page-types";
 
 type LedgerPageLoaderData = Awaited<ReturnType<typeof loadLedgerPageData>>;
-
-type TransactionApi = {
-  createSimpleTransaction: typeof createSimpleTransaction;
-  createTransaction: typeof createTransaction;
-  updateTransaction: typeof updateTransaction;
-  deleteTransaction: typeof deleteTransaction;
-  getTransaction: typeof getTransaction;
-  rebookBooking: typeof rebookBooking;
-};
-
-type LedgerMutationState = {
-  getEditingTransactionId: () => string | undefined;
-  getDeletingTransaction: () => { id: string; description: string } | undefined;
-  getRebooking: () => RebookingState | undefined;
-  setModalOpened: (opened: boolean) => void;
-  setSimpleModalOpened: (opened: boolean) => void;
-  setEditModalOpened: (opened: boolean) => void;
-  setCreateSplitInitialValues: (
-    values: SplitModalInitialValues | undefined,
-  ) => void;
-  setDeletingTransaction: (
-    value: { id: string; description: string } | undefined,
-  ) => void;
-  setRebookModalOpened: (opened: boolean) => void;
-};
-
-const defaultTransactionApi: TransactionApi = {
-  createSimpleTransaction,
-  createTransaction,
-  updateTransaction,
-  deleteTransaction,
-  getTransaction,
-  rebookBooking,
-};
-
-export function createLedgerMutationActions(args: {
-  accountBookId: string;
-  accountId: string;
-  invalidate: () => void;
-  state: LedgerMutationState;
-  pendingScrollRef: { current: string | undefined };
-  api?: TransactionApi;
-}) {
-  const api = args.api ?? defaultTransactionApi;
-
-  return {
-    async handleCreateTransaction(values: TransactionMutationValues) {
-      const transaction = await api.createTransaction({
-        data: { accountBookId: args.accountBookId, ...values },
-      });
-      args.state.setModalOpened(false);
-      args.state.setCreateSplitInitialValues(undefined);
-      args.pendingScrollRef.current = transaction.id;
-      args.invalidate();
-    },
-
-    async handleCreateSimpleTransaction(values: SimpleTransactionValues) {
-      const transaction = await api.createSimpleTransaction({
-        data: {
-          accountBookId: args.accountBookId,
-          accountId: args.accountId,
-          ...values,
-        },
-      });
-      args.state.setSimpleModalOpened(false);
-      args.pendingScrollRef.current = transaction.id;
-      args.invalidate();
-    },
-
-    async handleUpdateTransaction(values: TransactionMutationValues) {
-      const editingTransactionId = args.state.getEditingTransactionId();
-      if (!editingTransactionId) return;
-
-      await api.updateTransaction({
-        data: {
-          accountBookId: args.accountBookId,
-          transactionId: editingTransactionId,
-          ...values,
-        },
-      });
-      args.state.setEditModalOpened(false);
-      args.pendingScrollRef.current = editingTransactionId;
-      args.invalidate();
-    },
-
-    async handleDeleteTransaction() {
-      const deletingTransaction = args.state.getDeletingTransaction();
-      if (!deletingTransaction) return;
-
-      await api.deleteTransaction({
-        data: {
-          transactionId: deletingTransaction.id,
-          accountBookId: args.accountBookId,
-        },
-      });
-      args.state.setDeletingTransaction(undefined);
-      args.invalidate();
-    },
-
-    async handleRebookBooking(values: { targetAccountId: string }) {
-      const rebooking = args.state.getRebooking();
-      if (!rebooking) return;
-
-      await api.rebookBooking({
-        data: {
-          accountBookId: args.accountBookId,
-          bookingId: rebooking.bookingId,
-          targetAccountId: values.targetAccountId,
-        },
-      });
-
-      args.state.setRebookModalOpened(false);
-      args.pendingScrollRef.current = rebooking.transactionId;
-      args.invalidate();
-    },
-
-    getTransaction: api.getTransaction,
-    updateTransaction: api.updateTransaction,
-  };
-}
 
 export function useLedgerPageController(args: {
   loaderData: LedgerPageLoaderData;
@@ -166,7 +39,7 @@ export function useLedgerPageController(args: {
   LedgerPageViewProps,
   "accountBookId" | "onRowDataUpdated" | "viewSwitcher"
 > {
-  const { account, bookings, accounts } = args.loaderData;
+  const { account, accounts } = args.loaderData;
 
   const [modalOpened, setModalOpened] = useState(false);
   const [simpleModalOpened, setSimpleModalOpened] = useState(false);
@@ -182,7 +55,7 @@ export function useLedgerPageController(args: {
     string | undefined
   >();
   const [editingTransactionData, setEditingTransactionData] = useState<
-    Awaited<ReturnType<typeof getTransaction>> | undefined
+    Awaited<ReturnType<LedgerTransactionApi["getTransaction"]>> | undefined
   >();
   const [editingSimpleInitialValues, setEditingSimpleInitialValues] = useState<
     SimpleTransactionEditInitialValues | undefined
@@ -357,21 +230,7 @@ export function useLedgerPageController(args: {
     [],
   );
 
-  const rows = useMemo(
-    () =>
-      buildLedgerRows(account, bookings, {
-        hasPeriodFilter: args.hasPeriodFilter,
-        balanceBeforePeriodRaw: args.loaderData.balanceBeforePeriod,
-        hasBookingsBeforePeriod: args.loaderData.hasBookingsBeforePeriod,
-      }),
-    [
-      account,
-      args.hasPeriodFilter,
-      args.loaderData.balanceBeforePeriod,
-      args.loaderData.hasBookingsBeforePeriod,
-      bookings,
-    ],
-  );
+  const rows = args.loaderData.rows;
 
   const columnDefs = useLedgerColumnDefs({
     accountBookId: args.accountBookId,

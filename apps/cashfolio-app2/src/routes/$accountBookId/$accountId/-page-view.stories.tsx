@@ -65,6 +65,7 @@ const rows: LedgerRow[] = [
     referenceDebit: null,
     referenceCredit: null,
     balance: 915.5,
+    isVirtualCarryOver: false,
   },
   {
     id: "booking-1",
@@ -84,6 +85,7 @@ const rows: LedgerRow[] = [
     referenceDebit: null,
     referenceCredit: null,
     balance: 1000,
+    isVirtualCarryOver: false,
   },
 ];
 

@@ -10,7 +10,7 @@ vi.mock("@/server/transactions", () => ({
   updateTransaction: vi.fn(),
 }));
 
-import { createLedgerMutationActions } from "./-page-controller";
+import { createLedgerMutationActions } from "./-page-mutation-actions";
 
 function createActions(args: {
   state: unknown;

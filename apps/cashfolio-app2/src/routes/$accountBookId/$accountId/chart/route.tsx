@@ -1,22 +1,29 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { AccountType } from "@/.prisma-client/enums";
-import {
-  buildLedgerBalanceChartPoints,
-  createLedgerBalanceFormatter,
-  getUnitLabel,
-} from "../-page-data";
+import { createLedgerBalanceFormatter, getUnitLabel } from "../-page-data";
 import { Route as LedgerLayoutRoute } from "../route";
-import { LedgerBalanceChartPageView } from "./-page-view";
+import {
+  LedgerBalanceChartPageView,
+  type LedgerBalanceChartRenderPoint,
+} from "./-page-view";
 import { LedgerViewSegmentedControl } from "../-view-segmented-control";
 
 export const Route = createFileRoute("/$accountBookId/$accountId/chart")({
   component: LedgerChartPage,
 });
 
+function createLocalMidnightFromDateKey(dateKey: string): Date {
+  const [yearRaw, monthRaw, dayRaw] = dateKey.split("-");
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+  return new Date(year, month - 1, day);
+}
+
 function LedgerChartPage() {
   const { accountBookId, accountId } = LedgerLayoutRoute.useParams();
-  const { account, bookings } = LedgerLayoutRoute.useLoaderData();
+  const { account, balanceChartPoints } = LedgerLayoutRoute.useLoaderData();
 
   if (
     account.type !== AccountType.ASSET &&
@@ -31,9 +38,13 @@ function LedgerChartPage() {
     );
   }
 
-  const points = useMemo(
-    () => buildLedgerBalanceChartPoints(account, bookings),
-    [account, bookings],
+  const points = useMemo<LedgerBalanceChartRenderPoint[]>(
+    () =>
+      balanceChartPoints.map((point) => ({
+        ...point,
+        date: createLocalMidnightFromDateKey(point.dateKey),
+      })),
+    [balanceChartPoints],
   );
 
   const formatBalance = useMemo(
