@@ -579,21 +579,37 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
 }) => {
   await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
 
-  const createDialog = await openCreateTransaction(page);
-  await fillTransactionHeader(createDialog, "E2E Unitless Equity Create");
-  await setGridCellValue(page, 0, "credit", "90");
-  await setGridCellValue(page, 1, "date", "08.01.2026");
-  await setGridCellValue(page, 1, "account", seeded.unitlessEquityAccount.name);
+  const createSimpleDialog = await openCreateSimpleTransaction(page);
+  await createSimpleDialog.getByLabel("Date").fill("08.01.2026");
+  await createSimpleDialog
+    .getByLabel("Description")
+    .fill("E2E Unitless Equity Create");
+  await createSimpleDialog
+    .getByRole("combobox", { name: "Counter account" })
+    .click();
+  await page
+    .getByRole("option", {
+      name: accountOptionNameRegex(seeded.savingsAccount.name),
+    })
+    .first()
+    .click();
+  await createSimpleDialog.getByLabel("Amount").fill("90");
+  await createSimpleDialog
+    .getByRole("button", { name: "Switch to split editor" })
+    .click();
+
+  const createDialog = splitCreateDialog(page);
+  await expect(createDialog).toBeVisible();
 
   const createCounterRow = createDialog
     .locator('.ag-center-cols-container .ag-row[row-index="1"]')
     .first();
+  await setGridCellValue(page, 1, "account", seeded.unitlessEquityAccount.name);
   await expect(agGridCellByColId(createCounterRow, "unit")).toContainText(
     "Currency",
   );
   await expect(agGridCellByColId(createCounterRow, "ccy")).toContainText("CHF");
 
-  await setGridCellValue(page, 1, "debit", "90");
   await createDialog.getByRole("button", { name: "Create" }).click();
   await expect(
     agGridRowByText(page, "E2E Unitless Equity Create"),
@@ -601,22 +617,32 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
 
   await page.goto(`/${seeded.accountBookId}/${seeded.securityAccount.id}`);
 
-  const securityCreateDialog = await openCreateTransaction(page);
-  await fillTransactionHeader(securityCreateDialog, "E2E Unitless Equity Edit");
-  await setGridCellValue(page, 0, "credit", "5");
-  await setGridCellValue(page, 1, "date", "09.01.2026");
-  await setGridCellValue(
-    page,
-    1,
-    "account",
-    seeded.securityCounterAccount.name,
-  );
-  await setGridCellValue(page, 1, "debit", "5");
-  await securityCreateDialog.getByRole("button", { name: "Create" }).click();
+  const securitySimpleDialog = await openCreateSimpleTransaction(page);
+  await securitySimpleDialog.getByLabel("Date").fill("09.01.2026");
+  await securitySimpleDialog
+    .getByLabel("Description")
+    .fill("E2E Unitless Equity Edit");
+  await securitySimpleDialog
+    .getByRole("combobox", { name: "Counter account" })
+    .click();
+  await page
+    .getByRole("option", {
+      name: accountOptionNameRegex(seeded.securityCounterAccount.name),
+    })
+    .first()
+    .click();
+  await securitySimpleDialog.getByLabel("Amount").fill("5");
+  await securitySimpleDialog.getByRole("button", { name: "Create" }).click();
   await expect(agGridRowByText(page, "E2E Unitless Equity Edit")).toBeVisible();
 
   await openEditTransaction(page, "E2E Unitless Equity Edit");
   const editDialog = page.getByRole("dialog", { name: "Edit Transaction" });
+  await editDialog
+    .getByRole("button", { name: "Switch to split editor" })
+    .click();
+  await expect(
+    editDialog.getByRole("button", { name: "Add booking" }),
+  ).toBeVisible();
   await setGridCellValue(page, 1, "account", seeded.unitlessEquityAccount.name);
 
   const editCounterRow = editDialog
