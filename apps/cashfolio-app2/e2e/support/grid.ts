@@ -57,5 +57,6 @@ export async function setGridCellValue(
 
   await expect(editorInput).toBeVisible();
   await editorInput.fill(value);
-  await editorInput.press("Enter");
+  const page = "keyboard" in root ? root : root.page();
+  await page.keyboard.press("Enter");
 }
