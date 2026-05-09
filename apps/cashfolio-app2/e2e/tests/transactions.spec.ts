@@ -604,7 +604,12 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   const createCounterRow = createDialog
     .locator('.ag-center-cols-container .ag-row[row-index="1"]')
     .first();
-  await setGridCellValue(page, 1, "account", seeded.unitlessEquityAccount.name);
+  await setGridCellValue(
+    createDialog,
+    1,
+    "account",
+    seeded.unitlessEquityAccount.name,
+  );
   await expect(agGridCellByColId(createCounterRow, "unit")).toContainText(
     "Currency",
   );
@@ -643,7 +648,12 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   await expect(
     editDialog.getByRole("button", { name: "Add booking" }),
   ).toBeVisible();
-  await setGridCellValue(page, 1, "account", seeded.unitlessEquityAccount.name);
+  await setGridCellValue(
+    editDialog,
+    1,
+    "account",
+    seeded.unitlessEquityAccount.name,
+  );
 
   const editCounterRow = editDialog
     .locator('.ag-center-cols-container .ag-row[row-index="1"]')

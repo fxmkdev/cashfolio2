@@ -30,12 +30,12 @@ export async function clickRowAction(
 }
 
 export async function setGridCellValue(
-  page: Page,
+  root: Page | Locator,
   rowIndex: number,
   colId: string,
   value: string,
 ) {
-  const cell = page
+  const cell = root
     .locator(
       `.ag-center-cols-container .ag-row[row-index="${rowIndex}"] [col-id="${colId}"]`,
     )
@@ -44,18 +44,18 @@ export async function setGridCellValue(
   await expect(cell).toBeVisible();
   await cell.click({ force: true });
 
-  let editorInput = page
+  let editorInput = root
     .locator(".ag-cell-inline-editing input:not([type='hidden'])")
     .first();
 
   if (!(await editorInput.isVisible())) {
     await cell.press("Enter");
-    editorInput = page
+    editorInput = root
       .locator(".ag-cell-inline-editing input:not([type='hidden'])")
       .first();
   }
 
   await expect(editorInput).toBeVisible();
   await editorInput.fill(value);
-  await page.keyboard.press("Enter");
+  await editorInput.press("Enter");
 }
