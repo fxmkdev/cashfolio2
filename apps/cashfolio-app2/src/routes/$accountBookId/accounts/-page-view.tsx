@@ -281,18 +281,6 @@ export function AccountsPageView({
             typeDescriptor={tab}
           />
 
-          <EditAccountModal
-            opened={editModalOpen}
-            onClose={onCloseEditAccount}
-            onExitTransitionEnd={onClearEditingAccount}
-            accountGroups={accountGroups}
-            onSubmit={onSubmitUpdateAccount}
-            initialValues={editingAccount?.initialValues}
-            existingNodes={existingNodes}
-            editingId={editingAccount?.id}
-            typeDescriptor={tab}
-          />
-
           <EditAccountGroupModal
             opened={createGroupModalOpened}
             onClose={onCloseCreateGroup}
@@ -300,30 +288,6 @@ export function AccountsPageView({
             onSubmit={onSubmitCreateGroup}
             existingNodes={existingNodes}
             typeDescriptor={tab}
-          />
-
-          <EditAccountGroupModal
-            opened={editGroupModalOpen}
-            onClose={onCloseEditGroup}
-            onExitTransitionEnd={onClearEditingGroup}
-            accountGroups={accountGroups}
-            onSubmit={onSubmitUpdateGroup}
-            initialValues={editingGroup?.initialValues}
-            existingNodes={existingNodes}
-            editingId={editingGroup?.id}
-            typeDescriptor={tab}
-          />
-
-          <ConfirmDeleteModal
-            opened={!!deletingRow}
-            onClose={onCloseDelete}
-            title={
-              deletingRow
-                ? `Delete ${getEntityLabel(deletingRow.nodeType)}`
-                : "Delete"
-            }
-            name={deletingRow?.name}
-            onConfirm={onConfirmDelete}
           />
 
           <ConfirmArchiveModal
@@ -337,16 +301,52 @@ export function AccountsPageView({
             name={archivingRow?.name}
             onConfirm={onConfirmArchive}
           />
-
-          <ReorderGroupChildrenModal
-            opened={!!reorderingRow}
-            onClose={onCloseReorder}
-            rowName={reorderingRow?.name ?? ""}
-            initialRows={selectedSiblingRows}
-            onReorder={onReorderSiblings}
-          />
         </>
       )}
+
+      <EditAccountModal
+        opened={editModalOpen}
+        onClose={onCloseEditAccount}
+        onExitTransitionEnd={onClearEditingAccount}
+        accountGroups={accountGroups}
+        onSubmit={onSubmitUpdateAccount}
+        initialValues={editingAccount?.initialValues}
+        existingNodes={existingNodes}
+        editingId={editingAccount?.id}
+        typeDescriptor={tab}
+      />
+
+      <EditAccountGroupModal
+        opened={editGroupModalOpen}
+        onClose={onCloseEditGroup}
+        onExitTransitionEnd={onClearEditingGroup}
+        accountGroups={accountGroups}
+        onSubmit={onSubmitUpdateGroup}
+        initialValues={editingGroup?.initialValues}
+        existingNodes={existingNodes}
+        editingId={editingGroup?.id}
+        typeDescriptor={tab}
+      />
+
+      <ConfirmDeleteModal
+        opened={!!deletingRow}
+        onClose={onCloseDelete}
+        title={
+          deletingRow
+            ? `Delete ${getEntityLabel(deletingRow.nodeType)}`
+            : "Delete"
+        }
+        name={deletingRow?.name}
+        onConfirm={onConfirmDelete}
+      />
+
+      <ReorderGroupChildrenModal
+        opened={!!reorderingRow}
+        onClose={onCloseReorder}
+        rowName={reorderingRow?.name ?? ""}
+        initialRows={selectedSiblingRows}
+        onReorder={onReorderSiblings}
+      />
     </Container>
   );
 }
