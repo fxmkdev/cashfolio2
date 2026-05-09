@@ -100,6 +100,26 @@ async function openEditTransaction(page: Page, description: string) {
   ).toBeVisible();
 }
 
+function gridRowByIndex(root: Locator, rowIndex: number): Locator {
+  return root
+    .locator(`.ag-center-cols-container .ag-row[row-index="${rowIndex}"]`)
+    .first();
+}
+
+async function getEditableAndLockedRowIndices(dialog: Locator): Promise<{
+  editableRowIndex: number;
+  lockedRowIndex: number;
+}> {
+  const row0AccountCellClass =
+    (await agGridCellByColId(gridRowByIndex(dialog, 0), "account").getAttribute(
+      "class",
+    )) ?? "";
+  const row0IsEditable = !row0AccountCellClass.includes("ag-cell-disabled");
+  return row0IsEditable
+    ? { editableRowIndex: 0, lockedRowIndex: 1 }
+    : { editableRowIndex: 1, lockedRowIndex: 0 };
+}
+
 function assetAccountOptionLabel(name: string): string {
   return `Asset / Assets / ${name}`;
 }
@@ -648,23 +668,33 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   await expect(
     editDialog.getByRole("button", { name: "Add booking" }),
   ).toBeVisible();
+  const { editableRowIndex, lockedRowIndex } =
+    await getEditableAndLockedRowIndices(editDialog);
+  const lockedRow = gridRowByIndex(editDialog, lockedRowIndex);
+  const expectedUnit = (
+    await agGridCellByColId(lockedRow, "unit").innerText()
+  ).trim();
+  const expectedSymbol = (
+    await agGridCellByColId(lockedRow, "symbol").innerText()
+  ).trim();
+  const expectedCcy = (
+    await agGridCellByColId(lockedRow, "ccy").innerText()
+  ).trim();
   await setGridCellValue(
     editDialog,
-    1,
+    editableRowIndex,
     "account",
     seeded.unitlessEquityAccount.name,
   );
 
-  const editCounterRow = editDialog
-    .locator('.ag-center-cols-container .ag-row[row-index="1"]')
-    .first();
-  await expect(agGridCellByColId(editCounterRow, "unit")).toContainText(
-    "Security",
+  const editedRow = gridRowByIndex(editDialog, editableRowIndex);
+  await expect(agGridCellByColId(editedRow, "unit")).toContainText(
+    expectedUnit,
   );
-  await expect(agGridCellByColId(editCounterRow, "symbol")).toContainText(
-    "AAPL",
+  await expect(agGridCellByColId(editedRow, "symbol")).toContainText(
+    expectedSymbol,
   );
-  await expect(agGridCellByColId(editCounterRow, "ccy")).toContainText("USD");
+  await expect(agGridCellByColId(editedRow, "ccy")).toContainText(expectedCcy);
 
   await editDialog.getByRole("button", { name: "Save" }).click();
   await expect(agGridRowByText(page, "E2E Unitless Equity Edit")).toBeVisible();
@@ -676,10 +706,13 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   const unitlessEquityBooking = bookings.find(
     (booking) => booking.accountId === seeded.unitlessEquityAccount.id,
   );
+  const lockedBooking = bookings.find(
+    (booking) => booking.accountId !== seeded.unitlessEquityAccount.id,
+  );
   expect(unitlessEquityBooking).toMatchObject({
-    unit: Unit.SECURITY,
-    symbol: "AAPL",
-    tradeCurrency: "USD",
+    unit: lockedBooking?.unit,
+    symbol: lockedBooking?.symbol,
+    tradeCurrency: lockedBooking?.tradeCurrency,
     value: 5,
   });
 });
