@@ -104,6 +104,10 @@ function assetAccountOptionLabel(name: string): string {
   return `Asset / Assets / ${name}`;
 }
 
+function unitlessEquityAccountOptionLabel(name: string): string {
+  return `Accounts / ${name}`;
+}
+
 function accountOptionNameRegex(name: string): RegExp {
   return new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 }
@@ -572,4 +576,88 @@ test("create security simple transaction preserves account metadata", async ({
   await expect(
     agGridCellByColId(eurSecurityRow, "balanceInReferenceCurrency"),
   ).toHaveText(/^-13\.6[34]$/);
+});
+
+test("split dialogs auto-fill unit metadata for unitless equity account selection", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
+
+  const createDialog = await openCreateTransaction(page);
+  await fillTransactionHeader(createDialog, "E2E Unitless Equity Create");
+  await setGridCellValue(page, 0, "credit", "90");
+  await setGridCellValue(page, 1, "date", "08.01.2026");
+  await setGridCellValue(
+    page,
+    1,
+    "account",
+    unitlessEquityAccountOptionLabel(seeded.unitlessEquityAccount.name),
+  );
+
+  const createCounterRow = createDialog
+    .locator('.ag-center-cols-container .ag-row[row-index="1"]')
+    .first();
+  await expect(agGridCellByColId(createCounterRow, "unit")).toContainText(
+    "Currency",
+  );
+  await expect(agGridCellByColId(createCounterRow, "ccy")).toContainText("CHF");
+
+  await setGridCellValue(page, 1, "debit", "90");
+  await createDialog.getByRole("button", { name: "Create" }).click();
+  await expect(
+    agGridRowByText(page, "E2E Unitless Equity Create"),
+  ).toBeVisible();
+
+  await page.goto(`/${seeded.accountBookId}/${seeded.securityAccount.id}`);
+
+  const securityCreateDialog = await openCreateTransaction(page);
+  await fillTransactionHeader(securityCreateDialog, "E2E Unitless Equity Edit");
+  await setGridCellValue(page, 0, "credit", "5");
+  await setGridCellValue(page, 1, "date", "09.01.2026");
+  await setGridCellValue(
+    page,
+    1,
+    "account",
+    assetAccountOptionLabel(seeded.securityCounterAccount.name),
+  );
+  await setGridCellValue(page, 1, "debit", "5");
+  await securityCreateDialog.getByRole("button", { name: "Create" }).click();
+  await expect(agGridRowByText(page, "E2E Unitless Equity Edit")).toBeVisible();
+
+  await openEditTransaction(page, "E2E Unitless Equity Edit");
+  const editDialog = page.getByRole("dialog", { name: "Edit Transaction" });
+  await setGridCellValue(
+    page,
+    1,
+    "account",
+    unitlessEquityAccountOptionLabel(seeded.unitlessEquityAccount.name),
+  );
+
+  const editCounterRow = editDialog
+    .locator('.ag-center-cols-container .ag-row[row-index="1"]')
+    .first();
+  await expect(agGridCellByColId(editCounterRow, "unit")).toContainText(
+    "Security",
+  );
+  await expect(agGridCellByColId(editCounterRow, "symbol")).toContainText(
+    "AAPL",
+  );
+  await expect(agGridCellByColId(editCounterRow, "ccy")).toContainText("USD");
+
+  await editDialog.getByRole("button", { name: "Save" }).click();
+  await expect(agGridRowByText(page, "E2E Unitless Equity Edit")).toBeVisible();
+
+  const bookings = await getTransactionBookingsByDescription({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Unitless Equity Edit",
+  });
+  const unitlessEquityBooking = bookings.find(
+    (booking) => booking.accountId === seeded.unitlessEquityAccount.id,
+  );
+  expect(unitlessEquityBooking).toMatchObject({
+    unit: Unit.SECURITY,
+    symbol: "AAPL",
+    tradeCurrency: "USD",
+    value: 5,
+  });
 });

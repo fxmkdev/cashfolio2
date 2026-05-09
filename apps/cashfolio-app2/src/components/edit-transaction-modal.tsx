@@ -20,6 +20,7 @@ import {
   createEditTransactionColumnDefs,
   isEditableCell,
 } from "./edit-transaction-modal-columns";
+import { createBookingUnitDefaults } from "./edit-transaction-modal-unit-defaults";
 import { validateEditTransactionBookingsRoot } from "./edit-transaction-modal-validation";
 import type {
   AccountOption,
@@ -341,16 +342,19 @@ export function EditTransactionModal({
               if (selectedAccount) {
                 const clearDebit = isIncomeAccount(selectedAccount);
                 const clearCredit = isExpenseAccount(selectedAccount);
+                const lockedBooking = form.values.bookings.find(
+                  (booking) => booking.key === lockedBookingKey,
+                );
+                const bookingUnitDefaults = createBookingUnitDefaults({
+                  selectedAccount,
+                  lockedBooking,
+                });
 
                 const nextBooking: BookingValues = {
                   ...currentBooking,
                   account: event.newValue ?? undefined,
                   date: currentBooking.date,
-                  unit: selectedAccount.unit,
-                  currency: selectedAccount.currency ?? undefined,
-                  cryptocurrency: selectedAccount.cryptocurrency ?? undefined,
-                  symbol: selectedAccount.symbol ?? undefined,
-                  tradeCurrency: selectedAccount.tradeCurrency ?? undefined,
+                  ...bookingUnitDefaults,
                   debit: clearDebit ? undefined : currentBooking.debit,
                   credit: clearCredit ? undefined : currentBooking.credit,
                 };
