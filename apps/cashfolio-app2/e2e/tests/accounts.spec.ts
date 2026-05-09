@@ -277,10 +277,10 @@ test("archived mode allows edit, reorder siblings, and delete", async ({
   await expect(archivedSiblingRow).toBeVisible();
   await clickRowAction(archivedSiblingRow, "Delete");
   await expect(
-    page.getByRole("dialog", { name: "Delete account" }),
+    page.getByRole("dialog", { name: "Delete Account" }),
   ).toBeVisible();
   await page
-    .getByRole("dialog", { name: "Delete account" })
+    .getByRole("dialog", { name: "Delete Account" })
     .getByRole("button", { name: "Delete" })
     .click();
   await expect(agGridRowByText(page, siblingName)).toHaveCount(0);

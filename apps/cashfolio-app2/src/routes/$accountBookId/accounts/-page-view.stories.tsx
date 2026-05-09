@@ -481,7 +481,7 @@ export const ArchivedModeActions: Story = {
     await userEvent.click(
       walletRowQueries.getByRole("button", { name: "Delete" }),
     );
-    const deleteDialog = body.getByRole("dialog", { name: "Delete account" });
+    const deleteDialog = body.getByRole("dialog", { name: "Delete Account" });
     await expect(deleteDialog).toBeInTheDocument();
     await userEvent.click(
       within(deleteDialog).getByRole("button", { name: "Cancel" }),

@@ -33,17 +33,24 @@ export function ArchivedAccountTreeActionsCell({
   onUnarchive: () => void;
 }) {
   const reorderActionLabel = reorderLabel ?? "Reorder siblings";
+  const reorderActionUnavailableLabel = "Cannot reorder right now";
+  const canReorder = reorderEnabled && !!onReorder;
+  const resolvedReorderTooltipLabel = canReorder
+    ? reorderActionLabel
+    : reorderEnabled && !onReorder
+      ? reorderActionUnavailableLabel
+      : reorderActionLabel;
 
   return (
     <Group gap={4} wrap="nowrap" h="100%" align="center">
-      <Tooltip label={reorderActionLabel}>
+      <Tooltip label={resolvedReorderTooltipLabel}>
         <span style={TOOLTIP_TRIGGER_STYLE}>
           <ActionIcon
             variant="subtle"
             size="sm"
-            disabled={!reorderEnabled}
+            disabled={!canReorder}
             onClick={onReorder}
-            aria-label={reorderActionLabel}
+            aria-label="Reorder siblings"
           >
             <IconArrowsSort size={16} />
           </ActionIcon>
@@ -67,7 +74,7 @@ export function ArchivedAccountTreeActionsCell({
             color="red"
             disabled={!deletable}
             onClick={onDelete}
-            aria-label={deleteLabel}
+            aria-label="Delete"
           >
             <IconTrash size={16} />
           </ActionIcon>
@@ -81,7 +88,7 @@ export function ArchivedAccountTreeActionsCell({
             color="blue"
             disabled={!unarchivable}
             onClick={onUnarchive}
-            aria-label={unarchiveLabel}
+            aria-label="Unarchive"
           >
             <IconArchiveOff size={16} />
           </ActionIcon>
@@ -115,17 +122,24 @@ export function ActiveAccountTreeActionsCell({
   onReorder?: () => void;
 }) {
   const reorderActionLabel = reorderLabel ?? "Reorder siblings";
+  const reorderActionUnavailableLabel = "Cannot reorder right now";
+  const canReorder = reorderEnabled && !!onReorder;
+  const resolvedReorderTooltipLabel = canReorder
+    ? reorderActionLabel
+    : reorderEnabled && !onReorder
+      ? reorderActionUnavailableLabel
+      : reorderActionLabel;
 
   return (
     <Group gap={4} wrap="nowrap" h="100%" align="center">
-      <Tooltip label={reorderActionLabel}>
+      <Tooltip label={resolvedReorderTooltipLabel}>
         <span style={TOOLTIP_TRIGGER_STYLE}>
           <ActionIcon
             variant="subtle"
             size="sm"
-            disabled={!reorderEnabled}
+            disabled={!canReorder}
             onClick={onReorder}
-            aria-label={reorderActionLabel}
+            aria-label="Reorder siblings"
           >
             <IconArrowsSort size={16} />
           </ActionIcon>
@@ -149,7 +163,7 @@ export function ActiveAccountTreeActionsCell({
             color="yellow"
             disabled={!archivable}
             onClick={onArchive}
-            aria-label={archiveLabel}
+            aria-label="Archive"
           >
             <IconArchive size={16} />
           </ActionIcon>
@@ -163,7 +177,7 @@ export function ActiveAccountTreeActionsCell({
             color="red"
             disabled={!deletable}
             onClick={onDelete}
-            aria-label={deleteLabel}
+            aria-label="Delete"
           >
             <IconTrash size={16} />
           </ActionIcon>
