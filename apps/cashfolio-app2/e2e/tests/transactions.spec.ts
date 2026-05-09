@@ -110,10 +110,65 @@ function normalizeCellText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
+async function setGridAccountCellValue(args: {
+  dialog: Locator;
+  rowIndex: number;
+  accountName: string;
+}) {
+  const cell = args.dialog
+    .locator(
+      `.ag-center-cols-container .ag-row[row-index="${args.rowIndex}"] [col-id="account"]`,
+    )
+    .first();
+
+  await expect(cell).toBeVisible();
+  await cell.click({ force: true });
+
+  let editorInput = args.dialog
+    .locator(".ag-cell-inline-editing input:not([type='hidden'])")
+    .first();
+  if (!(await editorInput.isVisible())) {
+    await cell.press("Enter");
+    editorInput = args.dialog
+      .locator(".ag-cell-inline-editing input:not([type='hidden'])")
+      .first();
+  }
+
+  await expect(editorInput).toBeVisible();
+  await editorInput.fill(args.accountName);
+
+  const option = args.dialog
+    .page()
+    .getByRole("option", {
+      name: accountOptionNameRegex(args.accountName),
+    })
+    .first();
+  await expect(option).toBeVisible({ timeout: 3000 });
+  await option.click();
+  await args.dialog.page().keyboard.press("Enter");
+}
+
 async function setUnitlessEquityAccountOnEditableRow(args: {
   dialog: Locator;
   accountName: string;
 }): Promise<{ editedRowIndex: number; lockedRowIndex: number }> {
+  const visibleRowIndexes = async (): Promise<number[]> => {
+    const rows = args.dialog.locator(".ag-center-cols-container .ag-row");
+    const rowCount = await rows.count();
+    const indexes = new Set<number>();
+    for (let i = 0; i < rowCount; i += 1) {
+      const rowIndex = await rows.nth(i).getAttribute("row-index");
+      if (rowIndex == null) {
+        continue;
+      }
+      const parsed = Number(rowIndex);
+      if (!Number.isNaN(parsed)) {
+        indexes.add(parsed);
+      }
+    }
+    return [...indexes].sort((a, b) => a - b);
+  };
+
   const accountContains = async (rowIndex: number) =>
     normalizeCellText(
       await agGridCellByColId(
@@ -122,18 +177,24 @@ async function setUnitlessEquityAccountOnEditableRow(args: {
       ).innerText(),
     ).includes(args.accountName);
 
-  for (const rowIndex of [0, 1] as const) {
+  const rowIndexes = await visibleRowIndexes();
+  for (const rowIndex of rowIndexes) {
     try {
-      await setGridCellValue(
-        args.dialog,
+      await setGridAccountCellValue({
+        dialog: args.dialog,
         rowIndex,
-        "account",
-        args.accountName,
-      );
+        accountName: args.accountName,
+      });
+      await expect
+        .poll(async () => accountContains(rowIndex), { timeout: 3000 })
+        .toBe(true);
       if (await accountContains(rowIndex)) {
+        const lockedRowIndex =
+          rowIndexes.find((candidateIndex) => candidateIndex !== rowIndex) ??
+          rowIndex;
         return {
           editedRowIndex: rowIndex,
-          lockedRowIndex: rowIndex === 0 ? 1 : 0,
+          lockedRowIndex,
         };
       }
     } catch {
