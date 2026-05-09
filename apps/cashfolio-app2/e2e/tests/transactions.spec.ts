@@ -104,10 +104,6 @@ function assetAccountOptionLabel(name: string): string {
   return `Asset / Assets / ${name}`;
 }
 
-function unitlessEquityAccountOptionLabel(name: string): string {
-  return `Accounts / ${name}`;
-}
-
 function accountOptionNameRegex(name: string): RegExp {
   return new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 }
@@ -587,12 +583,7 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   await fillTransactionHeader(createDialog, "E2E Unitless Equity Create");
   await setGridCellValue(page, 0, "credit", "90");
   await setGridCellValue(page, 1, "date", "08.01.2026");
-  await setGridCellValue(
-    page,
-    1,
-    "account",
-    unitlessEquityAccountOptionLabel(seeded.unitlessEquityAccount.name),
-  );
+  await setGridCellValue(page, 1, "account", seeded.unitlessEquityAccount.name);
 
   const createCounterRow = createDialog
     .locator('.ag-center-cols-container .ag-row[row-index="1"]')
@@ -618,7 +609,7 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
     page,
     1,
     "account",
-    assetAccountOptionLabel(seeded.securityCounterAccount.name),
+    seeded.securityCounterAccount.name,
   );
   await setGridCellValue(page, 1, "debit", "5");
   await securityCreateDialog.getByRole("button", { name: "Create" }).click();
@@ -626,12 +617,7 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
 
   await openEditTransaction(page, "E2E Unitless Equity Edit");
   const editDialog = page.getByRole("dialog", { name: "Edit Transaction" });
-  await setGridCellValue(
-    page,
-    1,
-    "account",
-    unitlessEquityAccountOptionLabel(seeded.unitlessEquityAccount.name),
-  );
+  await setGridCellValue(page, 1, "account", seeded.unitlessEquityAccount.name);
 
   const editCounterRow = editDialog
     .locator('.ag-center-cols-container .ag-row[row-index="1"]')
