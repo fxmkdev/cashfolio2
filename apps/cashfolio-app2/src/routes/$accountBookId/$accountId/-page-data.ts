@@ -45,7 +45,7 @@ function toAccountOption(account: LedgerAccountOptionSource): AccountOption {
       .filter(Boolean)
       .join(" / "),
     value: account.id,
-    unit: account.unit as Unit,
+    unit: account.unit,
     currency: account.currency,
     cryptocurrency: account.cryptocurrency,
     symbol: account.symbol,

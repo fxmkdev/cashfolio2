@@ -13,7 +13,7 @@ export function createBookingUnitDefaults(args: {
 > {
   if (
     args.selectedAccount.type === AccountType.EQUITY &&
-    !args.selectedAccount.unit
+    args.selectedAccount.unit == null
   ) {
     return {
       unit: args.lockedBooking?.unit,
@@ -25,7 +25,7 @@ export function createBookingUnitDefaults(args: {
   }
 
   return {
-    unit: args.selectedAccount.unit,
+    unit: args.selectedAccount.unit ?? undefined,
     currency: args.selectedAccount.currency ?? undefined,
     cryptocurrency: args.selectedAccount.cryptocurrency ?? undefined,
     symbol: args.selectedAccount.symbol ?? undefined,

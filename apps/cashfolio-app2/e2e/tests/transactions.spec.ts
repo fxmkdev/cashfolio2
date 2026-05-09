@@ -106,18 +106,42 @@ function gridRowByIndex(root: Locator, rowIndex: number): Locator {
     .first();
 }
 
-async function getEditableAndLockedRowIndices(dialog: Locator): Promise<{
-  editableRowIndex: number;
-  lockedRowIndex: number;
-}> {
-  const row0AccountCellClass =
-    (await agGridCellByColId(gridRowByIndex(dialog, 0), "account").getAttribute(
-      "class",
-    )) ?? "";
-  const row0IsEditable = !row0AccountCellClass.includes("ag-cell-disabled");
-  return row0IsEditable
-    ? { editableRowIndex: 0, lockedRowIndex: 1 }
-    : { editableRowIndex: 1, lockedRowIndex: 0 };
+function normalizeCellText(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+async function setUnitlessEquityAccountOnEditableRow(args: {
+  dialog: Locator;
+  accountName: string;
+}): Promise<{ editedRowIndex: number; lockedRowIndex: number }> {
+  const accountContains = async (rowIndex: number) =>
+    normalizeCellText(
+      await agGridCellByColId(
+        gridRowByIndex(args.dialog, rowIndex),
+        "account",
+      ).innerText(),
+    ).includes(args.accountName);
+
+  for (const rowIndex of [0, 1] as const) {
+    try {
+      await setGridCellValue(
+        args.dialog,
+        rowIndex,
+        "account",
+        args.accountName,
+      );
+      if (await accountContains(rowIndex)) {
+        return {
+          editedRowIndex: rowIndex,
+          lockedRowIndex: rowIndex === 0 ? 1 : 0,
+        };
+      }
+    } catch {
+      // Try the other row if this one is non-editable in the current ordering.
+    }
+  }
+
+  throw new Error("Could not set unitless equity account on an editable row");
 }
 
 function assetAccountOptionLabel(name: string): string {
@@ -668,8 +692,11 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   await expect(
     editDialog.getByRole("button", { name: "Add booking" }),
   ).toBeVisible();
-  const { editableRowIndex, lockedRowIndex } =
-    await getEditableAndLockedRowIndices(editDialog);
+  const { editedRowIndex, lockedRowIndex } =
+    await setUnitlessEquityAccountOnEditableRow({
+      dialog: editDialog,
+      accountName: seeded.unitlessEquityAccount.name,
+    });
   const lockedRow = gridRowByIndex(editDialog, lockedRowIndex);
   const expectedUnit = (
     await agGridCellByColId(lockedRow, "unit").innerText()
@@ -680,14 +707,7 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   const expectedCcy = (
     await agGridCellByColId(lockedRow, "ccy").innerText()
   ).trim();
-  await setGridCellValue(
-    editDialog,
-    editableRowIndex,
-    "account",
-    seeded.unitlessEquityAccount.name,
-  );
-
-  const editedRow = gridRowByIndex(editDialog, editableRowIndex);
+  const editedRow = gridRowByIndex(editDialog, editedRowIndex);
   await expect(agGridCellByColId(editedRow, "unit")).toContainText(
     expectedUnit,
   );
@@ -709,10 +729,12 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   const lockedBooking = bookings.find(
     (booking) => booking.accountId !== seeded.unitlessEquityAccount.id,
   );
+  expect(unitlessEquityBooking).toBeDefined();
+  expect(lockedBooking).toBeDefined();
   expect(unitlessEquityBooking).toMatchObject({
     unit: lockedBooking?.unit,
     symbol: lockedBooking?.symbol,
     tradeCurrency: lockedBooking?.tradeCurrency,
-    value: 5,
   });
+  expect(unitlessEquityBooking?.value).toBe(-(lockedBooking?.value ?? 0));
 });

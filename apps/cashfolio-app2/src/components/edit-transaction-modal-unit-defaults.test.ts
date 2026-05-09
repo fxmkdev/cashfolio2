@@ -16,8 +16,7 @@ function accountOption(
   return {
     value: overrides.value,
     label: overrides.label,
-    unit:
-      "unit" in overrides ? (overrides.unit as unknown as Unit) : Unit.CURRENCY,
+    unit: "unit" in overrides ? (overrides.unit ?? null) : Unit.CURRENCY,
     type: overrides.type ?? AccountType.ASSET,
     currency: overrides.currency,
     cryptocurrency: overrides.cryptocurrency,
@@ -34,7 +33,7 @@ describe("createBookingUnitDefaults", () => {
       label: "Accounts / Equity",
       type: AccountType.EQUITY,
       equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
-      unit: undefined as unknown as Unit,
+      unit: null,
     });
     const lockedBooking: BookingValues = {
       key: "locked",
