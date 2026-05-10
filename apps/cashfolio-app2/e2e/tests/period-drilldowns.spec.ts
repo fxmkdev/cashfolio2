@@ -31,9 +31,8 @@ async function openTableView(args: {
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    await selectSegmentedControlOption(control, "Table");
-
     try {
+      await selectSegmentedControlOption(control, "Table");
       await expect(table).toBeVisible({ timeout: 3_000 });
       return table;
     } catch (error) {
