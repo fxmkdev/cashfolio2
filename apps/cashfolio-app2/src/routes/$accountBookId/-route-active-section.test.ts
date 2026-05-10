@@ -85,7 +85,7 @@ describe("getAccountsLinkSearch", () => {
         locationSearch: {},
         matches: [
           {
-            routeId: "/$accountId",
+            routeId: "/$accountBookId/$accountId",
             loaderData: {
               account: {
                 type: AccountType.EQUITY,
@@ -99,6 +99,29 @@ describe("getAccountsLinkSearch", () => {
     ).toEqual({
       tab: "EQUITY-EXPENSE",
       mode: "archived",
+    });
+  });
+
+  it("keeps compatibility with nested ledger route id form", () => {
+    expect(
+      getAccountsLinkSearch({
+        locationSearch: {},
+        matches: [
+          {
+            routeId: "/$accountId",
+            loaderData: {
+              account: {
+                type: AccountType.LIABILITY,
+                equityAccountSubtype: null,
+                isActive: true,
+              },
+            },
+          },
+        ],
+      }),
+    ).toEqual({
+      tab: "LIABILITY",
+      mode: "active",
     });
   });
 

@@ -58,6 +58,12 @@ const DEFAULT_ACCOUNTS_LINK_SEARCH: AccountsLinkSearch = {
   mode: "active",
 };
 
+const LEDGER_ROUTE_IDS = new Set([
+  "/$accountBookId/$accountId",
+  "/$accountBookId/$accountId/",
+  "/$accountId",
+]);
+
 type RouterMatchSnapshot = {
   routeId: string;
   loaderData: unknown;
@@ -165,7 +171,7 @@ export function getAccountsLinkSearch(args: {
 
   for (let index = args.matches.length - 1; index >= 0; index -= 1) {
     const match = args.matches[index];
-    if (match.routeId !== "/$accountId") {
+    if (!LEDGER_ROUTE_IDS.has(match.routeId)) {
       continue;
     }
 
