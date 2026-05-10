@@ -507,6 +507,7 @@ describe("createTimelineChartOptions", () => {
           type: "line",
           yKey: "cumulativeMetric",
           yName: "Cumulative Savings",
+          visible: false,
         }),
       ]),
     );

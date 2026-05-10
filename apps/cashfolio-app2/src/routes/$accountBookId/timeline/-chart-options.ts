@@ -259,6 +259,7 @@ export function createTimelineChartOptions(args: {
           xKey: "periodStart",
           yKey: "cumulativeMetric",
           yName: cumulativeMetricLabel,
+          visible: false,
           stroke: args.isDarkMode
             ? args.theme.colors.blue[2]
             : args.theme.colors.blue[7],
