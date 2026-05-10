@@ -3,7 +3,12 @@ import {
   round2,
   type BreakdownHierarchyAccumulatorItem,
 } from "./period-helpers";
-import { moneyAdd, moneyRound2, moneySum, toMoneyNumber } from "../shared/money";
+import {
+  moneyAdd,
+  moneyRound2,
+  moneySum,
+  toMoneyNumber,
+} from "../shared/money";
 import {
   parseTimelineScopeSelection,
   type TimelineScopeOption,
