@@ -1,12 +1,4 @@
-import {
-  AppShell,
-  Burger,
-  Button,
-  Divider,
-  Group,
-  Stack,
-  Text,
-} from "@mantine/core";
+import { AppShell, Burger, Divider, Group, Stack, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import {
   createFileRoute,
@@ -321,16 +313,6 @@ export function AccountBookShell({
               accountsTab={accountsLinkSearch.tab}
               accountsMode={accountsLinkSearch.mode}
             />
-            <form action="/api/logto/sign-out" method="post">
-              <Button
-                type="submit"
-                variant="default"
-                fullWidth
-                onClick={closeMobile}
-              >
-                Sign out
-              </Button>
-            </form>
           </Stack>
         </AppShell.Section>
       </AppShell.Navbar>

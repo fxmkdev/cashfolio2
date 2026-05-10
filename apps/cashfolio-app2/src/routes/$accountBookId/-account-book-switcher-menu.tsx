@@ -1,5 +1,10 @@
 import { Button, Menu, type MenuItemProps } from "@mantine/core";
-import { IconCheck, IconChevronDown, IconSettings } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconChevronUp,
+  IconLogout2,
+  IconSettings,
+} from "@tabler/icons-react";
 import { createLink } from "@tanstack/react-router";
 import { forwardRef, type ComponentPropsWithoutRef } from "react";
 import type { UserAccountBookOption } from "@/server/home";
@@ -32,17 +37,17 @@ export function AccountBookSwitcherMenu({
       ?.name ?? accountBookId;
 
   return (
-    <Menu position="top-end" withArrow>
+    <Menu position="top-end" withArrow width="target">
       <Menu.Target>
         <Button
           variant="default"
-          rightSection={<IconChevronDown size={16} />}
+          rightSection={<IconChevronUp size={16} />}
           fullWidth
         >
           {currentAccountBookName}
         </Button>
       </Menu.Target>
-      <Menu.Dropdown>
+      <Menu.Dropdown style={{ maxWidth: "100%" }}>
         {accountBooks.map((accountBook) => {
           const isCurrentBook = accountBook.id === accountBookId;
 
@@ -80,6 +85,16 @@ export function AccountBookSwitcherMenu({
         </LinkMenuItem>
         <Menu.Divider />
         <Menu.Item disabled>Create new account book</Menu.Item>
+        <Menu.Divider />
+        <form action="/api/logto/sign-out" method="post">
+          <Menu.Item
+            component="button"
+            type="submit"
+            leftSection={<IconLogout2 size={16} />}
+          >
+            Sign out
+          </Menu.Item>
+        </form>
       </Menu.Dropdown>
     </Menu>
   );

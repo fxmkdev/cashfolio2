@@ -90,8 +90,11 @@ export const RouteSmoke: Story = {
     await expect(
       canvas.getByRole("button", { name: "Storybook Book" }),
     ).toBeInTheDocument();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Storybook Book" }),
+    );
     await expect(
-      canvas.getByRole("button", { name: "Sign out" }),
+      canvas.getByRole("menuitem", { name: "Sign out" }),
     ).toBeVisible();
   },
 };
@@ -111,8 +114,11 @@ export const MobileFooterControlsSmoke: Story = {
     await expect(
       canvas.getByRole("button", { name: "Storybook Book" }),
     ).toBeVisible();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Storybook Book" }),
+    );
     await expect(
-      canvas.getByRole("button", { name: "Sign out" }),
+      canvas.getByRole("menuitem", { name: "Sign out" }),
     ).toBeVisible();
   },
 };
