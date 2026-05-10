@@ -62,9 +62,8 @@ async function doubleClickRowUntilLedgerNavigation(args: {
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    await args.row.dblclick();
-
     try {
+      await args.row.dblclick();
       await expect
         .poll(
           () => {
