@@ -9,7 +9,7 @@ primary_region = '$FLY_PRIMARY_REGION'
   internal_port = 6379
   protocol = "tcp"
   auto_start_machines = true
-  auto_stop_machines = true
+  auto_stop_machines = "suspend"
   min_machines_running = $FLY_MIN_MACHINES_RUNNING
   processes = ["app"]
   

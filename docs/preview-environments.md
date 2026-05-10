@@ -39,6 +39,11 @@ Dynamic preview CI uses a single GitHub environment:
 - `preview-cashfolio-app` for all app preview deployments (with dynamic
   `environment_url` per PR)
 
+Fly machine lifecycle note:
+
+- Preview apps use `auto_stop_machines = "suspend"` for faster resume after
+  idle periods and still honor `FLY_MIN_MACHINES_RUNNING`.
+
 Redis is shared and not deployed as part of dynamic PR preview. Redis deploys
 remain manual from `main` via `.github/workflows/deploy.yml` using the existing
 environment naming pattern (`<environment>-cashfolio-redis`). The manual deploy
