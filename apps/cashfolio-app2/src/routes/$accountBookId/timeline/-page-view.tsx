@@ -349,7 +349,6 @@ export function TimelinePageView({
             <Select
               label="View"
               value={selectedMetric}
-              aria-label="Timeline metric"
               data={TIMELINE_METRIC_OPTIONS}
               allowDeselect={false}
               onChange={(nextMetric) => {

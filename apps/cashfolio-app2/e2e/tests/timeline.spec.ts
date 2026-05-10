@@ -136,7 +136,7 @@ test("timeline expense scope combobox opens with all options and supports search
   await page.goto(`/${seeded.accountBookId}/timeline`);
   await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
 
-  await page.getByRole("combobox", { name: "Timeline metric" }).click();
+  await page.getByRole("combobox", { name: "View" }).click();
   await page.getByRole("option", { name: "Expenses", exact: true }).click();
   await expect
     .poll(() => new URL(page.url()).searchParams.get("metric"))
