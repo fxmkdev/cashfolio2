@@ -37,7 +37,7 @@ export function AccountBookSwitcherMenu({
       ?.name ?? accountBookId;
 
   return (
-    <Menu position="top-end" withArrow width="target">
+    <Menu position="top-end" width="target">
       <Menu.Target>
         <Button
           variant="default"
