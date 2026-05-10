@@ -1,11 +1,21 @@
 import { expect, test } from "@playwright/test";
-import { seedDatabase, type SeededData } from "../support/db";
+import {
+  seedDatabase,
+  seedThreeBookingSplitTransaction,
+  type SeededData,
+} from "../support/db";
 import { selectSegmentedControlOption } from "../support/segmented-control";
 
 let seeded: SeededData;
 
 test.beforeAll(async () => {
   seeded = await seedDatabase();
+  await seedThreeBookingSplitTransaction({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Timeline Expense Scope Seed",
+    currentAccountId: seeded.cashAccount.id,
+    debitAccountIds: [seeded.expenseAccount.id, seeded.expenseAccount.id],
+  });
 });
 
 test("timeline page is reachable and persists selected period mode across refresh", async ({
@@ -118,4 +128,53 @@ test("timeline deep link with invalid mode falls back to monthly", async ({
   await expect(
     periodModeControl.getByRole("radio", { name: "Yearly" }),
   ).not.toBeChecked();
+});
+
+test("timeline expense scope combobox opens with all options and supports searchable selection", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/timeline`);
+  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
+
+  await page.getByRole("combobox", { name: "Timeline metric" }).click();
+  await page.getByRole("option", { name: "Expenses", exact: true }).click();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("metric"))
+    .toBe("expenses");
+
+  const scopeInput = page.getByRole("combobox", {
+    name: "Timeline metric scope",
+  });
+  await expect(scopeInput).toHaveValue("Total");
+  await scopeInput.click();
+
+  await expect(
+    page.getByRole("option", { name: "Total", exact: true }),
+  ).toBeVisible();
+  const expenseAccountOption = page.getByRole("option", {
+    name: "Equity / E2E Expenses / E2E Expense",
+    exact: true,
+  });
+  await expect(expenseAccountOption).toBeVisible();
+
+  await scopeInput.fill("E2E Expense");
+  await expect(expenseAccountOption).toBeVisible();
+  await expenseAccountOption.click();
+
+  await expect(scopeInput).toHaveValue("Equity / E2E Expenses / E2E Expense");
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("expenseScope"))
+    .toBe(`account:${seeded.expenseAccount.id}`);
+
+  await scopeInput.click();
+  await scopeInput.fill("uncommitted scope text");
+  await page.getByRole("heading", { name: "Timeline" }).click();
+  await expect(scopeInput).toHaveValue("Equity / E2E Expenses / E2E Expense");
+
+  await scopeInput.click();
+  await page.getByRole("option", { name: "Total", exact: true }).click();
+  await expect(scopeInput).toHaveValue("Total");
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("expenseScope"))
+    .toBeNull();
 });

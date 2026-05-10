@@ -426,7 +426,7 @@ function buildTimelineScopeOptions(args: {
       : item.accountName;
     accountOptionByValue.set(accountValue, {
       value: accountValue,
-      label: `${accountLabel} (Account)`,
+      label: accountLabel,
       kind: "account",
     });
 
@@ -439,7 +439,7 @@ function buildTimelineScopeOptions(args: {
       const groupValue = `group:${groupId}` as const;
       groupOptionByValue.set(groupValue, {
         value: groupValue,
-        label: `${resolveGroupPath(groupId)} (Group)`,
+        label: resolveGroupPath(groupId),
         kind: "group",
       });
       groupId = groupById.get(groupId)?.parentGroupId ?? null;

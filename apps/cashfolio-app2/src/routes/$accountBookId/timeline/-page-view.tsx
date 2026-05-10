@@ -1,12 +1,14 @@
 import {
-  Autocomplete,
   Card,
+  Combobox,
   Group,
+  InputBase,
   SegmentedControl,
   Select,
   Stack,
   Text,
   Title,
+  useCombobox,
   useComputedColorScheme,
   useMantineTheme,
 } from "@mantine/core";
@@ -167,18 +169,33 @@ export function TimelinePageView({
     () => new Map(scopeOptions.map((option) => [option.value, option.label])),
     [scopeOptions],
   );
-  const scopeAutocompleteData = useMemo(
-    () => scopeOptions.map((option) => option.label),
-    [scopeOptions],
-  );
   const selectedScopeLabel =
     scopeLabelByValue.get(selectedScope) ??
     scopeLabelByValue.get("total") ??
     "Total";
-  const [scopeInputValue, setScopeInputValue] = useState(selectedScopeLabel);
+  const [scopeSearchValue, setScopeSearchValue] = useState(selectedScopeLabel);
+  const scopeCombobox = useCombobox({
+    onDropdownClose: () => {
+      scopeCombobox.resetSelectedOption();
+    },
+  });
+  const filteredScopeOptions = useMemo(() => {
+    const normalizedSearch = scopeSearchValue.trim().toLowerCase();
+    const shouldFilterOptions = scopeOptions.every(
+      (option) => option.label !== scopeSearchValue,
+    );
+
+    if (!shouldFilterOptions || normalizedSearch.length === 0) {
+      return scopeOptions;
+    }
+
+    return scopeOptions.filter((option) =>
+      option.label.toLowerCase().includes(normalizedSearch),
+    );
+  }, [scopeOptions, scopeSearchValue]);
 
   useEffect(() => {
-    setScopeInputValue(selectedScopeLabel);
+    setScopeSearchValue(selectedScopeLabel);
   }, [selectedScopeLabel]);
 
   const handleChartZoom = useCallback((event: AgZoomEvent) => {
@@ -339,50 +356,93 @@ export function TimelinePageView({
                 }
               }}
             />
-            <Autocomplete
-              label="Scope"
-              value={scopeInputValue}
-              aria-label="Timeline metric scope"
-              placeholder={
-                isScopedMetric
-                  ? "Select account group or account"
-                  : "Available for Income and Expenses"
-              }
-              data={scopeAutocompleteData}
-              disabled={!isScopedMetric}
-              onChange={(nextLabel) => {
-                setScopeInputValue(nextLabel);
+            <Combobox
+              store={scopeCombobox}
+              withinPortal={false}
+              onOptionSubmit={(nextScopeValue) => {
                 if (!isScopedMetric) {
                   return;
                 }
 
-                const nextScope = scopeOptions.find(
-                  (option) => option.label === nextLabel,
-                )?.value;
-
-                if (nextScope && nextScope !== selectedScope) {
-                  onMetricScopeChange(nextScope);
-                }
-              }}
-              onBlur={(event) => {
-                if (!isScopedMetric) {
+                const matchedOption = scopeOptions.find(
+                  (option) => option.value === nextScopeValue,
+                );
+                if (!matchedOption) {
                   return;
                 }
 
-                const typedLabel = event.currentTarget.value;
-                const nextScope = scopeOptions.find(
-                  (option) => option.label === typedLabel,
-                )?.value;
-                if (!nextScope) {
-                  setScopeInputValue(selectedScopeLabel);
-                  return;
+                setScopeSearchValue(matchedOption.label);
+                scopeCombobox.closeDropdown();
+                scopeCombobox.resetSelectedOption();
+
+                if (nextScopeValue !== selectedScope) {
+                  onMetricScopeChange(matchedOption.value);
                 }
-                if (nextScope === selectedScope) {
-                  return;
-                }
-                onMetricScopeChange(nextScope);
               }}
-            />
+            >
+              <Combobox.Target>
+                <InputBase
+                  label="Scope"
+                  aria-label="Timeline metric scope"
+                  placeholder={
+                    isScopedMetric
+                      ? "Select account group or account"
+                      : "Available for Income and Expenses"
+                  }
+                  value={isScopedMetric ? scopeSearchValue : ""}
+                  disabled={!isScopedMetric}
+                  rightSection={<Combobox.Chevron />}
+                  rightSectionPointerEvents="none"
+                  onFocus={() => {
+                    if (!isScopedMetric) {
+                      return;
+                    }
+                    scopeCombobox.openDropdown();
+                    scopeCombobox.updateSelectedOptionIndex("selected");
+                  }}
+                  onClick={() => {
+                    if (!isScopedMetric) {
+                      return;
+                    }
+                    scopeCombobox.openDropdown();
+                    scopeCombobox.updateSelectedOptionIndex("selected");
+                  }}
+                  onChange={(event) => {
+                    setScopeSearchValue(event.currentTarget.value);
+                    if (!isScopedMetric) {
+                      return;
+                    }
+                    scopeCombobox.openDropdown();
+                    scopeCombobox.updateSelectedOptionIndex();
+                  }}
+                  onBlur={() => {
+                    if (!isScopedMetric) {
+                      return;
+                    }
+                    scopeCombobox.closeDropdown();
+                    setScopeSearchValue(selectedScopeLabel);
+                  }}
+                />
+              </Combobox.Target>
+
+              <Combobox.Dropdown hidden={!isScopedMetric}>
+                <Combobox.Options>
+                  {filteredScopeOptions.length > 0 ? (
+                    filteredScopeOptions.map((option) => (
+                      <Combobox.Option
+                        value={option.value}
+                        key={option.value}
+                        active={option.value === selectedScope}
+                      >
+                        {option.label}
+                      </Combobox.Option>
+                    ))
+                  ) : (
+                    <Combobox.Empty>Nothing found</Combobox.Empty>
+                  )}
+                </Combobox.Options>
+              </Combobox.Dropdown>
+            </Combobox>
           </div>
         </Group>
 

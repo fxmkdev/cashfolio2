@@ -119,14 +119,14 @@ describe("getPeriodTimeline", () => {
           income: [
             {
               value: "account:income-a",
-              label: "Income A (Account)",
+              label: "Income A",
               kind: "account",
             },
           ],
           expenses: [
             {
               value: "group:expense-g",
-              label: "Expense G (Group)",
+              label: "Expense G",
               kind: "group",
             },
           ],
@@ -247,7 +247,7 @@ describe("getPeriodTimeline", () => {
           { value: "total", label: "Total", kind: "total" },
           {
             value: "account:income-a",
-            label: "Income A (Account)",
+            label: "Income A",
             kind: "account",
           },
         ],
@@ -255,7 +255,7 @@ describe("getPeriodTimeline", () => {
           { value: "total", label: "Total", kind: "total" },
           {
             value: "group:expense-g",
-            label: "Expense G (Group)",
+            label: "Expense G",
             kind: "group",
           },
         ],

@@ -319,17 +319,17 @@ describe("loadPeriodTimelinePointMetrics", () => {
     expect(result.scopeOptions.income).toEqual([
       {
         value: "group:grp-income",
-        label: "Income (Group)",
+        label: "Income",
         kind: "group",
       },
       {
         value: "group:grp-income-salary",
-        label: "Income / Salary (Group)",
+        label: "Income / Salary",
         kind: "group",
       },
       {
         value: "account:income-a",
-        label: "Income / Salary / Primary Salary (Account)",
+        label: "Income / Salary / Primary Salary",
         kind: "account",
       },
     ]);
