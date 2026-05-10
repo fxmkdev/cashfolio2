@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import {
   seedDatabase,
   seedExplicitGainLossDrilldownScenario,
@@ -15,6 +15,86 @@ function gridRowByText(container: Locator, text: string): Locator {
     .locator(".ag-center-cols-container .ag-row")
     .filter({ hasText: text })
     .first();
+}
+
+async function openTableView(args: {
+  page: Page;
+  controlName: string;
+  tableTestId: string;
+  maxAttempts?: number;
+}): Promise<Locator> {
+  const control = args.page.getByRole("radiogroup", {
+    name: args.controlName,
+  });
+  const table = args.page.getByTestId(args.tableTestId);
+  const maxAttempts = args.maxAttempts ?? 4;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    await selectSegmentedControlOption(control, "Table");
+
+    try {
+      await expect(table).toBeVisible({ timeout: 3_000 });
+      return table;
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxAttempts) {
+        await args.page.waitForTimeout(150);
+      }
+    }
+  }
+
+  throw new Error(
+    `Failed to open table view for "${args.controlName}" after ${maxAttempts} attempts.`,
+    { cause: lastError },
+  );
+}
+
+async function doubleClickRowUntilLedgerNavigation(args: {
+  page: Page;
+  row: Locator;
+  accountBookId: string;
+  period: string;
+  maxAttempts?: number;
+}) {
+  const maxAttempts = args.maxAttempts ?? 4;
+  const ledgerPathPattern = new RegExp(`^/${args.accountBookId}/[^/]+$`);
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    await args.row.dblclick();
+
+    try {
+      await expect
+        .poll(
+          () => {
+            const url = new URL(args.page.url());
+            return {
+              matchesLedgerPath: ledgerPathPattern.test(url.pathname),
+              isPeriodRoute: url.pathname === `/${args.accountBookId}/period`,
+              period: url.searchParams.get("period"),
+            };
+          },
+          { timeout: 2_500 },
+        )
+        .toEqual({
+          matchesLedgerPath: true,
+          isPeriodRoute: false,
+          period: args.period,
+        });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxAttempts) {
+        await args.page.waitForTimeout(150);
+      }
+    }
+  }
+
+  throw new Error(
+    `Failed to open ledger from period drilldown after ${maxAttempts} attempts.`,
+    { cause: lastError },
+  );
 }
 
 async function expandRowIfCollapsed(row: Locator) {
@@ -40,17 +120,20 @@ test("period allocation table account drilldown opens ledger with selected perio
   await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
   await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
 
-  const allocationChartTypeControl = page.getByRole("radiogroup", {
-    name: "Allocation chart type",
+  const allocationTable = await openTableView({
+    page,
+    controlName: "Allocation chart type",
+    tableTestId: "period-allocation-breakdown-table",
   });
-  await selectSegmentedControlOption(allocationChartTypeControl, "Table");
-
-  const allocationTable = page.getByTestId("period-allocation-breakdown-table");
-  await expect(allocationTable).toBeVisible();
 
   const usdRow = gridRowByText(allocationTable, seededBalances.usdAccountName);
   await expect(usdRow).toBeVisible();
-  await usdRow.dblclick();
+  await doubleClickRowUntilLedgerNavigation({
+    page,
+    row: usdRow,
+    accountBookId: seeded.accountBookId,
+    period,
+  });
 
   await expect
     .poll(() => {
@@ -90,15 +173,11 @@ test("period gains/losses table unit-account drilldown opens reconciliation page
   await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
   await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
 
-  const gainsLossesChartTypeControl = page.getByRole("radiogroup", {
-    name: "Gains/losses chart type",
+  const gainsLossesTable = await openTableView({
+    page,
+    controlName: "Gains/losses chart type",
+    tableTestId: "period-gains-losses-breakdown-table",
   });
-  await selectSegmentedControlOption(gainsLossesChartTypeControl, "Table");
-
-  const gainsLossesTable = page.getByTestId(
-    "period-gains-losses-breakdown-table",
-  );
-  await expect(gainsLossesTable).toBeVisible();
 
   const securityUnitRow = gridRowByText(gainsLossesTable, "AAPL (USD)");
   await expect(securityUnitRow).toBeVisible();
@@ -162,15 +241,11 @@ test("period explicit gains/losses rows drill to gain/loss ledger", async ({
   await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
   await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
 
-  const gainsLossesChartTypeControl = page.getByRole("radiogroup", {
-    name: "Gains/losses chart type",
+  const gainsLossesTable = await openTableView({
+    page,
+    controlName: "Gains/losses chart type",
+    tableTestId: "period-gains-losses-breakdown-table",
   });
-  await selectSegmentedControlOption(gainsLossesChartTypeControl, "Table");
-
-  const gainsLossesTable = page.getByTestId(
-    "period-gains-losses-breakdown-table",
-  );
-  await expect(gainsLossesTable).toBeVisible();
 
   const explicitRow = gridRowByText(gainsLossesTable, seeded.cashAccount.name);
   await expect(explicitRow).toBeVisible();
