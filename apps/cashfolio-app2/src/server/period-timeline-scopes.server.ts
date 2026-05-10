@@ -3,7 +3,7 @@ import {
   round2,
   type BreakdownHierarchyAccumulatorItem,
 } from "./period-helpers";
-import { moneyAdd, moneySum, toMoneyNumber } from "../shared/money";
+import { moneyAdd, moneyRound2, moneySum, toMoneyNumber } from "../shared/money";
 import {
   parseTimelineScopeSelection,
   type TimelineScopeOption,
@@ -43,8 +43,8 @@ function resolveScopedAmountFromMap(args: {
   groupById: Map<string, { parentGroupId: string | null }>;
 }): number {
   if (args.scope === "total") {
-    return round2(
-      toMoneyNumber(
+    return toMoneyNumber(
+      moneyRound2(
         moneySum(
           Array.from(args.amountByAccountId.values(), (item) => item.amount),
         ),
@@ -71,7 +71,7 @@ function resolveScopedAmountFromMap(args: {
     }
   }
 
-  return round2(toMoneyNumber(amount));
+  return toMoneyNumber(moneyRound2(amount));
 }
 
 export function resolveScopedMetricValue(args: {
