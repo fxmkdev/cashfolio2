@@ -2,6 +2,7 @@ import {
   Autocomplete,
   Card,
   Group,
+  SegmentedControl,
   Select,
   Stack,
   Text,
@@ -300,7 +301,6 @@ export function TimelinePageView({
             </LinkButton>
             <SegmentedControl
               value={selectedMode}
-              w={120}
               aria-label="Timeline period mode"
               data={[
                 { label: "Monthly", value: "month" },
