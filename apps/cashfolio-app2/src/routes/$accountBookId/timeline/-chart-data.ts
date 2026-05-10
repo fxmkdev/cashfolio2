@@ -4,7 +4,7 @@ import {
   parseExplicitPeriodSelection,
 } from "@/shared/period";
 import type { PeriodTimelineResponse } from "@/server/period-timeline";
-import type { TimelineMetric } from "./-page-types";
+import type { TimelineMetric, TimelinePeriodMode } from "./-page-types";
 
 export type TimelineChartDatum = {
   periodValue: string;
@@ -23,6 +23,7 @@ export type TimelineChartDatum = {
   netWorthPositive: number | null;
   netWorthNegative: number | null;
   cumulativeMetric: number;
+  rollingAverageMetric: number | null;
 };
 
 export type TimelineOpeningBalancePoint =
@@ -151,8 +152,48 @@ export function mapTimelinePointsToChartData(
         netWorthPositive: getNetWorthPositiveValue(point.netWorth),
         netWorthNegative: getNetWorthNegativeValue(point.netWorth),
         cumulativeMetric: 0,
+        rollingAverageMetric: null,
       },
     ];
+  });
+}
+
+function getRollingAverageWindowSize(periodMode: TimelinePeriodMode): number {
+  return periodMode === "year" ? 5 : 12;
+}
+
+export function addRollingAverageMetricToChartData(args: {
+  chartData: TimelineChartDatum[];
+  selectedMetric: TimelineMetric;
+  periodMode: TimelinePeriodMode;
+}): TimelineChartDatum[] {
+  if (isAreaTimelineMetric(args.selectedMetric)) {
+    return args.chartData;
+  }
+
+  const windowSize = getRollingAverageWindowSize(args.periodMode);
+  const currentPeriodIndex = args.chartData.length - 1;
+
+  return args.chartData.map((datum, index) => {
+    if (index === currentPeriodIndex) {
+      return {
+        ...datum,
+        rollingAverageMetric: null,
+      };
+    }
+
+    const startIndex = Math.max(0, index - windowSize + 1);
+    const trailingValues = args.chartData
+      .slice(startIndex, index + 1)
+      .map((point) => getTimelineMetricValue(point, args.selectedMetric));
+    const rollingAverageMetric =
+      trailingValues.reduce((sum, value) => sum + value, 0) /
+      trailingValues.length;
+
+    return {
+      ...datum,
+      rollingAverageMetric,
+    };
   });
 }
 
@@ -202,6 +243,7 @@ export function prependOpeningBalanceChartDatum(args: {
       args.openingBalancePoint.netWorth,
     ),
     cumulativeMetric: 0,
+    rollingAverageMetric: null,
   };
 
   return [openingDatum, ...args.chartData];

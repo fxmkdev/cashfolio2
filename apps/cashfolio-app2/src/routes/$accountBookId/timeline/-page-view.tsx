@@ -33,6 +33,7 @@ import {
 } from "./-page-types";
 import { type TimelineScopeSelection } from "@/shared/timeline-scope";
 import {
+  addRollingAverageMetricToChartData,
   createTimelineChartOptions,
   mapTimelinePointsToChartData,
   prependOpeningBalanceChartDatum,
@@ -122,8 +123,13 @@ export function TimelinePageView({
   );
 
   const baseChartData = useMemo(
-    () => mapTimelinePointsToChartData(timeline.points),
-    [timeline.points],
+    () =>
+      addRollingAverageMetricToChartData({
+        chartData: mapTimelinePointsToChartData(timeline.points),
+        selectedMetric,
+        periodMode: selectedMode,
+      }),
+    [selectedMetric, selectedMode, timeline.points],
   );
   const chartData = useMemo(
     () =>
