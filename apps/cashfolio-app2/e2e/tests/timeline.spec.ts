@@ -44,7 +44,7 @@ test("timeline page is reachable and persists selected period mode across refres
     periodModeControl.getByRole("radio", { name: "Yearly" }),
   ).toBeChecked();
 
-  await page.getByRole("link", { name: "Period" }).click();
+  await page.getByRole("main").getByRole("link", { name: "Period" }).click();
   await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/period$`));
   await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
 });
