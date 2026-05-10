@@ -55,7 +55,13 @@ Related docs:
 - `$accountBookId/timeline/route.tsx` - timeline page showing monthly/yearly
   metric history as a full-page chart with metric-specific rendering:
   - Flow metrics (`totalReturn`, `savings`, `income`, `expenses`, `gainsLosses`)
-    render as bar + cumulative line (legend toggles each series on/off)
+    render as bar + cumulative line + rolling-average line (legend toggles each
+    series on/off)
+    - Rolling-average window depends on mode:
+      - monthly: trailing 12 periods
+      - yearly: trailing 5 periods
+    - Rolling-average points are hidden for the current period (latest timeline
+      period).
   - Balance metrics (`assets`, `liabilities`, `netWorth`) render as area charts:
     assets (green), liabilities (red), net worth sign-split (green/red)
   - Cumulative line rebases to the currently visible range for flow metrics so

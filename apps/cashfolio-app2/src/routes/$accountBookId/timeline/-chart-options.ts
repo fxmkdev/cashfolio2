@@ -10,17 +10,16 @@ import {
   type TimelineMetric,
   type TimelinePeriodMode,
 } from "./-page-types";
-import {
-  TimelineChartDatum,
-  getTimelineMetricValue,
-  isAreaTimelineMetric,
-} from "./-chart-data";
+import { isAreaTimelineMetric } from "./-chart-data";
+import type { TimelineChartDatum } from "./-chart-data";
+import { getAxisDomainForMetric } from "./-chart-options-axis-domain";
 import {
   getTimelineRangeButtons,
   getTimelineRangeControlStyles,
 } from "./-range-controls";
 
 export {
+  addRollingAverageMetricToChartData,
   mapTimelinePointsToChartData,
   prependOpeningBalanceChartDatum,
   rebaseTimelineChartDataCumulativeToVisibleRange,
@@ -40,41 +39,6 @@ const pointDateFormatter = new Intl.DateTimeFormat("en-CH", {
   day: "2-digit",
   timeZone: "UTC",
 });
-
-function getAxisDomainForMetric(args: {
-  chartData: TimelineChartDatum[];
-  selectedMetric: TimelineMetric;
-}): { min?: number; max?: number } {
-  const values = args.chartData.map((datum) =>
-    getTimelineMetricValue(datum, args.selectedMetric),
-  );
-  const finiteValues = values.filter((value) => Number.isFinite(value));
-
-  if (finiteValues.length === 0) {
-    return {};
-  }
-
-  if (!isAreaTimelineMetric(args.selectedMetric)) {
-    const min = Math.min(...finiteValues);
-    const max = Math.max(...finiteValues);
-    if (min >= 0) {
-      return { min: 0 };
-    }
-    if (max <= 0) {
-      return { max: 0 };
-    }
-    return {};
-  }
-
-  let min = Math.min(0, ...finiteValues);
-  let max = Math.max(0, ...finiteValues);
-  if (min === max && min === 0) {
-    min = -1;
-    max = 1;
-  }
-
-  return { min, max };
-}
 
 export function createTimelineChartOptions(args: {
   chartData: TimelineChartDatum[];
@@ -102,6 +66,12 @@ export function createTimelineChartOptions(args: {
     ? args.theme.colors.gray[7]
     : args.theme.colors.gray[2];
   const currentPeriodBandFillOpacity = args.isDarkMode ? 0.2 : 0.45;
+  const rollingAverageStrokeColor = args.isDarkMode
+    ? (args.theme.colors.cyan?.[4] ?? args.theme.colors.blue[3])
+    : (args.theme.colors.cyan?.[7] ?? args.theme.colors.blue[8]);
+  const rollingAverageMarkerFillColor = args.isDarkMode
+    ? (args.theme.colors.cyan?.[3] ?? args.theme.colors.blue[2])
+    : (args.theme.colors.cyan?.[6] ?? args.theme.colors.blue[7]);
   const currentPeriod = args.chartData.at(-1);
   const lastMetricDate = args.chartData.at(-1)?.periodMetricDate;
   const rangeButtons = getTimelineRangeButtons(args.periodMode);
@@ -109,6 +79,9 @@ export function createTimelineChartOptions(args: {
   const selectedMetricLabel = getTimelineMetricLabel(args.selectedMetric);
   const selectedMetricKey = args.selectedMetric;
   const cumulativeMetricLabel = `Cumulative ${selectedMetricLabel}`;
+  const rollingAverageMetricLabel = `${
+    args.periodMode === "year" ? "5Y" : "12M"
+  } Rolling Avg ${selectedMetricLabel}`;
   const getAreaTooltipHeading = (datum: TimelineChartDatum) =>
     pointDateFormatter.format(datum.periodMetricDate);
   const axisDomain = getAxisDomainForMetric({
@@ -290,6 +263,38 @@ export function createTimelineChartOptions(args: {
                     value: args.currencyFormatter.format(
                       point.cumulativeMetric,
                     ),
+                  },
+                ],
+              };
+            },
+          },
+        },
+        {
+          type: "line" as const,
+          xKey: "periodStart",
+          yKey: "rollingAverageMetric",
+          yName: rollingAverageMetricLabel,
+          stroke: rollingAverageStrokeColor,
+          strokeWidth: 2,
+          lineDash: [6, 4],
+          marker: {
+            size: 5,
+            fill: rollingAverageMarkerFillColor,
+            stroke: rollingAverageStrokeColor,
+          },
+          tooltip: {
+            renderer: ({ datum }: { datum: unknown }) => {
+              const point = datum as TimelineChartDatum;
+              const rollingAverageValue = point.rollingAverageMetric;
+              return {
+                heading: point.periodLabel,
+                data: [
+                  {
+                    label: rollingAverageMetricLabel,
+                    value:
+                      rollingAverageValue == null
+                        ? "-"
+                        : args.currencyFormatter.format(rollingAverageValue),
                   },
                 ],
               };
