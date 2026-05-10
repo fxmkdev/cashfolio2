@@ -1,5 +1,5 @@
 import { IconBolt } from "@tabler/icons-react";
-import { Badge, Box, Button, Group, Modal, Tooltip } from "@mantine/core";
+import { Badge, Button, Group, Modal, Tooltip } from "@mantine/core";
 import type { AgGridReactProps } from "ag-grid-react";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 import { DataGrid } from "@/components/data-grid";
@@ -16,6 +16,7 @@ import {
   type SimpleTransactionDraftValues,
 } from "@/components/simple-transaction-modal";
 import { TopPageHeader } from "@/components/top-page-header";
+import { PageShell } from "@/components/page-shell";
 import type { ReactNode } from "react";
 import type { Unit } from "@/.prisma-client/enums";
 import { getTypeLabel } from "@/shared/account-utils";
@@ -193,17 +194,7 @@ export function LedgerPageView({
   onConfirmDeleteTransaction,
 }: LedgerPageViewProps) {
   return (
-    <Box
-      py="xl"
-      px="xl"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        flex: 1,
-        width: "100%",
-        minHeight: 0,
-      }}
-    >
+    <PageShell>
       <TopPageHeader
         heading={
           <AccountPathHeading
@@ -398,6 +389,6 @@ export function LedgerPageView({
         name={deletingTransaction?.description}
         onConfirm={onConfirmDeleteTransaction}
       />
-    </Box>
+    </PageShell>
   );
 }

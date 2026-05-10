@@ -1,7 +1,6 @@
 import {
   Alert,
   Card,
-  Container,
   Stack,
   Tabs,
   Text,
@@ -24,6 +23,7 @@ import { ensureChartModulesRegistered } from "@/ag-chart-modules";
 import { DataGrid } from "@/components/data-grid";
 import { LinkTab } from "@/components/link-tab";
 import { TopPageHeader } from "@/components/top-page-header";
+import { PageShell } from "@/components/page-shell";
 import {
   getValuationCacheSeries,
   type ValuationCacheSeriesPoint,
@@ -418,7 +418,7 @@ export function ValuationCachePageView({
   );
 
   return (
-    <Container fluid py="xl" px="xl" className={classes.page}>
+    <PageShell className={classes.page}>
       <TopPageHeader heading={<Title order={2}>Valuation Cache</Title>} />
 
       <Tabs value={selectedTab}>
@@ -511,6 +511,6 @@ export function ValuationCachePageView({
           )}
         </Card>
       </div>
-    </Container>
+    </PageShell>
   );
 }

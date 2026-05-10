@@ -1,8 +1,6 @@
 import {
   Alert,
-  Container,
   Grid,
-  Group,
   SimpleGrid,
   Stack,
   Text,
@@ -14,6 +12,7 @@ import { IconAlertTriangle } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
 import { TopPageHeader } from "@/components/top-page-header";
+import { PageShell } from "@/components/page-shell";
 import type { getPeriodOverview } from "@/server/period";
 import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import { formatMonthPeriodValue } from "@/shared/period";
@@ -352,7 +351,7 @@ export function PeriodPageView({
   };
 
   return (
-    <Container fluid py="xl" px="xl">
+    <PageShell>
       <TopPageHeader heading={<Title order={2}>Period</Title>} />
 
       <Stack gap="lg">
@@ -517,6 +516,6 @@ export function PeriodPageView({
           Showing nearest supported period for the requested value.
         </Text>
       ) : null}
-    </Container>
+    </PageShell>
   );
 }

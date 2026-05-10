@@ -1,16 +1,8 @@
-import {
-  Alert,
-  Button,
-  Card,
-  Container,
-  Group,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
+import { Alert, Button, Card, Group, Stack, Text, Title } from "@mantine/core";
 import { IconAlertTriangle, IconArrowLeft } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { DataGrid } from "@/components/data-grid";
+import { PageShell } from "@/components/page-shell";
 import { TopPageHeader } from "@/components/top-page-header";
 import type { PeriodGainLossReconciliation } from "@/server/period-gain-loss-reconciliation";
 import { formatMonthPeriodValue } from "@/shared/period";
@@ -73,7 +65,7 @@ export function GainLossReconciliationPageView({
 
   if (!reconciliation) {
     return (
-      <Container fluid py="xl" px="xl">
+      <PageShell>
         <TopPageHeader
           heading={<Title order={2}>{heading}</Title>}
           actions={headerActions}
@@ -81,7 +73,7 @@ export function GainLossReconciliationPageView({
         <Alert color="yellow" variant="light" title="No reconciliation data">
           No gain/loss reconciliation is available for this account and period.
         </Alert>
-      </Container>
+      </PageShell>
     );
   }
 
@@ -205,7 +197,7 @@ export function GainLossReconciliationPageView({
   };
 
   return (
-    <Container fluid py="xl" px="xl">
+    <PageShell>
       <TopPageHeader
         heading={<Title order={2}>{heading}</Title>}
         actions={headerActions}
@@ -351,6 +343,6 @@ export function GainLossReconciliationPageView({
           Showing nearest supported period for the requested value.
         </Text>
       ) : null}
-    </Container>
+    </PageShell>
   );
 }

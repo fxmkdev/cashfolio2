@@ -1,7 +1,6 @@
 import {
   Badge,
   Card,
-  Container,
   Group,
   Stack,
   Text,
@@ -13,6 +12,7 @@ import type { AgCartesianChartOptions } from "ag-charts-community";
 import { useMemo, type ReactNode } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
 import { AccountPathHeading } from "@/components/account-path-heading";
+import { PageShell } from "@/components/page-shell";
 import { TopPageHeader } from "@/components/top-page-header";
 import { getTypeLabel } from "@/shared/account-utils";
 import type { TabValue } from "@/shared/account-tabs";
@@ -153,7 +153,7 @@ export function LedgerBalanceChartPageView({
   );
 
   return (
-    <Container fluid py="xl" px="xl" className={classes.page}>
+    <PageShell className={classes.page}>
       <TopPageHeader
         heading={
           <AccountPathHeading
@@ -195,6 +195,6 @@ export function LedgerBalanceChartPageView({
           </Text>
         )}
       </Card>
-    </Container>
+    </PageShell>
   );
 }

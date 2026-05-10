@@ -266,15 +266,15 @@ export function AccountBookShell({
             aria-label="Toggle navigation"
             size="sm"
           />
-          <Text fw={600}>Navigation</Text>
+          <Text fw={600}>Cashfolio</Text>
         </Group>
       </AppShell.Header>
 
       <AppShell.Navbar p="sm">
         <AppShell.Section grow>
           <Stack gap="xs">
-            <Text size="sm" fw={600} c="dimmed" px="xs" pt="xs">
-              Account Book
+            <Text size="xl" fw={600} px="xs" pt="xs">
+              Cashfolio
             </Text>
             <Divider />
             <LinkNavLink
@@ -331,8 +331,7 @@ export function AccountBookShell({
         style={{
           display: "flex",
           flexDirection: "column",
-          height:
-            "calc(100dvh - var(--app-shell-header-offset) - var(--mantine-spacing-md) - var(--mantine-spacing-md))",
+          height: "100dvh",
           minHeight: 0,
         }}
       >

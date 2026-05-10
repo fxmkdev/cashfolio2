@@ -1,5 +1,4 @@
 import {
-  Box,
   Card,
   Group,
   SegmentedControl,
@@ -19,6 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
 import type { PeriodTimelineResponse } from "@/server/period-timeline";
 import { TopPageHeader } from "@/components/top-page-header";
+import { PageShell } from "@/components/page-shell";
 import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import {
   createDisplayNumberFormatter,
@@ -245,7 +245,7 @@ export function TimelinePageView({
   }, [accountBookId, selectedMode]);
 
   return (
-    <Box py="xl" px="xl" className={classes.page} style={{ width: "100%" }}>
+    <PageShell className={classes.page}>
       <TopPageHeader
         heading={<Title order={2}>Timeline</Title>}
         actions={
@@ -303,6 +303,6 @@ export function TimelinePageView({
           </div>
         )}
       </Card>
-    </Box>
+    </PageShell>
   );
 }

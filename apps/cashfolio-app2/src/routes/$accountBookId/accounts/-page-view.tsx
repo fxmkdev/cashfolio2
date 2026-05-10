@@ -1,4 +1,4 @@
-import { Box, Button, Group, Tabs, Title } from "@mantine/core";
+import { Button, Group, Tabs, Title } from "@mantine/core";
 import { IconArchive, IconPlus } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
 import { LinkButton } from "@/components/link-button";
@@ -18,6 +18,7 @@ import {
 import { ConfirmArchiveModal } from "@/components/confirm-archive-modal";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 import { DataGrid } from "@/components/data-grid";
+import { PageShell } from "@/components/page-shell";
 import {
   ReorderGroupChildrenModal,
   type ReorderGroupChildRow,
@@ -135,17 +136,7 @@ export function AccountsPageView({
   const isArchivedMode = mode === "archived";
 
   return (
-    <Box
-      py="xl"
-      px="xl"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        flex: 1,
-        width: "100%",
-        minHeight: 0,
-      }}
-    >
+    <PageShell>
       <TopPageHeader
         heading={
           isArchivedMode ? (
@@ -312,6 +303,6 @@ export function AccountsPageView({
         initialRows={selectedSiblingRows}
         onReorder={onReorderSiblings}
       />
-    </Box>
+    </PageShell>
   );
 }
