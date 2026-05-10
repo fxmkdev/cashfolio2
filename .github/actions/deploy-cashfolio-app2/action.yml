@@ -1,0 +1,124 @@
+name: Deploy cashfolio-app2
+description: Shared deploy flow for cashfolio-app2 on Fly.io
+inputs:
+  image:
+    description: Full container image reference to deploy
+    required: true
+  high_availability:
+    description: Whether to deploy with Fly high availability enabled
+    required: false
+    default: "true"
+  fly_app:
+    description: Fly app name
+    required: true
+  canonical_hostname:
+    description: Canonical hostname used by the app
+    required: true
+  base_url:
+    description: Base URL used by the app
+    required: true
+  fly_primary_region:
+    description: Fly primary region
+    required: true
+  fly_min_machines_running:
+    description: Fly min machines running
+    required: true
+  fly_memory:
+    description: Fly memory value
+    required: true
+  fly_cpu_kind:
+    description: Fly CPU kind
+    required: true
+  fly_cpus:
+    description: Fly CPU count
+    required: true
+  logto_endpoint:
+    description: Logto endpoint
+    required: true
+  logto_tenant_id:
+    description: Logto tenant ID
+    required: true
+  logto_app_id:
+    description: Logto app ID
+    required: true
+  fly_api_token:
+    description: Fly API token
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Prepare configuration file
+      shell: bash
+      run: |
+        envsubst \
+            < apps/cashfolio-app2/fly.template.toml \
+            > apps/cashfolio-app2/fly.generated.toml
+
+        echo "Generated configuration file:"
+        cat apps/cashfolio-app2/fly.generated.toml
+      env:
+        FLY_APP: ${{ inputs.fly_app }}
+        FLY_PRIMARY_REGION: ${{ inputs.fly_primary_region }}
+        FLY_MIN_MACHINES_RUNNING: ${{ inputs.fly_min_machines_running }}
+        FLY_MEMORY: ${{ inputs.fly_memory }}
+        FLY_CPU_KIND: ${{ inputs.fly_cpu_kind }}
+        FLY_CPUS: ${{ inputs.fly_cpus }}
+        CANONICAL_HOSTNAME: ${{ inputs.canonical_hostname }}
+        BASE_URL: ${{ inputs.base_url }}
+        LOGTO_ENDPOINT: ${{ inputs.logto_endpoint }}
+        LOGTO_TENANT_ID: ${{ inputs.logto_tenant_id }}
+        LOGTO_APP_ID: ${{ inputs.logto_app_id }}
+    - name: Log in to Fly registry
+      uses: docker/login-action@v4
+      with:
+        registry: registry.fly.io
+        username: x
+        password: ${{ inputs.fly_api_token }}
+    - name: Wait for cashfolio-app2 image in Fly registry
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        IMAGE="${{ inputs.image }}"
+        MAX_ATTEMPTS=24
+        SLEEP_SECONDS=15
+        LAST_ERROR=""
+
+        for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+          ERROR_FILE="$(mktemp)"
+          if docker manifest inspect "$IMAGE" > /dev/null 2>"$ERROR_FILE"; then
+            rm -f "$ERROR_FILE"
+            echo "Image is available: $IMAGE"
+            exit 0
+          fi
+
+          ERROR_TEXT="$(tr '\n' ' ' < "$ERROR_FILE" | sed -E 's/[[:space:]]+/ /g')"
+          rm -f "$ERROR_FILE"
+          LAST_ERROR="$ERROR_TEXT"
+
+          if printf '%s' "$ERROR_TEXT" | grep -Eiq '(unauthorized|authentication required|denied|forbidden|insufficient_scope|access denied)'; then
+            echo "Registry auth/permission error while checking image: $IMAGE"
+            echo "docker manifest inspect error: $ERROR_TEXT"
+            exit 1
+          fi
+
+          if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+            echo "[$attempt/$MAX_ATTEMPTS] Waiting for image: $IMAGE"
+            sleep "$SLEEP_SECONDS"
+          fi
+        done
+
+        echo "Timed out waiting for image: $IMAGE"
+        if [ -n "$LAST_ERROR" ]; then
+          echo "Last docker manifest inspect error: $LAST_ERROR"
+        fi
+        exit 1
+    - name: Deploy cashfolio-app2
+      shell: bash
+      run: |
+        flyctl deploy \
+          --config apps/cashfolio-app2/fly.generated.toml \
+          --ha=${{ inputs.high_availability }} \
+          --image "${{ inputs.image }}"
+      env:
+        FLY_API_TOKEN: ${{ inputs.fly_api_token }}
