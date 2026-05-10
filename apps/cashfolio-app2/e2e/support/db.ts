@@ -361,6 +361,7 @@ export async function getTransactionBookingsByDescription(args: {
       accountBookId: args.accountBookId,
       description: args.description,
     },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     include: {
       bookings: {
         orderBy: [{ sortOrder: "asc" }, { id: "asc" }],

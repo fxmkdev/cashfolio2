@@ -780,22 +780,33 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   await editDialog.getByRole("button", { name: "Save" }).click();
   await expect(agGridRowByText(page, "E2E Unitless Equity Edit")).toBeVisible();
 
-  const bookings = await getTransactionBookingsByDescription({
-    accountBookId: seeded.accountBookId,
-    description: "E2E Unitless Equity Edit",
-  });
-  const unitlessEquityBooking = bookings.find(
-    (booking) => booking.accountId === seeded.unitlessEquityAccount.id,
-  );
-  const lockedBooking = bookings.find(
-    (booking) => booking.accountId !== seeded.unitlessEquityAccount.id,
-  );
-  expect(unitlessEquityBooking).toBeDefined();
-  expect(lockedBooking).toBeDefined();
-  expect(unitlessEquityBooking).toMatchObject({
-    unit: lockedBooking?.unit,
-    symbol: lockedBooking?.symbol,
-    tradeCurrency: lockedBooking?.tradeCurrency,
-  });
-  expect(unitlessEquityBooking?.value).toBe(-(lockedBooking?.value ?? 0));
+  await expect
+    .poll(
+      async () => {
+        const bookings = await getTransactionBookingsByDescription({
+          accountBookId: seeded.accountBookId,
+          description: "E2E Unitless Equity Edit",
+        });
+        const unitlessEquityBooking = bookings.find(
+          (booking) => booking.accountId === seeded.unitlessEquityAccount.id,
+        );
+        const lockedBooking = bookings.find(
+          (booking) => booking.accountId !== seeded.unitlessEquityAccount.id,
+        );
+        if (!unitlessEquityBooking || !lockedBooking) {
+          return false;
+        }
+
+        return (
+          unitlessEquityBooking.unit === lockedBooking.unit &&
+          unitlessEquityBooking.symbol === lockedBooking.symbol &&
+          unitlessEquityBooking.tradeCurrency === lockedBooking.tradeCurrency &&
+          unitlessEquityBooking.value === -lockedBooking.value
+        );
+      },
+      {
+        timeout: 10_000,
+      },
+    )
+    .toBe(true);
 });
