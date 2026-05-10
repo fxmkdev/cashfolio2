@@ -76,10 +76,18 @@ export function parseTimelineSearch(
   search: Record<string, unknown>,
 ): TimelineSearch {
   return {
-    mode: isTimelinePeriodMode(search.mode) ? search.mode : undefined,
-    metric: isTimelineMetric(search.metric) ? search.metric : undefined,
-    incomeScope: parseTimelineScopeSelection(search.incomeScope),
-    expenseScope: parseTimelineScopeSelection(search.expenseScope),
+    ...("mode" in search
+      ? { mode: isTimelinePeriodMode(search.mode) ? search.mode : undefined }
+      : {}),
+    ...("metric" in search
+      ? { metric: isTimelineMetric(search.metric) ? search.metric : undefined }
+      : {}),
+    ...("incomeScope" in search
+      ? { incomeScope: parseTimelineScopeSelection(search.incomeScope) }
+      : {}),
+    ...("expenseScope" in search
+      ? { expenseScope: parseTimelineScopeSelection(search.expenseScope) }
+      : {}),
   };
 }
 

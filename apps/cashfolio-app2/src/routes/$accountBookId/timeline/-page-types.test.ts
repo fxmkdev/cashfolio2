@@ -43,6 +43,14 @@ describe("isTimelineMetric", () => {
 });
 
 describe("parseTimelineSearch", () => {
+  test("keeps validated search shape minimal when keys are absent", () => {
+    const result = parseTimelineSearch({ mode: "month" });
+    expect(result).toEqual({ mode: "month" });
+    expect("metric" in result).toBe(false);
+    expect("incomeScope" in result).toBe(false);
+    expect("expenseScope" in result).toBe(false);
+  });
+
   test("keeps valid mode values", () => {
     expect(parseTimelineSearch({ mode: "month" })).toEqual({ mode: "month" });
     expect(parseTimelineSearch({ mode: "year" })).toEqual({ mode: "year" });
