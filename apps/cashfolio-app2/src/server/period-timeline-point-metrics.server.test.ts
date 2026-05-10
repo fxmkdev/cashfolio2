@@ -335,4 +335,70 @@ describe("loadPeriodTimelinePointMetrics", () => {
     ]);
     expect(result.scopeOptions.expenses).toEqual([]);
   });
+
+  test("guards scoped traversal against cyclic group hierarchies", async () => {
+    const baseData = createBaseData({
+      overrides: {
+        allAccountGroups: [
+          { id: "grp-root", name: "Root", parentGroupId: null },
+          { id: "grp-cycle-a", name: "Cycle A", parentGroupId: "grp-cycle-b" },
+          { id: "grp-cycle-b", name: "Cycle B", parentGroupId: "grp-cycle-a" },
+        ],
+      },
+    });
+    getOrLoadPeriodBaseData.mockResolvedValue(baseData);
+    processPeriodEquityBookingsFromBaseData.mockImplementation(
+      async ({
+        equityAggregation,
+      }: {
+        equityAggregation: {
+          income: number;
+          expenses: number;
+          explicitGainLoss: number;
+          incomeAmountByAccountId: Map<string, unknown>;
+          expenseAmountByAccountId: Map<string, unknown>;
+        };
+      }) => {
+        equityAggregation.income = 50;
+        equityAggregation.expenses = 0;
+        equityAggregation.explicitGainLoss = 0;
+        equityAggregation.incomeAmountByAccountId.set("income-cycle", {
+          accountId: "income-cycle",
+          accountName: "Cycle Income",
+          groupId: "grp-cycle-a",
+          amount: 50,
+        });
+      },
+    );
+    computePeriodHoldingGainLoss.mockResolvedValue({
+      realizedGainLoss: 0,
+      unrealizedGainLoss: 0,
+      convertedCount: 0,
+      skippedCount: 0,
+    });
+    convertBookingValueToReference.mockResolvedValue(1);
+    getUnitToReferenceExchangeRate.mockResolvedValue(1);
+
+    const result = await loadPeriodTimelinePointMetrics({
+      accountBookId: "book-1",
+      period: "2026-02",
+      metricScopeFilter: {
+        metric: "income",
+        scope: "group:grp-root",
+      },
+    });
+
+    expect(result.scopedMetricValue).toBe(0);
+    const optionValues = result.scopeOptions.income.map(
+      (option) => option.value,
+    );
+    expect(optionValues).toHaveLength(3);
+    expect(optionValues).toEqual(
+      expect.arrayContaining([
+        "group:grp-cycle-a",
+        "group:grp-cycle-b",
+        "account:income-cycle",
+      ]),
+    );
+  });
 });

@@ -267,10 +267,15 @@ function hasGroupInPath(args: {
   groupById: Map<string, { parentGroupId: string | null }>;
 }): boolean {
   let groupId = args.accountGroupId;
+  const visitedGroupIds = new Set<string>();
   while (groupId) {
     if (groupId === args.targetGroupId) {
       return true;
     }
+    if (visitedGroupIds.has(groupId)) {
+      return false;
+    }
+    visitedGroupIds.add(groupId);
     groupId = args.groupById.get(groupId)?.parentGroupId ?? null;
   }
 
@@ -306,7 +311,7 @@ function resolveScopedAmountFromMap(args: {
   }
 
   const groupId = args.scope.slice("group:".length);
-  let amount = 0;
+  let amount = moneySum([]);
   for (const item of args.amountByAccountId.values()) {
     if (
       hasGroupInPath({
@@ -315,11 +320,11 @@ function resolveScopedAmountFromMap(args: {
         groupById: args.groupById,
       })
     ) {
-      amount = toMoneyNumber(moneyAdd(amount, item.amount));
+      amount = moneyAdd(amount, item.amount);
     }
   }
 
-  return round2(amount);
+  return round2(toMoneyNumber(amount));
 }
 
 function resolveScopedMetricValue(args: {
@@ -435,7 +440,12 @@ function buildTimelineScopeOptions(args: {
     }
 
     let groupId: string | null = item.groupId;
+    const visitedGroupIds = new Set<string>();
     while (groupId) {
+      if (visitedGroupIds.has(groupId)) {
+        break;
+      }
+      visitedGroupIds.add(groupId);
       const groupValue = `group:${groupId}` as const;
       groupOptionByValue.set(groupValue, {
         value: groupValue,
