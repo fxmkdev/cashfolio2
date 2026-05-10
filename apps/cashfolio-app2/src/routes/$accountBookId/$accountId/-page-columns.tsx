@@ -19,9 +19,20 @@ import {
 import type { LedgerRow } from "./-page-types";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/opening-balances";
 
+export function buildCounterpartyLedgerSearch(args: {
+  transactionId: string;
+  selectedPeriodValue?: string;
+}) {
+  return {
+    transactionId: args.transactionId,
+    period: args.selectedPeriodValue,
+  };
+}
+
 export function useLedgerColumnDefs(args: {
   accountBookId: string;
   hasPeriodFilter: boolean;
+  selectedPeriodValue?: string;
   referenceCurrency: string | null;
   isEquity: boolean;
   isOpeningBalances: boolean;
@@ -45,6 +56,7 @@ export function useLedgerColumnDefs(args: {
   const {
     accountBookId,
     hasPeriodFilter,
+    selectedPeriodValue,
     referenceCurrency,
     isEquity,
     isOpeningBalances,
@@ -84,7 +96,10 @@ export function useLedgerColumnDefs(args: {
               <LinkAnchor
                 to="/$accountBookId/$accountId"
                 params={{ accountBookId, accountId: account.id }}
-                search={{ transactionId: data.transactionId }}
+                search={buildCounterpartyLedgerSearch({
+                  transactionId: data.transactionId,
+                  selectedPeriodValue,
+                })}
                 size="sm"
               >
                 {account.name}
@@ -314,6 +329,7 @@ export function useLedgerColumnDefs(args: {
   }, [
     accountBookId,
     hasPeriodFilter,
+    selectedPeriodValue,
     referenceCurrency,
     isEquity,
     isOpeningBalances,

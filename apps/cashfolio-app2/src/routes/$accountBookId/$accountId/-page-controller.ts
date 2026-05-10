@@ -33,6 +33,7 @@ export function useLedgerPageController(args: {
   loaderData: LedgerPageLoaderData;
   accountBookId: string;
   hasPeriodFilter: boolean;
+  selectedPeriodValue?: string;
   pendingScrollRef: { current: string | undefined };
   invalidate: () => void;
 }): Omit<
@@ -235,6 +236,7 @@ export function useLedgerPageController(args: {
   const columnDefs = useLedgerColumnDefs({
     accountBookId: args.accountBookId,
     hasPeriodFilter: args.hasPeriodFilter,
+    selectedPeriodValue: args.selectedPeriodValue,
     referenceCurrency: args.loaderData.referenceCurrency,
     isEquity,
     isOpeningBalances,
