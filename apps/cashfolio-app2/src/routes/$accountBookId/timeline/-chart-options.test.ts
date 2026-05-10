@@ -513,6 +513,51 @@ describe("createTimelineChartOptions", () => {
     );
   });
 
+  test("keeps cumulative line visible when explicitly enabled", () => {
+    const chartData = rebaseTimelineChartDataCumulativeToVisibleRange({
+      chartData: mapTimelinePointsToChartData([
+        createTimelinePoint({
+          periodValue: "2026-01",
+          periodLabel: "January 2026",
+          totalReturn: 10,
+          savings: 7,
+          income: 11,
+          expenses: 4,
+          gainsLosses: 3,
+        }),
+      ]),
+      visibleRangeX: null,
+      selectedMetric: "savings",
+    });
+
+    const options = createTimelineChartOptions({
+      chartData,
+      periodMode: "month",
+      selectedMetric: "savings",
+      showCumulativeSeries: true,
+      amountCompactFormatter: new Intl.NumberFormat("en-CH", {
+        notation: "compact",
+      }),
+      currencyFormatter: new Intl.NumberFormat("en-CH", {
+        style: "currency",
+        currency: "CHF",
+      }),
+      colors: mockColors,
+      theme: mockTheme,
+      isDarkMode: false,
+    });
+
+    expect(options.series).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "line",
+          yKey: "cumulativeMetric",
+          visible: true,
+        }),
+      ]),
+    );
+  });
+
   test("uses yearly range buttons in year mode", () => {
     const options = createTimelineChartOptions({
       chartData: mapTimelinePointsToChartData([
