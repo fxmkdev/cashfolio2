@@ -115,6 +115,10 @@ jobs:
           --image "${CASHFOLIO_APP2_IMAGE}" \
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Wake up deployed app
+        uses: ./.github/actions/warm-up-url
+        with:
+          url: https://${{ vars.CANONICAL_HOSTNAME }}/
 
   cashfolio-redis-deploy:
     name: "cashfolio-redis: Deploy"
