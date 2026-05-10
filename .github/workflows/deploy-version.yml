@@ -59,7 +59,6 @@ jobs:
         with:
           version: ${{ env.FLYCTL_VERSION }}
       - name: Deploy cashfolio-app2
-        timeout-minutes: 10
         uses: ./.github/actions/deploy-cashfolio-app2
         with:
           image: ${{ inputs.cashfolio_app2_image || format('registry.fly.io/{0}:v{1}', vars.FLY_CASHFOLIO_APP_STAGING_APP, inputs.version_with_sha) }}

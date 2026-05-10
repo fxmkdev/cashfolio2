@@ -422,6 +422,9 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
+    concurrency:
+      group: preview-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     env:
       PREVIEW_URL: ${{ needs.resolve-preview-names.outputs.preview_url }}
       FLY_APP: ${{ needs.resolve-preview-names.outputs.fly_app }}
