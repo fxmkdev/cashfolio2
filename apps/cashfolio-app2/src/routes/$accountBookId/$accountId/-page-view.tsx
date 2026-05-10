@@ -1,5 +1,5 @@
 import { IconBolt } from "@tabler/icons-react";
-import { Badge, Button, Container, Group, Modal, Tooltip } from "@mantine/core";
+import { Badge, Box, Button, Group, Modal, Tooltip } from "@mantine/core";
 import type { AgGridReactProps } from "ag-grid-react";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 import { DataGrid } from "@/components/data-grid";
@@ -193,14 +193,14 @@ export function LedgerPageView({
   onConfirmDeleteTransaction,
 }: LedgerPageViewProps) {
   return (
-    <Container
-      fluid
+    <Box
       py="xl"
       px="xl"
       style={{
         display: "flex",
         flexDirection: "column",
         flex: 1,
+        width: "100%",
         minHeight: 0,
       }}
     >
@@ -398,6 +398,6 @@ export function LedgerPageView({
         name={deletingTransaction?.description}
         onConfirm={onConfirmDeleteTransaction}
       />
-    </Container>
+    </Box>
   );
 }

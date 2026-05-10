@@ -1,6 +1,6 @@
 import {
+  Box,
   Button,
-  Container,
   Group,
   Select,
   Stack,
@@ -158,7 +158,7 @@ export function AccountBookSettingsPageView(args: {
   }, [settings]);
 
   return (
-    <Container py="xl" size="sm">
+    <Box py="xl" px="xl" style={{ width: "100%" }}>
       <TopPageHeader
         heading={<Title order={2}>Settings</Title>}
         actions={
@@ -209,6 +209,6 @@ export function AccountBookSettingsPageView(args: {
           currencyOptions={currencyOptions}
         />
       </form>
-    </Container>
+    </Box>
   );
 }
