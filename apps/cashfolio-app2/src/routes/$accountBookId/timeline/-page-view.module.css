@@ -28,3 +28,17 @@
 .chartContainer :global(.ag-charts-overlay) {
   color: var(--mantine-color-dimmed);
 }
+
+.metricControls {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) minmax(260px, 420px);
+  gap: 12px;
+  align-items: end;
+}
+
+@media (max-width: 48em) {
+  .metricControls {
+    width: 100%;
+    grid-template-columns: 1fr;
+  }
+}

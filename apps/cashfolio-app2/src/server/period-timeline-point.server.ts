@@ -6,6 +6,10 @@ import {
   type PeriodTimelinePointContext,
 } from "./period-timeline-point-context.server";
 import { loadPeriodTimelinePointMetrics } from "./period-timeline-point-metrics.server";
+import type {
+  TimelineScopeSelection,
+  TimelineScopedMetric,
+} from "../shared/timeline-scope";
 
 export { loadPeriodTimelinePointContext };
 export type { PeriodTimelinePointContext };
@@ -14,6 +18,10 @@ export async function loadPeriodTimelinePoint(args: {
   accountBookId: string;
   period?: unknown;
   context?: PeriodTimelinePointContext;
+  metricScopeFilter?: {
+    metric: TimelineScopedMetric;
+    scope: TimelineScopeSelection;
+  };
 }) {
   const data = {
     accountBookId: args.accountBookId,
@@ -46,6 +54,11 @@ export async function loadPeriodTimelinePoint(args: {
       assets: 0,
       liabilities: 0,
       netWorth: 0,
+      scopeOptions: {
+        income: [],
+        expenses: [],
+      },
+      scopedMetricValue: 0,
     };
   }
 
@@ -58,6 +71,7 @@ export async function loadPeriodTimelinePoint(args: {
     accountBookId: data.accountBookId,
     period: data.period,
     baseData: loadedBaseData,
+    metricScopeFilter: args.metricScopeFilter,
   });
 
   return {

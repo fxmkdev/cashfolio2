@@ -115,6 +115,23 @@ describe("getPeriodTimeline", () => {
         assets: period.length + 5,
         liabilities: period.length + 6,
         netWorth: period.length + 7,
+        scopeOptions: {
+          income: [
+            {
+              value: "account:income-a",
+              label: "Income A (Account)",
+              kind: "account",
+            },
+          ],
+          expenses: [
+            {
+              value: "group:expense-g",
+              label: "Expense G (Group)",
+              kind: "group",
+            },
+          ],
+        },
+        scopedMetricValue: period.length + 20,
       }),
     );
   });
@@ -152,6 +169,7 @@ describe("getPeriodTimeline", () => {
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
       },
+      metricScopeFilter: undefined,
     });
     expect(loadPeriodTimelinePoint).toHaveBeenNthCalledWith(2, {
       accountBookId: "book-1",
@@ -161,6 +179,7 @@ describe("getPeriodTimeline", () => {
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
       },
+      metricScopeFilter: undefined,
     });
     expect(loadPeriodTimelinePoint).toHaveBeenNthCalledWith(3, {
       accountBookId: "book-1",
@@ -170,6 +189,7 @@ describe("getPeriodTimeline", () => {
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
       },
+      metricScopeFilter: undefined,
     });
 
     expect(result).toEqual({
@@ -222,6 +242,28 @@ describe("getPeriodTimeline", () => {
           netWorth: 14,
         },
       ],
+      scopeOptions: {
+        income: [
+          { value: "total", label: "Total", kind: "total" },
+          {
+            value: "account:income-a",
+            label: "Income A (Account)",
+            kind: "account",
+          },
+        ],
+        expenses: [
+          { value: "total", label: "Total", kind: "total" },
+          {
+            value: "group:expense-g",
+            label: "Expense G (Group)",
+            kind: "group",
+          },
+        ],
+      },
+      scopeSelection: {
+        income: "total",
+        expenses: "total",
+      },
     });
   });
 
@@ -230,6 +272,9 @@ describe("getPeriodTimeline", () => {
       data: {
         accountBookId: "book-2",
         granularity: "year",
+        scopedMetric: "income",
+        incomeScope: "account:income-a",
+        expenseScope: "total",
       },
     });
 
@@ -247,6 +292,32 @@ describe("getPeriodTimeline", () => {
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
       },
+      metricScopeFilter: {
+        metric: "income",
+        scope: "account:income-a",
+      },
+    });
+  });
+
+  test("falls back to total values when scoped selection is stale", async () => {
+    const result = await getPeriodTimeline({
+      data: {
+        accountBookId: "book-3",
+        granularity: "year",
+        scopedMetric: "income",
+        incomeScope: "account:missing",
+        expenseScope: "total",
+      },
+    });
+
+    expect(result.points).toEqual([
+      expect.objectContaining({
+        income: 6,
+      }),
+    ]);
+    expect(result.scopeSelection).toEqual({
+      income: "total",
+      expenses: "total",
     });
   });
 

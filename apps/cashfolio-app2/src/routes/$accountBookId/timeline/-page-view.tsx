@@ -1,7 +1,8 @@
 import {
+  Autocomplete,
   Card,
   Group,
-  SegmentedControl,
+  Select,
   Stack,
   Text,
   Title,
@@ -33,6 +34,10 @@ import {
   type TimelinePeriodMode,
 } from "./-page-types";
 import {
+  isTimelineScopedMetric,
+  type TimelineScopeSelection,
+} from "@/shared/timeline-scope";
+import {
   createTimelineChartOptions,
   mapTimelinePointsToChartData,
   prependOpeningBalanceChartDatum,
@@ -51,6 +56,7 @@ export type TimelinePageViewProps = {
   timeline: PeriodTimelineResponse;
   onModeChange: (mode: TimelinePeriodMode) => void;
   onMetricChange: (metric: TimelineMetric) => void;
+  onMetricScopeChange: (scope: TimelineScopeSelection) => void;
 };
 
 function findTimelineRangeButtons(container: HTMLElement): HTMLElement[] {
@@ -89,6 +95,7 @@ export function TimelinePageView({
   timeline,
   onModeChange,
   onMetricChange,
+  onMetricScopeChange,
 }: TimelinePageViewProps) {
   const activeReferenceCurrency = timeline.referenceCurrency;
   const theme = useMantineTheme();
@@ -148,6 +155,30 @@ export function TimelinePageView({
     () => getDefaultRangeButtonLabel(selectedMode),
     [selectedMode],
   );
+  const isScopedMetric = isTimelineScopedMetric(selectedMetric);
+  const selectedScope = isScopedMetric
+    ? timeline.scopeSelection[selectedMetric]
+    : "total";
+  const scopeOptions = isScopedMetric
+    ? timeline.scopeOptions[selectedMetric]
+    : [];
+  const scopeLabelByValue = useMemo(
+    () => new Map(scopeOptions.map((option) => [option.value, option.label])),
+    [scopeOptions],
+  );
+  const scopeAutocompleteData = useMemo(
+    () => scopeOptions.map((option) => option.label),
+    [scopeOptions],
+  );
+  const selectedScopeLabel =
+    scopeLabelByValue.get(selectedScope) ??
+    scopeLabelByValue.get("total") ??
+    "Total";
+  const [scopeInputValue, setScopeInputValue] = useState(selectedScopeLabel);
+
+  useEffect(() => {
+    setScopeInputValue(selectedScopeLabel);
+  }, [selectedScopeLabel]);
 
   const handleChartZoom = useCallback((event: AgZoomEvent) => {
     const nextRange = event.rangeX
@@ -250,8 +281,26 @@ export function TimelinePageView({
         heading={<Title order={2}>Timeline</Title>}
         actions={
           <Group gap="sm">
+            <LinkButton
+              variant="default"
+              leftSection={<IconListDetails size={16} />}
+              to="/$accountBookId/accounts"
+              params={{ accountBookId }}
+              search={{ tab: "ASSET", mode: "active" }}
+            >
+              Accounts
+            </LinkButton>
+            <LinkButton
+              variant="default"
+              leftSection={<IconCalendarMonth size={16} />}
+              to="/$accountBookId/period"
+              params={{ accountBookId }}
+            >
+              Period
+            </LinkButton>
             <SegmentedControl
               value={selectedMode}
+              w={120}
               aria-label="Timeline period mode"
               data={[
                 { label: "Monthly", value: "month" },
@@ -277,16 +326,64 @@ export function TimelinePageView({
               Amounts shown in {activeReferenceCurrency}
             </Text>
           </Stack>
-          <SegmentedControl
-            value={selectedMetric}
-            aria-label="Timeline metric"
-            data={TIMELINE_METRIC_OPTIONS}
-            onChange={(nextMetric) => {
-              if (isTimelineMetric(nextMetric)) {
-                onMetricChange(nextMetric);
+          <div className={classes.metricControls}>
+            <Select
+              label="View"
+              value={selectedMetric}
+              aria-label="Timeline metric"
+              data={TIMELINE_METRIC_OPTIONS}
+              allowDeselect={false}
+              onChange={(nextMetric) => {
+                if (isTimelineMetric(nextMetric)) {
+                  onMetricChange(nextMetric);
+                }
+              }}
+            />
+            <Autocomplete
+              label="Scope"
+              value={scopeInputValue}
+              aria-label="Timeline metric scope"
+              placeholder={
+                isScopedMetric
+                  ? "Select account group or account"
+                  : "Available for Income and Expenses"
               }
-            }}
-          />
+              data={scopeAutocompleteData}
+              disabled={!isScopedMetric}
+              onChange={(nextLabel) => {
+                setScopeInputValue(nextLabel);
+                if (!isScopedMetric) {
+                  return;
+                }
+
+                const nextScope = scopeOptions.find(
+                  (option) => option.label === nextLabel,
+                )?.value;
+
+                if (nextScope && nextScope !== selectedScope) {
+                  onMetricScopeChange(nextScope);
+                }
+              }}
+              onBlur={(event) => {
+                if (!isScopedMetric) {
+                  return;
+                }
+
+                const typedLabel = event.currentTarget.value;
+                const nextScope = scopeOptions.find(
+                  (option) => option.label === typedLabel,
+                )?.value;
+                if (!nextScope) {
+                  setScopeInputValue(selectedScopeLabel);
+                  return;
+                }
+                if (nextScope === selectedScope) {
+                  return;
+                }
+                onMetricScopeChange(nextScope);
+              }}
+            />
+          </div>
         </Group>
 
         {rebasedChartData.length === 0 ? (
