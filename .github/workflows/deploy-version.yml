@@ -78,7 +78,7 @@ jobs:
       - name: Wake up deployed app
         uses: ./.github/actions/warm-up-url
         with:
-          url: ${{ format('https://{0}/', inputs.canonical_hostname || vars.CANONICAL_HOSTNAME) }}
+          url: ${{ inputs.app_environment_url || inputs.base_url || format('https://{0}/', inputs.canonical_hostname || vars.CANONICAL_HOSTNAME) }}
 
   cashfolio-redis-deploy:
     name: "cashfolio-redis: Deploy"

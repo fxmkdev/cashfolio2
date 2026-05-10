@@ -86,7 +86,7 @@ runs:
 
         for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
           ERROR_FILE="$(mktemp)"
-          if docker manifest inspect "$IMAGE" > /dev/null 2>"$ERROR_FILE"; then
+          if timeout 20s docker manifest inspect "$IMAGE" > /dev/null 2>"$ERROR_FILE"; then
             rm -f "$ERROR_FILE"
             echo "Image is available: $IMAGE"
             exit 0
