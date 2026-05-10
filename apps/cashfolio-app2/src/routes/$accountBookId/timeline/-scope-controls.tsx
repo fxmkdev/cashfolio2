@@ -123,13 +123,12 @@ export function TimelineScopeControls({
               scopeCombobox.openDropdown();
               scopeCombobox.updateSelectedOptionIndex("selected");
             }}
-            onClick={(event) => {
+            onClick={() => {
               if (!isScopedMetric) {
                 return;
               }
               scopeCombobox.openDropdown();
               scopeCombobox.updateSelectedOptionIndex("selected");
-              event.currentTarget.select();
             }}
             onChange={(event) => {
               setScopeSearchValue(event.currentTarget.value);
