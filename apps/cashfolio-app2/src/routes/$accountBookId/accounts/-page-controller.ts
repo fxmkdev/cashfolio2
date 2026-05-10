@@ -36,10 +36,7 @@ import type { loadAccountsPageData } from "./-page-loader";
 import type { AccountsPageViewProps } from "./-page-view";
 
 type AccountsPageLoaderData = Awaited<ReturnType<typeof loadAccountsPageData>>;
-type AccountsPageControllerViewProps = Omit<
-  AccountsPageViewProps,
-  "accountBooks"
->;
+type AccountsPageControllerViewProps = AccountsPageViewProps;
 
 type AccountsMutationApi = {
   createAccount: typeof createAccount;

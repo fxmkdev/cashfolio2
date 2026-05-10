@@ -1,7 +1,12 @@
+import { fileURLToPath } from "node:url";
 import type { StorybookConfig } from "@storybook/react-vite";
 
 const TANSTACK_START_PLUGIN_PATTERN =
   /tanstack-(react-)?start|react-start|start-core/i;
+
+function toFilePath(relativePath: string) {
+  return fileURLToPath(new URL(relativePath, import.meta.url));
+}
 
 const config: StorybookConfig = {
   core: {
@@ -34,6 +39,31 @@ const config: StorybookConfig = {
     return {
       ...viteConfig,
       plugins: filteredPlugins,
+      resolve: {
+        ...(viteConfig.resolve ?? {}),
+        alias: {
+          ...(viteConfig.resolve?.alias ?? {}),
+          "#tanstack-start-entry": toFilePath("./tanstack-start-entry.stub.ts"),
+          "#tanstack-router-entry": toFilePath(
+            "./tanstack-router-entry.stub.ts",
+          ),
+          "#tanstack-start-plugin-adapters": toFilePath(
+            "./tanstack-start-plugin-adapters.stub.ts",
+          ),
+          "#tanstack-start-server-fn-resolver": toFilePath(
+            "./tanstack-start-server-fn-resolver.stub.ts",
+          ),
+          "tanstack-start-manifest:v": toFilePath(
+            "./tanstack-start-manifest.stub.ts",
+          ),
+          "tanstack-start-injected-head-scripts:v": toFilePath(
+            "./tanstack-start-injected-head-scripts.stub.ts",
+          ),
+          "@tanstack/start-storage-context": toFilePath(
+            "./tanstack-start-storage-context.stub.ts",
+          ),
+        },
+      },
     };
   },
 };

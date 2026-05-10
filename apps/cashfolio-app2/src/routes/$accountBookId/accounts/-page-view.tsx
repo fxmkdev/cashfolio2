@@ -1,17 +1,10 @@
-import { Button, Container, Group, Tabs, Title } from "@mantine/core";
-import {
-  IconArchive,
-  IconChartBar,
-  IconCalendarMonth,
-  IconListDetails,
-  IconPlus,
-} from "@tabler/icons-react";
+import { Button, Group, Tabs, Title } from "@mantine/core";
+import { IconArchive, IconPlus } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
 import { LinkButton } from "@/components/link-button";
 import { LinkTab } from "@/components/link-tab";
 import { AccountPathHeading } from "@/components/account-path-heading";
 import { TopPageHeader } from "@/components/top-page-header";
-import type { UserAccountBookOption } from "@/server/home";
 import type { AccountGroupInitialValues } from "@/components/edit-account-group-modal";
 import {
   EditAccountGroupModal,
@@ -25,6 +18,7 @@ import {
 import { ConfirmArchiveModal } from "@/components/confirm-archive-modal";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 import { DataGrid } from "@/components/data-grid";
+import { PageShell } from "@/components/page-shell";
 import {
   ReorderGroupChildrenModal,
   type ReorderGroupChildRow,
@@ -38,7 +32,6 @@ import type {
   TreeRow,
 } from "./-page-types";
 import type { loadAccountsPageData } from "./-page-loader";
-import { AccountBookSwitcherMenu } from "./-account-book-switcher-menu";
 
 type AccountsPageLoaderData = Awaited<ReturnType<typeof loadAccountsPageData>>;
 type RowTarget = {
@@ -49,7 +42,6 @@ type RowTarget = {
 
 export type AccountsPageViewProps = {
   accountBookId: string;
-  accountBooks: UserAccountBookOption[];
   tab: TabValue;
   mode: AccountsMode;
   tabs: readonly { value: TabValue; label: string }[];
@@ -100,7 +92,6 @@ export type AccountsPageViewProps = {
 
 export function AccountsPageView({
   accountBookId,
-  accountBooks,
   tab,
   mode,
   tabs,
@@ -145,7 +136,7 @@ export function AccountsPageView({
   const isArchivedMode = mode === "archived";
 
   return (
-    <Container fluid py="xl" px="xl">
+    <PageShell>
       <TopPageHeader
         heading={
           isArchivedMode ? (
@@ -161,36 +152,6 @@ export function AccountsPageView({
         }
         actions={
           <Group>
-            <LinkButton
-              variant="default"
-              leftSection={<IconListDetails size={16} />}
-              to="/$accountBookId/valuation-cache"
-              params={{ accountBookId }}
-            >
-              Valuation Cache
-            </LinkButton>
-            <LinkButton
-              variant="default"
-              leftSection={<IconCalendarMonth size={16} />}
-              to="/$accountBookId/period"
-              params={{ accountBookId }}
-            >
-              Period
-            </LinkButton>
-            <LinkButton
-              variant="default"
-              leftSection={<IconChartBar size={16} />}
-              to="/$accountBookId/timeline"
-              params={{ accountBookId }}
-            >
-              Timeline
-            </LinkButton>
-            <AccountBookSwitcherMenu
-              accountBookId={accountBookId}
-              accountBooks={accountBooks}
-              tab={tab}
-              mode={mode}
-            />
             {!isArchivedMode && (
               <>
                 <LinkButton
@@ -217,11 +178,6 @@ export function AccountsPageView({
                 </Button>
               </>
             )}
-            <form action="/api/logto/sign-out" method="post">
-              <Button type="submit" variant="default">
-                Sign out
-              </Button>
-            </form>
           </Group>
         }
       />
@@ -243,7 +199,7 @@ export function AccountsPageView({
       </Tabs>
 
       <DataGrid
-        containerStyle={{ height: "calc(100vh - 11rem)" }}
+        containerStyle={{ flex: 1, minHeight: 0 }}
         rowData={rows}
         columnDefs={columnDefs}
         autoGroupColumnDef={{
@@ -347,6 +303,6 @@ export function AccountsPageView({
         initialRows={selectedSiblingRows}
         onReorder={onReorderSiblings}
       />
-    </Container>
+    </PageShell>
   );
 }

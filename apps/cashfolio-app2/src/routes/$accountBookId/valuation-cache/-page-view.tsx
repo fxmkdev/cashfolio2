@@ -1,8 +1,6 @@
 import {
   Alert,
   Card,
-  Container,
-  Group,
   Stack,
   Tabs,
   Text,
@@ -10,11 +8,7 @@ import {
   useComputedColorScheme,
   useMantineTheme,
 } from "@mantine/core";
-import {
-  IconAlertTriangle,
-  IconCalendarMonth,
-  IconListDetails,
-} from "@tabler/icons-react";
+import { IconAlertTriangle } from "@tabler/icons-react";
 import type {
   ColDef,
   FirstDataRenderedEvent,
@@ -27,9 +21,9 @@ import { AgCharts } from "ag-charts-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
 import { DataGrid } from "@/components/data-grid";
-import { LinkButton } from "@/components/link-button";
 import { LinkTab } from "@/components/link-tab";
 import { TopPageHeader } from "@/components/top-page-header";
+import { PageShell } from "@/components/page-shell";
 import {
   getValuationCacheSeries,
   type ValuationCacheSeriesPoint,
@@ -424,31 +418,8 @@ export function ValuationCachePageView({
   );
 
   return (
-    <Container fluid py="xl" px="xl" className={classes.page}>
-      <TopPageHeader
-        heading={<Title order={2}>Valuation Cache</Title>}
-        actions={
-          <Group>
-            <LinkButton
-              variant="default"
-              leftSection={<IconListDetails size={16} />}
-              to="/$accountBookId/accounts"
-              params={{ accountBookId }}
-              search={{ tab: "ASSET", mode: "active" }}
-            >
-              Accounts
-            </LinkButton>
-            <LinkButton
-              variant="default"
-              leftSection={<IconCalendarMonth size={16} />}
-              to="/$accountBookId/period"
-              params={{ accountBookId }}
-            >
-              Period
-            </LinkButton>
-          </Group>
-        }
-      />
+    <PageShell className={classes.page}>
+      <TopPageHeader heading={<Title order={2}>Valuation Cache</Title>} />
 
       <Tabs value={selectedTab}>
         <Tabs.List mb="md">
@@ -540,6 +511,6 @@ export function ValuationCachePageView({
           )}
         </Card>
       </div>
-    </Container>
+    </PageShell>
   );
 }

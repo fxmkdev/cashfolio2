@@ -1,6 +1,5 @@
 import {
   Button,
-  Container,
   Group,
   Select,
   Stack,
@@ -13,7 +12,7 @@ import { type UseFormReturnType, useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { useEffect, useMemo, useState } from "react";
 import { IconCheck } from "@tabler/icons-react";
-import { LinkButton } from "@/components/link-button";
+import { PageShell } from "@/components/page-shell";
 import { TopPageHeader } from "@/components/top-page-header";
 import { currencies } from "@/currencies";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
@@ -59,6 +58,7 @@ function showSettingsSavedNotification() {
     icon: <IconCheck size={16} />,
     title: "Saved",
     message: "Account book settings saved.",
+    withBorder: true,
   });
 }
 
@@ -125,7 +125,7 @@ export function AccountBookSettingsPageView(args: {
     startDate: string;
   }) => Promise<void>;
 }) {
-  const { accountBookId, settings } = args;
+  const { settings } = args;
   const { isSubmitting, runSubmit } = useDialogSubmitState();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -158,22 +158,8 @@ export function AccountBookSettingsPageView(args: {
   }, [settings]);
 
   return (
-    <Container py="xl" size="sm">
-      <TopPageHeader
-        heading={<Title order={2}>Settings</Title>}
-        actions={
-          <Group>
-            <LinkButton
-              variant="default"
-              to="/$accountBookId/accounts"
-              params={{ accountBookId }}
-              search={{ tab: "ASSET", mode: "active" }}
-            >
-              Back to Accounts
-            </LinkButton>
-          </Group>
-        }
-      />
+    <PageShell>
+      <TopPageHeader heading={<Title order={2}>Settings</Title>} />
 
       <form
         onSubmit={form.onSubmit(async (values) => {
@@ -209,6 +195,6 @@ export function AccountBookSettingsPageView(args: {
           currencyOptions={currencyOptions}
         />
       </form>
-    </Container>
+    </PageShell>
   );
 }

@@ -9,6 +9,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  Navigate,
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
@@ -43,41 +44,89 @@ const preview: Preview = {
       const accountBookRoute = createRoute({
         getParentRoute: () => rootRoute,
         path: "/$accountBookId",
-        component: () => <Story />,
+        component: () => <Outlet />,
+      });
+      const accountBookIndexRoute = createRoute({
+        getParentRoute: () => accountBookRoute,
+        path: "/",
+        component: () => {
+          const { accountBookId } = accountBookRoute.useParams();
+
+          return (
+            <Navigate
+              to="/$accountBookId/accounts"
+              params={{ accountBookId }}
+              search={{ tab: "ASSET", mode: "active" }}
+              replace
+            />
+          );
+        },
       });
 
       const accountBookAccountsRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/$accountBookId/accounts",
+        getParentRoute: () => accountBookRoute,
+        path: "/accounts",
         component: () => <Story />,
       });
 
       const accountBookPeriodRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/$accountBookId/period",
+        getParentRoute: () => accountBookRoute,
+        path: "/period",
+        component: () => <Story />,
+      });
+      const accountBookTimelineRoute = createRoute({
+        getParentRoute: () => accountBookRoute,
+        path: "/timeline",
+        component: () => <Story />,
+      });
+      const accountBookSettingsRoute = createRoute({
+        getParentRoute: () => accountBookRoute,
+        path: "/settings",
+        component: () => <Story />,
+      });
+      const accountBookValuationCacheRoute = createRoute({
+        getParentRoute: () => accountBookRoute,
+        path: "/valuation-cache",
         component: () => <Story />,
       });
 
       const accountLedgerRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/$accountBookId/$accountId",
+        getParentRoute: () => accountBookRoute,
+        path: "/$accountId",
+        component: () => <Outlet />,
+      });
+
+      const accountLedgerIndexRoute = createRoute({
+        getParentRoute: () => accountLedgerRoute,
+        path: "/",
         component: () => <Story />,
       });
 
       const accountLedgerChartRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/$accountBookId/$accountId/chart",
+        getParentRoute: () => accountLedgerRoute,
+        path: "/chart",
         component: () => <Story />,
       });
+
+      const accountLedgerRouteTree = accountLedgerRoute.addChildren([
+        accountLedgerIndexRoute,
+        accountLedgerChartRoute,
+      ]);
+
+      const accountBookRouteTree = accountBookRoute.addChildren([
+        accountBookIndexRoute,
+        accountBookAccountsRoute,
+        accountBookPeriodRoute,
+        accountBookTimelineRoute,
+        accountBookSettingsRoute,
+        accountBookValuationCacheRoute,
+        accountLedgerRouteTree,
+      ]);
 
       const router = createRouter({
         routeTree: rootRoute.addChildren([
           rootStoryRoute,
-          accountBookRoute,
-          accountBookAccountsRoute,
-          accountBookPeriodRoute,
-          accountLedgerRoute,
-          accountLedgerChartRoute,
+          accountBookRouteTree,
         ]),
         // Storybook renders stories inside /iframe.html, so links/routes must
         // resolve relative to that base path.

@@ -244,7 +244,13 @@ function LedgerPageStoryHarness({
   });
 
   return (
-    <Box>
+    <Box
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "100dvh",
+      }}
+    >
       <LedgerPageView
         accountBookId="storybook-book"
         backTab="ASSET"

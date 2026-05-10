@@ -204,11 +204,6 @@ const existingNodes: AccountsPageViewProps["existingNodes"] = [
   },
 ];
 
-const accountBooks: AccountsPageViewProps["accountBooks"] = [
-  { id: "storybook-book", name: "Storybook Book" },
-  { id: "storybook-alt-book", name: "Storybook Alt Book" },
-];
-
 function getRowsFor(args: { mode: AccountsMode; tab: TabValue }): TreeRow[] {
   if (args.tab !== "ASSET") return [];
   return args.mode === "archived" ? archivedAssetRows : activeAssetRows;
@@ -361,10 +356,15 @@ function AccountsPageStoryHarness({
   });
 
   return (
-    <Box>
+    <Box
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "100dvh",
+      }}
+    >
       <AccountsPageView
         accountBookId="storybook-book"
-        accountBooks={accountBooks}
         tab={tab}
         mode={mode}
         tabs={tabs}
@@ -522,11 +522,11 @@ export const RouteSmoke: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByRole("link", { name: "Period" }),
+      canvas.getByRole("link", { name: "Archive" }),
     ).toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("link", { name: "Period" }));
-    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-book/period",
+    await userEvent.click(canvas.getByRole("link", { name: "Archive" }));
+    await expect(canvas.getByTestId("router-search")).toHaveTextContent(
+      '"mode":"archived"',
     );
   },
 };

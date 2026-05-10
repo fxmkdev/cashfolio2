@@ -1,8 +1,6 @@
 import {
   Alert,
-  Container,
   Grid,
-  Group,
   SimpleGrid,
   Stack,
   Text,
@@ -10,15 +8,11 @@ import {
   useComputedColorScheme,
   useMantineTheme,
 } from "@mantine/core";
-import {
-  IconAlertTriangle,
-  IconChartBar,
-  IconListDetails,
-} from "@tabler/icons-react";
+import { IconAlertTriangle } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
-import { LinkButton } from "@/components/link-button";
 import { TopPageHeader } from "@/components/top-page-header";
+import { PageShell } from "@/components/page-shell";
 import type { getPeriodOverview } from "@/server/period";
 import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import { formatMonthPeriodValue } from "@/shared/period";
@@ -357,31 +351,8 @@ export function PeriodPageView({
   };
 
   return (
-    <Container fluid py="xl" px="xl">
-      <TopPageHeader
-        heading={<Title order={2}>Period</Title>}
-        actions={
-          <Group gap="sm">
-            <LinkButton
-              variant="default"
-              leftSection={<IconListDetails size={16} />}
-              to="/$accountBookId/accounts"
-              params={{ accountBookId }}
-              search={{ tab: "ASSET", mode: "active" }}
-            >
-              Accounts
-            </LinkButton>
-            <LinkButton
-              variant="default"
-              leftSection={<IconChartBar size={16} />}
-              to="/$accountBookId/timeline"
-              params={{ accountBookId }}
-            >
-              Timeline
-            </LinkButton>
-          </Group>
-        }
-      />
+    <PageShell>
+      <TopPageHeader heading={<Title order={2}>Period</Title>} />
 
       <Stack gap="lg">
         <div
@@ -545,6 +516,6 @@ export function PeriodPageView({
           Showing nearest supported period for the requested value.
         </Text>
       ) : null}
-    </Container>
+    </PageShell>
   );
 }

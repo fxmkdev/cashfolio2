@@ -8,11 +8,11 @@ vi.mock("@/server/home", () => ({
 
 import {
   invalidateCachedUserAccountBooks,
-  loadUserAccountBooksForAccountsRoute,
+  loadUserAccountBooksForAccountBookRoute,
   resetCachedUserAccountBooksForTests,
 } from "./-account-book-options-loader";
 
-describe("loadUserAccountBooksForAccountsRoute", () => {
+describe("loadUserAccountBooksForAccountBookRoute", () => {
   beforeEach(() => {
     getUserAccountBooks.mockReset();
     resetCachedUserAccountBooksForTests();
@@ -28,8 +28,8 @@ describe("loadUserAccountBooksForAccountsRoute", () => {
       .mockResolvedValueOnce([{ id: "book-1", name: "Alpha" }])
       .mockResolvedValueOnce([{ id: "book-2", name: "Beta" }]);
 
-    await loadUserAccountBooksForAccountsRoute();
-    await loadUserAccountBooksForAccountsRoute();
+    await loadUserAccountBooksForAccountBookRoute();
+    await loadUserAccountBooksForAccountBookRoute();
 
     expect(getUserAccountBooks).toHaveBeenCalledTimes(2);
   });
@@ -42,8 +42,8 @@ describe("loadUserAccountBooksForAccountsRoute", () => {
     const books = [{ id: "book-1", name: "Alpha" }];
     getUserAccountBooks.mockResolvedValue(books);
 
-    const first = await loadUserAccountBooksForAccountsRoute();
-    const second = await loadUserAccountBooksForAccountsRoute();
+    const first = await loadUserAccountBooksForAccountBookRoute();
+    const second = await loadUserAccountBooksForAccountBookRoute();
 
     expect(first).toEqual(books);
     expect(second).toEqual(books);
@@ -59,10 +59,10 @@ describe("loadUserAccountBooksForAccountsRoute", () => {
       .mockRejectedValueOnce(new Error("network"))
       .mockResolvedValueOnce([{ id: "book-3", name: "Gamma" }]);
 
-    await expect(loadUserAccountBooksForAccountsRoute()).rejects.toThrow(
+    await expect(loadUserAccountBooksForAccountBookRoute()).rejects.toThrow(
       "network",
     );
-    const result = await loadUserAccountBooksForAccountsRoute();
+    const result = await loadUserAccountBooksForAccountBookRoute();
 
     expect(result).toEqual([{ id: "book-3", name: "Gamma" }]);
     expect(getUserAccountBooks).toHaveBeenCalledTimes(2);
@@ -77,9 +77,9 @@ describe("loadUserAccountBooksForAccountsRoute", () => {
       .mockResolvedValueOnce([{ id: "book-1", name: "Alpha" }])
       .mockResolvedValueOnce([{ id: "book-1", name: "Renamed" }]);
 
-    const first = await loadUserAccountBooksForAccountsRoute();
+    const first = await loadUserAccountBooksForAccountBookRoute();
     invalidateCachedUserAccountBooks();
-    const second = await loadUserAccountBooksForAccountsRoute();
+    const second = await loadUserAccountBooksForAccountBookRoute();
 
     expect(first).toEqual([{ id: "book-1", name: "Alpha" }]);
     expect(second).toEqual([{ id: "book-1", name: "Renamed" }]);

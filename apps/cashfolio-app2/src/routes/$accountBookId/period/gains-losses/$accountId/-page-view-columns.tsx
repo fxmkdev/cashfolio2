@@ -118,6 +118,7 @@ export function buildRealizedColumns(args: {
       colId: "actions",
       headerName: "",
       width: 84,
+      pinned: "right",
       sortable: false,
       filter: false,
       resizable: false,
