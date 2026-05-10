@@ -1,5 +1,9 @@
 import type { MantineTheme } from "@mantine/core";
-import type { AgCartesianChartOptions, AgZoomEvent } from "ag-charts-community";
+import type {
+  AgCartesianChartOptions,
+  AgSeriesVisibilityChange,
+  AgZoomEvent,
+} from "ag-charts-community";
 import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import {
   getTimelineMetricLabel,
@@ -76,12 +80,14 @@ export function createTimelineChartOptions(args: {
   chartData: TimelineChartDatum[];
   periodMode: TimelinePeriodMode;
   selectedMetric: TimelineMetric;
+  showCumulativeSeries?: boolean;
   amountCompactFormatter: Intl.NumberFormat;
   currencyFormatter: Intl.NumberFormat;
   colors: DashboardChartThemeColors;
   theme: MantineTheme;
   isDarkMode: boolean;
   onZoom?: (event: AgZoomEvent) => void;
+  onSeriesVisibilityChange?: (event: AgSeriesVisibilityChange) => void;
 }): AgCartesianChartOptions {
   const positiveFillColor = args.isDarkMode
     ? args.theme.colors.green[5]
@@ -259,6 +265,7 @@ export function createTimelineChartOptions(args: {
           xKey: "periodStart",
           yKey: "cumulativeMetric",
           yName: cumulativeMetricLabel,
+          visible: args.showCumulativeSeries ?? false,
           stroke: args.isDarkMode
             ? args.theme.colors.blue[2]
             : args.theme.colors.blue[7],
@@ -321,11 +328,13 @@ export function createTimelineChartOptions(args: {
       buttons: rangeButtons,
       ...rangeControlStyles,
     },
-    listeners: args.onZoom
-      ? {
-          zoom: args.onZoom,
-        }
-      : undefined,
+    listeners:
+      args.onZoom || args.onSeriesVisibilityChange
+        ? {
+            zoom: args.onZoom,
+            seriesVisibilityChange: args.onSeriesVisibilityChange,
+          }
+        : undefined,
     series,
     axes: {
       x: {

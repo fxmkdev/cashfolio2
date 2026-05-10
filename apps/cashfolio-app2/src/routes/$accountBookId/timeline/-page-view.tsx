@@ -11,6 +11,7 @@ import {
 import type {
   AgChartInstance,
   AgChartOptions,
+  AgSeriesVisibilityChange,
   AgZoomEvent,
 } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
@@ -135,6 +136,8 @@ export function TimelinePageView({
   );
   const [visibleRangeX, setVisibleRangeX] =
     useState<TimelineVisibleRange | null>(null);
+  const [isCumulativeSeriesVisible, setIsCumulativeSeriesVisible] =
+    useState(false);
   const rebasedChartData = useMemo(
     () =>
       rebaseTimelineChartDataCumulativeToVisibleRange({
@@ -169,18 +172,31 @@ export function TimelinePageView({
     });
   }, []);
 
+  const handleSeriesVisibilityChange = useCallback(
+    (event: AgSeriesVisibilityChange) => {
+      if (event.itemId !== "cumulativeMetric") {
+        return;
+      }
+
+      setIsCumulativeSeriesVisible(event.visible);
+    },
+    [],
+  );
+
   const chartOptions = useMemo(
     () =>
       createTimelineChartOptions({
         chartData: rebasedChartData,
         periodMode: selectedMode,
         selectedMetric,
+        showCumulativeSeries: isCumulativeSeriesVisible,
         amountCompactFormatter,
         currencyFormatter,
         colors,
         theme,
         isDarkMode,
         onZoom: handleChartZoom,
+        onSeriesVisibilityChange: handleSeriesVisibilityChange,
       }),
     [
       amountCompactFormatter,
@@ -188,6 +204,8 @@ export function TimelinePageView({
       colors,
       currencyFormatter,
       handleChartZoom,
+      handleSeriesVisibilityChange,
+      isCumulativeSeriesVisible,
       selectedMode,
       selectedMetric,
       isDarkMode,
