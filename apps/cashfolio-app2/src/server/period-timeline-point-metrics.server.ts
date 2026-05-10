@@ -120,7 +120,7 @@ export async function loadPeriodTimelinePointMetrics(args: {
         income: [],
         expenses: [],
       },
-      scopedMetricValue: 0,
+      scopedMetricValue: args.metricScopeFilter ? 0 : undefined,
     } satisfies PeriodTimelinePointMetrics;
   }
 

@@ -96,10 +96,27 @@ describe("loadPeriodTimelinePointMetrics", () => {
         income: [],
         expenses: [],
       },
-      scopedMetricValue: 0,
+      scopedMetricValue: undefined,
     });
     expect(processPeriodEquityBookingsFromBaseData).not.toHaveBeenCalled();
     expect(computePeriodHoldingGainLoss).not.toHaveBeenCalled();
+  });
+
+  test("returns scoped metric value zero before account-book start when scope filter is requested", async () => {
+    const baseData = createBaseData({ isBefore: true });
+
+    getOrLoadPeriodBaseData.mockResolvedValue(baseData);
+
+    const result = await loadPeriodTimelinePointMetrics({
+      accountBookId: "book-1",
+      period: "2026-02",
+      metricScopeFilter: {
+        metric: "expenses",
+        scope: "total",
+      },
+    });
+
+    expect(result.scopedMetricValue).toBe(0);
   });
 
   test("loads scalar metrics from shared equity + holdings pipelines", async () => {

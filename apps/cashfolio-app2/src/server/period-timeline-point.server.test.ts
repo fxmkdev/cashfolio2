@@ -179,10 +179,28 @@ describe("loadPeriodTimelinePoint", () => {
         income: [],
         expenses: [],
       },
-      scopedMetricValue: 0,
+      scopedMetricValue: undefined,
     });
     expect(getOrLoadPeriodBaseData).not.toHaveBeenCalled();
     expect(loadPeriodTimelinePointMetrics).not.toHaveBeenCalled();
+  });
+
+  test("returns scoped metric value zero before account-book start when scope filter is requested", async () => {
+    vi.setSystemTime(new Date("2026-01-10T12:00:00.000Z"));
+
+    const result = await loadPeriodTimelinePoint({
+      accountBookId: "book-1",
+      period: "2026-01",
+      context: createContext({
+        startDate: "2026-01-20T00:00:00.000Z",
+      }),
+      metricScopeFilter: {
+        metric: "income",
+        scope: "total",
+      },
+    });
+
+    expect(result.scopedMetricValue).toBe(0);
   });
 
   test("loads base data once and forwards it to timeline metrics loader", async () => {
