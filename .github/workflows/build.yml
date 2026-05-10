@@ -456,6 +456,24 @@ jobs:
             --image "${CASHFOLIO_APP2_IMAGE}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Wake up deployed app
+        run: |
+          set -euo pipefail
+
+          WARMUP_URL="${PREVIEW_URL%/}/"
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            --retry 12 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            --max-time 20 \
+            "$WARMUP_URL" \
+            > /dev/null
+
+          echo "App warm-up request succeeded: $WARMUP_URL"
       - name: Publish preview URL on PR
         uses: actions/github-script@v8
         with:
