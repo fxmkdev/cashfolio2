@@ -1,5 +1,8 @@
 import { createGroupPathResolver } from "./accounts-helpers";
-import { round2 } from "./period-helpers";
+import {
+  round2,
+  type BreakdownHierarchyAccumulatorItem,
+} from "./period-helpers";
 import { moneyAdd, moneySum, toMoneyNumber } from "../shared/money";
 import {
   parseTimelineScopeSelection,
@@ -7,13 +10,6 @@ import {
   type TimelineScopeSelection,
   type TimelineScopedMetric,
 } from "../shared/timeline-scope";
-
-type TimelineScopedAmountEntry = {
-  accountId: string;
-  accountName: string;
-  groupId: string | null;
-  amount: number;
-};
 
 export type TimelineMetricScopeFilter = {
   metric: TimelineScopedMetric;
@@ -42,7 +38,7 @@ function hasGroupInPath(args: {
 }
 
 function resolveScopedAmountFromMap(args: {
-  amountByAccountId: Map<string, TimelineScopedAmountEntry>;
+  amountByAccountId: Map<string, BreakdownHierarchyAccumulatorItem>;
   scope: TimelineScopeSelection;
   groupById: Map<string, { parentGroupId: string | null }>;
 }): number {
@@ -80,8 +76,8 @@ function resolveScopedAmountFromMap(args: {
 
 export function resolveScopedMetricValue(args: {
   metricScopeFilter?: TimelineMetricScopeFilter;
-  incomeAmountByAccountId: Map<string, TimelineScopedAmountEntry>;
-  expenseAmountByAccountId: Map<string, TimelineScopedAmountEntry>;
+  incomeAmountByAccountId: Map<string, BreakdownHierarchyAccumulatorItem>;
+  expenseAmountByAccountId: Map<string, BreakdownHierarchyAccumulatorItem>;
   allAccountGroups: Array<{
     id: string;
     name: string;
@@ -119,7 +115,7 @@ export function resolveScopedMetricValue(args: {
 }
 
 export function buildTimelineScopeOptions(args: {
-  amountByAccountId: Map<string, TimelineScopedAmountEntry>;
+  amountByAccountId: Map<string, BreakdownHierarchyAccumulatorItem>;
   allAccountGroups: Array<{
     id: string;
     name: string;
