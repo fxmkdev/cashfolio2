@@ -1,14 +1,10 @@
 import {
   Card,
-  Combobox,
   Group,
-  InputBase,
   SegmentedControl,
-  Select,
   Stack,
   Text,
   Title,
-  useCombobox,
   useComputedColorScheme,
   useMantineTheme,
 } from "@mantine/core";
@@ -32,16 +28,11 @@ import {
 } from "@/shared/unit-format";
 import {
   getTimelineMetricLabel,
-  isTimelineMetric,
   isTimelinePeriodMode,
-  TIMELINE_METRIC_OPTIONS,
   type TimelineMetric,
   type TimelinePeriodMode,
 } from "./-page-types";
-import {
-  isTimelineScopedMetric,
-  type TimelineScopeSelection,
-} from "@/shared/timeline-scope";
+import { type TimelineScopeSelection } from "@/shared/timeline-scope";
 import {
   createTimelineChartOptions,
   mapTimelinePointsToChartData,
@@ -50,6 +41,7 @@ import {
   type TimelineVisibleRange,
 } from "./-chart-options";
 import { getDefaultRangeButtonLabel } from "./-range-controls";
+import { TimelineScopeControls } from "./-scope-controls";
 import classes from "./-page-view.module.css";
 
 ensureChartModulesRegistered();
@@ -160,45 +152,6 @@ export function TimelinePageView({
     () => getDefaultRangeButtonLabel(selectedMode),
     [selectedMode],
   );
-  const isScopedMetric = isTimelineScopedMetric(selectedMetric);
-  const selectedScope = isScopedMetric
-    ? timeline.scopeSelection[selectedMetric]
-    : "total";
-  const scopeOptions = isScopedMetric
-    ? timeline.scopeOptions[selectedMetric]
-    : [];
-  const scopeLabelByValue = useMemo(
-    () => new Map(scopeOptions.map((option) => [option.value, option.label])),
-    [scopeOptions],
-  );
-  const selectedScopeLabel =
-    scopeLabelByValue.get(selectedScope) ??
-    scopeLabelByValue.get("total") ??
-    "Total";
-  const [scopeSearchValue, setScopeSearchValue] = useState(selectedScopeLabel);
-  const scopeCombobox = useCombobox({
-    onDropdownClose: () => {
-      scopeCombobox.resetSelectedOption();
-    },
-  });
-  const filteredScopeOptions = useMemo(() => {
-    const normalizedSearch = scopeSearchValue.trim().toLowerCase();
-    const shouldFilterOptions = scopeOptions.every(
-      (option) => option.label !== scopeSearchValue,
-    );
-
-    if (!shouldFilterOptions || normalizedSearch.length === 0) {
-      return scopeOptions;
-    }
-
-    return scopeOptions.filter((option) =>
-      option.label.toLowerCase().includes(normalizedSearch),
-    );
-  }, [scopeOptions, scopeSearchValue]);
-
-  useEffect(() => {
-    setScopeSearchValue(selectedScopeLabel);
-  }, [selectedScopeLabel]);
 
   const handleChartZoom = useCallback((event: AgZoomEvent) => {
     const nextRange = event.rangeX
@@ -346,105 +299,13 @@ export function TimelinePageView({
             </Text>
           </Stack>
           <div className={classes.metricControls}>
-            <Select
-              label="View"
-              value={selectedMetric}
-              data={TIMELINE_METRIC_OPTIONS}
-              allowDeselect={false}
-              onChange={(nextMetric) => {
-                if (isTimelineMetric(nextMetric)) {
-                  onMetricChange(nextMetric);
-                }
-              }}
+            <TimelineScopeControls
+              selectedMetric={selectedMetric}
+              scopeSelection={timeline.scopeSelection}
+              scopeOptions={timeline.scopeOptions}
+              onMetricChange={onMetricChange}
+              onMetricScopeChange={onMetricScopeChange}
             />
-            <Combobox
-              store={scopeCombobox}
-              withinPortal={false}
-              onOptionSubmit={(nextScopeValue) => {
-                if (!isScopedMetric) {
-                  return;
-                }
-
-                const matchedOption = scopeOptions.find(
-                  (option) => option.value === nextScopeValue,
-                );
-                if (!matchedOption) {
-                  return;
-                }
-
-                setScopeSearchValue(matchedOption.label);
-                scopeCombobox.closeDropdown();
-                scopeCombobox.resetSelectedOption();
-
-                if (nextScopeValue !== selectedScope) {
-                  onMetricScopeChange(matchedOption.value);
-                }
-              }}
-            >
-              <Combobox.Target>
-                <InputBase
-                  label="Scope"
-                  aria-label="Timeline metric scope"
-                  placeholder={
-                    isScopedMetric
-                      ? "Select account group or account"
-                      : "Available for Income and Expenses"
-                  }
-                  value={isScopedMetric ? scopeSearchValue : ""}
-                  disabled={!isScopedMetric}
-                  rightSection={<Combobox.Chevron />}
-                  rightSectionPointerEvents="none"
-                  onFocus={() => {
-                    if (!isScopedMetric) {
-                      return;
-                    }
-                    scopeCombobox.openDropdown();
-                    scopeCombobox.updateSelectedOptionIndex("selected");
-                  }}
-                  onClick={(event) => {
-                    if (!isScopedMetric) {
-                      return;
-                    }
-                    scopeCombobox.openDropdown();
-                    scopeCombobox.updateSelectedOptionIndex("selected");
-                    event.currentTarget.select();
-                  }}
-                  onChange={(event) => {
-                    setScopeSearchValue(event.currentTarget.value);
-                    if (!isScopedMetric) {
-                      return;
-                    }
-                    scopeCombobox.openDropdown();
-                    scopeCombobox.updateSelectedOptionIndex();
-                  }}
-                  onBlur={() => {
-                    if (!isScopedMetric) {
-                      return;
-                    }
-                    scopeCombobox.closeDropdown();
-                    setScopeSearchValue(selectedScopeLabel);
-                  }}
-                />
-              </Combobox.Target>
-
-              <Combobox.Dropdown hidden={!isScopedMetric}>
-                <Combobox.Options>
-                  {filteredScopeOptions.length > 0 ? (
-                    filteredScopeOptions.map((option) => (
-                      <Combobox.Option
-                        value={option.value}
-                        key={option.value}
-                        active={option.value === selectedScope}
-                      >
-                        {option.label}
-                      </Combobox.Option>
-                    ))
-                  ) : (
-                    <Combobox.Empty>Nothing found</Combobox.Empty>
-                  )}
-                </Combobox.Options>
-              </Combobox.Dropdown>
-            </Combobox>
           </div>
         </Group>
 
