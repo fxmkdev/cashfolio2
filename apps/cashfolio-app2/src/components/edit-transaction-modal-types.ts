@@ -7,7 +7,7 @@ import type {
 export type AccountOption = {
   label: string;
   value: string;
-  unit: Unit;
+  unit: Unit | null;
   currency?: string | null;
   cryptocurrency?: string | null;
   symbol?: string | null;

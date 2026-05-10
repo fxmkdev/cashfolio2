@@ -72,6 +72,7 @@ export type SeededData = {
   securityAccount: { id: string; name: string };
   securityCounterAccount: { id: string; name: string };
   expenseAccount: { id: string; name: string };
+  unitlessEquityAccount: { id: string; name: string };
 };
 
 type SeededGroups = {
@@ -88,6 +89,7 @@ type SeededAccounts = {
   securityAccount: { id: string; name: string };
   securityCounterAccount: { id: string; name: string };
   expenseAccount: { id: string; name: string };
+  unitlessEquityAccount: { id: string; name: string };
 };
 
 async function createSeedAccountBook(args?: {
@@ -273,6 +275,17 @@ async function createSeedAccounts(args: {
     },
   });
 
+  const unitlessEquityAccount = await prisma.account.create({
+    data: {
+      id: createId(),
+      accountBookId: args.accountBookId,
+      name: "E2E Unitless Equity",
+      type: AccountType.EQUITY,
+      groupId: null,
+      sortOrder: 1,
+    },
+  });
+
   return {
     cashAccount: {
       id: cashAccount.id,
@@ -301,6 +314,10 @@ async function createSeedAccounts(args: {
     expenseAccount: {
       id: expenseAccount.id,
       name: expenseAccount.name,
+    },
+    unitlessEquityAccount: {
+      id: unitlessEquityAccount.id,
+      name: unitlessEquityAccount.name,
     },
   };
 }

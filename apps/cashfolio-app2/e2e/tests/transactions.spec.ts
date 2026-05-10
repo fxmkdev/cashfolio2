@@ -100,6 +100,111 @@ async function openEditTransaction(page: Page, description: string) {
   ).toBeVisible();
 }
 
+function gridRowByIndex(root: Locator, rowIndex: number): Locator {
+  return root
+    .locator(`.ag-center-cols-container .ag-row[row-index="${rowIndex}"]`)
+    .first();
+}
+
+function normalizeCellText(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+async function setGridAccountCellValue(args: {
+  dialog: Locator;
+  rowIndex: number;
+  accountName: string;
+}) {
+  const cell = args.dialog
+    .locator(
+      `.ag-center-cols-container .ag-row[row-index="${args.rowIndex}"] [col-id="account"]`,
+    )
+    .first();
+
+  await expect(cell).toBeVisible();
+  await cell.click({ force: true });
+
+  let editorInput = args.dialog
+    .locator(".ag-cell-inline-editing input:not([type='hidden'])")
+    .first();
+  if (!(await editorInput.isVisible())) {
+    await cell.press("Enter");
+    editorInput = args.dialog
+      .locator(".ag-cell-inline-editing input:not([type='hidden'])")
+      .first();
+  }
+
+  await expect(editorInput).toBeVisible();
+  await editorInput.fill(args.accountName);
+
+  const option = args.dialog
+    .page()
+    .getByRole("option", {
+      name: accountOptionNameRegex(args.accountName),
+    })
+    .first();
+  await expect(option).toBeVisible({ timeout: 3000 });
+  await option.click();
+  await args.dialog.page().keyboard.press("Enter");
+}
+
+async function setUnitlessEquityAccountOnEditableRow(args: {
+  dialog: Locator;
+  accountName: string;
+}): Promise<{ editedRowIndex: number; lockedRowIndex: number }> {
+  const visibleRowIndexes = async (): Promise<number[]> => {
+    const rows = args.dialog.locator(".ag-center-cols-container .ag-row");
+    const rowCount = await rows.count();
+    const indexes = new Set<number>();
+    for (let i = 0; i < rowCount; i += 1) {
+      const rowIndex = await rows.nth(i).getAttribute("row-index");
+      if (rowIndex == null) {
+        continue;
+      }
+      const parsed = Number(rowIndex);
+      if (!Number.isNaN(parsed)) {
+        indexes.add(parsed);
+      }
+    }
+    return [...indexes].sort((a, b) => a - b);
+  };
+
+  const accountContains = async (rowIndex: number) =>
+    normalizeCellText(
+      await agGridCellByColId(
+        gridRowByIndex(args.dialog, rowIndex),
+        "account",
+      ).innerText(),
+    ).includes(args.accountName);
+
+  const rowIndexes = await visibleRowIndexes();
+  for (const rowIndex of rowIndexes) {
+    try {
+      await setGridAccountCellValue({
+        dialog: args.dialog,
+        rowIndex,
+        accountName: args.accountName,
+      });
+      await expect
+        .poll(async () => accountContains(rowIndex), { timeout: 3000 })
+        .toBe(true);
+      if (await accountContains(rowIndex)) {
+        const lockedRowIndex =
+          rowIndexes.find((candidateIndex) => candidateIndex !== rowIndex) ??
+          rowIndex;
+        return {
+          editedRowIndex: rowIndex,
+          lockedRowIndex,
+        };
+      }
+    } catch {
+      // Try the other row if this one is non-editable in the current ordering.
+    }
+  }
+
+  throw new Error("Could not set unitless equity account on an editable row");
+}
+
 function assetAccountOptionLabel(name: string): string {
   return `Asset / Assets / ${name}`;
 }
@@ -572,4 +677,125 @@ test("create security simple transaction preserves account metadata", async ({
   await expect(
     agGridCellByColId(eurSecurityRow, "balanceInReferenceCurrency"),
   ).toHaveText(/^-13\.6[34]$/);
+});
+
+test("split dialogs auto-fill unit metadata for unitless equity account selection", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
+
+  const createSimpleDialog = await openCreateSimpleTransaction(page);
+  await createSimpleDialog.getByLabel("Date").fill("08.01.2026");
+  await createSimpleDialog
+    .getByLabel("Description")
+    .fill("E2E Unitless Equity Create");
+  await createSimpleDialog
+    .getByRole("combobox", { name: "Counter account" })
+    .click();
+  await page
+    .getByRole("option", {
+      name: accountOptionNameRegex(seeded.savingsAccount.name),
+    })
+    .first()
+    .click();
+  await createSimpleDialog.getByLabel("Amount").fill("90");
+  await createSimpleDialog
+    .getByRole("button", { name: "Switch to split editor" })
+    .click();
+
+  const createDialog = splitCreateDialog(page);
+  await expect(createDialog).toBeVisible();
+
+  const createCounterRow = createDialog
+    .locator('.ag-center-cols-container .ag-row[row-index="1"]')
+    .first();
+  await setGridCellValue(
+    createDialog,
+    1,
+    "account",
+    seeded.unitlessEquityAccount.name,
+  );
+  await expect(agGridCellByColId(createCounterRow, "unit")).toContainText(
+    "Currency",
+  );
+  await expect(agGridCellByColId(createCounterRow, "ccy")).toContainText("CHF");
+
+  await createDialog.getByRole("button", { name: "Create" }).click();
+  await expect(
+    agGridRowByText(page, "E2E Unitless Equity Create"),
+  ).toBeVisible();
+
+  await page.goto(`/${seeded.accountBookId}/${seeded.securityAccount.id}`);
+
+  const securitySimpleDialog = await openCreateSimpleTransaction(page);
+  await securitySimpleDialog.getByLabel("Date").fill("09.01.2026");
+  await securitySimpleDialog
+    .getByLabel("Description")
+    .fill("E2E Unitless Equity Edit");
+  await securitySimpleDialog
+    .getByRole("combobox", { name: "Counter account" })
+    .click();
+  await page
+    .getByRole("option", {
+      name: accountOptionNameRegex(seeded.securityCounterAccount.name),
+    })
+    .first()
+    .click();
+  await securitySimpleDialog.getByLabel("Amount").fill("5");
+  await securitySimpleDialog.getByRole("button", { name: "Create" }).click();
+  await expect(agGridRowByText(page, "E2E Unitless Equity Edit")).toBeVisible();
+
+  await openEditTransaction(page, "E2E Unitless Equity Edit");
+  const editDialog = page.getByRole("dialog", { name: "Edit Transaction" });
+  await editDialog
+    .getByRole("button", { name: "Switch to split editor" })
+    .click();
+  await expect(
+    editDialog.getByRole("button", { name: "Add booking" }),
+  ).toBeVisible();
+  const { editedRowIndex, lockedRowIndex } =
+    await setUnitlessEquityAccountOnEditableRow({
+      dialog: editDialog,
+      accountName: seeded.unitlessEquityAccount.name,
+    });
+  const lockedRow = gridRowByIndex(editDialog, lockedRowIndex);
+  const expectedUnit = (
+    await agGridCellByColId(lockedRow, "unit").innerText()
+  ).trim();
+  const expectedSymbol = (
+    await agGridCellByColId(lockedRow, "symbol").innerText()
+  ).trim();
+  const expectedCcy = (
+    await agGridCellByColId(lockedRow, "ccy").innerText()
+  ).trim();
+  const editedRow = gridRowByIndex(editDialog, editedRowIndex);
+  await expect(agGridCellByColId(editedRow, "unit")).toContainText(
+    expectedUnit,
+  );
+  await expect(agGridCellByColId(editedRow, "symbol")).toContainText(
+    expectedSymbol,
+  );
+  await expect(agGridCellByColId(editedRow, "ccy")).toContainText(expectedCcy);
+
+  await editDialog.getByRole("button", { name: "Save" }).click();
+  await expect(agGridRowByText(page, "E2E Unitless Equity Edit")).toBeVisible();
+
+  const bookings = await getTransactionBookingsByDescription({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Unitless Equity Edit",
+  });
+  const unitlessEquityBooking = bookings.find(
+    (booking) => booking.accountId === seeded.unitlessEquityAccount.id,
+  );
+  const lockedBooking = bookings.find(
+    (booking) => booking.accountId !== seeded.unitlessEquityAccount.id,
+  );
+  expect(unitlessEquityBooking).toBeDefined();
+  expect(lockedBooking).toBeDefined();
+  expect(unitlessEquityBooking).toMatchObject({
+    unit: lockedBooking?.unit,
+    symbol: lockedBooking?.symbol,
+    tradeCurrency: lockedBooking?.tradeCurrency,
+  });
+  expect(unitlessEquityBooking?.value).toBe(-(lockedBooking?.value ?? 0));
 });
