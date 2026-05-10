@@ -10,11 +10,8 @@ import {
   type TimelineMetric,
   type TimelinePeriodMode,
 } from "./-page-types";
-import {
-  TimelineChartDatum,
-  getTimelineMetricValue,
-  isAreaTimelineMetric,
-} from "./-chart-data";
+import { isAreaTimelineMetric } from "./-chart-data";
+import type { TimelineChartDatum } from "./-chart-data";
 import { getAxisDomainForMetric } from "./-chart-options-axis-domain";
 import {
   getTimelineRangeButtons,
