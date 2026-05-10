@@ -1,12 +1,29 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { seedDatabase, type SeededData } from "../support/db";
-import { selectSegmentedControlOption } from "../support/segmented-control";
 
 let seeded: SeededData;
 
 test.beforeAll(async () => {
   seeded = await seedDatabase();
 });
+
+function getTimelinePeriodModeSelect(page: Page) {
+  return page.getByRole("combobox", {
+    name: "Timeline period mode",
+  });
+}
+
+async function selectTimelinePeriodMode(args: {
+  page: Page;
+  label: "Monthly" | "Yearly";
+}) {
+  const control = getTimelinePeriodModeSelect(args.page);
+  await control.click();
+  await args.page
+    .getByRole("option", { name: args.label, exact: true })
+    .click();
+  await expect(control).toHaveValue(args.label);
+}
 
 test("timeline page is reachable and persists selected period mode across refresh", async ({
   page,
@@ -20,19 +37,15 @@ test("timeline page is reachable and persists selected period mode across refres
   );
   await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
 
-  const periodModeControl = page.getByRole("radiogroup", {
-    name: "Timeline period mode",
-  });
-  await selectSegmentedControlOption(periodModeControl, "Yearly");
+  const periodModeControl = getTimelinePeriodModeSelect(page);
+  await selectTimelinePeriodMode({ page, label: "Yearly" });
 
   const chartCanvas = page.locator(".ag-charts-wrapper canvas").first();
   await expect(chartCanvas).toBeVisible();
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
-  await expect(
-    periodModeControl.getByRole("radio", { name: "Yearly" }),
-  ).toBeChecked();
+  await expect(periodModeControl).toHaveValue("Yearly");
 
   await page.getByRole("link", { name: "Period" }).click();
   await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/period$`));
@@ -50,22 +63,16 @@ test("timeline mode toggles update URL mode and keep history compact", async ({
     new RegExp(`/${seeded.accountBookId}/timeline$`),
   );
 
-  const periodModeControl = page.getByRole("radiogroup", {
-    name: "Timeline period mode",
-  });
+  const periodModeControl = getTimelinePeriodModeSelect(page);
 
-  await selectSegmentedControlOption(periodModeControl, "Yearly");
-  await expect(
-    periodModeControl.getByRole("radio", { name: "Yearly" }),
-  ).toBeChecked();
+  await selectTimelinePeriodMode({ page, label: "Yearly" });
+  await expect(periodModeControl).toHaveValue("Yearly");
   await expect
     .poll(() => new URL(page.url()).searchParams.get("mode"))
     .toBe("year");
 
-  await selectSegmentedControlOption(periodModeControl, "Monthly");
-  await expect(
-    periodModeControl.getByRole("radio", { name: "Monthly" }),
-  ).toBeChecked();
+  await selectTimelinePeriodMode({ page, label: "Monthly" });
+  await expect(periodModeControl).toHaveValue("Monthly");
   await expect
     .poll(() => new URL(page.url()).searchParams.get("mode"))
     .toBeNull();
@@ -83,12 +90,8 @@ test("timeline deep link with yearly mode selects yearly on first load", async (
   await page.goto(`/${seeded.accountBookId}/timeline?mode=year`);
   await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
 
-  const periodModeControl = page.getByRole("radiogroup", {
-    name: "Timeline period mode",
-  });
-  await expect(
-    periodModeControl.getByRole("radio", { name: "Yearly" }),
-  ).toBeChecked();
+  const periodModeControl = getTimelinePeriodModeSelect(page);
+  await expect(periodModeControl).toHaveValue("Yearly");
   await expect
     .poll(() => new URL(page.url()).searchParams.get("mode"))
     .toBe("year");
@@ -109,13 +112,7 @@ test("timeline deep link with invalid mode falls back to monthly", async ({
   await page.goto(`/${seeded.accountBookId}/timeline?mode=weekly`);
   await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
 
-  const periodModeControl = page.getByRole("radiogroup", {
-    name: "Timeline period mode",
-  });
-  await expect(
-    periodModeControl.getByRole("radio", { name: "Monthly" }),
-  ).toBeChecked();
-  await expect(
-    periodModeControl.getByRole("radio", { name: "Yearly" }),
-  ).not.toBeChecked();
+  const periodModeControl = getTimelinePeriodModeSelect(page);
+  await expect(periodModeControl).toHaveValue("Monthly");
+  await expect(periodModeControl).not.toHaveValue("Yearly");
 });
