@@ -142,9 +142,7 @@ test("timeline expense scope combobox opens with all options and supports search
     .poll(() => new URL(page.url()).searchParams.get("metric"))
     .toBe("expenses");
 
-  const scopeInput = page.getByRole("combobox", {
-    name: "Timeline metric scope",
-  });
+  const scopeInput = page.getByLabel("Timeline metric scope");
   await expect(scopeInput).toHaveValue("Total");
   await scopeInput.click();
 
