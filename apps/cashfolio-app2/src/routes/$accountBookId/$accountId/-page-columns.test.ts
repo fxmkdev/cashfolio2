@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildCounterpartyLedgerSearch } from "./-page-columns";
+import { buildCounterpartyLedgerSearch } from "./-counterparty-ledger-search";
 
 describe("buildCounterpartyLedgerSearch", () => {
   test("includes the selected period when provided", () => {

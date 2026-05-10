@@ -18,16 +18,7 @@ import {
 } from "@/shared/unit-format";
 import type { LedgerRow } from "./-page-types";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/opening-balances";
-
-export function buildCounterpartyLedgerSearch(args: {
-  transactionId: string;
-  selectedPeriodValue?: string;
-}) {
-  return {
-    transactionId: args.transactionId,
-    period: args.selectedPeriodValue,
-  };
-}
+import { buildCounterpartyLedgerSearch } from "./-counterparty-ledger-search";
 
 export function useLedgerColumnDefs(args: {
   accountBookId: string;
