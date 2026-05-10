@@ -116,23 +116,9 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       - name: Wake up deployed app
-        run: |
-          set -euo pipefail
-
-          WARMUP_URL="https://${{ vars.CANONICAL_HOSTNAME }}/"
-          curl \
-            --fail \
-            --silent \
-            --show-error \
-            --location \
-            --retry 12 \
-            --retry-delay 5 \
-            --retry-all-errors \
-            --max-time 20 \
-            "$WARMUP_URL" \
-            > /dev/null
-
-          echo "App warm-up request succeeded: $WARMUP_URL"
+        uses: ./.github/actions/warm-up-url
+        with:
+          url: https://${{ vars.CANONICAL_HOSTNAME }}/
 
   cashfolio-redis-deploy:
     name: "cashfolio-redis: Deploy"
