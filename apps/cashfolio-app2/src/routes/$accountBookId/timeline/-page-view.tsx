@@ -8,7 +8,6 @@ import {
   useComputedColorScheme,
   useMantineTheme,
 } from "@mantine/core";
-import { IconCalendarMonth, IconListDetails } from "@tabler/icons-react";
 import type {
   AgChartInstance,
   AgChartOptions,
@@ -17,7 +16,6 @@ import type {
 import { AgCharts } from "ag-charts-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
-import { LinkButton } from "@/components/link-button";
 import type { PeriodTimelineResponse } from "@/server/period-timeline";
 import { TopPageHeader } from "@/components/top-page-header";
 import { PageShell } from "@/components/page-shell";
@@ -253,38 +251,19 @@ export function TimelinePageView({
       <TopPageHeader
         heading={<Title order={2}>Timeline</Title>}
         actions={
-          <Group gap="sm">
-            <LinkButton
-              variant="default"
-              leftSection={<IconListDetails size={16} />}
-              to="/$accountBookId/accounts"
-              params={{ accountBookId }}
-              search={{ tab: "ASSET", mode: "active" }}
-            >
-              Accounts
-            </LinkButton>
-            <LinkButton
-              variant="default"
-              leftSection={<IconCalendarMonth size={16} />}
-              to="/$accountBookId/period"
-              params={{ accountBookId }}
-            >
-              Period
-            </LinkButton>
-            <SegmentedControl
-              value={selectedMode}
-              aria-label="Timeline period mode"
-              data={[
-                { label: "Monthly", value: "month" },
-                { label: "Yearly", value: "year" },
-              ]}
-              onChange={(nextMode) => {
-                if (isTimelinePeriodMode(nextMode)) {
-                  onModeChange(nextMode);
-                }
-              }}
-            />
-          </Group>
+          <SegmentedControl
+            value={selectedMode}
+            aria-label="Timeline period mode"
+            data={[
+              { label: "Monthly", value: "month" },
+              { label: "Yearly", value: "year" },
+            ]}
+            onChange={(nextMode) => {
+              if (isTimelinePeriodMode(nextMode)) {
+                onModeChange(nextMode);
+              }
+            }}
+          />
         }
       />
 
