@@ -26,12 +26,11 @@ import {
 } from "@/shared/unit-format";
 import {
   getTimelineMetricLabel,
-  isTimelineMetric,
   isTimelinePeriodMode,
-  TIMELINE_METRIC_OPTIONS,
   type TimelineMetric,
   type TimelinePeriodMode,
 } from "./-page-types";
+import { type TimelineScopeSelection } from "@/shared/timeline-scope";
 import {
   createTimelineChartOptions,
   mapTimelinePointsToChartData,
@@ -40,6 +39,7 @@ import {
   type TimelineVisibleRange,
 } from "./-chart-options";
 import { getDefaultRangeButtonLabel } from "./-range-controls";
+import { TimelineScopeControls } from "./-scope-controls";
 import classes from "./-page-view.module.css";
 
 ensureChartModulesRegistered();
@@ -51,6 +51,7 @@ export type TimelinePageViewProps = {
   timeline: PeriodTimelineResponse;
   onModeChange: (mode: TimelinePeriodMode) => void;
   onMetricChange: (metric: TimelineMetric) => void;
+  onMetricScopeChange: (scope: TimelineScopeSelection) => void;
 };
 
 function findTimelineRangeButtons(container: HTMLElement): HTMLElement[] {
@@ -89,6 +90,7 @@ export function TimelinePageView({
   timeline,
   onModeChange,
   onMetricChange,
+  onMetricScopeChange,
 }: TimelinePageViewProps) {
   const activeReferenceCurrency = timeline.referenceCurrency;
   const theme = useMantineTheme();
@@ -249,21 +251,19 @@ export function TimelinePageView({
       <TopPageHeader
         heading={<Title order={2}>Timeline</Title>}
         actions={
-          <Group gap="sm">
-            <SegmentedControl
-              value={selectedMode}
-              aria-label="Timeline period mode"
-              data={[
-                { label: "Monthly", value: "month" },
-                { label: "Yearly", value: "year" },
-              ]}
-              onChange={(nextMode) => {
-                if (isTimelinePeriodMode(nextMode)) {
-                  onModeChange(nextMode);
-                }
-              }}
-            />
-          </Group>
+          <SegmentedControl
+            value={selectedMode}
+            aria-label="Timeline period mode"
+            data={[
+              { label: "Monthly", value: "month" },
+              { label: "Yearly", value: "year" },
+            ]}
+            onChange={(nextMode) => {
+              if (isTimelinePeriodMode(nextMode)) {
+                onModeChange(nextMode);
+              }
+            }}
+          />
         }
       />
 
@@ -277,16 +277,15 @@ export function TimelinePageView({
               Amounts shown in {activeReferenceCurrency}
             </Text>
           </Stack>
-          <SegmentedControl
-            value={selectedMetric}
-            aria-label="Timeline metric"
-            data={TIMELINE_METRIC_OPTIONS}
-            onChange={(nextMetric) => {
-              if (isTimelineMetric(nextMetric)) {
-                onMetricChange(nextMetric);
-              }
-            }}
-          />
+          <div className={classes.metricControls}>
+            <TimelineScopeControls
+              selectedMetric={selectedMetric}
+              scopeSelection={timeline.scopeSelection}
+              scopeOptions={timeline.scopeOptions}
+              onMetricChange={onMetricChange}
+              onMetricScopeChange={onMetricScopeChange}
+            />
+          </div>
         </Group>
 
         {rebasedChartData.length === 0 ? (

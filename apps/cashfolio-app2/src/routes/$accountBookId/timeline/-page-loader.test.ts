@@ -38,11 +38,22 @@ describe("loadTimelinePageData", () => {
           netWorth: 60,
         },
       ],
+      scopeOptions: {
+        income: [{ value: "total", label: "Total", kind: "total" }],
+        expenses: [{ value: "total", label: "Total", kind: "total" }],
+      },
+      scopeSelection: {
+        income: "total",
+        expenses: "total",
+      },
     });
 
     const result = await loadTimelinePageData({
       accountBookId: "book-1",
       mode: "year",
+      scopedMetric: "income",
+      incomeScope: "group:income-1",
+      expenseScope: "total",
     });
 
     expect(mockedGetPeriodTimeline).toHaveBeenCalledTimes(1);
@@ -50,6 +61,9 @@ describe("loadTimelinePageData", () => {
       data: {
         accountBookId: "book-1",
         granularity: "year",
+        scopedMetric: "income",
+        incomeScope: "group:income-1",
+        expenseScope: "total",
       },
     });
     expect(result).toEqual({
@@ -77,6 +91,14 @@ describe("loadTimelinePageData", () => {
             netWorth: 60,
           },
         ],
+        scopeOptions: {
+          income: [{ value: "total", label: "Total", kind: "total" }],
+          expenses: [{ value: "total", label: "Total", kind: "total" }],
+        },
+        scopeSelection: {
+          income: "total",
+          expenses: "total",
+        },
       },
     });
   });

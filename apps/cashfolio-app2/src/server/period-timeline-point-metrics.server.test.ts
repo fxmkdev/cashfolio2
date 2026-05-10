@@ -92,9 +92,31 @@ describe("loadPeriodTimelinePointMetrics", () => {
       assets: 0,
       liabilities: 0,
       netWorth: 0,
+      scopeOptions: {
+        income: [],
+        expenses: [],
+      },
+      scopedMetricValue: undefined,
     });
     expect(processPeriodEquityBookingsFromBaseData).not.toHaveBeenCalled();
     expect(computePeriodHoldingGainLoss).not.toHaveBeenCalled();
+  });
+
+  test("returns scoped metric value zero before account-book start when scope filter is requested", async () => {
+    const baseData = createBaseData({ isBefore: true });
+
+    getOrLoadPeriodBaseData.mockResolvedValue(baseData);
+
+    const result = await loadPeriodTimelinePointMetrics({
+      accountBookId: "book-1",
+      period: "2026-02",
+      metricScopeFilter: {
+        metric: "expenses",
+        scope: "total",
+      },
+    });
+
+    expect(result.scopedMetricValue).toBe(0);
   });
 
   test("loads scalar metrics from shared equity + holdings pipelines", async () => {
@@ -149,6 +171,11 @@ describe("loadPeriodTimelinePointMetrics", () => {
       assets: 0,
       liabilities: 0,
       netWorth: 0,
+      scopeOptions: {
+        income: [],
+        expenses: [],
+      },
+      scopedMetricValue: undefined,
     });
   });
 
@@ -242,6 +269,153 @@ describe("loadPeriodTimelinePointMetrics", () => {
       assets: 250,
       liabilities: 70,
       netWorth: 180,
+      scopeOptions: {
+        income: [],
+        expenses: [],
+      },
+      scopedMetricValue: undefined,
     });
+  });
+
+  test("builds activity-only scope options and resolves scoped income values", async () => {
+    const baseData = createBaseData({
+      overrides: {
+        allAccountGroups: [
+          { id: "grp-income", name: "Income", parentGroupId: null },
+          {
+            id: "grp-income-salary",
+            name: "Salary",
+            parentGroupId: "grp-income",
+          },
+        ],
+      },
+    });
+    getOrLoadPeriodBaseData.mockResolvedValue(baseData);
+    processPeriodEquityBookingsFromBaseData.mockImplementation(
+      async ({
+        equityAggregation,
+      }: {
+        equityAggregation: {
+          income: number;
+          expenses: number;
+          explicitGainLoss: number;
+          incomeAmountByAccountId: Map<string, unknown>;
+          expenseAmountByAccountId: Map<string, unknown>;
+        };
+      }) => {
+        equityAggregation.income = 130;
+        equityAggregation.expenses = 0;
+        equityAggregation.explicitGainLoss = 0;
+        equityAggregation.incomeAmountByAccountId.set("income-a", {
+          accountId: "income-a",
+          accountName: "Primary Salary",
+          groupId: "grp-income-salary",
+          amount: 130,
+        });
+      },
+    );
+    computePeriodHoldingGainLoss.mockResolvedValue({
+      realizedGainLoss: 0,
+      unrealizedGainLoss: 0,
+      convertedCount: 0,
+      skippedCount: 0,
+    });
+    convertBookingValueToReference.mockResolvedValue(1);
+    getUnitToReferenceExchangeRate.mockResolvedValue(1);
+
+    const result = await loadPeriodTimelinePointMetrics({
+      accountBookId: "book-1",
+      period: "2026-02",
+      metricScopeFilter: {
+        metric: "income",
+        scope: "group:grp-income",
+      },
+    });
+
+    expect(result.scopedMetricValue).toBe(130);
+    expect(result.scopeOptions.income).toEqual([
+      {
+        value: "group:grp-income",
+        label: "Income",
+        kind: "group",
+      },
+      {
+        value: "group:grp-income-salary",
+        label: "Income / Salary",
+        kind: "group",
+      },
+      {
+        value: "account:income-a",
+        label: "Income / Salary / Primary Salary",
+        kind: "account",
+      },
+    ]);
+    expect(result.scopeOptions.expenses).toEqual([]);
+  });
+
+  test("guards scoped traversal against cyclic group hierarchies", async () => {
+    const baseData = createBaseData({
+      overrides: {
+        allAccountGroups: [
+          { id: "grp-root", name: "Root", parentGroupId: null },
+          { id: "grp-cycle-a", name: "Cycle A", parentGroupId: "grp-cycle-b" },
+          { id: "grp-cycle-b", name: "Cycle B", parentGroupId: "grp-cycle-a" },
+        ],
+      },
+    });
+    getOrLoadPeriodBaseData.mockResolvedValue(baseData);
+    processPeriodEquityBookingsFromBaseData.mockImplementation(
+      async ({
+        equityAggregation,
+      }: {
+        equityAggregation: {
+          income: number;
+          expenses: number;
+          explicitGainLoss: number;
+          incomeAmountByAccountId: Map<string, unknown>;
+          expenseAmountByAccountId: Map<string, unknown>;
+        };
+      }) => {
+        equityAggregation.income = 50;
+        equityAggregation.expenses = 0;
+        equityAggregation.explicitGainLoss = 0;
+        equityAggregation.incomeAmountByAccountId.set("income-cycle", {
+          accountId: "income-cycle",
+          accountName: "Cycle Income",
+          groupId: "grp-cycle-a",
+          amount: 50,
+        });
+      },
+    );
+    computePeriodHoldingGainLoss.mockResolvedValue({
+      realizedGainLoss: 0,
+      unrealizedGainLoss: 0,
+      convertedCount: 0,
+      skippedCount: 0,
+    });
+    convertBookingValueToReference.mockResolvedValue(1);
+    getUnitToReferenceExchangeRate.mockResolvedValue(1);
+
+    const result = await loadPeriodTimelinePointMetrics({
+      accountBookId: "book-1",
+      period: "2026-02",
+      metricScopeFilter: {
+        metric: "income",
+        scope: "group:grp-root",
+      },
+    });
+
+    expect(result.scopedMetricValue).toBe(0);
+    const optionValues = result.scopeOptions.income.map(
+      (option) => option.value,
+    );
+    expect(optionValues).toHaveLength(3);
+    expect(optionValues).toEqual(
+      expect.arrayContaining([
+        "group:grp-cycle-a",
+        "group:grp-cycle-b",
+        "account:income-cycle",
+      ]),
+    );
   });
 });

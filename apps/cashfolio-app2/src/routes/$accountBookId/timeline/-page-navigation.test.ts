@@ -6,6 +6,8 @@ describe("timeline page navigation", () => {
     const navigation = buildTimelineSearchNavigation({
       mode: "year",
       metric: "savings",
+      incomeScope: "group:income-1",
+      expenseScope: "account:expense-1",
     });
 
     expect(navigation.replace).toBe(true);
@@ -18,6 +20,8 @@ describe("timeline page navigation", () => {
     ).toEqual({
       mode: "year",
       metric: "savings",
+      incomeScope: "group:income-1",
+      expenseScope: "account:expense-1",
       q: "keep-me",
     });
   });
@@ -26,6 +30,8 @@ describe("timeline page navigation", () => {
     const navigation = buildTimelineSearchNavigation({
       mode: "month",
       metric: "totalReturn",
+      incomeScope: "total",
+      expenseScope: "total",
     });
 
     expect(
@@ -37,6 +43,8 @@ describe("timeline page navigation", () => {
     ).toEqual({
       mode: undefined,
       metric: undefined,
+      incomeScope: undefined,
+      expenseScope: undefined,
       q: "keep-me",
     });
   });

@@ -1,3 +1,10 @@
+import {
+  isTimelineScopedMetric,
+  parseTimelineScopeSelection,
+  type TimelineScopeSelection,
+  type TimelineScopedMetric,
+} from "@/shared/timeline-scope";
+
 export type TimelinePeriodMode = "month" | "year";
 export type TimelineMetric =
   | "totalReturn"
@@ -12,10 +19,13 @@ export type TimelineMetric =
 export type TimelineSearch = {
   mode?: TimelinePeriodMode;
   metric?: TimelineMetric;
+  incomeScope?: TimelineScopeSelection;
+  expenseScope?: TimelineScopeSelection;
 };
 
 export const DEFAULT_TIMELINE_MODE: TimelinePeriodMode = "month";
 export const DEFAULT_TIMELINE_METRIC: TimelineMetric = "totalReturn";
+export const DEFAULT_TIMELINE_SCOPE: TimelineScopeSelection = "total";
 
 export function isTimelinePeriodMode(
   value: unknown,
@@ -66,8 +76,18 @@ export function parseTimelineSearch(
   search: Record<string, unknown>,
 ): TimelineSearch {
   return {
-    mode: isTimelinePeriodMode(search.mode) ? search.mode : undefined,
-    metric: isTimelineMetric(search.metric) ? search.metric : undefined,
+    ...("mode" in search
+      ? { mode: isTimelinePeriodMode(search.mode) ? search.mode : undefined }
+      : {}),
+    ...("metric" in search
+      ? { metric: isTimelineMetric(search.metric) ? search.metric : undefined }
+      : {}),
+    ...("incomeScope" in search
+      ? { incomeScope: parseTimelineScopeSelection(search.incomeScope) }
+      : {}),
+    ...("expenseScope" in search
+      ? { expenseScope: parseTimelineScopeSelection(search.expenseScope) }
+      : {}),
   };
 }
 
@@ -77,4 +97,21 @@ export function getTimelineMode(search: TimelineSearch): TimelinePeriodMode {
 
 export function getTimelineMetric(search: TimelineSearch): TimelineMetric {
   return search.metric ?? DEFAULT_TIMELINE_METRIC;
+}
+
+export function getTimelineScopeForMetric(args: {
+  search: TimelineSearch;
+  metric: TimelineScopedMetric;
+}): TimelineScopeSelection {
+  if (args.metric === "income") {
+    return args.search.incomeScope ?? DEFAULT_TIMELINE_SCOPE;
+  }
+
+  return args.search.expenseScope ?? DEFAULT_TIMELINE_SCOPE;
+}
+
+export function getTimelineScopedMetric(
+  metric: TimelineMetric,
+): TimelineScopedMetric | undefined {
+  return isTimelineScopedMetric(metric) ? metric : undefined;
 }

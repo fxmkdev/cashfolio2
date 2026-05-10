@@ -2,6 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { formatMonthPeriodValue } from "../shared/period";
 import { startOfUtcDay } from "../shared/date";
 import type { TimelineOpeningBalancePoint } from "./period-timeline-opening-balance.server";
+import {
+  isTimelineScopedMetric,
+  parseTimelineScopeSelection,
+  type TimelineScopeOption,
+  type TimelineScopeSelection,
+  type TimelineScopedMetric,
+} from "../shared/timeline-scope";
 
 export type PeriodTimelineGranularity = "month" | "year";
 
@@ -25,11 +32,22 @@ export type PeriodTimelineResponse = {
   referenceCurrency: string;
   openingBalancePoint: PeriodTimelineOpeningBalancePoint;
   points: PeriodTimelinePoint[];
+  scopeOptions: {
+    income: TimelineScopeOption[];
+    expenses: TimelineScopeOption[];
+  };
+  scopeSelection: {
+    income: TimelineScopeSelection;
+    expenses: TimelineScopeSelection;
+  };
 };
 
 type TimelineInput = {
   accountBookId: string;
   granularity: PeriodTimelineGranularity;
+  scopedMetric?: TimelineScopedMetric;
+  incomeScope: TimelineScopeSelection;
+  expenseScope: TimelineScopeSelection;
 };
 
 function toMonthIndex(year: number, month: number): number {
@@ -44,6 +62,52 @@ function parseTimelineGranularity(value: unknown): PeriodTimelineGranularity {
   throw new Response("Invalid timeline granularity. Use month or year.", {
     status: 400,
   });
+}
+
+function parseOptionalTimelineScopedMetric(
+  value: unknown,
+): TimelineScopedMetric | undefined {
+  return isTimelineScopedMetric(value) ? value : undefined;
+}
+
+function parseTimelineScopeSelectionOrDefault(
+  value: unknown,
+): TimelineScopeSelection {
+  return parseTimelineScopeSelection(value) ?? "total";
+}
+
+function createTimelineScopeOptionsWithTotal(
+  options: Iterable<TimelineScopeOption>,
+): TimelineScopeOption[] {
+  const optionByValue = new Map<TimelineScopeSelection, TimelineScopeOption>();
+  for (const option of options) {
+    optionByValue.set(option.value, option);
+  }
+
+  const sortedOptions = Array.from(optionByValue.values()).toSorted(
+    (left, right) =>
+      left.label.localeCompare(right.label, "en") ||
+      left.value.localeCompare(right.value, "en"),
+  );
+  return [
+    {
+      value: "total",
+      label: "Total",
+      kind: "total",
+    },
+    ...sortedOptions,
+  ];
+}
+
+function clampTimelineScopeSelection(args: {
+  requested: TimelineScopeSelection;
+  options: TimelineScopeOption[];
+}): TimelineScopeSelection {
+  if (args.options.some((option) => option.value === args.requested)) {
+    return args.requested;
+  }
+
+  return "total";
 }
 
 export function buildTimelinePeriodValues(args: {
@@ -98,9 +162,18 @@ export const getPeriodTimeline = createServerFn({
   method: "GET",
 })
   .inputValidator(
-    (data: { accountBookId: string; granularity: unknown }): TimelineInput => ({
+    (data: {
+      accountBookId: string;
+      granularity: unknown;
+      scopedMetric?: unknown;
+      incomeScope?: unknown;
+      expenseScope?: unknown;
+    }): TimelineInput => ({
       accountBookId: data.accountBookId,
       granularity: parseTimelineGranularity(data.granularity),
+      scopedMetric: parseOptionalTimelineScopedMetric(data.scopedMetric),
+      incomeScope: parseTimelineScopeSelectionOrDefault(data.incomeScope),
+      expenseScope: parseTimelineScopeSelectionOrDefault(data.expenseScope),
     }),
   )
   .handler(async ({ data }) => {
@@ -128,12 +201,45 @@ export const getPeriodTimeline = createServerFn({
     });
 
     const points: PeriodTimelinePoint[] = [];
+    const scopedMetricValues: number[] = [];
+    const incomeScopeOptions = new Map<
+      TimelineScopeSelection,
+      TimelineScopeOption
+    >();
+    const expenseScopeOptions = new Map<
+      TimelineScopeSelection,
+      TimelineScopeOption
+    >();
+    const activeMetricScopeFilter = (() => {
+      if (data.scopedMetric === "income" && data.incomeScope !== "total") {
+        return {
+          metric: "income" as const,
+          scope: data.incomeScope,
+        };
+      }
+      if (data.scopedMetric === "expenses" && data.expenseScope !== "total") {
+        return {
+          metric: "expenses" as const,
+          scope: data.expenseScope,
+        };
+      }
+      return undefined;
+    })();
+
     for (const periodValue of periodValues) {
       const point = await loadPeriodTimelinePoint({
         accountBookId: data.accountBookId,
         period: periodValue,
         context,
+        metricScopeFilter: activeMetricScopeFilter,
       });
+      for (const option of point.scopeOptions.income) {
+        incomeScopeOptions.set(option.value, option);
+      }
+      for (const option of point.scopeOptions.expenses) {
+        expenseScopeOptions.set(option.value, option);
+      }
+      scopedMetricValues.push(point.scopedMetricValue ?? 0);
       points.push({
         periodValue: point.selectedPeriodValue,
         periodLabel: point.selectedPeriodLabel,
@@ -149,9 +255,45 @@ export const getPeriodTimeline = createServerFn({
       });
     }
 
+    const finalizedIncomeScopeOptions = createTimelineScopeOptionsWithTotal(
+      incomeScopeOptions.values(),
+    );
+    const finalizedExpenseScopeOptions = createTimelineScopeOptionsWithTotal(
+      expenseScopeOptions.values(),
+    );
+    const clampedIncomeScope = clampTimelineScopeSelection({
+      requested: data.incomeScope,
+      options: finalizedIncomeScopeOptions,
+    });
+    const clampedExpenseScope = clampTimelineScopeSelection({
+      requested: data.expenseScope,
+      options: finalizedExpenseScopeOptions,
+    });
+    const shouldUseScopedIncome =
+      data.scopedMetric === "income" && clampedIncomeScope !== "total";
+    const shouldUseScopedExpenses =
+      data.scopedMetric === "expenses" && clampedExpenseScope !== "total";
+    const responsePoints = points.map((point, index) => ({
+      ...point,
+      income: shouldUseScopedIncome
+        ? (scopedMetricValues[index] ?? 0)
+        : point.income,
+      expenses: shouldUseScopedExpenses
+        ? (scopedMetricValues[index] ?? 0)
+        : point.expenses,
+    }));
+
     return {
       referenceCurrency: context.referenceCurrency,
       openingBalancePoint,
-      points,
+      points: responsePoints,
+      scopeOptions: {
+        income: finalizedIncomeScopeOptions,
+        expenses: finalizedExpenseScopeOptions,
+      },
+      scopeSelection: {
+        income: clampedIncomeScope,
+        expenses: clampedExpenseScope,
+      },
     } satisfies PeriodTimelineResponse;
   });

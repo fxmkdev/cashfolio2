@@ -17,6 +17,12 @@ import { processPeriodEquityBookingsFromBaseData } from "./period-equity-booking
 import { createPeriodOverviewEquityAggregation } from "./period-overview-aggregation";
 import { buildTransferClearingVirtualHierarchy } from "./period-transfer-clearing";
 import type { GainLossContributionAccumulator } from "./period-gains-losses-contributions";
+import {
+  buildTimelineScopeOptions,
+  resolveScopedMetricValue,
+  type TimelineMetricScopeFilter,
+} from "./period-timeline-scopes.server";
+import { type TimelineScopeOption } from "../shared/timeline-scope";
 
 const TRANSACTIONS_PAGE_SIZE = 200;
 const TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE = 200;
@@ -30,6 +36,11 @@ export type PeriodTimelinePointMetrics = {
   assets: number;
   liabilities: number;
   netWorth: number;
+  scopeOptions: {
+    income: TimelineScopeOption[];
+    expenses: TimelineScopeOption[];
+  };
+  scopedMetricValue?: number;
 };
 
 function buildTransferClearingHoldingAccounts(args: {
@@ -85,6 +96,7 @@ export async function loadPeriodTimelinePointMetrics(args: {
   accountBookId: string;
   period?: unknown;
   baseData?: PeriodBaseData;
+  metricScopeFilter?: TimelineMetricScopeFilter;
 }) {
   const baseData =
     args.baseData ??
@@ -104,6 +116,11 @@ export async function loadPeriodTimelinePointMetrics(args: {
       assets: 0,
       liabilities: 0,
       netWorth: 0,
+      scopeOptions: {
+        income: [],
+        expenses: [],
+      },
+      scopedMetricValue: args.metricScopeFilter ? 0 : undefined,
     } satisfies PeriodTimelinePointMetrics;
   }
 
@@ -206,6 +223,20 @@ export async function loadPeriodTimelinePointMetrics(args: {
   const roundedAssets = round2(endOfPeriodBalanceStats.assets);
   const roundedLiabilities = round2(endOfPeriodBalanceStats.liabilities);
   const roundedNetWorth = round2(endOfPeriodBalanceStats.netWorth);
+  const incomeScopeOptions = buildTimelineScopeOptions({
+    amountByAccountId: equityAggregation.incomeAmountByAccountId,
+    allAccountGroups: baseData.allAccountGroups,
+  });
+  const expenseScopeOptions = buildTimelineScopeOptions({
+    amountByAccountId: equityAggregation.expenseAmountByAccountId,
+    allAccountGroups: baseData.allAccountGroups,
+  });
+  const scopedMetricValue = resolveScopedMetricValue({
+    metricScopeFilter: args.metricScopeFilter,
+    incomeAmountByAccountId: equityAggregation.incomeAmountByAccountId,
+    expenseAmountByAccountId: equityAggregation.expenseAmountByAccountId,
+    allAccountGroups: baseData.allAccountGroups,
+  });
 
   return {
     totalReturn: roundedTotalReturn,
@@ -216,5 +247,10 @@ export async function loadPeriodTimelinePointMetrics(args: {
     assets: roundedAssets,
     liabilities: roundedLiabilities,
     netWorth: roundedNetWorth,
+    scopeOptions: {
+      income: incomeScopeOptions,
+      expenses: expenseScopeOptions,
+    },
+    scopedMetricValue,
   } satisfies PeriodTimelinePointMetrics;
 }
