@@ -20,6 +20,24 @@ on:
       deploy-cashfolio-redis:
         type: boolean
         default: true
+      cashfolio_app2_image:
+        type: string
+        required: false
+      fly_app:
+        type: string
+        required: false
+      canonical_hostname:
+        type: string
+        required: false
+      base_url:
+        type: string
+        required: false
+      app_environment_name:
+        type: string
+        required: false
+      app_environment_url:
+        type: string
+        required: false
 
 env:
   NODE_VERSION: 24
@@ -30,11 +48,9 @@ jobs:
     name: "cashfolio-app2: Deploy"
     runs-on: ubuntu-latest
     if: ${{ inputs.deploy-cashfolio-app2 }}
-    env:
-      CASHFOLIO_APP2_IMAGE: registry.fly.io/${{ vars.FLY_CASHFOLIO_APP_STAGING_APP }}:v${{ inputs.version_with_sha }}
     environment:
-      name: ${{ inputs.environment }}-cashfolio-app
-      url: https://${{ vars.CANONICAL_HOSTNAME }}/
+      name: ${{ inputs.app_environment_name || format('{0}-cashfolio-app', inputs.environment) }}
+      url: ${{ inputs.app_environment_url || format('https://{0}/', inputs.canonical_hostname || vars.CANONICAL_HOSTNAME) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -42,83 +58,27 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@master
         with:
           version: ${{ env.FLYCTL_VERSION }}
-      - name: Prepare configuration file
-        run: |
-          envsubst \
-              < apps/cashfolio-app2/fly.template.toml \
-              > apps/cashfolio-app2/fly.generated.toml \
-
-          echo "Generated configuration file:"
-          cat apps/cashfolio-app2/fly.generated.toml
-        env:
-          FLY_APP: ${{  vars.FLY_APP }}
-          FLY_PRIMARY_REGION: ${{ vars.FLY_PRIMARY_REGION }}
-          FLY_MIN_MACHINES_RUNNING: ${{ vars.FLY_MIN_MACHINES_RUNNING }}
-          FLY_MEMORY: ${{ vars.FLY_MEMORY }}
-          FLY_CPU_KIND: ${{ vars.FLY_CPU_KIND }}
-          FLY_CPUS: ${{ vars.FLY_CPUS }}
-          CANONICAL_HOSTNAME: ${{ vars.CANONICAL_HOSTNAME }}
-          BASE_URL: ${{ vars.BASE_URL }}
-          LOGTO_ENDPOINT: ${{ vars.LOGTO_ENDPOINT }}
-          LOGTO_TENANT_ID: ${{ vars.LOGTO_TENANT_ID }}
-          LOGTO_APP_ID: ${{ vars.LOGTO_APP_ID }}
-      - name: Log in to Fly registry
-        uses: docker/login-action@v4
-        with:
-          registry: registry.fly.io
-          username: x
-          password: ${{ secrets.FLY_API_TOKEN }}
-      - name: Wait for cashfolio-app2 image in Fly registry
-        timeout-minutes: 7
-        run: |
-          set -euo pipefail
-
-          IMAGE="${CASHFOLIO_APP2_IMAGE}"
-          MAX_ATTEMPTS=24
-          SLEEP_SECONDS=15
-          LAST_ERROR=""
-
-          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
-            ERROR_FILE="$(mktemp)"
-            if docker manifest inspect "$IMAGE" > /dev/null 2>"$ERROR_FILE"; then
-              rm -f "$ERROR_FILE"
-              echo "Image is available: $IMAGE"
-              exit 0
-            fi
-
-            ERROR_TEXT="$(tr '\n' ' ' < "$ERROR_FILE" | sed -E 's/[[:space:]]+/ /g')"
-            rm -f "$ERROR_FILE"
-            LAST_ERROR="$ERROR_TEXT"
-
-            if printf '%s' "$ERROR_TEXT" | grep -Eiq '(unauthorized|authentication required|denied|forbidden|insufficient_scope|access denied)'; then
-              echo "Registry auth/permission error while checking image: $IMAGE"
-              echo "docker manifest inspect error: $ERROR_TEXT"
-              exit 1
-            fi
-
-            if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
-              echo "[$attempt/$MAX_ATTEMPTS] Waiting for image: $IMAGE"
-              sleep "$SLEEP_SECONDS"
-            fi
-          done
-
-          echo "Timed out waiting for image: $IMAGE"
-          if [ -n "$LAST_ERROR" ]; then
-            echo "Last docker manifest inspect error: $LAST_ERROR"
-          fi
-          exit 1
       - name: Deploy cashfolio-app2
-        run: |
-          flyctl deploy \
-          --config apps/cashfolio-app2/fly.generated.toml \
-          --ha=${{ inputs.high_availability }} \
-          --image "${CASHFOLIO_APP2_IMAGE}" \
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        uses: ./.github/actions/deploy-cashfolio-app2
+        with:
+          image: ${{ inputs.cashfolio_app2_image || format('registry.fly.io/{0}:v{1}', vars.FLY_CASHFOLIO_APP_STAGING_APP, inputs.version_with_sha) }}
+          high_availability: ${{ inputs.high_availability }}
+          fly_app: ${{ inputs.fly_app || vars.FLY_APP }}
+          canonical_hostname: ${{ inputs.canonical_hostname || vars.CANONICAL_HOSTNAME }}
+          base_url: ${{ inputs.base_url || vars.BASE_URL }}
+          fly_primary_region: ${{ vars.FLY_PRIMARY_REGION }}
+          fly_min_machines_running: ${{ vars.FLY_MIN_MACHINES_RUNNING }}
+          fly_memory: ${{ vars.FLY_MEMORY }}
+          fly_cpu_kind: ${{ vars.FLY_CPU_KIND }}
+          fly_cpus: ${{ vars.FLY_CPUS }}
+          logto_endpoint: ${{ vars.LOGTO_ENDPOINT }}
+          logto_tenant_id: ${{ vars.LOGTO_TENANT_ID }}
+          logto_app_id: ${{ vars.LOGTO_APP_ID }}
+          fly_api_token: ${{ secrets.FLY_API_TOKEN }}
       - name: Wake up deployed app
         uses: ./.github/actions/warm-up-url
         with:
-          url: https://${{ vars.CANONICAL_HOSTNAME }}/
+          url: ${{ inputs.app_environment_url || inputs.base_url || format('https://{0}/', inputs.canonical_hostname || vars.CANONICAL_HOSTNAME) }}
 
   cashfolio-redis-deploy:
     name: "cashfolio-redis: Deploy"

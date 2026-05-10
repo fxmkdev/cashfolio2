@@ -260,8 +260,8 @@ jobs:
           pr_number: ${{ github.event.pull_request.number }}
           head_ref: ${{ github.event.pull_request.head.ref }}
 
-  deploy-preview:
-    name: Deploy to preview
+  preview-prepare:
+    name: Prepare preview resources
     if: >-
       github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo.fork == false
@@ -274,26 +274,17 @@ jobs:
       - resolve-preview-names
     permissions:
       contents: read
-      deployments: write
-      pull-requests: write
-      issues: write
-    environment:
-      name: preview-cashfolio-app
-      url: ${{ needs.resolve-preview-names.outputs.preview_url }}
     concurrency:
       group: preview-pr-${{ github.event.pull_request.number }}
       cancel-in-progress: true
     env:
-      CASHFOLIO_APP2_IMAGE: ${{ needs.cashfolio-app2-build-push.outputs.image }}
+      FLY_APP: ${{ needs.resolve-preview-names.outputs.fly_app }}
+      PREVIEW_HOSTNAME: ${{ needs.resolve-preview-names.outputs.preview_hostname }}
+      PREVIEW_URL: ${{ needs.resolve-preview-names.outputs.preview_url }}
+      NEON_BRANCH_NAME: ${{ needs.resolve-preview-names.outputs.neon_branch_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-      - name: Resolve preview resource names
-        run: |
-          echo "FLY_APP=${{ needs.resolve-preview-names.outputs.fly_app }}" >> "$GITHUB_ENV"
-          echo "PREVIEW_HOSTNAME=${{ needs.resolve-preview-names.outputs.preview_hostname }}" >> "$GITHUB_ENV"
-          echo "PREVIEW_URL=${{ needs.resolve-preview-names.outputs.preview_url }}" >> "$GITHUB_ENV"
-          echo "NEON_BRANCH_NAME=${{ needs.resolve-preview-names.outputs.neon_branch_name }}" >> "$GITHUB_ENV"
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
         with:
@@ -386,80 +377,60 @@ jobs:
           COINLAYER_API_KEY: ${{ secrets.COINLAYER_API_KEY }}
           MARKETSTACK_API_KEY: ${{ secrets.MARKETSTACK_API_KEY }}
           STAGING_REDIS_URL: ${{ secrets.STAGING_REDIS_URL }}
-      - name: Prepare Fly configuration file
-        run: |
-          envsubst \
-            < apps/cashfolio-app2/fly.template.toml \
-            > apps/cashfolio-app2/fly.generated.toml
-        env:
-          FLY_APP: ${{ env.FLY_APP }}
-          FLY_PRIMARY_REGION: ${{ vars.FLY_PRIMARY_REGION }}
-          FLY_MIN_MACHINES_RUNNING: ${{ vars.FLY_MIN_MACHINES_RUNNING }}
-          FLY_MEMORY: ${{ vars.FLY_MEMORY }}
-          FLY_CPU_KIND: ${{ vars.FLY_CPU_KIND }}
-          FLY_CPUS: ${{ vars.FLY_CPUS }}
-          CANONICAL_HOSTNAME: ${{ env.PREVIEW_HOSTNAME }}
-          BASE_URL: ${{ env.PREVIEW_URL }}
-          LOGTO_ENDPOINT: ${{ vars.LOGTO_ENDPOINT }}
-          LOGTO_TENANT_ID: ${{ vars.LOGTO_TENANT_ID }}
-          LOGTO_APP_ID: ${{ vars.LOGTO_APP_ID }}
-      - name: Log in to Fly registry
-        uses: docker/login-action@v4
-        with:
-          registry: registry.fly.io
-          username: x
-          password: ${{ secrets.FLY_API_TOKEN }}
-      - name: Wait for cashfolio-app2 image in Fly registry
-        timeout-minutes: 7
-        run: |
-          set -euo pipefail
 
-          IMAGE="${CASHFOLIO_APP2_IMAGE}"
-          MAX_ATTEMPTS=24
-          SLEEP_SECONDS=15
-          LAST_ERROR=""
+  preview-deploy:
+    name: Deploy to preview
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.fork == false
+    needs:
+      - version
+      - cashfolio-app2-build-push
+      - resolve-preview-names
+      - preview-prepare
+    permissions:
+      contents: read
+      deployments: write
+    concurrency:
+      group: preview-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    uses: ./.github/workflows/deploy-version.yml
+    with:
+      version_with_sha: ${{ needs.version.outputs.version_with_sha }}
+      sha: ${{ needs.version.outputs.sha }}
+      environment: preview
+      app_environment_name: preview-cashfolio-app
+      app_environment_url: ${{ needs.resolve-preview-names.outputs.preview_url }}
+      deploy-cashfolio-app2: true
+      deploy-cashfolio-redis: false
+      high_availability: false
+      cashfolio_app2_image: ${{ needs.cashfolio-app2-build-push.outputs.image }}
+      fly_app: ${{ needs.resolve-preview-names.outputs.fly_app }}
+      canonical_hostname: ${{ needs.resolve-preview-names.outputs.preview_hostname }}
+      base_url: ${{ needs.resolve-preview-names.outputs.preview_url }}
+    secrets: inherit
 
-          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
-            ERROR_FILE="$(mktemp)"
-            if docker manifest inspect "$IMAGE" > /dev/null 2>"$ERROR_FILE"; then
-              rm -f "$ERROR_FILE"
-              echo "Image is available: $IMAGE"
-              exit 0
-            fi
-
-            ERROR_TEXT="$(tr '\n' ' ' < "$ERROR_FILE" | sed -E 's/[[:space:]]+/ /g')"
-            rm -f "$ERROR_FILE"
-            LAST_ERROR="$ERROR_TEXT"
-
-            if printf '%s' "$ERROR_TEXT" | grep -Eiq '(unauthorized|authentication required|denied|forbidden|insufficient_scope|access denied)'; then
-              echo "Registry auth/permission error while checking image: $IMAGE"
-              echo "docker manifest inspect error: $ERROR_TEXT"
-              exit 1
-            fi
-
-            if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
-              echo "[$attempt/$MAX_ATTEMPTS] Waiting for image: $IMAGE"
-              sleep "$SLEEP_SECONDS"
-            fi
-          done
-
-          echo "Timed out waiting for image: $IMAGE"
-          if [ -n "$LAST_ERROR" ]; then
-            echo "Last docker manifest inspect error: $LAST_ERROR"
-          fi
-          exit 1
-      - name: Deploy cashfolio-app2 to dynamic preview
-        run: |
-          flyctl deploy \
-            --config apps/cashfolio-app2/fly.generated.toml \
-            --ha=false \
-            --image "${CASHFOLIO_APP2_IMAGE}"
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-      - name: Wake up deployed app
-        uses: ./.github/actions/warm-up-url
-        with:
-          url: ${{ env.PREVIEW_URL }}
+  preview-post:
+    name: Publish preview URL on PR
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    needs:
+      - resolve-preview-names
+      - preview-deploy
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    concurrency:
+      group: preview-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      PREVIEW_URL: ${{ needs.resolve-preview-names.outputs.preview_url }}
+      FLY_APP: ${{ needs.resolve-preview-names.outputs.fly_app }}
+      NEON_BRANCH_NAME: ${{ needs.resolve-preview-names.outputs.neon_branch_name }}
+    steps:
       - name: Publish preview URL on PR
         uses: actions/github-script@v8
         with:
@@ -504,10 +475,6 @@ jobs:
                 body,
               });
             }
-        env:
-          PREVIEW_URL: ${{ env.PREVIEW_URL }}
-          FLY_APP: ${{ env.FLY_APP }}
-          NEON_BRANCH_NAME: ${{ env.NEON_BRANCH_NAME }}
 
   deploy:
     name: Deploy to staging
