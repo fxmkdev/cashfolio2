@@ -402,12 +402,13 @@ export function TimelinePageView({
                     scopeCombobox.openDropdown();
                     scopeCombobox.updateSelectedOptionIndex("selected");
                   }}
-                  onClick={() => {
+                  onClick={(event) => {
                     if (!isScopedMetric) {
                       return;
                     }
                     scopeCombobox.openDropdown();
                     scopeCombobox.updateSelectedOptionIndex("selected");
+                    event.currentTarget.select();
                   }}
                   onChange={(event) => {
                     setScopeSearchValue(event.currentTarget.value);
