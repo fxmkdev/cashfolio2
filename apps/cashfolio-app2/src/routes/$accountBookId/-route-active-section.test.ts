@@ -86,12 +86,10 @@ describe("getAccountsLinkSearch", () => {
         matches: [
           {
             routeId: "/$accountBookId/$accountId",
-            loaderData: {
-              account: {
-                type: AccountType.EQUITY,
-                equityAccountSubtype: EquityAccountSubtype.EXPENSE,
-                isActive: false,
-              },
+            account: {
+              type: AccountType.EQUITY,
+              equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+              isActive: false,
             },
           },
         ],
@@ -109,12 +107,10 @@ describe("getAccountsLinkSearch", () => {
         matches: [
           {
             routeId: "/$accountId",
-            loaderData: {
-              account: {
-                type: AccountType.LIABILITY,
-                equityAccountSubtype: null,
-                isActive: true,
-              },
+            account: {
+              type: AccountType.LIABILITY,
+              equityAccountSubtype: null,
+              isActive: true,
             },
           },
         ],

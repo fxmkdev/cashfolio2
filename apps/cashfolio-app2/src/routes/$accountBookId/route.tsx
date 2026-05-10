@@ -58,7 +58,7 @@ const LEDGER_ROUTE_IDS = new Set([
 
 type RouterMatchSnapshot = {
   routeId: string;
-  loaderData: unknown;
+  account: unknown;
 };
 
 export function getActiveSection(args: {
@@ -90,23 +90,16 @@ function getPeriodLinkSearch(search: Record<string, unknown>): {
   return typeof search.period === "string" ? { period: search.period } : {};
 }
 
-function hasLedgerAccountLoaderData(value: unknown): value is {
-  account: {
-    type: AccountType;
-    equityAccountSubtype: EquityAccountSubtype | null;
-    isActive: boolean;
-  };
+function isLedgerAccount(value: unknown): value is {
+  type: AccountType;
+  equityAccountSubtype: EquityAccountSubtype | null;
+  isActive: boolean;
 } {
-  if (typeof value !== "object" || value === null || !("account" in value)) {
+  if (typeof value !== "object" || value === null) {
     return false;
   }
 
-  const account = (value as { account: unknown }).account;
-  if (typeof account !== "object" || account === null) {
-    return false;
-  }
-
-  const candidate = account as {
+  const candidate = value as {
     type?: unknown;
     equityAccountSubtype?: unknown;
     isActive?: unknown;
@@ -128,6 +121,21 @@ function hasLedgerAccountLoaderData(value: unknown): value is {
     hasValidEquitySubtype &&
     typeof candidate.isActive === "boolean"
   );
+}
+
+function hasLedgerAccountLoaderData(value: unknown): value is {
+  account: {
+    type: AccountType;
+    equityAccountSubtype: EquityAccountSubtype | null;
+    isActive: boolean;
+  };
+} {
+  if (typeof value !== "object" || value === null || !("account" in value)) {
+    return false;
+  }
+
+  const account = (value as { account: unknown }).account;
+  return isLedgerAccount(account);
 }
 
 function getAccountsTabFromLedgerAccount(account: {
@@ -167,13 +175,13 @@ export function getAccountsLinkSearch(args: {
       continue;
     }
 
-    if (!hasLedgerAccountLoaderData(match.loaderData)) {
+    if (!isLedgerAccount(match.account)) {
       continue;
     }
 
     return {
-      tab: getAccountsTabFromLedgerAccount(match.loaderData.account),
-      mode: match.loaderData.account.isActive ? "active" : "archived",
+      tab: getAccountsTabFromLedgerAccount(match.account),
+      mode: match.account.isActive ? "active" : "archived",
     };
   }
 
@@ -189,7 +197,9 @@ function AccountBookLayout() {
       locationSearch: state.location.search as Record<string, unknown>,
       matches: state.matches.map((match) => ({
         routeId: match.routeId,
-        loaderData: match.loaderData,
+        account: hasLedgerAccountLoaderData(match.loaderData)
+          ? match.loaderData.account
+          : null,
       })),
     }),
   });
