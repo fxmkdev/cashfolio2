@@ -189,10 +189,10 @@ Plain-language summary:
 - Fallback answers: "What should we return for this requested day right now?"
 - Miss-cooldown answers: "Should we skip retrying this provider day for now?"
 
-Only TimeSeries values are considered permanent enough for derived Timeline
-metrics caching. One-hour fallback entries and provider results can still answer
-the current request, but Timeline metrics produced from them are not persisted
-in the derived metrics cache.
+Identity conversions and TimeSeries values are considered permanent enough for
+derived Timeline metrics caching. One-hour fallback entries and provider results
+can still answer the current request, but Timeline metrics produced from them
+are not persisted in the derived metrics cache.
 
 ## Core Lookup Algorithm
 

@@ -61,14 +61,15 @@ Related docs:
   - Generation pointer:
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
 - Timeline metrics entry:
-  `period:timeline:metrics:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{YYYY-MM-DD}:{periodValue}:{scopeKey}`
+  `period:timeline:metrics:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
 - For preset periods (`mtd`, `ytd`, `last-month`, `last-year`), `periodCacheKey`
   uses resolved concrete ranges (`granularity:from:to`) to avoid key aliasing
   across day/month boundaries.
 - For explicit current periods (`YYYY-MM` for current month, `YYYY` for current
   year), `periodCacheKey` includes a UTC-day suffix
   (`{periodValue}:{YYYY-MM-DD}`) so day rollovers do not reuse stale cache
-  entries.
+  entries. Historical explicit periods omit the day suffix and can be reused
+  across days.
 - TTL: 24 hours. Mutating account/transaction server functions explicitly
   invalidate period cache entries for the affected account book by advancing the
   shared generation. Base-data entries are also deleted through their index;

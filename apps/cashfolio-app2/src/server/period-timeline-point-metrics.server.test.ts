@@ -475,10 +475,16 @@ describe("loadPeriodTimelinePointMetrics", () => {
       convertedCount: 0,
       skippedCount: 0,
     });
-    convertBookingValueToReference.mockImplementation(
-      async ({ value }: { value: number }) => value,
+    convertBookingValueToReferenceDetails.mockImplementation(
+      async ({ value }: { value: number }) => ({
+        value,
+        source: "identity",
+      }),
     );
-    getUnitToReferenceExchangeRate.mockResolvedValue(1);
+    getUnitToReferenceExchangeRateDetails.mockResolvedValue({
+      rate: 1,
+      source: "identity",
+    });
 
     const result = await loadPeriodTimelinePointMetrics({
       accountBookId: "book-1",

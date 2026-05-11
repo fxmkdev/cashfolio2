@@ -389,6 +389,9 @@ describe("getPeriodTimeline", () => {
         metric: "assets",
         scope: "group:asset-g",
       },
+      valuationContext: {
+        exchangeRateByKey: expect.any(Map),
+      },
     });
     expect(loadTimelineOpeningBalancePoint).toHaveBeenCalledWith({
       accountBookId: "book-assets",

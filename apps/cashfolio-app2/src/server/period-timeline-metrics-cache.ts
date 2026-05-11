@@ -3,6 +3,7 @@ import {
   PERIOD_CACHE_TTL_SECONDS,
   getPeriodCacheEnvOrThrowWhenRedisAvailable,
   getPeriodCacheGeneration,
+  resolvePeriodCachePeriodKey,
 } from "./period-cache";
 import {
   loadPeriodTimelinePointMetricsWithCacheability,
@@ -22,14 +23,6 @@ const inflightByCacheKey = new Map<
 let hasWarnedTimelineMetricsCacheReadFailure = false;
 let hasWarnedTimelineMetricsCacheWriteFailure = false;
 
-function formatUtcDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function getCurrentUtcDayKey(): string {
-  return formatUtcDateKey(new Date());
-}
-
 function getScopeKey(
   metricScopeFilter: TimelineMetricScopeFilter | undefined,
 ): string {
@@ -44,8 +37,7 @@ function getTimelineMetricsCacheEntryKey(args: {
   cacheEnv: string;
   accountBookId: string;
   generation: string;
-  utcDay: string;
-  periodValue: string;
+  periodCacheKey: string;
   scopeKey: string;
 }) {
   return [
@@ -53,8 +45,7 @@ function getTimelineMetricsCacheEntryKey(args: {
     args.cacheEnv,
     args.accountBookId,
     args.generation,
-    args.utcDay,
-    args.periodValue,
+    args.periodCacheKey,
     args.scopeKey,
   ].join(":");
 }
@@ -80,6 +71,8 @@ function isTimelineMetricsCacheEntry(
     record.scopeOptions != null &&
     Array.isArray(record.scopeOptions.income) &&
     Array.isArray(record.scopeOptions.expenses) &&
+    Array.isArray(record.scopeOptions.assets) &&
+    Array.isArray(record.scopeOptions.liabilities) &&
     (record.scopedMetricValue === undefined ||
       typeof record.scopedMetricValue === "number")
   );
@@ -108,12 +101,15 @@ export async function getOrLoadPeriodTimelinePointMetrics(args: {
     accountBookId: args.accountBookId,
     redis,
   });
+  const periodCacheKey = await resolvePeriodCachePeriodKey({
+    accountBookId: args.accountBookId,
+    periodValue: args.period,
+  });
   const cacheKey = getTimelineMetricsCacheEntryKey({
     cacheEnv,
     accountBookId: args.accountBookId,
     generation,
-    utcDay: getCurrentUtcDayKey(),
-    periodValue: args.period,
+    periodCacheKey,
     scopeKey: getScopeKey(args.metricScopeFilter),
   });
 

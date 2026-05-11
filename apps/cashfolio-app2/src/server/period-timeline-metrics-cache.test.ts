@@ -41,6 +41,8 @@ function createMetrics(overrides = {}) {
     scopeOptions: {
       income: [],
       expenses: [],
+      assets: [],
+      liabilities: [],
     },
     ...overrides,
   };
@@ -94,8 +96,59 @@ describe("period timeline metrics cache", () => {
     expect(redisClient.setEx).toHaveBeenCalledTimes(1);
     const [entryKey] = redisClient.setEx.mock.calls[0] ?? [];
     expect(entryKey).toBe(
-      "period:timeline:metrics:v1:preview-app-123:book-1:gen-1:2026-05-11:2026-04:income:account:income-a",
+      "period:timeline:metrics:v1:preview-app-123:book-1:gen-1:2026-04:income:account:income-a",
     );
+  });
+
+  it("adds a UTC-day discriminator only for current explicit periods", async () => {
+    await getOrLoadPeriodTimelinePointMetrics({
+      accountBookId: "book-1",
+      period: "2026-05",
+    });
+    const [firstKey] = redisClient.setEx.mock.calls[0] ?? [];
+    expect(firstKey).toBe(
+      "period:timeline:metrics:v1:preview-app-123:book-1:gen-1:2026-05:2026-05-11:total",
+    );
+
+    vi.setSystemTime(new Date("2026-05-12T14:30:00.000Z"));
+    await getOrLoadPeriodTimelinePointMetrics({
+      accountBookId: "book-1",
+      period: "2026-05",
+    });
+    const [secondKey] = redisClient.setEx.mock.calls[1] ?? [];
+    expect(secondKey).toBe(
+      "period:timeline:metrics:v1:preview-app-123:book-1:gen-1:2026-05:2026-05-12:total",
+    );
+  });
+
+  it("ignores legacy entries missing balance scope options", async () => {
+    redisState.kv.set(
+      "period:timeline:metrics:v1:preview-app-123:book-1:gen-1:2026-04:total",
+      JSON.stringify({
+        totalReturn: 1,
+        savings: 1,
+        income: 1,
+        expenses: 1,
+        gainsLosses: 1,
+        assets: 1,
+        liabilities: 1,
+        netWorth: 1,
+        scopeOptions: {
+          income: [],
+          expenses: [],
+        },
+      }),
+    );
+
+    const result = await getOrLoadPeriodTimelinePointMetrics({
+      accountBookId: "book-1",
+      period: "2026-04",
+    });
+
+    expect(result).toEqual(createMetrics());
+    expect(
+      loadPeriodTimelinePointMetricsWithCacheability,
+    ).toHaveBeenCalledTimes(1);
   });
 
   it("does not write metrics that used non-permanent valuation sources", async () => {
