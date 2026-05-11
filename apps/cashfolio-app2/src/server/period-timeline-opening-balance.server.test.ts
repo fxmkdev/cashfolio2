@@ -1,8 +1,11 @@
-import { describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { AccountType, Unit } from "../.prisma-client/enums";
 
 const prisma = vi.hoisted(() => ({
   account: {
+    findMany: vi.fn(),
+  },
+  accountGroup: {
     findMany: vi.fn(),
   },
   booking: {
@@ -34,10 +37,16 @@ vi.mock("./period-conversion", () => ({
 import { loadTimelineOpeningBalancePoint } from "./period-timeline-opening-balance.server";
 
 describe("loadTimelineOpeningBalancePoint", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   test("normalizes start-date boundaries and computes balances including transfer-clearing virtual accounts", async () => {
     prisma.account.findMany.mockResolvedValue([
       {
         id: "asset-1",
+        name: "Cash",
+        groupId: null,
         type: AccountType.ASSET,
         unit: Unit.CURRENCY,
         currency: "CHF",
@@ -47,6 +56,8 @@ describe("loadTimelineOpeningBalancePoint", () => {
       },
       {
         id: "liability-1",
+        name: "Credit Card",
+        groupId: null,
         type: AccountType.LIABILITY,
         unit: Unit.CURRENCY,
         currency: "CHF",
@@ -55,6 +66,7 @@ describe("loadTimelineOpeningBalancePoint", () => {
         tradeCurrency: null,
       },
     ]);
+    prisma.accountGroup.findMany.mockResolvedValue([]);
     prisma.booking.groupBy.mockResolvedValue([
       {
         accountId: "asset-1",
@@ -118,6 +130,64 @@ describe("loadTimelineOpeningBalancePoint", () => {
       assets: 120,
       liabilities: 40,
       netWorth: 80,
+    });
+  });
+
+  test("resolves scoped asset opening balance from account groups", async () => {
+    prisma.account.findMany.mockResolvedValue([
+      {
+        id: "asset-1",
+        name: "Cash",
+        groupId: "group-assets",
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      },
+      {
+        id: "asset-2",
+        name: "Brokerage",
+        groupId: "group-other",
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      },
+    ]);
+    prisma.accountGroup.findMany.mockResolvedValue([
+      { id: "group-assets", name: "Assets", parentGroupId: null },
+      { id: "group-other", name: "Other", parentGroupId: null },
+    ]);
+    prisma.booking.groupBy.mockResolvedValue([
+      { accountId: "asset-1", _sum: { value: 75 } },
+      { accountId: "asset-2", _sum: { value: 25 } },
+    ]);
+    loadTransferClearingUnitBuckets.mockResolvedValue([]);
+    convertBookingValueToReference.mockImplementation(
+      async ({ value }: { value: number }) => value,
+    );
+
+    const result = await loadTimelineOpeningBalancePoint({
+      accountBookId: "book-1",
+      accountBookStartDate: new Date("2026-01-05T15:42:00.000Z"),
+      referenceCurrency: "CHF",
+      metricScopeFilter: {
+        metric: "assets",
+        scope: "group:group-assets",
+      },
+    });
+
+    expect(result).toEqual({
+      date: "2026-01-04T00:00:00.000Z",
+      label: "Opening Balance",
+      assets: 100,
+      liabilities: 0,
+      netWorth: 100,
+      scopedMetricValue: 75,
     });
   });
 });

@@ -130,6 +130,20 @@ describe("getPeriodTimeline", () => {
               kind: "group",
             },
           ],
+          assets: [
+            {
+              value: "group:asset-g",
+              label: "Asset G",
+              kind: "group",
+            },
+          ],
+          liabilities: [
+            {
+              value: "account:liability-a",
+              label: "Liability A",
+              kind: "account",
+            },
+          ],
         },
         scopedMetricValue: period.length + 20,
       }),
@@ -160,6 +174,7 @@ describe("getPeriodTimeline", () => {
       accountBookId: "book-1",
       accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
       referenceCurrency: "CHF",
+      metricScopeFilter: undefined,
     });
     expect(loadPeriodTimelinePoint).toHaveBeenNthCalledWith(1, {
       accountBookId: "book-1",
@@ -259,10 +274,28 @@ describe("getPeriodTimeline", () => {
             kind: "group",
           },
         ],
+        assets: [
+          { value: "total", label: "Total", kind: "total" },
+          {
+            value: "group:asset-g",
+            label: "Asset G",
+            kind: "group",
+          },
+        ],
+        liabilities: [
+          { value: "total", label: "Total", kind: "total" },
+          {
+            value: "account:liability-a",
+            label: "Liability A",
+            kind: "account",
+          },
+        ],
       },
       scopeSelection: {
         income: "total",
         expenses: "total",
+        assets: "total",
+        liabilities: "total",
       },
     });
   });
@@ -299,6 +332,63 @@ describe("getPeriodTimeline", () => {
     });
   });
 
+  test("applies scoped asset values and scoped opening balance", async () => {
+    loadTimelineOpeningBalancePoint.mockResolvedValueOnce({
+      date: "2026-01-04T00:00:00.000Z",
+      label: "Opening Balance",
+      assets: 150,
+      liabilities: 40,
+      netWorth: 110,
+      scopedMetricValue: 90,
+    });
+
+    const result = await getPeriodTimeline({
+      data: {
+        accountBookId: "book-assets",
+        granularity: "year",
+        scopedMetric: "assets",
+        assetScope: "group:asset-g",
+      },
+    });
+
+    expect(loadPeriodTimelinePoint).toHaveBeenCalledWith({
+      accountBookId: "book-assets",
+      period: "2026",
+      context: {
+        referenceCurrency: "CHF",
+        accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
+        holdingAccountsResolved: [],
+      },
+      metricScopeFilter: {
+        metric: "assets",
+        scope: "group:asset-g",
+      },
+    });
+    expect(loadTimelineOpeningBalancePoint).toHaveBeenCalledWith({
+      accountBookId: "book-assets",
+      accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
+      referenceCurrency: "CHF",
+      metricScopeFilter: {
+        metric: "assets",
+        scope: "group:asset-g",
+      },
+    });
+    expect(result.openingBalancePoint).toEqual({
+      date: "2026-01-04T00:00:00.000Z",
+      label: "Opening Balance",
+      assets: 90,
+      liabilities: 40,
+      netWorth: 110,
+    });
+    expect(result.points).toEqual([
+      expect.objectContaining({
+        assets: 24,
+        liabilities: 10,
+      }),
+    ]);
+    expect(result.scopeSelection.assets).toBe("group:asset-g");
+  });
+
   test("falls back to total values when scoped selection is stale", async () => {
     const result = await getPeriodTimeline({
       data: {
@@ -318,7 +408,27 @@ describe("getPeriodTimeline", () => {
     expect(result.scopeSelection).toEqual({
       income: "total",
       expenses: "total",
+      assets: "total",
+      liabilities: "total",
     });
+  });
+
+  test("falls back to total liabilities when scoped liability selection is stale", async () => {
+    const result = await getPeriodTimeline({
+      data: {
+        accountBookId: "book-4",
+        granularity: "year",
+        scopedMetric: "liabilities",
+        liabilityScope: "account:missing",
+      },
+    });
+
+    expect(result.points).toEqual([
+      expect.objectContaining({
+        liabilities: 10,
+      }),
+    ]);
+    expect(result.scopeSelection.liabilities).toBe("total");
   });
 
   test("rejects unsupported granularity", async () => {

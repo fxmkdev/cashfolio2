@@ -21,6 +21,8 @@ export type TimelineSearch = {
   metric?: TimelineMetric;
   incomeScope?: TimelineScopeSelection;
   expenseScope?: TimelineScopeSelection;
+  assetScope?: TimelineScopeSelection;
+  liabilityScope?: TimelineScopeSelection;
 };
 
 export const DEFAULT_TIMELINE_MODE: TimelinePeriodMode = "month";
@@ -88,6 +90,12 @@ export function parseTimelineSearch(
     ...("expenseScope" in search
       ? { expenseScope: parseTimelineScopeSelection(search.expenseScope) }
       : {}),
+    ...("assetScope" in search
+      ? { assetScope: parseTimelineScopeSelection(search.assetScope) }
+      : {}),
+    ...("liabilityScope" in search
+      ? { liabilityScope: parseTimelineScopeSelection(search.liabilityScope) }
+      : {}),
   };
 }
 
@@ -107,7 +115,15 @@ export function getTimelineScopeForMetric(args: {
     return args.search.incomeScope ?? DEFAULT_TIMELINE_SCOPE;
   }
 
-  return args.search.expenseScope ?? DEFAULT_TIMELINE_SCOPE;
+  if (args.metric === "expenses") {
+    return args.search.expenseScope ?? DEFAULT_TIMELINE_SCOPE;
+  }
+
+  if (args.metric === "assets") {
+    return args.search.assetScope ?? DEFAULT_TIMELINE_SCOPE;
+  }
+
+  return args.search.liabilityScope ?? DEFAULT_TIMELINE_SCOPE;
 }
 
 export function getTimelineScopedMetric(

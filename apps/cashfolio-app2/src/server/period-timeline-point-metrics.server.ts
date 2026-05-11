@@ -1,7 +1,7 @@
 import { round2 } from "./period-helpers";
 import { moneyAdd, moneySum, toMoneyNumber } from "../shared/money";
 import {
-  computeEndOfPeriodBalanceStats,
+  computeEndOfPeriodBalanceStatsWithConvertedBalances,
   type EndOfPeriodBalanceStats,
 } from "./period-balance-stats";
 import {
@@ -18,6 +18,7 @@ import { createPeriodOverviewEquityAggregation } from "./period-overview-aggrega
 import { buildTransferClearingVirtualHierarchy } from "./period-transfer-clearing";
 import type { GainLossContributionAccumulator } from "./period-gains-losses-contributions";
 import {
+  buildBalanceTimelineScopeAmountMaps,
   buildTimelineScopeOptions,
   resolveScopedMetricValue,
   type TimelineMetricScopeFilter,
@@ -39,8 +40,14 @@ export type PeriodTimelinePointMetrics = {
   scopeOptions: {
     income: TimelineScopeOption[];
     expenses: TimelineScopeOption[];
+    assets: TimelineScopeOption[];
+    liabilities: TimelineScopeOption[];
   };
   scopedMetricValue?: number;
+};
+
+type TimelineEndOfPeriodBalanceStats = EndOfPeriodBalanceStats & {
+  convertedBalanceByAccountId: Map<string, number | null>;
 };
 
 function buildTransferClearingHoldingAccounts(args: {
@@ -62,7 +69,7 @@ async function loadEndOfPeriodBalanceStats(args: {
   baseData: PeriodBaseData;
   referenceCurrency: string;
   exchangeRateByKey: Map<string, Promise<number | null>>;
-}): Promise<EndOfPeriodBalanceStats> {
+}): Promise<TimelineEndOfPeriodBalanceStats> {
   const endOfPeriodRawBalanceByAccountId = new Map(
     args.baseData.endOfPeriodRawBalances.map((balance) => [
       balance.accountId,
@@ -79,7 +86,7 @@ async function loadEndOfPeriodBalanceStats(args: {
     endOfPeriodRawBalanceByAccountId.set(accountId, rawBalance);
   }
 
-  return computeEndOfPeriodBalanceStats({
+  return computeEndOfPeriodBalanceStatsWithConvertedBalances({
     accounts: [...args.baseData.baseAssetLiabilityAccounts, ...virtualAccounts],
     rawBalanceByAccountId: endOfPeriodRawBalanceByAccountId,
     periodEnd: args.baseData.selection.to,
@@ -119,6 +126,8 @@ export async function loadPeriodTimelinePointMetrics(args: {
       scopeOptions: {
         income: [],
         expenses: [],
+        assets: [],
+        liabilities: [],
       },
       scopedMetricValue: args.metricScopeFilter ? 0 : undefined,
     } satisfies PeriodTimelinePointMetrics;
@@ -164,6 +173,16 @@ export async function loadPeriodTimelinePointMetrics(args: {
       bucket.unitLabel,
     );
   }
+
+  const { virtualGroups, virtualAccounts } =
+    buildTransferClearingVirtualHierarchy({
+      unitBuckets: baseData.transferClearingUnitBuckets,
+    });
+  const assetLiabilityAccounts = [
+    ...baseData.baseAssetLiabilityAccounts,
+    ...virtualAccounts,
+  ];
+  const allAccountGroups = [...baseData.allAccountGroups, ...virtualGroups];
 
   const [holdingGainLossTotals, endOfPeriodBalanceStats] = await Promise.all([
     computePeriodHoldingGainLoss({
@@ -223,19 +242,37 @@ export async function loadPeriodTimelinePointMetrics(args: {
   const roundedAssets = round2(endOfPeriodBalanceStats.assets);
   const roundedLiabilities = round2(endOfPeriodBalanceStats.liabilities);
   const roundedNetWorth = round2(endOfPeriodBalanceStats.netWorth);
+  const { assetAmountByAccountId, liabilityAmountByAccountId } =
+    buildBalanceTimelineScopeAmountMaps({
+      accounts: assetLiabilityAccounts,
+      convertedBalanceByAccountId:
+        endOfPeriodBalanceStats.convertedBalanceByAccountId,
+    });
   const incomeScopeOptions = buildTimelineScopeOptions({
     amountByAccountId: equityAggregation.incomeAmountByAccountId,
-    allAccountGroups: baseData.allAccountGroups,
+    allAccountGroups,
   });
   const expenseScopeOptions = buildTimelineScopeOptions({
     amountByAccountId: equityAggregation.expenseAmountByAccountId,
-    allAccountGroups: baseData.allAccountGroups,
+    allAccountGroups,
+  });
+  const assetScopeOptions = buildTimelineScopeOptions({
+    amountByAccountId: assetAmountByAccountId,
+    allAccountGroups,
+  });
+  const liabilityScopeOptions = buildTimelineScopeOptions({
+    amountByAccountId: liabilityAmountByAccountId,
+    allAccountGroups,
   });
   const scopedMetricValue = resolveScopedMetricValue({
     metricScopeFilter: args.metricScopeFilter,
-    incomeAmountByAccountId: equityAggregation.incomeAmountByAccountId,
-    expenseAmountByAccountId: equityAggregation.expenseAmountByAccountId,
-    allAccountGroups: baseData.allAccountGroups,
+    amountByMetric: {
+      income: equityAggregation.incomeAmountByAccountId,
+      expenses: equityAggregation.expenseAmountByAccountId,
+      assets: assetAmountByAccountId,
+      liabilities: liabilityAmountByAccountId,
+    },
+    allAccountGroups,
   });
 
   return {
@@ -250,6 +287,8 @@ export async function loadPeriodTimelinePointMetrics(args: {
     scopeOptions: {
       income: incomeScopeOptions,
       expenses: expenseScopeOptions,
+      assets: assetScopeOptions,
+      liabilities: liabilityScopeOptions,
     },
     scopedMetricValue,
   } satisfies PeriodTimelinePointMetrics;

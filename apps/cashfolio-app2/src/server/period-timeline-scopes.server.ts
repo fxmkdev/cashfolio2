@@ -1,3 +1,4 @@
+import { AccountType } from "../.prisma-client/enums";
 import { createGroupPathResolver } from "./accounts-helpers";
 import {
   round2,
@@ -20,6 +21,56 @@ export type TimelineMetricScopeFilter = {
   metric: TimelineScopedMetric;
   scope: TimelineScopeSelection;
 };
+
+export function buildBalanceTimelineScopeAmountMaps(args: {
+  accounts: Array<{
+    id: string;
+    name: string;
+    groupId: string | null;
+    type: AccountType;
+  }>;
+  convertedBalanceByAccountId: Map<string, number | null>;
+}) {
+  const assetAmountByAccountId = new Map<
+    string,
+    BreakdownHierarchyAccumulatorItem
+  >();
+  const liabilityAmountByAccountId = new Map<
+    string,
+    BreakdownHierarchyAccumulatorItem
+  >();
+
+  for (const account of args.accounts) {
+    const convertedBalance = args.convertedBalanceByAccountId.get(account.id);
+    if (convertedBalance == null) {
+      continue;
+    }
+
+    if (account.type === AccountType.ASSET) {
+      assetAmountByAccountId.set(account.id, {
+        accountId: account.id,
+        accountName: account.name,
+        groupId: account.groupId,
+        amount: convertedBalance,
+      });
+      continue;
+    }
+
+    if (account.type === AccountType.LIABILITY) {
+      liabilityAmountByAccountId.set(account.id, {
+        accountId: account.id,
+        accountName: account.name,
+        groupId: account.groupId,
+        amount: -convertedBalance,
+      });
+    }
+  }
+
+  return {
+    assetAmountByAccountId,
+    liabilityAmountByAccountId,
+  };
+}
 
 function hasGroupInPath(args: {
   accountGroupId: string | null;
@@ -81,8 +132,10 @@ function resolveScopedAmountFromMap(args: {
 
 export function resolveScopedMetricValue(args: {
   metricScopeFilter?: TimelineMetricScopeFilter;
-  incomeAmountByAccountId: Map<string, BreakdownHierarchyAccumulatorItem>;
-  expenseAmountByAccountId: Map<string, BreakdownHierarchyAccumulatorItem>;
+  amountByMetric: Record<
+    TimelineScopedMetric,
+    Map<string, BreakdownHierarchyAccumulatorItem>
+  >;
   allAccountGroups: Array<{
     id: string;
     name: string;
@@ -104,16 +157,8 @@ export function resolveScopedMetricValue(args: {
       { parentGroupId: group.parentGroupId },
     ]),
   );
-  if (args.metricScopeFilter.metric === "income") {
-    return resolveScopedAmountFromMap({
-      amountByAccountId: args.incomeAmountByAccountId,
-      scope: parsedScope,
-      groupById,
-    });
-  }
-
   return resolveScopedAmountFromMap({
-    amountByAccountId: args.expenseAmountByAccountId,
+    amountByAccountId: args.amountByMetric[args.metricScopeFilter.metric],
     scope: parsedScope,
     groupById,
   });

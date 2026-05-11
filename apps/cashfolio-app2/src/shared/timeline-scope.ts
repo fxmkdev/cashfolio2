@@ -1,4 +1,8 @@
-export type TimelineScopedMetric = "income" | "expenses";
+export type TimelineScopedMetric =
+  | "income"
+  | "expenses"
+  | "assets"
+  | "liabilities";
 
 export type TimelineScopeSelection =
   | "total"
@@ -16,7 +20,12 @@ export type TimelineScopeOption = {
 export function isTimelineScopedMetric(
   value: unknown,
 ): value is TimelineScopedMetric {
-  return value === "income" || value === "expenses";
+  return (
+    value === "income" ||
+    value === "expenses" ||
+    value === "assets" ||
+    value === "liabilities"
+  );
 }
 
 export function parseTimelineScopeSelection(

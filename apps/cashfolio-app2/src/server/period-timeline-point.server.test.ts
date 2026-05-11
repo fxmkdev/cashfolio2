@@ -144,6 +144,8 @@ describe("loadPeriodTimelinePoint", () => {
       scopeOptions: {
         income: [],
         expenses: [],
+        assets: [],
+        liabilities: [],
       },
       scopedMetricValue: 0,
     });
@@ -178,6 +180,8 @@ describe("loadPeriodTimelinePoint", () => {
       scopeOptions: {
         income: [],
         expenses: [],
+        assets: [],
+        liabilities: [],
       },
       scopedMetricValue: undefined,
     });
@@ -241,6 +245,8 @@ describe("loadPeriodTimelinePoint", () => {
       scopeOptions: {
         income: [],
         expenses: [],
+        assets: [],
+        liabilities: [],
       },
       scopedMetricValue: 0,
     });

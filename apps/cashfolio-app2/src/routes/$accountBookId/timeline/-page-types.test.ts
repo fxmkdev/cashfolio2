@@ -49,6 +49,8 @@ describe("parseTimelineSearch", () => {
     expect("metric" in result).toBe(false);
     expect("incomeScope" in result).toBe(false);
     expect("expenseScope" in result).toBe(false);
+    expect("assetScope" in result).toBe(false);
+    expect("liabilityScope" in result).toBe(false);
   });
 
   test("keeps valid mode values", () => {
@@ -93,6 +95,14 @@ describe("parseTimelineSearch", () => {
     expect(parseTimelineSearch({ expenseScope: "account:a-1" })).toEqual({
       expenseScope: "account:a-1",
     });
+    expect(parseTimelineSearch({ assetScope: "group:assets" })).toEqual({
+      assetScope: "group:assets",
+    });
+    expect(
+      parseTimelineSearch({ liabilityScope: "account:liability-1" }),
+    ).toEqual({
+      liabilityScope: "account:liability-1",
+    });
   });
 
   test("drops invalid mode values", () => {
@@ -116,6 +126,12 @@ describe("parseTimelineSearch", () => {
     });
     expect(parseTimelineSearch({ expenseScope: "invalid" })).toEqual({
       expenseScope: undefined,
+    });
+    expect(parseTimelineSearch({ assetScope: "account:" })).toEqual({
+      assetScope: undefined,
+    });
+    expect(parseTimelineSearch({ liabilityScope: "wat" })).toEqual({
+      liabilityScope: undefined,
     });
   });
 });
@@ -154,6 +170,18 @@ describe("getTimelineScopeForMetric", () => {
         search: { expenseScope: "group:expense-group" },
       }),
     ).toBe("group:expense-group");
+    expect(
+      getTimelineScopeForMetric({
+        metric: "assets",
+        search: { assetScope: "group:asset-group" },
+      }),
+    ).toBe("group:asset-group");
+    expect(
+      getTimelineScopeForMetric({
+        metric: "liabilities",
+        search: { liabilityScope: "account:liability-1" },
+      }),
+    ).toBe("account:liability-1");
   });
 
   test("falls back to default timeline scope", () => {
@@ -167,9 +195,11 @@ describe("getTimelineScopeForMetric", () => {
 });
 
 describe("getTimelineScopedMetric", () => {
-  test("returns scoped metric for income/expenses only", () => {
+  test("returns scoped metrics only", () => {
     expect(getTimelineScopedMetric("income")).toBe("income");
     expect(getTimelineScopedMetric("expenses")).toBe("expenses");
-    expect(getTimelineScopedMetric("assets")).toBeUndefined();
+    expect(getTimelineScopedMetric("assets")).toBe("assets");
+    expect(getTimelineScopedMetric("liabilities")).toBe("liabilities");
+    expect(getTimelineScopedMetric("netWorth")).toBeUndefined();
   });
 });

@@ -64,6 +64,10 @@ Related docs:
       period).
   - Balance metrics (`assets`, `liabilities`, `netWorth`) render as area charts:
     assets (green), liabilities (red), net worth sign-split (green/red)
+  - The scope combobox applies to `income`, `expenses`, `assets`, and
+    `liabilities`. The `Total` scope preserves the aggregate view; concrete
+    group/account scopes replace the selected metric series with that scope's
+    value.
   - Cumulative line rebases to the currently visible range for flow metrics so
     navigator/range-button/zoom interactions update the running baseline.
   - Loader fetches only the currently selected granularity (`mode` search
@@ -147,6 +151,8 @@ Related docs:
     monthly)
   - `metric?: "totalReturn" | "savings" | "income" | "expenses" | "gainsLosses" | "assets" | "liabilities" | "netWorth"`
     to select the timeline metric (default: `totalReturn`)
+  - `incomeScope?`, `expenseScope?`, `assetScope?`, and `liabilityScope?` use
+    `total`, `group:<id>`, or `account:<id>` for scoped timeline metrics.
 
 ### Global Navigation Progress
 

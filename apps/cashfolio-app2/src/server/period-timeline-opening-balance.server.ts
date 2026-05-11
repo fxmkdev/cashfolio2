@@ -2,13 +2,18 @@ import { AccountType } from "../.prisma-client/enums";
 import { prisma } from "../prisma.server";
 import { getOpeningBalancesBookingDate, startOfUtcDay } from "../shared/date";
 import { toMoneyNumber } from "../shared/money";
-import { computeEndOfPeriodBalanceStats } from "./period-balance-stats";
+import { computeEndOfPeriodBalanceStatsWithConvertedBalances } from "./period-balance-stats";
 import { round2 } from "./period-helpers";
 import { convertBookingValueToReference } from "./period-conversion";
 import {
   buildTransferClearingVirtualHierarchy,
   loadTransferClearingUnitBuckets,
 } from "./period-transfer-clearing";
+import {
+  buildBalanceTimelineScopeAmountMaps,
+  resolveScopedMetricValue,
+  type TimelineMetricScopeFilter,
+} from "./period-timeline-scopes.server";
 
 export type TimelineOpeningBalancePoint = {
   date: string;
@@ -16,34 +21,48 @@ export type TimelineOpeningBalancePoint = {
   assets: number;
   liabilities: number;
   netWorth: number;
+  scopedMetricValue?: number;
 };
 
 export async function loadTimelineOpeningBalancePoint(args: {
   accountBookId: string;
   accountBookStartDate: Date;
   referenceCurrency: string;
+  metricScopeFilter?: TimelineMetricScopeFilter;
 }): Promise<TimelineOpeningBalancePoint> {
   const accountBookStartDate = startOfUtcDay(args.accountBookStartDate);
   const openingBalanceDate =
     getOpeningBalancesBookingDate(accountBookStartDate);
 
-  const baseAssetLiabilityAccounts = await prisma.account.findMany({
-    where: {
-      accountBookId: args.accountBookId,
-      type: {
-        in: [AccountType.ASSET, AccountType.LIABILITY],
+  const [baseAssetLiabilityAccounts, accountGroups] = await Promise.all([
+    prisma.account.findMany({
+      where: {
+        accountBookId: args.accountBookId,
+        type: {
+          in: [AccountType.ASSET, AccountType.LIABILITY],
+        },
       },
-    },
-    select: {
-      id: true,
-      type: true,
-      unit: true,
-      currency: true,
-      cryptocurrency: true,
-      symbol: true,
-      tradeCurrency: true,
-    },
-  });
+      select: {
+        id: true,
+        name: true,
+        groupId: true,
+        type: true,
+        unit: true,
+        currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
+      },
+    }),
+    prisma.accountGroup.findMany({
+      where: { accountBookId: args.accountBookId },
+      select: {
+        id: true,
+        name: true,
+        parentGroupId: true,
+      },
+    }),
+  ]);
   const baseAssetLiabilityAccountIds = baseAssetLiabilityAccounts.map(
     (account) => account.id,
   );
@@ -77,7 +96,7 @@ export async function loadTimelineOpeningBalancePoint(args: {
     ]),
   );
 
-  const { virtualAccounts, rawBalanceByVirtualAccountId } =
+  const { virtualGroups, virtualAccounts, rawBalanceByVirtualAccountId } =
     buildTransferClearingVirtualHierarchy({
       unitBuckets: transferClearingUnitBuckets,
     });
@@ -87,16 +106,33 @@ export async function loadTimelineOpeningBalancePoint(args: {
   }
 
   const exchangeRateByKey = new Map<string, Promise<number | null>>();
-  const openingBalanceStats = await computeEndOfPeriodBalanceStats({
-    accounts: [...baseAssetLiabilityAccounts, ...virtualAccounts],
-    rawBalanceByAccountId: endOfPeriodRawBalanceByAccountId,
-    periodEnd: openingBalanceDate,
-    referenceCurrency: args.referenceCurrency,
-    convertBalanceToReference: (input) =>
-      convertBookingValueToReference({
-        ...input,
-        exchangeRateByKey,
-      }),
+  const openingBalanceStats =
+    await computeEndOfPeriodBalanceStatsWithConvertedBalances({
+      accounts: [...baseAssetLiabilityAccounts, ...virtualAccounts],
+      rawBalanceByAccountId: endOfPeriodRawBalanceByAccountId,
+      periodEnd: openingBalanceDate,
+      referenceCurrency: args.referenceCurrency,
+      convertBalanceToReference: (input) =>
+        convertBookingValueToReference({
+          ...input,
+          exchangeRateByKey,
+        }),
+    });
+  const { assetAmountByAccountId, liabilityAmountByAccountId } =
+    buildBalanceTimelineScopeAmountMaps({
+      accounts: [...baseAssetLiabilityAccounts, ...virtualAccounts],
+      convertedBalanceByAccountId:
+        openingBalanceStats.convertedBalanceByAccountId,
+    });
+  const scopedMetricValue = resolveScopedMetricValue({
+    metricScopeFilter: args.metricScopeFilter,
+    amountByMetric: {
+      income: new Map(),
+      expenses: new Map(),
+      assets: assetAmountByAccountId,
+      liabilities: liabilityAmountByAccountId,
+    },
+    allAccountGroups: [...accountGroups, ...virtualGroups],
   });
 
   return {
@@ -105,5 +141,7 @@ export async function loadTimelineOpeningBalancePoint(args: {
     assets: round2(openingBalanceStats.assets),
     liabilities: round2(openingBalanceStats.liabilities),
     netWorth: round2(openingBalanceStats.netWorth),
+    scopedMetricValue:
+      scopedMetricValue == null ? undefined : round2(scopedMetricValue),
   };
 }

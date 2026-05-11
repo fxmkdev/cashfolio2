@@ -14,6 +14,8 @@ export function buildTimelineSearchNavigation(args: {
   metric: TimelineMetric;
   incomeScope: TimelineScopeSelection;
   expenseScope: TimelineScopeSelection;
+  assetScope: TimelineScopeSelection;
+  liabilityScope: TimelineScopeSelection;
 }) {
   return {
     replace: true,
@@ -29,6 +31,14 @@ export function buildTimelineSearchNavigation(args: {
         args.expenseScope === DEFAULT_TIMELINE_SCOPE
           ? undefined
           : args.expenseScope,
+      assetScope:
+        args.assetScope === DEFAULT_TIMELINE_SCOPE
+          ? undefined
+          : args.assetScope,
+      liabilityScope:
+        args.liabilityScope === DEFAULT_TIMELINE_SCOPE
+          ? undefined
+          : args.liabilityScope,
     }),
   } as const;
 }
