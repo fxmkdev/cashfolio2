@@ -31,7 +31,10 @@ import {
   type TimelineMetric,
   type TimelinePeriodMode,
 } from "./-page-types";
-import { type TimelineScopeSelection } from "@/shared/timeline-scope";
+import {
+  isTimelineScopedMetric,
+  type TimelineScopeSelection,
+} from "@/shared/timeline-scope";
 import {
   addRollingAverageMetricToChartData,
   createTimelineChartOptions,
@@ -159,6 +162,20 @@ export function TimelinePageView({
     () => getDefaultRangeButtonLabel(selectedMode),
     [selectedMode],
   );
+  const selectedMetricSeriesLabel = useMemo(() => {
+    if (!isTimelineScopedMetric(selectedMetric)) {
+      return undefined;
+    }
+
+    const selectedScope = timeline.scopeSelection[selectedMetric];
+    if (selectedScope === "total") {
+      return undefined;
+    }
+
+    return timeline.scopeOptions[selectedMetric].find(
+      (option) => option.value === selectedScope,
+    )?.label;
+  }, [selectedMetric, timeline.scopeOptions, timeline.scopeSelection]);
 
   const handleChartZoom = useCallback((event: AgZoomEvent) => {
     const nextRange = event.rangeX
@@ -195,6 +212,7 @@ export function TimelinePageView({
         chartData: rebasedChartData,
         periodMode: selectedMode,
         selectedMetric,
+        selectedMetricSeriesLabel,
         showCumulativeSeries: isCumulativeSeriesVisible,
         amountCompactFormatter,
         currencyFormatter,
@@ -214,6 +232,7 @@ export function TimelinePageView({
       isCumulativeSeriesVisible,
       selectedMode,
       selectedMetric,
+      selectedMetricSeriesLabel,
       isDarkMode,
       theme,
     ],
