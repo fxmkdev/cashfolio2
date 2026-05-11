@@ -19,6 +19,7 @@ import type {
   BacktrackedFallbackCacheEntry,
   CachedRateResult,
   FetchRateResult,
+  ValuationRateLookupResult,
 } from "./types";
 import { NO_DATA_FETCH_RESULT } from "./types";
 
@@ -129,6 +130,14 @@ export async function getRateWithBacktracking(
   args: RateWithBacktrackingInput,
   deps: RateWithBacktrackingDeps = defaultDeps,
 ): Promise<number | null> {
+  const result = await getRateWithBacktrackingDetails(args, deps);
+  return result.rate;
+}
+
+export async function getRateWithBacktrackingDetails(
+  args: RateWithBacktrackingInput,
+  deps: RateWithBacktrackingDeps = defaultDeps,
+): Promise<ValuationRateLookupResult> {
   const requestedTimestamp = deps.toSeriesTimestamp(args.date);
   const latestFetchableTimestamp = args.latestFetchableDate
     ? Math.min(
@@ -143,11 +152,11 @@ export async function getRateWithBacktracking(
   const cached = await deps.getCachedRate(key, requestedTimestamp);
   if (cached?.timestamp === requestedTimestamp) {
     await deps.clearBacktrackedFallbackFromCache(backtrackedFallbackCacheKey);
-    return cached.rate;
+    return { rate: cached.rate, source: "timeSeries" };
   }
   if (cached && latestFetchableTimestamp <= cached.timestamp) {
     await deps.clearBacktrackedFallbackFromCache(backtrackedFallbackCacheKey);
-    return cached.rate;
+    return { rate: cached.rate, source: "timeSeries" };
   }
 
   const cachedBacktrackedFallback = await deps.getBacktrackedFallbackFromCache(
@@ -156,11 +165,11 @@ export async function getRateWithBacktracking(
   if (cachedBacktrackedFallback) {
     if (cachedBacktrackedFallback.kind === "noData") {
       if (stopOnExplicitNoData) {
-        return null;
+        return { rate: null, source: "missing" };
       }
       await deps.clearBacktrackedFallbackFromCache(backtrackedFallbackCacheKey);
     } else {
-      return cachedBacktrackedFallback.rate;
+      return { rate: cachedBacktrackedFallback.rate, source: "fallback" };
     }
   }
 
@@ -180,7 +189,7 @@ export async function getRateWithBacktracking(
         },
         deps.backtrackedFallbackTtlSeconds,
       );
-      return cached.rate;
+      return { rate: cached.rate, source: "timeSeries" };
     }
 
     const hasRecentMissedAttempt =
@@ -211,7 +220,7 @@ export async function getRateWithBacktracking(
           { kind: "noData" },
           deps.backtrackedNoDataFallbackTtlSeconds,
         );
-        return null;
+        return { rate: null, source: "missing" };
       }
       requestedDate = deps.subUtcDay(requestedDate);
       continue;
@@ -250,7 +259,7 @@ export async function getRateWithBacktracking(
 
       await deps.clearMissedAttemptForSeriesTimestamp(key, currentTimestamp);
 
-      return fetchedRate;
+      return { rate: fetchedRate, source: "provider" };
     }
 
     await deps.storeMissedAttemptForSeriesTimestamp({
@@ -272,8 +281,8 @@ export async function getRateWithBacktracking(
       },
       deps.backtrackedFallbackTtlSeconds,
     );
-    return cached.rate;
+    return { rate: cached.rate, source: "timeSeries" };
   }
 
-  return null;
+  return { rate: null, source: "missing" };
 }

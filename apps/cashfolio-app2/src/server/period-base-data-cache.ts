@@ -12,18 +12,21 @@ import {
   loadPeriodBaseDataUncached,
   type PeriodBaseData,
 } from "./period-base-data-loader.server";
+import {
+  PERIOD_CACHE_TTL_SECONDS,
+  advancePeriodCacheGeneration,
+  getPeriodCacheEnvOrThrowWhenRedisAvailable,
+  getPeriodCacheGeneration,
+} from "./period-cache";
 
-const PERIOD_BASE_CACHE_TTL_SECONDS = 24 * 60 * 60;
 const PERIOD_BASE_CACHE_MAX_SERIALIZED_BYTES = 2 * 1024 * 1024;
 
 const PERIOD_BASE_CACHE_ENTRY_PREFIX = "period:base:v1";
 const PERIOD_BASE_CACHE_INDEX_PREFIX = "period:base:index:v1";
-const PERIOD_BASE_CACHE_GENERATION_PREFIX = "period:base:generation:v1";
 
 let hasWarnedPeriodBaseCacheReadFailure = false;
 let hasWarnedPeriodBaseCacheWriteFailure = false;
 let hasWarnedPeriodBaseCacheInvalidationFailure = false;
-let hasWarnedPeriodBaseCacheNamespaceFailure = false;
 
 const inflightByCacheKey = new Map<string, Promise<PeriodBaseData>>();
 
@@ -82,24 +85,6 @@ function decodeDatesFromCache<T>(value: unknown): T {
   return value as T;
 }
 
-function getCacheEnvOrThrowWhenRedisAvailable(): string {
-  const rawCacheEnv = process.env.PERIOD_BASE_CACHE_ENV?.trim();
-  if (rawCacheEnv) {
-    return rawCacheEnv;
-  }
-
-  if (!hasWarnedPeriodBaseCacheNamespaceFailure) {
-    console.error(
-      "PERIOD_BASE_CACHE_ENV must be set when Redis-backed period base-data cache is enabled.",
-    );
-    hasWarnedPeriodBaseCacheNamespaceFailure = true;
-  }
-
-  throw new Error(
-    "PERIOD_BASE_CACHE_ENV must be set when Redis-backed period base-data cache is enabled.",
-  );
-}
-
 function getPeriodBaseCacheEntryKey(args: {
   cacheEnv: string;
   accountBookId: string;
@@ -115,13 +100,6 @@ function getPeriodBaseCacheIndexKey(args: {
   generation: string;
 }) {
   return `${PERIOD_BASE_CACHE_INDEX_PREFIX}:${args.cacheEnv}:${args.accountBookId}:${args.generation}`;
-}
-
-function getPeriodBaseCacheGenerationKey(args: {
-  cacheEnv: string;
-  accountBookId: string;
-}) {
-  return `${PERIOD_BASE_CACHE_GENERATION_PREFIX}:${args.cacheEnv}:${args.accountBookId}`;
 }
 
 function isPresetPeriodValue(value: string): boolean {
@@ -204,34 +182,6 @@ async function resolvePeriodBaseCachePeriodKey(args: {
   return `${selection.granularity}:${formatUtcDateKey(selection.from)}:${formatUtcDateKey(selection.to)}`;
 }
 
-async function getPeriodBaseCacheGeneration(args: {
-  cacheEnv: string;
-  accountBookId: string;
-  redis: NonNullable<Awaited<ReturnType<typeof getRedisClient>>>;
-}): Promise<string> {
-  const generationKey = getPeriodBaseCacheGenerationKey({
-    cacheEnv: args.cacheEnv,
-    accountBookId: args.accountBookId,
-  });
-
-  try {
-    const generation = await args.redis.get(generationKey);
-    if (generation && generation.trim().length > 0) {
-      return generation.trim();
-    }
-  } catch (error) {
-    if (!hasWarnedPeriodBaseCacheReadFailure) {
-      console.warn(
-        "Failed to read period base-data cache entry; continuing uncached.",
-        error,
-      );
-      hasWarnedPeriodBaseCacheReadFailure = true;
-    }
-  }
-
-  return "0";
-}
-
 export async function getOrLoadPeriodBaseData(args: {
   accountBookId: string;
   period?: unknown;
@@ -253,12 +203,12 @@ export async function getOrLoadPeriodBaseData(args: {
       });
     }
 
-    const cacheEnv = getCacheEnvOrThrowWhenRedisAvailable();
+    const cacheEnv = getPeriodCacheEnvOrThrowWhenRedisAvailable();
     const periodCacheKey = await resolvePeriodBaseCachePeriodKey({
       accountBookId: args.accountBookId,
       periodValue,
     });
-    const generation = await getPeriodBaseCacheGeneration({
+    const generation = await getPeriodCacheGeneration({
       cacheEnv,
       accountBookId: args.accountBookId,
       redis,
@@ -303,9 +253,9 @@ export async function getOrLoadPeriodBaseData(args: {
           accountBookId: args.accountBookId,
           generation,
         });
-        await redis.setEx(entryKey, PERIOD_BASE_CACHE_TTL_SECONDS, serialized);
+        await redis.setEx(entryKey, PERIOD_CACHE_TTL_SECONDS, serialized);
         await redis.sAdd(indexKey, entryKey);
-        await redis.expire(indexKey, PERIOD_BASE_CACHE_TTL_SECONDS);
+        await redis.expire(indexKey, PERIOD_CACHE_TTL_SECONDS);
       }
     } catch (error) {
       if (!hasWarnedPeriodBaseCacheWriteFailure) {
@@ -336,8 +286,8 @@ export async function invalidatePeriodBaseDataCacheForAccountBook(
     return;
   }
 
-  const cacheEnv = getCacheEnvOrThrowWhenRedisAvailable();
-  const generation = await getPeriodBaseCacheGeneration({
+  const cacheEnv = getPeriodCacheEnvOrThrowWhenRedisAvailable();
+  const generation = await getPeriodCacheGeneration({
     cacheEnv,
     accountBookId,
     redis,
@@ -347,10 +297,6 @@ export async function invalidatePeriodBaseDataCacheForAccountBook(
     accountBookId,
     generation,
   });
-  const generationKey = getPeriodBaseCacheGenerationKey({
-    cacheEnv,
-    accountBookId,
-  });
 
   try {
     const members = await redis.sMembers(indexKey);
@@ -359,8 +305,11 @@ export async function invalidatePeriodBaseDataCacheForAccountBook(
     } else {
       await redis.del(indexKey);
     }
-    const nextGeneration = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    await redis.set(generationKey, nextGeneration);
+    await advancePeriodCacheGeneration({
+      cacheEnv,
+      accountBookId,
+      redis,
+    });
 
     const inflightPrefix = `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:inflight:${accountBookId}:`;
     for (const cacheKey of inflightByCacheKey.keys()) {

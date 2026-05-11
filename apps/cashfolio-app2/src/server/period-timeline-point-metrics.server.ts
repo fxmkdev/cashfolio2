@@ -5,8 +5,8 @@ import {
   type EndOfPeriodBalanceStats,
 } from "./period-balance-stats";
 import {
-  convertBookingValueToReference,
-  getUnitToReferenceExchangeRate,
+  convertBookingValueToReferenceDetails,
+  getUnitToReferenceExchangeRateDetails,
 } from "./period-conversion";
 import {
   getOrLoadPeriodBaseData,
@@ -24,6 +24,11 @@ import {
   type TimelineMetricScopeFilter,
 } from "./period-timeline-scopes.server";
 import { type TimelineScopeOption } from "../shared/timeline-scope";
+import type {
+  ValuationRateLookupResult,
+  ValuationRateSource,
+} from "./valuation/types";
+import type { Unit } from "../.prisma-client/enums";
 
 const TRANSACTIONS_PAGE_SIZE = 200;
 const TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE = 200;
@@ -50,6 +55,19 @@ type TimelineEndOfPeriodBalanceStats = EndOfPeriodBalanceStats & {
   convertedBalanceByAccountId: Map<string, number | null>;
 };
 
+export type TimelineValuationContext = {
+  exchangeRateByKey: Map<string, Promise<ValuationRateLookupResult>>;
+};
+
+export type PeriodTimelinePointMetricsResult = {
+  metrics: PeriodTimelinePointMetrics;
+  cacheableFromPermanentValuationCache: boolean;
+};
+
+function isPermanentValuationSource(source: ValuationRateSource): boolean {
+  return source === "identity" || source === "timeSeries";
+}
+
 function buildTransferClearingHoldingAccounts(args: {
   transferClearingUnitBuckets: PeriodBaseData["transferClearingUnitBuckets"];
 }) {
@@ -68,7 +86,16 @@ function buildTransferClearingHoldingAccounts(args: {
 async function loadEndOfPeriodBalanceStats(args: {
   baseData: PeriodBaseData;
   referenceCurrency: string;
-  exchangeRateByKey: Map<string, Promise<number | null>>;
+  convertBalanceToReference: (input: {
+    value: number;
+    unit: Unit;
+    currency: string | null;
+    cryptocurrency: string | null;
+    symbol: string | null;
+    tradeCurrency: string | null;
+    date: Date;
+    referenceCurrency: string;
+  }) => Promise<number | null>;
 }): Promise<TimelineEndOfPeriodBalanceStats> {
   const endOfPeriodRawBalanceByAccountId = new Map(
     args.baseData.endOfPeriodRawBalances.map((balance) => [
@@ -91,11 +118,7 @@ async function loadEndOfPeriodBalanceStats(args: {
     rawBalanceByAccountId: endOfPeriodRawBalanceByAccountId,
     periodEnd: args.baseData.selection.to,
     referenceCurrency: args.referenceCurrency,
-    convertBalanceToReference: (input) =>
-      convertBookingValueToReference({
-        ...input,
-        exchangeRateByKey: args.exchangeRateByKey,
-      }),
+    convertBalanceToReference: args.convertBalanceToReference,
   });
 }
 
@@ -104,7 +127,19 @@ export async function loadPeriodTimelinePointMetrics(args: {
   period?: unknown;
   baseData?: PeriodBaseData;
   metricScopeFilter?: TimelineMetricScopeFilter;
-}) {
+  valuationContext?: TimelineValuationContext;
+}): Promise<PeriodTimelinePointMetrics> {
+  const result = await loadPeriodTimelinePointMetricsWithCacheability(args);
+  return result.metrics;
+}
+
+export async function loadPeriodTimelinePointMetricsWithCacheability(args: {
+  accountBookId: string;
+  period?: unknown;
+  baseData?: PeriodBaseData;
+  metricScopeFilter?: TimelineMetricScopeFilter;
+  valuationContext?: TimelineValuationContext;
+}): Promise<PeriodTimelinePointMetricsResult> {
   const baseData =
     args.baseData ??
     (await getOrLoadPeriodBaseData({
@@ -115,26 +150,37 @@ export async function loadPeriodTimelinePointMetrics(args: {
   const selection = baseData.selection;
   if (selection.isBeforeAccountBookStart) {
     return {
-      totalReturn: 0,
-      savings: 0,
-      income: 0,
-      expenses: 0,
-      gainsLosses: 0,
-      assets: 0,
-      liabilities: 0,
-      netWorth: 0,
-      scopeOptions: {
-        income: [],
-        expenses: [],
-        assets: [],
-        liabilities: [],
-      },
-      scopedMetricValue: args.metricScopeFilter ? 0 : undefined,
-    } satisfies PeriodTimelinePointMetrics;
+      metrics: {
+        totalReturn: 0,
+        savings: 0,
+        income: 0,
+        expenses: 0,
+        gainsLosses: 0,
+        assets: 0,
+        liabilities: 0,
+        netWorth: 0,
+        scopeOptions: {
+          income: [],
+          expenses: [],
+          assets: [],
+          liabilities: [],
+        },
+        scopedMetricValue: args.metricScopeFilter ? 0 : undefined,
+      } satisfies PeriodTimelinePointMetrics,
+      cacheableFromPermanentValuationCache: true,
+    };
   }
 
   const referenceCurrency = baseData.referenceCurrency;
-  const exchangeRateByKey = new Map<string, Promise<number | null>>();
+  const exchangeRateByKey =
+    args.valuationContext?.exchangeRateByKey ??
+    new Map<string, Promise<ValuationRateLookupResult>>();
+  let cacheableFromPermanentValuationCache = true;
+  const markValuationSource = (source: ValuationRateSource) => {
+    if (!isPermanentValuationSource(source)) {
+      cacheableFromPermanentValuationCache = false;
+    }
+  };
   const equityAggregation = createPeriodOverviewEquityAggregation();
   const gainsLossesContributionByKey = new Map<
     string,
@@ -146,12 +192,15 @@ export async function loadPeriodTimelinePointMetrics(args: {
     explicitCounterparts: baseData.explicitCounterparts,
     equityAggregation,
     gainsLossesContributionByKey,
-    convertBookingToReference: (booking) =>
-      convertBookingValueToReference({
+    convertBookingToReference: async (booking) => {
+      const result = await convertBookingValueToReferenceDetails({
         ...booking,
         referenceCurrency,
         exchangeRateByKey,
-      }),
+      });
+      markValuationSource(result.source);
+      return result.value;
+    },
   });
 
   const transferClearingHoldingAccounts = buildTransferClearingHoldingAccounts({
@@ -199,25 +248,38 @@ export async function loadPeriodTimelinePointMetrics(args: {
       transferClearingUnitBuckets: baseData.transferClearingUnitBuckets,
       assetLiabilityAccountNameById,
       gainsLossesContributionByKey,
-      resolveRate: (input) =>
-        getUnitToReferenceExchangeRate({
+      resolveRate: async (input) => {
+        const result = await getUnitToReferenceExchangeRateDetails({
           ...input,
           referenceCurrency,
           exchangeRateByKey,
-        }),
-      convertBookingToReference: (booking) =>
-        convertBookingValueToReference({
+        });
+        markValuationSource(result.source);
+        return result.rate;
+      },
+      convertBookingToReference: async (booking) => {
+        const result = await convertBookingValueToReferenceDetails({
           ...booking,
           referenceCurrency,
           exchangeRateByKey,
-        }),
+        });
+        markValuationSource(result.source);
+        return result.value;
+      },
       initialHoldingBalances: baseData.initialHoldingBalances,
       holdingTransactions: baseData.holdingTransactions,
     }),
     loadEndOfPeriodBalanceStats({
       baseData,
       referenceCurrency,
-      exchangeRateByKey,
+      convertBalanceToReference: async (input) => {
+        const result = await convertBookingValueToReferenceDetails({
+          ...input,
+          exchangeRateByKey,
+        });
+        markValuationSource(result.source);
+        return result.value;
+      },
     }),
   ]);
 
@@ -276,20 +338,23 @@ export async function loadPeriodTimelinePointMetrics(args: {
   });
 
   return {
-    totalReturn: roundedTotalReturn,
-    savings: roundedSavings,
-    income: roundedIncome,
-    expenses: roundedExpenses,
-    gainsLosses: roundedGainsLosses,
-    assets: roundedAssets,
-    liabilities: roundedLiabilities,
-    netWorth: roundedNetWorth,
-    scopeOptions: {
-      income: incomeScopeOptions,
-      expenses: expenseScopeOptions,
-      assets: assetScopeOptions,
-      liabilities: liabilityScopeOptions,
-    },
-    scopedMetricValue,
-  } satisfies PeriodTimelinePointMetrics;
+    metrics: {
+      totalReturn: roundedTotalReturn,
+      savings: roundedSavings,
+      income: roundedIncome,
+      expenses: roundedExpenses,
+      gainsLosses: roundedGainsLosses,
+      assets: roundedAssets,
+      liabilities: roundedLiabilities,
+      netWorth: roundedNetWorth,
+      scopeOptions: {
+        income: incomeScopeOptions,
+        expenses: expenseScopeOptions,
+        assets: assetScopeOptions,
+        liabilities: liabilityScopeOptions,
+      },
+      scopedMetricValue,
+    } satisfies PeriodTimelinePointMetrics,
+    cacheableFromPermanentValuationCache,
+  };
 }

@@ -1,12 +1,16 @@
-import { describe, expect, test, vi } from "vitest";
-import { AccountType, Unit } from "../.prisma-client/enums";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../.prisma-client/enums";
 import type { PeriodBaseData } from "./period-base-data-cache";
 
 const getOrLoadPeriodBaseData = vi.hoisted(() => vi.fn());
 const processPeriodEquityBookingsFromBaseData = vi.hoisted(() => vi.fn());
 const computePeriodHoldingGainLoss = vi.hoisted(() => vi.fn());
-const convertBookingValueToReference = vi.hoisted(() => vi.fn());
-const getUnitToReferenceExchangeRate = vi.hoisted(() => vi.fn());
+const convertBookingValueToReferenceDetails = vi.hoisted(() => vi.fn());
+const getUnitToReferenceExchangeRateDetails = vi.hoisted(() => vi.fn());
 
 vi.mock("./period-base-data-cache", () => ({
   getOrLoadPeriodBaseData,
@@ -21,11 +25,14 @@ vi.mock("./period-holding-gain-loss", () => ({
 }));
 
 vi.mock("./period-conversion", () => ({
-  convertBookingValueToReference,
-  getUnitToReferenceExchangeRate,
+  convertBookingValueToReferenceDetails,
+  getUnitToReferenceExchangeRateDetails,
 }));
 
-import { loadPeriodTimelinePointMetrics } from "./period-timeline-point-metrics.server";
+import {
+  loadPeriodTimelinePointMetrics,
+  loadPeriodTimelinePointMetricsWithCacheability,
+} from "./period-timeline-point-metrics.server";
 
 function createBaseData(args?: {
   isBefore?: boolean;
@@ -73,6 +80,10 @@ function createBaseData(args?: {
 }
 
 describe("loadPeriodTimelinePointMetrics", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   test("returns zeros before account-book start without running metric pipelines", async () => {
     const baseData = createBaseData({ isBefore: true });
 
@@ -150,8 +161,14 @@ describe("loadPeriodTimelinePointMetrics", () => {
       convertedCount: 0,
       skippedCount: 0,
     });
-    convertBookingValueToReference.mockResolvedValue(1);
-    getUnitToReferenceExchangeRate.mockResolvedValue(1);
+    convertBookingValueToReferenceDetails.mockResolvedValue({
+      value: 1,
+      source: "identity",
+    });
+    getUnitToReferenceExchangeRateDetails.mockResolvedValue({
+      rate: 1,
+      source: "identity",
+    });
 
     const result = await loadPeriodTimelinePointMetrics({
       accountBookId: "book-1",
@@ -181,6 +198,73 @@ describe("loadPeriodTimelinePointMetrics", () => {
       },
       scopedMetricValue: undefined,
     });
+  });
+
+  test("marks metrics cacheable only when valuation sources are permanent", async () => {
+    const baseData = createBaseData({
+      overrides: {
+        equityBookings: [
+          {
+            id: "booking-1",
+            accountId: "income-1",
+            accountName: "Income",
+            accountGroupId: null,
+            equityAccountSubtype: EquityAccountSubtype.INCOME,
+            transactionId: "transaction-1",
+            date: new Date("2026-02-10T00:00:00.000Z"),
+            value: 100,
+            unit: Unit.CURRENCY,
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ],
+      },
+    });
+    getOrLoadPeriodBaseData.mockResolvedValue(baseData);
+    processPeriodEquityBookingsFromBaseData.mockImplementation(
+      async ({
+        convertBookingToReference,
+      }: {
+        convertBookingToReference: (booking: {
+          value: number;
+          unit: Unit;
+          currency: string | null;
+          cryptocurrency: string | null;
+          symbol: string | null;
+          tradeCurrency: string | null;
+          date: Date;
+        }) => Promise<number | null>;
+      }) => {
+        await convertBookingToReference({
+          value: 100,
+          unit: Unit.CURRENCY,
+          currency: "USD",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          date: new Date("2026-02-10T00:00:00.000Z"),
+        });
+      },
+    );
+    computePeriodHoldingGainLoss.mockResolvedValue({
+      realizedGainLoss: 0,
+      unrealizedGainLoss: 0,
+      convertedCount: 0,
+      skippedCount: 0,
+    });
+    convertBookingValueToReferenceDetails.mockResolvedValue({
+      value: 100,
+      source: "provider",
+    });
+
+    const result = await loadPeriodTimelinePointMetricsWithCacheability({
+      accountBookId: "book-1",
+      period: "2026-02",
+    });
+
+    expect(result.cacheableFromPermanentValuationCache).toBe(false);
   });
 
   test("computes assets, liabilities, and net worth from end-of-period balances", async () => {
@@ -254,10 +338,16 @@ describe("loadPeriodTimelinePointMetrics", () => {
       convertedCount: 0,
       skippedCount: 0,
     });
-    convertBookingValueToReference.mockImplementation(
-      async ({ value }: { value: number }) => value,
+    convertBookingValueToReferenceDetails.mockImplementation(
+      async ({ value }: { value: number }) => ({
+        value,
+        source: "identity",
+      }),
     );
-    getUnitToReferenceExchangeRate.mockResolvedValue(1);
+    getUnitToReferenceExchangeRateDetails.mockResolvedValue({
+      rate: 1,
+      source: "identity",
+    });
 
     const result = await loadPeriodTimelinePointMetrics({
       accountBookId: "book-1",
@@ -484,8 +574,14 @@ describe("loadPeriodTimelinePointMetrics", () => {
       convertedCount: 0,
       skippedCount: 0,
     });
-    convertBookingValueToReference.mockResolvedValue(1);
-    getUnitToReferenceExchangeRate.mockResolvedValue(1);
+    convertBookingValueToReferenceDetails.mockResolvedValue({
+      value: 1,
+      source: "identity",
+    });
+    getUnitToReferenceExchangeRateDetails.mockResolvedValue({
+      rate: 1,
+      source: "identity",
+    });
 
     const result = await loadPeriodTimelinePointMetrics({
       accountBookId: "book-1",
@@ -557,8 +653,14 @@ describe("loadPeriodTimelinePointMetrics", () => {
       convertedCount: 0,
       skippedCount: 0,
     });
-    convertBookingValueToReference.mockResolvedValue(1);
-    getUnitToReferenceExchangeRate.mockResolvedValue(1);
+    convertBookingValueToReferenceDetails.mockResolvedValue({
+      value: 1,
+      source: "identity",
+    });
+    getUnitToReferenceExchangeRateDetails.mockResolvedValue({
+      rate: 1,
+      source: "identity",
+    });
 
     const result = await loadPeriodTimelinePointMetrics({
       accountBookId: "book-1",

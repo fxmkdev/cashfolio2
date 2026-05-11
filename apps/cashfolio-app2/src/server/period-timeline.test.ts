@@ -185,6 +185,9 @@ describe("getPeriodTimeline", () => {
         holdingAccountsResolved: [],
       },
       metricScopeFilter: undefined,
+      valuationContext: {
+        exchangeRateByKey: expect.any(Map),
+      },
     });
     expect(loadPeriodTimelinePoint).toHaveBeenNthCalledWith(2, {
       accountBookId: "book-1",
@@ -195,6 +198,9 @@ describe("getPeriodTimeline", () => {
         holdingAccountsResolved: [],
       },
       metricScopeFilter: undefined,
+      valuationContext: {
+        exchangeRateByKey: expect.any(Map),
+      },
     });
     expect(loadPeriodTimelinePoint).toHaveBeenNthCalledWith(3, {
       accountBookId: "book-1",
@@ -205,7 +211,24 @@ describe("getPeriodTimeline", () => {
         holdingAccountsResolved: [],
       },
       metricScopeFilter: undefined,
+      valuationContext: {
+        exchangeRateByKey: expect.any(Map),
+      },
     });
+    const valuationContexts = loadPeriodTimelinePoint.mock.calls.map(
+      ([args]) =>
+        (
+          args as {
+            valuationContext: { exchangeRateByKey: Map<string, unknown> };
+          }
+        ).valuationContext,
+    );
+    expect(valuationContexts[0]?.exchangeRateByKey).toBe(
+      valuationContexts[1]?.exchangeRateByKey,
+    );
+    expect(valuationContexts[1]?.exchangeRateByKey).toBe(
+      valuationContexts[2]?.exchangeRateByKey,
+    );
 
     expect(result).toEqual({
       referenceCurrency: "CHF",
@@ -328,6 +351,9 @@ describe("getPeriodTimeline", () => {
       metricScopeFilter: {
         metric: "income",
         scope: "account:income-a",
+      },
+      valuationContext: {
+        exchangeRateByKey: expect.any(Map),
       },
     });
   });

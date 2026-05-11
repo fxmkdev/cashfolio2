@@ -32,7 +32,7 @@ Related docs:
   `cache.ts`, `backtracking.ts`, `keys.ts`, `types.ts`, `date-utils.ts`,
   `constants.ts`
 
-## Period Base-Data Cache
+## Period Caches
 
 - Period overview and timeline use a shared Redis-backed **non-valuation**
   base-data cache (`src/server/period-base-data-cache.ts`) backed by an uncached
@@ -41,6 +41,18 @@ Related docs:
   bookings/transactions, raw balances, transfer-clearing buckets).
 - Excluded from cache payload: converted valuation outputs and exchange-rate
   results.
+- Timeline additionally uses a Redis-backed derived metrics cache
+  (`src/server/period-timeline-metrics-cache.ts`) for finalized scalar Timeline
+  point metrics. This cache sits above the base-data cache, so warm hits skip
+  period snapshot loading, valuation conversion, and gain/loss recomputation for
+  that point.
+- The base-data cache is intentionally kept even with derived Timeline metrics:
+  Period overview still consumes the base-data payload directly, and Timeline
+  misses still benefit from cached DB-derived inputs.
+- Both period cache families share the same environment namespace helper in
+  `src/server/period-cache.ts`. `PERIOD_BASE_CACHE_ENV` must be set when Redis
+  caching is enabled; Fly deployments populate it from the Fly app/deployment
+  environment so preview and staging apps can safely share one Redis instance.
 - Redis key namespace includes deployment scope and invalidation generation:
   - Entry:
     `period:base:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
@@ -48,6 +60,8 @@ Related docs:
     `period:base:index:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
   - Generation pointer:
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
+- Timeline metrics entry:
+  `period:timeline:metrics:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{YYYY-MM-DD}:{periodValue}:{scopeKey}`
 - For preset periods (`mtd`, `ytd`, `last-month`, `last-year`), `periodCacheKey`
   uses resolved concrete ranges (`granularity:from:to`) to avoid key aliasing
   across day/month boundaries.
@@ -56,11 +70,13 @@ Related docs:
   (`{periodValue}:{YYYY-MM-DD}`) so day rollovers do not reuse stale cache
   entries.
 - TTL: 24 hours. Mutating account/transaction server functions explicitly
-  invalidate cache entries for the affected account book by advancing the
-  generation.
-- `PERIOD_BASE_CACHE_ENV` must be set when Redis caching is enabled. On Fly
-  deployments this is set from `FLY_APP` to isolate multiple preview/staging
-  deployments sharing one Redis instance.
+  invalidate period cache entries for the affected account book by advancing the
+  shared generation. Base-data entries are also deleted through their index;
+  Timeline metrics entries are generation-invalidated and then expire naturally.
+- Timeline metrics entries are written only when every valuation dependency came
+  from identity conversion or the long-lived Redis TimeSeries valuation cache.
+  Metrics that needed provider fetches, short-lived fallback entries, or missing
+  valuation results are returned but not persisted as derived Timeline metrics.
 - `updateAccountBookSettings` (`src/server/account-book-settings.ts`) also
   invalidates period base-data cache when `referenceCurrency` or `startDate`
   changes.

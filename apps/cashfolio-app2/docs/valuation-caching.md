@@ -27,6 +27,10 @@ Primary consumers:
 - `src/server/accounts-queries.ts`
   - account tree reference balances
   - `getAccountReferenceBalances` lazy hydration endpoint
+- `src/server/period-timeline-point-metrics.server.ts`
+  - Timeline point valuation conversions
+  - exposes internal source metadata so derived Timeline metrics are cached only
+    when all valuations came from identity conversion or Redis TimeSeries
 
 Exchange-rate entry points:
 
@@ -34,6 +38,7 @@ Exchange-rate entry points:
   - `getCurrencyExchangeRate`
   - `getCryptocurrencyToCurrencyExchangeRate`
   - `getSecurityToCurrencyExchangeRate`
+  - internal `*Details` variants return the same rate plus source metadata
 
 ## Caching Layers
 
@@ -183,6 +188,11 @@ Plain-language summary:
 - TimeSeries answers: "What historical numeric rates do we have?"
 - Fallback answers: "What should we return for this requested day right now?"
 - Miss-cooldown answers: "Should we skip retrying this provider day for now?"
+
+Only TimeSeries values are considered permanent enough for derived Timeline
+metrics caching. One-hour fallback entries and provider results can still answer
+the current request, but Timeline metrics produced from them are not persisted
+in the derived metrics cache.
 
 ## Core Lookup Algorithm
 

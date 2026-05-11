@@ -7,7 +7,10 @@ import {
   getLatestAssumedAvailableHistoricalUtcDay,
   toSeriesTimestamp,
 } from "./valuation/date-utils";
-import { getRateWithBacktracking } from "./valuation/backtracking";
+import {
+  getRateWithBacktracking,
+  getRateWithBacktrackingDetails,
+} from "./valuation/backtracking";
 import {
   getCryptocurrencyBacktrackedFallbackCacheKey,
   getCryptocurrencyRedisSeriesKey,
@@ -21,6 +24,10 @@ import {
   fetchUsdPerCryptocurrencyRateFromCoinLayer,
   fetchUsdToCurrencyRateFromCurrencyLayer,
 } from "./valuation/providers";
+import type {
+  ValuationRateLookupResult,
+  ValuationRateSource,
+} from "./valuation/types";
 
 function getLatestFetchableHistoricalDate(now = new Date()): Date {
   return getLatestAssumedAvailableHistoricalUtcDay({
@@ -33,6 +40,16 @@ function getLatestFetchableHistoricalDate(now = new Date()): Date {
 type ValuationLookupContext = {
   latestFetchableDate: Date;
 };
+
+function combineValuationRateSources(
+  sources: ValuationRateSource[],
+): ValuationRateSource {
+  if (sources.includes("missing")) return "missing";
+  if (sources.includes("provider")) return "provider";
+  if (sources.includes("fallback")) return "fallback";
+  if (sources.includes("timeSeries")) return "timeSeries";
+  return "identity";
+}
 
 function createValuationLookupContext(
   now = new Date(),
@@ -64,12 +81,52 @@ async function getUsdToCurrencyRate(
   });
 }
 
+async function getUsdToCurrencyRateDetails(
+  targetCurrency: string,
+  date: Date,
+  context: ValuationLookupContext,
+): Promise<ValuationRateLookupResult> {
+  if (targetCurrency === BASE_CURRENCY) {
+    return { rate: 1, source: "identity" };
+  }
+
+  return getRateWithBacktrackingDetails({
+    seriesKey: getCurrencyRedisSeriesKey(targetCurrency),
+    backtrackedFallbackCacheKey: getCurrencyBacktrackedFallbackCacheKey(
+      targetCurrency,
+      toSeriesTimestamp(date),
+    ),
+    date,
+    latestFetchableDate: context.latestFetchableDate,
+    fetchRate: (targetDate) =>
+      fetchUsdToCurrencyRateFromCurrencyLayer(targetCurrency, targetDate),
+  });
+}
+
 async function getUsdPerCryptocurrencyRate(
   cryptocurrency: string,
   date: Date,
   context: ValuationLookupContext,
 ): Promise<number | null> {
   return getRateWithBacktracking({
+    seriesKey: getCryptocurrencyRedisSeriesKey(cryptocurrency),
+    backtrackedFallbackCacheKey: getCryptocurrencyBacktrackedFallbackCacheKey(
+      cryptocurrency,
+      toSeriesTimestamp(date),
+    ),
+    date,
+    latestFetchableDate: context.latestFetchableDate,
+    fetchRate: (targetDate) =>
+      fetchUsdPerCryptocurrencyRateFromCoinLayer(cryptocurrency, targetDate),
+  });
+}
+
+async function getUsdPerCryptocurrencyRateDetails(
+  cryptocurrency: string,
+  date: Date,
+  context: ValuationLookupContext,
+): Promise<ValuationRateLookupResult> {
+  return getRateWithBacktrackingDetails({
     seriesKey: getCryptocurrencyRedisSeriesKey(cryptocurrency),
     backtrackedFallbackCacheKey: getCryptocurrencyBacktrackedFallbackCacheKey(
       cryptocurrency,
@@ -89,6 +146,27 @@ async function getSecurityPrice(
   context: ValuationLookupContext,
 ): Promise<number | null> {
   return getRateWithBacktracking({
+    seriesKey: getSecurityRedisSeriesKey(symbol, tradeCurrency),
+    backtrackedFallbackCacheKey: getSecurityBacktrackedFallbackCacheKey(
+      symbol,
+      tradeCurrency,
+      toSeriesTimestamp(date),
+    ),
+    date,
+    latestFetchableDate: context.latestFetchableDate,
+    fetchRate: (targetDate) =>
+      fetchSecurityPriceFromMarketstack(symbol, tradeCurrency, targetDate),
+    stopOnExplicitNoData: false,
+  });
+}
+
+async function getSecurityPriceDetails(
+  symbol: string,
+  tradeCurrency: string,
+  date: Date,
+  context: ValuationLookupContext,
+): Promise<ValuationRateLookupResult> {
+  return getRateWithBacktrackingDetails({
     seriesKey: getSecurityRedisSeriesKey(symbol, tradeCurrency),
     backtrackedFallbackCacheKey: getSecurityBacktrackedFallbackCacheKey(
       symbol,
@@ -136,6 +214,45 @@ async function getCurrencyExchangeRateWithContext(
   }
 }
 
+async function getCurrencyExchangeRateDetailsWithContext(
+  args: {
+    sourceCurrency: string;
+    targetCurrency: string;
+    date: Date;
+  },
+  context: ValuationLookupContext,
+): Promise<ValuationRateLookupResult> {
+  const sourceCurrency = args.sourceCurrency.toUpperCase();
+  const targetCurrency = args.targetCurrency.toUpperCase();
+  if (sourceCurrency === targetCurrency) {
+    return { rate: 1, source: "identity" };
+  }
+
+  try {
+    const [usdToTargetRate, usdToSourceRate] = await Promise.all([
+      getUsdToCurrencyRateDetails(targetCurrency, args.date, context),
+      getUsdToCurrencyRateDetails(sourceCurrency, args.date, context),
+    ]);
+    if (usdToTargetRate.rate == null || usdToSourceRate.rate == null) {
+      return { rate: null, source: "missing" };
+    }
+
+    return {
+      rate: usdToTargetRate.rate / usdToSourceRate.rate,
+      source: combineValuationRateSources([
+        usdToTargetRate.source,
+        usdToSourceRate.source,
+      ]),
+    };
+  } catch (error) {
+    console.error(
+      `Unable to retrieve valuation rate for ${sourceCurrency} -> ${targetCurrency}`,
+      error,
+    );
+    return { rate: null, source: "missing" };
+  }
+}
+
 export async function getCurrencyExchangeRate(args: {
   sourceCurrency: string;
   targetCurrency: string;
@@ -143,6 +260,15 @@ export async function getCurrencyExchangeRate(args: {
 }): Promise<number | null> {
   const context = createValuationLookupContext();
   return getCurrencyExchangeRateWithContext(args, context);
+}
+
+export async function getCurrencyExchangeRateDetails(args: {
+  sourceCurrency: string;
+  targetCurrency: string;
+  date: Date;
+}): Promise<ValuationRateLookupResult> {
+  const context = createValuationLookupContext();
+  return getCurrencyExchangeRateDetailsWithContext(args, context);
 }
 
 export async function getCryptocurrencyToCurrencyExchangeRate(args: {
@@ -170,6 +296,40 @@ export async function getCryptocurrencyToCurrencyExchangeRate(args: {
       error,
     );
     return null;
+  }
+}
+
+export async function getCryptocurrencyToCurrencyExchangeRateDetails(args: {
+  cryptocurrency: string;
+  targetCurrency: string;
+  date: Date;
+}): Promise<ValuationRateLookupResult> {
+  const cryptocurrency = args.cryptocurrency.toUpperCase();
+  const targetCurrency = args.targetCurrency.toUpperCase();
+  const context = createValuationLookupContext();
+
+  try {
+    const [usdToTargetRate, cryptoToUsdRate] = await Promise.all([
+      getUsdToCurrencyRateDetails(targetCurrency, args.date, context),
+      getUsdPerCryptocurrencyRateDetails(cryptocurrency, args.date, context),
+    ]);
+    if (usdToTargetRate.rate == null || cryptoToUsdRate.rate == null) {
+      return { rate: null, source: "missing" };
+    }
+
+    return {
+      rate: cryptoToUsdRate.rate * usdToTargetRate.rate,
+      source: combineValuationRateSources([
+        usdToTargetRate.source,
+        cryptoToUsdRate.source,
+      ]),
+    };
+  } catch (error) {
+    console.error(
+      `Unable to retrieve valuation rate for ${cryptocurrency} -> ${targetCurrency}`,
+      error,
+    );
+    return { rate: null, source: "missing" };
   }
 }
 
@@ -207,5 +367,48 @@ export async function getSecurityToCurrencyExchangeRate(args: {
       error,
     );
     return null;
+  }
+}
+
+export async function getSecurityToCurrencyExchangeRateDetails(args: {
+  symbol: string;
+  tradeCurrency: string;
+  targetCurrency: string;
+  date: Date;
+}): Promise<ValuationRateLookupResult> {
+  const symbol = args.symbol.toUpperCase();
+  const tradeCurrency = args.tradeCurrency.toUpperCase();
+  const targetCurrency = args.targetCurrency.toUpperCase();
+  const context = createValuationLookupContext();
+
+  try {
+    const [securityPrice, tradeToTargetRate] = await Promise.all([
+      getSecurityPriceDetails(symbol, tradeCurrency, args.date, context),
+      getCurrencyExchangeRateDetailsWithContext(
+        {
+          sourceCurrency: tradeCurrency,
+          targetCurrency,
+          date: args.date,
+        },
+        context,
+      ),
+    ]);
+    if (securityPrice.rate == null || tradeToTargetRate.rate == null) {
+      return { rate: null, source: "missing" };
+    }
+
+    return {
+      rate: securityPrice.rate * tradeToTargetRate.rate,
+      source: combineValuationRateSources([
+        securityPrice.source,
+        tradeToTargetRate.source,
+      ]),
+    };
+  } catch (error) {
+    console.error(
+      `Unable to retrieve security exchange rate for ${symbol} (${tradeCurrency} -> ${targetCurrency})`,
+      error,
+    );
+    return { rate: null, source: "missing" };
   }
 }

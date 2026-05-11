@@ -1,11 +1,11 @@
 import { normalizePeriodValue } from "../shared/period";
-import { getOrLoadPeriodBaseData } from "./period-base-data-cache";
 import { resolvePeriodSelection } from "./period-selection";
 import {
   loadPeriodTimelinePointContext,
   type PeriodTimelinePointContext,
 } from "./period-timeline-point-context.server";
-import { loadPeriodTimelinePointMetrics } from "./period-timeline-point-metrics.server";
+import { getOrLoadPeriodTimelinePointMetrics } from "./period-timeline-metrics-cache";
+import type { TimelineValuationContext } from "./period-timeline-point-metrics.server";
 import type {
   TimelineScopeSelection,
   TimelineScopedMetric,
@@ -22,6 +22,7 @@ export async function loadPeriodTimelinePoint(args: {
     metric: TimelineScopedMetric;
     scope: TimelineScopeSelection;
   };
+  valuationContext?: TimelineValuationContext;
 }) {
   const data = {
     accountBookId: args.accountBookId,
@@ -64,16 +65,11 @@ export async function loadPeriodTimelinePoint(args: {
     };
   }
 
-  const loadedBaseData = await getOrLoadPeriodBaseData({
+  const metrics = await getOrLoadPeriodTimelinePointMetrics({
     accountBookId: data.accountBookId,
     period: data.period,
-  });
-
-  const metrics = await loadPeriodTimelinePointMetrics({
-    accountBookId: data.accountBookId,
-    period: data.period,
-    baseData: loadedBaseData,
     metricScopeFilter: args.metricScopeFilter,
+    valuationContext: args.valuationContext,
   });
 
   return {

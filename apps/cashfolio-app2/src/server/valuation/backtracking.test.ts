@@ -1,5 +1,8 @@
 import { describe, expect, test, vi } from "vitest";
-import { getRateWithBacktracking } from "./backtracking";
+import {
+  getRateWithBacktracking,
+  getRateWithBacktrackingDetails,
+} from "./backtracking";
 import { NO_DATA_FETCH_RESULT } from "./types";
 
 function createDeps() {
@@ -54,6 +57,49 @@ describe("getRateWithBacktracking", () => {
     expect(deps.clearBacktrackedFallbackFromCache).toHaveBeenCalledWith(
       "valuation:fallback:key",
     );
+  });
+
+  test("detailed lookup marks exact cached hit as TimeSeries source", async () => {
+    const deps = createDeps();
+    const requestedDate = new Date("2026-03-28T10:00:00.000Z");
+    const requestedTimestamp = deps.toSeriesTimestamp(requestedDate);
+    deps.getCachedRate.mockResolvedValueOnce({
+      rate: 1.234,
+      timestamp: requestedTimestamp,
+    });
+
+    const result = await getRateWithBacktrackingDetails(
+      {
+        seriesKey: "valuation:key",
+        backtrackedFallbackCacheKey: "valuation:fallback:key",
+        date: requestedDate,
+        fetchRate: vi.fn(),
+      },
+      deps,
+    );
+
+    expect(result).toEqual({ rate: 1.234, source: "timeSeries" });
+  });
+
+  test("detailed lookup marks fallback hits as fallback source", async () => {
+    const deps = createDeps();
+    deps.getBacktrackedFallbackFromCache.mockResolvedValueOnce({
+      kind: "rate",
+      rate: 0.88,
+      sourceTimestamp: Date.UTC(2026, 2, 27),
+    });
+
+    const result = await getRateWithBacktrackingDetails(
+      {
+        seriesKey: "valuation:key",
+        backtrackedFallbackCacheKey: "valuation:fallback:key",
+        date: new Date("2026-03-28T00:00:00.000Z"),
+        fetchRate: vi.fn(),
+      },
+      deps,
+    );
+
+    expect(result).toEqual({ rate: 0.88, source: "fallback" });
   });
 
   test("reuses cached backtracked fallback rate without provider call", async () => {

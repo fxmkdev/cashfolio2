@@ -10,19 +10,14 @@ const prisma = vi.hoisted(() => ({
   },
 }));
 
-const getOrLoadPeriodBaseData = vi.hoisted(() => vi.fn());
-const loadPeriodTimelinePointMetrics = vi.hoisted(() => vi.fn());
+const getOrLoadPeriodTimelinePointMetrics = vi.hoisted(() => vi.fn());
 
 vi.mock("../prisma.server", () => ({
   prisma,
 }));
 
-vi.mock("./period-base-data-cache", () => ({
-  getOrLoadPeriodBaseData,
-}));
-
-vi.mock("./period-timeline-point-metrics.server", () => ({
-  loadPeriodTimelinePointMetrics,
+vi.mock("./period-timeline-metrics-cache", () => ({
+  getOrLoadPeriodTimelinePointMetrics,
 }));
 
 import {
@@ -128,11 +123,7 @@ describe("loadPeriodTimelinePoint", () => {
     });
     prisma.account.findMany.mockResolvedValue([]);
 
-    getOrLoadPeriodBaseData.mockResolvedValue({
-      accountBookId: "book-1",
-      periodValue: "2026-02",
-    });
-    loadPeriodTimelinePointMetrics.mockResolvedValue({
+    getOrLoadPeriodTimelinePointMetrics.mockResolvedValue({
       totalReturn: 42,
       savings: 10,
       income: 50,
@@ -185,8 +176,7 @@ describe("loadPeriodTimelinePoint", () => {
       },
       scopedMetricValue: undefined,
     });
-    expect(getOrLoadPeriodBaseData).not.toHaveBeenCalled();
-    expect(loadPeriodTimelinePointMetrics).not.toHaveBeenCalled();
+    expect(getOrLoadPeriodTimelinePointMetrics).not.toHaveBeenCalled();
   });
 
   test("returns scoped metric value zero before account-book start when scope filter is requested", async () => {
@@ -207,7 +197,7 @@ describe("loadPeriodTimelinePoint", () => {
     expect(result.scopedMetricValue).toBe(0);
   });
 
-  test("loads base data once and forwards it to timeline metrics loader", async () => {
+  test("loads timeline metrics through the cache layer", async () => {
     const result = await loadPeriodTimelinePoint({
       accountBookId: "book-1",
       period: "2026-02",
@@ -216,18 +206,11 @@ describe("loadPeriodTimelinePoint", () => {
       }),
     });
 
-    expect(getOrLoadPeriodBaseData).toHaveBeenCalledWith({
+    expect(getOrLoadPeriodTimelinePointMetrics).toHaveBeenCalledWith({
       accountBookId: "book-1",
       period: "2026-02",
-    });
-    expect(loadPeriodTimelinePointMetrics).toHaveBeenCalledWith({
-      accountBookId: "book-1",
-      period: "2026-02",
-      baseData: {
-        accountBookId: "book-1",
-        periodValue: "2026-02",
-      },
       metricScopeFilter: undefined,
+      valuationContext: undefined,
     });
 
     expect(result).toEqual({
