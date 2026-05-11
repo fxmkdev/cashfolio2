@@ -44,6 +44,7 @@ export function createTimelineChartOptions(args: {
   chartData: TimelineChartDatum[];
   periodMode: TimelinePeriodMode;
   selectedMetric: TimelineMetric;
+  selectedMetricSeriesLabel?: string;
   showCumulativeSeries?: boolean;
   amountCompactFormatter: Intl.NumberFormat;
   currencyFormatter: Intl.NumberFormat;
@@ -77,11 +78,12 @@ export function createTimelineChartOptions(args: {
   const rangeButtons = getTimelineRangeButtons(args.periodMode);
   const rangeControlStyles = getTimelineRangeControlStyles(args);
   const selectedMetricLabel = getTimelineMetricLabel(args.selectedMetric);
+  const flowSeriesLabel = args.selectedMetricSeriesLabel ?? selectedMetricLabel;
   const selectedMetricKey = args.selectedMetric;
-  const cumulativeMetricLabel = `Cumulative ${selectedMetricLabel}`;
+  const cumulativeMetricLabel = `Cumulative ${flowSeriesLabel}`;
   const rollingAverageMetricLabel = `${
     args.periodMode === "year" ? "5Y" : "12M"
-  } Rolling Avg ${selectedMetricLabel}`;
+  } Rolling Avg ${flowSeriesLabel}`;
   const getAreaTooltipHeading = (datum: TimelineChartDatum) =>
     pointDateFormatter.format(datum.periodMetricDate);
   const axisDomain = getAxisDomainForMetric({
@@ -192,7 +194,7 @@ export function createTimelineChartOptions(args: {
           type: "bar" as const,
           xKey: "periodStart",
           yKey: selectedMetricKey as BarTimelineMetric,
-          yName: selectedMetricLabel,
+          yName: flowSeriesLabel,
           widthRatio: 0.72,
           itemStyler: ({ datum }: { datum: unknown }) => {
             if (args.selectedMetric === "expenses") {
@@ -223,7 +225,7 @@ export function createTimelineChartOptions(args: {
                 heading: point.periodLabel,
                 data: [
                   {
-                    label: selectedMetricLabel,
+                    label: flowSeriesLabel,
                     value: args.currencyFormatter.format(
                       point[selectedMetricKey],
                     ),
