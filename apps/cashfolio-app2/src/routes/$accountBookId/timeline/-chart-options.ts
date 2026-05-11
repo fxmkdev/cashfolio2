@@ -236,6 +236,38 @@ export function createTimelineChartOptions(args: {
         {
           type: "line" as const,
           xKey: "periodStart",
+          yKey: "rollingAverageMetric",
+          yName: rollingAverageMetricLabel,
+          stroke: rollingAverageStrokeColor,
+          strokeWidth: 2,
+          lineDash: [6, 4],
+          marker: {
+            size: 5,
+            fill: rollingAverageMarkerFillColor,
+            stroke: rollingAverageStrokeColor,
+          },
+          tooltip: {
+            renderer: ({ datum }: { datum: unknown }) => {
+              const point = datum as TimelineChartDatum;
+              const rollingAverageValue = point.rollingAverageMetric;
+              return {
+                heading: point.periodLabel,
+                data: [
+                  {
+                    label: rollingAverageMetricLabel,
+                    value:
+                      rollingAverageValue == null
+                        ? "-"
+                        : args.currencyFormatter.format(rollingAverageValue),
+                  },
+                ],
+              };
+            },
+          },
+        },
+        {
+          type: "line" as const,
+          xKey: "periodStart",
           yKey: "cumulativeMetric",
           yName: cumulativeMetricLabel,
           visible: args.showCumulativeSeries ?? false,
@@ -263,38 +295,6 @@ export function createTimelineChartOptions(args: {
                     value: args.currencyFormatter.format(
                       point.cumulativeMetric,
                     ),
-                  },
-                ],
-              };
-            },
-          },
-        },
-        {
-          type: "line" as const,
-          xKey: "periodStart",
-          yKey: "rollingAverageMetric",
-          yName: rollingAverageMetricLabel,
-          stroke: rollingAverageStrokeColor,
-          strokeWidth: 2,
-          lineDash: [6, 4],
-          marker: {
-            size: 5,
-            fill: rollingAverageMarkerFillColor,
-            stroke: rollingAverageStrokeColor,
-          },
-          tooltip: {
-            renderer: ({ datum }: { datum: unknown }) => {
-              const point = datum as TimelineChartDatum;
-              const rollingAverageValue = point.rollingAverageMetric;
-              return {
-                heading: point.periodLabel,
-                data: [
-                  {
-                    label: rollingAverageMetricLabel,
-                    value:
-                      rollingAverageValue == null
-                        ? "-"
-                        : args.currencyFormatter.format(rollingAverageValue),
                   },
                 ],
               };
