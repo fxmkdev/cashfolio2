@@ -431,6 +431,87 @@ export async function seedThreeBookingSplitTransaction(args: {
   });
 }
 
+export async function seedExpenseScopeOverflowOptions(args: {
+  accountBookId: string;
+  currentAccountId: string;
+  expenseGroupId: string;
+  count?: number;
+}) {
+  const count = args.count ?? 24;
+  if (count < 1) {
+    throw new Error("Expected at least one overflow expense account.");
+  }
+
+  const accounts = Array.from({ length: count }, (_, index) => {
+    const sequence = index + 1;
+    const name = `E2E Overflow Expense ${sequence.toString().padStart(2, "0")}`;
+
+    return {
+      id: createId(),
+      name,
+      label: `Equity / E2E Expenses / ${name}`,
+    };
+  });
+
+  await prisma.account.createMany({
+    data: accounts.map((account, index) => ({
+      id: account.id,
+      accountBookId: args.accountBookId,
+      name: account.name,
+      type: AccountType.EQUITY,
+      equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+      groupId: args.expenseGroupId,
+      unit: Unit.CURRENCY,
+      currency: "CHF",
+      sortOrder: index + 10,
+    })),
+  });
+
+  await prisma.transaction.create({
+    data: {
+      id: createId(),
+      accountBookId: args.accountBookId,
+      description: "E2E Timeline Scope Overflow Seed",
+      bookings: {
+        create: [
+          {
+            id: createId(),
+            accountId: args.currentAccountId,
+            date: new Date("2026-01-05T00:00:00.000Z"),
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: -count,
+            sortOrder: 0,
+          },
+          ...accounts.map((account, index) => ({
+            id: createId(),
+            accountId: account.id,
+            date: new Date("2026-01-05T00:00:00.000Z"),
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: 1,
+            sortOrder: index + 1,
+          })),
+        ],
+      },
+    },
+  });
+
+  const targetAccount = accounts[accounts.length - 1];
+  if (!targetAccount) {
+    throw new Error(
+      "Expected overflow expense account seed to create a target.",
+    );
+  }
+
+  return {
+    accounts,
+    targetAccount,
+  };
+}
+
 export async function seedAssetAccountWithMissingReferenceBalance(args: {
   accountBookId: string;
   counterAccountId: string;

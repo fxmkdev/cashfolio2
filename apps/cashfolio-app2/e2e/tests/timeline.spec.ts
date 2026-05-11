@@ -1,12 +1,18 @@
 import { expect, test } from "@playwright/test";
 import {
   seedDatabase,
+  seedExpenseScopeOverflowOptions,
   seedThreeBookingSplitTransaction,
   type SeededData,
 } from "../support/db";
 import { selectSegmentedControlOption } from "../support/segmented-control";
 
 let seeded: SeededData;
+let overflowExpenseScopeTarget: {
+  id: string;
+  label: string;
+  name: string;
+};
 
 test.beforeAll(async () => {
   seeded = await seedDatabase();
@@ -16,6 +22,12 @@ test.beforeAll(async () => {
     currentAccountId: seeded.cashAccount.id,
     debitAccountIds: [seeded.expenseAccount.id, seeded.expenseAccount.id],
   });
+  const overflowOptions = await seedExpenseScopeOverflowOptions({
+    accountBookId: seeded.accountBookId,
+    currentAccountId: seeded.cashAccount.id,
+    expenseGroupId: seeded.expenseGroupId,
+  });
+  overflowExpenseScopeTarget = overflowOptions.targetAccount;
 });
 
 test("timeline page is reachable and persists selected period mode across refresh", async ({
@@ -178,4 +190,52 @@ test("timeline expense scope combobox opens with all options and supports search
   await expect
     .poll(() => new URL(page.url()).searchParams.get("expenseScope"))
     .toBeNull();
+});
+
+test("timeline expense scope combobox scrolls through long option lists", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/timeline`);
+  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
+
+  await page.getByRole("combobox", { name: "View" }).click();
+  await page.getByRole("option", { name: "Expenses", exact: true }).click();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("metric"))
+    .toBe("expenses");
+
+  const scopeInput = page.getByLabel("Timeline metric scope");
+  await scopeInput.click();
+
+  const scopeOptionsViewport = page.getByTestId(
+    "timeline-scope-options-viewport",
+  );
+  await expect(scopeOptionsViewport).toBeVisible();
+  await expect
+    .poll(() =>
+      scopeOptionsViewport.evaluate((element) => ({
+        isConstrained: element.clientHeight <= 260,
+        isScrollable: element.scrollHeight > element.clientHeight,
+      })),
+    )
+    .toMatchObject({
+      isConstrained: true,
+      isScrollable: true,
+    });
+
+  await scopeOptionsViewport.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+
+  const overflowExpenseOption = page.getByRole("option", {
+    name: overflowExpenseScopeTarget.label,
+    exact: true,
+  });
+  await expect(overflowExpenseOption).toBeVisible();
+  await overflowExpenseOption.click();
+
+  await expect(scopeInput).toHaveValue(overflowExpenseScopeTarget.label);
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("expenseScope"))
+    .toBe(`account:${overflowExpenseScopeTarget.id}`);
 });
