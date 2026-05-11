@@ -78,26 +78,24 @@ describe("createTimelineChartOptions (flow metrics)", () => {
         }),
       ],
     });
-    expect(options.series).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          type: "bar",
-          yKey: "savings",
-          yName: "Savings",
-        }),
-        expect.objectContaining({
-          type: "line",
-          yKey: "cumulativeMetric",
-          yName: "Cumulative Savings",
-          visible: false,
-        }),
-        expect.objectContaining({
-          type: "line",
-          yKey: "rollingAverageMetric",
-          yName: "12M Rolling Avg Savings",
-        }),
-      ]),
-    );
+    const series = Array.isArray(options.series) ? options.series : [];
+    expect(series).toHaveLength(3);
+    expect(series[0]).toMatchObject({
+      type: "bar",
+      yKey: "savings",
+      yName: "Savings",
+    });
+    expect(series[1]).toMatchObject({
+      type: "line",
+      yKey: "rollingAverageMetric",
+      yName: "12M Rolling Avg Savings",
+    });
+    expect(series.at(-1)).toMatchObject({
+      type: "line",
+      yKey: "cumulativeMetric",
+      yName: "Cumulative Savings",
+      visible: false,
+    });
   });
 
   test("uses yearly range buttons in year mode", () => {
