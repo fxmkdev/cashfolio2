@@ -21,7 +21,6 @@ import { Route as AccountBookIdAccountIdRouteRouteImport } from './routes/$accou
 import { Route as AccountBookIdPeriodIndexRouteImport } from './routes/$accountBookId/period/index'
 import { Route as AccountBookIdAccountIdIndexRouteImport } from './routes/$accountBookId/$accountId/index'
 import { Route as ApiLogtoActionRouteImport } from './routes/api/logto/$action'
-import { Route as AccountBookIdAccountIdChartRouteRouteImport } from './routes/$accountBookId/$accountId/chart/route'
 import { Route as AccountBookIdPeriodGainsLossesAccountIdRouteRouteImport } from './routes/$accountBookId/period/gains-losses/$accountId/route'
 
 const AccountBookIdRouteRoute = AccountBookIdRouteRouteImport.update({
@@ -92,12 +91,6 @@ const ApiLogtoActionRoute = ApiLogtoActionRouteImport.update({
   path: '/api/logto/$action',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AccountBookIdAccountIdChartRouteRoute =
-  AccountBookIdAccountIdChartRouteRouteImport.update({
-    id: '/chart',
-    path: '/chart',
-    getParentRoute: () => AccountBookIdAccountIdRouteRoute,
-  } as any)
 const AccountBookIdPeriodGainsLossesAccountIdRouteRoute =
   AccountBookIdPeriodGainsLossesAccountIdRouteRouteImport.update({
     id: '/gains-losses/$accountId',
@@ -115,7 +108,6 @@ export interface FileRoutesByFullPath {
   '/$accountBookId/timeline': typeof AccountBookIdTimelineRouteRoute
   '/$accountBookId/valuation-cache': typeof AccountBookIdValuationCacheRouteRoute
   '/$accountBookId/': typeof AccountBookIdIndexRoute
-  '/$accountBookId/$accountId/chart': typeof AccountBookIdAccountIdChartRouteRoute
   '/api/logto/$action': typeof ApiLogtoActionRoute
   '/$accountBookId/$accountId/': typeof AccountBookIdAccountIdIndexRoute
   '/$accountBookId/period/': typeof AccountBookIdPeriodIndexRoute
@@ -128,7 +120,6 @@ export interface FileRoutesByTo {
   '/$accountBookId/timeline': typeof AccountBookIdTimelineRouteRoute
   '/$accountBookId/valuation-cache': typeof AccountBookIdValuationCacheRouteRoute
   '/$accountBookId': typeof AccountBookIdIndexRoute
-  '/$accountBookId/$accountId/chart': typeof AccountBookIdAccountIdChartRouteRoute
   '/api/logto/$action': typeof ApiLogtoActionRoute
   '/$accountBookId/$accountId': typeof AccountBookIdAccountIdIndexRoute
   '/$accountBookId/period': typeof AccountBookIdPeriodIndexRoute
@@ -145,7 +136,6 @@ export interface FileRoutesById {
   '/$accountBookId/timeline': typeof AccountBookIdTimelineRouteRoute
   '/$accountBookId/valuation-cache': typeof AccountBookIdValuationCacheRouteRoute
   '/$accountBookId/': typeof AccountBookIdIndexRoute
-  '/$accountBookId/$accountId/chart': typeof AccountBookIdAccountIdChartRouteRoute
   '/api/logto/$action': typeof ApiLogtoActionRoute
   '/$accountBookId/$accountId/': typeof AccountBookIdAccountIdIndexRoute
   '/$accountBookId/period/': typeof AccountBookIdPeriodIndexRoute
@@ -163,7 +153,6 @@ export interface FileRouteTypes {
     | '/$accountBookId/timeline'
     | '/$accountBookId/valuation-cache'
     | '/$accountBookId/'
-    | '/$accountBookId/$accountId/chart'
     | '/api/logto/$action'
     | '/$accountBookId/$accountId/'
     | '/$accountBookId/period/'
@@ -176,7 +165,6 @@ export interface FileRouteTypes {
     | '/$accountBookId/timeline'
     | '/$accountBookId/valuation-cache'
     | '/$accountBookId'
-    | '/$accountBookId/$accountId/chart'
     | '/api/logto/$action'
     | '/$accountBookId/$accountId'
     | '/$accountBookId/period'
@@ -192,7 +180,6 @@ export interface FileRouteTypes {
     | '/$accountBookId/timeline'
     | '/$accountBookId/valuation-cache'
     | '/$accountBookId/'
-    | '/$accountBookId/$accountId/chart'
     | '/api/logto/$action'
     | '/$accountBookId/$accountId/'
     | '/$accountBookId/period/'
@@ -291,13 +278,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLogtoActionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/$accountBookId/$accountId/chart': {
-      id: '/$accountBookId/$accountId/chart'
-      path: '/chart'
-      fullPath: '/$accountBookId/$accountId/chart'
-      preLoaderRoute: typeof AccountBookIdAccountIdChartRouteRouteImport
-      parentRoute: typeof AccountBookIdAccountIdRouteRoute
-    }
     '/$accountBookId/period/gains-losses/$accountId': {
       id: '/$accountBookId/period/gains-losses/$accountId'
       path: '/gains-losses/$accountId'
@@ -309,14 +289,11 @@ declare module '@tanstack/react-router' {
 }
 
 interface AccountBookIdAccountIdRouteRouteChildren {
-  AccountBookIdAccountIdChartRouteRoute: typeof AccountBookIdAccountIdChartRouteRoute
   AccountBookIdAccountIdIndexRoute: typeof AccountBookIdAccountIdIndexRoute
 }
 
 const AccountBookIdAccountIdRouteRouteChildren: AccountBookIdAccountIdRouteRouteChildren =
   {
-    AccountBookIdAccountIdChartRouteRoute:
-      AccountBookIdAccountIdChartRouteRoute,
     AccountBookIdAccountIdIndexRoute: AccountBookIdAccountIdIndexRoute,
   }
 

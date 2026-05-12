@@ -30,8 +30,8 @@ Related docs:
   mobile-only header burger toggle
   - Uses the theme `sm` breakpoint as the shared source of truth for both navbar
     collapse and header visibility.
-  - Keeps `Accounts` highlighted for account routes (`/$accountId` and
-    `/$accountId/chart`) as well as `/accounts`.
+  - Keeps `Accounts` highlighted for account routes (`/$accountId`) as well as
+    `/accounts`.
   - Loads account-book switcher options at shell level and memoizes on the
     browser side so nested route navigations can reuse the same list.
 - `$accountBookId/index.tsx` - index redirect route that forwards to
@@ -95,8 +95,6 @@ Related docs:
 - `$accountBookId/$accountId/route.tsx` - ledger layout route (loads ledger data
   and provides shared search params for child routes)
 - `$accountBookId/$accountId/index.tsx` - ledger page for a single account
-- `$accountBookId/$accountId/chart/route.tsx` - balance chart view for
-  asset/liability ledgers (daily closing native-unit balance)
 - Route-local helper files live inside the owning route folder and are prefixed
   with `-` so TanStack Router ignores them. For example:
   - accounts route modules:
@@ -141,8 +139,6 @@ Related docs:
   - `transactionId?: string` to auto-scroll and highlight a booking row
   - `period?: string` for explicit month/year period filtering on supported
     account types (asset, liability, and non-opening-balance equity)
-- `$accountBookId/$accountId/chart/route.tsx` intentionally has no search
-  params; the ledger/chart switch does not carry `transactionId` or `period`
 - `$accountBookId/period/route.tsx` and
   `$accountBookId/period/gains-losses/$accountId/route.tsx` both use
   `period?: string` with the same normalized period semantics
