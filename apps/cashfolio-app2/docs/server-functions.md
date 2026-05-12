@@ -28,9 +28,9 @@ Related docs:
   `period-gain-loss-reconciliation.ts`, `period-unit-format.ts`,
   `period-end-net-worth.ts`, `period-opening-balance-net-worth.ts`,
   `valuation.server.ts`, `valuation-cache.ts`
-- Valuation internals live in `src/server/valuation/`: `providers.ts`,
-  `cache.ts`, `backtracking.ts`, `keys.ts`, `types.ts`, `date-utils.ts`,
-  `constants.ts`
+- Valuation internals live in `src/server/valuation/`: `rate-lookups.ts`,
+  `source-rates.ts`, `lookup-context.ts`, `providers.ts`, `cache.ts`,
+  `backtracking.ts`, `keys.ts`, `types.ts`, `date-utils.ts`, `constants.ts`
 
 ## Period Caches
 
