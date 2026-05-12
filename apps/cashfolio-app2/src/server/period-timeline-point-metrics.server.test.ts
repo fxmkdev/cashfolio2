@@ -95,6 +95,8 @@ describe("loadPeriodTimelinePointMetrics", () => {
       scopeOptions: {
         income: [],
         expenses: [],
+        assets: [],
+        liabilities: [],
       },
       scopedMetricValue: undefined,
     });
@@ -174,6 +176,8 @@ describe("loadPeriodTimelinePointMetrics", () => {
       scopeOptions: {
         income: [],
         expenses: [],
+        assets: [],
+        liabilities: [],
       },
       scopedMetricValue: undefined,
     });
@@ -272,9 +276,169 @@ describe("loadPeriodTimelinePointMetrics", () => {
       scopeOptions: {
         income: [],
         expenses: [],
+        assets: [
+          {
+            value: "account:asset-1",
+            label: "Cash",
+            kind: "account",
+          },
+          {
+            value: "group:virtual:transfer-clearing",
+            label: "Transfer Clearing",
+            kind: "group",
+          },
+          {
+            value: "group:virtual:transfer-clearing:currency",
+            label: "Transfer Clearing / Currency",
+            kind: "group",
+          },
+          {
+            value: "account:virtual:transfer-clearing:account:currency:USD",
+            label: "Transfer Clearing / Currency / USD",
+            kind: "account",
+          },
+        ],
+        liabilities: [
+          {
+            value: "account:liability-1",
+            label: "Credit Card",
+            kind: "account",
+          },
+        ],
       },
       scopedMetricValue: undefined,
     });
+  });
+
+  test("builds balance scope options and resolves scoped liability values", async () => {
+    const baseData = createBaseData({
+      overrides: {
+        allAccountGroups: [
+          { id: "grp-assets", name: "Assets", parentGroupId: null },
+          { id: "grp-liabilities", name: "Liabilities", parentGroupId: null },
+        ],
+        baseAssetLiabilityAccounts: [
+          {
+            id: "asset-1",
+            name: "Cash",
+            groupId: "grp-assets",
+            type: AccountType.ASSET,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+          {
+            id: "liability-1",
+            name: "Credit Card",
+            groupId: "grp-liabilities",
+            type: AccountType.LIABILITY,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ],
+        endOfPeriodRawBalances: [
+          { accountId: "asset-1", rawBalance: 200 },
+          { accountId: "liability-1", rawBalance: -70 },
+        ],
+        transferClearingUnitBuckets: [
+          {
+            unitKey: "currency:USD",
+            unitLabel: "USD",
+            unitType: "currency",
+            unit: Unit.CURRENCY,
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            isNonReferenceUnit: true,
+            rawBalance: 50,
+            bookings: [],
+          },
+        ],
+      },
+    });
+
+    getOrLoadPeriodBaseData.mockResolvedValue(baseData);
+    processPeriodEquityBookingsFromBaseData.mockImplementation(
+      async ({
+        equityAggregation,
+      }: {
+        equityAggregation: {
+          income: number;
+          expenses: number;
+          explicitGainLoss: number;
+        };
+      }) => {
+        equityAggregation.income = 0;
+        equityAggregation.expenses = 0;
+        equityAggregation.explicitGainLoss = 0;
+      },
+    );
+    computePeriodHoldingGainLoss.mockResolvedValue({
+      realizedGainLoss: 0,
+      unrealizedGainLoss: 0,
+      convertedCount: 0,
+      skippedCount: 0,
+    });
+    convertBookingValueToReference.mockImplementation(
+      async ({ value }: { value: number }) => value,
+    );
+    getUnitToReferenceExchangeRate.mockResolvedValue(1);
+
+    const result = await loadPeriodTimelinePointMetrics({
+      accountBookId: "book-1",
+      period: "2026-02",
+      metricScopeFilter: {
+        metric: "liabilities",
+        scope: "group:grp-liabilities",
+      },
+    });
+
+    expect(result.scopedMetricValue).toBe(70);
+    expect(result.scopeOptions.assets).toEqual([
+      {
+        value: "group:grp-assets",
+        label: "Assets",
+        kind: "group",
+      },
+      {
+        value: "account:asset-1",
+        label: "Assets / Cash",
+        kind: "account",
+      },
+    ]);
+    expect(result.scopeOptions.liabilities).toEqual([
+      {
+        value: "group:grp-liabilities",
+        label: "Liabilities",
+        kind: "group",
+      },
+      {
+        value: "account:liability-1",
+        label: "Liabilities / Credit Card",
+        kind: "account",
+      },
+      {
+        value: "group:virtual:transfer-clearing",
+        label: "Transfer Clearing",
+        kind: "group",
+      },
+      {
+        value: "group:virtual:transfer-clearing:currency",
+        label: "Transfer Clearing / Currency",
+        kind: "group",
+      },
+      {
+        value: "account:virtual:transfer-clearing:account:currency:USD",
+        label: "Transfer Clearing / Currency / USD",
+        kind: "account",
+      },
+    ]);
   });
 
   test("builds activity-only scope options and resolves scoped income values", async () => {

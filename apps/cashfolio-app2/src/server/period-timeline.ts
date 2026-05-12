@@ -35,10 +35,14 @@ export type PeriodTimelineResponse = {
   scopeOptions: {
     income: TimelineScopeOption[];
     expenses: TimelineScopeOption[];
+    assets: TimelineScopeOption[];
+    liabilities: TimelineScopeOption[];
   };
   scopeSelection: {
     income: TimelineScopeSelection;
     expenses: TimelineScopeSelection;
+    assets: TimelineScopeSelection;
+    liabilities: TimelineScopeSelection;
   };
 };
 
@@ -48,6 +52,8 @@ type TimelineInput = {
   scopedMetric?: TimelineScopedMetric;
   incomeScope: TimelineScopeSelection;
   expenseScope: TimelineScopeSelection;
+  assetScope: TimelineScopeSelection;
+  liabilityScope: TimelineScopeSelection;
 };
 
 function toMonthIndex(year: number, month: number): number {
@@ -168,12 +174,16 @@ export const getPeriodTimeline = createServerFn({
       scopedMetric?: unknown;
       incomeScope?: unknown;
       expenseScope?: unknown;
+      assetScope?: unknown;
+      liabilityScope?: unknown;
     }): TimelineInput => ({
       accountBookId: data.accountBookId,
       granularity: parseTimelineGranularity(data.granularity),
       scopedMetric: parseOptionalTimelineScopedMetric(data.scopedMetric),
       incomeScope: parseTimelineScopeSelectionOrDefault(data.incomeScope),
       expenseScope: parseTimelineScopeSelectionOrDefault(data.expenseScope),
+      assetScope: parseTimelineScopeSelectionOrDefault(data.assetScope),
+      liabilityScope: parseTimelineScopeSelectionOrDefault(data.liabilityScope),
     }),
   )
   .handler(async ({ data }) => {
@@ -188,10 +198,41 @@ export const getPeriodTimeline = createServerFn({
     const context = await loadPeriodTimelinePointContext({
       accountBookId: data.accountBookId,
     });
+    const activeMetricScopeFilter = (() => {
+      if (data.scopedMetric === "income" && data.incomeScope !== "total") {
+        return {
+          metric: "income" as const,
+          scope: data.incomeScope,
+        };
+      }
+      if (data.scopedMetric === "expenses" && data.expenseScope !== "total") {
+        return {
+          metric: "expenses" as const,
+          scope: data.expenseScope,
+        };
+      }
+      if (data.scopedMetric === "assets" && data.assetScope !== "total") {
+        return {
+          metric: "assets" as const,
+          scope: data.assetScope,
+        };
+      }
+      if (
+        data.scopedMetric === "liabilities" &&
+        data.liabilityScope !== "total"
+      ) {
+        return {
+          metric: "liabilities" as const,
+          scope: data.liabilityScope,
+        };
+      }
+      return undefined;
+    })();
     const openingBalancePoint = await loadTimelineOpeningBalancePoint({
       accountBookId: data.accountBookId,
       accountBookStartDate: context.accountBookStartDate,
       referenceCurrency: context.referenceCurrency,
+      metricScopeFilter: activeMetricScopeFilter,
     });
 
     const periodValues = buildTimelinePeriodValues({
@@ -210,22 +251,14 @@ export const getPeriodTimeline = createServerFn({
       TimelineScopeSelection,
       TimelineScopeOption
     >();
-    const activeMetricScopeFilter = (() => {
-      if (data.scopedMetric === "income" && data.incomeScope !== "total") {
-        return {
-          metric: "income" as const,
-          scope: data.incomeScope,
-        };
-      }
-      if (data.scopedMetric === "expenses" && data.expenseScope !== "total") {
-        return {
-          metric: "expenses" as const,
-          scope: data.expenseScope,
-        };
-      }
-      return undefined;
-    })();
-
+    const assetScopeOptions = new Map<
+      TimelineScopeSelection,
+      TimelineScopeOption
+    >();
+    const liabilityScopeOptions = new Map<
+      TimelineScopeSelection,
+      TimelineScopeOption
+    >();
     for (const periodValue of periodValues) {
       const point = await loadPeriodTimelinePoint({
         accountBookId: data.accountBookId,
@@ -238,6 +271,12 @@ export const getPeriodTimeline = createServerFn({
       }
       for (const option of point.scopeOptions.expenses) {
         expenseScopeOptions.set(option.value, option);
+      }
+      for (const option of point.scopeOptions.assets) {
+        assetScopeOptions.set(option.value, option);
+      }
+      for (const option of point.scopeOptions.liabilities) {
+        liabilityScopeOptions.set(option.value, option);
       }
       scopedMetricValues.push(point.scopedMetricValue ?? 0);
       points.push({
@@ -261,6 +300,12 @@ export const getPeriodTimeline = createServerFn({
     const finalizedExpenseScopeOptions = createTimelineScopeOptionsWithTotal(
       expenseScopeOptions.values(),
     );
+    const finalizedAssetScopeOptions = createTimelineScopeOptionsWithTotal(
+      assetScopeOptions.values(),
+    );
+    const finalizedLiabilityScopeOptions = createTimelineScopeOptionsWithTotal(
+      liabilityScopeOptions.values(),
+    );
     const clampedIncomeScope = clampTimelineScopeSelection({
       requested: data.incomeScope,
       options: finalizedIncomeScopeOptions,
@@ -269,10 +314,22 @@ export const getPeriodTimeline = createServerFn({
       requested: data.expenseScope,
       options: finalizedExpenseScopeOptions,
     });
+    const clampedAssetScope = clampTimelineScopeSelection({
+      requested: data.assetScope,
+      options: finalizedAssetScopeOptions,
+    });
+    const clampedLiabilityScope = clampTimelineScopeSelection({
+      requested: data.liabilityScope,
+      options: finalizedLiabilityScopeOptions,
+    });
     const shouldUseScopedIncome =
       data.scopedMetric === "income" && clampedIncomeScope !== "total";
     const shouldUseScopedExpenses =
       data.scopedMetric === "expenses" && clampedExpenseScope !== "total";
+    const shouldUseScopedAssets =
+      data.scopedMetric === "assets" && clampedAssetScope !== "total";
+    const shouldUseScopedLiabilities =
+      data.scopedMetric === "liabilities" && clampedLiabilityScope !== "total";
     const responsePoints = points.map((point, index) => ({
       ...point,
       income: shouldUseScopedIncome
@@ -281,19 +338,40 @@ export const getPeriodTimeline = createServerFn({
       expenses: shouldUseScopedExpenses
         ? (scopedMetricValues[index] ?? 0)
         : point.expenses,
+      assets: shouldUseScopedAssets
+        ? (scopedMetricValues[index] ?? 0)
+        : point.assets,
+      liabilities: shouldUseScopedLiabilities
+        ? (scopedMetricValues[index] ?? 0)
+        : point.liabilities,
     }));
+    const { scopedMetricValue, ...baseOpeningBalancePoint } =
+      openingBalancePoint;
+    const responseOpeningBalancePoint = {
+      ...baseOpeningBalancePoint,
+      assets: shouldUseScopedAssets
+        ? (scopedMetricValue ?? 0)
+        : openingBalancePoint.assets,
+      liabilities: shouldUseScopedLiabilities
+        ? (scopedMetricValue ?? 0)
+        : openingBalancePoint.liabilities,
+    };
 
     return {
       referenceCurrency: context.referenceCurrency,
-      openingBalancePoint,
+      openingBalancePoint: responseOpeningBalancePoint,
       points: responsePoints,
       scopeOptions: {
         income: finalizedIncomeScopeOptions,
         expenses: finalizedExpenseScopeOptions,
+        assets: finalizedAssetScopeOptions,
+        liabilities: finalizedLiabilityScopeOptions,
       },
       scopeSelection: {
         income: clampedIncomeScope,
         expenses: clampedExpenseScope,
+        assets: clampedAssetScope,
+        liabilities: clampedLiabilityScope,
       },
     } satisfies PeriodTimelineResponse;
   });

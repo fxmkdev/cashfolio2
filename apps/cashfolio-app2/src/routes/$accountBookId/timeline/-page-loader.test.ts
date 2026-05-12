@@ -41,10 +41,14 @@ describe("loadTimelinePageData", () => {
       scopeOptions: {
         income: [{ value: "total", label: "Total", kind: "total" }],
         expenses: [{ value: "total", label: "Total", kind: "total" }],
+        assets: [{ value: "total", label: "Total", kind: "total" }],
+        liabilities: [{ value: "total", label: "Total", kind: "total" }],
       },
       scopeSelection: {
         income: "total",
         expenses: "total",
+        assets: "total",
+        liabilities: "total",
       },
     });
 
@@ -54,6 +58,8 @@ describe("loadTimelinePageData", () => {
       scopedMetric: "income",
       incomeScope: "group:income-1",
       expenseScope: "total",
+      assetScope: "total",
+      liabilityScope: "total",
     });
 
     expect(mockedGetPeriodTimeline).toHaveBeenCalledTimes(1);
@@ -64,6 +70,8 @@ describe("loadTimelinePageData", () => {
         scopedMetric: "income",
         incomeScope: "group:income-1",
         expenseScope: "total",
+        assetScope: "total",
+        liabilityScope: "total",
       },
     });
     expect(result).toEqual({
@@ -94,10 +102,14 @@ describe("loadTimelinePageData", () => {
         scopeOptions: {
           income: [{ value: "total", label: "Total", kind: "total" }],
           expenses: [{ value: "total", label: "Total", kind: "total" }],
+          assets: [{ value: "total", label: "Total", kind: "total" }],
+          liabilities: [{ value: "total", label: "Total", kind: "total" }],
         },
         scopeSelection: {
           income: "total",
           expenses: "total",
+          assets: "total",
+          liabilities: "total",
         },
       },
     });

@@ -8,6 +8,8 @@ describe("timeline page navigation", () => {
       metric: "savings",
       incomeScope: "group:income-1",
       expenseScope: "account:expense-1",
+      assetScope: "group:asset-1",
+      liabilityScope: "account:liability-1",
     });
 
     expect(navigation.replace).toBe(true);
@@ -22,6 +24,8 @@ describe("timeline page navigation", () => {
       metric: "savings",
       incomeScope: "group:income-1",
       expenseScope: "account:expense-1",
+      assetScope: "group:asset-1",
+      liabilityScope: "account:liability-1",
       q: "keep-me",
     });
   });
@@ -32,6 +36,8 @@ describe("timeline page navigation", () => {
       metric: "totalReturn",
       incomeScope: "total",
       expenseScope: "total",
+      assetScope: "total",
+      liabilityScope: "total",
     });
 
     expect(
@@ -45,6 +51,8 @@ describe("timeline page navigation", () => {
       metric: undefined,
       incomeScope: undefined,
       expenseScope: undefined,
+      assetScope: undefined,
+      liabilityScope: undefined,
       q: "keep-me",
     });
   });

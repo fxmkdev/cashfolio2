@@ -110,7 +110,7 @@ export function TimelineScopeControls({
             placeholder={
               isScopedMetric
                 ? "Select account group or account"
-                : "Available for Income and Expenses"
+                : "Available for Income, Expenses, Assets, and Liabilities"
             }
             value={isScopedMetric ? scopeSearchValue : ""}
             disabled={!isScopedMetric}
