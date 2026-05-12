@@ -27,9 +27,7 @@ export default tseslint.config(
     },
     rules: {
       "no-undef": "off",
-      "no-unassigned-vars": "off",
       "no-unused-vars": "off",
-      "no-useless-assignment": "off",
       "prefer-const": "off",
     },
   },
@@ -48,7 +46,6 @@ export default tseslint.config(
     },
     rules: {
       "@typescript-eslint/no-unused-vars": "off",
-      "no-useless-assignment": "off",
       "no-undef": "off",
       "no-unused-vars": "off",
       "prefer-const": "off",
