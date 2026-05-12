@@ -312,11 +312,46 @@ describe("valuation-cache server functions", () => {
         data: {
           accountBookId: "book-5",
           unitType: "INVALID",
-        } as unknown as Parameters<typeof getValuationCacheSeries>[0]["data"],
+        } as never,
       }),
     ).rejects.toMatchObject({
       status: 400,
     });
+  });
+
+  it("validates valuation cache unit input before authorization", async () => {
+    await expect(
+      getValuationCacheUnits({
+        data: null as never,
+      }),
+    ).rejects.toThrow("Input must be an object.");
+
+    await expect(
+      getValuationCacheUnits({
+        data: {} as never,
+      }),
+    ).rejects.toThrow("Account book id is required.");
+
+    expect(ensureAuthorizedForAccountBookId).not.toHaveBeenCalled();
+  });
+
+  it("validates valuation cache series input before authorization", async () => {
+    await expect(
+      getValuationCacheSeries({
+        data: null as never,
+      }),
+    ).rejects.toThrow("Input must be an object.");
+
+    await expect(
+      getValuationCacheSeries({
+        data: {
+          unitType: "CURRENCY",
+          currency: "EUR",
+        } as never,
+      }),
+    ).rejects.toThrow("Account book id is required.");
+
+    expect(ensureAuthorizedForAccountBookId).not.toHaveBeenCalled();
   });
 
   it("logs cache series read failures only once while returning non-fatal empty data", async () => {

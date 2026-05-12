@@ -7,6 +7,7 @@ import { Unit } from "../../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../../account-books/functions.server";
 import { prisma } from "../../prisma.server";
 import { getRedisClient } from "../../redis.server";
+import { assertRecord, requireStringField } from "../input-validation";
 import { toDayString } from "./date-utils";
 import {
   getCryptocurrencyRedisSeriesKey,
@@ -62,10 +63,39 @@ function normalizeUnitCode(value: string | null | undefined): string | null {
   return normalized.length > 0 ? normalized : null;
 }
 
+function getOptionalStringField(
+  data: Record<string, unknown>,
+  field: string,
+): string | undefined {
+  const value = data[field];
+  return typeof value === "string" ? value : undefined;
+}
+
+function validateGetValuationCacheUnitsInput(
+  data: unknown,
+): GetValuationCacheUnitsInput {
+  assertRecord(data);
+
+  return {
+    accountBookId: requireStringField(
+      data,
+      "accountBookId",
+      "Account book id is required.",
+    ),
+  };
+}
+
 function validateGetValuationCacheSeriesInput(
-  data: GetValuationCacheSeriesInput,
+  data: unknown,
 ): GetValuationCacheSeriesInput {
-  const unitType = (data as { unitType?: unknown }).unitType;
+  assertRecord(data);
+
+  const accountBookId = requireStringField(
+    data,
+    "accountBookId",
+    "Account book id is required.",
+  );
+  const unitType = data.unitType;
   if (!isValuationUnitTab(unitType)) {
     throw new Response(
       "Invalid unitType. Expected CURRENCY, CRYPTOCURRENCY, or SECURITY.",
@@ -73,7 +103,14 @@ function validateGetValuationCacheSeriesInput(
     );
   }
 
-  return data;
+  return {
+    accountBookId,
+    unitType,
+    currency: getOptionalStringField(data, "currency"),
+    cryptocurrency: getOptionalStringField(data, "cryptocurrency"),
+    symbol: getOptionalStringField(data, "symbol"),
+    tradeCurrency: getOptionalStringField(data, "tradeCurrency"),
+  };
 }
 
 function getSeriesKey(input: GetValuationCacheSeriesInput): string {
@@ -124,7 +161,7 @@ function toSortedUnits(unitsByKey: Map<string, ValuationCacheUnitRow>) {
 }
 
 export const getValuationCacheUnits = createServerFn({ method: "GET" })
-  .inputValidator((data: GetValuationCacheUnitsInput) => data)
+  .inputValidator(validateGetValuationCacheUnitsInput)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
