@@ -1,8 +1,9 @@
-import { Combobox, InputBase, Select, useCombobox } from "@mantine/core";
-import { useEffect, useMemo, useState } from "react";
+import { Select, TreeSelect } from "@mantine/core";
+import { useMemo } from "react";
 import type { PeriodTimelineResponse } from "@/server/period-timeline";
 import {
   isTimelineScopedMetric,
+  isTimelineScopeSelection,
   type TimelineScopeSelection,
 } from "@/shared/timeline-scope";
 import {
@@ -10,6 +11,10 @@ import {
   TIMELINE_METRIC_OPTIONS,
   type TimelineMetric,
 } from "./-page-types";
+import {
+  buildTimelineScopeTreeData,
+  getTimelineScopeTreeSearchLabel,
+} from "./-scope-tree";
 
 type TimelineScopeControlsProps = {
   selectedMetric: TimelineMetric;
@@ -31,40 +36,10 @@ export function TimelineScopeControls({
     ? scopeSelection[selectedMetric]
     : "total";
   const metricScopeOptions = isScopedMetric ? scopeOptions[selectedMetric] : [];
-
-  const scopeLabelByValue = useMemo(
-    () =>
-      new Map(metricScopeOptions.map((option) => [option.value, option.label])),
+  const scopeTreeData = useMemo(
+    () => buildTimelineScopeTreeData(metricScopeOptions),
     [metricScopeOptions],
   );
-  const selectedScopeLabel =
-    scopeLabelByValue.get(selectedScope) ??
-    scopeLabelByValue.get("total") ??
-    "Total";
-  const [scopeSearchValue, setScopeSearchValue] = useState(selectedScopeLabel);
-  const scopeCombobox = useCombobox({
-    onDropdownClose: () => {
-      scopeCombobox.resetSelectedOption();
-    },
-  });
-  const filteredScopeOptions = useMemo(() => {
-    const normalizedSearch = scopeSearchValue.trim().toLowerCase();
-    const shouldFilterOptions = metricScopeOptions.every(
-      (option) => option.label !== scopeSearchValue,
-    );
-
-    if (!shouldFilterOptions || normalizedSearch.length === 0) {
-      return metricScopeOptions;
-    }
-
-    return metricScopeOptions.filter((option) =>
-      option.label.toLowerCase().includes(normalizedSearch),
-    );
-  }, [metricScopeOptions, scopeSearchValue]);
-
-  useEffect(() => {
-    setScopeSearchValue(selectedScopeLabel);
-  }, [selectedScopeLabel]);
 
   return (
     <>
@@ -79,93 +54,36 @@ export function TimelineScopeControls({
           }
         }}
       />
-      <Combobox
-        store={scopeCombobox}
-        withinPortal={false}
-        onOptionSubmit={(nextScopeValue) => {
-          if (!isScopedMetric) {
-            return;
-          }
-
-          const matchedOption = metricScopeOptions.find(
-            (option) => option.value === nextScopeValue,
-          );
-          if (!matchedOption) {
-            return;
-          }
-
-          setScopeSearchValue(matchedOption.label);
-          scopeCombobox.closeDropdown();
-          scopeCombobox.resetSelectedOption();
-
-          if (nextScopeValue !== selectedScope) {
-            onMetricScopeChange(matchedOption.value);
+      <TreeSelect
+        label="Scope"
+        aria-label="Timeline metric scope"
+        placeholder={
+          isScopedMetric
+            ? "Select account group or account"
+            : "Available for Income, Expenses, Assets, and Liabilities"
+        }
+        data={scopeTreeData}
+        value={isScopedMetric ? selectedScope : null}
+        disabled={!isScopedMetric}
+        searchable
+        allowDeselect={false}
+        comboboxProps={{ withinPortal: false }}
+        nothingFoundMessage="Nothing found"
+        filter={(query, node) =>
+          getTimelineScopeTreeSearchLabel(node)
+            .toLowerCase()
+            .includes(query.trim().toLowerCase())
+        }
+        onChange={(nextScopeValue) => {
+          if (
+            isScopedMetric &&
+            isTimelineScopeSelection(nextScopeValue) &&
+            nextScopeValue !== selectedScope
+          ) {
+            onMetricScopeChange(nextScopeValue);
           }
         }}
-      >
-        <Combobox.Target>
-          <InputBase
-            label="Scope"
-            aria-label="Timeline metric scope"
-            placeholder={
-              isScopedMetric
-                ? "Select account group or account"
-                : "Available for Income, Expenses, Assets, and Liabilities"
-            }
-            value={isScopedMetric ? scopeSearchValue : ""}
-            disabled={!isScopedMetric}
-            rightSection={<Combobox.Chevron />}
-            rightSectionPointerEvents="none"
-            onFocus={() => {
-              if (!isScopedMetric) {
-                return;
-              }
-              scopeCombobox.openDropdown();
-              scopeCombobox.updateSelectedOptionIndex("selected");
-            }}
-            onClick={() => {
-              if (!isScopedMetric) {
-                return;
-              }
-              scopeCombobox.openDropdown();
-              scopeCombobox.updateSelectedOptionIndex("selected");
-            }}
-            onChange={(event) => {
-              setScopeSearchValue(event.currentTarget.value);
-              if (!isScopedMetric) {
-                return;
-              }
-              scopeCombobox.openDropdown();
-              scopeCombobox.updateSelectedOptionIndex();
-            }}
-            onBlur={() => {
-              if (!isScopedMetric) {
-                return;
-              }
-              scopeCombobox.closeDropdown();
-              setScopeSearchValue(selectedScopeLabel);
-            }}
-          />
-        </Combobox.Target>
-
-        <Combobox.Dropdown hidden={!isScopedMetric}>
-          <Combobox.Options>
-            {filteredScopeOptions.length > 0 ? (
-              filteredScopeOptions.map((option) => (
-                <Combobox.Option
-                  value={option.value}
-                  key={option.value}
-                  active={option.value === selectedScope}
-                >
-                  {option.label}
-                </Combobox.Option>
-              ))
-            ) : (
-              <Combobox.Empty>Nothing found</Combobox.Empty>
-            )}
-          </Combobox.Options>
-        </Combobox.Dropdown>
-      </Combobox>
+      />
     </>
   );
 }
