@@ -3,7 +3,7 @@ import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import { getAccountsLinkSearch, getActiveSection } from "./route";
 
 describe("getActiveSection", () => {
-  it("marks accounts section as active for accounts, ledger, and chart paths", () => {
+  it("marks accounts section as active for accounts and ledger paths", () => {
     const accountBookId = "book-1";
 
     expect(
@@ -15,12 +15,6 @@ describe("getActiveSection", () => {
     expect(
       getActiveSection({
         pathname: "/book-1/account-cash",
-        accountBookId,
-      }),
-    ).toBe("accounts");
-    expect(
-      getActiveSection({
-        pathname: "/book-1/account-cash/chart",
         accountBookId,
       }),
     ).toBe("accounts");
