@@ -131,6 +131,7 @@ describe("loadTimelineOpeningBalancePoint", () => {
       liabilities: 40,
       netWorth: 80,
     });
+    expect("scopedMetricValue" in result).toBe(false);
   });
 
   test("resolves scoped asset opening balance from account groups", async () => {

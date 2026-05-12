@@ -141,7 +141,8 @@ export async function loadTimelineOpeningBalancePoint(args: {
     assets: round2(openingBalanceStats.assets),
     liabilities: round2(openingBalanceStats.liabilities),
     netWorth: round2(openingBalanceStats.netWorth),
-    scopedMetricValue:
-      scopedMetricValue == null ? undefined : round2(scopedMetricValue),
+    ...(scopedMetricValue == null
+      ? {}
+      : { scopedMetricValue: round2(scopedMetricValue) }),
   };
 }
