@@ -30,7 +30,6 @@ import {
   type SplitModalInitialValues,
   type TransactionMutationValues,
 } from "./-page-view";
-import { LedgerViewSegmentedControl } from "./-view-segmented-control";
 
 const assetAccount = {
   id: "account-checking",
@@ -379,13 +378,6 @@ function LedgerPageStoryHarness({
             />
           ) : undefined
         }
-        viewSwitcher={
-          <LedgerViewSegmentedControl
-            accountBookId="storybook-book"
-            accountId="account-checking"
-            view="ledger"
-          />
-        }
         onRowDataUpdated={() => undefined}
         onAddTransactionClick={() => {
           setSplitModalOpened(false);
@@ -474,17 +466,6 @@ export const SplitModalState: Story = {
 
 export const EditModalState: Story = {
   render: () => <LedgerPageStoryHarness startWithEditModal={true} />,
-};
-
-export const RouteSmoke: Story = {
-  render: () => <LedgerPageStoryHarness routeSmoke={true} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("link", { name: "Chart" }));
-    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-book/account-checking/chart",
-    );
-  },
 };
 
 export const PeriodFilterRouteSmoke: Story = {

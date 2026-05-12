@@ -62,7 +62,6 @@ describe("deriveLedgerPresentationData", () => {
       hasPeriodFilter: true,
       balanceBeforePeriodRaw: 200,
       hasBookingsBeforePeriod: true,
-      today: utcDate(2026, 0, 11, 12),
     });
 
     expect(result.rows).toEqual([
@@ -84,7 +83,6 @@ describe("deriveLedgerPresentationData", () => {
       hasPeriodFilter: true,
       balanceBeforePeriodRaw: -100,
       hasBookingsBeforePeriod: true,
-      today: utcDate(2026, 0, 11, 12),
     });
 
     expect(result.rows).toEqual([
@@ -115,7 +113,6 @@ describe("deriveLedgerPresentationData", () => {
       hasPeriodFilter: true,
       balanceBeforePeriodRaw: 0,
       hasBookingsBeforePeriod: false,
-      today: utcDate(2026, 0, 11, 12),
     });
 
     expect(result.rows).toEqual([
@@ -150,7 +147,6 @@ describe("deriveLedgerPresentationData", () => {
       hasPeriodFilter: true,
       balanceBeforePeriodRaw: 0,
       hasBookingsBeforePeriod: false,
-      today: utcDate(2026, 0, 11, 12),
     });
 
     expect(result.rows).toEqual([
@@ -185,7 +181,6 @@ describe("deriveLedgerPresentationData", () => {
       hasPeriodFilter: false,
       balanceBeforePeriodRaw: 0,
       hasBookingsBeforePeriod: false,
-      today: utcDate(2026, 0, 11, 12),
     });
 
     expect(result.rows).toEqual([
@@ -200,43 +195,6 @@ describe("deriveLedgerPresentationData", () => {
     ]);
   });
 
-  test("builds chart with end-of-day collapse and today extension", () => {
-    const result = deriveLedgerPresentationData({
-      account: createAccount({ type: AccountType.ASSET }),
-      bookings: createBookings([
-        { date: utcDate(2026, 0, 10, 9), value: 100 },
-        { date: utcDate(2026, 0, 10, 12), value: -10 },
-        { date: utcDate(2026, 0, 10, 15), value: -15 },
-        { date: utcDate(2026, 0, 11, 9), value: 5 },
-      ]),
-      hasPeriodFilter: false,
-      balanceBeforePeriodRaw: 0,
-      hasBookingsBeforePeriod: false,
-      today: utcDate(2026, 0, 12, 12),
-    });
-
-    expect(result.balanceChartPoints).toEqual([
-      {
-        date: "2026-01-10T00:00:00.000Z",
-        dateKey: "2026-01-10",
-        dateLabel: "10.01.2026",
-        balance: 75,
-      },
-      {
-        date: "2026-01-11T00:00:00.000Z",
-        dateKey: "2026-01-11",
-        dateLabel: "11.01.2026",
-        balance: 80,
-      },
-      {
-        date: "2026-01-12T00:00:00.000Z",
-        dateKey: "2026-01-12",
-        dateLabel: "12.01.2026",
-        balance: 80,
-      },
-    ]);
-  });
-
   test("keeps 2-decimal exactness in running balances for floating-point edge values", () => {
     const result = deriveLedgerPresentationData({
       account: createAccount({ type: AccountType.ASSET }),
@@ -247,7 +205,6 @@ describe("deriveLedgerPresentationData", () => {
       hasPeriodFilter: false,
       balanceBeforePeriodRaw: 0,
       hasBookingsBeforePeriod: false,
-      today: utcDate(2026, 0, 11, 12),
     });
 
     expect(result.rows[0]?.balance).toBe(871.55);

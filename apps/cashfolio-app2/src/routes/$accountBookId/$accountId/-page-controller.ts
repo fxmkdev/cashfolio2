@@ -36,10 +36,7 @@ export function useLedgerPageController(args: {
   selectedPeriodValue?: string;
   pendingScrollRef: { current: string | undefined };
   invalidate: () => void;
-}): Omit<
-  LedgerPageViewProps,
-  "accountBookId" | "onRowDataUpdated" | "viewSwitcher"
-> {
+}): Omit<LedgerPageViewProps, "accountBookId" | "onRowDataUpdated"> {
   const { account, accounts } = args.loaderData;
 
   const [modalOpened, setModalOpened] = useState(false);

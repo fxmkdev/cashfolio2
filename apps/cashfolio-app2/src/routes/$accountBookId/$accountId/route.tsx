@@ -1,6 +1,5 @@
 import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
-import { AccountType } from "@/.prisma-client/enums";
 import { useTransactionScroll } from "@/hooks/use-transaction-scroll";
 import { formatMonthPeriodValue } from "@/shared/period";
 import {
@@ -24,7 +23,6 @@ import {
   parseLedgerSearch,
   type LedgerRow,
 } from "./-page-types";
-import { LedgerViewSegmentedControl } from "./-view-segmented-control";
 import { resolvePeriodFilterMinBookingDate } from "./-period-filter-min-booking-date";
 
 const LedgerPageView = lazy(async () => {
@@ -172,10 +170,6 @@ export function LedgerPageContent() {
     },
   });
 
-  const isBalanceChartAvailable =
-    viewProps.account.type === AccountType.ASSET ||
-    viewProps.account.type === AccountType.LIABILITY;
-
   return (
     <Suspense fallback={null}>
       <LedgerPageView
@@ -274,15 +268,6 @@ export function LedgerPageContent() {
                 setPickerOpened(false);
                 setPeriodFilter(undefined);
               }}
-            />
-          ) : undefined
-        }
-        viewSwitcher={
-          isBalanceChartAvailable ? (
-            <LedgerViewSegmentedControl
-              accountBookId={accountBookId}
-              accountId={viewProps.account.id}
-              view="ledger"
             />
           ) : undefined
         }

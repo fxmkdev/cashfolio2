@@ -289,7 +289,7 @@ export const getLedgerData = createServerFn({ method: "GET" })
       ),
     );
 
-    const { rows, balanceChartPoints } = deriveLedgerPresentationData({
+    const { rows } = deriveLedgerPresentationData({
       account,
       bookings: mappedBookings,
       hasPeriodFilter: periodRange !== null,
@@ -300,7 +300,6 @@ export const getLedgerData = createServerFn({ method: "GET" })
     return {
       referenceCurrency,
       rows,
-      balanceChartPoints,
       firstBookingDate: firstBooking?.date.toISOString() ?? null,
       balanceBeforePeriod: carryOverMetadata.balanceBeforePeriod,
       hasBookingsBeforePeriod: carryOverMetadata.hasBookingsBeforePeriod,

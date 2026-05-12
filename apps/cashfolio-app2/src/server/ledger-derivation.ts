@@ -53,13 +53,6 @@ export type LedgerDerivedRow = {
   isVirtualCarryOver: boolean;
 };
 
-export type LedgerBalanceChartPoint = {
-  date: string;
-  dateKey: string;
-  dateLabel: string;
-  balance: number;
-};
-
 type LedgerDerivationContext = {
   negate: boolean;
   isEquity: boolean;
@@ -78,22 +71,11 @@ function shouldNegate(
   );
 }
 
-function formatUtcDateKey(date: Date): string {
-  const year = String(date.getUTCFullYear()).padStart(4, "0");
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
 function formatUtcDateLabel(date: Date): string {
   const day = String(date.getUTCDate()).padStart(2, "0");
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   const year = String(date.getUTCFullYear()).padStart(4, "0");
   return `${day}.${month}.${year}`;
-}
-
-function toUtcMidnightIsoString(dateKey: string): string {
-  return `${dateKey}T00:00:00.000Z`;
 }
 
 function buildLedgerRowsFromBookings(args: {
@@ -223,65 +205,14 @@ function buildLedgerRowsFromBookings(args: {
   return rows;
 }
 
-function buildLedgerBalanceChartPointsFromBookings(args: {
-  bookings: LedgerDerivedBooking[];
-  negate: boolean;
-  today: Date;
-}): LedgerBalanceChartPoint[] {
-  const { bookings, negate, today } = args;
-  const balanceChartPoints: LedgerBalanceChartPoint[] = [];
-  let chartBalance = toMoney(0);
-
-  for (const booking of bookings) {
-    const value = negate
-      ? toMoney(booking.value).neg()
-      : toMoney(booking.value);
-    chartBalance = moneyAdd(chartBalance, value);
-
-    const dateKey = formatUtcDateKey(booking.date);
-    const dateLabel = formatUtcDateLabel(booking.date);
-    const lastPoint = balanceChartPoints[balanceChartPoints.length - 1];
-    const balanceValue = toMoneyNumber(chartBalance);
-
-    if (lastPoint && lastPoint.dateKey === dateKey) {
-      lastPoint.balance = balanceValue;
-      continue;
-    }
-
-    balanceChartPoints.push({
-      date: toUtcMidnightIsoString(dateKey),
-      dateKey,
-      dateLabel,
-      balance: balanceValue,
-    });
-  }
-
-  const lastPoint = balanceChartPoints[balanceChartPoints.length - 1];
-  if (lastPoint) {
-    const todayKey = formatUtcDateKey(today);
-    if (lastPoint.dateKey < todayKey) {
-      balanceChartPoints.push({
-        date: toUtcMidnightIsoString(todayKey),
-        dateKey: todayKey,
-        dateLabel: formatUtcDateLabel(today),
-        balance: lastPoint.balance,
-      });
-    }
-  }
-
-  return balanceChartPoints;
-}
-
 export function deriveLedgerPresentationData(args: {
   account: LedgerDerivedAccount;
   bookings: LedgerDerivedBooking[];
   hasPeriodFilter: boolean;
   balanceBeforePeriodRaw: number;
   hasBookingsBeforePeriod: boolean;
-  today?: Date;
 }): {
   rows: LedgerDerivedRow[];
-  balanceChartPoints: LedgerBalanceChartPoint[];
 } {
   const {
     account,
@@ -290,7 +221,6 @@ export function deriveLedgerPresentationData(args: {
     balanceBeforePeriodRaw,
     hasBookingsBeforePeriod,
   } = args;
-  const today = args.today ?? new Date();
   const context: LedgerDerivationContext = {
     negate: shouldNegate(account.type, account.equityAccountSubtype),
     isEquity: account.type === AccountType.EQUITY,
@@ -307,11 +237,6 @@ export function deriveLedgerPresentationData(args: {
     context,
     baseBalanceBeforePeriod,
   });
-  const balanceChartPoints = buildLedgerBalanceChartPointsFromBookings({
-    bookings,
-    negate: context.negate,
-    today,
-  });
 
-  return { rows, balanceChartPoints };
+  return { rows };
 }
