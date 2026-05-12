@@ -152,9 +152,15 @@ test("timeline expense scope tree select opens with hierarchical options and sup
   await expect(
     page.getByRole("option", { name: "Total", exact: true }),
   ).toBeVisible();
+  const equityGroupOption = page
+    .getByRole("option")
+    .filter({ hasText: /^Equity$/ });
+  await expect(equityGroupOption).toBeVisible();
+  await equityGroupOption.getByRole("button", { name: "Expand" }).click();
+
   const expenseGroupOption = page
     .getByRole("option")
-    .filter({ hasText: "E2E Expenses" });
+    .filter({ hasText: /^E2E Expenses$/ });
   await expect(expenseGroupOption).toBeVisible();
   await expenseGroupOption.getByRole("button", { name: "Expand" }).click();
 
