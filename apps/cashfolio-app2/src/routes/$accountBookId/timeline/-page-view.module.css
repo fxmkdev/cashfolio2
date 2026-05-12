@@ -31,7 +31,7 @@
 
 .metricControls {
   display: grid;
-  grid-template-columns: minmax(180px, 260px) minmax(260px, 420px);
+  grid-template-columns: repeat(2, minmax(180px, 260px));
   gap: 12px;
   align-items: end;
 }
