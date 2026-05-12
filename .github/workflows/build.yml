@@ -183,6 +183,19 @@ jobs:
       - name: Run format check
         run: pnpm --filter cashfolio-app2 format
 
+  cashfolio-app2-lint:
+    name: "cashfolio-app2: Lint"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup
+        uses: felixmokross/webplatform/.github/actions/setup@main
+      - name: Install dependencies
+        run: pnpm --filter cashfolio-app2 install
+      - name: Run lint
+        run: pnpm --filter cashfolio-app2 lint
+
   cli-typecheck:
     name: "cli: Typecheck"
     runs-on: ubuntu-latest
@@ -270,6 +283,7 @@ jobs:
       - cashfolio-app2-build-push
       - cashfolio-app2-unit
       - cashfolio-app2-typecheck
+      - cashfolio-app2-lint
       - cashfolio-app2-format
       - resolve-preview-names
     permissions:
@@ -485,6 +499,7 @@ jobs:
       - cashfolio-app2-unit
       - cashfolio-app2-e2e-required
       - cashfolio-app2-typecheck
+      - cashfolio-app2-lint
       - cashfolio-app2-format
       - cli-typecheck
     uses: ./.github/workflows/deploy-version.yml

@@ -9,8 +9,8 @@ import {
   buildNetWorthReconciliationModel,
   getPreviousPeriodValue,
   type NetWorthReconciliationModel,
-} from "./-net-worth-reconciliation";
-import { hasExplicitGainLossGroup } from "./-gains-losses-explicit";
+} from "./-net-worth/-net-worth-reconciliation";
+import { hasExplicitGainLossGroup } from "./-gains-losses/-gains-losses-explicit";
 import {
   DEFAULT_PERIOD_VALUE,
   getPeriodValue,

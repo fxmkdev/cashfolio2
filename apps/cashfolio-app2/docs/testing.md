@@ -55,6 +55,18 @@ pnpm --filter cashfolio-app2 coverage:ratchet:accept
 pnpm --filter cashfolio-app2 coverage:ratchet
 ```
 
+## Lint
+
+- ESLint uses a flat config in `eslint.config.js`.
+- The lint gate includes TypeScript, TanStack Router, and React Hooks checks.
+- Existing React Hooks findings are emitted as warnings; lint fails on errors.
+
+Command:
+
+```bash
+pnpm --filter cashfolio-app2 lint
+```
+
 ## E2E (Playwright)
 
 - E2E tests use **Playwright** with **Chromium**.
@@ -152,6 +164,7 @@ pnpm --filter cashfolio-app2 test-storybook
 Current CI gates for `cashfolio-app2`:
 
 - `typecheck`
+- `lint`
 - `format`
 - `unit + coverage` with coverage-ratchet enforcement
 - `e2e` shards (`cashfolio-app2: E2E (Shard X/Y)`)

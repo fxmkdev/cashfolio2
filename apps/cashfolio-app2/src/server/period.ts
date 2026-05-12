@@ -17,13 +17,13 @@ import {
   createBreakdownBucket,
   isMultiUnitTransaction,
   shouldIncludeTransactionForPeriod,
-} from "./period-helpers";
+} from "./period/period-helpers";
 import {
   getPeriodEndExclusive,
   resolvePeriodSelection,
   type PeriodSpecifier,
-} from "./period-selection";
-import { computeEndOfPeriodBalanceStats } from "./period-balance-stats";
+} from "./period/period-selection";
+import { computeEndOfPeriodBalanceStats } from "./period/period-balance-stats";
 
 export {
   DEFAULT_PERIOD_VALUE,
@@ -59,7 +59,8 @@ export const getPeriodOverview = createServerFn({
   .handler(async ({ data }) => {
     const { ensureAuthorizedForAccountBookId } =
       await import("../account-books/functions.server");
-    const { loadPeriodOverview } = await import("./period-overview.server");
+    const { loadPeriodOverview } =
+      await import("./period/period-overview.server");
 
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     return loadPeriodOverview(data);

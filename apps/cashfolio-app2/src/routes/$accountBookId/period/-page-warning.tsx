@@ -1,6 +1,6 @@
 import { Alert } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
-import type { NetWorthReconciliationModel } from "./-net-worth-reconciliation";
+import type { NetWorthReconciliationModel } from "./-net-worth/-net-worth-reconciliation";
 
 export function getSkippedValuationWarning(
   skippedBookingsCount: number,

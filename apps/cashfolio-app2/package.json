@@ -6,6 +6,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "start": "vite preview",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --check .",
     "pretest:unit": "pnpm prisma:generate",
@@ -51,15 +52,20 @@
     "redis": "^5.12.1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.59.1",
     "@storybook/addon-docs": "^10.3.6",
     "@storybook/react-vite": "^10.3.6",
     "@storybook/test-runner": "0.24.3",
+    "@tanstack/eslint-plugin-router": "^1.161.6",
     "@types/node": "^24.10.4",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitest/coverage-v8": "^4.1.5",
     "chromatic": "^16.6.3",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.6.0",
     "msw": "^2.14.2",
     "postcss": "^8.5.13",
     "postcss-preset-mantine": "^1.18.0",
@@ -67,6 +73,7 @@
     "prisma": "^7.8.0",
     "storybook": "^10.3.6",
     "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.3",
     "vite": "^8.0.10",
     "vitest": "^4.1.5"
   }

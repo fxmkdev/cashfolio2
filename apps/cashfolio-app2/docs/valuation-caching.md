@@ -24,7 +24,7 @@ for:
 
 Primary consumers:
 
-- `src/server/accounts-queries.ts`
+- `src/server/accounts/accounts-queries.ts`
   - account tree reference balances
   - `getAccountReferenceBalances` lazy hydration endpoint
 - `src/server/period-timeline-point-metrics.server.ts`
@@ -70,7 +70,7 @@ flowchart LR
 
 This deduplicates identical lookups during a single server-function execution.
 
-- `src/server/accounts-queries.ts`
+- `src/server/accounts/accounts-queries.ts`
   - Uses per-request maps for currencies, cryptocurrencies, and securities.
   - For account reference balances, all lookups use `today`, so memoization keys
     do not need an explicit date.
