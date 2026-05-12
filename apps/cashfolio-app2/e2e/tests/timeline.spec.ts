@@ -133,7 +133,7 @@ test("timeline deep link with invalid mode falls back to monthly", async ({
   ).not.toBeChecked();
 });
 
-test("timeline expense scope combobox opens with all options and supports searchable selection", async ({
+test("timeline expense scope tree select opens with hierarchical options and supports searchable selection", async ({
   page,
 }) => {
   await page.goto(`/${seeded.accountBookId}/timeline`);
@@ -152,8 +152,14 @@ test("timeline expense scope combobox opens with all options and supports search
   await expect(
     page.getByRole("option", { name: "Total", exact: true }),
   ).toBeVisible();
+  const expenseGroupOption = page
+    .getByRole("option")
+    .filter({ hasText: "E2E Expenses" });
+  await expect(expenseGroupOption).toBeVisible();
+  await expenseGroupOption.getByRole("button", { name: "Expand" }).click();
+
   const expenseAccountOption = page.getByRole("option", {
-    name: "Equity / E2E Expenses / E2E Expense",
+    name: "E2E Expense",
     exact: true,
   });
   await expect(expenseAccountOption).toBeVisible();
@@ -162,7 +168,7 @@ test("timeline expense scope combobox opens with all options and supports search
   await expect(expenseAccountOption).toBeVisible();
   await expenseAccountOption.click();
 
-  await expect(scopeInput).toHaveValue("Equity / E2E Expenses / E2E Expense");
+  await expect(scopeInput).toHaveValue("E2E Expense");
   await expect
     .poll(() => new URL(page.url()).searchParams.get("expenseScope"))
     .toBe(`account:${seeded.expenseAccount.id}`);
@@ -170,7 +176,7 @@ test("timeline expense scope combobox opens with all options and supports search
   await scopeInput.click();
   await scopeInput.fill("uncommitted scope text");
   await page.getByRole("heading", { name: "Timeline" }).click();
-  await expect(scopeInput).toHaveValue("Equity / E2E Expenses / E2E Expense");
+  await expect(scopeInput).toHaveValue("E2E Expense");
 
   await scopeInput.click();
   await page.getByRole("option", { name: "Total", exact: true }).click();
