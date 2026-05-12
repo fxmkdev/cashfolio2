@@ -2,9 +2,9 @@ export type {
   CreateSimpleTransactionInput,
   CreateTransactionInput,
   RebookBookingInput,
-} from "./transactions-types";
+} from "./transactions/transactions-types";
 
-export { getTransaction } from "./transactions-queries";
+export { getTransaction } from "./transactions/transactions-queries";
 
 export {
   createSimpleTransaction,
@@ -12,4 +12,4 @@ export {
   deleteTransaction,
   rebookBooking,
   updateTransaction,
-} from "./transactions-mutations";
+} from "./transactions/transactions-mutations";

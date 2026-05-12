@@ -1,11 +1,11 @@
 import { useCallback, useMemo } from "react";
 import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import type { getPeriodOverview } from "@/server/period";
-import { useGainsLossesWaterfallChartOptions } from "./-gains-losses-chart-options";
-import { getGainsLossesDrillState } from "./-gains-losses-drill";
-import { parseGainsLossesUnitAccountId } from "./-gains-losses-table-rows";
-import { buildGainsLossesWaterfallModel } from "./-gains-losses-waterfall-model";
-import type { GainsLossesChartType } from "./-breakdown-types";
+import { useGainsLossesWaterfallChartOptions } from "./-gains-losses/-gains-losses-chart-options";
+import { getGainsLossesDrillState } from "./-gains-losses/-gains-losses-drill";
+import { parseGainsLossesUnitAccountId } from "./-gains-losses/-gains-losses-table-rows";
+import { buildGainsLossesWaterfallModel } from "./-gains-losses/-gains-losses-waterfall-model";
+import type { GainsLossesChartType } from "./-breakdown/-breakdown-types";
 
 type PeriodOverview = Awaited<ReturnType<typeof getPeriodOverview>>;
 

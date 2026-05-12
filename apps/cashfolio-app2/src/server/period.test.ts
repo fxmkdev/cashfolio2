@@ -27,7 +27,7 @@ import {
 import {
   buildBreakdownHierarchyWithMeta,
   buildPeriodEndAllocationBreakdown,
-} from "./period-helpers";
+} from "./period/period-helpers";
 
 describe("normalizePeriodValue", () => {
   test("normalizes valid values", () => {

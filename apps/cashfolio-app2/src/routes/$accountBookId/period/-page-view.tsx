@@ -20,23 +20,23 @@ import {
   createDisplayNumberFormatter,
   getCurrencyDecimals,
 } from "@/shared/unit-format";
-import { PeriodAllocationBreakdownCard } from "./-allocation-breakdown-card";
+import { PeriodAllocationBreakdownCard } from "./-breakdown/-allocation-breakdown-card";
 import { ContributionChartCard } from "./-contribution-chart-card";
-import { PeriodBreakdownCard } from "./-breakdown-card";
-import { clampBreakdownPath } from "./-breakdown-drill";
-import { GainsLossesCard } from "./-gains-losses-card";
-import { clampGainsLossesPath } from "./-gains-losses-drill";
-import { usePeriodAllocationBreakdownViewModel } from "./-period-allocation-breakdown-view-model";
-import { usePeriodBreakdownViewModel } from "./-period-breakdown-view-model";
+import { PeriodBreakdownCard } from "./-breakdown/-breakdown-card";
+import { clampBreakdownPath } from "./-breakdown/-breakdown-drill";
+import { GainsLossesCard } from "./-gains-losses/-gains-losses-card";
+import { clampGainsLossesPath } from "./-gains-losses/-gains-losses-drill";
+import { usePeriodAllocationBreakdownViewModel } from "./-breakdown/-period-allocation-breakdown-view-model";
+import { usePeriodBreakdownViewModel } from "./-breakdown/-period-breakdown-view-model";
 import { usePeriodGainsLossesViewModel } from "./-period-gains-losses-view-model";
 import { buildPeriodPageStats } from "./-period-page-stats";
-import type { NetWorthReconciliationModel } from "./-net-worth-reconciliation";
+import type { NetWorthReconciliationModel } from "./-net-worth/-net-worth-reconciliation";
 import {
   PeriodNetWorthReconciliationWarning,
   PeriodSkippedValuationWarning,
 } from "./-page-warning";
 import { PeriodStatsCardsSection } from "./-period-stats-cards";
-import { usePeriodPageSessionState } from "./-page-session-state";
+import { usePeriodPageSessionState } from "./-selector/-page-session-state";
 import classes from "./-page-view.module.css";
 import {
   buildPeriodSelectorModel,
@@ -44,8 +44,8 @@ import {
   getPeriodModeChangeValue,
   getPeriodStepValue,
   getYearPickerValue,
-} from "./-selector-model";
-import { PeriodSelectorCard } from "./-selector-card";
+} from "./-selector/-selector-model";
+import { PeriodSelectorCard } from "./-selector/-selector-card";
 
 ensureChartModulesRegistered();
 

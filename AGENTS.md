@@ -50,6 +50,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution guidelines.
 pnpm --filter cashfolio-app2 dev              # Start dev server
 pnpm --filter cashfolio-app2 build            # Production build
 pnpm --filter cashfolio-app2 typecheck        # tsc --noEmit
+pnpm --filter cashfolio-app2 lint             # ESLint check
 pnpm --filter cashfolio-app2 test:unit        # Run unit/integration tests
 pnpm --filter cashfolio-app2 test:unit:coverage:ratchet # Run coverage + enforce no-regression baseline
 pnpm --filter cashfolio-app2 coverage:ratchet:accept # Accept current coverage as new baseline (explicit follow-up step)
@@ -78,6 +79,7 @@ pnpm --filter cashfolio-app2 prisma:generate  # Regenerate Prisma client (no DAT
 ## Quality Checklist
 
 - Run `pnpm --filter cashfolio-app2 typecheck` before finishing code changes.
+- Run `pnpm --filter cashfolio-app2 lint` before finishing code changes.
 - Run `pnpm --filter cashfolio-app2 test:unit` before finishing code changes.
 - Run `pnpm --filter cashfolio-app2 test:unit:coverage:ratchet` when touching
   tested app logic, so local checks align with CI coverage gating.

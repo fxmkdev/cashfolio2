@@ -15,7 +15,7 @@ import {
   type PeriodMode,
 } from "@/shared/period-selector-model";
 import periodClasses from "../../-page-view.module.css";
-import { PeriodSelectorCard } from "../../-selector-card";
+import { PeriodSelectorCard } from "../../-selector/-selector-card";
 import {
   buildRealizedColumns,
   buildRealizedLotMatchColumns,

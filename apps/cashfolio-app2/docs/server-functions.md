@@ -10,24 +10,34 @@ Related docs:
 
 ## Server Function Pattern
 
-- Server functions are located in `src/server/` (for example,
-  `src/server/accounts.ts`)
+- Public server-function facades live in `src/server/` (for example,
+  `src/server/accounts.ts`) so import paths remain stable.
+- Domain implementation modules live under `src/server/<domain>/`, currently
+  `accounts/`, `period/`, `transactions/`, and `valuation/`.
 - They are created with `createServerFn` from `@tanstack/react-start`
 - Canonical pattern: `createServerFn({ method })` -> `.inputValidator()` ->
   `.handler()`
 - Server-only modules may use `.server.ts` suffix where helpful (for example,
-  auth/session integration files), while domain server-function modules in
-  `src/server/` commonly use `.ts`
+  auth/session integration files), especially for Prisma/Redis/provider or
+  request-context implementation modules.
+- POST server functions validate object shape and required identifier fields
+  before authorization/database work. Use `src/server/input-validation.ts` for
+  dependency-free checks.
+- Account-book mutations should use `src/server/mutation-guard.server.ts` to
+  enforce same-origin and account-book authorization consistently.
 
 ## Core Modules
 
-- Key files: `accounts.ts` (barrel), `accounts-queries.ts`,
-  `accounts-mutations.ts`, `account-books.ts`, `account-book-settings.ts`,
-  `dashboard.ts`, `ledger.ts`, `transactions.ts` (barrel),
-  `transactions-queries.ts`, `transactions-mutations.ts`, `period.ts`,
-  `period-gain-loss-reconciliation.ts`, `period-unit-format.ts`,
+- Key public facades: `accounts.ts`, `account-books.ts`, `transactions.ts`,
+  `period.ts`, `period-timeline.ts`, `period-gain-loss-reconciliation.ts`,
   `period-end-net-worth.ts`, `period-opening-balance-net-worth.ts`,
   `valuation.server.ts`, `valuation-cache.ts`
+- Domain modules:
+  - account/account-book logic: `src/server/accounts/`
+  - period overview, timeline, reconciliation, and cache internals:
+    `src/server/period/`
+  - transaction and rebooking logic: `src/server/transactions/`
+  - valuation providers/cache helpers: `src/server/valuation/`
 - Valuation internals live in `src/server/valuation/`: `rate-lookups.ts`,
   `source-rates.ts`, `lookup-context.ts`, `providers.ts`, `cache.ts`,
   `backtracking.ts`, `keys.ts`, `types.ts`, `date-utils.ts`, `constants.ts`
@@ -35,24 +45,26 @@ Related docs:
 ## Period Caches
 
 - Period overview and timeline use a shared Redis-backed **non-valuation**
-  base-data cache (`src/server/period-base-data-cache.ts`) backed by an uncached
-  loader module (`src/server/period-base-data-loader.server.ts`).
+  base-data cache (`src/server/period/period-base-data-cache.ts`) backed by an
+  uncached loader module
+  (`src/server/period/period-base-data-loader.server.ts`).
 - Cached payload scope: DB-derived period inputs only (metadata, scoped raw
   bookings/transactions, raw balances, transfer-clearing buckets).
 - Excluded from cache payload: converted valuation outputs and exchange-rate
   results.
 - Timeline additionally uses a Redis-backed derived metrics cache
-  (`src/server/period-timeline-metrics-cache.ts`) for finalized scalar Timeline
-  point metrics. This cache sits above the base-data cache, so warm hits skip
-  period snapshot loading, valuation conversion, and gain/loss recomputation for
-  that point.
+  (`src/server/period/period-timeline-metrics-cache.ts`) for finalized scalar
+  Timeline point metrics. This cache sits above the base-data cache, so warm
+  hits skip period snapshot loading, valuation conversion, and gain/loss
+  recomputation for that point.
 - The base-data cache is intentionally kept even with derived Timeline metrics:
   Period overview still consumes the base-data payload directly, and Timeline
   misses still benefit from cached DB-derived inputs.
 - Both period cache families share the same environment namespace helper in
-  `src/server/period-cache.ts`. `PERIOD_BASE_CACHE_ENV` must be set when Redis
-  caching is enabled; Fly deployments populate it from the Fly app/deployment
-  environment so preview and staging apps can safely share one Redis instance.
+  `src/server/period/period-cache.ts`. `PERIOD_BASE_CACHE_ENV` must be set when
+  Redis caching is enabled; Fly deployments populate it from the Fly
+  app/deployment environment so preview and staging apps can safely share one
+  Redis instance.
 - Redis key namespace includes deployment scope and invalidation generation:
   - Entry:
     `period:base:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
@@ -78,8 +90,8 @@ Related docs:
   from identity conversion or the long-lived Redis TimeSeries valuation cache.
   Metrics that needed provider fetches, short-lived fallback entries, or missing
   valuation results are returned but not persisted as derived Timeline metrics.
-- `updateAccountBookSettings` (`src/server/account-book-settings.ts`) also
-  invalidates period base-data cache when `referenceCurrency` or `startDate`
+- `updateAccountBookSettings` (`src/server/accounts/account-book-settings.ts`)
+  also invalidates period caches when `referenceCurrency` or `startDate`
   changes.
 - When `startDate` changes via `updateAccountBookSettings`, all bookings in
   transactions containing an `OPENING_BALANCES` booking are shifted to the day
@@ -109,7 +121,7 @@ Related docs:
 ## Account Status Actions
 
 The status-changing server functions used by `$accountBookId/accounts.tsx` are
-implemented in `src/server/accounts-mutations.ts` and re-exported via
+implemented in `src/server/accounts/accounts-mutations.ts` and re-exported via
 `src/server/accounts.ts`:
 
 - `archiveAccount`
@@ -123,9 +135,10 @@ functions.
 
 ## Reorder Pattern
 
-`reorderAccountTreeItems` (implemented in `accounts-mutations.ts`, re-exported
-from `accounts.ts`) issues a batch of Prisma updates inside a transaction to
-update `sortOrder` values after reordering sibling rows in the reorder modal.
+`reorderAccountTreeItems` (implemented in
+`src/server/accounts/accounts-mutations.ts`, re-exported from
+`src/server/accounts.ts`) issues a batch of Prisma updates inside a transaction
+to update `sortOrder` values after reordering sibling rows in the reorder modal.
 
 ## Period Overview Gain/Loss
 
@@ -133,7 +146,7 @@ The canonical period gain/loss semantics are shared between:
 
 - `getPeriodOverview` (`src/server/period.ts`)
 - timeline metrics loading
-  (`src/server/period-timeline-point-metrics.server.ts`)
+  (`src/server/period/period-timeline-point-metrics.server.ts`)
 
 Both loaders reuse the shared period base-data cache and shared gain/loss
 subflows while keeping their output work focused:
@@ -148,7 +161,8 @@ single tracked-account flow:
   - non-reference real holding accounts
   - non-reference virtual transfer-clearing holding accounts
 - Both real transactions and synthetic transfer-clearing transactions flow
-  through the same lot/FIFO pipeline in `src/server/period-overview-holdings.ts`
+  through the same lot/FIFO pipeline in
+  `src/server/period/period-overview-holdings.ts`
 - Same-unit mixed-period holding transfers are treated as non-realizing carry
   adjustments, so in-period legs no longer create false realization when the
   opposite leg sits outside the selected period.
@@ -159,7 +173,7 @@ single tracked-account flow:
   - `stats.gainsLosses = explicit + realized + unrealized`
 
 Execution-residual reconciliation for eligible multi-unit income/expense
-transactions is isolated in `src/server/period-execution-residuals.ts`:
+transactions is isolated in `src/server/period/period-execution-residuals.ts`:
 
 - Candidate transactions are narrowed at query level to completed (no
   post-period legs) multi-unit transactions with at least one in-period booking
@@ -174,15 +188,15 @@ Transfer-clearing candidate loading now includes income/expense equity legs in
 addition to asset/liability legs. This keeps net-worth timing aligned when
 cross-period income/expense transactions remain partially posted at period end.
 
-To keep `src/server/period.ts` focused as an orchestration entrypoint, the
-larger gain/loss subflows are split into dedicated modules:
+To keep `src/server/period.ts` as a stable facade, the larger gain/loss subflows
+are split into dedicated modules under `src/server/period/`:
 
-- `src/server/period-equity-bookings.ts` handles paged equity booking conversion
-  from preloaded period base data, equity aggregation, and explicit counterpart
-  attribution
-- `src/server/period-holding-gain-loss.ts` handles tracked holding lot/FIFO
-  orchestration (real + transfer-clearing synthetic transactions) and residual
-  realization integration
+- `src/server/period/period-equity-bookings.ts` handles paged equity booking
+  conversion from preloaded period base data, equity aggregation, and explicit
+  counterpart attribution
+- `src/server/period/period-holding-gain-loss.ts` handles tracked holding
+  lot/FIFO orchestration (real + transfer-clearing synthetic transactions) and
+  residual realization integration
 
 ## Gain/Loss Reconciliation Explain Fields
 

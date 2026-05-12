@@ -127,6 +127,9 @@ Related docs:
     - `$accountBookId/timeline/-chart-data.ts`
     - `$accountBookId/timeline/-chart-options.ts`
     - `$accountBookId/timeline/-page-view.tsx`
+- Large route-local surfaces may also use `-`-prefixed private folders. The
+  period route uses `-breakdown/`, `-gains-losses/`, `-selector/`, and
+  `-net-worth/` to keep URL routes separate from page internals.
 
 ### Search Parameters
 

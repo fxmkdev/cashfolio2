@@ -31,7 +31,7 @@ Related docs:
 ## Valuation Providers and Caches
 
 - Reference-currency conversion and account/group reference-balance assembly are
-  implemented in `src/server/accounts-queries.ts` (re-exported via
+  implemented in `src/server/accounts/accounts-queries.ts` (re-exported via
   `src/server/accounts.ts`), using `src/server/valuation.server.ts`.
 - Canonical provider/cache internals (provider responsibilities, key formats,
   logging sanitization, and cache behavior) are documented in

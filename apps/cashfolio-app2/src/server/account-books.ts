@@ -1,4 +1,4 @@
 export {
   getAccountBookSettings,
   updateAccountBookSettings,
-} from "./account-book-settings";
+} from "./accounts/account-book-settings";

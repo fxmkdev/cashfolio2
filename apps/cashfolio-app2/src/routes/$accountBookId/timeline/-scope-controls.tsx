@@ -35,11 +35,13 @@ export function TimelineScopeControls({
   const selectedScope = isScopedMetric
     ? scopeSelection[selectedMetric]
     : "total";
-  const metricScopeOptions = isScopedMetric ? scopeOptions[selectedMetric] : [];
-  const scopeTreeData = useMemo(
-    () => buildTimelineScopeTreeData(metricScopeOptions),
-    [metricScopeOptions],
-  );
+  const scopeTreeData = useMemo(() => {
+    if (!isTimelineScopedMetric(selectedMetric)) {
+      return [];
+    }
+
+    return buildTimelineScopeTreeData(scopeOptions[selectedMetric]);
+  }, [scopeOptions, selectedMetric]);
 
   return (
     <>

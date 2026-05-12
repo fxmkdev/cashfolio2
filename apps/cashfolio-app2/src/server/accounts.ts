@@ -1,4 +1,7 @@
-export type { AccountGroupInput, AccountInput } from "./accounts-types";
+export type {
+  AccountGroupInput,
+  AccountInput,
+} from "./accounts/accounts-types";
 
 export {
   getAccountsPageData,
@@ -8,7 +11,7 @@ export {
   getExistingNodes,
   getAccountTreeData,
   getGainLossEquityAccountId,
-} from "./accounts-queries";
+} from "./accounts/accounts-queries";
 
 export {
   archiveAccount,
@@ -22,4 +25,4 @@ export {
   unarchiveAccountGroup,
   updateAccount,
   updateAccountGroup,
-} from "./accounts-mutations";
+} from "./accounts/accounts-mutations";
