@@ -57,7 +57,6 @@ export function TimelineScopeControls({
       <TreeSelect
         label="Scope"
         aria-label="Timeline metric scope"
-        placeholder={isScopedMetric ? "Select account group or account" : ""}
         data={scopeTreeData}
         value={isScopedMetric ? selectedScope : null}
         disabled={!isScopedMetric}
