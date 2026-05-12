@@ -1,29 +1,26 @@
-import { prisma } from "../prisma.server";
 import { getRedisClient } from "../redis.server";
-import {
-  normalizePeriodValue,
-  PERIOD_PRESET_LAST_MONTH,
-  PERIOD_PRESET_MTD,
-  PERIOD_PRESET_VALUES,
-} from "../shared/period";
-import { startOfUtcDay } from "../shared/date";
-import { resolvePeriodSelection } from "./period-selection";
+import { normalizePeriodValue } from "../shared/period";
 import {
   loadPeriodBaseDataUncached,
   type PeriodBaseData,
 } from "./period-base-data-loader.server";
+import {
+  PERIOD_CACHE_TTL_SECONDS,
+  advancePeriodCacheGeneration,
+  getPeriodCacheEnvOrThrowWhenRedisAvailable,
+  getPeriodCacheGeneration,
+  getPeriodInflightCacheKey,
+  resolvePeriodCachePeriodKey,
+} from "./period-cache";
 
-const PERIOD_BASE_CACHE_TTL_SECONDS = 24 * 60 * 60;
 const PERIOD_BASE_CACHE_MAX_SERIALIZED_BYTES = 2 * 1024 * 1024;
 
 const PERIOD_BASE_CACHE_ENTRY_PREFIX = "period:base:v1";
 const PERIOD_BASE_CACHE_INDEX_PREFIX = "period:base:index:v1";
-const PERIOD_BASE_CACHE_GENERATION_PREFIX = "period:base:generation:v1";
 
 let hasWarnedPeriodBaseCacheReadFailure = false;
 let hasWarnedPeriodBaseCacheWriteFailure = false;
 let hasWarnedPeriodBaseCacheInvalidationFailure = false;
-let hasWarnedPeriodBaseCacheNamespaceFailure = false;
 
 const inflightByCacheKey = new Map<string, Promise<PeriodBaseData>>();
 
@@ -82,24 +79,6 @@ function decodeDatesFromCache<T>(value: unknown): T {
   return value as T;
 }
 
-function getCacheEnvOrThrowWhenRedisAvailable(): string {
-  const rawCacheEnv = process.env.PERIOD_BASE_CACHE_ENV?.trim();
-  if (rawCacheEnv) {
-    return rawCacheEnv;
-  }
-
-  if (!hasWarnedPeriodBaseCacheNamespaceFailure) {
-    console.error(
-      "PERIOD_BASE_CACHE_ENV must be set when Redis-backed period base-data cache is enabled.",
-    );
-    hasWarnedPeriodBaseCacheNamespaceFailure = true;
-  }
-
-  throw new Error(
-    "PERIOD_BASE_CACHE_ENV must be set when Redis-backed period base-data cache is enabled.",
-  );
-}
-
 function getPeriodBaseCacheEntryKey(args: {
   cacheEnv: string;
   accountBookId: string;
@@ -117,127 +96,12 @@ function getPeriodBaseCacheIndexKey(args: {
   return `${PERIOD_BASE_CACHE_INDEX_PREFIX}:${args.cacheEnv}:${args.accountBookId}:${args.generation}`;
 }
 
-function getPeriodBaseCacheGenerationKey(args: {
-  cacheEnv: string;
-  accountBookId: string;
-}) {
-  return `${PERIOD_BASE_CACHE_GENERATION_PREFIX}:${args.cacheEnv}:${args.accountBookId}`;
-}
-
-function isPresetPeriodValue(value: string): boolean {
-  return (PERIOD_PRESET_VALUES as readonly string[]).includes(value);
-}
-
-function isCurrentExplicitPeriodValue(value: string): boolean {
-  const now = startOfUtcDay(new Date());
-  const monthMatch = /^(\d{4})-(\d{2})$/.exec(value);
-  if (monthMatch) {
-    const year = Number(monthMatch[1]);
-    const monthOneBased = Number(monthMatch[2]);
-    return (
-      year === now.getUTCFullYear() && monthOneBased === now.getUTCMonth() + 1
-    );
-  }
-
-  const yearMatch = /^(\d{4})$/.exec(value);
-  if (yearMatch) {
-    const year = Number(yearMatch[1]);
-    return year === now.getUTCFullYear();
-  }
-
-  return false;
-}
-
-function formatUtcDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function getInflightPeriodKey(periodValue: string): string {
-  if (
-    !isPresetPeriodValue(periodValue) &&
-    !isCurrentExplicitPeriodValue(periodValue)
-  ) {
-    return periodValue;
-  }
-
-  return `${periodValue}:${formatUtcDateKey(startOfUtcDay(new Date()))}`;
-}
-
-async function resolvePeriodBaseCachePeriodKey(args: {
-  accountBookId: string;
-  periodValue: string;
-}): Promise<string> {
-  if (!isPresetPeriodValue(args.periodValue)) {
-    if (isCurrentExplicitPeriodValue(args.periodValue)) {
-      return `${args.periodValue}:${formatUtcDateKey(startOfUtcDay(new Date()))}`;
-    }
-    return args.periodValue;
-  }
-
-  // Month presets are independent of the account-book start date.
-  // Derive keys directly so cache hits avoid an extra DB read.
-  if (
-    args.periodValue === PERIOD_PRESET_MTD ||
-    args.periodValue === PERIOD_PRESET_LAST_MONTH
-  ) {
-    const selection = resolvePeriodSelection({
-      periodValue: args.periodValue,
-      now: new Date(),
-    });
-
-    return `${selection.granularity}:${formatUtcDateKey(selection.from)}:${formatUtcDateKey(selection.to)}`;
-  }
-
-  const accountBook = await prisma.accountBook.findUniqueOrThrow({
-    where: { id: args.accountBookId },
-    select: {
-      startDate: true,
-    },
-  });
-
-  const selection = resolvePeriodSelection({
-    periodValue: args.periodValue,
-    now: new Date(),
-    firstBookingDate: startOfUtcDay(accountBook.startDate),
-  });
-
-  return `${selection.granularity}:${formatUtcDateKey(selection.from)}:${formatUtcDateKey(selection.to)}`;
-}
-
-async function getPeriodBaseCacheGeneration(args: {
-  cacheEnv: string;
-  accountBookId: string;
-  redis: NonNullable<Awaited<ReturnType<typeof getRedisClient>>>;
-}): Promise<string> {
-  const generationKey = getPeriodBaseCacheGenerationKey({
-    cacheEnv: args.cacheEnv,
-    accountBookId: args.accountBookId,
-  });
-
-  try {
-    const generation = await args.redis.get(generationKey);
-    if (generation && generation.trim().length > 0) {
-      return generation.trim();
-    }
-  } catch (error) {
-    if (!hasWarnedPeriodBaseCacheReadFailure) {
-      console.warn(
-        "Failed to read period base-data cache entry; continuing uncached.",
-        error,
-      );
-      hasWarnedPeriodBaseCacheReadFailure = true;
-    }
-  }
-
-  return "0";
-}
-
 export async function getOrLoadPeriodBaseData(args: {
   accountBookId: string;
   period?: unknown;
 }): Promise<PeriodBaseData> {
   const periodValue = normalizePeriodValue(args.period);
-  const inflightPeriodKey = getInflightPeriodKey(periodValue);
+  const inflightPeriodKey = getPeriodInflightCacheKey(periodValue);
   const inflightKey = `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:inflight:${args.accountBookId}:${inflightPeriodKey}`;
   const existingInflight = inflightByCacheKey.get(inflightKey);
   if (existingInflight) {
@@ -253,12 +117,12 @@ export async function getOrLoadPeriodBaseData(args: {
       });
     }
 
-    const cacheEnv = getCacheEnvOrThrowWhenRedisAvailable();
-    const periodCacheKey = await resolvePeriodBaseCachePeriodKey({
+    const cacheEnv = getPeriodCacheEnvOrThrowWhenRedisAvailable();
+    const periodCacheKey = await resolvePeriodCachePeriodKey({
       accountBookId: args.accountBookId,
       periodValue,
     });
-    const generation = await getPeriodBaseCacheGeneration({
+    const generation = await getPeriodCacheGeneration({
       cacheEnv,
       accountBookId: args.accountBookId,
       redis,
@@ -303,9 +167,9 @@ export async function getOrLoadPeriodBaseData(args: {
           accountBookId: args.accountBookId,
           generation,
         });
-        await redis.setEx(entryKey, PERIOD_BASE_CACHE_TTL_SECONDS, serialized);
+        await redis.setEx(entryKey, PERIOD_CACHE_TTL_SECONDS, serialized);
         await redis.sAdd(indexKey, entryKey);
-        await redis.expire(indexKey, PERIOD_BASE_CACHE_TTL_SECONDS);
+        await redis.expire(indexKey, PERIOD_CACHE_TTL_SECONDS);
       }
     } catch (error) {
       if (!hasWarnedPeriodBaseCacheWriteFailure) {
@@ -336,8 +200,8 @@ export async function invalidatePeriodBaseDataCacheForAccountBook(
     return;
   }
 
-  const cacheEnv = getCacheEnvOrThrowWhenRedisAvailable();
-  const generation = await getPeriodBaseCacheGeneration({
+  const cacheEnv = getPeriodCacheEnvOrThrowWhenRedisAvailable();
+  const generation = await getPeriodCacheGeneration({
     cacheEnv,
     accountBookId,
     redis,
@@ -347,10 +211,6 @@ export async function invalidatePeriodBaseDataCacheForAccountBook(
     accountBookId,
     generation,
   });
-  const generationKey = getPeriodBaseCacheGenerationKey({
-    cacheEnv,
-    accountBookId,
-  });
 
   try {
     const members = await redis.sMembers(indexKey);
@@ -359,8 +219,11 @@ export async function invalidatePeriodBaseDataCacheForAccountBook(
     } else {
       await redis.del(indexKey);
     }
-    const nextGeneration = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    await redis.set(generationKey, nextGeneration);
+    await advancePeriodCacheGeneration({
+      cacheEnv,
+      accountBookId,
+      redis,
+    });
 
     const inflightPrefix = `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:inflight:${accountBookId}:`;
     for (const cacheKey of inflightByCacheKey.keys()) {

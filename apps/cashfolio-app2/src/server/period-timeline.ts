@@ -9,8 +9,12 @@ import {
   type TimelineScopeSelection,
   type TimelineScopedMetric,
 } from "../shared/timeline-scope";
+import type { TimelineValuationContext } from "./period-timeline-point-metrics.server";
+import { mapWithConcurrencyLimit } from "./concurrency";
 
 export type PeriodTimelineGranularity = "month" | "year";
+
+const TIMELINE_POINT_LOAD_CONCURRENCY = 4;
 
 export type PeriodTimelinePoint = {
   periodValue: string;
@@ -241,8 +245,6 @@ export const getPeriodTimeline = createServerFn({
       maxDate: new Date(),
     });
 
-    const points: PeriodTimelinePoint[] = [];
-    const scopedMetricValues: number[] = [];
     const incomeScopeOptions = new Map<
       TimelineScopeSelection,
       TimelineScopeOption
@@ -259,13 +261,26 @@ export const getPeriodTimeline = createServerFn({
       TimelineScopeSelection,
       TimelineScopeOption
     >();
-    for (const periodValue of periodValues) {
-      const point = await loadPeriodTimelinePoint({
-        accountBookId: data.accountBookId,
-        period: periodValue,
-        context,
-        metricScopeFilter: activeMetricScopeFilter,
-      });
+
+    const valuationContext: TimelineValuationContext = {
+      exchangeRateByKey: new Map(),
+    };
+    const loadedPoints = await mapWithConcurrencyLimit(
+      periodValues,
+      TIMELINE_POINT_LOAD_CONCURRENCY,
+      (periodValue) =>
+        loadPeriodTimelinePoint({
+          accountBookId: data.accountBookId,
+          period: periodValue,
+          context,
+          metricScopeFilter: activeMetricScopeFilter,
+          valuationContext,
+        }),
+    );
+
+    const points: PeriodTimelinePoint[] = [];
+    const scopedMetricValues: number[] = [];
+    for (const point of loadedPoints) {
       for (const option of point.scopeOptions.income) {
         incomeScopeOptions.set(option.value, option);
       }

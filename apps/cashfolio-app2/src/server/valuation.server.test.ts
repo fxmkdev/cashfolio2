@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const getRateWithBacktracking = vi.hoisted(() => vi.fn());
+const getRateWithBacktrackingDetails = vi.hoisted(() => vi.fn());
 const getLatestAssumedAvailableHistoricalUtcDay = vi.hoisted(() => vi.fn());
 
 vi.mock("./valuation/backtracking", () => ({
   getRateWithBacktracking,
+  getRateWithBacktrackingDetails,
 }));
 
 vi.mock("./valuation/date-utils", async () => {
@@ -20,6 +22,7 @@ vi.mock("./valuation/date-utils", async () => {
 
 import {
   getCurrencyExchangeRate,
+  getCurrencyExchangeRateDetails,
   getSecurityToCurrencyExchangeRate,
 } from "./valuation.server";
 
@@ -30,6 +33,10 @@ describe("valuation server lookup context", () => {
       new Date("2026-03-28T00:00:00.000Z"),
     );
     getRateWithBacktracking.mockResolvedValue(1);
+    getRateWithBacktrackingDetails.mockResolvedValue({
+      rate: 1,
+      source: "timeSeries",
+    });
   });
 
   test("computes latest fetchable date once for currency exchange lookups", async () => {
@@ -53,6 +60,39 @@ describe("valuation server lookup context", () => {
     expect(latestFetchableDates[1]?.toISOString()).toBe(
       "2026-03-28T00:00:00.000Z",
     );
+  });
+
+  test("reports TimeSeries as permanent-cache source for detailed currency lookups", async () => {
+    getRateWithBacktrackingDetails.mockResolvedValueOnce({
+      rate: 0.9,
+      source: "timeSeries",
+    });
+
+    const result = await getCurrencyExchangeRateDetails({
+      sourceCurrency: "USD",
+      targetCurrency: "EUR",
+      date: new Date("2026-03-29T00:06:00.000Z"),
+    });
+
+    expect(result).toEqual({
+      rate: 0.9,
+      source: "timeSeries",
+    });
+  });
+
+  test("reports fallback source for detailed currency lookups using fallback cache", async () => {
+    getRateWithBacktrackingDetails.mockResolvedValueOnce({
+      rate: 0.9,
+      source: "fallback",
+    });
+
+    const result = await getCurrencyExchangeRateDetails({
+      sourceCurrency: "USD",
+      targetCurrency: "EUR",
+      date: new Date("2026-03-29T00:06:00.000Z"),
+    });
+
+    expect(result.source).toBe("fallback");
   });
 
   test("reuses one cutoff decision across nested security+fx lookup", async () => {

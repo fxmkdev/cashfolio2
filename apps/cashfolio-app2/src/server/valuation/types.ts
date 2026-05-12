@@ -25,6 +25,18 @@ export type CachedRateResult = {
   timestamp: number;
 };
 
+export type ValuationRateSource =
+  | "identity"
+  | "timeSeries"
+  | "fallback"
+  | "provider"
+  | "missing";
+
+export type ValuationRateLookupResult = {
+  rate: number | null;
+  source: ValuationRateSource;
+};
+
 export type BacktrackedRateFallbackCacheEntry = {
   kind: "rate";
   rate: number;
