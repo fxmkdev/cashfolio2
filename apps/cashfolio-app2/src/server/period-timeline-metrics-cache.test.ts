@@ -151,6 +151,32 @@ describe("period timeline metrics cache", () => {
     ).toHaveBeenCalledTimes(1);
   });
 
+  it("ignores malformed cached scope option arrays", async () => {
+    redisState.kv.set(
+      "period:timeline:metrics:v1:preview-app-123:book-1:gen-1:2026-04:total",
+      JSON.stringify(
+        createMetrics({
+          scopeOptions: {
+            income: [{ value: "income-a", label: "Income A", kind: "account" }],
+            expenses: [],
+            assets: [],
+            liabilities: [],
+          },
+        }),
+      ),
+    );
+
+    const result = await getOrLoadPeriodTimelinePointMetrics({
+      accountBookId: "book-1",
+      period: "2026-04",
+    });
+
+    expect(result).toEqual(createMetrics());
+    expect(
+      loadPeriodTimelinePointMetricsWithCacheability,
+    ).toHaveBeenCalledTimes(1);
+  });
+
   it("does not write metrics that used non-permanent valuation sources", async () => {
     loadPeriodTimelinePointMetricsWithCacheability.mockResolvedValueOnce({
       metrics: createMetrics({ totalReturn: 20 }),

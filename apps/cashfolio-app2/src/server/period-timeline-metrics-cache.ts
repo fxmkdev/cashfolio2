@@ -11,6 +11,10 @@ import {
   type TimelineValuationContext,
 } from "./period-timeline-point-metrics.server";
 import type { TimelineMetricScopeFilter } from "./period-timeline-scopes.server";
+import {
+  isTimelineScopeSelection,
+  type TimelineScopeOption,
+} from "../shared/timeline-scope";
 
 const PERIOD_TIMELINE_METRICS_CACHE_ENTRY_PREFIX = "period:timeline:metrics:v1";
 const PERIOD_TIMELINE_METRICS_CACHE_MAX_SERIALIZED_BYTES = 512 * 1024;
@@ -50,6 +54,27 @@ function getTimelineMetricsCacheEntryKey(args: {
   ].join(":");
 }
 
+function isTimelineScopeOption(value: unknown): value is TimelineScopeOption {
+  if (typeof value !== "object" || value == null) {
+    return false;
+  }
+
+  const option = value as Partial<TimelineScopeOption>;
+  return (
+    isTimelineScopeSelection(option.value) &&
+    typeof option.label === "string" &&
+    (option.kind === "total" ||
+      option.kind === "group" ||
+      option.kind === "account")
+  );
+}
+
+function isTimelineScopeOptionArray(
+  value: unknown,
+): value is TimelineScopeOption[] {
+  return Array.isArray(value) && value.every(isTimelineScopeOption);
+}
+
 function isTimelineMetricsCacheEntry(
   value: unknown,
 ): value is PeriodTimelinePointMetrics {
@@ -69,10 +94,10 @@ function isTimelineMetricsCacheEntry(
     typeof record.netWorth === "number" &&
     typeof record.scopeOptions === "object" &&
     record.scopeOptions != null &&
-    Array.isArray(record.scopeOptions.income) &&
-    Array.isArray(record.scopeOptions.expenses) &&
-    Array.isArray(record.scopeOptions.assets) &&
-    Array.isArray(record.scopeOptions.liabilities) &&
+    isTimelineScopeOptionArray(record.scopeOptions.income) &&
+    isTimelineScopeOptionArray(record.scopeOptions.expenses) &&
+    isTimelineScopeOptionArray(record.scopeOptions.assets) &&
+    isTimelineScopeOptionArray(record.scopeOptions.liabilities) &&
     (record.scopedMetricValue === undefined ||
       typeof record.scopedMetricValue === "number")
   );
