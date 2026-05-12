@@ -15,6 +15,8 @@ export type TimelineScopeOption = {
   value: TimelineScopeSelection;
   label: string;
   kind: TimelineScopeKind;
+  treeLabel?: string;
+  parentValue?: TimelineScopeSelection;
 };
 
 export function isTimelineScopedMetric(

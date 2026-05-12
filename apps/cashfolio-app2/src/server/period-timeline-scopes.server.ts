@@ -184,6 +184,7 @@ export function buildTimelineScopeOptions(args: {
     args.allAccountGroups.map((group) => [
       group.id,
       {
+        name: group.name,
         parentGroupId: group.parentGroupId,
       },
     ]),
@@ -206,6 +207,10 @@ export function buildTimelineScopeOptions(args: {
       value: accountValue,
       label: accountLabel,
       kind: "account",
+      treeLabel: item.accountName,
+      ...(item.groupId
+        ? { parentValue: `group:${item.groupId}` as const }
+        : {}),
     });
 
     if (!item.groupId) {
@@ -220,12 +225,17 @@ export function buildTimelineScopeOptions(args: {
       }
       visitedGroupIds.add(groupId);
       const groupValue = `group:${groupId}` as const;
+      const group = groupById.get(groupId);
       groupOptionByValue.set(groupValue, {
         value: groupValue,
         label: resolveGroupPath(groupId),
         kind: "group",
+        treeLabel: group?.name ?? resolveGroupPath(groupId),
+        ...(group?.parentGroupId
+          ? { parentValue: `group:${group.parentGroupId}` as const }
+          : {}),
       });
-      groupId = groupById.get(groupId)?.parentGroupId ?? null;
+      groupId = group?.parentGroupId ?? null;
     }
   }
 
