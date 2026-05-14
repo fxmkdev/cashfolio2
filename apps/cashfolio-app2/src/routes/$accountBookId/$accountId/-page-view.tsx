@@ -286,10 +286,11 @@ export function LedgerPageView({
                   leftSection={<IconPencil size={16} />}
                   menuLabel="Account actions"
                   onClick={onOpenAccountEdit}
-                  disabled={!!accountEditDisabledReason}
+                  primaryDisabled={!!accountEditDisabledReason}
                   menuItems={[
                     account.isActive
                       ? {
+                          key: "archive",
                           label: "Archive",
                           disabledReason: accountArchiveLabel,
                           disabled: !accountArchivable,
@@ -298,6 +299,7 @@ export function LedgerPageView({
                           onClick: onOpenArchiveAccount,
                         }
                       : {
+                          key: "unarchive",
                           label: "Unarchive",
                           disabledReason: accountUnarchiveLabel,
                           disabled: !accountUnarchivable,
@@ -306,6 +308,7 @@ export function LedgerPageView({
                           onClick: () => void onUnarchiveAccount(),
                         },
                     {
+                      key: "delete",
                       label: "Delete",
                       disabledReason: accountDeleteLabel,
                       disabled: !accountDeletable,

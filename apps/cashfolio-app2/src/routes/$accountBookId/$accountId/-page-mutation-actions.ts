@@ -172,11 +172,15 @@ export function createLedgerAccountMutationActions(args: {
 
   return {
     async handleUpdateAccount(values: TransformedFormValues) {
+      if (!values.name) {
+        throw new Error("Account name is required to update ledger account.");
+      }
+
       await api.updateAccount({
         data: {
           id: args.accountId,
           accountBookId: args.accountBookId,
-          name: values.name!,
+          name: values.name,
           type: values.type,
           equityAccountSubtype: values.equityAccountSubtype,
           groupId: values.groupId,

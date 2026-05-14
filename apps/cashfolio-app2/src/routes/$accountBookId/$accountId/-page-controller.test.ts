@@ -479,6 +479,50 @@ describe("createLedgerAccountMutationActions", () => {
     expect(onAccountDeleted).not.toHaveBeenCalled();
   });
 
+  test("rejects account update without a name", async () => {
+    const invalidate = vi.fn();
+    const onAccountDeleted = vi.fn();
+    const state = {
+      setAccountEditModalOpened: vi.fn(),
+      setDeletingAccount: vi.fn(),
+      setArchivingAccount: vi.fn(),
+    };
+    const api = {
+      updateAccount: vi.fn().mockResolvedValue(undefined),
+      deleteAccount: vi.fn().mockResolvedValue(undefined),
+      archiveAccount: vi.fn().mockResolvedValue(undefined),
+      unarchiveAccount: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const actions = createAccountActions({
+      invalidate,
+      onAccountDeleted,
+      state,
+      api,
+    });
+
+    await expect(
+      actions.handleUpdateAccount({
+        name: undefined,
+        typeDescriptor: "ASSET",
+        type: AccountType.ASSET,
+        equityAccountSubtype: undefined,
+        groupId: "group-1",
+        sortOrder: 3,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: undefined,
+        symbol: undefined,
+        tradeCurrency: undefined,
+        openingBalance: 100,
+      }),
+    ).rejects.toThrow("Account name is required");
+
+    expect(api.updateAccount).not.toHaveBeenCalled();
+    expect(state.setAccountEditModalOpened).not.toHaveBeenCalled();
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
   test("archives, unarchives, and deletes current account", async () => {
     const invalidate = vi.fn();
     const onAccountDeleted = vi.fn().mockResolvedValue(undefined);

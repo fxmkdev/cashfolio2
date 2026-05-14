@@ -1,12 +1,19 @@
-import { Button, Menu, Tooltip } from "@mantine/core";
+import {
+  Button,
+  type ButtonProps,
+  type MantineColor,
+  Menu,
+  Tooltip,
+} from "@mantine/core";
 import { IconChevronDown } from "@tabler/icons-react";
 import { Fragment, type ReactNode } from "react";
 
 export type SplitButtonMenuItem = {
+  key: string;
   label: string;
   disabledReason?: string;
   leftSection?: ReactNode;
-  color?: string;
+  color?: MantineColor;
   disabled?: boolean;
   onClick: () => void;
 };
@@ -18,15 +25,15 @@ export function SplitButton({
   menuItems,
   onClick,
   variant = "default",
-  disabled = false,
+  primaryDisabled = false,
 }: {
   children: ReactNode;
   leftSection?: ReactNode;
   menuLabel?: string;
   menuItems: SplitButtonMenuItem[];
   onClick: () => void;
-  variant?: string;
-  disabled?: boolean;
+  variant?: ButtonProps["variant"];
+  primaryDisabled?: boolean;
 }) {
   return (
     <Button.Group>
@@ -34,7 +41,7 @@ export function SplitButton({
         variant={variant}
         leftSection={leftSection}
         onClick={onClick}
-        disabled={disabled}
+        disabled={primaryDisabled}
       >
         {children}
       </Button>
@@ -58,12 +65,12 @@ export function SplitButton({
             );
 
             if (!item.disabled || !item.disabledReason) {
-              return <Fragment key={item.label}>{menuItem}</Fragment>;
+              return <Fragment key={item.key}>{menuItem}</Fragment>;
             }
 
             return (
               <Tooltip
-                key={item.label}
+                key={item.key}
                 label={item.disabledReason}
                 position="left"
                 multiline

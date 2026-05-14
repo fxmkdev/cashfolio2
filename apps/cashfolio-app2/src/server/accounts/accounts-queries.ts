@@ -7,11 +7,13 @@ import {
   type AccountReferenceBalancesInput,
   type AccountsPageDataInput,
   type AccountTreeDataInput,
+  type LedgerAccountActionDataInput,
   queryAccountGroups,
   queryAccountReferenceBalances,
   queryAccountsPageData,
   queryAccountTreeData,
   queryExistingNodes,
+  queryLedgerAccountActionData,
 } from "./accounts-queries-orchestration";
 
 export const getAccounts = createServerFn({ method: "GET" })
@@ -74,6 +76,13 @@ export const getAccountsPageData = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     return queryAccountsPageData(data);
+  });
+
+export const getLedgerAccountActionData = createServerFn({ method: "GET" })
+  .inputValidator((data: LedgerAccountActionDataInput) => data)
+  .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
+    return queryLedgerAccountActionData(data);
   });
 
 export const getAccountReferenceBalances = createServerFn({ method: "GET" })
