@@ -2,8 +2,8 @@ name: Version
 on:
   workflow_call:
     inputs:
-      release:
-        description: "Create a release"
+      force_release:
+        description: Force a release even without a !release commit marker
         required: false
         default: false
         type: boolean
@@ -60,7 +60,7 @@ jobs:
           set -euo pipefail
 
           ARGS=()
-          if [ "${{ inputs.release }}" = "true" ]; then
+          if [ "${{ inputs.force_release }}" = "true" ]; then
             ARGS+=(--release)
           fi
 

@@ -6,8 +6,8 @@ on:
       - main
   workflow_dispatch:
     inputs:
-      release:
-        description: "Create a release"
+      force_release:
+        description: Force a release even without a !release commit marker
         required: false
         default: false
         type: boolean
@@ -21,7 +21,7 @@ jobs:
     name: "Generate version"
     uses: ./.github/workflows/version.yml
     with:
-      release: ${{ github.event_name == 'workflow_dispatch' && inputs.release }}
+      force_release: ${{ github.event_name == 'workflow_dispatch' && inputs.force_release }}
 
   cashfolio-app2-build-push:
     name: "cashfolio-app2: Build and Push"
@@ -522,13 +522,18 @@ jobs:
       deploy-cashfolio-redis: false
     secrets: inherit
 
-  create-release:
-    name: Create release
+  release:
+    name: Release
     runs-on: ubuntu-latest
-    if: needs.version.outputs.is_new_release == 'true'
+    if: >-
+      github.event_name != 'pull_request' && needs.version.outputs.is_new_release
+      == 'true'
     needs:
       - deploy
       - version
+    concurrency:
+      group: release
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
@@ -540,7 +545,7 @@ jobs:
         uses: ./.github/actions/setup
       - name: Install dependencies
         run: pnpm --workspace-root install --frozen-lockfile
-      - name: Create release
-        run: pnpm releaser publish --draft ${{ needs.version.outputs.version }}
+      - name: Publish release
+        run: pnpm releaser publish ${{ needs.version.outputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
