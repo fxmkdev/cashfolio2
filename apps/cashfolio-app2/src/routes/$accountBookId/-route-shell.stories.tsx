@@ -62,8 +62,29 @@ function AccountBookShellSmokeHarness() {
 }
 
 function resetDesktopRailPreference() {
-  window.localStorage.removeItem(DESKTOP_RAIL_COLLAPSED_STORAGE_KEY);
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  try {
+    window.localStorage.removeItem(DESKTOP_RAIL_COLLAPSED_STORAGE_KEY);
+  } catch {
+    // Ignore blocked storage in Storybook sandboxes.
+  }
+
   return {};
+}
+
+function readDesktopRailPreference() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.localStorage.getItem(DESKTOP_RAIL_COLLAPSED_STORAGE_KEY);
+  } catch {
+    return null;
+  }
 }
 
 const meta = {
@@ -178,9 +199,7 @@ export const DesktopRailSmoke: Story = {
       canvas.getByRole("button", { name: "Expand sidebar" }),
     ).toBeVisible();
     await waitFor(() => {
-      expect(
-        window.localStorage.getItem(DESKTOP_RAIL_COLLAPSED_STORAGE_KEY),
-      ).toBe("true");
+      expect(readDesktopRailPreference()).toBe("true");
     });
     await expect(canvas.queryByText("Valuation Cache")).not.toBeInTheDocument();
 
@@ -210,9 +229,7 @@ export const DesktopRailSmoke: Story = {
       canvas.getByRole("button", { name: "Expand sidebar" }),
     );
     await waitFor(() => {
-      expect(
-        window.localStorage.getItem(DESKTOP_RAIL_COLLAPSED_STORAGE_KEY),
-      ).toBe("false");
+      expect(readDesktopRailPreference()).toBe("false");
     });
     await expect(
       canvas.getByRole("link", { name: "Valuation Cache" }),

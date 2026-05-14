@@ -150,54 +150,55 @@ function AccountBookNavigationLinkItem({
       : undefined,
   };
 
-  if (link.section === "accounts") {
-    return (
-      <LinkNavLink
-        {...sharedProps}
-        to="/$accountBookId/accounts"
-        params={{ accountBookId }}
-        search={accountsLinkSearch}
-      />
-    );
+  switch (link.section) {
+    case "accounts":
+      return (
+        <LinkNavLink
+          {...sharedProps}
+          to="/$accountBookId/accounts"
+          params={{ accountBookId }}
+          search={accountsLinkSearch}
+        />
+      );
+    case "activity":
+      return (
+        <LinkNavLink
+          {...sharedProps}
+          to="/$accountBookId/activity"
+          params={{ accountBookId }}
+          search={periodLinkSearch}
+        />
+      );
+    case "period":
+      return (
+        <LinkNavLink
+          {...sharedProps}
+          to="/$accountBookId/period"
+          params={{ accountBookId }}
+          search={periodLinkSearch}
+        />
+      );
+    case "timeline":
+      return (
+        <LinkNavLink
+          {...sharedProps}
+          to="/$accountBookId/timeline"
+          params={{ accountBookId }}
+        />
+      );
+    case "valuation-cache":
+      return (
+        <LinkNavLink
+          {...sharedProps}
+          to="/$accountBookId/valuation-cache"
+          params={{ accountBookId }}
+        />
+      );
+    default:
+      return assertNever(link.section);
   }
+}
 
-  if (link.section === "activity") {
-    return (
-      <LinkNavLink
-        {...sharedProps}
-        to="/$accountBookId/activity"
-        params={{ accountBookId }}
-        search={periodLinkSearch}
-      />
-    );
-  }
-
-  if (link.section === "period") {
-    return (
-      <LinkNavLink
-        {...sharedProps}
-        to="/$accountBookId/period"
-        params={{ accountBookId }}
-        search={periodLinkSearch}
-      />
-    );
-  }
-
-  if (link.section === "timeline") {
-    return (
-      <LinkNavLink
-        {...sharedProps}
-        to="/$accountBookId/timeline"
-        params={{ accountBookId }}
-      />
-    );
-  }
-
-  return (
-    <LinkNavLink
-      {...sharedProps}
-      to="/$accountBookId/valuation-cache"
-      params={{ accountBookId }}
-    />
-  );
+function assertNever(value: never): never {
+  throw new Error(`Unhandled account book navigation section: ${value}`);
 }
