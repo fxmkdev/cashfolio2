@@ -19,9 +19,9 @@ env:
 jobs:
   version:
     name: "Generate version"
-    uses: felixmokross/webplatform/.github/workflows/export.version.yml@main
+    uses: ./.github/workflows/version.yml
     with:
-      release: ${{ inputs.release }}
+      release: ${{ github.event_name == 'workflow_dispatch' && inputs.release }}
 
   cashfolio-app2-build-push:
     name: "cashfolio-app2: Build and Push"
@@ -37,7 +37,7 @@ jobs:
         with:
           version: ${{ env.FLYCTL_VERSION }}
       - name: Setup
-        uses: felixmokross/webplatform/.github/actions/setup@main
+        uses: ./.github/actions/setup
       - name: Set version on cashfolio-app2
         run: |
           pnpm version ${{ needs.version.outputs.version }} --git-tag-version false
@@ -93,7 +93,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
       - name: Setup
-        uses: felixmokross/webplatform/.github/actions/setup@main
+        uses: ./.github/actions/setup
       - name: Install dependencies
         run: pnpm --filter cashfolio-app2 install
       - name: Migrate test database
@@ -140,7 +140,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
       - name: Setup
-        uses: felixmokross/webplatform/.github/actions/setup@main
+        uses: ./.github/actions/setup
       - name: Install dependencies
         run: pnpm --filter cashfolio-app2 install
       - name: Generate Prisma Client
@@ -162,7 +162,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
       - name: Setup
-        uses: felixmokross/webplatform/.github/actions/setup@main
+        uses: ./.github/actions/setup
       - name: Install dependencies
         run: pnpm --filter cashfolio-app2 install
       - name: Generate Prisma Client
@@ -177,7 +177,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
       - name: Setup
-        uses: felixmokross/webplatform/.github/actions/setup@main
+        uses: ./.github/actions/setup
       - name: Install dependencies
         run: pnpm install
       - name: Run format check
@@ -190,7 +190,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
       - name: Setup
-        uses: felixmokross/webplatform/.github/actions/setup@main
+        uses: ./.github/actions/setup
       - name: Install dependencies
         run: pnpm --filter cashfolio-app2 install
       - name: Run lint
@@ -203,7 +203,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
       - name: Setup
-        uses: felixmokross/webplatform/.github/actions/setup@main
+        uses: ./.github/actions/setup
       - name: Install dependencies
         run: pnpm --filter cli install
       - name: Run typecheck in cli
@@ -235,7 +235,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Setup
-        uses: felixmokross/webplatform/.github/actions/setup@main
+        uses: ./.github/actions/setup
       - name: Install dependencies
         run: pnpm --filter cashfolio-app2 install
       - name: Generate Prisma Client
@@ -505,3 +505,26 @@ jobs:
       environment: staging
       deploy-cashfolio-redis: false
     secrets: inherit
+
+  create-release:
+    name: Create release
+    runs-on: ubuntu-latest
+    if: needs.version.outputs.is_new_release == 'true'
+    needs:
+      - deploy
+      - version
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout with full history
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Install dependencies
+        run: pnpm --workspace-root install --frozen-lockfile
+      - name: Create release
+        run: pnpm releaser publish --draft ${{ needs.version.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

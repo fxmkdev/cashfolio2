@@ -26,7 +26,7 @@ env:
 jobs:
   version:
     name: "Generate version"
-    uses: felixmokross/webplatform/.github/workflows/export.version.yml@main
+    uses: ./.github/workflows/version.yml
 
   cashfolio-redis-build-push:
     name: "cashfolio-redis: Build and Push"
