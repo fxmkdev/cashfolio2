@@ -3,8 +3,7 @@ import type { CustomCellRendererProps } from "ag-grid-react";
 import { ActionIcon, Box, Group, ThemeIcon, Tooltip } from "@mantine/core";
 import { IconTrash, IconX } from "@tabler/icons-react";
 import { Unit } from "../.prisma-client/enums";
-import { currencies } from "../currencies";
-import { cryptocurrencies } from "../cryptocurrencies";
+import type { AccountBookUnitUsage } from "../shared/account-book-unit-usage";
 import {
   isExpenseAccount,
   isIncomeAccount,
@@ -22,16 +21,10 @@ import type {
   AccountOption,
   BookingValues,
 } from "./edit-transaction-modal-types";
-
-const currencyOptions = Object.keys(currencies).map((code) => ({
-  label: code,
-  value: code,
-}));
-
-const cryptocurrencyOptions = Object.keys(cryptocurrencies).map((code) => ({
-  label: code,
-  value: code,
-}));
+import {
+  buildCryptocurrencySelectData,
+  buildCurrencySelectData,
+} from "./unit-select-options";
 
 export function isEditableCell(params: CellClassParams) {
   const { colDef, node } = params;
@@ -52,6 +45,7 @@ export function createEditTransactionColumnDefs(args: {
   accounts: AccountOption[];
   isSubmitting: boolean;
   accountBookStartDate: Date;
+  unitUsage?: AccountBookUnitUsage;
 }): ColDef[] {
   const { accounts, isSubmitting, accountBookStartDate } = args;
 
@@ -174,8 +168,16 @@ export function createEditTransactionColumnDefs(args: {
       cellEditorParams: ({ data }: { data?: BookingValues }) => ({
         options:
           data?.unit === Unit.CRYPTOCURRENCY
-            ? cryptocurrencyOptions
-            : currencyOptions,
+            ? buildCryptocurrencySelectData({
+                unitUsage: args.unitUsage,
+                selectedCryptocurrencies: [data.cryptocurrency],
+                compactLabels: true,
+              })
+            : buildCurrencySelectData({
+                unitUsage: args.unitUsage,
+                selectedCurrencies: [data?.currency, data?.tradeCurrency],
+                compactLabels: true,
+              }),
       }),
       valueSetter: ({
         data,

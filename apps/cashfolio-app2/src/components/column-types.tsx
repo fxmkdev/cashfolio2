@@ -1,4 +1,5 @@
 import { Select, TextInput } from "@mantine/core";
+import type { SelectProps } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import type { SuppressKeyboardEventParams } from "ag-grid-enterprise";
 import {
@@ -23,6 +24,9 @@ export const TEXT_COLUMN = "textColumn";
 export const DATE_COLUMN = "dateColumn";
 
 type FormattedNumericMode = "display" | "entry";
+type SelectColumnOptions = NonNullable<SelectProps["data"]>;
+type SelectColumnOption = { label: string; value: string };
+type SelectColumnGroup = { group: string; items: SelectColumnOption[] };
 
 type FormattedNumericColDefConfig = {
   formattedNumericMode?: FormattedNumericMode;
@@ -68,6 +72,48 @@ function getDefaultDisplayDecimals(data: unknown): number {
   }
 
   return 2;
+}
+
+function isSelectColumnOption(value: unknown): value is SelectColumnOption {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "value" in value &&
+    "label" in value
+  );
+}
+
+function isSelectColumnGroup(value: unknown): value is SelectColumnGroup {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "items" in value &&
+    Array.isArray((value as { items?: unknown }).items)
+  );
+}
+
+function findSelectOptionLabel(
+  options: SelectColumnOptions,
+  value: unknown,
+): string {
+  for (const option of options) {
+    if (typeof option === "string") {
+      if (option === value) return option;
+      continue;
+    }
+
+    if (isSelectColumnGroup(option)) {
+      const label = findSelectOptionLabel(option.items, value);
+      if (label) return label;
+      continue;
+    }
+
+    if (isSelectColumnOption(option) && option.value === value) {
+      return option.label;
+    }
+  }
+
+  return "";
 }
 
 export const columnTypes: AgGridReactProps["columnTypes"] = {
@@ -139,9 +185,7 @@ export const columnTypes: AgGridReactProps["columnTypes"] = {
   },
   [SELECT_COLUMN]: {
     valueFormatter: ({ value, colDef }) =>
-      (colDef.context?.options ?? []).find(
-        (o: { label: string; value: string }) => o.value === value,
-      )?.label ?? "",
+      findSelectOptionLabel(colDef.context?.options ?? [], value),
     cellEditor: ({
       colDef,
       options: paramsOptions,
@@ -150,7 +194,7 @@ export const columnTypes: AgGridReactProps["columnTypes"] = {
       onValueChange,
     }: CustomCellEditorProps & {
       searchable?: boolean;
-      options?: { label: string; value: string }[];
+      options?: SelectColumnOptions;
     }) => {
       const options = paramsOptions ?? colDef.context?.options ?? [];
       const ref = useRef<HTMLInputElement>(null);

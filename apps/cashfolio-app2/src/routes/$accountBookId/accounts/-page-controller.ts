@@ -252,6 +252,7 @@ export function useAccountsPageController(args: {
     rows: loaderRows,
     existingNodes,
     referenceCurrency,
+    unitUsage,
   } = args.loaderData;
 
   const gridApiRef = useRef<GridApi<AccountsGridRow> | null>(null);
@@ -383,6 +384,7 @@ export function useAccountsPageController(args: {
     tabs,
     accountGroups,
     existingNodes,
+    unitUsage,
     rows,
     columnDefs,
     onGridReady: handleGridReady,

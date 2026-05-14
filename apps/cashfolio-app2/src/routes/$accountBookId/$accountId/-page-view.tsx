@@ -35,6 +35,7 @@ import { TopPageHeader } from "@/components/top-page-header";
 import { PageShell } from "@/components/page-shell";
 import type { ReactNode } from "react";
 import type { Unit } from "@/.prisma-client/enums";
+import type { AccountBookUnitUsage } from "@/shared/account-book-unit-usage";
 import { getTypeLabel } from "@/shared/account-utils";
 import type { TabValue } from "@/shared/account-tabs";
 import type { SimpleTransactionEditInitialValues } from "./-page-data";
@@ -124,6 +125,7 @@ export type LedgerPageViewProps = {
   rebooking?: RebookingState;
   rebookModalOpened: boolean;
   hasCompleteBookingUnit: boolean;
+  unitUsage: AccountBookUnitUsage;
   accountOptions: AccountOption[];
   editAccountOptions: AccountOption[];
   simpleCounterAccountOptions: AccountOption[];
@@ -209,6 +211,7 @@ export function LedgerPageView({
   rebooking,
   rebookModalOpened,
   hasCompleteBookingUnit,
+  unitUsage,
   accountOptions,
   editAccountOptions,
   simpleCounterAccountOptions,
@@ -400,6 +403,7 @@ export function LedgerPageView({
           accounts={accountOptions}
           currentAccountId={account.id}
           accountBookStartDate={accountBookStartDate}
+          unitUsage={unitUsage}
           onClose={() => {
             if (isCreateSplitSubmitting) return;
             onCloseSplitModal();
@@ -445,6 +449,7 @@ export function LedgerPageView({
             accounts={editAccountOptions}
             currentAccountId={account.id}
             accountBookStartDate={accountBookStartDate}
+            unitUsage={unitUsage}
             onClose={() => {
               if (isEditSubmitting) return;
               onCloseEditModal();

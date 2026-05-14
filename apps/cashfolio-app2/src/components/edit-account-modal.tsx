@@ -16,8 +16,7 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../.prisma-client/enums";
-import { cryptocurrencies } from "../cryptocurrencies";
-import { currencies } from "../currencies";
+import type { AccountBookUnitUsage } from "../shared/account-book-unit-usage";
 import {
   validateAccountName,
   validateAccountUnit,
@@ -29,6 +28,7 @@ import {
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 import { FormattedNumberInput } from "./formatted-number-input";
 import { GroupTreeSelect, type GroupTreeOption } from "./group-tree-select";
+import { CryptocurrencySelect, CurrencySelect } from "./unit-select";
 
 type FormValues = {
   name?: string;
@@ -117,6 +117,7 @@ export function EditAccountModal({
   existingNodes,
   editingId,
   typeDescriptor,
+  unitUsage,
 }: {
   opened: boolean;
   onClose: () => void;
@@ -130,6 +131,7 @@ export function EditAccountModal({
   existingNodes?: ExistingNode[];
   editingId?: string;
   typeDescriptor: FormValues["typeDescriptor"];
+  unitUsage?: AccountBookUnitUsage;
 }) {
   const isEdit = !!initialValues;
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
@@ -348,23 +350,23 @@ export function EditAccountModal({
                 </Grid.Col>
                 {unit === Unit.CURRENCY ? (
                   <Grid.Col span={3} key={Unit.CURRENCY}>
-                    <Select
+                    <CurrencySelect
                       label="Currency"
                       withAsterisk
                       withAlignedLabels
-                      searchable
-                      data={Object.keys(currencies)}
+                      unitUsage={unitUsage}
+                      selectedCurrencies={[initialValues?.currency]}
                       {...form.getInputProps("currency")}
                     />
                   </Grid.Col>
                 ) : unit === Unit.CRYPTOCURRENCY ? (
                   <Grid.Col span={3} key={Unit.CRYPTOCURRENCY}>
-                    <Select
+                    <CryptocurrencySelect
                       label="Cryptocurrency"
                       withAsterisk
                       withAlignedLabels
-                      searchable
-                      data={Object.keys(cryptocurrencies)}
+                      unitUsage={unitUsage}
+                      selectedCryptocurrencies={[initialValues?.cryptocurrency]}
                       {...form.getInputProps("cryptocurrency")}
                     />
                   </Grid.Col>
@@ -378,12 +380,12 @@ export function EditAccountModal({
                       />
                     </Grid.Col>
                     <Grid.Col span={3}>
-                      <Select
+                      <CurrencySelect
                         label="Trade Currency"
                         withAsterisk
                         withAlignedLabels
-                        searchable
-                        data={Object.keys(currencies)}
+                        unitUsage={unitUsage}
+                        selectedCurrencies={[initialValues?.tradeCurrency]}
                         {...form.getInputProps("tradeCurrency")}
                       />
                     </Grid.Col>

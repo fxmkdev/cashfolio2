@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import type { TransformedFormValues } from "@/components/edit-account-modal";
 import type { SimpleTransactionDraftValues } from "@/components/simple-transaction-modal";
+import { createAccountBookUnitUsage } from "@/shared/account-book-unit-usage";
 import {
   getSystemManagedAccountSubtypeMessage,
   isSystemManagedEquitySubtype,
@@ -49,6 +50,14 @@ export function useLedgerPageController(args: {
 }): Omit<LedgerPageViewProps, "accountBookId" | "onRowDataUpdated"> {
   const { account, accounts, accountGroups, accountTreeRow, existingNodes } =
     args.loaderData;
+  const unitUsage = useMemo(
+    () =>
+      createAccountBookUnitUsage({
+        referenceCurrency: args.loaderData.referenceCurrency,
+        accounts,
+      }),
+    [accounts, args.loaderData.referenceCurrency],
+  );
 
   const [modalOpened, setModalOpened] = useState(false);
   const [accountEditModalOpened, setAccountEditModalOpened] = useState(false);
@@ -356,6 +365,7 @@ export function useLedgerPageController(args: {
     rebooking,
     rebookModalOpened,
     hasCompleteBookingUnit,
+    unitUsage,
     accountOptions,
     editAccountOptions,
     simpleCounterAccountOptions,

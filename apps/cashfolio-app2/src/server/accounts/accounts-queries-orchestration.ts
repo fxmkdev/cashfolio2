@@ -19,6 +19,10 @@ import {
   getDisplayBalanceInReferenceCurrencyByAccountId,
 } from "./accounts-queries-reference-balances";
 import {
+  createAccountBookUnitUsage,
+  type AccountBookUnitUsage,
+} from "../../shared/account-book-unit-usage";
+import {
   fetchAccountReferenceBalancesQueryData,
   fetchAccountTreeQueryData,
 } from "./accounts-queries-tree-data";
@@ -140,6 +144,34 @@ export async function queryExistingNodes(accountBookId: string) {
       }),
     ),
   ];
+}
+
+export async function queryActiveAccountBookUnitUsage(
+  accountBookId: string,
+): Promise<AccountBookUnitUsage> {
+  const [accountBook, accounts] = await Promise.all([
+    prisma.accountBook.findUniqueOrThrow({
+      where: { id: accountBookId },
+      select: { referenceCurrency: true },
+    }),
+    prisma.account.findMany({
+      where: {
+        accountBookId,
+        isActive: true,
+      },
+      select: {
+        isActive: true,
+        currency: true,
+        cryptocurrency: true,
+        tradeCurrency: true,
+      },
+    }),
+  ]);
+
+  return createAccountBookUnitUsage({
+    referenceCurrency: accountBook.referenceCurrency,
+    accounts,
+  });
 }
 
 export async function queryAccountTreeData(data: AccountTreeDataInput) {
@@ -423,26 +455,30 @@ export async function queryAccountReferenceBalances(
 export async function queryAccountsPageData(data: AccountsPageDataInput) {
   const accountState = data.accountState ?? "active";
 
-  const [treeData, accountGroups, existingNodes] = await Promise.all([
-    queryAccountTreeData({
-      accountBookId: data.accountBookId,
-      accountState,
-      type: data.type,
-      equityAccountSubtype: data.equityAccountSubtype,
-      includeReferenceBalances: false,
-    }),
-    accountState === "active"
-      ? queryAccountGroups(data.accountBookId)
-      : Promise.resolve([]),
-    accountState === "active"
-      ? queryExistingNodes(data.accountBookId)
-      : Promise.resolve([]),
-  ]);
+  const [treeData, accountGroups, existingNodes, unitUsage] = await Promise.all(
+    [
+      queryAccountTreeData({
+        accountBookId: data.accountBookId,
+        accountState,
+        type: data.type,
+        equityAccountSubtype: data.equityAccountSubtype,
+        includeReferenceBalances: false,
+      }),
+      accountState === "active"
+        ? queryAccountGroups(data.accountBookId)
+        : Promise.resolve([]),
+      accountState === "active"
+        ? queryExistingNodes(data.accountBookId)
+        : Promise.resolve([]),
+      queryActiveAccountBookUnitUsage(data.accountBookId),
+    ],
+  );
 
   return {
     accountGroups,
     existingNodes,
     referenceCurrency: treeData.referenceCurrency,
+    unitUsage,
     rows: treeData.rows,
   };
 }

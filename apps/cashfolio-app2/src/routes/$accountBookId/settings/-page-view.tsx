@@ -3,7 +3,6 @@ import {
   Divider,
   Group,
   Modal,
-  Select,
   Stack,
   Text,
   TextInput,
@@ -12,11 +11,11 @@ import {
 import { DateInput } from "@mantine/dates";
 import { type UseFormReturnType, useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { IconAlertTriangle, IconCheck, IconTrash } from "@tabler/icons-react";
 import { PageShell } from "@/components/page-shell";
 import { TopPageHeader } from "@/components/top-page-header";
-import { currencies } from "@/currencies";
+import { CurrencySelect } from "@/components/unit-select";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import { normalizeDateInputValue, startOfUtcDay } from "@/shared/date";
 import type { loadAccountBookSettingsPageData } from "./-page-loader";
@@ -30,15 +29,6 @@ type AccountBookSettingsFormValues = {
   referenceCurrency: string | null;
   startDate: Date | string | null;
 };
-
-function getCurrencyOptions() {
-  return Object.entries(currencies)
-    .map(([code, label]) => ({
-      value: code,
-      label: `${code} - ${label}`,
-    }))
-    .sort((left, right) => left.value.localeCompare(right.value));
-}
 
 function validateStartDate(value: Date | string | null) {
   const startDate = normalizeDateInputValue(value);
@@ -85,7 +75,7 @@ function SettingsFormFields(args: {
   form: UseFormReturnType<AccountBookSettingsFormValues>;
   isSubmitting: boolean;
   submitError: string | null;
-  currencyOptions: { value: string; label: string }[];
+  settings: AccountBookSettingsPageData;
 }) {
   return (
     <Stack gap="md">
@@ -96,13 +86,13 @@ function SettingsFormFields(args: {
         {...args.form.getInputProps("name")}
       />
 
-      <Select
+      <CurrencySelect
         label="Reference Currency"
         withAsterisk
-        searchable
         allowDeselect={false}
         disabled={args.isSubmitting}
-        data={args.currencyOptions}
+        unitUsage={args.settings.unitUsage}
+        selectedCurrencies={[args.form.values.referenceCurrency]}
         {...args.form.getInputProps("referenceCurrency")}
       />
 
@@ -281,8 +271,6 @@ export function AccountBookSettingsPageView(args: {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
 
-  const currencyOptions = useMemo(() => getCurrencyOptions(), []);
-
   const form = useForm<AccountBookSettingsFormValues>({
     mode: "controlled",
     initialValues: {
@@ -344,7 +332,7 @@ export function AccountBookSettingsPageView(args: {
           form={form}
           isSubmitting={isSubmitting}
           submitError={submitError}
-          currencyOptions={currencyOptions}
+          settings={settings}
         />
       </form>
 

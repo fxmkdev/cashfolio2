@@ -47,6 +47,7 @@ export type AccountsPageViewProps = {
   tabs: readonly { value: TabValue; label: string }[];
   accountGroups: AccountsPageLoaderData["accountGroups"];
   existingNodes: AccountsPageLoaderData["existingNodes"];
+  unitUsage: AccountsPageLoaderData["unitUsage"];
   rows: TreeRow[];
   columnDefs: NonNullable<AgGridReactProps<AccountsGridRow>["columnDefs"]>;
   onGridReady?: AgGridReactProps<AccountsGridRow>["onGridReady"];
@@ -97,6 +98,7 @@ export function AccountsPageView({
   tabs,
   accountGroups,
   existingNodes,
+  unitUsage,
   rows,
   columnDefs,
   onGridReady,
@@ -232,6 +234,7 @@ export function AccountsPageView({
             opened={createModalOpened}
             onClose={onCloseCreateAccount}
             accountGroups={accountGroups}
+            unitUsage={unitUsage}
             onSubmit={onSubmitCreateAccount}
             existingNodes={existingNodes}
             typeDescriptor={tab}
@@ -265,6 +268,7 @@ export function AccountsPageView({
         onClose={onCloseEditAccount}
         onExitTransitionEnd={onClearEditingAccount}
         accountGroups={accountGroups}
+        unitUsage={unitUsage}
         onSubmit={onSubmitUpdateAccount}
         initialValues={editingAccount?.initialValues}
         existingNodes={existingNodes}

@@ -1,9 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getAccountBookSettings = vi.hoisted(() => vi.fn());
+const getActiveAccountBookUnitUsage = vi.hoisted(() => vi.fn());
 
 vi.mock("@/server/account-books", () => ({
   getAccountBookSettings,
+}));
+
+vi.mock("@/server/accounts", () => ({
+  getActiveAccountBookUnitUsage,
 }));
 
 import { loadAccountBookSettingsPageData } from "./-page-loader";
@@ -16,6 +21,11 @@ describe("loadAccountBookSettingsPageData", () => {
       name: "My Book",
       referenceCurrency: "CHF",
       startDate: "2026-01-01T00:00:00.000Z",
+    });
+    getActiveAccountBookUnitUsage.mockReset();
+    getActiveAccountBookUnitUsage.mockResolvedValue({
+      currencies: ["CHF", "USD"],
+      cryptocurrencies: ["BTC"],
     });
   });
 
@@ -30,10 +40,17 @@ describe("loadAccountBookSettingsPageData", () => {
         accountBookId: "book-1",
       },
     });
+    expect(getActiveAccountBookUnitUsage).toHaveBeenCalledTimes(1);
+    expect(getActiveAccountBookUnitUsage).toHaveBeenCalledWith({
+      data: {
+        accountBookId: "book-1",
+      },
+    });
     expect(result).toEqual({
       id: "book-1",
       name: "My Book",
       referenceCurrency: "CHF",
+      unitUsage: { currencies: ["CHF", "USD"], cryptocurrencies: ["BTC"] },
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
   });

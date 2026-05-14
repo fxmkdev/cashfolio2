@@ -8,6 +8,7 @@ import {
   type AccountsPageDataInput,
   type AccountTreeDataInput,
   type LedgerAccountActionDataInput,
+  queryActiveAccountBookUnitUsage,
   queryAccountGroups,
   queryAccountReferenceBalances,
   queryAccountsPageData,
@@ -62,6 +63,13 @@ export const getExistingNodes = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     return queryExistingNodes(data.accountBookId);
+  });
+
+export const getActiveAccountBookUnitUsage = createServerFn({ method: "GET" })
+  .inputValidator((data: { accountBookId: string }) => data)
+  .handler(async ({ data }) => {
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
+    return queryActiveAccountBookUnitUsage(data.accountBookId);
   });
 
 export const getAccountTreeData = createServerFn({ method: "GET" })

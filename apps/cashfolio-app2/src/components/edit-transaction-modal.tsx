@@ -9,6 +9,7 @@ import { isAfter, parse, startOfDay } from "date-fns";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Unit } from "../.prisma-client/enums";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
+import type { AccountBookUnitUsage } from "../shared/account-book-unit-usage";
 import { isExpenseAccount, isIncomeAccount } from "../shared/account-utils";
 import {
   formatUtcDate,
@@ -43,6 +44,7 @@ export function EditTransactionModal({
   submitLabel,
   accounts,
   accountBookStartDate,
+  unitUsage,
   currentAccountId,
   onClose,
   onSubmittingChange,
@@ -55,6 +57,7 @@ export function EditTransactionModal({
   submitLabel?: string;
   accounts: AccountOption[];
   accountBookStartDate: Date;
+  unitUsage?: AccountBookUnitUsage;
   currentAccountId: string;
   onClose: () => void;
   onSubmittingChange?: (isSubmitting: boolean) => void;
@@ -209,8 +212,9 @@ export function EditTransactionModal({
         accounts,
         isSubmitting,
         accountBookStartDate: accountBookStartDay,
+        unitUsage,
       }),
-    [accountBookStartDay, accounts, isSubmitting],
+    [accountBookStartDay, accounts, isSubmitting, unitUsage],
   );
 
   useEffect(() => {
