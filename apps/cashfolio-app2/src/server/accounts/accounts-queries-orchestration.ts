@@ -64,6 +64,7 @@ export async function queryAccountGroups(accountBookId: string) {
       label: resolveGroupPath(group.id),
       type: group.type,
       equityAccountSubtype: group.equityAccountSubtype,
+      parentGroupId: group.parentGroupId,
     }))
     .toSorted((a, b) => a.label.localeCompare(b.label));
 }

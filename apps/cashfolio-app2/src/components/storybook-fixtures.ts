@@ -14,30 +14,35 @@ export const accountGroupOptions = [
     label: "Assets",
     type: AccountType.ASSET,
     equityAccountSubtype: null,
+    parentGroupId: null,
   },
   {
     value: "group-cash",
-    label: "Cash",
+    label: "Assets / Cash",
     type: AccountType.ASSET,
     equityAccountSubtype: null,
+    parentGroupId: "group-assets",
   },
   {
     value: "group-liabilities",
     label: "Liabilities",
     type: AccountType.LIABILITY,
     equityAccountSubtype: null,
+    parentGroupId: null,
   },
   {
     value: "group-income",
     label: "Income",
     type: AccountType.EQUITY,
     equityAccountSubtype: EquityAccountSubtype.INCOME,
+    parentGroupId: null,
   },
   {
     value: "group-expense",
     label: "Expense",
     type: AccountType.EQUITY,
     equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+    parentGroupId: null,
   },
 ];
 

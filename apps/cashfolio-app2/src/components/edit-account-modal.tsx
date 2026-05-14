@@ -28,6 +28,7 @@ import {
 } from "../shared/account-validation";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 import { FormattedNumberInput } from "./formatted-number-input";
+import { GroupTreeSelect, type GroupTreeOption } from "./group-tree-select";
 
 type FormValues = {
   name?: string;
@@ -120,12 +121,10 @@ export function EditAccountModal({
   opened: boolean;
   onClose: () => void;
   onExitTransitionEnd?: () => void;
-  accountGroups: {
-    value: string;
-    label: string;
+  accountGroups: (GroupTreeOption & {
     type: string;
     equityAccountSubtype: string | null;
-  }[];
+  })[];
   onSubmit: (values: TransformedFormValues) => void | Promise<void>;
   initialValues?: AccountInitialValues;
   existingNodes?: ExistingNode[];
@@ -296,12 +295,11 @@ export function EditAccountModal({
               />
             </Grid.Col>
             <Grid.Col span={9}>
-              <Select
+              <GroupTreeSelect
                 label="Group"
                 searchable
                 clearable
-                withAlignedLabels
-                data={accountGroups.filter(
+                groups={accountGroups.filter(
                   (g) =>
                     g.type === type &&
                     (!equityAccountSubtype ||
