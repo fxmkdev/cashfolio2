@@ -1,3 +1,10 @@
+import type { TransformedFormValues } from "@/components/edit-account-modal";
+import {
+  archiveAccount,
+  deleteAccount,
+  unarchiveAccount,
+  updateAccount,
+} from "@/server/accounts";
 import {
   createSimpleTransaction,
   createTransaction,
@@ -22,6 +29,13 @@ export type LedgerTransactionApi = {
   rebookBooking: typeof rebookBooking;
 };
 
+export type LedgerAccountApi = {
+  updateAccount: typeof updateAccount;
+  deleteAccount: typeof deleteAccount;
+  archiveAccount: typeof archiveAccount;
+  unarchiveAccount: typeof unarchiveAccount;
+};
+
 export type LedgerMutationState = {
   getEditingTransactionId: () => string | undefined;
   getDeletingTransaction: () => { id: string; description: string } | undefined;
@@ -38,6 +52,12 @@ export type LedgerMutationState = {
   setRebookModalOpened: (opened: boolean) => void;
 };
 
+export type LedgerAccountMutationState = {
+  setAccountEditModalOpened: (opened: boolean) => void;
+  setDeletingAccount: (deleting: boolean) => void;
+  setArchivingAccount: (archiving: boolean) => void;
+};
+
 const defaultTransactionApi: LedgerTransactionApi = {
   createSimpleTransaction,
   createTransaction,
@@ -45,6 +65,13 @@ const defaultTransactionApi: LedgerTransactionApi = {
   deleteTransaction,
   getTransaction,
   rebookBooking,
+};
+
+const defaultAccountApi: LedgerAccountApi = {
+  updateAccount,
+  deleteAccount,
+  archiveAccount,
+  unarchiveAccount,
 };
 
 export function createLedgerMutationActions(args: {
@@ -130,5 +157,64 @@ export function createLedgerMutationActions(args: {
 
     getTransaction: api.getTransaction,
     updateTransaction: api.updateTransaction,
+  };
+}
+
+export function createLedgerAccountMutationActions(args: {
+  accountBookId: string;
+  accountId: string;
+  invalidate: () => void;
+  onAccountDeleted: () => void | Promise<void>;
+  state: LedgerAccountMutationState;
+  api?: LedgerAccountApi;
+}) {
+  const api = args.api ?? defaultAccountApi;
+
+  return {
+    async handleUpdateAccount(values: TransformedFormValues) {
+      await api.updateAccount({
+        data: {
+          id: args.accountId,
+          accountBookId: args.accountBookId,
+          name: values.name!,
+          type: values.type,
+          equityAccountSubtype: values.equityAccountSubtype,
+          groupId: values.groupId,
+          sortOrder: values.sortOrder,
+          unit: values.unit,
+          currency: values.currency,
+          cryptocurrency: values.cryptocurrency,
+          symbol: values.symbol,
+          tradeCurrency: values.tradeCurrency,
+          openingBalance: values.openingBalance,
+        },
+      });
+      args.state.setAccountEditModalOpened(false);
+      args.invalidate();
+    },
+
+    async handleArchiveAccount() {
+      await api.archiveAccount({
+        data: { id: args.accountId, accountBookId: args.accountBookId },
+      });
+      args.state.setArchivingAccount(false);
+      args.invalidate();
+    },
+
+    async handleUnarchiveAccount() {
+      await api.unarchiveAccount({
+        data: { id: args.accountId, accountBookId: args.accountBookId },
+      });
+      args.invalidate();
+    },
+
+    async handleDeleteAccount() {
+      await api.deleteAccount({
+        data: { id: args.accountId, accountBookId: args.accountBookId },
+      });
+      args.state.setDeletingAccount(false);
+      await args.onAccountDeleted();
+      args.invalidate();
+    },
   };
 }

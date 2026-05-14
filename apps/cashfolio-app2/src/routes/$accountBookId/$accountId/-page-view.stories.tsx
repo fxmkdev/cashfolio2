@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Box, Text } from "@mantine/core";
 import { useEffect, useMemo, useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 import {
   accountOptions as baseAccountOptions,
@@ -117,6 +117,8 @@ function LedgerPageStoryHarness({
   startWithSimpleModal = false,
   startWithSplitModal = false,
   startWithEditModal = false,
+  accountActive = true,
+  accountActionsDisabled = false,
 }: {
   routeSmoke?: boolean;
   includePeriodFilterControls?: boolean;
@@ -124,7 +126,16 @@ function LedgerPageStoryHarness({
   startWithSimpleModal?: boolean;
   startWithSplitModal?: boolean;
   startWithEditModal?: boolean;
+  accountActive?: boolean;
+  accountActionsDisabled?: boolean;
 }) {
+  const [accountEditModalOpened, setAccountEditModalOpened] = useState(false);
+  const [archivingAccount, setArchivingAccount] = useState<
+    { id: string; name: string } | undefined
+  >();
+  const [deletingAccount, setDeletingAccount] = useState<
+    { id: string; name: string } | undefined
+  >();
   const [simpleModalOpened, setSimpleModalOpened] =
     useState(startWithSimpleModal);
   const [splitModalOpened, setSplitModalOpened] = useState(startWithSplitModal);
@@ -202,10 +213,11 @@ function LedgerPageStoryHarness({
           ...assetAccount,
           id: "account-equity",
           name: "Retained Earnings",
+          isActive: accountActive,
           type: AccountType.EQUITY,
           groupPathSegments: ["Equity"],
         }
-      : assetAccount;
+      : { ...assetAccount, isActive: accountActive };
 
   const setPeriodFilter = (nextPeriodValue: string | undefined) => {
     navigate({
@@ -254,6 +266,8 @@ function LedgerPageStoryHarness({
         accountBookId="storybook-book"
         backTab="ASSET"
         account={account}
+        accountGroups={[]}
+        existingNodes={[]}
         rows={rows}
         columnDefs={columnDefs}
         currentAccountLabel="Asset / Cash / Checking"
@@ -262,6 +276,20 @@ function LedgerPageStoryHarness({
         simpleTransactionDisabledReason={null}
         simpleModalOpened={simpleModalOpened}
         splitModalOpened={splitModalOpened}
+        accountEditModalOpened={accountEditModalOpened}
+        accountEditInitialValues={{
+          name: account.name,
+          type: account.type,
+          equityAccountSubtype: account.equityAccountSubtype,
+          groupId: undefined,
+          sortOrder: undefined,
+          unit: account.unit,
+          currency: account.currency,
+          cryptocurrency: account.cryptocurrency,
+          symbol: account.symbol,
+          tradeCurrency: account.tradeCurrency,
+          openingBalance: 1000,
+        }}
         editModalOpened={editModalOpened}
         isSimpleSubmitting={isSimpleSubmitting}
         isCreateSplitSubmitting={isCreateSplitSubmitting}
@@ -271,6 +299,8 @@ function LedgerPageStoryHarness({
         createSplitInitialValues={createSplitInitialValues}
         editingTransactionData={editingTransactionData}
         editingSimpleInitialValues={editingSimpleInitialValues}
+        deletingAccount={deletingAccount}
+        archivingAccount={archivingAccount}
         deletingTransaction={deletingTransaction}
         rebooking={rebooking}
         rebookModalOpened={rebookModalOpened}
@@ -282,6 +312,24 @@ function LedgerPageStoryHarness({
         rebookTargetAccountOptions={[
           { value: "account-groceries", label: "Groceries (Expense)" },
         ]}
+        accountArchivable={accountActive && !accountActionsDisabled}
+        accountArchiveLabel={
+          accountActionsDisabled
+            ? "Cannot archive account because its balance is not 0"
+            : "Archive"
+        }
+        accountUnarchivable={!accountActive && !accountActionsDisabled}
+        accountUnarchiveLabel={
+          accountActionsDisabled
+            ? "Cannot unarchive account because its parent group is archived"
+            : "Unarchive"
+        }
+        accountDeletable={!accountActionsDisabled}
+        accountDeleteLabel={
+          accountActionsDisabled
+            ? "Cannot delete account because it has bookings"
+            : "Delete"
+        }
         periodFilterControls={
           includePeriodFilterControls ? (
             <LedgerPeriodFilterCard
@@ -379,6 +427,26 @@ function LedgerPageStoryHarness({
           ) : undefined
         }
         onRowDataUpdated={() => undefined}
+        onOpenAccountEdit={() => setAccountEditModalOpened(true)}
+        onCloseAccountEdit={() => setAccountEditModalOpened(false)}
+        onSubmitUpdateAccount={async () => {
+          setAccountEditModalOpened(false);
+        }}
+        onOpenArchiveAccount={() =>
+          setArchivingAccount({ id: account.id, name: account.name })
+        }
+        onCloseArchiveAccount={() => setArchivingAccount(undefined)}
+        onConfirmArchiveAccount={async () => {
+          setArchivingAccount(undefined);
+        }}
+        onUnarchiveAccount={async () => undefined}
+        onOpenDeleteAccount={() =>
+          setDeletingAccount({ id: account.id, name: account.name })
+        }
+        onCloseDeleteAccount={() => setDeletingAccount(undefined)}
+        onConfirmDeleteAccount={async () => {
+          setDeletingAccount(undefined);
+        }}
         onAddTransactionClick={() => {
           setSplitModalOpened(false);
           setSimpleModalOpened(true);
@@ -454,6 +522,64 @@ type Story = StoryObj<typeof meta>;
 
 export const HappyPath: Story = {
   render: () => <LedgerPageStoryHarness />,
+};
+
+export const AccountActionsMenu: Story = {
+  render: () => <LedgerPageStoryHarness />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Account actions" }),
+    );
+
+    await expect(
+      screen.getByRole("menuitem", { name: "Archive" }),
+    ).toBeVisible();
+    await expect(
+      screen.getByRole("menuitem", { name: "Delete" }),
+    ).toBeVisible();
+  },
+};
+
+export const ArchivedAccountActionsMenu: Story = {
+  render: () => <LedgerPageStoryHarness accountActive={false} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Account actions" }),
+    );
+
+    await expect(
+      screen.getByRole("menuitem", { name: "Unarchive" }),
+    ).toBeVisible();
+    await expect(
+      screen.getByRole("menuitem", { name: "Delete" }),
+    ).toBeVisible();
+  },
+};
+
+export const DisabledAccountActionsMenu: Story = {
+  render: () => <LedgerPageStoryHarness accountActionsDisabled={true} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Account actions" }),
+    );
+
+    await expect(
+      screen.getByRole("menuitem", {
+        name: "Cannot archive account because its balance is not 0",
+      }),
+    ).toBeVisible();
+    await expect(
+      screen.getByRole("menuitem", {
+        name: "Cannot delete account because it has bookings",
+      }),
+    ).toBeVisible();
+  },
 };
 
 export const SimpleModalState: Story = {

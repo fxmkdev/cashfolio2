@@ -120,6 +120,15 @@ submit UX and prevent duplicate requests.
 - Pass heading content through `heading`, optional badges/chips through
   `headingAccessory`, and page actions through `actions`.
 
+## Split Button Pattern
+
+- Use `SplitButton` (`src/components/split-button.tsx`) when a page-level action
+  has one primary command and a small set of related secondary commands.
+- Keep the primary command on the main button and put secondary/destructive
+  commands in the menu.
+- Disabled menu items should remain visible and use the disabled-reason copy as
+  the item label.
+
 ## Breadcrumbs Pattern
 
 - Use `getAccountsBreadcrumbSegments`

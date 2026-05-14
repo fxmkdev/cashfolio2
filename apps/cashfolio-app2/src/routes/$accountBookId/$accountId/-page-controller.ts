@@ -1,6 +1,11 @@
 import { useCallback, useMemo, useState } from "react";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
+import type { TransformedFormValues } from "@/components/edit-account-modal";
 import type { SimpleTransactionDraftValues } from "@/components/simple-transaction-modal";
+import {
+  getSystemManagedAccountSubtypeMessage,
+  isSystemManagedEquitySubtype,
+} from "@/shared/system-managed-equity-subtypes";
 import { useLedgerColumnDefs } from "./-page-columns";
 import { useLedgerAccountOptions } from "./-page-account-options";
 import {
@@ -15,6 +20,7 @@ import {
 } from "./-page-edit-flow";
 import type { loadLedgerPageData } from "./-page-loader";
 import {
+  createLedgerAccountMutationActions,
   createLedgerMutationActions,
   type LedgerTransactionApi,
 } from "./-page-mutation-actions";
@@ -36,10 +42,18 @@ export function useLedgerPageController(args: {
   selectedPeriodValue?: string;
   pendingScrollRef: { current: string | undefined };
   invalidate: () => void;
+  onAccountDeleted: (args: {
+    tab: LedgerPageViewProps["backTab"];
+    mode: "active" | "archived";
+  }) => void | Promise<void>;
 }): Omit<LedgerPageViewProps, "accountBookId" | "onRowDataUpdated"> {
-  const { account, accounts } = args.loaderData;
+  const { account, accounts, accountGroups, accountTreeRow, existingNodes } =
+    args.loaderData;
 
   const [modalOpened, setModalOpened] = useState(false);
+  const [accountEditModalOpened, setAccountEditModalOpened] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [archivingAccount, setArchivingAccount] = useState(false);
   const [simpleModalOpened, setSimpleModalOpened] = useState(false);
   const [editModalOpened, setEditModalOpened] = useState(false);
   const [isCreateSplitSubmitting, setIsCreateSplitSubmitting] = useState(false);
@@ -254,10 +268,73 @@ export function useLedgerPageController(args: {
       ? `EQUITY-${account.equityAccountSubtype}`
       : account.type
   ) as "ASSET" | "LIABILITY" | `EQUITY-${EquityAccountSubtype}`;
+  const accountActions = createLedgerAccountMutationActions({
+    accountBookId: args.accountBookId,
+    accountId: account.id,
+    invalidate: args.invalidate,
+    onAccountDeleted: () =>
+      args.onAccountDeleted({
+        tab: backTab,
+        mode: account.isActive ? "active" : "archived",
+      }),
+    state: {
+      setAccountEditModalOpened,
+      setDeletingAccount,
+      setArchivingAccount,
+    },
+  });
+  const systemManagedAccountDisabledReason = isSystemManagedEquitySubtype(
+    account.equityAccountSubtype,
+  )
+    ? getSystemManagedAccountSubtypeMessage(account.equityAccountSubtype)
+    : undefined;
+  const accountEditInitialValues = useMemo(
+    () => ({
+      name: accountTreeRow.name,
+      type: accountTreeRow.type,
+      equityAccountSubtype: accountTreeRow.equityAccountSubtype,
+      groupId: accountTreeRow.groupId ?? undefined,
+      sortOrder: accountTreeRow.sortOrder ?? undefined,
+      unit: accountTreeRow.unit,
+      currency: accountTreeRow.currency,
+      cryptocurrency: accountTreeRow.cryptocurrency,
+      symbol: accountTreeRow.symbol,
+      tradeCurrency: accountTreeRow.tradeCurrency,
+      openingBalance: accountTreeRow.openingBalance,
+    }),
+    [accountTreeRow],
+  );
+  const accountArchiveDisabledReason =
+    systemManagedAccountDisabledReason ?? accountTreeRow.archiveDisabledReason;
+  const accountUnarchiveDisabledReason =
+    systemManagedAccountDisabledReason ??
+    accountTreeRow.unarchiveDisabledReason;
+  const accountDeleteDisabledReason =
+    systemManagedAccountDisabledReason ?? accountTreeRow.deleteDisabledReason;
 
   return {
     backTab,
     account,
+    accountGroups,
+    existingNodes,
+    accountEditModalOpened,
+    accountEditInitialValues,
+    accountEditDisabledReason: systemManagedAccountDisabledReason,
+    deletingAccount: deletingAccount
+      ? { id: account.id, name: account.name }
+      : undefined,
+    archivingAccount: archivingAccount
+      ? { id: account.id, name: account.name }
+      : undefined,
+    accountArchivable:
+      !systemManagedAccountDisabledReason && accountTreeRow.archivable,
+    accountArchiveLabel: accountArchiveDisabledReason ?? "Archive",
+    accountUnarchivable:
+      !systemManagedAccountDisabledReason && accountTreeRow.unarchivable,
+    accountUnarchiveLabel: accountUnarchiveDisabledReason ?? "Unarchive",
+    accountDeletable:
+      !systemManagedAccountDisabledReason && accountTreeRow.deletable,
+    accountDeleteLabel: accountDeleteDisabledReason ?? "Delete",
     rows,
     columnDefs,
     currentAccountLabel,
@@ -284,6 +361,17 @@ export function useLedgerPageController(args: {
     simpleCounterAccountOptions,
     editSimpleCounterAccountOptions,
     rebookTargetAccountOptions,
+    onOpenAccountEdit: () => setAccountEditModalOpened(true),
+    onCloseAccountEdit: () => setAccountEditModalOpened(false),
+    onSubmitUpdateAccount: (values: TransformedFormValues) =>
+      accountActions.handleUpdateAccount(values),
+    onOpenArchiveAccount: () => setArchivingAccount(true),
+    onCloseArchiveAccount: () => setArchivingAccount(false),
+    onConfirmArchiveAccount: accountActions.handleArchiveAccount,
+    onUnarchiveAccount: accountActions.handleUnarchiveAccount,
+    onOpenDeleteAccount: () => setDeletingAccount(true),
+    onCloseDeleteAccount: () => setDeletingAccount(false),
+    onConfirmDeleteAccount: accountActions.handleDeleteAccount,
     onAddTransactionClick: () => {
       setCreateSplitInitialValues(undefined);
       if (simpleTransactionDisabledReason) {

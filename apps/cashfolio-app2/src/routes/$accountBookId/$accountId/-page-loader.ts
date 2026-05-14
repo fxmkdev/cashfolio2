@@ -1,5 +1,10 @@
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
-import { getAccounts } from "@/server/accounts";
+import {
+  getAccountGroups,
+  getAccounts,
+  getAccountTreeData,
+  getExistingNodes,
+} from "@/server/accounts";
 import {
   getAccountForLedger,
   getLedgerData,
@@ -36,8 +41,16 @@ export async function loadLedgerPageData(args: {
   const shouldIncludeFirstBookingDate =
     account.type === AccountType.ASSET ||
     account.type === AccountType.LIABILITY;
+  const accountState = account.isActive ? "active" : "inactive";
 
-  const [ledgerData, accounts, periodBounds] = await Promise.all([
+  const [
+    ledgerData,
+    accounts,
+    periodBounds,
+    accountTreeData,
+    accountGroups,
+    existingNodes,
+  ] = await Promise.all([
     getLedgerData({
       data: {
         accountId: args.accountId,
@@ -60,10 +73,34 @@ export async function loadLedgerPageData(args: {
         accountBookId: args.accountBookId,
       },
     }),
+    getAccountTreeData({
+      data: {
+        accountBookId: args.accountBookId,
+        accountState,
+        type: account.type,
+        equityAccountSubtype: account.equityAccountSubtype ?? undefined,
+        includeReferenceBalances: false,
+      },
+    }),
+    getAccountGroups({
+      data: { accountBookId: args.accountBookId },
+    }),
+    getExistingNodes({
+      data: { accountBookId: args.accountBookId },
+    }),
   ]);
+  const accountTreeRow = accountTreeData.rows.find(
+    (row) => row.nodeType === "account" && row.id === args.accountId,
+  );
+  if (!accountTreeRow) {
+    throw new Error("Ledger account action data could not be loaded");
+  }
 
   return {
     account,
+    accountTreeRow,
+    accountGroups,
+    existingNodes,
     rows: ledgerData.rows,
     referenceCurrency: ledgerData.referenceCurrency,
     firstBookingDate: ledgerData.firstBookingDate,
