@@ -24,6 +24,7 @@ import {
 import type { AuthenticatedUserProfile } from "@/auth/user-profile";
 import type { UserAccountBookOption } from "@/server/home";
 import { markPendingAccountBookSwitch } from "./-account-book-switch-notification";
+import { ACCOUNT_BOOK_SIDEBAR_WIDTH } from "./-shell-dimensions";
 import type { AccountsMode, TabValue } from "./accounts/-page-types";
 
 const MenuItemLinkBase = forwardRef<
@@ -82,7 +83,10 @@ export function AccountBookSwitcherMenu({
       ?.name ?? accountBookId;
 
   return (
-    <Menu position="top-end" width={collapsed ? 260 : "target"}>
+    <Menu
+      position="top-end"
+      width={collapsed ? ACCOUNT_BOOK_SIDEBAR_WIDTH : "target"}
+    >
       <Menu.Target>
         {collapsed ? (
           <Tooltip label={currentAccountBookName} position="right">
@@ -104,7 +108,9 @@ export function AccountBookSwitcherMenu({
           </Button>
         )}
       </Menu.Target>
-      <Menu.Dropdown style={{ maxWidth: collapsed ? 260 : "100%" }}>
+      <Menu.Dropdown
+        style={{ maxWidth: collapsed ? ACCOUNT_BOOK_SIDEBAR_WIDTH : "100%" }}
+      >
         {accountBooks.map((accountBook) => {
           const isCurrentBook = accountBook.id === accountBookId;
 
@@ -165,7 +171,10 @@ export function UserMenu({
   userProfile: AuthenticatedUserProfile;
 }) {
   return (
-    <Menu position="top-end" width={collapsed ? 260 : "target"}>
+    <Menu
+      position="top-end"
+      width={collapsed ? ACCOUNT_BOOK_SIDEBAR_WIDTH : "target"}
+    >
       <Menu.Target>
         {collapsed ? (
           <Tooltip label={userProfile.displayName} position="right">
@@ -194,7 +203,9 @@ export function UserMenu({
           </Button>
         )}
       </Menu.Target>
-      <Menu.Dropdown style={{ maxWidth: collapsed ? 260 : "100%" }}>
+      <Menu.Dropdown
+        style={{ maxWidth: collapsed ? ACCOUNT_BOOK_SIDEBAR_WIDTH : "100%" }}
+      >
         <LinkMenuItem
           leftSection={<IconUserCog size={16} />}
           to="/$accountBookId/user-settings"

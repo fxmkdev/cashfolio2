@@ -32,6 +32,10 @@ import {
   UserMenu,
 } from "./-account-book-switcher-menu";
 import {
+  ACCOUNT_BOOK_RAIL_WIDTH,
+  ACCOUNT_BOOK_SIDEBAR_WIDTH,
+} from "./-shell-dimensions";
+import {
   parseAccountsSearch,
   tabs,
   type AccountsMode,
@@ -376,7 +380,9 @@ export function AccountBookShell({
         collapsed: false,
       }}
       navbar={{
-        width: desktopRailCollapsed ? 64 : 260,
+        width: desktopRailCollapsed
+          ? ACCOUNT_BOOK_RAIL_WIDTH
+          : ACCOUNT_BOOK_SIDEBAR_WIDTH,
         breakpoint: "sm",
         collapsed: { mobile: !mobileOpened, desktop: false },
       }}
