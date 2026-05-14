@@ -313,7 +313,7 @@ describe("getAccountsPageData", () => {
 
     expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledTimes(1);
     expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-3");
-    expect(prisma.account.findMany).toHaveBeenCalledTimes(2);
+    expect(prisma.account.findMany).toHaveBeenCalledTimes(1);
     expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
     expect(result).toEqual({
       accountGroups: [],

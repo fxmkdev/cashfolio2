@@ -474,7 +474,9 @@ export async function queryAccountsPageData(data: AccountsPageDataInput) {
       accountState === "active"
         ? queryExistingNodes(data.accountBookId)
         : Promise.resolve([]),
-      queryActiveAccountUnitUsageAccounts(data.accountBookId),
+      accountState === "active"
+        ? queryActiveAccountUnitUsageAccounts(data.accountBookId)
+        : Promise.resolve([]),
     ]);
   const unitUsage = createAccountBookUnitUsage({
     referenceCurrency: treeData.referenceCurrency,

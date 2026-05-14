@@ -31,10 +31,15 @@ describe("buildCurrencySelectData", () => {
       selectedCurrencies: ["XTS"],
     });
 
-    expect(data.find((group) => group.group === "Others")?.items[0]).toEqual({
+    const otherItems =
+      data.find((group) => group.group === "Others")?.items ?? [];
+    expect(otherItems).toContainEqual({
       value: "XTS",
       label: "XTS",
     });
+    expect(otherItems.map((item) => item.value)).toEqual(
+      otherItems.map((item) => item.value).toSorted(),
+    );
   });
 
   test("returns a valid Others-only list when no values are used", () => {

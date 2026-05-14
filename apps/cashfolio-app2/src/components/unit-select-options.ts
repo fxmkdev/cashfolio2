@@ -87,7 +87,9 @@ function buildGroupedUnitSelectData({
   const otherItems = [
     ...extraSelectedCodes,
     ...availableCodes.filter((code) => !usedCodeSet.has(code)),
-  ].map((code) => toOption(code, availableUnits, formatLabel));
+  ]
+    .toSorted((left, right) => left.localeCompare(right))
+    .map((code) => toOption(code, availableUnits, formatLabel));
   const groups: UnitSelectData = [];
 
   if (usedItems.length > 0) {

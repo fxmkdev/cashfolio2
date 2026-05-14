@@ -355,7 +355,7 @@ export function EditAccountModal({
                       withAsterisk
                       withAlignedLabels
                       unitUsage={unitUsage}
-                      selectedCurrencies={[initialValues?.currency]}
+                      selectedCurrency={initialValues?.currency}
                       compactLabels={false}
                       {...form.getInputProps("currency")}
                     />
@@ -367,7 +367,7 @@ export function EditAccountModal({
                       withAsterisk
                       withAlignedLabels
                       unitUsage={unitUsage}
-                      selectedCryptocurrencies={[initialValues?.cryptocurrency]}
+                      selectedCryptocurrency={initialValues?.cryptocurrency}
                       compactLabels={false}
                       {...form.getInputProps("cryptocurrency")}
                     />
@@ -387,7 +387,7 @@ export function EditAccountModal({
                         withAsterisk
                         withAlignedLabels
                         unitUsage={unitUsage}
-                        selectedCurrencies={[initialValues?.tradeCurrency]}
+                        selectedCurrency={initialValues?.tradeCurrency}
                         compactLabels={false}
                         {...form.getInputProps("tradeCurrency")}
                       />
