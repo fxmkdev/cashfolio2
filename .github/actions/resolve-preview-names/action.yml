@@ -75,9 +75,11 @@ runs:
         PREVIEW_URL="https://${PREVIEW_HOSTNAME}/"
         NEON_BRANCH_NAME="pr-${PR_NUMBER}-${SUFFIX}-cashfolio-app2"
 
-        echo "fly_app=${FLY_APP}" >> "$GITHUB_OUTPUT"
-        echo "fly_app_legacy=cashfolio-app2-pr-${PR_NUMBER}" >> "$GITHUB_OUTPUT"
-        echo "preview_hostname=${PREVIEW_HOSTNAME}" >> "$GITHUB_OUTPUT"
-        echo "preview_url=${PREVIEW_URL}" >> "$GITHUB_OUTPUT"
-        echo "neon_branch_name=${NEON_BRANCH_NAME}" >> "$GITHUB_OUTPUT"
-        echo "neon_branch_legacy=pr-${PR_NUMBER}-cashfolio-app2" >> "$GITHUB_OUTPUT"
+        {
+          echo "fly_app=${FLY_APP}"
+          echo "fly_app_legacy=cashfolio-app2-pr-${PR_NUMBER}"
+          echo "preview_hostname=${PREVIEW_HOSTNAME}"
+          echo "preview_url=${PREVIEW_URL}"
+          echo "neon_branch_name=${NEON_BRANCH_NAME}"
+          echo "neon_branch_legacy=pr-${PR_NUMBER}-cashfolio-app2"
+        } >> "$GITHUB_OUTPUT"
