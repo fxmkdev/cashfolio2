@@ -12,7 +12,7 @@ export function createTransactionFormInitialValues(args: {
     description?: string;
     bookings?: Omit<BookingValues, "key">[];
   };
-  currentAccountId: string;
+  currentAccountId?: string;
   currentAccount?: AccountOption;
 }): TransactionFormValues {
   return {

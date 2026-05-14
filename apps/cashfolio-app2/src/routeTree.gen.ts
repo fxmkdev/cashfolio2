@@ -17,9 +17,11 @@ import { Route as AccountBookIdValuationCacheRouteRouteImport } from './routes/$
 import { Route as AccountBookIdTimelineRouteRouteImport } from './routes/$accountBookId/timeline/route'
 import { Route as AccountBookIdSettingsRouteRouteImport } from './routes/$accountBookId/settings/route'
 import { Route as AccountBookIdPeriodRouteRouteImport } from './routes/$accountBookId/period/route'
+import { Route as AccountBookIdActivityRouteRouteImport } from './routes/$accountBookId/activity/route'
 import { Route as AccountBookIdAccountsRouteRouteImport } from './routes/$accountBookId/accounts/route'
 import { Route as AccountBookIdAccountIdRouteRouteImport } from './routes/$accountBookId/$accountId/route'
 import { Route as AccountBookIdPeriodIndexRouteImport } from './routes/$accountBookId/period/index'
+import { Route as AccountBookIdActivityIndexRouteImport } from './routes/$accountBookId/activity/index'
 import { Route as AccountBookIdAccountIdIndexRouteImport } from './routes/$accountBookId/$accountId/index'
 import { Route as ApiLogtoActionRouteImport } from './routes/api/logto/$action'
 import { Route as AccountBookIdPeriodGainsLossesAccountIdRouteRouteImport } from './routes/$accountBookId/period/gains-losses/$accountId/route'
@@ -68,6 +70,12 @@ const AccountBookIdPeriodRouteRoute =
     path: '/period',
     getParentRoute: () => AccountBookIdRouteRoute,
   } as any)
+const AccountBookIdActivityRouteRoute =
+  AccountBookIdActivityRouteRouteImport.update({
+    id: '/activity',
+    path: '/activity',
+    getParentRoute: () => AccountBookIdRouteRoute,
+  } as any)
 const AccountBookIdAccountsRouteRoute =
   AccountBookIdAccountsRouteRouteImport.update({
     id: '/accounts',
@@ -85,6 +93,12 @@ const AccountBookIdPeriodIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AccountBookIdPeriodRouteRoute,
+  } as any)
+const AccountBookIdActivityIndexRoute =
+  AccountBookIdActivityIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AccountBookIdActivityRouteRoute,
   } as any)
 const AccountBookIdAccountIdIndexRoute =
   AccountBookIdAccountIdIndexRouteImport.update({
@@ -109,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/$accountBookId': typeof AccountBookIdRouteRouteWithChildren
   '/$accountBookId/$accountId': typeof AccountBookIdAccountIdRouteRouteWithChildren
   '/$accountBookId/accounts': typeof AccountBookIdAccountsRouteRoute
+  '/$accountBookId/activity': typeof AccountBookIdActivityRouteRouteWithChildren
   '/$accountBookId/period': typeof AccountBookIdPeriodRouteRouteWithChildren
   '/$accountBookId/settings': typeof AccountBookIdSettingsRouteRoute
   '/$accountBookId/timeline': typeof AccountBookIdTimelineRouteRoute
@@ -117,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/$accountBookId/': typeof AccountBookIdIndexRoute
   '/api/logto/$action': typeof ApiLogtoActionRoute
   '/$accountBookId/$accountId/': typeof AccountBookIdAccountIdIndexRoute
+  '/$accountBookId/activity/': typeof AccountBookIdActivityIndexRoute
   '/$accountBookId/period/': typeof AccountBookIdPeriodIndexRoute
   '/$accountBookId/period/gains-losses/$accountId': typeof AccountBookIdPeriodGainsLossesAccountIdRouteRoute
 }
@@ -130,6 +146,7 @@ export interface FileRoutesByTo {
   '/$accountBookId': typeof AccountBookIdIndexRoute
   '/api/logto/$action': typeof ApiLogtoActionRoute
   '/$accountBookId/$accountId': typeof AccountBookIdAccountIdIndexRoute
+  '/$accountBookId/activity': typeof AccountBookIdActivityIndexRoute
   '/$accountBookId/period': typeof AccountBookIdPeriodIndexRoute
   '/$accountBookId/period/gains-losses/$accountId': typeof AccountBookIdPeriodGainsLossesAccountIdRouteRoute
 }
@@ -139,6 +156,7 @@ export interface FileRoutesById {
   '/$accountBookId': typeof AccountBookIdRouteRouteWithChildren
   '/$accountBookId/$accountId': typeof AccountBookIdAccountIdRouteRouteWithChildren
   '/$accountBookId/accounts': typeof AccountBookIdAccountsRouteRoute
+  '/$accountBookId/activity': typeof AccountBookIdActivityRouteRouteWithChildren
   '/$accountBookId/period': typeof AccountBookIdPeriodRouteRouteWithChildren
   '/$accountBookId/settings': typeof AccountBookIdSettingsRouteRoute
   '/$accountBookId/timeline': typeof AccountBookIdTimelineRouteRoute
@@ -147,6 +165,7 @@ export interface FileRoutesById {
   '/$accountBookId/': typeof AccountBookIdIndexRoute
   '/api/logto/$action': typeof ApiLogtoActionRoute
   '/$accountBookId/$accountId/': typeof AccountBookIdAccountIdIndexRoute
+  '/$accountBookId/activity/': typeof AccountBookIdActivityIndexRoute
   '/$accountBookId/period/': typeof AccountBookIdPeriodIndexRoute
   '/$accountBookId/period/gains-losses/$accountId': typeof AccountBookIdPeriodGainsLossesAccountIdRouteRoute
 }
@@ -157,6 +176,7 @@ export interface FileRouteTypes {
     | '/$accountBookId'
     | '/$accountBookId/$accountId'
     | '/$accountBookId/accounts'
+    | '/$accountBookId/activity'
     | '/$accountBookId/period'
     | '/$accountBookId/settings'
     | '/$accountBookId/timeline'
@@ -165,6 +185,7 @@ export interface FileRouteTypes {
     | '/$accountBookId/'
     | '/api/logto/$action'
     | '/$accountBookId/$accountId/'
+    | '/$accountBookId/activity/'
     | '/$accountBookId/period/'
     | '/$accountBookId/period/gains-losses/$accountId'
   fileRoutesByTo: FileRoutesByTo
@@ -178,6 +199,7 @@ export interface FileRouteTypes {
     | '/$accountBookId'
     | '/api/logto/$action'
     | '/$accountBookId/$accountId'
+    | '/$accountBookId/activity'
     | '/$accountBookId/period'
     | '/$accountBookId/period/gains-losses/$accountId'
   id:
@@ -186,6 +208,7 @@ export interface FileRouteTypes {
     | '/$accountBookId'
     | '/$accountBookId/$accountId'
     | '/$accountBookId/accounts'
+    | '/$accountBookId/activity'
     | '/$accountBookId/period'
     | '/$accountBookId/settings'
     | '/$accountBookId/timeline'
@@ -194,6 +217,7 @@ export interface FileRouteTypes {
     | '/$accountBookId/'
     | '/api/logto/$action'
     | '/$accountBookId/$accountId/'
+    | '/$accountBookId/activity/'
     | '/$accountBookId/period/'
     | '/$accountBookId/period/gains-losses/$accountId'
   fileRoutesById: FileRoutesById
@@ -263,6 +287,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountBookIdPeriodRouteRouteImport
       parentRoute: typeof AccountBookIdRouteRoute
     }
+    '/$accountBookId/activity': {
+      id: '/$accountBookId/activity'
+      path: '/activity'
+      fullPath: '/$accountBookId/activity'
+      preLoaderRoute: typeof AccountBookIdActivityRouteRouteImport
+      parentRoute: typeof AccountBookIdRouteRoute
+    }
     '/$accountBookId/accounts': {
       id: '/$accountBookId/accounts'
       path: '/accounts'
@@ -283,6 +314,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/$accountBookId/period/'
       preLoaderRoute: typeof AccountBookIdPeriodIndexRouteImport
       parentRoute: typeof AccountBookIdPeriodRouteRoute
+    }
+    '/$accountBookId/activity/': {
+      id: '/$accountBookId/activity/'
+      path: '/'
+      fullPath: '/$accountBookId/activity/'
+      preLoaderRoute: typeof AccountBookIdActivityIndexRouteImport
+      parentRoute: typeof AccountBookIdActivityRouteRoute
     }
     '/$accountBookId/$accountId/': {
       id: '/$accountBookId/$accountId/'
@@ -322,6 +360,20 @@ const AccountBookIdAccountIdRouteRouteWithChildren =
     AccountBookIdAccountIdRouteRouteChildren,
   )
 
+interface AccountBookIdActivityRouteRouteChildren {
+  AccountBookIdActivityIndexRoute: typeof AccountBookIdActivityIndexRoute
+}
+
+const AccountBookIdActivityRouteRouteChildren: AccountBookIdActivityRouteRouteChildren =
+  {
+    AccountBookIdActivityIndexRoute: AccountBookIdActivityIndexRoute,
+  }
+
+const AccountBookIdActivityRouteRouteWithChildren =
+  AccountBookIdActivityRouteRoute._addFileChildren(
+    AccountBookIdActivityRouteRouteChildren,
+  )
+
 interface AccountBookIdPeriodRouteRouteChildren {
   AccountBookIdPeriodIndexRoute: typeof AccountBookIdPeriodIndexRoute
   AccountBookIdPeriodGainsLossesAccountIdRouteRoute: typeof AccountBookIdPeriodGainsLossesAccountIdRouteRoute
@@ -342,6 +394,7 @@ const AccountBookIdPeriodRouteRouteWithChildren =
 interface AccountBookIdRouteRouteChildren {
   AccountBookIdAccountIdRouteRoute: typeof AccountBookIdAccountIdRouteRouteWithChildren
   AccountBookIdAccountsRouteRoute: typeof AccountBookIdAccountsRouteRoute
+  AccountBookIdActivityRouteRoute: typeof AccountBookIdActivityRouteRouteWithChildren
   AccountBookIdPeriodRouteRoute: typeof AccountBookIdPeriodRouteRouteWithChildren
   AccountBookIdSettingsRouteRoute: typeof AccountBookIdSettingsRouteRoute
   AccountBookIdTimelineRouteRoute: typeof AccountBookIdTimelineRouteRoute
@@ -353,6 +406,7 @@ const AccountBookIdRouteRouteChildren: AccountBookIdRouteRouteChildren = {
   AccountBookIdAccountIdRouteRoute:
     AccountBookIdAccountIdRouteRouteWithChildren,
   AccountBookIdAccountsRouteRoute: AccountBookIdAccountsRouteRoute,
+  AccountBookIdActivityRouteRoute: AccountBookIdActivityRouteRouteWithChildren,
   AccountBookIdPeriodRouteRoute: AccountBookIdPeriodRouteRouteWithChildren,
   AccountBookIdSettingsRouteRoute: AccountBookIdSettingsRouteRoute,
   AccountBookIdTimelineRouteRoute: AccountBookIdTimelineRouteRoute,

@@ -58,7 +58,7 @@ export function EditTransactionModal({
   accounts: AccountOption[];
   accountBookStartDate: Date;
   unitUsage?: AccountBookUnitUsage;
-  currentAccountId: string;
+  currentAccountId?: string;
   onClose: () => void;
   onSubmittingChange?: (isSubmitting: boolean) => void;
   onSubmit: (values: {
@@ -168,6 +168,7 @@ export function EditTransactionModal({
   }
 
   const lockedBookingKey = useMemo(() => {
+    if (!currentAccountId) return undefined;
     const first = form.values.bookings.find(
       (booking) => booking.account === currentAccountId,
     );
