@@ -317,7 +317,9 @@ single-account context.
 - **Columns**: Date, Account, Description, Ccy./Symbol, Debit/Credit in booking
   unit, Debit/Credit in reference currency, and row actions. No balance column.
 - **Period filter**: Uses the same explicit month/year filter control as the
-  account ledger, bounded by the account-book start date and today.
+  account ledger, bounded by the account-book start date and today. Direct
+  visits default to the current month so the page does not load the whole
+  account book by accident.
 - **Actions**: Add Transaction and Edit open the split transaction editor
   without a locked current account booking. Rebook excludes the clicked
   booking's current account.

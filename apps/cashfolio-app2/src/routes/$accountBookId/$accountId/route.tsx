@@ -17,7 +17,7 @@ import {
   loadLedgerPageData,
 } from "./-page-loader";
 import { useLedgerPageController } from "./-page-controller";
-import { LedgerPeriodFilterCard } from "./-period-filter-card";
+import { LedgerPeriodFilterCard } from "../-period-filter-card";
 import {
   parseLedgerExplicitPeriod,
   parseLedgerSearch,

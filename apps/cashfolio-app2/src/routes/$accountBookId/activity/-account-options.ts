@@ -6,7 +6,7 @@ import {
   isBookingValueCompatibleWithAccountType,
   isOpeningBalancesAccount,
 } from "@/shared/account-utils";
-import { createAccountOptions } from "../$accountId/-page-data";
+import { createAccountOptions } from "@/shared/account-options";
 import type { RebookingState } from "./-page-view";
 import type { ActivityAccountOptionSource } from "./-page-types";
 

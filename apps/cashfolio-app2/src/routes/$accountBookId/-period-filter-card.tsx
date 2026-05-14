@@ -37,6 +37,8 @@ type LedgerPeriodFilterCardProps = {
   maxYearPickerDate: Date;
   onMonthPickerChange: (nextValue: string | null) => void;
   onYearPickerChange: (nextValue: string | null) => void;
+  clearFilterLabel?: string;
+  clearFilterDisabled?: boolean;
   onClearFilter: () => void;
 };
 
@@ -60,6 +62,8 @@ export function LedgerPeriodFilterCard({
   maxYearPickerDate,
   onMonthPickerChange,
   onYearPickerChange,
+  clearFilterLabel = "Clear filter",
+  clearFilterDisabled = !hasPeriodFilter,
   onClearFilter,
 }: LedgerPeriodFilterCardProps) {
   return (
@@ -138,10 +142,10 @@ export function LedgerPeriodFilterCard({
             variant="subtle"
             color="gray"
             leftSection={<IconX size={16} />}
-            disabled={!hasPeriodFilter}
+            disabled={clearFilterDisabled}
             onClick={onClearFilter}
           >
-            Clear filter
+            {clearFilterLabel}
           </Button>
         </Group>
         <Text c="dimmed" size="sm">

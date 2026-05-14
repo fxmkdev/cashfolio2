@@ -19,10 +19,11 @@ import {
   getYearPickerValue,
   type PeriodMode,
 } from "@/shared/period-selector-model";
-import { LedgerPeriodFilterCard } from "../$accountId/-period-filter-card";
+import { LedgerPeriodFilterCard } from "../-period-filter-card";
 import { useActivityPageController } from "./-page-controller";
 import { loadActivityPageData } from "./-page-loader";
 import {
+  getDefaultActivityPeriodValue,
   parseActivityExplicitPeriod,
   parseActivitySearch,
   type ActivityRow,
@@ -36,7 +37,7 @@ const ActivityPageView = lazy(async () => {
 export const Route = createFileRoute("/$accountBookId/activity")({
   validateSearch: parseActivitySearch,
   loaderDeps: ({ search }) => ({
-    period: search.period,
+    period: search.period ?? getDefaultActivityPeriodValue(),
   }),
   loader: async ({ params: { accountBookId }, deps: { period } }) => {
     return loadActivityPageData({ accountBookId, period });
@@ -64,6 +65,10 @@ export function ActivityPageContent() {
     () => new Date(loaderData.periodBounds.maxDate),
     [loaderData.periodBounds.maxDate],
   );
+  const defaultPeriodValue = useMemo(
+    () => getDefaultActivityPeriodValue(maxDate),
+    [maxDate],
+  );
   const minBookingDate = useMemo(
     () =>
       loaderData.periodBounds.minBookingDate
@@ -72,8 +77,8 @@ export function ActivityPageContent() {
     [loaderData.periodBounds.minBookingDate],
   );
   const rawSelectedPeriod = useMemo(
-    () => parseActivityExplicitPeriod(period),
-    [period],
+    () => parseActivityExplicitPeriod(period ?? defaultPeriodValue),
+    [defaultPeriodValue, period],
   );
   const clampedPeriodValue = useMemo(() => {
     if (!rawSelectedPeriod) {
@@ -239,9 +244,11 @@ export function ActivityPageContent() {
               setPeriodFilter(nextPeriodValue);
               setPickerOpened(false);
             }}
+            clearFilterLabel="Current month"
+            clearFilterDisabled={selectedPeriod?.value === defaultPeriodValue}
             onClearFilter={() => {
               setPickerOpened(false);
-              setPeriodFilter(undefined);
+              setPeriodFilter(defaultPeriodValue);
             }}
           />
         }

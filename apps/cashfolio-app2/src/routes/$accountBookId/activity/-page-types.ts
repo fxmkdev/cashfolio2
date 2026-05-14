@@ -1,5 +1,6 @@
 import {
   formatExplicitPeriodSelectionLabel,
+  formatMonthPeriodValue,
   normalizeExplicitPeriodValue,
   parseExplicitPeriodSelection,
 } from "@/shared/period";
@@ -21,6 +22,10 @@ export function normalizeActivityPeriodValue(
   value: unknown,
 ): string | undefined {
   return normalizeExplicitPeriodValue(value);
+}
+
+export function getDefaultActivityPeriodValue(date: Date = new Date()): string {
+  return formatMonthPeriodValue(date.getUTCFullYear(), date.getUTCMonth());
 }
 
 export function parseActivityExplicitPeriod(

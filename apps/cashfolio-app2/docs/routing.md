@@ -153,7 +153,8 @@ Related docs:
 - `$accountBookId/activity/route.tsx` uses:
   - `transactionId?: string` to auto-scroll and highlight all visible booking
     rows for a transaction
-  - `period?: string` for explicit month/year period filtering
+  - `period?: string` for explicit month/year period filtering; omitted values
+    default to the current month to keep the initial Activity payload bounded
 - `$accountBookId/period/route.tsx` and
   `$accountBookId/period/gains-losses/$accountId/route.tsx` both use
   `period?: string` with the same normalized period semantics

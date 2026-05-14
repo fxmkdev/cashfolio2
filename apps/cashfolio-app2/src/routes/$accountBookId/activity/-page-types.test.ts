@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  getDefaultActivityPeriodValue,
   parseActivityExplicitPeriod,
   parseActivitySearch,
 } from "./-page-types";
@@ -22,6 +23,14 @@ describe("parseActivitySearch", () => {
       period: undefined,
       transactionId: undefined,
     });
+  });
+});
+
+describe("getDefaultActivityPeriodValue", () => {
+  test("defaults activity to the current UTC month", () => {
+    expect(
+      getDefaultActivityPeriodValue(new Date("2026-05-14T19:00:00.000Z")),
+    ).toBe("2026-05");
   });
 });
 

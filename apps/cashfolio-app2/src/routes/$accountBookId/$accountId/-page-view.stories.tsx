@@ -19,7 +19,7 @@ import {
 } from "@/shared/period-selector-model";
 import { useLedgerColumnDefs } from "./-page-columns";
 import type { SimpleTransactionEditInitialValues } from "./-page-data";
-import { LedgerPeriodFilterCard } from "./-period-filter-card";
+import { LedgerPeriodFilterCard } from "../-period-filter-card";
 import { parseLedgerExplicitPeriod, type LedgerRow } from "./-page-types";
 import {
   LedgerPageView,
