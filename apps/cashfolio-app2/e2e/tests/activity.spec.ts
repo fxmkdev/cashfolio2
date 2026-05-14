@@ -90,7 +90,7 @@ test("lists bookings, carries account link context, and creates transactions", a
 
   await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/activity`));
   await expect(page.getByRole("heading", { name: "Activity" })).toBeVisible();
-  await expect(page.getByText("May 2026")).toBeVisible();
+  await expect(page.getByText("Showing entries for May 2026")).toBeVisible();
 
   const newerCashRow = agGridRowByText(
     page,
