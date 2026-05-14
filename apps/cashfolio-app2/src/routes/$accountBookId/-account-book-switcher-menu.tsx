@@ -210,6 +210,7 @@ export function UserMenu({
           leftSection={<IconUserCog size={16} />}
           to="/$accountBookId/user-settings"
           params={{ accountBookId }}
+          preload={false}
         >
           User Settings
         </LinkMenuItem>

@@ -1,7 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { updateAuthenticatedUserSettings } from "@/server/user-profile";
-import { loadUserSettingsPageData } from "./-page-loader";
 
 const UserSettingsPageView = lazy(async () => {
   const module = await import("./-page-view");
@@ -9,7 +8,11 @@ const UserSettingsPageView = lazy(async () => {
 });
 
 export const Route = createFileRoute("/$accountBookId/user-settings")({
-  loader: loadUserSettingsPageData,
+  loader: async () => {
+    // Keep Account API server functions out of the initial client bundle.
+    const { loadUserSettingsPageData } = await import("./-page-loader");
+    return loadUserSettingsPageData();
+  },
   component: UserSettingsPage,
 });
 

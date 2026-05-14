@@ -6,6 +6,9 @@ import LogtoClient, {
 import { getCookie, setCookie } from "@tanstack/react-start/server";
 import { ensureSameOriginRequest } from "../security/same-origin.server";
 
+const DEFAULT_LOGTO_SCOPES = ["email"];
+const LOGTO_ACCOUNT_API_SCOPES = ["email", "profile"];
+
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -14,7 +17,11 @@ function requireEnv(name: string): string {
   return value;
 }
 
-function getRuntimeConfig(): {
+function getRuntimeConfig({
+  scopes = DEFAULT_LOGTO_SCOPES,
+}: {
+  scopes?: string[];
+} = {}): {
   logtoConfig: LogtoConfig;
   baseUrl: string;
   sessionSecret: string;
@@ -24,7 +31,7 @@ function getRuntimeConfig(): {
       endpoint: requireEnv("LOGTO_ENDPOINT"),
       appId: requireEnv("LOGTO_APP_ID"),
       appSecret: requireEnv("LOGTO_APP_SECRET"),
-      scopes: ["email", "profile"],
+      scopes,
     },
     baseUrl: requireEnv("BASE_URL"),
     sessionSecret: requireEnv("SESSION_SECRET"),
@@ -35,8 +42,11 @@ function absoluteUrl(pathname: string, baseUrl: string): string {
   return new URL(pathname, baseUrl).toString();
 }
 
-async function createLogtoClient(onNavigate?: (url: string) => void) {
-  const { logtoConfig, sessionSecret } = getRuntimeConfig();
+async function createLogtoClient(
+  onNavigate?: (url: string) => void,
+  configOptions?: { scopes?: string[] },
+) {
+  const { logtoConfig, sessionSecret } = getRuntimeConfig(configOptions);
   const storage = new CookieStorage({
     encryptionKey: sessionSecret,
     isSecure: true,
@@ -73,8 +83,9 @@ export async function fetchLogtoAccountApi(
   pathname: string,
   init?: RequestInit,
 ) {
-  const { logtoConfig } = getRuntimeConfig();
-  const { client } = await createLogtoClient();
+  const accountApiConfig = { scopes: LOGTO_ACCOUNT_API_SCOPES };
+  const { logtoConfig } = getRuntimeConfig(accountApiConfig);
+  const { client } = await createLogtoClient(undefined, accountApiConfig);
   const accessToken = await client.getAccessToken();
   const headers = new Headers(init?.headers);
   headers.set("authorization", `Bearer ${accessToken}`);
