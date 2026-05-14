@@ -101,6 +101,9 @@ Related docs:
 
 - Logto integration uses `@logto/node` with `CookieStorage` in
   `src/auth/logto.server.ts`
+- Logto Account API profile reads and updates are exposed through
+  `src/server/user-profile.ts`; profile mutations enforce same-origin request
+  checks before calling `PATCH /api/my-account`
 - User auth guard: `src/auth/functions.server.ts` (`ensureAuthenticated`)
 - User upsert/lookup: `src/users/functions.server.ts`
 - Account-book authorization guard: `src/account-books/functions.server.ts`

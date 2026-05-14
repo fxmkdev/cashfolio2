@@ -24,7 +24,7 @@ function getRuntimeConfig(): {
       endpoint: requireEnv("LOGTO_ENDPOINT"),
       appId: requireEnv("LOGTO_APP_ID"),
       appSecret: requireEnv("LOGTO_APP_SECRET"),
-      scopes: ["email"],
+      scopes: ["email", "profile"],
     },
     baseUrl: requireEnv("BASE_URL"),
     sessionSecret: requireEnv("SESSION_SECRET"),
@@ -63,6 +63,26 @@ export async function getLogtoContext(
 ) {
   const { client } = await createLogtoClient();
   return client.getContext(parameters);
+}
+
+export function getLogtoAccountSecurityUrl() {
+  return new URL("/account/security", requireEnv("LOGTO_ENDPOINT")).toString();
+}
+
+export async function fetchLogtoAccountApi(
+  pathname: string,
+  init?: RequestInit,
+) {
+  const { logtoConfig } = getRuntimeConfig();
+  const { client } = await createLogtoClient();
+  const accessToken = await client.getAccessToken();
+  const headers = new Headers(init?.headers);
+  headers.set("authorization", `Bearer ${accessToken}`);
+
+  return fetch(new URL(pathname, logtoConfig.endpoint), {
+    ...init,
+    headers,
+  });
 }
 
 export async function handleLogtoSignIn() {
