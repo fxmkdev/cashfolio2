@@ -26,7 +26,7 @@ export const CurrencySelect = forwardRef<HTMLInputElement, CurrencySelectProps>(
       unitUsage,
       usedCurrencies,
       selectedCurrencies,
-      compactLabels,
+      compactLabels = true,
       searchable = true,
       ...props
     },

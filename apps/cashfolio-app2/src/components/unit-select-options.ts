@@ -110,7 +110,8 @@ export function buildCurrencySelectData(args?: {
     availableUnits: currencies,
     usedValues: args?.usedCurrencies ?? args?.unitUsage?.currencies,
     selectedValues: args?.selectedCurrencies,
-    formatLabel: args?.compactLabels ? formatCodeLabel : formatFullLabel,
+    formatLabel:
+      args?.compactLabels === false ? formatFullLabel : formatCodeLabel,
   });
 }
 

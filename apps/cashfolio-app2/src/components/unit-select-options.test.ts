@@ -13,9 +13,9 @@ describe("buildCurrencySelectData", () => {
     expect(data[0]).toEqual({
       group: "Used",
       items: [
-        { value: "CHF", label: "CHF - Swiss Franc" },
-        { value: "USD", label: "USD - United States Dollar" },
-        { value: "EUR", label: "EUR - Euro" },
+        { value: "CHF", label: "CHF" },
+        { value: "USD", label: "USD" },
+        { value: "EUR", label: "EUR" },
       ],
     });
     expect(
@@ -42,6 +42,18 @@ describe("buildCurrencySelectData", () => {
 
     expect(data[0]?.group).toBe("Others");
     expect(data[0]?.items.length).toBeGreaterThan(0);
+  });
+
+  test("can include full currency names when requested", () => {
+    const data = buildCurrencySelectData({
+      usedCurrencies: ["CHF"],
+      compactLabels: false,
+    });
+
+    expect(data[0]?.items[0]).toEqual({
+      value: "CHF",
+      label: "CHF - Swiss Franc",
+    });
   });
 });
 
