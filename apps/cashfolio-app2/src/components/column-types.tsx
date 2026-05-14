@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { numericFormatter } from "react-number-format";
 import { Unit } from "../.prisma-client/enums";
 import { getUnitDisplayDecimals } from "../shared/unit-format";
+import { AccountTreeSelect } from "./account-tree-select";
 import {
   FormattedNumberInput,
   getNumberFormatSymbols,
@@ -17,6 +18,7 @@ import {
 
 export const FORMATTED_NUMERIC_COLUMN = "formattedNumericColumn";
 export const SELECT_COLUMN = "selectColumn";
+export const ACCOUNT_TREE_SELECT_COLUMN = "accountTreeSelectColumn";
 export const TEXT_COLUMN = "textColumn";
 export const DATE_COLUMN = "dateColumn";
 
@@ -181,6 +183,46 @@ export const columnTypes: AgGridReactProps["columnTypes"] = {
           onDropdownOpen={() => setIsDropdownOpen(true)}
           onDropdownClose={() => setIsDropdownOpen(false)}
           value={value}
+          onChange={(v) => onValueChange(v)}
+        />
+      );
+    },
+  },
+  [ACCOUNT_TREE_SELECT_COLUMN]: {
+    valueFormatter: ({ value, colDef }) =>
+      (colDef.context?.options ?? []).find(
+        (o: { label: string; value: string }) => o.value === value,
+      )?.label ?? "",
+    cellEditor: ({ colDef, value, onValueChange }: CustomCellEditorProps) => {
+      const options = colDef.context?.options ?? [];
+      const ref = useRef<HTMLInputElement>(null);
+      useEffect(() => {
+        ref.current?.select();
+      }, []);
+
+      const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+      useEffect(() => {
+        function handleSuppressKeyboardEvent(
+          params: SuppressKeyboardEventParams,
+        ) {
+          return params.event.key === "Enter";
+        }
+
+        colDef.suppressKeyboardEvent = isDropdownOpen
+          ? handleSuppressKeyboardEvent
+          : undefined;
+      }, [colDef, isDropdownOpen]);
+
+      return (
+        <AccountTreeSelect
+          ref={ref}
+          variant="unstyled"
+          pl={12}
+          accounts={options}
+          onDropdownOpen={() => setIsDropdownOpen(true)}
+          onDropdownClose={() => setIsDropdownOpen(false)}
+          value={value ?? null}
           onChange={(v) => onValueChange(v)}
         />
       );

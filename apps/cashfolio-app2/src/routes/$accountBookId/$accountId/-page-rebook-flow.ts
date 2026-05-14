@@ -61,8 +61,7 @@ export function useLedgerRebookFlow(args: {
 
     return args.accountOptions
       .filter((option) => eligibleAccountIds.has(option.value))
-      .toSorted((a, b) => a.label.localeCompare(b.label))
-      .map((option) => ({ value: option.value, label: option.label }));
+      .toSorted((a, b) => a.label.localeCompare(b.label));
   }, [
     args.accountOptions,
     args.accounts,

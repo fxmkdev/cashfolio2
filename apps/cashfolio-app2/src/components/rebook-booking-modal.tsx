@@ -1,11 +1,12 @@
-import { Button, Group, Select, Stack, Text } from "@mantine/core";
+import { Button, Group, Stack, Text } from "@mantine/core";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
+import {
+  AccountTreeSelect,
+  type AccountTreeOption,
+} from "./account-tree-select";
 
-export type RebookTargetOption = {
-  value: string;
-  label: string;
-};
+export type RebookTargetOption = AccountTreeOption;
 
 export function RebookBookingModal({
   targetAccounts,
@@ -71,11 +72,10 @@ export function RebookBookingModal({
   return (
     <form ref={formRef} onSubmit={handleSubmit}>
       <Stack gap="md">
-        <Select
+        <AccountTreeSelect
           label="Target account"
           placeholder="Select target account"
-          searchable
-          data={targetAccounts}
+          accounts={targetAccounts}
           data-autofocus
           value={targetAccountId}
           onChange={(value) => {

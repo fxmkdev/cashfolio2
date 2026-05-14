@@ -9,7 +9,10 @@ import {
   type AccountOption,
   type BookingValues,
 } from "@/components/edit-transaction-modal";
-import { RebookBookingModal } from "@/components/rebook-booking-modal";
+import {
+  RebookBookingModal,
+  type RebookTargetOption,
+} from "@/components/rebook-booking-modal";
 import {
   SimpleTransactionModal,
   type SimpleTransactionDirection,
@@ -105,7 +108,7 @@ export type LedgerPageViewProps = {
   editAccountOptions: AccountOption[];
   simpleCounterAccountOptions: AccountOption[];
   editSimpleCounterAccountOptions: AccountOption[];
-  rebookTargetAccountOptions: { value: string; label: string }[];
+  rebookTargetAccountOptions: RebookTargetOption[];
   periodFilterControls?: ReactNode;
   onRowDataUpdated: AgGridReactProps<LedgerRow>["onRowDataUpdated"];
   onAddTransactionClick: () => void;

@@ -34,9 +34,7 @@ export const ToggleDirectionAndSubmit: Story = {
       name: "Counter account",
     });
     await userEvent.click(counterAccountInput);
-    await userEvent.click(
-      await body.findByRole("option", { name: "Credit Card (CHF)" }),
-    );
+    await userEvent.click(await body.findByText("Credit Card (CHF)"));
 
     await userEvent.click(
       body.getByRole("button", { name: "Swap debit/credit direction" }),
@@ -57,9 +55,7 @@ export const ForcedDirectionDisablesToggle: Story = {
       name: "Counter account",
     });
     await userEvent.click(counterAccountInput);
-    await userEvent.click(
-      await body.findByRole("option", { name: "Salary (Income)" }),
-    );
+    await userEvent.click(await body.findByText("Salary (Income)"));
 
     await expect(
       body.getByRole("button", { name: "Swap debit/credit direction" }),
@@ -114,9 +110,7 @@ export const EnterSubmitPendingGuard: Story = {
       name: "Counter account",
     });
     await userEvent.click(counterAccountInput);
-    await userEvent.click(
-      await body.findByRole("option", { name: "Credit Card (CHF)" }),
-    );
+    await userEvent.click(await body.findByText("Credit Card (CHF)"));
 
     const descriptionInput = body.getByRole("textbox", { name: "Description" });
     await userEvent.type(descriptionInput, "{enter}{enter}");

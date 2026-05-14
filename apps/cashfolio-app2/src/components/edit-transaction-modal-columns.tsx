@@ -14,6 +14,7 @@ import { isSameDay } from "date-fns";
 import {
   DATE_COLUMN,
   FORMATTED_NUMERIC_COLUMN,
+  ACCOUNT_TREE_SELECT_COLUMN,
   SELECT_COLUMN,
   TEXT_COLUMN,
 } from "./column-types";
@@ -113,7 +114,7 @@ export function createEditTransactionColumnDefs(args: {
     },
     {
       field: "account",
-      type: SELECT_COLUMN,
+      type: ACCOUNT_TREE_SELECT_COLUMN,
       context: { options: accounts },
       minWidth: 150,
       flex: 1,

@@ -50,9 +50,7 @@ export const SubmitAndCancel: Story = {
     });
 
     await userEvent.click(targetAccountInput);
-    await userEvent.click(
-      await body.findByRole("option", { name: "Savings (CHF)" }),
-    );
+    await userEvent.click(await body.findByText("Savings (CHF)"));
     await expect(targetAccountInput).toHaveValue("Savings (CHF)");
     await userEvent.type(targetAccountInput, "{enter}");
     await expect(args.onSubmit).toHaveBeenCalledWith({
@@ -78,9 +76,7 @@ export const EnterSubmitPendingGuard: Story = {
     });
 
     await userEvent.click(targetAccountInput);
-    await userEvent.click(
-      await body.findByRole("option", { name: "Savings (CHF)" }),
-    );
+    await userEvent.click(await body.findByText("Savings (CHF)"));
     await userEvent.type(targetAccountInput, "{enter}{enter}");
 
     const submitButton = canvas.getByRole("button", { name: "Rebook" });
