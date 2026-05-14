@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   AppShell,
   Burger,
   Divider,
@@ -16,23 +17,24 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import {
-  IconActivity,
-  IconCalendarMonth,
   IconCheck,
-  IconChartBar,
-  IconDatabase,
-  IconListDetails,
+  IconLayoutSidebarLeftCollapse,
+  IconLayoutSidebarLeftExpand,
 } from "@tabler/icons-react";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import type { AuthenticatedUserProfile } from "@/auth/user-profile";
-import { LinkNavLink } from "@/components/link-nav-link";
 import type { UserAccountBookOption } from "@/server/home";
+import { AccountBookNavigationLinks } from "./-account-book-navigation-links";
 import { consumePendingAccountBookSwitch } from "./-account-book-switch-notification";
 import {
   AccountBookSwitcherMenu,
   UserMenu,
 } from "./-account-book-switcher-menu";
+import {
+  ACCOUNT_BOOK_RAIL_WIDTH,
+  ACCOUNT_BOOK_SIDEBAR_WIDTH,
+} from "./-shell-dimensions";
 import {
   parseAccountsSearch,
   tabs,
@@ -81,6 +83,9 @@ const DEFAULT_ACCOUNTS_LINK_SEARCH: AccountsLinkSearch = {
   mode: "active",
 };
 
+export const DESKTOP_RAIL_COLLAPSED_STORAGE_KEY =
+  "cashfolio:accountBookShell:desktopRailCollapsed";
+
 const LEDGER_ROUTE_IDS = new Set([
   "/$accountBookId/$accountId",
   "/$accountBookId/$accountId/",
@@ -91,6 +96,12 @@ type RouterMatchSnapshot = {
   routeId: string;
   account: unknown;
 };
+
+export function parseDesktopRailCollapsedPreference(
+  storedValue: string | null,
+): boolean {
+  return storedValue === "true";
+}
 
 export function getActiveSection(args: {
   pathname: string;
@@ -283,7 +294,66 @@ export function AccountBookShell({
 }: AccountBookShellProps) {
   const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] =
     useDisclosure(false);
+  const [desktopRailCollapsed, setDesktopRailCollapsed] = useState(false);
+  const [desktopRailPreferenceHydrated, setDesktopRailPreferenceHydrated] =
+    useState(false);
   const activeSection = getActiveSection({ pathname, accountBookId });
+  const toggleDesktopRail = () =>
+    setDesktopRailCollapsed((isCollapsed) => !isCollapsed);
+  const desktopRailToggle = (
+    <Tooltip
+      label={desktopRailCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      position="right"
+    >
+      <ActionIcon
+        aria-label={
+          desktopRailCollapsed ? "Expand sidebar" : "Collapse sidebar"
+        }
+        onClick={toggleDesktopRail}
+        variant="subtle"
+        visibleFrom="sm"
+      >
+        {desktopRailCollapsed ? (
+          <IconLayoutSidebarLeftExpand size={18} />
+        ) : (
+          <IconLayoutSidebarLeftCollapse size={18} />
+        )}
+      </ActionIcon>
+    </Tooltip>
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      setDesktopRailCollapsed(
+        parseDesktopRailCollapsedPreference(
+          window.localStorage.getItem(DESKTOP_RAIL_COLLAPSED_STORAGE_KEY),
+        ),
+      );
+    } catch {
+      setDesktopRailCollapsed(false);
+    } finally {
+      setDesktopRailPreferenceHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!desktopRailPreferenceHydrated || typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(
+        DESKTOP_RAIL_COLLAPSED_STORAGE_KEY,
+        desktopRailCollapsed ? "true" : "false",
+      );
+    } catch {
+      // Ignore storage persistence failures so navigation remains usable.
+    }
+  }, [desktopRailCollapsed, desktopRailPreferenceHydrated]);
 
   useEffect(() => {
     const pendingAccountBookSwitch =
@@ -310,9 +380,14 @@ export function AccountBookShell({
         collapsed: false,
       }}
       navbar={{
-        width: 260,
+        width: {
+          base: ACCOUNT_BOOK_SIDEBAR_WIDTH,
+          sm: desktopRailCollapsed
+            ? ACCOUNT_BOOK_RAIL_WIDTH
+            : ACCOUNT_BOOK_SIDEBAR_WIDTH,
+        },
         breakpoint: "sm",
-        collapsed: { mobile: !mobileOpened },
+        collapsed: { mobile: !mobileOpened, desktop: false },
       }}
     >
       <AppShell.Header hiddenFrom="sm">
@@ -327,53 +402,41 @@ export function AccountBookShell({
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="sm">
+      <AppShell.Navbar
+        p={{ base: "sm", sm: desktopRailCollapsed ? "xs" : "sm" }}
+      >
         <AppShell.Section grow>
           <Stack gap="xs">
-            <CashfolioTitle appVersion={appVersion} size="xl" px="xs" pt="xs" />
+            {desktopRailCollapsed ? (
+              <>
+                <Group px="xs" pt="xs" wrap="nowrap" hiddenFrom="sm">
+                  <CashfolioTitle appVersion={appVersion} size="xl" />
+                </Group>
+                <Group justify="center" pt="xs" visibleFrom="sm">
+                  {desktopRailToggle}
+                </Group>
+              </>
+            ) : (
+              <Group
+                align="center"
+                gap="xs"
+                justify="space-between"
+                px="xs"
+                pt="xs"
+                wrap="nowrap"
+              >
+                <CashfolioTitle appVersion={appVersion} size="xl" />
+                {desktopRailToggle}
+              </Group>
+            )}
             <Divider />
-            <LinkNavLink
-              label="Accounts"
-              leftSection={<IconListDetails size={16} />}
-              to="/$accountBookId/accounts"
-              params={{ accountBookId }}
-              search={accountsLinkSearch}
-              active={activeSection === "accounts"}
-              onClick={closeMobile}
-            />
-            <LinkNavLink
-              label="Activity"
-              leftSection={<IconActivity size={16} />}
-              to="/$accountBookId/activity"
-              params={{ accountBookId }}
-              search={periodLinkSearch}
-              active={activeSection === "activity"}
-              onClick={closeMobile}
-            />
-            <LinkNavLink
-              label="Period"
-              leftSection={<IconCalendarMonth size={16} />}
-              to="/$accountBookId/period"
-              params={{ accountBookId }}
-              search={periodLinkSearch}
-              active={activeSection === "period"}
-              onClick={closeMobile}
-            />
-            <LinkNavLink
-              label="Timeline"
-              leftSection={<IconChartBar size={16} />}
-              to="/$accountBookId/timeline"
-              params={{ accountBookId }}
-              active={activeSection === "timeline"}
-              onClick={closeMobile}
-            />
-            <LinkNavLink
-              label="Valuation Cache"
-              leftSection={<IconDatabase size={16} />}
-              to="/$accountBookId/valuation-cache"
-              params={{ accountBookId }}
-              active={activeSection === "valuation-cache"}
-              onClick={closeMobile}
+            <AccountBookNavigationLinks
+              accountBookId={accountBookId}
+              activeSection={activeSection}
+              accountsLinkSearch={accountsLinkSearch}
+              collapsed={desktopRailCollapsed}
+              onNavigate={closeMobile}
+              periodLinkSearch={periodLinkSearch}
             />
           </Stack>
         </AppShell.Section>
@@ -381,13 +444,51 @@ export function AccountBookShell({
         <AppShell.Section>
           <Stack gap="xs" pt="sm">
             <Divider />
-            <AccountBookSwitcherMenu
-              accountBookId={accountBookId}
-              accountBooks={accountBooks}
-              accountsTab={accountsLinkSearch.tab}
-              accountsMode={accountsLinkSearch.mode}
-            />
-            <UserMenu accountBookId={accountBookId} userProfile={userProfile} />
+            {desktopRailCollapsed ? (
+              <>
+                <Stack gap="xs" hiddenFrom="sm">
+                  <AccountBookSwitcherMenu
+                    accountBookId={accountBookId}
+                    accountBooks={accountBooks}
+                    accountsTab={accountsLinkSearch.tab}
+                    accountsMode={accountsLinkSearch.mode}
+                  />
+                  <UserMenu
+                    accountBookId={accountBookId}
+                    userProfile={userProfile}
+                  />
+                </Stack>
+                <Group justify="center" visibleFrom="sm">
+                  <AccountBookSwitcherMenu
+                    accountBookId={accountBookId}
+                    accountBooks={accountBooks}
+                    accountsTab={accountsLinkSearch.tab}
+                    accountsMode={accountsLinkSearch.mode}
+                    collapsed
+                  />
+                </Group>
+                <Group justify="center" visibleFrom="sm">
+                  <UserMenu
+                    accountBookId={accountBookId}
+                    userProfile={userProfile}
+                    collapsed
+                  />
+                </Group>
+              </>
+            ) : (
+              <>
+                <AccountBookSwitcherMenu
+                  accountBookId={accountBookId}
+                  accountBooks={accountBooks}
+                  accountsTab={accountsLinkSearch.tab}
+                  accountsMode={accountsLinkSearch.mode}
+                />
+                <UserMenu
+                  accountBookId={accountBookId}
+                  userProfile={userProfile}
+                />
+              </>
+            )}
           </Stack>
         </AppShell.Section>
       </AppShell.Navbar>

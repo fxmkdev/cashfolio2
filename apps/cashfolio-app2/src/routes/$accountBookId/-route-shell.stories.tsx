@@ -2,8 +2,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Box, Text, Title } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import { useRouterState } from "@tanstack/react-router";
-import { expect, userEvent, within } from "storybook/test";
-import { AccountBookShell } from "./route";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { AccountBookShell, DESKTOP_RAIL_COLLAPSED_STORAGE_KEY } from "./route";
 
 const STORYBOOK_ACCOUNT_BOOK_ID = "storybook-book";
 
@@ -11,6 +11,7 @@ function getHeadingLabel(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
   const section = segments[1];
 
+  if (section === "activity") return "Activity";
   if (section === "period") return "Period";
   if (section === "timeline") return "Timeline";
   if (section === "valuation-cache") return "Valuation Cache";
@@ -60,6 +61,32 @@ function AccountBookShellSmokeHarness() {
   );
 }
 
+function resetDesktopRailPreference() {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  try {
+    window.localStorage.removeItem(DESKTOP_RAIL_COLLAPSED_STORAGE_KEY);
+  } catch {
+    // Ignore blocked storage in Storybook sandboxes.
+  }
+
+  return {};
+}
+
+function readDesktopRailPreference() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.localStorage.getItem(DESKTOP_RAIL_COLLAPSED_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
 const meta = {
   title: "Routes/AccountBookShell",
   component: AccountBookShellSmokeHarness,
@@ -70,9 +97,18 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const RouteSmoke: Story = {
+  loaders: [resetDesktopRailPreference],
   render: () => <AccountBookShellSmokeHarness />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+
+    await expect(
+      canvas.getByRole("button", { name: "Collapse sidebar" }),
+    ).toBeVisible();
+    await userEvent.click(canvas.getByRole("link", { name: "Activity" }));
+    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
+      "/storybook-book/activity",
+    );
 
     await userEvent.click(canvas.getByRole("link", { name: "Period" }));
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
@@ -149,7 +185,70 @@ export const RouteSmoke: Story = {
   },
 };
 
+export const DesktopRailSmoke: Story = {
+  loaders: [resetDesktopRailPreference],
+  render: () => <AccountBookShellSmokeHarness />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Collapse sidebar" }),
+    );
+
+    await expect(
+      canvas.getByRole("button", { name: "Expand sidebar" }),
+    ).toBeVisible();
+    await waitFor(() => {
+      expect(readDesktopRailPreference()).toBe("true");
+    });
+    await expect(canvas.queryByText("Valuation Cache")).not.toBeInTheDocument();
+
+    await userEvent.click(
+      canvas.getByRole("link", { name: "Valuation Cache" }),
+    );
+    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
+      "/storybook-book/valuation-cache",
+    );
+
+    await userEvent.click(canvas.getByRole("link", { name: "Activity" }));
+    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
+      "/storybook-book/activity",
+    );
+
+    await userEvent.click(
+      canvas.getByRole("button", {
+        name: "Switch account book, current: Storybook Book",
+      }),
+    );
+    await expect(
+      canvas.getByRole("menuitem", { name: "Account Book Settings" }),
+    ).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+
+    await userEvent.click(
+      canvas.getByRole("button", {
+        name: "Open user menu, current: Storybook User",
+      }),
+    );
+    await expect(
+      canvas.getByRole("menuitem", { name: "Sign Out" }),
+    ).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Expand sidebar" }),
+    );
+    await waitFor(() => {
+      expect(readDesktopRailPreference()).toBe("false");
+    });
+    await expect(
+      canvas.getByRole("link", { name: "Valuation Cache" }),
+    ).toBeVisible();
+  },
+};
+
 export const MobileFooterControlsSmoke: Story = {
+  loaders: [resetDesktopRailPreference],
   parameters: {
     viewport: {
       defaultViewport: "mobile1",

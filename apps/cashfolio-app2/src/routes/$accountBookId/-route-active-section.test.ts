@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
-import { getAccountsLinkSearch, getActiveSection } from "./route";
+import {
+  getAccountsLinkSearch,
+  getActiveSection,
+  parseDesktopRailCollapsedPreference,
+} from "./route";
+
+describe("parseDesktopRailCollapsedPreference", () => {
+  it("defaults to expanded unless the stored preference is explicitly collapsed", () => {
+    expect(parseDesktopRailCollapsedPreference(null)).toBe(false);
+    expect(parseDesktopRailCollapsedPreference("false")).toBe(false);
+    expect(parseDesktopRailCollapsedPreference("invalid")).toBe(false);
+    expect(parseDesktopRailCollapsedPreference("true")).toBe(true);
+  });
+});
 
 describe("getActiveSection", () => {
   it("marks accounts section as active for accounts and ledger paths", () => {
