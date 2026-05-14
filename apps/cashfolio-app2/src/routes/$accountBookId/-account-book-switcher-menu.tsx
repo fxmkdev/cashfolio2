@@ -1,4 +1,4 @@
-import { Avatar, Button, Menu, Text, type MenuItemProps } from "@mantine/core";
+import { Avatar, Button, Menu, type MenuItemProps } from "@mantine/core";
 import {
   IconCheck,
   IconChevronUp,
@@ -26,6 +26,12 @@ const MenuItemLinkBase = forwardRef<
 });
 
 const LinkMenuItem = createLink(MenuItemLinkBase);
+
+const triggerLabelStyle = {
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+} as const;
 
 type AccountBookSwitcherMenuProps = {
   accountBookId: string;
@@ -73,7 +79,7 @@ export function AccountBookSwitcherMenu({
           rightSection={<IconChevronUp size={16} />}
           fullWidth
         >
-          {currentAccountBookName}
+          <span style={triggerLabelStyle}>{currentAccountBookName}</span>
         </Button>
       </Menu.Target>
       <Menu.Dropdown style={{ maxWidth: "100%" }}>
@@ -147,9 +153,7 @@ export function UserMenu({
           rightSection={<IconChevronUp size={16} />}
           fullWidth
         >
-          <Text component="span" truncate>
-            {userProfile.displayName}
-          </Text>
+          <span style={triggerLabelStyle}>{userProfile.displayName}</span>
         </Button>
       </Menu.Target>
       <Menu.Dropdown style={{ maxWidth: "100%" }}>
