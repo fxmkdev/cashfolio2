@@ -118,7 +118,7 @@ export function RealizedEventExplainDrawer(args: {
             <Stack gap="sm">
               <Text fw={600}>Lot Matches</Text>
               {args.selectedEvent.lotMatches.length === 0 ? (
-                <Alert color="yellow" variant="light" title="No lot matches">
+                <Alert color="yellow" variant="light" title="No Lot Matches">
                   No matched lots were captured for this event.
                 </Alert>
               ) : (

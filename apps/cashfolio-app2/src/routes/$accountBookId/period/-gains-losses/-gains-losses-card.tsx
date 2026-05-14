@@ -91,7 +91,7 @@ export function GainsLossesCard({
       drillHint="Double-click a bar to drill down."
       headerControls={
         <ChartTypeSegmentedControl
-          ariaLabel="Gains/losses chart type"
+          ariaLabel="Gains/Losses Chart Type"
           value={selectedChartType}
           options={GAINS_LOSSES_CHART_TYPE_OPTIONS}
           onChange={onSelectedChartTypeChange}

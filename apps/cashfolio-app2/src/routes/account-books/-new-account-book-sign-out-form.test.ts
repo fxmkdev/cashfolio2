@@ -17,6 +17,6 @@ describe("NewAccountBookSignOutForm", () => {
     expect(markup).toContain('action="/api/logto/sign-out"');
     expect(markup).toContain('method="post"');
     expect(markup).toContain('type="submit"');
-    expect(markup).toContain("Sign out");
+    expect(markup).toContain("Sign Out");
   });
 });

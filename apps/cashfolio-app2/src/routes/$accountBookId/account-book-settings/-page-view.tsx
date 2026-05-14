@@ -300,7 +300,7 @@ export function AccountBookSettingsPageView(args: {
 
   return (
     <PageShell>
-      <TopPageHeader heading={<Title order={2}>Settings</Title>} />
+      <TopPageHeader heading={<Title order={2}>Account Book Settings</Title>} />
 
       <form
         onSubmit={form.onSubmit(async (values) => {

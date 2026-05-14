@@ -115,7 +115,7 @@ test("archived mode allows edit, reorder siblings, and delete", async ({
 
   const renamedArchivedPrimaryRow = agGridRowByText(page, renamedPrimaryName);
   await expect(renamedArchivedPrimaryRow).toBeVisible();
-  await clickRowAction(renamedArchivedPrimaryRow, "Reorder siblings");
+  await clickRowAction(renamedArchivedPrimaryRow, "Reorder Siblings");
   await expect(
     page.getByRole("dialog", { name: "Reorder Siblings" }),
   ).toBeVisible();

@@ -1,10 +1,11 @@
-import { Button, Menu, type MenuItemProps } from "@mantine/core";
+import { Avatar, Button, Menu, type MenuItemProps } from "@mantine/core";
 import {
   IconCheck,
   IconChevronUp,
   IconLogout2,
   IconPlus,
   IconSettings,
+  IconUserCog,
 } from "@tabler/icons-react";
 import { createLink } from "@tanstack/react-router";
 import {
@@ -12,6 +13,7 @@ import {
   type ComponentPropsWithoutRef,
   type MouseEvent,
 } from "react";
+import type { AuthenticatedUserProfile } from "@/auth/user-profile";
 import type { UserAccountBookOption } from "@/server/home";
 import { markPendingAccountBookSwitch } from "./-account-book-switch-notification";
 import type { AccountsMode, TabValue } from "./accounts/-page-types";
@@ -24,6 +26,12 @@ const MenuItemLinkBase = forwardRef<
 });
 
 const LinkMenuItem = createLink(MenuItemLinkBase);
+
+const triggerLabelStyle = {
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+} as const;
 
 type AccountBookSwitcherMenuProps = {
   accountBookId: string;
@@ -71,7 +79,7 @@ export function AccountBookSwitcherMenu({
           rightSection={<IconChevronUp size={16} />}
           fullWidth
         >
-          {currentAccountBookName}
+          <span style={triggerLabelStyle}>{currentAccountBookName}</span>
         </Button>
       </Menu.Target>
       <Menu.Dropdown style={{ maxWidth: "100%" }}>
@@ -108,17 +116,53 @@ export function AccountBookSwitcherMenu({
         <Menu.Divider />
         <LinkMenuItem
           leftSection={<IconSettings size={16} />}
-          to="/$accountBookId/settings"
+          to="/$accountBookId/account-book-settings"
           params={{ accountBookId }}
         >
-          Settings
+          Account Book Settings
         </LinkMenuItem>
         <Menu.Divider />
         <LinkMenuItem
           leftSection={<IconPlus size={16} />}
           to="/account-books/new"
         >
-          Create new account book
+          Create New
+        </LinkMenuItem>
+      </Menu.Dropdown>
+    </Menu>
+  );
+}
+
+export function UserMenu({
+  accountBookId,
+  userProfile,
+}: {
+  accountBookId: string;
+  userProfile: AuthenticatedUserProfile;
+}) {
+  return (
+    <Menu position="top-end" width="target">
+      <Menu.Target>
+        <Button
+          variant="default"
+          leftSection={
+            <Avatar src={userProfile.avatarUrl} alt="" size={24} radius="xl">
+              {userProfile.initials}
+            </Avatar>
+          }
+          rightSection={<IconChevronUp size={16} />}
+          fullWidth
+        >
+          <span style={triggerLabelStyle}>{userProfile.displayName}</span>
+        </Button>
+      </Menu.Target>
+      <Menu.Dropdown style={{ maxWidth: "100%" }}>
+        <LinkMenuItem
+          leftSection={<IconUserCog size={16} />}
+          to="/$accountBookId/user-settings"
+          params={{ accountBookId }}
+        >
+          User Settings
         </LinkMenuItem>
         <Menu.Divider />
         <form action="/api/logto/sign-out" method="post">
@@ -127,7 +171,7 @@ export function AccountBookSwitcherMenu({
             type="submit"
             leftSection={<IconLogout2 size={16} />}
           >
-            Sign out
+            Sign Out
           </Menu.Item>
         </form>
       </Menu.Dropdown>

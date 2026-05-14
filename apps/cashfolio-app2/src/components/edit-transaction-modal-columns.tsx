@@ -259,7 +259,7 @@ export function createEditTransactionColumnDefs(args: {
               ? "At least 2 bookings are required"
               : null;
         return (
-          <Tooltip label={deleteDisabledReason ?? "Delete booking"}>
+          <Tooltip label={deleteDisabledReason ?? "Delete Booking"}>
             <ActionIcon
               mt={4}
               color="red"
@@ -271,7 +271,7 @@ export function createEditTransactionColumnDefs(args: {
                   context.onDelete(data.key);
                 }
               }}
-              aria-label="Delete booking"
+              aria-label="Delete Booking"
             >
               <IconTrash size={16} />
             </ActionIcon>

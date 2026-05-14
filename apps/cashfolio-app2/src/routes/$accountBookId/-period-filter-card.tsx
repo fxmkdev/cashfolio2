@@ -62,7 +62,7 @@ export function LedgerPeriodFilterCard({
   maxYearPickerDate,
   onMonthPickerChange,
   onYearPickerChange,
-  clearFilterLabel = "Clear filter",
+  clearFilterLabel = "Clear Filter",
   clearFilterDisabled = !hasPeriodFilter,
   onClearFilter,
 }: LedgerPeriodFilterCardProps) {
@@ -73,7 +73,7 @@ export function LedgerPeriodFilterCard({
         <Group gap="sm" wrap="wrap">
           <SegmentedControl
             size="sm"
-            aria-label="Ledger period mode"
+            aria-label="Ledger Period Mode"
             value={periodMode}
             onChange={onPeriodModeChange}
             data={[
@@ -85,7 +85,7 @@ export function LedgerPeriodFilterCard({
             <ActionIcon
               variant="default"
               size="input-sm"
-              aria-label="Previous period"
+              aria-label="Previous Period"
               disabled={!canGoToPreviousPeriod}
               onClick={() => onPeriodStep(-1)}
             >
@@ -130,7 +130,7 @@ export function LedgerPeriodFilterCard({
             <ActionIcon
               variant="default"
               size="input-sm"
-              aria-label="Next period"
+              aria-label="Next Period"
               disabled={!canGoToNextPeriod}
               onClick={() => onPeriodStep(1)}
             >

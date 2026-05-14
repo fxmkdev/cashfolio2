@@ -16,7 +16,7 @@ const AccountBookSettingsPageView = lazy(async () => {
   return { default: module.AccountBookSettingsPageView };
 });
 
-export const Route = createFileRoute("/$accountBookId/settings")({
+export const Route = createFileRoute("/$accountBookId/account-book-settings")({
   loader: async ({ params: { accountBookId } }) => {
     return loadAccountBookSettingsPageData({ accountBookId });
   },
@@ -27,7 +27,9 @@ function AccountBookSettingsPage() {
   const settings = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const router = useRouter();
-  const navigate = useNavigate({ from: "/$accountBookId/settings" });
+  const navigate = useNavigate({
+    from: "/$accountBookId/account-book-settings",
+  });
 
   return (
     <Suspense fallback={null}>

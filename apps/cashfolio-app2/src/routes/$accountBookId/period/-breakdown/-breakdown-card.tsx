@@ -66,14 +66,14 @@ export function PeriodBreakdownCard({
   const controls = (
     <Flex gap="md" wrap="wrap" justify="flex-end">
       <ChartTypeSegmentedControl
-        ariaLabel="Breakdown chart type"
+        ariaLabel="Breakdown Chart Type"
         value={selectedChartType}
         options={DEFAULT_BREAKDOWN_CHART_TYPE_OPTIONS}
         onChange={onSelectedChartTypeChange}
       />
       <SegmentedControl
         size="sm"
-        aria-label="Breakdown type"
+        aria-label="Breakdown Type"
         value={selectedBreakdown}
         onChange={(value) => {
           if (isBreakdownType(value)) {

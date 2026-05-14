@@ -123,7 +123,7 @@ describe("PeriodNetWorthReconciliationWarning", () => {
     );
 
     expect(html).toContain("period-net-worth-reconciliation-warning");
-    expect(html).toContain("Net worth reconciliation mismatch");
+    expect(html).toContain("Net Worth Reconciliation Mismatch");
   });
 
   it("renders nothing when mismatch is absent", () => {

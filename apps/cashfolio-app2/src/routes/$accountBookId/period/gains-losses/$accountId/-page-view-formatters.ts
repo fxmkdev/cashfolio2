@@ -42,7 +42,7 @@ export function getLedgerActionTooltipLabel(args: {
   isVirtualTarget: boolean;
 }) {
   if (args.canOpenLedger) {
-    return "Open in ledger";
+    return "Open in Ledger";
   }
   if (args.isVirtualTarget) {
     return "Virtual accounts have no ledger";

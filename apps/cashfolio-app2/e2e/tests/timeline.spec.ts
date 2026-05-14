@@ -31,7 +31,7 @@ test("timeline page is reachable and persists selected period mode across refres
   await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
 
   const periodModeControl = page.getByRole("radiogroup", {
-    name: "Timeline period mode",
+    name: "Timeline Period Mode",
   });
   await selectSegmentedControlOption(periodModeControl, "Yearly");
 
@@ -64,7 +64,7 @@ test("timeline mode toggles update URL mode and keep history compact", async ({
   );
 
   const periodModeControl = page.getByRole("radiogroup", {
-    name: "Timeline period mode",
+    name: "Timeline Period Mode",
   });
 
   await selectSegmentedControlOption(periodModeControl, "Yearly");
@@ -97,7 +97,7 @@ test("timeline deep link with yearly mode selects yearly on first load", async (
   await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
 
   const periodModeControl = page.getByRole("radiogroup", {
-    name: "Timeline period mode",
+    name: "Timeline Period Mode",
   });
   await expect(
     periodModeControl.getByRole("radio", { name: "Yearly" }),
@@ -123,7 +123,7 @@ test("timeline deep link with invalid mode falls back to monthly", async ({
   await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
 
   const periodModeControl = page.getByRole("radiogroup", {
-    name: "Timeline period mode",
+    name: "Timeline Period Mode",
   });
   await expect(
     periodModeControl.getByRole("radio", { name: "Monthly" }),
@@ -145,7 +145,7 @@ test("timeline expense scope tree select opens with hierarchical options and sup
     .poll(() => new URL(page.url()).searchParams.get("metric"))
     .toBe("expenses");
 
-  const scopeInput = page.getByLabel("Timeline metric scope");
+  const scopeInput = page.getByLabel("Timeline Metric Scope");
   await expect(scopeInput).toHaveValue("Total");
   await scopeInput.click();
 

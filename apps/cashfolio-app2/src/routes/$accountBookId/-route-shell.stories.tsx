@@ -14,6 +14,8 @@ function getHeadingLabel(pathname: string): string {
   if (section === "period") return "Period";
   if (section === "timeline") return "Timeline";
   if (section === "valuation-cache") return "Valuation Cache";
+  if (section === "account-book-settings") return "Account Book Settings";
+  if (section === "user-settings") return "User Settings";
   if (section === "accounts") return "Accounts";
 
   return "Accounts";
@@ -39,6 +41,11 @@ function AccountBookShellSmokeHarness() {
           { id: "storybook-alt-book", name: "Storybook Alt Book" },
         ]}
         appVersion="storybook"
+        userProfile={{
+          displayName: "Storybook User",
+          avatarUrl: null,
+          initials: "SU",
+        }}
         pathname={pathname}
         accountsLinkSearch={{ tab: "ASSET", mode: "active" }}
         periodLinkSearch={{}}
@@ -97,17 +104,23 @@ export const RouteSmoke: Story = {
     await expect(
       canvas.getByRole("button", { name: "Storybook Book" }),
     ).toBeInTheDocument();
+    await expect(
+      canvas.getByRole("button", { name: "Storybook User" }),
+    ).toBeInTheDocument();
     await userEvent.click(
       canvas.getByRole("button", { name: "Storybook Book" }),
     );
     await expect(
-      canvas.getByRole("menuitem", { name: "Sign out" }),
+      canvas.getByRole("menuitem", { name: "Account Book Settings" }),
     ).toBeVisible();
     await expect(
-      canvas.getByRole("menuitem", { name: "Create new account book" }),
+      canvas.getByRole("menuitem", { name: "Create New" }),
     ).toBeVisible();
     await expect(
-      canvas.getByRole("menuitem", { name: "Create new account book" }),
+      canvas.queryByRole("menuitem", { name: "Sign Out" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      canvas.getByRole("menuitem", { name: "Create New" }),
     ).not.toHaveAttribute("aria-disabled", "true");
     await userEvent.click(
       canvas.getByRole("menuitem", { name: "Storybook Alt Book" }),
@@ -118,6 +131,21 @@ export const RouteSmoke: Story = {
     await expect(
       await within(document.body).findByText("Now viewing Storybook Alt Book."),
     ).toBeVisible();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Storybook User" }),
+    );
+    await expect(
+      canvas.getByRole("menuitem", { name: "User Settings" }),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole("menuitem", { name: "Sign Out" }),
+    ).toBeVisible();
+    await userEvent.click(
+      canvas.getByRole("menuitem", { name: "User Settings" }),
+    );
+    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
+      "/storybook-alt-book/user-settings",
+    );
   },
 };
 
@@ -131,16 +159,19 @@ export const MobileFooterControlsSmoke: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      canvas.getByRole("button", { name: "Toggle navigation" }),
+      canvas.getByRole("button", { name: "Toggle Navigation" }),
     );
     await expect(
       canvas.getByRole("button", { name: "Storybook Book" }),
     ).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: "Storybook User" }),
+    ).toBeVisible();
     await userEvent.click(
-      canvas.getByRole("button", { name: "Storybook Book" }),
+      canvas.getByRole("button", { name: "Storybook User" }),
     );
     await expect(
-      canvas.getByRole("menuitem", { name: "Sign out" }),
+      canvas.getByRole("menuitem", { name: "Sign Out" }),
     ).toBeVisible();
   },
 };

@@ -51,7 +51,7 @@ test("mobile sidebar burger reveals and uses navigation links", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
 
-  const burger = page.getByRole("button", { name: "Toggle navigation" });
+  const burger = page.getByRole("button", { name: "Toggle Navigation" });
   await expect(burger).toBeVisible();
 
   await burger.click();

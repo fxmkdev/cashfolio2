@@ -24,7 +24,11 @@ export async function ensureAuthenticated() {
   if (e2eExternalId) {
     return {
       isAuthenticated: true,
-      claims: { sub: e2eExternalId },
+      claims: {
+        sub: e2eExternalId,
+        name: "E2E User",
+        email: `${e2eExternalId}@example.test`,
+      },
     } as LogtoContext;
   }
 

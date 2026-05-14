@@ -131,7 +131,7 @@ test("lists bookings, carries account link context, and creates transactions", a
   const createDialog = page.getByRole("dialog", { name: "Add Transaction" });
   await expect(createDialog).toBeVisible();
   await expect(
-    createDialog.getByRole("button", { name: "Add booking" }),
+    createDialog.getByRole("button", { name: "Add Booking" }),
   ).toBeVisible();
 
   const createdDescription = "E2E Activity Created";

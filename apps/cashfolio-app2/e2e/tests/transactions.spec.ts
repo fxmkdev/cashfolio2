@@ -17,13 +17,13 @@ let seeded: SeededData;
 
 function simpleCreateDialog(page: Page): Locator {
   return page.getByRole("dialog", { name: "Add Transaction" }).filter({
-    has: page.getByRole("button", { name: "Switch to split editor" }),
+    has: page.getByRole("button", { name: "Switch to Split Editor" }),
   });
 }
 
 function splitCreateDialog(page: Page): Locator {
   return page.getByRole("dialog", { name: "Add Transaction" }).filter({
-    has: page.getByRole("button", { name: "Add booking" }),
+    has: page.getByRole("button", { name: "Add Booking" }),
   });
 }
 
@@ -72,7 +72,7 @@ async function openCreateTransaction(page: Page): Promise<Locator> {
 
   const simpleDialog = simpleCreateDialog(page);
   await simpleDialog
-    .getByRole("button", { name: "Switch to split editor" })
+    .getByRole("button", { name: "Switch to Split Editor" })
     .click();
   await expect(simpleDialog).toHaveCount(0);
   await expect(splitDialog).toBeVisible();
@@ -302,7 +302,7 @@ test("create, edit, delete, and create multi-booking transaction", async ({
     accountName: seeded.savingsAccount.name,
   });
   await setGridCellValue(page, 1, "debit", "100");
-  await page.getByRole("button", { name: "Add booking" }).click();
+  await page.getByRole("button", { name: "Add Booking" }).click();
   await setGridCellValue(page, 2, "date", "01.01.2026");
   await setGridAccountCellValue({
     dialog: createSplitDialog,
@@ -325,12 +325,12 @@ test("create simple transaction", async ({ page }) => {
 
   await page.getByLabel("Date").fill("02.01.2026");
   await page.getByLabel("Description").fill("E2E Simple Transaction");
-  await simpleDialog.getByLabel("Counter account").click();
+  await simpleDialog.getByLabel("Counter Account").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
 
   await expect(
     simpleDialog.getByRole("button", {
-      name: "Swap debit/credit direction",
+      name: "Swap Debit/Credit Direction",
     }),
   ).toBeDisabled();
 
@@ -354,7 +354,7 @@ test("counterparty account link highlights the matching booking row", async ({
   const simpleDialog = await openCreateSimpleTransaction(page);
   await page.getByLabel("Date").fill("03.01.2026");
   await page.getByLabel("Description").fill(description);
-  await simpleDialog.getByLabel("Counter account").click();
+  await simpleDialog.getByLabel("Counter Account").click();
   await selectAccountLeaf(page, seeded.savingsAccount.name);
   await page.getByLabel("Amount").fill("77");
   await simpleDialog.getByRole("button", { name: "Create" }).click();
@@ -390,10 +390,10 @@ test("rebook booking to another compatible account", async ({ page }) => {
   const simpleDialog = await openCreateSimpleTransaction(page);
   await page.getByLabel("Date").fill("04.01.2026");
   await page.getByLabel("Description").fill("E2E Rebook Transaction");
-  await simpleDialog.getByLabel("Counter account").click();
+  await simpleDialog.getByLabel("Counter Account").click();
   await selectAccountLeaf(page, seeded.savingsAccount.name);
   await simpleDialog
-    .getByRole("button", { name: "Swap debit/credit direction" })
+    .getByRole("button", { name: "Swap Debit/Credit Direction" })
     .click();
   await page.getByLabel("Amount").fill("100");
   await simpleDialog.getByRole("button", { name: "Create" }).click();
@@ -405,7 +405,7 @@ test("rebook booking to another compatible account", async ({ page }) => {
   const rebookDialog = page.getByRole("dialog", { name: "Rebook Booking" });
   await expect(rebookDialog).toBeVisible();
 
-  const targetAccountInput = rebookDialog.getByLabel("Target account");
+  const targetAccountInput = rebookDialog.getByLabel("Target Account");
   await expect(targetAccountInput).toHaveValue("");
   await expectAccountLeafSearchResult({
     input: targetAccountInput,
@@ -464,7 +464,7 @@ test("eligible edit opens simple editor and ineligible edit opens split editor",
   });
   await page.getByLabel("Date").fill("04.01.2026");
   await page.getByLabel("Description").fill("E2E Editable Simple");
-  await simpleCreateDialog.getByLabel("Counter account").click();
+  await simpleCreateDialog.getByLabel("Counter Account").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
   await page.getByLabel("Amount").fill("20");
   await simpleCreateDialog.getByRole("button", { name: "Create" }).click();
@@ -474,9 +474,9 @@ test("eligible edit opens simple editor and ineligible edit opens split editor",
     name: "Edit Transaction",
   });
   await expect(
-    simpleEditDialog.getByRole("button", { name: "Switch to split editor" }),
+    simpleEditDialog.getByRole("button", { name: "Switch to Split Editor" }),
   ).toBeVisible();
-  await expect(simpleEditDialog.getByLabel("Counter account")).toBeVisible();
+  await expect(simpleEditDialog.getByLabel("Counter Account")).toBeVisible();
   await simpleEditDialog.getByRole("button", { name: "Save" }).click();
 
   await page.goto(`/${seeded.accountBookId}/${seeded.expenseAccount.id}`);
@@ -485,10 +485,10 @@ test("eligible edit opens simple editor and ineligible edit opens split editor",
     name: "Edit Transaction",
   });
   await expect(
-    expenseEditDialog.getByRole("button", { name: "Add booking" }),
+    expenseEditDialog.getByRole("button", { name: "Add Booking" }),
   ).toBeVisible();
   await expect(
-    expenseEditDialog.getByRole("button", { name: "Switch to split editor" }),
+    expenseEditDialog.getByRole("button", { name: "Switch to Split Editor" }),
   ).toHaveCount(0);
   await expenseEditDialog.getByRole("button", { name: "Cancel" }).click();
 
@@ -507,7 +507,7 @@ test("eligible edit opens simple editor and ineligible edit opens split editor",
     name: "Edit Transaction",
   });
   await expect(
-    splitEditDialog.getByRole("button", { name: "Add booking" }),
+    splitEditDialog.getByRole("button", { name: "Add Booking" }),
   ).toBeVisible();
   await splitEditDialog.getByRole("button", { name: "Cancel" }).click();
 });
@@ -523,7 +523,7 @@ test("switch from simple edit to split carries over edited values", async ({
   });
   await page.getByLabel("Date").fill("05.01.2026");
   await page.getByLabel("Description").fill("E2E Carry Switch");
-  await simpleCreateDialog.getByLabel("Counter account").click();
+  await simpleCreateDialog.getByLabel("Counter Account").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
   await page.getByLabel("Amount").fill("15");
   await simpleCreateDialog.getByRole("button", { name: "Create" }).click();
@@ -536,11 +536,11 @@ test("switch from simple edit to split carries over edited values", async ({
   await editDialog.getByLabel("Description").fill("E2E Carry Switch Updated");
   await editDialog.getByLabel("Amount").fill("55");
   await editDialog
-    .getByRole("button", { name: "Switch to split editor" })
+    .getByRole("button", { name: "Switch to Split Editor" })
     .click();
 
   await expect(
-    editDialog.getByRole("button", { name: "Add booking" }),
+    editDialog.getByRole("button", { name: "Add Booking" }),
   ).toBeVisible();
   await expect(editDialog.getByLabel("Description")).toHaveValue(
     "E2E Carry Switch Updated",
@@ -575,12 +575,12 @@ test("create flow: changing date before switching to split still allows split cr
   const simpleDialog = await openCreateSimpleTransaction(page);
   await simpleDialog.getByLabel("Date").fill("06.01.2026");
   await simpleDialog.getByLabel("Description").fill("E2E Create Date Switch");
-  await simpleDialog.getByLabel("Counter account").click();
+  await simpleDialog.getByLabel("Counter Account").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
   await simpleDialog.getByLabel("Amount").fill("22");
 
   await simpleDialog
-    .getByRole("button", { name: "Switch to split editor" })
+    .getByRole("button", { name: "Switch to Split Editor" })
     .click();
 
   const splitDialog = splitCreateDialog(page);
@@ -611,7 +611,7 @@ test("create security simple transaction preserves account metadata", async ({
 
   await page.getByLabel("Date").fill("03.01.2026");
   await page.getByLabel("Description").fill("E2E Security Simple Transaction");
-  await simpleDialog.getByLabel("Counter account").click();
+  await simpleDialog.getByLabel("Counter Account").click();
   await selectAccountLeaf(page, seeded.securityCounterAccount.name);
   await page.getByLabel("Amount").fill("3");
   await simpleDialog.getByRole("button", { name: "Create" }).click();
@@ -671,11 +671,11 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   await createSimpleDialog
     .getByLabel("Description")
     .fill("E2E Unitless Equity Create");
-  await createSimpleDialog.getByLabel("Counter account").click();
+  await createSimpleDialog.getByLabel("Counter Account").click();
   await selectAccountLeaf(page, seeded.savingsAccount.name);
   await createSimpleDialog.getByLabel("Amount").fill("90");
   await createSimpleDialog
-    .getByRole("button", { name: "Switch to split editor" })
+    .getByRole("button", { name: "Switch to Split Editor" })
     .click();
 
   const createDialog = splitCreateDialog(page);
@@ -706,7 +706,7 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   await securitySimpleDialog
     .getByLabel("Description")
     .fill("E2E Unitless Equity Edit");
-  await securitySimpleDialog.getByLabel("Counter account").click();
+  await securitySimpleDialog.getByLabel("Counter Account").click();
   await selectAccountLeaf(page, seeded.securityCounterAccount.name);
   await securitySimpleDialog.getByLabel("Amount").fill("5");
   await securitySimpleDialog.getByRole("button", { name: "Create" }).click();
@@ -715,10 +715,10 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   await openEditTransaction(page, "E2E Unitless Equity Edit");
   const editDialog = page.getByRole("dialog", { name: "Edit Transaction" });
   await editDialog
-    .getByRole("button", { name: "Switch to split editor" })
+    .getByRole("button", { name: "Switch to Split Editor" })
     .click();
   await expect(
-    editDialog.getByRole("button", { name: "Add booking" }),
+    editDialog.getByRole("button", { name: "Add Booking" }),
   ).toBeVisible();
   const { editedRowIndex, lockedRowIndex } =
     await setUnitlessEquityAccountOnEditableRow({

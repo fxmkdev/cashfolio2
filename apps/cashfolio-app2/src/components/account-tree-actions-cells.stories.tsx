@@ -37,7 +37,7 @@ function StoryComponent({
         <ActiveAccountTreeActionsCell
           archiveLabel={archivable ? "Archive" : "Cannot archive this row"}
           deleteLabel={deletable ? "Delete" : "Cannot delete this row"}
-          reorderLabel="Reorder siblings"
+          reorderLabel="Reorder Siblings"
           archivable={archivable}
           deletable={deletable}
           reorderEnabled={reorderEnabled}
@@ -48,7 +48,7 @@ function StoryComponent({
         />
       ) : (
         <ArchivedAccountTreeActionsCell
-          reorderLabel="Reorder siblings"
+          reorderLabel="Reorder Siblings"
           reorderEnabled={reorderEnabled}
           deleteLabel={deletable ? "Delete" : "Cannot delete this row"}
           unarchiveLabel={unarchivable ? "Unarchive" : "Cannot unarchive"}
@@ -123,7 +123,7 @@ export const ArchivedInteractionSmoke: Story = {
     const canvas = within(canvasElement);
 
     await userEvent.click(
-      canvas.getByRole("button", { name: "Reorder siblings" }),
+      canvas.getByRole("button", { name: "Reorder Siblings" }),
     );
     await userEvent.click(canvas.getByRole("button", { name: "Edit" }));
     await userEvent.click(canvas.getByRole("button", { name: "Delete" }));

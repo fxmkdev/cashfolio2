@@ -25,10 +25,14 @@ import {
 } from "@tabler/icons-react";
 import { useEffect, type ReactNode } from "react";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
+import type { AuthenticatedUserProfile } from "@/auth/user-profile";
 import { LinkNavLink } from "@/components/link-nav-link";
 import type { UserAccountBookOption } from "@/server/home";
 import { consumePendingAccountBookSwitch } from "./-account-book-switch-notification";
-import { AccountBookSwitcherMenu } from "./-account-book-switcher-menu";
+import {
+  AccountBookSwitcherMenu,
+  UserMenu,
+} from "./-account-book-switcher-menu";
 import {
   parseAccountsSearch,
   tabs,
@@ -41,17 +45,20 @@ export const Route = createFileRoute("/$accountBookId")({
     const [
       { loadUserAccountBooksForAccountBookRoute },
       { getRuntimeAppVersion },
+      { getAuthenticatedUserProfile },
     ] = await Promise.all([
       import("./-account-book-options-loader"),
       import("@/server/app-version"),
+      import("@/server/user-profile"),
     ]);
 
-    const [accountBooks, appVersion] = await Promise.all([
+    const [accountBooks, appVersion, userProfile] = await Promise.all([
       loadUserAccountBooksForAccountBookRoute(),
       getRuntimeAppVersion(),
+      getAuthenticatedUserProfile(),
     ]);
 
-    return { accountBooks, appVersion };
+    return { accountBooks, appVersion, userProfile };
   },
   component: AccountBookLayout,
 });
@@ -97,7 +104,9 @@ export function getActiveSection(args: {
   const section = segments[1];
   if (section === "activity") return "activity";
   if (section === "period") return "period";
-  if (section === "settings") return "settings";
+  if (section === "account-book-settings" || section === "user-settings") {
+    return "settings";
+  }
   if (section === "timeline") return "timeline";
   if (section === "valuation-cache") return "valuation-cache";
   return "accounts";
@@ -214,7 +223,7 @@ export function getAccountsLinkSearch(args: {
 }
 
 function AccountBookLayout() {
-  const { accountBooks, appVersion } = Route.useLoaderData();
+  const { accountBooks, appVersion, userProfile } = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const { pathname, locationSearch, matches } = useRouterState({
     select: (state) => ({
@@ -240,6 +249,7 @@ function AccountBookLayout() {
       pathname={pathname}
       accountBooks={accountBooks}
       appVersion={appVersion}
+      userProfile={userProfile}
       accountsLinkSearch={accountsLinkSearch}
       periodLinkSearch={periodLinkSearch}
     >
@@ -253,6 +263,7 @@ export type AccountBookShellProps = {
   pathname: string;
   accountBooks: UserAccountBookOption[];
   appVersion: string;
+  userProfile: AuthenticatedUserProfile;
   accountsLinkSearch: AccountsLinkSearch;
   periodLinkSearch: {
     period?: string;
@@ -265,6 +276,7 @@ export function AccountBookShell({
   pathname,
   accountBooks,
   appVersion,
+  userProfile,
   accountsLinkSearch,
   periodLinkSearch,
   children,
@@ -308,7 +320,7 @@ export function AccountBookShell({
           <Burger
             opened={mobileOpened}
             onClick={toggleMobile}
-            aria-label="Toggle navigation"
+            aria-label="Toggle Navigation"
             size="sm"
           />
           <CashfolioTitle appVersion={appVersion} />
@@ -375,6 +387,7 @@ export function AccountBookShell({
               accountsTab={accountsLinkSearch.tab}
               accountsMode={accountsLinkSearch.mode}
             />
+            <UserMenu accountBookId={accountBookId} userProfile={userProfile} />
           </Stack>
         </AppShell.Section>
       </AppShell.Navbar>

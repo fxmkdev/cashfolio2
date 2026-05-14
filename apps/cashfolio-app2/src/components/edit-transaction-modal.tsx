@@ -278,7 +278,7 @@ export function EditTransactionModal({
             disabled={isSubmitting}
             onClick={() => onAdd()}
           >
-            Add booking
+            Add Booking
           </Button>
         </Group>
         <DataGrid

@@ -2,7 +2,7 @@ import { expect, type Page } from "@playwright/test";
 
 export async function clickPeriodStepUntilQueryMatches(args: {
   page: Page;
-  buttonName: "Previous period" | "Next period";
+  buttonName: "Previous Period" | "Next Period";
   expectedPeriod: string;
   maxAttempts?: number;
   timeoutMs?: number;

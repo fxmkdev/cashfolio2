@@ -45,7 +45,7 @@ export function PeriodNetWorthReconciliationWarning(args: {
       variant="light"
       color="yellow"
       icon={<IconAlertTriangle size={16} />}
-      title="Net worth reconciliation mismatch"
+      title="Net Worth Reconciliation Mismatch"
       data-testid="period-net-worth-reconciliation-warning"
     >
       {warning}
@@ -66,7 +66,7 @@ export function PeriodSkippedValuationWarning(args: {
       variant="light"
       color="yellow"
       icon={<IconAlertTriangle size={16} />}
-      title="Partial data"
+      title="Partial Data"
       data-testid="period-skipped-valuations-warning"
     >
       {warning}

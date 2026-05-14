@@ -160,7 +160,7 @@ export function ActivityPageContent() {
           <LedgerPeriodFilterCard
             hasPeriodFilter={hasPeriodFilter}
             periodMode={periodMode}
-            selectedPeriodLabel={selectedPeriod?.label ?? "All periods"}
+            selectedPeriodLabel={selectedPeriod?.label ?? "All Periods"}
             pickerOpened={pickerOpened}
             onPickerOpenedChange={setPickerOpened}
             canGoToPreviousPeriod={
@@ -244,7 +244,7 @@ export function ActivityPageContent() {
               setPeriodFilter(nextPeriodValue);
               setPickerOpened(false);
             }}
-            clearFilterLabel="Current month"
+            clearFilterLabel="Current Month"
             clearFilterDisabled={selectedPeriod?.value === defaultPeriodValue}
             onClearFilter={() => {
               setPickerOpened(false);

@@ -189,7 +189,7 @@ export function useAccountTreeColumnDefs(params: {
             (rowsByParentKeyRef.current.get(parentKey)?.length ?? 0) - 1;
           const hasSiblings = siblingCount >= 1;
           const reorderLabel = hasSiblings
-            ? "Reorder siblings"
+            ? "Reorder Siblings"
             : "Cannot reorder because this row has no siblings";
 
           if (isArchivedMode) {

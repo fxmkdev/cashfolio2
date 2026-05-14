@@ -1900,7 +1900,7 @@ describe("getPeriodOverview", () => {
         totalGainLoss: 5,
         children: [
           {
-            label: "Unattributed (Multiple counterpart accounts)",
+            label: "Unattributed (Multiple Counterpart Accounts)",
             totalGainLoss: 5,
           },
         ],
@@ -1964,7 +1964,7 @@ describe("getPeriodOverview", () => {
         totalGainLoss: 5,
         children: [
           {
-            label: "Unattributed (No counterpart account)",
+            label: "Unattributed (No Counterpart Account)",
             totalGainLoss: 5,
           },
         ],

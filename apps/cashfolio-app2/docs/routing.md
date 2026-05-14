@@ -30,14 +30,15 @@ Related docs:
   `POST /api/logto/sign-out`
 - `$accountBookId/route.tsx` - shared account-book shell route using Mantine
   `AppShell` with left navbar navigation (Accounts, Activity, Period, Timeline,
-  Valuation Cache), navbar footer actions (Account Book switcher + Sign out),
+  Valuation Cache), navbar footer actions (Account Book switcher + User menu),
   and mobile-only header burger toggle
   - Uses the theme `sm` breakpoint as the shared source of truth for both navbar
     collapse and header visibility.
   - Keeps `Accounts` highlighted for account routes (`/$accountId`) as well as
     `/accounts`.
-  - Loads account-book switcher options at shell level and memoizes on the
-    browser side so nested route navigations can reuse the same list.
+  - Loads account-book switcher options and current user profile claims at shell
+    level. The footer keeps account-book actions in the account-book menu and
+    sign-out in the user menu.
 - `$accountBookId/index.tsx` - index redirect route that forwards to
   `$accountBookId/accounts`
 - `$accountBookId/accounts/route.tsx` - accounts page with tabs (one per account
@@ -50,9 +51,11 @@ Related docs:
 - `$accountBookId/valuation-cache/route.tsx` - valuation cache explorer page
   with tabs for Currency, Cryptocurrency, and Security; shows deduplicated unit
   rows and cached TimeSeries history charts (no live provider lookups)
-- `$accountBookId/settings/route.tsx` - account-book settings page for editing
-  account book name, reference currency, and start date, plus a danger-zone
-  delete flow that requires typing the current account-book name
+- `$accountBookId/account-book-settings/route.tsx` - account-book settings page
+  for editing account book name, reference currency, and start date, plus a
+  danger-zone delete flow that requires typing the current account-book name
+- `$accountBookId/user-settings/route.tsx` - placeholder user settings page
+  reached from the user menu while user-account management is built out
 - `$accountBookId/period/route.tsx` - period layout route with shared period
   search validation and loader data used by nested period pages
 - `$accountBookId/period/index.tsx` - period overview page with contribution,

@@ -23,12 +23,12 @@ export type ExplicitCounterpartAccount = {
 const EXPLICIT_UNATTRIBUTED_MISSING_COUNTERPART_ACCOUNT: ExplicitCounterpartAccount =
   {
     id: "explicit-unattributed:missing-counterpart",
-    name: "Unattributed (No counterpart account)",
+    name: "Unattributed (No Counterpart Account)",
   };
 const EXPLICIT_UNATTRIBUTED_MULTIPLE_COUNTERPARTS_ACCOUNT: ExplicitCounterpartAccount =
   {
     id: "explicit-unattributed:multiple-counterparts",
-    name: "Unattributed (Multiple counterpart accounts)",
+    name: "Unattributed (Multiple Counterpart Accounts)",
   };
 
 function normalizeGainLossCode(value: string | null): string {

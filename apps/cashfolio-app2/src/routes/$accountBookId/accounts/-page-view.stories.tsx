@@ -498,7 +498,7 @@ export const ArchivedModeActions: Story = {
     );
 
     await userEvent.click(
-      walletRowQueries.getByRole("button", { name: "Reorder siblings" }),
+      walletRowQueries.getByRole("button", { name: "Reorder Siblings" }),
     );
     const reorderDialog = body.getByRole("dialog", {
       name: "Reorder Siblings",
