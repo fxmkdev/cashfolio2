@@ -24,6 +24,29 @@ describe("resolveAppVersion", () => {
     ).resolves.toBe("2.3.4");
   });
 
+  test("builds runtime package paths from env and cwd", async () => {
+    const readPaths: string[] = [];
+
+    await expect(
+      resolveAppVersion({
+        cwd: "/app",
+        env: { npm_package_json: "/app/package.json" },
+        readPackageJson: async (filePath) => {
+          readPaths.push(filePath);
+
+          return filePath === "/app/apps/cashfolio-app2/package.json"
+            ? JSON.stringify({ version: "3.4.5" })
+            : JSON.stringify({ name: "cashfolio2" });
+        },
+      }),
+    ).resolves.toBe("3.4.5");
+
+    expect(readPaths).toEqual([
+      "/app/package.json",
+      "/app/apps/cashfolio-app2/package.json",
+    ]);
+  });
+
   test("returns unknown when no valid version is available", async () => {
     await expect(
       resolveAppVersion({

@@ -371,7 +371,20 @@ type CashfolioTitleProps = {
 function CashfolioTitle({ appVersion, size, px, pt }: CashfolioTitleProps) {
   return (
     <Tooltip label={`Version ${appVersion}`}>
-      <Text fw={600} size={size} px={px} pt={pt}>
+      <Text
+        aria-label={`Cashfolio, version ${appVersion}`}
+        component="span"
+        fw={600}
+        px={px}
+        pt={pt}
+        size={size}
+        style={{
+          cursor: "help",
+          display: "inline-flex",
+          outlineOffset: 2,
+        }}
+        tabIndex={0}
+      >
         Cashfolio
       </Text>
     </Tooltip>
