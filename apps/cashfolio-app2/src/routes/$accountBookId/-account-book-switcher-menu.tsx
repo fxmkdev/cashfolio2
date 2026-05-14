@@ -1,10 +1,11 @@
-import { Button, Menu, type MenuItemProps } from "@mantine/core";
+import { Avatar, Button, Menu, Text, type MenuItemProps } from "@mantine/core";
 import {
   IconCheck,
   IconChevronUp,
   IconLogout2,
   IconPlus,
   IconSettings,
+  IconUserCog,
 } from "@tabler/icons-react";
 import { createLink } from "@tanstack/react-router";
 import {
@@ -12,6 +13,7 @@ import {
   type ComponentPropsWithoutRef,
   type MouseEvent,
 } from "react";
+import type { AuthenticatedUserProfile } from "@/auth/user-profile";
 import type { UserAccountBookOption } from "@/server/home";
 import { markPendingAccountBookSwitch } from "./-account-book-switch-notification";
 import type { AccountsMode, TabValue } from "./accounts/-page-types";
@@ -108,10 +110,10 @@ export function AccountBookSwitcherMenu({
         <Menu.Divider />
         <LinkMenuItem
           leftSection={<IconSettings size={16} />}
-          to="/$accountBookId/settings"
+          to="/$accountBookId/account-book-settings"
           params={{ accountBookId }}
         >
-          Settings
+          Account Book Settings
         </LinkMenuItem>
         <Menu.Divider />
         <LinkMenuItem
@@ -119,6 +121,44 @@ export function AccountBookSwitcherMenu({
           to="/account-books/new"
         >
           Create new account book
+        </LinkMenuItem>
+      </Menu.Dropdown>
+    </Menu>
+  );
+}
+
+export function UserMenu({
+  accountBookId,
+  userProfile,
+}: {
+  accountBookId: string;
+  userProfile: AuthenticatedUserProfile;
+}) {
+  return (
+    <Menu position="top-end" width="target">
+      <Menu.Target>
+        <Button
+          variant="default"
+          leftSection={
+            <Avatar src={userProfile.avatarUrl} alt="" size={24} radius="xl">
+              {userProfile.initials}
+            </Avatar>
+          }
+          rightSection={<IconChevronUp size={16} />}
+          fullWidth
+        >
+          <Text component="span" truncate>
+            {userProfile.displayName}
+          </Text>
+        </Button>
+      </Menu.Target>
+      <Menu.Dropdown style={{ maxWidth: "100%" }}>
+        <LinkMenuItem
+          leftSection={<IconUserCog size={16} />}
+          to="/$accountBookId/user-settings"
+          params={{ accountBookId }}
+        >
+          User Settings
         </LinkMenuItem>
         <Menu.Divider />
         <form action="/api/logto/sign-out" method="post">

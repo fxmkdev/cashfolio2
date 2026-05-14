@@ -59,10 +59,16 @@ describe("getActiveSection", () => {
     ).toBe("valuation-cache");
   });
 
-  it("marks settings section for settings route", () => {
+  it("marks settings section for account-book and user settings routes", () => {
     expect(
       getActiveSection({
-        pathname: "/book-1/settings",
+        pathname: "/book-1/account-book-settings",
+        accountBookId: "book-1",
+      }),
+    ).toBe("settings");
+    expect(
+      getActiveSection({
+        pathname: "/book-1/user-settings",
         accountBookId: "book-1",
       }),
     ).toBe("settings");
