@@ -7,6 +7,7 @@ export {
   getAccountsPageData,
   getAccountReferenceBalances,
   getAccountGroups,
+  getActiveAccountBookUnitUsage,
   getAccounts,
   getExistingNodes,
   getLedgerAccountActionData,

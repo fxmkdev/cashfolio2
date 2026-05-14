@@ -14,6 +14,7 @@ describe("loadAccountsPageData", () => {
     accountGroups: [],
     existingNodes: [],
     referenceCurrency: "CHF",
+    unitUsage: { currencies: ["CHF"], cryptocurrencies: [] },
     rows: [],
   };
 

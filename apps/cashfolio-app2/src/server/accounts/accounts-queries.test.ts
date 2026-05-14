@@ -66,6 +66,7 @@ vi.mock("../valuation.server", () => ({
 }));
 
 import {
+  getActiveAccountBookUnitUsage,
   getAccountsPageData,
   getAccountTreeData,
   getGainLossEquityAccountId,
@@ -302,7 +303,7 @@ describe("getAccountsPageData", () => {
     getSecurityToCurrencyExchangeRate.mockResolvedValue(null);
   });
 
-  it("authorizes once and skips active-only page helpers for inactive state", async () => {
+  it("authorizes once, skips active-only page helpers for inactive state, and includes unit usage", async () => {
     const result = await getAccountsPageData({
       data: {
         accountBookId: "book-3",
@@ -318,7 +319,57 @@ describe("getAccountsPageData", () => {
       accountGroups: [],
       existingNodes: [],
       referenceCurrency: "CHF",
+      unitUsage: { currencies: ["CHF"], cryptocurrencies: [] },
       rows: [],
+    });
+  });
+});
+
+describe("getActiveAccountBookUnitUsage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    prisma.account.findMany.mockResolvedValue([
+      {
+        isActive: true,
+        currency: "USD",
+        cryptocurrency: null,
+        tradeCurrency: null,
+      },
+      {
+        isActive: true,
+        currency: null,
+        cryptocurrency: "BTC",
+        tradeCurrency: "EUR",
+      },
+    ]);
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "CHF",
+    });
+  });
+
+  it("authorizes and returns reference plus active account unit usage", async () => {
+    const result = await getActiveAccountBookUnitUsage({
+      data: { accountBookId: "book-6" },
+    });
+
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledTimes(1);
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-6");
+    expect(prisma.account.findMany).toHaveBeenCalledWith({
+      where: {
+        accountBookId: "book-6",
+        isActive: true,
+      },
+      select: {
+        isActive: true,
+        currency: true,
+        cryptocurrency: true,
+        tradeCurrency: true,
+      },
+    });
+    expect(result).toEqual({
+      currencies: ["CHF", "EUR", "USD"],
+      cryptocurrencies: ["BTC"],
     });
   });
 });

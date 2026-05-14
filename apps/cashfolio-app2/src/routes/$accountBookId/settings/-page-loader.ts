@@ -1,12 +1,18 @@
 import { getAccountBookSettings } from "@/server/account-books";
+import { getActiveAccountBookUnitUsage } from "@/server/accounts";
 import { normalizeDateInputValue, startOfUtcDay } from "@/shared/date";
 
 export async function loadAccountBookSettingsPageData(args: {
   accountBookId: string;
 }) {
-  const settings = await getAccountBookSettings({
-    data: { accountBookId: args.accountBookId },
-  });
+  const [settings, unitUsage] = await Promise.all([
+    getAccountBookSettings({
+      data: { accountBookId: args.accountBookId },
+    }),
+    getActiveAccountBookUnitUsage({
+      data: { accountBookId: args.accountBookId },
+    }),
+  ]);
 
   const startDate = normalizeDateInputValue(settings.startDate);
   if (!startDate) {
@@ -15,6 +21,7 @@ export async function loadAccountBookSettingsPageData(args: {
 
   return {
     ...settings,
+    unitUsage,
     startDate: startOfUtcDay(startDate),
   };
 }

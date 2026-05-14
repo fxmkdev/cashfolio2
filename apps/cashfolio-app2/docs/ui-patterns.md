@@ -16,6 +16,11 @@ paths are relative to that app directory.
 - Use `LinkTab` from `src/components/link-tab.tsx` for tab-like navigation that
   changes route/search state.
 
+## Label Typography
+
+- When a label combines a short code with a human-readable name, separate them
+  with an en dash (`–`), not a hyphen-minus (`-`). Example: `CHF – Swiss Franc`.
+
 ## Navigation Link Pattern
 
 - If an element navigates to another page (including route-search state such as

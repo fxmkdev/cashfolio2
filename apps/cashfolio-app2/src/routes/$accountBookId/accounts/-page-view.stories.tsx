@@ -376,6 +376,10 @@ function AccountsPageStoryHarness({
         tabs={tabs}
         accountGroups={accountGroups}
         existingNodes={existingNodes}
+        unitUsage={{
+          currencies: ["CHF", "EUR", "USD"],
+          cryptocurrencies: ["BTC"],
+        }}
         rows={rows}
         columnDefs={columnDefs}
         pinnedBottomRowData={getPinnedBottomRowData(

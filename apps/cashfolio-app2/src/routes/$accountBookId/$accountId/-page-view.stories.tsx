@@ -305,6 +305,10 @@ function LedgerPageStoryHarness({
         rebooking={rebooking}
         rebookModalOpened={rebookModalOpened}
         hasCompleteBookingUnit={true}
+        unitUsage={{
+          currencies: ["CHF", "EUR", "USD"],
+          cryptocurrencies: ["BTC"],
+        }}
         accountOptions={baseAccountOptions}
         editAccountOptions={baseAccountOptions}
         simpleCounterAccountOptions={baseAccountOptions}
