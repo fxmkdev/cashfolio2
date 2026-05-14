@@ -7,8 +7,13 @@ import {
   IconSettings,
 } from "@tabler/icons-react";
 import { createLink } from "@tanstack/react-router";
-import { forwardRef, type ComponentPropsWithoutRef } from "react";
+import {
+  forwardRef,
+  type ComponentPropsWithoutRef,
+  type MouseEvent,
+} from "react";
 import type { UserAccountBookOption } from "@/server/home";
+import { markPendingAccountBookSwitch } from "./-account-book-switch-notification";
 import type { AccountsMode, TabValue } from "./accounts/-page-types";
 
 const MenuItemLinkBase = forwardRef<
@@ -26,6 +31,27 @@ type AccountBookSwitcherMenuProps = {
   accountsTab: TabValue;
   accountsMode: AccountsMode;
 };
+
+function handleAccountBookSwitchClick(
+  event: MouseEvent<HTMLAnchorElement>,
+  accountBook: UserAccountBookOption,
+) {
+  if (
+    event.defaultPrevented ||
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  ) {
+    return;
+  }
+
+  markPendingAccountBookSwitch({
+    accountBookId: accountBook.id,
+    accountBookName: accountBook.name,
+  });
+}
 
 export function AccountBookSwitcherMenu({
   accountBookId,
@@ -71,6 +97,9 @@ export function AccountBookSwitcherMenu({
               key={accountBook.id}
               to="/$accountBookId"
               params={{ accountBookId: accountBook.id }}
+              onClick={(event) =>
+                handleAccountBookSwitchClick(event, accountBook)
+              }
             >
               {accountBook.name}
             </LinkMenuItem>

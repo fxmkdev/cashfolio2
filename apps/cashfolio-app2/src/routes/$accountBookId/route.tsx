@@ -9,6 +9,7 @@ import {
   type TextProps,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
 import {
   createFileRoute,
   Outlet,
@@ -16,14 +17,16 @@ import {
 } from "@tanstack/react-router";
 import {
   IconCalendarMonth,
+  IconCheck,
   IconChartBar,
   IconDatabase,
   IconListDetails,
 } from "@tabler/icons-react";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import { LinkNavLink } from "@/components/link-nav-link";
 import type { UserAccountBookOption } from "@/server/home";
+import { consumePendingAccountBookSwitch } from "./-account-book-switch-notification";
 import { AccountBookSwitcherMenu } from "./-account-book-switcher-menu";
 import {
   parseAccountsSearch,
@@ -266,6 +269,23 @@ export function AccountBookShell({
   const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] =
     useDisclosure(false);
   const activeSection = getActiveSection({ pathname, accountBookId });
+
+  useEffect(() => {
+    const pendingAccountBookSwitch =
+      consumePendingAccountBookSwitch(accountBookId);
+
+    if (!pendingAccountBookSwitch) {
+      return;
+    }
+
+    notifications.show({
+      color: "green",
+      icon: <IconCheck size={16} />,
+      title: "Account book switched",
+      message: `Now viewing ${pendingAccountBookSwitch.accountBookName}.`,
+      withBorder: true,
+    });
+  }, [accountBookId]);
 
   return (
     <AppShell
