@@ -63,28 +63,30 @@ test("creates a new empty account book and makes it available in navigation", as
   page,
 }, testInfo) => {
   const externalId = await useIsolatedUser(context, testInfo);
-  const accountBookName = `E2E Created ${createId()}`;
+  const firstAccountBookName = `E2E Alpha ${createId()}`;
+  const secondAccountBookName = `E2E Beta ${createId()}`;
 
   await page.goto("/account-books/new");
-  await page.getByLabel("Account Book Name").fill(accountBookName);
+  await page.getByLabel("Account Book Name").fill(firstAccountBookName);
   await page.getByRole("button", { name: "Create" }).click();
 
   await expect(page).toHaveURL(activeAssetAccountsUrlPattern);
   await expect(
-    page.getByRole("button", { name: accountBookName }),
+    page.getByRole("button", { name: firstAccountBookName }),
   ).toBeVisible();
+  await expect(page.getByText("Account book created.").last()).toBeVisible();
 
-  const accountBookId = getAccountBookIdFromAccountsUrl(page.url());
-  const accountBooks = await getUserAccountBooks(externalId);
+  const firstAccountBookId = getAccountBookIdFromAccountsUrl(page.url());
+  let accountBooks = await getUserAccountBooks(externalId);
   expect(accountBooks).toEqual([
     expect.objectContaining({
-      id: accountBookId,
-      name: accountBookName,
+      id: firstAccountBookId,
+      name: firstAccountBookName,
       referenceCurrency: "CHF",
     }),
   ]);
 
-  const accounts = await getAccountsForAccountBook(accountBookId);
+  const accounts = await getAccountsForAccountBook(firstAccountBookId);
   expect(accounts).toEqual([
     expect.objectContaining({
       name: "Gain/Loss",
@@ -93,9 +95,48 @@ test("creates a new empty account book and makes it available in navigation", as
     }),
   ]);
 
-  await page.getByRole("button", { name: accountBookName }).click();
+  await page.getByRole("button", { name: firstAccountBookName }).click();
   await expect(
-    page.getByRole("menuitem", { name: accountBookName }),
+    page.getByRole("menuitem", { name: firstAccountBookName }),
+  ).toBeVisible();
+  await page.getByRole("menuitem", { name: "Create new account book" }).click();
+
+  await expect(page).toHaveURL(/\/account-books\/new$/);
+  await page.getByLabel("Account Book Name").fill(secondAccountBookName);
+  await page.getByRole("button", { name: "Create" }).click();
+
+  await expect(page).toHaveURL(activeAssetAccountsUrlPattern);
+  await expect(
+    page.getByRole("button", { name: secondAccountBookName }),
+  ).toBeVisible();
+  await expect(page.getByText("Account book created.").last()).toBeVisible();
+
+  const secondAccountBookId = getAccountBookIdFromAccountsUrl(page.url());
+  accountBooks = await getUserAccountBooks(externalId);
+  expect(accountBooks).toEqual([
+    expect.objectContaining({
+      id: firstAccountBookId,
+      name: firstAccountBookName,
+      referenceCurrency: "CHF",
+    }),
+    expect.objectContaining({
+      id: secondAccountBookId,
+      name: secondAccountBookName,
+      referenceCurrency: "CHF",
+    }),
+  ]);
+
+  await page.getByRole("button", { name: secondAccountBookName }).click();
+  await page.getByRole("menuitem", { name: firstAccountBookName }).click();
+
+  await expect(page).toHaveURL(
+    new RegExp(`/${firstAccountBookId}/accounts\\?`),
+  );
+  await expect(
+    page.getByRole("button", { name: firstAccountBookName }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(`Now viewing ${firstAccountBookName}.`),
   ).toBeVisible();
 });
 

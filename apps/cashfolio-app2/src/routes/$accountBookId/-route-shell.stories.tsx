@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Box, Text, Title } from "@mantine/core";
+import { Notifications } from "@mantine/notifications";
 import { useRouterState } from "@tanstack/react-router";
 import { expect, userEvent, within } from "storybook/test";
 import { AccountBookShell } from "./route";
@@ -25,25 +26,30 @@ function AccountBookShellSmokeHarness() {
   const search = useRouterState({
     select: (state) => state.location.search,
   });
+  const accountBookId =
+    pathname.split("/").filter(Boolean)[0] ?? STORYBOOK_ACCOUNT_BOOK_ID;
 
   return (
-    <AccountBookShell
-      accountBookId={STORYBOOK_ACCOUNT_BOOK_ID}
-      accountBooks={[
-        { id: "storybook-book", name: "Storybook Book" },
-        { id: "storybook-alt-book", name: "Storybook Alt Book" },
-      ]}
-      appVersion="storybook"
-      pathname={pathname}
-      accountsLinkSearch={{ tab: "ASSET", mode: "active" }}
-      periodLinkSearch={{}}
-    >
-      <Box px="xl" py="xl">
-        <Title order={2}>{getHeadingLabel(pathname)}</Title>
-        <Text data-testid="router-path">{pathname}</Text>
-        <Text data-testid="router-search">{JSON.stringify(search)}</Text>
-      </Box>
-    </AccountBookShell>
+    <>
+      <Notifications />
+      <AccountBookShell
+        accountBookId={accountBookId}
+        accountBooks={[
+          { id: "storybook-book", name: "Storybook Book" },
+          { id: "storybook-alt-book", name: "Storybook Alt Book" },
+        ]}
+        appVersion="storybook"
+        pathname={pathname}
+        accountsLinkSearch={{ tab: "ASSET", mode: "active" }}
+        periodLinkSearch={{}}
+      >
+        <Box px="xl" py="xl">
+          <Title order={2}>{getHeadingLabel(pathname)}</Title>
+          <Text data-testid="router-path">{pathname}</Text>
+          <Text data-testid="router-search">{JSON.stringify(search)}</Text>
+        </Box>
+      </AccountBookShell>
+    </>
   );
 }
 
@@ -103,6 +109,15 @@ export const RouteSmoke: Story = {
     await expect(
       canvas.getByRole("menuitem", { name: "Create new account book" }),
     ).not.toHaveAttribute("aria-disabled", "true");
+    await userEvent.click(
+      canvas.getByRole("menuitem", { name: "Storybook Alt Book" }),
+    );
+    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
+      "/storybook-alt-book/accounts",
+    );
+    await expect(
+      await within(document.body).findByText("Now viewing Storybook Alt Book."),
+    ).toBeVisible();
   },
 };
 
