@@ -362,3 +362,86 @@ export async function seedExplicitGainLossDrilldownScenario(args: {
     gainLossAccountName: gainLossAccount.name,
   };
 }
+
+export async function seedActivityPageScenario(args: {
+  accountBookId: string;
+  cashAccountId: string;
+  savingsAccountId: string;
+  expenseAccountId: string;
+}) {
+  const olderTransactionId = createId();
+  const newerTransactionId = createId();
+  const olderDescription = "E2E Activity Older";
+  const newerDescription = "E2E Activity Newer";
+
+  await prisma.transaction.create({
+    data: {
+      id: olderTransactionId,
+      accountBookId: args.accountBookId,
+      description: olderDescription,
+      bookings: {
+        create: [
+          {
+            id: createId(),
+            accountId: args.cashAccountId,
+            date: new Date("2026-05-03T00:00:00.000Z"),
+            description: `${olderDescription} Cash`,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: 50,
+            sortOrder: 0,
+          },
+          {
+            id: createId(),
+            accountId: args.savingsAccountId,
+            date: new Date("2026-05-03T00:00:00.000Z"),
+            description: `${olderDescription} Savings`,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: -50,
+            sortOrder: 1,
+          },
+        ],
+      },
+    },
+  });
+
+  await prisma.transaction.create({
+    data: {
+      id: newerTransactionId,
+      accountBookId: args.accountBookId,
+      description: newerDescription,
+      bookings: {
+        create: [
+          {
+            id: createId(),
+            accountId: args.cashAccountId,
+            date: new Date("2026-05-12T00:00:00.000Z"),
+            description: `${newerDescription} Cash`,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: 125,
+            sortOrder: 0,
+          },
+          {
+            id: createId(),
+            accountId: args.expenseAccountId,
+            date: new Date("2026-05-12T00:00:00.000Z"),
+            description: `${newerDescription} Expense`,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: -125,
+            sortOrder: 1,
+          },
+        ],
+      },
+    },
+  });
+
+  return {
+    olderTransactionId,
+    newerTransactionId,
+    olderDescription,
+    newerDescription,
+  };
+}

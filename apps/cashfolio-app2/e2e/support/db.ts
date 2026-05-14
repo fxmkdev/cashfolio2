@@ -11,6 +11,7 @@ export { seedDatabase } from "./seed-database";
 export type { SeededData } from "./seed-database";
 export {
   getTransactionBookingsByDescription,
+  seedActivityPageScenario,
   seedAssetAccountWithMissingReferenceBalance,
   seedExplicitGainLossDrilldownScenario,
   seedNonZeroConvertibleArchivedAndLiabilityBalances,
