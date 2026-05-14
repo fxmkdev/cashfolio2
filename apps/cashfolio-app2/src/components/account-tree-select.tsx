@@ -139,7 +139,7 @@ export const AccountTreeSelect = forwardRef<
       allowDeselect={allowDeselect}
       expandOnClick={expandOnClick}
       defaultExpandAll={defaultExpandAll}
-      comboboxProps={{ withinPortal: false, ...comboboxProps }}
+      comboboxProps={{ withinPortal: true, ...comboboxProps }}
       nothingFoundMessage={nothingFoundMessage}
       filter={(query, node) =>
         getAccountTreeSearchLabel(node)

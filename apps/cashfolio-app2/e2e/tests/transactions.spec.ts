@@ -110,14 +110,21 @@ function normalizeCellText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function exactAccountOptionName(name: string): RegExp {
-  return new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
+function accountOptionNameRegex(name: string): RegExp {
+  return new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+}
+
+function accountLeafOption(page: Page, name: string): Locator {
+  return page
+    .getByRole("option", {
+      name: accountOptionNameRegex(name),
+    })
+    .filter({ hasNot: page.getByRole("button") })
+    .first();
 }
 
 async function selectAccountLeaf(page: Page, name: string) {
-  const option = page.getByRole("option", {
-    name: exactAccountOptionName(name),
-  });
+  const option = accountLeafOption(page, name);
   await expect(option).toBeVisible();
   await option.click();
 }
@@ -149,12 +156,7 @@ async function setGridAccountCellValue(args: {
   await expect(editorInput).toBeVisible();
   await editorInput.fill(args.accountName);
 
-  const option = args.dialog
-    .page()
-    .getByRole("option", {
-      name: exactAccountOptionName(args.accountName),
-    })
-    .first();
+  const option = accountLeafOption(args.dialog.page(), args.accountName);
   await expect(option).toBeVisible({ timeout: 3000 });
   await option.click();
 }
@@ -214,10 +216,6 @@ async function setUnitlessEquityAccountOnEditableRow(args: {
   }
 
   throw new Error("Could not set unitless equity account on an editable row");
-}
-
-function accountOptionNameRegex(name: string): RegExp {
-  return exactAccountOptionName(name);
 }
 
 test.beforeAll(async () => {
