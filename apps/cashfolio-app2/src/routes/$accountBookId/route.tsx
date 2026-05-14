@@ -17,20 +17,15 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import {
-  IconActivity,
-  IconCalendarMonth,
   IconCheck,
-  IconChartBar,
-  IconDatabase,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
-  IconListDetails,
 } from "@tabler/icons-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import type { AuthenticatedUserProfile } from "@/auth/user-profile";
-import { LinkNavLink } from "@/components/link-nav-link";
 import type { UserAccountBookOption } from "@/server/home";
+import { AccountBookNavigationLinks } from "./-account-book-navigation-links";
 import { consumePendingAccountBookSwitch } from "./-account-book-switch-notification";
 import {
   AccountBookSwitcherMenu,
@@ -426,136 +421,14 @@ export function AccountBookShell({
               </Group>
             )}
             <Divider />
-            <Stack
-              gap="xs"
-              hiddenFrom={desktopRailCollapsed ? "sm" : undefined}
-            >
-              <LinkNavLink
-                label="Accounts"
-                leftSection={<IconListDetails size={16} />}
-                to="/$accountBookId/accounts"
-                params={{ accountBookId }}
-                search={accountsLinkSearch}
-                active={activeSection === "accounts"}
-                onClick={closeMobile}
-              />
-              <LinkNavLink
-                label="Activity"
-                leftSection={<IconActivity size={16} />}
-                to="/$accountBookId/activity"
-                params={{ accountBookId }}
-                search={periodLinkSearch}
-                active={activeSection === "activity"}
-                onClick={closeMobile}
-              />
-              <LinkNavLink
-                label="Period"
-                leftSection={<IconCalendarMonth size={16} />}
-                to="/$accountBookId/period"
-                params={{ accountBookId }}
-                search={periodLinkSearch}
-                active={activeSection === "period"}
-                onClick={closeMobile}
-              />
-              <LinkNavLink
-                label="Timeline"
-                leftSection={<IconChartBar size={16} />}
-                to="/$accountBookId/timeline"
-                params={{ accountBookId }}
-                active={activeSection === "timeline"}
-                onClick={closeMobile}
-              />
-              <LinkNavLink
-                label="Valuation Cache"
-                leftSection={<IconDatabase size={16} />}
-                to="/$accountBookId/valuation-cache"
-                params={{ accountBookId }}
-                active={activeSection === "valuation-cache"}
-                onClick={closeMobile}
-              />
-            </Stack>
-            {desktopRailCollapsed ? (
-              <Stack align="center" gap="xs" visibleFrom="sm">
-                <Tooltip label="Accounts" position="right">
-                  <LinkNavLink
-                    aria-label="Accounts"
-                    label=""
-                    leftSection={<IconListDetails size={18} />}
-                    to="/$accountBookId/accounts"
-                    params={{ accountBookId }}
-                    search={accountsLinkSearch}
-                    active={activeSection === "accounts"}
-                    onClick={closeMobile}
-                    styles={{
-                      root: { justifyContent: "center", width: 40 },
-                      section: { marginInlineEnd: 0 },
-                    }}
-                  />
-                </Tooltip>
-                <Tooltip label="Activity" position="right">
-                  <LinkNavLink
-                    aria-label="Activity"
-                    label=""
-                    leftSection={<IconActivity size={18} />}
-                    to="/$accountBookId/activity"
-                    params={{ accountBookId }}
-                    search={periodLinkSearch}
-                    active={activeSection === "activity"}
-                    onClick={closeMobile}
-                    styles={{
-                      root: { justifyContent: "center", width: 40 },
-                      section: { marginInlineEnd: 0 },
-                    }}
-                  />
-                </Tooltip>
-                <Tooltip label="Period" position="right">
-                  <LinkNavLink
-                    aria-label="Period"
-                    label=""
-                    leftSection={<IconCalendarMonth size={18} />}
-                    to="/$accountBookId/period"
-                    params={{ accountBookId }}
-                    search={periodLinkSearch}
-                    active={activeSection === "period"}
-                    onClick={closeMobile}
-                    styles={{
-                      root: { justifyContent: "center", width: 40 },
-                      section: { marginInlineEnd: 0 },
-                    }}
-                  />
-                </Tooltip>
-                <Tooltip label="Timeline" position="right">
-                  <LinkNavLink
-                    aria-label="Timeline"
-                    label=""
-                    leftSection={<IconChartBar size={18} />}
-                    to="/$accountBookId/timeline"
-                    params={{ accountBookId }}
-                    active={activeSection === "timeline"}
-                    onClick={closeMobile}
-                    styles={{
-                      root: { justifyContent: "center", width: 40 },
-                      section: { marginInlineEnd: 0 },
-                    }}
-                  />
-                </Tooltip>
-                <Tooltip label="Valuation Cache" position="right">
-                  <LinkNavLink
-                    aria-label="Valuation Cache"
-                    label=""
-                    leftSection={<IconDatabase size={18} />}
-                    to="/$accountBookId/valuation-cache"
-                    params={{ accountBookId }}
-                    active={activeSection === "valuation-cache"}
-                    onClick={closeMobile}
-                    styles={{
-                      root: { justifyContent: "center", width: 40 },
-                      section: { marginInlineEnd: 0 },
-                    }}
-                  />
-                </Tooltip>
-              </Stack>
-            ) : null}
+            <AccountBookNavigationLinks
+              accountBookId={accountBookId}
+              activeSection={activeSection}
+              accountsLinkSearch={accountsLinkSearch}
+              collapsed={desktopRailCollapsed}
+              onNavigate={closeMobile}
+              periodLinkSearch={periodLinkSearch}
+            />
           </Stack>
         </AppShell.Section>
 

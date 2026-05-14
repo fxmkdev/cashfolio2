@@ -11,6 +11,7 @@ function getHeadingLabel(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
   const section = segments[1];
 
+  if (section === "activity") return "Activity";
   if (section === "period") return "Period";
   if (section === "timeline") return "Timeline";
   if (section === "valuation-cache") return "Valuation Cache";
@@ -83,6 +84,11 @@ export const RouteSmoke: Story = {
     await expect(
       canvas.getByRole("button", { name: "Collapse sidebar" }),
     ).toBeVisible();
+    await userEvent.click(canvas.getByRole("link", { name: "Activity" }));
+    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
+      "/storybook-book/activity",
+    );
+
     await userEvent.click(canvas.getByRole("link", { name: "Period" }));
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
       "/storybook-book/period",
@@ -183,6 +189,11 @@ export const DesktopRailSmoke: Story = {
     );
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
       "/storybook-book/valuation-cache",
+    );
+
+    await userEvent.click(canvas.getByRole("link", { name: "Activity" }));
+    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
+      "/storybook-book/activity",
     );
 
     await userEvent.click(
