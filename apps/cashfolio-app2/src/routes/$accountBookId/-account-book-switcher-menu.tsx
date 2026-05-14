@@ -3,6 +3,7 @@ import {
   IconCheck,
   IconChevronUp,
   IconLogout2,
+  IconPlus,
   IconSettings,
 } from "@tabler/icons-react";
 import { createLink } from "@tanstack/react-router";
@@ -84,7 +85,12 @@ export function AccountBookSwitcherMenu({
           Settings
         </LinkMenuItem>
         <Menu.Divider />
-        <Menu.Item disabled>Create new account book</Menu.Item>
+        <LinkMenuItem
+          leftSection={<IconPlus size={16} />}
+          to="/account-books/new"
+        >
+          Create new account book
+        </LinkMenuItem>
         <Menu.Divider />
         <form action="/api/logto/sign-out" method="post">
           <Menu.Item

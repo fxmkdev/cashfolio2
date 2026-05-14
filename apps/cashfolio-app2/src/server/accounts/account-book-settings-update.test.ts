@@ -1,130 +1,22 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-const createServerFn = vi.hoisted(() =>
-  vi.fn(() => {
-    let validate: ((data: unknown) => unknown) | undefined;
-    const chain = {
-      inputValidator: vi.fn((validator: (data: unknown) => unknown) => {
-        validate = validator;
-        return chain;
-      }),
-      handler: vi.fn((handler: ({ data }: { data: unknown }) => unknown) => {
-        return async ({ data }: { data: unknown }) => {
-          const validatedData = validate ? validate(data) : data;
-          return handler({ data: validatedData });
-        };
-      }),
-    };
-    return chain;
-  }),
-);
-
-const ensureAuthorizedForAccountBookId = vi.hoisted(() => vi.fn());
-const ensureSameOriginRequestFromServerContext = vi.hoisted(() => vi.fn());
-const invalidatePeriodBaseDataCacheForAccountBook = vi.hoisted(() => vi.fn());
-
-const tx = vi.hoisted(() => ({
-  accountBook: {
-    findUniqueOrThrow: vi.fn(),
-    update: vi.fn(),
-  },
-  booking: {
-    findFirst: vi.fn(),
-    updateMany: vi.fn(),
-  },
-  transaction: {
-    findMany: vi.fn(),
-  },
-}));
-
-const prisma = vi.hoisted(() => ({
-  accountBook: {
-    findUniqueOrThrow: vi.fn(),
-  },
-  $transaction: vi.fn(),
-}));
-
-vi.mock("@tanstack/react-start", () => ({
-  createServerFn,
-}));
-
-vi.mock("../../account-books/functions.server", () => ({
-  ensureAuthorizedForAccountBookId,
-}));
-
-vi.mock("../../security/same-origin.server", () => ({
-  ensureSameOriginRequestFromServerContext,
-}));
-
-vi.mock("../../prisma.server", () => ({
-  prisma,
-}));
-
-vi.mock("../period/period-base-data-cache", () => ({
-  invalidatePeriodBaseDataCacheForAccountBook,
-}));
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
-  getAccountBookSettings,
+  ensureAuthorizedForAccountBookId,
+  ensureSameOriginRequestFromServerContext,
+  invalidatePeriodBaseDataCacheForAccountBook,
+  resetAccountBookSettingsMocks,
+  restoreAccountBookSettingsMocks,
+  tx,
   updateAccountBookSettings,
-} from "./account-book-settings";
+} from "./account-book-settings-test-setup";
 
-describe("account-book settings server functions", () => {
+describe("updateAccountBookSettings", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-01-10T12:00:00.000Z"));
-
-    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
-      id: "book-1",
-      name: "My Book",
-      referenceCurrency: "chf",
-      startDate: new Date("2026-01-03T12:30:00.000Z"),
-    });
-
-    prisma.$transaction.mockImplementation(async (callback) => callback(tx));
-
-    tx.accountBook.findUniqueOrThrow.mockResolvedValue({
-      id: "book-1",
-      referenceCurrency: "CHF",
-      startDate: new Date("2026-01-03T00:00:00.000Z"),
-    });
-    tx.accountBook.update.mockResolvedValue({
-      id: "book-1",
-      name: "Updated Book",
-      referenceCurrency: "USD",
-      startDate: new Date("2026-01-02T00:00:00.000Z"),
-    });
-    tx.booking.findFirst.mockResolvedValue(null);
-    tx.booking.updateMany.mockResolvedValue({ count: 0 });
-    tx.transaction.findMany.mockResolvedValue([]);
+    resetAccountBookSettingsMocks();
   });
 
   afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it("loads account-book settings", async () => {
-    const result = await getAccountBookSettings({
-      data: { accountBookId: "book-1" },
-    });
-
-    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-1");
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
-      where: { id: "book-1" },
-      select: {
-        id: true,
-        name: true,
-        referenceCurrency: true,
-        startDate: true,
-      },
-    });
-    expect(result).toEqual({
-      id: "book-1",
-      name: "My Book",
-      referenceCurrency: "CHF",
-      startDate: "2026-01-03T00:00:00.000Z",
-    });
+    restoreAccountBookSettingsMocks();
   });
 
   it("updates name only without cache invalidation", async () => {

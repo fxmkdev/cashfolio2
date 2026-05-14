@@ -20,7 +20,11 @@ Related docs:
 ### Route Structure
 
 - `index.tsx` - authenticated home route; redirects to the first accessible
-  account book
+  account book, or to `/account-books/new` when the user has no account books
+- `account-books/new.tsx` - account-book creation route; creates an empty book,
+  links it to the current user, and relies on the existing database trigger to
+  seed only the system-managed Gain/Loss account. This route is outside the
+  account-book shell and includes its own sign-out action.
 - `api/logto/$action.tsx` - auth endpoints: `GET /api/logto/sign-in`,
   `GET /api/logto/callback`, `GET /api/logto/sign-up`,
   `POST /api/logto/sign-out`
@@ -44,7 +48,8 @@ Related docs:
   with tabs for Currency, Cryptocurrency, and Security; shows deduplicated unit
   rows and cached TimeSeries history charts (no live provider lookups)
 - `$accountBookId/settings/route.tsx` - account-book settings page for editing
-  account book name, reference currency, and start date
+  account book name, reference currency, and start date, plus a danger-zone
+  delete flow that requires typing the current account-book name
 - `$accountBookId/period/route.tsx` - period layout route with shared period
   search validation and loader data used by nested period pages
 - `$accountBookId/period/index.tsx` - period overview page with contribution,

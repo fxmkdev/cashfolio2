@@ -1,6 +1,13 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
-import { updateAccountBookSettings } from "@/server/account-books";
+import {
+  deleteAccountBook,
+  updateAccountBookSettings,
+} from "@/server/account-books";
 import { invalidateCachedUserAccountBooks } from "../-account-book-options-loader";
 import { loadAccountBookSettingsPageData } from "./-page-loader";
 
@@ -20,6 +27,7 @@ function AccountBookSettingsPage() {
   const settings = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const router = useRouter();
+  const navigate = useNavigate({ from: "/$accountBookId/settings" });
 
   return (
     <Suspense fallback={null}>
@@ -38,6 +46,17 @@ function AccountBookSettingsPage() {
 
           invalidateCachedUserAccountBooks();
           await router.invalidate();
+        }}
+        onDelete={async (values) => {
+          await deleteAccountBook({
+            data: {
+              accountBookId,
+              confirmationName: values.confirmationName,
+            },
+          });
+
+          invalidateCachedUserAccountBooks();
+          await navigate({ to: "/" });
         }}
       />
     </Suspense>

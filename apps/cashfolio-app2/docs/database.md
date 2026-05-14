@@ -21,6 +21,10 @@ paths are relative to that app directory.
   `scripts/prisma-migrate-deploy-with-retry.sh`, which retries likely transient
   `P1001` reachability failures with backoff and fails fast for clearly
   non-transient host/DNS resolution errors
+- The database owns system-managed Gain/Loss account seeding for new books via
+  the `AccountBook_ensure_gain_loss_account` trigger. Application account-book
+  creation should create the `AccountBook` and user link only; the trigger
+  creates the one system-managed `Gain/Loss` equity account.
 
 ## Models
 
