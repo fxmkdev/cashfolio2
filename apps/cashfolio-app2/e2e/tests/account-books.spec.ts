@@ -9,9 +9,9 @@ import {
   AccountType,
   EquityAccountSubtype,
 } from "../../src/.prisma-client/enums";
+import { E2E_AUTH_EXTERNAL_ID_COOKIE } from "../../src/auth/e2e-auth";
 import { getAccountsForAccountBook, getUserAccountBooks } from "../support/db";
 
-const E2E_AUTH_EXTERNAL_ID_COOKIE = "cashfolio-e2e-external-id";
 const activeAssetAccountsUrlPattern =
   /\/[^/]+\/accounts\?(?=.*\bmode=active\b)(?=.*\btab=ASSET\b)/;
 
