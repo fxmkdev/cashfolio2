@@ -22,9 +22,9 @@ Related docs:
 - `index.tsx` - authenticated home route; redirects to the first accessible
   account book, or to `/account-books/new` when the user has no account books
 - `account-books/new.tsx` - account-book creation route; creates an empty book,
-  links it to the current user, and seeds only the system-managed Gain/Loss
-  account. This route is outside the account-book shell and includes its own
-  sign-out action.
+  links it to the current user, and relies on the existing database trigger to
+  seed only the system-managed Gain/Loss account. This route is outside the
+  account-book shell and includes its own sign-out action.
 - `api/logto/$action.tsx` - auth endpoints: `GET /api/logto/sign-in`,
   `GET /api/logto/callback`, `GET /api/logto/sign-up`,
   `POST /api/logto/sign-out`

@@ -70,7 +70,7 @@ describe("createAccountBook", () => {
     vi.useRealTimers();
   });
 
-  it("creates an empty account book linked to the user", async () => {
+  it("creates an empty account book linked to the user and relies on the database trigger for Gain/Loss", async () => {
     const result = await createAccountBook({
       data: {
         name: "  My Book  ",
