@@ -168,6 +168,12 @@ export function LedgerPageContent() {
     invalidate: () => {
       router.invalidate();
     },
+    onAccountDeleted: ({ tab, mode }) =>
+      navigate({
+        to: "/$accountBookId/accounts",
+        params: { accountBookId },
+        search: { tab, mode },
+      }),
   });
 
   return (

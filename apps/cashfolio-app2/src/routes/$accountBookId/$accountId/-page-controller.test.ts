@@ -1,6 +1,12 @@
 import { describe, expect, test, vi } from "vitest";
-import { Unit } from "@/.prisma-client/enums";
+import { AccountType, Unit } from "@/.prisma-client/enums";
 
+vi.mock("@/server/accounts", () => ({
+  archiveAccount: vi.fn(),
+  deleteAccount: vi.fn(),
+  unarchiveAccount: vi.fn(),
+  updateAccount: vi.fn(),
+}));
 vi.mock("@/server/transactions", () => ({
   createSimpleTransaction: vi.fn(),
   createTransaction: vi.fn(),
@@ -10,7 +16,10 @@ vi.mock("@/server/transactions", () => ({
   updateTransaction: vi.fn(),
 }));
 
-import { createLedgerMutationActions } from "./-page-mutation-actions";
+import {
+  createLedgerAccountMutationActions,
+  createLedgerMutationActions,
+} from "./-page-mutation-actions";
 
 function createActions(args: {
   state: unknown;
@@ -27,6 +36,26 @@ function createActions(args: {
     >[0]["state"],
     pendingScrollRef: args.pendingScrollRef,
     api: args.api as Parameters<typeof createLedgerMutationActions>[0]["api"],
+  });
+}
+
+function createAccountActions(args: {
+  state: unknown;
+  api: unknown;
+  invalidate: () => void;
+  onAccountDeleted: () => void | Promise<void>;
+}) {
+  return createLedgerAccountMutationActions({
+    accountBookId: "book-1",
+    accountId: "account-1",
+    invalidate: args.invalidate,
+    onAccountDeleted: args.onAccountDeleted,
+    state: args.state as Parameters<
+      typeof createLedgerAccountMutationActions
+    >[0]["state"],
+    api: args.api as Parameters<
+      typeof createLedgerAccountMutationActions
+    >[0]["api"],
   });
 }
 
@@ -387,5 +416,152 @@ describe("createLedgerMutationActions", () => {
     expect(state.setDeletingTransaction).toHaveBeenCalledWith(undefined);
     expect(deletingTransaction).toBeUndefined();
     expect(invalidate).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("createLedgerAccountMutationActions", () => {
+  test("updates current account, closes modal, and invalidates", async () => {
+    const invalidate = vi.fn();
+    const onAccountDeleted = vi.fn();
+    const state = {
+      setAccountEditModalOpened: vi.fn(),
+      setDeletingAccount: vi.fn(),
+      setArchivingAccount: vi.fn(),
+    };
+    const api = {
+      updateAccount: vi.fn().mockResolvedValue(undefined),
+      deleteAccount: vi.fn().mockResolvedValue(undefined),
+      archiveAccount: vi.fn().mockResolvedValue(undefined),
+      unarchiveAccount: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const actions = createAccountActions({
+      invalidate,
+      onAccountDeleted,
+      state,
+      api,
+    });
+
+    await actions.handleUpdateAccount({
+      name: "Checking",
+      typeDescriptor: "ASSET",
+      type: AccountType.ASSET,
+      equityAccountSubtype: undefined,
+      groupId: "group-1",
+      sortOrder: 3,
+      unit: Unit.CURRENCY,
+      currency: "CHF",
+      cryptocurrency: undefined,
+      symbol: undefined,
+      tradeCurrency: undefined,
+      openingBalance: 100,
+    });
+
+    expect(api.updateAccount).toHaveBeenCalledWith({
+      data: {
+        id: "account-1",
+        accountBookId: "book-1",
+        name: "Checking",
+        type: AccountType.ASSET,
+        equityAccountSubtype: undefined,
+        groupId: "group-1",
+        sortOrder: 3,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: undefined,
+        symbol: undefined,
+        tradeCurrency: undefined,
+        openingBalance: 100,
+      },
+    });
+    expect(state.setAccountEditModalOpened).toHaveBeenCalledWith(false);
+    expect(invalidate).toHaveBeenCalledOnce();
+    expect(onAccountDeleted).not.toHaveBeenCalled();
+  });
+
+  test("rejects account update without a name", async () => {
+    const invalidate = vi.fn();
+    const onAccountDeleted = vi.fn();
+    const state = {
+      setAccountEditModalOpened: vi.fn(),
+      setDeletingAccount: vi.fn(),
+      setArchivingAccount: vi.fn(),
+    };
+    const api = {
+      updateAccount: vi.fn().mockResolvedValue(undefined),
+      deleteAccount: vi.fn().mockResolvedValue(undefined),
+      archiveAccount: vi.fn().mockResolvedValue(undefined),
+      unarchiveAccount: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const actions = createAccountActions({
+      invalidate,
+      onAccountDeleted,
+      state,
+      api,
+    });
+
+    await expect(
+      actions.handleUpdateAccount({
+        name: undefined,
+        typeDescriptor: "ASSET",
+        type: AccountType.ASSET,
+        equityAccountSubtype: undefined,
+        groupId: "group-1",
+        sortOrder: 3,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: undefined,
+        symbol: undefined,
+        tradeCurrency: undefined,
+        openingBalance: 100,
+      }),
+    ).rejects.toThrow("Account name is required");
+
+    expect(api.updateAccount).not.toHaveBeenCalled();
+    expect(state.setAccountEditModalOpened).not.toHaveBeenCalled();
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  test("archives, unarchives, and deletes current account", async () => {
+    const invalidate = vi.fn();
+    const onAccountDeleted = vi.fn().mockResolvedValue(undefined);
+    const state = {
+      setAccountEditModalOpened: vi.fn(),
+      setDeletingAccount: vi.fn(),
+      setArchivingAccount: vi.fn(),
+    };
+    const api = {
+      updateAccount: vi.fn().mockResolvedValue(undefined),
+      deleteAccount: vi.fn().mockResolvedValue(undefined),
+      archiveAccount: vi.fn().mockResolvedValue(undefined),
+      unarchiveAccount: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const actions = createAccountActions({
+      invalidate,
+      onAccountDeleted,
+      state,
+      api,
+    });
+
+    await actions.handleArchiveAccount();
+    expect(api.archiveAccount).toHaveBeenCalledWith({
+      data: { id: "account-1", accountBookId: "book-1" },
+    });
+    expect(state.setArchivingAccount).toHaveBeenCalledWith(false);
+
+    await actions.handleUnarchiveAccount();
+    expect(api.unarchiveAccount).toHaveBeenCalledWith({
+      data: { id: "account-1", accountBookId: "book-1" },
+    });
+
+    await actions.handleDeleteAccount();
+    expect(api.deleteAccount).toHaveBeenCalledWith({
+      data: { id: "account-1", accountBookId: "book-1" },
+    });
+    expect(state.setDeletingAccount).toHaveBeenCalledWith(false);
+    expect(onAccountDeleted).toHaveBeenCalledOnce();
+    expect(invalidate).toHaveBeenCalledTimes(3);
   });
 });

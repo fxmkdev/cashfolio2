@@ -1,5 +1,10 @@
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
-import { getAccounts } from "@/server/accounts";
+import {
+  getAccountGroups,
+  getAccounts,
+  getExistingNodes,
+  getLedgerAccountActionData,
+} from "@/server/accounts";
 import {
   getAccountForLedger,
   getLedgerData,
@@ -36,8 +41,14 @@ export async function loadLedgerPageData(args: {
   const shouldIncludeFirstBookingDate =
     account.type === AccountType.ASSET ||
     account.type === AccountType.LIABILITY;
-
-  const [ledgerData, accounts, periodBounds] = await Promise.all([
+  const [
+    ledgerData,
+    accounts,
+    periodBounds,
+    accountTreeRow,
+    accountGroups,
+    existingNodes,
+  ] = await Promise.all([
     getLedgerData({
       data: {
         accountId: args.accountId,
@@ -60,10 +71,25 @@ export async function loadLedgerPageData(args: {
         accountBookId: args.accountBookId,
       },
     }),
+    getLedgerAccountActionData({
+      data: {
+        accountBookId: args.accountBookId,
+        accountId: args.accountId,
+      },
+    }),
+    getAccountGroups({
+      data: { accountBookId: args.accountBookId },
+    }),
+    getExistingNodes({
+      data: { accountBookId: args.accountBookId },
+    }),
   ]);
 
   return {
     account,
+    accountTreeRow,
+    accountGroups,
+    existingNodes,
     rows: ledgerData.rows,
     referenceCurrency: ledgerData.referenceCurrency,
     firstBookingDate: ledgerData.firstBookingDate,

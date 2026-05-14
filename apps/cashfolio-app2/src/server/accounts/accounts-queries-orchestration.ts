@@ -4,7 +4,16 @@ import type {
   EquityAccountSubtype,
   Unit,
 } from "../../.prisma-client/enums";
-import { createGroupPathSegmentsResolver } from "../accounts/accounts-helpers";
+import {
+  createGroupPathSegmentsResolver,
+  getGroupHierarchy,
+  hasInactiveAncestorGroup,
+} from "../accounts/accounts-helpers";
+import {
+  getOpeningBalancesBookingDate,
+  getUtcDayRange,
+} from "../../shared/date";
+import { moneyIsZero, toMoneyNumber } from "../../shared/money";
 import {
   type AccountState,
   getDisplayBalanceInReferenceCurrencyByAccountId,
@@ -15,6 +24,13 @@ import {
 } from "./accounts-queries-tree-data";
 import { buildAccountTreeGroupActionAvailabilitySets } from "./accounts-tree-action-availability";
 import {
+  accountTypeRequiresZeroBalanceForArchive,
+  getAccountArchiveAvailability,
+  getAccountDeleteAvailability,
+  getAccountUnarchiveAvailability,
+} from "./account-tree-rules";
+import {
+  type AccountTreeRow,
   buildAccountRows,
   buildGroupRows,
   filterGroupsForAccountState,
@@ -42,6 +58,11 @@ export type AccountsPageDataInput = {
   type?: AccountType;
   equityAccountSubtype?: EquityAccountSubtype;
   accountState?: AccountState;
+};
+
+export type LedgerAccountActionDataInput = {
+  accountBookId: string;
+  accountId: string;
 };
 
 export type ExistingNode = {
@@ -230,6 +251,134 @@ export async function queryAccountTreeData(data: AccountTreeDataInput) {
   return {
     referenceCurrency,
     rows: sortAccountTreeRows([...accountRows, ...groupRows]),
+  };
+}
+
+export async function queryLedgerAccountActionData(
+  data: LedgerAccountActionDataInput,
+): Promise<AccountTreeRow> {
+  const [account, accountBook, bookingAggregate, bookingCount, groupById] =
+    await Promise.all([
+      prisma.account.findUnique({
+        where: {
+          id_accountBookId: {
+            id: data.accountId,
+            accountBookId: data.accountBookId,
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          equityAccountSubtype: true,
+          unit: true,
+          currency: true,
+          cryptocurrency: true,
+          symbol: true,
+          tradeCurrency: true,
+          groupId: true,
+          isActive: true,
+          sortOrder: true,
+        },
+      }),
+      prisma.accountBook.findUniqueOrThrow({
+        where: { id: data.accountBookId },
+        select: { startDate: true },
+      }),
+      prisma.booking.aggregate({
+        where: {
+          accountBookId: data.accountBookId,
+          accountId: data.accountId,
+        },
+        _sum: { value: true },
+      }),
+      prisma.booking.count({
+        where: {
+          accountBookId: data.accountBookId,
+          accountId: data.accountId,
+        },
+      }),
+      getGroupHierarchy(data.accountBookId),
+    ]);
+
+  if (!account) {
+    throw new Error(
+      `Ledger account action data not found for accountId=${data.accountId}, accountBookId=${data.accountBookId}.`,
+    );
+  }
+
+  const requiresZeroBalance = accountTypeRequiresZeroBalanceForArchive(
+    account.type,
+  );
+  const rawBalance = toMoneyNumber(bookingAggregate._sum.value ?? 0);
+  const hasZeroBalance =
+    !requiresZeroBalance || moneyIsZero(bookingAggregate._sum.value ?? 0);
+  const deleteAvailability = getAccountDeleteAvailability(bookingCount > 0);
+  const archiveAvailability = getAccountArchiveAvailability({
+    isActive: account.isActive,
+    hasZeroBalance,
+  });
+  const unarchiveAvailability = getAccountUnarchiveAvailability({
+    isActive: account.isActive,
+    hasInactiveAncestor: hasInactiveAncestorGroup(account.groupId, groupById),
+  });
+  const openingBalanceRange = getUtcDayRange(
+    getOpeningBalancesBookingDate(accountBook.startDate),
+  );
+  const openingBalanceAggregate = requiresZeroBalance
+    ? await prisma.booking.aggregate({
+        where: {
+          accountBookId: data.accountBookId,
+          accountId: data.accountId,
+          date: {
+            gte: openingBalanceRange.start,
+            lt: openingBalanceRange.endExclusive,
+          },
+        },
+        _sum: { value: true },
+      })
+    : null;
+  const openingRawBalance =
+    openingBalanceAggregate?._sum.value == null
+      ? null
+      : toMoneyNumber(openingBalanceAggregate._sum.value);
+
+  return {
+    id: account.id,
+    nodeType: "account",
+    name: account.name,
+    type: account.type,
+    equityAccountSubtype: account.equityAccountSubtype,
+    unit: account.unit as Unit | null,
+    currency: account.currency as string | null,
+    cryptocurrency: account.cryptocurrency as string | null,
+    symbol: account.symbol as string | null,
+    tradeCurrency: account.tradeCurrency as string | null,
+    balance:
+      account.type === "ASSET"
+        ? rawBalance
+        : account.type === "LIABILITY"
+          ? -rawBalance
+          : null,
+    balanceInReferenceCurrency: null,
+    openingBalance:
+      openingRawBalance == null
+        ? null
+        : account.type === "ASSET"
+          ? openingRawBalance
+          : account.type === "LIABILITY"
+            ? -openingRawBalance
+            : null,
+    parentId: account.groupId ?? undefined,
+    isActive: account.isActive,
+    groupId: account.groupId ?? undefined,
+    sortOrder: account.sortOrder,
+    deletable: deleteAvailability.enabled,
+    deleteDisabledReason: deleteAvailability.disabledReason,
+    archivable: archiveAvailability.enabled,
+    archiveDisabledReason: archiveAvailability.disabledReason,
+    unarchivable: unarchiveAvailability.enabled,
+    unarchiveDisabledReason: unarchiveAvailability.disabledReason,
   };
 }
 

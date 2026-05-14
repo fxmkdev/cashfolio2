@@ -1,9 +1,21 @@
-import { IconBolt } from "@tabler/icons-react";
+import {
+  IconArchive,
+  IconArchiveOff,
+  IconBolt,
+  IconPencil,
+  IconTrash,
+} from "@tabler/icons-react";
 import { Badge, Button, Group, Modal, Tooltip } from "@mantine/core";
 import type { AgGridReactProps } from "ag-grid-react";
+import { ConfirmArchiveModal } from "@/components/confirm-archive-modal";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 import { DataGrid } from "@/components/data-grid";
 import { AccountPathHeading } from "@/components/account-path-heading";
+import {
+  EditAccountModal,
+  type AccountInitialValues,
+  type TransformedFormValues,
+} from "@/components/edit-account-modal";
 import {
   EditTransactionModal,
   type AccountOption,
@@ -18,6 +30,7 @@ import {
   type SimpleTransactionDirection,
   type SimpleTransactionDraftValues,
 } from "@/components/simple-transaction-modal";
+import { SplitButton } from "@/components/split-button";
 import { TopPageHeader } from "@/components/top-page-header";
 import { PageShell } from "@/components/page-shell";
 import type { ReactNode } from "react";
@@ -79,6 +92,8 @@ export type LedgerPageViewProps = {
   accountBookId: string;
   backTab: TabValue;
   account: LedgerPageLoaderData["account"];
+  accountGroups: LedgerPageLoaderData["accountGroups"];
+  existingNodes: LedgerPageLoaderData["existingNodes"];
   rows: LedgerRow[];
   columnDefs: NonNullable<AgGridReactProps<LedgerRow>["columnDefs"]>;
   currentAccountLabel: string;
@@ -87,6 +102,9 @@ export type LedgerPageViewProps = {
   simpleTransactionDisabledReason: string | null;
   simpleModalOpened: boolean;
   splitModalOpened: boolean;
+  accountEditModalOpened: boolean;
+  accountEditInitialValues: AccountInitialValues;
+  accountEditDisabledReason?: string;
   editModalOpened: boolean;
   isSimpleSubmitting: boolean;
   isCreateSplitSubmitting: boolean;
@@ -100,6 +118,8 @@ export type LedgerPageViewProps = {
     bookings?: Omit<BookingValues, "key">[];
   };
   editingSimpleInitialValues?: SimpleTransactionEditInitialValues;
+  deletingAccount?: { id: string; name: string };
+  archivingAccount?: { id: string; name: string };
   deletingTransaction?: { id: string; description: string };
   rebooking?: RebookingState;
   rebookModalOpened: boolean;
@@ -109,8 +129,24 @@ export type LedgerPageViewProps = {
   simpleCounterAccountOptions: AccountOption[];
   editSimpleCounterAccountOptions: AccountOption[];
   rebookTargetAccountOptions: RebookTargetOption[];
+  accountArchivable: boolean;
+  accountArchiveLabel: string;
+  accountUnarchivable: boolean;
+  accountUnarchiveLabel: string;
+  accountDeletable: boolean;
+  accountDeleteLabel: string;
   periodFilterControls?: ReactNode;
   onRowDataUpdated: AgGridReactProps<LedgerRow>["onRowDataUpdated"];
+  onOpenAccountEdit: () => void;
+  onCloseAccountEdit: () => void;
+  onSubmitUpdateAccount: (values: TransformedFormValues) => Promise<void>;
+  onOpenArchiveAccount: () => void;
+  onCloseArchiveAccount: () => void;
+  onConfirmArchiveAccount: () => Promise<void>;
+  onUnarchiveAccount: () => Promise<void>;
+  onOpenDeleteAccount: () => void;
+  onCloseDeleteAccount: () => void;
+  onConfirmDeleteAccount: () => Promise<void>;
   onAddTransactionClick: () => void;
   onCloseSimpleModal: () => void;
   onSimpleSubmittingChange: (isSubmitting: boolean) => void;
@@ -145,6 +181,8 @@ export function LedgerPageView({
   accountBookId,
   backTab,
   account,
+  accountGroups,
+  existingNodes,
   rows,
   columnDefs,
   currentAccountLabel,
@@ -153,6 +191,9 @@ export function LedgerPageView({
   simpleTransactionDisabledReason,
   simpleModalOpened,
   splitModalOpened,
+  accountEditModalOpened,
+  accountEditInitialValues,
+  accountEditDisabledReason,
   editModalOpened,
   isSimpleSubmitting,
   isCreateSplitSubmitting,
@@ -162,6 +203,8 @@ export function LedgerPageView({
   createSplitInitialValues,
   editingTransactionData,
   editingSimpleInitialValues,
+  deletingAccount,
+  archivingAccount,
   deletingTransaction,
   rebooking,
   rebookModalOpened,
@@ -171,8 +214,24 @@ export function LedgerPageView({
   simpleCounterAccountOptions,
   editSimpleCounterAccountOptions,
   rebookTargetAccountOptions,
+  accountArchivable,
+  accountArchiveLabel,
+  accountUnarchivable,
+  accountUnarchiveLabel,
+  accountDeletable,
+  accountDeleteLabel,
   periodFilterControls,
   onRowDataUpdated,
+  onOpenAccountEdit,
+  onCloseAccountEdit,
+  onSubmitUpdateAccount,
+  onOpenArchiveAccount,
+  onCloseArchiveAccount,
+  onConfirmArchiveAccount,
+  onUnarchiveAccount,
+  onOpenDeleteAccount,
+  onCloseDeleteAccount,
+  onConfirmDeleteAccount,
   onAddTransactionClick,
   onCloseSimpleModal,
   onSimpleSubmittingChange,
@@ -218,6 +277,51 @@ export function LedgerPageView({
         }
         actions={
           <Group gap="sm">
+            <Tooltip
+              label={accountEditDisabledReason ?? "Edit account"}
+              disabled={!accountEditDisabledReason}
+            >
+              <span>
+                <SplitButton
+                  leftSection={<IconPencil size={16} />}
+                  menuLabel="Account actions"
+                  onClick={onOpenAccountEdit}
+                  primaryDisabled={!!accountEditDisabledReason}
+                  menuItems={[
+                    account.isActive
+                      ? {
+                          key: "archive",
+                          label: "Archive",
+                          disabledReason: accountArchiveLabel,
+                          disabled: !accountArchivable,
+                          color: "yellow",
+                          leftSection: <IconArchive size={16} />,
+                          onClick: onOpenArchiveAccount,
+                        }
+                      : {
+                          key: "unarchive",
+                          label: "Unarchive",
+                          disabledReason: accountUnarchiveLabel,
+                          disabled: !accountUnarchivable,
+                          color: "blue",
+                          leftSection: <IconArchiveOff size={16} />,
+                          onClick: () => void onUnarchiveAccount(),
+                        },
+                    {
+                      key: "delete",
+                      label: "Delete",
+                      disabledReason: accountDeleteLabel,
+                      disabled: !accountDeletable,
+                      color: "red",
+                      leftSection: <IconTrash size={16} />,
+                      onClick: onOpenDeleteAccount,
+                    },
+                  ]}
+                >
+                  Edit
+                </SplitButton>
+              </span>
+            </Tooltip>
             <Tooltip
               label={
                 simpleTransactionDisabledReason
@@ -350,6 +454,33 @@ export function LedgerPageView({
           />
         ) : null}
       </Modal>
+
+      <EditAccountModal
+        opened={accountEditModalOpened}
+        onClose={onCloseAccountEdit}
+        accountGroups={accountGroups}
+        onSubmit={onSubmitUpdateAccount}
+        initialValues={accountEditInitialValues}
+        existingNodes={existingNodes}
+        editingId={account.id}
+        typeDescriptor={backTab}
+      />
+
+      <ConfirmArchiveModal
+        opened={!!archivingAccount}
+        onClose={onCloseArchiveAccount}
+        title="Archive Account"
+        name={archivingAccount?.name}
+        onConfirm={onConfirmArchiveAccount}
+      />
+
+      <ConfirmDeleteModal
+        opened={!!deletingAccount}
+        onClose={onCloseDeleteAccount}
+        title="Delete Account"
+        name={deletingAccount?.name}
+        onConfirm={onConfirmDeleteAccount}
+      />
 
       <Modal
         opened={rebookModalOpened}
