@@ -56,6 +56,7 @@ pnpm --filter cashfolio-app2 test:unit:coverage:ratchet # Run coverage + enforce
 pnpm --filter cashfolio-app2 coverage:ratchet:accept # Accept current coverage as new baseline (explicit follow-up step)
 pnpm --filter cashfolio-app2 format           # Prettier check
 pnpm --filter cashfolio-app2 prisma:generate  # Regenerate Prisma client (no DATABASE_URL required)
+pnpm lint:workflows                           # actionlint check for GitHub workflows/actions
 ```
 
 ## cashfolio-app2 Working Conventions
@@ -88,6 +89,7 @@ pnpm --filter cashfolio-app2 prisma:generate  # Regenerate Prisma client (no DAT
   `apps/cashfolio-app2/coverage-baseline.json` in the same PR.
 - Run `pnpm --filter cashfolio-app2 format` when touching formatting-sensitive
   files.
+- Run `pnpm lint:workflows` when touching GitHub workflows or local actions.
 - Run `pnpm --filter cashfolio-app2 e2e` for changes that bear a significant
   risk of breaking the application.
 - If Prisma schema/client changes, run

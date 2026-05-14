@@ -47,9 +47,11 @@ jobs:
         run: |
           IMAGE_NAME=${{ vars.FLY_CASHFOLIO_APP_STAGING_APP }}
           IMAGE_TAG=v${{ needs.version.outputs.version_with_sha }}
-          echo "image_name=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
-          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
-          echo "image=registry.fly.io/$IMAGE_NAME:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          {
+            echo "image_name=$IMAGE_NAME"
+            echo "image_tag=$IMAGE_TAG"
+            echo "image=registry.fly.io/$IMAGE_NAME:$IMAGE_TAG"
+          } >> "$GITHUB_OUTPUT"
       - name: Build and push cashfolio-app2 Docker image
         run: |
           flyctl deploy \
@@ -195,6 +197,19 @@ jobs:
         run: pnpm --filter cashfolio-app2 install
       - name: Run lint
         run: pnpm --filter cashfolio-app2 lint
+
+  github-actions-lint:
+    name: "GitHub Actions: Lint"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run actionlint
+        run: pnpm lint:workflows
 
   cli-typecheck:
     name: "cli: Typecheck"
@@ -497,6 +512,7 @@ jobs:
       - cashfolio-app2-typecheck
       - cashfolio-app2-lint
       - cashfolio-app2-format
+      - github-actions-lint
       - cli-typecheck
     uses: ./.github/workflows/deploy-version.yml
     with:
