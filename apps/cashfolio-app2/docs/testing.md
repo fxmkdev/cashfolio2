@@ -127,6 +127,9 @@ When bypass is disabled, app auth behavior remains unchanged.
 - Tests run against PostgreSQL.
 - The suite runs a one-time DB reset in Playwright global setup.
 - Each spec file seeds an isolated account-book-scoped dataset in `beforeAll()`.
+- Specs that need a different authenticated user can set the e2e-only
+  `cashfolio-e2e-external-id` cookie. The auth bypass reads this cookie only
+  when both `E2E_TEST_MODE=true` and `E2E_AUTH_BYPASS=true`.
 - Seeding creates:
   - a user with `E2E_AUTH_EXTERNAL_ID`
   - an account book and user-account-book link
