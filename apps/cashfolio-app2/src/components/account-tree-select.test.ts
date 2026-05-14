@@ -117,8 +117,11 @@ describe("buildAccountTreeData", () => {
       },
     ]);
 
-    expect(
-      getAccountTreeSearchLabel(treeData[0]?.children?.[0]?.children?.[0]!),
-    ).toBe("Asset / Cash / Checking");
+    const accountNode = treeData[0]?.children?.[0]?.children?.[0];
+
+    expect(accountNode).toBeDefined();
+    expect(accountNode ? getAccountTreeSearchLabel(accountNode) : null).toBe(
+      "Asset / Cash / Checking",
+    );
   });
 });
