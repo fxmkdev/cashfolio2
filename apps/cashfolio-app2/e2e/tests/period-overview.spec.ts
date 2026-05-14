@@ -44,7 +44,7 @@ test("period page shows KPI waterfall and updated income/expenses wording", asyn
   await expect(page.getByText("Income").first()).toBeVisible();
   await expect(page.getByText("Expenses").first()).toBeVisible();
   const breakdownTypeControl = page.getByRole("radiogroup", {
-    name: "Breakdown type",
+    name: "Breakdown Type",
   });
   await expect(breakdownTypeControl).toBeVisible();
   await expect(
@@ -190,12 +190,12 @@ test("period page persists card state, drill state, and table expansion across r
   await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
 
   const breakdownTypeControl = page.getByRole("radiogroup", {
-    name: "Breakdown type",
+    name: "Breakdown Type",
   });
   await selectSegmentedControlOption(breakdownTypeControl, "Expenses");
 
   const breakdownChartTypeControl = page.getByRole("radiogroup", {
-    name: "Breakdown chart type",
+    name: "Breakdown Chart Type",
   });
   await selectSegmentedControlOption(breakdownChartTypeControl, "Donut");
 
@@ -221,12 +221,12 @@ test("period page persists card state, drill state, and table expansion across r
   ).toBeVisible();
 
   const allocationTypeControl = page.getByRole("radiogroup", {
-    name: "Allocation type",
+    name: "Allocation Type",
   });
   await selectSegmentedControlOption(allocationTypeControl, "Liabilities");
 
   const allocationChartTypeControl = page.getByRole("radiogroup", {
-    name: "Allocation chart type",
+    name: "Allocation Chart Type",
   });
   await selectSegmentedControlOption(allocationChartTypeControl, "Bar");
   await expect(
@@ -234,7 +234,7 @@ test("period page persists card state, drill state, and table expansion across r
   ).toBeChecked();
 
   const gainsLossesChartTypeControl = page.getByRole("radiogroup", {
-    name: "Gains/losses chart type",
+    name: "Gains/Losses Chart Type",
   });
   await selectSegmentedControlOption(gainsLossesChartTypeControl, "Table");
   await expect(
@@ -314,7 +314,7 @@ test("period picker opens on selected month/year page", async ({ page }) => {
   await expect(monthPicker.getByRole("button", { name: "2025" })).toBeVisible();
 
   const periodModeControl = page.getByRole("radiogroup", {
-    name: "Period mode",
+    name: "Period Mode",
   });
   await periodModeControl.getByText("Year", { exact: true }).click();
   await expect(periodPickerTrigger).toContainText("2025");
@@ -348,7 +348,7 @@ test("period previous/next controls update the period query parameter", async ({
   await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
 
   const periodModeControl = page.getByRole("radiogroup", {
-    name: "Period mode",
+    name: "Period Mode",
   });
   await selectSegmentedControlOption(periodModeControl, "Month");
 
@@ -357,14 +357,14 @@ test("period previous/next controls update the period query parameter", async ({
 
   await clickPeriodStepUntilQueryMatches({
     page,
-    buttonName: "Previous period",
+    buttonName: "Previous Period",
     expectedPeriod: "2026-03",
   });
   await expect(periodPickerTrigger).toContainText("March 2026");
 
   await clickPeriodStepUntilQueryMatches({
     page,
-    buttonName: "Next period",
+    buttonName: "Next Period",
     expectedPeriod: "2026-04",
   });
   await expect(periodPickerTrigger).toContainText("April 2026");

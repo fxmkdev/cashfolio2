@@ -6,7 +6,7 @@ const meta = {
   title: "Components/LinkAnchor",
   component: LinkAnchor,
   args: {
-    children: "Open account book",
+    children: "Open Account Book",
     to: "/$accountBookId",
     params: { accountBookId: "storybook-book" } as never,
     search: { tab: "ASSET", mode: "active" } as never,
@@ -22,7 +22,7 @@ export const Default: Story = {};
 export const RendersHref: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const link = canvas.getByRole("link", { name: "Open account book" });
+    const link = canvas.getByRole("link", { name: "Open Account Book" });
     await expect(link).toHaveAttribute(
       "href",
       expect.stringContaining("/storybook-book"),

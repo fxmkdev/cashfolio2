@@ -201,11 +201,11 @@ export const RouteSmoke: Story = {
       "2026",
     );
     await expect(
-      canvas.getByRole("button", { name: "Next period" }),
+      canvas.getByRole("button", { name: "Next Period" }),
     ).toBeDisabled();
 
     await userEvent.click(
-      canvas.getByRole("button", { name: "Previous period" }),
+      canvas.getByRole("button", { name: "Previous Period" }),
     );
     await expect(canvas.getByTestId("selected-period")).toHaveTextContent(
       "2025",
@@ -252,7 +252,7 @@ export const BreakdownToggleSmoke: Story = {
     ).toBeInTheDocument();
 
     const breakdownChartTypeControl = await canvas.findByLabelText(
-      "Breakdown chart type",
+      "Breakdown Chart Type",
     );
     const barOption = within(breakdownChartTypeControl).getByRole("radio", {
       name: "Bar",
@@ -289,7 +289,7 @@ export const AllocationToggleSmoke: Story = {
     ).toBeInTheDocument();
 
     const allocationChartTypeControl = await canvas.findByLabelText(
-      "Allocation chart type",
+      "Allocation Chart Type",
     );
     const allocationBarOption = within(allocationChartTypeControl).getByRole(
       "radio",
@@ -312,7 +312,7 @@ export const BreakdownTableModeSmoke: Story = {
     const canvas = within(canvasElement);
 
     const breakdownChartTypeControl = await canvas.findByLabelText(
-      "Breakdown chart type",
+      "Breakdown Chart Type",
     );
     const tableOption = within(breakdownChartTypeControl).getByRole("radio", {
       name: "Table",
@@ -335,7 +335,7 @@ export const AllocationTableModeSmoke: Story = {
     const canvas = within(canvasElement);
 
     const allocationChartTypeControl = await canvas.findByLabelText(
-      "Allocation chart type",
+      "Allocation Chart Type",
     );
     const tableOption = within(allocationChartTypeControl).getByRole("radio", {
       name: "Table",
@@ -363,7 +363,7 @@ export const BreakdownTableDoubleClickSmoke: Story = {
     const canvas = within(canvasElement);
 
     const breakdownChartTypeControl = await canvas.findByLabelText(
-      "Breakdown chart type",
+      "Breakdown Chart Type",
     );
     await userEvent.click(
       within(breakdownChartTypeControl).getByRole("radio", {
@@ -431,7 +431,7 @@ export const AllocationTableDoubleClickSmoke: Story = {
     const canvas = within(canvasElement);
 
     const allocationChartTypeControl = await canvas.findByLabelText(
-      "Allocation chart type",
+      "Allocation Chart Type",
     );
     await userEvent.click(
       within(allocationChartTypeControl).getByRole("radio", {
@@ -528,7 +528,7 @@ export const AllocationTableVirtualAccountDoubleClickIgnoredSmoke: Story = {
     const canvas = within(canvasElement);
 
     const allocationChartTypeControl = await canvas.findByLabelText(
-      "Allocation chart type",
+      "Allocation Chart Type",
     );
     await userEvent.click(
       within(allocationChartTypeControl).getByRole("radio", {
@@ -586,7 +586,7 @@ export const GainsLossesToggleSmoke: Story = {
     const canvas = within(canvasElement);
 
     const gainsLossesChartTypeControl = await canvas.findByLabelText(
-      "Gains/losses chart type",
+      "Gains/Losses Chart Type",
     );
     const tableOption = within(gainsLossesChartTypeControl).getByRole("radio", {
       name: "Table",
@@ -657,13 +657,13 @@ export const GainsLossesDrillSmoke: Story = {
     );
     await expect(
       canvas.getByText(
-        "Top-level groups for gains/losses in the selected period",
+        "Top-Level Groups for Gains/Losses in the Selected Period",
       ),
     ).toBeInTheDocument();
 
     await userEvent.dblClick(gainsLossesChart);
     await expect(
-      canvas.getByText("Drilled gains/losses in the selected period"),
+      canvas.getByText("Drilled Gains/Losses in the Selected Period"),
     ).toBeInTheDocument();
     await expect(canvas.getByText("FX")).toBeInTheDocument();
 

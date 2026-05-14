@@ -73,8 +73,8 @@ export function RebookBookingModal({
     <form ref={formRef} onSubmit={handleSubmit}>
       <Stack gap="md">
         <AccountTreeSelect
-          label="Target account"
-          placeholder="Select target account"
+          label="Target Account"
+          placeholder="Select Target Account"
           accounts={targetAccounts}
           data-autofocus
           value={targetAccountId}

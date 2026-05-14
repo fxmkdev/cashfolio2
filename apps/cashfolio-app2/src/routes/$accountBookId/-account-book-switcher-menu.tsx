@@ -126,7 +126,7 @@ export function AccountBookSwitcherMenu({
           leftSection={<IconPlus size={16} />}
           to="/account-books/new"
         >
-          Create new account book
+          Create New
         </LinkMenuItem>
       </Menu.Dropdown>
     </Menu>
@@ -171,7 +171,7 @@ export function UserMenu({
             type="submit"
             leftSection={<IconLogout2 size={16} />}
           >
-            Sign out
+            Sign Out
           </Menu.Item>
         </form>
       </Menu.Dropdown>

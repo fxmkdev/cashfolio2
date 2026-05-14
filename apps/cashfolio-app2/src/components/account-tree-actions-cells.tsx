@@ -32,7 +32,7 @@ export function ArchivedAccountTreeActionsCell({
   unarchivable: boolean;
   onUnarchive: () => void;
 }) {
-  const reorderActionLabel = reorderLabel ?? "Reorder siblings";
+  const reorderActionLabel = reorderLabel ?? "Reorder Siblings";
   const reorderActionUnavailableLabel = "Cannot reorder right now";
   const canReorder = reorderEnabled && !!onReorder;
   const resolvedReorderTooltipLabel = canReorder
@@ -50,7 +50,7 @@ export function ArchivedAccountTreeActionsCell({
             size="sm"
             disabled={!canReorder}
             onClick={onReorder}
-            aria-label="Reorder siblings"
+            aria-label="Reorder Siblings"
           >
             <IconArrowsSort size={16} />
           </ActionIcon>
@@ -121,7 +121,7 @@ export function ActiveAccountTreeActionsCell({
   onDelete: () => void;
   onReorder?: () => void;
 }) {
-  const reorderActionLabel = reorderLabel ?? "Reorder siblings";
+  const reorderActionLabel = reorderLabel ?? "Reorder Siblings";
   const reorderActionUnavailableLabel = "Cannot reorder right now";
   const canReorder = reorderEnabled && !!onReorder;
   const resolvedReorderTooltipLabel = canReorder
@@ -139,7 +139,7 @@ export function ActiveAccountTreeActionsCell({
             size="sm"
             disabled={!canReorder}
             onClick={onReorder}
-            aria-label="Reorder siblings"
+            aria-label="Reorder Siblings"
           >
             <IconArrowsSort size={16} />
           </ActionIcon>

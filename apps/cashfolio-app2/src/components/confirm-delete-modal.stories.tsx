@@ -7,7 +7,7 @@ const meta = {
   title: "Components/ConfirmDeleteModal",
   args: {
     opened: true,
-    title: "Delete account",
+    title: "Delete Account",
     name: "Savings",
     onClose: fn(),
     onConfirm: fn(),

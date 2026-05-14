@@ -120,7 +120,7 @@ test("period allocation table account drilldown opens ledger with selected perio
 
   const allocationTable = await openTableView({
     page,
-    controlName: "Allocation chart type",
+    controlName: "Allocation Chart Type",
     tableTestId: "period-allocation-breakdown-table",
   });
 
@@ -173,7 +173,7 @@ test("period gains/losses table unit-account drilldown opens reconciliation page
 
   const gainsLossesTable = await openTableView({
     page,
-    controlName: "Gains/losses chart type",
+    controlName: "Gains/Losses Chart Type",
     tableTestId: "period-gains-losses-breakdown-table",
   });
 
@@ -209,7 +209,7 @@ test("period gains/losses table unit-account drilldown opens reconciliation page
   expect(realizedEventRowId).toBeTruthy();
   await page
     .locator(`.ag-row[row-id="${realizedEventRowId}"]`)
-    .getByRole("button", { name: "Open in ledger" })
+    .getByRole("button", { name: "Open in Ledger" })
     .first()
     .click();
 
@@ -244,7 +244,7 @@ test("period explicit gains/losses rows drill to gain/loss ledger", async ({
 
   const gainsLossesTable = await openTableView({
     page,
-    controlName: "Gains/losses chart type",
+    controlName: "Gains/Losses Chart Type",
     tableTestId: "period-gains-losses-breakdown-table",
   });
 

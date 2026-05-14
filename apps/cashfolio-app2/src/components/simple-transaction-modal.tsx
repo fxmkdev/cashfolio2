@@ -222,7 +222,7 @@ export function SimpleTransactionModal({
 
         <Group align="end" wrap="wrap">
           <Select
-            label="Current account"
+            label="Current Account"
             data={[{ value: currentAccount.id, label: currentAccount.label }]}
             value={currentAccount.id}
             disabled
@@ -230,7 +230,7 @@ export function SimpleTransactionModal({
           />
 
           <Tooltip
-            label={forcedDirectionReason ?? "Swap debit/credit direction"}
+            label={forcedDirectionReason ?? "Swap Debit/Credit Direction"}
           >
             <span>
               <ActionIcon
@@ -244,7 +244,7 @@ export function SimpleTransactionModal({
                     form.values.direction === "DEBIT" ? "CREDIT" : "DEBIT",
                   )
                 }
-                aria-label="Swap debit/credit direction"
+                aria-label="Swap Debit/Credit Direction"
               >
                 <IconArrowRight
                   size={18}
@@ -260,7 +260,7 @@ export function SimpleTransactionModal({
           </Tooltip>
 
           <AccountTreeSelect
-            label="Counter account"
+            label="Counter Account"
             accounts={accounts}
             style={{ flex: "1 1 16rem" }}
             disabled={isSubmitting}
@@ -289,7 +289,7 @@ export function SimpleTransactionModal({
                 })
               }
             >
-              Switch to split editor
+              Switch to Split Editor
             </Button>
           )}
           <Button variant="subtle" onClick={onClose} disabled={isSubmitting}>

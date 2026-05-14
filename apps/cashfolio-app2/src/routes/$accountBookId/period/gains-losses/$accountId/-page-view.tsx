@@ -70,7 +70,7 @@ export function GainLossReconciliationPageView({
           heading={<Title order={2}>{heading}</Title>}
           actions={headerActions}
         />
-        <Alert color="yellow" variant="light" title="No reconciliation data">
+        <Alert color="yellow" variant="light" title="No Reconciliation Data">
           No gain/loss reconciliation is available for this account and period.
         </Alert>
       </PageShell>
@@ -305,7 +305,7 @@ export function GainLossReconciliationPageView({
                 variant="light"
                 color="yellow"
                 icon={<IconAlertTriangle size={16} />}
-                title="Partial data"
+                title="Partial Data"
               >
                 {reconciliation.diagnostics.skippedCount} valuation-related
                 item(s) were skipped because conversion or rate data was

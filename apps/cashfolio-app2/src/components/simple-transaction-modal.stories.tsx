@@ -30,12 +30,12 @@ export const ToggleDirectionAndSubmit: Story = {
 
     await userEvent.type(body.getByRole("textbox", { name: "Amount" }), "99");
 
-    const counterAccountInput = body.getByLabelText("Counter account");
+    const counterAccountInput = body.getByLabelText("Counter Account");
     await userEvent.click(counterAccountInput);
     await userEvent.click(await body.findByText("Credit Card (CHF)"));
 
     await userEvent.click(
-      body.getByRole("button", { name: "Swap debit/credit direction" }),
+      body.getByRole("button", { name: "Swap Debit/Credit Direction" }),
     );
     await userEvent.click(body.getByRole("button", { name: "Create" }));
 
@@ -49,12 +49,12 @@ export const ForcedDirectionDisablesToggle: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
 
-    const counterAccountInput = body.getByLabelText("Counter account");
+    const counterAccountInput = body.getByLabelText("Counter Account");
     await userEvent.click(counterAccountInput);
     await userEvent.click(await body.findByText("Salary (Income)"));
 
     await expect(
-      body.getByRole("button", { name: "Swap debit/credit direction" }),
+      body.getByRole("button", { name: "Swap Debit/Credit Direction" }),
     ).toBeDisabled();
   },
 };
@@ -75,11 +75,11 @@ export const EditModeWithSwitchToSplit: Story = {
 
     await expect(body.getByRole("button", { name: "Save" })).toBeVisible();
     await expect(
-      body.getByRole("button", { name: "Switch to split editor" }),
+      body.getByRole("button", { name: "Switch to Split Editor" }),
     ).toBeVisible();
 
     await userEvent.click(
-      body.getByRole("button", { name: "Switch to split editor" }),
+      body.getByRole("button", { name: "Switch to Split Editor" }),
     );
 
     await expect(args.onSwitchToSplit).toHaveBeenCalledWith(
@@ -102,7 +102,7 @@ export const EnterSubmitPendingGuard: Story = {
 
     await userEvent.type(body.getByRole("textbox", { name: "Amount" }), "99");
 
-    const counterAccountInput = body.getByLabelText("Counter account");
+    const counterAccountInput = body.getByLabelText("Counter Account");
     await userEvent.click(counterAccountInput);
     await userEvent.click(await body.findByText("Credit Card (CHF)"));
 

@@ -296,7 +296,7 @@ export function TimelinePageView({
         actions={
           <SegmentedControl
             value={selectedMode}
-            aria-label="Timeline period mode"
+            aria-label="Timeline Period Mode"
             data={[
               { label: "Monthly", value: "month" },
               { label: "Yearly", value: "year" },

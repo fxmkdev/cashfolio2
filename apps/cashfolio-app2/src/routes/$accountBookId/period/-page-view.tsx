@@ -446,7 +446,7 @@ export function PeriodPageView({
                     variant="light"
                     color="yellow"
                     icon={<IconAlertTriangle size={16} />}
-                    title="Partial data"
+                    title="Partial Data"
                   >
                     {allocationBreakdown.allocationPartialDataNotes}
                   </Alert>

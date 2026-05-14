@@ -186,7 +186,7 @@ export function LedgerPageContent() {
             <LedgerPeriodFilterCard
               hasPeriodFilter={hasPeriodFilter}
               periodMode={periodMode}
-              selectedPeriodLabel={selectedPeriod?.label ?? "All periods"}
+              selectedPeriodLabel={selectedPeriod?.label ?? "All Periods"}
               pickerOpened={pickerOpened}
               onPickerOpenedChange={setPickerOpened}
               canGoToPreviousPeriod={

@@ -320,7 +320,7 @@ export function AccountBookShell({
           <Burger
             opened={mobileOpened}
             onClick={toggleMobile}
-            aria-label="Toggle navigation"
+            aria-label="Toggle Navigation"
             size="sm"
           />
           <CashfolioTitle appVersion={appVersion} />

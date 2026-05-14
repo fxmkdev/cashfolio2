@@ -9,7 +9,7 @@ export function NewAccountBookSignOutForm() {
         variant="default"
         leftSection={<IconLogout2 size={16} />}
       >
-        Sign out
+        Sign Out
       </Button>
     </form>
   );

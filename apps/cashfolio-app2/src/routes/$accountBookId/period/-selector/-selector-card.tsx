@@ -69,7 +69,7 @@ export function PeriodSelectorCard({
         <Group gap="sm" wrap="nowrap" className={classes.periodSelectorRow}>
           <SegmentedControl
             size="sm"
-            aria-label="Period mode"
+            aria-label="Period Mode"
             value={periodMode}
             onChange={onPeriodModeChange}
             className={classes.periodModeControl}
@@ -86,7 +86,7 @@ export function PeriodSelectorCard({
             <ActionIcon
               variant="default"
               size="input-sm"
-              aria-label="Previous period"
+              aria-label="Previous Period"
               disabled={!canGoToPreviousPeriod}
               onClick={() => onPeriodStep(-1)}
             >
@@ -135,7 +135,7 @@ export function PeriodSelectorCard({
             <ActionIcon
               variant="default"
               size="input-sm"
-              aria-label="Next period"
+              aria-label="Next Period"
               disabled={!canGoToNextPeriod}
               onClick={() => onPeriodStep(1)}
             >

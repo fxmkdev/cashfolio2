@@ -63,8 +63,8 @@ export function usePeriodGainsLossesViewModel(args: {
   const gainsLossesSubtitle = useMemo(
     () =>
       gainsLossesDrillState.clampedPath.length === 0
-        ? "Top-level groups for gains/losses in the selected period"
-        : "Drilled gains/losses in the selected period",
+        ? "Top-Level Groups for Gains/Losses in the Selected Period"
+        : "Drilled Gains/Losses in the Selected Period",
     [gainsLossesDrillState.clampedPath.length],
   );
 

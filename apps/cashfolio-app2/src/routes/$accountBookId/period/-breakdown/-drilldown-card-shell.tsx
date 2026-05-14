@@ -140,7 +140,7 @@ export function DrilldownCardShell({
             variant="light"
             color="yellow"
             icon={<IconAlertTriangle size={16} />}
-            title="Adjusted totals in this view"
+            title="Adjusted Totals in This View"
           >
             Hidden non-positive or rounded-to-zero child accounts are excluded
             from drill-down rows. Parent totals can therefore differ slightly

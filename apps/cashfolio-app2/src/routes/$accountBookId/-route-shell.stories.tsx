@@ -114,13 +114,13 @@ export const RouteSmoke: Story = {
       canvas.getByRole("menuitem", { name: "Account Book Settings" }),
     ).toBeVisible();
     await expect(
-      canvas.getByRole("menuitem", { name: "Create new account book" }),
+      canvas.getByRole("menuitem", { name: "Create New" }),
     ).toBeVisible();
     await expect(
-      canvas.queryByRole("menuitem", { name: "Sign out" }),
+      canvas.queryByRole("menuitem", { name: "Sign Out" }),
     ).not.toBeInTheDocument();
     await expect(
-      canvas.getByRole("menuitem", { name: "Create new account book" }),
+      canvas.getByRole("menuitem", { name: "Create New" }),
     ).not.toHaveAttribute("aria-disabled", "true");
     await userEvent.click(
       canvas.getByRole("menuitem", { name: "Storybook Alt Book" }),
@@ -138,7 +138,7 @@ export const RouteSmoke: Story = {
       canvas.getByRole("menuitem", { name: "User Settings" }),
     ).toBeVisible();
     await expect(
-      canvas.getByRole("menuitem", { name: "Sign out" }),
+      canvas.getByRole("menuitem", { name: "Sign Out" }),
     ).toBeVisible();
     await userEvent.click(
       canvas.getByRole("menuitem", { name: "User Settings" }),
@@ -159,7 +159,7 @@ export const MobileFooterControlsSmoke: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      canvas.getByRole("button", { name: "Toggle navigation" }),
+      canvas.getByRole("button", { name: "Toggle Navigation" }),
     );
     await expect(
       canvas.getByRole("button", { name: "Storybook Book" }),
@@ -171,7 +171,7 @@ export const MobileFooterControlsSmoke: Story = {
       canvas.getByRole("button", { name: "Storybook User" }),
     );
     await expect(
-      canvas.getByRole("menuitem", { name: "Sign out" }),
+      canvas.getByRole("menuitem", { name: "Sign Out" }),
     ).toBeVisible();
   },
 };

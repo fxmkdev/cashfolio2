@@ -81,7 +81,12 @@ const preview: Preview = {
       });
       const accountBookSettingsRoute = createRoute({
         getParentRoute: () => accountBookRoute,
-        path: "/settings",
+        path: "/account-book-settings",
+        component: () => <Story />,
+      });
+      const accountBookUserSettingsRoute = createRoute({
+        getParentRoute: () => accountBookRoute,
+        path: "/user-settings",
         component: () => <Story />,
       });
       const accountBookValuationCacheRoute = createRoute({
@@ -119,6 +124,7 @@ const preview: Preview = {
         accountBookPeriodRoute,
         accountBookTimelineRoute,
         accountBookSettingsRoute,
+        accountBookUserSettingsRoute,
         accountBookValuationCacheRoute,
         accountLedgerRouteTree,
       ]);

@@ -23,7 +23,7 @@ export async function clickRowAction(
     | "Delete"
     | "Archive"
     | "Unarchive"
-    | "Reorder siblings",
+    | "Reorder Siblings",
 ) {
   await row.hover();
   await row.getByRole("button", { name: actionLabel }).click();

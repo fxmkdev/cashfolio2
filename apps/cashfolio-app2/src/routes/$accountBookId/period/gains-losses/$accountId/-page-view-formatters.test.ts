@@ -29,7 +29,7 @@ describe("page view formatters", () => {
         canOpenLedger: true,
         isVirtualTarget: false,
       }),
-    ).toBe("Open in ledger");
+    ).toBe("Open in Ledger");
     expect(
       getLedgerActionTooltipLabel({
         canOpenLedger: false,

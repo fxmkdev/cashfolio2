@@ -23,7 +23,7 @@ export async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
   const breakdownCard = args.page
     .getByRole("heading", { name: "Expenses Breakdown" })
     .locator(
-      "xpath=ancestor::*[self::section or self::article or self::div][.//*[@aria-label='Breakdown chart type'] and .//canvas][1]",
+      "xpath=ancestor::*[self::section or self::article or self::div][.//*[@aria-label='Breakdown Chart Type'] and .//canvas][1]",
     );
   const chartContainer = breakdownCard.getByTestId("period-breakdown-chart");
   await expect(chartContainer).toBeVisible();

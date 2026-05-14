@@ -16,6 +16,19 @@ paths are relative to that app directory.
 - Use `LinkTab` from `src/components/link-tab.tsx` for tab-like navigation that
   changes route/search state.
 
+## UI Copy
+
+- Use Title Case for UI labels, including buttons, links, menu items, tabs,
+  field labels, alert titles, placeholders, and accessible labels such as
+  `aria-label`. Follow common product title-case rules: capitalize major words,
+  and keep short articles, conjunctions, and prepositions lowercase unless they
+  start or end the label.
+- Use sentence case for full-sentence prose, helper text, validation errors,
+  notifications, and explanatory empty states.
+- Keep labels short and action-oriented. Prefer concise commands such as
+  `Create New` over longer menu text when the surrounding context already names
+  the object.
+
 ## Label Typography
 
 - When a label combines a short code with a human-readable name, separate them
@@ -365,7 +378,7 @@ eligible edit of two-booking transactions from the ledger route
   - ledger toolbar exposes a single `Add Transaction` button
   - there is no separate `Add Split Transaction` toolbar button
   - users can switch one-way to split editor from the simple create dialog via
-    `Switch to split editor`
+    `Switch to Split Editor`
   - switch carries over current simple-form draft values into split form
 
 - Entry fields:
@@ -376,7 +389,7 @@ eligible edit of two-booking transactions from the ledger route
   - the row action remains a single `Edit` action
   - if the transaction is simple-edit eligible, the edit modal opens in simple
     mode first
-  - users can switch one-way to split editor via `Switch to split editor`
+  - users can switch one-way to split editor via `Switch to Split Editor`
   - switch carries over current simple-form draft values into split form
 - Always creates exactly 2 bookings:
   - current account booking

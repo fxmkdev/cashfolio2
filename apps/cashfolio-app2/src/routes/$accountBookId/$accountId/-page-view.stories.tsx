@@ -339,7 +339,7 @@ function LedgerPageStoryHarness({
             <LedgerPeriodFilterCard
               hasPeriodFilter={hasPeriodFilter}
               periodMode={periodMode}
-              selectedPeriodLabel={selectedPeriod?.label ?? "All periods"}
+              selectedPeriodLabel={selectedPeriod?.label ?? "All Periods"}
               pickerOpened={pickerOpened}
               onPickerOpenedChange={setPickerOpened}
               canGoToPreviousPeriod={
@@ -609,7 +609,7 @@ export const PeriodFilterRouteSmoke: Story = {
       "(none)",
     );
     await expect(
-      canvas.getByRole("button", { name: "Clear filter" }),
+      canvas.getByRole("button", { name: "Clear Filter" }),
     ).toBeDisabled();
 
     await userEvent.click(canvas.getByRole("radio", { name: "Year" }));
@@ -622,7 +622,7 @@ export const PeriodFilterRouteSmoke: Story = {
       "(none)",
     );
 
-    await userEvent.click(canvas.getByRole("button", { name: "All periods" }));
+    await userEvent.click(canvas.getByRole("button", { name: "All Periods" }));
     await userEvent.click(canvas.getByRole("button", { name: /Feb/i }));
 
     await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
@@ -630,13 +630,13 @@ export const PeriodFilterRouteSmoke: Story = {
     );
 
     await userEvent.click(
-      canvas.getByRole("button", { name: "Previous period" }),
+      canvas.getByRole("button", { name: "Previous Period" }),
     );
     await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
       "2026-01",
     );
 
-    await userEvent.click(canvas.getByRole("button", { name: "Clear filter" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Clear Filter" }));
     await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
       "(none)",
     );
