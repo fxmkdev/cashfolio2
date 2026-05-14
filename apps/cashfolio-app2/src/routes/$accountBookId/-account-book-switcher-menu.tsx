@@ -7,9 +7,9 @@ import {
   type MenuItemProps,
 } from "@mantine/core";
 import {
+  IconBook2,
   IconCheck,
   IconChevronUp,
-  IconDatabase,
   IconLogout2,
   IconPlus,
   IconSettings,
@@ -95,7 +95,7 @@ export function AccountBookSwitcherMenu({
               size="lg"
               variant="default"
             >
-              <IconDatabase size={18} />
+              <IconBook2 size={18} />
             </ActionIcon>
           </Tooltip>
         ) : (
