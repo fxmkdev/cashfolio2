@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { AccountType, Unit } from "@/.prisma-client/enums";
+import { createAccountOptions } from "@/shared/account-options";
 import {
-  createAccountOptions,
   createLedgerBalanceFormatter,
   deriveSimpleTransactionEditState,
   getUnitLabel,

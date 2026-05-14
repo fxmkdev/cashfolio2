@@ -4,7 +4,6 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "@/.prisma-client/enums";
-import type { AccountOption } from "@/components/edit-transaction-modal";
 import {
   getUnitIdentifier,
   getSimpleTransactionUnitIdentifier,
@@ -15,7 +14,7 @@ import {
   getCurrencyDecimals,
   getUnitDisplayDecimals,
 } from "@/shared/unit-format";
-import type { LedgerAccount, LedgerAccountOptionSource } from "./-page-types";
+import type { LedgerAccount } from "./-page-types";
 
 export function getUnitLabel(account: {
   unit: Unit | null;
@@ -33,34 +32,6 @@ export function getUnitLabel(account: {
     case Unit.CRYPTOCURRENCY:
       return account.cryptocurrency;
   }
-}
-
-function toAccountOption(account: LedgerAccountOptionSource): AccountOption {
-  const typeLabel = getTypeLabel(account.type, account.equityAccountSubtype);
-
-  return {
-    label: [typeLabel, account.groupPath, account.name]
-      .filter(Boolean)
-      .join(" / "),
-    value: account.id,
-    treePath: [typeLabel, ...account.groupPathSegments],
-    treeLabel: account.name,
-    unit: account.unit,
-    currency: account.currency,
-    cryptocurrency: account.cryptocurrency,
-    symbol: account.symbol,
-    tradeCurrency: account.tradeCurrency,
-    type: account.type as AccountType,
-    equityAccountSubtype:
-      account.equityAccountSubtype as EquityAccountSubtype | null,
-  };
-}
-
-export function createAccountOptions(
-  accounts: LedgerAccountOptionSource[],
-  includeAccount: (account: LedgerAccountOptionSource) => boolean,
-): AccountOption[] {
-  return accounts.filter(includeAccount).map(toAccountOption);
 }
 
 type BalanceFormatterAccount = Pick<

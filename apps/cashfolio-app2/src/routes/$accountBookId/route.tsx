@@ -16,6 +16,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import {
+  IconActivity,
   IconCalendarMonth,
   IconCheck,
   IconChartBar,
@@ -56,6 +57,7 @@ export const Route = createFileRoute("/$accountBookId")({
 });
 
 export type AccountBookSection =
+  | "activity"
   | "accounts"
   | "period"
   | "settings"
@@ -93,6 +95,7 @@ export function getActiveSection(args: {
   }
 
   const section = segments[1];
+  if (section === "activity") return "activity";
   if (section === "period") return "period";
   if (section === "settings") return "settings";
   if (section === "timeline") return "timeline";
@@ -324,6 +327,15 @@ export function AccountBookShell({
               params={{ accountBookId }}
               search={accountsLinkSearch}
               active={activeSection === "accounts"}
+              onClick={closeMobile}
+            />
+            <LinkNavLink
+              label="Activity"
+              leftSection={<IconActivity size={16} />}
+              to="/$accountBookId/activity"
+              params={{ accountBookId }}
+              search={periodLinkSearch}
+              active={activeSection === "activity"}
               onClick={closeMobile}
             />
             <LinkNavLink

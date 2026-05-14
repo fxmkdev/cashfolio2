@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 import type { AccountOption } from "@/components/edit-transaction-modal";
+import { createAccountOptions } from "@/shared/account-options";
 import {
   getSimpleTransactionUnitIdentifier,
   isOpeningBalancesAccount,
 } from "@/shared/account-utils";
 import {
-  createAccountOptions,
   createCurrentAccountLabel,
   getSimpleTransactionDisabledReason,
   type SimpleTransactionEditInitialValues,

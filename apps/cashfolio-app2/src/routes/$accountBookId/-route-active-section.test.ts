@@ -20,6 +20,15 @@ describe("getActiveSection", () => {
     ).toBe("accounts");
   });
 
+  it("marks activity section for activity routes", () => {
+    expect(
+      getActiveSection({
+        pathname: "/book-1/activity",
+        accountBookId: "book-1",
+      }),
+    ).toBe("activity");
+  });
+
   it("marks period section as active for nested period routes", () => {
     expect(
       getActiveSection({

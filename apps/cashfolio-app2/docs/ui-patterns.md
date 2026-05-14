@@ -306,6 +306,24 @@ for ledger child routes.
 - **Navigation**: Double-click an account row on the accounts list to open its
   ledger; back link returns to accounts list
 
+## Activity Page Pattern
+
+The activity page (`src/routes/$accountBookId/activity/index.tsx`) shows
+individual bookings across the whole account book, newest first. It is not in a
+single-account context.
+
+- **Sign convention**: Uses raw booking values; positive values show in Debit
+  and negative values show as positive amounts in Credit.
+- **Columns**: Date, Account, Description, Ccy./Symbol, Debit/Credit in booking
+  unit, Debit/Credit in reference currency, and row actions. No balance column.
+- **Period filter**: Uses the same explicit month/year filter control as the
+  account ledger, bounded by the account-book start date and today. Direct
+  visits default to the current month so the page does not load the whole
+  account book by accident.
+- **Actions**: Add Transaction and Edit open the split transaction editor
+  without a locked current account booking. Rebook excludes the clicked
+  booking's current account.
+
 ## Validation Pattern
 
 Shared validators live in `src/shared/account-validation.ts` and are used both

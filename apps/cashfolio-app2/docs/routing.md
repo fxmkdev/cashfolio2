@@ -29,9 +29,9 @@ Related docs:
   `GET /api/logto/callback`, `GET /api/logto/sign-up`,
   `POST /api/logto/sign-out`
 - `$accountBookId/route.tsx` - shared account-book shell route using Mantine
-  `AppShell` with left navbar navigation (Accounts, Period, Timeline, Valuation
-  Cache), navbar footer actions (Account Book switcher + Sign out), and
-  mobile-only header burger toggle
+  `AppShell` with left navbar navigation (Accounts, Activity, Period, Timeline,
+  Valuation Cache), navbar footer actions (Account Book switcher + Sign out),
+  and mobile-only header burger toggle
   - Uses the theme `sm` breakpoint as the shared source of truth for both navbar
     collapse and header visibility.
   - Keeps `Accounts` highlighted for account routes (`/$accountId`) as well as
@@ -44,6 +44,9 @@ Related docs:
   type: Asset, Liability, Income, Expense)
   - Loader data is tab-scoped: only the selected tab is fetched in the route
     loader critical path.
+- `$accountBookId/activity/route.tsx` - activity page showing individual
+  bookings across the account book in reverse-chronological order, with an
+  explicit month/year period filter and booking-level Edit/Rebook/Delete actions
 - `$accountBookId/valuation-cache/route.tsx` - valuation cache explorer page
   with tabs for Currency, Cryptocurrency, and Security; shows deduplicated unit
   rows and cached TimeSeries history charts (no live provider lookups)
@@ -147,6 +150,11 @@ Related docs:
   - `transactionId?: string` to auto-scroll and highlight a booking row
   - `period?: string` for explicit month/year period filtering on supported
     account types (asset, liability, and non-opening-balance equity)
+- `$accountBookId/activity/route.tsx` uses:
+  - `transactionId?: string` to auto-scroll and highlight all visible booking
+    rows for a transaction
+  - `period?: string` for explicit month/year period filtering; omitted values
+    default to the current month to keep the initial Activity payload bounded
 - `$accountBookId/period/route.tsx` and
   `$accountBookId/period/gains-losses/$accountId/route.tsx` both use
   `period?: string` with the same normalized period semantics
