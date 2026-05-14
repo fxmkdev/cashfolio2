@@ -318,8 +318,9 @@ single-account context.
   unit, Debit/Credit in reference currency, and row actions. No balance column.
 - **Period filter**: Uses the same explicit month/year filter control as the
   account ledger, bounded by the account-book start date and today.
-- **Actions**: Edit opens the split transaction editor without a locked current
-  account booking. Rebook excludes the clicked booking's current account.
+- **Actions**: Add Transaction and Edit open the split transaction editor
+  without a locked current account booking. Rebook excludes the clicked
+  booking's current account.
 
 ## Validation Pattern
 

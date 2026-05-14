@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import {
+  createTransaction,
   deleteTransaction,
   getTransaction,
   rebookBooking,
@@ -24,7 +25,9 @@ export function useActivityPageController(args: {
   invalidate: () => void;
 }): Omit<ActivityPageViewProps, "accountBookId" | "onRowDataUpdated"> {
   const [editModalOpened, setEditModalOpened] = useState(false);
+  const [createModalOpened, setCreateModalOpened] = useState(false);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+  const [isCreateSubmitting, setIsCreateSubmitting] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | undefined
   >();
@@ -39,6 +42,7 @@ export function useActivityPageController(args: {
   const [isRebookSubmitting, setIsRebookSubmitting] = useState(false);
 
   const {
+    activeAccountOptions,
     editAccountOptions,
     hasCompleteBookingUnit,
     rebookTargetAccountOptions,
@@ -59,6 +63,16 @@ export function useActivityPageController(args: {
     },
     [args.accountBookId],
   );
+
+  const handleCreateTransaction = async (values: TransactionMutationValues) => {
+    const transaction = await createTransaction({
+      data: { accountBookId: args.accountBookId, ...values },
+    });
+
+    setCreateModalOpened(false);
+    args.pendingScrollRef.current = transaction.id;
+    args.invalidate();
+  };
 
   const handleUpdateTransaction = async (values: TransactionMutationValues) => {
     const editingId = editingTransactionId;
@@ -132,7 +146,9 @@ export function useActivityPageController(args: {
     rows: args.loaderData.rows,
     columnDefs,
     accountBookStartDate: new Date(args.loaderData.periodBounds.minBookingDate),
+    createModalOpened,
     editModalOpened,
+    isCreateSubmitting,
     isEditSubmitting,
     isRebookSubmitting,
     editingTransactionData,
@@ -140,8 +156,13 @@ export function useActivityPageController(args: {
     rebooking,
     rebookModalOpened,
     hasCompleteBookingUnit,
+    accountOptions: activeAccountOptions,
     editAccountOptions,
     rebookTargetAccountOptions,
+    onAddTransactionClick: () => setCreateModalOpened(true),
+    onCloseCreateModal: () => setCreateModalOpened(false),
+    onCreateSubmittingChange: setIsCreateSubmitting,
+    onSubmitCreateTransaction: handleCreateTransaction,
     onCloseEditModal: () => setEditModalOpened(false),
     onEditSubmittingChange: setIsEditSubmitting,
     onEditModalExitTransitionEnd: () => {

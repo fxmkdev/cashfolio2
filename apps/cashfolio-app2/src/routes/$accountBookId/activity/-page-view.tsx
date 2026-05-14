@@ -1,4 +1,5 @@
-import { Modal } from "@mantine/core";
+import { Button, Modal, Title } from "@mantine/core";
+import { IconBolt } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 import { DataGrid } from "@/components/data-grid";
@@ -53,7 +54,9 @@ export type ActivityPageViewProps = {
   rows: ActivityRow[];
   columnDefs: NonNullable<AgGridReactProps<ActivityRow>["columnDefs"]>;
   accountBookStartDate: Date;
+  createModalOpened: boolean;
   editModalOpened: boolean;
+  isCreateSubmitting: boolean;
   isEditSubmitting: boolean;
   isRebookSubmitting: boolean;
   editingTransactionData?: {
@@ -65,10 +68,17 @@ export type ActivityPageViewProps = {
   rebooking?: RebookingState;
   rebookModalOpened: boolean;
   hasCompleteBookingUnit: boolean;
+  accountOptions: AccountOption[];
   editAccountOptions: AccountOption[];
   rebookTargetAccountOptions: RebookTargetOption[];
   periodFilterControls?: ReactNode;
   onRowDataUpdated: AgGridReactProps<ActivityRow>["onRowDataUpdated"];
+  onAddTransactionClick: () => void;
+  onCloseCreateModal: () => void;
+  onCreateSubmittingChange: (isSubmitting: boolean) => void;
+  onSubmitCreateTransaction: (
+    values: TransactionMutationValues,
+  ) => Promise<void>;
   onCloseEditModal: () => void;
   onEditSubmittingChange: (isSubmitting: boolean) => void;
   onEditModalExitTransitionEnd: () => void;
@@ -87,7 +97,9 @@ export function ActivityPageView({
   rows,
   columnDefs,
   accountBookStartDate,
+  createModalOpened,
   editModalOpened,
+  isCreateSubmitting,
   isEditSubmitting,
   isRebookSubmitting,
   editingTransactionData,
@@ -95,10 +107,15 @@ export function ActivityPageView({
   rebooking,
   rebookModalOpened,
   hasCompleteBookingUnit,
+  accountOptions,
   editAccountOptions,
   rebookTargetAccountOptions,
   periodFilterControls,
   onRowDataUpdated,
+  onAddTransactionClick,
+  onCloseCreateModal,
+  onCreateSubmittingChange,
+  onSubmitCreateTransaction,
   onCloseEditModal,
   onEditSubmittingChange,
   onEditModalExitTransitionEnd,
@@ -112,7 +129,17 @@ export function ActivityPageView({
 }: ActivityPageViewProps) {
   return (
     <PageShell>
-      <TopPageHeader heading="Activity" />
+      <TopPageHeader
+        heading={<Title order={2}>Activity</Title>}
+        actions={
+          <Button
+            leftSection={<IconBolt size={16} />}
+            onClick={onAddTransactionClick}
+          >
+            Add Transaction
+          </Button>
+        }
+      />
 
       {periodFilterControls}
 
@@ -127,6 +154,31 @@ export function ActivityPageView({
         getRowId={({ data }) => data.id}
         onRowDataUpdated={onRowDataUpdated}
       />
+
+      <Modal
+        opened={createModalOpened}
+        onClose={() => {
+          if (isCreateSubmitting) return;
+          onCloseCreateModal();
+        }}
+        title="Add Transaction"
+        size="100%"
+        closeOnEscape={!isCreateSubmitting}
+        closeOnClickOutside={!isCreateSubmitting}
+        withCloseButton={!isCreateSubmitting}
+      >
+        <EditTransactionModal
+          submitLabel="Create"
+          accounts={accountOptions}
+          accountBookStartDate={accountBookStartDate}
+          onClose={() => {
+            if (isCreateSubmitting) return;
+            onCloseCreateModal();
+          }}
+          onSubmittingChange={onCreateSubmittingChange}
+          onSubmit={onSubmitCreateTransaction}
+        />
+      </Modal>
 
       <Modal
         opened={editModalOpened}
