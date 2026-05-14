@@ -52,7 +52,7 @@ describe("buildCurrencySelectData", () => {
 
     expect(data[0]?.items[0]).toEqual({
       value: "CHF",
-      label: "CHF - Swiss Franc",
+      label: "CHF – Swiss Franc",
     });
   });
 });
@@ -66,8 +66,8 @@ describe("buildCryptocurrencySelectData", () => {
     expect(data[0]).toEqual({
       group: "Used",
       items: [
-        { value: "BTC", label: "BTC - Bitcoin" },
-        { value: "ETH", label: "ETH - Ethereum" },
+        { value: "BTC", label: "BTC – Bitcoin" },
+        { value: "ETH", label: "ETH – Ethereum" },
       ],
     });
     expect(

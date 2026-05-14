@@ -93,6 +93,7 @@ function SettingsFormFields(args: {
         disabled={args.isSubmitting}
         unitUsage={args.settings.unitUsage}
         selectedCurrencies={[args.form.values.referenceCurrency]}
+        compactLabels={false}
         {...args.form.getInputProps("referenceCurrency")}
       />
 

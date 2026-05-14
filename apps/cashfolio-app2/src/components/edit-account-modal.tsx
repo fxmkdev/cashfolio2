@@ -349,18 +349,19 @@ export function EditAccountModal({
                   />
                 </Grid.Col>
                 {unit === Unit.CURRENCY ? (
-                  <Grid.Col span={3} key={Unit.CURRENCY}>
+                  <Grid.Col span={6} key={Unit.CURRENCY}>
                     <CurrencySelect
                       label="Currency"
                       withAsterisk
                       withAlignedLabels
                       unitUsage={unitUsage}
                       selectedCurrencies={[initialValues?.currency]}
+                      compactLabels={false}
                       {...form.getInputProps("currency")}
                     />
                   </Grid.Col>
                 ) : unit === Unit.CRYPTOCURRENCY ? (
-                  <Grid.Col span={3} key={Unit.CRYPTOCURRENCY}>
+                  <Grid.Col span={6} key={Unit.CRYPTOCURRENCY}>
                     <CryptocurrencySelect
                       label="Cryptocurrency"
                       withAsterisk
@@ -386,6 +387,7 @@ export function EditAccountModal({
                         withAlignedLabels
                         unitUsage={unitUsage}
                         selectedCurrencies={[initialValues?.tradeCurrency]}
+                        compactLabels={false}
                         {...form.getInputProps("tradeCurrency")}
                       />
                     </Grid.Col>

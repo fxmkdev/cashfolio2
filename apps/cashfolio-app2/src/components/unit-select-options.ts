@@ -46,7 +46,7 @@ function normalizeValues(
 }
 
 function formatFullLabel(code: string, name: string | undefined): string {
-  return name ? `${code} - ${name}` : code;
+  return name ? `${code} – ${name}` : code;
 }
 
 function formatCodeLabel(code: string): string {
