@@ -126,8 +126,8 @@ submit UX and prevent duplicate requests.
   has one primary command and a small set of related secondary commands.
 - Keep the primary command on the main button and put secondary/destructive
   commands in the menu.
-- Disabled menu items should remain visible and use the disabled-reason copy as
-  the item label.
+- Disabled menu items should remain visible with the normal action label; show
+  the disabled-reason copy in a tooltip.
 
 ## Breadcrumbs Pattern
 

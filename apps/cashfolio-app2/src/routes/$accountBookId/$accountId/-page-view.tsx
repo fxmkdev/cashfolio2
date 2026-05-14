@@ -291,7 +291,7 @@ export function LedgerPageView({
                     account.isActive
                       ? {
                           label: "Archive",
-                          disabledLabel: accountArchiveLabel,
+                          disabledReason: accountArchiveLabel,
                           disabled: !accountArchivable,
                           color: "yellow",
                           leftSection: <IconArchive size={16} />,
@@ -299,7 +299,7 @@ export function LedgerPageView({
                         }
                       : {
                           label: "Unarchive",
-                          disabledLabel: accountUnarchiveLabel,
+                          disabledReason: accountUnarchiveLabel,
                           disabled: !accountUnarchivable,
                           color: "blue",
                           leftSection: <IconArchiveOff size={16} />,
@@ -307,7 +307,7 @@ export function LedgerPageView({
                         },
                     {
                       label: "Delete",
-                      disabledLabel: accountDeleteLabel,
+                      disabledReason: accountDeleteLabel,
                       disabled: !accountDeletable,
                       color: "red",
                       leftSection: <IconTrash size={16} />,

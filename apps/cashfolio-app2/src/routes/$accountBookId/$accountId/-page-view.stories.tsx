@@ -570,14 +570,10 @@ export const DisabledAccountActionsMenu: Story = {
     );
 
     await expect(
-      screen.getByRole("menuitem", {
-        name: "Cannot archive account because its balance is not 0",
-      }),
+      screen.getByRole("menuitem", { name: "Archive" }),
     ).toBeVisible();
     await expect(
-      screen.getByRole("menuitem", {
-        name: "Cannot delete account because it has bookings",
-      }),
+      screen.getByRole("menuitem", { name: "Delete" }),
     ).toBeVisible();
   },
 };
