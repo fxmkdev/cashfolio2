@@ -170,7 +170,7 @@ export function createEditTransactionColumnDefs(args: {
           data?.unit === Unit.CRYPTOCURRENCY
             ? buildCryptocurrencySelectData({
                 unitUsage: args.unitUsage,
-                selectedCryptocurrencies: [data.cryptocurrency],
+                selectedCryptocurrencies: [data?.cryptocurrency],
                 compactLabels: true,
               })
             : buildCurrencySelectData({

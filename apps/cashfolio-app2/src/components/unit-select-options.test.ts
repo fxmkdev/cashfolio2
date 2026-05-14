@@ -66,8 +66,8 @@ describe("buildCryptocurrencySelectData", () => {
     expect(data[0]).toEqual({
       group: "Used",
       items: [
-        { value: "BTC", label: "BTC – Bitcoin" },
-        { value: "ETH", label: "ETH – Ethereum" },
+        { value: "BTC", label: "BTC" },
+        { value: "ETH", label: "ETH" },
       ],
     });
     expect(
@@ -84,5 +84,17 @@ describe("buildCryptocurrencySelectData", () => {
     });
 
     expect(data[0]?.items[0]).toEqual({ value: "BTC", label: "BTC" });
+  });
+
+  test("can include full cryptocurrency names when requested", () => {
+    const data = buildCryptocurrencySelectData({
+      usedCryptocurrencies: ["BTC"],
+      compactLabels: false,
+    });
+
+    expect(data[0]?.items[0]).toEqual({
+      value: "BTC",
+      label: "BTC – Bitcoin",
+    });
   });
 });

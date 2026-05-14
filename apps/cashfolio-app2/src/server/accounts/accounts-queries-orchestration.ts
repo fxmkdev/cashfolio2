@@ -154,23 +154,27 @@ export async function queryActiveAccountBookUnitUsage(
       where: { id: accountBookId },
       select: { referenceCurrency: true },
     }),
-    prisma.account.findMany({
-      where: {
-        accountBookId,
-        isActive: true,
-      },
-      select: {
-        isActive: true,
-        currency: true,
-        cryptocurrency: true,
-        tradeCurrency: true,
-      },
-    }),
+    queryActiveAccountUnitUsageAccounts(accountBookId),
   ]);
 
   return createAccountBookUnitUsage({
     referenceCurrency: accountBook.referenceCurrency,
     accounts,
+  });
+}
+
+async function queryActiveAccountUnitUsageAccounts(accountBookId: string) {
+  return prisma.account.findMany({
+    where: {
+      accountBookId,
+      isActive: true,
+    },
+    select: {
+      isActive: true,
+      currency: true,
+      cryptocurrency: true,
+      tradeCurrency: true,
+    },
   });
 }
 
@@ -455,8 +459,8 @@ export async function queryAccountReferenceBalances(
 export async function queryAccountsPageData(data: AccountsPageDataInput) {
   const accountState = data.accountState ?? "active";
 
-  const [treeData, accountGroups, existingNodes, unitUsage] = await Promise.all(
-    [
+  const [treeData, accountGroups, existingNodes, unitUsageAccounts] =
+    await Promise.all([
       queryAccountTreeData({
         accountBookId: data.accountBookId,
         accountState,
@@ -470,9 +474,12 @@ export async function queryAccountsPageData(data: AccountsPageDataInput) {
       accountState === "active"
         ? queryExistingNodes(data.accountBookId)
         : Promise.resolve([]),
-      queryActiveAccountBookUnitUsage(data.accountBookId),
-    ],
-  );
+      queryActiveAccountUnitUsageAccounts(data.accountBookId),
+    ]);
+  const unitUsage = createAccountBookUnitUsage({
+    referenceCurrency: treeData.referenceCurrency,
+    accounts: unitUsageAccounts,
+  });
 
   return {
     accountGroups,

@@ -55,7 +55,7 @@ export const CryptocurrencySelect = forwardRef<
     unitUsage,
     usedCryptocurrencies,
     selectedCryptocurrencies,
-    compactLabels,
+    compactLabels = true,
     searchable = true,
     ...props
   },

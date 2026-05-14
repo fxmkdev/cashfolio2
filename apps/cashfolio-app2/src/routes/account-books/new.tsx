@@ -32,10 +32,10 @@ export const Route = createFileRoute("/account-books/new")({
 });
 
 function getCurrencyOptions() {
-  return Object.keys(currencies)
-    .map((code) => ({
+  return Object.entries(currencies)
+    .map(([code, name]) => ({
       value: code,
-      label: code,
+      label: `${code} – ${name}`,
     }))
     .sort((left, right) => left.value.localeCompare(right.value));
 }

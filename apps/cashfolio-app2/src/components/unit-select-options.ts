@@ -125,6 +125,7 @@ export function buildCryptocurrencySelectData(args?: {
     availableUnits: cryptocurrencies,
     usedValues: args?.usedCryptocurrencies ?? args?.unitUsage?.cryptocurrencies,
     selectedValues: args?.selectedCryptocurrencies,
-    formatLabel: args?.compactLabels ? formatCodeLabel : formatFullLabel,
+    formatLabel:
+      args?.compactLabels === false ? formatFullLabel : formatCodeLabel,
   });
 }
