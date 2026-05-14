@@ -96,6 +96,12 @@ export const RouteSmoke: Story = {
     await expect(
       canvas.getByRole("menuitem", { name: "Sign out" }),
     ).toBeVisible();
+    await expect(
+      canvas.getByRole("menuitem", { name: "Create new account book" }),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole("menuitem", { name: "Create new account book" }),
+    ).not.toHaveAttribute("aria-disabled", "true");
   },
 };
 

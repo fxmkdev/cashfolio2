@@ -1,3 +1,5 @@
+export { createAccountBook } from "./account-book-creation";
+
 export {
   getAccountBookSettings,
   updateAccountBookSettings,
