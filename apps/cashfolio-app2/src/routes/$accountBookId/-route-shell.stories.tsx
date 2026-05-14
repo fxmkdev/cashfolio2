@@ -221,7 +221,17 @@ export const DesktopRailSmoke: Story = {
       }),
     );
     await expect(
-      canvas.getByRole("menuitem", { name: "Sign out" }),
+      canvas.getByRole("menuitem", { name: "Account Book Settings" }),
+    ).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+
+    await userEvent.click(
+      canvas.getByRole("button", {
+        name: "Open user menu, current: Storybook User",
+      }),
+    );
+    await expect(
+      canvas.getByRole("menuitem", { name: "Sign Out" }),
     ).toBeVisible();
     await userEvent.keyboard("{Escape}");
 

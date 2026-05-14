@@ -380,9 +380,12 @@ export function AccountBookShell({
         collapsed: false,
       }}
       navbar={{
-        width: desktopRailCollapsed
-          ? ACCOUNT_BOOK_RAIL_WIDTH
-          : ACCOUNT_BOOK_SIDEBAR_WIDTH,
+        width: {
+          base: ACCOUNT_BOOK_SIDEBAR_WIDTH,
+          sm: desktopRailCollapsed
+            ? ACCOUNT_BOOK_RAIL_WIDTH
+            : ACCOUNT_BOOK_SIDEBAR_WIDTH,
+        },
         breakpoint: "sm",
         collapsed: { mobile: !mobileOpened, desktop: false },
       }}
