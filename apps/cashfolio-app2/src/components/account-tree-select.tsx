@@ -118,7 +118,6 @@ export const AccountTreeSelect = forwardRef<
     searchable = true,
     allowDeselect = false,
     expandOnClick = true,
-    defaultExpandAll = true,
     onChange,
     ...props
   },
@@ -138,7 +137,6 @@ export const AccountTreeSelect = forwardRef<
       searchable={searchable}
       allowDeselect={allowDeselect}
       expandOnClick={expandOnClick}
-      defaultExpandAll={defaultExpandAll}
       comboboxProps={{ withinPortal: true, ...comboboxProps }}
       nothingFoundMessage={nothingFoundMessage}
       filter={(query, node) =>

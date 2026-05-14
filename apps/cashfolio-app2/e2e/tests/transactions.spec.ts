@@ -123,10 +123,33 @@ function accountLeafOption(page: Page, name: string): Locator {
     .first();
 }
 
+async function searchFocusedAccountTree(page: Page, name: string) {
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.type(name);
+}
+
 async function selectAccountLeaf(page: Page, name: string) {
+  await searchFocusedAccountTree(page, name);
   const option = accountLeafOption(page, name);
   await expect(option).toBeVisible();
   await option.click();
+}
+
+async function expectAccountLeafSearchResult(args: {
+  input: Locator;
+  page: Page;
+  accountName: string;
+  visible: boolean;
+}) {
+  await args.input.click();
+  await searchFocusedAccountTree(args.page, args.accountName);
+
+  const option = accountLeafOption(args.page, args.accountName);
+  if (args.visible) {
+    await expect(option).toBeVisible();
+  } else {
+    await expect(option).toHaveCount(0);
+  }
 }
 
 async function setGridAccountCellValue(args: {
@@ -384,29 +407,31 @@ test("rebook booking to another compatible account", async ({ page }) => {
 
   const targetAccountInput = rebookDialog.getByLabel("Target account");
   await expect(targetAccountInput).toHaveValue("");
+  await expectAccountLeafSearchResult({
+    input: targetAccountInput,
+    page,
+    accountName: seeded.investmentsAccount.name,
+    visible: true,
+  });
+  await expectAccountLeafSearchResult({
+    input: targetAccountInput,
+    page,
+    accountName: seeded.cashAccount.name,
+    visible: false,
+  });
+  await expectAccountLeafSearchResult({
+    input: targetAccountInput,
+    page,
+    accountName: seeded.cryptoAccount.name,
+    visible: false,
+  });
+  await expectAccountLeafSearchResult({
+    input: targetAccountInput,
+    page,
+    accountName: seeded.expenseAccount.name,
+    visible: false,
+  });
   await targetAccountInput.click();
-  await expect(
-    page
-      .getByRole("option", {
-        name: accountOptionNameRegex(seeded.investmentsAccount.name),
-      })
-      .first(),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("option", {
-      name: accountOptionNameRegex(seeded.cashAccount.name),
-    }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("option", {
-      name: accountOptionNameRegex(seeded.cryptoAccount.name),
-    }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("option", {
-      name: accountOptionNameRegex(seeded.expenseAccount.name),
-    }),
-  ).toHaveCount(0);
   await selectAccountLeaf(page, seeded.investmentsAccount.name);
   await targetAccountInput.press("Enter");
   await expect(rebookDialog).toBeHidden();
