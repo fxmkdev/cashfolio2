@@ -29,6 +29,10 @@ function splitPath(label: string): string[] {
 }
 
 function createPath(option: GroupTreeOption): string[] {
+  if (option.treeLabel) {
+    return [...(option.treePath ?? []), option.treeLabel];
+  }
+
   if (option.treePath?.length) {
     return [...option.treePath, option.treeLabel ?? option.label];
   }

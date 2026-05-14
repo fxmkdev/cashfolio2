@@ -4,7 +4,7 @@ import type {
   EquityAccountSubtype,
   Unit,
 } from "../../.prisma-client/enums";
-import { createGroupPathResolver } from "../accounts/accounts-helpers";
+import { createGroupPathSegmentsResolver } from "../accounts/accounts-helpers";
 import {
   type AccountState,
   getDisplayBalanceInReferenceCurrencyByAccountId,
@@ -57,15 +57,21 @@ export async function queryAccountGroups(accountBookId: string) {
     where: { accountBookId, isActive: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
-  const resolveGroupPath = createGroupPathResolver(groups);
+  const resolveGroupPathSegments = createGroupPathSegmentsResolver(groups);
   return groups
-    .map((group) => ({
-      value: group.id,
-      label: resolveGroupPath(group.id),
-      type: group.type,
-      equityAccountSubtype: group.equityAccountSubtype,
-      parentGroupId: group.parentGroupId,
-    }))
+    .map((group) => {
+      const pathSegments = resolveGroupPathSegments(group.id);
+
+      return {
+        value: group.id,
+        label: pathSegments.join(" / "),
+        type: group.type,
+        equityAccountSubtype: group.equityAccountSubtype,
+        parentGroupId: group.parentGroupId,
+        treePath: pathSegments.slice(0, -1),
+        treeLabel: group.name,
+      };
+    })
     .toSorted((a, b) => a.label.localeCompare(b.label));
 }
 

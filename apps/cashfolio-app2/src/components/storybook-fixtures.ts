@@ -15,6 +15,8 @@ export const accountGroupOptions = [
     type: AccountType.ASSET,
     equityAccountSubtype: null,
     parentGroupId: null,
+    treePath: [],
+    treeLabel: "Assets",
   },
   {
     value: "group-cash",
@@ -22,6 +24,8 @@ export const accountGroupOptions = [
     type: AccountType.ASSET,
     equityAccountSubtype: null,
     parentGroupId: "group-assets",
+    treePath: ["Assets"],
+    treeLabel: "Cash",
   },
   {
     value: "group-liabilities",
@@ -29,6 +33,8 @@ export const accountGroupOptions = [
     type: AccountType.LIABILITY,
     equityAccountSubtype: null,
     parentGroupId: null,
+    treePath: [],
+    treeLabel: "Liabilities",
   },
   {
     value: "group-income",
@@ -36,6 +42,8 @@ export const accountGroupOptions = [
     type: AccountType.EQUITY,
     equityAccountSubtype: EquityAccountSubtype.INCOME,
     parentGroupId: null,
+    treePath: [],
+    treeLabel: "Income",
   },
   {
     value: "group-expense",
@@ -43,6 +51,8 @@ export const accountGroupOptions = [
     type: AccountType.EQUITY,
     equityAccountSubtype: EquityAccountSubtype.EXPENSE,
     parentGroupId: null,
+    treePath: [],
+    treeLabel: "Expense",
   },
 ];
 

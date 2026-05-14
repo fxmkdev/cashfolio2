@@ -91,6 +91,40 @@ describe("buildGroupTreeData", () => {
     expect(treeData[0]?.children?.[0]?.value).toBe("group-cash");
   });
 
+  test("uses explicit tree labels when group names contain path delimiters", () => {
+    const treeData = buildGroupTreeData([
+      {
+        value: "group-assets",
+        label: "Assets",
+        parentGroupId: null,
+        treePath: [],
+        treeLabel: "Assets",
+      },
+      {
+        value: "group-cash-bank",
+        label: "Assets / Cash / Bank",
+        parentGroupId: "group-assets",
+        treePath: ["Assets"],
+        treeLabel: "Cash / Bank",
+      },
+    ]);
+
+    expect(treeData).toEqual([
+      {
+        value: "group-assets",
+        label: "Assets",
+        nodeProps: { searchLabel: "Assets" },
+        children: [
+          {
+            value: "group-cash-bank",
+            label: "Cash / Bank",
+            nodeProps: { searchLabel: "Assets / Cash / Bank" },
+          },
+        ],
+      },
+    ]);
+  });
+
   test("returns the full search label from node props", () => {
     const treeData = buildGroupTreeData([
       {
