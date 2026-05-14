@@ -1,12 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { currencies } from "../currencies";
 import { prisma } from "../prisma.server";
 import { ensureSameOriginRequestFromServerContext } from "../security/same-origin.server";
 import { normalizeDateInputValue, startOfUtcDay } from "../shared/date";
 import { ensureUser } from "../users/functions.server";
-
-const GAIN_LOSS_ACCOUNT_NAME = "Gain/Loss";
 
 type CreateAccountBookInput = {
   name: string;
@@ -113,13 +110,6 @@ export const createAccountBook = createServerFn({ method: "POST" })
           userLinks: {
             create: {
               userId: user.id,
-            },
-          },
-          accounts: {
-            create: {
-              name: GAIN_LOSS_ACCOUNT_NAME,
-              type: AccountType.EQUITY,
-              equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
             },
           },
         },

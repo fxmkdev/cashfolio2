@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 
 const createServerFn = vi.hoisted(() =>
   vi.fn(() => {
@@ -71,7 +70,7 @@ describe("createAccountBook", () => {
     vi.useRealTimers();
   });
 
-  it("creates an empty account book linked to the user with only Gain/Loss seeded", async () => {
+  it("creates an empty account book linked to the user", async () => {
     const result = await createAccountBook({
       data: {
         name: "  My Book  ",
@@ -93,13 +92,6 @@ describe("createAccountBook", () => {
             userId: "user-1",
           },
         },
-        accounts: {
-          create: {
-            name: "Gain/Loss",
-            type: AccountType.EQUITY,
-            equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
-          },
-        },
       },
       select: {
         id: true,
@@ -108,12 +100,8 @@ describe("createAccountBook", () => {
         startDate: true,
       },
     });
-    expect(
-      tx.accountBook.create.mock.calls[0]![0].data.accounts.create,
-    ).not.toEqual(
-      expect.objectContaining({
-        equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-      }),
+    expect(tx.accountBook.create.mock.calls[0]![0].data).not.toHaveProperty(
+      "accounts",
     );
     expect(tx.accountBook.create.mock.calls[0]![0].data).not.toHaveProperty(
       "groups",
