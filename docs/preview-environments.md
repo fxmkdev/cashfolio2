@@ -19,6 +19,10 @@ On pull requests (non-forks), CI now:
    `https://cashfolio-app2-pr-<PR_NUMBER>-<BRANCH_TAIL_SLUG>.fly.dev/`
 6. Posts/updates a PR comment with the dynamic preview URL
 
+Preview deployment is gated by the app image build and preview resource
+preparation. Unit tests, typecheck, lint, and format checks still run in CI, but
+they do not block dynamic preview deployment.
+
 `<BRANCH_TAIL_SLUG>` is derived from the last segment of the PR branch name
 (`head.ref`): lowercased, non-`[a-z0-9-]` characters replaced with `-`,
 consecutive dashes collapsed, and leading/trailing dashes trimmed (fallback:
