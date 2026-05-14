@@ -2,7 +2,7 @@ import {
   AccountType,
   EquityAccountSubtype,
   Unit,
-} from "@/.prisma-client/enums";
+} from "../.prisma-client/enums";
 import type { AccountOption } from "@/components/edit-transaction-modal";
 import { getTypeLabel } from "./account-utils";
 

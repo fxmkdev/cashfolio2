@@ -20,27 +20,21 @@ export const getActivityData = createServerFn({ method: "GET" })
     accountBookId: data.accountBookId,
     period:
       parseExplicitActivityPeriodSelection(data.period) ??
-      parseExplicitActivityPeriodSelection(getDefaultActivityPeriodValue()),
+      getDefaultActivityPeriodSelection(),
   }))
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
-    const periodRange = data.period
-      ? getExplicitPeriodDateRange(data.period)
-      : null;
+    const periodRange = getExplicitPeriodDateRange(data.period);
 
     const [bookings, openingBalanceTransactionIds, referenceCurrency] =
       await Promise.all([
         prisma.booking.findMany({
           where: {
             accountBookId: data.accountBookId,
-            ...(periodRange
-              ? {
-                  date: {
-                    gte: periodRange.from,
-                    lt: periodRange.toExclusive,
-                  },
-                }
-              : {}),
+            date: {
+              gte: periodRange.from,
+              lt: periodRange.toExclusive,
+            },
           },
           orderBy: [
             { date: "desc" },
@@ -154,4 +148,14 @@ function parseExplicitActivityPeriodSelection(
 
 function getDefaultActivityPeriodValue(date: Date = new Date()): string {
   return formatMonthPeriodValue(date.getUTCFullYear(), date.getUTCMonth());
+}
+
+function getDefaultActivityPeriodSelection(): ExplicitPeriodSelection {
+  const selection = parseExplicitActivityPeriodSelection(
+    getDefaultActivityPeriodValue(),
+  );
+  if (!selection) {
+    throw new Error("Default activity period is invalid.");
+  }
+  return selection;
 }
