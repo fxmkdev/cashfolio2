@@ -159,6 +159,7 @@ async function setGridAccountCellValue(args: {
   const option = accountLeafOption(args.dialog.page(), args.accountName);
   await expect(option).toBeVisible({ timeout: 3000 });
   await option.click();
+  await args.dialog.page().keyboard.press("Enter");
 }
 
 async function setUnitlessEquityAccountOnEditableRow(args: {
