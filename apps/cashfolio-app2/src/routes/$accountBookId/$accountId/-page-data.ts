@@ -36,15 +36,15 @@ export function getUnitLabel(account: {
 }
 
 function toAccountOption(account: LedgerAccountOptionSource): AccountOption {
+  const typeLabel = getTypeLabel(account.type, account.equityAccountSubtype);
+
   return {
-    label: [
-      getTypeLabel(account.type, account.equityAccountSubtype),
-      account.groupPath,
-      account.name,
-    ]
+    label: [typeLabel, account.groupPath, account.name]
       .filter(Boolean)
       .join(" / "),
     value: account.id,
+    treePath: [typeLabel, ...account.groupPathSegments],
+    treeLabel: account.name,
     unit: account.unit,
     currency: account.currency,
     cryptocurrency: account.cryptocurrency,

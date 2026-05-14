@@ -25,6 +25,7 @@ import {
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
 import type { AccountOption } from "./edit-transaction-modal";
+import { AccountTreeSelect } from "./account-tree-select";
 import { FormattedNumberInput } from "./formatted-number-input";
 
 export type SimpleTransactionDirection = "DEBIT" | "CREDIT";
@@ -258,16 +259,16 @@ export function SimpleTransactionModal({
             </span>
           </Tooltip>
 
-          <Select
+          <AccountTreeSelect
             label="Counter account"
-            data={accounts.map((account) => ({
-              value: account.value,
-              label: account.label,
-            }))}
-            searchable
+            accounts={accounts}
             style={{ flex: "1 1 16rem" }}
             disabled={isSubmitting}
-            {...form.getInputProps("counterAccountId")}
+            value={form.values.counterAccountId || null}
+            error={form.errors.counterAccountId}
+            onChange={(value) =>
+              form.setFieldValue("counterAccountId", value ?? "")
+            }
           />
         </Group>
 

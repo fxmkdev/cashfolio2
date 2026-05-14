@@ -24,9 +24,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(
-      canvas.getByRole("combobox", { name: "Target account" }),
-    ).toHaveValue("");
+    await expect(canvas.getByLabelText("Target account")).toHaveValue("");
   },
 };
 
@@ -45,14 +43,10 @@ export const SubmitAndCancel: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    const targetAccountInput = canvas.getByRole("combobox", {
-      name: "Target account",
-    });
+    const targetAccountInput = canvas.getByLabelText("Target account");
 
     await userEvent.click(targetAccountInput);
-    await userEvent.click(
-      await body.findByRole("option", { name: "Savings (CHF)" }),
-    );
+    await userEvent.click(await body.findByText("Savings (CHF)"));
     await expect(targetAccountInput).toHaveValue("Savings (CHF)");
     await userEvent.type(targetAccountInput, "{enter}");
     await expect(args.onSubmit).toHaveBeenCalledWith({
@@ -73,14 +67,10 @@ export const EnterSubmitPendingGuard: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    const targetAccountInput = canvas.getByRole("combobox", {
-      name: "Target account",
-    });
+    const targetAccountInput = canvas.getByLabelText("Target account");
 
     await userEvent.click(targetAccountInput);
-    await userEvent.click(
-      await body.findByRole("option", { name: "Savings (CHF)" }),
-    );
+    await userEvent.click(await body.findByText("Savings (CHF)"));
     await userEvent.type(targetAccountInput, "{enter}{enter}");
 
     const submitButton = canvas.getByRole("button", { name: "Rebook" });

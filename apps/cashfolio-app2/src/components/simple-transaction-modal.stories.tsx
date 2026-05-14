@@ -30,13 +30,9 @@ export const ToggleDirectionAndSubmit: Story = {
 
     await userEvent.type(body.getByRole("textbox", { name: "Amount" }), "99");
 
-    const counterAccountInput = body.getByRole("combobox", {
-      name: "Counter account",
-    });
+    const counterAccountInput = body.getByLabelText("Counter account");
     await userEvent.click(counterAccountInput);
-    await userEvent.click(
-      await body.findByRole("option", { name: "Credit Card (CHF)" }),
-    );
+    await userEvent.click(await body.findByText("Credit Card (CHF)"));
 
     await userEvent.click(
       body.getByRole("button", { name: "Swap debit/credit direction" }),
@@ -53,13 +49,9 @@ export const ForcedDirectionDisablesToggle: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
 
-    const counterAccountInput = body.getByRole("combobox", {
-      name: "Counter account",
-    });
+    const counterAccountInput = body.getByLabelText("Counter account");
     await userEvent.click(counterAccountInput);
-    await userEvent.click(
-      await body.findByRole("option", { name: "Salary (Income)" }),
-    );
+    await userEvent.click(await body.findByText("Salary (Income)"));
 
     await expect(
       body.getByRole("button", { name: "Swap debit/credit direction" }),
@@ -110,13 +102,9 @@ export const EnterSubmitPendingGuard: Story = {
 
     await userEvent.type(body.getByRole("textbox", { name: "Amount" }), "99");
 
-    const counterAccountInput = body.getByRole("combobox", {
-      name: "Counter account",
-    });
+    const counterAccountInput = body.getByLabelText("Counter account");
     await userEvent.click(counterAccountInput);
-    await userEvent.click(
-      await body.findByRole("option", { name: "Credit Card (CHF)" }),
-    );
+    await userEvent.click(await body.findByText("Credit Card (CHF)"));
 
     const descriptionInput = body.getByRole("textbox", { name: "Description" });
     await userEvent.type(descriptionInput, "{enter}{enter}");

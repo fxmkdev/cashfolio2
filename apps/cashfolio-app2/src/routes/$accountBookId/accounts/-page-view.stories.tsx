@@ -164,12 +164,18 @@ const accountGroups: AccountsPageViewProps["accountGroups"] = [
     label: "Assets",
     type: AccountType.ASSET,
     equityAccountSubtype: null,
+    parentGroupId: null,
+    treePath: [],
+    treeLabel: "Assets",
   },
   {
     value: "group-cash",
     label: "Assets / Cash",
     type: AccountType.ASSET,
     equityAccountSubtype: null,
+    parentGroupId: "group-assets",
+    treePath: ["Assets"],
+    treeLabel: "Cash",
   },
 ];
 
