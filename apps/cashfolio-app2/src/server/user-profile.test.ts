@@ -198,13 +198,12 @@ describe("user profile server functions", () => {
     ).rejects.toThrow("Avatar is not allowed.");
   });
 
-  it("falls back to claim profile when Account API profile lookup fails", async () => {
-    fetchLogtoAccountApi.mockRejectedValueOnce(new Error("Logto unavailable"));
-
+  it("loads shell profile from claims without calling Logto Account API", async () => {
     await expect(getAuthenticatedUserProfile()).resolves.toEqual({
       displayName: "Claims User",
       avatarUrl: "https://example.test/claims.png",
       initials: "CU",
     });
+    expect(fetchLogtoAccountApi).not.toHaveBeenCalled();
   });
 });

@@ -139,7 +139,7 @@ async function fetchAuthenticatedLogtoAccount(): Promise<LogtoAccountResponse> {
   return readLogtoAccountResponse(await readJsonResponse(response));
 }
 
-function resolveProfileFromLogtoAccount(
+function resolveSettingsProfileFromLogtoAccount(
   account: LogtoAccountResponse,
 ): AuthenticatedUserProfile {
   return resolveAuthenticatedUserProfile({
@@ -153,15 +153,7 @@ export const getAuthenticatedUserProfile = createServerFn({
   method: "GET",
 }).handler(async (): Promise<AuthenticatedUserProfile> => {
   const context = await ensureAuthenticated();
-  const fallbackProfile = resolveAuthenticatedUserProfile(context.claims);
-
-  try {
-    return resolveProfileFromLogtoAccount(
-      await fetchAuthenticatedLogtoAccount(),
-    );
-  } catch {
-    return fallbackProfile;
-  }
+  return resolveAuthenticatedUserProfile(context.claims);
 });
 
 export const getAuthenticatedUserSettings = createServerFn({
@@ -169,7 +161,7 @@ export const getAuthenticatedUserSettings = createServerFn({
 }).handler(async (): Promise<AuthenticatedUserSettings> => {
   await ensureAuthenticated();
   const account = await fetchAuthenticatedLogtoAccount();
-  const profile = resolveProfileFromLogtoAccount(account);
+  const profile = resolveSettingsProfileFromLogtoAccount(account);
 
   return {
     name: account.name ?? "",
@@ -200,7 +192,7 @@ export const updateAuthenticatedUserSettings = createServerFn({
     await assertLogtoAccountApiOk(response, "Failed to save user settings.");
 
     const account = readLogtoAccountResponse(await readJsonResponse(response));
-    const profile = resolveProfileFromLogtoAccount(account);
+    const profile = resolveSettingsProfileFromLogtoAccount(account);
 
     return {
       name: account.name ?? "",
