@@ -35,7 +35,7 @@ Redis cache note:
   `STAGING_REDIS_URL` into each preview app as `REDIS_URL` (no per-PR Redis
   instance is provisioned).
 
-When a PR is closed, CI deletes the corresponding Fly app, Neon branch (via
+When a PR is closed, CI deletes the corresponding Fly app and Neon branch (via
 `neondatabase/delete-branch-action`).
 
 Dynamic preview CI uses a single GitHub environment:
