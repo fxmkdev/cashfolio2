@@ -19,6 +19,7 @@ import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import { createAccountBook } from "@/server/account-books";
 import { normalizeDateInputValue, startOfUtcDay } from "@/shared/date";
 import { invalidateCachedUserAccountBooks } from "../$accountBookId/-account-book-options-loader";
+import { NewAccountBookSignOutForm } from "./-new-account-book-sign-out-form";
 
 type NewAccountBookFormValues = {
   name: string;
@@ -88,7 +89,10 @@ function NewAccountBookPage() {
   return (
     <Container size="xs" py="xl">
       <Stack gap="lg">
-        <Title order={2}>Create Account Book</Title>
+        <Group justify="space-between" align="center">
+          <Title order={2}>Create Account Book</Title>
+          <NewAccountBookSignOutForm />
+        </Group>
 
         <form
           onSubmit={form.onSubmit(async (values) => {
