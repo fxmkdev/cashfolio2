@@ -33,6 +33,7 @@ function AccountBookShellSmokeHarness() {
         { id: "storybook-book", name: "Storybook Book" },
         { id: "storybook-alt-book", name: "Storybook Alt Book" },
       ]}
+      appVersion="storybook"
       pathname={pathname}
       accountsLinkSearch={{ tab: "ASSET", mode: "active" }}
       periodLinkSearch={{}}
