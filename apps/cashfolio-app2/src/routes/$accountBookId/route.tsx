@@ -1,4 +1,13 @@
-import { AppShell, Burger, Divider, Group, Stack, Text } from "@mantine/core";
+import {
+  AppShell,
+  Burger,
+  Divider,
+  Group,
+  Stack,
+  Text,
+  Tooltip,
+  type TextProps,
+} from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import {
   createFileRoute,
@@ -25,10 +34,20 @@ import {
 
 export const Route = createFileRoute("/$accountBookId")({
   loader: async () => {
-    const { loadUserAccountBooksForAccountBookRoute } =
-      await import("./-account-book-options-loader");
+    const [
+      { loadUserAccountBooksForAccountBookRoute },
+      { getRuntimeAppVersion },
+    ] = await Promise.all([
+      import("./-account-book-options-loader"),
+      import("@/server/app-version"),
+    ]);
 
-    return loadUserAccountBooksForAccountBookRoute();
+    const [accountBooks, appVersion] = await Promise.all([
+      loadUserAccountBooksForAccountBookRoute(),
+      getRuntimeAppVersion(),
+    ]);
+
+    return { accountBooks, appVersion };
   },
   component: AccountBookLayout,
 });
@@ -189,7 +208,7 @@ export function getAccountsLinkSearch(args: {
 }
 
 function AccountBookLayout() {
-  const accountBooks = Route.useLoaderData();
+  const { accountBooks, appVersion } = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const { pathname, locationSearch, matches } = useRouterState({
     select: (state) => ({
@@ -214,6 +233,7 @@ function AccountBookLayout() {
       accountBookId={accountBookId}
       pathname={pathname}
       accountBooks={accountBooks}
+      appVersion={appVersion}
       accountsLinkSearch={accountsLinkSearch}
       periodLinkSearch={periodLinkSearch}
     >
@@ -226,6 +246,7 @@ export type AccountBookShellProps = {
   accountBookId: string;
   pathname: string;
   accountBooks: UserAccountBookOption[];
+  appVersion: string;
   accountsLinkSearch: AccountsLinkSearch;
   periodLinkSearch: {
     period?: string;
@@ -237,6 +258,7 @@ export function AccountBookShell({
   accountBookId,
   pathname,
   accountBooks,
+  appVersion,
   accountsLinkSearch,
   periodLinkSearch,
   children,
@@ -266,16 +288,14 @@ export function AccountBookShell({
             aria-label="Toggle navigation"
             size="sm"
           />
-          <Text fw={600}>Cashfolio</Text>
+          <CashfolioTitle appVersion={appVersion} />
         </Group>
       </AppShell.Header>
 
       <AppShell.Navbar p="sm">
         <AppShell.Section grow>
           <Stack gap="xs">
-            <Text size="xl" fw={600} px="xs" pt="xs">
-              Cashfolio
-            </Text>
+            <CashfolioTitle appVersion={appVersion} size="xl" px="xs" pt="xs" />
             <Divider />
             <LinkNavLink
               label="Accounts"
@@ -338,5 +358,35 @@ export function AccountBookShell({
         {children}
       </AppShell.Main>
     </AppShell>
+  );
+}
+
+type CashfolioTitleProps = {
+  appVersion: string;
+  size?: TextProps["size"];
+  px?: TextProps["px"];
+  pt?: TextProps["pt"];
+};
+
+function CashfolioTitle({ appVersion, size, px, pt }: CashfolioTitleProps) {
+  return (
+    <Tooltip label={`Version ${appVersion}`}>
+      <Text
+        aria-label={`Cashfolio, version ${appVersion}`}
+        component="span"
+        fw={600}
+        px={px}
+        pt={pt}
+        size={size}
+        style={{
+          cursor: "help",
+          display: "inline-flex",
+          outlineOffset: 2,
+        }}
+        tabIndex={0}
+      >
+        Cashfolio
+      </Text>
+    </Tooltip>
   );
 }
