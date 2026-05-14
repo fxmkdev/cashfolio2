@@ -12,6 +12,7 @@ import {
   normalizeDateInputValue,
   startOfUtcDay,
 } from "../../shared/date";
+import { ensureSameOriginRequestFromServerContext } from "../../security/same-origin.server";
 import { invalidatePeriodBaseDataCacheForAccountBook } from "../period/period-base-data-cache";
 
 type AccountBookSettings = {
