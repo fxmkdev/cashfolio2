@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { Unit } from "@/.prisma-client/enums";
+import { AccountType, Unit } from "@/.prisma-client/enums";
 import {
+  createAccountOptions,
   createLedgerBalanceFormatter,
   deriveSimpleTransactionEditState,
   getUnitLabel,
@@ -17,6 +18,36 @@ describe("getUnitLabel", () => {
         tradeCurrency: "USD",
       }),
     ).toBe("VWCE");
+  });
+});
+
+describe("createAccountOptions", () => {
+  test("uses server-provided group path segments for tree paths", () => {
+    const [option] = createAccountOptions(
+      [
+        {
+          id: "account-checking",
+          name: "Checking",
+          groupPath: "Assets / Cash / Bank / Daily",
+          groupPathSegments: ["Assets", "Cash / Bank", "Daily"],
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          type: AccountType.ASSET,
+          equityAccountSubtype: null,
+        } as unknown as Parameters<typeof createAccountOptions>[0][number],
+      ],
+      () => true,
+    );
+
+    expect(option?.treePath).toEqual([
+      "Asset",
+      "Assets",
+      "Cash / Bank",
+      "Daily",
+    ]);
   });
 });
 

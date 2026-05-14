@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../../prisma.server";
 import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../../account-books/functions.server";
-import { createGroupPathResolver } from "../accounts/accounts-helpers";
+import { createGroupPathSegmentsResolver } from "../accounts/accounts-helpers";
 import {
   type AccountReferenceBalancesInput,
   type AccountsPageDataInput,
@@ -28,12 +28,19 @@ export const getAccounts = createServerFn({ method: "GET" })
         where: { accountBookId: data.accountBookId },
       }),
     ]);
-    const resolveGroupPath = createGroupPathResolver(allGroups);
+    const resolveGroupPathSegments = createGroupPathSegmentsResolver(allGroups);
     return accounts
-      .map((a) => ({
-        ...a,
-        groupPath: a.groupId ? resolveGroupPath(a.groupId) : "",
-      }))
+      .map((a) => {
+        const groupPathSegments = a.groupId
+          ? resolveGroupPathSegments(a.groupId)
+          : [];
+
+        return {
+          ...a,
+          groupPath: groupPathSegments.join(" / "),
+          groupPathSegments,
+        };
+      })
       .toSorted((a, b) =>
         `${a.groupPath} / ${a.name}`.localeCompare(
           `${b.groupPath} / ${b.name}`,
