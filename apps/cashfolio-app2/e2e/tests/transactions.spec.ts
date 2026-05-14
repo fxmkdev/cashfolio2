@@ -110,6 +110,18 @@ function normalizeCellText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function exactAccountOptionName(name: string): RegExp {
+  return new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
+}
+
+async function selectAccountLeaf(page: Page, name: string) {
+  const option = page.getByRole("option", {
+    name: exactAccountOptionName(name),
+  });
+  await expect(option).toBeVisible();
+  await option.click();
+}
+
 async function setGridAccountCellValue(args: {
   dialog: Locator;
   rowIndex: number;
@@ -140,12 +152,11 @@ async function setGridAccountCellValue(args: {
   const option = args.dialog
     .page()
     .getByRole("option", {
-      name: accountOptionNameRegex(args.accountName),
+      name: exactAccountOptionName(args.accountName),
     })
     .first();
   await expect(option).toBeVisible({ timeout: 3000 });
   await option.click();
-  await args.dialog.page().keyboard.press("Enter");
 }
 
 async function setUnitlessEquityAccountOnEditableRow(args: {
@@ -205,12 +216,8 @@ async function setUnitlessEquityAccountOnEditableRow(args: {
   throw new Error("Could not set unitless equity account on an editable row");
 }
 
-function assetAccountOptionLabel(name: string): string {
-  return `Asset / Assets / ${name}`;
-}
-
 function accountOptionNameRegex(name: string): RegExp {
-  return new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  return exactAccountOptionName(name);
 }
 
 test.beforeAll(async () => {
@@ -226,12 +233,11 @@ test("create, edit, delete, and create multi-booking transaction", async ({
   await fillTransactionHeader(createDialog, "E2E Transaction 1");
   await setGridCellValue(page, 0, "credit", "100");
   await setGridCellValue(page, 1, "date", "01.01.2026");
-  await setGridCellValue(
-    page,
-    1,
-    "account",
-    assetAccountOptionLabel(seeded.savingsAccount.name),
-  );
+  await setGridAccountCellValue({
+    dialog: createDialog,
+    rowIndex: 1,
+    accountName: seeded.savingsAccount.name,
+  });
   await setGridCellValue(page, 1, "debit", "100");
   await createDialog.getByRole("button", { name: "Create" }).click();
 
@@ -268,21 +274,19 @@ test("create, edit, delete, and create multi-booking transaction", async ({
   await fillTransactionHeader(createSplitDialog, "E2E Split Transaction");
   await setGridCellValue(page, 0, "credit", "300");
   await setGridCellValue(page, 1, "date", "01.01.2026");
-  await setGridCellValue(
-    page,
-    1,
-    "account",
-    assetAccountOptionLabel(seeded.savingsAccount.name),
-  );
+  await setGridAccountCellValue({
+    dialog: createSplitDialog,
+    rowIndex: 1,
+    accountName: seeded.savingsAccount.name,
+  });
   await setGridCellValue(page, 1, "debit", "100");
   await page.getByRole("button", { name: "Add booking" }).click();
   await setGridCellValue(page, 2, "date", "01.01.2026");
-  await setGridCellValue(
-    page,
-    2,
-    "account",
-    assetAccountOptionLabel(seeded.investmentsAccount.name),
-  );
+  await setGridAccountCellValue({
+    dialog: createSplitDialog,
+    rowIndex: 2,
+    accountName: seeded.investmentsAccount.name,
+  });
   await setGridCellValue(page, 2, "debit", "200");
   await createSplitDialog.getByRole("button", { name: "Create" }).click();
 
@@ -300,10 +304,7 @@ test("create simple transaction", async ({ page }) => {
   await page.getByLabel("Date").fill("02.01.2026");
   await page.getByLabel("Description").fill("E2E Simple Transaction");
   await simpleDialog.getByLabel("Counter account").click();
-  await page
-    .getByRole("option", { name: /E2E Expense/ })
-    .first()
-    .click();
+  await selectAccountLeaf(page, seeded.expenseAccount.name);
 
   await expect(
     simpleDialog.getByRole("button", {
@@ -332,12 +333,7 @@ test("counterparty account link highlights the matching booking row", async ({
   await page.getByLabel("Date").fill("03.01.2026");
   await page.getByLabel("Description").fill(description);
   await simpleDialog.getByLabel("Counter account").click();
-  await page
-    .getByRole("option", {
-      name: accountOptionNameRegex(seeded.savingsAccount.name),
-    })
-    .first()
-    .click();
+  await selectAccountLeaf(page, seeded.savingsAccount.name);
   await page.getByLabel("Amount").fill("77");
   await simpleDialog.getByRole("button", { name: "Create" }).click();
 
@@ -373,12 +369,7 @@ test("rebook booking to another compatible account", async ({ page }) => {
   await page.getByLabel("Date").fill("04.01.2026");
   await page.getByLabel("Description").fill("E2E Rebook Transaction");
   await simpleDialog.getByLabel("Counter account").click();
-  await page
-    .getByRole("option", {
-      name: accountOptionNameRegex(seeded.savingsAccount.name),
-    })
-    .first()
-    .click();
+  await selectAccountLeaf(page, seeded.savingsAccount.name);
   await simpleDialog
     .getByRole("button", { name: "Swap debit/credit direction" })
     .click();
@@ -417,12 +408,7 @@ test("rebook booking to another compatible account", async ({ page }) => {
       name: accountOptionNameRegex(seeded.expenseAccount.name),
     }),
   ).toHaveCount(0);
-  await page
-    .getByRole("option", {
-      name: accountOptionNameRegex(seeded.investmentsAccount.name),
-    })
-    .first()
-    .click();
+  await selectAccountLeaf(page, seeded.investmentsAccount.name);
   await targetAccountInput.press("Enter");
   await expect(rebookDialog).toBeHidden();
 
@@ -455,12 +441,7 @@ test("eligible edit opens simple editor and ineligible edit opens split editor",
   await page.getByLabel("Date").fill("04.01.2026");
   await page.getByLabel("Description").fill("E2E Editable Simple");
   await simpleCreateDialog.getByLabel("Counter account").click();
-  await page
-    .getByRole("option", {
-      name: accountOptionNameRegex(seeded.expenseAccount.name),
-    })
-    .first()
-    .click();
+  await selectAccountLeaf(page, seeded.expenseAccount.name);
   await page.getByLabel("Amount").fill("20");
   await simpleCreateDialog.getByRole("button", { name: "Create" }).click();
 
@@ -519,12 +500,7 @@ test("switch from simple edit to split carries over edited values", async ({
   await page.getByLabel("Date").fill("05.01.2026");
   await page.getByLabel("Description").fill("E2E Carry Switch");
   await simpleCreateDialog.getByLabel("Counter account").click();
-  await page
-    .getByRole("option", {
-      name: accountOptionNameRegex(seeded.expenseAccount.name),
-    })
-    .first()
-    .click();
+  await selectAccountLeaf(page, seeded.expenseAccount.name);
   await page.getByLabel("Amount").fill("15");
   await simpleCreateDialog.getByRole("button", { name: "Create" }).click();
 
@@ -576,12 +552,7 @@ test("create flow: changing date before switching to split still allows split cr
   await simpleDialog.getByLabel("Date").fill("06.01.2026");
   await simpleDialog.getByLabel("Description").fill("E2E Create Date Switch");
   await simpleDialog.getByLabel("Counter account").click();
-  await page
-    .getByRole("option", {
-      name: accountOptionNameRegex(seeded.expenseAccount.name),
-    })
-    .first()
-    .click();
+  await selectAccountLeaf(page, seeded.expenseAccount.name);
   await simpleDialog.getByLabel("Amount").fill("22");
 
   await simpleDialog
@@ -617,12 +588,7 @@ test("create security simple transaction preserves account metadata", async ({
   await page.getByLabel("Date").fill("03.01.2026");
   await page.getByLabel("Description").fill("E2E Security Simple Transaction");
   await simpleDialog.getByLabel("Counter account").click();
-  await page
-    .getByRole("option", {
-      name: accountOptionNameRegex(seeded.securityCounterAccount.name),
-    })
-    .first()
-    .click();
+  await selectAccountLeaf(page, seeded.securityCounterAccount.name);
   await page.getByLabel("Amount").fill("3");
   await simpleDialog.getByRole("button", { name: "Create" }).click();
 
@@ -682,12 +648,7 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
     .getByLabel("Description")
     .fill("E2E Unitless Equity Create");
   await createSimpleDialog.getByLabel("Counter account").click();
-  await page
-    .getByRole("option", {
-      name: accountOptionNameRegex(seeded.savingsAccount.name),
-    })
-    .first()
-    .click();
+  await selectAccountLeaf(page, seeded.savingsAccount.name);
   await createSimpleDialog.getByLabel("Amount").fill("90");
   await createSimpleDialog
     .getByRole("button", { name: "Switch to split editor" })
@@ -699,12 +660,11 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   const createCounterRow = createDialog
     .locator('.ag-center-cols-container .ag-row[row-index="1"]')
     .first();
-  await setGridCellValue(
-    createDialog,
-    1,
-    "account",
-    seeded.unitlessEquityAccount.name,
-  );
+  await setGridAccountCellValue({
+    dialog: createDialog,
+    rowIndex: 1,
+    accountName: seeded.unitlessEquityAccount.name,
+  });
   await expect(agGridCellByColId(createCounterRow, "unit")).toContainText(
     "Currency",
   );
@@ -723,12 +683,7 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
     .getByLabel("Description")
     .fill("E2E Unitless Equity Edit");
   await securitySimpleDialog.getByLabel("Counter account").click();
-  await page
-    .getByRole("option", {
-      name: accountOptionNameRegex(seeded.securityCounterAccount.name),
-    })
-    .first()
-    .click();
+  await selectAccountLeaf(page, seeded.securityCounterAccount.name);
   await securitySimpleDialog.getByLabel("Amount").fill("5");
   await securitySimpleDialog.getByRole("button", { name: "Create" }).click();
   await expect(agGridRowByText(page, "E2E Unitless Equity Edit")).toBeVisible();
