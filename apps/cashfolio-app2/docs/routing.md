@@ -34,6 +34,9 @@ Related docs:
   and mobile-only header burger toggle
   - Uses the theme `sm` breakpoint as the shared source of truth for both navbar
     collapse and header visibility.
+  - Supports a desktop sidebar rail mode that keeps icon navigation visible,
+    defaults to the expanded sidebar, and persists the global user preference in
+    `localStorage`.
   - Keeps `Accounts` highlighted for account routes (`/$accountId`) as well as
     `/accounts`.
   - Loads account-book switcher options and current user profile claims at shell

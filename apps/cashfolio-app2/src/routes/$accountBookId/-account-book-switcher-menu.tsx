@@ -1,7 +1,15 @@
-import { Avatar, Button, Menu, type MenuItemProps } from "@mantine/core";
+import {
+  ActionIcon,
+  Avatar,
+  Button,
+  Menu,
+  Tooltip,
+  type MenuItemProps,
+} from "@mantine/core";
 import {
   IconCheck,
   IconChevronUp,
+  IconDatabase,
   IconLogout2,
   IconPlus,
   IconSettings,
@@ -38,6 +46,7 @@ type AccountBookSwitcherMenuProps = {
   accountBooks: UserAccountBookOption[];
   accountsTab: TabValue;
   accountsMode: AccountsMode;
+  collapsed?: boolean;
 };
 
 function handleAccountBookSwitchClick(
@@ -66,23 +75,36 @@ export function AccountBookSwitcherMenu({
   accountBooks,
   accountsTab,
   accountsMode,
+  collapsed = false,
 }: AccountBookSwitcherMenuProps) {
   const currentAccountBookName =
     accountBooks.find((accountBook) => accountBook.id === accountBookId)
       ?.name ?? accountBookId;
 
   return (
-    <Menu position="top-end" width="target">
+    <Menu position="top-end" width={collapsed ? 260 : "target"}>
       <Menu.Target>
-        <Button
-          variant="default"
-          rightSection={<IconChevronUp size={16} />}
-          fullWidth
-        >
-          <span style={triggerLabelStyle}>{currentAccountBookName}</span>
-        </Button>
+        {collapsed ? (
+          <Tooltip label={currentAccountBookName} position="right">
+            <ActionIcon
+              aria-label={`Switch account book, current: ${currentAccountBookName}`}
+              size="lg"
+              variant="default"
+            >
+              <IconDatabase size={18} />
+            </ActionIcon>
+          </Tooltip>
+        ) : (
+          <Button
+            variant="default"
+            rightSection={<IconChevronUp size={16} />}
+            fullWidth
+          >
+            <span style={triggerLabelStyle}>{currentAccountBookName}</span>
+          </Button>
+        )}
       </Menu.Target>
-      <Menu.Dropdown style={{ maxWidth: "100%" }}>
+      <Menu.Dropdown style={{ maxWidth: collapsed ? 260 : "100%" }}>
         {accountBooks.map((accountBook) => {
           const isCurrentBook = accountBook.id === accountBookId;
 
@@ -135,28 +157,44 @@ export function AccountBookSwitcherMenu({
 
 export function UserMenu({
   accountBookId,
+  collapsed = false,
   userProfile,
 }: {
   accountBookId: string;
+  collapsed?: boolean;
   userProfile: AuthenticatedUserProfile;
 }) {
   return (
-    <Menu position="top-end" width="target">
+    <Menu position="top-end" width={collapsed ? 260 : "target"}>
       <Menu.Target>
-        <Button
-          variant="default"
-          leftSection={
-            <Avatar src={userProfile.avatarUrl} alt="" size={24} radius="xl">
-              {userProfile.initials}
-            </Avatar>
-          }
-          rightSection={<IconChevronUp size={16} />}
-          fullWidth
-        >
-          <span style={triggerLabelStyle}>{userProfile.displayName}</span>
-        </Button>
+        {collapsed ? (
+          <Tooltip label={userProfile.displayName} position="right">
+            <ActionIcon
+              aria-label={`Open user menu, current: ${userProfile.displayName}`}
+              size="lg"
+              variant="default"
+            >
+              <Avatar src={userProfile.avatarUrl} alt="" size={24} radius="xl">
+                {userProfile.initials}
+              </Avatar>
+            </ActionIcon>
+          </Tooltip>
+        ) : (
+          <Button
+            variant="default"
+            leftSection={
+              <Avatar src={userProfile.avatarUrl} alt="" size={24} radius="xl">
+                {userProfile.initials}
+              </Avatar>
+            }
+            rightSection={<IconChevronUp size={16} />}
+            fullWidth
+          >
+            <span style={triggerLabelStyle}>{userProfile.displayName}</span>
+          </Button>
+        )}
       </Menu.Target>
-      <Menu.Dropdown style={{ maxWidth: "100%" }}>
+      <Menu.Dropdown style={{ maxWidth: collapsed ? 260 : "100%" }}>
         <LinkMenuItem
           leftSection={<IconUserCog size={16} />}
           to="/$accountBookId/user-settings"
