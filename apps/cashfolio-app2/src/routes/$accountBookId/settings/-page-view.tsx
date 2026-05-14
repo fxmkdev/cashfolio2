@@ -1,6 +1,8 @@
 import {
   Button,
+  Divider,
   Group,
+  Modal,
   Select,
   Stack,
   Text,
@@ -10,8 +12,8 @@ import {
 import { DateInput } from "@mantine/dates";
 import { type UseFormReturnType, useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
-import { useEffect, useMemo, useState } from "react";
-import { IconCheck } from "@tabler/icons-react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { IconAlertTriangle, IconCheck, IconTrash } from "@tabler/icons-react";
 import { PageShell } from "@/components/page-shell";
 import { TopPageHeader } from "@/components/top-page-header";
 import { currencies } from "@/currencies";
@@ -60,6 +62,23 @@ function showSettingsSavedNotification() {
     message: "Account book settings saved.",
     withBorder: true,
   });
+}
+
+function showAccountBookDeletedNotification() {
+  notifications.show({
+    color: "green",
+    icon: <IconCheck size={16} />,
+    title: "Deleted",
+    message: "Account book deleted.",
+    withBorder: true,
+  });
+}
+
+export function isDeleteAccountBookConfirmationMatch(args: {
+  confirmationName: string;
+  accountBookName: string;
+}): boolean {
+  return args.confirmationName.trim() === args.accountBookName;
 }
 
 function SettingsFormFields(args: {
@@ -116,6 +135,137 @@ function SettingsFormFields(args: {
   );
 }
 
+function DeleteAccountBookModal(args: {
+  opened: boolean;
+  accountBookName: string;
+  onClose: () => void;
+  onConfirm: (values: { confirmationName: string }) => Promise<void>;
+}) {
+  const { isSubmitting, runSubmit } = useDialogSubmitState();
+  const [confirmationName, setConfirmationName] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const confirmationMatches = isDeleteAccountBookConfirmationMatch({
+    confirmationName,
+    accountBookName: args.accountBookName,
+  });
+
+  useEffect(() => {
+    if (!args.opened) {
+      setConfirmationName("");
+      setSubmitError(null);
+    }
+  }, [args.opened]);
+
+  const handleClose = () => {
+    if (isSubmitting) return;
+    args.onClose();
+  };
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!confirmationMatches) return;
+
+    setSubmitError(null);
+    await runSubmit(async () => {
+      try {
+        await args.onConfirm({ confirmationName });
+        showAccountBookDeletedNotification();
+      } catch (error) {
+        setSubmitError(
+          error instanceof Error
+            ? error.message
+            : "Failed to delete account book.",
+        );
+      }
+    });
+  }
+
+  return (
+    <Modal
+      opened={args.opened}
+      onClose={handleClose}
+      title="Delete Account Book"
+      closeOnEscape={!isSubmitting}
+      closeOnClickOutside={!isSubmitting}
+      withCloseButton={!isSubmitting}
+    >
+      <form onSubmit={handleSubmit}>
+        <Stack gap="md">
+          <Text>
+            This will permanently delete the account book{" "}
+            <Text component="span" fw={700}>
+              {args.accountBookName}
+            </Text>{" "}
+            and all of its accounts, transactions, bookings, and user access.
+          </Text>
+          <Text size="sm" c="dimmed">
+            Type the account book name to confirm.
+          </Text>
+          <TextInput
+            label="Account Book Name"
+            value={confirmationName}
+            onChange={(event) => setConfirmationName(event.currentTarget.value)}
+            disabled={isSubmitting}
+            data-autofocus
+          />
+
+          {submitError && (
+            <Text size="sm" c="red">
+              {submitError}
+            </Text>
+          )}
+
+          <Group justify="flex-end">
+            <Button
+              variant="subtle"
+              onClick={handleClose}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="red"
+              type="submit"
+              loading={isSubmitting}
+              disabled={isSubmitting || !confirmationMatches}
+              leftSection={<IconTrash size={16} />}
+            >
+              Delete Account Book
+            </Button>
+          </Group>
+        </Stack>
+      </form>
+    </Modal>
+  );
+}
+
+function DangerZone(args: { onDeleteClick: () => void }) {
+  return (
+    <Stack gap="md" mt="xl">
+      <Divider />
+      <Group justify="space-between" align="flex-start" gap="lg">
+        <Stack gap={4}>
+          <Group gap="xs">
+            <IconAlertTriangle size={18} color="var(--mantine-color-red-6)" />
+            <Title order={3}>Danger Zone</Title>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Permanently delete this account book and all data inside it.
+          </Text>
+        </Stack>
+        <Button
+          color="red"
+          variant="outline"
+          leftSection={<IconTrash size={16} />}
+          onClick={args.onDeleteClick}
+        >
+          Delete Account Book
+        </Button>
+      </Group>
+    </Stack>
+  );
+}
+
 export function AccountBookSettingsPageView(args: {
   accountBookId: string;
   settings: AccountBookSettingsPageData;
@@ -124,10 +274,12 @@ export function AccountBookSettingsPageView(args: {
     referenceCurrency: string;
     startDate: string;
   }) => Promise<void>;
+  onDelete: (values: { confirmationName: string }) => Promise<void>;
 }) {
   const { settings } = args;
   const { isSubmitting, runSubmit } = useDialogSubmitState();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
 
   const currencyOptions = useMemo(() => getCurrencyOptions(), []);
 
@@ -195,6 +347,15 @@ export function AccountBookSettingsPageView(args: {
           currencyOptions={currencyOptions}
         />
       </form>
+
+      <DangerZone onDeleteClick={() => setDeleteModalOpened(true)} />
+
+      <DeleteAccountBookModal
+        opened={deleteModalOpened}
+        accountBookName={settings.name}
+        onClose={() => setDeleteModalOpened(false)}
+        onConfirm={args.onDelete}
+      />
     </PageShell>
   );
 }

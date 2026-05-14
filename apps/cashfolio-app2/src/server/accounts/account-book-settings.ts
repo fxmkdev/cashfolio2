@@ -28,6 +28,11 @@ type UpdateAccountBookSettingsInput = {
   startDate: Date | string;
 };
 
+type DeleteAccountBookInput = {
+  accountBookId: string;
+  confirmationName: string;
+};
+
 type AccountBookSettingsRecord = {
   id: string;
   name: string;
@@ -85,6 +90,19 @@ function normalizeAccountBookNameOrThrow(value: unknown): string {
   const normalized = value.trim();
   if (normalized.length === 0) {
     throw new Error("Account book name is required.");
+  }
+
+  return normalized;
+}
+
+function normalizeConfirmationNameOrThrow(value: unknown): string {
+  if (typeof value !== "string") {
+    throw new Error("Account book name confirmation is required.");
+  }
+
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    throw new Error("Account book name confirmation is required.");
   }
 
   return normalized;
@@ -351,4 +369,27 @@ export const updateAccountBookSettings = createServerFn({ method: "POST" })
     }
 
     return toAccountBookSettingsResponse(updated);
+  });
+
+export const deleteAccountBook = createServerFn({ method: "POST" })
+  .inputValidator((data: DeleteAccountBookInput) => data)
+  .handler(async ({ data }): Promise<void> => {
+    ensureSameOriginRequestFromServerContext();
+    await ensureAuthorizedForAccountBookId(data.accountBookId);
+
+    const confirmationName = normalizeConfirmationNameOrThrow(
+      data.confirmationName,
+    );
+    const accountBook = await prisma.accountBook.findUniqueOrThrow({
+      where: { id: data.accountBookId },
+      select: { name: true },
+    });
+
+    if (confirmationName !== accountBook.name) {
+      throw new Error("Account book name confirmation does not match.");
+    }
+
+    await prisma.accountBook.delete({
+      where: { id: data.accountBookId },
+    });
   });
