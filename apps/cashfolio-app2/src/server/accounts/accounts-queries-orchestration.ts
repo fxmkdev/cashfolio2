@@ -1,8 +1,8 @@
 import { prisma } from "../../prisma.server";
-import {
+import type {
   AccountType,
-  type EquityAccountSubtype,
-  type Unit,
+  EquityAccountSubtype,
+  Unit,
 } from "../../.prisma-client/enums";
 import {
   createGroupPathSegmentsResolver,
@@ -106,20 +106,7 @@ export async function queryAccountGroups(
       isActive: group.isActive,
       sortOrder: group.sortOrder,
     })),
-    accounts: accounts.map((account) => ({
-      id: account.id,
-      name: "",
-      type: AccountType.ASSET,
-      equityAccountSubtype: null,
-      unit: null,
-      currency: null,
-      cryptocurrency: null,
-      symbol: null,
-      tradeCurrency: null,
-      groupId: account.groupId,
-      isActive: false,
-      sortOrder: null,
-    })),
+    accounts,
   });
   const resolveGroupPathSegments = createGroupPathSegmentsResolver(groups);
   return filteredGroups
@@ -182,20 +169,7 @@ export async function queryExistingNodes(
       isActive: group.isActive,
       sortOrder: group.sortOrder,
     })),
-    accounts: accounts.map((account) => ({
-      id: account.id,
-      name: account.name,
-      type: AccountType.ASSET,
-      equityAccountSubtype: null,
-      unit: null,
-      currency: null,
-      cryptocurrency: null,
-      symbol: null,
-      tradeCurrency: null,
-      groupId: account.groupId,
-      isActive: accountState === "active",
-      sortOrder: null,
-    })),
+    accounts,
   });
 
   return [
