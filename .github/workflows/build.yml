@@ -328,6 +328,19 @@ jobs:
           role: ${{ vars.NEON_ROLE_NAME || 'neondb_owner' }}
           api_key: ${{ secrets.NEON_API_KEY }}
           expires_at: ${{ env.EXPIRES_AT }}
+      - name: Mask preview DATABASE_URL
+        shell: bash
+        env:
+          DATABASE_URL: ${{ steps.neon.outputs.db_url }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$DATABASE_URL" ]; then
+            echo "Neon branch creation did not return a DATABASE_URL."
+            exit 1
+          fi
+
+          echo "::add-mask::$DATABASE_URL"
       - name: Run Neon branch post-provision hook
         if: ${{ steps.neon.outputs.created == 'true' }}
         run: sh apps/cashfolio-app2/scripts/neon-branch-post-provision.sh
