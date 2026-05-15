@@ -1,0 +1,173 @@
+name: Refresh staging database
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run at 03:30 Europe/Zurich. GitHub schedules are UTC-only, so both
+    # possible UTC times are scheduled and the first job keeps exactly one.
+    - cron: "30 1 * * *"
+    - cron: "30 2 * * *"
+
+env:
+  NODE_VERSION: 24
+  FLYCTL_VERSION: 0.4.25
+
+concurrency:
+  group: refresh-staging-db
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  schedule-guard:
+    name: Schedule guard
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.guard.outputs.should_run }}
+    steps:
+      - name: Ensure workflow runs from main at the Zurich refresh time
+        id: guard
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          set -euo pipefail
+
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "This workflow refreshes staging from main only."
+            exit 1
+          fi
+
+          if [ "$EVENT_NAME" != "schedule" ]; then
+            echo "Manual run; bypassing schedule guard."
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          zurich_offset="$(TZ=Europe/Zurich date +%z)"
+          should_run=false
+
+          if [ "$EVENT_SCHEDULE" = "30 1 * * *" ] && [ "$zurich_offset" = "+0200" ]; then
+            should_run=true
+          fi
+
+          if [ "$EVENT_SCHEDULE" = "30 2 * * *" ] && [ "$zurich_offset" = "+0100" ]; then
+            should_run=true
+          fi
+
+          echo "event_schedule=${EVENT_SCHEDULE}"
+          echo "zurich_offset=${zurich_offset}"
+          echo "should_run=${should_run}"
+          echo "should_run=${should_run}" >> "$GITHUB_OUTPUT"
+
+  version:
+    name: Generate version
+    if: ${{ needs.schedule-guard.outputs.should_run == 'true' }}
+    needs:
+      - schedule-guard
+    uses: ./.github/workflows/version.yml
+
+  cashfolio-app2-build-push:
+    name: "cashfolio-app2: Build and Push"
+    runs-on: ubuntu-latest
+    if: ${{ needs.schedule-guard.outputs.should_run == 'true' }}
+    needs:
+      - schedule-guard
+      - version
+    outputs:
+      image: ${{ steps.image-name.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: ${{ env.FLYCTL_VERSION }}
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Set version on cashfolio-app2
+        run: |
+          pnpm version ${{ needs.version.outputs.version }} --git-tag-version false
+        working-directory: apps/cashfolio-app2
+      - name: Get cashfolio-app2 image name
+        id: image-name
+        run: |
+          IMAGE_NAME=${{ vars.FLY_CASHFOLIO_APP_STAGING_APP }}
+          IMAGE_TAG=v${{ needs.version.outputs.version_with_sha }}
+          {
+            echo "image_name=$IMAGE_NAME"
+            echo "image_tag=$IMAGE_TAG"
+            echo "image=registry.fly.io/$IMAGE_NAME:$IMAGE_TAG"
+          } >> "$GITHUB_OUTPUT"
+      - name: Build and push cashfolio-app2 Docker image
+        run: |
+          flyctl deploy \
+            --app ${{ steps.image-name.outputs.image_name }} \
+            --config apps/cashfolio-app2/fly.build.toml \
+            --build-only \
+            --image-label ${{ steps.image-name.outputs.image_tag }} \
+            --label org.opencontainers.image.version=${{ steps.image-name.outputs.image_tag }} \
+            --push
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  refresh-staging-db:
+    name: Refresh staging Neon branch
+    runs-on: ubuntu-latest
+    if: ${{ needs.schedule-guard.outputs.should_run == 'true' }}
+    needs:
+      - schedule-guard
+    environment:
+      name: staging-cashfolio-app
+      url: https://${{ vars.CANONICAL_HOSTNAME }}/
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Reset Neon staging branch from production
+        id: reset-neon
+        uses: neondatabase/reset-branch-action@v1
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch: ${{ vars.NEON_STAGING_BRANCH_ID }}
+          parent: true
+          api_key: ${{ secrets.NEON_API_KEY }}
+          cs_database: ${{ vars.NEON_DATABASE_NAME || 'neondb' }}
+          cs_role_name: ${{ vars.NEON_ROLE_NAME || 'neondb_owner' }}
+          cs_prisma: true
+      - name: Mask refreshed DATABASE_URL
+        shell: bash
+        env:
+          DATABASE_URL: ${{ steps.reset-neon.outputs.db_url }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$DATABASE_URL" ]; then
+            echo "Neon reset did not return a DATABASE_URL."
+            exit 1
+          fi
+
+          echo "::add-mask::$DATABASE_URL"
+      - name: Run staging DB post-refresh hook
+        run: sh apps/cashfolio-app2/scripts/staging-db-post-refresh.sh
+        env:
+          DATABASE_URL: ${{ steps.reset-neon.outputs.db_url }}
+
+  deploy-staging:
+    name: Deploy staging
+    if: ${{ needs.schedule-guard.outputs.should_run == 'true' }}
+    needs:
+      - schedule-guard
+      - version
+      - cashfolio-app2-build-push
+      - refresh-staging-db
+    uses: ./.github/workflows/deploy-version.yml
+    with:
+      version_with_sha: ${{ needs.version.outputs.version_with_sha }}
+      sha: ${{ needs.version.outputs.sha }}
+      environment: staging
+      deploy-cashfolio-app2: true
+      deploy-cashfolio-redis: false
+      cashfolio_app2_image: ${{ needs.cashfolio-app2-build-push.outputs.image }}
+    secrets: inherit
