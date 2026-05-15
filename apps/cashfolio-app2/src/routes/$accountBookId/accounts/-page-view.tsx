@@ -22,7 +22,7 @@ import {
   ReorderGroupChildrenModal,
   type ReorderGroupChildRow,
 } from "@/components/reorder-group-children-modal";
-import { getEntityLabel } from "./-page-types";
+import { getAccountsPageTitle, getEntityLabel } from "./-page-types";
 import type {
   AccountsGridRow,
   AccountsMode,
@@ -140,11 +140,9 @@ export function AccountsPageView({
     <PageShell>
       <TopPageHeader
         heading={
-          isArchivedMode ? (
-            <Title order={2}>Archived Accounts</Title>
-          ) : (
-            <Title order={2}>Accounts</Title>
-          )
+          <Title order={2}>
+            {getAccountsPageTitle(isArchivedMode ? "archived" : "active")}
+          </Title>
         }
         actions={
           <Group>

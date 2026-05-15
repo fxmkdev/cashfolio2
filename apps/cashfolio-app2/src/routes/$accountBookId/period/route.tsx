@@ -4,6 +4,7 @@ import { getGainLossEquityAccountId } from "@/server/accounts";
 import { getPeriodEndNetWorth } from "@/server/period-end-net-worth";
 import { getOpeningBalanceNetWorthForPeriod } from "@/server/period-opening-balance-net-worth";
 import { getPeriodOverview } from "@/server/period";
+import { createDocumentTitleHead } from "@/shared/document-title";
 import { formatMonthPeriodValue } from "@/shared/period";
 import {
   buildNetWorthReconciliationModel,
@@ -120,6 +121,8 @@ export const Route = createFileRoute("/$accountBookId/period")({
 
     return { overview, gainLossEquityAccountId, netWorthReconciliation };
   },
+  head: ({ loaderData }) =>
+    createDocumentTitleHead(loaderData?.overview.selectedPeriodLabel),
   component: PeriodLayout,
 });
 

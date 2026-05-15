@@ -4,6 +4,7 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
+import { createDocumentTitleHead } from "@/shared/document-title";
 import { invalidateCachedUserAccountBooks } from "../-account-book-options-loader";
 
 const AccountBookSettingsPageView = lazy(async () => {
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/$accountBookId/account-book-settings")({
     const { loadAccountBookSettingsPageData } = await import("./-page-loader");
     return loadAccountBookSettingsPageData({ accountBookId });
   },
+  head: () => createDocumentTitleHead("Account Book Settings"),
   component: AccountBookSettingsPage,
 });
 

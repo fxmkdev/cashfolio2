@@ -138,6 +138,14 @@ submit UX and prevent duplicate requests.
 - Pass heading content through `heading`, optional badges/chips through
   `headingAccessory`, and page actions through `actions`.
 
+## Document Title Pattern
+
+- Use `createDocumentTitleHead` (`src/shared/document-title.ts`) from route
+  `head` metadata for document titles.
+- Match the page-specific document title to the visible page heading text. Use
+  `Cashfolio` for routes without a page-specific title, otherwise use
+  `<page title> · Cashfolio`.
+
 ## Narrow Page Shell Pattern
 
 - Use `NarrowPageShell` (`src/components/narrow-page-shell.tsx`) for simple form

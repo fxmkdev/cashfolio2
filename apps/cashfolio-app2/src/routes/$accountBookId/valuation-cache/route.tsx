@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
+import { createDocumentTitleHead } from "@/shared/document-title";
 import { loadValuationCachePageData } from "./-page-loader";
 import { getValuationUnitTab, parseValuationCacheSearch } from "./-page-types";
 
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/$accountBookId/valuation-cache")({
   loader: async ({ params: { accountBookId } }) => {
     return loadValuationCachePageData({ accountBookId });
   },
+  head: () => createDocumentTitleHead("Valuation Cache"),
   component: ValuationCachePage,
 });
 

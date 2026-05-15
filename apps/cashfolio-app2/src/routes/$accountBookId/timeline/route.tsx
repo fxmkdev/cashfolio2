@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect } from "react";
+import { createDocumentTitleHead } from "@/shared/document-title";
 import { loadTimelinePageData } from "./-page-loader";
 import { buildTimelineSearchNavigation } from "./-page-navigation";
 import {
@@ -65,6 +66,7 @@ export const Route = createFileRoute("/$accountBookId/timeline")({
       liabilityScope,
     });
   },
+  head: () => createDocumentTitleHead("History"),
   component: TimelinePage,
 });
 

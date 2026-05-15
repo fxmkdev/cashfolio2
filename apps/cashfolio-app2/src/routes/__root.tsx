@@ -12,11 +12,13 @@ import {
 } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import { NavigationLoadingBar } from "../components/navigation-loading-bar";
+import { createDocumentTitleHead } from "@/shared/document-title";
 import "../mantine";
 import { theme } from "../theme";
 import { useEffect } from "react";
 
 export const Route = createRootRoute({
+  head: () => createDocumentTitleHead(),
   component: RootComponent,
 });
 
@@ -26,7 +28,6 @@ function RootComponent() {
       <head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Cashfolio</title>
         <link
           rel="icon"
           type="image/png"

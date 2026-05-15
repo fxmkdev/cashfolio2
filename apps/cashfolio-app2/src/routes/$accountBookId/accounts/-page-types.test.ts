@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EquityAccountSubtype } from "@/.prisma-client/enums";
-import { parseAccountsSearch, tabs } from "./-page-types";
+import { getAccountsPageTitle, parseAccountsSearch, tabs } from "./-page-types";
 
 describe("accounts page tab parsing", () => {
   it("does not expose the gain/loss tab", () => {
@@ -30,5 +30,15 @@ describe("accounts page tab parsing", () => {
       tab: `EQUITY-${EquityAccountSubtype.EXPENSE}`,
       mode: "archived",
     });
+  });
+});
+
+describe("getAccountsPageTitle", () => {
+  it("uses the active accounts heading for active mode", () => {
+    expect(getAccountsPageTitle("active")).toBe("Accounts");
+  });
+
+  it("uses the archived accounts heading for archived mode", () => {
+    expect(getAccountsPageTitle("archived")).toBe("Archived Accounts");
   });
 });

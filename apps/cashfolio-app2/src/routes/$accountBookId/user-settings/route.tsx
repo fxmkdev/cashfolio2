@@ -1,5 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
+import { createDocumentTitleHead } from "@/shared/document-title";
 
 const UserSettingsPageView = lazy(async () => {
   const module = await import("./-page-view");
@@ -12,6 +13,7 @@ export const Route = createFileRoute("/$accountBookId/user-settings")({
     const { loadUserSettingsPageData } = await import("./-page-loader");
     return loadUserSettingsPageData();
   },
+  head: () => createDocumentTitleHead("User Settings"),
   component: UserSettingsPage,
 });
 

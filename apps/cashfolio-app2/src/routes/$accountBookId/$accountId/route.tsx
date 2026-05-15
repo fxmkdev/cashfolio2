@@ -23,6 +23,7 @@ import {
   isLedgerPeriodFilterAvailable,
   loadLedgerPageData,
 } from "./-page-loader";
+import { createDocumentTitleHead } from "@/shared/document-title";
 import { useLedgerPageController } from "./-page-controller";
 import { PeriodFilterAction } from "../-period-filter-action";
 import {
@@ -48,6 +49,7 @@ export const Route = createFileRoute("/$accountBookId/$accountId")({
   }) => {
     return loadLedgerPageData({ accountBookId, accountId, period });
   },
+  head: ({ loaderData }) => createDocumentTitleHead(loaderData?.account.name),
   component: LedgerLayout,
 });
 
