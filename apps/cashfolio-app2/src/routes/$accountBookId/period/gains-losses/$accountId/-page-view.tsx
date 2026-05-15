@@ -29,6 +29,7 @@ import {
   getCurrencyDecimals,
   getUnitDisplayDecimals,
 } from "@/shared/unit-format";
+import { getGainLossReconciliationPageTitle } from "./-page-title";
 
 type GainLossReconciliationPageViewProps = {
   selectedPeriodValue: string;
@@ -47,9 +48,7 @@ export function GainLossReconciliationPageView({
 }: GainLossReconciliationPageViewProps) {
   const [pickerOpened, setPickerOpened] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const heading = reconciliation
-    ? `${reconciliation.target.accountName} · ${reconciliation.target.unitLabel}`
-    : "Gain/Loss Reconciliation";
+  const heading = getGainLossReconciliationPageTitle(reconciliation);
 
   const backButton = (
     <Button

@@ -4,7 +4,8 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
-import { parseAccountsSearch } from "./-page-types";
+import { createDocumentTitleHead } from "@/shared/document-title";
+import { getAccountsPageTitle, parseAccountsSearch } from "./-page-types";
 import { loadAccountsPageData } from "./-page-loader";
 import { useAccountsPageController } from "./-page-controller";
 
@@ -17,8 +18,10 @@ export const Route = createFileRoute("/$accountBookId/accounts")({
   validateSearch: parseAccountsSearch,
   loaderDeps: ({ search }) => ({ mode: search.mode, tab: search.tab }),
   loader: async ({ params: { accountBookId }, deps: { mode, tab } }) => {
-    return loadAccountsPageData({ accountBookId, mode, tab });
+    const pageData = await loadAccountsPageData({ accountBookId, mode, tab });
+    return { ...pageData, documentTitle: getAccountsPageTitle(mode) };
   },
+  head: ({ loaderData }) => createDocumentTitleHead(loaderData?.documentTitle),
   component: AccountsPage,
 });
 

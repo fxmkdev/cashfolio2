@@ -22,6 +22,7 @@ import {
 import { PeriodFilterAction } from "../-period-filter-action";
 import { useActivityPageController } from "./-page-controller";
 import { loadActivityPageData } from "./-page-loader";
+import { createDocumentTitleHead } from "@/shared/document-title";
 import {
   getDefaultActivityPeriodValue,
   parseActivityExplicitPeriod,
@@ -42,6 +43,7 @@ export const Route = createFileRoute("/$accountBookId/activity")({
   loader: async ({ params: { accountBookId }, deps: { period } }) => {
     return loadActivityPageData({ accountBookId, period });
   },
+  head: () => createDocumentTitleHead("Transactions"),
   component: ActivityLayout,
 });
 

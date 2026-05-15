@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { getPeriodGainLossReconciliation } from "@/server/period-gain-loss-reconciliation";
+import { createDocumentTitleHead } from "@/shared/document-title";
 import { formatMonthPeriodValue } from "@/shared/period";
 import { DEFAULT_PERIOD_VALUE } from "../../-page-types";
 import { getPeriodValue, parsePeriodSearch } from "../../-page-types";
+import { getGainLossReconciliationPageTitle } from "./-page-title";
 
 const GainLossReconciliationPageView = lazy(async () => {
   const module = await import("./-page-view");
@@ -25,6 +27,8 @@ export const Route = createFileRoute(
         period,
       },
     }),
+  head: ({ loaderData }) =>
+    createDocumentTitleHead(getGainLossReconciliationPageTitle(loaderData)),
   component: GainLossReconciliationPage,
 });
 
