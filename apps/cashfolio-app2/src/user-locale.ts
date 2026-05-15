@@ -27,10 +27,16 @@ export const USER_LOCALE_OPTIONS: Array<{
   { value: "fr-FR", label: "French (France)" },
 ];
 
-const supportedLocaleLookup = new Set<string>(SUPPORTED_USER_LOCALES);
+const supportedLocaleLookup = new Map<string, UserLocale>(
+  SUPPORTED_USER_LOCALES.map((locale) => [locale.toLowerCase(), locale]),
+);
 
-export function isSupportedUserLocale(value: string): value is UserLocale {
-  return supportedLocaleLookup.has(value);
+export function isSupportedUserLocale(value: string): boolean {
+  return resolveSupportedUserLocale(value) != null;
+}
+
+export function resolveSupportedUserLocale(value: string): UserLocale | null {
+  return supportedLocaleLookup.get(value.trim().toLowerCase()) ?? null;
 }
 
 export function resolveUserLocaleFromAcceptLanguage(
@@ -39,9 +45,7 @@ export function resolveUserLocaleFromAcceptLanguage(
   const requestedLocales = parseAcceptLanguageHeader(acceptLanguage);
 
   for (const requestedLocale of requestedLocales) {
-    const exactMatch = SUPPORTED_USER_LOCALES.find(
-      (locale) => locale.toLowerCase() === requestedLocale.toLowerCase(),
-    );
+    const exactMatch = resolveSupportedUserLocale(requestedLocale);
     if (exactMatch) {
       return exactMatch;
     }

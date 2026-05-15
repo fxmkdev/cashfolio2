@@ -111,7 +111,7 @@ describe("normalizeUserSettingsInput", () => {
       normalizeUserSettingsInput({
         name: "Ada",
         avatarUrl: "https://example.test/ada.png",
-        locale: "fr-FR",
+        locale: "fr-fr",
       }),
     ).toMatchObject({
       avatarUrl: "https://example.test/ada.png",
@@ -231,6 +231,11 @@ describe("user profile server functions", () => {
   });
 
   it("loads user settings from Logto Account API", async () => {
+    ensureUser.mockResolvedValueOnce({
+      id: "user-1",
+      locale: "de-ch",
+    });
+
     const result = await getAuthenticatedUserSettings();
 
     expect(ensureUser).toHaveBeenCalledTimes(1);
@@ -303,7 +308,7 @@ describe("user profile server functions", () => {
       data: {
         name: "  Ada Lovelace  ",
         avatarUrl: "  https://example.test/ada.png  ",
-        locale: "fr-FR",
+        locale: "fr-fr",
       },
     });
 

@@ -11,7 +11,7 @@ import {
 } from "@/auth/user-profile";
 import { ensureSameOriginRequestFromServerContext } from "@/security/same-origin.server";
 import {
-  isSupportedUserLocale,
+  resolveSupportedUserLocale,
   resolveUserLocaleFromAcceptLanguage,
   type UserLocale,
 } from "@/user-locale";
@@ -102,11 +102,12 @@ function readLocaleField(data: Record<string, unknown>): UserLocale {
   }
 
   const normalized = value.trim();
-  if (!isSupportedUserLocale(normalized)) {
+  const locale = resolveSupportedUserLocale(normalized);
+  if (!locale) {
     throw new Error(`${fieldLabels.locale} must be a supported locale.`);
   }
 
-  return normalized;
+  return locale;
 }
 
 export function normalizeUserSettingsInput(
@@ -142,8 +143,11 @@ export function normalizeUserSettingsInput(
 function resolveAuthenticatedUserSettingsLocale(
   locale: string | null | undefined,
 ): UserLocale {
-  if (locale && isSupportedUserLocale(locale)) {
-    return locale;
+  if (locale) {
+    const supportedLocale = resolveSupportedUserLocale(locale);
+    if (supportedLocale) {
+      return supportedLocale;
+    }
   }
 
   return resolveUserLocaleFromAcceptLanguage(
