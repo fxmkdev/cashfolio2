@@ -189,7 +189,6 @@ export function LedgerPageContent() {
   return (
     <Suspense fallback={null}>
       <LedgerPageView
-        accountBookId={accountBookId}
         {...viewProps}
         periodFilterControls={
           isPeriodFilterAvailable ? (

@@ -1,11 +1,63 @@
 import { describe, expect, test } from "vitest";
-import { AccountType, Unit } from "@/.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "@/.prisma-client/enums";
 import { createAccountOptions } from "@/shared/account-options";
 import {
   createLedgerBalanceFormatter,
   deriveSimpleTransactionEditState,
+  getLedgerAccountKindBadgeProps,
   getUnitLabel,
 } from "./-page-data";
+
+describe("getLedgerAccountKindBadgeProps", () => {
+  test.each([
+    [
+      { type: AccountType.ASSET, equityAccountSubtype: null },
+      { label: "Asset", color: "green", variant: "light" },
+    ],
+    [
+      { type: AccountType.LIABILITY, equityAccountSubtype: null },
+      { label: "Liability", color: "red", variant: "light" },
+    ],
+    [
+      {
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.INCOME,
+      },
+      { label: "Income", color: "green", variant: "filled" },
+    ],
+    [
+      {
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+      },
+      { label: "Expense", color: "red", variant: "filled" },
+    ],
+    [
+      {
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+      },
+      { label: "Gain/Loss", color: "yellow", variant: "light" },
+    ],
+    [
+      {
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+      },
+      { label: "Opening Balances", color: "yellow", variant: "light" },
+    ],
+    [
+      { type: AccountType.EQUITY, equityAccountSubtype: null },
+      { label: "Accounts", color: "gray", variant: "light" },
+    ],
+  ] as const)("maps %j to %j", (account, badgeProps) => {
+    expect(getLedgerAccountKindBadgeProps(account)).toEqual(badgeProps);
+  });
+});
 
 describe("getUnitLabel", () => {
   test("returns security symbol for security units", () => {

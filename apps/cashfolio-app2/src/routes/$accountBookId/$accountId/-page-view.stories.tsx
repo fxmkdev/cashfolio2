@@ -263,7 +263,6 @@ function LedgerPageStoryHarness({
       }}
     >
       <LedgerPageView
-        accountBookId="storybook-book"
         backTab="ASSET"
         account={account}
         accountGroups={[]}
@@ -525,6 +524,21 @@ type Story = StoryObj<typeof meta>;
 
 export const HappyPath: Story = {
   render: () => <LedgerPageStoryHarness />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await expect(
+      canvas.getByRole("heading", { name: "Checking" }),
+    ).toBeVisible();
+    await expect(canvas.getByText("Asset")).toBeVisible();
+    await expect(canvas.getByText("CHF")).toBeVisible();
+    await expect(
+      canvas.queryByRole("link", { name: "Accounts" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      canvas.queryByRole("link", { name: "Archive" }),
+    ).not.toBeInTheDocument();
+  },
 };
 
 export const AccountActionsMenu: Story = {
@@ -549,6 +563,16 @@ export const ArchivedAccountActionsMenu: Story = {
   render: () => <LedgerPageStoryHarness accountActive={false} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+
+    await expect(
+      canvas.getByRole("heading", { name: "Checking" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("link", { name: "Accounts" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      canvas.queryByRole("link", { name: "Archive" }),
+    ).not.toBeInTheDocument();
 
     await userEvent.click(
       canvas.getByRole("button", { name: "Account actions" }),
