@@ -234,7 +234,7 @@ describe("user profile server functions", () => {
     );
 
     await expect(getAuthenticatedUserSettings()).rejects.toThrow(
-      "Account settings need a fresh sign-in before they can be loaded. Please sign out and sign in again.",
+      "Account settings need a fresh sign-in. Please sign out and sign in again.",
     );
   });
 
@@ -253,7 +253,7 @@ describe("user profile server functions", () => {
         },
       }),
     ).rejects.toThrow(
-      "Account settings need a fresh sign-in before they can be loaded. Please sign out and sign in again.",
+      "Account settings need a fresh sign-in. Please sign out and sign in again.",
     );
   });
 

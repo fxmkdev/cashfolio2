@@ -36,7 +36,7 @@ const fieldLabels = {
 } as const;
 
 const accountApiAccessMessage =
-  "Account settings need a fresh sign-in before they can be loaded. Please sign out and sign in again.";
+  "Account settings need a fresh sign-in. Please sign out and sign in again.";
 
 const accountApiAccessErrorCodes = new Set([
   "consent_required",
