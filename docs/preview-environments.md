@@ -21,9 +21,10 @@ On pull requests (non-forks), CI now:
    `https://cashfolio-app2-pr-<PR_NUMBER>-<FLY_BRANCH_TAIL_SLUG>.fly.dev/`
 7. Posts/updates a PR comment with the dynamic preview URL
 
-Preview deployment is gated by the app image build and preview resource
-preparation. Unit tests, typecheck, lint, and format checks still run in CI, but
-they do not block dynamic preview deployment.
+Preview deployment is gated by the app image build. Preview resource preparation
+runs inside the same environment-scoped deployment job that deploys the app.
+Unit tests, typecheck, lint, and format checks still run in CI, but they do not
+block dynamic preview deployment.
 
 `<BRANCH_TAIL_SLUG>` is derived from the last segment of the PR branch name
 (`head.ref`): lowercased, non-`[a-z0-9-]` characters replaced with `-`,
@@ -80,8 +81,10 @@ Neon branch lifecycle notes:
 
 ## Required GitHub configuration
 
-Dynamic preview jobs can read configuration from the `preview-cashfolio-app`
-environment (recommended) or from repository/organization scope.
+Dynamic preview deployment reads configuration from the `preview-cashfolio-app`
+environment. Keep preview-only app configuration there so the reusable deploy
+job can prepare resources and deploy the app as a single GitHub environment
+deployment.
 
 ### Secrets
 
@@ -90,6 +93,7 @@ environment (recommended) or from repository/organization scope.
 - `NEON_API_KEY`
 - `CURRENCYLAYER_API_KEY`
 - `COINLAYER_API_KEY`
+- `MARKETSTACK_API_KEY`
 - `STAGING_REDIS_URL`
 
 ### Variables
