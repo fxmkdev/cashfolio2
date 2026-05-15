@@ -40,8 +40,6 @@ model User {
   id         String @id @default(cuid())
   externalId String @unique
 
-  viewPreferences Json?
-
   accountBookLinks UserAccountBookLink[]
 
   roles UserRole[] @default([])
