@@ -5,10 +5,15 @@
   "private": true,
   "scripts": {
     "start": "tsx src/index.ts",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "test": "node --import tsx --test src/commands/sync-account-book-helpers.test.ts"
+  },
+  "dependencies": {
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "@types/node": "^24.10.4",
+    "@types/pg": "^8.20.0",
     "commander": "^14.0.3",
     "dotenv": "^17.4.2",
     "redis": "^5.12.1",
