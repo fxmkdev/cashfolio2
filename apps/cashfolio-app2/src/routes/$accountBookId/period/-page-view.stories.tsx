@@ -68,7 +68,7 @@ export const HappyPath: Story = {
     const canvas = within(canvasElement);
     const heading = await canvas.findByRole(
       "heading",
-      { name: "Period" },
+      { name: "February 2026" },
       { timeout: 10000 },
     );
     await expect(heading).toBeInTheDocument();

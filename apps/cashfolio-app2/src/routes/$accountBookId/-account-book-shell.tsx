@@ -19,7 +19,10 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 import type { AuthenticatedUserProfile } from "@/auth/user-profile";
 import type { UserAccountBookOption } from "@/server/home";
-import { AccountBookNavigationLinks } from "./-account-book-navigation-links";
+import {
+  AccountBookAdminNavigationLinks,
+  AccountBookNavigationLinks,
+} from "./-account-book-navigation-links";
 import { consumePendingAccountBookSwitch } from "./-account-book-switch-notification";
 import {
   AccountBookSwitcherMenu,
@@ -214,6 +217,14 @@ export function AccountBookShell({
 
         <AppShell.Section>
           <Stack gap="xs" pt="sm">
+            <AccountBookAdminNavigationLinks
+              accountBookId={accountBookId}
+              activeSection={activeSection}
+              accountsLinkSearch={accountsLinkSearch}
+              collapsed={desktopRailCollapsed}
+              onNavigate={closeMobile}
+              periodLinkSearch={periodLinkSearch}
+            />
             <Divider />
             {desktopRailCollapsed ? (
               <>

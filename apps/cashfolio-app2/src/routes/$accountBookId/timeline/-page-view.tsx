@@ -292,7 +292,7 @@ export function TimelinePageView({
   return (
     <PageShell className={classes.page}>
       <TopPageHeader
-        heading={<Title order={2}>Timeline</Title>}
+        heading={<Title order={2}>History</Title>}
         actions={
           <SegmentedControl
             value={selectedMode}

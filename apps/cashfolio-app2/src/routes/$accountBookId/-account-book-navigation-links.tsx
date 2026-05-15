@@ -1,4 +1,4 @@
-import { Stack, Tooltip } from "@mantine/core";
+import { Stack, Text, Tooltip } from "@mantine/core";
 import {
   IconActivity,
   IconCalendarMonth,
@@ -24,19 +24,22 @@ const navigationLinks: AccountBookNavigationLink[] = [
   },
   {
     section: "activity",
-    label: "Activity",
+    label: "Transactions",
     icon: (size) => <IconActivity size={size} />,
   },
   {
     section: "period",
-    label: "Period",
+    label: "Period Report",
     icon: (size) => <IconCalendarMonth size={size} />,
   },
   {
     section: "timeline",
-    label: "Timeline",
+    label: "History",
     icon: (size) => <IconChartBar size={size} />,
   },
+];
+
+const adminNavigationLinks: AccountBookNavigationLink[] = [
   {
     section: "valuation-cache",
     label: "Valuation Cache",
@@ -63,11 +66,66 @@ export function AccountBookNavigationLinks({
   onNavigate,
   periodLinkSearch,
 }: AccountBookNavigationLinksProps) {
+  return (
+    <AccountBookNavigationLinkList
+      accountBookId={accountBookId}
+      activeSection={activeSection}
+      accountsLinkSearch={accountsLinkSearch}
+      collapsed={collapsed}
+      links={navigationLinks}
+      onNavigate={onNavigate}
+      periodLinkSearch={periodLinkSearch}
+    />
+  );
+}
+
+export function AccountBookAdminNavigationLinks({
+  accountBookId,
+  activeSection,
+  accountsLinkSearch,
+  collapsed,
+  onNavigate,
+  periodLinkSearch,
+}: AccountBookNavigationLinksProps) {
+  return (
+    <AccountBookNavigationLinkList
+      accountBookId={accountBookId}
+      activeSection={activeSection}
+      accountsLinkSearch={accountsLinkSearch}
+      collapsed={collapsed}
+      links={adminNavigationLinks}
+      onNavigate={onNavigate}
+      periodLinkSearch={periodLinkSearch}
+      sectionLabel="Admin"
+    />
+  );
+}
+
+type AccountBookNavigationLinkListProps = AccountBookNavigationLinksProps & {
+  links: AccountBookNavigationLink[];
+  sectionLabel?: string;
+};
+
+function AccountBookNavigationLinkList({
+  accountBookId,
+  activeSection,
+  accountsLinkSearch,
+  collapsed,
+  links,
+  onNavigate,
+  periodLinkSearch,
+  sectionLabel,
+}: AccountBookNavigationLinkListProps) {
   if (collapsed) {
     return (
       <>
         <Stack gap="xs" hiddenFrom="sm">
-          {navigationLinks.map((link) => (
+          {sectionLabel ? (
+            <Text c="dimmed" fw={600} px="xs" size="xs">
+              {sectionLabel}
+            </Text>
+          ) : null}
+          {links.map((link) => (
             <AccountBookNavigationLinkItem
               key={link.section}
               accountBookId={accountBookId}
@@ -80,7 +138,7 @@ export function AccountBookNavigationLinks({
           ))}
         </Stack>
         <Stack align="center" gap="xs" visibleFrom="sm">
-          {navigationLinks.map((link) => (
+          {links.map((link) => (
             <Tooltip key={link.section} label={link.label} position="right">
               <AccountBookNavigationLinkItem
                 accountBookId={accountBookId}
@@ -100,7 +158,12 @@ export function AccountBookNavigationLinks({
 
   return (
     <Stack gap="xs">
-      {navigationLinks.map((link) => (
+      {sectionLabel ? (
+        <Text c="dimmed" fw={600} px="xs" size="xs">
+          {sectionLabel}
+        </Text>
+      ) : null}
+      {links.map((link) => (
         <AccountBookNavigationLinkItem
           key={link.section}
           accountBookId={accountBookId}

@@ -41,8 +41,8 @@ paths are relative to that app directory.
   as a button with an `onClick` navigation handler.
 - Use:
   - `LinkAnchor` for text links/breadcrumbs
-  - `LinkButton` for button-styled navigation actions (for example "Period",
-    "Archive", "Accounts")
+  - `LinkButton` for button-styled navigation actions (for example "Period
+    Report", "Archive", "Accounts")
   - `LinkTab` for route-driven tab navigation (for example Asset/Liability/etc.
     on the accounts list)
 - Keep real `<Button onClick={...}>` controls for non-navigation actions only
