@@ -15,6 +15,7 @@ describe("loadUserSettingsPageData", () => {
       name: "Ada Lovelace",
       avatarUrl: "https://example.test/ada.png",
       initials: "AL",
+      locale: "de-CH",
     });
   });
 
@@ -23,6 +24,7 @@ describe("loadUserSettingsPageData", () => {
       name: "Ada Lovelace",
       avatarUrl: "https://example.test/ada.png",
       initials: "AL",
+      locale: "de-CH",
     });
     expect(getAuthenticatedUserSettings).toHaveBeenCalledTimes(1);
   });

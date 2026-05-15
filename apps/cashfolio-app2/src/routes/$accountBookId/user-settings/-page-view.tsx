@@ -2,6 +2,7 @@ import {
   Avatar,
   Button,
   Group,
+  Select,
   Stack,
   Text,
   TextInput,
@@ -14,6 +15,7 @@ import { useEffect, useState } from "react";
 import { NarrowPageShell } from "@/components/narrow-page-shell";
 import { TopPageHeader } from "@/components/top-page-header";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
+import { isSupportedUserLocale, USER_LOCALE_OPTIONS } from "@/user-locale";
 import type { loadUserSettingsPageData } from "./-page-loader";
 
 type UserSettingsPageData = Awaited<
@@ -23,6 +25,7 @@ type UserSettingsPageData = Awaited<
 type UserSettingsFormValues = {
   name: string;
   avatarUrl: string;
+  locale: string;
 };
 
 function validateAvatarUrl(value: string) {
@@ -68,6 +71,7 @@ export function UserSettingsPageView(args: {
     initialValues: {
       name: settings.name,
       avatarUrl: settings.avatarUrl,
+      locale: settings.locale,
     },
     validate: {
       name: (value) =>
@@ -75,6 +79,10 @@ export function UserSettingsPageView(args: {
           ? "Name cannot be longer than 128 characters."
           : null,
       avatarUrl: validateAvatarUrl,
+      locale: (value) =>
+        isSupportedUserLocale(value)
+          ? null
+          : "Locale must be a supported locale.",
     },
   });
 
@@ -82,6 +90,7 @@ export function UserSettingsPageView(args: {
     form.setValues({
       name: settings.name,
       avatarUrl: settings.avatarUrl,
+      locale: settings.locale,
     });
     form.resetDirty();
     setSubmitError(null);
@@ -103,6 +112,7 @@ export function UserSettingsPageView(args: {
               await args.onSubmit({
                 name: values.name.trim(),
                 avatarUrl: values.avatarUrl.trim(),
+                locale: values.locale,
               });
               showSettingsSavedNotification();
             } catch (error) {
@@ -123,7 +133,8 @@ export function UserSettingsPageView(args: {
             <Stack gap={2}>
               <Text fw={600}>Profile</Text>
               <Text size="sm" c="dimmed">
-                Name and avatar are stored in your Logto account.
+                Name and avatar are stored in Logto. Locale is stored in
+                Cashfolio.
               </Text>
             </Stack>
           </Group>
@@ -139,6 +150,15 @@ export function UserSettingsPageView(args: {
             placeholder="https://example.com/avatar.png"
             disabled={isSubmitting}
             {...form.getInputProps("avatarUrl")}
+          />
+
+          <Select
+            label="Locale"
+            withAsterisk
+            allowDeselect={false}
+            disabled={isSubmitting}
+            data={USER_LOCALE_OPTIONS}
+            {...form.getInputProps("locale")}
           />
 
           {submitError && (

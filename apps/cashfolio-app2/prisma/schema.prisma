@@ -40,6 +40,8 @@ model User {
   id         String @id @default(cuid())
   externalId String @unique
 
+  locale String?
+
   accountBookLinks UserAccountBookLink[]
 
   roles UserRole[] @default([])

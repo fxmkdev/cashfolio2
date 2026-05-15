@@ -21,12 +21,23 @@ const createServerFn = vi.hoisted(() =>
 );
 
 const ensureAuthenticated = vi.hoisted(() => vi.fn());
+const ensureUser = vi.hoisted(() => vi.fn());
 const fetchLogtoAccountApi = vi.hoisted(() => vi.fn());
 const getLogtoAccountSecurityUrl = vi.hoisted(() => vi.fn());
 const ensureSameOriginRequestFromServerContext = vi.hoisted(() => vi.fn());
+const getRequest = vi.hoisted(() => vi.fn());
+const prisma = vi.hoisted(() => ({
+  user: {
+    update: vi.fn(),
+  },
+}));
 
 vi.mock("@tanstack/react-start", () => ({
   createServerFn,
+}));
+
+vi.mock("@tanstack/react-start/server", () => ({
+  getRequest,
 }));
 
 vi.mock("@/auth/functions.server", () => ({
@@ -40,6 +51,14 @@ vi.mock("@/auth/logto.server", () => ({
 
 vi.mock("@/security/same-origin.server", () => ({
   ensureSameOriginRequestFromServerContext,
+}));
+
+vi.mock("@/users/functions.server", () => ({
+  ensureUser,
+}));
+
+vi.mock("@/prisma.server", () => ({
+  prisma,
 }));
 
 import {
@@ -66,10 +85,12 @@ describe("normalizeUserSettingsInput", () => {
       normalizeUserSettingsInput({
         name: "  ",
         avatarUrl: "",
+        locale: "en-CH",
       }),
     ).toEqual({
       name: null,
       avatarUrl: null,
+      locale: "en-CH",
     });
   });
 
@@ -78,19 +99,23 @@ describe("normalizeUserSettingsInput", () => {
       normalizeUserSettingsInput({
         name: "  Ada Lovelace  ",
         avatarUrl: "  http://example.test/ada.png  ",
+        locale: "de-CH",
       }),
     ).toEqual({
       name: "Ada Lovelace",
       avatarUrl: "http://example.test/ada.png",
+      locale: "de-CH",
     });
 
     expect(
       normalizeUserSettingsInput({
         name: "Ada",
         avatarUrl: "https://example.test/ada.png",
+        locale: "fr-FR",
       }),
     ).toMatchObject({
       avatarUrl: "https://example.test/ada.png",
+      locale: "fr-FR",
     });
   });
 
@@ -99,6 +124,7 @@ describe("normalizeUserSettingsInput", () => {
       normalizeUserSettingsInput({
         name: "Ada",
         avatarUrl: "example.test/ada.png",
+        locale: "en-CH",
       }),
     ).toThrow("Avatar URL must be a valid absolute URL.");
 
@@ -106,8 +132,27 @@ describe("normalizeUserSettingsInput", () => {
       normalizeUserSettingsInput({
         name: "Ada",
         avatarUrl: "ftp://example.test/ada.png",
+        locale: "en-CH",
       }),
     ).toThrow("Avatar URL must use HTTP or HTTPS.");
+  });
+
+  it("rejects unsupported locales", () => {
+    expect(() =>
+      normalizeUserSettingsInput({
+        name: "Ada",
+        avatarUrl: "",
+        locale: "es-ES",
+      }),
+    ).toThrow("Locale must be a supported locale.");
+
+    expect(() =>
+      normalizeUserSettingsInput({
+        name: "Ada",
+        avatarUrl: "",
+        locale: 123,
+      }),
+    ).toThrow("Locale must be a string.");
   });
 
   it("enforces Logto profile field length limits", () => {
@@ -115,6 +160,7 @@ describe("normalizeUserSettingsInput", () => {
       normalizeUserSettingsInput({
         name: "a".repeat(129),
         avatarUrl: "",
+        locale: "en-CH",
       }),
     ).toThrow("Name cannot be longer than 128 characters.");
 
@@ -122,6 +168,7 @@ describe("normalizeUserSettingsInput", () => {
       normalizeUserSettingsInput({
         name: "Ada",
         avatarUrl: `https://example.test/${"a".repeat(2049)}`,
+        locale: "en-CH",
       }),
     ).toThrow("Avatar URL cannot be longer than 2048 characters.");
   });
@@ -131,6 +178,7 @@ describe("normalizeUserSettingsInput", () => {
       normalizeUserSettingsInput({
         name: 123,
         avatarUrl: "",
+        locale: "en-CH",
       }),
     ).toThrow("Name must be a string.");
 
@@ -138,6 +186,7 @@ describe("normalizeUserSettingsInput", () => {
       normalizeUserSettingsInput({
         name: "Ada",
         avatarUrl: 123,
+        locale: "en-CH",
       }),
     ).toThrow("Avatar URL must be a string.");
   });
@@ -154,6 +203,21 @@ describe("user profile server functions", () => {
       },
       isAuthenticated: true,
     });
+    ensureUser.mockResolvedValue({
+      id: "user-1",
+      locale: "de-CH",
+    });
+    getRequest.mockReturnValue(
+      new Request("https://app.example.test/user-settings", {
+        headers: {
+          "accept-language": "fr-CA,fr;q=0.9,en;q=0.8",
+        },
+      }),
+    );
+    prisma.user.update.mockResolvedValue({
+      id: "user-1",
+      locale: "fr-FR",
+    });
     getLogtoAccountSecurityUrl.mockReturnValue(
       "https://tenant.logto.app/account/security",
     );
@@ -169,12 +233,54 @@ describe("user profile server functions", () => {
   it("loads user settings from Logto Account API", async () => {
     const result = await getAuthenticatedUserSettings();
 
-    expect(ensureAuthenticated).toHaveBeenCalledTimes(1);
+    expect(ensureUser).toHaveBeenCalledTimes(1);
     expect(fetchLogtoAccountApi).toHaveBeenCalledWith("/api/my-account");
     expect(result).toEqual({
       name: "Ada Lovelace",
       avatarUrl: "https://example.test/ada.png",
       initials: "AL",
+      locale: "de-CH",
+    });
+  });
+
+  it("resolves the locale from Accept-Language when the user has no stored locale", async () => {
+    ensureUser.mockResolvedValueOnce({
+      id: "user-1",
+      locale: null,
+    });
+
+    await expect(getAuthenticatedUserSettings()).resolves.toMatchObject({
+      locale: "fr-CH",
+    });
+  });
+
+  it("falls back to en-CH for unsupported or missing browser locales", async () => {
+    ensureUser.mockResolvedValueOnce({
+      id: "user-1",
+      locale: null,
+    });
+    getRequest.mockReturnValueOnce(
+      new Request("https://app.example.test/user-settings", {
+        headers: {
+          "accept-language": "es-ES,pt-BR;q=0.9",
+        },
+      }),
+    );
+
+    await expect(getAuthenticatedUserSettings()).resolves.toMatchObject({
+      locale: "en-CH",
+    });
+
+    ensureUser.mockResolvedValueOnce({
+      id: "user-1",
+      locale: null,
+    });
+    getRequest.mockReturnValueOnce(
+      new Request("https://app.example.test/user-settings"),
+    );
+
+    await expect(getAuthenticatedUserSettings()).resolves.toMatchObject({
+      locale: "en-CH",
     });
   });
 
@@ -197,6 +303,7 @@ describe("user profile server functions", () => {
       data: {
         name: "  Ada Lovelace  ",
         avatarUrl: "  https://example.test/ada.png  ",
+        locale: "fr-FR",
       },
     });
 
@@ -211,6 +318,10 @@ describe("user profile server functions", () => {
         avatar: "https://example.test/ada.png",
       }),
     });
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: "user-1" },
+      data: { locale: "fr-FR" },
+    });
   });
 
   it("uses Logto error messages for failed updates", async () => {
@@ -223,6 +334,7 @@ describe("user profile server functions", () => {
         data: {
           name: "Ada",
           avatarUrl: "https://example.test/ada.png",
+          locale: "en-CH",
         },
       }),
     ).rejects.toThrow("Avatar is not allowed.");
@@ -250,6 +362,7 @@ describe("user profile server functions", () => {
         data: {
           name: "Ada",
           avatarUrl: "https://example.test/ada.png",
+          locale: "en-CH",
         },
       }),
     ).rejects.toThrow(
@@ -275,6 +388,7 @@ describe("user profile server functions", () => {
         data: {
           name: "Ada",
           avatarUrl: "https://example.test/ada.png",
+          locale: "en-CH",
         },
       }),
     ).rejects.toThrow("fetch failed");
