@@ -24,7 +24,8 @@ Related docs:
 - `account-books/new.tsx` - account-book creation route; creates an empty book,
   links it to the current user, and relies on the existing database trigger to
   seed only the system-managed Gain/Loss account. This route is outside the
-  account-book shell and includes its own sign-out action.
+  account-book shell and shows either a user sign-out menu or a back link to the
+  source account book when opened from the account-book switcher.
 - `api/logto/$action.tsx` - auth endpoints: `GET /api/logto/sign-in`,
   `GET /api/logto/callback`, `GET /api/logto/sign-up`,
   `POST /api/logto/sign-out`

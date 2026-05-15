@@ -39,8 +39,9 @@ function AccountBookLayout() {
   const { accountBooks, appVersion, userProfile, accountSecurityUrl } =
     Route.useLoaderData();
   const { accountBookId } = Route.useParams();
-  const { pathname, locationSearch, matches } = useRouterState({
+  const { href, pathname, locationSearch, matches } = useRouterState({
     select: (state) => ({
+      href: state.location.href,
       pathname: state.location.pathname,
       locationSearch: state.location.search as Record<string, unknown>,
       matches: state.matches.map((match) => ({
@@ -55,6 +56,7 @@ function AccountBookLayout() {
   return (
     <AccountBookShell
       accountBookId={accountBookId}
+      currentHref={href}
       pathname={pathname}
       accountBooks={accountBooks}
       appVersion={appVersion}

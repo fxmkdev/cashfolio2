@@ -17,9 +17,14 @@ import { useMemo, useState } from "react";
 import { currencies } from "@/currencies";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import { createAccountBook } from "@/server/account-books";
+import { getUserAccountBooks } from "@/server/home";
+import { getAuthenticatedUserProfile } from "@/server/user-profile";
 import { normalizeDateInputValue, startOfUtcDay } from "@/shared/date";
 import { invalidateCachedUserAccountBooks } from "../$accountBookId/-account-book-options-loader";
-import { NewAccountBookSignOutForm } from "./-new-account-book-sign-out-form";
+import {
+  NewAccountBookPageActions,
+  resolveNewAccountBookReturnTarget,
+} from "./-new-account-book-page-actions";
 
 type NewAccountBookFormValues = {
   name: string;
@@ -28,8 +33,29 @@ type NewAccountBookFormValues = {
 };
 
 export const Route = createFileRoute("/account-books/new")({
+  validateSearch: parseNewAccountBookSearch,
+  loader: async () => {
+    const [accountBooks, userProfile] = await Promise.all([
+      getUserAccountBooks(),
+      getAuthenticatedUserProfile(),
+    ]);
+
+    return { accountBooks, userProfile };
+  },
   component: NewAccountBookPage,
 });
+
+export type NewAccountBookSearch = {
+  returnTo?: string;
+};
+
+export function parseNewAccountBookSearch(
+  search: Record<string, unknown>,
+): NewAccountBookSearch {
+  return typeof search.returnTo === "string" && search.returnTo.length > 0
+    ? { returnTo: search.returnTo }
+    : {};
+}
 
 function getCurrencyOptions() {
   return Object.entries(currencies)
@@ -65,10 +91,16 @@ function showAccountBookCreatedNotification() {
 }
 
 function NewAccountBookPage() {
+  const { accountBooks, userProfile } = Route.useLoaderData();
+  const { returnTo } = Route.useSearch();
   const navigate = useNavigate({ from: "/account-books/new" });
   const { isSubmitting, runSubmit } = useDialogSubmitState();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const currencyOptions = useMemo(() => getCurrencyOptions(), []);
+  const returnTarget = useMemo(
+    () => resolveNewAccountBookReturnTarget({ accountBooks, returnTo }),
+    [accountBooks, returnTo],
+  );
 
   const form = useForm<NewAccountBookFormValues>({
     mode: "controlled",
@@ -91,7 +123,10 @@ function NewAccountBookPage() {
       <Stack gap="lg">
         <Group justify="space-between" align="center">
           <Title order={2}>Create Account Book</Title>
-          <NewAccountBookSignOutForm />
+          <NewAccountBookPageActions
+            returnTarget={returnTarget}
+            userProfile={userProfile}
+          />
         </Group>
 
         <form

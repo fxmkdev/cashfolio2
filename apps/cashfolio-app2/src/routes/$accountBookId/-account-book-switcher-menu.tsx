@@ -49,6 +49,7 @@ type AccountBookSwitcherMenuProps = {
   accountBooks: UserAccountBookOption[];
   accountsTab: TabValue;
   accountsMode: AccountsMode;
+  createNewReturnTo: string;
   collapsed?: boolean;
 };
 
@@ -78,6 +79,7 @@ export function AccountBookSwitcherMenu({
   accountBooks,
   accountsTab,
   accountsMode,
+  createNewReturnTo,
   collapsed = false,
 }: AccountBookSwitcherMenuProps) {
   const currentAccountBookName =
@@ -155,6 +157,7 @@ export function AccountBookSwitcherMenu({
         <LinkMenuItem
           leftSection={<IconPlus size={16} />}
           to="/account-books/new"
+          search={{ returnTo: createNewReturnTo }}
         >
           Create New
         </LinkMenuItem>
