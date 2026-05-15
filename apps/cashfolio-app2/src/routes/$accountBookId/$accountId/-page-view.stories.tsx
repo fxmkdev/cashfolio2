@@ -567,6 +567,7 @@ export const ArchivedAccountActionsMenu: Story = {
     await expect(
       canvas.getByRole("heading", { name: "Checking" }),
     ).toBeVisible();
+    await expect(canvas.getByText("Archived")).toBeVisible();
     await expect(
       canvas.queryByRole("link", { name: "Accounts" }),
     ).not.toBeInTheDocument();
