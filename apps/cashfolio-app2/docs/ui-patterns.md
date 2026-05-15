@@ -138,6 +138,14 @@ submit UX and prevent duplicate requests.
 - Pass heading content through `heading`, optional badges/chips through
   `headingAccessory`, and page actions through `actions`.
 
+## Narrow Page Shell Pattern
+
+- Use `NarrowPageShell` (`src/components/narrow-page-shell.tsx`) for simple form
+  pages that should not span the full app content width.
+- The default width is Mantine `Container` size `xs`, matching the account-book
+  creation page. Keep the wrapper unframed; do not add card chrome unless the
+  page needs a distinct contained surface.
+
 ## Split Button Pattern
 
 - Use `SplitButton` (`src/components/split-button.tsx`) when a page-level action
