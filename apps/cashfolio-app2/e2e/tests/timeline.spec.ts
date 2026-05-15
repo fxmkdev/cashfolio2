@@ -31,7 +31,7 @@ test("timeline page is reachable and persists selected period mode across refres
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
 
   const periodModeControl = page.getByRole("radiogroup", {
-    name: "Timeline Period Mode",
+    name: "History Period Mode",
   });
   await selectSegmentedControlOption(periodModeControl, "Yearly");
 
@@ -64,7 +64,7 @@ test("timeline mode toggles update URL mode and keep history compact", async ({
   );
 
   const periodModeControl = page.getByRole("radiogroup", {
-    name: "Timeline Period Mode",
+    name: "History Period Mode",
   });
 
   await selectSegmentedControlOption(periodModeControl, "Yearly");
@@ -97,7 +97,7 @@ test("timeline deep link with yearly mode selects yearly on first load", async (
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
 
   const periodModeControl = page.getByRole("radiogroup", {
-    name: "Timeline Period Mode",
+    name: "History Period Mode",
   });
   await expect(
     periodModeControl.getByRole("radio", { name: "Yearly" }),
@@ -123,7 +123,7 @@ test("timeline deep link with invalid mode falls back to monthly", async ({
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
 
   const periodModeControl = page.getByRole("radiogroup", {
-    name: "Timeline Period Mode",
+    name: "History Period Mode",
   });
   await expect(
     periodModeControl.getByRole("radio", { name: "Monthly" }),
