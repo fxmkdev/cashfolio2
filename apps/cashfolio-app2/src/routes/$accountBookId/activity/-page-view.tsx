@@ -1,4 +1,4 @@
-import { Button, Modal, Title } from "@mantine/core";
+import { Button, Group, Modal, Title } from "@mantine/core";
 import { IconBolt } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
@@ -132,16 +132,17 @@ export function ActivityPageView({
       <TopPageHeader
         heading={<Title order={2}>Activity</Title>}
         actions={
-          <Button
-            leftSection={<IconBolt size={16} />}
-            onClick={onAddTransactionClick}
-          >
-            Add Transaction
-          </Button>
+          <Group gap="sm">
+            {periodFilterControls}
+            <Button
+              leftSection={<IconBolt size={16} />}
+              onClick={onAddTransactionClick}
+            >
+              Add Transaction
+            </Button>
+          </Group>
         }
       />
-
-      {periodFilterControls}
 
       <DataGrid
         containerStyle={{ flex: 1, minHeight: 0 }}

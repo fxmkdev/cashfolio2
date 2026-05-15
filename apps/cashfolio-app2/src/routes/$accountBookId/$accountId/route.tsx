@@ -17,7 +17,7 @@ import {
   loadLedgerPageData,
 } from "./-page-loader";
 import { useLedgerPageController } from "./-page-controller";
-import { LedgerPeriodFilterCard } from "../-period-filter-card";
+import { PeriodFilterAction } from "../-period-filter-action";
 import {
   parseLedgerExplicitPeriod,
   parseLedgerSearch,
@@ -183,8 +183,7 @@ export function LedgerPageContent() {
         {...viewProps}
         periodFilterControls={
           isPeriodFilterAvailable ? (
-            <LedgerPeriodFilterCard
-              hasPeriodFilter={hasPeriodFilter}
+            <PeriodFilterAction
               periodMode={periodMode}
               selectedPeriodLabel={selectedPeriod?.label ?? "All Periods"}
               pickerOpened={pickerOpened}
@@ -270,6 +269,7 @@ export function LedgerPageContent() {
                 setPeriodFilter(nextPeriodValue);
                 setPickerOpened(false);
               }}
+              clearFilterDisabled={!hasPeriodFilter}
               onClearFilter={() => {
                 setPickerOpened(false);
                 setPeriodFilter(undefined);

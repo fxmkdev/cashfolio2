@@ -19,7 +19,7 @@ import {
 } from "@/shared/period-selector-model";
 import { useLedgerColumnDefs } from "./-page-columns";
 import type { SimpleTransactionEditInitialValues } from "./-page-data";
-import { LedgerPeriodFilterCard } from "../-period-filter-card";
+import { PeriodFilterAction } from "../-period-filter-action";
 import { parseLedgerExplicitPeriod, type LedgerRow } from "./-page-types";
 import {
   LedgerPageView,
@@ -336,8 +336,7 @@ function LedgerPageStoryHarness({
         }
         periodFilterControls={
           includePeriodFilterControls ? (
-            <LedgerPeriodFilterCard
-              hasPeriodFilter={hasPeriodFilter}
+            <PeriodFilterAction
               periodMode={periodMode}
               selectedPeriodLabel={selectedPeriod?.label ?? "All Periods"}
               pickerOpened={pickerOpened}
@@ -423,6 +422,7 @@ function LedgerPageStoryHarness({
                 setPeriodFilter(nextPeriodValue);
                 setPickerOpened(false);
               }}
+              clearFilterDisabled={!hasPeriodFilter}
               onClearFilter={() => {
                 setPickerOpened(false);
                 setPeriodFilter(undefined);

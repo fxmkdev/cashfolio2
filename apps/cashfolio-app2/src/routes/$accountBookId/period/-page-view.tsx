@@ -11,6 +11,7 @@ import {
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
+import { PeriodFilterAction } from "../-period-filter-action";
 import { TopPageHeader } from "@/components/top-page-header";
 import { PageShell } from "@/components/page-shell";
 import type { getPeriodOverview } from "@/server/period";
@@ -45,7 +46,6 @@ import {
   getPeriodStepValue,
   getYearPickerValue,
 } from "./-selector/-selector-model";
-import { PeriodSelectorCard } from "./-selector/-selector-card";
 
 ensureChartModulesRegistered();
 
@@ -352,16 +352,11 @@ export function PeriodPageView({
 
   return (
     <PageShell>
-      <TopPageHeader heading={<Title order={2}>Period</Title>} />
-
-      <Stack gap="lg">
-        <div
-          className={classes.periodTopSection}
-          data-testid="period-top-section"
-        >
-          <PeriodSelectorCard
+      <TopPageHeader
+        heading={<Title order={2}>Period</Title>}
+        actions={
+          <PeriodFilterAction
             selectedPeriodLabel={overview.selectedPeriodLabel}
-            referenceCurrency={overview.referenceCurrency}
             periodMode={periodMode}
             pickerOpened={pickerOpened}
             onPickerOpenedChange={setPickerOpened}
@@ -376,6 +371,13 @@ export function PeriodPageView({
               ) + "-01"
             }
             selectedYearValue={`${String(overview.selectedYear).padStart(4, "0")}-01-01`}
+            monthPickerDefaultValue={
+              formatMonthPeriodValue(
+                overview.selectedYear,
+                periodSelectorModel.selectedMonth,
+              ) + "-01"
+            }
+            yearPickerDefaultValue={`${String(overview.selectedYear).padStart(4, "0")}-01-01`}
             minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
             maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
             minYearPickerDate={periodSelectorModel.minYearPickerDate}
@@ -383,7 +385,10 @@ export function PeriodPageView({
             onMonthPickerChange={handleMonthPickerChange}
             onYearPickerChange={handleYearPickerChange}
           />
-        </div>
+        }
+      />
+
+      <Stack gap="lg">
         <PeriodNetWorthReconciliationWarning
           reconciliation={netWorthReconciliation}
           currencyFormatter={currencyFormatter}

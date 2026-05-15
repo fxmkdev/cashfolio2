@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { DataGrid } from "@/components/data-grid";
 import { PageShell } from "@/components/page-shell";
 import { TopPageHeader } from "@/components/top-page-header";
+import { PeriodFilterAction } from "../../../-period-filter-action";
 import type { PeriodGainLossReconciliation } from "@/server/period-gain-loss-reconciliation";
 import { formatMonthPeriodValue } from "@/shared/period";
 import {
@@ -12,10 +13,7 @@ import {
   getPeriodModeChangeValue,
   getPeriodStepValue,
   getYearPickerValue,
-  type PeriodMode,
 } from "@/shared/period-selector-model";
-import periodClasses from "../../-page-view.module.css";
-import { PeriodSelectorCard } from "../../-selector/-selector-card";
 import {
   buildRealizedColumns,
   buildRealizedLotMatchColumns,
@@ -53,7 +51,7 @@ export function GainLossReconciliationPageView({
     ? `${reconciliation.target.accountName} · ${reconciliation.target.unitLabel}`
     : "Gain/Loss Reconciliation";
 
-  const headerActions = (
+  const backButton = (
     <Button
       variant="default"
       leftSection={<IconArrowLeft size={16} />}
@@ -68,7 +66,7 @@ export function GainLossReconciliationPageView({
       <PageShell>
         <TopPageHeader
           heading={<Title order={2}>{heading}</Title>}
-          actions={headerActions}
+          actions={backButton}
         />
         <Alert color="yellow" variant="light" title="No Reconciliation Data">
           No gain/loss reconciliation is available for this account and period.
@@ -200,48 +198,53 @@ export function GainLossReconciliationPageView({
     <PageShell>
       <TopPageHeader
         heading={<Title order={2}>{heading}</Title>}
-        actions={headerActions}
+        actions={
+          <Group gap="sm">
+            <PeriodFilterAction
+              selectedPeriodLabel={reconciliation.selectedPeriodLabel}
+              periodMode={periodMode}
+              pickerOpened={pickerOpened}
+              onPickerOpenedChange={setPickerOpened}
+              canGoToPreviousPeriod={periodSelectorModel.canGoToPreviousPeriod}
+              canGoToNextPeriod={periodSelectorModel.canGoToNextPeriod}
+              onPeriodModeChange={handlePeriodModeChange}
+              onPeriodStep={handlePeriodStep}
+              selectedMonthValue={`${formatMonthPeriodValue(
+                reconciliation.selectedYear,
+                periodSelectorModel.selectedMonth,
+              )}-01`}
+              selectedYearValue={`${String(reconciliation.selectedYear).padStart(4, "0")}-01-01`}
+              monthPickerDefaultValue={`${formatMonthPeriodValue(
+                reconciliation.selectedYear,
+                periodSelectorModel.selectedMonth,
+              )}-01`}
+              yearPickerDefaultValue={`${String(reconciliation.selectedYear).padStart(4, "0")}-01-01`}
+              minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
+              maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
+              minYearPickerDate={periodSelectorModel.minYearPickerDate}
+              maxYearPickerDate={periodSelectorModel.maxYearPickerDate}
+              onMonthPickerChange={(nextValue) => {
+                const nextPeriodValue = getMonthPickerValue(nextValue);
+                if (!nextPeriodValue) {
+                  return;
+                }
+                onPeriodChange(nextPeriodValue);
+                setPickerOpened(false);
+              }}
+              onYearPickerChange={(nextValue) => {
+                const nextPeriodValue = getYearPickerValue(nextValue);
+                if (!nextPeriodValue) {
+                  return;
+                }
+                onPeriodChange(nextPeriodValue);
+                setPickerOpened(false);
+              }}
+            />
+            {backButton}
+          </Group>
+        }
       />
       <Stack gap="lg">
-        <div className={periodClasses.periodTopSection}>
-          <PeriodSelectorCard
-            selectedPeriodLabel={reconciliation.selectedPeriodLabel}
-            referenceCurrency={reconciliation.referenceCurrency}
-            periodMode={periodMode as PeriodMode}
-            pickerOpened={pickerOpened}
-            onPickerOpenedChange={setPickerOpened}
-            canGoToPreviousPeriod={periodSelectorModel.canGoToPreviousPeriod}
-            canGoToNextPeriod={periodSelectorModel.canGoToNextPeriod}
-            onPeriodModeChange={handlePeriodModeChange}
-            onPeriodStep={handlePeriodStep}
-            selectedMonthValue={`${formatMonthPeriodValue(
-              reconciliation.selectedYear,
-              periodSelectorModel.selectedMonth,
-            )}-01`}
-            selectedYearValue={`${String(reconciliation.selectedYear).padStart(4, "0")}-01-01`}
-            minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
-            maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
-            minYearPickerDate={periodSelectorModel.minYearPickerDate}
-            maxYearPickerDate={periodSelectorModel.maxYearPickerDate}
-            onMonthPickerChange={(nextValue) => {
-              const nextPeriodValue = getMonthPickerValue(nextValue);
-              if (!nextPeriodValue) {
-                return;
-              }
-              onPeriodChange(nextPeriodValue);
-              setPickerOpened(false);
-            }}
-            onYearPickerChange={(nextValue) => {
-              const nextPeriodValue = getYearPickerValue(nextValue);
-              if (!nextPeriodValue) {
-                return;
-              }
-              onPeriodChange(nextPeriodValue);
-              setPickerOpened(false);
-            }}
-          />
-        </div>
-
         <ReconciliationStatCards
           summary={reconciliation.summary}
           currencyFormatter={currencyFormatter}

@@ -1,0 +1,15 @@
+.trigger {
+  inline-size: clamp(8.5rem, 16vw, 12rem);
+  min-inline-size: 0;
+}
+
+.trigger :global(.mantine-Button-inner) {
+  width: 100%;
+  min-width: 0;
+}
+
+.trigger :global(.mantine-Button-label) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

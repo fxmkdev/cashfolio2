@@ -123,16 +123,15 @@ export const ZeroIncomeSavingsRate: Story = {
   },
 };
 
-export const TopSectionLayoutSmoke: Story = {
+export const HeaderActionLayoutSmoke: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const topSection = await canvas.findByTestId("period-top-section");
-    await expect(topSection).toBeInTheDocument();
+    await expect(canvas.queryByTestId("period-top-section")).toBeNull();
     await expect(
-      within(topSection).getByTestId("period-picker-trigger"),
+      canvas.getByTestId("period-picker-trigger"),
     ).toBeInTheDocument();
     await expect(
-      within(topSection).queryByRole("heading", { name: "Expenses Breakdown" }),
+      canvas.queryByRole("heading", { name: "Expenses Breakdown" }),
     ).not.toBeInTheDocument();
   },
 };

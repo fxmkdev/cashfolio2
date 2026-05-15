@@ -19,7 +19,7 @@ import {
   getYearPickerValue,
   type PeriodMode,
 } from "@/shared/period-selector-model";
-import { LedgerPeriodFilterCard } from "../-period-filter-card";
+import { PeriodFilterAction } from "../-period-filter-action";
 import { useActivityPageController } from "./-page-controller";
 import { loadActivityPageData } from "./-page-loader";
 import {
@@ -157,8 +157,7 @@ export function ActivityPageContent() {
         accountBookId={accountBookId}
         {...viewProps}
         periodFilterControls={
-          <LedgerPeriodFilterCard
-            hasPeriodFilter={hasPeriodFilter}
+          <PeriodFilterAction
             periodMode={periodMode}
             selectedPeriodLabel={selectedPeriod?.label ?? "All Periods"}
             pickerOpened={pickerOpened}
@@ -243,12 +242,6 @@ export function ActivityPageContent() {
               }
               setPeriodFilter(nextPeriodValue);
               setPickerOpened(false);
-            }}
-            clearFilterLabel="Current Month"
-            clearFilterDisabled={selectedPeriod?.value === defaultPeriodValue}
-            onClearFilter={() => {
-              setPickerOpened(false);
-              setPeriodFilter(defaultPeriodValue);
             }}
           />
         }

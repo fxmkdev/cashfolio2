@@ -8,6 +8,10 @@ import {
 import { IconChevronDown } from "@tabler/icons-react";
 import { Fragment, type ReactNode } from "react";
 
+export function SplitButtonGroup({ children }: { children: ReactNode }) {
+  return <Button.Group>{children}</Button.Group>;
+}
+
 export type SplitButtonMenuItem = {
   key: string;
   label: string;
@@ -36,7 +40,7 @@ export function SplitButton({
   primaryDisabled?: boolean;
 }) {
   return (
-    <Button.Group>
+    <SplitButtonGroup>
       <Button
         variant={variant}
         leftSection={leftSection}
@@ -81,6 +85,6 @@ export function SplitButton({
           })}
         </Menu.Dropdown>
       </Menu>
-    </Button.Group>
+    </SplitButtonGroup>
   );
 }
