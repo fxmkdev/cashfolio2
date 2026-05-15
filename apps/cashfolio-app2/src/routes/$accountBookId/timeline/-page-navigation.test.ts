@@ -8,6 +8,7 @@ describe("timeline page navigation", () => {
       metric: "savings",
       incomeScope: "group:income-1",
       expenseScope: "account:expense-1",
+      gainLossScope: "unit-type:fx",
       assetScope: "group:asset-1",
       liabilityScope: "account:liability-1",
     });
@@ -24,6 +25,7 @@ describe("timeline page navigation", () => {
       metric: "savings",
       incomeScope: "group:income-1",
       expenseScope: "account:expense-1",
+      gainLossScope: "unit-type:fx",
       assetScope: "group:asset-1",
       liabilityScope: "account:liability-1",
       q: "keep-me",
@@ -36,6 +38,7 @@ describe("timeline page navigation", () => {
       metric: "totalReturn",
       incomeScope: "total",
       expenseScope: "total",
+      gainLossScope: "total",
       assetScope: "total",
       liabilityScope: "total",
     });
@@ -51,6 +54,7 @@ describe("timeline page navigation", () => {
       metric: undefined,
       incomeScope: undefined,
       expenseScope: undefined,
+      gainLossScope: undefined,
       assetScope: undefined,
       liabilityScope: undefined,
       q: "keep-me",

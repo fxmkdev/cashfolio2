@@ -130,6 +130,13 @@ describe("getPeriodTimeline", () => {
               kind: "group",
             },
           ],
+          gainsLosses: [
+            {
+              value: "unit-type:fx",
+              label: "FX",
+              kind: "gainLoss",
+            },
+          ],
           assets: [
             {
               value: "group:asset-g",
@@ -297,6 +304,14 @@ describe("getPeriodTimeline", () => {
             kind: "group",
           },
         ],
+        gainsLosses: [
+          { value: "total", label: "Total", kind: "total" },
+          {
+            value: "unit-type:fx",
+            label: "FX",
+            kind: "gainLoss",
+          },
+        ],
         assets: [
           { value: "total", label: "Total", kind: "total" },
           {
@@ -317,6 +332,7 @@ describe("getPeriodTimeline", () => {
       scopeSelection: {
         income: "total",
         expenses: "total",
+        gainsLosses: "total",
         assets: "total",
         liabilities: "total",
       },
@@ -356,6 +372,110 @@ describe("getPeriodTimeline", () => {
         exchangeRateByKey: expect.any(Map),
       },
     });
+  });
+
+  test("keeps merged Gain/Loss scope options in Period hierarchy order", async () => {
+    loadPeriodTimelinePoint.mockImplementation(
+      async ({ period }: { period: string }) => ({
+        selectedPeriodValue: period,
+        selectedPeriodLabel: `Label ${period}`,
+        selectedPeriodEnd:
+          period === "2026-03"
+            ? new Date("2026-03-17T00:00:00.000Z")
+            : period === "2026-02"
+              ? new Date("2026-02-28T00:00:00.000Z")
+              : new Date("2026-01-31T00:00:00.000Z"),
+        totalReturn: 0,
+        savings: 0,
+        income: 0,
+        expenses: 0,
+        gainsLosses: 0,
+        assets: 0,
+        liabilities: 0,
+        netWorth: 0,
+        scopeOptions: {
+          income: [],
+          expenses: [],
+          gainsLosses:
+            period === "2026-01"
+              ? [
+                  {
+                    value: "unit-type:explicit",
+                    label: "Explicit G/L",
+                    kind: "gainLoss",
+                  },
+                  {
+                    value: "explicit-account:cash",
+                    label: "Explicit G/L / Cash",
+                    kind: "gainLoss",
+                    parentValue: "unit-type:explicit",
+                  },
+                ]
+              : period === "2026-02"
+                ? [
+                    {
+                      value: "unit-type:fx",
+                      label: "FX",
+                      kind: "gainLoss",
+                    },
+                    {
+                      value: "unit:fx:USD",
+                      label: "FX / USD",
+                      kind: "gainLoss",
+                      parentValue: "unit-type:fx",
+                    },
+                    {
+                      value: "unit-account:fx:USD:cash-usd",
+                      label: "FX / USD / USD Cash",
+                      kind: "gainLoss",
+                      parentValue: "unit:fx:USD",
+                    },
+                  ]
+                : [
+                    {
+                      value: "unit-type:security",
+                      label: "Security",
+                      kind: "gainLoss",
+                    },
+                    {
+                      value: "unit:security:AAPL:USD",
+                      label: "Security / AAPL (USD)",
+                      kind: "gainLoss",
+                      parentValue: "unit-type:security",
+                    },
+                    {
+                      value: "unit-account:security:AAPL:USD:brokerage",
+                      label: "Security / AAPL (USD) / Brokerage",
+                      kind: "gainLoss",
+                      parentValue: "unit:security:AAPL:USD",
+                    },
+                  ],
+          assets: [],
+          liabilities: [],
+        },
+      }),
+    );
+
+    const result = await getPeriodTimeline({
+      data: {
+        accountBookId: "book-1",
+        granularity: "month",
+      },
+    });
+
+    expect(
+      result.scopeOptions.gainsLosses.map((option) => option.value),
+    ).toEqual([
+      "total",
+      "unit-type:fx",
+      "unit:fx:USD",
+      "unit-account:fx:USD:cash-usd",
+      "unit-type:security",
+      "unit:security:AAPL:USD",
+      "unit-account:security:AAPL:USD:brokerage",
+      "unit-type:explicit",
+      "explicit-account:cash",
+    ]);
   });
 
   test("applies scoped asset values and scoped opening balance", async () => {
@@ -418,6 +538,46 @@ describe("getPeriodTimeline", () => {
     expect(result.scopeSelection.assets).toBe("group:asset-g");
   });
 
+  test("applies scoped Gain/Loss values without opening-balance scoping", async () => {
+    const result = await getPeriodTimeline({
+      data: {
+        accountBookId: "book-gains",
+        granularity: "year",
+        scopedMetric: "gainsLosses",
+        gainLossScope: "unit-type:fx",
+      },
+    });
+
+    expect(loadPeriodTimelinePoint).toHaveBeenCalledWith({
+      accountBookId: "book-gains",
+      period: "2026",
+      context: {
+        referenceCurrency: "CHF",
+        accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
+        holdingAccountsResolved: [],
+      },
+      metricScopeFilter: {
+        metric: "gainsLosses",
+        scope: "unit-type:fx",
+      },
+      valuationContext: {
+        exchangeRateByKey: expect.any(Map),
+      },
+    });
+    expect(loadTimelineOpeningBalancePoint).toHaveBeenCalledWith({
+      accountBookId: "book-gains",
+      accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
+      referenceCurrency: "CHF",
+      metricScopeFilter: undefined,
+    });
+    expect(result.points).toEqual([
+      expect.objectContaining({
+        gainsLosses: 24,
+      }),
+    ]);
+    expect(result.scopeSelection.gainsLosses).toBe("unit-type:fx");
+  });
+
   test("falls back to total values when scoped selection is stale", async () => {
     const result = await getPeriodTimeline({
       data: {
@@ -437,6 +597,7 @@ describe("getPeriodTimeline", () => {
     expect(result.scopeSelection).toEqual({
       income: "total",
       expenses: "total",
+      gainsLosses: "total",
       assets: "total",
       liabilities: "total",
     });
@@ -458,6 +619,24 @@ describe("getPeriodTimeline", () => {
       }),
     ]);
     expect(result.scopeSelection.liabilities).toBe("total");
+  });
+
+  test("falls back to total Gain/Loss when scoped Gain/Loss selection is stale", async () => {
+    const result = await getPeriodTimeline({
+      data: {
+        accountBookId: "book-5",
+        granularity: "year",
+        scopedMetric: "gainsLosses",
+        gainLossScope: "unit-type:missing",
+      },
+    });
+
+    expect(result.points).toEqual([
+      expect.objectContaining({
+        gainsLosses: 8,
+      }),
+    ]);
+    expect(result.scopeSelection.gainsLosses).toBe("total");
   });
 
   test("rejects unsupported granularity", async () => {

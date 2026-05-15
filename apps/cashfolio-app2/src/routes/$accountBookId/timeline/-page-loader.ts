@@ -18,6 +18,7 @@ export async function loadTimelinePageData(args: {
   scopedMetric?: TimelineScopedMetric;
   incomeScope: TimelineScopeSelection;
   expenseScope: TimelineScopeSelection;
+  gainLossScope: TimelineScopeSelection;
   assetScope: TimelineScopeSelection;
   liabilityScope: TimelineScopeSelection;
 }): Promise<TimelinePageLoaderData> {
@@ -28,6 +29,7 @@ export async function loadTimelinePageData(args: {
       scopedMetric: args.scopedMetric,
       incomeScope: args.incomeScope,
       expenseScope: args.expenseScope,
+      gainLossScope: args.gainLossScope,
       assetScope: args.assetScope,
       liabilityScope: args.liabilityScope,
     },

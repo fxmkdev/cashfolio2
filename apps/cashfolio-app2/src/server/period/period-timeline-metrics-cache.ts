@@ -65,7 +65,8 @@ function isTimelineScopeOption(value: unknown): value is TimelineScopeOption {
     typeof option.label === "string" &&
     (option.kind === "total" ||
       option.kind === "group" ||
-      option.kind === "account")
+      option.kind === "account" ||
+      option.kind === "gainLoss")
   );
 }
 
@@ -96,6 +97,7 @@ function isTimelineMetricsCacheEntry(
     record.scopeOptions != null &&
     isTimelineScopeOptionArray(record.scopeOptions.income) &&
     isTimelineScopeOptionArray(record.scopeOptions.expenses) &&
+    isTimelineScopeOptionArray(record.scopeOptions.gainsLosses) &&
     isTimelineScopeOptionArray(record.scopeOptions.assets) &&
     isTimelineScopeOptionArray(record.scopeOptions.liabilities) &&
     (record.scopedMetricValue === undefined ||

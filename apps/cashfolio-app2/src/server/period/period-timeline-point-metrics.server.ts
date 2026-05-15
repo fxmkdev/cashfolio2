@@ -19,11 +19,13 @@ import { buildTransferClearingVirtualHierarchy } from "./period-transfer-clearin
 import type { GainLossContributionAccumulator } from "./period-gains-losses-contributions";
 import {
   buildBalanceTimelineScopeAmountMaps,
+  buildTimelineGainLossScopeOptions,
   buildTimelineScopeOptions,
   resolveScopedMetricValue,
   type TimelineMetricScopeFilter,
 } from "./period-timeline-scopes.server";
 import { type TimelineScopeOption } from "../../shared/timeline-scope";
+import { buildGainsLossesBreakdown } from "./period-gains-losses-breakdown";
 import type {
   ValuationRateLookupResult,
   ValuationRateSource,
@@ -45,6 +47,7 @@ export type PeriodTimelinePointMetrics = {
   scopeOptions: {
     income: TimelineScopeOption[];
     expenses: TimelineScopeOption[];
+    gainsLosses: TimelineScopeOption[];
     assets: TimelineScopeOption[];
     liabilities: TimelineScopeOption[];
   };
@@ -162,6 +165,7 @@ export async function loadPeriodTimelinePointMetricsWithCacheability(args: {
         scopeOptions: {
           income: [],
           expenses: [],
+          gainsLosses: [],
           assets: [],
           liabilities: [],
         },
@@ -326,6 +330,13 @@ export async function loadPeriodTimelinePointMetricsWithCacheability(args: {
     amountByAccountId: liabilityAmountByAccountId,
     allAccountGroups,
   });
+  const gainsLossesBreakdown = buildGainsLossesBreakdown({
+    contributions: Array.from(gainsLossesContributionByKey.values()),
+    referenceCurrency,
+  });
+  const gainLossScopeOptions = buildTimelineGainLossScopeOptions({
+    hierarchy: gainsLossesBreakdown.hierarchy,
+  });
   const scopedMetricValue = resolveScopedMetricValue({
     metricScopeFilter: args.metricScopeFilter,
     amountByMetric: {
@@ -334,6 +345,7 @@ export async function loadPeriodTimelinePointMetricsWithCacheability(args: {
       assets: assetAmountByAccountId,
       liabilities: liabilityAmountByAccountId,
     },
+    gainsLossesHierarchy: gainsLossesBreakdown.hierarchy,
     allAccountGroups,
   });
 
@@ -350,6 +362,7 @@ export async function loadPeriodTimelinePointMetricsWithCacheability(args: {
       scopeOptions: {
         income: incomeScopeOptions,
         expenses: expenseScopeOptions,
+        gainsLosses: gainLossScopeOptions,
         assets: assetScopeOptions,
         liabilities: liabilityScopeOptions,
       },

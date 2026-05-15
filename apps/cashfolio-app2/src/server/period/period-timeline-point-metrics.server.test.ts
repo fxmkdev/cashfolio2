@@ -106,6 +106,7 @@ describe("loadPeriodTimelinePointMetrics", () => {
       scopeOptions: {
         income: [],
         expenses: [],
+        gainsLosses: [],
         assets: [],
         liabilities: [],
       },
@@ -193,11 +194,158 @@ describe("loadPeriodTimelinePointMetrics", () => {
       scopeOptions: {
         income: [],
         expenses: [],
+        gainsLosses: [],
         assets: [],
         liabilities: [],
       },
       scopedMetricValue: undefined,
     });
+  });
+
+  test("builds Gain/Loss scope options and resolves scoped Gain/Loss values", async () => {
+    const baseData = createBaseData();
+    getOrLoadPeriodBaseData.mockResolvedValue(baseData);
+    processPeriodEquityBookingsFromBaseData.mockImplementation(
+      async ({
+        equityAggregation,
+        gainsLossesContributionByKey,
+      }: {
+        equityAggregation: {
+          income: number;
+          expenses: number;
+          explicitGainLoss: number;
+        };
+        gainsLossesContributionByKey: Map<string, unknown>;
+      }) => {
+        equityAggregation.income = 0;
+        equityAggregation.expenses = 0;
+        equityAggregation.explicitGainLoss = 5;
+        gainsLossesContributionByKey.set("explicit:cash-1", {
+          sourceKind: "EXPLICIT",
+          accountId: "cash-1",
+          accountName: "Cash",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          realizedGainLoss: 5,
+          unrealizedGainLoss: 0,
+        });
+      },
+    );
+    computePeriodHoldingGainLoss.mockImplementation(
+      async ({
+        gainsLossesContributionByKey,
+      }: {
+        gainsLossesContributionByKey: Map<string, unknown>;
+      }) => {
+        gainsLossesContributionByKey.set("holding:usd-cash:fx:USD", {
+          sourceKind: "HOLDING",
+          accountId: "usd-cash",
+          accountName: "USD Cash",
+          unit: Unit.CURRENCY,
+          currency: "USD",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          realizedGainLoss: 7,
+          unrealizedGainLoss: 3,
+        });
+        return {
+          realizedGainLoss: 7,
+          unrealizedGainLoss: 3,
+          convertedCount: 0,
+          skippedCount: 0,
+        };
+      },
+    );
+    convertBookingValueToReferenceDetails.mockResolvedValue({
+      value: 1,
+      source: "identity",
+    });
+    getUnitToReferenceExchangeRateDetails.mockResolvedValue({
+      rate: 1,
+      source: "identity",
+    });
+
+    const result = await loadPeriodTimelinePointMetrics({
+      accountBookId: "book-1",
+      period: "2026-02",
+      metricScopeFilter: {
+        metric: "gainsLosses",
+        scope: "unit-type:fx",
+      },
+    });
+
+    expect(result.gainsLosses).toBe(15);
+    expect(result.scopedMetricValue).toBe(10);
+    expect(result.scopeOptions.gainsLosses).toEqual([
+      {
+        value: "unit-type:fx",
+        label: "FX",
+        kind: "gainLoss",
+        treeLabel: "FX",
+      },
+      {
+        value: "unit:fx:USD",
+        label: "FX / USD",
+        kind: "gainLoss",
+        treeLabel: "USD",
+        parentValue: "unit-type:fx",
+      },
+      {
+        value: "unit-account:fx:USD:usd-cash",
+        label: "FX / USD / USD Cash",
+        kind: "gainLoss",
+        treeLabel: "USD Cash",
+        parentValue: "unit:fx:USD",
+      },
+      {
+        value: "unit-type:explicit",
+        label: "Explicit G/L",
+        kind: "gainLoss",
+        treeLabel: "Explicit G/L",
+      },
+      {
+        value: "explicit-account:cash-1",
+        label: "Explicit G/L / Cash",
+        kind: "gainLoss",
+        treeLabel: "Cash",
+        parentValue: "unit-type:explicit",
+      },
+    ]);
+
+    await expect(
+      loadPeriodTimelinePointMetrics({
+        accountBookId: "book-1",
+        period: "2026-02",
+        metricScopeFilter: {
+          metric: "gainsLosses",
+          scope: "unit:fx:USD",
+        },
+      }),
+    ).resolves.toMatchObject({ scopedMetricValue: 10 });
+    await expect(
+      loadPeriodTimelinePointMetrics({
+        accountBookId: "book-1",
+        period: "2026-02",
+        metricScopeFilter: {
+          metric: "gainsLosses",
+          scope: "unit-account:fx:USD:usd-cash",
+        },
+      }),
+    ).resolves.toMatchObject({ scopedMetricValue: 10 });
+    await expect(
+      loadPeriodTimelinePointMetrics({
+        accountBookId: "book-1",
+        period: "2026-02",
+        metricScopeFilter: {
+          metric: "gainsLosses",
+          scope: "explicit-account:cash-1",
+        },
+      }),
+    ).resolves.toMatchObject({ scopedMetricValue: 5 });
   });
 
   test("marks metrics cacheable only when valuation sources are permanent", async () => {
@@ -366,6 +514,7 @@ describe("loadPeriodTimelinePointMetrics", () => {
       scopeOptions: {
         income: [],
         expenses: [],
+        gainsLosses: [],
         assets: [
           {
             value: "account:asset-1",

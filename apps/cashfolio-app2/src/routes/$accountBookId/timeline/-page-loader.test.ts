@@ -41,12 +41,14 @@ describe("loadTimelinePageData", () => {
       scopeOptions: {
         income: [{ value: "total", label: "Total", kind: "total" }],
         expenses: [{ value: "total", label: "Total", kind: "total" }],
+        gainsLosses: [{ value: "total", label: "Total", kind: "total" }],
         assets: [{ value: "total", label: "Total", kind: "total" }],
         liabilities: [{ value: "total", label: "Total", kind: "total" }],
       },
       scopeSelection: {
         income: "total",
         expenses: "total",
+        gainsLosses: "total",
         assets: "total",
         liabilities: "total",
       },
@@ -58,6 +60,7 @@ describe("loadTimelinePageData", () => {
       scopedMetric: "income",
       incomeScope: "group:income-1",
       expenseScope: "total",
+      gainLossScope: "total",
       assetScope: "total",
       liabilityScope: "total",
     });
@@ -70,6 +73,7 @@ describe("loadTimelinePageData", () => {
         scopedMetric: "income",
         incomeScope: "group:income-1",
         expenseScope: "total",
+        gainLossScope: "total",
         assetScope: "total",
         liabilityScope: "total",
       },
@@ -102,12 +106,14 @@ describe("loadTimelinePageData", () => {
         scopeOptions: {
           income: [{ value: "total", label: "Total", kind: "total" }],
           expenses: [{ value: "total", label: "Total", kind: "total" }],
+          gainsLosses: [{ value: "total", label: "Total", kind: "total" }],
           assets: [{ value: "total", label: "Total", kind: "total" }],
           liabilities: [{ value: "total", label: "Total", kind: "total" }],
         },
         scopeSelection: {
           income: "total",
           expenses: "total",
+          gainsLosses: "total",
           assets: "total",
           liabilities: "total",
         },

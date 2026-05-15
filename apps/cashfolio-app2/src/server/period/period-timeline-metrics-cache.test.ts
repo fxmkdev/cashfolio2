@@ -41,6 +41,7 @@ function createMetrics(overrides = {}) {
     scopeOptions: {
       income: [],
       expenses: [],
+      gainsLosses: [],
       assets: [],
       liabilities: [],
     },
@@ -136,6 +137,7 @@ describe("period timeline metrics cache", () => {
         scopeOptions: {
           income: [],
           expenses: [],
+          gainsLosses: [],
         },
       }),
     );
@@ -159,6 +161,9 @@ describe("period timeline metrics cache", () => {
           scopeOptions: {
             income: [{ value: "income-a", label: "Income A", kind: "account" }],
             expenses: [],
+            gainsLosses: [
+              { value: "unit-type:fx", label: "FX", kind: "gainLoss" },
+            ],
             assets: [],
             liabilities: [],
           },

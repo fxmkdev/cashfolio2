@@ -49,6 +49,7 @@ describe("parseTimelineSearch", () => {
     expect("metric" in result).toBe(false);
     expect("incomeScope" in result).toBe(false);
     expect("expenseScope" in result).toBe(false);
+    expect("gainLossScope" in result).toBe(false);
     expect("assetScope" in result).toBe(false);
     expect("liabilityScope" in result).toBe(false);
   });
@@ -103,6 +104,22 @@ describe("parseTimelineSearch", () => {
     ).toEqual({
       liabilityScope: "account:liability-1",
     });
+    expect(parseTimelineSearch({ gainLossScope: "unit-type:fx" })).toEqual({
+      gainLossScope: "unit-type:fx",
+    });
+    expect(parseTimelineSearch({ gainLossScope: "unit:fx:USD" })).toEqual({
+      gainLossScope: "unit:fx:USD",
+    });
+    expect(
+      parseTimelineSearch({ gainLossScope: "unit-account:fx:USD:cash-1" }),
+    ).toEqual({
+      gainLossScope: "unit-account:fx:USD:cash-1",
+    });
+    expect(
+      parseTimelineSearch({ gainLossScope: "explicit-account:cash-1" }),
+    ).toEqual({
+      gainLossScope: "explicit-account:cash-1",
+    });
   });
 
   test("drops invalid mode values", () => {
@@ -132,6 +149,9 @@ describe("parseTimelineSearch", () => {
     });
     expect(parseTimelineSearch({ liabilityScope: "wat" })).toEqual({
       liabilityScope: undefined,
+    });
+    expect(parseTimelineSearch({ gainLossScope: "unit:" })).toEqual({
+      gainLossScope: undefined,
     });
   });
 });
@@ -172,6 +192,12 @@ describe("getTimelineScopeForMetric", () => {
     ).toBe("group:expense-group");
     expect(
       getTimelineScopeForMetric({
+        metric: "gainsLosses",
+        search: { gainLossScope: "unit-type:fx" },
+      }),
+    ).toBe("unit-type:fx");
+    expect(
+      getTimelineScopeForMetric({
         metric: "assets",
         search: { assetScope: "group:asset-group" },
       }),
@@ -198,6 +224,7 @@ describe("getTimelineScopedMetric", () => {
   test("returns scoped metrics only", () => {
     expect(getTimelineScopedMetric("income")).toBe("income");
     expect(getTimelineScopedMetric("expenses")).toBe("expenses");
+    expect(getTimelineScopedMetric("gainsLosses")).toBe("gainsLosses");
     expect(getTimelineScopedMetric("assets")).toBe("assets");
     expect(getTimelineScopedMetric("liabilities")).toBe("liabilities");
     expect(getTimelineScopedMetric("netWorth")).toBeUndefined();

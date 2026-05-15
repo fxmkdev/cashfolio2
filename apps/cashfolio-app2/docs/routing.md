@@ -78,10 +78,12 @@ Related docs:
       period).
   - Balance metrics (`assets`, `liabilities`, `netWorth`) render as area charts:
     assets (green), liabilities (red), net worth sign-split (green/red)
-  - The scope combobox applies to `income`, `expenses`, `assets`, and
-    `liabilities`. The `Total` scope preserves the aggregate view; concrete
-    group/account scopes replace the selected metric series with that scope's
-    value.
+  - The scope combobox applies to `income`, `expenses`, `gainsLosses`, `assets`,
+    and `liabilities`. The `Total` scope preserves the aggregate view; concrete
+    scopes replace the selected metric series with that scope's value. Gain/Loss
+    scopes use the Period Gains/Loss hierarchy: unit type, unit, then
+    asset/liability account; Explicit G/L drills only to the counterpart
+    asset/liability account.
   - Cumulative line rebases to the currently visible range for flow metrics so
     navigator/range-button/zoom interactions update the running baseline.
   - Loader fetches only the currently selected granularity (`mode` search
@@ -171,6 +173,9 @@ Related docs:
     to select the timeline metric (default: `totalReturn`)
   - `incomeScope?`, `expenseScope?`, `assetScope?`, and `liabilityScope?` use
     `total`, `group:<id>`, or `account:<id>` for scoped timeline metrics.
+    `gainLossScope?` uses `total` or Period Gain/Loss hierarchy node IDs such as
+    `unit-type:fx`, `unit:fx:USD`, `unit-account:fx:USD:<accountId>`, and
+    `explicit-account:<accountId>`.
 
 ### Global Navigation Progress
 

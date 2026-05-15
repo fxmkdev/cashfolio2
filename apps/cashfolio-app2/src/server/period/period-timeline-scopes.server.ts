@@ -16,6 +16,7 @@ import {
   type TimelineScopeSelection,
   type TimelineScopedMetric,
 } from "../../shared/timeline-scope";
+import type { PeriodGainsLossesBreakdownNode } from "./period-gains-losses-breakdown";
 
 export type TimelineMetricScopeFilter = {
   metric: TimelineScopedMetric;
@@ -130,12 +131,51 @@ function resolveScopedAmountFromMap(args: {
   return toMoneyNumber(moneyRound2(amount));
 }
 
+function findGainLossNodeByScope(args: {
+  hierarchy: PeriodGainsLossesBreakdownNode[];
+  scope: TimelineScopeSelection;
+}): PeriodGainsLossesBreakdownNode | undefined {
+  const nodes = [...args.hierarchy];
+  while (nodes.length > 0) {
+    const node = nodes.shift();
+    if (!node) {
+      continue;
+    }
+
+    if (node.id === args.scope) {
+      return node;
+    }
+
+    nodes.push(...node.children);
+  }
+
+  return undefined;
+}
+
+function resolveScopedGainLossValue(args: {
+  hierarchy: PeriodGainsLossesBreakdownNode[];
+  scope: TimelineScopeSelection;
+}): number {
+  if (args.scope === "total") {
+    return toMoneyNumber(
+      moneyRound2(moneySum(args.hierarchy.map((node) => node.totalGainLoss))),
+    );
+  }
+
+  return round2(
+    findGainLossNodeByScope({
+      hierarchy: args.hierarchy,
+      scope: args.scope,
+    })?.totalGainLoss ?? 0,
+  );
+}
+
 export function resolveScopedMetricValue(args: {
   metricScopeFilter?: TimelineMetricScopeFilter;
-  amountByMetric: Record<
-    TimelineScopedMetric,
-    Map<string, BreakdownHierarchyAccumulatorItem>
+  amountByMetric: Partial<
+    Record<TimelineScopedMetric, Map<string, BreakdownHierarchyAccumulatorItem>>
   >;
+  gainsLossesHierarchy?: PeriodGainsLossesBreakdownNode[];
   allAccountGroups: Array<{
     id: string;
     name: string;
@@ -151,6 +191,18 @@ export function resolveScopedMetricValue(args: {
     return undefined;
   }
 
+  if (args.metricScopeFilter.metric === "gainsLosses") {
+    return resolveScopedGainLossValue({
+      hierarchy: args.gainsLossesHierarchy ?? [],
+      scope: parsedScope,
+    });
+  }
+
+  const amountByAccountId = args.amountByMetric[args.metricScopeFilter.metric];
+  if (!amountByAccountId) {
+    return undefined;
+  }
+
   const groupById = new Map(
     args.allAccountGroups.map((group) => [
       group.id,
@@ -158,10 +210,38 @@ export function resolveScopedMetricValue(args: {
     ]),
   );
   return resolveScopedAmountFromMap({
-    amountByAccountId: args.amountByMetric[args.metricScopeFilter.metric],
+    amountByAccountId,
     scope: parsedScope,
     groupById,
   });
+}
+
+export function buildTimelineGainLossScopeOptions(args: {
+  hierarchy: PeriodGainsLossesBreakdownNode[];
+}): TimelineScopeOption[] {
+  const options: TimelineScopeOption[] = [];
+
+  const appendNodes = (
+    nodes: PeriodGainsLossesBreakdownNode[],
+    parentValue: TimelineScopeSelection | undefined,
+    parentLabel: string | undefined,
+  ) => {
+    for (const node of nodes) {
+      const value = node.id as TimelineScopeSelection;
+      const label = parentLabel ? `${parentLabel} / ${node.label}` : node.label;
+      options.push({
+        value,
+        label,
+        kind: "gainLoss",
+        treeLabel: node.label,
+        ...(parentValue ? { parentValue } : {}),
+      });
+      appendNodes(node.children, value, label);
+    }
+  };
+
+  appendNodes(args.hierarchy, undefined, undefined);
+  return options;
 }
 
 export function buildTimelineScopeOptions(args: {

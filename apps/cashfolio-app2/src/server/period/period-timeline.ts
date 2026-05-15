@@ -15,6 +15,12 @@ import { mapWithConcurrencyLimit } from "../concurrency";
 export type PeriodTimelineGranularity = "month" | "year";
 
 const TIMELINE_POINT_LOAD_CONCURRENCY = 4;
+const GAIN_LOSS_ROOT_SCOPE_ORDER: TimelineScopeSelection[] = [
+  "unit-type:fx",
+  "unit-type:security",
+  "unit-type:cryptocurrency",
+  "unit-type:explicit",
+];
 
 export type PeriodTimelinePoint = {
   periodValue: string;
@@ -39,12 +45,14 @@ export type PeriodTimelineResponse = {
   scopeOptions: {
     income: TimelineScopeOption[];
     expenses: TimelineScopeOption[];
+    gainsLosses: TimelineScopeOption[];
     assets: TimelineScopeOption[];
     liabilities: TimelineScopeOption[];
   };
   scopeSelection: {
     income: TimelineScopeSelection;
     expenses: TimelineScopeSelection;
+    gainsLosses: TimelineScopeSelection;
     assets: TimelineScopeSelection;
     liabilities: TimelineScopeSelection;
   };
@@ -56,6 +64,7 @@ type TimelineInput = {
   scopedMetric?: TimelineScopedMetric;
   incomeScope: TimelineScopeSelection;
   expenseScope: TimelineScopeSelection;
+  gainLossScope: TimelineScopeSelection;
   assetScope: TimelineScopeSelection;
   liabilityScope: TimelineScopeSelection;
 };
@@ -88,17 +97,22 @@ function parseTimelineScopeSelectionOrDefault(
 
 function createTimelineScopeOptionsWithTotal(
   options: Iterable<TimelineScopeOption>,
+  args?: { sort?: "label" | "none" },
 ): TimelineScopeOption[] {
   const optionByValue = new Map<TimelineScopeSelection, TimelineScopeOption>();
   for (const option of options) {
     optionByValue.set(option.value, option);
   }
 
-  const sortedOptions = Array.from(optionByValue.values()).toSorted(
-    (left, right) =>
-      left.label.localeCompare(right.label, "en") ||
-      left.value.localeCompare(right.value, "en"),
-  );
+  const dedupedOptions = Array.from(optionByValue.values());
+  const sortedOptions =
+    args?.sort === "none"
+      ? dedupedOptions
+      : dedupedOptions.toSorted(
+          (left, right) =>
+            left.label.localeCompare(right.label, "en") ||
+            left.value.localeCompare(right.value, "en"),
+        );
   return [
     {
       value: "total",
@@ -107,6 +121,76 @@ function createTimelineScopeOptionsWithTotal(
     },
     ...sortedOptions,
   ];
+}
+
+function resolveGainLossScopeOptionPath(args: {
+  option: TimelineScopeOption;
+  optionByValue: Map<TimelineScopeSelection, TimelineScopeOption>;
+}): TimelineScopeOption[] {
+  const path: TimelineScopeOption[] = [];
+  const visitedValues = new Set<TimelineScopeSelection>();
+  let currentOption: TimelineScopeOption | undefined = args.option;
+
+  while (currentOption && !visitedValues.has(currentOption.value)) {
+    path.unshift(currentOption);
+    visitedValues.add(currentOption.value);
+    currentOption = currentOption.parentValue
+      ? args.optionByValue.get(currentOption.parentValue)
+      : undefined;
+  }
+
+  return path;
+}
+
+function compareGainLossScopeOptionPaths(
+  leftPath: TimelineScopeOption[],
+  rightPath: TimelineScopeOption[],
+): number {
+  const leftRootRank = GAIN_LOSS_ROOT_SCOPE_ORDER.indexOf(leftPath[0]!.value);
+  const rightRootRank = GAIN_LOSS_ROOT_SCOPE_ORDER.indexOf(rightPath[0]!.value);
+  const leftRank =
+    leftRootRank === -1 ? GAIN_LOSS_ROOT_SCOPE_ORDER.length : leftRootRank;
+  const rightRank =
+    rightRootRank === -1 ? GAIN_LOSS_ROOT_SCOPE_ORDER.length : rightRootRank;
+  if (leftRank !== rightRank) {
+    return leftRank - rightRank;
+  }
+
+  const maxLength = Math.max(leftPath.length, rightPath.length);
+  for (let index = 0; index < maxLength; index += 1) {
+    const leftOption = leftPath[index];
+    const rightOption = rightPath[index];
+    if (!leftOption) {
+      return -1;
+    }
+    if (!rightOption) {
+      return 1;
+    }
+
+    const labelComparison =
+      leftOption.label.localeCompare(rightOption.label, "en") ||
+      leftOption.value.localeCompare(rightOption.value, "en");
+    if (labelComparison !== 0) {
+      return labelComparison;
+    }
+  }
+
+  return 0;
+}
+
+function sortGainLossScopeOptions(
+  options: Iterable<TimelineScopeOption>,
+): TimelineScopeOption[] {
+  const optionByValue = new Map(
+    Array.from(options, (option) => [option.value, option]),
+  );
+
+  return Array.from(optionByValue.values()).toSorted((left, right) =>
+    compareGainLossScopeOptionPaths(
+      resolveGainLossScopeOptionPath({ option: left, optionByValue }),
+      resolveGainLossScopeOptionPath({ option: right, optionByValue }),
+    ),
+  );
 }
 
 function clampTimelineScopeSelection(args: {
@@ -178,6 +262,7 @@ export const getPeriodTimeline = createServerFn({
       scopedMetric?: unknown;
       incomeScope?: unknown;
       expenseScope?: unknown;
+      gainLossScope?: unknown;
       assetScope?: unknown;
       liabilityScope?: unknown;
     }): TimelineInput => ({
@@ -186,6 +271,7 @@ export const getPeriodTimeline = createServerFn({
       scopedMetric: parseOptionalTimelineScopedMetric(data.scopedMetric),
       incomeScope: parseTimelineScopeSelectionOrDefault(data.incomeScope),
       expenseScope: parseTimelineScopeSelectionOrDefault(data.expenseScope),
+      gainLossScope: parseTimelineScopeSelectionOrDefault(data.gainLossScope),
       assetScope: parseTimelineScopeSelectionOrDefault(data.assetScope),
       liabilityScope: parseTimelineScopeSelectionOrDefault(data.liabilityScope),
     }),
@@ -215,6 +301,15 @@ export const getPeriodTimeline = createServerFn({
           scope: data.expenseScope,
         };
       }
+      if (
+        data.scopedMetric === "gainsLosses" &&
+        data.gainLossScope !== "total"
+      ) {
+        return {
+          metric: "gainsLosses" as const,
+          scope: data.gainLossScope,
+        };
+      }
       if (data.scopedMetric === "assets" && data.assetScope !== "total") {
         return {
           metric: "assets" as const,
@@ -236,7 +331,11 @@ export const getPeriodTimeline = createServerFn({
       accountBookId: data.accountBookId,
       accountBookStartDate: context.accountBookStartDate,
       referenceCurrency: context.referenceCurrency,
-      metricScopeFilter: activeMetricScopeFilter,
+      metricScopeFilter:
+        activeMetricScopeFilter?.metric === "assets" ||
+        activeMetricScopeFilter?.metric === "liabilities"
+          ? activeMetricScopeFilter
+          : undefined,
     });
 
     const periodValues = buildTimelinePeriodValues({
@@ -250,6 +349,10 @@ export const getPeriodTimeline = createServerFn({
       TimelineScopeOption
     >();
     const expenseScopeOptions = new Map<
+      TimelineScopeSelection,
+      TimelineScopeOption
+    >();
+    const gainLossScopeOptions = new Map<
       TimelineScopeSelection,
       TimelineScopeOption
     >();
@@ -287,6 +390,9 @@ export const getPeriodTimeline = createServerFn({
       for (const option of point.scopeOptions.expenses) {
         expenseScopeOptions.set(option.value, option);
       }
+      for (const option of point.scopeOptions.gainsLosses) {
+        gainLossScopeOptions.set(option.value, option);
+      }
       for (const option of point.scopeOptions.assets) {
         assetScopeOptions.set(option.value, option);
       }
@@ -315,6 +421,10 @@ export const getPeriodTimeline = createServerFn({
     const finalizedExpenseScopeOptions = createTimelineScopeOptionsWithTotal(
       expenseScopeOptions.values(),
     );
+    const finalizedGainLossScopeOptions = createTimelineScopeOptionsWithTotal(
+      sortGainLossScopeOptions(gainLossScopeOptions.values()),
+      { sort: "none" },
+    );
     const finalizedAssetScopeOptions = createTimelineScopeOptionsWithTotal(
       assetScopeOptions.values(),
     );
@@ -329,6 +439,10 @@ export const getPeriodTimeline = createServerFn({
       requested: data.expenseScope,
       options: finalizedExpenseScopeOptions,
     });
+    const clampedGainLossScope = clampTimelineScopeSelection({
+      requested: data.gainLossScope,
+      options: finalizedGainLossScopeOptions,
+    });
     const clampedAssetScope = clampTimelineScopeSelection({
       requested: data.assetScope,
       options: finalizedAssetScopeOptions,
@@ -341,6 +455,8 @@ export const getPeriodTimeline = createServerFn({
       data.scopedMetric === "income" && clampedIncomeScope !== "total";
     const shouldUseScopedExpenses =
       data.scopedMetric === "expenses" && clampedExpenseScope !== "total";
+    const shouldUseScopedGainLosses =
+      data.scopedMetric === "gainsLosses" && clampedGainLossScope !== "total";
     const shouldUseScopedAssets =
       data.scopedMetric === "assets" && clampedAssetScope !== "total";
     const shouldUseScopedLiabilities =
@@ -353,6 +469,9 @@ export const getPeriodTimeline = createServerFn({
       expenses: shouldUseScopedExpenses
         ? (scopedMetricValues[index] ?? 0)
         : point.expenses,
+      gainsLosses: shouldUseScopedGainLosses
+        ? (scopedMetricValues[index] ?? 0)
+        : point.gainsLosses,
       assets: shouldUseScopedAssets
         ? (scopedMetricValues[index] ?? 0)
         : point.assets,
@@ -379,12 +498,14 @@ export const getPeriodTimeline = createServerFn({
       scopeOptions: {
         income: finalizedIncomeScopeOptions,
         expenses: finalizedExpenseScopeOptions,
+        gainsLosses: finalizedGainLossScopeOptions,
         assets: finalizedAssetScopeOptions,
         liabilities: finalizedLiabilityScopeOptions,
       },
       scopeSelection: {
         income: clampedIncomeScope,
         expenses: clampedExpenseScope,
+        gainsLosses: clampedGainLossScope,
         assets: clampedAssetScope,
         liabilities: clampedLiabilityScope,
       },

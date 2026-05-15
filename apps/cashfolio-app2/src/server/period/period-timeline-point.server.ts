@@ -58,6 +58,7 @@ export async function loadPeriodTimelinePoint(args: {
       scopeOptions: {
         income: [],
         expenses: [],
+        gainsLosses: [],
         assets: [],
         liabilities: [],
       },
