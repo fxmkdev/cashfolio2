@@ -35,9 +35,6 @@ inputs:
   logto_endpoint:
     description: Logto endpoint
     required: true
-  logto_tenant_id:
-    description: Logto tenant ID
-    required: true
   logto_app_id:
     description: Logto app ID
     required: true
@@ -66,7 +63,6 @@ runs:
         CANONICAL_HOSTNAME: ${{ inputs.canonical_hostname }}
         BASE_URL: ${{ inputs.base_url }}
         LOGTO_ENDPOINT: ${{ inputs.logto_endpoint }}
-        LOGTO_TENANT_ID: ${{ inputs.logto_tenant_id }}
         LOGTO_APP_ID: ${{ inputs.logto_app_id }}
     - name: Log in to Fly registry
       uses: docker/login-action@v4
