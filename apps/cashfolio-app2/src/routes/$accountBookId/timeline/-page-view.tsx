@@ -292,11 +292,11 @@ export function TimelinePageView({
   return (
     <PageShell className={classes.page}>
       <TopPageHeader
-        heading={<Title order={2}>Timeline</Title>}
+        heading={<Title order={2}>History</Title>}
         actions={
           <SegmentedControl
             value={selectedMode}
-            aria-label="Timeline Period Mode"
+            aria-label="History Period Mode"
             data={[
               { label: "Monthly", value: "month" },
               { label: "Yearly", value: "year" },

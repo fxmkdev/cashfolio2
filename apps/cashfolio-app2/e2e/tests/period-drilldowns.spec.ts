@@ -116,7 +116,9 @@ test("period allocation table account drilldown opens ledger with selected perio
   });
 
   await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
-  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "January 2026" }),
+  ).toBeVisible();
 
   const allocationTable = await openTableView({
     page,
@@ -169,7 +171,9 @@ test("period gains/losses table unit-account drilldown opens reconciliation page
   });
 
   await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
-  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "February 2026" }),
+  ).toBeVisible();
 
   const gainsLossesTable = await openTableView({
     page,
@@ -240,7 +244,9 @@ test("period explicit gains/losses rows drill to gain/loss ledger", async ({
   });
 
   await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
-  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "January 2026" }),
+  ).toBeVisible();
 
   const gainsLossesTable = await openTableView({
     page,

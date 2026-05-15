@@ -24,7 +24,7 @@ test("period page shows KPI waterfall and updated income/expenses wording", asyn
   page,
 }) => {
   await page.goto(`/${seeded.accountBookId}/period`);
-  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();
 
   const waterfallHeading = page.getByRole("heading", {
     name: "Contribution to Total Return",
@@ -105,7 +105,7 @@ test("period allocation shows partial-data warning when valuation is missing", a
   });
 
   await page.goto(`/${seeded.accountBookId}/period`);
-  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();
   await expect(
     page.getByText(
       /skipped because reference-currency balances were unavailable\./,
@@ -143,7 +143,7 @@ test("period breakdown account leaf drilldown opens ledger with period filter", 
 
   await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
 
-  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();
   await expect(
     page.getByText(
       "Double-click a group to drill down, or an account to open ledger.",
@@ -189,7 +189,7 @@ test("period page persists card state, drill state, and table expansion across r
   });
 
   await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
-  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();
 
   const breakdownTypeControl = page.getByRole("radiogroup", {
     name: "Breakdown Type",
@@ -248,7 +248,7 @@ test("period page persists card state, drill state, and table expansion across r
   ).toBeChecked();
 
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();
 
   await expect(
     breakdownTypeControl.getByRole("radio", { name: "Income" }),
@@ -293,7 +293,7 @@ test("period picker opens on selected month/year page", async ({ page }) => {
   });
 
   await page.goto(`/${seeded.accountBookId}/period?period=2025-04`);
-  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "April 2025" })).toBeVisible();
 
   const periodPickerTrigger = page.getByTestId("period-picker-trigger");
   await expect(periodPickerTrigger).toContainText("April 2025");
@@ -347,7 +347,7 @@ test("period previous/next controls update the period query parameter", async ({
   });
 
   await page.goto(`/${seeded.accountBookId}/period?period=2026-04`);
-  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();
 
   const periodPickerTrigger = page.getByTestId("period-picker-trigger");
   await expect(periodPickerTrigger).toContainText("April 2026");

@@ -19,7 +19,7 @@ test("timeline empty state is shown when no periods are available", async ({
   page,
 }) => {
   await page.goto(`/${accountBookId}/timeline`);
-  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
   await expect(page.getByText("No periods available yet.")).toBeVisible();
   await expect(page.locator(".ag-charts-wrapper canvas")).toHaveCount(0);
 });

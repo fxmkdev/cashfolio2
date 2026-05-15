@@ -24,14 +24,14 @@ test("timeline page is reachable and persists selected period mode across refres
   await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
   await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Timeline" }).click();
+  await page.getByRole("link", { name: "History" }).click();
   await expect(page).toHaveURL(
     new RegExp(`/${seeded.accountBookId}/timeline$`),
   );
-  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
 
   const periodModeControl = page.getByRole("radiogroup", {
-    name: "Timeline Period Mode",
+    name: "History Period Mode",
   });
   await selectSegmentedControlOption(periodModeControl, "Yearly");
 
@@ -39,17 +39,17 @@ test("timeline page is reachable and persists selected period mode across refres
   await expect(chartCanvas).toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
   await expect(
     periodModeControl.getByRole("radio", { name: "Yearly" }),
   ).toBeChecked();
 
   await page
     .getByRole("navigation")
-    .getByRole("link", { name: "Period" })
+    .getByRole("link", { name: "Period Report" })
     .click();
   await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/period$`));
-  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();
 });
 
 test("timeline mode toggles update URL mode and keep history compact", async ({
@@ -58,13 +58,13 @@ test("timeline mode toggles update URL mode and keep history compact", async ({
   await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
   await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Timeline" }).click();
+  await page.getByRole("link", { name: "History" }).click();
   await expect(page).toHaveURL(
     new RegExp(`/${seeded.accountBookId}/timeline$`),
   );
 
   const periodModeControl = page.getByRole("radiogroup", {
-    name: "Timeline Period Mode",
+    name: "History Period Mode",
   });
 
   await selectSegmentedControlOption(periodModeControl, "Yearly");
@@ -94,10 +94,10 @@ test("timeline deep link with yearly mode selects yearly on first load", async (
   page,
 }) => {
   await page.goto(`/${seeded.accountBookId}/timeline?mode=year`);
-  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
 
   const periodModeControl = page.getByRole("radiogroup", {
-    name: "Timeline Period Mode",
+    name: "History Period Mode",
   });
   await expect(
     periodModeControl.getByRole("radio", { name: "Yearly" }),
@@ -111,7 +111,7 @@ test("timeline shows chart data for the account-book period range", async ({
   page,
 }) => {
   await page.goto(`/${seeded.accountBookId}/timeline`);
-  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
   await expect(page.locator(".ag-charts-wrapper canvas").first()).toBeVisible();
   await expect(page.getByText("No periods available yet.")).toHaveCount(0);
 });
@@ -120,10 +120,10 @@ test("timeline deep link with invalid mode falls back to monthly", async ({
   page,
 }) => {
   await page.goto(`/${seeded.accountBookId}/timeline?mode=weekly`);
-  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
 
   const periodModeControl = page.getByRole("radiogroup", {
-    name: "Timeline Period Mode",
+    name: "History Period Mode",
   });
   await expect(
     periodModeControl.getByRole("radio", { name: "Monthly" }),
@@ -137,7 +137,7 @@ test("timeline expense scope tree select opens with hierarchical options and sup
   page,
 }) => {
   await page.goto(`/${seeded.accountBookId}/timeline`);
-  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
 
   await page.getByRole("combobox", { name: "View" }).click();
   await page.getByRole("option", { name: "Expenses", exact: true }).click();
@@ -181,7 +181,7 @@ test("timeline expense scope tree select opens with hierarchical options and sup
 
   await scopeInput.click();
   await scopeInput.fill("uncommitted scope text");
-  await page.getByRole("heading", { name: "Timeline" }).click();
+  await page.getByRole("heading", { name: "History" }).click();
   await expect(scopeInput).toHaveValue("E2E Expense");
 
   await scopeInput.click();

@@ -30,9 +30,9 @@ Related docs:
   `GET /api/logto/callback`, `GET /api/logto/sign-up`,
   `POST /api/logto/sign-out`
 - `$accountBookId/route.tsx` - shared account-book shell route using Mantine
-  `AppShell` with left navbar navigation (Accounts, Activity, Period, Timeline,
-  Valuation Cache), navbar footer actions (Account Book switcher + User menu),
-  and mobile-only header burger toggle
+  `AppShell` with left navbar navigation (Accounts, Transactions, Period Report,
+  History), an Admin section for Valuation Cache, navbar footer actions (Account
+  Book switcher + User menu), and mobile-only header burger toggle
   - Uses the theme `sm` breakpoint as the shared source of truth for both navbar
     collapse and header visibility.
   - Supports a desktop sidebar rail mode that keeps icon navigation visible,

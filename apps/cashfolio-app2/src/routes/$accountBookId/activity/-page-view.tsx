@@ -130,7 +130,7 @@ export function ActivityPageView({
   return (
     <PageShell>
       <TopPageHeader
-        heading={<Title order={2}>Activity</Title>}
+        heading={<Title order={2}>Transactions</Title>}
         actions={
           <Group gap="sm">
             {periodFilterControls}

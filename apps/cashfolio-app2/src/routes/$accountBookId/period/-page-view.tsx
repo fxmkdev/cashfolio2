@@ -352,7 +352,7 @@ export function PeriodPageView({
   return (
     <PageShell>
       <TopPageHeader
-        heading={<Title order={2}>Period</Title>}
+        heading={<Title order={2}>{overview.selectedPeriodLabel}</Title>}
         actions={
           <PeriodFilterAction
             selectedPeriodLabel={overview.selectedPeriodLabel}

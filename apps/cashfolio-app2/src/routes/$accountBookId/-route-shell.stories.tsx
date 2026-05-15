@@ -12,9 +12,9 @@ function getHeadingLabel(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
   const section = segments[1];
 
-  if (section === "activity") return "Activity";
-  if (section === "period") return "Period";
-  if (section === "timeline") return "Timeline";
+  if (section === "activity") return "Transactions";
+  if (section === "period") return "Period Report";
+  if (section === "timeline") return "History";
   if (section === "valuation-cache") return "Valuation Cache";
   if (section === "account-book-settings") return "Account Book Settings";
   if (section === "user-settings") return "User Settings";
@@ -111,17 +111,17 @@ export const RouteSmoke: Story = {
     await expect(
       canvas.getByRole("button", { name: "Collapse sidebar" }),
     ).toBeVisible();
-    await userEvent.click(canvas.getByRole("link", { name: "Activity" }));
+    await userEvent.click(canvas.getByRole("link", { name: "Transactions" }));
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
       "/storybook-book/activity",
     );
 
-    await userEvent.click(canvas.getByRole("link", { name: "Period" }));
+    await userEvent.click(canvas.getByRole("link", { name: "Period Report" }));
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
       "/storybook-book/period",
     );
 
-    await userEvent.click(canvas.getByRole("link", { name: "Timeline" }));
+    await userEvent.click(canvas.getByRole("link", { name: "History" }));
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
       "/storybook-book/timeline",
     );
@@ -228,7 +228,7 @@ export const DesktopRailSmoke: Story = {
       "/storybook-book/valuation-cache",
     );
 
-    await userEvent.click(canvas.getByRole("link", { name: "Activity" }));
+    await userEvent.click(canvas.getByRole("link", { name: "Transactions" }));
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
       "/storybook-book/activity",
     );
