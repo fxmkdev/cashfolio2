@@ -47,7 +47,7 @@ export function useLedgerPageController(args: {
     tab: LedgerPageViewProps["backTab"];
     mode: "active" | "archived";
   }) => void | Promise<void>;
-}): Omit<LedgerPageViewProps, "accountBookId" | "onRowDataUpdated"> {
+}): Omit<LedgerPageViewProps, "onRowDataUpdated"> {
   const { account, accounts, accountGroups, accountTreeRow, existingNodes } =
     args.loaderData;
   const unitUsage = useMemo(

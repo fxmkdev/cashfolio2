@@ -263,7 +263,6 @@ function LedgerPageStoryHarness({
       }}
     >
       <LedgerPageView
-        accountBookId="storybook-book"
         backTab="ASSET"
         account={account}
         accountGroups={[]}
@@ -565,6 +564,16 @@ export const ArchivedAccountActionsMenu: Story = {
   render: () => <LedgerPageStoryHarness accountActive={false} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+
+    await expect(
+      canvas.getByRole("heading", { name: "Checking" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("link", { name: "Accounts" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      canvas.queryByRole("link", { name: "Archive" }),
+    ).not.toBeInTheDocument();
 
     await userEvent.click(
       canvas.getByRole("button", { name: "Account actions" }),

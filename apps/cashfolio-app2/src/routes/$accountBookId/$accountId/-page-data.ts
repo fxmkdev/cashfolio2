@@ -9,6 +9,7 @@ import {
   getSimpleTransactionUnitIdentifier,
   getTypeLabel,
 } from "@/shared/account-utils";
+import { isSystemManagedEquitySubtype } from "@/shared/system-managed-equity-subtypes";
 import {
   createDisplayNumberFormatter,
   getCurrencyDecimals,
@@ -40,10 +41,7 @@ export function getLedgerAccountKindBadgeProps(account: {
   if (account.equityAccountSubtype === EquityAccountSubtype.EXPENSE) {
     return { label, color: "red", variant: "filled" };
   }
-  if (
-    account.equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS ||
-    account.equityAccountSubtype === EquityAccountSubtype.OPENING_BALANCES
-  ) {
+  if (isSystemManagedEquitySubtype(account.equityAccountSubtype)) {
     return { label, color: "yellow", variant: "light" };
   }
 

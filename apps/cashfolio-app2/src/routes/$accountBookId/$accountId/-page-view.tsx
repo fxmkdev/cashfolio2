@@ -91,7 +91,6 @@ export type RebookingState = {
 };
 
 export type LedgerPageViewProps = {
-  accountBookId: string;
   backTab: TabValue;
   account: LedgerPageLoaderData["account"];
   accountGroups: LedgerPageLoaderData["accountGroups"];
