@@ -3,7 +3,8 @@ import { Box, Text, Title } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import { useRouterState } from "@tanstack/react-router";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { AccountBookShell, DESKTOP_RAIL_COLLAPSED_STORAGE_KEY } from "./route";
+import { AccountBookShell } from "./-account-book-shell";
+import { DESKTOP_RAIL_COLLAPSED_STORAGE_KEY } from "./-route-helpers";
 
 const STORYBOOK_ACCOUNT_BOOK_ID = "storybook-book";
 

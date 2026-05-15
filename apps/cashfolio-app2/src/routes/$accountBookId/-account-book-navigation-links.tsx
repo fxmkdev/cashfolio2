@@ -8,7 +8,7 @@ import {
 } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import { LinkNavLink } from "@/components/link-nav-link";
-import type { AccountBookSection, AccountsLinkSearch } from "./route";
+import type { AccountBookSection, AccountsLinkSearch } from "./-route-helpers";
 
 type AccountBookNavigationLink = {
   section: Exclude<AccountBookSection, "settings">;

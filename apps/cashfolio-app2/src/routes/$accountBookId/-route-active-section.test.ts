@@ -4,7 +4,7 @@ import {
   getAccountsLinkSearch,
   getActiveSection,
   parseDesktopRailCollapsedPreference,
-} from "./route";
+} from "./-route-helpers";
 
 describe("parseDesktopRailCollapsedPreference", () => {
   it("defaults to expanded unless the stored preference is explicitly collapsed", () => {
