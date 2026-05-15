@@ -36,6 +36,7 @@ function AccountBookShellSmokeHarness() {
     <>
       <Notifications />
       <AccountBookShell
+        accountSecurityUrl="https://tenant.logto.app/account/security"
         accountBookId={accountBookId}
         accountBooks={[
           { id: "storybook-book", name: "Storybook Book" },
@@ -173,6 +174,15 @@ export const RouteSmoke: Story = {
     await expect(
       canvas.getByRole("menuitem", { name: "User Settings" }),
     ).toBeVisible();
+    const accountSecurityLink = canvas.getByRole("menuitem", {
+      name: "Account Security",
+    });
+    await expect(accountSecurityLink).toBeVisible();
+    await expect(accountSecurityLink).toHaveAttribute(
+      "href",
+      "https://tenant.logto.app/account/security",
+    );
+    await expect(accountSecurityLink).toHaveAttribute("target", "_blank");
     await expect(
       canvas.getByRole("menuitem", { name: "Sign Out" }),
     ).toBeVisible();

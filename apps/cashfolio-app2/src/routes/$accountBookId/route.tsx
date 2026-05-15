@@ -47,20 +47,22 @@ export const Route = createFileRoute("/$accountBookId")({
     const [
       { loadUserAccountBooksForAccountBookRoute },
       { getRuntimeAppVersion },
-      { getAuthenticatedUserProfile },
+      { getAuthenticatedUserProfile, getUserAccountSecurityUrl },
     ] = await Promise.all([
       import("./-account-book-options-loader"),
       import("@/server/app-version"),
       import("@/server/user-profile"),
     ]);
 
-    const [accountBooks, appVersion, userProfile] = await Promise.all([
-      loadUserAccountBooksForAccountBookRoute(),
-      getRuntimeAppVersion(),
-      getAuthenticatedUserProfile(),
-    ]);
+    const [accountBooks, appVersion, userProfile, accountSecurityUrl] =
+      await Promise.all([
+        loadUserAccountBooksForAccountBookRoute(),
+        getRuntimeAppVersion(),
+        getAuthenticatedUserProfile(),
+        getUserAccountSecurityUrl(),
+      ]);
 
-    return { accountBooks, appVersion, userProfile };
+    return { accountBooks, appVersion, userProfile, accountSecurityUrl };
   },
   component: AccountBookLayout,
 });
@@ -234,7 +236,8 @@ export function getAccountsLinkSearch(args: {
 }
 
 function AccountBookLayout() {
-  const { accountBooks, appVersion, userProfile } = Route.useLoaderData();
+  const { accountBooks, appVersion, userProfile, accountSecurityUrl } =
+    Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const { pathname, locationSearch, matches } = useRouterState({
     select: (state) => ({
@@ -261,6 +264,7 @@ function AccountBookLayout() {
       accountBooks={accountBooks}
       appVersion={appVersion}
       userProfile={userProfile}
+      accountSecurityUrl={accountSecurityUrl}
       accountsLinkSearch={accountsLinkSearch}
       periodLinkSearch={periodLinkSearch}
     >
@@ -270,6 +274,7 @@ function AccountBookLayout() {
 }
 
 export type AccountBookShellProps = {
+  accountSecurityUrl: string | null;
   accountBookId: string;
   pathname: string;
   accountBooks: UserAccountBookOption[];
@@ -283,6 +288,7 @@ export type AccountBookShellProps = {
 };
 
 export function AccountBookShell({
+  accountSecurityUrl,
   accountBookId,
   pathname,
   accountBooks,
@@ -454,6 +460,7 @@ export function AccountBookShell({
                     accountsMode={accountsLinkSearch.mode}
                   />
                   <UserMenu
+                    accountSecurityUrl={accountSecurityUrl}
                     accountBookId={accountBookId}
                     userProfile={userProfile}
                   />
@@ -469,6 +476,7 @@ export function AccountBookShell({
                 </Group>
                 <Group justify="center" visibleFrom="sm">
                   <UserMenu
+                    accountSecurityUrl={accountSecurityUrl}
                     accountBookId={accountBookId}
                     userProfile={userProfile}
                     collapsed
@@ -484,6 +492,7 @@ export function AccountBookShell({
                   accountsMode={accountsLinkSearch.mode}
                 />
                 <UserMenu
+                  accountSecurityUrl={accountSecurityUrl}
                   accountBookId={accountBookId}
                   userProfile={userProfile}
                 />

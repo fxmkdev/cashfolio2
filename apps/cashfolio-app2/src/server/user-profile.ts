@@ -15,7 +15,6 @@ export type AuthenticatedUserSettings = {
   name: string;
   avatarUrl: string;
   initials: string;
-  accountSecurityUrl: string;
 };
 
 type LogtoAccountResponse = {
@@ -162,6 +161,16 @@ export const getAuthenticatedUserProfile = createServerFn({
   }
 });
 
+export const getUserAccountSecurityUrl = createServerFn({
+  method: "GET",
+}).handler(() => {
+  try {
+    return getLogtoAccountSecurityUrl();
+  } catch {
+    return null;
+  }
+});
+
 export const getAuthenticatedUserSettings = createServerFn({
   method: "GET",
 }).handler(async (): Promise<AuthenticatedUserSettings> => {
@@ -173,7 +182,6 @@ export const getAuthenticatedUserSettings = createServerFn({
     name: account.name ?? "",
     avatarUrl: account.avatar ?? "",
     initials: profile.initials,
-    accountSecurityUrl: getLogtoAccountSecurityUrl(),
   };
 });
 
@@ -204,6 +212,5 @@ export const updateAuthenticatedUserSettings = createServerFn({
       name: account.name ?? "",
       avatarUrl: account.avatar ?? "",
       initials: profile.initials,
-      accountSecurityUrl: getLogtoAccountSecurityUrl(),
     };
   });

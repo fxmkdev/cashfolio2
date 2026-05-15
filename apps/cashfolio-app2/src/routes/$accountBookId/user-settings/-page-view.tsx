@@ -9,11 +9,7 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
-import {
-  IconCheck,
-  IconExternalLink,
-  IconShieldLock,
-} from "@tabler/icons-react";
+import { IconCheck } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { PageShell } from "@/components/page-shell";
 import { TopPageHeader } from "@/components/top-page-header";
@@ -97,22 +93,7 @@ export function UserSettingsPageView(args: {
 
   return (
     <PageShell>
-      <TopPageHeader
-        heading={<Title order={2}>User Settings</Title>}
-        actions={
-          <Button
-            component="a"
-            href={settings.accountSecurityUrl}
-            target="_blank"
-            rel="noreferrer"
-            variant="default"
-            leftSection={<IconShieldLock size={16} />}
-            rightSection={<IconExternalLink size={16} />}
-          >
-            Account Security
-          </Button>
-        }
-      />
+      <TopPageHeader heading={<Title order={2}>User Settings</Title>} />
 
       <form
         onSubmit={form.onSubmit(async (values) => {

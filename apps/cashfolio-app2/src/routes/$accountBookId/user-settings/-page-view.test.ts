@@ -15,7 +15,6 @@ describe("UserSettingsPageView", () => {
             name: "Ada Lovelace",
             avatarUrl: "https://example.test/ada.png",
             initials: "AL",
-            accountSecurityUrl: "https://tenant.logto.app/account/security",
           },
           onSubmit: vi.fn(),
         }),
@@ -23,10 +22,8 @@ describe("UserSettingsPageView", () => {
     );
 
     expect(markup).toContain("User Settings");
-    expect(markup).toContain("Account Security");
-    expect(markup).toContain(
-      'href="https://tenant.logto.app/account/security"',
-    );
+    expect(markup).not.toContain("Account Security");
+    expect(markup).not.toContain("https://tenant.logto.app/account/security");
     expect(markup).toContain("Name");
     expect(markup).toContain("Avatar URL");
     expect(markup).toContain('value="Ada Lovelace"');

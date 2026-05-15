@@ -10,9 +10,11 @@ import {
   IconBook2,
   IconCheck,
   IconChevronUp,
+  IconExternalLink,
   IconLogout2,
   IconPlus,
   IconSettings,
+  IconShieldLock,
   IconUserCog,
 } from "@tabler/icons-react";
 import { createLink } from "@tanstack/react-router";
@@ -161,11 +163,56 @@ export function AccountBookSwitcherMenu({
   );
 }
 
+export function UserMenuItems({
+  accountBookId,
+  accountSecurityUrl,
+}: {
+  accountBookId: string;
+  accountSecurityUrl: string | null;
+}) {
+  return (
+    <>
+      <LinkMenuItem
+        leftSection={<IconUserCog size={16} />}
+        to="/$accountBookId/user-settings"
+        params={{ accountBookId }}
+        preload={false}
+      >
+        User Settings
+      </LinkMenuItem>
+      {accountSecurityUrl && (
+        <Menu.Item
+          component="a"
+          href={accountSecurityUrl}
+          target="_blank"
+          rel="noreferrer"
+          leftSection={<IconShieldLock size={16} />}
+          rightSection={<IconExternalLink size={16} />}
+        >
+          Account Security
+        </Menu.Item>
+      )}
+      <Menu.Divider />
+      <form action="/api/logto/sign-out" method="post">
+        <Menu.Item
+          component="button"
+          type="submit"
+          leftSection={<IconLogout2 size={16} />}
+        >
+          Sign Out
+        </Menu.Item>
+      </form>
+    </>
+  );
+}
+
 export function UserMenu({
+  accountSecurityUrl,
   accountBookId,
   collapsed = false,
   userProfile,
 }: {
+  accountSecurityUrl: string | null;
   accountBookId: string;
   collapsed?: boolean;
   userProfile: AuthenticatedUserProfile;
@@ -206,24 +253,10 @@ export function UserMenu({
       <Menu.Dropdown
         style={{ maxWidth: collapsed ? ACCOUNT_BOOK_SIDEBAR_WIDTH : "100%" }}
       >
-        <LinkMenuItem
-          leftSection={<IconUserCog size={16} />}
-          to="/$accountBookId/user-settings"
-          params={{ accountBookId }}
-          preload={false}
-        >
-          User Settings
-        </LinkMenuItem>
-        <Menu.Divider />
-        <form action="/api/logto/sign-out" method="post">
-          <Menu.Item
-            component="button"
-            type="submit"
-            leftSection={<IconLogout2 size={16} />}
-          >
-            Sign Out
-          </Menu.Item>
-        </form>
+        <UserMenuItems
+          accountBookId={accountBookId}
+          accountSecurityUrl={accountSecurityUrl}
+        />
       </Menu.Dropdown>
     </Menu>
   );

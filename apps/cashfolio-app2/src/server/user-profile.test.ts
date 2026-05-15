@@ -45,6 +45,7 @@ vi.mock("@/security/same-origin.server", () => ({
 import {
   getAuthenticatedUserProfile,
   getAuthenticatedUserSettings,
+  getUserAccountSecurityUrl,
   normalizeUserSettingsInput,
   updateAuthenticatedUserSettings,
 } from "./user-profile";
@@ -158,8 +159,21 @@ describe("user profile server functions", () => {
       name: "Ada Lovelace",
       avatarUrl: "https://example.test/ada.png",
       initials: "AL",
-      accountSecurityUrl: "https://tenant.logto.app/account/security",
     });
+  });
+
+  it("returns the Logto account security URL", async () => {
+    await expect(getUserAccountSecurityUrl()).resolves.toBe(
+      "https://tenant.logto.app/account/security",
+    );
+  });
+
+  it("omits the account security URL when Logto configuration is unavailable", async () => {
+    getLogtoAccountSecurityUrl.mockImplementationOnce(() => {
+      throw new Error("LOGTO_ENDPOINT must be set");
+    });
+
+    await expect(getUserAccountSecurityUrl()).resolves.toBeNull();
   });
 
   it("updates user settings through Logto Account API", async () => {
