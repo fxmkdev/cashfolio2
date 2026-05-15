@@ -185,7 +185,7 @@ export function UserMenuItems({
           component="a"
           href={accountSecurityUrl}
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
           leftSection={<IconShieldLock size={16} />}
           rightSection={<IconExternalLink size={16} />}
         >

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { UserSettingsPageView } from "./-page-view";
 
 describe("UserSettingsPageView", () => {
-  it("renders user settings fields and account security link", () => {
+  it("renders user settings fields without the account security link", () => {
     const markup = renderToStaticMarkup(
       createElement(
         MantineProvider,

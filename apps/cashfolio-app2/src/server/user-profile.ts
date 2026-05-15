@@ -30,6 +30,14 @@ type NormalizedUserSettingsInput = {
   avatarUrl: string | null;
 };
 
+const fieldLabels = {
+  avatarUrl: "Avatar URL",
+  name: "Name",
+} as const;
+
+const accountApiAccessMessage =
+  "Account settings need a fresh sign-in before they can be loaded. Please sign out and sign in again.";
+
 function getNullableString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
@@ -60,7 +68,7 @@ function readOptionalTextField(
     return null;
   }
   if (typeof value !== "string") {
-    throw new Error(`${field} must be a string.`);
+    throw new Error(`${fieldLabels[field]} must be a string.`);
   }
 
   const normalized = value.trim();
@@ -133,9 +141,22 @@ async function assertLogtoAccountApiOk(
 }
 
 async function fetchAuthenticatedLogtoAccount(): Promise<LogtoAccountResponse> {
-  const response = await fetchLogtoAccountApi("/api/my-account");
+  const response = await fetchLogtoAccountApiSafely("/api/my-account");
   await assertLogtoAccountApiOk(response, "Failed to load user settings.");
   return readLogtoAccountResponse(await readJsonResponse(response));
+}
+
+async function fetchLogtoAccountApiSafely(
+  pathname: string,
+  init?: RequestInit,
+) {
+  try {
+    return init
+      ? await fetchLogtoAccountApi(pathname, init)
+      : await fetchLogtoAccountApi(pathname);
+  } catch {
+    throw new Error(accountApiAccessMessage);
+  }
 }
 
 function resolveSettingsProfileFromLogtoAccount(
@@ -193,7 +214,7 @@ export const updateAuthenticatedUserSettings = createServerFn({
     ensureSameOriginRequestFromServerContext();
     await ensureAuthenticated();
 
-    const response = await fetchLogtoAccountApi("/api/my-account", {
+    const response = await fetchLogtoAccountApiSafely("/api/my-account", {
       method: "PATCH",
       headers: {
         "content-type": "application/json",

@@ -125,6 +125,22 @@ describe("normalizeUserSettingsInput", () => {
       }),
     ).toThrow("Avatar URL cannot be longer than 2048 characters.");
   });
+
+  it("uses human-readable labels for non-string text fields", () => {
+    expect(() =>
+      normalizeUserSettingsInput({
+        name: 123,
+        avatarUrl: "",
+      }),
+    ).toThrow("Name must be a string.");
+
+    expect(() =>
+      normalizeUserSettingsInput({
+        name: "Ada",
+        avatarUrl: 123,
+      }),
+    ).toThrow("Avatar URL must be a string.");
+  });
 });
 
 describe("user profile server functions", () => {
@@ -210,6 +226,29 @@ describe("user profile server functions", () => {
         },
       }),
     ).rejects.toThrow("Avatar is not allowed.");
+  });
+
+  it("asks users to sign in again when Account API access cannot be minted", async () => {
+    fetchLogtoAccountApi.mockRejectedValueOnce(new Error("missing scope"));
+
+    await expect(getAuthenticatedUserSettings()).rejects.toThrow(
+      "Account settings need a fresh sign-in before they can be loaded. Please sign out and sign in again.",
+    );
+  });
+
+  it("asks users to sign in again when Account API update access cannot be minted", async () => {
+    fetchLogtoAccountApi.mockRejectedValueOnce(new Error("missing scope"));
+
+    await expect(
+      updateAuthenticatedUserSettings({
+        data: {
+          name: "Ada",
+          avatarUrl: "https://example.test/ada.png",
+        },
+      }),
+    ).rejects.toThrow(
+      "Account settings need a fresh sign-in before they can be loaded. Please sign out and sign in again.",
+    );
   });
 
   it("loads shell profile from Logto Account API", async () => {

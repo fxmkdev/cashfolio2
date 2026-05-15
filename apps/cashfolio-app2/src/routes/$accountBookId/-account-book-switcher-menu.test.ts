@@ -59,7 +59,7 @@ describe("UserMenuItems", () => {
       props: {
         children: "Account Security",
         href: "https://tenant.logto.app/account/security",
-        rel: "noreferrer",
+        rel: "noopener noreferrer",
         target: "_blank",
       },
     });
