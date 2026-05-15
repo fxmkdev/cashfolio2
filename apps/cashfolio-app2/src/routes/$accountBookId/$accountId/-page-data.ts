@@ -16,6 +16,40 @@ import {
 } from "@/shared/unit-format";
 import type { LedgerAccount } from "./-page-types";
 
+export type LedgerAccountKindBadgeProps = {
+  label: string;
+  color: "green" | "red" | "yellow" | "gray";
+  variant: "filled" | "light";
+};
+
+export function getLedgerAccountKindBadgeProps(account: {
+  type: AccountType;
+  equityAccountSubtype: EquityAccountSubtype | null;
+}): LedgerAccountKindBadgeProps {
+  const label = getTypeLabel(account.type, account.equityAccountSubtype);
+
+  if (account.type === AccountType.ASSET) {
+    return { label, color: "green", variant: "light" };
+  }
+  if (account.type === AccountType.LIABILITY) {
+    return { label, color: "red", variant: "light" };
+  }
+  if (account.equityAccountSubtype === EquityAccountSubtype.INCOME) {
+    return { label, color: "green", variant: "filled" };
+  }
+  if (account.equityAccountSubtype === EquityAccountSubtype.EXPENSE) {
+    return { label, color: "red", variant: "filled" };
+  }
+  if (
+    account.equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS ||
+    account.equityAccountSubtype === EquityAccountSubtype.OPENING_BALANCES
+  ) {
+    return { label, color: "yellow", variant: "light" };
+  }
+
+  return { label, color: "gray", variant: "light" };
+}
+
 export function getUnitLabel(account: {
   unit: Unit | null;
   currency: string | null;

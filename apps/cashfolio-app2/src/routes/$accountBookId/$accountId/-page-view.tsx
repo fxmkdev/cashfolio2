@@ -5,12 +5,11 @@ import {
   IconPencil,
   IconTrash,
 } from "@tabler/icons-react";
-import { Badge, Button, Group, Modal, Tooltip } from "@mantine/core";
+import { Badge, Button, Group, Modal, Title, Tooltip } from "@mantine/core";
 import type { AgGridReactProps } from "ag-grid-react";
 import { ConfirmArchiveModal } from "@/components/confirm-archive-modal";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 import { DataGrid } from "@/components/data-grid";
-import { AccountPathHeading } from "@/components/account-path-heading";
 import {
   EditAccountModal,
   type AccountInitialValues,
@@ -36,9 +35,11 @@ import { PageShell } from "@/components/page-shell";
 import type { ReactNode } from "react";
 import type { Unit } from "@/.prisma-client/enums";
 import type { AccountBookUnitUsage } from "@/shared/account-book-unit-usage";
-import { getTypeLabel } from "@/shared/account-utils";
 import type { TabValue } from "@/shared/account-tabs";
-import type { SimpleTransactionEditInitialValues } from "./-page-data";
+import {
+  getLedgerAccountKindBadgeProps,
+  type SimpleTransactionEditInitialValues,
+} from "./-page-data";
 import type { loadLedgerPageData } from "./-page-loader";
 import type { LedgerRow } from "./-page-types";
 
@@ -180,7 +181,6 @@ export type LedgerPageViewProps = {
 };
 
 export function LedgerPageView({
-  accountBookId,
   backTab,
   account,
   accountGroups,
@@ -256,27 +256,27 @@ export function LedgerPageView({
   onCloseDeleteModal,
   onConfirmDeleteTransaction,
 }: LedgerPageViewProps) {
+  const accountKindBadge = getLedgerAccountKindBadgeProps(account);
+
   return (
     <PageShell>
       <TopPageHeader
-        heading={
-          <AccountPathHeading
-            accountBookId={accountBookId}
-            tab={backTab}
-            mode={account.isActive ? "active" : "archived"}
-            extraSegments={[
-              getTypeLabel(account.type, account.equityAccountSubtype),
-              ...account.groupPathSegments,
-              account.name,
-            ]}
-          />
-        }
+        heading={<Title order={2}>{account.name}</Title>}
         headingAccessory={
-          unitLabel ? (
-            <Badge size="lg" color="gray">
-              {unitLabel}
+          <>
+            <Badge
+              size="lg"
+              color={accountKindBadge.color}
+              variant={accountKindBadge.variant}
+            >
+              {accountKindBadge.label}
             </Badge>
-          ) : undefined
+            {unitLabel ? (
+              <Badge size="lg" color="gray">
+                {unitLabel}
+              </Badge>
+            ) : null}
+          </>
         }
         actions={
           <Group gap="sm">
