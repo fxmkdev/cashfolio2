@@ -275,6 +275,11 @@ export function LedgerPageView({
                 {unitLabel}
               </Badge>
             ) : null}
+            {!account.isActive ? (
+              <Badge size="lg" color="gray">
+                Archived
+              </Badge>
+            ) : null}
           </>
         }
         actions={
