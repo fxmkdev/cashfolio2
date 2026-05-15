@@ -303,7 +303,84 @@ describe("getAccountsPageData", () => {
     getSecurityToCurrencyExchangeRate.mockResolvedValue(null);
   });
 
-  it("authorizes once, skips active-only page helpers for inactive state, and includes unit usage", async () => {
+  it("authorizes once and exposes archived group modal data for inactive state", async () => {
+    prisma.account.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: "archived-account",
+          name: "Archived Account",
+          groupId: "group-child",
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "archived-account",
+          name: "Archived Account",
+          groupId: "group-child",
+        },
+      ]);
+    prisma.accountGroup.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: "group-root",
+          name: "Root",
+          type: AccountType.ASSET,
+          equityAccountSubtype: null,
+          parentGroupId: null,
+          isActive: true,
+          sortOrder: 0,
+        },
+        {
+          id: "group-child",
+          name: "Archived Child",
+          type: AccountType.ASSET,
+          equityAccountSubtype: null,
+          parentGroupId: "group-root",
+          isActive: false,
+          sortOrder: 1,
+        },
+        {
+          id: "group-active-sibling",
+          name: "Active Sibling",
+          type: AccountType.ASSET,
+          equityAccountSubtype: null,
+          parentGroupId: "group-root",
+          isActive: true,
+          sortOrder: 2,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "group-root",
+          name: "Root",
+          type: AccountType.ASSET,
+          equityAccountSubtype: null,
+          parentGroupId: null,
+          isActive: true,
+          sortOrder: 0,
+        },
+        {
+          id: "group-child",
+          name: "Archived Child",
+          type: AccountType.ASSET,
+          equityAccountSubtype: null,
+          parentGroupId: "group-root",
+          isActive: false,
+          sortOrder: 1,
+        },
+        {
+          id: "group-active-sibling",
+          name: "Active Sibling",
+          type: AccountType.ASSET,
+          equityAccountSubtype: null,
+          parentGroupId: "group-root",
+          isActive: true,
+          sortOrder: 2,
+        },
+      ]);
+
     const result = await getAccountsPageData({
       data: {
         accountBookId: "book-3",
@@ -313,11 +390,33 @@ describe("getAccountsPageData", () => {
 
     expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledTimes(1);
     expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-3");
-    expect(prisma.account.findMany).toHaveBeenCalledTimes(1);
-    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
-    expect(result).toEqual({
-      accountGroups: [],
-      existingNodes: [],
+    expect(prisma.account.findMany).toHaveBeenCalledTimes(3);
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(3);
+    expect(result.accountGroups.map((group) => group.value)).toEqual([
+      "group-root",
+      "group-child",
+    ]);
+    expect(result.existingNodes).toEqual([
+      {
+        id: "archived-account",
+        name: "Archived Account",
+        nodeType: "account",
+        groupId: "group-child",
+      },
+      {
+        id: "group-root",
+        name: "Root",
+        nodeType: "accountGroup",
+        parentId: undefined,
+      },
+      {
+        id: "group-child",
+        name: "Archived Child",
+        nodeType: "accountGroup",
+        parentId: "group-root",
+      },
+    ]);
+    expect(result).toMatchObject({
       referenceCurrency: "CHF",
       unitUsage: { currencies: ["CHF"], cryptocurrencies: [] },
       rows: [],

@@ -150,30 +150,6 @@ submit UX and prevent duplicate requests.
   controls that need attached button segments without the primary/menu action
   shape.
 
-## Breadcrumbs Pattern
-
-- Use `getAccountsBreadcrumbSegments`
-  (`src/components/accounts-breadcrumb-segments.tsx`) for the shared leading
-  segments on account routes.
-- Prefer `AccountPathHeading` (`src/components/account-path-heading.tsx`) when
-  rendering account-route headings so breadcrumb typography stays aligned with
-  `h2` titles.
-- Use `LinkAnchor` for breadcrumb links; do not compose Mantine `Anchor` with
-  router `Link` manually.
-- Keep breadcrumb typography consistent by setting heading styles on
-  `<Breadcrumbs ...>` and inheriting in children (`fz="inherit"`,
-  `fw="inherit"`, `lh="inherit"`).
-- Accounts page (`src/routes/$accountBookId/accounts.tsx`) shows a plain
-  `<Title order={2}>Accounts</Title>` in active mode and breadcrumbs in archived
-  mode.
-- Archived accounts header renders `Accounts / Archive` with
-  `archiveIsLink={false}` so the current segment is text, not a self-link.
-- Ledger page (`src/routes/$accountBookId/$accountId.tsx`) renders: `Accounts`
-  (and `Archive` when the account is archived), then account type, group path
-  segments, then account name.
-- Breadcrumb links should point to `/$accountBookId/accounts` and preserve the
-  current `tab` and desired `mode` in route search params.
-
 ## Period Breakdown Drill-Down Pattern
 
 - Period route (`src/routes/$accountBookId/period/route.tsx`) supports

@@ -22,9 +22,11 @@ function createActions(args: {
   state: unknown;
   api: unknown;
   invalidate: () => void;
+  createGroupIsActive?: boolean;
 }) {
   return createAccountsMutationActions({
     accountBookId: "book-1",
+    createGroupIsActive: args.createGroupIsActive,
     invalidate: args.invalidate,
     state: args.state as Parameters<
       typeof createAccountsMutationActions
@@ -115,6 +117,117 @@ describe("createAccountsMutationActions", () => {
       },
     });
     expect(state.setCreateModalOpened).toHaveBeenCalledWith(false);
+    expect(invalidate).toHaveBeenCalledOnce();
+  });
+
+  test("creates an active group by default", async () => {
+    const invalidate = vi.fn();
+    const state = {
+      getEditingAccount: () => undefined,
+      getEditingGroup: () => undefined,
+      getDeletingRow: () => undefined,
+      getArchivingRow: () => undefined,
+      setCreateModalOpened: vi.fn(),
+      setEditModalOpen: vi.fn(),
+      setCreateGroupModalOpened: vi.fn(),
+      setEditGroupModalOpen: vi.fn(),
+      setDeletingRow: vi.fn(),
+      setArchivingRow: vi.fn(),
+    };
+    const api = {
+      createAccount: vi.fn().mockResolvedValue(undefined),
+      updateAccount: vi.fn().mockResolvedValue(undefined),
+      createAccountGroup: vi.fn().mockResolvedValue(undefined),
+      updateAccountGroup: vi.fn().mockResolvedValue(undefined),
+      deleteAccount: vi.fn().mockResolvedValue(undefined),
+      deleteAccountGroup: vi.fn().mockResolvedValue(undefined),
+      archiveAccount: vi.fn().mockResolvedValue(undefined),
+      archiveAccountGroup: vi.fn().mockResolvedValue(undefined),
+      unarchiveAccount: vi.fn().mockResolvedValue(undefined),
+      unarchiveAccountGroup: vi.fn().mockResolvedValue(undefined),
+      reorderAccountTreeItems: vi.fn().mockResolvedValue(undefined),
+    };
+    const actions = createActions({ invalidate, state, api });
+
+    await actions.handleCreateGroup({
+      name: "Bank",
+      typeDescriptor: "ASSET",
+      type: AccountType.ASSET,
+      equityAccountSubtype: undefined,
+      parentGroupId: undefined,
+      sortOrder: 0,
+    });
+
+    expect(api.createAccountGroup).toHaveBeenCalledWith({
+      data: {
+        accountBookId: "book-1",
+        name: "Bank",
+        type: AccountType.ASSET,
+        equityAccountSubtype: undefined,
+        parentGroupId: undefined,
+        sortOrder: 0,
+        isActive: true,
+      },
+    });
+    expect(state.setCreateGroupModalOpened).toHaveBeenCalledWith(false);
+    expect(invalidate).toHaveBeenCalledOnce();
+  });
+
+  test("creates an archived group when configured for archived mode", async () => {
+    const invalidate = vi.fn();
+    const state = {
+      getEditingAccount: () => undefined,
+      getEditingGroup: () => undefined,
+      getDeletingRow: () => undefined,
+      getArchivingRow: () => undefined,
+      setCreateModalOpened: vi.fn(),
+      setEditModalOpen: vi.fn(),
+      setCreateGroupModalOpened: vi.fn(),
+      setEditGroupModalOpen: vi.fn(),
+      setDeletingRow: vi.fn(),
+      setArchivingRow: vi.fn(),
+    };
+    const api = {
+      createAccount: vi.fn().mockResolvedValue(undefined),
+      updateAccount: vi.fn().mockResolvedValue(undefined),
+      createAccountGroup: vi.fn().mockResolvedValue(undefined),
+      updateAccountGroup: vi.fn().mockResolvedValue(undefined),
+      deleteAccount: vi.fn().mockResolvedValue(undefined),
+      deleteAccountGroup: vi.fn().mockResolvedValue(undefined),
+      archiveAccount: vi.fn().mockResolvedValue(undefined),
+      archiveAccountGroup: vi.fn().mockResolvedValue(undefined),
+      unarchiveAccount: vi.fn().mockResolvedValue(undefined),
+      unarchiveAccountGroup: vi.fn().mockResolvedValue(undefined),
+      reorderAccountTreeItems: vi.fn().mockResolvedValue(undefined),
+    };
+    const actions = createActions({
+      invalidate,
+      state,
+      api,
+      createGroupIsActive: false,
+    });
+
+    await actions.handleCreateGroup({
+      name: "Old Banks",
+      typeDescriptor: "ASSET",
+      type: AccountType.ASSET,
+      equityAccountSubtype: undefined,
+      parentGroupId: "archived-parent",
+      sortOrder: 1,
+    });
+
+    expect(api.createAccountGroup).toHaveBeenCalledWith({
+      data: {
+        accountBookId: "book-1",
+        name: "Old Banks",
+        type: AccountType.ASSET,
+        equityAccountSubtype: undefined,
+        parentGroupId: "archived-parent",
+        sortOrder: 1,
+        isActive: false,
+      },
+    });
+    expect(state.setCreateGroupModalOpened).toHaveBeenCalledWith(false);
     expect(invalidate).toHaveBeenCalledOnce();
   });
 

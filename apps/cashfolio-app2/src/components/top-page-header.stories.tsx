@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Badge, Button, Group, Title } from "@mantine/core";
 import { IconBolt, IconListDetails } from "@tabler/icons-react";
-import { AccountPathHeading } from "./account-path-heading";
 import { TopPageHeader } from "./top-page-header";
 
 const meta = {
@@ -29,17 +28,10 @@ export const TitleHeading: Story = {
   ),
 };
 
-export const BreadcrumbWithAccessory: Story = {
+export const TitleWithAccessory: Story = {
   render: () => (
     <TopPageHeader
-      heading={
-        <AccountPathHeading
-          accountBookId="storybook-book"
-          tab="ASSET"
-          mode="active"
-          extraSegments={["Asset", "Cash", "neon", "neon"]}
-        />
-      }
+      heading={<Title order={2}>Cash</Title>}
       headingAccessory={
         <Badge size="lg" color="gray">
           CHF

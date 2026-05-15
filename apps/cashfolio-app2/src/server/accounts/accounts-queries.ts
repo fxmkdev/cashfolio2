@@ -52,17 +52,23 @@ export const getAccounts = createServerFn({ method: "GET" })
   });
 
 export const getAccountGroups = createServerFn({ method: "GET" })
-  .inputValidator((data: { accountBookId: string }) => data)
+  .inputValidator(
+    (data: { accountBookId: string; accountState?: "active" | "inactive" }) =>
+      data,
+  )
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
-    return queryAccountGroups(data.accountBookId);
+    return queryAccountGroups(data.accountBookId, data.accountState);
   });
 
 export const getExistingNodes = createServerFn({ method: "GET" })
-  .inputValidator((data: { accountBookId: string }) => data)
+  .inputValidator(
+    (data: { accountBookId: string; accountState?: "active" | "inactive" }) =>
+      data,
+  )
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
-    return queryExistingNodes(data.accountBookId);
+    return queryExistingNodes(data.accountBookId, data.accountState);
   });
 
 export const getActiveAccountBookUnitUsage = createServerFn({ method: "GET" })
