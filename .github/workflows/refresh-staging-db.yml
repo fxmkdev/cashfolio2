@@ -129,7 +129,7 @@ jobs:
         id: reset-neon
         uses: neondatabase/reset-branch-action@v1
         with:
-          project_id: ${{ vars.NEON_PROJECT_ID }}
+          project_id: ${{ vars.NEON_STAGING_PROJECT_ID }}
           branch: ${{ vars.NEON_STAGING_BRANCH_ID }}
           parent: true
           api_key: ${{ secrets.NEON_API_KEY }}

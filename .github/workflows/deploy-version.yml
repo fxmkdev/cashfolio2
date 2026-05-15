@@ -89,9 +89,9 @@ jobs:
         id: neon
         uses: neondatabase/create-branch-action@v6
         with:
-          project_id: ${{ vars.NEON_PROJECT_ID }}
+          project_id: ${{ vars.NEON_STAGING_PROJECT_ID }}
           branch_name: ${{ inputs.neon_branch_name }}
-          parent_branch: ${{ vars.NEON_PROD_BRANCH_ID }}
+          parent_branch: ${{ vars.NEON_STAGING_BRANCH_ID }}
           database: ${{ vars.NEON_DATABASE_NAME || 'neondb' }}
           role: ${{ vars.NEON_ROLE_NAME || 'neondb_owner' }}
           api_key: ${{ secrets.NEON_API_KEY }}

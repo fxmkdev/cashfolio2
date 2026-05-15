@@ -11,7 +11,7 @@ times and skips the one that does not match the current Zurich UTC offset.
 
 Required GitHub Actions configuration:
 
-- `NEON_PROJECT_ID`
+- `NEON_STAGING_PROJECT_ID`
 - `NEON_STAGING_BRANCH_ID`
 - `NEON_API_KEY`
 - Existing staging Fly variables and secrets used by `deploy-version.yml`

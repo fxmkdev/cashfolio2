@@ -9,7 +9,7 @@ On pull requests (non-forks), CI now:
 
 1. Builds and pushes the `cashfolio-app2` image
 2. Creates or reuses a Neon branch named
-   `pr-<PR_NUMBER>-<BRANCH_TAIL_SLUG>-cashfolio-app2` from production using
+   `pr-<PR_NUMBER>-<BRANCH_TAIL_SLUG>-cashfolio-app2` from staging using
    `neondatabase/create-branch-action`
 3. Runs the shared Neon branch post-provision hook when the Neon branch was
    newly created
@@ -105,8 +105,8 @@ deployment.
 - `FLY_CPUS`
 - `LOGTO_ENDPOINT`
 - `LOGTO_APP_ID`
-- `NEON_PROJECT_ID`
-- `NEON_PROD_BRANCH_ID`
+- `NEON_STAGING_PROJECT_ID`
+- `NEON_STAGING_BRANCH_ID`
 - `NEON_DATABASE_NAME` (optional; defaults to `neondb`)
 - `NEON_ROLE_NAME` (optional; defaults to `neondb_owner`)
 - `FLY_ORG` (optional; only needed if app creation requires explicit org)
