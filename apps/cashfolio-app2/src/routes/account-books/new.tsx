@@ -17,8 +17,6 @@ import { useMemo, useState } from "react";
 import { currencies } from "@/currencies";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import { createAccountBook } from "@/server/account-books";
-import { getUserAccountBooks } from "@/server/home";
-import { getAuthenticatedUserProfile } from "@/server/user-profile";
 import { normalizeDateInputValue, startOfUtcDay } from "@/shared/date";
 import { invalidateCachedUserAccountBooks } from "../$accountBookId/-account-book-options-loader";
 import {
@@ -35,6 +33,12 @@ type NewAccountBookFormValues = {
 export const Route = createFileRoute("/account-books/new")({
   validateSearch: parseNewAccountBookSearch,
   loader: async () => {
+    const [{ getUserAccountBooks }, { getAuthenticatedUserProfile }] =
+      await Promise.all([
+        import("@/server/home"),
+        import("@/server/user-profile"),
+      ]);
+
     const [accountBooks, userProfile] = await Promise.all([
       getUserAccountBooks(),
       getAuthenticatedUserProfile(),

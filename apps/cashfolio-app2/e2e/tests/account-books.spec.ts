@@ -54,7 +54,10 @@ test("redirects users without account books to account-book creation", async ({
   await expect(
     page.getByRole("heading", { name: "Create Account Book" }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Sign Out" })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Open user menu, current: E2E User" })
+    .click();
+  await expect(page.getByRole("menuitem", { name: "Sign Out" })).toBeVisible();
   await expect(await getUserAccountBooks(externalId)).toHaveLength(0);
 });
 
@@ -101,7 +104,10 @@ test("creates a new empty account book and makes it available in navigation", as
   ).toBeVisible();
   await page.getByRole("menuitem", { name: "Create New" }).click();
 
-  await expect(page).toHaveURL(/\/account-books\/new$/);
+  await expect(page).toHaveURL(/\/account-books\/new\?returnTo=/);
+  await expect(
+    page.getByRole("link", { name: `Back to ${firstAccountBookName}` }),
+  ).toHaveAttribute("href", new RegExp(`/${firstAccountBookId}/accounts\\?`));
   await page.getByLabel("Account Book Name").fill(secondAccountBookName);
   await page.getByRole("button", { name: "Create" }).click();
 
@@ -174,6 +180,9 @@ test("deletes an account book after typed-name confirmation and redirects to cre
   await expect(page).toHaveURL(/\/account-books\/new$/);
   await expect(
     page.getByRole("heading", { name: "Create Account Book" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Open user menu, current: E2E User" }),
   ).toBeVisible();
   await expect(await getUserAccountBooks(externalId)).toHaveLength(0);
 });
