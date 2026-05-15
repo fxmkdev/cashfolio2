@@ -150,9 +150,9 @@ test("period allocation table account drilldown opens ledger with selected perio
   expect(new URL(page.url()).pathname).not.toBe(
     `/${seeded.accountBookId}/period`,
   );
-  await expect(
-    page.getByText("Showing entries for January 2026"),
-  ).toBeVisible();
+  await expect(page.getByTestId("period-picker-trigger")).toContainText(
+    "January 2026",
+  );
   await expect(
     page.getByText("E2E Convertible Asset Balances Seed"),
   ).toBeVisible();
@@ -257,8 +257,8 @@ test("period explicit gains/losses rows drill to gain/loss ledger", async ({
       `/${seeded.accountBookId}/${explicitSeed.gainLossAccountId}\\?period=${period}$`,
     ),
   );
-  await expect(
-    page.getByText("Showing entries for January 2026"),
-  ).toBeVisible();
+  await expect(page.getByTestId("period-picker-trigger")).toContainText(
+    "January 2026",
+  );
   await expect(page.getByText("E2E Explicit Gain/Loss Seed")).toBeVisible();
 });

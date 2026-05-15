@@ -1,0 +1,28 @@
+.trigger {
+  inline-size: clamp(8.5rem, 16vw, 12rem);
+  min-inline-size: 0;
+}
+
+.trigger :global(.mantine-Button-inner) {
+  width: 100%;
+  min-width: 0;
+}
+
+.trigger :global(.mantine-Button-label) {
+  min-width: 0;
+}
+
+.triggerContent {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.triggerLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

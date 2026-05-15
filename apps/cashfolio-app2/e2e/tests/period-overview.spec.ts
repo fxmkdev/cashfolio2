@@ -169,7 +169,9 @@ test("period breakdown account leaf drilldown opens ledger with period filter", 
       path: `/${seeded.accountBookId}/${seeded.expenseAccount.id}`,
       period,
     });
-  await expect(page.getByText("Showing entries for April 2026")).toBeVisible();
+  await expect(page.getByTestId("period-picker-trigger")).toContainText(
+    "April 2026",
+  );
   await expect(agGridRowByText(page, seedDescription)).toBeVisible();
 });
 
@@ -346,11 +348,6 @@ test("period previous/next controls update the period query parameter", async ({
 
   await page.goto(`/${seeded.accountBookId}/period?period=2026-04`);
   await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
-
-  const periodModeControl = page.getByRole("radiogroup", {
-    name: "Period Mode",
-  });
-  await selectSegmentedControlOption(periodModeControl, "Month");
 
   const periodPickerTrigger = page.getByTestId("period-picker-trigger");
   await expect(periodPickerTrigger).toContainText("April 2026");

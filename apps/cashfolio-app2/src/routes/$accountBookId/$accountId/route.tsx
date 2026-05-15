@@ -1,5 +1,12 @@
 import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useTransactionScroll } from "@/hooks/use-transaction-scroll";
 import { formatMonthPeriodValue } from "@/shared/period";
 import {
@@ -17,7 +24,7 @@ import {
   loadLedgerPageData,
 } from "./-page-loader";
 import { useLedgerPageController } from "./-page-controller";
-import { LedgerPeriodFilterCard } from "../-period-filter-card";
+import { PeriodFilterAction } from "../-period-filter-action";
 import {
   parseLedgerExplicitPeriod,
   parseLedgerSearch,
@@ -119,15 +126,18 @@ export function LedgerPageContent() {
     }
     setUnfilteredPeriodMode(selectedPeriod.granularity);
   }, [selectedPeriod]);
-  const setPeriodFilter = (nextPeriodValue: string | undefined) => {
-    navigate({
-      search: (previousSearch) => ({
-        ...previousSearch,
-        period: nextPeriodValue,
-        transactionId: undefined,
-      }),
-    });
-  };
+  const setPeriodFilter = useCallback(
+    (nextPeriodValue: string | undefined) => {
+      navigate({
+        search: (previousSearch) => ({
+          ...previousSearch,
+          period: nextPeriodValue,
+          transactionId: undefined,
+        }),
+      });
+    },
+    [navigate],
+  );
   useEffect(() => {
     if (!isPeriodFilterAvailable || !period || !rawSelectedPeriod) {
       return;
@@ -183,8 +193,7 @@ export function LedgerPageContent() {
         {...viewProps}
         periodFilterControls={
           isPeriodFilterAvailable ? (
-            <LedgerPeriodFilterCard
-              hasPeriodFilter={hasPeriodFilter}
+            <PeriodFilterAction
               periodMode={periodMode}
               selectedPeriodLabel={selectedPeriod?.label ?? "All Periods"}
               pickerOpened={pickerOpened}
@@ -202,7 +211,6 @@ export function LedgerPageContent() {
                   return;
                 }
 
-                setPickerOpened(false);
                 const nextPeriodValue = getPeriodModeChangeValue({
                   nextMode: nextPeriodMode,
                   periodMode,
@@ -270,6 +278,7 @@ export function LedgerPageContent() {
                 setPeriodFilter(nextPeriodValue);
                 setPickerOpened(false);
               }}
+              clearFilterDisabled={!hasPeriodFilter}
               onClearFilter={() => {
                 setPickerOpened(false);
                 setPeriodFilter(undefined);

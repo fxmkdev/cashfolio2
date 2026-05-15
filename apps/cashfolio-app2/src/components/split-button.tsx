@@ -6,7 +6,13 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { IconChevronDown } from "@tabler/icons-react";
-import { Fragment, type ReactNode } from "react";
+import { Fragment, type ComponentPropsWithoutRef, type ReactNode } from "react";
+
+export function SplitButtonGroup(
+  props: ComponentPropsWithoutRef<typeof Button.Group>,
+) {
+  return <Button.Group {...props} />;
+}
 
 export type SplitButtonMenuItem = {
   key: string;
@@ -36,7 +42,7 @@ export function SplitButton({
   primaryDisabled?: boolean;
 }) {
   return (
-    <Button.Group>
+    <SplitButtonGroup>
       <Button
         variant={variant}
         leftSection={leftSection}
@@ -81,6 +87,6 @@ export function SplitButton({
           })}
         </Menu.Dropdown>
       </Menu>
-    </Button.Group>
+    </SplitButtonGroup>
   );
 }

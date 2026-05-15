@@ -280,6 +280,7 @@ export function LedgerPageView({
         }
         actions={
           <Group gap="sm">
+            {periodFilterControls}
             <Tooltip
               label={accountEditDisabledReason ?? "Edit account"}
               disabled={!accountEditDisabledReason}
@@ -344,8 +345,6 @@ export function LedgerPageView({
           </Group>
         }
       />
-
-      {periodFilterControls}
 
       <DataGrid
         containerStyle={{ flex: 1, minHeight: 0 }}

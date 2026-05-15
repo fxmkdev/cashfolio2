@@ -146,6 +146,9 @@ submit UX and prevent duplicate requests.
   commands in the menu.
 - Disabled menu items should remain visible with the normal action label; show
   the disabled-reason copy in a tooltip.
+- Use `SplitButtonGroup` from the same module for compact multi-part page
+  controls that need attached button segments without the primary/menu action
+  shape.
 
 ## Breadcrumbs Pattern
 

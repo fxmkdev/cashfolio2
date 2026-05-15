@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Box, Text } from "@mantine/core";
 import { useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import { expect, fn, userEvent, within } from "storybook/test";
+import { expect, fn, screen, userEvent, within } from "storybook/test";
 import { formatMonthPeriodValue } from "@/shared/period";
 import { DEFAULT_PERIOD_VALUE } from "./-page-types";
 import { PeriodPageView } from "./-page-view";
@@ -123,17 +123,21 @@ export const ZeroIncomeSavingsRate: Story = {
   },
 };
 
-export const TopSectionLayoutSmoke: Story = {
+export const HeaderActionLayoutSmoke: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const topSection = await canvas.findByTestId("period-top-section");
-    await expect(topSection).toBeInTheDocument();
+    await expect(canvas.queryByTestId("period-top-section")).toBeNull();
     await expect(
-      within(topSection).getByTestId("period-picker-trigger"),
+      canvas.getByTestId("period-picker-trigger"),
     ).toBeInTheDocument();
+    const analysisSection = await canvas.findByTestId(
+      "period-analysis-section",
+    );
     await expect(
-      within(topSection).queryByRole("heading", { name: "Expenses Breakdown" }),
-    ).not.toBeInTheDocument();
+      within(analysisSection).getByRole("heading", {
+        name: "Expenses Breakdown",
+      }),
+    ).toBeInTheDocument();
   },
 };
 
@@ -195,7 +199,9 @@ export const RouteSmoke: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    const yearModeOption = await canvas.findByRole("radio", { name: "Year" });
+    await userEvent.click(canvas.getByTestId("period-picker-trigger"));
+
+    const yearModeOption = await screen.findByRole("radio", { name: "Year" });
     await userEvent.click(yearModeOption);
     await expect(canvas.getByTestId("selected-period")).toHaveTextContent(
       "2026",
@@ -212,7 +218,7 @@ export const RouteSmoke: Story = {
     );
 
     await userEvent.click(canvas.getByTestId("period-picker-trigger"));
-    const yearPicker = await canvas.findByTestId("period-year-picker");
+    const yearPicker = await screen.findByTestId("period-year-picker");
     await userEvent.click(
       within(yearPicker).getByRole("button", { name: "2024" }),
     );
@@ -220,14 +226,17 @@ export const RouteSmoke: Story = {
       "2024",
     );
 
-    const monthModeOption = await canvas.findByRole("radio", { name: "Month" });
+    await userEvent.click(canvas.getByTestId("period-picker-trigger"));
+
+    const monthModeOption = await screen.findByRole("radio", {
+      name: "Month",
+    });
     await userEvent.click(monthModeOption);
     await expect(canvas.getByTestId("selected-period")).toHaveTextContent(
       "2024-12",
     );
 
-    await userEvent.click(canvas.getByTestId("period-picker-trigger"));
-    const monthPicker = await canvas.findByTestId("period-month-picker");
+    const monthPicker = await screen.findByTestId("period-month-picker");
     await userEvent.click(
       within(monthPicker).getByRole("button", { name: /Nov/i }),
     );
