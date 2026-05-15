@@ -13,7 +13,7 @@ import { type UseFormReturnType, useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { type FormEvent, useEffect, useState } from "react";
 import { IconAlertTriangle, IconCheck, IconTrash } from "@tabler/icons-react";
-import { PageShell } from "@/components/page-shell";
+import { NarrowPageShell } from "@/components/narrow-page-shell";
 import { TopPageHeader } from "@/components/top-page-header";
 import { CurrencySelect } from "@/components/unit-select";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
@@ -299,7 +299,7 @@ export function AccountBookSettingsPageView(args: {
   }, [settings]);
 
   return (
-    <PageShell>
+    <NarrowPageShell>
       <TopPageHeader heading={<Title order={2}>Account Book Settings</Title>} />
 
       <form
@@ -345,6 +345,6 @@ export function AccountBookSettingsPageView(args: {
         onClose={() => setDeleteModalOpened(false)}
         onConfirm={args.onDelete}
       />
-    </PageShell>
+    </NarrowPageShell>
   );
 }

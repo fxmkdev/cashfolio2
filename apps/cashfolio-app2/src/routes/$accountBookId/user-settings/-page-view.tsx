@@ -11,7 +11,7 @@ import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { IconCheck } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
-import { PageShell } from "@/components/page-shell";
+import { NarrowPageShell } from "@/components/narrow-page-shell";
 import { TopPageHeader } from "@/components/top-page-header";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import type { loadUserSettingsPageData } from "./-page-loader";
@@ -92,7 +92,7 @@ export function UserSettingsPageView(args: {
   const avatarUrl = form.values.avatarUrl.trim();
 
   return (
-    <PageShell>
+    <NarrowPageShell>
       <TopPageHeader heading={<Title order={2}>User Settings</Title>} />
 
       <form
@@ -158,6 +158,6 @@ export function UserSettingsPageView(args: {
           </Group>
         </Stack>
       </form>
-    </PageShell>
+    </NarrowPageShell>
   );
 }
