@@ -44,8 +44,8 @@ paths are relative to that app directory.
 
 **Auth / multi-tenancy models:**
 
-- `User` — identified by `externalId`; has `accountBookLinks`, roles, and
-  timestamps
+- `User` — identified by `externalId`; has the app-owned `locale`,
+  `accountBookLinks`, roles, and timestamps
 - `UserAccountBookLink` — composite key `(userId, accountBookId)`; grants a user
   access to an account book
 

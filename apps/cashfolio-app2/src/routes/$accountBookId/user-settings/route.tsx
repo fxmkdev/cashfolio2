@@ -30,6 +30,7 @@ function UserSettingsPage() {
             data: {
               name: values.name,
               avatarUrl: values.avatarUrl,
+              locale: values.locale,
             },
           });
           await router.invalidate();

@@ -15,6 +15,7 @@ describe("UserSettingsPageView", () => {
             name: "Ada Lovelace",
             avatarUrl: "https://example.test/ada.png",
             initials: "AL",
+            locale: "de-CH",
           },
           onSubmit: vi.fn(),
         }),
@@ -26,6 +27,8 @@ describe("UserSettingsPageView", () => {
     expect(markup).not.toContain("https://tenant.logto.app/account/security");
     expect(markup).toContain("Name");
     expect(markup).toContain("Avatar URL");
+    expect(markup).toContain("Locale");
+    expect(markup).toContain("German (Switzerland)");
     expect(markup).toContain('value="Ada Lovelace"');
     expect(markup).toContain('value="https://example.test/ada.png"');
     expect(markup).toContain('src="https://example.test/ada.png"');

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { ensureAuthenticated } from "@/auth/functions.server";
 import {
   fetchLogtoAccountApi,
@@ -9,12 +10,20 @@ import {
   type AuthenticatedUserProfile,
 } from "@/auth/user-profile";
 import { ensureSameOriginRequestFromServerContext } from "@/security/same-origin.server";
+import {
+  resolveSupportedUserLocale,
+  resolveUserLocaleFromAcceptLanguage,
+  type UserLocale,
+} from "@/user-locale";
+import { ensureUser } from "@/users/functions.server";
+import { prisma } from "@/prisma.server";
 import { assertRecord } from "./input-validation";
 
 export type AuthenticatedUserSettings = {
   name: string;
   avatarUrl: string;
   initials: string;
+  locale: UserLocale;
 };
 
 type LogtoAccountResponse = {
@@ -28,10 +37,12 @@ type LogtoAccountResponse = {
 type NormalizedUserSettingsInput = {
   name: string | null;
   avatarUrl: string | null;
+  locale: UserLocale;
 };
 
 const fieldLabels = {
   avatarUrl: "Avatar URL",
+  locale: "Locale",
   name: "Name",
 } as const;
 
@@ -84,6 +95,21 @@ function readOptionalTextField(
   return normalized.length > 0 ? normalized : null;
 }
 
+function readLocaleField(data: Record<string, unknown>): UserLocale {
+  const value = data.locale;
+  if (typeof value !== "string") {
+    throw new Error(`${fieldLabels.locale} must be a string.`);
+  }
+
+  const normalized = value.trim();
+  const locale = resolveSupportedUserLocale(normalized);
+  if (!locale) {
+    throw new Error(`${fieldLabels.locale} must be a supported locale.`);
+  }
+
+  return locale;
+}
+
 export function normalizeUserSettingsInput(
   value: unknown,
 ): NormalizedUserSettingsInput {
@@ -111,7 +137,22 @@ export function normalizeUserSettingsInput(
     }
   }
 
-  return { name, avatarUrl };
+  return { name, avatarUrl, locale: readLocaleField(value) };
+}
+
+function resolveAuthenticatedUserSettingsLocale(
+  locale: string | null | undefined,
+): UserLocale {
+  if (locale) {
+    const supportedLocale = resolveSupportedUserLocale(locale);
+    if (supportedLocale) {
+      return supportedLocale;
+    }
+  }
+
+  return resolveUserLocaleFromAcceptLanguage(
+    getRequest().headers.get("accept-language"),
+  );
 }
 
 async function readJsonResponse(response: Response): Promise<unknown> {
@@ -218,7 +259,7 @@ export const getUserAccountSecurityUrl = createServerFn({
 export const getAuthenticatedUserSettings = createServerFn({
   method: "GET",
 }).handler(async (): Promise<AuthenticatedUserSettings> => {
-  await ensureAuthenticated();
+  const user = await ensureUser();
   const account = await fetchAuthenticatedLogtoAccount();
   const profile = resolveSettingsProfileFromLogtoAccount(account);
 
@@ -226,6 +267,7 @@ export const getAuthenticatedUserSettings = createServerFn({
     name: account.name ?? "",
     avatarUrl: account.avatar ?? "",
     initials: profile.initials,
+    locale: resolveAuthenticatedUserSettingsLocale(user.locale),
   };
 });
 
@@ -235,7 +277,7 @@ export const updateAuthenticatedUserSettings = createServerFn({
   .inputValidator(normalizeUserSettingsInput)
   .handler(async ({ data }): Promise<AuthenticatedUserSettings> => {
     ensureSameOriginRequestFromServerContext();
-    await ensureAuthenticated();
+    const user = await ensureUser();
 
     const response = await fetchLogtoAccountApiSafely("/api/my-account", {
       method: "PATCH",
@@ -249,6 +291,11 @@ export const updateAuthenticatedUserSettings = createServerFn({
     });
     await assertLogtoAccountApiOk(response, "Failed to save user settings.");
 
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { locale: data.locale },
+    });
+
     const account = readLogtoAccountResponse(await readJsonResponse(response));
     const profile = resolveSettingsProfileFromLogtoAccount(account);
 
@@ -256,5 +303,6 @@ export const updateAuthenticatedUserSettings = createServerFn({
       name: account.name ?? "",
       avatarUrl: account.avatar ?? "",
       initials: profile.initials,
+      locale: data.locale,
     };
   });
