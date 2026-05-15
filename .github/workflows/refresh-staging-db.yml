@@ -125,10 +125,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-      - name: Set up flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@master
-        with:
-          version: ${{ env.FLYCTL_VERSION }}
       - name: Reset Neon staging branch from production
         id: reset-neon
         uses: neondatabase/reset-branch-action@v1
@@ -157,24 +153,6 @@ jobs:
         run: sh apps/cashfolio-app2/scripts/staging-db-post-refresh.sh
         env:
           DATABASE_URL: ${{ steps.reset-neon.outputs.db_url }}
-      - name: Stage refreshed DATABASE_URL on Fly
-        shell: bash
-        env:
-          DATABASE_URL: ${{ steps.reset-neon.outputs.db_url }}
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          FLY_APP: ${{ vars.FLY_APP }}
-        run: |
-          set -euo pipefail
-
-          if [ -z "$DATABASE_URL" ]; then
-            echo "Neon reset did not return a DATABASE_URL."
-            exit 1
-          fi
-
-          flyctl secrets set \
-            --app "$FLY_APP" \
-            --stage \
-            DATABASE_URL="$DATABASE_URL"
 
   deploy-staging:
     name: Deploy staging

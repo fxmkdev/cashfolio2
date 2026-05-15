@@ -1,9 +1,9 @@
 # Staging database refresh
 
 The `Refresh staging database` GitHub Actions workflow resets the long-lived
-staging Neon branch from its production parent, runs a post-refresh hook, stages
-the refreshed `DATABASE_URL` on the staging Fly app, and redeploys staging. The
-redeploy runs the existing Fly release command, which applies Prisma migrations.
+staging Neon branch from its production parent, runs a post-refresh hook, and
+redeploys staging. The redeploy runs the existing Fly release command, which
+applies Prisma migrations.
 
 The workflow is manually triggerable and also runs daily at 03:30 Europe/Zurich.
 Because GitHub schedules are UTC-only, the workflow schedules both possible UTC
