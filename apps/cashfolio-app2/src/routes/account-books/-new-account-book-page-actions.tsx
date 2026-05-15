@@ -1,6 +1,7 @@
-import { ActionIcon, Avatar, Button, Menu, Tooltip } from "@mantine/core";
+import { ActionIcon, Avatar, Menu, Tooltip } from "@mantine/core";
 import { IconArrowLeft, IconLogout2 } from "@tabler/icons-react";
 import type { AuthenticatedUserProfile } from "@/auth/user-profile";
+import { LinkButton } from "@/components/link-button";
 import type { UserAccountBookOption } from "@/server/home";
 
 export type NewAccountBookReturnTarget = {
@@ -51,14 +52,13 @@ export function NewAccountBookPageActions({
 }) {
   if (returnTarget) {
     return (
-      <Button
-        component="a"
-        href={returnTarget.href}
+      <LinkButton
         leftSection={<IconArrowLeft size={16} />}
+        to={returnTarget.href}
         variant="default"
       >
         Back to {returnTarget.accountBookName}
-      </Button>
+      </LinkButton>
     );
   }
 

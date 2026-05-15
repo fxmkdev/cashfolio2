@@ -1,12 +1,25 @@
 import { MantineProvider, Menu } from "@mantine/core";
-import { createElement } from "react";
+import { createElement, forwardRef } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   NewAccountBookPageActions,
   NewAccountBookSignOutMenuItem,
   resolveNewAccountBookReturnTarget,
 } from "./-new-account-book-page-actions";
+
+vi.mock("@/components/link-button", () => ({
+  LinkButton: forwardRef<HTMLAnchorElement, { to: string }>(
+    function MockLinkButton({ to, ...props }, ref) {
+      return createElement("a", {
+        ...props,
+        ref,
+        href: to,
+        "data-router-link": "true",
+      });
+    },
+  ),
+}));
 
 const accountBooks = [
   { id: "storybook-book", name: "Storybook Book" },
@@ -120,6 +133,7 @@ describe("NewAccountBookPageActions", () => {
     );
 
     expect(markup).toContain('href="/storybook-book/activity?period=2026-01"');
+    expect(markup).toContain('data-router-link="true"');
     expect(markup).toContain("Back to Storybook Book");
     expect(markup).not.toContain('action="/api/logto/sign-out"');
   });
