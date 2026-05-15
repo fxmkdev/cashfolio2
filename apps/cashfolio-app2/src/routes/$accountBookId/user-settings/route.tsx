@@ -1,17 +1,40 @@
-import { Text, Title } from "@mantine/core";
-import { createFileRoute } from "@tanstack/react-router";
-import { PageShell } from "@/components/page-shell";
-import { TopPageHeader } from "@/components/top-page-header";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { Suspense, lazy } from "react";
+
+const UserSettingsPageView = lazy(async () => {
+  const module = await import("./-page-view");
+  return { default: module.UserSettingsPageView };
+});
 
 export const Route = createFileRoute("/$accountBookId/user-settings")({
+  loader: async () => {
+    // Keep Account API server functions out of the initial client bundle.
+    const { loadUserSettingsPageData } = await import("./-page-loader");
+    return loadUserSettingsPageData();
+  },
   component: UserSettingsPage,
 });
 
 function UserSettingsPage() {
+  const settings = Route.useLoaderData();
+  const router = useRouter();
+
   return (
-    <PageShell>
-      <TopPageHeader heading={<Title order={2}>User Settings</Title>} />
-      <Text c="dimmed">User settings will be available here soon.</Text>
-    </PageShell>
+    <Suspense fallback={null}>
+      <UserSettingsPageView
+        settings={settings}
+        onSubmit={async (values) => {
+          const { updateAuthenticatedUserSettings } =
+            await import("@/server/user-profile");
+          await updateAuthenticatedUserSettings({
+            data: {
+              name: values.name,
+              avatarUrl: values.avatarUrl,
+            },
+          });
+          await router.invalidate();
+        }}
+      />
+    </Suspense>
   );
 }

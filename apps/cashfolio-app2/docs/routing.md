@@ -57,8 +57,9 @@ Related docs:
 - `$accountBookId/account-book-settings/route.tsx` - account-book settings page
   for editing account book name, reference currency, and start date, plus a
   danger-zone delete flow that requires typing the current account-book name
-- `$accountBookId/user-settings/route.tsx` - placeholder user settings page
-  reached from the user menu while user-account management is built out
+- `$accountBookId/user-settings/route.tsx` - user settings page for editing
+  Logto-backed name and avatar URL. The Logto Account Security link lives in the
+  shell user menu.
 - `$accountBookId/period/route.tsx` - period layout route with shared period
   search validation and loader data used by nested period pages
 - `$accountBookId/period/index.tsx` - period overview page with contribution,
