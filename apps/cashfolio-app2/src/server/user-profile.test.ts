@@ -229,7 +229,9 @@ describe("user profile server functions", () => {
   });
 
   it("asks users to sign in again when Account API access cannot be minted", async () => {
-    fetchLogtoAccountApi.mockRejectedValueOnce(new Error("missing scope"));
+    fetchLogtoAccountApi.mockRejectedValueOnce(
+      Object.assign(new Error("Invalid scope."), { code: "invalid_scope" }),
+    );
 
     await expect(getAuthenticatedUserSettings()).rejects.toThrow(
       "Account settings need a fresh sign-in before they can be loaded. Please sign out and sign in again.",
@@ -237,7 +239,11 @@ describe("user profile server functions", () => {
   });
 
   it("asks users to sign in again when Account API update access cannot be minted", async () => {
-    fetchLogtoAccountApi.mockRejectedValueOnce(new Error("missing scope"));
+    fetchLogtoAccountApi.mockRejectedValueOnce(
+      Object.assign(new Error("Not authenticated."), {
+        code: "not_authenticated",
+      }),
+    );
 
     await expect(
       updateAuthenticatedUserSettings({
@@ -249,6 +255,29 @@ describe("user profile server functions", () => {
     ).rejects.toThrow(
       "Account settings need a fresh sign-in before they can be loaded. Please sign out and sign in again.",
     );
+  });
+
+  it("preserves non-auth Account API load errors", async () => {
+    fetchLogtoAccountApi.mockRejectedValueOnce(
+      new Error("LOGTO_ENDPOINT must be set"),
+    );
+
+    await expect(getAuthenticatedUserSettings()).rejects.toThrow(
+      "LOGTO_ENDPOINT must be set",
+    );
+  });
+
+  it("preserves non-auth Account API update errors", async () => {
+    fetchLogtoAccountApi.mockRejectedValueOnce(new Error("fetch failed"));
+
+    await expect(
+      updateAuthenticatedUserSettings({
+        data: {
+          name: "Ada",
+          avatarUrl: "https://example.test/ada.png",
+        },
+      }),
+    ).rejects.toThrow("fetch failed");
   });
 
   it("loads shell profile from Logto Account API", async () => {

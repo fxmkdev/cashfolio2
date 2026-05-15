@@ -38,6 +38,15 @@ const fieldLabels = {
 const accountApiAccessMessage =
   "Account settings need a fresh sign-in before they can be loaded. Please sign out and sign in again.";
 
+const accountApiAccessErrorCodes = new Set([
+  "consent_required",
+  "interaction_required",
+  "invalid_grant",
+  "invalid_scope",
+  "login_required",
+  "not_authenticated",
+]);
+
 function getNullableString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
@@ -154,9 +163,23 @@ async function fetchLogtoAccountApiSafely(
     return init
       ? await fetchLogtoAccountApi(pathname, init)
       : await fetchLogtoAccountApi(pathname);
-  } catch {
-    throw new Error(accountApiAccessMessage);
+  } catch (error) {
+    if (isLogtoAccountApiAccessError(error)) {
+      throw new Error(accountApiAccessMessage);
+    }
+    throw error;
   }
+}
+
+function isLogtoAccountApiAccessError(error: unknown) {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const data = error as Record<string, unknown>;
+  return (
+    typeof data.code === "string" && accountApiAccessErrorCodes.has(data.code)
+  );
 }
 
 function resolveSettingsProfileFromLogtoAccount(
