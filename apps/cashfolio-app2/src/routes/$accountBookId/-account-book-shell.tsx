@@ -72,16 +72,23 @@ export function AccountBookShell({
   const [desktopRailPreferenceHydrated, setDesktopRailPreferenceHydrated] =
     useState(false);
   const activeSection = getActiveSection({ pathname, accountBookId });
+  const accountBookSwitcherMenuProps = {
+    accountBookId,
+    accountBooks,
+    accountsTab: accountsLinkSearch.tab,
+    accountsMode: accountsLinkSearch.mode,
+    createNewReturnTo: currentHref,
+  };
   const toggleDesktopRail = () =>
     setDesktopRailCollapsed((isCollapsed) => !isCollapsed);
   const desktopRailToggle = (
     <Tooltip
-      label={desktopRailCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      label={desktopRailCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
       position="right"
     >
       <ActionIcon
         aria-label={
-          desktopRailCollapsed ? "Expand sidebar" : "Collapse sidebar"
+          desktopRailCollapsed ? "Expand Sidebar" : "Collapse Sidebar"
         }
         onClick={toggleDesktopRail}
         variant="subtle"
@@ -203,6 +210,21 @@ export function AccountBookShell({
                 {desktopRailToggle}
               </Group>
             )}
+            {desktopRailCollapsed ? (
+              <>
+                <Stack gap="xs" hiddenFrom="sm">
+                  <AccountBookSwitcherMenu {...accountBookSwitcherMenuProps} />
+                </Stack>
+                <Group justify="center" visibleFrom="sm">
+                  <AccountBookSwitcherMenu
+                    {...accountBookSwitcherMenuProps}
+                    collapsed
+                  />
+                </Group>
+              </>
+            ) : (
+              <AccountBookSwitcherMenu {...accountBookSwitcherMenuProps} />
+            )}
             <Divider />
             <AccountBookNavigationLinks
               accountBookId={accountBookId}
@@ -229,29 +251,12 @@ export function AccountBookShell({
             {desktopRailCollapsed ? (
               <>
                 <Stack gap="xs" hiddenFrom="sm">
-                  <AccountBookSwitcherMenu
-                    accountBookId={accountBookId}
-                    accountBooks={accountBooks}
-                    accountsTab={accountsLinkSearch.tab}
-                    accountsMode={accountsLinkSearch.mode}
-                    createNewReturnTo={currentHref}
-                  />
                   <UserMenu
                     accountSecurityUrl={accountSecurityUrl}
                     accountBookId={accountBookId}
                     userProfile={userProfile}
                   />
                 </Stack>
-                <Group justify="center" visibleFrom="sm">
-                  <AccountBookSwitcherMenu
-                    accountBookId={accountBookId}
-                    accountBooks={accountBooks}
-                    accountsTab={accountsLinkSearch.tab}
-                    accountsMode={accountsLinkSearch.mode}
-                    createNewReturnTo={currentHref}
-                    collapsed
-                  />
-                </Group>
                 <Group justify="center" visibleFrom="sm">
                   <UserMenu
                     accountSecurityUrl={accountSecurityUrl}
@@ -262,20 +267,11 @@ export function AccountBookShell({
                 </Group>
               </>
             ) : (
-              <>
-                <AccountBookSwitcherMenu
-                  accountBookId={accountBookId}
-                  accountBooks={accountBooks}
-                  accountsTab={accountsLinkSearch.tab}
-                  accountsMode={accountsLinkSearch.mode}
-                  createNewReturnTo={currentHref}
-                />
-                <UserMenu
-                  accountSecurityUrl={accountSecurityUrl}
-                  accountBookId={accountBookId}
-                  userProfile={userProfile}
-                />
-              </>
+              <UserMenu
+                accountSecurityUrl={accountSecurityUrl}
+                accountBookId={accountBookId}
+                userProfile={userProfile}
+              />
             )}
           </Stack>
         </AppShell.Section>
