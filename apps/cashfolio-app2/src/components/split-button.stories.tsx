@@ -51,13 +51,11 @@ export const ThreePartControl: Story = {
         <Button variant="default" px="xs" aria-label="Previous Period">
           <IconChevronLeft size={16} />
         </Button>
-        <Button
-          variant="default"
-          rightSection={<IconChevronDown size={16} />}
-          w={160}
-          justify="space-between"
-        >
-          May 2026
+        <Button variant="default" w={160} justify="center">
+          <Group gap="xs" wrap="nowrap">
+            <span>May 2026</span>
+            <IconChevronDown size={16} />
+          </Group>
         </Button>
         <Button variant="default" px="xs" aria-label="Next Period">
           <IconChevronRight size={16} />

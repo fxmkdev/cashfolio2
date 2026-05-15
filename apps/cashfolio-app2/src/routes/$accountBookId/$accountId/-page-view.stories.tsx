@@ -607,22 +607,22 @@ export const PeriodFilterRouteSmoke: Story = {
     await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
       "(none)",
     );
+    await userEvent.click(canvas.getByRole("button", { name: "All Periods" }));
     await expect(
-      canvas.getByRole("button", { name: "Clear Filter" }),
+      screen.getByRole("button", { name: "Clear Filter" }),
     ).toBeDisabled();
 
-    await userEvent.click(canvas.getByRole("radio", { name: "Year" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Year" }));
     await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
       "(none)",
     );
 
-    await userEvent.click(canvas.getByRole("radio", { name: "Month" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Month" }));
     await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
       "(none)",
     );
 
-    await userEvent.click(canvas.getByRole("button", { name: "All Periods" }));
-    await userEvent.click(canvas.getByRole("button", { name: /Feb/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Feb/i }));
 
     await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
       "2026-02",
@@ -635,7 +635,8 @@ export const PeriodFilterRouteSmoke: Story = {
       "2026-01",
     );
 
-    await userEvent.click(canvas.getByRole("button", { name: "Clear Filter" }));
+    await userEvent.click(canvas.getByRole("button", { name: "January 2026" }));
+    await userEvent.click(screen.getByRole("button", { name: "Clear Filter" }));
     await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
       "(none)",
     );
