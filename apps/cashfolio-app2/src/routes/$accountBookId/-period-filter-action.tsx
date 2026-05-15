@@ -85,12 +85,16 @@ export function PeriodFilterAction({
           <Button
             variant="default"
             justify="center"
-            rightSection={<IconChevronDown size={16} />}
             onClick={() => onPickerOpenedChange(!pickerOpened)}
             className={classes.trigger}
             data-testid="period-picker-trigger"
           >
-            {selectedPeriodLabel}
+            <span className={classes.triggerContent}>
+              <span className={classes.triggerLabel}>
+                {selectedPeriodLabel}
+              </span>
+              <IconChevronDown size={16} />
+            </span>
           </Button>
         </Popover.Target>
         <Popover.Dropdown p="xs">

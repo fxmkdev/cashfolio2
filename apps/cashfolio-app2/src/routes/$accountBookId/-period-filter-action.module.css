@@ -4,17 +4,24 @@
 }
 
 .trigger :global(.mantine-Button-inner) {
-  position: relative;
   width: 100%;
   min-width: 0;
 }
 
-.trigger :global(.mantine-Button-section[data-position="right"]) {
-  position: absolute;
-  inset-inline-end: 0;
+.trigger :global(.mantine-Button-label) {
+  min-width: 0;
 }
 
-.trigger :global(.mantine-Button-label) {
+.triggerContent {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.triggerLabel {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
