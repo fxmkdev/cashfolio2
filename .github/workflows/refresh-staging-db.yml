@@ -136,19 +136,6 @@ jobs:
           cs_database: ${{ vars.NEON_DATABASE_NAME || 'neondb' }}
           cs_role_name: ${{ vars.NEON_ROLE_NAME || 'neondb_owner' }}
           cs_prisma: true
-      - name: Mask refreshed DATABASE_URL
-        shell: bash
-        env:
-          DATABASE_URL: ${{ steps.reset-neon.outputs.db_url }}
-        run: |
-          set -euo pipefail
-
-          if [ -z "$DATABASE_URL" ]; then
-            echo "Neon reset did not return a DATABASE_URL."
-            exit 1
-          fi
-
-          echo "::add-mask::$DATABASE_URL"
       - name: Run Neon branch post-provision hook
         run: sh apps/cashfolio-app2/scripts/neon-branch-post-provision.sh
         env:
