@@ -38,6 +38,12 @@ on:
       app_environment_url:
         type: string
         required: false
+      prepare_preview_environment:
+        type: boolean
+        default: false
+      neon_branch_name:
+        type: string
+        required: false
 
 env:
   NODE_VERSION: 24
@@ -58,6 +64,153 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@master
         with:
           version: ${{ env.FLYCTL_VERSION }}
+      - name: Validate preview environment inputs
+        if: ${{ inputs.prepare_preview_environment }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$FLY_APP" ]; then
+            echo "fly_app is required when prepare_preview_environment is true."
+            exit 1
+          fi
+          if [ -z "$NEON_BRANCH_NAME" ]; then
+            echo "neon_branch_name is required when prepare_preview_environment is true."
+            exit 1
+          fi
+        env:
+          FLY_APP: ${{ inputs.fly_app }}
+          NEON_BRANCH_NAME: ${{ inputs.neon_branch_name }}
+      - name: Set Neon branch expiration date
+        if: ${{ inputs.prepare_preview_environment }}
+        run: |
+          echo "EXPIRES_AT=$(date -u --date '+14 days' +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+      - name: Create or reuse Neon branch
+        if: ${{ inputs.prepare_preview_environment }}
+        id: neon
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_name: ${{ inputs.neon_branch_name }}
+          parent_branch: ${{ vars.NEON_PROD_BRANCH_ID }}
+          database: ${{ vars.NEON_DATABASE_NAME || 'neondb' }}
+          role: ${{ vars.NEON_ROLE_NAME || 'neondb_owner' }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          expires_at: ${{ env.EXPIRES_AT }}
+      - name: Mask preview DATABASE_URL
+        if: ${{ inputs.prepare_preview_environment }}
+        shell: bash
+        env:
+          DATABASE_URL: ${{ steps.neon.outputs.db_url }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$DATABASE_URL" ]; then
+            echo "Neon branch creation did not return a DATABASE_URL."
+            exit 1
+          fi
+
+          echo "::add-mask::$DATABASE_URL"
+      - name: Run Neon branch post-provision hook
+        if: ${{ inputs.prepare_preview_environment && steps.neon.outputs.created == 'true' }}
+        run: sh apps/cashfolio-app2/scripts/neon-branch-post-provision.sh
+        env:
+          DATABASE_URL: ${{ steps.neon.outputs.db_url }}
+      - name: Ensure Fly app exists
+        if: ${{ inputs.prepare_preview_environment }}
+        run: |
+          set -euo pipefail
+
+          set +e
+          FLY_STATUS_OUTPUT="$(flyctl status --app "$FLY_APP" 2>&1)"
+          FLY_STATUS_EXIT="$?"
+          set -e
+
+          if [ "$FLY_STATUS_EXIT" -eq 0 ]; then
+            echo "Reusing Fly app $FLY_APP"
+            exit 0
+          fi
+
+          if printf '%s\n' "$FLY_STATUS_OUTPUT" | grep -qiE 'could not find app|app not found|unknown app'; then
+            echo "Creating Fly app $FLY_APP"
+            if [ -n "${FLY_ORG:-}" ]; then
+              flyctl apps create "$FLY_APP" --org "$FLY_ORG"
+            else
+              flyctl apps create "$FLY_APP"
+            fi
+          else
+            echo "flyctl status failed for app $FLY_APP with an unexpected error:"
+            printf '%s\n' "$FLY_STATUS_OUTPUT"
+            exit "$FLY_STATUS_EXIT"
+          fi
+        env:
+          FLY_APP: ${{ inputs.fly_app }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_ORG: ${{ vars.FLY_ORG }}
+      - name: Generate preview session secret
+        if: ${{ inputs.prepare_preview_environment }}
+        id: session-secret
+        run: |
+          set -euo pipefail
+
+          SESSION_SECRET="$(openssl rand -hex 32)"
+          echo "::add-mask::${SESSION_SECRET}"
+          echo "value=${SESSION_SECRET}" >> "$GITHUB_OUTPUT"
+      - name: Set preview Fly app secrets
+        if: ${{ inputs.prepare_preview_environment }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "Neon branch creation did not return a DATABASE_URL."
+            exit 1
+          fi
+          if [ -z "${LOGTO_APP_SECRET:-}" ]; then
+            echo "LOGTO_APP_SECRET secret is required for Logto authentication in preview apps."
+            exit 1
+          fi
+          if [ -z "${SESSION_SECRET:-}" ]; then
+            echo "Preview session secret generation did not return a value."
+            exit 1
+          fi
+          if [ -z "${CURRENCYLAYER_API_KEY:-}" ]; then
+            echo "CURRENCYLAYER_API_KEY secret is required for FX conversion in preview apps."
+            exit 1
+          fi
+          if [ -z "${COINLAYER_API_KEY:-}" ]; then
+            echo "COINLAYER_API_KEY secret is required for crypto conversion in preview apps."
+            exit 1
+          fi
+          if [ -z "${MARKETSTACK_API_KEY:-}" ]; then
+            echo "MARKETSTACK_API_KEY secret is required for security conversion in preview apps."
+            exit 1
+          fi
+          if [ -z "${STAGING_REDIS_URL:-}" ]; then
+            echo "STAGING_REDIS_URL secret is required so preview apps use shared staging Redis cache."
+            exit 1
+          fi
+
+          echo "::add-mask::${DATABASE_URL}"
+
+          flyctl secrets set \
+            --app "$FLY_APP" \
+            --stage \
+            DATABASE_URL="${DATABASE_URL}" \
+            LOGTO_APP_SECRET="${LOGTO_APP_SECRET}" \
+            SESSION_SECRET="${SESSION_SECRET}" \
+            CURRENCYLAYER_API_KEY="${CURRENCYLAYER_API_KEY}" \
+            COINLAYER_API_KEY="${COINLAYER_API_KEY}" \
+            MARKETSTACK_API_KEY="${MARKETSTACK_API_KEY}" \
+            REDIS_URL="${STAGING_REDIS_URL}"
+        env:
+          FLY_APP: ${{ inputs.fly_app }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          DATABASE_URL: ${{ steps.neon.outputs.db_url }}
+          LOGTO_APP_SECRET: ${{ secrets.LOGTO_APP_SECRET }}
+          SESSION_SECRET: ${{ steps.session-secret.outputs.value }}
+          CURRENCYLAYER_API_KEY: ${{ secrets.CURRENCYLAYER_API_KEY }}
+          COINLAYER_API_KEY: ${{ secrets.COINLAYER_API_KEY }}
+          MARKETSTACK_API_KEY: ${{ secrets.MARKETSTACK_API_KEY }}
+          STAGING_REDIS_URL: ${{ secrets.STAGING_REDIS_URL }}
       - name: Deploy cashfolio-app2
         uses: ./.github/actions/deploy-cashfolio-app2
         with:
