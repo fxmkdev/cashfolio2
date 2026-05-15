@@ -76,6 +76,78 @@ describe("buildTimelineScopeTreeData", () => {
     ]);
   });
 
+  test("nests Gain/Loss hierarchy node values", () => {
+    expect(
+      buildTimelineScopeTreeData([
+        {
+          value: "unit-type:fx",
+          label: "FX",
+          kind: "gainLoss",
+          treeLabel: "FX",
+        },
+        {
+          value: "unit:fx:USD",
+          label: "FX / USD",
+          kind: "gainLoss",
+          treeLabel: "USD",
+          parentValue: "unit-type:fx",
+        },
+        {
+          value: "unit-account:fx:USD:cash-1",
+          label: "FX / USD / USD Cash",
+          kind: "gainLoss",
+          treeLabel: "USD Cash",
+          parentValue: "unit:fx:USD",
+        },
+        {
+          value: "unit-type:explicit",
+          label: "Explicit G/L",
+          kind: "gainLoss",
+          treeLabel: "Explicit G/L",
+        },
+        {
+          value: "explicit-account:cash-1",
+          label: "Explicit G/L / Cash",
+          kind: "gainLoss",
+          treeLabel: "Cash",
+          parentValue: "unit-type:explicit",
+        },
+      ]),
+    ).toEqual([
+      {
+        value: "unit-type:fx",
+        label: "FX",
+        nodeProps: { searchLabel: "FX" },
+        children: [
+          {
+            value: "unit:fx:USD",
+            label: "USD",
+            nodeProps: { searchLabel: "FX / USD" },
+            children: [
+              {
+                value: "unit-account:fx:USD:cash-1",
+                label: "USD Cash",
+                nodeProps: { searchLabel: "FX / USD / USD Cash" },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        value: "unit-type:explicit",
+        label: "Explicit G/L",
+        nodeProps: { searchLabel: "Explicit G/L" },
+        children: [
+          {
+            value: "explicit-account:cash-1",
+            label: "Cash",
+            nodeProps: { searchLabel: "Explicit G/L / Cash" },
+          },
+        ],
+      },
+    ]);
+  });
+
   test("promotes nodes with missing parents to root", () => {
     expect(
       buildTimelineScopeTreeData([

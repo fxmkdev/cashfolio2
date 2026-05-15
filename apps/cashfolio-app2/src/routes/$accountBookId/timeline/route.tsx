@@ -28,6 +28,10 @@ export const Route = createFileRoute("/$accountBookId/timeline")({
       search,
       metric: "expenses",
     }),
+    gainLossScope: getTimelineScopeForMetric({
+      search,
+      metric: "gainsLosses",
+    }),
     assetScope: getTimelineScopeForMetric({
       search,
       metric: "assets",
@@ -45,6 +49,7 @@ export const Route = createFileRoute("/$accountBookId/timeline")({
       scopedMetric,
       incomeScope,
       expenseScope,
+      gainLossScope,
       assetScope,
       liabilityScope,
     },
@@ -55,6 +60,7 @@ export const Route = createFileRoute("/$accountBookId/timeline")({
       scopedMetric,
       incomeScope,
       expenseScope,
+      gainLossScope,
       assetScope,
       liabilityScope,
     });
@@ -75,6 +81,10 @@ function TimelinePage() {
     search,
     metric: "expenses",
   });
+  const selectedGainLossScope = getTimelineScopeForMetric({
+    search,
+    metric: "gainsLosses",
+  });
   const selectedAssetScope = getTimelineScopeForMetric({
     search,
     metric: "assets",
@@ -90,6 +100,7 @@ function TimelinePage() {
     if (
       selectedIncomeScope === timeline.scopeSelection.income &&
       selectedExpenseScope === timeline.scopeSelection.expenses &&
+      selectedGainLossScope === timeline.scopeSelection.gainsLosses &&
       selectedAssetScope === timeline.scopeSelection.assets &&
       selectedLiabilityScope === timeline.scopeSelection.liabilities
     ) {
@@ -102,6 +113,7 @@ function TimelinePage() {
         metric: selectedMetric,
         incomeScope: timeline.scopeSelection.income,
         expenseScope: timeline.scopeSelection.expenses,
+        gainLossScope: timeline.scopeSelection.gainsLosses,
         assetScope: timeline.scopeSelection.assets,
         liabilityScope: timeline.scopeSelection.liabilities,
       }),
@@ -110,12 +122,14 @@ function TimelinePage() {
     navigate,
     selectedAssetScope,
     selectedExpenseScope,
+    selectedGainLossScope,
     selectedIncomeScope,
     selectedLiabilityScope,
     selectedMetric,
     selectedMode,
     timeline.scopeSelection.assets,
     timeline.scopeSelection.expenses,
+    timeline.scopeSelection.gainsLosses,
     timeline.scopeSelection.income,
     timeline.scopeSelection.liabilities,
   ]);
@@ -134,6 +148,7 @@ function TimelinePage() {
               metric: selectedMetric,
               incomeScope: timeline.scopeSelection.income,
               expenseScope: timeline.scopeSelection.expenses,
+              gainLossScope: timeline.scopeSelection.gainsLosses,
               assetScope: timeline.scopeSelection.assets,
               liabilityScope: timeline.scopeSelection.liabilities,
             }),
@@ -146,6 +161,7 @@ function TimelinePage() {
               metric,
               incomeScope: timeline.scopeSelection.income,
               expenseScope: timeline.scopeSelection.expenses,
+              gainLossScope: timeline.scopeSelection.gainsLosses,
               assetScope: timeline.scopeSelection.assets,
               liabilityScope: timeline.scopeSelection.liabilities,
             }),
@@ -164,6 +180,10 @@ function TimelinePage() {
                 selectedMetric === "expenses"
                   ? scope
                   : timeline.scopeSelection.expenses,
+              gainLossScope:
+                selectedMetric === "gainsLosses"
+                  ? scope
+                  : timeline.scopeSelection.gainsLosses,
               assetScope:
                 selectedMetric === "assets"
                   ? scope

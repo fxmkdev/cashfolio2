@@ -135,6 +135,7 @@ describe("loadPeriodTimelinePoint", () => {
       scopeOptions: {
         income: [],
         expenses: [],
+        gainsLosses: [],
         assets: [],
         liabilities: [],
       },
@@ -171,6 +172,7 @@ describe("loadPeriodTimelinePoint", () => {
       scopeOptions: {
         income: [],
         expenses: [],
+        gainsLosses: [],
         assets: [],
         liabilities: [],
       },
@@ -228,6 +230,7 @@ describe("loadPeriodTimelinePoint", () => {
       scopeOptions: {
         income: [],
         expenses: [],
+        gainsLosses: [],
         assets: [],
         liabilities: [],
       },

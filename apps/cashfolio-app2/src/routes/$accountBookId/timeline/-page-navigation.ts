@@ -14,6 +14,7 @@ export function buildTimelineSearchNavigation(args: {
   metric: TimelineMetric;
   incomeScope: TimelineScopeSelection;
   expenseScope: TimelineScopeSelection;
+  gainLossScope: TimelineScopeSelection;
   assetScope: TimelineScopeSelection;
   liabilityScope: TimelineScopeSelection;
 }) {
@@ -31,6 +32,10 @@ export function buildTimelineSearchNavigation(args: {
         args.expenseScope === DEFAULT_TIMELINE_SCOPE
           ? undefined
           : args.expenseScope,
+      gainLossScope:
+        args.gainLossScope === DEFAULT_TIMELINE_SCOPE
+          ? undefined
+          : args.gainLossScope,
       assetScope:
         args.assetScope === DEFAULT_TIMELINE_SCOPE
           ? undefined

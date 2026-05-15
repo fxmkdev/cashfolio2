@@ -21,6 +21,7 @@ export type TimelineSearch = {
   metric?: TimelineMetric;
   incomeScope?: TimelineScopeSelection;
   expenseScope?: TimelineScopeSelection;
+  gainLossScope?: TimelineScopeSelection;
   assetScope?: TimelineScopeSelection;
   liabilityScope?: TimelineScopeSelection;
 };
@@ -90,6 +91,9 @@ export function parseTimelineSearch(
     ...("expenseScope" in search
       ? { expenseScope: parseTimelineScopeSelection(search.expenseScope) }
       : {}),
+    ...("gainLossScope" in search
+      ? { gainLossScope: parseTimelineScopeSelection(search.gainLossScope) }
+      : {}),
     ...("assetScope" in search
       ? { assetScope: parseTimelineScopeSelection(search.assetScope) }
       : {}),
@@ -117,6 +121,10 @@ export function getTimelineScopeForMetric(args: {
 
   if (args.metric === "expenses") {
     return args.search.expenseScope ?? DEFAULT_TIMELINE_SCOPE;
+  }
+
+  if (args.metric === "gainsLosses") {
+    return args.search.gainLossScope ?? DEFAULT_TIMELINE_SCOPE;
   }
 
   if (args.metric === "assets") {

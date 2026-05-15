@@ -130,6 +130,13 @@ describe("getPeriodTimeline", () => {
               kind: "group",
             },
           ],
+          gainsLosses: [
+            {
+              value: "unit-type:fx",
+              label: "FX",
+              kind: "gainLoss",
+            },
+          ],
           assets: [
             {
               value: "group:asset-g",
@@ -297,6 +304,14 @@ describe("getPeriodTimeline", () => {
             kind: "group",
           },
         ],
+        gainsLosses: [
+          { value: "total", label: "Total", kind: "total" },
+          {
+            value: "unit-type:fx",
+            label: "FX",
+            kind: "gainLoss",
+          },
+        ],
         assets: [
           { value: "total", label: "Total", kind: "total" },
           {
@@ -317,6 +332,7 @@ describe("getPeriodTimeline", () => {
       scopeSelection: {
         income: "total",
         expenses: "total",
+        gainsLosses: "total",
         assets: "total",
         liabilities: "total",
       },
@@ -418,6 +434,46 @@ describe("getPeriodTimeline", () => {
     expect(result.scopeSelection.assets).toBe("group:asset-g");
   });
 
+  test("applies scoped Gain/Loss values without opening-balance scoping", async () => {
+    const result = await getPeriodTimeline({
+      data: {
+        accountBookId: "book-gains",
+        granularity: "year",
+        scopedMetric: "gainsLosses",
+        gainLossScope: "unit-type:fx",
+      },
+    });
+
+    expect(loadPeriodTimelinePoint).toHaveBeenCalledWith({
+      accountBookId: "book-gains",
+      period: "2026",
+      context: {
+        referenceCurrency: "CHF",
+        accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
+        holdingAccountsResolved: [],
+      },
+      metricScopeFilter: {
+        metric: "gainsLosses",
+        scope: "unit-type:fx",
+      },
+      valuationContext: {
+        exchangeRateByKey: expect.any(Map),
+      },
+    });
+    expect(loadTimelineOpeningBalancePoint).toHaveBeenCalledWith({
+      accountBookId: "book-gains",
+      accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
+      referenceCurrency: "CHF",
+      metricScopeFilter: undefined,
+    });
+    expect(result.points).toEqual([
+      expect.objectContaining({
+        gainsLosses: 24,
+      }),
+    ]);
+    expect(result.scopeSelection.gainsLosses).toBe("unit-type:fx");
+  });
+
   test("falls back to total values when scoped selection is stale", async () => {
     const result = await getPeriodTimeline({
       data: {
@@ -437,6 +493,7 @@ describe("getPeriodTimeline", () => {
     expect(result.scopeSelection).toEqual({
       income: "total",
       expenses: "total",
+      gainsLosses: "total",
       assets: "total",
       liabilities: "total",
     });
@@ -458,6 +515,24 @@ describe("getPeriodTimeline", () => {
       }),
     ]);
     expect(result.scopeSelection.liabilities).toBe("total");
+  });
+
+  test("falls back to total Gain/Loss when scoped Gain/Loss selection is stale", async () => {
+    const result = await getPeriodTimeline({
+      data: {
+        accountBookId: "book-5",
+        granularity: "year",
+        scopedMetric: "gainsLosses",
+        gainLossScope: "unit-type:missing",
+      },
+    });
+
+    expect(result.points).toEqual([
+      expect.objectContaining({
+        gainsLosses: 8,
+      }),
+    ]);
+    expect(result.scopeSelection.gainsLosses).toBe("total");
   });
 
   test("rejects unsupported granularity", async () => {
