@@ -691,6 +691,7 @@ export const createAccountGroup = createServerFn({ method: "POST" })
         name: data.name,
         type: data.type,
         equityAccountSubtype: data.equityAccountSubtype,
+        isActive: data.isActive ?? true,
         parentGroupId: data.parentGroupId,
         sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : null,
         accountBookId: data.accountBookId,

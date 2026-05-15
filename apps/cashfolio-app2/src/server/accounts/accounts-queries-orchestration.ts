@@ -77,13 +77,39 @@ export type ExistingNode = {
   groupId?: string;
 };
 
-export async function queryAccountGroups(accountBookId: string) {
+export async function queryAccountGroups(
+  accountBookId: string,
+  accountState: AccountState = "active",
+) {
   const groups = await prisma.accountGroup.findMany({
-    where: { accountBookId, isActive: true },
+    where:
+      accountState === "active"
+        ? { accountBookId, isActive: true }
+        : { accountBookId },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
+  const accounts =
+    accountState === "inactive"
+      ? await prisma.account.findMany({
+          where: { accountBookId, isActive: false },
+          select: { id: true, groupId: true },
+        })
+      : [];
+  const filteredGroups = filterGroupsForAccountState({
+    accountState,
+    accountGroups: groups.map((group) => ({
+      id: group.id,
+      name: group.name,
+      type: group.type,
+      equityAccountSubtype: group.equityAccountSubtype,
+      parentGroupId: group.parentGroupId,
+      isActive: group.isActive,
+      sortOrder: group.sortOrder,
+    })),
+    accounts,
+  });
   const resolveGroupPathSegments = createGroupPathSegmentsResolver(groups);
-  return groups
+  return filteredGroups
     .map((group) => {
       const pathSegments = resolveGroupPathSegments(group.id);
 
@@ -100,12 +126,15 @@ export async function queryAccountGroups(accountBookId: string) {
     .toSorted((a, b) => a.label.localeCompare(b.label));
 }
 
-export async function queryExistingNodes(accountBookId: string) {
+export async function queryExistingNodes(
+  accountBookId: string,
+  accountState: AccountState = "active",
+) {
   const [accounts, accountGroups] = await Promise.all([
     prisma.account.findMany({
       where: {
         accountBookId,
-        isActive: true,
+        isActive: accountState === "active",
       },
       select: {
         id: true,
@@ -114,17 +143,34 @@ export async function queryExistingNodes(accountBookId: string) {
       },
     }),
     prisma.accountGroup.findMany({
-      where: {
-        accountBookId,
-        isActive: true,
-      },
+      where:
+        accountState === "active"
+          ? { accountBookId, isActive: true }
+          : { accountBookId },
       select: {
         id: true,
         name: true,
         parentGroupId: true,
+        type: true,
+        equityAccountSubtype: true,
+        isActive: true,
+        sortOrder: true,
       },
     }),
   ]);
+  const filteredAccountGroups = filterGroupsForAccountState({
+    accountState,
+    accountGroups: accountGroups.map((group) => ({
+      id: group.id,
+      name: group.name,
+      type: group.type,
+      equityAccountSubtype: group.equityAccountSubtype,
+      parentGroupId: group.parentGroupId,
+      isActive: group.isActive,
+      sortOrder: group.sortOrder,
+    })),
+    accounts,
+  });
 
   return [
     ...accounts.map(
@@ -135,7 +181,7 @@ export async function queryExistingNodes(accountBookId: string) {
         groupId: account.groupId ?? undefined,
       }),
     ),
-    ...accountGroups.map(
+    ...filteredAccountGroups.map(
       (group): ExistingNode => ({
         id: group.id,
         name: group.name,
@@ -468,12 +514,8 @@ export async function queryAccountsPageData(data: AccountsPageDataInput) {
         equityAccountSubtype: data.equityAccountSubtype,
         includeReferenceBalances: false,
       }),
-      accountState === "active"
-        ? queryAccountGroups(data.accountBookId)
-        : Promise.resolve([]),
-      accountState === "active"
-        ? queryExistingNodes(data.accountBookId)
-        : Promise.resolve([]),
+      queryAccountGroups(data.accountBookId, accountState),
+      queryExistingNodes(data.accountBookId, accountState),
       accountState === "active"
         ? queryActiveAccountUnitUsageAccounts(data.accountBookId)
         : Promise.resolve([]),

@@ -79,7 +79,7 @@ export type AccountTreeRow = {
 export function filterGroupsForAccountState(args: {
   accountState: "active" | "inactive";
   accountGroups: AccountTreeGroup[];
-  accounts: AccountTreeAccount[];
+  accounts: Pick<AccountTreeAccount, "groupId">[];
 }): AccountTreeGroup[] {
   if (args.accountState === "active") {
     return args.accountGroups.filter((group) => group.isActive);

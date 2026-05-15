@@ -55,6 +55,10 @@ const prisma = vi.hoisted(() => ({
     findMany: vi.fn(),
     findUniqueOrThrow: vi.fn(),
   },
+  accountGroup: {
+    findMany: vi.fn(),
+    create: vi.fn(),
+  },
   $transaction: vi.fn(),
 }));
 
@@ -83,7 +87,7 @@ vi.mock("../period/period-base-data-cache", () => ({
   invalidatePeriodBaseDataCacheForAccountBook,
 }));
 
-import { updateAccount } from "./accounts-mutations";
+import { createAccountGroup, updateAccount } from "./accounts-mutations";
 
 describe("updateAccount opening balance management", () => {
   beforeEach(() => {
@@ -295,6 +299,77 @@ describe("updateAccount opening balance management", () => {
         }),
       }),
     );
+    expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
+      "book-1",
+    );
+  });
+});
+
+describe("createAccountGroup", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    prisma.accountGroup.findMany.mockResolvedValue([]);
+    prisma.accountGroup.create.mockResolvedValue({
+      id: "group-1",
+      accountBookId: "book-1",
+      name: "Group",
+      type: AccountType.ASSET,
+      equityAccountSubtype: null,
+      isActive: true,
+      parentGroupId: null,
+      sortOrder: null,
+    });
+  });
+
+  it("defaults new groups to active when isActive is omitted", async () => {
+    await createAccountGroup({
+      data: {
+        accountBookId: "book-1",
+        name: "Group",
+        type: AccountType.ASSET,
+      },
+    });
+
+    expect(prisma.accountGroup.create).toHaveBeenCalledWith({
+      data: {
+        accountBookId: "book-1",
+        name: "Group",
+        type: AccountType.ASSET,
+        equityAccountSubtype: undefined,
+        isActive: true,
+        parentGroupId: undefined,
+        sortOrder: null,
+      },
+    });
+    expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
+      "book-1",
+    );
+  });
+
+  it("creates archived groups when isActive is false", async () => {
+    await createAccountGroup({
+      data: {
+        accountBookId: "book-1",
+        name: "Archived Group",
+        type: AccountType.ASSET,
+        parentGroupId: "parent-1",
+        sortOrder: 2,
+        isActive: false,
+      },
+    });
+
+    expect(prisma.accountGroup.create).toHaveBeenCalledWith({
+      data: {
+        accountBookId: "book-1",
+        name: "Archived Group",
+        type: AccountType.ASSET,
+        equityAccountSubtype: undefined,
+        isActive: false,
+        parentGroupId: "parent-1",
+        sortOrder: 2,
+      },
+    });
     expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
       "book-1",
     );

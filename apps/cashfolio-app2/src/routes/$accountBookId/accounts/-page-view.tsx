@@ -1,9 +1,8 @@
 import { Button, Group, Tabs, Title } from "@mantine/core";
-import { IconArchive, IconPlus } from "@tabler/icons-react";
+import { IconArchive, IconArrowBackUp, IconPlus } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
 import { LinkButton } from "@/components/link-button";
 import { LinkTab } from "@/components/link-tab";
-import { AccountPathHeading } from "@/components/account-path-heading";
 import { TopPageHeader } from "@/components/top-page-header";
 import type { AccountGroupInitialValues } from "@/components/edit-account-group-modal";
 import {
@@ -142,12 +141,7 @@ export function AccountsPageView({
       <TopPageHeader
         heading={
           isArchivedMode ? (
-            <AccountPathHeading
-              accountBookId={accountBookId}
-              tab={tab}
-              mode="archived"
-              archiveIsLink={false}
-            />
+            <Title order={2}>Archived Accounts</Title>
           ) : (
             <Title order={2}>Accounts</Title>
           )
@@ -177,6 +171,26 @@ export function AccountsPageView({
                   onClick={onOpenCreateAccount}
                 >
                   Add Account
+                </Button>
+              </>
+            )}
+            {isArchivedMode && (
+              <>
+                <LinkButton
+                  variant="default"
+                  leftSection={<IconArrowBackUp size={16} />}
+                  to="/$accountBookId/accounts"
+                  params={{ accountBookId }}
+                  search={{ tab, mode: "active" }}
+                >
+                  Active Accounts
+                </LinkButton>
+                <Button
+                  variant="default"
+                  leftSection={<IconPlus size={16} />}
+                  onClick={onOpenCreateGroup}
+                >
+                  Add Group
                 </Button>
               </>
             )}
@@ -239,16 +253,6 @@ export function AccountsPageView({
             existingNodes={existingNodes}
             typeDescriptor={tab}
           />
-
-          <EditAccountGroupModal
-            opened={createGroupModalOpened}
-            onClose={onCloseCreateGroup}
-            accountGroups={accountGroups}
-            onSubmit={onSubmitCreateGroup}
-            existingNodes={existingNodes}
-            typeDescriptor={tab}
-          />
-
           <ConfirmArchiveModal
             opened={!!archivingRow}
             onClose={onCloseArchive}
@@ -262,6 +266,15 @@ export function AccountsPageView({
           />
         </>
       )}
+
+      <EditAccountGroupModal
+        opened={createGroupModalOpened}
+        onClose={onCloseCreateGroup}
+        accountGroups={accountGroups}
+        onSubmit={onSubmitCreateGroup}
+        existingNodes={existingNodes}
+        typeDescriptor={tab}
+      />
 
       <EditAccountModal
         opened={editModalOpen}

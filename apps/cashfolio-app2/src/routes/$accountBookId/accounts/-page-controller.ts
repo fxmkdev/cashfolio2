@@ -85,6 +85,7 @@ const defaultAccountsMutationApi: AccountsMutationApi = {
 
 export function createAccountsMutationActions(args: {
   accountBookId: string;
+  createGroupIsActive?: boolean;
   invalidate: () => void;
   state: AccountsMutationState;
   api?: AccountsMutationApi;
@@ -147,6 +148,7 @@ export function createAccountsMutationActions(args: {
           equityAccountSubtype: values.equityAccountSubtype,
           parentGroupId: values.parentGroupId,
           sortOrder: values.sortOrder,
+          isActive: args.createGroupIsActive ?? true,
         },
       });
       args.state.setCreateGroupModalOpened(false);
@@ -348,6 +350,7 @@ export function useAccountsPageController(args: {
 
   const actions = createAccountsMutationActions({
     accountBookId: args.accountBookId,
+    createGroupIsActive: !isArchivedMode,
     invalidate: args.invalidate,
     state: {
       getEditingAccount: () => modalState.editingAccount,
