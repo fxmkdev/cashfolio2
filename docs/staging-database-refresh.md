@@ -1,9 +1,9 @@
 # Staging database refresh
 
 The `Refresh staging database` GitHub Actions workflow resets the long-lived
-staging Neon branch from its production parent, runs a post-refresh hook, and
-redeploys staging. The redeploy runs the existing Fly release command, which
-applies Prisma migrations.
+staging Neon branch from its production parent, runs the shared Neon branch
+post-provision hook, and redeploys staging. The redeploy runs the existing Fly
+release command, which applies Prisma migrations.
 
 The workflow is manually triggerable and also runs daily at 03:30 Europe/Zurich.
 Because GitHub schedules are UTC-only, the workflow schedules both possible UTC
@@ -22,7 +22,7 @@ branches:
 - `NEON_DATABASE_NAME` defaults to `neondb`
 - `NEON_ROLE_NAME` defaults to `neondb_owner`
 
-Future staging-only data filtering should be added to
-`apps/cashfolio-app2/scripts/staging-db-post-refresh.sh`. The workflow invokes
-that script after Neon reset and before staging deployment with `DATABASE_URL`
-pointing at the refreshed staging branch.
+Future data filtering for branches cloned from production should be added to
+`apps/cashfolio-app2/scripts/neon-branch-post-provision.sh`. The staging
+refresh workflow invokes that script after Neon reset and before staging
+deployment with `DATABASE_URL` pointing at the refreshed staging branch.
