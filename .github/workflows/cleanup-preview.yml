@@ -77,7 +77,7 @@ jobs:
         uses: neondatabase/delete-branch-action@v3
         continue-on-error: true
         with:
-          project_id: ${{ vars.NEON_PROJECT_ID }}
+          project_id: ${{ vars.NEON_STAGING_PROJECT_ID }}
           branch: ${{ steps.names.outputs.neon_branch_name }}
           api_key: ${{ secrets.NEON_API_KEY }}
       - name: Delete Neon branch (legacy name)
@@ -85,7 +85,7 @@ jobs:
         uses: neondatabase/delete-branch-action@v3
         continue-on-error: true
         with:
-          project_id: ${{ vars.NEON_PROJECT_ID }}
+          project_id: ${{ vars.NEON_STAGING_PROJECT_ID }}
           branch: ${{ steps.names.outputs.neon_branch_legacy }}
           api_key: ${{ secrets.NEON_API_KEY }}
       - name: Warn if new Neon branch deletion failed
