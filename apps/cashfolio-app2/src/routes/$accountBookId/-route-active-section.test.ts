@@ -72,19 +72,22 @@ describe("getActiveSection", () => {
     ).toBe("valuation-cache");
   });
 
-  it("marks settings section for account-book and user settings routes", () => {
+  it("marks settings section for the settings route", () => {
     expect(
       getActiveSection({
-        pathname: "/book-1/account-book-settings",
+        pathname: "/book-1/settings",
         accountBookId: "book-1",
       }),
     ).toBe("settings");
+  });
+
+  it("marks user settings separately from navbar settings", () => {
     expect(
       getActiveSection({
         pathname: "/book-1/user-settings",
         accountBookId: "book-1",
       }),
-    ).toBe("settings");
+    ).toBe("user-settings");
   });
 });
 

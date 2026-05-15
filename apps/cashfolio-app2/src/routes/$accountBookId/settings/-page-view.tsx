@@ -18,13 +18,11 @@ import { TopPageHeader } from "@/components/top-page-header";
 import { CurrencySelect } from "@/components/unit-select";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import { normalizeDateInputValue, startOfUtcDay } from "@/shared/date";
-import type { loadAccountBookSettingsPageData } from "./-page-loader";
+import type { loadSettingsPageData } from "./-page-loader";
 
-type AccountBookSettingsPageData = Awaited<
-  ReturnType<typeof loadAccountBookSettingsPageData>
->;
+type SettingsPageData = Awaited<ReturnType<typeof loadSettingsPageData>>;
 
-type AccountBookSettingsFormValues = {
+type SettingsFormValues = {
   name: string;
   referenceCurrency: string | null;
   startDate: Date | string | null;
@@ -49,7 +47,7 @@ function showSettingsSavedNotification() {
     color: "green",
     icon: <IconCheck size={16} />,
     title: "Saved",
-    message: "Account book settings saved.",
+    message: "Settings saved.",
     withBorder: true,
   });
 }
@@ -72,10 +70,10 @@ export function isDeleteAccountBookConfirmationMatch(args: {
 }
 
 function SettingsFormFields(args: {
-  form: UseFormReturnType<AccountBookSettingsFormValues>;
+  form: UseFormReturnType<SettingsFormValues>;
   isSubmitting: boolean;
   submitError: string | null;
-  settings: AccountBookSettingsPageData;
+  settings: SettingsPageData;
 }) {
   return (
     <Stack gap="md">
@@ -257,9 +255,9 @@ function DangerZone(args: { onDeleteClick: () => void }) {
   );
 }
 
-export function AccountBookSettingsPageView(args: {
+export function SettingsPageView(args: {
   accountBookId: string;
-  settings: AccountBookSettingsPageData;
+  settings: SettingsPageData;
   onSubmit: (values: {
     name: string;
     referenceCurrency: string;
@@ -272,7 +270,7 @@ export function AccountBookSettingsPageView(args: {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
 
-  const form = useForm<AccountBookSettingsFormValues>({
+  const form = useForm<SettingsFormValues>({
     mode: "controlled",
     initialValues: {
       name: settings.name,
@@ -300,7 +298,7 @@ export function AccountBookSettingsPageView(args: {
 
   return (
     <NarrowPageShell>
-      <TopPageHeader heading={<Title order={2}>Account Book Settings</Title>} />
+      <TopPageHeader heading={<Title order={2}>Settings</Title>} />
 
       <form
         onSubmit={form.onSubmit(async (values) => {
@@ -323,7 +321,7 @@ export function AccountBookSettingsPageView(args: {
               setSubmitError(
                 error instanceof Error
                   ? error.message
-                  : "Failed to save account book settings.",
+                  : "Failed to save settings.",
               );
             }
           });

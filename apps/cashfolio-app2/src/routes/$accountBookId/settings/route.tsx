@@ -7,31 +7,31 @@ import { Suspense, lazy } from "react";
 import { createDocumentTitleHead } from "@/shared/document-title";
 import { invalidateCachedUserAccountBooks } from "../-account-book-options-loader";
 
-const AccountBookSettingsPageView = lazy(async () => {
+const SettingsPageView = lazy(async () => {
   const module = await import("./-page-view");
-  return { default: module.AccountBookSettingsPageView };
+  return { default: module.SettingsPageView };
 });
 
-export const Route = createFileRoute("/$accountBookId/account-book-settings")({
+export const Route = createFileRoute("/$accountBookId/settings")({
   loader: async ({ params: { accountBookId } }) => {
-    const { loadAccountBookSettingsPageData } = await import("./-page-loader");
-    return loadAccountBookSettingsPageData({ accountBookId });
+    const { loadSettingsPageData } = await import("./-page-loader");
+    return loadSettingsPageData({ accountBookId });
   },
-  head: () => createDocumentTitleHead("Account Book Settings"),
-  component: AccountBookSettingsPage,
+  head: () => createDocumentTitleHead("Settings"),
+  component: SettingsPage,
 });
 
-function AccountBookSettingsPage() {
+function SettingsPage() {
   const settings = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const router = useRouter();
   const navigate = useNavigate({
-    from: "/$accountBookId/account-book-settings",
+    from: "/$accountBookId/settings",
   });
 
   return (
     <Suspense fallback={null}>
-      <AccountBookSettingsPageView
+      <SettingsPageView
         accountBookId={accountBookId}
         settings={settings}
         onSubmit={async (values) => {

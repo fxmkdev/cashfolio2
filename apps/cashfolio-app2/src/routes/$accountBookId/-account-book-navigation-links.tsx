@@ -5,13 +5,14 @@ import {
   IconChartBar,
   IconDatabase,
   IconListDetails,
+  IconSettings,
 } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import { LinkNavLink } from "@/components/link-nav-link";
 import type { AccountBookSection, AccountsLinkSearch } from "./-route-helpers";
 
 type AccountBookNavigationLink = {
-  section: Exclude<AccountBookSection, "settings">;
+  section: Exclude<AccountBookSection, "user-settings">;
   label: string;
   icon: (size: number) => ReactNode;
 };
@@ -44,6 +45,11 @@ const adminNavigationLinks: AccountBookNavigationLink[] = [
     section: "valuation-cache",
     label: "Valuation Cache",
     icon: (size) => <IconDatabase size={size} />,
+  },
+  {
+    section: "settings",
+    label: "Settings",
+    icon: (size) => <IconSettings size={size} />,
   },
 ];
 
@@ -254,6 +260,14 @@ function AccountBookNavigationLinkItem({
         <LinkNavLink
           {...sharedProps}
           to="/$accountBookId/valuation-cache"
+          params={{ accountBookId }}
+        />
+      );
+    case "settings":
+      return (
+        <LinkNavLink
+          {...sharedProps}
+          to="/$accountBookId/settings"
           params={{ accountBookId }}
         />
       );
