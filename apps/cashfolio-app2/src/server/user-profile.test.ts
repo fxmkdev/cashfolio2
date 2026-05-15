@@ -198,12 +198,38 @@ describe("user profile server functions", () => {
     ).rejects.toThrow("Avatar is not allowed.");
   });
 
-  it("loads shell profile from claims without calling Logto Account API", async () => {
+  it("loads shell profile from Logto Account API", async () => {
+    await expect(getAuthenticatedUserProfile()).resolves.toEqual({
+      displayName: "Ada Lovelace",
+      avatarUrl: "https://example.test/ada.png",
+      initials: "AL",
+    });
+    expect(fetchLogtoAccountApi).toHaveBeenCalledWith("/api/my-account");
+  });
+
+  it("falls back to claims when Logto Account API rejects shell profile loading", async () => {
+    fetchLogtoAccountApi.mockResolvedValueOnce(
+      jsonResponse({ message: "Account API is disabled." }, { status: 403 }),
+    );
+
     await expect(getAuthenticatedUserProfile()).resolves.toEqual({
       displayName: "Claims User",
       avatarUrl: "https://example.test/claims.png",
       initials: "CU",
     });
-    expect(fetchLogtoAccountApi).not.toHaveBeenCalled();
+    expect(fetchLogtoAccountApi).toHaveBeenCalledWith("/api/my-account");
+  });
+
+  it("falls back to claims when Logto Account API throws during shell profile loading", async () => {
+    fetchLogtoAccountApi.mockRejectedValueOnce(
+      new Error("Network unavailable"),
+    );
+
+    await expect(getAuthenticatedUserProfile()).resolves.toEqual({
+      displayName: "Claims User",
+      avatarUrl: "https://example.test/claims.png",
+      initials: "CU",
+    });
+    expect(fetchLogtoAccountApi).toHaveBeenCalledWith("/api/my-account");
   });
 });
