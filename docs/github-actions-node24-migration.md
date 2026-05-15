@@ -1,10 +1,10 @@
 # GitHub Actions Node 24 Migration
 
-Tracking issue: [#104](https://github.com/felixmokross/cashfolio2/issues/104)
+Tracking issue: [#104](https://github.com/fxmkdev/cashfolio2/issues/104)
 
 This repository already upgraded directly controllable action references to Node
 24-compatible majors in
-[#103](https://github.com/felixmokross/cashfolio2/pull/103).
+[#103](https://github.com/fxmkdev/cashfolio2/pull/103).
 
 Some CI warnings are still expected because one external action still runs on
 Node 20:
@@ -18,7 +18,7 @@ Resolved since #104 was opened:
 - `superfly/flyctl-actions/setup-flyctl@master` now declares
   `runs.using: node24`
 - `neondatabase/create-branch-action@v6` now declares `runs.using: node24`
-- The previous `felixmokross/webplatform` setup/version dependency was replaced
+- The previous `fxmkdev/webplatform` setup/version dependency was replaced
   by local workflows/actions that use this repository's Node 24 configuration
 
 GitHub timeline from the warning:
