@@ -27,6 +27,9 @@ function AccountBookShellSmokeHarness() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
+  const href = useRouterState({
+    select: (state) => state.location.href,
+  });
   const search = useRouterState({
     select: (state) => state.location.search,
   });
@@ -39,6 +42,7 @@ function AccountBookShellSmokeHarness() {
       <AccountBookShell
         accountSecurityUrl="https://tenant.logto.app/account/security"
         accountBookId={accountBookId}
+        currentHref={href}
         accountBooks={[
           { id: "storybook-book", name: "Storybook Book" },
           { id: "storybook-alt-book", name: "Storybook Alt Book" },
@@ -154,6 +158,9 @@ export const RouteSmoke: Story = {
     await expect(
       canvas.getByRole("menuitem", { name: "Create New" }),
     ).toBeVisible();
+    await expect(
+      canvas.getByRole("menuitem", { name: "Create New" }),
+    ).toHaveAttribute("href", expect.stringContaining("returnTo="));
     await expect(
       canvas.queryByRole("menuitem", { name: "Sign Out" }),
     ).not.toBeInTheDocument();

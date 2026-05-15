@@ -4,12 +4,7 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
-import {
-  deleteAccountBook,
-  updateAccountBookSettings,
-} from "@/server/account-books";
 import { invalidateCachedUserAccountBooks } from "../-account-book-options-loader";
-import { loadAccountBookSettingsPageData } from "./-page-loader";
 
 const AccountBookSettingsPageView = lazy(async () => {
   const module = await import("./-page-view");
@@ -18,6 +13,7 @@ const AccountBookSettingsPageView = lazy(async () => {
 
 export const Route = createFileRoute("/$accountBookId/account-book-settings")({
   loader: async ({ params: { accountBookId } }) => {
+    const { loadAccountBookSettingsPageData } = await import("./-page-loader");
     return loadAccountBookSettingsPageData({ accountBookId });
   },
   component: AccountBookSettingsPage,
@@ -37,6 +33,9 @@ function AccountBookSettingsPage() {
         accountBookId={accountBookId}
         settings={settings}
         onSubmit={async (values) => {
+          const { updateAccountBookSettings } =
+            await import("@/server/account-books");
+
           await updateAccountBookSettings({
             data: {
               accountBookId,
@@ -50,6 +49,8 @@ function AccountBookSettingsPage() {
           await router.invalidate();
         }}
         onDelete={async (values) => {
+          const { deleteAccountBook } = await import("@/server/account-books");
+
           await deleteAccountBook({
             data: {
               accountBookId,

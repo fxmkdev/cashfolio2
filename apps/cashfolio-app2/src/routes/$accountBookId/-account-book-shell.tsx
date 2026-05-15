@@ -39,6 +39,7 @@ import {
 export type AccountBookShellProps = {
   accountSecurityUrl: string | null;
   accountBookId: string;
+  currentHref: string;
   pathname: string;
   accountBooks: UserAccountBookOption[];
   appVersion: string;
@@ -53,6 +54,7 @@ export type AccountBookShellProps = {
 export function AccountBookShell({
   accountSecurityUrl,
   accountBookId,
+  currentHref,
   pathname,
   accountBooks,
   appVersion,
@@ -221,6 +223,7 @@ export function AccountBookShell({
                     accountBooks={accountBooks}
                     accountsTab={accountsLinkSearch.tab}
                     accountsMode={accountsLinkSearch.mode}
+                    createNewReturnTo={currentHref}
                   />
                   <UserMenu
                     accountSecurityUrl={accountSecurityUrl}
@@ -234,6 +237,7 @@ export function AccountBookShell({
                     accountBooks={accountBooks}
                     accountsTab={accountsLinkSearch.tab}
                     accountsMode={accountsLinkSearch.mode}
+                    createNewReturnTo={currentHref}
                     collapsed
                   />
                 </Group>
@@ -253,6 +257,7 @@ export function AccountBookShell({
                   accountBooks={accountBooks}
                   accountsTab={accountsLinkSearch.tab}
                   accountsMode={accountsLinkSearch.mode}
+                  createNewReturnTo={currentHref}
                 />
                 <UserMenu
                   accountSecurityUrl={accountSecurityUrl}
