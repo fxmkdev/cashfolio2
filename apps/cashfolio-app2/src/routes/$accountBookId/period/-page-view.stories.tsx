@@ -130,9 +130,14 @@ export const HeaderActionLayoutSmoke: Story = {
     await expect(
       canvas.getByTestId("period-picker-trigger"),
     ).toBeInTheDocument();
+    const analysisSection = await canvas.findByTestId(
+      "period-analysis-section",
+    );
     await expect(
-      canvas.queryByRole("heading", { name: "Expenses Breakdown" }),
-    ).not.toBeInTheDocument();
+      within(analysisSection).getByRole("heading", {
+        name: "Expenses Breakdown",
+      }),
+    ).toBeInTheDocument();
   },
 };
 
