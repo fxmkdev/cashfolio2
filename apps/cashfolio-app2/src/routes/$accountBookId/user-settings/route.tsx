@@ -1,6 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
-import { updateAuthenticatedUserSettings } from "@/server/user-profile";
 
 const UserSettingsPageView = lazy(async () => {
   const module = await import("./-page-view");
@@ -25,6 +24,8 @@ function UserSettingsPage() {
       <UserSettingsPageView
         settings={settings}
         onSubmit={async (values) => {
+          const { updateAuthenticatedUserSettings } =
+            await import("@/server/user-profile");
           await updateAuthenticatedUserSettings({
             data: {
               name: values.name,
