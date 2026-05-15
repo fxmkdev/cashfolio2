@@ -1,8 +1,10 @@
-import { getUserAccountBooks, type UserAccountBookOption } from "@/server/home";
+import type { UserAccountBookOption } from "@/server/home";
 
 let cachedAccountBooksPromise: Promise<UserAccountBookOption[]> | null = null;
 
-export function loadUserAccountBooksForAccountBookRoute() {
+export async function loadUserAccountBooksForAccountBookRoute() {
+  const { getUserAccountBooks } = await import("@/server/home");
+
   if (typeof window === "undefined") {
     return getUserAccountBooks();
   }

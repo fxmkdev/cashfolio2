@@ -16,7 +16,6 @@ import { IconCheck, IconPlus } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { currencies } from "@/currencies";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
-import { createAccountBook } from "@/server/account-books";
 import { normalizeDateInputValue, startOfUtcDay } from "@/shared/date";
 import { invalidateCachedUserAccountBooks } from "../$accountBookId/-account-book-options-loader";
 import {
@@ -146,6 +145,8 @@ function NewAccountBookPage() {
             setSubmitError(null);
             await runSubmit(async () => {
               try {
+                const { createAccountBook } =
+                  await import("@/server/account-books");
                 const created = await createAccountBook({
                   data: {
                     name: values.name.trim(),
