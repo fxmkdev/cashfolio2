@@ -17,19 +17,21 @@ test("account-book sidebar links navigate between key sections", async ({
   );
   await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Activity" }).click();
+  await page.getByRole("link", { name: "Transactions" }).click();
   await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/activity`));
-  await expect(page.getByRole("heading", { name: "Activity" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Transactions" }),
+  ).toBeVisible();
 
-  await page.getByRole("link", { name: "Period" }).click();
+  await page.getByRole("link", { name: "Period Report" }).click();
   await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/period$`));
-  await expect(page.getByRole("heading", { name: "Period" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Timeline" }).click();
+  await page.getByRole("link", { name: "History" }).click();
   await expect(page).toHaveURL(
     new RegExp(`/${seeded.accountBookId}/timeline$`),
   );
-  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
 
   await page.getByRole("link", { name: "Valuation Cache" }).click();
   await expect(page).toHaveURL(
@@ -55,12 +57,12 @@ test("mobile sidebar burger reveals and uses navigation links", async ({
   await expect(burger).toBeVisible();
 
   await burger.click();
-  const timelineLink = page.getByRole("link", { name: "Timeline" });
+  const timelineLink = page.getByRole("link", { name: "History" });
   await expect(timelineLink).toBeVisible();
   await timelineLink.click();
 
   await expect(page).toHaveURL(
     new RegExp(`/${seeded.accountBookId}/timeline$`),
   );
-  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
 });

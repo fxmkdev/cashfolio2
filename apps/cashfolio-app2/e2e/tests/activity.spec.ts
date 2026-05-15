@@ -86,10 +86,12 @@ test("lists bookings, carries account link context, and creates transactions", a
   });
 
   await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
-  await page.getByRole("link", { name: "Activity" }).click();
+  await page.getByRole("link", { name: "Transactions" }).click();
 
   await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/activity`));
-  await expect(page.getByRole("heading", { name: "Activity" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Transactions" }),
+  ).toBeVisible();
   await expect(page.getByTestId("period-picker-trigger")).toContainText(
     "May 2026",
   );
