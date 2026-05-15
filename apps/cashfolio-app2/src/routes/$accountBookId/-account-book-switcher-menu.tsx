@@ -13,7 +13,6 @@ import {
   IconExternalLink,
   IconLogout2,
   IconPlus,
-  IconSettings,
   IconShieldLock,
   IconUserCog,
 } from "@tabler/icons-react";
@@ -145,14 +144,6 @@ export function AccountBookSwitcherMenu({
             </LinkMenuItem>
           );
         })}
-        <Menu.Divider />
-        <LinkMenuItem
-          leftSection={<IconSettings size={16} />}
-          to="/$accountBookId/account-book-settings"
-          params={{ accountBookId }}
-        >
-          Account Book Settings
-        </LinkMenuItem>
         <Menu.Divider />
         <LinkMenuItem
           leftSection={<IconPlus size={16} />}

@@ -159,7 +159,7 @@ test("deletes an account book after typed-name confirmation and redirects to cre
   await expect(page).toHaveURL(activeAssetAccountsUrlPattern);
 
   const accountBookId = getAccountBookIdFromAccountsUrl(page.url());
-  await page.goto(`/${accountBookId}/account-book-settings`);
+  await page.goto(`/${accountBookId}/settings`);
 
   await page
     .getByRole("button", { name: "Delete Account Book" })

@@ -16,10 +16,10 @@ import { Route as AccountBooksNewRouteImport } from './routes/account-books/new'
 import { Route as AccountBookIdValuationCacheRouteRouteImport } from './routes/$accountBookId/valuation-cache/route'
 import { Route as AccountBookIdUserSettingsRouteRouteImport } from './routes/$accountBookId/user-settings/route'
 import { Route as AccountBookIdTimelineRouteRouteImport } from './routes/$accountBookId/timeline/route'
+import { Route as AccountBookIdSettingsRouteRouteImport } from './routes/$accountBookId/settings/route'
 import { Route as AccountBookIdPeriodRouteRouteImport } from './routes/$accountBookId/period/route'
 import { Route as AccountBookIdActivityRouteRouteImport } from './routes/$accountBookId/activity/route'
 import { Route as AccountBookIdAccountsRouteRouteImport } from './routes/$accountBookId/accounts/route'
-import { Route as AccountBookIdAccountBookSettingsRouteRouteImport } from './routes/$accountBookId/account-book-settings/route'
 import { Route as AccountBookIdAccountIdRouteRouteImport } from './routes/$accountBookId/$accountId/route'
 import { Route as AccountBookIdPeriodIndexRouteImport } from './routes/$accountBookId/period/index'
 import { Route as AccountBookIdActivityIndexRouteImport } from './routes/$accountBookId/activity/index'
@@ -65,6 +65,12 @@ const AccountBookIdTimelineRouteRoute =
     path: '/timeline',
     getParentRoute: () => AccountBookIdRouteRoute,
   } as any)
+const AccountBookIdSettingsRouteRoute =
+  AccountBookIdSettingsRouteRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AccountBookIdRouteRoute,
+  } as any)
 const AccountBookIdPeriodRouteRoute =
   AccountBookIdPeriodRouteRouteImport.update({
     id: '/period',
@@ -81,12 +87,6 @@ const AccountBookIdAccountsRouteRoute =
   AccountBookIdAccountsRouteRouteImport.update({
     id: '/accounts',
     path: '/accounts',
-    getParentRoute: () => AccountBookIdRouteRoute,
-  } as any)
-const AccountBookIdAccountBookSettingsRouteRoute =
-  AccountBookIdAccountBookSettingsRouteRouteImport.update({
-    id: '/account-book-settings',
-    path: '/account-book-settings',
     getParentRoute: () => AccountBookIdRouteRoute,
   } as any)
 const AccountBookIdAccountIdRouteRoute =
@@ -129,10 +129,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$accountBookId': typeof AccountBookIdRouteRouteWithChildren
   '/$accountBookId/$accountId': typeof AccountBookIdAccountIdRouteRouteWithChildren
-  '/$accountBookId/account-book-settings': typeof AccountBookIdAccountBookSettingsRouteRoute
   '/$accountBookId/accounts': typeof AccountBookIdAccountsRouteRoute
   '/$accountBookId/activity': typeof AccountBookIdActivityRouteRouteWithChildren
   '/$accountBookId/period': typeof AccountBookIdPeriodRouteRouteWithChildren
+  '/$accountBookId/settings': typeof AccountBookIdSettingsRouteRoute
   '/$accountBookId/timeline': typeof AccountBookIdTimelineRouteRoute
   '/$accountBookId/user-settings': typeof AccountBookIdUserSettingsRouteRoute
   '/$accountBookId/valuation-cache': typeof AccountBookIdValuationCacheRouteRoute
@@ -146,8 +146,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/$accountBookId/account-book-settings': typeof AccountBookIdAccountBookSettingsRouteRoute
   '/$accountBookId/accounts': typeof AccountBookIdAccountsRouteRoute
+  '/$accountBookId/settings': typeof AccountBookIdSettingsRouteRoute
   '/$accountBookId/timeline': typeof AccountBookIdTimelineRouteRoute
   '/$accountBookId/user-settings': typeof AccountBookIdUserSettingsRouteRoute
   '/$accountBookId/valuation-cache': typeof AccountBookIdValuationCacheRouteRoute
@@ -164,10 +164,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$accountBookId': typeof AccountBookIdRouteRouteWithChildren
   '/$accountBookId/$accountId': typeof AccountBookIdAccountIdRouteRouteWithChildren
-  '/$accountBookId/account-book-settings': typeof AccountBookIdAccountBookSettingsRouteRoute
   '/$accountBookId/accounts': typeof AccountBookIdAccountsRouteRoute
   '/$accountBookId/activity': typeof AccountBookIdActivityRouteRouteWithChildren
   '/$accountBookId/period': typeof AccountBookIdPeriodRouteRouteWithChildren
+  '/$accountBookId/settings': typeof AccountBookIdSettingsRouteRoute
   '/$accountBookId/timeline': typeof AccountBookIdTimelineRouteRoute
   '/$accountBookId/user-settings': typeof AccountBookIdUserSettingsRouteRoute
   '/$accountBookId/valuation-cache': typeof AccountBookIdValuationCacheRouteRoute
@@ -185,10 +185,10 @@ export interface FileRouteTypes {
     | '/'
     | '/$accountBookId'
     | '/$accountBookId/$accountId'
-    | '/$accountBookId/account-book-settings'
     | '/$accountBookId/accounts'
     | '/$accountBookId/activity'
     | '/$accountBookId/period'
+    | '/$accountBookId/settings'
     | '/$accountBookId/timeline'
     | '/$accountBookId/user-settings'
     | '/$accountBookId/valuation-cache'
@@ -202,8 +202,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/$accountBookId/account-book-settings'
     | '/$accountBookId/accounts'
+    | '/$accountBookId/settings'
     | '/$accountBookId/timeline'
     | '/$accountBookId/user-settings'
     | '/$accountBookId/valuation-cache'
@@ -219,10 +219,10 @@ export interface FileRouteTypes {
     | '/'
     | '/$accountBookId'
     | '/$accountBookId/$accountId'
-    | '/$accountBookId/account-book-settings'
     | '/$accountBookId/accounts'
     | '/$accountBookId/activity'
     | '/$accountBookId/period'
+    | '/$accountBookId/settings'
     | '/$accountBookId/timeline'
     | '/$accountBookId/user-settings'
     | '/$accountBookId/valuation-cache'
@@ -293,6 +293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountBookIdTimelineRouteRouteImport
       parentRoute: typeof AccountBookIdRouteRoute
     }
+    '/$accountBookId/settings': {
+      id: '/$accountBookId/settings'
+      path: '/settings'
+      fullPath: '/$accountBookId/settings'
+      preLoaderRoute: typeof AccountBookIdSettingsRouteRouteImport
+      parentRoute: typeof AccountBookIdRouteRoute
+    }
     '/$accountBookId/period': {
       id: '/$accountBookId/period'
       path: '/period'
@@ -312,13 +319,6 @@ declare module '@tanstack/react-router' {
       path: '/accounts'
       fullPath: '/$accountBookId/accounts'
       preLoaderRoute: typeof AccountBookIdAccountsRouteRouteImport
-      parentRoute: typeof AccountBookIdRouteRoute
-    }
-    '/$accountBookId/account-book-settings': {
-      id: '/$accountBookId/account-book-settings'
-      path: '/account-book-settings'
-      fullPath: '/$accountBookId/account-book-settings'
-      preLoaderRoute: typeof AccountBookIdAccountBookSettingsRouteRouteImport
       parentRoute: typeof AccountBookIdRouteRoute
     }
     '/$accountBookId/$accountId': {
@@ -413,10 +413,10 @@ const AccountBookIdPeriodRouteRouteWithChildren =
 
 interface AccountBookIdRouteRouteChildren {
   AccountBookIdAccountIdRouteRoute: typeof AccountBookIdAccountIdRouteRouteWithChildren
-  AccountBookIdAccountBookSettingsRouteRoute: typeof AccountBookIdAccountBookSettingsRouteRoute
   AccountBookIdAccountsRouteRoute: typeof AccountBookIdAccountsRouteRoute
   AccountBookIdActivityRouteRoute: typeof AccountBookIdActivityRouteRouteWithChildren
   AccountBookIdPeriodRouteRoute: typeof AccountBookIdPeriodRouteRouteWithChildren
+  AccountBookIdSettingsRouteRoute: typeof AccountBookIdSettingsRouteRoute
   AccountBookIdTimelineRouteRoute: typeof AccountBookIdTimelineRouteRoute
   AccountBookIdUserSettingsRouteRoute: typeof AccountBookIdUserSettingsRouteRoute
   AccountBookIdValuationCacheRouteRoute: typeof AccountBookIdValuationCacheRouteRoute
@@ -426,11 +426,10 @@ interface AccountBookIdRouteRouteChildren {
 const AccountBookIdRouteRouteChildren: AccountBookIdRouteRouteChildren = {
   AccountBookIdAccountIdRouteRoute:
     AccountBookIdAccountIdRouteRouteWithChildren,
-  AccountBookIdAccountBookSettingsRouteRoute:
-    AccountBookIdAccountBookSettingsRouteRoute,
   AccountBookIdAccountsRouteRoute: AccountBookIdAccountsRouteRoute,
   AccountBookIdActivityRouteRoute: AccountBookIdActivityRouteRouteWithChildren,
   AccountBookIdPeriodRouteRoute: AccountBookIdPeriodRouteRouteWithChildren,
+  AccountBookIdSettingsRouteRoute: AccountBookIdSettingsRouteRoute,
   AccountBookIdTimelineRouteRoute: AccountBookIdTimelineRouteRoute,
   AccountBookIdUserSettingsRouteRoute: AccountBookIdUserSettingsRouteRoute,
   AccountBookIdValuationCacheRouteRoute: AccountBookIdValuationCacheRouteRoute,

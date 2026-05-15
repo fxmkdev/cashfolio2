@@ -11,9 +11,9 @@ vi.mock("@/server/accounts", () => ({
   getActiveAccountBookUnitUsage,
 }));
 
-import { loadAccountBookSettingsPageData } from "./-page-loader";
+import { loadSettingsPageData } from "./-page-loader";
 
-describe("loadAccountBookSettingsPageData", () => {
+describe("loadSettingsPageData", () => {
   beforeEach(() => {
     getAccountBookSettings.mockReset();
     getAccountBookSettings.mockResolvedValue({
@@ -30,7 +30,7 @@ describe("loadAccountBookSettingsPageData", () => {
   });
 
   it("loads account-book settings for the selected account book", async () => {
-    const result = await loadAccountBookSettingsPageData({
+    const result = await loadSettingsPageData({
       accountBookId: "book-1",
     });
 

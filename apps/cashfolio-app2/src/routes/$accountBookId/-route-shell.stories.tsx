@@ -16,7 +16,7 @@ function getHeadingLabel(pathname: string): string {
   if (section === "period") return "Period Report";
   if (section === "timeline") return "History";
   if (section === "valuation-cache") return "Valuation Cache";
-  if (section === "account-book-settings") return "Account Book Settings";
+  if (section === "settings") return "Settings";
   if (section === "user-settings") return "User Settings";
   if (section === "accounts") return "Accounts";
 
@@ -133,6 +133,11 @@ export const RouteSmoke: Story = {
       "/storybook-book/valuation-cache",
     );
 
+    await userEvent.click(canvas.getByRole("link", { name: "Settings" }));
+    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
+      "/storybook-book/settings",
+    );
+
     await userEvent.click(canvas.getByRole("link", { name: "Accounts" }));
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
       "/storybook-book/accounts",
@@ -153,8 +158,8 @@ export const RouteSmoke: Story = {
       canvas.getByRole("button", { name: "Storybook Book" }),
     );
     await expect(
-      canvas.getByRole("menuitem", { name: "Account Book Settings" }),
-    ).toBeVisible();
+      canvas.queryByRole("menuitem", { name: "Account Book Settings" }),
+    ).not.toBeInTheDocument();
     await expect(
       canvas.getByRole("menuitem", { name: "Create New" }),
     ).toBeVisible();
@@ -228,6 +233,11 @@ export const DesktopRailSmoke: Story = {
       "/storybook-book/valuation-cache",
     );
 
+    await userEvent.click(canvas.getByRole("link", { name: "Settings" }));
+    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
+      "/storybook-book/settings",
+    );
+
     await userEvent.click(canvas.getByRole("link", { name: "Transactions" }));
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
       "/storybook-book/activity",
@@ -239,8 +249,8 @@ export const DesktopRailSmoke: Story = {
       }),
     );
     await expect(
-      canvas.getByRole("menuitem", { name: "Account Book Settings" }),
-    ).toBeVisible();
+      canvas.queryByRole("menuitem", { name: "Account Book Settings" }),
+    ).not.toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
 
     await userEvent.click(
@@ -262,6 +272,7 @@ export const DesktopRailSmoke: Story = {
     await expect(
       canvas.getByRole("link", { name: "Valuation Cache" }),
     ).toBeVisible();
+    await expect(canvas.getByRole("link", { name: "Settings" })).toBeVisible();
   },
 };
 
