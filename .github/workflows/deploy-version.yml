@@ -72,7 +72,6 @@ jobs:
           fly_cpu_kind: ${{ vars.FLY_CPU_KIND }}
           fly_cpus: ${{ vars.FLY_CPUS }}
           logto_endpoint: ${{ vars.LOGTO_ENDPOINT }}
-          logto_tenant_id: ${{ vars.LOGTO_TENANT_ID }}
           logto_app_id: ${{ vars.LOGTO_APP_ID }}
           fly_api_token: ${{ secrets.FLY_API_TOKEN }}
       - name: Wake up deployed app

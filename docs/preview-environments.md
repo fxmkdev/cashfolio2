@@ -93,7 +93,6 @@ environment (recommended) or from repository/organization scope.
 - `FLY_CPU_KIND`
 - `FLY_CPUS`
 - `LOGTO_ENDPOINT`
-- `LOGTO_TENANT_ID`
 - `LOGTO_APP_ID`
 - `NEON_PROJECT_ID`
 - `NEON_PROD_BRANCH_ID`
