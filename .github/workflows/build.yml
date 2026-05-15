@@ -328,6 +328,11 @@ jobs:
           role: ${{ vars.NEON_ROLE_NAME || 'neondb_owner' }}
           api_key: ${{ secrets.NEON_API_KEY }}
           expires_at: ${{ env.EXPIRES_AT }}
+      - name: Run Neon branch post-provision hook
+        if: ${{ steps.neon.outputs.created == 'true' }}
+        run: sh apps/cashfolio-app2/scripts/neon-branch-post-provision.sh
+        env:
+          DATABASE_URL: ${{ steps.neon.outputs.db_url }}
       - name: Ensure Fly app exists
         run: |
           set -euo pipefail

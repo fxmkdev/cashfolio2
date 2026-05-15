@@ -11,13 +11,15 @@ On pull requests (non-forks), CI now:
 2. Creates or reuses a Neon branch named
    `pr-<PR_NUMBER>-<BRANCH_TAIL_SLUG>-cashfolio-app2` from production using
    `neondatabase/create-branch-action`
-3. Creates or reuses a Fly app named
+3. Runs the shared Neon branch post-provision hook when the Neon branch was
+   newly created
+4. Creates or reuses a Fly app named
    `cashfolio-app2-pr-<PR_NUMBER>-<FLY_BRANCH_TAIL_SLUG>`
-4. Sets Fly secrets (`DATABASE_URL`, `LOGTO_APP_SECRET`, `SESSION_SECRET`), with
+5. Sets Fly secrets (`DATABASE_URL`, `LOGTO_APP_SECRET`, `SESSION_SECRET`), with
    `SESSION_SECRET` generated per deploy in CI
-5. Deploys the PR image to
+6. Deploys the PR image to
    `https://cashfolio-app2-pr-<PR_NUMBER>-<FLY_BRANCH_TAIL_SLUG>.fly.dev/`
-6. Posts/updates a PR comment with the dynamic preview URL
+7. Posts/updates a PR comment with the dynamic preview URL
 
 Preview deployment is gated by the app image build and preview resource
 preparation. Unit tests, typecheck, lint, and format checks still run in CI, but
@@ -65,10 +67,15 @@ not depend on Redis image build/push.
 Neon branch lifecycle notes:
 
 1. CI sets `expires_at` to 14 days in the create-branch step.
-2. This is a safety fallback in case close-time cleanup fails.
-3. For long-lived PRs without updates, the Neon preview branch can expire before
+2. Newly created branches run
+   `apps/cashfolio-app2/scripts/neon-branch-post-provision.sh` before Fly app
+   secrets are staged.
+3. Existing branches skip the post-provision hook because they are reused, not
+   reset from production.
+4. The expiration is a safety fallback in case close-time cleanup fails.
+5. For long-lived PRs without updates, the Neon preview branch can expire before
    the PR is closed.
-4. A later PR update (`synchronize`) will recreate/reuse the branch name and
+6. A later PR update (`synchronize`) will recreate/reuse the branch name and
    restore preview DB provisioning.
 
 ## Required GitHub configuration

@@ -149,8 +149,8 @@ jobs:
           fi
 
           echo "::add-mask::$DATABASE_URL"
-      - name: Run staging DB post-refresh hook
-        run: sh apps/cashfolio-app2/scripts/staging-db-post-refresh.sh
+      - name: Run Neon branch post-provision hook
+        run: sh apps/cashfolio-app2/scripts/neon-branch-post-provision.sh
         env:
           DATABASE_URL: ${{ steps.reset-neon.outputs.db_url }}
 
