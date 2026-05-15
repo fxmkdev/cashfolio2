@@ -60,7 +60,7 @@ export function PeriodFilterAction({
   onMonthPickerChange,
   onYearPickerChange,
   clearFilterLabel = "Clear Filter",
-  clearFilterDisabled = false,
+  clearFilterDisabled = true,
   onClearFilter,
 }: PeriodFilterActionProps) {
   return (

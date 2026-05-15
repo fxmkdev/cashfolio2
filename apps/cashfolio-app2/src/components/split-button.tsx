@@ -6,10 +6,12 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { IconChevronDown } from "@tabler/icons-react";
-import { Fragment, type ReactNode } from "react";
+import { Fragment, type ComponentPropsWithoutRef, type ReactNode } from "react";
 
-export function SplitButtonGroup({ children }: { children: ReactNode }) {
-  return <Button.Group>{children}</Button.Group>;
+export function SplitButtonGroup(
+  props: ComponentPropsWithoutRef<typeof Button.Group>,
+) {
+  return <Button.Group {...props} />;
 }
 
 export type SplitButtonMenuItem = {

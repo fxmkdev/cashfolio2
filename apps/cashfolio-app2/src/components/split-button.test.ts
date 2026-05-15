@@ -12,7 +12,7 @@ describe("SplitButtonGroup", () => {
         null,
         createElement(
           SplitButtonGroup,
-          null,
+          { className: "period-actions" },
           createElement("button", { type: "button" }, "Previous"),
           createElement("button", { type: "button" }, "Next"),
         ),
@@ -21,5 +21,6 @@ describe("SplitButtonGroup", () => {
 
     expect(html).toContain("Previous");
     expect(html).toContain("Next");
+    expect(html).toContain("period-actions");
   });
 });
