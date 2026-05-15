@@ -175,7 +175,6 @@ export function ActivityPageContent() {
                 return;
               }
 
-              setPickerOpened(false);
               const nextPeriodValue = getPeriodModeChangeValue({
                 nextMode: nextPeriodMode,
                 periodMode,

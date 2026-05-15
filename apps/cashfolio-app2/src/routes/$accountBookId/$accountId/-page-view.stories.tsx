@@ -354,7 +354,6 @@ function LedgerPageStoryHarness({
                   return;
                 }
 
-                setPickerOpened(false);
                 const nextPeriodValue = getPeriodModeChangeValue({
                   nextMode: nextPeriodMode,
                   periodMode,

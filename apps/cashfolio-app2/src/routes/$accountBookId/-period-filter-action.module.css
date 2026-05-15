@@ -4,8 +4,14 @@
 }
 
 .trigger :global(.mantine-Button-inner) {
+  position: relative;
   width: 100%;
   min-width: 0;
+}
+
+.trigger :global(.mantine-Button-section[data-position="right"]) {
+  position: absolute;
+  inset-inline-end: 0;
 }
 
 .trigger :global(.mantine-Button-label) {

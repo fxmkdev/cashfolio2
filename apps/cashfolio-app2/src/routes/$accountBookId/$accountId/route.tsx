@@ -201,7 +201,6 @@ export function LedgerPageContent() {
                   return;
                 }
 
-                setPickerOpened(false);
                 const nextPeriodValue = getPeriodModeChangeValue({
                   nextMode: nextPeriodMode,
                   periodMode,

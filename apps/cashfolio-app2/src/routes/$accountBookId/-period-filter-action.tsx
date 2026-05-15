@@ -84,7 +84,7 @@ export function PeriodFilterAction({
         <Popover.Target>
           <Button
             variant="default"
-            justify="space-between"
+            justify="center"
             rightSection={<IconChevronDown size={16} />}
             onClick={() => onPickerOpenedChange(!pickerOpened)}
             className={classes.trigger}

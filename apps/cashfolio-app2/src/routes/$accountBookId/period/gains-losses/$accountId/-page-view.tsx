@@ -164,7 +164,6 @@ export function GainLossReconciliationPageView({
   );
 
   const handlePeriodModeChange = (nextMode: string) => {
-    setPickerOpened(false);
     const nextPeriodValue = getPeriodModeChangeValue({
       nextMode,
       periodMode,

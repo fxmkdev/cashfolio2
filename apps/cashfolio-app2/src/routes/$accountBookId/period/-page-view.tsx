@@ -300,7 +300,6 @@ export function PeriodPageView({
   });
 
   const handlePeriodModeChange = (nextMode: string) => {
-    setPickerOpened(false);
     const nextPeriodValue = getPeriodModeChangeValue({
       nextMode,
       periodMode,
