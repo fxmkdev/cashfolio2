@@ -15,6 +15,12 @@ import { mapWithConcurrencyLimit } from "../concurrency";
 export type PeriodTimelineGranularity = "month" | "year";
 
 const TIMELINE_POINT_LOAD_CONCURRENCY = 4;
+const GAIN_LOSS_ROOT_SCOPE_ORDER: TimelineScopeSelection[] = [
+  "unit-type:fx",
+  "unit-type:security",
+  "unit-type:cryptocurrency",
+  "unit-type:explicit",
+];
 
 export type PeriodTimelinePoint = {
   periodValue: string;
@@ -91,7 +97,7 @@ function parseTimelineScopeSelectionOrDefault(
 
 function createTimelineScopeOptionsWithTotal(
   options: Iterable<TimelineScopeOption>,
-  args?: { sort?: boolean },
+  args?: { sort?: "label" | "none" },
 ): TimelineScopeOption[] {
   const optionByValue = new Map<TimelineScopeSelection, TimelineScopeOption>();
   for (const option of options) {
@@ -100,7 +106,7 @@ function createTimelineScopeOptionsWithTotal(
 
   const dedupedOptions = Array.from(optionByValue.values());
   const sortedOptions =
-    args?.sort === false
+    args?.sort === "none"
       ? dedupedOptions
       : dedupedOptions.toSorted(
           (left, right) =>
@@ -115,6 +121,76 @@ function createTimelineScopeOptionsWithTotal(
     },
     ...sortedOptions,
   ];
+}
+
+function resolveGainLossScopeOptionPath(args: {
+  option: TimelineScopeOption;
+  optionByValue: Map<TimelineScopeSelection, TimelineScopeOption>;
+}): TimelineScopeOption[] {
+  const path: TimelineScopeOption[] = [];
+  const visitedValues = new Set<TimelineScopeSelection>();
+  let currentOption: TimelineScopeOption | undefined = args.option;
+
+  while (currentOption && !visitedValues.has(currentOption.value)) {
+    path.unshift(currentOption);
+    visitedValues.add(currentOption.value);
+    currentOption = currentOption.parentValue
+      ? args.optionByValue.get(currentOption.parentValue)
+      : undefined;
+  }
+
+  return path;
+}
+
+function compareGainLossScopeOptionPaths(
+  leftPath: TimelineScopeOption[],
+  rightPath: TimelineScopeOption[],
+): number {
+  const leftRootRank = GAIN_LOSS_ROOT_SCOPE_ORDER.indexOf(leftPath[0]!.value);
+  const rightRootRank = GAIN_LOSS_ROOT_SCOPE_ORDER.indexOf(rightPath[0]!.value);
+  const leftRank =
+    leftRootRank === -1 ? GAIN_LOSS_ROOT_SCOPE_ORDER.length : leftRootRank;
+  const rightRank =
+    rightRootRank === -1 ? GAIN_LOSS_ROOT_SCOPE_ORDER.length : rightRootRank;
+  if (leftRank !== rightRank) {
+    return leftRank - rightRank;
+  }
+
+  const maxLength = Math.max(leftPath.length, rightPath.length);
+  for (let index = 0; index < maxLength; index += 1) {
+    const leftOption = leftPath[index];
+    const rightOption = rightPath[index];
+    if (!leftOption) {
+      return -1;
+    }
+    if (!rightOption) {
+      return 1;
+    }
+
+    const labelComparison =
+      leftOption.label.localeCompare(rightOption.label, "en") ||
+      leftOption.value.localeCompare(rightOption.value, "en");
+    if (labelComparison !== 0) {
+      return labelComparison;
+    }
+  }
+
+  return 0;
+}
+
+function sortGainLossScopeOptions(
+  options: Iterable<TimelineScopeOption>,
+): TimelineScopeOption[] {
+  const optionByValue = new Map(
+    Array.from(options, (option) => [option.value, option]),
+  );
+
+  return Array.from(optionByValue.values()).toSorted((left, right) =>
+    compareGainLossScopeOptionPaths(
+      resolveGainLossScopeOptionPath({ option: left, optionByValue }),
+      resolveGainLossScopeOptionPath({ option: right, optionByValue }),
+    ),
+  );
 }
 
 function clampTimelineScopeSelection(args: {
@@ -346,8 +422,8 @@ export const getPeriodTimeline = createServerFn({
       expenseScopeOptions.values(),
     );
     const finalizedGainLossScopeOptions = createTimelineScopeOptionsWithTotal(
-      gainLossScopeOptions.values(),
-      { sort: false },
+      sortGainLossScopeOptions(gainLossScopeOptions.values()),
+      { sort: "none" },
     );
     const finalizedAssetScopeOptions = createTimelineScopeOptionsWithTotal(
       assetScopeOptions.values(),

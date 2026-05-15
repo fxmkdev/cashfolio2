@@ -374,6 +374,110 @@ describe("getPeriodTimeline", () => {
     });
   });
 
+  test("keeps merged Gain/Loss scope options in Period hierarchy order", async () => {
+    loadPeriodTimelinePoint.mockImplementation(
+      async ({ period }: { period: string }) => ({
+        selectedPeriodValue: period,
+        selectedPeriodLabel: `Label ${period}`,
+        selectedPeriodEnd:
+          period === "2026-03"
+            ? new Date("2026-03-17T00:00:00.000Z")
+            : period === "2026-02"
+              ? new Date("2026-02-28T00:00:00.000Z")
+              : new Date("2026-01-31T00:00:00.000Z"),
+        totalReturn: 0,
+        savings: 0,
+        income: 0,
+        expenses: 0,
+        gainsLosses: 0,
+        assets: 0,
+        liabilities: 0,
+        netWorth: 0,
+        scopeOptions: {
+          income: [],
+          expenses: [],
+          gainsLosses:
+            period === "2026-01"
+              ? [
+                  {
+                    value: "unit-type:explicit",
+                    label: "Explicit G/L",
+                    kind: "gainLoss",
+                  },
+                  {
+                    value: "explicit-account:cash",
+                    label: "Explicit G/L / Cash",
+                    kind: "gainLoss",
+                    parentValue: "unit-type:explicit",
+                  },
+                ]
+              : period === "2026-02"
+                ? [
+                    {
+                      value: "unit-type:fx",
+                      label: "FX",
+                      kind: "gainLoss",
+                    },
+                    {
+                      value: "unit:fx:USD",
+                      label: "FX / USD",
+                      kind: "gainLoss",
+                      parentValue: "unit-type:fx",
+                    },
+                    {
+                      value: "unit-account:fx:USD:cash-usd",
+                      label: "FX / USD / USD Cash",
+                      kind: "gainLoss",
+                      parentValue: "unit:fx:USD",
+                    },
+                  ]
+                : [
+                    {
+                      value: "unit-type:security",
+                      label: "Security",
+                      kind: "gainLoss",
+                    },
+                    {
+                      value: "unit:security:AAPL:USD",
+                      label: "Security / AAPL (USD)",
+                      kind: "gainLoss",
+                      parentValue: "unit-type:security",
+                    },
+                    {
+                      value: "unit-account:security:AAPL:USD:brokerage",
+                      label: "Security / AAPL (USD) / Brokerage",
+                      kind: "gainLoss",
+                      parentValue: "unit:security:AAPL:USD",
+                    },
+                  ],
+          assets: [],
+          liabilities: [],
+        },
+      }),
+    );
+
+    const result = await getPeriodTimeline({
+      data: {
+        accountBookId: "book-1",
+        granularity: "month",
+      },
+    });
+
+    expect(
+      result.scopeOptions.gainsLosses.map((option) => option.value),
+    ).toEqual([
+      "total",
+      "unit-type:fx",
+      "unit:fx:USD",
+      "unit-account:fx:USD:cash-usd",
+      "unit-type:security",
+      "unit:security:AAPL:USD",
+      "unit-account:security:AAPL:USD:brokerage",
+      "unit-type:explicit",
+      "explicit-account:cash",
+    ]);
+  });
+
   test("applies scoped asset values and scoped opening balance", async () => {
     loadTimelineOpeningBalancePoint.mockResolvedValueOnce({
       date: "2026-01-04T00:00:00.000Z",
