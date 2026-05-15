@@ -82,7 +82,10 @@ export async function queryAccountGroups(
   accountState: AccountState = "active",
 ) {
   const groups = await prisma.accountGroup.findMany({
-    where: { accountBookId },
+    where:
+      accountState === "active"
+        ? { accountBookId, isActive: true }
+        : { accountBookId },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
   const accounts =
@@ -153,9 +156,10 @@ export async function queryExistingNodes(
       },
     }),
     prisma.accountGroup.findMany({
-      where: {
-        accountBookId,
-      },
+      where:
+        accountState === "active"
+          ? { accountBookId, isActive: true }
+          : { accountBookId },
       select: {
         id: true,
         name: true,

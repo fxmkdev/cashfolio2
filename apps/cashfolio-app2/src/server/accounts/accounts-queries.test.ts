@@ -422,6 +422,28 @@ describe("getAccountsPageData", () => {
       rows: [],
     });
   });
+
+  it("keeps active group modal helper queries scoped to active groups", async () => {
+    await getAccountsPageData({
+      data: {
+        accountBookId: "book-3",
+        accountState: "active",
+      },
+    });
+
+    expect(prisma.accountGroup.findMany).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: { accountBookId: "book-3", isActive: true },
+      }),
+    );
+    expect(prisma.accountGroup.findMany).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        where: { accountBookId: "book-3", isActive: true },
+      }),
+    );
+  });
 });
 
 describe("getActiveAccountBookUnitUsage", () => {
