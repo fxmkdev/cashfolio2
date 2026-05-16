@@ -30,9 +30,14 @@ import { FormattedNumberInput } from "./formatted-number-input";
 import { GroupTreeSelect, type GroupTreeOption } from "./group-tree-select";
 import { CryptocurrencySelect, CurrencySelect } from "./unit-select";
 
+export type AccountTypeDescriptor =
+  | "ASSET"
+  | "LIABILITY"
+  | `EQUITY-${EquityAccountSubtype}`;
+
 type FormValues = {
   name?: string;
-  typeDescriptor?: "ASSET" | "LIABILITY" | `EQUITY-${EquityAccountSubtype}`;
+  typeDescriptor?: AccountTypeDescriptor;
   groupId?: string;
   sortOrder?: number;
   openingBalance?: number | string;
@@ -107,18 +112,7 @@ export type ExistingNode = {
   groupId?: string;
 };
 
-export function EditAccountModal({
-  opened,
-  onClose,
-  onExitTransitionEnd,
-  accountGroups,
-  onSubmit,
-  initialValues,
-  existingNodes,
-  editingId,
-  typeDescriptor,
-  unitUsage,
-}: {
+export type EditAccountModalProps = {
   opened: boolean;
   onClose: () => void;
   onExitTransitionEnd?: () => void;
@@ -130,9 +124,22 @@ export function EditAccountModal({
   initialValues?: AccountInitialValues;
   existingNodes?: ExistingNode[];
   editingId?: string;
-  typeDescriptor: FormValues["typeDescriptor"];
+  typeDescriptor: AccountTypeDescriptor;
   unitUsage?: AccountBookUnitUsage;
-}) {
+};
+
+export function EditAccountModal({
+  opened,
+  onClose,
+  onExitTransitionEnd,
+  accountGroups,
+  onSubmit,
+  initialValues,
+  existingNodes,
+  editingId,
+  typeDescriptor,
+  unitUsage,
+}: EditAccountModalProps) {
   const isEdit = !!initialValues;
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const { isSubmitting, runSubmit } = useDialogSubmitState();
