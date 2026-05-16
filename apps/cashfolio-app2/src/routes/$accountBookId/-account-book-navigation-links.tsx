@@ -7,6 +7,7 @@ import {
   IconExternalLink,
   IconListDetails,
   IconSettings,
+  IconShieldCog,
 } from "@tabler/icons-react";
 import {
   forwardRef,
@@ -128,7 +129,7 @@ function AccountBookAdminRootLink({
       component="a"
       href="/admin"
       label={collapsed ? "" : "Admin"}
-      leftSection={<IconSettings size={collapsed ? 18 : 16} />}
+      leftSection={<IconShieldCog size={collapsed ? 18 : 16} />}
       onClick={onNavigate}
       rel="noopener noreferrer"
       rightSection={collapsed ? undefined : <IconExternalLink size={14} />}

@@ -53,10 +53,10 @@ export const RouteSmoke: Story = {
     await expect(
       canvas.getByRole("link", { name: "Overview" }),
     ).toHaveAttribute("href", "/admin");
-    await expect(canvas.getByRole("link", { name: "App" })).toHaveAttribute(
-      "href",
-      "/",
-    );
+    const appLink = canvas.getByRole("link", { name: "Go to App" });
+    await expect(appLink).toHaveAttribute("href", "/");
+    await expect(appLink).toHaveAttribute("target", "_blank");
+    await expect(appLink).toHaveAttribute("rel", "noopener noreferrer");
     await userEvent.click(
       canvas.getByRole("button", { name: "Storybook User" }),
     );

@@ -10,7 +10,11 @@ import {
   type TextProps,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconHome2, IconLayoutDashboard } from "@tabler/icons-react";
+import {
+  IconExternalLink,
+  IconHome2,
+  IconLayoutDashboard,
+} from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import type { AuthenticatedUserProfile } from "@/auth/user-profile";
 import { LinkNavLink } from "@/components/link-nav-link";
@@ -73,9 +77,6 @@ export function AdminShell({
             </Group>
             <Divider />
             <Stack gap="xs">
-              <Text c="dimmed" fw={600} px="xs" size="xs">
-                Admin
-              </Text>
               <LinkNavLink
                 leftSection={<IconLayoutDashboard size={16} />}
                 label="Overview"
@@ -91,9 +92,12 @@ export function AdminShell({
             <NavLink
               component="a"
               href="/"
-              label="App"
+              label="Go to App"
               leftSection={<IconHome2 size={16} />}
               onClick={closeMobile}
+              rel="noopener noreferrer"
+              rightSection={<IconExternalLink size={14} />}
+              target="_blank"
             />
             <Divider />
             <UserMenu
