@@ -8,13 +8,26 @@ export async function getOrCreateUser(userContext: LogtoContext) {
     throw new Error("No user claims");
   }
 
-  const user = await prisma.user.upsert({
-    where: { externalId: userContext.claims.sub },
-    create: { externalId: userContext.claims.sub },
-    update: {},
-  });
+  const externalId = userContext.claims.sub;
 
-  return user;
+  try {
+    return await prisma.user.upsert({
+      where: { externalId },
+      create: { externalId },
+      update: {},
+    });
+  } catch (error) {
+    if (!isUniqueExternalIdError(error)) {
+      throw error;
+    }
+
+    const user = await prisma.user.findUnique({ where: { externalId } });
+    if (!user) {
+      throw error;
+    }
+
+    return user;
+  }
 }
 
 export async function ensureUser() {
@@ -31,4 +44,22 @@ export async function ensureUserHasRole(role: UserRole) {
   }
 
   return user;
+}
+
+function isUniqueExternalIdError(error: unknown) {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const data = error as {
+    code?: unknown;
+    meta?: { target?: unknown };
+  };
+
+  if (data.code !== "P2002") {
+    return false;
+  }
+
+  const target = data.meta?.target;
+  return Array.isArray(target) && target.includes("externalId");
 }
