@@ -42,12 +42,25 @@ describe("deleteBookScopedRedisDataForAccountBooks", () => {
     expect(redis.scanIterator).not.toHaveBeenCalled();
   });
 
-  it("throws when Redis is configured but unavailable", async () => {
+  it("continues when Redis is configured but unavailable", async () => {
     getRedisClient.mockResolvedValue(null);
 
     await expect(
       deleteBookScopedRedisDataForAccountBooks(["book-1"]),
-    ).rejects.toThrow("Redis is configured but unavailable.");
+    ).resolves.toBeUndefined();
+
+    expect(redis.scanIterator).not.toHaveBeenCalled();
+    expect(redis.del).not.toHaveBeenCalled();
+  });
+
+  it("continues when Redis cleanup fails", async () => {
+    redis.scanIterator.mockImplementation(() => {
+      throw new Error("scan failed");
+    });
+
+    await expect(
+      deleteBookScopedRedisDataForAccountBooks(["book-1"]),
+    ).resolves.toBeUndefined();
   });
 
   it("scans and deletes all book-scoped period cache families", async () => {

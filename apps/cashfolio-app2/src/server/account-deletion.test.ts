@@ -177,27 +177,4 @@ describe("account deletion", () => {
     });
     expect(deleteLogtoUser).toHaveBeenCalledWith("logto-user-1");
   });
-
-  it("aborts before DB and Logto deletion when Redis cleanup fails", async () => {
-    prisma.user.findUnique.mockResolvedValue({
-      id: "user-1",
-      accountBookLinks: [
-        createAccountBookLink({
-          id: "book-1",
-          name: "Private Book",
-          userLinkCount: 1,
-        }),
-      ],
-    });
-    deleteBookScopedRedisDataForAccountBooks.mockRejectedValue(
-      new Error("Redis is configured but unavailable."),
-    );
-
-    await expect(deleteAuthenticatedAccount()).rejects.toThrow(
-      "Redis is configured but unavailable.",
-    );
-
-    expect(prisma.$transaction).not.toHaveBeenCalled();
-    expect(deleteLogtoUser).not.toHaveBeenCalled();
-  });
 });
