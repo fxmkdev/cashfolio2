@@ -63,7 +63,7 @@ export async function doubleClickBreakdownLeafUntilLedgerNavigation(args: {
   );
 }
 
-export type PeriodPageSessionState = {
+export type ReportPageSessionState = {
   selectedBreakdown: "expense" | "income";
   selectedChartType: "donut" | "bar" | "table";
   selectedAllocationBreakdown: "asset" | "liability";
@@ -80,9 +80,9 @@ export type PeriodPageSessionState = {
   drillPathByGainsLosses: string[];
 };
 
-export function createPeriodPageSessionState(
-  overrides: Partial<PeriodPageSessionState> = {},
-): PeriodPageSessionState {
+export function createReportPageSessionState(
+  overrides: Partial<ReportPageSessionState> = {},
+): ReportPageSessionState {
   return {
     selectedBreakdown: overrides.selectedBreakdown ?? "expense",
     selectedChartType: overrides.selectedChartType ?? "donut",
@@ -104,12 +104,12 @@ export function createPeriodPageSessionState(
   };
 }
 
-export async function seedPeriodPageSessionState(args: {
+export async function seedReportPageSessionState(args: {
   page: Page;
   accountBookId: string;
-  state: PeriodPageSessionState;
+  state: ReportPageSessionState;
 }) {
-  const key = `cashfolio:periodPageState:${args.accountBookId}`;
+  const key = `cashfolio:reportPageState:${args.accountBookId}`;
 
   await args.page.addInitScript(
     ({ scriptKey, scriptState }) => {

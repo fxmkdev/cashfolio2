@@ -14,13 +14,13 @@ import type { ReportPageViewProps } from "./-page-view";
 
 export const STORYBOOK_ACCOUNT_BOOK_ID = "storybook-book";
 
-export function clearPeriodStorySessionStorage(accountBookId: string) {
+export function clearReportStorySessionStorage(accountBookId: string) {
   if (typeof window === "undefined") {
     return;
   }
 
   const storageKeys = [
-    `cashfolio:periodPageState:${accountBookId}`,
+    `cashfolio:reportPageState:${accountBookId}`,
     `cashfolio:periodExpandedGroups:${accountBookId}:breakdown:expense`,
     `cashfolio:periodExpandedGroups:${accountBookId}:breakdown:income`,
     `cashfolio:periodExpandedGroups:${accountBookId}:allocation:asset`,

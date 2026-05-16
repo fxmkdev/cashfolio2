@@ -69,7 +69,7 @@ async function doubleClickRowUntilLedgerNavigation(args: {
             const url = new URL(args.page.url());
             return {
               matchesLedgerPath: ledgerPathPattern.test(url.pathname),
-              isPeriodRoute: url.pathname === `/${args.accountBookId}/period`,
+              isPeriodRoute: url.pathname === `/${args.accountBookId}/report`,
               period: url.searchParams.get("period"),
             };
           },
@@ -115,7 +115,7 @@ test("period allocation table account drilldown opens ledger with selected perio
     counterAccountId: seeded.cashAccount.id,
   });
 
-  await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
+  await page.goto(`/${seeded.accountBookId}/report?period=${period}`);
   await expect(
     page.getByRole("heading", { name: "January 2026" }),
   ).toBeVisible();
@@ -150,7 +150,7 @@ test("period allocation table account drilldown opens ledger with selected perio
       period,
     });
   expect(new URL(page.url()).pathname).not.toBe(
-    `/${seeded.accountBookId}/period`,
+    `/${seeded.accountBookId}/report`,
   );
   await expect(page.getByTestId("period-picker-trigger")).toContainText(
     "January 2026",
@@ -170,7 +170,7 @@ test("period gains/losses table unit-account drilldown opens reconciliation page
     counterAccountId: seeded.cashAccount.id,
   });
 
-  await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
+  await page.goto(`/${seeded.accountBookId}/report?period=${period}`);
   await expect(
     page.getByRole("heading", { name: "February 2026" }),
   ).toBeVisible();
@@ -194,7 +194,7 @@ test("period gains/losses table unit-account drilldown opens reconciliation page
 
   await expect(page).toHaveURL(
     new RegExp(
-      `/${seeded.accountBookId}/period/gains-losses/${seeded.securityAccount.id}\\?period=${period}$`,
+      `/${seeded.accountBookId}/report/gains-losses/${seeded.securityAccount.id}\\?period=${period}$`,
     ),
   );
   await expect(
@@ -243,7 +243,7 @@ test("period explicit gains/losses rows drill to gain/loss ledger", async ({
     counterAccountId: seeded.cashAccount.id,
   });
 
-  await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
+  await page.goto(`/${seeded.accountBookId}/report?period=${period}`);
   await expect(
     page.getByRole("heading", { name: "January 2026" }),
   ).toBeVisible();

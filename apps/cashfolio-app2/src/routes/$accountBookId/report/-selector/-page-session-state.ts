@@ -151,7 +151,7 @@ function loadReportPageSessionState(
 }
 
 export function useReportPageSessionState(accountBookId: string) {
-  const storageKey = `cashfolio:periodPageState:${accountBookId}`;
+  const storageKey = `cashfolio:reportPageState:${accountBookId}`;
   const [state, setState] = useState<ReportPageSessionState>(
     getDefaultReportPageSessionState,
   );

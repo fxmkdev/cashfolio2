@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { agGridRowByText } from "../support/grid";
 import {
-  createPeriodPageSessionState,
+  createReportPageSessionState,
   doubleClickBreakdownLeafUntilLedgerNavigation,
-  seedPeriodPageSessionState,
-} from "../support/accounts-period-page";
+  seedReportPageSessionState,
+} from "../support/report-page";
 import {
   seedDatabase,
   seedAssetAccountWithMissingReferenceBalance,
@@ -20,10 +20,10 @@ test.beforeAll(async () => {
   seeded = await seedDatabase();
 });
 
-test("period page shows KPI waterfall and updated income/expenses wording", async ({
+test("report page shows KPI waterfall and updated income/expenses wording", async ({
   page,
 }) => {
-  await page.goto(`/${seeded.accountBookId}/period`);
+  await page.goto(`/${seeded.accountBookId}/report`);
   await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();
 
   const waterfallHeading = page.getByRole("heading", {
@@ -104,7 +104,7 @@ test("period allocation shows partial-data warning when valuation is missing", a
     counterAccountId: seeded.cashAccount.id,
   });
 
-  await page.goto(`/${seeded.accountBookId}/period`);
+  await page.goto(`/${seeded.accountBookId}/report`);
   await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();
   await expect(
     page.getByText(
@@ -127,10 +127,10 @@ test("period breakdown account leaf drilldown opens ledger with period filter", 
     date: "2026-04-07T00:00:00.000Z",
   });
 
-  await seedPeriodPageSessionState({
+  await seedReportPageSessionState({
     page,
     accountBookId: seeded.accountBookId,
-    state: createPeriodPageSessionState({
+    state: createReportPageSessionState({
       drillPathByBreakdown: {
         expense: [
           `group:${seeded.equityGroupId}`,
@@ -141,7 +141,7 @@ test("period breakdown account leaf drilldown opens ledger with period filter", 
     }),
   });
 
-  await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
+  await page.goto(`/${seeded.accountBookId}/report?period=${period}`);
 
   await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();
   await expect(
@@ -175,7 +175,7 @@ test("period breakdown account leaf drilldown opens ledger with period filter", 
   await expect(agGridRowByText(page, seedDescription)).toBeVisible();
 });
 
-test("period page persists card state, drill state, and table expansion across refresh", async ({
+test("report page persists card state, drill state, and table expansion across refresh", async ({
   page,
 }) => {
   const period = "2026-04";
@@ -188,7 +188,7 @@ test("period page persists card state, drill state, and table expansion across r
     date: "2026-04-07T00:00:00.000Z",
   });
 
-  await page.goto(`/${seeded.accountBookId}/period?period=${period}`);
+  await page.goto(`/${seeded.accountBookId}/report?period=${period}`);
   await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();
 
   const breakdownTypeControl = page.getByRole("radiogroup", {
@@ -292,7 +292,7 @@ test("period picker opens on selected month/year page", async ({ page }) => {
     date: "2025-04-07T00:00:00.000Z",
   });
 
-  await page.goto(`/${seeded.accountBookId}/period?period=2025-04`);
+  await page.goto(`/${seeded.accountBookId}/report?period=2025-04`);
   await expect(page.getByRole("heading", { name: "April 2025" })).toBeVisible();
 
   const periodPickerTrigger = page.getByTestId("period-picker-trigger");
@@ -346,7 +346,7 @@ test("period previous/next controls update the period query parameter", async ({
     date: "2026-04-07T00:00:00.000Z",
   });
 
-  await page.goto(`/${seeded.accountBookId}/period?period=2026-04`);
+  await page.goto(`/${seeded.accountBookId}/report?period=2026-04`);
   await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();
 
   const periodPickerTrigger = page.getByTestId("period-picker-trigger");

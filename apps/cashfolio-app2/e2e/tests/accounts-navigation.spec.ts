@@ -18,19 +18,19 @@ test("account-book sidebar links navigate between key sections", async ({
   await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
 
   await page.getByRole("link", { name: "Transactions" }).click();
-  await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/activity`));
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}/transactions`),
+  );
   await expect(
     page.getByRole("heading", { name: "Transactions" }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "Report" }).click();
-  await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/period$`));
+  await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/report$`));
   await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();
 
   await page.getByRole("link", { name: "History" }).click();
-  await expect(page).toHaveURL(
-    new RegExp(`/${seeded.accountBookId}/timeline$`),
-  );
+  await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/history$`));
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
 
   await page.getByRole("link", { name: "Valuation Cache" }).click();
@@ -57,12 +57,10 @@ test("mobile sidebar burger reveals and uses navigation links", async ({
   await expect(burger).toBeVisible();
 
   await burger.click();
-  const timelineLink = page.getByRole("link", { name: "History" });
-  await expect(timelineLink).toBeVisible();
-  await timelineLink.click();
+  const historyLink = page.getByRole("link", { name: "History" });
+  await expect(historyLink).toBeVisible();
+  await historyLink.click();
 
-  await expect(page).toHaveURL(
-    new RegExp(`/${seeded.accountBookId}/timeline$`),
-  );
+  await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/history$`));
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
 });

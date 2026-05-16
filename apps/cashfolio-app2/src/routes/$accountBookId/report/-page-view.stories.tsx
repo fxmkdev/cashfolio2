@@ -10,7 +10,7 @@ import { ReportPageView } from "./-page-view";
 import {
   STORYBOOK_ACCOUNT_BOOK_ID,
   baseOverview,
-  clearPeriodStorySessionStorage,
+  clearReportStorySessionStorage,
   deriveOverviewFromSelectedPeriodValue,
 } from "./-page-view.story-fixtures";
 
@@ -42,7 +42,7 @@ const meta = {
   component: ReportPageView,
   decorators: [
     (Story, context) => {
-      clearPeriodStorySessionStorage(
+      clearReportStorySessionStorage(
         context.args.accountBookId ?? STORYBOOK_ACCOUNT_BOOK_ID,
       );
 

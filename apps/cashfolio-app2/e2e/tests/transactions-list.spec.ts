@@ -7,7 +7,7 @@ import {
 } from "../support/grid";
 import {
   getTransactionBookingsByDescription,
-  seedActivityPageScenario,
+  seedTransactionsPageScenario,
   seedDatabase,
   type SeededData,
 } from "../support/db";
@@ -78,7 +78,7 @@ test.beforeAll(async () => {
 test("lists bookings, carries account link context, and creates transactions", async ({
   page,
 }) => {
-  const scenario = await seedActivityPageScenario({
+  const scenario = await seedTransactionsPageScenario({
     accountBookId: seeded.accountBookId,
     cashAccountId: seeded.cashAccount.id,
     savingsAccountId: seeded.savingsAccount.id,
@@ -88,7 +88,9 @@ test("lists bookings, carries account link context, and creates transactions", a
   await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
   await page.getByRole("link", { name: "Transactions" }).click();
 
-  await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/activity`));
+  await expect(page).toHaveURL(
+    new RegExp(`/${seeded.accountBookId}/transactions`),
+  );
   await expect(
     page.getByRole("heading", { name: "Transactions" }),
   ).toBeVisible();
@@ -130,7 +132,7 @@ test("lists bookings, carries account link context, and creates transactions", a
     agGridRowByText(page, `${scenario.newerDescription} Cash`),
   ).toBeVisible();
 
-  await page.goto(`/${seeded.accountBookId}/activity?period=2026-05`);
+  await page.goto(`/${seeded.accountBookId}/transactions?period=2026-05`);
   await page.getByRole("button", { name: "Add Transaction" }).click();
   const createDialog = page.getByRole("dialog", { name: "Add Transaction" });
   await expect(createDialog).toBeVisible();
@@ -138,7 +140,7 @@ test("lists bookings, carries account link context, and creates transactions", a
     createDialog.getByRole("button", { name: "Add Booking" }),
   ).toBeVisible();
 
-  const createdDescription = "E2E Activity Created";
+  const createdDescription = "E2E Transactions Created";
   await createDialog.getByLabel("Date").fill("05/13/2026");
   await createDialog.getByLabel("Description").fill(createdDescription);
   await setGridCellValue(createDialog, 0, "date", "05/13/2026");
