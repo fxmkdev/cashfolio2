@@ -17,7 +17,12 @@ import { NarrowPageShell } from "@/components/narrow-page-shell";
 import { TopPageHeader } from "@/components/top-page-header";
 import { CurrencySelect } from "@/components/unit-select";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
-import { normalizeDateInputValue, startOfUtcDay } from "@/shared/date";
+import {
+  getDateInputValueFormat,
+  normalizeDateInputValue,
+  startOfUtcDay,
+} from "@/shared/date";
+import { useUserLocale } from "@/user-locale-context";
 import type { loadSettingsPageData } from "./-page-loader";
 
 type SettingsPageData = Awaited<ReturnType<typeof loadSettingsPageData>>;
@@ -75,6 +80,8 @@ function SettingsFormFields(args: {
   submitError: string | null;
   settings: SettingsPageData;
 }) {
+  const userLocale = useUserLocale();
+
   return (
     <Stack gap="md">
       <TextInput
@@ -96,8 +103,8 @@ function SettingsFormFields(args: {
       />
 
       <DateInput
-        valueFormat="DD.MM.YYYY"
-        dateParser={(value) => normalizeDateInputValue(value)}
+        valueFormat={getDateInputValueFormat(userLocale)}
+        dateParser={(value) => normalizeDateInputValue(value, userLocale)}
         label="Start Date"
         withAsterisk
         maxDate={startOfUtcDay(new Date())}

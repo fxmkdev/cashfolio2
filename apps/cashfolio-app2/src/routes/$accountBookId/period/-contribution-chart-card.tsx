@@ -97,6 +97,7 @@ export function buildContributionWaterfallModel(args: {
 export function ContributionChartCard(args: {
   stats: ContributionChartStats;
   currencyFormatter: Intl.NumberFormat;
+  locale: string;
   colors: DashboardChartThemeColors;
   waterfallPalette: {
     positive: string;
@@ -106,11 +107,11 @@ export function ContributionChartCard(args: {
 }) {
   const amountCompactFormatter = useMemo(
     () =>
-      new Intl.NumberFormat("en-CH", {
+      new Intl.NumberFormat(args.locale, {
         notation: "compact",
         maximumFractionDigits: 1,
       }),
-    [],
+    [args.locale],
   );
   const waterfallModel = useMemo(
     () => buildContributionWaterfallModel({ stats: args.stats }),

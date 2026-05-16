@@ -195,6 +195,7 @@ describe("getPeriodTimeline", () => {
       valuationContext: {
         exchangeRateByKey: expect.any(Map),
       },
+      locale: "en-US",
     });
     expect(loadPeriodTimelinePoint).toHaveBeenNthCalledWith(2, {
       accountBookId: "book-1",
@@ -208,6 +209,7 @@ describe("getPeriodTimeline", () => {
       valuationContext: {
         exchangeRateByKey: expect.any(Map),
       },
+      locale: "en-US",
     });
     expect(loadPeriodTimelinePoint).toHaveBeenNthCalledWith(3, {
       accountBookId: "book-1",
@@ -221,6 +223,7 @@ describe("getPeriodTimeline", () => {
       valuationContext: {
         exchangeRateByKey: expect.any(Map),
       },
+      locale: "en-US",
     });
     const valuationContexts = loadPeriodTimelinePoint.mock.calls.map(
       ([args]) =>
@@ -371,6 +374,7 @@ describe("getPeriodTimeline", () => {
       valuationContext: {
         exchangeRateByKey: expect.any(Map),
       },
+      locale: "en-US",
     });
   });
 
@@ -512,6 +516,7 @@ describe("getPeriodTimeline", () => {
       valuationContext: {
         exchangeRateByKey: expect.any(Map),
       },
+      locale: "en-US",
     });
     expect(loadTimelineOpeningBalancePoint).toHaveBeenCalledWith({
       accountBookId: "book-assets",
@@ -563,6 +568,7 @@ describe("getPeriodTimeline", () => {
       valuationContext: {
         exchangeRateByKey: expect.any(Map),
       },
+      locale: "en-US",
     });
     expect(loadTimelineOpeningBalancePoint).toHaveBeenCalledWith({
       accountBookId: "book-gains",

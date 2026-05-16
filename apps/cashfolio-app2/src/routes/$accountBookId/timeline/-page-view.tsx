@@ -25,6 +25,7 @@ import {
   createDisplayNumberFormatter,
   getCurrencyDecimals,
 } from "@/shared/unit-format";
+import { useUserLocale } from "@/user-locale-context";
 import {
   getTimelineMetricLabel,
   isTimelinePeriodMode,
@@ -97,6 +98,7 @@ export function TimelinePageView({
   onMetricChange,
   onMetricScopeChange,
 }: TimelinePageViewProps) {
+  const userLocale = useUserLocale();
   const activeReferenceCurrency = timeline.referenceCurrency;
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
@@ -108,21 +110,31 @@ export function TimelinePageView({
   const currencyFormatter = useMemo(
     () =>
       createDisplayNumberFormatter({
-        locale: "en-CH",
+        locale: userLocale,
         style: "currency",
         currency: activeReferenceCurrency,
         decimals: getCurrencyDecimals(activeReferenceCurrency),
       }),
-    [activeReferenceCurrency],
+    [activeReferenceCurrency, userLocale],
   );
 
   const amountCompactFormatter = useMemo(
     () =>
-      new Intl.NumberFormat("en-CH", {
+      new Intl.NumberFormat(userLocale, {
         notation: "compact",
         maximumFractionDigits: 1,
       }),
-    [],
+    [userLocale],
+  );
+  const pointDateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(userLocale, {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        timeZone: "UTC",
+      }),
+    [userLocale],
   );
 
   const baseChartData = useMemo(
@@ -216,6 +228,7 @@ export function TimelinePageView({
         showCumulativeSeries: isCumulativeSeriesVisible,
         amountCompactFormatter,
         currencyFormatter,
+        pointDateFormatter,
         colors,
         theme,
         isDarkMode,
@@ -230,6 +243,7 @@ export function TimelinePageView({
       handleChartZoom,
       handleSeriesVisibilityChange,
       isCumulativeSeriesVisible,
+      pointDateFormatter,
       selectedMode,
       selectedMetric,
       selectedMetricSeriesLabel,

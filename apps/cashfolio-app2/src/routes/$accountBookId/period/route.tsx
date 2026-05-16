@@ -4,6 +4,7 @@ import { getGainLossEquityAccountId } from "@/server/accounts";
 import { getPeriodEndNetWorth } from "@/server/period-end-net-worth";
 import { getOpeningBalanceNetWorthForPeriod } from "@/server/period-opening-balance-net-worth";
 import { getPeriodOverview } from "@/server/period";
+import { getAuthenticatedUserLocale } from "@/server/user-profile";
 import { createDocumentTitleHead } from "@/shared/document-title";
 import { formatMonthPeriodValue } from "@/shared/period";
 import {
@@ -92,10 +93,12 @@ export const Route = createFileRoute("/$accountBookId/period")({
     period: getPeriodValue(search),
   }),
   loader: async ({ params: { accountBookId }, deps: { period } }) => {
+    const userLocale = await getAuthenticatedUserLocale();
     const overview = await getPeriodOverview({
       data: {
         accountBookId,
         period,
+        locale: userLocale,
       },
     });
     const [gainLossEquityAccountId, netWorthReconciliation] = await Promise.all(

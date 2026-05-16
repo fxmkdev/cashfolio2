@@ -76,6 +76,7 @@ describe("loadTimelinePageData", () => {
         gainLossScope: "total",
         assetScope: "total",
         liabilityScope: "total",
+        locale: "en-US",
       },
     });
     expect(result).toEqual({

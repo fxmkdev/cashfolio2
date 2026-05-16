@@ -1,3 +1,5 @@
+import { DEFAULT_USER_LOCALE } from "@/user-locale";
+
 const PERIOD_MONTH_REGEX = /^(\d{4})-(\d{2})$/;
 const PERIOD_YEAR_REGEX = /^(\d{4})$/;
 export const PERIOD_MONTH_NAMES = [
@@ -58,6 +60,18 @@ export type ExplicitPeriodSelection =
 
 export function formatMonthPeriodValue(year: number, month: number): string {
   return `${String(year).padStart(4, "0")}-${String(month + 1).padStart(2, "0")}`;
+}
+
+export function formatMonthPeriodLabel(
+  year: number,
+  month: number,
+  locale = DEFAULT_USER_LOCALE,
+): string {
+  return new Intl.DateTimeFormat(locale, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month, 1)));
 }
 
 export function parseExplicitMonthPeriod(
@@ -139,9 +153,10 @@ export function parseExplicitPeriodSelectionFromUnknown(
 
 export function formatExplicitPeriodSelectionLabel(
   selection: ExplicitPeriodSelection,
+  locale = DEFAULT_USER_LOCALE,
 ): string {
   if (selection.granularity === "month") {
-    return `${PERIOD_MONTH_NAMES[selection.month]} ${selection.year}`;
+    return formatMonthPeriodLabel(selection.year, selection.month, locale);
   }
 
   return selection.value;

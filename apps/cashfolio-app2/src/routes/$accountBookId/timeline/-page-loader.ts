@@ -7,6 +7,8 @@ import type {
   TimelineScopeSelection,
   TimelineScopedMetric,
 } from "@/shared/timeline-scope";
+import type { UserLocale } from "@/user-locale";
+import { DEFAULT_USER_LOCALE } from "@/user-locale";
 
 export type TimelinePageLoaderData = {
   timeline: PeriodTimelineResponse;
@@ -21,6 +23,7 @@ export async function loadTimelinePageData(args: {
   gainLossScope: TimelineScopeSelection;
   assetScope: TimelineScopeSelection;
   liabilityScope: TimelineScopeSelection;
+  locale?: UserLocale;
 }): Promise<TimelinePageLoaderData> {
   const timeline = await getPeriodTimeline({
     data: {
@@ -32,6 +35,7 @@ export async function loadTimelinePageData(args: {
       gainLossScope: args.gainLossScope,
       assetScope: args.assetScope,
       liabilityScope: args.liabilityScope,
+      locale: args.locale ?? DEFAULT_USER_LOCALE,
     },
   });
 

@@ -23,6 +23,7 @@ import { PeriodFilterAction } from "../-period-filter-action";
 import { useActivityPageController } from "./-page-controller";
 import { loadActivityPageData } from "./-page-loader";
 import { createDocumentTitleHead } from "@/shared/document-title";
+import { useUserLocale } from "@/user-locale-context";
 import {
   getDefaultActivityPeriodValue,
   parseActivityExplicitPeriod,
@@ -56,6 +57,7 @@ export function ActivityPageContent() {
   const { accountBookId } = Route.useParams();
   const { transactionId, period } = Route.useSearch();
   const router = useRouter();
+  const userLocale = useUserLocale();
   const [pickerOpened, setPickerOpened] = useState(false);
   const [unfilteredPeriodMode, setUnfilteredPeriodMode] =
     useState<PeriodMode>("month");
@@ -79,8 +81,8 @@ export function ActivityPageContent() {
     [loaderData.periodBounds.minBookingDate],
   );
   const rawSelectedPeriod = useMemo(
-    () => parseActivityExplicitPeriod(period ?? defaultPeriodValue),
-    [defaultPeriodValue, period],
+    () => parseActivityExplicitPeriod(period ?? defaultPeriodValue, userLocale),
+    [defaultPeriodValue, period, userLocale],
   );
   const clampedPeriodValue = useMemo(() => {
     if (!rawSelectedPeriod) {
@@ -95,9 +97,9 @@ export function ActivityPageContent() {
   const selectedPeriod = useMemo(
     () =>
       clampedPeriodValue
-        ? parseActivityExplicitPeriod(clampedPeriodValue)
+        ? parseActivityExplicitPeriod(clampedPeriodValue, userLocale)
         : null,
-    [clampedPeriodValue],
+    [clampedPeriodValue, userLocale],
   );
   useEffect(() => {
     if (!selectedPeriod) {

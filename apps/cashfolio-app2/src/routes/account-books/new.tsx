@@ -16,8 +16,13 @@ import { IconCheck, IconPlus } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { currencies } from "@/currencies";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
-import { normalizeDateInputValue, startOfUtcDay } from "@/shared/date";
+import {
+  getDateInputValueFormat,
+  normalizeDateInputValue,
+  startOfUtcDay,
+} from "@/shared/date";
 import { createDocumentTitleHead } from "@/shared/document-title";
+import { UserLocaleProvider, useUserLocale } from "@/user-locale-context";
 import { invalidateCachedUserAccountBooks } from "../$accountBookId/-account-book-options-loader";
 import {
   NewAccountBookPageActions,
@@ -33,18 +38,21 @@ type NewAccountBookFormValues = {
 export const Route = createFileRoute("/account-books/new")({
   validateSearch: parseNewAccountBookSearch,
   loader: async () => {
-    const [{ getUserAccountBooks }, { getAuthenticatedUserProfile }] =
-      await Promise.all([
-        import("@/server/home"),
-        import("@/server/user-profile"),
-      ]);
-
-    const [accountBooks, userProfile] = await Promise.all([
-      getUserAccountBooks(),
-      getAuthenticatedUserProfile(),
+    const [
+      { getUserAccountBooks },
+      { getAuthenticatedUserLocale, getAuthenticatedUserProfile },
+    ] = await Promise.all([
+      import("@/server/home"),
+      import("@/server/user-profile"),
     ]);
 
-    return { accountBooks, userProfile };
+    const [accountBooks, userProfile, userLocale] = await Promise.all([
+      getUserAccountBooks(),
+      getAuthenticatedUserProfile(),
+      getAuthenticatedUserLocale(),
+    ]);
+
+    return { accountBooks, userProfile, userLocale };
   },
   head: () => createDocumentTitleHead("Create Account Book"),
   component: NewAccountBookPage,
@@ -96,8 +104,26 @@ function showAccountBookCreatedNotification() {
 }
 
 function NewAccountBookPage() {
-  const { accountBooks, userProfile } = Route.useLoaderData();
+  const { accountBooks, userProfile, userLocale } = Route.useLoaderData();
+  return (
+    <UserLocaleProvider locale={userLocale}>
+      <NewAccountBookPageContent
+        accountBooks={accountBooks}
+        userProfile={userProfile}
+      />
+    </UserLocaleProvider>
+  );
+}
+
+function NewAccountBookPageContent({
+  accountBooks,
+  userProfile,
+}: Pick<
+  ReturnType<typeof Route.useLoaderData>,
+  "accountBooks" | "userProfile"
+>) {
   const { returnTo } = Route.useSearch();
+  const userLocale = useUserLocale();
   const navigate = useNavigate({ from: "/account-books/new" });
   const { isSubmitting, runSubmit } = useDialogSubmitState();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -193,8 +219,8 @@ function NewAccountBookPage() {
             />
 
             <DateInput
-              valueFormat="DD.MM.YYYY"
-              dateParser={(value) => normalizeDateInputValue(value)}
+              valueFormat={getDateInputValueFormat(userLocale)}
+              dateParser={(value) => normalizeDateInputValue(value, userLocale)}
               label="Start Date"
               withAsterisk
               maxDate={startOfUtcDay(new Date())}

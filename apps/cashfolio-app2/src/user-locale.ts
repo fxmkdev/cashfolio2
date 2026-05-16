@@ -1,4 +1,4 @@
-export const DEFAULT_USER_LOCALE = "en-CH";
+export const DEFAULT_USER_LOCALE = "en-US";
 
 export const SUPPORTED_USER_LOCALES = [
   "en-CH",

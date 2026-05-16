@@ -21,6 +21,7 @@ import {
   createDisplayNumberFormatter,
   getCurrencyDecimals,
 } from "@/shared/unit-format";
+import { useUserLocale } from "@/user-locale-context";
 import { PeriodAllocationBreakdownCard } from "./-breakdown/-allocation-breakdown-card";
 import { ContributionChartCard } from "./-contribution-chart-card";
 import { PeriodBreakdownCard } from "./-breakdown/-breakdown-card";
@@ -86,6 +87,7 @@ export function PeriodPageView({
   onExplicitGainLossDoubleClick,
   onGainLossUnitAccountDoubleClick,
 }: PeriodPageViewProps) {
+  const userLocale = useUserLocale();
   const {
     selectedBreakdown,
     selectedChartType,
@@ -123,12 +125,12 @@ export function PeriodPageView({
   const currencyFormatter = useMemo(
     () =>
       createDisplayNumberFormatter({
-        locale: "en-CH",
+        locale: userLocale,
         style: "currency",
         currency: overview.referenceCurrency,
         decimals: getCurrencyDecimals(overview.referenceCurrency),
       }),
-    [overview.referenceCurrency],
+    [overview.referenceCurrency, userLocale],
   );
   const referenceCurrencyDisplayDecimals = useMemo(
     () => getCurrencyDecimals(overview.referenceCurrency),
@@ -137,20 +139,20 @@ export function PeriodPageView({
 
   const percentageFormatter = useMemo(
     () =>
-      new Intl.NumberFormat("en-CH", {
+      new Intl.NumberFormat(userLocale, {
         minimumFractionDigits: 1,
         maximumFractionDigits: 1,
       }),
-    [],
+    [userLocale],
   );
   const savingsRateFormatter = useMemo(
     () =>
-      new Intl.NumberFormat("en-CH", {
+      new Intl.NumberFormat(userLocale, {
         style: "percent",
         minimumFractionDigits: 0,
         maximumFractionDigits: 1,
       }),
-    [],
+    [userLocale],
   );
 
   const periodSelectorModel = useMemo(
@@ -406,6 +408,7 @@ export function PeriodPageView({
             <ContributionChartCard
               stats={overview.stats}
               currencyFormatter={currencyFormatter}
+              locale={userLocale}
               colors={colors}
               waterfallPalette={waterfallPalette}
             />

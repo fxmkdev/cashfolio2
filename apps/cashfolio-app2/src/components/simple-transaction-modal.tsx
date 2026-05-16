@@ -9,7 +9,7 @@ import {
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
-import { isAfter, parse, startOfDay } from "date-fns";
+import { isAfter, startOfDay } from "date-fns";
 import { useEffect } from "react";
 import { IconArrowRight } from "@tabler/icons-react";
 import {
@@ -18,7 +18,8 @@ import {
   isOpeningBalancesAccount,
 } from "../shared/account-utils";
 import {
-  formatUtcDate,
+  formatUtcDateForLocale,
+  getDateInputValueFormat,
   normalizeDateInputValue,
   startOfUtcDay,
 } from "../shared/date";
@@ -27,6 +28,7 @@ import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances"
 import type { AccountOption } from "./edit-transaction-modal";
 import { AccountTreeSelect } from "./account-tree-select";
 import { FormattedNumberInput } from "./formatted-number-input";
+import { useUserLocale } from "@/user-locale-context";
 
 export type SimpleTransactionDirection = "DEBIT" | "CREDIT";
 
@@ -84,9 +86,13 @@ export function SimpleTransactionModal({
     direction: SimpleTransactionDirection;
   }) => Promise<void>;
 }) {
+  const userLocale = useUserLocale();
   const today = startOfDay(new Date());
   const accountBookStartDay = startOfUtcDay(accountBookStartDate);
-  const accountBookStartDateLabel = formatUtcDate(accountBookStartDay);
+  const accountBookStartDateLabel = formatUtcDateForLocale(
+    accountBookStartDay,
+    userLocale,
+  );
   const { isSubmitting, runSubmit } = useDialogSubmitState({
     onSubmittingChange,
   });
@@ -195,8 +201,8 @@ export function SimpleTransactionModal({
       <Stack gap="md">
         <Group align="start" wrap="nowrap">
           <DateInput
-            valueFormat="DD.MM.YYYY"
-            dateParser={(value) => parse(value, "dd.MM.yyyy", new Date())}
+            valueFormat={getDateInputValueFormat(userLocale)}
+            dateParser={(value) => normalizeDateInputValue(value, userLocale)}
             label="Date"
             w={180}
             minDate={accountBookStartDay}
@@ -213,7 +219,6 @@ export function SimpleTransactionModal({
             label="Amount"
             allowNegative={false}
             hideControls
-            locale="en-CH"
             w={220}
             disabled={isSubmitting}
             {...form.getInputProps("amount")}

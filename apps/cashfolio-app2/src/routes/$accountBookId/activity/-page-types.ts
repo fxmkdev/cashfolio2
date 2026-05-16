@@ -4,6 +4,7 @@ import {
   normalizeExplicitPeriodValue,
   parseExplicitPeriodSelection,
 } from "@/shared/period";
+import type { UserLocale } from "@/user-locale";
 
 type ActivityServerModule = typeof import("@/server/activity");
 type AccountsServerModule = typeof import("@/server/accounts");
@@ -30,6 +31,7 @@ export function getDefaultActivityPeriodValue(date: Date = new Date()): string {
 
 export function parseActivityExplicitPeriod(
   periodValue: string | undefined,
+  locale?: UserLocale,
 ): ActivityExplicitPeriodSelection | null {
   if (!periodValue) {
     return null;
@@ -45,7 +47,7 @@ export function parseActivityExplicitPeriod(
     granularity: explicitPeriodSelection.granularity,
     year: explicitPeriodSelection.year,
     month: explicitPeriodSelection.month,
-    label: formatExplicitPeriodSelectionLabel(explicitPeriodSelection),
+    label: formatExplicitPeriodSelectionLabel(explicitPeriodSelection, locale),
   };
 }
 

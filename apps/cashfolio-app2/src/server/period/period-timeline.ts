@@ -11,6 +11,11 @@ import {
 } from "../../shared/timeline-scope";
 import type { TimelineValuationContext } from "./period-timeline-point-metrics.server";
 import { mapWithConcurrencyLimit } from "../concurrency";
+import {
+  DEFAULT_USER_LOCALE,
+  resolveSupportedUserLocale,
+  type UserLocale,
+} from "../../user-locale";
 
 export type PeriodTimelineGranularity = "month" | "year";
 
@@ -67,7 +72,14 @@ type TimelineInput = {
   gainLossScope: TimelineScopeSelection;
   assetScope: TimelineScopeSelection;
   liabilityScope: TimelineScopeSelection;
+  locale: UserLocale;
 };
+
+function normalizeLocaleInput(value: unknown): UserLocale {
+  return typeof value === "string"
+    ? (resolveSupportedUserLocale(value) ?? DEFAULT_USER_LOCALE)
+    : DEFAULT_USER_LOCALE;
+}
 
 function toMonthIndex(year: number, month: number): number {
   return year * 12 + month;
@@ -265,6 +277,7 @@ export const getPeriodTimeline = createServerFn({
       gainLossScope?: unknown;
       assetScope?: unknown;
       liabilityScope?: unknown;
+      locale?: unknown;
     }): TimelineInput => ({
       accountBookId: data.accountBookId,
       granularity: parseTimelineGranularity(data.granularity),
@@ -274,6 +287,7 @@ export const getPeriodTimeline = createServerFn({
       gainLossScope: parseTimelineScopeSelectionOrDefault(data.gainLossScope),
       assetScope: parseTimelineScopeSelectionOrDefault(data.assetScope),
       liabilityScope: parseTimelineScopeSelectionOrDefault(data.liabilityScope),
+      locale: normalizeLocaleInput(data.locale),
     }),
   )
   .handler(async ({ data }) => {
@@ -378,6 +392,7 @@ export const getPeriodTimeline = createServerFn({
           context,
           metricScopeFilter: activeMetricScopeFilter,
           valuationContext,
+          locale: data.locale,
         }),
     );
 

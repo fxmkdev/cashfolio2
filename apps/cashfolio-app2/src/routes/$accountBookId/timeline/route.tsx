@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect } from "react";
 import { createDocumentTitleHead } from "@/shared/document-title";
+import { getAuthenticatedUserLocale } from "@/server/user-profile";
 import { loadTimelinePageData } from "./-page-loader";
 import { buildTimelineSearchNavigation } from "./-page-navigation";
 import {
@@ -55,6 +56,7 @@ export const Route = createFileRoute("/$accountBookId/timeline")({
       liabilityScope,
     },
   }) => {
+    const userLocale = await getAuthenticatedUserLocale();
     return loadTimelinePageData({
       accountBookId,
       mode,
@@ -64,6 +66,7 @@ export const Route = createFileRoute("/$accountBookId/timeline")({
       gainLossScope,
       assetScope,
       liabilityScope,
+      locale: userLocale,
     });
   },
   head: () => createDocumentTitleHead("History"),

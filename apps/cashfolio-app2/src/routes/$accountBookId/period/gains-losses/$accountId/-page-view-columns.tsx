@@ -8,6 +8,7 @@ import {
 import {
   formatDateLabel,
   formatDescription,
+  getGridUserLocale,
   getLedgerActionTooltipLabel,
   toEventSide,
 } from "./-page-view-formatters";
@@ -50,7 +51,8 @@ export function buildRealizedColumns(args: {
       field: "date",
       width: 140,
       type: DATE_COLUMN,
-      valueFormatter: ({ value }) => formatDateLabel(value),
+      valueFormatter: ({ context, value }) =>
+        formatDateLabel(value, getGridUserLocale(context)),
     },
     {
       headerName: "Transaction",
@@ -175,7 +177,8 @@ export function buildRealizedLotMatchColumns(args: {
       field: "acquisitionDate",
       width: 140,
       type: DATE_COLUMN,
-      valueFormatter: ({ value }) => formatDateLabel(value),
+      valueFormatter: ({ context, value }) =>
+        formatDateLabel(value, getGridUserLocale(context)),
     },
     {
       headerName: "Matched Qty",
@@ -246,7 +249,8 @@ export function buildOpenLotColumns(args: {
       field: "acquisitionDate",
       width: 140,
       type: DATE_COLUMN,
-      valueFormatter: ({ value }) => formatDateLabel(value),
+      valueFormatter: ({ context, value }) =>
+        formatDateLabel(value, getGridUserLocale(context)),
     },
     {
       headerName: "Quantity",
@@ -312,7 +316,8 @@ export const DIAGNOSTICS_COLUMNS: ColDef<DiagnosticRow>[] = [
     field: "date",
     width: 140,
     type: DATE_COLUMN,
-    valueFormatter: ({ value }) => formatDateLabel(value),
+    valueFormatter: ({ context, value }) =>
+      formatDateLabel(value, getGridUserLocale(context)),
   },
   {
     headerName: "Reason",

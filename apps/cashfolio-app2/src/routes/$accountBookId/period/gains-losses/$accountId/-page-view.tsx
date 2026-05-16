@@ -30,6 +30,7 @@ import {
   getUnitDisplayDecimals,
 } from "@/shared/unit-format";
 import { getGainLossReconciliationPageTitle } from "./-page-title";
+import { useUserLocale } from "@/user-locale-context";
 
 type GainLossReconciliationPageViewProps = {
   selectedPeriodValue: string;
@@ -46,6 +47,7 @@ export function GainLossReconciliationPageView({
   onOpenEventTransaction,
   onBackToPeriod,
 }: GainLossReconciliationPageViewProps) {
+  const userLocale = useUserLocale();
   const [pickerOpened, setPickerOpened] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const heading = getGainLossReconciliationPageTitle(reconciliation);
@@ -76,6 +78,7 @@ export function GainLossReconciliationPageView({
 
   const currencyFormatter = buildCurrencyFormatter(
     reconciliation.referenceCurrency,
+    userLocale,
   );
   const referenceCurrencyDisplayDecimals = getCurrencyDecimals(
     reconciliation.referenceCurrency,
@@ -92,10 +95,10 @@ export function GainLossReconciliationPageView({
   const quantityFormatter = useMemo(
     () =>
       createDisplayNumberFormatter({
-        locale: "en-CH",
+        locale: userLocale,
         decimals: quantityDisplayDecimals,
       }),
-    [quantityDisplayDecimals],
+    [quantityDisplayDecimals, userLocale],
   );
   const periodSelectorModel = buildPeriodSelectorModel({
     selectedGranularity: reconciliation.selectedGranularity,

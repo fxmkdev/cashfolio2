@@ -14,6 +14,17 @@ import {
   getPeriodEndExclusive,
   resolvePeriodSelection,
 } from "./period-selection";
+import {
+  DEFAULT_USER_LOCALE,
+  resolveSupportedUserLocale,
+  type UserLocale,
+} from "../../user-locale";
+
+function normalizeLocaleInput(value: unknown): UserLocale {
+  return typeof value === "string"
+    ? (resolveSupportedUserLocale(value) ?? DEFAULT_USER_LOCALE)
+    : DEFAULT_USER_LOCALE;
+}
 
 function sortDiagnostics(
   diagnostics: GainLossReconciliationDiagnostic[],
@@ -29,10 +40,16 @@ export const getPeriodGainLossReconciliation = createServerFn({
   method: "GET",
 })
   .inputValidator(
-    (data: { accountBookId: string; accountId: string; period?: unknown }) => ({
+    (data: {
+      accountBookId: string;
+      accountId: string;
+      period?: unknown;
+      locale?: unknown;
+    }) => ({
       accountBookId: data.accountBookId,
       accountId: data.accountId,
       period: normalizePeriodValue(data.period),
+      locale: normalizeLocaleInput(data.locale),
     }),
   )
   .handler(async ({ data }): Promise<PeriodGainLossReconciliation | null> => {
@@ -53,6 +70,7 @@ export const getPeriodGainLossReconciliation = createServerFn({
       periodValue: data.period,
       now,
       firstBookingDate: accountBookStartDate,
+      locale: data.locale,
     });
     const isBeforeAccountBookStart = selection.to < accountBookStartDate;
     const queryStart = selection.from;

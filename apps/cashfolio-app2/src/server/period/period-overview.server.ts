@@ -15,6 +15,7 @@ import { processPeriodEquityBookingsFromBaseData } from "./period-equity-booking
 import { type GainLossContributionAccumulator } from "./period-gains-losses-contributions";
 import { buildTransferClearingVirtualHierarchy } from "./period-transfer-clearing";
 import { buildPeriodOverviewResponse } from "./period-overview-response";
+import type { UserLocale } from "../../user-locale";
 
 const TRANSACTIONS_PAGE_SIZE = 200;
 const TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE = 200;
@@ -23,6 +24,7 @@ export async function loadPeriodOverview(args: {
   accountBookId: string;
   period?: unknown;
   baseData?: PeriodBaseData;
+  locale?: UserLocale;
 }) {
   const baseData =
     args.baseData ??
@@ -212,5 +214,6 @@ export async function loadPeriodOverview(args: {
     convertedBookingsCount,
     skippedBookingsCount,
     gainsLossesContributions: Array.from(gainsLossesContributionByKey.values()),
+    locale: args.locale,
   });
 }

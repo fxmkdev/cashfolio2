@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { getPeriodGainLossReconciliation } from "@/server/period-gain-loss-reconciliation";
+import { getAuthenticatedUserLocale } from "@/server/user-profile";
 import { createDocumentTitleHead } from "@/shared/document-title";
 import { formatMonthPeriodValue } from "@/shared/period";
 import { DEFAULT_PERIOD_VALUE } from "../../-page-types";
@@ -19,14 +20,20 @@ export const Route = createFileRoute(
   loaderDeps: ({ search }) => ({
     period: getPeriodValue(search),
   }),
-  loader: async ({ params: { accountBookId, accountId }, deps: { period } }) =>
-    getPeriodGainLossReconciliation({
+  loader: async ({
+    params: { accountBookId, accountId },
+    deps: { period },
+  }) => {
+    const userLocale = await getAuthenticatedUserLocale();
+    return getPeriodGainLossReconciliation({
       data: {
         accountBookId,
         accountId,
         period,
+        locale: userLocale,
       },
-    }),
+    });
+  },
   head: ({ loaderData }) =>
     createDocumentTitleHead(getGainLossReconciliationPageTitle(loaderData)),
   component: GainLossReconciliationPage,

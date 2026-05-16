@@ -11,6 +11,7 @@ import {
 import type { ColDef } from "ag-grid-enterprise";
 import { DataGrid } from "@/components/data-grid";
 import type { PeriodGainLossReconciliation } from "@/server/period-gain-loss-reconciliation";
+import { useUserLocale } from "@/user-locale-context";
 import {
   formatDateLabel,
   formatDescription,
@@ -30,6 +31,8 @@ export function RealizedEventExplainDrawer(args: {
   quantityFormatter: Intl.NumberFormat;
   realizedLotMatchColumns: ColDef<RealizedEventLotMatchRow>[];
 }) {
+  const userLocale = useUserLocale();
+
   return (
     <Drawer
       opened={args.opened}
@@ -60,7 +63,7 @@ export function RealizedEventExplainDrawer(args: {
                 {args.reconciliation.selectedPeriodLabel}
               </Text>
               <Text size="sm">
-                Date: {formatDateLabel(args.selectedEvent.date)}
+                Date: {formatDateLabel(args.selectedEvent.date, userLocale)}
               </Text>
             </Stack>
           </Card>

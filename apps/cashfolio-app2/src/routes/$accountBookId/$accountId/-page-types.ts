@@ -3,6 +3,7 @@ import {
   normalizeExplicitPeriodValue,
   parseExplicitPeriodSelection,
 } from "@/shared/period";
+import type { UserLocale } from "@/user-locale";
 
 export type LedgerSearch = { transactionId?: string; period?: string };
 
@@ -20,6 +21,7 @@ export function normalizeLedgerPeriodValue(value: unknown): string | undefined {
 
 export function parseLedgerExplicitPeriod(
   periodValue: string | undefined,
+  locale?: UserLocale,
 ): LedgerExplicitPeriodSelection | null {
   if (!periodValue) {
     return null;
@@ -35,7 +37,7 @@ export function parseLedgerExplicitPeriod(
     granularity: explicitPeriodSelection.granularity,
     year: explicitPeriodSelection.year,
     month: explicitPeriodSelection.month,
-    label: formatExplicitPeriodSelectionLabel(explicitPeriodSelection),
+    label: formatExplicitPeriodSelectionLabel(explicitPeriodSelection, locale),
   };
 }
 

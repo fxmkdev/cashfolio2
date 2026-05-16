@@ -6,11 +6,15 @@ import {
   type AgGridReactProps,
   type CustomCellEditorProps,
 } from "ag-grid-react";
-import { parse } from "date-fns";
 import { useEffect, useRef, useState } from "react";
 import { numericFormatter } from "react-number-format";
 import { Unit } from "../.prisma-client/enums";
+import {
+  getDateInputValueFormat,
+  normalizeDateInputValue,
+} from "../shared/date";
 import { getUnitDisplayDecimals } from "../shared/unit-format";
+import { DEFAULT_USER_LOCALE } from "../user-locale";
 import { AccountTreeSelect } from "./account-tree-select";
 import {
   FormattedNumberInput,
@@ -35,6 +39,18 @@ type FormattedNumericColDefConfig = {
     value: number | null | undefined;
   }) => number;
 };
+
+function getGridUserLocale(context: unknown): string {
+  if (
+    typeof context === "object" &&
+    context !== null &&
+    typeof (context as { userLocale?: unknown }).userLocale === "string"
+  ) {
+    return (context as { userLocale: string }).userLocale;
+  }
+
+  return DEFAULT_USER_LOCALE;
+}
 
 function getFormattedNumericConfig(
   colDef: unknown,
@@ -120,9 +136,10 @@ export const columnTypes: AgGridReactProps["columnTypes"] = {
   [FORMATTED_NUMERIC_COLUMN]: {
     headerClass: "ag-right-aligned-header",
     cellClass: "ag-right-aligned-cell",
-    valueFormatter: ({ value, data, colDef }) => {
-      const { decimalSeparator, thousandSeparator } =
-        getNumberFormatSymbols("en-CH");
+    valueFormatter: ({ value, data, colDef, context }) => {
+      const { decimalSeparator, thousandSeparator } = getNumberFormatSymbols(
+        getGridUserLocale(context),
+      );
       if (value == null) {
         return "";
       }
@@ -154,6 +171,7 @@ export const columnTypes: AgGridReactProps["columnTypes"] = {
       onValueChange,
       data,
       colDef,
+      context,
     }: CustomCellEditorProps) => {
       const ref = useRef<HTMLInputElement>(null);
       useEffect(() => {
@@ -174,7 +192,7 @@ export const columnTypes: AgGridReactProps["columnTypes"] = {
           hideControls
           variant="unstyled"
           px={12}
-          locale="en-CH"
+          locale={getGridUserLocale(context)}
           decimalScale={mode === "display" ? decimals : undefined}
           fixedDecimalScale={false}
           value={value}
@@ -296,9 +314,12 @@ export const columnTypes: AgGridReactProps["columnTypes"] = {
       value,
       onValueChange,
       startDate,
+      context,
     }: CustomCellEditorProps & {
       startDate?: string | Date;
+      context?: unknown;
     }) => {
+      const locale = getGridUserLocale(context);
       const ref = useRef<HTMLInputElement>(null);
       useEffect(() => {
         ref.current?.select();
@@ -308,8 +329,8 @@ export const columnTypes: AgGridReactProps["columnTypes"] = {
           ref={ref}
           variant="unstyled"
           px={12}
-          valueFormat="DD.MM.YYYY"
-          dateParser={(value) => parse(value, "dd.MM.yyyy", new Date())}
+          valueFormat={getDateInputValueFormat(locale)}
+          dateParser={(value) => normalizeDateInputValue(value, locale)}
           minDate={startDate}
           value={value}
           onChange={(v) => onValueChange(v)}

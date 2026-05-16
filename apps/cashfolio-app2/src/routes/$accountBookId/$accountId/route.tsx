@@ -24,6 +24,7 @@ import {
   loadLedgerPageData,
 } from "./-page-loader";
 import { createDocumentTitleHead } from "@/shared/document-title";
+import { useUserLocale } from "@/user-locale-context";
 import { useLedgerPageController } from "./-page-controller";
 import { PeriodFilterAction } from "../-period-filter-action";
 import {
@@ -62,6 +63,7 @@ export function LedgerPageContent() {
   const { accountBookId } = Route.useParams();
   const { transactionId, period } = Route.useSearch();
   const router = useRouter();
+  const userLocale = useUserLocale();
   const [pickerOpened, setPickerOpened] = useState(false);
   const [unfilteredPeriodMode, setUnfilteredPeriodMode] =
     useState<PeriodMode>("month");
@@ -104,8 +106,11 @@ export function LedgerPageContent() {
     ],
   );
   const rawSelectedPeriod = useMemo(
-    () => (isPeriodFilterAvailable ? parseLedgerExplicitPeriod(period) : null),
-    [isPeriodFilterAvailable, period],
+    () =>
+      isPeriodFilterAvailable
+        ? parseLedgerExplicitPeriod(period, userLocale)
+        : null,
+    [isPeriodFilterAvailable, period, userLocale],
   );
   const clampedPeriodValue = useMemo(() => {
     if (!rawSelectedPeriod) {
@@ -119,8 +124,10 @@ export function LedgerPageContent() {
   }, [maxDate, minBookingDate, rawSelectedPeriod]);
   const selectedPeriod = useMemo(
     () =>
-      clampedPeriodValue ? parseLedgerExplicitPeriod(clampedPeriodValue) : null,
-    [clampedPeriodValue],
+      clampedPeriodValue
+        ? parseLedgerExplicitPeriod(clampedPeriodValue, userLocale)
+        : null,
+    [clampedPeriodValue, userLocale],
   );
   useEffect(() => {
     if (!selectedPeriod) {
