@@ -12,7 +12,6 @@ export type AccountBookSection =
   | "period"
   | "settings"
   | "timeline"
-  | "user-settings"
   | "valuation-cache";
 
 export type AccountsLinkSearch = {
@@ -58,7 +57,6 @@ export function getActiveSection(args: {
   if (section === "activity") return "activity";
   if (section === "period") return "period";
   if (section === "settings") return "settings";
-  if (section === "user-settings") return "user-settings";
   if (section === "timeline") return "timeline";
   if (section === "valuation-cache") return "valuation-cache";
   return "accounts";

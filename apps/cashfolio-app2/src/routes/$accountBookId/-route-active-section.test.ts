@@ -80,15 +80,6 @@ describe("getActiveSection", () => {
       }),
     ).toBe("settings");
   });
-
-  it("marks user settings separately from navbar settings", () => {
-    expect(
-      getActiveSection({
-        pathname: "/book-1/user-settings",
-        accountBookId: "book-1",
-      }),
-    ).toBe("user-settings");
-  });
 });
 
 describe("getAccountsLinkSearch", () => {

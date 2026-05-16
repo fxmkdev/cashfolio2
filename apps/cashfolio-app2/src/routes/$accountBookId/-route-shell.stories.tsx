@@ -17,7 +17,6 @@ function getHeadingLabel(pathname: string): string {
   if (section === "timeline") return "History";
   if (section === "valuation-cache") return "Valuation Cache";
   if (section === "settings") return "Settings";
-  if (section === "user-settings") return "User Settings";
   if (section === "accounts") return "Accounts";
 
   return "Accounts";
@@ -148,6 +147,10 @@ export const RouteSmoke: Story = {
     await expect(
       canvas.getByRole("link", { name: "Accounts" }),
     ).toHaveAttribute("data-active", "true");
+    const adminLink = canvas.getByRole("link", { name: "Admin" });
+    await expect(adminLink).toHaveAttribute("href", "/admin");
+    await expect(adminLink).toHaveAttribute("target", "_blank");
+    await expect(adminLink).toHaveAttribute("rel", "noopener noreferrer");
     await expect(
       canvas.getByRole("button", { name: "Storybook Book" }),
     ).toBeInTheDocument();
@@ -203,7 +206,10 @@ export const RouteSmoke: Story = {
       canvas.getByRole("menuitem", { name: "User Settings" }),
     );
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-alt-book/user-settings",
+      "/user-settings",
+    );
+    await expect(canvas.getByTestId("router-search")).toHaveTextContent(
+      "returnTo",
     );
   },
 };

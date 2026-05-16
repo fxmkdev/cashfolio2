@@ -1,9 +1,11 @@
-import { Stack, Text, Tooltip } from "@mantine/core";
+import { NavLink, Stack, Text, Tooltip } from "@mantine/core";
 import {
+  IconAdjustments,
   IconActivity,
   IconCalendarMonth,
   IconChartBar,
   IconDatabase,
+  IconExternalLink,
   IconListDetails,
   IconSettings,
 } from "@tabler/icons-react";
@@ -16,7 +18,7 @@ import { LinkNavLink } from "@/components/link-nav-link";
 import type { AccountBookSection, AccountsLinkSearch } from "./-route-helpers";
 
 type AccountBookNavigationLink = {
-  section: Exclude<AccountBookSection, "user-settings">;
+  section: AccountBookSection;
   label: string;
   icon: (size: number) => ReactNode;
 };
@@ -98,17 +100,67 @@ export function AccountBookAdminNavigationLinks({
   periodLinkSearch,
 }: AccountBookNavigationLinksProps) {
   return (
-    <AccountBookNavigationLinkList
-      accountBookId={accountBookId}
-      activeSection={activeSection}
-      accountsLinkSearch={accountsLinkSearch}
-      collapsed={collapsed}
-      links={adminNavigationLinks}
-      onNavigate={onNavigate}
-      periodLinkSearch={periodLinkSearch}
-      sectionLabel="Admin"
+    <Stack gap="xs">
+      <AccountBookNavigationLinkList
+        accountBookId={accountBookId}
+        activeSection={activeSection}
+        accountsLinkSearch={accountsLinkSearch}
+        collapsed={collapsed}
+        links={adminNavigationLinks}
+        onNavigate={onNavigate}
+        periodLinkSearch={periodLinkSearch}
+        sectionLabel="Admin"
+      />
+      <AccountBookAdminRootLink collapsed={collapsed} onNavigate={onNavigate} />
+    </Stack>
+  );
+}
+
+function AccountBookAdminRootLink({
+  collapsed,
+  onNavigate,
+}: {
+  collapsed: boolean;
+  onNavigate: () => void;
+}) {
+  const renderLink = () => (
+    <NavLink
+      aria-label={collapsed ? "Admin" : undefined}
+      component="a"
+      href="/admin"
+      label={collapsed ? "" : "Admin"}
+      leftSection={<IconAdjustments size={collapsed ? 18 : 16} />}
+      onClick={onNavigate}
+      rel="noopener noreferrer"
+      rightSection={collapsed ? undefined : <IconExternalLink size={14} />}
+      styles={
+        collapsed
+          ? {
+              root: { justifyContent: "center", width: 40 },
+              section: { marginInlineEnd: 0 },
+            }
+          : undefined
+      }
+      target="_blank"
     />
   );
+
+  if (collapsed) {
+    return (
+      <>
+        <Stack gap="xs" hiddenFrom="sm">
+          {renderLink()}
+        </Stack>
+        <Stack align="center" gap="xs" visibleFrom="sm">
+          <Tooltip label="Admin" position="right">
+            {renderLink()}
+          </Tooltip>
+        </Stack>
+      </>
+    );
+  }
+
+  return renderLink();
 }
 
 type AccountBookNavigationLinkListProps = AccountBookNavigationLinksProps & {

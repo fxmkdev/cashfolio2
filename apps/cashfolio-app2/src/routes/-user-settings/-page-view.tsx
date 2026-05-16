@@ -10,13 +10,15 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
-import { IconCheck } from "@tabler/icons-react";
+import { IconArrowLeft, IconCheck } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { LinkButton } from "@/components/link-button";
 import { NarrowPageShell } from "@/components/narrow-page-shell";
 import { TopPageHeader } from "@/components/top-page-header";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import { isSupportedUserLocale, USER_LOCALE_OPTIONS } from "@/user-locale";
 import type { loadUserSettingsPageData } from "./-page-loader";
+import type { UserSettingsReturnTarget } from "./-return-target";
 
 type UserSettingsPageData = Awaited<
   ReturnType<typeof loadUserSettingsPageData>
@@ -60,10 +62,11 @@ function showSettingsSavedNotification() {
 }
 
 export function UserSettingsPageView(args: {
+  returnTarget: UserSettingsReturnTarget | null;
   settings: UserSettingsPageData;
   onSubmit: (values: UserSettingsFormValues) => Promise<void>;
 }) {
-  const { settings } = args;
+  const { returnTarget, settings } = args;
   const { isSubmitting, runSubmit } = useDialogSubmitState();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const form = useForm<UserSettingsFormValues>({
@@ -101,8 +104,21 @@ export function UserSettingsPageView(args: {
   const avatarUrl = form.values.avatarUrl.trim();
 
   return (
-    <NarrowPageShell>
-      <TopPageHeader heading={<Title order={2}>User Settings</Title>} />
+    <NarrowPageShell py="xl">
+      <TopPageHeader
+        heading={<Title order={2}>User Settings</Title>}
+        actions={
+          returnTarget ? (
+            <LinkButton
+              leftSection={<IconArrowLeft size={16} />}
+              to={returnTarget.href}
+              variant="default"
+            >
+              {returnTarget.label}
+            </LinkButton>
+          ) : null
+        }
+      />
 
       <form
         onSubmit={form.onSubmit(async (values) => {

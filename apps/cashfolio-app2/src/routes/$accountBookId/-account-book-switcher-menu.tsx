@@ -1,6 +1,5 @@
 import {
   ActionIcon,
-  Avatar,
   Button,
   Menu,
   Tooltip,
@@ -10,12 +9,7 @@ import {
   IconBook2,
   IconCheck,
   IconChevronDown,
-  IconChevronUp,
-  IconExternalLink,
-  IconLogout2,
   IconPlus,
-  IconShieldLock,
-  IconUserCog,
 } from "@tabler/icons-react";
 import { createLink } from "@tanstack/react-router";
 import {
@@ -23,7 +17,6 @@ import {
   type ComponentPropsWithoutRef,
   type MouseEvent,
 } from "react";
-import type { AuthenticatedUserProfile } from "@/auth/user-profile";
 import type { UserAccountBookOption } from "@/server/home";
 import { markPendingAccountBookSwitch } from "./-account-book-switch-notification";
 import { ACCOUNT_BOOK_SIDEBAR_WIDTH } from "./-shell-dimensions";
@@ -153,105 +146,6 @@ export function AccountBookSwitcherMenu({
         >
           Create New
         </LinkMenuItem>
-      </Menu.Dropdown>
-    </Menu>
-  );
-}
-
-export function UserMenuItems({
-  accountBookId,
-  accountSecurityUrl,
-}: {
-  accountBookId: string;
-  accountSecurityUrl: string | null;
-}) {
-  return (
-    <>
-      <LinkMenuItem
-        leftSection={<IconUserCog size={16} />}
-        to="/$accountBookId/user-settings"
-        params={{ accountBookId }}
-        preload={false}
-      >
-        User Settings
-      </LinkMenuItem>
-      {accountSecurityUrl && (
-        <Menu.Item
-          component="a"
-          href={accountSecurityUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          leftSection={<IconShieldLock size={16} />}
-          rightSection={<IconExternalLink size={16} />}
-        >
-          Account Security
-        </Menu.Item>
-      )}
-      <Menu.Divider />
-      <form action="/api/logto/sign-out" method="post">
-        <Menu.Item
-          component="button"
-          type="submit"
-          leftSection={<IconLogout2 size={16} />}
-        >
-          Sign Out
-        </Menu.Item>
-      </form>
-    </>
-  );
-}
-
-export function UserMenu({
-  accountSecurityUrl,
-  accountBookId,
-  collapsed = false,
-  userProfile,
-}: {
-  accountSecurityUrl: string | null;
-  accountBookId: string;
-  collapsed?: boolean;
-  userProfile: AuthenticatedUserProfile;
-}) {
-  return (
-    <Menu
-      position="top-end"
-      width={collapsed ? ACCOUNT_BOOK_SIDEBAR_WIDTH : "target"}
-    >
-      <Menu.Target>
-        {collapsed ? (
-          <Tooltip label={userProfile.displayName} position="right">
-            <ActionIcon
-              aria-label={`Open user menu, current: ${userProfile.displayName}`}
-              size="lg"
-              variant="default"
-            >
-              <Avatar src={userProfile.avatarUrl} alt="" size={24} radius="xl">
-                {userProfile.initials}
-              </Avatar>
-            </ActionIcon>
-          </Tooltip>
-        ) : (
-          <Button
-            variant="default"
-            leftSection={
-              <Avatar src={userProfile.avatarUrl} alt="" size={24} radius="xl">
-                {userProfile.initials}
-              </Avatar>
-            }
-            rightSection={<IconChevronUp size={16} />}
-            fullWidth
-          >
-            <span style={triggerLabelStyle}>{userProfile.displayName}</span>
-          </Button>
-        )}
-      </Menu.Target>
-      <Menu.Dropdown
-        style={{ maxWidth: collapsed ? ACCOUNT_BOOK_SIDEBAR_WIDTH : "100%" }}
-      >
-        <UserMenuItems
-          accountBookId={accountBookId}
-          accountSecurityUrl={accountSecurityUrl}
-        />
       </Menu.Dropdown>
     </Menu>
   );
