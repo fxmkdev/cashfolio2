@@ -40,6 +40,7 @@ import {
   getLedgerAccountKindBadgeProps,
   type SimpleTransactionEditInitialValues,
 } from "./-page-data";
+import { createLedgerAccountEditModalProps } from "./-account-edit-modal-props";
 import type { loadLedgerPageData } from "./-page-loader";
 import type { LedgerRow } from "./-page-types";
 
@@ -464,14 +465,17 @@ export function LedgerPageView({
       </Modal>
 
       <EditAccountModal
-        opened={accountEditModalOpened}
-        onClose={onCloseAccountEdit}
-        accountGroups={accountGroups}
-        onSubmit={onSubmitUpdateAccount}
-        initialValues={accountEditInitialValues}
-        existingNodes={existingNodes}
-        editingId={account.id}
-        typeDescriptor={backTab}
+        {...createLedgerAccountEditModalProps({
+          opened: accountEditModalOpened,
+          onClose: onCloseAccountEdit,
+          accountGroups,
+          unitUsage,
+          onSubmit: onSubmitUpdateAccount,
+          initialValues: accountEditInitialValues,
+          existingNodes,
+          editingId: account.id,
+          typeDescriptor: backTab,
+        })}
       />
 
       <ConfirmArchiveModal
