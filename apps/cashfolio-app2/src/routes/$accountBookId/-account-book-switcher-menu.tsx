@@ -9,6 +9,7 @@ import {
 import {
   IconBook2,
   IconCheck,
+  IconChevronDown,
   IconChevronUp,
   IconExternalLink,
   IconLogout2,
@@ -87,7 +88,7 @@ export function AccountBookSwitcherMenu({
 
   return (
     <Menu
-      position="top-end"
+      position="bottom-start"
       width={collapsed ? ACCOUNT_BOOK_SIDEBAR_WIDTH : "target"}
     >
       <Menu.Target>
@@ -104,7 +105,7 @@ export function AccountBookSwitcherMenu({
         ) : (
           <Button
             variant="default"
-            rightSection={<IconChevronUp size={16} />}
+            rightSection={<IconChevronDown size={16} />}
             fullWidth
           >
             <span style={triggerLabelStyle}>{currentAccountBookName}</span>

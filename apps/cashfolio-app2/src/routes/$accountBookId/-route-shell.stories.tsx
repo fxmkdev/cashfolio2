@@ -109,7 +109,7 @@ export const RouteSmoke: Story = {
     const canvas = within(canvasElement);
 
     await expect(
-      canvas.getByRole("button", { name: "Collapse sidebar" }),
+      canvas.getByRole("button", { name: "Collapse Sidebar" }),
     ).toBeVisible();
     await userEvent.click(canvas.getByRole("link", { name: "Transactions" }));
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
@@ -215,11 +215,11 @@ export const DesktopRailSmoke: Story = {
     const canvas = within(canvasElement);
 
     await userEvent.click(
-      canvas.getByRole("button", { name: "Collapse sidebar" }),
+      canvas.getByRole("button", { name: "Collapse Sidebar" }),
     );
 
     await expect(
-      canvas.getByRole("button", { name: "Expand sidebar" }),
+      canvas.getByRole("button", { name: "Expand Sidebar" }),
     ).toBeVisible();
     await waitFor(() => {
       expect(readDesktopRailPreference()).toBe("true");
@@ -264,7 +264,7 @@ export const DesktopRailSmoke: Story = {
     await userEvent.keyboard("{Escape}");
 
     await userEvent.click(
-      canvas.getByRole("button", { name: "Expand sidebar" }),
+      canvas.getByRole("button", { name: "Expand Sidebar" }),
     );
     await waitFor(() => {
       expect(readDesktopRailPreference()).toBe("false");
