@@ -20,6 +20,11 @@ export type AccountGroupRow = {
   parentGroupId: string | null;
 };
 
+export type AccountWithEquitySubtype = {
+  type: string;
+  equityAccountSubtype: string | null;
+};
+
 const REQUIRED_ENV_VARS = [
   "PROD_DATABASE_READONLY_URL",
   "STAGING_DATABASE_URL",
@@ -74,31 +79,17 @@ export function isExpectedConfirmation(
   return confirmation.trim() === `replace ${accountBookId}`;
 }
 
-export function sortAccountGroupsParentFirst<T extends AccountGroupRow>(
+export function withoutAccountGroupParentIds<T extends AccountGroupRow>(
   groups: T[],
 ): T[] {
-  const remaining = new Map(groups.map((group) => [group.id, group]));
-  const sorted: T[] = [];
+  return groups.map((group) => ({ ...group, parentGroupId: null }));
+}
 
-  while (remaining.size > 0) {
-    const ready = [...remaining.values()].filter(
-      (group) =>
-        group.parentGroupId === null || !remaining.has(group.parentGroupId),
-    );
-
-    if (ready.length === 0) {
-      throw new Error("Unable to order account groups parent-first.");
-    }
-
-    ready.sort((left, right) => left.id.localeCompare(right.id));
-
-    for (const group of ready) {
-      sorted.push(group);
-      remaining.delete(group.id);
-    }
-  }
-
-  return sorted;
+export function hasGainLossAccount(accounts: AccountWithEquitySubtype[]) {
+  return accounts.some(
+    (account) =>
+      account.type === "EQUITY" && account.equityAccountSubtype === "GAIN_LOSS",
+  );
 }
 
 function assertValidDatabaseUrl(value: string, label: string) {

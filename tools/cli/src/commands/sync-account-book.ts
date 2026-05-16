@@ -3,9 +3,10 @@ import { Client } from "pg";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import {
+  hasGainLossAccount,
   isExpectedConfirmation,
   readSyncAccountBookConfig,
-  sortAccountGroupsParentFirst,
+  withoutAccountGroupParentIds,
   type SyncAccountBookConfig,
 } from "./sync-account-book-helpers";
 
@@ -277,7 +278,7 @@ async function fetchSourceAccountBook(
 
     return {
       accountBook: accountBooks[0]!,
-      accountGroups: sortAccountGroupsParentFirst(accountGroups),
+      accountGroups,
       accounts,
       transactions,
       bookings,
@@ -339,22 +340,17 @@ async function replaceTargetAccountBook(
       data.accountBook,
     ]);
 
-    const generatedGainLossDelete = await client.query(
-      `
-        DELETE FROM "Account"
-        WHERE "accountBookId" = $1
-          AND "type" = 'EQUITY'
-          AND "equityAccountSubtype" = 'GAIN_LOSS'
-      `,
-      [data.accountBook.id],
-    );
+    const generatedGainLossDelete = hasGainLossAccount(data.accounts)
+      ? await deleteGeneratedGainLossAccount(client, data.accountBook.id)
+      : { rowCount: 0 };
 
     await insertRows(
       client,
       `"AccountGroup"`,
       ACCOUNT_GROUP_COLUMNS,
-      data.accountGroups,
+      withoutAccountGroupParentIds(data.accountGroups),
     );
+    await restoreAccountGroupParents(client, data.accountGroups);
     await insertRows(client, `"Account"`, ACCOUNT_COLUMNS, data.accounts);
     await insertRows(
       client,
@@ -380,6 +376,42 @@ async function replaceTargetAccountBook(
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
+  }
+}
+
+async function deleteGeneratedGainLossAccount(
+  client: Client,
+  accountBookId: string,
+) {
+  return client.query(
+    `
+      DELETE FROM "Account"
+      WHERE "accountBookId" = $1
+        AND "type" = 'EQUITY'
+        AND "equityAccountSubtype" = 'GAIN_LOSS'
+    `,
+    [accountBookId],
+  );
+}
+
+async function restoreAccountGroupParents(
+  client: Client,
+  accountGroups: AccountGroupRow[],
+) {
+  for (const group of accountGroups) {
+    if (group.parentGroupId === null) {
+      continue;
+    }
+
+    await client.query(
+      `
+        UPDATE "AccountGroup"
+        SET "parentGroupId" = $1
+        WHERE "id" = $2
+          AND "accountBookId" = $3
+      `,
+      [group.parentGroupId, group.id, group.accountBookId],
+    );
   }
 }
 
@@ -439,11 +471,16 @@ async function createTargetUserLink(
 ) {
   const userResult = await client.query<{ id: string }>(
     `
-      INSERT INTO "User" ("id", "externalId", "createdAt", "updatedAt")
-      VALUES (gen_random_uuid()::text, $1, NOW(), NOW())
-      ON CONFLICT ("externalId") DO UPDATE
-      SET "externalId" = EXCLUDED."externalId"
-      RETURNING "id"
+      WITH inserted AS (
+        INSERT INTO "User" ("id", "externalId", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid()::text, $1, NOW(), NOW())
+        ON CONFLICT ("externalId") DO NOTHING
+        RETURNING "id"
+      )
+      SELECT "id" FROM inserted
+      UNION ALL
+      SELECT "id" FROM "User" WHERE "externalId" = $1
+      LIMIT 1
     `,
     [externalId],
   );

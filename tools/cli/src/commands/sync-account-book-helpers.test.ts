@@ -2,9 +2,10 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   assertNotGitHubActions,
+  hasGainLossAccount,
   isExpectedConfirmation,
   readSyncAccountBookConfig,
-  sortAccountGroupsParentFirst,
+  withoutAccountGroupParentIds,
 } from "./sync-account-book-helpers";
 
 const VALID_ENV = {
@@ -82,29 +83,40 @@ describe("isExpectedConfirmation", () => {
   });
 });
 
-describe("sortAccountGroupsParentFirst", () => {
-  it("orders parent groups before children", () => {
-    const sorted = sortAccountGroupsParentFirst([
-      { id: "grandchild", parentGroupId: "child" },
-      { id: "sibling", parentGroupId: "root" },
-      { id: "root", parentGroupId: null },
+describe("withoutAccountGroupParentIds", () => {
+  it("returns copies with parent group IDs cleared", () => {
+    const groups = [
       { id: "child", parentGroupId: "root" },
-    ]);
+      { id: "root", parentGroupId: null },
+    ];
+    const result = withoutAccountGroupParentIds(groups);
 
-    assert.deepEqual(
-      sorted.map((group) => group.id),
-      ["root", "child", "sibling", "grandchild"],
+    assert.deepEqual(result, [
+      { id: "child", parentGroupId: null },
+      { id: "root", parentGroupId: null },
+    ]);
+    assert.equal(groups[0]!.parentGroupId, "root");
+  });
+});
+
+describe("hasGainLossAccount", () => {
+  it("returns true when an equity gain/loss account is present", () => {
+    assert.equal(
+      hasGainLossAccount([
+        { type: "ASSET", equityAccountSubtype: null },
+        { type: "EQUITY", equityAccountSubtype: "GAIN_LOSS" },
+      ]),
+      true,
     );
   });
 
-  it("throws for cycles", () => {
-    assert.throws(
-      () =>
-        sortAccountGroupsParentFirst([
-          { id: "a", parentGroupId: "b" },
-          { id: "b", parentGroupId: "a" },
-        ]),
-      /Unable to order account groups/,
+  it("returns false for other equity subtypes", () => {
+    assert.equal(
+      hasGainLossAccount([
+        { type: "EQUITY", equityAccountSubtype: "OPENING_BALANCES" },
+        { type: "ASSET", equityAccountSubtype: "GAIN_LOSS" },
+      ]),
+      false,
     );
   });
 });
