@@ -1,5 +1,6 @@
 import { NavLink, Stack, Text, Tooltip } from "@mantine/core";
 import {
+  IconAdjustments,
   IconActivity,
   IconCalendarMonth,
   IconChartBar,
@@ -7,7 +8,6 @@ import {
   IconExternalLink,
   IconListDetails,
   IconSettings,
-  IconShieldCog,
 } from "@tabler/icons-react";
 import {
   forwardRef,
@@ -129,7 +129,7 @@ function AccountBookAdminRootLink({
       component="a"
       href="/admin"
       label={collapsed ? "" : "Admin"}
-      leftSection={<IconShieldCog size={collapsed ? 18 : 16} />}
+      leftSection={<IconAdjustments size={collapsed ? 18 : 16} />}
       onClick={onNavigate}
       rel="noopener noreferrer"
       rightSection={collapsed ? undefined : <IconExternalLink size={14} />}
