@@ -29,12 +29,12 @@ Related docs:
 ## Core Modules
 
 - Key public facades: `accounts.ts`, `account-books.ts`, `transactions.ts`,
-  `period.ts`, `period-timeline.ts`, `period-gain-loss-reconciliation.ts`,
+  `period.ts`, `period-history.ts`, `period-gain-loss-reconciliation.ts`,
   `period-end-net-worth.ts`, `period-opening-balance-net-worth.ts`,
   `valuation.server.ts`, `valuation-cache.ts`
 - Domain modules:
   - account/account-book logic: `src/server/accounts/`
-  - period overview, timeline, reconciliation, and cache internals:
+  - period overview, history, reconciliation, and cache internals:
     `src/server/period/`
   - transaction and rebooking logic: `src/server/transactions/`
   - valuation providers/cache helpers: `src/server/valuation/`
@@ -44,7 +44,7 @@ Related docs:
 
 ## Period Caches
 
-- Period overview and timeline use a shared Redis-backed **non-valuation**
+- Period overview and history use a shared Redis-backed **non-valuation**
   base-data cache (`src/server/period/period-base-data-cache.ts`) backed by an
   uncached loader module
   (`src/server/period/period-base-data-loader.server.ts`).
@@ -52,13 +52,13 @@ Related docs:
   bookings/transactions, raw balances, transfer-clearing buckets).
 - Excluded from cache payload: converted valuation outputs and exchange-rate
   results.
-- Timeline additionally uses a Redis-backed derived metrics cache
-  (`src/server/period/period-timeline-metrics-cache.ts`) for finalized scalar
-  Timeline point metrics. This cache sits above the base-data cache, so warm
-  hits skip period snapshot loading, valuation conversion, and gain/loss
+- History additionally uses a Redis-backed derived metrics cache
+  (`src/server/period/period-history-metrics-cache.ts`) for finalized scalar
+  History point metrics. This cache sits above the base-data cache, so warm hits
+  skip period snapshot loading, valuation conversion, and gain/loss
   recomputation for that point.
-- The base-data cache is intentionally kept even with derived Timeline metrics:
-  Period overview still consumes the base-data payload directly, and Timeline
+- The base-data cache is intentionally kept even with derived History metrics:
+  Period overview still consumes the base-data payload directly, and History
   misses still benefit from cached DB-derived inputs.
 - Both period cache families share the same environment namespace helper in
   `src/server/period/period-cache.ts`. `PERIOD_BASE_CACHE_ENV` must be set when
@@ -72,8 +72,8 @@ Related docs:
     `period:base:index:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
   - Generation pointer:
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
-- Timeline metrics entry:
-  `period:timeline:metrics:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
+- History metrics entry:
+  `period:history:metrics:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
 - For preset periods (`mtd`, `ytd`, `last-month`, `last-year`), `periodCacheKey`
   uses resolved concrete ranges (`granularity:from:to`) to avoid key aliasing
   across day/month boundaries.
@@ -85,11 +85,11 @@ Related docs:
 - TTL: 24 hours. Mutating account/transaction server functions explicitly
   invalidate period cache entries for the affected account book by advancing the
   shared generation. Base-data entries are also deleted through their index;
-  Timeline metrics entries are generation-invalidated and then expire naturally.
-- Timeline metrics entries are written only when every valuation dependency came
+  History metrics entries are generation-invalidated and then expire naturally.
+- History metrics entries are written only when every valuation dependency came
   from identity conversion or the long-lived Redis TimeSeries valuation cache.
   Metrics that needed provider fetches, short-lived fallback entries, or missing
-  valuation results are returned but not persisted as derived Timeline metrics.
+  valuation results are returned but not persisted as derived History metrics.
 - `updateAccountBookSettings` (`src/server/accounts/account-book-settings.ts`)
   also invalidates period caches when `referenceCurrency` or `startDate`
   changes.
@@ -157,14 +157,14 @@ to update `sortOrder` values after reordering sibling rows in the reorder modal.
 The canonical period gain/loss semantics are shared between:
 
 - `getPeriodOverview` (`src/server/period.ts`)
-- timeline metrics loading
-  (`src/server/period/period-timeline-point-metrics.server.ts`)
+- history metrics loading
+  (`src/server/period/period-history-point-metrics.server.ts`)
 
 Both loaders reuse the shared period base-data cache and shared gain/loss
 subflows while keeping their output work focused:
 
 - period overview computes the full response payload
-- timeline metrics compute only scalar series values
+- history metrics compute only scalar series values
 
 The engine keeps period gains/losses aligned with net-worth deltas by using a
 single tracked-account flow:
@@ -225,12 +225,12 @@ are split into dedicated modules under `src/server/period/`:
 
 ## Period Warning Surface
 
-When `skippedBookingsCount > 0`, the period page shows a partial-data warning
+When `skippedBookingsCount > 0`, the report page shows a partial-data warning
 below the period selector. This warning explicitly states strict
 `totalReturn == netWorth delta` checks may be incomplete for the selected period
 due to unavailable valuation data.
 
-The period page also shows a net-worth reconciliation warning when
+The report page also shows a net-worth reconciliation warning when
 `endOfPeriodNetWorth` does not match `baselineNetWorth + totalReturn` at cent
 precision. The baseline uses the previous period's end net worth when available,
 and falls back to opening-balance net worth derived from balances strictly

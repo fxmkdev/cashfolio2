@@ -61,7 +61,7 @@ Related docs:
   type: Asset, Liability, Income, Expense)
   - Loader data is tab-scoped: only the selected tab is fetched in the route
     loader critical path.
-- `$accountBookId/activity/route.tsx` - activity page showing individual
+- `$accountBookId/transactions/route.tsx` - transactions page showing individual
   bookings across the account book in reverse-chronological order, with an
   explicit month/year period filter and booking-level Edit/Rebook/Delete actions
 - `$accountBookId/valuation-cache/route.tsx` - valuation cache explorer page
@@ -70,14 +70,14 @@ Related docs:
 - `$accountBookId/settings/route.tsx` - account-book settings page for editing
   account book name, reference currency, and start date, plus a danger-zone
   delete flow that requires typing the current account-book name
-- `$accountBookId/period/route.tsx` - period layout route with shared period
-  search validation and loader data used by nested period pages
-- `$accountBookId/period/index.tsx` - period overview page with contribution,
+- `$accountBookId/report/route.tsx` - period layout route with shared period
+  search validation and loader data used by nested report pages
+- `$accountBookId/report/index.tsx` - report overview page with contribution,
   allocation, and gains/losses breakdown cards
-- `$accountBookId/period/gains-losses/$accountId/route.tsx` - dedicated
+- `$accountBookId/report/gains-losses/$accountId/route.tsx` - dedicated
   gain/loss reconciliation page for unit-account drill-down (opened from
   Gains/Losses Breakdown leaf rows)
-- `$accountBookId/timeline/route.tsx` - timeline page showing monthly/yearly
+- `$accountBookId/history/route.tsx` - history page showing monthly/yearly
   metric history as a full-page chart with metric-specific rendering:
   - Flow metrics (`totalReturn`, `savings`, `income`, `expenses`, `gainsLosses`)
     render as bar + cumulative line + rolling-average line (legend toggles each
@@ -85,7 +85,7 @@ Related docs:
     - Rolling-average window depends on mode:
       - monthly: trailing 12 periods
       - yearly: trailing 5 periods
-    - Rolling-average points are hidden for the current period (latest timeline
+    - Rolling-average points are hidden for the current period (latest history
       period).
   - Balance metrics (`assets`, `liabilities`, `netWorth`) render as area charts:
     assets (green), liabilities (red), net worth sign-split (green/red)
@@ -102,22 +102,22 @@ Related docs:
   - Viewport controls:
     - Uses AG Charts `navigator` + `ranges` controls.
     - Uses mixed x-axis strategy in
-      `src/routes/$accountBookId/timeline/-chart-options.ts`:
+      `src/routes/$accountBookId/history/-chart-options.ts`:
       - flow metrics use `unit-time` for discrete period buckets
       - balance metrics use continuous `time` positioned at period-end dates
         (with exact domain bounds via `nice: false`)
     - Default ranges are monthly `1Y` and yearly `5Y` (see
       `getDefaultRangeButtonLabel` in
-      `src/routes/$accountBookId/timeline/-range-controls.ts`).
+      `src/routes/$accountBookId/history/-range-controls.ts`).
     - AG Charts (current app version: `13.2.1`) does not expose a public API to
       select a specific range-button as active. Setting zoom via
       `initialState`/`setState` updates the visible domain but may not mark the
       corresponding range button active.
-    - Therefore `src/routes/$accountBookId/timeline/-page-view.tsx` applies the
+    - Therefore `src/routes/$accountBookId/history/-page-view.tsx` applies the
       default by programmatically triggering the matching range button after the
       chart mounts. If AG Charts adds a public active-button API, prefer that
       and remove the DOM-trigger fallback.
-  - Period overview + timeline share a non-valuation Redis base-data cache with
+  - Period overview + history share a non-valuation Redis base-data cache with
     deployment-scoped namespacing via `PERIOD_BASE_CACHE_ENV`.
 - `$accountBookId/$accountId/route.tsx` - ledger layout route (loads ledger data
   and provides shared search params for child routes)
@@ -140,22 +140,22 @@ Related docs:
     - `$accountBookId/$accountId/-page-transaction-utils.ts`
     - `$accountBookId/$accountId/-page-columns.tsx`
   - period gain/loss reconciliation modules:
-    - `$accountBookId/period/gains-losses/$accountId/-page-view.tsx`
-    - `$accountBookId/period/gains-losses/$accountId/-page-view-types.ts`
-    - `$accountBookId/period/gains-losses/$accountId/-page-view-formatters.ts`
-    - `$accountBookId/period/gains-losses/$accountId/-page-view-columns.tsx`
-    - `$accountBookId/period/gains-losses/$accountId/-realized-event-explain-drawer.tsx`
-    - `$accountBookId/period/gains-losses/$accountId/-reconciliation-stat-cards.tsx`
-  - timeline route modules:
-    - `$accountBookId/timeline/-page-loader.ts`
-    - `$accountBookId/timeline/-page-types.ts`
-    - `$accountBookId/timeline/-page-navigation.ts`
-    - `$accountBookId/timeline/-range-controls.ts`
-    - `$accountBookId/timeline/-chart-data.ts`
-    - `$accountBookId/timeline/-chart-options.ts`
-    - `$accountBookId/timeline/-page-view.tsx`
+    - `$accountBookId/report/gains-losses/$accountId/-page-view.tsx`
+    - `$accountBookId/report/gains-losses/$accountId/-page-view-types.ts`
+    - `$accountBookId/report/gains-losses/$accountId/-page-view-formatters.ts`
+    - `$accountBookId/report/gains-losses/$accountId/-page-view-columns.tsx`
+    - `$accountBookId/report/gains-losses/$accountId/-realized-event-explain-drawer.tsx`
+    - `$accountBookId/report/gains-losses/$accountId/-reconciliation-stat-cards.tsx`
+  - history route modules:
+    - `$accountBookId/history/-page-loader.ts`
+    - `$accountBookId/history/-page-types.ts`
+    - `$accountBookId/history/-page-navigation.ts`
+    - `$accountBookId/history/-range-controls.ts`
+    - `$accountBookId/history/-chart-data.ts`
+    - `$accountBookId/history/-chart-options.ts`
+    - `$accountBookId/history/-page-view.tsx`
 - Large route-local surfaces may also use `-`-prefixed private folders. The
-  period route uses `-breakdown/`, `-gains-losses/`, `-selector/`, and
+  report route uses `-breakdown/`, `-gains-losses/`, `-selector/`, and
   `-net-worth/` to keep URL routes separate from page internals.
 
 ### Search Parameters
@@ -169,21 +169,22 @@ Related docs:
   - `transactionId?: string` to auto-scroll and highlight a booking row
   - `period?: string` for explicit month/year period filtering on supported
     account types (asset, liability, and non-opening-balance equity)
-- `$accountBookId/activity/route.tsx` uses:
+- `$accountBookId/transactions/route.tsx` uses:
   - `transactionId?: string` to auto-scroll and highlight all visible booking
     rows for a transaction
   - `period?: string` for explicit month/year period filtering; omitted values
-    default to the current month to keep the initial Activity payload bounded
-- `$accountBookId/period/route.tsx` and
-  `$accountBookId/period/gains-losses/$accountId/route.tsx` both use
+    default to the current month to keep the initial Transactions payload
+    bounded
+- `$accountBookId/report/route.tsx` and
+  `$accountBookId/report/gains-losses/$accountId/route.tsx` both use
   `period?: string` with the same normalized period semantics
-- `$accountBookId/timeline/route.tsx` uses:
-  - `mode?: "month" | "year"` to select the timeline granularity (default:
+- `$accountBookId/history/route.tsx` uses:
+  - `mode?: "month" | "year"` to select the history granularity (default:
     monthly)
   - `metric?: "totalReturn" | "savings" | "income" | "expenses" | "gainsLosses" | "assets" | "liabilities" | "netWorth"`
-    to select the timeline metric (default: `totalReturn`)
+    to select the history metric (default: `totalReturn`)
   - `incomeScope?`, `expenseScope?`, `assetScope?`, and `liabilityScope?` use
-    `total`, `group:<id>`, or `account:<id>` for scoped timeline metrics.
+    `total`, `group:<id>`, or `account:<id>` for scoped history metrics.
     `gainLossScope?` uses `total` or Period Gain/Loss hierarchy node IDs such as
     `unit-type:fx`, `unit:fx:USD`, `unit-account:fx:USD:<accountId>`, and
     `explicit-account:<accountId>`.

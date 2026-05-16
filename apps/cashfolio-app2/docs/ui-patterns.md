@@ -168,7 +168,7 @@ submit UX and prevent duplicate requests.
 
 ## Period Breakdown Drill-Down Pattern
 
-- Period route (`src/routes/$accountBookId/period/route.tsx`) supports
+- Report route (`src/routes/$accountBookId/report/route.tsx`) supports
   drill-down in:
   - Expense/Income charts (`Donut`, `Bar`)
   - Gains/Losses chart (`Waterfall`)
@@ -314,9 +314,9 @@ for ledger child routes.
 - **Navigation**: Double-click an account row on the accounts list to open its
   ledger; back link returns to accounts list
 
-## Activity Page Pattern
+## Transactions Page Pattern
 
-The activity page (`src/routes/$accountBookId/activity/index.tsx`) shows
+The transactions page (`src/routes/$accountBookId/transactions/index.tsx`) shows
 individual bookings across the whole account book, newest first. It is not in a
 single-account context.
 
