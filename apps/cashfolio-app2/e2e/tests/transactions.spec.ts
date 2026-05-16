@@ -88,7 +88,7 @@ async function openCreateSimpleTransaction(page: Page): Promise<Locator> {
 }
 
 async function fillTransactionHeader(dialog: Locator, description: string) {
-  await dialog.getByLabel("Date").fill("01.01.2026");
+  await dialog.getByLabel("Date").fill("01/01/2026");
   await dialog.getByLabel("Description").fill(description);
 }
 
@@ -254,7 +254,7 @@ test("create, edit, delete, and create multi-booking transaction", async ({
   const createDialog = await openCreateTransaction(page);
   await fillTransactionHeader(createDialog, "E2E Transaction 1");
   await setGridCellValue(page, 0, "credit", "100");
-  await setGridCellValue(page, 1, "date", "01.01.2026");
+  await setGridCellValue(page, 1, "date", "01/01/2026");
   await setGridAccountCellValue({
     dialog: createDialog,
     rowIndex: 1,
@@ -295,7 +295,7 @@ test("create, edit, delete, and create multi-booking transaction", async ({
   const createSplitDialog = await openCreateTransaction(page);
   await fillTransactionHeader(createSplitDialog, "E2E Split Transaction");
   await setGridCellValue(page, 0, "credit", "300");
-  await setGridCellValue(page, 1, "date", "01.01.2026");
+  await setGridCellValue(page, 1, "date", "01/01/2026");
   await setGridAccountCellValue({
     dialog: createSplitDialog,
     rowIndex: 1,
@@ -303,7 +303,7 @@ test("create, edit, delete, and create multi-booking transaction", async ({
   });
   await setGridCellValue(page, 1, "debit", "100");
   await page.getByRole("button", { name: "Add Booking" }).click();
-  await setGridCellValue(page, 2, "date", "01.01.2026");
+  await setGridCellValue(page, 2, "date", "01/01/2026");
   await setGridAccountCellValue({
     dialog: createSplitDialog,
     rowIndex: 2,
@@ -323,7 +323,7 @@ test("create simple transaction", async ({ page }) => {
 
   const simpleDialog = await openCreateSimpleTransaction(page);
 
-  await page.getByLabel("Date").fill("02.01.2026");
+  await page.getByLabel("Date").fill("01/02/2026");
   await page.getByLabel("Description").fill("E2E Simple Transaction");
   await simpleDialog.getByLabel("Counter Account").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
@@ -352,7 +352,7 @@ test("counterparty account link highlights the matching booking row", async ({
 
   const description = "E2E Counterparty Highlight";
   const simpleDialog = await openCreateSimpleTransaction(page);
-  await page.getByLabel("Date").fill("03.01.2026");
+  await page.getByLabel("Date").fill("01/03/2026");
   await page.getByLabel("Description").fill(description);
   await simpleDialog.getByLabel("Counter Account").click();
   await selectAccountLeaf(page, seeded.savingsAccount.name);
@@ -388,7 +388,7 @@ test("rebook booking to another compatible account", async ({ page }) => {
   await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
 
   const simpleDialog = await openCreateSimpleTransaction(page);
-  await page.getByLabel("Date").fill("04.01.2026");
+  await page.getByLabel("Date").fill("01/04/2026");
   await page.getByLabel("Description").fill("E2E Rebook Transaction");
   await simpleDialog.getByLabel("Counter Account").click();
   await selectAccountLeaf(page, seeded.savingsAccount.name);
@@ -462,7 +462,7 @@ test("eligible edit opens simple editor and ineligible edit opens split editor",
   const simpleCreateDialog = page.getByRole("dialog", {
     name: "Add Transaction",
   });
-  await page.getByLabel("Date").fill("04.01.2026");
+  await page.getByLabel("Date").fill("01/04/2026");
   await page.getByLabel("Description").fill("E2E Editable Simple");
   await simpleCreateDialog.getByLabel("Counter Account").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
@@ -521,7 +521,7 @@ test("switch from simple edit to split carries over edited values", async ({
   const simpleCreateDialog = page.getByRole("dialog", {
     name: "Add Transaction",
   });
-  await page.getByLabel("Date").fill("05.01.2026");
+  await page.getByLabel("Date").fill("01/05/2026");
   await page.getByLabel("Description").fill("E2E Carry Switch");
   await simpleCreateDialog.getByLabel("Counter Account").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
@@ -573,7 +573,7 @@ test("create flow: changing date before switching to split still allows split cr
   await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
 
   const simpleDialog = await openCreateSimpleTransaction(page);
-  await simpleDialog.getByLabel("Date").fill("06.01.2026");
+  await simpleDialog.getByLabel("Date").fill("01/06/2026");
   await simpleDialog.getByLabel("Description").fill("E2E Create Date Switch");
   await simpleDialog.getByLabel("Counter Account").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
@@ -589,7 +589,7 @@ test("create flow: changing date before switching to split still allows split cr
     "E2E Create Date Switch",
   );
 
-  await splitDialog.getByLabel("Date").fill("07.01.2026");
+  await splitDialog.getByLabel("Date").fill("01/07/2026");
 
   const splitRow0 = splitDialog
     .locator('.ag-center-cols-container .ag-row[row-index="0"]')
@@ -607,7 +607,7 @@ test("create security simple transaction preserves account metadata", async ({
 
   const simpleDialog = await openCreateSimpleTransaction(page);
 
-  await page.getByLabel("Date").fill("03.01.2026");
+  await page.getByLabel("Date").fill("01/03/2026");
   await page.getByLabel("Description").fill("E2E Security Simple Transaction");
   await simpleDialog.getByLabel("Counter Account").click();
   await selectAccountLeaf(page, seeded.securityCounterAccount.name);
@@ -665,7 +665,7 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
 
   const createSimpleDialog = await openCreateSimpleTransaction(page);
-  await createSimpleDialog.getByLabel("Date").fill("08.01.2026");
+  await createSimpleDialog.getByLabel("Date").fill("01/08/2026");
   await createSimpleDialog
     .getByLabel("Description")
     .fill("E2E Unitless Equity Create");
@@ -700,7 +700,7 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   await page.goto(`/${seeded.accountBookId}/${seeded.securityAccount.id}`);
 
   const securitySimpleDialog = await openCreateSimpleTransaction(page);
-  await securitySimpleDialog.getByLabel("Date").fill("09.01.2026");
+  await securitySimpleDialog.getByLabel("Date").fill("01/09/2026");
   await securitySimpleDialog
     .getByLabel("Description")
     .fill("E2E Unitless Equity Edit");
