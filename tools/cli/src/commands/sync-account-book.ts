@@ -40,7 +40,7 @@ async function syncAccountBook(config: SyncAccountBookConfig) {
     await target.connect();
 
     const data = await fetchSourceAccountBook(source, config.accountBookId);
-    const sourceCounts = getSourceCounts(data);
+    const sourceCounts = getSourceCounts(data, 1);
     const targetCounts = await fetchTargetCounts(target, config.accountBookId);
 
     console.log(`Source account book: ${data.accountBook.id}`);

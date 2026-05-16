@@ -24,7 +24,9 @@ export async function fetchSourceAccountBook(
   client: Client,
   accountBookId: string,
 ): Promise<AccountBookData> {
-  await client.query("BEGIN TRANSACTION READ ONLY");
+  await client.query(
+    "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY",
+  );
 
   try {
     const accountBook = await fetchSourceAccountBookRow(client, accountBookId);

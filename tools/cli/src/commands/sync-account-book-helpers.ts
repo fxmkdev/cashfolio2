@@ -15,7 +15,7 @@ export type SyncAccountBookEnv = Record<string, string | undefined> & {
   GITHUB_ACTIONS?: string;
 };
 
-export type AccountGroupRow = {
+export type AccountGroupParentRef = {
   id: string;
   parentGroupId: string | null;
 };
@@ -79,7 +79,7 @@ export function isExpectedConfirmation(
   return confirmation.trim() === `replace ${accountBookId}`;
 }
 
-export function withoutAccountGroupParentIds<T extends AccountGroupRow>(
+export function withoutAccountGroupParentIds<T extends AccountGroupParentRef>(
   groups: T[],
 ): T[] {
   return groups.map((group) => ({ ...group, parentGroupId: null }));

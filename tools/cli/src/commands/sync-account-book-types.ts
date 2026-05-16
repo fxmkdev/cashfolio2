@@ -2,9 +2,9 @@ export type AccountBookRow = {
   id: string;
   name: string;
   referenceCurrency: string;
-  startDate: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  startDate: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type AccountGroupRow = {
@@ -16,8 +16,8 @@ export type AccountGroupRow = {
   sortOrder: number | null;
   parentGroupId: string | null;
   accountBookId: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type AccountRow = {
@@ -34,21 +34,21 @@ export type AccountRow = {
   symbol: string | null;
   tradeCurrency: string | null;
   accountBookId: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type TransactionRow = {
   id: string;
   description: string;
   accountBookId: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type BookingRow = {
   id: string;
-  date: Date;
+  date: string;
   description: string;
   transactionId: string;
   accountId: string;
