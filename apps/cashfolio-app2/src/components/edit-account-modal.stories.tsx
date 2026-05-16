@@ -25,12 +25,25 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Create: Story = {};
+export const Create: Story = {
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+
+    await expect(body.getByLabelText("Unit")).not.toBeDisabled();
+    await expect(body.getByLabelText("Currency")).not.toBeDisabled();
+  },
+};
 
 export const Edit: Story = {
   args: {
     initialValues: editAccountInitialValues,
     editingId: "account-checking",
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+
+    await expect(body.getByLabelText("Unit")).toBeDisabled();
+    await expect(body.getByLabelText("Currency")).toBeDisabled();
   },
 };
 
