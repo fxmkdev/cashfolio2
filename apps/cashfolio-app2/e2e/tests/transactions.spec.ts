@@ -594,9 +594,7 @@ test("create flow: changing date before switching to split still allows split cr
   const splitRow0 = splitDialog
     .locator('.ag-center-cols-container .ag-row[row-index="0"]')
     .first();
-  await expect(agGridCellByColId(splitRow0, "date")).toContainText(
-    "07.01.2026",
-  );
+  await expect(agGridCellByColId(splitRow0, "date")).toContainText("1/7/2026");
 
   await splitDialog.getByRole("button", { name: "Create" }).click();
   await expect(agGridRowByText(page, "E2E Create Date Switch")).toBeVisible();
