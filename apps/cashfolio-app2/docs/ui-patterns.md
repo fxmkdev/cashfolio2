@@ -42,7 +42,7 @@ paths are relative to that app directory.
 - Use:
   - `LinkAnchor` for text links/breadcrumbs
   - `LinkButton` for button-styled navigation actions (for example Accounts,
-    Archive, or Period Report)
+    Archive, or Report)
   - `LinkTab` for route-driven tab navigation (for example Asset/Liability/etc.
     on the accounts list)
 - Keep real `<Button onClick={...}>` controls for non-navigation actions only

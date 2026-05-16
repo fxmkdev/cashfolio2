@@ -13,7 +13,7 @@ function getHeadingLabel(pathname: string): string {
   const section = segments[1];
 
   if (section === "activity") return "Transactions";
-  if (section === "period") return "Period Report";
+  if (section === "period") return "Report";
   if (section === "timeline") return "History";
   if (section === "valuation-cache") return "Valuation Cache";
   if (section === "settings") return "Settings";
@@ -116,7 +116,7 @@ export const RouteSmoke: Story = {
       "/storybook-book/activity",
     );
 
-    await userEvent.click(canvas.getByRole("link", { name: "Period Report" }));
+    await userEvent.click(canvas.getByRole("link", { name: "Report" }));
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
       "/storybook-book/period",
     );
@@ -224,11 +224,28 @@ export const DesktopRailSmoke: Story = {
     await waitFor(() => {
       expect(readDesktopRailPreference()).toBe("true");
     });
+    await expect(canvas.queryByText("Report")).not.toBeInTheDocument();
     await expect(canvas.queryByText("Valuation Cache")).not.toBeInTheDocument();
 
-    await userEvent.click(
-      canvas.getByRole("link", { name: "Valuation Cache" }),
-    );
+    const reportRailLink = canvas.getByRole("link", { name: "Report" });
+    await expect(reportRailLink).toBeVisible();
+    await userEvent.hover(reportRailLink);
+    await expect(
+      await within(document.body).findByText("Report"),
+    ).toBeVisible();
+    await userEvent.unhover(reportRailLink);
+
+    const valuationCacheRailLink = canvas.getByRole("link", {
+      name: "Valuation Cache",
+    });
+    await expect(valuationCacheRailLink).toBeVisible();
+    await userEvent.hover(valuationCacheRailLink);
+    await expect(
+      await within(document.body).findByText("Valuation Cache"),
+    ).toBeVisible();
+    await userEvent.unhover(valuationCacheRailLink);
+
+    await userEvent.click(valuationCacheRailLink);
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
       "/storybook-book/valuation-cache",
     );

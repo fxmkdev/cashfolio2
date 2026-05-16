@@ -7,7 +7,11 @@ import {
   IconListDetails,
   IconSettings,
 } from "@tabler/icons-react";
-import type { ReactNode } from "react";
+import {
+  forwardRef,
+  type ComponentPropsWithoutRef,
+  type ReactNode,
+} from "react";
 import { LinkNavLink } from "@/components/link-nav-link";
 import type { AccountBookSection, AccountsLinkSearch } from "./-route-helpers";
 
@@ -30,7 +34,7 @@ const navigationLinks: AccountBookNavigationLink[] = [
   },
   {
     section: "period",
-    label: "Period Report",
+    label: "Report",
     icon: (size) => <IconCalendarMonth size={size} />,
   },
   {
@@ -184,7 +188,7 @@ function AccountBookNavigationLinkList({
   );
 }
 
-type AccountBookNavigationLinkItemProps = {
+type AccountBookNavigationLinkItemOwnProps = {
   accountBookId: string;
   activeSection: AccountBookSection;
   accountsLinkSearch: AccountsLinkSearch;
@@ -196,21 +200,48 @@ type AccountBookNavigationLinkItemProps = {
   };
 };
 
-function AccountBookNavigationLinkItem({
-  accountBookId,
-  activeSection,
-  accountsLinkSearch,
-  collapsed = false,
-  link,
-  onNavigate,
-  periodLinkSearch,
-}: AccountBookNavigationLinkItemProps) {
+type AccountBookNavigationLinkItemProps =
+  AccountBookNavigationLinkItemOwnProps &
+    Pick<
+      ComponentPropsWithoutRef<"a">,
+      | "aria-describedby"
+      | "className"
+      | "onBlur"
+      | "onFocus"
+      | "onMouseEnter"
+      | "onMouseLeave"
+      | "onMouseMove"
+      | "onPointerEnter"
+      | "onPointerLeave"
+      | "onTouchStart"
+      | "style"
+      | "tabIndex"
+    >;
+
+const AccountBookNavigationLinkItem = forwardRef<
+  HTMLAnchorElement,
+  AccountBookNavigationLinkItemProps
+>(function AccountBookNavigationLinkItem(
+  {
+    accountBookId,
+    activeSection,
+    accountsLinkSearch,
+    collapsed = false,
+    link,
+    onNavigate,
+    periodLinkSearch,
+    ...triggerProps
+  },
+  ref,
+) {
   const sharedProps = {
+    ...triggerProps,
     "aria-label": collapsed ? link.label : undefined,
     active: activeSection === link.section,
     label: collapsed ? "" : link.label,
     leftSection: link.icon(collapsed ? 18 : 16),
     onClick: onNavigate,
+    ref,
     styles: collapsed
       ? {
           root: { justifyContent: "center", width: 40 },
@@ -274,7 +305,7 @@ function AccountBookNavigationLinkItem({
     default:
       return assertNever(link.section);
   }
-}
+});
 
 function assertNever(value: never): never {
   throw new Error(`Unhandled account book navigation section: ${value}`);
