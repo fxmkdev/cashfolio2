@@ -46,7 +46,7 @@ test("timeline page is reachable and persists selected period mode across refres
 
   await page
     .getByRole("navigation")
-    .getByRole("link", { name: "Period Report" })
+    .getByRole("link", { name: "Report" })
     .click();
   await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/period$`));
   await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();

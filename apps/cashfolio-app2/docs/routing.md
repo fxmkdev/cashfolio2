@@ -30,7 +30,7 @@ Related docs:
   `GET /api/logto/callback`, `GET /api/logto/sign-up`,
   `POST /api/logto/sign-out`
 - `$accountBookId/route.tsx` - shared account-book shell route using Mantine
-  `AppShell` with left navbar navigation (Accounts, Transactions, Period Report,
+  `AppShell` with left navbar navigation (Accounts, Transactions, Report,
   History), an Admin section for Valuation Cache and Settings, navbar footer
   actions (Account Book switcher + User menu), and mobile-only header burger
   toggle
