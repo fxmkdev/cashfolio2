@@ -20,6 +20,7 @@ describe("createLedgerAccountEditModalProps", () => {
       symbol: null,
       tradeCurrency: null,
       openingBalance: 0,
+      hasBookings: true,
     };
 
     const props = createLedgerAccountEditModalProps({
@@ -39,6 +40,7 @@ describe("createLedgerAccountEditModalProps", () => {
     expect(props.unitUsage?.cryptocurrencies).toEqual(["BTC", "ETH"]);
     expect(props.initialValues).toBe(initialValues);
     expect(props.initialValues?.cryptocurrency).toBe("BTC");
+    expect(props.initialValues?.hasBookings).toBe(true);
     expect(props.editingId).toBe("account-brokerage");
   });
 });

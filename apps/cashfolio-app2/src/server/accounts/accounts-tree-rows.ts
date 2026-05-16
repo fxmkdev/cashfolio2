@@ -64,6 +64,7 @@ export type AccountTreeRow = {
   balance: number | null;
   balanceInReferenceCurrency: number | null;
   openingBalance: number | null;
+  hasBookings: boolean;
   parentId: string | undefined;
   isActive: boolean;
   groupId: string | undefined;
@@ -181,6 +182,7 @@ export function buildAccountRows(args: {
       balance: displayBalance,
       balanceInReferenceCurrency: displayBalanceInReferenceCurrency,
       openingBalance: displayOpeningBalance,
+      hasBookings,
       parentId: account.groupId ?? undefined,
       isActive: account.isActive,
       groupId: account.groupId ?? undefined,
@@ -252,6 +254,7 @@ export function buildGroupRows(args: {
       balance: null,
       balanceInReferenceCurrency: null,
       openingBalance: null,
+      hasBookings: false,
       parentId: group.parentGroupId ?? undefined,
       isActive: group.isActive,
       groupId: group.id,

@@ -7,9 +7,11 @@ import {
   TextInput,
   Grid,
   Select,
+  Tooltip,
+  VisuallyHidden,
 } from "@mantine/core";
 import { isNotEmpty, useForm } from "@mantine/form";
-import { useEffect, useReducer } from "react";
+import { type ReactNode, useEffect, useId, useReducer } from "react";
 import { Fragment } from "react/jsx-runtime";
 import {
   AccountType,
@@ -66,6 +68,7 @@ export type AccountInitialValues = {
   symbol?: string | null;
   tradeCurrency?: string | null;
   openingBalance?: number | null;
+  hasBookings?: boolean;
 };
 
 function toFormValues(initial: AccountInitialValues): FormValues {
@@ -141,6 +144,7 @@ export function EditAccountModal({
   unitUsage,
 }: EditAccountModalProps) {
   const isEdit = !!initialValues;
+  const unitLockDescriptionId = useId();
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const { isSubmitting, runSubmit } = useDialogSubmitState();
   const form = useForm<FormValues, TransformedFormValues>({
@@ -226,6 +230,28 @@ export function EditAccountModal({
   const { unit, type, equityAccountSubtype } = transformAccountValues(
     form.getValues(),
   );
+  const isUnitIdentityLocked =
+    isEdit &&
+    !!initialValues?.hasBookings &&
+    (initialValues?.type === AccountType.ASSET ||
+      initialValues?.type === AccountType.LIABILITY);
+  const unitLockTooltipLabel = isUnitIdentityLocked
+    ? "Unit cannot be changed after bookings have been created."
+    : undefined;
+  const unitLockDescriptionProps = unitLockTooltipLabel
+    ? { "aria-describedby": unitLockDescriptionId }
+    : {};
+  const renderUnitLockTooltip = (children: ReactNode) => {
+    if (!unitLockTooltipLabel) {
+      return children;
+    }
+
+    return (
+      <Tooltip label={unitLockTooltipLabel} withArrow>
+        <div style={{ cursor: "help" }}>{children}</div>
+      </Tooltip>
+    );
+  };
   const handleClose = () => {
     if (isSubmitting) return;
     onClose();
@@ -246,6 +272,11 @@ export function EditAccountModal({
         onSubmit={form.onSubmit((values) => runSubmit(() => onSubmit(values)))}
       >
         <Stack gap="xl">
+          {unitLockTooltipLabel ? (
+            <VisuallyHidden id={unitLockDescriptionId}>
+              {unitLockTooltipLabel}
+            </VisuallyHidden>
+          ) : null}
           <Grid>
             <Grid.Col span={6}>
               <TextInput
@@ -341,62 +372,82 @@ export function EditAccountModal({
             ).includes(type) && (
               <>
                 <Grid.Col span={3}>
-                  <Select
-                    label="Unit"
-                    withAsterisk
-                    withAlignedLabels
-                    allowDeselect={false}
-                    data={[
-                      { value: Unit.CURRENCY, label: "Currency" },
-                      { value: Unit.CRYPTOCURRENCY, label: "Cryptocurrency" },
-                      { value: Unit.SECURITY, label: "Security" },
-                    ]}
-                    {...form.getInputProps("unit")}
-                  />
+                  {renderUnitLockTooltip(
+                    <Select
+                      label="Unit"
+                      withAsterisk
+                      withAlignedLabels
+                      allowDeselect={false}
+                      disabled={isUnitIdentityLocked}
+                      data={[
+                        { value: Unit.CURRENCY, label: "Currency" },
+                        { value: Unit.CRYPTOCURRENCY, label: "Cryptocurrency" },
+                        { value: Unit.SECURITY, label: "Security" },
+                      ]}
+                      {...form.getInputProps("unit")}
+                      {...unitLockDescriptionProps}
+                    />,
+                  )}
                 </Grid.Col>
                 {unit === Unit.CURRENCY ? (
                   <Grid.Col span={6} key={Unit.CURRENCY}>
-                    <CurrencySelect
-                      label="Currency"
-                      withAsterisk
-                      withAlignedLabels
-                      unitUsage={unitUsage}
-                      selectedCurrency={initialValues?.currency}
-                      compactLabels={false}
-                      {...form.getInputProps("currency")}
-                    />
+                    {renderUnitLockTooltip(
+                      <CurrencySelect
+                        label="Currency"
+                        withAsterisk
+                        withAlignedLabels
+                        unitUsage={unitUsage}
+                        selectedCurrency={initialValues?.currency}
+                        compactLabels={false}
+                        disabled={isUnitIdentityLocked}
+                        {...form.getInputProps("currency")}
+                        {...unitLockDescriptionProps}
+                      />,
+                    )}
                   </Grid.Col>
                 ) : unit === Unit.CRYPTOCURRENCY ? (
                   <Grid.Col span={6} key={Unit.CRYPTOCURRENCY}>
-                    <CryptocurrencySelect
-                      label="Cryptocurrency"
-                      withAsterisk
-                      withAlignedLabels
-                      unitUsage={unitUsage}
-                      selectedCryptocurrency={initialValues?.cryptocurrency}
-                      compactLabels={false}
-                      {...form.getInputProps("cryptocurrency")}
-                    />
+                    {renderUnitLockTooltip(
+                      <CryptocurrencySelect
+                        label="Cryptocurrency"
+                        withAsterisk
+                        withAlignedLabels
+                        unitUsage={unitUsage}
+                        selectedCryptocurrency={initialValues?.cryptocurrency}
+                        compactLabels={false}
+                        disabled={isUnitIdentityLocked}
+                        {...form.getInputProps("cryptocurrency")}
+                        {...unitLockDescriptionProps}
+                      />,
+                    )}
                   </Grid.Col>
                 ) : unit === Unit.SECURITY ? (
                   <Fragment key={Unit.SECURITY}>
                     <Grid.Col span={3}>
-                      <TextInput
-                        label="Symbol"
-                        withAsterisk
-                        {...form.getInputProps("symbol")}
-                      />
+                      {renderUnitLockTooltip(
+                        <TextInput
+                          label="Symbol"
+                          withAsterisk
+                          disabled={isUnitIdentityLocked}
+                          {...form.getInputProps("symbol")}
+                          {...unitLockDescriptionProps}
+                        />,
+                      )}
                     </Grid.Col>
                     <Grid.Col span={6}>
-                      <CurrencySelect
-                        label="Trade Currency"
-                        withAsterisk
-                        withAlignedLabels
-                        unitUsage={unitUsage}
-                        selectedCurrency={initialValues?.tradeCurrency}
-                        compactLabels={false}
-                        {...form.getInputProps("tradeCurrency")}
-                      />
+                      {renderUnitLockTooltip(
+                        <CurrencySelect
+                          label="Trade Currency"
+                          withAsterisk
+                          withAlignedLabels
+                          unitUsage={unitUsage}
+                          selectedCurrency={initialValues?.tradeCurrency}
+                          compactLabels={false}
+                          disabled={isUnitIdentityLocked}
+                          {...form.getInputProps("tradeCurrency")}
+                          {...unitLockDescriptionProps}
+                        />,
+                      )}
                     </Grid.Col>
                   </Fragment>
                 ) : null}

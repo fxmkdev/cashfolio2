@@ -46,6 +46,7 @@ const tx = vi.hoisted(() => ({
     deleteMany: vi.fn(),
   },
   booking: {
+    count: vi.fn(),
     deleteMany: vi.fn(),
   },
 }));
@@ -58,6 +59,9 @@ const prisma = vi.hoisted(() => ({
   accountGroup: {
     findMany: vi.fn(),
     create: vi.fn(),
+  },
+  booking: {
+    count: vi.fn(),
   },
   $transaction: vi.fn(),
 }));
@@ -97,6 +101,11 @@ describe("updateAccount opening balance management", () => {
     prisma.account.findUniqueOrThrow.mockResolvedValue({
       type: AccountType.ASSET,
       equityAccountSubtype: null,
+      unit: Unit.CURRENCY,
+      currency: "CHF",
+      cryptocurrency: null,
+      symbol: null,
+      tradeCurrency: null,
     });
     prisma.$transaction.mockImplementation(async (callback) => callback(tx));
 
@@ -118,7 +127,124 @@ describe("updateAccount opening balance management", () => {
     tx.transaction.create.mockResolvedValue({ id: "tx-created" });
     tx.transaction.update.mockResolvedValue({ id: "tx-open" });
     tx.transaction.deleteMany.mockResolvedValue({ count: 0 });
+    tx.booking.count.mockResolvedValue(0);
     tx.booking.deleteMany.mockResolvedValue({ count: 0 });
+  });
+
+  it("rejects changing currency when the account has bookings", async () => {
+    tx.booking.count.mockResolvedValue(1);
+
+    await expect(
+      updateAccount({
+        data: {
+          id: "account-1",
+          accountBookId: "book-1",
+          name: "Cash",
+          type: AccountType.ASSET,
+          unit: Unit.CURRENCY,
+          currency: "EUR",
+          openingBalance: 150,
+        },
+      }),
+    ).rejects.toThrow(
+      "Account unit cannot be changed after bookings have been created.",
+    );
+
+    expect(tx.booking.count).toHaveBeenCalledWith({
+      where: {
+        accountId: "account-1",
+        accountBookId: "book-1",
+      },
+    });
+    expect(tx.account.update).not.toHaveBeenCalled();
+    expect(invalidatePeriodBaseDataCacheForAccountBook).not.toHaveBeenCalled();
+  });
+
+  it("rejects changing unit type when the account has bookings", async () => {
+    tx.booking.count.mockResolvedValue(1);
+
+    await expect(
+      updateAccount({
+        data: {
+          id: "account-1",
+          accountBookId: "book-1",
+          name: "Cash",
+          type: AccountType.ASSET,
+          unit: Unit.CRYPTOCURRENCY,
+          cryptocurrency: "BTC",
+          openingBalance: 150,
+        },
+      }),
+    ).rejects.toThrow(
+      "Account unit cannot be changed after bookings have been created.",
+    );
+
+    expect(tx.account.update).not.toHaveBeenCalled();
+    expect(invalidatePeriodBaseDataCacheForAccountBook).not.toHaveBeenCalled();
+  });
+
+  it("allows changing unit identity when the account has no bookings", async () => {
+    tx.booking.count.mockResolvedValue(0);
+    tx.transaction.findMany.mockResolvedValue([]);
+
+    await updateAccount({
+      data: {
+        id: "account-1",
+        accountBookId: "book-1",
+        name: "Cash",
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "EUR",
+        openingBalance: null,
+      },
+    });
+
+    expect(tx.account.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          unit: Unit.CURRENCY,
+          currency: "EUR",
+        }),
+      }),
+    );
+    expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
+      "book-1",
+    );
+  });
+
+  it("allows non-unit edits when the account has bookings", async () => {
+    tx.booking.count.mockResolvedValue(1);
+    tx.transaction.findMany.mockResolvedValue([]);
+
+    await updateAccount({
+      data: {
+        id: "account-1",
+        accountBookId: "book-1",
+        name: "Renamed Cash",
+        type: AccountType.ASSET,
+        groupId: "group-1",
+        sortOrder: 3,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        openingBalance: null,
+      },
+    });
+
+    expect(tx.booking.count).not.toHaveBeenCalled();
+    expect(tx.account.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          name: "Renamed Cash",
+          groupId: "group-1",
+          sortOrder: 3,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+        }),
+      }),
+    );
+    expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
+      "book-1",
+    );
   });
 
   it("updates the existing opening-balance transaction instead of creating a new one", async () => {

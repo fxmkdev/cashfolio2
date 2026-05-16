@@ -310,6 +310,7 @@ export function useLedgerPageController(args: {
       symbol: accountTreeRow.symbol,
       tradeCurrency: accountTreeRow.tradeCurrency,
       openingBalance: accountTreeRow.openingBalance,
+      hasBookings: accountTreeRow.hasBookings,
     }),
     [accountTreeRow],
   );

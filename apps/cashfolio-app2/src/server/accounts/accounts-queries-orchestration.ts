@@ -451,6 +451,7 @@ export async function queryLedgerAccountActionData(
           : account.type === "LIABILITY"
             ? -openingRawBalance
             : null,
+    hasBookings: bookingCount > 0,
     parentId: account.groupId ?? undefined,
     isActive: account.isActive,
     groupId: account.groupId ?? undefined,

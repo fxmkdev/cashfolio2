@@ -9,6 +9,25 @@ export type RowTarget = {
   name: string;
 };
 
+export function createAccountInitialValuesFromRow(
+  data: TreeRow,
+): AccountInitialValues {
+  return {
+    name: data.name,
+    type: data.type,
+    equityAccountSubtype: data.equityAccountSubtype,
+    groupId: data.groupId ?? undefined,
+    sortOrder: data.sortOrder ?? undefined,
+    unit: data.unit,
+    currency: data.currency,
+    cryptocurrency: data.cryptocurrency,
+    symbol: data.symbol,
+    tradeCurrency: data.tradeCurrency,
+    openingBalance: data.openingBalance,
+    hasBookings: data.hasBookings,
+  };
+}
+
 export function useAccountsPageModalState() {
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [editingAccount, setEditingAccount] = useState<
@@ -30,19 +49,7 @@ export function useAccountsPageModalState() {
     if (data.nodeType === "account") {
       setEditingAccount({
         id: data.id,
-        initialValues: {
-          name: data.name,
-          type: data.type,
-          equityAccountSubtype: data.equityAccountSubtype,
-          groupId: data.groupId ?? undefined,
-          sortOrder: data.sortOrder ?? undefined,
-          unit: data.unit,
-          currency: data.currency,
-          cryptocurrency: data.cryptocurrency,
-          symbol: data.symbol,
-          tradeCurrency: data.tradeCurrency,
-          openingBalance: data.openingBalance,
-        },
+        initialValues: createAccountInitialValuesFromRow(data),
       });
       setEditModalOpen(true);
       return;

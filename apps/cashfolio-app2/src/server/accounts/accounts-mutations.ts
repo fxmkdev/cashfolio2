@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../../prisma.server";
-import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../../.prisma-client/enums";
 import { Prisma } from "../../.prisma-client/client";
 import {
   validateAccountInput,
@@ -42,6 +46,8 @@ import { invalidatePeriodBaseDataCacheForAccountBook } from "../period/period-ba
 
 const OPENING_BALANCES_ACCOUNT_NAME = "Opening Balances";
 const OPENING_BALANCE_EPSILON = 0.000001;
+const ACCOUNT_UNIT_LOCKED_MESSAGE =
+  "Account unit cannot be changed after bookings have been created.";
 
 function validateAccountMutationInput(data: unknown): AccountInput {
   assertRecord(data);
@@ -153,6 +159,47 @@ function isUniqueConstraintError(error: unknown): boolean {
 
   const maybeCode = (error as { code?: unknown }).code;
   return maybeCode === "P2002";
+}
+
+type AccountUnitIdentityInput = {
+  unit?: Unit | null;
+  currency?: string | null;
+  cryptocurrency?: string | null;
+  symbol?: string | null;
+  tradeCurrency?: string | null;
+};
+
+function normalizeOptionalString(value: string | null | undefined) {
+  return value ?? null;
+}
+
+function getAccountUnitIdentityKey(account: AccountUnitIdentityInput): string {
+  if (account.unit === "CURRENCY") {
+    return [account.unit, normalizeOptionalString(account.currency)].join(":");
+  }
+
+  if (account.unit === "CRYPTOCURRENCY") {
+    return [account.unit, normalizeOptionalString(account.cryptocurrency)].join(
+      ":",
+    );
+  }
+
+  if (account.unit === "SECURITY") {
+    return [
+      account.unit,
+      normalizeOptionalString(account.symbol),
+      normalizeOptionalString(account.tradeCurrency),
+    ].join(":");
+  }
+
+  return account.unit ?? "UNITLESS";
+}
+
+function hasAccountUnitIdentityChanged(
+  before: AccountUnitIdentityInput,
+  after: AccountUnitIdentityInput,
+): boolean {
+  return getAccountUnitIdentityKey(before) !== getAccountUnitIdentityKey(after);
 }
 
 async function getOrCreateOpeningBalancesAccountId(
@@ -611,7 +658,15 @@ export const updateAccount = createServerFn({ method: "POST" })
       where: {
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
       },
-      select: { type: true, equityAccountSubtype: true },
+      select: {
+        type: true,
+        equityAccountSubtype: true,
+        unit: true,
+        currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
+      },
     });
     assertNoSystemManagedAccountSubtype(existing);
     if (
@@ -632,7 +687,24 @@ export const updateAccount = createServerFn({ method: "POST" })
       })
     ).map((a) => a.name);
     validateAccountInput(data, siblingNames);
+    const shouldGuardUnitIdentity =
+      (existing.type === AccountType.ASSET ||
+        existing.type === AccountType.LIABILITY) &&
+      hasAccountUnitIdentityChanged(existing, data);
+
     const account = await prisma.$transaction(async (tx) => {
+      if (shouldGuardUnitIdentity) {
+        const bookingCount = await tx.booking.count({
+          where: {
+            accountId: data.id,
+            accountBookId: data.accountBookId,
+          },
+        });
+        if (bookingCount > 0) {
+          throw new Error(ACCOUNT_UNIT_LOCKED_MESSAGE);
+        }
+      }
+
       const updatedAccount = await tx.account.update({
         where: {
           id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
