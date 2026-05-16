@@ -15,8 +15,9 @@ On pull requests (non-forks), CI now:
    newly created
 4. Creates or reuses a Fly app named
    `cashfolio-app2-pr-<PR_NUMBER>-<FLY_BRANCH_TAIL_SLUG>`
-5. Sets Fly secrets (`DATABASE_URL`, `LOGTO_APP_SECRET`, `SESSION_SECRET`), with
-   `SESSION_SECRET` generated per deploy in CI
+5. Sets Fly secrets (`DATABASE_URL`, `LOGTO_APP_SECRET`,
+   `LOGTO_MANAGEMENT_API_APP_SECRET`, `SESSION_SECRET`), with `SESSION_SECRET`
+   generated per deploy in CI
 6. Deploys the PR image to
    `https://cashfolio-app2-pr-<PR_NUMBER>-<FLY_BRANCH_TAIL_SLUG>.fly.dev/`
 7. Posts/updates a PR comment with the dynamic preview URL
@@ -90,6 +91,7 @@ deployment.
 
 - `FLY_API_TOKEN`
 - `LOGTO_APP_SECRET`
+- `LOGTO_MANAGEMENT_API_APP_SECRET`
 - `NEON_API_KEY`
 - `CURRENCYLAYER_API_KEY`
 - `COINLAYER_API_KEY`
@@ -105,6 +107,9 @@ deployment.
 - `FLY_CPUS`
 - `LOGTO_ENDPOINT`
 - `LOGTO_APP_ID`
+- `LOGTO_MANAGEMENT_API_ENDPOINT`
+- `LOGTO_MANAGEMENT_API_RESOURCE`
+- `LOGTO_MANAGEMENT_API_APP_ID`
 - `NEON_STAGING_PROJECT_ID`
 - `NEON_STAGING_BRANCH_ID`
 - `NEON_DATABASE_NAME` (optional; defaults to `neondb`)

@@ -38,6 +38,15 @@ inputs:
   logto_app_id:
     description: Logto app ID
     required: true
+  logto_management_api_endpoint:
+    description: Logto Management API endpoint
+    required: true
+  logto_management_api_resource:
+    description: Logto Management API resource indicator
+    required: true
+  logto_management_api_app_id:
+    description: Logto Management API M2M app ID
+    required: true
   fly_api_token:
     description: Fly API token
     required: true
@@ -64,6 +73,11 @@ runs:
         BASE_URL: ${{ inputs.base_url }}
         LOGTO_ENDPOINT: ${{ inputs.logto_endpoint }}
         LOGTO_APP_ID: ${{ inputs.logto_app_id }}
+        LOGTO_MANAGEMENT_API_ENDPOINT:
+          ${{ inputs.logto_management_api_endpoint }}
+        LOGTO_MANAGEMENT_API_RESOURCE:
+          ${{ inputs.logto_management_api_resource }}
+        LOGTO_MANAGEMENT_API_APP_ID: ${{ inputs.logto_management_api_app_id }}
     - name: Log in to Fly registry
       uses: docker/login-action@v4
       with:
