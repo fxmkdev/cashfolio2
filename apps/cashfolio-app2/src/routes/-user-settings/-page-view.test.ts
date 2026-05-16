@@ -11,6 +11,7 @@ describe("UserSettingsPageView", () => {
         MantineProvider,
         null,
         createElement(UserSettingsPageView, {
+          returnTarget: null,
           settings: {
             name: "Ada Lovelace",
             avatarUrl: "https://example.test/ada.png",

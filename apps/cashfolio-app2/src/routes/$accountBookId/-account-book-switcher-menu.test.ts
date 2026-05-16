@@ -14,31 +14,31 @@ vi.mock("@tanstack/react-router", async () => {
       React.forwardRef<
         HTMLAnchorElement,
         {
-          params?: { accountBookId?: string };
+          search?: Record<string, unknown>;
           to?: string;
           [key: string]: unknown;
         }
-      >(function LinkMenuItem({ params, to, ...props }, ref) {
-        const accountBookId =
-          (params as { accountBookId?: string } | undefined)?.accountBookId ??
-          "";
-        const href =
-          to === "/$accountBookId/user-settings"
-            ? `/${accountBookId}/user-settings`
-            : (to ?? "#");
-
+      >(function LinkMenuItem({ search, to, ...props }, ref) {
+        const searchParams = new URLSearchParams();
+        for (const [key, value] of Object.entries(search ?? {})) {
+          if (typeof value === "string") {
+            searchParams.set(key, value);
+          }
+        }
+        const suffix = searchParams.size ? `?${searchParams.toString()}` : "";
+        const href = `${to ?? "#"}${suffix}`;
         return React.createElement(Component, { ...props, href, ref });
       }),
   };
 });
 
-import { UserMenuItems } from "./-account-book-switcher-menu";
+import { UserMenuItems } from "../-user-menu";
 
 describe("UserMenuItems", () => {
   it("renders user settings, account security, and sign out entries", () => {
     const menuItems = UserMenuItems({
-      accountBookId: "book-1",
       accountSecurityUrl: "https://tenant.logto.app/account/security",
+      userSettingsReturnTo: "/book-1/accounts?tab=ASSET&mode=active",
     });
     if (!isValidElement<{ children: ReactNode }>(menuItems)) {
       throw new Error("Expected UserMenuItems to return a React element.");
@@ -50,9 +50,9 @@ describe("UserMenuItems", () => {
     expect(settingsItem).toMatchObject({
       props: {
         children: "User Settings",
-        params: { accountBookId: "book-1" },
         preload: false,
-        to: "/$accountBookId/user-settings",
+        search: { returnTo: "/book-1/accounts?tab=ASSET&mode=active" },
+        to: "/user-settings",
       },
     });
     expect(securityItem).toMatchObject({
@@ -83,8 +83,8 @@ describe("UserMenuItems", () => {
 
   it("omits account security when no URL is available", () => {
     const menuItems = UserMenuItems({
-      accountBookId: "book-1",
       accountSecurityUrl: null,
+      userSettingsReturnTo: "/admin",
     });
     if (!isValidElement<{ children: ReactNode }>(menuItems)) {
       throw new Error("Expected UserMenuItems to return a React element.");

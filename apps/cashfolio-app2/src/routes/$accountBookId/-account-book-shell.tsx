@@ -19,15 +19,13 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 import type { AuthenticatedUserProfile } from "@/auth/user-profile";
 import type { UserAccountBookOption } from "@/server/home";
+import { UserMenu } from "../-user-menu";
 import {
   AccountBookAdminNavigationLinks,
   AccountBookNavigationLinks,
 } from "./-account-book-navigation-links";
 import { consumePendingAccountBookSwitch } from "./-account-book-switch-notification";
-import {
-  AccountBookSwitcherMenu,
-  UserMenu,
-} from "./-account-book-switcher-menu";
+import { AccountBookSwitcherMenu } from "./-account-book-switcher-menu";
 import {
   DESKTOP_RAIL_COLLAPSED_STORAGE_KEY,
   getActiveSection,
@@ -253,14 +251,14 @@ export function AccountBookShell({
                 <Stack gap="xs" hiddenFrom="sm">
                   <UserMenu
                     accountSecurityUrl={accountSecurityUrl}
-                    accountBookId={accountBookId}
+                    userSettingsReturnTo={currentHref}
                     userProfile={userProfile}
                   />
                 </Stack>
                 <Group justify="center" visibleFrom="sm">
                   <UserMenu
                     accountSecurityUrl={accountSecurityUrl}
-                    accountBookId={accountBookId}
+                    userSettingsReturnTo={currentHref}
                     userProfile={userProfile}
                     collapsed
                   />
@@ -269,7 +267,7 @@ export function AccountBookShell({
             ) : (
               <UserMenu
                 accountSecurityUrl={accountSecurityUrl}
-                accountBookId={accountBookId}
+                userSettingsReturnTo={currentHref}
                 userProfile={userProfile}
               />
             )}

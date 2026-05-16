@@ -26,14 +26,24 @@ Related docs:
   seed only the system-managed Gain/Loss account. This route is outside the
   account-book shell and shows either a user sign-out menu or a back link to the
   source account book when opened from the account-book switcher.
+- `admin/route.tsx` - Cashfolio Admin shell route using Mantine `AppShell` with
+  a left navbar. It is outside the account-book context, has no account-book
+  switcher, and loads the current user profile plus locale for the shared user
+  menu.
+- `admin/index.tsx` - Admin overview placeholder page showing `Coming soon`.
+- `user-settings.tsx` - isolated user settings page for editing Logto-backed
+  name/avatar URL and the app-owned locale preference. It accepts a safe
+  `returnTo` search parameter so the page can link back to either the Admin UI
+  or the originating account-book UI.
 - `api/logto/$action.tsx` - auth endpoints: `GET /api/logto/sign-in`,
   `GET /api/logto/callback`, `GET /api/logto/sign-up`,
   `POST /api/logto/sign-out`
 - `$accountBookId/route.tsx` - shared account-book shell route using Mantine
   `AppShell` with left navbar navigation (Accounts, Transactions, Report,
-  History), an Admin section for Valuation Cache and Settings, navbar footer
-  actions (Account Book switcher + User menu), and mobile-only header burger
-  toggle
+  History), an Admin section for Valuation Cache, account-book Settings, and an
+  external-link `Admin` entry that opens `/admin` in a new tab/window, navbar
+  footer actions (Account Book switcher + User menu), and mobile-only header
+  burger toggle
   - Uses the theme `sm` breakpoint as the shared source of truth for both navbar
     collapse and header visibility.
   - Supports a desktop sidebar rail mode that keeps icon navigation visible,
@@ -43,7 +53,8 @@ Related docs:
     `/accounts`.
   - Loads account-book switcher options and current user profile claims at shell
     level. The footer keeps account-book actions in the account-book menu and
-    sign-out in the user menu.
+    sign-out in the user menu. The shared user menu links to isolated
+    `/user-settings` with the current URL as `returnTo`.
 - `$accountBookId/index.tsx` - index redirect route that forwards to
   `$accountBookId/accounts`
 - `$accountBookId/accounts/route.tsx` - accounts page with tabs (one per account
@@ -59,9 +70,6 @@ Related docs:
 - `$accountBookId/settings/route.tsx` - account-book settings page for editing
   account book name, reference currency, and start date, plus a danger-zone
   delete flow that requires typing the current account-book name
-- `$accountBookId/user-settings/route.tsx` - user settings page for editing
-  Logto-backed name/avatar URL and the app-owned locale preference. The Logto
-  Account Security link lives in the shell user menu.
 - `$accountBookId/period/route.tsx` - period layout route with shared period
   search validation and loader data used by nested period pages
 - `$accountBookId/period/index.tsx` - period overview page with contribution,
