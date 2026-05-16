@@ -201,25 +201,6 @@ jobs:
           COINLAYER_API_KEY: ${{ secrets.COINLAYER_API_KEY }}
           MARKETSTACK_API_KEY: ${{ secrets.MARKETSTACK_API_KEY }}
           STAGING_REDIS_URL: ${{ secrets.STAGING_REDIS_URL }}
-      - name: Stage Logto Management API Fly secret
-        if: ${{ !inputs.prepare_preview_environment }}
-        run: |
-          set -euo pipefail
-
-          if [ -z "${LOGTO_MANAGEMENT_API_APP_SECRET:-}" ]; then
-            echo "LOGTO_MANAGEMENT_API_APP_SECRET secret is required for Logto Management API access."
-            exit 1
-          fi
-
-          flyctl secrets set \
-            --app "$FLY_APP" \
-            --stage \
-            LOGTO_MANAGEMENT_API_APP_SECRET="${LOGTO_MANAGEMENT_API_APP_SECRET}"
-        env:
-          FLY_APP: ${{ inputs.fly_app || vars.FLY_APP }}
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          LOGTO_MANAGEMENT_API_APP_SECRET:
-            ${{ secrets.LOGTO_MANAGEMENT_API_APP_SECRET }}
       - name: Deploy cashfolio-app2
         uses: ./.github/actions/deploy-cashfolio-app2
         with:
