@@ -154,6 +154,10 @@ jobs:
             echo "LOGTO_APP_SECRET secret is required for Logto authentication in preview apps."
             exit 1
           fi
+          if [ -z "${LOGTO_MANAGEMENT_API_APP_SECRET:-}" ]; then
+            echo "LOGTO_MANAGEMENT_API_APP_SECRET secret is required for Logto Management API access in preview apps."
+            exit 1
+          fi
           if [ -z "${SESSION_SECRET:-}" ]; then
             echo "Preview session secret generation did not return a value."
             exit 1
@@ -179,6 +183,7 @@ jobs:
             --stage \
             DATABASE_URL="${DATABASE_URL}" \
             LOGTO_APP_SECRET="${LOGTO_APP_SECRET}" \
+            LOGTO_MANAGEMENT_API_APP_SECRET="${LOGTO_MANAGEMENT_API_APP_SECRET}" \
             SESSION_SECRET="${SESSION_SECRET}" \
             CURRENCYLAYER_API_KEY="${CURRENCYLAYER_API_KEY}" \
             COINLAYER_API_KEY="${COINLAYER_API_KEY}" \
@@ -189,6 +194,8 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           DATABASE_URL: ${{ steps.neon.outputs.db_url }}
           LOGTO_APP_SECRET: ${{ secrets.LOGTO_APP_SECRET }}
+          LOGTO_MANAGEMENT_API_APP_SECRET:
+            ${{ secrets.LOGTO_MANAGEMENT_API_APP_SECRET }}
           SESSION_SECRET: ${{ steps.session-secret.outputs.value }}
           CURRENCYLAYER_API_KEY: ${{ secrets.CURRENCYLAYER_API_KEY }}
           COINLAYER_API_KEY: ${{ secrets.COINLAYER_API_KEY }}
@@ -209,6 +216,11 @@ jobs:
           fly_cpus: ${{ vars.FLY_CPUS }}
           logto_endpoint: ${{ vars.LOGTO_ENDPOINT }}
           logto_app_id: ${{ vars.LOGTO_APP_ID }}
+          logto_management_api_endpoint:
+            ${{ vars.LOGTO_MANAGEMENT_API_ENDPOINT }}
+          logto_management_api_resource:
+            ${{ vars.LOGTO_MANAGEMENT_API_RESOURCE }}
+          logto_management_api_app_id: ${{ vars.LOGTO_MANAGEMENT_API_APP_ID }}
           fly_api_token: ${{ secrets.FLY_API_TOKEN }}
       - name: Wake up deployed app
         uses: ./.github/actions/warm-up-url

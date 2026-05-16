@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AccountBookIdRouteRouteImport } from './routes/$accountBookId/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountBookIdIndexRouteImport } from './routes/$accountBookId/index'
+import { Route as AccountDeleteRouteImport } from './routes/account/delete'
 import { Route as AccountBooksNewRouteImport } from './routes/account-books/new'
 import { Route as AccountBookIdValuationCacheRouteRouteImport } from './routes/$accountBookId/valuation-cache/route'
 import { Route as AccountBookIdUserSettingsRouteRouteImport } from './routes/$accountBookId/user-settings/route'
@@ -41,6 +42,11 @@ const AccountBookIdIndexRoute = AccountBookIdIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AccountBookIdRouteRoute,
+} as any)
+const AccountDeleteRoute = AccountDeleteRouteImport.update({
+  id: '/account/delete',
+  path: '/account/delete',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AccountBooksNewRoute = AccountBooksNewRouteImport.update({
   id: '/account-books/new',
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/$accountBookId/user-settings': typeof AccountBookIdUserSettingsRouteRoute
   '/$accountBookId/valuation-cache': typeof AccountBookIdValuationCacheRouteRoute
   '/account-books/new': typeof AccountBooksNewRoute
+  '/account/delete': typeof AccountDeleteRoute
   '/$accountBookId/': typeof AccountBookIdIndexRoute
   '/api/logto/$action': typeof ApiLogtoActionRoute
   '/$accountBookId/$accountId/': typeof AccountBookIdAccountIdIndexRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/$accountBookId/user-settings': typeof AccountBookIdUserSettingsRouteRoute
   '/$accountBookId/valuation-cache': typeof AccountBookIdValuationCacheRouteRoute
   '/account-books/new': typeof AccountBooksNewRoute
+  '/account/delete': typeof AccountDeleteRoute
   '/$accountBookId': typeof AccountBookIdIndexRoute
   '/api/logto/$action': typeof ApiLogtoActionRoute
   '/$accountBookId/$accountId': typeof AccountBookIdAccountIdIndexRoute
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   '/$accountBookId/user-settings': typeof AccountBookIdUserSettingsRouteRoute
   '/$accountBookId/valuation-cache': typeof AccountBookIdValuationCacheRouteRoute
   '/account-books/new': typeof AccountBooksNewRoute
+  '/account/delete': typeof AccountDeleteRoute
   '/$accountBookId/': typeof AccountBookIdIndexRoute
   '/api/logto/$action': typeof ApiLogtoActionRoute
   '/$accountBookId/$accountId/': typeof AccountBookIdAccountIdIndexRoute
@@ -193,6 +202,7 @@ export interface FileRouteTypes {
     | '/$accountBookId/user-settings'
     | '/$accountBookId/valuation-cache'
     | '/account-books/new'
+    | '/account/delete'
     | '/$accountBookId/'
     | '/api/logto/$action'
     | '/$accountBookId/$accountId/'
@@ -208,6 +218,7 @@ export interface FileRouteTypes {
     | '/$accountBookId/user-settings'
     | '/$accountBookId/valuation-cache'
     | '/account-books/new'
+    | '/account/delete'
     | '/$accountBookId'
     | '/api/logto/$action'
     | '/$accountBookId/$accountId'
@@ -227,6 +238,7 @@ export interface FileRouteTypes {
     | '/$accountBookId/user-settings'
     | '/$accountBookId/valuation-cache'
     | '/account-books/new'
+    | '/account/delete'
     | '/$accountBookId/'
     | '/api/logto/$action'
     | '/$accountBookId/$accountId/'
@@ -239,6 +251,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountBookIdRouteRoute: typeof AccountBookIdRouteRouteWithChildren
   AccountBooksNewRoute: typeof AccountBooksNewRoute
+  AccountDeleteRoute: typeof AccountDeleteRoute
   ApiLogtoActionRoute: typeof ApiLogtoActionRoute
 }
 
@@ -264,6 +277,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/$accountBookId/'
       preLoaderRoute: typeof AccountBookIdIndexRouteImport
       parentRoute: typeof AccountBookIdRouteRoute
+    }
+    '/account/delete': {
+      id: '/account/delete'
+      path: '/account/delete'
+      fullPath: '/account/delete'
+      preLoaderRoute: typeof AccountDeleteRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/account-books/new': {
       id: '/account-books/new'
@@ -443,6 +463,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountBookIdRouteRoute: AccountBookIdRouteRouteWithChildren,
   AccountBooksNewRoute: AccountBooksNewRoute,
+  AccountDeleteRoute: AccountDeleteRoute,
   ApiLogtoActionRoute: ApiLogtoActionRoute,
 }
 export const routeTree = rootRouteImport

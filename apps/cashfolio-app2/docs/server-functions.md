@@ -105,6 +105,14 @@ Related docs:
   `src/server/user-profile.ts`; profile mutations enforce same-origin request
   checks before calling `PATCH /api/my-account`. User locale settings are stored
   on the app-owned `User` row.
+- Self-service deletion is exposed at `/account/delete` for Logto Account
+  Center. The `POST` flow uses `src/server/account-deletion.ts` to delete the
+  app-owned `User`, remove account books that would otherwise become
+  inaccessible, clear book-scoped Redis period caches, and call Logto Management
+  API `DELETE /api/users/{userId}` through
+  `src/auth/logto-management.server.ts`. It requires
+  `LOGTO_MANAGEMENT_API_ENDPOINT`, `LOGTO_MANAGEMENT_API_RESOURCE`,
+  `LOGTO_MANAGEMENT_API_APP_ID`, and `LOGTO_MANAGEMENT_API_APP_SECRET`.
 - User auth guard: `src/auth/functions.server.ts` (`ensureAuthenticated`)
 - User upsert/lookup: `src/users/functions.server.ts`
 - Account-book authorization guard: `src/account-books/functions.server.ts`
