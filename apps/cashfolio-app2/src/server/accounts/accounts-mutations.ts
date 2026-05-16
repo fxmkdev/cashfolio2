@@ -155,6 +155,69 @@ function isUniqueConstraintError(error: unknown): boolean {
   return maybeCode === "P2002";
 }
 
+type ExistingAccountUnitIdentity = {
+  unit: AccountInput["unit"] | null;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  tradeCurrency: string | null;
+};
+
+function normalizeSubmittedUnitField(value: string | null | undefined) {
+  return value ?? null;
+}
+
+function assertAccountUnitIdentityUnchanged(
+  data: AccountInput,
+  existing: ExistingAccountUnitIdentity,
+) {
+  if (data.unit !== undefined && (data.unit ?? null) !== existing.unit) {
+    throw new Error("Account unit cannot be changed");
+  }
+
+  if (
+    data.currency !== undefined &&
+    normalizeSubmittedUnitField(data.currency) !== existing.currency
+  ) {
+    throw new Error("Account unit cannot be changed");
+  }
+
+  if (
+    data.cryptocurrency !== undefined &&
+    normalizeSubmittedUnitField(data.cryptocurrency) !== existing.cryptocurrency
+  ) {
+    throw new Error("Account unit cannot be changed");
+  }
+
+  if (
+    data.symbol !== undefined &&
+    normalizeSubmittedUnitField(data.symbol) !== existing.symbol
+  ) {
+    throw new Error("Account unit cannot be changed");
+  }
+
+  if (
+    data.tradeCurrency !== undefined &&
+    normalizeSubmittedUnitField(data.tradeCurrency) !== existing.tradeCurrency
+  ) {
+    throw new Error("Account unit cannot be changed");
+  }
+}
+
+function mergeExistingAccountUnitIdentity(
+  data: AccountInput,
+  existing: ExistingAccountUnitIdentity,
+): AccountInput {
+  return {
+    ...data,
+    unit: existing.unit ?? undefined,
+    currency: existing.currency ?? undefined,
+    cryptocurrency: existing.cryptocurrency ?? undefined,
+    symbol: existing.symbol ?? undefined,
+    tradeCurrency: existing.tradeCurrency ?? undefined,
+  };
+}
+
 async function getOrCreateOpeningBalancesAccountId(
   tx: Prisma.TransactionClient,
   accountBookId: string,
@@ -611,7 +674,15 @@ export const updateAccount = createServerFn({ method: "POST" })
       where: {
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
       },
-      select: { type: true, equityAccountSubtype: true },
+      select: {
+        type: true,
+        equityAccountSubtype: true,
+        unit: true,
+        currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
+      },
     });
     assertNoSystemManagedAccountSubtype(existing);
     if (
@@ -620,6 +691,11 @@ export const updateAccount = createServerFn({ method: "POST" })
     ) {
       throw new Error("Account type cannot be changed");
     }
+    assertAccountUnitIdentityUnchanged(data, existing);
+    const dataWithExistingUnitIdentity = mergeExistingAccountUnitIdentity(
+      data,
+      existing,
+    );
 
     const siblingNames = (
       await prisma.account.findMany({
@@ -631,7 +707,7 @@ export const updateAccount = createServerFn({ method: "POST" })
         select: { name: true },
       })
     ).map((a) => a.name);
-    validateAccountInput(data, siblingNames);
+    validateAccountInput(dataWithExistingUnitIdentity, siblingNames);
     const account = await prisma.$transaction(async (tx) => {
       const updatedAccount = await tx.account.update({
         where: {
@@ -641,11 +717,6 @@ export const updateAccount = createServerFn({ method: "POST" })
           name: data.name,
           groupId: data.groupId ?? null,
           sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : null,
-          unit: data.unit,
-          currency: data.currency,
-          cryptocurrency: data.cryptocurrency,
-          symbol: data.symbol,
-          tradeCurrency: data.tradeCurrency,
         },
       });
 

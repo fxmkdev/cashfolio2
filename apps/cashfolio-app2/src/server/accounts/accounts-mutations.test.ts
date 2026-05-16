@@ -97,6 +97,11 @@ describe("updateAccount opening balance management", () => {
     prisma.account.findUniqueOrThrow.mockResolvedValue({
       type: AccountType.ASSET,
       equityAccountSubtype: null,
+      unit: Unit.CURRENCY,
+      currency: "CHF",
+      cryptocurrency: null,
+      symbol: null,
+      tradeCurrency: null,
     });
     prisma.$transaction.mockImplementation(async (callback) => callback(tx));
 
@@ -119,6 +124,65 @@ describe("updateAccount opening balance management", () => {
     tx.transaction.update.mockResolvedValue({ id: "tx-open" });
     tx.transaction.deleteMany.mockResolvedValue({ count: 0 });
     tx.booking.deleteMany.mockResolvedValue({ count: 0 });
+  });
+
+  it("updates editable account fields without rewriting unit identity fields", async () => {
+    await updateAccount({
+      data: {
+        id: "account-1",
+        accountBookId: "book-1",
+        name: "Cash renamed",
+        type: AccountType.ASSET,
+        groupId: "group-1",
+        sortOrder: 7,
+      },
+    });
+
+    expect(validateAccountInput).toHaveBeenCalledWith(
+      expect.objectContaining({
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: undefined,
+        symbol: undefined,
+        tradeCurrency: undefined,
+      }),
+      [],
+    );
+    expect(tx.account.update).toHaveBeenCalledWith({
+      where: {
+        id_accountBookId: { id: "account-1", accountBookId: "book-1" },
+      },
+      data: {
+        name: "Cash renamed",
+        groupId: "group-1",
+        sortOrder: 7,
+      },
+    });
+  });
+
+  it.each([
+    ["unit", { unit: Unit.CRYPTOCURRENCY }],
+    ["currency", { currency: "USD" }],
+    ["cryptocurrency", { cryptocurrency: "BTC" }],
+    ["symbol", { symbol: "AAPL" }],
+    ["trade currency", { tradeCurrency: "USD" }],
+  ])("rejects changing account %s after creation", async (_label, change) => {
+    await expect(
+      updateAccount({
+        data: {
+          id: "account-1",
+          accountBookId: "book-1",
+          name: "Cash",
+          type: AccountType.ASSET,
+          ...change,
+        },
+      }),
+    ).rejects.toThrow("Account unit cannot be changed");
+
+    expect(validateAccountInput).not.toHaveBeenCalled();
+    expect(tx.account.update).not.toHaveBeenCalled();
+    expect(tx.transaction.update).not.toHaveBeenCalled();
+    expect(invalidatePeriodBaseDataCacheForAccountBook).not.toHaveBeenCalled();
   });
 
   it("updates the existing opening-balance transaction instead of creating a new one", async () => {
@@ -179,6 +243,8 @@ describe("updateAccount opening balance management", () => {
                   },
                 },
                 data: expect.objectContaining({
+                  unit: Unit.CURRENCY,
+                  currency: "CHF",
                   value: 150,
                   sortOrder: 0,
                 }),
@@ -191,6 +257,8 @@ describe("updateAccount opening balance management", () => {
                   },
                 },
                 data: expect.objectContaining({
+                  unit: Unit.CURRENCY,
+                  currency: "CHF",
                   value: -150,
                   sortOrder: 1,
                 }),
