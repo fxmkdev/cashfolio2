@@ -3,13 +3,31 @@ import type { UserRole } from "../.prisma-client/enums";
 import { ensureAuthenticated } from "../auth/functions.server";
 import { prisma } from "../prisma.server";
 
+const userLookupByExternalId = new Map<
+  string,
+  Promise<Awaited<ReturnType<typeof upsertUserByExternalId>>>
+>();
+
 export async function getOrCreateUser(userContext: LogtoContext) {
   if (!userContext.claims) {
     throw new Error("No user claims");
   }
 
   const externalId = userContext.claims.sub;
+  const inFlightLookup = userLookupByExternalId.get(externalId);
+  if (inFlightLookup) {
+    return await inFlightLookup;
+  }
 
+  const lookup = upsertUserByExternalId(externalId).finally(() => {
+    userLookupByExternalId.delete(externalId);
+  });
+  userLookupByExternalId.set(externalId, lookup);
+
+  return await lookup;
+}
+
+async function upsertUserByExternalId(externalId: string) {
   try {
     return await prisma.user.upsert({
       where: { externalId },
@@ -17,7 +35,7 @@ export async function getOrCreateUser(userContext: LogtoContext) {
       update: {},
     });
   } catch (error) {
-    if (!isUniqueExternalIdError(error)) {
+    if (!isUniqueConstraintError(error)) {
       throw error;
     }
 
@@ -46,25 +64,14 @@ export async function ensureUserHasRole(role: UserRole) {
   return user;
 }
 
-function isUniqueExternalIdError(error: unknown) {
+function isUniqueConstraintError(error: unknown) {
   if (typeof error !== "object" || error === null) {
     return false;
   }
 
   const data = error as {
     code?: unknown;
-    meta?: { target?: unknown };
   };
 
-  if (data.code !== "P2002") {
-    return false;
-  }
-
-  const target = data.meta?.target;
-  return (
-    Array.isArray(target) &&
-    target.some(
-      (field) => typeof field === "string" && field.includes("externalId"),
-    )
-  );
+  return data.code === "P2002";
 }

@@ -42,10 +42,29 @@ describe("getOrCreateUser", () => {
     vi.clearAllMocks();
   });
 
+  it("shares concurrent lookups for the same externalId", async () => {
+    let resolveUpsert: (value: typeof user) => void = () => undefined;
+    prisma.user.upsert.mockReturnValueOnce(
+      new Promise<typeof user>((resolve) => {
+        resolveUpsert = resolve;
+      }),
+    );
+
+    const firstLookup = getOrCreateUser(userContext);
+    const secondLookup = getOrCreateUser(userContext);
+
+    expect(prisma.user.upsert).toHaveBeenCalledTimes(1);
+
+    resolveUpsert(user);
+    await expect(Promise.all([firstLookup, secondLookup])).resolves.toEqual([
+      user,
+      user,
+    ]);
+  });
+
   it("returns the concurrently-created user when upsert races on externalId", async () => {
     prisma.user.upsert.mockRejectedValueOnce({
       code: "P2002",
-      meta: { target: ['"externalId"'] },
     });
     prisma.user.findUnique.mockResolvedValueOnce(user);
 
@@ -54,5 +73,14 @@ describe("getOrCreateUser", () => {
     expect(prisma.user.findUnique).toHaveBeenCalledWith({
       where: { externalId: "user-external-id" },
     });
+  });
+
+  it("rethrows non-unique upsert errors", async () => {
+    const error = new Error("database unavailable");
+    prisma.user.upsert.mockRejectedValueOnce(error);
+
+    await expect(getOrCreateUser(userContext)).rejects.toBe(error);
+
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
   });
 });
