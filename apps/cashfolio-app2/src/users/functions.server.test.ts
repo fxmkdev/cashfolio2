@@ -45,7 +45,7 @@ describe("getOrCreateUser", () => {
   it("returns the concurrently-created user when upsert races on externalId", async () => {
     prisma.user.upsert.mockRejectedValueOnce({
       code: "P2002",
-      meta: { target: ["externalId"] },
+      meta: { target: ['"externalId"'] },
     });
     prisma.user.findUnique.mockResolvedValueOnce(user);
 

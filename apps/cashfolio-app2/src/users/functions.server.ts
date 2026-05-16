@@ -61,5 +61,10 @@ function isUniqueExternalIdError(error: unknown) {
   }
 
   const target = data.meta?.target;
-  return Array.isArray(target) && target.includes("externalId");
+  return (
+    Array.isArray(target) &&
+    target.some(
+      (field) => typeof field === "string" && field.includes("externalId"),
+    )
+  );
 }
