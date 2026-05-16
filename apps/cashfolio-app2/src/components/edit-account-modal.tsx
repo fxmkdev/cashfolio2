@@ -226,6 +226,7 @@ export function EditAccountModal({
   const { unit, type, equityAccountSubtype } = transformAccountValues(
     form.getValues(),
   );
+  const unitIdentityDisabled = isEdit;
   const handleClose = () => {
     if (isSubmitting) return;
     onClose();
@@ -351,6 +352,7 @@ export function EditAccountModal({
                       { value: Unit.CRYPTOCURRENCY, label: "Cryptocurrency" },
                       { value: Unit.SECURITY, label: "Security" },
                     ]}
+                    disabled={unitIdentityDisabled}
                     {...form.getInputProps("unit")}
                   />
                 </Grid.Col>
@@ -363,6 +365,7 @@ export function EditAccountModal({
                       unitUsage={unitUsage}
                       selectedCurrency={initialValues?.currency}
                       compactLabels={false}
+                      disabled={unitIdentityDisabled}
                       {...form.getInputProps("currency")}
                     />
                   </Grid.Col>
@@ -375,6 +378,7 @@ export function EditAccountModal({
                       unitUsage={unitUsage}
                       selectedCryptocurrency={initialValues?.cryptocurrency}
                       compactLabels={false}
+                      disabled={unitIdentityDisabled}
                       {...form.getInputProps("cryptocurrency")}
                     />
                   </Grid.Col>
@@ -384,6 +388,7 @@ export function EditAccountModal({
                       <TextInput
                         label="Symbol"
                         withAsterisk
+                        disabled={unitIdentityDisabled}
                         {...form.getInputProps("symbol")}
                       />
                     </Grid.Col>
@@ -395,6 +400,7 @@ export function EditAccountModal({
                         unitUsage={unitUsage}
                         selectedCurrency={initialValues?.tradeCurrency}
                         compactLabels={false}
+                        disabled={unitIdentityDisabled}
                         {...form.getInputProps("tradeCurrency")}
                       />
                     </Grid.Col>
