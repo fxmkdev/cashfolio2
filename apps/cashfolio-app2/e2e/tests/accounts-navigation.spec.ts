@@ -23,7 +23,7 @@ test("account-book sidebar links navigate between key sections", async ({
     page.getByRole("heading", { name: "Transactions" }),
   ).toBeVisible();
 
-  await page.getByRole("link", { name: "Period Report" }).click();
+  await page.getByRole("link", { name: "Report" }).click();
   await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/period$`));
   await expect(page.getByRole("heading", { name: "April 2026" })).toBeVisible();
 
