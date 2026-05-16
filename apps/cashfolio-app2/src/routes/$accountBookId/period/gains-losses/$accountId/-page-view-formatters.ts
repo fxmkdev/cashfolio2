@@ -1,13 +1,15 @@
-import { format } from "date-fns";
+import { formatUtcDateForLocale } from "@/shared/date";
 import {
   createDisplayNumberFormatter,
   getCurrencyDecimals,
 } from "@/shared/unit-format";
+import { DEFAULT_USER_LOCALE } from "@/user-locale";
+export { getGridUserLocale } from "@/components/grid-locale";
 import type { EventSide, RealizedEventRow } from "./-page-view-types";
 
-export function buildCurrencyFormatter(currency: string) {
+export function buildCurrencyFormatter(currency: string, locale: string) {
   return createDisplayNumberFormatter({
-    locale: "en-CH",
+    locale,
     style: "currency",
     currency,
     decimals: getCurrencyDecimals(currency),
@@ -29,12 +31,12 @@ export function toEventSide(event: RealizedEventRow): EventSide {
   return "flat";
 }
 
-export function formatDateLabel(value: string) {
+export function formatDateLabel(value: string, locale = DEFAULT_USER_LOCALE) {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) {
     return "—";
   }
-  return format(date, "dd.MM.yyyy");
+  return formatUtcDateForLocale(date, locale);
 }
 
 export function getLedgerActionTooltipLabel(args: {

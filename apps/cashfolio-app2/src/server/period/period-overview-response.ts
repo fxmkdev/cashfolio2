@@ -1,5 +1,8 @@
 import { AccountType } from "../../.prisma-client/enums";
-import { formatMonthPeriodValue } from "../../shared/period";
+import {
+  formatMonthPeriodLabel,
+  formatMonthPeriodValue,
+} from "../../shared/period";
 import {
   buildAvailableYears,
   buildBreakdownHierarchyWithMeta,
@@ -15,6 +18,7 @@ import {
   type PeriodGainsLossesContribution,
 } from "./period-gains-losses-breakdown";
 import type { NormalizedPeriodSelection } from "./period-selection";
+import type { UserLocale } from "../../user-locale";
 
 type PeriodOverviewAssetLiabilityAccount = {
   id: string;
@@ -46,6 +50,7 @@ export function buildPeriodOverviewResponse(args: {
   convertedBookingsCount: number;
   skippedBookingsCount: number;
   gainsLossesContributions?: PeriodGainsLossesContribution[];
+  locale?: UserLocale;
 }) {
   const { income, expenses, explicitGainLoss } = args.equityAggregation;
   const realizedGainLoss = args.isBeforeAccountBookStart
@@ -155,7 +160,14 @@ export function buildPeriodOverviewResponse(args: {
   return {
     selectedPeriodValue: args.selection.periodValue,
     selectedPeriodSpecifier: args.selection.periodSpecifier,
-    selectedPeriodLabel: args.selection.label,
+    selectedPeriodLabel:
+      args.selection.granularity === "month" && args.selection.month != null
+        ? formatMonthPeriodLabel(
+            args.selection.year,
+            args.selection.month,
+            args.locale,
+          )
+        : args.selection.label,
     selectedGranularity: args.selection.granularity,
     selectedYear: args.selection.year,
     selectedMonth: args.selection.month,

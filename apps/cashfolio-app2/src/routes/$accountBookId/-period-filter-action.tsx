@@ -14,6 +14,7 @@ import {
 } from "@tabler/icons-react";
 import { SplitButtonGroup } from "@/components/split-button";
 import type { PeriodMode } from "@/shared/period-selector-model";
+import { useUserLocale } from "@/user-locale-context";
 import classes from "./-period-filter-action.module.css";
 
 type PeriodFilterActionProps = {
@@ -63,6 +64,8 @@ export function PeriodFilterAction({
   clearFilterDisabled = true,
   onClearFilter,
 }: PeriodFilterActionProps) {
+  const userLocale = useUserLocale();
+
   return (
     <SplitButtonGroup>
       <Button
@@ -113,6 +116,7 @@ export function PeriodFilterAction({
             {periodMode === "month" ? (
               <MonthPicker
                 data-testid="period-month-picker"
+                locale={userLocale}
                 value={selectedMonthValue}
                 defaultDate={monthPickerDefaultValue}
                 onChange={onMonthPickerChange}
@@ -122,6 +126,7 @@ export function PeriodFilterAction({
             ) : (
               <YearPicker
                 data-testid="period-year-picker"
+                locale={userLocale}
                 value={selectedYearValue}
                 defaultDate={yearPickerDefaultValue}
                 onChange={onYearPickerChange}

@@ -15,6 +15,7 @@ import {
   getCurrencyDecimals,
   getUnitDisplayDecimals,
 } from "@/shared/unit-format";
+import { DEFAULT_USER_LOCALE } from "@/user-locale";
 import type { LedgerAccount } from "./-page-types";
 
 export type LedgerAccountKindBadgeProps = {
@@ -71,10 +72,13 @@ type BalanceFormatterAccount = Pick<
   "unit" | "currency" | "cryptocurrency" | "symbol" | "tradeCurrency"
 >;
 
-export function createLedgerBalanceFormatter(account: BalanceFormatterAccount) {
+export function createLedgerBalanceFormatter(
+  account: BalanceFormatterAccount,
+  locale = DEFAULT_USER_LOCALE,
+) {
   if (account.unit === Unit.CURRENCY && account.currency) {
     const currencyFormatter = createDisplayNumberFormatter({
-      locale: "en-CH",
+      locale,
       style: "currency",
       currency: account.currency,
       decimals: getCurrencyDecimals(account.currency),
@@ -84,7 +88,7 @@ export function createLedgerBalanceFormatter(account: BalanceFormatterAccount) {
   }
 
   const numberFormatter = createDisplayNumberFormatter({
-    locale: "en-CH",
+    locale,
     decimals: getUnitDisplayDecimals({
       unit: account.unit,
       currency: account.currency,

@@ -1,4 +1,5 @@
 import { Unit } from "../.prisma-client/enums";
+import { DEFAULT_USER_LOCALE } from "../user-locale";
 import { currencyDisplayDecimals } from "./unit-format-currency-decimals";
 import { cryptocurrencyDisplayDecimals } from "./unit-format-cryptocurrency-decimals";
 
@@ -82,7 +83,7 @@ export function createDisplayNumberFormatter(args: {
   style?: "decimal" | "currency";
   currency?: string;
 }) {
-  const locale = args.locale ?? "en-CH";
+  const locale = args.locale ?? DEFAULT_USER_LOCALE;
 
   if (args.style === "currency") {
     if (!args.currency) {
@@ -108,7 +109,7 @@ export function createRateNumberFormatter(args?: {
   minimumFractionDigits?: number;
   maximumFractionDigits?: number;
 }) {
-  const locale = args?.locale ?? "en-CH";
+  const locale = args?.locale ?? DEFAULT_USER_LOCALE;
   const minimumFractionDigits = args?.minimumFractionDigits ?? 2;
   const maximumFractionDigits = args?.maximumFractionDigits ?? 6;
 

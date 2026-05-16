@@ -17,6 +17,7 @@ import {
   getTimelineRangeButtons,
   getTimelineRangeControlStyles,
 } from "./-range-controls";
+import { DEFAULT_USER_LOCALE } from "@/user-locale";
 
 export {
   addRollingAverageMetricToChartData,
@@ -33,7 +34,7 @@ type BarTimelineMetric = Exclude<
   "assets" | "liabilities" | "netWorth"
 >;
 
-const pointDateFormatter = new Intl.DateTimeFormat("en-CH", {
+const defaultPointDateFormatter = new Intl.DateTimeFormat(DEFAULT_USER_LOCALE, {
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
@@ -48,6 +49,7 @@ export function createTimelineChartOptions(args: {
   showCumulativeSeries?: boolean;
   amountCompactFormatter: Intl.NumberFormat;
   currencyFormatter: Intl.NumberFormat;
+  pointDateFormatter?: Intl.DateTimeFormat;
   colors: DashboardChartThemeColors;
   theme: MantineTheme;
   isDarkMode: boolean;
@@ -85,7 +87,9 @@ export function createTimelineChartOptions(args: {
     args.periodMode === "year" ? "5Y" : "12M"
   } Rolling Avg ${flowSeriesLabel}`;
   const getAreaTooltipHeading = (datum: TimelineChartDatum) =>
-    pointDateFormatter.format(datum.periodMetricDate);
+    (args.pointDateFormatter ?? defaultPointDateFormatter).format(
+      datum.periodMetricDate,
+    );
   const axisDomain = getAxisDomainForMetric({
     chartData: args.chartData,
     selectedMetric: selectedMetricKey,

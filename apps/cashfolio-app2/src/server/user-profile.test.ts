@@ -259,7 +259,7 @@ describe("user profile server functions", () => {
     });
   });
 
-  it("falls back to en-CH for unsupported or missing browser locales", async () => {
+  it("falls back to en-US for unsupported or missing browser locales", async () => {
     ensureUser.mockResolvedValueOnce({
       id: "user-1",
       locale: null,
@@ -273,7 +273,7 @@ describe("user profile server functions", () => {
     );
 
     await expect(getAuthenticatedUserSettings()).resolves.toMatchObject({
-      locale: "en-CH",
+      locale: "en-US",
     });
 
     ensureUser.mockResolvedValueOnce({
@@ -285,7 +285,7 @@ describe("user profile server functions", () => {
     );
 
     await expect(getAuthenticatedUserSettings()).resolves.toMatchObject({
-      locale: "en-CH",
+      locale: "en-US",
     });
   });
 

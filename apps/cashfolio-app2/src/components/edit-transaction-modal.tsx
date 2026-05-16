@@ -5,17 +5,19 @@ import { DateInput } from "@mantine/dates";
 import { formRootRule, isNotEmpty, useForm } from "@mantine/form";
 import { IconInfoCircle, IconTablePlus } from "@tabler/icons-react";
 import { createId } from "@paralleldrive/cuid2";
-import { isAfter, parse, startOfDay } from "date-fns";
+import { isAfter, startOfDay } from "date-fns";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Unit } from "../.prisma-client/enums";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 import type { AccountBookUnitUsage } from "../shared/account-book-unit-usage";
 import { isExpenseAccount, isIncomeAccount } from "../shared/account-utils";
 import {
-  formatUtcDate,
+  formatUtcDateForLocale,
+  getDateInputValueFormat,
   normalizeDateInputValue,
   startOfUtcDay,
 } from "../shared/date";
+import { useUserLocale } from "@/user-locale-context";
 import { DataGrid } from "./data-grid";
 import {
   createEditTransactionColumnDefs,
@@ -77,14 +79,18 @@ export function EditTransactionModal({
   }) => Promise<void>;
   onDeleteTransaction?: () => void;
 }) {
+  const userLocale = useUserLocale();
   const { thousandSeparator, decimalSeparator } =
-    getNumberFormatSymbols("en-CH");
+    getNumberFormatSymbols(userLocale);
   const { isSubmitting, runSubmit } = useDialogSubmitState({
     onSubmittingChange,
   });
   const today = startOfDay(new Date());
   const accountBookStartDay = startOfUtcDay(accountBookStartDate);
-  const accountBookStartDateLabel = formatUtcDate(accountBookStartDay);
+  const accountBookStartDateLabel = formatUtcDateForLocale(
+    accountBookStartDay,
+    userLocale,
+  );
   const currentAccount = accounts.find((a) => a.value === currentAccountId);
 
   const form = useForm({
@@ -241,8 +247,8 @@ export function EditTransactionModal({
       <Stack gap="md">
         <Group align="start">
           <DateInput
-            valueFormat="DD.MM.YYYY"
-            dateParser={(value) => parse(value, "dd.MM.yyyy", new Date())}
+            valueFormat={getDateInputValueFormat(userLocale)}
+            dateParser={(value) => normalizeDateInputValue(value, userLocale)}
             w={140}
             label={
               <Group gap={4}>

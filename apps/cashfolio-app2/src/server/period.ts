@@ -24,6 +24,7 @@ import {
   type PeriodSpecifier,
 } from "./period/period-selection";
 import { computeEndOfPeriodBalanceStats } from "./period/period-balance-stats";
+import { normalizeUserLocaleInput } from "../user-locale";
 
 export {
   DEFAULT_PERIOD_VALUE,
@@ -52,10 +53,13 @@ export {
 export const getPeriodOverview = createServerFn({
   method: "GET",
 })
-  .inputValidator((data: { accountBookId: string; period?: unknown }) => ({
-    accountBookId: data.accountBookId,
-    period: normalizePeriodValue(data.period),
-  }))
+  .inputValidator(
+    (data: { accountBookId: string; period?: unknown; locale?: unknown }) => ({
+      accountBookId: data.accountBookId,
+      period: normalizePeriodValue(data.period),
+      locale: normalizeUserLocaleInput(data.locale),
+    }),
+  )
   .handler(async ({ data }) => {
     const { ensureAuthorizedForAccountBookId } =
       await import("../account-books/functions.server");

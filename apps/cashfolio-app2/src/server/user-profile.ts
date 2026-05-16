@@ -155,6 +155,11 @@ function resolveAuthenticatedUserSettingsLocale(
   );
 }
 
+export async function resolveAuthenticatedUserLocaleForRequest(): Promise<UserLocale> {
+  const user = await ensureUser();
+  return resolveAuthenticatedUserSettingsLocale(user.locale);
+}
+
 async function readJsonResponse(response: Response): Promise<unknown> {
   try {
     return await response.json();
@@ -245,6 +250,10 @@ export const getAuthenticatedUserProfile = createServerFn({
     return resolveAuthenticatedUserProfile(context.claims);
   }
 });
+
+export const getAuthenticatedUserLocale = createServerFn({
+  method: "GET",
+}).handler(resolveAuthenticatedUserLocaleForRequest);
 
 export const getUserAccountSecurityUrl = createServerFn({
   method: "GET",

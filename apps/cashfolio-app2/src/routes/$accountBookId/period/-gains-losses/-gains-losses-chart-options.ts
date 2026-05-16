@@ -7,6 +7,7 @@ import type {
 } from "ag-charts-community";
 import { useMemo } from "react";
 import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
+import { useUserLocale } from "@/user-locale-context";
 import { buildCommonChartThemeParams } from "../-breakdown/-breakdown-chart-options";
 import type {
   GainsLossesWaterfallDatum,
@@ -51,13 +52,14 @@ export function useGainsLossesWaterfallChartOptions(args: {
     onNodeDoubleClick,
   } = args;
   const safeTotalGainLoss = toFiniteNumber(totalGainLoss);
+  const userLocale = useUserLocale();
   const amountCompactFormatter = useMemo(
     () =>
-      new Intl.NumberFormat("en-CH", {
+      new Intl.NumberFormat(userLocale, {
         notation: "compact",
         maximumFractionDigits: 1,
       }),
-    [],
+    [userLocale],
   );
 
   const waterfallSeries = useMemo<

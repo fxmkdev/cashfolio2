@@ -1,10 +1,10 @@
 import {
   DEFAULT_PERIOD_VALUE,
   formatMonthPeriodValue,
+  formatMonthPeriodLabel,
   normalizePeriodValue,
   parseExplicitMonthPeriod,
   parseExplicitYearPeriod,
-  PERIOD_MONTH_NAMES,
   PERIOD_PRESET_LAST_MONTH,
   PERIOD_PRESET_LAST_YEAR,
   PERIOD_PRESET_MTD,
@@ -12,6 +12,7 @@ import {
   type PeriodPresetValue,
 } from "../../shared/period";
 import { addUtcDays, startOfUtcDay } from "../../shared/date";
+import { DEFAULT_USER_LOCALE, type UserLocale } from "../../user-locale";
 
 export type PeriodSpecifier = PeriodPresetValue | "month" | "year";
 
@@ -167,10 +168,13 @@ function clampExplicitSelectionToBounds(args: {
   };
 }
 
-function buildPeriodLabel(base: NormalizedPeriodBase): string {
+function buildPeriodLabel(
+  base: NormalizedPeriodBase,
+  locale: UserLocale = DEFAULT_USER_LOCALE,
+): string {
   if (base.granularity === "month") {
     const month = base.month ?? 0;
-    return `${PERIOD_MONTH_NAMES[month]} ${base.year}`;
+    return formatMonthPeriodLabel(base.year, month, locale);
   }
 
   return String(base.year);
@@ -180,6 +184,7 @@ export function resolvePeriodSelection(args: {
   periodValue: string;
   now?: Date;
   firstBookingDate?: Date | null;
+  locale?: UserLocale;
 }): NormalizedPeriodSelection {
   const now = startOfUtcDay(args.now ?? new Date());
   const normalizedPeriodValue = normalizePeriodValue(args.periodValue);
@@ -240,7 +245,7 @@ export function resolvePeriodSelection(args: {
     month: base.granularity === "month" ? (base.month ?? 0) : null,
     from,
     to,
-    label: buildPeriodLabel(base),
+    label: buildPeriodLabel(base, args.locale),
   };
 }
 

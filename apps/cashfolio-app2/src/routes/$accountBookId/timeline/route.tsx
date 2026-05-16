@@ -55,6 +55,9 @@ export const Route = createFileRoute("/$accountBookId/timeline")({
       liabilityScope,
     },
   }) => {
+    const { getAuthenticatedUserLocale } =
+      await import("@/server/user-profile");
+    const userLocale = await getAuthenticatedUserLocale();
     return loadTimelinePageData({
       accountBookId,
       mode,
@@ -64,6 +67,7 @@ export const Route = createFileRoute("/$accountBookId/timeline")({
       gainLossScope,
       assetScope,
       liabilityScope,
+      locale: userLocale,
     });
   },
   head: () => createDocumentTitleHead("History"),

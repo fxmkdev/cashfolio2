@@ -461,8 +461,8 @@ unit identity.
 
 Defined in `src/components/column-types.tsx`:
 
-- `FORMATTED_NUMERIC_COLUMN` — right-aligned, `en-CH` locale number formatting
-  with unit-aware display precision
+- `FORMATTED_NUMERIC_COLUMN` — right-aligned, active user-locale number
+  formatting with unit-aware display precision
 - `SELECT_COLUMN` — searchable dropdown editor
 - `TEXT_COLUMN` — text input editor
 - `DATE_COLUMN` — date input with min/max constraints from context
@@ -524,7 +524,7 @@ data groups them hierarchically. Fields that don't apply to a node type are
 
 `src/components/formatted-number-input.tsx` wraps Mantine's `NumberInput` using
 `Intl.NumberFormat` to extract locale-specific thousand/decimal separators
-(defaults to `en-CH`).
+(defaults to `en-US`).
 
 Precision behavior:
 

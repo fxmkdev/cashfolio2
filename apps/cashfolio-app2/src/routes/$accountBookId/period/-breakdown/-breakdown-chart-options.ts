@@ -5,6 +5,7 @@ import type {
 } from "ag-charts-community";
 import { useMemo } from "react";
 import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
+import { useUserLocale } from "@/user-locale-context";
 import type { BreakdownChartType } from "./-breakdown-types";
 
 export type PeriodBreakdownChartDatum = {
@@ -63,13 +64,14 @@ export function usePeriodBreakdownChartOptions(args: {
   totalBreakdownAmountLabel: string;
   onNodeDoubleClick: (datum: PeriodBreakdownNodeDatum) => void;
 }): PeriodBreakdownChartOptions {
+  const userLocale = useUserLocale();
   const amountCompactFormatter = useMemo(
     () =>
-      new Intl.NumberFormat("en-CH", {
+      new Intl.NumberFormat(userLocale, {
         notation: "compact",
         maximumFractionDigits: 1,
       }),
-    [],
+    [userLocale],
   );
 
   const donutSeries = useMemo<

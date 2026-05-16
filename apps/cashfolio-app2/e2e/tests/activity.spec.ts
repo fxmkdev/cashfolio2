@@ -139,16 +139,16 @@ test("lists bookings, carries account link context, and creates transactions", a
   ).toBeVisible();
 
   const createdDescription = "E2E Activity Created";
-  await createDialog.getByLabel("Date").fill("13.05.2026");
+  await createDialog.getByLabel("Date").fill("05/13/2026");
   await createDialog.getByLabel("Description").fill(createdDescription);
-  await setGridCellValue(createDialog, 0, "date", "13.05.2026");
+  await setGridCellValue(createDialog, 0, "date", "05/13/2026");
   await setGridAccountCellValue({
     dialog: createDialog,
     rowIndex: 0,
     accountName: seeded.cashAccount.name,
   });
   await setGridCellValue(createDialog, 0, "credit", "88");
-  await setGridCellValue(createDialog, 1, "date", "13.05.2026");
+  await setGridCellValue(createDialog, 1, "date", "05/13/2026");
   await setGridAccountCellValue({
     dialog: createDialog,
     rowIndex: 1,

@@ -72,7 +72,7 @@ describe("createTimelineChartOptions (balance metrics)", () => {
     const tooltip = areaSeries.tooltip?.renderer?.({
       datum: chartData[0],
     });
-    expect(tooltip?.heading).toBe("31.01.2026");
+    expect(tooltip?.heading).toBe("01/31/2026");
   });
 
   test("does not render rolling-average series for balance metrics", () => {

@@ -92,10 +92,14 @@ export const Route = createFileRoute("/$accountBookId/period")({
     period: getPeriodValue(search),
   }),
   loader: async ({ params: { accountBookId }, deps: { period } }) => {
+    const { getAuthenticatedUserLocale } =
+      await import("@/server/user-profile");
+    const userLocale = await getAuthenticatedUserLocale();
     const overview = await getPeriodOverview({
       data: {
         accountBookId,
         period,
+        locale: userLocale,
       },
     });
     const [gainLossEquityAccountId, netWorthReconciliation] = await Promise.all(

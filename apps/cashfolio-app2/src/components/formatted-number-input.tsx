@@ -1,5 +1,6 @@
 import { useMemo, type ComponentPropsWithRef } from "react";
 import { NumberInput } from "@mantine/core";
+import { useUserLocale } from "@/user-locale-context";
 
 export type FormattedNumberInputProps = ComponentPropsWithRef<
   typeof NumberInput
@@ -8,12 +9,14 @@ export type FormattedNumberInputProps = ComponentPropsWithRef<
 };
 
 export function FormattedNumberInput({
-  locale = "en-CH",
+  locale,
   ...props
 }: FormattedNumberInputProps) {
+  const userLocale = useUserLocale();
+  const resolvedLocale = locale ?? userLocale;
   const { thousandSeparator, decimalSeparator } = useMemo(
-    () => getNumberFormatSymbols(locale),
-    [locale],
+    () => getNumberFormatSymbols(resolvedLocale),
+    [resolvedLocale],
   );
 
   return (

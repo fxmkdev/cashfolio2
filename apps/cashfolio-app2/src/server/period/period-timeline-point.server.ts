@@ -10,6 +10,7 @@ import type {
   TimelineScopeSelection,
   TimelineScopedMetric,
 } from "../../shared/timeline-scope";
+import type { UserLocale } from "../../user-locale";
 
 export { loadPeriodTimelinePointContext };
 export type { PeriodTimelinePointContext };
@@ -23,6 +24,7 @@ export async function loadPeriodTimelinePoint(args: {
     scope: TimelineScopeSelection;
   };
   valuationContext?: TimelineValuationContext;
+  locale?: UserLocale;
 }) {
   const data = {
     accountBookId: args.accountBookId,
@@ -39,6 +41,7 @@ export async function loadPeriodTimelinePoint(args: {
     periodValue: data.period,
     now: new Date(),
     firstBookingDate: context.accountBookStartDate,
+    locale: args.locale,
   });
   const isBeforeAccountBookStart = selection.to < context.accountBookStartDate;
 

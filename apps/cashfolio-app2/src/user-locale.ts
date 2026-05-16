@@ -1,4 +1,4 @@
-export const DEFAULT_USER_LOCALE = "en-CH";
+export const DEFAULT_USER_LOCALE = "en-US";
 
 export const SUPPORTED_USER_LOCALES = [
   "en-CH",
@@ -37,6 +37,12 @@ export function isSupportedUserLocale(value: string): boolean {
 
 export function resolveSupportedUserLocale(value: string): UserLocale | null {
   return supportedLocaleLookup.get(value.trim().toLowerCase()) ?? null;
+}
+
+export function normalizeUserLocaleInput(value: unknown): UserLocale {
+  return typeof value === "string"
+    ? (resolveSupportedUserLocale(value) ?? DEFAULT_USER_LOCALE)
+    : DEFAULT_USER_LOCALE;
 }
 
 export function resolveUserLocaleFromAcceptLanguage(

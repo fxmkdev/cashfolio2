@@ -32,6 +32,7 @@ import {
 } from "@/server/valuation-cache";
 import { createRateNumberFormatter } from "@/shared/unit-format";
 import { VALUATION_BASE_CURRENCY } from "@/shared/valuation-base-currency";
+import { useUserLocale } from "@/user-locale-context";
 import {
   getRowsForValuationUnitTab,
   resolveSelectedUnit,
@@ -124,6 +125,7 @@ export function ValuationCachePageView({
   selectedTab,
   units,
 }: ValuationCachePageViewProps) {
+  const userLocale = useUserLocale();
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
   const gridApiRef = useRef<GridApi<ValuationCacheUnitRow> | null>(null);
@@ -299,21 +301,21 @@ export function ValuationCachePageView({
   const numberFormatter = useMemo(
     () =>
       createRateNumberFormatter({
-        locale: "en-CH",
+        locale: userLocale,
         minimumFractionDigits: 2,
         maximumFractionDigits: 6,
       }),
-    [],
+    [userLocale],
   );
 
   const dateFormatter = useMemo(
     () =>
-      new Intl.DateTimeFormat("en-CH", {
+      new Intl.DateTimeFormat(userLocale, {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
       }),
-    [],
+    [userLocale],
   );
 
   const chartTextColor = isDarkMode ? theme.colors.dark[0] : theme.black;

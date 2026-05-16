@@ -19,14 +19,22 @@ export const Route = createFileRoute(
   loaderDeps: ({ search }) => ({
     period: getPeriodValue(search),
   }),
-  loader: async ({ params: { accountBookId, accountId }, deps: { period } }) =>
-    getPeriodGainLossReconciliation({
+  loader: async ({
+    params: { accountBookId, accountId },
+    deps: { period },
+  }) => {
+    const { getAuthenticatedUserLocale } =
+      await import("@/server/user-profile");
+    const userLocale = await getAuthenticatedUserLocale();
+    return getPeriodGainLossReconciliation({
       data: {
         accountBookId,
         accountId,
         period,
+        locale: userLocale,
       },
-    }),
+    });
+  },
   head: ({ loaderData }) =>
     createDocumentTitleHead(getGainLossReconciliationPageTitle(loaderData)),
   component: GainLossReconciliationPage,
