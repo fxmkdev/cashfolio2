@@ -98,4 +98,12 @@ describe("shared/date", () => {
     expect(europeanDate?.toISOString()).toBe("2026-04-20T00:00:00.000Z");
     expect(impossibleCalendarDate).toBeNull();
   });
+
+  test("normalizeDateInputValue prefers locale parsing before Swiss compatibility fallback", () => {
+    const ambiguousUsDate = normalizeDateInputValue("04.05.2026", "en-US");
+    const swissFallbackDate = normalizeDateInputValue("31.12.2026", "en-US");
+
+    expect(ambiguousUsDate?.toISOString()).toBe("2026-04-05T00:00:00.000Z");
+    expect(swissFallbackDate?.toISOString()).toBe("2026-12-31T00:00:00.000Z");
+  });
 });

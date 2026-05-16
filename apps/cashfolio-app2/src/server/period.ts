@@ -24,11 +24,7 @@ import {
   type PeriodSpecifier,
 } from "./period/period-selection";
 import { computeEndOfPeriodBalanceStats } from "./period/period-balance-stats";
-import {
-  DEFAULT_USER_LOCALE,
-  resolveSupportedUserLocale,
-  type UserLocale,
-} from "../user-locale";
+import { normalizeUserLocaleInput } from "../user-locale";
 
 export {
   DEFAULT_PERIOD_VALUE,
@@ -54,12 +50,6 @@ export {
   shouldIncludeTransactionForPeriod,
 };
 
-function normalizeLocaleInput(value: unknown): UserLocale {
-  return typeof value === "string"
-    ? (resolveSupportedUserLocale(value) ?? DEFAULT_USER_LOCALE)
-    : DEFAULT_USER_LOCALE;
-}
-
 export const getPeriodOverview = createServerFn({
   method: "GET",
 })
@@ -67,7 +57,7 @@ export const getPeriodOverview = createServerFn({
     (data: { accountBookId: string; period?: unknown; locale?: unknown }) => ({
       accountBookId: data.accountBookId,
       period: normalizePeriodValue(data.period),
-      locale: normalizeLocaleInput(data.locale),
+      locale: normalizeUserLocaleInput(data.locale),
     }),
   )
   .handler(async ({ data }) => {

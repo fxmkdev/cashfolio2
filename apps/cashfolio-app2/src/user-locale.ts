@@ -39,6 +39,12 @@ export function resolveSupportedUserLocale(value: string): UserLocale | null {
   return supportedLocaleLookup.get(value.trim().toLowerCase()) ?? null;
 }
 
+export function normalizeUserLocaleInput(value: unknown): UserLocale {
+  return typeof value === "string"
+    ? (resolveSupportedUserLocale(value) ?? DEFAULT_USER_LOCALE)
+    : DEFAULT_USER_LOCALE;
+}
+
 export function resolveUserLocaleFromAcceptLanguage(
   acceptLanguage: string | null,
 ): UserLocale {

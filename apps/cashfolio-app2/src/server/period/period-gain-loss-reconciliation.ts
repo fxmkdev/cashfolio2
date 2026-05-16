@@ -14,17 +14,7 @@ import {
   getPeriodEndExclusive,
   resolvePeriodSelection,
 } from "./period-selection";
-import {
-  DEFAULT_USER_LOCALE,
-  resolveSupportedUserLocale,
-  type UserLocale,
-} from "../../user-locale";
-
-function normalizeLocaleInput(value: unknown): UserLocale {
-  return typeof value === "string"
-    ? (resolveSupportedUserLocale(value) ?? DEFAULT_USER_LOCALE)
-    : DEFAULT_USER_LOCALE;
-}
+import { normalizeUserLocaleInput } from "../../user-locale";
 
 function sortDiagnostics(
   diagnostics: GainLossReconciliationDiagnostic[],
@@ -49,7 +39,7 @@ export const getPeriodGainLossReconciliation = createServerFn({
       accountBookId: data.accountBookId,
       accountId: data.accountId,
       period: normalizePeriodValue(data.period),
-      locale: normalizeLocaleInput(data.locale),
+      locale: normalizeUserLocaleInput(data.locale),
     }),
   )
   .handler(async ({ data }): Promise<PeriodGainLossReconciliation | null> => {

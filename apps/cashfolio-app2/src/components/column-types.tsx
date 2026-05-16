@@ -14,12 +14,12 @@ import {
   normalizeDateInputValue,
 } from "../shared/date";
 import { getUnitDisplayDecimals } from "../shared/unit-format";
-import { DEFAULT_USER_LOCALE } from "../user-locale";
 import { AccountTreeSelect } from "./account-tree-select";
 import {
   FormattedNumberInput,
   getNumberFormatSymbols,
 } from "./formatted-number-input";
+import { getGridUserLocale } from "./grid-locale";
 
 export const FORMATTED_NUMERIC_COLUMN = "formattedNumericColumn";
 export const SELECT_COLUMN = "selectColumn";
@@ -39,18 +39,6 @@ type FormattedNumericColDefConfig = {
     value: number | null | undefined;
   }) => number;
 };
-
-function getGridUserLocale(context: unknown): string {
-  if (
-    typeof context === "object" &&
-    context !== null &&
-    typeof (context as { userLocale?: unknown }).userLocale === "string"
-  ) {
-    return (context as { userLocale: string }).userLocale;
-  }
-
-  return DEFAULT_USER_LOCALE;
-}
 
 function getFormattedNumericConfig(
   colDef: unknown,

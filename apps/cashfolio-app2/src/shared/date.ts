@@ -79,17 +79,17 @@ export function normalizeDateInputValue(
   const trimmed = value.trim();
   if (!trimmed) return null;
 
+  const localizedDate = parseLocalizedDateInputValue(trimmed, locale);
+  if (localizedDate) {
+    return localizedDate;
+  }
+
   const swissDateMatch = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(trimmed);
   if (swissDateMatch) {
     const day = Number(swissDateMatch[1]);
     const month = Number(swissDateMatch[2]);
     const year = Number(swissDateMatch[3]);
     return createUtcDateFromParts({ year, month, day });
-  }
-
-  const localizedDate = parseLocalizedDateInputValue(trimmed, locale);
-  if (localizedDate) {
-    return localizedDate;
   }
 
   const isoDateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);

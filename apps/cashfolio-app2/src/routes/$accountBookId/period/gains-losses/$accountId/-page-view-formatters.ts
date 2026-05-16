@@ -4,6 +4,7 @@ import {
   getCurrencyDecimals,
 } from "@/shared/unit-format";
 import { DEFAULT_USER_LOCALE } from "@/user-locale";
+export { getGridUserLocale } from "@/components/grid-locale";
 import type { EventSide, RealizedEventRow } from "./-page-view-types";
 
 export function buildCurrencyFormatter(currency: string, locale: string) {
@@ -36,18 +37,6 @@ export function formatDateLabel(value: string, locale = DEFAULT_USER_LOCALE) {
     return "—";
   }
   return formatUtcDateForLocale(date, locale);
-}
-
-export function getGridUserLocale(context: unknown): string {
-  if (
-    typeof context === "object" &&
-    context !== null &&
-    typeof (context as { userLocale?: unknown }).userLocale === "string"
-  ) {
-    return (context as { userLocale: string }).userLocale;
-  }
-
-  return DEFAULT_USER_LOCALE;
 }
 
 export function getLedgerActionTooltipLabel(args: {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_USER_LOCALE,
   isSupportedUserLocale,
+  normalizeUserLocaleInput,
   resolveSupportedUserLocale,
   resolveUserLocaleFromAcceptLanguage,
 } from "./user-locale";
@@ -11,6 +12,9 @@ describe("user locale helpers", () => {
     expect(isSupportedUserLocale("de-ch")).toBe(true);
     expect(resolveSupportedUserLocale("de-ch")).toBe("de-CH");
     expect(resolveSupportedUserLocale("  FR-fr  ")).toBe("fr-FR");
+    expect(normalizeUserLocaleInput(" fr-fr ")).toBe("fr-FR");
+    expect(normalizeUserLocaleInput("es-ES")).toBe(DEFAULT_USER_LOCALE);
+    expect(normalizeUserLocaleInput(null)).toBe(DEFAULT_USER_LOCALE);
   });
 
   it("resolves Accept-Language locales to canonical supported tags", () => {

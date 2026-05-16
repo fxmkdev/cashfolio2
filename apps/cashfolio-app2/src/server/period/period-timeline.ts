@@ -11,11 +11,7 @@ import {
 } from "../../shared/timeline-scope";
 import type { TimelineValuationContext } from "./period-timeline-point-metrics.server";
 import { mapWithConcurrencyLimit } from "../concurrency";
-import {
-  DEFAULT_USER_LOCALE,
-  resolveSupportedUserLocale,
-  type UserLocale,
-} from "../../user-locale";
+import { normalizeUserLocaleInput, type UserLocale } from "../../user-locale";
 
 export type PeriodTimelineGranularity = "month" | "year";
 
@@ -74,12 +70,6 @@ type TimelineInput = {
   liabilityScope: TimelineScopeSelection;
   locale: UserLocale;
 };
-
-function normalizeLocaleInput(value: unknown): UserLocale {
-  return typeof value === "string"
-    ? (resolveSupportedUserLocale(value) ?? DEFAULT_USER_LOCALE)
-    : DEFAULT_USER_LOCALE;
-}
 
 function toMonthIndex(year: number, month: number): number {
   return year * 12 + month;
@@ -287,7 +277,7 @@ export const getPeriodTimeline = createServerFn({
       gainLossScope: parseTimelineScopeSelectionOrDefault(data.gainLossScope),
       assetScope: parseTimelineScopeSelectionOrDefault(data.assetScope),
       liabilityScope: parseTimelineScopeSelectionOrDefault(data.liabilityScope),
-      locale: normalizeLocaleInput(data.locale),
+      locale: normalizeUserLocaleInput(data.locale),
     }),
   )
   .handler(async ({ data }) => {

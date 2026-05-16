@@ -5,6 +5,7 @@ import { ensureGridModulesRegistered } from "../ag-grid-modules";
 import { formatUtcDateForLocale } from "@/shared/date";
 import { useUserLocale } from "@/user-locale-context";
 import { useMemo } from "react";
+import { getGridUserLocale } from "./grid-locale";
 
 ensureGridModulesRegistered();
 
@@ -14,7 +15,7 @@ export function DataGrid({
 }: AgGridReactProps & { ref?: React.Ref<AgGridReact> }) {
   const userLocale = useUserLocale();
   const resolvedContext = useMemo(
-    () => ({ userLocale, ...context }),
+    () => ({ ...context, userLocale }),
     [context, userLocale],
   );
 
@@ -36,6 +37,8 @@ const dataTypeDefinitions: AgGridReactProps["dataTypeDefinitions"] = {
     extendsDataType: "dateString",
 
     valueFormatter: ({ context, value }) =>
-      value ? formatUtcDateForLocale(new Date(value), context.userLocale) : "",
+      value
+        ? formatUtcDateForLocale(new Date(value), getGridUserLocale(context))
+        : "",
   },
 };
