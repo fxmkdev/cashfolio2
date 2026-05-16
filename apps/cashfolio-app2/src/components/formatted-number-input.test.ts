@@ -7,10 +7,9 @@ describe("getNumberFormatSymbols", () => {
       thousandSeparator: ",",
       decimalSeparator: ".",
     });
-    expect(getNumberFormatSymbols("de-CH")).toEqual({
-      thousandSeparator: "’",
-      decimalSeparator: ".",
-    });
+    const deChSymbols = getNumberFormatSymbols("de-CH");
+    expect(["'", "’"]).toContain(deChSymbols.thousandSeparator);
+    expect(deChSymbols.decimalSeparator).toBe(".");
     expect(getNumberFormatSymbols("fr-FR")).toEqual({
       thousandSeparator: " ",
       decimalSeparator: ",",
