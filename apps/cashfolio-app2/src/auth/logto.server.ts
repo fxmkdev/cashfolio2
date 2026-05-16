@@ -167,3 +167,8 @@ export async function handleLogtoSignOut(request: Request) {
     headers: { Location: navigateToUrl },
   });
 }
+
+export async function destroyLogtoSession() {
+  const { storage } = await createLogtoClient();
+  await storage.destroy();
+}
