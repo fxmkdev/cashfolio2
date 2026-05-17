@@ -42,7 +42,7 @@ type NormalizedUserSettingsInput = {
 
 const fieldLabels = {
   avatarUrl: "Avatar URL",
-  locale: "Locale",
+  locale: "Regional format",
   name: "Name",
 } as const;
 
@@ -104,7 +104,7 @@ function readLocaleField(data: Record<string, unknown>): UserLocale {
   const normalized = value.trim();
   const locale = resolveSupportedUserLocale(normalized);
   if (!locale) {
-    throw new Error(`${fieldLabels.locale} must be a supported locale.`);
+    throw new Error(`${fieldLabels.locale} must be a supported option.`);
   }
 
   return locale;
