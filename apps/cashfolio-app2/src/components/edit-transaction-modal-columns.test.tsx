@@ -45,37 +45,27 @@ describe("createEditTransactionColumnDefs", () => {
     });
     const currencyColumn = columnDefs.find((column) => column.colId === "ccy");
 
-    expect(
-      currencyColumn?.cellEditorParams?.({
-        data: { key: "row-1", unit: Unit.CURRENCY, currency: "CHF" },
-      }),
-    ).toMatchObject({
-      options: [
-        {
-          group: "Used",
-          items: [
-            { value: "CHF", label: "CHF" },
-            { value: "USD", label: "USD" },
-          ],
-        },
+    const currencyEditorParams = currencyColumn?.cellEditorParams?.({
+      data: { key: "row-1", unit: Unit.CURRENCY, currency: "CHF" },
+    });
+    expect(currencyEditorParams?.options[0]).toEqual({
+      group: "Used",
+      items: [
+        { value: "CHF", label: "CHF" },
+        { value: "USD", label: "USD" },
       ],
     });
 
-    expect(
-      currencyColumn?.cellEditorParams?.({
-        data: {
-          key: "row-2",
-          unit: Unit.CRYPTOCURRENCY,
-          cryptocurrency: "BTC",
-        },
-      }),
-    ).toMatchObject({
-      options: [
-        {
-          group: "Used",
-          items: [{ value: "BTC", label: "BTC" }],
-        },
-      ],
+    const cryptocurrencyEditorParams = currencyColumn?.cellEditorParams?.({
+      data: {
+        key: "row-2",
+        unit: Unit.CRYPTOCURRENCY,
+        cryptocurrency: "BTC",
+      },
+    });
+    expect(cryptocurrencyEditorParams?.options[0]).toEqual({
+      group: "Used",
+      items: [{ value: "BTC", label: "BTC" }],
     });
   });
 });
