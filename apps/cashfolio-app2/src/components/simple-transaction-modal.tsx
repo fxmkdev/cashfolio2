@@ -10,7 +10,7 @@ import {
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { isAfter, startOfDay } from "date-fns";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { IconArrowRight } from "@tabler/icons-react";
 import {
   isExpenseAccount,
@@ -109,7 +109,7 @@ export function SimpleTransactionModal({
         initialValues?.direction ?? ("DEBIT" as SimpleTransactionDirection),
     },
     validate: {
-      date: (value, values) => {
+      date: (value) => {
         const date = normalizeDateInputValue(value);
         if (!date) {
           return value ? "Date is invalid" : "Date is required";
@@ -161,10 +161,13 @@ export function SimpleTransactionModal({
       },
     },
   });
+  const formRef = useRef(form);
+  formRef.current = form;
 
   const selectedAccount = accounts.find(
     (account) => account.value === form.values.counterAccountId,
   );
+  const currentDirection = form.values.direction;
   const forcedDirection = getForcedDirection(selectedAccount);
   const forcedDirectionReason =
     forcedDirection === "DEBIT"
@@ -174,10 +177,10 @@ export function SimpleTransactionModal({
         : null;
 
   useEffect(() => {
-    if (forcedDirection && form.values.direction !== forcedDirection) {
-      form.setFieldValue("direction", forcedDirection);
+    if (forcedDirection && currentDirection !== forcedDirection) {
+      formRef.current.setFieldValue("direction", forcedDirection);
     }
-  }, [forcedDirection, form.values.direction]);
+  }, [currentDirection, forcedDirection]);
 
   return (
     <form

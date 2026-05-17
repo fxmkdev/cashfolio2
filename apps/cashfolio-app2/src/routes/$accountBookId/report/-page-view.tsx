@@ -39,7 +39,6 @@ import {
 } from "./-page-warning";
 import { PeriodStatsCardsSection } from "./-period-stats-cards";
 import { useReportPageSessionState } from "./-selector/-page-session-state";
-import classes from "./-page-view.module.css";
 import {
   buildPeriodSelectorModel,
   getMonthPickerValue,

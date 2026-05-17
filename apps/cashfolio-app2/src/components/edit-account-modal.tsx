@@ -9,7 +9,7 @@ import {
   Select,
 } from "@mantine/core";
 import { isNotEmpty, useForm } from "@mantine/form";
-import { useEffect, useReducer } from "react";
+import { useEffect, useMemo, useReducer, useRef } from "react";
 import { Fragment } from "react/jsx-runtime";
 import {
   AccountType,
@@ -210,18 +210,24 @@ export function EditAccountModal({
       }
     },
   });
+  const formRef = useRef(form);
+  formRef.current = form;
+  const resetInitialValues = useMemo(
+    () =>
+      initialValues
+        ? toFormValues(initialValues)
+        : { unit: Unit.CURRENCY, typeDescriptor },
+    [initialValues, typeDescriptor],
+  );
 
   useEffect(() => {
     if (opened) {
-      if (initialValues) {
-        form.setInitialValues(toFormValues(initialValues));
-      } else {
-        form.setInitialValues({ unit: Unit.CURRENCY, typeDescriptor });
-      }
-      form.reset();
+      const currentForm = formRef.current;
+      currentForm.setInitialValues(resetInitialValues);
+      currentForm.reset();
       forceUpdate();
     }
-  }, [opened, initialValues]);
+  }, [opened, resetInitialValues]);
 
   const { unit, type, equityAccountSubtype } = transformAccountValues(
     form.getValues(),

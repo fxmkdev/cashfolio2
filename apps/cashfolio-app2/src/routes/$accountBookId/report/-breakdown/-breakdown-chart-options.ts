@@ -64,6 +64,13 @@ export function usePeriodBreakdownChartOptions(args: {
   totalBreakdownAmountLabel: string;
   onNodeDoubleClick: (datum: PeriodBreakdownNodeDatum) => void;
 }): PeriodBreakdownChartOptions {
+  const {
+    chartData,
+    colors,
+    onNodeDoubleClick,
+    selectedChartType,
+    totalBreakdownAmountLabel,
+  } = args;
   const userLocale = useUserLocale();
   const amountCompactFormatter = useMemo(
     () =>
@@ -90,8 +97,8 @@ export function usePeriodBreakdownChartOptions(args: {
         },
         innerLabels: [
           {
-            text: args.totalBreakdownAmountLabel,
-            color: args.colors.chartTextColor,
+            text: totalBreakdownAmountLabel,
+            color: colors.chartTextColor,
             fontWeight: 600,
             fontSize: 18,
           },
@@ -102,36 +109,32 @@ export function usePeriodBreakdownChartOptions(args: {
         },
         listeners: {
           seriesNodeDoubleClick: ({ datum }) => {
-            args.onNodeDoubleClick(datum as PeriodBreakdownChartDatum);
+            onNodeDoubleClick(datum as PeriodBreakdownChartDatum);
           },
         },
       },
     ],
-    [
-      args.colors.chartTextColor,
-      args.onNodeDoubleClick,
-      args.totalBreakdownAmountLabel,
-    ],
+    [colors.chartTextColor, onNodeDoubleClick, totalBreakdownAmountLabel],
   );
 
   const donutChartOptions = useMemo<
     AgPolarChartOptions<PeriodBreakdownChartDatum>
   >(
     () => ({
-      data: args.chartData,
+      data: chartData,
       height: 440,
       background: {
         visible: false,
       },
       theme: {
-        params: buildCommonChartThemeParams(args.colors),
+        params: buildCommonChartThemeParams(colors),
       },
       legend: {
         position: "bottom",
       },
       series: donutSeries,
     }),
-    [args.chartData, args.colors, donutSeries],
+    [chartData, colors, donutSeries],
   );
 
   const barChartOptions = useMemo<AgCartesianChartOptions>(
@@ -141,13 +144,13 @@ export function usePeriodBreakdownChartOptions(args: {
         visible: false,
       },
       theme: {
-        params: buildCommonChartThemeParams(args.colors),
+        params: buildCommonChartThemeParams(colors),
       },
       legend: {
         enabled: false,
         position: "bottom",
       },
-      series: args.chartData.map((datum) => ({
+      series: chartData.map((datum) => ({
         type: "bar" as const,
         data: [datum],
         direction: "vertical" as const,
@@ -163,7 +166,7 @@ export function usePeriodBreakdownChartOptions(args: {
         },
         listeners: {
           seriesNodeDoubleClick: ({ datum }) => {
-            args.onNodeDoubleClick(datum as PeriodBreakdownChartDatum);
+            onNodeDoubleClick(datum as PeriodBreakdownChartDatum);
           },
         },
       })),
@@ -183,13 +186,8 @@ export function usePeriodBreakdownChartOptions(args: {
         },
       },
     }),
-    [
-      amountCompactFormatter,
-      args.colors,
-      args.chartData,
-      args.onNodeDoubleClick,
-    ],
+    [amountCompactFormatter, chartData, colors, onNodeDoubleClick],
   );
 
-  return args.selectedChartType === "bar" ? barChartOptions : donutChartOptions;
+  return selectedChartType === "bar" ? barChartOptions : donutChartOptions;
 }

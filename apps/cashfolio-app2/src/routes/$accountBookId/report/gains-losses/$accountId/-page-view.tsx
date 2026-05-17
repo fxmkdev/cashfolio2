@@ -40,19 +40,20 @@ type GainLossReconciliationPageViewProps = {
   onBackToPeriod: () => void;
 };
 
-export function GainLossReconciliationPageView({
-  selectedPeriodValue,
-  reconciliation,
-  onPeriodChange,
-  onOpenEventTransaction,
-  onBackToPeriod,
-}: GainLossReconciliationPageViewProps) {
-  const userLocale = useUserLocale();
-  const [pickerOpened, setPickerOpened] = useState(false);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const heading = getGainLossReconciliationPageTitle(reconciliation);
+type LoadedGainLossReconciliationPageViewProps = Omit<
+  GainLossReconciliationPageViewProps,
+  "reconciliation"
+> & {
+  heading: string;
+  reconciliation: PeriodGainLossReconciliation;
+};
 
-  const backButton = (
+function BackToPeriodButton({
+  onBackToPeriod,
+}: {
+  onBackToPeriod: () => void;
+}) {
+  return (
     <Button
       variant="default"
       leftSection={<IconArrowLeft size={16} />}
@@ -61,13 +62,22 @@ export function GainLossReconciliationPageView({
       Back to Period
     </Button>
   );
+}
 
+export function GainLossReconciliationPageView({
+  selectedPeriodValue,
+  reconciliation,
+  onPeriodChange,
+  onOpenEventTransaction,
+  onBackToPeriod,
+}: GainLossReconciliationPageViewProps) {
+  const heading = getGainLossReconciliationPageTitle(reconciliation);
   if (!reconciliation) {
     return (
       <PageShell>
         <TopPageHeader
           heading={<Title order={2}>{heading}</Title>}
-          actions={backButton}
+          actions={<BackToPeriodButton onBackToPeriod={onBackToPeriod} />}
         />
         <Alert color="yellow" variant="light" title="No Reconciliation Data">
           No gain/loss reconciliation is available for this account and period.
@@ -76,6 +86,29 @@ export function GainLossReconciliationPageView({
     );
   }
 
+  return (
+    <LoadedGainLossReconciliationPageView
+      selectedPeriodValue={selectedPeriodValue}
+      reconciliation={reconciliation}
+      heading={heading}
+      onPeriodChange={onPeriodChange}
+      onOpenEventTransaction={onOpenEventTransaction}
+      onBackToPeriod={onBackToPeriod}
+    />
+  );
+}
+
+function LoadedGainLossReconciliationPageView({
+  selectedPeriodValue,
+  reconciliation,
+  heading,
+  onPeriodChange,
+  onOpenEventTransaction,
+  onBackToPeriod,
+}: LoadedGainLossReconciliationPageViewProps) {
+  const userLocale = useUserLocale();
+  const [pickerOpened, setPickerOpened] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const currencyFormatter = buildCurrencyFormatter(
     reconciliation.referenceCurrency,
     userLocale,
@@ -241,7 +274,7 @@ export function GainLossReconciliationPageView({
                 setPickerOpened(false);
               }}
             />
-            {backButton}
+            <BackToPeriodButton onBackToPeriod={onBackToPeriod} />
           </Group>
         }
       />
