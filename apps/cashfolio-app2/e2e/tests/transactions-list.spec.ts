@@ -1,4 +1,3 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
 import { Unit } from "../../src/.prisma-client/enums";
 import {
   agGridCellByColId,
@@ -11,6 +10,7 @@ import {
   seedDatabase,
   type SeededData,
 } from "../support/db";
+import { expect, test, type Locator, type Page } from "../support/fixtures";
 
 let seeded: SeededData;
 
@@ -71,8 +71,8 @@ async function rowIndex(row: Locator): Promise<number> {
   return Number(index);
 }
 
-test.beforeAll(async () => {
-  seeded = await seedDatabase();
+test.beforeAll(async ({ e2eExternalId }) => {
+  seeded = await seedDatabase({ userExternalId: e2eExternalId });
 });
 
 test("lists bookings, carries account link context, and creates transactions", async ({

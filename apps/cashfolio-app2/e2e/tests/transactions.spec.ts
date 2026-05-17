@@ -1,4 +1,3 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
 import { Unit } from "../../src/.prisma-client/enums";
 import {
   agGridCellByColId,
@@ -12,6 +11,7 @@ import {
   seedThreeBookingSplitTransaction,
   type SeededData,
 } from "../support/db";
+import { expect, test, type Locator, type Page } from "../support/fixtures";
 
 let seeded: SeededData;
 
@@ -242,8 +242,8 @@ async function setUnitlessEquityAccountOnEditableRow(args: {
   throw new Error("Could not set unitless equity account on an editable row");
 }
 
-test.beforeAll(async () => {
-  seeded = await seedDatabase();
+test.beforeAll(async ({ e2eExternalId }) => {
+  seeded = await seedDatabase({ userExternalId: e2eExternalId });
 });
 
 test("create, edit, delete, and create multi-booking transaction", async ({

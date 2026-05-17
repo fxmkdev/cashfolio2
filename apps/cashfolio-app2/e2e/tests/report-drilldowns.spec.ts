@@ -1,4 +1,3 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
 import {
   seedDatabase,
   seedExplicitGainLossDrilldownScenario,
@@ -6,6 +5,7 @@ import {
   seedSecurityGainLossDrilldownScenario,
   type SeededData,
 } from "../support/db";
+import { expect, test, type Locator, type Page } from "../support/fixtures";
 import { selectSegmentedControlOption } from "../support/segmented-control";
 
 let seeded: SeededData;
@@ -102,8 +102,8 @@ async function expandRowIfCollapsed(row: Locator) {
   }
 }
 
-test.beforeAll(async () => {
-  seeded = await seedDatabase();
+test.beforeAll(async ({ e2eExternalId }) => {
+  seeded = await seedDatabase({ userExternalId: e2eExternalId });
 });
 
 test("period allocation table account drilldown opens ledger with selected period", async ({

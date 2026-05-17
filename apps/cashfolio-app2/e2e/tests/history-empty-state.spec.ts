@@ -1,9 +1,9 @@
-import { expect, test } from "@playwright/test";
 import { seedDatabase } from "../support/db";
+import { expect, test } from "../support/fixtures";
 
 let accountBookId: string;
 
-test.beforeAll(async () => {
+test.beforeAll(async ({ e2eExternalId }) => {
   const now = new Date();
   const futureStartDate = new Date(
     Date.UTC(now.getUTCFullYear() + 1, 0, 1, 0, 0, 0, 0),
@@ -11,6 +11,7 @@ test.beforeAll(async () => {
 
   const seeded = await seedDatabase({
     accountBookStartDate: futureStartDate,
+    userExternalId: e2eExternalId,
   });
   accountBookId = seeded.accountBookId;
 });

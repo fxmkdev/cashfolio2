@@ -1,4 +1,3 @@
-import { expect, test } from "@playwright/test";
 import { agGridRowByText } from "../support/grid";
 import {
   createReportPageSessionState,
@@ -11,13 +10,14 @@ import {
   seedThreeBookingSplitTransaction,
   type SeededData,
 } from "../support/db";
+import { expect, test } from "../support/fixtures";
 import { clickPeriodStepUntilQueryMatches } from "../support/period-navigation";
 import { selectSegmentedControlOption } from "../support/segmented-control";
 
 let seeded: SeededData;
 
-test.beforeAll(async () => {
-  seeded = await seedDatabase();
+test.beforeAll(async ({ e2eExternalId }) => {
+  seeded = await seedDatabase({ userExternalId: e2eExternalId });
 });
 
 test("report page shows KPI waterfall and updated income/expenses wording", async ({

@@ -1,16 +1,16 @@
-import { expect, test, type Page } from "@playwright/test";
 import { agGridRowByText, clickRowAction } from "../support/grid";
 import {
   seedDatabase,
   seedNonZeroConvertibleAssetBalances,
   type SeededData,
 } from "../support/db";
+import { expect, test, type Page } from "../support/fixtures";
 import { openDialogFromButton } from "../support/ui";
 
 let seeded: SeededData;
 
-test.beforeAll(async () => {
-  seeded = await seedDatabase();
+test.beforeAll(async ({ e2eExternalId }) => {
+  seeded = await seedDatabase({ userExternalId: e2eExternalId });
 });
 
 async function createAssetAccount(args: { page: Page; name: string }) {
