@@ -8,7 +8,7 @@ const ACCOUNT_DELETE_HAS_BOOKINGS_REASON =
   "Cannot delete account because it has bookings";
 const ACCOUNT_ARCHIVE_ALREADY_ARCHIVED_REASON = "Account is already archived";
 const ACCOUNT_ARCHIVE_NON_ZERO_BALANCE_REASON =
-  "Cannot archive account because its balance is not 0";
+  "Cannot archive account because its current or scheduled balance is not 0";
 const ACCOUNT_UNARCHIVE_ALREADY_ACTIVE_REASON = "Account is already active";
 const ACCOUNT_UNARCHIVE_PARENT_ARCHIVED_REASON =
   "Cannot unarchive account because its parent group is archived";

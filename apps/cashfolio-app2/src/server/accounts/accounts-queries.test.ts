@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AccountType,
   EquityAccountSubtype,
@@ -74,6 +74,8 @@ import {
 
 describe("getAccountTreeData", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-02-10T12:00:00.000Z"));
     vi.clearAllMocks();
 
     prisma.account.findMany.mockResolvedValue([]);
@@ -90,6 +92,10 @@ describe("getAccountTreeData", () => {
     getCurrencyExchangeRate.mockResolvedValue(1);
     getCryptocurrencyToCurrencyExchangeRate.mockResolvedValue(null);
     getSecurityToCurrencyExchangeRate.mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("returns null reference balances and unavailable actions when those features are disabled", async () => {
@@ -140,6 +146,10 @@ describe("getAccountTreeData", () => {
         { accountId: "liability-1", _sum: { value: 5 } },
       ])
       .mockResolvedValueOnce([
+        { accountId: "asset-1", _sum: { value: 10 } },
+        { accountId: "liability-1", _sum: { value: 5 } },
+      ])
+      .mockResolvedValueOnce([
         { accountId: "asset-1", _sum: { value: 8 } },
         { accountId: "liability-1", _sum: { value: 2 } },
       ]);
@@ -155,6 +165,14 @@ describe("getAccountTreeData", () => {
 
     expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-1");
     expect(getCurrencyExchangeRate).not.toHaveBeenCalled();
+    expect(prisma.booking.groupBy).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: expect.objectContaining({
+          date: { lt: new Date("2026-02-11T00:00:00.000Z") },
+        }),
+      }),
+    );
 
     const assetRow = result.rows.find((row) => row.id === "asset-1");
     const liabilityRow = result.rows.find((row) => row.id === "liability-1");
@@ -227,6 +245,9 @@ describe("getAccountTreeData", () => {
         { accountId: "asset-archived", _sum: { value: 5 } },
       ])
       .mockResolvedValueOnce([
+        { accountId: "asset-archived", _sum: { value: 5 } },
+      ])
+      .mockResolvedValueOnce([
         { accountId: "asset-archived", _sum: { value: 2 } },
       ]);
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
@@ -280,6 +301,51 @@ describe("getAccountTreeData", () => {
     expect(result.rows.map((row) => row.id)).toEqual(
       expect.arrayContaining(["group-root", "group-child", "asset-archived"]),
     );
+  });
+
+  it("keeps future bookings out of current balances while preserving action constraints", async () => {
+    prisma.account.findMany.mockResolvedValue([
+      {
+        id: "asset-scheduled",
+        name: "Scheduled Asset",
+        type: AccountType.ASSET,
+        equityAccountSubtype: null,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+        groupId: null,
+        isActive: true,
+        sortOrder: 1,
+      },
+    ]);
+    prisma.booking.groupBy
+      .mockResolvedValueOnce([{ accountId: "asset-scheduled", _count: 1 }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { accountId: "asset-scheduled", _sum: { value: 25 } },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const result = await getAccountTreeData({
+      data: {
+        accountBookId: "book-scheduled",
+        accountState: "active",
+      },
+    });
+
+    expect(result.rows).toEqual([
+      expect.objectContaining({
+        id: "asset-scheduled",
+        balance: 0,
+        deletable: false,
+        deleteDisabledReason: "Cannot delete account because it has bookings",
+        archivable: false,
+        archiveDisabledReason:
+          "Cannot archive account because its current or scheduled balance is not 0",
+      }),
+    ]);
   });
 });
 

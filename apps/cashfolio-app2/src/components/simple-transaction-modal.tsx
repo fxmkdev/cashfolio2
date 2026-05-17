@@ -9,7 +9,7 @@ import {
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
-import { isAfter, startOfDay } from "date-fns";
+import { startOfDay } from "date-fns";
 import { useEffect, useRef } from "react";
 import { IconArrowRight } from "@tabler/icons-react";
 import {
@@ -116,9 +116,6 @@ export function SimpleTransactionModal({
         }
         if (startOfUtcDay(date) < accountBookStartDay) {
           return `Date cannot be before account book start date (${accountBookStartDateLabel}).`;
-        }
-        if (isAfter(startOfDay(date), today)) {
-          return "Date cannot be in the future";
         }
         return null;
       },

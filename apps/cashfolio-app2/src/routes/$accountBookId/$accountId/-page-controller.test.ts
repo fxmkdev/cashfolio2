@@ -25,11 +25,15 @@ function createActions(args: {
   state: unknown;
   api: unknown;
   invalidate: () => void;
+  selectedPeriodValue?: string;
+  setPeriodFilter?: (nextPeriodValue: string | undefined) => void;
   pendingScrollRef: { current: string | undefined };
 }) {
   return createLedgerMutationActions({
     accountBookId: "book-1",
     accountId: "account-1",
+    selectedPeriodValue: args.selectedPeriodValue,
+    setPeriodFilter: args.setPeriodFilter ?? vi.fn(),
     invalidate: args.invalidate,
     state: args.state as Parameters<
       typeof createLedgerMutationActions
@@ -175,6 +179,67 @@ describe("createLedgerMutationActions", () => {
     expect(state.setCreateSplitInitialValues).toHaveBeenCalledWith(undefined);
     expect(pendingScrollRef.current).toBe("tx-new");
     expect(invalidate).toHaveBeenCalledOnce();
+  });
+
+  test("moves filtered ledgers to the created transaction period", async () => {
+    const invalidate = vi.fn();
+    const setPeriodFilter = vi.fn();
+    const pendingScrollRef: { current: string | undefined } = {
+      current: undefined,
+    };
+    const state = {
+      getEditingTransactionId: () => undefined,
+      getDeletingTransaction: () => undefined,
+      getRebooking: () => undefined,
+      setModalOpened: vi.fn(),
+      setSimpleModalOpened: vi.fn(),
+      setEditModalOpened: vi.fn(),
+      setCreateSplitInitialValues: vi.fn(),
+      setDeletingTransaction: vi.fn(),
+      setRebookModalOpened: vi.fn(),
+    };
+    const api = {
+      createTransaction: vi.fn().mockResolvedValue({ id: "tx-future" }),
+      createSimpleTransaction: vi.fn(),
+      updateTransaction: vi.fn(),
+      deleteTransaction: vi.fn(),
+      getTransaction: vi.fn(),
+      rebookBooking: vi.fn(),
+    };
+    const actions = createActions({
+      state,
+      api,
+      invalidate,
+      selectedPeriodValue: "2026-01",
+      setPeriodFilter,
+      pendingScrollRef,
+    });
+
+    await actions.handleCreateTransaction({
+      description: "",
+      bookings: [
+        {
+          date: "2026-03-05T00:00:00.000Z",
+          accountId: "account-1",
+          description: "",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          value: 10,
+        },
+        {
+          date: "2026-03-05T00:00:00.000Z",
+          accountId: "counter-1",
+          description: "",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          value: -10,
+        },
+      ],
+    });
+
+    expect(setPeriodFilter).toHaveBeenCalledWith("2026-03");
+    expect(invalidate).not.toHaveBeenCalled();
+    expect(pendingScrollRef.current).toBe("tx-future");
   });
 
   test("updates transaction only when an editing transaction id exists", async () => {

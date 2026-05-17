@@ -318,7 +318,7 @@ function LedgerPageStoryHarness({
         accountArchivable={accountActive && !accountActionsDisabled}
         accountArchiveLabel={
           accountActionsDisabled
-            ? "Cannot archive account because its balance is not 0"
+            ? "Cannot archive account because its current or scheduled balance is not 0"
             : "Archive"
         }
         accountUnarchivable={!accountActive && !accountActionsDisabled}

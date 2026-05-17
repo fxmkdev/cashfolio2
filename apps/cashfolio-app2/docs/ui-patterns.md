@@ -307,6 +307,8 @@ for ledger child routes.
   - available for asset, liability, and non-opening-balance equity accounts
   - asset/liability bounds start at the account's first booking period (never
     before account-book start)
+  - bounds extend through the account's latest booking date, so scheduled future
+    bookings can be viewed without turning reports into projections
   - filtered asset/liability ledgers append a virtual `Balance carried forward`
     row when prior bookings exist
 - **Counterparty names**: Derived from sibling bookings on the same transaction,
@@ -325,9 +327,9 @@ single-account context.
 - **Columns**: Date, Account, Description, Ccy./Symbol, Debit/Credit in booking
   unit, Debit/Credit in reference currency, and row actions. No balance column.
 - **Period filter**: Uses the same explicit month/year filter control as the
-  account ledger, bounded by the account-book start date and today. Direct
-  visits default to the current month so the page does not load the whole
-  account book by accident.
+  account ledger, bounded by the account-book start date and the latest booking
+  date. Direct visits default to the current month so the page does not load the
+  whole account book by accident or jump to scheduled future bookings.
 - **Actions**: Add Transaction and Edit open the split transaction editor
   without a locked current account booking. Rebook excludes the clicked
   booking's current account.

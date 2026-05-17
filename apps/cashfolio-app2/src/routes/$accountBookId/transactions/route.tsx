@@ -69,9 +69,13 @@ export function TransactionsPageContent() {
     () => new Date(loaderData.periodBounds.maxDate),
     [loaderData.periodBounds.maxDate],
   );
+  const currentDate = useMemo(
+    () => new Date(loaderData.periodBounds.currentDate),
+    [loaderData.periodBounds.currentDate],
+  );
   const defaultPeriodValue = useMemo(
-    () => getDefaultTransactionsPeriodValue(maxDate),
-    [maxDate],
+    () => getDefaultTransactionsPeriodValue(currentDate),
+    [currentDate],
   );
   const minBookingDate = useMemo(
     () =>
@@ -150,6 +154,7 @@ export function TransactionsPageContent() {
     loaderData,
     accountBookId,
     selectedPeriodValue: selectedPeriod?.value,
+    setPeriodFilter,
     pendingScrollRef,
     invalidate: () => {
       router.invalidate();

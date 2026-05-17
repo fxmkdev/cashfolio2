@@ -183,6 +183,7 @@ export function LedgerPageContent() {
     accountBookId,
     hasPeriodFilter,
     selectedPeriodValue: selectedPeriod?.value,
+    setPeriodFilter,
     pendingScrollRef,
     invalidate: () => {
       router.invalidate();

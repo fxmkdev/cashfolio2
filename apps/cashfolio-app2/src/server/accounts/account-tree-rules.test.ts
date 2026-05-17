@@ -49,7 +49,8 @@ describe("account action availability", () => {
       getAccountArchiveAvailability({ isActive: true, hasZeroBalance: false }),
     ).toEqual({
       enabled: false,
-      disabledReason: "Cannot archive account because its balance is not 0",
+      disabledReason:
+        "Cannot archive account because its current or scheduled balance is not 0",
     });
   });
 

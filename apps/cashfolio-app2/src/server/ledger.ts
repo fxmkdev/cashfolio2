@@ -307,21 +307,42 @@ export const getLedgerData = createServerFn({ method: "GET" })
   });
 
 export const getLedgerPeriodBounds = createServerFn({ method: "GET" })
-  .inputValidator((data: { accountBookId: string }) => data)
+  .inputValidator((data: { accountBookId: string; accountId?: string }) => ({
+    accountBookId: data.accountBookId,
+    accountId: typeof data.accountId === "string" ? data.accountId : undefined,
+  }))
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
-    const accountBook = await prisma.accountBook.findUniqueOrThrow({
-      where: { id: data.accountBookId },
-      select: { startDate: true },
-    });
+    const [accountBook, latestBooking] = await Promise.all([
+      prisma.accountBook.findUniqueOrThrow({
+        where: { id: data.accountBookId },
+        select: { startDate: true },
+      }),
+      prisma.booking.findFirst({
+        where: {
+          accountBookId: data.accountBookId,
+          ...(data.accountId ? { accountId: data.accountId } : undefined),
+        },
+        orderBy: [{ date: "desc" }, { id: "desc" }],
+        select: { date: true },
+      }),
+    ]);
     const currentDay = startOfUtcDay(new Date());
     const accountBookStartDate = startOfUtcDay(accountBook.startDate);
     const openingBalancesBookingDate =
       getOpeningBalancesBookingDate(accountBookStartDate);
+    const latestBookingDay = latestBooking
+      ? startOfUtcDay(latestBooking.date)
+      : null;
+    const maxDate =
+      latestBookingDay && latestBookingDay > currentDay
+        ? latestBookingDay
+        : currentDay;
 
     return {
       minBookingDate: accountBookStartDate.toISOString(),
-      maxDate: currentDay.toISOString(),
+      maxDate: maxDate.toISOString(),
+      currentDate: currentDay.toISOString(),
       openingBalancesBookingDate: openingBalancesBookingDate.toISOString(),
     };
   });

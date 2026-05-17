@@ -114,6 +114,7 @@ export function filterGroupsForAccountState(args: {
 export function buildAccountRows(args: {
   accounts: AccountTreeAccount[];
   rawBalanceByAccountId: Map<string, number>;
+  allScheduledRawBalanceByAccountId: Map<string, number>;
   openingRawBalanceByAccountId: Map<string, number>;
   displayBalanceInReferenceCurrencyByAccountId: Map<string, number | null>;
   bookingCountByAccountId: Map<string, number>;
@@ -130,7 +131,9 @@ export function buildAccountRows(args: {
     const requiresZeroBalance = accountTypeRequiresZeroBalanceForArchive(
       account.type,
     );
-    const hasZeroBalance = !requiresZeroBalance || rawBalance === 0;
+    const allScheduledRawBalance =
+      args.allScheduledRawBalanceByAccountId.get(account.id) ?? 0;
+    const hasZeroBalance = !requiresZeroBalance || allScheduledRawBalance === 0;
     const hasInactiveAncestor = hasInactiveAncestorGroup(
       account.groupId,
       args.groupById,
