@@ -211,6 +211,8 @@ export const RouteSmoke: Story = {
     await expect(canvas.getByTestId("router-search")).toHaveTextContent(
       "returnTo",
     );
+    await userEvent.click(canvas.getByRole("link", { name: "Admin" }));
+    await expect(canvas.getByTestId("router-path")).toHaveTextContent("/admin");
   },
 };
 
