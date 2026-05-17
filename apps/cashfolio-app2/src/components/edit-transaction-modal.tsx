@@ -5,7 +5,6 @@ import { DateInput } from "@mantine/dates";
 import { formRootRule, isNotEmpty, useForm } from "@mantine/form";
 import { IconInfoCircle, IconTablePlus } from "@tabler/icons-react";
 import { createId } from "@paralleldrive/cuid2";
-import { isAfter, startOfDay } from "date-fns";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Unit } from "../.prisma-client/enums";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
@@ -85,7 +84,6 @@ export function EditTransactionModal({
   const { isSubmitting, runSubmit } = useDialogSubmitState({
     onSubmittingChange,
   });
-  const today = startOfDay(new Date());
   const accountBookStartDay = startOfUtcDay(accountBookStartDate);
   const accountBookStartDateLabel = formatUtcDateForLocale(
     accountBookStartDay,
@@ -118,9 +116,6 @@ export function EditTransactionModal({
         if (startOfUtcDay(date) < accountBookStartDay) {
           return `Date cannot be before account book start date (${accountBookStartDateLabel}).`;
         }
-        if (isAfter(startOfDay(date), today)) {
-          return "Date cannot be in the future";
-        }
         return null;
       },
       bookings: {
@@ -138,9 +133,6 @@ export function EditTransactionModal({
           }
           if (startOfUtcDay(bookingDate) < accountBookStartDay) {
             return `Date cannot be before account book start date (${accountBookStartDateLabel}).`;
-          }
-          if (isAfter(startOfDay(bookingDate), today)) {
-            return "Date cannot be in the future";
           }
           return null;
         },

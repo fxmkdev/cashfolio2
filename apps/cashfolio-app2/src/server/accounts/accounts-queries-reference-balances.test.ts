@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountType, Unit } from "../../.prisma-client/enums";
 
 const createServerFn = vi.hoisted(() =>
@@ -59,6 +59,8 @@ import { getAccountReferenceBalances } from "./accounts-queries";
 
 describe("getAccountReferenceBalances", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-02-10T12:00:00.000Z"));
     vi.clearAllMocks();
 
     prisma.account.findMany.mockResolvedValue([]);
@@ -70,6 +72,10 @@ describe("getAccountReferenceBalances", () => {
     getCurrencyExchangeRate.mockResolvedValue(1);
     getCryptocurrencyToCurrencyExchangeRate.mockResolvedValue(null);
     getSecurityToCurrencyExchangeRate.mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("filters accounts by selected tab and mode", async () => {
@@ -154,6 +160,13 @@ describe("getAccountReferenceBalances", () => {
       { id: "liability-usd", balanceInReferenceCurrency: -4.5 },
       { id: "asset-security", balanceInReferenceCurrency: null },
     ]);
+    expect(prisma.booking.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          date: { lt: new Date("2026-02-11T00:00:00.000Z") },
+        }),
+      }),
+    );
 
     expect(getCurrencyExchangeRate).toHaveBeenCalledWith(
       expect.objectContaining({

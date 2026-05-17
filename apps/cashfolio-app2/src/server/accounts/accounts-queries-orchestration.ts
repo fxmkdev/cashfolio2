@@ -10,8 +10,10 @@ import {
   hasInactiveAncestorGroup,
 } from "../accounts/accounts-helpers";
 import {
+  addUtcDays,
   getOpeningBalancesBookingDate,
   getUtcDayRange,
+  startOfUtcDay,
 } from "../../shared/date";
 import { moneyIsZero, toMoneyNumber } from "../../shared/money";
 import {
@@ -235,6 +237,7 @@ export async function queryAccountTreeData(data: AccountTreeDataInput) {
     groupById,
     accountBook,
     rawBalanceByAccountId,
+    allScheduledRawBalanceByAccountId,
     openingRawBalanceByAccountId,
     bookingCounts,
     allAccountsForGroup,
@@ -289,6 +292,7 @@ export async function queryAccountTreeData(data: AccountTreeDataInput) {
   const accountRows = buildAccountRows({
     accounts: normalizedAccounts,
     rawBalanceByAccountId,
+    allScheduledRawBalanceByAccountId,
     openingRawBalanceByAccountId,
     displayBalanceInReferenceCurrencyByAccountId,
     bookingCountByAccountId,
@@ -339,49 +343,64 @@ export async function queryAccountTreeData(data: AccountTreeDataInput) {
 export async function queryLedgerAccountActionData(
   data: LedgerAccountActionDataInput,
 ): Promise<AccountTreeRow> {
-  const [account, accountBook, bookingAggregate, bookingCount, groupById] =
-    await Promise.all([
-      prisma.account.findUnique({
-        where: {
-          id_accountBookId: {
-            id: data.accountId,
-            accountBookId: data.accountBookId,
-          },
-        },
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          equityAccountSubtype: true,
-          unit: true,
-          currency: true,
-          cryptocurrency: true,
-          symbol: true,
-          tradeCurrency: true,
-          groupId: true,
-          isActive: true,
-          sortOrder: true,
-        },
-      }),
-      prisma.accountBook.findUniqueOrThrow({
-        where: { id: data.accountBookId },
-        select: { startDate: true },
-      }),
-      prisma.booking.aggregate({
-        where: {
+  const currentBalanceEndExclusive = addUtcDays(startOfUtcDay(new Date()), 1);
+  const [
+    account,
+    accountBook,
+    bookingAggregate,
+    allScheduledBookingAggregate,
+    bookingCount,
+    groupById,
+  ] = await Promise.all([
+    prisma.account.findUnique({
+      where: {
+        id_accountBookId: {
+          id: data.accountId,
           accountBookId: data.accountBookId,
-          accountId: data.accountId,
         },
-        _sum: { value: true },
-      }),
-      prisma.booking.count({
-        where: {
-          accountBookId: data.accountBookId,
-          accountId: data.accountId,
-        },
-      }),
-      getGroupHierarchy(data.accountBookId),
-    ]);
+      },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        equityAccountSubtype: true,
+        unit: true,
+        currency: true,
+        cryptocurrency: true,
+        symbol: true,
+        tradeCurrency: true,
+        groupId: true,
+        isActive: true,
+        sortOrder: true,
+      },
+    }),
+    prisma.accountBook.findUniqueOrThrow({
+      where: { id: data.accountBookId },
+      select: { startDate: true },
+    }),
+    prisma.booking.aggregate({
+      where: {
+        accountBookId: data.accountBookId,
+        accountId: data.accountId,
+        date: { lt: currentBalanceEndExclusive },
+      },
+      _sum: { value: true },
+    }),
+    prisma.booking.aggregate({
+      where: {
+        accountBookId: data.accountBookId,
+        accountId: data.accountId,
+      },
+      _sum: { value: true },
+    }),
+    prisma.booking.count({
+      where: {
+        accountBookId: data.accountBookId,
+        accountId: data.accountId,
+      },
+    }),
+    getGroupHierarchy(data.accountBookId),
+  ]);
 
   if (!account) {
     throw new Error(
@@ -394,7 +413,8 @@ export async function queryLedgerAccountActionData(
   );
   const rawBalance = toMoneyNumber(bookingAggregate._sum.value ?? 0);
   const hasZeroBalance =
-    !requiresZeroBalance || moneyIsZero(bookingAggregate._sum.value ?? 0);
+    !requiresZeroBalance ||
+    moneyIsZero(allScheduledBookingAggregate._sum.value ?? 0);
   const deleteAvailability = getAccountDeleteAvailability(bookingCount > 0);
   const archiveAvailability = getAccountArchiveAvailability({
     isActive: account.isActive,

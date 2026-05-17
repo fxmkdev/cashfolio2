@@ -1,7 +1,9 @@
 import { prisma } from "../../prisma.server";
 import {
+  addUtcDays,
   getOpeningBalancesBookingDate,
   getUtcDayRange,
+  startOfUtcDay,
 } from "../../shared/date";
 import { toMoneyNumber } from "../../shared/money";
 import type {
@@ -105,10 +107,12 @@ export async function fetchAccountTreeQueryData(args: {
       (account) => account.type === "ASSET" || account.type === "LIABILITY",
     )
     .map((account) => account.id);
+  const currentBalanceEndExclusive = addUtcDays(startOfUtcDay(new Date()), 1);
 
   const [
     bookingCounts,
     accountBalances,
+    allScheduledAccountBalances,
     accountBook,
     allAccountsForGroup,
     allGroupsForParent,
@@ -123,6 +127,17 @@ export async function fetchAccountTreeQueryData(args: {
             accountId: { in: accounts.map((account) => account.id) },
           },
           _count: true,
+        })
+      : Promise.resolve([]),
+    assetAndLiabilityAccountIds.length > 0
+      ? prisma.booking.groupBy({
+          by: ["accountId"],
+          where: {
+            accountBookId: args.accountBookId,
+            accountId: { in: assetAndLiabilityAccountIds },
+            date: { lt: currentBalanceEndExclusive },
+          },
+          _sum: { value: true },
         })
       : Promise.resolve([]),
     assetAndLiabilityAccountIds.length > 0
@@ -189,6 +204,12 @@ export async function fetchAccountTreeQueryData(args: {
       toMoneyNumber(balance._sum.value ?? 0),
     ]),
   );
+  const allScheduledRawBalanceByAccountId = new Map(
+    allScheduledAccountBalances.map((balance) => [
+      balance.accountId,
+      toMoneyNumber(balance._sum.value ?? 0),
+    ]),
+  );
   const openingBalanceDate = getOpeningBalancesBookingDate(
     accountBook.startDate,
   );
@@ -221,6 +242,7 @@ export async function fetchAccountTreeQueryData(args: {
     groupById,
     accountBook: accountBook as AccountBookTreeMeta,
     rawBalanceByAccountId,
+    allScheduledRawBalanceByAccountId,
     openingRawBalanceByAccountId,
     bookingCounts,
     allAccountsForGroup,
@@ -259,6 +281,7 @@ export async function fetchAccountReferenceBalancesQueryData(args: {
       (account) => account.type === "ASSET" || account.type === "LIABILITY",
     )
     .map((account) => account.id);
+  const currentBalanceEndExclusive = addUtcDays(startOfUtcDay(new Date()), 1);
 
   const [accountBalances, accountBook] = await Promise.all([
     assetAndLiabilityAccountIds.length > 0
@@ -267,6 +290,7 @@ export async function fetchAccountReferenceBalancesQueryData(args: {
           where: {
             accountBookId: args.accountBookId,
             accountId: { in: assetAndLiabilityAccountIds },
+            date: { lt: currentBalanceEndExclusive },
           },
           _sum: { value: true },
         })

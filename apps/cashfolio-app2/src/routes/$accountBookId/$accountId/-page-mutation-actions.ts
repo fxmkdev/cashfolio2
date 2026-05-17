@@ -13,6 +13,10 @@ import {
   rebookBooking,
   updateTransaction,
 } from "@/server/transactions";
+import {
+  getBookingPeriodValue,
+  getLatestBookingDate,
+} from "@/shared/transaction-period";
 import type {
   RebookingState,
   SimpleTransactionValues,
@@ -77,6 +81,8 @@ const defaultAccountApi: LedgerAccountApi = {
 export function createLedgerMutationActions(args: {
   accountBookId: string;
   accountId: string;
+  selectedPeriodValue?: string;
+  setPeriodFilter: (nextPeriodValue: string | undefined) => void;
   invalidate: () => void;
   state: LedgerMutationState;
   pendingScrollRef: { current: string | undefined };
@@ -92,7 +98,7 @@ export function createLedgerMutationActions(args: {
       args.state.setModalOpened(false);
       args.state.setCreateSplitInitialValues(undefined);
       args.pendingScrollRef.current = transaction.id;
-      args.invalidate();
+      reloadTransactionPeriod(args, values);
     },
 
     async handleCreateSimpleTransaction(values: SimpleTransactionValues) {
@@ -105,7 +111,7 @@ export function createLedgerMutationActions(args: {
       });
       args.state.setSimpleModalOpened(false);
       args.pendingScrollRef.current = transaction.id;
-      args.invalidate();
+      reloadSimpleTransactionPeriod(args, values);
     },
 
     async handleUpdateTransaction(values: TransactionMutationValues) {
@@ -121,7 +127,7 @@ export function createLedgerMutationActions(args: {
       });
       args.state.setEditModalOpened(false);
       args.pendingScrollRef.current = editingTransactionId;
-      args.invalidate();
+      reloadTransactionPeriod(args, values);
     },
 
     async handleDeleteTransaction() {
@@ -158,6 +164,51 @@ export function createLedgerMutationActions(args: {
     getTransaction: api.getTransaction,
     updateTransaction: api.updateTransaction,
   };
+}
+
+function reloadTransactionPeriod(
+  args: Pick<
+    Parameters<typeof createLedgerMutationActions>[0],
+    "selectedPeriodValue" | "setPeriodFilter" | "invalidate"
+  >,
+  values: TransactionMutationValues,
+) {
+  const latestBookingDate = getLatestBookingDate(values.bookings);
+  reloadDatePeriod(args, latestBookingDate);
+}
+
+function reloadSimpleTransactionPeriod(
+  args: Pick<
+    Parameters<typeof createLedgerMutationActions>[0],
+    "selectedPeriodValue" | "setPeriodFilter" | "invalidate"
+  >,
+  values: SimpleTransactionValues,
+) {
+  reloadDatePeriod(args, new Date(values.date));
+}
+
+function reloadDatePeriod(
+  args: Pick<
+    Parameters<typeof createLedgerMutationActions>[0],
+    "selectedPeriodValue" | "setPeriodFilter" | "invalidate"
+  >,
+  date: Date | null,
+) {
+  if (!args.selectedPeriodValue || !date || isNaN(date.getTime())) {
+    args.invalidate();
+    return;
+  }
+
+  const nextPeriodValue = getBookingPeriodValue({
+    date,
+    currentPeriodValue: args.selectedPeriodValue,
+  });
+  if (nextPeriodValue !== args.selectedPeriodValue) {
+    args.setPeriodFilter(nextPeriodValue);
+    return;
+  }
+
+  args.invalidate();
 }
 
 export function createLedgerAccountMutationActions(args: {

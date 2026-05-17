@@ -6,6 +6,10 @@ import {
   rebookBooking,
   updateTransaction,
 } from "@/server/transactions";
+import {
+  getBookingPeriodValue,
+  getLatestBookingDate,
+} from "@/shared/transaction-period";
 import { useTransactionsAccountOptions } from "./-account-options";
 import { useTransactionsColumnDefs } from "./-page-columns";
 import type { loadTransactionsPageData } from "./-page-loader";
@@ -23,6 +27,7 @@ export function useTransactionsPageController(args: {
   loaderData: TransactionsPageLoaderData;
   accountBookId: string;
   selectedPeriodValue?: string;
+  setPeriodFilter: (nextPeriodValue: string | undefined) => void;
   pendingScrollRef: { current: string | undefined };
   invalidate: () => void;
 }): Omit<TransactionsPageViewProps, "accountBookId" | "onRowDataUpdated"> {
@@ -73,7 +78,7 @@ export function useTransactionsPageController(args: {
 
     setCreateModalOpened(false);
     args.pendingScrollRef.current = transaction.id;
-    args.invalidate();
+    reloadTransactionPeriod(values);
   };
 
   const handleUpdateTransaction = async (values: TransactionMutationValues) => {
@@ -90,8 +95,25 @@ export function useTransactionsPageController(args: {
 
     setEditModalOpened(false);
     args.pendingScrollRef.current = editingId;
-    args.invalidate();
+    reloadTransactionPeriod(values);
   };
+
+  function reloadTransactionPeriod(values: TransactionMutationValues) {
+    const latestBookingDate = getLatestBookingDate(values.bookings);
+    const nextPeriodValue = latestBookingDate
+      ? getBookingPeriodValue({
+          date: latestBookingDate,
+          currentPeriodValue: args.selectedPeriodValue,
+        })
+      : args.selectedPeriodValue;
+
+    if (nextPeriodValue && nextPeriodValue !== args.selectedPeriodValue) {
+      args.setPeriodFilter(nextPeriodValue);
+      return;
+    }
+
+    args.invalidate();
+  }
 
   const handleRebookClick = useCallback((nextRebooking: RebookingState) => {
     setRebooking(nextRebooking);

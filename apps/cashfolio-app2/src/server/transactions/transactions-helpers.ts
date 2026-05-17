@@ -4,7 +4,7 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../../.prisma-client/enums";
-import { isAfter, isBefore, startOfDay } from "date-fns";
+import { isBefore } from "date-fns";
 import { getUnitIdentifier } from "../../shared/account-utils";
 import { validateGainLossSimpleTransactionInvariant } from "../../shared/gain-loss-transaction-invariant";
 import { formatUtcDate, startOfUtcDay } from "../../shared/date";
@@ -17,7 +17,6 @@ import type { CreateTransactionInput } from "./transactions-types";
 
 export function validateCreateTransaction(input: CreateTransactionInput) {
   const errors: string[] = [];
-  const today = startOfDay(new Date());
 
   if (input.bookings.length < 2) {
     errors.push("At least two bookings are required.");
@@ -28,8 +27,6 @@ export function validateCreateTransaction(input: CreateTransactionInput) {
     const date = new Date(b.date);
     if (isNaN(date.getTime())) {
       errors.push(`Booking ${i}: invalid date.`);
-    } else if (isAfter(startOfDay(date), today)) {
-      errors.push(`Booking ${i}: date cannot be in the future.`);
     }
 
     if (!b.accountId) {

@@ -380,6 +380,31 @@ describe("transactions mutations", () => {
     );
   });
 
+  it("creates a simple transaction with a future date", async () => {
+    const created = { id: "tx-future-simple" };
+    prisma.transaction.create.mockResolvedValueOnce(created);
+
+    await expect(
+      createSimpleTransaction({
+        data: createSimpleInput({ date: "2026-03-12T00:00:00.000Z" }),
+      }),
+    ).resolves.toEqual(created);
+
+    expect(prisma.transaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          bookings: expect.objectContaining({
+            create: expect.arrayContaining([
+              expect.objectContaining({
+                date: new Date("2026-03-12T00:00:00.000Z"),
+              }),
+            ]),
+          }),
+        }),
+      }),
+    );
+  });
+
   it("creates full transactions from validated booking payloads", async () => {
     const created = { id: "tx-full" };
     prisma.transaction.create.mockResolvedValueOnce(created);

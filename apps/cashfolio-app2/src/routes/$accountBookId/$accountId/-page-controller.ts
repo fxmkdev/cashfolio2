@@ -41,6 +41,7 @@ export function useLedgerPageController(args: {
   accountBookId: string;
   hasPeriodFilter: boolean;
   selectedPeriodValue?: string;
+  setPeriodFilter: (nextPeriodValue: string | undefined) => void;
   pendingScrollRef: { current: string | undefined };
   invalidate: () => void;
   onAccountDeleted: (args: {
@@ -107,6 +108,8 @@ export function useLedgerPageController(args: {
   const actions = createLedgerMutationActions({
     accountBookId: args.accountBookId,
     accountId: account.id,
+    selectedPeriodValue: args.selectedPeriodValue,
+    setPeriodFilter: args.setPeriodFilter,
     invalidate: args.invalidate,
     pendingScrollRef: args.pendingScrollRef,
     state: {

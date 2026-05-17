@@ -1,6 +1,5 @@
 import { prisma } from "../../prisma.server";
 import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
-import { isAfter, startOfDay } from "date-fns";
 import { getSimpleTransactionUnitIdentifier } from "../../shared/account-utils";
 import { toMoneyNumber } from "../../shared/money";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/opening-balances";
@@ -123,13 +122,9 @@ export async function createSimpleTransactionOperation(
   }
 
   const bookingDate = new Date(data.date);
-  const today = startOfDay(new Date());
 
   if (isNaN(bookingDate.getTime())) {
     throw new Error("Date is invalid.");
-  }
-  if (isAfter(startOfDay(bookingDate), today)) {
-    throw new Error("Date cannot be in the future.");
   }
 
   if (data.accountId === data.counterAccountId) {

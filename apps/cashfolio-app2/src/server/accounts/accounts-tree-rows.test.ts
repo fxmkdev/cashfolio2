@@ -124,6 +124,10 @@ describe("buildAccountRows and buildGroupRows", () => {
         ["asset-1", 100],
         ["liability-1", 25],
       ]),
+      allScheduledRawBalanceByAccountId: new Map([
+        ["asset-1", 100],
+        ["liability-1", 25],
+      ]),
       openingRawBalanceByAccountId: new Map([
         ["asset-1", 80],
         ["liability-1", -10],

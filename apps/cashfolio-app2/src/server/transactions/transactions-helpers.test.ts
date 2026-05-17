@@ -203,8 +203,35 @@ describe("transactions helpers", () => {
         ],
       }),
     ).toThrow(
-      "Booking 0: date cannot be in the future. Booking 0: currency is required. Booking 1: invalid date. Booking 1: symbol and trade currency are required for security bookings.",
+      "Booking 0: currency is required. Booking 1: invalid date. Booking 1: symbol and trade currency are required for security bookings.",
     );
+  });
+
+  test("allows future booking dates", () => {
+    expect(() =>
+      validateCreateTransaction({
+        accountBookId: "book-1",
+        description: "scheduled transaction",
+        bookings: [
+          {
+            date: "2026-03-03T00:00:00.000Z",
+            accountId: "asset-1",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: 120,
+          },
+          {
+            date: "2026-03-03T00:00:00.000Z",
+            accountId: "equity-1",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: -120,
+          },
+        ],
+      }),
+    ).not.toThrow();
   });
 
   test("builds nested transaction create payload with stable sort order", () => {
