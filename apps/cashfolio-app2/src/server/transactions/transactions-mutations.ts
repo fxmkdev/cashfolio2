@@ -1,9 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { prisma } from "../../prisma.server";
-import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
-import { isAfter, startOfDay } from "date-fns";
-import { getSimpleTransactionUnitIdentifier } from "../../shared/account-utils";
-import { toMoneyNumber } from "../../shared/money";
 import {
   assertRecord,
   requireArrayField,
@@ -11,18 +6,15 @@ import {
   requireStringField,
 } from "../input-validation";
 import { ensureAuthorizedAccountBookMutation } from "../mutation-guard.server";
-import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/opening-balances";
-import { validateRebookGainLossSimpleTransactionInvariant } from "./rebook-gain-loss-validation";
-import { validateRebookBookingTarget } from "./rebook-booking-validation";
-import {
-  accountTypeMeta,
-  buildTransactionCreateData,
-  getBookingUnitFields,
-  validateAccountTypeBookings,
-  validateAccountTypeBookingsWithAccounts,
-  validateCreateTransaction,
-} from "./transactions-helpers";
 import { invalidatePeriodBaseDataCacheForAccountBook } from "../period/period-base-data-cache";
+import {
+  createSimpleTransactionOperation,
+  createTransactionOperation,
+  deleteTransactionOperation,
+  rebookBookingOperation,
+  updateTransactionOperation,
+  type TransactionMutationOperationResult,
+} from "./transactions-mutation-operations";
 import type {
   CreateSimpleTransactionInput,
   CreateTransactionInput,
@@ -100,410 +92,54 @@ function validateDeleteTransactionInput(data: unknown): {
   };
 }
 
+async function runTransactionMutation<T>(
+  accountBookId: string,
+  operation: () => Promise<TransactionMutationOperationResult<T>>,
+): Promise<T> {
+  await ensureAuthorizedAccountBookMutation(accountBookId);
+  const result = await operation();
+  if (result.invalidatePeriodCache) {
+    await invalidatePeriodBaseDataCacheForAccountBook(accountBookId);
+  }
+  return result.data;
+}
+
 export const updateTransaction = createServerFn({ method: "POST" })
   .inputValidator(validateUpdateTransactionInput)
-  .handler(async ({ data }) => {
-    await ensureAuthorizedAccountBookMutation(data.accountBookId);
-    const existingOpeningBookingCount = await prisma.booking.count({
-      where: {
-        accountBookId: data.accountBookId,
-        transactionId: data.transactionId,
-        account: {
-          type: AccountType.EQUITY,
-          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-        },
-      },
-    });
-    if (existingOpeningBookingCount > 0) {
-      throw new Error(OPENING_BALANCES_MANAGEMENT_MESSAGE);
-    }
-
-    validateCreateTransaction(data);
-    await validateAccountTypeBookings(data.bookings, data.accountBookId);
-
-    await prisma.$transaction([
-      prisma.booking.deleteMany({
-        where: {
-          transactionId: data.transactionId,
-          accountBookId: data.accountBookId,
-        },
-      }),
-      prisma.transaction.update({
-        where: {
-          id_accountBookId: {
-            id: data.transactionId,
-            accountBookId: data.accountBookId,
-          },
-        },
-        data: {
-          description: data.description,
-          bookings: {
-            create: data.bookings.map((b, sortOrder) => ({
-              date: new Date(b.date),
-              description: b.description,
-              account: {
-                connect: {
-                  id_accountBookId: {
-                    id: b.accountId,
-                    accountBookId: data.accountBookId,
-                  },
-                },
-              },
-              unit: b.unit,
-              currency: b.currency,
-              cryptocurrency: b.cryptocurrency,
-              symbol: b.symbol,
-              tradeCurrency: b.tradeCurrency,
-              value: b.value,
-              sortOrder,
-              accountBook: {
-                connect: { id: data.accountBookId },
-              },
-            })),
-          },
-        },
-      }),
-    ]);
-    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
-  });
+  .handler(async ({ data }) =>
+    runTransactionMutation(data.accountBookId, () =>
+      updateTransactionOperation(data),
+    ),
+  );
 
 export const createTransaction = createServerFn({ method: "POST" })
   .inputValidator(validateCreateTransactionInput)
-  .handler(async ({ data }) => {
-    await ensureAuthorizedAccountBookMutation(data.accountBookId);
-    validateCreateTransaction(data);
-    await validateAccountTypeBookings(data.bookings, data.accountBookId);
-
-    const transaction = await prisma.transaction.create({
-      data: buildTransactionCreateData(data),
-    });
-    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
-
-    return transaction;
-  });
+  .handler(async ({ data }) =>
+    runTransactionMutation(data.accountBookId, () =>
+      createTransactionOperation(data),
+    ),
+  );
 
 export const createSimpleTransaction = createServerFn({ method: "POST" })
   .inputValidator(validateCreateSimpleTransactionInput)
-  .handler(async ({ data }) => {
-    await ensureAuthorizedAccountBookMutation(data.accountBookId);
-
-    if (!Number.isFinite(data.amount) || data.amount <= 0) {
-      throw new Error("Amount must be greater than zero.");
-    }
-    if (data.direction !== "DEBIT" && data.direction !== "CREDIT") {
-      throw new Error("Direction must be either DEBIT or CREDIT.");
-    }
-
-    if (typeof data.date !== "string" || data.date.trim() === "") {
-      throw new Error("Date is required.");
-    }
-
-    const bookingDate = new Date(data.date);
-    const today = startOfDay(new Date());
-
-    if (isNaN(bookingDate.getTime())) {
-      throw new Error("Date is invalid.");
-    }
-    if (isAfter(startOfDay(bookingDate), today)) {
-      throw new Error("Date cannot be in the future.");
-    }
-
-    if (data.accountId === data.counterAccountId) {
-      throw new Error(
-        "Counter account must be different from the current account.",
-      );
-    }
-
-    const [accounts, accountBook] = await Promise.all([
-      prisma.account.findMany({
-        where: {
-          accountBookId: data.accountBookId,
-          id: { in: [data.accountId, data.counterAccountId] },
-        },
-        select: {
-          id: true,
-          type: true,
-          equityAccountSubtype: true,
-          unit: true,
-          currency: true,
-          cryptocurrency: true,
-          symbol: true,
-          tradeCurrency: true,
-          isActive: true,
-        },
-      }),
-      prisma.accountBook.findUniqueOrThrow({
-        where: { id: data.accountBookId },
-        select: { startDate: true },
-      }),
-    ]);
-
-    const currentAccount = accounts.find(
-      (account) => account.id === data.accountId,
-    );
-    const counterAccount = accounts.find(
-      (account) => account.id === data.counterAccountId,
-    );
-
-    if (!currentAccount) {
-      throw new Error("Current account was not found.");
-    }
-    if (!counterAccount) {
-      throw new Error("Counter account was not found.");
-    }
-
-    if (
-      currentAccount.type !== AccountType.ASSET &&
-      currentAccount.type !== AccountType.LIABILITY
-    ) {
-      throw new Error(
-        "Simple transactions are only allowed for asset or liability accounts.",
-      );
-    }
-
-    if (!counterAccount.isActive) {
-      throw new Error("Counter account must be active.");
-    }
-
-    const currentUnitIdentifier =
-      getSimpleTransactionUnitIdentifier(currentAccount);
-    if (!currentUnitIdentifier) {
-      throw new Error("Current account unit details are incomplete.");
-    }
-
-    if (
-      counterAccount.type !== AccountType.EQUITY &&
-      counterAccount.type !== AccountType.ASSET &&
-      counterAccount.type !== AccountType.LIABILITY
-    ) {
-      throw new Error("Account type is not supported for simple transactions.");
-    }
-
-    if (
-      counterAccount.type === AccountType.ASSET ||
-      counterAccount.type === AccountType.LIABILITY
-    ) {
-      const counterUnitIdentifier =
-        getSimpleTransactionUnitIdentifier(counterAccount);
-      if (!counterUnitIdentifier) {
-        throw new Error("Counter account unit details are incomplete.");
-      }
-      if (counterUnitIdentifier !== currentUnitIdentifier) {
-        throw new Error(
-          "Asset and liability accounts must use the same unit as the current account.",
-        );
-      }
-    }
-
-    if (
-      counterAccount.type === AccountType.EQUITY &&
-      counterAccount.equityAccountSubtype === EquityAccountSubtype.INCOME &&
-      data.direction !== "DEBIT"
-    ) {
-      throw new Error(
-        "Income accounts require a debit on the current account.",
-      );
-    }
-    if (
-      counterAccount.type === AccountType.EQUITY &&
-      counterAccount.equityAccountSubtype === EquityAccountSubtype.EXPENSE &&
-      data.direction !== "CREDIT"
-    ) {
-      throw new Error(
-        "Expense accounts require a credit on the current account.",
-      );
-    }
-
-    const currentBookingUnitFields = getBookingUnitFields(
-      currentAccount,
-      "current account",
-    );
-    const counterBookingUnitFields =
-      counterAccount.type === AccountType.EQUITY
-        ? currentBookingUnitFields
-        : getBookingUnitFields(counterAccount, "counter account");
-
-    const currentValue =
-      data.direction === "DEBIT" ? data.amount : -data.amount;
-    const createInput: CreateTransactionInput = {
-      accountBookId: data.accountBookId,
-      description: data.description,
-      bookings: [
-        {
-          date: bookingDate.toISOString(),
-          accountId: currentAccount.id,
-          description: "",
-          ...currentBookingUnitFields,
-          value: currentValue,
-        },
-        {
-          date: bookingDate.toISOString(),
-          accountId: counterAccount.id,
-          description: "",
-          ...counterBookingUnitFields,
-          value: -currentValue,
-        },
-      ],
-    };
-
-    validateCreateTransaction(createInput);
-    const accountMap = new Map(
-      [currentAccount, counterAccount].map((account) => [
-        account.id,
-        accountTypeMeta(account),
-      ]),
-    );
-    validateAccountTypeBookingsWithAccounts(createInput.bookings, accountMap, {
-      accountBookStartDate: accountBook.startDate,
-    });
-
-    const transaction = await prisma.transaction.create({
-      data: buildTransactionCreateData(createInput),
-    });
-    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
-
-    return transaction;
-  });
+  .handler(async ({ data }) =>
+    runTransactionMutation(data.accountBookId, () =>
+      createSimpleTransactionOperation(data),
+    ),
+  );
 
 export const rebookBooking = createServerFn({ method: "POST" })
   .inputValidator(validateRebookBookingInput)
-  .handler(async ({ data }) => {
-    await ensureAuthorizedAccountBookMutation(data.accountBookId);
-
-    const [booking, targetAccount, accountBook] = await Promise.all([
-      prisma.booking.findUnique({
-        where: {
-          id_accountBookId: {
-            id: data.bookingId,
-            accountBookId: data.accountBookId,
-          },
-        },
-        select: {
-          id: true,
-          date: true,
-          accountId: true,
-          unit: true,
-          currency: true,
-          cryptocurrency: true,
-          symbol: true,
-          tradeCurrency: true,
-          value: true,
-          transactionId: true,
-        },
-      }),
-      prisma.account.findUnique({
-        where: {
-          id_accountBookId: {
-            id: data.targetAccountId,
-            accountBookId: data.accountBookId,
-          },
-        },
-        select: {
-          id: true,
-          isActive: true,
-          unit: true,
-          currency: true,
-          cryptocurrency: true,
-          symbol: true,
-          tradeCurrency: true,
-          type: true,
-          equityAccountSubtype: true,
-        },
-      }),
-      prisma.accountBook.findUniqueOrThrow({
-        where: { id: data.accountBookId },
-        select: { startDate: true },
-      }),
-    ]);
-
-    if (!booking) {
-      throw new Error("Booking was not found.");
-    }
-    if (!targetAccount) {
-      throw new Error("Target account was not found.");
-    }
-    const sourceTransactionOpeningBookingCount = await prisma.booking.count({
-      where: {
-        accountBookId: data.accountBookId,
-        transactionId: booking.transactionId,
-        account: {
-          type: AccountType.EQUITY,
-          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-        },
-      },
-    });
-
-    validateRebookBookingTarget({
-      booking: {
-        accountId: booking.accountId,
-        date: booking.date,
-        unit: booking.unit,
-        currency: booking.currency,
-        cryptocurrency: booking.cryptocurrency,
-        symbol: booking.symbol,
-        tradeCurrency: booking.tradeCurrency,
-        value: toMoneyNumber(booking.value),
-      },
-      targetAccount,
-      accountBookStartDate: accountBook.startDate,
-      sourceTransactionContainsOpeningBalancesBooking:
-        sourceTransactionOpeningBookingCount > 0,
-    });
-
-    await validateRebookGainLossSimpleTransactionInvariant({
-      accountBookId: data.accountBookId,
-      transactionId: booking.transactionId,
-      bookingId: booking.id,
-      targetAccount,
-    });
-
-    await prisma.booking.update({
-      where: {
-        id_accountBookId: {
-          id: booking.id,
-          accountBookId: data.accountBookId,
-        },
-      },
-      data: {
-        account: {
-          connect: {
-            id_accountBookId: {
-              id: targetAccount.id,
-              accountBookId: data.accountBookId,
-            },
-          },
-        },
-      },
-    });
-    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
-
-    return { transactionId: booking.transactionId };
-  });
+  .handler(async ({ data }) =>
+    runTransactionMutation(data.accountBookId, () =>
+      rebookBookingOperation(data),
+    ),
+  );
 
 export const deleteTransaction = createServerFn({ method: "POST" })
   .inputValidator(validateDeleteTransactionInput)
-  .handler(async ({ data }) => {
-    await ensureAuthorizedAccountBookMutation(data.accountBookId);
-    const openingBookingCount = await prisma.booking.count({
-      where: {
-        accountBookId: data.accountBookId,
-        transactionId: data.transactionId,
-        account: {
-          type: AccountType.EQUITY,
-          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-        },
-      },
-    });
-    if (openingBookingCount > 0) {
-      throw new Error(OPENING_BALANCES_MANAGEMENT_MESSAGE);
-    }
-    await prisma.transaction.delete({
-      where: {
-        id_accountBookId: {
-          id: data.transactionId,
-          accountBookId: data.accountBookId,
-        },
-      },
-    });
-    await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
-  });
+  .handler(async ({ data }) =>
+    runTransactionMutation(data.accountBookId, () =>
+      deleteTransactionOperation(data),
+    ),
+  );
