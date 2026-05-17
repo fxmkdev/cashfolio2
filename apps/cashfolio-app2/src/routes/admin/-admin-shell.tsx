@@ -9,7 +9,7 @@ import {
   type TextProps,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconHome2, IconLayoutDashboard } from "@tabler/icons-react";
+import { IconArrowLeft, IconLayoutDashboard } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import type { AuthenticatedUserProfile } from "@/auth/user-profile";
 import { LinkNavLink } from "@/components/link-nav-link";
@@ -86,7 +86,7 @@ export function AdminShell({
           <Stack gap="xs" pt="sm">
             <LinkNavLink
               label="Back to App"
-              leftSection={<IconHome2 size={16} />}
+              leftSection={<IconArrowLeft size={16} />}
               onClick={closeMobile}
               to="/"
             />
