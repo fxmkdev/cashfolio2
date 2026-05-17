@@ -20,6 +20,7 @@ import {
   getDateInputValueFormat,
   normalizeDateInputValue,
   startOfUtcDay,
+  startOfUtcMonth,
 } from "@/shared/date";
 import { createDocumentTitleHead } from "@/shared/document-title";
 import { UserLocaleProvider, useUserLocale } from "@/user-locale-context";
@@ -138,7 +139,7 @@ function NewAccountBookPageContent({
     initialValues: {
       name: "",
       referenceCurrency: "CHF",
-      startDate: startOfUtcDay(new Date()),
+      startDate: startOfUtcMonth(new Date()),
     },
     validate: {
       name: (value) =>

@@ -9,6 +9,7 @@ import {
   normalizeDateInputValue,
   isSameUtcDay,
   startOfUtcDay,
+  startOfUtcMonth,
 } from "./date";
 
 describe("shared/date", () => {
@@ -16,6 +17,12 @@ describe("shared/date", () => {
     const result = startOfUtcDay(new Date("2026-04-20T17:42:11.123Z"));
 
     expect(result.toISOString()).toBe("2026-04-20T00:00:00.000Z");
+  });
+
+  test("startOfUtcMonth normalizes to the first day of the UTC month", () => {
+    const result = startOfUtcMonth(new Date("2026-05-17T11:42:11.123Z"));
+
+    expect(result.toISOString()).toBe("2026-05-01T00:00:00.000Z");
   });
 
   test("getOpeningBalancesBookingDate returns account-book start day minus one day", () => {

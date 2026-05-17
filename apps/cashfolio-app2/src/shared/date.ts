@@ -7,6 +7,10 @@ export function startOfUtcDay(date: Date): Date {
   );
 }
 
+export function startOfUtcMonth(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+}
+
 export const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export function addUtcDays(date: Date, days: number): Date {
