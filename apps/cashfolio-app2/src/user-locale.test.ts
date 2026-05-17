@@ -6,7 +6,6 @@ import {
   normalizeUserLocaleInput,
   resolveSupportedUserLocale,
   resolveUserLocaleFromAcceptLanguage,
-  USER_LOCALE_OPTION_GROUPS,
   USER_LOCALE_OPTIONS,
 } from "./user-locale";
 
@@ -36,17 +35,38 @@ describe("user locale helpers", () => {
     expect(DEFAULT_USER_LOCALE).toBe("en-US");
   });
 
-  it("exposes grouped options and formatting samples for all supported locales", () => {
+  it("exposes flat label-sorted options and formatting samples for all supported locales", () => {
     expect(USER_LOCALE_OPTIONS).toHaveLength(20);
     expect(
       new Set(USER_LOCALE_OPTIONS.map((option) => option.value)).size,
     ).toBe(20);
-    expect(USER_LOCALE_OPTION_GROUPS).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ group: "Switzerland" }),
-        expect.objectContaining({ group: "United States" }),
-      ]),
-    );
+    expect(USER_LOCALE_OPTIONS.map((option) => option.label)).toEqual([
+      "Dutch (Netherlands)",
+      "English (Australia)",
+      "English (Canada)",
+      "English (Hong Kong)",
+      "English (India)",
+      "English (Singapore)",
+      "English (Switzerland)",
+      "English (United Kingdom)",
+      "English (United States)",
+      "French (Belgium)",
+      "French (Canada)",
+      "French (France)",
+      "French (Switzerland)",
+      "German (Austria)",
+      "German (Germany)",
+      "German (Switzerland)",
+      "Italian (Italy)",
+      "Italian (Switzerland)",
+      "Japanese (Japan)",
+      "Spanish (Spain)",
+    ]);
+    expect(Object.keys(USER_LOCALE_OPTIONS[0] ?? {}).toSorted()).toEqual([
+      "label",
+      "sample",
+      "value",
+    ]);
     expect(formatUserLocaleSample("en-US")).toBe("May 17, 2026 · 1,234,567.89");
   });
 });

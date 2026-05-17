@@ -28,94 +28,36 @@ export type UserLocale = (typeof SUPPORTED_USER_LOCALES)[number];
 export type UserLocaleOption = {
   value: UserLocale;
   label: string;
-  country: string;
   sample: string;
-};
-
-export type UserLocaleOptionGroup = {
-  group: string;
-  items: Array<{
-    value: UserLocale;
-    label: string;
-  }>;
 };
 
 const SAMPLE_DATE = new Date(Date.UTC(2026, 4, 17));
 const SAMPLE_NUMBER = 1234567.89;
 
-const USER_LOCALE_OPTION_GROUP_DEFINITIONS: UserLocaleOptionGroup[] = [
-  {
-    group: "Australia",
-    items: [{ value: "en-AU", label: "English (Australia)" }],
-  },
-  {
-    group: "Austria",
-    items: [{ value: "de-AT", label: "German (Austria)" }],
-  },
-  {
-    group: "Belgium",
-    items: [{ value: "fr-BE", label: "French (Belgium)" }],
-  },
-  {
-    group: "Canada",
-    items: [
-      { value: "en-CA", label: "English (Canada)" },
-      { value: "fr-CA", label: "French (Canada)" },
-    ],
-  },
-  {
-    group: "France",
-    items: [{ value: "fr-FR", label: "French (France)" }],
-  },
-  {
-    group: "Germany",
-    items: [{ value: "de-DE", label: "German (Germany)" }],
-  },
-  {
-    group: "Hong Kong",
-    items: [{ value: "en-HK", label: "English (Hong Kong)" }],
-  },
-  {
-    group: "India",
-    items: [{ value: "en-IN", label: "English (India)" }],
-  },
-  {
-    group: "Italy",
-    items: [{ value: "it-IT", label: "Italian (Italy)" }],
-  },
-  {
-    group: "Japan",
-    items: [{ value: "ja-JP", label: "Japanese (Japan)" }],
-  },
-  {
-    group: "Netherlands",
-    items: [{ value: "nl-NL", label: "Dutch (Netherlands)" }],
-  },
-  {
-    group: "Singapore",
-    items: [{ value: "en-SG", label: "English (Singapore)" }],
-  },
-  {
-    group: "Spain",
-    items: [{ value: "es-ES", label: "Spanish (Spain)" }],
-  },
-  {
-    group: "Switzerland",
-    items: [
-      { value: "en-CH", label: "English (Switzerland)" },
-      { value: "de-CH", label: "German (Switzerland)" },
-      { value: "fr-CH", label: "French (Switzerland)" },
-      { value: "it-CH", label: "Italian (Switzerland)" },
-    ],
-  },
-  {
-    group: "United Kingdom",
-    items: [{ value: "en-GB", label: "English (United Kingdom)" }],
-  },
-  {
-    group: "United States",
-    items: [{ value: "en-US", label: "English (United States)" }],
-  },
+const USER_LOCALE_OPTION_DEFINITIONS: Array<{
+  value: UserLocale;
+  label: string;
+}> = [
+  { value: "nl-NL", label: "Dutch (Netherlands)" },
+  { value: "en-AU", label: "English (Australia)" },
+  { value: "en-CA", label: "English (Canada)" },
+  { value: "en-HK", label: "English (Hong Kong)" },
+  { value: "en-IN", label: "English (India)" },
+  { value: "en-SG", label: "English (Singapore)" },
+  { value: "en-CH", label: "English (Switzerland)" },
+  { value: "en-GB", label: "English (United Kingdom)" },
+  { value: "en-US", label: "English (United States)" },
+  { value: "fr-BE", label: "French (Belgium)" },
+  { value: "fr-CA", label: "French (Canada)" },
+  { value: "fr-FR", label: "French (France)" },
+  { value: "fr-CH", label: "French (Switzerland)" },
+  { value: "de-AT", label: "German (Austria)" },
+  { value: "de-DE", label: "German (Germany)" },
+  { value: "de-CH", label: "German (Switzerland)" },
+  { value: "it-IT", label: "Italian (Italy)" },
+  { value: "it-CH", label: "Italian (Switzerland)" },
+  { value: "ja-JP", label: "Japanese (Japan)" },
+  { value: "es-ES", label: "Spanish (Spain)" },
 ];
 
 export function formatUserLocaleSample(locale: UserLocale): string {
@@ -129,18 +71,9 @@ export function formatUserLocaleSample(locale: UserLocale): string {
 }
 
 export const USER_LOCALE_OPTIONS: UserLocaleOption[] =
-  USER_LOCALE_OPTION_GROUP_DEFINITIONS.flatMap(({ group, items }) =>
-    items.map((item) => ({
-      ...item,
-      country: group,
-      sample: formatUserLocaleSample(item.value),
-    })),
-  );
-
-export const USER_LOCALE_OPTION_GROUPS: UserLocaleOptionGroup[] =
-  USER_LOCALE_OPTION_GROUP_DEFINITIONS.map(({ group, items }) => ({
-    group,
-    items: items.map((item) => ({ ...item })),
+  USER_LOCALE_OPTION_DEFINITIONS.map((item) => ({
+    ...item,
+    sample: formatUserLocaleSample(item.value),
   }));
 
 const supportedLocaleLookup = new Map<string, UserLocale>(

@@ -19,7 +19,6 @@ import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import {
   isSupportedUserLocale,
   resolveSupportedUserLocale,
-  USER_LOCALE_OPTION_GROUPS,
   USER_LOCALE_OPTIONS,
 } from "@/user-locale";
 import type { loadUserSettingsPageData } from "./-page-loader";
@@ -193,7 +192,7 @@ export function UserSettingsPageView(args: {
             disabled={isSubmitting}
             searchable
             nothingFoundMessage="No regional format found"
-            data={USER_LOCALE_OPTION_GROUPS}
+            data={USER_LOCALE_OPTIONS}
             {...form.getInputProps("locale")}
           />
 
