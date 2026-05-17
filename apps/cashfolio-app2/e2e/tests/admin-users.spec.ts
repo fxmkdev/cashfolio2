@@ -36,8 +36,9 @@ test("admin users page manages a user's Admin role from the row action dialog", 
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText(targetUserExternalId);
 
-  await dialog.getByText("Admin", { exact: true }).click();
-  await expect(dialog.getByLabel("Admin")).toBeChecked();
+  const adminSwitch = dialog.getByRole("switch", { name: "Admin" });
+  await adminSwitch.click();
+  await expect(adminSwitch).toBeChecked();
   await dialog.getByRole("button", { name: "Save" }).click();
 
   await expect(dialog).toBeHidden();
