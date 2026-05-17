@@ -105,7 +105,7 @@ Required env vars:
 
 - `E2E_TEST_MODE=true`
 - `E2E_AUTH_BYPASS=true`
-- `E2E_AUTH_EXTERNAL_ID=<external-id-used-for-seeded-user>`
+- `E2E_AUTH_EXTERNAL_ID=<fallback-external-id-used-for-seeded-user>`
 
 When bypass is disabled, app auth behavior remains unchanged.
 
@@ -126,12 +126,17 @@ When bypass is disabled, app auth behavior remains unchanged.
 
 - Tests run against PostgreSQL.
 - The suite runs a one-time DB reset in Playwright global setup.
-- Each spec file seeds an isolated account-book-scoped dataset in `beforeAll()`.
+- CI runs two Playwright workers per shard. Playwright keeps
+  `fullyParallel=false`, so workers run spec files in parallel while tests
+  within a spec file remain serial.
+- Each worker gets a unique e2e auth external id through `e2e/support/fixtures`.
+- Each spec file seeds an isolated account-book-scoped dataset in `beforeAll()`
+  for its worker-scoped user.
 - Specs that need a different authenticated user can set the e2e-only
   `cashfolio-e2e-external-id` cookie. The auth bypass reads this cookie only
   when both `E2E_TEST_MODE=true` and `E2E_AUTH_BYPASS=true`.
 - Seeding creates:
-  - a user with `E2E_AUTH_EXTERNAL_ID`
+  - a user with the worker-scoped e2e external id
   - an account book and user-account-book link
   - root account groups
   - baseline asset/expense accounts used in core transaction flows
@@ -146,7 +151,8 @@ pnpm --filter cashfolio-app2 e2e:ci
 
 `e2e:ci` supports:
 
-- `E2E_WORKERS` to control Playwright worker parallelism in CI.
+- `E2E_WORKERS` to control Playwright worker parallelism in CI; CI defaults to
+  `2` workers per shard.
 - `E2E_SHARD` to run a single Playwright shard (format: `index/total`).
 
 Default local DB URL fallback for e2e is:

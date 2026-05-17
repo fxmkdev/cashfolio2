@@ -15,6 +15,14 @@ export const getFirstUserAccountBookId = createServerFn({
   const link = await prisma.userAccountBookLink.findFirst({
     where: { userId: user.id },
     select: { accountBookId: true },
+    orderBy: [
+      {
+        accountBook: {
+          name: "asc",
+        },
+      },
+      { accountBookId: "asc" },
+    ],
   });
 
   return link?.accountBookId ?? null;

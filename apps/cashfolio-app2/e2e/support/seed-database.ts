@@ -45,16 +45,18 @@ type SeededAccounts = {
 
 async function createSeedAccountBook(args?: {
   accountBookStartDate?: Date;
+  userExternalId?: string;
   userRoles?: UserRole[];
-}): Promise<{ accountBookId: string }> {
+}): Promise<{ accountBookId: string; userExternalId: string }> {
+  const userExternalId = args?.userExternalId ?? DEFAULT_EXTERNAL_ID;
   const user = await prisma.user.upsert({
     where: {
-      externalId: DEFAULT_EXTERNAL_ID,
+      externalId: userExternalId,
     },
     update: args?.userRoles ? { roles: args.userRoles } : {},
     create: {
       id: createId(),
-      externalId: DEFAULT_EXTERNAL_ID,
+      externalId: userExternalId,
       roles: args?.userRoles,
     },
   });
@@ -76,7 +78,7 @@ async function createSeedAccountBook(args?: {
     },
   });
 
-  return { accountBookId: accountBook.id };
+  return { accountBookId: accountBook.id, userExternalId };
 }
 
 async function createSeedGroups(accountBookId: string): Promise<SeededGroups> {
@@ -262,11 +264,12 @@ async function createSeedAccounts(args: {
 
 export async function seedDatabase(args?: {
   accountBookStartDate?: Date;
+  userExternalId?: string;
   userRoles?: UserRole[];
 }): Promise<SeededData> {
   assertSafeWriteTarget();
 
-  const { accountBookId } = await createSeedAccountBook(args);
+  const { accountBookId, userExternalId } = await createSeedAccountBook(args);
   const groups = await createSeedGroups(accountBookId);
   const accounts = await createSeedAccounts({
     accountBookId,
@@ -276,7 +279,7 @@ export async function seedDatabase(args?: {
 
   return {
     accountBookId,
-    userExternalId: DEFAULT_EXTERNAL_ID,
+    userExternalId,
     equityGroupId: groups.equityGroupId,
     expenseGroupId: groups.expenseGroupId,
     ...accounts,

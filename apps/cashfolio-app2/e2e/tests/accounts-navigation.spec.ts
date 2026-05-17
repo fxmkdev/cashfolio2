@@ -1,11 +1,14 @@
-import { expect, test } from "@playwright/test";
 import { UserRole } from "../../src/.prisma-client/enums";
 import { seedDatabase, type SeededData } from "../support/db";
+import { expect, test } from "../support/fixtures";
 
 let seeded: SeededData;
 
-test.beforeAll(async () => {
-  seeded = await seedDatabase({ userRoles: [UserRole.ADMIN] });
+test.beforeAll(async ({ e2eExternalId }) => {
+  seeded = await seedDatabase({
+    userExternalId: e2eExternalId,
+    userRoles: [UserRole.ADMIN],
+  });
 });
 
 test("account-book sidebar links navigate between key sections", async ({

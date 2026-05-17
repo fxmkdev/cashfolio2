@@ -1,15 +1,15 @@
-import { expect, test } from "@playwright/test";
 import {
   seedDatabase,
   seedThreeBookingSplitTransaction,
   type SeededData,
 } from "../support/db";
+import { expect, test } from "../support/fixtures";
 import { selectSegmentedControlOption } from "../support/segmented-control";
 
 let seeded: SeededData;
 
-test.beforeAll(async () => {
-  seeded = await seedDatabase();
+test.beforeAll(async ({ e2eExternalId }) => {
+  seeded = await seedDatabase({ userExternalId: e2eExternalId });
   await seedThreeBookingSplitTransaction({
     accountBookId: seeded.accountBookId,
     description: "E2E History Expense Scope Seed",

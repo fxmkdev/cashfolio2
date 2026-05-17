@@ -1,37 +1,13 @@
-import {
-  expect,
-  test,
-  type BrowserContext,
-  type TestInfo,
-} from "@playwright/test";
 import { createId } from "@paralleldrive/cuid2";
 import {
   AccountType,
   EquityAccountSubtype,
 } from "../../src/.prisma-client/enums";
-import { E2E_AUTH_EXTERNAL_ID_COOKIE } from "../../src/auth/e2e-auth";
 import { getAccountsForAccountBook, getUserAccountBooks } from "../support/db";
+import { expect, test, useIsolatedE2EUser } from "../support/fixtures";
 
 const activeAssetAccountsUrlPattern =
   /\/[^/]+\/accounts\?(?=.*\bmode=active\b)(?=.*\btab=ASSET\b)/;
-
-async function useIsolatedUser(context: BrowserContext, testInfo: TestInfo) {
-  const externalId = `e2e-${testInfo.workerIndex}-${createId()}`;
-  const baseURL =
-    typeof testInfo.project.use.baseURL === "string"
-      ? testInfo.project.use.baseURL
-      : "http://127.0.0.1:4173";
-
-  await context.addCookies([
-    {
-      name: E2E_AUTH_EXTERNAL_ID_COOKIE,
-      value: externalId,
-      url: baseURL,
-    },
-  ]);
-
-  return externalId;
-}
 
 function getAccountBookIdFromAccountsUrl(url: string): string {
   const match = new URL(url).pathname.match(/^\/([^/]+)\/accounts$/);
@@ -46,7 +22,7 @@ test("redirects users without account books to account-book creation", async ({
   context,
   page,
 }, testInfo) => {
-  const externalId = await useIsolatedUser(context, testInfo);
+  const externalId = await useIsolatedE2EUser(context, testInfo);
 
   await page.goto("/");
 
@@ -65,7 +41,7 @@ test("creates a new empty account book and makes it available in navigation", as
   context,
   page,
 }, testInfo) => {
-  const externalId = await useIsolatedUser(context, testInfo);
+  const externalId = await useIsolatedE2EUser(context, testInfo);
   const firstAccountBookName = `E2E Alpha ${createId()}`;
   const secondAccountBookName = `E2E Beta ${createId()}`;
 
@@ -150,7 +126,7 @@ test("deletes an account book after typed-name confirmation and redirects to cre
   context,
   page,
 }, testInfo) => {
-  const externalId = await useIsolatedUser(context, testInfo);
+  const externalId = await useIsolatedE2EUser(context, testInfo);
   const accountBookName = `E2E Deleted ${createId()}`;
 
   await page.goto("/account-books/new");

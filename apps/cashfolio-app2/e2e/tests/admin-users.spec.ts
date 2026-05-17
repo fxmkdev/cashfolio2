@@ -1,12 +1,16 @@
-import { expect, test } from "@playwright/test";
 import { UserRole } from "../../src/.prisma-client/enums";
 import { seedDatabase } from "../support/db";
 import { prisma } from "../support/db-client";
+import { expect, test } from "../support/fixtures";
 
-const targetUserExternalId = "e2e-admin-users-role-target";
+let targetUserExternalId: string;
 
-test.beforeAll(async () => {
-  await seedDatabase({ userRoles: [UserRole.ADMIN] });
+test.beforeAll(async ({ e2eExternalId }) => {
+  targetUserExternalId = `${e2eExternalId}-role-target`;
+  await seedDatabase({
+    userExternalId: e2eExternalId,
+    userRoles: [UserRole.ADMIN],
+  });
   await prisma.user.upsert({
     where: { externalId: targetUserExternalId },
     update: { roles: [] },

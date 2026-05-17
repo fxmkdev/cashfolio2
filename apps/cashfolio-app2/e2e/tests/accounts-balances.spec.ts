@@ -1,4 +1,3 @@
-import { expect, test } from "@playwright/test";
 import {
   agGridCellByColId,
   agGridPinnedBottomRow,
@@ -11,11 +10,12 @@ import {
   seedNonZeroConvertibleAssetBalances,
   type SeededData,
 } from "../support/db";
+import { expect, test } from "../support/fixtures";
 
 let seeded: SeededData;
 
-test.beforeAll(async () => {
-  seeded = await seedDatabase();
+test.beforeAll(async ({ e2eExternalId }) => {
+  seeded = await seedDatabase({ userExternalId: e2eExternalId });
 });
 
 test("balance column visibility and baseline values across tabs/modes", async ({
