@@ -79,7 +79,7 @@ describe("deleteBookScopedRedisDataForAccountBooks", () => {
       COUNT: 100,
     });
     expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:timeline:metrics:v1:*:book-1:*",
+      MATCH: "period:history:metrics:v1:*:book-1:*",
       COUNT: 100,
     });
     expect(redis.del).toHaveBeenCalledTimes(4);

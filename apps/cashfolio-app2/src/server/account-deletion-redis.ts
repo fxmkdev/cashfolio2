@@ -4,7 +4,7 @@ const BOOK_SCOPED_REDIS_KEY_PATTERNS = [
   "period:base:v1:*:{accountBookId}:*",
   "period:base:index:v1:*:{accountBookId}:*",
   "period:base:generation:v1:*:{accountBookId}",
-  "period:timeline:metrics:v1:*:{accountBookId}:*",
+  "period:history:metrics:v1:*:{accountBookId}:*",
 ] as const;
 
 let hasWarnedAccountDeletionRedisCleanupFailure = false;
