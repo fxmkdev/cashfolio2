@@ -1,10 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { UserRole } from "../../src/.prisma-client/enums";
 import { seedDatabase, type SeededData } from "../support/db";
 
 let seeded: SeededData;
 
 test.beforeAll(async () => {
-  seeded = await seedDatabase();
+  seeded = await seedDatabase({ userRoles: [UserRole.ADMIN] });
 });
 
 test("account-book sidebar links navigate between key sections", async ({
