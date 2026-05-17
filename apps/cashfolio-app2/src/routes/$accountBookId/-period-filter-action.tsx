@@ -17,7 +17,7 @@ import type { PeriodMode } from "@/shared/period-selector-model";
 import { useUserLocale } from "@/user-locale-context";
 import classes from "./-period-filter-action.module.css";
 
-type PeriodFilterActionProps = {
+export type PeriodFilterActionProps = {
   periodMode: PeriodMode;
   selectedPeriodLabel: string;
   pickerOpened: boolean;

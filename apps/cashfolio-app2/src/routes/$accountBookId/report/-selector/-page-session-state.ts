@@ -6,21 +6,24 @@ import type {
   GainsLossesChartType,
 } from "../-breakdown/-breakdown-types";
 
-type DrillPathByBreakdown = Record<BreakdownType, string[]>;
-type DrillPathByAllocationBreakdown = Record<AllocationBreakdownType, string[]>;
-type DrillPathByBreakdownUpdater =
+export type DrillPathByBreakdown = Record<BreakdownType, string[]>;
+export type DrillPathByAllocationBreakdown = Record<
+  AllocationBreakdownType,
+  string[]
+>;
+export type DrillPathByBreakdownUpdater =
   | DrillPathByBreakdown
   | ((previousValue: DrillPathByBreakdown) => DrillPathByBreakdown);
-type DrillPathByAllocationBreakdownUpdater =
+export type DrillPathByAllocationBreakdownUpdater =
   | DrillPathByAllocationBreakdown
   | ((
       previousValue: DrillPathByAllocationBreakdown,
     ) => DrillPathByAllocationBreakdown);
-type DrillPathByGainsLossesUpdater =
+export type DrillPathByGainsLossesUpdater =
   | string[]
   | ((previousValue: string[]) => string[]);
 
-type ReportPageSessionState = {
+export type ReportPageSessionState = {
   selectedBreakdown: BreakdownType;
   selectedChartType: BreakdownChartType;
   selectedAllocationBreakdown: AllocationBreakdownType;
