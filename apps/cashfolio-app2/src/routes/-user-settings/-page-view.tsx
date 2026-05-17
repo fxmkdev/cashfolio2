@@ -3,7 +3,6 @@ import {
   Button,
   Group,
   Select,
-  type SelectProps,
   Stack,
   Text,
   TextInput,
@@ -22,7 +21,6 @@ import {
   resolveSupportedUserLocale,
   USER_LOCALE_OPTION_GROUPS,
   USER_LOCALE_OPTIONS,
-  type UserLocale,
 } from "@/user-locale";
 import type { loadUserSettingsPageData } from "./-page-loader";
 import type { UserSettingsReturnTarget } from "./-return-target";
@@ -40,23 +38,6 @@ type UserSettingsFormValues = {
 const userLocaleOptionByValue = new Map(
   USER_LOCALE_OPTIONS.map((option) => [option.value, option]),
 );
-
-const renderRegionalFormatOption: SelectProps["renderOption"] = ({
-  option,
-}) => {
-  const localeOption = userLocaleOptionByValue.get(option.value as UserLocale);
-
-  return (
-    <Stack gap={0}>
-      <Text size="sm">{option.label}</Text>
-      {localeOption ? (
-        <Text size="xs" c="dimmed">
-          {localeOption.sample}
-        </Text>
-      ) : null}
-    </Stack>
-  );
-};
 
 function validateAvatarUrl(value: string) {
   const normalized = value.trim();
@@ -213,7 +194,6 @@ export function UserSettingsPageView(args: {
             searchable
             nothingFoundMessage="No regional format found"
             data={USER_LOCALE_OPTION_GROUPS}
-            renderOption={renderRegionalFormatOption}
             {...form.getInputProps("locale")}
           />
 
