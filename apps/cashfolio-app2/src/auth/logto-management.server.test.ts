@@ -3,6 +3,7 @@ import {
   clearLogtoManagementApiTokenCacheForTests,
   deleteLogtoUser,
   getLogtoManagementApiAccessToken,
+  getLogtoUser,
 } from "./logto-management.server";
 
 const fetchMock = vi.fn();
@@ -92,6 +93,58 @@ describe("Logto Management API helpers", () => {
         },
       },
     );
+  });
+
+  it("fetches a Logto user with profile fields", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          access_token: "management-token",
+          expires_in: 3600,
+        }),
+      )
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          id: "user-1",
+          username: "ada",
+          primaryEmail: "ada@example.test",
+          name: "Ada Lovelace",
+          avatar: "https://example.test/ada.png",
+          lastSignInAt: 1_767_225_600_000,
+        }),
+      );
+
+    await expect(getLogtoUser("user 1")).resolves.toEqual({
+      id: "user-1",
+      username: "ada",
+      primaryEmail: "ada@example.test",
+      name: "Ada Lovelace",
+      avatar: "https://example.test/ada.png",
+      lastSignInAt: 1_767_225_600_000,
+    });
+
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      new URL("https://tenant.logto.app/api/users/user%201"),
+      {
+        method: "GET",
+        headers: {
+          authorization: "Bearer management-token",
+        },
+      },
+    );
+  });
+
+  it("returns null for a missing Logto user lookup", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          access_token: "management-token",
+          expires_in: 3600,
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 404 }));
+
+    await expect(getLogtoUser("user-1")).resolves.toBeNull();
   });
 
   it("treats a missing Logto user as already deleted", async () => {

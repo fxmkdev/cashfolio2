@@ -1,11 +1,12 @@
 import {
   ActionIcon,
+  Avatar,
   Badge,
   Button,
-  Checkbox,
   Group,
   Modal,
   Stack,
+  Switch,
   Text,
   Title,
   Tooltip,
@@ -16,6 +17,7 @@ import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { useMemo, useState } from "react";
 import { UserRole } from "@/.prisma-client/enums";
 import { DataGrid } from "@/components/data-grid";
+import { getGridUserLocale } from "@/components/grid-locale";
 import { PageShell } from "@/components/page-shell";
 import { TopPageHeader } from "@/components/top-page-header";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
@@ -37,23 +39,107 @@ function showRolesSavedNotification() {
 }
 
 function UserRolesCell({ roles }: { roles: UserRole[] }) {
-  if (roles.length === 0) {
+  const content = roles.includes(UserRole.ADMIN) ? (
+    <Badge radius="xl" variant="light">
+      Admin
+    </Badge>
+  ) : (
+    <Text c="dimmed" size="sm">
+      None
+    </Text>
+  );
+
+  return (
+    <Group
+      align="center"
+      data-empty={roles.length === 0 ? "true" : undefined}
+      data-testid="admin-user-roles-cell"
+      gap={4}
+      h="100%"
+      wrap="nowrap"
+    >
+      {content}
+    </Group>
+  );
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function getIdentityStatusLabel(status: AdminUserListItem["identityStatus"]) {
+  if (status === "missing") return "Missing identity";
+  if (status === "unavailable") return "Identity unavailable";
+  return null;
+}
+
+function UserNameCell({ user }: { user: AdminUserListItem }) {
+  const statusLabel = getIdentityStatusLabel(user.identityStatus);
+
+  return (
+    <Group gap="sm" h="100%" align="center" wrap="nowrap">
+      <Avatar alt={user.displayName} radius="xl" size="sm" src={user.avatarUrl}>
+        {getInitials(user.displayName)}
+      </Avatar>
+      <Stack gap={0}>
+        <Group gap="xs" wrap="nowrap">
+          <Text fw={500} size="sm">
+            {user.displayName}
+          </Text>
+          {statusLabel ? (
+            <Badge color="gray" size="xs" variant="light">
+              {statusLabel}
+            </Badge>
+          ) : null}
+        </Group>
+        {user.username ? (
+          <Text c="dimmed" size="xs">
+            {user.username}
+          </Text>
+        ) : null}
+      </Stack>
+    </Group>
+  );
+}
+
+function UserEmailCell({ email }: { email: string | null }) {
+  if (!email) {
     return (
-      <Text c="dimmed" size="sm">
-        None
-      </Text>
+      <Group h="100%" align="center">
+        <Text c="dimmed" size="sm">
+          No email
+        </Text>
+      </Group>
     );
   }
 
   return (
-    <Group gap={4} h="100%" align="center">
-      {roles.includes(UserRole.ADMIN) && (
-        <Badge radius="xl" variant="light">
-          Admin
-        </Badge>
-      )}
+    <Group h="100%" align="center">
+      <Text size="sm">{email}</Text>
     </Group>
   );
+}
+
+function formatAdminTimestamp(value: unknown, context: unknown) {
+  if (typeof value !== "string" || value.length === 0) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat(getGridUserLocale(context), {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(date);
 }
 
 function UserActionsCell({
@@ -97,11 +183,25 @@ export function AdminUsersPageView({
   const columnDefs = useMemo<ColDef<AdminUserListItem>[]>(
     () => [
       {
-        field: "externalId",
-        headerName: "External ID",
-        minWidth: 260,
+        field: "displayName",
+        headerName: "Name",
+        minWidth: 280,
         flex: 1,
         filter: "agTextColumnFilter",
+        cellRenderer: ({ data }: ICellRendererParams<AdminUserListItem>) =>
+          data ? <UserNameCell user={data} /> : null,
+      },
+      {
+        field: "email",
+        headerName: "Email",
+        minWidth: 240,
+        flex: 1,
+        filter: "agTextColumnFilter",
+        cellRenderer: ({
+          value,
+        }: ICellRendererParams<AdminUserListItem, string | null>) => (
+          <UserEmailCell email={value ?? null} />
+        ),
       },
       {
         field: "roles",
@@ -116,12 +216,6 @@ export function AdminUsersPageView({
         ),
       },
       {
-        field: "locale",
-        headerName: "Locale",
-        width: 130,
-        valueFormatter: ({ value }) => value ?? "",
-      },
-      {
         field: "accountBookCount",
         headerName: "Account Books",
         width: 150,
@@ -130,14 +224,16 @@ export function AdminUsersPageView({
       {
         field: "createdAt",
         headerName: "Created",
-        width: 170,
-        type: "dateString",
+        width: 190,
+        valueFormatter: ({ context, value }) =>
+          formatAdminTimestamp(value, context),
       },
       {
         field: "updatedAt",
         headerName: "Updated",
-        width: 170,
-        type: "dateString",
+        width: 190,
+        valueFormatter: ({ context, value }) =>
+          formatAdminTimestamp(value, context),
       },
       {
         colId: "actions",
@@ -200,10 +296,15 @@ export function AdminUsersPageView({
               <Text size="sm" c="dimmed">
                 User
               </Text>
-              <Text fw={500}>{managingUser.externalId}</Text>
+              <Text fw={500}>{managingUser.displayName}</Text>
+              {managingUser.email ? (
+                <Text c="dimmed" size="sm">
+                  {managingUser.email}
+                </Text>
+              ) : null}
             </Stack>
 
-            <Checkbox
+            <Switch
               label="Admin"
               checked={adminRoleChecked}
               disabled={isSubmitting}

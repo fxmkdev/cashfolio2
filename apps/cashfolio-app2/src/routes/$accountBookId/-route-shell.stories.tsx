@@ -40,6 +40,7 @@ function AccountBookShellSmokeHarness() {
       <AccountBookShell
         accountSecurityUrl="https://tenant.logto.app/account/security"
         accountBookId={accountBookId}
+        canAccessAdmin
         currentHref={href}
         accountBooks={[
           { id: "storybook-book", name: "Storybook Book" },

@@ -22,7 +22,9 @@ const createServerFn = vi.hoisted(() =>
 );
 
 const ensureUserHasRole = vi.hoisted(() => vi.fn());
+const ensureUser = vi.hoisted(() => vi.fn());
 const ensureSameOriginRequestFromServerContext = vi.hoisted(() => vi.fn());
+const getLogtoUser = vi.hoisted(() => vi.fn());
 const prisma = vi.hoisted(() => ({
   user: {
     count: vi.fn(),
@@ -40,7 +42,12 @@ vi.mock("../security/same-origin.server", () => ({
 }));
 
 vi.mock("../users/functions.server", () => ({
+  ensureUser,
   ensureUserHasRole,
+}));
+
+vi.mock("../auth/logto-management.server", () => ({
+  getLogtoUser,
 }));
 
 vi.mock("../prisma.server", () => ({
@@ -50,6 +57,7 @@ vi.mock("../prisma.server", () => ({
 import {
   ensureAdminAccess,
   getAdminUsers,
+  getCurrentUserCanAccessAdmin,
   updateAdminUserRoles,
   validateUpdateAdminUserRolesInput,
 } from "./admin-users";
@@ -76,10 +84,22 @@ function createUser(args: {
 describe("admin users server functions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    ensureUser.mockResolvedValue({
+      id: "current-user",
+      roles: [UserRole.ADMIN],
+    });
     ensureUserHasRole.mockResolvedValue({
       id: "admin-user",
       roles: [UserRole.ADMIN],
     });
+    getLogtoUser.mockImplementation(async (externalId: string) => ({
+      id: externalId,
+      username: `${externalId}-username`,
+      primaryEmail: `${externalId}@example.test`,
+      name: `Name ${externalId}`,
+      avatar: `https://example.test/${externalId}.png`,
+      lastSignInAt: null,
+    }));
     prisma.user.findMany.mockResolvedValue([]);
     prisma.user.count.mockResolvedValue(1);
     prisma.user.update.mockImplementation(async ({ data, where }) =>
@@ -112,8 +132,12 @@ describe("admin users server functions", () => {
       {
         id: "user-1",
         externalId: "logto-1",
+        displayName: "Name logto-1",
+        email: "logto-1@example.test",
+        username: "logto-1-username",
+        avatarUrl: "https://example.test/logto-1.png",
+        identityStatus: "available",
         roles: [UserRole.ADMIN],
-        locale: null,
         accountBookCount: 3,
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-02T00:00:00.000Z",
@@ -121,8 +145,12 @@ describe("admin users server functions", () => {
       {
         id: "user-2",
         externalId: "logto-2",
+        displayName: "Name logto-2",
+        email: "logto-2@example.test",
+        username: "logto-2-username",
+        avatarUrl: "https://example.test/logto-2.png",
+        identityStatus: "available",
         roles: [],
-        locale: null,
         accountBookCount: 0,
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-02T00:00:00.000Z",
@@ -136,7 +164,6 @@ describe("admin users server functions", () => {
         id: true,
         externalId: true,
         roles: true,
-        locale: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -146,6 +173,8 @@ describe("admin users server functions", () => {
         },
       },
     });
+    expect(getLogtoUser).toHaveBeenCalledWith("logto-1");
+    expect(getLogtoUser).toHaveBeenCalledWith("logto-2");
   });
 
   it("rejects non-admin access", async () => {
@@ -161,6 +190,72 @@ describe("admin users server functions", () => {
     await expect(ensureAdminAccess()).resolves.toBeUndefined();
 
     expect(ensureUserHasRole).toHaveBeenCalledWith(UserRole.ADMIN);
+  });
+
+  it("preserves the 403 response thrown by the admin guard", async () => {
+    const error = new Response("Forbidden", { status: 403 });
+    ensureUserHasRole.mockRejectedValueOnce(error);
+
+    await expect(ensureAdminAccess()).rejects.toBe(error);
+  });
+
+  it("returns whether the current user can access Admin", async () => {
+    await expect(getCurrentUserCanAccessAdmin()).resolves.toBe(true);
+
+    ensureUser.mockResolvedValueOnce({
+      id: "current-user",
+      roles: [],
+    });
+
+    await expect(getCurrentUserCanAccessAdmin()).resolves.toBe(false);
+  });
+
+  it("keeps Logto-missing users visible with fallback identity fields", async () => {
+    getLogtoUser.mockResolvedValueOnce(null);
+    prisma.user.findMany.mockResolvedValueOnce([
+      createUser({
+        id: "user-1",
+        externalId: "missing-logto-user",
+        roles: [],
+        accountBookCount: 0,
+      }),
+    ]);
+
+    await expect(getAdminUsers()).resolves.toMatchObject([
+      {
+        id: "user-1",
+        externalId: "missing-logto-user",
+        displayName: "missing-logto-user",
+        email: null,
+        username: null,
+        avatarUrl: null,
+        identityStatus: "missing",
+      },
+    ]);
+  });
+
+  it("keeps Logto-unavailable users visible with fallback identity fields", async () => {
+    getLogtoUser.mockRejectedValueOnce(new Error("Logto unavailable"));
+    prisma.user.findMany.mockResolvedValueOnce([
+      createUser({
+        id: "user-1",
+        externalId: "unavailable-logto-user",
+        roles: [],
+        accountBookCount: 0,
+      }),
+    ]);
+
+    await expect(getAdminUsers()).resolves.toMatchObject([
+      {
+        id: "user-1",
+        externalId: "unavailable-logto-user",
+        displayName: "unavailable-logto-user",
+        email: null,
+        username: null,
+        avatarUrl: null,
+        identityStatus: "unavailable",
+      },
+    ]);
   });
 
   it("updates another user's roles", async () => {

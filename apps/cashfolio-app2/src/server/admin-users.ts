@@ -1,19 +1,26 @@
 import { createServerFn } from "@tanstack/react-start";
 import { UserRole } from "../.prisma-client/enums";
+import { getLogtoUser } from "../auth/logto-management.server";
 import { prisma } from "../prisma.server";
 import { ensureSameOriginRequestFromServerContext } from "../security/same-origin.server";
-import { ensureUserHasRole } from "../users/functions.server";
+import { ensureUser, ensureUserHasRole } from "../users/functions.server";
 import {
   assertRecord,
   requireArrayField,
   requireStringField,
 } from "./input-validation";
 
+type LogtoIdentityStatus = "available" | "missing" | "unavailable";
+
 export type AdminUserListItem = {
   id: string;
   externalId: string;
+  displayName: string;
+  email: string | null;
+  username: string | null;
+  avatarUrl: string | null;
+  identityStatus: LogtoIdentityStatus;
   roles: UserRole[];
-  locale: string | null;
   accountBookCount: number;
   createdAt: string;
   updatedAt: string;
@@ -23,7 +30,6 @@ type AdminUserRecord = {
   id: string;
   externalId: string;
   roles: UserRole[];
-  locale: string | null;
   createdAt: Date;
   updatedAt: Date;
   _count: {
@@ -38,12 +44,73 @@ type UpdateAdminUserRolesInput = {
 
 const USER_ROLES = new Set<string>(Object.values(UserRole));
 
-function toAdminUserListItem(user: AdminUserRecord): AdminUserListItem {
+type LogtoIdentityResult =
+  | {
+      status: "available";
+      displayName: string;
+      email: string | null;
+      username: string | null;
+      avatarUrl: string | null;
+    }
+  | {
+      status: "missing" | "unavailable";
+      displayName: string;
+      email: null;
+      username: null;
+      avatarUrl: null;
+    };
+
+async function loadLogtoIdentity(
+  user: AdminUserRecord,
+): Promise<LogtoIdentityResult> {
+  try {
+    const logtoUser = await getLogtoUser(user.externalId);
+    if (!logtoUser) {
+      return {
+        status: "missing",
+        displayName: user.externalId,
+        email: null,
+        username: null,
+        avatarUrl: null,
+      };
+    }
+
+    return {
+      status: "available",
+      displayName:
+        logtoUser.name ??
+        logtoUser.primaryEmail ??
+        logtoUser.username ??
+        user.externalId,
+      email: logtoUser.primaryEmail,
+      username: logtoUser.username,
+      avatarUrl: logtoUser.avatar,
+    };
+  } catch {
+    return {
+      status: "unavailable",
+      displayName: user.externalId,
+      email: null,
+      username: null,
+      avatarUrl: null,
+    };
+  }
+}
+
+async function toAdminUserListItem(
+  user: AdminUserRecord,
+): Promise<AdminUserListItem> {
+  const identity = await loadLogtoIdentity(user);
+
   return {
     id: user.id,
     externalId: user.externalId,
+    displayName: identity.displayName,
+    email: identity.email,
+    username: identity.username,
+    avatarUrl: identity.avatarUrl,
+    identityStatus: identity.status,
     roles: user.roles,
-    locale: user.locale,
     accountBookCount: user._count.accountBookLinks,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
@@ -81,7 +148,6 @@ export const getAdminUsers = createServerFn({ method: "GET" }).handler(
         id: true,
         externalId: true,
         roles: true,
-        locale: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -92,7 +158,7 @@ export const getAdminUsers = createServerFn({ method: "GET" }).handler(
       },
     });
 
-    return users.map(toAdminUserListItem);
+    return await Promise.all(users.map(toAdminUserListItem));
   },
 );
 
@@ -101,6 +167,13 @@ export const ensureAdminAccess = createServerFn({ method: "GET" }).handler(
     await ensureUserHasRole(UserRole.ADMIN);
   },
 );
+
+export const getCurrentUserCanAccessAdmin = createServerFn({
+  method: "GET",
+}).handler(async (): Promise<boolean> => {
+  const user = await ensureUser();
+  return user.roles.includes(UserRole.ADMIN);
+});
 
 export const updateAdminUserRoles = createServerFn({ method: "POST" })
   .inputValidator(validateUpdateAdminUserRolesInput)
@@ -135,7 +208,6 @@ export const updateAdminUserRoles = createServerFn({ method: "POST" })
         id: true,
         externalId: true,
         roles: true,
-        locale: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -146,5 +218,5 @@ export const updateAdminUserRoles = createServerFn({ method: "POST" })
       },
     });
 
-    return toAdminUserListItem(updatedUser);
+    return await toAdminUserListItem(updatedUser);
   });

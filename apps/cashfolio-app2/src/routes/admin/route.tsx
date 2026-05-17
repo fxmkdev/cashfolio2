@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { UserLocaleProvider } from "@/user-locale-context";
 import { AdminShell } from "./-admin-shell";
+import { AdminRouteErrorComponent } from "./-route-error";
 
 export const Route = createFileRoute("/admin")({
   loader: async () => {
@@ -35,6 +36,7 @@ export const Route = createFileRoute("/admin")({
       userLocale,
     };
   },
+  errorComponent: AdminRouteErrorComponent,
   component: AdminLayout,
 });
 

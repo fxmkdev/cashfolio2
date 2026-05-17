@@ -21,10 +21,12 @@ export const Route = createFileRoute("/$accountBookId")({
         getAuthenticatedUserProfile,
         getUserAccountSecurityUrl,
       },
+      { getCurrentUserCanAccessAdmin },
     ] = await Promise.all([
       import("./-account-book-options-loader"),
       import("@/server/app-version"),
       import("@/server/user-profile"),
+      import("@/server/admin-users"),
     ]);
 
     const [
@@ -33,12 +35,14 @@ export const Route = createFileRoute("/$accountBookId")({
       userProfile,
       accountSecurityUrl,
       userLocale,
+      canAccessAdmin,
     ] = await Promise.all([
       loadUserAccountBooksForAccountBookRoute(),
       getRuntimeAppVersion(),
       getAuthenticatedUserProfile(),
       getUserAccountSecurityUrl(),
       getAuthenticatedUserLocale(),
+      getCurrentUserCanAccessAdmin(),
     ]);
 
     return {
@@ -47,6 +51,7 @@ export const Route = createFileRoute("/$accountBookId")({
       userProfile,
       accountSecurityUrl,
       userLocale,
+      canAccessAdmin,
     };
   },
   component: AccountBookLayout,
@@ -59,6 +64,7 @@ function AccountBookLayout() {
     userProfile,
     accountSecurityUrl,
     userLocale,
+    canAccessAdmin,
   } = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const { href, pathname, locationSearch, matches } = useRouterState({
@@ -79,6 +85,7 @@ function AccountBookLayout() {
     <UserLocaleProvider locale={userLocale}>
       <AccountBookShell
         accountBookId={accountBookId}
+        canAccessAdmin={canAccessAdmin}
         currentHref={href}
         pathname={pathname}
         accountBooks={accountBooks}
