@@ -3,11 +3,10 @@ import {
   isValuationUnitTab,
   type ValuationUnitTab,
 } from "../../shared/valuation-unit-tabs";
-import { Unit } from "../../.prisma-client/enums";
-import { ensureAuthorizedForAccountBookId } from "../../account-books/functions.server";
-import { prisma } from "../../prisma.server";
 import { getRedisClient } from "../../redis.server";
-import { assertRecord, requireStringField } from "../input-validation";
+import { ensureUser } from "../../users/functions.server";
+import { assertRecord } from "../input-validation";
+import { BASE_CURRENCY } from "./constants";
 import { toDayString } from "./date-utils";
 import {
   getCryptocurrencyRedisSeriesKey,
@@ -43,11 +42,10 @@ export type ValuationCacheSeriesResponse = {
 };
 
 type GetValuationCacheUnitsInput = {
-  accountBookId: string;
+  readonly _empty?: never;
 };
 
 type GetValuationCacheSeriesInput = {
-  accountBookId: string;
   unitType: ValuationUnitTab;
   currency?: string;
   cryptocurrency?: string;
@@ -55,6 +53,7 @@ type GetValuationCacheSeriesInput = {
   tradeCurrency?: string;
 };
 
+let hasWarnedValuationCacheUnitsReadFailure = false;
 let hasWarnedValuationCacheSeriesReadFailure = false;
 
 function normalizeUnitCode(value: string | null | undefined): string | null {
@@ -76,13 +75,7 @@ function validateGetValuationCacheUnitsInput(
 ): GetValuationCacheUnitsInput {
   assertRecord(data);
 
-  return {
-    accountBookId: requireStringField(
-      data,
-      "accountBookId",
-      "Account book id is required.",
-    ),
-  };
+  return {};
 }
 
 function validateGetValuationCacheSeriesInput(
@@ -90,11 +83,6 @@ function validateGetValuationCacheSeriesInput(
 ): GetValuationCacheSeriesInput {
   assertRecord(data);
 
-  const accountBookId = requireStringField(
-    data,
-    "accountBookId",
-    "Account book id is required.",
-  );
   const unitType = data.unitType;
   if (!isValuationUnitTab(unitType)) {
     throw new Response(
@@ -104,7 +92,6 @@ function validateGetValuationCacheSeriesInput(
   }
 
   return {
-    accountBookId,
     unitType,
     currency: getOptionalStringField(data, "currency"),
     cryptocurrency: getOptionalStringField(data, "cryptocurrency"),
@@ -160,78 +147,147 @@ function toSortedUnits(unitsByKey: Map<string, ValuationCacheUnitRow>) {
   );
 }
 
+function addCurrencyCacheUnit(
+  unitsByKey: Map<string, ValuationCacheUnitRow>,
+  currency: string,
+) {
+  const normalizedCurrency = normalizeUnitCode(currency);
+  if (!normalizedCurrency) {
+    return;
+  }
+
+  const unitKey = `currency:${normalizedCurrency}`;
+  unitsByKey.set(unitKey, {
+    unitType: "CURRENCY",
+    label: normalizedCurrency,
+    unitKey,
+    currency: normalizedCurrency,
+  });
+}
+
+function addCryptocurrencyCacheUnit(
+  unitsByKey: Map<string, ValuationCacheUnitRow>,
+  cryptocurrency: string,
+) {
+  const normalizedCryptocurrency = normalizeUnitCode(cryptocurrency);
+  if (!normalizedCryptocurrency) {
+    return;
+  }
+
+  const unitKey = `crypto:${normalizedCryptocurrency}`;
+  unitsByKey.set(unitKey, {
+    unitType: "CRYPTOCURRENCY",
+    label: normalizedCryptocurrency,
+    unitKey,
+    cryptocurrency: normalizedCryptocurrency,
+  });
+}
+
+function addSecurityCacheUnit(
+  unitsByKey: Map<string, ValuationCacheUnitRow>,
+  symbol: string,
+  tradeCurrency: string,
+) {
+  const normalizedSymbol = normalizeUnitCode(symbol);
+  const normalizedTradeCurrency = normalizeUnitCode(tradeCurrency);
+  if (!normalizedSymbol || !normalizedTradeCurrency) {
+    return;
+  }
+
+  const unitKey = `security:${normalizedSymbol}:${normalizedTradeCurrency}`;
+  unitsByKey.set(unitKey, {
+    unitType: "SECURITY",
+    label: `${normalizedSymbol} (${normalizedTradeCurrency})`,
+    unitKey,
+    symbol: normalizedSymbol,
+    tradeCurrency: normalizedTradeCurrency,
+  });
+}
+
+function addValuationCacheUnitForRedisKey(args: {
+  currencyUnitsByKey: Map<string, ValuationCacheUnitRow>;
+  cryptocurrencyUnitsByKey: Map<string, ValuationCacheUnitRow>;
+  securityUnitsByKey: Map<string, ValuationCacheUnitRow>;
+  key: string;
+}) {
+  const parts = args.key.split(":");
+  if (
+    parts.length === 4 &&
+    parts[0] === "valuation" &&
+    parts[1] === "currencylayer" &&
+    parts[2] === BASE_CURRENCY
+  ) {
+    addCurrencyCacheUnit(args.currencyUnitsByKey, parts[3]);
+    return;
+  }
+
+  if (
+    parts.length === 4 &&
+    parts[0] === "valuation" &&
+    parts[1] === "coinlayer" &&
+    parts[2] === BASE_CURRENCY
+  ) {
+    addCryptocurrencyCacheUnit(args.cryptocurrencyUnitsByKey, parts[3]);
+    return;
+  }
+
+  if (
+    parts.length === 4 &&
+    parts[0] === "valuation" &&
+    parts[1] === "marketstack"
+  ) {
+    addSecurityCacheUnit(args.securityUnitsByKey, parts[2], parts[3]);
+  }
+}
+
+async function scanValuationCacheUnitKeys(
+  redis: NonNullable<Awaited<ReturnType<typeof getRedisClient>>>,
+) {
+  const keys: string[] = [];
+  const patterns = [
+    `valuation:currencylayer:${BASE_CURRENCY}:*`,
+    `valuation:coinlayer:${BASE_CURRENCY}:*`,
+    "valuation:marketstack:*:*",
+  ];
+
+  for (const pattern of patterns) {
+    for await (const scanResult of redis.scanIterator({
+      MATCH: pattern,
+      COUNT: 100,
+    })) {
+      const batch = Array.isArray(scanResult) ? scanResult : [scanResult];
+      keys.push(...batch);
+    }
+  }
+
+  return keys;
+}
+
 export const getValuationCacheUnits = createServerFn({ method: "GET" })
   .inputValidator(validateGetValuationCacheUnitsInput)
-  .handler(async ({ data }) => {
-    await ensureAuthorizedForAccountBookId(data.accountBookId);
+  .handler(async () => {
+    await ensureUser();
 
-    const accounts = await prisma.account.findMany({
-      where: { accountBookId: data.accountBookId },
-      select: {
-        unit: true,
-        currency: true,
-        cryptocurrency: true,
-        symbol: true,
-        tradeCurrency: true,
-      },
-    });
     const currencyUnitsByKey = new Map<string, ValuationCacheUnitRow>();
     const cryptocurrencyUnitsByKey = new Map<string, ValuationCacheUnitRow>();
     const securityUnitsByKey = new Map<string, ValuationCacheUnitRow>();
 
-    for (const account of accounts) {
-      if (account.unit === Unit.CURRENCY) {
-        const currency = normalizeUnitCode(account.currency);
-        if (!currency) {
-          continue;
-        }
-
-        const unitKey = `currency:${currency}`;
-        if (!currencyUnitsByKey.has(unitKey)) {
-          currencyUnitsByKey.set(unitKey, {
-            unitType: "CURRENCY",
-            label: currency,
-            unitKey,
-            currency,
+    const redis = await getRedisClient();
+    if (redis) {
+      try {
+        const keys = await scanValuationCacheUnitKeys(redis);
+        for (const key of keys) {
+          addValuationCacheUnitForRedisKey({
+            currencyUnitsByKey,
+            cryptocurrencyUnitsByKey,
+            securityUnitsByKey,
+            key,
           });
         }
-        continue;
-      }
-
-      if (account.unit === Unit.CRYPTOCURRENCY) {
-        const cryptocurrency = normalizeUnitCode(account.cryptocurrency);
-        if (!cryptocurrency) {
-          continue;
-        }
-
-        const unitKey = `crypto:${cryptocurrency}`;
-        if (!cryptocurrencyUnitsByKey.has(unitKey)) {
-          cryptocurrencyUnitsByKey.set(unitKey, {
-            unitType: "CRYPTOCURRENCY",
-            label: cryptocurrency,
-            unitKey,
-            cryptocurrency,
-          });
-        }
-        continue;
-      }
-
-      if (account.unit === Unit.SECURITY) {
-        const symbol = normalizeUnitCode(account.symbol);
-        const tradeCurrency = normalizeUnitCode(account.tradeCurrency);
-        if (!symbol || !tradeCurrency) {
-          continue;
-        }
-
-        const unitKey = `security:${symbol}:${tradeCurrency}`;
-        if (!securityUnitsByKey.has(unitKey)) {
-          securityUnitsByKey.set(unitKey, {
-            unitType: "SECURITY",
-            label: `${symbol} (${tradeCurrency})`,
-            unitKey,
-            symbol,
-            tradeCurrency,
-          });
+      } catch (error) {
+        if (!hasWarnedValuationCacheUnitsReadFailure) {
+          console.warn("Failed to read valuation cache unit keys.", error);
+          hasWarnedValuationCacheUnitsReadFailure = true;
         }
       }
     }
@@ -246,7 +302,7 @@ export const getValuationCacheUnits = createServerFn({ method: "GET" })
 export const getValuationCacheSeries = createServerFn({ method: "GET" })
   .inputValidator(validateGetValuationCacheSeriesInput)
   .handler(async ({ data }) => {
-    await ensureAuthorizedForAccountBookId(data.accountBookId);
+    await ensureUser();
 
     const seriesKey = getSeriesKey(data);
     const redis = await getRedisClient();

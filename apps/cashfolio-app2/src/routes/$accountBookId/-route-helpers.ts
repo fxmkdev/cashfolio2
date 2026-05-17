@@ -12,8 +12,7 @@ export type AccountBookSection =
   | "report"
   | "settings"
   | "history"
-  | "user-settings"
-  | "valuation-cache";
+  | "user-settings";
 
 export type AccountsLinkSearch = {
   tab: TabValue;
@@ -60,7 +59,6 @@ export function getActiveSection(args: {
   if (section === "settings") return "settings";
   if (section === "user-settings") return "user-settings";
   if (section === "history") return "history";
-  if (section === "valuation-cache") return "valuation-cache";
   return "accounts";
 }
 

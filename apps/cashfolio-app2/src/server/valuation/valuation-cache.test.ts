@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Unit } from "../../.prisma-client/enums";
 
 const createServerFn = vi.hoisted(() =>
   vi.fn(() => {
@@ -20,31 +19,18 @@ const createServerFn = vi.hoisted(() =>
   }),
 );
 
-const ensureAuthorizedForAccountBookId = vi.hoisted(() => vi.fn());
+const ensureUser = vi.hoisted(() => vi.fn());
 const getRedisClient = vi.hoisted(() => vi.fn());
 const getCurrencyExchangeRate = vi.hoisted(() => vi.fn());
 const getCryptocurrencyToCurrencyExchangeRate = vi.hoisted(() => vi.fn());
 const getSecurityToCurrencyExchangeRate = vi.hoisted(() => vi.fn());
 
-const prisma = vi.hoisted(() => ({
-  accountBook: {
-    findUniqueOrThrow: vi.fn(),
-  },
-  account: {
-    findMany: vi.fn(),
-  },
-}));
-
 vi.mock("@tanstack/react-start", () => ({
   createServerFn,
 }));
 
-vi.mock("../../account-books/functions.server", () => ({
-  ensureAuthorizedForAccountBookId,
-}));
-
-vi.mock("../../prisma.server", () => ({
-  prisma,
+vi.mock("../../users/functions.server", () => ({
+  ensureUser,
 }));
 
 vi.mock("../../redis.server", () => ({
@@ -66,92 +52,53 @@ describe("valuation-cache server functions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    prisma.account.findMany.mockResolvedValue([]);
+    ensureUser.mockResolvedValue({ id: "user-1" });
     getRedisClient.mockResolvedValue(null);
   });
 
-  it("deduplicates units, normalizes casing, and includes all account states", async () => {
-    prisma.account.findMany.mockResolvedValue([
-      {
-        unit: Unit.CURRENCY,
-        currency: "eur",
-        cryptocurrency: null,
-        symbol: null,
-        tradeCurrency: null,
-        isActive: true,
-      },
-      {
-        unit: Unit.CURRENCY,
-        currency: "EUR",
-        cryptocurrency: null,
-        symbol: null,
-        tradeCurrency: null,
-        isActive: false,
-      },
-      {
-        unit: Unit.CURRENCY,
-        currency: " chf ",
-        cryptocurrency: null,
-        symbol: null,
-        tradeCurrency: null,
-        isActive: true,
-      },
-      {
-        unit: Unit.CRYPTOCURRENCY,
-        currency: null,
-        cryptocurrency: "btc",
-        symbol: null,
-        tradeCurrency: null,
-        isActive: true,
-      },
-      {
-        unit: Unit.CRYPTOCURRENCY,
-        currency: null,
-        cryptocurrency: "BTC",
-        symbol: null,
-        tradeCurrency: null,
-        isActive: false,
-      },
-      {
-        unit: Unit.SECURITY,
-        currency: null,
-        cryptocurrency: null,
-        symbol: "aapl",
-        tradeCurrency: "usd",
-        isActive: true,
-      },
-      {
-        unit: Unit.SECURITY,
-        currency: null,
-        cryptocurrency: null,
-        symbol: "AAPL",
-        tradeCurrency: "USD",
-        isActive: false,
-      },
-      {
-        unit: Unit.SECURITY,
-        currency: null,
-        cryptocurrency: null,
-        symbol: "AAPL",
-        tradeCurrency: "CHF",
-        isActive: true,
-      },
-    ]);
+  it("deduplicates and normalizes all permanent valuation TimeSeries keys", async () => {
+    const keysByPattern: Record<string, string[]> = {
+      "valuation:currencylayer:USD:*": [
+        "valuation:currencylayer:USD:eur",
+        "valuation:currencylayer:USD:EUR",
+        "valuation:currencylayer:USD:chf",
+      ],
+      "valuation:coinlayer:USD:*": [
+        "valuation:coinlayer:USD:btc",
+        "valuation:coinlayer:USD:BTC",
+      ],
+      "valuation:marketstack:*:*": [
+        "valuation:marketstack:aapl:usd",
+        "valuation:marketstack:AAPL:USD",
+        "valuation:marketstack:AAPL:CHF",
+        "valuation:marketstack:fallback:AAPL:USD:1767225600000",
+      ],
+    };
+    const redis = {
+      scanIterator: vi.fn(({ MATCH }: { MATCH: string }) =>
+        (async function* scanKeys() {
+          yield keysByPattern[MATCH] ?? [];
+        })(),
+      ),
+    };
+    getRedisClient.mockResolvedValue(redis);
 
     const result = await getValuationCacheUnits({
-      data: { accountBookId: "book-1" },
+      data: {},
     });
 
-    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-1");
-    expect(prisma.account.findMany).toHaveBeenCalledWith({
-      where: { accountBookId: "book-1" },
-      select: {
-        unit: true,
-        currency: true,
-        cryptocurrency: true,
-        symbol: true,
-        tradeCurrency: true,
-      },
+    expect(ensureUser).toHaveBeenCalledTimes(1);
+    expect(redis.scanIterator).toHaveBeenCalledWith({
+      MATCH: "valuation:currencylayer:USD:*",
+      COUNT: 100,
+    });
+    expect(redis.scanIterator).toHaveBeenCalledWith({
+      MATCH: "valuation:coinlayer:USD:*",
+      COUNT: 100,
+    });
+    expect(redis.scanIterator).toHaveBeenCalledWith({
+      MATCH: "valuation:marketstack:*:*",
+      COUNT: 100,
     });
 
     expect(result).toEqual({
@@ -210,13 +157,12 @@ describe("valuation-cache server functions", () => {
 
     const result = await getValuationCacheSeries({
       data: {
-        accountBookId: "book-2",
         unitType: "CURRENCY",
         currency: "eur",
       },
     });
 
-    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-2");
+    expect(ensureUser).toHaveBeenCalledTimes(1);
     expect(redis.exists).toHaveBeenCalledWith(
       "valuation:currencylayer:USD:EUR",
     );
@@ -247,7 +193,6 @@ describe("valuation-cache server functions", () => {
 
     const unavailable = await getValuationCacheSeries({
       data: {
-        accountBookId: "book-3",
         unitType: "CRYPTOCURRENCY",
         cryptocurrency: "BTC",
       },
@@ -268,7 +213,6 @@ describe("valuation-cache server functions", () => {
 
     const missingSeries = await getValuationCacheSeries({
       data: {
-        accountBookId: "book-3",
         unitType: "SECURITY",
         symbol: "AAPL",
         tradeCurrency: "USD",
@@ -294,7 +238,6 @@ describe("valuation-cache server functions", () => {
 
     await getValuationCacheSeries({
       data: {
-        accountBookId: "book-4",
         unitType: "SECURITY",
         symbol: "MSFT",
         tradeCurrency: "USD",
@@ -310,7 +253,6 @@ describe("valuation-cache server functions", () => {
     await expect(
       getValuationCacheSeries({
         data: {
-          accountBookId: "book-5",
           unitType: "INVALID",
         } as never,
       }),
@@ -326,13 +268,7 @@ describe("valuation-cache server functions", () => {
       }),
     ).rejects.toThrow("Input must be an object.");
 
-    await expect(
-      getValuationCacheUnits({
-        data: {} as never,
-      }),
-    ).rejects.toThrow("Account book id is required.");
-
-    expect(ensureAuthorizedForAccountBookId).not.toHaveBeenCalled();
+    expect(ensureUser).not.toHaveBeenCalled();
   });
 
   it("validates valuation cache series input before authorization", async () => {
@@ -345,13 +281,14 @@ describe("valuation-cache server functions", () => {
     await expect(
       getValuationCacheSeries({
         data: {
-          unitType: "CURRENCY",
           currency: "EUR",
         } as never,
       }),
-    ).rejects.toThrow("Account book id is required.");
+    ).rejects.toMatchObject({
+      status: 400,
+    });
 
-    expect(ensureAuthorizedForAccountBookId).not.toHaveBeenCalled();
+    expect(ensureUser).not.toHaveBeenCalled();
   });
 
   it("logs cache series read failures only once while returning non-fatal empty data", async () => {
@@ -366,14 +303,12 @@ describe("valuation-cache server functions", () => {
 
     const firstResult = await getValuationCacheSeries({
       data: {
-        accountBookId: "book-6",
         unitType: "CRYPTOCURRENCY",
         cryptocurrency: "BTC",
       },
     });
     const secondResult = await getValuationCacheSeries({
       data: {
-        accountBookId: "book-6",
         unitType: "CRYPTOCURRENCY",
         cryptocurrency: "BTC",
       },

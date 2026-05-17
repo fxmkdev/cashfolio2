@@ -31,6 +31,10 @@ Related docs:
   switcher, and loads the current user profile plus locale for the shared user
   menu.
 - `admin/index.tsx` - Admin overview placeholder page showing `Coming soon`.
+- `admin/valuation-cache/route.tsx` - global valuation cache explorer page with
+  tabs for Currency, Cryptocurrency, and Security; scans cached Redis TimeSeries
+  keys, shows all cached units, and displays cached history charts without live
+  provider lookups or account-book context.
 - `user-settings.tsx` - isolated user settings page for editing Logto-backed
   name/avatar URL and the app-owned locale preference. It accepts a safe
   `returnTo` search parameter so the page can link back to either the Admin UI
@@ -40,9 +44,9 @@ Related docs:
   `POST /api/logto/sign-out`
 - `$accountBookId/route.tsx` - shared account-book shell route using Mantine
   `AppShell` with left navbar navigation (Accounts, Transactions, Report,
-  History), an Admin section for Valuation Cache, account-book Settings, and an
-  `Admin` entry that navigates to `/admin` in-app, navbar footer actions
-  (Account Book switcher + User menu), and mobile-only header burger toggle
+  History), an Admin section for account-book Settings and an `Admin` entry that
+  navigates to `/admin` in-app, navbar footer actions (Account Book switcher +
+  User menu), and mobile-only header burger toggle
   - Uses the theme `sm` breakpoint as the shared source of truth for both navbar
     collapse and header visibility.
   - Supports a desktop sidebar rail mode that keeps icon navigation visible,
@@ -63,9 +67,6 @@ Related docs:
 - `$accountBookId/transactions/route.tsx` - transactions page showing individual
   bookings across the account book in reverse-chronological order, with an
   explicit month/year period filter and booking-level Edit/Rebook/Delete actions
-- `$accountBookId/valuation-cache/route.tsx` - valuation cache explorer page
-  with tabs for Currency, Cryptocurrency, and Security; shows deduplicated unit
-  rows and cached TimeSeries history charts (no live provider lookups)
 - `$accountBookId/settings/route.tsx` - account-book settings page for editing
   account book name, reference currency, and start date, plus a danger-zone
   delete flow that requires typing the current account-book name

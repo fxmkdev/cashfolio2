@@ -18,16 +18,12 @@ describe("loadValuationCachePageData", () => {
     });
   });
 
-  it("loads valuation cache units for the selected account book", async () => {
-    const result = await loadValuationCachePageData({
-      accountBookId: "book-1",
-    });
+  it("loads valuation cache units", async () => {
+    const result = await loadValuationCachePageData();
 
     expect(getValuationCacheUnits).toHaveBeenCalledTimes(1);
     expect(getValuationCacheUnits).toHaveBeenCalledWith({
-      data: {
-        accountBookId: "book-1",
-      },
+      data: {},
     });
     expect(result).toEqual({
       currencyUnits: [],

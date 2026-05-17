@@ -50,11 +50,23 @@ export const RouteSmoke: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    await expect(
-      canvas.getByRole("link", { name: "Overview" }),
-    ).toHaveAttribute("href", "/admin");
-    await userEvent.click(canvas.getByRole("link", { name: "Overview" }));
+    const overviewLink = canvas.getByRole("link", { name: "Overview" });
+    await expect(overviewLink).toHaveAttribute("href", "/admin");
+    await userEvent.click(overviewLink);
     await expect(canvas.getByTestId("router-path")).toHaveTextContent("/admin");
+    const valuationCacheLink = canvas.getByRole("link", {
+      name: "Valuation Cache",
+    });
+    await expect(valuationCacheLink).toHaveAttribute(
+      "href",
+      "/admin/valuation-cache",
+    );
+    await userEvent.click(valuationCacheLink);
+    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
+      "/admin/valuation-cache",
+    );
+    await expect(overviewLink).not.toHaveAttribute("data-active", "true");
+    await expect(valuationCacheLink).toHaveAttribute("data-active", "true");
     const appLink = canvas.getByRole("link", { name: "Back to App" });
     await expect(appLink).toHaveAttribute("href", "/");
     await expect(appLink).not.toHaveAttribute("target");

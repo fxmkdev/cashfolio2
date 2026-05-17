@@ -15,7 +15,6 @@ function getHeadingLabel(pathname: string): string {
   if (section === "transactions") return "Transactions";
   if (section === "report") return "Report";
   if (section === "history") return "History";
-  if (section === "valuation-cache") return "Valuation Cache";
   if (section === "settings") return "Settings";
   if (section === "accounts") return "Accounts";
 
@@ -125,12 +124,9 @@ export const RouteSmoke: Story = {
       "/storybook-book/history",
     );
 
-    await userEvent.click(
-      canvas.getByRole("link", { name: "Valuation Cache" }),
-    );
-    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-book/valuation-cache",
-    );
+    await expect(
+      canvas.queryByRole("link", { name: "Valuation Cache" }),
+    ).not.toBeInTheDocument();
 
     await userEvent.click(canvas.getByRole("link", { name: "Settings" }));
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
@@ -243,20 +239,9 @@ export const DesktopRailSmoke: Story = {
     ).toBeVisible();
     await userEvent.unhover(reportRailLink);
 
-    const valuationCacheRailLink = canvas.getByRole("link", {
-      name: "Valuation Cache",
-    });
-    await expect(valuationCacheRailLink).toBeVisible();
-    await userEvent.hover(valuationCacheRailLink);
     await expect(
-      await within(document.body).findByText("Valuation Cache"),
-    ).toBeVisible();
-    await userEvent.unhover(valuationCacheRailLink);
-
-    await userEvent.click(valuationCacheRailLink);
-    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-book/valuation-cache",
-    );
+      canvas.queryByRole("link", { name: "Valuation Cache" }),
+    ).not.toBeInTheDocument();
 
     await userEvent.click(canvas.getByRole("link", { name: "Settings" }));
     await expect(canvas.getByTestId("router-path")).toHaveTextContent(
@@ -295,8 +280,8 @@ export const DesktopRailSmoke: Story = {
       expect(readDesktopRailPreference()).toBe("false");
     });
     await expect(
-      canvas.getByRole("link", { name: "Valuation Cache" }),
-    ).toBeVisible();
+      canvas.queryByRole("link", { name: "Valuation Cache" }),
+    ).not.toBeInTheDocument();
     await expect(canvas.getByRole("link", { name: "Settings" })).toBeVisible();
   },
 };
