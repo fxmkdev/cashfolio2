@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { UserRole } from "../.prisma-client/enums";
-import { getLogtoUser } from "../auth/logto-management.server";
+import {
+  getLogtoUser,
+  getLogtoUsers,
+  type LogtoManagementUser,
+} from "../auth/logto-management.server";
 import { prisma } from "../prisma.server";
 import { ensureSameOriginRequestFromServerContext } from "../security/same-origin.server";
 import { ensureUser, ensureUserHasRole } from "../users/functions.server";
@@ -60,61 +64,112 @@ type LogtoIdentityResult =
       avatarUrl: null;
     };
 
-async function loadLogtoIdentity(
-  user: AdminUserRecord,
-): Promise<LogtoIdentityResult> {
-  try {
-    const logtoUser = await getLogtoUser(user.externalId);
-    if (!logtoUser) {
-      return {
-        status: "missing",
-        displayName: user.externalId,
-        email: null,
-        username: null,
-        avatarUrl: null,
-      };
-    }
+function getUnavailableIdentity(user: AdminUserRecord): LogtoIdentityResult {
+  return {
+    status: "unavailable",
+    displayName: user.externalId,
+    email: null,
+    username: null,
+    avatarUrl: null,
+  };
+}
 
+function getLogtoIdentityResult(
+  user: AdminUserRecord,
+  logtoUser: LogtoManagementUser | null | undefined,
+): LogtoIdentityResult {
+  if (!logtoUser) {
     return {
-      status: "available",
-      displayName:
-        logtoUser.name ??
-        logtoUser.primaryEmail ??
-        logtoUser.username ??
-        user.externalId,
-      email: logtoUser.primaryEmail,
-      username: logtoUser.username,
-      avatarUrl: logtoUser.avatar,
-    };
-  } catch {
-    return {
-      status: "unavailable",
+      status: "missing",
       displayName: user.externalId,
       email: null,
       username: null,
       avatarUrl: null,
     };
   }
+
+  return {
+    status: "available",
+    displayName:
+      logtoUser.name ??
+      logtoUser.primaryEmail ??
+      logtoUser.username ??
+      user.externalId,
+    email: logtoUser.primaryEmail,
+    username: logtoUser.username,
+    avatarUrl: logtoUser.avatar,
+  };
+}
+
+function logLogtoIdentityFailure(
+  message: string,
+  error: unknown,
+  context: Record<string, unknown>,
+) {
+  console.warn(message, { ...context, error });
+}
+
+async function loadLogtoIdentity(user: AdminUserRecord) {
+  try {
+    return getLogtoIdentityResult(user, await getLogtoUser(user.externalId));
+  } catch (error) {
+    logLogtoIdentityFailure("Failed to load Logto user identity.", error, {
+      externalId: user.externalId,
+    });
+    return getUnavailableIdentity(user);
+  }
 }
 
 async function toAdminUserListItem(
   user: AdminUserRecord,
+  identity?: LogtoIdentityResult,
 ): Promise<AdminUserListItem> {
-  const identity = await loadLogtoIdentity(user);
+  const resolvedIdentity = identity ?? (await loadLogtoIdentity(user));
 
   return {
     id: user.id,
     externalId: user.externalId,
-    displayName: identity.displayName,
-    email: identity.email,
-    username: identity.username,
-    avatarUrl: identity.avatarUrl,
-    identityStatus: identity.status,
+    displayName: resolvedIdentity.displayName,
+    email: resolvedIdentity.email,
+    username: resolvedIdentity.username,
+    avatarUrl: resolvedIdentity.avatarUrl,
+    identityStatus: resolvedIdentity.status,
     roles: user.roles,
     accountBookCount: user._count.accountBookLinks,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };
+}
+
+async function loadLogtoIdentities(
+  users: AdminUserRecord[],
+): Promise<Map<string, LogtoIdentityResult>> {
+  if (users.length === 0) {
+    return new Map();
+  }
+
+  try {
+    const logtoUsersById = await getLogtoUsers(
+      users.map((user) => user.externalId),
+    );
+
+    return new Map(
+      users.map((user) => [
+        user.externalId,
+        getLogtoIdentityResult(user, logtoUsersById.get(user.externalId)),
+      ]),
+    );
+  } catch (error) {
+    logLogtoIdentityFailure(
+      "Failed to load Logto user identities for Admin Users.",
+      error,
+      { userCount: users.length },
+    );
+
+    return new Map(
+      users.map((user) => [user.externalId, getUnavailableIdentity(user)]),
+    );
+  }
 }
 
 export function validateUpdateAdminUserRolesInput(
@@ -158,7 +213,12 @@ export const getAdminUsers = createServerFn({ method: "GET" }).handler(
       },
     });
 
-    return await Promise.all(users.map(toAdminUserListItem));
+    const identities = await loadLogtoIdentities(users);
+    return await Promise.all(
+      users.map((user) =>
+        toAdminUserListItem(user, identities.get(user.externalId)),
+      ),
+    );
   },
 );
 

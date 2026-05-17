@@ -128,6 +128,14 @@ function readLogtoUserResponse(value: unknown): LogtoManagementUser {
   };
 }
 
+function readLogtoUsersResponse(value: unknown): LogtoManagementUser[] {
+  if (!Array.isArray(value)) {
+    throw new Error("Logto users response is invalid.");
+  }
+
+  return value.map(readLogtoUserResponse);
+}
+
 export function clearLogtoManagementApiTokenCacheForTests() {
   cachedManagementToken = null;
 }
@@ -196,6 +204,45 @@ export async function getLogtoUser(
   }
 
   return readLogtoUserResponse(responseBody);
+}
+
+export async function getLogtoUsers(
+  userIds: string[],
+): Promise<Map<string, LogtoManagementUser>> {
+  const uniqueUserIds = Array.from(new Set(userIds)).filter(
+    (userId) => userId.length > 0,
+  );
+
+  if (uniqueUserIds.length === 0) {
+    return new Map();
+  }
+
+  const config = getManagementApiConfig();
+  const accessToken = await getLogtoManagementApiAccessToken();
+  const url = new URL("/api/users", config.endpoint);
+  for (const userId of uniqueUserIds) {
+    url.searchParams.append("search.id", userId);
+  }
+  url.searchParams.set("mode.id", "exact");
+  url.searchParams.set("page_size", String(uniqueUserIds.length));
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const responseBody = await readJsonResponse(response);
+  if (!response.ok) {
+    throw new Error(
+      readErrorMessage(responseBody) ?? "Failed to fetch Logto users.",
+    );
+  }
+
+  return new Map(
+    readLogtoUsersResponse(responseBody).map((user) => [user.id, user]),
+  );
 }
 
 export async function deleteLogtoUser(userId: string): Promise<void> {

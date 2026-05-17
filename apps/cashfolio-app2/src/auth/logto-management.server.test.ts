@@ -4,6 +4,7 @@ import {
   deleteLogtoUser,
   getLogtoManagementApiAccessToken,
   getLogtoUser,
+  getLogtoUsers,
 } from "./logto-management.server";
 
 const fetchMock = vi.fn();
@@ -145,6 +146,81 @@ describe("Logto Management API helpers", () => {
       .mockResolvedValueOnce(new Response(null, { status: 404 }));
 
     await expect(getLogtoUser("user-1")).resolves.toBeNull();
+  });
+
+  it("fetches multiple Logto users with an exact id search", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          access_token: "management-token",
+          expires_in: 3600,
+        }),
+      )
+      .mockResolvedValueOnce(
+        createJsonResponse([
+          {
+            id: "user-1",
+            username: "ada",
+            primaryEmail: "ada@example.test",
+            name: "Ada Lovelace",
+            avatar: null,
+            lastSignInAt: null,
+          },
+          {
+            id: "user-2",
+            username: null,
+            primaryEmail: "grace@example.test",
+            name: "Grace Hopper",
+            avatar: "https://example.test/grace.png",
+            lastSignInAt: 1_767_225_600_000,
+          },
+        ]),
+      );
+
+    const users = await getLogtoUsers(["user 1", "user-2", "user-2"]);
+
+    expect(Array.from(users.entries())).toEqual([
+      [
+        "user-1",
+        {
+          id: "user-1",
+          username: "ada",
+          primaryEmail: "ada@example.test",
+          name: "Ada Lovelace",
+          avatar: null,
+          lastSignInAt: null,
+        },
+      ],
+      [
+        "user-2",
+        {
+          id: "user-2",
+          username: null,
+          primaryEmail: "grace@example.test",
+          name: "Grace Hopper",
+          avatar: "https://example.test/grace.png",
+          lastSignInAt: 1_767_225_600_000,
+        },
+      ],
+    ]);
+
+    const expectedUrl = new URL("https://tenant.logto.app/api/users");
+    expectedUrl.searchParams.append("search.id", "user 1");
+    expectedUrl.searchParams.append("search.id", "user-2");
+    expectedUrl.searchParams.set("mode.id", "exact");
+    expectedUrl.searchParams.set("page_size", "2");
+    expect(fetchMock).toHaveBeenLastCalledWith(expectedUrl, {
+      method: "GET",
+      headers: {
+        authorization: "Bearer management-token",
+      },
+    });
+  });
+
+  it("does not request Logto users when the requested id list is empty", async () => {
+    await expect(getLogtoUsers([])).resolves.toEqual(new Map());
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("treats a missing Logto user as already deleted", async () => {

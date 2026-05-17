@@ -25,6 +25,7 @@ const ensureUserHasRole = vi.hoisted(() => vi.fn());
 const ensureUser = vi.hoisted(() => vi.fn());
 const ensureSameOriginRequestFromServerContext = vi.hoisted(() => vi.fn());
 const getLogtoUser = vi.hoisted(() => vi.fn());
+const getLogtoUsers = vi.hoisted(() => vi.fn());
 const prisma = vi.hoisted(() => ({
   user: {
     count: vi.fn(),
@@ -48,6 +49,7 @@ vi.mock("../users/functions.server", () => ({
 
 vi.mock("../auth/logto-management.server", () => ({
   getLogtoUser,
+  getLogtoUsers,
 }));
 
 vi.mock("../prisma.server", () => ({
@@ -100,6 +102,21 @@ describe("admin users server functions", () => {
       avatar: `https://example.test/${externalId}.png`,
       lastSignInAt: null,
     }));
+    getLogtoUsers.mockImplementation(async (externalIds: string[]) => {
+      return new Map(
+        externalIds.map((externalId) => [
+          externalId,
+          {
+            id: externalId,
+            username: `${externalId}-username`,
+            primaryEmail: `${externalId}@example.test`,
+            name: `Name ${externalId}`,
+            avatar: `https://example.test/${externalId}.png`,
+            lastSignInAt: null,
+          },
+        ]),
+      );
+    });
     prisma.user.findMany.mockResolvedValue([]);
     prisma.user.count.mockResolvedValue(1);
     prisma.user.update.mockImplementation(async ({ data, where }) =>
@@ -173,8 +190,9 @@ describe("admin users server functions", () => {
         },
       },
     });
-    expect(getLogtoUser).toHaveBeenCalledWith("logto-1");
-    expect(getLogtoUser).toHaveBeenCalledWith("logto-2");
+    expect(getLogtoUsers).toHaveBeenCalledTimes(1);
+    expect(getLogtoUsers).toHaveBeenCalledWith(["logto-1", "logto-2"]);
+    expect(getLogtoUser).not.toHaveBeenCalled();
   });
 
   it("rejects non-admin access", async () => {
@@ -211,7 +229,7 @@ describe("admin users server functions", () => {
   });
 
   it("keeps Logto-missing users visible with fallback identity fields", async () => {
-    getLogtoUser.mockResolvedValueOnce(null);
+    getLogtoUsers.mockResolvedValueOnce(new Map());
     prisma.user.findMany.mockResolvedValueOnce([
       createUser({
         id: "user-1",
@@ -235,7 +253,9 @@ describe("admin users server functions", () => {
   });
 
   it("keeps Logto-unavailable users visible with fallback identity fields", async () => {
-    getLogtoUser.mockRejectedValueOnce(new Error("Logto unavailable"));
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const error = new Error("Logto unavailable");
+    getLogtoUsers.mockRejectedValueOnce(error);
     prisma.user.findMany.mockResolvedValueOnce([
       createUser({
         id: "user-1",
@@ -256,6 +276,14 @@ describe("admin users server functions", () => {
         identityStatus: "unavailable",
       },
     ]);
+    expect(consoleWarn).toHaveBeenCalledWith(
+      "Failed to load Logto user identities for Admin Users.",
+      {
+        error,
+        userCount: 1,
+      },
+    );
+    consoleWarn.mockRestore();
   });
 
   it("updates another user's roles", async () => {
