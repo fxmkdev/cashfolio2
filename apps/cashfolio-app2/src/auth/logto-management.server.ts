@@ -8,6 +8,8 @@ type LogtoManagementTokenResponse = {
   expires_in?: unknown;
 };
 
+const LOGTO_USERS_BATCH_SIZE = 100;
+
 export type LogtoManagementUser = {
   id: string;
   username: string | null;
@@ -136,6 +138,16 @@ function readLogtoUsersResponse(value: unknown): LogtoManagementUser[] {
   return value.map(readLogtoUserResponse);
 }
 
+function getBatches<T>(items: T[], batchSize: number): T[][] {
+  const batches: T[][] = [];
+
+  for (let index = 0; index < items.length; index += batchSize) {
+    batches.push(items.slice(index, index + batchSize));
+  }
+
+  return batches;
+}
+
 export function clearLogtoManagementApiTokenCacheForTests() {
   cachedManagementToken = null;
 }
@@ -219,12 +231,36 @@ export async function getLogtoUsers(
 
   const config = getManagementApiConfig();
   const accessToken = await getLogtoManagementApiAccessToken();
-  const url = new URL("/api/users", config.endpoint);
-  for (const userId of uniqueUserIds) {
+  const logtoUsers: LogtoManagementUser[] = [];
+
+  for (const userIdBatch of getBatches(uniqueUserIds, LOGTO_USERS_BATCH_SIZE)) {
+    logtoUsers.push(
+      ...(await getLogtoUsersBatch({
+        accessToken,
+        endpoint: config.endpoint,
+        userIds: userIdBatch,
+      })),
+    );
+  }
+
+  return new Map(logtoUsers.map((user) => [user.id, user]));
+}
+
+async function getLogtoUsersBatch({
+  accessToken,
+  endpoint,
+  userIds,
+}: {
+  accessToken: string;
+  endpoint: string;
+  userIds: string[];
+}): Promise<LogtoManagementUser[]> {
+  const url = new URL("/api/users", endpoint);
+  for (const userId of userIds) {
     url.searchParams.append("search.id", userId);
   }
   url.searchParams.set("mode.id", "exact");
-  url.searchParams.set("page_size", String(uniqueUserIds.length));
+  url.searchParams.set("page_size", String(userIds.length));
 
   const response = await fetch(url, {
     method: "GET",
@@ -240,9 +276,7 @@ export async function getLogtoUsers(
     );
   }
 
-  return new Map(
-    readLogtoUsersResponse(responseBody).map((user) => [user.id, user]),
-  );
+  return readLogtoUsersResponse(responseBody);
 }
 
 export async function deleteLogtoUser(userId: string): Promise<void> {

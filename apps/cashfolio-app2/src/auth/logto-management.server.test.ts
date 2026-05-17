@@ -217,6 +217,59 @@ describe("Logto Management API helpers", () => {
     });
   });
 
+  it("chunks Logto user exact-id searches at the Management API page-size cap", async () => {
+    const userIds = Array.from(
+      { length: 101 },
+      (_, index) => `user-${index + 1}`,
+    );
+    const createLogtoUser = (id: string) => ({
+      id,
+      username: null,
+      primaryEmail: `${id}@example.test`,
+      name: `Name ${id}`,
+      avatar: null,
+      lastSignInAt: null,
+    });
+
+    fetchMock
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          access_token: "management-token",
+          expires_in: 3600,
+        }),
+      )
+      .mockResolvedValueOnce(
+        createJsonResponse(userIds.slice(0, 100).map(createLogtoUser)),
+      )
+      .mockResolvedValueOnce(
+        createJsonResponse(userIds.slice(100).map(createLogtoUser)),
+      );
+
+    const users = await getLogtoUsers(userIds);
+
+    expect(users.size).toBe(101);
+    expect(users.get("user-1")).toMatchObject({
+      id: "user-1",
+      primaryEmail: "user-1@example.test",
+    });
+    expect(users.get("user-101")).toMatchObject({
+      id: "user-101",
+      primaryEmail: "user-101@example.test",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    const firstBatchUrl = fetchMock.mock.calls[1]?.[0] as URL;
+    const secondBatchUrl = fetchMock.mock.calls[2]?.[0] as URL;
+    expect(firstBatchUrl.searchParams.getAll("search.id")).toEqual(
+      userIds.slice(0, 100),
+    );
+    expect(firstBatchUrl.searchParams.get("page_size")).toBe("100");
+    expect(secondBatchUrl.searchParams.getAll("search.id")).toEqual([
+      "user-101",
+    ]);
+    expect(secondBatchUrl.searchParams.get("page_size")).toBe("1");
+  });
+
   it("does not request Logto users when the requested id list is empty", async () => {
     await expect(getLogtoUsers([])).resolves.toEqual(new Map());
 
