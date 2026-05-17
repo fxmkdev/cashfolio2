@@ -20,6 +20,7 @@ test.beforeAll(async () => {
 test("admin users page manages a user's Admin role from the row action dialog", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
   await page.goto("/admin/users");
 
   await expect(page.getByRole("heading", { name: "Users" })).toBeVisible();
