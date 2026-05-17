@@ -109,7 +109,7 @@ export function SimpleTransactionModal({
         initialValues?.direction ?? ("DEBIT" as SimpleTransactionDirection),
     },
     validate: {
-      date: (value, values) => {
+      date: (value) => {
         const date = normalizeDateInputValue(value);
         if (!date) {
           return value ? "Date is invalid" : "Date is required";

@@ -245,7 +245,7 @@ function AccountsPageStoryHarness({
   startWithEditModal?: boolean;
   routeSmoke?: boolean;
 }) {
-  const [tabState, setTabState] = useState<TabValue>(initialTab);
+  const [tabState] = useState<TabValue>(initialTab);
   const [modeState, setModeState] = useState<AccountsMode>(initialMode);
   const [createModalOpened, setCreateModalOpened] =
     useState(startWithCreateModal);

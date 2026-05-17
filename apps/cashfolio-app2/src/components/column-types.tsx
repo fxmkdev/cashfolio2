@@ -120,6 +120,169 @@ function findSelectOptionLabel(
   return "";
 }
 
+function FormattedNumericCellEditor({
+  value,
+  onValueChange,
+  data,
+  colDef,
+  context,
+}: CustomCellEditorProps) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    ref.current?.select();
+  }, []);
+
+  const config = getFormattedNumericConfig(colDef);
+  const mode = config.formattedNumericMode ?? "display";
+  const decimals =
+    config.getDisplayDecimals?.({
+      data,
+      value: typeof value === "number" ? value : Number(value),
+    }) ?? getDefaultDisplayDecimals(data);
+
+  return (
+    <FormattedNumberInput
+      ref={ref}
+      hideControls
+      variant="unstyled"
+      px={12}
+      locale={getGridUserLocale(context)}
+      decimalScale={mode === "display" ? decimals : undefined}
+      fixedDecimalScale={false}
+      value={value}
+      onValueChange={({ floatValue }) => onValueChange(floatValue)}
+    />
+  );
+}
+
+function SelectCellEditor({
+  colDef,
+  options: paramsOptions,
+  searchable,
+  value,
+  onValueChange,
+}: CustomCellEditorProps & {
+  searchable?: boolean;
+  options?: SelectColumnOptions;
+}) {
+  const options = paramsOptions ?? colDef.context?.options ?? [];
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    ref.current?.select();
+  }, []);
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    function handleSuppressKeyboardEvent(params: SuppressKeyboardEventParams) {
+      return params.event.key === "Enter";
+    }
+
+    colDef.suppressKeyboardEvent = isDropdownOpen
+      ? handleSuppressKeyboardEvent
+      : undefined;
+  }, [colDef, isDropdownOpen]);
+
+  return (
+    <Select
+      ref={ref}
+      variant="unstyled"
+      pl={12}
+      selectFirstOptionOnChange
+      searchable={searchable ?? true}
+      withAlignedLabels
+      data={options}
+      onDropdownOpen={() => setIsDropdownOpen(true)}
+      onDropdownClose={() => setIsDropdownOpen(false)}
+      value={value}
+      onChange={(nextValue) => onValueChange(nextValue)}
+    />
+  );
+}
+
+function AccountTreeSelectCellEditor({
+  colDef,
+  value,
+  onValueChange,
+}: CustomCellEditorProps) {
+  const options = colDef.context?.options ?? [];
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    ref.current?.select();
+  }, []);
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    function handleSuppressKeyboardEvent(params: SuppressKeyboardEventParams) {
+      return params.event.key === "Enter";
+    }
+
+    colDef.suppressKeyboardEvent = isDropdownOpen
+      ? handleSuppressKeyboardEvent
+      : undefined;
+  }, [colDef, isDropdownOpen]);
+
+  return (
+    <AccountTreeSelect
+      ref={ref}
+      variant="unstyled"
+      pl={12}
+      accounts={options}
+      onDropdownOpen={() => setIsDropdownOpen(true)}
+      onDropdownClose={() => setIsDropdownOpen(false)}
+      value={value ?? null}
+      onChange={(nextValue) => onValueChange(nextValue)}
+    />
+  );
+}
+
+function TextCellEditor({ value, onValueChange }: CustomCellEditorProps) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    ref.current?.select();
+  }, []);
+
+  return (
+    <TextInput
+      ref={ref}
+      variant="unstyled"
+      px={12}
+      value={value}
+      onChange={(event) => onValueChange(event.currentTarget.value)}
+    />
+  );
+}
+
+function DateCellEditor({
+  value,
+  onValueChange,
+  startDate,
+  context,
+}: CustomCellEditorProps & {
+  startDate?: string | Date;
+  context?: unknown;
+}) {
+  const locale = getGridUserLocale(context);
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    ref.current?.select();
+  }, []);
+
+  return (
+    <DateInput
+      ref={ref}
+      variant="unstyled"
+      px={12}
+      valueFormat={getDateInputValueFormat(locale)}
+      dateParser={(nextValue) => normalizeDateInputValue(nextValue, locale)}
+      minDate={startDate}
+      value={value}
+      onChange={(nextValue) => onValueChange(nextValue)}
+    />
+  );
+}
+
 export const columnTypes: AgGridReactProps["columnTypes"] = {
   [FORMATTED_NUMERIC_COLUMN]: {
     headerClass: "ag-right-aligned-header",
@@ -154,176 +317,26 @@ export const columnTypes: AgGridReactProps["columnTypes"] = {
         fixedDecimalScale: true,
       });
     },
-    cellEditor: ({
-      value,
-      onValueChange,
-      data,
-      colDef,
-      context,
-    }: CustomCellEditorProps) => {
-      const ref = useRef<HTMLInputElement>(null);
-      useEffect(() => {
-        ref.current?.select();
-      }, []);
-
-      const config = getFormattedNumericConfig(colDef);
-      const mode = config.formattedNumericMode ?? "display";
-      const decimals =
-        config.getDisplayDecimals?.({
-          data,
-          value: typeof value === "number" ? value : Number(value),
-        }) ?? getDefaultDisplayDecimals(data);
-
-      return (
-        <FormattedNumberInput
-          ref={ref}
-          hideControls
-          variant="unstyled"
-          px={12}
-          locale={getGridUserLocale(context)}
-          decimalScale={mode === "display" ? decimals : undefined}
-          fixedDecimalScale={false}
-          value={value}
-          onValueChange={({ floatValue }) => onValueChange(floatValue)}
-        />
-      );
-    },
+    cellEditor: FormattedNumericCellEditor,
   },
   [SELECT_COLUMN]: {
     valueFormatter: ({ value, colDef }) =>
       findSelectOptionLabel(colDef.context?.options ?? [], value),
-    cellEditor: ({
-      colDef,
-      options: paramsOptions,
-      searchable,
-      value,
-      onValueChange,
-    }: CustomCellEditorProps & {
-      searchable?: boolean;
-      options?: SelectColumnOptions;
-    }) => {
-      const options = paramsOptions ?? colDef.context?.options ?? [];
-      const ref = useRef<HTMLInputElement>(null);
-      useEffect(() => {
-        ref.current?.select();
-      }, []);
-
-      const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-      useEffect(() => {
-        function handleSuppressKeyboardEvent(
-          params: SuppressKeyboardEventParams,
-        ) {
-          return params.event.key === "Enter";
-        }
-
-        colDef.suppressKeyboardEvent = isDropdownOpen
-          ? handleSuppressKeyboardEvent
-          : undefined;
-      }, [isDropdownOpen]);
-      return (
-        <Select
-          ref={ref}
-          variant="unstyled"
-          pl={12}
-          selectFirstOptionOnChange
-          searchable={searchable ?? true}
-          withAlignedLabels
-          data={options}
-          onDropdownOpen={() => setIsDropdownOpen(true)}
-          onDropdownClose={() => setIsDropdownOpen(false)}
-          value={value}
-          onChange={(v) => onValueChange(v)}
-        />
-      );
-    },
+    cellEditor: SelectCellEditor,
   },
   [ACCOUNT_TREE_SELECT_COLUMN]: {
     valueFormatter: ({ value, colDef }) =>
       (colDef.context?.options ?? []).find(
         (o: { label: string; value: string }) => o.value === value,
       )?.label ?? "",
-    cellEditor: ({ colDef, value, onValueChange }: CustomCellEditorProps) => {
-      const options = colDef.context?.options ?? [];
-      const ref = useRef<HTMLInputElement>(null);
-      useEffect(() => {
-        ref.current?.select();
-      }, []);
-
-      const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-      useEffect(() => {
-        function handleSuppressKeyboardEvent(
-          params: SuppressKeyboardEventParams,
-        ) {
-          return params.event.key === "Enter";
-        }
-
-        colDef.suppressKeyboardEvent = isDropdownOpen
-          ? handleSuppressKeyboardEvent
-          : undefined;
-      }, [colDef, isDropdownOpen]);
-
-      return (
-        <AccountTreeSelect
-          ref={ref}
-          variant="unstyled"
-          pl={12}
-          accounts={options}
-          onDropdownOpen={() => setIsDropdownOpen(true)}
-          onDropdownClose={() => setIsDropdownOpen(false)}
-          value={value ?? null}
-          onChange={(v) => onValueChange(v)}
-        />
-      );
-    },
+    cellEditor: AccountTreeSelectCellEditor,
   },
   [TEXT_COLUMN]: {
-    cellEditor: ({ value, onValueChange }: CustomCellEditorProps) => {
-      const ref = useRef<HTMLInputElement>(null);
-      useEffect(() => {
-        ref.current?.select();
-      }, []);
-      return (
-        <TextInput
-          ref={ref}
-          variant="unstyled"
-          px={12}
-          value={value}
-          onChange={(e) => onValueChange(e.currentTarget.value)}
-        />
-      );
-    },
+    cellEditor: TextCellEditor,
   },
   [DATE_COLUMN]: {
     headerClass: "ag-right-aligned-header",
     cellClass: "ag-right-aligned-cell",
-    cellEditor: ({
-      value,
-      onValueChange,
-      startDate,
-      context,
-    }: CustomCellEditorProps & {
-      startDate?: string | Date;
-      context?: unknown;
-    }) => {
-      const locale = getGridUserLocale(context);
-      const ref = useRef<HTMLInputElement>(null);
-      useEffect(() => {
-        ref.current?.select();
-      }, []);
-      return (
-        <DateInput
-          ref={ref}
-          variant="unstyled"
-          px={12}
-          valueFormat={getDateInputValueFormat(locale)}
-          dateParser={(value) => normalizeDateInputValue(value, locale)}
-          minDate={startDate}
-          value={value}
-          onChange={(v) => onValueChange(v)}
-        />
-      );
-    },
+    cellEditor: DateCellEditor,
   },
 };
