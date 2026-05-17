@@ -41,9 +41,8 @@ Related docs:
 - `$accountBookId/route.tsx` - shared account-book shell route using Mantine
   `AppShell` with left navbar navigation (Accounts, Transactions, Report,
   History), an Admin section for Valuation Cache, account-book Settings, and an
-  external-link `Admin` entry that opens `/admin` in a new tab/window, navbar
-  footer actions (Account Book switcher + User menu), and mobile-only header
-  burger toggle
+  `Admin` entry that navigates to `/admin` in-app, navbar footer actions
+  (Account Book switcher + User menu), and mobile-only header burger toggle
   - Uses the theme `sm` breakpoint as the shared source of truth for both navbar
     collapse and header visibility.
   - Supports a desktop sidebar rail mode that keeps icon navigation visible,

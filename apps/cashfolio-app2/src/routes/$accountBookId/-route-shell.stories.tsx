@@ -149,8 +149,8 @@ export const RouteSmoke: Story = {
     ).toHaveAttribute("data-active", "true");
     const adminLink = canvas.getByRole("link", { name: "Admin" });
     await expect(adminLink).toHaveAttribute("href", "/admin");
-    await expect(adminLink).toHaveAttribute("target", "_blank");
-    await expect(adminLink).toHaveAttribute("rel", "noopener noreferrer");
+    await expect(adminLink).not.toHaveAttribute("target");
+    await expect(adminLink).not.toHaveAttribute("rel");
     await expect(
       canvas.getByRole("button", { name: "Storybook Book" }),
     ).toBeInTheDocument();
