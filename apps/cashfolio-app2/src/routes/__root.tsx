@@ -13,7 +13,6 @@ import {
 import { Notifications } from "@mantine/notifications";
 import { NavigationLoadingBar } from "../components/navigation-loading-bar";
 import { createDocumentTitleHead } from "@/shared/document-title";
-import { DEFAULT_USER_LOCALE } from "@/user-locale";
 import "../mantine";
 import { theme } from "../theme";
 import { useEffect } from "react";
@@ -25,7 +24,7 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <html lang={DEFAULT_USER_LOCALE} {...mantineHtmlProps}>
+    <html lang="en" {...mantineHtmlProps}>
       <head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />

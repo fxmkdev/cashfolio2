@@ -3,6 +3,7 @@ import {
   Button,
   Group,
   Select,
+  type SelectProps,
   Stack,
   Text,
   TextInput,
@@ -16,7 +17,13 @@ import { LinkButton } from "@/components/link-button";
 import { NarrowPageShell } from "@/components/narrow-page-shell";
 import { TopPageHeader } from "@/components/top-page-header";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
-import { isSupportedUserLocale, USER_LOCALE_OPTIONS } from "@/user-locale";
+import {
+  isSupportedUserLocale,
+  resolveSupportedUserLocale,
+  USER_LOCALE_OPTION_GROUPS,
+  USER_LOCALE_OPTIONS,
+  type UserLocale,
+} from "@/user-locale";
 import type { loadUserSettingsPageData } from "./-page-loader";
 import type { UserSettingsReturnTarget } from "./-return-target";
 
@@ -28,6 +35,27 @@ type UserSettingsFormValues = {
   name: string;
   avatarUrl: string;
   locale: string;
+};
+
+const userLocaleOptionByValue = new Map(
+  USER_LOCALE_OPTIONS.map((option) => [option.value, option]),
+);
+
+const renderRegionalFormatOption: SelectProps["renderOption"] = ({
+  option,
+}) => {
+  const localeOption = userLocaleOptionByValue.get(option.value as UserLocale);
+
+  return (
+    <Stack gap={0}>
+      <Text size="sm">{option.label}</Text>
+      {localeOption ? (
+        <Text size="xs" c="dimmed">
+          {localeOption.sample}
+        </Text>
+      ) : null}
+    </Stack>
+  );
 };
 
 function validateAvatarUrl(value: string) {
@@ -85,7 +113,7 @@ export function UserSettingsPageView(args: {
       locale: (value) =>
         isSupportedUserLocale(value)
           ? null
-          : "Locale must be a supported locale.",
+          : "Regional format must be a supported option.",
     },
   });
 
@@ -102,6 +130,10 @@ export function UserSettingsPageView(args: {
   }, [settings]);
 
   const avatarUrl = form.values.avatarUrl.trim();
+  const selectedLocale = resolveSupportedUserLocale(form.values.locale);
+  const selectedLocaleOption = selectedLocale
+    ? userLocaleOptionByValue.get(selectedLocale)
+    : null;
 
   return (
     <NarrowPageShell py="xl">
@@ -149,8 +181,8 @@ export function UserSettingsPageView(args: {
             <Stack gap={2}>
               <Text fw={600}>Profile</Text>
               <Text size="sm" c="dimmed">
-                Name and avatar are stored in Logto. Locale is stored in
-                Cashfolio.
+                Name and avatar are stored in Logto. Regional format is stored
+                in Cashfolio.
               </Text>
             </Stack>
           </Group>
@@ -169,11 +201,19 @@ export function UserSettingsPageView(args: {
           />
 
           <Select
-            label="Locale"
+            label="Regional Format"
+            description={
+              selectedLocaleOption
+                ? `Example: ${selectedLocaleOption.sample}`
+                : "Choose how dates and numbers are formatted."
+            }
             withAsterisk
             allowDeselect={false}
             disabled={isSubmitting}
-            data={USER_LOCALE_OPTIONS}
+            searchable
+            nothingFoundMessage="No regional format found"
+            data={USER_LOCALE_OPTION_GROUPS}
+            renderOption={renderRegionalFormatOption}
             {...form.getInputProps("locale")}
           />
 

@@ -142,9 +142,9 @@ describe("normalizeUserSettingsInput", () => {
       normalizeUserSettingsInput({
         name: "Ada",
         avatarUrl: "",
-        locale: "es-ES",
+        locale: "pt-BR",
       }),
-    ).toThrow("Locale must be a supported locale.");
+    ).toThrow("Regional format must be a supported option.");
 
     expect(() =>
       normalizeUserSettingsInput({
@@ -152,7 +152,7 @@ describe("normalizeUserSettingsInput", () => {
         avatarUrl: "",
         locale: 123,
       }),
-    ).toThrow("Locale must be a string.");
+    ).toThrow("Regional format must be a string.");
   });
 
   it("enforces Logto profile field length limits", () => {
@@ -255,7 +255,7 @@ describe("user profile server functions", () => {
     });
 
     await expect(getAuthenticatedUserSettings()).resolves.toMatchObject({
-      locale: "fr-CH",
+      locale: "fr-CA",
     });
   });
 
@@ -267,7 +267,7 @@ describe("user profile server functions", () => {
     getRequest.mockReturnValueOnce(
       new Request("https://app.example.test/user-settings", {
         headers: {
-          "accept-language": "es-ES,pt-BR;q=0.9",
+          "accept-language": "pt-BR,ko-KR;q=0.9",
         },
       }),
     );
