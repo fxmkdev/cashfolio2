@@ -13,6 +13,7 @@ import {
   IconArrowLeft,
   IconDatabase,
   IconLayoutDashboard,
+  IconUsers,
 } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import type { AuthenticatedUserProfile } from "@/auth/user-profile";
@@ -89,6 +90,12 @@ export function AdminShell({
                 label="Valuation Cache"
                 onClick={closeMobile}
                 to="/admin/valuation-cache"
+              />
+              <LinkNavLink
+                leftSection={<IconUsers size={16} />}
+                label="Users"
+                onClick={closeMobile}
+                to="/admin/users"
               />
             </Stack>
           </Stack>

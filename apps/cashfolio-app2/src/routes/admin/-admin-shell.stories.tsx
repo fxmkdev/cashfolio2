@@ -67,6 +67,10 @@ export const RouteSmoke: Story = {
     );
     await expect(overviewLink).not.toHaveAttribute("data-active", "true");
     await expect(valuationCacheLink).toHaveAttribute("data-active", "true");
+    await expect(canvas.getByRole("link", { name: "Users" })).toHaveAttribute(
+      "href",
+      "/admin/users",
+    );
     const appLink = canvas.getByRole("link", { name: "Back to App" });
     await expect(appLink).toHaveAttribute("href", "/");
     await expect(appLink).not.toHaveAttribute("target");

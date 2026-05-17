@@ -26,15 +26,17 @@ Related docs:
   seed only the system-managed Gain/Loss account. This route is outside the
   account-book shell and shows either a user sign-out menu or a back link to the
   source account book when opened from the account-book switcher.
-- `admin/route.tsx` - Cashfolio Admin shell route using Mantine `AppShell` with
-  a left navbar. It is outside the account-book context, has no account-book
-  switcher, and loads the current user profile plus locale for the shared user
-  menu.
+- `admin/route.tsx` - Admin-only Cashfolio Admin shell route using Mantine
+  `AppShell` with a left navbar. It is outside the account-book context, has no
+  account-book switcher, and loads the current user profile plus locale for the
+  shared user menu.
 - `admin/index.tsx` - Admin overview placeholder page showing `Coming soon`.
 - `admin/valuation-cache/route.tsx` - global valuation cache explorer page with
   tabs for Currency, Cryptocurrency, and Security; scans cached Redis TimeSeries
   keys, shows all cached units, and displays cached history charts without live
   provider lookups or account-book context.
+- `admin/users.tsx` - Admin users page listing app-owned database users and
+  supporting app role management.
 - `user-settings.tsx` - isolated user settings page for editing Logto-backed
   name/avatar URL and the app-owned locale preference. It accepts a safe
   `returnTo` search parameter so the page can link back to either the Admin UI
