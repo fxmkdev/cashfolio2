@@ -1,11 +1,10 @@
-import { NavLink, Stack, Text, Tooltip } from "@mantine/core";
+import { Stack, Text, Tooltip } from "@mantine/core";
 import {
   IconAdjustments,
   IconReceipt,
   IconCalendarMonth,
   IconChartBar,
   IconDatabase,
-  IconExternalLink,
   IconListDetails,
   IconSettings,
 } from "@tabler/icons-react";
@@ -124,15 +123,11 @@ function AccountBookAdminRootLink({
   onNavigate: () => void;
 }) {
   const renderLink = () => (
-    <NavLink
+    <LinkNavLink
       aria-label={collapsed ? "Admin" : undefined}
-      component="a"
-      href="/admin"
       label={collapsed ? "" : "Admin"}
       leftSection={<IconAdjustments size={collapsed ? 18 : 16} />}
       onClick={onNavigate}
-      rel="noopener noreferrer"
-      rightSection={collapsed ? undefined : <IconExternalLink size={14} />}
       styles={
         collapsed
           ? {
@@ -141,7 +136,7 @@ function AccountBookAdminRootLink({
             }
           : undefined
       }
-      target="_blank"
+      to="/admin"
     />
   );
 
