@@ -35,10 +35,10 @@ jobs:
     needs:
       - version
     steps:
-      - name: Ensure redis deploy is only triggered from main
+      - name: Ensure redis deploy is only triggered from main or tags
         run: |
-          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
-            echo "cashfolio-redis deploys are allowed only from main."
+          if [ "$GITHUB_REF" != "refs/heads/main" ] && [ "$GITHUB_REF_TYPE" != "tag" ]; then
+            echo "cashfolio-redis deploys are allowed only from main or tags."
             exit 1
           fi
       - name: Checkout

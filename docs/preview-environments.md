@@ -61,10 +61,10 @@ Fly machine lifecycle note:
   keeps machines running, and `FLY_MIN_MACHINES_RUNNING` is still honored.
 
 Redis is shared and not deployed as part of dynamic PR preview. Redis deploys
-remain manual from `main` via `.github/workflows/deploy.yml` using the existing
-environment naming pattern (`<environment>-cashfolio-redis`). The manual deploy
-workflow runs app and Redis deployment as separate jobs, so app-only deploys do
-not depend on Redis image build/push.
+remain manual from `main` or tags via `.github/workflows/deploy.yml` using the
+existing environment naming pattern (`<environment>-cashfolio-redis`). The
+manual deploy workflow runs app and Redis deployment as separate jobs, so
+app-only deploys do not depend on Redis image build/push.
 
 Neon branch lifecycle notes:
 
