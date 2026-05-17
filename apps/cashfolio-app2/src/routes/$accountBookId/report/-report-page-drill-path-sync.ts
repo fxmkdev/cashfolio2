@@ -2,25 +2,14 @@ import { useEffect } from "react";
 import type { BreakdownHierarchyNode } from "@/shared/breakdown-hierarchy";
 import { clampBreakdownPath } from "./-breakdown/-breakdown-drill";
 import type {
-  AllocationBreakdownType,
-  BreakdownType,
-} from "./-breakdown/-breakdown-types";
+  DrillPathByAllocationBreakdown,
+  DrillPathByAllocationBreakdownUpdater,
+  DrillPathByBreakdown,
+  DrillPathByBreakdownUpdater,
+  DrillPathByGainsLossesUpdater,
+} from "./-selector/-page-session-state";
 import type { GainsLossesBreakdownNode } from "./-gains-losses/-gains-losses-breakdown-types";
 import { clampGainsLossesPath } from "./-gains-losses/-gains-losses-drill";
-
-type DrillPathByBreakdown = Record<BreakdownType, string[]>;
-type DrillPathByAllocationBreakdown = Record<AllocationBreakdownType, string[]>;
-type DrillPathByBreakdownUpdater =
-  | DrillPathByBreakdown
-  | ((previousValue: DrillPathByBreakdown) => DrillPathByBreakdown);
-type DrillPathByAllocationBreakdownUpdater =
-  | DrillPathByAllocationBreakdown
-  | ((
-      previousValue: DrillPathByAllocationBreakdown,
-    ) => DrillPathByAllocationBreakdown);
-type DrillPathByGainsLossesUpdater =
-  | string[]
-  | ((previousValue: string[]) => string[]);
 
 type ReportDrillPathSyncInput = {
   drillPathByBreakdown: DrillPathByBreakdown;

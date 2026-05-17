@@ -1,6 +1,5 @@
-import type { ComponentProps } from "react";
 import { useMemo, useState } from "react";
-import type { PeriodFilterAction } from "../../-period-filter-action";
+import type { PeriodFilterActionProps } from "../../-period-filter-action";
 import type { getPeriodOverview } from "@/server/period";
 import { formatMonthPeriodValue } from "@/shared/period";
 import {
@@ -12,7 +11,6 @@ import {
 } from "./-selector-model";
 
 type PeriodOverview = Awaited<ReturnType<typeof getPeriodOverview>>;
-type PeriodFilterActionProps = ComponentProps<typeof PeriodFilterAction>;
 
 export function useReportPeriodFilterActionProps(args: {
   overview: PeriodOverview;
