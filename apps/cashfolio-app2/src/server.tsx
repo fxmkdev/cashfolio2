@@ -5,6 +5,7 @@ import {
 import {
   installGlobalServerErrorLogging,
   logServerError,
+  shouldLogServerRequestError,
 } from "./server/error-logging.server";
 
 installGlobalServerErrorLogging();
@@ -33,10 +34,12 @@ function createServerEntry(entry: { fetch: typeof fetch }) {
         await ensureE2EValuationProviderMocksEnabled();
         return await entry.fetch(...args);
       } catch (error) {
-        await logServerError("Server request failed.", error, {
-          requestMethod: request?.method ?? "<unknown>",
-          requestUrl: request?.url ?? "<unknown>",
-        });
+        if (shouldLogServerRequestError(error)) {
+          await logServerError("Server request failed.", error, {
+            requestMethod: request?.method ?? "<unknown>",
+            requestUrl: request?.url ?? "<unknown>",
+          });
+        }
         throw error;
       }
     },

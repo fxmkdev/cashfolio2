@@ -1,6 +1,7 @@
 const REDACTED = "[redacted]";
 const MAX_DEPTH = 4;
 const MAX_BODY_TEXT_LENGTH = 4_000;
+const MAX_RESPONSE_BODY_BYTES = MAX_BODY_TEXT_LENGTH * 4;
 
 type SerializableLogValue =
   | string
@@ -42,6 +43,23 @@ export async function logServerError(
       loggingError: fallbackString(loggingError),
     });
   }
+}
+
+export function shouldLogServerRequestError(error: unknown) {
+  if (error instanceof Response) {
+    return error.status >= 500;
+  }
+
+  if (isRedirectLike(error)) {
+    return false;
+  }
+
+  const status = getStatusLikeValue(error);
+  if (status !== null && status < 500) {
+    return false;
+  }
+
+  return true;
 }
 
 export function installGlobalServerErrorLogging() {
@@ -158,6 +176,7 @@ async function serializeResponse(
     statusText: response.statusText,
     url: response.url,
     redirected: response.redirected,
+    bodyUsed: response.bodyUsed,
     headers: serializeHeaders(response.headers),
     bodyText: await readResponseBodyText(response),
     ...(await serializeEnumerableFields(response, options)),
@@ -236,9 +255,17 @@ async function readResponseBodyText(response: Response) {
     return null;
   }
 
+  if (response.bodyUsed) {
+    return "[body-used]";
+  }
+
   try {
-    const bodyText = await response.clone().text();
-    return truncateText(redactSensitiveText(bodyText));
+    const body = response.clone().body;
+    if (body === null) {
+      return null;
+    }
+
+    return await readBodyPreview(body);
   } catch (error) {
     return {
       error: await serializeUnknown(error, {
@@ -247,6 +274,47 @@ async function readResponseBodyText(response: Response) {
       }),
     };
   }
+}
+
+async function readBodyPreview(body: ReadableStream<Uint8Array>) {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let bodyText = "";
+  let bytesRead = 0;
+  let truncated = false;
+
+  try {
+    while (bodyText.length < MAX_BODY_TEXT_LENGTH) {
+      const result = await reader.read();
+      if (result.done) {
+        bodyText += decoder.decode();
+        break;
+      }
+
+      bytesRead += result.value.byteLength;
+      bodyText += decoder.decode(result.value, { stream: true });
+
+      if (
+        bytesRead >= MAX_RESPONSE_BODY_BYTES ||
+        bodyText.length >= MAX_BODY_TEXT_LENGTH
+      ) {
+        truncated = true;
+        void reader.cancel();
+        break;
+      }
+    }
+
+    if (!truncated) {
+      bodyText += decoder.decode();
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const redactedText = redactSensitiveText(
+    bodyText.slice(0, MAX_BODY_TEXT_LENGTH),
+  );
+  return truncated ? `${redactedText}... [truncated]` : redactedText;
 }
 
 function redactSensitiveText(text: string) {
@@ -261,14 +329,6 @@ function redactSensitiveText(text: string) {
     );
 }
 
-function truncateText(text: string) {
-  if (text.length <= MAX_BODY_TEXT_LENGTH) {
-    return text;
-  }
-
-  return `${text.slice(0, MAX_BODY_TEXT_LENGTH)}... [truncated]`;
-}
-
 function getConstructorName(value: object) {
   return value.constructor?.name ?? "Object";
 }
@@ -281,6 +341,33 @@ function hasErrorCode(error: Error): error is Error & {
     (typeof (error as { code?: unknown }).code === "string" ||
       typeof (error as { code?: unknown }).code === "number")
   );
+}
+
+function isRedirectLike(value: unknown) {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "isRedirect" in value &&
+    (value as { isRedirect?: unknown }).isRedirect === true
+  );
+}
+
+function getStatusLikeValue(value: unknown) {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const data = value as {
+    status?: unknown;
+    statusCode?: unknown;
+  };
+  if (typeof data.status === "number") {
+    return data.status;
+  }
+  if (typeof data.statusCode === "number") {
+    return data.statusCode;
+  }
+  return null;
 }
 
 function fallbackString(value: unknown) {

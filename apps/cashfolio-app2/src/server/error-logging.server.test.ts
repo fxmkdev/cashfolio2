@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { serializeServerError } from "./error-logging.server";
+import {
+  serializeServerError,
+  shouldLogServerRequestError,
+} from "./error-logging.server";
 
 describe("serializeServerError", () => {
   it("serializes Response rejections with status, safe headers, and body text", async () => {
@@ -20,6 +23,7 @@ describe("serializeServerError", () => {
       statusText: "Forbidden",
       url: "",
       redirected: false,
+      bodyUsed: false,
       headers: {
         authorization: "[redacted]",
         "content-type": "text/plain",
@@ -90,5 +94,57 @@ describe("serializeServerError", () => {
     expect(payload).toMatchObject({
       bodyText: '{"message":"Failed","sessionSecret":"[redacted]"}',
     });
+  });
+
+  it("uses a clear marker for already-consumed Response bodies", async () => {
+    const response = new Response("Already read", { status: 500 });
+    await response.text();
+
+    await expect(serializeServerError(response)).resolves.toMatchObject({
+      type: "Response",
+      status: 500,
+      bodyUsed: true,
+      bodyText: "[body-used]",
+    });
+  });
+
+  it("reads only a bounded Response body preview", async () => {
+    const response = new Response("x".repeat(5_000), { status: 500 });
+
+    const payload = await serializeServerError(response);
+
+    expect(payload).toMatchObject({
+      type: "Response",
+      status: 500,
+    });
+    expect(String((payload as { bodyText: unknown }).bodyText)).toHaveLength(
+      4_015,
+    );
+    expect(String((payload as { bodyText: unknown }).bodyText)).toMatch(
+      /\.\.\. \[truncated\]$/,
+    );
+  });
+});
+
+describe("shouldLogServerRequestError", () => {
+  it("skips expected redirects and non-5xx Response values", () => {
+    expect(
+      shouldLogServerRequestError(new Response(null, { status: 404 })),
+    ).toBe(false);
+    expect(
+      shouldLogServerRequestError({
+        isRedirect: true,
+        statusCode: 302,
+        href: "/api/logto/sign-in",
+      }),
+    ).toBe(false);
+  });
+
+  it("logs server failures and unknown thrown values", () => {
+    expect(
+      shouldLogServerRequestError(new Response(null, { status: 500 })),
+    ).toBe(true);
+    expect(shouldLogServerRequestError({ statusCode: 503 })).toBe(true);
+    expect(shouldLogServerRequestError(new Error("boom"))).toBe(true);
   });
 });
