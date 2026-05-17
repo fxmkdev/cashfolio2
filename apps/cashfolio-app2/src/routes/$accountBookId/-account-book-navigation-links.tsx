@@ -4,7 +4,6 @@ import {
   IconReceipt,
   IconCalendarMonth,
   IconChartBar,
-  IconDatabase,
   IconListDetails,
   IconSettings,
 } from "@tabler/icons-react";
@@ -46,11 +45,6 @@ const navigationLinks: AccountBookNavigationLink[] = [
 ];
 
 const adminNavigationLinks: AccountBookNavigationLink[] = [
-  {
-    section: "valuation-cache",
-    label: "Valuation Cache",
-    icon: (size) => <IconDatabase size={size} />,
-  },
   {
     section: "settings",
     label: "Settings",
@@ -330,14 +324,6 @@ const AccountBookNavigationLinkItem = forwardRef<
         <LinkNavLink
           {...sharedProps}
           to="/$accountBookId/history"
-          params={{ accountBookId }}
-        />
-      );
-    case "valuation-cache":
-      return (
-        <LinkNavLink
-          {...sharedProps}
-          to="/$accountBookId/valuation-cache"
           params={{ accountBookId }}
         />
       );

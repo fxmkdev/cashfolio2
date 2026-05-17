@@ -55,11 +55,9 @@ export function updateSelectedUnitKeyByTab(args: {
 }
 
 export function toValuationCacheSeriesInput(args: {
-  accountBookId: string;
   unit: ValuationCacheUnitRow;
 }) {
   return {
-    accountBookId: args.accountBookId,
     unitType: args.unit.unitType,
     currency: args.unit.currency,
     cryptocurrency: args.unit.cryptocurrency,

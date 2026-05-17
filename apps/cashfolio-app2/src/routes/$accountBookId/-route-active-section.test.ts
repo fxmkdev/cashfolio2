@@ -57,19 +57,13 @@ describe("getActiveSection", () => {
     ).toBe("report");
   });
 
-  it("marks history and valuation-cache sections for their top-level routes", () => {
+  it("marks history section for its top-level route", () => {
     expect(
       getActiveSection({
         pathname: "/book-1/history",
         accountBookId: "book-1",
       }),
     ).toBe("history");
-    expect(
-      getActiveSection({
-        pathname: "/book-1/valuation-cache",
-        accountBookId: "book-1",
-      }),
-    ).toBe("valuation-cache");
   });
 
   it("marks settings section for the settings route", () => {

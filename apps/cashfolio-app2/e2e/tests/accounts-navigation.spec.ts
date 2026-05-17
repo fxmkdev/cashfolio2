@@ -33,13 +33,9 @@ test("account-book sidebar links navigate between key sections", async ({
   await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/history$`));
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Valuation Cache" }).click();
-  await expect(page).toHaveURL(
-    new RegExp(`/${seeded.accountBookId}/valuation-cache$`),
-  );
   await expect(
-    page.getByRole("heading", { name: "Valuation Cache" }),
-  ).toBeVisible();
+    page.getByRole("link", { name: "Valuation Cache" }),
+  ).not.toBeVisible();
 
   await page.getByRole("link", { name: "Accounts" }).click();
   await expect(page).toHaveURL(
@@ -63,4 +59,17 @@ test("mobile sidebar burger reveals and uses navigation links", async ({
 
   await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/history$`));
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
+});
+
+test("admin shell exposes the global valuation cache", async ({ page }) => {
+  await page.goto("/admin");
+
+  await expect(page).toHaveURL(/\/admin\/?$/);
+  await expect(page.getByRole("heading", { name: "Admin" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Valuation Cache" }).click();
+  await expect(page).toHaveURL(/\/admin\/valuation-cache$/);
+  await expect(
+    page.getByRole("heading", { name: "Valuation Cache" }),
+  ).toBeVisible();
 });

@@ -63,11 +63,11 @@ type SeriesState = {
 
 function getCachedSeriesContextText(tab: ValuationUnitTab): string {
   if (tab === "CURRENCY") {
-    return `Currency cache values are ${VALUATION_BASE_CURRENCY} -> selected currency rates (valuation base currency, not account-book reference currency).`;
+    return `Currency cache values are ${VALUATION_BASE_CURRENCY} -> selected currency rates.`;
   }
 
   if (tab === "CRYPTOCURRENCY") {
-    return `Cryptocurrency cache values are prices in ${VALUATION_BASE_CURRENCY} per coin (valuation base currency, not account-book reference currency).`;
+    return `Cryptocurrency cache values are prices in ${VALUATION_BASE_CURRENCY} per coin.`;
   }
 
   return "Security cache values are prices in each security's trade currency.";
@@ -115,13 +115,11 @@ function getColumnsForTab(
 }
 
 export type ValuationCachePageViewProps = {
-  accountBookId: string;
   selectedTab: ValuationUnitTab;
   units: ValuationCacheUnitsResponse;
 };
 
 export function ValuationCachePageView({
-  accountBookId,
   selectedTab,
   units,
 }: ValuationCachePageViewProps) {
@@ -253,7 +251,6 @@ export function ValuationCachePageView({
 
     void getValuationCacheSeries({
       data: toValuationCacheSeriesInput({
-        accountBookId,
         unit: selectedUnit,
       }),
     })
@@ -286,7 +283,7 @@ export function ValuationCachePageView({
     return () => {
       active = false;
     };
-  }, [accountBookId, selectedUnit]);
+  }, [selectedUnit]);
 
   const chartData = useMemo<ChartDatum[]>(
     () =>
@@ -429,8 +426,7 @@ export function ValuationCachePageView({
             <LinkTab
               key={tab.value}
               value={tab.value}
-              to="/$accountBookId/valuation-cache"
-              params={{ accountBookId }}
+              to="/admin/valuation-cache"
               search={{
                 tab: formatValuationUnitTabSearchValue(tab.value),
               }}
@@ -446,7 +442,7 @@ export function ValuationCachePageView({
           <Stack gap={4}>
             <Text fw={600}>Units</Text>
             <Text c="dimmed" size="sm">
-              Unique units in this account book ({selectedTab.toLowerCase()}).
+              Cached units ({selectedTab.toLowerCase()}).
             </Text>
           </Stack>
 

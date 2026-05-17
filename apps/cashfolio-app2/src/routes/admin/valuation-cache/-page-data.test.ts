@@ -107,11 +107,9 @@ describe("valuation-cache page data helpers", () => {
   it("creates chart-series request payload from selected row", () => {
     expect(
       toValuationCacheSeriesInput({
-        accountBookId: "book-1",
         unit: units.currencyUnits[0],
       }),
     ).toEqual({
-      accountBookId: "book-1",
       unitType: "CURRENCY",
       currency: "EUR",
       cryptocurrency: undefined,
@@ -121,11 +119,9 @@ describe("valuation-cache page data helpers", () => {
 
     expect(
       toValuationCacheSeriesInput({
-        accountBookId: "book-1",
         unit: units.securityUnits[0],
       }),
     ).toEqual({
-      accountBookId: "book-1",
       unitType: "SECURITY",
       currency: undefined,
       cryptocurrency: undefined,

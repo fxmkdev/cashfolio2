@@ -9,7 +9,11 @@ import {
   type TextProps,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconArrowLeft, IconLayoutDashboard } from "@tabler/icons-react";
+import {
+  IconArrowLeft,
+  IconDatabase,
+  IconLayoutDashboard,
+} from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import type { AuthenticatedUserProfile } from "@/auth/user-profile";
 import { LinkNavLink } from "@/components/link-nav-link";
@@ -73,10 +77,18 @@ export function AdminShell({
             <Divider />
             <Stack gap="xs">
               <LinkNavLink
+                activeOptions={{ exact: true }}
                 leftSection={<IconLayoutDashboard size={16} />}
                 label="Overview"
                 onClick={closeMobile}
                 to="/admin"
+              />
+              <LinkNavLink
+                activeOptions={{ exact: true }}
+                leftSection={<IconDatabase size={16} />}
+                label="Valuation Cache"
+                onClick={closeMobile}
+                to="/admin/valuation-cache"
               />
             </Stack>
           </Stack>
