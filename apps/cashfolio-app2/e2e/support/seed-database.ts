@@ -3,6 +3,7 @@ import {
   AccountType,
   EquityAccountSubtype,
   Unit,
+  type UserRole,
 } from "../../src/.prisma-client/enums";
 import {
   assertSafeWriteTarget,
@@ -44,15 +45,17 @@ type SeededAccounts = {
 
 async function createSeedAccountBook(args?: {
   accountBookStartDate?: Date;
+  userRoles?: UserRole[];
 }): Promise<{ accountBookId: string }> {
   const user = await prisma.user.upsert({
     where: {
       externalId: DEFAULT_EXTERNAL_ID,
     },
-    update: {},
+    update: args?.userRoles ? { roles: args.userRoles } : {},
     create: {
       id: createId(),
       externalId: DEFAULT_EXTERNAL_ID,
+      roles: args?.userRoles,
     },
   });
 
@@ -259,6 +262,7 @@ async function createSeedAccounts(args: {
 
 export async function seedDatabase(args?: {
   accountBookStartDate?: Date;
+  userRoles?: UserRole[];
 }): Promise<SeededData> {
   assertSafeWriteTarget();
 

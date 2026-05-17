@@ -1,10 +1,12 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { UserLocaleProvider } from "@/user-locale-context";
 import { AdminShell } from "./-admin-shell";
+import { AdminRouteErrorComponent } from "./-route-error";
 
 export const Route = createFileRoute("/admin")({
   loader: async () => {
     const [
+      { ensureAdminAccess },
       { getRuntimeAppVersion },
       {
         getAuthenticatedUserLocale,
@@ -12,9 +14,12 @@ export const Route = createFileRoute("/admin")({
         getUserAccountSecurityUrl,
       },
     ] = await Promise.all([
+      import("@/server/admin-users"),
       import("@/server/app-version"),
       import("@/server/user-profile"),
     ]);
+
+    await ensureAdminAccess();
 
     const [appVersion, userProfile, accountSecurityUrl, userLocale] =
       await Promise.all([
@@ -31,6 +36,7 @@ export const Route = createFileRoute("/admin")({
       userLocale,
     };
   },
+  errorComponent: AdminRouteErrorComponent,
   component: AdminLayout,
 });
 

@@ -26,15 +26,20 @@ Related docs:
   seed only the system-managed Gain/Loss account. This route is outside the
   account-book shell and shows either a user sign-out menu or a back link to the
   source account book when opened from the account-book switcher.
-- `admin/route.tsx` - Cashfolio Admin shell route using Mantine `AppShell` with
-  a left navbar. It is outside the account-book context, has no account-book
-  switcher, and loads the current user profile plus locale for the shared user
-  menu.
+- `admin/route.tsx` - Admin-only Cashfolio Admin shell route using Mantine
+  `AppShell` with a left navbar. It is outside the account-book context, has no
+  account-book switcher, and loads the current user profile plus locale for the
+  shared user menu. Non-admin users receive a `403 Forbidden` loader response
+  and see an explanatory Admin access error page.
 - `admin/index.tsx` - Admin overview placeholder page showing `Coming soon`.
 - `admin/valuation-cache/route.tsx` - global valuation cache explorer page with
   tabs for Currency, Cryptocurrency, and Security; scans cached Redis TimeSeries
   keys, shows all cached units, and displays cached history charts without live
   provider lookups or account-book context.
+- `admin/users.tsx` - Admin users page listing app-owned database users and
+  supporting app role management. Rows are enriched with Logto Management API
+  identity fields when available while DB rows remain visible if Logto lookup
+  fails or the Logto user is missing.
 - `user-settings.tsx` - isolated user settings page for editing Logto-backed
   name/avatar URL and the app-owned locale preference. It accepts a safe
   `returnTo` search parameter so the page can link back to either the Admin UI
@@ -45,8 +50,9 @@ Related docs:
 - `$accountBookId/route.tsx` - shared account-book shell route using Mantine
   `AppShell` with left navbar navigation (Accounts, Transactions, Report,
   History), an Admin section for account-book Settings and an `Admin` entry that
-  navigates to `/admin` in-app, navbar footer actions (Account Book switcher +
-  User menu), and mobile-only header burger toggle
+  navigates to `/admin` in-app for users with the app `ADMIN` role, navbar
+  footer actions (Account Book switcher + User menu), and mobile-only header
+  burger toggle
   - Uses the theme `sm` breakpoint as the shared source of truth for both navbar
     collapse and header visibility.
   - Supports a desktop sidebar rail mode that keeps icon navigation visible,

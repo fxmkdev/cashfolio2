@@ -112,9 +112,13 @@ Related docs:
   API `DELETE /api/users/{userId}` through
   `src/auth/logto-management.server.ts`. It requires
   `LOGTO_MANAGEMENT_API_ENDPOINT`, `LOGTO_MANAGEMENT_API_RESOURCE`,
-  `LOGTO_MANAGEMENT_API_APP_ID`, and `LOGTO_MANAGEMENT_API_APP_SECRET`.
+  `LOGTO_MANAGEMENT_API_APP_ID`, and `LOGTO_MANAGEMENT_API_APP_SECRET`. The same
+  Management API helper also reads `GET /api/users/{userId}` and uses batched
+  `GET /api/users` exact-id searches for Admin user-table identity enrichment.
 - User auth guard: `src/auth/functions.server.ts` (`ensureAuthenticated`)
 - User upsert/lookup: `src/users/functions.server.ts`
+- Admin user listing, current-user Admin capability checks, and role management:
+  `src/server/admin-users.ts`
 - Account-book authorization guard: `src/account-books/functions.server.ts`
 - All account/ledger/transaction server functions enforce account-book access
   before querying/updating data

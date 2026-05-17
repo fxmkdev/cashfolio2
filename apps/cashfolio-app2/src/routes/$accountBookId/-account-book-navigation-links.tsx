@@ -88,10 +88,11 @@ export function AccountBookAdminNavigationLinks({
   accountBookId,
   activeSection,
   accountsLinkSearch,
+  canAccessAdmin,
   collapsed,
   onNavigate,
   periodLinkSearch,
-}: AccountBookNavigationLinksProps) {
+}: AccountBookNavigationLinksProps & { canAccessAdmin: boolean }) {
   return (
     <Stack gap="xs">
       <AccountBookNavigationLinkList
@@ -104,7 +105,12 @@ export function AccountBookAdminNavigationLinks({
         periodLinkSearch={periodLinkSearch}
         sectionLabel="Admin"
       />
-      <AccountBookAdminRootLink collapsed={collapsed} onNavigate={onNavigate} />
+      {canAccessAdmin ? (
+        <AccountBookAdminRootLink
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+        />
+      ) : null}
     </Stack>
   );
 }

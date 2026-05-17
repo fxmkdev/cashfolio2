@@ -40,6 +40,7 @@ import {
 export type AccountBookShellProps = {
   accountSecurityUrl: string | null;
   accountBookId: string;
+  canAccessAdmin: boolean;
   currentHref: string;
   pathname: string;
   accountBooks: UserAccountBookOption[];
@@ -55,6 +56,7 @@ export type AccountBookShellProps = {
 export function AccountBookShell({
   accountSecurityUrl,
   accountBookId,
+  canAccessAdmin,
   currentHref,
   pathname,
   accountBooks,
@@ -241,6 +243,7 @@ export function AccountBookShell({
               accountBookId={accountBookId}
               activeSection={activeSection}
               accountsLinkSearch={accountsLinkSearch}
+              canAccessAdmin={canAccessAdmin}
               collapsed={desktopRailCollapsed}
               onNavigate={closeMobile}
               periodLinkSearch={periodLinkSearch}
