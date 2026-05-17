@@ -1,7 +1,7 @@
 import { NavLink, Stack, Text, Tooltip } from "@mantine/core";
 import {
   IconAdjustments,
-  IconActivity,
+  IconReceipt,
   IconCalendarMonth,
   IconChartBar,
   IconDatabase,
@@ -18,7 +18,7 @@ import { LinkNavLink } from "@/components/link-nav-link";
 import type { AccountBookSection, AccountsLinkSearch } from "./-route-helpers";
 
 type AccountBookNavigationLink = {
-  section: AccountBookSection;
+  section: Exclude<AccountBookSection, "user-settings">;
   label: string;
   icon: (size: number) => ReactNode;
 };
@@ -30,17 +30,17 @@ const navigationLinks: AccountBookNavigationLink[] = [
     icon: (size) => <IconListDetails size={size} />,
   },
   {
-    section: "activity",
+    section: "transactions",
     label: "Transactions",
-    icon: (size) => <IconActivity size={size} />,
+    icon: (size) => <IconReceipt size={size} />,
   },
   {
-    section: "period",
+    section: "report",
     label: "Report",
     icon: (size) => <IconCalendarMonth size={size} />,
   },
   {
-    section: "timeline",
+    section: "history",
     label: "History",
     icon: (size) => <IconChartBar size={size} />,
   },
@@ -312,29 +312,29 @@ const AccountBookNavigationLinkItem = forwardRef<
           search={accountsLinkSearch}
         />
       );
-    case "activity":
+    case "transactions":
       return (
         <LinkNavLink
           {...sharedProps}
-          to="/$accountBookId/activity"
+          to="/$accountBookId/transactions"
           params={{ accountBookId }}
           search={periodLinkSearch}
         />
       );
-    case "period":
+    case "report":
       return (
         <LinkNavLink
           {...sharedProps}
-          to="/$accountBookId/period"
+          to="/$accountBookId/report"
           params={{ accountBookId }}
           search={periodLinkSearch}
         />
       );
-    case "timeline":
+    case "history":
       return (
         <LinkNavLink
           {...sharedProps}
-          to="/$accountBookId/timeline"
+          to="/$accountBookId/history"
           params={{ accountBookId }}
         />
       );

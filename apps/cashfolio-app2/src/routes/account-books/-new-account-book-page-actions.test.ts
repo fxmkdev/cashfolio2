@@ -37,11 +37,11 @@ describe("resolveNewAccountBookReturnTarget", () => {
     expect(
       resolveNewAccountBookReturnTarget({
         accountBooks,
-        returnTo: "/storybook-book/period?period=2026-01#rows",
+        returnTo: "/storybook-book/report?period=2026-01#rows",
       }),
     ).toEqual({
       accountBookName: "Storybook Book",
-      href: "/storybook-book/period?period=2026-01#rows",
+      href: "/storybook-book/report?period=2026-01#rows",
     });
   });
 
@@ -125,14 +125,16 @@ describe("NewAccountBookPageActions", () => {
         createElement(NewAccountBookPageActions, {
           returnTarget: {
             accountBookName: "Storybook Book",
-            href: "/storybook-book/activity?period=2026-01",
+            href: "/storybook-book/transactions?period=2026-01",
           },
           userProfile,
         }),
       ),
     );
 
-    expect(markup).toContain('href="/storybook-book/activity?period=2026-01"');
+    expect(markup).toContain(
+      'href="/storybook-book/transactions?period=2026-01"',
+    );
     expect(markup).toContain('data-router-link="true"');
     expect(markup).toContain("Back to Storybook Book");
     expect(markup).not.toContain('action="/api/logto/sign-out"');

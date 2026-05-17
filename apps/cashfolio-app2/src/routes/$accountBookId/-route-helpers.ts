@@ -7,11 +7,12 @@ import {
 } from "./accounts/-page-types";
 
 export type AccountBookSection =
-  | "activity"
+  | "transactions"
   | "accounts"
-  | "period"
+  | "report"
   | "settings"
-  | "timeline"
+  | "history"
+  | "user-settings"
   | "valuation-cache";
 
 export type AccountsLinkSearch = {
@@ -54,10 +55,11 @@ export function getActiveSection(args: {
   }
 
   const section = segments[1];
-  if (section === "activity") return "activity";
-  if (section === "period") return "period";
+  if (section === "transactions") return "transactions";
+  if (section === "report") return "report";
   if (section === "settings") return "settings";
-  if (section === "timeline") return "timeline";
+  if (section === "user-settings") return "user-settings";
+  if (section === "history") return "history";
   if (section === "valuation-cache") return "valuation-cache";
   return "accounts";
 }

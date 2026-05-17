@@ -363,7 +363,7 @@ export async function seedExplicitGainLossDrilldownScenario(args: {
   };
 }
 
-export async function seedActivityPageScenario(args: {
+export async function seedTransactionsPageScenario(args: {
   accountBookId: string;
   cashAccountId: string;
   savingsAccountId: string;
@@ -371,8 +371,8 @@ export async function seedActivityPageScenario(args: {
 }) {
   const olderTransactionId = createId();
   const newerTransactionId = createId();
-  const olderDescription = "E2E Activity Older";
-  const newerDescription = "E2E Activity Newer";
+  const olderDescription = "E2E Transactions Older";
+  const newerDescription = "E2E Transactions Newer";
 
   await prisma.transaction.create({
     data: {

@@ -33,37 +33,37 @@ describe("getActiveSection", () => {
     ).toBe("accounts");
   });
 
-  it("marks activity section for activity routes", () => {
+  it("marks transactions section for transactions routes", () => {
     expect(
       getActiveSection({
-        pathname: "/book-1/activity",
+        pathname: "/book-1/transactions",
         accountBookId: "book-1",
       }),
-    ).toBe("activity");
+    ).toBe("transactions");
   });
 
-  it("marks period section as active for nested period routes", () => {
+  it("marks report section as active for nested report routes", () => {
     expect(
       getActiveSection({
-        pathname: "/book-1/period",
+        pathname: "/book-1/report",
         accountBookId: "book-1",
       }),
-    ).toBe("period");
+    ).toBe("report");
     expect(
       getActiveSection({
-        pathname: "/book-1/period/gains-losses/account-cash",
+        pathname: "/book-1/report/gains-losses/account-cash",
         accountBookId: "book-1",
       }),
-    ).toBe("period");
+    ).toBe("report");
   });
 
-  it("marks timeline and valuation-cache sections for their top-level routes", () => {
+  it("marks history and valuation-cache sections for their top-level routes", () => {
     expect(
       getActiveSection({
-        pathname: "/book-1/timeline",
+        pathname: "/book-1/history",
         accountBookId: "book-1",
       }),
-    ).toBe("timeline");
+    ).toBe("history");
     expect(
       getActiveSection({
         pathname: "/book-1/valuation-cache",

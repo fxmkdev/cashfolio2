@@ -27,9 +27,9 @@ Primary consumers:
 - `src/server/accounts/accounts-queries.ts`
   - account tree reference balances
   - `getAccountReferenceBalances` lazy hydration endpoint
-- `src/server/period-timeline-point-metrics.server.ts`
-  - Timeline point valuation conversions
-  - exposes internal source metadata so derived Timeline metrics are cached only
+- `src/server/period/period-history-point-metrics.server.ts`
+  - History point valuation conversions
+  - exposes internal source metadata so derived History metrics are cached only
     when all valuations came from identity conversion or Redis TimeSeries
 
 Exchange-rate entry points:
@@ -190,9 +190,9 @@ Plain-language summary:
 - Miss-cooldown answers: "Should we skip retrying this provider day for now?"
 
 Identity conversions and TimeSeries values are considered permanent enough for
-derived Timeline metrics caching. One-hour fallback entries and provider results
-can still answer the current request, but Timeline metrics produced from them
-are not persisted in the derived metrics cache.
+derived History metrics caching. One-hour fallback entries and provider results
+can still answer the current request, but History metrics produced from them are
+not persisted in the derived metrics cache.
 
 ## Core Lookup Algorithm
 
