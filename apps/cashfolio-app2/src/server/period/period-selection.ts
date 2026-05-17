@@ -11,7 +11,7 @@ import {
   PERIOD_PRESET_YTD,
   type PeriodPresetValue,
 } from "../../shared/period";
-import { addUtcDays, startOfUtcDay } from "../../shared/date";
+import { addUtcDays, startOfUtcDay, startOfUtcMonth } from "../../shared/date";
 import { DEFAULT_USER_LOCALE, type UserLocale } from "../../user-locale";
 
 export type PeriodSpecifier = PeriodPresetValue | "month" | "year";
@@ -29,10 +29,6 @@ export type NormalizedPeriodSelection = NormalizedPeriodBase & {
   to: Date;
   label: string;
 };
-
-function startOfUtcMonth(date: Date): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
-}
 
 function endOfUtcMonth(year: number, month: number): Date {
   return new Date(Date.UTC(year, month + 1, 0));
