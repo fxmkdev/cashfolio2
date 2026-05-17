@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Box, Text } from "@mantine/core";
 import { useEffect, useMemo, useState } from "react";
-import { expect, screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 import {
   accountOptions as baseAccountOptions,
@@ -550,12 +550,12 @@ export const AccountActionsMenu: Story = {
       canvas.getByRole("button", { name: "Account actions" }),
     );
 
-    await expect(
-      screen.getByRole("menuitem", { name: "Archive" }),
-    ).toBeVisible();
-    await expect(
-      screen.getByRole("menuitem", { name: "Delete" }),
-    ).toBeVisible();
+    await waitFor(() => {
+      expect(screen.getByRole("menuitem", { name: "Archive" })).toBeVisible();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("menuitem", { name: "Delete" })).toBeVisible();
+    });
   },
 };
 
@@ -579,12 +579,12 @@ export const ArchivedAccountActionsMenu: Story = {
       canvas.getByRole("button", { name: "Account actions" }),
     );
 
-    await expect(
-      screen.getByRole("menuitem", { name: "Unarchive" }),
-    ).toBeVisible();
-    await expect(
-      screen.getByRole("menuitem", { name: "Delete" }),
-    ).toBeVisible();
+    await waitFor(() => {
+      expect(screen.getByRole("menuitem", { name: "Unarchive" })).toBeVisible();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("menuitem", { name: "Delete" })).toBeVisible();
+    });
   },
 };
 
@@ -597,12 +597,12 @@ export const DisabledAccountActionsMenu: Story = {
       canvas.getByRole("button", { name: "Account actions" }),
     );
 
-    await expect(
-      screen.getByRole("menuitem", { name: "Archive" }),
-    ).toBeVisible();
-    await expect(
-      screen.getByRole("menuitem", { name: "Delete" }),
-    ).toBeVisible();
+    await waitFor(() => {
+      expect(screen.getByRole("menuitem", { name: "Archive" })).toBeVisible();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("menuitem", { name: "Delete" })).toBeVisible();
+    });
   },
 };
 
@@ -619,6 +619,11 @@ export const EditModalState: Story = {
 };
 
 export const PeriodFilterRouteSmoke: Story = {
+  parameters: {
+    router: {
+      initialPath: "/storybook-book/account-checking",
+    },
+  },
   render: () => (
     <LedgerPageStoryHarness
       routeSmoke={true}
