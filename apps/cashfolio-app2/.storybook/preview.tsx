@@ -6,6 +6,7 @@ import {
 } from "ag-grid-enterprise";
 import { MantineProvider } from "@mantine/core";
 import {
+  createMemoryHistory,
   createRootRoute,
   createRoute,
   createRouter,
@@ -15,6 +16,12 @@ import {
 } from "@tanstack/react-router";
 import "../src/mantine";
 import { theme } from "../src/theme";
+
+type RouterStoryParameters = {
+  router?: {
+    initialPath?: string;
+  };
+};
 
 const preview: Preview = {
   parameters: {
@@ -30,7 +37,10 @@ const preview: Preview = {
     },
   },
   decorators: [
-    (Story) => {
+    (Story, context) => {
+      const { router: routerParameters } =
+        context.parameters as RouterStoryParameters;
+      const initialPath = routerParameters?.initialPath ?? "/";
       const rootRoute = createRootRoute({
         component: () => <Outlet />,
       });
@@ -38,12 +48,6 @@ const preview: Preview = {
       const rootStoryRoute = createRoute({
         getParentRoute: () => rootRoute,
         path: "/",
-        component: () => <Story />,
-      });
-
-      const adminRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/admin",
         component: () => <Story />,
       });
 
@@ -74,6 +78,21 @@ const preview: Preview = {
         path: "/accounts",
         component: () => <Story />,
       });
+      const accountBookTransactionsRoute = createRoute({
+        getParentRoute: () => accountBookRoute,
+        path: "/transactions",
+        component: () => <Story />,
+      });
+      const accountBookReportRoute = createRoute({
+        getParentRoute: () => accountBookRoute,
+        path: "/report",
+        component: () => <Story />,
+      });
+      const accountBookHistoryRoute = createRoute({
+        getParentRoute: () => accountBookRoute,
+        path: "/history",
+        component: () => <Story />,
+      });
 
       const accountBookPeriodRoute = createRoute({
         getParentRoute: () => accountBookRoute,
@@ -87,7 +106,7 @@ const preview: Preview = {
       });
       const accountBookSettingsRoute = createRoute({
         getParentRoute: () => accountBookRoute,
-        path: "/account-book-settings",
+        path: "/settings",
         component: () => <Story />,
       });
       const accountBookUserSettingsRoute = createRoute({
@@ -124,9 +143,38 @@ const preview: Preview = {
         accountLedgerChartRoute,
       ]);
 
+      const adminRoute = createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/admin",
+        component: () => <Story />,
+      });
+      const adminValuationCacheRoute = createRoute({
+        getParentRoute: () => adminRoute,
+        path: "/valuation-cache",
+        component: () => <Story />,
+      });
+      const adminUsersRoute = createRoute({
+        getParentRoute: () => adminRoute,
+        path: "/users",
+        component: () => <Story />,
+      });
+      const adminRouteTree = adminRoute.addChildren([
+        adminValuationCacheRoute,
+        adminUsersRoute,
+      ]);
+
+      const userSettingsRoute = createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/user-settings",
+        component: () => <Story />,
+      });
+
       const accountBookRouteTree = accountBookRoute.addChildren([
         accountBookIndexRoute,
         accountBookAccountsRoute,
+        accountBookTransactionsRoute,
+        accountBookReportRoute,
+        accountBookHistoryRoute,
         accountBookPeriodRoute,
         accountBookTimelineRoute,
         accountBookSettingsRoute,
@@ -138,12 +186,13 @@ const preview: Preview = {
       const router = createRouter({
         routeTree: rootRoute.addChildren([
           rootStoryRoute,
-          adminRoute,
+          adminRouteTree,
+          userSettingsRoute,
           accountBookRouteTree,
         ]),
-        // Storybook renders stories inside /iframe.html, so links/routes must
-        // resolve relative to that base path.
-        basepath: "/iframe.html",
+        history: createMemoryHistory({
+          initialEntries: [initialPath],
+        }),
       });
 
       return (

@@ -25,12 +25,29 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+function getFieldControl(dialog: HTMLElement, label: string) {
+  const labelElement = within(dialog).getByText(label, {
+    selector: ".mantine-InputWrapper-label",
+  });
+  const wrapper = labelElement.closest(".mantine-InputWrapper-root");
+  const control = wrapper?.querySelector("input, button");
+
+  if (!(control instanceof HTMLElement)) {
+    throw new Error(`Could not find control for ${label}`);
+  }
+
+  return control;
+}
+
 export const Create: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole("dialog", { name: "New Account" });
 
-    await expect(body.getByLabelText("Unit")).not.toBeDisabled();
-    await expect(body.getByLabelText("Currency")).not.toBeDisabled();
+    await waitFor(() => expect(dialog).toBeVisible());
+    await waitFor(() => expect(getFieldControl(dialog, "Unit")).toBeVisible());
+    await expect(getFieldControl(dialog, "Unit")).not.toBeDisabled();
+    await expect(getFieldControl(dialog, "Currency")).not.toBeDisabled();
   },
 };
 
@@ -41,9 +58,12 @@ export const Edit: Story = {
   },
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole("dialog", { name: "Edit Account" });
 
-    await expect(body.getByLabelText("Unit")).toBeDisabled();
-    await expect(body.getByLabelText("Currency")).toBeDisabled();
+    await waitFor(() => expect(dialog).toBeVisible());
+    await waitFor(() => expect(getFieldControl(dialog, "Unit")).toBeVisible());
+    await expect(getFieldControl(dialog, "Unit")).toBeDisabled();
+    await expect(getFieldControl(dialog, "Currency")).toBeDisabled();
   },
 };
 

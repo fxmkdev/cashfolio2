@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Box, Text } from "@mantine/core";
 import { useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import { expect, fn, screen, userEvent, within } from "storybook/test";
+import { expect, fn, screen, userEvent, waitFor, within } from "storybook/test";
 import { formatMonthPeriodValue } from "@/shared/period";
 import { DEFAULT_PERIOD_VALUE } from "./-page-types";
 import { ReportPageView } from "./-page-view";
@@ -195,6 +195,11 @@ export const FullyConvertible: Story = {
 };
 
 export const RouteSmoke: Story = {
+  parameters: {
+    router: {
+      initialPath: "/storybook-book/report",
+    },
+  },
   render: () => <PeriodRouteSmokeHarness />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -665,18 +670,22 @@ export const GainsLossesDrillSmoke: Story = {
       "period-gains-losses-breakdown-chart",
     );
     await expect(
-      canvas.getByText(
-        "Top-Level Groups for Gains/Losses in the Selected Period",
+      await canvas.findByText(
+        /Top-Level Groups for Gains\/Losses in the Selected Period/,
       ),
     ).toBeInTheDocument();
 
     await userEvent.dblClick(gainsLossesChart);
-    await expect(
-      canvas.getByText("Drilled Gains/Losses in the Selected Period"),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        canvas.getByText(/Drilled Gains\/Losses in the Selected Period/),
+      ).toBeInTheDocument();
+    });
     await expect(canvas.getByText("FX")).toBeInTheDocument();
 
     await userEvent.dblClick(gainsLossesChart);
-    await expect(canvas.getByText("USD")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(canvas.getByText("USD")).toBeInTheDocument();
+    });
   },
 };

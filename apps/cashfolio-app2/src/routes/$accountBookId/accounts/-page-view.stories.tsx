@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Box, Text } from "@mantine/core";
 import { useMemo, useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 import type { AccountGroupInitialValues } from "@/components/edit-account-group-modal";
 import type {
@@ -386,7 +386,7 @@ function AccountsPageStoryHarness({
           { mode, tab },
           referenceCurrencyBalanceTotal,
         )}
-        isGroupOpenByDefault={() => false}
+        isGroupOpenByDefault={() => initialMode === "archived"}
         onRowGroupOpened={() => undefined}
         createModalOpened={createModalOpened}
         editModalOpen={editModalOpen}
@@ -461,6 +461,15 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+async function findVisibleDialog(
+  body: ReturnType<typeof within>,
+  name: string,
+) {
+  const dialog = await body.findByRole("dialog", { name });
+  await waitFor(() => expect(dialog).toBeVisible());
+  return dialog;
+}
+
 export const ActiveHappyPath: Story = {
   render: () => <AccountsPageStoryHarness initialMode="active" />,
 };
@@ -474,39 +483,58 @@ export const ArchivedModeActions: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    const walletCell = canvas.getByText("Wallet");
-    const walletRow = walletCell.closest(".ag-row");
-    if (!walletRow) throw new Error("Could not resolve Wallet row");
-    const walletRowQueries = within(walletRow as HTMLElement);
+    const getWalletRowQueries = async () => {
+      const walletCell = await canvas.findByText("Wallet", undefined, {
+        timeout: 10000,
+      });
+      const walletRow = walletCell.closest(".ag-row");
+      if (!walletRow) throw new Error("Could not resolve Wallet row");
+      return within(walletRow as HTMLElement);
+    };
 
+    let walletRowQueries = await getWalletRowQueries();
     await userEvent.click(
-      walletRowQueries.getByRole("button", { name: "Edit" }),
+      await walletRowQueries.findByRole("button", { name: "Edit" }),
     );
-    const editDialog = body.getByRole("dialog", { name: "Edit Account" });
-    await expect(editDialog).toBeInTheDocument();
+    const editDialog = await findVisibleDialog(body, "Edit Account");
     await userEvent.click(
       within(editDialog).getByRole("button", { name: "Save" }),
     );
+    await waitFor(() => {
+      expect(
+        body.queryByRole("dialog", { name: "Edit Account" }),
+      ).not.toBeInTheDocument();
+    });
 
+    walletRowQueries = await getWalletRowQueries();
     await userEvent.click(
-      walletRowQueries.getByRole("button", { name: "Delete" }),
+      await walletRowQueries.findByRole("button", { name: "Delete" }),
     );
-    const deleteDialog = body.getByRole("dialog", { name: "Delete Account" });
-    await expect(deleteDialog).toBeInTheDocument();
+    const deleteDialog = await findVisibleDialog(body, "Delete Account");
     await userEvent.click(
       within(deleteDialog).getByRole("button", { name: "Cancel" }),
     );
-
-    await userEvent.click(
-      walletRowQueries.getByRole("button", { name: "Reorder Siblings" }),
-    );
-    const reorderDialog = body.getByRole("dialog", {
-      name: "Reorder Siblings",
+    await waitFor(() => {
+      expect(
+        body.queryByRole("dialog", { name: "Delete Account" }),
+      ).not.toBeInTheDocument();
     });
-    await expect(reorderDialog).toBeInTheDocument();
+
+    walletRowQueries = await getWalletRowQueries();
+    await userEvent.click(
+      await walletRowQueries.findByRole("button", {
+        name: "Reorder Siblings",
+      }),
+    );
+    const reorderDialog = await findVisibleDialog(body, "Reorder Siblings");
     await userEvent.click(
       within(reorderDialog).getByRole("button", { name: "Close" }),
     );
+    await waitFor(() => {
+      expect(
+        body.queryByRole("dialog", { name: "Reorder Siblings" }),
+      ).not.toBeInTheDocument();
+    });
   },
 };
 
@@ -526,6 +554,11 @@ export const EditModalOpen: Story = {
 };
 
 export const RouteSmoke: Story = {
+  parameters: {
+    router: {
+      initialPath: "/storybook-book/accounts?tab=ASSET&mode=active",
+    },
+  },
   render: () => (
     <AccountsPageStoryHarness initialMode="active" routeSmoke={true} />
   ),

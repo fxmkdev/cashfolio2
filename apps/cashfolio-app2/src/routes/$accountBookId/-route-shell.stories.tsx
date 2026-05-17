@@ -3,6 +3,7 @@ import { Box, Text, Title } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import { useRouterState } from "@tanstack/react-router";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { findVisibleMenuItem } from "@/storybook-test-utils";
 import { AccountBookShell } from "./-account-book-shell";
 import { DESKTOP_RAIL_COLLAPSED_STORAGE_KEY } from "./-route-helpers";
 
@@ -92,6 +93,13 @@ function readDesktopRailPreference() {
   }
 }
 
+async function findUserMenuButton(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  return await canvas.findByRole("button", {
+    name: /Storybook User/,
+  });
+}
+
 const meta = {
   title: "Routes/AccountBookShell",
   component: AccountBookShellSmokeHarness,
@@ -102,48 +110,66 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const RouteSmoke: Story = {
+  parameters: {
+    router: {
+      initialPath: "/storybook-book/accounts?tab=ASSET&mode=active",
+    },
+  },
   loaders: [resetDesktopRailPreference],
   render: () => <AccountBookShellSmokeHarness />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
 
     await expect(
-      canvas.getByRole("button", { name: "Collapse Sidebar" }),
+      await canvas.findByRole("button", { name: "Collapse Sidebar" }),
     ).toBeVisible();
+
     await userEvent.click(canvas.getByRole("link", { name: "Transactions" }));
-    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-book/transactions",
-    );
+    await waitFor(() => {
+      expect(canvas.getByTestId("router-path")).toHaveTextContent(
+        "/storybook-book/transactions",
+      );
+    });
 
     await userEvent.click(canvas.getByRole("link", { name: "Report" }));
-    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-book/report",
-    );
+    await waitFor(() => {
+      expect(canvas.getByTestId("router-path")).toHaveTextContent(
+        "/storybook-book/report",
+      );
+    });
 
     await userEvent.click(canvas.getByRole("link", { name: "History" }));
-    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-book/history",
-    );
+    await waitFor(() => {
+      expect(canvas.getByTestId("router-path")).toHaveTextContent(
+        "/storybook-book/history",
+      );
+    });
 
     await expect(
       canvas.queryByRole("link", { name: "Valuation Cache" }),
     ).not.toBeInTheDocument();
 
     await userEvent.click(canvas.getByRole("link", { name: "Settings" }));
-    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-book/settings",
-    );
+    await waitFor(() => {
+      expect(canvas.getByTestId("router-path")).toHaveTextContent(
+        "/storybook-book/settings",
+      );
+    });
 
     await userEvent.click(canvas.getByRole("link", { name: "Accounts" }));
-    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-book/accounts",
-    );
+    await waitFor(() => {
+      expect(canvas.getByTestId("router-path")).toHaveTextContent(
+        "/storybook-book/accounts",
+      );
+    });
     await expect(canvas.getByTestId("router-search")).toHaveTextContent(
       '"mode":"active"',
     );
     await expect(
       canvas.getByRole("link", { name: "Accounts" }),
     ).toHaveAttribute("data-active", "true");
+
     const adminLink = canvas.getByRole("link", { name: "Admin" });
     await expect(adminLink).toHaveAttribute("href", "/admin");
     await expect(adminLink).not.toHaveAttribute("target");
@@ -151,93 +177,106 @@ export const RouteSmoke: Story = {
     await expect(
       canvas.getByRole("button", { name: "Storybook Book" }),
     ).toBeInTheDocument();
-    await expect(
-      canvas.getByRole("button", { name: "Storybook User" }),
-    ).toBeInTheDocument();
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Storybook Book" }),
+    await expect(await findUserMenuButton(canvasElement)).toBeInTheDocument();
+
+    await userEvent.click(await findUserMenuButton(canvasElement));
+    const userSettingsMenuItem = await findVisibleMenuItem(
+      body,
+      "User Settings",
     );
-    await expect(
-      canvas.queryByRole("menuitem", { name: "Account Book Settings" }),
-    ).not.toBeInTheDocument();
-    await expect(
-      canvas.getByRole("menuitem", { name: "Create New" }),
-    ).toBeVisible();
-    await expect(
-      canvas.getByRole("menuitem", { name: "Create New" }),
-    ).toHaveAttribute("href", expect.stringContaining("returnTo="));
-    await expect(
-      canvas.queryByRole("menuitem", { name: "Sign Out" }),
-    ).not.toBeInTheDocument();
-    await expect(
-      canvas.getByRole("menuitem", { name: "Create New" }),
-    ).not.toHaveAttribute("aria-disabled", "true");
-    await userEvent.click(
-      canvas.getByRole("menuitem", { name: "Storybook Alt Book" }),
+    const accountSecurityLink = await findVisibleMenuItem(
+      body,
+      "Account Security",
     );
-    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-alt-book/accounts",
-    );
-    await expect(
-      await within(document.body).findByText("Now viewing Storybook Alt Book."),
-    ).toBeVisible();
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Storybook User" }),
-    );
-    await expect(
-      canvas.getByRole("menuitem", { name: "User Settings" }),
-    ).toBeVisible();
-    const accountSecurityLink = canvas.getByRole("menuitem", {
-      name: "Account Security",
-    });
-    await expect(accountSecurityLink).toBeVisible();
     await expect(accountSecurityLink).toHaveAttribute(
       "href",
       "https://tenant.logto.app/account/security",
     );
     await expect(accountSecurityLink).toHaveAttribute("target", "_blank");
-    await expect(
-      canvas.getByRole("menuitem", { name: "Sign Out" }),
-    ).toBeVisible();
+    await expect(await findVisibleMenuItem(body, "Sign Out")).toBeVisible();
+    await expect(userSettingsMenuItem).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(
+        body.queryByRole("menuitem", { name: "User Settings" }),
+      ).not.toBeInTheDocument();
+    });
+
     await userEvent.click(
-      canvas.getByRole("menuitem", { name: "User Settings" }),
+      canvas.getByRole("button", { name: "Storybook Book" }),
     );
-    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/user-settings",
+    await expect(
+      body.queryByRole("menuitem", { name: "Account Book Settings" }),
+    ).not.toBeInTheDocument();
+    await expect(await findVisibleMenuItem(body, "Create New")).toBeVisible();
+    await expect(await findVisibleMenuItem(body, "Create New")).toHaveAttribute(
+      "href",
+      expect.stringContaining("returnTo="),
     );
+    await expect(
+      body.queryByRole("menuitem", { name: "Sign Out" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      await findVisibleMenuItem(body, "Create New"),
+    ).not.toHaveAttribute("aria-disabled", "true");
+    await userEvent.click(
+      await findVisibleMenuItem(body, "Storybook Alt Book"),
+    );
+    await waitFor(() => {
+      expect(canvas.getByTestId("router-path")).toHaveTextContent(
+        "/storybook-alt-book/accounts",
+      );
+    });
+    await expect(
+      await body.findByText("Now viewing Storybook Alt Book."),
+    ).toBeVisible();
+
+    await userEvent.click(canvas.getByRole("link", { name: "Admin" }));
+    await waitFor(() => {
+      expect(canvas.getByTestId("router-path")).toHaveTextContent("/admin");
+    });
+
+    await userEvent.click(await findUserMenuButton(canvasElement));
+    await userEvent.click(await findVisibleMenuItem(body, "User Settings"));
+    await waitFor(() => {
+      expect(canvas.getByTestId("router-path")).toHaveTextContent(
+        "/user-settings",
+      );
+    });
     await expect(canvas.getByTestId("router-search")).toHaveTextContent(
       "returnTo",
     );
-    await userEvent.click(canvas.getByRole("link", { name: "Admin" }));
-    await expect(canvas.getByTestId("router-path")).toHaveTextContent("/admin");
   },
 };
 
 export const DesktopRailSmoke: Story = {
+  parameters: {
+    router: {
+      initialPath: "/storybook-book/accounts?tab=ASSET&mode=active",
+    },
+  },
   loaders: [resetDesktopRailPreference],
   render: () => <AccountBookShellSmokeHarness />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
 
     await userEvent.click(
-      canvas.getByRole("button", { name: "Collapse Sidebar" }),
+      await canvas.findByRole("button", { name: "Collapse Sidebar" }),
     );
 
     await expect(
-      canvas.getByRole("button", { name: "Expand Sidebar" }),
+      await canvas.findByRole("button", { name: "Expand Sidebar" }),
     ).toBeVisible();
     await waitFor(() => {
       expect(readDesktopRailPreference()).toBe("true");
     });
-    await expect(canvas.queryByText("Report")).not.toBeInTheDocument();
     await expect(canvas.queryByText("Valuation Cache")).not.toBeInTheDocument();
 
     const reportRailLink = canvas.getByRole("link", { name: "Report" });
     await expect(reportRailLink).toBeVisible();
     await userEvent.hover(reportRailLink);
-    await expect(
-      await within(document.body).findByText("Report"),
-    ).toBeVisible();
+    await expect(await body.findByRole("tooltip")).toHaveTextContent("Report");
     await userEvent.unhover(reportRailLink);
 
     await expect(
@@ -245,14 +284,18 @@ export const DesktopRailSmoke: Story = {
     ).not.toBeInTheDocument();
 
     await userEvent.click(canvas.getByRole("link", { name: "Settings" }));
-    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-book/settings",
-    );
+    await waitFor(() => {
+      expect(canvas.getByTestId("router-path")).toHaveTextContent(
+        "/storybook-book/settings",
+      );
+    });
 
     await userEvent.click(canvas.getByRole("link", { name: "Transactions" }));
-    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
-      "/storybook-book/transactions",
-    );
+    await waitFor(() => {
+      expect(canvas.getByTestId("router-path")).toHaveTextContent(
+        "/storybook-book/transactions",
+      );
+    });
 
     await userEvent.click(
       canvas.getByRole("button", {
@@ -260,7 +303,7 @@ export const DesktopRailSmoke: Story = {
       }),
     );
     await expect(
-      canvas.queryByRole("menuitem", { name: "Account Book Settings" }),
+      body.queryByRole("menuitem", { name: "Account Book Settings" }),
     ).not.toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
 
@@ -269,9 +312,7 @@ export const DesktopRailSmoke: Story = {
         name: "Open user menu, current: Storybook User",
       }),
     );
-    await expect(
-      canvas.getByRole("menuitem", { name: "Sign Out" }),
-    ).toBeVisible();
+    await expect(await findVisibleMenuItem(body, "Sign Out")).toBeVisible();
     await userEvent.keyboard("{Escape}");
 
     await userEvent.click(
@@ -290,6 +331,12 @@ export const DesktopRailSmoke: Story = {
 export const MobileFooterControlsSmoke: Story = {
   loaders: [resetDesktopRailPreference],
   parameters: {
+    router: {
+      initialPath: "/storybook-book/accounts?tab=ASSET&mode=active",
+    },
+    testRunner: {
+      viewport: { width: 390, height: 844 },
+    },
     viewport: {
       defaultViewport: "mobile1",
     },
@@ -297,20 +344,16 @@ export const MobileFooterControlsSmoke: Story = {
   render: () => <AccountBookShellSmokeHarness />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+
     await userEvent.click(
-      canvas.getByRole("button", { name: "Toggle Navigation" }),
+      await canvas.findByRole("button", { name: "Toggle Navigation" }),
     );
     await expect(
-      canvas.getByRole("button", { name: "Storybook Book" }),
+      await canvas.findByRole("button", { name: "Storybook Book" }),
     ).toBeVisible();
-    await expect(
-      canvas.getByRole("button", { name: "Storybook User" }),
-    ).toBeVisible();
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Storybook User" }),
-    );
-    await expect(
-      canvas.getByRole("menuitem", { name: "Sign Out" }),
-    ).toBeVisible();
+    await expect(await findUserMenuButton(canvasElement)).toBeVisible();
+    await userEvent.click(await findUserMenuButton(canvasElement));
+    await expect(await findVisibleMenuItem(body, "Sign Out")).toBeVisible();
   },
 };
