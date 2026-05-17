@@ -105,21 +105,26 @@ export function ContributionChartCard(args: {
     total: string;
   };
 }) {
+  const { colors, currencyFormatter, locale, stats, waterfallPalette } = args;
+  const { expenses, gainsLosses, income } = stats;
   const amountCompactFormatter = useMemo(
     () =>
-      new Intl.NumberFormat(args.locale, {
+      new Intl.NumberFormat(locale, {
         notation: "compact",
         maximumFractionDigits: 1,
       }),
-    [args.locale],
+    [locale],
   );
   const waterfallModel = useMemo(
-    () => buildContributionWaterfallModel({ stats: args.stats }),
-    [args.stats.expenses, args.stats.gainsLosses, args.stats.income],
+    () =>
+      buildContributionWaterfallModel({
+        stats: { expenses, gainsLosses, income },
+      }),
+    [expenses, gainsLosses, income],
   );
   const gainLossLabel = useMemo(
-    () => getGainLossLabel(args.stats.gainsLosses),
-    [args.stats.gainsLosses],
+    () => getGainLossLabel(gainsLosses),
+    [gainsLosses],
   );
   const waterfallSeries = useMemo<AgWaterfallSeriesOptions<WaterfallDatum>>(
     () => ({
@@ -131,29 +136,29 @@ export function ContributionChartCard(args: {
       totals: waterfallModel.totals,
       item: {
         positive: {
-          fill: args.waterfallPalette.positive,
-          stroke: args.waterfallPalette.positive,
+          fill: waterfallPalette.positive,
+          stroke: waterfallPalette.positive,
         },
         negative: {
-          fill: args.waterfallPalette.negative,
-          stroke: args.waterfallPalette.negative,
+          fill: waterfallPalette.negative,
+          stroke: waterfallPalette.negative,
         },
       },
       subtotal: {
-        fill: args.waterfallPalette.total,
-        stroke: args.waterfallPalette.total,
+        fill: waterfallPalette.total,
+        stroke: waterfallPalette.total,
       },
       total: {
-        fill: args.waterfallPalette.total,
-        stroke: args.waterfallPalette.total,
+        fill: waterfallPalette.total,
+        stroke: waterfallPalette.total,
       },
       itemStyler: (
         params: AgWaterfallSeriesItemStylerParams<WaterfallDatum>,
       ) => {
         if (isWaterfallTotalDatum(params.datum) && params.datum.isTotal) {
           return {
-            fill: args.waterfallPalette.total,
-            stroke: args.waterfallPalette.total,
+            fill: waterfallPalette.total,
+            stroke: waterfallPalette.total,
           };
         }
 
@@ -169,14 +174,14 @@ export function ContributionChartCard(args: {
             data: [
               {
                 label: "Total",
-                value: args.currencyFormatter.format(amount),
+                value: currencyFormatter.format(amount),
               },
             ],
           };
         },
       },
     }),
-    [args.currencyFormatter, args.waterfallPalette, waterfallModel],
+    [currencyFormatter, waterfallPalette, waterfallModel],
   );
   const waterfallChartOptions = useMemo<AgCartesianChartOptions>(
     () => ({
@@ -187,13 +192,13 @@ export function ContributionChartCard(args: {
       },
       theme: {
         params: {
-          textColor: args.colors.chartTextColor,
-          foregroundColor: args.colors.chartTextColor,
-          borderColor: args.colors.themeBorderColor,
-          tooltipBackgroundColor: args.colors.tooltipBackgroundColor,
+          textColor: colors.chartTextColor,
+          foregroundColor: colors.chartTextColor,
+          borderColor: colors.themeBorderColor,
+          tooltipBackgroundColor: colors.tooltipBackgroundColor,
           tooltipBorder: true,
-          tooltipTextColor: args.colors.tooltipTextColor,
-          tooltipSubtleTextColor: args.colors.tooltipSubtleTextColor,
+          tooltipTextColor: colors.tooltipTextColor,
+          tooltipSubtleTextColor: colors.tooltipSubtleTextColor,
         },
       },
       legend: {
@@ -214,7 +219,7 @@ export function ContributionChartCard(args: {
             {
               type: "line",
               value: 0,
-              stroke: args.colors.zeroLineColor,
+              stroke: colors.zeroLineColor,
               strokeWidth: 1,
               lineDash: [5, 5],
             },
@@ -222,7 +227,7 @@ export function ContributionChartCard(args: {
         },
       },
     }),
-    [amountCompactFormatter, args.colors, waterfallModel.data, waterfallSeries],
+    [amountCompactFormatter, colors, waterfallModel.data, waterfallSeries],
   );
 
   return (

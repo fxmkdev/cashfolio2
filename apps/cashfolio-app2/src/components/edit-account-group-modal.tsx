@@ -9,7 +9,7 @@ import {
   Select,
 } from "@mantine/core";
 import { isNotEmpty, useForm } from "@mantine/form";
-import { useEffect, useMemo, useReducer } from "react";
+import { useEffect, useMemo, useReducer, useRef } from "react";
 import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import {
   validateAccountGroupName,
@@ -141,18 +141,21 @@ export function EditAccountGroupModal({
     },
     transformValues: transformAccountGroupValues,
   });
+  const formRef = useRef(form);
+  formRef.current = form;
+  const resetInitialValues = useMemo(
+    () => (initialValues ? toFormValues(initialValues) : { typeDescriptor }),
+    [initialValues, typeDescriptor],
+  );
 
   useEffect(() => {
     if (opened) {
-      if (initialValues) {
-        form.setInitialValues(toFormValues(initialValues));
-      } else {
-        form.setInitialValues({ typeDescriptor });
-      }
-      form.reset();
+      const currentForm = formRef.current;
+      currentForm.setInitialValues(resetInitialValues);
+      currentForm.reset();
       forceUpdate();
     }
-  }, [opened, initialValues]);
+  }, [opened, resetInitialValues]);
 
   const { type, equityAccountSubtype } = transformAccountGroupValues(
     form.getValues(),

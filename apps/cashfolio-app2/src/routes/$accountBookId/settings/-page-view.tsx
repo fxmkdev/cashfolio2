@@ -11,7 +11,7 @@ import {
 import { DateInput } from "@mantine/dates";
 import { type UseFormReturnType, useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { IconAlertTriangle, IconCheck, IconTrash } from "@tabler/icons-react";
 import { NarrowPageShell } from "@/components/narrow-page-shell";
 import { TopPageHeader } from "@/components/top-page-header";
@@ -292,14 +292,17 @@ export function SettingsPageView(args: {
       startDate: validateStartDate,
     },
   });
+  const formRef = useRef(form);
+  formRef.current = form;
 
   useEffect(() => {
-    form.setValues({
+    const currentForm = formRef.current;
+    currentForm.setValues({
       name: settings.name,
       referenceCurrency: settings.referenceCurrency,
       startDate: settings.startDate,
     });
-    form.resetDirty();
+    currentForm.resetDirty();
     setSubmitError(null);
   }, [settings]);
 

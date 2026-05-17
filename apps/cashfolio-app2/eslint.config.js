@@ -57,7 +57,7 @@ export default tseslint.config(
       "no-undef": "off",
       "no-unused-vars": "off",
       "prefer-const": "off",
-      "react-hooks/exhaustive-deps": "warn",
+      "react-hooks/exhaustive-deps": "error",
       "react-hooks/rules-of-hooks": "error",
     },
   },
