@@ -8,7 +8,9 @@ import {
   buildBreakdownHierarchyWithMeta,
   buildBreakdownItems,
   buildPeriodEndAllocationBreakdown,
+  buildSignedBreakdownHierarchyWithMeta,
   round2,
+  type BreakdownHierarchyAccumulatorItem,
   type PeriodGroupNode,
 } from "./period-helpers";
 import { moneyAdd, moneySum, toMoneyNumber } from "../../shared/money";
@@ -45,6 +47,7 @@ export function buildPeriodOverviewResponse(args: {
   realizedGainLoss: number;
   unrealizedGainLoss: number;
   cashFlow: number;
+  cashFlowAmountByAccountId: Map<string, BreakdownHierarchyAccumulatorItem>;
   hasCashAccounts?: boolean;
   isBeforeAccountBookStart: boolean;
   endOfPeriodBalanceStats: PeriodOverviewEndOfPeriodStats;
@@ -152,6 +155,37 @@ export function buildPeriodOverviewResponse(args: {
       amount: node.amount,
     })),
   );
+  const {
+    hierarchy: cashFlowBreakdownHierarchy,
+    hasHiddenAmountDiscrepancy: cashFlowBreakdownHasHiddenAmountDiscrepancy,
+    hiddenAmountDiscrepancyNodeIds: cashFlowBreakdownDiscrepancyNodeIds,
+  } = args.isBeforeAccountBookStart
+    ? {
+        hierarchy: [],
+        hasHiddenAmountDiscrepancy: false,
+        hiddenAmountDiscrepancyNodeIds: [],
+      }
+    : buildSignedBreakdownHierarchyWithMeta({
+        items: Array.from(args.cashFlowAmountByAccountId.values()),
+        groupById: args.groupById,
+      });
+  const cashFlowTopLevelAbsoluteTotal = cashFlowBreakdownHierarchy.reduce(
+    (sum, node) => sum + Math.abs(node.amount),
+    0,
+  );
+  const cashFlowBreakdownItems = cashFlowBreakdownHierarchy.map((node) => ({
+    id: node.id,
+    label: node.label,
+    kind: node.kind,
+    amount: node.amount,
+    percentage:
+      cashFlowTopLevelAbsoluteTotal <= 0
+        ? 0
+        : round2((Math.abs(node.amount) / cashFlowTopLevelAbsoluteTotal) * 100),
+  }));
+  const cashFlowBreakdownTotalAmount = round2(
+    cashFlowBreakdownHierarchy.reduce((sum, node) => sum + node.amount, 0),
+  );
 
   const availableYears = buildAvailableYears({
     firstBookingDate: args.minPeriodDate,
@@ -220,6 +254,13 @@ export function buildPeriodOverviewResponse(args: {
       hierarchy: incomeBreakdownHierarchy,
       hasHiddenAmountDiscrepancy: incomeBreakdownHasHiddenAmountDiscrepancy,
       hiddenAmountDiscrepancyNodeIds: incomeBreakdownDiscrepancyNodeIds,
+    },
+    cashFlowBreakdown: {
+      totalAmount: cashFlowBreakdownTotalAmount,
+      items: cashFlowBreakdownItems,
+      hierarchy: cashFlowBreakdownHierarchy,
+      hasHiddenAmountDiscrepancy: cashFlowBreakdownHasHiddenAmountDiscrepancy,
+      hiddenAmountDiscrepancyNodeIds: cashFlowBreakdownDiscrepancyNodeIds,
     },
     assetBreakdown,
     liabilityBreakdown,

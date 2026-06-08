@@ -12,6 +12,7 @@ type HistoryNavigationSearch = Record<string, unknown>;
 export function buildHistorySearchNavigation(args: {
   mode: HistoryPeriodMode;
   metric: HistoryMetric;
+  cashFlowScope: HistoryScopeSelection;
   incomeScope: HistoryScopeSelection;
   expenseScope: HistoryScopeSelection;
   gainLossScope: HistoryScopeSelection;
@@ -24,6 +25,10 @@ export function buildHistorySearchNavigation(args: {
       ...previousSearch,
       mode: args.mode === DEFAULT_HISTORY_MODE ? undefined : args.mode,
       metric: args.metric === DEFAULT_HISTORY_METRIC ? undefined : args.metric,
+      cashFlowScope:
+        args.cashFlowScope === DEFAULT_HISTORY_SCOPE
+          ? undefined
+          : args.cashFlowScope,
       incomeScope:
         args.incomeScope === DEFAULT_HISTORY_SCOPE
           ? undefined

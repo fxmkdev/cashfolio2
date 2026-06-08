@@ -41,6 +41,7 @@ describe("loadHistoryPageData", () => {
         },
       ],
       scopeOptions: {
+        cashFlow: [{ value: "total", label: "Total", kind: "total" }],
         income: [{ value: "total", label: "Total", kind: "total" }],
         expenses: [{ value: "total", label: "Total", kind: "total" }],
         gainsLosses: [{ value: "total", label: "Total", kind: "total" }],
@@ -48,6 +49,7 @@ describe("loadHistoryPageData", () => {
         liabilities: [{ value: "total", label: "Total", kind: "total" }],
       },
       scopeSelection: {
+        cashFlow: "total",
         income: "total",
         expenses: "total",
         gainsLosses: "total",
@@ -60,6 +62,7 @@ describe("loadHistoryPageData", () => {
       accountBookId: "book-1",
       mode: "year",
       scopedMetric: "income",
+      cashFlowScope: "total",
       incomeScope: "group:income-1",
       expenseScope: "total",
       gainLossScope: "total",
@@ -73,6 +76,7 @@ describe("loadHistoryPageData", () => {
         accountBookId: "book-1",
         granularity: "year",
         scopedMetric: "income",
+        cashFlowScope: "total",
         incomeScope: "group:income-1",
         expenseScope: "total",
         gainLossScope: "total",
@@ -109,6 +113,7 @@ describe("loadHistoryPageData", () => {
           },
         ],
         scopeOptions: {
+          cashFlow: [{ value: "total", label: "Total", kind: "total" }],
           income: [{ value: "total", label: "Total", kind: "total" }],
           expenses: [{ value: "total", label: "Total", kind: "total" }],
           gainsLosses: [{ value: "total", label: "Total", kind: "total" }],
@@ -116,6 +121,7 @@ describe("loadHistoryPageData", () => {
           liabilities: [{ value: "total", label: "Total", kind: "total" }],
         },
         scopeSelection: {
+          cashFlow: "total",
           income: "total",
           expenses: "total",
           gainsLosses: "total",

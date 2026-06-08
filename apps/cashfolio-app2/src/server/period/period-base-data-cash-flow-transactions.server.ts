@@ -81,6 +81,9 @@ async function loadPeriodCashFlowTransactionsPage(
           tradeCurrency: true,
           account: {
             select: {
+              id: true,
+              name: true,
+              groupId: true,
               type: true,
               isCashAccount: true,
             },
@@ -129,6 +132,9 @@ function mapPeriodCashFlowTransaction(
       symbol: booking.symbol,
       tradeCurrency: booking.tradeCurrency,
       account: {
+        id: booking.account.id,
+        name: booking.account.name,
+        groupId: booking.account.groupId,
         type: booking.account.type,
         isCashAccount: booking.account.isCashAccount,
       },

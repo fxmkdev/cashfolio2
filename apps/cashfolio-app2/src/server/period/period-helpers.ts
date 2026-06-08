@@ -507,6 +507,162 @@ export function buildBreakdownHierarchyWithMeta(args: {
   };
 }
 
+function finalizeSignedBreakdownHierarchyNodes(
+  childrenById: Map<string, MutableBreakdownHierarchyNode>,
+): {
+  hierarchy: BreakdownHierarchyNode[];
+  hasHiddenAmountDiscrepancy: boolean;
+  hiddenAmountDiscrepancyNodeIdsInSubtree: Set<string>;
+  rawDisplayedAmount: number;
+  prunedNodeCount: number;
+} {
+  const nodes: BreakdownHierarchyNode[] = [];
+  const hiddenAmountDiscrepancyNodeIdsInSubtree = new Set<string>();
+  let rawDisplayedAmount = 0;
+  let prunedNodeCount = 0;
+
+  for (const node of childrenById.values()) {
+    if (node.kind === "account") {
+      const roundedAmount = round2(node.amount);
+
+      if (moneyIsZero(roundedAmount)) {
+        prunedNodeCount += 1;
+        continue;
+      }
+
+      rawDisplayedAmount = toMoneyNumber(
+        moneyAdd(rawDisplayedAmount, node.amount),
+      );
+      nodes.push({
+        id: node.id,
+        label: node.label,
+        kind: node.kind,
+        amount: roundedAmount,
+        children: [],
+      });
+      continue;
+    }
+
+    const {
+      hierarchy: children,
+      hasHiddenAmountDiscrepancy: hasChildDiscrepancy,
+      hiddenAmountDiscrepancyNodeIdsInSubtree: childDiscrepancyNodeIds,
+      rawDisplayedAmount: rawDisplayedChildrenAmount,
+      prunedNodeCount: prunedChildNodeCount,
+    } = finalizeSignedBreakdownHierarchyNodes(node.childrenById);
+    prunedNodeCount += prunedChildNodeCount;
+
+    const roundedAmount = round2(node.amount);
+    const roundedDisplayedChildrenAmount = round2(rawDisplayedChildrenAmount);
+
+    if (moneyIsZero(roundedAmount) || children.length === 0) {
+      prunedNodeCount += 1;
+      continue;
+    }
+
+    if (
+      prunedChildNodeCount > 0 &&
+      !moneyIsZero(moneySubtract(roundedDisplayedChildrenAmount, roundedAmount))
+    ) {
+      hiddenAmountDiscrepancyNodeIdsInSubtree.add(node.id);
+    } else if (hasChildDiscrepancy) {
+      hiddenAmountDiscrepancyNodeIdsInSubtree.add(node.id);
+    }
+
+    for (const nodeId of childDiscrepancyNodeIds) {
+      hiddenAmountDiscrepancyNodeIdsInSubtree.add(nodeId);
+    }
+
+    rawDisplayedAmount = toMoneyNumber(
+      moneyAdd(rawDisplayedAmount, node.amount),
+    );
+    nodes.push({
+      id: node.id,
+      label: node.label,
+      kind: node.kind,
+      amount: roundedAmount,
+      children,
+    });
+  }
+
+  nodes.sort(
+    (a, b) =>
+      Math.abs(b.amount) - Math.abs(a.amount) ||
+      a.label.localeCompare(b.label, "en") ||
+      a.id.localeCompare(b.id),
+  );
+
+  return {
+    hierarchy: nodes,
+    hasHiddenAmountDiscrepancy:
+      hiddenAmountDiscrepancyNodeIdsInSubtree.size > 0,
+    hiddenAmountDiscrepancyNodeIdsInSubtree,
+    rawDisplayedAmount,
+    prunedNodeCount,
+  };
+}
+
+export function buildSignedBreakdownHierarchyWithMeta(args: {
+  items: BreakdownHierarchyAccumulatorItem[];
+  groupById: Map<string, PeriodGroupNode>;
+}): {
+  hierarchy: BreakdownHierarchyNode[];
+  hasHiddenAmountDiscrepancy: boolean;
+  hiddenAmountDiscrepancyNodeIds: string[];
+} {
+  const rootChildrenById = new Map<string, MutableBreakdownHierarchyNode>();
+
+  for (const item of args.items) {
+    if (moneyIsZero(item.amount)) {
+      continue;
+    }
+
+    const groupPath = item.groupId
+      ? resolveGroupPathToRoot({
+          groupId: item.groupId,
+          groupById: args.groupById,
+        }).reverse()
+      : [];
+
+    let currentChildrenById = rootChildrenById;
+
+    for (const group of groupPath) {
+      const groupNode = getOrCreateMutableBreakdownHierarchyNode({
+        nodeId: `group:${group.id}`,
+        label: group.name,
+        kind: "group",
+        childrenById: currentChildrenById,
+      });
+      groupNode.amount = toMoneyNumber(moneyAdd(groupNode.amount, item.amount));
+      currentChildrenById = groupNode.childrenById;
+    }
+
+    const accountNode = getOrCreateMutableBreakdownHierarchyNode({
+      nodeId: `account:${item.accountId}`,
+      label: item.accountName,
+      kind: "account",
+      childrenById: currentChildrenById,
+    });
+    accountNode.amount = toMoneyNumber(
+      moneyAdd(accountNode.amount, item.amount),
+    );
+  }
+
+  const {
+    hierarchy,
+    hasHiddenAmountDiscrepancy,
+    hiddenAmountDiscrepancyNodeIdsInSubtree,
+  } = finalizeSignedBreakdownHierarchyNodes(rootChildrenById);
+
+  return {
+    hierarchy,
+    hasHiddenAmountDiscrepancy,
+    hiddenAmountDiscrepancyNodeIds: Array.from(
+      hiddenAmountDiscrepancyNodeIdsInSubtree,
+    ).sort((a, b) => a.localeCompare(b, "en")),
+  };
+}
+
 export function buildBreakdownHierarchy(args: {
   items: BreakdownHierarchyAccumulatorItem[];
   groupById: Map<string, PeriodGroupNode>;

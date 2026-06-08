@@ -5,6 +5,7 @@ import { BreakdownTable } from "./-breakdown-table";
 import {
   ChartTypeSegmentedControl,
   DEFAULT_BREAKDOWN_CHART_TYPE_OPTIONS,
+  type ChartTypeOption,
 } from "../-selector/-chart-type-segmented-control";
 import type {
   BreakdownBreadcrumb,
@@ -36,8 +37,13 @@ type PeriodBreakdownCardProps = {
 };
 
 function isBreakdownType(value: string): value is BreakdownType {
-  return value === "expense" || value === "income";
+  return value === "expense" || value === "income" || value === "cashFlow";
 }
+
+const CASH_FLOW_BREAKDOWN_CHART_TYPE_OPTIONS =
+  DEFAULT_BREAKDOWN_CHART_TYPE_OPTIONS.filter(
+    (option) => option.value !== "donut",
+  ) as readonly ChartTypeOption<BreakdownChartType>[];
 
 export function PeriodBreakdownCard({
   selectedBreakdown,
@@ -60,15 +66,23 @@ export function PeriodBreakdownCard({
   onChartContainerDoubleClick,
   footer,
 }: PeriodBreakdownCardProps) {
-  const isTableView = selectedChartType === "table";
+  const effectiveSelectedChartType =
+    selectedBreakdown === "cashFlow" && selectedChartType === "donut"
+      ? "bar"
+      : selectedChartType;
+  const isTableView = effectiveSelectedChartType === "table";
   const hasTableBreakdown = breakdownHierarchy.length > 0;
+  const chartTypeOptions =
+    selectedBreakdown === "cashFlow"
+      ? CASH_FLOW_BREAKDOWN_CHART_TYPE_OPTIONS
+      : DEFAULT_BREAKDOWN_CHART_TYPE_OPTIONS;
 
   const controls = (
     <Flex gap="md" wrap="wrap" justify="flex-end">
       <ChartTypeSegmentedControl
         ariaLabel="Breakdown Chart Type"
-        value={selectedChartType}
-        options={DEFAULT_BREAKDOWN_CHART_TYPE_OPTIONS}
+        value={effectiveSelectedChartType}
+        options={chartTypeOptions}
         onChange={onSelectedChartTypeChange}
       />
       <SegmentedControl
@@ -83,6 +97,7 @@ export function PeriodBreakdownCard({
         data={[
           { label: "Expenses", value: "expense" },
           { label: "Income", value: "income" },
+          { label: "Cash Flow", value: "cashFlow" },
         ]}
       />
     </Flex>

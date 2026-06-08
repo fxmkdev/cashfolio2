@@ -21,6 +21,10 @@ export const Route = createFileRoute("/$accountBookId/history")({
   loaderDeps: ({ search }) => ({
     mode: getHistoryMode(search),
     metric: getHistoryMetric(search),
+    cashFlowScope: getHistoryScopeForMetric({
+      search,
+      metric: "cashFlow",
+    }),
     incomeScope: getHistoryScopeForMetric({
       search,
       metric: "income",
@@ -48,6 +52,7 @@ export const Route = createFileRoute("/$accountBookId/history")({
     deps: {
       mode,
       scopedMetric,
+      cashFlowScope,
       incomeScope,
       expenseScope,
       gainLossScope,
@@ -62,6 +67,7 @@ export const Route = createFileRoute("/$accountBookId/history")({
       accountBookId,
       mode,
       scopedMetric,
+      cashFlowScope,
       incomeScope,
       expenseScope,
       gainLossScope,
@@ -79,6 +85,10 @@ function HistoryPage() {
   const search = Route.useSearch();
   const selectedMode = getHistoryMode(search);
   const selectedMetric = getHistoryMetric(search);
+  const selectedCashFlowScope = getHistoryScopeForMetric({
+    search,
+    metric: "cashFlow",
+  });
   const selectedIncomeScope = getHistoryScopeForMetric({
     search,
     metric: "income",
@@ -104,6 +114,7 @@ function HistoryPage() {
 
   useEffect(() => {
     if (
+      selectedCashFlowScope === history.scopeSelection.cashFlow &&
       selectedIncomeScope === history.scopeSelection.income &&
       selectedExpenseScope === history.scopeSelection.expenses &&
       selectedGainLossScope === history.scopeSelection.gainsLosses &&
@@ -117,6 +128,7 @@ function HistoryPage() {
       buildHistorySearchNavigation({
         mode: selectedMode,
         metric: selectedMetric,
+        cashFlowScope: history.scopeSelection.cashFlow,
         incomeScope: history.scopeSelection.income,
         expenseScope: history.scopeSelection.expenses,
         gainLossScope: history.scopeSelection.gainsLosses,
@@ -127,12 +139,14 @@ function HistoryPage() {
   }, [
     navigate,
     selectedAssetScope,
+    selectedCashFlowScope,
     selectedExpenseScope,
     selectedGainLossScope,
     selectedIncomeScope,
     selectedLiabilityScope,
     selectedMetric,
     selectedMode,
+    history.scopeSelection.cashFlow,
     history.scopeSelection.assets,
     history.scopeSelection.expenses,
     history.scopeSelection.gainsLosses,
@@ -152,6 +166,7 @@ function HistoryPage() {
             buildHistorySearchNavigation({
               mode,
               metric: selectedMetric,
+              cashFlowScope: history.scopeSelection.cashFlow,
               incomeScope: history.scopeSelection.income,
               expenseScope: history.scopeSelection.expenses,
               gainLossScope: history.scopeSelection.gainsLosses,
@@ -165,6 +180,7 @@ function HistoryPage() {
             buildHistorySearchNavigation({
               mode: selectedMode,
               metric,
+              cashFlowScope: history.scopeSelection.cashFlow,
               incomeScope: history.scopeSelection.income,
               expenseScope: history.scopeSelection.expenses,
               gainLossScope: history.scopeSelection.gainsLosses,
@@ -178,6 +194,10 @@ function HistoryPage() {
             buildHistorySearchNavigation({
               mode: selectedMode,
               metric: selectedMetric,
+              cashFlowScope:
+                selectedMetric === "cashFlow"
+                  ? scope
+                  : history.scopeSelection.cashFlow,
               incomeScope:
                 selectedMetric === "income"
                   ? scope

@@ -1,5 +1,5 @@
 export type HistoryScopedMetric =
-  "income" | "expenses" | "gainsLosses" | "assets" | "liabilities";
+  "cashFlow" | "income" | "expenses" | "gainsLosses" | "assets" | "liabilities";
 
 export type HistoryScopeSelection =
   | "total"
@@ -24,6 +24,7 @@ export function isHistoryScopedMetric(
   value: unknown,
 ): value is HistoryScopedMetric {
   return (
+    value === "cashFlow" ||
     value === "income" ||
     value === "expenses" ||
     value === "gainsLosses" ||

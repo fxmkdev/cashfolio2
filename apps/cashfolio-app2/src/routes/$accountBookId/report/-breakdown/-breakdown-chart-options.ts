@@ -156,6 +156,18 @@ export function usePeriodBreakdownChartOptions(args: {
           data: [datum],
           direction: "vertical" as const,
           grouped: false,
+          fill:
+            datum.amount > 0
+              ? colors.positiveMarkerColor
+              : datum.amount < 0
+                ? colors.negativeMarkerColor
+                : colors.zeroLineColor,
+          stroke:
+            datum.amount > 0
+              ? colors.positiveMarkerColor
+              : datum.amount < 0
+                ? colors.negativeMarkerColor
+                : colors.zeroLineColor,
           widthRatio: 0.72,
           xKey: "label" as const,
           yKey: "amount" as const,
@@ -184,6 +196,15 @@ export function usePeriodBreakdownChartOptions(args: {
           label: {
             formatter: ({ value }) => amountCompactFormatter.format(value),
           },
+          crossLines: [
+            {
+              type: "line",
+              value: 0,
+              stroke: colors.zeroLineColor,
+              strokeWidth: 1,
+              lineDash: [5, 5],
+            },
+          ],
         },
       },
     }),

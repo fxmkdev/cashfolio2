@@ -48,6 +48,7 @@ describe("parseHistorySearch", () => {
     const result = parseHistorySearch({ mode: "month" });
     expect(result).toEqual({ mode: "month" });
     expect("metric" in result).toBe(false);
+    expect("cashFlowScope" in result).toBe(false);
     expect("incomeScope" in result).toBe(false);
     expect("expenseScope" in result).toBe(false);
     expect("gainLossScope" in result).toBe(false);
@@ -93,6 +94,9 @@ describe("parseHistorySearch", () => {
   test("keeps valid scope values", () => {
     expect(parseHistorySearch({ incomeScope: "total" })).toEqual({
       incomeScope: "total",
+    });
+    expect(parseHistorySearch({ cashFlowScope: "group:cash" })).toEqual({
+      cashFlowScope: "group:cash",
     });
     expect(parseHistorySearch({ incomeScope: "group:g-1" })).toEqual({
       incomeScope: "group:g-1",
@@ -145,6 +149,9 @@ describe("parseHistorySearch", () => {
     expect(parseHistorySearch({ incomeScope: "group:" })).toEqual({
       incomeScope: undefined,
     });
+    expect(parseHistorySearch({ cashFlowScope: "account:" })).toEqual({
+      cashFlowScope: undefined,
+    });
     expect(parseHistorySearch({ expenseScope: "invalid" })).toEqual({
       expenseScope: undefined,
     });
@@ -182,6 +189,12 @@ describe("getHistoryMetric", () => {
 
 describe("getHistoryScopeForMetric", () => {
   test("returns explicit metric scope when present", () => {
+    expect(
+      getHistoryScopeForMetric({
+        metric: "cashFlow",
+        search: { cashFlowScope: "account:cash-1" },
+      }),
+    ).toBe("account:cash-1");
     expect(
       getHistoryScopeForMetric({
         metric: "income",
@@ -226,6 +239,7 @@ describe("getHistoryScopeForMetric", () => {
 
 describe("getHistoryScopedMetric", () => {
   test("returns scoped metrics only", () => {
+    expect(getHistoryScopedMetric("cashFlow")).toBe("cashFlow");
     expect(getHistoryScopedMetric("income")).toBe("income");
     expect(getHistoryScopedMetric("expenses")).toBe("expenses");
     expect(getHistoryScopedMetric("gainsLosses")).toBe("gainsLosses");
