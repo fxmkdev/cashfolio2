@@ -284,6 +284,7 @@ Implementation:
 - `src/server/valuation/providers.ts`
 - `src/server/valuation/provider-response-parsers.ts`
 - `src/server/valuation/provider-logging.ts`
+- `src/server/valuation/provider-usage.ts`
 
 Provider behavior:
 
@@ -301,6 +302,37 @@ Provider behavior:
   - non-positive close prices are treated as unusable (`null`)
 
 Provider calls are logged with sanitized context so API keys are never logged.
+
+## Provider Usage Accounting
+
+Implementation:
+
+- `src/server/valuation/provider-usage.ts`
+- `src/server/valuation-provider-usage.ts`
+- `src/routes/admin/valuation-provider-usage/route.tsx`
+
+Every real external provider HTTP attempt is recorded in Postgres as a
+`ValuationProviderRequest` row. Cache hits, fallback hits, miss-cooldown skips,
+identity conversions, and in-flight dedup waiters are not counted because they
+do not call an external provider.
+
+Recorded fields include provider, unit type, outcome, request reason, valuation
+date, unit identifiers, HTTP status, duration, retry count, and a sanitized
+error message when one is available. API keys and token-like values are redacted
+before they can be persisted.
+
+Request reasons distinguish why the provider attempt happened:
+
+- `INITIAL_PROBE` - the first real provider attempt for a lookup
+- `BACKTRACK_PROBE` - an older-day provider attempt during backtracking
+- `RATE_LIMIT_RETRY` - a Marketstack retry after a rate-limited attempt
+
+Usage writes are best-effort. If recording fails, valuation continues and the
+failure is logged once per server process.
+
+The Admin `Valuation Cache` page answers "what valuation data is cached in
+Redis?" The Admin `Provider Usage` page answers "how often did we call external
+providers, and why?"
 
 ## Conversion Formulas (After Cached Lookup)
 

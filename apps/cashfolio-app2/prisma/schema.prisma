@@ -36,6 +36,35 @@ enum UserRole {
   ADMIN
 }
 
+enum ValuationProviderName {
+  CURRENCYLAYER
+  COINLAYER
+  MARKETSTACK
+}
+
+enum ValuationProviderUnitType {
+  CURRENCY
+  CRYPTOCURRENCY
+  SECURITY
+}
+
+enum ValuationProviderRequestOutcome {
+  RETRIEVED
+  NO_DATA
+  MISSING_RATE
+  TIMEOUT
+  HTTP_ERROR
+  PROVIDER_ERROR
+  REQUEST_ERROR
+  RATE_LIMIT_RETRY
+}
+
+enum ValuationProviderRequestReason {
+  INITIAL_PROBE
+  BACKTRACK_PROBE
+  RATE_LIMIT_RETRY
+}
+
 model User {
   id         String @id @default(cuid())
   externalId String @unique
@@ -180,4 +209,31 @@ model Booking {
   @@index([accountBookId, accountId, date])
   @@index([accountBookId, date])
   @@index([accountBookId, transactionId, date])
+}
+
+model ValuationProviderRequest {
+  id String @id @default(cuid())
+
+  provider      ValuationProviderName
+  unitType      ValuationProviderUnitType
+  outcome       ValuationProviderRequestOutcome
+  requestReason ValuationProviderRequestReason
+
+  requestedAt   DateTime @default(now())
+  valuationDate DateTime
+
+  currency       String?
+  cryptocurrency String?
+  symbol         String?
+  tradeCurrency  String?
+
+  httpStatus  Int?
+  durationMs  Int
+  retryCount  Int     @default(0)
+  errorMessage String?
+
+  @@index([requestedAt])
+  @@index([provider, requestedAt])
+  @@index([outcome, requestedAt])
+  @@index([requestReason, requestedAt])
 }

@@ -18,6 +18,7 @@ import { Route as AccountBookIdIndexRouteImport } from './routes/$accountBookId/
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AccountDeleteRouteImport } from './routes/account/delete'
 import { Route as AccountBooksNewRouteImport } from './routes/account-books/new'
+import { Route as AdminValuationProviderUsageRouteRouteImport } from './routes/admin/valuation-provider-usage/route'
 import { Route as AdminValuationCacheRouteRouteImport } from './routes/admin/valuation-cache/route'
 import { Route as AccountBookIdTransactionsRouteRouteImport } from './routes/$accountBookId/transactions/route'
 import { Route as AccountBookIdSettingsRouteRouteImport } from './routes/$accountBookId/settings/route'
@@ -77,6 +78,12 @@ const AccountBooksNewRoute = AccountBooksNewRouteImport.update({
   path: '/account-books/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminValuationProviderUsageRouteRoute =
+  AdminValuationProviderUsageRouteRouteImport.update({
+    id: '/valuation-provider-usage',
+    path: '/valuation-provider-usage',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
 const AdminValuationCacheRouteRoute =
   AdminValuationCacheRouteRouteImport.update({
     id: '/valuation-cache',
@@ -167,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/$accountBookId/settings': typeof AccountBookIdSettingsRouteRoute
   '/$accountBookId/transactions': typeof AccountBookIdTransactionsRouteRouteWithChildren
   '/admin/valuation-cache': typeof AdminValuationCacheRouteRoute
+  '/admin/valuation-provider-usage': typeof AdminValuationProviderUsageRouteRoute
   '/account-books/new': typeof AccountBooksNewRoute
   '/account/delete': typeof AccountDeleteRoute
   '/admin/users': typeof AdminUsersRoute
@@ -186,6 +194,7 @@ export interface FileRoutesByTo {
   '/$accountBookId/history': typeof AccountBookIdHistoryRouteRoute
   '/$accountBookId/settings': typeof AccountBookIdSettingsRouteRoute
   '/admin/valuation-cache': typeof AdminValuationCacheRouteRoute
+  '/admin/valuation-provider-usage': typeof AdminValuationProviderUsageRouteRoute
   '/account-books/new': typeof AccountBooksNewRoute
   '/account/delete': typeof AccountDeleteRoute
   '/admin/users': typeof AdminUsersRoute
@@ -211,6 +220,7 @@ export interface FileRoutesById {
   '/$accountBookId/settings': typeof AccountBookIdSettingsRouteRoute
   '/$accountBookId/transactions': typeof AccountBookIdTransactionsRouteRouteWithChildren
   '/admin/valuation-cache': typeof AdminValuationCacheRouteRoute
+  '/admin/valuation-provider-usage': typeof AdminValuationProviderUsageRouteRoute
   '/account-books/new': typeof AccountBooksNewRoute
   '/account/delete': typeof AccountDeleteRoute
   '/admin/users': typeof AdminUsersRoute
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/$accountBookId/settings'
     | '/$accountBookId/transactions'
     | '/admin/valuation-cache'
+    | '/admin/valuation-provider-usage'
     | '/account-books/new'
     | '/account/delete'
     | '/admin/users'
@@ -256,6 +267,7 @@ export interface FileRouteTypes {
     | '/$accountBookId/history'
     | '/$accountBookId/settings'
     | '/admin/valuation-cache'
+    | '/admin/valuation-provider-usage'
     | '/account-books/new'
     | '/account/delete'
     | '/admin/users'
@@ -280,6 +292,7 @@ export interface FileRouteTypes {
     | '/$accountBookId/settings'
     | '/$accountBookId/transactions'
     | '/admin/valuation-cache'
+    | '/admin/valuation-provider-usage'
     | '/account-books/new'
     | '/account/delete'
     | '/admin/users'
@@ -367,6 +380,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/account-books/new'
       preLoaderRoute: typeof AccountBooksNewRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/valuation-provider-usage': {
+      id: '/admin/valuation-provider-usage'
+      path: '/valuation-provider-usage'
+      fullPath: '/admin/valuation-provider-usage'
+      preLoaderRoute: typeof AdminValuationProviderUsageRouteRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/admin/valuation-cache': {
       id: '/admin/valuation-cache'
@@ -537,12 +557,14 @@ const AccountBookIdRouteRouteWithChildren =
 
 interface AdminRouteRouteChildren {
   AdminValuationCacheRouteRoute: typeof AdminValuationCacheRouteRoute
+  AdminValuationProviderUsageRouteRoute: typeof AdminValuationProviderUsageRouteRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminValuationCacheRouteRoute: AdminValuationCacheRouteRoute,
+  AdminValuationProviderUsageRouteRoute: AdminValuationProviderUsageRouteRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
 }

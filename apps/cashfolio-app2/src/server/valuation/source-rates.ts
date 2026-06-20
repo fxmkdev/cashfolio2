@@ -37,8 +37,12 @@ export async function getUsdToCurrencyRate(
     ),
     date,
     latestFetchableDate: context.latestFetchableDate,
-    fetchRate: (targetDate) =>
-      fetchUsdToCurrencyRateFromCurrencyLayer(targetCurrency, targetDate),
+    fetchRate: (targetDate, requestReason) =>
+      fetchUsdToCurrencyRateFromCurrencyLayer(
+        targetCurrency,
+        targetDate,
+        requestReason,
+      ),
   });
 }
 
@@ -59,8 +63,12 @@ export async function getUsdToCurrencyRateDetails(
     ),
     date,
     latestFetchableDate: context.latestFetchableDate,
-    fetchRate: (targetDate) =>
-      fetchUsdToCurrencyRateFromCurrencyLayer(targetCurrency, targetDate),
+    fetchRate: (targetDate, requestReason) =>
+      fetchUsdToCurrencyRateFromCurrencyLayer(
+        targetCurrency,
+        targetDate,
+        requestReason,
+      ),
   });
 }
 
@@ -77,8 +85,12 @@ export async function getUsdPerCryptocurrencyRate(
     ),
     date,
     latestFetchableDate: context.latestFetchableDate,
-    fetchRate: (targetDate) =>
-      fetchUsdPerCryptocurrencyRateFromCoinLayer(cryptocurrency, targetDate),
+    fetchRate: (targetDate, requestReason) =>
+      fetchUsdPerCryptocurrencyRateFromCoinLayer(
+        cryptocurrency,
+        targetDate,
+        requestReason,
+      ),
   });
 }
 
@@ -95,8 +107,12 @@ export async function getUsdPerCryptocurrencyRateDetails(
     ),
     date,
     latestFetchableDate: context.latestFetchableDate,
-    fetchRate: (targetDate) =>
-      fetchUsdPerCryptocurrencyRateFromCoinLayer(cryptocurrency, targetDate),
+    fetchRate: (targetDate, requestReason) =>
+      fetchUsdPerCryptocurrencyRateFromCoinLayer(
+        cryptocurrency,
+        targetDate,
+        requestReason,
+      ),
   });
 }
 
@@ -115,8 +131,13 @@ export async function getSecurityPrice(
     ),
     date,
     latestFetchableDate: context.latestFetchableDate,
-    fetchRate: (targetDate) =>
-      fetchSecurityPriceFromMarketstack(symbol, tradeCurrency, targetDate),
+    fetchRate: (targetDate, requestReason) =>
+      fetchSecurityPriceFromMarketstack(
+        symbol,
+        tradeCurrency,
+        targetDate,
+        requestReason,
+      ),
     stopOnExplicitNoData: false,
   });
 }
@@ -136,8 +157,13 @@ export async function getSecurityPriceDetails(
     ),
     date,
     latestFetchableDate: context.latestFetchableDate,
-    fetchRate: (targetDate) =>
-      fetchSecurityPriceFromMarketstack(symbol, tradeCurrency, targetDate),
+    fetchRate: (targetDate, requestReason) =>
+      fetchSecurityPriceFromMarketstack(
+        symbol,
+        tradeCurrency,
+        targetDate,
+        requestReason,
+      ),
     stopOnExplicitNoData: false,
   });
 }

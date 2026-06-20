@@ -4,7 +4,7 @@ export type ProviderName = "currencylayer" | "coinlayer" | "marketstack";
 type ProviderLogContextValue = string | number | boolean | null | undefined;
 export type ProviderLogContext = Record<string, ProviderLogContextValue>;
 
-function sanitizeProviderLogText(value: string): string {
+export function sanitizeProviderLogText(value: string): string {
   return value
     .replace(/(access_key=)[^&\s]+/gi, "$1[redacted]")
     .replace(/(api[_-]?key=)[^&\s]+/gi, "$1[redacted]")

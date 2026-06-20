@@ -11,6 +11,7 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import {
   IconArrowLeft,
+  IconChartBar,
   IconDatabase,
   IconLayoutDashboard,
   IconUsers,
@@ -90,6 +91,12 @@ export function AdminShell({
                 label="Valuation Cache"
                 onClick={closeMobile}
                 to="/admin/valuation-cache"
+              />
+              <LinkNavLink
+                leftSection={<IconChartBar size={16} />}
+                label="Provider Usage"
+                onClick={closeMobile}
+                to="/admin/valuation-provider-usage"
               />
               <LinkNavLink
                 leftSection={<IconUsers size={16} />}

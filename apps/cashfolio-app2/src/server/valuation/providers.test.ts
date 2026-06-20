@@ -1,4 +1,16 @@
-import { describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+
+const recordValuationProviderRequest = vi.hoisted(() => vi.fn());
+
+vi.mock("./provider-usage", () => ({
+  recordValuationProviderRequest,
+  VALUATION_PROVIDER_REQUEST_REASONS: {
+    INITIAL_PROBE: "INITIAL_PROBE",
+    BACKTRACK_PROBE: "BACKTRACK_PROBE",
+    RATE_LIMIT_RETRY: "RATE_LIMIT_RETRY",
+  },
+}));
+
 import {
   fetchSecurityPriceFromMarketstack,
   fetchUsdPerCryptocurrencyRateFromCoinLayer,
@@ -9,6 +21,10 @@ import {
 import { NO_DATA_FETCH_RESULT } from "./types";
 
 describe("Valuation provider helpers", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   test("treats marketstack quote-currency mismatch as unusable data", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -135,6 +151,18 @@ describe("Valuation provider helpers", () => {
           outcome: "retrieved",
         }),
       );
+      expect(recordValuationProviderRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "CURRENCYLAYER",
+          unitType: "CURRENCY",
+          outcome: "RETRIEVED",
+          requestReason: "INITIAL_PROBE",
+          currency: "CHF",
+          httpStatus: 200,
+          retryCount: 0,
+          durationMs: expect.any(Number),
+        }),
+      );
 
       const combinedLogs = [...infoSpy.mock.calls, ...warnSpy.mock.calls]
         .flat()
@@ -225,6 +253,27 @@ describe("Valuation provider helpers", () => {
           outcome: "retrieved",
         }),
       );
+      expect(recordValuationProviderRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "COINLAYER",
+          unitType: "CRYPTOCURRENCY",
+          outcome: "RETRIEVED",
+          requestReason: "INITIAL_PROBE",
+          cryptocurrency: "BTC",
+          httpStatus: 200,
+        }),
+      );
+      expect(recordValuationProviderRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "MARKETSTACK",
+          unitType: "SECURITY",
+          outcome: "RETRIEVED",
+          requestReason: "INITIAL_PROBE",
+          symbol: "AAPL",
+          tradeCurrency: "USD",
+          httpStatus: 200,
+        }),
+      );
     } finally {
       fetchSpy.mockRestore();
       infoSpy.mockRestore();
@@ -275,6 +324,213 @@ describe("Valuation provider helpers", () => {
       delete process.env.E2E_TEST_MODE;
     } else {
       process.env.E2E_TEST_MODE = originalE2ETestMode;
+    }
+  });
+
+  test("records currencylayer no-data and missing-rate outcomes", async () => {
+    const originalApiKey = process.env.CURRENCYLAYER_API_KEY;
+    process.env.CURRENCYLAYER_API_KEY = "currencylayer-secret-token";
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    try {
+      fetchSpy
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              success: false,
+              error: { code: 106, info: "No data available" },
+            }),
+            { status: 200 },
+          ),
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              success: true,
+              quotes: {},
+            }),
+            { status: 200 },
+          ),
+        );
+
+      const noDataResult = await fetchUsdToCurrencyRateFromCurrencyLayer(
+        "CHF",
+        new Date("2026-03-28T00:00:00.000Z"),
+      );
+      const missingRateResult = await fetchUsdToCurrencyRateFromCurrencyLayer(
+        "EUR",
+        new Date("2026-03-28T00:00:00.000Z"),
+      );
+
+      expect(noDataResult).toBe(NO_DATA_FETCH_RESULT);
+      expect(missingRateResult).toBeNull();
+      expect(recordValuationProviderRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "CURRENCYLAYER",
+          outcome: "NO_DATA",
+          currency: "CHF",
+          httpStatus: 200,
+        }),
+      );
+      expect(recordValuationProviderRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "CURRENCYLAYER",
+          outcome: "MISSING_RATE",
+          currency: "EUR",
+          httpStatus: 200,
+        }),
+      );
+    } finally {
+      fetchSpy.mockRestore();
+      if (originalApiKey == null) {
+        delete process.env.CURRENCYLAYER_API_KEY;
+      } else {
+        process.env.CURRENCYLAYER_API_KEY = originalApiKey;
+      }
+    }
+  });
+
+  test("records request, timeout, HTTP, and provider error outcomes", async () => {
+    const originalApiKey = process.env.COINLAYER_API_KEY;
+    process.env.COINLAYER_API_KEY = "coinlayer-secret-token";
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      const timeoutError = new Error("aborted");
+      timeoutError.name = "AbortError";
+      fetchSpy
+        .mockRejectedValueOnce(new Error("network failed access_key=secret"))
+        .mockRejectedValueOnce(timeoutError)
+        .mockResolvedValueOnce(new Response("Nope", { status: 503 }))
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              success: false,
+              error: { code: 101, info: "invalid access key" },
+            }),
+            { status: 200 },
+          ),
+        );
+
+      await expect(
+        fetchUsdPerCryptocurrencyRateFromCoinLayer(
+          "BTC",
+          new Date("2026-03-28T00:00:00.000Z"),
+        ),
+      ).rejects.toThrow("network failed");
+      await expect(
+        fetchUsdPerCryptocurrencyRateFromCoinLayer(
+          "BTC",
+          new Date("2026-03-28T00:00:00.000Z"),
+        ),
+      ).rejects.toThrow("Coinlayer request timed out");
+      await expect(
+        fetchUsdPerCryptocurrencyRateFromCoinLayer(
+          "BTC",
+          new Date("2026-03-28T00:00:00.000Z"),
+        ),
+      ).rejects.toThrow("Coinlayer request failed with 503");
+      await expect(
+        fetchUsdPerCryptocurrencyRateFromCoinLayer(
+          "BTC",
+          new Date("2026-03-28T00:00:00.000Z"),
+        ),
+      ).rejects.toThrow("Coinlayer request failed: invalid access key");
+
+      expect(recordValuationProviderRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "COINLAYER",
+          outcome: "REQUEST_ERROR",
+          errorMessage: "network failed access_key=[redacted]",
+        }),
+      );
+      expect(recordValuationProviderRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "COINLAYER",
+          outcome: "TIMEOUT",
+          errorMessage: "Coinlayer request timed out",
+        }),
+      );
+      expect(recordValuationProviderRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "COINLAYER",
+          outcome: "HTTP_ERROR",
+          httpStatus: 503,
+        }),
+      );
+      expect(recordValuationProviderRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "COINLAYER",
+          outcome: "PROVIDER_ERROR",
+          httpStatus: 200,
+          errorMessage: "invalid access key",
+        }),
+      );
+    } finally {
+      fetchSpy.mockRestore();
+      warnSpy.mockRestore();
+      if (originalApiKey == null) {
+        delete process.env.COINLAYER_API_KEY;
+      } else {
+        process.env.COINLAYER_API_KEY = originalApiKey;
+      }
+    }
+  });
+
+  test("records marketstack rate-limit retries separately", async () => {
+    const originalApiKey = process.env.MARKETSTACK_API_KEY;
+    process.env.MARKETSTACK_API_KEY = "marketstack-secret-token";
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      fetchSpy
+        .mockResolvedValueOnce(new Response("Rate limited", { status: 429 }))
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              data: [{ close: 180, currency: "USD" }],
+            }),
+            { status: 200 },
+          ),
+        );
+
+      const result = await fetchSecurityPriceFromMarketstack(
+        "AAPL",
+        "USD",
+        new Date("2026-03-28T00:00:00.000Z"),
+      );
+
+      expect(result).toBe(180);
+      expect(recordValuationProviderRequest).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          provider: "MARKETSTACK",
+          outcome: "RATE_LIMIT_RETRY",
+          requestReason: "INITIAL_PROBE",
+          retryCount: 0,
+          httpStatus: 429,
+        }),
+      );
+      expect(recordValuationProviderRequest).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          provider: "MARKETSTACK",
+          outcome: "RETRIEVED",
+          requestReason: "RATE_LIMIT_RETRY",
+          retryCount: 1,
+          httpStatus: 200,
+        }),
+      );
+    } finally {
+      fetchSpy.mockRestore();
+      warnSpy.mockRestore();
+      if (originalApiKey == null) {
+        delete process.env.MARKETSTACK_API_KEY;
+      } else {
+        process.env.MARKETSTACK_API_KEY = originalApiKey;
+      }
     }
   });
 });

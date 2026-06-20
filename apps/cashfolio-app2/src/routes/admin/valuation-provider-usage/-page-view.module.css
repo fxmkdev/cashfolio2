@@ -1,0 +1,32 @@
+.page {
+  min-height: 100%;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.contentLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.gridContainer {
+  height: 420px;
+  margin-top: 12px;
+}
+
+.breakdownGrid {
+  height: 300px;
+  margin-top: 12px;
+}
+
+@media (min-width: 64rem) {
+  .contentLayout {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.35fr);
+  }
+}
