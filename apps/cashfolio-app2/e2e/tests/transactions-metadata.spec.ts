@@ -102,7 +102,7 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   await expect(createDialog).toBeVisible();
 
   const createCounterRow = createDialog
-    .locator('.ag-center-cols-container .ag-row[row-index="1"]')
+    .locator('.ag-grid-scrolling-container > .ag-row[row-index="1"]')
     .first();
   await setGridAccountCellValue({
     dialog: createDialog,

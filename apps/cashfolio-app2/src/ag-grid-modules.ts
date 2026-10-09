@@ -90,7 +90,9 @@ export function ensureGridModulesRegistered() {
   ModuleRegistry.registerModules(GRID_MODULES);
 
   if (import.meta.env.DEV) {
-    ModuleRegistry.registerModules([ValidationModule]);
+    ModuleRegistry.registerModules([
+      ValidationModule.with({ showOverlayOn: [] }),
+    ]);
   }
 
   gridModulesRegistered = true;

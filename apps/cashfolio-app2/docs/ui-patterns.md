@@ -666,3 +666,26 @@ const { pendingScrollRef, handleRowDataUpdated } = useTransactionScroll(
 - AG Grid theme in `src/components/grid-theme.tsx` maps Mantine CSS variables to
   AG Grid theming
 - PostCSS configured with `postcss-preset-mantine` and `postcss-simple-vars`
+
+### AG Grid 36 containers and diagnostics
+
+AG Grid 36 uses `.ag-grid-viewport` for native horizontal and vertical
+scrolling. Rendered body rows are direct children of
+`.ag-grid-scrolling-container`, with scrolling, left-pinned, and right-pinned
+cell sections inside each row. Pinned bottom rows are in
+`.ag-grid-pinned-bottom-rows`. Avoid selectors using the old center-column,
+pinned-column, or floating-bottom containers. Scope row actions to their row and
+modal editing locators to their dialog; master/detail grids can reuse row
+indices.
+
+The transaction detail grid's auto-height override applies to both the scrolling
+rows wrapper and its container so short booking lists remain compact. Loading
+and empty overlays are siblings of the viewport in v36; do not depend on them
+being viewport children.
+
+`ensureGridModulesRegistered` supplies the same selective feature modules in the
+application and Storybook. Development registers `ValidationModule` with
+`showOverlayOn: []`, retaining console messages without an intrusive diagnostic
+overlay. Production omits that module. Cashfolio's charts remain standalone; no
+Integrated Charts or sparkline module is registered. Expanded account groups
+retain their existing session-storage keys and JSON array of group IDs.

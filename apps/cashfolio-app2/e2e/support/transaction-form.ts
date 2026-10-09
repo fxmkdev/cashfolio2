@@ -99,7 +99,7 @@ export async function openEditTransaction(page: Page, description: string) {
 
 export function gridRowByIndex(root: Locator, rowIndex: number): Locator {
   return root
-    .locator(`.ag-center-cols-container .ag-row[row-index="${rowIndex}"]`)
+    .locator(`.ag-grid-scrolling-container > .ag-row[row-index="${rowIndex}"]`)
     .first();
 }
 
@@ -152,7 +152,7 @@ export async function setUnitlessEquityAccountOnEditableRow(args: {
   accountName: string;
 }): Promise<{ editedRowIndex: number; lockedRowIndex: number }> {
   const visibleRowIndexes = async (): Promise<number[]> => {
-    const rows = args.dialog.locator(".ag-center-cols-container .ag-row");
+    const rows = args.dialog.locator(".ag-grid-scrolling-container > .ag-row");
     const rowCount = await rows.count();
     const indexes = new Set<number>();
     for (let i = 0; i < rowCount; i += 1) {

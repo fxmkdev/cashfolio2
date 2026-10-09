@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ColDef } from "ag-grid-enterprise";
 import { Box } from "@mantine/core";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   FORMATTED_NUMERIC_COLUMN,
   TEXT_COLUMN,
@@ -74,3 +75,120 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+// A long, wide grid exercises v36's unified scroll viewport and pinned cells.
+export const ScrollingAndPinnedCells: Story = {
+  render: () => (
+    <Box h={280} w="100%">
+      <DataGrid
+        rowData={Array.from({ length: 80 }, (_, index) => ({
+          id: `scroll-${index}`,
+          date: new Date("2026-01-10"),
+          description: `Booking ${index}`,
+          amount: index,
+        }))}
+        columnDefs={[
+          { ...columns[0], width: 110, pinned: "left" },
+          { ...columns[1], flex: undefined, width: 1000 },
+          { ...columns[2], width: 110, pinned: "right" },
+        ]}
+        getRowId={({ data }) => data.id}
+        rowSelection={{ mode: "multiRow" }}
+        pinnedBottomRowData={[
+          { id: "total", description: "Total", amount: 3160 },
+        ]}
+      />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const viewport =
+      canvasElement.querySelector<HTMLElement>(".ag-grid-viewport")!;
+    await waitFor(() => {
+      expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight);
+      expect(viewport.scrollWidth).toBeGreaterThan(viewport.clientWidth);
+    });
+    const firstRow = canvasElement.querySelector<HTMLElement>(
+      '.ag-grid-scrolling-container > .ag-row[row-id="scroll-0"]',
+    )!;
+    const checkbox = firstRow.querySelector<HTMLInputElement>(
+      'input[type="checkbox"]',
+    )!;
+    await userEvent.click(checkbox);
+    await waitFor(() =>
+      expect(firstRow).toHaveAttribute("aria-selected", "true"),
+    );
+
+    const description = firstRow.querySelector<HTMLElement>(
+      '[col-id="description"]',
+    )!;
+    await userEvent.click(description);
+    await userEvent.clear(canvas.getByRole("textbox"));
+    await userEvent.type(canvas.getByRole("textbox"), "Edited booking{Enter}");
+    await waitFor(() =>
+      expect(description).toHaveTextContent("Edited booking"),
+    );
+    await userEvent.click(description);
+    await userEvent.clear(canvas.getByRole("textbox"));
+    await userEvent.type(canvas.getByRole("textbox"), "Cancelled{Escape}");
+    await waitFor(() =>
+      expect(description).toHaveTextContent("Edited booking"),
+    );
+    await userEvent.keyboard("{ArrowDown}");
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector(".ag-cell-focus")?.closest(".ag-row"),
+      ).toHaveAttribute("row-id", "scroll-1"),
+    );
+
+    const pinnedAmount = firstRow.querySelector<HTMLElement>(
+      '.ag-grid-pinned-right-cells [col-id="amount"]',
+    )!;
+    const initialRight = pinnedAmount.getBoundingClientRect().right;
+    viewport.scrollLeft = 300;
+    await waitFor(() => {
+      expect(viewport.scrollLeft).toBeGreaterThan(0);
+      expect(pinnedAmount.getBoundingClientRect().right).toBeCloseTo(
+        initialRight,
+        0,
+      );
+    });
+    viewport.scrollTop = viewport.scrollHeight;
+    await waitFor(() => expect(canvas.getByText("Booking 79")).toBeVisible());
+    viewport.scrollLeft = 0;
+    await waitFor(() => expect(canvas.getByText("Total")).toBeVisible());
+  },
+};
+
+export const NarrowScrollingGrid: Story = {
+  ...ScrollingAndPinnedCells,
+  parameters: {
+    testRunner: { viewport: { width: 390, height: 844 } },
+  },
+};
+
+export const Empty: Story = {
+  render: () => (
+    <Box h={280}>
+      <DataGrid rowData={[]} columnDefs={columns} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText("No Rows To Show"),
+    ).toBeVisible();
+  },
+};
+
+export const Loading: Story = {
+  render: () => (
+    <Box h={280}>
+      <DataGrid loading columnDefs={columns} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText("Loading..."),
+    ).toBeVisible();
+  },
+};

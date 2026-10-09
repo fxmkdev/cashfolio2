@@ -113,7 +113,7 @@ test("switch from simple edit to split carries over edited values", async ({
   );
 
   const firstRow = editDialog
-    .locator('.ag-center-cols-container .ag-row[row-index="0"]')
+    .locator('.ag-grid-scrolling-container > .ag-row[row-index="0"]')
     .first();
   await expect(agGridCellByColId(firstRow, "credit")).toContainText("55");
 
@@ -158,7 +158,7 @@ test("create flow: changing date before switching to split still allows split cr
   await splitDialog.getByLabel("Date").fill("01/07/2026");
 
   const splitRow0 = splitDialog
-    .locator('.ag-center-cols-container .ag-row[row-index="0"]')
+    .locator('.ag-grid-scrolling-container > .ag-row[row-index="0"]')
     .first();
   await expect(agGridCellByColId(splitRow0, "date")).toContainText("1/7/2026");
 

@@ -316,7 +316,7 @@ export function createEditTransactionColumnDefs(args: {
         const acct = accounts.find((a) => a.value === data.account);
         return !isExpenseAccount(acct);
       },
-      tooltipValueGetter: ({ context, node }) =>
+      tooltip: ({ context, node }) =>
         context.form.errors[`bookings.${node?.rowIndex}.credit`],
       cellStyle: ({ context, node }) =>
         context.form.errors[`bookings.${node?.rowIndex}.credit`]

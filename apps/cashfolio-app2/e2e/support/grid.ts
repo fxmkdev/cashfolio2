@@ -2,17 +2,17 @@ import { expect, type Locator, type Page } from "@playwright/test";
 
 export function agGridRowByText(page: Page, text: string): Locator {
   return page
-    .locator(".ag-center-cols-container .ag-row")
+    .locator(".ag-grid-scrolling-container > .ag-row:not(.ag-full-width-row)")
     .filter({ hasText: text })
     .first();
 }
 
 export function agGridCellByColId(row: Locator, colId: string): Locator {
-  return row.locator(`[col-id="${colId}"]`).first();
+  return row.locator(`.ag-cell[col-id="${colId}"]`).first();
 }
 
 export function agGridPinnedBottomRow(page: Page): Locator {
-  return page.locator(".ag-floating-bottom .ag-row-pinned").first();
+  return page.locator(".ag-grid-pinned-bottom-rows .ag-row-pinned").first();
 }
 
 export async function clickRowAction(
@@ -34,34 +34,17 @@ export async function clickPinnedRowAction(args: {
   row: Locator;
   actionLabel: string;
 }) {
-  const rowIndex = await args.row.getAttribute("row-index");
-  if (rowIndex == null) {
-    throw new Error(
-      "Cannot click pinned row action without AG Grid row-index.",
-    );
-  }
-
   await args.row.hover();
-  const pinnedRow = args.row
-    .page()
-    .locator(`.ag-pinned-right-cols-container .ag-row[row-index="${rowIndex}"]`)
-    .first();
-  await expect(pinnedRow).toBeVisible();
-  await pinnedRow.getByRole("button", { name: args.actionLabel }).click();
+  // v36 keeps pinned and scrolling cells inside the same row element.
+  const action = args.row
+    .locator(":scope > .ag-grid-pinned-right-cells")
+    .getByRole("button", { name: args.actionLabel });
+  await expect(action).toBeVisible();
+  await action.click();
 }
 
 export async function clickGridRowSelectionCheckbox(row: Locator) {
-  const rowIndex = await row.getAttribute("row-index");
-  if (rowIndex == null) {
-    throw new Error(
-      "Cannot click row selection checkbox without AG Grid row-index.",
-    );
-  }
-
-  const checkbox = row
-    .page()
-    .locator(`.ag-row[row-index="${rowIndex}"] .ag-selection-checkbox`)
-    .first();
+  const checkbox = row.locator(".ag-selection-checkbox").first();
   await expect(checkbox).toBeVisible();
   await checkbox.click();
 }
@@ -74,7 +57,7 @@ export async function setGridCellValue(
 ) {
   const cell = root
     .locator(
-      `.ag-center-cols-container .ag-row[row-index="${rowIndex}"] [col-id="${colId}"]`,
+      `.ag-grid-scrolling-container > .ag-row[row-index="${rowIndex}"] [col-id="${colId}"]`,
     )
     .first();
 
@@ -131,7 +114,7 @@ export async function setGridAccountTreeCellValue(args: {
 }) {
   const cell = args.root
     .locator(
-      `.ag-center-cols-container .ag-row[row-index="${args.rowIndex}"] [col-id="${args.colId}"]`,
+      `.ag-grid-scrolling-container > .ag-row[row-index="${args.rowIndex}"] [col-id="${args.colId}"]`,
     )
     .first();
 
