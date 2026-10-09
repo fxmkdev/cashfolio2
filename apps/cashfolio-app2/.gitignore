@@ -11,3 +11,4 @@ test-results
 coverage
 .nyc_output
 coverage-storybook
+.vitest

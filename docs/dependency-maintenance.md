@@ -17,16 +17,17 @@ The refreshed manifest versions are:
 | Storybook                                | 10.6.1                   |
 | Playwright                               | 1.64.0                   |
 | AG Grid / AG Charts                      | 36.2.0 / 14.2.0          |
-| Vitest / coverage                        | 4.1.11                   |
+| Vitest / coverage / browser              | 5.0.3                    |
 | MSW                                      | 2.15.0                   |
 | Logto / Chromatic / dotenv               | 4.0.0 / 18.11.0 / 18.0.6 |
 | Redis / PostgreSQL driver                | 6.3.0 / 8.23.1           |
 | Node runtime / typings                   | 24.21.0 / 24.19.1        |
 | pnpm / Prettier                          | 11.28.5 / 3.9.9          |
 
-TypeScript 7, Vitest 5, MSW 3, pnpm 12, and Prisma prereleases are deferred to
-separate migrations. Storybook uses addon-vitest 10.6.1 and the Playwright
-browser provider 4.1.11, retaining Vitest 4 for this first stage. See the app's
+TypeScript 7, MSW 3, pnpm 12, and Prisma prereleases are deferred to separate
+migrations. Storybook uses addon-vitest 10.6.1 with the Playwright browser
+provider 5.0.3. Vitest, coverage, and browser packages are upgraded together to
+stable 5.0.3. See the app's
 [Nitro compatibility notes](../apps/cashfolio-app2/docs/deployment.md#nitro-version-pin)
 before revisiting its beta pin or scoped H3 override.
 
@@ -199,3 +200,23 @@ aliases during dependency pre-bundling; its built version passed every
 interaction test. These tooling issues are outside this Grid migration. Existing
 Enterprise missing-license warnings remain; no licensing configuration was
 changed.
+
+## Vitest 5 migration
+
+The unit and Storybook configs explicitly preserve `clearMocks: false`; reset
+and restore defaults remain unchanged. File-based projects retain independent
+Vite plugins, aliases, setup files, and test discovery rather than relying on
+Vitest 5's changed inline-project inheritance default. Review hoisted mocks for
+top-level placement and await asynchronous assertions; assertions and the
+coverage baseline must not be weakened. Unit coverage still uses `coverage/`,
+while Storybook uses `coverage-storybook/`. Browser failure artifacts now use
+`.vitest/` and are uploaded by the existing CI artifact action.
+
+MSW stays on 2.15.0. The application MSW 3 migration is explicitly deferred;
+`@vitest/mocker@5.0.3` still declares the compatible MSW 2 peer range `^2.4.9`.
+
+Vitest 5 reports the same covered-file, branch, and function inventory. It
+counts four fewer covered statements/lines across the generated Prisma namespace
+and `unit-format.ts`: statements are 72.99%, branches 65.01%, functions 70.34%,
+and lines 73.84%. The committed coverage baseline remains unchanged and its
+ratchet passes; no exclusions or assertions were weakened.

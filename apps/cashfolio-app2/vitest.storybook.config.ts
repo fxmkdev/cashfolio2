@@ -16,11 +16,14 @@ export default defineConfig({
     }),
   ],
   test: {
+    // Preserve Vitest 4 mock-history behavior across tests.
+    clearMocks: false,
     name: "storybook",
     browser: {
       enabled: true,
       provider: playwright(),
       headless: true,
+      screenshotFailures: true,
       instances: [{ browser: "chromium" }],
     },
     setupFiles: ["./.storybook/vitest.setup.ts"],

@@ -220,6 +220,13 @@ jobs:
         run: pnpm --filter cashfolio-app2 build-storybook
       - name: Run Storybook tests
         run: pnpm --filter cashfolio-app2 test-storybook
+      - name: Upload Storybook failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cashfolio-app2-storybook-failures
+          path: apps/cashfolio-app2/.vitest
+          if-no-files-found: ignore
 
   github-actions-lint:
     name: "GitHub Actions: Lint"
