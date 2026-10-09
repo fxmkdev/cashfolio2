@@ -16,7 +16,7 @@ The refreshed manifest versions are:
 | Vite                                     | 8.3.4                    |
 | Storybook                                | 10.6.1                   |
 | Playwright                               | 1.64.0                   |
-| AG Grid / AG Charts                      | 35.3.1 / 14.2.0          |
+| AG Grid / AG Charts                      | 36.2.0 / 14.2.0          |
 | Vitest / coverage                        | 4.1.11                   |
 | MSW                                      | 2.15.0                   |
 | Logto / Chromatic / dotenv               | 4.0.0 / 18.11.0 / 18.0.6 |
@@ -24,7 +24,7 @@ The refreshed manifest versions are:
 | Node runtime / typings                   | 24.21.0 / 24.19.1        |
 | pnpm / Prettier                          | 11.28.5 / 3.9.9          |
 
-TypeScript 7, Vitest 5, MSW 3, AG Grid 36, pnpm 12, and Prisma prereleases are
+TypeScript 7, Vitest 5, MSW 3, pnpm 12, and Prisma prereleases are
 deferred to separate migrations. Keep the exact Storybook test-runner pin. See
 the app's
 [Nitro compatibility notes](../apps/cashfolio-app2/docs/deployment.md#nitro-version-pin)
@@ -157,3 +157,47 @@ the original baseline had one high `deepmerge-ts` and one moderate `sprintf-js`
 finding. Incorporating main's scoped Prisma security fix removes the high
 finding; the final audit retains only the moderate `sprintf-js` finding above.
 Node 24, Prisma 7, the Nitro pin, schema, and coverage baseline are unchanged.
+
+## AG Grid 36 migration
+
+AG Grid Enterprise and React use `^36.2.0`, with Community and the new
+`ag-stack` resolved to the same version. Version 36.2.0 was published on
+2026-09-16 and meets pnpm 11's default 1440-minute release age. No release-age
+exception was added. The migration follows the official
+[AG Grid 36 guide](https://www.ag-grid.com/react-data-grid/upgrading-to-ag-grid-36/)
+and the 36.1/36.2 guides.
+
+Cashfolio uses standalone AG Charts, not Integrated Charts or grid sparklines.
+Its three direct Charts packages remain at `^13.3.1`. Grid 36.2.0 brings
+`ag-charts-types@14.2.0` and optional Charts Community/Enterprise 14.2.0 into
+the lockfile; these do not change the standalone Charts version. A future
+Integrated Charts feature would require compatible Charts modules and its own
+Charts migration. The Nitro pin, scoped H3 override, Prisma 7, Node 24 typings,
+and coverage baseline remain unchanged.
+
+The new DOM places pinned cells inside each row and uses a unified scrolling
+viewport. E2E row locators target `.ag-grid-scrolling-container > .ag-row`;
+pinned action and selection helpers stay scoped to the supplied row. The detail
+grid's minimum-height override targets the new scrolling container. Development
+validation keeps full console diagnostics with its diagnostic overlay disabled;
+Storybook uses the application's selective module registration too.
+
+Migration verification passed on Node 24.21.0 / pnpm 11.28.5: app typecheck,
+lint, formatting, all 994 unit tests, the unchanged coverage ratchet, production
+build, Storybook build, all 93 Storybook tests, and frozen-lockfile
+installation. The complete 46-test application E2E run passed; all three focused
+compatibility tests also passed, including the additional offscreen ledger
+scroll-and-flash scenario (47 distinct E2E scenarios). Desktop/mobile light/dark
+screenshots and browser checks covered pinned cells and totals without runtime
+errors. History and report E2E tests verified the standalone charts. Audit
+findings remain one high (`deepmerge-ts`) and one moderate (`sprintf-js`), with
+no critical findings.
+
+An additional application development-mode smoke check was blocked by the
+unchanged Vite configuration: TanStack Start requires `/@react-refresh`, but no
+React Refresh plugin is configured. Production and built Storybook checks
+passed. The optional Storybook development server also reported unresolved `@/`
+aliases during dependency pre-bundling; its built version passed every
+interaction test. These tooling issues are outside this Grid migration. Existing
+Enterprise missing-license warnings remain; no licensing configuration was
+changed.

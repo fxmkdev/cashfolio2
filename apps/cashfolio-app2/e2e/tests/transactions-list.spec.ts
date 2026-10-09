@@ -42,7 +42,7 @@ async function setGridAccountCellValue(args: {
 }) {
   const cell = args.dialog
     .locator(
-      `.ag-center-cols-container .ag-row[row-index="${args.rowIndex}"] [col-id="account"]`,
+      `.ag-grid-scrolling-container > .ag-row[row-index="${args.rowIndex}"] [col-id="account"]`,
     )
     .first();
 

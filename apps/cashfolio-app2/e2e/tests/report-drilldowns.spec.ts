@@ -12,7 +12,7 @@ let seeded: SeededData;
 
 function gridRowByText(container: Locator, text: string): Locator {
   return container
-    .locator(".ag-center-cols-container .ag-row")
+    .locator(".ag-grid-scrolling-container > .ag-row")
     .filter({ hasText: text })
     .first();
 }
@@ -204,7 +204,7 @@ test("period gains/losses table unit-account drilldown opens reconciliation page
   ).toBeVisible();
 
   const realizedEventRow = page
-    .locator(".ag-center-cols-container .ag-row")
+    .locator(".ag-grid-scrolling-container > .ag-row")
     .filter({ hasText: gainLossSeed.sellDescription })
     .first();
   await expect(realizedEventRow).toBeVisible();

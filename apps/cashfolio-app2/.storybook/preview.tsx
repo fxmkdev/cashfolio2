@@ -1,10 +1,7 @@
 import type { Preview } from "@storybook/react-vite";
 import { createContext, useContext, type ComponentType } from "react";
 import { themes } from "storybook/theming";
-import {
-  AllEnterpriseModule as GridAllEnterpriseModule,
-  ModuleRegistry as GridModuleRegistry,
-} from "ag-grid-enterprise";
+import { ensureGridModulesRegistered } from "../src/ag-grid-modules";
 import { MantineProvider } from "@mantine/core";
 import {
   createMemoryHistory,
@@ -226,7 +223,7 @@ function createStoryRouter(Story: ComponentType, initialPath: string) {
   });
 }
 
-GridModuleRegistry.registerModules([GridAllEnterpriseModule]);
+ensureGridModulesRegistered();
 
 export default preview;
 
