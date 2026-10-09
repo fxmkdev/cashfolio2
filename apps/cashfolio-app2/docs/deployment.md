@@ -30,3 +30,16 @@ Fly deployments keep using `release_command` for Prisma migrations so migrations
 run from the same image before app Machines update. The Docker runtime image is
 still intentionally slim: it copies Nitro `.output` plus a minimal Prisma
 migration payload, not the full repository or workspace install.
+
+## Fly CLI version
+
+CI pins `flyctl` to `0.4.115` across build, deployment, database refresh, and
+preview cleanup workflows. Fly changed its public IP assignment API to reject
+`org_slug`; the old `0.4.25` CLI sent that field during first deployment. This
+left preview apps without public addresses even though `flyctl deploy` returned
+success, and HTTP warm-up failed with `Could not resolve host`. The upstream fix
+shipped in
+[flyctl 0.4.97](https://github.com/superfly/flyctl/releases/tag/v0.4.97).
+
+Rerunning a historical workflow attempt still uses its original CLI pin;
+existing PRs need to incorporate the updated workflows first.

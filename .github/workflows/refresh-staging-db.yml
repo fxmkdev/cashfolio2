@@ -10,7 +10,7 @@ on:
 
 env:
   NODE_VERSION: 24
-  FLYCTL_VERSION: 0.4.25
+  FLYCTL_VERSION: 0.4.115
 
 concurrency:
   group: refresh-staging-db

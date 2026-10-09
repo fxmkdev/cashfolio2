@@ -5,7 +5,7 @@ on:
       - closed
 
 env:
-  FLYCTL_VERSION: 0.4.25
+  FLYCTL_VERSION: 0.4.115
 
 jobs:
   cleanup-preview:
