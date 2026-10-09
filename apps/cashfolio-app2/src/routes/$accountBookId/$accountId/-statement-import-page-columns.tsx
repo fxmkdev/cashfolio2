@@ -1,6 +1,6 @@
 import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { ActionIcon, Badge, Group, Tooltip } from "@mantine/core";
-import { IconEye, IconEyeOff, IconPencil } from "@tabler/icons-react";
+import { IconPencil } from "@tabler/icons-react";
 import { useMemo } from "react";
 import {
   ACCOUNT_TREE_SELECT_COLUMN,
@@ -24,14 +24,12 @@ export function useStatementImportColumnDefs(args: {
   isSubmitting: boolean;
   statuses: Map<string, StatementImportDraftStatus>;
   onEditDraft: (draftId: string) => void;
-  onToggleDraftIgnored: (draftId: string) => void;
 }): ColDef<StatementImportGridRow>[] {
   const {
     account,
     counterAccountOptions,
     isSubmitting,
     onEditDraft,
-    onToggleDraftIgnored,
     statuses,
   } = args;
 
@@ -142,7 +140,7 @@ export function useStatementImportColumnDefs(args: {
       {
         colId: "actions",
         headerName: "",
-        width: 95,
+        width: 55,
         pinned: "right",
         sortable: false,
         filter: false,
@@ -154,9 +152,6 @@ export function useStatementImportColumnDefs(args: {
         }: ICellRendererParams<StatementImportGridRow>) => {
           if (!isStatementImportReviewDraftRow(data)) return null;
           const editDisabled = isSubmitting || data.ignored;
-          const toggleIgnoredLabel = data.ignored
-            ? "Unignore Imported Transaction"
-            : "Ignore Imported Transaction";
           return (
             <Group gap={4} wrap="nowrap" h="100%" align="center">
               <Tooltip
@@ -172,35 +167,12 @@ export function useStatementImportColumnDefs(args: {
                   <IconPencil size={16} />
                 </ActionIcon>
               </Tooltip>
-              <Tooltip label={toggleIgnoredLabel}>
-                <ActionIcon
-                  variant="subtle"
-                  color="blue"
-                  size="sm"
-                  disabled={isSubmitting}
-                  onClick={() => onToggleDraftIgnored(data.id)}
-                  aria-label={toggleIgnoredLabel}
-                >
-                  {data.ignored ? (
-                    <IconEye size={16} />
-                  ) : (
-                    <IconEyeOff size={16} />
-                  )}
-                </ActionIcon>
-              </Tooltip>
             </Group>
           );
         },
       },
     ],
-    [
-      account,
-      counterAccountOptions,
-      isSubmitting,
-      onEditDraft,
-      onToggleDraftIgnored,
-      statuses,
-    ],
+    [account, counterAccountOptions, isSubmitting, onEditDraft, statuses],
   );
 }
 

@@ -53,7 +53,6 @@ export function useStatementImportPageState(args: {
     isSubmitting,
     isEditSubmitting,
     setDrafts,
-    clearSelection: reviewState.clearSelection,
     clearEditingDraft: () => setEditingDraftId(undefined),
   });
 
@@ -89,8 +88,6 @@ export function useStatementImportPageState(args: {
 
   return {
     activeStep: uploadState.activeStep,
-    bulkIgnoredActionLabel: reviewState.bulkIgnoredActionLabel,
-    bulkShouldIgnoreSelectedDrafts: reviewState.bulkShouldIgnoreSelectedDrafts,
     canReviewStatementImport: uploadState.canReviewStatementImport,
     columnDefs: reviewState.columnDefs,
     discardUploadModalOpened: uploadState.discardUploadModalOpened,
@@ -99,10 +96,10 @@ export function useStatementImportPageState(args: {
     file: uploadState.file,
     handleDraftCellChange: reviewState.handleDraftCellChange,
     handleFileChange: uploadState.handleFileChange,
-    handleBulkIgnoredChange: reviewState.handleBulkIgnoredChange,
     handleImport,
     handleSaveDraft,
     handleSelectionChange: reviewState.handleSelectionChange,
+    handleReviewRowsUpdated: reviewState.handleReviewRowsUpdated,
     handleStepClick: uploadState.handleStepClick,
     ignoredCount: reviewState.ignoredCount,
     importDisabled: reviewState.importDisabled,
@@ -111,7 +108,6 @@ export function useStatementImportPageState(args: {
     parseErrors: uploadState.parseErrors,
     readyCount: reviewState.readyCount,
     reviewRows: reviewState.reviewRows,
-    selectedDraftCount: reviewState.selectedDraftCount,
     resetStatementImportReview: uploadState.resetStatementImportReview,
     closeDiscardUploadModal: uploadState.closeDiscardUploadModal,
     setIsEditSubmitting,

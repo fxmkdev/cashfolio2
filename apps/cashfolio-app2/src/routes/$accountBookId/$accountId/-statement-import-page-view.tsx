@@ -1,6 +1,7 @@
 import { Center, Stack, Stepper } from "@mantine/core";
 import { IconFileUpload, IconTable } from "@tabler/icons-react";
 import { DataGrid } from "@/components/data-grid";
+import { gridTheme } from "@/components/grid-theme";
 import type { AccountOption } from "@/components/edit-transaction-modal";
 import { PageBreadcrumbs } from "@/components/page-breadcrumbs";
 import { PageShell } from "@/components/page-shell";
@@ -13,12 +14,16 @@ import { StatementImportActions } from "./-statement-import-actions";
 import { StatementImportDiscardUploadModal } from "./-statement-import-discard-upload-modal";
 import { StatementImportEditModal } from "./-statement-import-edit-modal";
 import {
-  StatementImportBulkSelectionBar,
+  StatementImportReviewSummary,
   StatementImportFileControls,
   StatementImportParseErrors,
 } from "./-statement-import-file-controls";
 import { useStatementImportPageState } from "./-statement-import-page-state";
 import { isStatementImportReviewDraftRow } from "./-statement-import-page-controller";
+
+const statementImportGridTheme = gridTheme.withParams({
+  selectedRowBackgroundColor: "transparent",
+});
 
 type StatementImportPageViewProps = {
   accountBookId: string;
@@ -132,19 +137,10 @@ export function AccountStatementImportPageView({
         >
           <Stack gap="md" flex={1} mih={0}>
             <Stack gap={0} flex={1} mih={0}>
-              <StatementImportBulkSelectionBar
-                bulkIgnoredActionLabel={state.bulkIgnoredActionLabel}
-                bulkShouldIgnoreSelectedDrafts={
-                  state.bulkShouldIgnoreSelectedDrafts
-                }
-                isEditSubmitting={state.isEditSubmitting}
-                isSubmitting={isSubmitting}
-                selectedDraftCount={state.selectedDraftCount}
-                summaryText={state.summaryText}
-                onBulkIgnoredChange={state.handleBulkIgnoredChange}
-              />
+              <StatementImportReviewSummary summaryText={state.summaryText} />
 
               <DataGrid
+                theme={statementImportGridTheme}
                 containerStyle={{
                   flex: 1,
                   minHeight: 0,
@@ -176,6 +172,8 @@ export function AccountStatementImportPageView({
                 }}
                 onCellValueChanged={state.handleDraftCellChange}
                 onSelectionChanged={state.handleSelectionChange}
+                onRowDataUpdated={state.handleReviewRowsUpdated}
+                onFirstDataRendered={state.handleReviewRowsUpdated}
               />
             </Stack>
 

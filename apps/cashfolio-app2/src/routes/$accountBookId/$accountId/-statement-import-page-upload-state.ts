@@ -15,7 +15,6 @@ export function useStatementImportUploadState(args: {
   isSubmitting: boolean;
   isEditSubmitting: boolean;
   setDrafts: Dispatch<SetStateAction<StatementImportDraft[]>>;
-  clearSelection: () => void;
   clearEditingDraft: () => void;
 }) {
   const {
@@ -25,7 +24,6 @@ export function useStatementImportUploadState(args: {
     isSubmitting,
     isEditSubmitting,
     setDrafts,
-    clearSelection,
     clearEditingDraft,
   } = args;
   const [file, setFile] = useState<File | null>(null);
@@ -116,7 +114,6 @@ export function useStatementImportUploadState(args: {
   function clearStatementImportReviewState() {
     setParseErrors([]);
     setDrafts([]);
-    clearSelection();
     clearEditingDraft();
   }
 

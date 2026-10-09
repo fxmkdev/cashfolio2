@@ -194,15 +194,6 @@ export function getStatementImportSummaryText(args: {
   return `${args.readyCount} of ${args.drafts.length} ready${ignoredSuffix}`;
 }
 
-export function getStatementImportBulkIgnoredActionLabel(args: {
-  shouldIgnore: boolean;
-  selectedDraftCount: number;
-}): string {
-  const action = args.shouldIgnore ? "Ignore" : "Unignore";
-  const rowLabel = args.selectedDraftCount === 1 ? "row" : "rows";
-  return `${action} ${args.selectedDraftCount} selected ${rowLabel}`;
-}
-
 export function getStatementImportTransactionsToSubmit(
   drafts: StatementImportDraft[],
 ): TransactionMutationValues[] {
@@ -226,31 +217,25 @@ export function isStatementImportDisabled(args: {
   );
 }
 
-export function toggleStatementImportDraftIgnored(
-  drafts: StatementImportDraft[],
-  draftId: string,
-): StatementImportDraft[] {
-  return drafts.map((draft) =>
-    draft.id === draftId ? { ...draft, ignored: !draft.ignored } : draft,
-  );
-}
-
-export function setStatementImportDraftsIgnored(args: {
+export function setStatementImportDraftSelection(args: {
   drafts: StatementImportDraft[];
-  draftIds: string[];
-  ignored: boolean;
+  selectedDraftIds: string[];
 }): StatementImportDraft[] {
-  const draftIds = new Set(args.draftIds);
-  return args.drafts.map((draft) => {
-    if (!draftIds.has(draft.id) || draft.ignored === args.ignored) {
+  const selectedDraftIds = new Set(args.selectedDraftIds);
+  let changed = false;
+  const drafts = args.drafts.map((draft) => {
+    const ignored = !selectedDraftIds.has(draft.id);
+    if (draft.ignored === ignored) {
       return draft;
     }
 
+    changed = true;
     return {
       ...draft,
-      ignored: args.ignored,
+      ignored,
     };
   });
+  return changed ? drafts : args.drafts;
 }
 
 function shouldNegateStatementImportBalance(type: AccountType): boolean {

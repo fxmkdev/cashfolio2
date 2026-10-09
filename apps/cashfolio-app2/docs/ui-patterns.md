@@ -492,8 +492,12 @@ compatibility but ignored by the importer.
   badge in the counter account cell and must be edited through the row action.
 - Drafts can be ignored without removing them from the review grid. Ignored rows
   are greyed out, show an `Ignored` status, and are skipped during import. The
-  ignore and unignore row actions both use the standard blue action color; the
-  row styling and status badge communicate the ignored state.
+  review checkbox directly controls inclusion: checked rows are included and
+  unchecked rows are ignored. Every newly uploaded statement starts with all
+  draft checkboxes checked. The header checkbox includes or ignores all draft
+  rows; the `Balance carried forward` row has no checkbox. Included rows use
+  normal styling without a selected-row background tint. Ignored drafts cannot
+  be edited until their checkbox is checked again.
 - Import uses a batch server mutation so either all reviewed drafts are created
   or none are.
 - For imported mixed-currency drafts, `EditTransactionModal` preserves the

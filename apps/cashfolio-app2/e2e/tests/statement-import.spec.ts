@@ -13,6 +13,7 @@ import {
   countTransactionsByDescription,
   getTransactionBookingsByDescription,
   seedDatabase,
+  seedThreeBookingSplitTransaction,
   type SeededData,
 } from "../support/db";
 import { expect, test } from "../support/fixtures";
@@ -219,9 +220,9 @@ test("shows multiple for drafts with several counter bookings", async ({
   );
 });
 
-test("bulk ignores statement rows and skips them during import", async ({
+test("checkboxes control statement row inclusion and skip unchecked rows during import", async ({
   page,
-}) => {
+}, testInfo) => {
   const importedDescription = "E2E Statement Import Included";
   const firstIgnoredDescription = "E2E Statement Import Ignored First";
   const secondIgnoredDescription = "E2E Statement Import Ignored Second";
@@ -231,6 +232,13 @@ test("bulk ignores statement rows and skips them during import", async ({
     `2026-05-17;-98.75;;;ignored;${firstIgnoredDescription};extra value`,
     `2026-05-18;-45.20;;;ignored;${secondIgnoredDescription};extra value`,
   ].join("\n");
+
+  await seedThreeBookingSplitTransaction({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Statement Import Starting Balance",
+    currentAccountId: seeded.cashAccount.id,
+    debitAccountIds: [seeded.savingsAccount.id, seeded.investmentsAccount.id],
+  });
 
   await page.goto(
     `/${seeded.accountBookId}/${seeded.cashAccount.id}?period=2026-04`,
@@ -249,6 +257,33 @@ test("bulk ignores statement rows and skips them during import", async ({
   await expect(includedRow).toBeVisible();
   await expect(firstIgnoredRow).toBeVisible();
   await expect(secondIgnoredRow).toBeVisible();
+
+  const headerCheckbox = page.locator(
+    ".ag-header-select-all input[type=checkbox]",
+  );
+  const includedCheckbox = includedRow.locator(".ag-selection-checkbox input");
+  const firstIgnoredCheckbox = firstIgnoredRow.locator(
+    ".ag-selection-checkbox input",
+  );
+  const secondIgnoredCheckbox = secondIgnoredRow.locator(
+    ".ag-selection-checkbox input",
+  );
+  await expect(includedCheckbox).toBeChecked();
+  await expect(firstIgnoredCheckbox).toBeChecked();
+  await expect(secondIgnoredCheckbox).toBeChecked();
+  await expect(headerCheckbox).toBeChecked();
+  const carriedForwardRow = agGridRowByText(page, "Balance carried forward");
+  await expect(carriedForwardRow).toBeVisible();
+  await expect(carriedForwardRow.getByRole("checkbox")).toHaveCount(0);
+
+  await clickGridRowSelectionCheckbox(firstIgnoredRow);
+  await expect(firstIgnoredCheckbox).not.toBeChecked();
+  await expect(agGridCellByColId(firstIgnoredRow, "status")).toContainText(
+    "Ignored",
+  );
+  await expect(firstIgnoredRow).toHaveClass(/statement-import-row-ignored/);
+  await expect(page.getByText("0 of 3 ready, 1 ignored")).toBeVisible();
+  await expect(headerCheckbox).toBeChecked({ indeterminate: true });
 
   await page.getByRole("button", { name: /Upload/ }).click();
   const discardDialog = page.getByRole("dialog", {
@@ -273,52 +308,48 @@ test("bulk ignores statement rows and skips them during import", async ({
   });
   await expect(includedRow).toBeVisible();
 
+  await expect(includedCheckbox).toBeChecked();
+  await expect(firstIgnoredCheckbox).toBeChecked();
+  await expect(secondIgnoredCheckbox).toBeChecked();
+  await expect(headerCheckbox).toBeChecked();
   await expect(page.getByRole("button", { name: /selected rows/ })).toHaveCount(
     0,
   );
+  await expect(
+    page.getByRole("button", {
+      name: /(?:Unignore|Ignore) Imported Transaction/,
+    }),
+  ).toHaveCount(0);
+
+  await headerCheckbox.click();
+  await expect(includedCheckbox).not.toBeChecked();
+  await expect(firstIgnoredCheckbox).not.toBeChecked();
+  await expect(secondIgnoredCheckbox).not.toBeChecked();
+  await expect(page.getByText("0 of 3 ready, 3 ignored")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Import Transactions" }),
+  ).toBeDisabled();
+
+  await headerCheckbox.click();
+  await expect(includedCheckbox).toBeChecked();
+  await expect(firstIgnoredCheckbox).toBeChecked();
+  await expect(secondIgnoredCheckbox).toBeChecked();
+  await expect(headerCheckbox).toBeChecked();
 
   await clickGridRowSelectionCheckbox(firstIgnoredRow);
-  await expect(
-    page.getByRole("button", { name: "Ignore 1 selected row" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Ignore 1 selected row" }).click();
-  await expect(agGridCellByColId(firstIgnoredRow, "status")).toContainText(
-    "Ignored",
-  );
-  await expect(page.getByText("0 of 3 ready, 1 ignored")).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Unignore 1 selected row" }),
-  ).toBeVisible();
-
   await clickGridRowSelectionCheckbox(secondIgnoredRow);
-  await expect(page.getByText("2 selected", { exact: true })).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Ignore 2 selected rows" }),
-  ).toBeVisible();
-
-  await page.getByRole("button", { name: "Ignore 2 selected rows" }).click();
-  await expect(agGridCellByColId(firstIgnoredRow, "status")).toContainText(
-    "Ignored",
-  );
-  await expect(agGridCellByColId(secondIgnoredRow, "status")).toContainText(
-    "Ignored",
-  );
+  await expect(firstIgnoredCheckbox).not.toBeChecked();
+  await expect(secondIgnoredCheckbox).not.toBeChecked();
   await expect(page.getByText("0 of 3 ready, 2 ignored")).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Unignore 2 selected rows" }),
-  ).toBeVisible();
 
-  await page.getByRole("button", { name: "Unignore 2 selected rows" }).click();
+  await clickGridRowSelectionCheckbox(firstIgnoredRow);
+  await expect(firstIgnoredCheckbox).toBeChecked();
   await expect(agGridCellByColId(firstIgnoredRow, "status")).toContainText(
     "Needs edit",
   );
-  await expect(agGridCellByColId(secondIgnoredRow, "status")).toContainText(
-    "Needs edit",
-  );
-
-  await page.getByRole("button", { name: "Ignore 2 selected rows" }).click();
-  await expect(firstIgnoredRow).toBeVisible();
-  await expect(secondIgnoredRow).toBeVisible();
+  await expect(firstIgnoredRow).not.toHaveClass(/statement-import-row-ignored/);
+  await clickGridRowSelectionCheckbox(firstIgnoredRow);
+  await expect(firstIgnoredCheckbox).not.toBeChecked();
 
   await setGridAccountTreeCellValue({
     root: page,
@@ -329,6 +360,27 @@ test("bulk ignores statement rows and skips them during import", async ({
 
   await expect(agGridCellByColId(includedRow, "status")).toContainText("Ready");
   await expect(page.getByText("1 of 3 ready, 2 ignored")).toBeVisible();
+
+  await expect(includedCheckbox).toBeChecked();
+  await expect(firstIgnoredCheckbox).not.toBeChecked();
+  await expect(secondIgnoredCheckbox).not.toBeChecked();
+  await expect(headerCheckbox).toBeChecked({ indeterminate: true });
+
+  await expect(
+    firstIgnoredRow.getByRole("button", { name: "Edit Imported Transaction" }),
+  ).toBeDisabled();
+
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme });
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-mantine-color-scheme",
+      colorScheme,
+    );
+    await page.mouse.move(0, 0);
+    await page.screenshot({
+      path: testInfo.outputPath(`review-${colorScheme}.png`),
+    });
+  }
 
   await page.getByRole("button", { name: "Import Transactions" }).click();
   await expect(page).toHaveURL(
