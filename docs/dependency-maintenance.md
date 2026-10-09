@@ -144,11 +144,13 @@ ports. Regression tests cover undefined aggregate data, negative/zero amounts,
 aggregate clicks, ordinary-node drilldowns, and bigint/grouped zoom boundaries.
 Browser diagnostics are retained with the chart E2E artifacts; no new AG Charts
 option warnings or uncaught errors occurred. Existing trial-license warnings
-remain visible. Build directive/deprecation warnings and server logs for aborted
-requests also occur in the Charts 13 baseline. Production license credentials
-were unavailable, so preserving the license setup is verified separately from
-licensed-production rendering. The admin cache chart was typechecked; populated
-Redis-cache rendering was not exercised in this local run.
+remain visible. Build directive/deprecation warnings also occur in the Charts 13
+baseline. Application E2E server logs include requests aborted during page
+navigation; the stack traces originate in HTTP connection-close handlers,
+without browser chart errors or failed tests. Production license credentials
+were unavailable, so preserving the existing enterprise/trial behavior does not
+verify licensed-production rendering. The admin cache chart was typechecked;
+populated Redis-cache rendering was not exercised in this local run.
 
 Frozen-lockfile installation passed. The Charts update added no audit findings:
 the original baseline had one high `deepmerge-ts` and one moderate `sprintf-js`
