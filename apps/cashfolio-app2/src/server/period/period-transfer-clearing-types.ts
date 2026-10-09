@@ -16,9 +16,7 @@ export type TransferClearingBooking = {
 };
 
 export type TransferClearingUnitType =
-  | "currency"
-  | "security"
-  | "cryptocurrency";
+  "currency" | "security" | "cryptocurrency";
 
 export type TransferClearingUnitBucket = {
   unitKey: string;

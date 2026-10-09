@@ -164,9 +164,8 @@ export const getPeriodGainLossReconciliationPageData = createServerFn({
   method: "GET",
 })
   .inputValidator(validatePeriodGainLossReconciliationInput)
-  .handler(
-    async ({ data }): Promise<PeriodGainLossReconciliationPageData> =>
-      loadPeriodGainLossReconciliationPageData(data),
+  .handler(async ({ data }): Promise<PeriodGainLossReconciliationPageData> =>
+    loadPeriodGainLossReconciliationPageData(data),
   );
 
 export type { PeriodGainLossReconciliation };

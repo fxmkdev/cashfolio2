@@ -33,8 +33,7 @@ export type StatementImportBalanceCarriedForwardRow = {
 };
 
 export type StatementImportGridRow =
-  | StatementImportReviewDraftRow
-  | StatementImportBalanceCarriedForwardRow;
+  StatementImportReviewDraftRow | StatementImportBalanceCarriedForwardRow;
 
 export function getStatementImportSuccessLedgerSearch(args: {
   selectedPeriodValue?: string;

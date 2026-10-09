@@ -1,4 +1,4 @@
-import { createServerFn } from "@tanstack/react-start";
+import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { ensureAuthenticated } from "@/auth/functions.server";
 import {
@@ -155,10 +155,12 @@ function resolveAuthenticatedUserSettingsLocale(
   );
 }
 
-export async function resolveAuthenticatedUserLocaleForRequest(): Promise<UserLocale> {
-  const user = await ensureUser();
-  return resolveAuthenticatedUserSettingsLocale(user.locale);
-}
+export const resolveAuthenticatedUserLocaleForRequest = createServerOnlyFn(
+  async (): Promise<UserLocale> => {
+    const user = await ensureUser();
+    return resolveAuthenticatedUserSettingsLocale(user.locale);
+  },
+);
 
 async function readJsonResponse(response: Response): Promise<unknown> {
   try {

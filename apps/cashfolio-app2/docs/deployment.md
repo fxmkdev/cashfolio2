@@ -24,6 +24,10 @@ pnpm view nitro version dist-tags peerDependencies --json
 pnpm view nitro@3.0.0 peerDependencies --json
 ```
 
+The pinned beta uses `ocache` 0.1. Newer stable H3 releases require `ocache`
+0.3, so `pnpm-workspace.yaml` pins `nitro>h3` to the patched `2.0.1-rc.20`
+release candidate. Revisit this scoped override together with the Nitro pin.
+
 ## Fly release migrations
 
 Fly deployments keep using `release_command` for Prisma migrations so migrations

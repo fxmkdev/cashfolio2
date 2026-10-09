@@ -25,8 +25,7 @@ type CurrentPageBreadcrumbItem = {
 };
 
 export type PageBreadcrumbItem =
-  | LinkedPageBreadcrumbItem
-  | CurrentPageBreadcrumbItem;
+  LinkedPageBreadcrumbItem | CurrentPageBreadcrumbItem;
 
 export type PageBreadcrumbsProps = {
   items: readonly PageBreadcrumbItem[];

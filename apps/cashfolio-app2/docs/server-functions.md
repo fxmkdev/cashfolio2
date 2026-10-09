@@ -20,6 +20,9 @@ Related docs:
 - Server-only modules may use `.server.ts` suffix where helpful (for example,
   auth/session integration files), especially for Prisma/Redis/provider or
   request-context implementation modules.
+- Exported request-context helpers in client-importable server-function facades
+  must use `createServerOnlyFn`, so import protection can remove their
+  server-only dependencies from the client bundle.
 - POST server functions validate object shape and required identifier fields
   before authorization/database work. Use `src/server/input-validation.ts` for
   dependency-free checks.
@@ -129,11 +132,9 @@ Related docs:
 
 ## Dependency Security Note
 
-- Root `package.json` pins `h3` via `pnpm.overrides` to address transitive
-  security advisories while `@tanstack/start-server-core` still references
-  `h3@2.0.1-rc.16`
-- Remove this override once TanStack Start upgrades its transitive `h3`
-  dependency to a patched release
+- TanStack Start now references the patched `h3@2.0.1-rc.20` release, so the
+  previous `h3-v2` override is no longer needed.
+- Remaining dependency security overrides live in `pnpm-workspace.yaml`.
 
 ## Account Status Actions
 

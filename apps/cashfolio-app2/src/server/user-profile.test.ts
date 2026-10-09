@@ -34,6 +34,7 @@ const prisma = vi.hoisted(() => ({
 
 vi.mock("@tanstack/react-start", () => ({
   createServerFn,
+  createServerOnlyFn: (handler: () => unknown) => handler,
 }));
 
 vi.mock("@tanstack/react-start/server", () => ({

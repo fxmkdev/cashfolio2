@@ -14,6 +14,9 @@ paths are relative to that app directory.
   during module initialization so app startup fails before serving traffic when
   the database is unreachable
 - Custom Prisma configuration in `prisma.config.ts` at the app root
+- Prisma configuration and the workspace CLI call dotenv's `config()` explicitly
+  to load `.env` from the current working directory. Existing process
+  environment variables take precedence over values in `.env`.
 - `prisma generate` works without `DATABASE_URL`; `prisma.config.ts` allows a
   missing URL for generate, while non-generate Prisma commands require
   `DATABASE_URL` via strict env validation

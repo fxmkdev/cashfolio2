@@ -1,4 +1,5 @@
 import type { Preview } from "@storybook/react-vite";
+import { createContext, useContext, type ComponentType } from "react";
 import { themes } from "storybook/theming";
 import {
   AllEnterpriseModule as GridAllEnterpriseModule,
@@ -23,6 +24,13 @@ type RouterStoryParameters = {
   };
 };
 
+const StoryContext = createContext<ComponentType>(() => null);
+
+function StoryFromContext() {
+  const Story = useContext(StoryContext);
+  return <Story />;
+}
+
 const preview: Preview = {
   parameters: {
     controls: {
@@ -36,175 +44,187 @@ const preview: Preview = {
       theme: themes[getPreferredColorScheme()],
     },
   },
-  decorators: [
-    (Story, context) => {
+  loaders: [
+    async (context) => {
       const { router: routerParameters } =
         context.parameters as RouterStoryParameters;
-      const initialPath = routerParameters?.initialPath ?? "/";
-      const rootRoute = createRootRoute({
-        component: () => <Outlet />,
-      });
-
-      const rootStoryRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/",
-        component: () => <Story />,
-      });
-
-      const accountBookRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/$accountBookId",
-        component: () => <Outlet />,
-      });
-      const accountBookIndexRoute = createRoute({
-        getParentRoute: () => accountBookRoute,
-        path: "/",
-        component: () => {
-          const { accountBookId } = accountBookRoute.useParams();
-
-          return (
-            <Navigate
-              to="/$accountBookId/accounts"
-              params={{ accountBookId }}
-              search={{ tab: "ASSET", mode: "active" }}
-              replace
-            />
-          );
-        },
-      });
-
-      const accountBookAccountsRoute = createRoute({
-        getParentRoute: () => accountBookRoute,
-        path: "/accounts",
-        component: () => <Story />,
-      });
-      const accountBookTransactionsRoute = createRoute({
-        getParentRoute: () => accountBookRoute,
-        path: "/transactions",
-        component: () => <Story />,
-      });
-      const accountBookReportRoute = createRoute({
-        getParentRoute: () => accountBookRoute,
-        path: "/report",
-        component: () => <Story />,
-      });
-      const accountBookHistoryRoute = createRoute({
-        getParentRoute: () => accountBookRoute,
-        path: "/history",
-        component: () => <Story />,
-      });
-
-      const accountBookPeriodRoute = createRoute({
-        getParentRoute: () => accountBookRoute,
-        path: "/period",
-        component: () => <Story />,
-      });
-      const accountBookTimelineRoute = createRoute({
-        getParentRoute: () => accountBookRoute,
-        path: "/timeline",
-        component: () => <Story />,
-      });
-      const accountBookSettingsRoute = createRoute({
-        getParentRoute: () => accountBookRoute,
-        path: "/settings",
-        component: () => <Story />,
-      });
-      const accountBookUserSettingsRoute = createRoute({
-        getParentRoute: () => accountBookRoute,
-        path: "/user-settings",
-        component: () => <Story />,
-      });
-      const accountBookValuationCacheRoute = createRoute({
-        getParentRoute: () => accountBookRoute,
-        path: "/valuation-cache",
-        component: () => <Story />,
-      });
-
-      const accountLedgerRoute = createRoute({
-        getParentRoute: () => accountBookRoute,
-        path: "/$accountId",
-        component: () => <Outlet />,
-      });
-
-      const accountLedgerIndexRoute = createRoute({
-        getParentRoute: () => accountLedgerRoute,
-        path: "/",
-        component: () => <Story />,
-      });
-
-      const accountLedgerChartRoute = createRoute({
-        getParentRoute: () => accountLedgerRoute,
-        path: "/chart",
-        component: () => <Story />,
-      });
-
-      const accountLedgerRouteTree = accountLedgerRoute.addChildren([
-        accountLedgerIndexRoute,
-        accountLedgerChartRoute,
-      ]);
-
-      const adminRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/admin",
-        component: () => <Story />,
-      });
-      const adminValuationCacheRoute = createRoute({
-        getParentRoute: () => adminRoute,
-        path: "/valuation-cache",
-        component: () => <Story />,
-      });
-      const adminUsersRoute = createRoute({
-        getParentRoute: () => adminRoute,
-        path: "/users",
-        component: () => <Story />,
-      });
-      const adminRouteTree = adminRoute.addChildren([
-        adminValuationCacheRoute,
-        adminUsersRoute,
-      ]);
-
-      const userSettingsRoute = createRoute({
-        getParentRoute: () => rootRoute,
-        path: "/user-settings",
-        component: () => <Story />,
-      });
-
-      const accountBookRouteTree = accountBookRoute.addChildren([
-        accountBookIndexRoute,
-        accountBookAccountsRoute,
-        accountBookTransactionsRoute,
-        accountBookReportRoute,
-        accountBookHistoryRoute,
-        accountBookPeriodRoute,
-        accountBookTimelineRoute,
-        accountBookSettingsRoute,
-        accountBookUserSettingsRoute,
-        accountBookValuationCacheRoute,
-        accountLedgerRouteTree,
-      ]);
-
-      const router = createRouter({
-        routeTree: rootRoute.addChildren([
-          rootStoryRoute,
-          adminRouteTree,
-          userSettingsRoute,
-          accountBookRouteTree,
-        ]),
-        history: createMemoryHistory({
-          initialEntries: [initialPath],
-        }),
-      });
-
-      return (
-        <div data-ag-theme-mode={getPreferredColorScheme()}>
-          <MantineProvider theme={theme} defaultColorScheme="auto">
-            <RouterProvider router={router} />
-          </MantineProvider>
-        </div>
+      const router = createStoryRouter(
+        StoryFromContext,
+        routerParameters?.initialPath ?? "/",
       );
+      // Load the initial route before Storybook renders or starts a play function.
+      await router.load();
+      return { storyRouter: router };
     },
   ],
+  decorators: [
+    (Story, context) => (
+      <div data-ag-theme-mode={getPreferredColorScheme()}>
+        <MantineProvider theme={theme} defaultColorScheme="auto">
+          <StoryContext.Provider value={Story}>
+            <RouterProvider router={context.loaded.storyRouter} />
+          </StoryContext.Provider>
+        </MantineProvider>
+      </div>
+    ),
+  ],
 };
+
+function createStoryRouter(Story: ComponentType, initialPath: string) {
+  const rootRoute = createRootRoute({
+    component: () => <Outlet />,
+  });
+
+  const rootStoryRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/",
+    component: () => <Story />,
+  });
+
+  const accountBookRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/$accountBookId",
+    component: () => <Outlet />,
+  });
+  const accountBookIndexRoute = createRoute({
+    getParentRoute: () => accountBookRoute,
+    path: "/",
+    component: () => {
+      const { accountBookId } = accountBookRoute.useParams();
+
+      return (
+        <Navigate
+          to="/$accountBookId/accounts"
+          params={{ accountBookId }}
+          search={{ tab: "ASSET", mode: "active" }}
+          replace
+        />
+      );
+    },
+  });
+
+  const accountBookAccountsRoute = createRoute({
+    getParentRoute: () => accountBookRoute,
+    path: "/accounts",
+    component: () => <Story />,
+  });
+  const accountBookTransactionsRoute = createRoute({
+    getParentRoute: () => accountBookRoute,
+    path: "/transactions",
+    component: () => <Story />,
+  });
+  const accountBookReportRoute = createRoute({
+    getParentRoute: () => accountBookRoute,
+    path: "/report",
+    component: () => <Story />,
+  });
+  const accountBookHistoryRoute = createRoute({
+    getParentRoute: () => accountBookRoute,
+    path: "/history",
+    component: () => <Story />,
+  });
+
+  const accountBookPeriodRoute = createRoute({
+    getParentRoute: () => accountBookRoute,
+    path: "/period",
+    component: () => <Story />,
+  });
+  const accountBookTimelineRoute = createRoute({
+    getParentRoute: () => accountBookRoute,
+    path: "/timeline",
+    component: () => <Story />,
+  });
+  const accountBookSettingsRoute = createRoute({
+    getParentRoute: () => accountBookRoute,
+    path: "/settings",
+    component: () => <Story />,
+  });
+  const accountBookUserSettingsRoute = createRoute({
+    getParentRoute: () => accountBookRoute,
+    path: "/user-settings",
+    component: () => <Story />,
+  });
+  const accountBookValuationCacheRoute = createRoute({
+    getParentRoute: () => accountBookRoute,
+    path: "/valuation-cache",
+    component: () => <Story />,
+  });
+
+  const accountLedgerRoute = createRoute({
+    getParentRoute: () => accountBookRoute,
+    path: "/$accountId",
+    component: () => <Outlet />,
+  });
+
+  const accountLedgerIndexRoute = createRoute({
+    getParentRoute: () => accountLedgerRoute,
+    path: "/",
+    component: () => <Story />,
+  });
+
+  const accountLedgerChartRoute = createRoute({
+    getParentRoute: () => accountLedgerRoute,
+    path: "/chart",
+    component: () => <Story />,
+  });
+
+  const accountLedgerRouteTree = accountLedgerRoute.addChildren([
+    accountLedgerIndexRoute,
+    accountLedgerChartRoute,
+  ]);
+
+  const adminRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin",
+    component: () => <Story />,
+  });
+  const adminValuationCacheRoute = createRoute({
+    getParentRoute: () => adminRoute,
+    path: "/valuation-cache",
+    component: () => <Story />,
+  });
+  const adminUsersRoute = createRoute({
+    getParentRoute: () => adminRoute,
+    path: "/users",
+    component: () => <Story />,
+  });
+  const adminRouteTree = adminRoute.addChildren([
+    adminValuationCacheRoute,
+    adminUsersRoute,
+  ]);
+
+  const userSettingsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/user-settings",
+    component: () => <Story />,
+  });
+
+  const accountBookRouteTree = accountBookRoute.addChildren([
+    accountBookIndexRoute,
+    accountBookAccountsRoute,
+    accountBookTransactionsRoute,
+    accountBookReportRoute,
+    accountBookHistoryRoute,
+    accountBookPeriodRoute,
+    accountBookTimelineRoute,
+    accountBookSettingsRoute,
+    accountBookUserSettingsRoute,
+    accountBookValuationCacheRoute,
+    accountLedgerRouteTree,
+  ]);
+
+  return createRouter({
+    routeTree: rootRoute.addChildren([
+      rootStoryRoute,
+      adminRouteTree,
+      userSettingsRoute,
+      accountBookRouteTree,
+    ]),
+    history: createMemoryHistory({
+      initialEntries: [initialPath],
+    }),
+  });
+}
 
 GridModuleRegistry.registerModules([GridAllEnterpriseModule]);
 

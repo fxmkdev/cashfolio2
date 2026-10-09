@@ -21,8 +21,7 @@ export type GainsLossesTotalFooterRow = {
 };
 
 export type GainsLossesGridRow =
-  | GainsLossesTableRow
-  | GainsLossesTotalFooterRow;
+  GainsLossesTableRow | GainsLossesTotalFooterRow;
 
 const UNIT_ACCOUNT_ROW_ID_PREFIX = "unit-account:";
 const UNIT_ROW_ID_PREFIX = "unit:";
