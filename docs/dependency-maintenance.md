@@ -24,9 +24,8 @@ The refreshed manifest versions are:
 | Node runtime / typings                   | 24.21.0 / 24.19.1        |
 | pnpm / Prettier                          | 11.28.5 / 3.9.9          |
 
-TypeScript 7, Vitest 5, MSW 3, pnpm 12, and Prisma prereleases are
-deferred to separate migrations. Keep the exact Storybook test-runner pin. See
-the app's
+TypeScript 7, Vitest 5, MSW 3, pnpm 12, and Prisma prereleases are deferred to
+separate migrations. Keep the exact Storybook test-runner pin. See the app's
 [Nitro compatibility notes](../apps/cashfolio-app2/docs/deployment.md#nitro-version-pin)
 before revisiting its beta pin or scoped H3 override.
 
@@ -98,9 +97,9 @@ The three standalone Charts packages (`ag-charts-community`,
 `ag-charts-enterprise`, and `ag-charts-react`) use `^14.2.0` and resolve to
 14.2.0. Registry metadata checked on 2026-10-09 identified it as the latest
 stable release, published on 2026-09-16, beyond pnpm 11's default one-day
-release-age threshold. The policy and existing exceptions remain unchanged. AG
-Grid stays on main's 35.3.1; its optional Charts 13 dependencies can coexist
-because the app uses standalone Charts, without integrated Grid chart modules.
+release-age threshold. The policy and existing exceptions remain unchanged. The
+subsequent AG Grid 36 migration is documented below; the app continues to use
+standalone Charts, without integrated Grid chart modules.
 
 The
 [official v14 migration guide](https://www.ag-grid.com/charts/react/upgrade-to-ag-charts-14/)
@@ -168,12 +167,13 @@ exception was added. The migration follows the official
 and the 36.1/36.2 guides.
 
 Cashfolio uses standalone AG Charts, not Integrated Charts or grid sparklines.
-Its three direct Charts packages remain at `^13.3.1`. Grid 36.2.0 brings
-`ag-charts-types@14.2.0` and optional Charts Community/Enterprise 14.2.0 into
-the lockfile; these do not change the standalone Charts version. A future
-Integrated Charts feature would require compatible Charts modules and its own
-Charts migration. The Nitro pin, scoped H3 override, Prisma 7, Node 24 typings,
-and coverage baseline remain unchanged.
+The three direct Charts packages preserve main's `^14.2.0` baseline from the
+separately merged Charts migration (#349). Grid's optional Charts dependencies
+and `ag-charts-types` also resolve to 14.2.0, removing the old optional Charts
+13 graph. No Charts application migration is duplicated here. A future
+Integrated Charts feature would require registration of compatible Charts
+modules. The Nitro pin, scoped H3 override, Prisma 7, Node 24 typings, and
+coverage baseline remain unchanged.
 
 The new DOM places pinned cells inside each row and uses a unified scrolling
 viewport. E2E row locators target `.ag-grid-scrolling-container > .ag-row`;
@@ -184,15 +184,15 @@ validation keeps full console diagnostics with its diagnostic overlay disabled;
 Storybook uses the application's selective module registration too.
 
 Migration verification passed on Node 24.21.0 / pnpm 11.28.5: app typecheck,
-lint, formatting, all 994 unit tests, the unchanged coverage ratchet, production
-build, Storybook build, all 93 Storybook tests, and frozen-lockfile
-installation. The complete 46-test application E2E run passed; all three focused
-compatibility tests also passed, including the additional offscreen ledger
-scroll-and-flash scenario (47 distinct E2E scenarios). Desktop/mobile light/dark
-screenshots and browser checks covered pinned cells and totals without runtime
-errors. History and report E2E tests verified the standalone charts. After
-incorporating the security fix merged into main, audit reports one moderate
-(`sprintf-js`) finding, with no high or critical findings.
+lint, formatting, all 1002 unit tests, the unchanged coverage ratchet,
+production build, Storybook build, all 93 Storybook tests, and frozen-lockfile
+installation. The complete 51-test application E2E run includes the offscreen
+ledger scroll-and-flash scenario and the Charts compatibility coverage merged
+into main. Desktop/mobile light/dark screenshots and browser checks covered
+pinned cells and totals without runtime errors. History and report E2E tests
+verified the standalone charts. After incorporating the security fix merged into
+main, audit reports one moderate (`sprintf-js`) finding, with no high or
+critical findings.
 
 An additional application development-mode smoke check was blocked by the
 unchanged Vite configuration: TanStack Start requires `/@react-refresh`, but no
