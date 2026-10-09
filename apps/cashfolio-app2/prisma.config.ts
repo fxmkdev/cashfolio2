@@ -1,6 +1,8 @@
-import "dotenv/config";
+import { config } from "dotenv";
 import type { PrismaConfig } from "prisma";
 import { env } from "prisma/config";
+
+config();
 
 const isPrismaGenerateCommand = process.argv.includes("generate");
 const databaseUrl = isPrismaGenerateCommand

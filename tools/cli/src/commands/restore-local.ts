@@ -1,13 +1,13 @@
 import { program } from "commander";
 import { exec } from "../shared";
-import { createClient, type RedisClientOptions } from "redis";
+import { createClient, type AnyRedisClientOptions } from "redis";
 
 const redisClientOptions = {
   RESP: 2,
   commandOptions: {
     timeout: undefined,
   },
-} satisfies RedisClientOptions;
+} satisfies AnyRedisClientOptions;
 
 program.command("restore-local").action(async () => {
   console.log("Dropping local database…");

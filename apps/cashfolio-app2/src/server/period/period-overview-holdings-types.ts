@@ -41,9 +41,7 @@ export type HoldingLot = {
 };
 
 export type HoldingExecutionPricingSource =
-  | "directConversion"
-  | "residualAdjusted"
-  | "marketFallback";
+  "directConversion" | "residualAdjusted" | "marketFallback";
 
 export type HoldingExecutionLotMatch = {
   acquisitionSortKey: string;

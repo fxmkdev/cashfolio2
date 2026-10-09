@@ -184,25 +184,21 @@ export async function queryExistingNodes(
   });
 
   return [
-    ...accounts.map(
-      (account): ExistingNode => ({
-        id: account.id,
-        name: account.name,
-        nodeType: "account",
-        groupId: account.groupId ?? undefined,
-        type: account.type,
-        unit: account.unit as Unit | null,
-      }),
-    ),
-    ...filteredAccountGroups.map(
-      (group): ExistingNode => ({
-        id: group.id,
-        name: group.name,
-        nodeType: "accountGroup",
-        parentId: group.parentGroupId ?? undefined,
-        type: group.type,
-      }),
-    ),
+    ...accounts.map((account): ExistingNode => ({
+      id: account.id,
+      name: account.name,
+      nodeType: "account",
+      groupId: account.groupId ?? undefined,
+      type: account.type,
+      unit: account.unit as Unit | null,
+    })),
+    ...filteredAccountGroups.map((group): ExistingNode => ({
+      id: group.id,
+      name: group.name,
+      nodeType: "accountGroup",
+      parentId: group.parentGroupId ?? undefined,
+      type: group.type,
+    })),
   ];
 }
 

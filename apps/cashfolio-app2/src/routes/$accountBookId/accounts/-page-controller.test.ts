@@ -229,8 +229,8 @@ describe("createAccountsMutationActions", () => {
     const invalidate = vi.fn();
 
     let editingAccount:
-      | { id: string; initialValues: Record<string, unknown> }
-      | undefined = undefined;
+      { id: string; initialValues: Record<string, unknown> } | undefined =
+      undefined;
 
     const state = {
       getEditingAccount: () => editingAccount,

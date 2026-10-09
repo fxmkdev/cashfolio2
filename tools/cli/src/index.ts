@@ -1,6 +1,8 @@
 import { program } from "commander";
-import "dotenv/config";
+import { config } from "dotenv";
 import "./commands";
+
+config();
 
 program.name("cli");
 

@@ -1,23 +1,23 @@
 {
   "engines": {
     "node": ">=24 <25",
-    "pnpm": "11.5.2"
+    "pnpm": "11.28.5"
   },
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": "^24.16.0",
+      "version": "^24.21.0",
       "onFail": "download"
     }
   },
   "devDependencies": {
-    "@fxmk/releaser": "0.5.5",
+    "@fxmk/releaser": "0.5.6",
     "github-actionlint": "1.7.12",
-    "prettier": "3.8.3"
+    "prettier": "3.9.9"
   },
   "scripts": {
     "cashfolio": "pnpm --filter cli start",
     "lint:workflows": "node scripts/actionlint.mjs"
   },
-  "packageManager": "pnpm@11.5.2+sha512.71c631e382066efc25625d5cf029075de07b61b37f6e27350fbd84b1bda5864c8c1967adc280776b45c30a715c0359a3be08fef42d5bb09e2b99029979692916"
+  "packageManager": "pnpm@11.28.5+sha512.484563d30b4c2ad27cb48aa94ff2b302dbcebc8ff6bf28816c2589886e146ce7f76f354f3bc1a438e6f5e9768c302aa0a6f7add8232903cd4cf81426cbc14d9e"
 }

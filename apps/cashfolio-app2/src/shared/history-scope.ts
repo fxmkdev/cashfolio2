@@ -1,9 +1,5 @@
 export type HistoryScopedMetric =
-  | "income"
-  | "expenses"
-  | "gainsLosses"
-  | "assets"
-  | "liabilities";
+  "income" | "expenses" | "gainsLosses" | "assets" | "liabilities";
 
 export type HistoryScopeSelection =
   | "total"

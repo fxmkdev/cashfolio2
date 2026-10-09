@@ -20,8 +20,7 @@ export type DrillPathByAllocationBreakdownUpdater =
       previousValue: DrillPathByAllocationBreakdown,
     ) => DrillPathByAllocationBreakdown);
 export type DrillPathByGainsLossesUpdater =
-  | string[]
-  | ((previousValue: string[]) => string[]);
+  string[] | ((previousValue: string[]) => string[]);
 
 export type ReportPageSessionState = {
   selectedBreakdown: BreakdownType;

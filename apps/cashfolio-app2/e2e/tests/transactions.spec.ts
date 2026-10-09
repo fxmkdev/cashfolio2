@@ -22,7 +22,7 @@ import {
 
 let seeded: SeededData;
 
-test.beforeAll(async ({ e2eExternalId }) => {
+test.beforeEach(async ({ e2eExternalId }) => {
   seeded = await seedDatabase({ userExternalId: e2eExternalId });
 });
 

@@ -161,6 +161,12 @@ Default local DB URL fallback for e2e is:
 
 ## Storybook Interaction Tests
 
+The shared preview loader creates and loads each story's memory router before
+rendering. Keep that initialization ahead of play functions; mounting an
+unloaded router can leave the canvas empty when a synchronous interaction query
+runs. The decorator supplies the current story through React context so the
+loaded router remains stable when story args change.
+
 Run Storybook tests against local Storybook server:
 
 ```bash

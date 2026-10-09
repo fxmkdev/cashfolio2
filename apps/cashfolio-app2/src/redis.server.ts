@@ -1,11 +1,11 @@
-import { createClient, type RedisClientOptions } from "redis";
+import { createClient, type AnyRedisClientOptions } from "redis";
 
 const redisClientOptions = {
   RESP: 2,
   commandOptions: {
     timeout: undefined,
   },
-} satisfies RedisClientOptions;
+} satisfies AnyRedisClientOptions;
 
 function createRedisClient(redisUrl: string) {
   return createClient({

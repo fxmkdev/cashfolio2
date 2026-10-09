@@ -134,9 +134,7 @@ function StatementImportCsvFormatHelp() {
 }
 
 export type AccountTypeDescriptor =
-  | "ASSET"
-  | "LIABILITY"
-  | `EQUITY-${EquityAccountSubtype}`;
+  "ASSET" | "LIABILITY" | `EQUITY-${EquityAccountSubtype}`;
 
 type FormValues = {
   name?: string;

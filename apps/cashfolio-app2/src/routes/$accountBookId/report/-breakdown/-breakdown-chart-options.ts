@@ -22,8 +22,7 @@ export type PeriodBreakdownChartDatum = {
 export type PeriodBreakdownNodeDatum = PeriodBreakdownChartDatum;
 
 export type PeriodBreakdownChartOptions =
-  | AgPolarChartOptions<PeriodBreakdownChartDatum>
-  | AgCartesianChartOptions;
+  AgPolarChartOptions<PeriodBreakdownChartDatum> | AgCartesianChartOptions;
 
 function buildBreakdownTooltipData(args: {
   label: string;

@@ -11,14 +11,10 @@ export type StatementImportCsvHeader =
   (typeof STATEMENT_IMPORT_CSV_HEADERS)[number];
 
 export type StatementImportCsvColumnRef =
-  | number
-  | { index: number }
-  | { header: string };
+  number | { index: number } | { header: string };
 
 export type StatementImportCsvDateFormat =
-  | "yyyy-MM-dd"
-  | "dd.MM.yyyy"
-  | "MM/dd/yyyy";
+  "yyyy-MM-dd" | "dd.MM.yyyy" | "MM/dd/yyyy";
 
 export type StatementImportCsvNumberFormat = {
   decimalSeparator: "." | ",";

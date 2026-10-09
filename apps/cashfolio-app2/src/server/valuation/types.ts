@@ -26,11 +26,7 @@ export type CachedRateResult = {
 };
 
 export type ValuationRateSource =
-  | "identity"
-  | "timeSeries"
-  | "fallback"
-  | "provider"
-  | "missing";
+  "identity" | "timeSeries" | "fallback" | "provider" | "missing";
 
 export type ValuationRateLookupResult = {
   rate: number | null;
@@ -48,8 +44,7 @@ export type BacktrackedNoDataFallbackCacheEntry = {
 };
 
 export type BacktrackedFallbackCacheEntry =
-  | BacktrackedRateFallbackCacheEntry
-  | BacktrackedNoDataFallbackCacheEntry;
+  BacktrackedRateFallbackCacheEntry | BacktrackedNoDataFallbackCacheEntry;
 
 export const NO_DATA_FETCH_RESULT = Symbol("valuation-no-data-fetch-result");
 
