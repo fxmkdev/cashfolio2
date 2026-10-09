@@ -1,3 +1,4 @@
+import type { AgZoomEvent } from "ag-charts-community";
 import { addUtcDays } from "@/shared/date";
 import {
   getExplicitPeriodDateRange,
@@ -30,10 +31,7 @@ export type HistoryChartDatum = {
 export type HistoryOpeningBalancePoint =
   PeriodHistoryResponse["openingBalancePoint"];
 
-export type HistoryVisibleRange = {
-  start?: Date | string | number;
-  end?: Date | string | number;
-};
+export type HistoryVisibleRange = NonNullable<AgZoomEvent["rangeX"]>;
 
 const AREA_HISTORY_METRICS = ["assets", "liabilities", "netWorth"] as const;
 export type AreaHistoryMetric = (typeof AREA_HISTORY_METRICS)[number];
@@ -53,6 +51,15 @@ function toRangeBoundaryTimestamp(
 
   if (value instanceof Date) {
     return value.getTime();
+  }
+
+  if (typeof value === "object") {
+    return toRangeBoundaryTimestamp(value.value);
+  }
+
+  if (typeof value === "bigint") {
+    const timestamp = Number(value);
+    return Number.isSafeInteger(timestamp) ? timestamp : null;
   }
 
   if (typeof value === "number") {

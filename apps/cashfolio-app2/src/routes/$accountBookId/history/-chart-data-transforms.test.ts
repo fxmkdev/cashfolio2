@@ -7,6 +7,60 @@ import {
 import { createHistoryPoint } from "./-chart-test-helpers";
 
 describe("rebaseHistoryChartDataCumulativeToVisibleRange", () => {
+  test.each([
+    {
+      start: BigInt(Date.parse("2026-02-01")),
+      end: BigInt(Date.parse("2026-03-01")),
+    },
+    {
+      start: { value: new Date("2026-02-01"), groupPercentage: 0 },
+      end: { value: BigInt(Date.parse("2026-03-01")), groupPercentage: 1 },
+    },
+  ])("rebases with v14 zoom boundaries (case %#)", (visibleRangeX) => {
+    const chartData = mapHistoryPointsToChartData(
+      ["2026-01", "2026-02", "2026-03"].map((periodValue) =>
+        createHistoryPoint({
+          periodValue,
+          periodLabel: periodValue,
+          income: 10,
+          totalReturn: 10,
+          savings: 10,
+          expenses: 0,
+          gainsLosses: 0,
+        }),
+      ),
+    );
+
+    expect(
+      rebaseHistoryChartDataCumulativeToVisibleRange({
+        chartData,
+        visibleRangeX,
+        selectedMetric: "income",
+      }).map((datum) => datum.cumulativeMetric),
+    ).toEqual([0, 10, 20]);
+  });
+
+  test("ignores bigint boundaries outside safe timestamp precision", () => {
+    const chartData = mapHistoryPointsToChartData([
+      createHistoryPoint({
+        periodValue: "2026-01",
+        periodLabel: "January 2026",
+        income: 10,
+        totalReturn: 10,
+        savings: 10,
+        expenses: 0,
+        gainsLosses: 0,
+      }),
+    ]);
+    expect(
+      rebaseHistoryChartDataCumulativeToVisibleRange({
+        chartData,
+        visibleRangeX: { start: 2n ** 100n },
+        selectedMetric: "income",
+      })[0].cumulativeMetric,
+    ).toBe(10);
+  });
+
   test("rebases cumulative values to visible range", () => {
     const chartData = mapHistoryPointsToChartData([
       createHistoryPoint({

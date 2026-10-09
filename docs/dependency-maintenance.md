@@ -24,7 +24,7 @@ The refreshed manifest versions are:
 | Node runtime / typings                   | 24.21.0 / 24.19.1        |
 | pnpm / Prettier                          | 11.28.5 / 3.9.9          |
 
-TypeScript 7, Vitest 5, MSW 3, AG Grid 36, AG Charts 14, pnpm 12, and Prisma
+TypeScript 7, Vitest 5, MSW 3, AG Grid 36, pnpm 12, and Prisma
 prereleases are deferred to separate migrations. Keep the exact Storybook
 test-runner pin. See the app's
 [Nitro compatibility notes](../apps/cashfolio-app2/docs/deployment.md#nitro-version-pin)

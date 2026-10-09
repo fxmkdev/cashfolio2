@@ -1,4 +1,5 @@
 import type {
+  AgBarSeriesOptions,
   AgCartesianChartOptions,
   AgDonutSeriesOptions,
   AgPolarChartOptions,
@@ -149,26 +150,28 @@ export function usePeriodBreakdownChartOptions(args: {
         enabled: false,
         position: "bottom",
       },
-      series: chartData.map((datum) => ({
-        type: "bar" as const,
-        data: [datum],
-        direction: "vertical" as const,
-        grouped: false,
-        widthRatio: 0.72,
-        xKey: "label" as const,
-        yKey: "amount" as const,
-        yName: "Amount",
-        showInLegend: false,
-        tooltip: {
-          renderer: ({ datum }: { datum: PeriodBreakdownChartDatum }) =>
-            buildBreakdownTooltipData(datum),
-        },
-        listeners: {
-          seriesNodeDoubleClick: ({ datum }) => {
-            onNodeDoubleClick(datum as PeriodBreakdownChartDatum);
+      series: chartData.map<AgBarSeriesOptions<PeriodBreakdownChartDatum>>(
+        (datum) => ({
+          type: "bar" as const,
+          data: [datum],
+          direction: "vertical" as const,
+          grouped: false,
+          widthRatio: 0.72,
+          xKey: "label" as const,
+          yKey: "amount" as const,
+          yName: "Amount",
+          showInLegend: false,
+          tooltip: {
+            renderer: ({ datum }: { datum: PeriodBreakdownChartDatum }) =>
+              buildBreakdownTooltipData(datum),
           },
-        },
-      })),
+          listeners: {
+            seriesNodeDoubleClick: ({ datum }) => {
+              onNodeDoubleClick(datum as PeriodBreakdownChartDatum);
+            },
+          },
+        }),
+      ),
       axes: {
         x: {
           type: "category",
@@ -179,8 +182,7 @@ export function usePeriodBreakdownChartOptions(args: {
         y: {
           type: "number",
           label: {
-            formatter: ({ value }) =>
-              amountCompactFormatter.format(Number(value)),
+            formatter: ({ value }) => amountCompactFormatter.format(value),
           },
         },
       },
