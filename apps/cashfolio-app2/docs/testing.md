@@ -177,7 +177,14 @@ state, and storage isolation between stories.
 The root Vitest config lists separate unit and Storybook projects. Unit scripts
 invoke the unit config directly, retaining Node execution and `coverage/` for
 the unchanged ratchet. Storybook coverage writes to `coverage-storybook/`; it
-must never contribute to the unit ratchet.
+must never contribute to the unit ratchet. Vitest worker limits are global; the
+root config limits browser tests to one worker, while unit scripts use their
+independent config and retain their existing concurrency.
+
+Pending-submit interactions should control when a mocked request resolves so
+coverage overhead cannot end the pending state before disabled-action assertions
+finish. Preserve the assertions and release the request before checking
+recovery.
 
 Run browser tests directly; a Storybook server is optional for interactive
 debugging:

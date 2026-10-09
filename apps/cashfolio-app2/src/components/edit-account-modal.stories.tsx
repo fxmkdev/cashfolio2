@@ -85,6 +85,13 @@ export const PendingSubmitDisablesActions: Story = {
     ),
   },
   play: async ({ canvasElement, args }) => {
+    // Keep submission pending through both clicks, even under coverage overhead.
+    let finishSubmit = () => {};
+    const pendingSubmit = new Promise<undefined>((resolve) => {
+      finishSubmit = () => resolve(undefined);
+    });
+    args.onSubmit.mockImplementationOnce(() => pendingSubmit);
+
     const body = within(canvasElement.ownerDocument.body);
     const saveButton = body.getByRole("button", { name: "Save" });
 
@@ -95,6 +102,7 @@ export const PendingSubmitDisablesActions: Story = {
     await userEvent.click(saveButton);
     await expect(args.onSubmit).toHaveBeenCalledTimes(1);
 
+    finishSubmit();
     await waitFor(() => expect(saveButton).not.toBeDisabled());
     await expect(saveButton).not.toHaveAttribute("data-loading");
   },
