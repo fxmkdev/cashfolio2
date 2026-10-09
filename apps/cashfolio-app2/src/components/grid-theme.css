@@ -34,6 +34,10 @@
 .transactions-master-grid
   .ag-details-row
   .ag-layout-auto-height
+  .ag-grid-scrolling-rows,
+.transactions-master-grid
+  .ag-details-row
+  .ag-layout-auto-height
   .ag-grid-scrolling-container {
   min-height: 0;
 }

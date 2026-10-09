@@ -678,9 +678,10 @@ pinned-column, or floating-bottom containers. Scope row actions to their row and
 modal editing locators to their dialog; master/detail grids can reuse row
 indices.
 
-The transaction detail grid's auto-height override applies to the new scrolling
-container so short booking lists remain compact. Loading and empty overlays are
-siblings of the viewport in v36; do not depend on them being viewport children.
+The transaction detail grid's auto-height override applies to both the scrolling
+rows wrapper and its container so short booking lists remain compact. Loading
+and empty overlays are siblings of the viewport in v36; do not depend on them
+being viewport children.
 
 `ensureGridModulesRegistered` supplies the same selective feature modules in the
 application and Storybook. Development registers `ValidationModule` with

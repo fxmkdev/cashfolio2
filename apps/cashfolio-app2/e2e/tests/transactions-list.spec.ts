@@ -135,6 +135,24 @@ test("lists transactions with booking details, carries account link context, and
   );
   await expect(agGridCellByColId(newerCashBookingRow, "credit")).toHaveText("");
 
+  // Short detail grids should fit their bookings without the default 150px body minimum.
+  const detailBody = page
+    .locator(
+      ".transactions-master-grid .ag-details-row .ag-grid-scrolling-rows",
+    )
+    .first();
+  await expect
+    .poll(() =>
+      detailBody.evaluate((body) => {
+        const rows = body.querySelector(".ag-grid-scrolling-container")!;
+        return Math.abs(
+          body.getBoundingClientRect().height -
+            rows.getBoundingClientRect().height,
+        );
+      }),
+    )
+    .toBeLessThan(1);
+
   await agGridCellByColId(newerCashBookingRow, "account")
     .getByRole("link", { name: seeded.cashAccount.name })
     .click();
