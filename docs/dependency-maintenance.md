@@ -189,9 +189,9 @@ installation. The complete 46-test application E2E run passed; all three focused
 compatibility tests also passed, including the additional offscreen ledger
 scroll-and-flash scenario (47 distinct E2E scenarios). Desktop/mobile light/dark
 screenshots and browser checks covered pinned cells and totals without runtime
-errors. History and report E2E tests verified the standalone charts. Audit
-findings remain one high (`deepmerge-ts`) and one moderate (`sprintf-js`), with
-no critical findings.
+errors. History and report E2E tests verified the standalone charts. After
+incorporating the security fix merged into main, audit reports one moderate
+(`sprintf-js`) finding, with no high or critical findings.
 
 An additional application development-mode smoke check was blocked by the
 unchanged Vite configuration: TanStack Start requires `/@react-refresh`, but no
