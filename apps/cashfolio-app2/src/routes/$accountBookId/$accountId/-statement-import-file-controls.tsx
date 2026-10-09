@@ -1,8 +1,6 @@
 import { Alert, Button, Group, Stack, Text } from "@mantine/core";
 import { Dropzone, MIME_TYPES } from "@mantine/dropzone";
 import {
-  IconEye,
-  IconEyeOff,
   IconFileCheck,
   IconFileText,
   IconUpload,
@@ -127,22 +125,10 @@ function StatementImportSelectedFile({
   );
 }
 
-export function StatementImportBulkSelectionBar({
-  bulkIgnoredActionLabel,
-  bulkShouldIgnoreSelectedDrafts,
-  isEditSubmitting,
-  isSubmitting,
-  selectedDraftCount,
+export function StatementImportReviewSummary({
   summaryText,
-  onBulkIgnoredChange,
 }: {
-  bulkIgnoredActionLabel: string;
-  bulkShouldIgnoreSelectedDrafts: boolean;
-  isEditSubmitting: boolean;
-  isSubmitting: boolean;
-  selectedDraftCount: number;
   summaryText: string;
-  onBulkIgnoredChange: () => void;
 }) {
   return (
     <Group
@@ -163,27 +149,6 @@ export function StatementImportBulkSelectionBar({
       <Text c="dimmed" size="sm">
         {summaryText}
       </Text>
-
-      <Group justify="end" gap="xs" wrap="nowrap">
-        {selectedDraftCount > 0 ? (
-          <Button
-            size="xs"
-            variant="light"
-            color="blue"
-            leftSection={
-              bulkShouldIgnoreSelectedDrafts ? (
-                <IconEyeOff size={16} />
-              ) : (
-                <IconEye size={16} />
-              )
-            }
-            disabled={isSubmitting || isEditSubmitting}
-            onClick={onBulkIgnoredChange}
-          >
-            {bulkIgnoredActionLabel}
-          </Button>
-        ) : null}
-      </Group>
     </Group>
   );
 }

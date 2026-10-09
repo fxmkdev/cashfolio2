@@ -2,7 +2,6 @@ import { describe, expect, test } from "vitest";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 import {
   getStatementImportBalanceCarriedForwardRow,
-  getStatementImportBulkIgnoredActionLabel,
   getStatementImportGridRows,
   getStatementImportIgnoredCount,
   getStatementImportReadyCount,
@@ -11,8 +10,7 @@ import {
   getStatementImportSummaryText,
   getStatementImportTransactionsToSubmit,
   isStatementImportDisabled,
-  setStatementImportDraftsIgnored,
-  toggleStatementImportDraftIgnored,
+  setStatementImportDraftSelection,
 } from "./-statement-import-page-controller";
 import type {
   StatementImportDraft,
@@ -265,105 +263,61 @@ describe("statement import page controller", () => {
     expect(getStatementImportTransactionsToSubmit(drafts)).toEqual([]);
   });
 
-  test("toggles ignored state without changing draft data", () => {
-    const draft = createDraft();
-
-    const [ignoredDraft] = toggleStatementImportDraftIgnored([draft], draft.id);
-    expect(ignoredDraft).toEqual({
-      ...draft,
-      ignored: true,
-    });
-
-    const [includedDraft] = toggleStatementImportDraftIgnored(
-      [ignoredDraft],
-      draft.id,
-    );
-    expect(includedDraft).toEqual(draft);
-  });
-
-  test("bulk ignores selected drafts without changing unselected drafts", () => {
-    const firstDraft = createDraft({ id: "draft-1" });
-    const secondDraft = createDraft({ id: "draft-2" });
-    const unselectedDraft = createDraft({ id: "draft-3" });
-
-    const result = setStatementImportDraftsIgnored({
-      drafts: [firstDraft, secondDraft, unselectedDraft],
-      draftIds: [firstDraft.id, secondDraft.id],
-      ignored: true,
-    });
-
-    expect(result).toEqual([
-      { ...firstDraft, ignored: true },
-      { ...secondDraft, ignored: true },
-      unselectedDraft,
-    ]);
-  });
-
-  test("bulk ignore supports a single selected draft", () => {
-    const selectedDraft = createDraft({ id: "selected-draft" });
-    const unselectedDraft = createDraft({ id: "unselected-draft" });
-
-    const result = setStatementImportDraftsIgnored({
-      drafts: [selectedDraft, unselectedDraft],
-      draftIds: [selectedDraft.id],
-      ignored: true,
-    });
-
-    expect(result).toEqual([
-      { ...selectedDraft, ignored: true },
-      unselectedDraft,
-    ]);
-  });
-
-  test("bulk unignores selected drafts", () => {
-    const firstDraft = createDraft({ id: "draft-1", ignored: true });
-    const secondDraft = createDraft({ id: "draft-2", ignored: true });
-
-    const result = setStatementImportDraftsIgnored({
-      drafts: [firstDraft, secondDraft],
-      draftIds: [firstDraft.id, secondDraft.id],
-      ignored: false,
-    });
-
-    expect(result).toEqual([
-      { ...firstDraft, ignored: false },
-      { ...secondDraft, ignored: false },
-    ]);
-  });
-
-  test("bulk ignore keeps already ignored selected draft data unchanged", () => {
-    const includedDraft = createDraft({ id: "included-draft" });
-    const ignoredDraft = createDraft({
-      id: "ignored-draft",
-      ignored: true,
-      transaction: {
-        description: "Ignored custom transaction",
-        bookings: [],
-      },
-    });
-
-    const result = setStatementImportDraftsIgnored({
+  test("includes checked drafts and ignores unchecked drafts without changing their data", () => {
+    const includedDraft = createDraft({ id: "included-draft", ignored: true });
+    const ignoredDraft = createDraft({ id: "ignored-draft" });
+    const result = setStatementImportDraftSelection({
       drafts: [includedDraft, ignoredDraft],
-      draftIds: [includedDraft.id, ignoredDraft.id],
-      ignored: true,
+      selectedDraftIds: [includedDraft.id],
     });
 
-    expect(result).toEqual([{ ...includedDraft, ignored: true }, ignoredDraft]);
+    expect(result).toEqual([
+      { ...includedDraft, ignored: false },
+      { ...ignoredDraft, ignored: true },
+    ]);
+    expect(result[0]?.transaction).toBe(includedDraft.transaction);
+    expect(result[1]?.transaction).toBe(ignoredDraft.transaction);
   });
 
-  test("bulk ignore action labels use singular and plural selected row text", () => {
-    expect(
-      getStatementImportBulkIgnoredActionLabel({
-        shouldIgnore: true,
-        selectedDraftCount: 1,
-      }),
-    ).toBe("Ignore 1 selected row");
-    expect(
-      getStatementImportBulkIgnoredActionLabel({
-        shouldIgnore: false,
-        selectedDraftCount: 2,
-      }),
-    ).toBe("Unignore 2 selected rows");
+  test("includes every draft when all checkboxes are checked", () => {
+    const drafts = [
+      createDraft({ id: "draft-1", ignored: true }),
+      createDraft({ id: "draft-2", ignored: true }),
+    ];
+    const result = setStatementImportDraftSelection({
+      drafts,
+      selectedDraftIds: drafts.map((draft) => draft.id),
+    });
+
+    expect(result.map((draft) => draft.ignored)).toEqual([false, false]);
+  });
+
+  test("ignores every draft when all checkboxes are unchecked", () => {
+    const drafts = [
+      createDraft({ id: "draft-1" }),
+      createDraft({ id: "draft-2" }),
+    ];
+    const result = setStatementImportDraftSelection({
+      drafts,
+      selectedDraftIds: [],
+    });
+
+    expect(result.map((draft) => draft.ignored)).toEqual([true, true]);
+    expect(getStatementImportTransactionsToSubmit(result)).toEqual([]);
+  });
+
+  test("keeps matching inclusion state unchanged and disregards unknown row IDs", () => {
+    const includedDraft = createDraft({ id: "included-draft" });
+    const ignoredDraft = createDraft({ id: "ignored-draft", ignored: true });
+    const drafts = [includedDraft, ignoredDraft];
+    const result = setStatementImportDraftSelection({
+      drafts,
+      selectedDraftIds: [includedDraft.id, "unknown-row"],
+    });
+
+    expect(result).toBe(drafts);
+    expect(result[0]).toBe(includedDraft);
+    expect(result[1]).toBe(ignoredDraft);
   });
 
   test("derives asset account hypothetical balances from bottom to top in CSV order", () => {

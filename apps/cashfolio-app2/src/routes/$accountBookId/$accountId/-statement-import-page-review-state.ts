@@ -1,8 +1,12 @@
 import type {
   CellValueChangedEvent,
+  FirstDataRenderedEvent,
+  GridApi,
+  IRowNode,
+  RowDataUpdatedEvent,
   SelectionChangedEvent,
 } from "ag-grid-enterprise";
-import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import type { AccountOption } from "@/components/edit-transaction-modal";
 import type { LedgerAccount } from "./-page-types";
 import {
@@ -13,11 +17,9 @@ import {
 } from "./-statement-import";
 import { useStatementImportColumnDefs } from "./-statement-import-page-columns";
 import {
-  getStatementImportBulkIgnoredActionLabel,
   isStatementImportReviewDraftRow,
-  setStatementImportDraftsIgnored,
+  setStatementImportDraftSelection,
   type StatementImportGridRow,
-  toggleStatementImportDraftIgnored,
 } from "./-statement-import-page-controller";
 import { useStatementImportReviewDerivedState } from "./-statement-import-page-review-derived-state";
 
@@ -43,8 +45,6 @@ export function useStatementImportReviewState(args: {
     isEditSubmitting,
     onEditDraft,
   } = args;
-  const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([]);
-
   const derivedState = useStatementImportReviewDerivedState({
     account,
     accountBookStartDate,
@@ -54,38 +54,13 @@ export function useStatementImportReviewState(args: {
     isSubmitting,
     isEditSubmitting,
   });
-  const selectedDraftIdSet = useMemo(
-    () => new Set(selectedDraftIds),
-    [selectedDraftIds],
-  );
-  const selectedDrafts = useMemo(
-    () => drafts.filter((draft) => selectedDraftIdSet.has(draft.id)),
-    [drafts, selectedDraftIdSet],
-  );
-  const selectedDraftCount = selectedDrafts.length;
-  const bulkShouldIgnoreSelectedDrafts = selectedDrafts.some(
-    (draft) => !draft.ignored,
-  );
-  const bulkIgnoredActionLabel = getStatementImportBulkIgnoredActionLabel({
-    shouldIgnore: bulkShouldIgnoreSelectedDrafts,
-    selectedDraftCount,
-  });
-
   const columnDefs = useStatementImportColumnDefs({
     account,
     counterAccountOptions: derivedState.counterAccountOptions,
     isSubmitting,
     statuses: derivedState.statuses,
     onEditDraft,
-    onToggleDraftIgnored: (draftId) =>
-      setDrafts((current) =>
-        toggleStatementImportDraftIgnored(current, draftId),
-      ),
   });
-
-  function clearSelection() {
-    setSelectedDraftIds([]);
-  }
 
   function handleDraftCellChange(
     event: CellValueChangedEvent<StatementImportGridRow>,
@@ -135,42 +110,75 @@ export function useStatementImportReviewState(args: {
   function handleSelectionChange(
     event: SelectionChangedEvent<StatementImportGridRow>,
   ) {
-    setSelectedDraftIds(
-      event.api
-        .getSelectedRows()
-        .filter(isStatementImportReviewDraftRow)
-        .map((draft) => draft.id),
-    );
-  }
-
-  function handleBulkIgnoredChange() {
-    if (selectedDraftCount < 1) {
+    // Grid initialization and API synchronization must not change inclusion.
+    if (
+      event.source !== "checkboxSelected" &&
+      event.source !== "spaceKey" &&
+      event.source !== "keyboardSelectAll" &&
+      event.source !== "uiSelectAll" &&
+      event.source !== "uiSelectAllFiltered" &&
+      event.source !== "uiSelectAllCurrentPage"
+    ) {
+      return;
+    }
+    if (isSubmitting || isEditSubmitting) {
+      syncDraftSelection(event.api);
       return;
     }
 
+    const selectedDraftIds = event.api
+      .getSelectedRows()
+      .filter(isStatementImportReviewDraftRow)
+      .map((draft) => draft.id);
     setDrafts((current) =>
-      setStatementImportDraftsIgnored({
-        drafts: current,
-        draftIds: selectedDraftIds,
-        ignored: bulkShouldIgnoreSelectedDrafts,
-      }),
+      setStatementImportDraftSelection({ drafts: current, selectedDraftIds }),
     );
   }
 
+  function syncDraftSelection(api: GridApi<StatementImportGridRow>) {
+    const nodesToSelect: IRowNode<StatementImportGridRow>[] = [];
+    const nodesToDeselect: IRowNode<StatementImportGridRow>[] = [];
+    api.forEachNode((node) => {
+      const selected =
+        isStatementImportReviewDraftRow(node.data) && !node.data.ignored;
+      if (node.isSelected() !== selected) {
+        (selected ? nodesToSelect : nodesToDeselect).push(node);
+      }
+    });
+    if (nodesToSelect.length > 0) {
+      api.setNodesSelected({
+        nodes: nodesToSelect,
+        newValue: true,
+        source: "api",
+      });
+    }
+    if (nodesToDeselect.length > 0) {
+      api.setNodesSelected({
+        nodes: nodesToDeselect,
+        newValue: false,
+        source: "api",
+      });
+    }
+  }
+
+  function handleReviewRowsUpdated(
+    event:
+      | RowDataUpdatedEvent<StatementImportGridRow>
+      | FirstDataRenderedEvent<StatementImportGridRow>,
+  ) {
+    syncDraftSelection(event.api);
+  }
+
   return {
-    bulkIgnoredActionLabel,
-    bulkShouldIgnoreSelectedDrafts,
-    clearSelection,
     columnDefs,
-    handleBulkIgnoredChange,
     handleDraftCellChange,
     handleSelectionChange,
+    handleReviewRowsUpdated,
     ignoredCount: derivedState.ignoredCount,
     importDisabled: derivedState.importDisabled,
     includedCount: derivedState.includedCount,
     readyCount: derivedState.readyCount,
     reviewRows: derivedState.reviewRows,
-    selectedDraftCount,
     summaryText: derivedState.summaryText,
   };
 }
