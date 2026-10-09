@@ -103,6 +103,20 @@ async function findUserMenuButton(canvasElement: HTMLElement) {
 const meta = {
   title: "Routes/AccountBookShell",
   component: AccountBookShellSmokeHarness,
+  loaders: [
+    () => {
+      // Vitest seeds these after each preceding story; the setup hook must clear them.
+      if (import.meta.env.MODE === "test") {
+        expect(
+          window.localStorage.getItem("cashfolio-storybook-isolation"),
+        ).toBeNull();
+        expect(
+          window.sessionStorage.getItem("cashfolio-storybook-isolation"),
+        ).toBeNull();
+      }
+      return {};
+    },
+  ],
 } satisfies Meta<typeof AccountBookShellSmokeHarness>;
 
 export default meta;
@@ -118,8 +132,16 @@ export const RouteSmoke: Story = {
   loaders: [resetDesktopRailPreference],
   render: () => <AccountBookShellSmokeHarness />,
   play: async ({ canvasElement }) => {
+    if (import.meta.env.MODE === "test") {
+      await expect(window.innerWidth).toBe(1280);
+      await expect(window.innerHeight).toBe(900);
+    }
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
+
+    await expect(canvas.getByTestId("router-path")).toHaveTextContent(
+      "/storybook-book/accounts",
+    );
 
     await expect(
       await canvas.findByRole("button", { name: "Collapse Sidebar" }),
@@ -334,15 +356,16 @@ export const MobileFooterControlsSmoke: Story = {
     router: {
       initialPath: "/storybook-book/accounts?tab=ASSET&mode=active",
     },
-    testRunner: {
-      viewport: { width: 390, height: 844 },
-    },
     viewport: {
-      defaultViewport: "mobile1",
+      defaultViewport: "cashfolioMobile",
     },
   },
   render: () => <AccountBookShellSmokeHarness />,
   play: async ({ canvasElement }) => {
+    if (import.meta.env.MODE === "test") {
+      await expect(window.innerWidth).toBe(390);
+      await expect(window.innerHeight).toBe(844);
+    }
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
 

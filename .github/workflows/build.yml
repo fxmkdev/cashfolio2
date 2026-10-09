@@ -219,45 +219,7 @@ jobs:
       - name: Build Storybook
         run: pnpm --filter cashfolio-app2 build-storybook
       - name: Run Storybook tests
-        run: |
-          STORYBOOK_LOG=/tmp/cashfolio-app2-storybook.log
-          STORYBOOK_URL=http://127.0.0.1:6006
-
-          python3 -m http.server 6006 \
-            --bind 127.0.0.1 \
-            --directory apps/cashfolio-app2/storybook-static \
-            > "$STORYBOOK_LOG" 2>&1 &
-          STORYBOOK_PID=$!
-
-          cleanup() {
-            status=$?
-            kill "$STORYBOOK_PID" 2>/dev/null || true
-
-            if [ "$status" -ne 0 ]; then
-              echo "::group::Storybook server log"
-              cat "$STORYBOOK_LOG"
-              echo "::endgroup::"
-            fi
-          }
-          trap cleanup EXIT
-
-          for _ in {1..60}; do
-            if curl --fail --silent --show-error "$STORYBOOK_URL/iframe.html" >/dev/null; then
-              break
-            fi
-
-            if ! kill -0 "$STORYBOOK_PID" 2>/dev/null; then
-              exit 1
-            fi
-
-            sleep 2
-          done
-
-          if ! curl --fail --silent --show-error "$STORYBOOK_URL/iframe.html" >/dev/null; then
-            exit 1
-          fi
-
-          pnpm --filter cashfolio-app2 test-storybook --maxWorkers 1 --testTimeout 30000
+        run: pnpm --filter cashfolio-app2 test-storybook
 
   github-actions-lint:
     name: "GitHub Actions: Lint"

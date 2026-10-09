@@ -30,6 +30,19 @@ function StoryFromContext() {
 
 const preview: Preview = {
   parameters: {
+    viewport: {
+      defaultViewport: "cashfolioDesktop",
+      options: {
+        cashfolioDesktop: {
+          name: "Cashfolio desktop",
+          styles: { width: "1280px", height: "900px" },
+        },
+        cashfolioMobile: {
+          name: "Cashfolio mobile",
+          styles: { width: "390px", height: "844px" },
+        },
+      },
+    },
     controls: {
       matchers: {
         color: /(background|color)$/i,

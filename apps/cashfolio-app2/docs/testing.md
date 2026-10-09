@@ -11,11 +11,11 @@ paths are relative to that app directory.
 - **E2E tests (top layer)**: user journeys and browser-level behavior with
   Playwright.
 - **Storybook interaction tests**: component-level UI interaction validation via
-  Storybook test runner.
+  Storybook Vitest addon.
 
 ## Unit and Integration (Vitest)
 
-- Framework: **Vitest** (`vitest.config.ts`)
+- Framework: **Vitest** (`vitest.unit.config.ts`)
 - Test files: `src/**/*.test.ts`
 - Runtime: Node test environment
 - Prisma client is generated before unit test runs via `pretest:unit`.
@@ -167,11 +167,25 @@ unloaded router can leave the canvas empty when a synchronous interaction query
 runs. The decorator supplies the current story through React context so the
 loaded router remains stable when story args change.
 
-Run Storybook tests against local Storybook server:
+Storybook 10.6 applies preview annotations automatically. The browser project
+uses the existing TanStack stubs and loaded memory router, runs every story in
+headless Playwright Chromium, and clears local/session storage before each
+story. Viewport parameters preserve the 1280×900 desktop default and 390×844
+mobile story. Regression assertions check viewport dimensions, initial route
+state, and storage isolation between stories.
+
+The root Vitest config lists separate unit and Storybook projects. Unit scripts
+invoke the unit config directly, retaining Node execution and `coverage/` for
+the unchanged ratchet. Storybook coverage writes to `coverage-storybook/`; it
+must never contribute to the unit ratchet.
+
+Run browser tests directly; a Storybook server is optional for interactive
+debugging:
 
 ```bash
 pnpm --filter cashfolio-app2 storybook
 pnpm --filter cashfolio-app2 test-storybook
+pnpm --filter cashfolio-app2 test-storybook:coverage
 ```
 
 ## CI Quality Gates
