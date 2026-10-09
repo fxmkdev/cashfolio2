@@ -40,15 +40,27 @@ Remove an override only after confirming the lockfile resolves patched versions
 and the relevant checks pass. Preserve the release-age policy; existing
 exceptions for the project's releaser package should name its current pin.
 
+Prisma 7.10 still requests `deepmerge-ts@7.1.5`, so a scoped
+`@prisma/config>deepmerge-ts` override selects the patched `8.0.2` release.
+Prisma uses the public `deepmerge` export to load plain configuration objects.
+The version 8 changes to Map merging and renamed custom-merge types do not
+affect this configuration shape. Configuration loading, client generation,
+schema validation, and migration SQL generation must remain covered when
+revisiting this override. Remove it when Prisma resolves a patched release
+without the override. See the
+[version 8 release notes](https://github.com/RebeccaStevens/deepmerge-ts/releases/tag/v8.0.0)
+and
+[recursive merge advisory](https://github.com/advisories/GHSA-ggr8-5vv4-36mx).
+
 ## Remaining audit findings
 
-As of 2026-10-09, `pnpm audit` reports one high and one moderate finding, with
-no critical findings, down from 112 findings before the refresh:
+As of 2026-10-09, after the scoped Prisma override, `pnpm audit` reports one
+moderate finding, with no high or critical findings, down from 112 findings
+before the refresh:
 
-| Dependency           | Path                                                        | Severity | Follow-up                                                                                                                                                                                                       |
-| -------------------- | ----------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `deepmerge-ts@7.1.5` | Prisma 7 configuration, including release migration tooling | High     | The [recursive merge advisory](https://github.com/advisories/GHSA-ggr8-5vv4-36mx) is fixed in major version 8. Update through a compatible Prisma release or assess that transitive major migration separately. |
-| `sprintf-js@1.0.3`   | Storybook test-runner's Jest dependencies                   | Moderate | The [precision-specifier advisory](https://github.com/advisories/GHSA-hp3w-g68c-fv3c) has no published patched version. Revisit when a fix or compatible upstream replacement is available.                     |
+| Dependency         | Path                                      | Severity | Follow-up                                                                                                                                                                                   |
+| ------------------ | ----------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sprintf-js@1.0.3` | Storybook test-runner's Jest dependencies | Moderate | The [precision-specifier advisory](https://github.com/advisories/GHSA-hp3w-g68c-fv3c) has no published patched version. Revisit when a fix or compatible upstream replacement is available. |
 
 These counts describe the dependency audit, not an assessment of reachability in
 the running application. Re-run the audit when updating dependencies because
@@ -72,3 +84,10 @@ with PKCE/state and a secure cookie, invalid-callback rejection, and same-origin
 sign-out clearing encrypted session data. A full authenticated sign-in/callback/
 sign-out session in preview was not completed because interactive login
 credentials were unavailable; the E2E authentication bypass does not cover it.
+
+The scoped `deepmerge-ts` follow-up passed frozen-lockfile installation, Prisma
+configuration loading with and without a database URL, client generation, schema
+validation, and migration SQL generation without a database connection. App
+typecheck, lint, formatting, all 994 unit tests, the production build, and CLI
+typecheck also passed. Database-backed migrations and application E2E tests
+remain part of the CI gate.
