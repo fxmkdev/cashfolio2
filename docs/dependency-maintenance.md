@@ -178,7 +178,8 @@ and coverage baseline remain unchanged.
 The new DOM places pinned cells inside each row and uses a unified scrolling
 viewport. E2E row locators target `.ag-grid-scrolling-container > .ag-row`;
 pinned action and selection helpers stay scoped to the supplied row. The detail
-grid's minimum-height override targets the new scrolling container. Development
+grid's minimum-height override targets the new scrolling wrapper and container.
+The transaction editor uses the 36.2 `tooltip` callback API. Development
 validation keeps full console diagnostics with its diagnostic overlay disabled;
 Storybook uses the application's selective module registration too.
 
