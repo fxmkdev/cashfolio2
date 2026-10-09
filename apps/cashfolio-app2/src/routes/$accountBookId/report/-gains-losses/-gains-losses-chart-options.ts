@@ -1,7 +1,6 @@
 import type {
   AgBarSeriesOptions,
   AgCartesianChartOptions,
-  AgWaterfallSeriesItemStylerParams,
   AgWaterfallSeriesOptions,
   AgWaterfallSeriesTooltipRendererParams,
 } from "ag-charts-community";
@@ -81,43 +80,27 @@ export function useGainsLossesWaterfallChartOptions(args: {
           fill: waterfallPalette.negative,
           stroke: waterfallPalette.negative,
         },
-      },
-      subtotal: {
-        fill: waterfallPalette.total,
-        stroke: waterfallPalette.total,
-      },
-      total: {
-        fill: waterfallPalette.total,
-        stroke: waterfallPalette.total,
-      },
-      itemStyler: (
-        params: AgWaterfallSeriesItemStylerParams<GainsLossesWaterfallDatum>,
-      ) => {
-        if (params.itemType === "total" || params.itemType === "subtotal") {
-          return {
-            fill: waterfallPalette.total,
-            stroke: waterfallPalette.total,
-          };
-        }
-
-        return undefined;
+        total: {
+          fill: waterfallPalette.total,
+          stroke: waterfallPalette.total,
+        },
       },
       tooltip: {
         renderer: (
           params: AgWaterfallSeriesTooltipRendererParams<GainsLossesWaterfallDatum>,
         ) => {
           const { datum, itemType } = params;
-          const node = datum as Partial<GainsLossesWaterfallDatum>;
+          const node = datum as Partial<GainsLossesWaterfallDatum> | undefined;
           const isAggregateItem =
             itemType === "total" || itemType === "subtotal";
           const amount = isAggregateItem
             ? safeTotalGainLoss
-            : toFiniteNumber(node.totalGainLoss);
+            : toFiniteNumber(node?.totalGainLoss);
 
           return {
             heading: isAggregateItem
               ? totalAxisLabel
-              : String(node.label ?? totalAxisLabel),
+              : String(node?.label ?? totalAxisLabel),
             data: [
               {
                 label: "Total",
@@ -129,6 +112,10 @@ export function useGainsLossesWaterfallChartOptions(args: {
       },
       listeners: {
         seriesNodeDoubleClick: ({ datum }) => {
+          if (datum == null) {
+            return;
+          }
+
           const node = datum as Partial<GainsLossesWaterfallDatum>;
           if (
             typeof node.id !== "string" ||
@@ -260,8 +247,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
         y: {
           type: "number",
           label: {
-            formatter: ({ value }) =>
-              amountCompactFormatter.format(Number(value)),
+            formatter: ({ value }) => amountCompactFormatter.format(value),
           },
           crossLines: [
             {

@@ -118,7 +118,7 @@ Related docs:
     - Default ranges are monthly `1Y` and yearly `5Y` (see
       `getDefaultRangeButtonLabel` in
       `src/routes/$accountBookId/history/-range-controls.ts`).
-    - AG Charts (current app version: `13.2.1`) does not expose a public API to
+    - AG Charts (current app version: `14.2.0`) does not expose a public API to
       select a specific range-button as active. Setting zoom via
       `initialState`/`setState` updates the visible domain but may not mark the
       corresponding range button active.

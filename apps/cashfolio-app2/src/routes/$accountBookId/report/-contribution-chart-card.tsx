@@ -1,7 +1,6 @@
 import { Card, Stack, Text, Title } from "@mantine/core";
 import type {
   AgCartesianChartOptions,
-  AgWaterfallSeriesItemStylerParams,
   AgWaterfallSeriesOptions,
 } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
@@ -20,10 +19,6 @@ type WaterfallTotal = {
   axisLabel: string;
 };
 
-type WaterfallTotalDatum = {
-  isTotal: boolean;
-};
-
 export type ContributionChartStats = {
   income: number;
   expenses: number;
@@ -35,14 +30,6 @@ export type ContributionWaterfallModel = {
   amountByLabel: Record<string, number>;
   totals: WaterfallTotal[];
 };
-
-function isWaterfallTotalDatum(datum: unknown): datum is WaterfallTotalDatum {
-  if (typeof datum !== "object" || datum === null || !("isTotal" in datum)) {
-    return false;
-  }
-
-  return typeof datum.isTotal === "boolean";
-}
 
 function getGainLossLabel(amount: number): "Gain" | "Loss" {
   return amount >= 0 ? "Gain" : "Loss";
@@ -143,30 +130,19 @@ export function ContributionChartCard(args: {
           fill: waterfallPalette.negative,
           stroke: waterfallPalette.negative,
         },
-      },
-      subtotal: {
-        fill: waterfallPalette.total,
-        stroke: waterfallPalette.total,
-      },
-      total: {
-        fill: waterfallPalette.total,
-        stroke: waterfallPalette.total,
-      },
-      itemStyler: (
-        params: AgWaterfallSeriesItemStylerParams<WaterfallDatum>,
-      ) => {
-        if (isWaterfallTotalDatum(params.datum) && params.datum.isTotal) {
-          return {
-            fill: waterfallPalette.total,
-            stroke: waterfallPalette.total,
-          };
-        }
-
-        return undefined;
+        total: {
+          fill: waterfallPalette.total,
+          stroke: waterfallPalette.total,
+        },
       },
       tooltip: {
-        renderer: ({ datum }) => {
-          const label = String(datum.label);
+        renderer: ({ datum, itemType }) => {
+          const label =
+            itemType === "subtotal"
+              ? "Savings"
+              : itemType === "total"
+                ? "Total Return"
+                : datum.label;
           const amount = waterfallModel.amountByLabel[label] ?? 0;
 
           return {
@@ -212,8 +188,7 @@ export function ContributionChartCard(args: {
         y: {
           type: "number",
           label: {
-            formatter: ({ value }) =>
-              amountCompactFormatter.format(Number(value)),
+            formatter: ({ value }) => amountCompactFormatter.format(value),
           },
           crossLines: [
             {

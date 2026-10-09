@@ -379,8 +379,7 @@ export function createHistoryChartOptions(args: {
         min: axisDomain.min,
         max: axisDomain.max,
         label: {
-          formatter: ({ value }) =>
-            args.amountCompactFormatter.format(Number(value)),
+          formatter: ({ value }) => args.amountCompactFormatter.format(value),
         },
         crossLines: [
           {

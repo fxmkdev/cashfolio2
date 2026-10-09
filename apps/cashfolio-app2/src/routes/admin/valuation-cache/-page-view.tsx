@@ -381,13 +381,16 @@ export function ValuationCachePageView({
           type: "time",
           label: {
             rotation: -30,
-            formatter: ({ value }) => dateFormatter.format(new Date(value)),
+            formatter: ({ value }) =>
+              dateFormatter.format(
+                new Date(typeof value === "bigint" ? Number(value) : value),
+              ),
           },
         },
         y: {
           type: "number",
           label: {
-            formatter: ({ value }) => numberFormatter.format(Number(value)),
+            formatter: ({ value }) => numberFormatter.format(value),
           },
         },
       },
