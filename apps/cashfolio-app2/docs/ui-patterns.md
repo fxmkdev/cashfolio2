@@ -176,10 +176,10 @@ submit UX and prevent duplicate requests.
 ## Period Breakdown Drill-Down Pattern
 
 - AG Charts 14 callbacks have no source datum for waterfall totals/subtotals.
-  Use `itemType` to identify aggregate bars and the existing contribution
-  model to format Savings and Total Return. Aggregate bars do not drill down.
-- Style both waterfall total types through `item.total`; top-level
-  `total`, `subtotal`, and `itemStyler` options are unsupported.
+  Use `itemType` to identify aggregate bars and the existing contribution model
+  to format Savings and Total Return. Aggregate bars do not drill down.
+- Style both waterfall total types through `item.total`; top-level `total`,
+  `subtotal`, and `itemStyler` options are unsupported.
 - The selective registry in `src/ag-chart-modules.ts` includes
   `CrossLinesModule` for report zero lines and history zero lines/current-period
   bands. Keep these explicit registrations when adding chart features.
