@@ -16,6 +16,7 @@ import { type GainLossContributionAccumulator } from "./period-gains-losses-cont
 import { buildTransferClearingVirtualHierarchy } from "./period-transfer-clearing";
 import { buildPeriodOverviewResponse } from "./period-overview-response";
 import { computePeriodCashFlow } from "./period-cash-flow";
+import type { BreakdownHierarchyAccumulatorItem } from "./period-helpers";
 import type { UserLocale } from "../../user-locale";
 
 const TRANSACTIONS_PAGE_SIZE = 200;
@@ -128,6 +129,10 @@ export async function loadPeriodOverview(args: {
   let realizedGainLoss = 0;
   let unrealizedGainLoss = 0;
   let cashFlow = 0;
+  let cashFlowAmountByAccountId = new Map<
+    string,
+    BreakdownHierarchyAccumulatorItem
+  >();
 
   if (!isBeforeAccountBookStart) {
     const equityBookingTotals = await processPeriodEquityBookingsFromBaseData({
@@ -197,6 +202,7 @@ export async function loadPeriodOverview(args: {
         }),
     });
     cashFlow = cashFlowResult.cashFlow;
+    cashFlowAmountByAccountId = cashFlowResult.cashFlowAmountByAccountId;
     skippedBookingsCount += cashFlowResult.skippedCount;
   }
 
@@ -225,6 +231,7 @@ export async function loadPeriodOverview(args: {
     realizedGainLoss,
     unrealizedGainLoss,
     cashFlow,
+    cashFlowAmountByAccountId,
     hasCashAccounts: baseData.hasCashAccounts,
     isBeforeAccountBookStart,
     endOfPeriodBalanceStats,

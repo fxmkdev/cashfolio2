@@ -282,6 +282,28 @@ export const BreakdownToggleSmoke: Story = {
     await expect(
       canvas.getByText("Top-level groups for income in the selected period"),
     ).toBeInTheDocument();
+
+    const cashFlowOption = await canvas.findByRole("radio", {
+      name: "Cash Flow",
+    });
+    await userEvent.click(cashFlowOption);
+    await expect(cashFlowOption).toBeChecked();
+    await expect(
+      canvas.getByRole("heading", { name: "Cash Flow Breakdown" }),
+    ).toBeInTheDocument();
+    await expect(
+      canvas.getByText("Top-level cash account groups in the selected period"),
+    ).toBeInTheDocument();
+    await expect(
+      within(breakdownChartTypeControl).queryByRole("radio", {
+        name: "Donut",
+      }),
+    ).not.toBeInTheDocument();
+    await expect(
+      within(breakdownChartTypeControl).getByRole("radio", {
+        name: "Bar",
+      }),
+    ).toBeChecked();
   },
 };
 

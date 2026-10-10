@@ -96,6 +96,7 @@ function isHistoryMetricsCacheEntry(
     typeof record.netWorth === "number" &&
     typeof record.scopeOptions === "object" &&
     record.scopeOptions != null &&
+    isHistoryScopeOptionArray(record.scopeOptions.cashFlow) &&
     isHistoryScopeOptionArray(record.scopeOptions.income) &&
     isHistoryScopeOptionArray(record.scopeOptions.expenses) &&
     isHistoryScopeOptionArray(record.scopeOptions.gainsLosses) &&

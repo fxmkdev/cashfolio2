@@ -135,7 +135,7 @@ describe("period base-data cache", () => {
     expect(redisClient.setEx).toHaveBeenCalledTimes(1);
     const [entryKey] = redisClient.setEx.mock.calls[0] ?? [];
     expect(entryKey).toContain(
-      "period:base:v5:preview-app-123:book-1:0:2026-02",
+      "period:base:v6:preview-app-123:book-1:0:2026-02",
     );
 
     expect(first.selection.from).toBeInstanceOf(Date);
@@ -155,7 +155,7 @@ describe("period base-data cache", () => {
 
     expect(result.periodValue).toBe("2026-02");
     expect(redisClient.get).toHaveBeenCalledWith(
-      "period:base:v5:preview-app-123:book-1:0:2026-02",
+      "period:base:v6:preview-app-123:book-1:0:2026-02",
     );
     expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
   });
@@ -173,7 +173,7 @@ describe("period base-data cache", () => {
 
     expect(result.periodValue).toBe("2026-02");
     expect(redisClient.get).toHaveBeenCalledWith(
-      "period:base:v5:preview-app-123:book-1:0:2026-02",
+      "period:base:v6:preview-app-123:book-1:0:2026-02",
     );
     expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
   });
@@ -191,33 +191,115 @@ describe("period base-data cache", () => {
 
     expect(result.periodValue).toBe("2026-02");
     expect(redisClient.get).toHaveBeenCalledWith(
-      "period:base:v5:preview-app-123:book-1:0:2026-02",
+      "period:base:v6:preview-app-123:book-1:0:2026-02",
     );
     expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
   });
 
+  it("reloads legacy v5 cash-flow bookings without account metadata and caches a usable v6 snapshot", async () => {
+    const account = {
+      id: "asset-1",
+      name: "Cash",
+      groupId: "cash-group",
+      type: AccountType.ASSET,
+      unit: Unit.CURRENCY,
+      currency: "CHF",
+      cryptocurrency: null,
+      symbol: null,
+      tradeCurrency: null,
+      isCashAccount: true,
+    };
+    const booking = {
+      id: "booking-1",
+      accountId: account.id,
+      date: new Date("2026-02-10T00:00:00.000Z"),
+      value: 100,
+      unit: Unit.CURRENCY,
+      currency: "CHF",
+      cryptocurrency: null,
+      symbol: null,
+      tradeCurrency: null,
+      account,
+    };
+    prisma.account.findMany.mockResolvedValueOnce([account]);
+    prisma.transaction.findMany.mockResolvedValue([
+      { id: "tx-1", bookings: [booking] },
+    ]);
+    const legacyKey = "period:base:v5:preview-app-123:book-1:0:2026-02";
+    redisState.kv.set(
+      legacyKey,
+      JSON.stringify({
+        periodValue: "2026-02",
+        cashFlowTransactions: [
+          {
+            id: "tx-1",
+            bookings: [
+              {
+                ...booking,
+                account: { type: AccountType.ASSET, isCashAccount: true },
+              },
+            ],
+          },
+        ],
+      }),
+    );
+
+    const first = await periodBaseCache.getOrLoadPeriodBaseData({
+      accountBookId: "book-1",
+      period: "2026-02",
+    });
+    const second = await periodBaseCache.getOrLoadPeriodBaseData({
+      accountBookId: "book-1",
+      period: "2026-02",
+    });
+
+    for (const result of [first, second]) {
+      expect(result.cashFlowTransactions[0]?.bookings[0]?.account).toEqual({
+        id: "asset-1",
+        name: "Cash",
+        groupId: "cash-group",
+        type: AccountType.ASSET,
+        isCashAccount: true,
+      });
+      expect(result.cashFlowTransactions[0]?.bookings[0]?.date).toBeInstanceOf(
+        Date,
+      );
+    }
+    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
+    expect(redisClient.get).not.toHaveBeenCalledWith(legacyKey);
+    expect(redisClient.setEx).toHaveBeenCalledWith(
+      "period:base:v6:preview-app-123:book-1:0:2026-02",
+      24 * 60 * 60,
+      expect.any(String),
+    );
+    expect(redisClient.sAdd).toHaveBeenCalledWith(
+      "period:base:index:v6:preview-app-123:book-1:0",
+      "period:base:v6:preview-app-123:book-1:0:2026-02",
+    );
+  });
+
   it("invalidates all cached period entries for one account book in one namespace", async () => {
-    redisState.kv.set("period:base:v5:preview-app-123:book-1:0:2026-01", "{}");
-    redisState.kv.set("period:base:v5:preview-app-123:book-1:0:2026-02", "{}");
-    redisState.kv.set("period:base:v5:preview-app-123:book-2:0:2026-02", "{}");
+    redisState.kv.set("period:base:v6:preview-app-123:book-1:0:2026-01", "{}");
+    redisState.kv.set("period:base:v6:preview-app-123:book-1:0:2026-02", "{}");
+    redisState.kv.set("period:base:v6:preview-app-123:book-2:0:2026-02", "{}");
     redisState.sets.set(
-      "period:base:index:v5:preview-app-123:book-1:0",
+      "period:base:index:v6:preview-app-123:book-1:0",
       new Set([
-        "period:base:v5:preview-app-123:book-1:0:2026-01",
-        "period:base:v5:preview-app-123:book-1:0:2026-02",
+        "period:base:v6:preview-app-123:book-1:0:2026-01",
+        "period:base:v6:preview-app-123:book-1:0:2026-02",
       ]),
     );
 
     await periodBaseCache.invalidatePeriodBaseDataCacheForAccountBook("book-1");
 
     expect(
-      redisState.kv.has("period:base:v5:preview-app-123:book-1:0:2026-01"),
+      redisState.kv.has("period:base:v6:preview-app-123:book-1:0:2026-01"),
     ).toBe(false);
     expect(
-      redisState.kv.has("period:base:v5:preview-app-123:book-1:0:2026-02"),
+      redisState.kv.has("period:base:v6:preview-app-123:book-1:0:2026-02"),
     ).toBe(false);
     expect(
-      redisState.kv.has("period:base:v5:preview-app-123:book-2:0:2026-02"),
+      redisState.kv.has("period:base:v6:preview-app-123:book-2:0:2026-02"),
     ).toBe(true);
     expect(redisClient.set).toHaveBeenCalledTimes(1);
     expect(redisClient.set.mock.calls[0]?.[0]).toBe(
@@ -233,7 +315,7 @@ describe("period base-data cache", () => {
 
     const [entryKey] = redisClient.setEx.mock.calls[0] ?? [];
     expect(entryKey).toContain(
-      "period:base:v5:preview-app-123:book-1:0:month:2026-05-01:2026-05-01",
+      "period:base:v6:preview-app-123:book-1:0:month:2026-05-01:2026-05-01",
     );
   });
 
@@ -244,7 +326,7 @@ describe("period base-data cache", () => {
     });
     const [firstKey] = redisClient.setEx.mock.calls[0] ?? [];
     expect(firstKey).toContain(
-      "period:base:v5:preview-app-123:book-1:0:2026-05:2026-05-01",
+      "period:base:v6:preview-app-123:book-1:0:2026-05:2026-05-01",
     );
 
     vi.setSystemTime(new Date("2026-05-02T12:00:00.000Z"));
@@ -254,7 +336,7 @@ describe("period base-data cache", () => {
     });
     const [secondKey] = redisClient.setEx.mock.calls[1] ?? [];
     expect(secondKey).toContain(
-      "period:base:v5:preview-app-123:book-1:0:2026-05:2026-05-02",
+      "period:base:v6:preview-app-123:book-1:0:2026-05:2026-05-02",
     );
   });
 
@@ -319,13 +401,13 @@ describe("period base-data cache", () => {
 
   it("switches generation after invalidation so old entries are not reused", async () => {
     redisState.kv.set(
-      "period:base:v5:preview-app-123:book-1:0:month:2026-05-01:2026-05-01",
+      "period:base:v6:preview-app-123:book-1:0:month:2026-05-01:2026-05-01",
       JSON.stringify({ cached: true }),
     );
     redisState.sets.set(
-      "period:base:index:v5:preview-app-123:book-1:0",
+      "period:base:index:v6:preview-app-123:book-1:0",
       new Set([
-        "period:base:v5:preview-app-123:book-1:0:month:2026-05-01:2026-05-01",
+        "period:base:v6:preview-app-123:book-1:0:month:2026-05-01:2026-05-01",
       ]),
     );
 

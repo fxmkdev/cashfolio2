@@ -18,6 +18,9 @@ function cashBooking(
     tradeCurrency: null,
     date: new Date("2026-01-10T00:00:00.000Z"),
     account: {
+      id: "cash-a",
+      name: "Cash A",
+      groupId: "cash-group",
       type: AccountType.ASSET,
       isCashAccount: true,
     },
@@ -34,7 +37,13 @@ describe("computePeriodCashFlow", () => {
           bookings: [
             cashBooking(100),
             cashBooking(-100, {
-              account: { type: AccountType.EQUITY, isCashAccount: false },
+              account: {
+                id: "income-a",
+                name: "Income A",
+                groupId: null,
+                type: AccountType.EQUITY,
+                isCashAccount: false,
+              },
             }),
           ],
         },
@@ -43,7 +52,13 @@ describe("computePeriodCashFlow", () => {
           bookings: [
             cashBooking(-40),
             cashBooking(40, {
-              account: { type: AccountType.EQUITY, isCashAccount: false },
+              account: {
+                id: "expense-a",
+                name: "Expense A",
+                groupId: null,
+                type: AccountType.EQUITY,
+                isCashAccount: false,
+              },
             }),
           ],
         },
@@ -51,7 +66,16 @@ describe("computePeriodCashFlow", () => {
       convertBookingToReference: async (booking) => booking.value,
     });
 
-    expect(result).toEqual({ cashFlow: 60, skippedCount: 0 });
+    expect(result.cashFlow).toBe(60);
+    expect(result.skippedCount).toBe(0);
+    expect(Array.from(result.cashFlowAmountByAccountId.values())).toEqual([
+      {
+        accountId: "cash-a",
+        accountName: "Cash A",
+        groupId: "cash-group",
+        amount: 60,
+      },
+    ]);
   });
 
   it("ignores pure cash-to-cash transfers", async () => {
@@ -67,7 +91,9 @@ describe("computePeriodCashFlow", () => {
       convertBookingToReference,
     });
 
-    expect(result).toEqual({ cashFlow: 0, skippedCount: 0 });
+    expect(result.cashFlow).toBe(0);
+    expect(result.skippedCount).toBe(0);
+    expect(result.cashFlowAmountByAccountId.size).toBe(0);
     expect(convertBookingToReference).not.toHaveBeenCalled();
   });
 
@@ -79,7 +105,13 @@ describe("computePeriodCashFlow", () => {
           bookings: [
             cashBooking(-100),
             cashBooking(100, {
-              account: { type: AccountType.ASSET, isCashAccount: false },
+              account: {
+                id: "brokerage-a",
+                name: "Brokerage A",
+                groupId: null,
+                type: AccountType.ASSET,
+                isCashAccount: false,
+              },
             }),
           ],
         },
@@ -92,7 +124,9 @@ describe("computePeriodCashFlow", () => {
         booking.currency === "XXX" ? null : booking.value,
     });
 
-    expect(result).toEqual({ cashFlow: -100, skippedCount: 1 });
+    expect(result.cashFlow).toBe(-100);
+    expect(result.skippedCount).toBe(1);
+    expect(result.cashFlowAmountByAccountId.get("cash-a")?.amount).toBe(-100);
   });
 
   it("sums only cash bookings inside the requested period", async () => {
@@ -104,7 +138,13 @@ describe("computePeriodCashFlow", () => {
             cashBooking(100, { date: new Date("2026-01-31T00:00:00.000Z") }),
             cashBooking(50, { date: new Date("2026-02-01T00:00:00.000Z") }),
             cashBooking(-150, {
-              account: { type: AccountType.EQUITY, isCashAccount: false },
+              account: {
+                id: "equity-a",
+                name: "Equity A",
+                groupId: null,
+                type: AccountType.EQUITY,
+                isCashAccount: false,
+              },
             }),
           ],
         },
@@ -114,6 +154,8 @@ describe("computePeriodCashFlow", () => {
       convertBookingToReference: async (booking) => booking.value,
     });
 
-    expect(result).toEqual({ cashFlow: 100, skippedCount: 0 });
+    expect(result.cashFlow).toBe(100);
+    expect(result.skippedCount).toBe(0);
+    expect(result.cashFlowAmountByAccountId.get("cash-a")?.amount).toBe(100);
   });
 });

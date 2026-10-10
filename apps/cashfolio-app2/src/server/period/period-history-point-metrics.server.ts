@@ -47,6 +47,7 @@ export type PeriodHistoryPointMetrics = {
   liabilities: number;
   netWorth: number;
   scopeOptions: {
+    cashFlow: HistoryScopeOption[];
     income: HistoryScopeOption[];
     expenses: HistoryScopeOption[];
     gainsLosses: HistoryScopeOption[];
@@ -166,6 +167,7 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
         liabilities: 0,
         netWorth: 0,
         scopeOptions: {
+          cashFlow: [],
           income: [],
           expenses: [],
           gainsLosses: [],
@@ -333,6 +335,10 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
       convertedBalanceByAccountId:
         endOfPeriodBalanceStats.convertedBalanceByAccountId,
     });
+  const cashFlowScopeOptions = buildHistoryScopeOptions({
+    amountByAccountId: cashFlowResult.cashFlowAmountByAccountId,
+    allAccountGroups,
+  });
   const incomeScopeOptions = buildHistoryScopeOptions({
     amountByAccountId: equityAggregation.incomeAmountByAccountId,
     allAccountGroups,
@@ -360,6 +366,7 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
     metricScopeFilter: args.metricScopeFilter,
     amountByMetric: {
       income: equityAggregation.incomeAmountByAccountId,
+      cashFlow: cashFlowResult.cashFlowAmountByAccountId,
       expenses: equityAggregation.expenseAmountByAccountId,
       assets: assetAmountByAccountId,
       liabilities: liabilityAmountByAccountId,
@@ -380,6 +387,7 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
       liabilities: roundedLiabilities,
       netWorth: roundedNetWorth,
       scopeOptions: {
+        cashFlow: cashFlowScopeOptions,
         income: incomeScopeOptions,
         expenses: expenseScopeOptions,
         gainsLosses: gainLossScopeOptions,

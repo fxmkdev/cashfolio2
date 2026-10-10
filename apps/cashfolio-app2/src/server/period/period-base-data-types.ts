@@ -107,6 +107,9 @@ export type PeriodBaseCashFlowTransaction = {
     symbol: string | null;
     tradeCurrency: string | null;
     account: {
+      id: string;
+      name: string;
+      groupId: string | null;
       type: AccountType;
       isCashAccount: boolean;
     };

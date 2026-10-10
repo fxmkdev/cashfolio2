@@ -60,6 +60,7 @@ export async function loadPeriodHistoryPoint(args: {
       liabilities: 0,
       netWorth: 0,
       scopeOptions: {
+        cashFlow: [],
         income: [],
         expenses: [],
         gainsLosses: [],

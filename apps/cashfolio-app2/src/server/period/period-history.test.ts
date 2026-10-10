@@ -115,6 +115,13 @@ describe("getPeriodHistory", () => {
         liabilities: period.length + 6,
         netWorth: period.length + 7,
         scopeOptions: {
+          cashFlow: [
+            {
+              value: "account:cash-a",
+              label: "Cash A",
+              kind: "account",
+            },
+          ],
           income: [
             {
               value: "account:income-a",
@@ -297,6 +304,14 @@ describe("getPeriodHistory", () => {
         },
       ],
       scopeOptions: {
+        cashFlow: [
+          { value: "total", label: "Total", kind: "total" },
+          {
+            value: "account:cash-a",
+            label: "Cash A",
+            kind: "account",
+          },
+        ],
         income: [
           { value: "total", label: "Total", kind: "total" },
           {
@@ -339,6 +354,7 @@ describe("getPeriodHistory", () => {
         ],
       },
       scopeSelection: {
+        cashFlow: "total",
         income: "total",
         expenses: "total",
         gainsLosses: "total",
@@ -406,6 +422,7 @@ describe("getPeriodHistory", () => {
         liabilities: 0,
         netWorth: 0,
         scopeOptions: {
+          cashFlow: [],
           income: [],
           expenses: [],
           gainsLosses:
@@ -594,6 +611,48 @@ describe("getPeriodHistory", () => {
     expect(result.scopeSelection.gainsLosses).toBe("unit-type:fx");
   });
 
+  test("applies scoped cash flow values without opening-balance scoping", async () => {
+    const result = await getPeriodHistory({
+      data: {
+        accountBookId: "book-cash-flow",
+        granularity: "year",
+        scopedMetric: "cashFlow",
+        cashFlowScope: "account:cash-a",
+      },
+    });
+
+    expect(loadPeriodHistoryPoint).toHaveBeenCalledWith({
+      accountBookId: "book-cash-flow",
+      period: "2026",
+      context: {
+        referenceCurrency: "CHF",
+        accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
+        holdingAccountsResolved: [],
+        hasCashAccounts: true,
+      },
+      metricScopeFilter: {
+        metric: "cashFlow",
+        scope: "account:cash-a",
+      },
+      valuationContext: {
+        exchangeRateByKey: expect.any(Map),
+      },
+      locale: "en-US",
+    });
+    expect(loadHistoryOpeningBalancePoint).toHaveBeenCalledWith({
+      accountBookId: "book-cash-flow",
+      accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
+      referenceCurrency: "CHF",
+      metricScopeFilter: undefined,
+    });
+    expect(result.points).toEqual([
+      expect.objectContaining({
+        cashFlow: 24,
+      }),
+    ]);
+    expect(result.scopeSelection.cashFlow).toBe("account:cash-a");
+  });
+
   test("falls back to total values when scoped selection is stale", async () => {
     const result = await getPeriodHistory({
       data: {
@@ -611,12 +670,31 @@ describe("getPeriodHistory", () => {
       }),
     ]);
     expect(result.scopeSelection).toEqual({
+      cashFlow: "total",
       income: "total",
       expenses: "total",
       gainsLosses: "total",
       assets: "total",
       liabilities: "total",
     });
+  });
+
+  test("falls back to total cash flow when scoped cash flow selection is stale", async () => {
+    const result = await getPeriodHistory({
+      data: {
+        accountBookId: "book-cash-flow-stale",
+        granularity: "year",
+        scopedMetric: "cashFlow",
+        cashFlowScope: "account:missing",
+      },
+    });
+
+    expect(result.points).toEqual([
+      expect.objectContaining({
+        cashFlow: 12,
+      }),
+    ]);
+    expect(result.scopeSelection.cashFlow).toBe("total");
   });
 
   test("falls back to total liabilities when scoped liability selection is stale", async () => {

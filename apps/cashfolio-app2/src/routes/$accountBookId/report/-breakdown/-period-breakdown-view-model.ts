@@ -22,6 +22,7 @@ type DrillPathByBreakdownUpdater =
 
 export type PeriodBreakdownViewModel = {
   activeBreakdown: PeriodOverview["expenseBreakdown"];
+  effectiveSelectedChartType: BreakdownChartType;
   breakdownTitle: string;
   breakdownTableExpandedGroupsStorageKey: string;
   breakdownSubtitle: string;
@@ -59,19 +60,38 @@ export function usePeriodBreakdownViewModel(args: {
     onBreakdownAccountDoubleClick,
   } = args;
 
-  const activeBreakdown = useMemo(
-    () =>
-      selectedBreakdown === "expense"
-        ? overview.expenseBreakdown
-        : overview.incomeBreakdown,
-    [overview.expenseBreakdown, overview.incomeBreakdown, selectedBreakdown],
-  );
+  const activeBreakdown = useMemo(() => {
+    if (selectedBreakdown === "expense") {
+      return overview.expenseBreakdown;
+    }
+    if (selectedBreakdown === "income") {
+      return overview.incomeBreakdown;
+    }
+    return overview.cashFlowBreakdown;
+  }, [
+    overview.cashFlowBreakdown,
+    overview.expenseBreakdown,
+    overview.incomeBreakdown,
+    selectedBreakdown,
+  ]);
 
+  const effectiveSelectedChartType =
+    selectedBreakdown === "cashFlow" && selectedChartType === "donut"
+      ? "bar"
+      : selectedChartType;
   const breakdownTitle =
-    selectedBreakdown === "expense" ? "Expenses Breakdown" : "Income Breakdown";
+    selectedBreakdown === "expense"
+      ? "Expenses Breakdown"
+      : selectedBreakdown === "income"
+        ? "Income Breakdown"
+        : "Cash Flow Breakdown";
   const breakdownTableExpandedGroupsStorageKey = `cashfolio:periodExpandedGroups:${accountBookId}:breakdown:${selectedBreakdown}`;
   const breakdownRootLabel =
-    selectedBreakdown === "expense" ? "All Expenses" : "All Income";
+    selectedBreakdown === "expense"
+      ? "All Expenses"
+      : selectedBreakdown === "income"
+        ? "All Income"
+        : "All Cash Flow";
   const drillState = useMemo(
     () =>
       getBreakdownDrillState({
@@ -91,14 +111,22 @@ export function usePeriodBreakdownViewModel(args: {
     const isTopLevel = drillState.clampedPath.length === 0;
 
     if (isTopLevel) {
-      return selectedBreakdown === "expense"
-        ? "Top-level groups for expenses in the selected period"
-        : "Top-level groups for income in the selected period";
+      if (selectedBreakdown === "expense") {
+        return "Top-level groups for expenses in the selected period";
+      }
+      if (selectedBreakdown === "income") {
+        return "Top-level groups for income in the selected period";
+      }
+      return "Top-level cash account groups in the selected period";
     }
 
-    return selectedBreakdown === "expense"
-      ? "Drilled expense groups in the selected period"
-      : "Drilled income groups in the selected period";
+    if (selectedBreakdown === "expense") {
+      return "Drilled expense groups in the selected period";
+    }
+    if (selectedBreakdown === "income") {
+      return "Drilled income groups in the selected period";
+    }
+    return "Drilled cash account groups in the selected period";
   }, [drillState.clampedPath.length, selectedBreakdown]);
 
   const currentBreakdownLevelTotalAmount = useMemo(
@@ -109,14 +137,30 @@ export function usePeriodBreakdownViewModel(args: {
       ),
     [drillState.currentNodes],
   );
+  const currentBreakdownLevelAbsoluteAmount = useMemo(
+    () =>
+      drillState.currentNodes.reduce(
+        (sum, breakdownNode) => sum + Math.abs(breakdownNode.amount),
+        0,
+      ),
+    [drillState.currentNodes],
+  );
 
   const chartData = useMemo<PeriodBreakdownChartDatum[]>(
     () =>
       drillState.currentNodes.map((item) => {
+        const percentageTotal =
+          selectedBreakdown === "cashFlow"
+            ? currentBreakdownLevelAbsoluteAmount
+            : currentBreakdownLevelTotalAmount;
         const percentage =
-          currentBreakdownLevelTotalAmount <= 0
+          percentageTotal <= 0
             ? 0
-            : (item.amount / currentBreakdownLevelTotalAmount) * 100;
+            : ((selectedBreakdown === "cashFlow"
+                ? Math.abs(item.amount)
+                : item.amount) /
+                percentageTotal) *
+              100;
 
         return {
           id: item.id,
@@ -130,10 +174,12 @@ export function usePeriodBreakdownViewModel(args: {
         };
       }),
     [
+      currentBreakdownLevelAbsoluteAmount,
       currentBreakdownLevelTotalAmount,
       currencyFormatter,
       drillState.currentNodes,
       percentageFormatter,
+      selectedBreakdown,
     ],
   );
 
@@ -198,7 +244,7 @@ export function usePeriodBreakdownViewModel(args: {
 
   const chartOptions = usePeriodBreakdownChartOptions({
     chartData,
-    selectedChartType,
+    selectedChartType: effectiveSelectedChartType,
     colors,
     totalBreakdownAmountLabel,
     onNodeDoubleClick: handleNodeDoubleClick,
@@ -220,10 +266,13 @@ export function usePeriodBreakdownViewModel(args: {
   const emptyBreakdownMessage =
     selectedBreakdown === "expense"
       ? "No expenses were found for this period."
-      : "No income was found for this period.";
+      : selectedBreakdown === "income"
+        ? "No income was found for this period."
+        : "No cash flow was found for this period.";
 
   return {
     activeBreakdown,
+    effectiveSelectedChartType,
     breakdownTitle,
     breakdownTableExpandedGroupsStorageKey,
     breakdownSubtitle,

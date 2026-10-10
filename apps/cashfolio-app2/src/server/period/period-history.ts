@@ -46,6 +46,7 @@ export type PeriodHistoryResponse = {
   openingBalancePoint: PeriodHistoryOpeningBalancePoint;
   points: PeriodHistoryPoint[];
   scopeOptions: {
+    cashFlow: HistoryScopeOption[];
     income: HistoryScopeOption[];
     expenses: HistoryScopeOption[];
     gainsLosses: HistoryScopeOption[];
@@ -53,6 +54,7 @@ export type PeriodHistoryResponse = {
     liabilities: HistoryScopeOption[];
   };
   scopeSelection: {
+    cashFlow: HistoryScopeSelection;
     income: HistoryScopeSelection;
     expenses: HistoryScopeSelection;
     gainsLosses: HistoryScopeSelection;
@@ -65,6 +67,7 @@ type HistoryInput = {
   accountBookId: string;
   granularity: PeriodHistoryGranularity;
   scopedMetric?: HistoryScopedMetric;
+  cashFlowScope: HistoryScopeSelection;
   incomeScope: HistoryScopeSelection;
   expenseScope: HistoryScopeSelection;
   gainLossScope: HistoryScopeSelection;
@@ -264,6 +267,7 @@ export const getPeriodHistory = createServerFn({
       accountBookId: string;
       granularity: unknown;
       scopedMetric?: unknown;
+      cashFlowScope?: unknown;
       incomeScope?: unknown;
       expenseScope?: unknown;
       gainLossScope?: unknown;
@@ -274,6 +278,7 @@ export const getPeriodHistory = createServerFn({
       accountBookId: data.accountBookId,
       granularity: parseHistoryGranularity(data.granularity),
       scopedMetric: parseOptionalHistoryScopedMetric(data.scopedMetric),
+      cashFlowScope: parseHistoryScopeSelectionOrDefault(data.cashFlowScope),
       incomeScope: parseHistoryScopeSelectionOrDefault(data.incomeScope),
       expenseScope: parseHistoryScopeSelectionOrDefault(data.expenseScope),
       gainLossScope: parseHistoryScopeSelectionOrDefault(data.gainLossScope),
@@ -295,6 +300,12 @@ export const getPeriodHistory = createServerFn({
       accountBookId: data.accountBookId,
     });
     const activeMetricScopeFilter = (() => {
+      if (data.scopedMetric === "cashFlow" && data.cashFlowScope !== "total") {
+        return {
+          metric: "cashFlow" as const,
+          scope: data.cashFlowScope,
+        };
+      }
       if (data.scopedMetric === "income" && data.incomeScope !== "total") {
         return {
           metric: "income" as const,
@@ -350,6 +361,10 @@ export const getPeriodHistory = createServerFn({
       maxDate: new Date(),
     });
 
+    const cashFlowScopeOptions = new Map<
+      HistoryScopeSelection,
+      HistoryScopeOption
+    >();
     const incomeScopeOptions = new Map<
       HistoryScopeSelection,
       HistoryScopeOption
@@ -391,6 +406,9 @@ export const getPeriodHistory = createServerFn({
     const points: PeriodHistoryPoint[] = [];
     const scopedMetricValues: number[] = [];
     for (const point of loadedPoints) {
+      for (const option of point.scopeOptions.cashFlow) {
+        cashFlowScopeOptions.set(option.value, option);
+      }
       for (const option of point.scopeOptions.income) {
         incomeScopeOptions.set(option.value, option);
       }
@@ -423,6 +441,9 @@ export const getPeriodHistory = createServerFn({
       });
     }
 
+    const finalizedCashFlowScopeOptions = createHistoryScopeOptionsWithTotal(
+      cashFlowScopeOptions.values(),
+    );
     const finalizedIncomeScopeOptions = createHistoryScopeOptionsWithTotal(
       incomeScopeOptions.values(),
     );
@@ -439,6 +460,10 @@ export const getPeriodHistory = createServerFn({
     const finalizedLiabilityScopeOptions = createHistoryScopeOptionsWithTotal(
       liabilityScopeOptions.values(),
     );
+    const clampedCashFlowScope = clampHistoryScopeSelection({
+      requested: data.cashFlowScope,
+      options: finalizedCashFlowScopeOptions,
+    });
     const clampedIncomeScope = clampHistoryScopeSelection({
       requested: data.incomeScope,
       options: finalizedIncomeScopeOptions,
@@ -459,6 +484,8 @@ export const getPeriodHistory = createServerFn({
       requested: data.liabilityScope,
       options: finalizedLiabilityScopeOptions,
     });
+    const shouldUseScopedCashFlow =
+      data.scopedMetric === "cashFlow" && clampedCashFlowScope !== "total";
     const shouldUseScopedIncome =
       data.scopedMetric === "income" && clampedIncomeScope !== "total";
     const shouldUseScopedExpenses =
@@ -471,6 +498,9 @@ export const getPeriodHistory = createServerFn({
       data.scopedMetric === "liabilities" && clampedLiabilityScope !== "total";
     const responsePoints = points.map((point, index) => ({
       ...point,
+      cashFlow: shouldUseScopedCashFlow
+        ? (scopedMetricValues[index] ?? 0)
+        : point.cashFlow,
       income: shouldUseScopedIncome
         ? (scopedMetricValues[index] ?? 0)
         : point.income,
@@ -505,6 +535,7 @@ export const getPeriodHistory = createServerFn({
       openingBalancePoint: responseOpeningBalancePoint,
       points: responsePoints,
       scopeOptions: {
+        cashFlow: finalizedCashFlowScopeOptions,
         income: finalizedIncomeScopeOptions,
         expenses: finalizedExpenseScopeOptions,
         gainsLosses: finalizedGainLossScopeOptions,
@@ -512,6 +543,7 @@ export const getPeriodHistory = createServerFn({
         liabilities: finalizedLiabilityScopeOptions,
       },
       scopeSelection: {
+        cashFlow: clampedCashFlowScope,
         income: clampedIncomeScope,
         expenses: clampedExpenseScope,
         gainsLosses: clampedGainLossScope,

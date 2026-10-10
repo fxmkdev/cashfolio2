@@ -141,6 +141,7 @@ export function ReportPageView({
     drillPathByGainsLosses,
     expenseBreakdownHierarchy: overview.expenseBreakdown.hierarchy,
     incomeBreakdownHierarchy: overview.incomeBreakdown.hierarchy,
+    cashFlowBreakdownHierarchy: overview.cashFlowBreakdown.hierarchy,
     assetBreakdownHierarchy: overview.assetBreakdown.hierarchy,
     liabilityBreakdownHierarchy: overview.liabilityBreakdown.hierarchy,
     gainsLossesBreakdownHierarchy: overview.gainsLossesBreakdown.hierarchy,

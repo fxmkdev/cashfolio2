@@ -20,6 +20,7 @@ export type HistoryMetric =
 export type HistorySearch = {
   mode?: HistoryPeriodMode;
   metric?: HistoryMetric;
+  cashFlowScope?: HistoryScopeSelection;
   incomeScope?: HistoryScopeSelection;
   expenseScope?: HistoryScopeSelection;
   gainLossScope?: HistoryScopeSelection;
@@ -88,6 +89,9 @@ export function parseHistorySearch(
     ...("metric" in search
       ? { metric: isHistoryMetric(search.metric) ? search.metric : undefined }
       : {}),
+    ...("cashFlowScope" in search
+      ? { cashFlowScope: parseHistoryScopeSelection(search.cashFlowScope) }
+      : {}),
     ...("incomeScope" in search
       ? { incomeScope: parseHistoryScopeSelection(search.incomeScope) }
       : {}),
@@ -118,6 +122,10 @@ export function getHistoryScopeForMetric(args: {
   search: HistorySearch;
   metric: HistoryScopedMetric;
 }): HistoryScopeSelection {
+  if (args.metric === "cashFlow") {
+    return args.search.cashFlowScope ?? DEFAULT_HISTORY_SCOPE;
+  }
+
   if (args.metric === "income") {
     return args.search.incomeScope ?? DEFAULT_HISTORY_SCOPE;
   }

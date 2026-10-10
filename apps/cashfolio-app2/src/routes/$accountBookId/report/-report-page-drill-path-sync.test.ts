@@ -53,6 +53,7 @@ function getBaseSyncInput() {
     drillPathByBreakdown: {
       expense: ["group:root"],
       income: ["group:root"],
+      cashFlow: ["group:root"],
     },
     drillPathByAllocationBreakdown: {
       asset: ["group:root"],
@@ -61,6 +62,7 @@ function getBaseSyncInput() {
     drillPathByGainsLosses: ["unit-type:fx"],
     expenseBreakdownHierarchy: validBreakdownHierarchy,
     incomeBreakdownHierarchy: validBreakdownHierarchy,
+    cashFlowBreakdownHierarchy: validBreakdownHierarchy,
     assetBreakdownHierarchy: validBreakdownHierarchy,
     liabilityBreakdownHierarchy: validBreakdownHierarchy,
     gainsLossesBreakdownHierarchy: validGainsLossesHierarchy,
@@ -75,6 +77,7 @@ describe("getSyncedReportDrillPaths", () => {
       drillPathByBreakdown: {
         expense: ["group:root"],
         income: ["group:root"],
+        cashFlow: ["group:root"],
       },
       drillPathByAllocationBreakdown: {
         asset: ["group:root"],
@@ -87,18 +90,20 @@ describe("getSyncedReportDrillPaths", () => {
     });
   });
 
-  test("clamps expense and income paths independently", () => {
+  test("clamps flow breakdown paths independently", () => {
     const synced = getSyncedReportDrillPaths({
       ...getBaseSyncInput(),
       drillPathByBreakdown: {
         expense: ["group:root", "group:missing"],
         income: ["group:root", "group:child"],
+        cashFlow: ["group:root", "group:child", "group:missing"],
       },
     });
 
     expect(synced.drillPathByBreakdown).toEqual({
       expense: ["group:root"],
       income: ["group:root", "group:child"],
+      cashFlow: ["group:root", "group:child"],
     });
     expect(synced.hasBreakdownChanges).toBe(true);
     expect(synced.hasAllocationBreakdownChanges).toBe(false);
@@ -140,6 +145,7 @@ describe("getSyncedReportDrillPaths", () => {
       ...getBaseSyncInput(),
       expenseBreakdownHierarchy: [],
       incomeBreakdownHierarchy: [],
+      cashFlowBreakdownHierarchy: [],
       assetBreakdownHierarchy: [],
       liabilityBreakdownHierarchy: [],
       gainsLossesBreakdownHierarchy: [],
@@ -148,6 +154,7 @@ describe("getSyncedReportDrillPaths", () => {
     expect(synced.drillPathByBreakdown).toEqual({
       expense: [],
       income: [],
+      cashFlow: [],
     });
     expect(synced.drillPathByAllocationBreakdown).toEqual({
       asset: [],

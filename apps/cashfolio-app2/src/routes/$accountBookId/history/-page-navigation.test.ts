@@ -6,6 +6,7 @@ describe("history page navigation", () => {
     const navigation = buildHistorySearchNavigation({
       mode: "year",
       metric: "savings",
+      cashFlowScope: "group:cash-1",
       incomeScope: "group:income-1",
       expenseScope: "account:expense-1",
       gainLossScope: "unit-type:fx",
@@ -23,6 +24,7 @@ describe("history page navigation", () => {
     ).toEqual({
       mode: "year",
       metric: "savings",
+      cashFlowScope: "group:cash-1",
       incomeScope: "group:income-1",
       expenseScope: "account:expense-1",
       gainLossScope: "unit-type:fx",
@@ -36,6 +38,7 @@ describe("history page navigation", () => {
     const navigation = buildHistorySearchNavigation({
       mode: "month",
       metric: "totalReturn",
+      cashFlowScope: "total",
       incomeScope: "total",
       expenseScope: "total",
       gainLossScope: "total",
@@ -52,6 +55,7 @@ describe("history page navigation", () => {
     ).toEqual({
       mode: undefined,
       metric: undefined,
+      cashFlowScope: undefined,
       incomeScope: undefined,
       expenseScope: undefined,
       gainLossScope: undefined,

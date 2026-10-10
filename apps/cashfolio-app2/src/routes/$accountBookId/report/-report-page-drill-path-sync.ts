@@ -17,6 +17,7 @@ type ReportDrillPathSyncInput = {
   drillPathByGainsLosses: string[];
   expenseBreakdownHierarchy: BreakdownHierarchyNode[];
   incomeBreakdownHierarchy: BreakdownHierarchyNode[];
+  cashFlowBreakdownHierarchy: BreakdownHierarchyNode[];
   assetBreakdownHierarchy: BreakdownHierarchyNode[];
   liabilityBreakdownHierarchy: BreakdownHierarchyNode[];
   gainsLossesBreakdownHierarchy: GainsLossesBreakdownNode[];
@@ -57,6 +58,10 @@ export function getSyncedReportDrillPaths(
       hierarchy: args.incomeBreakdownHierarchy,
       path: args.drillPathByBreakdown.income,
     }),
+    cashFlow: clampBreakdownPath({
+      hierarchy: args.cashFlowBreakdownHierarchy,
+      path: args.drillPathByBreakdown.cashFlow,
+    }),
   };
   const drillPathByAllocationBreakdown = {
     asset: clampBreakdownPath({
@@ -85,6 +90,10 @@ export function getSyncedReportDrillPaths(
       !arePathsEqual(
         drillPathByBreakdown.income,
         args.drillPathByBreakdown.income,
+      ) ||
+      !arePathsEqual(
+        drillPathByBreakdown.cashFlow,
+        args.drillPathByBreakdown.cashFlow,
       ),
     hasAllocationBreakdownChanges:
       !arePathsEqual(
@@ -119,6 +128,7 @@ export function useSyncedReportDrillPaths(
     drillPathByGainsLosses,
     expenseBreakdownHierarchy,
     incomeBreakdownHierarchy,
+    cashFlowBreakdownHierarchy,
     assetBreakdownHierarchy,
     liabilityBreakdownHierarchy,
     gainsLossesBreakdownHierarchy,
@@ -134,6 +144,7 @@ export function useSyncedReportDrillPaths(
       drillPathByGainsLosses,
       expenseBreakdownHierarchy,
       incomeBreakdownHierarchy,
+      cashFlowBreakdownHierarchy,
       assetBreakdownHierarchy,
       liabilityBreakdownHierarchy,
       gainsLossesBreakdownHierarchy,
@@ -152,6 +163,7 @@ export function useSyncedReportDrillPaths(
     }
   }, [
     assetBreakdownHierarchy,
+    cashFlowBreakdownHierarchy,
     drillPathByAllocationBreakdown,
     drillPathByBreakdown,
     drillPathByGainsLosses,

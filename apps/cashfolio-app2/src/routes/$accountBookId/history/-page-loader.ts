@@ -18,6 +18,7 @@ export async function loadHistoryPageData(args: {
   accountBookId: string;
   mode: HistoryPeriodMode;
   scopedMetric?: HistoryScopedMetric;
+  cashFlowScope: HistoryScopeSelection;
   incomeScope: HistoryScopeSelection;
   expenseScope: HistoryScopeSelection;
   gainLossScope: HistoryScopeSelection;
@@ -30,6 +31,7 @@ export async function loadHistoryPageData(args: {
       accountBookId: args.accountBookId,
       granularity: args.mode,
       scopedMetric: args.scopedMetric,
+      cashFlowScope: args.cashFlowScope,
       incomeScope: args.incomeScope,
       expenseScope: args.expenseScope,
       gainLossScope: args.gainLossScope,

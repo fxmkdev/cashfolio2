@@ -8,6 +8,11 @@ describe("getDefaultReportPageSessionState", () => {
   test("defaults gains/losses chart to waterfall with empty drill path", () => {
     expect(getDefaultReportPageSessionState()).toMatchObject({
       selectedGainsLossesChartType: "waterfall",
+      drillPathByBreakdown: {
+        expense: [],
+        income: [],
+        cashFlow: [],
+      },
       drillPathByGainsLosses: [],
     });
   });
@@ -21,7 +26,11 @@ describe("parseStoredReportPageSessionState", () => {
       selectedAllocationBreakdown: "liability",
       selectedAllocationChartType: "table",
       selectedGainsLossesChartType: "table",
-      drillPathByBreakdown: { expense: ["group:a"], income: ["group:b"] },
+      drillPathByBreakdown: {
+        expense: ["group:a"],
+        income: ["group:b"],
+        cashFlow: ["group:cash"],
+      },
       drillPathByAllocationBreakdown: {
         asset: ["group:c"],
         liability: ["group:d"],
@@ -35,6 +44,11 @@ describe("parseStoredReportPageSessionState", () => {
       selectedAllocationBreakdown: "liability",
       selectedAllocationChartType: "table",
       selectedGainsLossesChartType: "table",
+      drillPathByBreakdown: {
+        expense: ["group:a"],
+        income: ["group:b"],
+        cashFlow: ["group:cash"],
+      },
       drillPathByGainsLosses: ["unit-type:fx", "unit:fx:USD"],
     });
   });
@@ -53,6 +67,7 @@ describe("parseStoredReportPageSessionState", () => {
     });
 
     expect(parsed.selectedGainsLossesChartType).toBe("waterfall");
+    expect(parsed.drillPathByBreakdown.cashFlow).toEqual([]);
     expect(parsed.drillPathByGainsLosses).toEqual([]);
   });
 });

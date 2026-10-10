@@ -38,6 +38,7 @@ function createMetrics(overrides = {}) {
     liabilities: 30,
     netWorth: 70,
     scopeOptions: {
+      cashFlow: [],
       income: [],
       expenses: [],
       gainsLosses: [],
@@ -207,6 +208,7 @@ describe("period history metrics cache", () => {
       JSON.stringify({
         totalReturn: 1,
         savings: 1,
+        cashFlow: 1,
         income: 1,
         expenses: 1,
         gainsLosses: 1,
@@ -214,6 +216,7 @@ describe("period history metrics cache", () => {
         liabilities: 1,
         netWorth: 1,
         scopeOptions: {
+          cashFlow: [],
           income: [],
           expenses: [],
           gainsLosses: [],
@@ -259,6 +262,7 @@ describe("period history metrics cache", () => {
       JSON.stringify(
         createMetrics({
           scopeOptions: {
+            cashFlow: [],
             income: [{ value: "income-a", label: "Income A", kind: "account" }],
             expenses: [],
             gainsLosses: [

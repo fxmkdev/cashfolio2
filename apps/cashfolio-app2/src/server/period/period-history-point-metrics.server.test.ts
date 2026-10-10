@@ -107,6 +107,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
       liabilities: 0,
       netWorth: 0,
       scopeOptions: {
+        cashFlow: [],
         income: [],
         expenses: [],
         gainsLosses: [],
@@ -196,6 +197,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
       liabilities: 0,
       netWorth: 0,
       scopeOptions: {
+        cashFlow: [],
         income: [],
         expenses: [],
         gainsLosses: [],
@@ -223,6 +225,9 @@ describe("loadPeriodHistoryPointMetrics", () => {
                 symbol: null,
                 tradeCurrency: null,
                 account: {
+                  id: "cash-a",
+                  name: "Cash A",
+                  groupId: null,
                   type: AccountType.ASSET,
                   isCashAccount: true,
                 },
@@ -237,6 +242,9 @@ describe("loadPeriodHistoryPointMetrics", () => {
                 symbol: null,
                 tradeCurrency: null,
                 account: {
+                  id: "income-a",
+                  name: "Income A",
+                  groupId: null,
                   type: AccountType.EQUITY,
                   isCashAccount: false,
                 },
@@ -275,6 +283,14 @@ describe("loadPeriodHistoryPointMetrics", () => {
     });
 
     expect(result.metrics.cashFlow).toBe(140);
+    expect(result.metrics.scopeOptions.cashFlow).toEqual([
+      {
+        value: "account:cash-a",
+        label: "Cash A",
+        kind: "account",
+        treeLabel: "Cash A",
+      },
+    ]);
     expect(result.cacheableFromPermanentValuationCache).toBe(true);
     expect(convertBookingValueToReferenceDetails).toHaveBeenCalledWith({
       value: 70,
@@ -602,6 +618,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
       liabilities: 70,
       netWorth: 180,
       scopeOptions: {
+        cashFlow: [],
         income: [],
         expenses: [],
         gainsLosses: [],

@@ -141,6 +141,7 @@ describe("loadPeriodHistoryPoint", () => {
       liabilities: 60,
       netWorth: 80,
       scopeOptions: {
+        cashFlow: [],
         income: [],
         expenses: [],
         gainsLosses: [],
@@ -179,6 +180,7 @@ describe("loadPeriodHistoryPoint", () => {
       liabilities: 0,
       netWorth: 0,
       scopeOptions: {
+        cashFlow: [],
         income: [],
         expenses: [],
         gainsLosses: [],
@@ -238,6 +240,7 @@ describe("loadPeriodHistoryPoint", () => {
       liabilities: 60,
       netWorth: 80,
       scopeOptions: {
+        cashFlow: [],
         income: [],
         expenses: [],
         gainsLosses: [],

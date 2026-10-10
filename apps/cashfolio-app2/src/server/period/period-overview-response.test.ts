@@ -74,6 +74,7 @@ describe("period overview response", () => {
       realizedGainLoss: 12,
       unrealizedGainLoss: 8,
       cashFlow: 90,
+      cashFlowAmountByAccountId: new Map(),
       isBeforeAccountBookStart: true,
       endOfPeriodBalanceStats: {
         assets: 0,
@@ -165,6 +166,26 @@ describe("period overview response", () => {
       realizedGainLoss: 5,
       unrealizedGainLoss: 15,
       cashFlow: 75,
+      cashFlowAmountByAccountId: new Map([
+        [
+          "asset-1",
+          {
+            accountId: "asset-1",
+            accountName: "Cash",
+            groupId: null,
+            amount: 90,
+          },
+        ],
+        [
+          "cash-negative",
+          {
+            accountId: "cash-negative",
+            accountName: "Spending Cash",
+            groupId: null,
+            amount: -15,
+          },
+        ],
+      ]),
       isBeforeAccountBookStart: false,
       endOfPeriodBalanceStats: {
         assets: 100,
@@ -272,6 +293,41 @@ describe("period overview response", () => {
     expect(response.liabilityBreakdown.totalAmount).toBe(40);
     expect(response.incomeBreakdown.totalAmount).toBe(120);
     expect(response.expenseBreakdown.totalAmount).toBe(20);
+    expect(response.cashFlowBreakdown).toMatchObject({
+      totalAmount: 75,
+      items: [
+        {
+          id: "account:asset-1",
+          label: "Cash",
+          kind: "account",
+          amount: 90,
+          percentage: 85.71,
+        },
+        {
+          id: "account:cash-negative",
+          label: "Spending Cash",
+          kind: "account",
+          amount: -15,
+          percentage: 14.29,
+        },
+      ],
+      hierarchy: [
+        {
+          id: "account:asset-1",
+          label: "Cash",
+          kind: "account",
+          amount: 90,
+          children: [],
+        },
+        {
+          id: "account:cash-negative",
+          label: "Spending Cash",
+          kind: "account",
+          amount: -15,
+          children: [],
+        },
+      ],
+    });
     expect(response.gainsLossesBreakdown.hierarchy).toEqual([
       {
         id: "unit-type:fx",
@@ -405,6 +461,7 @@ describe("period overview response", () => {
       realizedGainLoss: 4.444,
       unrealizedGainLoss: -1.111,
       cashFlow: 0,
+      cashFlowAmountByAccountId: new Map(),
       isBeforeAccountBookStart: false,
       endOfPeriodBalanceStats: {
         assets: 0,
