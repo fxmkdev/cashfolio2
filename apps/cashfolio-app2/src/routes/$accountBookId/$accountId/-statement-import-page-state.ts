@@ -14,6 +14,7 @@ import { useStatementImportUploadState } from "./-statement-import-page-upload-s
 import { getStatementImportReviewSnapshot } from "./-statement-import-dirty-state";
 
 export function useStatementImportPageState(args: {
+  accountBookId: string;
   account: LedgerAccount;
   statementImportCsvFormat: StatementImportCsvFormat;
   accountBookStartDate: Date;
@@ -61,6 +62,7 @@ export function useStatementImportPageState(args: {
     onEditDraft: setEditingDraftId,
   });
   const uploadState = useStatementImportUploadState({
+    accountBookId: args.accountBookId,
     account,
     statementImportCsvFormat: args.statementImportCsvFormat,
     draftsLength: drafts.length,
@@ -137,6 +139,7 @@ export function useStatementImportPageState(args: {
     includedCount: reviewState.includedCount,
     isEditSubmitting,
     parseErrors: uploadState.parseErrors,
+    isCheckingExistingBookings: uploadState.isCheckingExistingBookings,
     readyCount: reviewState.readyCount,
     reviewRows: reviewState.reviewRows,
     setIsEditSubmitting,

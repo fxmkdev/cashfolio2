@@ -13,6 +13,7 @@ export type StatementImportDraft = {
   sourceRowNumber: number;
   currentAccountId: string;
   ignored: boolean;
+  matchedExistingBooking?: { id: string; transactionId: string };
   date: string;
   amount: number;
   originalAmount: number | undefined;
@@ -25,7 +26,7 @@ export type StatementImportDraft = {
 export type StatementImportDraftStatus =
   | {
       kind: "ignored";
-      label: "Ignored";
+      label: "Ignored" | "Already exists";
       color: "gray";
       message: string;
     }

@@ -1,4 +1,4 @@
-import { Center, Stack, Stepper } from "@mantine/core";
+import { Center, Group, Loader, Stack, Stepper, Text } from "@mantine/core";
 import { IconFileUpload, IconTable } from "@tabler/icons-react";
 import { DataGrid } from "@/components/data-grid";
 import { gridTheme } from "@/components/grid-theme";
@@ -55,6 +55,7 @@ export function AccountStatementImportPageView({
   onSubmit,
 }: StatementImportPageViewProps) {
   const state = useStatementImportPageState({
+    accountBookId,
     account,
     statementImportCsvFormat,
     accountBookStartDate,
@@ -125,6 +126,14 @@ export function AccountStatementImportPageView({
               />
 
               <StatementImportParseErrors parseErrors={state.parseErrors} />
+              {state.isCheckingExistingBookings ? (
+                <Group gap="xs" role="status">
+                  <Loader size="sm" />
+                  <Text size="sm" c="dimmed">
+                    Checking for existing transactions…
+                  </Text>
+                </Group>
+              ) : null}
             </Stack>
           </Center>
         </Stepper.Step>

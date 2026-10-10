@@ -1,0 +1,157 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Unit } from "@/.prisma-client/enums";
+import { toMoney } from "@/shared/money";
+
+const mocks = vi.hoisted(() => ({
+  authorize: vi.fn(),
+  account: vi.fn(),
+  bookings: vi.fn(),
+}));
+vi.mock("@tanstack/react-start", () => ({
+  createServerFn: () => ({
+    inputValidator: (validate: (data: unknown) => unknown) => ({
+      handler:
+        (handler: (args: { data: unknown }) => unknown) =>
+        (args: { data: unknown }) =>
+          handler({ data: validate(args.data) }),
+    }),
+  }),
+}));
+vi.mock("@/account-books/functions.server", () => ({
+  ensureAuthorizedForAccountBookId: mocks.authorize,
+}));
+vi.mock("@/prisma.server", () => ({
+  prisma: {
+    account: { findUniqueOrThrow: mocks.account },
+    booking: { findMany: mocks.bookings },
+  },
+}));
+import { getStatementImportExistingBookings } from "./statement-import";
+
+const input = {
+  accountBookId: "book-1",
+  accountId: "account-1",
+  from: "2026-02-01",
+  to: "2026-02-28",
+};
+
+describe("statement import existing bookings", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mocks.account.mockResolvedValue({ unit: Unit.CURRENCY, currency: "CHF" });
+    mocks.bookings.mockResolvedValue([]);
+  });
+
+  it("scopes account and bookings to the authorized book, unit, and inclusive UTC range", async () => {
+    await getStatementImportExistingBookings({ data: input });
+    expect(mocks.authorize).toHaveBeenCalledWith("book-1");
+    expect(mocks.account).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id_accountBookId: { id: "account-1", accountBookId: "book-1" },
+        },
+      }),
+    );
+    expect(mocks.bookings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          accountBookId: "book-1",
+          accountId: "account-1",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          date: { gte: new Date("2026-02-01"), lt: new Date("2026-03-01") },
+        },
+        orderBy: [{ date: "asc" }, { id: "asc" }],
+      }),
+    );
+    expect(mocks.authorize.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.account.mock.invocationCallOrder[0],
+    );
+  });
+
+  it.each([
+    { unit: Unit.CRYPTOCURRENCY, cryptocurrency: "BTC" },
+    { unit: Unit.SECURITY, symbol: "VWRL", tradeCurrency: "USD" },
+  ])("filters the account unit metadata: %j", async (account) => {
+    mocks.account.mockResolvedValue(account);
+    await getStatementImportExistingBookings({
+      data: { ...input, from: input.to },
+    });
+    expect(mocks.bookings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining(account),
+      }),
+    );
+  });
+
+  it("returns decimal strings and prefers booking descriptions over transaction descriptions", async () => {
+    mocks.bookings.mockResolvedValue([
+      {
+        id: "b1",
+        transactionId: "t1",
+        date: new Date("2026-02-12"),
+        value: toMoney("-12.340000000000000001"),
+        description: "Edited booking",
+        transaction: { description: "Original transaction" },
+      },
+      {
+        id: "b2",
+        transactionId: "t2",
+        date: new Date("2026-02-28T18:00:00Z"),
+        value: toMoney("3.10"),
+        description: "",
+        transaction: { description: "Edited transaction" },
+      },
+    ]);
+    expect(await getStatementImportExistingBookings({ data: input })).toEqual([
+      {
+        id: "b1",
+        transactionId: "t1",
+        date: "2026-02-12",
+        amount: "-12.340000000000000001",
+        description: "Edited booking",
+      },
+      {
+        id: "b2",
+        transactionId: "t2",
+        date: "2026-02-28",
+        amount: "3.1",
+        description: "Edited transaction",
+      },
+    ]);
+  });
+
+  it("does not query when authorization fails", async () => {
+    mocks.authorize.mockRejectedValue(new Error("Unauthorized"));
+    await expect(
+      getStatementImportExistingBookings({ data: input }),
+    ).rejects.toThrow("Unauthorized");
+    expect(mocks.account).not.toHaveBeenCalled();
+    expect(mocks.bookings).not.toHaveBeenCalled();
+  });
+
+  it("does not query bookings when the account is absent", async () => {
+    mocks.account.mockRejectedValue(new Error("Account not found"));
+    await expect(
+      getStatementImportExistingBookings({ data: input }),
+    ).rejects.toThrow("Account not found");
+    expect(mocks.bookings).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    null,
+    [],
+    {},
+    { ...input, accountId: "" },
+    { ...input, accountBookId: 1 },
+    { ...input, from: "2026-02-30" },
+    { ...input, to: "not-a-date" },
+    { ...input, from: "2026-03-01" },
+  ])("rejects malformed input before authorization: %j", async (data) => {
+    await expect(async () =>
+      getStatementImportExistingBookings({ data }),
+    ).rejects.toThrow();
+    expect(mocks.authorize).not.toHaveBeenCalled();
+    expect(mocks.bookings).not.toHaveBeenCalled();
+  });
+});

@@ -22,9 +22,11 @@ export function getStatementImportDraftStatus(args: {
   if (args.draft.ignored) {
     return {
       kind: "ignored",
-      label: "Ignored",
+      label: args.draft.matchedExistingBooking ? "Already exists" : "Ignored",
       color: "gray",
-      message: "This row will not be imported.",
+      message: args.draft.matchedExistingBooking
+        ? "An existing booking in this account has the same date and amount. Check this row to import it anyway."
+        : "This row will not be imported.",
     };
   }
 
