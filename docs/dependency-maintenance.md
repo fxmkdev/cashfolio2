@@ -2,7 +2,7 @@
 
 The October 2026 refresh updates stable releases within the existing major
 versions, plus Logto 4, Chromatic 18, and dotenv 18. Node runtime and typings
-stay on 24; pnpm is now on stable 12.11.0. Package families such as Mantine,
+stay on 24; pnpm is now on stable 12.11.1. Package families such as Mantine,
 React, Prisma, Storybook, AG Grid, AG Charts, and Vitest must be updated
 together.
 
@@ -24,7 +24,7 @@ The refreshed manifest versions are:
 | Logto / Chromatic / dotenv               | 4.0.0 / 18.11.0 / 18.0.6 |
 | Redis / PostgreSQL driver                | 6.3.0 / 8.23.1           |
 | Node runtime / typings                   | 24.21.0 / 24.19.1        |
-| pnpm / Prettier                          | 12.11.0 / 3.9.9          |
+| pnpm / Prettier                          | 12.11.1 / 3.9.9          |
 
 MSW 3 and Prisma prereleases are deferred to separate migrations. Storybook uses
 addon-vitest 10.6.1 with the Playwright browser provider 5.0.3. Vitest,
@@ -248,11 +248,11 @@ lockfile for macOS development and Linux Docker/CI builds.
 
 ## pnpm 12 migration
 
-The workspace pins stable pnpm 12.11.0 in packageManager (with registry SHA-512
-integrity), engines, and the Docker migration-tools stage. pnpm 12.11.0,
-published on October 9 at 06:42 UTC, passed the one-day release-age threshold
-when rechecked on October 10. Versions 12.11.1 and 12.11.2 were still too young
-at implementation time. The existing one-day policy is now explicit as
+The workspace pins stable pnpm 12.11.1 in packageManager (with registry SHA-512
+integrity), engines, and the Docker migration-tools stage. Published on October 9
+at 12:22 UTC, it passed the one-day release-age threshold when rechecked on
+October 10 before the final review. pnpm 12.11.2 remains too young. The existing
+one-day policy is now explicit as
 `minimumReleaseAge: 1440`; retain the narrow `@fxmk/releaser@0.5.6` exception
 and the reviewed `allowBuilds` entries.
 
@@ -275,7 +275,8 @@ application dependency versions changed during the package-manager migration.
 Repeat resolution and frozen installation must preserve this result. See the
 [official pnpm 12 migration differences](https://pnpm.io/blog/whats-different-in-pnpm-12)
 and
-[pnpm 12.11.0 release notes](https://github.com/pnpm/pnpm/releases/tag/v12.11.0).
+[pnpm 12.11.0 release notes](https://github.com/pnpm/pnpm/releases/tag/v12.11.0), and
+[pnpm 12.11.1 patch notes](https://github.com/pnpm/pnpm/releases/tag/v12.11.1).
 
 ## Tooling migration verification
 

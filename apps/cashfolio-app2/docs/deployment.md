@@ -51,7 +51,7 @@ existing PRs need to incorporate the updated workflows first.
 ## Compiler and package-manager installation
 
 Docker keeps Node 24 and Prisma CLI/client/adapter 7.x. The build stage follows
-the workspace's integrity-qualified pnpm 12.11.0 packageManager pin; the
+the workspace's integrity-qualified pnpm 12.11.1 packageManager pin; the
 separate migration-tools stage explicitly activates the same version. Filtered
 frozen installation must retain TypeScript 7's Linux platform package and
 TypeScript 6's compiler API alias. Preserve the minimal release-command payload
