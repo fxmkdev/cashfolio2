@@ -152,8 +152,6 @@ export function AccountStatementImportPageView({
           <Stack gap="md" flex={1} mih={0}>
             <Text size="sm" c="dimmed">
               Check rows to include them in the import; uncheck to ignore them.
-              Change the first checkbox, then hold Shift and click another to
-              apply the same choice to the rows between them.
             </Text>
             <Stack
               gap={0}
@@ -201,11 +199,8 @@ export function AccountStatementImportPageView({
                 }}
                 selectionColumnDef={{
                   pinned: "left",
-                  headerName: "Include",
                   headerTooltip:
                     "Checked rows will be imported. Unchecked rows are ignored.",
-                  width: 116,
-                  minWidth: 116,
                   resizable: false,
                   suppressKeyboardEvent: state.suppressInclusionKeyboardEvent,
                 }}

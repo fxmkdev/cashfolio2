@@ -265,20 +265,23 @@ test("Shift applies the starting inclusion state to mixed statement ranges", asy
       .locator(".ag-selection-checkbox")
       .click({ modifiers: shift ? ["Shift"] : [] });
   const header = page.locator(".ag-header-select-all input[type=checkbox]");
+  const guidance = page.getByText(
+    "Check rows to include them in the import; uncheck to ignore them.",
+    { exact: true },
+  );
+  const selectionHeader = page
+    .getByRole("columnheader")
+    .filter({ has: header });
   async function expectIncluded(indices: number[]) {
     for (let index = 0; index < rows.length; index++) {
       if (indices.includes(index)) await expect(checkbox(index)).toBeChecked();
       else await expect(checkbox(index)).not.toBeChecked();
     }
   }
-  await expect(
-    page.getByText("Check rows to include them in the import;", {
-      exact: false,
-    }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("columnheader", { name: /Include/ }),
-  ).toBeVisible();
+  await expect(guidance).toBeVisible();
+  await expect(selectionHeader).toBeVisible();
+  await expect(selectionHeader).toHaveText("");
+  await expect(selectionHeader).toHaveCSS("width", "50px");
   await expectIncluded([0, 1, 2, 3, 4]);
   await expect(checkbox(0)).toHaveAttribute(
     "aria-label",
@@ -373,14 +376,8 @@ test("Shift applies the starting inclusion state to mixed statement ranges", asy
         (await page.locator(".ag-root-wrapper").boundingBox())?.x ?? Infinity,
     )
     .toBeLessThan(40);
-  await expect(
-    page.getByText("Check rows to include them in the import;", {
-      exact: false,
-    }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("columnheader", { name: /Include/ }),
-  ).toBeVisible();
+  await expect(guidance).toBeVisible();
+  await expect(selectionHeader).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("range-review-narrow.png"),
   });
