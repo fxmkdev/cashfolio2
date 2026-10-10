@@ -25,13 +25,14 @@ The refreshed manifest versions are:
 | pnpm / Prettier                          | 11.28.5 / 3.9.9          |
 
 TypeScript 7, Vitest 5, MSW 3, pnpm 12, and Prisma prereleases are deferred to
-separate migrations. Keep the exact Storybook test-runner pin. See the app's
+separate migrations. Storybook uses addon-vitest 10.6.1 and the Playwright
+browser provider 4.1.11, retaining Vitest 4 for this first stage. See the app's
 [Nitro compatibility notes](../apps/cashfolio-app2/docs/deployment.md#nitro-version-pin)
 before revisiting its beta pin or scoped H3 override.
 
-The pinned Storybook test-runner uses Jest 30.4.2 through a scoped override.
-Jest 30.5 rejects the Node loader hooks that Storybook 10.6 uses to load the
-test-runner configuration. Revisit this override with the test-runner migration.
+The Storybook runner and its scoped Jest overrides are removed. Every existing
+story remains included; unit coverage stays separate and its baseline is
+unchanged.
 
 Security overrides live in `pnpm-workspace.yaml`. Prefer compatible upstream
 updates; use scoped overrides where the parent still locks an affected version.
@@ -53,13 +54,9 @@ and
 
 ## Remaining audit findings
 
-As of 2026-10-09, after the scoped Prisma override, `pnpm audit` reports one
-moderate finding, with no high or critical findings, down from 112 findings
-before the refresh:
-
-| Dependency         | Path                                      | Severity | Follow-up                                                                                                                                                                                   |
-| ------------------ | ----------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sprintf-js@1.0.3` | Storybook test-runner's Jest dependencies | Moderate | The [precision-specifier advisory](https://github.com/advisories/GHSA-hp3w-g68c-fv3c) has no published patched version. Revisit when a fix or compatible upstream replacement is available. |
+As of 2026-10-09, after the scoped Prisma override and removal of the Storybook
+runner, `pnpm audit` reports no findings. Runner removal eliminates the
+previously reported moderate `sprintf-js` advisory.
 
 These counts describe the dependency audit, not an assessment of reachability in
 the running application. Re-run the audit when updating dependencies because

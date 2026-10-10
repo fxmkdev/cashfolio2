@@ -10,3 +10,4 @@ playwright-report
 test-results
 coverage
 .nyc_output
+coverage-storybook

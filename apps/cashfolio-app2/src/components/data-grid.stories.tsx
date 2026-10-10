@@ -89,7 +89,7 @@ export const ScrollingAndPinnedCells: Story = {
         }))}
         columnDefs={[
           { ...columns[0], width: 110, pinned: "left" },
-          { ...columns[1], flex: undefined, width: 1000 },
+          { ...columns[1], flex: undefined, width: 1600 },
           { ...columns[2], width: 110, pinned: "right" },
         ]}
         getRowId={({ data }) => data.id}
@@ -100,7 +100,12 @@ export const ScrollingAndPinnedCells: Story = {
       />
     </Box>
   ),
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, parameters }) => {
+    if (import.meta.env.MODE === "test") {
+      const mobile = parameters.viewport?.defaultViewport === "cashfolioMobile";
+      await expect(window.innerWidth).toBe(mobile ? 390 : 1280);
+      await expect(window.innerHeight).toBe(mobile ? 844 : 900);
+    }
     const canvas = within(canvasElement);
     const viewport =
       canvasElement.querySelector<HTMLElement>(".ag-grid-viewport")!;
@@ -163,7 +168,7 @@ export const ScrollingAndPinnedCells: Story = {
 export const NarrowScrollingGrid: Story = {
   ...ScrollingAndPinnedCells,
   parameters: {
-    testRunner: { viewport: { width: 390, height: 844 } },
+    viewport: { defaultViewport: "cashfolioMobile" },
   },
 };
 
