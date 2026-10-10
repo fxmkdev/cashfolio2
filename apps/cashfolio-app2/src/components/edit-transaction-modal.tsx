@@ -312,6 +312,11 @@ export function EditTransactionModal({
               setIsDateInputDirty(false);
               form.getInputProps("date").onChange(nextDate);
             }}
+            onBlur={(event) => {
+              // DateInput restores provisional text on blur without onChange.
+              setIsDateInputDirty(false);
+              form.getInputProps("date").onBlur(event);
+            }}
           />
           <TextInput
             label="Description"

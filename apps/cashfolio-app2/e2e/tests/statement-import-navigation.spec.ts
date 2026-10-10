@@ -316,6 +316,43 @@ test("reverting editor fields removes protection and subsequent booking addition
   await expect(page.getByText("Drop CSV File Here")).toBeVisible();
 });
 
+for (const input of ["invalid date", ""]) {
+  test(`restoring ${input === "" ? "cleared" : "invalid"} editor date input on blur clears provisional protection`, async ({
+    page,
+  }) => {
+    await openReview(page);
+    await clickPinnedRowAction({
+      row: agGridRowByText(page, description),
+      actionLabel: "Edit Imported Transaction",
+    });
+    const editor = page.getByRole("dialog", {
+      name: "Edit Imported Transaction",
+    });
+    const date = editor.getByLabel("Date", { exact: true });
+    const descriptionInput = editor.getByLabel("Description", { exact: true });
+    await date.fill(input);
+    await (await requestNativeDeparture(page, "reload")).dismiss();
+    await descriptionInput.click();
+    await expect(date).toHaveValue("05/14/2026");
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const event = new Event("beforeunload", { cancelable: true });
+          window.dispatchEvent(event);
+          return event.defaultPrevented;
+        }),
+      )
+      .toBe(false);
+
+    await descriptionInput.fill("Pending editor description");
+    await date.fill(input);
+    await descriptionInput.click();
+    await expect(date).toHaveValue("05/14/2026");
+    await (await requestNativeDeparture(page, "reload")).dismiss();
+    await expect(descriptionInput).toHaveValue("Pending editor description");
+  });
+}
+
 test("modal booking input and invalid date input are protected before Save Draft", async ({
   page,
 }) => {
