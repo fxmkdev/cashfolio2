@@ -514,11 +514,18 @@ compatibility but ignored by the importer.
 - Drafts can be ignored without removing them from the review grid. Ignored rows
   are greyed out, show an `Ignored` status, and are skipped during import. The
   review checkbox directly controls inclusion: checked rows are included and
-  unchecked rows are ignored. Every newly uploaded statement starts with all
-  draft checkboxes checked. The header checkbox includes or ignores all draft
-  rows; the `Balance carried forward` row has no checkbox. Included rows use
-  normal styling without a selected-row background tint. Ignored drafts cannot
-  be edited until their checkbox is checked again.
+  unchecked rows are ignored. On upload, existing bookings in the target account
+  are matched by UTC day and exact signed amount in the account's unit, across
+  the CSV date range regardless of the selected ledger period. Matching is
+  one-to-one: each existing booking skips at most one CSV row. Exact
+  descriptions are paired first, then remaining rows are paired in CSV order
+  even if their descriptions differ. Matched drafts start unchecked and show
+  `Already exists` with an explanatory tooltip; unmatched drafts start checked.
+  Users can check matched rows to import them anyway. Matching runs once per
+  upload; it is not rerun on submission. The header checkbox includes or ignores
+  all draft rows; the `Balance carried forward` row has no checkbox. Included
+  rows use normal styling without a selected-row background tint. Ignored drafts
+  cannot be edited until their checkbox is checked again.
 - Import uses a batch server mutation so either all reviewed drafts are created
   or none are.
 - For imported mixed-currency drafts, `EditTransactionModal` preserves the

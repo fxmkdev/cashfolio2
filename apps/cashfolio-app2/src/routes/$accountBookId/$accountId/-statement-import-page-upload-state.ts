@@ -1,4 +1,6 @@
 import { useRef, useState } from "react";
+import { getStatementImportExistingBookings } from "@/server/statement-import";
+import { matchStatementImportDrafts } from "./-statement-import-matching";
 import type { LedgerAccount } from "./-page-types";
 import {
   parseStatementImportCsv,
@@ -9,6 +11,7 @@ import {
 export type StatementImportPageStep = "upload" | "review";
 
 export function useStatementImportUploadState(args: {
+  accountBookId: string;
   account: LedgerAccount;
   statementImportCsvFormat: StatementImportCsvFormat;
   draftsLength: number;
@@ -30,11 +33,14 @@ export function useStatementImportUploadState(args: {
   } = args;
   const [file, setFile] = useState<File | null>(null);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
+  const [isCheckingExistingBookings, setIsCheckingExistingBookings] =
+    useState(false);
   const [activeStep, setActiveStep] =
     useState<StatementImportPageStep>("upload");
   const fileReadRequestId = useRef(0);
 
-  const canReviewStatementImport = draftsLength > 0 && parseErrors.length === 0;
+  const canReviewStatementImport =
+    !isCheckingExistingBookings && draftsLength > 0 && parseErrors.length === 0;
   const canNavigateStatementImportSteps = !isSubmitting && !isEditSubmitting;
 
   async function handleFileChange(nextFile: File | null) {
@@ -42,34 +48,53 @@ export function useStatementImportUploadState(args: {
     fileReadRequestId.current = requestId;
     setFile(nextFile);
     clearStatementImportReviewState();
+    setIsCheckingExistingBookings(false);
     setActiveStep("upload");
     if (!nextFile) {
       return;
     }
 
-    const text = await nextFile.text();
-    if (requestId !== fileReadRequestId.current) {
-      return;
-    }
+    setIsCheckingExistingBookings(true);
+    try {
+      const text = await nextFile.text();
+      if (requestId !== fileReadRequestId.current) return;
 
-    const result = parseStatementImportCsv({
-      text,
-      currentAccount: account,
-      format: statementImportCsvFormat,
-    });
-    if (requestId !== fileReadRequestId.current) {
-      return;
-    }
+      const result = parseStatementImportCsv({
+        text,
+        currentAccount: account,
+        format: statementImportCsvFormat,
+      });
+      setParseErrors(result.errors);
+      if (result.errors.length > 0 || result.drafts.length === 0) return;
 
-    setParseErrors(result.errors);
-    setDrafts(result.drafts);
-    if (result.errors.length === 0 && result.drafts.length > 0) {
+      const dates = result.drafts.map((draft) => draft.date).sort();
+      const bookings = await getStatementImportExistingBookings({
+        data: {
+          accountBookId: args.accountBookId,
+          accountId: account.id,
+          from: dates[0],
+          to: dates[dates.length - 1],
+        },
+      });
+      if (requestId !== fileReadRequestId.current) return;
+
+      setDrafts(matchStatementImportDrafts(result.drafts, bookings));
       setActiveStep("review");
+    } catch {
+      if (requestId !== fileReadRequestId.current) return;
+      setParseErrors([
+        "Could not read the statement or check for existing transactions. Please upload the file again to retry.",
+      ]);
+    } finally {
+      if (requestId === fileReadRequestId.current) {
+        setIsCheckingExistingBookings(false);
+      }
     }
   }
 
   function resetStatementImportReview() {
     fileReadRequestId.current += 1;
+    setIsCheckingExistingBookings(false);
     setFile(null);
     clearStatementImportReviewState();
     setActiveStep("upload");
@@ -112,6 +137,7 @@ export function useStatementImportUploadState(args: {
     file,
     handleFileChange,
     handleStepClick,
+    isCheckingExistingBookings,
     parseErrors,
     resetStatementImportReview,
   };

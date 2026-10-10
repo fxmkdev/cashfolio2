@@ -17,6 +17,7 @@ import {
   type SeededData,
 } from "../support/db";
 import { expect, test } from "../support/fixtures";
+import { prisma } from "../support/db-client";
 import { setGridAccountCellValue } from "../support/transaction-form";
 
 let seeded: SeededData;
@@ -94,7 +95,22 @@ test("imports a statement after selecting the counter account in the review grid
   await expect(agGridCellByColId(draftRow, "status")).toContainText("Ready");
   await expect(page.getByText("1 of 1 ready")).toBeVisible();
 
+  // Capture the initial redirect before the ledger consumes its scroll target.
+  let importedSearch: URLSearchParams | undefined;
+  const importNavigation = page.waitForURL((url) => {
+    if (
+      url.pathname !== `/${seeded.accountBookId}/${seeded.cashAccount.id}` ||
+      !url.searchParams.get("transactionId")
+    ) {
+      return false;
+    }
+    importedSearch = url.searchParams;
+    return true;
+  });
   await page.getByRole("button", { name: "Import Transactions" }).click();
+  await importNavigation;
+  expect(importedSearch?.get("period")).toBe("2026-05");
+  expect(importedSearch?.get("transactionId")).toBeTruthy();
 
   await expect(page).toHaveURL(
     ledgerUrlPattern({
@@ -103,10 +119,6 @@ test("imports a statement after selecting the counter account in the review grid
     }),
   );
   await expect(agGridRowByText(page, importedDescription)).toBeVisible();
-
-  const ledgerUrl = new URL(page.url());
-  expect(ledgerUrl.searchParams.get("period")).toBe("2026-05");
-  expect(ledgerUrl.searchParams.get("transactionId")).toBeTruthy();
 
   const bookings = await getTransactionBookingsByDescription({
     accountBookId: seeded.accountBookId,
@@ -407,4 +419,177 @@ test("checkboxes control statement row inclusion and skip unchecked rows during 
   });
   expect(firstIgnoredTransactionCount).toBe(0);
   expect(secondIgnoredTransactionCount).toBe(0);
+});
+
+test("overlapping statements skip existing transactions and transfers while preserving repeated payments", async ({
+  page,
+}) => {
+  const existingDescription = "E2E Existing Statement Payment";
+  const changedDescription = "E2E CSV Payment Description Before Edit";
+  const transferDescription = "E2E CSV Transfer";
+  const extraDescription = "E2E Additional Same Day Payment";
+  const newDescription = "E2E New Statement Payment";
+  await prisma.transaction.create({
+    data: {
+      accountBookId: seeded.accountBookId,
+      description: existingDescription,
+      bookings: {
+        create: [
+          {
+            accountId: seeded.cashAccount.id,
+            date: new Date("2026-06-03"),
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: -27.35,
+            description: "Edited booking text",
+          },
+          {
+            accountId: seeded.expenseAccount.id,
+            date: new Date("2026-06-03"),
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: 27.35,
+            description: "",
+          },
+        ],
+      },
+    },
+  });
+  // The target account is the counter leg of a transaction entered elsewhere.
+  await prisma.transaction.create({
+    data: {
+      accountBookId: seeded.accountBookId,
+      description: "Transfer entered from savings",
+      bookings: {
+        create: [
+          {
+            accountId: seeded.savingsAccount.id,
+            date: new Date("2026-06-04"),
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: -60.1,
+            description: "",
+          },
+          {
+            accountId: seeded.cashAccount.id,
+            date: new Date("2026-06-05"),
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            value: 60.1,
+            description: "",
+          },
+        ],
+      },
+    },
+  });
+  const csv = [
+    "Booked;Cashflow;Original;Currency;Rate;Text",
+    `2026-06-03;-27.35;;;;${changedDescription}`,
+    `2026-06-03;-27.35;;;;${extraDescription}`,
+    `2026-06-05;60.10;;;;${transferDescription}`,
+    `2026-06-06;-18.20;;;;${newDescription}`,
+  ].join("\n");
+  await page.goto(
+    `/${seeded.accountBookId}/${seeded.cashAccount.id}?period=2026-04`,
+  );
+  await openStatementImportPage(page);
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "overlap.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv),
+  });
+  for (const description of [changedDescription, transferDescription]) {
+    const row = agGridRowByText(page, description);
+    await expect(agGridCellByColId(row, "status")).toContainText(
+      "Already exists",
+    );
+    await expect(row.locator(".ag-selection-checkbox input")).not.toBeChecked();
+  }
+  await expect(page.getByText("0 of 4 ready, 2 ignored")).toBeVisible();
+  await setGridAccountTreeCellValue({
+    root: page,
+    rowIndex: 1,
+    colId: "counterAccountId",
+    accountName: seeded.expenseAccount.name,
+  });
+  await setGridAccountTreeCellValue({
+    root: page,
+    rowIndex: 3,
+    colId: "counterAccountId",
+    accountName: seeded.expenseAccount.name,
+  });
+  await page.getByRole("button", { name: "Import Transactions" }).click();
+  await expect(page).toHaveURL(
+    ledgerUrlPattern({
+      accountBookId: seeded.accountBookId,
+      accountId: seeded.cashAccount.id,
+    }),
+  );
+  expect(
+    await countTransactionsByDescription({
+      accountBookId: seeded.accountBookId,
+      description: changedDescription,
+    }),
+  ).toBe(0);
+  expect(
+    await countTransactionsByDescription({
+      accountBookId: seeded.accountBookId,
+      description: transferDescription,
+    }),
+  ).toBe(0);
+  expect(
+    await countTransactionsByDescription({
+      accountBookId: seeded.accountBookId,
+      description: existingDescription,
+    }),
+  ).toBe(1);
+  expect(
+    await countTransactionsByDescription({
+      accountBookId: seeded.accountBookId,
+      description: extraDescription,
+    }),
+  ).toBe(1);
+  expect(
+    await countTransactionsByDescription({
+      accountBookId: seeded.accountBookId,
+      description: newDescription,
+    }),
+  ).toBe(1);
+
+  // Reimporting the expanded statement now matches every row.
+  await openStatementImportPage(page);
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "overlap-again.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv),
+  });
+  await expect(page.getByText("0 of 4 ready, 4 ignored")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Import Transactions" }),
+  ).toBeDisabled();
+  const override = agGridRowByText(page, changedDescription);
+  await clickGridRowSelectionCheckbox(override);
+  await expect(agGridCellByColId(override, "status")).toContainText(
+    "Needs edit",
+  );
+  await setGridAccountTreeCellValue({
+    root: page,
+    rowIndex: 0,
+    colId: "counterAccountId",
+    accountName: seeded.expenseAccount.name,
+  });
+  await expect(page.getByText("1 of 4 ready, 3 ignored")).toBeVisible();
+  await page.getByRole("button", { name: "Import Transactions" }).click();
+  await expect(page).toHaveURL(
+    ledgerUrlPattern({
+      accountBookId: seeded.accountBookId,
+      accountId: seeded.cashAccount.id,
+    }),
+  );
+  expect(
+    await countTransactionsByDescription({
+      accountBookId: seeded.accountBookId,
+      description: changedDescription,
+    }),
+  ).toBe(1);
 });

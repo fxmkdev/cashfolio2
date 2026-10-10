@@ -1,6 +1,8 @@
 import type { AccountOption } from "@/components/edit-transaction-modal";
 import type { BookingValues } from "@/components/edit-transaction-modal-types";
 import { createBookingUnitDefaults } from "@/components/edit-transaction-modal-unit-defaults";
+import { getUnitIdentifier } from "@/shared/account-utils";
+import { toMoney } from "@/shared/money";
 import type { TransactionMutationValues } from "./-page-view";
 import type { StatementImportDraft } from "./-statement-import-types";
 
@@ -36,9 +38,28 @@ export function updateStatementImportDraftTransaction(args: {
     args.transaction.bookings.find(
       (booking) => booking.accountId === currentAccountId,
     ) ?? args.transaction.bookings[0];
+  const previousCurrentBookings = args.draft.transaction.bookings.filter(
+    (booking) => booking.accountId === currentAccountId,
+  );
+  const nextCurrentBookings = args.transaction.bookings.filter(
+    (booking) => booking.accountId === currentAccountId,
+  );
+  const currentBookingsUnchanged =
+    previousCurrentBookings.length === nextCurrentBookings.length &&
+    previousCurrentBookings.every((booking, index) => {
+      const nextBooking = nextCurrentBookings[index];
+      return (
+        booking.date === nextBooking.date &&
+        toMoney(booking.value).equals(nextBooking.value) &&
+        getUnitIdentifier(booking) === getUnitIdentifier(nextBooking)
+      );
+    });
 
   return {
     ...args.draft,
+    matchedExistingBooking: currentBookingsUnchanged
+      ? args.draft.matchedExistingBooking
+      : undefined,
     date: currentBooking?.date ?? args.draft.date,
     amount: currentBooking?.value ?? args.draft.amount,
     counterAccountId: getCounterAccountIdFromTransaction({

@@ -38,7 +38,7 @@ export function useStatementImportColumnDefs(args: {
       {
         colId: "status",
         headerName: "Status",
-        width: 135,
+        width: 155,
         cellRenderer: ({
           data,
         }: ICellRendererParams<StatementImportGridRow>) => {
