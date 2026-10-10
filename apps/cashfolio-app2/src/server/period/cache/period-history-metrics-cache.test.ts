@@ -16,6 +16,12 @@ const redisClient = vi.hoisted(() => ({
 const getRedisClient = vi.hoisted(() =>
   vi.fn<() => Promise<typeof redisClient | null>>(async () => redisClient),
 );
+const prisma = vi.hoisted(() => ({
+  accountBook: { findUniqueOrThrow: vi.fn() },
+}));
+
+vi.mock("../../../prisma.server", () => ({ prisma }));
+
 const loadPeriodHistoryPointMetricsWithCacheability = vi.hoisted(() => vi.fn());
 
 vi.mock("../../../redis.server", () => ({
@@ -54,14 +60,13 @@ function createMetrics(overrides = {}) {
 describe("period history metrics cache", () => {
   beforeEach(() => {
     redisState.kv.clear();
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-11T14:30:00.000Z"));
     process.env.PERIOD_BASE_CACHE_ENV = "preview-app-123";
-    redisState.kv.set(
-      "period:base:generation:v1:preview-app-123:book-1",
-      "gen-1",
-    );
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      periodCacheRevision: "gen-1",
+    });
     loadPeriodHistoryPointMetricsWithCacheability.mockResolvedValue({
       metrics: createMetrics(),
       cacheableFromPermanentValuationCache: true,
@@ -309,10 +314,9 @@ describe("period history metrics cache", () => {
     });
     const [firstKey] = redisClient.setEx.mock.calls[0] ?? [];
 
-    redisState.kv.set(
-      "period:base:generation:v1:preview-app-123:book-1",
-      "gen-2",
-    );
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      periodCacheRevision: "gen-2",
+    });
     await getOrLoadPeriodHistoryPointMetrics({
       accountBookId: "book-1",
       period: "2026-04",
@@ -334,6 +338,7 @@ describe("period history metrics cache", () => {
     expect(toNumericMoney(result)).toEqual(toNumericMoney(createMetrics()));
     expect(redisClient.setEx).not.toHaveBeenCalled();
   });
+
   it("round-trips exact metric values on cold and warm cache reads", async () => {
     const exact = "12345678901234567890.123456789123456789";
     loadPeriodHistoryPointMetricsWithCacheability.mockResolvedValue({
@@ -368,5 +373,65 @@ describe("period history metrics cache", () => {
       1,
     );
     expect(redisClient.setEx).toHaveBeenCalledTimes(1);
+  });
+
+  it("bypasses cached metrics when the database revision cannot be read", async () => {
+    const args = { accountBookId: "book-1", period: "2026-04" };
+    await getOrLoadPeriodHistoryPointMetrics(args);
+    vi.clearAllMocks();
+    prisma.accountBook.findUniqueOrThrow.mockRejectedValueOnce(
+      new Error("DB unavailable"),
+    );
+    loadPeriodHistoryPointMetricsWithCacheability.mockResolvedValueOnce({
+      metrics: createMetrics({ income: toMoney("99.123456789123456789") }),
+      cacheableFromPermanentValuationCache: true,
+    });
+
+    expect(
+      (await getOrLoadPeriodHistoryPointMetrics(args)).income.toString(),
+    ).toBe("99.123456789123456789");
+    expect(redisClient.get).not.toHaveBeenCalled();
+    expect(redisClient.setEx).not.toHaveBeenCalled();
+  });
+
+  it("does not join or reuse metrics from a pre-commit inflight load", async () => {
+    let release!: () => void;
+    let started!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const ready = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    loadPeriodHistoryPointMetricsWithCacheability.mockImplementationOnce(
+      async () => {
+        started();
+        await gate;
+        return {
+          metrics: createMetrics({ income: toMoney("1.123456789123456789") }),
+          cacheableFromPermanentValuationCache: true,
+        };
+      },
+    );
+    const args = { accountBookId: "book-1", period: "2026-04" };
+    const oldLoad = getOrLoadPeriodHistoryPointMetrics(args);
+    await ready;
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      periodCacheRevision: "gen-2",
+    });
+    try {
+      expect(
+        (await getOrLoadPeriodHistoryPointMetrics(args)).income.toString(),
+      ).toBe("12");
+    } finally {
+      release();
+      await oldLoad;
+    }
+    expect(
+      (await getOrLoadPeriodHistoryPointMetrics(args)).income.toString(),
+    ).toBe("12");
+    expect(loadPeriodHistoryPointMetricsWithCacheability).toHaveBeenCalledTimes(
+      2,
+    );
   });
 });

@@ -73,6 +73,10 @@ pnpm --filter cashfolio-app2 lint
 - Playwright config: `playwright.config.ts`
 - Tests: `e2e/tests/`
 - DB/setup helpers: `e2e/support/`
+- `e2e/tests/period-cache-revision.spec.ts` verifies the database-owned report
+  cache revision against PostgreSQL: all financial tables, settings edits,
+  rollback/commit visibility, bulk statements, and concurrent commits. Cache
+  unit tests separately cover Redis failures and loads spanning a commit.
 
 ### Query Priority
 

@@ -28,6 +28,14 @@ paths are relative to that app directory.
   the `AccountBook_ensure_gain_loss_account` trigger. Application account-book
   creation should create the `AccountBook` and user link only; the trigger
   creates the one system-managed `Gain/Loss` equity account.
+- The database also owns `AccountBook.periodCacheRevision` (UUID). Statement
+  triggers on Account, AccountGroup, Transaction, and Booking refresh each
+  affected book once per statement; updates that reassign rows refresh both
+  books. A row trigger refreshes the revision for reference currency/start date
+  edits. Revisions roll back with failed writes and do not change `updatedAt`.
+  Report cache readers query the revision before using Redis, so invalidation
+  remains correct when Redis cleanup fails. These triggers require ordinary
+  UPDATE permission on AccountBook and serialize revision updates per book.
 
 ## Models
 
