@@ -262,7 +262,7 @@ export function buildHistoryPeriodValues(args: {
 export const getPeriodHistory = createServerFn({
   method: "GET",
 })
-  .inputValidator(
+  .validator(
     (data: {
       accountBookId: string;
       granularity: unknown;

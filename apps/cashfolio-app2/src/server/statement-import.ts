@@ -17,7 +17,7 @@ export type StatementImportExistingBooking = {
 export const getStatementImportExistingBookings = createServerFn({
   method: "GET",
 })
-  .inputValidator((data: unknown) => {
+  .validator((data: unknown) => {
     assertRecord(data);
     const accountBookId = requireStringField(data, "accountBookId");
     const accountId = requireStringField(data, "accountId");

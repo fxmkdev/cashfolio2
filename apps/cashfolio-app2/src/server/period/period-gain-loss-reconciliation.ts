@@ -154,7 +154,7 @@ async function loadPeriodGainLossReconciliationPageData(
 export const getPeriodGainLossReconciliation = createServerFn({
   method: "GET",
 })
-  .inputValidator(validatePeriodGainLossReconciliationInput)
+  .validator(validatePeriodGainLossReconciliationInput)
   .handler(async ({ data }): Promise<PeriodGainLossReconciliation | null> => {
     const pageData = await loadPeriodGainLossReconciliationPageData(data);
     return pageData.reconciliation;
@@ -163,7 +163,7 @@ export const getPeriodGainLossReconciliation = createServerFn({
 export const getPeriodGainLossReconciliationPageData = createServerFn({
   method: "GET",
 })
-  .inputValidator(validatePeriodGainLossReconciliationInput)
+  .validator(validatePeriodGainLossReconciliationInput)
   .handler(async ({ data }): Promise<PeriodGainLossReconciliationPageData> =>
     loadPeriodGainLossReconciliationPageData(data),
   );

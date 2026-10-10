@@ -18,7 +18,7 @@ import {
 } from "./accounts-queries-orchestration";
 
 export const getAccounts = createServerFn({ method: "GET" })
-  .inputValidator((data: { accountBookId: string }) => data)
+  .validator((data: { accountBookId: string }) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const [accounts, allGroups] = await Promise.all([
@@ -52,7 +52,7 @@ export const getAccounts = createServerFn({ method: "GET" })
   });
 
 export const getAccountGroups = createServerFn({ method: "GET" })
-  .inputValidator(
+  .validator(
     (data: { accountBookId: string; accountState?: "active" | "inactive" }) =>
       data,
   )
@@ -62,7 +62,7 @@ export const getAccountGroups = createServerFn({ method: "GET" })
   });
 
 export const getExistingNodes = createServerFn({ method: "GET" })
-  .inputValidator(
+  .validator(
     (data: { accountBookId: string; accountState?: "active" | "inactive" }) =>
       data,
   )
@@ -72,42 +72,42 @@ export const getExistingNodes = createServerFn({ method: "GET" })
   });
 
 export const getActiveAccountBookUnitUsage = createServerFn({ method: "GET" })
-  .inputValidator((data: { accountBookId: string }) => data)
+  .validator((data: { accountBookId: string }) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     return queryActiveAccountBookUnitUsage(data.accountBookId);
   });
 
 export const getAccountTreeData = createServerFn({ method: "GET" })
-  .inputValidator((data: AccountTreeDataInput) => data)
+  .validator((data: AccountTreeDataInput) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     return queryAccountTreeData(data);
   });
 
 export const getAccountsPageData = createServerFn({ method: "GET" })
-  .inputValidator((data: AccountsPageDataInput) => data)
+  .validator((data: AccountsPageDataInput) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     return queryAccountsPageData(data);
   });
 
 export const getLedgerAccountActionData = createServerFn({ method: "GET" })
-  .inputValidator((data: LedgerAccountActionDataInput) => data)
+  .validator((data: LedgerAccountActionDataInput) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     return queryLedgerAccountActionData(data);
   });
 
 export const getAccountReferenceBalances = createServerFn({ method: "GET" })
-  .inputValidator((data: AccountReferenceBalancesInput) => data)
+  .validator((data: AccountReferenceBalancesInput) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     return queryAccountReferenceBalances(data);
   });
 
 export const getGainLossEquityAccountId = createServerFn({ method: "GET" })
-  .inputValidator((data: { accountBookId: string }) => data)
+  .validator((data: { accountBookId: string }) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const account = await prisma.account.findFirst({

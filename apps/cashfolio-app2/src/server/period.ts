@@ -53,7 +53,7 @@ export {
 export const getPeriodOverview = createServerFn({
   method: "GET",
 })
-  .inputValidator(
+  .validator(
     (data: { accountBookId: string; period?: unknown; locale?: unknown }) => ({
       accountBookId: data.accountBookId,
       period: normalizePeriodValue(data.period),

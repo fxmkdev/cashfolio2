@@ -11,7 +11,7 @@ const createServerFn = vi.hoisted(() =>
   vi.fn(() => {
     let validate: ((data: unknown) => unknown) | undefined;
     const chain = {
-      inputValidator: vi.fn((validator: (data: unknown) => unknown) => {
+      validator: vi.fn((validator: (data: unknown) => unknown) => {
         validate = validator;
         return chain;
       }),
