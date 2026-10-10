@@ -45,12 +45,15 @@ export const getStatementImportExistingBookings = createServerFn({
         tradeCurrency: true,
       },
     });
+    // Security unit identity is symbol-based; trade currency only affects pricing.
+    const { tradeCurrency: _tradeCurrency, ...unitFields } =
+      getBookingUnitFields(account);
     const bookings = await prisma.booking.findMany({
       where: {
         accountBookId: data.accountBookId,
         accountId: data.accountId,
         date: { gte: data.from, lt: addUtcDays(data.to, 1) },
-        ...getBookingUnitFields(account),
+        ...unitFields,
       },
       select: {
         id: true,

@@ -70,17 +70,72 @@ describe("statement import existing bookings", () => {
   });
 
   it.each([
-    { unit: Unit.CRYPTOCURRENCY, cryptocurrency: "BTC" },
-    { unit: Unit.SECURITY, symbol: "VWRL", tradeCurrency: "USD" },
-  ])("filters the account unit metadata: %j", async (account) => {
-    mocks.account.mockResolvedValue(account);
-    await getStatementImportExistingBookings({
-      data: { ...input, from: input.to },
+    {
+      account: { unit: Unit.CRYPTOCURRENCY, cryptocurrency: "BTC" },
+      unitFields: { unit: Unit.CRYPTOCURRENCY, cryptocurrency: "BTC" },
+    },
+    {
+      account: { unit: Unit.SECURITY, symbol: "VWRL", tradeCurrency: "USD" },
+      unitFields: { unit: Unit.SECURITY, symbol: "VWRL" },
+    },
+  ])(
+    "filters the canonical account unit: %j",
+    async ({ account, unitFields }) => {
+      mocks.account.mockResolvedValue(account);
+      await getStatementImportExistingBookings({
+        data: { ...input, from: input.to },
+      });
+      expect(mocks.bookings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            accountBookId: input.accountBookId,
+            accountId: input.accountId,
+            date: { gte: new Date(input.to), lt: new Date("2026-03-01") },
+            ...unitFields,
+          },
+        }),
+      );
+    },
+  );
+
+  it("includes a rebooked security with a different trade currency but the same symbol", async () => {
+    mocks.account.mockResolvedValue({
+      unit: Unit.SECURITY,
+      symbol: "AAPL",
+      tradeCurrency: "CHF",
     });
-    expect(mocks.bookings).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining(account),
-      }),
+    const booking = {
+      id: "rebooked-security",
+      transactionId: "security-transaction",
+      unit: Unit.SECURITY,
+      symbol: "AAPL",
+      tradeCurrency: "USD",
+      date: new Date("2026-02-12"),
+      value: toMoney("2.5"),
+      description: "Rebooked AAPL",
+      transaction: { description: "Original purchase" },
+    };
+    mocks.bookings.mockImplementation(async ({ where }) =>
+      [booking].filter(
+        (candidate) =>
+          candidate.unit === where.unit &&
+          candidate.symbol === where.symbol &&
+          (where.tradeCurrency === undefined ||
+            candidate.tradeCurrency === where.tradeCurrency),
+      ),
+    );
+
+    expect(await getStatementImportExistingBookings({ data: input })).toEqual([
+      {
+        id: booking.id,
+        transactionId: booking.transactionId,
+        date: "2026-02-12",
+        amount: "2.5",
+        description: booking.description,
+      },
+    ]);
+    expect(mocks.bookings.mock.calls[0][0].where).not.toHaveProperty(
+      "tradeCurrency",
     );
   });
 
