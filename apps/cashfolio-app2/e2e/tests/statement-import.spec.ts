@@ -369,11 +369,7 @@ test("Shift applies the starting inclusion state to mixed statement ranges", asy
   await expect
     .poll(
       async () =>
-        (
-          await page
-            .getByRole("columnheader", { name: /Include/ })
-            .boundingBox()
-        )?.x ?? Infinity,
+        (await page.locator(".ag-root-wrapper").boundingBox())?.x ?? Infinity,
     )
     .toBeLessThan(40);
   await expect(
