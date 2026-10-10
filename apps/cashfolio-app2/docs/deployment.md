@@ -37,6 +37,12 @@ migration payload, not the full repository or workspace install.
 
 ## Staging release seed
 
+The seed CLI lives inside `cashfolio-app2` because it is an app-specific
+deployment task that uses the app’s generated Prisma client and accounting
+conventions. This avoids making `tools/cli` depend on application internals. If
+both projects later need it, extract an independent workspace package for shared
+use.
+
 Staging selects `scripts/release-staging.sh` as its Fly release command. With
 `STAGING_SEED_ENABLED=true`, it verifies the approved seed and migration targets
 read-only before applying migrations, then transactionally replaces staging
