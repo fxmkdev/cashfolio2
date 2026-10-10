@@ -13,7 +13,8 @@ Architecture and implementation patterns for `apps/cashfolio-app2`.
 
 ## Storybook and Chromatic
 
-Run Storybook locally from `apps/cashfolio-app2`:
+For interactive development, start Storybook in a separate terminal. The server
+command keeps running until you stop it:
 
 ```bash
 pnpm --filter cashfolio-app2 prisma:generate
@@ -26,10 +27,12 @@ Build Storybook:
 pnpm --filter cashfolio-app2 build-storybook
 ```
 
-Run interaction tests (with Storybook dev server running on port `6006`):
+Run browser render/interaction tests directly; no running Storybook server is
+required:
 
 ```bash
 pnpm --filter cashfolio-app2 test-storybook
+pnpm --filter cashfolio-app2 test-storybook:coverage
 ```
 
 ### Storybook Coverage Guideline

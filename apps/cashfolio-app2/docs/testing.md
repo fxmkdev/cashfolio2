@@ -186,13 +186,18 @@ coverage overhead cannot end the pending state before disabled-action assertions
 finish. Preserve the assertions and release the request before checking
 recovery.
 
-Run browser tests directly; a Storybook server is optional for interactive
-debugging:
+Run browser tests directly without starting a Storybook server:
+
+```bash
+pnpm --filter cashfolio-app2 test-storybook
+pnpm --filter cashfolio-app2 test-storybook:coverage
+```
+
+For interactive debugging, optionally start Storybook in a separate terminal.
+This command keeps running until you stop it:
 
 ```bash
 pnpm --filter cashfolio-app2 storybook
-pnpm --filter cashfolio-app2 test-storybook
-pnpm --filter cashfolio-app2 test-storybook:coverage
 ```
 
 ## CI Quality Gates
