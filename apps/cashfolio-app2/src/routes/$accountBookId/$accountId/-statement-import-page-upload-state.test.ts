@@ -50,6 +50,12 @@ function file(description = "Statement", date = "2026-02-03") {
 
 function setup() {
   let drafts: StatementImportDraft[] = [];
+  let existingBookings: StatementImportExistingBooking[] = [];
+  const setExistingBookings = vi.fn(
+    (bookings: StatementImportExistingBooking[]) => {
+      existingBookings = bookings;
+    },
+  );
   const setDrafts = vi.fn((next) => {
     drafts = typeof next === "function" ? next(drafts) : next;
   });
@@ -79,6 +85,7 @@ function setup() {
       isSubmitting: busy,
       isEditSubmitting: false,
       setDrafts,
+      setExistingBookings,
       clearEditingDraft,
       requestConfirmation,
     });
@@ -89,6 +96,7 @@ function setup() {
     clearEditingDraft,
     requestConfirmation,
     getDrafts: () => drafts,
+    getExistingBookings: () => existingBookings,
     setBusy: (value: boolean) => {
       busy = value;
     },
@@ -115,12 +123,11 @@ describe("statement import upload", () => {
       canReviewStatementImport: false,
     });
     expect(state.getDrafts()).toEqual([]);
+    expect(state.getExistingBookings()).toEqual([]);
     expect(harness.lookup).toHaveBeenCalledWith({
       data: {
         accountBookId: "book-1",
         accountId: "asset-1",
-        from: "2026-02-03T00:00:00.000Z",
-        to: "2026-02-03T00:00:00.000Z",
       },
     });
     lookup.resolve([
@@ -139,6 +146,9 @@ describe("statement import upload", () => {
       canReviewStatementImport: true,
     });
     expect(state.getDrafts()[0].ignored).toBe(true);
+    expect(state.getExistingBookings()).toHaveLength(1);
+    await state.render().handleFileChange(null);
+    expect(state.getExistingBookings()).toEqual([]);
   });
 
   it("stays on upload with retry instructions when the lookup fails", async () => {
@@ -154,6 +164,7 @@ describe("statement import upload", () => {
       "upload the file again to retry",
     );
     expect(state.getDrafts()).toEqual([]);
+    expect(state.getExistingBookings()).toEqual([]);
   });
 
   it("does not check invalid CSV", async () => {
@@ -173,9 +184,19 @@ describe("statement import upload", () => {
       const first = state.render().handleFileChange(file("Old"));
       await vi.waitFor(() => expect(harness.lookup).toHaveBeenCalledTimes(1));
       await state.render().handleFileChange(file("New"));
-      if (outcome === "success") old.resolve([]);
+      if (outcome === "success")
+        old.resolve([
+          {
+            id: "old",
+            transactionId: "old-tx",
+            date: "2026-02-03",
+            amount: "100.25",
+            description: "Old",
+          },
+        ]);
       else old.reject(new Error("Old failure"));
       await first;
+      expect(state.getExistingBookings()).toEqual([]);
       expect(state.getDrafts().map((draft) => draft.description)).toEqual([
         "New",
       ]);
@@ -197,6 +218,7 @@ describe("statement import upload", () => {
     old.resolve([]);
     await pending;
     expect(state.getDrafts()).toEqual([]);
+    expect(state.getExistingBookings()).toEqual([]);
     expect(state.render()).toMatchObject({
       file: null,
       activeStep: "upload",
@@ -221,7 +243,16 @@ describe("statement import upload", () => {
     });
   });
 
-  it("preserves reviewed drafts until upload discard is confirmed", async () => {
+  it("preserves reviewed drafts and history until upload discard is confirmed", async () => {
+    harness.lookup.mockResolvedValue([
+      {
+        id: "opening",
+        transactionId: "opening-tx",
+        date: "2026-01-01",
+        amount: "50",
+        description: "Opening",
+      },
+    ]);
     const state = setup();
     state.render().handleStepClick(1);
     expect(state.render().activeStep).toBe("upload");
@@ -233,8 +264,10 @@ describe("statement import upload", () => {
     state.render().handleStepClick(0);
     expect(state.requestConfirmation).toHaveBeenCalledTimes(1);
     expect(state.getDrafts()).toHaveLength(1);
+    expect(state.getExistingBookings()).toHaveLength(1);
     state.requestConfirmation.mock.calls[0][0]();
     expect(state.getDrafts()).toEqual([]);
+    expect(state.getExistingBookings()).toEqual([]);
     expect(state.render()).toMatchObject({
       file: null,
       activeStep: "upload",

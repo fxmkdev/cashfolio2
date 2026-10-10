@@ -1,4 +1,5 @@
 import type { CellValueChangedEvent } from "ag-grid-enterprise";
+import type { StatementImportExistingBooking } from "@/server/statement-import";
 import type { Dispatch, SetStateAction } from "react";
 import type { AccountOption } from "@/components/edit-transaction-modal";
 import type { LedgerAccount } from "./-page-types";
@@ -20,7 +21,7 @@ export function useStatementImportReviewState(args: {
   account: LedgerAccount;
   accountBookStartDate: Date;
   accountOptions: AccountOption[];
-  persistedBalance: number;
+  existingBookings: StatementImportExistingBooking[];
   drafts: StatementImportDraft[];
   setDrafts: Dispatch<SetStateAction<StatementImportDraft[]>>;
   isSubmitting: boolean;
@@ -31,7 +32,7 @@ export function useStatementImportReviewState(args: {
     account,
     accountBookStartDate,
     accountOptions,
-    persistedBalance,
+    existingBookings,
     drafts,
     setDrafts,
     isSubmitting,
@@ -46,7 +47,7 @@ export function useStatementImportReviewState(args: {
     account,
     accountBookStartDate,
     accountOptions,
-    persistedBalance,
+    existingBookings,
     drafts,
     isSubmitting,
     isEditSubmitting,

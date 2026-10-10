@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { ensureAuthorizedForAccountBookId } from "@/account-books/functions.server";
 import { prisma } from "@/prisma.server";
 import { getBookingUnitFields } from "@/shared/booking-unit-fields";
-import { addUtcDays, formatUtcDate, parseUtcDayDate } from "@/shared/date";
+import { formatUtcDate } from "@/shared/date";
 import { toMoney } from "@/shared/money";
 import { assertRecord, requireStringField } from "./input-validation";
 
@@ -21,12 +21,7 @@ export const getStatementImportExistingBookings = createServerFn({
     assertRecord(data);
     const accountBookId = requireStringField(data, "accountBookId");
     const accountId = requireStringField(data, "accountId");
-    const from = parseUtcDayDate(requireStringField(data, "from"));
-    const to = parseUtcDayDate(requireStringField(data, "to"));
-    if (!from || !to || from > to) {
-      throw new Error("A valid inclusive UTC date range is required.");
-    }
-    return { accountBookId, accountId, from, to };
+    return { accountBookId, accountId };
   })
   .handler(async ({ data }): Promise<StatementImportExistingBooking[]> => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
@@ -52,7 +47,6 @@ export const getStatementImportExistingBookings = createServerFn({
       where: {
         accountBookId: data.accountBookId,
         accountId: data.accountId,
-        date: { gte: data.from, lt: addUtcDays(data.to, 1) },
         ...unitFields,
       },
       select: {
