@@ -39,6 +39,7 @@ export function useStatementImportColumnDefs(args: {
         colId: "status",
         headerName: "Status",
         width: 155,
+        pinned: "left",
         cellRenderer: ({
           data,
         }: ICellRendererParams<StatementImportGridRow>) => {
@@ -58,6 +59,7 @@ export function useStatementImportColumnDefs(args: {
         field: "date",
         headerName: "Date",
         width: 130,
+        pinned: "left",
         type: DATE_COLUMN,
         cellDataType: "dateString",
       },
@@ -65,6 +67,7 @@ export function useStatementImportColumnDefs(args: {
         field: "amount",
         headerName: "Amount",
         width: 130,
+        pinned: "left",
         type: FORMATTED_NUMERIC_COLUMN,
       },
       {
@@ -125,6 +128,7 @@ export function useStatementImportColumnDefs(args: {
         field: "balance",
         headerName: getStatementImportBalanceHeaderName(),
         width: 155,
+        pinned: "right",
         type: FORMATTED_NUMERIC_COLUMN,
         context: {
           formattedNumeric: {
