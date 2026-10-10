@@ -11,14 +11,10 @@ export type ValuationProviderRequestReason =
   (typeof VALUATION_PROVIDER_REQUEST_REASONS)[keyof typeof VALUATION_PROVIDER_REQUEST_REASONS];
 
 export type ValuationProviderName =
-  | "CURRENCYLAYER"
-  | "COINLAYER"
-  | "MARKETSTACK";
+  "CURRENCYLAYER" | "COINLAYER" | "MARKETSTACK";
 
 export type ValuationProviderUnitType =
-  | "CURRENCY"
-  | "CRYPTOCURRENCY"
-  | "SECURITY";
+  "CURRENCY" | "CRYPTOCURRENCY" | "SECURITY";
 
 export type ValuationProviderRequestOutcome =
   | "RETRIEVED"

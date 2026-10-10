@@ -10,9 +10,7 @@ import type {
 import { toUtcDay } from "./valuation/date-utils";
 
 export type ValuationProviderUsageWindowKey =
-  | "today"
-  | "last7Days"
-  | "last30Days";
+  "today" | "last7Days" | "last30Days";
 
 export type ValuationProviderUsageCount = {
   key: string;
