@@ -45,6 +45,29 @@ Related docs:
   `source-rates.ts`, `lookup-context.ts`, `providers.ts`, `cache.ts`,
   `backtracking.ts`, `keys.ts`, `types.ts`, `date-utils.ts`, `constants.ts`
 
+## Concurrent Account-Book Mutations
+
+Account/group mutations, transaction mutations (including bulk statement
+imports), and account-book settings updates/deletion use
+`src/server/account-book-mutation.server.ts` after authorization. It starts a
+Prisma transaction and locks the owning `AccountBook` row with `FOR UPDATE`
+before reading state used by business rules. The transaction has a 30-second
+timeout, including time spent waiting for that lock. All validation queries and
+writes must use the callback's transaction client, including queries in helper
+modules.
+
+The transaction explicitly uses `ReadCommitted`: after waiting for a previous
+writer, subsequent reads see that writer's committed changes. This protects
+group cycle checks, sibling names, cash-flag inheritance, archive/unarchive
+checks, opening-balance updates, and booking start-date validation. Mutations in
+different books can proceed independently. Redis invalidation happens after
+commit.
+
+This is a cooperative application-write protocol, not a database constraint on
+arbitrary SQL. New book-scoped application mutations must use the same boundary;
+maintenance scripts must coordinate separately. Concurrent edits are applied in
+lock order; this does not introduce optimistic edit-version conflict detection.
+
 ## Period Caches
 
 - Period overview and history use a shared Redis-backed **non-valuation**

@@ -31,6 +31,7 @@ const ensureSameOriginRequestFromServerContext = vi.hoisted(() => vi.fn());
 const invalidatePeriodBaseDataCacheForAccountBook = vi.hoisted(() => vi.fn());
 
 const prisma = vi.hoisted(() => ({
+  $queryRaw: vi.fn(),
   booking: {
     count: vi.fn(),
     deleteMany: vi.fn(),
@@ -221,7 +222,10 @@ describe("transactions mutations", () => {
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
-    prisma.$transaction.mockResolvedValue([]);
+    prisma.$queryRaw.mockResolvedValue([{ id: "book-1" }]);
+    prisma.$transaction.mockImplementation(async (callback) =>
+      callback(prisma),
+    );
   });
 
   afterEach(() => {
@@ -526,8 +530,8 @@ describe("transactions mutations", () => {
       }),
     ).rejects.toThrow("At least two bookings are required.");
 
-    expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(prisma.transaction.create).not.toHaveBeenCalled();
+    expect(prisma.transaction.update).not.toHaveBeenCalled();
     expect(invalidatePeriodBaseDataCacheForAccountBook).not.toHaveBeenCalled();
   });
 
@@ -625,7 +629,8 @@ describe("transactions mutations", () => {
       }),
     ).rejects.toThrow(OPENING_BALANCES_MANAGEMENT_MESSAGE);
 
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
+    expect(prisma.transaction.update).not.toHaveBeenCalled();
   });
 
   it("updates non-opening transactions by replacing bookings", async () => {
@@ -700,7 +705,8 @@ describe("transactions mutations", () => {
       }),
     ).rejects.toThrow(GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE);
 
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
+    expect(prisma.transaction.update).not.toHaveBeenCalled();
   });
 
   it("blocks rebook when source transaction contains opening-balance bookings", async () => {

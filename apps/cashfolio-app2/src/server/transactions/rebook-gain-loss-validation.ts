@@ -1,3 +1,4 @@
+import type { Prisma } from "../../.prisma-client/client";
 import {
   type AccountType,
   type EquityAccountSubtype,
@@ -10,13 +11,16 @@ type AccountTypeMeta = {
   equityAccountSubtype: EquityAccountSubtype | null;
 };
 
-export async function validateRebookGainLossSimpleTransactionInvariant(args: {
-  accountBookId: string;
-  transactionId: string;
-  bookingId: string;
-  targetAccount: AccountTypeMeta;
-}) {
-  const transactionBookings = await prisma.booking.findMany({
+export async function validateRebookGainLossSimpleTransactionInvariant(
+  args: {
+    accountBookId: string;
+    transactionId: string;
+    bookingId: string;
+    targetAccount: AccountTypeMeta;
+  },
+  db: Pick<Prisma.TransactionClient, "booking"> = prisma,
+) {
+  const transactionBookings = await db.booking.findMany({
     where: {
       accountBookId: args.accountBookId,
       transactionId: args.transactionId,

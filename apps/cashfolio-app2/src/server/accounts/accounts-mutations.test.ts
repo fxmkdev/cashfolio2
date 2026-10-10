@@ -31,7 +31,9 @@ const validateAccountGroupInput = vi.hoisted(() => vi.fn());
 const invalidatePeriodBaseDataCacheForAccountBook = vi.hoisted(() => vi.fn());
 
 const tx = vi.hoisted(() => ({
+  $queryRaw: vi.fn(),
   account: {
+    findUniqueOrThrow: vi.fn(),
     update: vi.fn(),
     updateMany: vi.fn(),
     findFirst: vi.fn(),
@@ -39,6 +41,8 @@ const tx = vi.hoisted(() => ({
     create: vi.fn(),
   },
   accountGroup: {
+    findUniqueOrThrow: vi.fn(),
+    create: vi.fn(),
     update: vi.fn(),
     updateMany: vi.fn(),
     findMany: vi.fn(),
@@ -57,19 +61,7 @@ const tx = vi.hoisted(() => ({
   },
 }));
 
-const prisma = vi.hoisted(() => ({
-  account: {
-    findMany: vi.fn(),
-    findUniqueOrThrow: vi.fn(),
-  },
-  accountGroup: {
-    findMany: vi.fn(),
-    findUniqueOrThrow: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-  },
-  $transaction: vi.fn(),
-}));
+const prisma = vi.hoisted(() => ({ $transaction: vi.fn() }));
 
 vi.mock("@tanstack/react-start", () => ({
   createServerFn,
@@ -106,9 +98,10 @@ import {
 describe("updateAccount opening balance management", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    tx.$queryRaw.mockResolvedValue([{ id: "book-1" }]);
 
-    prisma.account.findMany.mockResolvedValue([]);
-    prisma.account.findUniqueOrThrow.mockResolvedValue({
+    tx.account.findMany.mockResolvedValue([]);
+    tx.account.findUniqueOrThrow.mockResolvedValue({
       type: AccountType.ASSET,
       equityAccountSubtype: null,
       unit: Unit.CURRENCY,
@@ -118,7 +111,7 @@ describe("updateAccount opening balance management", () => {
       tradeCurrency: null,
       isCashAccount: false,
     });
-    prisma.accountGroup.findUniqueOrThrow.mockResolvedValue({
+    tx.accountGroup.findUniqueOrThrow.mockResolvedValue({
       isCashAccount: false,
     });
     prisma.$transaction.mockImplementation(async (callback) => callback(tx));
@@ -135,7 +128,6 @@ describe("updateAccount opening balance management", () => {
       isCashAccount: false,
     });
     tx.account.updateMany.mockResolvedValue({ count: 0 });
-    tx.account.findMany.mockResolvedValue([]);
     tx.accountGroup.update.mockResolvedValue({
       id: "group-1",
       name: "Group",
@@ -192,7 +184,7 @@ describe("updateAccount opening balance management", () => {
   });
 
   it("ignores stale submitted unit identity fields when updating unitless equity accounts", async () => {
-    prisma.account.findUniqueOrThrow.mockResolvedValueOnce({
+    tx.account.findUniqueOrThrow.mockResolvedValueOnce({
       type: AccountType.EQUITY,
       equityAccountSubtype: EquityAccountSubtype.EXPENSE,
       unit: null,
@@ -387,7 +379,7 @@ describe("updateAccount opening balance management", () => {
       delimitersToGuess: [","],
       columns: ["date", "amount", "description"],
     };
-    prisma.account.findUniqueOrThrow.mockResolvedValueOnce({
+    tx.account.findUniqueOrThrow.mockResolvedValueOnce({
       type: AccountType.ASSET,
       equityAccountSubtype: null,
       unit: Unit.CURRENCY,
@@ -461,7 +453,7 @@ describe("updateAccount opening balance management", () => {
   });
 
   it("inherits cash status when creating accounts inside cash groups", async () => {
-    prisma.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
+    tx.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
       isCashAccount: true,
     });
 
@@ -486,7 +478,7 @@ describe("updateAccount opening balance management", () => {
   });
 
   it("inherits cash status when moving accounts into cash groups", async () => {
-    prisma.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
+    tx.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
       isCashAccount: true,
     });
 
@@ -513,7 +505,7 @@ describe("updateAccount opening balance management", () => {
   });
 
   it("preserves cash status when updating accounts without a cash flag", async () => {
-    prisma.account.findUniqueOrThrow.mockResolvedValueOnce({
+    tx.account.findUniqueOrThrow.mockResolvedValueOnce({
       type: AccountType.ASSET,
       equityAccountSubtype: null,
       unit: Unit.CURRENCY,
@@ -766,14 +758,15 @@ describe("updateAccount opening balance management", () => {
 describe("createAccountGroup", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    tx.$queryRaw.mockResolvedValue([{ id: "book-1" }]);
 
-    prisma.accountGroup.findMany.mockResolvedValue([]);
-    prisma.accountGroup.findUniqueOrThrow.mockResolvedValue({
+    tx.accountGroup.findMany.mockResolvedValue([]);
+    tx.accountGroup.findUniqueOrThrow.mockResolvedValue({
       type: AccountType.ASSET,
       equityAccountSubtype: null,
       isCashAccount: false,
     });
-    prisma.accountGroup.create.mockResolvedValue({
+    tx.accountGroup.create.mockResolvedValue({
       id: "group-1",
       accountBookId: "book-1",
       name: "Group",
@@ -784,7 +777,7 @@ describe("createAccountGroup", () => {
       parentGroupId: null,
       sortOrder: null,
     });
-    prisma.accountGroup.update.mockResolvedValue({
+    tx.accountGroup.update.mockResolvedValue({
       id: "group-1",
       accountBookId: "book-1",
       name: "Group",
@@ -798,9 +791,11 @@ describe("createAccountGroup", () => {
     prisma.$transaction.mockImplementation(async (callback) => callback(tx));
     tx.account.findMany.mockResolvedValue([]);
     tx.account.updateMany.mockResolvedValue({ count: 0 });
-    tx.accountGroup.findMany.mockResolvedValue([
-      { id: "group-1", parentGroupId: null, type: AccountType.ASSET },
-    ]);
+    tx.accountGroup.findMany.mockImplementation(async ({ select }) =>
+      select.name
+        ? []
+        : [{ id: "group-1", parentGroupId: null, type: AccountType.ASSET }],
+    );
     tx.accountGroup.update.mockResolvedValue({
       id: "group-1",
       accountBookId: "book-1",
@@ -824,7 +819,7 @@ describe("createAccountGroup", () => {
       },
     });
 
-    expect(prisma.accountGroup.create).toHaveBeenCalledWith({
+    expect(tx.accountGroup.create).toHaveBeenCalledWith({
       data: {
         accountBookId: "book-1",
         name: "Group",
@@ -853,7 +848,7 @@ describe("createAccountGroup", () => {
       },
     });
 
-    expect(prisma.accountGroup.create).toHaveBeenCalledWith({
+    expect(tx.accountGroup.create).toHaveBeenCalledWith({
       data: {
         accountBookId: "book-1",
         name: "Archived Group",
@@ -884,7 +879,7 @@ describe("createAccountGroup", () => {
       expect.objectContaining({ isCashAccount: true }),
       [],
     );
-    expect(prisma.accountGroup.create).toHaveBeenCalledWith({
+    expect(tx.accountGroup.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         name: "Cash",
         isCashAccount: true,
@@ -893,7 +888,7 @@ describe("createAccountGroup", () => {
   });
 
   it("inherits cash status from parent groups when creating nested groups", async () => {
-    prisma.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
+    tx.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
       isCashAccount: true,
     });
 
@@ -907,7 +902,7 @@ describe("createAccountGroup", () => {
       },
     });
 
-    expect(prisma.accountGroup.create).toHaveBeenCalledWith({
+    expect(tx.accountGroup.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         parentGroupId: "cash-parent",
         isCashAccount: true,
@@ -952,7 +947,7 @@ describe("createAccountGroup", () => {
   });
 
   it("preserves and returns group cash status when updating groups without a cash flag", async () => {
-    prisma.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
+    tx.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
       type: AccountType.ASSET,
       equityAccountSubtype: null,
       isCashAccount: true,

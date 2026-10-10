@@ -1,4 +1,4 @@
-import { prisma } from "../../prisma.server";
+import type { Prisma } from "../../.prisma-client/client";
 import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import { getSimpleTransactionUnitIdentifier } from "../../shared/account-utils";
 import { parseUtcDayDate } from "../../shared/date";
@@ -36,8 +36,11 @@ type DeleteTransactionInput = {
   accountBookId: string;
 };
 
-export async function updateTransactionOperation(data: UpdateTransactionInput) {
-  const existingOpeningBookingCount = await prisma.booking.count({
+export async function updateTransactionOperation(
+  data: UpdateTransactionInput,
+  tx: Prisma.TransactionClient,
+) {
+  const existingOpeningBookingCount = await tx.booking.count({
     where: {
       accountBookId: data.accountBookId,
       transactionId: data.transactionId,
@@ -52,59 +55,60 @@ export async function updateTransactionOperation(data: UpdateTransactionInput) {
   }
 
   validateCreateTransaction(data);
-  await validateAccountTypeBookings(data.bookings, data.accountBookId);
+  await validateAccountTypeBookings(data.bookings, data.accountBookId, tx);
 
-  await prisma.$transaction([
-    prisma.booking.deleteMany({
-      where: {
-        transactionId: data.transactionId,
+  await tx.booking.deleteMany({
+    where: {
+      transactionId: data.transactionId,
+      accountBookId: data.accountBookId,
+    },
+  });
+  await tx.transaction.update({
+    where: {
+      id_accountBookId: {
+        id: data.transactionId,
         accountBookId: data.accountBookId,
       },
-    }),
-    prisma.transaction.update({
-      where: {
-        id_accountBookId: {
-          id: data.transactionId,
-          accountBookId: data.accountBookId,
-        },
-      },
-      data: {
-        description: data.description,
-        bookings: {
-          create: data.bookings.map((b, sortOrder) => ({
-            date: requireUtcDayDate(b.date),
-            description: b.description,
-            account: {
-              connect: {
-                id_accountBookId: {
-                  id: b.accountId,
-                  accountBookId: data.accountBookId,
-                },
+    },
+    data: {
+      description: data.description,
+      bookings: {
+        create: data.bookings.map((b, sortOrder) => ({
+          date: requireUtcDayDate(b.date),
+          description: b.description,
+          account: {
+            connect: {
+              id_accountBookId: {
+                id: b.accountId,
+                accountBookId: data.accountBookId,
               },
             },
-            unit: b.unit,
-            currency: b.currency,
-            cryptocurrency: b.cryptocurrency,
-            symbol: b.symbol,
-            tradeCurrency: b.tradeCurrency,
-            value: b.value,
-            sortOrder,
-            accountBook: {
-              connect: { id: data.accountBookId },
-            },
-          })),
-        },
+          },
+          unit: b.unit,
+          currency: b.currency,
+          cryptocurrency: b.cryptocurrency,
+          symbol: b.symbol,
+          tradeCurrency: b.tradeCurrency,
+          value: b.value,
+          sortOrder,
+          accountBook: {
+            connect: { id: data.accountBookId },
+          },
+        })),
       },
-    }),
-  ]);
+    },
+  });
   return { data: undefined, invalidatePeriodCache: true };
 }
 
-export async function createTransactionOperation(data: CreateTransactionInput) {
+export async function createTransactionOperation(
+  data: CreateTransactionInput,
+  tx: Prisma.TransactionClient,
+) {
   validateCreateTransaction(data);
-  await validateAccountTypeBookings(data.bookings, data.accountBookId);
+  await validateAccountTypeBookings(data.bookings, data.accountBookId, tx);
 
-  const transaction = await prisma.transaction.create({
+  const transaction = await tx.transaction.create({
     data: buildTransactionCreateData(data),
   });
   return { data: transaction, invalidatePeriodCache: true };
@@ -112,6 +116,7 @@ export async function createTransactionOperation(data: CreateTransactionInput) {
 
 export async function createTransactionsOperation(
   data: CreateTransactionsInput,
+  tx: Prisma.TransactionClient,
 ) {
   const createInputs = data.transactions.map((transaction) => ({
     ...transaction,
@@ -123,16 +128,15 @@ export async function createTransactionsOperation(
     await validateAccountTypeBookings(
       createInput.bookings,
       createInput.accountBookId,
+      tx,
     );
   }
 
-  const transactions = await prisma.$transaction((tx) =>
-    Promise.all(
-      createInputs.map((createInput) =>
-        tx.transaction.create({
-          data: buildTransactionCreateData(createInput),
-        }),
-      ),
+  const transactions = await Promise.all(
+    createInputs.map((createInput) =>
+      tx.transaction.create({
+        data: buildTransactionCreateData(createInput),
+      }),
     ),
   );
 
@@ -141,6 +145,7 @@ export async function createTransactionsOperation(
 
 export async function createSimpleTransactionOperation(
   data: CreateSimpleTransactionInput,
+  tx: Prisma.TransactionClient,
 ) {
   if (!Number.isFinite(data.amount) || data.amount <= 0) {
     throw new Error("Amount must be greater than zero.");
@@ -166,7 +171,7 @@ export async function createSimpleTransactionOperation(
   }
 
   const [accounts, accountBook] = await Promise.all([
-    prisma.account.findMany({
+    tx.account.findMany({
       where: {
         accountBookId: data.accountBookId,
         id: { in: [data.accountId, data.counterAccountId] },
@@ -183,7 +188,7 @@ export async function createSimpleTransactionOperation(
         isActive: true,
       },
     }),
-    prisma.accountBook.findUniqueOrThrow({
+    tx.accountBook.findUniqueOrThrow({
       where: { id: data.accountBookId },
       select: { startDate: true },
     }),
@@ -305,15 +310,18 @@ export async function createSimpleTransactionOperation(
     accountBookStartDate: accountBook.startDate,
   });
 
-  const transaction = await prisma.transaction.create({
+  const transaction = await tx.transaction.create({
     data: buildTransactionCreateData(createInput),
   });
   return { data: transaction, invalidatePeriodCache: true };
 }
 
-export async function rebookBookingOperation(data: RebookBookingInput) {
+export async function rebookBookingOperation(
+  data: RebookBookingInput,
+  tx: Prisma.TransactionClient,
+) {
   const [booking, targetAccount, accountBook] = await Promise.all([
-    prisma.booking.findUnique({
+    tx.booking.findUnique({
       where: {
         id_accountBookId: {
           id: data.bookingId,
@@ -333,7 +341,7 @@ export async function rebookBookingOperation(data: RebookBookingInput) {
         transactionId: true,
       },
     }),
-    prisma.account.findUnique({
+    tx.account.findUnique({
       where: {
         id_accountBookId: {
           id: data.targetAccountId,
@@ -352,7 +360,7 @@ export async function rebookBookingOperation(data: RebookBookingInput) {
         equityAccountSubtype: true,
       },
     }),
-    prisma.accountBook.findUniqueOrThrow({
+    tx.accountBook.findUniqueOrThrow({
       where: { id: data.accountBookId },
       select: { startDate: true },
     }),
@@ -364,7 +372,7 @@ export async function rebookBookingOperation(data: RebookBookingInput) {
   if (!targetAccount) {
     throw new Error("Target account was not found.");
   }
-  const sourceTransactionOpeningBookingCount = await prisma.booking.count({
+  const sourceTransactionOpeningBookingCount = await tx.booking.count({
     where: {
       accountBookId: data.accountBookId,
       transactionId: booking.transactionId,
@@ -392,14 +400,17 @@ export async function rebookBookingOperation(data: RebookBookingInput) {
       sourceTransactionOpeningBookingCount > 0,
   });
 
-  await validateRebookGainLossSimpleTransactionInvariant({
-    accountBookId: data.accountBookId,
-    transactionId: booking.transactionId,
-    bookingId: booking.id,
-    targetAccount,
-  });
+  await validateRebookGainLossSimpleTransactionInvariant(
+    {
+      accountBookId: data.accountBookId,
+      transactionId: booking.transactionId,
+      bookingId: booking.id,
+      targetAccount,
+    },
+    tx,
+  );
 
-  await prisma.booking.update({
+  await tx.booking.update({
     where: {
       id_accountBookId: {
         id: booking.id,
@@ -423,8 +434,11 @@ export async function rebookBookingOperation(data: RebookBookingInput) {
   };
 }
 
-export async function deleteTransactionOperation(data: DeleteTransactionInput) {
-  const openingBookingCount = await prisma.booking.count({
+export async function deleteTransactionOperation(
+  data: DeleteTransactionInput,
+  tx: Prisma.TransactionClient,
+) {
+  const openingBookingCount = await tx.booking.count({
     where: {
       accountBookId: data.accountBookId,
       transactionId: data.transactionId,
@@ -437,7 +451,7 @@ export async function deleteTransactionOperation(data: DeleteTransactionInput) {
   if (openingBookingCount > 0) {
     throw new Error(OPENING_BALANCES_MANAGEMENT_MESSAGE);
   }
-  await prisma.transaction.delete({
+  await tx.transaction.delete({
     where: {
       id_accountBookId: {
         id: data.transactionId,

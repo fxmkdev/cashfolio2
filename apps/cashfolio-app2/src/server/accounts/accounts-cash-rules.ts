@@ -29,13 +29,16 @@ function canBeCashGroup(group: { type: AccountType }) {
   return group.type === AccountType.ASSET;
 }
 
-async function getParentGroupCashFlag(args: {
-  accountBookId: string;
-  parentGroupId?: string | null;
-}) {
+async function getParentGroupCashFlag(
+  args: {
+    accountBookId: string;
+    parentGroupId?: string | null;
+  },
+  db: Pick<Prisma.TransactionClient, "accountGroup">,
+) {
   if (!args.parentGroupId) return undefined;
 
-  const parentGroup = await prisma.accountGroup.findUniqueOrThrow({
+  const parentGroup = await db.accountGroup.findUniqueOrThrow({
     where: {
       id_accountBookId: {
         id: args.parentGroupId,
@@ -50,11 +53,15 @@ async function getParentGroupCashFlag(args: {
 
 export async function resolveAccountCashFlag<T extends AccountInput>(
   data: T,
+  db: Pick<Prisma.TransactionClient, "accountGroup"> = prisma,
 ): Promise<T> {
-  const parentCashFlag = await getParentGroupCashFlag({
-    accountBookId: data.accountBookId,
-    parentGroupId: data.groupId,
-  });
+  const parentCashFlag = await getParentGroupCashFlag(
+    {
+      accountBookId: data.accountBookId,
+      parentGroupId: data.groupId,
+    },
+    db,
+  );
   const isCashAccount = parentCashFlag ?? data.isCashAccount ?? false;
 
   if (isCashAccount && !canBeCashAccount(data)) {
@@ -69,11 +76,15 @@ export async function resolveAccountCashFlag<T extends AccountInput>(
 
 export async function resolveAccountGroupCashFlag<T extends AccountGroupInput>(
   data: T,
+  db: Pick<Prisma.TransactionClient, "accountGroup"> = prisma,
 ): Promise<T> {
-  const parentCashFlag = await getParentGroupCashFlag({
-    accountBookId: data.accountBookId,
-    parentGroupId: data.parentGroupId,
-  });
+  const parentCashFlag = await getParentGroupCashFlag(
+    {
+      accountBookId: data.accountBookId,
+      parentGroupId: data.parentGroupId,
+    },
+    db,
+  );
   const isCashAccount = parentCashFlag ?? data.isCashAccount ?? false;
 
   if (isCashAccount && !canBeCashGroup(data)) {
