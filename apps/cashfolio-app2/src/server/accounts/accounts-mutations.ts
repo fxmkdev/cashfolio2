@@ -1,3 +1,5 @@
+import type { Prisma } from "../../.prisma-client/client";
+import { withAccountBookMutation } from "../account-book-mutation.server";
 import { createServerFn } from "@tanstack/react-start";
 import {
   assertRecord,
@@ -108,10 +110,12 @@ function validateReorderAccountTreeItemsInput(data: unknown): {
 
 async function runAccountMutation<T>(
   accountBookId: string,
-  operation: () => Promise<AccountMutationOperationResult<T>>,
+  operation: (
+    tx: Prisma.TransactionClient,
+  ) => Promise<AccountMutationOperationResult<T>>,
 ): Promise<T> {
   await ensureAuthorizedAccountBookMutation(accountBookId);
-  const result = await operation();
+  const result = await withAccountBookMutation(accountBookId, operation);
   if (result.invalidatePeriodCache) {
     await invalidatePeriodBaseDataCacheForAccountBook(accountBookId);
   }
@@ -121,79 +125,87 @@ async function runAccountMutation<T>(
 export const createAccount = createServerFn({ method: "POST" })
   .inputValidator(validateAccountMutationInput)
   .handler(async ({ data }) =>
-    runAccountMutation(data.accountBookId, () => createAccountOperation(data)),
+    runAccountMutation(data.accountBookId, (tx) =>
+      createAccountOperation(data, tx),
+    ),
   );
 
 export const updateAccount = createServerFn({ method: "POST" })
   .inputValidator(validateAccountUpdateInput)
   .handler(async ({ data }) =>
-    runAccountMutation(data.accountBookId, () => updateAccountOperation(data)),
+    runAccountMutation(data.accountBookId, (tx) =>
+      updateAccountOperation(data, tx),
+    ),
   );
 
 export const createAccountGroup = createServerFn({ method: "POST" })
   .inputValidator(validateAccountGroupMutationInput)
   .handler(async ({ data }) =>
-    runAccountMutation(data.accountBookId, () =>
-      createAccountGroupOperation(data),
+    runAccountMutation(data.accountBookId, (tx) =>
+      createAccountGroupOperation(data, tx),
     ),
   );
 
 export const updateAccountGroup = createServerFn({ method: "POST" })
   .inputValidator(validateAccountGroupUpdateInput)
   .handler(async ({ data }) =>
-    runAccountMutation(data.accountBookId, () =>
-      updateAccountGroupOperation(data),
+    runAccountMutation(data.accountBookId, (tx) =>
+      updateAccountGroupOperation(data, tx),
     ),
   );
 
 export const deleteAccount = createServerFn({ method: "POST" })
   .inputValidator(validateAccountBookNodeIdInput)
   .handler(async ({ data }) =>
-    runAccountMutation(data.accountBookId, () => deleteAccountOperation(data)),
+    runAccountMutation(data.accountBookId, (tx) =>
+      deleteAccountOperation(data, tx),
+    ),
   );
 
 export const deleteAccountGroup = createServerFn({ method: "POST" })
   .inputValidator(validateAccountBookNodeIdInput)
   .handler(async ({ data }) =>
-    runAccountMutation(data.accountBookId, () =>
-      deleteAccountGroupOperation(data),
+    runAccountMutation(data.accountBookId, (tx) =>
+      deleteAccountGroupOperation(data, tx),
     ),
   );
 
 export const archiveAccount = createServerFn({ method: "POST" })
   .inputValidator(validateAccountBookNodeIdInput)
   .handler(async ({ data }) =>
-    runAccountMutation(data.accountBookId, () => archiveAccountOperation(data)),
+    runAccountMutation(data.accountBookId, (tx) =>
+      archiveAccountOperation(data, tx),
+    ),
   );
 
 export const archiveAccountGroup = createServerFn({ method: "POST" })
   .inputValidator(validateAccountBookNodeIdInput)
   .handler(async ({ data }) =>
-    runAccountMutation(data.accountBookId, () =>
-      archiveAccountGroupOperation(data),
+    runAccountMutation(data.accountBookId, (tx) =>
+      archiveAccountGroupOperation(data, tx),
     ),
   );
 
 export const unarchiveAccount = createServerFn({ method: "POST" })
   .inputValidator(validateAccountBookNodeIdInput)
   .handler(async ({ data }) =>
-    runAccountMutation(data.accountBookId, () =>
-      unarchiveAccountOperation(data),
+    runAccountMutation(data.accountBookId, (tx) =>
+      unarchiveAccountOperation(data, tx),
     ),
   );
 
 export const unarchiveAccountGroup = createServerFn({ method: "POST" })
   .inputValidator(validateAccountBookNodeIdInput)
   .handler(async ({ data }) =>
-    runAccountMutation(data.accountBookId, () =>
-      unarchiveAccountGroupOperation(data),
+    runAccountMutation(data.accountBookId, (tx) =>
+      unarchiveAccountGroupOperation(data, tx),
     ),
   );
 
 export const reorderAccountTreeItems = createServerFn({ method: "POST" })
   .inputValidator(validateReorderAccountTreeItemsInput)
   .handler(async ({ data }) =>
-    runAccountMutation(data.accountBookId, () =>
-      reorderAccountTreeItemsOperation(data),
+    runAccountMutation(data.accountBookId, (tx) =>
+      reorderAccountTreeItemsOperation(data, tx),
     ),
   );

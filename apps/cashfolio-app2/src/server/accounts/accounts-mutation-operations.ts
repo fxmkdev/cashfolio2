@@ -1,4 +1,3 @@
-import { prisma } from "../../prisma.server";
 import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import { Prisma } from "../../.prisma-client/client";
 import {
@@ -591,13 +590,17 @@ async function applyOpeningBalanceTarget(args: {
   }
 }
 
-export async function createAccountOperation(data: AccountInput) {
+export async function createAccountOperation(
+  data: AccountInput,
+  tx: Prisma.TransactionClient,
+) {
   const normalizedData = await resolveAccountCashFlag(
     normalizeMissingCashAccountFlag(normalizeEquityAccountUnitIdentity(data)),
+    tx,
   );
   assertNoSystemManagedAccountSubtype(normalizedData);
   const siblingNames = (
-    await prisma.account.findMany({
+    await tx.account.findMany({
       where: {
         groupId: normalizedData.groupId ?? null,
         accountBookId: normalizedData.accountBookId,
@@ -606,54 +609,53 @@ export async function createAccountOperation(data: AccountInput) {
     })
   ).map((a) => a.name);
   validateAccountInput(normalizedData, siblingNames);
-  const account = await prisma.$transaction(async (tx) => {
-    const createdAccount = await tx.account.create({
-      data: {
-        name: normalizedData.name,
-        type: normalizedData.type,
-        equityAccountSubtype: normalizedData.equityAccountSubtype,
-        groupId: normalizedData.groupId ?? null,
-        sortOrder:
-          typeof normalizedData.sortOrder === "number"
-            ? normalizedData.sortOrder
-            : null,
-        unit: normalizedData.unit,
-        currency: normalizedData.currency,
-        cryptocurrency: normalizedData.cryptocurrency,
-        symbol: normalizedData.symbol,
-        tradeCurrency: normalizedData.tradeCurrency,
-        statementImportCsvFormat: toStatementImportCsvFormatJsonInput(
-          normalizedData.statementImportCsvFormat,
-        ),
-        isCashAccount: normalizedData.isCashAccount ?? false,
-        accountBookId: normalizedData.accountBookId,
-      },
-    });
-
-    await applyOpeningBalanceTarget({
-      tx,
+  const account = await tx.account.create({
+    data: {
+      name: normalizedData.name,
+      type: normalizedData.type,
+      equityAccountSubtype: normalizedData.equityAccountSubtype,
+      groupId: normalizedData.groupId ?? null,
+      sortOrder:
+        typeof normalizedData.sortOrder === "number"
+          ? normalizedData.sortOrder
+          : null,
+      unit: normalizedData.unit,
+      currency: normalizedData.currency,
+      cryptocurrency: normalizedData.cryptocurrency,
+      symbol: normalizedData.symbol,
+      tradeCurrency: normalizedData.tradeCurrency,
+      statementImportCsvFormat: toStatementImportCsvFormatJsonInput(
+        normalizedData.statementImportCsvFormat,
+      ),
+      isCashAccount: normalizedData.isCashAccount ?? false,
       accountBookId: normalizedData.accountBookId,
-      account: {
-        id: createdAccount.id,
-        name: createdAccount.name,
-        type: createdAccount.type,
-        unit: createdAccount.unit,
-        currency: createdAccount.currency,
-        cryptocurrency: createdAccount.cryptocurrency,
-        symbol: createdAccount.symbol,
-        tradeCurrency: createdAccount.tradeCurrency,
-      },
-      openingBalance: normalizedData.openingBalance,
-    });
+    },
+  });
 
-    return createdAccount;
+  await applyOpeningBalanceTarget({
+    tx,
+    accountBookId: normalizedData.accountBookId,
+    account: {
+      id: account.id,
+      name: account.name,
+      type: account.type,
+      unit: account.unit,
+      currency: account.currency,
+      cryptocurrency: account.cryptocurrency,
+      symbol: account.symbol,
+      tradeCurrency: account.tradeCurrency,
+    },
+    openingBalance: normalizedData.openingBalance,
   });
   return { data: account, invalidatePeriodCache: true };
 }
 
-export async function updateAccountOperation(data: AccountUpdateInput) {
+export async function updateAccountOperation(
+  data: AccountUpdateInput,
+  tx: Prisma.TransactionClient,
+) {
   const submittedData = normalizeEquityAccountUnitIdentity(data);
-  const existing = await prisma.account.findUniqueOrThrow({
+  const existing = await tx.account.findUniqueOrThrow({
     where: {
       id_accountBookId: {
         id: submittedData.id,
@@ -690,6 +692,7 @@ export async function updateAccountOperation(data: AccountUpdateInput) {
       submittedDataWithExistingCashFlag,
       existing,
     ),
+    tx,
   );
   const dataWithExistingUnitIdentity = mergeExistingAccountUnitIdentity(
     normalizedData,
@@ -697,7 +700,7 @@ export async function updateAccountOperation(data: AccountUpdateInput) {
   );
 
   const siblingNames = (
-    await prisma.account.findMany({
+    await tx.account.findMany({
       where: {
         groupId: normalizedData.groupId ?? null,
         accountBookId: normalizedData.accountBookId,
@@ -707,56 +710,56 @@ export async function updateAccountOperation(data: AccountUpdateInput) {
     })
   ).map((a) => a.name);
   validateAccountInput(dataWithExistingUnitIdentity, siblingNames);
-  const account = await prisma.$transaction(async (tx) => {
-    const updatedAccount = await tx.account.update({
-      where: {
-        id_accountBookId: {
-          id: normalizedData.id,
-          accountBookId: normalizedData.accountBookId,
-        },
+  const account = await tx.account.update({
+    where: {
+      id_accountBookId: {
+        id: normalizedData.id,
+        accountBookId: normalizedData.accountBookId,
       },
-      data: {
-        name: normalizedData.name,
-        groupId: normalizedData.groupId ?? null,
-        sortOrder:
-          typeof normalizedData.sortOrder === "number"
-            ? normalizedData.sortOrder
-            : null,
-        statementImportCsvFormat: toStatementImportCsvFormatJsonInput(
-          getStatementImportCsvFormatUpdateInput(normalizedData, existing),
-        ),
-        isCashAccount: normalizedData.isCashAccount ?? false,
-      },
-    });
+    },
+    data: {
+      name: normalizedData.name,
+      groupId: normalizedData.groupId ?? null,
+      sortOrder:
+        typeof normalizedData.sortOrder === "number"
+          ? normalizedData.sortOrder
+          : null,
+      statementImportCsvFormat: toStatementImportCsvFormatJsonInput(
+        getStatementImportCsvFormatUpdateInput(normalizedData, existing),
+      ),
+      isCashAccount: normalizedData.isCashAccount ?? false,
+    },
+  });
 
-    await applyOpeningBalanceTarget({
-      tx,
-      accountBookId: normalizedData.accountBookId,
-      account: {
-        id: updatedAccount.id,
-        name: updatedAccount.name,
-        type: updatedAccount.type,
-        unit: updatedAccount.unit,
-        currency: updatedAccount.currency,
-        cryptocurrency: updatedAccount.cryptocurrency,
-        symbol: updatedAccount.symbol,
-        tradeCurrency: updatedAccount.tradeCurrency,
-      },
-      openingBalance: normalizedData.openingBalance,
-    });
-
-    return updatedAccount;
+  await applyOpeningBalanceTarget({
+    tx,
+    accountBookId: normalizedData.accountBookId,
+    account: {
+      id: account.id,
+      name: account.name,
+      type: account.type,
+      unit: account.unit,
+      currency: account.currency,
+      cryptocurrency: account.cryptocurrency,
+      symbol: account.symbol,
+      tradeCurrency: account.tradeCurrency,
+    },
+    openingBalance: normalizedData.openingBalance,
   });
   return { data: account, invalidatePeriodCache: true };
 }
 
-export async function createAccountGroupOperation(data: AccountGroupInput) {
+export async function createAccountGroupOperation(
+  data: AccountGroupInput,
+  tx: Prisma.TransactionClient,
+) {
   const normalizedData = await resolveAccountGroupCashFlag(
     normalizeMissingGroupCashAccountFlag(data),
+    tx,
   );
   assertNoSystemManagedGroupSubtype(normalizedData);
   const siblingNames = (
-    await prisma.accountGroup.findMany({
+    await tx.accountGroup.findMany({
       where: {
         parentGroupId: normalizedData.parentGroupId ?? null,
         accountBookId: normalizedData.accountBookId,
@@ -765,7 +768,7 @@ export async function createAccountGroupOperation(data: AccountGroupInput) {
     })
   ).map((g) => g.name);
   validateAccountGroupInput(normalizedData, siblingNames);
-  const group = await prisma.accountGroup.create({
+  const group = await tx.accountGroup.create({
     data: {
       name: normalizedData.name,
       type: normalizedData.type,
@@ -785,9 +788,10 @@ export async function createAccountGroupOperation(data: AccountGroupInput) {
 
 export async function updateAccountGroupOperation(
   data: AccountGroupUpdateInput,
+  tx: Prisma.TransactionClient,
 ) {
   const submittedData = data;
-  const existing = await prisma.accountGroup.findUniqueOrThrow({
+  const existing = await tx.accountGroup.findUniqueOrThrow({
     where: {
       id_accountBookId: {
         id: submittedData.id,
@@ -804,13 +808,16 @@ export async function updateAccountGroupOperation(
   ) {
     throw new Error("Group type cannot be changed");
   }
-  const normalizedData = await resolveAccountGroupCashFlag({
-    ...submittedData,
-    isCashAccount: submittedData.isCashAccount ?? existing.isCashAccount,
-  });
+  const normalizedData = await resolveAccountGroupCashFlag(
+    {
+      ...submittedData,
+      isCashAccount: submittedData.isCashAccount ?? existing.isCashAccount,
+    },
+    tx,
+  );
 
   const [siblingGroups, groupById] = await Promise.all([
-    prisma.accountGroup.findMany({
+    tx.accountGroup.findMany({
       where: {
         parentGroupId: normalizedData.parentGroupId ?? null,
         accountBookId: normalizedData.accountBookId,
@@ -818,7 +825,7 @@ export async function updateAccountGroupOperation(
       },
       select: { name: true },
     }),
-    getGroupHierarchy(normalizedData.accountBookId),
+    getGroupHierarchy(normalizedData.accountBookId, tx),
   ]);
   const siblingNames = siblingGroups.map((g) => g.name);
   validateAccountGroupInput(normalizedData, siblingNames);
@@ -827,54 +834,53 @@ export async function updateAccountGroupOperation(
     parentGroupId: normalizedData.parentGroupId,
     groupById,
   });
-  const group = await prisma.$transaction(async (tx) => {
-    if (normalizedData.isCashAccount) {
-      await assertCashableGroupSubtree({
-        tx,
-        accountBookId: normalizedData.accountBookId,
-        groupId: normalizedData.id,
-      });
-    }
-
-    const updatedGroup = await tx.accountGroup.update({
-      where: {
-        id_accountBookId: {
-          id: normalizedData.id,
-          accountBookId: normalizedData.accountBookId,
-        },
-      },
-      data: {
-        name: normalizedData.name,
-        parentGroupId: normalizedData.parentGroupId,
-        sortOrder:
-          typeof normalizedData.sortOrder === "number"
-            ? normalizedData.sortOrder
-            : null,
-        isCashAccount: normalizedData.isCashAccount ?? false,
-      },
-    });
-
-    await applyGroupCashFlagToSubtree({
+  if (normalizedData.isCashAccount) {
+    await assertCashableGroupSubtree({
       tx,
       accountBookId: normalizedData.accountBookId,
       groupId: normalizedData.id,
-      isCashAccount: normalizedData.isCashAccount ?? false,
     });
+  }
 
-    return updatedGroup;
+  const group = await tx.accountGroup.update({
+    where: {
+      id_accountBookId: {
+        id: normalizedData.id,
+        accountBookId: normalizedData.accountBookId,
+      },
+    },
+    data: {
+      name: normalizedData.name,
+      parentGroupId: normalizedData.parentGroupId,
+      sortOrder:
+        typeof normalizedData.sortOrder === "number"
+          ? normalizedData.sortOrder
+          : null,
+      isCashAccount: normalizedData.isCashAccount ?? false,
+    },
+  });
+
+  await applyGroupCashFlagToSubtree({
+    tx,
+    accountBookId: normalizedData.accountBookId,
+    groupId: normalizedData.id,
+    isCashAccount: normalizedData.isCashAccount ?? false,
   });
   return { data: group, invalidatePeriodCache: true };
 }
 
-export async function deleteAccountOperation(data: AccountBookNodeIdInput) {
+export async function deleteAccountOperation(
+  data: AccountBookNodeIdInput,
+  tx: Prisma.TransactionClient,
+) {
   const [account, bookingCount] = await Promise.all([
-    prisma.account.findUniqueOrThrow({
+    tx.account.findUniqueOrThrow({
       where: {
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
       },
       select: { type: true, equityAccountSubtype: true },
     }),
-    prisma.booking.count({
+    tx.booking.count({
       where: { accountId: data.id, accountBookId: data.accountBookId },
     }),
   ]);
@@ -883,7 +889,7 @@ export async function deleteAccountOperation(data: AccountBookNodeIdInput) {
   if (!deleteAvailability.enabled) {
     throw new Error(deleteAvailability.disabledReason);
   }
-  await prisma.account.delete({
+  await tx.account.delete({
     where: {
       id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
     },
@@ -893,9 +899,10 @@ export async function deleteAccountOperation(data: AccountBookNodeIdInput) {
 
 export async function deleteAccountGroupOperation(
   data: AccountBookNodeIdInput,
+  tx: Prisma.TransactionClient,
 ) {
   const [group, childAccounts, childGroups] = await Promise.all([
-    prisma.accountGroup.findUniqueOrThrow({
+    tx.accountGroup.findUniqueOrThrow({
       where: {
         id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
       },
@@ -904,10 +911,10 @@ export async function deleteAccountGroupOperation(
         equityAccountSubtype: true,
       },
     }),
-    prisma.account.count({
+    tx.account.count({
       where: { groupId: data.id, accountBookId: data.accountBookId },
     }),
-    prisma.accountGroup.count({
+    tx.accountGroup.count({
       where: { parentGroupId: data.id, accountBookId: data.accountBookId },
     }),
   ]);
@@ -919,7 +926,7 @@ export async function deleteAccountGroupOperation(
   if (!deleteAvailability.enabled) {
     throw new Error(deleteAvailability.disabledReason);
   }
-  await prisma.accountGroup.delete({
+  await tx.accountGroup.delete({
     where: {
       id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
     },
@@ -927,8 +934,11 @@ export async function deleteAccountGroupOperation(
   return { data: undefined, invalidatePeriodCache: true };
 }
 
-export async function archiveAccountOperation(data: AccountBookNodeIdInput) {
-  const account = await prisma.account.findUniqueOrThrow({
+export async function archiveAccountOperation(
+  data: AccountBookNodeIdInput,
+  tx: Prisma.TransactionClient,
+) {
+  const account = await tx.account.findUniqueOrThrow({
     where: {
       id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
     },
@@ -942,7 +952,7 @@ export async function archiveAccountOperation(data: AccountBookNodeIdInput) {
 
   let hasZeroBalance = true;
   if (accountTypeRequiresZeroBalanceForArchive(account.type)) {
-    const balance = await prisma.booking.aggregate({
+    const balance = await tx.booking.aggregate({
       where: { accountId: data.id, accountBookId: data.accountBookId },
       _sum: { value: true },
     });
@@ -956,7 +966,7 @@ export async function archiveAccountOperation(data: AccountBookNodeIdInput) {
     throw new Error(archiveAvailability.disabledReason);
   }
 
-  await prisma.account.update({
+  await tx.account.update({
     where: {
       id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
     },
@@ -967,8 +977,9 @@ export async function archiveAccountOperation(data: AccountBookNodeIdInput) {
 
 export async function archiveAccountGroupOperation(
   data: AccountBookNodeIdInput,
+  tx: Prisma.TransactionClient,
 ) {
-  const group = await prisma.accountGroup.findUniqueOrThrow({
+  const group = await tx.accountGroup.findUniqueOrThrow({
     where: {
       id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
     },
@@ -981,14 +992,14 @@ export async function archiveAccountGroupOperation(
   }
 
   const [activeChildAccounts, activeChildGroups] = await Promise.all([
-    prisma.account.count({
+    tx.account.count({
       where: {
         groupId: data.id,
         accountBookId: data.accountBookId,
         isActive: true,
       },
     }),
-    prisma.accountGroup.count({
+    tx.accountGroup.count({
       where: {
         parentGroupId: data.id,
         accountBookId: data.accountBookId,
@@ -1006,7 +1017,7 @@ export async function archiveAccountGroupOperation(
     throw new Error(archiveAvailability.disabledReason);
   }
 
-  await prisma.accountGroup.update({
+  await tx.accountGroup.update({
     where: {
       id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
     },
@@ -1015,8 +1026,11 @@ export async function archiveAccountGroupOperation(
   return { data: undefined, invalidatePeriodCache: true };
 }
 
-export async function unarchiveAccountOperation(data: AccountBookNodeIdInput) {
-  const account = await prisma.account.findUniqueOrThrow({
+export async function unarchiveAccountOperation(
+  data: AccountBookNodeIdInput,
+  tx: Prisma.TransactionClient,
+) {
+  const account = await tx.account.findUniqueOrThrow({
     where: {
       id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
     },
@@ -1033,7 +1047,7 @@ export async function unarchiveAccountOperation(data: AccountBookNodeIdInput) {
     return { data: undefined, invalidatePeriodCache: false };
   }
 
-  const groupById = await getGroupHierarchy(data.accountBookId);
+  const groupById = await getGroupHierarchy(data.accountBookId, tx);
   const unarchiveAvailability = getAccountUnarchiveAvailability({
     isActive: account.isActive,
     hasInactiveAncestor: hasInactiveAncestorGroup(account.groupId, groupById),
@@ -1042,7 +1056,7 @@ export async function unarchiveAccountOperation(data: AccountBookNodeIdInput) {
     throw new Error(unarchiveAvailability.disabledReason);
   }
 
-  await prisma.account.update({
+  await tx.account.update({
     where: {
       id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
     },
@@ -1053,8 +1067,9 @@ export async function unarchiveAccountOperation(data: AccountBookNodeIdInput) {
 
 export async function unarchiveAccountGroupOperation(
   data: AccountBookNodeIdInput,
+  tx: Prisma.TransactionClient,
 ) {
-  const group = await prisma.accountGroup.findUniqueOrThrow({
+  const group = await tx.accountGroup.findUniqueOrThrow({
     where: {
       id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
     },
@@ -1071,7 +1086,7 @@ export async function unarchiveAccountGroupOperation(
     return { data: undefined, invalidatePeriodCache: false };
   }
 
-  const groupById = await getGroupHierarchy(data.accountBookId);
+  const groupById = await getGroupHierarchy(data.accountBookId, tx);
   const unarchiveAvailability = getGroupUnarchiveAvailability({
     isActive: group.isActive,
     hasInactiveAncestor: hasInactiveAncestorGroup(
@@ -1083,7 +1098,7 @@ export async function unarchiveAccountGroupOperation(
     throw new Error(unarchiveAvailability.disabledReason);
   }
 
-  await prisma.accountGroup.update({
+  await tx.accountGroup.update({
     where: {
       id_accountBookId: { id: data.id, accountBookId: data.accountBookId },
     },
@@ -1094,11 +1109,12 @@ export async function unarchiveAccountGroupOperation(
 
 export async function reorderAccountTreeItemsOperation(
   data: ReorderAccountTreeItemsInput,
+  tx: Prisma.TransactionClient,
 ) {
-  await prisma.$transaction(
+  await Promise.all(
     data.updates.map((u) =>
       u.nodeType === "account"
-        ? prisma.account.update({
+        ? tx.account.update({
             where: {
               id_accountBookId: {
                 id: u.id,
@@ -1107,7 +1123,7 @@ export async function reorderAccountTreeItemsOperation(
             },
             data: { sortOrder: u.sortOrder },
           })
-        : prisma.accountGroup.update({
+        : tx.accountGroup.update({
             where: {
               id_accountBookId: {
                 id: u.id,

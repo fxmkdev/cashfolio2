@@ -166,6 +166,10 @@ jobs:
         run: pnpm --filter cashfolio-app2 test:staging-release
       - name: Verify transactional seed against PostgreSQL
         run: pnpm --filter cashfolio-app2 test:staging-seed
+      - name: Verify concurrent accounting mutations against PostgreSQL
+        env:
+          MUTATION_TEST_ADMIN_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: pnpm --filter cashfolio-app2 test:mutations
       - name: Build standalone seed payload
         run: pnpm --filter cashfolio-app2 build:staging-seed
       - name: Verify standalone CSV export without database credentials

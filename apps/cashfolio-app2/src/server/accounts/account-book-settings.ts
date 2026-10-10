@@ -1,3 +1,4 @@
+import { withAccountBookMutation } from "../account-book-mutation.server";
 import { createServerFn } from "@tanstack/react-start";
 import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import { prisma } from "../../prisma.server";
@@ -260,7 +261,7 @@ export const updateAccountBookSettings = createServerFn({ method: "POST" })
     const startDate = normalizeStartDateOrThrow(data.startDate);
 
     const { updated, referenceCurrencyChanged, startDateChanged } =
-      await prisma.$transaction(async (tx) => {
+      await withAccountBookMutation(data.accountBookId, async (tx) => {
         const currentAccountBook = await tx.accountBook.findUniqueOrThrow({
           where: { id: data.accountBookId },
           select: {
@@ -329,16 +330,18 @@ export const deleteAccountBook = createServerFn({ method: "POST" })
     const confirmationName = normalizeConfirmationNameOrThrow(
       data.confirmationName,
     );
-    const accountBook = await prisma.accountBook.findUniqueOrThrow({
-      where: { id: data.accountBookId },
-      select: { name: true },
-    });
+    await withAccountBookMutation(data.accountBookId, async (tx) => {
+      const accountBook = await tx.accountBook.findUniqueOrThrow({
+        where: { id: data.accountBookId },
+        select: { name: true },
+      });
 
-    if (confirmationName !== accountBook.name) {
-      throw new Error("Account book name confirmation does not match.");
-    }
+      if (confirmationName !== accountBook.name) {
+        throw new Error("Account book name confirmation does not match.");
+      }
 
-    await prisma.accountBook.delete({
-      where: { id: data.accountBookId },
+      await tx.accountBook.delete({
+        where: { id: data.accountBookId },
+      });
     });
   });
