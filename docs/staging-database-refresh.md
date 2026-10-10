@@ -252,7 +252,3 @@ production-shaped data to staging, normal previews, or CI artifacts.
    deadline. Record completion using only nonsensitive comparison findings and
    cleanup confirmation; if the check is incomplete at the deadline, delete the
    environment and start a separately approved comparison later.
-
-The existing local `sync-account-book` operator command is not part of the
-synthetic staging deployment or daily refresh path. This procedure does not
-recommend copying raw production data into default staging.
