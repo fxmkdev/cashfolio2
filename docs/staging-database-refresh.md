@@ -35,20 +35,24 @@ normally.
 
 ## Configure the approved target
 
-In the `staging-cashfolio-app` GitHub environment, configure:
+Manually configure these secrets on the staging Fly app, following the existing
+staging/production secret-provisioning convention. No copies are required in
+GitHub:
 
 - Secret `STAGING_SEED_DATABASE_URL`: a **direct** Neon connection string for
   the dedicated `cashfolio_staging_seed` role created only on staging. Never use
   the production owner credential. There is no fallback to `DATABASE_URL`.
-- Variable `STAGING_SEED_TARGET`: JSON containing the reviewed destination
-  below.
-- Variable `STAGING_SEED_USER_EXTERNAL_IDS`: a comma-separated list of tester
+- Secret `STAGING_SEED_TARGET`: JSON containing the reviewed destination below.
+- Secret `STAGING_SEED_USER_EXTERNAL_IDS`: a comma-separated list of tester
   Logto external IDs. Include an existing staging administrator; replacement
   fails before removing data if no configured tester already has `ADMIN`. Use at
   least two tester identities to exercise sharing. Roles are preserved; new app
   users receive no administrator role automatically.
-- Variable `STAGING_SEED_ENABLED`: keep `false` or unset until all checks pass;
-  set exactly `true` afterward. Other nonempty values fail the staging release.
+
+Keep `STAGING_SEED_ENABLED` as a variable in the `staging-cashfolio-app` GitHub
+environment. Leave it `false` or unset until all checks pass, then set exactly
+`true`. Other nonempty values fail the staging release. CI includes this
+non-secret flag in the generated Fly configuration.
 
 ```json
 {
@@ -68,11 +72,33 @@ branch. Exact hostname matching is required, including the actual region. The
 seed rejects pooled endpoints, routing overrides, and a mismatched database or
 role. Use port 5432 and `sslmode=verify-full`; the client verifies certificates.
 
-When seeding is enabled, CI stages the three seed configuration values as Fly
-secrets on staging only, keeping the JSON out of generated TOML. The application
-migration connection remains the existing Fly `DATABASE_URL`. The seed URL
-provides only data permissions and is never used to run migrations. Do not set
-these secrets on production or preview Fly apps.
+After provisioning the role below, create an empty input file outside the
+repository and restrict it to permissions `0600` before entering secrets. Using
+a trusted editor, include three `NAME=VALUE` lines: the dedicated seed URL, the
+reviewed target JSON on one line, and the comma-separated tester IDs. Replace
+the app name and file path in this example with the reviewed staging app and
+your protected file:
+
+```bash
+umask 077
+touch /secure/path/staging-seed.env
+chmod 600 /secure/path/staging-seed.env
+# Populate the file with the three values using a trusted editor before importing.
+flyctl secrets import --app YOUR_STAGING_FLY_APP --stage < /secure/path/staging-seed.env
+```
+
+Using stdin keeps secret values out of command arguments and shell history.
+Remove the input file after successful import. `--stage` stores the secrets
+without deploying or enabling seeding; the next deployment consumes them.
+Complete the credential and destination checks below before enabling the flag.
+
+CI does not create, update, or copy staging seed secrets. Automatic Fly secret
+provisioning remains limited to dynamic previews' ordinary application secrets;
+previews receive no seed credentials or configuration. The application migration
+connection remains the existing Fly `DATABASE_URL`. The seed URL provides only
+data permissions and is never used to run migrations. Do not set these secrets
+on production or preview Fly apps. An enabled release with missing configuration
+fails its read-only preflight before migrations or replacement.
 
 ## Provision isolated seed credentials
 

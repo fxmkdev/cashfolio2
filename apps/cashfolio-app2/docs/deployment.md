@@ -50,6 +50,15 @@ application data. Seeding defaults to disabled until destination and credential
 isolation are verified. Production and preview use the original migration-only
 command and never receive the dedicated seed URL.
 
+Operators manually provision `STAGING_SEED_DATABASE_URL`, `STAGING_SEED_TARGET`,
+and `STAGING_SEED_USER_EXTERNAL_IDS` as secrets on staging's Fly app, following
+the staging/production convention. CI does not set or copy these secrets. The
+`STAGING_SEED_ENABLED` GitHub environment variable remains the non-secret
+deployment flag and defaults to disabled. Missing seed configuration fails the
+enabled release's read-only preflight before migrations. Dynamic previews retain
+automatic provisioning of their ordinary app secrets and receive no seed
+configuration.
+
 `pnpm build:staging-seed` uses an independent Vite SSR configuration with
 bundled dependencies to produce `dist/staging-seed/seed.mjs` and its dynamic
 query compiler chunks. Docker builds this after Prisma generation and copies the
