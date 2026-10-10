@@ -7,6 +7,7 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
   {
     ignores: [
+      ".vitest/**",
       "coverage/**",
       "coverage-storybook/**",
       "dist/**",

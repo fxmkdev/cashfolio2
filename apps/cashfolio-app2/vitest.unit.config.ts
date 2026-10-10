@@ -8,6 +8,8 @@ export default defineConfig({
     },
   },
   test: {
+    // Preserve Vitest 4 mock-history behavior across tests.
+    clearMocks: false,
     name: "unit",
     environment: "node",
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
