@@ -54,6 +54,13 @@ need to be strictly Conventional Commit formatted.
 - Keep `@types/node` aligned with Node 24. Do not upgrade to Node 25+ typings
   until the runtime migration is planned.
 
+## Package Manager
+
+Use the pnpm 12 version pinned by `packageManager` and `engines`. Keep Docker's
+pnpm pin aligned. Dependency updates retain a minimum release age of 1440
+minutes; do not add broad exceptions or relax the build-script allowlist.
+Run `pnpm install --frozen-lockfile` to verify the committed dependency graph.
+
 ## Compiler Tooling
 
 App and CLI typechecks use native TypeScript 7 through `tsc`. The `typescript`

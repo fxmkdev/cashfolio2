@@ -3,7 +3,8 @@
 ARG NODE_VERSION=24.21.0
 ARG DOTENV_VERSION=18.0.6
 ARG PRISMA_VERSION=7.10.0
-ARG PNPM_VERSION=11.28.5
+ARG PNPM_VERSION=12.11.1
+ARG COREPACK_VERSION=0.36.0
 FROM node:${NODE_VERSION}-slim AS base
 
 LABEL fly_launch_runtime="TanStack Start"
@@ -14,15 +15,17 @@ ENV NODE_ENV="production"
 
 FROM base AS build
 
+ARG COREPACK_VERSION
+
 # Install packages needed to generate Prisma client and build the application.
 RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=apt-lists,target=/var/lib/apt/lists,sharing=locked \
     apt-get update -qq && \
     apt-get install --no-install-recommends -y openssl
 
-# npm is used only to refresh Corepack before pnpm is available.
+# npm is used only to bootstrap the pinned Corepack before pnpm is available.
 # This works around Corepack signature issues: https://github.com/nodejs/corepack/issues/612
-RUN npm install -g corepack@latest
+RUN npm install -g corepack@${COREPACK_VERSION}
 RUN corepack enable pnpm
 
 # Install node modules
@@ -42,14 +45,18 @@ RUN pnpm --filter cashfolio-app2 build
 
 FROM base AS migration-tools
 
+ARG COREPACK_VERSION
 ARG DOTENV_VERSION
 ARG PNPM_VERSION
 ARG PRISMA_VERSION
 
-# npm is used only to refresh Corepack before pnpm is available.
-RUN npm install -g corepack@latest
+# npm is used only to bootstrap the pinned Corepack before pnpm is available.
+RUN npm install -g corepack@${COREPACK_VERSION}
 RUN corepack enable pnpm && corepack prepare pnpm@${PNPM_VERSION} --activate
-RUN pnpm add --prod \
+# Share the reviewed release-age, build-script, and security override policy.
+COPY --link pnpm-workspace.yaml ./
+RUN echo '{"private":true}' > package.json
+RUN pnpm add --workspace-root --prod \
     --allow-build=@prisma/engines \
     --allow-build=prisma \
     dotenv@${DOTENV_VERSION} \

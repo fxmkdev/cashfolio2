@@ -6,9 +6,9 @@ the generated Node server from `.output/server/index.mjs`.
 ## Nitro version pin
 
 The app intentionally pins `nitro` to an exact beta version instead of a range.
-As of 2026-05-22, the npm `latest` tag for `nitro` was also a dated beta
-release, while the stable `nitro@3.0.0` package declared only `vite: ^7` peer
-compatibility. This app runs on Vite 8, and the beta Nitro line declares
+As rechecked on 2026-10-10, the npm `latest` tag for `nitro` is still a dated
+beta release, while the stable `nitro@3.0.0` package declared only `vite: ^7`
+peer compatibility. This app runs on Vite 8, and the beta Nitro line declares
 `vite: ^7 || ^8`.
 
 Because of that peer-compatibility difference, `nitro@3.0.0` is not the safer
@@ -47,3 +47,20 @@ shipped in
 
 Rerunning a historical workflow attempt still uses its original CLI pin;
 existing PRs need to incorporate the updated workflows first.
+
+## Compiler and package-manager installation
+
+Docker keeps Node 24 and Prisma CLI/client/adapter 7.x. The build stage follows
+the workspace's integrity-qualified pnpm 12.11.1 packageManager pin; the
+separate migration-tools stage explicitly activates the same version. Filtered
+frozen installation must retain TypeScript 7's Linux platform package and
+TypeScript 6's compiler API alias. Preserve the minimal release-command payload
+and reviewed Prisma build-script approvals when updating the image. The
+migration-tools stage copies `pnpm-workspace.yaml` into its minimal private
+workspace so the same release-age and patched compatible security overrides
+govern that install. Audit this payload separately from the app's lockfile.
+
+Docker pins Corepack 0.36.0, the eligible stable bootstrap checked during the
+migration, rather than downloading an unreviewed latest release. Its Node 24
+requirement is satisfied by the existing 24.21.0 image pin. Review Corepack's
+publication age and runtime compatibility when changing this bootstrap pin.

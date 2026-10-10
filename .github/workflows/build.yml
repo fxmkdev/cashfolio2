@@ -39,7 +39,7 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
       - name: Set version on cashfolio-app2
-        # pnpm 11's native version command only bumps packages that already
+        # pnpm's native version command only bumps packages that already
         # have a version field. cashfolio-app2 is versionless in git, so use
         # npm only as a package.json editor for this CI-only image stamp.
         run: |
