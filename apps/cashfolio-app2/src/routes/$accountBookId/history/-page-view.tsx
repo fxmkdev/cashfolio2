@@ -46,6 +46,10 @@ import {
 } from "./-chart-options";
 import { getDefaultRangeButtonLabel } from "./-range-controls";
 import { HistoryScopeControls } from "./-scope-controls";
+import {
+  resolveHistoryAccountDrillTarget,
+  type HistoryAccountDrillTarget,
+} from "./-account-drilldown";
 import classes from "./-page-view.module.css";
 
 ensureChartModulesRegistered();
@@ -55,6 +59,11 @@ export type HistoryPageViewProps = {
   selectedMode: HistoryPeriodMode;
   selectedMetric: HistoryMetric;
   history: PeriodHistoryResponse;
+  gainLossEquityAccountId: string | null;
+  onAccountPeriodDoubleClick: (
+    target: HistoryAccountDrillTarget,
+    periodValue: string,
+  ) => void;
   onModeChange: (mode: HistoryPeriodMode) => void;
   onMetricChange: (metric: HistoryMetric) => void;
   onMetricScopeChange: (scope: HistoryScopeSelection) => void;
@@ -94,6 +103,8 @@ export function HistoryPageView({
   selectedMode,
   selectedMetric,
   history,
+  gainLossEquityAccountId,
+  onAccountPeriodDoubleClick,
   onModeChange,
   onMetricChange,
   onMetricScopeChange,
@@ -220,6 +231,32 @@ export function HistoryPageView({
     [],
   );
 
+  const drillTarget = useMemo(
+    () =>
+      resolveHistoryAccountDrillTarget({
+        metric: selectedMetric,
+        scope: isHistoryScopedMetric(selectedMetric)
+          ? history.scopeSelection[selectedMetric]
+          : undefined,
+        options: isHistoryScopedMetric(selectedMetric)
+          ? history.scopeOptions[selectedMetric]
+          : [],
+        gainLossEquityAccountId,
+      }),
+    [
+      selectedMetric,
+      history.scopeSelection,
+      history.scopeOptions,
+      gainLossEquityAccountId,
+    ],
+  );
+  const handlePeriodDoubleClick = useCallback(
+    (periodValue: string) => {
+      if (drillTarget) onAccountPeriodDoubleClick(drillTarget, periodValue);
+    },
+    [drillTarget, onAccountPeriodDoubleClick],
+  );
+
   const chartOptions = useMemo(
     () =>
       createHistoryChartOptions({
@@ -234,6 +271,7 @@ export function HistoryPageView({
         colors,
         theme,
         isDarkMode,
+        onPeriodDoubleClick: drillTarget ? handlePeriodDoubleClick : undefined,
         onZoom: handleChartZoom,
         onSeriesVisibilityChange: handleSeriesVisibilityChange,
       }),
@@ -243,6 +281,8 @@ export function HistoryPageView({
       colors,
       currencyFormatter,
       handleChartZoom,
+      drillTarget,
+      handlePeriodDoubleClick,
       handleSeriesVisibilityChange,
       isCumulativeSeriesVisible,
       pointDateFormatter,
@@ -346,6 +386,16 @@ export function HistoryPageView({
             />
           </div>
         </Group>
+
+        {drillTarget &&
+          !shouldShowCashFlowEmptyState &&
+          rebasedChartData.length > 0 && (
+            <Text c="dimmed" size="sm" mt="sm">
+              {drillTarget.kind === "reconciliation"
+                ? "Double-click a period to open gain/loss reconciliation."
+                : "Double-click a period to open ledger."}
+            </Text>
+          )}
 
         {shouldShowCashFlowEmptyState ? (
           <div className={classes.emptyState}>

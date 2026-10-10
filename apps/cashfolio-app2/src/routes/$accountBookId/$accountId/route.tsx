@@ -11,11 +11,9 @@ import { useTransactionScroll } from "@/hooks/use-transaction-scroll";
 import { formatMonthPeriodValue } from "@/shared/period";
 import {
   buildPeriodSelectorModel,
-  getMonthBoundsForYear,
   getMonthPickerValue,
   getPeriodModeChangeValue,
   getPeriodStepValue,
-  getYearBounds,
   getYearPickerValue,
   type PeriodMode,
 } from "@/shared/period-selector-model";
@@ -32,6 +30,7 @@ import {
   parseLedgerSearch,
   type LedgerRow,
 } from "./-page-types";
+import { clampLedgerExplicitPeriodToBounds } from "./-explicit-period-bounds";
 import { resolvePeriodFilterMinBookingDate } from "./-period-filter-min-booking-date";
 
 const LedgerPageView = lazy(async () => {
@@ -118,10 +117,10 @@ export function LedgerPageContent() {
     }
     return clampLedgerExplicitPeriodToBounds({
       selectedPeriod: rawSelectedPeriod,
-      minBookingDate,
+      minBookingDate: accountBookMinBookingDate,
       maxDate,
     });
-  }, [maxDate, minBookingDate, rawSelectedPeriod]);
+  }, [maxDate, accountBookMinBookingDate, rawSelectedPeriod]);
   const selectedPeriod = useMemo(
     () =>
       clampedPeriodValue
@@ -305,30 +304,4 @@ export function LedgerPageContent() {
       />
     </Suspense>
   );
-}
-
-function clampLedgerExplicitPeriodToBounds(args: {
-  selectedPeriod: NonNullable<ReturnType<typeof parseLedgerExplicitPeriod>>;
-  minBookingDate: Date | null;
-  maxDate: Date;
-}): string {
-  const { selectedPeriod, minBookingDate, maxDate } = args;
-  const { minYear, maxYear } = getYearBounds({ minBookingDate, maxDate });
-  const clampedYear = Math.min(Math.max(selectedPeriod.year, minYear), maxYear);
-
-  if (selectedPeriod.granularity === "year") {
-    return String(clampedYear).padStart(4, "0");
-  }
-
-  const { minMonth, maxMonth } = getMonthBoundsForYear({
-    year: clampedYear,
-    minBookingDate,
-    maxDate,
-  });
-  const clampedMonth = Math.min(
-    Math.max(selectedPeriod.month ?? maxMonth, minMonth),
-    maxMonth,
-  );
-
-  return formatMonthPeriodValue(clampedYear, clampedMonth);
 }
