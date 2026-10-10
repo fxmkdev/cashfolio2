@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 import type { AccountOption } from "@/components/edit-transaction-modal";
 import type { TransactionMutationValues } from "./-page-view";
 import type { LedgerAccount } from "./-page-types";
@@ -10,6 +11,7 @@ import {
 import { getStatementImportTransactionsToSubmit } from "./-statement-import-page-controller";
 import { useStatementImportReviewState } from "./-statement-import-page-review-state";
 import { useStatementImportUploadState } from "./-statement-import-page-upload-state";
+import { getStatementImportReviewSnapshot } from "./-statement-import-dirty-state";
 
 export function useStatementImportPageState(args: {
   account: LedgerAccount;
@@ -18,6 +20,7 @@ export function useStatementImportPageState(args: {
   accountOptions: AccountOption[];
   persistedBalance: number;
   isSubmitting: boolean;
+  isImportComplete: boolean;
   onSubmittingChange: (isSubmitting: boolean) => void;
   onSubmit: (transactions: TransactionMutationValues[]) => Promise<void>;
 }) {
@@ -33,6 +36,17 @@ export function useStatementImportPageState(args: {
   const [drafts, setDrafts] = useState<StatementImportDraft[]>([]);
   const [editingDraftId, setEditingDraftId] = useState<string | undefined>();
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+  const [isEditorDirty, setIsEditorDirty] = useState(false);
+  const [isReviewCellDirty, setIsReviewCellDirty] = useState(false);
+  const [reviewBaseline, setReviewBaseline] = useState(() =>
+    getStatementImportReviewSnapshot([]),
+  );
+  const guard = useUnsavedChangesGuard(
+    !args.isImportComplete &&
+      (getStatementImportReviewSnapshot(drafts) !== reviewBaseline ||
+        isEditorDirty ||
+        isReviewCellDirty),
+  );
 
   const editingDraft = drafts.find((draft) => draft.id === editingDraftId);
   const reviewState = useStatementImportReviewState({
@@ -52,8 +66,16 @@ export function useStatementImportPageState(args: {
     draftsLength: drafts.length,
     isSubmitting,
     isEditSubmitting,
-    setDrafts,
-    clearEditingDraft: () => setEditingDraftId(undefined),
+    setDrafts: (nextDrafts) => {
+      setReviewBaseline(getStatementImportReviewSnapshot(nextDrafts));
+      setDrafts(nextDrafts);
+    },
+    clearEditingDraft: () => {
+      setEditingDraftId(undefined);
+      setIsEditorDirty(false);
+      setIsReviewCellDirty(false);
+    },
+    requestConfirmation: guard.requestConfirmation,
   });
 
   async function handleImport() {
@@ -78,19 +100,28 @@ export function useStatementImportPageState(args: {
       ),
     );
     setEditingDraftId(undefined);
+    setIsEditorDirty(false);
     return Promise.resolve();
   }
 
   function closeEditDraft() {
     if (isEditSubmitting) return;
     setEditingDraftId(undefined);
+    setIsEditorDirty(false);
   }
 
   return {
     activeStep: uploadState.activeStep,
     canReviewStatementImport: uploadState.canReviewStatementImport,
     columnDefs: reviewState.columnDefs,
-    discardUploadModalOpened: uploadState.discardUploadModalOpened,
+    discardModalOpened: guard.isConfirmationOpen,
+    discardAction: guard.isNavigationBlocked
+      ? ("leave" as const)
+      : ("upload" as const),
+    confirmDiscard: guard.confirm,
+    closeDiscardModal: guard.cancel,
+    setIsEditorDirty,
+    setIsReviewCellDirty,
     drafts,
     editingDraft,
     file: uploadState.file,
@@ -102,14 +133,12 @@ export function useStatementImportPageState(args: {
     handleReviewRowsUpdated: reviewState.handleReviewRowsUpdated,
     handleStepClick: uploadState.handleStepClick,
     ignoredCount: reviewState.ignoredCount,
-    importDisabled: reviewState.importDisabled,
+    importDisabled: args.isImportComplete || reviewState.importDisabled,
     includedCount: reviewState.includedCount,
     isEditSubmitting,
     parseErrors: uploadState.parseErrors,
     readyCount: reviewState.readyCount,
     reviewRows: reviewState.reviewRows,
-    resetStatementImportReview: uploadState.resetStatementImportReview,
-    closeDiscardUploadModal: uploadState.closeDiscardUploadModal,
     setIsEditSubmitting,
     closeEditDraft,
     summaryText: reviewState.summaryText,

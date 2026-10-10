@@ -1,4 +1,4 @@
-import { useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useRef, useState } from "react";
 import type { LedgerAccount } from "./-page-types";
 import {
   parseStatementImportCsv,
@@ -14,8 +14,9 @@ export function useStatementImportUploadState(args: {
   draftsLength: number;
   isSubmitting: boolean;
   isEditSubmitting: boolean;
-  setDrafts: Dispatch<SetStateAction<StatementImportDraft[]>>;
+  setDrafts: (drafts: StatementImportDraft[]) => void;
   clearEditingDraft: () => void;
+  requestConfirmation: (action: () => void) => void;
 }) {
   const {
     account,
@@ -25,13 +26,12 @@ export function useStatementImportUploadState(args: {
     isEditSubmitting,
     setDrafts,
     clearEditingDraft,
+    requestConfirmation,
   } = args;
   const [file, setFile] = useState<File | null>(null);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [activeStep, setActiveStep] =
     useState<StatementImportPageStep>("upload");
-  const [discardUploadModalOpened, setDiscardUploadModalOpened] =
-    useState(false);
   const fileReadRequestId = useRef(0);
 
   const canReviewStatementImport = draftsLength > 0 && parseErrors.length === 0;
@@ -43,7 +43,6 @@ export function useStatementImportUploadState(args: {
     setFile(nextFile);
     clearStatementImportReviewState();
     setActiveStep("upload");
-    setDiscardUploadModalOpened(false);
     if (!nextFile) {
       return;
     }
@@ -73,7 +72,6 @@ export function useStatementImportUploadState(args: {
     fileReadRequestId.current += 1;
     setFile(null);
     clearStatementImportReviewState();
-    setDiscardUploadModalOpened(false);
     setActiveStep("upload");
   }
 
@@ -86,21 +84,12 @@ export function useStatementImportUploadState(args: {
     handleReviewStepClick();
   }
 
-  function closeDiscardUploadModal() {
-    setDiscardUploadModalOpened(false);
-  }
-
   function handleUploadStepClick() {
     if (activeStep === "upload" || !canNavigateStatementImportSteps) {
       return;
     }
 
-    if (draftsLength > 0) {
-      setDiscardUploadModalOpened(true);
-      return;
-    }
-
-    resetStatementImportReview();
+    requestConfirmation(resetStatementImportReview);
   }
 
   function handleReviewStepClick() {
@@ -120,8 +109,6 @@ export function useStatementImportUploadState(args: {
   return {
     activeStep,
     canReviewStatementImport,
-    closeDiscardUploadModal,
-    discardUploadModalOpened,
     file,
     handleFileChange,
     handleStepClick,
