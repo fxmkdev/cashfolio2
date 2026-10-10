@@ -231,6 +231,24 @@ test("parses Fly's concatenated pretty-printed JSON logs", () => {
   );
 });
 
+test("reordered log delivery cannot replace terminal metrics with earlier progress", () => {
+  assert.deepEqual(
+    parseCleanupLogs(
+      [
+        log(),
+        log({ ...metrics, status: "running" }),
+        log({
+          ...metrics,
+          status: "running",
+          elapsedMs: 50,
+          deletedRows: 1000,
+        }),
+      ].join("\n"),
+    ),
+    metrics,
+  );
+});
+
 test("lost create response recovers and destroys by unique name", async () => {
   const { args } = fixture();
   let created;

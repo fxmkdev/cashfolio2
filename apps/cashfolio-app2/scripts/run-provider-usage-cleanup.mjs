@@ -76,6 +76,14 @@ export function parseCleanupLogs(output) {
         )
       )
         continue;
+      if (
+        latest &&
+        (value.elapsedMs < latest.elapsedMs ||
+          (value.elapsedMs === latest.elapsedMs &&
+            (value.deletedRows < latest.deletedRows ||
+              (latest.status !== "running" && value.status === "running"))))
+      )
+        continue;
       latest = {
         status: value.status,
         cutoff: value.cutoff,
