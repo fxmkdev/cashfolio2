@@ -21,6 +21,7 @@ export function StatementImportEditModal({
   onClose,
   onSaveDraft,
   onSubmittingChange,
+  onDirtyChange,
 }: {
   account: LedgerAccount;
   accountBookStartDate: Date;
@@ -31,6 +32,7 @@ export function StatementImportEditModal({
   onClose: () => void;
   onSaveDraft: (values: TransactionMutationValues) => Promise<void>;
   onSubmittingChange: (isSubmitting: boolean) => void;
+  onDirtyChange: (isDirty: boolean) => void;
 }) {
   return (
     <Modal
@@ -53,6 +55,7 @@ export function StatementImportEditModal({
           preserveBookingUnitOnUnitlessEquityAccountChange
           onClose={onClose}
           onSubmittingChange={onSubmittingChange}
+          onDirtyChange={onDirtyChange}
           onSubmit={onSaveDraft}
         />
       ) : null}

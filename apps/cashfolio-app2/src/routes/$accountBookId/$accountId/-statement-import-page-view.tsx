@@ -11,7 +11,7 @@ import type { TransactionMutationValues } from "./-page-view";
 import type { LedgerAccount } from "./-page-types";
 import type { StatementImportCsvFormat } from "./-statement-import";
 import { StatementImportActions } from "./-statement-import-actions";
-import { StatementImportDiscardUploadModal } from "./-statement-import-discard-upload-modal";
+import { StatementImportDiscardModal } from "./-statement-import-discard-modal";
 import { StatementImportEditModal } from "./-statement-import-edit-modal";
 import {
   StatementImportReviewSummary,
@@ -34,6 +34,7 @@ type StatementImportPageViewProps = {
   persistedBalance: number;
   unitUsage: AccountBookUnitUsage;
   isSubmitting: boolean;
+  isImportComplete: boolean;
   period?: string;
   onSubmittingChange: (isSubmitting: boolean) => void;
   onSubmit: (transactions: TransactionMutationValues[]) => Promise<void>;
@@ -48,6 +49,7 @@ export function AccountStatementImportPageView({
   persistedBalance,
   unitUsage,
   isSubmitting,
+  isImportComplete,
   period,
   onSubmittingChange,
   onSubmit,
@@ -59,6 +61,7 @@ export function AccountStatementImportPageView({
     accountOptions,
     persistedBalance,
     isSubmitting,
+    isImportComplete,
     onSubmittingChange,
     onSubmit,
   });
@@ -140,6 +143,9 @@ export function AccountStatementImportPageView({
               <StatementImportReviewSummary summaryText={state.summaryText} />
 
               <DataGrid
+                context={{
+                  onCellEditorDirtyChange: state.setIsReviewCellDirty,
+                }}
                 theme={statementImportGridTheme}
                 containerStyle={{
                   flex: 1,
@@ -188,13 +194,15 @@ export function AccountStatementImportPageView({
         </Stepper.Step>
       </Stepper>
 
-      <StatementImportDiscardUploadModal
-        opened={state.discardUploadModalOpened}
-        onClose={state.closeDiscardUploadModal}
-        onConfirm={state.resetStatementImportReview}
+      <StatementImportDiscardModal
+        opened={state.discardModalOpened}
+        action={state.discardAction}
+        onClose={state.closeDiscardModal}
+        onConfirm={state.confirmDiscard}
       />
 
       <StatementImportEditModal
+        onDirtyChange={state.setIsEditorDirty}
         account={account}
         accountBookStartDate={accountBookStartDate}
         accountOptions={accountOptions}

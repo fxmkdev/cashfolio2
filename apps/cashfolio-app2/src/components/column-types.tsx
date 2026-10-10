@@ -12,6 +12,7 @@ import { Unit } from "../.prisma-client/enums";
 import {
   getDateInputValueFormat,
   normalizeDateInputValue,
+  normalizeDateInputValueToUtcDay,
 } from "../shared/date";
 import { getUnitDisplayDecimals } from "../shared/unit-format";
 import { AccountTreeSelect } from "./account-tree-select";
@@ -20,6 +21,7 @@ import {
   getNumberFormatSymbols,
 } from "./formatted-number-input";
 import { getGridUserLocale } from "./grid-locale";
+import { useCellEditorDirtyState } from "@/hooks/use-cell-editor-dirty-state";
 
 export const FORMATTED_NUMERIC_COLUMN = "formattedNumericColumn";
 export const SELECT_COLUMN = "selectColumn";
@@ -122,11 +124,13 @@ function findSelectOptionLabel(
 
 function FormattedNumericCellEditor({
   value,
+  initialValue,
   onValueChange,
   data,
   colDef,
   context,
 }: CustomCellEditorProps) {
+  useCellEditorDirtyState({ value, initialValue, context });
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     ref.current?.select();
@@ -160,11 +164,14 @@ function SelectCellEditor({
   options: paramsOptions,
   searchable,
   value,
+  initialValue,
+  context,
   onValueChange,
 }: CustomCellEditorProps & {
   searchable?: boolean;
   options?: SelectColumnOptions;
 }) {
+  useCellEditorDirtyState({ value, initialValue, context });
   const options = paramsOptions ?? colDef.context?.options ?? [];
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -203,8 +210,11 @@ function SelectCellEditor({
 function AccountTreeSelectCellEditor({
   colDef,
   value,
+  initialValue,
+  context,
   onValueChange,
 }: CustomCellEditorProps) {
+  useCellEditorDirtyState({ value, initialValue, context });
   const options = colDef.context?.options ?? [];
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -237,7 +247,13 @@ function AccountTreeSelectCellEditor({
   );
 }
 
-function TextCellEditor({ value, onValueChange }: CustomCellEditorProps) {
+function TextCellEditor({
+  value,
+  initialValue,
+  context,
+  onValueChange,
+}: CustomCellEditorProps) {
+  useCellEditorDirtyState({ value, initialValue, context });
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     ref.current?.select();
@@ -256,6 +272,7 @@ function TextCellEditor({ value, onValueChange }: CustomCellEditorProps) {
 
 function DateCellEditor({
   value,
+  initialValue,
   onValueChange,
   startDate,
   context,
@@ -264,6 +281,15 @@ function DateCellEditor({
   context?: unknown;
 }) {
   const locale = getGridUserLocale(context);
+  const initialTime = normalizeDateInputValueToUtcDay(
+    initialValue,
+    locale,
+  )?.getTime();
+  const setHasPendingInput = useCellEditorDirtyState({
+    value: normalizeDateInputValueToUtcDay(value, locale)?.getTime(),
+    initialValue: initialTime,
+    context: context as CustomCellEditorProps["context"],
+  });
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     ref.current?.select();
@@ -278,7 +304,20 @@ function DateCellEditor({
       dateParser={(nextValue) => normalizeDateInputValue(nextValue, locale)}
       minDate={startDate}
       value={value}
-      onChange={(nextValue) => onValueChange(nextValue)}
+      onChange={(nextValue) => {
+        setHasPendingInput(false);
+        onValueChange(nextValue);
+      }}
+      onInput={(event) =>
+        setHasPendingInput(
+          normalizeDateInputValueToUtcDay(
+            event.currentTarget.value,
+            locale,
+          )?.getTime() !== initialTime ||
+            (event.currentTarget.value !== "" &&
+              !normalizeDateInputValue(event.currentTarget.value, locale)),
+        )
+      }
     />
   );
 }

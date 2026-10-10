@@ -61,12 +61,18 @@ export const Route = createFileRoute(
 });
 
 function StatementImportRoutePage() {
+  const { accountBookId, accountId } = Route.useParams();
+  return <StatementImportAccountPage key={`${accountBookId}/${accountId}`} />;
+}
+
+function StatementImportAccountPage() {
   const loaderData = Route.useLoaderData();
   const { accountBookId, accountId } = Route.useParams();
   const { period } = Route.useSearch();
   const navigate = Route.useNavigate();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isImportComplete, setIsImportComplete] = useState(false);
   const unitUsage = useMemo(
     () =>
       createAccountBookUnitUsage({
@@ -98,6 +104,7 @@ function StatementImportRoutePage() {
         transactions,
       },
     });
+    setIsImportComplete(true);
     const search = getStatementImportSuccessLedgerSearch({
       selectedPeriodValue: period,
       transactions,
@@ -114,6 +121,7 @@ function StatementImportRoutePage() {
 
     await router.invalidate();
     navigate({
+      ignoreBlocker: true,
       to: "/$accountBookId/$accountId",
       params: { accountBookId, accountId },
       search,
@@ -131,6 +139,7 @@ function StatementImportRoutePage() {
         persistedBalance={loaderData.persistedBalance}
         unitUsage={unitUsage}
         isSubmitting={isSubmitting}
+        isImportComplete={isImportComplete}
         period={period}
         onSubmittingChange={setIsSubmitting}
         onSubmit={handleImport}

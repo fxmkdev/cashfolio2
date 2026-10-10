@@ -5,7 +5,7 @@ import { DateInput } from "@mantine/dates";
 import { formRootRule, isNotEmpty, useForm } from "@mantine/form";
 import { IconInfoCircle, IconTablePlus } from "@tabler/icons-react";
 import { createId } from "@paralleldrive/cuid2";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Unit } from "../.prisma-client/enums";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 import type { AccountBookUnitUsage } from "../shared/account-book-unit-usage";
@@ -34,6 +34,7 @@ import {
   toTransactionSubmitBookings,
 } from "./edit-transaction-modal-values";
 import { getNumberFormatSymbols } from "./formatted-number-input";
+import { isTransactionFormDirty } from "./edit-transaction-modal-dirty-state";
 
 export type {
   AccountOption,
@@ -52,6 +53,7 @@ export function EditTransactionModal({
   preserveBookingUnitOnUnitlessEquityAccountChange,
   onClose,
   onSubmittingChange,
+  onDirtyChange,
   onSubmit,
 }: {
   initialValues?: {
@@ -67,6 +69,7 @@ export function EditTransactionModal({
   preserveBookingUnitOnUnitlessEquityAccountChange?: boolean;
   onClose: () => void;
   onSubmittingChange?: (isSubmitting: boolean) => void;
+  onDirtyChange?: (isDirty: boolean) => void;
   onSubmit: (values: {
     description: string;
     bookings: {
@@ -95,6 +98,9 @@ export function EditTransactionModal({
     userLocale,
   );
   const currentAccount = accounts.find((a) => a.value === currentAccountId);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const [isCellEditorDirty, setIsCellEditorDirty] = useState(false);
+  const [isDateInputDirty, setIsDateInputDirty] = useState(false);
 
   const form = useForm({
     mode: "uncontrolled",
@@ -104,7 +110,17 @@ export function EditTransactionModal({
       currentAccount,
     }),
     onValuesChange: ({ date }, { date: previousDate }) => {
-      if (date !== previousDate) {
+      setIsFormDirty(
+        isTransactionFormDirty(
+          form.getValues(),
+          form.getInitialValues(),
+          userLocale,
+        ),
+      );
+      if (
+        normalizeDateInputValueToUtcDay(date, userLocale)?.getTime() !==
+        normalizeDateInputValueToUtcDay(previousDate, userLocale)?.getTime()
+      ) {
         const normalizedDate = normalizeDateInputValue(date, userLocale);
         if (date != null && normalizedDate == null) return;
         for (let i = 0; i < form.values.bookings.length; i++) {
@@ -153,6 +169,16 @@ export function EditTransactionModal({
   });
 
   const gridRef = useRef<AgGridReact>(null);
+  // AG Grid mutates rows when committing a cell. Keep those rows separate from
+  // Mantine's values and initial-value snapshot so dirty checks stay accurate.
+  const bookingRows = useMemo(
+    () => form.values.bookings.map((booking) => ({ ...booking })),
+    [form.values.bookings],
+  );
+
+  useEffect(() => {
+    onDirtyChange?.(isFormDirty || isCellEditorDirty || isDateInputDirty);
+  }, [isFormDirty, isCellEditorDirty, isDateInputDirty, onDirtyChange]);
 
   function onAdd() {
     const newRow = {
@@ -247,6 +273,18 @@ export function EditTransactionModal({
       <Stack gap="md">
         <Group align="start">
           <DateInput
+            onInput={(event) => {
+              const input = event.currentTarget.value;
+              const date = normalizeDateInputValueToUtcDay(input, userLocale);
+              const initialDate = normalizeDateInputValueToUtcDay(
+                form.getInitialValues().date,
+                userLocale,
+              );
+              setIsDateInputDirty(
+                date?.getTime() !== initialDate?.getTime() ||
+                  (input !== "" && !date),
+              );
+            }}
             valueFormat={getDateInputValueFormat(userLocale)}
             dateParser={(value) => normalizeDateInputValue(value, userLocale)}
             w={140}
@@ -270,6 +308,15 @@ export function EditTransactionModal({
             minDate={accountBookStartDay}
             data-autofocus={autoFocusDate || undefined}
             {...form.getInputProps("date")}
+            onChange={(nextDate) => {
+              setIsDateInputDirty(false);
+              form.getInputProps("date").onChange(nextDate);
+            }}
+            onBlur={(event) => {
+              // DateInput restores provisional text on blur without onChange.
+              setIsDateInputDirty(false);
+              form.getInputProps("date").onBlur(event);
+            }}
           />
           <TextInput
             label="Description"
@@ -293,7 +340,7 @@ export function EditTransactionModal({
           containerStyle={{
             height: `calc(100vh - 30.5rem)`,
           }}
-          rowData={form.values.bookings}
+          rowData={bookingRows}
           getRowId={({ data }) => data.key}
           columnDefs={columnDefs}
           rowDragManaged
@@ -396,6 +443,7 @@ export function EditTransactionModal({
           }}
           grandTotalRow="pinnedBottom"
           context={{
+            onCellEditorDirtyChange: setIsCellEditorDirty,
             status: form.errors.bookings ?? null,
             deleteDisabled: form.values.bookings.length <= 2,
             lockedBookingKey,

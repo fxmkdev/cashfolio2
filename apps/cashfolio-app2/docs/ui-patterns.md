@@ -404,11 +404,22 @@ with split bookings:
 - **Debit/credit mutual exclusivity**: setting one clears the other
 - **Current account booking**: locked (read-only) and non-deletable
 - **Minimum bookings**: at least 2 bookings enforced
-- **Date propagation**: date changes propagate to all bookings
+- **Date propagation**: calendar-day changes propagate to all bookings;
+  unrelated updates that clone a `Date` must not overwrite booking dates
 - **Unit auto-population**: unit is auto-populated from selected account
   metadata
 - **Booking row reordering**: enabled via AG Grid row drag in both create and
   edit flows
+- **Dirty reporting**: optional `onDirtyChange` reports form and pending editor
+  changes. Custom grid editors report provisional changes through
+  `context.onCellEditorDirtyChange`; modal grid rows are copies so cell commits
+  cannot mutate the form's initial-value snapshot.
+
+`useUnsavedChangesGuard` combines a route-scoped TanStack Router blocker with
+`beforeunload`. Its `requestConfirmation` also guards local discard actions,
+using the same `confirm`/`cancel` handlers and confirmation dialog as
+navigation. Scope blocking to the route owning the edits so destination loader
+redirects can complete after the user confirms departure.
 
 ## Simple Transaction Creation / Editing
 
@@ -473,6 +484,16 @@ columns are ignored. The fifth `exchange rate` column is reserved for source CSV
 compatibility but ignored by the importer.
 
 - Imported rows are virtual transaction drafts until the user confirms import.
+- Modified statement reviews require confirmation before returning to Upload or
+  navigating elsewhere, including browser Back/Forward. Reloading, closing the
+  tab, or leaving the site uses the browser's native `beforeunload`
+  confirmation. Untouched reviews and reviews restored to their uploaded values
+  do not prompt. Unsaved changes in the imported-transaction editor, including
+  active grid edits, are protected on page departure; closing or cancelling that
+  editor still discards its changes directly. The guard stays active during
+  import and after failure, and is disabled once the batch mutation succeeds.
+  Drafts are not persisted, and browsers cannot guarantee `beforeunload` during
+  forced termination or every mobile lifecycle event.
 - CSV `amount` is signed from the current ledger account perspective: positive
   values debit the current account and negative values credit it.
 - The current-account booking uses the ledger account unit. The counter booking
