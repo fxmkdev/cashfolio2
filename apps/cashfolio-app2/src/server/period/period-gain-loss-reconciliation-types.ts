@@ -91,7 +91,7 @@ export type GainLossReconciliationSummary<Amount = number> = {
 export type GainLossReconciliationDetails<Amount = number> = {
   target: GainLossReconciliationTarget;
   summary: GainLossReconciliationSummary<Amount>;
-  skippedCount: Amount;
+  skippedCount: number;
   realizedEvents: GainLossReconciliationRealizedEvent<Amount>[];
   unrealizedOpenLots: GainLossReconciliationOpenLot<Amount>[];
   diagnostics: GainLossReconciliationDiagnostic[];
