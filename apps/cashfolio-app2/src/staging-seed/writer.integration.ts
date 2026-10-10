@@ -2,7 +2,15 @@ import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { PrismaClient } from "../.prisma-client/client";
 import { EquityAccountSubtype, UserRole } from "../.prisma-client/enums";
 import type { ApprovedSeedTarget } from "./target";
@@ -375,6 +383,113 @@ describe("staging seed against disposable PostgreSQL", () => {
       await fixture.$executeRawUnsafe(
         "DROP FUNCTION staging_seed_test_reject_booking()",
       );
+    }
+  });
+
+  it("retries a deadlocked reset when an earlier edit holds Booking before updating Transaction", async () => {
+    await replaceStagingData(seed, config, dataset);
+    const editedTransaction = await fixture.transaction.findFirstOrThrow({
+      where: { description: "Coop groceries" },
+    });
+    const application = client(databaseUrl.href);
+    let notifyBookingLocked!: () => void;
+    const bookingLocked = new Promise<void>((resolve) => {
+      notifyBookingLocked = resolve;
+    });
+    let resumeEdit!: () => void;
+    const waitForEdit = new Promise<void>((resolve) => {
+      resumeEdit = resolve;
+    });
+    const transaction = vi.spyOn(seed, "$transaction");
+    let operations: Promise<PromiseSettledResult<unknown>[]> | undefined;
+    const applicationEdit = application.$transaction(
+      async (tx) => {
+        // Let the seed's default 1s detector find the cycle first, so the seed is
+        // the victim. This test connection uses the local fixture's admin role.
+        await tx.$executeRawUnsafe("SET LOCAL deadlock_timeout = '10s'");
+        await tx.booking.deleteMany({
+          where: { transactionId: editedTransaction.id },
+        });
+        notifyBookingLocked();
+        await waitForEdit;
+        return tx.transaction.update({
+          where: {
+            id_accountBookId: {
+              id: editedTransaction.id,
+              accountBookId: editedTransaction.accountBookId,
+            },
+          },
+          data: {
+            description: "Edited immediately before staging replacement",
+          },
+        });
+      },
+      { timeout: 30_000 },
+    );
+    // Observe rejection immediately even if setup/polling fails before the reset.
+    operations = Promise.allSettled([applicationEdit]);
+    try {
+      await Promise.race([bookingLocked, applicationEdit]);
+      const replacement = replaceStagingData(seed, config, dataset);
+      operations = Promise.allSettled([applicationEdit, replacement]);
+      await expect
+        .poll(
+          async () => {
+            const [locks] = await fixture.$queryRaw<
+              { bookingWaiting: boolean; transactionHeld: boolean }[]
+            >`
+          SELECT
+            EXISTS (
+              SELECT 1 FROM pg_locks l JOIN pg_class c ON c.oid = l.relation
+              JOIN pg_stat_activity a USING (pid)
+              WHERE a.usename = ${roleName} AND c.relname = 'Booking'
+                AND l.mode = 'ShareRowExclusiveLock' AND NOT l.granted
+            ) AS "bookingWaiting",
+            EXISTS (
+              SELECT 1 FROM pg_locks l JOIN pg_class c ON c.oid = l.relation
+              JOIN pg_stat_activity a USING (pid)
+              WHERE a.usename = ${roleName} AND c.relname = 'Transaction'
+                AND l.mode = 'ShareRowExclusiveLock' AND l.granted
+            ) AS "transactionHeld"
+        `;
+            return locks;
+          },
+          { timeout: 10_000 },
+        )
+        .toEqual({ bookingWaiting: true, transactionHeld: true });
+      resumeEdit();
+
+      const outcomes = await operations;
+      expect(outcomes.map((outcome) => outcome.status)).toEqual([
+        "fulfilled",
+        "fulfilled",
+      ]);
+      expect(transaction).toHaveBeenCalledTimes(2);
+      await expect(transaction.mock.results[0].value).rejects.toMatchObject({
+        code: "P2010",
+        meta: { driverAdapterError: { cause: { originalCode: "40P01" } } },
+      });
+      const summary = await replacement;
+      expect(summary.books).toHaveLength(3);
+      expect(await fixture.accountBook.count()).toBe(3);
+      expect(await fixture.booking.count()).toBe(
+        summary.books.reduce((total, book) => total + book.bookings, 0),
+      );
+      expect(
+        await fixture.transaction.findUnique({
+          where: {
+            id_accountBookId: {
+              id: editedTransaction.id,
+              accountBookId: editedTransaction.accountBookId,
+            },
+          },
+        }),
+      ).toBeNull();
+    } finally {
+      resumeEdit();
+      await operations;
+      transaction.mockRestore();
+      await application.$disconnect();
     }
   });
 

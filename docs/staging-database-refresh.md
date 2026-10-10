@@ -14,6 +14,11 @@ fails the release before application Machines update. Deployments for the same
 environment are serialized across main builds, manual Deploy runs, and the daily
 refresh workflow.
 
+Replacement makes at most three transaction attempts for deadlocks or Prisma
+transaction write conflicts, waiting 100 ms and then 200 ms before retries. Each
+attempt repeats destination verification and lock acquisition. Other errors fail
+immediately; exhausted retries fail the release.
+
 The `Refresh staging database` workflow rebuilds and redeploys staging daily at
 03:30 Europe/Zurich, keeping the dataset current even without code changes. It
 also supports manual runs from `main`. It no longer resets staging from

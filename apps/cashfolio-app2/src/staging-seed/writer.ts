@@ -1,5 +1,6 @@
 import { createId } from "@paralleldrive/cuid2";
-import type { Prisma, PrismaClient } from "../.prisma-client/client";
+import { setTimeout as delay } from "node:timers/promises";
+import { Prisma, type PrismaClient } from "../.prisma-client/client";
 import {
   AccountType,
   EquityAccountSubtype,
@@ -27,6 +28,24 @@ export type SeedSummary = {
 };
 
 const BATCH_SIZE = 500;
+const MAX_REPLACEMENT_ATTEMPTS = 3;
+
+type ReplacementConfig = {
+  target: ApprovedSeedTarget;
+  testerExternalIds: string[];
+};
+
+function isTransactionConflict(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  if (error.code === "P2034") return true;
+  if (error.code !== "P2010") return false;
+  const adapterError = error.meta?.driverAdapterError as
+    { cause?: { originalCode?: string } } | undefined;
+  return (
+    error.meta?.code === "40P01" ||
+    adapterError?.cause?.originalCode === "40P01"
+  );
+}
 
 export async function insertSeedBooks(
   tx: Prisma.TransactionClient,
@@ -153,7 +172,7 @@ export async function insertSeedBooks(
 
 export async function replaceStagingData(
   prisma: PrismaClient,
-  config: { target: ApprovedSeedTarget; testerExternalIds: string[] },
+  config: ReplacementConfig,
   dataset: SeedDataset,
 ): Promise<SeedSummary> {
   if (
@@ -164,6 +183,27 @@ export async function replaceStagingData(
       "At least one configured tester is required before replacement.",
     );
   }
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await replaceStagingDataOnce(prisma, config, dataset);
+    } catch (error) {
+      if (
+        attempt >= MAX_REPLACEMENT_ATTEMPTS ||
+        !isTransactionConflict(error)
+      ) {
+        throw error;
+      }
+      // PostgreSQL has rolled back the failed transaction and released its locks.
+      await delay(100 * attempt);
+    }
+  }
+}
+
+async function replaceStagingDataOnce(
+  prisma: PrismaClient,
+  config: ReplacementConfig,
+  dataset: SeedDataset,
+): Promise<SeedSummary> {
   return prisma.$transaction(
     async (tx) => {
       await verifyServerIdentity(tx, config.target);
