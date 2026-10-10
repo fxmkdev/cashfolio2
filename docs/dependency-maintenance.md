@@ -2,8 +2,9 @@
 
 The October 2026 refresh updates stable releases within the existing major
 versions, plus Logto 4, Chromatic 18, and dotenv 18. Node runtime and typings
-stay on 24, and pnpm stays on 11. Package families such as Mantine, React,
-Prisma, Storybook, AG Grid, AG Charts, and Vitest must be updated together.
+stay on 24; pnpm is now on stable 12.11.0. Package families such as Mantine,
+React, Prisma, Storybook, AG Grid, AG Charts, and Vitest must be updated
+together.
 
 The refreshed manifest versions are:
 
@@ -23,12 +24,12 @@ The refreshed manifest versions are:
 | Logto / Chromatic / dotenv               | 4.0.0 / 18.11.0 / 18.0.6 |
 | Redis / PostgreSQL driver                | 6.3.0 / 8.23.1           |
 | Node runtime / typings                   | 24.21.0 / 24.19.1        |
-| pnpm / Prettier                          | 11.28.5 / 3.9.9          |
+| pnpm / Prettier                          | 12.11.0 / 3.9.9          |
 
-MSW 3, pnpm 12, and Prisma prereleases are deferred to separate migrations.
-Storybook uses addon-vitest 10.6.1 with the Playwright browser provider 5.0.3.
-Vitest, coverage, and browser packages are upgraded together to stable 5.0.3.
-See the app's
+MSW 3 and Prisma prereleases are deferred to separate migrations. Storybook uses
+addon-vitest 10.6.1 with the Playwright browser provider 5.0.3. Vitest,
+coverage, and browser packages are upgraded together to stable 5.0.3. See the
+app's
 [Nitro compatibility notes](../apps/cashfolio-app2/docs/deployment.md#nitro-version-pin)
 before revisiting its beta pin or scoped H3 override.
 
@@ -56,14 +57,14 @@ and
 
 ## Remaining audit findings
 
-As of 2026-10-09, after the scoped Prisma override and removal of the Storybook
+As of 2026-10-10, after the scoped Prisma override and removal of the Storybook
 runner, `pnpm audit` reports no findings. Runner removal eliminates the
 previously reported moderate `sprintf-js` advisory.
 
-The separately installed Docker release-migration payload still reports two high
-and one moderate findings through `deepmerge-ts` and `mysql2`; it currently does
-not read the workspace overrides. The pnpm migration must carry the reviewed
-workspace policy into that minimal installation and recheck its audit.
+The Docker release-migration payload now reads the same reviewed workspace
+release-age, build-script, and security override policy. Its separate audit also
+reports no findings; this fixes its previously reported two high and one
+moderate findings through `deepmerge-ts` and `mysql2`.
 
 These counts describe the dependency audit, not an assessment of reachability in
 the running application. Re-run the audit when updating dependencies because
@@ -244,3 +245,57 @@ Verify `pnpm --filter cashfolio-app2 exec tsc --version` and
 reports 6.x. Use `tsc6` for compatibility comparisons; it must not replace the
 native typecheck commands. Native compiler platform packages must remain in the
 lockfile for macOS development and Linux Docker/CI builds.
+
+## pnpm 12 migration
+
+The workspace pins stable pnpm 12.11.0 in packageManager (with registry SHA-512
+integrity), engines, and the Docker migration-tools stage. pnpm 12.11.0,
+published on October 9 at 06:42 UTC, passed the one-day release-age threshold
+when rechecked on October 10. Versions 12.11.1 and 12.11.2 were still too young
+at implementation time. The existing one-day policy is now explicit as
+`minimumReleaseAge: 1440`; retain the narrow `@fxmk/releaser@0.5.6` exception
+and the reviewed `allowBuilds` entries.
+
+The stable default installation mode is retained. Review pnpm 12's workspace
+setting validation, engine enforcement, cyclic peer resolution, platform binary
+installation, and Corepack bootstrap when changing these files. Existing
+lockfiles remain supported, but re-resolution can rewrite cyclic peer variants.
+Use `--frozen-lockfile` without a boolean argument and `--no-frozen-lockfile`
+when explicitly disabling it. Verify both workspace and filtered Docker
+installation; do not broadly enable dependency build scripts.
+
+The 12.11 release adds dependency permissions and approved agent-skill links.
+Cashfolio retains its existing `allowBuilds` policy; no broader permissions,
+agent-skill approvals, Rust toolchain management, or experimental linker modes
+are enabled. The existing Node 24 runtime pin remains locked during resolution.
+
+The lockfile adds a separate pnpm/platform-binary document. The application lock
+document remains byte-for-byte identical to the validated TypeScript stage; no
+application dependency versions changed during the package-manager migration.
+Repeat resolution and frozen installation must preserve this result. See the
+[official pnpm 12 migration differences](https://pnpm.io/blog/whats-different-in-pnpm-12)
+and
+[pnpm 12.11.0 release notes](https://github.com/pnpm/pnpm/releases/tag/v12.11.0).
+
+## Tooling migration verification
+
+The rebased stack preserves all 89 original story IDs plus main's four Grid
+stories. Current main's statement-import changes leave 1000 unit tests and 51
+application E2E tests. All 1000 unit tests, 93 Storybook render/interaction
+tests (including a separate coverage run), 51 E2E tests, and 11 CLI tests
+passed. Prisma generation, app/CLI native typechecks, TypeScript 6 compatibility
+comparisons, app lint/format, workflow lint, production and Storybook builds,
+CLI startup help, and frozen-lockfile installation passed. The unit coverage
+baseline is unchanged and its ratchet passes; Storybook coverage remains in a
+separate directory. Desktop 1280x900 and mobile 390x844 browser dimensions,
+per-story storage isolation, and awaited router initialization are asserted. The
+scrolling Grid fixture is wider than the desktop viewport so its existing
+horizontal-scroll assertion exercises overflow at both sizes.
+
+Docker verification covers filtered frozen installation, the Linux native
+compiler, Prisma schema validation, release migrations against a dedicated local
+test database, and an HTTP 200 response from the generated production server.
+Both workspace and separate migration-payload audits report zero findings.
+Outdated checks still list intentionally excluded newer Node/typing, MSW, Prisma
+prerelease, and Nitro beta lines, plus unrelated Chromatic updates; these are
+not refreshed by this migration.

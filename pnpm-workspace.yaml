@@ -11,6 +11,8 @@ allowBuilds:
   prisma: true
   unrs-resolver: true
 
+minimumReleaseAge: 1440
+
 minimumReleaseAgeExclude:
   - "@fxmk/releaser@0.5.6"
 
