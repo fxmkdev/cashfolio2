@@ -1,3 +1,4 @@
+import { toNumericMoney } from "../money-boundary";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const convertBookingValueToReference = vi.hoisted(() => vi.fn());
@@ -91,7 +92,7 @@ describe("loadPeriodEndNetWorth", () => {
       baseData,
     });
 
-    expect(result).toMatchObject({
+    expect(toNumericMoney(result)).toMatchObject({
       selectedPeriodValue: "2026-02",
       endOfPeriodNetWorth: 75,
       skippedCount: 0,
@@ -143,7 +144,7 @@ describe("loadPeriodEndNetWorth", () => {
       baseData,
     });
 
-    expect(result).toMatchObject({
+    expect(toNumericMoney(result)).toMatchObject({
       endOfPeriodNetWorth: 100,
       skippedCount: 1,
     });

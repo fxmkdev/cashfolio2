@@ -1,3 +1,4 @@
+import { toMoney, type MoneyInput } from "./money";
 import {
   AccountType,
   EquityAccountSubtype,
@@ -53,7 +54,7 @@ export function isExpenseAccount(
 }
 
 export function isBookingValueCompatibleWithAccountType(
-  value: number,
+  value: MoneyInput,
   account: {
     type: AccountType;
     equityAccountSubtype?: EquityAccountSubtype | null;
@@ -63,14 +64,14 @@ export function isBookingValueCompatibleWithAccountType(
     account.type === AccountType.EQUITY &&
     account.equityAccountSubtype === EquityAccountSubtype.INCOME
   ) {
-    return value <= 0;
+    return toMoney(value).lessThanOrEqualTo(0);
   }
 
   if (
     account.type === AccountType.EQUITY &&
     account.equityAccountSubtype === EquityAccountSubtype.EXPENSE
   ) {
-    return value >= 0;
+    return toMoney(value).greaterThanOrEqualTo(0);
   }
 
   return true;

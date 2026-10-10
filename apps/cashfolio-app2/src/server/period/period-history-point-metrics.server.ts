@@ -1,5 +1,6 @@
+import { toMoney, type Money, moneyAdd, moneySum } from "../../shared/money";
 import { round2 } from "./period-helpers";
-import { moneyAdd, moneySum, toMoneyNumber } from "../../shared/money";
+
 import {
   computeEndOfPeriodBalanceStatsWithConvertedBalances,
   type EndOfPeriodBalanceStats,
@@ -28,7 +29,7 @@ import { type HistoryScopeOption } from "../../shared/history-scope";
 import { buildGainsLossesBreakdown } from "./period-gains-losses-breakdown";
 import { computePeriodCashFlow } from "./period-cash-flow";
 import type {
-  ValuationRateLookupResult,
+  DecimalValuationRateLookupResult as ValuationRateLookupResult,
   ValuationRateSource,
 } from "../valuation/types";
 import type { Unit } from "../../.prisma-client/enums";
@@ -37,15 +38,15 @@ const TRANSACTIONS_PAGE_SIZE = 200;
 const TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE = 200;
 
 export type PeriodHistoryPointMetrics = {
-  totalReturn: number;
-  savings: number;
-  cashFlow: number;
-  income: number;
-  expenses: number;
-  gainsLosses: number;
-  assets: number;
-  liabilities: number;
-  netWorth: number;
+  totalReturn: Money;
+  savings: Money;
+  cashFlow: Money;
+  income: Money;
+  expenses: Money;
+  gainsLosses: Money;
+  assets: Money;
+  liabilities: Money;
+  netWorth: Money;
   scopeOptions: {
     cashFlow: HistoryScopeOption[];
     income: HistoryScopeOption[];
@@ -54,11 +55,11 @@ export type PeriodHistoryPointMetrics = {
     assets: HistoryScopeOption[];
     liabilities: HistoryScopeOption[];
   };
-  scopedMetricValue?: number;
+  scopedMetricValue?: Money;
 };
 
 type HistoryEndOfPeriodBalanceStats = EndOfPeriodBalanceStats & {
-  convertedBalanceByAccountId: Map<string, number | null>;
+  convertedBalanceByAccountId: Map<string, Money | null>;
 };
 
 export type HistoryValuationContext = {
@@ -93,7 +94,7 @@ async function loadEndOfPeriodBalanceStats(args: {
   baseData: PeriodBaseData;
   referenceCurrency: string;
   convertBalanceToReference: (input: {
-    value: number;
+    value: Money;
     unit: Unit;
     currency: string | null;
     cryptocurrency: string | null;
@@ -101,7 +102,7 @@ async function loadEndOfPeriodBalanceStats(args: {
     tradeCurrency: string | null;
     date: Date;
     referenceCurrency: string;
-  }) => Promise<number | null>;
+  }) => Promise<Money | null>;
 }): Promise<HistoryEndOfPeriodBalanceStats> {
   const endOfPeriodRawBalanceByAccountId = new Map(
     args.baseData.endOfPeriodRawBalances.map((balance) => [
@@ -157,15 +158,15 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
   if (selection.isBeforeAccountBookStart) {
     return {
       metrics: {
-        totalReturn: 0,
-        savings: 0,
-        cashFlow: 0,
-        income: 0,
-        expenses: 0,
-        gainsLosses: 0,
-        assets: 0,
-        liabilities: 0,
-        netWorth: 0,
+        totalReturn: toMoney(0),
+        savings: toMoney(0),
+        cashFlow: toMoney(0),
+        income: toMoney(0),
+        expenses: toMoney(0),
+        gainsLosses: toMoney(0),
+        assets: toMoney(0),
+        liabilities: toMoney(0),
+        netWorth: toMoney(0),
         scopeOptions: {
           cashFlow: [],
           income: [],
@@ -174,7 +175,7 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
           assets: [],
           liabilities: [],
         },
-        scopedMetricValue: args.metricScopeFilter ? 0 : undefined,
+        scopedMetricValue: args.metricScopeFilter ? toMoney(0) : undefined,
       } satisfies PeriodHistoryPointMetrics,
       cacheableFromPermanentValuationCache: true,
     };
@@ -308,23 +309,21 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
     ]);
 
   const { income, expenses, explicitGainLoss } = equityAggregation;
-  const gainsLosses = toMoneyNumber(
-    moneySum([
-      explicitGainLoss,
-      holdingGainLossTotals.realizedGainLoss,
-      holdingGainLossTotals.unrealizedGainLoss,
-    ]),
-  );
+  const gainsLosses = moneySum([
+    explicitGainLoss,
+    holdingGainLossTotals.realizedGainLoss,
+    holdingGainLossTotals.unrealizedGainLoss,
+  ]);
 
   const roundedIncome = round2(income);
   const roundedExpenses = round2(expenses);
   const roundedGainsLosses = round2(gainsLosses);
   const roundedCashFlow = round2(cashFlowResult.cashFlow);
   const roundedSavings = round2(
-    toMoneyNumber(moneyAdd(roundedIncome, -roundedExpenses)),
+    moneyAdd(roundedIncome, toMoney(roundedExpenses).neg()),
   );
   const roundedTotalReturn = round2(
-    toMoneyNumber(moneyAdd(roundedSavings, roundedGainsLosses)),
+    moneyAdd(roundedSavings, roundedGainsLosses),
   );
   const roundedAssets = round2(endOfPeriodBalanceStats.assets);
   const roundedLiabilities = round2(endOfPeriodBalanceStats.liabilities);

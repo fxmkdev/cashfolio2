@@ -1,3 +1,4 @@
+import { toMoney } from "../../shared/money";
 import { describe, expect, it } from "vitest";
 import {
   AccountType,
@@ -35,7 +36,7 @@ describe("period overview response", () => {
           equityAccountSubtype: EquityAccountSubtype.INCOME,
         },
       },
-      convertedValue: -100,
+      convertedValue: toMoney(-100),
       aggregation: equityAggregation,
     });
     accumulateConvertedEquityBooking({
@@ -47,7 +48,7 @@ describe("period overview response", () => {
           equityAccountSubtype: EquityAccountSubtype.EXPENSE,
         },
       },
-      convertedValue: 40,
+      convertedValue: toMoney(40),
       aggregation: equityAggregation,
     });
     accumulateConvertedEquityBooking({
@@ -59,7 +60,7 @@ describe("period overview response", () => {
           equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
         },
       },
-      convertedValue: -20,
+      convertedValue: toMoney(-20),
       aggregation: equityAggregation,
     });
 
@@ -71,15 +72,15 @@ describe("period overview response", () => {
       groupById: new Map(),
       assetLiabilityAccounts: [],
       equityAggregation,
-      realizedGainLoss: 12,
-      unrealizedGainLoss: 8,
-      cashFlow: 90,
+      realizedGainLoss: toMoney(12),
+      unrealizedGainLoss: toMoney(8),
+      cashFlow: toMoney(90),
       cashFlowAmountByAccountId: new Map(),
       isBeforeAccountBookStart: true,
       endOfPeriodBalanceStats: {
-        assets: 0,
-        liabilities: 0,
-        netWorth: 0,
+        assets: toMoney(0),
+        liabilities: toMoney(0),
+        netWorth: toMoney(0),
         convertedBalanceByAccountId: new Map(),
       },
       bookingsCount: 3,
@@ -114,7 +115,7 @@ describe("period overview response", () => {
           equityAccountSubtype: EquityAccountSubtype.INCOME,
         },
       },
-      convertedValue: -120,
+      convertedValue: toMoney(-120),
       aggregation: equityAggregation,
     });
     accumulateConvertedEquityBooking({
@@ -126,7 +127,7 @@ describe("period overview response", () => {
           equityAccountSubtype: EquityAccountSubtype.EXPENSE,
         },
       },
-      convertedValue: 20,
+      convertedValue: toMoney(20),
       aggregation: equityAggregation,
     });
     accumulateConvertedEquityBooking({
@@ -138,7 +139,7 @@ describe("period overview response", () => {
           equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
         },
       },
-      convertedValue: -10,
+      convertedValue: toMoney(-10),
       aggregation: equityAggregation,
     });
 
@@ -163,9 +164,9 @@ describe("period overview response", () => {
         },
       ],
       equityAggregation,
-      realizedGainLoss: 5,
-      unrealizedGainLoss: 15,
-      cashFlow: 75,
+      realizedGainLoss: toMoney(5),
+      unrealizedGainLoss: toMoney(15),
+      cashFlow: toMoney(75),
       cashFlowAmountByAccountId: new Map([
         [
           "asset-1",
@@ -173,7 +174,7 @@ describe("period overview response", () => {
             accountId: "asset-1",
             accountName: "Cash",
             groupId: null,
-            amount: 90,
+            amount: toMoney(90),
           },
         ],
         [
@@ -182,18 +183,18 @@ describe("period overview response", () => {
             accountId: "cash-negative",
             accountName: "Spending Cash",
             groupId: null,
-            amount: -15,
+            amount: toMoney(-15),
           },
         ],
       ]),
       isBeforeAccountBookStart: false,
       endOfPeriodBalanceStats: {
-        assets: 100,
-        liabilities: 40,
-        netWorth: 60,
+        assets: toMoney(100),
+        liabilities: toMoney(40),
+        netWorth: toMoney(60),
         convertedBalanceByAccountId: new Map([
-          ["asset-1", 100],
-          ["liability-1", -40],
+          ["asset-1", toMoney(100)],
+          ["liability-1", toMoney(-40)],
         ]),
       },
       bookingsCount: 5,
@@ -209,8 +210,8 @@ describe("period overview response", () => {
           cryptocurrency: null,
           symbol: null,
           tradeCurrency: null,
-          realizedGainLoss: 4,
-          unrealizedGainLoss: 1,
+          realizedGainLoss: toMoney(4),
+          unrealizedGainLoss: toMoney(1),
         },
         {
           sourceKind: "HOLDING",
@@ -221,8 +222,8 @@ describe("period overview response", () => {
           cryptocurrency: null,
           symbol: null,
           tradeCurrency: null,
-          realizedGainLoss: 1,
-          unrealizedGainLoss: -1,
+          realizedGainLoss: toMoney(1),
+          unrealizedGainLoss: toMoney(-1),
         },
         {
           sourceKind: "HOLDING",
@@ -233,8 +234,8 @@ describe("period overview response", () => {
           cryptocurrency: null,
           symbol: null,
           tradeCurrency: null,
-          realizedGainLoss: 3,
-          unrealizedGainLoss: 2,
+          realizedGainLoss: toMoney(3),
+          unrealizedGainLoss: toMoney(2),
         },
         {
           sourceKind: "HOLDING",
@@ -245,8 +246,8 @@ describe("period overview response", () => {
           cryptocurrency: null,
           symbol: "aapl",
           tradeCurrency: "usd",
-          realizedGainLoss: 1,
-          unrealizedGainLoss: 9,
+          realizedGainLoss: toMoney(1),
+          unrealizedGainLoss: toMoney(9),
         },
         {
           sourceKind: "HOLDING",
@@ -257,8 +258,8 @@ describe("period overview response", () => {
           cryptocurrency: "btc",
           symbol: null,
           tradeCurrency: null,
-          realizedGainLoss: -1,
-          unrealizedGainLoss: 6,
+          realizedGainLoss: toMoney(-1),
+          unrealizedGainLoss: toMoney(6),
         },
         {
           sourceKind: "EXPLICIT",
@@ -269,8 +270,8 @@ describe("period overview response", () => {
           cryptocurrency: null,
           symbol: null,
           tradeCurrency: null,
-          realizedGainLoss: 10,
-          unrealizedGainLoss: 0,
+          realizedGainLoss: toMoney(10),
+          unrealizedGainLoss: toMoney(0),
         },
       ],
     });
@@ -446,7 +447,7 @@ describe("period overview response", () => {
           equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
         },
       },
-      convertedValue: -0.335,
+      convertedValue: toMoney(-0.335),
       aggregation: equityAggregation,
     });
 
@@ -458,15 +459,15 @@ describe("period overview response", () => {
       groupById: new Map(),
       assetLiabilityAccounts: [],
       equityAggregation,
-      realizedGainLoss: 4.444,
-      unrealizedGainLoss: -1.111,
-      cashFlow: 0,
+      realizedGainLoss: toMoney(4.444),
+      unrealizedGainLoss: toMoney(-1.111),
+      cashFlow: toMoney(0),
       cashFlowAmountByAccountId: new Map(),
       isBeforeAccountBookStart: false,
       endOfPeriodBalanceStats: {
-        assets: 0,
-        liabilities: 0,
-        netWorth: 0,
+        assets: toMoney(0),
+        liabilities: toMoney(0),
+        netWorth: toMoney(0),
         convertedBalanceByAccountId: new Map(),
       },
       bookingsCount: 1,
@@ -482,8 +483,8 @@ describe("period overview response", () => {
           cryptocurrency: null,
           symbol: null,
           tradeCurrency: null,
-          realizedGainLoss: 4.444,
-          unrealizedGainLoss: -1.111,
+          realizedGainLoss: toMoney(4.444),
+          unrealizedGainLoss: toMoney(-1.111),
         },
         {
           sourceKind: "EXPLICIT",
@@ -494,8 +495,8 @@ describe("period overview response", () => {
           cryptocurrency: null,
           symbol: null,
           tradeCurrency: null,
-          realizedGainLoss: 0.335,
-          unrealizedGainLoss: 0,
+          realizedGainLoss: toMoney(0.335),
+          unrealizedGainLoss: toMoney(0),
         },
       ],
     });

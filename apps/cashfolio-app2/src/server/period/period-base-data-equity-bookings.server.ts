@@ -1,6 +1,7 @@
+import { toMoney } from "../../shared/money";
 import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import { prisma } from "../../prisma.server";
-import { toMoneyNumber } from "../../shared/money";
+
 import type { PeriodBaseEquityBooking } from "./period-base-data-types";
 
 const EQUITY_BOOKINGS_PAGE_SIZE = 1_000;
@@ -179,7 +180,7 @@ function mapPeriodEquityBooking(args: {
     equityAccountSubtype: account.equityAccountSubtype,
     transactionId: args.booking.transactionId,
     date: args.booking.date,
-    value: toMoneyNumber(args.booking.value),
+    value: toMoney(args.booking.value),
     unit: args.booking.unit,
     currency: args.booking.currency,
     cryptocurrency: args.booking.cryptocurrency,

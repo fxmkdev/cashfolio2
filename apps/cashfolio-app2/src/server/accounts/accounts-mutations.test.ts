@@ -635,7 +635,7 @@ describe("updateAccount opening balance management", () => {
                 data: expect.objectContaining({
                   unit: Unit.CURRENCY,
                   currency: "CHF",
-                  value: 150,
+                  value: "150",
                   sortOrder: 0,
                 }),
               }),
@@ -649,7 +649,7 @@ describe("updateAccount opening balance management", () => {
                 data: expect.objectContaining({
                   unit: Unit.CURRENCY,
                   currency: "CHF",
-                  value: -150,
+                  value: "-150",
                   sortOrder: 1,
                 }),
               }),
@@ -750,7 +750,7 @@ describe("updateAccount opening balance management", () => {
                     },
                   },
                 },
-                value: -250,
+                value: "-250",
               }),
             ]),
           }),

@@ -1,3 +1,4 @@
+import { toMoney, type Money } from "../../shared/money";
 import { EquityAccountSubtype, Unit } from "../../.prisma-client/enums";
 import type { PeriodBaseData } from "../period/period-base-data-cache";
 import {
@@ -19,14 +20,14 @@ export async function processPeriodEquityBookingsFromBaseData(args: {
   equityAggregation: PeriodOverviewEquityAggregation;
   gainsLossesContributionByKey: Map<string, GainLossContributionAccumulator>;
   convertBookingToReference: (booking: {
-    value: number;
+    value: Money;
     unit: Unit;
     currency: string | null;
     cryptocurrency: string | null;
     symbol: string | null;
     tradeCurrency: string | null;
     date: Date;
-  }) => Promise<number | null>;
+  }) => Promise<Money | null>;
   conversionBatchSize?: number;
 }) {
   const explicitCounterpartAccountByTransactionId = new Map(
@@ -46,7 +47,7 @@ export async function processPeriodEquityBookingsFromBaseData(args: {
     cryptocurrency: string | null;
     symbol: string | null;
     tradeCurrency: string | null;
-    convertedValue: number;
+    convertedValue: Money;
   }> = [];
 
   let bookingsCount = 0;
@@ -145,8 +146,8 @@ export async function processPeriodEquityBookingsFromBaseData(args: {
       cryptocurrency: explicitBooking.cryptocurrency,
       symbol: explicitBooking.symbol,
       tradeCurrency: explicitBooking.tradeCurrency,
-      realizedGainLoss: -explicitBooking.convertedValue,
-      unrealizedGainLoss: 0,
+      realizedGainLoss: toMoney(explicitBooking.convertedValue).neg(),
+      unrealizedGainLoss: toMoney(0),
     });
   }
 

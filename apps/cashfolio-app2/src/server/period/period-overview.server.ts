@@ -1,5 +1,6 @@
+import { toMoney, type Money, moneyAdd } from "../../shared/money";
 import { startOfUtcDay } from "../../shared/date";
-import { moneyAdd, toMoneyNumber } from "../../shared/money";
+
 import {
   convertBookingValueToReference,
   getUnitToReferenceExchangeRate,
@@ -119,16 +120,16 @@ export async function loadPeriodOverview(args: {
   let convertedBookingsCount = 0;
   let skippedBookingsCount = 0;
 
-  const exchangeRateByKey = new Map<string, Promise<number | null>>();
+  const exchangeRateByKey = new Map<string, Promise<Money | null>>();
   const equityAggregation = createPeriodOverviewEquityAggregation();
   const gainsLossesContributionByKey = new Map<
     string,
     GainLossContributionAccumulator
   >();
 
-  let realizedGainLoss = 0;
-  let unrealizedGainLoss = 0;
-  let cashFlow = 0;
+  let realizedGainLoss: Money = toMoney(0);
+  let unrealizedGainLoss: Money = toMoney(0);
+  let cashFlow: Money = toMoney(0);
   let cashFlowAmountByAccountId = new Map<
     string,
     BreakdownHierarchyAccumulatorItem
@@ -181,11 +182,13 @@ export async function loadPeriodOverview(args: {
       holdingTransactions: baseData.holdingTransactions,
     });
 
-    realizedGainLoss = toMoneyNumber(
-      moneyAdd(realizedGainLoss, holdingGainLossTotals.realizedGainLoss),
+    realizedGainLoss = moneyAdd(
+      realizedGainLoss,
+      holdingGainLossTotals.realizedGainLoss,
     );
-    unrealizedGainLoss = toMoneyNumber(
-      moneyAdd(unrealizedGainLoss, holdingGainLossTotals.unrealizedGainLoss),
+    unrealizedGainLoss = moneyAdd(
+      unrealizedGainLoss,
+      holdingGainLossTotals.unrealizedGainLoss,
     );
     convertedBookingsCount += holdingGainLossTotals.convertedCount;
     skippedBookingsCount += holdingGainLossTotals.skippedCount;

@@ -1,3 +1,5 @@
+import { toNumericMoney } from "../money-boundary";
+import { type Money } from "../../shared/money";
 import {
   computeTransferClearingGainLossSplit,
   loadTransferClearingUnitBuckets,
@@ -62,11 +64,11 @@ export async function buildTransferClearingReconciliation(args: {
   }
 
   const diagnostics: GainLossReconciliationDiagnostic[] = [];
-  const realizedEvents: GainLossReconciliationRealizedEvent[] = [];
-  const unrealizedOpenLots: GainLossReconciliationOpenLot[] = [];
+  const realizedEvents: GainLossReconciliationRealizedEvent<Money>[] = [];
+  const unrealizedOpenLots: GainLossReconciliationOpenLot<Money>[] = [];
 
   if (args.isBeforeAccountBookStart) {
-    return {
+    return toNumericMoney({
       target: {
         accountId: args.accountId,
         accountName: targetBucket.unitLabel,
@@ -83,10 +85,10 @@ export async function buildTransferClearingReconciliation(args: {
       realizedEvents,
       unrealizedOpenLots,
       diagnostics,
-    };
+    });
   }
 
-  const exchangeRateByKey = new Map<string, Promise<number | null>>();
+  const exchangeRateByKey = new Map<string, Promise<Money | null>>();
   const split = await computeTransferClearingGainLossSplit({
     unitBuckets: [targetBucket],
     periodStart: args.queryStart,
@@ -123,7 +125,7 @@ export async function buildTransferClearingReconciliation(args: {
     },
   });
 
-  return {
+  return toNumericMoney({
     target: {
       accountId: args.accountId,
       accountName: targetBucket.unitLabel,
@@ -143,5 +145,5 @@ export async function buildTransferClearingReconciliation(args: {
     realizedEvents,
     unrealizedOpenLots: addRunningUnrealizedGainLoss(unrealizedOpenLots),
     diagnostics,
-  };
+  });
 }

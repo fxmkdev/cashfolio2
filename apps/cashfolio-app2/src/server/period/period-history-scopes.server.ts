@@ -1,15 +1,17 @@
+import {
+  toMoney,
+  type Money,
+  moneyAdd,
+  moneyRound2,
+  moneySum,
+} from "../../shared/money";
 import { AccountType } from "../../.prisma-client/enums";
 import { createGroupPathResolver } from "../accounts/accounts-helpers";
 import {
   round2,
   type BreakdownHierarchyAccumulatorItem,
 } from "./period-helpers";
-import {
-  moneyAdd,
-  moneyRound2,
-  moneySum,
-  toMoneyNumber,
-} from "../../shared/money";
+
 import {
   parseHistoryScopeSelection,
   type HistoryScopeOption,
@@ -30,7 +32,7 @@ export function buildBalanceHistoryScopeAmountMaps(args: {
     groupId: string | null;
     type: AccountType;
   }>;
-  convertedBalanceByAccountId: Map<string, number | null>;
+  convertedBalanceByAccountId: Map<string, Money | null>;
 }) {
   const assetAmountByAccountId = new Map<
     string,
@@ -62,7 +64,7 @@ export function buildBalanceHistoryScopeAmountMaps(args: {
         accountId: account.id,
         accountName: account.name,
         groupId: account.groupId,
-        amount: -convertedBalance,
+        amount: toMoney(convertedBalance).neg(),
       });
     }
   }
@@ -98,20 +100,18 @@ function resolveScopedAmountFromMap(args: {
   amountByAccountId: Map<string, BreakdownHierarchyAccumulatorItem>;
   scope: HistoryScopeSelection;
   groupById: Map<string, { parentGroupId: string | null }>;
-}): number {
+}): Money {
   if (args.scope === "total") {
-    return toMoneyNumber(
-      moneyRound2(
-        moneySum(
-          Array.from(args.amountByAccountId.values(), (item) => item.amount),
-        ),
+    return moneyRound2(
+      moneySum(
+        Array.from(args.amountByAccountId.values(), (item) => item.amount),
       ),
     );
   }
 
   if (args.scope.startsWith("account:")) {
     const accountId = args.scope.slice("account:".length);
-    return round2(args.amountByAccountId.get(accountId)?.amount ?? 0);
+    return round2(args.amountByAccountId.get(accountId)?.amount ?? toMoney(0));
   }
 
   const groupId = args.scope.slice("group:".length);
@@ -128,7 +128,7 @@ function resolveScopedAmountFromMap(args: {
     }
   }
 
-  return toMoneyNumber(moneyRound2(amount));
+  return moneyRound2(amount);
 }
 
 function findGainLossNodeByScope(args: {
@@ -155,10 +155,10 @@ function findGainLossNodeByScope(args: {
 function resolveScopedGainLossValue(args: {
   hierarchy: PeriodGainsLossesBreakdownNode[];
   scope: HistoryScopeSelection;
-}): number {
+}): Money {
   if (args.scope === "total") {
-    return toMoneyNumber(
-      moneyRound2(moneySum(args.hierarchy.map((node) => node.totalGainLoss))),
+    return moneyRound2(
+      moneySum(args.hierarchy.map((node) => node.totalGainLoss)),
     );
   }
 
@@ -166,7 +166,7 @@ function resolveScopedGainLossValue(args: {
     findGainLossNodeByScope({
       hierarchy: args.hierarchy,
       scope: args.scope,
-    })?.totalGainLoss ?? 0,
+    })?.totalGainLoss ?? toMoney(0),
   );
 }
 
@@ -181,7 +181,7 @@ export function resolveScopedMetricValue(args: {
     name: string;
     parentGroupId: string | null;
   }>;
-}): number | undefined {
+}): Money | undefined {
   if (!args.metricScopeFilter) {
     return undefined;
   }
@@ -253,7 +253,7 @@ export function buildHistoryScopeOptions(args: {
   }>;
 }): HistoryScopeOption[] {
   const nonZeroItems = Array.from(args.amountByAccountId.values()).filter(
-    (item) => item.amount !== 0,
+    (item) => toMoney(item.amount).equals(0) === false,
   );
   if (nonZeroItems.length === 0) {
     return [];

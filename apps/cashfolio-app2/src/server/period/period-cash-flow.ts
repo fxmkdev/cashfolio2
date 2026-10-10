@@ -1,9 +1,10 @@
+import { toMoney, type Money, moneyAdd } from "../../shared/money";
 import { AccountType, Unit } from "../../.prisma-client/enums";
-import { moneyAdd, toMoneyNumber } from "../../shared/money";
+
 import type { BreakdownHierarchyAccumulatorItem } from "./period-helpers";
 
 export type PeriodCashFlowBooking = {
-  value: number;
+  value: Money;
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
@@ -25,14 +26,14 @@ export type PeriodCashFlowTransaction = {
 };
 
 type ConvertBookingToReference = (booking: {
-  value: number;
+  value: Money;
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
   symbol: string | null;
   tradeCurrency: string | null;
   date: Date;
-}) => Promise<number | null>;
+}) => Promise<Money | null>;
 
 function isPureCashTransfer(transaction: PeriodCashFlowTransaction): boolean {
   return (
@@ -65,11 +66,11 @@ export async function computePeriodCashFlow(args: {
   periodStart?: Date;
   periodEndExclusive?: Date;
 }): Promise<{
-  cashFlow: number;
+  cashFlow: Money;
   skippedCount: number;
   cashFlowAmountByAccountId: Map<string, BreakdownHierarchyAccumulatorItem>;
 }> {
-  let cashFlow = 0;
+  let cashFlow: Money = toMoney(0);
   let skippedCount = 0;
   const cashFlowAmountByAccountId = new Map<
     string,
@@ -110,7 +111,7 @@ export async function computePeriodCashFlow(args: {
         skippedCount += 1;
         continue;
       }
-      cashFlow = toMoneyNumber(moneyAdd(cashFlow, convertedValue));
+      cashFlow = moneyAdd(cashFlow, convertedValue);
       const booking = cashBookings[index];
       if (!booking) {
         continue;
@@ -121,7 +122,7 @@ export async function computePeriodCashFlow(args: {
         accountId: booking.account.id,
         accountName: booking.account.name,
         groupId: booking.account.groupId,
-        amount: toMoneyNumber(moneyAdd(existing?.amount ?? 0, convertedValue)),
+        amount: moneyAdd(existing?.amount ?? toMoney(0), convertedValue),
       });
     }
   }

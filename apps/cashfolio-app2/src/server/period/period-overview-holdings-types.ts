@@ -1,3 +1,4 @@
+import { type Money } from "../../shared/money";
 import {
   type AccountType,
   type EquityAccountSubtype,
@@ -20,7 +21,7 @@ export type HoldingTransactionBooking = {
   transactionId?: string | null;
   accountId: string;
   date: Date;
-  value: number;
+  value: Money;
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
@@ -35,8 +36,8 @@ export type HoldingTransaction = {
 };
 
 export type HoldingLot = {
-  quantity: number;
-  unitCostInReference: number;
+  quantity: Money;
+  unitCostInReference: Money;
   acquisitionSortKey: string;
 };
 
@@ -45,11 +46,11 @@ export type HoldingExecutionPricingSource =
 
 export type HoldingExecutionLotMatch = {
   acquisitionSortKey: string;
-  matchedQuantity: number;
-  lotUnitCostInReference: number;
-  executionUnitPriceInReference: number;
-  realizedGainLossDelta: number;
-  runningEventRealizedGainLoss: number;
+  matchedQuantity: Money;
+  lotUnitCostInReference: Money;
+  executionUnitPriceInReference: Money;
+  realizedGainLossDelta: Money;
+  runningEventRealizedGainLoss: Money;
 };
 
 export type HoldingExecutionEvent = {
@@ -58,11 +59,11 @@ export type HoldingExecutionEvent = {
   transactionDescription?: string | null;
   transactionId?: string | null;
   date: Date;
-  quantity: number;
+  quantity: Money;
   pricingSource: HoldingExecutionPricingSource;
-  marketReferenceAmount: number;
-  residualAllocationAmount: number;
-  effectiveReferenceAmount: number;
+  marketReferenceAmount: Money;
+  residualAllocationAmount: Money;
+  effectiveReferenceAmount: Money;
 };
 
 export type HoldingAccountState = {
@@ -79,18 +80,18 @@ export type HoldingRateResolver = (input: {
   symbol: string | null;
   tradeCurrency: string | null;
   date: Date;
-}) => Promise<number | null>;
+}) => Promise<Money | null>;
 
 export type HoldingBookingConverter = (booking: {
   id: string;
-  value: number;
+  value: Money;
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
   symbol: string | null;
   tradeCurrency: string | null;
   date: Date;
-}) => Promise<number | null>;
+}) => Promise<Money | null>;
 
 export type HoldingGainLossWorkingState = {
   stateByHoldingAccountId: Map<string, HoldingAccountState>;

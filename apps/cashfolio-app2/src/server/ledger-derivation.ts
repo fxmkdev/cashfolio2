@@ -1,3 +1,4 @@
+import type { Money } from "../shared/money";
 import {
   AccountType,
   EquityAccountSubtype,
@@ -19,8 +20,8 @@ export type LedgerDerivedBooking = {
   id: string;
   date: Date;
   description: string | null;
-  value: number;
-  valueInReferenceCurrency: number | null;
+  value: Money;
+  valueInReferenceCurrency: Money | null;
   unit: Unit | null;
   currency: string | null;
   cryptocurrency: string | null;
@@ -209,7 +210,7 @@ export function deriveLedgerPresentationData(args: {
   account: LedgerDerivedAccount;
   bookings: LedgerDerivedBooking[];
   hasPeriodFilter: boolean;
-  balanceBeforePeriodRaw: number;
+  balanceBeforePeriodRaw: Money;
   hasBookingsBeforePeriod: boolean;
 }): {
   rows: LedgerDerivedRow[];

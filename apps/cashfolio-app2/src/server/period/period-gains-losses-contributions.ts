@@ -1,3 +1,4 @@
+import { toMoney, type Money, moneyAdd } from "../../shared/money";
 import { AccountType, Unit } from "../../.prisma-client/enums";
 import { prisma } from "../../prisma.server";
 import { isNearZero } from "./period-overview-holdings-common";
@@ -11,8 +12,8 @@ export type GainLossContributionAccumulator = {
   cryptocurrency: string | null;
   symbol: string | null;
   tradeCurrency: string | null;
-  realizedGainLoss: number;
-  unrealizedGainLoss: number;
+  realizedGainLoss: Money;
+  unrealizedGainLoss: Money;
 };
 
 export type ExplicitCounterpartAccount = {
@@ -92,17 +93,20 @@ export function accumulateGainLossContribution(args: {
   cryptocurrency: string | null;
   symbol: string | null;
   tradeCurrency: string | null;
-  realizedGainLoss: number;
-  unrealizedGainLoss: number;
+  realizedGainLoss: Money;
+  unrealizedGainLoss: Money;
 }) {
   const realizedGainLoss = isNearZero(args.realizedGainLoss)
-    ? 0
+    ? toMoney(0)
     : args.realizedGainLoss;
   const unrealizedGainLoss = isNearZero(args.unrealizedGainLoss)
-    ? 0
+    ? toMoney(0)
     : args.unrealizedGainLoss;
 
-  if (realizedGainLoss === 0 && unrealizedGainLoss === 0) {
+  if (
+    toMoney(realizedGainLoss).equals(0) &&
+    toMoney(unrealizedGainLoss).equals(0)
+  ) {
     return;
   }
 
@@ -118,8 +122,14 @@ export function accumulateGainLossContribution(args: {
   const existing = args.byKey.get(key);
 
   if (existing) {
-    existing.realizedGainLoss += realizedGainLoss;
-    existing.unrealizedGainLoss += unrealizedGainLoss;
+    existing.realizedGainLoss = moneyAdd(
+      existing.realizedGainLoss,
+      realizedGainLoss,
+    );
+    existing.unrealizedGainLoss = moneyAdd(
+      existing.unrealizedGainLoss,
+      unrealizedGainLoss,
+    );
     if (
       isNearZero(existing.realizedGainLoss) &&
       isNearZero(existing.unrealizedGainLoss)

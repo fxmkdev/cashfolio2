@@ -1,4 +1,11 @@
 import {
+  toMoney,
+  type Money,
+  moneyAdd,
+  moneySubtract,
+  moneySum,
+} from "../../shared/money";
+import {
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -13,7 +20,7 @@ import {
   finalizeHoldingGainLossState,
   initializeHoldingGainLossState,
 } from "./period-overview-holdings";
-import { moneySubtract, moneySum, toMoneyNumber } from "../../shared/money";
+
 import { isNearZero } from "./period-overview-holdings-common";
 import type {
   HoldingRateConvertibleAccount,
@@ -38,7 +45,7 @@ export async function computePeriodHoldingGainLoss(args: {
   gainsLossesContributionByKey: Map<string, GainLossContributionAccumulator>;
   initialHoldingBalances?: Array<{
     accountId: string;
-    rawBalance: number;
+    rawBalance: Money;
   }>;
   holdingTransactions?: Array<
     HoldingTransaction & {
@@ -52,16 +59,16 @@ export async function computePeriodHoldingGainLoss(args: {
     symbol: string | null;
     tradeCurrency: string | null;
     date: Date;
-  }) => Promise<number | null>;
+  }) => Promise<Money | null>;
   convertBookingToReference: (booking: {
-    value: number;
+    value: Money;
     unit: Unit;
     currency: string | null;
     cryptocurrency: string | null;
     symbol: string | null;
     tradeCurrency: string | null;
     date: Date;
-  }) => Promise<number | null>;
+  }) => Promise<Money | null>;
 }) {
   const holdingAccountIds = args.holdingAccounts.map((account) => account.id);
   const holdingAccountIdSet = new Set(holdingAccountIds);
@@ -71,14 +78,14 @@ export async function computePeriodHoldingGainLoss(args: {
   ];
 
   let holdingGainLossSplit = {
-    realizedGainLoss: 0,
-    unrealizedGainLoss: 0,
+    realizedGainLoss: toMoney(0),
+    unrealizedGainLoss: toMoney(0),
     convertedCount: 0,
     skippedCount: 0,
   };
 
   if (trackedHoldingAccounts.length > 0) {
-    const initialHoldingBalanceByAccountId = new Map<string, number>();
+    const initialHoldingBalanceByAccountId = new Map<string, Money>();
     if (args.initialHoldingBalances) {
       for (const balance of args.initialHoldingBalances) {
         initialHoldingBalanceByAccountId.set(
@@ -99,7 +106,7 @@ export async function computePeriodHoldingGainLoss(args: {
       for (const balance of initialHoldingBalances) {
         initialHoldingBalanceByAccountId.set(
           balance.accountId,
-          toMoneyNumber(balance._sum.value ?? 0),
+          toMoney(balance._sum.value ?? toMoney(0)),
         );
       }
     }
@@ -112,9 +119,7 @@ export async function computePeriodHoldingGainLoss(args: {
       const openingPostedBalance = unitBucket.bookings
         .filter((booking) => booking.date < args.periodStart)
         .map((booking) => booking.value);
-      const openingBalance = toMoneyNumber(
-        moneySubtract(0, moneySum(openingPostedBalance)),
-      );
+      const openingBalance = moneySubtract(0, moneySum(openingPostedBalance));
       if (isNearZero(openingBalance)) {
         continue;
       }
@@ -238,7 +243,7 @@ export async function computePeriodHoldingGainLoss(args: {
               id: booking.id,
               accountId: booking.accountId,
               date: booking.date,
-              value: toMoneyNumber(booking.value),
+              value: toMoney(booking.value),
               unit: booking.unit,
               currency: booking.currency,
               cryptocurrency: booking.cryptocurrency,
@@ -298,7 +303,7 @@ export async function computePeriodHoldingGainLoss(args: {
               id: booking.id,
               accountId: transferClearingHoldingAccountId,
               date: booking.date,
-              value: -booking.value,
+              value: toMoney(booking.value).neg(),
               unit: booking.unit,
               currency: booking.currency,
               cryptocurrency: booking.cryptocurrency,
@@ -367,15 +372,16 @@ export async function computePeriodHoldingGainLoss(args: {
           symbol: contribution.symbol,
           tradeCurrency: contribution.tradeCurrency,
           realizedGainLoss: contribution.realizedGainLoss,
-          unrealizedGainLoss: 0,
+          unrealizedGainLoss: toMoney(0),
         });
       },
     });
 
   return {
-    realizedGainLoss:
-      holdingGainLossSplit.realizedGainLoss +
+    realizedGainLoss: moneyAdd(
+      holdingGainLossSplit.realizedGainLoss,
       executionResidualRealization.realizedGainLoss,
+    ),
     unrealizedGainLoss: holdingGainLossSplit.unrealizedGainLoss,
     convertedCount:
       holdingGainLossSplit.convertedCount +

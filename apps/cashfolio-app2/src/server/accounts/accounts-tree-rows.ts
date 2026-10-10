@@ -1,3 +1,5 @@
+import { toNumericMoney } from "../money-boundary";
+import { toMoney, type Money } from "../../shared/money";
 import type {
   AccountType,
   EquityAccountSubtype,
@@ -119,10 +121,10 @@ export function filterGroupsForAccountState(args: {
 
 export function buildAccountRows(args: {
   accounts: AccountTreeAccount[];
-  rawBalanceByAccountId: Map<string, number>;
-  allScheduledRawBalanceByAccountId: Map<string, number>;
-  openingRawBalanceByAccountId: Map<string, number>;
-  displayBalanceInReferenceCurrencyByAccountId: Map<string, number | null>;
+  rawBalanceByAccountId: Map<string, Money>;
+  allScheduledRawBalanceByAccountId: Map<string, Money>;
+  openingRawBalanceByAccountId: Map<string, Money>;
+  displayBalanceInReferenceCurrencyByAccountId: Map<string, Money | null>;
   bookingCountByAccountId: Map<string, number>;
   groupById: Map<
     string,
@@ -130,80 +132,88 @@ export function buildAccountRows(args: {
   >;
   includeActionAvailability: boolean;
 }): AccountTreeRow[] {
-  return args.accounts.map((account) => {
-    const rawBalance = args.rawBalanceByAccountId.get(account.id) ?? 0;
+  return toNumericMoney(
+    args.accounts.map((account) => {
+      const rawBalance =
+        args.rawBalanceByAccountId.get(account.id) ?? toMoney(0);
 
-    const hasBookings = (args.bookingCountByAccountId.get(account.id) ?? 0) > 0;
-    const requiresZeroBalance = accountTypeRequiresZeroBalanceForArchive(
-      account.type,
-    );
-    const allScheduledRawBalance =
-      args.allScheduledRawBalanceByAccountId.get(account.id) ?? 0;
-    const hasZeroBalance = !requiresZeroBalance || allScheduledRawBalance === 0;
-    const hasInactiveAncestor = hasInactiveAncestorGroup(
-      account.groupId,
-      args.groupById,
-    );
-    const deleteAvailability = args.includeActionAvailability
-      ? getAccountDeleteAvailability(hasBookings)
-      : unavailableActionAvailability();
-    const archiveAvailability = args.includeActionAvailability
-      ? getAccountArchiveAvailability({
-          isActive: account.isActive,
-          hasZeroBalance,
-        })
-      : unavailableActionAvailability();
-    const unarchiveAvailability = args.includeActionAvailability
-      ? getAccountUnarchiveAvailability({
-          isActive: account.isActive,
-          hasInactiveAncestor,
-        })
-      : unavailableActionAvailability();
-    const displayBalance =
-      account.type === "ASSET"
-        ? rawBalance
-        : account.type === "LIABILITY"
-          ? -rawBalance
-          : null;
-    const displayBalanceInReferenceCurrency =
-      args.displayBalanceInReferenceCurrencyByAccountId.get(account.id) ?? null;
-    const openingRawBalance = args.openingRawBalanceByAccountId.get(account.id);
-    const displayOpeningBalance =
-      openingRawBalance == null
-        ? null
-        : account.type === "ASSET"
-          ? openingRawBalance
+      const hasBookings =
+        (args.bookingCountByAccountId.get(account.id) ?? 0) > 0;
+      const requiresZeroBalance = accountTypeRequiresZeroBalanceForArchive(
+        account.type,
+      );
+      const allScheduledRawBalance =
+        args.allScheduledRawBalanceByAccountId.get(account.id) ?? toMoney(0);
+      const hasZeroBalance =
+        !requiresZeroBalance || toMoney(allScheduledRawBalance).equals(0);
+      const hasInactiveAncestor = hasInactiveAncestorGroup(
+        account.groupId,
+        args.groupById,
+      );
+      const deleteAvailability = args.includeActionAvailability
+        ? getAccountDeleteAvailability(hasBookings)
+        : unavailableActionAvailability();
+      const archiveAvailability = args.includeActionAvailability
+        ? getAccountArchiveAvailability({
+            isActive: account.isActive,
+            hasZeroBalance,
+          })
+        : unavailableActionAvailability();
+      const unarchiveAvailability = args.includeActionAvailability
+        ? getAccountUnarchiveAvailability({
+            isActive: account.isActive,
+            hasInactiveAncestor,
+          })
+        : unavailableActionAvailability();
+      const displayBalance =
+        account.type === "ASSET"
+          ? rawBalance
           : account.type === "LIABILITY"
-            ? -openingRawBalance
+            ? toMoney(rawBalance).neg()
             : null;
-    return {
-      id: account.id,
-      nodeType: "account",
-      name: account.name,
-      type: account.type,
-      equityAccountSubtype: account.equityAccountSubtype,
-      unit: account.unit,
-      currency: account.currency,
-      cryptocurrency: account.cryptocurrency,
-      symbol: account.symbol,
-      tradeCurrency: account.tradeCurrency,
-      statementImportCsvFormat: account.statementImportCsvFormat,
-      isCashAccount: account.isCashAccount,
-      balance: displayBalance,
-      balanceInReferenceCurrency: displayBalanceInReferenceCurrency,
-      openingBalance: displayOpeningBalance,
-      parentId: account.groupId ?? undefined,
-      isActive: account.isActive,
-      groupId: account.groupId ?? undefined,
-      sortOrder: account.sortOrder,
-      deletable: deleteAvailability.enabled,
-      deleteDisabledReason: deleteAvailability.disabledReason,
-      archivable: archiveAvailability.enabled,
-      archiveDisabledReason: archiveAvailability.disabledReason,
-      unarchivable: unarchiveAvailability.enabled,
-      unarchiveDisabledReason: unarchiveAvailability.disabledReason,
-    };
-  });
+      const displayBalanceInReferenceCurrency =
+        args.displayBalanceInReferenceCurrencyByAccountId.get(account.id) ??
+        null;
+      const openingRawBalance = args.openingRawBalanceByAccountId.get(
+        account.id,
+      );
+      const displayOpeningBalance =
+        openingRawBalance == null
+          ? null
+          : account.type === "ASSET"
+            ? openingRawBalance
+            : account.type === "LIABILITY"
+              ? toMoney(openingRawBalance).neg()
+              : null;
+      return {
+        id: account.id,
+        nodeType: "account",
+        name: account.name,
+        type: account.type,
+        equityAccountSubtype: account.equityAccountSubtype,
+        unit: account.unit,
+        currency: account.currency,
+        cryptocurrency: account.cryptocurrency,
+        symbol: account.symbol,
+        tradeCurrency: account.tradeCurrency,
+        statementImportCsvFormat: account.statementImportCsvFormat,
+        isCashAccount: account.isCashAccount,
+        balance: displayBalance,
+        balanceInReferenceCurrency: displayBalanceInReferenceCurrency,
+        openingBalance: displayOpeningBalance,
+        parentId: account.groupId ?? undefined,
+        isActive: account.isActive,
+        groupId: account.groupId ?? undefined,
+        sortOrder: account.sortOrder,
+        deletable: deleteAvailability.enabled,
+        deleteDisabledReason: deleteAvailability.disabledReason,
+        archivable: archiveAvailability.enabled,
+        archiveDisabledReason: archiveAvailability.disabledReason,
+        unarchivable: unarchiveAvailability.enabled,
+        unarchiveDisabledReason: unarchiveAvailability.disabledReason,
+      };
+    }),
+  );
 }
 
 export function buildGroupRows(args: {

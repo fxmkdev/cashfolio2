@@ -1,3 +1,4 @@
+import { toNumericMoney } from "../money-boundary";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { AccountType, Unit } from "../../.prisma-client/enums";
 
@@ -124,14 +125,14 @@ describe("loadHistoryOpeningBalancePoint", () => {
       referenceCurrency: "CHF",
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       date: "2026-01-04T00:00:00.000Z",
       label: "Opening Balance",
       assets: 120,
       liabilities: 40,
       netWorth: 80,
     });
-    expect("scopedMetricValue" in result).toBe(false);
+    expect(toNumericMoney("scopedMetricValue" in result)).toBe(false);
   });
 
   test("resolves scoped asset opening balance from account groups", async () => {
@@ -182,7 +183,7 @@ describe("loadHistoryOpeningBalancePoint", () => {
       },
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       date: "2026-01-04T00:00:00.000Z",
       label: "Opening Balance",
       assets: 100,

@@ -1,3 +1,4 @@
+import { toMoney, type Money } from "../../shared/money";
 import { BASE_CURRENCY } from "./constants";
 import { toSeriesTimestamp } from "./date-utils";
 import {
@@ -18,15 +19,15 @@ import {
   fetchUsdToCurrencyRateFromCurrencyLayer,
 } from "./providers";
 import type { ValuationLookupContext } from "./lookup-context";
-import type { ValuationRateLookupResult } from "./types";
+import type { DecimalValuationRateLookupResult as ValuationRateLookupResult } from "./types";
 
 export async function getUsdToCurrencyRate(
   targetCurrency: string,
   date: Date,
   context: ValuationLookupContext,
-): Promise<number | null> {
+): Promise<Money | null> {
   if (targetCurrency === BASE_CURRENCY) {
-    return 1;
+    return toMoney(1);
   }
 
   return getRateWithBacktracking({
@@ -43,7 +44,7 @@ export async function getUsdToCurrencyRate(
         targetDate,
         requestReason,
       ),
-  });
+  }).then((rate) => (rate == null ? null : toMoney(rate)));
 }
 
 export async function getUsdToCurrencyRateDetails(
@@ -52,7 +53,7 @@ export async function getUsdToCurrencyRateDetails(
   context: ValuationLookupContext,
 ): Promise<ValuationRateLookupResult> {
   if (targetCurrency === BASE_CURRENCY) {
-    return { rate: 1, source: "identity" };
+    return { rate: toMoney(1), source: "identity" };
   }
 
   return getRateWithBacktrackingDetails({
@@ -69,14 +70,17 @@ export async function getUsdToCurrencyRateDetails(
         targetDate,
         requestReason,
       ),
-  });
+  }).then((result) => ({
+    ...result,
+    rate: result.rate == null ? null : toMoney(result.rate),
+  }));
 }
 
 export async function getUsdPerCryptocurrencyRate(
   cryptocurrency: string,
   date: Date,
   context: ValuationLookupContext,
-): Promise<number | null> {
+): Promise<Money | null> {
   return getRateWithBacktracking({
     seriesKey: getCryptocurrencyRedisSeriesKey(cryptocurrency),
     backtrackedFallbackCacheKey: getCryptocurrencyBacktrackedFallbackCacheKey(
@@ -91,7 +95,7 @@ export async function getUsdPerCryptocurrencyRate(
         targetDate,
         requestReason,
       ),
-  });
+  }).then((rate) => (rate == null ? null : toMoney(rate)));
 }
 
 export async function getUsdPerCryptocurrencyRateDetails(
@@ -113,7 +117,10 @@ export async function getUsdPerCryptocurrencyRateDetails(
         targetDate,
         requestReason,
       ),
-  });
+  }).then((result) => ({
+    ...result,
+    rate: result.rate == null ? null : toMoney(result.rate),
+  }));
 }
 
 export async function getSecurityPrice(
@@ -121,7 +128,7 @@ export async function getSecurityPrice(
   tradeCurrency: string,
   date: Date,
   context: ValuationLookupContext,
-): Promise<number | null> {
+): Promise<Money | null> {
   return getRateWithBacktracking({
     seriesKey: getSecurityRedisSeriesKey(symbol, tradeCurrency),
     backtrackedFallbackCacheKey: getSecurityBacktrackedFallbackCacheKey(
@@ -139,7 +146,7 @@ export async function getSecurityPrice(
         requestReason,
       ),
     stopOnExplicitNoData: false,
-  });
+  }).then((rate) => (rate == null ? null : toMoney(rate)));
 }
 
 export async function getSecurityPriceDetails(
@@ -165,5 +172,8 @@ export async function getSecurityPriceDetails(
         requestReason,
       ),
     stopOnExplicitNoData: false,
-  });
+  }).then((result) => ({
+    ...result,
+    rate: result.rate == null ? null : toMoney(result.rate),
+  }));
 }

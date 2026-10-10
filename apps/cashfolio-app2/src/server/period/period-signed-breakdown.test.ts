@@ -1,3 +1,5 @@
+import { toMoney } from "../../shared/money";
+import { toNumericMoney } from "../money-boundary";
 import { describe, expect, it } from "vitest";
 import { buildSignedBreakdownHierarchyWithMeta } from "./period-helpers";
 
@@ -14,18 +16,18 @@ describe("signed breakdown hierarchy", () => {
             accountId: "receipts",
             accountName: "Receipts",
             groupId: "cash",
-            amount: 100,
+            amount: toMoney(100),
           },
           {
             accountId: "payments",
             accountName: "Payments",
             groupId: "cash",
-            amount: -100 + netAmount,
+            amount: toMoney(-100 + netAmount),
           },
         ],
       });
 
-      expect(result).toEqual({
+      expect(toNumericMoney(result)).toEqual({
         hierarchy: [
           {
             id: "group:cash",
@@ -63,13 +65,28 @@ describe("signed breakdown hierarchy", () => {
         ["cash", { id: "cash", name: "Cash", parentGroupId: "parent" }],
       ]),
       items: [
-        { accountId: "a", accountName: "A", groupId: "cash", amount: 100 },
-        { accountId: "b", accountName: "B", groupId: "cash", amount: -100 },
-        { accountId: "c", accountName: "C", groupId: "parent", amount: 25 },
+        {
+          accountId: "a",
+          accountName: "A",
+          groupId: "cash",
+          amount: toMoney(100),
+        },
+        {
+          accountId: "b",
+          accountName: "B",
+          groupId: "cash",
+          amount: toMoney(-100),
+        },
+        {
+          accountId: "c",
+          accountName: "C",
+          groupId: "parent",
+          amount: toMoney(25),
+        },
       ],
     });
 
-    expect(result.hierarchy).toMatchObject([
+    expect(toNumericMoney(result.hierarchy)).toMatchObject([
       {
         id: "group:parent",
         amount: 25,
@@ -86,7 +103,7 @@ describe("signed breakdown hierarchy", () => {
         ],
       },
     ]);
-    expect(result.hasHiddenAmountDiscrepancy).toBe(false);
+    expect(toNumericMoney(result.hasHiddenAmountDiscrepancy)).toBe(false);
   });
 
   it("still prunes groups whose accounts all round to zero", () => {
@@ -95,11 +112,21 @@ describe("signed breakdown hierarchy", () => {
         ["cash", { id: "cash", name: "Cash", parentGroupId: null }],
       ]),
       items: [
-        { accountId: "a", accountName: "A", groupId: "cash", amount: 0.004 },
-        { accountId: "b", accountName: "B", groupId: "cash", amount: -0.004 },
+        {
+          accountId: "a",
+          accountName: "A",
+          groupId: "cash",
+          amount: toMoney(0.004),
+        },
+        {
+          accountId: "b",
+          accountName: "B",
+          groupId: "cash",
+          amount: toMoney(-0.004),
+        },
       ],
     });
 
-    expect(result.hierarchy).toEqual([]);
+    expect(toNumericMoney(result.hierarchy)).toEqual([]);
   });
 });

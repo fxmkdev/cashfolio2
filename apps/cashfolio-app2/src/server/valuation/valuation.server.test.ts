@@ -1,3 +1,4 @@
+import { toNumericMoney } from "../money-boundary";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const getRateWithBacktracking = vi.hoisted(() => vi.fn());
@@ -45,7 +46,7 @@ describe("valuation server lookup context", () => {
       date: new Date("2026-03-29T00:06:00.000Z"),
     });
 
-    expect(result).toBe(1);
+    expect(toNumericMoney(result)).toBe(1);
     expect(getLatestAssumedAvailableHistoricalUtcDay).toHaveBeenCalledTimes(1);
     expect(getRateWithBacktracking).toHaveBeenCalledTimes(2);
 
@@ -73,7 +74,7 @@ describe("valuation server lookup context", () => {
       date: new Date("2026-03-29T00:06:00.000Z"),
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       rate: 0.9,
       source: "timeSeries",
     });
@@ -91,7 +92,7 @@ describe("valuation server lookup context", () => {
       date: new Date("2026-03-29T00:06:00.000Z"),
     });
 
-    expect(result.source).toBe("fallback");
+    expect(toNumericMoney(result.source)).toBe("fallback");
   });
 
   test("reuses one cutoff decision across nested security+fx lookup", async () => {
@@ -102,7 +103,7 @@ describe("valuation server lookup context", () => {
       date: new Date("2026-03-29T00:06:00.000Z"),
     });
 
-    expect(result).toBe(1);
+    expect(toNumericMoney(result)).toBe(1);
     expect(getLatestAssumedAvailableHistoricalUtcDay).toHaveBeenCalledTimes(1);
     expect(getRateWithBacktracking).toHaveBeenCalledTimes(3);
 
@@ -111,9 +112,42 @@ describe("valuation server lookup context", () => {
     );
     expect(latestFetchableDates).toHaveLength(3);
     expect(
-      latestFetchableDates.every(
-        (value) => value?.toISOString() === "2026-03-28T00:00:00.000Z",
+      toNumericMoney(
+        latestFetchableDates.every(
+          (value) => value?.toISOString() === "2026-03-28T00:00:00.000Z",
+        ),
       ),
     ).toBe(true);
+  });
+});
+
+describe("composed Decimal rates", () => {
+  test("composes source numeric security and FX rates without binary multiplication", async () => {
+    getRateWithBacktracking.mockImplementation(
+      async ({ seriesKey }: { seriesKey: string }) => {
+        if (seriesKey === "valuation:marketstack:ABC:EUR") return 0.1;
+        if (seriesKey === "valuation:currencylayer:USD:CHF") return 0.99;
+        if (seriesKey === "valuation:currencylayer:USD:EUR") return 0.03;
+        return null;
+      },
+    );
+    const rate = await getSecurityToCurrencyExchangeRate({
+      symbol: "ABC",
+      tradeCurrency: "EUR",
+      targetCurrency: "CHF",
+      date: new Date("2026-01-01"),
+    });
+    expect(rate!.toString()).toBe("3.3");
+  });
+
+  test("rejects non-finite source rates as unavailable valuations", async () => {
+    getRateWithBacktracking.mockResolvedValue(Infinity);
+    expect(
+      await getCurrencyExchangeRate({
+        sourceCurrency: "USD",
+        targetCurrency: "CHF",
+        date: new Date("2026-01-01"),
+      }),
+    ).toBeNull();
   });
 });

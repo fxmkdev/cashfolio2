@@ -1,10 +1,11 @@
+import { toMoney, type Money, moneyAdd } from "../../shared/money";
 import { EquityAccountSubtype } from "../../.prisma-client/enums";
 import type { BreakdownHierarchyAccumulatorItem } from "./period-helpers";
 
 export type PeriodOverviewEquityAggregation = {
-  income: number;
-  expenses: number;
-  explicitGainLoss: number;
+  income: Money;
+  expenses: Money;
+  explicitGainLoss: Money;
   expenseAmountByAccountId: Map<string, BreakdownHierarchyAccumulatorItem>;
   incomeAmountByAccountId: Map<string, BreakdownHierarchyAccumulatorItem>;
 };
@@ -20,9 +21,9 @@ type AggregatedEquityBooking = {
 
 export function createPeriodOverviewEquityAggregation(): PeriodOverviewEquityAggregation {
   return {
-    income: 0,
-    expenses: 0,
-    explicitGainLoss: 0,
+    income: toMoney(0),
+    expenses: toMoney(0),
+    explicitGainLoss: toMoney(0),
     expenseAmountByAccountId: new Map(),
     incomeAmountByAccountId: new Map(),
   };
@@ -31,11 +32,11 @@ export function createPeriodOverviewEquityAggregation(): PeriodOverviewEquityAgg
 function upsertBreakdownAmount(args: {
   targetMap: Map<string, BreakdownHierarchyAccumulatorItem>;
   account: AggregatedEquityBooking["account"];
-  amount: number;
+  amount: Money;
 }) {
   const existingItem = args.targetMap.get(args.account.id);
   if (existingItem) {
-    existingItem.amount += args.amount;
+    existingItem.amount = moneyAdd(existingItem.amount, args.amount);
     return;
   }
 
@@ -49,14 +50,14 @@ function upsertBreakdownAmount(args: {
 
 export function accumulateConvertedEquityBooking(args: {
   booking: AggregatedEquityBooking;
-  convertedValue: number;
+  convertedValue: Money;
   aggregation: PeriodOverviewEquityAggregation;
 }) {
   if (
     args.booking.account.equityAccountSubtype === EquityAccountSubtype.INCOME
   ) {
-    const incomeAmount = -args.convertedValue;
-    args.aggregation.income += incomeAmount;
+    const incomeAmount = toMoney(args.convertedValue).neg();
+    args.aggregation.income = moneyAdd(args.aggregation.income, incomeAmount);
     upsertBreakdownAmount({
       targetMap: args.aggregation.incomeAmountByAccountId,
       account: args.booking.account,
@@ -69,7 +70,10 @@ export function accumulateConvertedEquityBooking(args: {
     args.booking.account.equityAccountSubtype === EquityAccountSubtype.EXPENSE
   ) {
     const expenseAmount = args.convertedValue;
-    args.aggregation.expenses += expenseAmount;
+    args.aggregation.expenses = moneyAdd(
+      args.aggregation.expenses,
+      expenseAmount,
+    );
     upsertBreakdownAmount({
       targetMap: args.aggregation.expenseAmountByAccountId,
       account: args.booking.account,
@@ -78,5 +82,8 @@ export function accumulateConvertedEquityBooking(args: {
     return;
   }
 
-  args.aggregation.explicitGainLoss += -args.convertedValue;
+  args.aggregation.explicitGainLoss = moneyAdd(
+    args.aggregation.explicitGainLoss,
+    toMoney(args.convertedValue).neg(),
+  );
 }

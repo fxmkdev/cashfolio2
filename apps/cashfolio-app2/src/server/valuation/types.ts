@@ -1,3 +1,4 @@
+import type { Money } from "../../shared/money";
 export type CurrencyLayerHistoricalResponse = {
   success: boolean;
   quotes?: Record<string, number>;
@@ -50,3 +51,8 @@ export const NO_DATA_FETCH_RESULT = Symbol("valuation-no-data-fetch-result");
 
 export type NoDataFetchResult = typeof NO_DATA_FETCH_RESULT;
 export type FetchRateResult = number | null | NoDataFetchResult;
+
+export type DecimalValuationRateLookupResult = {
+  rate: Money | null;
+  source: ValuationRateSource;
+};

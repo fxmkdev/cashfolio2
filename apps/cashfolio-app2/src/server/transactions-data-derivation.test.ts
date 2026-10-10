@@ -1,3 +1,5 @@
+import type { MoneyInput } from "../shared/money";
+import { toMoney } from "../shared/money";
 import { describe, expect, test } from "vitest";
 import { Unit } from "../.prisma-client/enums";
 import { deriveTransactionsRows } from "./transactions-data-derivation";
@@ -14,8 +16,8 @@ function utcDate(
 function createBooking(args: {
   id: string;
   date: Date;
-  value: number;
-  valueInReferenceCurrency?: number | null;
+  value: MoneyInput;
+  valueInReferenceCurrency?: MoneyInput | null;
   description?: string | null;
   transactionId?: string;
   transactionDescription?: string | null;
@@ -32,11 +34,17 @@ function createBooking(args: {
     id: args.id,
     date: args.date,
     description: args.description ?? null,
-    value: args.value,
+    value: toMoney(args.value),
     valueInReferenceCurrency:
-      args.valueInReferenceCurrency === undefined
+      (args.valueInReferenceCurrency === undefined
         ? args.value
-        : args.valueInReferenceCurrency,
+        : args.valueInReferenceCurrency) == null
+        ? null
+        : toMoney(
+            (args.valueInReferenceCurrency === undefined
+              ? args.value
+              : args.valueInReferenceCurrency)!,
+          ),
     unit: args.unit === undefined ? (Unit.CURRENCY as Unit | null) : args.unit,
     currency: args.currency === undefined ? "CHF" : args.currency,
     cryptocurrency: args.cryptocurrency ?? null,
@@ -60,7 +68,7 @@ describe("deriveTransactionsRows", () => {
           transactionId: "transaction-1",
           transactionDescription: "Salary",
           date: utcDate(2026, 0, 11),
-          value: 100,
+          value: toMoney(100),
           account: { id: "bank", name: "Bank" },
         }),
         createBooking({
@@ -68,7 +76,7 @@ describe("deriveTransactionsRows", () => {
           transactionId: "transaction-1",
           transactionDescription: "Salary",
           date: utcDate(2026, 0, 10),
-          value: -100,
+          value: toMoney(-100),
           account: { id: "income", name: "Income" },
         }),
       ],
@@ -95,7 +103,7 @@ describe("deriveTransactionsRows", () => {
           id: "debit-1",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: 60,
+          value: toMoney(60),
           account: { id: "bank", name: "Bank" },
           description: "Booking text",
           transactionDescription: "Transaction text",
@@ -104,7 +112,7 @@ describe("deriveTransactionsRows", () => {
           id: "debit-2",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: 40,
+          value: toMoney(40),
           account: { id: "bank", name: "Bank" },
           transactionDescription: "Transaction text",
         }),
@@ -112,7 +120,7 @@ describe("deriveTransactionsRows", () => {
           id: "credit",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: -100,
+          value: toMoney(-100),
           unit: Unit.SECURITY,
           currency: null,
           symbol: "AAPL",
@@ -161,15 +169,15 @@ describe("deriveTransactionsRows", () => {
           id: "debit",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: 100,
-          valueInReferenceCurrency: 120,
+          value: toMoney(100),
+          valueInReferenceCurrency: toMoney(120),
         }),
         createBooking({
           id: "credit",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: -100,
-          valueInReferenceCurrency: -110,
+          value: toMoney(-100),
+          valueInReferenceCurrency: toMoney(-110),
         }),
       ],
     });
@@ -185,14 +193,14 @@ describe("deriveTransactionsRows", () => {
           id: "debit",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: 100,
-          valueInReferenceCurrency: 120,
+          value: toMoney(100),
+          valueInReferenceCurrency: toMoney(120),
         }),
         createBooking({
           id: "credit",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: -100,
+          value: toMoney(-100),
           valueInReferenceCurrency: null,
         }),
       ],
@@ -209,21 +217,21 @@ describe("deriveTransactionsRows", () => {
           id: "older",
           transactionId: "transaction-b",
           date: utcDate(2026, 0, 10),
-          value: 100,
+          value: toMoney(100),
           transactionCreatedAt: utcDate(2026, 0, 10, 9),
         }),
         createBooking({
           id: "newer-created",
           transactionId: "transaction-a",
           date: utcDate(2026, 0, 10),
-          value: 100,
+          value: toMoney(100),
           transactionCreatedAt: utcDate(2026, 0, 10, 10),
         }),
         createBooking({
           id: "newest-date",
           transactionId: "transaction-c",
           date: utcDate(2026, 0, 11),
-          value: 100,
+          value: toMoney(100),
           transactionCreatedAt: utcDate(2026, 0, 9, 10),
         }),
       ],
@@ -244,14 +252,14 @@ describe("deriveTransactionsRows", () => {
           id: "debit",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: 100,
+          value: toMoney(100),
           currency: "USD",
         }),
         createBooking({
           id: "credit",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: -100,
+          value: toMoney(-100),
           currency: "USD",
         }),
       ],
@@ -276,14 +284,14 @@ describe("deriveTransactionsRows", () => {
           id: "debit",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: 100,
+          value: toMoney(100),
           currency: "CHF",
         }),
         createBooking({
           id: "credit",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: -100,
+          value: toMoney(-100),
           currency: "CHF",
         }),
       ],
@@ -308,28 +316,28 @@ describe("deriveTransactionsRows", () => {
           id: "debit-usd",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: 100,
+          value: toMoney(100),
           currency: "USD",
         }),
         createBooking({
           id: "credit-usd",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: -100,
+          value: toMoney(-100),
           currency: "USD",
         }),
         createBooking({
           id: "debit-chf",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: 90,
+          value: toMoney(90),
           currency: "CHF",
         }),
         createBooking({
           id: "credit-chf",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: -90,
+          value: toMoney(-90),
           currency: "CHF",
         }),
       ],
@@ -353,21 +361,21 @@ describe("deriveTransactionsRows", () => {
           id: "debit-usd",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: 100,
+          value: toMoney(100),
           currency: "USD",
         }),
         createBooking({
           id: "credit-usd",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: -100,
+          value: toMoney(-100),
           currency: "USD",
         }),
         createBooking({
           id: "debit-btc",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: 1,
+          value: toMoney(1),
           unit: Unit.CRYPTOCURRENCY,
           currency: null,
           cryptocurrency: "BTC",
@@ -376,7 +384,7 @@ describe("deriveTransactionsRows", () => {
           id: "credit-btc",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: -1,
+          value: toMoney(-1),
           unit: Unit.CRYPTOCURRENCY,
           currency: null,
           cryptocurrency: "BTC",
@@ -403,21 +411,21 @@ describe("deriveTransactionsRows", () => {
           id: "debit-chf",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: 90,
+          value: toMoney(90),
           currency: "CHF",
         }),
         createBooking({
           id: "credit-chf",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: -90,
+          value: toMoney(-90),
           currency: "CHF",
         }),
         createBooking({
           id: "debit-security",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: 3,
+          value: toMoney(3),
           unit: Unit.SECURITY,
           currency: null,
           symbol: "AAPL",
@@ -427,7 +435,7 @@ describe("deriveTransactionsRows", () => {
           id: "credit-security",
           transactionId: "transaction-1",
           date: utcDate(2026, 0, 10),
-          value: -3,
+          value: toMoney(-3),
           unit: Unit.SECURITY,
           currency: null,
           symbol: "AAPL",

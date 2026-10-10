@@ -1,6 +1,8 @@
+import { toNumericMoney } from "../money-boundary";
+import { toMoney, type Money, moneyAdd } from "../../shared/money";
 import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import { prisma } from "../../prisma.server";
-import { moneyAdd, toMoneyNumber } from "../../shared/money";
+
 import {
   convertBookingValueToReference,
   getUnitToReferenceExchangeRate,
@@ -67,15 +69,15 @@ export async function buildRealAccountReconciliation(args: {
     args.referenceCurrency,
   );
   if (!targetAccount) {
-    return null;
+    return toNumericMoney(null);
   }
 
   const diagnostics: GainLossReconciliationDiagnostic[] = [];
-  const realizedEvents: GainLossReconciliationRealizedEvent[] = [];
-  const unrealizedOpenLots: GainLossReconciliationOpenLot[] = [];
+  const realizedEvents: GainLossReconciliationRealizedEvent<Money>[] = [];
+  const unrealizedOpenLots: GainLossReconciliationOpenLot<Money>[] = [];
 
   if (args.isBeforeAccountBookStart) {
-    return {
+    return toNumericMoney({
       target: {
         accountId: targetAccount.id,
         accountName: account.name,
@@ -92,7 +94,7 @@ export async function buildRealAccountReconciliation(args: {
       realizedEvents,
       unrealizedOpenLots,
       diagnostics,
-    };
+    });
   }
 
   const siblingAccounts = await prisma.account.findMany({
@@ -154,14 +156,14 @@ export async function buildRealAccountReconciliation(args: {
   const initialHoldingBalanceByAccountId = new Map(
     initialHoldingBalances.map((balance) => [
       balance.accountId,
-      toMoneyNumber(balance._sum.value ?? 0),
+      toMoney(balance._sum.value ?? toMoney(0)),
     ]),
   );
 
-  const exchangeRateByKey = new Map<string, Promise<number | null>>();
+  const exchangeRateByKey = new Map<string, Promise<Money | null>>();
   let targetSkippedCount = 0;
-  let targetRealizedGainLoss = 0;
-  let targetUnrealizedGainLoss = 0;
+  let targetRealizedGainLoss: Money = toMoney(0);
+  let targetUnrealizedGainLoss: Money = toMoney(0);
 
   const state = await initializeHoldingGainLossState({
     holdingAccounts: targetTrackedHoldingAccounts,
@@ -276,7 +278,7 @@ export async function buildRealAccountReconciliation(args: {
           transactionId: transaction.id,
           accountId: booking.accountId,
           date: booking.date,
-          value: toMoneyNumber(booking.value),
+          value: toMoney(booking.value),
           unit: booking.unit,
           currency: booking.currency,
           cryptocurrency: booking.cryptocurrency,
@@ -321,14 +323,13 @@ export async function buildRealAccountReconciliation(args: {
       if (gainLossByAccount.accountId !== targetAccount.id) {
         return;
       }
-      targetRealizedGainLoss = toMoneyNumber(
-        moneyAdd(targetRealizedGainLoss, gainLossByAccount.realizedGainLoss),
+      targetRealizedGainLoss = moneyAdd(
+        targetRealizedGainLoss,
+        gainLossByAccount.realizedGainLoss,
       );
-      targetUnrealizedGainLoss = toMoneyNumber(
-        moneyAdd(
-          targetUnrealizedGainLoss,
-          gainLossByAccount.unrealizedGainLoss,
-        ),
+      targetUnrealizedGainLoss = moneyAdd(
+        targetUnrealizedGainLoss,
+        gainLossByAccount.unrealizedGainLoss,
       );
     },
     onAccountExecutionEvent: (event) => {
@@ -352,7 +353,7 @@ export async function buildRealAccountReconciliation(args: {
     },
   });
 
-  return {
+  return toNumericMoney({
     target: {
       accountId: targetAccount.id,
       accountName: account.name,
@@ -372,5 +373,5 @@ export async function buildRealAccountReconciliation(args: {
     realizedEvents,
     unrealizedOpenLots: addRunningUnrealizedGainLoss(unrealizedOpenLots),
     diagnostics,
-  };
+  });
 }

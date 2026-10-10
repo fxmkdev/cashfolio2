@@ -1,3 +1,6 @@
+import { toMoney } from "../../shared/money";
+import { toNumericMoney } from "../money-boundary";
+import { toMoneyNumber, type Money } from "../../shared/money";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AccountType,
@@ -33,7 +36,7 @@ describe("computeExecutionResidualRealization", () => {
               id: "booking-cash-chf",
               accountId: "asset-cash",
               date: new Date("2025-12-31T23:00:00.000Z"),
-              value: -100,
+              value: toMoney(-100),
               unit: Unit.CURRENCY,
               currency: "CHF",
               cryptocurrency: null,
@@ -45,7 +48,7 @@ describe("computeExecutionResidualRealization", () => {
               id: "booking-expense-usd",
               accountId: "expense-usd",
               date: new Date("2026-01-15T00:00:00.000Z"),
-              value: 100,
+              value: toMoney(100),
               unit: Unit.CURRENCY,
               currency: "USD",
               cryptocurrency: null,
@@ -63,7 +66,7 @@ describe("computeExecutionResidualRealization", () => {
       realizedGainLoss: number;
     }> = [];
     const convertBookingToReference = vi.fn(
-      async ({ value }: { value: number }) => value,
+      async ({ value }: { value: Money }) => value,
     );
 
     const result = await computeExecutionResidualRealization({
@@ -77,18 +80,18 @@ describe("computeExecutionResidualRealization", () => {
       onContribution: (contribution) => {
         contributions.push({
           accountId: contribution.accountId,
-          realizedGainLoss: contribution.realizedGainLoss,
+          realizedGainLoss: toMoneyNumber(contribution.realizedGainLoss),
         });
       },
     });
 
-    expect(result).toMatchObject({
+    expect(toNumericMoney(result)).toMatchObject({
       realizedGainLoss: 0,
       convertedCount: 2,
       skippedCount: 0,
     });
     expect(convertBookingToReference).toHaveBeenCalledTimes(2);
-    expect(contributions).toEqual([]);
+    expect(toNumericMoney(contributions)).toEqual([]);
   });
 
   it("realizes cross-period residuals in the completion period", async () => {
@@ -101,7 +104,7 @@ describe("computeExecutionResidualRealization", () => {
               id: "booking-expense-usd",
               accountId: "expense-usd",
               date: new Date("2026-01-31T00:00:00.000Z"),
-              value: 100,
+              value: toMoney(100),
               unit: Unit.CURRENCY,
               currency: "USD",
               cryptocurrency: null,
@@ -113,7 +116,7 @@ describe("computeExecutionResidualRealization", () => {
               id: "booking-cash-chf",
               accountId: "asset-cash",
               date: new Date("2026-02-01T00:00:00.000Z"),
-              value: -90,
+              value: toMoney(-90),
               unit: Unit.CURRENCY,
               currency: "CHF",
               cryptocurrency: null,
@@ -141,34 +144,34 @@ describe("computeExecutionResidualRealization", () => {
       convertBookingToReference: async ({ currency, value, date }) => {
         if (
           currency === "USD" &&
-          value === 100 &&
+          toMoney(value).equals(100) &&
           date.toISOString() === "2026-01-31T00:00:00.000Z"
         ) {
-          return 80;
+          return toMoney(80);
         }
         if (
           currency === "CHF" &&
-          value === -90 &&
+          toMoney(value).equals(-90) &&
           date.toISOString() === "2026-02-01T00:00:00.000Z"
         ) {
-          return -90;
+          return toMoney(-90);
         }
         return null;
       },
       onContribution: (contribution) => {
         contributions.push({
           accountId: contribution.accountId,
-          realizedGainLoss: contribution.realizedGainLoss,
+          realizedGainLoss: toMoneyNumber(contribution.realizedGainLoss),
         });
       },
     });
 
-    expect(result).toMatchObject({
+    expect(toNumericMoney(result)).toMatchObject({
       realizedGainLoss: -10,
       convertedCount: 2,
       skippedCount: 0,
     });
-    expect(contributions).toEqual([
+    expect(toNumericMoney(contributions)).toEqual([
       {
         accountId: "expense-usd",
         realizedGainLoss: -10,
@@ -191,8 +194,8 @@ describe("computeExecutionResidualRealization", () => {
     expect(prisma.transaction.findMany).toHaveBeenCalledTimes(1);
     const [query] = prisma.transaction.findMany.mock.calls[0] ?? [];
     expect(query).toBeDefined();
-    expect(query?.where?.accountBookId).toBe("book-1");
-    expect(query?.where?.AND).toEqual(
+    expect(toNumericMoney(query?.where?.accountBookId)).toBe("book-1");
+    expect(toNumericMoney(query?.where?.AND)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           bookings: expect.objectContaining({

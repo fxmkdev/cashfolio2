@@ -7,6 +7,8 @@ export const MoneyDecimal = Decimal.clone({
 
 type Stringable = { toString(): string };
 export type MoneyInput = Decimal.Value | Stringable;
+// Internal monetary calculations use Decimal; MoneyInput is for source boundaries.
+export type Money = Decimal;
 
 function toDecimalValue(value: MoneyInput): Decimal.Value {
   if (typeof value === "number") {
@@ -32,7 +34,11 @@ function toDecimalValue(value: MoneyInput): Decimal.Value {
 }
 
 export function toMoney(value: MoneyInput): Decimal {
-  return new MoneyDecimal(toDecimalValue(value));
+  const result = new MoneyDecimal(toDecimalValue(value));
+  if (!result.isFinite()) {
+    throw new Error("Money value must be finite.");
+  }
+  return result;
 }
 
 export function moneyAdd(left: MoneyInput, right: MoneyInput): Decimal {
@@ -57,6 +63,14 @@ export function moneyAbs(value: MoneyInput): Decimal {
 
 export function moneyIsZero(value: MoneyInput): boolean {
   return toMoney(value).isZero();
+}
+
+export function moneyIsFinite(value: MoneyInput): boolean {
+  try {
+    return toMoney(value).isFinite();
+  } catch {
+    return false;
+  }
 }
 
 export function moneyRound2(value: MoneyInput): Decimal {

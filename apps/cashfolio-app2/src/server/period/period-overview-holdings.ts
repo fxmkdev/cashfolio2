@@ -1,4 +1,14 @@
 import {
+  toMoney,
+  type Money,
+  moneyAdd,
+  moneySubtract,
+  moneyMultiply,
+  moneyDivide,
+  moneyAbs,
+  moneyIsFinite,
+} from "../../shared/money";
+import {
   applyExecutionToLots,
   buildResidualAllocationWeights,
   isExplicitGainLossBooking,
@@ -33,7 +43,7 @@ export type HoldingGainLossSkippedReason =
 
 export async function initializeHoldingGainLossState(args: {
   holdingAccounts: HoldingRateConvertibleAccount[];
-  initialBalanceByAccountId: Map<string, number>;
+  initialBalanceByAccountId: Map<string, Money>;
   initialRateDate: Date;
   resolveRate: HoldingRateResolver;
   onSkippedItem?: (item: {
@@ -51,7 +61,7 @@ export async function initializeHoldingGainLossState(args: {
       let skipped = false;
       let skippedIncrement = 0;
       const initialBalance =
-        args.initialBalanceByAccountId.get(account.id) ?? 0;
+        args.initialBalanceByAccountId.get(account.id) ?? toMoney(0);
 
       if (!isNearZero(initialBalance)) {
         const initialRate = await args.resolveRate({
@@ -218,7 +228,7 @@ export async function applyHoldingTransactionsToGainLossState(args: {
       ...counterpartBookings,
     ];
 
-    const convertedByBookingId = new Map<string, number | null>();
+    const convertedByBookingId = new Map<string, Money | null>();
     const convertedValues = await Promise.all(
       bookingsToConvert.map((booking) =>
         args.convertBookingToReference({
@@ -267,10 +277,10 @@ export async function applyHoldingTransactionsToGainLossState(args: {
       (booking) => convertedByBookingId.get(booking.id) == null,
     );
     const hasPositiveHoldingBooking = inPeriodHoldingBookings.some(
-      (booking) => booking.value > QUANTITY_EPSILON,
+      (booking) => toMoney(booking.value).comparedTo(QUANTITY_EPSILON) > 0,
     );
     const hasNegativeHoldingBooking = inPeriodHoldingBookings.some(
-      (booking) => booking.value < -QUANTITY_EPSILON,
+      (booking) => toMoney(booking.value).comparedTo(-QUANTITY_EPSILON) < 0,
     );
     const shouldAllocateAllHoldingResidual =
       counterpartBookings.length === 0 &&
@@ -282,10 +292,10 @@ export async function applyHoldingTransactionsToGainLossState(args: {
       counterpartHasMissingConversions ||
       (counterpartBookings.length === 0 && !shouldAllocateAllHoldingResidual);
 
-    const holdingMarketValueByBookingId = new Map<string, number>(
+    const holdingMarketValueByBookingId = new Map<string, Money>(
       inPeriodHoldingBookings.map((booking) => [
         booking.id,
-        convertedByBookingId.get(booking.id) ?? 0,
+        convertedByBookingId.get(booking.id) ?? toMoney(0),
       ]),
     );
     const residualAllocationWeights = buildResidualAllocationWeights({
@@ -294,30 +304,39 @@ export async function applyHoldingTransactionsToGainLossState(args: {
     });
 
     const counterpartTotalInReference = shouldUseMarketFallback
-      ? 0
-      : -counterpartBookings.reduce(
-          (sum, booking) => sum + (convertedByBookingId.get(booking.id) ?? 0),
-          0,
-        );
+      ? toMoney(0)
+      : toMoney(
+          counterpartBookings.reduce(
+            (sum, booking) =>
+              moneyAdd(sum, convertedByBookingId.get(booking.id) ?? toMoney(0)),
+            toMoney(0),
+          ),
+        ).neg();
     const holdingMarketTotalInReference = inPeriodHoldingBookings.reduce(
       (sum, booking) =>
-        sum + (holdingMarketValueByBookingId.get(booking.id) ?? 0),
-      0,
+        moneyAdd(
+          sum,
+          holdingMarketValueByBookingId.get(booking.id) ?? toMoney(0),
+        ),
+      toMoney(0),
     );
     const residualInReference = shouldUseMarketFallback
-      ? 0
-      : counterpartTotalInReference - holdingMarketTotalInReference;
+      ? toMoney(0)
+      : moneySubtract(
+          counterpartTotalInReference,
+          holdingMarketTotalInReference,
+        );
 
     for (let index = 0; index < inPeriodHoldingBookings.length; index += 1) {
       const booking = inPeriodHoldingBookings[index]!;
       const marketReferenceAmount =
-        holdingMarketValueByBookingId.get(booking.id) ?? 0;
+        holdingMarketValueByBookingId.get(booking.id) ?? toMoney(0);
       const residualAllocationAmount = shouldUseMarketFallback
-        ? 0
-        : residualInReference * residualAllocationWeights[index]!;
+        ? toMoney(0)
+        : moneyMultiply(residualInReference, residualAllocationWeights[index]!);
       const effectiveReferenceAmount = shouldUseMarketFallback
         ? marketReferenceAmount
-        : marketReferenceAmount + residualAllocationAmount;
+        : moneyAdd(marketReferenceAmount, residualAllocationAmount);
       const pricingSource = shouldUseMarketFallback
         ? "marketFallback"
         : isNearZero(residualAllocationAmount)
@@ -356,8 +375,8 @@ export async function finalizeHoldingGainLossState(args: {
     cryptocurrency: HoldingRateConvertibleAccount["cryptocurrency"];
     symbol: HoldingRateConvertibleAccount["symbol"];
     tradeCurrency: HoldingRateConvertibleAccount["tradeCurrency"];
-    realizedGainLoss: number;
-    unrealizedGainLoss: number;
+    realizedGainLoss: Money;
+    unrealizedGainLoss: Money;
   }) => void;
   onAccountExecutionEvent?: (event: {
     accountId: string;
@@ -366,23 +385,23 @@ export async function finalizeHoldingGainLossState(args: {
     transactionDescription?: string | null;
     transactionId: string | null;
     date: Date;
-    quantity: number;
+    quantity: Money;
     pricingSource: "directConversion" | "residualAdjusted" | "marketFallback";
-    marketReferenceAmount: number;
-    residualAllocationAmount: number;
-    effectiveReferenceAmount: number;
-    executionUnitPriceInReference: number;
-    realizedGainLossDelta: number;
-    runningRealizedGainLoss: number;
+    marketReferenceAmount: Money;
+    residualAllocationAmount: Money;
+    effectiveReferenceAmount: Money;
+    executionUnitPriceInReference: Money;
+    realizedGainLossDelta: Money;
+    runningRealizedGainLoss: Money;
     lotMatches: HoldingExecutionLotMatch[];
   }) => void;
   onAccountOpenLotValuation?: (lot: {
     accountId: string;
     acquisitionSortKey: string;
-    quantity: number;
-    unitCostInReference: number;
-    periodEndRate: number;
-    unrealizedGainLoss: number;
+    quantity: Money;
+    unitCostInReference: Money;
+    periodEndRate: Money;
+    unrealizedGainLoss: Money;
   }) => void;
   onSkippedItem?: (item: {
     accountId: string;
@@ -396,16 +415,16 @@ export async function finalizeHoldingGainLossState(args: {
 }) {
   let skippedCount = args.state.skippedCount;
   const convertedCount = args.state.convertedCount;
-  let realizedGainLoss = 0;
-  let unrealizedGainLoss = 0;
+  let realizedGainLoss: Money = toMoney(0);
+  let unrealizedGainLoss: Money = toMoney(0);
 
   for (const state of args.state.stateByHoldingAccountId.values()) {
     if (state.skipped) {
       continue;
     }
 
-    let accountRealizedGainLoss = 0;
-    let accountUnrealizedGainLoss = 0;
+    let accountRealizedGainLoss: Money = toMoney(0);
+    let accountUnrealizedGainLoss: Money = toMoney(0);
 
     state.executionEvents.sort((left, right) => {
       const dateDiff = left.date.getTime() - right.date.getTime();
@@ -420,9 +439,11 @@ export async function finalizeHoldingGainLossState(args: {
         continue;
       }
 
-      const executionUnitPriceInReference =
-        event.effectiveReferenceAmount / event.quantity;
-      if (!Number.isFinite(executionUnitPriceInReference)) {
+      const executionUnitPriceInReference = moneyDivide(
+        event.effectiveReferenceAmount,
+        event.quantity,
+      );
+      if (!moneyIsFinite(executionUnitPriceInReference)) {
         skippedCount += 1;
         args.onSkippedItem?.({
           accountId: state.account.id,
@@ -456,7 +477,10 @@ export async function finalizeHoldingGainLossState(args: {
             }
           : {}),
       });
-      accountRealizedGainLoss += realizedGainLossDelta;
+      accountRealizedGainLoss = moneyAdd(
+        accountRealizedGainLoss,
+        realizedGainLossDelta,
+      );
       args.onAccountExecutionEvent?.({
         accountId: state.account.id,
         bookingId: event.bookingId,
@@ -477,10 +501,10 @@ export async function finalizeHoldingGainLossState(args: {
     }
 
     const openQuantity = state.lots.reduce(
-      (sum, lot) => sum + Math.abs(lot.quantity),
-      0,
+      (sum, lot) => moneyAdd(sum, moneyAbs(lot.quantity)),
+      toMoney(0),
     );
-    if (openQuantity > QUANTITY_EPSILON) {
+    if (toMoney(openQuantity).comparedTo(QUANTITY_EPSILON) > 0) {
       const periodEndRate = await args.resolveRate({
         unit: state.account.unit,
         currency: state.account.currency,
@@ -499,9 +523,14 @@ export async function finalizeHoldingGainLossState(args: {
         });
       } else {
         for (const lot of state.lots) {
-          const lotUnrealizedGainLoss =
-            lot.quantity * (periodEndRate - lot.unitCostInReference);
-          accountUnrealizedGainLoss += lotUnrealizedGainLoss;
+          const lotUnrealizedGainLoss = moneyMultiply(
+            lot.quantity,
+            moneySubtract(periodEndRate, lot.unitCostInReference),
+          );
+          accountUnrealizedGainLoss = moneyAdd(
+            accountUnrealizedGainLoss,
+            lotUnrealizedGainLoss,
+          );
           args.onAccountOpenLotValuation?.({
             accountId: state.account.id,
             acquisitionSortKey: lot.acquisitionSortKey,
@@ -514,8 +543,11 @@ export async function finalizeHoldingGainLossState(args: {
       }
     }
 
-    realizedGainLoss += accountRealizedGainLoss;
-    unrealizedGainLoss += accountUnrealizedGainLoss;
+    realizedGainLoss = moneyAdd(realizedGainLoss, accountRealizedGainLoss);
+    unrealizedGainLoss = moneyAdd(
+      unrealizedGainLoss,
+      accountUnrealizedGainLoss,
+    );
 
     if (
       args.onAccountGainLoss &&
@@ -545,7 +577,7 @@ export async function finalizeHoldingGainLossState(args: {
 
 export async function computeHoldingGainLossSplit(args: {
   holdingAccounts: HoldingRateConvertibleAccount[];
-  initialBalanceByAccountId: Map<string, number>;
+  initialBalanceByAccountId: Map<string, Money>;
   transactions: HoldingTransaction[];
   periodStart: Date;
   periodEndExclusive: Date;

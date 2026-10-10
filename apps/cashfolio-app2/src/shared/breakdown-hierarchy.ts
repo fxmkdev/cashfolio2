@@ -1,9 +1,9 @@
 export type BreakdownNodeKind = "group" | "account";
 
-export type BreakdownHierarchyNode = {
+export type BreakdownHierarchyNode<Amount = number> = {
   id: string;
   label: string;
   kind: BreakdownNodeKind;
-  amount: number;
-  children: BreakdownHierarchyNode[];
+  amount: Amount;
+  children: BreakdownHierarchyNode<Amount>[];
 };
