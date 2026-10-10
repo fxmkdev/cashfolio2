@@ -197,7 +197,8 @@ test("shows multiple for drafts with several counter bookings", async ({
   await expect(counterCell).toContainText("Multiple");
   await expect(agGridCellByColId(draftRow, "status")).toContainText("Ready");
 
-  await counterCell.dblclick();
+  // The full cell's center can sit beneath the pinned Balance column.
+  await counterCell.getByText("Multiple", { exact: true }).dblclick();
   await expect(page.locator(".ag-cell-inline-editing")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Import Transactions" }).click();
