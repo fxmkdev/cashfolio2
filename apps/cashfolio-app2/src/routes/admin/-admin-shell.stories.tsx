@@ -77,6 +77,9 @@ export const RouteSmoke: Story = {
         "/admin/valuation-cache",
       );
     });
+    await expect(
+      canvas.getByRole("link", { name: "Provider Usage" }),
+    ).toHaveAttribute("href", "/admin/valuation-provider-usage");
     await expect(canvas.getByRole("link", { name: "Users" })).toHaveAttribute(
       "href",
       "/admin/users",

@@ -15,6 +15,10 @@ import {
   storeCachedRate,
   storeMissedAttemptForSeriesTimestamp,
 } from "./cache";
+import {
+  VALUATION_PROVIDER_REQUEST_REASONS,
+  type ValuationProviderRequestReason,
+} from "./provider-usage";
 import type {
   BacktrackedFallbackCacheEntry,
   CachedRateResult,
@@ -28,7 +32,10 @@ export type RateWithBacktrackingInput = {
   backtrackedFallbackCacheKey: string;
   date: Date;
   latestFetchableDate?: Date;
-  fetchRate: (date: Date) => Promise<FetchRateResult>;
+  fetchRate: (
+    date: Date,
+    requestReason: ValuationProviderRequestReason,
+  ) => Promise<FetchRateResult>;
   stopOnExplicitNoData?: boolean;
 };
 
@@ -104,7 +111,11 @@ async function fetchRateWithInFlightDedup(args: {
   seriesKey: string;
   timestamp: number;
   date: Date;
-  fetchRate: (date: Date) => Promise<FetchRateResult>;
+  requestReason: ValuationProviderRequestReason;
+  fetchRate: (
+    date: Date,
+    requestReason: ValuationProviderRequestReason,
+  ) => Promise<FetchRateResult>;
 }): Promise<FetchRateResult> {
   const inFlightKey = getInFlightProviderFetchKey(
     args.seriesKey,
@@ -116,7 +127,7 @@ async function fetchRateWithInFlightDedup(args: {
   }
 
   let fetchPromise: Promise<FetchRateResult>;
-  fetchPromise = args.fetchRate(args.date).finally(() => {
+  fetchPromise = args.fetchRate(args.date, args.requestReason).finally(() => {
     if (inFlightProviderFetchByKey.get(inFlightKey) === fetchPromise) {
       inFlightProviderFetchByKey.delete(inFlightKey);
     }
@@ -177,6 +188,7 @@ export async function getRateWithBacktrackingDetails(
     latestFetchableTimestamp < requestedTimestamp
       ? new Date(latestFetchableTimestamp)
       : deps.toUtcDay(args.date);
+  let hasAttemptedProviderFetch = false;
   for (let i = 0; i <= deps.maxBacktrackDays; i++) {
     const currentTimestamp = deps.toSeriesTimestamp(requestedDate);
     if (cached && currentTimestamp <= cached.timestamp) {
@@ -202,10 +214,15 @@ export async function getRateWithBacktrackingDetails(
       continue;
     }
 
+    const requestReason = hasAttemptedProviderFetch
+      ? VALUATION_PROVIDER_REQUEST_REASONS.BACKTRACK_PROBE
+      : VALUATION_PROVIDER_REQUEST_REASONS.INITIAL_PROBE;
+    hasAttemptedProviderFetch = true;
     const fetchedRate = await fetchRateWithInFlightDedup({
       seriesKey: key,
       timestamp: currentTimestamp,
       date: requestedDate,
+      requestReason,
       fetchRate: args.fetchRate,
     });
     if (fetchedRate === NO_DATA_FETCH_RESULT) {

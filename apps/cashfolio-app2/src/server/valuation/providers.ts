@@ -16,9 +16,16 @@ import {
   getProviderBaseContext,
   logProviderInfo,
   logProviderWarn,
+  sanitizeProviderLogText,
   toSafeProviderErrorMessage,
   type ProviderLogContext,
 } from "./provider-logging";
+import {
+  recordValuationProviderRequest,
+  VALUATION_PROVIDER_REQUEST_REASONS,
+  type ValuationProviderRequestOutcome,
+  type ValuationProviderRequestReason,
+} from "./provider-usage";
 import type {
   CoinLayerHistoricalResponse,
   CurrencyLayerHistoricalResponse,
@@ -56,6 +63,7 @@ export { isNoDataProviderError, parseMarketstackEodResponse };
 export async function fetchUsdToCurrencyRateFromCurrencyLayer(
   targetCurrency: string,
   date: Date,
+  requestReason: ValuationProviderRequestReason = VALUATION_PROVIDER_REQUEST_REASONS.INITIAL_PROBE,
 ): Promise<FetchRateResult> {
   const apiKey = getCurrencyLayerApiKey();
   if (!apiKey) return null;
@@ -79,6 +87,28 @@ export async function fetchUsdToCurrencyRateFromCurrencyLayer(
     () => controller.abort(),
     CURRENCYLAYER_TIMEOUT_MS,
   );
+  const requestedAt = new Date();
+  const startedAt = Date.now();
+
+  async function recordUsage(args: {
+    outcome: ValuationProviderRequestOutcome;
+    httpStatus?: number;
+    errorMessage?: string;
+  }) {
+    await recordValuationProviderRequest({
+      provider: "CURRENCYLAYER",
+      unitType: "CURRENCY",
+      outcome: args.outcome,
+      requestReason,
+      valuationDate: date,
+      requestedAt,
+      durationMs: Date.now() - startedAt,
+      retryCount: 0,
+      currency: targetCurrency,
+      httpStatus: args.httpStatus,
+      errorMessage: args.errorMessage,
+    });
+  }
 
   let response: Response;
   try {
@@ -86,6 +116,10 @@ export async function fetchUsdToCurrencyRateFromCurrencyLayer(
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       const timeoutError = new Error("Currencylayer request timed out");
+      await recordUsage({
+        outcome: "TIMEOUT",
+        errorMessage: timeoutError.message,
+      });
       logProviderWarn(timeoutError.message, {
         ...requestContext,
         timeoutMs: CURRENCYLAYER_TIMEOUT_MS,
@@ -93,6 +127,10 @@ export async function fetchUsdToCurrencyRateFromCurrencyLayer(
       });
       throw timeoutError;
     }
+    await recordUsage({
+      outcome: "REQUEST_ERROR",
+      errorMessage: toSafeProviderErrorMessage(error),
+    });
     logProviderWarn("Valuation provider request failed", {
       ...requestContext,
       outcome: "requestError",
@@ -104,6 +142,11 @@ export async function fetchUsdToCurrencyRateFromCurrencyLayer(
   }
 
   if (!response.ok) {
+    await recordUsage({
+      outcome: "HTTP_ERROR",
+      httpStatus: response.status,
+      errorMessage: response.statusText,
+    });
     logProviderWarn("Valuation provider response failed", {
       ...requestContext,
       outcome: "httpError",
@@ -115,38 +158,64 @@ export async function fetchUsdToCurrencyRateFromCurrencyLayer(
     );
   }
 
-  const data = (await response.json()) as CurrencyLayerHistoricalResponse;
-  if (!data.success) {
-    if (isNoDataProviderError(data.error)) {
-      logProviderInfo("Valuation provider response received", {
-        ...requestContext,
-        outcome: "noData",
-      });
-      return NO_DATA_FETCH_RESULT;
+  let parsed: FetchRateResult;
+  let providerErrorMessage: string | undefined;
+  try {
+    const data = (await response.json()) as CurrencyLayerHistoricalResponse;
+    if (!data.success) {
+      if (isNoDataProviderError(data.error)) {
+        parsed = NO_DATA_FETCH_RESULT;
+      } else {
+        providerErrorMessage = data.error?.info ?? "Unknown error";
+        throw new Error(
+          `Currencylayer request failed: ${providerErrorMessage}`,
+        );
+      }
+    } else {
+      const quote = data.quotes?.[`${BASE_CURRENCY}${targetCurrency}`];
+      parsed = typeof quote === "number" ? quote : null;
     }
-
+  } catch (error) {
+    const errorMessage =
+      providerErrorMessage ?? toSafeProviderErrorMessage(error);
+    await recordUsage({
+      outcome: "PROVIDER_ERROR",
+      httpStatus: response.status,
+      errorMessage,
+    });
     logProviderWarn("Valuation provider response failed", {
       ...requestContext,
       outcome: "providerError",
-      errorInfo: data.error?.info ?? "Unknown error",
+      errorInfo: errorMessage,
     });
-    throw new Error(
-      `Currencylayer request failed: ${data.error?.info ?? "Unknown error"}`,
-    );
+    throw error;
   }
 
-  const quote = data.quotes?.[`${BASE_CURRENCY}${targetCurrency}`];
-  const hasRate = typeof quote === "number";
+  await recordUsage({
+    outcome:
+      parsed === NO_DATA_FETCH_RESULT
+        ? "NO_DATA"
+        : typeof parsed === "number"
+          ? "RETRIEVED"
+          : "MISSING_RATE",
+    httpStatus: response.status,
+  });
   logProviderInfo("Valuation provider response received", {
     ...requestContext,
-    outcome: hasRate ? "retrieved" : "missingRate",
+    outcome:
+      parsed === NO_DATA_FETCH_RESULT
+        ? "noData"
+        : typeof parsed === "number"
+          ? "retrieved"
+          : "missingRate",
   });
-  return hasRate ? quote : null;
+  return parsed;
 }
 
 export async function fetchUsdPerCryptocurrencyRateFromCoinLayer(
   cryptocurrency: string,
   date: Date,
+  requestReason: ValuationProviderRequestReason = VALUATION_PROVIDER_REQUEST_REASONS.INITIAL_PROBE,
 ): Promise<FetchRateResult> {
   const apiKey = getCoinLayerApiKey();
   if (!apiKey) return null;
@@ -166,6 +235,28 @@ export async function fetchUsdPerCryptocurrencyRateFromCoinLayer(
   const url = `https://api.coinlayer.com/${toDayString(date)}?${params.toString()}`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), COINLAYER_TIMEOUT_MS);
+  const requestedAt = new Date();
+  const startedAt = Date.now();
+
+  async function recordUsage(args: {
+    outcome: ValuationProviderRequestOutcome;
+    httpStatus?: number;
+    errorMessage?: string;
+  }) {
+    await recordValuationProviderRequest({
+      provider: "COINLAYER",
+      unitType: "CRYPTOCURRENCY",
+      outcome: args.outcome,
+      requestReason,
+      valuationDate: date,
+      requestedAt,
+      durationMs: Date.now() - startedAt,
+      retryCount: 0,
+      cryptocurrency,
+      httpStatus: args.httpStatus,
+      errorMessage: args.errorMessage,
+    });
+  }
 
   let response: Response;
   try {
@@ -173,6 +264,10 @@ export async function fetchUsdPerCryptocurrencyRateFromCoinLayer(
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       const timeoutError = new Error("Coinlayer request timed out");
+      await recordUsage({
+        outcome: "TIMEOUT",
+        errorMessage: timeoutError.message,
+      });
       logProviderWarn(timeoutError.message, {
         ...requestContext,
         timeoutMs: COINLAYER_TIMEOUT_MS,
@@ -180,6 +275,10 @@ export async function fetchUsdPerCryptocurrencyRateFromCoinLayer(
       });
       throw timeoutError;
     }
+    await recordUsage({
+      outcome: "REQUEST_ERROR",
+      errorMessage: toSafeProviderErrorMessage(error),
+    });
     logProviderWarn("Valuation provider request failed", {
       ...requestContext,
       outcome: "requestError",
@@ -191,6 +290,11 @@ export async function fetchUsdPerCryptocurrencyRateFromCoinLayer(
   }
 
   if (!response.ok) {
+    await recordUsage({
+      outcome: "HTTP_ERROR",
+      httpStatus: response.status,
+      errorMessage: response.statusText,
+    });
     logProviderWarn("Valuation provider response failed", {
       ...requestContext,
       outcome: "httpError",
@@ -202,39 +306,63 @@ export async function fetchUsdPerCryptocurrencyRateFromCoinLayer(
     );
   }
 
-  const data = (await response.json()) as CoinLayerHistoricalResponse;
-  if (!data.success) {
-    if (isNoDataProviderError(data.error)) {
-      logProviderInfo("Valuation provider response received", {
-        ...requestContext,
-        outcome: "noData",
-      });
-      return NO_DATA_FETCH_RESULT;
+  let parsed: FetchRateResult;
+  let providerErrorMessage: string | undefined;
+  try {
+    const data = (await response.json()) as CoinLayerHistoricalResponse;
+    if (!data.success) {
+      if (isNoDataProviderError(data.error)) {
+        parsed = NO_DATA_FETCH_RESULT;
+      } else {
+        providerErrorMessage = data.error?.info ?? "Unknown error";
+        throw new Error(`Coinlayer request failed: ${providerErrorMessage}`);
+      }
+    } else {
+      const rate = data.rates?.[cryptocurrency];
+      parsed = typeof rate === "number" ? rate : null;
     }
-
+  } catch (error) {
+    const errorMessage =
+      providerErrorMessage ?? toSafeProviderErrorMessage(error);
+    await recordUsage({
+      outcome: "PROVIDER_ERROR",
+      httpStatus: response.status,
+      errorMessage,
+    });
     logProviderWarn("Valuation provider response failed", {
       ...requestContext,
       outcome: "providerError",
-      errorInfo: data.error?.info ?? "Unknown error",
+      errorInfo: errorMessage,
     });
-    throw new Error(
-      `Coinlayer request failed: ${data.error?.info ?? "Unknown error"}`,
-    );
+    throw error;
   }
 
-  const rate = data.rates?.[cryptocurrency];
-  const hasRate = typeof rate === "number";
+  await recordUsage({
+    outcome:
+      parsed === NO_DATA_FETCH_RESULT
+        ? "NO_DATA"
+        : typeof parsed === "number"
+          ? "RETRIEVED"
+          : "MISSING_RATE",
+    httpStatus: response.status,
+  });
   logProviderInfo("Valuation provider response received", {
     ...requestContext,
-    outcome: hasRate ? "retrieved" : "missingRate",
+    outcome:
+      parsed === NO_DATA_FETCH_RESULT
+        ? "noData"
+        : typeof parsed === "number"
+          ? "retrieved"
+          : "missingRate",
   });
-  return hasRate ? rate : null;
+  return parsed;
 }
 
 export async function fetchSecurityPriceFromMarketstack(
   symbol: string,
   tradeCurrency: string,
   date: Date,
+  requestReason: ValuationProviderRequestReason = VALUATION_PROVIDER_REQUEST_REASONS.INITIAL_PROBE,
   retryCount = 0,
 ): Promise<FetchRateResult> {
   const apiKey = getMarketstackApiKey();
@@ -255,6 +383,29 @@ export async function fetchSecurityPriceFromMarketstack(
   const url = `https://api.marketstack.com/v2/eod/${toDayString(date)}?${params.toString()}`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), MARKETSTACK_TIMEOUT_MS);
+  const requestedAt = new Date();
+  const startedAt = Date.now();
+
+  async function recordUsage(args: {
+    outcome: ValuationProviderRequestOutcome;
+    httpStatus?: number;
+    errorMessage?: string;
+  }) {
+    await recordValuationProviderRequest({
+      provider: "MARKETSTACK",
+      unitType: "SECURITY",
+      outcome: args.outcome,
+      requestReason,
+      valuationDate: date,
+      requestedAt,
+      durationMs: Date.now() - startedAt,
+      retryCount,
+      symbol,
+      tradeCurrency,
+      httpStatus: args.httpStatus,
+      errorMessage: args.errorMessage,
+    });
+  }
 
   let response: Response;
   try {
@@ -262,6 +413,10 @@ export async function fetchSecurityPriceFromMarketstack(
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       const timeoutError = new Error("Marketstack request timed out");
+      await recordUsage({
+        outcome: "TIMEOUT",
+        errorMessage: timeoutError.message,
+      });
       logProviderWarn(timeoutError.message, {
         ...requestContext,
         timeoutMs: MARKETSTACK_TIMEOUT_MS,
@@ -269,6 +424,10 @@ export async function fetchSecurityPriceFromMarketstack(
       });
       throw timeoutError;
     }
+    await recordUsage({
+      outcome: "REQUEST_ERROR",
+      errorMessage: toSafeProviderErrorMessage(error),
+    });
     logProviderWarn("Valuation provider request failed", {
       ...requestContext,
       outcome: "requestError",
@@ -283,6 +442,11 @@ export async function fetchSecurityPriceFromMarketstack(
     response.status === 429 &&
     retryCount < MARKETSTACK_RATE_LIMIT_MAX_RETRIES
   ) {
+    await recordUsage({
+      outcome: "RATE_LIMIT_RETRY",
+      httpStatus: response.status,
+      errorMessage: response.statusText,
+    });
     logProviderWarn("Valuation provider rate limited; retrying", {
       ...requestContext,
       outcome: "rateLimitRetry",
@@ -297,11 +461,17 @@ export async function fetchSecurityPriceFromMarketstack(
       symbol,
       tradeCurrency,
       date,
+      VALUATION_PROVIDER_REQUEST_REASONS.RATE_LIMIT_RETRY,
       retryCount + 1,
     );
   }
 
   if (!response.ok) {
+    await recordUsage({
+      outcome: "HTTP_ERROR",
+      httpStatus: response.status,
+      errorMessage: response.statusText,
+    });
     logProviderWarn("Valuation provider response failed", {
       ...requestContext,
       outcome: "httpError",
@@ -313,12 +483,33 @@ export async function fetchSecurityPriceFromMarketstack(
     );
   }
 
-  const data = (await response.json()) as MarketstackEodResponse;
-  const parsed = parseMarketstackEodResponse({
-    response: data,
-    symbol,
-    tradeCurrency,
-    date,
+  let parsed: FetchRateResult;
+  try {
+    const data = (await response.json()) as MarketstackEodResponse;
+    parsed = parseMarketstackEodResponse({
+      response: data,
+      symbol,
+      tradeCurrency,
+      date,
+    });
+  } catch (error) {
+    await recordUsage({
+      outcome: "PROVIDER_ERROR",
+      httpStatus: response.status,
+      errorMessage: sanitizeProviderLogText(
+        error instanceof Error ? error.message : String(error),
+      ),
+    });
+    throw error;
+  }
+  await recordUsage({
+    outcome:
+      parsed === NO_DATA_FETCH_RESULT
+        ? "NO_DATA"
+        : typeof parsed === "number"
+          ? "RETRIEVED"
+          : "MISSING_RATE",
+    httpStatus: response.status,
   });
   logProviderInfo("Valuation provider response received", {
     ...requestContext,

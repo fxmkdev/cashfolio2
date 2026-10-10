@@ -224,6 +224,7 @@ describe("getRateWithBacktracking", () => {
     expect(fetchRate).toHaveBeenCalledTimes(1);
     expect(fetchRate).toHaveBeenCalledWith(
       new Date("2026-03-27T00:00:00.000Z"),
+      "INITIAL_PROBE",
     );
   });
 
@@ -321,7 +322,40 @@ describe("getRateWithBacktracking", () => {
 
     expect(result).toBe(0.91);
     expect(fetchRate).toHaveBeenCalledTimes(1);
-    expect(fetchRate).toHaveBeenCalledWith(latestFetchableDate);
+    expect(fetchRate).toHaveBeenCalledWith(
+      latestFetchableDate,
+      "INITIAL_PROBE",
+    );
+  });
+
+  test("passes initial and backtrack request reasons to provider fetches", async () => {
+    const deps = createDeps();
+    const fetchRate = vi
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(0.91);
+
+    const result = await getRateWithBacktracking(
+      {
+        seriesKey: "valuation:key",
+        backtrackedFallbackCacheKey: "valuation:fallback:key",
+        date: new Date("2026-03-28T00:00:00.000Z"),
+        fetchRate,
+      },
+      deps,
+    );
+
+    expect(result).toBe(0.91);
+    expect(fetchRate).toHaveBeenNthCalledWith(
+      1,
+      new Date("2026-03-28T00:00:00.000Z"),
+      "INITIAL_PROBE",
+    );
+    expect(fetchRate).toHaveBeenNthCalledWith(
+      2,
+      new Date("2026-03-27T00:00:00.000Z"),
+      "BACKTRACK_PROBE",
+    );
   });
 
   test("deduplicates in-flight provider fetches for the same series/date", async () => {

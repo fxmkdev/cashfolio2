@@ -69,6 +69,59 @@ point.
 See [Synthetic staging data](../../../docs/staging-database-refresh.md) for the
 approved target, staging-only role, tester access, and enablement procedure.
 
+## Provider usage cleanup
+
+`pnpm --filter cashfolio-app2 build:provider-usage-cleanup` builds the
+independent Node 24 payload at `dist/provider-usage-cleanup/cleanup.mjs`. Docker
+copies the whole directory, including query compiler chunks, following the
+staging-seed packaging pattern. The command requires only the app's
+`DATABASE_URL`, creates its own Prisma client, and disconnects it on success or
+failure. It does not start the web server or require authentication, Redis, or
+valuation API secrets. After building,
+`pnpm --filter cashfolio-app2 cleanup:provider-usage` executes it against the
+configured database; this is a destructive retention operation.
+
+`.github/workflows/cleanup-provider-usage.yml` runs daily at 03:43 UTC on the
+default branch. Manual dispatch on `main` selects `prod`, `staging`, or `both`.
+Scheduled runs target both; PR previews are excluded. Runs are serialized per
+environment without cancelling active cleanup. The workflow uses the existing
+`prod-cashfolio-app` / `staging-cashfolio-app` environments, `FLY_APP` and
+`FLY_PRIMARY_REGION` variables, and `FLY_API_TOKEN` secret. No database
+connection string is copied into GitHub Actions.
+
+The Node runner `scripts/run-provider-usage-cleanup.mjs` resolves the immutable
+image digest from the deployed `app` process Machines. Mixed web images fail
+clearly, so rerun after deployment finishes. It uses the Fly Machines API to
+launch a temporary Machine in that app, inheriting the app's database secret.
+The Machine has one shared CPU, 512 MB RAM, no HTTP services, and no restart.
+Its command overrides the web-server entrypoint. An eight-minute runner budget
+allows startup, the five-minute cleanup budget, and log delivery. The runner
+checks the process exit event, not merely a stopped state. It destroys the
+Machine after success, and attempts stop plus force-destruction after failure,
+timeout, or cancellation. Lost creation responses are recovered by unique name.
+An API outage can prevent destruction; a visible workflow failure then requires
+an operator to inspect/remove any `provider-usage-cleanup-*` Machine.
+
+Both production and staging must deploy an image containing this payload before
+the workflow can succeed. Older images fail visibly; there is no fallback to a
+different image or a GitHub-hosted database connection. Review GitHub Actions
+logs and summaries for the UTC cutoff, deleted rows, committed batches, elapsed
+milliseconds, and table-plus-index bytes. Failed runs report the last available
+progress (or unavailable metrics when the command could not start) and fail the
+job. No connection strings, raw driver errors, or arbitrary remote logs are
+printed. There is no additional notification service.
+
+CI exercises the runner with mocked Fly responses and the database cleanup in a
+fresh, isolated PostgreSQL database, including the bundled CLI. Run locally with
+`pnpm --filter cashfolio-app2 test:provider-usage-cleanup-runner` and
+`pnpm --filter cashfolio-app2 test:provider-usage-cleanup`. The latter requires
+a local PostgreSQL maintenance database and defaults to port 5433; set
+`PROVIDER_USAGE_CLEANUP_TEST_DATABASE_URL` to override it. The test creates and
+drops only a uniquely named test database, never the application database.
+
+See [Raw request retention](valuation-caching.md#raw-request-retention) for the
+cutoff, batching, and failure semantics.
+
 ## Fly CLI version
 
 CI pins `flyctl` to `0.4.115` across build, deployment, database refresh, and

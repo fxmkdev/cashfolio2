@@ -36,6 +36,10 @@ Related docs:
   tabs for Currency, Cryptocurrency, and Security; scans cached Redis TimeSeries
   keys, shows all cached units, and displays cached history charts without live
   provider lookups or account-book context.
+- `admin/valuation-provider-usage/route.tsx` - Admin-only provider usage page
+  showing persisted Currencylayer, Coinlayer, and Marketstack HTTP attempts. It
+  summarizes today, 7-day, and 30-day counts and lists recent calls with outcome
+  and request-reason metadata.
 - `admin/users.tsx` - Admin users page listing app-owned database users and
   supporting app role management and admin-triggered user deletion. Rows are
   enriched with Logto Management API identity fields when available while DB

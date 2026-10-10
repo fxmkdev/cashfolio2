@@ -30,6 +30,10 @@
     "e2e:ci": "E2E_TEST_MODE=${E2E_TEST_MODE:-true} sh -c 'pnpm prisma:generate && playwright test ${E2E_SHARD:+--shard=$E2E_SHARD}'",
     "test-storybook:coverage": "vitest run --project storybook --coverage",
     "build:staging-seed": "vite build --config vite.staging-seed.config.ts",
+    "build:provider-usage-cleanup": "vite build --config vite.provider-usage-cleanup.config.ts",
+    "cleanup:provider-usage": "node dist/provider-usage-cleanup/cleanup.mjs",
+    "test:provider-usage-cleanup": "pnpm prisma:generate && pnpm build:provider-usage-cleanup && vitest run --config vitest.provider-usage-cleanup.config.ts",
+    "test:provider-usage-cleanup-runner": "node --test scripts/run-provider-usage-cleanup.test.mjs",
     "seed:staging": "node dist/staging-seed/seed.mjs",
     "test:staging-seed": "pnpm prisma:generate && vitest run --config vitest.staging-seed.config.ts",
     "test:staging-release": "node --test scripts/release-staging.test.mjs"

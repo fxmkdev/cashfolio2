@@ -284,6 +284,7 @@ Implementation:
 - `src/server/valuation/providers.ts`
 - `src/server/valuation/provider-response-parsers.ts`
 - `src/server/valuation/provider-logging.ts`
+- `src/server/valuation/provider-usage.ts`
 
 Provider behavior:
 
@@ -301,6 +302,72 @@ Provider behavior:
   - non-positive close prices are treated as unusable (`null`)
 
 Provider calls are logged with sanitized context so API keys are never logged.
+
+## Provider Usage Accounting
+
+Implementation:
+
+- `src/server/valuation/provider-usage.ts`
+- `src/server/valuation-provider-usage.ts`
+- `src/routes/admin/valuation-provider-usage/route.tsx`
+
+Every real external provider HTTP attempt is recorded in Postgres as a
+`ValuationProviderRequest` row. Cache hits, fallback hits, miss-cooldown skips,
+identity conversions, and in-flight dedup waiters are not counted because they
+do not call an external provider.
+
+Recorded fields include provider, unit type, outcome, request reason, valuation
+date, unit identifiers, HTTP status, duration, retry count, and a sanitized
+error message when one is available. API keys and token-like values are redacted
+before they can be persisted. Sanitized messages are capped at 2,000 characters
+for new records; existing messages are not rewritten.
+
+Request reasons distinguish why the provider attempt happened:
+
+- `INITIAL_PROBE` - the first real provider attempt for a lookup
+- `BACKTRACK_PROBE` - an older-day provider attempt during backtracking
+- `RATE_LIMIT_RETRY` - a Marketstack retry after a rate-limited attempt
+
+Usage writes are best-effort, with a one-second caller deadline including client
+loading, pool acquisition, and the insert. A dedicated, reused single-connection
+accounting pool has a 250 ms connection/acquisition limit and a 750 ms driver
+query limit, isolated from the application's normal database pool. Inserts use
+transaction-local 500 ms statement and 250 ms lock timeouts in a bounded
+transaction. If recording fails or times out, valuation continues and a fixed
+warning (without raw database errors) is logged once per server process. Late
+write failures remain handled; the caller deadline does not leave unhandled
+promise rejections.
+
+Provider JSON parsing and interpretation are guarded together. Malformed
+Currencylayer/Coinlayer responses are recorded once as `PROVIDER_ERROR`, just
+like Marketstack parse failures, before the original error propagates.
+
+The Admin `Valuation Cache` page answers "what valuation data is cached in
+Redis?" The Admin `Provider Usage` page answers "how often did we call external
+providers, and why?"
+
+### Raw request retention
+
+Raw requests are retained for 90 elapsed days, based on `requestedAt`, not the
+valuation date. A recently requested historical valuation therefore remains
+visible. The standalone `src/provider-usage-cleanup/cli.ts` captures one UTC
+cutoff and deletes rows strictly older than that cutoff (the boundary is kept).
+It uses the timestamp index and oldest-first batches of 1,000, committing every
+batch independently. There is no retention work in the valuation request path.
+
+Each run has a five-minute work budget, with bounded database transactions and
+lock waits. Unfinished cleanup or a database error fails the command; committed
+batches remain deleted and subsequent runs safely resume. Missed schedules
+require no special catch-up because every overdue row is eligible each run.
+PostgreSQL autovacuum reclaims dead tuples for reuse; deleting rows does not
+guarantee the on-disk table size immediately shrinks. Cleanup reports table plus
+index bytes with `pg_total_relation_size` for monitoring, not a size limit.
+
+GitHub Actions runs cleanup daily in production and staging, with results in
+workflow logs and summaries. See
+[Deployment](deployment.md#provider-usage-cleanup) for execution, manual
+triggers, and rollout requirements. Long-term aggregates and automatic
+notifications are not part of this retention mechanism.
 
 ## Conversion Formulas (After Cached Lookup)
 

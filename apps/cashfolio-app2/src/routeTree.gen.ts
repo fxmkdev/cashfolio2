@@ -9,37 +9,33 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as UserSettingsRouteImport } from './routes/user-settings'
-import { Route as AdminRouteRouteImport } from './routes/admin/route'
-import { Route as AccountBookIdRouteRouteImport } from './routes/$accountBookId/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AccountBookIdRouteRouteImport } from './routes/$accountBookId/route'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
+import { Route as UserSettingsRouteImport } from './routes/user-settings'
 import { Route as AccountBookIdIndexRouteImport } from './routes/$accountBookId/index'
-import { Route as AdminUsersRouteImport } from './routes/admin/users'
-import { Route as AccountDeleteRouteImport } from './routes/account/delete'
-import { Route as AccountBooksNewRouteImport } from './routes/account-books/new'
-import { Route as AdminValuationCacheRouteRouteImport } from './routes/admin/valuation-cache/route'
-import { Route as AccountBookIdTransactionsRouteRouteImport } from './routes/$accountBookId/transactions/route'
-import { Route as AccountBookIdSettingsRouteRouteImport } from './routes/$accountBookId/settings/route'
-import { Route as AccountBookIdReportRouteRouteImport } from './routes/$accountBookId/report/route'
-import { Route as AccountBookIdHistoryRouteRouteImport } from './routes/$accountBookId/history/route'
-import { Route as AccountBookIdAccountsRouteRouteImport } from './routes/$accountBookId/accounts/route'
 import { Route as AccountBookIdAccountIdRouteRouteImport } from './routes/$accountBookId/$accountId/route'
-import { Route as AccountBookIdTransactionsIndexRouteImport } from './routes/$accountBookId/transactions/index'
-import { Route as AccountBookIdReportIndexRouteImport } from './routes/$accountBookId/report/index'
+import { Route as AccountBookIdAccountsRouteRouteImport } from './routes/$accountBookId/accounts/route'
+import { Route as AccountBookIdHistoryRouteRouteImport } from './routes/$accountBookId/history/route'
+import { Route as AccountBookIdReportRouteRouteImport } from './routes/$accountBookId/report/route'
+import { Route as AccountBookIdSettingsRouteRouteImport } from './routes/$accountBookId/settings/route'
+import { Route as AccountBookIdTransactionsRouteRouteImport } from './routes/$accountBookId/transactions/route'
+import { Route as AccountBooksNewRouteImport } from './routes/account-books/new'
+import { Route as AccountDeleteRouteImport } from './routes/account/delete'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminUsersRouteImport } from './routes/admin/users'
+import { Route as AdminValuationCacheRouteRouteImport } from './routes/admin/valuation-cache/route'
+import { Route as AdminValuationProviderUsageRouteRouteImport } from './routes/admin/valuation-provider-usage/route'
 import { Route as AccountBookIdAccountIdIndexRouteImport } from './routes/$accountBookId/$accountId/index'
-import { Route as ApiLogtoActionRouteImport } from './routes/api/logto/$action'
 import { Route as AccountBookIdAccountIdImportStatementRouteImport } from './routes/$accountBookId/$accountId/import-statement'
+import { Route as AccountBookIdReportIndexRouteImport } from './routes/$accountBookId/report/index'
+import { Route as AccountBookIdTransactionsIndexRouteImport } from './routes/$accountBookId/transactions/index'
+import { Route as ApiLogtoActionRouteImport } from './routes/api/logto/$action'
 import { Route as AccountBookIdReportGainsLossesAccountIdRouteRouteImport } from './routes/$accountBookId/report/gains-losses/$accountId/route'
 
-const UserSettingsRoute = UserSettingsRouteImport.update({
-  id: '/user-settings',
-  path: '/user-settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRouteRoute = AdminRouteRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountBookIdRouteRoute = AccountBookIdRouteRouteImport.update({
@@ -47,64 +43,25 @@ const AccountBookIdRouteRoute = AccountBookIdRouteRouteImport.update({
   path: '/$accountBookId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AdminRouteRoute,
+const UserSettingsRoute = UserSettingsRouteImport.update({
+  id: '/user-settings',
+  path: '/user-settings',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AccountBookIdIndexRoute = AccountBookIdIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AccountBookIdRouteRoute,
 } as any)
-const AdminUsersRoute = AdminUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AccountDeleteRoute = AccountDeleteRouteImport.update({
-  id: '/account/delete',
-  path: '/account/delete',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AccountBooksNewRoute = AccountBooksNewRouteImport.update({
-  id: '/account-books/new',
-  path: '/account-books/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminValuationCacheRouteRoute =
-  AdminValuationCacheRouteRouteImport.update({
-    id: '/valuation-cache',
-    path: '/valuation-cache',
-    getParentRoute: () => AdminRouteRoute,
-  } as any)
-const AccountBookIdTransactionsRouteRoute =
-  AccountBookIdTransactionsRouteRouteImport.update({
-    id: '/transactions',
-    path: '/transactions',
-    getParentRoute: () => AccountBookIdRouteRoute,
-  } as any)
-const AccountBookIdSettingsRouteRoute =
-  AccountBookIdSettingsRouteRouteImport.update({
-    id: '/settings',
-    path: '/settings',
-    getParentRoute: () => AccountBookIdRouteRoute,
-  } as any)
-const AccountBookIdReportRouteRoute =
-  AccountBookIdReportRouteRouteImport.update({
-    id: '/report',
-    path: '/report',
-    getParentRoute: () => AccountBookIdRouteRoute,
-  } as any)
-const AccountBookIdHistoryRouteRoute =
-  AccountBookIdHistoryRouteRouteImport.update({
-    id: '/history',
-    path: '/history',
+const AccountBookIdAccountIdRouteRoute =
+  AccountBookIdAccountIdRouteRouteImport.update({
+    id: '/$accountId',
+    path: '/$accountId',
     getParentRoute: () => AccountBookIdRouteRoute,
   } as any)
 const AccountBookIdAccountsRouteRoute =
@@ -113,23 +70,61 @@ const AccountBookIdAccountsRouteRoute =
     path: '/accounts',
     getParentRoute: () => AccountBookIdRouteRoute,
   } as any)
-const AccountBookIdAccountIdRouteRoute =
-  AccountBookIdAccountIdRouteRouteImport.update({
-    id: '/$accountId',
-    path: '/$accountId',
+const AccountBookIdHistoryRouteRoute =
+  AccountBookIdHistoryRouteRouteImport.update({
+    id: '/history',
+    path: '/history',
     getParentRoute: () => AccountBookIdRouteRoute,
   } as any)
-const AccountBookIdTransactionsIndexRoute =
-  AccountBookIdTransactionsIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AccountBookIdTransactionsRouteRoute,
+const AccountBookIdReportRouteRoute =
+  AccountBookIdReportRouteRouteImport.update({
+    id: '/report',
+    path: '/report',
+    getParentRoute: () => AccountBookIdRouteRoute,
   } as any)
-const AccountBookIdReportIndexRoute =
-  AccountBookIdReportIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AccountBookIdReportRouteRoute,
+const AccountBookIdSettingsRouteRoute =
+  AccountBookIdSettingsRouteRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AccountBookIdRouteRoute,
+  } as any)
+const AccountBookIdTransactionsRouteRoute =
+  AccountBookIdTransactionsRouteRouteImport.update({
+    id: '/transactions',
+    path: '/transactions',
+    getParentRoute: () => AccountBookIdRouteRoute,
+  } as any)
+const AccountBooksNewRoute = AccountBooksNewRouteImport.update({
+  id: '/account-books/new',
+  path: '/account-books/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountDeleteRoute = AccountDeleteRouteImport.update({
+  id: '/account/delete',
+  path: '/account/delete',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminValuationCacheRouteRoute =
+  AdminValuationCacheRouteRouteImport.update({
+    id: '/valuation-cache',
+    path: '/valuation-cache',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminValuationProviderUsageRouteRoute =
+  AdminValuationProviderUsageRouteRouteImport.update({
+    id: '/valuation-provider-usage',
+    path: '/valuation-provider-usage',
+    getParentRoute: () => AdminRouteRoute,
   } as any)
 const AccountBookIdAccountIdIndexRoute =
   AccountBookIdAccountIdIndexRouteImport.update({
@@ -137,17 +132,29 @@ const AccountBookIdAccountIdIndexRoute =
     path: '/',
     getParentRoute: () => AccountBookIdAccountIdRouteRoute,
   } as any)
-const ApiLogtoActionRoute = ApiLogtoActionRouteImport.update({
-  id: '/api/logto/$action',
-  path: '/api/logto/$action',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AccountBookIdAccountIdImportStatementRoute =
   AccountBookIdAccountIdImportStatementRouteImport.update({
     id: '/import-statement',
     path: '/import-statement',
     getParentRoute: () => AccountBookIdAccountIdRouteRoute,
   } as any)
+const AccountBookIdReportIndexRoute =
+  AccountBookIdReportIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AccountBookIdReportRouteRoute,
+  } as any)
+const AccountBookIdTransactionsIndexRoute =
+  AccountBookIdTransactionsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AccountBookIdTransactionsRouteRoute,
+  } as any)
+const ApiLogtoActionRoute = ApiLogtoActionRouteImport.update({
+  id: '/api/logto/$action',
+  path: '/api/logto/$action',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountBookIdReportGainsLossesAccountIdRouteRoute =
   AccountBookIdReportGainsLossesAccountIdRouteRouteImport.update({
     id: '/gains-losses/$accountId',
@@ -167,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/$accountBookId/settings': typeof AccountBookIdSettingsRouteRoute
   '/$accountBookId/transactions': typeof AccountBookIdTransactionsRouteRouteWithChildren
   '/admin/valuation-cache': typeof AdminValuationCacheRouteRoute
+  '/admin/valuation-provider-usage': typeof AdminValuationProviderUsageRouteRoute
   '/account-books/new': typeof AccountBooksNewRoute
   '/account/delete': typeof AccountDeleteRoute
   '/admin/users': typeof AdminUsersRoute
@@ -186,6 +194,7 @@ export interface FileRoutesByTo {
   '/$accountBookId/history': typeof AccountBookIdHistoryRouteRoute
   '/$accountBookId/settings': typeof AccountBookIdSettingsRouteRoute
   '/admin/valuation-cache': typeof AdminValuationCacheRouteRoute
+  '/admin/valuation-provider-usage': typeof AdminValuationProviderUsageRouteRoute
   '/account-books/new': typeof AccountBooksNewRoute
   '/account/delete': typeof AccountDeleteRoute
   '/admin/users': typeof AdminUsersRoute
@@ -211,6 +220,7 @@ export interface FileRoutesById {
   '/$accountBookId/settings': typeof AccountBookIdSettingsRouteRoute
   '/$accountBookId/transactions': typeof AccountBookIdTransactionsRouteRouteWithChildren
   '/admin/valuation-cache': typeof AdminValuationCacheRouteRoute
+  '/admin/valuation-provider-usage': typeof AdminValuationProviderUsageRouteRoute
   '/account-books/new': typeof AccountBooksNewRoute
   '/account/delete': typeof AccountDeleteRoute
   '/admin/users': typeof AdminUsersRoute
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/$accountBookId/settings'
     | '/$accountBookId/transactions'
     | '/admin/valuation-cache'
+    | '/admin/valuation-provider-usage'
     | '/account-books/new'
     | '/account/delete'
     | '/admin/users'
@@ -256,6 +267,7 @@ export interface FileRouteTypes {
     | '/$accountBookId/history'
     | '/$accountBookId/settings'
     | '/admin/valuation-cache'
+    | '/admin/valuation-provider-usage'
     | '/account-books/new'
     | '/account/delete'
     | '/admin/users'
@@ -280,6 +292,7 @@ export interface FileRouteTypes {
     | '/$accountBookId/settings'
     | '/$accountBookId/transactions'
     | '/admin/valuation-cache'
+    | '/admin/valuation-provider-usage'
     | '/account-books/new'
     | '/account/delete'
     | '/admin/users'
@@ -305,18 +318,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/user-settings': {
-      id: '/user-settings'
-      path: '/user-settings'
-      fullPath: '/user-settings'
-      preLoaderRoute: typeof UserSettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$accountBookId': {
@@ -326,88 +332,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountBookIdRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/': {
-      id: '/admin/'
-      path: '/'
-      fullPath: '/admin/'
-      preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
+    '/user-settings': {
+      id: '/user-settings'
+      path: '/user-settings'
+      fullPath: '/user-settings'
+      preLoaderRoute: typeof UserSettingsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/$accountBookId/': {
       id: '/$accountBookId/'
       path: '/'
       fullPath: '/$accountBookId/'
       preLoaderRoute: typeof AccountBookIdIndexRouteImport
-      parentRoute: typeof AccountBookIdRouteRoute
-    }
-    '/admin/users': {
-      id: '/admin/users'
-      path: '/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AdminUsersRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/account/delete': {
-      id: '/account/delete'
-      path: '/account/delete'
-      fullPath: '/account/delete'
-      preLoaderRoute: typeof AccountDeleteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/account-books/new': {
-      id: '/account-books/new'
-      path: '/account-books/new'
-      fullPath: '/account-books/new'
-      preLoaderRoute: typeof AccountBooksNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/valuation-cache': {
-      id: '/admin/valuation-cache'
-      path: '/valuation-cache'
-      fullPath: '/admin/valuation-cache'
-      preLoaderRoute: typeof AdminValuationCacheRouteRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/$accountBookId/transactions': {
-      id: '/$accountBookId/transactions'
-      path: '/transactions'
-      fullPath: '/$accountBookId/transactions'
-      preLoaderRoute: typeof AccountBookIdTransactionsRouteRouteImport
-      parentRoute: typeof AccountBookIdRouteRoute
-    }
-    '/$accountBookId/settings': {
-      id: '/$accountBookId/settings'
-      path: '/settings'
-      fullPath: '/$accountBookId/settings'
-      preLoaderRoute: typeof AccountBookIdSettingsRouteRouteImport
-      parentRoute: typeof AccountBookIdRouteRoute
-    }
-    '/$accountBookId/report': {
-      id: '/$accountBookId/report'
-      path: '/report'
-      fullPath: '/$accountBookId/report'
-      preLoaderRoute: typeof AccountBookIdReportRouteRouteImport
-      parentRoute: typeof AccountBookIdRouteRoute
-    }
-    '/$accountBookId/history': {
-      id: '/$accountBookId/history'
-      path: '/history'
-      fullPath: '/$accountBookId/history'
-      preLoaderRoute: typeof AccountBookIdHistoryRouteRouteImport
-      parentRoute: typeof AccountBookIdRouteRoute
-    }
-    '/$accountBookId/accounts': {
-      id: '/$accountBookId/accounts'
-      path: '/accounts'
-      fullPath: '/$accountBookId/accounts'
-      preLoaderRoute: typeof AccountBookIdAccountsRouteRouteImport
       parentRoute: typeof AccountBookIdRouteRoute
     }
     '/$accountBookId/$accountId': {
@@ -417,19 +360,82 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountBookIdAccountIdRouteRouteImport
       parentRoute: typeof AccountBookIdRouteRoute
     }
-    '/$accountBookId/transactions/': {
-      id: '/$accountBookId/transactions/'
-      path: '/'
-      fullPath: '/$accountBookId/transactions/'
-      preLoaderRoute: typeof AccountBookIdTransactionsIndexRouteImport
-      parentRoute: typeof AccountBookIdTransactionsRouteRoute
+    '/$accountBookId/accounts': {
+      id: '/$accountBookId/accounts'
+      path: '/accounts'
+      fullPath: '/$accountBookId/accounts'
+      preLoaderRoute: typeof AccountBookIdAccountsRouteRouteImport
+      parentRoute: typeof AccountBookIdRouteRoute
     }
-    '/$accountBookId/report/': {
-      id: '/$accountBookId/report/'
+    '/$accountBookId/history': {
+      id: '/$accountBookId/history'
+      path: '/history'
+      fullPath: '/$accountBookId/history'
+      preLoaderRoute: typeof AccountBookIdHistoryRouteRouteImport
+      parentRoute: typeof AccountBookIdRouteRoute
+    }
+    '/$accountBookId/report': {
+      id: '/$accountBookId/report'
+      path: '/report'
+      fullPath: '/$accountBookId/report'
+      preLoaderRoute: typeof AccountBookIdReportRouteRouteImport
+      parentRoute: typeof AccountBookIdRouteRoute
+    }
+    '/$accountBookId/settings': {
+      id: '/$accountBookId/settings'
+      path: '/settings'
+      fullPath: '/$accountBookId/settings'
+      preLoaderRoute: typeof AccountBookIdSettingsRouteRouteImport
+      parentRoute: typeof AccountBookIdRouteRoute
+    }
+    '/$accountBookId/transactions': {
+      id: '/$accountBookId/transactions'
+      path: '/transactions'
+      fullPath: '/$accountBookId/transactions'
+      preLoaderRoute: typeof AccountBookIdTransactionsRouteRouteImport
+      parentRoute: typeof AccountBookIdRouteRoute
+    }
+    '/account-books/new': {
+      id: '/account-books/new'
+      path: '/account-books/new'
+      fullPath: '/account-books/new'
+      preLoaderRoute: typeof AccountBooksNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/delete': {
+      id: '/account/delete'
+      path: '/account/delete'
+      fullPath: '/account/delete'
+      preLoaderRoute: typeof AccountDeleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
       path: '/'
-      fullPath: '/$accountBookId/report/'
-      preLoaderRoute: typeof AccountBookIdReportIndexRouteImport
-      parentRoute: typeof AccountBookIdReportRouteRoute
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/valuation-cache': {
+      id: '/admin/valuation-cache'
+      path: '/valuation-cache'
+      fullPath: '/admin/valuation-cache'
+      preLoaderRoute: typeof AdminValuationCacheRouteRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/valuation-provider-usage': {
+      id: '/admin/valuation-provider-usage'
+      path: '/valuation-provider-usage'
+      fullPath: '/admin/valuation-provider-usage'
+      preLoaderRoute: typeof AdminValuationProviderUsageRouteRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/$accountBookId/$accountId/': {
       id: '/$accountBookId/$accountId/'
@@ -438,19 +444,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountBookIdAccountIdIndexRouteImport
       parentRoute: typeof AccountBookIdAccountIdRouteRoute
     }
-    '/api/logto/$action': {
-      id: '/api/logto/$action'
-      path: '/api/logto/$action'
-      fullPath: '/api/logto/$action'
-      preLoaderRoute: typeof ApiLogtoActionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/$accountBookId/$accountId/import-statement': {
       id: '/$accountBookId/$accountId/import-statement'
       path: '/import-statement'
       fullPath: '/$accountBookId/$accountId/import-statement'
       preLoaderRoute: typeof AccountBookIdAccountIdImportStatementRouteImport
       parentRoute: typeof AccountBookIdAccountIdRouteRoute
+    }
+    '/$accountBookId/report/': {
+      id: '/$accountBookId/report/'
+      path: '/'
+      fullPath: '/$accountBookId/report/'
+      preLoaderRoute: typeof AccountBookIdReportIndexRouteImport
+      parentRoute: typeof AccountBookIdReportRouteRoute
+    }
+    '/$accountBookId/transactions/': {
+      id: '/$accountBookId/transactions/'
+      path: '/'
+      fullPath: '/$accountBookId/transactions/'
+      preLoaderRoute: typeof AccountBookIdTransactionsIndexRouteImport
+      parentRoute: typeof AccountBookIdTransactionsRouteRoute
+    }
+    '/api/logto/$action': {
+      id: '/api/logto/$action'
+      path: '/api/logto/$action'
+      fullPath: '/api/logto/$action'
+      preLoaderRoute: typeof ApiLogtoActionRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/$accountBookId/report/gains-losses/$accountId': {
       id: '/$accountBookId/report/gains-losses/$accountId'
@@ -537,12 +557,14 @@ const AccountBookIdRouteRouteWithChildren =
 
 interface AdminRouteRouteChildren {
   AdminValuationCacheRouteRoute: typeof AdminValuationCacheRouteRoute
+  AdminValuationProviderUsageRouteRoute: typeof AdminValuationProviderUsageRouteRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminValuationCacheRouteRoute: AdminValuationCacheRouteRoute,
+  AdminValuationProviderUsageRouteRoute: AdminValuationProviderUsageRouteRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
