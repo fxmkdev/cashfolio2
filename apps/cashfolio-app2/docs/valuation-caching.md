@@ -328,8 +328,19 @@ Request reasons distinguish why the provider attempt happened:
 - `BACKTRACK_PROBE` - an older-day provider attempt during backtracking
 - `RATE_LIMIT_RETRY` - a Marketstack retry after a rate-limited attempt
 
-Usage writes are best-effort. If recording fails, valuation continues and the
-failure is logged once per server process.
+Usage writes are best-effort, with a one-second caller deadline including client
+loading, pool acquisition, and the insert. A dedicated, reused single-connection
+accounting pool has a 250 ms connection/acquisition limit and a 750 ms driver
+query limit, isolated from the application's normal database pool. Inserts use
+transaction-local 500 ms statement and 250 ms lock timeouts in a bounded
+transaction. If recording fails or times out, valuation continues and a fixed
+warning (without raw database errors) is logged once per server process. Late
+write failures remain handled; the caller deadline does not leave unhandled
+promise rejections.
+
+Provider JSON parsing and interpretation are guarded together. Malformed
+Currencylayer/Coinlayer responses are recorded once as `PROVIDER_ERROR`, just
+like Marketstack parse failures, before the original error propagates.
 
 The Admin `Valuation Cache` page answers "what valuation data is cached in
 Redis?" The Admin `Provider Usage` page answers "how often did we call external

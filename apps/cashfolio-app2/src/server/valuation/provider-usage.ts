@@ -35,6 +35,7 @@ export type RecordValuationProviderRequestInput = {
 };
 
 let hasWarnedValuationProviderUsageWriteFailure = false;
+export const PROVIDER_USAGE_WRITE_DEADLINE_MS = 1_000;
 
 function normalizeOptionalCode(value: string | undefined): string | undefined {
   const normalized = value?.trim().toUpperCase();
@@ -44,11 +45,11 @@ function normalizeOptionalCode(value: string | undefined): string | undefined {
 export async function recordValuationProviderRequest(
   input: RecordValuationProviderRequestInput,
 ): Promise<void> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    const { prisma } = await import("../../prisma.server");
-
-    await prisma.valuationProviderRequest.create({
-      data: {
+    const write = async () => {
+      const { writeProviderUsage } = await import("./provider-usage-db.server");
+      await writeProviderUsage({
         provider: input.provider,
         unitType: input.unitType,
         outcome: input.outcome,
@@ -65,15 +66,25 @@ export async function recordValuationProviderRequest(
         errorMessage: input.errorMessage
           ? sanitizeProviderLogText(input.errorMessage).slice(0, 2_000)
           : undefined,
-      },
-    });
-  } catch (error) {
+      });
+    };
+    await Promise.race([
+      write(),
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(
+          () => reject(new Error("Usage write deadline exceeded")),
+          PROVIDER_USAGE_WRITE_DEADLINE_MS,
+        );
+      }),
+    ]);
+  } catch {
     if (!hasWarnedValuationProviderUsageWriteFailure) {
       console.warn(
         "Failed to record valuation provider usage; continuing without usage row.",
-        error,
       );
       hasWarnedValuationProviderUsageWriteFailure = true;
     }
+  } finally {
+    clearTimeout(timeout);
   }
 }

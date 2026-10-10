@@ -1,13 +1,9 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-const prisma = vi.hoisted(() => ({
-  valuationProviderRequest: {
-    create: vi.fn(),
-  },
-}));
+const writeProviderUsage = vi.hoisted(() => vi.fn());
 
-vi.mock("../../prisma.server", () => ({
-  prisma,
+vi.mock("./provider-usage-db.server", () => ({
+  writeProviderUsage,
 }));
 
 import { recordValuationProviderRequest } from "./provider-usage";
@@ -15,8 +11,9 @@ import { recordValuationProviderRequest } from "./provider-usage";
 describe("valuation provider usage recording", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    prisma.valuationProviderRequest.create.mockResolvedValue({});
+    writeProviderUsage.mockReset().mockResolvedValue(undefined);
   });
+  afterEach(() => vi.useRealTimers());
 
   test("stores normalized provider request usage without leaking secrets", async () => {
     await recordValuationProviderRequest({
@@ -32,8 +29,8 @@ describe("valuation provider usage recording", () => {
       errorMessage: "failed access_key=secret-token",
     });
 
-    expect(prisma.valuationProviderRequest.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
+    expect(writeProviderUsage).toHaveBeenCalledWith(
+      expect.objectContaining({
         provider: "CURRENCYLAYER",
         unitType: "CURRENCY",
         outcome: "REQUEST_ERROR",
@@ -45,13 +42,13 @@ describe("valuation provider usage recording", () => {
         retryCount: 0,
         errorMessage: "failed access_key=[redacted]",
       }),
-    });
+    );
   });
 
   test("does not throw when usage persistence fails", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    prisma.valuationProviderRequest.create.mockRejectedValueOnce(
-      new Error("database unavailable"),
+    writeProviderUsage.mockRejectedValueOnce(
+      new Error("postgresql://user:private-password@localhost/database"),
     );
 
     await expect(
@@ -70,6 +67,9 @@ describe("valuation provider usage recording", () => {
     ).resolves.toBeUndefined();
 
     expect(warnSpy).toHaveBeenCalledOnce();
+    expect(JSON.stringify(warnSpy.mock.calls)).not.toContain(
+      "private-password",
+    );
     warnSpy.mockRestore();
   });
 
@@ -96,8 +96,32 @@ describe("valuation provider usage recording", () => {
       durationMs: 1,
       errorMessage,
     });
-    expect(prisma.valuationProviderRequest.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ errorMessage: expected }),
+    expect(writeProviderUsage).toHaveBeenCalledWith(
+      expect.objectContaining({ errorMessage: expected }),
+    );
+  });
+
+  test("bounds a stalled write and handles its eventual rejection", async () => {
+    vi.useFakeTimers();
+    let rejectWrite!: (error: Error) => void;
+    writeProviderUsage.mockReturnValueOnce(
+      new Promise((_resolve, reject) => {
+        rejectWrite = reject;
+      }),
+    );
+    const promise = recordValuationProviderRequest({
+      provider: "CURRENCYLAYER",
+      unitType: "CURRENCY",
+      outcome: "RETRIEVED",
+      requestReason: "INITIAL_PROBE",
+      requestedAt: new Date(),
+      valuationDate: new Date(),
+      durationMs: 1,
     });
+    await vi.advanceTimersByTimeAsync(1_000);
+    await expect(promise).resolves.toBeUndefined();
+    expect(vi.getTimerCount()).toBe(0);
+    rejectWrite(new Error("late database failure"));
+    await Promise.resolve();
   });
 });

@@ -12,10 +12,18 @@ import {
   describe,
   expect,
   test,
+  vi,
 } from "vitest";
 import { PrismaClient } from "../.prisma-client/client";
 import { CLEANUP_LOG_PREFIX, cleanupProviderUsage } from "./run";
 import { createCleanupStore } from "./store";
+import { getProviderUsageClient } from "../server/valuation/provider-usage-db.server";
+import {
+  fetchSecurityPriceFromMarketstack,
+  fetchUsdPerCryptocurrencyRateFromCoinLayer,
+  fetchUsdToCurrencyRateFromCurrencyLayer,
+} from "../server/valuation/providers";
+import { PROVIDER_USAGE_WRITE_DEADLINE_MS } from "../server/valuation/provider-usage";
 
 const execute = promisify(execFile);
 const adminUrl = new URL(
@@ -40,6 +48,7 @@ const client = new PrismaClient({
   adapter: new PrismaPg({ connectionString: databaseUrl.href }),
 });
 let databaseCreated = false;
+let usageClient: PrismaClient | undefined;
 const now = new Date("2026-10-10T12:00:00Z");
 const cutoff = new Date("2026-07-12T12:00:00Z");
 const base = {
@@ -59,11 +68,18 @@ describe("provider usage cleanup against disposable PostgreSQL", () => {
       env: { ...process.env, DATABASE_URL: databaseUrl.href },
       maxBuffer: 4 * 1024 * 1024,
     });
+    vi.stubEnv("DATABASE_URL", databaseUrl.href);
+    vi.stubEnv("CURRENCYLAYER_API_KEY", "test-key");
+    vi.stubEnv("COINLAYER_API_KEY", "test-key");
+    vi.stubEnv("MARKETSTACK_API_KEY", "test-key");
   });
   beforeEach(async () => {
     await client.valuationProviderRequest.deleteMany();
   });
   afterAll(async () => {
+    await usageClient?.$disconnect();
+    delete global.__providerUsageDb__;
+    vi.unstubAllEnvs();
     await client.$disconnect();
     try {
       if (databaseCreated)
@@ -72,6 +88,113 @@ describe("provider usage cleanup against disposable PostgreSQL", () => {
         );
     } finally {
       await admin.$disconnect();
+    }
+  });
+
+  test("a locked usage table does not block provider rates, provider errors, or app-data reads", async () => {
+    usageClient = getProviderUsageClient();
+    await usageClient.$connect();
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ success: true, quotes: { USDCHF: 0.9 } }),
+        ),
+      )
+      .mockResolvedValueOnce(new Response("unavailable", { status: 503 }));
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    let signalReady!: () => void;
+    let releaseLock!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      signalReady = resolve;
+    });
+    const release = new Promise<void>((resolve) => {
+      releaseLock = resolve;
+    });
+    const lock = client.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`LOCK TABLE "ValuationProviderRequest" IN ACCESS EXCLUSIVE MODE`;
+        signalReady();
+        await release;
+      },
+      { timeout: 10_000 },
+    );
+    await ready;
+    try {
+      const started = performance.now();
+      await expect(
+        fetchUsdToCurrencyRateFromCurrencyLayer("CHF", now),
+      ).resolves.toBe(0.9);
+      await expect(
+        fetchUsdPerCryptocurrencyRateFromCoinLayer("BTC", now),
+      ).rejects.toThrow("Coinlayer request failed with 503");
+      expect(performance.now() - started).toBeLessThan(
+        2 * PROVIDER_USAGE_WRITE_DEADLINE_MS + 1_000,
+      );
+      await expect(client.user.count()).resolves.toBe(0);
+      expect(warnSpy).toHaveBeenCalledWith(
+        "Failed to record valuation provider usage; continuing without usage row.",
+      );
+    } finally {
+      releaseLock();
+      await lock;
+      fetchSpy.mockRestore();
+      infoSpy.mockRestore();
+      warnSpy.mockRestore();
+    }
+    expect(await client.valuationProviderRequest.count()).toBe(0);
+  });
+
+  test("an exhausted accounting pool fails quickly without queued inserts leaking after release", async () => {
+    usageClient = getProviderUsageClient();
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(
+        async () =>
+          new Response(
+            JSON.stringify({ data: [{ close: 180, currency: "USD" }] }),
+          ),
+      );
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    let signalReady!: () => void;
+    let releasePool!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      signalReady = resolve;
+    });
+    const release = new Promise<void>((resolve) => {
+      releasePool = resolve;
+    });
+    const held = usageClient.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT 1`;
+        signalReady();
+        await release;
+      },
+      { timeout: 10_000 },
+    );
+    await ready;
+    try {
+      const started = performance.now();
+      await expect(
+        fetchSecurityPriceFromMarketstack("AAPL", "USD", now),
+      ).resolves.toBe(180);
+      expect(performance.now() - started).toBeLessThan(
+        PROVIDER_USAGE_WRITE_DEADLINE_MS + 500,
+      );
+    } finally {
+      releasePool();
+      await held;
+    }
+    try {
+      expect(await client.valuationProviderRequest.count()).toBe(0);
+      await expect(
+        fetchSecurityPriceFromMarketstack("AAPL", "USD", now),
+      ).resolves.toBe(180);
+      expect(await client.valuationProviderRequest.count()).toBe(1);
+    } finally {
+      fetchSpy.mockRestore();
+      infoSpy.mockRestore();
     }
   });
 

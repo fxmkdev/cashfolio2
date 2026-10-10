@@ -533,4 +533,61 @@ describe("Valuation provider helpers", () => {
       }
     }
   });
+
+  test.each(
+    [
+      {
+        provider: "CURRENCYLAYER",
+        env: "CURRENCYLAYER_API_KEY",
+        lookup: () =>
+          fetchUsdToCurrencyRateFromCurrencyLayer(
+            "CHF",
+            new Date("2026-03-28"),
+          ),
+      },
+      {
+        provider: "COINLAYER",
+        env: "COINLAYER_API_KEY",
+        lookup: () =>
+          fetchUsdPerCryptocurrencyRateFromCoinLayer(
+            "BTC",
+            new Date("2026-03-28"),
+          ),
+      },
+    ].flatMap((provider) =>
+      [
+        "null",
+        "{",
+        JSON.stringify({ success: false, error: { info: 42 } }),
+      ].map((body) => ({ ...provider, body })),
+    ),
+  )(
+    "records exactly one provider error for $provider with malformed body $body",
+    async ({ provider, env, lookup, body }) => {
+      vi.stubEnv(env, "test-key");
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(new Response(body, { status: 200 }));
+      const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      try {
+        await expect(lookup()).rejects.toThrow();
+        expect(fetchSpy).toHaveBeenCalledOnce();
+        expect(recordValuationProviderRequest).toHaveBeenCalledOnce();
+        expect(recordValuationProviderRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            provider,
+            outcome: "PROVIDER_ERROR",
+            httpStatus: 200,
+            errorMessage: expect.any(String),
+          }),
+        );
+      } finally {
+        fetchSpy.mockRestore();
+        infoSpy.mockRestore();
+        warnSpy.mockRestore();
+        vi.unstubAllEnvs();
+      }
+    },
+  );
 });
