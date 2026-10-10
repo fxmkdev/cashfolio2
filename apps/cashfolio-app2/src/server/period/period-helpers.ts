@@ -555,7 +555,7 @@ function finalizeSignedBreakdownHierarchyNodes(
     const roundedAmount = round2(node.amount);
     const roundedDisplayedChildrenAmount = round2(rawDisplayedChildrenAmount);
 
-    if (moneyIsZero(roundedAmount) || children.length === 0) {
+    if (children.length === 0) {
       prunedNodeCount += 1;
       continue;
     }
