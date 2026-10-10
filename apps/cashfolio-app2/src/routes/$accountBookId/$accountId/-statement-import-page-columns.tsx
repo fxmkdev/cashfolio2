@@ -38,11 +38,20 @@ export function useStatementImportColumnDefs(args: {
       {
         colId: "status",
         headerName: "Status",
-        width: 155,
+        width: 235,
         pinned: "left",
         cellRenderer: ({
           data,
         }: ICellRendererParams<StatementImportGridRow>) => {
+          if (data?.rowType === "existingBooking") {
+            return (
+              <Tooltip label="This booking already exists in the account and affects the balance, but is not matched to a statement row.">
+                <Badge color="gray" variant="light">
+                  Existing · not in statement
+                </Badge>
+              </Tooltip>
+            );
+          }
           if (!isStatementImportReviewDraftRow(data)) return null;
           const status = statuses.get(data.id);
           if (!status) return null;

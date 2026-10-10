@@ -1,6 +1,6 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import type { MouseEvent, KeyboardEvent } from "react";
-import { AccountType } from "@/.prisma-client/enums";
+import { AccountType, Unit } from "@/.prisma-client/enums";
 import type {
   GridApi,
   GridReadyEvent,
@@ -75,23 +75,48 @@ function setup() {
   const selected = new Set(drafts.map((draft) => draft.id));
   const nodes = drafts.map((draft) => ({
     id: draft.id,
-    data: draft,
+    data: { ...draft, rowType: "draft" as const, balance: 0 },
     isSelected: () => selected.has(draft.id),
   }));
   const balance = getStatementImportBalanceCarriedForwardRow({
-    persistedBalance: 100,
-    account: { type: AccountType.ASSET },
+    existingBookings: [
+      {
+        id: "opening",
+        transactionId: "opening-tx",
+        date: "2026-01-01",
+        amount: "100",
+        description: "Opening",
+      },
+    ],
+    account: { type: AccountType.ASSET, unit: Unit.CURRENCY, currency: "CHF" },
+    drafts,
   })!;
   const balanceNode = {
     id: balance.id,
     data: balance,
     isSelected: () => false,
   };
-  let displayedNodes = [...nodes, balanceNode];
+  const existingNode = {
+    id: "__statement_import_existing_booking__manual",
+    data: {
+      id: "__statement_import_existing_booking__manual",
+      rowType: "existingBooking" as const,
+      date: "2026-02-03",
+      amount: 5,
+      description: "Manual",
+      balance: 105,
+    },
+    isSelected: () => false,
+  };
+  let displayedNodes = [nodes[0], existingNode, ...nodes.slice(1), balanceNode];
   const setDrafts = vi.fn((update) => {
     drafts = typeof update === "function" ? update(drafts) : update;
     nodes.forEach((node) => {
-      node.data = drafts.find((draft) => draft.id === node.id)!;
+      node.data = {
+        ...drafts.find((draft) => draft.id === node.id)!,
+        rowType: "draft",
+        balance: 0,
+      };
     });
   });
   const setNodesSelected = vi.fn(({ nodes: changedNodes, newValue }) => {
@@ -102,11 +127,11 @@ function setup() {
   const api = {
     isDestroyed: () => false,
     forEachNode: (callback: (node: unknown) => void) =>
-      [...nodes, balanceNode].forEach(callback),
+      [...nodes, existingNode, balanceNode].forEach(callback),
     forEachNodeAfterFilterAndSort: (callback: (node: unknown) => void) =>
       displayedNodes.forEach(callback),
     getRowNode: (id: string) =>
-      [...nodes, balanceNode].find((node) => node.id === id),
+      [...nodes, existingNode, balanceNode].find((node) => node.id === id),
     getSelectedRows: () =>
       nodes.filter((node) => selected.has(node.id)).map((node) => node.data),
     setNodesSelected,
@@ -259,6 +284,8 @@ describe("statement import inclusion interactions", () => {
     expect(state.included()).toEqual(["a", "b", "d"]);
     state.setDrafts.mockClear();
     state.click(STATEMENT_IMPORT_BALANCE_CARRIED_FORWARD_ROW_ID);
+    state.click("__statement_import_existing_booking__manual");
+    state.key("__statement_import_existing_booking__manual");
     expect(state.setDrafts).not.toHaveBeenCalled();
   });
 

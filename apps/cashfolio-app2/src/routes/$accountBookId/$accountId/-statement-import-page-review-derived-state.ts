@@ -1,3 +1,4 @@
+import type { StatementImportExistingBooking } from "@/server/statement-import";
 import { useMemo } from "react";
 import type { AccountOption } from "@/components/edit-transaction-modal";
 import type { LedgerAccount } from "./-page-types";
@@ -17,7 +18,7 @@ export function useStatementImportReviewDerivedState(args: {
   account: LedgerAccount;
   accountBookStartDate: Date;
   accountOptions: AccountOption[];
-  persistedBalance: number;
+  existingBookings: StatementImportExistingBooking[];
   drafts: StatementImportDraft[];
   isSubmitting: boolean;
   isEditSubmitting: boolean;
@@ -26,7 +27,7 @@ export function useStatementImportReviewDerivedState(args: {
     account,
     accountBookStartDate,
     accountOptions,
-    persistedBalance,
+    existingBookings,
     drafts,
     isSubmitting,
     isEditSubmitting,
@@ -65,10 +66,10 @@ export function useStatementImportReviewDerivedState(args: {
     () =>
       getStatementImportGridRows({
         account,
-        persistedBalance,
+        existingBookings,
         drafts,
       }),
-    [account, drafts, persistedBalance],
+    [account, drafts, existingBookings],
   );
 
   return {

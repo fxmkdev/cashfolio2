@@ -507,10 +507,24 @@ compatibility but ignored by the importer.
   scrolling. AG Grid automatically unpins columns when the viewport is too
   narrow to accommodate the frozen columns.
 - The review grid shows a hypothetical account balance in the imported account's
-  unit. It starts from the account's persisted all-time balance, preserves CSV
-  row order, sums from the last imported row up to the first, and ignores rows
-  marked as ignored. When the starting balance is non-zero, the grid appends a
-  virtual `Balance carried forward` row at the bottom.
+  unit, calculated chronologically from a snapshot of all existing account-unit
+  bookings fetched on upload plus the selected import candidates. Existing
+  bookings count once, including those matched to ignored candidates. Selecting
+  a matched candidate deliberately adds another transaction. Later bookings do
+  not affect earlier row balances. Edits recalculate using each current-account
+  booking's own UTC date and compatible unit; liability balances are
+  sign-adjusted. The combined grid shows newest dates first, preserving CSV row
+  order within each day (calculated bottom-to-top). Matched bookings occupy
+  their CSV row's position; other existing same-day bookings precede the CSV
+  sequence. A non-zero projected balance before the earliest review date appears
+  in a virtual `Balance carried forward` row at the bottom. History is refreshed
+  on upload rather than synchronized with concurrent account edits.
+- Unmatched existing bookings within the inclusive range of current draft dates
+  appear as read-only rows labelled `Existing · not in statement`, with date,
+  signed amount, description, and projected balance. They have no checkbox or
+  edit action, do not affect import counts, and are never submitted. Matched
+  bookings remain represented by their CSV rows. Date edits update the visible
+  range; earlier history contributes to the carried balance.
 - The counter account is editable directly in the review grid. Full draft edits
   still use `EditTransactionModal`.
 - Drafts with zero or multiple non-current-account bookings show a `Multiple`
@@ -527,22 +541,22 @@ compatibility but ignored by the importer.
   `Already exists` with an explanatory tooltip; unmatched drafts start checked.
   Users can check matched rows to import them anyway. Matching runs once per
   upload; it is not rerun on submission. The header checkbox includes or ignores
-  all draft rows; the `Balance carried forward` row has no checkbox. Included
-  rows use normal styling without a selected-row background tint. Ignored drafts
-  cannot be edited until their checkbox is checked again.
+  all draft rows; existing-booking and `Balance carried forward` rows have no
+  checkbox. Included rows use normal styling without a selected-row background
+  tint. Ignored drafts cannot be edited until their checkbox is checked again.
 - The review grid's unlabeled checkbox column uses AG Grid's default compact
   width, native checkboxes, and mixed header state. The visible guidance reads
   `Check rows to include them in the import; uncheck to ignore them.` A normal
   checkbox click or Space establishes a range anchor with the resulting
   inclusion state. Shift-click or Shift+Space in the inclusion cell applies that
   state to the displayed draft range, inclusive, regardless of the endpoint's
-  previous state. Rows outside the range and the carried-forward balance are
-  unaffected. Repeated ranges keep the same anchor and do not restore earlier
-  changes when shortened. Without a valid anchor, Shift toggles only the
-  endpoint. File changes, header/select-all actions, and sorting/filtering clear
-  the anchor; draft edits, keyboard activation of row actions, and API
-  synchronization retain it. Inclusion is locked while import or draft-edit
-  submission is in progress.
+  previous state. Rows outside the range, existing-booking rows, and the
+  carried-forward balance are unaffected. Repeated ranges keep the same anchor
+  and do not restore earlier changes when shortened. Without a valid anchor,
+  Shift toggles only the endpoint. File changes, header/select-all actions, and
+  sorting/filtering clear the anchor; draft edits, keyboard activation of row
+  actions, and API synchronization retain it. Inclusion is locked while import
+  or draft-edit submission is in progress.
 - Import uses a batch server mutation so either all reviewed drafts are created
   or none are.
 - For imported mixed-currency drafts, `EditTransactionModal` preserves the

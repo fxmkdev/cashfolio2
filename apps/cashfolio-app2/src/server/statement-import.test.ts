@@ -31,8 +31,6 @@ import { getStatementImportExistingBookings } from "./statement-import";
 const input = {
   accountBookId: "book-1",
   accountId: "account-1",
-  from: "2026-02-01",
-  to: "2026-02-28",
 };
 
 describe("statement import existing bookings", () => {
@@ -42,7 +40,7 @@ describe("statement import existing bookings", () => {
     mocks.bookings.mockResolvedValue([]);
   });
 
-  it("scopes account and bookings to the authorized book, unit, and inclusive UTC range", async () => {
+  it("scopes account and bookings to the authorized book and unit across complete history", async () => {
     await getStatementImportExistingBookings({ data: input });
     expect(mocks.authorize).toHaveBeenCalledWith("book-1");
     expect(mocks.account).toHaveBeenCalledWith(
@@ -59,11 +57,11 @@ describe("statement import existing bookings", () => {
           accountId: "account-1",
           unit: Unit.CURRENCY,
           currency: "CHF",
-          date: { gte: new Date("2026-02-01"), lt: new Date("2026-03-01") },
         },
         orderBy: [{ date: "asc" }, { id: "asc" }],
       }),
     );
+    expect(mocks.bookings.mock.calls[0][0].where).not.toHaveProperty("date");
     expect(mocks.authorize.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.account.mock.invocationCallOrder[0],
     );
@@ -83,14 +81,13 @@ describe("statement import existing bookings", () => {
     async ({ account, unitFields }) => {
       mocks.account.mockResolvedValue(account);
       await getStatementImportExistingBookings({
-        data: { ...input, from: input.to },
+        data: input,
       });
       expect(mocks.bookings).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             accountBookId: input.accountBookId,
             accountId: input.accountId,
-            date: { gte: new Date(input.to), lt: new Date("2026-03-01") },
             ...unitFields,
           },
         }),
@@ -199,9 +196,6 @@ describe("statement import existing bookings", () => {
     {},
     { ...input, accountId: "" },
     { ...input, accountBookId: 1 },
-    { ...input, from: "2026-02-30" },
-    { ...input, to: "not-a-date" },
-    { ...input, from: "2026-03-01" },
   ])("rejects malformed input before authorization: %j", async (data) => {
     await expect(async () =>
       getStatementImportExistingBookings({ data }),

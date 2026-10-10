@@ -1,5 +1,8 @@
 import { useRef, useState } from "react";
-import { getStatementImportExistingBookings } from "@/server/statement-import";
+import {
+  getStatementImportExistingBookings,
+  type StatementImportExistingBooking,
+} from "@/server/statement-import";
 import { matchStatementImportDrafts } from "./-statement-import-matching";
 import type { LedgerAccount } from "./-page-types";
 import {
@@ -18,6 +21,7 @@ export function useStatementImportUploadState(args: {
   isSubmitting: boolean;
   isEditSubmitting: boolean;
   setDrafts: (drafts: StatementImportDraft[]) => void;
+  setExistingBookings: (bookings: StatementImportExistingBooking[]) => void;
   clearEditingDraft: () => void;
   requestConfirmation: (action: () => void) => void;
 }) {
@@ -28,6 +32,7 @@ export function useStatementImportUploadState(args: {
     isSubmitting,
     isEditSubmitting,
     setDrafts,
+    setExistingBookings,
     clearEditingDraft,
     requestConfirmation,
   } = args;
@@ -67,17 +72,15 @@ export function useStatementImportUploadState(args: {
       setParseErrors(result.errors);
       if (result.errors.length > 0 || result.drafts.length === 0) return;
 
-      const dates = result.drafts.map((draft) => draft.date).sort();
       const bookings = await getStatementImportExistingBookings({
         data: {
           accountBookId: args.accountBookId,
           accountId: account.id,
-          from: dates[0],
-          to: dates[dates.length - 1],
         },
       });
       if (requestId !== fileReadRequestId.current) return;
 
+      setExistingBookings(bookings);
       setDrafts(matchStatementImportDrafts(result.drafts, bookings));
       setActiveStep("review");
     } catch {
@@ -128,6 +131,7 @@ export function useStatementImportUploadState(args: {
   function clearStatementImportReviewState() {
     setParseErrors([]);
     setDrafts([]);
+    setExistingBookings([]);
     clearEditingDraft();
   }
 

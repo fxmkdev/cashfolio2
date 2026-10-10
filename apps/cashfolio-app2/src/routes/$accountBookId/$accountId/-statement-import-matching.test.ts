@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AccountType } from "@/.prisma-client/enums";
+import { AccountType, Unit } from "@/.prisma-client/enums";
 import type { StatementImportExistingBooking } from "@/server/statement-import";
 import {
   createStatementImportDraft,
@@ -120,8 +120,15 @@ describe("statement import matching", () => {
     expect(getStatementImportTransactionsToSubmit(rows)).toEqual([]);
     expect(
       getStatementImportReviewRows({
-        account: { type: AccountType.ASSET },
-        persistedBalance: 200,
+        account: {
+          type: AccountType.ASSET,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+        },
+        existingBookings: [
+          booking({ id: "opening", date: "2026-01-01", amount: "99.75" }),
+          booking(),
+        ],
         drafts: rows,
       })[0].balance,
     ).toBe(200);
@@ -143,8 +150,15 @@ describe("statement import matching", () => {
     ]);
     expect(
       getStatementImportReviewRows({
-        account: { type: AccountType.ASSET },
-        persistedBalance: 200,
+        account: {
+          type: AccountType.ASSET,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+        },
+        existingBookings: [
+          booking({ id: "opening", date: "2026-01-01", amount: "99.75" }),
+          booking(),
+        ],
         drafts: included,
       })[0].balance,
     ).toBe(300.25);

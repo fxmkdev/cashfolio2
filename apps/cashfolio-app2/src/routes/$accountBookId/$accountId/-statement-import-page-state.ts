@@ -1,3 +1,4 @@
+import type { StatementImportExistingBooking } from "@/server/statement-import";
 import { useState } from "react";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 import type { AccountOption } from "@/components/edit-transaction-modal";
@@ -19,7 +20,6 @@ export function useStatementImportPageState(args: {
   statementImportCsvFormat: StatementImportCsvFormat;
   accountBookStartDate: Date;
   accountOptions: AccountOption[];
-  persistedBalance: number;
   isSubmitting: boolean;
   isImportComplete: boolean;
   onSubmittingChange: (isSubmitting: boolean) => void;
@@ -29,12 +29,14 @@ export function useStatementImportPageState(args: {
     account,
     accountBookStartDate,
     accountOptions,
-    persistedBalance,
     isSubmitting,
     onSubmittingChange,
     onSubmit,
   } = args;
   const [drafts, setDrafts] = useState<StatementImportDraft[]>([]);
+  const [existingBookings, setExistingBookings] = useState<
+    StatementImportExistingBooking[]
+  >([]);
   const [editingDraftId, setEditingDraftId] = useState<string | undefined>();
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [isEditorDirty, setIsEditorDirty] = useState(false);
@@ -54,8 +56,8 @@ export function useStatementImportPageState(args: {
     account,
     accountBookStartDate,
     accountOptions,
-    persistedBalance,
     drafts,
+    existingBookings,
     setDrafts,
     isSubmitting,
     isEditSubmitting,
@@ -73,6 +75,7 @@ export function useStatementImportPageState(args: {
       setReviewBaseline(getStatementImportReviewSnapshot(nextDrafts));
       setDrafts(nextDrafts);
     },
+    setExistingBookings,
     clearEditingDraft: () => {
       setEditingDraftId(undefined);
       setIsEditorDirty(false);

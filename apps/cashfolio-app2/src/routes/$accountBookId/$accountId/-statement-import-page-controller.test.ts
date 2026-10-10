@@ -17,6 +17,18 @@ import type {
   StatementImportDraftStatus,
 } from "./-statement-import";
 
+function openingBooking(amount: number) {
+  return [
+    {
+      id: "opening",
+      transactionId: "opening-tx",
+      date: "2026-01-01",
+      amount: String(amount),
+      description: "Opening balance",
+    },
+  ];
+}
+
 function createDraft(
   overrides: Partial<StatementImportDraft> = {},
 ): StatementImportDraft {
@@ -355,8 +367,12 @@ describe("statement import page controller", () => {
     });
 
     const rows = getStatementImportReviewRows({
-      account: { type: AccountType.ASSET },
-      persistedBalance: 100,
+      account: {
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+      },
+      existingBookings: openingBooking(100),
       drafts: [firstDraft, secondDraft],
     });
 
@@ -364,8 +380,13 @@ describe("statement import page controller", () => {
     expect(rows.map((row) => row.balance)).toEqual([106, 96]);
     expect(
       getStatementImportBalanceCarriedForwardRow({
-        account: { type: AccountType.ASSET },
-        persistedBalance: 100,
+        account: {
+          type: AccountType.ASSET,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+        },
+        existingBookings: openingBooking(100),
+        drafts: [firstDraft, secondDraft],
       }),
     ).toEqual({
       id: "__statement_import_balance_carried_forward__",
@@ -375,8 +396,12 @@ describe("statement import page controller", () => {
     });
     expect(
       getStatementImportGridRows({
-        account: { type: AccountType.ASSET },
-        persistedBalance: 100,
+        account: {
+          type: AccountType.ASSET,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+        },
+        existingBookings: openingBooking(100),
         drafts: [firstDraft, secondDraft],
       }).map((row) => row.id),
     ).toEqual([
@@ -389,8 +414,13 @@ describe("statement import page controller", () => {
   test("suppresses the carried-forward row when the starting balance is zero", () => {
     expect(
       getStatementImportBalanceCarriedForwardRow({
-        account: { type: AccountType.ASSET },
-        persistedBalance: 0,
+        account: {
+          type: AccountType.ASSET,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+        },
+        existingBookings: openingBooking(0),
+        drafts: [createDraft()],
       }),
     ).toBeUndefined();
   });
@@ -431,8 +461,12 @@ describe("statement import page controller", () => {
     });
 
     const rows = getStatementImportReviewRows({
-      account: { type: AccountType.ASSET },
-      persistedBalance: 100,
+      account: {
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+      },
+      existingBookings: openingBooking(100),
       drafts: [ignoredDraft, includedDraft],
     });
 
@@ -473,8 +507,12 @@ describe("statement import page controller", () => {
     });
 
     const rows = getStatementImportReviewRows({
-      account: { type: AccountType.ASSET },
-      persistedBalance: 5,
+      account: {
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+      },
+      existingBookings: openingBooking(5),
       drafts: [draft],
     });
 
@@ -500,16 +538,25 @@ describe("statement import page controller", () => {
     });
 
     const rows = getStatementImportReviewRows({
-      account: { type: AccountType.LIABILITY },
-      persistedBalance: -100,
+      account: {
+        type: AccountType.LIABILITY,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+      },
+      existingBookings: openingBooking(-100),
       drafts: [draft],
     });
 
     expect(rows[0]?.balance).toBe(125);
     expect(
       getStatementImportBalanceCarriedForwardRow({
-        account: { type: AccountType.LIABILITY },
-        persistedBalance: -100,
+        account: {
+          type: AccountType.LIABILITY,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+        },
+        existingBookings: openingBooking(-100),
+        drafts: [draft],
       })?.balance,
     ).toBe(100);
   });

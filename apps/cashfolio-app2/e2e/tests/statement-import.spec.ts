@@ -35,6 +35,17 @@ function ledgerUrlPattern(args: { accountBookId: string; accountId: string }) {
   return new RegExp(`/${args.accountBookId}/${args.accountId}(?:[?]|$)`);
 }
 
+async function selectImportCounterAccount(page: Page, description: string) {
+  const row = agGridRowByText(page, description);
+  await expect(row).toBeVisible();
+  await setGridAccountTreeCellValue({
+    root: page,
+    rowIndex: Number(await row.getAttribute("row-index")),
+    colId: "counterAccountId",
+    accountName: seeded.expenseAccount.name,
+  });
+}
+
 async function expectStatementUploadDropzone(page: Page) {
   await expect(page.getByText("Drop CSV File Here")).toBeVisible();
   await expect(
@@ -82,12 +93,7 @@ test("imports a statement after selecting the counter account in the review grid
     page.getByRole("button", { name: "Import Transactions" }),
   ).toBeDisabled();
 
-  await setGridAccountTreeCellValue({
-    root: page,
-    rowIndex: 0,
-    colId: "counterAccountId",
-    accountName: seeded.expenseAccount.name,
-  });
+  await selectImportCounterAccount(page, importedDescription);
 
   await expect(agGridCellByColId(draftRow, "counterAccountId")).toContainText(
     seeded.expenseAccount.name,
@@ -197,8 +203,11 @@ test("shows multiple for drafts with several counter bookings", async ({
   await expect(counterCell).toContainText("Multiple");
   await expect(agGridCellByColId(draftRow, "status")).toContainText("Ready");
 
-  // The full cell's center can sit beneath the pinned Balance column.
-  await counterCell.getByText("Multiple", { exact: true }).dblclick();
+  // Bring the scrolling column clear of the frozen Balance column.
+  await page.locator(".ag-grid-viewport").evaluate((viewport) => {
+    viewport.scrollLeft = 190;
+  });
+  await counterCell.dblclick();
   await expect(page.locator(".ag-cell-inline-editing")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Import Transactions" }).click();
@@ -307,12 +316,7 @@ test("Shift applies the starting inclusion state to mixed statement ranges", asy
   await click(0, true);
   await expectIncluded([0, 1, 2, 3]);
   await click(1);
-  await setGridAccountTreeCellValue({
-    root: page,
-    rowIndex: 2,
-    colId: "counterAccountId",
-    accountName: seeded.expenseAccount.name,
-  });
+  await selectImportCounterAccount(page, descriptions[2]);
   await click(3, true);
   await expectIncluded([0]);
   await header.click();
@@ -384,12 +388,7 @@ test("Shift applies the starting inclusion state to mixed statement ranges", asy
   await page.setViewportSize({ width: 1280, height: 720 });
 
   for (const rowIndex of [0, 4]) {
-    await setGridAccountTreeCellValue({
-      root: page,
-      rowIndex,
-      colId: "counterAccountId",
-      accountName: seeded.expenseAccount.name,
-    });
+    await selectImportCounterAccount(page, descriptions[rowIndex]);
   }
   await page.getByRole("button", { name: "Import Transactions" }).click();
   await expect(page).toHaveURL(
@@ -599,12 +598,7 @@ test("checkboxes control statement row inclusion and skip unchecked rows during 
   await clickGridRowSelectionCheckbox(firstIgnoredRow);
   await expect(firstIgnoredCheckbox).not.toBeChecked();
 
-  await setGridAccountTreeCellValue({
-    root: page,
-    rowIndex: 0,
-    colId: "counterAccountId",
-    accountName: seeded.expenseAccount.name,
-  });
+  await selectImportCounterAccount(page, importedDescription);
 
   await expect(agGridCellByColId(includedRow, "status")).toContainText("Ready");
   await expect(page.getByText("1 of 3 ready, 2 ignored")).toBeVisible();
@@ -742,18 +736,8 @@ test("overlapping statements skip existing transactions and transfers while pres
     await expect(row.locator(".ag-selection-checkbox input")).not.toBeChecked();
   }
   await expect(page.getByText("0 of 4 ready, 2 ignored")).toBeVisible();
-  await setGridAccountTreeCellValue({
-    root: page,
-    rowIndex: 1,
-    colId: "counterAccountId",
-    accountName: seeded.expenseAccount.name,
-  });
-  await setGridAccountTreeCellValue({
-    root: page,
-    rowIndex: 3,
-    colId: "counterAccountId",
-    accountName: seeded.expenseAccount.name,
-  });
+  await selectImportCounterAccount(page, extraDescription);
+  await selectImportCounterAccount(page, newDescription);
   await page.getByRole("button", { name: "Import Transactions" }).click();
   await expect(page).toHaveURL(
     ledgerUrlPattern({
@@ -808,12 +792,7 @@ test("overlapping statements skip existing transactions and transfers while pres
   await expect(agGridCellByColId(override, "status")).toContainText(
     "Needs edit",
   );
-  await setGridAccountTreeCellValue({
-    root: page,
-    rowIndex: 0,
-    colId: "counterAccountId",
-    accountName: seeded.expenseAccount.name,
-  });
+  await selectImportCounterAccount(page, changedDescription);
   await expect(page.getByText("1 of 4 ready, 3 ignored")).toBeVisible();
   await page.getByRole("button", { name: "Import Transactions" }).click();
   await expect(page).toHaveURL(
@@ -828,4 +807,152 @@ test("overlapping statements skip existing transactions and transfers while pres
       description: changedDescription,
     }),
   ).toBe(1);
+});
+
+test("previews historical balances and read-only unmatched bookings during a partial import", async ({
+  page,
+  e2eExternalId,
+}, testInfo) => {
+  const scenario = await seedDatabase({ userExternalId: e2eExternalId });
+  const history = [
+    { date: "2026-01-01", amount: 100, description: "Preview opening" },
+    {
+      date: "2026-02-02",
+      amount: -10,
+      description: "Preview existing payment",
+    },
+    { date: "2026-02-03", amount: 5, description: "Preview manual booking" },
+    { date: "2026-02-10", amount: 1000, description: "Preview later activity" },
+  ];
+  for (const entry of history) {
+    await prisma.transaction.create({
+      data: {
+        accountBookId: scenario.accountBookId,
+        description: entry.description,
+        bookings: {
+          create: [
+            {
+              accountId: scenario.cashAccount.id,
+              date: new Date(entry.date),
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              value: entry.amount,
+              description: "",
+            },
+            {
+              accountId: scenario.savingsAccount.id,
+              date: new Date(entry.date),
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+              value: -entry.amount,
+              description: "",
+            },
+          ],
+        },
+      },
+    });
+  }
+  const csv = [
+    "Booked;Cashflow;Original;Currency;Rate;Text",
+    "2026-02-02;-10;;;;Preview existing payment",
+    "2026-02-04;-20;;;;Preview candidate A",
+    "2026-02-04;-20;;;;Preview candidate B",
+  ].join("\n");
+  await page.goto(
+    `/${scenario.accountBookId}/${scenario.cashAccount.id}?period=2026-04`,
+  );
+  await openStatementImportPage(page);
+  const upload = () =>
+    page.locator('input[type="file"]').setInputFiles({
+      name: "preview.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(csv),
+    });
+  await upload();
+  await expect(page.getByText("0 of 3 ready, 1 ignored")).toBeVisible();
+  const candidateA = agGridRowByText(page, "Preview candidate A");
+  const candidateB = agGridRowByText(page, "Preview candidate B");
+  const matched = agGridRowByText(page, "Preview existing payment");
+  const manual = agGridRowByText(page, "Preview manual booking");
+  await expect(candidateA).toHaveAttribute("row-index", "0");
+  await expect(candidateB).toHaveAttribute("row-index", "1");
+  await expect(manual).toHaveAttribute("row-index", "2");
+  await expect(matched).toHaveAttribute("row-index", "3");
+  await expect(agGridCellByColId(candidateA, "balance")).toHaveText("55.00");
+  await expect(agGridCellByColId(candidateB, "balance")).toHaveText("75.00");
+  await expect(agGridCellByColId(matched, "balance")).toHaveText("90.00");
+  await expect(agGridCellByColId(manual, "balance")).toHaveText("95.00");
+  await expect(agGridCellByColId(manual, "amount")).toHaveText("5.00");
+  await expect(agGridCellByColId(manual, "status")).toContainText(
+    "Existing · not in statement",
+  );
+  await expect(manual.getByRole("checkbox")).toHaveCount(0);
+  await expect(manual.getByRole("button")).toHaveCount(0);
+  await agGridCellByColId(manual, "description").dblclick();
+  await expect(page.locator(".ag-cell-inline-editing")).toHaveCount(0);
+  await page.locator(".ag-grid-viewport").evaluate((viewport) => {
+    viewport.scrollLeft = 190;
+  });
+  await agGridCellByColId(manual, "counterAccountId").dblclick();
+  await expect(page.locator(".ag-cell-inline-editing")).toHaveCount(0);
+  await expect(agGridRowByText(page, "Preview later activity")).toHaveCount(0);
+  await expect(
+    agGridCellByColId(
+      agGridRowByText(page, "Balance carried forward"),
+      "balance",
+    ),
+  ).toHaveText("100.00");
+  await clickGridRowSelectionCheckbox(candidateA);
+  await expect(agGridCellByColId(candidateA, "balance")).toHaveText("75.00");
+  await expect(page.getByText("0 of 3 ready, 2 ignored")).toBeVisible();
+  await clickGridRowSelectionCheckbox(candidateA);
+  for (const row of [candidateA, candidateB]) {
+    await setGridAccountTreeCellValue({
+      root: page,
+      rowIndex: Number(await row.getAttribute("row-index")),
+      colId: "counterAccountId",
+      accountName: scenario.expenseAccount.name,
+    });
+  }
+  await expect(page.getByText("2 of 3 ready, 1 ignored")).toBeVisible();
+  await page.locator(".ag-grid-viewport").evaluate((viewport) => {
+    viewport.scrollLeft = 0;
+  });
+  await page.screenshot({
+    path: testInfo.outputPath("existing-booking-preview.png"),
+  });
+  await page.getByRole("button", { name: "Import Transactions" }).click();
+  await expect(page).toHaveURL(
+    ledgerUrlPattern({
+      accountBookId: scenario.accountBookId,
+      accountId: scenario.cashAccount.id,
+    }),
+  );
+  expect(
+    await prisma.transaction.count({
+      where: { accountBookId: scenario.accountBookId },
+    }),
+  ).toBe(6);
+  for (const description of [
+    "Preview candidate A",
+    "Preview candidate B",
+    "Preview manual booking",
+    "Preview existing payment",
+  ]) {
+    expect(
+      await countTransactionsByDescription({
+        accountBookId: scenario.accountBookId,
+        description,
+      }),
+    ).toBe(1);
+  }
+  await openStatementImportPage(page);
+  await upload();
+  await expect(page.getByText("0 of 3 ready, 3 ignored")).toBeVisible();
+  await expect(agGridCellByColId(candidateA, "balance")).toHaveText("55.00");
+  await expect(agGridCellByColId(candidateB, "balance")).toHaveText("75.00");
+  await expect(manual).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Import Transactions" }),
+  ).toBeDisabled();
 });

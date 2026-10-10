@@ -33,7 +33,6 @@ type StatementImportPageViewProps = {
   statementImportCsvFormat: StatementImportCsvFormat;
   accountBookStartDate: Date;
   accountOptions: AccountOption[];
-  persistedBalance: number;
   unitUsage: AccountBookUnitUsage;
   isSubmitting: boolean;
   isImportComplete: boolean;
@@ -48,7 +47,6 @@ export function AccountStatementImportPageView({
   statementImportCsvFormat,
   accountBookStartDate,
   accountOptions,
-  persistedBalance,
   unitUsage,
   isSubmitting,
   isImportComplete,
@@ -62,7 +60,6 @@ export function AccountStatementImportPageView({
     statementImportCsvFormat,
     accountBookStartDate,
     accountOptions,
-    persistedBalance,
     isSubmitting,
     isImportComplete,
     onSubmittingChange,
