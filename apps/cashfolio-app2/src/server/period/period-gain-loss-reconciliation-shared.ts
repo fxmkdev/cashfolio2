@@ -1,3 +1,4 @@
+import { toMoney, type Money, moneyAdd } from "../../shared/money";
 import { round2 } from "./period-helpers";
 import type {
   GainLossReconciliationDiagnostic,
@@ -82,13 +83,13 @@ function toRealizedEventLotMatches(args: {
   bookingId: string;
   lotMatches: Array<{
     acquisitionSortKey: string;
-    matchedQuantity: number;
-    lotUnitCostInReference: number;
-    executionUnitPriceInReference: number;
-    realizedGainLossDelta: number;
-    runningEventRealizedGainLoss: number;
+    matchedQuantity: Money;
+    lotUnitCostInReference: Money;
+    executionUnitPriceInReference: Money;
+    realizedGainLossDelta: Money;
+    runningEventRealizedGainLoss: Money;
   }>;
-}): GainLossReconciliationRealizedEventLotMatch[] {
+}): GainLossReconciliationRealizedEventLotMatch<Money>[] {
   return args.lotMatches.map((lotMatch, index) => {
     const parsed = parseAcquisitionSortKey(lotMatch.acquisitionSortKey);
     return {
@@ -111,7 +112,7 @@ function toRealizedEventLotMatches(args: {
 
 export function toRoundedRealizedEvent(
   event: ReconciliationExecutionEventInput,
-): GainLossReconciliationRealizedEvent {
+): GainLossReconciliationRealizedEvent<Money> {
   const roundedEffectiveReferenceAmount = round2(
     event.effectiveReferenceAmount,
   );
@@ -158,7 +159,7 @@ export function toRoundedRealizedEvent(
 
 export function toRoundedOpenLot(
   lot: ReconciliationOpenLotInput,
-): GainLossReconciliationOpenLot {
+): GainLossReconciliationOpenLot<Money> {
   const parsed = parseAcquisitionSortKey(lot.acquisitionSortKey);
   return {
     id: `lot:${lot.acquisitionSortKey}`,
@@ -169,42 +170,42 @@ export function toRoundedOpenLot(
     unitCostInReference: round2(lot.unitCostInReference),
     periodEndRate: round2(lot.periodEndRate),
     unrealizedGainLoss: round2(lot.unrealizedGainLoss),
-    runningUnrealizedGainLoss: 0,
+    runningUnrealizedGainLoss: toMoney(0),
   };
 }
 
 export function toSummary(args: {
-  realizedGainLoss: number;
-  unrealizedGainLoss: number;
-}): GainLossReconciliationSummary {
+  realizedGainLoss: Money;
+  unrealizedGainLoss: Money;
+}): GainLossReconciliationSummary<Money> {
   const realizedGainLoss = round2(args.realizedGainLoss);
   const unrealizedGainLoss = round2(args.unrealizedGainLoss);
   return {
     realizedGainLoss,
     unrealizedGainLoss,
-    totalGainLoss: round2(realizedGainLoss + unrealizedGainLoss),
+    totalGainLoss: round2(moneyAdd(realizedGainLoss, unrealizedGainLoss)),
   };
 }
 
-export function toEmptySummary(): GainLossReconciliationSummary {
+export function toEmptySummary(): GainLossReconciliationSummary<Money> {
   return {
-    realizedGainLoss: 0,
-    unrealizedGainLoss: 0,
-    totalGainLoss: 0,
+    realizedGainLoss: toMoney(0),
+    unrealizedGainLoss: toMoney(0),
+    totalGainLoss: toMoney(0),
   };
 }
 
 export function addRunningUnrealizedGainLoss(
-  openLots: GainLossReconciliationOpenLot[],
-): GainLossReconciliationOpenLot[] {
+  openLots: GainLossReconciliationOpenLot<Money>[],
+): GainLossReconciliationOpenLot<Money>[] {
   const sortedOpenLots = [...openLots].sort((left, right) =>
     left.acquisitionSortKey.localeCompare(right.acquisitionSortKey, "en"),
   );
-  let runningUnrealizedGainLoss = 0;
+  let runningUnrealizedGainLoss: Money = toMoney(0);
 
   return sortedOpenLots.map((openLot) => {
     runningUnrealizedGainLoss = round2(
-      runningUnrealizedGainLoss + openLot.unrealizedGainLoss,
+      moneyAdd(runningUnrealizedGainLoss, openLot.unrealizedGainLoss),
     );
     return {
       ...openLot,

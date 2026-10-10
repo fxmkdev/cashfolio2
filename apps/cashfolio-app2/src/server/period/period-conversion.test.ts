@@ -1,6 +1,9 @@
+import type { Money } from "../../shared/money";
+import { toMoney } from "../../shared/money";
+import { toNumericMoney } from "../money-boundary";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Unit } from "../../.prisma-client/enums";
-import type { ValuationRateLookupResult } from "../valuation/types";
+import type { DecimalValuationRateLookupResult } from "../valuation/types";
 
 const getCurrencyExchangeRate = vi.hoisted(() =>
   vi.fn<
@@ -8,7 +11,7 @@ const getCurrencyExchangeRate = vi.hoisted(() =>
       sourceCurrency: string;
       targetCurrency: string;
       date: Date;
-    }) => Promise<number | null>
+    }) => Promise<Money | null>
   >(),
 );
 const getCurrencyExchangeRateDetails = vi.hoisted(() =>
@@ -17,7 +20,7 @@ const getCurrencyExchangeRateDetails = vi.hoisted(() =>
       sourceCurrency: string;
       targetCurrency: string;
       date: Date;
-    }) => Promise<ValuationRateLookupResult>
+    }) => Promise<DecimalValuationRateLookupResult>
   >(),
 );
 const getCryptocurrencyToCurrencyExchangeRate = vi.hoisted(() =>
@@ -26,7 +29,7 @@ const getCryptocurrencyToCurrencyExchangeRate = vi.hoisted(() =>
       cryptocurrency: string;
       targetCurrency: string;
       date: Date;
-    }) => Promise<number | null>
+    }) => Promise<Money | null>
   >(),
 );
 const getCryptocurrencyToCurrencyExchangeRateDetails = vi.hoisted(() =>
@@ -35,7 +38,7 @@ const getCryptocurrencyToCurrencyExchangeRateDetails = vi.hoisted(() =>
       cryptocurrency: string;
       targetCurrency: string;
       date: Date;
-    }) => Promise<ValuationRateLookupResult>
+    }) => Promise<DecimalValuationRateLookupResult>
   >(),
 );
 const getSecurityToCurrencyExchangeRate = vi.hoisted(() =>
@@ -45,7 +48,7 @@ const getSecurityToCurrencyExchangeRate = vi.hoisted(() =>
       tradeCurrency: string;
       targetCurrency: string;
       date: Date;
-    }) => Promise<number | null>
+    }) => Promise<Money | null>
   >(),
 );
 const getSecurityToCurrencyExchangeRateDetails = vi.hoisted(() =>
@@ -55,7 +58,7 @@ const getSecurityToCurrencyExchangeRateDetails = vi.hoisted(() =>
       tradeCurrency: string;
       targetCurrency: string;
       date: Date;
-    }) => Promise<ValuationRateLookupResult>
+    }) => Promise<DecimalValuationRateLookupResult>
   >(),
 );
 
@@ -80,9 +83,9 @@ const date = new Date("2026-04-05T12:34:56.000Z");
 describe("getUnitToReferenceExchangeRate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrencyExchangeRate.mockResolvedValue(0.9);
-    getCryptocurrencyToCurrencyExchangeRate.mockResolvedValue(50_000);
-    getSecurityToCurrencyExchangeRate.mockResolvedValue(123.45);
+    getCurrencyExchangeRate.mockResolvedValue(toMoney(0.9));
+    getCryptocurrencyToCurrencyExchangeRate.mockResolvedValue(toMoney(50_000));
+    getSecurityToCurrencyExchangeRate.mockResolvedValue(toMoney(123.45));
   });
 
   it("returns identity rates without calling valuation providers", async () => {
@@ -97,7 +100,7 @@ describe("getUnitToReferenceExchangeRate", () => {
       exchangeRateByKey: new Map(),
     });
 
-    expect(result).toBe(1);
+    expect(toNumericMoney(result)).toBe(1);
     expect(getCurrencyExchangeRate).not.toHaveBeenCalled();
   });
 
@@ -112,7 +115,7 @@ describe("getUnitToReferenceExchangeRate", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey: new Map(),
-      }),
+      }).then(toNumericMoney),
     ).resolves.toBeNull();
     await expect(
       getUnitToReferenceExchangeRate({
@@ -124,7 +127,7 @@ describe("getUnitToReferenceExchangeRate", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey: new Map(),
-      }),
+      }).then(toNumericMoney),
     ).resolves.toBeNull();
     await expect(
       getUnitToReferenceExchangeRate({
@@ -136,12 +139,12 @@ describe("getUnitToReferenceExchangeRate", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey: new Map(),
-      }),
+      }).then(toNumericMoney),
     ).resolves.toBeNull();
   });
 
   it("looks up and caches currency exchange rates by uppercase key and date", async () => {
-    const exchangeRateByKey = new Map<string, Promise<number | null>>();
+    const exchangeRateByKey = new Map<string, Promise<Money | null>>();
     const input = {
       unit: Unit.CURRENCY,
       currency: "usd",
@@ -153,8 +156,12 @@ describe("getUnitToReferenceExchangeRate", () => {
       exchangeRateByKey,
     };
 
-    await expect(getUnitToReferenceExchangeRate(input)).resolves.toBe(0.9);
-    await expect(getUnitToReferenceExchangeRate(input)).resolves.toBe(0.9);
+    await expect(
+      getUnitToReferenceExchangeRate(input).then(toNumericMoney),
+    ).resolves.toBe(0.9);
+    await expect(
+      getUnitToReferenceExchangeRate(input).then(toNumericMoney),
+    ).resolves.toBe(0.9);
 
     expect(getCurrencyExchangeRate).toHaveBeenCalledTimes(1);
     expect(getCurrencyExchangeRate).toHaveBeenCalledWith({
@@ -176,7 +183,7 @@ describe("getUnitToReferenceExchangeRate", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey: new Map(),
-      }),
+      }).then(toNumericMoney),
     ).resolves.toBe(50_000);
     await expect(
       getUnitToReferenceExchangeRate({
@@ -188,7 +195,7 @@ describe("getUnitToReferenceExchangeRate", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey: new Map(),
-      }),
+      }).then(toNumericMoney),
     ).resolves.toBe(123.45);
 
     expect(getCryptocurrencyToCurrencyExchangeRate).toHaveBeenCalledWith({
@@ -209,15 +216,15 @@ describe("getUnitToReferenceExchangeRateDetails", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getCurrencyExchangeRateDetails.mockResolvedValue({
-      rate: 0.9,
+      rate: toMoney(0.9),
       source: "timeSeries",
     });
     getCryptocurrencyToCurrencyExchangeRateDetails.mockResolvedValue({
-      rate: 50_000,
+      rate: toMoney(50_000),
       source: "provider",
     });
     getSecurityToCurrencyExchangeRateDetails.mockResolvedValue({
-      rate: 123.45,
+      rate: toMoney(123.45),
       source: "fallback",
     });
   });
@@ -233,7 +240,7 @@ describe("getUnitToReferenceExchangeRateDetails", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey: new Map(),
-      }),
+      }).then(toNumericMoney),
     ).resolves.toEqual({ rate: 1, source: "identity" });
     await expect(
       getUnitToReferenceExchangeRateDetails({
@@ -245,7 +252,7 @@ describe("getUnitToReferenceExchangeRateDetails", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey: new Map(),
-      }),
+      }).then(toNumericMoney),
     ).resolves.toEqual({ rate: null, source: "missing" });
 
     expect(getCurrencyExchangeRateDetails).not.toHaveBeenCalled();
@@ -255,7 +262,7 @@ describe("getUnitToReferenceExchangeRateDetails", () => {
   it("looks up and caches detailed currency exchange rates", async () => {
     const exchangeRateByKey = new Map<
       string,
-      Promise<ValuationRateLookupResult>
+      Promise<DecimalValuationRateLookupResult>
     >();
     const input = {
       unit: Unit.CURRENCY,
@@ -268,18 +275,18 @@ describe("getUnitToReferenceExchangeRateDetails", () => {
       exchangeRateByKey,
     };
 
-    await expect(getUnitToReferenceExchangeRateDetails(input)).resolves.toEqual(
-      {
-        rate: 0.9,
-        source: "timeSeries",
-      },
-    );
-    await expect(getUnitToReferenceExchangeRateDetails(input)).resolves.toEqual(
-      {
-        rate: 0.9,
-        source: "timeSeries",
-      },
-    );
+    await expect(
+      getUnitToReferenceExchangeRateDetails(input).then(toNumericMoney),
+    ).resolves.toEqual({
+      rate: 0.9,
+      source: "timeSeries",
+    });
+    await expect(
+      getUnitToReferenceExchangeRateDetails(input).then(toNumericMoney),
+    ).resolves.toEqual({
+      rate: 0.9,
+      source: "timeSeries",
+    });
 
     expect(getCurrencyExchangeRateDetails).toHaveBeenCalledTimes(1);
     expect(exchangeRateByKey.has("currency:EUR:CHF:2026-04-05")).toBe(true);
@@ -296,7 +303,7 @@ describe("getUnitToReferenceExchangeRateDetails", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey: new Map(),
-      }),
+      }).then(toNumericMoney),
     ).resolves.toEqual({ rate: 50_000, source: "provider" });
     await expect(
       getUnitToReferenceExchangeRateDetails({
@@ -308,7 +315,7 @@ describe("getUnitToReferenceExchangeRateDetails", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey: new Map(),
-      }),
+      }).then(toNumericMoney),
     ).resolves.toEqual({ rate: 123.45, source: "fallback" });
 
     expect(getCryptocurrencyToCurrencyExchangeRateDetails).toHaveBeenCalledWith(
@@ -330,13 +337,13 @@ describe("getUnitToReferenceExchangeRateDetails", () => {
 describe("convertBookingValueToReference", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCurrencyExchangeRate.mockResolvedValue(0.9);
+    getCurrencyExchangeRate.mockResolvedValue(toMoney(0.9));
   });
 
   it("short-circuits zero and identity currency conversions", async () => {
     await expect(
       convertBookingValueToReference({
-        value: 0,
+        value: toMoney(0),
         unit: Unit.SECURITY,
         currency: null,
         cryptocurrency: null,
@@ -345,11 +352,11 @@ describe("convertBookingValueToReference", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey: new Map(),
-      }),
+      }).then(toNumericMoney),
     ).resolves.toBe(0);
     await expect(
       convertBookingValueToReference({
-        value: 12.34,
+        value: toMoney(12.34),
         unit: Unit.CURRENCY,
         currency: "chf",
         cryptocurrency: null,
@@ -358,18 +365,18 @@ describe("convertBookingValueToReference", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey: new Map(),
-      }),
+      }).then(toNumericMoney),
     ).resolves.toBe(12.34);
 
     expect(getCurrencyExchangeRate).not.toHaveBeenCalled();
   });
 
   it("converts values and preserves null when rates are unavailable", async () => {
-    const exchangeRateByKey = new Map<string, Promise<number | null>>();
+    const exchangeRateByKey = new Map<string, Promise<Money | null>>();
 
     await expect(
       convertBookingValueToReference({
-        value: 10,
+        value: toMoney(10),
         unit: Unit.CURRENCY,
         currency: "USD",
         cryptocurrency: null,
@@ -378,14 +385,14 @@ describe("convertBookingValueToReference", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey,
-      }),
+      }).then(toNumericMoney),
     ).resolves.toBe(9);
 
     getCurrencyExchangeRate.mockResolvedValueOnce(null);
 
     await expect(
       convertBookingValueToReference({
-        value: 10,
+        value: toMoney(10),
         unit: Unit.CURRENCY,
         currency: "EUR",
         cryptocurrency: null,
@@ -394,7 +401,7 @@ describe("convertBookingValueToReference", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey,
-      }),
+      }).then(toNumericMoney),
     ).resolves.toBeNull();
   });
 });
@@ -403,7 +410,7 @@ describe("convertBookingValueToReferenceDetails", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getCurrencyExchangeRateDetails.mockResolvedValue({
-      rate: 0.9,
+      rate: toMoney(0.9),
       source: "timeSeries",
     });
   });
@@ -411,7 +418,7 @@ describe("convertBookingValueToReferenceDetails", () => {
   it("short-circuits zero and identity currency conversions with identity source", async () => {
     await expect(
       convertBookingValueToReferenceDetails({
-        value: 0,
+        value: toMoney(0),
         unit: Unit.SECURITY,
         currency: null,
         cryptocurrency: null,
@@ -420,11 +427,11 @@ describe("convertBookingValueToReferenceDetails", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey: new Map(),
-      }),
+      }).then(toNumericMoney),
     ).resolves.toEqual({ value: 0, source: "identity" });
     await expect(
       convertBookingValueToReferenceDetails({
-        value: 12.34,
+        value: toMoney(12.34),
         unit: Unit.CURRENCY,
         currency: "CHF",
         cryptocurrency: null,
@@ -433,14 +440,14 @@ describe("convertBookingValueToReferenceDetails", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey: new Map(),
-      }),
+      }).then(toNumericMoney),
     ).resolves.toEqual({ value: 12.34, source: "identity" });
   });
 
   it("converts values and carries rate lookup source details", async () => {
     await expect(
       convertBookingValueToReferenceDetails({
-        value: 10,
+        value: toMoney(10),
         unit: Unit.CURRENCY,
         currency: "USD",
         cryptocurrency: null,
@@ -449,7 +456,7 @@ describe("convertBookingValueToReferenceDetails", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey: new Map(),
-      }),
+      }).then(toNumericMoney),
     ).resolves.toEqual({ value: 9, source: "timeSeries" });
 
     getCurrencyExchangeRateDetails.mockResolvedValueOnce({
@@ -459,7 +466,7 @@ describe("convertBookingValueToReferenceDetails", () => {
 
     await expect(
       convertBookingValueToReferenceDetails({
-        value: 10,
+        value: toMoney(10),
         unit: Unit.CURRENCY,
         currency: "EUR",
         cryptocurrency: null,
@@ -468,7 +475,7 @@ describe("convertBookingValueToReferenceDetails", () => {
         date,
         referenceCurrency: "CHF",
         exchangeRateByKey: new Map(),
-      }),
+      }).then(toNumericMoney),
     ).resolves.toEqual({ value: null, source: "missing" });
   });
 });

@@ -1,3 +1,4 @@
+import { toNumericMoney } from "../money-boundary";
 import { createServerFn } from "@tanstack/react-start";
 import { formatMonthPeriodValue } from "../../shared/period";
 import { startOfUtcDay } from "../../shared/date";
@@ -38,7 +39,8 @@ export type PeriodHistoryPoint = {
   netWorth: number;
 };
 
-export type PeriodHistoryOpeningBalancePoint = HistoryOpeningBalancePoint;
+export type PeriodHistoryOpeningBalancePoint =
+  import("../money-boundary").NumericMoney<HistoryOpeningBalancePoint>;
 
 export type PeriodHistoryResponse = {
   referenceCurrency: string;
@@ -424,21 +426,23 @@ export const getPeriodHistory = createServerFn({
       for (const option of point.scopeOptions.liabilities) {
         liabilityScopeOptions.set(option.value, option);
       }
-      scopedMetricValues.push(point.scopedMetricValue ?? 0);
-      points.push({
-        periodValue: point.selectedPeriodValue,
-        periodLabel: point.selectedPeriodLabel,
-        periodEndDate: point.selectedPeriodEnd.toISOString(),
-        totalReturn: point.totalReturn,
-        savings: point.savings,
-        cashFlow: point.cashFlow,
-        income: point.income,
-        expenses: point.expenses,
-        gainsLosses: point.gainsLosses,
-        assets: point.assets,
-        liabilities: point.liabilities,
-        netWorth: point.netWorth,
-      });
+      scopedMetricValues.push(toNumericMoney(point.scopedMetricValue ?? 0));
+      points.push(
+        toNumericMoney({
+          periodValue: point.selectedPeriodValue,
+          periodLabel: point.selectedPeriodLabel,
+          periodEndDate: point.selectedPeriodEnd.toISOString(),
+          totalReturn: point.totalReturn,
+          savings: point.savings,
+          cashFlow: point.cashFlow,
+          income: point.income,
+          expenses: point.expenses,
+          gainsLosses: point.gainsLosses,
+          assets: point.assets,
+          liabilities: point.liabilities,
+          netWorth: point.netWorth,
+        }),
+      );
     }
 
     const finalizedCashFlowScopeOptions = createHistoryScopeOptionsWithTotal(
@@ -532,7 +536,7 @@ export const getPeriodHistory = createServerFn({
     return {
       referenceCurrency: context.referenceCurrency,
       hasCashAccounts: context.hasCashAccounts,
-      openingBalancePoint: responseOpeningBalancePoint,
+      openingBalancePoint: toNumericMoney(responseOpeningBalancePoint),
       points: responsePoints,
       scopeOptions: {
         cashFlow: finalizedCashFlowScopeOptions,

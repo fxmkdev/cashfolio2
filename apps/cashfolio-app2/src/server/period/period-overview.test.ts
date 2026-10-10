@@ -1,3 +1,4 @@
+import { toMoney, moneyMultiply, type Money } from "../../shared/money";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AccountType,
@@ -573,7 +574,7 @@ describe("getPeriodOverview", () => {
       ]);
     });
     convertBookingValueToReference.mockImplementation(async ({ value }) => {
-      if (value === 60) {
+      if (toMoney(value).equals(60)) {
         return null;
       }
       return value;
@@ -748,11 +749,11 @@ describe("getPeriodOverview", () => {
       .mockResolvedValueOnce([]);
 
     convertBookingValueToReference.mockImplementation(async ({ value }) => {
-      if (value === 5) return 700;
-      if (value === -700) return -700;
-      if (value === -2) return -260;
-      if (value === 300) return 300;
-      if (value === 3) return 390;
+      if (toMoney(value).equals(5)) return 700;
+      if (toMoney(value).equals(-700)) return -700;
+      if (toMoney(value).equals(-2)) return -260;
+      if (toMoney(value).equals(300)) return 300;
+      if (toMoney(value).equals(3)) return 390;
       return value;
     });
     getUnitToReferenceExchangeRate.mockResolvedValue(130);
@@ -904,13 +905,8 @@ describe("getPeriodOverview", () => {
       ]);
     });
     convertBookingValueToReference.mockImplementation(
-      async ({
-        value,
-        currency,
-      }: {
-        value: number;
-        currency: string | null;
-      }) => (currency === "USD" ? value * 0.9 : value),
+      async ({ value, currency }: { value: Money; currency: string | null }) =>
+        currency === "USD" ? moneyMultiply(value, 0.9) : value,
     );
 
     const result = await getPeriodOverview({
@@ -1046,13 +1042,8 @@ describe("getPeriodOverview", () => {
       ]);
     });
     convertBookingValueToReference.mockImplementation(
-      async ({
-        value,
-        currency,
-      }: {
-        value: number;
-        currency: string | null;
-      }) => (currency === "USD" ? value * 0.9 : value),
+      async ({ value, currency }: { value: Money; currency: string | null }) =>
+        currency === "USD" ? moneyMultiply(value, 0.9) : value,
     );
 
     const result = await getPeriodOverview({
@@ -1173,13 +1164,8 @@ describe("getPeriodOverview", () => {
     prisma.transaction.findMany.mockReset();
     prisma.transaction.findMany.mockImplementation(() => Promise.resolve([]));
     convertBookingValueToReference.mockImplementation(
-      async ({
-        value,
-        currency,
-      }: {
-        value: number;
-        currency: string | null;
-      }) => (currency === "USD" ? value * 0.9 : value),
+      async ({ value, currency }: { value: Money; currency: string | null }) =>
+        currency === "USD" ? moneyMultiply(value, 0.9) : value,
     );
 
     const result = await getPeriodOverview({
@@ -1302,13 +1288,8 @@ describe("getPeriodOverview", () => {
       ]);
     });
     convertBookingValueToReference.mockImplementation(
-      async ({
-        value,
-        currency,
-      }: {
-        value: number;
-        currency: string | null;
-      }) => (currency === "USD" ? null : value),
+      async ({ value, currency }: { value: Money; currency: string | null }) =>
+        currency === "USD" ? null : value,
     );
 
     const result = await getPeriodOverview({
@@ -1557,13 +1538,8 @@ describe("getPeriodOverview", () => {
       ]);
     });
     convertBookingValueToReference.mockImplementation(
-      async ({
-        value,
-        currency,
-      }: {
-        value: number;
-        currency: string | null;
-      }) => (currency === "USD" ? value * 0.9 : value),
+      async ({ value, currency }: { value: Money; currency: string | null }) =>
+        currency === "USD" ? moneyMultiply(value, 0.9) : value,
     );
 
     const january = await getPeriodOverview({
@@ -1720,13 +1696,8 @@ describe("getPeriodOverview", () => {
       ]);
     });
     convertBookingValueToReference.mockImplementation(
-      async ({
-        value,
-        currency,
-      }: {
-        value: number;
-        currency: string | null;
-      }) => (currency === "USD" ? value * 0.8 : value),
+      async ({ value, currency }: { value: Money; currency: string | null }) =>
+        currency === "USD" ? moneyMultiply(value, 0.8) : value,
     );
     getUnitToReferenceExchangeRate.mockImplementation(
       async ({ currency }: { currency: string | null }) =>
@@ -1889,13 +1860,8 @@ describe("getPeriodOverview", () => {
       ]);
     });
     convertBookingValueToReference.mockImplementation(
-      async ({
-        value,
-        currency,
-      }: {
-        value: number;
-        currency: string | null;
-      }) => (currency === "USD" ? value * 0.8 : value),
+      async ({ value, currency }: { value: Money; currency: string | null }) =>
+        currency === "USD" ? moneyMultiply(value, 0.8) : value,
     );
     getUnitToReferenceExchangeRate.mockImplementation(
       async ({ currency }: { currency: string | null }) =>
@@ -2118,7 +2084,7 @@ describe("getPeriodOverview", () => {
     });
     prisma.booking.groupBy.mockResolvedValue([]);
     convertBookingValueToReference.mockImplementation(async ({ value }) => {
-      if (value === -1) {
+      if (toMoney(value).equals(-1)) {
         return -1e-12;
       }
       return value;
@@ -2602,11 +2568,11 @@ describe("getPeriodOverview", () => {
         value,
         currency,
       }: {
-        value: number;
+        value: Money;
         currency: string | null;
       }) => {
         if (currency === "USD") {
-          return value * 2;
+          return moneyMultiply(value, 2);
         }
         return value;
       },
@@ -2674,11 +2640,11 @@ describe("getPeriodOverview", () => {
         value,
         currency,
       }: {
-        value: number;
+        value: Money;
         currency: string | null;
       }) => {
         if (currency === "USD") {
-          return value * 2;
+          return moneyMultiply(value, 2);
         }
         return value;
       },
@@ -2751,7 +2717,7 @@ describe("getPeriodOverview", () => {
         currency,
         date,
       }: {
-        value: number;
+        value: Money;
         currency: string | null;
         date: Date;
       }) => {
@@ -2760,13 +2726,13 @@ describe("getPeriodOverview", () => {
         }
         const dateKey = date.toISOString().slice(0, 10);
         if (dateKey === "2026-01-10") {
-          return value * 2;
+          return moneyMultiply(value, 2);
         }
         if (dateKey === "2026-01-15") {
-          return value * 3;
+          return moneyMultiply(value, 3);
         }
         if (dateKey === "2026-01-31") {
-          return value * 4;
+          return moneyMultiply(value, 4);
         }
         return value;
       },
@@ -2868,11 +2834,11 @@ describe("getPeriodOverview", () => {
       return Promise.resolve([]);
     });
     convertBookingValueToReference.mockImplementation(
-      async ({ value, unit }: { value: number; unit: Unit }) => {
+      async ({ value, unit }: { value: Money; unit: Unit }) => {
         if (unit === Unit.CRYPTOCURRENCY) {
           return null;
         }
-        return value * 2;
+        return moneyMultiply(value, 2);
       },
     );
     getUnitToReferenceExchangeRate.mockImplementation(

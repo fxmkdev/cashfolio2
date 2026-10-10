@@ -1,3 +1,4 @@
+import type { Money } from "../shared/money";
 import { Unit } from "../.prisma-client/enums";
 import { moneyAbs, moneySum, toMoney, toMoneyNumber } from "../shared/money";
 
@@ -5,8 +6,8 @@ export type TransactionsDerivedBooking = {
   id: string;
   date: Date;
   description: string | null;
-  value: number;
-  valueInReferenceCurrency: number | null;
+  value: Money;
+  valueInReferenceCurrency: Money | null;
   unit: Unit | null;
   currency: string | null;
   cryptocurrency: string | null;
@@ -153,7 +154,7 @@ function getNonReferenceUnitKey(args: {
   }
 }
 
-function splitDebitCredit(value: number): {
+function splitDebitCredit(value: Money): {
   debit: number | null;
   credit: number | null;
 } {
@@ -200,21 +201,17 @@ function toBookingRow(
 
 function getSideReferenceTotal(
   bookings: TransactionsDerivedBooking[],
-): number | null {
+): Money | null {
   if (bookings.length === 0) {
-    return 0;
+    return toMoney(0);
   }
 
   if (bookings.some((booking) => booking.valueInReferenceCurrency == null)) {
     return null;
   }
 
-  return toMoneyNumber(
-    moneyAbs(
-      moneySum(
-        bookings.map((booking) => booking.valueInReferenceCurrency ?? 0),
-      ),
-    ),
+  return moneyAbs(
+    moneySum(bookings.map((booking) => booking.valueInReferenceCurrency ?? 0)),
   );
 }
 
@@ -239,10 +236,8 @@ function getReferenceAmount(
   );
 }
 
-function getSideOriginalTotal(bookings: TransactionsDerivedBooking[]): number {
-  return toMoneyNumber(
-    moneyAbs(moneySum(bookings.map((booking) => booking.value))),
-  );
+function getSideOriginalTotal(bookings: TransactionsDerivedBooking[]): Money {
+  return moneyAbs(moneySum(bookings.map((booking) => booking.value)));
 }
 
 function getOriginalAmountSummary(args: {

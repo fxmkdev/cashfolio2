@@ -1,3 +1,4 @@
+import { toNumericMoney } from "../money-boundary";
 import { createServerFn } from "@tanstack/react-start";
 import { normalizePeriodValue } from "../../shared/period";
 import { type PeriodEndNetWorthResult } from "./period-end-net-worth.types";
@@ -18,5 +19,5 @@ export const getPeriodEndNetWorth = createServerFn({
 
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
-    return loadPeriodEndNetWorth(data);
+    return toNumericMoney(await loadPeriodEndNetWorth(data));
   });

@@ -1,3 +1,4 @@
+import { toMoney, type Money } from "../shared/money";
 import { createServerFn } from "@tanstack/react-start";
 import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
@@ -8,7 +9,7 @@ import {
   parseExplicitPeriodSelectionFromUnknown,
   type ExplicitPeriodSelection,
 } from "../shared/period";
-import { toMoneyNumber } from "../shared/money";
+
 import { mapWithConcurrencyLimit } from "./concurrency";
 import { convertBookingValueToReference } from "./period/period-conversion";
 import { deriveTransactionsRows } from "./transactions-data-derivation";
@@ -104,14 +105,14 @@ export const getTransactionsData = createServerFn({ method: "GET" })
       })),
     );
 
-    const exchangeRateByKey = new Map<string, Promise<number | null>>();
+    const exchangeRateByKey = new Map<string, Promise<Money | null>>();
     const convertedValuesInReferenceCurrency = await mapWithConcurrencyLimit(
       bookings,
       TRANSACTIONS_REFERENCE_CONVERSION_CONCURRENCY,
       (booking) =>
         booking.unit
           ? convertBookingValueToReference({
-              value: toMoneyNumber(booking.value),
+              value: toMoney(booking.value),
               unit: booking.unit,
               currency: booking.currency,
               cryptocurrency: booking.cryptocurrency,
@@ -121,14 +122,14 @@ export const getTransactionsData = createServerFn({ method: "GET" })
               referenceCurrency,
               exchangeRateByKey,
             })
-          : Promise.resolve<number | null>(null),
+          : Promise.resolve<Money | null>(null),
     );
 
     const mappedBookings = bookings.map((booking, index) => ({
       id: booking.id,
       date: booking.date,
       description: booking.description,
-      value: toMoneyNumber(booking.value),
+      value: toMoney(booking.value),
       valueInReferenceCurrency:
         convertedValuesInReferenceCurrency[index] ?? null,
       unit: booking.unit,

@@ -1,3 +1,4 @@
+import { toNumericMoney } from "../money-boundary";
 import { createServerFn } from "@tanstack/react-start";
 import { normalizePeriodValue } from "../../shared/period";
 import { type OpeningBalanceNetWorthResult } from "./period-opening-balance-net-worth.types";
@@ -20,5 +21,5 @@ export const getOpeningBalanceNetWorthForPeriod = createServerFn({
 
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
-    return loadOpeningBalanceNetWorthForPeriod(data);
+    return toNumericMoney(await loadOpeningBalanceNetWorthForPeriod(data));
   });

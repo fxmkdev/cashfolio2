@@ -1,4 +1,10 @@
 import {
+  toMoney,
+  type Money,
+  moneyMultiply,
+  moneyDivide,
+} from "../../shared/money";
+import {
   combineValuationRateSources,
   createValuationLookupContext,
   type ValuationLookupContext,
@@ -11,7 +17,7 @@ import {
   getUsdToCurrencyRate,
   getUsdToCurrencyRateDetails,
 } from "./source-rates";
-import type { ValuationRateLookupResult } from "./types";
+import type { DecimalValuationRateLookupResult as ValuationRateLookupResult } from "./types";
 
 async function getCurrencyExchangeRateWithContext(
   args: {
@@ -20,11 +26,11 @@ async function getCurrencyExchangeRateWithContext(
     date: Date;
   },
   context: ValuationLookupContext,
-): Promise<number | null> {
+): Promise<Money | null> {
   const sourceCurrency = args.sourceCurrency.toUpperCase();
   const targetCurrency = args.targetCurrency.toUpperCase();
   if (sourceCurrency === targetCurrency) {
-    return 1;
+    return toMoney(1);
   }
 
   try {
@@ -36,7 +42,7 @@ async function getCurrencyExchangeRateWithContext(
       return null;
     }
 
-    return usdToTargetRate / usdToSourceRate;
+    return toMoney(moneyDivide(usdToTargetRate, usdToSourceRate));
   } catch (error) {
     console.error(
       `Unable to retrieve valuation rate for ${sourceCurrency} -> ${targetCurrency}`,
@@ -57,7 +63,7 @@ async function getCurrencyExchangeRateDetailsWithContext(
   const sourceCurrency = args.sourceCurrency.toUpperCase();
   const targetCurrency = args.targetCurrency.toUpperCase();
   if (sourceCurrency === targetCurrency) {
-    return { rate: 1, source: "identity" };
+    return { rate: toMoney(1), source: "identity" };
   }
 
   try {
@@ -70,7 +76,7 @@ async function getCurrencyExchangeRateDetailsWithContext(
     }
 
     return {
-      rate: usdToTargetRate.rate / usdToSourceRate.rate,
+      rate: toMoney(moneyDivide(usdToTargetRate.rate, usdToSourceRate.rate)),
       source: combineValuationRateSources([
         usdToTargetRate.source,
         usdToSourceRate.source,
@@ -89,7 +95,7 @@ export async function getCurrencyExchangeRate(args: {
   sourceCurrency: string;
   targetCurrency: string;
   date: Date;
-}): Promise<number | null> {
+}): Promise<Money | null> {
   const context = createValuationLookupContext();
   return getCurrencyExchangeRateWithContext(args, context);
 }
@@ -107,7 +113,7 @@ export async function getCryptocurrencyToCurrencyExchangeRate(args: {
   cryptocurrency: string;
   targetCurrency: string;
   date: Date;
-}): Promise<number | null> {
+}): Promise<Money | null> {
   const cryptocurrency = args.cryptocurrency.toUpperCase();
   const targetCurrency = args.targetCurrency.toUpperCase();
   const context = createValuationLookupContext();
@@ -121,7 +127,7 @@ export async function getCryptocurrencyToCurrencyExchangeRate(args: {
       return null;
     }
 
-    return cryptoToUsdRate * usdToTargetRate;
+    return moneyMultiply(cryptoToUsdRate, usdToTargetRate);
   } catch (error) {
     console.error(
       `Unable to retrieve valuation rate for ${cryptocurrency} -> ${targetCurrency}`,
@@ -150,7 +156,7 @@ export async function getCryptocurrencyToCurrencyExchangeRateDetails(args: {
     }
 
     return {
-      rate: cryptoToUsdRate.rate * usdToTargetRate.rate,
+      rate: moneyMultiply(cryptoToUsdRate.rate, usdToTargetRate.rate),
       source: combineValuationRateSources([
         usdToTargetRate.source,
         cryptoToUsdRate.source,
@@ -170,7 +176,7 @@ export async function getSecurityToCurrencyExchangeRate(args: {
   tradeCurrency: string;
   targetCurrency: string;
   date: Date;
-}): Promise<number | null> {
+}): Promise<Money | null> {
   const symbol = args.symbol.toUpperCase();
   const tradeCurrency = args.tradeCurrency.toUpperCase();
   const targetCurrency = args.targetCurrency.toUpperCase();
@@ -192,7 +198,7 @@ export async function getSecurityToCurrencyExchangeRate(args: {
       return null;
     }
 
-    return securityPrice * tradeToTargetRate;
+    return moneyMultiply(securityPrice, tradeToTargetRate);
   } catch (error) {
     console.error(
       `Unable to retrieve security exchange rate for ${symbol} (${tradeCurrency} -> ${targetCurrency})`,
@@ -230,7 +236,7 @@ export async function getSecurityToCurrencyExchangeRateDetails(args: {
     }
 
     return {
-      rate: securityPrice.rate * tradeToTargetRate.rate,
+      rate: moneyMultiply(securityPrice.rate, tradeToTargetRate.rate),
       source: combineValuationRateSources([
         securityPrice.source,
         tradeToTargetRate.source,

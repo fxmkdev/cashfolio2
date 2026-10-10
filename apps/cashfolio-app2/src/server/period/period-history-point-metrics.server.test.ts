@@ -1,3 +1,6 @@
+import type { MoneyInput, Money } from "../../shared/money";
+import { toMoney } from "../../shared/money";
+import { toNumericMoney } from "../money-boundary";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
   AccountType,
@@ -96,7 +99,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
       period: "2026-02",
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       totalReturn: 0,
       savings: 0,
       cashFlow: 0,
@@ -134,7 +137,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
       },
     });
 
-    expect(result.scopedMetricValue).toBe(0);
+    expect(toNumericMoney(result.scopedMetricValue)).toBe(0);
   });
 
   test("loads scalar metrics from shared equity + holdings pipelines", async () => {
@@ -161,17 +164,17 @@ describe("loadPeriodHistoryPointMetrics", () => {
       },
     );
     computePeriodHoldingGainLoss.mockResolvedValue({
-      realizedGainLoss: 7,
-      unrealizedGainLoss: -2,
+      realizedGainLoss: toMoney(7),
+      unrealizedGainLoss: toMoney(-2),
       convertedCount: 0,
       skippedCount: 0,
     });
     convertBookingValueToReferenceDetails.mockResolvedValue({
-      value: 1,
+      value: toMoney(1),
       source: "identity",
     });
     getUnitToReferenceExchangeRateDetails.mockResolvedValue({
-      rate: 1,
+      rate: toMoney(1),
       source: "identity",
     });
 
@@ -186,7 +189,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
     });
     expect(processPeriodEquityBookingsFromBaseData).toHaveBeenCalledTimes(1);
     expect(computePeriodHoldingGainLoss).toHaveBeenCalledTimes(1);
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       totalReturn: 135,
       savings: 100,
       cashFlow: 0,
@@ -218,7 +221,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
               {
                 id: "cash-booking",
                 date: new Date("2026-02-10T00:00:00.000Z"),
-                value: 70,
+                value: toMoney(70),
                 unit: Unit.CURRENCY,
                 currency: "USD",
                 cryptocurrency: null,
@@ -235,7 +238,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
               {
                 id: "income-booking",
                 date: new Date("2026-02-10T00:00:00.000Z"),
-                value: -70,
+                value: toMoney(-70),
                 unit: Unit.CURRENCY,
                 currency: "USD",
                 cryptocurrency: null,
@@ -261,19 +264,19 @@ describe("loadPeriodHistoryPointMetrics", () => {
       skippedCount: 0,
     });
     computePeriodHoldingGainLoss.mockResolvedValue({
-      realizedGainLoss: 0,
-      unrealizedGainLoss: 0,
+      realizedGainLoss: toMoney(0),
+      unrealizedGainLoss: toMoney(0),
       convertedCount: 0,
       skippedCount: 0,
     });
     convertBookingValueToReferenceDetails.mockImplementation(
       async ({ value }: { value: number }) => ({
-        value: value * 2,
+        value: toMoney(value * 2),
         source: "timeSeries",
       }),
     );
     getUnitToReferenceExchangeRateDetails.mockResolvedValue({
-      rate: 1,
+      rate: toMoney(1),
       source: "identity",
     });
 
@@ -282,8 +285,8 @@ describe("loadPeriodHistoryPointMetrics", () => {
       period: "2026-02",
     });
 
-    expect(result.metrics.cashFlow).toBe(140);
-    expect(result.metrics.scopeOptions.cashFlow).toEqual([
+    expect(toNumericMoney(result.metrics.cashFlow)).toBe(140);
+    expect(toNumericMoney(result.metrics.scopeOptions.cashFlow)).toEqual([
       {
         value: "account:cash-a",
         label: "Cash A",
@@ -293,7 +296,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
     ]);
     expect(result.cacheableFromPermanentValuationCache).toBe(true);
     expect(convertBookingValueToReferenceDetails).toHaveBeenCalledWith({
-      value: 70,
+      value: toMoney(70),
       unit: Unit.CURRENCY,
       currency: "USD",
       cryptocurrency: null,
@@ -332,8 +335,8 @@ describe("loadPeriodHistoryPointMetrics", () => {
           cryptocurrency: null,
           symbol: null,
           tradeCurrency: null,
-          realizedGainLoss: 5,
-          unrealizedGainLoss: 0,
+          realizedGainLoss: toMoney(5),
+          unrealizedGainLoss: toMoney(0),
         });
       },
     );
@@ -352,23 +355,23 @@ describe("loadPeriodHistoryPointMetrics", () => {
           cryptocurrency: null,
           symbol: null,
           tradeCurrency: null,
-          realizedGainLoss: 7,
-          unrealizedGainLoss: 3,
+          realizedGainLoss: toMoney(7),
+          unrealizedGainLoss: toMoney(3),
         });
         return {
-          realizedGainLoss: 7,
-          unrealizedGainLoss: 3,
+          realizedGainLoss: toMoney(7),
+          unrealizedGainLoss: toMoney(3),
           convertedCount: 0,
           skippedCount: 0,
         };
       },
     );
     convertBookingValueToReferenceDetails.mockResolvedValue({
-      value: 1,
+      value: toMoney(1),
       source: "identity",
     });
     getUnitToReferenceExchangeRateDetails.mockResolvedValue({
-      rate: 1,
+      rate: toMoney(1),
       source: "identity",
     });
 
@@ -381,9 +384,9 @@ describe("loadPeriodHistoryPointMetrics", () => {
       },
     });
 
-    expect(result.gainsLosses).toBe(15);
-    expect(result.scopedMetricValue).toBe(10);
-    expect(result.scopeOptions.gainsLosses).toEqual([
+    expect(toNumericMoney(result.gainsLosses)).toBe(15);
+    expect(toNumericMoney(result.scopedMetricValue)).toBe(10);
+    expect(toNumericMoney(result.scopeOptions.gainsLosses)).toEqual([
       {
         value: "unit-type:fx",
         label: "FX",
@@ -427,7 +430,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
           metric: "gainsLosses",
           scope: "unit:fx:USD",
         },
-      }),
+      }).then(toNumericMoney),
     ).resolves.toMatchObject({ scopedMetricValue: 10 });
     await expect(
       loadPeriodHistoryPointMetrics({
@@ -437,7 +440,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
           metric: "gainsLosses",
           scope: "unit-account:fx:USD:usd-cash",
         },
-      }),
+      }).then(toNumericMoney),
     ).resolves.toMatchObject({ scopedMetricValue: 10 });
     await expect(
       loadPeriodHistoryPointMetrics({
@@ -447,7 +450,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
           metric: "gainsLosses",
           scope: "explicit-account:cash-1",
         },
-      }),
+      }).then(toNumericMoney),
     ).resolves.toMatchObject({ scopedMetricValue: 5 });
   });
 
@@ -463,7 +466,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
             equityAccountSubtype: EquityAccountSubtype.INCOME,
             transactionId: "transaction-1",
             date: new Date("2026-02-10T00:00:00.000Z"),
-            value: 100,
+            value: toMoney(100),
             unit: Unit.CURRENCY,
             currency: "USD",
             cryptocurrency: null,
@@ -479,17 +482,17 @@ describe("loadPeriodHistoryPointMetrics", () => {
         convertBookingToReference,
       }: {
         convertBookingToReference: (booking: {
-          value: number;
+          value: MoneyInput;
           unit: Unit;
           currency: string | null;
           cryptocurrency: string | null;
           symbol: string | null;
           tradeCurrency: string | null;
           date: Date;
-        }) => Promise<number | null>;
+        }) => Promise<Money | null>;
       }) => {
         await convertBookingToReference({
-          value: 100,
+          value: toMoney(100),
           unit: Unit.CURRENCY,
           currency: "USD",
           cryptocurrency: null,
@@ -500,13 +503,13 @@ describe("loadPeriodHistoryPointMetrics", () => {
       },
     );
     computePeriodHoldingGainLoss.mockResolvedValue({
-      realizedGainLoss: 0,
-      unrealizedGainLoss: 0,
+      realizedGainLoss: toMoney(0),
+      unrealizedGainLoss: toMoney(0),
       convertedCount: 0,
       skippedCount: 0,
     });
     convertBookingValueToReferenceDetails.mockResolvedValue({
-      value: 100,
+      value: toMoney(100),
       source: "provider",
     });
 
@@ -548,8 +551,8 @@ describe("loadPeriodHistoryPointMetrics", () => {
           },
         ],
         endOfPeriodRawBalances: [
-          { accountId: "asset-1", rawBalance: 200 },
-          { accountId: "liability-1", rawBalance: -70 },
+          { accountId: "asset-1", rawBalance: toMoney(200) },
+          { accountId: "liability-1", rawBalance: toMoney(-70) },
         ],
         transferClearingUnitBuckets: [
           {
@@ -562,7 +565,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
             symbol: null,
             tradeCurrency: null,
             isNonReferenceUnit: true,
-            rawBalance: -50,
+            rawBalance: toMoney(-50),
             bookings: [],
           },
         ],
@@ -586,8 +589,8 @@ describe("loadPeriodHistoryPointMetrics", () => {
       },
     );
     computePeriodHoldingGainLoss.mockResolvedValue({
-      realizedGainLoss: 0,
-      unrealizedGainLoss: 0,
+      realizedGainLoss: toMoney(0),
+      unrealizedGainLoss: toMoney(0),
       convertedCount: 0,
       skippedCount: 0,
     });
@@ -598,7 +601,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
       }),
     );
     getUnitToReferenceExchangeRateDetails.mockResolvedValue({
-      rate: 1,
+      rate: toMoney(1),
       source: "identity",
     });
 
@@ -607,7 +610,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
       period: "2026-02",
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       totalReturn: 0,
       savings: 0,
       cashFlow: 0,
@@ -697,8 +700,8 @@ describe("loadPeriodHistoryPointMetrics", () => {
           },
         ],
         endOfPeriodRawBalances: [
-          { accountId: "asset-1", rawBalance: 200 },
-          { accountId: "liability-1", rawBalance: -70 },
+          { accountId: "asset-1", rawBalance: toMoney(200) },
+          { accountId: "liability-1", rawBalance: toMoney(-70) },
         ],
         transferClearingUnitBuckets: [
           {
@@ -711,7 +714,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
             symbol: null,
             tradeCurrency: null,
             isNonReferenceUnit: true,
-            rawBalance: 50,
+            rawBalance: toMoney(50),
             bookings: [],
           },
         ],
@@ -735,8 +738,8 @@ describe("loadPeriodHistoryPointMetrics", () => {
       },
     );
     computePeriodHoldingGainLoss.mockResolvedValue({
-      realizedGainLoss: 0,
-      unrealizedGainLoss: 0,
+      realizedGainLoss: toMoney(0),
+      unrealizedGainLoss: toMoney(0),
       convertedCount: 0,
       skippedCount: 0,
     });
@@ -747,7 +750,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
       }),
     );
     getUnitToReferenceExchangeRateDetails.mockResolvedValue({
-      rate: 1,
+      rate: toMoney(1),
       source: "identity",
     });
 
@@ -760,8 +763,8 @@ describe("loadPeriodHistoryPointMetrics", () => {
       },
     });
 
-    expect(result.scopedMetricValue).toBe(70);
-    expect(result.scopeOptions.assets).toEqual([
+    expect(toNumericMoney(result.scopedMetricValue)).toBe(70);
+    expect(toNumericMoney(result.scopeOptions.assets)).toEqual([
       {
         value: "group:grp-assets",
         label: "Assets",
@@ -776,7 +779,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
         parentValue: "group:grp-assets",
       },
     ]);
-    expect(result.scopeOptions.liabilities).toEqual([
+    expect(toNumericMoney(result.scopeOptions.liabilities)).toEqual([
       {
         value: "group:grp-liabilities",
         label: "Liabilities",
@@ -846,22 +849,22 @@ describe("loadPeriodHistoryPointMetrics", () => {
           accountId: "income-a",
           accountName: "Primary Salary",
           groupId: "grp-income-salary",
-          amount: 130,
+          amount: toMoney(130),
         });
       },
     );
     computePeriodHoldingGainLoss.mockResolvedValue({
-      realizedGainLoss: 0,
-      unrealizedGainLoss: 0,
+      realizedGainLoss: toMoney(0),
+      unrealizedGainLoss: toMoney(0),
       convertedCount: 0,
       skippedCount: 0,
     });
     convertBookingValueToReferenceDetails.mockResolvedValue({
-      value: 1,
+      value: toMoney(1),
       source: "identity",
     });
     getUnitToReferenceExchangeRateDetails.mockResolvedValue({
-      rate: 1,
+      rate: toMoney(1),
       source: "identity",
     });
 
@@ -874,8 +877,8 @@ describe("loadPeriodHistoryPointMetrics", () => {
       },
     });
 
-    expect(result.scopedMetricValue).toBe(130);
-    expect(result.scopeOptions.income).toEqual([
+    expect(toNumericMoney(result.scopedMetricValue)).toBe(130);
+    expect(toNumericMoney(result.scopeOptions.income)).toEqual([
       {
         value: "group:grp-income",
         label: "Income",
@@ -897,7 +900,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
         parentValue: "group:grp-income-salary",
       },
     ]);
-    expect(result.scopeOptions.expenses).toEqual([]);
+    expect(toNumericMoney(result.scopeOptions.expenses)).toEqual([]);
   });
 
   test("guards scoped traversal against cyclic group hierarchies", async () => {
@@ -930,22 +933,22 @@ describe("loadPeriodHistoryPointMetrics", () => {
           accountId: "income-cycle",
           accountName: "Cycle Income",
           groupId: "grp-cycle-a",
-          amount: 50,
+          amount: toMoney(50),
         });
       },
     );
     computePeriodHoldingGainLoss.mockResolvedValue({
-      realizedGainLoss: 0,
-      unrealizedGainLoss: 0,
+      realizedGainLoss: toMoney(0),
+      unrealizedGainLoss: toMoney(0),
       convertedCount: 0,
       skippedCount: 0,
     });
     convertBookingValueToReferenceDetails.mockResolvedValue({
-      value: 1,
+      value: toMoney(1),
       source: "identity",
     });
     getUnitToReferenceExchangeRateDetails.mockResolvedValue({
-      rate: 1,
+      rate: toMoney(1),
       source: "identity",
     });
 
@@ -958,12 +961,12 @@ describe("loadPeriodHistoryPointMetrics", () => {
       },
     });
 
-    expect(result.scopedMetricValue).toBe(0);
+    expect(toNumericMoney(result.scopedMetricValue)).toBe(0);
     const optionValues = result.scopeOptions.income.map(
       (option) => option.value,
     );
     expect(optionValues).toHaveLength(3);
-    expect(optionValues).toEqual(
+    expect(toNumericMoney(optionValues)).toEqual(
       expect.arrayContaining([
         "group:grp-cycle-a",
         "group:grp-cycle-b",

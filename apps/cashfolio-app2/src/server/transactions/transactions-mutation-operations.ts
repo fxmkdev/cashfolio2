@@ -2,7 +2,7 @@ import { prisma } from "../../prisma.server";
 import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import { getSimpleTransactionUnitIdentifier } from "../../shared/account-utils";
 import { parseUtcDayDate } from "../../shared/date";
-import { toMoneyNumber } from "../../shared/money";
+import { toMoney } from "../../shared/money";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/opening-balances";
 import { validateRebookGainLossSimpleTransactionInvariant } from "./rebook-gain-loss-validation";
 import { validateRebookBookingTarget } from "./rebook-booking-validation";
@@ -51,8 +51,11 @@ export async function updateTransactionOperation(data: UpdateTransactionInput) {
     throw new Error(OPENING_BALANCES_MANAGEMENT_MESSAGE);
   }
 
-  validateCreateTransaction(data);
-  await validateAccountTypeBookings(data.bookings, data.accountBookId);
+  const normalizedInput = validateCreateTransaction(data);
+  await validateAccountTypeBookings(
+    normalizedInput.bookings,
+    data.accountBookId,
+  );
 
   await prisma.$transaction([
     prisma.booking.deleteMany({
@@ -71,7 +74,7 @@ export async function updateTransactionOperation(data: UpdateTransactionInput) {
       data: {
         description: data.description,
         bookings: {
-          create: data.bookings.map((b, sortOrder) => ({
+          create: normalizedInput.bookings.map((b, sortOrder) => ({
             date: requireUtcDayDate(b.date),
             description: b.description,
             account: {
@@ -87,7 +90,7 @@ export async function updateTransactionOperation(data: UpdateTransactionInput) {
             cryptocurrency: b.cryptocurrency,
             symbol: b.symbol,
             tradeCurrency: b.tradeCurrency,
-            value: b.value,
+            value: toMoney(b.value).toString(),
             sortOrder,
             accountBook: {
               connect: { id: data.accountBookId },
@@ -101,11 +104,14 @@ export async function updateTransactionOperation(data: UpdateTransactionInput) {
 }
 
 export async function createTransactionOperation(data: CreateTransactionInput) {
-  validateCreateTransaction(data);
-  await validateAccountTypeBookings(data.bookings, data.accountBookId);
+  const normalizedInput = validateCreateTransaction(data);
+  await validateAccountTypeBookings(
+    normalizedInput.bookings,
+    data.accountBookId,
+  );
 
   const transaction = await prisma.transaction.create({
-    data: buildTransactionCreateData(data),
+    data: buildTransactionCreateData(normalizedInput),
   });
   return { data: transaction, invalidatePeriodCache: true };
 }
@@ -113,13 +119,14 @@ export async function createTransactionOperation(data: CreateTransactionInput) {
 export async function createTransactionsOperation(
   data: CreateTransactionsInput,
 ) {
-  const createInputs = data.transactions.map((transaction) => ({
-    ...transaction,
-    accountBookId: data.accountBookId,
-  }));
+  const createInputs = data.transactions.map((transaction) =>
+    validateCreateTransaction({
+      ...transaction,
+      accountBookId: data.accountBookId,
+    }),
+  );
 
   for (const createInput of createInputs) {
-    validateCreateTransaction(createInput);
     await validateAccountTypeBookings(
       createInput.bookings,
       createInput.accountBookId,
@@ -294,19 +301,23 @@ export async function createSimpleTransactionOperation(
     ],
   };
 
-  validateCreateTransaction(createInput);
+  const normalizedInput = validateCreateTransaction(createInput);
   const accountMap = new Map(
     [currentAccount, counterAccount].map((account) => [
       account.id,
       accountTypeMeta(account),
     ]),
   );
-  validateAccountTypeBookingsWithAccounts(createInput.bookings, accountMap, {
-    accountBookStartDate: accountBook.startDate,
-  });
+  validateAccountTypeBookingsWithAccounts(
+    normalizedInput.bookings,
+    accountMap,
+    {
+      accountBookStartDate: accountBook.startDate,
+    },
+  );
 
   const transaction = await prisma.transaction.create({
-    data: buildTransactionCreateData(createInput),
+    data: buildTransactionCreateData(normalizedInput),
   });
   return { data: transaction, invalidatePeriodCache: true };
 }
@@ -384,7 +395,7 @@ export async function rebookBookingOperation(data: RebookBookingInput) {
       cryptocurrency: booking.cryptocurrency,
       symbol: booking.symbol,
       tradeCurrency: booking.tradeCurrency,
-      value: toMoneyNumber(booking.value),
+      value: toMoney(booking.value),
     },
     targetAccount,
     accountBookStartDate: accountBook.startDate,

@@ -1,9 +1,10 @@
+import { type Money } from "../../shared/money";
 import { convertBookingValueToReference } from "./period-conversion";
 import {
   computeEndOfPeriodBalanceStatsWithConvertedBalances,
   type EndOfPeriodBalanceAccount,
 } from "./period-balance-stats";
-import { type PeriodEndNetWorthResult } from "./period-end-net-worth.types";
+
 import {
   getOrLoadPeriodBaseData,
   type PeriodBaseData,
@@ -14,7 +15,7 @@ export async function loadPeriodEndNetWorth(args: {
   accountBookId: string;
   period?: unknown;
   baseData?: PeriodBaseData;
-}): Promise<PeriodEndNetWorthResult> {
+}) {
   const baseData =
     args.baseData ??
     (await getOrLoadPeriodBaseData({
@@ -45,7 +46,7 @@ export async function loadPeriodEndNetWorth(args: {
     ...transferClearingVirtualAccounts,
   ];
 
-  const exchangeRateByKey = new Map<string, Promise<number | null>>();
+  const exchangeRateByKey = new Map<string, Promise<Money | null>>();
   const endOfPeriodBalanceStats =
     await computeEndOfPeriodBalanceStatsWithConvertedBalances({
       accounts: assetLiabilityAccounts,

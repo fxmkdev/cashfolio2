@@ -1,3 +1,5 @@
+import { toMoney } from "../../shared/money";
+import { toNumericMoney } from "../money-boundary";
 import { describe, expect, it, vi } from "vitest";
 import { AccountType, Unit } from "../../.prisma-client/enums";
 import {
@@ -10,7 +12,7 @@ function cashBooking(
   overrides: Partial<PeriodCashFlowTransaction["bookings"][number]> = {},
 ): PeriodCashFlowTransaction["bookings"][number] {
   return {
-    value,
+    value: toMoney(value),
     unit: Unit.CURRENCY,
     currency: "CHF",
     cryptocurrency: null,
@@ -66,9 +68,11 @@ describe("computePeriodCashFlow", () => {
       convertBookingToReference: async (booking) => booking.value,
     });
 
-    expect(result.cashFlow).toBe(60);
+    expect(toNumericMoney(result.cashFlow)).toBe(60);
     expect(result.skippedCount).toBe(0);
-    expect(Array.from(result.cashFlowAmountByAccountId.values())).toEqual([
+    expect(
+      toNumericMoney(Array.from(result.cashFlowAmountByAccountId.values())),
+    ).toEqual([
       {
         accountId: "cash-a",
         accountName: "Cash A",
@@ -91,9 +95,9 @@ describe("computePeriodCashFlow", () => {
       convertBookingToReference,
     });
 
-    expect(result.cashFlow).toBe(0);
+    expect(toNumericMoney(result.cashFlow)).toBe(0);
     expect(result.skippedCount).toBe(0);
-    expect(result.cashFlowAmountByAccountId.size).toBe(0);
+    expect(toNumericMoney(result.cashFlowAmountByAccountId.size)).toBe(0);
     expect(convertBookingToReference).not.toHaveBeenCalled();
   });
 
@@ -124,9 +128,11 @@ describe("computePeriodCashFlow", () => {
         booking.currency === "XXX" ? null : booking.value,
     });
 
-    expect(result.cashFlow).toBe(-100);
+    expect(toNumericMoney(result.cashFlow)).toBe(-100);
     expect(result.skippedCount).toBe(1);
-    expect(result.cashFlowAmountByAccountId.get("cash-a")?.amount).toBe(-100);
+    expect(
+      toNumericMoney(result.cashFlowAmountByAccountId.get("cash-a")?.amount),
+    ).toBe(-100);
   });
 
   it("sums only cash bookings inside the requested period", async () => {
@@ -154,8 +160,10 @@ describe("computePeriodCashFlow", () => {
       convertBookingToReference: async (booking) => booking.value,
     });
 
-    expect(result.cashFlow).toBe(100);
+    expect(toNumericMoney(result.cashFlow)).toBe(100);
     expect(result.skippedCount).toBe(0);
-    expect(result.cashFlowAmountByAccountId.get("cash-a")?.amount).toBe(100);
+    expect(
+      toNumericMoney(result.cashFlowAmountByAccountId.get("cash-a")?.amount),
+    ).toBe(100);
   });
 });

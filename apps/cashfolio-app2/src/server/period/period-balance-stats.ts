@@ -1,10 +1,11 @@
-import { AccountType, type Unit } from "../../.prisma-client/enums";
 import {
+  toMoney,
+  type Money,
   moneyAdd,
-  moneyIsZero,
   moneySubtract,
-  toMoneyNumber,
+  moneyIsZero,
 } from "../../shared/money";
+import { AccountType, type Unit } from "../../.prisma-client/enums";
 
 export type EndOfPeriodBalanceAccount = {
   id: string;
@@ -17,18 +18,18 @@ export type EndOfPeriodBalanceAccount = {
 };
 
 export type EndOfPeriodBalanceStats = {
-  assets: number;
-  liabilities: number;
-  netWorth: number;
+  assets: Money;
+  liabilities: Money;
+  netWorth: Money;
   skippedCount: number;
 };
 
 type EndOfPeriodBalanceComputationResult = EndOfPeriodBalanceStats & {
-  convertedBalanceByAccountId: Map<string, number | null>;
+  convertedBalanceByAccountId: Map<string, Money | null>;
 };
 
 type ConvertBalanceToReference = (input: {
-  value: number;
+  value: Money;
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
@@ -36,26 +37,29 @@ type ConvertBalanceToReference = (input: {
   tradeCurrency: string | null;
   date: Date;
   referenceCurrency: string;
-}) => Promise<number | null>;
+}) => Promise<Money | null>;
 
 export async function computeEndOfPeriodBalanceStatsWithConvertedBalances(args: {
   accounts: EndOfPeriodBalanceAccount[];
-  rawBalanceByAccountId: Map<string, number>;
+  rawBalanceByAccountId: Map<string, Money>;
   periodEnd: Date;
   referenceCurrency: string;
   convertBalanceToReference: ConvertBalanceToReference;
 }): Promise<EndOfPeriodBalanceComputationResult> {
-  let assets = 0;
-  let liabilities = 0;
+  let assets: Money = toMoney(0);
+  let liabilities: Money = toMoney(0);
   let skippedCount = 0;
-  const convertedBalanceByAccountId = new Map<string, number | null>();
+  const convertedBalanceByAccountId = new Map<string, Money | null>();
 
   const conversionResults = await Promise.all(
     args.accounts.map(async (account) => {
-      const rawBalance = args.rawBalanceByAccountId.get(account.id) ?? 0;
+      const rawBalance =
+        args.rawBalanceByAccountId.get(account.id) ?? toMoney(0);
 
       if (account.unit == null) {
-        const normalizedConvertedBalance = moneyIsZero(rawBalance) ? 0 : null;
+        const normalizedConvertedBalance = moneyIsZero(rawBalance)
+          ? toMoney(0)
+          : null;
 
         return {
           accountId: account.id,
@@ -77,7 +81,7 @@ export async function computeEndOfPeriodBalanceStatsWithConvertedBalances(args: 
       });
 
       const normalizedConvertedBalance =
-        convertedBalance ?? (moneyIsZero(rawBalance) ? 0 : null);
+        convertedBalance ?? (moneyIsZero(rawBalance) ? toMoney(0) : null);
 
       return {
         accountId: account.id,
@@ -102,12 +106,11 @@ export async function computeEndOfPeriodBalanceStatsWithConvertedBalances(args: 
     }
 
     if (conversionResult.accountType === AccountType.ASSET) {
-      assets = toMoneyNumber(
-        moneyAdd(assets, conversionResult.convertedBalance),
-      );
+      assets = moneyAdd(assets, conversionResult.convertedBalance);
     } else if (conversionResult.accountType === AccountType.LIABILITY) {
-      liabilities = toMoneyNumber(
-        moneySubtract(liabilities, conversionResult.convertedBalance),
+      liabilities = moneySubtract(
+        liabilities,
+        conversionResult.convertedBalance,
       );
     }
   }
@@ -115,7 +118,7 @@ export async function computeEndOfPeriodBalanceStatsWithConvertedBalances(args: 
   return {
     assets,
     liabilities,
-    netWorth: toMoneyNumber(moneySubtract(assets, liabilities)),
+    netWorth: moneySubtract(assets, liabilities),
     skippedCount,
     convertedBalanceByAccountId,
   };
@@ -123,7 +126,7 @@ export async function computeEndOfPeriodBalanceStatsWithConvertedBalances(args: 
 
 export async function computeEndOfPeriodBalanceStats(args: {
   accounts: EndOfPeriodBalanceAccount[];
-  rawBalanceByAccountId: Map<string, number>;
+  rawBalanceByAccountId: Map<string, Money>;
   periodEnd: Date;
   referenceCurrency: string;
   convertBalanceToReference: ConvertBalanceToReference;

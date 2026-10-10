@@ -1,5 +1,10 @@
+import {
+  toMoney,
+  type Money,
+  moneyMultiply,
+  moneyIsZero,
+} from "../../shared/money";
 import type { AccountType, Unit } from "../../.prisma-client/enums";
-import { moneyIsZero, moneyMultiply, toMoneyNumber } from "../../shared/money";
 
 export async function computeRawBalanceInReferenceCurrency(args: {
   type: AccountType;
@@ -8,25 +13,23 @@ export async function computeRawBalanceInReferenceCurrency(args: {
   cryptocurrency: string | null;
   symbol: string | null;
   tradeCurrency: string | null;
-  rawBalance: number;
+  rawBalance: Money;
   referenceCurrency: string;
-  getCurrencyToReferenceRate: (
-    sourceCurrency: string,
-  ) => Promise<number | null>;
+  getCurrencyToReferenceRate: (sourceCurrency: string) => Promise<Money | null>;
   getCryptocurrencyToReferenceRate: (
     cryptocurrency: string,
-  ) => Promise<number | null>;
+  ) => Promise<Money | null>;
   getSecurityToReferenceRate: (
     symbol: string,
     tradeCurrency: string,
-  ) => Promise<number | null>;
-}): Promise<number | null> {
+  ) => Promise<Money | null>;
+}): Promise<Money | null> {
   const isAssetOrLiability = args.type === "ASSET" || args.type === "LIABILITY";
   if (!isAssetOrLiability) return null;
 
   if (args.unit === "CURRENCY") {
     if (!args.currency) return null;
-    if (moneyIsZero(args.rawBalance)) return 0;
+    if (moneyIsZero(args.rawBalance)) return toMoney(0);
 
     const sourceCurrency = args.currency.toUpperCase();
     if (sourceCurrency === args.referenceCurrency) {
@@ -36,24 +39,24 @@ export async function computeRawBalanceInReferenceCurrency(args: {
     const exchangeRate = await args.getCurrencyToReferenceRate(sourceCurrency);
     return exchangeRate == null
       ? null
-      : toMoneyNumber(moneyMultiply(args.rawBalance, exchangeRate));
+      : moneyMultiply(args.rawBalance, exchangeRate);
   }
 
   if (args.unit === "CRYPTOCURRENCY") {
     if (!args.cryptocurrency) return null;
-    if (moneyIsZero(args.rawBalance)) return 0;
+    if (moneyIsZero(args.rawBalance)) return toMoney(0);
 
     const exchangeRate = await args.getCryptocurrencyToReferenceRate(
       args.cryptocurrency.toUpperCase(),
     );
     return exchangeRate == null
       ? null
-      : toMoneyNumber(moneyMultiply(args.rawBalance, exchangeRate));
+      : moneyMultiply(args.rawBalance, exchangeRate);
   }
 
   if (args.unit === "SECURITY") {
     if (!args.symbol || !args.tradeCurrency) return null;
-    if (moneyIsZero(args.rawBalance)) return 0;
+    if (moneyIsZero(args.rawBalance)) return toMoney(0);
 
     const exchangeRate = await args.getSecurityToReferenceRate(
       args.symbol.toUpperCase(),
@@ -61,7 +64,7 @@ export async function computeRawBalanceInReferenceCurrency(args: {
     );
     return exchangeRate == null
       ? null
-      : toMoneyNumber(moneyMultiply(args.rawBalance, exchangeRate));
+      : moneyMultiply(args.rawBalance, exchangeRate);
   }
 
   return null;

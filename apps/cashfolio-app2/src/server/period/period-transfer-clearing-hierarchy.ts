@@ -1,3 +1,4 @@
+import { toMoney, type Money } from "../../shared/money";
 import { AccountType } from "../../.prisma-client/enums";
 import { isNearZero } from "./period-overview-holdings-common";
 import {
@@ -43,7 +44,7 @@ export function buildTransferClearingVirtualHierarchy(args: {
     return {
       virtualGroups: [] as TransferClearingVirtualGroup[],
       virtualAccounts: [] as TransferClearingVirtualAccount[],
-      rawBalanceByVirtualAccountId: new Map<string, number>(),
+      rawBalanceByVirtualAccountId: new Map<string, Money>(),
     };
   }
 
@@ -74,17 +75,20 @@ export function buildTransferClearingVirtualHierarchy(args: {
   }
 
   const virtualAccounts: TransferClearingVirtualAccount[] = [];
-  const rawBalanceByVirtualAccountId = new Map<string, number>();
+  const rawBalanceByVirtualAccountId = new Map<string, Money>();
 
   for (const bucket of nonZeroBuckets) {
-    const clearingRawBalance = -bucket.rawBalance;
+    const clearingRawBalance = toMoney(bucket.rawBalance).neg();
     const accountId = `virtual:transfer-clearing:account:${bucket.unitKey}`;
 
     virtualAccounts.push({
       id: accountId,
       name: bucket.unitLabel,
       groupId: getTransferClearingUnitTypeGroupId(bucket.unitType),
-      type: clearingRawBalance > 0 ? AccountType.ASSET : AccountType.LIABILITY,
+      type:
+        toMoney(clearingRawBalance).comparedTo(0) > 0
+          ? AccountType.ASSET
+          : AccountType.LIABILITY,
       unit: bucket.unit,
       currency: bucket.currency,
       cryptocurrency: bucket.cryptocurrency,
