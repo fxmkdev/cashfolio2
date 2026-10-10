@@ -166,7 +166,13 @@ export function useStatementImportInclusionState(args: {
     const headerSpace =
       event.key === " " &&
       target.closest(".ag-header-cell")?.querySelector(".ag-header-select-all");
-    if (event.key === " " && !headerSpace && !args.disabled) {
+    // AG Grid ignores character keys from renderer children, such as Edit.
+    if (
+      event.key === " " &&
+      !headerSpace &&
+      !args.disabled &&
+      target.matches(".ag-cell")
+    ) {
       const rowId = target.closest(".ag-row[row-id]")?.getAttribute("row-id");
       const node = rowId && apiRef.current?.getRowNode(rowId);
       if (node && isStatementImportReviewDraftRow(node.data)) {

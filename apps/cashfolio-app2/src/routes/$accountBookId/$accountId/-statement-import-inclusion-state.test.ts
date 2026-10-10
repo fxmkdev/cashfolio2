@@ -36,7 +36,17 @@ class TargetElement {
     readonly rowId?: string,
     readonly header = false,
     readonly editor = false,
+    readonly rendererChild = false,
   ) {}
+  matches(selector: string) {
+    return (
+      selector === ".ag-cell" &&
+      !!this.rowId &&
+      !this.header &&
+      !this.editor &&
+      !this.rendererChild
+    );
+  }
   closest(selector: string) {
     if (selector === ".ag-header-select-all") return this.header ? this : null;
     if (selector === ".ag-selection-checkbox") return this.rowId ? this : null;
@@ -154,9 +164,14 @@ function setup() {
     } as unknown as SuppressKeyboardEventParams<StatementImportGridRow>);
     return { suppressed, event };
   }
-  function capturedKey(key = "a", header = false, editor = false) {
+  function capturedKey(
+    key = "a",
+    header = false,
+    editor = false,
+    rendererChild = false,
+  ) {
     const event = {
-      target: new TargetElement("b", header, editor),
+      target: new TargetElement("b", header, editor, rendererChild),
       key,
       ctrlKey: key === "a",
       metaKey: false,
@@ -315,6 +330,25 @@ describe("statement import inclusion interactions", () => {
     state.capturedKey(" ", true);
     state.click("c");
     expect(state.included()).toEqual(["a", "c"]);
+  });
+
+  it("does not establish an anchor for Space on a renderer child", () => {
+    const state = setup();
+    expect(
+      state.capturedKey(" ", false, false, true).preventDefault,
+    ).not.toHaveBeenCalled();
+    state.click("d");
+    expect(state.included()).toEqual(["a", "b", "c"]);
+  });
+
+  it("preserves an existing include anchor for Space on a renderer child", () => {
+    const state = setup();
+    state.normal("d");
+    state.normal("a");
+    state.normal("a");
+    state.capturedKey(" ", false, false, true);
+    state.click("d");
+    expect(state.included()).toEqual(["a", "b", "c", "d"]);
   });
 
   it("blocks mouse/keyboard changes and restores native selection while submitting", () => {

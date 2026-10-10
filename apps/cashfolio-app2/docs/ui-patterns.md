@@ -540,8 +540,9 @@ compatibility but ignored by the importer.
   unaffected. Repeated ranges keep the same anchor and do not restore earlier
   changes when shortened. Without a valid anchor, Shift toggles only the
   endpoint. File changes, header/select-all actions, and sorting/filtering clear
-  the anchor; draft edits and API synchronization retain it. Inclusion is locked
-  while import or draft-edit submission is in progress.
+  the anchor; draft edits, keyboard activation of row actions, and API
+  synchronization retain it. Inclusion is locked while import or draft-edit
+  submission is in progress.
 - Import uses a batch server mutation so either all reviewed drafts are created
   or none are.
 - For imported mixed-currency drafts, `EditTransactionModal` preserves the

@@ -408,6 +408,66 @@ test("Shift applies the starting inclusion state to mixed statement ranges", asy
   }
 });
 
+test("Space on the Edit button preserves the statement inclusion anchor", async ({
+  page,
+}) => {
+  const descriptions = ["A", "B", "C", "D"].map(
+    (letter) => `E2E Statement Edit Space ${letter}`,
+  );
+  const csv = [
+    "Booked;Cashflow;Original;Currency;Rate;Text;Ignored",
+    ...descriptions.map(
+      (description, index) =>
+        `2026-06-${20 + index};-${301 + index}.23;;;;${description};`,
+    ),
+  ].join("\n");
+  await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
+  await openStatementImportPage(page);
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "statement-edit-space.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv),
+  });
+  const rows = descriptions.map((description) =>
+    agGridRowByText(page, description),
+  );
+  const checkbox = (index: number) =>
+    rows[index].locator(".ag-selection-checkbox input");
+  async function activateEditWithSpace() {
+    const edit = rows[2].getByRole("button", {
+      name: "Edit Imported Transaction",
+    });
+    await edit.focus();
+    await page.keyboard.press("Space");
+    const dialog = page.getByRole("dialog", {
+      name: "Edit Imported Transaction",
+    });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+  }
+  await expect(checkbox(3)).toBeChecked();
+
+  // Edit activation must not create an anchor: only the endpoint toggles.
+  await activateEditWithSpace();
+  await rows[3].locator(".ag-selection-checkbox").click({
+    modifiers: ["Shift"],
+  });
+  for (const index of [0, 1, 2]) await expect(checkbox(index)).toBeChecked();
+  await expect(checkbox(3)).not.toBeChecked();
+
+  // An include anchor must survive keyboard activation of another row's Edit.
+  await rows[0].locator(".ag-selection-checkbox").click();
+  await expect(checkbox(0)).not.toBeChecked();
+  await rows[0].locator(".ag-selection-checkbox").click();
+  await expect(checkbox(0)).toBeChecked();
+  await activateEditWithSpace();
+  await rows[3].locator(".ag-selection-checkbox").click({
+    modifiers: ["Shift"],
+  });
+  for (const index of [0, 1, 2, 3]) await expect(checkbox(index)).toBeChecked();
+});
+
 test("checkboxes control statement row inclusion and skip unchecked rows during import", async ({
   page,
 }, testInfo) => {
