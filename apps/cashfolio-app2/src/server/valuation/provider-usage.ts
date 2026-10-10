@@ -1,30 +1,21 @@
+import {
+  ValuationProviderRequestReason,
+  type ValuationProviderName,
+  type ValuationProviderRequestOutcome,
+  type ValuationProviderUnitType,
+} from "../../.prisma-client/enums";
 import { toUtcDay } from "./date-utils";
 import { sanitizeProviderLogText } from "./provider-logging";
 
-export const VALUATION_PROVIDER_REQUEST_REASONS = {
-  INITIAL_PROBE: "INITIAL_PROBE",
-  BACKTRACK_PROBE: "BACKTRACK_PROBE",
-  RATE_LIMIT_RETRY: "RATE_LIMIT_RETRY",
-} as const;
+export const VALUATION_PROVIDER_REQUEST_REASONS =
+  ValuationProviderRequestReason;
 
-export type ValuationProviderRequestReason =
-  (typeof VALUATION_PROVIDER_REQUEST_REASONS)[keyof typeof VALUATION_PROVIDER_REQUEST_REASONS];
-
-export type ValuationProviderName =
-  "CURRENCYLAYER" | "COINLAYER" | "MARKETSTACK";
-
-export type ValuationProviderUnitType =
-  "CURRENCY" | "CRYPTOCURRENCY" | "SECURITY";
-
-export type ValuationProviderRequestOutcome =
-  | "RETRIEVED"
-  | "NO_DATA"
-  | "MISSING_RATE"
-  | "TIMEOUT"
-  | "HTTP_ERROR"
-  | "PROVIDER_ERROR"
-  | "REQUEST_ERROR"
-  | "RATE_LIMIT_RETRY";
+export type {
+  ValuationProviderName,
+  ValuationProviderRequestOutcome,
+  ValuationProviderRequestReason,
+  ValuationProviderUnitType,
+};
 
 export type RecordValuationProviderRequestInput = {
   provider: ValuationProviderName;
