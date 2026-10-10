@@ -216,7 +216,9 @@ MSW stays on 2.15.0. The application MSW 3 migration is explicitly deferred;
 `@vitest/mocker@5.0.3` still declares the compatible MSW 2 peer range `^2.4.9`.
 
 Vitest 5 reports the same covered-file, branch, and function inventory. It
-counts four fewer covered statements/lines across the generated Prisma namespace
-and `unit-format.ts`: statements are 72.99%, branches 65.01%, functions 70.34%,
-and lines 73.84%. The committed coverage baseline remains unchanged and its
-ratchet passes; no exclusions or assertions were weakened.
+counts four fewer total statements/lines across the generated Prisma namespace
+and `unit-format.ts`. After rebasing onto the merged Storybook migration, the
+2026-10-10 local Node 24.21.0 run passed all 1000 unit tests and covered all 256
+files: statements 73.00% (6128/8394), branches 65.04% (3922/6030), functions 70.33%
+(1425/2026), and lines 73.86% (5962/8072). The committed coverage baseline remains
+unchanged and its ratchet passes; no exclusions or assertions were weakened.
