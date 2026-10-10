@@ -69,6 +69,7 @@
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "@vitest/browser-playwright": "^5.0.3",
     "@vitest/coverage-v8": "^5.0.3",
     "chromatic": "^18.11.0",
@@ -83,7 +84,7 @@
     "postcss-simple-vars": "^7.0.1",
     "prisma": "^7.10.0",
     "storybook": "^10.6.1",
-    "typescript": "^6.0.3",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.71.1",
     "vite": "8.3.4",
     "vitest": "^5.0.3"

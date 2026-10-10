@@ -54,6 +54,14 @@ need to be strictly Conventional Commit formatted.
 - Keep `@types/node` aligned with Node 24. Do not upgrade to Node 25+ typings
   until the runtime migration is planned.
 
+## Compiler Tooling
+
+App and CLI typechecks use native TypeScript 7 through `tsc`. The `typescript`
+dependency remains an alias to `@typescript/typescript6` for tools requiring the
+TypeScript 6 compiler API, including ESLint and Storybook docgen. The native
+compiler is installed through the `@typescript/native` alias. Use `tsc6` only
+when comparing compatibility; preserve native `tsc` in typecheck scripts.
+
 ## Review Comment Workflow
 
 - If the current Codex/chat thread is linked to an open pull request, push

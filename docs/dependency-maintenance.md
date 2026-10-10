@@ -18,16 +18,17 @@ The refreshed manifest versions are:
 | Playwright                               | 1.64.0                   |
 | AG Grid / AG Charts                      | 36.2.0 / 14.2.0          |
 | Vitest / coverage / browser              | 5.0.3                    |
+| TypeScript / typescript6 compatibility   | 7.0.2 / 6.0.2            |
 | MSW                                      | 2.15.0                   |
 | Logto / Chromatic / dotenv               | 4.0.0 / 18.11.0 / 18.0.6 |
 | Redis / PostgreSQL driver                | 6.3.0 / 8.23.1           |
 | Node runtime / typings                   | 24.21.0 / 24.19.1        |
 | pnpm / Prettier                          | 11.28.5 / 3.9.9          |
 
-TypeScript 7, MSW 3, pnpm 12, and Prisma prereleases are deferred to separate
-migrations. Storybook uses addon-vitest 10.6.1 with the Playwright browser
-provider 5.0.3. Vitest, coverage, and browser packages are upgraded together to
-stable 5.0.3. See the app's
+MSW 3, pnpm 12, and Prisma prereleases are deferred to separate migrations.
+Storybook uses addon-vitest 10.6.1 with the Playwright browser provider 5.0.3.
+Vitest, coverage, and browser packages are upgraded together to stable 5.0.3.
+See the app's
 [Nitro compatibility notes](../apps/cashfolio-app2/docs/deployment.md#nitro-version-pin)
 before revisiting its beta pin or scoped H3 override.
 
@@ -58,6 +59,11 @@ and
 As of 2026-10-09, after the scoped Prisma override and removal of the Storybook
 runner, `pnpm audit` reports no findings. Runner removal eliminates the
 previously reported moderate `sprintf-js` advisory.
+
+The separately installed Docker release-migration payload still reports two high
+and one moderate findings through `deepmerge-ts` and `mysql2`; it currently does
+not read the workspace overrides. The pnpm migration must carry the reviewed
+workspace policy into that minimal installation and recheck its audit.
 
 These counts describe the dependency audit, not an assessment of reachability in
 the running application. Re-run the audit when updating dependencies because
@@ -222,3 +228,19 @@ and `unit-format.ts`. After rebasing onto the merged Storybook migration, the
 files: statements 73.00% (6128/8394), branches 65.04% (3922/6030), functions 70.33%
 (1425/2026), and lines 73.86% (5962/8072). The committed coverage baseline remains
 unchanged and its ratchet passes; no exclusions or assertions were weakened.
+
+## TypeScript 7 migration
+
+App and CLI typechecks use TypeScript 7.0.2's native `tsc`. Both projects
+install `@typescript/native` as an alias of `typescript@^7.0.2` and `typescript`
+as an alias of `@typescript/typescript6@^6.0.2`, following Microsoft's
+documented side-by-side arrangement. The compatibility package exposes `tsc6`
+and the TypeScript 6 compiler API for ESLint, Storybook react-docgen-typescript,
+and other tooling that imports `typescript`. Do not replace that API alias with
+the native compiler package until those consumers support its API.
+
+Verify `pnpm --filter cashfolio-app2 exec tsc --version` and
+`pnpm --filter cli exec tsc --version` report 7.x, while importing `typescript`
+reports 6.x. Use `tsc6` for compatibility comparisons; it must not replace the
+native typecheck commands. Native compiler platform packages must remain in the
+lockfile for macOS development and Linux Docker/CI builds.
