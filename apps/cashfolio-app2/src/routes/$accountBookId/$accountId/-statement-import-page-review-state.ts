@@ -1,11 +1,4 @@
-import type {
-  CellValueChangedEvent,
-  FirstDataRenderedEvent,
-  GridApi,
-  IRowNode,
-  RowDataUpdatedEvent,
-  SelectionChangedEvent,
-} from "ag-grid-enterprise";
+import type { CellValueChangedEvent } from "ag-grid-enterprise";
 import type { Dispatch, SetStateAction } from "react";
 import type { AccountOption } from "@/components/edit-transaction-modal";
 import type { LedgerAccount } from "./-page-types";
@@ -18,9 +11,9 @@ import {
 import { useStatementImportColumnDefs } from "./-statement-import-page-columns";
 import {
   isStatementImportReviewDraftRow,
-  setStatementImportDraftSelection,
   type StatementImportGridRow,
 } from "./-statement-import-page-controller";
+import { useStatementImportInclusionState } from "./-statement-import-inclusion-state";
 import { useStatementImportReviewDerivedState } from "./-statement-import-page-review-derived-state";
 
 export function useStatementImportReviewState(args: {
@@ -45,6 +38,10 @@ export function useStatementImportReviewState(args: {
     isEditSubmitting,
     onEditDraft,
   } = args;
+  const inclusionState = useStatementImportInclusionState({
+    setDrafts,
+    disabled: isSubmitting || isEditSubmitting,
+  });
   const derivedState = useStatementImportReviewDerivedState({
     account,
     accountBookStartDate,
@@ -107,73 +104,10 @@ export function useStatementImportReviewState(args: {
     }
   }
 
-  function handleSelectionChange(
-    event: SelectionChangedEvent<StatementImportGridRow>,
-  ) {
-    // Grid initialization and API synchronization must not change inclusion.
-    if (
-      event.source !== "checkboxSelected" &&
-      event.source !== "spaceKey" &&
-      event.source !== "keyboardSelectAll" &&
-      event.source !== "uiSelectAll" &&
-      event.source !== "uiSelectAllFiltered" &&
-      event.source !== "uiSelectAllCurrentPage"
-    ) {
-      return;
-    }
-    if (isSubmitting || isEditSubmitting) {
-      syncDraftSelection(event.api);
-      return;
-    }
-
-    const selectedDraftIds = event.api
-      .getSelectedRows()
-      .filter(isStatementImportReviewDraftRow)
-      .map((draft) => draft.id);
-    setDrafts((current) =>
-      setStatementImportDraftSelection({ drafts: current, selectedDraftIds }),
-    );
-  }
-
-  function syncDraftSelection(api: GridApi<StatementImportGridRow>) {
-    const nodesToSelect: IRowNode<StatementImportGridRow>[] = [];
-    const nodesToDeselect: IRowNode<StatementImportGridRow>[] = [];
-    api.forEachNode((node) => {
-      const selected =
-        isStatementImportReviewDraftRow(node.data) && !node.data.ignored;
-      if (node.isSelected() !== selected) {
-        (selected ? nodesToSelect : nodesToDeselect).push(node);
-      }
-    });
-    if (nodesToSelect.length > 0) {
-      api.setNodesSelected({
-        nodes: nodesToSelect,
-        newValue: true,
-        source: "api",
-      });
-    }
-    if (nodesToDeselect.length > 0) {
-      api.setNodesSelected({
-        nodes: nodesToDeselect,
-        newValue: false,
-        source: "api",
-      });
-    }
-  }
-
-  function handleReviewRowsUpdated(
-    event:
-      | RowDataUpdatedEvent<StatementImportGridRow>
-      | FirstDataRenderedEvent<StatementImportGridRow>,
-  ) {
-    syncDraftSelection(event.api);
-  }
-
   return {
     columnDefs,
     handleDraftCellChange,
-    handleSelectionChange,
-    handleReviewRowsUpdated,
+    ...inclusionState,
     ignoredCount: derivedState.ignoredCount,
     importDisabled: derivedState.importDisabled,
     includedCount: derivedState.includedCount,

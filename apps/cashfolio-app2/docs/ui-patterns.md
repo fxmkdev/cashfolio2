@@ -530,6 +530,16 @@ compatibility but ignored by the importer.
   all draft rows; the `Balance carried forward` row has no checkbox. Included
   rows use normal styling without a selected-row background tint. Ignored drafts
   cannot be edited until their checkbox is checked again.
+- The review grid's `Include` column retains AG Grid's native checkboxes and
+  mixed header state. A normal checkbox click or Space establishes a range
+  anchor with the resulting inclusion state. Shift-click or Shift+Space in the
+  inclusion cell applies that state to the displayed draft range, inclusive,
+  regardless of the endpoint's previous state. Rows outside the range and the
+  carried-forward balance are unaffected. Repeated ranges keep the same anchor
+  and do not restore earlier changes when shortened. Without a valid anchor,
+  Shift toggles only the endpoint. File changes, header/select-all actions, and
+  sorting/filtering clear the anchor; draft edits and API synchronization retain
+  it. Inclusion is locked while import or draft-edit submission is in progress.
 - Import uses a batch server mutation so either all reviewed drafts are created
   or none are.
 - For imported mixed-currency drafts, `EditTransactionModal` preserves the

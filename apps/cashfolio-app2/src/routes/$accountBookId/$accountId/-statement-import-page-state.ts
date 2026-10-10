@@ -69,6 +69,7 @@ export function useStatementImportPageState(args: {
     isSubmitting,
     isEditSubmitting,
     setDrafts: (nextDrafts) => {
+      reviewState.resetInclusionAnchor();
       setReviewBaseline(getStatementImportReviewSnapshot(nextDrafts));
       setDrafts(nextDrafts);
     },
@@ -131,6 +132,12 @@ export function useStatementImportPageState(args: {
     handleFileChange: uploadState.handleFileChange,
     handleImport,
     handleSaveDraft,
+    handleInclusionGridReady: reviewState.handleInclusionGridReady,
+    handleInclusionRowSelected: reviewState.handleInclusionRowSelected,
+    handleInclusionClickCapture: reviewState.handleInclusionClickCapture,
+    handleInclusionKeyDownCapture: reviewState.handleInclusionKeyDownCapture,
+    suppressInclusionKeyboardEvent: reviewState.suppressInclusionKeyboardEvent,
+    resetInclusionAnchor: reviewState.resetInclusionAnchor,
     handleSelectionChange: reviewState.handleSelectionChange,
     handleReviewRowsUpdated: reviewState.handleReviewRowsUpdated,
     handleStepClick: uploadState.handleStepClick,

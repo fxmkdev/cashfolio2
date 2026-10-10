@@ -232,6 +232,188 @@ test("shows multiple for drafts with several counter bookings", async ({
   );
 });
 
+test("Shift applies the starting inclusion state to mixed statement ranges", async ({
+  page,
+}, testInfo) => {
+  const descriptions = ["A", "B", "C", "D", "E"].map(
+    (letter) => `E2E Statement Range ${letter}`,
+  );
+  const csv = [
+    "Booked;Cashflow;Original;Currency;Rate;Text;Ignored",
+    ...descriptions.map(
+      (description, index) =>
+        `2026-06-${10 + index};-${201 + index}.23;;;;${description};`,
+    ),
+  ].join("\n");
+  const file = {
+    name: "statement-ranges.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv),
+  };
+  await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
+  await openStatementImportPage(page);
+  await page.locator('input[type="file"]').setInputFiles(file);
+
+  const rows = descriptions.map((description) =>
+    agGridRowByText(page, description),
+  );
+  const checkbox = (index: number) =>
+    rows[index].locator(".ag-selection-checkbox input");
+  const click = (index: number, shift = false) =>
+    rows[index]
+      .locator(".ag-selection-checkbox")
+      .click({ modifiers: shift ? ["Shift"] : [] });
+  const header = page.locator(".ag-header-select-all input[type=checkbox]");
+  async function expectIncluded(indices: number[]) {
+    for (let index = 0; index < rows.length; index++) {
+      if (indices.includes(index)) await expect(checkbox(index)).toBeChecked();
+      else await expect(checkbox(index)).not.toBeChecked();
+    }
+  }
+  await expect(
+    page.getByText("Check rows to include them in the import;", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: /Include/ }),
+  ).toBeVisible();
+  await expectIncluded([0, 1, 2, 3, 4]);
+  await expect(checkbox(0)).toHaveAttribute(
+    "aria-label",
+    /Toggle Inclusion.*\(checked\)/,
+  );
+
+  // Without an anchor, Shift toggles only the endpoint.
+  await click(4, true);
+  await expectIncluded([0, 1, 2, 3]);
+  await expect(checkbox(4)).toHaveAttribute(
+    "aria-label",
+    /Toggle Inclusion.*\(unchecked\)/,
+  );
+  await click(1);
+  // The already-unchecked endpoint must still ignore the entire range.
+  await click(4, true);
+  await expectIncluded([0]);
+  await click(2, true);
+  await expectIncluded([0]);
+
+  // An upward range includes all rows despite an already-checked endpoint.
+  await click(3);
+  await click(0, true);
+  await expectIncluded([0, 1, 2, 3]);
+  await click(1);
+  await setGridAccountTreeCellValue({
+    root: page,
+    rowIndex: 2,
+    colId: "counterAccountId",
+    accountName: seeded.expenseAccount.name,
+  });
+  await click(3, true);
+  await expectIncluded([0]);
+  await header.click();
+  await expectIncluded([0, 1, 2, 3, 4]);
+
+  // Header actions reset the anchor; the native mixed state includes all.
+  await click(1);
+  await expect(header).toBeChecked({ indeterminate: true });
+  await header.click();
+  await expect(header).toBeChecked();
+  await click(3, true);
+  await expectIncluded([0, 1, 2, 4]);
+  await header.click();
+
+  // Replacing a reviewed file clears the old anchor and checkbox states.
+  await click(1);
+  await page.getByRole("button", { name: /Upload/ }).click();
+  await page
+    .getByRole("dialog", { name: "Discard reviewed statement?" })
+    .getByRole("button", { name: "Discard and upload another file" })
+    .click();
+  await page.locator('input[type="file"]').setInputFiles(file);
+  await expectIncluded([0, 1, 2, 3, 4]);
+  await click(2, true);
+  await expectIncluded([0, 1, 3, 4]);
+  await click(2);
+  await expect(agGridCellByColId(rows[2], "status")).toContainText(
+    "Needs edit",
+  );
+
+  // A no-op keyboard select-all must also clear the range anchor.
+  await rows[1].locator(".ag-cell:has(.ag-selection-checkbox)").focus();
+  await page.keyboard.press("ControlOrMeta+A");
+  await click(3, true);
+  await expectIncluded([0, 1, 2, 4]);
+  await header.click();
+
+  // Focus native selection cells to exercise actual Space/Shift+Space handling.
+  await rows[1].locator(".ag-cell:has(.ag-selection-checkbox)").focus();
+  await page.keyboard.press("Space");
+  await expect(checkbox(1)).not.toBeChecked();
+  await rows[3].locator(".ag-cell:has(.ag-selection-checkbox)").focus();
+  await page.keyboard.press("Shift+Space");
+  await expectIncluded([0, 4]);
+  await expect(header).toBeChecked({ indeterminate: true });
+
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme });
+    await page.screenshot({
+      path: testInfo.outputPath(`range-review-${colorScheme}.png`),
+    });
+  }
+  await page.setViewportSize({ width: 640, height: 800 });
+  await expect(
+    page.getByRole("button", { name: "Toggle Navigation" }),
+  ).toBeVisible();
+  // Wait for AppShell's desktop-to-mobile layout transition before visual QA.
+  await expect
+    .poll(
+      async () =>
+        (
+          await page
+            .getByRole("columnheader", { name: /Include/ })
+            .boundingBox()
+        )?.x ?? Infinity,
+    )
+    .toBeLessThan(40);
+  await expect(
+    page.getByText("Check rows to include them in the import;", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: /Include/ }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("range-review-narrow.png"),
+  });
+  await page.setViewportSize({ width: 1280, height: 720 });
+
+  for (const rowIndex of [0, 4]) {
+    await setGridAccountTreeCellValue({
+      root: page,
+      rowIndex,
+      colId: "counterAccountId",
+      accountName: seeded.expenseAccount.name,
+    });
+  }
+  await page.getByRole("button", { name: "Import Transactions" }).click();
+  await expect(page).toHaveURL(
+    ledgerUrlPattern({
+      accountBookId: seeded.accountBookId,
+      accountId: seeded.cashAccount.id,
+    }),
+  );
+  for (let index = 0; index < descriptions.length; index++) {
+    expect(
+      await countTransactionsByDescription({
+        accountBookId: seeded.accountBookId,
+        description: descriptions[index],
+      }),
+    ).toBe(index === 0 || index === 4 ? 1 : 0);
+  }
+});
+
 test("checkboxes control statement row inclusion and skip unchecked rows during import", async ({
   page,
 }, testInfo) => {
