@@ -1,5 +1,6 @@
 import { Center, Group, Loader, Stack, Stepper, Text } from "@mantine/core";
 import { IconFileUpload, IconTable } from "@tabler/icons-react";
+import { LocaleModule } from "ag-grid-enterprise";
 import { DataGrid } from "@/components/data-grid";
 import { gridTheme } from "@/components/grid-theme";
 import type { AccountOption } from "@/components/edit-transaction-modal";
@@ -24,6 +25,7 @@ import { isStatementImportReviewDraftRow } from "./-statement-import-page-contro
 const statementImportGridTheme = gridTheme.withParams({
   selectedRowBackgroundColor: "transparent",
 });
+const statementImportGridModules = [LocaleModule];
 
 type StatementImportPageViewProps = {
   accountBookId: string;
@@ -148,10 +150,20 @@ export function AccountStatementImportPageView({
           }
         >
           <Stack gap="md" flex={1} mih={0}>
-            <Stack gap={0} flex={1} mih={0}>
+            <Text size="sm" c="dimmed">
+              Check rows to include them in the import; uncheck to ignore them.
+            </Text>
+            <Stack
+              gap={0}
+              flex={1}
+              mih={0}
+              onClickCapture={state.handleInclusionClickCapture}
+              onKeyDownCapture={state.handleInclusionKeyDownCapture}
+            >
               <StatementImportReviewSummary summaryText={state.summaryText} />
 
               <DataGrid
+                modules={statementImportGridModules}
                 context={{
                   onCellEditorDirtyChange: state.setIsReviewCellDirty,
                 }}
@@ -185,7 +197,26 @@ export function AccountStatementImportPageView({
                     isStatementImportReviewDraftRow(data),
                   enableClickSelection: false,
                 }}
-                selectionColumnDef={{ pinned: "left" }}
+                selectionColumnDef={{
+                  pinned: "left",
+                  headerTooltip:
+                    "Checked rows will be imported. Unchecked rows are ignored.",
+                  resizable: false,
+                  suppressKeyboardEvent: state.suppressInclusionKeyboardEvent,
+                }}
+                localeText={{
+                  ariaRowToggleSelection:
+                    "Press Space to Toggle Inclusion; Shift+Space to Apply to a Range",
+                  ariaRowSelectAll:
+                    "Press Space to Toggle Inclusion of All Rows",
+                  ariaHeaderSelection: "Include All Rows",
+                  ariaRowSelect: "Include Row",
+                  ariaRowDeselect: "Ignore Row",
+                }}
+                onGridReady={state.handleInclusionGridReady}
+                onRowSelected={state.handleInclusionRowSelected}
+                onSortChanged={state.resetInclusionAnchor}
+                onFilterChanged={state.resetInclusionAnchor}
                 onCellValueChanged={state.handleDraftCellChange}
                 onSelectionChanged={state.handleSelectionChange}
                 onRowDataUpdated={state.handleReviewRowsUpdated}
