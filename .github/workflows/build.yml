@@ -138,6 +138,41 @@ jobs:
             exit 1
           fi
 
+  cashfolio-app2-staging-seed:
+    name: "cashfolio-app2: Staging seed integration"
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cashfolio
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cashfolio" --health-interval
+          10s --health-timeout 5s --health-retries 5
+    env:
+      STAGING_SEED_TEST_ADMIN_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Install dependencies
+        run: pnpm --filter cashfolio-app2 install
+      - name: Verify staging release ordering and failure behavior
+        run: pnpm --filter cashfolio-app2 test:staging-release
+      - name: Verify transactional seed against PostgreSQL
+        run: pnpm --filter cashfolio-app2 test:staging-seed
+      - name: Build standalone seed payload
+        run: pnpm --filter cashfolio-app2 build:staging-seed
+      - name: Verify standalone CSV export without database credentials
+        run:
+          node apps/cashfolio-app2/dist/staging-seed/seed.mjs --sample-csv >
+          /tmp/cashfolio-staging-import.csv
+
   cashfolio-app2-unit:
     name: "cashfolio-app2: Unit + Coverage"
     runs-on: ubuntu-latest
@@ -424,6 +459,7 @@ jobs:
       - version
       - cashfolio-app2-build-push
       - cashfolio-app2-unit
+      - cashfolio-app2-staging-seed
       - cashfolio-app2-e2e-required
       - cashfolio-app2-typecheck
       - cashfolio-app2-lint

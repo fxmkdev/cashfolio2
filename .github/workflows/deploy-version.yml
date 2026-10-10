@@ -54,6 +54,11 @@ jobs:
     name: "cashfolio-app2: Deploy"
     runs-on: ubuntu-latest
     if: ${{ inputs.deploy-cashfolio-app2 }}
+    concurrency:
+      group:
+        cashfolio-app2-deploy-${{ inputs.environment }}-${{ inputs.fly_app ||
+        'shared' }}
+      cancel-in-progress: false
     environment:
       name: ${{ inputs.app_environment_name || format('{0}-cashfolio-app', inputs.environment) }}
       url: ${{ inputs.app_environment_url || format('https://{0}/', inputs.canonical_hostname || vars.CANONICAL_HOSTNAME) }}
@@ -201,11 +206,44 @@ jobs:
           COINLAYER_API_KEY: ${{ secrets.COINLAYER_API_KEY }}
           MARKETSTACK_API_KEY: ${{ secrets.MARKETSTACK_API_KEY }}
           STAGING_REDIS_URL: ${{ secrets.STAGING_REDIS_URL }}
+      - name: Stage approved staging seed configuration
+        if:
+          ${{ inputs.environment == 'staging' && vars.STAGING_SEED_ENABLED ==
+          'true' }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${STAGING_SEED_DATABASE_URL:-}" ] || [ -z "${STAGING_SEED_TARGET:-}" ] || [ -z "${STAGING_SEED_USER_EXTERNAL_IDS:-}" ]; then
+            echo "Enabled staging seeding requires its dedicated database URL, approved target, and tester identities."
+            exit 1
+          fi
+
+          flyctl secrets set \
+            --app "$FLY_APP" \
+            --stage \
+            STAGING_SEED_DATABASE_URL="$STAGING_SEED_DATABASE_URL" \
+            STAGING_SEED_TARGET="$STAGING_SEED_TARGET" \
+            STAGING_SEED_USER_EXTERNAL_IDS="$STAGING_SEED_USER_EXTERNAL_IDS"
+        env:
+          FLY_APP: ${{ inputs.fly_app || vars.FLY_APP }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          STAGING_SEED_DATABASE_URL: ${{ secrets.STAGING_SEED_DATABASE_URL }}
+          STAGING_SEED_TARGET: ${{ vars.STAGING_SEED_TARGET }}
+          STAGING_SEED_USER_EXTERNAL_IDS:
+            ${{ vars.STAGING_SEED_USER_EXTERNAL_IDS }}
       - name: Deploy cashfolio-app2
         uses: ./.github/actions/deploy-cashfolio-app2
         with:
           image: ${{ inputs.cashfolio_app2_image || format('registry.fly.io/{0}:v{1}', vars.FLY_CASHFOLIO_APP_STAGING_APP, inputs.version_with_sha) }}
           high_availability: ${{ inputs.high_availability }}
+          app_environment: ${{ inputs.environment }}
+          staging_seed_enabled:
+            ${{ inputs.environment == 'staging' && vars.STAGING_SEED_ENABLED ||
+            'false' }}
+          release_command:
+            ${{ inputs.environment == 'staging' && 'sh
+            apps/cashfolio-app2/scripts/release-staging.sh' || 'sh
+            apps/cashfolio-app2/scripts/prisma-migrate-deploy-with-retry.sh' }}
           fly_app: ${{ inputs.fly_app || vars.FLY_APP }}
           canonical_hostname: ${{ inputs.canonical_hostname || vars.CANONICAL_HOSTNAME }}
           base_url: ${{ inputs.base_url || vars.BASE_URL }}

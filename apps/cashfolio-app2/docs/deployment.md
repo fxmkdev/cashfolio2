@@ -35,6 +35,25 @@ run from the same image before app Machines update. The Docker runtime image is
 still intentionally slim: it copies Nitro `.output` plus a minimal Prisma
 migration payload, not the full repository or workspace install.
 
+## Staging release seed
+
+Staging selects `scripts/release-staging.sh` as its Fly release command. With
+`STAGING_SEED_ENABLED=true`, it verifies the approved seed and migration targets
+read-only before applying migrations, then transactionally replaces staging
+application data. Seeding defaults to disabled until destination and credential
+isolation are verified. Production and preview use the original migration-only
+command and never receive the dedicated seed URL.
+
+`pnpm build:staging-seed` uses an independent Vite SSR configuration with
+bundled dependencies to produce `dist/staging-seed/seed.mjs` and its dynamic
+query compiler chunks. Docker builds this after Prisma generation and copies the
+entire output directory into the release payload; the seed does not need a
+workspace install in the runtime image. Keep generated chunks beside the entry
+point.
+
+See [Synthetic staging data](../../../docs/staging-database-refresh.md) for the
+approved target, staging-only role, tester access, and enablement procedure.
+
 ## Fly CLI version
 
 CI pins `flyctl` to `0.4.115` across build, deployment, database refresh, and
