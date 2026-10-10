@@ -1,3 +1,5 @@
+import type { Prisma } from "../../.prisma-client/client";
+import { withAccountBookMutation } from "../account-book-mutation.server";
 import { createServerFn } from "@tanstack/react-start";
 import {
   validateCreateTransactionInput,
@@ -22,10 +24,14 @@ import {
 
 async function runTransactionMutation<T>(
   accountBookId: string,
-  operation: () => Promise<TransactionMutationOperationResult<T>>,
+  operation: (
+    tx: Prisma.TransactionClient,
+  ) => Promise<TransactionMutationOperationResult<T>>,
 ): Promise<T> {
   await ensureAuthorizedAccountBookMutation(accountBookId);
-  const result = await withDatabaseConflictRetry(operation);
+  const result = await withDatabaseConflictRetry(() =>
+    withAccountBookMutation(accountBookId, operation),
+  );
   if (result.invalidatePeriodCache) {
     await invalidatePeriodBaseDataCacheForAccountBook(accountBookId);
   }
@@ -35,47 +41,47 @@ async function runTransactionMutation<T>(
 export const updateTransaction = createServerFn({ method: "POST" })
   .validator(validateUpdateTransactionInput)
   .handler(async ({ data }) =>
-    runTransactionMutation(data.accountBookId, () =>
-      updateTransactionOperation(data),
+    runTransactionMutation(data.accountBookId, (tx) =>
+      updateTransactionOperation(data, tx),
     ),
   );
 
 export const createTransaction = createServerFn({ method: "POST" })
   .validator(validateCreateTransactionInput)
   .handler(async ({ data }) =>
-    runTransactionMutation(data.accountBookId, () =>
-      createTransactionOperation(data),
+    runTransactionMutation(data.accountBookId, (tx) =>
+      createTransactionOperation(data, tx),
     ),
   );
 
 export const createTransactions = createServerFn({ method: "POST" })
   .validator(validateCreateTransactionsInput)
   .handler(async ({ data }) =>
-    runTransactionMutation(data.accountBookId, () =>
-      createTransactionsOperation(data),
+    runTransactionMutation(data.accountBookId, (tx) =>
+      createTransactionsOperation(data, tx),
     ),
   );
 
 export const createSimpleTransaction = createServerFn({ method: "POST" })
   .validator(validateCreateSimpleTransactionInput)
   .handler(async ({ data }) =>
-    runTransactionMutation(data.accountBookId, () =>
-      createSimpleTransactionOperation(data),
+    runTransactionMutation(data.accountBookId, (tx) =>
+      createSimpleTransactionOperation(data, tx),
     ),
   );
 
 export const rebookBooking = createServerFn({ method: "POST" })
   .validator(validateRebookBookingInput)
   .handler(async ({ data }) =>
-    runTransactionMutation(data.accountBookId, () =>
-      rebookBookingOperation(data),
+    runTransactionMutation(data.accountBookId, (tx) =>
+      rebookBookingOperation(data, tx),
     ),
   );
 
 export const deleteTransaction = createServerFn({ method: "POST" })
   .validator(validateDeleteTransactionInput)
   .handler(async ({ data }) =>
-    runTransactionMutation(data.accountBookId, () =>
-      deleteTransactionOperation(data),
+    runTransactionMutation(data.accountBookId, (tx) =>
+      deleteTransactionOperation(data, tx),
     ),
   );

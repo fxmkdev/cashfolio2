@@ -21,9 +21,11 @@ const mocks = vi.hoisted(() => {
   const ensureSameOriginRequestFromServerContext = vi.fn();
   const invalidatePeriodBaseDataCacheForAccountBook = vi.fn();
   const tx = {
+    $queryRaw: vi.fn(),
     accountBook: {
       findUniqueOrThrow: vi.fn(),
       update: vi.fn(),
+      delete: vi.fn(),
     },
     booking: {
       findFirst: vi.fn(),
@@ -36,7 +38,6 @@ const mocks = vi.hoisted(() => {
   const prisma = {
     accountBook: {
       findUniqueOrThrow: vi.fn(),
-      delete: vi.fn(),
     },
     $transaction: vi.fn(),
   };
@@ -92,6 +93,7 @@ export const {
 
 export function resetAccountBookSettingsMocks() {
   vi.clearAllMocks();
+  tx.$queryRaw.mockResolvedValue([{ id: "book-1" }]);
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-01-10T12:00:00.000Z"));
 
@@ -101,7 +103,7 @@ export function resetAccountBookSettingsMocks() {
     referenceCurrency: "chf",
     startDate: new Date("2026-01-03T12:30:00.000Z"),
   });
-  prisma.accountBook.delete.mockResolvedValue({
+  tx.accountBook.delete.mockResolvedValue({
     id: "book-1",
   });
 
@@ -109,6 +111,7 @@ export function resetAccountBookSettingsMocks() {
 
   tx.accountBook.findUniqueOrThrow.mockResolvedValue({
     id: "book-1",
+    name: "My Book",
     referenceCurrency: "CHF",
     startDate: new Date("2026-01-03T00:00:00.000Z"),
   });

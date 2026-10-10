@@ -5,7 +5,7 @@ import {
   deleteAccountBook,
   ensureAuthorizedForAccountBookId,
   ensureSameOriginRequestFromServerContext,
-  prisma,
+  tx,
   resetAccountBookSettingsMocks,
   restoreAccountBookSettingsMocks,
 } from "./account-book-settings-test-setup";
@@ -29,11 +29,11 @@ describe("deleteAccountBook", () => {
 
     expect(ensureSameOriginRequestFromServerContext).toHaveBeenCalledTimes(1);
     expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-1");
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
+    expect(tx.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
       where: { id: "book-1" },
       select: { name: true },
     });
-    expect(prisma.accountBook.delete).toHaveBeenCalledWith({
+    expect(tx.accountBook.delete).toHaveBeenCalledWith({
       where: { id: "book-1" },
     });
   });
@@ -46,11 +46,11 @@ describe("deleteAccountBook", () => {
       },
     });
 
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
+    expect(tx.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
       where: { id: "book-1" },
       select: { name: true },
     });
-    expect(prisma.accountBook.delete).toHaveBeenCalledWith({
+    expect(tx.accountBook.delete).toHaveBeenCalledWith({
       where: { id: "book-1" },
     });
   });
@@ -65,7 +65,7 @@ describe("deleteAccountBook", () => {
       }),
     ).rejects.toThrow("Account book name confirmation is required.");
 
-    expect(prisma.accountBook.delete).not.toHaveBeenCalled();
+    expect(tx.accountBook.delete).not.toHaveBeenCalled();
   });
 
   it("rejects mismatched account book delete confirmation", async () => {
@@ -78,7 +78,7 @@ describe("deleteAccountBook", () => {
       }),
     ).rejects.toThrow("Account book name confirmation does not match.");
 
-    expect(prisma.accountBook.delete).not.toHaveBeenCalled();
+    expect(tx.accountBook.delete).not.toHaveBeenCalled();
   });
   it("retries only the database delete after a conflict", async () => {
     prisma.accountBook.delete.mockRejectedValueOnce(

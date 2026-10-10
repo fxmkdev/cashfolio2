@@ -13,6 +13,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --check .",
+    "test:mutations": "pnpm prisma:generate && vitest run --config vitest.mutations.config.ts",
     "pretest:unit": "pnpm prisma:generate",
     "test:unit": "vitest run --config vitest.unit.config.ts",
     "pretest:unit:coverage": "pnpm prisma:generate",
