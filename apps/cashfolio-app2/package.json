@@ -28,7 +28,11 @@
     "e2e:install": "playwright install chromium",
     "e2e": "E2E_TEST_MODE=${E2E_TEST_MODE:-true} DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@127.0.0.1:5433/postgres?schema=public} BASE_URL=${BASE_URL:-http://127.0.0.1:4173} E2E_AUTH_BYPASS=${E2E_AUTH_BYPASS:-true} E2E_AUTH_EXTERNAL_ID=${E2E_AUTH_EXTERNAL_ID:-e2e-user} sh -c 'pnpm prisma:generate && pnpm exec prisma migrate deploy && playwright test'",
     "e2e:ci": "E2E_TEST_MODE=${E2E_TEST_MODE:-true} sh -c 'pnpm prisma:generate && playwright test ${E2E_SHARD:+--shard=$E2E_SHARD}'",
-    "test-storybook:coverage": "vitest run --project storybook --coverage"
+    "test-storybook:coverage": "vitest run --project storybook --coverage",
+    "build:staging-seed": "vite build --config vite.staging-seed.config.ts",
+    "seed:staging": "node dist/staging-seed/seed.mjs",
+    "test:staging-seed": "pnpm prisma:generate && vitest run --config vitest.staging-seed.config.ts",
+    "test:staging-release": "node --test scripts/release-staging.test.mjs"
   },
   "dependencies": {
     "@logto/node": "^4.0.0",

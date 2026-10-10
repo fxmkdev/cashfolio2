@@ -54,6 +54,11 @@ jobs:
     name: "cashfolio-app2: Deploy"
     runs-on: ubuntu-latest
     if: ${{ inputs.deploy-cashfolio-app2 }}
+    concurrency:
+      group:
+        cashfolio-app2-deploy-${{ inputs.environment }}-${{ inputs.fly_app ||
+        'shared' }}
+      cancel-in-progress: false
     environment:
       name: ${{ inputs.app_environment_name || format('{0}-cashfolio-app', inputs.environment) }}
       url: ${{ inputs.app_environment_url || format('https://{0}/', inputs.canonical_hostname || vars.CANONICAL_HOSTNAME) }}
@@ -206,6 +211,14 @@ jobs:
         with:
           image: ${{ inputs.cashfolio_app2_image || format('registry.fly.io/{0}:v{1}', vars.FLY_CASHFOLIO_APP_STAGING_APP, inputs.version_with_sha) }}
           high_availability: ${{ inputs.high_availability }}
+          app_environment: ${{ inputs.environment }}
+          staging_seed_enabled:
+            ${{ inputs.environment == 'staging' && vars.STAGING_SEED_ENABLED ||
+            'false' }}
+          release_command:
+            ${{ inputs.environment == 'staging' && 'sh
+            apps/cashfolio-app2/scripts/release-staging.sh' || 'sh
+            apps/cashfolio-app2/scripts/prisma-migrate-deploy-with-retry.sh' }}
           fly_app: ${{ inputs.fly_app || vars.FLY_APP }}
           canonical_hostname: ${{ inputs.canonical_hostname || vars.CANONICAL_HOSTNAME }}
           base_url: ${{ inputs.base_url || vars.BASE_URL }}

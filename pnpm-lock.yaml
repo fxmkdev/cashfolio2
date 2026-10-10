@@ -377,9 +377,6 @@ importers:
       dotenv:
         specifier: ^18.0.6
         version: 18.0.6
-      pg:
-        specifier: ^8.23.1
-        version: 8.23.1
       redis:
         specifier: ^6.3.0
         version: 6.3.0
@@ -387,9 +384,6 @@ importers:
       '@types/node':
         specifier: ^24.19.1
         version: 24.19.1
-      '@types/pg':
-        specifier: ^8.23.1
-        version: 8.23.1
       '@typescript/native':
         specifier: npm:typescript@^7.0.2
         version: typescript@7.0.2

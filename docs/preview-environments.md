@@ -10,7 +10,8 @@ On pull requests (non-forks), CI now:
 1. Builds and pushes the `cashfolio-app2` image
 2. Creates or reuses a Neon branch named
    `pr-<PR_NUMBER>-<BRANCH_TAIL_SLUG>-cashfolio-app2` from staging using
-   `neondatabase/create-branch-action`
+   `neondatabase/create-branch-action` (new branches inherit the synthetic
+   dataset from enabled staging seeding)
 3. Runs the shared Neon branch post-provision hook when the Neon branch was
    newly created
 4. Creates or reuses a Fly app named
@@ -43,6 +44,12 @@ truncates it and appends `-<6-char-sha1>` for stable uniqueness.
 reserved app-name terms before applying the same truncation rule. For example,
 `github` becomes `gh` so branch names such as `fix-github-actions` do not
 produce Fly app names that are rejected for phishing prevention.
+
+Staging replaces its synthetic application data on each enabled deployment and
+at the daily refresh. Preview releases only run migrations and never receive the
+staging seed connection secret. Existing previews retain their previously copied
+data rather than refreshing automatically. See
+[Synthetic staging data](staging-database-refresh.md) for setup and lifecycle.
 
 Redis cache note:
 

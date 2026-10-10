@@ -19,9 +19,11 @@ primary_region = '$FLY_PRIMARY_REGION'
   cpus = $FLY_CPUS
 
 [deploy]
-  release_command = "sh apps/cashfolio-app2/scripts/prisma-migrate-deploy-with-retry.sh"
+  release_command = '$RELEASE_COMMAND'
 
 [env]
+  APP_ENVIRONMENT = '$APP_ENVIRONMENT'
+  STAGING_SEED_ENABLED = '$STAGING_SEED_ENABLED'
   CANONICAL_HOSTNAME = '$CANONICAL_HOSTNAME'
   BASE_URL = '$BASE_URL'
   PERIOD_BASE_CACHE_ENV = '$FLY_APP'

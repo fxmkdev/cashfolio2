@@ -116,34 +116,6 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-  refresh-staging-db:
-    name: Refresh staging Neon branch
-    runs-on: ubuntu-latest
-    if: ${{ needs.schedule-guard.outputs.should_run == 'true' }}
-    needs:
-      - schedule-guard
-    environment:
-      name: staging-cashfolio-app
-      url: https://${{ vars.CANONICAL_HOSTNAME }}/
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-      - name: Reset Neon staging branch from production
-        id: reset-neon
-        uses: neondatabase/reset-branch-action@v1
-        with:
-          project_id: ${{ vars.NEON_STAGING_PROJECT_ID }}
-          branch: ${{ vars.NEON_STAGING_BRANCH_ID }}
-          parent: true
-          api_key: ${{ secrets.NEON_API_KEY }}
-          cs_database: ${{ vars.NEON_DATABASE_NAME || 'neondb' }}
-          cs_role_name: ${{ vars.NEON_ROLE_NAME || 'neondb_owner' }}
-          cs_prisma: true
-      - name: Run Neon branch post-provision hook
-        run: sh apps/cashfolio-app2/scripts/neon-branch-post-provision.sh
-        env:
-          DATABASE_URL: ${{ steps.reset-neon.outputs.db_url }}
-
   deploy-staging:
     name: Deploy staging
     if: ${{ needs.schedule-guard.outputs.should_run == 'true' }}
@@ -151,7 +123,6 @@ jobs:
       - schedule-guard
       - version
       - cashfolio-app2-build-push
-      - refresh-staging-db
     uses: ./.github/workflows/deploy-version.yml
     with:
       version_with_sha: ${{ needs.version.outputs.version_with_sha }}
