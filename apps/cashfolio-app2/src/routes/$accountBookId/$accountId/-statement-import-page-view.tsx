@@ -185,6 +185,7 @@ export function AccountStatementImportPageView({
                     isStatementImportReviewDraftRow(data),
                   enableClickSelection: false,
                 }}
+                selectionColumnDef={{ pinned: "left" }}
                 onCellValueChanged={state.handleDraftCellChange}
                 onSelectionChanged={state.handleSelectionChange}
                 onRowDataUpdated={state.handleReviewRowsUpdated}

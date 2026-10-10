@@ -502,6 +502,10 @@ compatibility but ignored by the importer.
   account unit and the opposite `amount`.
 - Drafts are reviewed in a separate grid on the import page, not directly in the
   ledger grid.
+- The review grid freezes Checkbox, Status, Date, and Amount on the left and
+  Balance on the right, immediately before the edit action, during horizontal
+  scrolling. AG Grid automatically unpins columns when the viewport is too
+  narrow to accommodate the frozen columns.
 - The review grid shows a hypothetical account balance in the imported account's
   unit. It starts from the account's persisted all-time balance, preserves CSV
   row order, sums from the last imported row up to the first, and ignores rows
