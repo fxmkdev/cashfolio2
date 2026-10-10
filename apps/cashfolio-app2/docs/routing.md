@@ -108,6 +108,13 @@ Related docs:
     scope's value. Gain/Loss scopes use the Period Gains/Loss hierarchy: unit
     type, unit, then asset/liability account; Explicit G/L drills only to the
     counterpart asset/liability account.
+  - When an account scope is selected, double-click a period bar or an
+    Assets/Liabilities balance point to open its ledger with that exact month or
+    year. Gain/Loss unit-account scopes open period reconciliation (including
+    supported virtual transfer-clearing accounts); Explicit G/L account scopes
+    open the book's Gain/Loss equity ledger. Totals, groups, units, cumulative
+    and rolling-average overlays, and the synthetic opening-balance point do not
+    open an account. A hint appears when a destination is available.
   - Cumulative line rebases to the currently visible range for flow metrics so
     navigator/range-button/zoom interactions update the running baseline.
   - Loader fetches only the currently selected granularity (`mode` search
@@ -182,6 +189,10 @@ Related docs:
   - `transactionId?: string` to auto-scroll and highlight a booking row
   - `period?: string` for explicit month/year period filtering on supported
     account types (asset, liability, and non-opening-balance equity)
+    - Valid explicit periods clamp to account-book date bounds, preserving empty
+      periods before an asset/liability account's first booking. The picker
+      still starts at that first booking: Previous is disabled for earlier
+      periods and Next advances to the first selectable period.
 - `$accountBookId/transactions/route.tsx` uses:
   - `transactionId?: string` to auto-scroll and highlight all visible booking
     rows for a transaction

@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect } from "react";
 import { createDocumentTitleHead } from "@/shared/document-title";
 import { loadHistoryPageData } from "./-page-loader";
+import { buildHistoryAccountDrillNavigation } from "./-account-drilldown";
 import { buildHistorySearchNavigation } from "./-page-navigation";
 import {
   getHistoryMetric,
@@ -109,7 +110,7 @@ function HistoryPage() {
     search,
     metric: "liabilities",
   });
-  const { history } = Route.useLoaderData();
+  const { history, gainLossEquityAccountId } = Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/history" });
 
   useEffect(() => {
@@ -161,6 +162,15 @@ function HistoryPage() {
         selectedMode={selectedMode}
         selectedMetric={selectedMetric}
         history={history}
+        gainLossEquityAccountId={gainLossEquityAccountId}
+        onAccountPeriodDoubleClick={(target, periodValue) => {
+          const navigation = buildHistoryAccountDrillNavigation({
+            accountBookId,
+            target,
+            periodValue,
+          });
+          if (navigation) void navigate(navigation);
+        }}
         onModeChange={(mode) =>
           navigate(
             buildHistorySearchNavigation({

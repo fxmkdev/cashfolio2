@@ -17,6 +17,7 @@ import {
   getHistoryRangeButtons,
   getHistoryRangeControlStyles,
 } from "./-range-controls";
+import { parseExplicitPeriodSelection } from "@/shared/period";
 import { DEFAULT_USER_LOCALE } from "@/user-locale";
 
 export {
@@ -53,6 +54,7 @@ export function createHistoryChartOptions(args: {
   colors: DashboardChartThemeColors;
   theme: MantineTheme;
   isDarkMode: boolean;
+  onPeriodDoubleClick?: (periodValue: string) => void;
   onZoom?: (event: AgZoomEvent) => void;
   onSeriesVisibilityChange?: (event: AgSeriesVisibilityChange) => void;
 }): AgCartesianChartOptions {
@@ -99,6 +101,16 @@ export function createHistoryChartOptions(args: {
     args.periodMode === "year"
       ? { unit: "year" as const, utc: true }
       : { unit: "month" as const, utc: true };
+
+  const periodListeners = args.onPeriodDoubleClick
+    ? {
+        seriesNodeDoubleClick: ({ datum }: { datum: unknown }) => {
+          const point = datum as HistoryChartDatum;
+          if (parseExplicitPeriodSelection(point.periodValue))
+            args.onPeriodDoubleClick?.(point.periodValue);
+        },
+      }
+    : undefined;
 
   const series = isAreaHistoryMetric(selectedMetricKey)
     ? selectedMetricKey === "netWorth"
@@ -162,6 +174,7 @@ export function createHistoryChartOptions(args: {
             type: "area" as const,
             xKey: "periodMetricDate",
             yKey: selectedMetricKey,
+            listeners: periodListeners,
             yName: selectedMetricLabel,
             stroke:
               selectedMetricKey === "assets"
@@ -173,7 +186,8 @@ export function createHistoryChartOptions(args: {
                 : negativeFillColor,
             fillOpacity: 0.4,
             marker: {
-              enabled: false,
+              enabled: !!args.onPeriodDoubleClick,
+              size: 5,
             },
             tooltip: {
               renderer: ({ datum }: { datum: unknown }) => {
@@ -200,6 +214,7 @@ export function createHistoryChartOptions(args: {
           yKey: selectedMetricKey as BarHistoryMetric,
           yName: flowSeriesLabel,
           widthRatio: 0.72,
+          listeners: periodListeners,
           itemStyler: ({ datum }: { datum: unknown }) => {
             if (args.selectedMetric === "expenses") {
               return {
