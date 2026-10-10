@@ -158,7 +158,7 @@ export const getCurrentUserCanAccessAdmin = createServerFn({
 });
 
 export const updateAdminUserRoles = createServerFn({ method: "POST" })
-  .inputValidator(validateUpdateAdminUserRolesInput)
+  .validator(validateUpdateAdminUserRolesInput)
   .handler(async ({ data }): Promise<AdminUserListItem> => {
     ensureSameOriginRequestFromServerContext();
     const currentAdmin = await ensureUserHasRole(UserRole.ADMIN);
@@ -208,7 +208,7 @@ export const updateAdminUserRoles = createServerFn({ method: "POST" })
   });
 
 export const deleteAdminUser = createServerFn({ method: "POST" })
-  .inputValidator(validateDeleteAdminUserInput)
+  .validator(validateDeleteAdminUserInput)
   .handler(async ({ data }): Promise<void> => {
     ensureSameOriginRequestFromServerContext();
     const currentAdmin = await ensureUserHasRole(UserRole.ADMIN);

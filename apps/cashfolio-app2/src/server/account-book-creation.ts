@@ -39,7 +39,7 @@ function toCreatedAccountBook(record: AccountBookRecord): CreatedAccountBook {
 }
 
 export const createAccountBook = createServerFn({ method: "POST" })
-  .inputValidator((data: CreateAccountBookInput) => data)
+  .validator((data: CreateAccountBookInput) => data)
   .handler(async ({ data }): Promise<CreatedAccountBook> => {
     ensureSameOriginRequestFromServerContext();
 

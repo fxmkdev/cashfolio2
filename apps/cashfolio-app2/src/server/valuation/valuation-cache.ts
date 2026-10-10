@@ -264,7 +264,7 @@ async function scanValuationCacheUnitKeys(
 }
 
 export const getValuationCacheUnits = createServerFn({ method: "GET" })
-  .inputValidator(validateGetValuationCacheUnitsInput)
+  .validator(validateGetValuationCacheUnitsInput)
   .handler(async () => {
     await ensureUser();
 
@@ -300,7 +300,7 @@ export const getValuationCacheUnits = createServerFn({ method: "GET" })
   });
 
 export const getValuationCacheSeries = createServerFn({ method: "GET" })
-  .inputValidator(validateGetValuationCacheSeriesInput)
+  .validator(validateGetValuationCacheSeriesInput)
   .handler(async ({ data }) => {
     await ensureUser();
 

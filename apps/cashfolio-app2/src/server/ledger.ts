@@ -30,7 +30,7 @@ const LEDGER_REFERENCE_CONVERSION_CONCURRENCY = 12;
 export { deriveLedgerPresentationData } from "./ledger-derivation";
 
 export const getAccountForLedger = createServerFn({ method: "GET" })
-  .inputValidator((data: { accountId: string; accountBookId: string }) => data)
+  .validator((data: { accountId: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const account = await prisma.account.findUniqueOrThrow({
@@ -75,7 +75,7 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
 export const getLedgerAccountPersistedBalance = createServerFn({
   method: "GET",
 })
-  .inputValidator((data: { accountId: string; accountBookId: string }) => data)
+  .validator((data: { accountId: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const currentBalanceEndExclusive = addUtcDays(startOfUtcDay(new Date()), 1);
@@ -92,7 +92,7 @@ export const getLedgerAccountPersistedBalance = createServerFn({
   });
 
 export const getLedgerData = createServerFn({ method: "GET" })
-  .inputValidator(
+  .validator(
     (data: {
       accountId: string;
       accountBookId: string;
@@ -335,7 +335,7 @@ export const getLedgerData = createServerFn({ method: "GET" })
   });
 
 export const getLedgerPeriodBounds = createServerFn({ method: "GET" })
-  .inputValidator((data: { accountBookId: string; accountId?: string }) => ({
+  .validator((data: { accountBookId: string; accountId?: string }) => ({
     accountBookId: data.accountBookId,
     accountId: typeof data.accountId === "string" ? data.accountId : undefined,
   }))

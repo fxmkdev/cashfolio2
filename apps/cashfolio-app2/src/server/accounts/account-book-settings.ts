@@ -231,7 +231,7 @@ async function migrateOpeningTransactionsToDate(
 }
 
 export const getAccountBookSettings = createServerFn({ method: "GET" })
-  .inputValidator(validateAccountBookSettingsInput)
+  .validator(validateAccountBookSettingsInput)
   .handler(async ({ data }): Promise<AccountBookSettings> => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
@@ -249,7 +249,7 @@ export const getAccountBookSettings = createServerFn({ method: "GET" })
   });
 
 export const updateAccountBookSettings = createServerFn({ method: "POST" })
-  .inputValidator(validateUpdateAccountBookSettingsInput)
+  .validator(validateUpdateAccountBookSettingsInput)
   .handler(async ({ data }): Promise<AccountBookSettings> => {
     await ensureAuthorizedAccountBookMutation(data.accountBookId);
 
@@ -321,7 +321,7 @@ export const updateAccountBookSettings = createServerFn({ method: "POST" })
   });
 
 export const deleteAccountBook = createServerFn({ method: "POST" })
-  .inputValidator((data: DeleteAccountBookInput) => data)
+  .validator((data: DeleteAccountBookInput) => data)
   .handler(async ({ data }): Promise<void> => {
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);

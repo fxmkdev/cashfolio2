@@ -119,19 +119,19 @@ async function runAccountMutation<T>(
 }
 
 export const createAccount = createServerFn({ method: "POST" })
-  .inputValidator(validateAccountMutationInput)
+  .validator(validateAccountMutationInput)
   .handler(async ({ data }) =>
     runAccountMutation(data.accountBookId, () => createAccountOperation(data)),
   );
 
 export const updateAccount = createServerFn({ method: "POST" })
-  .inputValidator(validateAccountUpdateInput)
+  .validator(validateAccountUpdateInput)
   .handler(async ({ data }) =>
     runAccountMutation(data.accountBookId, () => updateAccountOperation(data)),
   );
 
 export const createAccountGroup = createServerFn({ method: "POST" })
-  .inputValidator(validateAccountGroupMutationInput)
+  .validator(validateAccountGroupMutationInput)
   .handler(async ({ data }) =>
     runAccountMutation(data.accountBookId, () =>
       createAccountGroupOperation(data),
@@ -139,7 +139,7 @@ export const createAccountGroup = createServerFn({ method: "POST" })
   );
 
 export const updateAccountGroup = createServerFn({ method: "POST" })
-  .inputValidator(validateAccountGroupUpdateInput)
+  .validator(validateAccountGroupUpdateInput)
   .handler(async ({ data }) =>
     runAccountMutation(data.accountBookId, () =>
       updateAccountGroupOperation(data),
@@ -147,13 +147,13 @@ export const updateAccountGroup = createServerFn({ method: "POST" })
   );
 
 export const deleteAccount = createServerFn({ method: "POST" })
-  .inputValidator(validateAccountBookNodeIdInput)
+  .validator(validateAccountBookNodeIdInput)
   .handler(async ({ data }) =>
     runAccountMutation(data.accountBookId, () => deleteAccountOperation(data)),
   );
 
 export const deleteAccountGroup = createServerFn({ method: "POST" })
-  .inputValidator(validateAccountBookNodeIdInput)
+  .validator(validateAccountBookNodeIdInput)
   .handler(async ({ data }) =>
     runAccountMutation(data.accountBookId, () =>
       deleteAccountGroupOperation(data),
@@ -161,13 +161,13 @@ export const deleteAccountGroup = createServerFn({ method: "POST" })
   );
 
 export const archiveAccount = createServerFn({ method: "POST" })
-  .inputValidator(validateAccountBookNodeIdInput)
+  .validator(validateAccountBookNodeIdInput)
   .handler(async ({ data }) =>
     runAccountMutation(data.accountBookId, () => archiveAccountOperation(data)),
   );
 
 export const archiveAccountGroup = createServerFn({ method: "POST" })
-  .inputValidator(validateAccountBookNodeIdInput)
+  .validator(validateAccountBookNodeIdInput)
   .handler(async ({ data }) =>
     runAccountMutation(data.accountBookId, () =>
       archiveAccountGroupOperation(data),
@@ -175,7 +175,7 @@ export const archiveAccountGroup = createServerFn({ method: "POST" })
   );
 
 export const unarchiveAccount = createServerFn({ method: "POST" })
-  .inputValidator(validateAccountBookNodeIdInput)
+  .validator(validateAccountBookNodeIdInput)
   .handler(async ({ data }) =>
     runAccountMutation(data.accountBookId, () =>
       unarchiveAccountOperation(data),
@@ -183,7 +183,7 @@ export const unarchiveAccount = createServerFn({ method: "POST" })
   );
 
 export const unarchiveAccountGroup = createServerFn({ method: "POST" })
-  .inputValidator(validateAccountBookNodeIdInput)
+  .validator(validateAccountBookNodeIdInput)
   .handler(async ({ data }) =>
     runAccountMutation(data.accountBookId, () =>
       unarchiveAccountGroupOperation(data),
@@ -191,7 +191,7 @@ export const unarchiveAccountGroup = createServerFn({ method: "POST" })
   );
 
 export const reorderAccountTreeItems = createServerFn({ method: "POST" })
-  .inputValidator(validateReorderAccountTreeItemsInput)
+  .validator(validateReorderAccountTreeItemsInput)
   .handler(async ({ data }) =>
     runAccountMutation(data.accountBookId, () =>
       reorderAccountTreeItemsOperation(data),

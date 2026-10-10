@@ -116,7 +116,7 @@ async function runTransactionMutation<T>(
 }
 
 export const updateTransaction = createServerFn({ method: "POST" })
-  .inputValidator(validateUpdateTransactionInput)
+  .validator(validateUpdateTransactionInput)
   .handler(async ({ data }) =>
     runTransactionMutation(data.accountBookId, () =>
       updateTransactionOperation(data),
@@ -124,7 +124,7 @@ export const updateTransaction = createServerFn({ method: "POST" })
   );
 
 export const createTransaction = createServerFn({ method: "POST" })
-  .inputValidator(validateCreateTransactionInput)
+  .validator(validateCreateTransactionInput)
   .handler(async ({ data }) =>
     runTransactionMutation(data.accountBookId, () =>
       createTransactionOperation(data),
@@ -132,7 +132,7 @@ export const createTransaction = createServerFn({ method: "POST" })
   );
 
 export const createTransactions = createServerFn({ method: "POST" })
-  .inputValidator(validateCreateTransactionsInput)
+  .validator(validateCreateTransactionsInput)
   .handler(async ({ data }) =>
     runTransactionMutation(data.accountBookId, () =>
       createTransactionsOperation(data),
@@ -140,7 +140,7 @@ export const createTransactions = createServerFn({ method: "POST" })
   );
 
 export const createSimpleTransaction = createServerFn({ method: "POST" })
-  .inputValidator(validateCreateSimpleTransactionInput)
+  .validator(validateCreateSimpleTransactionInput)
   .handler(async ({ data }) =>
     runTransactionMutation(data.accountBookId, () =>
       createSimpleTransactionOperation(data),
@@ -148,7 +148,7 @@ export const createSimpleTransaction = createServerFn({ method: "POST" })
   );
 
 export const rebookBooking = createServerFn({ method: "POST" })
-  .inputValidator(validateRebookBookingInput)
+  .validator(validateRebookBookingInput)
   .handler(async ({ data }) =>
     runTransactionMutation(data.accountBookId, () =>
       rebookBookingOperation(data),
@@ -156,7 +156,7 @@ export const rebookBooking = createServerFn({ method: "POST" })
   );
 
 export const deleteTransaction = createServerFn({ method: "POST" })
-  .inputValidator(validateDeleteTransactionInput)
+  .validator(validateDeleteTransactionInput)
   .handler(async ({ data }) =>
     runTransactionMutation(data.accountBookId, () =>
       deleteTransactionOperation(data),

@@ -16,7 +16,7 @@ import { deriveTransactionsRows } from "./transactions-data-derivation";
 const TRANSACTIONS_REFERENCE_CONVERSION_CONCURRENCY = 12;
 
 export const getTransactionsData = createServerFn({ method: "GET" })
-  .inputValidator((data: { accountBookId: string; period?: unknown }) => ({
+  .validator((data: { accountBookId: string; period?: unknown }) => ({
     accountBookId: data.accountBookId,
     period:
       parseExplicitTransactionsPeriodSelection(data.period) ??

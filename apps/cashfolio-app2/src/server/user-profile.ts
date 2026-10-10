@@ -285,7 +285,7 @@ export const getAuthenticatedUserSettings = createServerFn({
 export const updateAuthenticatedUserSettings = createServerFn({
   method: "POST",
 })
-  .inputValidator(normalizeUserSettingsInput)
+  .validator(normalizeUserSettingsInput)
   .handler(async ({ data }): Promise<AuthenticatedUserSettings> => {
     ensureSameOriginRequestFromServerContext();
     const user = await ensureUser();

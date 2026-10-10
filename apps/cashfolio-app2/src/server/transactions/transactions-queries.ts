@@ -5,9 +5,7 @@ import { ensureAuthorizedForAccountBookId } from "../../account-books/functions.
 import { toMoneyNumber } from "../../shared/money";
 
 export const getTransaction = createServerFn({ method: "GET" })
-  .inputValidator(
-    (data: { transactionId: string; accountBookId: string }) => data,
-  )
+  .validator((data: { transactionId: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     const transaction = await prisma.transaction.findUniqueOrThrow({

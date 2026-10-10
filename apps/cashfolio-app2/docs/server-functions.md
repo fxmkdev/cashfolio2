@@ -15,7 +15,7 @@ Related docs:
 - Domain implementation modules live under `src/server/<domain>/`, currently
   `accounts/`, `period/`, `transactions/`, and `valuation/`.
 - They are created with `createServerFn` from `@tanstack/react-start`
-- Canonical pattern: `createServerFn({ method })` -> `.inputValidator()` ->
+- Canonical pattern: `createServerFn({ method })` -> `.validator()` ->
   `.handler()`
 - Server-only modules may use `.server.ts` suffix where helpful (for example,
   auth/session integration files), especially for Prisma/Redis/provider or

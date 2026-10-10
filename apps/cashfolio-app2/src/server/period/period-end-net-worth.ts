@@ -5,7 +5,7 @@ import { type PeriodEndNetWorthResult } from "./period-end-net-worth.types";
 export const getPeriodEndNetWorth = createServerFn({
   method: "GET",
 })
-  .inputValidator((data: { accountBookId: string; period?: unknown }) => ({
+  .validator((data: { accountBookId: string; period?: unknown }) => ({
     accountBookId: data.accountBookId,
     period: normalizePeriodValue(data.period),
   }))

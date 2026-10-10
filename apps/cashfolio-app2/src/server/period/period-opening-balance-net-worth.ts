@@ -5,7 +5,7 @@ import { type OpeningBalanceNetWorthResult } from "./period-opening-balance-net-
 export const getOpeningBalanceNetWorthForPeriod = createServerFn({
   method: "GET",
 })
-  .inputValidator((data: { accountBookId: string; period?: unknown }) => ({
+  .validator((data: { accountBookId: string; period?: unknown }) => ({
     accountBookId: data.accountBookId,
     period: normalizePeriodValue(data.period),
   }))
