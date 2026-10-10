@@ -90,10 +90,11 @@ model UserAccountBookLink {
 }
 
 model AccountBook {
-  id                String @default(cuid())
-  name              String
-  referenceCurrency String
-  startDate         DateTime
+  id                  String   @default(cuid())
+  name                String
+  referenceCurrency   String
+  startDate           DateTime
+  periodCacheRevision String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   groups       AccountGroup[]
   accounts     Account[]

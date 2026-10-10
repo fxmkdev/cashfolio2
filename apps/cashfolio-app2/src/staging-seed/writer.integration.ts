@@ -386,7 +386,7 @@ describe("staging seed against disposable PostgreSQL", () => {
     }
   });
 
-  it("retries a deadlocked reset when an earlier edit holds Booking before updating Transaction", async () => {
+  it("retries a deadlocked reset when an earlier writer locks Booking before mutating", async () => {
     await replaceStagingData(seed, config, dataset);
     const editedTransaction = await fixture.transaction.findFirstOrThrow({
       where: { description: "Coop groceries" },
@@ -407,11 +407,23 @@ describe("staging seed against disposable PostgreSQL", () => {
         // Let the seed's default 1s detector find the cycle first, so the seed is
         // the victim. This test connection uses the local fixture's admin role.
         await tx.$executeRawUnsafe("SET LOCAL deadlock_timeout = '10s'");
+        // A completed booking write now advances the AccountBook revision and
+        // would block reset at its first table lock, avoiding this cycle. Hold
+        // the booking locks before writing to keep exercising the retry path.
+        await tx.$executeRawUnsafe(
+          'LOCK TABLE "Booking" IN ROW EXCLUSIVE MODE',
+        );
+        await tx.$queryRaw`
+          SELECT "id" FROM "Booking"
+          WHERE "transactionId" = ${editedTransaction.id}
+            AND "accountBookId" = ${editedTransaction.accountBookId}
+          FOR UPDATE
+        `;
+        notifyBookingLocked();
+        await waitForEdit;
         await tx.booking.deleteMany({
           where: { transactionId: editedTransaction.id },
         });
-        notifyBookingLocked();
-        await waitForEdit;
         return tx.transaction.update({
           where: {
             id_accountBookId: {

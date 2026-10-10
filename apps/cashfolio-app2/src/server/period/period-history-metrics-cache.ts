@@ -126,10 +126,17 @@ export async function getOrLoadPeriodHistoryPointMetrics(args: {
 
   const cacheEnv = getPeriodCacheEnvOrThrowWhenRedisAvailable();
   const generation = await getPeriodCacheGeneration({
-    cacheEnv,
     accountBookId: args.accountBookId,
-    redis,
   });
+  if (generation === null) {
+    const result = await loadPeriodHistoryPointMetricsWithCacheability({
+      accountBookId: args.accountBookId,
+      period: args.period,
+      metricScopeFilter: args.metricScopeFilter,
+      valuationContext: args.valuationContext,
+    });
+    return result.metrics;
+  }
   const periodCacheKey = await resolvePeriodCachePeriodKey({
     accountBookId: args.accountBookId,
     periodValue: args.period,
