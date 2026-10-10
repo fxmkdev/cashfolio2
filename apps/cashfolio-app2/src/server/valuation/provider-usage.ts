@@ -63,7 +63,7 @@ export async function recordValuationProviderRequest(
         durationMs: Math.max(0, Math.round(input.durationMs)),
         retryCount: input.retryCount ?? 0,
         errorMessage: input.errorMessage
-          ? sanitizeProviderLogText(input.errorMessage)
+          ? sanitizeProviderLogText(input.errorMessage).slice(0, 2_000)
           : undefined,
       },
     });

@@ -319,7 +319,8 @@ do not call an external provider.
 Recorded fields include provider, unit type, outcome, request reason, valuation
 date, unit identifiers, HTTP status, duration, retry count, and a sanitized
 error message when one is available. API keys and token-like values are redacted
-before they can be persisted.
+before they can be persisted. Sanitized messages are capped at 2,000 characters
+for new records; existing messages are not rewritten.
 
 Request reasons distinguish why the provider attempt happened:
 
@@ -333,6 +334,29 @@ failure is logged once per server process.
 The Admin `Valuation Cache` page answers "what valuation data is cached in
 Redis?" The Admin `Provider Usage` page answers "how often did we call external
 providers, and why?"
+
+### Raw request retention
+
+Raw requests are retained for 90 elapsed days, based on `requestedAt`, not the
+valuation date. A recently requested historical valuation therefore remains
+visible. The standalone `src/provider-usage-cleanup/cli.ts` captures one UTC
+cutoff and deletes rows strictly older than that cutoff (the boundary is kept).
+It uses the timestamp index and oldest-first batches of 1,000, committing every
+batch independently. There is no retention work in the valuation request path.
+
+Each run has a five-minute work budget, with bounded database transactions and
+lock waits. Unfinished cleanup or a database error fails the command; committed
+batches remain deleted and subsequent runs safely resume. Missed schedules
+require no special catch-up because every overdue row is eligible each run.
+PostgreSQL autovacuum reclaims dead tuples for reuse; deleting rows does not
+guarantee the on-disk table size immediately shrinks. Cleanup reports table plus
+index bytes with `pg_total_relation_size` for monitoring, not a size limit.
+
+GitHub Actions runs cleanup daily in production and staging, with results in
+workflow logs and summaries. See
+[Deployment](deployment.md#provider-usage-cleanup) for execution, manual
+triggers, and rollout requirements. Long-term aggregates and automatic
+notifications are not part of this retention mechanism.
 
 ## Conversion Formulas (After Cached Lookup)
 

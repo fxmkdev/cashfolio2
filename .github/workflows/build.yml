@@ -173,6 +173,35 @@ jobs:
           node apps/cashfolio-app2/dist/staging-seed/seed.mjs --sample-csv >
           /tmp/cashfolio-staging-import.csv
 
+  cashfolio-app2-provider-usage-cleanup:
+    name: "cashfolio-app2: Provider usage cleanup integration"
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    env:
+      PROVIDER_USAGE_CLEANUP_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Install dependencies
+        run: pnpm --filter cashfolio-app2 install
+      - name: Verify Fly Machine lifecycle
+        run: pnpm --filter cashfolio-app2 test:provider-usage-cleanup-runner
+      - name: Verify PostgreSQL batching and standalone payload
+        run: pnpm --filter cashfolio-app2 test:provider-usage-cleanup
+
   cashfolio-app2-unit:
     name: "cashfolio-app2: Unit + Coverage"
     runs-on: ubuntu-latest

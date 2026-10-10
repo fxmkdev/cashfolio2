@@ -72,4 +72,32 @@ describe("valuation provider usage recording", () => {
     expect(warnSpy).toHaveBeenCalledOnce();
     warnSpy.mockRestore();
   });
+
+  test.each([
+    [undefined, undefined],
+    ["short message", "short message"],
+    ["x".repeat(2_500), "x".repeat(2_000)],
+    [
+      `access_key=${"secret".repeat(500)} remaining message`,
+      "access_key=[redacted] remaining message",
+    ],
+    [
+      `${"x".repeat(1_985)} access_key=secret-token`,
+      `${"x".repeat(1_985)} access_key=[redacted]`.slice(0, 2_000),
+    ],
+  ])("bounds sanitized errors (%#)", async (errorMessage, expected) => {
+    await recordValuationProviderRequest({
+      provider: "CURRENCYLAYER",
+      unitType: "CURRENCY",
+      outcome: "REQUEST_ERROR",
+      requestReason: "INITIAL_PROBE",
+      requestedAt: new Date(),
+      valuationDate: new Date(),
+      durationMs: 1,
+      errorMessage,
+    });
+    expect(prisma.valuationProviderRequest.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ errorMessage: expected }),
+    });
+  });
 });

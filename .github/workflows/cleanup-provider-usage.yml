@@ -1,0 +1,67 @@
+name: Cleanup provider usage
+
+on:
+  schedule:
+    - cron: "43 3 * * *"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to clean up
+        type: choice
+        options: [both, prod, staging]
+        default: both
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  targets:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      environments: ${{ steps.targets.outputs.environments }}
+    steps:
+      - name: Select environments
+        id: targets
+        env:
+          TARGET: ${{ inputs.environment || 'both' }}
+        run: |
+          case "$TARGET" in
+            both) echo 'environments=["prod","staging"]' >> "$GITHUB_OUTPUT" ;;
+            prod) echo 'environments=["prod"]' >> "$GITHUB_OUTPUT" ;;
+            staging) echo 'environments=["staging"]' >> "$GITHUB_OUTPUT" ;;
+            *) exit 1 ;;
+          esac
+
+  cleanup:
+    name: Cleanup provider usage (${{ matrix.environment }})
+    needs: targets
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: ${{ fromJSON(needs.targets.outputs.environments) }}
+    environment: ${{ format('{0}-cashfolio-app', matrix.environment) }}
+    concurrency:
+      group: provider-usage-cleanup-${{ matrix.environment }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: 0.4.115
+      - name: Run cleanup in deployed image
+        run: node apps/cashfolio-app2/scripts/run-provider-usage-cleanup.mjs
+        env:
+          CLEANUP_ENVIRONMENT: ${{ matrix.environment }}
+          FLY_APP: ${{ vars.FLY_APP }}
+          FLY_PRIMARY_REGION: ${{ vars.FLY_PRIMARY_REGION }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
