@@ -6,9 +6,9 @@ import {
 } from "./period-base-data-loader.server";
 import {
   PERIOD_CACHE_TTL_SECONDS,
-  advancePeriodCacheGeneration,
   getPeriodCacheEnvOrThrowWhenRedisAvailable,
   getPeriodCacheGeneration,
+  getPeriodCacheGenerationKey,
   getPeriodInflightCacheKey,
   resolvePeriodCachePeriodKey,
 } from "./period-cache";
@@ -102,30 +102,35 @@ export async function getOrLoadPeriodBaseData(args: {
 }): Promise<PeriodBaseData> {
   const periodValue = normalizePeriodValue(args.period);
   const inflightPeriodKey = getPeriodInflightCacheKey(periodValue);
-  const inflightKey = `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:inflight:${args.accountBookId}:${inflightPeriodKey}`;
+  const loadUncached = () =>
+    loadPeriodBaseDataUncached({
+      accountBookId: args.accountBookId,
+      period: periodValue,
+    });
+  const redis = await getRedisClient();
+  if (!redis) {
+    return loadUncached();
+  }
+
+  const cacheEnv = getPeriodCacheEnvOrThrowWhenRedisAvailable();
+  // Read the committed database revision before joining an inflight load. A
+  // process that missed Redis cleanup must never join a pre-mutation promise.
+  const generation = await getPeriodCacheGeneration({
+    accountBookId: args.accountBookId,
+  });
+  if (generation === null) {
+    return loadUncached();
+  }
+  const inflightKey = `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:inflight:${cacheEnv}:${args.accountBookId}:${generation}:${inflightPeriodKey}`;
   const existingInflight = inflightByCacheKey.get(inflightKey);
   if (existingInflight) {
     return existingInflight;
   }
 
   const loadPromise = (async () => {
-    const redis = await getRedisClient();
-    if (!redis) {
-      return loadPeriodBaseDataUncached({
-        accountBookId: args.accountBookId,
-        period: periodValue,
-      });
-    }
-
-    const cacheEnv = getPeriodCacheEnvOrThrowWhenRedisAvailable();
     const periodCacheKey = await resolvePeriodCachePeriodKey({
       accountBookId: args.accountBookId,
       periodValue,
-    });
-    const generation = await getPeriodCacheGeneration({
-      cacheEnv,
-      accountBookId: args.accountBookId,
-      redis,
     });
     const entryKey = getPeriodBaseCacheEntryKey({
       cacheEnv,
@@ -150,10 +155,7 @@ export async function getOrLoadPeriodBaseData(args: {
       }
     }
 
-    const loaded = await loadPeriodBaseDataUncached({
-      accountBookId: args.accountBookId,
-      period: periodValue,
-    });
+    const loaded = await loadUncached();
 
     try {
       const encoded = encodeDatesForCache(loaded);
@@ -170,6 +172,15 @@ export async function getOrLoadPeriodBaseData(args: {
         await redis.setEx(entryKey, PERIOD_CACHE_TTL_SECONDS, serialized);
         await redis.sAdd(indexKey, entryKey);
         await redis.expire(indexKey, PERIOD_CACHE_TTL_SECONDS);
+        // This pointer is only a cleanup hint. Readers use the DB revision.
+        await redis.set(
+          getPeriodCacheGenerationKey({
+            cacheEnv,
+            accountBookId: args.accountBookId,
+          }),
+          generation,
+          { NX: true },
+        );
       }
     } catch (error) {
       if (!hasWarnedPeriodBaseCacheWriteFailure) {
@@ -195,46 +206,39 @@ export async function getOrLoadPeriodBaseData(args: {
 export async function invalidatePeriodBaseDataCacheForAccountBook(
   accountBookId: string,
 ): Promise<void> {
-  const redis = await getRedisClient();
-  if (!redis) {
-    return;
-  }
-
-  const cacheEnv = getPeriodCacheEnvOrThrowWhenRedisAvailable();
-  const generation = await getPeriodCacheGeneration({
-    cacheEnv,
-    accountBookId,
-    redis,
-  });
-  const indexKey = getPeriodBaseCacheIndexKey({
-    cacheEnv,
-    accountBookId,
-    generation,
-  });
-
   try {
+    const redis = await getRedisClient();
+    if (!redis) {
+      return;
+    }
+    const cacheEnv = getPeriodCacheEnvOrThrowWhenRedisAvailable();
+    const generationKey = getPeriodCacheGenerationKey({
+      cacheEnv,
+      accountBookId,
+    });
+    const previousGeneration = (await redis.get(generationKey)) ?? "0";
+    const generation = await getPeriodCacheGeneration({ accountBookId });
+    if (generation === null) {
+      return;
+    }
+    // Publish the cleanup hint before deleting obsolete entries. Even if any
+    // Redis command fails, the committed DB revision already invalidated them.
+    await redis.set(generationKey, generation);
+    const indexKey = getPeriodBaseCacheIndexKey({
+      cacheEnv,
+      accountBookId,
+      generation: previousGeneration,
+    });
     const members = await redis.sMembers(indexKey);
     if (members.length > 0) {
       await redis.del([...members, indexKey]);
     } else {
       await redis.del(indexKey);
     }
-    await advancePeriodCacheGeneration({
-      cacheEnv,
-      accountBookId,
-      redis,
-    });
-
-    const inflightPrefix = `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:inflight:${accountBookId}:`;
-    for (const cacheKey of inflightByCacheKey.keys()) {
-      if (cacheKey.startsWith(inflightPrefix)) {
-        inflightByCacheKey.delete(cacheKey);
-      }
-    }
   } catch (error) {
     if (!hasWarnedPeriodBaseCacheInvalidationFailure) {
       console.warn(
-        "Failed to invalidate period base-data cache entries; continuing without invalidation.",
+        "Failed to clean up obsolete period cache entries; database revision still enforces invalidation.",
         error,
       );
       hasWarnedPeriodBaseCacheInvalidationFailure = true;

@@ -1,5 +1,4 @@
 import { prisma } from "../../prisma.server";
-import { getRedisClient } from "../../redis.server";
 import {
   PERIOD_PRESET_LAST_MONTH,
   PERIOD_PRESET_MTD,
@@ -13,10 +12,6 @@ export const PERIOD_CACHE_GENERATION_PREFIX = "period:base:generation:v1";
 
 let hasWarnedPeriodCacheNamespaceFailure = false;
 let hasWarnedPeriodCacheGenerationReadFailure = false;
-
-export type PeriodCacheRedisClient = NonNullable<
-  Awaited<ReturnType<typeof getRedisClient>>
->;
 
 export function formatUtcDateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -124,44 +119,23 @@ export function getPeriodCacheGenerationKey(args: {
 }
 
 export async function getPeriodCacheGeneration(args: {
-  cacheEnv: string;
   accountBookId: string;
-  redis: PeriodCacheRedisClient;
-}): Promise<string> {
-  const generationKey = getPeriodCacheGenerationKey({
-    cacheEnv: args.cacheEnv,
-    accountBookId: args.accountBookId,
-  });
-
+}): Promise<string | null> {
   try {
-    const generation = await args.redis.get(generationKey);
-    if (generation && generation.trim().length > 0) {
-      return generation.trim();
-    }
+    const book = await prisma.accountBook.findUniqueOrThrow({
+      where: { id: args.accountBookId },
+      select: { periodCacheRevision: true },
+    });
+    return book.periodCacheRevision;
   } catch (error) {
     if (!hasWarnedPeriodCacheGenerationReadFailure) {
       console.warn(
-        "Failed to read period cache generation; continuing with default generation.",
+        "Failed to read account-book cache revision; continuing uncached.",
         error,
       );
       hasWarnedPeriodCacheGenerationReadFailure = true;
     }
   }
 
-  return "0";
-}
-
-export async function advancePeriodCacheGeneration(args: {
-  cacheEnv: string;
-  accountBookId: string;
-  redis: PeriodCacheRedisClient;
-}): Promise<string> {
-  const generationKey = getPeriodCacheGenerationKey({
-    cacheEnv: args.cacheEnv,
-    accountBookId: args.accountBookId,
-  });
-  const nextGeneration = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-
-  await args.redis.set(generationKey, nextGeneration);
-  return nextGeneration;
+  return null;
 }

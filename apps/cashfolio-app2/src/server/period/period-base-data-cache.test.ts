@@ -8,8 +8,10 @@ const redisState = vi.hoisted(() => ({
 
 const redisClient = vi.hoisted(() => ({
   get: vi.fn(async (key: string) => redisState.kv.get(key) ?? null),
-  set: vi.fn(async (key: string, value: string) => {
-    redisState.kv.set(key, value);
+  set: vi.fn(async (key: string, value: string, options?: { NX: boolean }) => {
+    if (!options?.NX || !redisState.kv.has(key)) {
+      redisState.kv.set(key, value);
+    }
   }),
   setEx: vi.fn(async (key: string, _ttl: number, value: string) => {
     redisState.kv.set(key, value);
@@ -33,7 +35,9 @@ const redisClient = vi.hoisted(() => ({
   }),
 }));
 
-const getRedisClient = vi.hoisted(() => vi.fn(async () => redisClient));
+const getRedisClient = vi.hoisted(() =>
+  vi.fn<() => Promise<typeof redisClient | null>>(async () => redisClient),
+);
 
 const prisma = vi.hoisted(() => ({
   accountBook: {
@@ -74,13 +78,14 @@ describe("period base-data cache", () => {
   beforeEach(() => {
     redisState.kv.clear();
     redisState.sets.clear();
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-01T12:00:00.000Z"));
     process.env.PERIOD_BASE_CACHE_ENV = "preview-app-123";
 
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
       referenceCurrency: "CHF",
+      periodCacheRevision: "0",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
     prisma.accountGroup.findMany.mockResolvedValue([]);
@@ -131,7 +136,7 @@ describe("period base-data cache", () => {
       period: "2026-02",
     });
 
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
     expect(redisClient.setEx).toHaveBeenCalledTimes(1);
     const [entryKey] = redisClient.setEx.mock.calls[0] ?? [];
     expect(entryKey).toContain(
@@ -157,7 +162,7 @@ describe("period base-data cache", () => {
     expect(redisClient.get).toHaveBeenCalledWith(
       "period:base:v6:preview-app-123:book-1:0:2026-02",
     );
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
   });
 
   it("ignores stale v3 entries computed before legacy cash-account fallback", async () => {
@@ -175,7 +180,7 @@ describe("period base-data cache", () => {
     expect(redisClient.get).toHaveBeenCalledWith(
       "period:base:v6:preview-app-123:book-1:0:2026-02",
     );
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
   });
 
   it("ignores stale v4 entries computed with legacy cash-account fallback", async () => {
@@ -193,7 +198,7 @@ describe("period base-data cache", () => {
     expect(redisClient.get).toHaveBeenCalledWith(
       "period:base:v6:preview-app-123:book-1:0:2026-02",
     );
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
   });
 
   it("reloads legacy v5 cash-flow bookings without account metadata and caches a usable v6 snapshot", async () => {
@@ -265,7 +270,7 @@ describe("period base-data cache", () => {
         Date,
       );
     }
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
     expect(redisClient.get).not.toHaveBeenCalledWith(legacyKey);
     expect(redisClient.setEx).toHaveBeenCalledWith(
       "period:base:v6:preview-app-123:book-1:0:2026-02",
@@ -340,7 +345,7 @@ describe("period base-data cache", () => {
     );
   });
 
-  it("does not perform extra account-book reads for month preset cache hits", async () => {
+  it("only reads the database revision for month preset cache hits", async () => {
     await periodBaseCache.getOrLoadPeriodBaseData({
       accountBookId: "book-1",
       period: "mtd",
@@ -350,10 +355,14 @@ describe("period base-data cache", () => {
       period: "mtd",
     });
 
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenLastCalledWith({
+      where: { id: "book-1" },
+      select: { periodCacheRevision: true },
+    });
   });
 
-  it("deduplicates concurrent misses before awaiting cache-key/redis work", async () => {
+  it("deduplicates concurrent misses with the same committed revision", async () => {
     redisClient.get.mockImplementation(async (key: string) => {
       await Promise.resolve();
       return redisState.kv.get(key) ?? null;
@@ -370,7 +379,7 @@ describe("period base-data cache", () => {
       }),
     ]);
 
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
   });
 
   it("does not share inflight preset loads across UTC-day boundaries", async () => {
@@ -396,7 +405,7 @@ describe("period base-data cache", () => {
     releaseGet?.();
     await Promise.all([first, second]);
 
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(2);
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(2);
   });
 
   it("switches generation after invalidation so old entries are not reused", async () => {
@@ -411,6 +420,11 @@ describe("period base-data cache", () => {
       ]),
     );
 
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      periodCacheRevision: "gen-2",
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01T00:00:00Z"),
+    });
     await periodBaseCache.invalidatePeriodBaseDataCacheForAccountBook("book-1");
 
     await periodBaseCache.getOrLoadPeriodBaseData({
@@ -418,7 +432,7 @@ describe("period base-data cache", () => {
       period: "mtd",
     });
 
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
     const [entryKey] = redisClient.setEx.mock.calls[0] ?? [];
     expect(entryKey).not.toContain(":0:month:2026-05-01:2026-05-01");
   });
@@ -443,7 +457,7 @@ describe("period base-data cache", () => {
     });
 
     expect(result.periodValue).toBe("2026-02");
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(1);
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
   });
 
   it("skips cache write for oversized payloads", async () => {
@@ -480,5 +494,121 @@ describe("period base-data cache", () => {
     });
 
     expect(redisClient.setEx).not.toHaveBeenCalled();
+  });
+
+  it.each(["sMembers", "del", "set"] as const)(
+    "does not reuse old data after cleanup %s fails",
+    async (command) => {
+      const args = { accountBookId: "book-1", period: "2026-02" };
+      await periodBaseCache.getOrLoadPeriodBaseData(args);
+      const oldKey = redisClient.setEx.mock.calls[0][0];
+      prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+        periodCacheRevision: "committed-revision",
+        referenceCurrency: "EUR",
+        startDate: new Date("2026-01-01T00:00:00Z"),
+      });
+      redisClient[command].mockRejectedValueOnce(
+        new Error("Redis unavailable"),
+      );
+
+      await expect(
+        periodBaseCache.invalidatePeriodBaseDataCacheForAccountBook("book-1"),
+      ).resolves.toBeUndefined();
+      const result = await periodBaseCache.getOrLoadPeriodBaseData(args);
+
+      expect(result.referenceCurrency).toBe("EUR");
+      expect(redisState.kv.has(oldKey)).toBe(true);
+      expect(redisClient.setEx.mock.calls[1][0]).toContain(
+        ":committed-revision:",
+      );
+    },
+  );
+
+  it("uses the committed revision when Redis was offline during the mutation", async () => {
+    const args = { accountBookId: "book-1", period: "2026-02" };
+    await periodBaseCache.getOrLoadPeriodBaseData(args);
+    getRedisClient.mockRejectedValueOnce(new Error("Connection failed"));
+    await expect(
+      periodBaseCache.invalidatePeriodBaseDataCacheForAccountBook("book-1"),
+    ).resolves.toBeUndefined();
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      periodCacheRevision: "after-outage",
+      referenceCurrency: "EUR",
+      startDate: new Date("2026-01-01T00:00:00Z"),
+    });
+
+    const result = await periodBaseCache.getOrLoadPeriodBaseData(args);
+    expect(result.referenceCurrency).toBe("EUR");
+    expect(redisClient.setEx.mock.calls[1][0]).toContain(":after-outage:");
+  });
+
+  it("bypasses cache reads and writes when the database revision cannot be read", async () => {
+    const args = { accountBookId: "book-1", period: "2026-02" };
+    await periodBaseCache.getOrLoadPeriodBaseData(args);
+    vi.clearAllMocks();
+    prisma.accountBook.findUniqueOrThrow.mockRejectedValueOnce(
+      new Error("Revision read failed"),
+    );
+
+    const result = await periodBaseCache.getOrLoadPeriodBaseData(args);
+    expect(result.periodValue).toBe("2026-02");
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
+    expect(redisClient.get).not.toHaveBeenCalled();
+    expect(redisClient.setEx).not.toHaveBeenCalled();
+  });
+
+  it("loads fresh data when Redis is unavailable", async () => {
+    getRedisClient.mockResolvedValue(null);
+    const result = await periodBaseCache.getOrLoadPeriodBaseData({
+      accountBookId: "book-1",
+      period: "2026-02",
+    });
+    await periodBaseCache.invalidatePeriodBaseDataCacheForAccountBook("book-1");
+    expect(result.periodValue).toBe("2026-02");
+    expect(redisClient.get).not.toHaveBeenCalled();
+    expect(redisClient.setEx).not.toHaveBeenCalled();
+  });
+
+  it("does not fail an already committed mutation when the cleanup namespace is missing", async () => {
+    delete process.env.PERIOD_BASE_CACHE_ENV;
+    await expect(
+      periodBaseCache.invalidatePeriodBaseDataCacheForAccountBook("book-1"),
+    ).resolves.toBeUndefined();
+    expect(redisClient.set).not.toHaveBeenCalled();
+  });
+
+  it("does not join a pre-commit inflight load even when cleanup was never called", async () => {
+    let release!: () => void;
+    let started!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const ready = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    prisma.accountGroup.findMany.mockImplementationOnce(async () => {
+      started();
+      await gate;
+      return [];
+    });
+    const args = { accountBookId: "book-1", period: "2026-02" };
+    const oldLoad = periodBaseCache.getOrLoadPeriodBaseData(args);
+    await ready;
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      periodCacheRevision: "new-revision",
+      referenceCurrency: "EUR",
+      startDate: new Date("2026-01-01T00:00:00Z"),
+    });
+    try {
+      const newResult = await periodBaseCache.getOrLoadPeriodBaseData(args);
+      expect(newResult.referenceCurrency).toBe("EUR");
+    } finally {
+      release();
+      await oldLoad;
+    }
+    // The old writer can finish after the new writer without poisoning its key.
+    const result = await periodBaseCache.getOrLoadPeriodBaseData(args);
+    expect(result.referenceCurrency).toBe("EUR");
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(2);
   });
 });

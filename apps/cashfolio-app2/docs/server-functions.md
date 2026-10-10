@@ -68,12 +68,13 @@ Related docs:
   Redis caching is enabled; Fly deployments populate it from the Fly
   app/deployment environment so preview and staging apps can safely share one
   Redis instance.
-- Redis key namespace includes deployment scope and invalidation generation:
+- Redis key namespace includes deployment scope and the database-backed
+  invalidation generation (`AccountBook.periodCacheRevision`):
   - Entry:
     `period:base:v6:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
   - Index:
     `period:base:index:v6:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
-  - Generation pointer:
+  - Cleanup hint (never used to determine cache validity):
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
 - History metrics entry:
   `period:history:metrics:v5:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
@@ -87,10 +88,21 @@ Related docs:
   (`{periodValue}:{YYYY-MM-DD}`) so day rollovers do not reuse stale cache
   entries. Historical explicit periods omit the day suffix and can be reused
   across days.
-- TTL: 24 hours. Mutating account/transaction server functions explicitly
-  invalidate period cache entries for the affected account book by advancing the
-  shared generation. Base-data entries are also deleted through their index;
-  History metrics entries are generation-invalidated and then expire naturally.
+- TTL: 24 hours. PostgreSQL statement triggers advance the affected account
+  books' UUID revisions on Account, AccountGroup, Transaction, and Booking
+  inserts/updates/deletes. A settings trigger also advances the revision when
+  reference currency or start date changes. The revision commits or rolls back
+  with the write, including writes from seed scripts and administrative tools.
+- Every cache lookup reads the committed revision from PostgreSQL, including
+  warm hits. If that read fails, both Redis reads and writes are bypassed.
+  Inflight loads are scoped by revision, so a request after a commit cannot join
+  a pre-commit load. Every application process uses the same authoritative
+  database revision when choosing cache keys.
+- Mutation handlers retain best-effort Redis cleanup through the previous
+  base-data index. The cleanup hint is updated before deletion. Redis outages,
+  failed cleanup, and process crashes after commit cannot make old cache keys
+  valid again; obsolete entries expire naturally. Derived History entries also
+  expire naturally.
 - History metrics entries are written only when every valuation dependency came
   from identity conversion or the long-lived Redis TimeSeries valuation cache.
   Metrics that needed provider fetches, short-lived fallback entries, or missing
