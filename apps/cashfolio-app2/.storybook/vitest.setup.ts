@@ -17,12 +17,14 @@ beforeEach(() => {
 
 // Leave data behind so the next story exercises storage isolation.
 afterEach(() => {
-  window.localStorage.setItem(
-    "cashfolio-storybook-isolation",
-    "previous-story",
-  );
-  window.sessionStorage.setItem(
-    "cashfolio-storybook-isolation",
-    "previous-story",
-  );
+  for (const storage of ["localStorage", "sessionStorage"] as const) {
+    try {
+      window[storage].setItem(
+        "cashfolio-storybook-isolation",
+        "previous-story",
+      );
+    } catch {
+      // Ignore blocked storage in constrained browser contexts.
+    }
+  }
 });

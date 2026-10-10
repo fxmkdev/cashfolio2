@@ -89,7 +89,7 @@ export const ScrollingAndPinnedCells: Story = {
         }))}
         columnDefs={[
           { ...columns[0], width: 110, pinned: "left" },
-          { ...columns[1], flex: undefined, width: 1000 },
+          { ...columns[1], flex: undefined, width: 1600 },
           { ...columns[2], width: 110, pinned: "right" },
         ]}
         getRowId={({ data }) => data.id}
