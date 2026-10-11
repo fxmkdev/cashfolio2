@@ -7,6 +7,42 @@ import {
 } from "./edit-transaction-modal-values";
 
 describe("createTransactionFormInitialValues", () => {
+  test("preserves fractional COP amounts when opening and submitting unchanged", () => {
+    const form = createTransactionFormInitialValues({
+      initialValues: {
+        description: "Transfer",
+        bookings: [
+          {
+            date: "2026-05-18T00:00:00.000Z",
+            account: "cash",
+            unit: Unit.CURRENCY,
+            currency: "COP",
+            debit: 1234.5678,
+          },
+          {
+            date: "2026-05-18T00:00:00.000Z",
+            account: "bank",
+            unit: Unit.CURRENCY,
+            currency: "COP",
+            credit: 1234.5678,
+          },
+        ],
+      },
+    });
+
+    expect(form.bookings[0]?.debit).toBe(1234.5678);
+    expect(form.bookings[1]?.credit).toBe(1234.5678);
+    expect(
+      toTransactionSubmitBookings(form.bookings).map((booking) => ({
+        currency: booking.currency,
+        value: booking.value,
+      })),
+    ).toEqual([
+      { currency: "COP", value: 1234.5678 },
+      { currency: "COP", value: -1234.5678 },
+    ]);
+  });
+
   test("supports split editing without a current account", () => {
     const result = createTransactionFormInitialValues({});
 
