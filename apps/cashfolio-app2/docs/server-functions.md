@@ -55,6 +55,36 @@ Related docs:
   `source-rates.ts`, `lookup-context.ts`, `providers.ts`, `cache.ts`,
   `backtracking.ts`, `keys.ts`, `types.ts`, `date-utils.ts`, `constants.ts`
 
+### Account Mutation Operations
+
+`src/server/accounts/accounts-mutation-operations.ts` keeps the existing
+operation exports stable. Implementations live in
+`src/server/accounts/mutations/`:
+
+- `account-edit.ts`: account creation/update, immutable unit identity, and CSV
+  configuration persistence
+- `group-edit.ts`: group creation/update, cycle checks, and cash-flag
+  propagation
+- `opening-balances.ts`: system account lookup and opening-balance transaction
+  creation, reconciliation, and removal
+- `status.ts`: account/group archive and unarchive eligibility and writes
+- `delete.ts`: account/group deletion checks and writes
+- `reorder.ts`: sibling sort-order writes
+- `types.ts`: shared operation inputs and mutation results
+
+Every operation still receives the owning mutation boundary's transaction
+client. Keep authorization, book locking, conflict retry, and post-commit cache
+invalidation in the existing mutation handlers.
+
+### Valuation Provider Adapters
+
+`src/server/valuation/providers.ts` remains the provider facade. Individual HTTP
+adapters live in `providers/currencylayer.ts`, `providers/coinlayer.ts`, and
+`providers/marketstack.ts`. `providers/request.ts` owns shared fetch timeout,
+request-error logging, and attempt-outcome recording. Adapters own their API
+key, URL, response interpretation, usage metadata, and HTTP/provider errors;
+Marketstack also owns its provider-specific rate-limit retry.
+
 ### Period Module Organization
 
 Period implementation modules are grouped by concern under `src/server/period/`:
@@ -74,10 +104,30 @@ Period implementation modules are grouped by concern under `src/server/period/`:
 - `net-worth/`: end-of-period and opening-balance net-worth loading
 
 Cross-concern selection, conversion, balance statistics, unit formatting, and
-period helpers remain at the period folder root. Tests live alongside the
-modules they exercise; cross-concern pipeline tests remain at the root. Use
-explicit imports between these modules. Existing public facades in `src/server/`
-remain the entry points for routes and keep their import paths stable.
+calculation-context preparation remain at the period folder root.
+`period-calculation-context.ts` prepares the shared maps and virtual hierarchy
+from preloaded base data, as described in the
+[reporting data-loading boundary](#reporting-data-loading-boundary).
+`period-helpers.ts` retains selection/year helpers and rounding, and re-exports
+the extracted helpers:
+
+- `breakdown/period-breakdown-state.ts`: group paths, accumulator types, and
+  mutable hierarchy nodes shared by breakdown builders
+- `breakdown/period-breakdown-buckets.ts` and `period-allocation-breakdown.ts`:
+  bucket summaries and period-end allocation
+- `breakdown/period-breakdown-hierarchy.ts` and
+  `period-signed-breakdown-hierarchy.ts`: positive and signed hierarchy builders
+  with their respective pruning/discrepancy rules
+- `holdings/period-holding-events.ts`: event-series gain/loss, date grouping,
+  ordering, and convertible account selection
+
+Extracted breakdown builders use the shared money rounding primitive directly;
+they do not import back through `period-helpers.ts`. Breakdown and holding-event
+helpers remain pure and consume prepared inputs; database reads stay in the
+base-data loaders. Tests live alongside the modules they exercise; cross-concern
+pipeline tests remain at the root. Use explicit imports between these modules.
+Existing public facades in `src/server/` remain the entry points for routes and
+keep their import paths stable.
 
 ## Concurrent Account-Book Mutations
 
