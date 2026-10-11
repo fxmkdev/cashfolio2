@@ -1,3 +1,5 @@
+import { UnarchiveMutationFeedback } from "@/components/unarchive-mutation-feedback";
+import type { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
 import {
   IconArchive,
   IconArchiveOff,
@@ -95,6 +97,7 @@ export type RebookingState = {
 };
 
 export type LedgerPageViewProps = {
+  onRefreshConstraints?: () => Promise<void>;
   backTab: TabValue;
   account: LedgerPageLoaderData["account"];
   accountGroups: LedgerPageLoaderData["accountGroups"];
@@ -154,6 +157,7 @@ export type LedgerPageViewProps = {
   onCloseArchiveAccount: () => void;
   onConfirmArchiveAccount: () => Promise<void>;
   onUnarchiveAccount: () => Promise<void>;
+  unarchiveRecovery?: ReturnType<typeof useUnarchiveMutation>;
   onOpenDeleteAccount: () => void;
   onCloseDeleteAccount: () => void;
   onConfirmDeleteAccount: () => Promise<void>;
@@ -190,6 +194,7 @@ export type LedgerPageViewProps = {
 };
 
 export function LedgerPageView({
+  onRefreshConstraints,
   backTab,
   account,
   accountGroups,
@@ -245,6 +250,7 @@ export function LedgerPageView({
   onCloseArchiveAccount,
   onConfirmArchiveAccount,
   onUnarchiveAccount,
+  unarchiveRecovery,
   onOpenDeleteAccount,
   onCloseDeleteAccount,
   onConfirmDeleteAccount,
@@ -344,7 +350,9 @@ export function LedgerPageView({
                           key: "unarchive",
                           label: "Unarchive",
                           disabledReason: accountUnarchiveLabel,
-                          disabled: !accountUnarchivable,
+                          disabled:
+                            !accountUnarchivable ||
+                            unarchiveRecovery?.isPending,
                           color: "blue",
                           leftSection: <IconArchiveOff size={16} />,
                           onClick: () => void onUnarchiveAccount(),
@@ -384,6 +392,10 @@ export function LedgerPageView({
         }
       />
 
+      <UnarchiveMutationFeedback
+        recovery={unarchiveRecovery}
+        onRefreshConstraints={onRefreshConstraints}
+      />
       <DataGrid
         containerStyle={{ flex: 1, minHeight: 0 }}
         rowData={rows}
@@ -410,6 +422,7 @@ export function LedgerPageView({
         onExitTransitionEnd={onSimpleModalExitTransitionEnd}
       >
         <SimpleTransactionModal
+          onRefreshConstraints={onRefreshConstraints}
           currentAccount={{ id: account.id, label: currentAccountLabel }}
           accounts={
             createSimpleInitialValues
@@ -443,6 +456,7 @@ export function LedgerPageView({
         withCloseButton={!isCreateSplitSubmitting}
       >
         <EditTransactionModal
+          onRefreshConstraints={onRefreshConstraints}
           initialValues={createSplitInitialValues}
           submitLabel={splitCreateDialogText.submitLabel}
           accounts={
@@ -478,6 +492,7 @@ export function LedgerPageView({
         editMode === "SIMPLE" &&
         editingSimpleInitialValues ? (
           <SimpleTransactionModal
+            onRefreshConstraints={onRefreshConstraints}
             currentAccount={{ id: account.id, label: currentAccountLabel }}
             accounts={editSimpleCounterAccountOptions}
             initialValues={editingSimpleInitialValues}
@@ -493,6 +508,7 @@ export function LedgerPageView({
           />
         ) : editingTransactionData ? (
           <EditTransactionModal
+            onRefreshConstraints={onRefreshConstraints}
             initialValues={editingTransactionData}
             accounts={editAccountOptions}
             currentAccountId={account.id}
@@ -509,6 +525,7 @@ export function LedgerPageView({
       </Modal>
 
       <EditAccountModal
+        onRefreshConstraints={onRefreshConstraints}
         {...createLedgerAccountEditModalProps({
           opened: accountEditModalOpened,
           onClose: onCloseAccountEdit,
@@ -523,6 +540,7 @@ export function LedgerPageView({
       />
 
       <ConfirmArchiveModal
+        onRefreshConstraints={onRefreshConstraints}
         opened={!!archivingAccount}
         onClose={onCloseArchiveAccount}
         title="Archive Account"
@@ -531,6 +549,7 @@ export function LedgerPageView({
       />
 
       <ConfirmDeleteModal
+        onRefreshConstraints={onRefreshConstraints}
         opened={!!deletingAccount}
         onClose={onCloseDeleteAccount}
         title="Delete Account"
@@ -553,6 +572,7 @@ export function LedgerPageView({
       >
         {rebooking && (
           <RebookBookingModal
+            onRefreshConstraints={onRefreshConstraints}
             targetAccounts={rebookTargetAccountOptions}
             disabledReason={
               !hasCompleteBookingUnit
@@ -570,6 +590,7 @@ export function LedgerPageView({
       </Modal>
 
       <ConfirmDeleteModal
+        onRefreshConstraints={onRefreshConstraints}
         opened={!!deletingTransaction}
         onClose={onCloseDeleteModal}
         title="Delete Transaction"

@@ -64,6 +64,11 @@ it.each([
   prismaError("P1017"),
   prismaError("P2010"),
   prismaError("P2010", { code: "42501" }),
+  prismaError("P2010", { code: "55P03" }),
+  prismaError("P2010", {
+    driverAdapterError: { cause: { originalCode: "55P03" } },
+  }),
+  new TypeError("Failed to fetch"),
   prismaError("P2010", {
     driverAdapterError: { cause: { originalCode: "42501" } },
   }),

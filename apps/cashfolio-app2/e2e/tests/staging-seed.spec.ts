@@ -48,6 +48,9 @@ test.beforeAll(async ({ e2eExternalId }) => {
 test("synthetic household data supports reports and three years of history", async ({
   page,
 }) => {
+  // Cold three-year History computation and its large fixture are deliberately
+  // heavier than ordinary page checks, especially with revision triggers.
+  test.setTimeout(120_000);
   const household = seededBook("household");
   await page.goto(`/${household.id}/report?period=2026-10`);
   await expect(

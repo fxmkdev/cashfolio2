@@ -55,6 +55,29 @@ pnpm --filter cashfolio-app2 coverage:ratchet:accept
 pnpm --filter cashfolio-app2 coverage:ratchet
 ```
 
+## Concurrent Mutation Integration Tests
+
+`pnpm --filter cashfolio-app2 test:mutations` exercises public mutation handlers
+against real PostgreSQL with only request authentication and Redis mocked. The
+suite creates and drops its own migrated disposable database; it never targets
+`DATABASE_URL`. `MUTATION_TEST_ADMIN_DATABASE_URL` must point to a local
+`postgres` maintenance database (default: `127.0.0.1:5433/postgres`).
+
+Tests pause one writer after its book lock and observe the competing writer
+waiting in PostgreSQL before allowing the first to commit. They cover hierarchy
+cycles, sibling names, shared opening-balance account creation, cash
+inheritance, archive/unarchive checks, start-date validation, and rollback. A
+held-lock test keeps the holder active beyond 25 seconds, verifies the busy-book
+rejection without writes, and then verifies an explicit retry after releasing
+the lock. A cache-trigger deadlock test selects the public book-locking mutation
+as victim and verifies a fresh transaction retries successfully without losing
+the competing writer's changes. CI runs the suite in the PostgreSQL-backed
+staging-seed integration job.
+
+`e2e/tests/mutation-recovery.spec.ts` verifies rejected simple/split drafts,
+archived selections, archive/delete confirmation errors, account/group edits,
+and import review/inclusion preservation after a constraint refresh.
+
 ## Lint
 
 - ESLint uses a flat config in `eslint.config.js`.

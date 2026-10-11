@@ -1,3 +1,5 @@
+import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
+import { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
 import { useCallback, useMemo, useState } from "react";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import {
@@ -27,7 +29,7 @@ import {
   createUpdateTransactionPayloadFromSimpleValues,
 } from "./page-edit-flow";
 import { createCopySimpleTransactionInitialValues } from "./page-transaction-utils";
-import type { loadLedgerPageData } from "./page-loader";
+import { loadLedgerPageData } from "./page-loader";
 import {
   createLedgerAccountMutationActions,
   createLedgerMutationActions,
@@ -60,15 +62,23 @@ export function useLedgerPageController(args: {
   }) => void | Promise<void>;
   onOpenImportPage: () => void;
 }): Omit<LedgerPageViewProps, "onRowDataUpdated"> {
+  const { data: loaderData, refresh: onRefreshConstraints } =
+    useRefreshedMutationData(args.loaderData, () =>
+      loadLedgerPageData({
+        accountBookId: args.accountBookId,
+        accountId: args.loaderData.account.id,
+        period: args.selectedPeriodValue,
+      }),
+    );
   const { account, accounts, accountGroups, accountTreeRow, existingNodes } =
-    args.loaderData;
+    loaderData;
   const unitUsage = useMemo(
     () =>
       createAccountBookUnitUsage({
-        referenceCurrency: args.loaderData.referenceCurrency,
+        referenceCurrency: loaderData.referenceCurrency,
         accounts,
       }),
-    [accounts, args.loaderData.referenceCurrency],
+    [accounts, loaderData.referenceCurrency],
   );
 
   const [modalOpened, setModalOpened] = useState(false);
@@ -311,13 +321,13 @@ export function useLedgerPageController(args: {
     [],
   );
 
-  const rows = args.loaderData.rows;
+  const rows = loaderData.rows;
 
   const columnDefs = useLedgerColumnDefs({
     accountBookId: args.accountBookId,
     hasPeriodFilter: args.hasPeriodFilter,
     selectedPeriodValue: args.selectedPeriodValue,
-    referenceCurrency: args.loaderData.referenceCurrency,
+    referenceCurrency: loaderData.referenceCurrency,
     isEquity,
     isOpeningBalances,
     isIncome,
@@ -331,9 +341,7 @@ export function useLedgerPageController(args: {
   const unitLabel = getUnitLabel(account);
   const statementImportDisabledReason =
     getStatementImportDisabledReason(account);
-  const accountBookStartDate = new Date(
-    args.loaderData.periodBounds.minBookingDate,
-  );
+  const accountBookStartDate = new Date(loaderData.periodBounds.minBookingDate);
 
   const backTab = (
     account.type === AccountType.EQUITY && account.equityAccountSubtype
@@ -371,8 +379,19 @@ export function useLedgerPageController(args: {
     accountTreeRow.unarchiveDisabledReason;
   const accountDeleteDisabledReason =
     systemManagedAccountDisabledReason ?? accountTreeRow.deleteDisabledReason;
+  const unarchiveRecovery = useUnarchiveMutation({
+    scopeKey: `${args.accountBookId}:${account.id}`,
+    onUnarchive: accountActions.handleUnarchiveAccount,
+    onRefreshConstraints,
+    isEligible: (target) =>
+      target.id === account.id &&
+      !systemManagedAccountDisabledReason &&
+      accountTreeRow.unarchivable,
+  });
 
   return {
+    onRefreshConstraints,
+    unarchiveRecovery,
     backTab,
     account,
     accountGroups,
@@ -433,7 +452,12 @@ export function useLedgerPageController(args: {
     onOpenArchiveAccount: () => setArchivingAccount(true),
     onCloseArchiveAccount: () => setArchivingAccount(false),
     onConfirmArchiveAccount: accountActions.handleArchiveAccount,
-    onUnarchiveAccount: accountActions.handleUnarchiveAccount,
+    onUnarchiveAccount: () =>
+      unarchiveRecovery.unarchive({
+        id: account.id,
+        name: account.name,
+        nodeType: "account",
+      }),
     onOpenDeleteAccount: () => setDeletingAccount(true),
     onCloseDeleteAccount: () => setDeletingAccount(false),
     onConfirmDeleteAccount: accountActions.handleDeleteAccount,

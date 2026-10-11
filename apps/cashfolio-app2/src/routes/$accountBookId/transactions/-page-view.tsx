@@ -54,6 +54,7 @@ export type RebookingState = {
 
 export type TransactionsPageViewProps = {
   accountBookId: string;
+  onRefreshConstraints?: () => Promise<void>;
   rows: TransactionsRow[];
   columnDefs: NonNullable<AgGridReactProps<TransactionsRow>["columnDefs"]>;
   detailColumnDefs: NonNullable<
@@ -104,6 +105,7 @@ export type TransactionsPageViewProps = {
 };
 
 export function TransactionsPageView({
+  onRefreshConstraints,
   rows,
   columnDefs,
   detailColumnDefs,
@@ -212,6 +214,7 @@ export function TransactionsPageView({
         withCloseButton={!isCreateSubmitting}
       >
         <EditTransactionModal
+          onRefreshConstraints={onRefreshConstraints}
           initialValues={createTransactionInitialValues}
           autoFocusDate={!!createTransactionInitialValues}
           submitLabel={createDialogText.submitLabel}
@@ -241,6 +244,7 @@ export function TransactionsPageView({
       >
         {editingTransactionData ? (
           <EditTransactionModal
+            onRefreshConstraints={onRefreshConstraints}
             initialValues={editingTransactionData}
             accounts={editAccountOptions}
             accountBookStartDate={accountBookStartDate}
@@ -269,6 +273,7 @@ export function TransactionsPageView({
       >
         {rebooking && (
           <RebookBookingModal
+            onRefreshConstraints={onRefreshConstraints}
             targetAccounts={rebookTargetAccountOptions}
             disabledReason={
               !hasCompleteBookingUnit
@@ -286,6 +291,7 @@ export function TransactionsPageView({
       </Modal>
 
       <ConfirmDeleteModal
+        onRefreshConstraints={onRefreshConstraints}
         opened={!!deletingTransaction}
         onClose={onCloseDeleteModal}
         title="Delete Transaction"

@@ -65,6 +65,7 @@ export function useAccountTreeColumnDefs(params: {
   balanceInReferenceCurrencyByGroupId: Map<string, GroupBalanceAggregation>;
   onEditRow: (row: TreeRow) => void;
   onUnarchiveRow: (row: TreeRow) => Promise<void>;
+  unarchivePending?: boolean;
   onArchiveRow: (row: RowTarget) => void;
   onDeleteRow: (row: RowTarget) => void;
   onReorderRow: (value: { name: string; parentKey: string }) => void;
@@ -78,6 +79,7 @@ export function useAccountTreeColumnDefs(params: {
     balanceInReferenceCurrencyByGroupId,
     onEditRow,
     onUnarchiveRow,
+    unarchivePending,
     onArchiveRow,
     onDeleteRow,
     onReorderRow,
@@ -220,6 +222,7 @@ export function useAccountTreeColumnDefs(params: {
           if (isArchivedMode) {
             return (
               <ArchivedAccountTreeActionsCell
+                unarchivePending={unarchivePending}
                 reorderEnabled={hasSiblings}
                 reorderLabel={reorderLabel}
                 deleteLabel={data.deleteDisabledReason ?? "Delete"}
@@ -267,6 +270,7 @@ export function useAccountTreeColumnDefs(params: {
     referenceCurrency,
     onEditRow,
     onUnarchiveRow,
+    unarchivePending,
     onArchiveRow,
     onDeleteRow,
     onReorderRow,

@@ -1,3 +1,5 @@
+import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
+import { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
 import type { GridApi, GridReadyEvent } from "ag-grid-enterprise";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useExpandedGroups } from "@/hooks/use-expanded-groups";
@@ -21,7 +23,6 @@ import {
   type AccountsGridRow,
   tabs,
   type ReferenceCurrencyTotalFooterRow,
-  type TreeRow,
 } from "./-page-types";
 import {
   useBalanceInReferenceCurrencyByGroupId,
@@ -32,7 +33,7 @@ import {
 import { type RowTarget, useAccountsPageModalState } from "./-page-modal-state";
 import { useAccountsReferenceBalanceRows } from "./-page-reference-balances";
 import { useAccountTreeColumnDefs } from "./-page-columns";
-import type { loadAccountsPageData } from "./-page-loader";
+import { loadAccountsPageData } from "./-page-loader";
 import type { AccountsPageViewProps } from "./-page-view";
 
 type AccountsPageLoaderData = Awaited<ReturnType<typeof loadAccountsPageData>>;
@@ -216,7 +217,7 @@ export function createAccountsMutationActions(args: {
       args.invalidate();
     },
 
-    async handleUnarchiveRow(row: TreeRow) {
+    async handleUnarchiveRow(row: RowTarget) {
       if (row.nodeType === "account") {
         await api.unarchiveAccount({
           data: { id: row.id, accountBookId: args.accountBookId },
@@ -255,13 +256,21 @@ export function useAccountsPageController(args: {
   invalidate: () => void;
   onOpenLedger: AccountsPageViewProps["onOpenLedger"];
 }): AccountsPageControllerViewProps {
+  const { data: loaderData, refresh: onRefreshConstraints } =
+    useRefreshedMutationData(args.loaderData, () =>
+      loadAccountsPageData({
+        accountBookId: args.accountBookId,
+        tab: args.tab,
+        mode: args.mode,
+      }),
+    );
   const {
     accountGroups,
     rows: loaderRows,
     existingNodes,
     referenceCurrency,
     unitUsage,
-  } = args.loaderData;
+  } = loaderData;
 
   const gridApiRef = useRef<GridApi<AccountsGridRow> | null>(null);
   const modalState = useAccountsPageModalState();
@@ -372,6 +381,18 @@ export function useAccountsPageController(args: {
     },
   });
 
+  const unarchiveRecovery = useUnarchiveMutation({
+    scopeKey: `${args.accountBookId}:${args.tab}:${args.mode}`,
+    onUnarchive: actions.handleUnarchiveRow,
+    onRefreshConstraints,
+    isEligible: (target) =>
+      rows.some(
+        (row) =>
+          row.id === target.id &&
+          row.nodeType === target.nodeType &&
+          row.unarchivable,
+      ),
+  });
   const columnDefs = useAccountTreeColumnDefs({
     isArchivedMode,
     isEquityTab,
@@ -380,13 +401,16 @@ export function useAccountsPageController(args: {
     isReferenceBalancesLoading: shouldShowReferenceBalancesLoading,
     balanceInReferenceCurrencyByGroupId,
     onEditRow: modalState.handleEditRow,
-    onUnarchiveRow: actions.handleUnarchiveRow,
+    onUnarchiveRow: unarchiveRecovery.unarchive,
+    unarchivePending: unarchiveRecovery.isPending,
     onArchiveRow: modalState.setArchivingRow,
     onDeleteRow: modalState.setDeletingRow,
     onReorderRow: modalState.setReorderingRow,
   });
 
   return {
+    onRefreshConstraints,
+    unarchiveRecovery,
     accountBookId: args.accountBookId,
     tab: args.tab,
     mode: args.mode,

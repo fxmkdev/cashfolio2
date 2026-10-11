@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import { expect, test, type Page } from "../support/fixtures";
 import { seedDatabase, type SeededData } from "../support/db";
+import { prisma } from "../support/db-client";
 import {
   agGridRowByText,
   clickGridRowSelectionCheckbox,
@@ -17,6 +18,12 @@ const changedDescription = "Modified statement review";
 test.beforeAll(async ({ e2eExternalId }) => {
   seeded = await seedDatabase({ userExternalId: e2eExternalId });
   otherBook = await seedDatabase({ userExternalId: e2eExternalId });
+  // Other suites can initialize the worker's user with a different locale.
+  // These date-input scenarios intentionally use US-formatted dates.
+  await prisma.user.update({
+    where: { externalId: e2eExternalId },
+    data: { locale: "en-US" },
+  });
 });
 
 function discardDialog(page: Page) {

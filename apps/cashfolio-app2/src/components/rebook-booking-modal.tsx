@@ -1,5 +1,6 @@
+import { MutationSubmitFeedback } from "./mutation-submit-feedback";
 import { Button, Group, Stack, Text } from "@mantine/core";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 import {
   AccountTreeSelect,
@@ -14,28 +15,25 @@ export function RebookBookingModal({
   onClose,
   onSubmittingChange,
   onSubmit,
+  onRefreshConstraints,
 }: {
   targetAccounts: RebookTargetOption[];
   disabledReason?: string | null;
   onClose: () => void;
+  onRefreshConstraints?: () => Promise<void>;
   onSubmittingChange?: (isSubmitting: boolean) => void;
   onSubmit: (values: { targetAccountId: string }) => Promise<void>;
 }) {
-  const { isSubmitting, runSubmit } = useDialogSubmitState({
+  const submitState = useDialogSubmitState({
     onSubmittingChange,
+    captureErrors: true,
+    onRefreshConstraints,
   });
+  const { isSubmitting, runSubmit } = submitState;
   const formRef = useRef<HTMLFormElement>(null);
   const selectedTargetAccountIdRef = useRef<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const [targetAccountId, setTargetAccountId] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
-
-  useEffect(() => {
-    selectedTargetAccountIdRef.current = null;
-    setTargetAccountId(null);
-    setValidationError(null);
-    setSubmitError(null);
-  }, [targetAccounts]);
 
   const noEligibleAccountReason =
     disabledReason ??
@@ -50,22 +48,25 @@ export function RebookBookingModal({
 
     const selectedTargetAccountId =
       targetAccountId ?? selectedTargetAccountIdRef.current;
-    if (!selectedTargetAccountId) {
-      setValidationError("Target account is required");
+    if (
+      !selectedTargetAccountId ||
+      !targetAccounts.some(
+        (account) => account.value === selectedTargetAccountId,
+      )
+    ) {
+      setValidationError(
+        selectedTargetAccountId
+          ? "The selected account is no longer available. Choose another account."
+          : "Target account is required",
+      );
       return;
     }
 
     setValidationError(null);
-    setSubmitError(null);
+    submitState.clearSubmissionError();
 
     await runSubmit(async () => {
-      try {
-        await onSubmit({ targetAccountId: selectedTargetAccountId });
-      } catch (error) {
-        setSubmitError(
-          error instanceof Error ? error.message : "Failed to rebook booking.",
-        );
-      }
+      await onSubmit({ targetAccountId: selectedTargetAccountId });
     });
   }
 
@@ -82,7 +83,7 @@ export function RebookBookingModal({
             selectedTargetAccountIdRef.current = value;
             setTargetAccountId(value);
             setValidationError(null);
-            setSubmitError(null);
+            submitState.clearSubmissionError();
           }}
           onKeyDown={(event) => {
             if (event.key !== "Enter") return;
@@ -109,11 +110,10 @@ export function RebookBookingModal({
           </Text>
         )}
 
-        {submitError && (
-          <Text size="sm" c="red">
-            {submitError}
-          </Text>
-        )}
+        <MutationSubmitFeedback
+          state={submitState}
+          onRefreshConstraints={onRefreshConstraints}
+        />
 
         <Group justify="end">
           <Button variant="subtle" onClick={onClose} disabled={isSubmitting}>

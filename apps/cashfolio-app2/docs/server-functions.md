@@ -79,6 +79,41 @@ modules they exercise; cross-concern pipeline tests remain at the root. Use
 explicit imports between these modules. Existing public facades in `src/server/`
 remain the entry points for routes and keep their import paths stable.
 
+## Concurrent Account-Book Mutations
+
+Account/group mutations, transaction mutations (including bulk statement
+imports), and account-book settings updates/deletion use
+`src/server/account-book-mutation.server.ts` after authorization. It starts a
+Prisma transaction and locks the owning `AccountBook` row with `FOR UPDATE`
+before reading state used by business rules. Before acquiring the lock, it sets
+transaction-local PostgreSQL `lock_timeout` to 25 seconds. PostgreSQL cancels a
+statement that waits that long for a lock. Prisma retains its 30-second
+interactive-transaction timeout; it does not interrupt every running database
+query, so it is not an unconditional wall-clock deadline. All validation queries
+and writes must use the callback's transaction client, including queries in
+helper modules.
+
+PostgreSQL SQLSTATE `55P03` (including Prisma's driver-adapter representation)
+is translated only after the transaction has rolled back to: "This account book
+is busy. No changes were saved. Please try again." Other errors propagate as
+before. A busy-book rejection is safe to retry explicitly and is never retried
+automatically. Each account, transaction, settings, and book-deletion mutation
+wraps a fresh book-locking transaction in one `withDatabaseConflictRetry` loop.
+Only fully rolled-back database conflicts receive main's bounded server-side
+retries; authorization and post-commit cleanup remain outside that loop.
+
+The transaction explicitly uses `ReadCommitted`: after waiting for a previous
+writer, subsequent reads see that writer's committed changes. This protects
+group cycle checks, sibling names, cash-flag inheritance, archive/unarchive
+checks, opening-balance updates, and booking start-date validation. Mutations in
+different books can proceed independently. Redis invalidation happens after
+commit.
+
+This is a cooperative application-write protocol, not a database constraint on
+arbitrary SQL. New book-scoped application mutations must use the same boundary;
+maintenance scripts must coordinate separately. Concurrent edits are applied in
+lock order; this does not introduce optimistic edit-version conflict detection.
+
 ## Period Caches
 
 - Period overview and history use a shared Redis-backed **non-valuation**

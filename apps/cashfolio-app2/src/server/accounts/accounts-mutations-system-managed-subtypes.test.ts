@@ -26,6 +26,8 @@ const validateAccountInput = vi.hoisted(() => vi.fn());
 const validateAccountGroupInput = vi.hoisted(() => vi.fn());
 
 const prisma = vi.hoisted(() => ({
+  $executeRaw: vi.fn(),
+  $queryRaw: vi.fn(),
   account: {
     findMany: vi.fn(),
     findUniqueOrThrow: vi.fn(),
@@ -85,6 +87,10 @@ import {
 describe("accounts-mutations system-managed subtype guards", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    prisma.$queryRaw.mockResolvedValue([{ id: "book-1" }]);
+    prisma.$transaction.mockImplementation(async (callback) =>
+      callback(prisma),
+    );
     prisma.account.findMany.mockResolvedValue([]);
     prisma.accountGroup.findMany.mockResolvedValue([]);
     prisma.booking.count.mockResolvedValue(0);

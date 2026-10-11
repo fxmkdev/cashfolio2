@@ -1,7 +1,8 @@
+import { withDatabaseConflictRetry } from "../database-conflict-retry";
+import { withAccountBookMutation } from "../account-book-mutation.server";
 import { createServerFn } from "@tanstack/react-start";
 import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import { prisma } from "../../prisma.server";
-import { withDatabaseConflictRetry } from "../database-conflict-retry";
 import { ensureAuthorizedForAccountBookId } from "../../account-books/functions.server";
 import { ensureSameOriginRequestFromServerContext } from "../../security/same-origin.server";
 import {
@@ -214,7 +215,7 @@ export const updateAccountBookSettings = createServerFn({ method: "POST" })
 
     const { updated, referenceCurrencyChanged, startDateChanged } =
       await withDatabaseConflictRetry(() =>
-        prisma.$transaction(async (tx) => {
+        withAccountBookMutation(data.accountBookId, async (tx) => {
           const currentAccountBook = await tx.accountBook.findUniqueOrThrow({
             where: { id: data.accountBookId },
             select: {
@@ -282,18 +283,20 @@ export const deleteAccountBook = createServerFn({ method: "POST" })
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
     const { confirmationName } = data;
-    const accountBook = await prisma.accountBook.findUniqueOrThrow({
-      where: { id: data.accountBookId },
-      select: { name: true },
-    });
-
-    if (confirmationName !== accountBook.name) {
-      throw new Error("Account book name confirmation does not match.");
-    }
-
     await withDatabaseConflictRetry(() =>
-      prisma.accountBook.delete({
-        where: { id: data.accountBookId },
+      withAccountBookMutation(data.accountBookId, async (tx) => {
+        const accountBook = await tx.accountBook.findUniqueOrThrow({
+          where: { id: data.accountBookId },
+          select: { name: true },
+        });
+
+        if (confirmationName !== accountBook.name) {
+          throw new Error("Account book name confirmation does not match.");
+        }
+
+        await tx.accountBook.delete({
+          where: { id: data.accountBookId },
+        });
       }),
     );
   });

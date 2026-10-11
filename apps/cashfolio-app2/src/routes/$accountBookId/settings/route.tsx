@@ -3,6 +3,8 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
+import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
+import { loadSettingsPageData } from "./-page-loader";
 import { Suspense, lazy } from "react";
 import { createDocumentTitleHead } from "@/shared/document-title";
 import { invalidateCachedUserAccountBooks } from "../-account-book-options-loader";
@@ -22,8 +24,12 @@ export const Route = createFileRoute("/$accountBookId/settings")({
 });
 
 function SettingsPage() {
-  const settings = Route.useLoaderData();
+  const sourceSettings = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
+  const { data: settings, refresh: onRefreshConstraints } =
+    useRefreshedMutationData(sourceSettings, () =>
+      loadSettingsPageData({ accountBookId }),
+    );
   const router = useRouter();
   const navigate = useNavigate({
     from: "/$accountBookId/settings",
@@ -32,8 +38,10 @@ function SettingsPage() {
   return (
     <Suspense fallback={null}>
       <SettingsPageView
+        key={accountBookId}
         accountBookId={accountBookId}
         settings={settings}
+        onRefreshConstraints={onRefreshConstraints}
         onSubmit={async (values) => {
           const { updateAccountBookSettings } =
             await import("@/server/account-books");

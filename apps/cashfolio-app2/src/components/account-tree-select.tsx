@@ -3,7 +3,7 @@ import {
   type TreeNodeData,
   type TreeSelectProps,
 } from "@mantine/core";
-import { forwardRef, useMemo } from "react";
+import { forwardRef, useMemo, useRef } from "react";
 
 export const ACCOUNT_TREE_GROUP_VALUE_PREFIX =
   "__cashfolio_account_tree_group__:";
@@ -122,7 +122,27 @@ export const AccountTreeSelect = forwardRef<
   },
   ref,
 ) {
-  const data = useMemo(() => buildAccountTreeData(accounts), [accounts]);
+  const previousOptions = useRef(new Map<string, AccountTreeOption>());
+  for (const account of accounts)
+    previousOptions.current.set(account.value, account);
+  const value = props.value ?? props.defaultValue;
+  const selectedValue = typeof value === "string" ? value : null;
+  const missing =
+    selectedValue &&
+    !accounts.some((account) => account.value === selectedValue)
+      ? (previousOptions.current.get(selectedValue) ?? {
+          value: selectedValue,
+          label: selectedValue,
+        })
+      : undefined;
+  const data = buildAccountTreeData(
+    missing
+      ? [
+          ...accounts,
+          { ...missing, label: `${missing.label} (no longer available)` },
+        ]
+      : accounts,
+  );
   const accountValues = useMemo(
     () => new Set(accounts.map((account) => account.value)),
     [accounts],
@@ -133,6 +153,12 @@ export const AccountTreeSelect = forwardRef<
       ref={ref}
       {...props}
       data={data}
+      error={
+        props.error ??
+        (missing
+          ? "The selected account is no longer available. Choose another account."
+          : undefined)
+      }
       searchable={searchable}
       allowDeselect={allowDeselect}
       expandOnClick={expandOnClick}

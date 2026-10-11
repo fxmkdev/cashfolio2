@@ -367,7 +367,7 @@ export const columnTypes: AgGridReactProps["columnTypes"] = {
     valueFormatter: ({ value, colDef }) =>
       (colDef.context?.options ?? []).find(
         (o: { label: string; value: string }) => o.value === value,
-      )?.label ?? "",
+      )?.label ?? (value ? `${value} (no longer available)` : ""),
     cellEditor: AccountTreeSelectCellEditor,
   },
   [TEXT_COLUMN]: {

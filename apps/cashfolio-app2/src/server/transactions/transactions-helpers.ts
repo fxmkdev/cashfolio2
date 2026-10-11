@@ -1,3 +1,4 @@
+import type { Prisma } from "../../.prisma-client/client";
 import { prisma } from "../../prisma.server";
 import {
   AccountType,
@@ -101,16 +102,17 @@ export async function validateAccountTypeBookings(
     date: string | Date;
   }[],
   accountBookId: string,
+  db: Pick<Prisma.TransactionClient, "account" | "accountBook"> = prisma,
 ) {
   const accountIds = bookings.map((b) => b.accountId).filter(Boolean);
   if (accountIds.length === 0) return;
 
   const [accounts, accountBook] = await Promise.all([
-    prisma.account.findMany({
+    db.account.findMany({
       where: { id: { in: accountIds }, accountBookId },
       select: { id: true, type: true, equityAccountSubtype: true },
     }),
-    prisma.accountBook.findUniqueOrThrow({
+    db.accountBook.findUniqueOrThrow({
       where: { id: accountBookId },
       select: { startDate: true },
     }),

@@ -19,6 +19,8 @@ import { ConfirmArchiveModal } from "@/components/confirm-archive-modal";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 import { DataGrid } from "@/components/data-grid";
 import { PageShell } from "@/components/page-shell";
+import { UnarchiveMutationFeedback } from "@/components/unarchive-mutation-feedback";
+import type { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
 import {
   ReorderGroupChildrenModal,
   type ReorderGroupChildRow,
@@ -42,6 +44,8 @@ type RowTarget = {
 
 export type AccountsPageViewProps = {
   accountBookId: string;
+  onRefreshConstraints?: () => Promise<void>;
+  unarchiveRecovery?: ReturnType<typeof useUnarchiveMutation>;
   tab: TabValue;
   mode: AccountsMode;
   tabs: readonly { value: TabValue; label: string }[];
@@ -93,6 +97,8 @@ export type AccountsPageViewProps = {
 
 export function AccountsPageView({
   accountBookId,
+  onRefreshConstraints,
+  unarchiveRecovery,
   tab,
   mode,
   tabs,
@@ -198,6 +204,10 @@ export function AccountsPageView({
         }
       />
 
+      <UnarchiveMutationFeedback
+        recovery={unarchiveRecovery}
+        onRefreshConstraints={onRefreshConstraints}
+      />
       <Tabs value={tab}>
         <Tabs.List mb="md">
           {tabs.map((t) => (
@@ -245,6 +255,7 @@ export function AccountsPageView({
       {!isArchivedMode && (
         <>
           <EditAccountModal
+            onRefreshConstraints={onRefreshConstraints}
             opened={createModalOpened}
             onClose={onCloseCreateAccount}
             accountGroups={accountGroups}
@@ -254,6 +265,7 @@ export function AccountsPageView({
             typeDescriptor={tab}
           />
           <ConfirmArchiveModal
+            onRefreshConstraints={onRefreshConstraints}
             opened={!!archivingRow}
             onClose={onCloseArchive}
             title={
@@ -268,6 +280,7 @@ export function AccountsPageView({
       )}
 
       <EditAccountGroupModal
+        onRefreshConstraints={onRefreshConstraints}
         opened={createGroupModalOpened}
         onClose={onCloseCreateGroup}
         accountGroups={accountGroups}
@@ -277,6 +290,7 @@ export function AccountsPageView({
       />
 
       <EditAccountModal
+        onRefreshConstraints={onRefreshConstraints}
         opened={editModalOpen}
         onClose={onCloseEditAccount}
         onExitTransitionEnd={onClearEditingAccount}
@@ -290,6 +304,7 @@ export function AccountsPageView({
       />
 
       <EditAccountGroupModal
+        onRefreshConstraints={onRefreshConstraints}
         opened={editGroupModalOpen}
         onClose={onCloseEditGroup}
         onExitTransitionEnd={onClearEditingGroup}
@@ -302,6 +317,7 @@ export function AccountsPageView({
       />
 
       <ConfirmDeleteModal
+        onRefreshConstraints={onRefreshConstraints}
         opened={!!deletingRow}
         onClose={onCloseDelete}
         title={
@@ -314,6 +330,8 @@ export function AccountsPageView({
       />
 
       <ReorderGroupChildrenModal
+        key={reorderingRow?.parentKey}
+        onRefreshConstraints={onRefreshConstraints}
         opened={!!reorderingRow}
         onClose={onCloseReorder}
         rowName={reorderingRow?.name ?? ""}

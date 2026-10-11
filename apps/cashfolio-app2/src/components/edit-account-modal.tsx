@@ -1,3 +1,4 @@
+import { MutationSubmitFeedback } from "./mutation-submit-feedback";
 import {
   ActionIcon,
   Box,
@@ -20,7 +21,7 @@ import {
 } from "@mantine/core";
 import { isNotEmpty, useForm } from "@mantine/form";
 import { IconCheck, IconCopy, IconInfoCircle } from "@tabler/icons-react";
-import { useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useReducer, useRef } from "react";
 import { Fragment } from "react/jsx-runtime";
 import {
   AccountType,
@@ -308,6 +309,7 @@ export function transformAccountValues(
 export type EditAccountModalProps = {
   opened: boolean;
   onClose: () => void;
+  onRefreshConstraints?: () => Promise<void>;
   onExitTransitionEnd?: () => void;
   accountGroups: AccountGroupOption[];
   onSubmit: (values: TransformedFormValues) => void | Promise<void>;
@@ -324,6 +326,7 @@ export function EditAccountModal({
   onExitTransitionEnd,
   accountGroups,
   onSubmit,
+  onRefreshConstraints,
   initialValues,
   existingNodes,
   editingId,
@@ -333,8 +336,11 @@ export function EditAccountModal({
   const isEdit = !!initialValues;
   const statementImportCsvFormatInputId = useId();
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
-  const { isSubmitting, runSubmit } = useDialogSubmitState();
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const submitState = useDialogSubmitState({
+    captureErrors: true,
+    onRefreshConstraints,
+  });
+  const { isSubmitting, runSubmit, clearSubmissionError } = submitState;
   const form = useForm<FormValues, TransformedFormValues>({
     mode: "uncontrolled",
     initialValues: initialValues
@@ -354,6 +360,9 @@ export function EditAccountModal({
       },
       typeDescriptor: isNotEmpty("Type is required"),
       groupId: (value, values) =>
+        (value && !accountGroups.some((group) => group.value === value)
+          ? "The selected group is no longer available. Choose another group or clear the selection."
+          : null) ??
         getAccountCashParentCompatibilityError({
           accountType: transformAccountValues(values).type,
           accountUnit: values.unit,
@@ -410,7 +419,7 @@ export function EditAccountModal({
         values.typeDescriptor !== previous.typeDescriptor ||
         values.groupId !== previous.groupId
       ) {
-        setSubmitError(null);
+        clearSubmissionError();
         forceUpdate();
       }
     },
@@ -425,15 +434,28 @@ export function EditAccountModal({
     [initialValues, typeDescriptor],
   );
 
+  const initializedSession = useRef<string | null>(null);
   useEffect(() => {
-    if (opened) {
+    if (!opened) {
+      initializedSession.current = null;
+      return;
+    }
+    const session = `${editingId ?? "create"}/${typeDescriptor}`;
+    if (initializedSession.current !== session) {
+      initializedSession.current = session;
       const currentForm = formRef.current;
       currentForm.setInitialValues(resetInitialValues);
       currentForm.reset();
-      setSubmitError(null);
+      clearSubmissionError();
       forceUpdate();
     }
-  }, [opened, resetInitialValues]);
+  }, [
+    opened,
+    editingId,
+    typeDescriptor,
+    resetInitialValues,
+    clearSubmissionError,
+  ]);
 
   const { unit, type, equityAccountSubtype } = transformAccountValues(
     form.getValues(),
@@ -477,19 +499,11 @@ export function EditAccountModal({
     >
       <form
         onSubmit={form.onSubmit((values) => {
-          setSubmitError(null);
+          clearSubmissionError();
           return runSubmit(async () => {
-            try {
-              await onSubmit(
-                applyAccountGroupCashInheritance(values, accountGroups),
-              );
-            } catch (error) {
-              setSubmitError(
-                error instanceof Error
-                  ? error.message
-                  : "Failed to save account.",
-              );
-            }
+            await onSubmit(
+              applyAccountGroupCashInheritance(values, accountGroups),
+            );
           });
         })}
       >
@@ -702,11 +716,10 @@ export function EditAccountModal({
               </>
             )}
           </Grid>
-          {submitError && (
-            <Text size="sm" c="red">
-              {submitError}
-            </Text>
-          )}
+          <MutationSubmitFeedback
+            state={submitState}
+            onRefreshConstraints={onRefreshConstraints}
+          />
           <Group justify="end">
             <Button
               variant="subtle"

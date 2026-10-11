@@ -6,6 +6,7 @@ import {
   ensureAuthorizedForAccountBookId,
   ensureSameOriginRequestFromServerContext,
   prisma,
+  tx,
   resetAccountBookSettingsMocks,
   restoreAccountBookSettingsMocks,
 } from "./account-book-settings-test-setup";
@@ -29,11 +30,11 @@ describe("deleteAccountBook", () => {
 
     expect(ensureSameOriginRequestFromServerContext).toHaveBeenCalledTimes(1);
     expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-1");
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
+    expect(tx.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
       where: { id: "book-1" },
       select: { name: true },
     });
-    expect(prisma.accountBook.delete).toHaveBeenCalledWith({
+    expect(tx.accountBook.delete).toHaveBeenCalledWith({
       where: { id: "book-1" },
     });
   });
@@ -46,11 +47,11 @@ describe("deleteAccountBook", () => {
       },
     });
 
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
+    expect(tx.accountBook.findUniqueOrThrow).toHaveBeenCalledWith({
       where: { id: "book-1" },
       select: { name: true },
     });
-    expect(prisma.accountBook.delete).toHaveBeenCalledWith({
+    expect(tx.accountBook.delete).toHaveBeenCalledWith({
       where: { id: "book-1" },
     });
   });
@@ -65,7 +66,7 @@ describe("deleteAccountBook", () => {
       }),
     ).rejects.toThrow("Account book name confirmation is required.");
 
-    expect(prisma.accountBook.delete).not.toHaveBeenCalled();
+    expect(tx.accountBook.delete).not.toHaveBeenCalled();
   });
 
   it("rejects mismatched account book delete confirmation", async () => {
@@ -78,10 +79,10 @@ describe("deleteAccountBook", () => {
       }),
     ).rejects.toThrow("Account book name confirmation does not match.");
 
-    expect(prisma.accountBook.delete).not.toHaveBeenCalled();
+    expect(tx.accountBook.delete).not.toHaveBeenCalled();
   });
-  it("retries only the database delete after a conflict", async () => {
-    prisma.accountBook.delete.mockRejectedValueOnce(
+  it("retries the locked delete transaction after a conflict", async () => {
+    tx.accountBook.delete.mockRejectedValueOnce(
       new Prisma.PrismaClientKnownRequestError("deadlock", {
         code: "P2034",
         clientVersion: "test",
@@ -90,8 +91,10 @@ describe("deleteAccountBook", () => {
     await deleteAccountBook({
       data: { accountBookId: "book-1", confirmationName: "My Book" },
     });
-    expect(prisma.accountBook.delete).toHaveBeenCalledTimes(2);
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledOnce();
+    expect(tx.accountBook.delete).toHaveBeenCalledTimes(2);
+    expect(tx.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(2);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(2);
     expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledOnce();
     expect(ensureSameOriginRequestFromServerContext).toHaveBeenCalledOnce();
   });

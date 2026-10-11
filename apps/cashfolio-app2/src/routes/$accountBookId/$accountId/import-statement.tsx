@@ -1,3 +1,4 @@
+import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { notifications } from "@mantine/notifications";
 import { Suspense, lazy, useMemo, useState } from "react";
@@ -57,9 +58,13 @@ function StatementImportRoutePage() {
 }
 
 function StatementImportAccountPage() {
-  const loaderData = Route.useLoaderData();
+  const sourceData = Route.useLoaderData();
   const { accountBookId, accountId } = Route.useParams();
   const { period } = Route.useSearch();
+  const { data: loaderData, refresh: onRefreshConstraints } =
+    useRefreshedMutationData(sourceData, () =>
+      loadLedgerPageData({ accountBookId, accountId, period }),
+    );
   const navigate = Route.useNavigate();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -132,6 +137,7 @@ function StatementImportAccountPage() {
         isImportComplete={isImportComplete}
         period={period}
         onSubmittingChange={setIsSubmitting}
+        onRefreshConstraints={onRefreshConstraints}
         onSubmit={handleImport}
       />
     </Suspense>
