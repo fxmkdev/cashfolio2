@@ -1,3 +1,8 @@
+import {
+  BulkTransactionToolbar,
+  BulkTransactionDialogs,
+} from "@/components/bulk-transaction-actions";
+import type { BulkTransactionActions } from "@/hooks/use-bulk-transaction-actions";
 import { Button, Group, Modal, Title } from "@mantine/core";
 import { IconBolt } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
@@ -53,6 +58,7 @@ export type RebookingState = {
 };
 
 export type TransactionsPageViewProps = {
+  bulkActions?: BulkTransactionActions<TransactionsRow>;
   accountBookId: string;
   onRefreshConstraints?: () => Promise<void>;
   rows: TransactionsRow[];
@@ -106,6 +112,7 @@ export type TransactionsPageViewProps = {
 
 export function TransactionsPageView({
   onRefreshConstraints,
+  bulkActions,
   rows,
   columnDefs,
   detailColumnDefs,
@@ -163,7 +170,10 @@ export function TransactionsPageView({
         }
       />
 
+      {bulkActions && <BulkTransactionToolbar actions={bulkActions} />}
+
       <DataGrid
+        {...bulkActions?.gridProps}
         className="transactions-master-grid"
         containerStyle={{ flex: 1, minHeight: 0 }}
         rowData={rows}
@@ -173,7 +183,10 @@ export function TransactionsPageView({
           suppressHeaderMenuButton: true,
         }}
         getRowId={({ data }) => data.id}
-        onRowDataUpdated={onRowDataUpdated}
+        onRowDataUpdated={(event) => {
+          bulkActions?.gridProps.onRowDataUpdated?.(event);
+          onRowDataUpdated?.(event);
+        }}
         masterDetail
         detailRowAutoHeight
         suppressColumnVirtualisation
@@ -200,6 +213,8 @@ export function TransactionsPageView({
           },
         }}
       />
+
+      {bulkActions && <BulkTransactionDialogs actions={bulkActions} />}
 
       <Modal
         opened={createModalOpened}

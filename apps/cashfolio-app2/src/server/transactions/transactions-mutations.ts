@@ -8,6 +8,8 @@ import {
   validateCreateSimpleTransactionInput,
   validateRebookBookingInput,
   validateDeleteTransactionInput,
+  validateDeleteTransactionsInput,
+  validateRebookBookingsInput,
 } from "./transactions-input-validation";
 import { ensureAuthorizedAccountBookMutation } from "../mutation-guard.server";
 import { withDatabaseConflictRetry } from "../database-conflict-retry";
@@ -21,6 +23,11 @@ import {
   updateTransactionOperation,
   type TransactionMutationOperationResult,
 } from "./transactions-mutation-operations";
+
+import {
+  deleteTransactionsOperation,
+  rebookBookingsOperation,
+} from "./transactions-bulk-operations";
 
 async function runTransactionMutation<T>(
   accountBookId: string,
@@ -83,5 +90,21 @@ export const deleteTransaction = createServerFn({ method: "POST" })
   .handler(async ({ data }) =>
     runTransactionMutation(data.accountBookId, (tx) =>
       deleteTransactionOperation(data, tx),
+    ),
+  );
+
+export const rebookBookings = createServerFn({ method: "POST" })
+  .validator(validateRebookBookingsInput)
+  .handler(async ({ data }) =>
+    runTransactionMutation(data.accountBookId, (tx) =>
+      rebookBookingsOperation(data, tx),
+    ),
+  );
+
+export const deleteTransactions = createServerFn({ method: "POST" })
+  .validator(validateDeleteTransactionsInput)
+  .handler(async ({ data }) =>
+    runTransactionMutation(data.accountBookId, (tx) =>
+      deleteTransactionsOperation(data, tx),
     ),
   );

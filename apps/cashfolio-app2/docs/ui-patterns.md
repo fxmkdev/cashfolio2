@@ -379,6 +379,29 @@ with the transaction's bookings.
   transaction-level actions on the master row. Rebook is a booking-level action
   in the detail grid and excludes the clicked booking's current account.
 
+## Bulk Transaction Actions
+
+- Account ledgers support bulk Rebook and Delete; the Transactions page supports
+  bulk Delete on master rows. Existing single-row actions remain available.
+- Use AG Grid native `multiRow` checkbox selection, a left-pinned selection
+  column, filtered header select-all, and no selection on ordinary cell clicks.
+  Opening-balance transactions have disabled checkboxes with the management
+  explanation; virtual carried-forward rows have no checkbox.
+- Show a contextual toolbar above the grid with the selected booking/transaction
+  count, action buttons, and Clear Selection. Selection survives sorting and
+  ordinary refreshes, but excludes filtered-out or newly protected rows and
+  clears when account, book, or period changes.
+- Rebook snapshots selected bookings and offers a single target compatible with
+  every booking. Delete snapshots unique transaction IDs and explicitly warns
+  that all bookings, including those in other accounts, are permanently deleted.
+- Dialog submission uses the async-submit guard and shared mutation feedback.
+  Failure preserves the dialog snapshot and shows an inline error while
+  refreshing current constraints; live selection is reconciled with selectable
+  rows, and target choices update. Success clears selection, refreshes once, and
+  reports the affected count. Bulk actions are atomic.
+- Shared selection and action state lives in `useBulkTransactionActions`, with
+  toolbar/dialog components in `bulk-transaction-actions.tsx`.
+
 ## Validation Pattern
 
 Shared validators live in `src/shared/account-validation.ts` and are used both

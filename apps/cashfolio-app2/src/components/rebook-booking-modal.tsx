@@ -12,6 +12,7 @@ export type RebookTargetOption = AccountTreeOption;
 export function RebookBookingModal({
   targetAccounts,
   disabledReason,
+  description,
   onClose,
   onSubmittingChange,
   onSubmit,
@@ -19,6 +20,7 @@ export function RebookBookingModal({
 }: {
   targetAccounts: RebookTargetOption[];
   disabledReason?: string | null;
+  description?: string;
   onClose: () => void;
   onRefreshConstraints?: () => Promise<void>;
   onSubmittingChange?: (isSubmitting: boolean) => void;
@@ -73,6 +75,7 @@ export function RebookBookingModal({
   return (
     <form ref={formRef} onSubmit={handleSubmit}>
       <Stack gap="md">
+        {description && <Text size="sm">{description}</Text>}
         <AccountTreeSelect
           label="Target Account"
           placeholder="Select Target Account"

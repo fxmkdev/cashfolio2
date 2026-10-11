@@ -444,9 +444,14 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
     expect(await db.transaction.count()).toBe(1);
   });
 
-  it.each(["archive", "rebook"] as const)(
-    "protects account balance and target status when %s wins the lock",
-    async (first) => {
+  it.each([
+    ["archive", false],
+    ["rebook", false],
+    ["archive", true],
+    ["rebook", true],
+  ] as const)(
+    "protects account balance and target status when %s wins the lock (bulk: %s)",
+    async (first, bulk) => {
       const source = await mutations.createAccount({ data: account("Source") });
       const target = await mutations.createAccount({ data: account("Target") });
       const income = await mutations.createAccount({
@@ -474,13 +479,21 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
           data: { accountBookId: bookId, id: target.id },
         });
       const rebook = () =>
-        transactions.rebookBooking({
-          data: {
-            accountBookId: bookId,
-            bookingId: booking.id,
-            targetAccountId: target.id,
-          },
-        });
+        bulk
+          ? transactions.rebookBookings({
+              data: {
+                accountBookId: bookId,
+                bookingIds: [booking.id],
+                targetAccountId: target.id,
+              },
+            })
+          : transactions.rebookBooking({
+              data: {
+                accountBookId: bookId,
+                bookingId: booking.id,
+                targetAccountId: target.id,
+              },
+            });
       const outcomes = await race(
         first === "archive" ? archive : rebook,
         first === "archive" ? rebook : archive,

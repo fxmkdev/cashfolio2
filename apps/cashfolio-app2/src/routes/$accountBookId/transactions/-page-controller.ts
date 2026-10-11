@@ -1,8 +1,10 @@
 import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
+import { useBulkTransactionActions } from "@/hooks/use-bulk-transaction-actions";
 import { useCallback, useState } from "react";
 import {
   createTransaction,
   deleteTransaction,
+  deleteTransactions,
   getTransaction,
   rebookBooking,
   updateTransaction,
@@ -193,9 +195,21 @@ export function useTransactionsPageController(args: {
     onDeleteClick: handleDeleteClick,
   });
 
+  const bulkActions = useBulkTransactionActions({
+    scopeKey: `${args.accountBookId}:${args.selectedPeriodValue ?? ""}`,
+    deleteTransactions: (transactionIds) =>
+      deleteTransactions({
+        data: { accountBookId: args.accountBookId, transactionIds },
+      }),
+    rows: loaderData.rows,
+    invalidate: args.invalidate,
+    onRefreshConstraints,
+  });
+
   return {
     onRefreshConstraints,
     rows: loaderData.rows,
+    bulkActions,
     columnDefs,
     detailColumnDefs,
     accountBookStartDate: new Date(loaderData.periodBounds.minBookingDate),

@@ -1,6 +1,6 @@
 import { MutationSubmitFeedback } from "./mutation-submit-feedback";
 import { Button, Group, Modal, Text } from "@mantine/core";
-import type { FormEvent } from "react";
+import type { ReactNode, FormEvent } from "react";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 
 export function ConfirmDeleteModal({
@@ -8,15 +8,19 @@ export function ConfirmDeleteModal({
   onClose,
   title,
   name,
+  description,
   onConfirm,
   onRefreshConstraints,
+  onExitTransitionEnd,
 }: {
   opened: boolean;
   onClose: () => void;
   onRefreshConstraints?: () => Promise<void>;
   title: string;
   name?: string;
+  description?: ReactNode;
   onConfirm: () => void | Promise<void>;
+  onExitTransitionEnd?: () => void;
 }) {
   const submitState = useDialogSubmitState({
     captureErrors: true,
@@ -39,6 +43,7 @@ export function ConfirmDeleteModal({
   return (
     <Modal
       opened={opened}
+      onExitTransitionEnd={onExitTransitionEnd}
       onClose={handleClose}
       title={title}
       closeOnEscape={!isSubmitting}
@@ -47,6 +52,11 @@ export function ConfirmDeleteModal({
     >
       <form onSubmit={handleSubmit}>
         <Text mb="lg">Are you sure you want to delete {name}?</Text>
+        {description && (
+          <Text mb="lg" size="sm">
+            {description}
+          </Text>
+        )}
         <MutationSubmitFeedback
           state={submitState}
           onRefreshConstraints={onRefreshConstraints}
