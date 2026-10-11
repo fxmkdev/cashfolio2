@@ -36,3 +36,14 @@ export type RebookBookingInput = {
   bookingId: string;
   targetAccountId: string;
 };
+
+export type RebookBookingsInput = {
+  accountBookId: string;
+  bookingIds: string[];
+  targetAccountId: string;
+};
+
+export type DeleteTransactionsInput = {
+  accountBookId: string;
+  transactionIds: string[];
+};

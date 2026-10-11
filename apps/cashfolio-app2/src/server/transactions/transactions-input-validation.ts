@@ -14,6 +14,8 @@ import type {
   CreateTransactionInput,
   CreateTransactionsInput,
   RebookBookingInput,
+  RebookBookingsInput,
+  DeleteTransactionsInput,
 } from "./transactions-types";
 
 function readBookingDate(
@@ -205,5 +207,42 @@ export function validateDeleteTransactionInput(data: unknown): {
       "accountBookId",
       "Account book id is required.",
     ),
+  };
+}
+
+function readBulkIds(data: Record<string, unknown>, field: string): string[] {
+  const ids = requireArrayField(data, field);
+  if (ids.length === 0) throw new Error("Select at least one item.");
+  return [
+    ...new Set(
+      ids.map((id) =>
+        requireStringField(
+          { id },
+          "id",
+          "Each item id must be a nonempty string.",
+        ),
+      ),
+    ),
+  ];
+}
+
+export function validateRebookBookingsInput(
+  data: unknown,
+): RebookBookingsInput {
+  assertRecord(data);
+  return {
+    accountBookId: requireStringField(data, "accountBookId"),
+    bookingIds: readBulkIds(data, "bookingIds"),
+    targetAccountId: requireStringField(data, "targetAccountId"),
+  };
+}
+
+export function validateDeleteTransactionsInput(
+  data: unknown,
+): DeleteTransactionsInput {
+  assertRecord(data);
+  return {
+    accountBookId: requireStringField(data, "accountBookId"),
+    transactionIds: readBulkIds(data, "transactionIds"),
   };
 }

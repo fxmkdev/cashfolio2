@@ -1,5 +1,7 @@
 import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
 import { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
+import { deleteTransactions, rebookBookings } from "@/server/transactions";
+import { useBulkTransactionActions } from "@/hooks/use-bulk-transaction-actions";
 import { useCallback, useMemo, useState } from "react";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import {
@@ -130,6 +132,30 @@ export function useLedgerPageController(args: {
     editingTransactionData: editingTransactionData ?? createSplitInitialValues,
     editingSimpleInitialValues:
       editingSimpleInitialValues ?? createSimpleInitialValues,
+  });
+
+  const bulkActions = useBulkTransactionActions({
+    scopeKey: `${args.accountBookId}:${account.id}:${args.selectedPeriodValue ?? ""}`,
+    rows: loaderData.rows,
+    invalidate: args.invalidate,
+    onRefreshConstraints,
+    deleteTransactions: (transactionIds) =>
+      deleteTransactions({
+        data: { accountBookId: args.accountBookId, transactionIds },
+      }),
+    rebook: {
+      submit: (bookingIds, targetAccountId) =>
+        rebookBookings({
+          data: {
+            accountBookId: args.accountBookId,
+            bookingIds,
+            targetAccountId,
+          },
+        }),
+      currentAccountId: account.id,
+      accountOptions,
+      getBooking: (row) => row,
+    },
   });
 
   const actions = createLedgerMutationActions({
@@ -392,6 +418,7 @@ export function useLedgerPageController(args: {
   return {
     onRefreshConstraints,
     unarchiveRecovery,
+    bulkActions,
     backTab,
     account,
     accountGroups,

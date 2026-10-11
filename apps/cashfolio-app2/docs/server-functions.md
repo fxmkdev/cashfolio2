@@ -366,3 +366,23 @@ after calculations and rounding. Numeric request values and provider/Redis
 TimeSeries rates have only the precision received at those source boundaries;
 the refactor cannot recover digits already lost there. Provider and TimeSeries
 storage formats and lookup behavior remain unchanged.
+
+## Bulk Transaction Mutations
+
+`rebookBookings` accepts `{ accountBookId, bookingIds, targetAccountId }` and
+returns `{ transactionIds }` with unique affected transaction IDs.
+`deleteTransactions` accepts `{ accountBookId, transactionIds }` and returns no
+payload. Both validate nonempty identifier arrays and deduplicate them before
+account-book mutation authorization.
+
+All batch reads, validation, and writes use the transaction client supplied by
+`withAccountBookMutation`, inside the existing conflict retry. This locks the
+account-book row before reading business-rule state and serializes mutations
+with other writers in the same book. Bulk operations do not open nested
+transactions. Every requested item must belong to the account book and still
+exist. Any invalid item aborts the whole batch. Rebooking preserves existing
+opening-balance, account/unit/sign/date restrictions and validates Gain/Loss
+against the final proposed accounts for every affected transaction. Deletion
+removes complete transactions with cascading bookings. Period-cache cleanup runs
+once after commit; database cache-revision triggers participate in the same
+transaction. Single-item APIs remain unchanged.

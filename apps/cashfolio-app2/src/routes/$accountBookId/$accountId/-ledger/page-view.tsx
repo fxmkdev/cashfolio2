@@ -1,6 +1,11 @@
 import { UnarchiveMutationFeedback } from "@/components/unarchive-mutation-feedback";
 import type { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
 import {
+  BulkTransactionToolbar,
+  BulkTransactionDialogs,
+} from "@/components/bulk-transaction-actions";
+import type { BulkTransactionActions } from "@/hooks/use-bulk-transaction-actions";
+import {
   IconArchive,
   IconArchiveOff,
   IconBolt,
@@ -98,6 +103,7 @@ export type RebookingState = {
 
 export type LedgerPageViewProps = {
   onRefreshConstraints?: () => Promise<void>;
+  bulkActions?: BulkTransactionActions<LedgerRow>;
   backTab: TabValue;
   account: LedgerPageLoaderData["account"];
   accountGroups: LedgerPageLoaderData["accountGroups"];
@@ -195,6 +201,7 @@ export type LedgerPageViewProps = {
 
 export function LedgerPageView({
   onRefreshConstraints,
+  bulkActions,
   backTab,
   account,
   accountGroups,
@@ -396,7 +403,10 @@ export function LedgerPageView({
         recovery={unarchiveRecovery}
         onRefreshConstraints={onRefreshConstraints}
       />
+      {bulkActions && <BulkTransactionToolbar actions={bulkActions} />}
+
       <DataGrid
+        {...bulkActions?.gridProps}
         containerStyle={{ flex: 1, minHeight: 0 }}
         rowData={rows}
         columnDefs={columnDefs}
@@ -405,8 +415,13 @@ export function LedgerPageView({
           suppressHeaderMenuButton: true,
         }}
         getRowId={({ data }) => data.id}
-        onRowDataUpdated={onRowDataUpdated}
+        onRowDataUpdated={(event) => {
+          bulkActions?.gridProps.onRowDataUpdated?.(event);
+          onRowDataUpdated?.(event);
+        }}
       />
+
+      {bulkActions && <BulkTransactionDialogs actions={bulkActions} />}
 
       <Modal
         opened={simpleModalOpened}
