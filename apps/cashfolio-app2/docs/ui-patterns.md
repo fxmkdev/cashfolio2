@@ -94,6 +94,28 @@ render trees in extracted `*PageView` components.
 
 ## Modal Pattern
 
+`src/components/edit-account-modal.tsx` remains the public account-editor entry
+point, including its existing type and form-value exports. Its implementation
+lives in `src/components/account-editor/`:
+
+- `types.ts`: input props, initial values, and form-value contracts
+- `values.ts`: initial-value creation, form transforms, and CSV JSON validation
+- `controller.ts`: form validation, edit-session initialization, cash
+  eligibility, submission, and close guards
+- `view.tsx`: the account modal render tree
+- `statement-import-csv-format-field.tsx`: CSV configuration input and JSON help
+
+The form/controller is created once per modal render, and a constraint refresh
+does not initialize a new edit session. Existing stories and value tests
+exercise the public entry point so callers keep the same API.
+
+Shared CSV configuration handling keeps
+`src/shared/statement-import-csv-format.ts` as its public entry point.
+Implementation modules in the sibling `statement-import-csv-format/` folder
+separate types/headers, normalization, semantic validation, column/header
+resolution, format/JSON reading, and nested mapping reading. These modules
+remain independent of UI and server dependencies.
+
 `EditAccountModal` and `EditAccountGroupModal` share these conventions:
 
 - **`onExitTransitionEnd`**: used to defer clearing `initialValues` state until
