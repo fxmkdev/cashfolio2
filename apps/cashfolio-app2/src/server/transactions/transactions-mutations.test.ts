@@ -88,6 +88,64 @@ import type {
 const BASE_DATE = "2026-01-12T00:00:00.000Z";
 const FIXED_SYSTEM_TIME = new Date("2026-02-01T12:00:00.000Z");
 
+describe("transaction mutation boundary validation", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it.each([
+    [
+      createTransaction,
+      { accountBookId: "book-1", description: "", bookings: [null] },
+    ],
+    [
+      updateTransaction,
+      {
+        accountBookId: "book-1",
+        transactionId: "tx-1",
+        description: "",
+        bookings: [{}],
+      },
+    ],
+    [
+      createTransactions,
+      {
+        accountBookId: "book-1",
+        transactions: [{ description: "", bookings: [null] }],
+      },
+    ],
+    [
+      createSimpleTransaction,
+      {
+        accountBookId: "book-1",
+        accountId: "a-1",
+        counterAccountId: "a-2",
+        date: BASE_DATE,
+        description: "",
+        amount: 10,
+        direction: "OTHER",
+      },
+    ],
+    [
+      rebookBooking,
+      { accountBookId: "book-1", bookingId: "b-1", targetAccountId: [] },
+    ],
+    [deleteTransaction, { accountBookId: "book-1", transactionId: null }],
+  ])(
+    "rejects malformed data before authorization, operations, or invalidation (%#)",
+    async (mutation, data) => {
+      await expect(mutation({ data })).rejects.toThrow();
+      expect(ensureAuthorizedForAccountBookId).not.toHaveBeenCalled();
+      expect(ensureSameOriginRequestFromServerContext).not.toHaveBeenCalled();
+      expect(prisma.account.findMany).not.toHaveBeenCalled();
+      expect(prisma.booking.count).not.toHaveBeenCalled();
+      expect(prisma.transaction.create).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(
+        invalidatePeriodBaseDataCacheForAccountBook,
+      ).not.toHaveBeenCalled();
+    },
+  );
+});
+
 function createAssetAccount(id: string) {
   return {
     id,

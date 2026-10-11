@@ -1,13 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import {
-  assertRecord,
-  requireArrayField,
-  requireNumberField,
-  requireStringField,
-} from "../input-validation";
+  validateAccountMutationInput,
+  validateAccountUpdateInput,
+  validateAccountGroupMutationInput,
+  validateAccountGroupUpdateInput,
+  validateAccountBookNodeIdInput,
+  validateReorderAccountTreeItemsInput,
+} from "./accounts-input-validation";
 import { ensureAuthorizedAccountBookMutation } from "../mutation-guard.server";
 import { invalidatePeriodBaseDataCacheForAccountBook } from "../period/period-base-data-cache";
-import type { AccountGroupInput, AccountInput } from "./accounts-types";
 import {
   archiveAccountGroupOperation,
   archiveAccountOperation,
@@ -22,89 +23,6 @@ import {
   updateAccountOperation,
   type AccountMutationOperationResult,
 } from "./accounts-mutation-operations";
-
-function validateAccountMutationInput(data: unknown): AccountInput {
-  assertRecord(data);
-  requireStringField(data, "accountBookId", "Account book id is required.");
-  return data as AccountInput;
-}
-
-function validateAccountUpdateInput(data: unknown): AccountInput & {
-  id: string;
-} {
-  assertRecord(data);
-  requireStringField(data, "id", "Account id is required.");
-  requireStringField(data, "accountBookId", "Account book id is required.");
-  return data as AccountInput & { id: string };
-}
-
-function validateAccountGroupMutationInput(data: unknown): AccountGroupInput {
-  assertRecord(data);
-  requireStringField(data, "accountBookId", "Account book id is required.");
-  return data as AccountGroupInput;
-}
-
-function validateAccountGroupUpdateInput(data: unknown): AccountGroupInput & {
-  id: string;
-} {
-  assertRecord(data);
-  requireStringField(data, "id", "Account group id is required.");
-  requireStringField(data, "accountBookId", "Account book id is required.");
-  return data as AccountGroupInput & { id: string };
-}
-
-function validateAccountBookNodeIdInput(data: unknown): {
-  id: string;
-  accountBookId: string;
-} {
-  assertRecord(data);
-  return {
-    id: requireStringField(data, "id", "Node id is required."),
-    accountBookId: requireStringField(
-      data,
-      "accountBookId",
-      "Account book id is required.",
-    ),
-  };
-}
-
-function validateReorderAccountTreeItemsInput(data: unknown): {
-  accountBookId: string;
-  updates: {
-    id: string;
-    nodeType: "account" | "accountGroup";
-    sortOrder: number;
-  }[];
-} {
-  assertRecord(data);
-  const accountBookId = requireStringField(
-    data,
-    "accountBookId",
-    "Account book id is required.",
-  );
-  const updates = requireArrayField(data, "updates", "Updates are required.");
-
-  return {
-    accountBookId,
-    updates: updates.map((update) => {
-      assertRecord(update, "Reorder update must be an object.");
-      const nodeType = update.nodeType;
-      if (nodeType !== "account" && nodeType !== "accountGroup") {
-        throw new Error("Node type is invalid.");
-      }
-
-      return {
-        id: requireStringField(update, "id", "Node id is required."),
-        nodeType,
-        sortOrder: requireNumberField(
-          update,
-          "sortOrder",
-          "Sort order is required.",
-        ),
-      };
-    }),
-  };
-}
 
 async function runAccountMutation<T>(
   accountBookId: string,

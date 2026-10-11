@@ -3,17 +3,7 @@ import { prisma } from "../prisma.server";
 import { ensureSameOriginRequestFromServerContext } from "../security/same-origin.server";
 import { startOfUtcDay } from "../shared/date";
 import { ensureUser } from "../users/functions.server";
-import {
-  normalizeAccountBookNameOrThrow,
-  normalizeReferenceCurrencyOrThrow,
-  normalizeStartDateOrThrow,
-} from "./account-book-validation";
-
-type CreateAccountBookInput = {
-  name: string;
-  referenceCurrency: string;
-  startDate: Date | string;
-};
+import { validateCreateAccountBookInput } from "./account-book-validation";
 
 type CreatedAccountBook = {
   id: string;
@@ -39,16 +29,12 @@ function toCreatedAccountBook(record: AccountBookRecord): CreatedAccountBook {
 }
 
 export const createAccountBook = createServerFn({ method: "POST" })
-  .validator((data: CreateAccountBookInput) => data)
+  .validator(validateCreateAccountBookInput)
   .handler(async ({ data }): Promise<CreatedAccountBook> => {
     ensureSameOriginRequestFromServerContext();
 
     const user = await ensureUser();
-    const name = normalizeAccountBookNameOrThrow(data.name);
-    const referenceCurrency = normalizeReferenceCurrencyOrThrow(
-      data.referenceCurrency,
-    );
-    const startDate = normalizeStartDateOrThrow(data.startDate);
+    const { name, referenceCurrency, startDate } = data;
 
     const created = await prisma.$transaction(async (tx) => {
       return tx.accountBook.create({

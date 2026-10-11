@@ -10,7 +10,7 @@ export type AccountInput = {
   name: string;
   type: AccountType;
   equityAccountSubtype?: EquityAccountSubtype;
-  groupId?: string;
+  groupId?: string | null;
   sortOrder?: number;
   unit?: Unit;
   currency?: string;
@@ -27,7 +27,7 @@ export type AccountGroupInput = {
   name: string;
   type: AccountType;
   equityAccountSubtype?: EquityAccountSubtype;
-  parentGroupId?: string;
+  parentGroupId?: string | null;
   sortOrder?: number;
   isCashAccount?: boolean;
   isActive?: boolean;

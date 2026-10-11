@@ -10,9 +10,8 @@ import {
   startOfUtcDay,
 } from "../../shared/date";
 import {
-  normalizeAccountBookNameOrThrow,
-  normalizeReferenceCurrencyOrThrow,
-  normalizeStartDateOrThrow,
+  validateDeleteAccountBookInput,
+  validateUpdateAccountBookSettingsInput,
 } from "../account-book-validation";
 import { assertRecord, requireStringField } from "../input-validation";
 import { ensureAuthorizedAccountBookMutation } from "../mutation-guard.server";
@@ -23,18 +22,6 @@ type AccountBookSettings = {
   name: string;
   referenceCurrency: string;
   startDate: string;
-};
-
-type UpdateAccountBookSettingsInput = {
-  accountBookId: string;
-  name: string;
-  referenceCurrency: string;
-  startDate: Date | string;
-};
-
-type DeleteAccountBookInput = {
-  accountBookId: string;
-  confirmationName: string;
 };
 
 type AccountBookSettingsRecord = {
@@ -57,24 +44,6 @@ function validateAccountBookSettingsInput(data: unknown): {
   };
 }
 
-function validateUpdateAccountBookSettingsInput(
-  data: unknown,
-): UpdateAccountBookSettingsInput {
-  assertRecord(data);
-  requireStringField(data, "accountBookId", "Account book id is required.");
-  requireStringField(data, "name", "Account book name is required.");
-  requireStringField(
-    data,
-    "referenceCurrency",
-    "Reference currency is required.",
-  );
-  if (data.startDate == null) {
-    throw new Error("Start date is required.");
-  }
-
-  return data as UpdateAccountBookSettingsInput;
-}
-
 function toAccountBookSettingsResponse(
   record: AccountBookSettingsRecord,
 ): AccountBookSettings {
@@ -84,19 +53,6 @@ function toAccountBookSettingsResponse(
     referenceCurrency: record.referenceCurrency.toUpperCase(),
     startDate: startOfUtcDay(record.startDate).toISOString(),
   };
-}
-
-function normalizeConfirmationNameOrThrow(value: unknown): string {
-  if (typeof value !== "string") {
-    throw new Error("Account book name confirmation is required.");
-  }
-
-  const normalized = value.trim();
-  if (normalized.length === 0) {
-    throw new Error("Account book name confirmation is required.");
-  }
-
-  return normalized;
 }
 
 async function findFirstNonOpeningBookingDate(
@@ -253,11 +209,7 @@ export const updateAccountBookSettings = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<AccountBookSettings> => {
     await ensureAuthorizedAccountBookMutation(data.accountBookId);
 
-    const name = normalizeAccountBookNameOrThrow(data.name);
-    const referenceCurrency = normalizeReferenceCurrencyOrThrow(
-      data.referenceCurrency,
-    );
-    const startDate = normalizeStartDateOrThrow(data.startDate);
+    const { name, referenceCurrency, startDate } = data;
 
     const { updated, referenceCurrencyChanged, startDateChanged } =
       await prisma.$transaction(async (tx) => {
@@ -321,14 +273,12 @@ export const updateAccountBookSettings = createServerFn({ method: "POST" })
   });
 
 export const deleteAccountBook = createServerFn({ method: "POST" })
-  .validator((data: DeleteAccountBookInput) => data)
+  .validator(validateDeleteAccountBookInput)
   .handler(async ({ data }): Promise<void> => {
     ensureSameOriginRequestFromServerContext();
     await ensureAuthorizedForAccountBookId(data.accountBookId);
 
-    const confirmationName = normalizeConfirmationNameOrThrow(
-      data.confirmationName,
-    );
+    const { confirmationName } = data;
     const accountBook = await prisma.accountBook.findUniqueOrThrow({
       where: { id: data.accountBookId },
       select: { name: true },
