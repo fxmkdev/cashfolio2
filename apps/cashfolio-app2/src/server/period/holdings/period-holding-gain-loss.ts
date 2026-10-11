@@ -5,12 +5,7 @@ import {
   moneySubtract,
   moneySum,
 } from "../../../shared/money";
-import {
-  AccountType,
-  EquityAccountSubtype,
-  Unit,
-} from "../../../.prisma-client/enums";
-import { prisma } from "../../../prisma.server";
+import { AccountType, Unit } from "../../../.prisma-client/enums";
 import {
   accumulateGainLossContribution,
   type GainLossContributionAccumulator,
@@ -29,29 +24,30 @@ import type {
 import { computeExecutionResidualRealization } from "./period-execution-residuals";
 import type { TransferClearingUnitBucket } from "../transfer-clearing/period-transfer-clearing";
 
+import type { PeriodBaseExecutionResidualTransaction } from "../base-data/period-base-data-types";
+
 export async function computePeriodHoldingGainLoss(args: {
-  accountBookId: string;
   periodStart: Date;
   periodEndExclusive: Date;
   periodEnd: Date;
   initialHoldingDate: Date;
   referenceCurrency: string;
-  transactionPageSize: number;
   transferClearingBatchSize: number;
   holdingAccounts: HoldingRateConvertibleAccount[];
   transferClearingHoldingAccounts: HoldingRateConvertibleAccount[];
   transferClearingUnitBuckets: TransferClearingUnitBucket[];
   assetLiabilityAccountNameById: Map<string, string>;
   gainsLossesContributionByKey: Map<string, GainLossContributionAccumulator>;
-  initialHoldingBalances?: Array<{
+  initialHoldingBalances: Array<{
     accountId: string;
     rawBalance: Money;
   }>;
-  holdingTransactions?: Array<
+  holdingTransactions: Array<
     HoldingTransaction & {
       id?: string;
     }
   >;
+  executionResidualTransactions: PeriodBaseExecutionResidualTransaction[];
   resolveRate: (input: {
     unit: Unit;
     currency: string | null;
@@ -86,29 +82,11 @@ export async function computePeriodHoldingGainLoss(args: {
 
   if (trackedHoldingAccounts.length > 0) {
     const initialHoldingBalanceByAccountId = new Map<string, Money>();
-    if (args.initialHoldingBalances) {
-      for (const balance of args.initialHoldingBalances) {
-        initialHoldingBalanceByAccountId.set(
-          balance.accountId,
-          balance.rawBalance,
-        );
-      }
-    } else if (holdingAccountIds.length > 0) {
-      const initialHoldingBalances = await prisma.booking.groupBy({
-        by: ["accountId"],
-        where: {
-          accountBookId: args.accountBookId,
-          accountId: { in: holdingAccountIds },
-          date: { lt: args.periodStart },
-        },
-        _sum: { value: true },
-      });
-      for (const balance of initialHoldingBalances) {
-        initialHoldingBalanceByAccountId.set(
-          balance.accountId,
-          toMoney(balance._sum.value ?? toMoney(0)),
-        );
-      }
+    for (const balance of args.initialHoldingBalances) {
+      initialHoldingBalanceByAccountId.set(
+        balance.accountId,
+        balance.rawBalance,
+      );
     }
 
     for (const unitBucket of args.transferClearingUnitBuckets) {
@@ -137,133 +115,16 @@ export async function computePeriodHoldingGainLoss(args: {
       resolveRate: args.resolveRate,
     });
 
-    if (args.holdingTransactions) {
-      await applyHoldingTransactionsToGainLossState({
-        state: holdingGainLossState,
-        transactions: args.holdingTransactions.map((transaction) => ({
-          bookings: transaction.bookings,
-        })),
-        periodStart: args.periodStart,
-        periodEndExclusive: args.periodEndExclusive,
-        convertBookingToReference: ({ id: _id, ...booking }) =>
-          args.convertBookingToReference(booking),
-      });
-    } else if (holdingAccountIds.length > 0) {
-      let nextTransactionIdCursor: string | undefined;
-
-      while (true) {
-        const transactionsPage = await prisma.transaction.findMany({
-          where: {
-            accountBookId: args.accountBookId,
-            AND: [
-              {
-                bookings: {
-                  some: {
-                    accountId: {
-                      in: holdingAccountIds,
-                    },
-                    date: {
-                      gte: args.periodStart,
-                      lt: args.periodEndExclusive,
-                    },
-                  },
-                },
-              },
-              {
-                bookings: {
-                  none: {
-                    date: {
-                      gte: args.periodEndExclusive,
-                    },
-                  },
-                },
-              },
-              {
-                bookings: {
-                  none: {
-                    account: {
-                      type: AccountType.EQUITY,
-                      equityAccountSubtype:
-                        EquityAccountSubtype.OPENING_BALANCES,
-                    },
-                  },
-                },
-              },
-            ],
-          },
-          orderBy: { id: "asc" },
-          take: args.transactionPageSize,
-          ...(nextTransactionIdCursor
-            ? {
-                cursor: {
-                  id_accountBookId: {
-                    id: nextTransactionIdCursor,
-                    accountBookId: args.accountBookId,
-                  },
-                },
-                skip: 1,
-              }
-            : {}),
-          select: {
-            id: true,
-            bookings: {
-              select: {
-                id: true,
-                accountId: true,
-                date: true,
-                value: true,
-                unit: true,
-                currency: true,
-                cryptocurrency: true,
-                symbol: true,
-                tradeCurrency: true,
-                account: {
-                  select: {
-                    type: true,
-                    equityAccountSubtype: true,
-                  },
-                },
-              },
-              orderBy: [{ date: "asc" }, { id: "asc" }],
-            },
-          },
-        });
-
-        if (transactionsPage.length === 0) {
-          break;
-        }
-
-        nextTransactionIdCursor =
-          transactionsPage[transactionsPage.length - 1].id;
-
-        await applyHoldingTransactionsToGainLossState({
-          state: holdingGainLossState,
-          transactions: transactionsPage.map((transaction) => ({
-            bookings: transaction.bookings.map((booking) => ({
-              id: booking.id,
-              accountId: booking.accountId,
-              date: booking.date,
-              value: toMoney(booking.value),
-              unit: booking.unit,
-              currency: booking.currency,
-              cryptocurrency: booking.cryptocurrency,
-              symbol: booking.symbol,
-              tradeCurrency: booking.tradeCurrency,
-              accountType: booking.account.type,
-              equityAccountSubtype: booking.account.equityAccountSubtype,
-            })),
-          })),
-          periodStart: args.periodStart,
-          periodEndExclusive: args.periodEndExclusive,
-          convertBookingToReference: ({ id: _id, ...booking }) =>
-            args.convertBookingToReference(booking),
-        });
-
-        if (transactionsPage.length < args.transactionPageSize) {
-          break;
-        }
-      }
-    }
+    await applyHoldingTransactionsToGainLossState({
+      state: holdingGainLossState,
+      transactions: args.holdingTransactions.map((transaction) => ({
+        bookings: transaction.bookings,
+      })),
+      periodStart: args.periodStart,
+      periodEndExclusive: args.periodEndExclusive,
+      convertBookingToReference: ({ id: _id, ...booking }) =>
+        args.convertBookingToReference(booking),
+    });
 
     const transferClearingTransactionBatch: HoldingTransaction[] = [];
     const flushTransferClearingTransactionBatch = async () => {
@@ -353,12 +214,11 @@ export async function computePeriodHoldingGainLoss(args: {
 
   const executionResidualRealization =
     await computeExecutionResidualRealization({
-      accountBookId: args.accountBookId,
+      transactions: args.executionResidualTransactions,
       periodStart: args.periodStart,
       periodEndExclusive: args.periodEndExclusive,
       referenceCurrency: args.referenceCurrency,
       trackedHoldingAccountIdSet: holdingAccountIdSet,
-      pageSize: args.transactionPageSize,
       convertBookingToReference: args.convertBookingToReference,
       onContribution: (contribution) => {
         accumulateGainLossContribution({

@@ -1,65 +1,48 @@
 import { toMoney } from "../../../shared/money";
 import { toNumericMoney } from "../../money-boundary";
 import { toMoneyNumber, type Money } from "../../../shared/money";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  AccountType,
-  EquityAccountSubtype,
-  Unit,
-} from "../../../.prisma-client/enums";
+import { describe, expect, it, vi } from "vitest";
+import { Unit } from "../../../.prisma-client/enums";
 
-const prisma = vi.hoisted(() => ({
-  transaction: {
-    findMany: vi.fn(),
-  },
-}));
-
-vi.mock("../../../prisma.server", () => ({
-  prisma,
-}));
-
+vi.mock("../../../prisma.server", () => {
+  throw new Error("Residual calculations must not import Prisma.");
+});
+import type { PeriodBaseExecutionResidualTransaction } from "../base-data/period-base-data-types";
 import { computeExecutionResidualRealization } from "./period-execution-residuals";
 
 describe("computeExecutionResidualRealization", () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-    prisma.transaction.findMany.mockResolvedValue([]);
-  });
-
   it("converts cross-period completion candidates without realizing zero residuals", async () => {
-    prisma.transaction.findMany
-      .mockResolvedValueOnce([
-        {
-          id: "tx-cross-period",
-          bookings: [
-            {
-              id: "booking-cash-chf",
-              accountId: "asset-cash",
-              date: new Date("2025-12-31T23:00:00.000Z"),
-              value: toMoney(-100),
-              unit: Unit.CURRENCY,
-              currency: "CHF",
-              cryptocurrency: null,
-              symbol: null,
-              tradeCurrency: null,
-              account: { name: "Cash" },
-            },
-            {
-              id: "booking-expense-usd",
-              accountId: "expense-usd",
-              date: new Date("2026-01-15T00:00:00.000Z"),
-              value: toMoney(100),
-              unit: Unit.CURRENCY,
-              currency: "USD",
-              cryptocurrency: null,
-              symbol: null,
-              tradeCurrency: null,
-              account: { name: "Travel USD" },
-            },
-          ],
-        },
-      ])
-      .mockResolvedValueOnce([]);
+    const transactions = [
+      {
+        id: "tx-cross-period",
+        bookings: [
+          {
+            id: "booking-cash-chf",
+            accountId: "asset-cash",
+            date: new Date("2025-12-31T23:00:00.000Z"),
+            value: toMoney(-100),
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            account: { name: "Cash" },
+          },
+          {
+            id: "booking-expense-usd",
+            accountId: "expense-usd",
+            date: new Date("2026-01-15T00:00:00.000Z"),
+            value: toMoney(100),
+            unit: Unit.CURRENCY,
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            account: { name: "Travel USD" },
+          },
+        ],
+      },
+    ];
 
     const contributions: Array<{
       accountId: string;
@@ -70,12 +53,11 @@ describe("computeExecutionResidualRealization", () => {
     );
 
     const result = await computeExecutionResidualRealization({
-      accountBookId: "book-1",
+      transactions,
       periodStart: new Date("2026-01-01T00:00:00.000Z"),
       periodEndExclusive: new Date("2026-02-01T00:00:00.000Z"),
       referenceCurrency: "CHF",
       trackedHoldingAccountIdSet: new Set<string>(),
-      pageSize: 100,
       convertBookingToReference,
       onContribution: (contribution) => {
         contributions.push({
@@ -95,39 +77,37 @@ describe("computeExecutionResidualRealization", () => {
   });
 
   it("realizes cross-period residuals in the completion period", async () => {
-    prisma.transaction.findMany
-      .mockResolvedValueOnce([
-        {
-          id: "tx-cross-period-completion",
-          bookings: [
-            {
-              id: "booking-expense-usd",
-              accountId: "expense-usd",
-              date: new Date("2026-01-31T00:00:00.000Z"),
-              value: toMoney(100),
-              unit: Unit.CURRENCY,
-              currency: "USD",
-              cryptocurrency: null,
-              symbol: null,
-              tradeCurrency: null,
-              account: { name: "Travel USD" },
-            },
-            {
-              id: "booking-cash-chf",
-              accountId: "asset-cash",
-              date: new Date("2026-02-01T00:00:00.000Z"),
-              value: toMoney(-90),
-              unit: Unit.CURRENCY,
-              currency: "CHF",
-              cryptocurrency: null,
-              symbol: null,
-              tradeCurrency: null,
-              account: { name: "Cash" },
-            },
-          ],
-        },
-      ])
-      .mockResolvedValueOnce([]);
+    const transactions = [
+      {
+        id: "tx-cross-period-completion",
+        bookings: [
+          {
+            id: "booking-expense-usd",
+            accountId: "expense-usd",
+            date: new Date("2026-01-31T00:00:00.000Z"),
+            value: toMoney(100),
+            unit: Unit.CURRENCY,
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            account: { name: "Travel USD" },
+          },
+          {
+            id: "booking-cash-chf",
+            accountId: "asset-cash",
+            date: new Date("2026-02-01T00:00:00.000Z"),
+            value: toMoney(-90),
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            account: { name: "Cash" },
+          },
+        ],
+      },
+    ];
 
     const contributions: Array<{
       accountId: string;
@@ -135,12 +115,11 @@ describe("computeExecutionResidualRealization", () => {
     }> = [];
 
     const result = await computeExecutionResidualRealization({
-      accountBookId: "book-1",
+      transactions,
       periodStart: new Date("2026-02-01T00:00:00.000Z"),
       periodEndExclusive: new Date("2026-03-01T00:00:00.000Z"),
       referenceCurrency: "CHF",
       trackedHoldingAccountIdSet: new Set<string>(),
-      pageSize: 100,
       convertBookingToReference: async ({ currency, value, date }) => {
         if (
           currency === "USD" &&
@@ -178,61 +157,132 @@ describe("computeExecutionResidualRealization", () => {
       },
     ]);
   });
+});
 
-  it("queries only income/expense candidates and excludes explicit gain/loss bookings", async () => {
-    await computeExecutionResidualRealization({
-      accountBookId: "book-1",
-      periodStart: new Date("2026-01-01T00:00:00.000Z"),
-      periodEndExclusive: new Date("2026-02-01T00:00:00.000Z"),
-      referenceCurrency: "CHF",
-      trackedHoldingAccountIdSet: new Set<string>(),
-      pageSize: 100,
-      convertBookingToReference: async ({ value }) => value,
-      onContribution: () => undefined,
-    });
-
-    expect(prisma.transaction.findMany).toHaveBeenCalledTimes(1);
-    const [query] = prisma.transaction.findMany.mock.calls[0] ?? [];
-    expect(query).toBeDefined();
-    expect(toNumericMoney(query?.where?.accountBookId)).toBe("book-1");
-    expect(toNumericMoney(query?.where?.AND)).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          bookings: expect.objectContaining({
-            some: expect.objectContaining({
-              date: {
-                gte: new Date("2026-01-01T00:00:00.000Z"),
-                lt: new Date("2026-02-01T00:00:00.000Z"),
-              },
-            }),
-          }),
-        }),
-        expect.objectContaining({
-          bookings: expect.objectContaining({
-            some: expect.objectContaining({
-              account: {
-                type: AccountType.EQUITY,
-                equityAccountSubtype: {
-                  in: [
-                    EquityAccountSubtype.INCOME,
-                    EquityAccountSubtype.EXPENSE,
-                  ],
-                },
-              },
-            }),
-          }),
-        }),
-        expect.objectContaining({
-          bookings: {
-            none: {
-              account: {
-                type: AccountType.EQUITY,
-                equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
-              },
-            },
-          },
-        }),
-      ]),
-    );
+function residualTransaction(): PeriodBaseExecutionResidualTransaction {
+  return {
+    id: "residual",
+    bookings: [
+      {
+        id: "chf",
+        accountId: "cash",
+        date: new Date("2026-02-01"),
+        value: toMoney(-90),
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+        account: { name: "Cash" },
+      },
+      {
+        id: "usd",
+        accountId: "expense-usd",
+        date: new Date("2026-01-31"),
+        value: toMoney(20),
+        unit: Unit.CURRENCY,
+        currency: "USD",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+        account: { name: "USD Expense" },
+      },
+      {
+        id: "eur",
+        accountId: "expense-eur",
+        date: new Date("2026-02-01"),
+        value: toMoney(60),
+        unit: Unit.CURRENCY,
+        currency: "EUR",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+        account: { name: "EUR Expense" },
+      },
+    ],
+  };
+}
+const residualArgs = {
+  periodStart: new Date("2026-02-01"),
+  periodEndExclusive: new Date("2026-03-01"),
+  referenceCurrency: "CHF",
+  trackedHoldingAccountIdSet: new Set<string>(),
+};
+it("attributes the residual across non-reference legs by Decimal value weight", async () => {
+  const onContribution = vi.fn();
+  const result = await computeExecutionResidualRealization({
+    ...residualArgs,
+    transactions: [residualTransaction()],
+    convertBookingToReference: async ({ value }) => value,
+    onContribution,
   });
+  expect(result.realizedGainLoss.toString()).toBe("-10");
+  expect(
+    onContribution.mock.calls.map(([c]) => [
+      c.accountId,
+      c.realizedGainLoss.toString(),
+    ]),
+  ).toEqual([
+    ["expense-usd", "-2.5"],
+    ["expense-eur", "-7.5"],
+  ]);
+});
+it("skips realization and attribution when any conversion is missing", async () => {
+  const onContribution = vi.fn();
+  const result = await computeExecutionResidualRealization({
+    ...residualArgs,
+    transactions: [residualTransaction()],
+    convertBookingToReference: async ({ currency, value }) =>
+      currency === "EUR" ? null : value,
+    onContribution,
+  });
+  expect(toNumericMoney(result)).toEqual({
+    realizedGainLoss: 0,
+    convertedCount: 2,
+    skippedCount: 1,
+  });
+  expect(onContribution).not.toHaveBeenCalled();
+});
+it("excludes in-period tracked holdings but accepts tracked legs before the period", async () => {
+  const convertBookingToReference = vi.fn(
+    async ({ value }: { value: Money }) => value,
+  );
+  const onContribution = vi.fn();
+  const result = await computeExecutionResidualRealization({
+    ...residualArgs,
+    transactions: [residualTransaction()],
+    trackedHoldingAccountIdSet: new Set(["expense-eur"]),
+    convertBookingToReference,
+    onContribution,
+  });
+  expect(toNumericMoney(result)).toEqual({
+    realizedGainLoss: 0,
+    convertedCount: 0,
+    skippedCount: 0,
+  });
+  expect(convertBookingToReference).not.toHaveBeenCalled();
+  const completed = await computeExecutionResidualRealization({
+    ...residualArgs,
+    transactions: [residualTransaction()],
+    trackedHoldingAccountIdSet: new Set(["expense-usd"]),
+    convertBookingToReference,
+    onContribution,
+  });
+  expect(completed.realizedGainLoss.toString()).toBe("-10");
+});
+it("ignores empty and same-unit transactions without valuation lookups", async () => {
+  const singleUnit = residualTransaction();
+  singleUnit.bookings = singleUnit.bookings.map((b) => ({
+    ...b,
+    currency: "CHF",
+  }));
+  const convertBookingToReference = vi.fn();
+  const result = await computeExecutionResidualRealization({
+    ...residualArgs,
+    transactions: [{ id: "empty", bookings: [] }, singleUnit],
+    convertBookingToReference,
+    onContribution: () => undefined,
+  });
+  expect(result.realizedGainLoss.toString()).toBe("0");
+  expect(convertBookingToReference).not.toHaveBeenCalled();
 });

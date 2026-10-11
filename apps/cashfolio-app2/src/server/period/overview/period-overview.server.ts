@@ -14,13 +14,12 @@ import { computePeriodHoldingGainLoss } from "../holdings/period-holding-gain-lo
 import { createPeriodOverviewEquityAggregation } from "./period-overview-aggregation";
 import { processPeriodEquityBookingsFromBaseData } from "./period-equity-bookings";
 import { type GainLossContributionAccumulator } from "../breakdown/period-gains-losses-contributions";
-import { buildTransferClearingVirtualHierarchy } from "../transfer-clearing/period-transfer-clearing";
+import { preparePeriodCalculationContext } from "../period-calculation-context";
 import { buildPeriodOverviewResponse } from "./period-overview-response";
 import { computePeriodCashFlow } from "./period-cash-flow";
 import type { BreakdownHierarchyAccumulatorItem } from "../period-helpers";
 import type { UserLocale } from "../../../user-locale";
 
-const TRANSACTIONS_PAGE_SIZE = 200;
 const TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE = 200;
 
 export async function loadPeriodOverview(args: {
@@ -45,76 +44,13 @@ export async function loadPeriodOverview(args: {
   const initialHoldingDate = selection.initialHoldingDate;
   const isBeforeAccountBookStart = selection.isBeforeAccountBookStart;
 
-  const assetLiabilityAccountNameById = new Map(
-    baseData.baseAssetLiabilityAccounts.map((account) => [
-      account.id,
-      account.name,
-    ]),
-  );
-
-  const endOfPeriodRawBalanceByAccountId = new Map(
-    baseData.endOfPeriodRawBalances.map((balance) => [
-      balance.accountId,
-      balance.rawBalance,
-    ]),
-  );
-
   const {
-    virtualGroups: transferClearingVirtualGroups,
-    virtualAccounts: transferClearingVirtualAccounts,
-    rawBalanceByVirtualAccountId,
-  } = buildTransferClearingVirtualHierarchy({
-    unitBuckets: baseData.transferClearingUnitBuckets,
-  });
-
-  const transferClearingUnitLabelByHoldingAccountId = new Map(
-    baseData.transferClearingUnitBuckets
-      .filter((bucket) => bucket.isNonReferenceUnit)
-      .map((bucket) => [
-        `virtual:transfer-clearing:account:${bucket.unitKey}`,
-        bucket.unitLabel,
-      ]),
-  );
-  const transferClearingHoldingAccounts = baseData.transferClearingUnitBuckets
-    .filter((bucket) => bucket.isNonReferenceUnit)
-    .map((bucket) => ({
-      id: `virtual:transfer-clearing:account:${bucket.unitKey}`,
-      unit: bucket.unit,
-      currency: bucket.currency,
-      cryptocurrency: bucket.cryptocurrency,
-      symbol: bucket.symbol,
-      tradeCurrency: bucket.tradeCurrency,
-    }));
-
-  const groupById = new Map(
-    baseData.allAccountGroups.map((group) => [group.id, group]),
-  );
-  for (const virtualGroup of transferClearingVirtualGroups) {
-    groupById.set(virtualGroup.id, virtualGroup);
-  }
-
-  const assetLiabilityAccounts = [
-    ...baseData.baseAssetLiabilityAccounts,
-    ...transferClearingVirtualAccounts,
-  ];
-  for (const virtualAccount of transferClearingVirtualAccounts) {
-    assetLiabilityAccountNameById.set(virtualAccount.id, virtualAccount.name);
-  }
-  for (const [
-    holdingAccountId,
-    unitLabel,
-  ] of transferClearingUnitLabelByHoldingAccountId) {
-    if (assetLiabilityAccountNameById.has(holdingAccountId)) {
-      continue;
-    }
-    assetLiabilityAccountNameById.set(holdingAccountId, unitLabel);
-  }
-
-  // Intentionally keep posted real-account balances: virtual transfer-clearing
-  // accounts represent the missing counterpart leg with opposite sign.
-  for (const [accountId, rawBalance] of rawBalanceByVirtualAccountId) {
-    endOfPeriodRawBalanceByAccountId.set(accountId, rawBalance);
-  }
+    assetLiabilityAccountNameById,
+    endOfPeriodRawBalanceByAccountId,
+    transferClearingHoldingAccounts,
+    groupById,
+    assetLiabilityAccounts,
+  } = preparePeriodCalculationContext(baseData);
 
   let bookingsCount = 0;
   let convertedBookingsCount = 0;
@@ -153,13 +89,11 @@ export async function loadPeriodOverview(args: {
     skippedBookingsCount += equityBookingTotals.skippedCount;
 
     const holdingGainLossTotals = await computePeriodHoldingGainLoss({
-      accountBookId: args.accountBookId,
       periodStart: queryStart,
       periodEndExclusive: queryEndExclusive,
       periodEnd: selection.to,
       initialHoldingDate,
       referenceCurrency,
-      transactionPageSize: TRANSACTIONS_PAGE_SIZE,
       transferClearingBatchSize: TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE,
       holdingAccounts: baseData.holdingAccountsResolved,
       transferClearingHoldingAccounts,
@@ -180,6 +114,7 @@ export async function loadPeriodOverview(args: {
         }),
       initialHoldingBalances: baseData.initialHoldingBalances,
       holdingTransactions: baseData.holdingTransactions,
+      executionResidualTransactions: baseData.executionResidualTransactions,
     });
 
     realizedGainLoss = moneyAdd(

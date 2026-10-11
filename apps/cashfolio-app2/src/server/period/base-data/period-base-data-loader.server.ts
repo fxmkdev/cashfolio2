@@ -6,7 +6,7 @@ import {
 import { prisma } from "../../../prisma.server";
 import { normalizePeriodValue } from "../../../shared/period";
 import { addUtcDays, startOfUtcDay } from "../../../shared/date";
-import { resolveExplicitCounterpartNonEquityAccounts } from "../breakdown/period-gains-losses-contributions";
+import { resolveExplicitCounterpartNonEquityAccounts } from "./period-base-data-explicit-counterparts.server";
 import { filterConvertibleHoldingAccounts } from "../period-helpers";
 import {
   getPeriodEndExclusive,
@@ -17,6 +17,7 @@ import {
   loadPeriodCashFlowTransactionsRaw,
   loadPeriodEquityBookingsRaw,
   loadPeriodHoldingTransactionsRaw,
+  loadPeriodExecutionResidualTransactionsRaw,
 } from "./period-base-data-queries.server";
 import { loadTransferClearingUnitBuckets } from "../transfer-clearing/period-transfer-clearing";
 import type { PeriodBaseData } from "./period-base-data-types";
@@ -143,6 +144,7 @@ export async function loadPeriodBaseDataUncached(args: {
     initialHoldingBalancesGrouped,
     holdingTransactions,
     cashFlowTransactions,
+    executionResidualTransactions,
   ] = await Promise.all([
     isBeforeAccountBookStart
       ? Promise.resolve([])
@@ -179,6 +181,13 @@ export async function loadPeriodBaseDataUncached(args: {
           cashAccountIds,
           queryStart,
           queryEndExclusive,
+        }),
+    isBeforeAccountBookStart
+      ? Promise.resolve([])
+      : loadPeriodExecutionResidualTransactionsRaw({
+          accountBookId: args.accountBookId,
+          periodStart: queryStart,
+          periodEndExclusive: queryEndExclusive,
         }),
   ]);
 
@@ -245,6 +254,7 @@ export async function loadPeriodBaseDataUncached(args: {
     })),
     holdingTransactions,
     cashFlowTransactions,
+    executionResidualTransactions,
     hasCashAccounts: cashAccountIds.length > 0,
   };
 }

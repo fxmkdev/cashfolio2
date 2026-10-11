@@ -1,6 +1,6 @@
 import { toMoney, type Money } from "../../../shared/money";
 import { EquityAccountSubtype, Unit } from "../../../.prisma-client/enums";
-import type { PeriodBaseData } from "../cache/period-base-data-cache";
+import type { PeriodBaseData } from "../base-data/period-base-data-types";
 import {
   accumulateGainLossContribution,
   type GainLossContributionAccumulator,
