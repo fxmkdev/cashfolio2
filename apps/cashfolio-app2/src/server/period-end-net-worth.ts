@@ -1,2 +1,2 @@
-export type { PeriodEndNetWorthResult } from "./period/period-end-net-worth.types";
-export { getPeriodEndNetWorth } from "./period/period-end-net-worth";
+export type { PeriodEndNetWorthResult } from "./period/net-worth/period-end-net-worth.types";
+export { getPeriodEndNetWorth } from "./period/net-worth/period-end-net-worth";

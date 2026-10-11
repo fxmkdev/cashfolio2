@@ -8,7 +8,7 @@ import {
   validateReorderAccountTreeItemsInput,
 } from "./accounts-input-validation";
 import { ensureAuthorizedAccountBookMutation } from "../mutation-guard.server";
-import { invalidatePeriodBaseDataCacheForAccountBook } from "../period/period-base-data-cache";
+import { invalidatePeriodBaseDataCacheForAccountBook } from "../period/cache/period-base-data-cache";
 import {
   archiveAccountGroupOperation,
   archiveAccountOperation,
