@@ -20,21 +20,21 @@ import {
 import {
   isLedgerPeriodFilterAvailable,
   loadLedgerPageData,
-} from "./-page-loader";
+} from "./-ledger/page-loader";
 import { createDocumentTitleHead } from "@/shared/document-title";
 import { useUserLocale } from "@/user-locale-context";
-import { useLedgerPageController } from "./-page-controller";
+import { useLedgerPageController } from "./-ledger/page-controller";
 import { PeriodFilterAction } from "../-period-filter-action";
 import {
   parseLedgerExplicitPeriod,
   parseLedgerSearch,
   type LedgerRow,
-} from "./-page-types";
-import { clampLedgerExplicitPeriodToBounds } from "./-explicit-period-bounds";
-import { resolvePeriodFilterMinBookingDate } from "./-period-filter-min-booking-date";
+} from "./-ledger/page-types";
+import { clampLedgerExplicitPeriodToBounds } from "./-ledger/explicit-period-bounds";
+import { resolvePeriodFilterMinBookingDate } from "./-ledger/period-filter-min-booking-date";
 
 const LedgerPageView = lazy(async () => {
-  const module = await import("./-page-view");
+  const module = await import("./-ledger/page-view");
   return { default: module.LedgerPageView };
 });
 

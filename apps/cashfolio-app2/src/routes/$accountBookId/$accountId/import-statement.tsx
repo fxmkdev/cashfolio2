@@ -6,17 +6,17 @@ import { createAccountBookUnitUsage } from "@/shared/account-book-unit-usage";
 import { createAccountOptions } from "@/shared/account-options";
 import { createDocumentTitleHead } from "@/shared/document-title";
 import { createTransactions } from "@/server/transactions";
-import { loadLedgerPageData } from "./-page-loader";
-import { parseLedgerSearch } from "./-page-types";
-import type { TransactionMutationValues } from "./-page-view";
-import { getStatementImportSuccessLedgerSearch } from "./-statement-import-page-controller";
+import { loadLedgerPageData } from "./-ledger/page-loader";
+import { parseLedgerSearch } from "./-ledger/page-types";
+import type { TransactionMutationValues } from "./-ledger/page-view";
+import { getStatementImportSuccessLedgerSearch } from "./-statement-import/page-controller";
 import {
   getStatementImportDisabledReason,
   shouldIncludeStatementImportAccountOption,
 } from "./-statement-import";
 
 const AccountStatementImportPageView = lazy(async () => {
-  const module = await import("./-statement-import-page-view");
+  const module = await import("./-statement-import/page-view");
   return { default: module.AccountStatementImportPageView };
 });
 

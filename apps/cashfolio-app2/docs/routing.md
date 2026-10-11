@@ -142,8 +142,10 @@ Related docs:
 - `$accountBookId/$accountId/route.tsx` - ledger layout route (loads ledger data
   and provides shared search params for child routes)
 - `$accountBookId/$accountId/index.tsx` - ledger page for a single account
-- Route-local helper files live inside the owning route folder and are prefixed
-  with `-` so TanStack Router ignores them. For example:
+- Route-local helper files live inside the owning route folder and either have a
+  `-` prefix or live beneath a `-`-prefixed private folder so TanStack Router
+  ignores them. Files inside an ignored folder do not need their own prefix.
+  Tests and stories are colocated with their implementation. For example:
   - accounts route modules:
     - `$accountBookId/accounts/-page-loader.ts`
     - `$accountBookId/accounts/-page-controller.ts`
@@ -152,13 +154,25 @@ Related docs:
     - `$accountBookId/accounts/-page-reference-balances.ts`
     - `$accountBookId/accounts/-page-columns.tsx`
   - ledger route modules:
-    - `$accountBookId/$accountId/-page-loader.ts`
-    - `$accountBookId/$accountId/-page-controller.ts`
-    - `$accountBookId/$accountId/-page-account-options.ts`
-    - `$accountBookId/$accountId/-page-edit-flow.ts`
-    - `$accountBookId/$accountId/-page-rebook-flow.ts`
-    - `$accountBookId/$accountId/-page-transaction-utils.ts`
-    - `$accountBookId/$accountId/-page-columns.tsx`
+    - `$accountBookId/$accountId/-ledger/page-loader.ts`
+    - `$accountBookId/$accountId/-ledger/page-controller.ts`
+    - `$accountBookId/$accountId/-ledger/page-account-options.ts`
+    - `$accountBookId/$accountId/-ledger/page-edit-flow.ts`
+    - `$accountBookId/$accountId/-ledger/page-rebook-flow.ts`
+    - `$accountBookId/$accountId/-ledger/page-transaction-utils.ts`
+    - `$accountBookId/$accountId/-ledger/page-columns.tsx`
+  - statement-import modules:
+    - `$accountBookId/$accountId/-statement-import/index.ts` preserves the
+      feature's parsing and draft facade exports.
+    - `$accountBookId/$accountId/-statement-import/parser/` owns CSV parsing,
+      normalization, and validation.
+    - `$accountBookId/$accountId/-statement-import/draft/` owns draft creation,
+      editing, status, account options, matching, and dirty-state helpers.
+    - Page controllers, state, balance and inclusion helpers, and UI components
+      live directly in `$accountBookId/$accountId/-statement-import/`.
+    - The account route directory keeps only `route.tsx`, `index.tsx`, and
+      `import-statement.tsx` as route entry files alongside these private
+      folders.
   - period gain/loss reconciliation modules:
     - `$accountBookId/report/gains-losses/$accountId/-page-view.tsx`
     - `$accountBookId/report/gains-losses/$accountId/-page-view-types.ts`

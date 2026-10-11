@@ -77,9 +77,12 @@ pnpm lint:workflows                           # actionlint check for GitHub work
 - Use `en-CH` locale for number formatting.
 - Keep currency/crypto constants in `src/currencies.ts` and
   `src/cryptocurrencies.ts`.
-- In `src/routes/`, any non-route file must be prefixed with `-` (for example,
-  `src/routes/$accountBookId/-ledger-page-view.tsx`) so TanStack Router skips it
-  during route-tree generation.
+- In `src/routes/`, non-route files must be prefixed with `-` or live inside a
+  `-`-prefixed private folder so TanStack Router skips them during route-tree
+  generation. Files inside an ignored folder do not need their own `-` prefix
+  (for example, `src/routes/$accountBookId/$accountId/-ledger/page-view.tsx`).
+  Group larger route-local implementations by concern and colocate their tests
+  and stories with the implementation.
 
 ## Quality Checklist
 
