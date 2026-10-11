@@ -68,6 +68,7 @@ function createBaseData(args?: {
     transferClearingUnitBuckets: [],
     equityBookings: [],
     explicitCounterparts: [],
+    executionResidualTransactions: [],
     initialHoldingBalances: [],
     holdingTransactions: [],
     cashFlowTransactions: [],

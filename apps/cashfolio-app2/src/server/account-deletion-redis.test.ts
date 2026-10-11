@@ -111,6 +111,8 @@ describe("deleteBookScopedRedisDataForAccountBooks", () => {
       COUNT: 100,
     });
     for (const prefix of [
+      "period:base:v8",
+      "period:base:index:v8",
       "period:base:v7",
       "period:base:index:v7",
       "period:history:metrics:v6",
@@ -148,6 +150,6 @@ describe("deleteBookScopedRedisDataForAccountBooks", () => {
       MATCH: "period:history:metrics:v5:*:book-1:*",
       COUNT: 100,
     });
-    expect(redis.del).toHaveBeenCalledTimes(21);
+    expect(redis.del).toHaveBeenCalledTimes(23);
   });
 });

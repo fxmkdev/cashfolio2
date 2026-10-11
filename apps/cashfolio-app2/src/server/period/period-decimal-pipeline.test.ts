@@ -82,6 +82,7 @@ function createScenario(): PeriodBaseData {
     ],
     transferClearingUnitBuckets: [],
     explicitCounterparts: [],
+    executionResidualTransactions: [],
     initialHoldingBalances: [
       { accountId: holding.id, rawBalance: toMoney("0.3") },
     ],
@@ -140,7 +141,7 @@ function createScenario(): PeriodBaseData {
 
 describe("Decimal monetary pipelines", () => {
   it("agrees across overview, history, FIFO reconciliation, and cached base inputs", async () => {
-    prisma.transaction.findMany.mockResolvedValue([]);
+    vi.clearAllMocks();
     const scenario = createScenario();
     const overview = await loadPeriodOverview({
       accountBookId: "book-1",
@@ -171,6 +172,10 @@ describe("Decimal monetary pipelines", () => {
     expect(
       await loadPeriodOverview({ accountBookId: "book-1", baseData: warm }),
     ).toEqual(overview);
+    expect(prisma.account.findFirst).not.toHaveBeenCalled();
+    expect(prisma.account.findMany).not.toHaveBeenCalled();
+    expect(prisma.booking.groupBy).not.toHaveBeenCalled();
+    expect(prisma.transaction.findMany).not.toHaveBeenCalled();
 
     const holding = scenario.baseAssetLiabilityAccounts[0]!;
     prisma.account.findFirst.mockResolvedValue(holding);
@@ -211,6 +216,54 @@ describe("Decimal monetary pipelines", () => {
     expect(typeof JSON.parse(JSON.stringify(overview)).stats.gainsLosses).toBe(
       "number",
     );
+  });
+
+  it("calculates residuals from supplied base inputs in overview and history without database reads", async () => {
+    vi.clearAllMocks();
+    const scenario = createScenario();
+    const booking = scenario.holdingTransactions[0]!.bookings[0]!;
+    scenario.executionResidualTransactions = [
+      {
+        id: "residual",
+        bookings: [
+          {
+            ...booking,
+            id: "expense-security",
+            accountId: "expense-security",
+            value: toMoney("0.5"),
+            account: { name: "Security Expense" },
+          },
+          {
+            ...booking,
+            id: "cash",
+            accountId: "cash",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            symbol: null,
+            tradeCurrency: null,
+            value: toMoney("-90"),
+            account: { name: "Cash" },
+          },
+        ],
+      },
+    ];
+    const overview = await loadPeriodOverview({
+      accountBookId: "book-1",
+      baseData: scenario,
+    });
+    const history = toNumericMoney(
+      await loadPeriodHistoryPointMetrics({
+        accountBookId: "book-1",
+        baseData: scenario,
+      }),
+    );
+    expect(overview.stats.gainsLosses).toBe(-12.84);
+    expect(history.gainsLosses).toBe(overview.stats.gainsLosses);
+    expect(history.totalReturn).toBe(overview.stats.totalReturn);
+    expect(prisma.account.findFirst).not.toHaveBeenCalled();
+    expect(prisma.account.findMany).not.toHaveBeenCalled();
+    expect(prisma.booking.groupBy).not.toHaveBeenCalled();
+    expect(prisma.transaction.findMany).not.toHaveBeenCalled();
   });
 
   it("cancels large account balances before the numeric response boundary", async () => {

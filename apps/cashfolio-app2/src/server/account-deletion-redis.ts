@@ -15,6 +15,8 @@ const BOOK_SCOPED_REDIS_KEY_PATTERNS = [
   "period:base:index:v6:*:{accountBookId}:*",
   "period:base:v7:*:{accountBookId}:*",
   "period:base:index:v7:*:{accountBookId}:*",
+  "period:base:v8:*:{accountBookId}:*",
+  "period:base:index:v8:*:{accountBookId}:*",
   "period:base:generation:v1:*:{accountBookId}",
   "period:history:metrics:v1:*:{accountBookId}:*",
   "period:history:metrics:v2:*:{accountBookId}:*",

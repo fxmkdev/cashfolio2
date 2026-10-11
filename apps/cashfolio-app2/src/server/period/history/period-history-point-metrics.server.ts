@@ -1,10 +1,7 @@
 import { toMoney, type Money, moneyAdd, moneySum } from "../../../shared/money";
 import { round2 } from "../period-helpers";
 
-import {
-  computeEndOfPeriodBalanceStatsWithConvertedBalances,
-  type EndOfPeriodBalanceStats,
-} from "../period-balance-stats";
+import { computeEndOfPeriodBalanceStatsWithConvertedBalances } from "../period-balance-stats";
 import {
   convertBookingValueToReferenceDetails,
   getUnitToReferenceExchangeRateDetails,
@@ -16,7 +13,7 @@ import {
 import { computePeriodHoldingGainLoss } from "../holdings/period-holding-gain-loss";
 import { processPeriodEquityBookingsFromBaseData } from "../overview/period-equity-bookings";
 import { createPeriodOverviewEquityAggregation } from "../overview/period-overview-aggregation";
-import { buildTransferClearingVirtualHierarchy } from "../transfer-clearing/period-transfer-clearing";
+import { preparePeriodCalculationContext } from "../period-calculation-context";
 import type { GainLossContributionAccumulator } from "../breakdown/period-gains-losses-contributions";
 import {
   buildBalanceHistoryScopeAmountMaps,
@@ -32,9 +29,7 @@ import type {
   DecimalValuationRateLookupResult as ValuationRateLookupResult,
   ValuationRateSource,
 } from "../../valuation/types";
-import type { Unit } from "../../../.prisma-client/enums";
 
-const TRANSACTIONS_PAGE_SIZE = 200;
 const TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE = 200;
 
 export type PeriodHistoryPointMetrics = {
@@ -58,10 +53,6 @@ export type PeriodHistoryPointMetrics = {
   scopedMetricValue?: Money;
 };
 
-type HistoryEndOfPeriodBalanceStats = EndOfPeriodBalanceStats & {
-  convertedBalanceByAccountId: Map<string, Money | null>;
-};
-
 export type HistoryValuationContext = {
   exchangeRateByKey: Map<string, Promise<ValuationRateLookupResult>>;
 };
@@ -73,60 +64,6 @@ export type PeriodHistoryPointMetricsResult = {
 
 function isPermanentValuationSource(source: ValuationRateSource): boolean {
   return source === "identity" || source === "timeSeries";
-}
-
-function buildTransferClearingHoldingAccounts(args: {
-  transferClearingUnitBuckets: PeriodBaseData["transferClearingUnitBuckets"];
-}) {
-  return args.transferClearingUnitBuckets
-    .filter((bucket) => bucket.isNonReferenceUnit)
-    .map((bucket) => ({
-      id: `virtual:transfer-clearing:account:${bucket.unitKey}`,
-      unit: bucket.unit,
-      currency: bucket.currency,
-      cryptocurrency: bucket.cryptocurrency,
-      symbol: bucket.symbol,
-      tradeCurrency: bucket.tradeCurrency,
-    }));
-}
-
-async function loadEndOfPeriodBalanceStats(args: {
-  baseData: PeriodBaseData;
-  referenceCurrency: string;
-  convertBalanceToReference: (input: {
-    value: Money;
-    unit: Unit;
-    currency: string | null;
-    cryptocurrency: string | null;
-    symbol: string | null;
-    tradeCurrency: string | null;
-    date: Date;
-    referenceCurrency: string;
-  }) => Promise<Money | null>;
-}): Promise<HistoryEndOfPeriodBalanceStats> {
-  const endOfPeriodRawBalanceByAccountId = new Map(
-    args.baseData.endOfPeriodRawBalances.map((balance) => [
-      balance.accountId,
-      balance.rawBalance,
-    ]),
-  );
-
-  const { virtualAccounts, rawBalanceByVirtualAccountId } =
-    buildTransferClearingVirtualHierarchy({
-      unitBuckets: args.baseData.transferClearingUnitBuckets,
-    });
-
-  for (const [accountId, rawBalance] of rawBalanceByVirtualAccountId) {
-    endOfPeriodRawBalanceByAccountId.set(accountId, rawBalance);
-  }
-
-  return computeEndOfPeriodBalanceStatsWithConvertedBalances({
-    accounts: [...args.baseData.baseAssetLiabilityAccounts, ...virtualAccounts],
-    rawBalanceByAccountId: endOfPeriodRawBalanceByAccountId,
-    periodEnd: args.baseData.selection.to,
-    referenceCurrency: args.referenceCurrency,
-    convertBalanceToReference: args.convertBalanceToReference,
-  });
 }
 
 export async function loadPeriodHistoryPointMetrics(args: {
@@ -213,46 +150,22 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
     },
   });
 
-  const transferClearingHoldingAccounts = buildTransferClearingHoldingAccounts({
-    transferClearingUnitBuckets: baseData.transferClearingUnitBuckets,
-  });
-
-  const assetLiabilityAccountNameById = new Map(
-    baseData.baseAssetLiabilityAccounts.map((account) => [
-      account.id,
-      account.name,
-    ]),
-  );
-  for (const bucket of baseData.transferClearingUnitBuckets) {
-    if (!bucket.isNonReferenceUnit) {
-      continue;
-    }
-    assetLiabilityAccountNameById.set(
-      `virtual:transfer-clearing:account:${bucket.unitKey}`,
-      bucket.unitLabel,
-    );
-  }
-
-  const { virtualGroups, virtualAccounts } =
-    buildTransferClearingVirtualHierarchy({
-      unitBuckets: baseData.transferClearingUnitBuckets,
-    });
-  const assetLiabilityAccounts = [
-    ...baseData.baseAssetLiabilityAccounts,
-    ...virtualAccounts,
-  ];
-  const allAccountGroups = [...baseData.allAccountGroups, ...virtualGroups];
+  const {
+    transferClearingHoldingAccounts,
+    assetLiabilityAccountNameById,
+    assetLiabilityAccounts,
+    allAccountGroups,
+    endOfPeriodRawBalanceByAccountId,
+  } = preparePeriodCalculationContext(baseData);
 
   const [holdingGainLossTotals, endOfPeriodBalanceStats, cashFlowResult] =
     await Promise.all([
       computePeriodHoldingGainLoss({
-        accountBookId: args.accountBookId,
         periodStart: selection.from,
         periodEndExclusive: selection.queryEndExclusive,
         periodEnd: selection.to,
         initialHoldingDate: selection.initialHoldingDate,
         referenceCurrency,
-        transactionPageSize: TRANSACTIONS_PAGE_SIZE,
         transferClearingBatchSize: TRANSFER_CLEARING_TRANSACTIONS_BATCH_SIZE,
         holdingAccounts: baseData.holdingAccountsResolved,
         transferClearingHoldingAccounts,
@@ -279,9 +192,12 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
         },
         initialHoldingBalances: baseData.initialHoldingBalances,
         holdingTransactions: baseData.holdingTransactions,
+        executionResidualTransactions: baseData.executionResidualTransactions,
       }),
-      loadEndOfPeriodBalanceStats({
-        baseData,
+      computeEndOfPeriodBalanceStatsWithConvertedBalances({
+        accounts: assetLiabilityAccounts,
+        rawBalanceByAccountId: endOfPeriodRawBalanceByAccountId,
+        periodEnd: selection.to,
         referenceCurrency,
         convertBalanceToReference: async (input) => {
           const result = await convertBookingValueToReferenceDetails({

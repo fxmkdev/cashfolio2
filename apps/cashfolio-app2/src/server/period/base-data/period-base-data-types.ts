@@ -117,6 +117,22 @@ export type PeriodBaseCashFlowTransaction = {
   }>;
 };
 
+export type PeriodBaseExecutionResidualTransaction = {
+  id: string;
+  bookings: Array<{
+    id: string;
+    accountId: string;
+    date: Date;
+    value: Money;
+    unit: Unit;
+    currency: string | null;
+    cryptocurrency: string | null;
+    symbol: string | null;
+    tradeCurrency: string | null;
+    account: { name: string };
+  }>;
+};
+
 type PeriodBaseInitialHoldingBalance = {
   accountId: string;
   rawBalance: Money;
@@ -136,6 +152,7 @@ export type PeriodBaseData = {
   explicitCounterparts: PeriodBaseExplicitCounterpart[];
   initialHoldingBalances: PeriodBaseInitialHoldingBalance[];
   holdingTransactions: PeriodBaseHoldingTransaction[];
+  executionResidualTransactions: PeriodBaseExecutionResidualTransaction[];
   cashFlowTransactions: PeriodBaseCashFlowTransaction[];
   hasCashAccounts: boolean;
 };

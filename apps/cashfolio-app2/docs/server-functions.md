@@ -121,7 +121,8 @@ lock order; this does not introduce optimistic edit-version conflict detection.
   by an uncached loader module
   (`src/server/period/base-data/period-base-data-loader.server.ts`).
 - Cached payload scope: DB-derived period inputs only (metadata, scoped raw
-  bookings/transactions, raw balances, transfer-clearing buckets).
+  bookings/transactions, raw balances, transfer-clearing buckets, and complete
+  execution-residual candidate transactions).
 - Excluded from cache payload: converted valuation outputs and exchange-rate
   results.
 - History additionally uses a Redis-backed derived metrics cache
@@ -140,14 +141,14 @@ lock order; this does not introduce optimistic edit-version conflict detection.
 - Redis key namespace includes deployment scope and the database-backed
   invalidation generation (`AccountBook.periodCacheRevision`):
   - Entry:
-    `period:base:v7:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
+    `period:base:v8:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
   - Index:
-    `period:base:index:v7:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
+    `period:base:index:v8:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
   - Cleanup hint (never used to determine cache validity):
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
 - History metrics entry:
   `period:history:metrics:v6:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
-- Base-data v7 and History metrics v6 store monetary values as tagged exact
+- Base-data v8 and History metrics v6 store monetary values as tagged exact
   decimal strings through `src/server/money-cache-codec.ts`
   (`{ __cashfolioDecimal: "..." }`). Dates retain their existing
   `{ __cashfolioDateMs: milliseconds }` representation. Reads reconstruct
@@ -386,3 +387,30 @@ against the final proposed accounts for every affected transaction. Deletion
 removes complete transactions with cascading bookings. Period-cache cleanup runs
 once after commit; database cache-revision triggers participate in the same
 transaction. Single-item APIs remain unchanged.
+
+## Reporting data-loading boundary
+
+Period overview and History calculations consume complete database-derived
+inputs from `PeriodBaseData`. The base-data loader owns paginated transaction
+queries, opening holdings balances, and explicit gain/loss counterpart account
+resolution. Execution-residual candidate transactions include all booking legs,
+including legs before the selected period; candidate selection retains the
+income/expense, completion-period, and explicit/opening-balance exclusions.
+Periods before the account-book start contain no residual candidates.
+
+Holding and execution-residual calculation helpers require preloaded inputs and
+have no Prisma dependency or fallback queries. They keep valuation resolution
+injected through callbacks. `preparePeriodCalculationContext` builds the common
+real/virtual account hierarchy, balance maps, account names, and
+transfer-clearing holding accounts without modifying cached data. Overview and
+History retain their own response assembly, scheduling, and History
+valuation-cacheability tracking.
+
+Base-data v8 adds required `executionResidualTransactions` and does not reuse v7
+entries. The existing Decimal/date codec, 24-hour TTL, 2 MiB size limit, and
+database revision invalidation apply to these raw inputs. Converted residual
+results remain outside the base-data cache. History metrics stay at v6 because
+this refactor preserves their response shape and accounting semantics. No schema
+migration is required. This boundary removes live database queries during
+calculations; it does not introduce a transaction snapshot around the existing
+multi-query base-data load.
