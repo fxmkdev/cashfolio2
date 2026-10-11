@@ -1,6 +1,7 @@
+import { toMoney } from "../../shared/money";
 import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import { prisma } from "../../prisma.server";
-import { toMoneyNumber } from "../../shared/money";
+
 import type { PeriodBaseHoldingTransaction } from "./period-base-data-types";
 
 const TRANSACTIONS_PAGE_SIZE = 200;
@@ -135,7 +136,7 @@ function mapPeriodHoldingTransaction(
       id: booking.id,
       accountId: booking.accountId,
       date: booking.date,
-      value: toMoneyNumber(booking.value),
+      value: toMoney(booking.value),
       unit: booking.unit,
       currency: booking.currency,
       cryptocurrency: booking.cryptocurrency,

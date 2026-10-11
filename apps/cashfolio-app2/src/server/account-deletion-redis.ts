@@ -13,12 +13,15 @@ const BOOK_SCOPED_REDIS_KEY_PATTERNS = [
   "period:base:index:v5:*:{accountBookId}:*",
   "period:base:v6:*:{accountBookId}:*",
   "period:base:index:v6:*:{accountBookId}:*",
+  "period:base:v7:*:{accountBookId}:*",
+  "period:base:index:v7:*:{accountBookId}:*",
   "period:base:generation:v1:*:{accountBookId}",
   "period:history:metrics:v1:*:{accountBookId}:*",
   "period:history:metrics:v2:*:{accountBookId}:*",
   "period:history:metrics:v3:*:{accountBookId}:*",
   "period:history:metrics:v4:*:{accountBookId}:*",
   "period:history:metrics:v5:*:{accountBookId}:*",
+  "period:history:metrics:v6:*:{accountBookId}:*",
 ] as const;
 
 let hasWarnedAccountDeletionRedisCleanupFailure = false;

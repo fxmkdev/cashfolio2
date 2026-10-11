@@ -1,5 +1,14 @@
+import {
+  toMoney,
+  type Money,
+  MoneyDecimal,
+  moneyAdd,
+  moneySubtract,
+  moneyMultiply,
+  moneyAbs,
+} from "../../shared/money";
 import type { Unit } from "../../.prisma-client/enums";
-import { moneyAbs, moneyAdd, toMoneyNumber } from "../../shared/money";
+
 import {
   QUANTITY_EPSILON,
   isNearZero,
@@ -35,20 +44,20 @@ export function toHoldingUnitIdentifier(input: {
 function getOpenQuantityByLotSign(args: {
   lots: HoldingLot[];
   lotSign: 1 | -1;
-}): number {
+}): Money {
   return args.lots.reduce(
     (sum, lot) =>
-      toMoneyNumber(
-        moneyAdd(
-          sum,
-          Math.sign(lot.quantity) === args.lotSign ? moneyAbs(lot.quantity) : 0,
-        ),
+      moneyAdd(
+        sum,
+        toMoney(lot.quantity).comparedTo(0) === args.lotSign
+          ? moneyAbs(lot.quantity)
+          : 0,
       ),
-    0,
+    toMoney(0),
   );
 }
 
-function getPositiveOpenQuantity(lots: HoldingLot[]): number {
+function getPositiveOpenQuantity(lots: HoldingLot[]): Money {
   return getOpenQuantityByLotSign({
     lots,
     lotSign: 1,
@@ -57,21 +66,21 @@ function getPositiveOpenQuantity(lots: HoldingLot[]): number {
 
 function drainTransferLots(args: {
   lots: HoldingLot[];
-  quantity: number;
+  quantity: Money;
   lotSign: 1 | -1;
 }): HoldingLot[] {
   const drainedLots: HoldingLot[] = [];
   let remaining = args.quantity;
 
   while (
-    remaining > QUANTITY_EPSILON &&
+    toMoney(remaining).comparedTo(QUANTITY_EPSILON) > 0 &&
     args.lots.length > 0 &&
-    Math.sign(args.lots[0]!.quantity) === args.lotSign &&
-    Math.abs(args.lots[0]!.quantity) > QUANTITY_EPSILON
+    toMoney(args.lots[0]!.quantity).comparedTo(0) === args.lotSign &&
+    moneyAbs(args.lots[0]!.quantity).comparedTo(QUANTITY_EPSILON) > 0
   ) {
     const lot = args.lots[0]!;
-    const movedMagnitude = Math.min(remaining, Math.abs(lot.quantity));
-    const movedQuantity = args.lotSign * movedMagnitude;
+    const movedMagnitude = MoneyDecimal.min(remaining, moneyAbs(lot.quantity));
+    const movedQuantity = moneyMultiply(args.lotSign, movedMagnitude);
 
     drainedLots.push({
       quantity: movedQuantity,
@@ -79,8 +88,8 @@ function drainTransferLots(args: {
       acquisitionSortKey: lot.acquisitionSortKey,
     });
 
-    lot.quantity -= movedQuantity;
-    remaining -= movedMagnitude;
+    lot.quantity = moneySubtract(lot.quantity, movedQuantity);
+    remaining = moneySubtract(remaining, movedMagnitude);
 
     if (isNearZero(lot.quantity)) {
       args.lots.shift();
@@ -111,22 +120,23 @@ export function resolveHoldingTransferDirection(args: {
   stateByHoldingAccountId: Map<string, HoldingAccountState>;
   holdingBookings: HoldingTransactionBooking[];
 }): HoldingTransferDirection | null {
-  const netByAccountId = new Map<string, number>();
-  let netQuantity = 0;
+  const netByAccountId = new Map<string, Money>();
+  let netQuantity: Money = toMoney(0);
   let hasPositive = false;
   let hasNegative = false;
 
   for (const booking of args.holdingBookings) {
     netByAccountId.set(
       booking.accountId,
-      toMoneyNumber(
-        moneyAdd(netByAccountId.get(booking.accountId) ?? 0, booking.value),
+      moneyAdd(
+        netByAccountId.get(booking.accountId) ?? toMoney(0),
+        booking.value,
       ),
     );
-    netQuantity = toMoneyNumber(moneyAdd(netQuantity, booking.value));
-    if (booking.value > QUANTITY_EPSILON) {
+    netQuantity = moneyAdd(netQuantity, booking.value);
+    if (toMoney(booking.value).comparedTo(QUANTITY_EPSILON) > 0) {
       hasPositive = true;
-    } else if (booking.value < -QUANTITY_EPSILON) {
+    } else if (toMoney(booking.value).comparedTo(-QUANTITY_EPSILON) < 0) {
       hasNegative = true;
     }
   }
@@ -137,7 +147,7 @@ export function resolveHoldingTransferDirection(args: {
 
   let canTransferLong = true;
   for (const [accountId, netDelta] of netByAccountId) {
-    if (netDelta >= -QUANTITY_EPSILON) {
+    if (toMoney(netDelta).comparedTo(-QUANTITY_EPSILON) >= 0) {
       continue;
     }
 
@@ -147,7 +157,12 @@ export function resolveHoldingTransferDirection(args: {
       break;
     }
 
-    if (getPositiveOpenQuantity(state.lots) + QUANTITY_EPSILON < -netDelta) {
+    if (
+      moneyAdd(
+        getPositiveOpenQuantity(state.lots),
+        QUANTITY_EPSILON,
+      ).comparedTo(toMoney(netDelta).neg()) < 0
+    ) {
       canTransferLong = false;
       break;
     }
@@ -155,7 +170,7 @@ export function resolveHoldingTransferDirection(args: {
 
   let canTransferShort = true;
   for (const [accountId, netDelta] of netByAccountId) {
-    if (netDelta <= QUANTITY_EPSILON) {
+    if (toMoney(netDelta).comparedTo(QUANTITY_EPSILON) <= 0) {
       continue;
     }
 
@@ -166,12 +181,13 @@ export function resolveHoldingTransferDirection(args: {
     }
 
     if (
-      getOpenQuantityByLotSign({
-        lots: state.lots,
-        lotSign: -1,
-      }) +
-        QUANTITY_EPSILON <
-      netDelta
+      moneyAdd(
+        getOpenQuantityByLotSign({
+          lots: state.lots,
+          lotSign: -1,
+        }),
+        QUANTITY_EPSILON,
+      ).comparedTo(netDelta) < 0
     ) {
       canTransferShort = false;
       break;
@@ -203,13 +219,13 @@ export function applyHoldingTransferWithoutRealization(args: {
 
   const sourceBookings = sortedBookings.filter((booking) =>
     args.direction === "LONG"
-      ? booking.value < -QUANTITY_EPSILON
-      : booking.value > QUANTITY_EPSILON,
+      ? toMoney(booking.value).comparedTo(-QUANTITY_EPSILON) < 0
+      : toMoney(booking.value).comparedTo(QUANTITY_EPSILON) > 0,
   );
   const destinationBookings = sortedBookings.filter((booking) =>
     args.direction === "LONG"
-      ? booking.value > QUANTITY_EPSILON
-      : booking.value < -QUANTITY_EPSILON,
+      ? toMoney(booking.value).comparedTo(QUANTITY_EPSILON) > 0
+      : toMoney(booking.value).comparedTo(-QUANTITY_EPSILON) < 0,
   );
 
   for (const booking of sourceBookings) {
@@ -221,7 +237,7 @@ export function applyHoldingTransferWithoutRealization(args: {
     transferPool.push(
       ...drainTransferLots({
         lots: state.lots,
-        quantity: Math.abs(booking.value),
+        quantity: moneyAbs(booking.value),
         lotSign,
       }),
     );
@@ -233,11 +249,20 @@ export function applyHoldingTransferWithoutRealization(args: {
       continue;
     }
 
-    let remaining = Math.abs(booking.value);
-    while (remaining > QUANTITY_EPSILON && transferPool.length > 0) {
+    let remaining = moneyAbs(booking.value);
+    while (
+      toMoney(remaining).comparedTo(QUANTITY_EPSILON) > 0 &&
+      transferPool.length > 0
+    ) {
       const lot = transferPool[0]!;
-      const movedMagnitude = Math.min(remaining, Math.abs(lot.quantity));
-      const movedQuantity = Math.sign(lot.quantity) * movedMagnitude;
+      const movedMagnitude = MoneyDecimal.min(
+        remaining,
+        moneyAbs(lot.quantity),
+      );
+      const movedQuantity = moneyMultiply(
+        toMoney(lot.quantity).comparedTo(0),
+        movedMagnitude,
+      );
 
       insertLotByAcquisitionOrder({
         lots: state.lots,
@@ -248,8 +273,8 @@ export function applyHoldingTransferWithoutRealization(args: {
         },
       });
 
-      lot.quantity -= movedQuantity;
-      remaining -= movedMagnitude;
+      lot.quantity = moneySubtract(lot.quantity, movedQuantity);
+      remaining = moneySubtract(remaining, movedMagnitude);
 
       if (isNearZero(lot.quantity)) {
         transferPool.shift();

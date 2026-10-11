@@ -1,3 +1,5 @@
+import type { MoneyInput } from "../shared/money";
+import { toMoney } from "../shared/money";
 import { describe, expect, test } from "vitest";
 import { AccountType, Unit } from "../.prisma-client/enums";
 import { deriveLedgerPresentationData } from "./ledger-derivation";
@@ -17,19 +19,25 @@ function createAccount(args: { type: AccountType }) {
 function createBookings(
   entries: Array<{
     date: Date;
-    value: number;
-    valueInReferenceCurrency?: number | null;
+    value: MoneyInput;
+    valueInReferenceCurrency?: MoneyInput | null;
   }>,
 ) {
   return entries.map((entry, index) => ({
     id: `booking-${index + 1}`,
     date: new Date(entry.date.getTime()),
     description: "",
-    value: entry.value,
+    value: toMoney(entry.value),
     valueInReferenceCurrency:
-      entry.valueInReferenceCurrency === undefined
+      (entry.valueInReferenceCurrency === undefined
         ? entry.value
-        : entry.valueInReferenceCurrency,
+        : entry.valueInReferenceCurrency) == null
+        ? null
+        : toMoney(
+            (entry.valueInReferenceCurrency === undefined
+              ? entry.value
+              : entry.valueInReferenceCurrency)!,
+          ),
     unit: Unit.CURRENCY as Unit | null,
     currency: "CHF",
     cryptocurrency: null,
@@ -56,11 +64,11 @@ describe("deriveLedgerPresentationData", () => {
     const result = deriveLedgerPresentationData({
       account: createAccount({ type: AccountType.ASSET }),
       bookings: createBookings([
-        { date: utcDate(2026, 0, 10, 9), value: -50 },
-        { date: utcDate(2026, 0, 11, 9), value: 30 },
+        { date: utcDate(2026, 0, 10, 9), value: toMoney(-50) },
+        { date: utcDate(2026, 0, 11, 9), value: toMoney(30) },
       ]),
       hasPeriodFilter: true,
-      balanceBeforePeriodRaw: 200,
+      balanceBeforePeriodRaw: toMoney(200),
       hasBookingsBeforePeriod: true,
     });
 
@@ -79,9 +87,11 @@ describe("deriveLedgerPresentationData", () => {
   test("seeds filtered liability balances from pre-period totals", () => {
     const result = deriveLedgerPresentationData({
       account: createAccount({ type: AccountType.LIABILITY }),
-      bookings: createBookings([{ date: utcDate(2026, 0, 10, 9), value: 20 }]),
+      bookings: createBookings([
+        { date: utcDate(2026, 0, 10, 9), value: toMoney(20) },
+      ]),
       hasPeriodFilter: true,
-      balanceBeforePeriodRaw: -100,
+      balanceBeforePeriodRaw: toMoney(-100),
       hasBookingsBeforePeriod: true,
     });
 
@@ -101,17 +111,17 @@ describe("deriveLedgerPresentationData", () => {
       bookings: createBookings([
         {
           date: utcDate(2026, 0, 10, 9),
-          value: 100,
-          valueInReferenceCurrency: 150,
+          value: toMoney(100),
+          valueInReferenceCurrency: toMoney(150),
         },
         {
           date: utcDate(2026, 0, 11, 9),
-          value: -40,
-          valueInReferenceCurrency: -40,
+          value: toMoney(-40),
+          valueInReferenceCurrency: toMoney(-40),
         },
       ]),
       hasPeriodFilter: true,
-      balanceBeforePeriodRaw: 0,
+      balanceBeforePeriodRaw: toMoney(0),
       hasBookingsBeforePeriod: false,
     });
 
@@ -135,17 +145,17 @@ describe("deriveLedgerPresentationData", () => {
       bookings: createBookings([
         {
           date: utcDate(2026, 0, 10, 9),
-          value: 100,
-          valueInReferenceCurrency: 150,
+          value: toMoney(100),
+          valueInReferenceCurrency: toMoney(150),
         },
         {
           date: utcDate(2026, 0, 11, 9),
-          value: -40,
+          value: toMoney(-40),
           valueInReferenceCurrency: null,
         },
       ]),
       hasPeriodFilter: true,
-      balanceBeforePeriodRaw: 0,
+      balanceBeforePeriodRaw: toMoney(0),
       hasBookingsBeforePeriod: false,
     });
 
@@ -169,17 +179,17 @@ describe("deriveLedgerPresentationData", () => {
       bookings: createBookings([
         {
           date: utcDate(2026, 0, 10, 9),
-          value: 100,
-          valueInReferenceCurrency: 150,
+          value: toMoney(100),
+          valueInReferenceCurrency: toMoney(150),
         },
         {
           date: utcDate(2026, 0, 11, 9),
-          value: -40,
-          valueInReferenceCurrency: -40,
+          value: toMoney(-40),
+          valueInReferenceCurrency: toMoney(-40),
         },
       ]),
       hasPeriodFilter: false,
-      balanceBeforePeriodRaw: 0,
+      balanceBeforePeriodRaw: toMoney(0),
       hasBookingsBeforePeriod: false,
     });
 
@@ -199,11 +209,11 @@ describe("deriveLedgerPresentationData", () => {
     const result = deriveLedgerPresentationData({
       account: createAccount({ type: AccountType.ASSET }),
       bookings: createBookings([
-        { date: utcDate(2026, 0, 10, 9), value: -8439.45 },
-        { date: utcDate(2026, 0, 11, 9), value: 9311.0 },
+        { date: utcDate(2026, 0, 10, 9), value: toMoney(-8439.45) },
+        { date: utcDate(2026, 0, 11, 9), value: toMoney(9311.0) },
       ]),
       hasPeriodFilter: false,
-      balanceBeforePeriodRaw: 0,
+      balanceBeforePeriodRaw: toMoney(0),
       hasBookingsBeforePeriod: false,
     });
 

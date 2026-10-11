@@ -1,3 +1,4 @@
+import { type Money } from "../../shared/money";
 import type {
   AccountType,
   EquityAccountSubtype,
@@ -57,7 +58,7 @@ export type PeriodBaseEquityBooking = {
   equityAccountSubtype: EquityAccountSubtype;
   transactionId: string;
   date: Date;
-  value: number;
+  value: Money;
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
@@ -73,14 +74,14 @@ type PeriodBaseExplicitCounterpart = {
 
 type PeriodBaseRawBalance = {
   accountId: string;
-  rawBalance: number;
+  rawBalance: Money;
 };
 
 type PeriodBaseHoldingBooking = {
   id: string;
   accountId: string;
   date: Date;
-  value: number;
+  value: Money;
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
@@ -100,7 +101,7 @@ export type PeriodBaseCashFlowTransaction = {
   bookings: Array<{
     id: string;
     date: Date;
-    value: number;
+    value: Money;
     unit: Unit;
     currency: string | null;
     cryptocurrency: string | null;
@@ -118,7 +119,7 @@ export type PeriodBaseCashFlowTransaction = {
 
 type PeriodBaseInitialHoldingBalance = {
   accountId: string;
-  rawBalance: number;
+  rawBalance: Money;
 };
 
 export type PeriodBaseData = {

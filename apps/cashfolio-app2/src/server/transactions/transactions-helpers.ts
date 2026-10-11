@@ -17,10 +17,20 @@ import {
   type BookingUnitFieldsSource,
 } from "../../shared/booking-unit-fields";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../../shared/opening-balances";
+import {
+  moneyIsZero,
+  moneySum,
+  toMoney,
+  type Money,
+  type MoneyInput,
+} from "../../shared/money";
 import type { CreateTransactionInput } from "./transactions-types";
 
-export function validateCreateTransaction(input: CreateTransactionInput) {
+export function validateCreateTransaction(
+  input: CreateTransactionInput,
+): CreateTransactionInput<Money> {
   const errors: string[] = [];
+  const normalizedValues: Money[] = [];
 
   if (input.bookings.length < 2) {
     errors.push("At least two bookings are required.");
@@ -49,8 +59,14 @@ export function validateCreateTransaction(input: CreateTransactionInput) {
       );
     }
 
-    if (b.value === 0) {
-      errors.push(`Booking ${i}: value must be non-zero.`);
+    if (typeof b.value !== "number" || !Number.isFinite(b.value)) {
+      errors.push(`Booking ${i}: value must be finite.`);
+    } else {
+      const value = toMoney(b.value);
+      normalizedValues.push(value);
+      if (moneyIsZero(value)) {
+        errors.push(`Booking ${i}: value must be non-zero.`);
+      }
     }
   }
 
@@ -59,8 +75,8 @@ export function validateCreateTransaction(input: CreateTransactionInput) {
       input.bookings.map((b) => getUnitIdentifier(b)),
     );
     if (unitIdentifiers.size === 1) {
-      const sum = input.bookings.reduce((acc, b) => acc + b.value, 0);
-      if (Math.abs(sum) > 0.001) {
+      const sum = moneySum(normalizedValues);
+      if (!moneyIsZero(sum)) {
         errors.push("The sum of all bookings must be zero.");
       }
     }
@@ -69,10 +85,21 @@ export function validateCreateTransaction(input: CreateTransactionInput) {
   if (errors.length > 0) {
     throw new Error(errors.join(" "));
   }
+  return {
+    ...input,
+    bookings: input.bookings.map((booking, index) => ({
+      ...booking,
+      value: normalizedValues[index]!,
+    })),
+  };
 }
 
 export async function validateAccountTypeBookings(
-  bookings: { accountId: string; value: number; date: string | Date }[],
+  bookings: {
+    accountId: string;
+    value: MoneyInput;
+    date: string | Date;
+  }[],
   accountBookId: string,
 ) {
   const accountIds = bookings.map((b) => b.accountId).filter(Boolean);
@@ -115,7 +142,11 @@ export function accountTypeMeta(account: {
 }
 
 export function validateAccountTypeBookingsWithAccounts(
-  bookings: { accountId: string; value: number; date: string | Date }[],
+  bookings: {
+    accountId: string;
+    value: MoneyInput;
+    date: string | Date;
+  }[],
   accountMap: Map<string, AccountTypeMeta>,
   options?: {
     accountBookStartDate?: Date;
@@ -148,7 +179,7 @@ export function validateAccountTypeBookingsWithAccounts(
     if (
       account.type === AccountType.EQUITY &&
       account.equityAccountSubtype === EquityAccountSubtype.INCOME &&
-      b.value > 0
+      toMoney(b.value).gt(0)
     ) {
       errors.push(`Booking ${i}: Income accounts cannot have debit entries.`);
     }
@@ -156,7 +187,7 @@ export function validateAccountTypeBookingsWithAccounts(
     if (
       account.type === AccountType.EQUITY &&
       account.equityAccountSubtype === EquityAccountSubtype.EXPENSE &&
-      b.value < 0
+      toMoney(b.value).lt(0)
     ) {
       errors.push(`Booking ${i}: Expense accounts cannot have credit entries.`);
     }
@@ -192,7 +223,9 @@ export function validateAccountTypeBookingsWithAccounts(
   }
 }
 
-export function buildTransactionCreateData(input: CreateTransactionInput) {
+export function buildTransactionCreateData(
+  input: CreateTransactionInput<MoneyInput>,
+) {
   return {
     description: input.description,
     accountBookId: input.accountBookId,
@@ -213,7 +246,7 @@ export function buildTransactionCreateData(input: CreateTransactionInput) {
         cryptocurrency: booking.cryptocurrency,
         symbol: booking.symbol,
         tradeCurrency: booking.tradeCurrency,
-        value: booking.value,
+        value: toMoney(booking.value).toString(),
         sortOrder,
         accountBook: {
           connect: { id: input.accountBookId },

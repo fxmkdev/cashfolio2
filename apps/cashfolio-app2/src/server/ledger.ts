@@ -1,3 +1,5 @@
+import { toNumericMoney } from "./money-boundary";
+import { toMoney, type Money } from "../shared/money";
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../prisma.server";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
@@ -12,7 +14,7 @@ import {
   parseExplicitPeriodSelectionFromUnknown,
   type ExplicitPeriodSelection,
 } from "../shared/period";
-import { toMoneyNumber } from "../shared/money";
+
 import type { StatementImportCsvFormat } from "../shared/statement-import-csv-format";
 import { createGroupPathSegmentsResolver } from "./accounts/accounts-helpers";
 import {
@@ -88,7 +90,7 @@ export const getLedgerAccountPersistedBalance = createServerFn({
       _sum: { value: true },
     });
 
-    return toMoneyNumber(aggregateResult._sum.value ?? 0);
+    return toNumericMoney(toMoney(aggregateResult._sum.value ?? toMoney(0)));
   });
 
 export const getLedgerData = createServerFn({ method: "GET" })
@@ -175,11 +177,13 @@ export const getLedgerData = createServerFn({ method: "GET" })
             _count: { _all: true },
           })
           .then((aggregateResult) => ({
-            balanceBeforePeriod: toMoneyNumber(aggregateResult._sum.value ?? 0),
+            balanceBeforePeriod: toMoney(
+              aggregateResult._sum.value ?? toMoney(0),
+            ),
             hasBookingsBeforePeriod: aggregateResult._count._all > 0,
           }))
       : Promise.resolve({
-          balanceBeforePeriod: 0,
+          balanceBeforePeriod: toMoney(0),
           hasBookingsBeforePeriod: false,
         });
 
@@ -252,16 +256,16 @@ export const getLedgerData = createServerFn({ method: "GET" })
       firstBookingPromise,
     ]);
 
-    let convertedValuesInReferenceCurrency: Array<number | null> | null = null;
+    let convertedValuesInReferenceCurrency: Array<Money | null> | null = null;
     if (data.includeReferenceValues && referenceCurrency) {
-      const exchangeRateByKey = new Map<string, Promise<number | null>>();
+      const exchangeRateByKey = new Map<string, Promise<Money | null>>();
       convertedValuesInReferenceCurrency = await mapWithConcurrencyLimit(
         bookings,
         LEDGER_REFERENCE_CONVERSION_CONCURRENCY,
         (booking) =>
           booking.unit
             ? convertBookingValueToReference({
-                value: toMoneyNumber(booking.value),
+                value: toMoney(booking.value),
                 unit: booking.unit,
                 currency: booking.currency,
                 cryptocurrency: booking.cryptocurrency,
@@ -271,19 +275,19 @@ export const getLedgerData = createServerFn({ method: "GET" })
                 referenceCurrency,
                 exchangeRateByKey,
               })
-            : Promise.resolve<number | null>(null),
+            : Promise.resolve<Money | null>(null),
       );
     }
 
     type LedgerBookingRecord = (typeof bookings)[number];
     const mapLedgerBooking = (
       booking: LedgerBookingRecord,
-      valueInReferenceCurrency: number | null,
+      valueInReferenceCurrency: Money | null,
     ) => ({
       id: booking.id,
       date: booking.date,
       description: booking.description,
-      value: toMoneyNumber(booking.value),
+      value: toMoney(booking.value),
       valueInReferenceCurrency,
       unit: booking.unit,
       currency: booking.currency,
@@ -329,7 +333,9 @@ export const getLedgerData = createServerFn({ method: "GET" })
       referenceCurrency,
       rows,
       firstBookingDate: firstBooking?.date.toISOString() ?? null,
-      balanceBeforePeriod: carryOverMetadata.balanceBeforePeriod,
+      balanceBeforePeriod: toNumericMoney(
+        carryOverMetadata.balanceBeforePeriod,
+      ),
       hasBookingsBeforePeriod: carryOverMetadata.hasBookingsBeforePeriod,
     };
   });

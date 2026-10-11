@@ -1,15 +1,19 @@
 import {
+  toMoney,
+  type Money,
+  moneyAdd,
+  moneyMultiply,
+  moneyDivide,
+  moneyAbs,
+  moneySum,
+} from "../../shared/money";
+import {
   AccountType,
   EquityAccountSubtype,
   Unit,
 } from "../../.prisma-client/enums";
 import { prisma } from "../../prisma.server";
-import {
-  moneyAbs,
-  moneyAdd,
-  moneySum,
-  toMoneyNumber,
-} from "../../shared/money";
+
 import { isMultiUnitTransaction } from "./period-helpers";
 import { isNearZero, isWithinPeriod } from "./period-overview-holdings-common";
 
@@ -17,7 +21,7 @@ type ExecutionResidualBooking = {
   id: string;
   accountId: string;
   date: Date;
-  value: number;
+  value: Money;
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
@@ -36,7 +40,7 @@ type ExecutionResidualContribution = {
   cryptocurrency: string | null;
   symbol: string | null;
   tradeCurrency: string | null;
-  realizedGainLoss: number;
+  realizedGainLoss: Money;
 };
 
 function isNonReferenceExecutionBooking(args: {
@@ -62,17 +66,17 @@ export async function computeExecutionResidualRealization(args: {
   trackedHoldingAccountIdSet: Set<string>;
   pageSize: number;
   convertBookingToReference: (booking: {
-    value: number;
+    value: Money;
     unit: Unit;
     currency: string | null;
     cryptocurrency: string | null;
     symbol: string | null;
     tradeCurrency: string | null;
     date: Date;
-  }) => Promise<number | null>;
+  }) => Promise<Money | null>;
   onContribution: (contribution: ExecutionResidualContribution) => void;
 }) {
-  let realizedGainLoss = 0;
+  let realizedGainLoss: Money = toMoney(0);
   let convertedCount = 0;
   let skippedCount = 0;
   let nextTransactionIdCursor: string | undefined;
@@ -187,7 +191,7 @@ export async function computeExecutionResidualRealization(args: {
           id: booking.id,
           accountId: booking.accountId,
           date: booking.date,
-          value: toMoneyNumber(booking.value),
+          value: toMoney(booking.value),
           unit: booking.unit,
           currency: booking.currency,
           cryptocurrency: booking.cryptocurrency,
@@ -242,8 +246,8 @@ export async function computeExecutionResidualRealization(args: {
         ),
       );
 
-      let executionResidualInReference = 0;
-      const convertedByBookingId = new Map<string, number>();
+      let executionResidualInReference: Money = toMoney(0);
+      const convertedByBookingId = new Map<string, Money>();
       let hasMissingConversion = false;
 
       for (let index = 0; index < nonExplicitBookings.length; index += 1) {
@@ -257,8 +261,9 @@ export async function computeExecutionResidualRealization(args: {
         }
 
         convertedCount += 1;
-        executionResidualInReference = toMoneyNumber(
-          moneyAdd(executionResidualInReference, convertedValue),
+        executionResidualInReference = moneyAdd(
+          executionResidualInReference,
+          convertedValue,
         );
         convertedByBookingId.set(booking.id, convertedValue);
       }
@@ -267,8 +272,9 @@ export async function computeExecutionResidualRealization(args: {
         continue;
       }
 
-      realizedGainLoss = toMoneyNumber(
-        moneyAdd(realizedGainLoss, executionResidualInReference),
+      realizedGainLoss = moneyAdd(
+        realizedGainLoss,
+        executionResidualInReference,
       );
 
       const nonReferenceBookings = nonExplicitBookings.filter((booking) =>
@@ -283,11 +289,9 @@ export async function computeExecutionResidualRealization(args: {
       }
 
       const attributionWeights = nonReferenceBookings.map((booking) =>
-        toMoneyNumber(moneyAbs(convertedByBookingId.get(booking.id) ?? 0)),
+        moneyAbs(convertedByBookingId.get(booking.id) ?? toMoney(0)),
       );
-      const totalAttributionWeight = toMoneyNumber(
-        moneySum(attributionWeights),
-      );
+      const totalAttributionWeight = moneySum(attributionWeights);
 
       for (
         let attributionIndex = 0;
@@ -296,9 +300,12 @@ export async function computeExecutionResidualRealization(args: {
       ) {
         const booking = nonReferenceBookings[attributionIndex]!;
         const weight =
-          totalAttributionWeight > 0
-            ? attributionWeights[attributionIndex]! / totalAttributionWeight
-            : 1 / nonReferenceBookings.length;
+          toMoney(totalAttributionWeight).comparedTo(0) > 0
+            ? moneyDivide(
+                attributionWeights[attributionIndex]!,
+                totalAttributionWeight,
+              )
+            : moneyDivide(1, nonReferenceBookings.length);
 
         args.onContribution({
           accountId: booking.accountId,
@@ -308,7 +315,7 @@ export async function computeExecutionResidualRealization(args: {
           cryptocurrency: booking.cryptocurrency,
           symbol: booking.symbol,
           tradeCurrency: booking.tradeCurrency,
-          realizedGainLoss: executionResidualInReference * weight,
+          realizedGainLoss: moneyMultiply(executionResidualInReference, weight),
         });
       }
     }

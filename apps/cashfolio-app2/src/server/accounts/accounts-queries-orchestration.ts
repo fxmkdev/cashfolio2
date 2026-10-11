@@ -1,3 +1,5 @@
+import { toNumericMoney } from "../money-boundary";
+import { toMoney, moneyIsZero } from "../../shared/money";
 import { prisma } from "../../prisma.server";
 import type {
   AccountType,
@@ -15,7 +17,7 @@ import {
   getUtcDayRange,
   startOfUtcDay,
 } from "../../shared/date";
-import { moneyIsZero, toMoneyNumber } from "../../shared/money";
+
 import type { StatementImportCsvFormat } from "../../shared/statement-import-csv-format";
 import {
   type AccountState,
@@ -434,10 +436,10 @@ export async function queryLedgerAccountActionData(
   const requiresZeroBalance = accountTypeRequiresZeroBalanceForArchive(
     account.type,
   );
-  const rawBalance = toMoneyNumber(bookingAggregate._sum.value ?? 0);
+  const rawBalance = toMoney(bookingAggregate._sum.value ?? toMoney(0));
   const hasZeroBalance =
     !requiresZeroBalance ||
-    moneyIsZero(allScheduledBookingAggregate._sum.value ?? 0);
+    moneyIsZero(allScheduledBookingAggregate._sum.value ?? toMoney(0));
   const deleteAvailability = getAccountDeleteAvailability(bookingCount > 0);
   const archiveAvailability = getAccountArchiveAvailability({
     isActive: account.isActive,
@@ -466,9 +468,9 @@ export async function queryLedgerAccountActionData(
   const openingRawBalance =
     openingBalanceAggregate?._sum.value == null
       ? null
-      : toMoneyNumber(openingBalanceAggregate._sum.value);
+      : toMoney(openingBalanceAggregate._sum.value);
 
-  return {
+  return toNumericMoney({
     id: account.id,
     nodeType: "account",
     name: account.name,
@@ -485,7 +487,7 @@ export async function queryLedgerAccountActionData(
       account.type === "ASSET"
         ? rawBalance
         : account.type === "LIABILITY"
-          ? -rawBalance
+          ? toMoney(rawBalance).neg()
           : null,
     balanceInReferenceCurrency: null,
     openingBalance:
@@ -494,7 +496,7 @@ export async function queryLedgerAccountActionData(
         : account.type === "ASSET"
           ? openingRawBalance
           : account.type === "LIABILITY"
-            ? -openingRawBalance
+            ? toMoney(openingRawBalance).neg()
             : null,
     parentId: account.groupId ?? undefined,
     isActive: account.isActive,
@@ -506,7 +508,7 @@ export async function queryLedgerAccountActionData(
     archiveDisabledReason: archiveAvailability.disabledReason,
     unarchivable: unarchiveAvailability.enabled,
     unarchiveDisabledReason: unarchiveAvailability.disabledReason,
-  };
+  });
 }
 
 export async function queryAccountReferenceBalances(
@@ -537,14 +539,14 @@ export async function queryAccountReferenceBalances(
       includeReferenceBalances: true,
     });
 
-  return {
+  return toNumericMoney({
     referenceCurrency,
     rows: accounts.map((account) => ({
       id: account.id,
       balanceInReferenceCurrency:
         displayBalanceInReferenceCurrencyByAccountId.get(account.id) ?? null,
     })),
-  };
+  });
 }
 
 export async function queryAccountsPageData(data: AccountsPageDataInput) {

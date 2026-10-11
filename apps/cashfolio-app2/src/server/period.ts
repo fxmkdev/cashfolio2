@@ -1,3 +1,4 @@
+import { toNumericMoney } from "./money-boundary";
 import { createServerFn } from "@tanstack/react-start";
 import {
   DEFAULT_PERIOD_VALUE,
@@ -11,9 +12,9 @@ import {
   type PeriodPresetValue,
 } from "../shared/period";
 import {
-  buildBreakdownHierarchy,
-  buildBreakdownItems,
-  computeHoldingGainLossForEventSeries,
+  buildBreakdownHierarchy as buildBreakdownHierarchyDecimal,
+  buildBreakdownItems as buildBreakdownItemsDecimal,
+  computeHoldingGainLossForEventSeries as computeHoldingGainLossForEventSeriesDecimal,
   createBreakdownBucket,
   isMultiUnitTransaction,
   shouldIncludeTransactionForPeriod,
@@ -23,7 +24,7 @@ import {
   resolvePeriodSelection,
   type PeriodSpecifier,
 } from "./period/period-selection";
-import { computeEndOfPeriodBalanceStats } from "./period/period-balance-stats";
+import { computeEndOfPeriodBalanceStats as computeEndOfPeriodBalanceStatsDecimal } from "./period/period-balance-stats";
 import { normalizeUserLocaleInput } from "../user-locale";
 
 export {
@@ -39,11 +40,7 @@ export {
 export type { PeriodPresetValue };
 export type { PeriodSpecifier };
 export {
-  buildBreakdownHierarchy,
-  buildBreakdownItems,
-  computeEndOfPeriodBalanceStats,
   getPeriodEndExclusive,
-  computeHoldingGainLossForEventSeries,
   createBreakdownBucket,
   isMultiUnitTransaction,
   resolvePeriodSelection,
@@ -69,3 +66,27 @@ export const getPeriodOverview = createServerFn({
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     return loadPeriodOverview(data);
   });
+
+export function buildBreakdownHierarchy(
+  args: Parameters<typeof buildBreakdownHierarchyDecimal>[0],
+) {
+  return toNumericMoney(buildBreakdownHierarchyDecimal(args));
+}
+
+export function buildBreakdownItems(
+  args: Parameters<typeof buildBreakdownItemsDecimal>[0],
+) {
+  return toNumericMoney(buildBreakdownItemsDecimal(args));
+}
+
+export async function computeEndOfPeriodBalanceStats(
+  args: Parameters<typeof computeEndOfPeriodBalanceStatsDecimal>[0],
+) {
+  return toNumericMoney(await computeEndOfPeriodBalanceStatsDecimal(args));
+}
+
+export function computeHoldingGainLossForEventSeries(
+  args: Parameters<typeof computeHoldingGainLossForEventSeriesDecimal>[0],
+) {
+  return toNumericMoney(computeHoldingGainLossForEventSeriesDecimal(args));
+}

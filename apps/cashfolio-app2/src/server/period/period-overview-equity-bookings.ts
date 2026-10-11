@@ -1,10 +1,11 @@
+import { toMoney, type Money } from "../../shared/money";
 import {
   AccountType,
   EquityAccountSubtype,
   Unit,
 } from "../../.prisma-client/enums";
 import { prisma } from "../../prisma.server";
-import { toMoneyNumber } from "../../shared/money";
+
 import { convertBookingValueToReference } from "./period-conversion";
 import {
   accumulateConvertedEquityBooking,
@@ -28,7 +29,7 @@ export type ConvertedExplicitEquityBooking = {
   cryptocurrency: string | null;
   symbol: string | null;
   tradeCurrency: string | null;
-  convertedValue: number;
+  convertedValue: Money;
 };
 
 function resolveEquityBookingAccountId(booking: {
@@ -92,7 +93,7 @@ export async function loadPeriodEquityBookings(args: {
   queryStart: Date;
   queryEndExclusive: Date;
   referenceCurrency: string;
-  exchangeRateByKey: Map<string, Promise<number | null>>;
+  exchangeRateByKey: Map<string, Promise<Money | null>>;
   equityAccountIds: string[];
   equityAccountById: Map<string, ResolvedEquityAccount>;
 }) {
@@ -181,7 +182,7 @@ export async function loadPeriodEquityBookings(args: {
     const conversionTasks = bookingsPage.map((booking) => ({
       booking,
       convertedValuePromise: convertBookingValueToReference({
-        value: toMoneyNumber(booking.value),
+        value: toMoney(booking.value),
         unit: booking.unit,
         currency: booking.currency,
         cryptocurrency: booking.cryptocurrency,

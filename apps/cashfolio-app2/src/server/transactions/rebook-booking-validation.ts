@@ -1,3 +1,4 @@
+import type { MoneyInput } from "../../shared/money";
 import {
   AccountType,
   EquityAccountSubtype,
@@ -20,7 +21,7 @@ export type RebookBookingValidationInput = {
   cryptocurrency: string | null;
   symbol: string | null;
   tradeCurrency: string | null;
-  value: number;
+  value: MoneyInput;
 };
 
 export type RebookTargetAccountValidationInput = {

@@ -1,3 +1,13 @@
+import { toNumericMoney } from "../money-boundary";
+import {
+  toMoney,
+  type Money,
+  moneyAdd,
+  moneyMultiply,
+  moneyDivide,
+  moneyAbs,
+  moneySum,
+} from "../../shared/money";
 import { AccountType } from "../../.prisma-client/enums";
 import {
   formatMonthPeriodLabel,
@@ -13,7 +23,7 @@ import {
   type BreakdownHierarchyAccumulatorItem,
   type PeriodGroupNode,
 } from "./period-helpers";
-import { moneyAdd, moneySum, toMoneyNumber } from "../../shared/money";
+
 import type { PeriodOverviewEquityAggregation } from "./period-overview-aggregation";
 import {
   buildGainsLossesBreakdown,
@@ -30,10 +40,10 @@ type PeriodOverviewAssetLiabilityAccount = {
 };
 
 type PeriodOverviewEndOfPeriodStats = {
-  assets: number;
-  liabilities: number;
-  netWorth: number;
-  convertedBalanceByAccountId: Map<string, number | null>;
+  assets: Money;
+  liabilities: Money;
+  netWorth: Money;
+  convertedBalanceByAccountId: Map<string, Money | null>;
 };
 
 export function buildPeriodOverviewResponse(args: {
@@ -44,9 +54,9 @@ export function buildPeriodOverviewResponse(args: {
   groupById: Map<string, PeriodGroupNode>;
   assetLiabilityAccounts: PeriodOverviewAssetLiabilityAccount[];
   equityAggregation: PeriodOverviewEquityAggregation;
-  realizedGainLoss: number;
-  unrealizedGainLoss: number;
-  cashFlow: number;
+  realizedGainLoss: Money;
+  unrealizedGainLoss: Money;
+  cashFlow: Money;
   cashFlowAmountByAccountId: Map<string, BreakdownHierarchyAccumulatorItem>;
   hasCashAccounts?: boolean;
   isBeforeAccountBookStart: boolean;
@@ -59,28 +69,26 @@ export function buildPeriodOverviewResponse(args: {
 }) {
   const { income, expenses, explicitGainLoss } = args.equityAggregation;
   const realizedGainLoss = args.isBeforeAccountBookStart
-    ? 0
+    ? toMoney(0)
     : args.realizedGainLoss;
   const unrealizedGainLoss = args.isBeforeAccountBookStart
-    ? 0
+    ? toMoney(0)
     : args.unrealizedGainLoss;
   const gainsLosses = args.isBeforeAccountBookStart
-    ? 0
-    : toMoneyNumber(
-        moneySum([explicitGainLoss, realizedGainLoss, unrealizedGainLoss]),
-      );
+    ? toMoney(0)
+    : moneySum([explicitGainLoss, realizedGainLoss, unrealizedGainLoss]);
 
   const roundedIncome = round2(income);
   const roundedExpenses = round2(expenses);
   const roundedGainsLosses = round2(gainsLosses);
   const roundedCashFlow = round2(
-    args.isBeforeAccountBookStart ? 0 : args.cashFlow,
+    args.isBeforeAccountBookStart ? toMoney(0) : args.cashFlow,
   );
   const roundedSavings = round2(
-    toMoneyNumber(moneyAdd(roundedIncome, -roundedExpenses)),
+    moneyAdd(roundedIncome, toMoney(roundedExpenses).neg()),
   );
   const roundedTotalReturn = round2(
-    toMoneyNumber(moneyAdd(roundedSavings, roundedGainsLosses)),
+    moneyAdd(roundedSavings, roundedGainsLosses),
   );
   const roundedEndOfPeriodAssets = round2(args.endOfPeriodBalanceStats.assets);
   const roundedEndOfPeriodLiabilities = round2(
@@ -170,8 +178,8 @@ export function buildPeriodOverviewResponse(args: {
         groupById: args.groupById,
       });
   const cashFlowTopLevelAbsoluteTotal = cashFlowBreakdownHierarchy.reduce(
-    (sum, node) => sum + Math.abs(node.amount),
-    0,
+    (sum, node) => moneyAdd(sum, moneyAbs(node.amount)),
+    toMoney(0),
   );
   const cashFlowBreakdownItems = cashFlowBreakdownHierarchy.map((node) => ({
     id: node.id,
@@ -179,12 +187,20 @@ export function buildPeriodOverviewResponse(args: {
     kind: node.kind,
     amount: node.amount,
     percentage:
-      cashFlowTopLevelAbsoluteTotal <= 0
-        ? 0
-        : round2((Math.abs(node.amount) / cashFlowTopLevelAbsoluteTotal) * 100),
+      toMoney(cashFlowTopLevelAbsoluteTotal).comparedTo(0) <= 0
+        ? toMoney(0)
+        : round2(
+            moneyMultiply(
+              moneyDivide(moneyAbs(node.amount), cashFlowTopLevelAbsoluteTotal),
+              100,
+            ),
+          ),
   }));
   const cashFlowBreakdownTotalAmount = round2(
-    cashFlowBreakdownHierarchy.reduce((sum, node) => sum + node.amount, 0),
+    cashFlowBreakdownHierarchy.reduce(
+      (sum, node) => moneyAdd(sum, node.amount),
+      toMoney(0),
+    ),
   );
 
   const availableYears = buildAvailableYears({
@@ -196,7 +212,7 @@ export function buildPeriodOverviewResponse(args: {
     referenceCurrency: args.referenceCurrency,
   });
 
-  return {
+  return toNumericMoney({
     selectedPeriodValue: args.selection.periodValue,
     selectedPeriodSpecifier: args.selection.periodSpecifier,
     selectedPeriodLabel:
@@ -265,5 +281,5 @@ export function buildPeriodOverviewResponse(args: {
     assetBreakdown,
     liabilityBreakdown,
     gainsLossesBreakdown,
-  };
+  });
 }

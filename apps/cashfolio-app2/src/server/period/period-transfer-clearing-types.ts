@@ -1,3 +1,4 @@
+import { type Money } from "../../shared/money";
 import { Unit } from "../../.prisma-client/enums";
 import type { EndOfPeriodBalanceAccount } from "./period-balance-stats";
 
@@ -7,7 +8,7 @@ export type TransferClearingBooking = {
   transactionDescription?: string | null;
   transactionId?: string | null;
   date: Date;
-  value: number;
+  value: Money;
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
@@ -28,7 +29,7 @@ export type TransferClearingUnitBucket = {
   symbol: string | null;
   tradeCurrency: string | null;
   isNonReferenceUnit: boolean;
-  rawBalance: number;
+  rawBalance: Money;
   bookings: TransferClearingBooking[];
 };
 

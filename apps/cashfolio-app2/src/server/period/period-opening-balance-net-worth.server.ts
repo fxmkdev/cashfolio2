@@ -1,14 +1,15 @@
+import { toMoney, type Money } from "../../shared/money";
 import { AccountType } from "../../.prisma-client/enums";
 import { prisma } from "../../prisma.server";
 import { addUtcDays, startOfUtcDay } from "../../shared/date";
-import { toMoneyNumber } from "../../shared/money";
+
 import { normalizePeriodValue } from "../../shared/period";
 import {
   computeEndOfPeriodBalanceStats,
   type EndOfPeriodBalanceAccount,
 } from "./period-balance-stats";
 import { convertBookingValueToReference } from "./period-conversion";
-import { type OpeningBalanceNetWorthResult } from "./period-opening-balance-net-worth.types";
+
 import { buildTransferClearingVirtualHierarchy } from "./period-transfer-clearing";
 import { loadTransferClearingUnitBuckets } from "./period-transfer-clearing-buckets";
 import { resolvePeriodSelection } from "./period-selection";
@@ -39,8 +40,8 @@ async function loadRawBalanceByAccountIdBeforePeriodStart(args: {
   accountBookId: string;
   periodStart: Date;
   accounts: EndOfPeriodBalanceAccount[];
-}): Promise<Map<string, number>> {
-  const rawBalanceByAccountId = new Map<string, number>();
+}): Promise<Map<string, Money>> {
+  const rawBalanceByAccountId = new Map<string, Money>();
   if (args.accounts.length === 0) {
     return rawBalanceByAccountId;
   }
@@ -64,7 +65,7 @@ async function loadRawBalanceByAccountIdBeforePeriodStart(args: {
   for (const groupedBalance of groupedBalances) {
     rawBalanceByAccountId.set(
       groupedBalance.accountId,
-      toMoneyNumber(groupedBalance._sum.value ?? 0),
+      toMoney(groupedBalance._sum.value ?? toMoney(0)),
     );
   }
 
@@ -90,7 +91,7 @@ async function loadTransferClearingOpeningBaseline(args: {
 export async function loadOpeningBalanceNetWorthForPeriod(args: {
   accountBookId: string;
   period?: unknown;
-}): Promise<OpeningBalanceNetWorthResult> {
+}) {
   const normalizedPeriodValue = normalizePeriodValue(args.period);
 
   const accountBook = await prisma.accountBook.findUniqueOrThrow({
@@ -135,7 +136,7 @@ export async function loadOpeningBalanceNetWorthForPeriod(args: {
     rawBalanceByAccountId.set(accountId, rawBalance);
   }
 
-  const exchangeRateByKey = new Map<string, Promise<number | null>>();
+  const exchangeRateByKey = new Map<string, Promise<Money | null>>();
   const balanceStats = await computeEndOfPeriodBalanceStats({
     accounts: [...accounts, ...transferClearingVirtualAccounts],
     rawBalanceByAccountId,

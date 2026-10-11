@@ -1,13 +1,16 @@
-import { Unit } from "../../.prisma-client/enums";
 import {
-  moneyAbs,
+  toMoney,
+  type Money,
   moneyAdd,
-  moneyDivide,
-  moneyMultiply,
   moneySubtract,
+  moneyMultiply,
+  moneyDivide,
+  moneyAbs,
   moneySum,
-  toMoneyNumber,
+  moneyIsFinite,
 } from "../../shared/money";
+import { Unit } from "../../.prisma-client/enums";
+
 import type { HoldingGainLossSkippedReason } from "./period-overview-holdings";
 import type { HoldingExecutionLotMatch } from "./period-overview-holdings-types";
 import {
@@ -36,10 +39,10 @@ export async function computeTransferClearingGainLossSplit(args: {
     symbol: string | null;
     tradeCurrency: string | null;
     date: Date;
-  }) => Promise<number | null>;
+  }) => Promise<Money | null>;
   convertBookingToReference: (
     booking: TransferClearingBooking,
-  ) => Promise<number | null>;
+  ) => Promise<Money | null>;
   onUnitGainLoss?: (gainLossByUnit: {
     unitKey: TransferClearingUnitBucket["unitKey"];
     unitLabel: TransferClearingUnitBucket["unitLabel"];
@@ -48,8 +51,8 @@ export async function computeTransferClearingGainLossSplit(args: {
     cryptocurrency: TransferClearingUnitBucket["cryptocurrency"];
     symbol: TransferClearingUnitBucket["symbol"];
     tradeCurrency: TransferClearingUnitBucket["tradeCurrency"];
-    realizedGainLoss: number;
-    unrealizedGainLoss: number;
+    realizedGainLoss: Money;
+    unrealizedGainLoss: Money;
   }) => void;
   onUnitExecutionEvent?: (event: {
     unitKey: TransferClearingUnitBucket["unitKey"];
@@ -58,23 +61,23 @@ export async function computeTransferClearingGainLossSplit(args: {
     transactionDescription?: string | null;
     transactionId: string | null;
     date: Date;
-    quantity: number;
+    quantity: Money;
     pricingSource: "directConversion";
-    marketReferenceAmount: number;
-    residualAllocationAmount: number;
-    effectiveReferenceAmount: number;
-    executionUnitPriceInReference: number;
-    realizedGainLossDelta: number;
-    runningRealizedGainLoss: number;
+    marketReferenceAmount: Money;
+    residualAllocationAmount: Money;
+    effectiveReferenceAmount: Money;
+    executionUnitPriceInReference: Money;
+    realizedGainLossDelta: Money;
+    runningRealizedGainLoss: Money;
     lotMatches: HoldingExecutionLotMatch[];
   }) => void;
   onUnitOpenLotValuation?: (lot: {
     unitKey: TransferClearingUnitBucket["unitKey"];
     acquisitionSortKey: string;
-    quantity: number;
-    unitCostInReference: number;
-    periodEndRate: number;
-    unrealizedGainLoss: number;
+    quantity: Money;
+    unitCostInReference: Money;
+    periodEndRate: Money;
+    unrealizedGainLoss: Money;
   }) => void;
   onSkippedItem?: (item: {
     unitKey: TransferClearingUnitBucket["unitKey"];
@@ -86,8 +89,8 @@ export async function computeTransferClearingGainLossSplit(args: {
     date: Date;
   }) => void;
 }) {
-  let realizedGainLoss = 0;
-  let unrealizedGainLoss = 0;
+  let realizedGainLoss: Money = toMoney(0);
+  let unrealizedGainLoss: Money = toMoney(0);
   let convertedCount = 0;
   let skippedCount = 0;
 
@@ -95,21 +98,19 @@ export async function computeTransferClearingGainLossSplit(args: {
     if (!unitBucket.isNonReferenceUnit) {
       continue;
     }
-    let unitRealizedGainLoss = 0;
-    let unitUnrealizedGainLoss = 0;
+    let unitRealizedGainLoss: Money = toMoney(0);
+    let unitUnrealizedGainLoss: Money = toMoney(0);
 
     const lots: Array<{
-      quantity: number;
-      unitCostInReference: number;
+      quantity: Money;
+      unitCostInReference: Money;
       acquisitionSortKey: string;
     }> = [];
 
     const openingPostedBalance = unitBucket.bookings
       .filter((booking) => booking.date < args.periodStart)
       .map((booking) => booking.value);
-    const openingBalance = toMoneyNumber(
-      moneySubtract(0, moneySum(openingPostedBalance)),
-    );
+    const openingBalance = moneySubtract(0, moneySum(openingPostedBalance));
 
     if (!isNearZero(openingBalance)) {
       const initialRate = await args.resolveRate({
@@ -184,12 +185,12 @@ export async function computeTransferClearingGainLossSplit(args: {
         continue;
       }
 
-      const clearingQuantity = -booking.value;
-      const clearingReferenceAmount = -convertedValue;
-      const executionUnitPriceInReference = toMoneyNumber(
+      const clearingQuantity = toMoney(booking.value).neg();
+      const clearingReferenceAmount = toMoney(convertedValue).neg();
+      const executionUnitPriceInReference = toMoney(
         moneyDivide(clearingReferenceAmount, clearingQuantity),
       );
-      if (!Number.isFinite(executionUnitPriceInReference)) {
+      if (!moneyIsFinite(executionUnitPriceInReference)) {
         skippedCount += 1;
         args.onSkippedItem?.({
           unitKey: unitBucket.unitKey,
@@ -224,11 +225,10 @@ export async function computeTransferClearingGainLossSplit(args: {
             }
           : {}),
       });
-      realizedGainLoss = toMoneyNumber(
-        moneyAdd(realizedGainLoss, bookingRealizedGainLoss),
-      );
-      unitRealizedGainLoss = toMoneyNumber(
-        moneyAdd(unitRealizedGainLoss, bookingRealizedGainLoss),
+      realizedGainLoss = moneyAdd(realizedGainLoss, bookingRealizedGainLoss);
+      unitRealizedGainLoss = moneyAdd(
+        unitRealizedGainLoss,
+        bookingRealizedGainLoss,
       );
       args.onUnitExecutionEvent?.({
         unitKey: unitBucket.unitKey,
@@ -240,7 +240,7 @@ export async function computeTransferClearingGainLossSplit(args: {
         quantity: clearingQuantity,
         pricingSource: "directConversion",
         marketReferenceAmount: clearingReferenceAmount,
-        residualAllocationAmount: 0,
+        residualAllocationAmount: toMoney(0),
         effectiveReferenceAmount: clearingReferenceAmount,
         executionUnitPriceInReference,
         realizedGainLossDelta: bookingRealizedGainLoss,
@@ -250,10 +250,10 @@ export async function computeTransferClearingGainLossSplit(args: {
     }
 
     const openQuantity = lots.reduce(
-      (sum, lot) => toMoneyNumber(moneyAdd(sum, moneyAbs(lot.quantity))),
-      0,
+      (sum, lot) => moneyAdd(sum, moneyAbs(lot.quantity)),
+      toMoney(0),
     );
-    if (openQuantity > QUANTITY_EPSILON) {
+    if (toMoney(openQuantity).comparedTo(QUANTITY_EPSILON) > 0) {
       const periodEndRate = await args.resolveRate({
         unit: unitBucket.unit,
         currency: unitBucket.currency,
@@ -270,17 +270,13 @@ export async function computeTransferClearingGainLossSplit(args: {
           date: args.periodEnd,
         });
       } else {
-        let unitUnrealized = 0;
+        let unitUnrealized: Money = toMoney(0);
         for (const lot of lots) {
-          const lotUnrealizedGainLoss = toMoneyNumber(
-            moneyMultiply(
-              lot.quantity,
-              moneySubtract(periodEndRate, lot.unitCostInReference),
-            ),
+          const lotUnrealizedGainLoss = moneyMultiply(
+            lot.quantity,
+            moneySubtract(periodEndRate, lot.unitCostInReference),
           );
-          unitUnrealized = toMoneyNumber(
-            moneyAdd(unitUnrealized, lotUnrealizedGainLoss),
-          );
+          unitUnrealized = moneyAdd(unitUnrealized, lotUnrealizedGainLoss);
           args.onUnitOpenLotValuation?.({
             unitKey: unitBucket.unitKey,
             acquisitionSortKey: lot.acquisitionSortKey,
@@ -290,11 +286,10 @@ export async function computeTransferClearingGainLossSplit(args: {
             unrealizedGainLoss: lotUnrealizedGainLoss,
           });
         }
-        unrealizedGainLoss = toMoneyNumber(
-          moneyAdd(unrealizedGainLoss, unitUnrealized),
-        );
-        unitUnrealizedGainLoss = toMoneyNumber(
-          moneyAdd(unitUnrealizedGainLoss, unitUnrealized),
+        unrealizedGainLoss = moneyAdd(unrealizedGainLoss, unitUnrealized);
+        unitUnrealizedGainLoss = moneyAdd(
+          unitUnrealizedGainLoss,
+          unitUnrealized,
         );
       }
     }

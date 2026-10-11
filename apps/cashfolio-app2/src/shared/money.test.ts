@@ -26,3 +26,43 @@ describe("money helpers", () => {
     expect(toMoneyNumber(converted)).toBeCloseTo(1, 12);
   });
 });
+
+describe("monetary precision boundaries", () => {
+  test("rejects non-finite numeric, string, and database-like inputs", async () => {
+    const { toMoney } = await import("./money");
+    for (const input of [
+      NaN,
+      Infinity,
+      -Infinity,
+      "NaN",
+      "Infinity",
+      { toString: () => "-Infinity" },
+    ]) {
+      expect(() => toMoney(input)).toThrow();
+    }
+  });
+
+  test("preserves high-precision database values through large cancellation", async () => {
+    const { toMoney } = await import("./money");
+    const databaseValue = {
+      toString: () => "9007199254740993.123456789123456789",
+    };
+    expect(
+      moneySum([
+        toMoney(databaseValue),
+        "-9007199254740993",
+        "-0.123456789123456789",
+      ]).toString(),
+    ).toBe("0");
+    expect(
+      moneySum(
+        Array.from({ length: 1000 }, () => "0.0000000000000000001"),
+      ).toString(),
+    ).toBe("1e-16");
+  });
+
+  test("rounds positive and negative half ties to even", () => {
+    expect(moneyRound2("-2.345").toString()).toBe("-2.34");
+    expect(moneyRound2("-2.355").toString()).toBe("-2.36");
+  });
+});

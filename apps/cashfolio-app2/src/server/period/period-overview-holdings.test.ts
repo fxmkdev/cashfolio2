@@ -1,3 +1,6 @@
+import type { MoneyInput, Money } from "../../shared/money";
+import { toMoney } from "../../shared/money";
+import { toNumericMoney } from "../money-boundary";
 import { describe, expect, it, vi } from "vitest";
 import {
   AccountType,
@@ -32,14 +35,14 @@ const holdingAccounts = [
 function createHoldingBooking(args: {
   id: string;
   date: string;
-  value: number;
+  value: MoneyInput;
   accountId?: string;
 }) {
   return {
     id: args.id,
     accountId: args.accountId ?? HOLDING_ACCOUNT_ID,
     date: new Date(args.date),
-    value: args.value,
+    value: toMoney(args.value),
     unit: Unit.SECURITY,
     currency: null,
     cryptocurrency: null,
@@ -54,14 +57,14 @@ function createHoldingCurrencyBooking(args: {
   id: string;
   accountId: string;
   date: string;
-  value: number;
+  value: MoneyInput;
   currency: string;
 }) {
   return {
     id: args.id,
     accountId: args.accountId,
     date: new Date(args.date),
-    value: args.value,
+    value: toMoney(args.value),
     unit: Unit.CURRENCY,
     currency: args.currency,
     cryptocurrency: null,
@@ -72,12 +75,16 @@ function createHoldingCurrencyBooking(args: {
   } as const;
 }
 
-function createCashBooking(args: { id: string; date: string; value: number }) {
+function createCashBooking(args: {
+  id: string;
+  date: string;
+  value: MoneyInput;
+}) {
   return {
     id: args.id,
     accountId: CASH_ACCOUNT_ID,
     date: new Date(args.date),
-    value: args.value,
+    value: toMoney(args.value),
     unit: Unit.CURRENCY,
     currency: "CHF",
     cryptocurrency: null,
@@ -91,13 +98,13 @@ function createCashBooking(args: { id: string; date: string; value: number }) {
 function createExplicitGainLossBooking(args: {
   id: string;
   date: string;
-  value: number;
+  value: MoneyInput;
 }) {
   return {
     id: args.id,
     accountId: "equity-gainloss",
     date: new Date(args.date),
-    value: args.value,
+    value: toMoney(args.value),
     unit: Unit.CURRENCY,
     currency: "CHF",
     cryptocurrency: null,
@@ -112,17 +119,17 @@ describe("period overview holdings FIFO", () => {
   it("seeds opening balance as a lot and computes unrealized gain at period end", async () => {
     const resolveRate = vi.fn().mockImplementation(async ({ date }) => {
       if (date.toISOString() === "2026-01-31T00:00:00.000Z") {
-        return 100;
+        return toMoney(100);
       }
       if (date.toISOString() === "2026-02-28T00:00:00.000Z") {
-        return 110;
+        return toMoney(110);
       }
       return null;
     });
 
     const result = await computeHoldingGainLossSplit({
       holdingAccounts: [...holdingAccounts],
-      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, 10]]),
+      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, toMoney(10)]]),
       transactions: [],
       periodStart: new Date("2026-02-01T00:00:00.000Z"),
       periodEndExclusive: new Date("2026-03-01T00:00:00.000Z"),
@@ -132,7 +139,7 @@ describe("period overview holdings FIFO", () => {
       convertBookingToReference: vi.fn(),
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       realizedGainLoss: 0,
       unrealizedGainLoss: 100,
       convertedCount: 0,
@@ -141,18 +148,18 @@ describe("period overview holdings FIFO", () => {
   });
 
   it("applies FIFO matching for partial lot disposal and keeps remaining unrealized", async () => {
-    const convertedByBookingId = new Map<string, number>([
-      ["h-buy-1", 1000],
-      ["c-buy-1", -1000],
-      ["h-buy-2", 600],
-      ["c-buy-2", -600],
-      ["h-sell-1", -1560],
-      ["c-sell-1", 1560],
+    const convertedByBookingId = new Map<string, Money>([
+      ["h-buy-1", toMoney(1000)],
+      ["c-buy-1", toMoney(-1000)],
+      ["h-buy-2", toMoney(600)],
+      ["c-buy-2", toMoney(-600)],
+      ["h-sell-1", toMoney(-1560)],
+      ["c-sell-1", toMoney(1560)],
     ]);
 
     const resolveRate = vi.fn().mockImplementation(async ({ date }) => {
       if (date.toISOString() === "2026-02-28T00:00:00.000Z") {
-        return 125;
+        return toMoney(125);
       }
       return null;
     });
@@ -166,12 +173,12 @@ describe("period overview holdings FIFO", () => {
             createHoldingBooking({
               id: "h-buy-1",
               date: "2026-02-10T00:00:00.000Z",
-              value: 10,
+              value: toMoney(10),
             }),
             createCashBooking({
               id: "c-buy-1",
               date: "2026-02-10T00:00:00.000Z",
-              value: -1000,
+              value: toMoney(-1000),
             }),
           ],
         },
@@ -180,12 +187,12 @@ describe("period overview holdings FIFO", () => {
             createHoldingBooking({
               id: "h-buy-2",
               date: "2026-02-11T00:00:00.000Z",
-              value: 5,
+              value: toMoney(5),
             }),
             createCashBooking({
               id: "c-buy-2",
               date: "2026-02-11T00:00:00.000Z",
-              value: -600,
+              value: toMoney(-600),
             }),
           ],
         },
@@ -194,12 +201,12 @@ describe("period overview holdings FIFO", () => {
             createHoldingBooking({
               id: "h-sell-1",
               date: "2026-02-15T00:00:00.000Z",
-              value: -12,
+              value: toMoney(-12),
             }),
             createCashBooking({
               id: "c-sell-1",
               date: "2026-02-15T00:00:00.000Z",
-              value: 1560,
+              value: toMoney(1560),
             }),
           ],
         },
@@ -213,18 +220,18 @@ describe("period overview holdings FIFO", () => {
         convertedByBookingId.get(booking.id) ?? null,
     });
 
-    expect(result.realizedGainLoss).toBe(320);
-    expect(result.unrealizedGainLoss).toBe(15);
+    expect(toNumericMoney(result.realizedGainLoss)).toBe(320);
+    expect(toNumericMoney(result.unrealizedGainLoss)).toBe(15);
     expect(result.convertedCount).toBe(6);
     expect(result.skippedCount).toBe(0);
   });
 
   it("handles short-lot covering via FIFO", async () => {
-    const convertedByBookingId = new Map<string, number>([
-      ["h-short-open", -500],
-      ["c-short-open", 500],
-      ["h-short-cover", 270],
-      ["c-short-cover", -270],
+    const convertedByBookingId = new Map<string, Money>([
+      ["h-short-open", toMoney(-500)],
+      ["c-short-open", toMoney(500)],
+      ["h-short-cover", toMoney(270)],
+      ["c-short-cover", toMoney(-270)],
     ]);
 
     const result = await computeHoldingGainLossSplit({
@@ -236,12 +243,12 @@ describe("period overview holdings FIFO", () => {
             createHoldingBooking({
               id: "h-short-open",
               date: "2026-02-10T00:00:00.000Z",
-              value: -5,
+              value: toMoney(-5),
             }),
             createCashBooking({
               id: "c-short-open",
               date: "2026-02-10T00:00:00.000Z",
-              value: 500,
+              value: toMoney(500),
             }),
           ],
         },
@@ -250,12 +257,12 @@ describe("period overview holdings FIFO", () => {
             createHoldingBooking({
               id: "h-short-cover",
               date: "2026-02-16T00:00:00.000Z",
-              value: 3,
+              value: toMoney(3),
             }),
             createCashBooking({
               id: "c-short-cover",
               date: "2026-02-16T00:00:00.000Z",
-              value: -270,
+              value: toMoney(-270),
             }),
           ],
         },
@@ -264,21 +271,21 @@ describe("period overview holdings FIFO", () => {
       periodEndExclusive: new Date("2026-03-01T00:00:00.000Z"),
       initialRateDate: new Date("2026-01-31T00:00:00.000Z"),
       periodEnd: new Date("2026-02-28T00:00:00.000Z"),
-      resolveRate: vi.fn().mockResolvedValue(95),
+      resolveRate: vi.fn().mockResolvedValue(toMoney(95)),
       convertBookingToReference: async (booking) =>
         convertedByBookingId.get(booking.id) ?? null,
     });
 
-    expect(result.realizedGainLoss).toBe(30);
-    expect(result.unrealizedGainLoss).toBe(10);
+    expect(toNumericMoney(result.realizedGainLoss)).toBe(30);
+    expect(toNumericMoney(result.unrealizedGainLoss)).toBe(10);
   });
 
   it("absorbs off-market execution differences into realized gain/loss", async () => {
-    const convertedByBookingId = new Map<string, number>([
-      ["h-buy", 1000],
-      ["c-buy", -1100],
-      ["h-sell", -1200],
-      ["c-sell", 1180],
+    const convertedByBookingId = new Map<string, Money>([
+      ["h-buy", toMoney(1000)],
+      ["c-buy", toMoney(-1100)],
+      ["h-sell", toMoney(-1200)],
+      ["c-sell", toMoney(1180)],
     ]);
 
     const result = await computeHoldingGainLossSplit({
@@ -290,12 +297,12 @@ describe("period overview holdings FIFO", () => {
             createHoldingBooking({
               id: "h-buy",
               date: "2026-02-10T00:00:00.000Z",
-              value: 10,
+              value: toMoney(10),
             }),
             createCashBooking({
               id: "c-buy",
               date: "2026-02-10T00:00:00.000Z",
-              value: -1100,
+              value: toMoney(-1100),
             }),
           ],
         },
@@ -304,12 +311,12 @@ describe("period overview holdings FIFO", () => {
             createHoldingBooking({
               id: "h-sell",
               date: "2026-02-20T00:00:00.000Z",
-              value: -10,
+              value: toMoney(-10),
             }),
             createCashBooking({
               id: "c-sell",
               date: "2026-02-20T00:00:00.000Z",
-              value: 1180,
+              value: toMoney(1180),
             }),
           ],
         },
@@ -318,18 +325,18 @@ describe("period overview holdings FIFO", () => {
       periodEndExclusive: new Date("2026-03-01T00:00:00.000Z"),
       initialRateDate: new Date("2026-01-31T00:00:00.000Z"),
       periodEnd: new Date("2026-02-28T00:00:00.000Z"),
-      resolveRate: vi.fn().mockResolvedValue(120),
+      resolveRate: vi.fn().mockResolvedValue(toMoney(120)),
       convertBookingToReference: async (booking) =>
         convertedByBookingId.get(booking.id) ?? null,
     });
 
-    expect(result.realizedGainLoss).toBe(80);
-    expect(result.unrealizedGainLoss).toBe(0);
+    expect(toNumericMoney(result.realizedGainLoss)).toBe(80);
+    expect(toNumericMoney(result.unrealizedGainLoss)).toBe(0);
   });
 
   it("falls back to market conversion when counterpart conversion is missing", async () => {
-    const convertedByBookingId = new Map<string, number | null>([
-      ["h-buy", 200],
+    const convertedByBookingId = new Map<string, Money | null>([
+      ["h-buy", toMoney(200)],
       ["c-buy", null],
     ]);
 
@@ -342,12 +349,12 @@ describe("period overview holdings FIFO", () => {
             createHoldingBooking({
               id: "h-buy",
               date: "2026-02-10T00:00:00.000Z",
-              value: 2,
+              value: toMoney(2),
             }),
             createCashBooking({
               id: "c-buy",
               date: "2026-02-10T00:00:00.000Z",
-              value: -250,
+              value: toMoney(-250),
             }),
           ],
         },
@@ -356,12 +363,12 @@ describe("period overview holdings FIFO", () => {
       periodEndExclusive: new Date("2026-03-01T00:00:00.000Z"),
       initialRateDate: new Date("2026-01-31T00:00:00.000Z"),
       periodEnd: new Date("2026-02-28T00:00:00.000Z"),
-      resolveRate: vi.fn().mockResolvedValue(100),
+      resolveRate: vi.fn().mockResolvedValue(toMoney(100)),
       convertBookingToReference: async (booking) =>
         convertedByBookingId.get(booking.id) ?? null,
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       realizedGainLoss: 0,
       unrealizedGainLoss: 0,
       convertedCount: 1,
@@ -370,9 +377,9 @@ describe("period overview holdings FIFO", () => {
   });
 
   it("uses straddled counterpart legs outside period for execution pricing", async () => {
-    const convertedByBookingId = new Map<string, number>([
-      ["h-buy", 100],
-      ["c-buy-before-period", -120],
+    const convertedByBookingId = new Map<string, Money>([
+      ["h-buy", toMoney(100)],
+      ["c-buy-before-period", toMoney(-120)],
     ]);
 
     const result = await computeHoldingGainLossSplit({
@@ -384,12 +391,12 @@ describe("period overview holdings FIFO", () => {
             createHoldingBooking({
               id: "h-buy",
               date: "2026-02-01T00:00:00.000Z",
-              value: 1,
+              value: toMoney(1),
             }),
             createCashBooking({
               id: "c-buy-before-period",
               date: "2026-01-31T00:00:00.000Z",
-              value: -120,
+              value: toMoney(-120),
             }),
           ],
         },
@@ -398,12 +405,12 @@ describe("period overview holdings FIFO", () => {
       periodEndExclusive: new Date("2026-03-01T00:00:00.000Z"),
       initialRateDate: new Date("2026-01-31T00:00:00.000Z"),
       periodEnd: new Date("2026-02-28T00:00:00.000Z"),
-      resolveRate: vi.fn().mockResolvedValue(110),
+      resolveRate: vi.fn().mockResolvedValue(toMoney(110)),
       convertBookingToReference: async (booking) =>
         convertedByBookingId.get(booking.id) ?? null,
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       realizedGainLoss: 0,
       unrealizedGainLoss: -10,
       convertedCount: 2,
@@ -414,9 +421,9 @@ describe("period overview holdings FIFO", () => {
   it("allocates all-holding residual for multi-unit exchanges", async () => {
     const eurAccountId = "holding-eur";
     const usdAccountId = "holding-usd";
-    const convertedByBookingId = new Map<string, number>([
-      ["h-sell-eur", -96],
-      ["h-buy-usd", 100],
+    const convertedByBookingId = new Map<string, Money>([
+      ["h-sell-eur", toMoney(-96)],
+      ["h-buy-usd", toMoney(100)],
     ]);
 
     const result = await computeHoldingGainLossSplit({
@@ -438,7 +445,7 @@ describe("period overview holdings FIFO", () => {
           tradeCurrency: null,
         },
       ],
-      initialBalanceByAccountId: new Map([[eurAccountId, 80]]),
+      initialBalanceByAccountId: new Map([[eurAccountId, toMoney(80)]]),
       transactions: [
         {
           bookings: [
@@ -446,14 +453,14 @@ describe("period overview holdings FIFO", () => {
               id: "h-sell-eur",
               accountId: eurAccountId,
               date: "2026-02-10T00:00:00.000Z",
-              value: -80,
+              value: toMoney(-80),
               currency: "EUR",
             }),
             createHoldingCurrencyBooking({
               id: "h-buy-usd",
               accountId: usdAccountId,
               date: "2026-02-10T00:00:00.000Z",
-              value: 100,
+              value: toMoney(100),
               currency: "USD",
             }),
           ],
@@ -468,19 +475,19 @@ describe("period overview holdings FIFO", () => {
           currency === "EUR" &&
           date.toISOString() === "2026-01-31T00:00:00.000Z"
         ) {
-          return 1;
+          return toMoney(1);
         }
         if (
           currency === "USD" &&
           date.toISOString() === "2026-02-28T00:00:00.000Z"
         ) {
-          return 1;
+          return toMoney(1);
         }
         if (
           currency === "EUR" &&
           date.toISOString() === "2026-02-28T00:00:00.000Z"
         ) {
-          return 1;
+          return toMoney(1);
         }
         return null;
       }),
@@ -490,19 +497,25 @@ describe("period overview holdings FIFO", () => {
 
     expect(result.convertedCount).toBe(2);
     expect(result.skippedCount).toBe(0);
-    expect(result.realizedGainLoss).toBeCloseTo(17.9591836735, 9);
-    expect(result.unrealizedGainLoss).toBeCloseTo(2.0408163265, 9);
+    expect(toNumericMoney(result.realizedGainLoss)).toBeCloseTo(
+      17.9591836735,
+      9,
+    );
+    expect(toNumericMoney(result.unrealizedGainLoss)).toBeCloseTo(
+      2.0408163265,
+      9,
+    );
   });
 
   it("transfers holding lots across accounts without realizing gain/loss", async () => {
-    const convertedByBookingId = new Map<string, number>([
-      ["h-transfer-out", -440],
-      ["h-transfer-in", 440],
+    const convertedByBookingId = new Map<string, Money>([
+      ["h-transfer-out", toMoney(-440)],
+      ["h-transfer-in", toMoney(440)],
     ]);
 
     const result = await computeHoldingGainLossSplit({
       holdingAccounts: [...holdingAccounts],
-      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, 10]]),
+      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, toMoney(10)]]),
       transactions: [
         {
           bookings: [
@@ -510,13 +523,13 @@ describe("period overview holdings FIFO", () => {
               id: "h-transfer-out",
               accountId: HOLDING_ACCOUNT_ID,
               date: "2026-02-10T00:00:00.000Z",
-              value: -4,
+              value: toMoney(-4),
             }),
             createHoldingBooking({
               id: "h-transfer-in",
               accountId: SECOND_HOLDING_ACCOUNT_ID,
               date: "2026-02-10T00:00:00.000Z",
-              value: 4,
+              value: toMoney(4),
             }),
           ],
         },
@@ -527,15 +540,15 @@ describe("period overview holdings FIFO", () => {
       periodEnd: new Date("2026-02-28T00:00:00.000Z"),
       resolveRate: vi.fn().mockImplementation(async ({ date }) => {
         if (date.toISOString() === "2026-01-31T00:00:00.000Z") {
-          return 100;
+          return toMoney(100);
         }
-        return 110;
+        return toMoney(110);
       }),
       convertBookingToReference: async (booking) =>
         convertedByBookingId.get(booking.id) ?? null,
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       realizedGainLoss: 0,
       unrealizedGainLoss: 100,
       convertedCount: 0,
@@ -544,16 +557,16 @@ describe("period overview holdings FIFO", () => {
   });
 
   it("preserves FIFO lot order for transferred lots in destination accounts", async () => {
-    const convertedByBookingId = new Map<string, number>([
-      ["h-destination-buy", 200],
-      ["c-destination-buy", -200],
-      ["h-destination-sell", -150],
-      ["c-destination-sell", 150],
+    const convertedByBookingId = new Map<string, Money>([
+      ["h-destination-buy", toMoney(200)],
+      ["c-destination-buy", toMoney(-200)],
+      ["h-destination-sell", toMoney(-150)],
+      ["c-destination-sell", toMoney(150)],
     ]);
 
     const result = await computeHoldingGainLossSplit({
       holdingAccounts: [...holdingAccounts],
-      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, 1]]),
+      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, toMoney(1)]]),
       transactions: [
         {
           bookings: [
@@ -561,12 +574,12 @@ describe("period overview holdings FIFO", () => {
               id: "h-destination-buy",
               accountId: SECOND_HOLDING_ACCOUNT_ID,
               date: "2026-02-05T00:00:00.000Z",
-              value: 1,
+              value: toMoney(1),
             }),
             createCashBooking({
               id: "c-destination-buy",
               date: "2026-02-05T00:00:00.000Z",
-              value: -200,
+              value: toMoney(-200),
             }),
           ],
         },
@@ -576,13 +589,13 @@ describe("period overview holdings FIFO", () => {
               id: "h-transfer-out-fifo-order",
               accountId: HOLDING_ACCOUNT_ID,
               date: "2026-02-10T00:00:00.000Z",
-              value: -1,
+              value: toMoney(-1),
             }),
             createHoldingBooking({
               id: "h-transfer-in-fifo-order",
               accountId: SECOND_HOLDING_ACCOUNT_ID,
               date: "2026-02-10T00:00:00.000Z",
-              value: 1,
+              value: toMoney(1),
             }),
           ],
         },
@@ -592,12 +605,12 @@ describe("period overview holdings FIFO", () => {
               id: "h-destination-sell",
               accountId: SECOND_HOLDING_ACCOUNT_ID,
               date: "2026-02-20T00:00:00.000Z",
-              value: -1,
+              value: toMoney(-1),
             }),
             createCashBooking({
               id: "c-destination-sell",
               date: "2026-02-20T00:00:00.000Z",
-              value: 150,
+              value: toMoney(150),
             }),
           ],
         },
@@ -608,15 +621,15 @@ describe("period overview holdings FIFO", () => {
       periodEnd: new Date("2026-02-28T00:00:00.000Z"),
       resolveRate: vi.fn().mockImplementation(async ({ date }) => {
         if (date.toISOString() === "2026-01-31T00:00:00.000Z") {
-          return 100;
+          return toMoney(100);
         }
-        return 200;
+        return toMoney(200);
       }),
       convertBookingToReference: async (booking) =>
         convertedByBookingId.get(booking.id) ?? null,
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       realizedGainLoss: 50,
       unrealizedGainLoss: 0,
       convertedCount: 4,
@@ -625,14 +638,14 @@ describe("period overview holdings FIFO", () => {
   });
 
   it("transfers short lots across accounts without realizing gain/loss", async () => {
-    const convertedByBookingId = new Map<string, number>([
-      ["h-short-transfer-out", 360],
-      ["h-short-transfer-in", -360],
+    const convertedByBookingId = new Map<string, Money>([
+      ["h-short-transfer-out", toMoney(360)],
+      ["h-short-transfer-in", toMoney(-360)],
     ]);
 
     const result = await computeHoldingGainLossSplit({
       holdingAccounts: [...holdingAccounts],
-      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, -10]]),
+      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, toMoney(-10)]]),
       transactions: [
         {
           bookings: [
@@ -640,13 +653,13 @@ describe("period overview holdings FIFO", () => {
               id: "h-short-transfer-out",
               accountId: HOLDING_ACCOUNT_ID,
               date: "2026-02-10T00:00:00.000Z",
-              value: 4,
+              value: toMoney(4),
             }),
             createHoldingBooking({
               id: "h-short-transfer-in",
               accountId: SECOND_HOLDING_ACCOUNT_ID,
               date: "2026-02-10T00:00:00.000Z",
-              value: -4,
+              value: toMoney(-4),
             }),
           ],
         },
@@ -657,15 +670,15 @@ describe("period overview holdings FIFO", () => {
       periodEnd: new Date("2026-02-28T00:00:00.000Z"),
       resolveRate: vi.fn().mockImplementation(async ({ date }) => {
         if (date.toISOString() === "2026-01-31T00:00:00.000Z") {
-          return 100;
+          return toMoney(100);
         }
-        return 90;
+        return toMoney(90);
       }),
       convertBookingToReference: async (booking) =>
         convertedByBookingId.get(booking.id) ?? null,
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       realizedGainLoss: 0,
       unrealizedGainLoss: 100,
       convertedCount: 0,
@@ -674,14 +687,14 @@ describe("period overview holdings FIFO", () => {
   });
 
   it("falls back to execution pricing when short-transfer source is insufficient", async () => {
-    const convertedByBookingId = new Map<string, number>([
-      ["h-short-transfer-out-insufficient", 400],
-      ["h-short-transfer-in-insufficient", -400],
+    const convertedByBookingId = new Map<string, Money>([
+      ["h-short-transfer-out-insufficient", toMoney(400)],
+      ["h-short-transfer-in-insufficient", toMoney(-400)],
     ]);
 
     const result = await computeHoldingGainLossSplit({
       holdingAccounts: [...holdingAccounts],
-      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, -2]]),
+      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, toMoney(-2)]]),
       transactions: [
         {
           bookings: [
@@ -689,13 +702,13 @@ describe("period overview holdings FIFO", () => {
               id: "h-short-transfer-out-insufficient",
               accountId: HOLDING_ACCOUNT_ID,
               date: "2026-02-10T00:00:00.000Z",
-              value: 4,
+              value: toMoney(4),
             }),
             createHoldingBooking({
               id: "h-short-transfer-in-insufficient",
               accountId: SECOND_HOLDING_ACCOUNT_ID,
               date: "2026-02-10T00:00:00.000Z",
-              value: -4,
+              value: toMoney(-4),
             }),
           ],
         },
@@ -704,12 +717,12 @@ describe("period overview holdings FIFO", () => {
       periodEndExclusive: new Date("2026-03-01T00:00:00.000Z"),
       initialRateDate: new Date("2026-01-31T00:00:00.000Z"),
       periodEnd: new Date("2026-02-28T00:00:00.000Z"),
-      resolveRate: vi.fn().mockResolvedValue(100),
+      resolveRate: vi.fn().mockResolvedValue(toMoney(100)),
       convertBookingToReference: async (booking) =>
         convertedByBookingId.get(booking.id) ?? null,
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       realizedGainLoss: 0,
       unrealizedGainLoss: 0,
       convertedCount: 2,
@@ -718,15 +731,15 @@ describe("period overview holdings FIFO", () => {
   });
 
   it("treats mixed-period same-unit holding transfers as non-realizing carry-outs", async () => {
-    const convertedByBookingId = new Map<string, number>([
-      ["h-carry-out", -440],
+    const convertedByBookingId = new Map<string, Money>([
+      ["h-carry-out", toMoney(-440)],
     ]);
 
     const result = await computeHoldingGainLossSplit({
       holdingAccounts: [...holdingAccounts],
       initialBalanceByAccountId: new Map([
-        [HOLDING_ACCOUNT_ID, 10],
-        [SECOND_HOLDING_ACCOUNT_ID, 4],
+        [HOLDING_ACCOUNT_ID, toMoney(10)],
+        [SECOND_HOLDING_ACCOUNT_ID, toMoney(4)],
       ]),
       transactions: [
         {
@@ -735,13 +748,13 @@ describe("period overview holdings FIFO", () => {
               id: "h-carry-in-before-period",
               accountId: SECOND_HOLDING_ACCOUNT_ID,
               date: "2026-01-31T00:00:00.000Z",
-              value: 4,
+              value: toMoney(4),
             }),
             createHoldingBooking({
               id: "h-carry-out",
               accountId: HOLDING_ACCOUNT_ID,
               date: "2026-02-01T00:00:00.000Z",
-              value: -4,
+              value: toMoney(-4),
             }),
           ],
         },
@@ -752,15 +765,15 @@ describe("period overview holdings FIFO", () => {
       periodEnd: new Date("2026-02-28T00:00:00.000Z"),
       resolveRate: vi.fn().mockImplementation(async ({ date }) => {
         if (date.toISOString() === "2026-01-31T00:00:00.000Z") {
-          return 100;
+          return toMoney(100);
         }
-        return 120;
+        return toMoney(120);
       }),
       convertBookingToReference: async (booking) =>
         convertedByBookingId.get(booking.id) ?? null,
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       realizedGainLoss: 0,
       unrealizedGainLoss: 200,
       convertedCount: 1,
@@ -769,13 +782,15 @@ describe("period overview holdings FIFO", () => {
   });
 
   it("uses opening unit basis for mixed-period same-unit carry-ins", async () => {
-    const convertedByBookingId = new Map<string, number>([["h-carry-in", 110]]);
+    const convertedByBookingId = new Map<string, Money>([
+      ["h-carry-in", toMoney(110)],
+    ]);
 
     const result = await computeHoldingGainLossSplit({
       holdingAccounts: [...holdingAccounts],
       initialBalanceByAccountId: new Map([
-        [HOLDING_ACCOUNT_ID, 0],
-        [SECOND_HOLDING_ACCOUNT_ID, 1],
+        [HOLDING_ACCOUNT_ID, toMoney(0)],
+        [SECOND_HOLDING_ACCOUNT_ID, toMoney(1)],
       ]),
       transactions: [
         {
@@ -784,13 +799,13 @@ describe("period overview holdings FIFO", () => {
               id: "h-carry-out-before-period",
               accountId: HOLDING_ACCOUNT_ID,
               date: "2026-01-31T00:00:00.000Z",
-              value: -1,
+              value: toMoney(-1),
             }),
             createHoldingBooking({
               id: "h-carry-in",
               accountId: SECOND_HOLDING_ACCOUNT_ID,
               date: "2026-02-10T00:00:00.000Z",
-              value: 1,
+              value: toMoney(1),
             }),
           ],
         },
@@ -801,15 +816,15 @@ describe("period overview holdings FIFO", () => {
       periodEnd: new Date("2026-02-28T00:00:00.000Z"),
       resolveRate: vi.fn().mockImplementation(async ({ date }) => {
         if (date.toISOString() === "2026-01-31T00:00:00.000Z") {
-          return 100;
+          return toMoney(100);
         }
-        return 120;
+        return toMoney(120);
       }),
       convertBookingToReference: async (booking) =>
         convertedByBookingId.get(booking.id) ?? null,
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       realizedGainLoss: 0,
       unrealizedGainLoss: 40,
       convertedCount: 1,
@@ -821,8 +836,8 @@ describe("period overview holdings FIFO", () => {
     const result = await computeHoldingGainLossSplit({
       holdingAccounts: [...holdingAccounts],
       initialBalanceByAccountId: new Map([
-        [HOLDING_ACCOUNT_ID, 10],
-        [SECOND_HOLDING_ACCOUNT_ID, 4],
+        [HOLDING_ACCOUNT_ID, toMoney(10)],
+        [SECOND_HOLDING_ACCOUNT_ID, toMoney(4)],
       ]),
       transactions: [
         {
@@ -831,13 +846,13 @@ describe("period overview holdings FIFO", () => {
               id: "h-carry-in-before-period",
               accountId: SECOND_HOLDING_ACCOUNT_ID,
               date: "2026-01-31T00:00:00.000Z",
-              value: 4,
+              value: toMoney(4),
             }),
             createHoldingBooking({
               id: "h-carry-out",
               accountId: HOLDING_ACCOUNT_ID,
               date: "2026-02-01T00:00:00.000Z",
-              value: -4,
+              value: toMoney(-4),
             }),
           ],
         },
@@ -848,15 +863,15 @@ describe("period overview holdings FIFO", () => {
       periodEnd: new Date("2026-02-28T00:00:00.000Z"),
       resolveRate: vi.fn().mockImplementation(async ({ date }) => {
         if (date.toISOString() === "2026-01-31T00:00:00.000Z") {
-          return 100;
+          return toMoney(100);
         }
-        return 120;
+        return toMoney(120);
       }),
       convertBookingToReference: async (booking) =>
-        booking.id === "h-carry-out" ? null : 0,
+        booking.id === "h-carry-out" ? null : toMoney(0),
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       realizedGainLoss: 0,
       unrealizedGainLoss: 280,
       convertedCount: 0,
@@ -865,10 +880,10 @@ describe("period overview holdings FIFO", () => {
   });
 
   it("allocates residual by quantity when holding market values are zero", async () => {
-    const convertedByBookingId = new Map<string, number>([
-      ["h-a", 0],
-      ["h-b", 0],
-      ["c-total", -300],
+    const convertedByBookingId = new Map<string, Money>([
+      ["h-a", toMoney(0)],
+      ["h-b", toMoney(0)],
+      ["c-total", toMoney(-300)],
     ]);
 
     const result = await computeHoldingGainLossSplit({
@@ -880,17 +895,17 @@ describe("period overview holdings FIFO", () => {
             createHoldingBooking({
               id: "h-a",
               date: "2026-02-10T00:00:00.000Z",
-              value: 2,
+              value: toMoney(2),
             }),
             createHoldingBooking({
               id: "h-b",
               date: "2026-02-10T00:00:00.000Z",
-              value: 1,
+              value: toMoney(1),
             }),
             createCashBooking({
               id: "c-total",
               date: "2026-02-10T00:00:00.000Z",
-              value: -300,
+              value: toMoney(-300),
             }),
           ],
         },
@@ -899,12 +914,17 @@ describe("period overview holdings FIFO", () => {
       periodEndExclusive: new Date("2026-03-01T00:00:00.000Z"),
       initialRateDate: new Date("2026-01-31T00:00:00.000Z"),
       periodEnd: new Date("2026-02-28T00:00:00.000Z"),
-      resolveRate: vi.fn().mockResolvedValue(100),
+      resolveRate: vi.fn().mockResolvedValue(toMoney(100)),
       convertBookingToReference: async (booking) =>
         convertedByBookingId.get(booking.id) ?? null,
     });
 
-    expect(result).toEqual({
+    expect(
+      toNumericMoney({
+        ...result,
+        unrealizedGainLoss: result.unrealizedGainLoss.toDecimalPlaces(2),
+      }),
+    ).toEqual({
       realizedGainLoss: 0,
       unrealizedGainLoss: 0,
       convertedCount: 3,
@@ -913,10 +933,10 @@ describe("period overview holdings FIFO", () => {
   });
 
   it("uses equal residual allocation when both market values and quantities are zero", async () => {
-    const convertedByBookingId = new Map<string, number>([
-      ["h-zero-a", 0],
-      ["h-zero-b", 0],
-      ["c-total", -200],
+    const convertedByBookingId = new Map<string, Money>([
+      ["h-zero-a", toMoney(0)],
+      ["h-zero-b", toMoney(0)],
+      ["c-total", toMoney(-200)],
     ]);
 
     const result = await computeHoldingGainLossSplit({
@@ -928,17 +948,17 @@ describe("period overview holdings FIFO", () => {
             createHoldingBooking({
               id: "h-zero-a",
               date: "2026-02-10T00:00:00.000Z",
-              value: 0,
+              value: toMoney(0),
             }),
             createHoldingBooking({
               id: "h-zero-b",
               date: "2026-02-10T00:00:00.000Z",
-              value: 0,
+              value: toMoney(0),
             }),
             createCashBooking({
               id: "c-total",
               date: "2026-02-10T00:00:00.000Z",
-              value: -200,
+              value: toMoney(-200),
             }),
           ],
         },
@@ -947,12 +967,12 @@ describe("period overview holdings FIFO", () => {
       periodEndExclusive: new Date("2026-03-01T00:00:00.000Z"),
       initialRateDate: new Date("2026-01-31T00:00:00.000Z"),
       periodEnd: new Date("2026-02-28T00:00:00.000Z"),
-      resolveRate: vi.fn().mockResolvedValue(100),
+      resolveRate: vi.fn().mockResolvedValue(toMoney(100)),
       convertBookingToReference: async (booking) =>
         convertedByBookingId.get(booking.id) ?? null,
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       realizedGainLoss: 0,
       unrealizedGainLoss: 0,
       convertedCount: 3,
@@ -961,39 +981,39 @@ describe("period overview holdings FIFO", () => {
   });
 
   it("excludes explicit gain/loss equity bookings from execution price allocation", async () => {
-    const convertedByBookingId = new Map<string, number>([
-      ["h-sell", -110],
-      ["c-sell", 120],
-      ["e-gainloss", -10],
+    const convertedByBookingId = new Map<string, Money>([
+      ["h-sell", toMoney(-110)],
+      ["c-sell", toMoney(120)],
+      ["e-gainloss", toMoney(-10)],
     ]);
 
     const resolveRate = vi.fn().mockImplementation(async ({ date }) => {
       if (date.toISOString() === "2026-01-31T00:00:00.000Z") {
-        return 100;
+        return toMoney(100);
       }
-      return 120;
+      return toMoney(120);
     });
 
     const result = await computeHoldingGainLossSplit({
       holdingAccounts: [...holdingAccounts],
-      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, 1]]),
+      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, toMoney(1)]]),
       transactions: [
         {
           bookings: [
             createHoldingBooking({
               id: "h-sell",
               date: "2026-02-10T00:00:00.000Z",
-              value: -1,
+              value: toMoney(-1),
             }),
             createCashBooking({
               id: "c-sell",
               date: "2026-02-10T00:00:00.000Z",
-              value: 120,
+              value: toMoney(120),
             }),
             createExplicitGainLossBooking({
               id: "e-gainloss",
               date: "2026-02-10T00:00:00.000Z",
-              value: -10,
+              value: toMoney(-10),
             }),
           ],
         },
@@ -1007,8 +1027,8 @@ describe("period overview holdings FIFO", () => {
         convertedByBookingId.get(booking.id) ?? null,
     });
 
-    expect(result.realizedGainLoss).toBe(20);
-    expect(result.unrealizedGainLoss).toBe(0);
+    expect(toNumericMoney(result.realizedGainLoss)).toBe(20);
+    expect(toNumericMoney(result.unrealizedGainLoss)).toBe(0);
     expect(result.convertedCount).toBe(2);
     expect(result.skippedCount).toBe(0);
   });
@@ -1016,7 +1036,7 @@ describe("period overview holdings FIFO", () => {
   it("skips holding contribution when opening balance exists but initial rate is unavailable", async () => {
     const result = await computeHoldingGainLossSplit({
       holdingAccounts: [...holdingAccounts],
-      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, 10]]),
+      initialBalanceByAccountId: new Map([[HOLDING_ACCOUNT_ID, toMoney(10)]]),
       transactions: [],
       periodStart: new Date("2026-02-01T00:00:00.000Z"),
       periodEndExclusive: new Date("2026-03-01T00:00:00.000Z"),
@@ -1026,7 +1046,7 @@ describe("period overview holdings FIFO", () => {
       convertBookingToReference: vi.fn(),
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       realizedGainLoss: 0,
       unrealizedGainLoss: 0,
       convertedCount: 0,

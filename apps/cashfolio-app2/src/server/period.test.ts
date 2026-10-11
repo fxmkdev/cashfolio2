@@ -1,3 +1,6 @@
+import { toMoney } from "../shared/money";
+import { toNumericMoney } from "./money-boundary";
+import { moneyMultiply, type Money } from "../shared/money";
 import { describe, expect, test, vi } from "vitest";
 vi.mock("../account-books/functions.server", () => ({
   ensureAuthorizedForAccountBookId: vi.fn(),
@@ -31,10 +34,12 @@ import {
 
 describe("normalizePeriodValue", () => {
   test("normalizes valid values", () => {
-    expect(normalizePeriodValue(" LAST-MONTH ")).toBe("last-month");
+    expect(toNumericMoney(normalizePeriodValue(" LAST-MONTH "))).toBe(
+      "last-month",
+    );
     expect(normalizePeriodValue("2026-3")).toBe(DEFAULT_PERIOD_VALUE);
-    expect(normalizePeriodValue("2026-03")).toBe("2026-03");
-    expect(normalizePeriodValue("2026")).toBe("2026");
+    expect(toNumericMoney(normalizePeriodValue("2026-03"))).toBe("2026-03");
+    expect(toNumericMoney(normalizePeriodValue("2026"))).toBe("2026");
   });
 
   test("falls back to default for unsupported values", () => {
@@ -56,7 +61,7 @@ describe("resolvePeriodSelection", () => {
 
     expect(selection.from.toISOString()).toBe("2026-03-01T00:00:00.000Z");
     expect(selection.to.toISOString()).toBe("2026-03-27T00:00:00.000Z");
-    expect(selection.periodSpecifier).toBe("mtd");
+    expect(toNumericMoney(selection.periodSpecifier)).toBe("mtd");
   });
 
   test("clamps current period to a non-inverted range on the first day", () => {
@@ -77,7 +82,7 @@ describe("resolvePeriodSelection", () => {
 
     expect(selection.from.toISOString()).toBe("2026-01-01T00:00:00.000Z");
     expect(selection.to.toISOString()).toBe("2026-03-27T00:00:00.000Z");
-    expect(selection.periodSpecifier).toBe("ytd");
+    expect(toNumericMoney(selection.periodSpecifier)).toBe("ytd");
   });
 
   test("uses natural month end for historical months", () => {
@@ -88,7 +93,7 @@ describe("resolvePeriodSelection", () => {
 
     expect(selection.from.toISOString()).toBe("2024-02-01T00:00:00.000Z");
     expect(selection.to.toISOString()).toBe("2024-02-29T00:00:00.000Z");
-    expect(selection.periodSpecifier).toBe("month");
+    expect(toNumericMoney(selection.periodSpecifier)).toBe("month");
   });
 
   test("clamps explicit month to current month when no bookings exist", () => {
@@ -98,11 +103,11 @@ describe("resolvePeriodSelection", () => {
       firstBookingDate: null,
     });
 
-    expect(selection.year).toBe(2026);
-    expect(selection.month).toBe(2);
+    expect(toNumericMoney(selection.year)).toBe(2026);
+    expect(toNumericMoney(selection.month)).toBe(2);
     expect(selection.from.toISOString()).toBe("2026-03-01T00:00:00.000Z");
     expect(selection.to.toISOString()).toBe("2026-03-27T00:00:00.000Z");
-    expect(selection.periodSpecifier).toBe("month");
+    expect(toNumericMoney(selection.periodSpecifier)).toBe("month");
   });
 
   test("uses natural year end for historical years", () => {
@@ -113,7 +118,7 @@ describe("resolvePeriodSelection", () => {
 
     expect(selection.from.toISOString()).toBe("2025-01-01T00:00:00.000Z");
     expect(selection.to.toISOString()).toBe("2025-12-31T00:00:00.000Z");
-    expect(selection.periodSpecifier).toBe("year");
+    expect(toNumericMoney(selection.periodSpecifier)).toBe("year");
   });
 
   test("clamps explicit year to current year when no bookings exist", () => {
@@ -123,10 +128,10 @@ describe("resolvePeriodSelection", () => {
       firstBookingDate: null,
     });
 
-    expect(selection.year).toBe(2026);
+    expect(toNumericMoney(selection.year)).toBe(2026);
     expect(selection.from.toISOString()).toBe("2026-01-01T00:00:00.000Z");
     expect(selection.to.toISOString()).toBe("2026-03-27T00:00:00.000Z");
-    expect(selection.periodSpecifier).toBe("year");
+    expect(toNumericMoney(selection.periodSpecifier)).toBe("year");
   });
 
   test("starts first year at first booking month", () => {
@@ -174,20 +179,20 @@ describe("computeEndOfPeriodBalanceStats", () => {
         },
       ],
       rawBalanceByAccountId: new Map([
-        ["asset-chf", 100],
-        ["liability-usd", -40],
+        ["asset-chf", toMoney(100)],
+        ["liability-usd", toMoney(-40)],
       ]),
       periodEnd,
       referenceCurrency: "CHF",
       convertBalanceToReference: async (input) => {
         if (input.currency === "USD") {
-          return input.value * 2;
+          return moneyMultiply(input.value, 2);
         }
         return input.value;
       },
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       assets: 100,
       liabilities: 80,
       netWorth: 20,
@@ -198,7 +203,7 @@ describe("computeEndOfPeriodBalanceStats", () => {
   test("counts skipped conversions for missing unit metadata and null conversions", async () => {
     const periodEnd = new Date("2026-02-28T00:00:00.000Z");
     const convertBalanceToReference = vi.fn(
-      async (input: { value: number; symbol: string | null; date: Date }) => {
+      async (input: { value: Money; symbol: string | null; date: Date }) => {
         if (input.symbol === "NO_RATE") {
           return null;
         }
@@ -246,17 +251,17 @@ describe("computeEndOfPeriodBalanceStats", () => {
         },
       ],
       rawBalanceByAccountId: new Map([
-        ["asset-ok", 50],
-        ["liability-ok", -10],
-        ["asset-missing-unit", 20],
-        ["asset-no-rate", 5],
+        ["asset-ok", toMoney(50)],
+        ["liability-ok", toMoney(-10)],
+        ["asset-missing-unit", toMoney(20)],
+        ["asset-no-rate", toMoney(5)],
       ]),
       periodEnd,
       referenceCurrency: "CHF",
       convertBalanceToReference,
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       assets: 50,
       liabilities: 10,
       netWorth: 40,
@@ -273,7 +278,7 @@ describe("computeEndOfPeriodBalanceStats", () => {
   test("does not count missing-unit accounts without raw balance as skipped", async () => {
     const periodEnd = new Date("2026-02-28T00:00:00.000Z");
     const convertBalanceToReference = vi.fn(
-      async (input: { value: number }) => input.value,
+      async (input: { value: Money }) => input.value,
     );
 
     const result = await computeEndOfPeriodBalanceStats({
@@ -294,7 +299,7 @@ describe("computeEndOfPeriodBalanceStats", () => {
       convertBalanceToReference,
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       assets: 0,
       liabilities: 0,
       netWorth: 0,
@@ -306,7 +311,7 @@ describe("computeEndOfPeriodBalanceStats", () => {
   test("does not count missing-unit accounts with zero net raw balance as skipped", async () => {
     const periodEnd = new Date("2026-02-28T00:00:00.000Z");
     const convertBalanceToReference = vi.fn(
-      async (input: { value: number }) => input.value,
+      async (input: { value: Money }) => input.value,
     );
 
     const result = await computeEndOfPeriodBalanceStats({
@@ -321,13 +326,15 @@ describe("computeEndOfPeriodBalanceStats", () => {
           tradeCurrency: null,
         },
       ],
-      rawBalanceByAccountId: new Map([["asset-missing-unit-zero-net", 0]]),
+      rawBalanceByAccountId: new Map([
+        ["asset-missing-unit-zero-net", toMoney(0)],
+      ]),
       periodEnd,
       referenceCurrency: "CHF",
       convertBalanceToReference,
     });
 
-    expect(result).toEqual({
+    expect(toNumericMoney(result)).toEqual({
       assets: 0,
       liabilities: 0,
       netWorth: 0,
@@ -343,99 +350,111 @@ describe("transaction period inclusion", () => {
 
   test("includes transactions when at least one booking is in period and none after end", () => {
     expect(
-      shouldIncludeTransactionForPeriod({
-        bookingDates: [
-          new Date("2026-01-25T00:00:00.000Z"),
-          new Date("2026-02-14T00:00:00.000Z"),
-        ],
-        periodStart,
-        periodEndExclusive,
-      }),
+      toNumericMoney(
+        shouldIncludeTransactionForPeriod({
+          bookingDates: [
+            new Date("2026-01-25T00:00:00.000Z"),
+            new Date("2026-02-14T00:00:00.000Z"),
+          ],
+          periodStart,
+          periodEndExclusive,
+        }),
+      ),
     ).toBe(true);
   });
 
   test("excludes transactions when latest booking is on/after period end", () => {
     expect(
-      shouldIncludeTransactionForPeriod({
-        bookingDates: [
-          new Date("2026-02-14T00:00:00.000Z"),
-          new Date("2026-03-01T00:00:00.000Z"),
-        ],
-        periodStart,
-        periodEndExclusive,
-      }),
+      toNumericMoney(
+        shouldIncludeTransactionForPeriod({
+          bookingDates: [
+            new Date("2026-02-14T00:00:00.000Z"),
+            new Date("2026-03-01T00:00:00.000Z"),
+          ],
+          periodStart,
+          periodEndExclusive,
+        }),
+      ),
     ).toBe(false);
   });
 
   test("excludes transactions without any booking in period", () => {
     expect(
-      shouldIncludeTransactionForPeriod({
-        bookingDates: [
-          new Date("2026-01-14T00:00:00.000Z"),
-          new Date("2026-01-20T00:00:00.000Z"),
-        ],
-        periodStart,
-        periodEndExclusive,
-      }),
+      toNumericMoney(
+        shouldIncludeTransactionForPeriod({
+          bookingDates: [
+            new Date("2026-01-14T00:00:00.000Z"),
+            new Date("2026-01-20T00:00:00.000Z"),
+          ],
+          periodStart,
+          periodEndExclusive,
+        }),
+      ),
     ).toBe(false);
   });
 
   test("detects multi-unit transactions", () => {
     expect(
-      isMultiUnitTransaction([
-        {
-          unit: Unit.CURRENCY,
-          currency: "CHF",
-          cryptocurrency: null,
-          symbol: null,
-          tradeCurrency: null,
-        },
-        {
-          unit: Unit.CURRENCY,
-          currency: "EUR",
-          cryptocurrency: null,
-          symbol: null,
-          tradeCurrency: null,
-        },
-      ]),
+      toNumericMoney(
+        isMultiUnitTransaction([
+          {
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+          {
+            unit: Unit.CURRENCY,
+            currency: "EUR",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ]),
+      ),
     ).toBe(true);
 
     expect(
-      isMultiUnitTransaction([
-        {
-          unit: Unit.CURRENCY,
-          currency: "CHF",
-          cryptocurrency: null,
-          symbol: null,
-          tradeCurrency: null,
-        },
-        {
-          unit: Unit.CURRENCY,
-          currency: "CHF",
-          cryptocurrency: null,
-          symbol: null,
-          tradeCurrency: null,
-        },
-      ]),
+      toNumericMoney(
+        isMultiUnitTransaction([
+          {
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+          {
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+          },
+        ]),
+      ),
     ).toBe(false);
 
     expect(
-      isMultiUnitTransaction([
-        {
-          unit: Unit.SECURITY,
-          currency: null,
-          cryptocurrency: null,
-          symbol: "AAPL",
-          tradeCurrency: "USD",
-        },
-        {
-          unit: Unit.SECURITY,
-          currency: null,
-          cryptocurrency: null,
-          symbol: "AAPL",
-          tradeCurrency: "CHF",
-        },
-      ]),
+      toNumericMoney(
+        isMultiUnitTransaction([
+          {
+            unit: Unit.SECURITY,
+            currency: null,
+            cryptocurrency: null,
+            symbol: "AAPL",
+            tradeCurrency: "USD",
+          },
+          {
+            unit: Unit.SECURITY,
+            currency: null,
+            cryptocurrency: null,
+            symbol: "AAPL",
+            tradeCurrency: "CHF",
+          },
+        ]),
+      ),
     ).toBe(true);
   });
 });
@@ -443,17 +462,17 @@ describe("transaction period inclusion", () => {
 describe("computeHoldingGainLossForEventSeries", () => {
   test("uses the same sign convention as transaction gain/loss", () => {
     const gainLoss = computeHoldingGainLossForEventSeries({
-      initialBalance: 1000,
-      initialRate: 1.2,
+      initialBalance: toMoney(1000),
+      initialRate: toMoney(1.2),
       events: [
-        { rate: 1.1, balanceDelta: 200 },
-        { rate: 1.05, balanceDelta: 0 },
+        { rate: toMoney(1.1), balanceDelta: toMoney(200) },
+        { rate: toMoney(1.05), balanceDelta: toMoney(0) },
       ],
     });
 
     // event 1: 1000 * (1.1 - 1.2) = -100
     // event 2: 1200 * (1.05 - 1.1) = -60
-    expect(gainLoss).toBeCloseTo(-160, 10);
+    expect(toNumericMoney(gainLoss)).toBeCloseTo(-160, 10);
   });
 });
 
@@ -487,12 +506,14 @@ describe("expense breakdown grouping", () => {
 
   test("buckets by top-level root group", () => {
     expect(
-      createBreakdownBucket({
-        accountId: "account-rent",
-        accountName: "Rent Account",
-        groupId: "rent",
-        groupById,
-      }),
+      toNumericMoney(
+        createBreakdownBucket({
+          accountId: "account-rent",
+          accountName: "Rent Account",
+          groupId: "rent",
+          groupById,
+        }),
+      ),
     ).toEqual({
       id: "group:expenses",
       label: "Expenses",
@@ -502,12 +523,14 @@ describe("expense breakdown grouping", () => {
 
   test("falls back to account bucket when group cannot be resolved", () => {
     expect(
-      createBreakdownBucket({
-        accountId: "account-misc",
-        accountName: "Misc",
-        groupId: "missing-group",
-        groupById,
-      }),
+      toNumericMoney(
+        createBreakdownBucket({
+          accountId: "account-misc",
+          accountName: "Misc",
+          groupId: "missing-group",
+          groupById,
+        }),
+      ),
     ).toEqual({
       id: "account:account-misc",
       label: "Misc",
@@ -521,29 +544,29 @@ describe("expense breakdown grouping", () => {
         id: "group:housing",
         label: "Housing",
         kind: "group",
-        amount: 1900,
+        amount: toMoney(1900),
       },
       {
         id: "group:food",
         label: "Food",
         kind: "group",
-        amount: 1100,
+        amount: toMoney(1100),
       },
       {
         id: "account:refunds",
         label: "Refunds",
         kind: "account",
-        amount: -200,
+        amount: toMoney(-200),
       },
     ]);
 
-    expect(breakdown.totalAmount).toBe(3000);
+    expect(toNumericMoney(breakdown.totalAmount)).toBe(3000);
     expect(breakdown.items).toHaveLength(2);
-    expect(breakdown.items[0]).toMatchObject({
+    expect(toNumericMoney(breakdown.items[0])).toMatchObject({
       id: "group:housing",
       percentage: 63.33,
     });
-    expect(breakdown.items[1]).toMatchObject({
+    expect(toNumericMoney(breakdown.items[1])).toMatchObject({
       id: "group:food",
       percentage: 36.67,
     });
@@ -593,13 +616,13 @@ describe("breakdown hierarchy", () => {
           accountId: "account-rent",
           accountName: "Rent",
           groupId: "rent",
-          amount: 1500,
+          amount: toMoney(1500),
         },
       ],
       groupById,
     });
 
-    expect(hierarchy).toEqual([
+    expect(toNumericMoney(hierarchy)).toEqual([
       {
         id: "group:expenses",
         label: "Expenses",
@@ -641,19 +664,19 @@ describe("breakdown hierarchy", () => {
           accountId: "account-rent",
           accountName: "Rent",
           groupId: "rent",
-          amount: 900,
+          amount: toMoney(900),
         },
         {
           accountId: "account-misc",
           accountName: "Misc",
           groupId: null,
-          amount: 100,
+          amount: toMoney(100),
         },
       ],
       groupById,
     });
 
-    expect(hierarchy.map((item) => item.id)).toEqual([
+    expect(toNumericMoney(hierarchy.map((item) => item.id))).toEqual([
       "group:expenses",
       "account:account-misc",
     ]);
@@ -666,19 +689,19 @@ describe("breakdown hierarchy", () => {
           accountId: "account-rent",
           accountName: "Rent",
           groupId: "rent",
-          amount: 1000,
+          amount: toMoney(1000),
         },
         {
           accountId: "account-refund",
           accountName: "Refund",
           groupId: "rent",
-          amount: -1000,
+          amount: toMoney(-1000),
         },
       ],
       groupById,
     });
 
-    expect(hierarchy).toEqual([]);
+    expect(toNumericMoney(hierarchy)).toEqual([]);
   });
 
   test("prunes tiny positive accounts that round to zero", () => {
@@ -688,13 +711,13 @@ describe("breakdown hierarchy", () => {
           accountId: "account-tiny",
           accountName: "Tiny",
           groupId: "rent",
-          amount: 0.004,
+          amount: toMoney(0.004),
         },
       ],
       groupById,
     });
 
-    expect(hierarchy).toEqual([]);
+    expect(toNumericMoney(hierarchy)).toEqual([]);
   });
 
   test("prunes groups that have no visible children after leaf pruning", () => {
@@ -704,21 +727,21 @@ describe("breakdown hierarchy", () => {
           accountId: "account-tiny-a",
           accountName: "Tiny A",
           groupId: "rent",
-          amount: 0.004,
+          amount: toMoney(0.004),
         },
         {
           accountId: "account-tiny-b",
           accountName: "Tiny B",
           groupId: "rent",
-          amount: 0.004,
+          amount: toMoney(0.004),
         },
       ],
       groupById,
     });
 
-    expect(result.hierarchy).toEqual([]);
-    expect(result.hasHiddenAmountDiscrepancy).toBe(false);
-    expect(result.hiddenAmountDiscrepancyNodeIds).toEqual([]);
+    expect(toNumericMoney(result.hierarchy)).toEqual([]);
+    expect(toNumericMoney(result.hasHiddenAmountDiscrepancy)).toBe(false);
+    expect(toNumericMoney(result.hiddenAmountDiscrepancyNodeIds)).toEqual([]);
   });
 
   test("orders siblings by descending amount with deterministic tie-breakers", () => {
@@ -728,32 +751,31 @@ describe("breakdown hierarchy", () => {
           accountId: "account-food",
           accountName: "Food Account",
           groupId: "food",
-          amount: 100,
+          amount: toMoney(100),
         },
         {
           accountId: "account-rent",
           accountName: "Rent Account",
           groupId: "rent",
-          amount: 300,
+          amount: toMoney(300),
         },
         {
           accountId: "account-travel",
           accountName: "Travel",
           groupId: null,
-          amount: 100,
+          amount: toMoney(100),
         },
       ],
       groupById,
     });
 
-    expect(hierarchy.map((item) => item.id)).toEqual([
+    expect(toNumericMoney(hierarchy.map((item) => item.id))).toEqual([
       "group:expenses",
       "account:account-travel",
     ]);
-    expect(hierarchy[0]?.children.map((item) => item.id)).toEqual([
-      "group:housing",
-      "group:food",
-    ]);
+    expect(
+      toNumericMoney(hierarchy[0]?.children.map((item) => item.id)),
+    ).toEqual(["group:housing", "group:food"]);
   });
 
   test("flags hidden amount discrepancies when pruned leaves affect parent totals", () => {
@@ -763,25 +785,25 @@ describe("breakdown hierarchy", () => {
           accountId: "account-rent",
           accountName: "Rent",
           groupId: "rent",
-          amount: 100,
+          amount: toMoney(100),
         },
         {
           accountId: "account-refund",
           accountName: "Refund",
           groupId: "rent",
-          amount: -20,
+          amount: toMoney(-20),
         },
       ],
       groupById,
     });
 
-    expect(result.hasHiddenAmountDiscrepancy).toBe(true);
-    expect(result.hiddenAmountDiscrepancyNodeIds).toEqual([
+    expect(toNumericMoney(result.hasHiddenAmountDiscrepancy)).toBe(true);
+    expect(toNumericMoney(result.hiddenAmountDiscrepancyNodeIds)).toEqual([
       "group:expenses",
       "group:housing",
       "group:rent",
     ]);
-    expect(result.hierarchy).toEqual([
+    expect(toNumericMoney(result.hierarchy)).toEqual([
       {
         id: "group:expenses",
         label: "Expenses",
@@ -842,20 +864,20 @@ describe("breakdown hierarchy", () => {
           accountId: "positive",
           accountName: "Positive",
           groupId: "a-child",
-          amount: 100,
+          amount: toMoney(100),
         },
         {
           accountId: "negative",
           accountName: "Negative",
           groupId: "a-child",
-          amount: -25,
+          amount: toMoney(-25),
         },
       ],
       groupById: customGroupById,
     });
 
-    expect(result.hasHiddenAmountDiscrepancy).toBe(true);
-    expect(result.hiddenAmountDiscrepancyNodeIds).toEqual([
+    expect(toNumericMoney(result.hasHiddenAmountDiscrepancy)).toBe(true);
+    expect(toNumericMoney(result.hiddenAmountDiscrepancyNodeIds)).toEqual([
       "group:a-child",
       "group:z-root",
     ]);
@@ -868,25 +890,25 @@ describe("breakdown hierarchy", () => {
           accountId: "account-food",
           accountName: "Food",
           groupId: "food",
-          amount: 10,
+          amount: toMoney(10),
         },
         {
           accountId: "account-tiny-a",
           accountName: "Tiny A",
           groupId: "rent",
-          amount: 0.004,
+          amount: toMoney(0.004),
         },
         {
           accountId: "account-tiny-b",
           accountName: "Tiny B",
           groupId: "rent",
-          amount: 0.004,
+          amount: toMoney(0.004),
         },
       ],
       groupById,
     });
 
-    expect(result.hierarchy).toEqual([
+    expect(toNumericMoney(result.hierarchy)).toEqual([
       {
         id: "group:expenses",
         label: "Expenses",
@@ -911,8 +933,10 @@ describe("breakdown hierarchy", () => {
         ],
       },
     ]);
-    expect(result.hasHiddenAmountDiscrepancy).toBe(true);
-    expect(result.hiddenAmountDiscrepancyNodeIds).toEqual(["group:expenses"]);
+    expect(toNumericMoney(result.hasHiddenAmountDiscrepancy)).toBe(true);
+    expect(toNumericMoney(result.hiddenAmountDiscrepancyNodeIds)).toEqual([
+      "group:expenses",
+    ]);
   });
 
   test("does not flag discrepancies caused only by rounding distribution", () => {
@@ -922,20 +946,20 @@ describe("breakdown hierarchy", () => {
           accountId: "account-a",
           accountName: "A",
           groupId: "rent",
-          amount: 0.005,
+          amount: toMoney(0.005),
         },
         {
           accountId: "account-b",
           accountName: "B",
           groupId: "rent",
-          amount: 0.005,
+          amount: toMoney(0.005),
         },
       ],
       groupById,
     });
 
-    expect(result.hasHiddenAmountDiscrepancy).toBe(false);
-    expect(result.hiddenAmountDiscrepancyNodeIds).toEqual([]);
+    expect(toNumericMoney(result.hasHiddenAmountDiscrepancy)).toBe(false);
+    expect(toNumericMoney(result.hiddenAmountDiscrepancyNodeIds)).toEqual([]);
   });
 });
 
@@ -967,14 +991,14 @@ describe("buildPeriodEndAllocationBreakdown", () => {
           accountName: "Credit Card",
           groupId: "liabilities",
           accountType: AccountType.LIABILITY,
-          convertedBalanceInReferenceCurrency: -1200.5,
+          convertedBalanceInReferenceCurrency: toMoney(-1200.5),
         },
       ],
       groupById,
     });
 
-    expect(result.totalAmount).toBe(1200.5);
-    expect(result.items).toEqual([
+    expect(toNumericMoney(result.totalAmount)).toBe(1200.5);
+    expect(toNumericMoney(result.items)).toEqual([
       {
         id: "group:liabilities",
         label: "Liabilities",
@@ -1002,27 +1026,27 @@ describe("buildPeriodEndAllocationBreakdown", () => {
           accountName: "Zero",
           groupId: "assets",
           accountType: AccountType.ASSET,
-          convertedBalanceInReferenceCurrency: 0,
+          convertedBalanceInReferenceCurrency: toMoney(0),
         },
         {
           accountId: "liability-not-outstanding",
           accountName: "Not Outstanding",
           groupId: "liabilities",
           accountType: AccountType.LIABILITY,
-          convertedBalanceInReferenceCurrency: 25,
+          convertedBalanceInReferenceCurrency: toMoney(25),
         },
         {
           accountId: "asset-visible",
           accountName: "Visible",
           groupId: "assets",
           accountType: AccountType.ASSET,
-          convertedBalanceInReferenceCurrency: 100,
+          convertedBalanceInReferenceCurrency: toMoney(100),
         },
       ],
       groupById,
     });
 
-    expect(result.items).toEqual([
+    expect(toNumericMoney(result.items)).toEqual([
       {
         id: "group:assets",
         label: "Assets",
@@ -1043,22 +1067,24 @@ describe("buildPeriodEndAllocationBreakdown", () => {
           accountName: "Main",
           groupId: "assets",
           accountType: AccountType.ASSET,
-          convertedBalanceInReferenceCurrency: 100.002,
+          convertedBalanceInReferenceCurrency: toMoney(100.002),
         },
         {
           accountId: "asset-tiny",
           accountName: "Tiny",
           groupId: "assets",
           accountType: AccountType.ASSET,
-          convertedBalanceInReferenceCurrency: 0.004,
+          convertedBalanceInReferenceCurrency: toMoney(0.004),
         },
       ],
       groupById,
     });
 
-    expect(result.hasHiddenAmountDiscrepancy).toBe(true);
-    expect(result.hiddenAmountDiscrepancyNodeIds).toEqual(["group:assets"]);
-    expect(result.hierarchy).toEqual([
+    expect(toNumericMoney(result.hasHiddenAmountDiscrepancy)).toBe(true);
+    expect(toNumericMoney(result.hiddenAmountDiscrepancyNodeIds)).toEqual([
+      "group:assets",
+    ]);
+    expect(toNumericMoney(result.hierarchy)).toEqual([
       {
         id: "group:assets",
         label: "Assets",

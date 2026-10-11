@@ -1,3 +1,6 @@
+import Decimal from "decimal.js";
+import { encodeMoneyCache, decodeMoneyCache } from "../money-cache-codec";
+import { moneyIsFinite, type Money } from "../../shared/money";
 import { getRedisClient } from "../../redis.server";
 import {
   PERIOD_CACHE_TTL_SECONDS,
@@ -16,7 +19,7 @@ import {
   type HistoryScopeOption,
 } from "../../shared/history-scope";
 
-const PERIOD_HISTORY_METRICS_CACHE_ENTRY_PREFIX = "period:history:metrics:v5";
+const PERIOD_HISTORY_METRICS_CACHE_ENTRY_PREFIX = "period:history:metrics:v6";
 const PERIOD_HISTORY_METRICS_CACHE_MAX_SERIALIZED_BYTES = 512 * 1024;
 
 const inflightByCacheKey = new Map<
@@ -76,6 +79,10 @@ function isHistoryScopeOptionArray(
   return Array.isArray(value) && value.every(isHistoryScopeOption);
 }
 
+function isCachedMoney(value: unknown): value is Money {
+  return Decimal.isDecimal(value) && moneyIsFinite(value as Money);
+}
+
 function isHistoryMetricsCacheEntry(
   value: unknown,
 ): value is PeriodHistoryPointMetrics {
@@ -85,15 +92,15 @@ function isHistoryMetricsCacheEntry(
 
   const record = value as Partial<PeriodHistoryPointMetrics>;
   return (
-    typeof record.totalReturn === "number" &&
-    typeof record.savings === "number" &&
-    typeof record.cashFlow === "number" &&
-    typeof record.income === "number" &&
-    typeof record.expenses === "number" &&
-    typeof record.gainsLosses === "number" &&
-    typeof record.assets === "number" &&
-    typeof record.liabilities === "number" &&
-    typeof record.netWorth === "number" &&
+    isCachedMoney(record.totalReturn) &&
+    isCachedMoney(record.savings) &&
+    isCachedMoney(record.cashFlow) &&
+    isCachedMoney(record.income) &&
+    isCachedMoney(record.expenses) &&
+    isCachedMoney(record.gainsLosses) &&
+    isCachedMoney(record.assets) &&
+    isCachedMoney(record.liabilities) &&
+    isCachedMoney(record.netWorth) &&
     typeof record.scopeOptions === "object" &&
     record.scopeOptions != null &&
     isHistoryScopeOptionArray(record.scopeOptions.cashFlow) &&
@@ -103,7 +110,7 @@ function isHistoryMetricsCacheEntry(
     isHistoryScopeOptionArray(record.scopeOptions.assets) &&
     isHistoryScopeOptionArray(record.scopeOptions.liabilities) &&
     (record.scopedMetricValue === undefined ||
-      typeof record.scopedMetricValue === "number")
+      isCachedMoney(record.scopedMetricValue))
   );
 }
 
@@ -151,7 +158,7 @@ export async function getOrLoadPeriodHistoryPointMetrics(args: {
     try {
       const cached = await redis.get(cacheKey);
       if (cached) {
-        const parsed = JSON.parse(cached) as unknown;
+        const parsed = decodeMoneyCache<unknown>(JSON.parse(cached));
         if (isHistoryMetricsCacheEntry(parsed)) {
           return parsed;
         }
@@ -178,7 +185,7 @@ export async function getOrLoadPeriodHistoryPointMetrics(args: {
     }
 
     try {
-      const serialized = JSON.stringify(result.metrics);
+      const serialized = JSON.stringify(encodeMoneyCache(result.metrics));
       if (
         Buffer.byteLength(serialized, "utf8") <=
         PERIOD_HISTORY_METRICS_CACHE_MAX_SERIALIZED_BYTES

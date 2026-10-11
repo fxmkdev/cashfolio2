@@ -1,5 +1,6 @@
+import { toMoney, type Money, moneyAdd, moneySum } from "../../shared/money";
 import { Unit } from "../../.prisma-client/enums";
-import { moneyAdd, moneySum, toMoneyNumber } from "../../shared/money";
+
 import { round2 } from "./period-helpers";
 import { normalizeUppercaseCode } from "./period-unit-format";
 
@@ -12,16 +13,16 @@ export type PeriodGainsLossesContribution = {
   cryptocurrency: string | null;
   symbol: string | null;
   tradeCurrency: string | null;
-  realizedGainLoss: number;
-  unrealizedGainLoss: number;
+  realizedGainLoss: Money;
+  unrealizedGainLoss: Money;
 };
 
 export type PeriodGainsLossesBreakdownNode = {
   id: string;
   label: string;
-  realizedGainLoss: number;
-  unrealizedGainLoss: number;
-  totalGainLoss: number;
+  realizedGainLoss: Money;
+  unrealizedGainLoss: Money;
+  totalGainLoss: Money;
   children: PeriodGainsLossesBreakdownNode[];
 };
 
@@ -88,17 +89,15 @@ function getUnitContributionDescriptor(
 }
 
 function toRoundedGainLossTotals(args: {
-  realizedGainLoss: number;
-  unrealizedGainLoss: number;
+  realizedGainLoss: Money;
+  unrealizedGainLoss: Money;
 }) {
   const realizedGainLoss = round2(args.realizedGainLoss);
   const unrealizedGainLoss = round2(args.unrealizedGainLoss);
   return {
     realizedGainLoss,
     unrealizedGainLoss,
-    totalGainLoss: round2(
-      toMoneyNumber(moneyAdd(realizedGainLoss, unrealizedGainLoss)),
-    ),
+    totalGainLoss: round2(moneyAdd(realizedGainLoss, unrealizedGainLoss)),
   };
 }
 
@@ -115,8 +114,8 @@ export function buildGainsLossesBreakdown(args: {
       string,
       {
         accountName: string;
-        realizedGainLoss: number;
-        unrealizedGainLoss: number;
+        realizedGainLoss: Money;
+        unrealizedGainLoss: Money;
       }
     >;
   };
@@ -126,15 +125,15 @@ export function buildGainsLossesBreakdown(args: {
     string,
     {
       accountName: string;
-      realizedGainLoss: number;
-      unrealizedGainLoss: number;
+      realizedGainLoss: Money;
+      unrealizedGainLoss: Money;
     }
   >();
 
   for (const contribution of args.contributions) {
     if (
-      contribution.realizedGainLoss === 0 &&
-      contribution.unrealizedGainLoss === 0
+      toMoney(contribution.realizedGainLoss).equals(0) &&
+      toMoney(contribution.unrealizedGainLoss).equals(0)
     ) {
       continue;
     }
@@ -142,17 +141,13 @@ export function buildGainsLossesBreakdown(args: {
     if (contribution.sourceKind === "EXPLICIT") {
       const explicitExisting = explicitByAccountId.get(contribution.accountId);
       if (explicitExisting) {
-        explicitExisting.realizedGainLoss = toMoneyNumber(
-          moneyAdd(
-            explicitExisting.realizedGainLoss,
-            contribution.realizedGainLoss,
-          ),
+        explicitExisting.realizedGainLoss = moneyAdd(
+          explicitExisting.realizedGainLoss,
+          contribution.realizedGainLoss,
         );
-        explicitExisting.unrealizedGainLoss = toMoneyNumber(
-          moneyAdd(
-            explicitExisting.unrealizedGainLoss,
-            contribution.unrealizedGainLoss,
-          ),
+        explicitExisting.unrealizedGainLoss = moneyAdd(
+          explicitExisting.unrealizedGainLoss,
+          contribution.unrealizedGainLoss,
         );
       } else {
         explicitByAccountId.set(contribution.accountId, {
@@ -185,17 +180,13 @@ export function buildGainsLossesBreakdown(args: {
 
     const existingAccount = unitValue.byAccountId.get(contribution.accountId);
     if (existingAccount) {
-      existingAccount.realizedGainLoss = toMoneyNumber(
-        moneyAdd(
-          existingAccount.realizedGainLoss,
-          contribution.realizedGainLoss,
-        ),
+      existingAccount.realizedGainLoss = moneyAdd(
+        existingAccount.realizedGainLoss,
+        contribution.realizedGainLoss,
       );
-      existingAccount.unrealizedGainLoss = toMoneyNumber(
-        moneyAdd(
-          existingAccount.unrealizedGainLoss,
-          contribution.unrealizedGainLoss,
-        ),
+      existingAccount.unrealizedGainLoss = moneyAdd(
+        existingAccount.unrealizedGainLoss,
+        contribution.unrealizedGainLoss,
       );
     } else {
       unitValue.byAccountId.set(contribution.accountId, {
@@ -236,11 +227,11 @@ export function buildGainsLossesBreakdown(args: {
               children: [],
             }));
           const roundedTotals = toRoundedGainLossTotals({
-            realizedGainLoss: toMoneyNumber(
-              moneySum(accountNodes.map((node) => node.realizedGainLoss)),
+            realizedGainLoss: moneySum(
+              accountNodes.map((node) => node.realizedGainLoss),
             ),
-            unrealizedGainLoss: toMoneyNumber(
-              moneySum(accountNodes.map((node) => node.unrealizedGainLoss)),
+            unrealizedGainLoss: moneySum(
+              accountNodes.map((node) => node.unrealizedGainLoss),
             ),
           });
           return {
@@ -255,11 +246,11 @@ export function buildGainsLossesBreakdown(args: {
     }
 
     const roundedTotals = toRoundedGainLossTotals({
-      realizedGainLoss: toMoneyNumber(
-        moneySum(childNodes.map((node) => node.realizedGainLoss)),
+      realizedGainLoss: moneySum(
+        childNodes.map((node) => node.realizedGainLoss),
       ),
-      unrealizedGainLoss: toMoneyNumber(
-        moneySum(childNodes.map((node) => node.unrealizedGainLoss)),
+      unrealizedGainLoss: moneySum(
+        childNodes.map((node) => node.unrealizedGainLoss),
       ),
     });
 
@@ -287,11 +278,11 @@ export function buildGainsLossesBreakdown(args: {
 
   if (explicitChildren.length > 0) {
     const roundedTotals = toRoundedGainLossTotals({
-      realizedGainLoss: toMoneyNumber(
-        moneySum(explicitChildren.map((node) => node.realizedGainLoss)),
+      realizedGainLoss: moneySum(
+        explicitChildren.map((node) => node.realizedGainLoss),
       ),
-      unrealizedGainLoss: toMoneyNumber(
-        moneySum(explicitChildren.map((node) => node.unrealizedGainLoss)),
+      unrealizedGainLoss: moneySum(
+        explicitChildren.map((node) => node.unrealizedGainLoss),
       ),
     });
     hierarchy.push({

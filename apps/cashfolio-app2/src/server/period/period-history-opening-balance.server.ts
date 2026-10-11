@@ -1,10 +1,11 @@
+import { toMoney, type Money } from "../../shared/money";
 import { AccountType } from "../../.prisma-client/enums";
 import { prisma } from "../../prisma.server";
 import {
   getOpeningBalancesBookingDate,
   startOfUtcDay,
 } from "../../shared/date";
-import { toMoneyNumber } from "../../shared/money";
+
 import { computeEndOfPeriodBalanceStatsWithConvertedBalances } from "./period-balance-stats";
 import { round2 } from "./period-helpers";
 import { convertBookingValueToReference } from "./period-conversion";
@@ -21,10 +22,10 @@ import {
 export type HistoryOpeningBalancePoint = {
   date: string;
   label: string;
-  assets: number;
-  liabilities: number;
-  netWorth: number;
-  scopedMetricValue?: number;
+  assets: Money;
+  liabilities: Money;
+  netWorth: Money;
+  scopedMetricValue?: Money;
 };
 
 export async function loadHistoryOpeningBalancePoint(args: {
@@ -95,7 +96,7 @@ export async function loadHistoryOpeningBalancePoint(args: {
   const endOfPeriodRawBalanceByAccountId = new Map(
     endOfPeriodRawBalancesGrouped.map((balance) => [
       balance.accountId,
-      toMoneyNumber(balance._sum.value ?? 0),
+      toMoney(balance._sum.value ?? toMoney(0)),
     ]),
   );
 
@@ -105,10 +106,10 @@ export async function loadHistoryOpeningBalancePoint(args: {
     });
 
   for (const [accountId, rawBalance] of rawBalanceByVirtualAccountId) {
-    endOfPeriodRawBalanceByAccountId.set(accountId, rawBalance);
+    endOfPeriodRawBalanceByAccountId.set(accountId, toMoney(rawBalance));
   }
 
-  const exchangeRateByKey = new Map<string, Promise<number | null>>();
+  const exchangeRateByKey = new Map<string, Promise<Money | null>>();
   const openingBalanceStats =
     await computeEndOfPeriodBalanceStatsWithConvertedBalances({
       accounts: [...baseAssetLiabilityAccounts, ...virtualAccounts],

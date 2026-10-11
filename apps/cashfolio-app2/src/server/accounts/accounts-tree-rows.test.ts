@@ -1,3 +1,4 @@
+import { toMoney } from "../../shared/money";
 import { describe, expect, test } from "vitest";
 import { AccountType, Unit } from "../../.prisma-client/enums";
 import {
@@ -130,20 +131,20 @@ describe("buildAccountRows and buildGroupRows", () => {
     const accountRows = buildAccountRows({
       accounts,
       rawBalanceByAccountId: new Map([
-        ["asset-1", 100],
-        ["liability-1", 25],
+        ["asset-1", toMoney(100)],
+        ["liability-1", toMoney(25)],
       ]),
       allScheduledRawBalanceByAccountId: new Map([
-        ["asset-1", 100],
-        ["liability-1", 25],
+        ["asset-1", toMoney(100)],
+        ["liability-1", toMoney(25)],
       ]),
       openingRawBalanceByAccountId: new Map([
-        ["asset-1", 80],
-        ["liability-1", -10],
+        ["asset-1", toMoney(80)],
+        ["liability-1", toMoney(-10)],
       ]),
       displayBalanceInReferenceCurrencyByAccountId: new Map([
-        ["asset-1", 100],
-        ["liability-1", -25],
+        ["asset-1", toMoney(100)],
+        ["liability-1", toMoney(-25)],
       ]),
       bookingCountByAccountId: new Map(),
       groupById: createGroupHierarchyMap(groups),

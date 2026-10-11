@@ -1,3 +1,4 @@
+import { toMoney, type Money, moneyMultiply } from "../../shared/money";
 import type {
   AccountType,
   EquityAccountSubtype,
@@ -40,10 +41,10 @@ export function getAccountsWhereClause(args: {
 
 export async function getDisplayBalanceInReferenceCurrencyByAccountId(args: {
   accounts: AccountReferenceBalanceSource[];
-  rawBalanceByAccountId: Map<string, number>;
+  rawBalanceByAccountId: Map<string, Money>;
   referenceCurrency: string;
   includeReferenceBalances: boolean;
-}): Promise<Map<string, number | null>> {
+}): Promise<Map<string, Money | null>> {
   const {
     accounts,
     rawBalanceByAccountId,
@@ -56,10 +57,10 @@ export async function getDisplayBalanceInReferenceCurrencyByAccountId(args: {
   }
 
   const today = new Date();
-  let usdToReferenceRatePromise: Promise<number | null> | null = null;
+  let usdToReferenceRatePromise: Promise<Money | null> | null = null;
   const getUsdToReferenceRate = () => {
     if (referenceCurrency === "USD") {
-      return Promise.resolve(1);
+      return Promise.resolve(toMoney(1));
     }
 
     if (!usdToReferenceRatePromise) {
@@ -72,15 +73,9 @@ export async function getDisplayBalanceInReferenceCurrencyByAccountId(args: {
 
     return usdToReferenceRatePromise;
   };
-  const exchangeRateBySourceCurrency = new Map<
-    string,
-    Promise<number | null>
-  >();
-  const exchangeRateByCryptocurrency = new Map<
-    string,
-    Promise<number | null>
-  >();
-  const exchangeRateBySecurity = new Map<string, Promise<number | null>>();
+  const exchangeRateBySourceCurrency = new Map<string, Promise<Money | null>>();
+  const exchangeRateByCryptocurrency = new Map<string, Promise<Money | null>>();
+  const exchangeRateBySecurity = new Map<string, Promise<Money | null>>();
   const getCurrencyToReferenceRate = (sourceCurrency: string) => {
     const normalizedSourceCurrency = sourceCurrency.toUpperCase();
     const existingPromise = exchangeRateBySourceCurrency.get(
@@ -106,7 +101,7 @@ export async function getDisplayBalanceInReferenceCurrencyByAccountId(args: {
       if (usdToReferenceRate == null || sourceToUsdRate == null) {
         return null;
       }
-      return sourceToUsdRate * usdToReferenceRate;
+      return moneyMultiply(sourceToUsdRate, usdToReferenceRate);
     })();
     exchangeRateBySourceCurrency.set(
       normalizedSourceCurrency,
@@ -159,7 +154,7 @@ export async function getDisplayBalanceInReferenceCurrencyByAccountId(args: {
   return new Map(
     await Promise.all(
       accounts.map(async (account) => {
-        const rawBalance = rawBalanceByAccountId.get(account.id) ?? 0;
+        const rawBalance = rawBalanceByAccountId.get(account.id) ?? toMoney(0);
         const rawBalanceInReferenceCurrency =
           await computeRawBalanceInReferenceCurrency({
             type: account.type,
@@ -181,7 +176,7 @@ export async function getDisplayBalanceInReferenceCurrencyByAccountId(args: {
             : account.type === "ASSET"
               ? rawBalanceInReferenceCurrency
               : account.type === "LIABILITY"
-                ? -rawBalanceInReferenceCurrency
+                ? toMoney(rawBalanceInReferenceCurrency).neg()
                 : null;
 
         return [account.id, displayBalanceInReferenceCurrency] as const;

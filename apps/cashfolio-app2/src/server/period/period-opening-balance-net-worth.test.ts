@@ -1,3 +1,4 @@
+import { toNumericMoney } from "../money-boundary";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const convertBookingValueToReference = vi.hoisted(() => vi.fn());
@@ -102,7 +103,7 @@ describe("loadOpeningBalanceNetWorthForPeriod", () => {
       referenceCurrency: "CHF",
     });
 
-    expect(result).toMatchObject({
+    expect(toNumericMoney(result)).toMatchObject({
       openingBalanceNetWorth: 100,
       skippedCount: 0,
       periodStart: "2026-02-01T00:00:00.000Z",
@@ -131,7 +132,7 @@ describe("loadOpeningBalanceNetWorthForPeriod", () => {
       period: "2026-02",
     });
 
-    expect(result.openingBalanceNetWorth).toBe(75);
+    expect(toNumericMoney(result.openingBalanceNetWorth)).toBe(75);
     expect(result.skippedCount).toBe(0);
   });
 });

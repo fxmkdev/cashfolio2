@@ -10,7 +10,7 @@ import {
   getOpeningBalancesBookingDate,
   getUtcDayRange,
 } from "../../shared/date";
-import { moneyIsZero } from "../../shared/money";
+import { moneyIsZero, toMoney, moneyAbs, type Money } from "../../shared/money";
 import {
   applyGroupCashFlagToSubtree,
   assertCashableGroupSubtree,
@@ -71,18 +71,18 @@ type ReorderAccountTreeItemsInput = {
 
 function normalizeOpeningBalanceTarget(
   openingBalance: number | null | undefined,
-): number | undefined {
+): Money | undefined {
   if (openingBalance === undefined) {
     return undefined;
   }
   if (openingBalance === null) {
-    return 0;
+    return toMoney(0);
   }
   const value = Number(openingBalance);
   if (!Number.isFinite(value)) {
     throw new Error("Opening balance is invalid.");
   }
-  return value;
+  return toMoney(value);
 }
 
 function isUniqueConstraintError(error: unknown): boolean {
@@ -344,9 +344,10 @@ async function applyOpeningBalanceTarget(args: {
   const targetRawOpeningBalance =
     args.account.type === AccountType.ASSET
       ? normalizedOpeningBalance
-      : -normalizedOpeningBalance;
-  const hasTargetOpeningBalance =
-    Math.abs(targetRawOpeningBalance) > OPENING_BALANCE_EPSILON;
+      : toMoney(normalizedOpeningBalance).neg();
+  const hasTargetOpeningBalance = moneyAbs(targetRawOpeningBalance).greaterThan(
+    OPENING_BALANCE_EPSILON,
+  );
 
   const bookingUnitFields = getBookingUnitFields(
     args.account,
@@ -381,7 +382,7 @@ async function applyOpeningBalanceTarget(args: {
                 },
               },
               ...bookingUnitFields,
-              value: targetRawOpeningBalance,
+              value: toMoney(targetRawOpeningBalance).toString(),
               sortOrder: 0,
               accountBook: {
                 connect: { id: args.accountBookId },
@@ -399,7 +400,7 @@ async function applyOpeningBalanceTarget(args: {
                 },
               },
               ...bookingUnitFields,
-              value: -targetRawOpeningBalance,
+              value: toMoney(targetRawOpeningBalance).neg().toString(),
               sortOrder: 1,
               accountBook: {
                 connect: { id: args.accountBookId },
@@ -464,7 +465,7 @@ async function applyOpeningBalanceTarget(args: {
                 },
               },
               ...bookingUnitFields,
-              value: targetRawOpeningBalance,
+              value: toMoney(targetRawOpeningBalance).toString(),
               sortOrder: 0,
               accountBook: {
                 connect: { id: args.accountBookId },
@@ -482,7 +483,7 @@ async function applyOpeningBalanceTarget(args: {
                 },
               },
               ...bookingUnitFields,
-              value: -targetRawOpeningBalance,
+              value: toMoney(targetRawOpeningBalance).neg().toString(),
               sortOrder: 1,
               accountBook: {
                 connect: { id: args.accountBookId },
@@ -539,7 +540,7 @@ async function applyOpeningBalanceTarget(args: {
               date: openingBalancesBookingDate,
               description: "",
               ...bookingUnitFields,
-              value: targetRawOpeningBalance,
+              value: toMoney(targetRawOpeningBalance).toString(),
               sortOrder: 0,
               account: {
                 connect: {
@@ -562,7 +563,7 @@ async function applyOpeningBalanceTarget(args: {
               date: openingBalancesBookingDate,
               description: "",
               ...bookingUnitFields,
-              value: -targetRawOpeningBalance,
+              value: toMoney(targetRawOpeningBalance).neg().toString(),
               sortOrder: 1,
             },
           },

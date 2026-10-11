@@ -1,3 +1,9 @@
+import {
+  toMoney,
+  type Money,
+  moneyMultiply,
+  moneyIsZero,
+} from "../../shared/money";
 import { Unit } from "../../.prisma-client/enums";
 import {
   getCryptocurrencyToCurrencyExchangeRateDetails,
@@ -7,9 +13,9 @@ import {
   getSecurityToCurrencyExchangeRateDetails,
   getSecurityToCurrencyExchangeRate,
 } from "../valuation.server";
-import { moneyMultiply, moneyIsZero, toMoneyNumber } from "../../shared/money";
+
 import type {
-  ValuationRateLookupResult,
+  DecimalValuationRateLookupResult as ValuationRateLookupResult,
   ValuationRateSource,
 } from "../valuation/types";
 
@@ -21,7 +27,7 @@ type RateLookupInput = {
   tradeCurrency: string | null;
   date: Date;
   referenceCurrency: string;
-  exchangeRateByKey: Map<string, Promise<number | null>>;
+  exchangeRateByKey: Map<string, Promise<Money | null>>;
 };
 
 type RateLookupDetailsInput = Omit<RateLookupInput, "exchangeRateByKey"> & {
@@ -29,13 +35,15 @@ type RateLookupDetailsInput = Omit<RateLookupInput, "exchangeRateByKey"> & {
 };
 
 export type ReferenceConversionResult = {
-  value: number | null;
+  value: Money | null;
   source: ValuationRateSource;
 };
 
-const ONE_EXCHANGE_RATE_PROMISE: Promise<number | null> = Promise.resolve(1);
+const ONE_EXCHANGE_RATE_PROMISE: Promise<Money | null> = Promise.resolve(
+  toMoney(1),
+);
 const ONE_EXCHANGE_RATE_DETAILS_PROMISE: Promise<ValuationRateLookupResult> =
-  Promise.resolve({ rate: 1, source: "identity" });
+  Promise.resolve({ rate: toMoney(1), source: "identity" });
 
 function toDateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -43,7 +51,7 @@ function toDateKey(date: Date): string {
 
 export async function getUnitToReferenceExchangeRate(
   args: RateLookupInput,
-): Promise<number | null> {
+): Promise<Money | null> {
   const { unit, referenceCurrency, exchangeRateByKey } = args;
   const dateKey = toDateKey(args.date);
 
@@ -51,7 +59,7 @@ export async function getUnitToReferenceExchangeRate(
     if (!args.currency) return null;
     const sourceCurrency = args.currency.toUpperCase();
     if (sourceCurrency === referenceCurrency) {
-      return 1;
+      return toMoney(1);
     }
 
     const cacheKey = `currency:${sourceCurrency}:${referenceCurrency}:${dateKey}`;
@@ -124,7 +132,7 @@ export async function getUnitToReferenceExchangeRateDetails(
     if (!args.currency) return { rate: null, source: "missing" };
     const sourceCurrency = args.currency.toUpperCase();
     if (sourceCurrency === referenceCurrency) {
-      return { rate: 1, source: "identity" };
+      return { rate: toMoney(1), source: "identity" };
     }
 
     const cacheKey = `currency:${sourceCurrency}:${referenceCurrency}:${dateKey}`;
@@ -190,7 +198,7 @@ export async function getUnitToReferenceExchangeRateDetails(
 }
 
 export async function convertBookingValueToReference(args: {
-  value: number;
+  value: Money;
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
@@ -198,10 +206,10 @@ export async function convertBookingValueToReference(args: {
   tradeCurrency: string | null;
   date: Date;
   referenceCurrency: string;
-  exchangeRateByKey: Map<string, Promise<number | null>>;
-}): Promise<number | null> {
+  exchangeRateByKey: Map<string, Promise<Money | null>>;
+}): Promise<Money | null> {
   if (moneyIsZero(args.value)) {
-    return 0;
+    return toMoney(0);
   }
 
   const exchangeRatePromise =
@@ -224,11 +232,11 @@ export async function convertBookingValueToReference(args: {
     return null;
   }
 
-  return toMoneyNumber(moneyMultiply(args.value, exchangeRate));
+  return moneyMultiply(args.value, exchangeRate);
 }
 
 export async function convertBookingValueToReferenceDetails(args: {
-  value: number;
+  value: Money;
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
@@ -239,7 +247,7 @@ export async function convertBookingValueToReferenceDetails(args: {
   exchangeRateByKey: Map<string, Promise<ValuationRateLookupResult>>;
 }): Promise<ReferenceConversionResult> {
   if (moneyIsZero(args.value)) {
-    return { value: 0, source: "identity" };
+    return { value: toMoney(0), source: "identity" };
   }
 
   const exchangeRatePromise =
@@ -263,7 +271,7 @@ export async function convertBookingValueToReferenceDetails(args: {
   }
 
   return {
-    value: toMoneyNumber(moneyMultiply(args.value, exchangeRate.rate)),
+    value: moneyMultiply(args.value, exchangeRate.rate),
     source: exchangeRate.source,
   };
 }

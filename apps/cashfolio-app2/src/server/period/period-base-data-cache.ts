@@ -1,3 +1,4 @@
+import { encodeMoneyCache, decodeMoneyCache } from "../money-cache-codec";
 import { getRedisClient } from "../../redis.server";
 import { normalizePeriodValue } from "../../shared/period";
 import {
@@ -15,8 +16,8 @@ import {
 
 const PERIOD_BASE_CACHE_MAX_SERIALIZED_BYTES = 2 * 1024 * 1024;
 
-const PERIOD_BASE_CACHE_ENTRY_PREFIX = "period:base:v6";
-const PERIOD_BASE_CACHE_INDEX_PREFIX = "period:base:index:v6";
+const PERIOD_BASE_CACHE_ENTRY_PREFIX = "period:base:v7";
+const PERIOD_BASE_CACHE_INDEX_PREFIX = "period:base:index:v7";
 
 let hasWarnedPeriodBaseCacheReadFailure = false;
 let hasWarnedPeriodBaseCacheWriteFailure = false;
@@ -24,61 +25,7 @@ let hasWarnedPeriodBaseCacheInvalidationFailure = false;
 
 const inflightByCacheKey = new Map<string, Promise<PeriodBaseData>>();
 
-type CachedDate = { __cashfolioDateMs: number };
-
 export type { PeriodBaseData };
-function isCachedDate(value: unknown): value is CachedDate {
-  return (
-    typeof value === "object" &&
-    value != null &&
-    "__cashfolioDateMs" in value &&
-    typeof (value as { __cashfolioDateMs?: unknown }).__cashfolioDateMs ===
-      "number"
-  );
-}
-
-function encodeDatesForCache<T>(value: T): unknown {
-  if (value instanceof Date) {
-    return { __cashfolioDateMs: value.getTime() } satisfies CachedDate;
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((item) => encodeDatesForCache(item));
-  }
-
-  if (typeof value === "object" && value != null) {
-    const record = value as Record<string, unknown>;
-    const encodedRecord: Record<string, unknown> = {};
-    for (const [key, entryValue] of Object.entries(record)) {
-      encodedRecord[key] = encodeDatesForCache(entryValue);
-    }
-    return encodedRecord;
-  }
-
-  return value;
-}
-
-function decodeDatesFromCache<T>(value: unknown): T {
-  if (isCachedDate(value)) {
-    return new Date(value.__cashfolioDateMs) as T;
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((item) => decodeDatesFromCache(item)) as T;
-  }
-
-  if (typeof value === "object" && value != null) {
-    const record = value as Record<string, unknown>;
-    const decodedRecord: Record<string, unknown> = {};
-    for (const [key, entryValue] of Object.entries(record)) {
-      decodedRecord[key] = decodeDatesFromCache(entryValue);
-    }
-    return decodedRecord as T;
-  }
-
-  return value as T;
-}
-
 function getPeriodBaseCacheEntryKey(args: {
   cacheEnv: string;
   accountBookId: string;
@@ -138,7 +85,7 @@ export async function getOrLoadPeriodBaseData(args: {
       const cached = await redis.get(entryKey);
       if (cached) {
         const parsed = JSON.parse(cached) as unknown;
-        return decodeDatesFromCache<PeriodBaseData>(parsed);
+        return decodeMoneyCache<PeriodBaseData>(parsed);
       }
     } catch (error) {
       if (!hasWarnedPeriodBaseCacheReadFailure) {
@@ -156,7 +103,7 @@ export async function getOrLoadPeriodBaseData(args: {
     });
 
     try {
-      const encoded = encodeDatesForCache(loaded);
+      const encoded = encodeMoneyCache(loaded);
       const serialized = JSON.stringify(encoded);
       if (
         Buffer.byteLength(serialized, "utf8") <=

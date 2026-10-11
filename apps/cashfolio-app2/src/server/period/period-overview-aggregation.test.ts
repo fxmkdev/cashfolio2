@@ -1,3 +1,5 @@
+import { toMoney } from "../../shared/money";
+import { toNumericMoney } from "../money-boundary";
 import { describe, expect, it } from "vitest";
 import { EquityAccountSubtype } from "../../.prisma-client/enums";
 import {
@@ -18,7 +20,7 @@ describe("period overview aggregation", () => {
           equityAccountSubtype: EquityAccountSubtype.INCOME,
         },
       },
-      convertedValue: -100,
+      convertedValue: toMoney(-100),
       aggregation,
     });
     accumulateConvertedEquityBooking({
@@ -30,7 +32,7 @@ describe("period overview aggregation", () => {
           equityAccountSubtype: EquityAccountSubtype.INCOME,
         },
       },
-      convertedValue: -25,
+      convertedValue: toMoney(-25),
       aggregation,
     });
     accumulateConvertedEquityBooking({
@@ -42,7 +44,7 @@ describe("period overview aggregation", () => {
           equityAccountSubtype: EquityAccountSubtype.EXPENSE,
         },
       },
-      convertedValue: 40,
+      convertedValue: toMoney(40),
       aggregation,
     });
     accumulateConvertedEquityBooking({
@@ -54,23 +56,25 @@ describe("period overview aggregation", () => {
           equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
         },
       },
-      convertedValue: -20,
+      convertedValue: toMoney(-20),
       aggregation,
     });
 
-    expect(aggregation.income).toBe(125);
-    expect(aggregation.expenses).toBe(40);
-    expect(aggregation.explicitGainLoss).toBe(20);
-    expect(aggregation.incomeAmountByAccountId.get("income-1")).toMatchObject({
+    expect(toNumericMoney(aggregation.income)).toBe(125);
+    expect(toNumericMoney(aggregation.expenses)).toBe(40);
+    expect(toNumericMoney(aggregation.explicitGainLoss)).toBe(20);
+    expect(
+      toNumericMoney(aggregation.incomeAmountByAccountId.get("income-1")),
+    ).toMatchObject({
       accountName: "Salary",
       amount: 125,
     });
-    expect(aggregation.expenseAmountByAccountId.get("expense-1")).toMatchObject(
-      {
-        accountName: "Rent",
-        groupId: "group-expense",
-        amount: 40,
-      },
-    );
+    expect(
+      toNumericMoney(aggregation.expenseAmountByAccountId.get("expense-1")),
+    ).toMatchObject({
+      accountName: "Rent",
+      groupId: "group-expense",
+      amount: 40,
+    });
   });
 });

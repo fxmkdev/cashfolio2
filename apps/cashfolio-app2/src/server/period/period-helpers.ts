@@ -1,15 +1,19 @@
+import type { MoneyInput } from "../../shared/money";
+import {
+  toMoney,
+  type Money,
+  moneyAdd,
+  moneySubtract,
+  moneyMultiply,
+  moneyDivide,
+  moneyAbs,
+  moneyIsZero,
+  moneyRound2,
+  moneySum,
+} from "../../shared/money";
 import { AccountType, Unit } from "../../.prisma-client/enums";
 import { startOfUtcDay } from "../../shared/date";
-import {
-  moneyAdd,
-  moneyDivide,
-  moneyIsZero,
-  moneyMultiply,
-  moneyRound2,
-  moneySubtract,
-  moneySum,
-  toMoneyNumber,
-} from "../../shared/money";
+
 import type {
   BreakdownHierarchyNode,
   BreakdownNodeKind,
@@ -31,24 +35,24 @@ export type ExpenseBreakdownAccumulatorItem = {
   id: string;
   label: string;
   kind: BreakdownNodeKind;
-  amount: number;
+  amount: Money;
 };
 
 export type BreakdownHierarchyAccumulatorItem = {
   accountId: string;
   accountName: string;
   groupId: string | null;
-  amount: number;
+  amount: Money;
 };
 
 export type HoldingEvent = {
   date: Date;
-  balanceDelta: number;
+  balanceDelta: Money;
 };
 
 export type HoldingGainLossSeriesEvent = {
-  rate: number;
-  balanceDelta: number;
+  rate: Money;
+  balanceDelta: Money;
 };
 
 type MultiUnitBooking = {
@@ -63,8 +67,8 @@ function toDateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-export function round2(value: number): number {
-  return toMoneyNumber(moneyRound2(value));
+export function round2(value: MoneyInput): Money {
+  return moneyRound2(value);
 }
 
 function getBookingUnitIdentifier(booking: MultiUnitBooking): string | null {
@@ -184,39 +188,33 @@ export function createBreakdownBucket(args: {
 }
 
 export function buildBreakdownItems(items: ExpenseBreakdownAccumulatorItem[]): {
-  totalAmount: number;
+  totalAmount: Money;
   items: Array<{
     id: string;
     label: string;
     kind: "group" | "account";
-    amount: number;
-    percentage: number;
+    amount: Money;
+    percentage: Money;
   }>;
 } {
-  const positiveItems = items.filter((item) => item.amount > 0);
-  const totalRaw = toMoneyNumber(
-    moneySum(positiveItems.map((item) => item.amount)),
+  const positiveItems = items.filter(
+    (item) => toMoney(item.amount).comparedTo(0) > 0,
   );
+  const totalRaw = moneySum(positiveItems.map((item) => item.amount));
 
   const sortedItems = positiveItems
     .map((item) => ({
       ...item,
       amount: round2(item.amount),
       percentage:
-        totalRaw <= 0
-          ? 0
-          : round2(
-              toMoneyNumber(
-                moneyMultiply(moneyDivide(item.amount, totalRaw), 100),
-              ),
-            ),
+        toMoney(totalRaw).comparedTo(0) <= 0
+          ? toMoney(0)
+          : round2(moneyMultiply(moneyDivide(item.amount, totalRaw), 100)),
     }))
-    .sort((a, b) => b.amount - a.amount);
+    .sort((a, b) => toMoney(b.amount).comparedTo(a.amount));
 
   return {
-    totalAmount: round2(
-      toMoneyNumber(moneySum(sortedItems.map((item) => item.amount))),
-    ),
+    totalAmount: round2(moneySum(sortedItems.map((item) => item.amount))),
     items: sortedItems,
   };
 }
@@ -227,19 +225,19 @@ export function buildPeriodEndAllocationBreakdown(args: {
     accountName: string;
     groupId: string | null;
     accountType: "ASSET" | "LIABILITY";
-    convertedBalanceInReferenceCurrency: number | null;
+    convertedBalanceInReferenceCurrency: Money | null;
   }>;
   groupById: Map<string, PeriodGroupNode>;
 }): {
-  totalAmount: number;
+  totalAmount: Money;
   items: Array<{
     id: string;
     label: string;
     kind: "group" | "account";
-    amount: number;
-    percentage: number;
+    amount: Money;
+    percentage: Money;
   }>;
-  hierarchy: BreakdownHierarchyNode[];
+  hierarchy: BreakdownHierarchyNode<Money>[];
   hasHiddenAmountDiscrepancy: boolean;
   hiddenAmountDiscrepancyNodeIds: string[];
   skippedMissingReferenceBalanceCount: number;
@@ -258,9 +256,9 @@ export function buildPeriodEndAllocationBreakdown(args: {
     const displayAmount =
       item.accountType === AccountType.ASSET
         ? item.convertedBalanceInReferenceCurrency
-        : -item.convertedBalanceInReferenceCurrency;
+        : toMoney(item.convertedBalanceInReferenceCurrency).neg();
 
-    if (displayAmount < 0) {
+    if (toMoney(displayAmount).comparedTo(0) < 0) {
       skippedNegativeCount += 1;
       continue;
     }
@@ -308,7 +306,7 @@ type MutableBreakdownHierarchyNode = {
   id: string;
   label: string;
   kind: BreakdownNodeKind;
-  amount: number;
+  amount: Money;
   childrenById: Map<string, MutableBreakdownHierarchyNode>;
 };
 
@@ -321,7 +319,7 @@ function createMutableBreakdownHierarchyNode(args: {
     id: args.id,
     label: args.label,
     kind: args.kind,
-    amount: 0,
+    amount: toMoney(0),
     childrenById: new Map(),
   };
 }
@@ -349,29 +347,27 @@ function getOrCreateMutableBreakdownHierarchyNode(args: {
 function finalizeBreakdownHierarchyNodes(
   childrenById: Map<string, MutableBreakdownHierarchyNode>,
 ): {
-  hierarchy: BreakdownHierarchyNode[];
+  hierarchy: BreakdownHierarchyNode<Money>[];
   hasHiddenAmountDiscrepancy: boolean;
   hiddenAmountDiscrepancyNodeIdsInSubtree: Set<string>;
-  rawDisplayedAmount: number;
+  rawDisplayedAmount: Money;
   prunedNodeCount: number;
 } {
-  const nodes: BreakdownHierarchyNode[] = [];
+  const nodes: BreakdownHierarchyNode<Money>[] = [];
   const hiddenAmountDiscrepancyNodeIdsInSubtree = new Set<string>();
-  let rawDisplayedAmount = 0;
+  let rawDisplayedAmount: Money = toMoney(0);
   let prunedNodeCount = 0;
 
   for (const node of childrenById.values()) {
     if (node.kind === "account") {
       const roundedAmount = round2(node.amount);
 
-      if (roundedAmount <= 0) {
+      if (toMoney(roundedAmount).comparedTo(0) <= 0) {
         prunedNodeCount += 1;
         continue;
       }
 
-      rawDisplayedAmount = toMoneyNumber(
-        moneyAdd(rawDisplayedAmount, node.amount),
-      );
+      rawDisplayedAmount = moneyAdd(rawDisplayedAmount, node.amount);
       nodes.push({
         id: node.id,
         label: node.label,
@@ -394,7 +390,7 @@ function finalizeBreakdownHierarchyNodes(
     const roundedAmount = round2(node.amount);
     const roundedDisplayedChildrenAmount = round2(rawDisplayedChildrenAmount);
 
-    if (roundedAmount <= 0) {
+    if (toMoney(roundedAmount).comparedTo(0) <= 0) {
       prunedNodeCount += 1;
       continue;
     }
@@ -417,9 +413,7 @@ function finalizeBreakdownHierarchyNodes(
       hiddenAmountDiscrepancyNodeIdsInSubtree.add(nodeId);
     }
 
-    rawDisplayedAmount = toMoneyNumber(
-      moneyAdd(rawDisplayedAmount, node.amount),
-    );
+    rawDisplayedAmount = moneyAdd(rawDisplayedAmount, node.amount);
     nodes.push({
       id: node.id,
       label: node.label,
@@ -431,7 +425,7 @@ function finalizeBreakdownHierarchyNodes(
 
   nodes.sort(
     (a, b) =>
-      b.amount - a.amount ||
+      toMoney(b.amount).comparedTo(a.amount) ||
       a.label.localeCompare(b.label, "en") ||
       a.id.localeCompare(b.id),
   );
@@ -450,7 +444,7 @@ export function buildBreakdownHierarchyWithMeta(args: {
   items: BreakdownHierarchyAccumulatorItem[];
   groupById: Map<string, PeriodGroupNode>;
 }): {
-  hierarchy: BreakdownHierarchyNode[];
+  hierarchy: BreakdownHierarchyNode<Money>[];
   hasHiddenAmountDiscrepancy: boolean;
   hiddenAmountDiscrepancyNodeIds: string[];
 } {
@@ -477,7 +471,7 @@ export function buildBreakdownHierarchyWithMeta(args: {
         kind: "group",
         childrenById: currentChildrenById,
       });
-      groupNode.amount = toMoneyNumber(moneyAdd(groupNode.amount, item.amount));
+      groupNode.amount = moneyAdd(groupNode.amount, item.amount);
       currentChildrenById = groupNode.childrenById;
     }
 
@@ -487,9 +481,7 @@ export function buildBreakdownHierarchyWithMeta(args: {
       kind: "account",
       childrenById: currentChildrenById,
     });
-    accountNode.amount = toMoneyNumber(
-      moneyAdd(accountNode.amount, item.amount),
-    );
+    accountNode.amount = moneyAdd(accountNode.amount, item.amount);
   }
 
   const {
@@ -510,15 +502,15 @@ export function buildBreakdownHierarchyWithMeta(args: {
 function finalizeSignedBreakdownHierarchyNodes(
   childrenById: Map<string, MutableBreakdownHierarchyNode>,
 ): {
-  hierarchy: BreakdownHierarchyNode[];
+  hierarchy: BreakdownHierarchyNode<Money>[];
   hasHiddenAmountDiscrepancy: boolean;
   hiddenAmountDiscrepancyNodeIdsInSubtree: Set<string>;
-  rawDisplayedAmount: number;
+  rawDisplayedAmount: Money;
   prunedNodeCount: number;
 } {
-  const nodes: BreakdownHierarchyNode[] = [];
+  const nodes: BreakdownHierarchyNode<Money>[] = [];
   const hiddenAmountDiscrepancyNodeIdsInSubtree = new Set<string>();
-  let rawDisplayedAmount = 0;
+  let rawDisplayedAmount: Money = toMoney(0);
   let prunedNodeCount = 0;
 
   for (const node of childrenById.values()) {
@@ -530,9 +522,7 @@ function finalizeSignedBreakdownHierarchyNodes(
         continue;
       }
 
-      rawDisplayedAmount = toMoneyNumber(
-        moneyAdd(rawDisplayedAmount, node.amount),
-      );
+      rawDisplayedAmount = moneyAdd(rawDisplayedAmount, node.amount);
       nodes.push({
         id: node.id,
         label: node.label,
@@ -573,9 +563,7 @@ function finalizeSignedBreakdownHierarchyNodes(
       hiddenAmountDiscrepancyNodeIdsInSubtree.add(nodeId);
     }
 
-    rawDisplayedAmount = toMoneyNumber(
-      moneyAdd(rawDisplayedAmount, node.amount),
-    );
+    rawDisplayedAmount = moneyAdd(rawDisplayedAmount, node.amount);
     nodes.push({
       id: node.id,
       label: node.label,
@@ -587,7 +575,7 @@ function finalizeSignedBreakdownHierarchyNodes(
 
   nodes.sort(
     (a, b) =>
-      Math.abs(b.amount) - Math.abs(a.amount) ||
+      moneyAbs(b.amount).comparedTo(moneyAbs(a.amount)) ||
       a.label.localeCompare(b.label, "en") ||
       a.id.localeCompare(b.id),
   );
@@ -606,7 +594,7 @@ export function buildSignedBreakdownHierarchyWithMeta(args: {
   items: BreakdownHierarchyAccumulatorItem[];
   groupById: Map<string, PeriodGroupNode>;
 }): {
-  hierarchy: BreakdownHierarchyNode[];
+  hierarchy: BreakdownHierarchyNode<Money>[];
   hasHiddenAmountDiscrepancy: boolean;
   hiddenAmountDiscrepancyNodeIds: string[];
 } {
@@ -633,7 +621,7 @@ export function buildSignedBreakdownHierarchyWithMeta(args: {
         kind: "group",
         childrenById: currentChildrenById,
       });
-      groupNode.amount = toMoneyNumber(moneyAdd(groupNode.amount, item.amount));
+      groupNode.amount = moneyAdd(groupNode.amount, item.amount);
       currentChildrenById = groupNode.childrenById;
     }
 
@@ -643,9 +631,7 @@ export function buildSignedBreakdownHierarchyWithMeta(args: {
       kind: "account",
       childrenById: currentChildrenById,
     });
-    accountNode.amount = toMoneyNumber(
-      moneyAdd(accountNode.amount, item.amount),
-    );
+    accountNode.amount = moneyAdd(accountNode.amount, item.amount);
   }
 
   const {
@@ -666,25 +652,23 @@ export function buildSignedBreakdownHierarchyWithMeta(args: {
 export function buildBreakdownHierarchy(args: {
   items: BreakdownHierarchyAccumulatorItem[];
   groupById: Map<string, PeriodGroupNode>;
-}): BreakdownHierarchyNode[] {
+}): BreakdownHierarchyNode<Money>[] {
   return buildBreakdownHierarchyWithMeta(args).hierarchy;
 }
 
 export function computeHoldingGainLossForEventSeries(args: {
-  initialBalance: number;
-  initialRate: number;
+  initialBalance: Money;
+  initialRate: Money;
   events: HoldingGainLossSeriesEvent[];
-}): number {
+}): Money {
   let balance = args.initialBalance;
   let previousRate = args.initialRate;
-  let gainLoss = 0;
+  let gainLoss: Money = toMoney(0);
 
   for (const event of args.events) {
-    const rateDiff = toMoneyNumber(moneySubtract(event.rate, previousRate));
-    gainLoss = toMoneyNumber(
-      moneyAdd(gainLoss, moneyMultiply(balance, rateDiff)),
-    );
-    balance = toMoneyNumber(moneyAdd(balance, event.balanceDelta));
+    const rateDiff = moneySubtract(event.rate, previousRate);
+    gainLoss = moneyAdd(gainLoss, moneyMultiply(balance, rateDiff));
+    balance = moneyAdd(balance, event.balanceDelta);
     previousRate = event.rate;
   }
 
@@ -715,7 +699,7 @@ export function sortHoldingEventsAscending(
 }
 
 export function getHoldingEventDateMap(args: {
-  bookings: Array<{ date: Date; value: number }>;
+  bookings: Array<{ date: Date; value: Money }>;
   periodEnd: Date;
 }): Map<string, HoldingEvent> {
   const eventByDateKey = new Map<string, HoldingEvent>();
@@ -726,9 +710,7 @@ export function getHoldingEventDateMap(args: {
     const existing = eventByDateKey.get(dateKey);
 
     if (existing) {
-      existing.balanceDelta = toMoneyNumber(
-        moneyAdd(existing.balanceDelta, booking.value),
-      );
+      existing.balanceDelta = moneyAdd(existing.balanceDelta, booking.value);
     } else {
       eventByDateKey.set(dateKey, {
         date,
@@ -742,7 +724,7 @@ export function getHoldingEventDateMap(args: {
   if (!eventByDateKey.has(periodEndKey)) {
     eventByDateKey.set(periodEndKey, {
       date: periodEndDate,
-      balanceDelta: 0,
+      balanceDelta: toMoney(0),
     });
   }
 

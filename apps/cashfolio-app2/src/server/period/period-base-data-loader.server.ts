@@ -1,3 +1,4 @@
+import { toMoney } from "../../shared/money";
 import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import { prisma } from "../../prisma.server";
 import { normalizePeriodValue } from "../../shared/period";
@@ -8,7 +9,7 @@ import {
   getPeriodEndExclusive,
   resolvePeriodSelection,
 } from "./period-selection";
-import { toMoneyNumber } from "../../shared/money";
+
 import {
   loadPeriodCashFlowTransactionsRaw,
   loadPeriodEquityBookingsRaw,
@@ -224,7 +225,7 @@ export async function loadPeriodBaseDataUncached(args: {
     holdingAccountsResolved,
     endOfPeriodRawBalances: endOfPeriodRawBalancesGrouped.map((row) => ({
       accountId: row.accountId,
-      rawBalance: toMoneyNumber(row._sum.value ?? 0),
+      rawBalance: toMoney(row._sum.value ?? toMoney(0)),
     })),
     transferClearingUnitBuckets,
     equityBookings,
@@ -237,7 +238,7 @@ export async function loadPeriodBaseDataUncached(args: {
     })),
     initialHoldingBalances: initialHoldingBalancesGrouped.map((row) => ({
       accountId: row.accountId,
-      rawBalance: toMoneyNumber(row._sum.value ?? 0),
+      rawBalance: toMoney(row._sum.value ?? toMoney(0)),
     })),
     holdingTransactions,
     cashFlowTransactions,

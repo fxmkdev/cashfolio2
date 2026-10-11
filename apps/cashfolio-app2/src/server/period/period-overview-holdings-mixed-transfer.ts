@@ -1,4 +1,14 @@
 import {
+  toMoney,
+  type Money,
+  MoneyDecimal,
+  moneySubtract,
+  moneyMultiply,
+  moneyDivide,
+  moneyAbs,
+  moneyIsFinite,
+} from "../../shared/money";
+import {
   isNearZero,
   toLotAcquisitionSortKey,
   QUANTITY_EPSILON,
@@ -30,8 +40,8 @@ function insertLotByAcquisitionOrder(args: {
 
 function applyNonRealizingExecutionToLots(args: {
   lots: HoldingLot[];
-  quantity: number;
-  unitCostInReference: number;
+  quantity: Money;
+  unitCostInReference: Money;
   acquisitionSortKey: string;
 }) {
   let remainingQuantity = args.quantity;
@@ -39,15 +49,22 @@ function applyNonRealizingExecutionToLots(args: {
   while (
     !isNearZero(remainingQuantity) &&
     args.lots.length > 0 &&
-    Math.sign(remainingQuantity) !== Math.sign(args.lots[0]!.quantity)
+    toMoney(remainingQuantity).comparedTo(0) !==
+      toMoney(args.lots[0]!.quantity).comparedTo(0)
   ) {
     const lot = args.lots[0]!;
-    const closeQuantity = Math.min(
-      Math.abs(remainingQuantity),
-      Math.abs(lot.quantity),
+    const closeQuantity = MoneyDecimal.min(
+      moneyAbs(remainingQuantity),
+      moneyAbs(lot.quantity),
     );
-    lot.quantity -= Math.sign(lot.quantity) * closeQuantity;
-    remainingQuantity -= Math.sign(remainingQuantity) * closeQuantity;
+    lot.quantity = moneySubtract(
+      lot.quantity,
+      moneyMultiply(toMoney(lot.quantity).comparedTo(0), closeQuantity),
+    );
+    remainingQuantity = moneySubtract(
+      remainingQuantity,
+      moneyMultiply(toMoney(remainingQuantity).comparedTo(0), closeQuantity),
+    );
 
     if (isNearZero(lot.quantity)) {
       args.lots.shift();
@@ -100,7 +117,7 @@ function hasOpeningAcquisitionSortKey(acquisitionSortKey: string): boolean {
 function resolveOpeningUnitCostInReference(args: {
   state: HoldingGainLossWorkingState;
   unitIdentifier: string | null;
-}): number | null {
+}): Money | null {
   if (!args.unitIdentifier) {
     return null;
   }
@@ -158,7 +175,7 @@ export async function applyMixedPeriodSameUnitHoldingTransfer(args: {
     return false;
   }
 
-  const convertedByBookingId = new Map<string, number | null>();
+  const convertedByBookingId = new Map<string, Money | null>();
   const convertedValues = await Promise.all(
     args.inPeriodHoldingBookings.map((booking) =>
       args.convertBookingToReference({
@@ -211,7 +228,7 @@ export async function applyMixedPeriodSameUnitHoldingTransfer(args: {
   });
 
   for (const booking of toSortedBookings(args.inPeriodHoldingBookings)) {
-    if (Math.abs(booking.value) <= QUANTITY_EPSILON) {
+    if (moneyAbs(booking.value).comparedTo(QUANTITY_EPSILON) <= 0) {
       continue;
     }
 
@@ -220,8 +237,11 @@ export async function applyMixedPeriodSameUnitHoldingTransfer(args: {
       continue;
     }
 
-    const executionUnitPriceInReference = convertedValue / booking.value;
-    if (!Number.isFinite(executionUnitPriceInReference)) {
+    const executionUnitPriceInReference = moneyDivide(
+      convertedValue,
+      booking.value,
+    );
+    if (!moneyIsFinite(executionUnitPriceInReference)) {
       args.state.skippedCount += 1;
       args.onSkippedItem?.({
         accountId: booking.accountId,
@@ -243,7 +263,8 @@ export async function applyMixedPeriodSameUnitHoldingTransfer(args: {
     }
 
     const lotMovementUnitCostInReference =
-      booking.value > QUANTITY_EPSILON && openingUnitCostInReference != null
+      toMoney(booking.value).comparedTo(QUANTITY_EPSILON) > 0 &&
+      openingUnitCostInReference != null
         ? openingUnitCostInReference
         : executionUnitPriceInReference;
 

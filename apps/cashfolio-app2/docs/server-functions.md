@@ -70,15 +70,20 @@ Related docs:
   Redis instance.
 - Redis key namespace includes deployment scope and invalidation generation:
   - Entry:
-    `period:base:v6:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
+    `period:base:v7:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
   - Index:
-    `period:base:index:v6:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
+    `period:base:index:v7:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
   - Generation pointer:
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
 - History metrics entry:
-  `period:history:metrics:v5:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
-- Base-data v6 adds cash-flow booking account IDs, names, and group IDs. Older
+  `period:history:metrics:v6:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
+- Base-data v7 and History metrics v6 store monetary values as tagged exact
+  decimal strings through `src/server/money-cache-codec.ts`
+  (`{ __cashfolioDecimal: "..." }`). Dates retain their existing
+  `{ __cashfolioDateMs: milliseconds }` representation. Reads reconstruct
+  `MoneyDecimal` values; invalid decimal/date payloads are cache misses. Older
   snapshots are not reused; their entries and indexes expire after 24 hours.
+  Account-book deletion cleans up both old and current cache versions.
 - For preset periods (`mtd`, `ytd`, `last-month`, `last-year`), `periodCacheKey`
   uses resolved concrete ranges (`granularity:from:to`) to avoid key aliasing
   across day/month boundaries.
@@ -243,3 +248,33 @@ The report page also shows a net-worth reconciliation warning when
 precision. The baseline uses the previous period's end net worth when available,
 and falls back to opening-balance net worth derived from balances strictly
 before the current period start.
+
+## Monetary calculation boundaries
+
+Server monetary amounts, balances, quantities, FIFO lot costs, composed
+valuation rates, residual allocation weights, and reconciliation totals use
+`MoneyDecimal` from `src/shared/money.ts`: 40 significant digits with half-even
+rounding. Normalize Prisma decimals directly through their decimal string
+representation; do not convert them to numbers first. Reject non-finite monetary
+inputs and persist calculated booking amounts as decimal strings. No database
+schema migration is needed.
+
+Same-unit transactions must sum to exactly zero using Decimal, matching the
+transaction editor. The former server tolerance of `0.001` no longer applies;
+mixed-unit validation semantics are unchanged. The existing FIFO quantity
+threshold (`1e-9`) and opening-balance threshold (`1e-6`) remain unchanged and
+are compared using Decimal.
+
+Reports retain their existing rounding stages. Round income, expenses, and
+gains/losses to two decimal places with half-even rounding; calculate savings
+from rounded income and expenses, and total return from rounded savings and
+gains/losses. Breakdown and reconciliation rounding stages are likewise
+retained. Decimal division still rounds to the configured 40 significant digits.
+
+Request and browser-facing response amounts remain numbers, with existing field
+names, nulls, and missing-valuation behavior. `src/server/money-boundary.ts` and
+explicit `toMoneyNumber` calls convert only when constructing public responses,
+after calculations and rounding. Numeric request values and provider/Redis
+TimeSeries rates have only the precision received at those source boundaries;
+the refactor cannot recover digits already lost there. Provider and TimeSeries
+storage formats and lookup behavior remain unchanged.

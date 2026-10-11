@@ -1,6 +1,6 @@
 import type { Unit } from "../../.prisma-client/enums";
 
-export type CreateTransactionInput = {
+export type CreateTransactionInput<Amount = number> = {
   accountBookId: string;
   description: string;
   bookings: {
@@ -12,7 +12,7 @@ export type CreateTransactionInput = {
     cryptocurrency?: string;
     symbol?: string;
     tradeCurrency?: string;
-    value: number;
+    value: Amount;
   }[];
 };
 

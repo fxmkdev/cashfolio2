@@ -1,3 +1,5 @@
+import { toMoney } from "../../shared/money";
+import { toNumericMoney } from "../money-boundary";
 import { describe, expect, test, vi } from "vitest";
 import { computeRawBalanceInReferenceCurrency } from "./accounts-reference-balance";
 
@@ -12,14 +14,14 @@ describe("computeRawBalanceInReferenceCurrency", () => {
       cryptocurrency: null,
       symbol: null,
       tradeCurrency: null,
-      rawBalance: 100,
+      rawBalance: toMoney(100),
       referenceCurrency: "CHF",
       getCurrencyToReferenceRate,
       getCryptocurrencyToReferenceRate: vi.fn(),
       getSecurityToReferenceRate: vi.fn(),
     });
 
-    expect(converted).toBeCloseTo(110);
+    expect(toNumericMoney(converted)).toBeCloseTo(110);
     expect(getCurrencyToReferenceRate).toHaveBeenCalledWith("EUR");
 
     const noConversion = await computeRawBalanceInReferenceCurrency({
@@ -29,14 +31,14 @@ describe("computeRawBalanceInReferenceCurrency", () => {
       cryptocurrency: null,
       symbol: null,
       tradeCurrency: null,
-      rawBalance: 10,
+      rawBalance: toMoney(10),
       referenceCurrency: "CHF",
       getCurrencyToReferenceRate,
       getCryptocurrencyToReferenceRate: vi.fn(),
       getSecurityToReferenceRate: vi.fn(),
     });
 
-    expect(noConversion).toBe(10);
+    expect(toNumericMoney(noConversion)).toBe(10);
   });
 
   test("handles crypto and security conversion edge cases", async () => {
@@ -50,14 +52,14 @@ describe("computeRawBalanceInReferenceCurrency", () => {
       cryptocurrency: "btc",
       symbol: null,
       tradeCurrency: null,
-      rawBalance: 2,
+      rawBalance: toMoney(2),
       referenceCurrency: "CHF",
       getCurrencyToReferenceRate: vi.fn(),
       getCryptocurrencyToReferenceRate: cryptoRate,
       getSecurityToReferenceRate: securityRate,
     });
 
-    expect(crypto).toBe(50000);
+    expect(toNumericMoney(crypto)).toBe(50000);
     expect(cryptoRate).toHaveBeenCalledWith("BTC");
 
     const security = await computeRawBalanceInReferenceCurrency({
@@ -67,14 +69,14 @@ describe("computeRawBalanceInReferenceCurrency", () => {
       cryptocurrency: null,
       symbol: "aapl",
       tradeCurrency: "usd",
-      rawBalance: 3,
+      rawBalance: toMoney(3),
       referenceCurrency: "CHF",
       getCurrencyToReferenceRate: vi.fn(),
       getCryptocurrencyToReferenceRate: vi.fn(),
       getSecurityToReferenceRate: securityRate,
     });
 
-    expect(security).toBe(540);
+    expect(toNumericMoney(security)).toBe(540);
     expect(securityRate).toHaveBeenCalledWith("AAPL", "USD");
 
     const missingTradeCurrency = await computeRawBalanceInReferenceCurrency({
@@ -84,7 +86,7 @@ describe("computeRawBalanceInReferenceCurrency", () => {
       cryptocurrency: null,
       symbol: "AAPL",
       tradeCurrency: null,
-      rawBalance: 3,
+      rawBalance: toMoney(3),
       referenceCurrency: "CHF",
       getCurrencyToReferenceRate: vi.fn(),
       getCryptocurrencyToReferenceRate: vi.fn(),
@@ -102,7 +104,7 @@ describe("computeRawBalanceInReferenceCurrency", () => {
       cryptocurrency: null,
       symbol: null,
       tradeCurrency: null,
-      rawBalance: 20,
+      rawBalance: toMoney(20),
       referenceCurrency: "CHF",
       getCurrencyToReferenceRate: vi.fn(),
       getCryptocurrencyToReferenceRate: vi.fn(),
@@ -118,7 +120,7 @@ describe("computeRawBalanceInReferenceCurrency", () => {
       cryptocurrency: null,
       symbol: null,
       tradeCurrency: null,
-      rawBalance: 0,
+      rawBalance: toMoney(0),
       referenceCurrency: "CHF",
       getCurrencyToReferenceRate: vi.fn(),
       getCryptocurrencyToReferenceRate: vi.fn(),

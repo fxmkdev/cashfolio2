@@ -72,3 +72,9 @@ const query = {
 This ensures data isolation per account book. Foreign keys also carry
 `accountBookId` (e.g. `groupId` + `accountBookId`) to enable this at the
 database level.
+
+Monetary server calculations normalize Prisma Decimal values directly into the
+shared `MoneyDecimal` (40-digit precision, half-even rounding), and persist
+calculated booking values as decimal strings. API amounts remain numeric. See
+[Monetary calculation boundaries](server-functions.md#monetary-calculation-boundaries)
+for validation, report rounding, and cache representation.
