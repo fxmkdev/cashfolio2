@@ -436,8 +436,7 @@ test("Space on the Edit button preserves the statement inclusion anchor", async 
     const edit = rows[2].getByRole("button", {
       name: "Edit Imported Transaction",
     });
-    await edit.focus();
-    await page.keyboard.press("Space");
+    await edit.press("Space");
     const dialog = page.getByRole("dialog", {
       name: "Edit Imported Transaction",
     });
