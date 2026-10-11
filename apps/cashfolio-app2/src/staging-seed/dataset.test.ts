@@ -55,6 +55,80 @@ describe("staging synthetic dataset", () => {
     expect(dataset.books[2].transactions).toEqual([]);
   });
 
+  it("sorts the household first and the empty book last by name", () => {
+    expect(dataset.books.map((book) => book.name).sort()).toEqual([
+      "1. Swiss Household Demo",
+      "2. Valuation Edge Cases",
+      "3. Empty Demo",
+    ]);
+  });
+
+  it("uses practical top-level categories without account-type wrappers", () => {
+    expect(
+      household.groups
+        .filter((group) => !group.parentKey)
+        .map((group) => group.name),
+    ).toEqual([
+      "Cash",
+      "Investments",
+      "Housing",
+      "Daily living",
+      "Leisure and travel",
+      "Former bank accounts",
+    ]);
+    for (const book of dataset.books) {
+      expect(
+        book.groups.some((group) =>
+          ["Assets", "Liabilities", "Income", "Expenses"].includes(group.name),
+        ),
+      ).toBe(false);
+    }
+    for (const key of [
+      "card",
+      "loan",
+      "salary",
+      "interest",
+      "side-income",
+      "tax",
+      "fees",
+    ]) {
+      const account = household.accounts.find(
+        (account) => account.key === key,
+      )!;
+      expect(account.groupKey).toBeUndefined();
+    }
+    for (const key of ["cash", "zkb", "postfinance", "swissquote"]) {
+      const group = household.groups.find((group) => group.key === key)!;
+      expect(group.isCashAccount).toBe(true);
+    }
+  });
+
+  it.each([
+    ["current", ["Cash", "Zürcher Kantonalbank", "Everyday account CHF"]],
+    ["savings", ["Cash", "Zürcher Kantonalbank", "Emergency savings CHF"]],
+    ["eur", ["Cash", "PostFinance", "Travel account EUR"]],
+    ["spare", ["Cash", "PostFinance", "Holiday savings CHF"]],
+    ["usd", ["Cash", "Swissquote", "Broker cash USD"]],
+    ["wallet", ["Cash", "Cash wallet CHF"]],
+    ["aapl", ["Investments", "Shares", "Apple shares"]],
+    ["btc", ["Investments", "Cryptocurrencies", "Bitcoin wallet"]],
+    ["pension", ["Investments", "Pillar 3a savings"]],
+    ["rent", ["Housing", "Rent"]],
+    ["groceries", ["Daily living", "Groceries"]],
+    ["travel", ["Leisure and travel", "Travel"]],
+    ["archived", ["Former bank accounts", "Closed bank account CHF"]],
+  ])("places %s in a realistic account path", (key, expectedPath) => {
+    const account = household.accounts.find((account) => account.key === key)!;
+    const path = [account.name];
+    let groupKey = account.groupKey;
+    while (groupKey) {
+      const group = household.groups.find((group) => group.key === groupKey)!;
+      path.unshift(group.name);
+      groupKey = group.parentKey;
+    }
+    expect(path).toEqual(expectedPath);
+  });
+
   it("covers every day, all month boundaries and today, with only opening balances before start", () => {
     const days = new Set(
       allBookings().map((booking) => booking.date.toISOString()),
@@ -318,12 +392,6 @@ describe("staging synthetic dataset", () => {
         ),
       ),
     ).toBeNull();
-    expect(
-      household.groups.find((group) => group.key === "securities")?.parentKey,
-    ).toBe("investments");
-    expect(
-      household.groups.find((group) => group.key === "investments")?.parentKey,
-    ).toBe("assets");
   });
 
   it("isolates missing valuation and crosses a month boundary without future bookings", () => {

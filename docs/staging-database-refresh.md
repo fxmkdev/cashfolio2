@@ -38,6 +38,19 @@ period-cache reads; previous staging deep links become invalid. Shared
 market-rate caches remain available and old period-cache entries expire
 normally.
 
+The seeded books are named `1. Swiss Household Demo`, `2. Valuation Edge Cases`,
+and `3. Empty Demo`. Numeric prefixes put the household first and the empty book
+last in the existing alphabetical account-book selector.
+
+The household uses practical categories without redundant account-type wrapper
+groups. Cash accounts include
+`Cash → Zürcher Kantonalbank → Everyday account CHF`, with additional accounts
+under PostFinance and Swissquote and a cash wallet directly under Cash.
+Investments contain Shares and Cryptocurrencies subgroups. Housing, Daily
+living, and Leisure and travel are top-level expense groups; income, debts,
+Taxes, and Bank and trading fees are ungrouped. Former bank accounts remains an
+archived group with a closed account.
+
 ## Configure the approved target
 
 Manually configure these secrets on the staging Fly app, following the existing

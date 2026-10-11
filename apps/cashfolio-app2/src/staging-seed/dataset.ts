@@ -61,7 +61,7 @@ function threeYearsBefore(today: Date): Date {
 }
 
 function edgeCases(startDate: Date, today: Date): SeedBook {
-  const target = book("edge-cases", "Valuation Edge Cases", startDate);
+  const target = book("edge-cases", "2. Valuation Edge Cases", startDate);
   addGroup(target, "cash", "Cash", AccountType.ASSET, { isCashAccount: true });
   addAccount(target, "current", "Transfer account CHF", AccountType.ASSET, {
     ...CHF,
@@ -115,7 +115,7 @@ function edgeCases(startDate: Date, today: Date): SeedBook {
 export function generateStagingDataset(today?: Date): SeedDataset {
   const resolvedToday = resolveToday(today);
   const startDate = threeYearsBefore(resolvedToday);
-  const household = book("household", "Swiss Household Demo", startDate);
+  const household = book("household", "1. Swiss Household Demo", startDate);
   householdAccounts(household);
   householdTransactions(household, resolvedToday);
   return {
@@ -123,7 +123,7 @@ export function generateStagingDataset(today?: Date): SeedDataset {
     books: [
       household,
       edgeCases(startDate, resolvedToday),
-      book("empty", "Empty Demo", startDate),
+      book("empty", "3. Empty Demo", startDate),
     ],
   };
 }
