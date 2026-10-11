@@ -3,7 +3,10 @@ import { Suspense, lazy, useEffect } from "react";
 import { createDocumentTitleHead } from "@/shared/document-title";
 import { loadHistoryPageData } from "./-page-loader";
 import { buildHistoryAccountDrillNavigation } from "./-account-drilldown";
-import { buildHistorySearchNavigation } from "./-page-navigation";
+import {
+  buildHistorySearchNavigation,
+  buildHistoryViewNavigation,
+} from "./-page-navigation";
 import {
   getHistoryMetric,
   getHistoryMode,
@@ -185,49 +188,12 @@ function HistoryPage() {
             }),
           )
         }
-        onMetricChange={(metric) =>
+        onViewChange={(selection) =>
           navigate(
-            buildHistorySearchNavigation({
+            buildHistoryViewNavigation({
               mode: selectedMode,
-              metric,
-              cashFlowScope: history.scopeSelection.cashFlow,
-              incomeScope: history.scopeSelection.income,
-              expenseScope: history.scopeSelection.expenses,
-              gainLossScope: history.scopeSelection.gainsLosses,
-              assetScope: history.scopeSelection.assets,
-              liabilityScope: history.scopeSelection.liabilities,
-            }),
-          )
-        }
-        onMetricScopeChange={(scope) =>
-          navigate(
-            buildHistorySearchNavigation({
-              mode: selectedMode,
-              metric: selectedMetric,
-              cashFlowScope:
-                selectedMetric === "cashFlow"
-                  ? scope
-                  : history.scopeSelection.cashFlow,
-              incomeScope:
-                selectedMetric === "income"
-                  ? scope
-                  : history.scopeSelection.income,
-              expenseScope:
-                selectedMetric === "expenses"
-                  ? scope
-                  : history.scopeSelection.expenses,
-              gainLossScope:
-                selectedMetric === "gainsLosses"
-                  ? scope
-                  : history.scopeSelection.gainsLosses,
-              assetScope:
-                selectedMetric === "assets"
-                  ? scope
-                  : history.scopeSelection.assets,
-              liabilityScope:
-                selectedMetric === "liabilities"
-                  ? scope
-                  : history.scopeSelection.liabilities,
+              selection,
+              scopeSelection: history.scopeSelection,
             }),
           )
         }

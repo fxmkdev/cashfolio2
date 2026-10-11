@@ -31,11 +31,9 @@ import {
   isHistoryPeriodMode,
   type HistoryMetric,
   type HistoryPeriodMode,
+  type HistoryViewSelection,
 } from "./-page-types";
-import {
-  isHistoryScopedMetric,
-  type HistoryScopeSelection,
-} from "@/shared/history-scope";
+import { isHistoryScopedMetric } from "@/shared/history-scope";
 import {
   addRollingAverageMetricToChartData,
   createHistoryChartOptions,
@@ -45,7 +43,7 @@ import {
   type HistoryVisibleRange,
 } from "./-chart-options";
 import { getDefaultRangeButtonLabel } from "./-range-controls";
-import { HistoryScopeControls } from "./-scope-controls";
+import { HistoryViewSelect } from "./-view-select";
 import {
   resolveHistoryAccountDrillTarget,
   type HistoryAccountDrillTarget,
@@ -65,8 +63,7 @@ export type HistoryPageViewProps = {
     periodValue: string,
   ) => void;
   onModeChange: (mode: HistoryPeriodMode) => void;
-  onMetricChange: (metric: HistoryMetric) => void;
-  onMetricScopeChange: (scope: HistoryScopeSelection) => void;
+  onViewChange: (selection: HistoryViewSelection) => void;
 };
 
 function findHistoryRangeButtons(container: HTMLElement): HTMLElement[] {
@@ -106,8 +103,7 @@ export function HistoryPageView({
   gainLossEquityAccountId,
   onAccountPeriodDoubleClick,
   onModeChange,
-  onMetricChange,
-  onMetricScopeChange,
+  onViewChange,
 }: HistoryPageViewProps) {
   const userLocale = useUserLocale();
   const activeReferenceCurrency = history.referenceCurrency;
@@ -377,12 +373,11 @@ export function HistoryPageView({
             </Text>
           </Stack>
           <div className={classes.metricControls}>
-            <HistoryScopeControls
+            <HistoryViewSelect
               selectedMetric={selectedMetric}
               scopeSelection={history.scopeSelection}
               scopeOptions={history.scopeOptions}
-              onMetricChange={onMetricChange}
-              onMetricScopeChange={onMetricScopeChange}
+              onViewChange={onViewChange}
             />
           </div>
         </Group>

@@ -108,8 +108,9 @@ for (const colorScheme of ["light", "dark"] as const) {
           path: testInfo.outputPath(`history-${metric}.png`),
           fullPage: true,
         });
+        await expect(page.getByRole("textbox")).toHaveCount(1);
         if (metric === "expenses") {
-          await expect(page.getByLabel("History Metric Scope")).toHaveValue(
+          await expect(page.getByRole("textbox", { name: "View" })).toHaveValue(
             seeded.expenseAccount.name,
           );
         }

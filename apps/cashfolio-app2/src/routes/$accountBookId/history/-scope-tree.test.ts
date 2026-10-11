@@ -1,5 +1,12 @@
 import { describe, expect, test } from "vitest";
-import { buildHistoryScopeTreeData } from "./-scope-tree";
+import { HISTORY_METRIC_OPTIONS } from "./-page-types";
+import {
+  buildHistoryViewTreeData,
+  getHistoryScopeTreeSearchLabel,
+  getHistoryViewTreeSelection,
+  getHistoryViewTreeValue,
+  buildHistoryScopeTreeData,
+} from "./-scope-tree";
 
 describe("buildHistoryScopeTreeData", () => {
   test("keeps total first and nests groups and accounts", () => {
@@ -198,5 +205,166 @@ describe("buildHistoryScopeTreeData", () => {
         nodeProps: { searchLabel: "B" },
       },
     ]);
+  });
+});
+
+const emptyScopeOptions = {
+  cashFlow: [],
+  income: [],
+  expenses: [],
+  gainsLosses: [],
+  assets: [],
+  liabilities: [],
+};
+
+describe("unified history view tree", () => {
+  test("keeps all views in order as selectable totals, even without children", () => {
+    const data = buildHistoryViewTreeData(emptyScopeOptions);
+    expect(data.map((node) => node.label)).toEqual(
+      HISTORY_METRIC_OPTIONS.map((option) => option.label),
+    );
+    for (const [index, node] of data.entries()) {
+      expect(node.children).toBeUndefined();
+      expect(
+        getHistoryViewTreeSelection(node.value, emptyScopeOptions),
+      ).toEqual({
+        metric: HISTORY_METRIC_OPTIONS[index].value,
+        scope: "total",
+      });
+    }
+  });
+
+  test("nests groups and accounts under their metric and removes redundant totals", () => {
+    const scopeOptions = {
+      ...emptyScopeOptions,
+      assets: [
+        { value: "total", label: "Total", kind: "total" },
+        { value: "group:assets", label: "Assets", kind: "group" },
+        {
+          value: "group:cash",
+          label: "Assets / Cash",
+          treeLabel: "Cash",
+          kind: "group",
+          parentValue: "group:assets",
+        },
+        {
+          value: "account:shared",
+          label: "Assets / Cash / Bank",
+          treeLabel: "Bank",
+          kind: "account",
+          parentValue: "group:cash",
+        },
+        { value: "account:ungrouped", label: "Ungrouped", kind: "account" },
+      ] as const,
+    };
+    const options = { ...scopeOptions, assets: [...scopeOptions.assets] };
+    const root = buildHistoryViewTreeData(options).find(
+      (node) => node.value === "assets:total",
+    )!;
+    expect(root.children?.map((node) => node.value)).toEqual([
+      "assets:group:assets",
+      "assets:account:ungrouped",
+    ]);
+    const account = root.children![0].children![0].children![0];
+    expect(account.label).toBe("Bank");
+    expect(getHistoryScopeTreeSearchLabel(account)).toBe(
+      "Assets / Assets / Cash / Bank",
+    );
+    expect(getHistoryViewTreeSelection(account.value, options)).toEqual({
+      metric: "assets",
+      scope: "account:shared",
+    });
+    expect(
+      getHistoryViewTreeSelection(root.children![0].value, options),
+    ).toEqual({ metric: "assets", scope: "group:assets" });
+  });
+
+  test("namespaces the same account across Cash Flow and Assets", () => {
+    const account = {
+      value: "account:bank",
+      label: "Bank",
+      kind: "account",
+    } as const;
+    const options = {
+      ...emptyScopeOptions,
+      cashFlow: [account],
+      assets: [account],
+    };
+    const data = buildHistoryViewTreeData(options);
+    const values = data.flatMap(
+      (node) => node.children?.map((child) => child.value) ?? [],
+    );
+    expect(values).toEqual(["cashFlow:account:bank", "assets:account:bank"]);
+    for (const metric of ["cashFlow", "assets"] as const) {
+      const selection = { metric, scope: account.value };
+      expect(
+        getHistoryViewTreeSelection(
+          getHistoryViewTreeValue(selection),
+          options,
+        ),
+      ).toEqual(selection);
+    }
+  });
+
+  test("preserves Gain/Loss hierarchy and colon-delimited account IDs", () => {
+    const options = {
+      ...emptyScopeOptions,
+      gainsLosses: [
+        { value: "unit-type:security", label: "Securities", kind: "gainLoss" },
+        {
+          value: "unit:security:AAPL:USD",
+          label: "Securities / AAPL",
+          treeLabel: "AAPL",
+          kind: "gainLoss",
+          parentValue: "unit-type:security",
+        },
+        {
+          value: "unit-account:security:AAPL:USD:bank",
+          label: "Securities / AAPL / Bank",
+          treeLabel: "Bank",
+          kind: "gainLoss",
+          parentValue: "unit:security:AAPL:USD",
+        },
+      ] as const,
+    };
+    const mutableOptions = {
+      ...options,
+      gainsLosses: [...options.gainsLosses],
+    };
+    const root = buildHistoryViewTreeData(mutableOptions).find(
+      (node) => node.value === "gainsLosses:total",
+    )!;
+    const account = root.children![0].children![0].children![0];
+    expect(account.value).toBe(
+      "gainsLosses:unit-account:security:AAPL:USD:bank",
+    );
+    expect(getHistoryViewTreeSelection(account.value, mutableOptions)).toEqual({
+      metric: "gainsLosses",
+      scope: "unit-account:security:AAPL:USD:bank",
+    });
+  });
+
+  test.each([
+    null,
+    "",
+    "assets",
+    "unknown:total",
+    "assets:invalid",
+    "assets:account:missing",
+    "savings:account:bank",
+    "assets:group:",
+  ])("rejects invalid or unavailable selection %s", (value) => {
+    expect(
+      getHistoryViewTreeSelection(value, emptyScopeOptions),
+    ).toBeUndefined();
+  });
+
+  test("uses the node label when a custom search label is absent", () => {
+    expect(
+      getHistoryScopeTreeSearchLabel({
+        value: "assets:total",
+        label: "Assets",
+      }),
+    ).toBe("Assets");
   });
 });

@@ -129,61 +129,123 @@ test("history deep link with invalid mode falls back to monthly", async ({
   ).not.toBeChecked();
 });
 
-test("history expense scope tree select opens with hierarchical options and supports searchable selection", async ({
+test("history view tree selects roots, groups and accounts and supports search", async ({
   page,
 }) => {
-  await page.goto(`/${seeded.accountBookId}/history`);
+  await page.goto(`/${seeded.accountBookId}/history?mode=year`);
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
 
-  await page.getByRole("combobox", { name: "View" }).click();
-  await page.getByRole("option", { name: "Expenses", exact: true }).click();
+  const viewInput = page.getByRole("textbox", { name: "View" });
+  await expect(page.getByRole("textbox")).toHaveCount(1);
+  await expect(viewInput).toHaveValue("Total Return");
+  await viewInput.click();
+  await expect(
+    page.getByRole("option", { name: "Total", exact: true }),
+  ).toHaveCount(0);
+  const expensesRoot = page
+    .getByRole("option")
+    .filter({ hasText: /^Expenses$/ });
+  await expensesRoot.click();
+  await expect(viewInput).toHaveValue("Expenses");
   await expect
     .poll(() => new URL(page.url()).searchParams.get("metric"))
     .toBe("expenses");
 
-  const scopeInput = page.getByLabel("History Metric Scope");
-  await expect(scopeInput).toHaveValue("Total");
-  await scopeInput.click();
-
-  await expect(
-    page.getByRole("option", { name: "Total", exact: true }),
-  ).toBeVisible();
-  const equityGroupOption = page
-    .getByRole("option")
-    .filter({ hasText: /^Equity$/ });
-  await expect(equityGroupOption).toBeVisible();
-  await equityGroupOption.getByRole("button", { name: "Expand" }).click();
-
-  const expenseGroupOption = page
+  await viewInput.click();
+  await expensesRoot.getByRole("button", { name: "Expand" }).click();
+  const equityGroup = page.getByRole("option").filter({ hasText: /^Equity$/ });
+  await equityGroup.getByRole("button", { name: "Expand" }).click();
+  const expenseGroup = page
     .getByRole("option")
     .filter({ hasText: /^E2E Expenses$/ });
-  await expect(expenseGroupOption).toBeVisible();
-  await expenseGroupOption.getByRole("button", { name: "Expand" }).click();
+  await expenseGroup.click();
+  await expect(viewInput).toHaveValue("E2E Expenses");
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("expenseScope"))
+    .toBe(`group:${seeded.expenseGroupId}`);
 
-  const expenseAccountOption = page.getByRole("option", {
-    name: "E2E Expense",
-    exact: true,
-  });
-  await expect(expenseAccountOption).toBeVisible();
-
-  await scopeInput.fill("E2E Expense");
-  await expect(expenseAccountOption).toBeVisible();
-  await expenseAccountOption.click();
-
-  await expect(scopeInput).toHaveValue("E2E Expense");
+  await viewInput.click();
+  await viewInput.fill("Expenses / Equity / E2E Expenses / E2E Expense");
+  await page.getByRole("option", { name: "E2E Expense", exact: true }).click();
+  await expect(viewInput).toHaveValue("E2E Expense");
   await expect
     .poll(() => new URL(page.url()).searchParams.get("expenseScope"))
     .toBe(`account:${seeded.expenseAccount.id}`);
 
-  await scopeInput.click();
-  await scopeInput.fill("uncommitted scope text");
+  await viewInput.click();
+  await viewInput.fill("uncommitted view text");
   await page.getByRole("heading", { name: "History" }).click();
-  await expect(scopeInput).toHaveValue("E2E Expense");
+  await expect(viewInput).toHaveValue("E2E Expense");
+  await page.reload();
+  await expect(viewInput).toHaveValue("E2E Expense");
+  await expect(page.getByRole("radio", { name: "Yearly" })).toBeChecked();
 
-  await scopeInput.click();
-  await page.getByRole("option", { name: "Total", exact: true }).click();
-  await expect(scopeInput).toHaveValue("Total");
+  await viewInput.click();
+  await expensesRoot.click();
+  await expect(viewInput).toHaveValue("Expenses");
   await expect
     .poll(() => new URL(page.url()).searchParams.get("expenseScope"))
     .toBeNull();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("mode"))
+    .toBe("year");
+});
+
+test("history view tree switches metric and account together and retains other saved scopes", async ({
+  page,
+}) => {
+  await page.goto(
+    `/${seeded.accountBookId}/history?mode=year&metric=expenses&expenseScope=account:${seeded.expenseAccount.id}`,
+  );
+  const viewInput = page.getByRole("textbox", { name: "View" });
+  await expect(viewInput).toHaveValue(seeded.expenseAccount.name);
+  await viewInput.click();
+  await viewInput.fill(`Assets / Assets / ${seeded.cashAccount.name}`);
+  const cashOption = page.getByRole("option", {
+    name: seeded.cashAccount.name,
+    exact: true,
+  });
+  await cashOption.click();
+  await expect
+    .poll(() => ({
+      metric: new URL(page.url()).searchParams.get("metric"),
+      assetScope: new URL(page.url()).searchParams.get("assetScope"),
+    }))
+    .toEqual({
+      metric: "assets",
+      assetScope: `account:${seeded.cashAccount.id}`,
+    });
+  await expect(viewInput).toHaveValue(seeded.cashAccount.name);
+  expect(new URL(page.url()).searchParams.get("expenseScope")).toBe(
+    `account:${seeded.expenseAccount.id}`,
+  );
+  expect(new URL(page.url()).searchParams.get("mode")).toBe("year");
+  await page.reload();
+  await expect(viewInput).toHaveValue(seeded.cashAccount.name);
+
+  await viewInput.click();
+  await viewInput.fill("Net Worth");
+  await page.getByRole("option", { name: "Net Worth", exact: true }).click();
+  await expect(viewInput).toHaveValue("Net Worth");
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("metric"))
+    .toBe("netWorth");
+  expect(new URL(page.url()).searchParams.get("assetScope")).toBe(
+    `account:${seeded.cashAccount.id}`,
+  );
+
+  await viewInput.click();
+  await viewInput.fill("Assets");
+  await page
+    .getByRole("option")
+    .filter({ hasText: /^Assets$/ })
+    .first()
+    .click();
+  await expect(viewInput).toHaveValue("Assets");
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("assetScope"))
+    .toBeNull();
+  expect(new URL(page.url()).searchParams.get("expenseScope")).toBe(
+    `account:${seeded.expenseAccount.id}`,
+  );
 });
