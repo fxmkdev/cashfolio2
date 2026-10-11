@@ -104,8 +104,12 @@ Period implementation modules are grouped by concern under `src/server/period/`:
 - `net-worth/`: end-of-period and opening-balance net-worth loading
 
 Cross-concern selection, conversion, balance statistics, unit formatting, and
-period helpers remain at the period folder root. `period-helpers.ts` retains
-selection/year helpers and rounding, and re-exports the extracted helpers:
+calculation-context preparation remain at the period folder root.
+`period-calculation-context.ts` prepares the shared maps and virtual hierarchy
+from preloaded base data, as described in the
+[reporting data-loading boundary](#reporting-data-loading-boundary).
+`period-helpers.ts` retains selection/year helpers and rounding, and re-exports
+the extracted helpers:
 
 - `breakdown/period-breakdown-state.ts`: group paths, accumulator types, and
   mutable hierarchy nodes shared by breakdown builders
@@ -118,10 +122,12 @@ selection/year helpers and rounding, and re-exports the extracted helpers:
   ordering, and convertible account selection
 
 Extracted breakdown builders use the shared money rounding primitive directly;
-they do not import back through `period-helpers.ts`. Tests live alongside the
-modules they exercise; cross-concern pipeline tests remain at the root. Use
-explicit imports between these modules. Existing public facades in `src/server/`
-remain the entry points for routes and keep their import paths stable.
+they do not import back through `period-helpers.ts`. Breakdown and holding-event
+helpers remain pure and consume prepared inputs; database reads stay in the
+base-data loaders. Tests live alongside the modules they exercise; cross-concern
+pipeline tests remain at the root. Use explicit imports between these modules.
+Existing public facades in `src/server/` remain the entry points for routes and
+keep their import paths stable.
 
 ## Concurrent Account-Book Mutations
 
