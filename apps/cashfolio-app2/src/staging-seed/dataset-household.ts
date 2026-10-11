@@ -20,26 +20,25 @@ import {
 } from "./dataset-model";
 
 export function householdAccounts(target: SeedBook) {
-  addGroup(target, "assets", "Assets", AccountType.ASSET);
-  addGroup(target, "cash", "Cash and bank accounts", AccountType.ASSET, {
-    parentKey: "assets",
+  addGroup(target, "cash", "Cash", AccountType.ASSET, {
     isCashAccount: true,
   });
-  addGroup(target, "investments", "Investments", AccountType.ASSET, {
-    parentKey: "assets",
-  });
+  for (const [key, name] of [
+    ["zkb", "Zürcher Kantonalbank"],
+    ["postfinance", "PostFinance"],
+    ["swissquote", "Swissquote"],
+  ]) {
+    addGroup(target, key, name, AccountType.ASSET, {
+      parentKey: "cash",
+      isCashAccount: true,
+    });
+  }
+  addGroup(target, "investments", "Investments", AccountType.ASSET);
   addGroup(target, "securities", "Shares", AccountType.ASSET, {
     parentKey: "investments",
   });
   addGroup(target, "crypto", "Cryptocurrencies", AccountType.ASSET, {
     parentKey: "investments",
-  });
-  addGroup(target, "liabilities", "Liabilities", AccountType.LIABILITY);
-  addGroup(target, "income", "Income", AccountType.EQUITY, {
-    equityAccountSubtype: EquityAccountSubtype.INCOME,
-  });
-  addGroup(target, "expenses", "Expenses", AccountType.EQUITY, {
-    equityAccountSubtype: EquityAccountSubtype.EXPENSE,
   });
   for (const [key, name] of [
     ["housing", "Housing"],
@@ -47,7 +46,6 @@ export function householdAccounts(target: SeedBook) {
     ["leisure", "Leisure and travel"],
   ]) {
     addGroup(target, key, name, AccountType.EQUITY, {
-      parentKey: "expenses",
       equityAccountSubtype: EquityAccountSubtype.EXPENSE,
     });
   }
@@ -55,17 +53,17 @@ export function householdAccounts(target: SeedBook) {
     isActive: false,
     isCashAccount: true,
   });
-  for (const [key, name, unit] of [
-    ["current", "Everyday account CHF", CHF],
-    ["savings", "Emergency savings CHF", CHF],
-    ["wallet", "Cash wallet CHF", CHF],
-    ["eur", "Travel account EUR", EUR],
-    ["usd", "Broker cash USD", USD],
-    ["spare", "Holiday savings CHF", CHF],
+  for (const [key, name, groupKey, unit] of [
+    ["current", "Everyday account CHF", "zkb", CHF],
+    ["savings", "Emergency savings CHF", "zkb", CHF],
+    ["wallet", "Cash wallet CHF", "cash", CHF],
+    ["eur", "Travel account EUR", "postfinance", EUR],
+    ["usd", "Broker cash USD", "swissquote", USD],
+    ["spare", "Holiday savings CHF", "postfinance", CHF],
   ] as const) {
     addAccount(target, key, name, AccountType.ASSET, {
       ...unit,
-      groupKey: "cash",
+      groupKey,
       isCashAccount: true,
       ...(key === "current" ? { statementImportCsvFormat } : undefined),
     });
@@ -85,7 +83,6 @@ export function householdAccounts(target: SeedBook) {
   ]) {
     addAccount(target, key, name, AccountType.LIABILITY, {
       ...CHF,
-      groupKey: "liabilities",
     });
   }
   for (const [key, name] of [
@@ -95,7 +92,6 @@ export function householdAccounts(target: SeedBook) {
   ]) {
     addAccount(target, key, name, AccountType.EQUITY, {
       ...(key === "interest" ? {} : CHF),
-      groupKey: "income",
       equityAccountSubtype: EquityAccountSubtype.INCOME,
     });
   }
@@ -106,11 +102,11 @@ export function householdAccounts(target: SeedBook) {
     ["groceries", "Groceries", "daily"],
     ["household", "Household supplies", "daily"],
     ["transport", "Public transport", "daily"],
-    ["tax", "Taxes", "expenses"],
+    ["tax", "Taxes", undefined],
     ["restaurants", "Cafes and restaurants", "leisure"],
     ["travel", "Travel", "leisure"],
-    ["fees", "Bank and trading fees", "expenses"],
-  ]) {
+    ["fees", "Bank and trading fees", undefined],
+  ] as const) {
     addAccount(target, key, name, AccountType.EQUITY, {
       ...(key === "travel" ? {} : CHF),
       groupKey,

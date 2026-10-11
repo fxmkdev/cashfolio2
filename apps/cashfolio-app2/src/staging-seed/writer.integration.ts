@@ -194,9 +194,11 @@ describe("staging seed against disposable PostgreSQL", () => {
         roles: [],
       }),
     );
-    expect(current.books.map((book) => book.name).sort()).toEqual(
-      ["Swiss Household Demo", "Valuation Edge Cases", "Empty Demo"].sort(),
-    );
+    expect(current.books.map((book) => book.name).sort()).toEqual([
+      "1. Swiss Household Demo",
+      "2. Valuation Edge Cases",
+      "3. Empty Demo",
+    ]);
     expect(
       current.books.every((book) => book.referenceCurrency === "CHF"),
     ).toBe(true);
