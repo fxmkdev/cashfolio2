@@ -853,14 +853,12 @@ describe("transactions mutations", () => {
     expect(prisma.booking.update).not.toHaveBeenCalled();
   });
   it("recreates transaction edit queries after a deadlock and cleans up only after commit", async () => {
-    prisma.$transaction
-      .mockRejectedValueOnce(
-        new Prisma.PrismaClientKnownRequestError("deadlock", {
-          code: "P2034",
-          clientVersion: "test",
-        }),
-      )
-      .mockResolvedValueOnce([]);
+    prisma.transaction.update.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError("deadlock", {
+        code: "P2034",
+        clientVersion: "test",
+      }),
+    );
     await updateTransaction({
       data: { ...createTransactionInput(), transactionId: "tx-1" },
     });
@@ -868,7 +866,8 @@ describe("transactions mutations", () => {
     expect(prisma.$transaction).toHaveBeenCalledTimes(2);
     const first = prisma.$transaction.mock.calls[0]![0];
     const second = prisma.$transaction.mock.calls[1]![0];
-    expect(second[0]).not.toBe(first[0]);
+    expect(second).not.toBe(first);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
     expect(prisma.booking.deleteMany).toHaveBeenCalledTimes(2);
     expect(prisma.transaction.update).toHaveBeenCalledTimes(2);
     expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledOnce();

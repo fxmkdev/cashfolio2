@@ -19,6 +19,8 @@ import { ConfirmArchiveModal } from "@/components/confirm-archive-modal";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 import { DataGrid } from "@/components/data-grid";
 import { PageShell } from "@/components/page-shell";
+import { UnarchiveMutationFeedback } from "@/components/unarchive-mutation-feedback";
+import type { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
 import {
   ReorderGroupChildrenModal,
   type ReorderGroupChildRow,
@@ -43,6 +45,7 @@ type RowTarget = {
 export type AccountsPageViewProps = {
   accountBookId: string;
   onRefreshConstraints?: () => Promise<void>;
+  unarchiveRecovery?: ReturnType<typeof useUnarchiveMutation>;
   tab: TabValue;
   mode: AccountsMode;
   tabs: readonly { value: TabValue; label: string }[];
@@ -95,6 +98,7 @@ export type AccountsPageViewProps = {
 export function AccountsPageView({
   accountBookId,
   onRefreshConstraints,
+  unarchiveRecovery,
   tab,
   mode,
   tabs,
@@ -200,6 +204,10 @@ export function AccountsPageView({
         }
       />
 
+      <UnarchiveMutationFeedback
+        recovery={unarchiveRecovery}
+        onRefreshConstraints={onRefreshConstraints}
+      />
       <Tabs value={tab}>
         <Tabs.List mb="md">
           {tabs.map((t) => (
@@ -322,6 +330,8 @@ export function AccountsPageView({
       />
 
       <ReorderGroupChildrenModal
+        key={reorderingRow?.parentKey}
+        onRefreshConstraints={onRefreshConstraints}
         opened={!!reorderingRow}
         onClose={onCloseReorder}
         rowName={reorderingRow?.name ?? ""}

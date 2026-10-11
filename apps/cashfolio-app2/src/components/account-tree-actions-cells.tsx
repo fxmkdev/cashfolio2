@@ -20,6 +20,7 @@ export function ArchivedAccountTreeActionsCell({
   onReorder,
   unarchivable,
   onUnarchive,
+  unarchivePending = false,
 }: {
   reorderLabel?: string;
   reorderEnabled?: boolean;
@@ -31,6 +32,7 @@ export function ArchivedAccountTreeActionsCell({
   onReorder?: () => void;
   unarchivable: boolean;
   onUnarchive: () => void;
+  unarchivePending?: boolean;
 }) {
   const reorderActionLabel = reorderLabel ?? "Reorder Siblings";
   const reorderActionUnavailableLabel = "Cannot reorder right now";
@@ -86,7 +88,7 @@ export function ArchivedAccountTreeActionsCell({
             variant="subtle"
             size="sm"
             color="blue"
-            disabled={!unarchivable}
+            disabled={!unarchivable || unarchivePending}
             onClick={onUnarchive}
             aria-label="Unarchive"
           >

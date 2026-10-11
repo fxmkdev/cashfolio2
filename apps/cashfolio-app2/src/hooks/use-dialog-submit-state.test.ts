@@ -42,6 +42,11 @@ vi.mock("react", () => ({
 import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../shared/mutation-errors";
 import { useDialogSubmitState } from "./use-dialog-submit-state";
 import { useRefreshedMutationData } from "./use-refreshed-mutation-data";
+import {
+  useReorderGroupChildren,
+  type ReorderGroupChildRow,
+} from "./use-reorder-group-children";
+import { useUnarchiveMutation } from "./use-unarchive-mutation";
 
 function render<T>(hook: () => T): T {
   harness.cursor = 0;
@@ -67,6 +72,233 @@ beforeEach(() => {
 afterEach(() => {
   harness.cleanups.forEach((cleanup) => cleanup());
   vi.useRealTimers();
+});
+
+describe("reorder recovery", () => {
+  const initialRows: ReorderGroupChildRow[] = [
+    { id: "a", name: "A", nodeType: "account" },
+    { id: "b", name: "B", nodeType: "accountGroup" },
+  ];
+  const reversed = [...initialRows].reverse();
+  it("restores the confirmed order and remounts the grid before refreshing", async () => {
+    const onReorder = vi.fn().mockRejectedValue(new Error("Rejected reorder"));
+    let refreshed = initialRows;
+    const refresh = vi.fn(async () => {
+      expect(render(useHook).rows).toEqual(initialRows);
+      expect(render(useHook).gridVersion).toBe(1);
+      refreshed = [...initialRows];
+    });
+    const useHook = () =>
+      useReorderGroupChildren({
+        opened: true,
+        initialRows: refreshed,
+        onReorder,
+        onRefreshConstraints: refresh,
+      });
+    await render(useHook).reorder(reversed);
+    expect(render(useHook).submitState.submissionError?.message).toBe(
+      "Rejected reorder",
+    );
+    expect(refresh).toHaveBeenCalledOnce();
+    await render(useHook).reorder(reversed);
+    expect(onReorder).toHaveBeenCalledTimes(2);
+  });
+  it("retains a successful order and prevents duplicate pending drags", async () => {
+    const pending = deferred();
+    const onReorder = vi.fn(() => pending.promise);
+    const useHook = () =>
+      useReorderGroupChildren({ opened: true, initialRows, onReorder });
+    const result = render(useHook).reorder(reversed);
+    await render(useHook).reorder(initialRows);
+    expect(onReorder).toHaveBeenCalledOnce();
+    vi.advanceTimersByTime(2000);
+    expect(render(useHook).submitState.isWaiting).toBe(true);
+    pending.resolve();
+    await result;
+    expect(render(useHook).rows).toEqual(reversed);
+    expect(render(useHook).submitState.isWaiting).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+  it("offers explicit busy retry without automatically resubmitting", async () => {
+    const onReorder = vi
+      .fn()
+      .mockRejectedValueOnce(new Error(ACCOUNT_BOOK_BUSY_MESSAGE))
+      .mockResolvedValue(undefined);
+    const useHook = () =>
+      useReorderGroupChildren({ opened: true, initialRows, onReorder });
+    await render(useHook).reorder(reversed);
+    expect(onReorder).toHaveBeenCalledOnce();
+    expect(render(useHook).rows).toEqual(initialRows);
+    await render(useHook).retry();
+    expect(onReorder).toHaveBeenLastCalledWith(reversed);
+    expect(onReorder).toHaveBeenCalledTimes(2);
+    expect(render(useHook).rows).toEqual(reversed);
+  });
+  it("requires a new drag when refreshed sibling membership changed", async () => {
+    let refreshed = initialRows;
+    const onReorder = vi
+      .fn()
+      .mockRejectedValue(new Error(ACCOUNT_BOOK_BUSY_MESSAGE));
+    const refresh = async () => {
+      refreshed = [initialRows[0], { id: "c", name: "C", nodeType: "account" }];
+    };
+    const useHook = () =>
+      useReorderGroupChildren({
+        opened: true,
+        initialRows: refreshed,
+        onReorder,
+        onRefreshConstraints: refresh,
+      });
+    await render(useHook).reorder(reversed);
+    expect(render(useHook).membershipChanged).toBe(true);
+    await render(useHook).retry();
+    expect(onReorder).toHaveBeenCalledOnce();
+    expect(render(useHook).rows).toEqual(refreshed);
+  });
+  it("keeps a failed refresh separate and allows manual recovery", async () => {
+    const onReorder = vi
+      .fn()
+      .mockRejectedValue(new Error("Validation rejected"));
+    const refresh = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Read failed"))
+      .mockResolvedValue(undefined);
+    const useHook = () =>
+      useReorderGroupChildren({
+        opened: true,
+        initialRows,
+        onReorder,
+        onRefreshConstraints: refresh,
+      });
+    await render(useHook).reorder(reversed);
+    expect(render(useHook).submitState.refreshError).toContain(
+      "Could not refresh",
+    );
+    await render(useHook).submitState.refreshConstraints();
+    expect(render(useHook).submitState.refreshError).toBeNull();
+    expect(render(useHook).submitState.submissionError?.message).toBe(
+      "Validation rejected",
+    );
+    await render(useHook).retry();
+    expect(onReorder).toHaveBeenCalledOnce();
+  });
+  it("does not retry uncertain outcomes or unchanged/invalid row orders", async () => {
+    const onReorder = vi
+      .fn()
+      .mockRejectedValue(new TypeError("Failed to fetch"));
+    const useHook = () =>
+      useReorderGroupChildren({ opened: true, initialRows, onReorder });
+    await render(useHook).reorder(initialRows);
+    await render(useHook).reorder([initialRows[0]]);
+    expect(onReorder).not.toHaveBeenCalled();
+    await render(useHook).reorder(reversed);
+    expect(
+      render(useHook).submitState.submissionError?.isUncertainOutcome,
+    ).toBe(true);
+    await render(useHook).retry();
+    expect(onReorder).toHaveBeenCalledOnce();
+  });
+});
+
+describe("direct unarchive recovery", () => {
+  const account = { id: "a", name: "Account", nodeType: "account" as const };
+  const group = { id: "g", name: "Group", nodeType: "accountGroup" as const };
+  it.each([account, group])(
+    "captures rejection and refreshes the target's eligibility: $nodeType",
+    async (target) => {
+      let eligible = true;
+      const onUnarchive = vi
+        .fn()
+        .mockRejectedValue(new Error("Inactive ancestor"));
+      const refresh = vi.fn(async () => {
+        eligible = false;
+      });
+      const useHook = () =>
+        useUnarchiveMutation({
+          scopeKey: "book",
+          onUnarchive,
+          onRefreshConstraints: refresh,
+          isEligible: () => eligible,
+        });
+      await render(useHook).unarchive(target);
+      expect(render(useHook).target).toEqual(target);
+      expect(render(useHook).submitState.submissionError?.message).toBe(
+        "Inactive ancestor",
+      );
+      expect(render(useHook).retryDisabled).toBe(true);
+      expect(refresh).toHaveBeenCalledOnce();
+      await render(useHook).retry();
+      expect(onUnarchive).toHaveBeenCalledOnce();
+    },
+  );
+  it("does not replace the pending target on duplicate submission", async () => {
+    const pending = deferred();
+    const onUnarchive = vi.fn(() => pending.promise);
+    const useHook = () =>
+      useUnarchiveMutation({
+        scopeKey: "book",
+        onUnarchive,
+        onRefreshConstraints: vi.fn(),
+        isEligible: () => true,
+      });
+    const result = render(useHook).unarchive(account);
+    await render(useHook).unarchive(group);
+    expect(render(useHook).target).toEqual(account);
+    expect(render(useHook).isPending).toBe(true);
+    expect(onUnarchive).toHaveBeenCalledOnce();
+    pending.resolve();
+    await result;
+    expect(render(useHook).target).toBeNull();
+  });
+  it("only explicitly retries confirmed busy rollback while still eligible", async () => {
+    let eligible = true;
+    const onUnarchive = vi
+      .fn()
+      .mockRejectedValueOnce(new Error(ACCOUNT_BOOK_BUSY_MESSAGE))
+      .mockResolvedValue(undefined);
+    const useHook = () =>
+      useUnarchiveMutation({
+        scopeKey: "book",
+        onUnarchive,
+        onRefreshConstraints: vi.fn(),
+        isEligible: () => eligible,
+      });
+    await render(useHook).unarchive(account);
+    expect(onUnarchive).toHaveBeenCalledOnce();
+    eligible = false;
+    await render(useHook).retry();
+    expect(onUnarchive).toHaveBeenCalledOnce();
+    eligible = true;
+    await render(useHook).retry();
+    expect(onUnarchive).toHaveBeenCalledTimes(2);
+    expect(render(useHook).target).toBeNull();
+  });
+  it("keeps network uncertainty and refresh errors separate, and clears context on navigation", async () => {
+    let scopeKey = "book:a";
+    const onUnarchive = vi
+      .fn()
+      .mockRejectedValue(new TypeError("Failed to fetch"));
+    const refresh = vi.fn().mockRejectedValue(new Error("Read failed"));
+    const useHook = () =>
+      useUnarchiveMutation({
+        scopeKey,
+        onUnarchive,
+        onRefreshConstraints: refresh,
+        isEligible: () => true,
+      });
+    await render(useHook).unarchive(account);
+    expect(
+      render(useHook).submitState.submissionError?.isUncertainOutcome,
+    ).toBe(true);
+    expect(render(useHook).submitState.refreshError).toContain(
+      "Could not refresh",
+    );
+    await render(useHook).retry();
+    expect(onUnarchive).toHaveBeenCalledOnce();
+    scopeKey = "book:b";
+    render(useHook);
+    expect(render(useHook).target).toBeNull();
+  });
 });
 
 describe("dialog submission lifecycle", () => {

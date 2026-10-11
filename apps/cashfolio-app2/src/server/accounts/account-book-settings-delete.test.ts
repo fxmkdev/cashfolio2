@@ -5,6 +5,7 @@ import {
   deleteAccountBook,
   ensureAuthorizedForAccountBookId,
   ensureSameOriginRequestFromServerContext,
+  prisma,
   tx,
   resetAccountBookSettingsMocks,
   restoreAccountBookSettingsMocks,
@@ -80,8 +81,8 @@ describe("deleteAccountBook", () => {
 
     expect(tx.accountBook.delete).not.toHaveBeenCalled();
   });
-  it("retries only the database delete after a conflict", async () => {
-    prisma.accountBook.delete.mockRejectedValueOnce(
+  it("retries the locked delete transaction after a conflict", async () => {
+    tx.accountBook.delete.mockRejectedValueOnce(
       new Prisma.PrismaClientKnownRequestError("deadlock", {
         code: "P2034",
         clientVersion: "test",
@@ -90,8 +91,10 @@ describe("deleteAccountBook", () => {
     await deleteAccountBook({
       data: { accountBookId: "book-1", confirmationName: "My Book" },
     });
-    expect(prisma.accountBook.delete).toHaveBeenCalledTimes(2);
-    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledOnce();
+    expect(tx.accountBook.delete).toHaveBeenCalledTimes(2);
+    expect(tx.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(2);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(2);
     expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledOnce();
     expect(ensureSameOriginRequestFromServerContext).toHaveBeenCalledOnce();
   });

@@ -5,10 +5,12 @@ export function MutationSubmitFeedback({
   state,
   onRefreshConstraints,
   onRetry,
+  retryDisabled = false,
 }: {
   state: ReturnType<typeof useDialogSubmitState>;
   onRefreshConstraints?: () => Promise<void>;
   onRetry?: () => void;
+  retryDisabled?: boolean;
 }) {
   return (
     <>
@@ -44,7 +46,9 @@ export function MutationSubmitFeedback({
             <Button
               size="xs"
               type={onRetry ? "button" : "submit"}
-              disabled={state.isSubmitting || state.isRefreshing}
+              disabled={
+                retryDisabled || state.isSubmitting || state.isRefreshing
+              }
               onClick={onRetry}
             >
               Try again

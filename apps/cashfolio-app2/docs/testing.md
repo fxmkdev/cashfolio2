@@ -69,8 +69,10 @@ cycles, sibling names, shared opening-balance account creation, cash
 inheritance, archive/unarchive checks, start-date validation, and rollback. A
 held-lock test keeps the holder active beyond 25 seconds, verifies the busy-book
 rejection without writes, and then verifies an explicit retry after releasing
-the lock. CI runs the suite in the PostgreSQL-backed staging-seed integration
-job.
+the lock. A cache-trigger deadlock test selects the public book-locking mutation
+as victim and verifies a fresh transaction retries successfully without losing
+the competing writer's changes. CI runs the suite in the PostgreSQL-backed
+staging-seed integration job.
 
 `e2e/tests/mutation-recovery.spec.ts` verifies rejected simple/split drafts,
 archived selections, archive/delete confirmation errors, account/group edits,

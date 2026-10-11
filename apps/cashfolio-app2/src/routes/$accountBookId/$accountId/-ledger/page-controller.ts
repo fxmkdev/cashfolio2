@@ -1,4 +1,5 @@
 import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
+import { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
 import { useCallback, useMemo, useState } from "react";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import {
@@ -378,9 +379,19 @@ export function useLedgerPageController(args: {
     accountTreeRow.unarchiveDisabledReason;
   const accountDeleteDisabledReason =
     systemManagedAccountDisabledReason ?? accountTreeRow.deleteDisabledReason;
+  const unarchiveRecovery = useUnarchiveMutation({
+    scopeKey: `${args.accountBookId}:${account.id}`,
+    onUnarchive: accountActions.handleUnarchiveAccount,
+    onRefreshConstraints,
+    isEligible: (target) =>
+      target.id === account.id &&
+      !systemManagedAccountDisabledReason &&
+      accountTreeRow.unarchivable,
+  });
 
   return {
     onRefreshConstraints,
+    unarchiveRecovery,
     backTab,
     account,
     accountGroups,
@@ -441,7 +452,12 @@ export function useLedgerPageController(args: {
     onOpenArchiveAccount: () => setArchivingAccount(true),
     onCloseArchiveAccount: () => setArchivingAccount(false),
     onConfirmArchiveAccount: accountActions.handleArchiveAccount,
-    onUnarchiveAccount: accountActions.handleUnarchiveAccount,
+    onUnarchiveAccount: () =>
+      unarchiveRecovery.unarchive({
+        id: account.id,
+        name: account.name,
+        nodeType: "account",
+      }),
     onOpenDeleteAccount: () => setDeletingAccount(true),
     onCloseDeleteAccount: () => setDeletingAccount(false),
     onConfirmDeleteAccount: accountActions.handleDeleteAccount,

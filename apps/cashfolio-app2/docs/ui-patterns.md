@@ -783,7 +783,22 @@ markers and balance previews. It retains draft edits and inclusion decisions,
 even when new matches are discovered, and revalidates against refreshed account
 choices and start dates. Review remains open until a successful import.
 
+Sibling reorder uses the same submission feedback, but restores the last
+confirmed order on rejection rather than retaining an unsaved arrangement. AG
+Grid remounts to undo its internally managed drag order, then an authorized
+refresh reloads saved siblings. A busy rollback retains the attempted order for
+explicit retry only while the sibling membership is unchanged; otherwise the
+user must drag the refreshed rows again. Dragging is disabled during saves and
+refreshes.
+
+Direct unarchive on the accounts page and ledger uses `useUnarchiveMutation`.
+Page-level feedback names the affected account/group, refreshes eligibility, and
+keeps other open drafts mounted. Pending actions cannot be submitted twice. Busy
+retries are disabled when the refreshed target is no longer eligible.
+
 Only the confirmed busy-book rollback offers **Try again**. A failed network
 request can have an uncertain save outcome; feedback asks the user to refresh
-and check saved data before submitting again. No automatic mutation retry,
-optimistic edit versions, or live cross-tab synchronization is implemented.
+and check saved data before submitting again. The client never automatically
+retries a mutation. Server-side retries apply only to fully rolled-back database
+conflicts (see [server functions](server-functions.md)). Optimistic edit
+versions and live cross-tab synchronization remain separate follow-ups.

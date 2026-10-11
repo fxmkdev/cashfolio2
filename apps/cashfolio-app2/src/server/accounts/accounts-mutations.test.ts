@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Prisma } from "../../.prisma-client/client";
+import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../../shared/mutation-errors";
 import {
   AccountType,
   EquityAccountSubtype,
@@ -1127,18 +1128,44 @@ describe("createAccountGroup", () => {
 });
 
 describe("reorderAccountTreeItems conflict recovery", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    tx.$queryRaw.mockResolvedValue([{ id: "book-1" }]);
+    prisma.$transaction.mockImplementation(async (callback) => callback(tx));
+    tx.account.update.mockResolvedValue({ id: "account" });
+  });
+
+  it.each([
+    { code: "55P03" },
+    { driverAdapterError: { cause: { originalCode: "55P03" } } },
+  ])("does not automatically retry a busy-book rollback: %j", async (meta) => {
+    tx.$queryRaw.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError("lock timeout", {
+        code: "P2010",
+        clientVersion: "test",
+        meta,
+      }),
+    );
+    await expect(
+      reorderAccountTreeItems({
+        data: {
+          accountBookId: "book-1",
+          updates: [{ id: "a", nodeType: "account", sortOrder: 0 }],
+        },
+      }),
+    ).rejects.toThrow(ACCOUNT_BOOK_BUSY_MESSAGE);
+    expect(prisma.$transaction).toHaveBeenCalledOnce();
+    expect(tx.account.update).not.toHaveBeenCalled();
+    expect(invalidatePeriodBaseDataCacheForAccountBook).not.toHaveBeenCalled();
+  });
 
   it("recreates reorder queries on conflict with authorization and cleanup outside retries", async () => {
-    prisma.account.update.mockImplementation(async () => ({ id: "account" }));
-    prisma.$transaction
-      .mockRejectedValueOnce(
-        new Prisma.PrismaClientKnownRequestError("deadlock", {
-          code: "P2034",
-          clientVersion: "test",
-        }),
-      )
-      .mockResolvedValueOnce([]);
+    tx.account.update.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError("deadlock", {
+        code: "P2034",
+        clientVersion: "test",
+      }),
+    );
 
     await reorderAccountTreeItems({
       data: {
@@ -1154,8 +1181,8 @@ describe("reorderAccountTreeItems conflict recovery", () => {
     const first = prisma.$transaction.mock.calls[0]![0];
     const second = prisma.$transaction.mock.calls[1]![0];
     expect(second).not.toBe(first);
-    expect(second[0]).not.toBe(first[0]);
-    expect(prisma.account.update).toHaveBeenCalledTimes(4);
+    expect(tx.account.update).toHaveBeenCalledTimes(4);
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(2);
     expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledOnce();
     expect(ensureSameOriginRequestFromServerContext).toHaveBeenCalledOnce();
     expect(

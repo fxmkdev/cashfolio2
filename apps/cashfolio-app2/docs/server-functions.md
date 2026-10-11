@@ -96,8 +96,11 @@ helper modules.
 PostgreSQL SQLSTATE `55P03` (including Prisma's driver-adapter representation)
 is translated only after the transaction has rolled back to: "This account book
 is busy. No changes were saved. Please try again." Other errors propagate as
-before. A busy-book rejection is safe to retry explicitly; mutations are never
-retried automatically.
+before. A busy-book rejection is safe to retry explicitly and is never retried
+automatically. Each account, transaction, settings, and book-deletion mutation
+wraps a fresh book-locking transaction in one `withDatabaseConflictRetry` loop.
+Only fully rolled-back database conflicts receive main's bounded server-side
+retries; authorization and post-commit cleanup remain outside that loop.
 
 The transaction explicitly uses `ReadCommitted`: after waiting for a previous
 writer, subsequent reads see that writer's committed changes. This protects
