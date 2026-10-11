@@ -142,6 +142,12 @@ remain the entry points for routes and keep their import paths stable.
   failed cleanup, and process crashes after commit cannot make old cache keys
   valid again; obsolete entries expire naturally. Derived History entries also
   expire naturally.
+- Account/transaction mutation handlers retry only rolled-back database
+  conflicts, up to three attempts with 100 ms and 200 ms waits. Settings updates
+  and book/user deletion use the same helper. Authorization runs before
+  retrying; Redis cleanup, Logto calls, and session changes are outside the
+  retry loop. This handles book/child deadlocks introduced by the revision
+  triggers without replaying committed writes or external effects.
 - History metrics entries are written only when every valuation dependency came
   from identity conversion or the long-lived Redis TimeSeries valuation cache.
   Metrics that needed provider fetches, short-lived fallback entries, or missing

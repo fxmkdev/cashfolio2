@@ -2,6 +2,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { expect, test } from "@playwright/test";
 import type { Prisma } from "../../src/.prisma-client/client";
 import { AccountType, Unit } from "../../src/.prisma-client/enums";
+import { withDatabaseConflictRetry } from "../../src/server/database-conflict-retry";
 import { prisma } from "../support/db-client";
 
 let bookId: string;
@@ -223,3 +224,202 @@ test("bulk writes and concurrent commits generate distinct revisions", async () 
   });
   expect(await revision()).toBe(finalRevision);
 });
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+async function backendPid(tx: Prisma.TransactionClient) {
+  const [row] = await tx.$queryRaw<{ pid: number }[]>`
+    SELECT pg_backend_pid() AS pid
+  `;
+  return row!.pid;
+}
+
+async function waitUntilBlocked(waitingPid: number, blockingPid: number) {
+  await expect
+    .poll(async () => {
+      const [row] = await prisma.$queryRaw<{ blocked: boolean }[]>`
+        SELECT ${blockingPid} = ANY(pg_blocking_pids(${waitingPid})) AS blocked
+      `;
+      return row!.blocked;
+    })
+    .toBe(true);
+}
+
+for (const victim of ["multi-row", "single-row"] as const) {
+  test(`retries ${victim} mutation after a book/child deadlock without partial writes`, async () => {
+    const secondAccount = await prisma.account.create({
+      data: {
+        accountBookId: bookId,
+        name: "Second account",
+        type: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+      },
+    });
+    const originalRevision = await revision();
+    const firstWritten = deferred<void>();
+    const secondLocked = deferred<void>();
+    const multiPid = deferred<number>();
+    const singlePid = deferred<number>();
+    const continueMulti = deferred<void>();
+    const continueSingle = deferred<void>();
+    let multiAttempts = 0;
+    let singleAttempts = 0;
+    let rolledBackValue: number | string | null = null;
+    let rolledBackRevision: string | undefined;
+
+    const multi = withDatabaseConflictRetry(async () => {
+      const attempt = ++multiAttempts;
+      try {
+        return await prisma.$transaction(
+          async (tx) => {
+            // Only the chosen victim starts its short detector once the cycle
+            // exists. The other connection may wait while we establish it.
+            if (victim === "multi-row") {
+              await tx.$executeRaw`SET LOCAL deadlock_timeout = '1s'`;
+            } else {
+              await tx.$executeRaw`SET LOCAL deadlock_timeout = '30s'`;
+            }
+            if (attempt === 1) multiPid.resolve(await backendPid(tx));
+            await tx.account.update({
+              where: {
+                id_accountBookId: { id: accountId, accountBookId: bookId },
+              },
+              data: { sortOrder: 11 },
+            });
+            if (attempt === 1) {
+              rolledBackRevision = await revision(bookId, tx);
+              firstWritten.resolve();
+              await continueMulti.promise;
+            }
+            await tx.account.update({
+              where: {
+                id_accountBookId: {
+                  id: secondAccount.id,
+                  accountBookId: bookId,
+                },
+              },
+              data: { sortOrder: 22 },
+            });
+            return revision(bookId, tx);
+          },
+          { timeout: 30_000 },
+        );
+      } catch (error) {
+        if (victim === "multi-row" && attempt === 1) {
+          const account = await prisma.account.findUniqueOrThrow({
+            where: {
+              id_accountBookId: { id: accountId, accountBookId: bookId },
+            },
+          });
+          rolledBackValue = account.sortOrder;
+        }
+        throw error;
+      }
+    });
+    // Observe rejection while coordinating the first transaction, too.
+    let outcomes = Promise.allSettled([multi]);
+    try {
+      await Promise.race([firstWritten.promise, multi]);
+      const single = withDatabaseConflictRetry(async () => {
+        const attempt = ++singleAttempts;
+        try {
+          return await prisma.$transaction(
+            async (tx) => {
+              if (victim === "single-row") {
+                await tx.$executeRaw`SET LOCAL deadlock_timeout = '1s'`;
+              } else {
+                await tx.$executeRaw`SET LOCAL deadlock_timeout = '30s'`;
+              }
+              if (attempt === 1) {
+                singlePid.resolve(await backendPid(tx));
+                await tx.$queryRaw`
+                  SELECT "id" FROM "Account"
+                  WHERE "id" = ${secondAccount.id} AND "accountBookId" = ${bookId}
+                  FOR UPDATE
+                `;
+                secondLocked.resolve();
+                await continueSingle.promise;
+              }
+              await tx.account.update({
+                where: {
+                  id_accountBookId: {
+                    id: secondAccount.id,
+                    accountBookId: bookId,
+                  },
+                },
+                data: { name: "Edited concurrently" },
+              });
+              return revision(bookId, tx);
+            },
+            { timeout: 30_000 },
+          );
+        } catch (error) {
+          if (victim === "single-row" && attempt === 1) {
+            const account = await prisma.account.findUniqueOrThrow({
+              where: {
+                id_accountBookId: {
+                  id: secondAccount.id,
+                  accountBookId: bookId,
+                },
+              },
+            });
+            rolledBackValue = account.name;
+          }
+          throw error;
+        }
+      });
+      outcomes = Promise.allSettled([multi, single]);
+      await Promise.race([secondLocked.promise, single]);
+      const [multiBackend, singleBackend] = await Promise.all([
+        multiPid.promise,
+        singlePid.promise,
+      ]);
+      if (victim === "multi-row") {
+        continueSingle.resolve();
+        await waitUntilBlocked(singleBackend, multiBackend);
+        continueMulti.resolve();
+      } else {
+        continueMulti.resolve();
+        await waitUntilBlocked(multiBackend, singleBackend);
+        continueSingle.resolve();
+      }
+
+      const committed = await Promise.all([multi, single]);
+      expect(multiAttempts).toBe(victim === "multi-row" ? 2 : 1);
+      expect(singleAttempts).toBe(victim === "single-row" ? 2 : 1);
+      expect(rolledBackValue).toBe(
+        victim === "multi-row" ? null : "Second account",
+      );
+      const [first, second] = await Promise.all([
+        prisma.account.findUniqueOrThrow({
+          where: { id_accountBookId: { id: accountId, accountBookId: bookId } },
+        }),
+        prisma.account.findUniqueOrThrow({
+          where: {
+            id_accountBookId: { id: secondAccount.id, accountBookId: bookId },
+          },
+        }),
+      ]);
+      expect(first.sortOrder).toBe(11);
+      expect(second.sortOrder).toBe(22);
+      expect(second.name).toBe("Edited concurrently");
+      expect(new Set(committed).size).toBe(2);
+      const finalRevision = await revision();
+      expect(committed).toContain(finalRevision);
+      expect(finalRevision).not.toBe(originalRevision);
+      if (victim === "multi-row")
+        expect(finalRevision).not.toBe(rolledBackRevision);
+    } finally {
+      continueMulti.resolve();
+      continueSingle.resolve();
+      await outcomes;
+    }
+  });
+}

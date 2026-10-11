@@ -75,7 +75,8 @@ pnpm --filter cashfolio-app2 lint
 - DB/setup helpers: `e2e/support/`
 - `e2e/tests/period-cache-revision.spec.ts` verifies the database-owned report
   cache revision against PostgreSQL: all financial tables, settings edits,
-  rollback/commit visibility, bulk statements, and concurrent commits. Cache
+  rollback/commit visibility, bulk statements, concurrent commits, and recovery
+  from book/child deadlocks with either writer selected as the victim. Cache
   unit tests separately cover Redis failures and loads spanning a commit.
 
 ### Query Priority

@@ -36,6 +36,15 @@ paths are relative to that app directory.
   Report cache readers query the revision before using Redis, so invalidation
   remains correct when Redis cleanup fails. These triggers require ordinary
   UPDATE permission on AccountBook and serialize revision updates per book.
+- Revision triggers acquire the book row after child writes, so concurrent
+  multi-statement mutations can form a book/child lock cycle. Application
+  account/transaction mutations, settings updates, and book/user deletion retry
+  rolled-back database conflicts with `withDatabaseConflictRetry`: at most three
+  attempts, with 100 ms and 200 ms delays. It recognizes Prisma P2034 and P2010
+  carrying PostgreSQL 40P01; other failures and the final conflict propagate.
+  Each attempt recreates its transactions and queries. Authorization and
+  external effects stay outside retries; the staging seed retains its own
+  existing retry workflow.
 
 ## Models
 

@@ -1,3 +1,4 @@
+import { Prisma } from "../.prisma-client/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const ensureAuthenticated = vi.hoisted(() => vi.fn());
@@ -177,4 +178,33 @@ describe("account deletion", () => {
     });
     expect(deleteLogtoUser).toHaveBeenCalledWith("logto-user-1");
   });
+  it("retries rolled-back user deletion without repeating Redis or Logto effects", async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: "user-1",
+      accountBookLinks: [
+        createAccountBookLink({
+          id: "book-1",
+          name: "Private Book",
+          userLinkCount: 1,
+        }),
+      ],
+    });
+    tx.accountBook.deleteMany.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError("deadlock", {
+        code: "P2034",
+        clientVersion: "test",
+      }),
+    );
+    await deleteAuthenticatedAccount();
+    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+    expect(tx.user.deleteMany).toHaveBeenCalledTimes(2);
+    expect(ensureAuthenticated).toHaveBeenCalledOnce();
+    expect(deleteBookScopedRedisDataForAccountBooks).toHaveBeenCalledOnce();
+    expect(deleteLogtoUser).toHaveBeenCalledExactlyOnceWith("logto-user-1");
+    expect(destroyLogtoSession).not.toHaveBeenCalled();
+  });
 });
+
+vi.mock("node:timers/promises", () => ({
+  setTimeout: vi.fn().mockResolvedValue(undefined),
+}));

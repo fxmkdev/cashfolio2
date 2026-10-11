@@ -1,9 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { Prisma } from "../../.prisma-client/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   ensureAuthorizedForAccountBookId,
   ensureSameOriginRequestFromServerContext,
   invalidatePeriodBaseDataCacheForAccountBook,
+  prisma,
   resetAccountBookSettingsMocks,
   restoreAccountBookSettingsMocks,
   tx,
@@ -260,4 +262,33 @@ describe("updateAccountBookSettings", () => {
       select: { date: true },
     });
   });
+  it("retries the full settings transaction without repeating authorization or cleanup", async () => {
+    tx.accountBook.update.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError("deadlock", {
+        code: "P2034",
+        clientVersion: "test",
+      }),
+    );
+    tx.transaction.findMany.mockResolvedValue([{ id: "tx-opening-1" }]);
+    await updateAccountBookSettings({
+      data: {
+        accountBookId: "book-1",
+        name: "Updated Book",
+        referenceCurrency: "USD",
+        startDate: "2026-01-02",
+      },
+    });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+    expect(tx.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(2);
+    expect(tx.booking.updateMany).toHaveBeenCalledTimes(2);
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledOnce();
+    expect(ensureSameOriginRequestFromServerContext).toHaveBeenCalledOnce();
+    expect(
+      invalidatePeriodBaseDataCacheForAccountBook,
+    ).toHaveBeenCalledExactlyOnceWith("book-1");
+  });
 });
+
+vi.mock("node:timers/promises", () => ({
+  setTimeout: vi.fn().mockResolvedValue(undefined),
+}));
