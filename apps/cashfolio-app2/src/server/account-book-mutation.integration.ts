@@ -46,7 +46,7 @@ vi.mock("../account-books/functions.server", () => ({
 vi.mock("../security/same-origin.server", () => ({
   ensureSameOriginRequestFromServerContext: vi.fn(),
 }));
-vi.mock("./period/period-base-data-cache", () => ({
+vi.mock("./period/cache/period-base-data-cache", () => ({
   invalidatePeriodBaseDataCacheForAccountBook: vi.fn(),
 }));
 
