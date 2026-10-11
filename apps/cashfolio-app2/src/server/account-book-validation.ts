@@ -1,5 +1,43 @@
 import { currencies } from "../currencies";
 import { normalizeDateInputValue, startOfUtcDay } from "../shared/date";
+import { assertRecord, requireStringField } from "./input-validation";
+
+export function validateCreateAccountBookInput(data: unknown) {
+  assertRecord(data);
+  return {
+    name: normalizeAccountBookNameOrThrow(data.name),
+    referenceCurrency: normalizeReferenceCurrencyOrThrow(
+      data.referenceCurrency,
+    ),
+    startDate: normalizeStartDateOrThrow(data.startDate),
+  };
+}
+
+export function validateUpdateAccountBookSettingsInput(data: unknown) {
+  assertRecord(data);
+  const accountBookId = requireStringField(
+    data,
+    "accountBookId",
+    "Account book id is required.",
+  );
+  return { accountBookId, ...validateCreateAccountBookInput(data) };
+}
+
+export function validateDeleteAccountBookInput(data: unknown) {
+  assertRecord(data);
+  return {
+    accountBookId: requireStringField(
+      data,
+      "accountBookId",
+      "Account book id is required.",
+    ),
+    confirmationName: requireStringField(
+      data,
+      "confirmationName",
+      "Account book name confirmation is required.",
+    ).trim(),
+  };
+}
 
 export function normalizeAccountBookNameOrThrow(value: unknown): string {
   if (typeof value !== "string") {

@@ -23,9 +23,19 @@ Related docs:
 - Exported request-context helpers in client-importable server-function facades
   must use `createServerOnlyFn`, so import protection can remove their
   server-only dependencies from the client bundle.
-- POST server functions validate object shape and required identifier fields
-  before authorization/database work. Use `src/server/input-validation.ts` for
-  dependency-free checks.
+- POST server functions parse unknown inputs into complete typed payloads before
+  authorization/database work. Account/group and transaction contracts live in
+  their domain's `*-input-validation.ts` module; account-book contracts live in
+  `src/server/account-book-validation.ts`. Use `src/server/input-validation.ts`
+  for reusable primitive readers. Construct the returned payload explicitly so
+  unknown properties never reach operations.
+- Validate nested objects/arrays, enum values, finite monetary numbers, UTC
+  booking dates, and 32-bit integer sort orders. Descriptions may be empty
+  strings. Reuse the CSV format reader for nested import configuration.
+- Preserve omitted update fields as `undefined`; preserve supported `null`
+  values for clearing group/parent IDs, opening balances, and CSV configuration.
+  Database-dependent business rules (ownership, sibling names, account types,
+  balances, and book start-date constraints) remain in domain operations.
 - Account-book mutations should use `src/server/mutation-guard.server.ts` to
   enforce same-origin and account-book authorization consistently.
 

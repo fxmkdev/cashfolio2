@@ -1,10 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import {
-  assertRecord,
-  requireArrayField,
-  requireNumberField,
-  requireStringField,
-} from "../input-validation";
+  validateCreateTransactionInput,
+  validateCreateTransactionsInput,
+  validateUpdateTransactionInput,
+  validateCreateSimpleTransactionInput,
+  validateRebookBookingInput,
+  validateDeleteTransactionInput,
+} from "./transactions-input-validation";
 import { ensureAuthorizedAccountBookMutation } from "../mutation-guard.server";
 import { invalidatePeriodBaseDataCacheForAccountBook } from "../period/period-base-data-cache";
 import {
@@ -16,92 +18,6 @@ import {
   updateTransactionOperation,
   type TransactionMutationOperationResult,
 } from "./transactions-mutation-operations";
-import type {
-  CreateSimpleTransactionInput,
-  CreateTransactionInput,
-  CreateTransactionsInput,
-  RebookBookingInput,
-} from "./transactions-types";
-
-function validateCreateTransactionInput(data: unknown): CreateTransactionInput {
-  assertRecord(data);
-  requireStringField(data, "accountBookId", "Account book id is required.");
-  requireArrayField(data, "bookings", "Bookings are required.");
-  return data as CreateTransactionInput;
-}
-
-function validateCreateTransactionsInput(
-  data: unknown,
-): CreateTransactionsInput {
-  assertRecord(data);
-  requireStringField(data, "accountBookId", "Account book id is required.");
-  requireArrayField(data, "transactions", "Transactions are required.");
-  return data as CreateTransactionsInput;
-}
-
-function validateUpdateTransactionInput(
-  data: unknown,
-): CreateTransactionInput & {
-  transactionId: string;
-} {
-  assertRecord(data);
-  requireStringField(data, "transactionId", "Transaction id is required.");
-  requireStringField(data, "accountBookId", "Account book id is required.");
-  requireArrayField(data, "bookings", "Bookings are required.");
-  return data as CreateTransactionInput & { transactionId: string };
-}
-
-function validateCreateSimpleTransactionInput(
-  data: unknown,
-): CreateSimpleTransactionInput {
-  assertRecord(data);
-  requireStringField(data, "accountBookId", "Account book id is required.");
-  requireStringField(data, "accountId", "Account id is required.");
-  requireStringField(
-    data,
-    "counterAccountId",
-    "Counter account id is required.",
-  );
-  requireStringField(data, "date", "Date is required.");
-  requireNumberField(data, "amount", "Amount is required.");
-  return data as CreateSimpleTransactionInput;
-}
-
-function validateRebookBookingInput(data: unknown): RebookBookingInput {
-  assertRecord(data);
-  return {
-    accountBookId: requireStringField(
-      data,
-      "accountBookId",
-      "Account book id is required.",
-    ),
-    bookingId: requireStringField(data, "bookingId", "Booking id is required."),
-    targetAccountId: requireStringField(
-      data,
-      "targetAccountId",
-      "Target account id is required.",
-    ),
-  };
-}
-
-function validateDeleteTransactionInput(data: unknown): {
-  transactionId: string;
-  accountBookId: string;
-} {
-  assertRecord(data);
-  return {
-    transactionId: requireStringField(
-      data,
-      "transactionId",
-      "Transaction id is required.",
-    ),
-    accountBookId: requireStringField(
-      data,
-      "accountBookId",
-      "Account book id is required.",
-    ),
-  };
-}
 
 async function runTransactionMutation<T>(
   accountBookId: string,

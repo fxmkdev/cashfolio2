@@ -97,11 +97,84 @@ vi.mock("../period/period-base-data-cache", () => ({
 }));
 
 import {
+  archiveAccount,
+  archiveAccountGroup,
   createAccount,
   createAccountGroup,
+  deleteAccount,
+  deleteAccountGroup,
+  reorderAccountTreeItems,
+  unarchiveAccount,
+  unarchiveAccountGroup,
   updateAccount,
   updateAccountGroup,
 } from "./accounts-mutations";
+
+describe("account mutation boundary validation", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it.each([
+    [
+      createAccount,
+      { accountBookId: "book-1", name: 123, type: AccountType.ASSET },
+    ],
+    [
+      updateAccount,
+      {
+        accountBookId: "book-1",
+        id: "a-1",
+        name: "Name",
+        type: AccountType.ASSET,
+        openingBalance: "100",
+      },
+    ],
+    [
+      createAccountGroup,
+      { accountBookId: "book-1", name: "Name", type: "OTHER" },
+    ],
+    [
+      updateAccountGroup,
+      {
+        accountBookId: "book-1",
+        id: "g-1",
+        name: "Name",
+        type: AccountType.ASSET,
+        isCashAccount: "true",
+      },
+    ],
+    [
+      reorderAccountTreeItems,
+      {
+        accountBookId: "book-1",
+        updates: [{ id: "a-1", nodeType: "account", sortOrder: 0.5 }],
+      },
+    ],
+    ...[
+      archiveAccount,
+      archiveAccountGroup,
+      unarchiveAccount,
+      unarchiveAccountGroup,
+      deleteAccount,
+      deleteAccountGroup,
+    ].map(
+      (mutation) => [mutation, { accountBookId: "book-1", id: null }] as const,
+    ),
+  ] as const)(
+    "rejects malformed data before authorization, operations, or invalidation (%#)",
+    async (mutation, data) => {
+      await expect(mutation({ data })).rejects.toThrow();
+      expect(ensureAuthorizedForAccountBookId).not.toHaveBeenCalled();
+      expect(ensureSameOriginRequestFromServerContext).not.toHaveBeenCalled();
+      expect(prisma.account.findMany).not.toHaveBeenCalled();
+      expect(prisma.account.findUniqueOrThrow).not.toHaveBeenCalled();
+      expect(prisma.accountGroup.findMany).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(
+        invalidatePeriodBaseDataCacheForAccountBook,
+      ).not.toHaveBeenCalled();
+    },
+  );
+});
 
 describe("updateAccount opening balance management", () => {
   beforeEach(() => {
