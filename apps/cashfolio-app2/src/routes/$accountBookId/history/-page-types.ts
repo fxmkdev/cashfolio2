@@ -17,6 +17,11 @@ export type HistoryMetric =
   | "liabilities"
   | "netWorth";
 
+export type HistoryViewSelection = {
+  metric: HistoryMetric;
+  scope: HistoryScopeSelection;
+};
+
 export type HistorySearch = {
   mode?: HistoryPeriodMode;
   metric?: HistoryMetric;

@@ -4,8 +4,13 @@ import {
   DEFAULT_HISTORY_MODE,
   type HistoryMetric,
   type HistoryPeriodMode,
+  type HistoryViewSelection,
 } from "./-page-types";
-import type { HistoryScopeSelection } from "@/shared/history-scope";
+import {
+  isHistoryScopedMetric,
+  type HistoryScopeSelection,
+  type HistoryScopedMetric,
+} from "@/shared/history-scope";
 
 type HistoryNavigationSearch = Record<string, unknown>;
 
@@ -49,4 +54,27 @@ export function buildHistorySearchNavigation(args: {
           : args.liabilityScope,
     }),
   } as const;
+}
+
+export function buildHistoryViewNavigation(args: {
+  mode: HistoryPeriodMode;
+  selection: HistoryViewSelection;
+  scopeSelection: Record<HistoryScopedMetric, HistoryScopeSelection>;
+}) {
+  const { metric, scope } = args.selection;
+  const scopes = {
+    ...args.scopeSelection,
+    ...(isHistoryScopedMetric(metric) ? { [metric]: scope } : {}),
+  };
+
+  return buildHistorySearchNavigation({
+    mode: args.mode,
+    metric,
+    cashFlowScope: scopes.cashFlow,
+    incomeScope: scopes.income,
+    expenseScope: scopes.expenses,
+    gainLossScope: scopes.gainsLosses,
+    assetScope: scopes.assets,
+    liabilityScope: scopes.liabilities,
+  });
 }

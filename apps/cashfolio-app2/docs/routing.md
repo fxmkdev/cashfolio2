@@ -217,6 +217,11 @@ Related docs:
   `$accountBookId/report/gains-losses/$accountId/route.tsx` both use
   `period?: string` with the same normalized period semantics
 - `$accountBookId/history/route.tsx` uses:
+  - The single searchable View tree combines metric and scope selection. Each
+    metric root selects its total; descendants select that metric and group,
+    account, or Gain/Loss hierarchy node together. Tree values are namespaced by
+    metric, while URL parameters retain the existing metric and scope format.
+    Selecting a root clears its saved scope and preserves other metrics’ scopes.
   - `mode?: "month" | "year"` to select the history granularity (default:
     monthly)
   - `metric?: "totalReturn" | "savings" | "cashFlow" | "income" | "expenses" | "gainsLosses" | "assets" | "liabilities" | "netWorth"`

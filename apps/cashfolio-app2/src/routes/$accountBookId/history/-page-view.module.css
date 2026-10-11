@@ -38,15 +38,11 @@
 }
 
 .metricControls {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(180px, 260px));
-  gap: 12px;
-  align-items: end;
+  width: 260px;
 }
 
 @media (max-width: 48em) {
   .metricControls {
     width: 100%;
-    grid-template-columns: 1fr;
   }
 }

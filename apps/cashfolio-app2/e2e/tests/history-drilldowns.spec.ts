@@ -136,7 +136,7 @@ test("monthly expense bar opens only that month and Back restores History scope"
   await expect(page.getByText("History drill expense 2026-02")).toHaveCount(0);
   await page.goBack();
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
-  await expect(page.getByLabel("History Metric Scope")).toHaveValue(
+  await expect(page.getByRole("textbox", { name: "View" })).toHaveValue(
     seeded.expenseAccount.name,
   );
   expect(new URL(page.url()).searchParams.get("expenseScope")).toBe(

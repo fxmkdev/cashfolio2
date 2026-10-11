@@ -1,8 +1,79 @@
 import type { TreeNodeData } from "@mantine/core";
-import type {
-  HistoryScopeOption,
-  HistoryScopeSelection,
+import {
+  isHistoryScopedMetric,
+  parseHistoryScopeSelection,
+  type HistoryScopeOption,
+  type HistoryScopeSelection,
+  type HistoryScopedMetric,
 } from "@/shared/history-scope";
+
+import {
+  HISTORY_METRIC_OPTIONS,
+  isHistoryMetric,
+  type HistoryViewSelection,
+} from "./-page-types";
+
+type HistoryScopeOptions = Record<HistoryScopedMetric, HistoryScopeOption[]>;
+
+export function getHistoryViewTreeValue(
+  selection: HistoryViewSelection,
+): string {
+  return `${selection.metric}:${selection.scope}`;
+}
+
+export function getHistoryViewTreeSelection(
+  value: string | null,
+  scopeOptions: HistoryScopeOptions,
+): HistoryViewSelection | undefined {
+  if (!value) return undefined;
+
+  const separator = value.indexOf(":");
+  const metric = value.slice(0, separator);
+  const scope = parseHistoryScopeSelection(value.slice(separator + 1));
+  if (!isHistoryMetric(metric) || !scope) return undefined;
+
+  if (
+    scope !== "total" &&
+    (!isHistoryScopedMetric(metric) ||
+      !scopeOptions[metric].some((option) => option.value === scope))
+  ) {
+    return undefined;
+  }
+
+  return { metric, scope };
+}
+
+export function buildHistoryViewTreeData(
+  scopeOptions: HistoryScopeOptions,
+): TreeNodeData[] {
+  return HISTORY_METRIC_OPTIONS.map(({ value: metric, label }) => {
+    function namespaceNode(node: TreeNodeData): TreeNodeData {
+      return {
+        ...node,
+        value: `${metric}:${node.value}`,
+        nodeProps: {
+          searchLabel: `${label} / ${getHistoryScopeTreeSearchLabel(node)}`,
+        },
+        ...(node.children
+          ? { children: node.children.map(namespaceNode) }
+          : {}),
+      };
+    }
+
+    const children = isHistoryScopedMetric(metric)
+      ? buildHistoryScopeTreeData(
+          scopeOptions[metric].filter((option) => option.value !== "total"),
+        ).map(namespaceNode)
+      : [];
+
+    return {
+      value: getHistoryViewTreeValue({ metric, scope: "total" }),
+      label,
+      nodeProps: { searchLabel: label },
+      ...(children.length > 0 ? { children } : {}),
+    };
+  });
+}
 
 export function getHistoryScopeTreeSearchLabel(node: TreeNodeData): string {
   return typeof node.nodeProps?.searchLabel === "string"
