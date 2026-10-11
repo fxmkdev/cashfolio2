@@ -3,6 +3,8 @@ import { IconFileUpload, IconTable } from "@tabler/icons-react";
 import { LocaleModule } from "ag-grid-enterprise";
 import { DataGrid } from "@/components/data-grid";
 import { gridTheme } from "@/components/grid-theme";
+import { MutationSubmitFeedback } from "@/components/mutation-submit-feedback";
+import { getStatementImportDisabledReason } from "./index";
 import type { AccountOption } from "@/components/edit-transaction-modal";
 import { PageBreadcrumbs } from "@/components/page-breadcrumbs";
 import { PageShell } from "@/components/page-shell";
@@ -39,6 +41,7 @@ type StatementImportPageViewProps = {
   period?: string;
   onSubmittingChange: (isSubmitting: boolean) => void;
   onSubmit: (transactions: TransactionMutationValues[]) => Promise<void>;
+  onRefreshConstraints?: () => Promise<void>;
 };
 
 export function AccountStatementImportPageView({
@@ -53,6 +56,7 @@ export function AccountStatementImportPageView({
   period,
   onSubmittingChange,
   onSubmit,
+  onRefreshConstraints,
 }: StatementImportPageViewProps) {
   const state = useStatementImportPageState({
     accountBookId,
@@ -64,6 +68,7 @@ export function AccountStatementImportPageView({
     isImportComplete,
     onSubmittingChange,
     onSubmit,
+    onRefreshConstraints,
   });
   const activeStep = state.activeStep === "upload" ? 0 : 1;
 
@@ -147,6 +152,16 @@ export function AccountStatementImportPageView({
           }
         >
           <Stack gap="md" flex={1} mih={0}>
+            <MutationSubmitFeedback
+              state={state.submitState}
+              onRefreshConstraints={state.refreshConstraints}
+              onRetry={() => void state.handleImport()}
+            />
+            {getStatementImportDisabledReason(account) && (
+              <Text c="red" role="alert">
+                {getStatementImportDisabledReason(account)}
+              </Text>
+            )}
             <Text size="sm" c="dimmed">
               Check rows to include them in the import; uncheck to ignore them.
             </Text>
@@ -224,7 +239,10 @@ export function AccountStatementImportPageView({
             <StatementImportActions
               draftsLength={state.drafts.length}
               includedCount={state.includedCount}
-              importDisabled={state.importDisabled}
+              importDisabled={
+                state.importDisabled ||
+                !!getStatementImportDisabledReason(account)
+              }
               isSubmitting={isSubmitting}
               onImport={() => void state.handleImport()}
             />

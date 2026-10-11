@@ -110,7 +110,11 @@ export async function createTransactionOperation(
   tx: Prisma.TransactionClient,
 ) {
   const normalizedInput = validateCreateTransaction(data);
-  await validateAccountTypeBookings(normalizedInput.bookings, data.accountBookId, tx);
+  await validateAccountTypeBookings(
+    normalizedInput.bookings,
+    data.accountBookId,
+    tx,
+  );
 
   const transaction = await tx.transaction.create({
     data: buildTransactionCreateData(normalizedInput),

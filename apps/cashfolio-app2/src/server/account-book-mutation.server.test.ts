@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const tx = vi.hoisted(() => ({ $queryRaw: vi.fn() }));
+const tx = vi.hoisted(() => ({ $executeRaw: vi.fn(), $queryRaw: vi.fn() }));
 const prisma = vi.hoisted(() => ({ $transaction: vi.fn() }));
 vi.mock("../prisma.server", () => ({ prisma }));
 
+import { Prisma } from "../.prisma-client/client";
+import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../shared/mutation-errors";
 import { withAccountBookMutation } from "./account-book-mutation.server";
 
 describe("withAccountBookMutation", () => {
@@ -30,6 +32,12 @@ describe("withAccountBookMutation", () => {
       isolationLevel: "ReadCommitted",
       timeout: 30_000,
     });
+    expect(tx.$executeRaw.mock.calls[0][0].join("")).toBe(
+      "SET LOCAL lock_timeout = '25s'",
+    );
+    expect(tx.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.$queryRaw.mock.invocationCallOrder[0],
+    );
     expect(tx.$queryRaw.mock.calls[0][1]).toBe("book-1");
   });
 
@@ -49,5 +57,53 @@ describe("withAccountBookMutation", () => {
       "lock failed",
     );
     expect(operation).not.toHaveBeenCalled();
+  });
+  it.each([
+    { code: "55P03" },
+    { driverAdapterError: { cause: { originalCode: "55P03" } } },
+  ])(
+    "classifies the PostgreSQL busy error after rollback: %j",
+    async (meta) => {
+      const error = new Prisma.PrismaClientKnownRequestError("lock timeout", {
+        code: "P2010",
+        clientVersion: "test",
+        meta,
+      });
+      let rolledBack = false;
+      tx.$queryRaw.mockRejectedValue(error);
+      prisma.$transaction.mockImplementation(async (callback) => {
+        try {
+          return await callback(tx);
+        } finally {
+          rolledBack = true;
+        }
+      });
+      const operation = vi.fn();
+      await expect(
+        withAccountBookMutation("book-1", operation),
+      ).rejects.toThrow(ACCOUNT_BOOK_BUSY_MESSAGE);
+      expect(rolledBack).toBe(true);
+      expect(operation).not.toHaveBeenCalled();
+    },
+  );
+  it("classifies a direct PostgreSQL lock-timeout error", async () => {
+    tx.$queryRaw.mockRejectedValue(
+      Object.assign(new Error("lock timeout"), { code: "55P03" }),
+    );
+    await expect(withAccountBookMutation("book-1", vi.fn())).rejects.toThrow(
+      ACCOUNT_BOOK_BUSY_MESSAGE,
+    );
+  });
+
+  it("preserves unrelated Prisma errors", async () => {
+    const error = new Prisma.PrismaClientKnownRequestError("other", {
+      code: "P2010",
+      clientVersion: "test",
+      meta: { code: "40P01" },
+    });
+    tx.$queryRaw.mockRejectedValue(error);
+    await expect(withAccountBookMutation("book-1", vi.fn())).rejects.toBe(
+      error,
+    );
   });
 });

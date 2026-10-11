@@ -26,6 +26,7 @@ const validateAccountInput = vi.hoisted(() => vi.fn());
 const validateAccountGroupInput = vi.hoisted(() => vi.fn());
 
 const prisma = vi.hoisted(() => ({
+  $executeRaw: vi.fn(),
   $queryRaw: vi.fn(),
   account: {
     findMany: vi.fn(),

@@ -12,7 +12,7 @@ import {
   getImportDraftStatus,
   accountOptions,
 } from "../test-fixtures";
-import { matchStatementImportDrafts } from "./matching";
+import {matchStatementImportDrafts, refreshStatementImportMatches} from "./matching";
 import {
   getStatementImportIgnoredCount,
   getStatementImportTransactionsToSubmit,
@@ -47,6 +47,25 @@ function booking(
 }
 
 describe("statement import matching", () => {
+  it("refreshes matches without losing draft edits or inclusion decisions", () => {
+    const edited = draft("My unsaved edit");
+    const excluded = { ...draft("Excluded", 3), ignored: true };
+    const refreshed = refreshStatementImportMatches(
+      [edited, excluded],
+      [booking()],
+    );
+    expect(refreshed[0]).toEqual({
+      ...edited,
+      matchedExistingBooking: { id: "b1", transactionId: "t1" },
+    });
+    expect(refreshed[0].transaction).toBe(edited.transaction);
+    expect(refreshed[1]).toEqual(excluded);
+    expect(refreshStatementImportMatches(refreshed, [])).toEqual([
+      { ...edited, matchedExistingBooking: undefined },
+      { ...excluded, matchedExistingBooking: undefined },
+    ]);
+  });
+
   it("ignores a date and amount match with an edited description", () => {
     const [matched] = matchStatementImportDrafts([draft()], [booking()]);
     expect(matched).toMatchObject({

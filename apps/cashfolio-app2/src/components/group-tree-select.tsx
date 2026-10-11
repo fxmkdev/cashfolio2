@@ -3,7 +3,7 @@ import {
   type TreeNodeData,
   type TreeSelectProps,
 } from "@mantine/core";
-import { forwardRef, useMemo } from "react";
+import { forwardRef, useRef } from "react";
 
 export type GroupTreeOption = {
   value: string;
@@ -109,13 +109,38 @@ export const GroupTreeSelect = forwardRef<
   },
   ref,
 ) {
-  const data = useMemo(() => buildGroupTreeData(groups), [groups]);
+  const previousGroups = useRef(new Map<string, GroupTreeOption>());
+  for (const group of groups) previousGroups.current.set(group.value, group);
+  const value = props.value ?? props.defaultValue;
+  const selectedValue = typeof value === "string" ? value : null;
+  const unavailable =
+    selectedValue && !groups.some((group) => group.value === selectedValue);
+  const previous = selectedValue
+    ? previousGroups.current.get(selectedValue)
+    : undefined;
+  const data = buildGroupTreeData(
+    unavailable
+      ? [
+          ...groups,
+          {
+            value: selectedValue,
+            label: `${previous?.label ?? selectedValue} (no longer available)`,
+          },
+        ]
+      : groups,
+  );
 
   return (
     <TreeSelect
       ref={ref}
       {...props}
       data={data}
+      error={
+        props.error ??
+        (unavailable
+          ? "The selected group is no longer available. Choose another group or clear the selection."
+          : undefined)
+      }
       searchable={searchable}
       allowDeselect={allowDeselect}
       comboboxProps={{ withinPortal: true, ...comboboxProps }}
@@ -125,7 +150,10 @@ export const GroupTreeSelect = forwardRef<
           .toLowerCase()
           .includes(query.trim().toLowerCase())
       }
-      onChange={onChange}
+      onChange={(value) => {
+        if (value === null || groups.some((group) => group.value === value))
+          onChange(value);
+      }}
     />
   );
 });

@@ -1,3 +1,4 @@
+import { MutationSubmitFeedback } from "./mutation-submit-feedback";
 import type { RowDragEndEvent } from "ag-grid-enterprise";
 import type { AgGridReact } from "ag-grid-react";
 import { Button, Group, Stack, TextInput, Tooltip } from "@mantine/core";
@@ -55,6 +56,7 @@ export function EditTransactionModal({
   onSubmittingChange,
   onDirtyChange,
   onSubmit,
+  onRefreshConstraints,
 }: {
   initialValues?: {
     description?: string;
@@ -68,6 +70,7 @@ export function EditTransactionModal({
   autoFocusDate?: boolean;
   preserveBookingUnitOnUnitlessEquityAccountChange?: boolean;
   onClose: () => void;
+  onRefreshConstraints?: () => Promise<void>;
   onSubmittingChange?: (isSubmitting: boolean) => void;
   onDirtyChange?: (isDirty: boolean) => void;
   onSubmit: (values: {
@@ -89,9 +92,12 @@ export function EditTransactionModal({
   const userLocale = useUserLocale();
   const { thousandSeparator, decimalSeparator } =
     getNumberFormatSymbols(userLocale);
-  const { isSubmitting, runSubmit } = useDialogSubmitState({
+  const submitState = useDialogSubmitState({
     onSubmittingChange,
+    captureErrors: true,
+    onRefreshConstraints,
   });
+  const { isSubmitting, runSubmit } = submitState;
   const accountBookStartDay = startOfUtcDay(accountBookStartDate);
   const accountBookStartDateLabel = formatUtcDateForLocale(
     accountBookStartDay,
@@ -160,7 +166,12 @@ export function EditTransactionModal({
           }
           return null;
         },
-        account: isNotEmpty("Account is required"),
+        account: (value) =>
+          !value
+            ? "Account is required"
+            : accounts.some((account) => account.value === value)
+              ? null
+              : "The selected account is no longer available. Choose another account.",
         unit: isNotEmpty("Unit is required"),
         debit: (value) => (value === 0 ? "Must be non-zero" : null),
         credit: (value) => (value === 0 ? "Must be non-zero" : null),
@@ -271,6 +282,10 @@ export function EditTransactionModal({
       }}
     >
       <Stack gap="md">
+        <MutationSubmitFeedback
+          state={submitState}
+          onRefreshConstraints={onRefreshConstraints}
+        />
         <Group align="start">
           <DateInput
             onInput={(event) => {

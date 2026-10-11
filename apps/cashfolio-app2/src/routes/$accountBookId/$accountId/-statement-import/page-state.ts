@@ -1,5 +1,9 @@
-import type { StatementImportExistingBooking } from "@/server/statement-import";
+import {
+  getStatementImportExistingBookings,
+  type StatementImportExistingBooking,
+} from "@/server/statement-import";
 import { useState } from "react";
+import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 import type { AccountOption } from "@/components/edit-transaction-modal";
 import type { TransactionMutationValues } from "../-ledger/page-view";
@@ -9,10 +13,12 @@ import {
   type StatementImportCsvFormat,
   type StatementImportDraft,
 } from "./index";
+import { getStatementImportDisabledReason } from "./account-options";
 import { getStatementImportTransactionsToSubmit } from "./page-controller";
 import { useStatementImportReviewState } from "./page-review-state";
 import { useStatementImportUploadState } from "./page-upload-state";
 import { getStatementImportReviewSnapshot } from "./draft/dirty-state";
+import { refreshStatementImportMatches } from "./draft/matching";
 
 export function useStatementImportPageState(args: {
   accountBookId: string;
@@ -24,6 +30,7 @@ export function useStatementImportPageState(args: {
   isImportComplete: boolean;
   onSubmittingChange: (isSubmitting: boolean) => void;
   onSubmit: (transactions: TransactionMutationValues[]) => Promise<void>;
+  onRefreshConstraints?: () => Promise<void>;
 }) {
   const {
     account,
@@ -37,6 +44,24 @@ export function useStatementImportPageState(args: {
   const [existingBookings, setExistingBookings] = useState<
     StatementImportExistingBooking[]
   >([]);
+  async function refreshConstraints() {
+    const [bookings] = await Promise.all([
+      getStatementImportExistingBookings({
+        data: {
+          accountBookId: args.accountBookId,
+          accountId: account.id,
+        },
+      }),
+      args.onRefreshConstraints?.(),
+    ]);
+    setExistingBookings(bookings);
+    setDrafts((current) => refreshStatementImportMatches(current, bookings));
+  }
+  const submitState = useDialogSubmitState({
+    captureErrors: true,
+    onSubmittingChange,
+    onRefreshConstraints: refreshConstraints,
+  });
   const [editingDraftId, setEditingDraftId] = useState<string | undefined>();
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [isEditorDirty, setIsEditorDirty] = useState(false);
@@ -85,12 +110,15 @@ export function useStatementImportPageState(args: {
   });
 
   async function handleImport() {
-    onSubmittingChange(true);
-    try {
-      await onSubmit(getStatementImportTransactionsToSubmit(drafts));
-    } finally {
-      onSubmittingChange(false);
-    }
+    if (
+      args.isImportComplete ||
+      reviewState.importDisabled ||
+      getStatementImportDisabledReason(account)
+    )
+      return;
+    await submitState.runSubmit(() =>
+      onSubmit(getStatementImportTransactionsToSubmit(drafts)),
+    );
   }
 
   function handleSaveDraft(values: TransactionMutationValues) {
@@ -117,6 +145,8 @@ export function useStatementImportPageState(args: {
   }
 
   return {
+    submitState,
+    refreshConstraints,
     activeStep: uploadState.activeStep,
     canReviewStatementImport: uploadState.canReviewStatementImport,
     columnDefs: reviewState.columnDefs,
@@ -145,7 +175,10 @@ export function useStatementImportPageState(args: {
     handleReviewRowsUpdated: reviewState.handleReviewRowsUpdated,
     handleStepClick: uploadState.handleStepClick,
     ignoredCount: reviewState.ignoredCount,
-    importDisabled: args.isImportComplete || reviewState.importDisabled,
+    importDisabled:
+      args.isImportComplete ||
+      submitState.isRefreshing ||
+      reviewState.importDisabled,
     includedCount: reviewState.includedCount,
     isEditSubmitting,
     parseErrors: uploadState.parseErrors,

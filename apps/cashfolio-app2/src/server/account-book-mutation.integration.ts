@@ -25,7 +25,7 @@ vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => {
     let validate: (data: unknown) => unknown = (data) => data;
     const chain = {
-      inputValidator: (validator: typeof validate) => {
+      validator: (validator: typeof validate) => {
         validate = validator;
         return chain;
       },
@@ -216,6 +216,67 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
       );
     await admin.$disconnect();
   });
+
+  it("rolls back a 25-second lock wait and allows an explicit retry", async () => {
+    let acquired!: () => void;
+    const locked = new Promise<void>((resolve) => {
+      acquired = resolve;
+    });
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const holder = db.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "AccountBook" WHERE id = ${bookId} FOR UPDATE`;
+        acquired();
+        await gate;
+      },
+      { timeout: 60_000 },
+    );
+    const write = vi.fn();
+    let deadline: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await locked;
+      const before = await db.account.count();
+      const start = Date.now();
+      const rejected = boundary.withAccountBookMutation(bookId, async (tx) => {
+        write();
+        return tx.account.create({
+          data: {
+            id: "retry-account",
+            name: "Retry",
+            accountBookId: bookId,
+            type: AccountType.ASSET,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+          },
+        });
+      });
+      await expect(
+        Promise.race([
+          rejected,
+          new Promise((_, reject) => {
+            deadline = setTimeout(
+              () => reject(new Error("Lock wait exceeded its deadline")),
+              32_000,
+            );
+          }),
+        ]),
+      ).rejects.toThrow(
+        "This account book is busy. No changes were saved. Please try again.",
+      );
+      expect(Date.now() - start).toBeGreaterThanOrEqual(24_000);
+      expect(write).not.toHaveBeenCalled();
+      expect(await db.account.count()).toBe(before);
+    } finally {
+      clearTimeout(deadline);
+      release();
+      await holder;
+    }
+    await mutations.createAccount({ data: account("Retry") });
+    expect(await db.account.count({ where: { name: "Retry" } })).toBe(1);
+  }, 45_000);
 
   it("rejects simultaneous opposite group moves instead of committing a cycle", async () => {
     const outcomes = await race(

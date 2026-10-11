@@ -760,3 +760,30 @@ application and Storybook. Development registers `ValidationModule` with
 overlay. Production omits that module. Cashfolio's charts remain standalone; no
 Integrated Charts or sparkline module is registered. Expanded account groups
 retain their existing session-storage keys and JSON array of group IDs.
+
+## Rejected book mutations
+
+Book-mutation forms opt into
+`useDialogSubmitState({ captureErrors: true, onRefreshConstraints })` and render
+`MutationSubmitFeedback`. Existing callers that do not opt into capture still
+receive thrown errors. The hook prevents duplicate submissions, clears timers on
+completion/unmount, and exposes waiting feedback after two seconds: "Waiting for
+another change to finish…".
+
+Rejected saves leave the form and draft mounted. Recovery uses authorized page
+reads through `useRefreshedMutationData` to refresh choices, group rules and the
+book's earliest booking date without router navigation or form reset. Account
+and group forms initialize once per open/edit session. Unavailable selections
+retain their IDs and display an explanation; the user must correct them under
+the current validation rules. Refresh failures appear separately from save
+errors, with a manual **Refresh choices** action.
+
+Statement-import recovery also reloads existing bookings and recalculates match
+markers and balance previews. It retains draft edits and inclusion decisions,
+even when new matches are discovered, and revalidates against refreshed account
+choices and start dates. Review remains open until a successful import.
+
+Only the confirmed busy-book rollback offers **Try again**. A failed network
+request can have an uncertain save outcome; feedback asks the user to refresh
+and check saved data before submitting again. No automatic mutation retry,
+optimistic edit versions, or live cross-tab synchronization is implemented.

@@ -32,6 +32,7 @@ const validateAccountGroupInput = vi.hoisted(() => vi.fn());
 const invalidatePeriodBaseDataCacheForAccountBook = vi.hoisted(() => vi.fn());
 
 const tx = vi.hoisted(() => ({
+  $executeRaw: vi.fn(),
   $queryRaw: vi.fn(),
   account: {
     findUniqueOrThrow: vi.fn(),

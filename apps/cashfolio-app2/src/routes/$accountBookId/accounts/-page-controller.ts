@@ -1,3 +1,4 @@
+import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
 import type { GridApi, GridReadyEvent } from "ag-grid-enterprise";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useExpandedGroups } from "@/hooks/use-expanded-groups";
@@ -32,7 +33,7 @@ import {
 import { type RowTarget, useAccountsPageModalState } from "./-page-modal-state";
 import { useAccountsReferenceBalanceRows } from "./-page-reference-balances";
 import { useAccountTreeColumnDefs } from "./-page-columns";
-import type { loadAccountsPageData } from "./-page-loader";
+import { loadAccountsPageData } from "./-page-loader";
 import type { AccountsPageViewProps } from "./-page-view";
 
 type AccountsPageLoaderData = Awaited<ReturnType<typeof loadAccountsPageData>>;
@@ -255,13 +256,21 @@ export function useAccountsPageController(args: {
   invalidate: () => void;
   onOpenLedger: AccountsPageViewProps["onOpenLedger"];
 }): AccountsPageControllerViewProps {
+  const { data: loaderData, refresh: onRefreshConstraints } =
+    useRefreshedMutationData(args.loaderData, () =>
+      loadAccountsPageData({
+        accountBookId: args.accountBookId,
+        tab: args.tab,
+        mode: args.mode,
+      }),
+    );
   const {
     accountGroups,
     rows: loaderRows,
     existingNodes,
     referenceCurrency,
     unitUsage,
-  } = args.loaderData;
+  } = loaderData;
 
   const gridApiRef = useRef<GridApi<AccountsGridRow> | null>(null);
   const modalState = useAccountsPageModalState();
@@ -387,6 +396,7 @@ export function useAccountsPageController(args: {
   });
 
   return {
+    onRefreshConstraints,
     accountBookId: args.accountBookId,
     tab: args.tab,
     mode: args.mode,

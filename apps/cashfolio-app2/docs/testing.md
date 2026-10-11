@@ -66,8 +66,15 @@ suite creates and drops its own migrated disposable database; it never targets
 Tests pause one writer after its book lock and observe the competing writer
 waiting in PostgreSQL before allowing the first to commit. They cover hierarchy
 cycles, sibling names, shared opening-balance account creation, cash
-inheritance, archive/unarchive checks, start-date validation, and rollback. CI
-runs the suite in the PostgreSQL-backed staging-seed integration job.
+inheritance, archive/unarchive checks, start-date validation, and rollback. A
+held-lock test keeps the holder active beyond 25 seconds, verifies the busy-book
+rejection without writes, and then verifies an explicit retry after releasing
+the lock. CI runs the suite in the PostgreSQL-backed staging-seed integration
+job.
+
+`e2e/tests/mutation-recovery.spec.ts` verifies rejected simple/split drafts,
+archived selections, archive/delete confirmation errors, account/group edits,
+and import review/inclusion preservation after a constraint refresh.
 
 ## Lint
 

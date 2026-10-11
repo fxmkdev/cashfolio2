@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => {
   const ensureSameOriginRequestFromServerContext = vi.fn();
   const invalidatePeriodBaseDataCacheForAccountBook = vi.fn();
   const tx = {
+    $executeRaw: vi.fn(),
     $queryRaw: vi.fn(),
     accountBook: {
       findUniqueOrThrow: vi.fn(),

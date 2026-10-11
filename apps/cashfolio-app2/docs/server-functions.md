@@ -85,10 +85,19 @@ Account/group mutations, transaction mutations (including bulk statement
 imports), and account-book settings updates/deletion use
 `src/server/account-book-mutation.server.ts` after authorization. It starts a
 Prisma transaction and locks the owning `AccountBook` row with `FOR UPDATE`
-before reading state used by business rules. The transaction has a 30-second
-timeout, including time spent waiting for that lock. All validation queries and
-writes must use the callback's transaction client, including queries in helper
-modules.
+before reading state used by business rules. Before acquiring the lock, it sets
+transaction-local PostgreSQL `lock_timeout` to 25 seconds. PostgreSQL cancels a
+statement that waits that long for a lock. Prisma retains its 30-second
+interactive-transaction timeout; it does not interrupt every running database
+query, so it is not an unconditional wall-clock deadline. All validation queries
+and writes must use the callback's transaction client, including queries in
+helper modules.
+
+PostgreSQL SQLSTATE `55P03` (including Prisma's driver-adapter representation)
+is translated only after the transaction has rolled back to: "This account book
+is busy. No changes were saved. Please try again." Other errors propagate as
+before. A busy-book rejection is safe to retry explicitly; mutations are never
+retried automatically.
 
 The transaction explicitly uses `ReadCommitted`: after waiting for a previous
 writer, subsequent reads see that writer's committed changes. This protects

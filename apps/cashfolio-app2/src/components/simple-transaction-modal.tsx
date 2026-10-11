@@ -1,3 +1,4 @@
+import { MutationSubmitFeedback } from "./mutation-submit-feedback";
 import {
   ActionIcon,
   Button,
@@ -94,6 +95,7 @@ export function SimpleTransactionModal({
   onClose,
   onSubmittingChange,
   onSubmit,
+  onRefreshConstraints,
 }: {
   currentAccount: {
     id: string;
@@ -106,6 +108,7 @@ export function SimpleTransactionModal({
   submitLabel?: string;
   onSwitchToSplit?: (draft: SimpleTransactionDraftValues) => void;
   onClose: () => void;
+  onRefreshConstraints?: () => Promise<void>;
   onSubmittingChange?: (isSubmitting: boolean) => void;
   onSubmit: (values: {
     date: string;
@@ -122,9 +125,12 @@ export function SimpleTransactionModal({
     accountBookStartDay,
     userLocale,
   );
-  const { isSubmitting, runSubmit } = useDialogSubmitState({
+  const submitState = useDialogSubmitState({
     onSubmittingChange,
+    captureErrors: true,
+    onRefreshConstraints,
   });
+  const { isSubmitting, runSubmit } = submitState;
 
   const form = useForm({
     mode: "controlled",
@@ -149,7 +155,10 @@ export function SimpleTransactionModal({
         const counterAccount = accounts.find(
           (account) => account.value === value,
         );
-        if (!counterAccount) return "Counter account is required";
+        if (!counterAccount)
+          return value
+            ? "The selected account is no longer available. Choose another account."
+            : "Counter account is required";
         if (isOpeningBalancesAccount(counterAccount)) {
           return OPENING_BALANCES_MANAGEMENT_MESSAGE;
         }
@@ -222,6 +231,10 @@ export function SimpleTransactionModal({
       }
     >
       <Stack gap="md">
+        <MutationSubmitFeedback
+          state={submitState}
+          onRefreshConstraints={onRefreshConstraints}
+        />
         <Group align="start" wrap="nowrap">
           <DateInput
             valueFormat={getDateInputValueFormat(userLocale)}

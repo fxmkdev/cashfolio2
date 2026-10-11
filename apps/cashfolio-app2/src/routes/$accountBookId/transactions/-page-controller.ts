@@ -1,3 +1,4 @@
+import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
 import { useCallback, useState } from "react";
 import {
   createTransaction,
@@ -13,7 +14,7 @@ import {
 } from "@/shared/transaction-period";
 import { useTransactionsAccountOptions } from "./-account-options";
 import { useTransactionsColumnDefs } from "./-page-columns";
-import type { loadTransactionsPageData } from "./-page-loader";
+import { loadTransactionsPageData } from "./-page-loader";
 import type {
   TransactionsPageViewProps,
   RebookingState,
@@ -32,6 +33,13 @@ export function useTransactionsPageController(args: {
   pendingScrollRef: { current: string | undefined };
   invalidate: () => void;
 }): Omit<TransactionsPageViewProps, "accountBookId" | "onRowDataUpdated"> {
+  const { data: loaderData, refresh: onRefreshConstraints } =
+    useRefreshedMutationData(args.loaderData, () =>
+      loadTransactionsPageData({
+        accountBookId: args.accountBookId,
+        period: args.selectedPeriodValue,
+      }),
+    );
   const [editModalOpened, setEditModalOpened] = useState(false);
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
@@ -57,7 +65,7 @@ export function useTransactionsPageController(args: {
     hasCompleteBookingUnit,
     rebookTargetAccountOptions,
   } = useTransactionsAccountOptions({
-    accounts: args.loaderData.accounts,
+    accounts: loaderData.accounts,
     editingTransactionData:
       editingTransactionData ?? createTransactionInitialValues,
     rebooking,
@@ -178,7 +186,7 @@ export function useTransactionsPageController(args: {
   const { columnDefs, detailColumnDefs } = useTransactionsColumnDefs({
     accountBookId: args.accountBookId,
     selectedPeriodValue: args.selectedPeriodValue,
-    referenceCurrency: args.loaderData.referenceCurrency,
+    referenceCurrency: loaderData.referenceCurrency,
     onEditClick: handleEditClick,
     onRebookClick: handleRebookClick,
     onCopyClick: handleCopyClick,
@@ -186,10 +194,11 @@ export function useTransactionsPageController(args: {
   });
 
   return {
-    rows: args.loaderData.rows,
+    onRefreshConstraints,
+    rows: loaderData.rows,
     columnDefs,
     detailColumnDefs,
-    accountBookStartDate: new Date(args.loaderData.periodBounds.minBookingDate),
+    accountBookStartDate: new Date(loaderData.periodBounds.minBookingDate),
     createModalOpened,
     editModalOpened,
     isCreateSubmitting,

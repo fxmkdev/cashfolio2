@@ -28,7 +28,8 @@ export function validateEditTransactionBookingsRoot(args: {
     const account = accounts.find(
       (candidate) => candidate.value === booking.account,
     );
-    if (!account) continue;
+    if (!account)
+      return "A selected account is no longer available. Choose another account.";
 
     if (isIncomeAccount(account) && booking.debit !== undefined) {
       return "Income accounts cannot have debit entries.";

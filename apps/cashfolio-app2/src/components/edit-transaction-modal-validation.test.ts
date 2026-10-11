@@ -36,6 +36,21 @@ function rootValidation(bookings: BookingValues[], accounts: AccountOption[]) {
 }
 
 describe("validateEditTransactionBookingsRoot", () => {
+  test("requires correcting an unavailable selected account without clearing the draft", () => {
+    const bookings = [
+      {
+        key: "draft",
+        account: "removed",
+        debit: 10,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+      },
+    ];
+    expect(rootValidation(bookings, [])).toBe(
+      "A selected account is no longer available. Choose another account.",
+    );
+    expect(bookings[0].account).toBe("removed");
+  });
   test("allows valid gain/loss two-booking transaction", () => {
     const result = rootValidation(
       [

@@ -32,6 +32,7 @@ const ensureSameOriginRequestFromServerContext = vi.hoisted(() => vi.fn());
 const invalidatePeriodBaseDataCacheForAccountBook = vi.hoisted(() => vi.fn());
 
 const prisma = vi.hoisted(() => ({
+  $executeRaw: vi.fn(),
   $queryRaw: vi.fn(),
   booking: {
     count: vi.fn(),

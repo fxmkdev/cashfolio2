@@ -13,6 +13,7 @@ import { type UseFormReturnType, useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { IconAlertTriangle, IconCheck, IconTrash } from "@tabler/icons-react";
+import { MutationSubmitFeedback } from "@/components/mutation-submit-feedback";
 import { NarrowPageShell } from "@/components/narrow-page-shell";
 import { TopPageHeader } from "@/components/top-page-header";
 import { CurrencySelect } from "@/components/unit-select";
@@ -77,7 +78,8 @@ export function isDeleteAccountBookConfirmationMatch(args: {
 function SettingsFormFields(args: {
   form: UseFormReturnType<SettingsFormValues>;
   isSubmitting: boolean;
-  submitError: string | null;
+  submitState: ReturnType<typeof useDialogSubmitState>;
+  onRefreshConstraints?: () => Promise<void>;
   settings: SettingsPageData;
 }) {
   const userLocale = useUserLocale();
@@ -112,11 +114,10 @@ function SettingsFormFields(args: {
         {...args.form.getInputProps("startDate")}
       />
 
-      {args.submitError && (
-        <Text size="sm" c="red">
-          {args.submitError}
-        </Text>
-      )}
+      <MutationSubmitFeedback
+        state={args.submitState}
+        onRefreshConstraints={args.onRefreshConstraints}
+      />
 
       <Group justify="end">
         <Button
@@ -136,10 +137,14 @@ function DeleteAccountBookModal(args: {
   accountBookName: string;
   onClose: () => void;
   onConfirm: (values: { confirmationName: string }) => Promise<void>;
+  onRefreshConstraints?: () => Promise<void>;
 }) {
-  const { isSubmitting, runSubmit } = useDialogSubmitState();
+  const submitState = useDialogSubmitState({
+    captureErrors: true,
+    onRefreshConstraints: args.onRefreshConstraints,
+  });
+  const { isSubmitting, runSubmit, clearSubmissionError } = submitState;
   const [confirmationName, setConfirmationName] = useState("");
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const confirmationMatches = isDeleteAccountBookConfirmationMatch({
     confirmationName,
     accountBookName: args.accountBookName,
@@ -148,9 +153,9 @@ function DeleteAccountBookModal(args: {
   useEffect(() => {
     if (!args.opened) {
       setConfirmationName("");
-      setSubmitError(null);
+      clearSubmissionError();
     }
-  }, [args.opened]);
+  }, [args.opened, clearSubmissionError]);
 
   const handleClose = () => {
     if (isSubmitting) return;
@@ -161,18 +166,10 @@ function DeleteAccountBookModal(args: {
     event.preventDefault();
     if (!confirmationMatches) return;
 
-    setSubmitError(null);
+    clearSubmissionError();
     await runSubmit(async () => {
-      try {
-        await args.onConfirm({ confirmationName });
-        showAccountBookDeletedNotification();
-      } catch (error) {
-        setSubmitError(
-          error instanceof Error
-            ? error.message
-            : "Failed to delete account book.",
-        );
-      }
+      await args.onConfirm({ confirmationName });
+      showAccountBookDeletedNotification();
     });
   }
 
@@ -205,11 +202,10 @@ function DeleteAccountBookModal(args: {
             data-autofocus
           />
 
-          {submitError && (
-            <Text size="sm" c="red">
-              {submitError}
-            </Text>
-          )}
+          <MutationSubmitFeedback
+            state={submitState}
+            onRefreshConstraints={args.onRefreshConstraints}
+          />
 
           <Group justify="flex-end">
             <Button
@@ -271,10 +267,14 @@ export function SettingsPageView(args: {
     startDate: string;
   }) => Promise<void>;
   onDelete: (values: { confirmationName: string }) => Promise<void>;
+  onRefreshConstraints?: () => Promise<void>;
 }) {
   const { settings } = args;
-  const { isSubmitting, runSubmit } = useDialogSubmitState();
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const submitState = useDialogSubmitState({
+    captureErrors: true,
+    onRefreshConstraints: args.onRefreshConstraints,
+  });
+  const { isSubmitting, runSubmit, clearSubmissionError } = submitState;
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
 
   const form = useForm<SettingsFormValues>({
@@ -297,13 +297,13 @@ export function SettingsPageView(args: {
 
   useEffect(() => {
     const currentForm = formRef.current;
+    if (currentForm.isDirty()) return;
     currentForm.setValues({
       name: settings.name,
       referenceCurrency: settings.referenceCurrency,
       startDate: settings.startDate,
     });
     currentForm.resetDirty();
-    setSubmitError(null);
   }, [settings]);
 
   return (
@@ -318,29 +318,23 @@ export function SettingsPageView(args: {
             return;
           }
 
-          setSubmitError(null);
+          clearSubmissionError();
           await runSubmit(async () => {
-            try {
-              await args.onSubmit({
-                name: values.name.trim(),
-                referenceCurrency,
-                startDate: startOfUtcDay(normalizedStartDate).toISOString(),
-              });
-              showSettingsSavedNotification();
-            } catch (error) {
-              setSubmitError(
-                error instanceof Error
-                  ? error.message
-                  : "Failed to save settings.",
-              );
-            }
+            await args.onSubmit({
+              name: values.name.trim(),
+              referenceCurrency,
+              startDate: startOfUtcDay(normalizedStartDate).toISOString(),
+            });
+            form.resetDirty();
+            showSettingsSavedNotification();
           });
         })}
       >
         <SettingsFormFields
           form={form}
           isSubmitting={isSubmitting}
-          submitError={submitError}
+          submitState={submitState}
+          onRefreshConstraints={args.onRefreshConstraints}
           settings={settings}
         />
       </form>
@@ -352,6 +346,7 @@ export function SettingsPageView(args: {
         accountBookName={settings.name}
         onClose={() => setDeleteModalOpened(false)}
         onConfirm={args.onDelete}
+        onRefreshConstraints={args.onRefreshConstraints}
       />
     </NarrowPageShell>
   );

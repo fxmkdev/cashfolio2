@@ -3,6 +3,20 @@ import { formatUtcDate } from "@/shared/date";
 import { toMoney } from "@/shared/money";
 import type { StatementImportDraft } from "../types";
 
+/** Recheck matches without changing the user's inclusion decisions or edits. */
+export function refreshStatementImportMatches(
+  drafts: StatementImportDraft[],
+  bookings: StatementImportExistingBooking[],
+): StatementImportDraft[] {
+  return matchStatementImportDrafts(
+    drafts.map((draft) => ({
+      ...draft,
+      matchedExistingBooking: undefined,
+    })),
+    bookings,
+  ).map((draft, index) => ({ ...draft, ignored: drafts[index].ignored }));
+}
+
 export function matchStatementImportDrafts(
   drafts: StatementImportDraft[],
   bookings: StatementImportExistingBooking[],

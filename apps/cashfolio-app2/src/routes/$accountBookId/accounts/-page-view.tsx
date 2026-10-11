@@ -42,6 +42,7 @@ type RowTarget = {
 
 export type AccountsPageViewProps = {
   accountBookId: string;
+  onRefreshConstraints?: () => Promise<void>;
   tab: TabValue;
   mode: AccountsMode;
   tabs: readonly { value: TabValue; label: string }[];
@@ -93,6 +94,7 @@ export type AccountsPageViewProps = {
 
 export function AccountsPageView({
   accountBookId,
+  onRefreshConstraints,
   tab,
   mode,
   tabs,
@@ -245,6 +247,7 @@ export function AccountsPageView({
       {!isArchivedMode && (
         <>
           <EditAccountModal
+            onRefreshConstraints={onRefreshConstraints}
             opened={createModalOpened}
             onClose={onCloseCreateAccount}
             accountGroups={accountGroups}
@@ -254,6 +257,7 @@ export function AccountsPageView({
             typeDescriptor={tab}
           />
           <ConfirmArchiveModal
+            onRefreshConstraints={onRefreshConstraints}
             opened={!!archivingRow}
             onClose={onCloseArchive}
             title={
@@ -268,6 +272,7 @@ export function AccountsPageView({
       )}
 
       <EditAccountGroupModal
+        onRefreshConstraints={onRefreshConstraints}
         opened={createGroupModalOpened}
         onClose={onCloseCreateGroup}
         accountGroups={accountGroups}
@@ -277,6 +282,7 @@ export function AccountsPageView({
       />
 
       <EditAccountModal
+        onRefreshConstraints={onRefreshConstraints}
         opened={editModalOpen}
         onClose={onCloseEditAccount}
         onExitTransitionEnd={onClearEditingAccount}
@@ -290,6 +296,7 @@ export function AccountsPageView({
       />
 
       <EditAccountGroupModal
+        onRefreshConstraints={onRefreshConstraints}
         opened={editGroupModalOpen}
         onClose={onCloseEditGroup}
         onExitTransitionEnd={onClearEditingGroup}
@@ -302,6 +309,7 @@ export function AccountsPageView({
       />
 
       <ConfirmDeleteModal
+        onRefreshConstraints={onRefreshConstraints}
         opened={!!deletingRow}
         onClose={onCloseDelete}
         title={
