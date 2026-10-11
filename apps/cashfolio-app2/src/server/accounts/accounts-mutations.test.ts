@@ -163,9 +163,9 @@ describe("account mutation boundary validation", () => {
       await expect(mutation({ data })).rejects.toThrow();
       expect(ensureAuthorizedForAccountBookId).not.toHaveBeenCalled();
       expect(ensureSameOriginRequestFromServerContext).not.toHaveBeenCalled();
-      expect(prisma.account.findMany).not.toHaveBeenCalled();
-      expect(prisma.account.findUniqueOrThrow).not.toHaveBeenCalled();
-      expect(prisma.accountGroup.findMany).not.toHaveBeenCalled();
+      expect(tx.account.findMany).not.toHaveBeenCalled();
+      expect(tx.account.findUniqueOrThrow).not.toHaveBeenCalled();
+      expect(tx.accountGroup.findMany).not.toHaveBeenCalled();
       expect(prisma.$transaction).not.toHaveBeenCalled();
       expect(
         invalidatePeriodBaseDataCacheForAccountBook,

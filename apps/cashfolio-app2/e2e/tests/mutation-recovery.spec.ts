@@ -259,7 +259,7 @@ for (const entity of ["account", "group"] as const) {
     const dialog = page.getByRole("dialog", {
       name: entity === "account" ? "Edit Account" : "Edit Group",
     });
-    await dialog.getByLabel("Name", { exact: true }).fill(duplicate);
+    await dialog.getByLabel("Name").fill(duplicate);
     // Another writer creates the sibling after the form's validation snapshot.
     if (entity === "account")
       await prisma.account.create({
@@ -280,13 +280,9 @@ for (const entity of ["account", "group"] as const) {
     await expect(
       dialog.getByRole("button", { name: "Refresh choices" }),
     ).toBeEnabled();
-    await expect(dialog.getByLabel("Name", { exact: true })).toHaveValue(
-      duplicate,
-    );
+    await expect(dialog.getByLabel("Name")).toHaveValue(duplicate);
     await dialog.getByRole("button", { name: "Refresh choices" }).click();
-    await expect(dialog.getByLabel("Name", { exact: true })).toHaveValue(
-      duplicate,
-    );
+    await expect(dialog.getByLabel("Name")).toHaveValue(duplicate);
     expect(
       await model.count({
         where: { id, name: original, accountBookId: seeded.accountBookId },

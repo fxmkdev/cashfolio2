@@ -413,15 +413,30 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
     expect(await db.transaction.count()).toBe(0);
   });
 
-  it("rolls back earlier account writes when opening-balance validation fails", async () => {
-    await expect(
-      mutations.createAccount({
-        data: account("Wallet", { openingBalance: NaN }),
-      }),
-    ).rejects.toThrow("Opening balance is invalid");
+  it("rolls back account and opening-balance writes when the transaction fails", async () => {
+    const original = boundary.withAccountBookMutation;
+    const spy = vi
+      .spyOn(boundary, "withAccountBookMutation")
+      .mockImplementationOnce((id, operation) =>
+        original(id, async (tx) => {
+          await operation(tx);
+          throw new Error("Opening balance save failed.");
+        }),
+      );
+    try {
+      await expect(
+        mutations.createAccount({
+          data: account("Wallet", { openingBalance: 10 }),
+        }),
+      ).rejects.toThrow("Opening balance save failed.");
+    } finally {
+      spy.mockRestore();
+    }
     expect(await db.account.count({ where: { type: AccountType.ASSET } })).toBe(
       0,
     );
+    expect(await db.transaction.count()).toBe(0);
+    expect(await db.booking.count()).toBe(0);
     // A failed mutation releases the lock so the next writer can proceed.
     await mutations.createAccount({
       data: account("Wallet", { openingBalance: 10 }),

@@ -13,7 +13,7 @@ import {
   type StatementImportCsvFormat,
   type StatementImportDraft,
 } from "./index";
-import { getStatementImportDisabledReason } from "./account-options";
+import { getStatementImportDisabledReason } from "./draft/account-options";
 import { getStatementImportTransactionsToSubmit } from "./page-controller";
 import { useStatementImportReviewState } from "./page-review-state";
 import { useStatementImportUploadState } from "./page-upload-state";

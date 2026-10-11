@@ -12,7 +12,10 @@ import {
   getImportDraftStatus,
   accountOptions,
 } from "../test-fixtures";
-import {matchStatementImportDrafts, refreshStatementImportMatches} from "./matching";
+import {
+  matchStatementImportDrafts,
+  refreshStatementImportMatches,
+} from "./matching";
 import {
   getStatementImportIgnoredCount,
   getStatementImportTransactionsToSubmit,
