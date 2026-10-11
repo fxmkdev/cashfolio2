@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import { prisma } from "../../prisma.server";
+import { withDatabaseConflictRetry } from "../database-conflict-retry";
 import { ensureAuthorizedForAccountBookId } from "../../account-books/functions.server";
 import { ensureSameOriginRequestFromServerContext } from "../../security/same-origin.server";
 import {
@@ -212,58 +213,60 @@ export const updateAccountBookSettings = createServerFn({ method: "POST" })
     const { name, referenceCurrency, startDate } = data;
 
     const { updated, referenceCurrencyChanged, startDateChanged } =
-      await prisma.$transaction(async (tx) => {
-        const currentAccountBook = await tx.accountBook.findUniqueOrThrow({
-          where: { id: data.accountBookId },
-          select: {
-            id: true,
-            referenceCurrency: true,
-            startDate: true,
-          },
-        });
-
-        const referenceCurrencyChanged =
-          currentAccountBook.referenceCurrency.toUpperCase() !==
-          referenceCurrency;
-        const startDateChanged = !isSameUtcDay(
-          currentAccountBook.startDate,
-          startDate,
-        );
-
-        if (startDateChanged) {
-          const firstNonOpeningBookingDay =
-            await findFirstNonOpeningBookingDate(tx, data.accountBookId);
-          assertStartDateNotAfterFirstNonOpeningBooking({
-            startDate,
-            firstNonOpeningBookingDay,
+      await withDatabaseConflictRetry(() =>
+        prisma.$transaction(async (tx) => {
+          const currentAccountBook = await tx.accountBook.findUniqueOrThrow({
+            where: { id: data.accountBookId },
+            select: {
+              id: true,
+              referenceCurrency: true,
+              startDate: true,
+            },
           });
-          await migrateOpeningTransactionsToDate(tx, {
-            accountBookId: data.accountBookId,
+
+          const referenceCurrencyChanged =
+            currentAccountBook.referenceCurrency.toUpperCase() !==
+            referenceCurrency;
+          const startDateChanged = !isSameUtcDay(
+            currentAccountBook.startDate,
             startDate,
+          );
+
+          if (startDateChanged) {
+            const firstNonOpeningBookingDay =
+              await findFirstNonOpeningBookingDate(tx, data.accountBookId);
+            assertStartDateNotAfterFirstNonOpeningBooking({
+              startDate,
+              firstNonOpeningBookingDay,
+            });
+            await migrateOpeningTransactionsToDate(tx, {
+              accountBookId: data.accountBookId,
+              startDate,
+            });
+          }
+
+          const updated = await tx.accountBook.update({
+            where: { id: data.accountBookId },
+            data: {
+              name,
+              referenceCurrency,
+              startDate,
+            },
+            select: {
+              id: true,
+              name: true,
+              referenceCurrency: true,
+              startDate: true,
+            },
           });
-        }
 
-        const updated = await tx.accountBook.update({
-          where: { id: data.accountBookId },
-          data: {
-            name,
-            referenceCurrency,
-            startDate,
-          },
-          select: {
-            id: true,
-            name: true,
-            referenceCurrency: true,
-            startDate: true,
-          },
-        });
-
-        return {
-          updated,
-          referenceCurrencyChanged,
-          startDateChanged,
-        };
-      });
+          return {
+            updated,
+            referenceCurrencyChanged,
+            startDateChanged,
+          };
+        }),
+      );
 
     if (referenceCurrencyChanged || startDateChanged) {
       await invalidatePeriodBaseDataCacheForAccountBook(data.accountBookId);
@@ -288,7 +291,9 @@ export const deleteAccountBook = createServerFn({ method: "POST" })
       throw new Error("Account book name confirmation does not match.");
     }
 
-    await prisma.accountBook.delete({
-      where: { id: data.accountBookId },
-    });
+    await withDatabaseConflictRetry(() =>
+      prisma.accountBook.delete({
+        where: { id: data.accountBookId },
+      }),
+    );
   });

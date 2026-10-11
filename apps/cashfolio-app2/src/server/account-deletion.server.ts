@@ -1,6 +1,7 @@
 import type { LogtoContext } from "@logto/node";
 import { ensureAuthenticated } from "@/auth/functions.server";
 import { deleteLogtoUser } from "@/auth/logto-management.server";
+import { withDatabaseConflictRetry } from "./database-conflict-retry";
 import { destroyLogtoSession } from "@/auth/logto.server";
 import { prisma } from "@/prisma.server";
 import { ensureSameOriginRequest } from "@/security/same-origin.server";
@@ -76,26 +77,28 @@ export async function deleteApplicationUserData(args: {
   externalId: string;
   accountBookIdsToDelete: string[];
 }): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    await tx.user.deleteMany({
-      where: { externalId: args.externalId },
-    });
+  await withDatabaseConflictRetry(() =>
+    prisma.$transaction(async (tx) => {
+      await tx.user.deleteMany({
+        where: { externalId: args.externalId },
+      });
 
-    if (args.accountBookIdsToDelete.length === 0) {
-      return;
-    }
+      if (args.accountBookIdsToDelete.length === 0) {
+        return;
+      }
 
-    await tx.accountBook.deleteMany({
-      where: {
-        id: {
-          in: args.accountBookIdsToDelete,
+      await tx.accountBook.deleteMany({
+        where: {
+          id: {
+            in: args.accountBookIdsToDelete,
+          },
+          userLinks: {
+            none: {},
+          },
         },
-        userLinks: {
-          none: {},
-        },
-      },
-    });
-  });
+      });
+    }),
+  );
 }
 
 export async function deleteUserAccountData(args: {

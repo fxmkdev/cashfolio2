@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { Prisma } from "../../.prisma-client/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   deleteAccountBook,
@@ -79,4 +80,23 @@ describe("deleteAccountBook", () => {
 
     expect(prisma.accountBook.delete).not.toHaveBeenCalled();
   });
+  it("retries only the database delete after a conflict", async () => {
+    prisma.accountBook.delete.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError("deadlock", {
+        code: "P2034",
+        clientVersion: "test",
+      }),
+    );
+    await deleteAccountBook({
+      data: { accountBookId: "book-1", confirmationName: "My Book" },
+    });
+    expect(prisma.accountBook.delete).toHaveBeenCalledTimes(2);
+    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledOnce();
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledOnce();
+    expect(ensureSameOriginRequestFromServerContext).toHaveBeenCalledOnce();
+  });
 });
+
+vi.mock("node:timers/promises", () => ({
+  setTimeout: vi.fn().mockResolvedValue(undefined),
+}));

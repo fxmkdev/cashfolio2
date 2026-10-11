@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Prisma } from "../../.prisma-client/client";
 import {
   AccountType,
   EquityAccountSubtype,
@@ -59,6 +60,7 @@ const tx = vi.hoisted(() => ({
 
 const prisma = vi.hoisted(() => ({
   account: {
+    update: vi.fn(),
     findMany: vi.fn(),
     findUniqueOrThrow: vi.fn(),
   },
@@ -94,6 +96,10 @@ vi.mock("../../prisma.server", () => ({
 
 vi.mock("../period/cache/period-base-data-cache", () => ({
   invalidatePeriodBaseDataCacheForAccountBook,
+}));
+
+vi.mock("node:timers/promises", () => ({
+  setTimeout: vi.fn().mockResolvedValue(undefined),
 }));
 
 import {
@@ -1122,5 +1128,43 @@ describe("createAccountGroup", () => {
 
     expect(tx.accountGroup.update).not.toHaveBeenCalled();
     expect(tx.accountGroup.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("reorderAccountTreeItems conflict recovery", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("recreates reorder queries on conflict with authorization and cleanup outside retries", async () => {
+    prisma.account.update.mockImplementation(async () => ({ id: "account" }));
+    prisma.$transaction
+      .mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError("deadlock", {
+          code: "P2034",
+          clientVersion: "test",
+        }),
+      )
+      .mockResolvedValueOnce([]);
+
+    await reorderAccountTreeItems({
+      data: {
+        accountBookId: "book-1",
+        updates: [
+          { id: "account-a", nodeType: "account", sortOrder: 1 },
+          { id: "account-b", nodeType: "account", sortOrder: 2 },
+        ],
+      },
+    });
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+    const first = prisma.$transaction.mock.calls[0]![0];
+    const second = prisma.$transaction.mock.calls[1]![0];
+    expect(second).not.toBe(first);
+    expect(second[0]).not.toBe(first[0]);
+    expect(prisma.account.update).toHaveBeenCalledTimes(4);
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledOnce();
+    expect(ensureSameOriginRequestFromServerContext).toHaveBeenCalledOnce();
+    expect(
+      invalidatePeriodBaseDataCacheForAccountBook,
+    ).toHaveBeenCalledExactlyOnceWith("book-1");
   });
 });

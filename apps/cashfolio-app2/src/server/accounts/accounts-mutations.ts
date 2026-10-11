@@ -8,6 +8,7 @@ import {
   validateReorderAccountTreeItemsInput,
 } from "./accounts-input-validation";
 import { ensureAuthorizedAccountBookMutation } from "../mutation-guard.server";
+import { withDatabaseConflictRetry } from "../database-conflict-retry";
 import { invalidatePeriodBaseDataCacheForAccountBook } from "../period/cache/period-base-data-cache";
 import {
   archiveAccountGroupOperation,
@@ -29,7 +30,7 @@ async function runAccountMutation<T>(
   operation: () => Promise<AccountMutationOperationResult<T>>,
 ): Promise<T> {
   await ensureAuthorizedAccountBookMutation(accountBookId);
-  const result = await operation();
+  const result = await withDatabaseConflictRetry(operation);
   if (result.invalidatePeriodCache) {
     await invalidatePeriodBaseDataCacheForAccountBook(accountBookId);
   }
