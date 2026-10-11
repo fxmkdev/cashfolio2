@@ -7,7 +7,7 @@ import {
 import { moneyMultiply, toMoney } from "../../shared/money";
 import { toNumericMoney } from "../money-boundary";
 import { decodeMoneyCache, encodeMoneyCache } from "../money-cache-codec";
-import type { PeriodBaseData } from "./period-base-data-types";
+import type { PeriodBaseData } from "./base-data/period-base-data-types";
 
 const prisma = vi.hoisted(() => ({
   account: { findFirst: vi.fn(), findMany: vi.fn() },
@@ -16,7 +16,7 @@ const prisma = vi.hoisted(() => ({
 }));
 const getOrLoadPeriodBaseData = vi.hoisted(() => vi.fn());
 vi.mock("../../prisma.server", () => ({ prisma }));
-vi.mock("./period-base-data-cache", () => ({ getOrLoadPeriodBaseData }));
+vi.mock("./cache/period-base-data-cache", () => ({ getOrLoadPeriodBaseData }));
 vi.mock("../valuation.server", () => ({
   getSecurityToCurrencyExchangeRate: async ({ date }: { date: Date }) =>
     securityRate(date),
@@ -27,9 +27,9 @@ vi.mock("../valuation.server", () => ({
   }) => ({ rate: securityRate(date), source: "timeSeries" }),
 }));
 
-import { loadPeriodOverview } from "./period-overview.server";
-import { loadPeriodHistoryPointMetrics } from "./period-history-point-metrics.server";
-import { buildRealAccountReconciliation } from "./period-gain-loss-reconciliation-real-account";
+import { loadPeriodOverview } from "./overview/period-overview.server";
+import { loadPeriodHistoryPointMetrics } from "./history/period-history-point-metrics.server";
+import { buildRealAccountReconciliation } from "./reconciliation/period-gain-loss-reconciliation-real-account";
 import { computeEndOfPeriodBalanceStats } from "./period-balance-stats";
 
 function securityRate(date: Date) {
@@ -234,7 +234,7 @@ describe("Decimal monetary pipelines", () => {
 
 it("allocates fractional residuals using Decimal weights", async () => {
   const { buildResidualAllocationWeights } =
-    await import("./period-overview-holdings-common");
+    await import("./holdings/period-overview-holdings-common");
   const { moneySum } = await import("../../shared/money");
   const source = createScenario().holdingTransactions[0]!.bookings[0]!;
   const bookings = [source, { ...source, id: "second" }];

@@ -55,27 +55,51 @@ Related docs:
   `source-rates.ts`, `lookup-context.ts`, `providers.ts`, `cache.ts`,
   `backtracking.ts`, `keys.ts`, `types.ts`, `date-utils.ts`, `constants.ts`
 
+### Period Module Organization
+
+Period implementation modules are grouped by concern under `src/server/period/`:
+
+- `base-data/`: database-derived period inputs, loaders, queries, and types
+- `cache/`: shared cache generation/key helpers, base-data cache, and History
+  metrics cache
+- `holdings/`: lot/FIFO gain/loss calculation, holding transfers, and execution
+  residuals
+- `history/`: History loading, point metrics, scopes, and opening-balance points
+- `reconciliation/`: gain/loss reconciliation and event-level explain data
+- `breakdown/`: gain/loss breakdowns and contribution attribution
+- `overview/`: Period overview loading, aggregation, responses, equity bookings,
+  and cash flow
+- `transfer-clearing/`: virtual transfer-clearing buckets, hierarchy, and
+  gain/loss
+- `net-worth/`: end-of-period and opening-balance net-worth loading
+
+Cross-concern selection, conversion, balance statistics, unit formatting, and
+period helpers remain at the period folder root. Tests live alongside the
+modules they exercise; cross-concern pipeline tests remain at the root. Use
+explicit imports between these modules. Existing public facades in `src/server/`
+remain the entry points for routes and keep their import paths stable.
+
 ## Period Caches
 
 - Period overview and history use a shared Redis-backed **non-valuation**
-  base-data cache (`src/server/period/period-base-data-cache.ts`) backed by an
-  uncached loader module
-  (`src/server/period/period-base-data-loader.server.ts`).
+  base-data cache (`src/server/period/cache/period-base-data-cache.ts`) backed
+  by an uncached loader module
+  (`src/server/period/base-data/period-base-data-loader.server.ts`).
 - Cached payload scope: DB-derived period inputs only (metadata, scoped raw
   bookings/transactions, raw balances, transfer-clearing buckets).
 - Excluded from cache payload: converted valuation outputs and exchange-rate
   results.
 - History additionally uses a Redis-backed derived metrics cache
-  (`src/server/period/period-history-metrics-cache.ts`) for finalized scalar
-  History point metrics. This cache sits above the base-data cache, so warm hits
-  skip period snapshot loading, valuation conversion, and gain/loss
+  (`src/server/period/cache/period-history-metrics-cache.ts`) for finalized
+  scalar History point metrics. This cache sits above the base-data cache, so
+  warm hits skip period snapshot loading, valuation conversion, and gain/loss
   recomputation for that point.
 - The base-data cache is intentionally kept even with derived History metrics:
   Period overview still consumes the base-data payload directly, and History
   misses still benefit from cached DB-derived inputs.
 - Both period cache families share the same environment namespace helper in
-  `src/server/period/period-cache.ts`. `PERIOD_BASE_CACHE_ENV` must be set when
-  Redis caching is enabled; Fly deployments populate it from the Fly
+  `src/server/period/cache/period-cache.ts`. `PERIOD_BASE_CACHE_ENV` must be set
+  when Redis caching is enabled; Fly deployments populate it from the Fly
   app/deployment environment so preview and staging apps can safely share one
   Redis instance.
 - Redis key namespace includes deployment scope and invalidation generation:
@@ -181,7 +205,7 @@ The canonical period gain/loss semantics are shared between:
 
 - `getPeriodOverview` (`src/server/period.ts`)
 - history metrics loading
-  (`src/server/period/period-history-point-metrics.server.ts`)
+  (`src/server/period/history/period-history-point-metrics.server.ts`)
 
 Both loaders reuse the shared period base-data cache and shared gain/loss
 subflows while keeping their output work focused:
@@ -197,7 +221,7 @@ single tracked-account flow:
   - non-reference virtual transfer-clearing holding accounts
 - Both real transactions and synthetic transfer-clearing transactions flow
   through the same lot/FIFO pipeline in
-  `src/server/period/period-overview-holdings.ts`
+  `src/server/period/holdings/period-overview-holdings.ts`
 - Same-unit mixed-period holding transfers are treated as non-realizing carry
   adjustments, so in-period legs no longer create false realization when the
   opposite leg sits outside the selected period.
@@ -208,7 +232,8 @@ single tracked-account flow:
   - `stats.gainsLosses = explicit + realized + unrealized`
 
 Execution-residual reconciliation for eligible multi-unit income/expense
-transactions is isolated in `src/server/period/period-execution-residuals.ts`:
+transactions is isolated in
+`src/server/period/holdings/period-execution-residuals.ts`:
 
 - Candidate transactions are narrowed at query level to completed (no
   post-period legs) multi-unit transactions with at least one in-period booking
@@ -226,12 +251,12 @@ cross-period income/expense transactions remain partially posted at period end.
 To keep `src/server/period.ts` as a stable facade, the larger gain/loss subflows
 are split into dedicated modules under `src/server/period/`:
 
-- `src/server/period/period-equity-bookings.ts` handles paged equity booking
-  conversion from preloaded period base data, equity aggregation, and explicit
-  counterpart attribution
-- `src/server/period/period-holding-gain-loss.ts` handles tracked holding
-  lot/FIFO orchestration (real + transfer-clearing synthetic transactions) and
-  residual realization integration
+- `src/server/period/overview/period-equity-bookings.ts` handles paged equity
+  booking conversion from preloaded period base data, equity aggregation, and
+  explicit counterpart attribution
+- `src/server/period/holdings/period-holding-gain-loss.ts` handles tracked
+  holding lot/FIFO orchestration (real + transfer-clearing synthetic
+  transactions) and residual realization integration
 
 ## Gain/Loss Reconciliation Explain Fields
 

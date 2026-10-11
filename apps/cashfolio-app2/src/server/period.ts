@@ -61,7 +61,7 @@ export const getPeriodOverview = createServerFn({
     const { ensureAuthorizedForAccountBookId } =
       await import("../account-books/functions.server");
     const { loadPeriodOverview } =
-      await import("./period/period-overview.server");
+      await import("./period/overview/period-overview.server");
 
     await ensureAuthorizedForAccountBookId(data.accountBookId);
     return loadPeriodOverview(data);

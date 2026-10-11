@@ -27,7 +27,7 @@ Primary consumers:
 - `src/server/accounts/accounts-queries.ts`
   - account tree reference balances
   - `getAccountReferenceBalances` lazy hydration endpoint
-- `src/server/period/period-history-point-metrics.server.ts`
+- `src/server/period/history/period-history-point-metrics.server.ts`
   - History point valuation conversions
   - exposes internal source metadata so derived History metrics are cached only
     when all valuations came from identity conversion or Redis TimeSeries

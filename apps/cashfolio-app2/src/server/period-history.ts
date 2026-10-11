@@ -1,10 +1,10 @@
-export { getPeriodHistory } from "./period/period-history";
+export { getPeriodHistory } from "./period/history/period-history";
 export type {
   PeriodHistoryGranularity,
   PeriodHistoryOpeningBalancePoint,
   PeriodHistoryPoint,
   PeriodHistoryResponse,
-} from "./period/period-history";
+} from "./period/history/period-history";
 export type {
   HistoryScopeOption,
   HistoryScopeSelection,

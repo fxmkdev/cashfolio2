@@ -15,7 +15,7 @@ import {
 } from "../account-book-validation";
 import { assertRecord, requireStringField } from "../input-validation";
 import { ensureAuthorizedAccountBookMutation } from "../mutation-guard.server";
-import { invalidatePeriodBaseDataCacheForAccountBook } from "../period/period-base-data-cache";
+import { invalidatePeriodBaseDataCacheForAccountBook } from "../period/cache/period-base-data-cache";
 
 type AccountBookSettings = {
   id: string;
