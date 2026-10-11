@@ -58,16 +58,19 @@ export type GainLossReconciliationRealizedEvent<Amount = number> = {
   };
 };
 
-export type GainLossReconciliationOpenLot<Amount = number> = {
+export type GainLossReconciliationOpenLot<
+  Amount = number,
+  Valuation = Amount,
+> = {
   id: string;
   acquisitionSortKey: string;
   acquisitionDate: string;
   acquisitionBookingId: string;
   quantity: Amount;
   unitCostInReference: Amount;
-  periodEndRate: Amount;
-  unrealizedGainLoss: Amount;
-  runningUnrealizedGainLoss: Amount;
+  periodEndRate: Valuation;
+  unrealizedGainLoss: Valuation;
+  runningUnrealizedGainLoss: Valuation;
 };
 
 export type GainLossReconciliationTarget = {

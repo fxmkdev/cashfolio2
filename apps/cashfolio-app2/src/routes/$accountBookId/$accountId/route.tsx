@@ -1,3 +1,4 @@
+import { AccountGainLossSection } from "@/components/gain-loss/account-gain-loss-section";
 import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
 import { Suspense, lazy, useCallback, useMemo } from "react";
 import { useTransactionScroll } from "@/hooks/use-transaction-scroll";
@@ -139,6 +140,30 @@ export function LedgerPageContent() {
   return (
     <Suspense fallback={null}>
       <LedgerPageView
+        gainLossSection={
+          loaderData.account.type !== "EQUITY" &&
+          !(
+            loaderData.account.unit === "CURRENCY" &&
+            loaderData.account.currency === loaderData.referenceCurrency
+          ) ? (
+            <AccountGainLossSection
+              accountBookId={accountBookId}
+              accountId={accountId}
+              period={selectedPeriod?.value}
+              refreshKey={loaderData}
+              onOpenTransaction={(transactionId) => {
+                void navigate({
+                  search: (previous) => ({
+                    ...previous,
+                    period: undefined,
+                    transactionId,
+                  }),
+                });
+              }}
+            />
+          ) : undefined
+        }
+
         {...viewProps}
         periodFilterControls={
           isPeriodFilterAvailable ? (

@@ -154,6 +154,7 @@ export type LedgerPageViewProps = {
   accountDeletable: boolean;
   accountDeleteLabel: string;
   statementImportDisabledReason: string | null;
+  gainLossSection?: ReactNode;
   periodFilterControls?: ReactNode;
   onRowDataUpdated: AgGridReactProps<LedgerRow>["onRowDataUpdated"];
   onOpenAccountEdit: () => void;
@@ -248,6 +249,7 @@ export function LedgerPageView({
   accountDeletable,
   accountDeleteLabel,
   statementImportDisabledReason,
+  gainLossSection,
   periodFilterControls,
   onRowDataUpdated,
   onOpenAccountEdit,
@@ -405,6 +407,7 @@ export function LedgerPageView({
       />
       {bulkActions && <BulkTransactionToolbar actions={bulkActions} />}
 
+      {gainLossSection}
       <DataGrid
         {...bulkActions?.gridProps}
         containerStyle={{ flex: 1, minHeight: 0 }}

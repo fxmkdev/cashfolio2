@@ -56,7 +56,7 @@ export function pushDiagnostic(
   });
 }
 
-function parseAcquisitionSortKey(sortKey: string): {
+export function parseAcquisitionSortKey(sortKey: string): {
   acquisitionDate: string;
   acquisitionBookingId: string;
 } {
@@ -80,6 +80,7 @@ function parseAcquisitionSortKey(sortKey: string): {
 }
 
 function toRealizedEventLotMatches(args: {
+  roundAmounts?: boolean;
   bookingId: string;
   lotMatches: Array<{
     acquisitionSortKey: string;
@@ -90,6 +91,7 @@ function toRealizedEventLotMatches(args: {
     runningEventRealizedGainLoss: Money;
   }>;
 }): GainLossReconciliationRealizedEventLotMatch<Money>[] {
+  const round = args.roundAmounts === false ? toMoney : round2;
   return args.lotMatches.map((lotMatch, index) => {
     const parsed = parseAcquisitionSortKey(lotMatch.acquisitionSortKey);
     return {
@@ -97,13 +99,13 @@ function toRealizedEventLotMatches(args: {
       acquisitionSortKey: lotMatch.acquisitionSortKey,
       acquisitionDate: parsed.acquisitionDate,
       acquisitionBookingId: parsed.acquisitionBookingId,
-      matchedQuantity: round2(lotMatch.matchedQuantity),
-      lotUnitCostInReference: round2(lotMatch.lotUnitCostInReference),
-      executionUnitPriceInReference: round2(
+      matchedQuantity: round(lotMatch.matchedQuantity),
+      lotUnitCostInReference: round(lotMatch.lotUnitCostInReference),
+      executionUnitPriceInReference: round(
         lotMatch.executionUnitPriceInReference,
       ),
-      realizedGainLossDelta: round2(lotMatch.realizedGainLossDelta),
-      runningEventRealizedGainLoss: round2(
+      realizedGainLossDelta: round(lotMatch.realizedGainLossDelta),
+      runningEventRealizedGainLoss: round(
         lotMatch.runningEventRealizedGainLoss,
       ),
     };
@@ -112,15 +114,15 @@ function toRealizedEventLotMatches(args: {
 
 export function toRoundedRealizedEvent(
   event: ReconciliationExecutionEventInput,
+  roundAmounts = true,
 ): GainLossReconciliationRealizedEvent<Money> {
-  const roundedEffectiveReferenceAmount = round2(
-    event.effectiveReferenceAmount,
-  );
-  const roundedExecutionUnitPriceInReference = round2(
+  const round = roundAmounts ? round2 : toMoney;
+  const roundedEffectiveReferenceAmount = round(event.effectiveReferenceAmount);
+  const roundedExecutionUnitPriceInReference = round(
     event.executionUnitPriceInReference,
   );
-  const roundedRealizedGainLossDelta = round2(event.realizedGainLossDelta);
-  const roundedRunningRealizedGainLoss = round2(event.runningRealizedGainLoss);
+  const roundedRealizedGainLossDelta = round(event.realizedGainLossDelta);
+  const roundedRunningRealizedGainLoss = round(event.runningRealizedGainLoss);
 
   return {
     id: `event:${event.bookingId}`,
@@ -135,13 +137,14 @@ export function toRoundedRealizedEvent(
     realizedGainLossDelta: roundedRealizedGainLossDelta,
     runningRealizedGainLoss: roundedRunningRealizedGainLoss,
     lotMatches: toRealizedEventLotMatches({
+      roundAmounts,
       bookingId: event.bookingId,
       lotMatches: event.lotMatches,
     }),
     pricing: {
       source: event.pricingSource,
-      marketReferenceAmount: round2(event.marketReferenceAmount),
-      residualAllocationAmount: round2(event.residualAllocationAmount),
+      marketReferenceAmount: round(event.marketReferenceAmount),
+      residualAllocationAmount: round(event.residualAllocationAmount),
       effectiveReferenceAmount: roundedEffectiveReferenceAmount,
     },
     rounding: {
@@ -159,7 +162,9 @@ export function toRoundedRealizedEvent(
 
 export function toRoundedOpenLot(
   lot: ReconciliationOpenLotInput,
+  roundAmounts = true,
 ): GainLossReconciliationOpenLot<Money> {
+  const round = roundAmounts ? round2 : toMoney;
   const parsed = parseAcquisitionSortKey(lot.acquisitionSortKey);
   return {
     id: `lot:${lot.acquisitionSortKey}`,
@@ -167,9 +172,9 @@ export function toRoundedOpenLot(
     acquisitionDate: parsed.acquisitionDate,
     acquisitionBookingId: parsed.acquisitionBookingId,
     quantity: lot.quantity,
-    unitCostInReference: round2(lot.unitCostInReference),
-    periodEndRate: round2(lot.periodEndRate),
-    unrealizedGainLoss: round2(lot.unrealizedGainLoss),
+    unitCostInReference: round(lot.unitCostInReference),
+    periodEndRate: round(lot.periodEndRate),
+    unrealizedGainLoss: round(lot.unrealizedGainLoss),
     runningUnrealizedGainLoss: toMoney(0),
   };
 }
@@ -197,14 +202,16 @@ export function toEmptySummary(): GainLossReconciliationSummary<Money> {
 
 export function addRunningUnrealizedGainLoss(
   openLots: GainLossReconciliationOpenLot<Money>[],
+  roundAmounts = true,
 ): GainLossReconciliationOpenLot<Money>[] {
+  const round = roundAmounts ? round2 : toMoney;
   const sortedOpenLots = [...openLots].sort((left, right) =>
     left.acquisitionSortKey.localeCompare(right.acquisitionSortKey, "en"),
   );
   let runningUnrealizedGainLoss: Money = toMoney(0);
 
   return sortedOpenLots.map((openLot) => {
-    runningUnrealizedGainLoss = round2(
+    runningUnrealizedGainLoss = round(
       moneyAdd(runningUnrealizedGainLoss, openLot.unrealizedGainLoss),
     );
     return {

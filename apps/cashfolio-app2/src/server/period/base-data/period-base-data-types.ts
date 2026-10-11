@@ -79,6 +79,9 @@ type PeriodBaseRawBalance = {
 
 type PeriodBaseHoldingBooking = {
   id: string;
+  description?: string | null;
+  transactionDescription?: string | null;
+  transactionId?: string | null;
   accountId: string;
   date: Date;
   value: Money;

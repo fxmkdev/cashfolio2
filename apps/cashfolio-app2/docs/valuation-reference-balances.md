@@ -101,3 +101,37 @@ Dynamic PR preview deployment (`.github/workflows/build.yml`) sets:
 - `COINLAYER_API_KEY` from `secrets.COINLAYER_API_KEY`
 - `MARKETSTACK_API_KEY` from `secrets.MARKETSTACK_API_KEY`
 - `REDIS_URL` from `secrets.STAGING_REDIS_URL` (shared staging Redis)
+
+## Accumulated Holding Gain/Loss
+
+Asset and Liability account lists display Realised, Unrealised, and Total under
+`G/L Since Start (<referenceCurrency>)`. These figures replay holdings from the
+account-book start through today, using the existing opening valuation on the
+day before book start as the basis for opening holdings. They include calculated
+holding price/FX gains and losses, excluding separately booked explicit G/L and
+income such as dividends and interest. Securities traded in the reference
+currency are eligible; reference-currency cash is not.
+
+The shared FIFO/execution-pricing engine supports chronological range replay.
+Executions are ordered by booking date, and completed same-unit transfers carry
+acquisition costs between accounts. Calculation includes all real holding
+accounts, including archived accounts and both account types; filtering to the
+selected active/archived mode and tab happens afterwards. Virtual transfer
+clearing is not included in real-account totals. Group and footer amounts sum
+account leaves using Decimal arithmetic before conversion to display numbers.
+Zero-balance and archived accounts retain realised gains.
+
+G/L hydrates independently of the account tree and reference balances. A failed
+request exposes a retry action. A missing closing price leaves reliable Realised
+G/L available while Unrealised and Total remain unavailable; the drawer still
+shows open-lot quantities and acquisition costs. Missing opening or execution
+basis, including partially posted holding transactions, withholds accumulated
+G/L and propagates through dependent transfers. Group/footer components remain
+unavailable if any eligible descendant lacks that component.
+
+An individual holding ledger displays the same three values since book start,
+using the selected month/year end capped at today (today when unfiltered).
+`View Calculation` loads a drawer with realised execution pricing, FIFO matches,
+unrealised open lots, and completeness diagnostics. Summary and drawer use the
+same range calculation. Report and History retain their existing period meaning;
+accumulated realised/unrealised values are not sums of period splits.

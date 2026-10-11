@@ -1,3 +1,4 @@
+import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Box, Text } from "@mantine/core";
@@ -144,6 +145,17 @@ const activeAssetRows: TreeRow[] = [
     balance: 120,
     balanceInReferenceCurrency: 120,
   }),
+  createAccountRow({
+    id: "account-holding",
+    name: "USD Holding",
+    groupId: "group-assets",
+    type: AccountType.ASSET,
+    isActive: true,
+    sortOrder: 2,
+    currency: "USD",
+    balance: 100,
+    balanceInReferenceCurrency: 90,
+  }),
 ];
 
 const archivedAssetRows: TreeRow[] = activeAssetRows.map((row) => ({
@@ -241,12 +253,14 @@ function getPinnedBottomRowData(
 }
 
 function AccountsPageStoryHarness({
+  gainLossState = "ready",
   initialMode,
   initialTab = "ASSET",
   startWithCreateModal = false,
   startWithEditModal = false,
   routeSmoke = false,
 }: {
+  gainLossState?: "ready" | "loading" | "error" | "partial";
   initialMode: AccountsMode;
   initialTab?: TabValue;
   startWithCreateModal?: boolean;
@@ -321,7 +335,51 @@ function AccountsPageStoryHarness({
     !isEquityTab,
   );
 
+  const gainLossData: AccountGainLossSummaries = {
+    referenceCurrency: "CHF",
+    startDate: "2026-01-01Z",
+    asOfDate: "2026-03-31Z",
+    rows: rows.map((row) => ({
+      id: row.id,
+      applicable: row.id === "account-holding" || row.id === "group-assets",
+      summary:
+        row.id === "account-holding" || row.id === "group-assets"
+          ? {
+              realizedGainLoss: 20,
+              unrealizedGainLoss: gainLossState === "partial" ? null : -10,
+              totalGainLoss: gainLossState === "partial" ? null : 10,
+            }
+          : {
+              realizedGainLoss: null,
+              unrealizedGainLoss: null,
+              totalGainLoss: null,
+            },
+      diagnostics:
+        gainLossState === "partial"
+          ? [
+              {
+                date: "2026-03-31Z",
+                message: "Closing valuation is unavailable.",
+              },
+            ]
+          : [],
+    })),
+    total: {
+      applicable: true,
+      summary: {
+        realizedGainLoss: 20,
+        unrealizedGainLoss: gainLossState === "partial" ? null : -10,
+        totalGainLoss: gainLossState === "partial" ? null : 10,
+      },
+      diagnostics: [],
+    },
+  };
   const columnDefs = useAccountTreeColumnDefs({
+    gainLossData:
+      gainLossState === "loading" || gainLossState === "error"
+        ? undefined
+        : gainLossData,
+    isGainLossLoading: gainLossState === "loading",
     isArchivedMode: mode === "archived",
     isEquityTab,
     rowsByParentKey,
@@ -378,6 +436,18 @@ function AccountsPageStoryHarness({
       }}
     >
       <AccountsPageView
+        gainLoss={{
+          data:
+            gainLossState === "loading" || gainLossState === "error"
+              ? undefined
+              : gainLossData,
+          loading: gainLossState === "loading",
+          error:
+            gainLossState === "error"
+              ? "Gain/loss could not be loaded. Please try again."
+              : undefined,
+          retry: () => {},
+        }}
         accountBookId="storybook-book"
         tab={tab}
         mode={mode}
@@ -593,4 +663,20 @@ export const RouteSmoke: Story = {
       '"mode":"active"',
     );
   },
+};
+
+export const GainLossLoading: Story = {
+  render: () => (
+    <AccountsPageStoryHarness initialMode="active" gainLossState="loading" />
+  ),
+};
+export const GainLossFailure: Story = {
+  render: () => (
+    <AccountsPageStoryHarness initialMode="active" gainLossState="error" />
+  ),
+};
+export const GainLossPartial: Story = {
+  render: () => (
+    <AccountsPageStoryHarness initialMode="active" gainLossState="partial" />
+  ),
 };

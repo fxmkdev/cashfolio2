@@ -549,3 +549,23 @@ user). Logto `404` and repeated database deletion are idempotent. Self-service
 retries remain available while the identity/session is usable; otherwise another
 active Admin finishes deletion from the pending row. No background worker or
 automatic privilege restoration is introduced.
+
+## Accumulated Account Gain/Loss
+
+`src/server/account-gain-loss.ts` exposes authorized GET functions for
+account-list summaries and individual-account summaries/details. The range
+loader in `src/server/accounts/account-gain-loss.server.ts` uses account-book
+start, the existing opening balance date, UTC as-of dates, shared holding
+transaction queries, and valuation conversions. Its metadata, opening balances,
+transactions, and group hierarchy share one read-only RepeatableRead snapshot;
+valuation requests and FIFO replay run after that transaction completes. All
+relevant real accounts participate before active/archived and Asset/Liability
+display filtering.
+
+`calculateAccountGainLoss` reuses the existing holding FIFO/pricing engine with
+chronological replay and per-account callbacks. Its completeness diagnostics
+propagate missing basis through transfers, and its optional detail collection
+retains exact amounts until the numeric serialization boundary. Existing period
+loaders retain their period-opening valuation and rounding semantics. No derived
+G/L cache or database migration is introduced; valuation caches and
+request-local rate deduplication remain shared.

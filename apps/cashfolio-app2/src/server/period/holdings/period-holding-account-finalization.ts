@@ -17,9 +17,86 @@ import {
 import type {
   HoldingAccountState,
   HoldingExecutionLotMatch,
+  HoldingExecutionEvent,
   HoldingGainLossFinalizationCallbacks,
   HoldingRateResolver,
 } from "./period-overview-holdings-types";
+
+/** Apply one priced execution to FIFO lots without requesting a closing valuation. */
+export function applyHoldingAccountExecution(
+  args: {
+    state: HoldingAccountState;
+    event: HoldingExecutionEvent;
+  } & Pick<
+    HoldingGainLossFinalizationCallbacks,
+    "onAccountExecutionEvent" | "onSkippedItem"
+  >,
+): number {
+  const { event } = args;
+  if (isNearZero(event.quantity)) {
+    return 0;
+  }
+
+  const executionUnitPriceInReference = moneyDivide(
+    event.effectiveReferenceAmount,
+    event.quantity,
+  );
+  if (!moneyIsFinite(executionUnitPriceInReference)) {
+    args.onSkippedItem?.({
+      accountId: args.state.account.id,
+      bookingId: event.bookingId,
+      bookingDescription: event.bookingDescription,
+      transactionDescription: event.transactionDescription,
+      transactionId: event.transactionId ?? null,
+      reason: "invalidExecutionPrice",
+      date: event.date,
+    });
+    return 1;
+  }
+
+  let lotMatches: HoldingExecutionLotMatch[] | undefined;
+  const realizedGainLossDelta = applyExecutionToLots({
+    lots: args.state.lots,
+    quantity: event.quantity,
+    executionUnitPriceInReference,
+    acquisitionSortKey: toLotAcquisitionSortKey({
+      date: event.date,
+      bookingId: event.bookingId,
+    }),
+    ...(args.onAccountExecutionEvent
+      ? {
+          onLotMatched: (lotMatch: HoldingExecutionLotMatch) => {
+            if (!lotMatches) {
+              lotMatches = [];
+            }
+            lotMatches.push(lotMatch);
+          },
+        }
+      : {}),
+  });
+  args.state.realizedGainLoss = moneyAdd(
+    args.state.realizedGainLoss ?? toMoney(0),
+    realizedGainLossDelta,
+  );
+  args.onAccountExecutionEvent?.({
+    accountId: args.state.account.id,
+    bookingId: event.bookingId,
+    bookingDescription: event.bookingDescription,
+    transactionDescription: event.transactionDescription,
+    transactionId: event.transactionId ?? null,
+    date: event.date,
+    quantity: event.quantity,
+    pricingSource: event.pricingSource,
+    marketReferenceAmount: event.marketReferenceAmount,
+    residualAllocationAmount: event.residualAllocationAmount,
+    effectiveReferenceAmount: event.effectiveReferenceAmount,
+    executionUnitPriceInReference,
+    realizedGainLossDelta,
+    runningRealizedGainLoss: args.state.realizedGainLoss,
+    lotMatches: lotMatches ?? [],
+  });
+  return 0;
+}
 
 /** Apply ordered executions to one account's FIFO lots, then value open lots. */
 export async function finalizeHoldingAccountGainLoss(
@@ -30,7 +107,6 @@ export async function finalizeHoldingAccountGainLoss(
   } & Omit<HoldingGainLossFinalizationCallbacks, "onAccountGainLoss">,
 ) {
   let skippedCount = 0;
-  let accountRealizedGainLoss: Money = toMoney(0);
   let accountUnrealizedGainLoss: Money = toMoney(0);
 
   args.state.executionEvents.sort((left, right) => {
@@ -42,70 +118,13 @@ export async function finalizeHoldingAccountGainLoss(
   });
 
   for (const event of args.state.executionEvents) {
-    if (isNearZero(event.quantity)) {
-      continue;
-    }
-
-    const executionUnitPriceInReference = moneyDivide(
-      event.effectiveReferenceAmount,
-      event.quantity,
-    );
-    if (!moneyIsFinite(executionUnitPriceInReference)) {
-      skippedCount += 1;
-      args.onSkippedItem?.({
-        accountId: args.state.account.id,
-        bookingId: event.bookingId,
-        bookingDescription: event.bookingDescription,
-        transactionDescription: event.transactionDescription,
-        transactionId: event.transactionId ?? null,
-        reason: "invalidExecutionPrice",
-        date: event.date,
-      });
-      continue;
-    }
-
-    let lotMatches: HoldingExecutionLotMatch[] | undefined;
-    const realizedGainLossDelta = applyExecutionToLots({
-      lots: args.state.lots,
-      quantity: event.quantity,
-      executionUnitPriceInReference,
-      acquisitionSortKey: toLotAcquisitionSortKey({
-        date: event.date,
-        bookingId: event.bookingId,
-      }),
-      ...(args.onAccountExecutionEvent
-        ? {
-            onLotMatched: (lotMatch: HoldingExecutionLotMatch) => {
-              if (!lotMatches) {
-                lotMatches = [];
-              }
-              lotMatches.push(lotMatch);
-            },
-          }
-        : {}),
-    });
-    accountRealizedGainLoss = moneyAdd(
-      accountRealizedGainLoss,
-      realizedGainLossDelta,
-    );
-    args.onAccountExecutionEvent?.({
-      accountId: args.state.account.id,
-      bookingId: event.bookingId,
-      bookingDescription: event.bookingDescription,
-      transactionDescription: event.transactionDescription,
-      transactionId: event.transactionId ?? null,
-      date: event.date,
-      quantity: event.quantity,
-      pricingSource: event.pricingSource,
-      marketReferenceAmount: event.marketReferenceAmount,
-      residualAllocationAmount: event.residualAllocationAmount,
-      effectiveReferenceAmount: event.effectiveReferenceAmount,
-      executionUnitPriceInReference,
-      realizedGainLossDelta,
-      runningRealizedGainLoss: accountRealizedGainLoss,
-      lotMatches: lotMatches ?? [],
-    });
+    skippedCount += applyHoldingAccountExecution({ ...args, event });
   }
+  args.state.executionEvents = [];
+  for (const event of args.state.processedExecutionEvents ?? []) {
+    args.onAccountExecutionEvent?.(event);
+  }
+  args.state.processedExecutionEvents = [];
 
   const openQuantity = args.state.lots.reduce(
     (sum, lot) => moneyAdd(sum, moneyAbs(lot.quantity)),
@@ -122,6 +141,11 @@ export async function finalizeHoldingAccountGainLoss(
     });
 
     if (periodEndRate == null) {
+      for (const lot of args.state.lots)
+        args.onAccountUnvaluedOpenLot?.({
+          accountId: args.state.account.id,
+          ...lot,
+        });
       skippedCount += 1;
       args.onSkippedItem?.({
         accountId: args.state.account.id,
@@ -151,7 +175,7 @@ export async function finalizeHoldingAccountGainLoss(
   }
 
   return {
-    realizedGainLoss: accountRealizedGainLoss,
+    realizedGainLoss: args.state.realizedGainLoss ?? toMoney(0),
     unrealizedGainLoss: accountUnrealizedGainLoss,
     skippedCount,
   };

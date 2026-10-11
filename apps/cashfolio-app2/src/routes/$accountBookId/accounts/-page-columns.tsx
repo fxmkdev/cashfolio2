@@ -1,6 +1,12 @@
+import { buildAccountGainLossColumns } from "./-gain-loss-columns";
+import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import { useMemo, useRef } from "react";
 import { Loader } from "@mantine/core";
-import { type ColDef, type ICellRendererParams } from "ag-grid-enterprise";
+import {
+  type ColDef,
+  type ColGroupDef,
+  type ICellRendererParams,
+} from "ag-grid-enterprise";
 import { Unit } from "@/.prisma-client/enums";
 import { FORMATTED_NUMERIC_COLUMN } from "@/components/grid/column-types";
 import { getCurrencyDecimals } from "@/shared/unit-format";
@@ -57,6 +63,8 @@ export function getAccountListBalanceValue(args: {
 }
 
 export function useAccountTreeColumnDefs(params: {
+  gainLossData?: AccountGainLossSummaries;
+  isGainLossLoading?: boolean;
   isArchivedMode: boolean;
   isEquityTab: boolean;
   rowsByParentKey: Map<string, TreeRow[]>;
@@ -69,8 +77,10 @@ export function useAccountTreeColumnDefs(params: {
   onArchiveRow: (row: RowTarget) => void;
   onDeleteRow: (row: RowTarget) => void;
   onReorderRow: (value: { name: string; parentKey: string }) => void;
-}): ColDef<AccountsGridRow>[] {
+}): (ColDef<AccountsGridRow> | ColGroupDef<AccountsGridRow>)[] {
   const {
+    gainLossData,
+    isGainLossLoading,
     isArchivedMode,
     isEquityTab,
     rowsByParentKey,
@@ -94,7 +104,9 @@ export function useAccountTreeColumnDefs(params: {
   balanceInReferenceCurrencyByGroupIdRef.current =
     balanceInReferenceCurrencyByGroupId;
 
-  return useMemo<ColDef<AccountsGridRow>[]>(() => {
+  return useMemo<
+    (ColDef<AccountsGridRow> | ColGroupDef<AccountsGridRow>)[]
+  >(() => {
     const referenceCurrencyDisplayDecimals =
       getCurrencyDecimals(referenceCurrency);
 
@@ -196,6 +208,11 @@ export function useAccountTreeColumnDefs(params: {
                 return formatValue?.(value) ?? value.toString();
               },
             } satisfies ColDef<AccountsGridRow>,
+            buildAccountGainLossColumns({
+              referenceCurrency,
+              data: gainLossData,
+              loading: isGainLossLoading ?? false,
+            }),
           ]
         : []),
       {
@@ -265,6 +282,8 @@ export function useAccountTreeColumnDefs(params: {
       } satisfies ColDef<AccountsGridRow>,
     ];
   }, [
+    gainLossData,
+    isGainLossLoading,
     isArchivedMode,
     isEquityTab,
     referenceCurrency,
