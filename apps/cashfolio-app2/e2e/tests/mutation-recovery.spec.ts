@@ -436,9 +436,22 @@ for (const action of ["Archive", "Delete"] as const) {
 test("a rejected import retains edited review rows and inclusion choices", async ({
   page,
 }) => {
-  await page.goto(
-    `/${seeded.accountBookId}/${seeded.cashAccount.id}/import-statement`,
+  // Client navigation avoids uploading before the lazy import page hydrates.
+  await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
+  await page
+    .getByRole("button", { name: "Account actions", exact: true })
+    .click();
+  await page
+    .getByRole("menuitem", { name: "Import Statement", exact: true })
+    .click();
+  await expect(page).toHaveURL(
+    new RegExp(
+      `/${seeded.accountBookId}/${seeded.cashAccount.id}/import-statement(?:\\?|$)`,
+    ),
   );
+  await expect(
+    page.getByRole("heading", { name: "Import Statement", exact: true }),
+  ).toBeVisible();
   await page.locator('input[type="file"]').setInputFiles({
     name: "draft.csv",
     mimeType: "text/csv",
