@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vitest";
 import { AccountType, Unit } from "../.prisma-client/enums";
-import { ACCOUNT_TREE_SELECT_COLUMN, SELECT_COLUMN } from "./column-types";
+import {
+  ACCOUNT_TREE_SELECT_COLUMN,
+  columnTypes,
+  FORMATTED_NUMERIC_COLUMN,
+  SELECT_COLUMN,
+} from "./column-types";
 import {
   createEditTransactionColumnDefs,
   getMixedUnitTransactionFooterLabel,
@@ -22,6 +27,33 @@ const accounts: AccountOption[] = [
 ];
 
 describe("createEditTransactionColumnDefs", () => {
+  test("shows full fractional COP precision in debit and credit entry columns", () => {
+    const columnDefs = createEditTransactionColumnDefs({
+      accounts,
+      isSubmitting: false,
+      accountBookStartDate: new Date("2026-01-04T00:00:00.000Z"),
+    });
+    const formatter = columnTypes?.[FORMATTED_NUMERIC_COLUMN]?.valueFormatter;
+    if (typeof formatter !== "function") {
+      throw new Error("Expected a numeric value formatter");
+    }
+
+    for (const field of ["debit", "credit"]) {
+      const colDef = columnDefs.find((column) => column.field === field);
+      expect(colDef?.context?.formattedNumeric?.formattedNumericMode).toBe(
+        "entry",
+      );
+      expect(
+        formatter({
+          value: 1234.5678,
+          data: { unit: Unit.CURRENCY, currency: "COP" },
+          colDef,
+          context: { userLocale: "en-CH" },
+        } as never),
+      ).toBe("1'234.5678");
+    }
+  });
+
   test("uses TreeSelect only for the booking account column", () => {
     const columnDefs = createEditTransactionColumnDefs({
       accounts,

@@ -679,11 +679,19 @@ Precision behavior:
 
 - **Display contexts** enforce unit-aware precision via
   `src/shared/unit-format.ts`:
-  - currencies: ISO 4217 minor units (with fallback to `2`)
+  - currencies: Unicode CLDR 48.2 standard display digits (with fallback to
+    `2`), covering current and historical codes in `src/currencies.ts`; for
+    example, COP and KRW use `0`, CHF uses `2`, KWD uses `3`, and CLF uses `4`
   - cryptocurrencies: Kraken `display_decimals` (with fallback to `8`)
   - securities: `0` decimals
 - **Data-entry contexts** do not enforce decimal caps, so users can enter and
   review full decimal precision from the stored numeric value.
+
+Currency display digits are pinned in
+`src/shared/unit-format-currency-decimals.ts` so browser/runtime CLDR versions
+do not change display precision. Cash digits and cash rounding increments are
+not applied. Display formatting does not change stored amounts or calculation
+precision.
 
 ## Session Storage for UI State
 

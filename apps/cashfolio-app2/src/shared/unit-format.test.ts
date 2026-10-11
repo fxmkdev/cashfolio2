@@ -9,16 +9,32 @@ import {
 } from "./unit-format";
 
 describe("getCurrencyDecimals", () => {
-  test("returns ISO minor units for known currencies", () => {
-    expect(getCurrencyDecimals("CHF")).toBe(2);
-    expect(getCurrencyDecimals("JPY")).toBe(0);
-    expect(getCurrencyDecimals("BHD")).toBe(3);
+  test.each([
+    ["COP", 0],
+    ["KRW", 0],
+    ["JPY", 0],
+    ["CHF", 2],
+    ["USD", 2],
+    ["BHD", 3],
+    ["KWD", 3],
+    ["CLF", 4],
+    ["IQD", 0],
+    ["BYR", 0],
+  ])("returns CLDR display digits for %s", (currency, decimals) => {
+    expect(getCurrencyDecimals(currency)).toBe(decimals);
   });
 
-  test("falls back to 2 decimals for non-ISO/unsupported currencies", () => {
+  test("normalizes currency codes", () => {
+    expect(getCurrencyDecimals(" cop ")).toBe(0);
+    expect(getCurrencyDecimals("kwd")).toBe(3);
+  });
+
+  test("uses 2 decimals for default, unsupported, or missing currencies", () => {
     expect(getCurrencyDecimals("CNH")).toBe(2);
     expect(getCurrencyDecimals("XXX_UNKNOWN")).toBe(2);
     expect(getCurrencyDecimals(null)).toBe(2);
+    expect(getCurrencyDecimals(undefined)).toBe(2);
+    expect(getCurrencyDecimals(" ")).toBe(2);
   });
 });
 
@@ -59,6 +75,29 @@ describe("getUnitDisplayDecimals", () => {
 });
 
 describe("createDisplayNumberFormatter", () => {
+  test.each([
+    ["COP", "12"],
+    ["KRW", "12"],
+    ["CHF", "12.00"],
+    ["KWD", "12.000"],
+    ["CLF", "12.0000"],
+  ])("formats amounts with %s display digits", (currency, expected) => {
+    const formatter = createDisplayNumberFormatter({
+      locale: "en-CH",
+      style: "currency",
+      currency,
+      decimals: getCurrencyDecimals(currency),
+    });
+
+    expect(
+      formatter
+        .formatToParts(12)
+        .filter((part) => part.type !== "currency" && part.type !== "literal")
+        .map((part) => part.value)
+        .join(""),
+    ).toBe(expected);
+  });
+
   test("creates a decimal formatter with fixed display precision", () => {
     const formatter = createDisplayNumberFormatter({
       locale: "en-CH",
