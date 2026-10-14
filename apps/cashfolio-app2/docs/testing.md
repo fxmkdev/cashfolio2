@@ -82,7 +82,8 @@ and import review/inclusion preservation after a constraint refresh.
 
 - ESLint uses a flat config in `eslint.config.js`.
 - The lint gate includes TypeScript, TanStack Router, and React Hooks checks.
-- Existing React Hooks findings are emitted as warnings; lint fails on errors.
+- React Hooks dependency and Rules of Hooks violations are configured as errors
+  and fail lint.
 
 Command:
 
