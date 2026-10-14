@@ -63,6 +63,12 @@ Run `pnpm install --frozen-lockfile` to verify the committed dependency graph.
 
 ## Compiler Tooling
 
+Always author new handwritten code in TypeScript, including application code,
+tests, scripts, tooling, and custom ESLint rules. Include each TypeScript source
+in its owning package's typecheck. Existing JavaScript files can be migrated in
+focused follow-ups; generated JavaScript and build output are not handwritten
+source.
+
 App and CLI typechecks use native TypeScript 7 through `tsc`. The `typescript`
 dependency remains an alias to `@typescript/typescript6` for tools requiring the
 TypeScript 6 compiler API, including ESLint and Storybook docgen. The native

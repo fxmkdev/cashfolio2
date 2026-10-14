@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { ESLint } from "eslint";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 const eslint = new ESLint({
   cwd: fileURLToPath(new URL("../../", import.meta.url)),
@@ -14,6 +14,12 @@ async function boundaryMessages(code: string, filePath: string) {
 }
 
 describe("configured shared/server import boundaries", () => {
+  beforeAll(async () => {
+    // Load the real config once outside individual test timeouts. Native TS
+    // loading and parser startup can be slower during the full coverage run.
+    await eslint.calculateConfigForFile("src/shared/example.ts");
+  }, 30_000);
+
   const dependencies = [
     'import { value } from "@/components/example";',
     'import type { Value } from "@/components/example";',

@@ -17,6 +17,7 @@
   },
   "include": [
     "src",
+    "eslint-rules/**/*.ts",
     "vite.config.ts",
     "vite.staging-seed.config.ts",
     "vite.provider-usage-cleanup.config.ts",

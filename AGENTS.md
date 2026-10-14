@@ -14,6 +14,10 @@ file and the linked docs are for `apps/cashfolio-app2`.
 
 - Use `pnpm` as package manager.
 - Use Node 24 for local development, CI, and application runtime.
+- Always author new handwritten application code, tests, scripts, and tooling
+  (including custom ESLint rules) in TypeScript, and include them in the owning
+  package's typecheck. Existing JavaScript files can be migrated separately;
+  generated JavaScript and build output are not handwritten source.
 - Keep changes focused and minimal; avoid unrelated refactors.
 - Keep docs in sync when introducing new patterns or conventions.
 - Before starting implementation work, run `git fetch origin` and base new

@@ -1,6 +1,10 @@
 import { dirname, resolve, sep } from "node:path";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
-export default {
+type Options = [{ sourceRoot: string }];
+type MessageIds = "uiDependency";
+
+const noUiDependencies: TSESLint.RuleModule<MessageIds, Options> = {
   meta: {
     type: "problem",
     docs: {
@@ -26,13 +30,13 @@ export default {
       resolve(sourceRoot, directory),
     );
 
-    function checkSource(source) {
+    function checkSource(source: TSESTree.Node | null | undefined): void {
       if (source?.type === "TSLiteralType") source = source.literal;
       if (source?.type !== "Literal" || typeof source.value !== "string")
         return;
 
       const specifier = source.value;
-      let target;
+      let target: string;
       if (specifier.startsWith("@/")) {
         target = resolve(sourceRoot, specifier.slice(2));
       } else if (specifier.startsWith("./") || specifier.startsWith("../")) {
@@ -55,7 +59,7 @@ export default {
       ExportNamedDeclaration: (node) => checkSource(node.source),
       ExportAllDeclaration: (node) => checkSource(node.source),
       ImportExpression: (node) => checkSource(node.source),
-      TSImportType: (node) => checkSource(node.source ?? node.argument),
+      TSImportType: (node) => checkSource(node.source),
       CallExpression(node) {
         if (
           node.callee.type === "Identifier" &&
@@ -67,3 +71,5 @@ export default {
     };
   },
 };
+
+export default noUiDependencies;

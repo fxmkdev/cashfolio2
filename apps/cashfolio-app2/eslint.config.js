@@ -4,7 +4,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 import { fileURLToPath } from "node:url";
-import noUiDependencies from "./eslint-rules/no-ui-dependencies.js";
+import noUiDependencies from "./eslint-rules/no-ui-dependencies.ts";
 
 export default tseslint.config(
   {
