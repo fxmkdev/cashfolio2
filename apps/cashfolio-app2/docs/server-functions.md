@@ -129,6 +129,26 @@ pipeline tests remain at the root. Use explicit imports between these modules.
 Existing public facades in `src/server/` remain the entry points for routes and
 keep their import paths stable.
 
+### Holding Gain/Loss Engine
+
+`holdings/period-overview-holdings.ts` keeps the public initialization,
+transaction-processing, finalization, and combined calculation exports. It owns
+transfer classification and cross-account aggregation, and delegates to:
+
+- `period-holding-execution-pricing.ts`: booking conversions, conversion
+  counters and missing-conversion callbacks, counterpart pricing, residual
+  allocation, and execution-event creation for non-transfer transactions
+- `period-holding-account-finalization.ts`: one account's deterministic
+  execution order, FIFO lot matching, realized gains, and period-end open-lot
+  valuation
+- `period-overview-holdings-types.ts`: shared state, callback payloads, and
+  skipped-reason types; existing public type exports remain available through
+  the engine entrypoint
+
+Accounts and transactions retain their existing processing order. Decimal
+precision, thresholds, missing-rate behavior, and reconciliation explain
+callbacks are shared by Period overview, History, and reconciliation.
+
 ## Concurrent Account-Book Mutations
 
 Account/group mutations, transaction mutations (including bulk statement
