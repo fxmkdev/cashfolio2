@@ -32,8 +32,10 @@ test("accumulated account G/L, nested totals, historical summary, and FIFO expla
   // Expand the tree path before inspecting the holding's cells.
   for (const name of ["Assets", "G/L Portfolio", "G/L Holdings"]) {
     const groupRow = agGridRowByText(page, name);
+    await expect(groupRow).toBeVisible();
     const expand = groupRow.locator(".ag-group-contracted");
     if (await expand.isVisible()) await expand.click();
+    await expect(groupRow).toHaveAttribute("aria-expanded", "true");
   }
   await expect(agGridCellByColId(row, "realizedGainLoss")).toHaveText("13.00");
   await expect(agGridCellByColId(row, "unrealizedGainLoss")).toHaveText("8.00");
@@ -75,8 +77,11 @@ test("accumulated account G/L, nested totals, historical summary, and FIFO expla
   await page.goto(`/${book.accountBookId}/accounts?mode=archived`);
   const archived = agGridRowByText(page, source.name);
   for (const name of ["Assets", "G/L Portfolio", "G/L Holdings"]) {
-    const expand = agGridRowByText(page, name).locator(".ag-group-contracted");
+    const groupRow = agGridRowByText(page, name);
+    await expect(groupRow).toBeVisible();
+    const expand = groupRow.locator(".ag-group-contracted");
     if (await expand.isVisible()) await expand.click();
+    await expect(groupRow).toHaveAttribute("aria-expanded", "true");
   }
   await expect(agGridCellByColId(archived, "totalGainLoss")).toHaveText("6.00");
   await expect(agGridCellByColId(archived, "realizedGainLoss")).toHaveText(

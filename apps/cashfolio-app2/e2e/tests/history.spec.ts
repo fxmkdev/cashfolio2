@@ -165,6 +165,8 @@ test("history view tree selects roots, groups and accounts and supports search",
     .toBe(`group:${seeded.expenseGroupId}`);
 
   await viewInput.click();
+  // The input label changes optimistically; the selected option confirms the new scope has loaded.
+  await expect(expenseGroup).toHaveAttribute("aria-selected", "true");
   await viewInput.fill("Expenses / Equity / E2E Expenses / E2E Expense");
   await page.getByRole("option", { name: "E2E Expense", exact: true }).click();
   await expect(viewInput).toHaveValue("E2E Expense");
