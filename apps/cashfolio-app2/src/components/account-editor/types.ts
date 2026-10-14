@@ -7,7 +7,7 @@ import { type StatementImportCsvFormat } from "@/shared/statement-import-csv-for
 import {
   type AccountGroupOption,
   type ExistingNode,
-} from "../account-cash-form-rules";
+} from "./account-cash-form-rules";
 import { type AccountBookUnitUsage } from "../../shared/account-book-unit-usage";
 
 export type AccountTypeDescriptor =

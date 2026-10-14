@@ -12,9 +12,9 @@ import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { IconArrowLeft, IconCheck } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
-import { LinkButton } from "@/components/link-button";
-import { NarrowPageShell } from "@/components/narrow-page-shell";
-import { TopPageHeader } from "@/components/top-page-header";
+import { LinkButton } from "@/components/navigation/link-button";
+import { NarrowPageShell } from "@/components/layout/narrow-page-shell";
+import { TopPageHeader } from "@/components/layout/top-page-header";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import {
   isSupportedUserLocale,

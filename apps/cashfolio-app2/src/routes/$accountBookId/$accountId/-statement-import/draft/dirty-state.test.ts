@@ -7,7 +7,7 @@ import {
   toStatementImportEditInitialValues,
 } from "../index";
 import { accountOptions, createRow, currentAccount } from "../test-fixtures";
-import { toTransactionSubmitBookings } from "@/components/edit-transaction-modal-values";
+import { toTransactionSubmitBookings } from "@/components/transaction-editor/edit-transaction-modal-values";
 import { getStatementImportReviewSnapshot } from "./dirty-state";
 
 function createDraft() {

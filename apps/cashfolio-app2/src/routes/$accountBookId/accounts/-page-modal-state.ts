@@ -2,8 +2,8 @@ import { useCallback, useState } from "react";
 import {
   createAccountInitialValues,
   type AccountInitialValues,
-} from "@/components/edit-account-modal";
-import type { AccountGroupInitialValues } from "@/components/edit-account-group-modal";
+} from "@/components/account-editor/edit-account-modal";
+import type { AccountGroupInitialValues } from "@/components/account-editor/edit-account-group-modal";
 import type { TreeRow } from "./-page-types";
 
 export type RowTarget = {

@@ -1,26 +1,26 @@
 import {
   BulkTransactionToolbar,
   BulkTransactionDialogs,
-} from "@/components/bulk-transaction-actions";
+} from "@/components/transactions/bulk-transaction-actions";
 import type { BulkTransactionActions } from "@/hooks/use-bulk-transaction-actions";
 import { Button, Group, Modal, Title } from "@mantine/core";
 import { IconBolt } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
-import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
-import { DataGrid, dataTypeDefinitions } from "@/components/data-grid";
-import { columnTypes } from "@/components/column-types";
+import { ConfirmDeleteModal } from "@/components/dialogs/confirm-delete-modal";
+import { DataGrid, dataTypeDefinitions } from "@/components/grid/data-grid";
+import { columnTypes } from "@/components/grid/column-types";
 import type { AccountOption } from "@/shared/account-options";
 import {
   EditTransactionModal,
   type BookingValues,
-} from "@/components/edit-transaction-modal";
-import { getTransactionCreateDialogText } from "@/components/transaction-create-dialog-text";
+} from "@/components/transaction-editor/edit-transaction-modal";
+import { getTransactionCreateDialogText } from "@/components/transactions/transaction-create-dialog-text";
 import {
   RebookBookingModal,
   type RebookTargetOption,
-} from "@/components/rebook-booking-modal";
-import { PageShell } from "@/components/page-shell";
-import { TopPageHeader } from "@/components/top-page-header";
+} from "@/components/transactions/rebook-booking-modal";
+import { PageShell } from "@/components/layout/page-shell";
+import { TopPageHeader } from "@/components/layout/top-page-header";
 import type { ReactNode } from "react";
 import type { Unit } from "@/.prisma-client/enums";
 import { useUserLocale } from "@/user-locale-context";

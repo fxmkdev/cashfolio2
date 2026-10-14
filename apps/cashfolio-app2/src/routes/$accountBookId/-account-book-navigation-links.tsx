@@ -12,7 +12,7 @@ import {
   type ComponentPropsWithoutRef,
   type ReactNode,
 } from "react";
-import { LinkNavLink } from "@/components/link-nav-link";
+import { LinkNavLink } from "@/components/navigation/link-nav-link";
 import type { AccountBookSection, AccountsLinkSearch } from "./-route-helpers";
 
 type AccountBookNavigationLink = {

@@ -2,7 +2,7 @@ import type {
   AccountInitialValues,
   EditAccountModalProps,
   TransformedFormValues,
-} from "@/components/edit-account-modal";
+} from "@/components/account-editor/edit-account-modal";
 import type { AccountBookUnitUsage } from "@/shared/account-book-unit-usage";
 import type { TabValue } from "@/shared/account-tabs";
 import type { loadLedgerPageData } from "./page-loader";

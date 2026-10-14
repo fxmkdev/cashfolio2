@@ -13,10 +13,10 @@ import { type UseFormReturnType, useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { IconAlertTriangle, IconCheck, IconTrash } from "@tabler/icons-react";
-import { MutationSubmitFeedback } from "@/components/mutation-submit-feedback";
-import { NarrowPageShell } from "@/components/narrow-page-shell";
-import { TopPageHeader } from "@/components/top-page-header";
-import { CurrencySelect } from "@/components/unit-select";
+import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
+import { NarrowPageShell } from "@/components/layout/narrow-page-shell";
+import { TopPageHeader } from "@/components/layout/top-page-header";
+import { CurrencySelect } from "@/components/controls/unit-select";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import {
   getDateInputValueFormat,

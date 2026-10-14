@@ -7,7 +7,7 @@ import { AccountType, Unit } from "@/.prisma-client/enums";
 import {
   accountOptions as baseAccountOptions,
   editTransactionInitialValues,
-} from "@/components/storybook-fixtures";
+} from "@/components/testing/storybook-fixtures";
 import { formatMonthPeriodValue } from "@/shared/period";
 import {
   buildPeriodSelectorModel,

@@ -1,6 +1,6 @@
 import { Modal } from "@mantine/core";
 import type { AccountOption } from "@/shared/account-options";
-import { EditTransactionModal } from "@/components/edit-transaction-modal";
+import { EditTransactionModal } from "@/components/transaction-editor/edit-transaction-modal";
 import type { AccountBookUnitUsage } from "@/shared/account-book-unit-usage";
 import type { LedgerAccount } from "../-ledger/page-types";
 import type { TransactionMutationValues } from "../-ledger/page-view";

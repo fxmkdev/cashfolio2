@@ -11,7 +11,7 @@ import {
   useComputedColorScheme,
 } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
-import { NavigationLoadingBar } from "../components/navigation-loading-bar";
+import { NavigationLoadingBar } from "../components/navigation/navigation-loading-bar";
 import { createDocumentTitleHead } from "@/shared/document-title";
 import "../mantine";
 import { theme } from "../theme";

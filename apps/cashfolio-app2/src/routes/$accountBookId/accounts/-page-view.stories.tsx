@@ -4,12 +4,12 @@ import { Box, Text } from "@mantine/core";
 import { useMemo, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { AccountType, Unit } from "@/.prisma-client/enums";
-import type { AccountGroupInitialValues } from "@/components/edit-account-group-modal";
+import type { AccountGroupInitialValues } from "@/components/account-editor/edit-account-group-modal";
 import type {
   AccountInitialValues,
   TransformedFormValues,
-} from "@/components/edit-account-modal";
-import type { ReorderGroupChildRow } from "@/components/reorder-group-children-modal";
+} from "@/components/account-editor/edit-account-modal";
+import type { ReorderGroupChildRow } from "@/components/account-tree/reorder-group-children-modal";
 import { useAccountTreeColumnDefs } from "./-page-columns";
 import {
   useBalanceInReferenceCurrencyByGroupId,

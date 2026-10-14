@@ -7,12 +7,12 @@ import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import {
   createAccountInitialValues,
   type TransformedFormValues,
-} from "@/components/edit-account-modal";
+} from "@/components/account-editor/edit-account-modal";
 import type {
   SimpleTransactionDraftValues,
   SimpleTransactionInitialValues,
-} from "@/components/simple-transaction-modal";
-import { createCopyTransactionInitialValues } from "@/components/edit-transaction-modal-values";
+} from "@/components/transactions/simple-transaction-modal";
+import { createCopyTransactionInitialValues } from "@/components/transaction-editor/edit-transaction-modal-values";
 import { createAccountBookUnitUsage } from "@/shared/account-book-unit-usage";
 import {
   getSystemManagedAccountSubtypeMessage,

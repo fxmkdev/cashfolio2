@@ -1,30 +1,30 @@
 import { Button, Group, Tabs, Title } from "@mantine/core";
 import { IconArchive, IconPlus } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
-import { LinkButton } from "@/components/link-button";
-import { LinkTab } from "@/components/link-tab";
-import { PageBreadcrumbs } from "@/components/page-breadcrumbs";
-import { TopPageHeader } from "@/components/top-page-header";
-import type { AccountGroupInitialValues } from "@/components/edit-account-group-modal";
+import { LinkButton } from "@/components/navigation/link-button";
+import { LinkTab } from "@/components/navigation/link-tab";
+import { PageBreadcrumbs } from "@/components/navigation/page-breadcrumbs";
+import { TopPageHeader } from "@/components/layout/top-page-header";
+import type { AccountGroupInitialValues } from "@/components/account-editor/edit-account-group-modal";
 import {
   EditAccountGroupModal,
   type AccountGroupTransformedFormValues,
-} from "@/components/edit-account-group-modal";
-import type { AccountInitialValues } from "@/components/edit-account-modal";
+} from "@/components/account-editor/edit-account-group-modal";
+import type { AccountInitialValues } from "@/components/account-editor/edit-account-modal";
 import {
   EditAccountModal,
   type TransformedFormValues,
-} from "@/components/edit-account-modal";
-import { ConfirmArchiveModal } from "@/components/confirm-archive-modal";
-import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
-import { DataGrid } from "@/components/data-grid";
-import { PageShell } from "@/components/page-shell";
-import { UnarchiveMutationFeedback } from "@/components/unarchive-mutation-feedback";
+} from "@/components/account-editor/edit-account-modal";
+import { ConfirmArchiveModal } from "@/components/dialogs/confirm-archive-modal";
+import { ConfirmDeleteModal } from "@/components/dialogs/confirm-delete-modal";
+import { DataGrid } from "@/components/grid/data-grid";
+import { PageShell } from "@/components/layout/page-shell";
+import { UnarchiveMutationFeedback } from "@/components/dialogs/unarchive-mutation-feedback";
 import type { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
 import {
   ReorderGroupChildrenModal,
   type ReorderGroupChildRow,
-} from "@/components/reorder-group-children-modal";
+} from "@/components/account-tree/reorder-group-children-modal";
 import { getAccountsPageTitle, getEntityLabel } from "./-page-types";
 import type {
   AccountsGridRow,

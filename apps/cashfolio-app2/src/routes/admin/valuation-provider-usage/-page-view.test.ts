@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 import type { ValuationProviderUsageResponse } from "@/server/valuation-provider-usage";
 
-vi.mock("@/components/data-grid", () => ({
+vi.mock("@/components/grid/data-grid", () => ({
   DataGrid: ({
     columnDefs,
     rowData,

@@ -25,18 +25,41 @@ or custom loader. Use type-only imports for ESLint/AST types and erasable
 TypeScript syntax so direct loading remains supported. Type stripping does not
 check types; the normal `typecheck` command does.
 
+## Shared Component Organization
+
+Shared UI code lives under `src/components/`, grouped by the feature or UI
+responsibility that owns it:
+
+| Folder                | Responsibility                                                         |
+| --------------------- | ---------------------------------------------------------------------- |
+| `account-editor/`     | Account/group editing, form values, and cash-account form rules        |
+| `account-tree/`       | Account/group tree selection, row actions, and sibling reordering      |
+| `transaction-editor/` | Split transaction editing, booking columns, validation, and form state |
+| `transactions/`       | Simple transaction editing, rebooking, bulk actions, and dialog copy   |
+| `grid/`               | DataGrid, column editors, filters, locale, and grid theme/CSS          |
+| `navigation/`         | Router link wrappers, breadcrumbs, and navigation progress             |
+| `layout/`             | Page shells and page headers                                           |
+| `dialogs/`            | Confirmations and shared mutation feedback                             |
+| `controls/`           | Number inputs, unit selectors, and split buttons                       |
+| `testing/`            | Fixtures shared by component stories                                   |
+
+Colocate tests and stories with their implementation. Import modules directly
+from their owning folder; do not add root-level compatibility shims or general
+component barrel files. Keep route-specific UI beside its owning route, and keep
+existing Storybook titles and story export names stable when moving files.
+
 ## Mantine
 
 - **Mantine 9** for all UI components, forms (`@mantine/form`), and theming
-- **AG Grid Enterprise** wrapped in `src/components/data-grid.tsx` with tree
-  data support
-- Use `LinkAnchor` from `src/components/link-anchor.tsx` for in-app links that
-  should look like Mantine anchors. Avoid `Anchor` + `component={Link}` with
-  casts.
-- Use `LinkButton` from `src/components/link-button.tsx` when a navigation
-  control should look like a Mantine button.
-- Use `LinkTab` from `src/components/link-tab.tsx` for tab-like navigation that
-  changes route/search state.
+- **AG Grid Enterprise** wrapped in `src/components/grid/data-grid.tsx` with
+  tree data support
+- Use `LinkAnchor` from `src/components/navigation/link-anchor.tsx` for in-app
+  links that should look like Mantine anchors. Avoid `Anchor` +
+  `component={Link}` with casts.
+- Use `LinkButton` from `src/components/navigation/link-button.tsx` when a
+  navigation control should look like a Mantine button.
+- Use `LinkTab` from `src/components/navigation/link-tab.tsx` for tab-like
+  navigation that changes route/search state.
 
 ## UI Copy
 
@@ -116,9 +139,9 @@ render trees in extracted `*PageView` components.
 
 ## Modal Pattern
 
-`src/components/edit-account-modal.tsx` remains the public account-editor entry
-point, including its existing type and form-value exports. Its implementation
-lives in `src/components/account-editor/`:
+`src/components/account-editor/edit-account-modal.tsx` remains the public
+account-editor entry point, including its existing type and form-value exports.
+Its implementation lives in `src/components/account-editor/`:
 
 - `types.ts`: input props, initial values, and form-value contracts
 - `values.ts`: initial-value creation, form transforms, and CSV JSON validation
@@ -178,14 +201,14 @@ submit UX and prevent duplicate requests.
 
 ## Top Page Header Pattern
 
-- Use `TopPageHeader` (`src/components/top-page-header.tsx`) for page-level
-  headers on account-book routes.
+- Use `TopPageHeader` (`src/components/layout/top-page-header.tsx`) for
+  page-level headers on account-book routes.
 - Keep layout props centralized in `TopPageHeader`: `mb="lg"`,
   `justify="space-between"`, `align="center"`, `mih={36}`.
 - Pass heading content through `heading`, optional badges/chips through
   `headingAccessory`, and page actions through `actions`.
 - For hierarchical subpages, pass `PageBreadcrumbs`
-  (`src/components/page-breadcrumbs.tsx`) as the `heading`.
+  (`src/components/navigation/page-breadcrumbs.tsx`) as the `heading`.
 - Breadcrumb parent items are links and the current page item is plain text. Do
   not duplicate breadcrumb navigation with a top-right back button.
 
@@ -199,16 +222,17 @@ submit UX and prevent duplicate requests.
 
 ## Narrow Page Shell Pattern
 
-- Use `NarrowPageShell` (`src/components/narrow-page-shell.tsx`) for simple form
-  pages that should not span the full app content width.
+- Use `NarrowPageShell` (`src/components/layout/narrow-page-shell.tsx`) for
+  simple form pages that should not span the full app content width.
 - The default width is Mantine `Container` size `xs`, matching the account-book
   creation page. Keep the wrapper unframed; do not add card chrome unless the
   page needs a distinct contained surface.
 
 ## Split Button Pattern
 
-- Use `SplitButton` (`src/components/split-button.tsx`) when a page-level action
-  has one primary command and a small set of related secondary commands.
+- Use `SplitButton` (`src/components/controls/split-button.tsx`) when a
+  page-level action has one primary command and a small set of related secondary
+  commands.
 - Keep the primary command on the main button and put secondary/destructive
   commands in the menu.
 - Disabled menu items should remain visible with the normal action label; show
@@ -309,9 +333,9 @@ crypto, or security bookings.
 ## Data Grid Actions Column
 
 - Use `cellClass: "actions-cell"` so icons only appear on whole-row hover
-  (styled in `src/components/grid-theme.css`). This must work for pinned actions
-  columns too; rely on AG Grid's row-hover state rather than hovering only the
-  actions cell.
+  (styled in `src/components/grid/grid-theme.css`). This must work for pinned
+  actions columns too; rely on AG Grid's row-hover state rather than hovering
+  only the actions cell.
 - Reuse this class in modal grids too (for example `EditTransactionModal`'s
   actions column) to keep action affordances consistent across the app
 - Wrap multiple action icons in a
@@ -326,9 +350,9 @@ crypto, or security bookings.
   server
 - Check constraints server-side before deleting (never trust client-side
   `deletable` alone)
-- Use `<ConfirmDeleteModal>` (`src/components/confirm-delete-modal.tsx`) for
-  delete confirmations — props: `opened`, `onClose`, `title`, `name` (the item
-  being deleted), `onConfirm`
+- Use `<ConfirmDeleteModal>` (`src/components/dialogs/confirm-delete-modal.tsx`)
+  for delete confirmations — props: `opened`, `onClose`, `title`, `name` (the
+  item being deleted), `onConfirm`
 
 ## Archive / Unarchive Pattern
 
@@ -342,7 +366,7 @@ crypto, or security bookings.
   - unarchive parent-chain constraints in `unarchiveAccount` and
     `unarchiveAccountGroup`
 - Active view uses archive confirmation via `<ConfirmArchiveModal>`
-  (`src/components/confirm-archive-modal.tsx`)
+  (`src/components/dialogs/confirm-archive-modal.tsx`)
 - Archived view triggers unarchive directly from the action icon (no
   confirmation modal)
 
@@ -465,8 +489,8 @@ handlers).
 
 ## Transaction Editing (EditTransactionModal)
 
-`src/components/edit-transaction-modal.tsx` handles create/edit of transactions
-with split bookings:
+`src/components/transaction-editor/edit-transaction-modal.tsx` handles
+create/edit of transactions with split bookings:
 
 - **Debit/credit mutual exclusivity**: setting one clears the other
 - **Current account booking**: locked (read-only) and non-deletable
@@ -490,8 +514,8 @@ redirects can complete after the user confirms departure.
 
 ## Simple Transaction Creation / Editing
 
-`src/components/simple-transaction-modal.tsx` handles quick creation and
-eligible edit of two-booking transactions from the ledger route
+`src/components/transactions/simple-transaction-modal.tsx` handles quick
+creation and eligible edit of two-booking transactions from the ledger route
 (`src/routes/$accountBookId/$accountId.tsx`).
 
 - Create entrypoint:
@@ -636,7 +660,7 @@ compatibility but ignored by the importer.
   `"ag-cell-disabled"` so users can see which fields are locked in the current
   row context
 - `"ag-cell-disabled"` styling is intentionally subtle in
-  `src/components/grid-theme.css` (`color: var(--mantine-color-dimmed)` and
+  `src/components/grid/grid-theme.css` (`color: var(--mantine-color-dimmed)` and
   `cursor: not-allowed`)
 - Do not apply this affordance to permanently non-editable columns
   (`editable: false`, e.g. status/col-span or actions columns)
@@ -675,7 +699,7 @@ unit identity.
 
 ## AG Grid Column Types
 
-Defined in `src/components/column-types.tsx`:
+Defined in `src/components/grid/column-types.tsx`:
 
 - `FORMATTED_NUMERIC_COLUMN` — right-aligned, active user-locale number
   formatting with unit-aware display precision
@@ -710,7 +734,7 @@ Columns use AG Grid's built-in filter UI (not URL search params):
 `AgThemeModeSynchronizer` (in `__root.tsx`) listens to
 `useComputedColorScheme()` and sets `data-ag-theme-mode` on `documentElement`.
 The AG Grid Quartz theme responds to this attribute to switch between light and
-dark mode. AG Grid theme config is in `src/components/grid-theme.tsx`.
+dark mode. AG Grid theme config is in `src/components/grid/grid-theme.tsx`.
 
 ## Sibling Reorder Pattern
 
@@ -718,8 +742,8 @@ dark mode. AG Grid theme config is in `src/components/grid-theme.tsx`.
 - Reorder action availability follows the generic `Action Availability Pattern`.
 - Availability is based on sibling count under the same parent.
 - Clicking the action opens `ReorderGroupChildrenModal`
-  (`src/components/reorder-group-children-modal.tsx`) and shows all siblings
-  (accounts and groups) of the clicked row.
+  (`src/components/account-tree/reorder-group-children-modal.tsx`) and shows all
+  siblings (accounts and groups) of the clicked row.
 - The modal uses a compact AG Grid with:
   - no header (`headerHeight={0}`)
   - one draggable name column
@@ -738,9 +762,9 @@ data groups them hierarchically. Fields that don't apply to a node type are
 
 ## FormattedNumberInput
 
-`src/components/formatted-number-input.tsx` wraps Mantine's `NumberInput` using
-`Intl.NumberFormat` to extract locale-specific thousand/decimal separators
-(defaults to `en-US`).
+`src/components/controls/formatted-number-input.tsx` wraps Mantine's
+`NumberInput` using `Intl.NumberFormat` to extract locale-specific
+thousand/decimal separators (defaults to `en-US`).
 
 Precision behavior:
 
@@ -801,8 +825,8 @@ const { pendingScrollRef, handleRowDataUpdated } = useTransactionScroll(
 
 - Theme config in `src/theme.ts`: `primaryColor: "blue"`, `defaultRadius: "md"`,
   `fontFamily: "Inter, sans-serif"`
-- AG Grid theme in `src/components/grid-theme.tsx` maps Mantine CSS variables to
-  AG Grid theming
+- AG Grid theme in `src/components/grid/grid-theme.tsx` maps Mantine CSS
+  variables to AG Grid theming
 - PostCSS configured with `postcss-preset-mantine` and `postcss-simple-vars`
 
 ### AG Grid 36 containers and diagnostics

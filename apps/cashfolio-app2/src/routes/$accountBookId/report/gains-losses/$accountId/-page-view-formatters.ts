@@ -4,7 +4,7 @@ import {
   getCurrencyDecimals,
 } from "@/shared/unit-format";
 import { DEFAULT_USER_LOCALE } from "@/user-locale";
-export { getGridUserLocale } from "@/components/grid-locale";
+export { getGridUserLocale } from "@/components/grid/grid-locale";
 import type { EventSide, RealizedEventRow } from "./-page-view-types";
 
 export function buildCurrencyFormatter(currency: string, locale: string) {

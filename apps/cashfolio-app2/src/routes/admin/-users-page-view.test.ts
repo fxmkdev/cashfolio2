@@ -7,7 +7,7 @@ import { UserRole } from "@/.prisma-client/enums";
 import type { AdminUserListItem } from "@/server/admin-users";
 import { isDeleteUserConfirmationMatch } from "./-users-page-utils";
 
-vi.mock("@/components/data-grid", () => ({
+vi.mock("@/components/grid/data-grid", () => ({
   DataGrid: ({
     columnDefs,
     rowData,

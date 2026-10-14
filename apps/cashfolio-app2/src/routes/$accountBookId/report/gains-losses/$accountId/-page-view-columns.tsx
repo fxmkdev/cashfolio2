@@ -4,7 +4,7 @@ import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import {
   DATE_COLUMN,
   FORMATTED_NUMERIC_COLUMN,
-} from "@/components/column-types";
+} from "@/components/grid/column-types";
 import {
   formatDateLabel,
   formatDescription,

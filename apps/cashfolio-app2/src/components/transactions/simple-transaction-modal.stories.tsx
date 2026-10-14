@@ -1,0 +1,120 @@
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
+import { SimpleTransactionModal } from "./simple-transaction-modal";
+import { accountOptions } from "../testing/storybook-fixtures";
+
+const meta = {
+  title: "Components/SimpleTransactionModal",
+  component: SimpleTransactionModal,
+  args: {
+    currentAccount: {
+      id: "account-checking",
+      label: "Checking (CHF)",
+    },
+    accounts: accountOptions,
+    accountBookStartDate: new Date("2026-01-04T00:00:00.000Z"),
+    onClose: fn(),
+    onSubmit: fn(async () => undefined),
+  },
+} satisfies Meta<typeof SimpleTransactionModal>;
+
+export default meta;
+
+type Story = StoryObj<typeof meta>;
+
+export const Default: Story = {};
+
+export const ToggleDirectionAndSubmit: Story = {
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+
+    await userEvent.type(body.getByRole("textbox", { name: "Amount" }), "99");
+
+    const counterAccountInput = body.getByLabelText("Counter Account");
+    await userEvent.click(counterAccountInput);
+    await userEvent.click(await body.findByText("Credit Card (CHF)"));
+
+    await userEvent.click(
+      body.getByRole("button", { name: "Swap Debit/Credit Direction" }),
+    );
+    await userEvent.click(body.getByRole("button", { name: "Create" }));
+
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ direction: "CREDIT" }),
+    );
+  },
+};
+
+export const ForcedDirectionDisablesToggle: Story = {
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+
+    const counterAccountInput = body.getByLabelText("Counter Account");
+    await userEvent.click(counterAccountInput);
+    await userEvent.click(await body.findByText("Salary (Income)"));
+
+    await expect(
+      body.getByRole("button", { name: "Swap Debit/Credit Direction" }),
+    ).toBeDisabled();
+  },
+};
+
+export const EditModeWithSwitchToSplit: Story = {
+  args: {
+    initialValues: {
+      date: new Date("2026-01-15T00:00:00.000Z"),
+      description: "Coffee",
+      counterAccountId: "account-credit-card",
+      amount: 5.5,
+      direction: "CREDIT",
+    },
+    onSwitchToSplit: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+
+    await expect(body.getByRole("button", { name: "Save" })).toBeVisible();
+    await expect(
+      body.getByRole("button", { name: "Switch to Split Editor" }),
+    ).toBeVisible();
+
+    await userEvent.click(
+      body.getByRole("button", { name: "Switch to Split Editor" }),
+    );
+
+    await expect(args.onSwitchToSplit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        counterAccountId: "account-credit-card",
+        direction: "CREDIT",
+      }),
+    );
+  },
+};
+
+export const EnterSubmitPendingGuard: Story = {
+  args: {
+    onSubmit: fn(
+      async () => await new Promise((resolve) => setTimeout(resolve, 150)),
+    ),
+  },
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+
+    await userEvent.type(body.getByRole("textbox", { name: "Amount" }), "99");
+
+    const counterAccountInput = body.getByLabelText("Counter Account");
+    await userEvent.click(counterAccountInput);
+    await userEvent.click(await body.findByText("Credit Card (CHF)"));
+
+    const descriptionInput = body.getByRole("textbox", { name: "Description" });
+    await userEvent.type(descriptionInput, "{enter}{enter}");
+
+    const submitButton = body.getByRole("button", { name: "Create" });
+    await expect(submitButton).toBeDisabled();
+    await expect(submitButton).toHaveAttribute("data-loading");
+    await expect(args.onSubmit).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => expect(submitButton).not.toBeDisabled());
+    await expect(submitButton).not.toHaveAttribute("data-loading");
+  },
+};

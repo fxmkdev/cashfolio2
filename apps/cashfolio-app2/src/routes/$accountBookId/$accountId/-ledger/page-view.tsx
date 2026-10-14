@@ -1,9 +1,9 @@
-import { UnarchiveMutationFeedback } from "@/components/unarchive-mutation-feedback";
+import { UnarchiveMutationFeedback } from "@/components/dialogs/unarchive-mutation-feedback";
 import type { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
 import {
   BulkTransactionToolbar,
   BulkTransactionDialogs,
-} from "@/components/bulk-transaction-actions";
+} from "@/components/transactions/bulk-transaction-actions";
 import type { BulkTransactionActions } from "@/hooks/use-bulk-transaction-actions";
 import {
   IconArchive,
@@ -15,33 +15,33 @@ import {
 } from "@tabler/icons-react";
 import { Badge, Button, Group, Modal, Title, Tooltip } from "@mantine/core";
 import type { AgGridReactProps } from "ag-grid-react";
-import { ConfirmArchiveModal } from "@/components/confirm-archive-modal";
-import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
-import { DataGrid } from "@/components/data-grid";
+import { ConfirmArchiveModal } from "@/components/dialogs/confirm-archive-modal";
+import { ConfirmDeleteModal } from "@/components/dialogs/confirm-delete-modal";
+import { DataGrid } from "@/components/grid/data-grid";
 import {
   EditAccountModal,
   type AccountInitialValues,
   type TransformedFormValues,
-} from "@/components/edit-account-modal";
+} from "@/components/account-editor/edit-account-modal";
 import type { AccountOption } from "@/shared/account-options";
 import {
   EditTransactionModal,
   type BookingValues,
-} from "@/components/edit-transaction-modal";
+} from "@/components/transaction-editor/edit-transaction-modal";
 import {
   RebookBookingModal,
   type RebookTargetOption,
-} from "@/components/rebook-booking-modal";
+} from "@/components/transactions/rebook-booking-modal";
 import {
   SimpleTransactionModal,
   type SimpleTransactionDirection,
   type SimpleTransactionDraftValues,
   type SimpleTransactionInitialValues,
-} from "@/components/simple-transaction-modal";
-import { SplitButton } from "@/components/split-button";
-import { getTransactionCreateDialogText } from "@/components/transaction-create-dialog-text";
-import { TopPageHeader } from "@/components/top-page-header";
-import { PageShell } from "@/components/page-shell";
+} from "@/components/transactions/simple-transaction-modal";
+import { SplitButton } from "@/components/controls/split-button";
+import { getTransactionCreateDialogText } from "@/components/transactions/transaction-create-dialog-text";
+import { TopPageHeader } from "@/components/layout/top-page-header";
+import { PageShell } from "@/components/layout/page-shell";
 import type { ReactNode } from "react";
 import type { Unit } from "@/.prisma-client/enums";
 import type { AccountBookUnitUsage } from "@/shared/account-book-unit-usage";
