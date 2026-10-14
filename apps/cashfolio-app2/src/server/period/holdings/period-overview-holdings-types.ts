@@ -98,3 +98,64 @@ export type HoldingGainLossWorkingState = {
   skippedCount: number;
   convertedCount: number;
 };
+
+export type HoldingGainLossSkippedReason =
+  | "missingInitialRate"
+  | "missingConversion"
+  | "invalidExecutionPrice"
+  | "missingPeriodEndRate";
+
+export type HoldingInitialSkippedItem = {
+  accountId: string;
+  reason: HoldingGainLossSkippedReason;
+  date: Date;
+};
+
+export type HoldingSkippedItem = HoldingInitialSkippedItem & {
+  bookingId?: string;
+  bookingDescription?: string | null;
+  transactionDescription?: string | null;
+  transactionId?: string | null;
+};
+
+export type HoldingTransactionSkippedItem = HoldingSkippedItem & {
+  bookingId: string;
+  transactionId: string | null;
+};
+
+export type HoldingAccountGainLoss = Omit<
+  HoldingRateConvertibleAccount,
+  "id"
+> & {
+  accountId: string;
+  realizedGainLoss: Money;
+  unrealizedGainLoss: Money;
+};
+
+export type HoldingAccountExecutionEvent = Omit<
+  HoldingExecutionEvent,
+  "transactionId"
+> & {
+  accountId: string;
+  transactionId: string | null;
+  executionUnitPriceInReference: Money;
+  realizedGainLossDelta: Money;
+  runningRealizedGainLoss: Money;
+  lotMatches: HoldingExecutionLotMatch[];
+};
+
+export type HoldingAccountOpenLotValuation = {
+  accountId: string;
+  acquisitionSortKey: string;
+  quantity: Money;
+  unitCostInReference: Money;
+  periodEndRate: Money;
+  unrealizedGainLoss: Money;
+};
+
+export type HoldingGainLossFinalizationCallbacks = {
+  onAccountGainLoss?: (gainLossByAccount: HoldingAccountGainLoss) => void;
+  onAccountExecutionEvent?: (event: HoldingAccountExecutionEvent) => void;
+  onAccountOpenLotValuation?: (lot: HoldingAccountOpenLotValuation) => void;
+  onSkippedItem?: (item: HoldingSkippedItem) => void;
+};
