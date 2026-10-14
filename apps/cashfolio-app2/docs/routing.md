@@ -194,6 +194,23 @@ Related docs:
 
 ### Search Parameters
 
+Ledger and Transactions share `-use-explicit-period-filter.ts` beside the
+account-book period-filter component. It owns picker state, month/year mode,
+explicit selection derivation, URL normalization, stepping, picker callbacks,
+and optional clearing, and returns typed `PeriodFilterAction` props. Each route
+supplies its parser, clamping policy, bounds, availability, and navigation
+callback; navigation preserves other search parameters and clears
+`transactionId` when the period changes.
+
+Ledger remains unfiltered by default and offers Clear Filter on eligible
+accounts. It clamps explicit URLs to account-book bounds while allowing
+account-specific picker/navigation minimums, so empty periods before the first
+account booking remain selected. Transactions defaults to the loader's current
+month without adding an implicit period to the URL and does not offer clearing.
+The routes retain their different clamping algorithms. Only explicitly supplied
+out-of-range URL periods are normalized. Report and History keep their existing
+controllers.
+
 - Routes use `validateSearch` to define typed, validated search parameters
 - `$accountBookId/accounts/route.tsx` uses:
   - `tab: TabValue` to track the active account type tab
