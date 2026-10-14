@@ -321,6 +321,17 @@ jobs:
         run: pnpm --filter cli install
       - name: Run typecheck in cli
         run: pnpm --filter cli typecheck
+
+  cli-tests:
+    name: "cli: Tests"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Install dependencies
+        run: pnpm --filter cli install --frozen-lockfile
       - name: Run CLI tests
         run: pnpm --filter cli test
 
@@ -397,6 +408,7 @@ jobs:
       - version
       - cashfolio-app2-build-push
       - resolve-preview-names
+      - cli-tests
     permissions:
       contents: read
       deployments: write
@@ -502,6 +514,7 @@ jobs:
       - cashfolio-app2-format
       - github-actions-lint
       - cli-typecheck
+      - cli-tests
     uses: ./.github/workflows/deploy-version.yml
     with:
       version_with_sha: ${{ needs.version.outputs.version_with_sha }}
