@@ -217,7 +217,7 @@ test("empty asset period before first booking stays selected after refresh", asy
   page,
 }) => {
   await page.goto(
-    `/${seeded.accountBookId}/${seeded.securityAccount.id}?period=2026-01`,
+    `/${seeded.accountBookId}/${seeded.securityAccount.id}?period=2026-01&source=period-filter&transactionId=missing`,
   );
   await expect(page.getByTestId("period-picker-trigger")).toContainText(
     "January 2026",
@@ -241,7 +241,27 @@ test("empty asset period before first booking stays selected after refresh", asy
     `/${seeded.accountBookId}/${seeded.securityAccount.id}`,
     "2026-02",
   );
+  expect(new URL(page.url()).searchParams.get("source")).toBe("period-filter");
+  expect(new URL(page.url()).searchParams.get("transactionId")).toBeNull();
   await expect(page.getByText("E2E Security Gain/Loss Buy")).toBeVisible();
+
+  await page.goBack();
+  await expect(page.getByTestId("period-picker-trigger")).toContainText(
+    "January 2026",
+  );
+  await page.goForward();
+  await expect(page.getByTestId("period-picker-trigger")).toContainText(
+    "February 2026",
+  );
+  await page.getByTestId("period-picker-trigger").click();
+  const picker = page.getByTestId("period-month-picker");
+  await expect(picker.getByRole("button", { name: /Jan/i })).toBeDisabled();
+  await page.getByRole("button", { name: "Clear Filter" }).click();
+  await expect(page.getByTestId("period-picker-trigger")).toContainText(
+    "All Periods",
+  );
+  expect(new URL(page.url()).searchParams.get("period")).toBeNull();
+  expect(new URL(page.url()).searchParams.get("source")).toBe("period-filter");
 });
 
 test("aggregate History scope does not advertise account drill-down", async ({

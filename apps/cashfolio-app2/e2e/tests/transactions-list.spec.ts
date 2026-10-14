@@ -11,6 +11,7 @@ import {
   type SeededData,
 } from "../support/db";
 import { expect, test, type Locator, type Page } from "../support/fixtures";
+import { selectSegmentedControlOption } from "../support/segmented-control";
 
 let seeded: SeededData;
 
@@ -80,6 +81,43 @@ async function expandTransactionRow(row: Locator) {
 
 test.beforeAll(async ({ e2eExternalId }) => {
   seeded = await seedDatabase({ userExternalId: e2eExternalId });
+});
+
+test("period controls preserve search context and follow browser history", async ({
+  page,
+}) => {
+  await page.goto(
+    `/${seeded.accountBookId}/transactions?period=2026-05&source=period-filter&transactionId=missing`,
+  );
+  const picker = page.getByTestId("period-picker-trigger");
+  await expect(picker).toContainText("May 2026");
+  await page.getByRole("button", { name: "Next Period" }).click();
+  await expect(picker).toContainText("June 2026");
+  const nextUrl = new URL(page.url());
+  expect(nextUrl.searchParams.get("period")).toBe("2026-06");
+  expect(nextUrl.searchParams.get("transactionId")).toBeNull();
+  expect(nextUrl.searchParams.get("source")).toBe("period-filter");
+
+  await page.goBack();
+  await expect(picker).toContainText("May 2026");
+  await page.goForward();
+  await expect(picker).toContainText("June 2026");
+
+  await picker.click();
+  await expect(page.getByRole("button", { name: "Clear Filter" })).toHaveCount(
+    0,
+  );
+  await selectSegmentedControlOption(
+    page.getByRole("radiogroup", { name: "Period Mode" }),
+    "Year",
+  );
+  await expect(picker).toHaveText(/2026/);
+  await expect(page.getByTestId("period-year-picker")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await page.goto(`/${seeded.accountBookId}/transactions`);
+  await expect(picker).not.toContainText("All Periods");
+  expect(new URL(page.url()).searchParams.get("period")).toBeNull();
 });
 
 test("lists transactions with booking details, carries account link context, and creates transactions", async ({

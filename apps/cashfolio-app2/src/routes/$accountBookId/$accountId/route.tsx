@@ -1,22 +1,6 @@
 import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
-import {
-  Suspense,
-  lazy,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { Suspense, lazy, useCallback, useMemo } from "react";
 import { useTransactionScroll } from "@/hooks/use-transaction-scroll";
-import { formatMonthPeriodValue } from "@/shared/period";
-import {
-  buildPeriodSelectorModel,
-  getMonthPickerValue,
-  getPeriodModeChangeValue,
-  getPeriodStepValue,
-  getYearPickerValue,
-  type PeriodMode,
-} from "@/shared/period-selector-model";
 import {
   isLedgerPeriodFilterAvailable,
   loadLedgerPageData,
@@ -25,6 +9,7 @@ import { createDocumentTitleHead } from "@/shared/document-title";
 import { useUserLocale } from "@/user-locale-context";
 import { useLedgerPageController } from "./-ledger/page-controller";
 import { PeriodFilterAction } from "../-period-filter-action";
+import { useExplicitPeriodFilter } from "../-use-explicit-period-filter";
 import {
   parseLedgerExplicitPeriod,
   parseLedgerSearch,
@@ -63,9 +48,6 @@ export function LedgerPageContent() {
   const { transactionId, period } = Route.useSearch();
   const router = useRouter();
   const userLocale = useUserLocale();
-  const [pickerOpened, setPickerOpened] = useState(false);
-  const [unfilteredPeriodMode, setUnfilteredPeriodMode] =
-    useState<PeriodMode>("month");
   const isPeriodFilterAvailable = isLedgerPeriodFilterAvailable(
     loaderData.account,
   );
@@ -104,37 +86,7 @@ export function LedgerPageContent() {
       loaderData.account.type,
     ],
   );
-  const rawSelectedPeriod = useMemo(
-    () =>
-      isPeriodFilterAvailable
-        ? parseLedgerExplicitPeriod(period, userLocale)
-        : null,
-    [isPeriodFilterAvailable, period, userLocale],
-  );
-  const clampedPeriodValue = useMemo(() => {
-    if (!rawSelectedPeriod) {
-      return null;
-    }
-    return clampLedgerExplicitPeriodToBounds({
-      selectedPeriod: rawSelectedPeriod,
-      minBookingDate: accountBookMinBookingDate,
-      maxDate,
-    });
-  }, [maxDate, accountBookMinBookingDate, rawSelectedPeriod]);
-  const selectedPeriod = useMemo(
-    () =>
-      clampedPeriodValue
-        ? parseLedgerExplicitPeriod(clampedPeriodValue, userLocale)
-        : null,
-    [clampedPeriodValue, userLocale],
-  );
-  useEffect(() => {
-    if (!selectedPeriod) {
-      return;
-    }
-    setUnfilteredPeriodMode(selectedPeriod.granularity);
-  }, [selectedPeriod]);
-  const setPeriodFilter = useCallback(
+  const onPeriodChange = useCallback(
     (nextPeriodValue: string | undefined) => {
       navigate({
         search: (previousSearch) => ({
@@ -146,36 +98,19 @@ export function LedgerPageContent() {
     },
     [navigate],
   );
-  useEffect(() => {
-    if (!isPeriodFilterAvailable || !period || !rawSelectedPeriod) {
-      return;
-    }
-    if (!clampedPeriodValue || period === clampedPeriodValue) {
-      return;
-    }
-    setPeriodFilter(clampedPeriodValue);
-  }, [
-    clampedPeriodValue,
-    isPeriodFilterAvailable,
-    period,
-    rawSelectedPeriod,
-    setPeriodFilter,
-  ]);
-  const periodMode = selectedPeriod?.granularity ?? unfilteredPeriodMode;
-  const selectedYear = selectedPeriod?.year ?? maxDate.getUTCFullYear();
-  const selectedMonth = selectedPeriod?.month ?? maxDate.getUTCMonth();
-  const periodSelectorModel = useMemo(
-    () =>
-      buildPeriodSelectorModel({
-        selectedGranularity: periodMode,
-        selectedYear,
-        selectedMonth: periodMode === "month" ? selectedMonth : null,
-        minBookingDate,
-        maxDate,
-      }),
-    [maxDate, minBookingDate, periodMode, selectedMonth, selectedYear],
-  );
-  const hasPeriodFilter = isPeriodFilterAvailable && selectedPeriod != null;
+  const { selectedPeriod, hasPeriodFilter, setPeriodFilter, controls } =
+    useExplicitPeriodFilter({
+      available: isPeriodFilterAvailable,
+      period,
+      locale: userLocale,
+      parsePeriod: parseLedgerExplicitPeriod,
+      clampPeriod: clampLedgerExplicitPeriodToBounds,
+      clampMinDate: accountBookMinBookingDate,
+      navigationMinDate: minBookingDate,
+      maxDate,
+      allowClear: true,
+      onPeriodChange,
+    });
 
   const viewProps = useLedgerPageController({
     loaderData,
@@ -207,97 +142,7 @@ export function LedgerPageContent() {
         {...viewProps}
         periodFilterControls={
           isPeriodFilterAvailable ? (
-            <PeriodFilterAction
-              periodMode={periodMode}
-              selectedPeriodLabel={selectedPeriod?.label ?? "All Periods"}
-              pickerOpened={pickerOpened}
-              onPickerOpenedChange={setPickerOpened}
-              canGoToPreviousPeriod={
-                hasPeriodFilter && periodSelectorModel.canGoToPreviousPeriod
-              }
-              canGoToNextPeriod={
-                hasPeriodFilter && periodSelectorModel.canGoToNextPeriod
-              }
-              onPeriodModeChange={(nextMode) => {
-                const nextPeriodMode = nextMode as PeriodMode;
-                if (!hasPeriodFilter) {
-                  setUnfilteredPeriodMode(nextPeriodMode);
-                  return;
-                }
-
-                const nextPeriodValue = getPeriodModeChangeValue({
-                  nextMode: nextPeriodMode,
-                  periodMode,
-                  selectedYear,
-                  selectedYearMaxMonth:
-                    periodSelectorModel.selectedYearMonthBounds.maxMonth,
-                });
-                if (!nextPeriodValue) {
-                  return;
-                }
-                setPeriodFilter(nextPeriodValue);
-              }}
-              onPeriodStep={(step) => {
-                if (!hasPeriodFilter) {
-                  return;
-                }
-
-                setPickerOpened(false);
-                const nextPeriodValue = getPeriodStepValue({
-                  periodMode,
-                  step,
-                  selectedMonthIndex: periodSelectorModel.selectedMonthIndex,
-                  minMonthIndex: periodSelectorModel.minMonthIndex,
-                  maxMonthIndex: periodSelectorModel.maxMonthIndex,
-                  selectedYear,
-                  minYear: periodSelectorModel.minYear,
-                  maxYear: periodSelectorModel.maxYear,
-                });
-                if (!nextPeriodValue) {
-                  return;
-                }
-                setPeriodFilter(nextPeriodValue);
-              }}
-              selectedMonthValue={
-                hasPeriodFilter
-                  ? formatMonthPeriodValue(selectedYear, selectedMonth) + "-01"
-                  : null
-              }
-              selectedYearValue={
-                hasPeriodFilter
-                  ? `${String(selectedYear).padStart(4, "0")}-01-01`
-                  : null
-              }
-              monthPickerDefaultValue={
-                formatMonthPeriodValue(selectedYear, selectedMonth) + "-01"
-              }
-              yearPickerDefaultValue={`${String(selectedYear).padStart(4, "0")}-01-01`}
-              minMonthPickerDate={periodSelectorModel.minMonthPickerDate}
-              maxMonthPickerDate={periodSelectorModel.maxMonthPickerDate}
-              minYearPickerDate={periodSelectorModel.minYearPickerDate}
-              maxYearPickerDate={periodSelectorModel.maxYearPickerDate}
-              onMonthPickerChange={(nextValue) => {
-                const nextPeriodValue = getMonthPickerValue(nextValue);
-                if (!nextPeriodValue) {
-                  return;
-                }
-                setPeriodFilter(nextPeriodValue);
-                setPickerOpened(false);
-              }}
-              onYearPickerChange={(nextValue) => {
-                const nextPeriodValue = getYearPickerValue(nextValue);
-                if (!nextPeriodValue) {
-                  return;
-                }
-                setPeriodFilter(nextPeriodValue);
-                setPickerOpened(false);
-              }}
-              clearFilterDisabled={!hasPeriodFilter}
-              onClearFilter={() => {
-                setPickerOpened(false);
-                setPeriodFilter(undefined);
-              }}
-            />
+            <PeriodFilterAction {...controls} />
           ) : undefined
         }
         onRowDataUpdated={handleRowDataUpdated}
