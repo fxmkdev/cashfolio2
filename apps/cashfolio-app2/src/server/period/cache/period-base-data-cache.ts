@@ -1,3 +1,8 @@
+import {
+  PERIOD_BASE_CACHE_ENTRY_PREFIX,
+  getPeriodBaseCacheEntryKey,
+  getPeriodBaseCacheIndexKey,
+} from "../../../shared/book-cache-keys";
 import { encodeMoneyCache, decodeMoneyCache } from "../../money-cache-codec";
 import { getRedisClient } from "../../../redis.server";
 import { normalizePeriodValue } from "../../../shared/period";
@@ -16,9 +21,6 @@ import {
 
 const PERIOD_BASE_CACHE_MAX_SERIALIZED_BYTES = 2 * 1024 * 1024;
 
-const PERIOD_BASE_CACHE_ENTRY_PREFIX = "period:base:v8";
-const PERIOD_BASE_CACHE_INDEX_PREFIX = "period:base:index:v8";
-
 let hasWarnedPeriodBaseCacheReadFailure = false;
 let hasWarnedPeriodBaseCacheWriteFailure = false;
 let hasWarnedPeriodBaseCacheInvalidationFailure = false;
@@ -26,23 +28,6 @@ let hasWarnedPeriodBaseCacheInvalidationFailure = false;
 const inflightByCacheKey = new Map<string, Promise<PeriodBaseData>>();
 
 export type { PeriodBaseData };
-function getPeriodBaseCacheEntryKey(args: {
-  cacheEnv: string;
-  accountBookId: string;
-  generation: string;
-  periodCacheKey: string;
-}) {
-  return `${PERIOD_BASE_CACHE_ENTRY_PREFIX}:${args.cacheEnv}:${args.accountBookId}:${args.generation}:${args.periodCacheKey}`;
-}
-
-function getPeriodBaseCacheIndexKey(args: {
-  cacheEnv: string;
-  accountBookId: string;
-  generation: string;
-}) {
-  return `${PERIOD_BASE_CACHE_INDEX_PREFIX}:${args.cacheEnv}:${args.accountBookId}:${args.generation}`;
-}
-
 export async function getOrLoadPeriodBaseData(args: {
   accountBookId: string;
   period?: unknown;

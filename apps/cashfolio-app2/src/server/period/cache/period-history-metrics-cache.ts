@@ -1,3 +1,4 @@
+import { getHistoryMetricsCacheEntryKey } from "../../../shared/book-cache-keys";
 import Decimal from "decimal.js";
 import { encodeMoneyCache, decodeMoneyCache } from "../../money-cache-codec";
 import { moneyIsFinite, type Money } from "../../../shared/money";
@@ -19,7 +20,6 @@ import {
   type HistoryScopeOption,
 } from "../../../shared/history-scope";
 
-const PERIOD_HISTORY_METRICS_CACHE_ENTRY_PREFIX = "period:history:metrics:v6";
 const PERIOD_HISTORY_METRICS_CACHE_MAX_SERIALIZED_BYTES = 512 * 1024;
 
 const inflightByCacheKey = new Map<
@@ -38,23 +38,6 @@ function getScopeKey(
   }
 
   return `${metricScopeFilter.metric}:${metricScopeFilter.scope}`;
-}
-
-function getHistoryMetricsCacheEntryKey(args: {
-  cacheEnv: string;
-  accountBookId: string;
-  generation: string;
-  periodCacheKey: string;
-  scopeKey: string;
-}) {
-  return [
-    PERIOD_HISTORY_METRICS_CACHE_ENTRY_PREFIX,
-    args.cacheEnv,
-    args.accountBookId,
-    args.generation,
-    args.periodCacheKey,
-    args.scopeKey,
-  ].join(":");
 }
 
 function isHistoryScopeOption(value: unknown): value is HistoryScopeOption {

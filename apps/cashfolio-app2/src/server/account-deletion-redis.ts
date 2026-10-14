@@ -1,38 +1,10 @@
+import {
+  getBookScopedRedisKeyPatterns,
+  isBookScopedPeriodCacheKey,
+} from "../shared/book-cache-keys";
 import { getRedisClient } from "@/redis.server";
 
-const BOOK_SCOPED_REDIS_KEY_PATTERNS = [
-  "period:base:v1:*:{accountBookId}:*",
-  "period:base:index:v1:*:{accountBookId}:*",
-  "period:base:v2:*:{accountBookId}:*",
-  "period:base:index:v2:*:{accountBookId}:*",
-  "period:base:v3:*:{accountBookId}:*",
-  "period:base:index:v3:*:{accountBookId}:*",
-  "period:base:v4:*:{accountBookId}:*",
-  "period:base:index:v4:*:{accountBookId}:*",
-  "period:base:v5:*:{accountBookId}:*",
-  "period:base:index:v5:*:{accountBookId}:*",
-  "period:base:v6:*:{accountBookId}:*",
-  "period:base:index:v6:*:{accountBookId}:*",
-  "period:base:v7:*:{accountBookId}:*",
-  "period:base:index:v7:*:{accountBookId}:*",
-  "period:base:v8:*:{accountBookId}:*",
-  "period:base:index:v8:*:{accountBookId}:*",
-  "period:base:generation:v1:*:{accountBookId}",
-  "period:history:metrics:v1:*:{accountBookId}:*",
-  "period:history:metrics:v2:*:{accountBookId}:*",
-  "period:history:metrics:v3:*:{accountBookId}:*",
-  "period:history:metrics:v4:*:{accountBookId}:*",
-  "period:history:metrics:v5:*:{accountBookId}:*",
-  "period:history:metrics:v6:*:{accountBookId}:*",
-] as const;
-
 let hasWarnedAccountDeletionRedisCleanupFailure = false;
-
-function getBookScopedRedisKeyPatterns(accountBookId: string): string[] {
-  return BOOK_SCOPED_REDIS_KEY_PATTERNS.map((pattern) =>
-    pattern.replace("{accountBookId}", accountBookId),
-  );
-}
 
 function hasRedisUrlConfigured(): boolean {
   return Boolean(process.env.REDIS_URL?.trim());
@@ -41,12 +13,15 @@ function hasRedisUrlConfigured(): boolean {
 async function deleteKeysForPattern(
   redis: NonNullable<Awaited<ReturnType<typeof getRedisClient>>>,
   pattern: string,
+  accountBookId: string,
 ) {
   for await (const scanResult of redis.scanIterator({
     MATCH: pattern,
     COUNT: 100,
   })) {
-    const keys = Array.isArray(scanResult) ? scanResult : [scanResult];
+    const keys = (Array.isArray(scanResult) ? scanResult : [scanResult]).filter(
+      (key) => isBookScopedPeriodCacheKey(key, accountBookId),
+    );
     if (keys.length > 0) {
       await redis.del(keys);
     }
@@ -76,7 +51,7 @@ export async function deleteBookScopedRedisDataForAccountBooks(
     for (const accountBookId of uniqueAccountBookIds) {
       const patterns = getBookScopedRedisKeyPatterns(accountBookId);
       for (const pattern of patterns) {
-        await deleteKeysForPattern(redis, pattern);
+        await deleteKeysForPattern(redis, pattern, accountBookId);
       }
     }
   } catch (error) {

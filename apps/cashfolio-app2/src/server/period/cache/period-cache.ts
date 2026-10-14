@@ -8,7 +8,10 @@ import { startOfUtcDay } from "../../../shared/date";
 import { resolvePeriodSelection } from "../period-selection";
 
 export const PERIOD_CACHE_TTL_SECONDS = 24 * 60 * 60;
-export const PERIOD_CACHE_GENERATION_PREFIX = "period:base:generation:v1";
+export {
+  PERIOD_CACHE_GENERATION_PREFIX,
+  getPeriodCacheGenerationKey,
+} from "../../../shared/book-cache-keys";
 
 let hasWarnedPeriodCacheNamespaceFailure = false;
 let hasWarnedPeriodCacheGenerationReadFailure = false;
@@ -109,13 +112,6 @@ export function getPeriodCacheEnvOrThrowWhenRedisAvailable(): string {
   throw new Error(
     "PERIOD_BASE_CACHE_ENV must be set when Redis-backed period cache is enabled.",
   );
-}
-
-export function getPeriodCacheGenerationKey(args: {
-  cacheEnv: string;
-  accountBookId: string;
-}) {
-  return `${PERIOD_CACHE_GENERATION_PREFIX}:${args.cacheEnv}:${args.accountBookId}`;
 }
 
 export async function getPeriodCacheGeneration(args: {
