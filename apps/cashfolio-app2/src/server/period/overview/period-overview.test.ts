@@ -30,6 +30,8 @@ const convertBookingValueToReference = vi.hoisted(() => vi.fn());
 const getUnitToReferenceExchangeRate = vi.hoisted(() => vi.fn());
 
 const prisma = vi.hoisted(() => ({
+  $transaction: vi.fn(),
+  $executeRaw: vi.fn(),
   accountBook: {
     findUniqueOrThrow: vi.fn(),
   },
@@ -229,6 +231,8 @@ function findBreakdownNodeById(
 describe("getPeriodOverview", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    prisma.$executeRaw.mockResolvedValue(0);
+    prisma.$transaction.mockImplementation(async (load) => load(prisma));
     vi.useFakeTimers();
 
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({

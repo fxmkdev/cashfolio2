@@ -3,7 +3,7 @@ import {
   AccountType,
   EquityAccountSubtype,
 } from "../../../.prisma-client/enums";
-import { prisma } from "../../../prisma.server";
+import type { PeriodReadClient } from "./period-read-client";
 
 import type { PeriodBaseCashFlowTransaction } from "./period-base-data-types";
 
@@ -18,6 +18,7 @@ type LoadPeriodCashFlowTransactionsRawArgs = {
 
 export async function loadPeriodCashFlowTransactionsRaw(
   args: LoadPeriodCashFlowTransactionsRawArgs,
+  db: Pick<PeriodReadClient, "transaction">,
 ): Promise<PeriodBaseCashFlowTransaction[]> {
   const results: PeriodBaseCashFlowTransaction[] = [];
   if (args.cashAccountIds.length === 0) {
@@ -27,10 +28,13 @@ export async function loadPeriodCashFlowTransactionsRaw(
   let nextTransactionIdCursor: string | undefined;
 
   while (true) {
-    const transactionsPage = await loadPeriodCashFlowTransactionsPage({
-      ...args,
-      nextTransactionIdCursor,
-    });
+    const transactionsPage = await loadPeriodCashFlowTransactionsPage(
+      {
+        ...args,
+        nextTransactionIdCursor,
+      },
+      db,
+    );
     if (transactionsPage.length === 0) {
       break;
     }
@@ -55,8 +59,9 @@ async function loadPeriodCashFlowTransactionsPage(
   args: LoadPeriodCashFlowTransactionsRawArgs & {
     nextTransactionIdCursor: string | undefined;
   },
+  db: Pick<PeriodReadClient, "transaction">,
 ) {
-  return prisma.transaction.findMany({
+  return db.transaction.findMany({
     where: getCashFlowTransactionsWhere(args),
     orderBy: { id: "asc" },
     take: TRANSACTIONS_PAGE_SIZE,

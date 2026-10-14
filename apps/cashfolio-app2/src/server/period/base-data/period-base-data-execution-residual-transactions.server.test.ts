@@ -41,11 +41,14 @@ describe("execution-residual candidate loader", () => {
     prisma.transaction.findMany.mockResolvedValue([]);
   });
   it("scopes candidates by book, completion period, income/expense, and excludes opening/explicit bookings", async () => {
-    await loadPeriodExecutionResidualTransactionsRaw({
-      accountBookId: "book-1",
-      periodStart: new Date("2026-01-01T00:00:00.000Z"),
-      periodEndExclusive: new Date("2026-02-01T00:00:00.000Z"),
-    });
+    await loadPeriodExecutionResidualTransactionsRaw(
+      {
+        accountBookId: "book-1",
+        periodStart: new Date("2026-01-01T00:00:00.000Z"),
+        periodEndExclusive: new Date("2026-02-01T00:00:00.000Z"),
+      },
+      prisma,
+    );
 
     expect(prisma.transaction.findMany).toHaveBeenCalledTimes(1);
     const [query] = prisma.transaction.findMany.mock.calls[0] ?? [];
@@ -94,7 +97,7 @@ describe("execution-residual candidate loader", () => {
 
   it("loads complete bookings in deterministic order and preserves Decimal precision", async () => {
     prisma.transaction.findMany.mockResolvedValueOnce([transaction("tx-1")]);
-    const rows = await loadPeriodExecutionResidualTransactionsRaw(args);
+    const rows = await loadPeriodExecutionResidualTransactionsRaw(args, prisma);
     expect(rows[0]!.bookings[0]!.value.toString()).toBe(
       "123.123456789123456789",
     );
@@ -136,7 +139,7 @@ describe("execution-residual candidate loader", () => {
     prisma.transaction.findMany
       .mockResolvedValueOnce(page)
       .mockResolvedValueOnce([transaction("tx-last")]);
-    const rows = await loadPeriodExecutionResidualTransactionsRaw(args);
+    const rows = await loadPeriodExecutionResidualTransactionsRaw(args, prisma);
     expect(rows).toHaveLength(201);
     expect(prisma.transaction.findMany).toHaveBeenCalledTimes(2);
     expect(prisma.transaction.findMany.mock.calls[0]![0]).not.toHaveProperty(
@@ -148,7 +151,9 @@ describe("execution-residual candidate loader", () => {
     });
   });
   it("returns an empty array when no candidates exist", async () => {
-    expect(await loadPeriodExecutionResidualTransactionsRaw(args)).toEqual([]);
+    expect(
+      await loadPeriodExecutionResidualTransactionsRaw(args, prisma),
+    ).toEqual([]);
     expect(prisma.transaction.findMany).toHaveBeenCalledTimes(1);
   });
 });

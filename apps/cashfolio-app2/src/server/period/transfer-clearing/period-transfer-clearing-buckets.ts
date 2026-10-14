@@ -5,6 +5,7 @@ import {
   Unit,
 } from "../../../.prisma-client/enums";
 import { prisma } from "../../../prisma.server";
+import type { PeriodReadClient } from "../base-data/period-read-client";
 
 import {
   TRANSFER_CLEARING_BOOKINGS_PAGE_SIZE,
@@ -71,15 +72,18 @@ function toTransferClearingUnitDescriptor(args: {
   };
 }
 
-async function loadTransferClearingBookings(args: {
-  accountBookId: string;
-  periodEndExclusive: Date;
-}): Promise<TransferClearingBooking[]> {
+async function loadTransferClearingBookings(
+  args: {
+    accountBookId: string;
+    periodEndExclusive: Date;
+  },
+  db: Pick<PeriodReadClient, "booking">,
+): Promise<TransferClearingBooking[]> {
   const results: TransferClearingBooking[] = [];
   let nextBookingIdCursor: string | undefined;
 
   while (true) {
-    const bookingsPage = await prisma.booking.findMany({
+    const bookingsPage = await db.booking.findMany({
       where: {
         accountBookId: args.accountBookId,
         date: { lt: args.periodEndExclusive },
@@ -205,15 +209,21 @@ function aggregateTransferClearingUnitBuckets(args: {
   );
 }
 
-export async function loadTransferClearingUnitBuckets(args: {
-  accountBookId: string;
-  periodEndExclusive: Date;
-  referenceCurrency: string;
-}) {
-  const bookings = await loadTransferClearingBookings({
-    accountBookId: args.accountBookId,
-    periodEndExclusive: args.periodEndExclusive,
-  });
+export async function loadTransferClearingUnitBuckets(
+  args: {
+    accountBookId: string;
+    periodEndExclusive: Date;
+    referenceCurrency: string;
+  },
+  db: Pick<PeriodReadClient, "booking"> = prisma,
+) {
+  const bookings = await loadTransferClearingBookings(
+    {
+      accountBookId: args.accountBookId,
+      periodEndExclusive: args.periodEndExclusive,
+    },
+    db,
+  );
 
   return aggregateTransferClearingUnitBuckets({
     bookings,

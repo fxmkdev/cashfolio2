@@ -8,6 +8,7 @@ import { getRedisClient } from "../../../redis.server";
 import { normalizePeriodValue } from "../../../shared/period";
 import {
   loadPeriodBaseDataUncached,
+  loadPeriodBaseDataSnapshot,
   type PeriodBaseData,
 } from "../base-data/period-base-data-loader.server";
 import {
@@ -87,7 +88,16 @@ export async function getOrLoadPeriodBaseData(args: {
       }
     }
 
-    const loaded = await loadUncached();
+    const snapshot = await loadPeriodBaseDataSnapshot({
+      accountBookId: args.accountBookId,
+      period: periodValue,
+    });
+    const loaded = snapshot.data;
+
+    // A commit between the lookup and the snapshot must not mislabel its data.
+    if (snapshot.revision !== generation) {
+      return loaded;
+    }
 
     try {
       const encoded = encodeMoneyCache(loaded);

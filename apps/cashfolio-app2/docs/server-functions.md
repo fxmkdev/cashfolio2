@@ -496,8 +496,25 @@ database revision invalidation apply to these raw inputs. Converted residual
 results remain outside the base-data cache. History metrics stay at v6 because
 this refactor preserves their response shape and accounting semantics. No schema
 migration is required. This boundary removes live database queries during
-calculations; it does not introduce a transaction snapshot around the existing
-multi-query base-data load.
+calculations. Each uncached period dataset is loaded in one read-only PostgreSQL
+`RepeatableRead` transaction with a 30-second timeout. Account-book settings,
+cache revision, account metadata, balances, all paginated booking/transaction
+queries, transfer clearing, and explicit counterpart resolution use that same
+transaction client. Transaction failures propagate rather than falling back to
+independent reads. Calculations, valuation/provider requests, and Redis I/O run
+after the transaction finishes.
+
+The snapshot loader returns its revision as internal metadata; public responses
+and cached payloads are unchanged. A base-cache miss is persisted only when the
+snapshot revision matches the lookup revision. Derived History metrics also
+recheck the revision after calculation and skip persistence if it changed or
+cannot be read. An overlapping mutation can therefore return a coherent older
+snapshot without contaminating a newer cache generation.
+
+This guarantee applies to each period overview or History point independently. A
+multi-period History response may contain points from different committed
+revisions; it does not hold one database transaction across all points or
+external valuation requests.
 
 ## Admin membership and account deletion
 
