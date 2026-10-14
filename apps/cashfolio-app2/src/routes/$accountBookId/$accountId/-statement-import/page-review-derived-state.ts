@@ -1,6 +1,6 @@
 import type { StatementImportExistingBooking } from "@/server/statement-import";
 import { useMemo } from "react";
-import type { AccountOption } from "@/components/edit-transaction-modal";
+import type { AccountOption } from "@/shared/account-options";
 import type { LedgerAccount } from "../-ledger/page-types";
 import {
   getStatementImportDraftStatus,

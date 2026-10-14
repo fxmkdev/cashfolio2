@@ -4,10 +4,8 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../.prisma-client/enums";
-import type {
-  AccountOption,
-  BookingValues,
-} from "./edit-transaction-modal-types";
+import type { AccountOption } from "@/shared/account-options";
+import type { BookingValues } from "./edit-transaction-modal-types";
 import { createBookingUnitDefaults } from "./edit-transaction-modal-unit-defaults";
 
 function accountOption(

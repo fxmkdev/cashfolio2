@@ -1,4 +1,4 @@
-import type { AccountOption } from "@/components/edit-transaction-modal";
+import type { AccountOption } from "@/shared/account-options";
 import type { BookingValues } from "@/components/edit-transaction-modal-types";
 import { createBookingUnitDefaults } from "@/components/edit-transaction-modal-unit-defaults";
 import { getUnitIdentifier } from "@/shared/account-utils";

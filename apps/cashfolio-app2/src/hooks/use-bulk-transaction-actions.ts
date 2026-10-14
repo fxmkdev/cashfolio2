@@ -10,7 +10,7 @@ import {
   type BulkActionRow,
   type BulkRebookBooking,
 } from "@/shared/bulk-transaction-actions";
-import type { AccountOption } from "@/components/edit-transaction-modal";
+import type { AccountOption } from "@/shared/account-options";
 
 export type BulkActionDialog =
   | { action: "delete"; transactionIds: string[] }

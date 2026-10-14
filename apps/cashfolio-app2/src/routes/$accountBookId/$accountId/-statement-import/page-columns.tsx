@@ -8,7 +8,7 @@ import {
   FORMATTED_NUMERIC_COLUMN,
   TEXT_COLUMN,
 } from "@/components/column-types";
-import type { AccountOption } from "@/components/edit-transaction-modal";
+import type { AccountOption } from "@/shared/account-options";
 import { getUnitDisplayDecimals } from "@/shared/unit-format";
 import type { LedgerAccount } from "../-ledger/page-types";
 import type { StatementImportDraftStatus } from "./index";

@@ -6,10 +6,8 @@ import {
 } from "../.prisma-client/enums";
 import { GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE } from "../shared/gain-loss-transaction-invariant";
 import { validateEditTransactionBookingsRoot } from "./edit-transaction-modal-validation";
-import type {
-  AccountOption,
-  BookingValues,
-} from "./edit-transaction-modal-types";
+import type { AccountOption } from "@/shared/account-options";
+import type { BookingValues } from "./edit-transaction-modal-types";
 
 function account(
   value: string,

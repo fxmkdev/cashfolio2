@@ -3,8 +3,20 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../.prisma-client/enums";
-import type { AccountOption } from "@/components/edit-transaction-modal";
 import { getTypeLabel } from "./account-utils";
+
+export type AccountOption = {
+  label: string;
+  value: string;
+  treePath?: string[];
+  unit: Unit | null;
+  currency?: string | null;
+  cryptocurrency?: string | null;
+  symbol?: string | null;
+  tradeCurrency?: string | null;
+  type: AccountType;
+  equityAccountSubtype?: EquityAccountSubtype | null;
+};
 
 export type AccountOptionSource = {
   id: string;

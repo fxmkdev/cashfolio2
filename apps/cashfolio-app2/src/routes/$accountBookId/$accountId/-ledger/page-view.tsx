@@ -23,9 +23,9 @@ import {
   type AccountInitialValues,
   type TransformedFormValues,
 } from "@/components/edit-account-modal";
+import type { AccountOption } from "@/shared/account-options";
 import {
   EditTransactionModal,
-  type AccountOption,
   type BookingValues,
 } from "@/components/edit-transaction-modal";
 import {

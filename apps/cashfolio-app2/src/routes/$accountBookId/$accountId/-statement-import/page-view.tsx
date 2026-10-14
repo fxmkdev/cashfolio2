@@ -5,7 +5,7 @@ import { DataGrid } from "@/components/data-grid";
 import { gridTheme } from "@/components/grid-theme";
 import { MutationSubmitFeedback } from "@/components/mutation-submit-feedback";
 import { getStatementImportDisabledReason } from "./index";
-import type { AccountOption } from "@/components/edit-transaction-modal";
+import type { AccountOption } from "@/shared/account-options";
 import { PageBreadcrumbs } from "@/components/page-breadcrumbs";
 import { PageShell } from "@/components/page-shell";
 import { TopPageHeader } from "@/components/top-page-header";

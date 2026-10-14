@@ -10,6 +10,12 @@ Related docs:
 
 ## Server Function Pattern
 
+Server production modules may depend on shared contracts and logic, but must not
+import component or route implementations, including type-only dependencies. The
+`cashfolio/no-ui-dependencies` lint rule enforces this direction; see
+[shared contract ownership](ui-patterns.md#shared-contract-ownership) for its
+scope and test exemptions.
+
 - Public server-function facades live in `src/server/` (for example,
   `src/server/accounts.ts`) so import paths remain stable.
 - Domain implementation modules live under `src/server/<domain>/`, currently

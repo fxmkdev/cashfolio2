@@ -9,10 +9,8 @@ import { moneyIsZero, moneySubtract, moneySum } from "../shared/money";
 import { validateGainLossSimpleTransactionInvariant } from "../shared/gain-loss-transaction-invariant";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
 import { numericFormatter } from "react-number-format";
-import type {
-  AccountOption,
-  BookingValues,
-} from "./edit-transaction-modal-types";
+import type { AccountOption } from "@/shared/account-options";
+import type { BookingValues } from "./edit-transaction-modal-types";
 
 export function validateEditTransactionBookingsRoot(args: {
   bookings: BookingValues[];

@@ -6,8 +6,8 @@ import {
   formatDateInputValueAsUtcDayIsoString,
   normalizeDateInputValueToUtcDay,
 } from "../shared/date";
+import type { AccountOption } from "@/shared/account-options";
 import type {
-  AccountOption,
   BookingValues,
   TransactionFormValues,
 } from "./edit-transaction-modal-types";

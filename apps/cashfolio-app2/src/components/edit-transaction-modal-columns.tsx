@@ -18,10 +18,8 @@ import {
   SELECT_COLUMN,
   TEXT_COLUMN,
 } from "./column-types";
-import type {
-  AccountOption,
-  BookingValues,
-} from "./edit-transaction-modal-types";
+import type { AccountOption } from "@/shared/account-options";
+import type { BookingValues } from "./edit-transaction-modal-types";
 import {
   buildCryptocurrencySelectData,
   buildCurrencySelectData,

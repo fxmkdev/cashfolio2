@@ -1,21 +1,6 @@
-import type {
-  AccountType,
-  EquityAccountSubtype,
-  Unit,
-} from "../.prisma-client/enums";
+import type { Unit } from "../.prisma-client/enums";
 
-export type AccountOption = {
-  label: string;
-  value: string;
-  treePath?: string[];
-  unit: Unit | null;
-  currency?: string | null;
-  cryptocurrency?: string | null;
-  symbol?: string | null;
-  tradeCurrency?: string | null;
-  type: AccountType;
-  equityAccountSubtype?: EquityAccountSubtype | null;
-};
+export type { AccountOption } from "../shared/account-options";
 
 export type BookingValues = {
   key: string;

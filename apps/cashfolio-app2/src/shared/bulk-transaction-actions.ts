@@ -1,5 +1,5 @@
 import type { Unit } from "../.prisma-client/enums";
-import type { AccountOption } from "../components/edit-transaction-modal";
+import type { AccountOption } from "@/shared/account-options";
 import {
   getBookingUnitIdentifier,
   isBookingUnitCompatibleWithAccount,

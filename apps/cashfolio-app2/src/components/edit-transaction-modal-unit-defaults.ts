@@ -1,8 +1,6 @@
 import { AccountType } from "../.prisma-client/enums";
-import type {
-  AccountOption,
-  BookingValues,
-} from "./edit-transaction-modal-types";
+import type { AccountOption } from "@/shared/account-options";
+import type { BookingValues } from "./edit-transaction-modal-types";
 
 export function createBookingUnitDefaults(args: {
   selectedAccount: AccountOption;
