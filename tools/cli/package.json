@@ -9,7 +9,7 @@
   "scripts": {
     "start": "tsx src/index.ts",
     "typecheck": "tsc",
-    "test": "tsx --test src/book-cache-cleanup.test.ts src/restore-local.test.ts"
+    "test": "tsx --test src/book-cache-cleanup.test.ts src/restore-local.test.ts src/restore-redis-client.test.ts"
   },
   "dependencies": {
     "commander": "^15.0.0",

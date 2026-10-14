@@ -46,4 +46,6 @@ The Redis URL is required before database restoration begins. Cleanup uses
 incremental scans and bounded deletion batches, reports the number of keys
 actually deleted, and closes its connection on success or failure. A Redis
 failure makes the command fail even though the database may already have been
-restored; resolve the Redis issue before retrying.
+restored. Automatic reconnection is disabled, with a 5-second socket connection
+timeout, so connection or authentication failures terminate the command instead
+of retrying indefinitely. Resolve the Redis issue before explicitly retrying.
