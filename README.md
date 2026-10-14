@@ -29,3 +29,21 @@ pnpm --filter cashfolio-app2 build
 pnpm --filter cashfolio-app2 typecheck
 pnpm --filter cashfolio-app2 format
 ```
+
+## Restore a Local Database
+
+Run `pnpm cashfolio restore-local` from the repository root with
+`RESTORE_DB_URL`, `RESTORE_DB_NAME`, and `RESTORE_REDIS_URL` configured in the
+environment or `tools/cli/.env`. The command restores `tools/cli/backup.dump`
+and then clears book-scoped caches from the Redis instance selected by
+`RESTORE_REDIS_URL`. Use a dedicated local restore Redis instance: cleanup
+covers all books and environment namespaces on that instance. It removes legacy
+`account-book:*` keys and all versions of period base entries/indexes,
+generation pointers, and History metrics; global `valuation:*` caches and
+unrelated keys are retained.
+
+The Redis URL is required before database restoration begins. Cleanup uses
+incremental scans and bounded deletion batches, reports the number of keys
+actually deleted, and closes its connection on success or failure. A Redis
+failure makes the command fail even though the database may already have been
+restored; resolve the Redis issue before retrying.

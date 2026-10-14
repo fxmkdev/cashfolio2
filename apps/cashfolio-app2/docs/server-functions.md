@@ -192,6 +192,14 @@ lock order; this does not introduce optimistic edit-version conflict detection.
 
 ## Period Caches
 
+Cache key prefixes, current versions, key builders, and version-independent
+cleanup patterns are owned by `src/shared/book-cache-keys.ts`. Keep this module
+free of runtime dependencies: both app caches/account deletion and the workspace
+CLI consume it. Add new book-scoped cache families there so restore and deletion
+cleanup stay aligned; version bumps within existing families need no cleanup
+list changes. Account deletion cleans only the requested books across
+environment namespaces and preserves global valuation caches.
+
 - Period overview and history use a shared Redis-backed **non-valuation**
   base-data cache (`src/server/period/cache/period-base-data-cache.ts`) backed
   by an uncached loader module

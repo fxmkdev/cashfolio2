@@ -13,6 +13,7 @@
     "jsx": "preserve",
     "incremental": true,
     "target": "ES2017",
+    "rootDir": "../..",
     "rootDirs": ["./src"],
     "outDir": "./dist"
   },

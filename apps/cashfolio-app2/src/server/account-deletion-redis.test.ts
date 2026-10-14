@@ -63,93 +63,46 @@ describe("deleteBookScopedRedisDataForAccountBooks", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("scans and deletes all book-scoped period cache families", async () => {
-    await deleteBookScopedRedisDataForAccountBooks(["book-1"]);
+  it("deletes only requested books across versions, environments and scan pages", async () => {
+    const target = [
+      "period:base:v1:local:book-1:revision:2026-01",
+      "period:base:v8:preview:book-1:revision:2026-01",
+      "period:base:v99:local:book-1:revision:2026-01",
+      "period:base:index:v99:local:book-1:revision",
+      "period:base:generation:v99:local:book-1",
+      "period:history:metrics:v99:preview:book-1:revision:2026-01:total",
+      "period:base:v8:local:book-2:revision:2026-01",
+    ];
+    const preserved = [
+      "period:base:v8:local:book-10:revision:2026-01",
+      "period:history:metrics:v6:local:book-3:revision:2026-01:total",
+      "period:history:metrics:v6:local:book-3:revision:2026-01:scope:book-1:child",
+      "valuation:currencylayer:USD:CHF",
+      "session:user-1",
+    ];
+    const keys = new Set([...target, ...preserved]);
+    redis.scanIterator.mockImplementation(async function* ({ MATCH }) {
+      const regex = MATCH.split("*")
+        .map((part: string) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+        .join(".*");
+      yield [];
+      for (const key of [...keys])
+        if (new RegExp(`^${regex}$`).test(key)) yield [key];
+    });
+    redis.del.mockImplementation(async (batch: string[]) => {
+      let count = 0;
+      for (const key of batch) if (keys.delete(key)) count++;
+      return count;
+    });
 
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:base:v1:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:base:index:v1:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:base:v2:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:base:index:v2:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:base:v3:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:base:index:v3:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:base:v4:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:base:index:v4:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:base:v5:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:base:index:v5:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:base:generation:v1:*:book-1",
-      COUNT: 100,
-    });
-    for (const prefix of [
-      "period:base:v8",
-      "period:base:index:v8",
-      "period:base:v7",
-      "period:base:index:v7",
-      "period:history:metrics:v6",
-    ]) {
-      expect(redis.scanIterator).toHaveBeenCalledWith({
-        MATCH: `${prefix}:*:book-1:*`,
-        COUNT: 100,
-      });
-    }
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:base:v6:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:base:index:v6:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:history:metrics:v1:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:history:metrics:v2:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:history:metrics:v3:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:history:metrics:v4:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.scanIterator).toHaveBeenCalledWith({
-      MATCH: "period:history:metrics:v5:*:book-1:*",
-      COUNT: 100,
-    });
-    expect(redis.del).toHaveBeenCalledTimes(23);
+    await deleteBookScopedRedisDataForAccountBooks([
+      "book-1",
+      "book-2",
+      "book-1",
+    ]);
+    expect([...keys]).toEqual(preserved);
+    expect(redis.scanIterator).toHaveBeenCalledTimes(8);
+    for (const [options] of redis.scanIterator.mock.calls)
+      expect(options.COUNT).toBe(100);
   });
 });

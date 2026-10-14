@@ -321,6 +321,8 @@ jobs:
         run: pnpm --filter cli install
       - name: Run typecheck in cli
         run: pnpm --filter cli typecheck
+      - name: Run CLI tests
+        run: pnpm --filter cli test
 
   storybook-publish:
     name: "cashfolio-app2: Publish Storybook"
