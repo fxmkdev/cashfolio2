@@ -3,6 +3,8 @@ import tanstackRouter from "@tanstack/eslint-plugin-router";
 import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 import tseslint from "typescript-eslint";
+import { fileURLToPath } from "node:url";
+import noUiDependencies from "./eslint-rules/no-ui-dependencies.ts";
 
 export default tseslint.config(
   {
@@ -62,6 +64,19 @@ export default tseslint.config(
       "prefer-const": "off",
       "react-hooks/exhaustive-deps": "error",
       "react-hooks/rules-of-hooks": "error",
+    },
+  },
+  {
+    files: ["src/shared/**/*.{ts,tsx}", "src/server/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.{ts,tsx}", "**/*.integration.{ts,tsx}"],
+    plugins: {
+      cashfolio: { rules: { "no-ui-dependencies": noUiDependencies } },
+    },
+    rules: {
+      "cashfolio/no-ui-dependencies": [
+        "error",
+        { sourceRoot: fileURLToPath(new URL("./src", import.meta.url)) },
+      ],
     },
   },
   {

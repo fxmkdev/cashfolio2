@@ -3,6 +3,28 @@
 Scope: This document describes `apps/cashfolio-app2`. Unless noted otherwise,
 paths are relative to that app directory.
 
+## Shared Contract Ownership
+
+Cross-feature contracts belong in `src/shared/`, independent of UI components.
+Import `AccountOption` directly from `src/shared/account-options.ts` in account
+selectors, transaction editors, route controllers, and bulk-action helpers. The
+transaction-modal modules retain compatibility type re-exports; editor-only
+`BookingValues` and `TransactionFormValues` remain in the editor's types module.
+
+The `cashfolio/no-ui-dependencies` ESLint rule rejects dependencies from
+production modules in `src/shared/` and `src/server/` into `src/components/` or
+`src/routes/`. It checks type-only imports, re-exports, literal dynamic imports,
+TypeScript import types, and literal `require` calls as well as regular imports.
+Both `@/` and normalized relative paths are checked. Test and integration-test
+files are exempt so they can compare behavior across layers.
+
+Custom ESLint rules are TypeScript sources under `eslint-rules/`, included in
+the app's strict typecheck. The ESLint config imports their `.ts` files
+directly; Node 24 loads them through native type stripping without a build step
+or custom loader. Use type-only imports for ESLint/AST types and erasable
+TypeScript syntax so direct loading remains supported. Type stripping does not
+check types; the normal `typecheck` command does.
+
 ## Mantine
 
 - **Mantine 9** for all UI components, forms (`@mantine/form`), and theming

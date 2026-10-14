@@ -1,7 +1,7 @@
 import type { CellValueChangedEvent } from "ag-grid-enterprise";
 import type { StatementImportExistingBooking } from "@/server/statement-import";
 import type { Dispatch, SetStateAction } from "react";
-import type { AccountOption } from "@/components/edit-transaction-modal";
+import type { AccountOption } from "@/shared/account-options";
 import type { LedgerAccount } from "../-ledger/page-types";
 import {
   hasStatementImportSingleCounterBooking,

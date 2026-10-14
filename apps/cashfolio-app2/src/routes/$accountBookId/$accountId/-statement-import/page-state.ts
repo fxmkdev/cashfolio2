@@ -5,7 +5,7 @@ import {
 import { useState } from "react";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
-import type { AccountOption } from "@/components/edit-transaction-modal";
+import type { AccountOption } from "@/shared/account-options";
 import type { TransactionMutationValues } from "../-ledger/page-view";
 import type { LedgerAccount } from "../-ledger/page-types";
 import {

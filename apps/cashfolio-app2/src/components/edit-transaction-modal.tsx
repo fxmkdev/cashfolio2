@@ -26,10 +26,8 @@ import {
 } from "./edit-transaction-modal-columns";
 import { createBookingUnitDefaults } from "./edit-transaction-modal-unit-defaults";
 import { validateEditTransactionBookingsRoot } from "./edit-transaction-modal-validation";
-import type {
-  AccountOption,
-  BookingValues,
-} from "./edit-transaction-modal-types";
+import type { AccountOption } from "@/shared/account-options";
+import type { BookingValues } from "./edit-transaction-modal-types";
 import {
   createTransactionFormInitialValues,
   toTransactionSubmitBookings,

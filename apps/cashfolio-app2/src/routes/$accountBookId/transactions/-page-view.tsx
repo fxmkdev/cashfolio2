@@ -9,9 +9,9 @@ import type { AgGridReactProps } from "ag-grid-react";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 import { DataGrid, dataTypeDefinitions } from "@/components/data-grid";
 import { columnTypes } from "@/components/column-types";
+import type { AccountOption } from "@/shared/account-options";
 import {
   EditTransactionModal,
-  type AccountOption,
   type BookingValues,
 } from "@/components/edit-transaction-modal";
 import { getTransactionCreateDialogText } from "@/components/transaction-create-dialog-text";

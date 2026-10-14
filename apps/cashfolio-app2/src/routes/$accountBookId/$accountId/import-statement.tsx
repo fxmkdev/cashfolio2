@@ -2,7 +2,7 @@ import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { notifications } from "@mantine/notifications";
 import { Suspense, lazy, useMemo, useState } from "react";
-import type { AccountOption } from "@/components/edit-transaction-modal";
+import type { AccountOption } from "@/shared/account-options";
 import { createAccountBookUnitUsage } from "@/shared/account-book-unit-usage";
 import { createAccountOptions } from "@/shared/account-options";
 import { createDocumentTitleHead } from "@/shared/document-title";

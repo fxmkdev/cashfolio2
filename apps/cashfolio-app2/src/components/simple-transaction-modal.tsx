@@ -28,7 +28,7 @@ import {
 } from "../shared/date";
 import { useDialogSubmitState } from "../hooks/use-dialog-submit-state";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "../shared/opening-balances";
-import type { AccountOption } from "./edit-transaction-modal";
+import type { AccountOption } from "@/shared/account-options";
 import { AccountTreeSelect } from "./account-tree-select";
 import { FormattedNumberInput } from "./formatted-number-input";
 import { useUserLocale } from "@/user-locale-context";
