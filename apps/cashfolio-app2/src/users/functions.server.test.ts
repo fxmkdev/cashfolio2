@@ -15,7 +15,9 @@ vi.mock("../auth/functions.server", () => ({
   ensureAuthenticated: vi.fn(),
 }));
 
-import { getOrCreateUser } from "./functions.server";
+import { getOrCreateUser, ensureUserHasRole } from "./functions.server";
+import { ensureAuthenticated } from "../auth/functions.server";
+import { UserRole } from "../.prisma-client/enums";
 
 const userContext = {
   isAuthenticated: true,
@@ -83,4 +85,27 @@ describe("getOrCreateUser", () => {
 
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
   });
+});
+
+describe("Admin authorization", () => {
+  it.each([false, true])(
+    "checks deletion pending state (%s)",
+    async (deletionPending) => {
+      vi.mocked(ensureAuthenticated).mockResolvedValue(userContext);
+      prisma.user.upsert.mockResolvedValue({
+        ...user,
+        roles: [UserRole.ADMIN],
+        deletionPending,
+      });
+      if (deletionPending) {
+        await expect(ensureUserHasRole(UserRole.ADMIN)).rejects.toMatchObject({
+          status: 403,
+        });
+      } else {
+        await expect(ensureUserHasRole(UserRole.ADMIN)).resolves.toMatchObject({
+          deletionPending: false,
+        });
+      }
+    },
+  );
 });

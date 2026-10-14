@@ -57,7 +57,7 @@ export async function ensureUser() {
 export async function ensureUserHasRole(role: UserRole) {
   const user = await ensureUser();
 
-  if (!user.roles.includes(role)) {
+  if (user.deletionPending || !user.roles.includes(role)) {
     throw new Response("Forbidden", { status: 403 });
   }
 

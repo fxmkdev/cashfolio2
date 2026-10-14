@@ -44,10 +44,16 @@ function showRolesSavedNotification() {
   });
 }
 
-function UserRolesCell({ roles }: { roles: UserRole[] }) {
+function UserRolesCell({
+  roles,
+  deletionPending,
+}: {
+  roles: UserRole[];
+  deletionPending: boolean;
+}) {
   const content = roles.includes(UserRole.ADMIN) ? (
     <Badge radius="xl" variant="light">
-      Admin
+      {deletionPending ? "Admin (inactive)" : "Admin"}
     </Badge>
   ) : (
     <Text c="dimmed" size="sm">
@@ -91,6 +97,11 @@ function UserNameCell({ user }: { user: AdminUserListItem }) {
           <Text fw={500} size="sm">
             {user.displayName}
           </Text>
+          {user.deletionPending ? (
+            <Badge color="orange" size="xs">
+              Deletion pending
+            </Badge>
+          ) : null}
           {statusLabel ? (
             <Badge color="gray" size="xs" variant="light">
               {statusLabel}
@@ -153,15 +164,24 @@ function UserActionsCell({
 }) {
   return (
     <Group gap={4} wrap="nowrap" h="100%" align="center">
-      <Tooltip label="Manage Roles">
-        <ActionIcon
-          variant="subtle"
-          size="sm"
-          onClick={() => onManageRoles(user)}
-          aria-label="Manage Roles"
-        >
-          <IconUserCog size={16} />
-        </ActionIcon>
+      <Tooltip
+        label={
+          user.deletionPending
+            ? "Deletion pending; role changes unavailable"
+            : "Manage Roles"
+        }
+      >
+        <span style={{ display: "inline-flex" }}>
+          <ActionIcon
+            variant="subtle"
+            size="sm"
+            disabled={user.deletionPending}
+            onClick={() => onManageRoles(user)}
+            aria-label="Manage Roles"
+          >
+            <IconUserCog size={16} />
+          </ActionIcon>
+        </span>
       </Tooltip>
       <DeleteUserAction user={user} onDeleteUser={onDeleteUser} />
     </Group>
@@ -218,8 +238,12 @@ export function AdminUsersPageView({
         sortable: false,
         cellRenderer: ({
           value,
+          data,
         }: ICellRendererParams<AdminUserListItem, UserRole[]>) => (
-          <UserRolesCell roles={value ?? []} />
+          <UserRolesCell
+            roles={value ?? []}
+            deletionPending={data?.deletionPending ?? false}
+          />
         ),
       },
       {
@@ -268,6 +292,14 @@ export function AdminUsersPageView({
     [],
   );
 
+  const pendingRoleDeletion = managingUser
+    ? (users.find((user) => user.id === managingUser.id)?.deletionPending ??
+      managingUser.deletionPending)
+    : false;
+  const currentDeletingUser = deletingUser
+    ? (users.find((user) => user.id === deletingUser.id) ?? deletingUser)
+    : null;
+
   const selectedRoles = adminRoleChecked ? [UserRole.ADMIN] : [];
 
   return (
@@ -315,7 +347,7 @@ export function AdminUsersPageView({
             <Switch
               label="Admin"
               checked={adminRoleChecked}
-              disabled={isSubmitting}
+              disabled={isSubmitting || pendingRoleDeletion}
               onChange={(event) => {
                 setAdminRoleChecked(event.currentTarget.checked);
                 setSubmitError(null);
@@ -338,6 +370,7 @@ export function AdminUsersPageView({
               </Button>
               <Button
                 loading={isSubmitting}
+                disabled={pendingRoleDeletion}
                 onClick={() => {
                   void runSubmit(async () => {
                     try {
@@ -361,7 +394,7 @@ export function AdminUsersPageView({
       </Modal>
 
       <DeleteUserModal
-        user={deletingUser}
+        user={currentDeletingUser}
         onClose={() => setDeletingUser(null)}
         onDeleteUser={onDeleteUser}
       />

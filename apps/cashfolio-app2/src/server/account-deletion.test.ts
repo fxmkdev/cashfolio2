@@ -8,11 +8,16 @@ const deleteBookScopedRedisDataForAccountBooks = vi.hoisted(() => vi.fn());
 
 const tx = vi.hoisted(() => ({
   user: {
+    findUnique: vi.fn(),
+    update: vi.fn(),
+    count: vi.fn(),
     deleteMany: vi.fn(),
   },
   accountBook: {
     deleteMany: vi.fn(),
   },
+  $executeRaw: vi.fn(),
+  $queryRaw: vi.fn(),
 }));
 
 const prisma = vi.hoisted(() => ({
@@ -75,6 +80,15 @@ describe("account deletion", () => {
         email: "user@example.test",
       },
     });
+    tx.$executeRaw.mockResolvedValue(0);
+    tx.$queryRaw.mockResolvedValue([]);
+    tx.user.findUnique.mockImplementation(async (args) => {
+      const user = await prisma.user.findUnique(args);
+      return user
+        ? { ...user, roles: user.roles ?? [], deletionPending: true }
+        : null;
+    });
+    tx.user.update.mockResolvedValue({});
     prisma.$transaction.mockImplementation(async (callback) => callback(tx));
     tx.user.deleteMany.mockResolvedValue({ count: 1 });
     tx.accountBook.deleteMany.mockResolvedValue({ count: 1 });
@@ -196,7 +210,7 @@ describe("account deletion", () => {
       }),
     );
     await deleteAuthenticatedAccount();
-    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(3);
     expect(tx.user.deleteMany).toHaveBeenCalledTimes(2);
     expect(ensureAuthenticated).toHaveBeenCalledOnce();
     expect(deleteBookScopedRedisDataForAccountBooks).toHaveBeenCalledOnce();

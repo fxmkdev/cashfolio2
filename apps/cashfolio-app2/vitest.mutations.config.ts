@@ -7,7 +7,10 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/server/account-book-mutation.integration.ts"],
+    include: [
+      "src/server/account-book-mutation.integration.ts",
+      "src/server/admin-mutation.integration.ts",
+    ],
     fileParallelism: false,
     hookTimeout: 120_000,
     testTimeout: 30_000,

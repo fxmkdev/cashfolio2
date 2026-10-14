@@ -243,3 +243,10 @@ Current CI gates for `cashfolio-app2`:
 
 CI stores Playwright reports, Playwright JSON timing output, and unit coverage
 artifacts for troubleshooting and trend tracking.
+
+The mutation integration suite also uses a disposable PostgreSQL database for
+Admin-role and user-deletion races. It pauses one operation after acquiring the
+global advisory lock, verifies that the second operation is waiting in
+PostgreSQL, and checks the final active-Admin count. Logto and authentication
+are stubbed; financial and user-state reads/writes use the real generated Prisma
+client.

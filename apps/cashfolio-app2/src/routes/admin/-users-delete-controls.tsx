@@ -50,11 +50,17 @@ export function DeleteUserAction({
 }) {
   return (
     <Tooltip
-      label={user.isCurrentUser ? "You cannot delete yourself" : "Delete"}
+      label={
+        user.isCurrentUser
+          ? "You cannot delete yourself"
+          : user.deletionPending
+            ? "Retry deletion"
+            : "Delete"
+      }
     >
       <span style={TOOLTIP_TRIGGER_STYLE}>
         <ActionIcon
-          aria-label="Delete"
+          aria-label={user.deletionPending ? "Retry deletion" : "Delete"}
           color="red"
           disabled={user.isCurrentUser}
           onClick={() => onDeleteUser(user)}
@@ -124,7 +130,7 @@ export function DeleteUserModal({
     <Modal
       opened={opened}
       onClose={handleClose}
-      title="Delete user"
+      title={user?.deletionPending ? "Retry deletion" : "Delete user"}
       size="md"
       closeOnEscape={!isSubmitting}
       closeOnClickOutside={!isSubmitting}
@@ -156,6 +162,13 @@ export function DeleteUserModal({
               </Text>
             </Stack>
 
+            {user.deletionPending ? (
+              <Text c="orange" size="sm">
+                Deletion has started but has not finished. Retry to complete it.
+                Admin access and role changes are unavailable while deletion is
+                pending.
+              </Text>
+            ) : null}
             <Text size="sm">
               This will permanently delete the user from Cashfolio and Logto.
               Account books only linked to this user will be deleted. Shared
@@ -198,7 +211,7 @@ export function DeleteUserModal({
                 disabled={isSubmitting || !confirmationMatches}
                 leftSection={<IconTrash size={16} />}
               >
-                Delete user
+                {user.deletionPending ? "Retry deletion" : "Delete user"}
               </Button>
             </Group>
           </Stack>
