@@ -1,7 +1,7 @@
 import { ActionIcon, Avatar, Menu, Tooltip } from "@mantine/core";
 import { IconArrowLeft, IconLogout2 } from "@tabler/icons-react";
 import type { AuthenticatedUserProfile } from "@/auth/user-profile";
-import { LinkButton } from "@/components/link-button";
+import { LinkButton } from "@/components/navigation/link-button";
 import type { UserAccountBookOption } from "@/server/home";
 
 export type NewAccountBookReturnTarget = {

@@ -3,7 +3,7 @@ import type { AccountOption } from "@/shared/account-options";
 import type {
   SimpleTransactionDraftValues,
   SimpleTransactionDirection,
-} from "@/components/simple-transaction-modal";
+} from "@/components/transactions/simple-transaction-modal";
 import {
   getBookingUnitFields,
   type BookingUnitFieldsSource,

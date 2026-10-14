@@ -1,10 +1,10 @@
 import { Alert, Card, Group, Stack, Text, Title } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
-import { DataGrid } from "@/components/data-grid";
-import { PageBreadcrumbs } from "@/components/page-breadcrumbs";
-import { PageShell } from "@/components/page-shell";
-import { TopPageHeader } from "@/components/top-page-header";
+import { DataGrid } from "@/components/grid/data-grid";
+import { PageBreadcrumbs } from "@/components/navigation/page-breadcrumbs";
+import { PageShell } from "@/components/layout/page-shell";
+import { TopPageHeader } from "@/components/layout/top-page-header";
 import { PeriodFilterAction } from "../../../-period-filter-action";
 import { DEFAULT_PERIOD_VALUE } from "../../-page-types";
 import type { PeriodGainLossReconciliation } from "@/server/period-gain-loss-reconciliation";

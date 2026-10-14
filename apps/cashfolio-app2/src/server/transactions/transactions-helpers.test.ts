@@ -613,7 +613,7 @@ describe("exact monetary transaction validation", () => {
     [1, -0.999999999],
   ])("agrees with the UI balance rule for %j", async (...values) => {
     const { validateEditTransactionBookingsRoot } =
-      await import("../../components/edit-transaction-modal-validation");
+      await import("../../components/transaction-editor/edit-transaction-modal-validation");
     const input = transaction(values);
     const uiError = validateEditTransactionBookingsRoot({
       bookings: input.bookings.map((booking, index) => ({

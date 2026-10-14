@@ -1,5 +1,5 @@
-import type { TransformedFormValues } from "@/components/edit-account-modal";
-import type { SimpleTransactionInitialValues } from "@/components/simple-transaction-modal";
+import type { TransformedFormValues } from "@/components/account-editor/edit-account-modal";
+import type { SimpleTransactionInitialValues } from "@/components/transactions/simple-transaction-modal";
 import {
   archiveAccount,
   deleteAccount,

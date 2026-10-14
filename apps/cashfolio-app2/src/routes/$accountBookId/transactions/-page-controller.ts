@@ -9,7 +9,7 @@ import {
   rebookBooking,
   updateTransaction,
 } from "@/server/transactions";
-import { createCopyTransactionInitialValues } from "@/components/edit-transaction-modal-values";
+import { createCopyTransactionInitialValues } from "@/components/transaction-editor/edit-transaction-modal-values";
 import {
   getBookingPeriodValue,
   getLatestBookingDate,

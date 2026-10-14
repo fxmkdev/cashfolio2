@@ -253,8 +253,8 @@ controllers.
 
 - Global top loading bar is rendered in `src/routes/__root.tsx` via
   `NavigationLoadingBar`
-- Implementation lives in `src/components/navigation-loading-bar.tsx` and uses
-  `@mantine/nprogress` + `useRouterState`
+- Implementation lives in `src/components/navigation/navigation-loading-bar.tsx`
+  and uses `@mantine/nprogress` + `useRouterState`
 - The progress bar tracks URL transitions only (loading while
   `state.location.href` differs from the last settled URL), including same-route
   search-param navigations (for example, period preset switching)

@@ -18,8 +18,8 @@ import { AgCharts } from "ag-charts-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ensureChartModulesRegistered } from "@/ag-chart-modules";
 import type { PeriodHistoryResponse } from "@/server/period-history";
-import { TopPageHeader } from "@/components/top-page-header";
-import { PageShell } from "@/components/page-shell";
+import { TopPageHeader } from "@/components/layout/top-page-header";
+import { PageShell } from "@/components/layout/page-shell";
 import { getDashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import {
   createDisplayNumberFormatter,

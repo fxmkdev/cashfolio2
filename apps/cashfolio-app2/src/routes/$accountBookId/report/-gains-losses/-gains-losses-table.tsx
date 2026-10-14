@@ -1,7 +1,7 @@
 import type { ColDef } from "ag-grid-enterprise";
 import { useMemo } from "react";
-import { FORMATTED_NUMERIC_COLUMN } from "@/components/column-types";
-import { DataGrid } from "@/components/data-grid";
+import { FORMATTED_NUMERIC_COLUMN } from "@/components/grid/column-types";
+import { DataGrid } from "@/components/grid/data-grid";
 import { useExpandedGroups } from "@/hooks/use-expanded-groups";
 import type { GainsLossesBreakdownNode } from "./-gains-losses-breakdown-types";
 import { isExplicitGainLossDrillRow } from "./-gains-losses-drill";

@@ -11,8 +11,8 @@ import { Unit } from "@/.prisma-client/enums";
 import {
   DATE_COLUMN,
   FORMATTED_NUMERIC_COLUMN,
-} from "@/components/column-types";
-import { LinkAnchor } from "@/components/link-anchor";
+} from "@/components/grid/column-types";
+import { LinkAnchor } from "@/components/navigation/link-anchor";
 import {
   getCurrencyDecimals,
   getUnitDisplayDecimals,
@@ -20,7 +20,7 @@ import {
 import {
   getUniqueMultiValueFilterLabels,
   multiValueSetFilterColumn,
-} from "@/components/multi-value-set-filter";
+} from "@/components/grid/multi-value-set-filter";
 import { isReferenceCurrencyUnit } from "@/shared/reference-currency-display";
 import type { LedgerRow } from "./page-types";
 import { OPENING_BALANCES_MANAGEMENT_MESSAGE } from "@/shared/opening-balances";

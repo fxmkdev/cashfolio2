@@ -7,7 +7,7 @@ import {
   DATE_COLUMN,
   FORMATTED_NUMERIC_COLUMN,
   TEXT_COLUMN,
-} from "@/components/column-types";
+} from "@/components/grid/column-types";
 import type { AccountOption } from "@/shared/account-options";
 import { getUnitDisplayDecimals } from "@/shared/unit-format";
 import type { LedgerAccount } from "../-ledger/page-types";

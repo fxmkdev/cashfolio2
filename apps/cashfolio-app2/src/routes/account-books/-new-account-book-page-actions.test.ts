@@ -8,7 +8,7 @@ import {
   resolveNewAccountBookReturnTarget,
 } from "./-new-account-book-page-actions";
 
-vi.mock("@/components/link-button", () => ({
+vi.mock("@/components/navigation/link-button", () => ({
   LinkButton: forwardRef<HTMLAnchorElement, { to: string }>(
     function MockLinkButton({ to, ...props }, ref) {
       return createElement("a", {

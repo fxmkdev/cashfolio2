@@ -1,10 +1,10 @@
 import { Card, Group, Stack, Text, Title } from "@mantine/core";
 import type { ColDef } from "ag-grid-enterprise";
 import { useMemo } from "react";
-import { DataGrid } from "@/components/data-grid";
-import { getGridUserLocale } from "@/components/grid-locale";
-import { PageShell } from "@/components/page-shell";
-import { TopPageHeader } from "@/components/top-page-header";
+import { DataGrid } from "@/components/grid/data-grid";
+import { getGridUserLocale } from "@/components/grid/grid-locale";
+import { PageShell } from "@/components/layout/page-shell";
+import { TopPageHeader } from "@/components/layout/top-page-header";
 import type {
   ValuationProviderUsageBreakdownRow,
   ValuationProviderUsageRequestRow,

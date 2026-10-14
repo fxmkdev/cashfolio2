@@ -26,7 +26,7 @@ import {
   getCashAccountDisabledReason,
   resolveAccountCashAccountFormValue,
   applyAccountGroupCashInheritance,
-} from "../account-cash-form-rules";
+} from "./account-cash-form-rules";
 
 export function useEditAccountModalController({
   opened,

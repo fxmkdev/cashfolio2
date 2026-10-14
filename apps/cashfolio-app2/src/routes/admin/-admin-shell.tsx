@@ -18,7 +18,7 @@ import {
 } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import type { AuthenticatedUserProfile } from "@/auth/user-profile";
-import { LinkNavLink } from "@/components/link-nav-link";
+import { LinkNavLink } from "@/components/navigation/link-nav-link";
 import { UserMenu } from "../-user-menu";
 import { ACCOUNT_BOOK_SIDEBAR_WIDTH } from "../$accountBookId/-shell-dimensions";
 

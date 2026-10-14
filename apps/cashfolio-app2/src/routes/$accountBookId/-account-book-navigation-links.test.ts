@@ -3,7 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/components/link-nav-link", () => ({
+vi.mock("@/components/navigation/link-nav-link", () => ({
   LinkNavLink: ({
     label,
     params,

@@ -1,5 +1,5 @@
 import type { AccountOption } from "@/shared/account-options";
-import type { SimpleTransactionDraftValues } from "@/components/simple-transaction-modal";
+import type { SimpleTransactionDraftValues } from "@/components/transactions/simple-transaction-modal";
 import {
   buildSimpleTransactionValues,
   normalizeSimpleDraft,

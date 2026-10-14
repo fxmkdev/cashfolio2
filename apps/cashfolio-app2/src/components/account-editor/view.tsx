@@ -4,7 +4,7 @@ import {
   AccountType,
   EquityAccountSubtype,
 } from "../../.prisma-client/enums";
-import { isAccountGroupCompatibleWithAccountCashRules } from "../account-cash-form-rules";
+import { isAccountGroupCompatibleWithAccountCashRules } from "./account-cash-form-rules";
 import {
   Modal,
   Stack,
@@ -17,12 +17,12 @@ import {
   Checkbox,
   Button,
 } from "@mantine/core";
-import { GroupTreeSelect } from "../group-tree-select";
-import { FormattedNumberInput } from "../formatted-number-input";
-import { CurrencySelect, CryptocurrencySelect } from "../unit-select";
+import { GroupTreeSelect } from "../account-tree/group-tree-select";
+import { FormattedNumberInput } from "../controls/formatted-number-input";
+import { CurrencySelect, CryptocurrencySelect } from "../controls/unit-select";
 import { Fragment } from "react/jsx-runtime";
 import { StatementImportCsvFormatField } from "./statement-import-csv-format-field";
-import { MutationSubmitFeedback } from "../mutation-submit-feedback";
+import { MutationSubmitFeedback } from "../dialogs/mutation-submit-feedback";
 import { useEditAccountModalController } from "./controller";
 
 export function EditAccountModal(props: EditAccountModalProps) {

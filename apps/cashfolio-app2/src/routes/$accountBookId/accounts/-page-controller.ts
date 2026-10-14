@@ -3,8 +3,8 @@ import { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
 import type { GridApi, GridReadyEvent } from "ag-grid-enterprise";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useExpandedGroups } from "@/hooks/use-expanded-groups";
-import type { TransformedFormValues } from "@/components/edit-account-modal";
-import type { AccountGroupTransformedFormValues } from "@/components/edit-account-group-modal";
+import type { TransformedFormValues } from "@/components/account-editor/edit-account-modal";
+import type { AccountGroupTransformedFormValues } from "@/components/account-editor/edit-account-group-modal";
 import {
   archiveAccount,
   archiveAccountGroup,

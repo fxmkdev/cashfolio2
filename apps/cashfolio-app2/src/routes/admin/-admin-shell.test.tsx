@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 
-vi.mock("@/components/link-nav-link", () => ({
+vi.mock("@/components/navigation/link-nav-link", () => ({
   LinkNavLink: ({
     label,
     to,
