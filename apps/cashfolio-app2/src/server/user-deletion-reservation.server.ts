@@ -10,27 +10,14 @@ import {
 export function reserveUserDeletion(args: {
   externalId: string;
   currentAdminId?: string;
-}) {
+}): Promise<void> {
   return withAdminMutation(async (tx) => {
     if (args.currentAdminId) await requireActiveAdmin(tx, args.currentAdminId);
     const user = await tx.user.findUnique({
       where: { externalId: args.externalId },
-      include: {
-        accountBookLinks: {
-          select: {
-            accountBook: {
-              select: {
-                id: true,
-                name: true,
-                _count: { select: { userLinks: true } },
-              },
-            },
-          },
-        },
-      },
     });
     // An already completed retry or a Logto-only user needs no DB reservation.
-    if (!user) return [];
+    if (!user) return;
     if (args.currentAdminId === user.id)
       throw new Error("You cannot delete yourself.");
     if (!user.deletionPending) {
@@ -48,6 +35,5 @@ export function reserveUserDeletion(args: {
         data: { deletionPending: true },
       });
     }
-    return user.accountBookLinks;
   });
 }
