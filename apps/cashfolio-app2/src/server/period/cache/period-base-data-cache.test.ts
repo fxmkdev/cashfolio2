@@ -41,6 +41,8 @@ const getRedisClient = vi.hoisted(() =>
 );
 
 const prisma = vi.hoisted(() => ({
+  $transaction: vi.fn(),
+  $executeRaw: vi.fn(),
   accountBook: {
     findUniqueOrThrow: vi.fn(),
   },
@@ -80,6 +82,8 @@ describe("period base-data cache", () => {
     redisState.kv.clear();
     redisState.sets.clear();
     vi.resetAllMocks();
+    prisma.$executeRaw.mockResolvedValue(0);
+    prisma.$transaction.mockImplementation(async (load) => load(prisma));
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-01T12:00:00.000Z"));
     process.env.PERIOD_BASE_CACHE_ENV = "preview-app-123";
@@ -138,6 +142,7 @@ describe("period base-data cache", () => {
     });
 
     expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     expect(redisClient.setEx).toHaveBeenCalledTimes(1);
     const [entryKey] = redisClient.setEx.mock.calls[0] ?? [];
     expect(entryKey).toContain(
@@ -146,6 +151,40 @@ describe("period base-data cache", () => {
 
     expect(first.selection.from).toBeInstanceOf(Date);
     expect(second.selection.from).toBeInstanceOf(Date);
+  });
+
+  it("returns a newer coherent snapshot without storing it under the lookup revision", async () => {
+    prisma.accountBook.findUniqueOrThrow
+      .mockResolvedValueOnce({ periodCacheRevision: "before-commit" })
+      .mockResolvedValue({
+        referenceCurrency: "EUR",
+        startDate: new Date("2026-01-01T00:00:00Z"),
+        periodCacheRevision: "after-commit",
+      });
+
+    const result = await periodBaseCache.getOrLoadPeriodBaseData({
+      accountBookId: "book-1",
+      period: "2026-02",
+    });
+    expect(result.referenceCurrency).toBe("EUR");
+    expect(redisClient.get).toHaveBeenCalledWith(
+      expect.stringContaining(":before-commit:"),
+    );
+    expect(redisClient.setEx).not.toHaveBeenCalled();
+    expect(redisClient.sAdd).not.toHaveBeenCalled();
+    expect(redisClient.set).not.toHaveBeenCalled();
+  });
+
+  it("does not persist or fall back to global reads after a failed snapshot", async () => {
+    prisma.$transaction.mockRejectedValueOnce(new Error("snapshot failed"));
+    await expect(
+      periodBaseCache.getOrLoadPeriodBaseData({
+        accountBookId: "book-1",
+        period: "2026-02",
+      }),
+    ).rejects.toThrow("snapshot failed");
+    expect(prisma.accountGroup.findMany).not.toHaveBeenCalled();
+    expect(redisClient.setEx).not.toHaveBeenCalled();
   });
 
   it("ignores stale v2 entries written before cash-flow transactions were cached", async () => {

@@ -3,7 +3,7 @@ import {
   AccountType,
   EquityAccountSubtype,
 } from "../../../.prisma-client/enums";
-import { prisma } from "../../../prisma.server";
+import type { PeriodReadClient } from "./period-read-client";
 
 import type { PeriodBaseHoldingTransaction } from "./period-base-data-types";
 
@@ -18,6 +18,7 @@ type LoadPeriodHoldingTransactionsRawArgs = {
 
 export async function loadPeriodHoldingTransactionsRaw(
   args: LoadPeriodHoldingTransactionsRawArgs,
+  db: Pick<PeriodReadClient, "transaction">,
 ): Promise<PeriodBaseHoldingTransaction[]> {
   const results: PeriodBaseHoldingTransaction[] = [];
   if (args.holdingAccountIds.length === 0) {
@@ -27,10 +28,13 @@ export async function loadPeriodHoldingTransactionsRaw(
   let nextTransactionIdCursor: string | undefined;
 
   while (true) {
-    const transactionsPage = await loadPeriodHoldingTransactionsPage({
-      ...args,
-      nextTransactionIdCursor,
-    });
+    const transactionsPage = await loadPeriodHoldingTransactionsPage(
+      {
+        ...args,
+        nextTransactionIdCursor,
+      },
+      db,
+    );
     if (transactionsPage.length === 0) {
       break;
     }
@@ -55,8 +59,9 @@ async function loadPeriodHoldingTransactionsPage(
   args: LoadPeriodHoldingTransactionsRawArgs & {
     nextTransactionIdCursor: string | undefined;
   },
+  db: Pick<PeriodReadClient, "transaction">,
 ) {
-  return prisma.transaction.findMany({
+  return db.transaction.findMany({
     where: getHoldingTransactionsWhere(args),
     orderBy: { id: "asc" },
     take: TRANSACTIONS_PAGE_SIZE,

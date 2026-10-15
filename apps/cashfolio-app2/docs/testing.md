@@ -55,12 +55,12 @@ pnpm --filter cashfolio-app2 coverage:ratchet:accept
 pnpm --filter cashfolio-app2 coverage:ratchet
 ```
 
-## Concurrent Mutation Integration Tests
+## Concurrent Mutation and Snapshot Integration Tests
 
 `pnpm --filter cashfolio-app2 test:mutations` exercises public mutation handlers
 against real PostgreSQL with only request authentication and Redis mocked. The
-suite creates and drops its own migrated disposable database; it never targets
-`DATABASE_URL`. `MUTATION_TEST_ADMIN_DATABASE_URL` must point to a local
+suites create and drop their own migrated disposable databases; they never
+target `DATABASE_URL`. `MUTATION_TEST_ADMIN_DATABASE_URL` must point to a local
 `postgres` maintenance database (default: `127.0.0.1:5433/postgres`).
 
 Tests pause one writer after its book lock and observe the competing writer
@@ -73,6 +73,11 @@ the lock. A cache-trigger deadlock test selects the public book-locking mutation
 as victim and verifies a fresh transaction retries successfully without losing
 the competing writer's changes. CI runs the suite in the PostgreSQL-backed
 staging-seed integration job.
+
+The same command also verifies period snapshots against real PostgreSQL. It
+pauses a read after balance loading or between pagination queries, commits an
+independent deposit or settings change, and verifies that the paused dataset
+retains the earlier state while the next load sees the complete committed state.
 
 `e2e/tests/mutation-recovery.spec.ts` verifies rejected simple/split drafts,
 archived selections, archive/delete confirmation errors, account/group edits,

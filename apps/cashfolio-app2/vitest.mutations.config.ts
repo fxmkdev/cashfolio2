@@ -10,6 +10,7 @@ export default defineConfig({
     include: [
       "src/server/account-book-mutation.integration.ts",
       "src/server/admin-mutation.integration.ts",
+      "src/server/period/base-data/period-base-data-snapshot.integration.ts",
     ],
     fileParallelism: false,
     hookTimeout: 120_000,

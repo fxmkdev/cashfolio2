@@ -2,21 +2,24 @@ import {
   AccountType,
   EquityAccountSubtype,
 } from "../../../.prisma-client/enums";
-import { prisma } from "../../../prisma.server";
+import type { PeriodReadClient } from "./period-read-client";
 import { toMoney } from "../../../shared/money";
 import type { PeriodBaseExecutionResidualTransaction } from "./period-base-data-types";
 
 const TRANSACTIONS_PAGE_SIZE = 200;
 
-export async function loadPeriodExecutionResidualTransactionsRaw(args: {
-  accountBookId: string;
-  periodStart: Date;
-  periodEndExclusive: Date;
-}): Promise<PeriodBaseExecutionResidualTransaction[]> {
+export async function loadPeriodExecutionResidualTransactionsRaw(
+  args: {
+    accountBookId: string;
+    periodStart: Date;
+    periodEndExclusive: Date;
+  },
+  db: Pick<PeriodReadClient, "transaction">,
+): Promise<PeriodBaseExecutionResidualTransaction[]> {
   const results: PeriodBaseExecutionResidualTransaction[] = [];
   let nextTransactionIdCursor: string | undefined;
   while (true) {
-    const transactionsPage = await prisma.transaction.findMany({
+    const transactionsPage = await db.transaction.findMany({
       where: {
         accountBookId: args.accountBookId,
         AND: [

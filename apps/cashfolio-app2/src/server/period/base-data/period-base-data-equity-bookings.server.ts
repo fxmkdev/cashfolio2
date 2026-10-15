@@ -3,7 +3,7 @@ import {
   AccountType,
   EquityAccountSubtype,
 } from "../../../.prisma-client/enums";
-import { prisma } from "../../../prisma.server";
+import type { PeriodReadClient } from "./period-read-client";
 
 import type { PeriodBaseEquityBooking } from "./period-base-data-types";
 
@@ -30,15 +30,19 @@ type LoadPeriodEquityBookingsRawArgs = {
 
 export async function loadPeriodEquityBookingsRaw(
   args: LoadPeriodEquityBookingsRawArgs,
+  db: Pick<PeriodReadClient, "booking">,
 ): Promise<PeriodBaseEquityBooking[]> {
   const results: PeriodBaseEquityBooking[] = [];
   let nextBookingIdCursor: string | undefined;
 
   while (true) {
-    const bookingsPage = await loadPeriodEquityBookingsPage({
-      ...args,
-      nextBookingIdCursor,
-    });
+    const bookingsPage = await loadPeriodEquityBookingsPage(
+      {
+        ...args,
+        nextBookingIdCursor,
+      },
+      db,
+    );
     if (bookingsPage.length === 0) {
       break;
     }
@@ -70,9 +74,10 @@ async function loadPeriodEquityBookingsPage(
   args: LoadPeriodEquityBookingsRawArgs & {
     nextBookingIdCursor: string | undefined;
   },
+  db: Pick<PeriodReadClient, "booking">,
 ) {
   const usesPreloadedEquityAccountFilter = args.equityAccountIds.length > 0;
-  return prisma.booking.findMany({
+  return db.booking.findMany({
     where: getEquityBookingsWhere({
       ...args,
       usesPreloadedEquityAccountFilter,

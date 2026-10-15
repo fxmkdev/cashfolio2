@@ -174,6 +174,15 @@ export async function getOrLoadPeriodHistoryPointMetrics(args: {
       return result.metrics;
     }
 
+    // Calculation may outlive a mutation. Never publish under an older revision.
+    if (
+      (await getPeriodCacheGeneration({
+        accountBookId: args.accountBookId,
+      })) !== generation
+    ) {
+      return result.metrics;
+    }
+
     try {
       const serialized = JSON.stringify(encodeMoneyCache(result.metrics));
       if (

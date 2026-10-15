@@ -307,6 +307,39 @@ describe("period history metrics cache", () => {
     expect(redisClient.setEx).not.toHaveBeenCalled();
   });
 
+  it("returns calculated metrics without caching when a mutation commits during calculation", async () => {
+    loadPeriodHistoryPointMetricsWithCacheability.mockImplementationOnce(
+      async () => {
+        prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+          periodCacheRevision: "gen-2",
+        });
+        return {
+          metrics: createMetrics(),
+          cacheableFromPermanentValuationCache: true,
+        };
+      },
+    );
+    const result = await getOrLoadPeriodHistoryPointMetrics({
+      accountBookId: "book-1",
+      period: "2026-04",
+    });
+    expect(result.income.toString()).toBe("12");
+    expect(prisma.accountBook.findUniqueOrThrow).toHaveBeenCalledTimes(2);
+    expect(redisClient.setEx).not.toHaveBeenCalled();
+  });
+
+  it("skips persistence when the final revision check fails", async () => {
+    prisma.accountBook.findUniqueOrThrow
+      .mockResolvedValueOnce({ periodCacheRevision: "gen-1" })
+      .mockRejectedValueOnce(new Error("revision unavailable"));
+    const result = await getOrLoadPeriodHistoryPointMetrics({
+      accountBookId: "book-1",
+      period: "2026-04",
+    });
+    expect(result.income.toString()).toBe("12");
+    expect(redisClient.setEx).not.toHaveBeenCalled();
+  });
+
   it("uses the shared generation so invalidation changes the metrics key", async () => {
     await getOrLoadPeriodHistoryPointMetrics({
       accountBookId: "book-1",

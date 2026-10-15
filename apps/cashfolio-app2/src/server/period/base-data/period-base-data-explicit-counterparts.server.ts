@@ -1,5 +1,5 @@
 import { AccountType } from "../../../.prisma-client/enums";
-import { prisma } from "../../../prisma.server";
+import type { PeriodReadClient } from "./period-read-client";
 import type { ExplicitCounterpartAccount } from "../breakdown/period-gains-losses-contributions";
 
 const EXPLICIT_UNATTRIBUTED_MISSING_COUNTERPART_ACCOUNT: ExplicitCounterpartAccount =
@@ -13,11 +13,14 @@ const EXPLICIT_UNATTRIBUTED_MULTIPLE_COUNTERPARTS_ACCOUNT: ExplicitCounterpartAc
     name: "Unattributed (Multiple Counterpart Accounts)",
   };
 
-export async function resolveExplicitCounterpartNonEquityAccounts(args: {
-  accountBookId: string;
-  explicitTransactionIds: string[];
-  byTransactionId: Map<string, ExplicitCounterpartAccount>;
-}) {
+export async function resolveExplicitCounterpartNonEquityAccounts(
+  args: {
+    accountBookId: string;
+    explicitTransactionIds: string[];
+    byTransactionId: Map<string, ExplicitCounterpartAccount>;
+  },
+  db: Pick<PeriodReadClient, "booking">,
+) {
   const missingTransactionIds = Array.from(
     new Set(
       args.explicitTransactionIds.filter(
@@ -29,7 +32,7 @@ export async function resolveExplicitCounterpartNonEquityAccounts(args: {
     return;
   }
 
-  const counterpartBookings = await prisma.booking.findMany({
+  const counterpartBookings = await db.booking.findMany({
     where: {
       accountBookId: args.accountBookId,
       transactionId: { in: missingTransactionIds },
