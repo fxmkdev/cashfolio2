@@ -191,6 +191,76 @@ test("history view tree selects roots, groups and accounts and supports search",
     .toBe("year");
 });
 
+test("history view search waits for a pending scope selection to commit", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
+  await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+  await page.goto(
+    `/${seeded.accountBookId}/history?mode=year&metric=expenses&assetScope=account:${seeded.cashAccount.id}`,
+  );
+  const viewInput = page.getByRole("textbox", { name: "View" });
+  await expect(viewInput).toHaveValue("Expenses");
+  await expect(viewInput).toBeEnabled();
+
+  let releaseResponse = () => {};
+  const responseGate = new Promise<void>((resolve) => {
+    releaseResponse = resolve;
+  });
+  let markResponseReady = () => {};
+  const responseReady = new Promise<void>((resolve) => {
+    markResponseReady = resolve;
+  });
+  let holdNextResponse = true;
+  await page.route("**/_serverFn/**", async (route) => {
+    if (!holdNextResponse || route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+    holdNextResponse = false;
+    const response = await route.fetch();
+    markResponseReady();
+    await responseGate;
+    await route.fulfill({ response });
+  });
+
+  try {
+    await viewInput.click();
+    await viewInput.fill("Expenses / Equity / E2E Expenses");
+    await page
+      .getByRole("option")
+      .filter({ hasText: /^E2E Expenses$/ })
+      .click();
+    await responseReady;
+    await expect(viewInput).toBeDisabled();
+  } finally {
+    releaseResponse();
+  }
+
+  await expect(viewInput).toBeEnabled();
+  await expect(viewInput).toHaveValue("E2E Expenses");
+  await viewInput.click();
+  await viewInput.fill("Expenses / Equity / E2E Expenses / E2E Expense");
+  await page.getByRole("option", { name: "E2E Expense", exact: true }).click();
+  await expect(viewInput).toBeEnabled();
+  await expect(viewInput).toHaveValue("E2E Expense");
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("expenseScope"))
+    .toBe(`account:${seeded.expenseAccount.id}`);
+  expect(new URL(page.url()).searchParams.get("assetScope")).toBe(
+    `account:${seeded.cashAccount.id}`,
+  );
+
+  await page.reload();
+  await expect(viewInput).toHaveValue("E2E Expense");
+  await expect(viewInput).toBeEnabled();
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+  await page.goForward();
+  await expect(viewInput).toHaveValue("E2E Expense");
+  await expect(viewInput).toBeEnabled();
+});
+
 test("history view tree switches metric and account together and retains other saved scopes", async ({
   page,
 }) => {

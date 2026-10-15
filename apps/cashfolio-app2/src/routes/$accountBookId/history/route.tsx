@@ -1,4 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useRouterState,
+} from "@tanstack/react-router";
 import { Suspense, lazy, useEffect } from "react";
 import { createDocumentTitleHead } from "@/shared/document-title";
 import { loadHistoryPageData } from "./-page-loader";
@@ -85,6 +89,9 @@ export const Route = createFileRoute("/$accountBookId/history")({
 });
 
 function HistoryPage() {
+  const isViewPending = useRouterState({
+    select: (state) => state.status === "pending",
+  });
   const { accountBookId } = Route.useParams();
   const search = Route.useSearch();
   const selectedMode = getHistoryMode(search);
@@ -164,6 +171,7 @@ function HistoryPage() {
         accountBookId={accountBookId}
         selectedMode={selectedMode}
         selectedMetric={selectedMetric}
+        isViewPending={isViewPending}
         history={history}
         gainLossEquityAccountId={gainLossEquityAccountId}
         onAccountPeriodDoubleClick={(target, periodValue) => {

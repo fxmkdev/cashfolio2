@@ -56,6 +56,7 @@ export type HistoryPageViewProps = {
   accountBookId: string;
   selectedMode: HistoryPeriodMode;
   selectedMetric: HistoryMetric;
+  isViewPending: boolean;
   history: PeriodHistoryResponse;
   gainLossEquityAccountId: string | null;
   onAccountPeriodDoubleClick: (
@@ -99,6 +100,7 @@ export function HistoryPageView({
   accountBookId,
   selectedMode,
   selectedMetric,
+  isViewPending,
   history,
   gainLossEquityAccountId,
   onAccountPeriodDoubleClick,
@@ -374,6 +376,7 @@ export function HistoryPageView({
           </Stack>
           <div className={classes.metricControls}>
             <HistoryViewSelect
+              disabled={isViewPending}
               selectedMetric={selectedMetric}
               scopeSelection={history.scopeSelection}
               scopeOptions={history.scopeOptions}

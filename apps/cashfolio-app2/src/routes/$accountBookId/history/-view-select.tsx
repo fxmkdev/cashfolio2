@@ -11,6 +11,7 @@ import {
 } from "./-scope-tree";
 
 type HistoryViewSelectProps = {
+  disabled?: boolean;
   selectedMetric: HistoryMetric;
   scopeSelection: PeriodHistoryResponse["scopeSelection"];
   scopeOptions: PeriodHistoryResponse["scopeOptions"];
@@ -18,6 +19,7 @@ type HistoryViewSelectProps = {
 };
 
 export function HistoryViewSelect({
+  disabled = false,
   selectedMetric,
   scopeSelection,
   scopeOptions,
@@ -37,6 +39,7 @@ export function HistoryViewSelect({
   return (
     <TreeSelect
       label="View"
+      disabled={disabled}
       data={treeData}
       value={selectedValue}
       searchable

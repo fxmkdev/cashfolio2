@@ -239,6 +239,10 @@ controllers.
     account, or Gain/Loss hierarchy node together. Tree values are namespaced by
     metric, while URL parameters retain the existing metric and scope format.
     Selecting a root clears its saved scope and preserves other metrics’ scopes.
+    The View selector is disabled while router navigation is pending, including
+    scope normalization and back/forward navigation, so a late committed
+    selection cannot overwrite the next search query. It becomes available again
+    when navigation settles.
   - `mode?: "month" | "year"` to select the history granularity (default:
     monthly)
   - `metric?: "totalReturn" | "savings" | "cashFlow" | "income" | "expenses" | "gainsLosses" | "assets" | "liabilities" | "netWorth"`
