@@ -14,6 +14,7 @@ const tx = vi.hoisted(() => ({
     deleteMany: vi.fn(),
   },
   accountBook: {
+    findMany: vi.fn(),
     deleteMany: vi.fn(),
   },
   $executeRaw: vi.fn(),
@@ -60,6 +61,7 @@ function createAccountBookLink(args: {
   userLinkCount: number;
 }) {
   return {
+    accountBookId: args.id,
     accountBook: {
       id: args.id,
       name: args.name,
@@ -72,7 +74,7 @@ function createAccountBookLink(args: {
 
 describe("account deletion", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     ensureAuthenticated.mockResolvedValue({
       isAuthenticated: true,
       claims: {
@@ -85,12 +87,17 @@ describe("account deletion", () => {
     tx.user.findUnique.mockImplementation(async (args) => {
       const user = await prisma.user.findUnique(args);
       return user
-        ? { ...user, roles: user.roles ?? [], deletionPending: true }
+        ? {
+            ...user,
+            roles: user.roles ?? [],
+            deletionPending: user.deletionPending ?? true,
+          }
         : null;
     });
     tx.user.update.mockResolvedValue({});
     prisma.$transaction.mockImplementation(async (callback) => callback(tx));
     tx.user.deleteMany.mockResolvedValue({ count: 1 });
+    tx.accountBook.findMany.mockResolvedValue([{ id: "book-1" }]);
     tx.accountBook.deleteMany.mockResolvedValue({ count: 1 });
     deleteBookScopedRedisDataForAccountBooks.mockResolvedValue(undefined);
     deleteLogtoUser.mockResolvedValue(undefined);
@@ -142,12 +149,28 @@ describe("account deletion", () => {
   });
 
   it("deletes the user and only account books that have no remaining links", async () => {
-    await deleteApplicationUserData({
-      externalId: "logto-user-1",
-      accountBookIdsToDelete: ["book-1"],
+    prisma.user.findUnique.mockResolvedValue({
+      accountBookLinks: [
+        { accountBookId: "book-2" },
+        { accountBookId: "book-1" },
+      ],
     });
+    await expect(
+      deleteApplicationUserData({ externalId: "logto-user-1" }),
+    ).resolves.toEqual(["book-1"]);
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(tx.$queryRaw.mock.invocationCallOrder[1]).toBeLessThan(
+      tx.user.findUnique.mock.invocationCallOrder[0],
+    );
+    expect(tx.$queryRaw.mock.invocationCallOrder[2]).toBeLessThan(
+      tx.user.deleteMany.mock.invocationCallOrder[0],
+    );
+    expect(tx.accountBook.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ["book-1", "book-2"] }, userLinks: { none: {} } },
+      select: { id: true },
+      orderBy: { id: "asc" },
+    });
     expect(tx.user.deleteMany).toHaveBeenCalledWith({
       where: { externalId: "logto-user-1" },
     });
@@ -159,7 +182,18 @@ describe("account deletion", () => {
     });
   });
 
-  it("cleans Redis for deleted books, deletes app data, and deletes the Logto user", async () => {
+  it("cleans Redis for actually deleted books only after database commit", async () => {
+    let committed = false;
+    prisma.$transaction.mockImplementation(async (callback) => {
+      committed = false;
+      const result = await callback(tx);
+      committed = true;
+      return result;
+    });
+    deleteBookScopedRedisDataForAccountBooks.mockImplementation(async () => {
+      expect(committed).toBe(true);
+      expect(tx.accountBook.deleteMany).toHaveBeenCalledOnce();
+    });
     prisma.user.findUnique.mockResolvedValue({
       id: "user-1",
       accountBookLinks: [
@@ -191,6 +225,58 @@ describe("account deletion", () => {
       },
     });
     expect(deleteLogtoUser).toHaveBeenCalledWith("logto-user-1");
+  });
+
+  it("returns no deleted books when the user is already gone", async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+    await expect(
+      deleteApplicationUserData({ externalId: "missing" }),
+    ).resolves.toEqual([]);
+    expect(tx.user.deleteMany).not.toHaveBeenCalled();
+    expect(tx.accountBook.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("requires a deletion reservation before removing application data", async () => {
+    prisma.user.findUnique.mockResolvedValue({ deletionPending: false });
+    await expect(
+      deleteApplicationUserData({ externalId: "logto-user-1" }),
+    ).rejects.toThrow("Account deletion is pending");
+    expect(tx.user.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("deletes a user without books without searching for unrelated orphans", async () => {
+    prisma.user.findUnique.mockResolvedValue({ accountBookLinks: [] });
+    await expect(
+      deleteApplicationUserData({ externalId: "logto-user-1" }),
+    ).resolves.toEqual([]);
+    expect(tx.user.deleteMany).toHaveBeenCalledOnce();
+    expect(tx.accountBook.findMany).not.toHaveBeenCalled();
+  });
+
+  it("preserves books that still have members", async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      accountBookLinks: [{ accountBookId: "shared" }],
+    });
+    tx.accountBook.findMany.mockResolvedValue([]);
+    await expect(
+      deleteApplicationUserData({ externalId: "logto-user-1" }),
+    ).resolves.toEqual([]);
+    expect(tx.accountBook.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("does not clean Redis when database cleanup rolls back", async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: "user-1",
+      accountBookLinks: [{ accountBookId: "book-1" }],
+    });
+    prisma.$transaction
+      .mockImplementationOnce(async (callback) => callback(tx))
+      .mockImplementationOnce(async (callback) => {
+        await callback(tx);
+        throw new Error("commit failed");
+      });
+    await expect(deleteAuthenticatedAccount()).rejects.toThrow("commit failed");
+    expect(deleteBookScopedRedisDataForAccountBooks).not.toHaveBeenCalled();
   });
   it("retries rolled-back user deletion without repeating Redis or Logto effects", async () => {
     prisma.user.findUnique.mockResolvedValue({

@@ -22,6 +22,7 @@ const auth = vi.hoisted(() => ({
   getLogto: vi.fn(),
   session: vi.fn(),
 }));
+const deleteBookScopedRedisDataForAccountBooks = vi.hoisted(() => vi.fn());
 vi.mock("@tanstack/react-start", () => ({
   createServerFn() {
     let validate = (data: unknown) => data;
@@ -56,7 +57,7 @@ vi.mock("../security/same-origin.server", () => ({
   ensureSameOriginRequestFromServerContext: vi.fn(),
 }));
 vi.mock("./account-deletion-redis", () => ({
-  deleteBookScopedRedisDataForAccountBooks: vi.fn(),
+  deleteBookScopedRedisDataForAccountBooks,
 }));
 
 const run = promisify(execFile);
@@ -112,6 +113,99 @@ async function activeAdminIds() {
   ).map((user) => user.id);
 }
 
+async function createBook(id: string, memberIds: string[]) {
+  await db.accountBook.create({
+    data: {
+      id,
+      name: id,
+      referenceCurrency: "CHF",
+      startDate: new Date("2026-01-01"),
+      userLinks: { create: memberIds.map((userId) => ({ userId })) },
+      groups: { create: { id: `${id}-group`, name: "Assets", type: "ASSET" } },
+      accounts: {
+        create: {
+          id: `${id}-account`,
+          name: "Cash",
+          type: "ASSET",
+          groupId: `${id}-group`,
+        },
+      },
+      transactions: {
+        create: { id: `${id}-transaction`, description: "Opening" },
+      },
+      bookings: {
+        create: {
+          date: new Date("2026-01-01"),
+          description: "Opening balance",
+          transactionId: `${id}-transaction`,
+          accountId: `${id}-account`,
+          unit: "CURRENCY",
+          currency: "CHF",
+          value: "100.00",
+        },
+      },
+    },
+  });
+}
+
+async function financialRowCounts(accountBookId: string) {
+  const where = { accountBookId };
+  return Promise.all([
+    db.accountGroup.count({ where }),
+    db.account.count({ where }),
+    db.transaction.count({ where }),
+    db.booking.count({ where }),
+  ]);
+}
+
+function signal() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+/** Commit all reservations before allowing either identity deletion to finish. */
+async function withLogtoBarrier(
+  targets: string[],
+  check: (
+    release: (index: number) => void,
+    deletions: Promise<void>[],
+  ) => Promise<void>,
+) {
+  const gates = targets.map(() => ({
+    reached: signal(),
+    resume: signal(),
+  }));
+  const assigned = new Set<number>();
+  auth.deleteLogto.mockImplementation(async (externalId: string) => {
+    const index = targets.findIndex(
+      (target, index) => target === externalId && !assigned.has(index),
+    );
+    assigned.add(index);
+    const gate = gates[index];
+    gate.reached.resolve();
+    await gate.resume.promise;
+  });
+  const deletions = targets.map(selfDelete);
+  const settled = Promise.allSettled(deletions);
+  try {
+    await Promise.race([
+      Promise.all(gates.map((gate) => gate.reached.promise)),
+      settled.then((outcomes) => {
+        throw new Error(
+          `Deletion ended before the Logto barrier: ${JSON.stringify(outcomes)}`,
+        );
+      }),
+    ]);
+    await check((index) => gates[index].resume.resolve(), deletions);
+  } finally {
+    for (const gate of gates) gate.resume.resolve();
+    await settled;
+  }
+}
+
 /** Pause the first operation after its lock and observe the second waiting in PG. */
 async function race(
   first: () => Promise<unknown>,
@@ -160,7 +254,7 @@ async function race(
   }
 }
 
-describe("last Admin invariants against disposable PostgreSQL", () => {
+describe("Admin and account deletion invariants against disposable PostgreSQL", () => {
   beforeAll(async () => {
     await admin.$executeRawUnsafe(`CREATE DATABASE "${databaseName}"`);
     created = true;
@@ -194,6 +288,15 @@ describe("last Admin invariants against disposable PostgreSQL", () => {
       avatar: null,
     }));
     auth.deleteLogto.mockResolvedValue(undefined);
+    deleteBookScopedRedisDataForAccountBooks.mockImplementation(
+      async (deletedBookIds: string[]) => {
+        // A separate connection must see committed deletion before Redis runs.
+        for (const id of deletedBookIds) {
+          expect(await db.accountBook.findUnique({ where: { id } })).toBeNull();
+          expect(await financialRowCounts(id)).toEqual([0, 0, 0, 0]);
+        }
+      },
+    );
   });
   afterAll(async () => {
     await Promise.all([db.$disconnect(), applicationDb?.$disconnect()]);
@@ -288,6 +391,7 @@ describe("last Admin invariants against disposable PostgreSQL", () => {
     expect(await db.user.findUnique({ where: { id: "b" } })).toBeNull();
   });
   it("retains the reservation if database cleanup fails after Logto deletion", async () => {
+    await createBook("private", ["b"]);
     const original = boundary.withAdminMutation;
     const spy = vi
       .spyOn(boundary, "withAdminMutation")
@@ -309,25 +413,125 @@ describe("last Admin invariants against disposable PostgreSQL", () => {
       (await db.user.findUniqueOrThrow({ where: { id: "b" } })).deletionPending,
     ).toBe(true);
     expect(auth.deleteLogto).toHaveBeenCalledExactlyOnceWith("b");
+    expect(
+      await db.accountBook.findUnique({ where: { id: "private" } }),
+    ).not.toBeNull();
+    expect(await financialRowCounts("private")).toEqual([1, 2, 1, 1]);
+    expect(deleteBookScopedRedisDataForAccountBooks).not.toHaveBeenCalled();
     auth.getLogto.mockResolvedValue(null); // Logto already deleted; confirm by external ID.
     await users.deleteAdminUser({ data: { userId: "b", confirmation: "b" } });
     expect(await db.user.findUnique({ where: { id: "b" } })).toBeNull();
+    expect(
+      await db.accountBook.findUnique({ where: { id: "private" } }),
+    ).toBeNull();
+    expect(await financialRowCounts("private")).toEqual([0, 0, 0, 0]);
+    expect(
+      deleteBookScopedRedisDataForAccountBooks,
+    ).toHaveBeenCalledExactlyOnceWith(["private"]);
   });
   it("supports simultaneous idempotent retries of a pending deletion", async () => {
     await db.user.update({
       where: { id: "b" },
       data: { deletionPending: true },
     });
-    const outcomes = await race(
-      () => remove("a", "b"),
-      () => remove("a", "b"),
-    );
-    expect(outcomes.map((outcome) => outcome.status)).toEqual([
-      "fulfilled",
-      "fulfilled",
-    ]);
+    await createBook("private", ["b"]);
+    await withLogtoBarrier(["b", "b"], async (release, deletions) => {
+      release(0);
+      release(1);
+      await Promise.all(deletions);
+    });
     expect(await db.user.findUnique({ where: { id: "b" } })).toBeNull();
     expect(await activeAdminIds()).toEqual(["a"]);
+    expect(await financialRowCounts("private")).toEqual([0, 0, 0, 0]);
+    expect(deleteBookScopedRedisDataForAccountBooks.mock.calls).toEqual([
+      [expect.any(Array)],
+      [expect.any(Array)],
+    ]);
+    expect(deleteBookScopedRedisDataForAccountBooks.mock.calls.flat(2)).toEqual(
+      ["private"],
+    );
+  });
+
+  it.each([0, 1])(
+    "deletes a shared book when both last members reserve deletion (first completion %i)",
+    async (first) => {
+      await db.user.updateMany({ data: { roles: [] } });
+      await createBook("shared", ["a", "b"]);
+      await createBook("unrelated-orphan", []);
+      await withLogtoBarrier(["a", "b"], async (release, deletions) => {
+        expect(await db.user.count({ where: { deletionPending: true } })).toBe(
+          2,
+        );
+        expect(deleteBookScopedRedisDataForAccountBooks).not.toHaveBeenCalled();
+        release(first);
+        await deletions[first];
+        expect(
+          await db.accountBook.findUnique({ where: { id: "shared" } }),
+        ).not.toBeNull();
+        expect(await financialRowCounts("shared")).toEqual([1, 2, 1, 1]);
+        expect(
+          deleteBookScopedRedisDataForAccountBooks,
+        ).toHaveBeenCalledExactlyOnceWith([]);
+        release(1 - first);
+        await deletions[1 - first];
+      });
+      expect(await db.user.count()).toBe(0);
+      expect(
+        await db.accountBook.findUnique({ where: { id: "shared" } }),
+      ).toBeNull();
+      expect(await financialRowCounts("shared")).toEqual([0, 0, 0, 0]);
+      expect(
+        await db.accountBook.findUnique({ where: { id: "unrelated-orphan" } }),
+      ).not.toBeNull();
+      expect(deleteBookScopedRedisDataForAccountBooks.mock.calls).toEqual([
+        [[]],
+        [["shared"]],
+      ]);
+    },
+  );
+
+  it("preserves a shared book and its caches when a third member remains", async () => {
+    await db.user.updateMany({ data: { roles: [] } });
+    await db.user.create({ data: { id: "c", externalId: "c" } });
+    await createBook("shared", ["a", "b", "c"]);
+    await withLogtoBarrier(["a", "b"], async (release, deletions) => {
+      release(0);
+      release(1);
+      await Promise.all(deletions);
+    });
+    expect(await db.user.findMany({ select: { id: true } })).toEqual([
+      { id: "c" },
+    ]);
+    expect(
+      await db.userAccountBookLink.findMany({
+        select: { userId: true, accountBookId: true },
+      }),
+    ).toEqual([{ userId: "c", accountBookId: "shared" }]);
+    expect(await financialRowCounts("shared")).toEqual([1, 2, 1, 1]);
+    expect(deleteBookScopedRedisDataForAccountBooks.mock.calls).toEqual([
+      [[]],
+      [[]],
+    ]);
+  });
+
+  it("uses current links for books and members added after reservation", async () => {
+    await createBook("now-shared", ["b"]);
+    await withLogtoBarrier(["b"], async (release, deletions) => {
+      await createBook("late-private", ["b"]);
+      await db.userAccountBookLink.create({
+        data: { userId: "a", accountBookId: "now-shared" },
+      });
+      release(0);
+      await deletions[0];
+    });
+    expect(await db.accountBook.findMany({ select: { id: true } })).toEqual([
+      { id: "now-shared" },
+    ]);
+    expect(await financialRowCounts("late-private")).toEqual([0, 0, 0, 0]);
+    expect(await financialRowCounts("now-shared")).toEqual([1, 2, 1, 1]);
+    expect(
+      deleteBookScopedRedisDataForAccountBooks,
+    ).toHaveBeenCalledExactlyOnceWith(["late-private"]);
   });
   it("preserves deletion of non-Admins and Logto-only users", async () => {
     await db.user.update({ where: { id: "b" }, data: { roles: [] } });

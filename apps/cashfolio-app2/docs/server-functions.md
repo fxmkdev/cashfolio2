@@ -536,11 +536,20 @@ another Admin when the application has no Admin users.
 
 Every deletion first commits `User.deletionPending = true` under the same guard.
 The migration defaults existing users to false. Both Admin and Account Center
-deletions then remove the Logto identity, perform best-effort book-cache
-cleanup, and remove application data. A failed Logto call or database cleanup
+deletions then remove the Logto identity and remove application data. Only after
+the database transaction commits do they perform best-effort book-cache cleanup,
+using the IDs of books actually deleted. A failed Logto call or database cleanup
 leaves the reservation intact: it is never automatically cleared after an
 ambiguous failure. This prevents a user being counted as a remaining Admin after
 their identity may already have been removed.
+
+Deletion previews are advisory. Final application cleanup locks the target user
+row before reading their current membership links, requires the reservation, and
+locks the linked book rows in sorted ID order. It then deletes the user and
+their links and deletes only those candidate books with no remaining members.
+This also covers books linked after reservation and concurrent deletion of the
+last members of a shared book. Row locks prevent membership inserts from racing
+these decisions. Unrelated historical orphan books are never scanned or deleted.
 
 Admin user-list responses include `deletionPending`. Pending rows display their
 status, disable role editing, and offer **Retry deletion**. Admins can retry

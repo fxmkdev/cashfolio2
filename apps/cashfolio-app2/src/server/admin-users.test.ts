@@ -36,6 +36,7 @@ const tx = vi.hoisted(() => ({
     deleteMany: vi.fn(),
   },
   accountBook: {
+    findMany: vi.fn(),
     deleteMany: vi.fn(),
   },
   $executeRaw: vi.fn(),
@@ -114,6 +115,7 @@ function createAccountBookLink(args: {
   userLinkCount: number;
 }) {
   return {
+    accountBookId: args.id,
     accountBook: {
       id: args.id,
       name: args.name,
@@ -202,6 +204,7 @@ describe("admin users server functions", () => {
     });
     prisma.$transaction.mockImplementation(async (callback) => callback(tx));
     tx.user.deleteMany.mockResolvedValue({ count: 1 });
+    tx.accountBook.findMany.mockResolvedValue([{ id: "private-book" }]);
     tx.accountBook.deleteMany.mockResolvedValue({ count: 1 });
     deleteBookScopedRedisDataForAccountBooks.mockResolvedValue(undefined);
     deleteLogtoUser.mockResolvedValue(undefined);
@@ -510,6 +513,9 @@ describe("admin users server functions", () => {
       "private-book",
     ]);
     expect(deleteLogtoUser.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.user.deleteMany.mock.invocationCallOrder[0],
+    );
+    expect(tx.accountBook.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
       deleteBookScopedRedisDataForAccountBooks.mock.invocationCallOrder[0],
     );
     expect(tx.user.deleteMany).toHaveBeenCalledWith({

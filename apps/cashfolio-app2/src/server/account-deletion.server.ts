@@ -1,4 +1,5 @@
 import type { LogtoContext } from "@logto/node";
+import { Prisma } from "../.prisma-client/client";
 import { ensureAuthenticated } from "@/auth/functions.server";
 import { deleteLogtoUser } from "@/auth/logto-management.server";
 import {
@@ -79,32 +80,50 @@ export async function getAccountDeletionPreview(): Promise<AccountDeletionPrevie
 
 export async function deleteApplicationUserData(args: {
   externalId: string;
-  accountBookIdsToDelete: string[];
-}): Promise<void> {
-  await withAdminMutation(async (tx) => {
+}): Promise<string[]> {
+  return withAdminMutation(async (tx) => {
+    // Block new membership links before reading the user's current books.
+    await tx.$queryRaw`SELECT id FROM "User" WHERE "externalId" = ${args.externalId} FOR UPDATE`;
     const user = await tx.user.findUnique({
       where: { externalId: args.externalId },
+      select: {
+        deletionPending: true,
+        accountBookLinks: { select: { accountBookId: true } },
+      },
     });
-    if (user && !user.deletionPending)
-      throw new Error(DELETION_PENDING_MESSAGE);
+    if (!user) return [];
+    if (!user.deletionPending) throw new Error(DELETION_PENDING_MESSAGE);
+
+    const candidateIds = user.accountBookLinks
+      .map((link) => link.accountBookId)
+      .sort();
+    if (candidateIds.length > 0) {
+      // Prevent new links while deciding which books have become orphaned.
+      await tx.$queryRaw(Prisma.sql`
+        SELECT id FROM "AccountBook"
+        WHERE id IN (${Prisma.join(candidateIds)}) ORDER BY id FOR UPDATE
+      `);
+    }
     await tx.user.deleteMany({
       where: { externalId: args.externalId },
     });
 
-    if (args.accountBookIdsToDelete.length === 0) {
-      return;
-    }
-
-    await tx.accountBook.deleteMany({
+    if (candidateIds.length === 0) return [];
+    const orphanedBooks = await tx.accountBook.findMany({
       where: {
-        id: {
-          in: args.accountBookIdsToDelete,
-        },
-        userLinks: {
-          none: {},
-        },
+        id: { in: candidateIds },
+        userLinks: { none: {} },
       },
+      select: { id: true },
+      orderBy: { id: "asc" },
     });
+    const deletedBookIds = orphanedBooks.map((book) => book.id);
+    if (deletedBookIds.length > 0) {
+      await tx.accountBook.deleteMany({
+        where: { id: { in: deletedBookIds }, userLinks: { none: {} } },
+      });
+    }
+    return deletedBookIds;
   });
 }
 
@@ -112,18 +131,13 @@ export async function deleteUserAccountData(args: {
   externalId: string;
   currentAdminId?: string;
 }): Promise<void> {
-  const links = await reserveUserDeletion(args);
-  const plan = planAccountDeletionFromLinks(links);
-  const accountBookIdsToDelete = plan.accountBooksToDelete.map(
-    (book) => book.id,
-  );
+  await reserveUserDeletion(args);
   // Never retry external effects as part of a rolled-back database transaction.
   await deleteLogtoUser(args.externalId);
-  await deleteBookScopedRedisDataForAccountBooks(accountBookIdsToDelete);
-  await deleteApplicationUserData({
+  const deletedBookIds = await deleteApplicationUserData({
     externalId: args.externalId,
-    accountBookIdsToDelete,
   });
+  await deleteBookScopedRedisDataForAccountBooks(deletedBookIds);
 }
 
 export async function deleteAuthenticatedAccount(): Promise<void> {
