@@ -293,6 +293,10 @@ crypto, or security bookings.
 
 ## Accounts List Columns
 
+- The `Name` column has a 320px minimum width and grows with the available
+  space. When columns no longer fit, scroll horizontally inside the grid to
+  reach the remaining balances, G/L columns, and row actions. This applies to
+  every tab in both active and archived views.
 - Non-equity tabs (`ASSET`, `LIABILITY`) render `Ccy.`, `Symbol`, `Balance`, and
   `Balance (<referenceCurrency>)`.
 - `Balance` is account-level only (group rows are blank), with no aggregation.

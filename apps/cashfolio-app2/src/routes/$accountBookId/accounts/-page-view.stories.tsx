@@ -253,6 +253,8 @@ function getPinnedBottomRowData(
 }
 
 function AccountsPageStoryHarness({
+  rowsOverride,
+  expandGroups = false,
   gainLossState = "ready",
   initialMode,
   initialTab = "ASSET",
@@ -260,6 +262,8 @@ function AccountsPageStoryHarness({
   startWithEditModal = false,
   routeSmoke = false,
 }: {
+  rowsOverride?: TreeRow[];
+  expandGroups?: boolean;
   gainLossState?: "ready" | "loading" | "error" | "partial";
   initialMode: AccountsMode;
   initialTab?: TabValue;
@@ -321,7 +325,10 @@ function AccountsPageStoryHarness({
   const mode: AccountsMode =
     routeSearch.mode === "archived" ? "archived" : modeState;
 
-  const rows = useMemo(() => getRowsFor({ mode, tab }), [mode, tab]);
+  const rows = useMemo(
+    () => rowsOverride ?? getRowsFor({ mode, tab }),
+    [mode, tab, rowsOverride],
+  );
   const rowsByParentKey = useRowsByParentKey(rows);
   const selectedSiblingRows: ReorderGroupChildRow[] = useSelectedSiblingRows(
     rowsByParentKey,
@@ -464,7 +471,7 @@ function AccountsPageStoryHarness({
           { mode, tab },
           referenceCurrencyBalanceTotal,
         )}
-        isGroupOpenByDefault={() => initialMode === "archived"}
+        isGroupOpenByDefault={() => expandGroups || initialMode === "archived"}
         onRowGroupOpened={() => undefined}
         createModalOpened={createModalOpened}
         editModalOpen={editModalOpen}
@@ -550,6 +557,51 @@ async function findVisibleDialog(
 
 export const ActiveHappyPath: Story = {
   render: () => <AccountsPageStoryHarness initialMode="active" />,
+};
+
+export const ConstrainedWidthWithGainLoss: Story = {
+  render: () => (
+    <Box w={960} maw="100%">
+      <AccountsPageStoryHarness
+        initialMode="active"
+        expandGroups
+        rowsOverride={activeAssetRows.map((row) => ({
+          ...row,
+          name:
+            row.id === "group-cash"
+              ? "Cash and savings accounts"
+              : row.id === "account-checking"
+                ? "Household current account"
+                : row.id === "account-holding"
+                  ? "US dollar investment holdings"
+                  : row.name,
+        }))}
+      />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const nameHeader = await canvas.findByRole("columnheader", {
+      name: "Name",
+    });
+    await waitFor(() => {
+      expect(nameHeader.getBoundingClientRect().width).toBeGreaterThanOrEqual(
+        320,
+      );
+      expect(canvas.getByText("Household current account")).toBeVisible();
+    });
+    const viewport = canvasElement.querySelector(".ag-grid-viewport");
+    if (!viewport) throw new Error("Could not resolve Accounts viewport");
+    expect(viewport.scrollWidth).toBeGreaterThan(viewport.clientWidth);
+    viewport.scrollLeft = viewport.scrollWidth;
+    await waitFor(() => {
+      expect(canvas.getByRole("columnheader", { name: "Total" })).toBeVisible();
+      expect(
+        canvas.getAllByRole("button", { name: "Edit" }).length,
+      ).toBeGreaterThan(0);
+    });
+    viewport.scrollLeft = 0;
+  },
 };
 
 export const ArchivedMode: Story = {

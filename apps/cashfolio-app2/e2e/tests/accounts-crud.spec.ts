@@ -1,4 +1,8 @@
-import { agGridRowByText, clickRowAction } from "../support/grid";
+import {
+  agGridRowByText,
+  clickRowAction,
+  revealRowActions,
+} from "../support/grid";
 import {
   seedDatabase,
   seedNonZeroConvertibleAssetBalances,
@@ -225,7 +229,7 @@ test("archive action is disabled for non-zero asset balances", async ({
 
   const usdRow = agGridRowByText(page, seededBalances.usdAccountName);
   await expect(usdRow).toBeVisible();
-  await usdRow.hover();
+  await revealRowActions(usdRow);
 
   const archiveButton = usdRow.getByRole("button", { name: "Archive" });
   await expect(archiveButton).toBeDisabled();

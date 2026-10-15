@@ -262,6 +262,7 @@ export function AccountsPageView({
           headerName: "Name",
           field: "name",
           flex: 1,
+          minWidth: 320,
           filter: "agTextColumnFilter",
           valueGetter: ({ data }) => data?.name,
           cellRendererParams: {

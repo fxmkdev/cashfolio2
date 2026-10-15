@@ -18,6 +18,77 @@ test.beforeAll(async ({ e2eExternalId }) => {
   assetRootId = root.id;
 });
 
+test("account names keep their minimum width and overflow stays inside the grid", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
+  const grid = page.locator(".ag-root-wrapper").first();
+  const viewport = grid.locator(".ag-grid-viewport");
+  const nameHeader = grid.getByRole("columnheader", {
+    name: "Name",
+    exact: true,
+  });
+  await expect(agGridRowByText(page, seeded.cashAccount.name)).toBeVisible();
+  await expect
+    .poll(async () => (await nameHeader.boundingBox())?.width ?? 0)
+    .toBeGreaterThanOrEqual(320);
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => element.scrollWidth > element.clientWidth),
+    )
+    .toBe(true);
+  await viewport.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  await expect
+    .poll(() => viewport.evaluate((element) => element.scrollLeft))
+    .toBeGreaterThan(0);
+  await expect(
+    grid.getByRole("columnheader", { name: "Total", exact: true }),
+  ).toBeInViewport();
+  const cashRow = grid.locator(`.ag-row[row-id="${seeded.cashAccount.id}"]`);
+  await cashRow.hover();
+  const edit = cashRow.getByRole("button", { name: "Edit", exact: true });
+  await expect(edit).toBeInViewport();
+  await edit.click();
+  const dialog = page.getByRole("dialog", { name: "Edit Account" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await viewport.evaluate((element) => {
+    element.scrollLeft = 0;
+  });
+  await expect
+    .poll(async () => (await nameHeader.boundingBox())?.width ?? 0)
+    .toBeGreaterThan(320);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(async () => (await nameHeader.boundingBox())?.width ?? 0)
+    .toBeGreaterThanOrEqual(320);
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => element.scrollWidth > element.clientWidth),
+    )
+    .toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+      ),
+    )
+    .toBeLessThanOrEqual(1);
+  await viewport.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  await expect(edit).toBeInViewport();
+});
+
 test("restores pre-upgrade expanded group storage and persists collapse", async ({
   page,
 }) => {
