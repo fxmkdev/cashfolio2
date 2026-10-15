@@ -95,3 +95,12 @@ shared `MoneyDecimal` (40-digit precision, half-even rounding), and persist
 calculated booking values as decimal strings. API amounts remain numeric. See
 [Monetary calculation boundaries](server-functions.md#monetary-calculation-boundaries)
 for validation, report rounding, and cache representation.
+
+## Pending user deletion
+
+`User.deletionPending` defaults to false. Application deletion reserves the user
+before removing their Logto identity. Pending users retain their stored roles
+for diagnostics, but are excluded from active-Admin checks and cannot change
+roles. A failed cleanup is resumed by retrying deletion, rather than clearing
+the flag. See
+[Admin membership and account deletion](server-functions.md#admin-membership-and-account-deletion).

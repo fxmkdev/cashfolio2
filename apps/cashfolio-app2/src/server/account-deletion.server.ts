@@ -1,14 +1,18 @@
 import type { LogtoContext } from "@logto/node";
 import { ensureAuthenticated } from "@/auth/functions.server";
 import { deleteLogtoUser } from "@/auth/logto-management.server";
-import { withDatabaseConflictRetry } from "./database-conflict-retry";
+import {
+  withAdminMutation,
+  DELETION_PENDING_MESSAGE,
+  FINAL_ADMIN_MESSAGE,
+} from "./admin-mutation.server";
+import { reserveUserDeletion } from "./user-deletion-reservation.server";
 import { destroyLogtoSession } from "@/auth/logto.server";
 import { prisma } from "@/prisma.server";
 import { ensureSameOriginRequest } from "@/security/same-origin.server";
 import {
   planAccountDeletionFromLinks,
   type AccountDeletionPreview,
-  type LinkedAccountBook,
 } from "./account-deletion-plan";
 import { deleteBookScopedRedisDataForAccountBooks } from "./account-deletion-redis";
 
@@ -77,63 +81,55 @@ export async function deleteApplicationUserData(args: {
   externalId: string;
   accountBookIdsToDelete: string[];
 }): Promise<void> {
-  await withDatabaseConflictRetry(() =>
-    prisma.$transaction(async (tx) => {
-      await tx.user.deleteMany({
-        where: { externalId: args.externalId },
-      });
+  await withAdminMutation(async (tx) => {
+    const user = await tx.user.findUnique({
+      where: { externalId: args.externalId },
+    });
+    if (user && !user.deletionPending)
+      throw new Error(DELETION_PENDING_MESSAGE);
+    await tx.user.deleteMany({
+      where: { externalId: args.externalId },
+    });
 
-      if (args.accountBookIdsToDelete.length === 0) {
-        return;
-      }
+    if (args.accountBookIdsToDelete.length === 0) {
+      return;
+    }
 
-      await tx.accountBook.deleteMany({
-        where: {
-          id: {
-            in: args.accountBookIdsToDelete,
-          },
-          userLinks: {
-            none: {},
-          },
+    await tx.accountBook.deleteMany({
+      where: {
+        id: {
+          in: args.accountBookIdsToDelete,
         },
-      });
-    }),
-  );
+        userLinks: {
+          none: {},
+        },
+      },
+    });
+  });
 }
 
 export async function deleteUserAccountData(args: {
   externalId: string;
-  accountBookLinks: LinkedAccountBook[];
-  deleteLogtoFirst?: boolean;
+  currentAdminId?: string;
 }): Promise<void> {
-  const plan = planAccountDeletionFromLinks(args.accountBookLinks);
+  const links = await reserveUserDeletion(args);
+  const plan = planAccountDeletionFromLinks(links);
   const accountBookIdsToDelete = plan.accountBooksToDelete.map(
-    (accountBook) => accountBook.id,
+    (book) => book.id,
   );
-
-  if (args.deleteLogtoFirst) {
-    await deleteLogtoUser(args.externalId);
-  }
-
+  // Never retry external effects as part of a rolled-back database transaction.
+  await deleteLogtoUser(args.externalId);
   await deleteBookScopedRedisDataForAccountBooks(accountBookIdsToDelete);
   await deleteApplicationUserData({
     externalId: args.externalId,
     accountBookIdsToDelete,
   });
-
-  if (!args.deleteLogtoFirst) {
-    await deleteLogtoUser(args.externalId);
-  }
 }
 
 export async function deleteAuthenticatedAccount(): Promise<void> {
   const context = await ensureAuthenticated();
-  const externalId = getAuthenticatedExternalId(context);
-  const user = await getUserAccountBookLinks(externalId);
-
   await deleteUserAccountData({
-    externalId,
-    accountBookLinks: user?.accountBookLinks ?? [],
+    externalId: getAuthenticatedExternalId(context),
   });
 }
 
@@ -141,7 +137,20 @@ export async function handleAccountDeletionRequest(
   request: Request,
 ): Promise<Response> {
   ensureSameOriginRequest(request);
-  await deleteAuthenticatedAccount();
+  try {
+    await deleteAuthenticatedAccount();
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith(FINAL_ADMIN_MESSAGE)
+    ) {
+      return new Response(error.message, {
+        status: 409,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      });
+    }
+    throw error;
+  }
   await destroyLogtoSession();
 
   return new Response(null, {

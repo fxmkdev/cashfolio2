@@ -58,3 +58,42 @@ test("admin users page manages a user's Admin role from the row action dialog", 
     })
     .toEqual([UserRole.ADMIN]);
 });
+
+test("pending deletions show inactive Admin status and a retry action", async ({
+  page,
+}) => {
+  await prisma.user.update({
+    where: { externalId: targetUserExternalId },
+    data: { roles: [UserRole.ADMIN], deletionPending: true },
+  });
+  try {
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await page.goto("/admin/users");
+    const row = page
+      .locator(".ag-row")
+      .filter({ hasText: targetUserExternalId });
+    await expect(row).toContainText("Deletion pending");
+    await expect(row).toContainText("Admin (inactive)");
+    await expect(
+      row.getByRole("button", { name: "Manage Roles" }),
+    ).toBeDisabled();
+    await row.getByRole("button", { name: "Retry deletion" }).click();
+    const dialog = page.getByRole("dialog", { name: "Retry deletion" });
+    await expect(dialog).toContainText("Deletion has started");
+    await expect(
+      dialog.getByRole("button", { name: "Retry deletion" }),
+    ).toBeDisabled();
+    await dialog
+      .getByRole("textbox", { name: "External ID" })
+      .fill(targetUserExternalId);
+    await expect(
+      dialog.getByRole("button", { name: "Retry deletion" }),
+    ).toBeEnabled();
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+  } finally {
+    await prisma.user.update({
+      where: { externalId: targetUserExternalId },
+      data: { roles: [], deletionPending: false },
+    });
+  }
+});

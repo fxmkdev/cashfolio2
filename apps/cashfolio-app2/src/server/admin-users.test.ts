@@ -30,11 +30,16 @@ const deleteLogtoUser = vi.hoisted(() => vi.fn());
 const deleteBookScopedRedisDataForAccountBooks = vi.hoisted(() => vi.fn());
 const tx = vi.hoisted(() => ({
   user: {
+    findUnique: vi.fn(),
+    update: vi.fn(),
+    count: vi.fn(),
     deleteMany: vi.fn(),
   },
   accountBook: {
     deleteMany: vi.fn(),
   },
+  $executeRaw: vi.fn(),
+  $queryRaw: vi.fn(),
 }));
 const prisma = vi.hoisted(() => ({
   user: {
@@ -93,6 +98,7 @@ function createUser(args: {
     id: args.id,
     externalId: args.externalId,
     roles: args.roles,
+    deletionPending: false,
     locale: null,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     updatedAt: new Date("2026-01-02T00:00:00.000Z"),
@@ -118,9 +124,12 @@ function createAccountBookLink(args: {
   };
 }
 
+const pendingIds = new Set<string>();
+
 describe("admin users server functions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    pendingIds.clear();
     ensureUser.mockResolvedValue({
       id: "current-user",
       roles: [UserRole.ADMIN],
@@ -163,6 +172,34 @@ describe("admin users server functions", () => {
         accountBookCount: 2,
       }),
     );
+    tx.$executeRaw.mockResolvedValue(0);
+    tx.$queryRaw.mockResolvedValue([]);
+    tx.user.count.mockImplementation((args) => prisma.user.count(args));
+    tx.user.update.mockImplementation((args) => {
+      if (args.data.deletionPending) {
+        pendingIds.add(args.where.id);
+        return { deletionPending: true };
+      }
+      return prisma.user.update(args);
+    });
+    tx.user.findUnique.mockImplementation(async (args) => {
+      if (args.where.id === "admin-user")
+        return {
+          id: "admin-user",
+          roles: [UserRole.ADMIN],
+          deletionPending: false,
+        };
+      const user = await prisma.user.findUnique(args);
+      if (user) return { ...user, deletionPending: pendingIds.has(user.id) };
+      return args.where.id
+        ? createUser({
+            id: args.where.id,
+            externalId: "external-updated",
+            roles: [UserRole.ADMIN],
+            accountBookCount: 2,
+          })
+        : null;
+    });
     prisma.$transaction.mockImplementation(async (callback) => callback(tx));
     tx.user.deleteMany.mockResolvedValue({ count: 1 });
     tx.accountBook.deleteMany.mockResolvedValue({ count: 1 });
@@ -202,6 +239,7 @@ describe("admin users server functions", () => {
         roles: [UserRole.ADMIN],
         accountBookCount: 3,
         isCurrentUser: true,
+        deletionPending: false,
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-02T00:00:00.000Z",
       },
@@ -216,6 +254,7 @@ describe("admin users server functions", () => {
         roles: [],
         accountBookCount: 0,
         isCurrentUser: false,
+        deletionPending: false,
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-02T00:00:00.000Z",
       },
@@ -228,6 +267,7 @@ describe("admin users server functions", () => {
         id: true,
         externalId: true,
         roles: true,
+        deletionPending: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -272,6 +312,15 @@ describe("admin users server functions", () => {
       roles: [],
     });
 
+    await expect(getCurrentUserCanAccessAdmin()).resolves.toBe(false);
+  });
+
+  it("does not expose Admin access for a deletion-pending user", async () => {
+    ensureUser.mockResolvedValue({
+      id: "pending",
+      roles: [UserRole.ADMIN],
+      deletionPending: true,
+    });
     await expect(getCurrentUserCanAccessAdmin()).resolves.toBe(false);
   });
 
@@ -418,13 +467,14 @@ describe("admin users server functions", () => {
       where: {
         id: { not: "last-admin" },
         roles: { has: UserRole.ADMIN },
+        deletionPending: false,
       },
     });
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
   it("deletes another user and reuses account deletion cleanup", async () => {
-    prisma.user.findUnique.mockResolvedValueOnce({
+    prisma.user.findUnique.mockResolvedValue({
       ...createUser({
         id: "target-user",
         externalId: "logto-target",
@@ -476,7 +526,7 @@ describe("admin users server functions", () => {
 
   it("deletes a database user when the Logto identity is missing", async () => {
     getLogtoUser.mockResolvedValueOnce(null);
-    prisma.user.findUnique.mockResolvedValueOnce({
+    prisma.user.findUnique.mockResolvedValue({
       ...createUser({
         id: "target-user",
         externalId: "missing-logto-user",
@@ -512,7 +562,7 @@ describe("admin users server functions", () => {
       avatar: null,
       lastSignInAt: null,
     });
-    prisma.user.findUnique.mockResolvedValueOnce({
+    prisma.user.findUnique.mockResolvedValue({
       ...createUser({
         id: "target-user",
         externalId: "logto-no-email",
@@ -541,7 +591,7 @@ describe("admin users server functions", () => {
     const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const error = new Error("Logto unavailable");
     getLogtoUser.mockRejectedValueOnce(error);
-    prisma.user.findUnique.mockResolvedValueOnce({
+    prisma.user.findUnique.mockResolvedValue({
       ...createUser({
         id: "target-user",
         externalId: "unavailable-logto-user",
@@ -576,7 +626,7 @@ describe("admin users server functions", () => {
   });
 
   it("rejects deleting the current admin", async () => {
-    prisma.user.findUnique.mockResolvedValueOnce({
+    prisma.user.findUnique.mockResolvedValue({
       ...createUser({
         id: "admin-user",
         externalId: "logto-admin",
@@ -602,7 +652,7 @@ describe("admin users server functions", () => {
 
   it("rejects deleting the final Admin user", async () => {
     prisma.user.count.mockResolvedValueOnce(0);
-    prisma.user.findUnique.mockResolvedValueOnce({
+    prisma.user.findUnique.mockResolvedValue({
       ...createUser({
         id: "last-admin",
         externalId: "logto-last-admin",
@@ -625,16 +675,18 @@ describe("admin users server functions", () => {
       where: {
         id: { not: "last-admin" },
         roles: { has: UserRole.ADMIN },
+        deletionPending: false,
       },
     });
-    expect(getLogtoUser).not.toHaveBeenCalled();
+    expect(getLogtoUser).toHaveBeenCalledWith("logto-last-admin");
+    expect(deleteLogtoUser).not.toHaveBeenCalled();
     expect(deleteBookScopedRedisDataForAccountBooks).not.toHaveBeenCalled();
     expect(tx.user.deleteMany).not.toHaveBeenCalled();
     expect(deleteLogtoUser).not.toHaveBeenCalled();
   });
 
   it("rejects an external-id confirmation when the Logto email is available", async () => {
-    prisma.user.findUnique.mockResolvedValueOnce({
+    prisma.user.findUnique.mockResolvedValue({
       ...createUser({
         id: "target-user",
         externalId: "logto-target",
@@ -659,7 +711,7 @@ describe("admin users server functions", () => {
   });
 
   it("rejects a delete confirmation that does not match the required value", async () => {
-    prisma.user.findUnique.mockResolvedValueOnce({
+    prisma.user.findUnique.mockResolvedValue({
       ...createUser({
         id: "target-user",
         externalId: "logto-target",

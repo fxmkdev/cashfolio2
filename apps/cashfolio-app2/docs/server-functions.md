@@ -498,3 +498,37 @@ this refactor preserves their response shape and accounting semantics. No schema
 migration is required. This boundary removes live database queries during
 calculations; it does not introduce a transaction snapshot around the existing
 multi-query base-data load.
+
+## Admin membership and account deletion
+
+Application role changes and account-deletion reservations use
+`src/server/admin-mutation.server.ts`. A global PostgreSQL transaction-scoped
+advisory lock serializes these operations across users and app instances. Actor
+authorization and the remaining-Admin count are re-read after the lock. The
+transaction uses Read Committed isolation, a 25-second lock timeout, and the
+existing database-only conflict retry. External API calls never run inside that
+transaction or its automatic retry. Administrative SQL maintenance must preserve
+the same invariant independently.
+
+An active Admin has the `ADMIN` role and `deletionPending = false`. Role changes
+reject pending targets; pending users cannot access Admin or authorize Admin
+mutations. Self-demotion and Admin-triggered self-deletion remain prohibited.
+Self-service deletion of the final Admin returns a readable `409` response
+asking them to appoint another Admin first. Non-Admin deletion does not require
+another Admin when the application has no Admin users.
+
+Every deletion first commits `User.deletionPending = true` under the same guard.
+The migration defaults existing users to false. Both Admin and Account Center
+deletions then remove the Logto identity, perform best-effort book-cache
+cleanup, and remove application data. A failed Logto call or database cleanup
+leaves the reservation intact: it is never automatically cleared after an
+ambiguous failure. This prevents a user being counted as a remaining Admin after
+their identity may already have been removed.
+
+Admin user-list responses include `deletionPending`. Pending rows display their
+status, disable role editing, and offer **Retry deletion**. Admins can retry
+with the existing confirmation flow (external ID when Logto reports a missing
+user). Logto `404` and repeated database deletion are idempotent. Self-service
+retries remain available while the identity/session is usable; otherwise another
+active Admin finishes deletion from the pending row. No background worker or
+automatic privilege restoration is introduced.

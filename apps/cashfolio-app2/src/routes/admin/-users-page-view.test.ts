@@ -75,6 +75,7 @@ const users: AdminUserListItem[] = [
     avatarUrl: "https://example.test/ada.png",
     identityStatus: "available",
     roles: [UserRole.ADMIN],
+    deletionPending: false,
     accountBookCount: 2,
     isCurrentUser: true,
     createdAt: "2026-01-01T00:00:00.000Z",
@@ -89,6 +90,7 @@ const users: AdminUserListItem[] = [
     avatarUrl: null,
     identityStatus: "missing",
     roles: [],
+    deletionPending: false,
     accountBookCount: 0,
     isCurrentUser: false,
     createdAt: "2026-01-03T00:00:00.000Z",
@@ -97,6 +99,30 @@ const users: AdminUserListItem[] = [
 ];
 
 describe("AdminUsersPageView", () => {
+  it("shows pending deletion and disables role editing while offering retry", () => {
+    const pending = {
+      ...users[1],
+      roles: [UserRole.ADMIN],
+      deletionPending: true,
+    };
+    const markup = renderToStaticMarkup(
+      createElement(
+        MantineProvider,
+        null,
+        createElement(AdminUsersPageView, {
+          users: [pending],
+          onSubmitRoles: vi.fn(),
+          onDeleteUser: vi.fn(),
+        }),
+      ),
+    );
+    expect(markup).toContain("Deletion pending");
+    expect(markup).toContain("Admin (inactive)");
+    expect(markup).toContain('aria-label="Retry deletion"');
+    expect(markup).toMatch(
+      /<button[^>]*disabled[^>]*aria-label="Manage Roles"/,
+    );
+  });
   it("renders users, role pills, and role-management actions", () => {
     const markup = renderToStaticMarkup(
       createElement(
