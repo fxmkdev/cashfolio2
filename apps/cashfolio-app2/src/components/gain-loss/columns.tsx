@@ -36,6 +36,7 @@ export function buildRealizedColumns(args: {
           return "—";
         }
         const side = toEventSide(data);
+        if (side === "transfer") return <Badge variant="light">Transfer</Badge>;
         if (side === "flat") {
           return <Badge variant="light">Flat</Badge>;
         }

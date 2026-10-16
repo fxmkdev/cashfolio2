@@ -1,5 +1,5 @@
 import {
-  applyHoldingTransferWithoutRealization,
+  applyHoldingTransfer,
   resolveHoldingTransferDirection,
 } from "./period-overview-holdings-transfer";
 import type {
@@ -49,11 +49,12 @@ export async function applyPendingHoldingExecutions(args: {
         })
       : transfer.direction;
     if (direction) {
-      applyHoldingTransferWithoutRealization({
+      applyHoldingTransfer({
         stateByHoldingAccountId: args.state.stateByHoldingAccountId,
         holdingBookings: bookings,
         direction,
         transferPool: transfer.pool,
+        captureLotMatches: args.captureLotMatches,
       });
     } else {
       // Preserve the existing market fallback for same-unit movements without transferable lots.

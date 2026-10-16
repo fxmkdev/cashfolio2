@@ -22,6 +22,7 @@ export function formatDescription(value: string | null | undefined) {
 }
 
 export function toEventSide(event: RealizedEventRow): EventSide {
+  if (event.pricing.source === "transferBasis") return "transfer";
   if (event.quantity > 0) {
     return "buy";
   }

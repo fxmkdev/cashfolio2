@@ -117,13 +117,19 @@ Executions are ordered by booking date, and completed same-unit transfers carry
 acquisition costs between accounts. Source-first multi-day transfers remove FIFO
 lots on each outgoing booking date and hold them in a transfer-specific pool
 until receipt. Sales between those dates consume only the source's remaining
-lots. Same-date and receipt-before-withdrawal transfers retain their existing
-atomic treatment. Calculation includes all real holding accounts, including
-archived accounts and both account types; filtering to the selected
-active/archived mode and tab happens afterwards. Virtual transfer clearing is
-not included in real-account totals. Group and footer amounts sum account leaves
-using Decimal arithmetic before conversion to display numbers. Zero-balance and
-archived accounts retain realised gains.
+lots. On receipt, carried lots close any opposite destination position using
+FIFO and each incoming lot's carried acquisition cost. The destination records
+that realised G/L; any remainder keeps its original cost and acquisition order.
+The calculation exposes one transfer-basis event per receipt that closes lots,
+with per-match costs and no market-reference amount. A fully closed position has
+no open lots and needs no closing valuation. Same-date and
+receipt-before-withdrawal transfers retain their existing atomic treatment.
+Calculation includes all real holding accounts, including archived accounts and
+both account types; filtering to the selected active/archived mode and tab
+happens afterwards. Virtual transfer clearing is not included in real-account
+totals. Group and footer amounts sum account leaves using Decimal arithmetic
+before conversion to display numbers. Zero-balance and archived accounts retain
+realised gains.
 
 G/L hydrates independently of the account tree and reference balances. A failed
 request exposes a retry action. A missing closing price leaves reliable Realised

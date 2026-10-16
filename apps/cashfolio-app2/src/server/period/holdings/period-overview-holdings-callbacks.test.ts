@@ -245,6 +245,48 @@ describe("holding engine callbacks and counters", () => {
     });
   });
 
+  it("reconciles opposite-position transfer matches in the period adapter", async () => {
+    const source = { ...account, id: "source" };
+    const events: HoldingAccountExecutionEvent[] = [];
+    const result = await computeHoldingGainLossSplit({
+      ...period,
+      holdingAccounts: [source, account],
+      initialBalanceByAccountId: new Map([
+        [source.id, toMoney(2)],
+        [account.id, toMoney(-1)],
+      ]),
+      transactions: [
+        { bookings: [booking("out", -2, source.id), booking("in", 2)] },
+        { bookings: [booking("sell", -1), booking("cash", 160, "cash")] },
+      ],
+      resolveRate: async ({ date }) =>
+        date === period.initialRateDate ? toMoney(100) : null,
+      convertBookingToReference: async ({ id }) =>
+        toMoney(id === "sell" ? -160 : 160),
+      onAccountExecutionEvent: (event) => events.push(event),
+    });
+    expect(toNumericMoney(result)).toMatchObject({
+      realizedGainLoss: 60,
+      unrealizedGainLoss: 0,
+      skippedCount: 0,
+    });
+    expect(
+      toNumericMoney(
+        events.map((event) => ({
+          id: event.bookingId,
+          source: event.pricingSource,
+          delta: event.realizedGainLossDelta,
+          running: event.runningRealizedGainLoss,
+        })),
+      ),
+    ).toEqual([
+      { id: "in", source: "transferBasis", delta: 0, running: 0 },
+      { id: "sell", source: "directConversion", delta: 60, running: 60 },
+    ]);
+    expect(events[0]!.lotMatches).toHaveLength(1);
+    expect(events[0]!.marketReferenceAmount).toBeNull();
+  });
+
   it("keeps realized explain data when the period-end rate is unavailable", async () => {
     const callbackOrder: string[] = [];
     const onAccountOpenLotValuation = vi.fn();

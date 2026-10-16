@@ -117,12 +117,28 @@ export async function finalizeHoldingAccountGainLoss(
     return left.bookingId.localeCompare(right.bookingId, "en");
   });
 
+  const processedEvents = args.state.processedExecutionEvents ?? [];
   for (const event of args.state.executionEvents) {
-    skippedCount += applyHoldingAccountExecution({ ...args, event });
+    skippedCount += applyHoldingAccountExecution({
+      ...args,
+      event,
+      onAccountExecutionEvent: args.onAccountExecutionEvent
+        ? (processed) => processedEvents.push(processed)
+        : undefined,
+    });
   }
   args.state.executionEvents = [];
-  for (const event of args.state.processedExecutionEvents ?? []) {
-    args.onAccountExecutionEvent?.(event);
+  processedEvents.sort((left, right) => {
+    const dateDiff = left.date.getTime() - right.date.getTime();
+    return dateDiff || left.bookingId.localeCompare(right.bookingId, "en");
+  });
+  let runningRealizedGainLoss = toMoney(0);
+  for (const event of processedEvents) {
+    runningRealizedGainLoss = moneyAdd(
+      runningRealizedGainLoss,
+      event.realizedGainLossDelta,
+    );
+    args.onAccountExecutionEvent?.({ ...event, runningRealizedGainLoss });
   }
   args.state.processedExecutionEvents = [];
 

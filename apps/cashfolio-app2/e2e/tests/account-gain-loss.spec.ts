@@ -133,6 +133,65 @@ test("opening a calculation event in the ledger closes the drawer and clears the
   await expect(calculation).toBeVisible();
 });
 
+test("transfers close opposite positions and explain their realised gain without open lots", async ({
+  page,
+  e2eExternalId,
+}) => {
+  const book = await seedDatabase({
+    userExternalId: e2eExternalId,
+    accountBookStartDate: new Date("2026-01-01Z"),
+  });
+  const { destination } = await seedAccountGainLoss(
+    book.accountBookId,
+    book.cashAccount.id,
+    "opposite",
+  );
+  await page.goto(`/${book.accountBookId}/${destination.id}?period=2026-01`);
+  await expect(page.getByTestId("account-gain-loss-realised")).toContainText(
+    "110.00",
+  );
+  await expect(page.getByTestId("account-gain-loss-unrealised")).toContainText(
+    "0.00",
+  );
+  await expect(page.getByTestId("account-gain-loss-total")).toContainText(
+    "110.00",
+  );
+  await page
+    .getByRole("button", { name: "View Calculation", exact: true })
+    .click();
+  const calculation = page.getByRole("dialog", {
+    name: "Gain/Loss Calculation",
+    exact: true,
+  });
+  await expect(
+    calculation.getByText("No Rows To Show", { exact: true }),
+  ).toBeVisible();
+  const transfer = calculation
+    .locator(".ag-row")
+    .filter({ hasText: "Transfer Holding" });
+  await expect(transfer.getByText("Transfer", { exact: true })).toBeVisible();
+  await expect(agGridCellByColId(transfer, "realizedGainLossDelta")).toHaveText(
+    "50.00",
+  );
+  await transfer.getByText("Transfer Holding", { exact: true }).click();
+  const event = page.getByRole("dialog", { name: "Explain Realised Delta" });
+  await expect(
+    event.getByText("Transfer basis", { exact: true }),
+  ).toBeVisible();
+  await expect(event.getByText(/carried acquisition costs/)).toBeVisible();
+  await expect(event).toContainText("100.00000");
+  await expect(event).toContainText("150.00000");
+  await event.locator(".mantine-Drawer-close").click();
+  await expect(event).not.toBeVisible();
+  await transfer.hover();
+  await transfer
+    .getByRole("button", { name: "Open in Ledger", exact: true })
+    .click();
+  await expect(calculation).not.toBeVisible();
+  await expect(page).toHaveURL((url) => !url.searchParams.has("period"));
+  await expect(agGridRowByText(page, "Transfer Holding")).toBeInViewport();
+});
+
 test("G/L request failure can be retried without blocking the accounts page", async ({
   page,
   e2eExternalId,

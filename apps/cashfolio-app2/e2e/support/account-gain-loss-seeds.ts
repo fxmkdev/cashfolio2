@@ -4,6 +4,7 @@ import { prisma, assertSafeWriteTarget } from "./db-client";
 export async function seedAccountGainLoss(
   accountBookId: string,
   cashAccountId: string,
+  scenario: "default" | "opposite" = "default",
 ) {
   assertSafeWriteTarget();
   const root = await prisma.accountGroup.findFirstOrThrow({
@@ -92,7 +93,12 @@ export async function seedAccountGainLoss(
       ],
     });
   }
-  await trade("Initial Purchase", "2026-01-10Z", 3, -6);
+  if (scenario === "opposite") {
+    await trade("Initial Purchase", "2026-01-01Z", 2, -200);
+    await trade("Open Short", "2026-01-02Z", -1, 150);
+  } else {
+    await trade("Initial Purchase", "2026-01-10Z", 3, -6);
+  }
   const transactionId = createId();
   await prisma.transaction.create({
     data: { id: transactionId, accountBookId, description: "Transfer Holding" },
@@ -105,7 +111,7 @@ export async function seedAccountGainLoss(
         accountBookId,
         transactionId,
         accountId: source.id,
-        date: new Date("2026-02-10Z"),
+        date: new Date(scenario === "opposite" ? "2026-01-03Z" : "2026-02-10Z"),
         value: -2,
         unit: "SECURITY",
         symbol: "AAPL",
@@ -117,7 +123,7 @@ export async function seedAccountGainLoss(
         accountBookId,
         transactionId,
         accountId: destination.id,
-        date: new Date("2026-02-10Z"),
+        date: new Date(scenario === "opposite" ? "2026-01-04Z" : "2026-02-10Z"),
         value: 2,
         unit: "SECURITY",
         symbol: "AAPL",
@@ -125,8 +131,12 @@ export async function seedAccountGainLoss(
       },
     ],
   });
-  await trade("Source Sale", "2026-02-20Z", -1, 8, source.id);
-  await trade("Partial Sale", "2026-03-10Z", -1, 15);
+  if (scenario === "opposite") {
+    await trade("Close Position", "2026-01-05Z", -1, 160);
+  } else {
+    await trade("Source Sale", "2026-02-20Z", -1, 8, source.id);
+    await trade("Partial Sale", "2026-03-10Z", -1, 15);
+  }
   await prisma.account.update({
     where: { id_accountBookId: { id: source.id, accountBookId } },
     data: { isActive: false },

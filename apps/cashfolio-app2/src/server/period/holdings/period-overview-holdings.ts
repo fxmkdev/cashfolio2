@@ -8,7 +8,7 @@ import {
 } from "./period-overview-holdings-common";
 import { applyMixedPeriodSameUnitHoldingTransfer } from "./period-overview-holdings-mixed-transfer";
 import {
-  applyHoldingTransferWithoutRealization,
+  applyHoldingTransfer,
   resolveHoldingTransferDirection,
   toHoldingUnitIdentifier,
 } from "./period-overview-holdings-transfer";
@@ -188,7 +188,7 @@ export async function applyHoldingTransactionsToGainLossState(args: {
         : null;
 
     if (transferDirection != null) {
-      applyHoldingTransferWithoutRealization({
+      applyHoldingTransfer({
         stateByHoldingAccountId: args.state.stateByHoldingAccountId,
         holdingBookings: inPeriodHoldingBookings,
         direction: transferDirection,

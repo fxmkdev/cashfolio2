@@ -152,6 +152,183 @@ describe("accumulated account G/L", () => {
       expect(summary.realizedEvents).toEqual([]);
     },
   );
+  it.each([
+    { sign: 1, acquisition: 100, opposite: 150, closing: 160 },
+    { sign: -1, acquisition: 200, opposite: 150, closing: 140 },
+  ])(
+    "closes opposite destination positions using transferred costs ($sign)",
+    async ({ sign, acquisition, opposite, closing }) => {
+      const source = account("source");
+      const destination = account("destination");
+      const transactions = [
+        trade(
+          "acquire",
+          source,
+          "2026-01-01Z",
+          sign * 2,
+          sign * acquisition * 2,
+        ),
+        trade("opposite", destination, "2026-01-02Z", -sign, -sign * opposite),
+        {
+          bookings: [
+            booking("out", source, "2026-01-03Z", -sign * 2),
+            booking("in", destination, "2026-01-04Z", sign * 2),
+          ],
+        },
+        trade("close", destination, "2026-01-05Z", -sign, -sign * closing),
+      ];
+      const args = {
+        accounts: [source, destination],
+        transactions,
+        closingRate: null,
+      };
+      const summary = await calculate(args);
+      const details = await calculate({
+        ...args,
+        transactions: [...transactions].reverse().map((transaction) => ({
+          bookings: [...transaction.bookings].reverse(),
+        })),
+        detailAccountId: destination.id,
+      });
+      expect(
+        toNumericMoney(details.results.get(destination.id)!.summary),
+      ).toEqual({
+        realizedGainLoss: 110,
+        unrealizedGainLoss: 0,
+        totalGainLoss: 110,
+      });
+      expect(summary.results).toEqual(details.results);
+      expect(toNumericMoney(details.results.get(source.id)!.summary)).toEqual({
+        realizedGainLoss: 0,
+        unrealizedGainLoss: 0,
+        totalGainLoss: 0,
+      });
+      expect(details.unrealizedOpenLots).toEqual([]);
+      expect(details.results.get(destination.id)!.diagnostics).toEqual([]);
+      expect(
+        toNumericMoney(
+          details.realizedEvents.map((event) => ({
+            bookingId: event.bookingId,
+            delta: event.realizedGainLossDelta,
+            running: event.runningRealizedGainLoss,
+          })),
+        ),
+      ).toEqual([
+        { bookingId: "opposite", delta: 0, running: 0 },
+        { bookingId: "in", delta: 50, running: 50 },
+        { bookingId: "close", delta: 60, running: 110 },
+      ]);
+      const receipt = details.realizedEvents[1]!;
+      expect(receipt.id).toBe("event:in");
+      expect(toNumericMoney(receipt.pricing)).toEqual({
+        source: "transferBasis",
+        marketReferenceAmount: null,
+        residualAllocationAmount: 0,
+        effectiveReferenceAmount: sign * acquisition,
+      });
+      expect(
+        toNumericMoney(receipt.lotMatches[0]!.executionUnitPriceInReference),
+      ).toBe(acquisition);
+      expect(receipt.transactionId).toBe("tx:in");
+      expect(
+        toNumericMoney(
+          moneySum(
+            details.realizedEvents.map((event) => event.realizedGainLossDelta),
+          ),
+        ),
+      ).toBe(110);
+    },
+  );
+
+  it.each(["2026-01-03Z", "2026-01-20Z"])(
+    "matches multiple carried costs separately and preserves residual basis (receipt %s)",
+    async (receiptDate) => {
+      const source = account("source");
+      const destination = account("destination");
+      const result = await calculate({
+        accounts: [source, destination],
+        detailAccountId: destination.id,
+        closingRate: 240,
+        transactions: [
+          trade("buy1", source, "2026-01-01Z", 1, 100),
+          trade("buy2", source, "2026-01-02Z", 1, 200),
+          trade("short", destination, "2026-01-02Z", -1.5, -225),
+          {
+            bookings: [
+              booking("out", source, "2026-01-03Z", -2),
+              booking("in", destination, receiptDate, 2),
+            ],
+          },
+        ],
+      });
+      expect(
+        toNumericMoney(result.results.get(destination.id)!.summary),
+      ).toEqual({
+        realizedGainLoss: 25,
+        unrealizedGainLoss: 20,
+        totalGainLoss: 45,
+      });
+      const receipt = result.realizedEvents.find(
+        (event) => event.bookingId === "in",
+      )!;
+      expect(toNumericMoney(receipt.quantity)).toBe(1.5);
+      expect(toNumericMoney(receipt.effectiveReferenceAmount)).toBe(200);
+      expect(
+        toNumericMoney(
+          receipt.lotMatches.map((match) => ({
+            quantity: match.matchedQuantity,
+            price: match.executionUnitPriceInReference,
+            delta: match.realizedGainLossDelta,
+            running: match.runningEventRealizedGainLoss,
+          })),
+        ),
+      ).toEqual([
+        { quantity: 1, price: 100, delta: 50, running: 50 },
+        { quantity: 0.5, price: 200, delta: -25, running: 25 },
+      ]);
+      expect(new Set(receipt.lotMatches.map((match) => match.id)).size).toBe(2);
+      expect(toNumericMoney(result.unrealizedOpenLots[0])).toMatchObject({
+        quantity: 0.5,
+        unitCostInReference: 200,
+        acquisitionBookingId: "buy2",
+      });
+    },
+  );
+
+  it("records zero-gain transfer matches across split receipts", async () => {
+    const source = account("source");
+    const destination = account("destination");
+    const result = await calculate({
+      accounts: [source, destination],
+      detailAccountId: destination.id,
+      transactions: [
+        trade("buy", source, "2026-01-01Z", 2, 200),
+        trade("short", destination, "2026-01-02Z", -1.5, -150),
+        {
+          bookings: [
+            booking("out", source, "2026-01-03Z", -2),
+            booking("first", destination, "2026-01-04Z", 1),
+            booking("second", destination, "2026-02-01Z", 1),
+          ],
+        },
+      ],
+    });
+    const receipts = result.realizedEvents.filter(
+      (event) => event.pricing.source === "transferBasis",
+    );
+    expect(toNumericMoney(receipts.map((event) => event.quantity))).toEqual([
+      1, 0.5,
+    ]);
+    expect(
+      toNumericMoney(receipts.map((event) => event.realizedGainLossDelta)),
+    ).toEqual([0, 0]);
+    expect(toNumericMoney(result.unrealizedOpenLots[0])).toMatchObject({
+      quantity: 0.5,
+      unitCostInReference: 100,
+      acquisitionBookingId: "buy",
+    });
+  });
+
   it("orders executions by booking date even when multi-day transactions interleave", async () => {
     const holding = account("a");
     const early = trade("jan", holding, "2026-01-01Z", 1, 100);

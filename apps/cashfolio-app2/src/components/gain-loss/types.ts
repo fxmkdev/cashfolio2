@@ -8,4 +8,4 @@ export type OpenLotRow =
 export type DiagnosticRow =
   PeriodGainLossReconciliation["diagnostics"]["items"][number];
 
-export type EventSide = "buy" | "sell" | "flat";
+export type EventSide = "buy" | "sell" | "flat" | "transfer";

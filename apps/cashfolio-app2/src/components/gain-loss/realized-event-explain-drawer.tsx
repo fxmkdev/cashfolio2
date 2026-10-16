@@ -48,11 +48,19 @@ export function RealizedEventExplainDrawer(args: {
                 </Text>
                 <Badge
                   color={
-                    toEventSide(args.selectedEvent) === "buy" ? "green" : "red"
+                    toEventSide(args.selectedEvent) === "transfer"
+                      ? "blue"
+                      : toEventSide(args.selectedEvent) === "buy"
+                        ? "green"
+                        : "red"
                   }
                   variant="light"
                 >
-                  {toEventSide(args.selectedEvent) === "buy" ? "Buy" : "Sell"}
+                  {toEventSide(args.selectedEvent) === "transfer"
+                    ? "Transfer"
+                    : toEventSide(args.selectedEvent) === "buy"
+                      ? "Buy"
+                      : "Sell"}
                 </Badge>
               </Group>
               <Text size="sm" c="dimmed">
@@ -63,6 +71,15 @@ export function RealizedEventExplainDrawer(args: {
               </Text>
             </Stack>
           </Card>
+
+          {args.selectedEvent.pricing.source === "transferBasis" ? (
+            <Alert color="blue" title="Transfer basis">
+              Incoming holdings close opposite positions using their carried
+              acquisition costs. Quantity and effective amount cover only the
+              matched portion. The displayed price is its weighted average; each
+              FIFO match uses its own carried cost.
+            </Alert>
+          ) : null}
 
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <Card withBorder radius="md" p="md">

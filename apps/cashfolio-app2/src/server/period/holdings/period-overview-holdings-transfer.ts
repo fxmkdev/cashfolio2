@@ -7,6 +7,7 @@ import {
   moneyMultiply,
   moneyAbs,
 } from "../../../shared/money";
+import { receiveHoldingTransfer } from "./holding-transfer-receipts";
 import type { Unit } from "../../../.prisma-client/enums";
 
 import {
@@ -99,23 +100,6 @@ function drainTransferLots(args: {
   return drainedLots;
 }
 
-function insertLotByAcquisitionOrder(args: {
-  lots: HoldingLot[];
-  lot: HoldingLot;
-}) {
-  const insertIndex = args.lots.findIndex(
-    (existingLot) =>
-      existingLot.acquisitionSortKey > args.lot.acquisitionSortKey,
-  );
-
-  if (insertIndex === -1) {
-    args.lots.push(args.lot);
-    return;
-  }
-
-  args.lots.splice(insertIndex, 0, args.lot);
-}
-
 export function resolveHoldingTransferDirection(args: {
   stateByHoldingAccountId: Map<string, HoldingAccountState>;
   holdingBookings: HoldingTransactionBooking[];
@@ -201,11 +185,12 @@ export function resolveHoldingTransferDirection(args: {
   return canTransferLong ? "LONG" : "SHORT";
 }
 
-export function applyHoldingTransferWithoutRealization(args: {
+export function applyHoldingTransfer(args: {
   stateByHoldingAccountId: Map<string, HoldingAccountState>;
   holdingBookings: HoldingTransactionBooking[];
   direction: HoldingTransferDirection;
   transferPool?: HoldingLot[];
+  captureLotMatches?: boolean;
 }) {
   const transferPool = args.transferPool ?? [];
   const lotSign = args.direction === "LONG" ? 1 : -1;
@@ -250,36 +235,11 @@ export function applyHoldingTransferWithoutRealization(args: {
       continue;
     }
 
-    let remaining = moneyAbs(booking.value);
-    while (
-      toMoney(remaining).comparedTo(QUANTITY_EPSILON) > 0 &&
-      transferPool.length > 0
-    ) {
-      const lot = transferPool[0]!;
-      const movedMagnitude = MoneyDecimal.min(
-        remaining,
-        moneyAbs(lot.quantity),
-      );
-      const movedQuantity = moneyMultiply(
-        toMoney(lot.quantity).comparedTo(0),
-        movedMagnitude,
-      );
-
-      insertLotByAcquisitionOrder({
-        lots: state.lots,
-        lot: {
-          quantity: movedQuantity,
-          unitCostInReference: lot.unitCostInReference,
-          acquisitionSortKey: lot.acquisitionSortKey,
-        },
-      });
-
-      lot.quantity = moneySubtract(lot.quantity, movedQuantity);
-      remaining = moneySubtract(remaining, movedMagnitude);
-
-      if (isNearZero(lot.quantity)) {
-        transferPool.shift();
-      }
-    }
+    receiveHoldingTransfer({
+      state,
+      booking,
+      transferPool,
+      captureLotMatches: args.captureLotMatches,
+    });
   }
 }

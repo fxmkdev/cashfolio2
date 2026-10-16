@@ -143,7 +143,10 @@ export function toRoundedRealizedEvent(
     }),
     pricing: {
       source: event.pricingSource,
-      marketReferenceAmount: round(event.marketReferenceAmount),
+      marketReferenceAmount:
+        event.marketReferenceAmount == null
+          ? null
+          : round(event.marketReferenceAmount),
       residualAllocationAmount: round(event.residualAllocationAmount),
       effectiveReferenceAmount: roundedEffectiveReferenceAmount,
     },

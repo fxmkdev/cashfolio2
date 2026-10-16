@@ -42,7 +42,7 @@ export type HoldingLot = {
 };
 
 export type HoldingExecutionPricingSource =
-  "directConversion" | "residualAdjusted" | "marketFallback";
+  "directConversion" | "residualAdjusted" | "marketFallback" | "transferBasis";
 
 export type HoldingExecutionLotMatch = {
   acquisitionSortKey: string;
@@ -61,7 +61,7 @@ export type HoldingExecutionEvent = {
   date: Date;
   quantity: Money;
   pricingSource: HoldingExecutionPricingSource;
-  marketReferenceAmount: Money;
+  marketReferenceAmount: Money | null;
   residualAllocationAmount: Money;
   effectiveReferenceAmount: Money;
 };

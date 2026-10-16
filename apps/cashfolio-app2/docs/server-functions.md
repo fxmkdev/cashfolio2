@@ -565,7 +565,13 @@ display filtering.
 `calculateAccountGainLoss` reuses the existing holding FIFO/pricing engine with
 chronological replay and per-account callbacks. Its completeness diagnostics
 propagate missing basis through transfers, and its optional detail collection
-retains exact amounts until the numeric serialization boundary. Existing period
-loaders retain their period-opening valuation and rounding semantics. No derived
-G/L cache or database migration is introduced; valuation caches and
-request-local rate deduplication remain shared.
+retains exact amounts until the numeric serialization boundary. Transfer
+receipts match opposing destination lots at each carried acquisition cost and
+attribute realised G/L to the destination. Reconciliation emits one
+`transferBasis` event per matching receipt (including zero-gain matches), with
+the matched quantity, weighted-average carried price, individual FIFO match
+prices, and a null `pricing.marketReferenceAmount`. Unmatched quantities keep
+their original costs and acquisition order. Existing period loaders retain their
+period-opening valuation and rounding semantics. No derived G/L cache or
+database migration is introduced; valuation caches and request-local rate
+deduplication remain shared.

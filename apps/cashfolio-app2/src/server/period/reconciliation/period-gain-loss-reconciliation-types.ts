@@ -1,3 +1,4 @@
+import type { HoldingExecutionPricingSource } from "../holdings/period-overview-holdings-types";
 import type { Money } from "../../../shared/money";
 import type { Unit } from "../../../.prisma-client/enums";
 import type { HoldingGainLossSkippedReason } from "../holdings/period-overview-holdings";
@@ -41,8 +42,8 @@ export type GainLossReconciliationRealizedEvent<Amount = number> = {
   runningRealizedGainLoss: Amount;
   lotMatches: GainLossReconciliationRealizedEventLotMatch<Amount>[];
   pricing: {
-    source: "directConversion" | "residualAdjusted" | "marketFallback";
-    marketReferenceAmount: Amount;
+    source: HoldingExecutionPricingSource;
+    marketReferenceAmount: Amount | null;
     residualAllocationAmount: Amount;
     effectiveReferenceAmount: Amount;
   };
@@ -107,8 +108,8 @@ export type ReconciliationExecutionEventInput = {
   transactionDescription?: string | null;
   date: Date;
   quantity: Money;
-  pricingSource: "directConversion" | "residualAdjusted" | "marketFallback";
-  marketReferenceAmount: Money;
+  pricingSource: HoldingExecutionPricingSource;
+  marketReferenceAmount: Money | null;
   residualAllocationAmount: Money;
   effectiveReferenceAmount: Money;
   executionUnitPriceInReference: Money;
