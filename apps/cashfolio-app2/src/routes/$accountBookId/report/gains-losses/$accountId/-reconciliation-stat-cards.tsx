@@ -27,6 +27,11 @@ export function ReconciliationStatCards(args: {
   return (
     <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg">
       <StatCard
+        label="Total"
+        value={args.currencyFormatter.format(args.summary.totalGainLoss)}
+        valueColor={args.summary.totalGainLoss >= 0 ? "green" : "red"}
+      />
+      <StatCard
         label="Realised"
         value={args.currencyFormatter.format(args.summary.realizedGainLoss)}
         valueColor={args.summary.realizedGainLoss >= 0 ? "green" : "red"}
@@ -35,11 +40,6 @@ export function ReconciliationStatCards(args: {
         label="Unrealised"
         value={args.currencyFormatter.format(args.summary.unrealizedGainLoss)}
         valueColor={args.summary.unrealizedGainLoss >= 0 ? "green" : "red"}
-      />
-      <StatCard
-        label="Total"
-        value={args.currencyFormatter.format(args.summary.totalGainLoss)}
-        valueColor={args.summary.totalGainLoss >= 0 ? "green" : "red"}
       />
     </SimpleGrid>
   );

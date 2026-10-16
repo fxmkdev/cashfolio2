@@ -104,7 +104,7 @@ Dynamic PR preview deployment (`.github/workflows/build.yml`) sets:
 
 ## Accumulated Holding Gain/Loss
 
-Asset and Liability account lists display Realised, Unrealised, and Total under
+Asset and Liability account lists display Total, Realised, and Unrealised under
 `G/L Since Start (<referenceCurrency>)`. These figures replay holdings from the
 account-book start through today, using the existing opening valuation on the
 day before book start as the basis for opening holdings. They include calculated

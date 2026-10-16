@@ -38,9 +38,9 @@ export function GainLossSummaryValues({
     <SimpleGrid cols={3}>
       {(
         [
+          ["Total", summary.totalGainLoss],
           ["Realised", summary.realizedGainLoss],
           ["Unrealised", summary.unrealizedGainLoss],
-          ["Total", summary.totalGainLoss],
         ] as const
       ).map(([label, amount]) => (
         <Stack key={label} gap={2}>
