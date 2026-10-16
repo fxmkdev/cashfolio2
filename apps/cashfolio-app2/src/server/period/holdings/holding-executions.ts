@@ -5,11 +5,10 @@ import {
 import type {
   HoldingAccountState,
   HoldingExecutionEvent,
-  HoldingTransactionBooking,
 } from "./period-overview-holdings-types";
 import { toMoney } from "../../../shared/money";
 import { applyHoldingAccountExecution } from "./period-holding-account-finalization";
-import { toLotAcquisitionSortKey } from "./period-overview-holdings-common";
+import { buildHoldingReplayOperations } from "./holding-replay-operations";
 import type {
   HoldingGainLossWorkingState,
   HoldingSkippedItem,
@@ -36,50 +35,25 @@ export async function applyPendingHoldingExecutions(args: {
         : undefined,
     });
   };
-  const events = [...args.state.stateByHoldingAccountId.values()].flatMap(
-    (state) =>
-      state.skipped
-        ? []
-        : state.executionEvents.map((event) => ({ state, event })),
-  );
-  const operations = [
-    ...events.map((item) => ({
-      sortKey: toLotAcquisitionSortKey({
-        date: item.event.date,
-        bookingId: item.event.bookingId,
-      }),
-      execution: item,
-      transfer: undefined as HoldingTransactionBooking[] | undefined,
-    })),
-    ...(args.state.holdingTransfers ?? []).map((bookings) => ({
-      sortKey: bookings
-        .map((booking) =>
-          toLotAcquisitionSortKey({
-            date: booking.date,
-            bookingId: booking.id,
-          }),
-        )
-        .sort()
-        .at(-1)!,
-      execution: undefined,
-      transfer: bookings,
-    })),
-  ].sort((left, right) => left.sortKey.localeCompare(right.sortKey, "en"));
+  const operations = buildHoldingReplayOperations(args.state);
   for (const operation of operations) {
     if (operation.execution) {
       execute(operation.execution.state, operation.execution.event);
       continue;
     }
-    const bookings = operation.transfer!;
-    const direction = resolveHoldingTransferDirection({
-      stateByHoldingAccountId: args.state.stateByHoldingAccountId,
-      holdingBookings: bookings,
-    });
+    const { bookings, transfer } = operation;
+    const direction = transfer.atomic
+      ? resolveHoldingTransferDirection({
+          stateByHoldingAccountId: args.state.stateByHoldingAccountId,
+          holdingBookings: bookings,
+        })
+      : transfer.direction;
     if (direction) {
       applyHoldingTransferWithoutRealization({
         stateByHoldingAccountId: args.state.stateByHoldingAccountId,
         holdingBookings: bookings,
         direction,
+        transferPool: transfer.pool,
       });
     } else {
       // Preserve the existing market fallback for same-unit movements without transferable lots.

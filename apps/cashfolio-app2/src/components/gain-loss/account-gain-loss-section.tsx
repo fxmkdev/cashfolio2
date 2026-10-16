@@ -74,7 +74,10 @@ export function AccountGainLossSection(args: {
         {details.data ? (
           <AccountGainLossCalculation
             data={details.data}
-            onOpenTransaction={args.onOpenTransaction}
+            onOpenTransaction={(transactionId) => {
+              setOpened(false);
+              args.onOpenTransaction(transactionId);
+            }}
           />
         ) : null}
       </Drawer>

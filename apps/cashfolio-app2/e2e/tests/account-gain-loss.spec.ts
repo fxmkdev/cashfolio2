@@ -95,6 +95,44 @@ test("accumulated account G/L, nested totals, historical summary, and FIFO expla
   ).toHaveText("6.00");
 });
 
+test("opening a calculation event in the ledger closes the drawer and clears the period filter", async ({
+  page,
+  e2eExternalId,
+}) => {
+  const book = await seedDatabase({
+    userExternalId: e2eExternalId,
+    accountBookStartDate: new Date("2026-01-01Z"),
+  });
+  const { destination } = await seedAccountGainLoss(
+    book.accountBookId,
+    book.cashAccount.id,
+  );
+  await page.goto(`/${book.accountBookId}/${destination.id}?period=2026-03`);
+  await page
+    .getByRole("button", { name: "View Calculation", exact: true })
+    .click();
+  const calculation = page.getByRole("dialog", {
+    name: "Gain/Loss Calculation",
+    exact: true,
+  });
+  const sale = calculation
+    .locator(".ag-row")
+    .filter({ hasText: "Partial Sale" });
+  await sale.hover();
+  await sale
+    .getByRole("button", { name: "Open in Ledger", exact: true })
+    .click();
+  await expect(calculation).not.toBeVisible();
+  // The ledger consumes transactionId after scrolling, so assert the lasting scope change.
+  await expect(page).toHaveURL((url) => !url.searchParams.has("period"));
+  await expect(agGridRowByText(page, "Partial Sale")).toBeInViewport();
+  // Closing the calculation must not prevent inspecting it again on the same route.
+  await page
+    .getByRole("button", { name: "View Calculation", exact: true })
+    .click();
+  await expect(calculation).toBeVisible();
+});
+
 test("G/L request failure can be retried without blocking the accounts page", async ({
   page,
   e2eExternalId,

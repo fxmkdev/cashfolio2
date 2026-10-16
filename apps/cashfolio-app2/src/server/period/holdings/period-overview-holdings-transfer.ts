@@ -205,8 +205,9 @@ export function applyHoldingTransferWithoutRealization(args: {
   stateByHoldingAccountId: Map<string, HoldingAccountState>;
   holdingBookings: HoldingTransactionBooking[];
   direction: HoldingTransferDirection;
+  transferPool?: HoldingLot[];
 }) {
-  const transferPool: HoldingLot[] = [];
+  const transferPool = args.transferPool ?? [];
   const lotSign = args.direction === "LONG" ? 1 : -1;
 
   const sortedBookings = [...args.holdingBookings].sort((left, right) => {

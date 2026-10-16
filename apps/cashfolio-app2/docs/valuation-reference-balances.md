@@ -114,12 +114,16 @@ currency are eligible; reference-currency cash is not.
 
 The shared FIFO/execution-pricing engine supports chronological range replay.
 Executions are ordered by booking date, and completed same-unit transfers carry
-acquisition costs between accounts. Calculation includes all real holding
-accounts, including archived accounts and both account types; filtering to the
-selected active/archived mode and tab happens afterwards. Virtual transfer
-clearing is not included in real-account totals. Group and footer amounts sum
-account leaves using Decimal arithmetic before conversion to display numbers.
-Zero-balance and archived accounts retain realised gains.
+acquisition costs between accounts. Source-first multi-day transfers remove FIFO
+lots on each outgoing booking date and hold them in a transfer-specific pool
+until receipt. Sales between those dates consume only the source's remaining
+lots. Same-date and receipt-before-withdrawal transfers retain their existing
+atomic treatment. Calculation includes all real holding accounts, including
+archived accounts and both account types; filtering to the selected
+active/archived mode and tab happens afterwards. Virtual transfer clearing is
+not included in real-account totals. Group and footer amounts sum account leaves
+using Decimal arithmetic before conversion to display numbers. Zero-balance and
+archived accounts retain realised gains.
 
 G/L hydrates independently of the account tree and reference balances. A failed
 request exposes a retry action. A missing closing price leaves reliable Realised
@@ -134,4 +138,6 @@ using the selected month/year end capped at today (today when unfiltered).
 `View Calculation` loads a drawer with realised execution pricing, FIFO matches,
 unrealised open lots, and completeness diagnostics. Summary and drawer use the
 same range calculation. Report and History retain their existing period meaning;
-accumulated realised/unrealised values are not sums of period splits.
+accumulated realised/unrealised values are not sums of period splits. Opening an
+event in the ledger closes the calculation drawer before navigating to the
+transaction and clearing the ledger's period filter.
