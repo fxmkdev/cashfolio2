@@ -11,7 +11,7 @@ vi.mock("@/redis.server", () => ({
   getRedisClient,
 }));
 
-import { deleteBookScopedRedisDataForAccountBooks } from "./account-deletion-redis";
+import { deleteBookScopedRedisDataForAccountBooks } from "./user-deletion-redis";
 
 async function* scanResult(keys: string[]) {
   if (keys.length > 0) {

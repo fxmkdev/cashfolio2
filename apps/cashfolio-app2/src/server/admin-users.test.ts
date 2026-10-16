@@ -75,7 +75,7 @@ vi.mock("../prisma.server", () => ({
   prisma,
 }));
 
-vi.mock("./account-deletion-redis", () => ({
+vi.mock("./user-deletion-redis", () => ({
   deleteBookScopedRedisDataForAccountBooks,
 }));
 
@@ -476,7 +476,7 @@ describe("admin users server functions", () => {
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
-  it("deletes another user and reuses account deletion cleanup", async () => {
+  it("deletes another user and reuses user deletion cleanup", async () => {
     prisma.user.findUnique.mockResolvedValue({
       ...createUser({
         id: "target-user",

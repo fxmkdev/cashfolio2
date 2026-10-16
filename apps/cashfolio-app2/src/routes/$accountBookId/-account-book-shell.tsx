@@ -38,7 +38,7 @@ import {
 } from "./-shell-dimensions";
 
 export type AccountBookShellProps = {
-  accountSecurityUrl: string | null;
+  userSecurityUrl: string | null;
   accountBookId: string;
   canAccessAdmin: boolean;
   currentHref: string;
@@ -54,7 +54,7 @@ export type AccountBookShellProps = {
 };
 
 export function AccountBookShell({
-  accountSecurityUrl,
+  userSecurityUrl,
   accountBookId,
   canAccessAdmin,
   currentHref,
@@ -253,14 +253,14 @@ export function AccountBookShell({
               <>
                 <Stack gap="xs" hiddenFrom="sm">
                   <UserMenu
-                    accountSecurityUrl={accountSecurityUrl}
+                    userSecurityUrl={userSecurityUrl}
                     userSettingsReturnTo={currentHref}
                     userProfile={userProfile}
                   />
                 </Stack>
                 <Group justify="center" visibleFrom="sm">
                   <UserMenu
-                    accountSecurityUrl={accountSecurityUrl}
+                    userSecurityUrl={userSecurityUrl}
                     userSettingsReturnTo={currentHref}
                     userProfile={userProfile}
                     collapsed
@@ -269,7 +269,7 @@ export function AccountBookShell({
               </>
             ) : (
               <UserMenu
-                accountSecurityUrl={accountSecurityUrl}
+                userSecurityUrl={userSecurityUrl}
                 userSettingsReturnTo={currentHref}
                 userProfile={userProfile}
               />

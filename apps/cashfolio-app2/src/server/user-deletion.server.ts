@@ -12,10 +12,10 @@ import { destroyLogtoSession } from "@/auth/logto.server";
 import { prisma } from "@/prisma.server";
 import { ensureSameOriginRequest } from "@/security/same-origin.server";
 import {
-  planAccountDeletionFromLinks,
-  type AccountDeletionPreview,
-} from "./account-deletion-plan";
-import { deleteBookScopedRedisDataForAccountBooks } from "./account-deletion-redis";
+  planUserDeletionFromLinks,
+  type UserDeletionPreview,
+} from "./user-deletion-plan";
+import { deleteBookScopedRedisDataForAccountBooks } from "./user-deletion-redis";
 
 function getAuthenticatedExternalId(context: LogtoContext): string {
   if (!context.claims?.sub) {
@@ -34,7 +34,7 @@ function getAuthenticatedDisplayName(context: LogtoContext): string {
   const displayName = claims.name ?? claims.username ?? claims.email;
   return typeof displayName === "string" && displayName.trim().length > 0
     ? displayName.trim()
-    : "your account";
+    : "your Cashfolio account";
 }
 
 async function getUserAccountBookLinks(externalId: string) {
@@ -66,11 +66,11 @@ async function getUserAccountBookLinks(externalId: string) {
   });
 }
 
-export async function getAccountDeletionPreview(): Promise<AccountDeletionPreview> {
+export async function getUserDeletionPreview(): Promise<UserDeletionPreview> {
   const context = await ensureAuthenticated();
   const externalId = getAuthenticatedExternalId(context);
   const user = await getUserAccountBookLinks(externalId);
-  const plan = planAccountDeletionFromLinks(user?.accountBookLinks ?? []);
+  const plan = planUserDeletionFromLinks(user?.accountBookLinks ?? []);
 
   return {
     displayName: getAuthenticatedDisplayName(context),
@@ -127,7 +127,7 @@ export async function deleteApplicationUserData(args: {
   });
 }
 
-export async function deleteUserAccountData(args: {
+export async function deleteUserData(args: {
   externalId: string;
   currentAdminId?: string;
 }): Promise<void> {
@@ -140,19 +140,19 @@ export async function deleteUserAccountData(args: {
   await deleteBookScopedRedisDataForAccountBooks(deletedBookIds);
 }
 
-export async function deleteAuthenticatedAccount(): Promise<void> {
+export async function deleteAuthenticatedUser(): Promise<void> {
   const context = await ensureAuthenticated();
-  await deleteUserAccountData({
+  await deleteUserData({
     externalId: getAuthenticatedExternalId(context),
   });
 }
 
-export async function handleAccountDeletionRequest(
+export async function handleUserDeletionRequest(
   request: Request,
 ): Promise<Response> {
   ensureSameOriginRequest(request);
   try {
-    await deleteAuthenticatedAccount();
+    await deleteAuthenticatedUser();
   } catch (error) {
     if (
       error instanceof Error &&
@@ -170,7 +170,7 @@ export async function handleAccountDeletionRequest(
   return new Response(null, {
     status: 302,
     headers: {
-      Location: "/account/delete?deleted=1",
+      Location: "/user/delete?deleted=1",
     },
   });
 }

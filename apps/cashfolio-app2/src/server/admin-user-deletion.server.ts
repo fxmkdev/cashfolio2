@@ -1,5 +1,5 @@
 import { prisma } from "../prisma.server";
-import { deleteUserAccountData } from "./account-deletion.server";
+import { deleteUserData } from "./user-deletion.server";
 import { loadLogtoIdentity } from "./admin-user-identities.server";
 
 export type DeleteAdminUserInput = {
@@ -51,7 +51,7 @@ export async function deleteAdminUserById(args: {
     throw new Error("Confirmation does not match the user.");
   }
 
-  await deleteUserAccountData({
+  await deleteUserData({
     externalId: targetUser.externalId,
     currentAdminId: args.currentAdminId,
   });

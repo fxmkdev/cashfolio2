@@ -47,7 +47,7 @@ const fieldLabels = {
 } as const;
 
 const accountApiAccessMessage =
-  "Account settings need a fresh sign-in. Please sign out and sign in again.";
+  "User settings need a fresh sign-in. Please sign out and sign in again.";
 
 const accountApiAccessErrorCodes = new Set([
   "consent_required",
@@ -257,7 +257,7 @@ export const getAuthenticatedUserLocale = createServerFn({
   method: "GET",
 }).handler(resolveAuthenticatedUserLocaleForRequest);
 
-export const getUserAccountSecurityUrl = createServerFn({
+export const getUserSecurityUrl = createServerFn({
   method: "GET",
 }).handler(() => {
   try {

@@ -34,10 +34,10 @@ const triggerLabelStyle = {
 } as const;
 
 export function UserMenuItems({
-  accountSecurityUrl,
+  userSecurityUrl,
   userSettingsReturnTo,
 }: {
-  accountSecurityUrl: string | null;
+  userSecurityUrl: string | null;
   userSettingsReturnTo: string;
 }) {
   return (
@@ -50,16 +50,16 @@ export function UserMenuItems({
       >
         User Settings
       </LinkMenuItem>
-      {accountSecurityUrl && (
+      {userSecurityUrl && (
         <Menu.Item
           component="a"
-          href={accountSecurityUrl}
+          href={userSecurityUrl}
           target="_blank"
           rel="noopener noreferrer"
           leftSection={<IconShieldLock size={16} />}
           rightSection={<IconExternalLink size={16} />}
         >
-          Account Security
+          Sign-in & security
         </Menu.Item>
       )}
       <Menu.Divider />
@@ -77,12 +77,12 @@ export function UserMenuItems({
 }
 
 export function UserMenu({
-  accountSecurityUrl,
+  userSecurityUrl,
   collapsed = false,
   userProfile,
   userSettingsReturnTo,
 }: {
-  accountSecurityUrl: string | null;
+  userSecurityUrl: string | null;
   collapsed?: boolean;
   userProfile: AuthenticatedUserProfile;
   userSettingsReturnTo: string;
@@ -124,7 +124,7 @@ export function UserMenu({
         style={{ maxWidth: collapsed ? ACCOUNT_BOOK_SIDEBAR_WIDTH : "100%" }}
       >
         <UserMenuItems
-          accountSecurityUrl={accountSecurityUrl}
+          userSecurityUrl={userSecurityUrl}
           userSettingsReturnTo={userSettingsReturnTo}
         />
       </Menu.Dropdown>

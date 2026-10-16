@@ -69,6 +69,11 @@ pnpm lint:workflows                           # actionlint check for GitHub work
 
 ## cashfolio-app2 Working Conventions
 
+- Use `User`/`user` for identities in app-owned code; reserve
+  `Account`/`account` for the financial business entity. In customer-facing
+  identity actions, use "Cashfolio account"; admin actions may use "user".
+  Explicit provider terms and documented legacy URLs are exceptions. See
+  [Identity and financial-account terminology](apps/cashfolio-app2/docs/ui-patterns.md#identity-and-financial-account-terminology).
 - Prefer Mantine styling; use CSS modules when manual styling is required.
 - Import Prisma enums from `src/.prisma-client/enums` (not `@prisma/client`).
 - Do not edit `src/routeTree.gen.ts` (generated file).

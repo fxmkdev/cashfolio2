@@ -39,7 +39,7 @@ function AccountBookShellSmokeHarness() {
     <>
       <Notifications />
       <AccountBookShell
-        accountSecurityUrl="https://tenant.logto.app/account/security"
+        userSecurityUrl="https://tenant.logto.app/account/security"
         accountBookId={accountBookId}
         canAccessAdmin
         currentHref={href}
@@ -208,7 +208,7 @@ export const RouteSmoke: Story = {
     );
     const accountSecurityLink = await findVisibleMenuItem(
       body,
-      "Account Security",
+      "Sign-in & security",
     );
     await expect(accountSecurityLink).toHaveAttribute(
       "href",

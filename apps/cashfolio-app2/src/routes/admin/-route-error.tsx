@@ -16,7 +16,7 @@ export function AdminRouteErrorComponent({ error }: ErrorComponentProps) {
   return (
     <AdminRouteErrorPage
       title="Admin access required"
-      message="Your account is not authorized to access the Admin area."
+      message="You are not authorized to access the Admin area."
     />
   );
 }

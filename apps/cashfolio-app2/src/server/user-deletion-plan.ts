@@ -1,10 +1,10 @@
-export type AccountDeletionPreview = {
+export type UserDeletionPreview = {
   displayName: string;
-  accountBooksToDelete: AccountDeletionAccountBook[];
-  accountBooksToUnlink: AccountDeletionAccountBook[];
+  accountBooksToDelete: UserDeletionAccountBook[];
+  accountBooksToUnlink: UserDeletionAccountBook[];
 };
 
-export type AccountDeletionAccountBook = {
+export type UserDeletionAccountBook = {
   id: string;
   name: string;
 };
@@ -20,15 +20,15 @@ export type LinkedAccountBook = {
 };
 
 export type DeletionPlan = {
-  accountBooksToDelete: AccountDeletionAccountBook[];
-  accountBooksToUnlink: AccountDeletionAccountBook[];
+  accountBooksToDelete: UserDeletionAccountBook[];
+  accountBooksToUnlink: UserDeletionAccountBook[];
 };
 
-export function planAccountDeletionFromLinks(
+export function planUserDeletionFromLinks(
   links: LinkedAccountBook[],
 ): DeletionPlan {
-  const accountBooksToDelete: AccountDeletionAccountBook[] = [];
-  const accountBooksToUnlink: AccountDeletionAccountBook[] = [];
+  const accountBooksToDelete: UserDeletionAccountBook[] = [];
+  const accountBooksToUnlink: UserDeletionAccountBook[] = [];
 
   for (const link of links) {
     const accountBook = {

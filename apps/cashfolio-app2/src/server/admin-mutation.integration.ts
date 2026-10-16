@@ -56,7 +56,7 @@ vi.mock("../security/same-origin.server", () => ({
   ensureSameOriginRequest: vi.fn(),
   ensureSameOriginRequestFromServerContext: vi.fn(),
 }));
-vi.mock("./account-deletion-redis", () => ({
+vi.mock("./user-deletion-redis", () => ({
   deleteBookScopedRedisDataForAccountBooks,
 }));
 
@@ -87,7 +87,7 @@ const db = new PrismaClient({
 let applicationDb: PrismaClient | undefined;
 let created = false;
 let users: typeof import("./admin-users");
-let deletion: typeof import("./account-deletion.server");
+let deletion: typeof import("./user-deletion.server");
 let boundary: typeof import("./admin-mutation.server");
 
 function demote(actor: string, target: string) {
@@ -102,7 +102,7 @@ function remove(actor: string, target: string) {
 }
 function selfDelete(target: string) {
   auth.authenticated.mockResolvedValueOnce({ claims: { sub: target } });
-  return deletion.deleteAuthenticatedAccount();
+  return deletion.deleteAuthenticatedUser();
 }
 async function activeAdminIds() {
   return (
@@ -254,7 +254,7 @@ async function race(
   }
 }
 
-describe("Admin and account deletion invariants against disposable PostgreSQL", () => {
+describe("Admin and user deletion invariants against disposable PostgreSQL", () => {
   beforeAll(async () => {
     await admin.$executeRawUnsafe(`CREATE DATABASE "${databaseName}"`);
     created = true;
@@ -266,7 +266,7 @@ describe("Admin and account deletion invariants against disposable PostgreSQL", 
     applicationDb = (await import("../prisma.server")).prisma;
     boundary = await import("./admin-mutation.server");
     users = await import("./admin-users");
-    deletion = await import("./account-deletion.server");
+    deletion = await import("./user-deletion.server");
   });
   beforeEach(async () => {
     vi.resetAllMocks();
@@ -383,7 +383,7 @@ describe("Admin and account deletion invariants against disposable PostgreSQL", 
       (await db.user.findUniqueOrThrow({ where: { id: "b" } })).deletionPending,
     ).toBe(true);
     await expect(demote("a", "b")).rejects.toThrow(
-      "Account deletion is pending",
+      "Cashfolio account deletion is pending",
     );
     await expect(selfDelete("a")).rejects.toThrow("At least one Admin");
     expect(await activeAdminIds()).toEqual(["a"]);
@@ -544,7 +544,7 @@ describe("Admin and account deletion invariants against disposable PostgreSQL", 
   it("returns a readable conflict for final-Admin self-service deletion", async () => {
     await db.user.update({ where: { id: "b" }, data: { roles: [] } });
     auth.authenticated.mockResolvedValue({ claims: { sub: "a" } });
-    const response = await deletion.handleAccountDeletionRequest(
+    const response = await deletion.handleUserDeletionRequest(
       new Request("https://example.test/account/delete", { method: "POST" }),
     );
     expect(response.status).toBe(409);

@@ -19,7 +19,7 @@ export const Route = createFileRoute("/$accountBookId")({
       {
         getAuthenticatedUserLocale,
         getAuthenticatedUserProfile,
-        getUserAccountSecurityUrl,
+        getUserSecurityUrl,
       },
       { getCurrentUserCanAccessAdmin },
     ] = await Promise.all([
@@ -33,14 +33,14 @@ export const Route = createFileRoute("/$accountBookId")({
       accountBooks,
       appVersion,
       userProfile,
-      accountSecurityUrl,
+      userSecurityUrl,
       userLocale,
       canAccessAdmin,
     ] = await Promise.all([
       loadUserAccountBooksForAccountBookRoute(),
       getRuntimeAppVersion(),
       getAuthenticatedUserProfile(),
-      getUserAccountSecurityUrl(),
+      getUserSecurityUrl(),
       getAuthenticatedUserLocale(),
       getCurrentUserCanAccessAdmin(),
     ]);
@@ -49,7 +49,7 @@ export const Route = createFileRoute("/$accountBookId")({
       accountBooks,
       appVersion,
       userProfile,
-      accountSecurityUrl,
+      userSecurityUrl,
       userLocale,
       canAccessAdmin,
     };
@@ -62,7 +62,7 @@ function AccountBookLayout() {
     accountBooks,
     appVersion,
     userProfile,
-    accountSecurityUrl,
+    userSecurityUrl,
     userLocale,
     canAccessAdmin,
   } = Route.useLoaderData();
@@ -91,7 +91,7 @@ function AccountBookLayout() {
         accountBooks={accountBooks}
         appVersion={appVersion}
         userProfile={userProfile}
-        accountSecurityUrl={accountSecurityUrl}
+        userSecurityUrl={userSecurityUrl}
         accountsLinkSearch={getAccountsLinkSearch({
           locationSearch,
           matches,

@@ -23,14 +23,14 @@ import { UserMenu } from "../-user-menu";
 import { ACCOUNT_BOOK_SIDEBAR_WIDTH } from "../$accountBookId/-shell-dimensions";
 
 export type AdminShellProps = {
-  accountSecurityUrl: string | null;
+  userSecurityUrl: string | null;
   appVersion: string;
   children: ReactNode;
   userProfile: AuthenticatedUserProfile;
 };
 
 export function AdminShell({
-  accountSecurityUrl,
+  userSecurityUrl,
   appVersion,
   children,
   userProfile,
@@ -118,7 +118,7 @@ export function AdminShell({
             />
             <Divider />
             <UserMenu
-              accountSecurityUrl={accountSecurityUrl}
+              userSecurityUrl={userSecurityUrl}
               userProfile={userProfile}
               userSettingsReturnTo="/admin"
             />
