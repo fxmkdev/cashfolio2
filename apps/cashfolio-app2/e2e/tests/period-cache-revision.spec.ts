@@ -324,7 +324,9 @@ for (const victim of ["multi-row", "single-row"] as const) {
       }
     });
     // Observe rejection while coordinating the first transaction, too.
-    let outcomes = Promise.allSettled([multi]);
+    let outcomes: Promise<PromiseSettledResult<string>[]> = Promise.allSettled([
+      multi,
+    ]);
     try {
       await Promise.race([firstWritten.promise, multi]);
       const single = withDatabaseConflictRetry(async () => {

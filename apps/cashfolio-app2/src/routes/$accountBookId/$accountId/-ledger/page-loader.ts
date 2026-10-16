@@ -35,6 +35,7 @@ export async function loadLedgerPageData(args: {
     data: { accountBookId: args.accountBookId },
   });
   const account = await accountPromise;
+  const accountState = account.isActive ? "active" : "inactive";
   const isPeriodFilterAllowed = isLedgerPeriodFilterAvailable(account);
   const shouldIncludeReferenceValues =
     isPeriodFilterAllowed && account.type === AccountType.EQUITY;
@@ -79,10 +80,10 @@ export async function loadLedgerPageData(args: {
       },
     }),
     getAccountGroups({
-      data: { accountBookId: args.accountBookId },
+      data: { accountBookId: args.accountBookId, accountState },
     }),
     getExistingNodes({
-      data: { accountBookId: args.accountBookId },
+      data: { accountBookId: args.accountBookId, accountState },
     }),
   ]);
 

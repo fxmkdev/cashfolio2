@@ -102,6 +102,9 @@ pnpm --filter cashfolio-app2 lint
 - Playwright config: `playwright.config.ts`
 - Tests: `e2e/tests/`
 - DB/setup helpers: `e2e/support/`
+- The app's `typecheck` command includes all E2E tests, helpers, global setup
+  and teardown, and `playwright.config.ts`. The existing CI typecheck gate
+  checks these files too.
 - `e2e/tests/period-cache-revision.spec.ts` verifies the database-owned report
   cache revision against PostgreSQL: all financial tables, settings edits,
   rollback/commit visibility, bulk statements, concurrent commits, and recovery

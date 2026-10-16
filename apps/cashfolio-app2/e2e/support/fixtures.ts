@@ -40,7 +40,7 @@ export async function useIsolatedE2EUser(
   return externalId;
 }
 
-export const test = base.extend<Record<string, never>, E2EWorkerFixtures>({
+export const test = base.extend<object, E2EWorkerFixtures>({
   e2eExternalId: [
     async ({ browserName: _browserName }, fixtureUse, workerInfo) => {
       await fixtureUse(`e2e-worker-${workerInfo.workerIndex}-${createId()}`);
