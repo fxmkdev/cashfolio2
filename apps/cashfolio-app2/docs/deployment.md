@@ -89,18 +89,22 @@ environment without cancelling active cleanup. The workflow uses the existing
 `FLY_PRIMARY_REGION` variables, and `FLY_API_TOKEN` secret. No database
 connection string is copied into GitHub Actions.
 
-The Node runner `scripts/run-provider-usage-cleanup.mjs` resolves the immutable
-image digest from the deployed `app` process Machines. Mixed web images fail
-clearly, so rerun after deployment finishes. It uses the Fly Machines API to
-launch a temporary Machine in that app, inheriting the app's database secret.
-The Machine has one shared CPU, 512 MB RAM, no HTTP services, and no restart.
-Its command overrides the web-server entrypoint. An eight-minute runner budget
-allows startup, the five-minute cleanup budget, and log delivery. The runner
-checks the process exit event, not merely a stopped state. It destroys the
-Machine after success, and attempts stop plus force-destruction after failure,
-timeout, or cancellation. Lost creation responses are recovered by unique name.
-An API outage can prevent destruction; a visible workflow failure then requires
-an operator to inspect/remove any `provider-usage-cleanup-*` Machine.
+The Node 24 runner `scripts/run-provider-usage-cleanup.ts` resolves the
+immutable image digest from the deployed `app` process Machines. Mixed web
+images fail clearly, so rerun after deployment finishes. It uses the Fly
+Machines API to launch a temporary Machine in that app, inheriting the app's
+database secret. Creation sets `skip_launch: false`, letting Fly prepare the
+image and start the Machine asynchronously. The runner polls through image
+preparation and startup; it does not issue a separate start request that could
+race image preparation. The Machine has one shared CPU, 512 MB RAM, no HTTP
+services, and no restart. Its command overrides the web-server entrypoint. An
+eight-minute runner budget allows startup, the five-minute cleanup budget, and
+log delivery. The runner checks the process exit event, not merely a stopped
+state. It destroys the Machine after success, and attempts stop plus
+force-destruction after failure, timeout, or cancellation. Lost creation
+responses are recovered by unique name. An API outage can prevent destruction; a
+visible workflow failure then requires an operator to inspect/remove any
+`provider-usage-cleanup-*` Machine.
 
 Both production and staging must deploy an image containing this payload before
 the workflow can succeed. Older images fail visibly; there is no fallback to a
@@ -109,7 +113,9 @@ logs and summaries for the UTC cutoff, deleted rows, committed batches, elapsed
 milliseconds, and table-plus-index bytes. Failed runs report the last available
 progress (or unavailable metrics when the command could not start) and fail the
 job. No connection strings, raw driver errors, or arbitrary remote logs are
-printed. There is no additional notification service.
+printed. Machines API HTTP errors identify the method, operation, and status
+without including the response body. There is no additional notification
+service.
 
 CI exercises the runner with mocked Fly responses and the database cleanup in a
 fresh, isolated PostgreSQL database, including the bundled CLI. Run locally with

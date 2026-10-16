@@ -59,7 +59,7 @@ jobs:
         with:
           version: 0.4.115
       - name: Run cleanup in deployed image
-        run: node apps/cashfolio-app2/scripts/run-provider-usage-cleanup.mjs
+        run: node apps/cashfolio-app2/scripts/run-provider-usage-cleanup.ts
         env:
           CLEANUP_ENVIRONMENT: ${{ matrix.environment }}
           FLY_APP: ${{ vars.FLY_APP }}

@@ -34,7 +34,7 @@
     "build:provider-usage-cleanup": "vite build --config vite.provider-usage-cleanup.config.ts",
     "cleanup:provider-usage": "node dist/provider-usage-cleanup/cleanup.mjs",
     "test:provider-usage-cleanup": "pnpm prisma:generate && pnpm build:provider-usage-cleanup && vitest run --config vitest.provider-usage-cleanup.config.ts",
-    "test:provider-usage-cleanup-runner": "node --test scripts/run-provider-usage-cleanup.test.mjs",
+    "test:provider-usage-cleanup-runner": "node --test scripts/run-provider-usage-cleanup.test.ts",
     "seed:staging": "node dist/staging-seed/seed.mjs",
     "test:staging-seed": "pnpm prisma:generate && vitest run --config vitest.staging-seed.config.ts",
     "test:staging-release": "node --test scripts/release-staging.test.mjs"
