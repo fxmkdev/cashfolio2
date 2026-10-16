@@ -509,7 +509,6 @@ for (const entity of ["account", "group"] as const) {
     const id = createId();
     const original = `Original ${entity}`;
     const duplicate = `Unsaved ${entity}`;
-    const model = entity === "account" ? prisma.account : prisma.accountGroup;
     const data = {
       id,
       name: original,
@@ -550,11 +549,12 @@ for (const entity of ["account", "group"] as const) {
     await expect(dialog.getByLabel("Name")).toHaveValue(duplicate);
     await dialog.getByRole("button", { name: "Refresh choices" }).click();
     await expect(dialog.getByLabel("Name")).toHaveValue(duplicate);
-    expect(
-      await model.count({
-        where: { id, name: original, accountBookId: seeded.accountBookId },
-      }),
-    ).toBe(1);
+    const where = { id, name: original, accountBookId: seeded.accountBookId };
+    const savedCount =
+      entity === "account"
+        ? await prisma.account.count({ where })
+        : await prisma.accountGroup.count({ where });
+    expect(savedCount).toBe(1);
   });
 }
 
