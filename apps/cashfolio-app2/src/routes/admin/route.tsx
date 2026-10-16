@@ -11,7 +11,7 @@ export const Route = createFileRoute("/admin")({
       {
         getAuthenticatedUserLocale,
         getAuthenticatedUserProfile,
-        getUserAccountSecurityUrl,
+        getUserSecurityUrl,
       },
     ] = await Promise.all([
       import("@/server/admin-users"),
@@ -21,18 +21,18 @@ export const Route = createFileRoute("/admin")({
 
     await ensureAdminAccess();
 
-    const [appVersion, userProfile, accountSecurityUrl, userLocale] =
+    const [appVersion, userProfile, userSecurityUrl, userLocale] =
       await Promise.all([
         getRuntimeAppVersion(),
         getAuthenticatedUserProfile(),
-        getUserAccountSecurityUrl(),
+        getUserSecurityUrl(),
         getAuthenticatedUserLocale(),
       ]);
 
     return {
       appVersion,
       userProfile,
-      accountSecurityUrl,
+      userSecurityUrl,
       userLocale,
     };
   },
@@ -41,13 +41,13 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminLayout() {
-  const { appVersion, userProfile, accountSecurityUrl, userLocale } =
+  const { appVersion, userProfile, userSecurityUrl, userLocale } =
     Route.useLoaderData();
 
   return (
     <UserLocaleProvider locale={userLocale}>
       <AdminShell
-        accountSecurityUrl={accountSecurityUrl}
+        userSecurityUrl={userSecurityUrl}
         appVersion={appVersion}
         userProfile={userProfile}
       >

@@ -29,12 +29,13 @@ describe("UserSettingsPageView", () => {
     );
 
     expect(markup).toContain("User Settings");
-    expect(markup).not.toContain("Account Security");
+    expect(markup).not.toContain("Sign-in & security");
     expect(markup).not.toContain("https://tenant.logto.app/account/security");
     expect(markup).toContain("Name");
     expect(markup).toContain("Avatar URL");
     expect(markup).toContain("Regional Format");
-    expect(markup).toContain("Regional format is stored in Cashfolio");
+    expect(markup).toContain("choose how dates and numbers");
+    expect(markup).not.toContain("Logto");
     expect(markup).toContain("German (Switzerland)");
     expect(normalizeRenderedSample(markup)).toContain(
       normalizeRenderedSample(`Example: ${formatUserLocaleSample("de-CH")}`),

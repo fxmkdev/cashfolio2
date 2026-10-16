@@ -1,5 +1,5 @@
 import { Prisma } from "../.prisma-client/client";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const ensureAuthenticated = vi.hoisted(() => vi.fn());
 const deleteLogtoUser = vi.hoisted(() => vi.fn());
@@ -44,16 +44,17 @@ vi.mock("@/prisma.server", () => ({
   prisma,
 }));
 
-vi.mock("./account-deletion-redis", () => ({
+vi.mock("./user-deletion-redis", () => ({
   deleteBookScopedRedisDataForAccountBooks,
 }));
 
-import { planAccountDeletionFromLinks } from "./account-deletion-plan";
+import { planUserDeletionFromLinks } from "./user-deletion-plan";
 import {
   deleteApplicationUserData,
-  deleteAuthenticatedAccount,
-  getAccountDeletionPreview,
-} from "./account-deletion.server";
+  deleteAuthenticatedUser,
+  getUserDeletionPreview,
+  handleUserDeletionRequest,
+} from "./user-deletion.server";
 
 function createAccountBookLink(args: {
   id: string;
@@ -72,9 +73,10 @@ function createAccountBookLink(args: {
   };
 }
 
-describe("account deletion", () => {
+describe("user deletion", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.stubEnv("BASE_URL", "https://example.test");
     ensureAuthenticated.mockResolvedValue({
       isAuthenticated: true,
       claims: {
@@ -104,8 +106,66 @@ describe("account deletion", () => {
     destroyLogtoSession.mockResolvedValue(undefined);
   });
 
+  afterEach(() => vi.unstubAllEnvs());
+
+  it.each(["/user/delete", "/account/delete"])(
+    "destroys the session and redirects successful POST %s to canonical success",
+    async (path) => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      const response = await handleUserDeletionRequest(
+        new Request(`https://example.test${path}`, {
+          method: "POST",
+          headers: { origin: "https://example.test" },
+        }),
+      );
+      expect(response.status).toBe(302);
+      expect(response.headers.get("location")).toBe("/user/delete?deleted=1");
+      expect(deleteLogtoUser).toHaveBeenCalledExactlyOnceWith("logto-user-1");
+      expect(destroyLogtoSession).toHaveBeenCalledOnce();
+      expect(destroyLogtoSession.mock.invocationCallOrder[0]).toBeGreaterThan(
+        deleteLogtoUser.mock.invocationCallOrder[0],
+      );
+    },
+  );
+
+  it.each(["/user/delete", "/account/delete"])(
+    "rejects cross-origin POST %s before authentication or deletion",
+    async (path) => {
+      await expect(
+        handleUserDeletionRequest(
+          new Request(`https://example.test${path}`, {
+            method: "POST",
+            headers: { origin: "https://other.test" },
+          }),
+        ),
+      ).rejects.toMatchObject({ status: 403 });
+      expect(ensureAuthenticated).not.toHaveBeenCalled();
+      expect(deleteLogtoUser).not.toHaveBeenCalled();
+      expect(destroyLogtoSession).not.toHaveBeenCalled();
+    },
+  );
+
+  it("returns a readable conflict and preserves the final Admin's session", async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: "last-admin",
+      roles: ["ADMIN"],
+      deletionPending: false,
+    });
+    tx.user.count.mockResolvedValue(0);
+    const response = await handleUserDeletionRequest(
+      new Request("https://example.test/user/delete", {
+        method: "POST",
+        headers: { origin: "https://example.test" },
+      }),
+    );
+    expect(response.status).toBe(409);
+    expect(await response.text()).toContain("Appoint another Admin");
+    expect(deleteLogtoUser).not.toHaveBeenCalled();
+    expect(destroyLogtoSession).not.toHaveBeenCalled();
+  });
+
   it("plans last-linked account books for deletion and shared books for unlinking", () => {
-    const plan = planAccountDeletionFromLinks([
+    const plan = planUserDeletionFromLinks([
       createAccountBookLink({
         id: "book-1",
         name: "Private Book",
@@ -141,7 +201,7 @@ describe("account deletion", () => {
       ],
     });
 
-    await expect(getAccountDeletionPreview()).resolves.toEqual({
+    await expect(getUserDeletionPreview()).resolves.toEqual({
       displayName: "user@example.test",
       accountBooksToDelete: [{ id: "book-1", name: "Private Book" }],
       accountBooksToUnlink: [{ id: "book-2", name: "Shared Book" }],
@@ -210,7 +270,7 @@ describe("account deletion", () => {
       ],
     });
 
-    await deleteAuthenticatedAccount();
+    await deleteAuthenticatedUser();
 
     expect(deleteBookScopedRedisDataForAccountBooks).toHaveBeenCalledWith([
       "book-1",
@@ -240,7 +300,7 @@ describe("account deletion", () => {
     prisma.user.findUnique.mockResolvedValue({ deletionPending: false });
     await expect(
       deleteApplicationUserData({ externalId: "logto-user-1" }),
-    ).rejects.toThrow("Account deletion is pending");
+    ).rejects.toThrow("Cashfolio account deletion is pending");
     expect(tx.user.deleteMany).not.toHaveBeenCalled();
   });
 
@@ -275,7 +335,7 @@ describe("account deletion", () => {
         await callback(tx);
         throw new Error("commit failed");
       });
-    await expect(deleteAuthenticatedAccount()).rejects.toThrow("commit failed");
+    await expect(deleteAuthenticatedUser()).rejects.toThrow("commit failed");
     expect(deleteBookScopedRedisDataForAccountBooks).not.toHaveBeenCalled();
   });
   it("retries rolled-back user deletion without repeating Redis or Logto effects", async () => {
@@ -295,7 +355,7 @@ describe("account deletion", () => {
         clientVersion: "test",
       }),
     );
-    await deleteAuthenticatedAccount();
+    await deleteAuthenticatedUser();
     expect(prisma.$transaction).toHaveBeenCalledTimes(3);
     expect(tx.user.deleteMany).toHaveBeenCalledTimes(2);
     expect(ensureAuthenticated).toHaveBeenCalledOnce();

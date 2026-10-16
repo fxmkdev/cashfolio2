@@ -63,6 +63,8 @@ existing Storybook titles and story export names stable when moving files.
 
 ## UI Copy
 
+- Use the explicit identity labels below in sentence case, including headings
+  and actions; these are exceptions to the general title-case convention.
 - Use Title Case for UI labels, including buttons, links, menu items, tabs,
   field labels, alert titles, placeholders, and accessible labels such as
   `aria-label`. Follow common product title-case rules: capitalize major words,
@@ -73,6 +75,36 @@ existing Storybook titles and story export names stable when moving files.
 - Keep labels short and action-oriented. Prefer concise commands such as
   `Create New` over longer menu text when the surrounding context already names
   the object.
+
+### Identity and financial-account terminology
+
+Cashfolio has distinct `User`, `AccountBook`, and `Account` entities. Keep their
+names distinct in routes, modules, types, functions, props, tests, and docs:
+
+| Concept                            | App-owned code                                                     | Customer-facing wording                                    |
+| ---------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------- |
+| Sign-in identity                   | `User`, `user-deletion`, `deleteAuthenticatedUser`, `/user/delete` | "Cashfolio account", "Delete my Cashfolio account"         |
+| Identity security                  | `userSecurityUrl`, `getUserSecurityUrl`                            | "Sign-in & security"                                       |
+| Financial account                  | `Account`, `deleteAccount`, `accountId`                            | "Account", "Delete Account", with the account name visible |
+| Book containing financial accounts | `AccountBook`, `accountBookId`                                     | "Account Book"                                             |
+
+Use "user" in admin actions such as "Delete user" and retain "User Settings" for
+personal preferences. Avoid unqualified "account settings" or "account deletion"
+for identities in app-owned code, diagnostics, or documentation.
+
+Provider-scoped terms such as `LogtoAccountResponse`, Logto Account API, and
+`/api/my-account` retain the provider's terminology. The legacy
+`/account/delete` URL is a compatibility exception, not a pattern for new
+routes; see [self-service deletion](server-functions.md#auth-and-authorization).
+
+Destructive UI must identify the target and explain its consequences. User
+self-deletion uses "Delete your Cashfolio account", "Delete my Cashfolio
+account", and "Cashfolio account deleted". Explain loss of sign-in access,
+deletion of books only that person can access, and preservation of shared books
+for other users; show the affected-book preview. Financial-account deletion
+shows the financial account's name alongside "Delete Account". Keep provider
+storage details out of ordinary profile and deletion copy; technical admin tools
+and architecture docs may name Logto.
 
 ## Label Typography
 

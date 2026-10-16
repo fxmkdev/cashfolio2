@@ -27,7 +27,7 @@ export function reserveUserDeletion(args: {
           user.id,
           args.currentAdminId
             ? FINAL_ADMIN_MESSAGE
-            : `${FINAL_ADMIN_MESSAGE} Appoint another Admin before deleting your account.`,
+            : `${FINAL_ADMIN_MESSAGE} Appoint another Admin before deleting your Cashfolio account.`,
         );
       }
       await tx.user.update({

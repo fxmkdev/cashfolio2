@@ -5,7 +5,7 @@ import { withDatabaseConflictRetry } from "./database-conflict-retry";
 
 export const FINAL_ADMIN_MESSAGE = "At least one Admin user is required.";
 export const DELETION_PENDING_MESSAGE =
-  "Account deletion is pending. Retry deletion to finish it.";
+  "Cashfolio account deletion is pending. Retry deletion to finish it.";
 
 /** Serialize app-owned Admin membership changes across processes and users. */
 export function withAdminMutation<T>(

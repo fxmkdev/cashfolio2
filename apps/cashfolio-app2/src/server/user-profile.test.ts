@@ -65,7 +65,7 @@ vi.mock("@/prisma.server", () => ({
 import {
   getAuthenticatedUserProfile,
   getAuthenticatedUserSettings,
-  getUserAccountSecurityUrl,
+  getUserSecurityUrl,
   normalizeUserSettingsInput,
   updateAuthenticatedUserSettings,
 } from "./user-profile";
@@ -291,7 +291,7 @@ describe("user profile server functions", () => {
   });
 
   it("returns the Logto account security URL", async () => {
-    await expect(getUserAccountSecurityUrl()).resolves.toBe(
+    await expect(getUserSecurityUrl()).resolves.toBe(
       "https://tenant.logto.app/account/security",
     );
   });
@@ -301,7 +301,7 @@ describe("user profile server functions", () => {
       throw new Error("LOGTO_ENDPOINT must be set");
     });
 
-    await expect(getUserAccountSecurityUrl()).resolves.toBeNull();
+    await expect(getUserSecurityUrl()).resolves.toBeNull();
   });
 
   it("updates user settings through Logto Account API", async () => {
@@ -352,7 +352,7 @@ describe("user profile server functions", () => {
     );
 
     await expect(getAuthenticatedUserSettings()).rejects.toThrow(
-      "Account settings need a fresh sign-in. Please sign out and sign in again.",
+      "User settings need a fresh sign-in. Please sign out and sign in again.",
     );
   });
 
@@ -372,7 +372,7 @@ describe("user profile server functions", () => {
         },
       }),
     ).rejects.toThrow(
-      "Account settings need a fresh sign-in. Please sign out and sign in again.",
+      "User settings need a fresh sign-in. Please sign out and sign in again.",
     );
   });
 

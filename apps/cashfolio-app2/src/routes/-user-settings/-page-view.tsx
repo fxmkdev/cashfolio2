@@ -161,8 +161,8 @@ export function UserSettingsPageView(args: {
             <Stack gap={2}>
               <Text fw={600}>Profile</Text>
               <Text size="sm" c="dimmed">
-                Name and avatar are stored in Logto. Regional format is stored
-                in Cashfolio.
+                Personalize your name and avatar, and choose how dates and
+                numbers are displayed.
               </Text>
             </Stack>
           </Group>

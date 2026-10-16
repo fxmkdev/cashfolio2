@@ -50,6 +50,14 @@ Related docs:
   name/avatar URL and the app-owned locale preference. It accepts a safe
   `returnTo` search parameter so the page can link back to either the Admin UI
   or the originating account-book UI.
+- `user/delete.tsx` - canonical self-service user deletion route at
+  `/user/delete`. The UI calls the identity a "Cashfolio account" and previews
+  affected books. `account/delete.tsx` preserves existing Logto Account Center
+  configuration: GET redirects to the canonical route, preserving validated
+  `deleted=1` success state, and POST delegates to the same deletion handler.
+  New integrations use `/user/delete`. See
+  [terminology](ui-patterns.md#identity-and-financial-account-terminology) and
+  [deletion behavior](server-functions.md#auth-and-authorization).
 - `api/logto/$action.tsx` - auth endpoints: `GET /api/logto/sign-in`,
   `GET /api/logto/callback`, `GET /api/logto/sign-up`,
   `POST /api/logto/sign-out`

@@ -37,7 +37,7 @@ import { UserMenuItems } from "../-user-menu";
 describe("UserMenuItems", () => {
   it("renders user settings, account security, and sign out entries", () => {
     const menuItems = UserMenuItems({
-      accountSecurityUrl: "https://tenant.logto.app/account/security",
+      userSecurityUrl: "https://tenant.logto.app/account/security",
       userSettingsReturnTo: "/book-1/accounts?tab=ASSET&mode=active",
     });
     if (!isValidElement<{ children: ReactNode }>(menuItems)) {
@@ -57,7 +57,7 @@ describe("UserMenuItems", () => {
     });
     expect(securityItem).toMatchObject({
       props: {
-        children: "Account Security",
+        children: "Sign-in & security",
         href: "https://tenant.logto.app/account/security",
         rel: "noopener noreferrer",
         target: "_blank",
@@ -83,7 +83,7 @@ describe("UserMenuItems", () => {
 
   it("omits account security when no URL is available", () => {
     const menuItems = UserMenuItems({
-      accountSecurityUrl: null,
+      userSecurityUrl: null,
       userSettingsReturnTo: "/admin",
     });
     if (!isValidElement<{ children: ReactNode }>(menuItems)) {
@@ -93,7 +93,7 @@ describe("UserMenuItems", () => {
     expect(Children.toArray(menuItems.props.children)).not.toContainEqual(
       expect.objectContaining({
         props: expect.objectContaining({
-          children: "Account Security",
+          children: "Sign-in & security",
         }),
       }),
     );

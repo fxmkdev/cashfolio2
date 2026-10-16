@@ -29,7 +29,7 @@ describe("AdminShell", () => {
         MantineProvider,
         null,
         createElement(AdminShell, {
-          accountSecurityUrl: null,
+          userSecurityUrl: null,
           appVersion: "test",
           children: createElement("main", null, "Admin content"),
           userProfile: {

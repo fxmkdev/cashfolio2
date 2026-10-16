@@ -103,4 +103,4 @@ before removing their Logto identity. Pending users retain their stored roles
 for diagnostics, but are excluded from active-Admin checks and cannot change
 roles. A failed cleanup is resumed by retrying deletion, rather than clearing
 the flag. See
-[Admin membership and account deletion](server-functions.md#admin-membership-and-account-deletion).
+[Admin membership and user deletion](server-functions.md#admin-membership-and-user-deletion).

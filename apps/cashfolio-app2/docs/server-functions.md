@@ -194,11 +194,11 @@ lock order; this does not introduce optimistic edit-version conflict detection.
 
 Cache key prefixes, current versions, key builders, and version-independent
 cleanup patterns are owned by `src/shared/book-cache-keys.ts`. Keep this module
-free of runtime dependencies: both app caches/account deletion and the workspace
+free of runtime dependencies: both app caches/user deletion and the workspace
 CLI consume it. Add new book-scoped cache families there so restore and deletion
 cleanup stay aligned; version bumps within existing families need no cleanup
-list changes. Account deletion cleans only the requested books across
-environment namespaces and preserves global valuation caches.
+list changes. User deletion cleans only the requested books across environment
+namespaces and preserves global valuation caches.
 
 - Period overview and history use a shared Redis-backed **non-valuation**
   base-data cache (`src/server/period/cache/period-base-data-cache.ts`) backed
@@ -287,8 +287,13 @@ environment namespaces and preserves global valuation caches.
   `src/server/user-profile.ts`; profile mutations enforce same-origin request
   checks before calling `PATCH /api/my-account`. User locale settings are stored
   on the app-owned `User` row.
-- Self-service deletion is exposed at `/account/delete` for Logto Account
-  Center. The `POST` flow uses `src/server/account-deletion.ts` to delete the
+- Self-service deletion is exposed at `/user/delete` for Logto Account Center.
+  Configure new integrations with this canonical URL. The legacy
+  `/account/delete` endpoint remains compatible: GET redirects to `/user/delete`
+  and preserves validated `deleted=1` success state; POST uses the same deletion
+  handler and redirects to `/user/delete?deleted=1` after success. Both POST
+  endpoints retain authentication, same-origin checks, and final-Admin
+  protection. The `POST` flow uses `src/server/user-deletion.ts` to delete the
   app-owned `User`, remove account books that would otherwise become
   inaccessible, clear book-scoped Redis period caches, and call Logto Management
   API `DELETE /api/users/{userId}` through
@@ -516,9 +521,9 @@ multi-period History response may contain points from different committed
 revisions; it does not hold one database transaction across all points or
 external valuation requests.
 
-## Admin membership and account deletion
+## Admin membership and user deletion
 
-Application role changes and account-deletion reservations use
+Application role changes and user-deletion reservations use
 `src/server/admin-mutation.server.ts`. A global PostgreSQL transaction-scoped
 advisory lock serializes these operations across users and app instances. Actor
 authorization and the remaining-Admin count are re-read after the lock. The

@@ -4,7 +4,7 @@ import {
 } from "../shared/book-cache-keys";
 import { getRedisClient } from "@/redis.server";
 
-let hasWarnedAccountDeletionRedisCleanupFailure = false;
+let hasWarnedUserDeletionRedisCleanupFailure = false;
 
 function hasRedisUrlConfigured(): boolean {
   return Boolean(process.env.REDIS_URL?.trim());
@@ -38,11 +38,11 @@ export async function deleteBookScopedRedisDataForAccountBooks(
   try {
     const redis = await getRedisClient();
     if (!redis) {
-      if (!hasWarnedAccountDeletionRedisCleanupFailure) {
+      if (!hasWarnedUserDeletionRedisCleanupFailure) {
         console.warn(
-          "Redis is configured but unavailable; continuing account deletion without book-scoped Redis cleanup.",
+          "Redis is configured but unavailable; continuing user deletion without book-scoped Redis cleanup.",
         );
-        hasWarnedAccountDeletionRedisCleanupFailure = true;
+        hasWarnedUserDeletionRedisCleanupFailure = true;
       }
       return;
     }
@@ -55,12 +55,12 @@ export async function deleteBookScopedRedisDataForAccountBooks(
       }
     }
   } catch (error) {
-    if (!hasWarnedAccountDeletionRedisCleanupFailure) {
+    if (!hasWarnedUserDeletionRedisCleanupFailure) {
       console.warn(
-        "Failed to delete book-scoped Redis data during account deletion; continuing account deletion.",
+        "Failed to delete book-scoped Redis data during user deletion; continuing user deletion.",
         error,
       );
-      hasWarnedAccountDeletionRedisCleanupFailure = true;
+      hasWarnedUserDeletionRedisCleanupFailure = true;
     }
   }
 }

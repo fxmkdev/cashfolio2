@@ -18,7 +18,7 @@ function AdminShellSmokeHarness() {
     <>
       <Notifications />
       <AdminShell
-        accountSecurityUrl="https://tenant.logto.app/account/security"
+        userSecurityUrl="https://tenant.logto.app/account/security"
         appVersion="storybook"
         userProfile={{
           displayName: "Storybook User",
