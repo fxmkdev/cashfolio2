@@ -45,7 +45,7 @@ test("account names keep their minimum width and overflow stays inside the grid"
     .poll(() => viewport.evaluate((element) => element.scrollLeft))
     .toBeGreaterThan(0);
   await expect(
-    grid.getByRole("columnheader", { name: "Total", exact: true }),
+    grid.getByRole("columnheader", { name: "Unrealised", exact: true }),
   ).toBeInViewport();
   const cashRow = grid.locator(`.ag-row[row-id="${seeded.cashAccount.id}"]`);
   await cashRow.hover();

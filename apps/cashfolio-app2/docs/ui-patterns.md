@@ -297,6 +297,7 @@ crypto, or security bookings.
   space. When columns no longer fit, scroll horizontally inside the grid to
   reach the remaining balances, G/L columns, and row actions. This applies to
   every tab in both active and archived views.
+- The G/L section orders its columns as `Total`, `Realised`, `Unrealised`.
 - Non-equity tabs (`ASSET`, `LIABILITY`) render `Ccy.`, `Symbol`, `Balance`, and
   `Balance (<referenceCurrency>)`.
 - `Balance` is account-level only (group rows are blank), with no aggregation.

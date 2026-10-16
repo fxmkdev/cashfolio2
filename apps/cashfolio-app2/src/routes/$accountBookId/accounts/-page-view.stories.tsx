@@ -595,7 +595,9 @@ export const ConstrainedWidthWithGainLoss: Story = {
     expect(viewport.scrollWidth).toBeGreaterThan(viewport.clientWidth);
     viewport.scrollLeft = viewport.scrollWidth;
     await waitFor(() => {
-      expect(canvas.getByRole("columnheader", { name: "Total" })).toBeVisible();
+      expect(
+        canvas.getByRole("columnheader", { name: "Unrealised" }),
+      ).toBeVisible();
       expect(
         canvas.getAllByRole("button", { name: "Edit" }).length,
       ).toBeGreaterThan(0);

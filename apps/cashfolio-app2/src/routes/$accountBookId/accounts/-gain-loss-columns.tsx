@@ -22,9 +22,9 @@ export function buildAccountGainLossColumns(args: {
         : byId.get(data.id)
       : undefined;
   const fields: { field: keyof AccountGainLossSummary; label: string }[] = [
+    { field: "totalGainLoss", label: "Total" },
     { field: "realizedGainLoss", label: "Realised" },
     { field: "unrealizedGainLoss", label: "Unrealised" },
-    { field: "totalGainLoss", label: "Total" },
   ];
   return {
     headerName: `G/L Since Start (${args.referenceCurrency})`,
