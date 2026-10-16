@@ -249,9 +249,9 @@ export function AccountsPageView({
           {formatUtcDateForLocale(new Date(gainLoss.data.startDate), locale)} ·
           As of{" "}
           {formatUtcDateForLocale(new Date(gainLoss.data.asOfDate), locale)} ·
-          Totals include accounts in this tab and archive mode. Incomplete
-          columns show —; totals require complete data for every eligible
-          account.
+          Totals include only {isArchivedMode ? "archived" : "active"} accounts
+          in this tab. Incomplete columns show —; totals require complete data
+          for every eligible account.
         </Text>
       ) : null}
       <DataGrid
