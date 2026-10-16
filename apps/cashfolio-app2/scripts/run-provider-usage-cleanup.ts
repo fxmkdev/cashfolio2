@@ -10,7 +10,62 @@ const execute = promisify(execFile);
 
 export class CleanupJobError extends Error {}
 
-export function selectWebImage(machines) {
+export interface ExitEvent {
+  exited_at?: string;
+  exit_code?: number;
+  guest_exit_code?: number;
+  oom_killed?: boolean | number;
+  requested_stop?: boolean | number;
+  signal?: number;
+  guest_signal?: number;
+}
+
+export interface Machine {
+  id?: string;
+  name?: string;
+  state?: string;
+  config?: { metadata?: { fly_process_group?: string } };
+  image_ref?: { registry?: string; repository?: string; digest?: string };
+  events?: {
+    timestamp?: number;
+    request?: {
+      MonitorEvent?: { exit_event?: ExitEvent };
+      exit_event?: ExitEvent;
+    };
+  }[];
+}
+
+export interface CleanupSummary {
+  status: "running" | "completed" | "incomplete" | "failed";
+  cutoff: string;
+  deletedRows: number;
+  batchCount: number;
+  elapsedMs: number;
+  tableBytes: number | null;
+}
+
+type HttpMethod = "GET" | "POST" | "DELETE";
+export type MachinesApi = (
+  method: HttpMethod,
+  path: string,
+  body?: Record<string, unknown>,
+) => Promise<unknown>;
+
+export interface CleanupJobOptions {
+  api: MachinesApi;
+  readLogs: (machineId: string) => Promise<string>;
+  report: (
+    summary: CleanupSummary | undefined,
+    succeeded: boolean,
+  ) => Promise<void>;
+  region: string;
+  clock?: () => number;
+  sleep?: (ms: number) => Promise<void>;
+  signal?: Pick<AbortSignal, "aborted">;
+  timeoutMs?: number;
+}
+
+export function selectWebImage(machines: Machine[]) {
   const web = machines.filter(
     (machine) => machine.config?.metadata?.fly_process_group === "app",
   );
@@ -30,9 +85,9 @@ export function selectWebImage(machines) {
   return images[0];
 }
 
-export function processExit(machine) {
+export function processExit(machine: Machine) {
   const events = [...(machine.events ?? [])].sort(
-    (a, b) => b.timestamp - a.timestamp,
+    (a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0),
   );
   for (const event of events) {
     const exit =
@@ -51,8 +106,8 @@ export function processExit(machine) {
   return null;
 }
 
-export function parseCleanupLogs(output) {
-  let latest;
+export function parseCleanupLogs(output: string) {
+  let latest: CleanupSummary | undefined;
   // flyctl emits concatenated, indented JSON objects, not just JSON lines.
   for (const entry of output.trim().split(/\r?\n(?=\{)/)) {
     try {
@@ -99,7 +154,11 @@ export function parseCleanupLogs(output) {
   return latest;
 }
 
-export function summaryMarkdown(environment, summary, succeeded) {
+export function summaryMarkdown(
+  environment: string,
+  summary: CleanupSummary | undefined,
+  succeeded: boolean,
+) {
   return [
     `### Provider usage cleanup: ${environment}`,
     `Result: ${succeeded ? "success" : "failure"}`,
@@ -125,14 +184,14 @@ export async function runCleanupJob({
   sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   signal,
   timeoutMs = JOB_TIMEOUT_MS,
-}) {
+}: CleanupJobOptions) {
   const name = `provider-usage-cleanup-${randomUUID()}`;
   const deadline = clock() + timeoutMs;
-  let machineId;
+  let machineId: string | undefined;
   let createAttempted = false;
-  let summary;
+  let summary: CleanupSummary | undefined;
   let succeeded = false;
-  let failure;
+  let failure: CleanupJobError | undefined;
   const checkDeadline = () => {
     if (signal?.aborted)
       throw new CleanupJobError("Cleanup job was cancelled.");
@@ -140,13 +199,15 @@ export async function runCleanupJob({
       throw new CleanupJobError("Cleanup Machine timed out.");
   };
   try {
-    const image = selectWebImage(await api("GET", ""));
+    const image = selectWebImage((await api("GET", "")) as Machine[]);
     checkDeadline();
     createAttempted = true;
-    const machine = await api("POST", "", {
+    const machine = (await api("POST", "", {
       name,
       region,
-      skip_launch: true,
+      // Fly prepares the image asynchronously. Launch as part of creation so
+      // a separate /start request cannot race that preparation.
+      skip_launch: false,
       config: {
         image,
         init: {
@@ -161,21 +222,19 @@ export async function runCleanupJob({
         auto_destroy: false,
         metadata: { fly_process_group: "provider-usage-cleanup" },
       },
-    });
+    })) as Machine | undefined;
     if (!machine?.id)
       throw new CleanupJobError("Fly did not return a cleanup Machine ID.");
     machineId = machine.id;
-    checkDeadline();
-    await api("POST", `/${machineId}/start`, {});
     let exitCode;
     while (true) {
       checkDeadline();
-      const state = await api("GET", `/${machineId}`);
+      const state = (await api("GET", `/${machineId}`)) as Machine;
       if (state.state === "stopped") {
         exitCode = processExit(state);
         if (exitCode !== null) break;
       }
-      if (["destroyed", "failed"].includes(state.state))
+      if (["destroyed", "failed", "launch_failed"].includes(state.state ?? ""))
         throw new CleanupJobError(
           "Cleanup Machine failed before reporting a process exit.",
         );
@@ -206,7 +265,7 @@ export async function runCleanupJob({
     // Recover a create whose response was lost, without creating another Machine.
     if (!machineId && createAttempted) {
       try {
-        machineId = (await api("GET", "")).find(
+        machineId = ((await api("GET", "")) as Machine[]).find(
           (machine) => machine.name === name,
         )?.id;
       } catch {
@@ -248,7 +307,7 @@ export async function runCleanupJob({
   return summary;
 }
 
-export function createMachinesApi(app, token) {
+export function createMachinesApi(app: string, token: string): MachinesApi {
   return async (method, path, body) => {
     const response = await fetch(
       `https://api.machines.dev/v1/apps/${encodeURIComponent(app)}/machines${path}`,
@@ -262,10 +321,21 @@ export function createMachinesApi(app, token) {
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       },
     );
-    if (!response.ok)
+    if (!response.ok) {
+      const operation =
+        method === "GET"
+          ? path === ""
+            ? "list Machines"
+            : "inspect cleanup Machine"
+          : method === "DELETE"
+            ? "destroy cleanup Machine"
+            : path === ""
+              ? "create cleanup Machine"
+              : "stop cleanup Machine";
       throw new CleanupJobError(
-        `Fly Machines API returned HTTP ${response.status}.`,
+        `Fly Machines API ${method} (${operation}) returned HTTP ${response.status}.`,
       );
+    }
     if (response.status === 204) return;
     const text = await response.text();
     return text ? JSON.parse(text) : undefined;
@@ -279,9 +349,11 @@ async function main() {
     FLY_PRIMARY_REGION: region,
     CLEANUP_ENVIRONMENT: environment,
   } = process.env;
-  const report = async (summary, succeeded) => {
+  const report: CleanupJobOptions["report"] = async (summary, succeeded) => {
     const markdown = summaryMarkdown(
-      ["prod", "staging"].includes(environment) ? environment : "unconfigured",
+      environment === "prod" || environment === "staging"
+        ? environment
+        : "unconfigured",
       summary,
       succeeded,
     );
@@ -289,7 +361,12 @@ async function main() {
     if (process.env.GITHUB_STEP_SUMMARY)
       await appendFile(process.env.GITHUB_STEP_SUMMARY, markdown);
   };
-  if (!app || !token || !region || !["prod", "staging"].includes(environment)) {
+  if (
+    !app ||
+    !token ||
+    !region ||
+    (environment !== "prod" && environment !== "staging")
+  ) {
     await report(undefined, false);
     throw new CleanupJobError(
       "Missing or invalid cleanup workflow configuration.",
