@@ -6,8 +6,11 @@ import {
 } from "./-page-view-formatters";
 import type { RealizedEventRow } from "./-page-view-types";
 
-function asEventWithQuantity(quantity: number): RealizedEventRow {
-  return { quantity } as RealizedEventRow;
+function asEventWithQuantity(
+  quantity: number,
+  source: RealizedEventRow["pricing"]["source"] = "directConversion",
+): RealizedEventRow {
+  return { quantity, pricing: { source } } as RealizedEventRow;
 }
 
 describe("page view formatters", () => {
@@ -15,6 +18,12 @@ describe("page view formatters", () => {
     expect(toEventSide(asEventWithQuantity(1))).toBe("buy");
     expect(toEventSide(asEventWithQuantity(-1))).toBe("sell");
     expect(toEventSide(asEventWithQuantity(0))).toBe("flat");
+    expect(toEventSide(asEventWithQuantity(1, "transferBasis"))).toBe(
+      "transfer",
+    );
+    expect(toEventSide(asEventWithQuantity(-1, "transferBasis"))).toBe(
+      "transfer",
+    );
   });
 
   it("normalizes empty descriptions", () => {

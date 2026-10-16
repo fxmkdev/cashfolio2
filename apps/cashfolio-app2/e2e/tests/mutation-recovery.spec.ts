@@ -12,6 +12,7 @@ import {
   agGridRowByText,
   agGridCellByColId,
   clickRowAction,
+  revealRowActions,
   setGridAccountTreeCellValue,
 } from "../support/grid";
 import {
@@ -184,6 +185,7 @@ for (const nodeType of ["account", "accountGroup"] as const) {
     const contracted = parentRow.locator(".ag-group-contracted").first();
     if (await contracted.isVisible()) await contracted.click();
     const row = agGridRowByText(page, name);
+    await revealRowActions(row);
     await expect(row.getByRole("button", { name: "Unarchive" })).toBeEnabled();
     await prisma.accountGroup.update({
       where: {

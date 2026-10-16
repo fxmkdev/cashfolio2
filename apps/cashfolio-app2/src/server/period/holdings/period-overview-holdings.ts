@@ -1,4 +1,5 @@
-import { toMoney, type Money, moneyAdd } from "../../../shared/money";
+import { applyPendingHoldingExecutions } from "./holding-executions";
+import { toMoney, type Money, moneyAdd, moneySum } from "../../../shared/money";
 import {
   isExplicitGainLossBooking,
   isNearZero,
@@ -7,7 +8,7 @@ import {
 } from "./period-overview-holdings-common";
 import { applyMixedPeriodSameUnitHoldingTransfer } from "./period-overview-holdings-mixed-transfer";
 import {
-  applyHoldingTransferWithoutRealization,
+  applyHoldingTransfer,
   resolveHoldingTransferDirection,
   toHoldingUnitIdentifier,
 } from "./period-overview-holdings-transfer";
@@ -162,6 +163,19 @@ export async function applyHoldingTransactionsToGainLossState(args: {
         }),
       ),
     );
+    if (
+      args.state.chronological &&
+      allNonExplicitAreHolding &&
+      allNonExplicitInPeriod &&
+      nonExplicitUnitIdentifiers.size === 1 &&
+      !nonExplicitUnitIdentifiers.has(null) &&
+      isNearZero(
+        moneySum(inPeriodHoldingBookings.map((booking) => booking.value)),
+      )
+    ) {
+      (args.state.holdingTransfers ??= []).push(inPeriodHoldingBookings);
+      continue;
+    }
     const transferDirection =
       allNonExplicitAreHolding &&
       allNonExplicitInPeriod &&
@@ -174,7 +188,7 @@ export async function applyHoldingTransactionsToGainLossState(args: {
         : null;
 
     if (transferDirection != null) {
-      applyHoldingTransferWithoutRealization({
+      applyHoldingTransfer({
         stateByHoldingAccountId: args.state.stateByHoldingAccountId,
         holdingBookings: inPeriodHoldingBookings,
         direction: transferDirection,
@@ -215,6 +229,12 @@ export async function finalizeHoldingGainLossState(
     resolveRate: HoldingRateResolver;
   } & HoldingGainLossFinalizationCallbacks,
 ) {
+  if (args.state.chronological)
+    await applyPendingHoldingExecutions({
+      state: args.state,
+      captureLotMatches: !!args.onAccountExecutionEvent,
+      onSkippedItem: args.onSkippedItem,
+    });
   let skippedCount = args.state.skippedCount;
   const convertedCount = args.state.convertedCount;
   let realizedGainLoss: Money = toMoney(0);
@@ -230,6 +250,7 @@ export async function finalizeHoldingGainLossState(
       periodEnd: args.periodEnd,
       resolveRate: args.resolveRate,
       onAccountExecutionEvent: args.onAccountExecutionEvent,
+      onAccountUnvaluedOpenLot: args.onAccountUnvaluedOpenLot,
       onAccountOpenLotValuation: args.onAccountOpenLotValuation,
       onSkippedItem: args.onSkippedItem,
     });
@@ -271,6 +292,7 @@ export async function finalizeHoldingGainLossState(
 
 export async function computeHoldingGainLossSplit(
   args: {
+    chronological?: boolean;
     holdingAccounts: HoldingRateConvertibleAccount[];
     initialBalanceByAccountId: Map<string, Money>;
     transactions: HoldingTransaction[];
@@ -290,6 +312,8 @@ export async function computeHoldingGainLossSplit(
     onSkippedItem: args.onSkippedItem,
   });
 
+  state.chronological = args.chronological;
+  state.convertBookingToReference = args.convertBookingToReference;
   await applyHoldingTransactionsToGainLossState({
     state,
     transactions: args.transactions,
@@ -305,6 +329,7 @@ export async function computeHoldingGainLossSplit(
     resolveRate: args.resolveRate,
     onAccountGainLoss: args.onAccountGainLoss,
     onAccountExecutionEvent: args.onAccountExecutionEvent,
+    onAccountUnvaluedOpenLot: args.onAccountUnvaluedOpenLot,
     onAccountOpenLotValuation: args.onAccountOpenLotValuation,
     onSkippedItem: args.onSkippedItem,
   });

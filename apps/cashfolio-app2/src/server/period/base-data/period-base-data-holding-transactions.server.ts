@@ -78,9 +78,11 @@ async function loadPeriodHoldingTransactionsPage(
       : {}),
     select: {
       id: true,
+      description: true,
       bookings: {
         select: {
           id: true,
+          description: true,
           accountId: true,
           date: true,
           value: true,
@@ -142,6 +144,9 @@ function mapPeriodHoldingTransaction(
     id: transaction.id,
     bookings: transaction.bookings.map((booking) => ({
       id: booking.id,
+      description: booking.description,
+      transactionDescription: transaction.description,
+      transactionId: transaction.id,
       accountId: booking.accountId,
       date: booking.date,
       value: toMoney(booking.value),

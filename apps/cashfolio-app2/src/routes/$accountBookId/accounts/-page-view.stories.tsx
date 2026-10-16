@@ -1,3 +1,4 @@
+import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Box, Text } from "@mantine/core";
@@ -144,6 +145,17 @@ const activeAssetRows: TreeRow[] = [
     balance: 120,
     balanceInReferenceCurrency: 120,
   }),
+  createAccountRow({
+    id: "account-holding",
+    name: "USD Holding",
+    groupId: "group-assets",
+    type: AccountType.ASSET,
+    isActive: true,
+    sortOrder: 2,
+    currency: "USD",
+    balance: 100,
+    balanceInReferenceCurrency: 90,
+  }),
 ];
 
 const archivedAssetRows: TreeRow[] = activeAssetRows.map((row) => ({
@@ -241,12 +253,18 @@ function getPinnedBottomRowData(
 }
 
 function AccountsPageStoryHarness({
+  rowsOverride,
+  expandGroups = false,
+  gainLossState = "ready",
   initialMode,
   initialTab = "ASSET",
   startWithCreateModal = false,
   startWithEditModal = false,
   routeSmoke = false,
 }: {
+  rowsOverride?: TreeRow[];
+  expandGroups?: boolean;
+  gainLossState?: "ready" | "loading" | "error" | "partial";
   initialMode: AccountsMode;
   initialTab?: TabValue;
   startWithCreateModal?: boolean;
@@ -307,7 +325,10 @@ function AccountsPageStoryHarness({
   const mode: AccountsMode =
     routeSearch.mode === "archived" ? "archived" : modeState;
 
-  const rows = useMemo(() => getRowsFor({ mode, tab }), [mode, tab]);
+  const rows = useMemo(
+    () => rowsOverride ?? getRowsFor({ mode, tab }),
+    [mode, tab, rowsOverride],
+  );
   const rowsByParentKey = useRowsByParentKey(rows);
   const selectedSiblingRows: ReorderGroupChildRow[] = useSelectedSiblingRows(
     rowsByParentKey,
@@ -321,7 +342,51 @@ function AccountsPageStoryHarness({
     !isEquityTab,
   );
 
+  const gainLossData: AccountGainLossSummaries = {
+    referenceCurrency: "CHF",
+    startDate: "2026-01-01Z",
+    asOfDate: "2026-03-31Z",
+    rows: rows.map((row) => ({
+      id: row.id,
+      applicable: row.id === "account-holding" || row.id === "group-assets",
+      summary:
+        row.id === "account-holding" || row.id === "group-assets"
+          ? {
+              realizedGainLoss: 20,
+              unrealizedGainLoss: gainLossState === "partial" ? null : -10,
+              totalGainLoss: gainLossState === "partial" ? null : 10,
+            }
+          : {
+              realizedGainLoss: null,
+              unrealizedGainLoss: null,
+              totalGainLoss: null,
+            },
+      diagnostics:
+        gainLossState === "partial"
+          ? [
+              {
+                date: "2026-03-31Z",
+                message: "Closing valuation is unavailable.",
+              },
+            ]
+          : [],
+    })),
+    total: {
+      applicable: true,
+      summary: {
+        realizedGainLoss: 20,
+        unrealizedGainLoss: gainLossState === "partial" ? null : -10,
+        totalGainLoss: gainLossState === "partial" ? null : 10,
+      },
+      diagnostics: [],
+    },
+  };
   const columnDefs = useAccountTreeColumnDefs({
+    gainLossData:
+      gainLossState === "loading" || gainLossState === "error"
+        ? undefined
+        : gainLossData,
+    isGainLossLoading: gainLossState === "loading",
     isArchivedMode: mode === "archived",
     isEquityTab,
     rowsByParentKey,
@@ -378,6 +443,18 @@ function AccountsPageStoryHarness({
       }}
     >
       <AccountsPageView
+        gainLoss={{
+          data:
+            gainLossState === "loading" || gainLossState === "error"
+              ? undefined
+              : gainLossData,
+          loading: gainLossState === "loading",
+          error:
+            gainLossState === "error"
+              ? "Gain/loss could not be loaded. Please try again."
+              : undefined,
+          retry: () => {},
+        }}
         accountBookId="storybook-book"
         tab={tab}
         mode={mode}
@@ -394,7 +471,7 @@ function AccountsPageStoryHarness({
           { mode, tab },
           referenceCurrencyBalanceTotal,
         )}
-        isGroupOpenByDefault={() => initialMode === "archived"}
+        isGroupOpenByDefault={() => expandGroups || initialMode === "archived"}
         onRowGroupOpened={() => undefined}
         createModalOpened={createModalOpened}
         editModalOpen={editModalOpen}
@@ -480,6 +557,53 @@ async function findVisibleDialog(
 
 export const ActiveHappyPath: Story = {
   render: () => <AccountsPageStoryHarness initialMode="active" />,
+};
+
+export const ConstrainedWidthWithGainLoss: Story = {
+  render: () => (
+    <Box w={960} maw="100%">
+      <AccountsPageStoryHarness
+        initialMode="active"
+        expandGroups
+        rowsOverride={activeAssetRows.map((row) => ({
+          ...row,
+          name:
+            row.id === "group-cash"
+              ? "Cash and savings accounts"
+              : row.id === "account-checking"
+                ? "Household current account"
+                : row.id === "account-holding"
+                  ? "US dollar investment holdings"
+                  : row.name,
+        }))}
+      />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const nameHeader = await canvas.findByRole("columnheader", {
+      name: "Name",
+    });
+    await waitFor(() => {
+      expect(nameHeader.getBoundingClientRect().width).toBeGreaterThanOrEqual(
+        320,
+      );
+      expect(canvas.getByText("Household current account")).toBeVisible();
+    });
+    const viewport = canvasElement.querySelector(".ag-grid-viewport");
+    if (!viewport) throw new Error("Could not resolve Accounts viewport");
+    expect(viewport.scrollWidth).toBeGreaterThan(viewport.clientWidth);
+    viewport.scrollLeft = viewport.scrollWidth;
+    await waitFor(() => {
+      expect(
+        canvas.getByRole("columnheader", { name: "Unrealised" }),
+      ).toBeVisible();
+      expect(
+        canvas.getAllByRole("button", { name: "Edit" }).length,
+      ).toBeGreaterThan(0);
+    });
+    viewport.scrollLeft = 0;
+  },
 };
 
 export const ArchivedMode: Story = {
@@ -593,4 +717,20 @@ export const RouteSmoke: Story = {
       '"mode":"active"',
     );
   },
+};
+
+export const GainLossLoading: Story = {
+  render: () => (
+    <AccountsPageStoryHarness initialMode="active" gainLossState="loading" />
+  ),
+};
+export const GainLossFailure: Story = {
+  render: () => (
+    <AccountsPageStoryHarness initialMode="active" gainLossState="error" />
+  ),
+};
+export const GainLossPartial: Story = {
+  render: () => (
+    <AccountsPageStoryHarness initialMode="active" gainLossState="partial" />
+  ),
 };

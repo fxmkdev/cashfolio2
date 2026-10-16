@@ -1,3 +1,5 @@
+import { getAccountGainLossSummaries } from "@/server/account-gain-loss";
+import { useGainLossRequest } from "@/hooks/use-gain-loss-request";
 import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
 import { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
 import type { GridApi, GridReadyEvent } from "ag-grid-enterprise";
@@ -287,6 +289,24 @@ export function useAccountsPageController(args: {
     rows: loaderRows,
   });
 
+  const loadGainLoss = useCallback(
+    () =>
+      getAccountGainLossSummaries({
+        data: {
+          accountBookId: args.accountBookId,
+          type: args.tab === "LIABILITY" ? "LIABILITY" : "ASSET",
+          accountState: args.mode === "archived" ? "inactive" : "active",
+        },
+      }),
+    [args.accountBookId, args.tab, args.mode],
+  );
+  const gainLoss = useGainLossRequest({
+    enabled: !isEquityTab,
+    scopeKey: `${args.accountBookId}:${args.tab}:${args.mode}`,
+    refreshKey: loaderData,
+    load: loadGainLoss,
+  });
+
   const storageKey = `cashfolio:expandedGroups:${args.accountBookId}:${args.mode}:${args.tab}`;
   const { isGroupOpenByDefault, onRowGroupOpened } =
     useExpandedGroups(storageKey);
@@ -394,6 +414,8 @@ export function useAccountsPageController(args: {
       ),
   });
   const columnDefs = useAccountTreeColumnDefs({
+    gainLossData: gainLoss.data,
+    isGainLossLoading: gainLoss.loading,
     isArchivedMode,
     isEquityTab,
     rowsByParentKey,
@@ -409,6 +431,7 @@ export function useAccountsPageController(args: {
   });
 
   return {
+    gainLoss,
     onRefreshConstraints,
     unarchiveRecovery,
     accountBookId: args.accountBookId,

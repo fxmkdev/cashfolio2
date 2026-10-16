@@ -1,4 +1,7 @@
-import { Button, Group, Tabs, Title } from "@mantine/core";
+import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
+import { formatUtcDateForLocale } from "@/shared/date";
+import { useUserLocale } from "@/user-locale-context";
+import { Alert, Text, Button, Group, Tabs, Title } from "@mantine/core";
 import { IconArchive, IconPlus } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
 import { LinkButton } from "@/components/navigation/link-button";
@@ -43,6 +46,12 @@ type RowTarget = {
 };
 
 export type AccountsPageViewProps = {
+  gainLoss?: {
+    data?: AccountGainLossSummaries;
+    error?: string;
+    loading: boolean;
+    retry: () => void;
+  };
   accountBookId: string;
   onRefreshConstraints?: () => Promise<void>;
   unarchiveRecovery?: ReturnType<typeof useUnarchiveMutation>;
@@ -96,6 +105,7 @@ export type AccountsPageViewProps = {
 };
 
 export function AccountsPageView({
+  gainLoss,
   accountBookId,
   onRefreshConstraints,
   unarchiveRecovery,
@@ -143,6 +153,7 @@ export function AccountsPageView({
 }: AccountsPageViewProps) {
   const isArchivedMode = mode === "archived";
 
+  const locale = useUserLocale();
   return (
     <PageShell>
       <TopPageHeader
@@ -224,6 +235,25 @@ export function AccountsPageView({
         </Tabs.List>
       </Tabs>
 
+      {gainLoss?.error ? (
+        <Alert color="red" title="Gain/Loss Unavailable" mb="sm">
+          {gainLoss.error}
+          <Button variant="subtle" size="xs" onClick={gainLoss.retry}>
+            Retry
+          </Button>
+        </Alert>
+      ) : null}
+      {gainLoss?.data ? (
+        <Text size="xs" c="dimmed" mb="xs">
+          Holding G/L since{" "}
+          {formatUtcDateForLocale(new Date(gainLoss.data.startDate), locale)} ·
+          As of{" "}
+          {formatUtcDateForLocale(new Date(gainLoss.data.asOfDate), locale)} ·
+          Totals include only {isArchivedMode ? "archived" : "active"} accounts
+          in this tab. Incomplete columns show —; totals require complete data
+          for every eligible account.
+        </Text>
+      ) : null}
       <DataGrid
         containerStyle={{ flex: 1, minHeight: 0 }}
         rowData={rows}
@@ -232,6 +262,7 @@ export function AccountsPageView({
           headerName: "Name",
           field: "name",
           flex: 1,
+          minWidth: 320,
           filter: "agTextColumnFilter",
           valueGetter: ({ data }) => data?.name,
           cellRendererParams: {

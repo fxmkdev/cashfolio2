@@ -15,6 +15,17 @@ export function agGridPinnedBottomRow(page: Page): Locator {
   return page.locator(".ag-grid-pinned-bottom-rows .ag-row-pinned").first();
 }
 
+export async function revealRowActions(row: Locator) {
+  await row.hover();
+  // Virtualised action columns are only mounted after scrolling into view.
+  await row.evaluate((element) => {
+    const viewport = element
+      .closest(".ag-root-wrapper")
+      ?.querySelector(".ag-grid-viewport");
+    if (viewport) viewport.scrollLeft = viewport.scrollWidth;
+  });
+}
+
 export async function clickRowAction(
   row: Locator,
   actionLabel:
@@ -26,7 +37,7 @@ export async function clickRowAction(
     | "Unarchive"
     | "Reorder Siblings",
 ) {
-  await row.hover();
+  await revealRowActions(row);
   await row.getByRole("button", { name: actionLabel }).click();
 }
 

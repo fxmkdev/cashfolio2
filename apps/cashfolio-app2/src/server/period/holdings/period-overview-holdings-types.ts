@@ -42,7 +42,7 @@ export type HoldingLot = {
 };
 
 export type HoldingExecutionPricingSource =
-  "directConversion" | "residualAdjusted" | "marketFallback";
+  "directConversion" | "residualAdjusted" | "marketFallback" | "transferBasis";
 
 export type HoldingExecutionLotMatch = {
   acquisitionSortKey: string;
@@ -61,7 +61,7 @@ export type HoldingExecutionEvent = {
   date: Date;
   quantity: Money;
   pricingSource: HoldingExecutionPricingSource;
-  marketReferenceAmount: Money;
+  marketReferenceAmount: Money | null;
   residualAllocationAmount: Money;
   effectiveReferenceAmount: Money;
 };
@@ -71,6 +71,8 @@ export type HoldingAccountState = {
   lots: HoldingLot[];
   executionEvents: HoldingExecutionEvent[];
   skipped: boolean;
+  realizedGainLoss?: Money;
+  processedExecutionEvents?: HoldingAccountExecutionEvent[];
 };
 
 export type HoldingRateResolver = (input: {
@@ -94,6 +96,9 @@ export type HoldingBookingConverter = (booking: {
 }) => Promise<Money | null>;
 
 export type HoldingGainLossWorkingState = {
+  chronological?: boolean;
+  holdingTransfers?: HoldingTransactionBooking[][];
+  convertBookingToReference?: HoldingBookingConverter;
   stateByHoldingAccountId: Map<string, HoldingAccountState>;
   skippedCount: number;
   convertedCount: number;
@@ -156,6 +161,12 @@ export type HoldingAccountOpenLotValuation = {
 export type HoldingGainLossFinalizationCallbacks = {
   onAccountGainLoss?: (gainLossByAccount: HoldingAccountGainLoss) => void;
   onAccountExecutionEvent?: (event: HoldingAccountExecutionEvent) => void;
+  onAccountUnvaluedOpenLot?: (
+    lot: Omit<
+      HoldingAccountOpenLotValuation,
+      "periodEndRate" | "unrealizedGainLoss"
+    >,
+  ) => void;
   onAccountOpenLotValuation?: (lot: HoldingAccountOpenLotValuation) => void;
   onSkippedItem?: (item: HoldingSkippedItem) => void;
 };
