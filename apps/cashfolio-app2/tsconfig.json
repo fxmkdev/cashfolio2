@@ -17,6 +17,7 @@
   },
   "include": [
     "src",
+    "e2e/tests/ledger-archived-account-edit.spec.ts",
     "eslint-rules/**/*.ts",
     "vite.config.ts",
     "vite.staging-seed.config.ts",
