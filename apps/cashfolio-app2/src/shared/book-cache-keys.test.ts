@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getAccountGainLossCacheEntryKey,
   getPeriodBaseCacheEntryKey,
   getPeriodBaseCacheIndexKey,
   getPeriodCacheGenerationKey,
@@ -29,6 +30,7 @@ const fixtureKeys = [
     `period:base:index:${version}:preview:book-1:revision`,
     `period:base:generation:${version}:local:book-1`,
     `period:history:metrics:${version}:preview:book-1:revision:2026-01:total`,
+    `account:gain-loss:${version}:preview:book-1:revision:2026-05-11:2026-05-10`,
   ]),
 ];
 const otherBookKeys = fixtureKeys.map((key) =>
@@ -44,6 +46,13 @@ const preservedKeys = [
 ];
 
 it("preserves deployed cache key formats and versions", () => {
+  expect(
+    getAccountGainLossCacheEntryKey({
+      ...scope,
+      asOfDate: "2026-05-11",
+      latestFetchableDate: "2026-05-10",
+    }),
+  ).toBe("account:gain-loss:v1:local:book-1:revision-1:2026-05-11:2026-05-10");
   expect(
     getPeriodBaseCacheEntryKey({ ...scope, periodCacheKey: "2026-01" }),
   ).toBe("period:base:v8:local:book-1:revision-1:2026-01");
@@ -91,6 +100,14 @@ describe("cleanup namespace ownership", () => {
     expect(
       isBookScopedPeriodCacheKey(
         "period:history:metrics:v6:local:book-2:revision:2026-01:scope:book-1:child",
+        "book-1",
+      ),
+    ).toBe(false);
+  });
+  it("checks ownership for G/L suffixes containing another book ID", () => {
+    expect(
+      isBookScopedPeriodCacheKey(
+        "account:gain-loss:v1:local:book-2:revision:book-1:2026-05-10",
         "book-1",
       ),
     ).toBe(false);

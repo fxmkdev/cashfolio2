@@ -131,6 +131,30 @@ totals. Group and footer amounts sum account leaves using Decimal arithmetic
 before conversion to display numbers. Zero-balance and archived accounts retain
 realised gains.
 
+The Accounts list caches one book-wide summary dataset in Redis before filtering
+by account type and active/archived state. Warm hits skip transaction loading,
+valuation lookups, and FIFO replay. Ledger summaries and calculation drawers
+continue calculating independently. This improves repeat loads; a cold cache
+still requires the complete historical replay.
+
+The cache uses the existing deployment namespace and database-owned
+`AccountBook.periodCacheRevision`, plus the resolved UTC as-of day and latest
+fetchable valuation day. Edits that advance the revision invalidate summaries
+across processes; UTC rollover and the daily provider publication cutoff select
+new keys. Entries expire after 24 hours and are limited to 512 KiB. Monetary
+values use the shared exact Decimal codec. Book/user deletion and restore
+cleanup include this cache family across all versions and environments.
+
+Persistence follows History's valuation-source policy: every dependency must
+come from identity conversion or Redis TimeSeries. Provider, temporary fallback,
+and missing valuations are returned for the request but not persisted. The
+snapshot revision must match the lookup revision and a final committed-revision
+read, and the publication cutoff must remain unchanged during calculation.
+Overlapping loads share an in-process promise scoped to the complete cache key.
+Unavailable Redis or revision reads, malformed/oversized cache entries, and
+Redis command failures fall back to the uncached calculation. As with the other
+period caches, Redis requires `PERIOD_BASE_CACHE_ENV`.
+
 G/L hydrates independently of the account tree and reference balances. A failed
 request exposes a retry action. A missing closing price leaves reliable Realised
 G/L available while Unrealised and Total remain unavailable; the drawer still

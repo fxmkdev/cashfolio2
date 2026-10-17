@@ -568,13 +568,13 @@ automatic privilege restoration is introduced.
 
 `src/server/account-gain-loss.ts` exposes authorized GET functions for
 account-list summaries and individual-account summaries/details. The range
-loader in `src/server/accounts/account-gain-loss.server.ts` uses account-book
-start, the existing opening balance date, UTC as-of dates, shared holding
-transaction queries, and valuation conversions. Its metadata, opening balances,
-transactions, and group hierarchy share one read-only RepeatableRead snapshot;
-valuation requests and FIFO replay run after that transaction completes. All
-relevant real accounts participate before active/archived and Asset/Liability
-display filtering.
+loader in `src/server/accounts/account-gain-loss-range.server.ts` uses
+account-book start, the existing opening balance date, UTC as-of dates, shared
+holding transaction queries, and valuation conversions. Its metadata, opening
+balances, transactions, and group hierarchy share one read-only RepeatableRead
+snapshot; valuation requests and FIFO replay run after that transaction
+completes. All relevant real accounts participate before active/archived and
+Asset/Liability display filtering.
 
 `calculateAccountGainLoss` reuses the existing holding FIFO/pricing engine with
 chronological replay and per-account callbacks. Its completeness diagnostics
@@ -586,6 +586,43 @@ attribute realised G/L to the destination. Reconciliation emits one
 the matched quantity, weighted-average carried price, individual FIFO match
 prices, and a null `pricing.marketReferenceAmount`. Unmatched quantities keep
 their original costs and acquisition order. Existing period loaders retain their
-period-opening valuation and rounding semantics. No derived G/L cache or
-database migration is introduced; valuation caches and request-local rate
+period-opening valuation and rounding semantics. Accounts-list accumulated G/L
+uses the summary cache described below; valuation caches and request-local rate
 deduplication remain shared.
+
+### Accounts-list accumulated G/L summary cache
+
+`src/server/accounts/account-gain-loss-cache.server.ts` caches one book-wide
+summary dataset, including leaf diagnostics and account/group view metadata.
+Filtering by Asset/Liability and active/archived state and Decimal group/footer
+aggregation happen after retrieval. Public server-function inputs and responses
+are unchanged, and authorization runs before cache access. Ledger summaries and
+calculation drawers bypass this cache.
+
+- Key:
+  `account:gain-loss:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{asOfDate}:{latestFetchableDate}`.
+  Dates are UTC `YYYY-MM-DD`; both days are captured before loading. The latest
+  fetchable day uses the shared valuation publication-window rules.
+- TTL is 24 hours; maximum encoded size is 512 KiB. The shared Decimal codec
+  preserves exact values, and reads validate the decoded summary structure.
+  Payloads exclude transactions, FIFO detail events, and internal cache
+  metadata.
+- Every lookup reads the committed PostgreSQL revision, including warm hits.
+  Inflight promise deduplication uses the entire key, preventing requests after
+  a mutation from joining an older calculation. Only the DB snapshot runs inside
+  the existing read-only repeatable-read transaction; valuation runs afterwards.
+- Persistence requires identity/TimeSeries valuation sources, a snapshot
+  revision matching the lookup revision and a final DB revision read, and an
+  unchanged publication cutoff. Provider/fallback/missing results still answer
+  the request without persistence. Database-only completeness diagnostics retain
+  their existing meaning and are invalidated by revision/day changes.
+- Missing Redis or failed revision reads bypass caching. Malformed or oversized
+  entries and Redis command failures fall back to calculation. Read/write
+  warnings are throttled per process; the existing required environment
+  namespace behavior applies. Obsolete generations expire naturally, and shared
+  key-family helpers include this cache in book/user deletion and restore
+  cleanup.
+
+A warm hit skips historical DB inputs, valuation, and FIFO replay. A cold or
+non-cacheable request still performs the full replay; this cache does not add
+incremental FIFO snapshots or change pricing/concurrency semantics.
