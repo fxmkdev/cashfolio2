@@ -11,7 +11,11 @@ const mocks = vi.hoisted(() => ({
   transactions: vi.fn(),
   pending: vi.fn(),
   calculate: vi.fn(),
+  rate: vi.fn(),
+  conversion: vi.fn(),
+  redis: vi.fn(),
 }));
+vi.mock("../../redis.server", () => ({ getRedisClient: mocks.redis }));
 vi.mock("../../prisma.server", () => ({
   prisma: {
     $transaction: mocks.snapshot,
@@ -29,9 +33,10 @@ vi.mock("./account-gain-loss-calculation.server", () => ({
   calculateAccountGainLoss: mocks.calculate,
 }));
 vi.mock("../period/period-conversion", () => ({
-  convertBookingValueToReference: vi.fn(),
-  getUnitToReferenceExchangeRate: vi.fn(),
+  convertBookingValueToReferenceDetails: mocks.conversion,
+  getUnitToReferenceExchangeRateDetails: mocks.rate,
 }));
+import { loadAccountGainLossRange } from "./account-gain-loss-range.server";
 import {
   queryAccountGainLoss,
   queryAccountGainLossSummaries,
@@ -61,6 +66,7 @@ const result = (amount: string) => ({
 });
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.redis.mockResolvedValue(null);
   mocks.snapshot.mockImplementation(async (load) =>
     load({
       $executeRaw: mocks.readOnly,
@@ -73,6 +79,7 @@ beforeEach(() => {
   );
   mocks.book.mockResolvedValue({
     referenceCurrency: "CHF",
+    periodCacheRevision: "revision",
     startDate: new Date("2026-01-01Z"),
   });
   mocks.accounts.mockResolvedValue([
@@ -312,4 +319,87 @@ describe("account G/L date", () => {
     expect(() => resolveAccountGainLossDate("bad", now)).toThrow(
       "Invalid account G/L period",
     ));
+});
+
+describe("summary cache integration", () => {
+  it("skips snapshot loading and replay on a warm summary hit, while ledger details remain uncached", async () => {
+    const entries = new Map<string, string>();
+    const redis = {
+      get: vi.fn(async (key: string) => entries.get(key) ?? null),
+      setEx: vi.fn(async (key: string, _ttl: number, value: string) => {
+        entries.set(key, value);
+      }),
+    };
+    mocks.redis.mockResolvedValue(redis);
+    vi.stubEnv("PERIOD_BASE_CACHE_ENV", "test");
+    try {
+      await queryAccountGainLossSummaries({
+        accountBookId: "book",
+        type: "ASSET",
+        accountState: "active",
+      });
+      await queryAccountGainLossSummaries({
+        accountBookId: "book",
+        type: "LIABILITY",
+        accountState: "active",
+      });
+      expect(mocks.snapshot).toHaveBeenCalledTimes(1);
+      expect(mocks.transactions).toHaveBeenCalledTimes(1);
+      expect(mocks.calculate).toHaveBeenCalledTimes(1);
+      expect(redis.get).toHaveBeenCalledTimes(2);
+      expect(redis.setEx).toHaveBeenCalledTimes(1);
+      await queryAccountGainLoss({
+        accountBookId: "book",
+        accountId: "a",
+        includeDetails: true,
+      });
+      expect(mocks.calculate).toHaveBeenCalledTimes(2);
+      expect(redis.get).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it.each(["identity", "timeSeries", "fallback", "provider", "missing"])(
+    "tracks %s dependencies for both opening/closing rates and execution conversions",
+    async (source) => {
+      const permanent = source === "identity" || source === "timeSeries";
+      for (const dependency of ["rate", "conversion"]) {
+        mocks.rate.mockResolvedValue({
+          rate: toMoney(1),
+          source: dependency === "rate" ? source : "identity",
+        });
+        mocks.conversion.mockResolvedValue({
+          value: toMoney(2),
+          source: dependency === "conversion" ? source : "identity",
+        });
+        const calculated = await mocks.calculate();
+        mocks.calculate.mockImplementationOnce(async (args) => {
+          const input = {
+            unit: "CURRENCY",
+            currency: "USD",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            date: new Date("2026-01-01Z"),
+          };
+          expect(await args.resolveRate(input)).toEqual(toMoney(1));
+          expect(
+            await args.convertBookingToReference({
+              ...input,
+              id: "booking",
+              value: toMoney(2),
+            }),
+          ).toEqual(toMoney(2));
+          return calculated;
+        });
+        const range = await loadAccountGainLossRange({
+          accountBookId: "book",
+          asOfDate: new Date("2026-05-11Z"),
+        });
+        expect(range.cacheableFromPermanentValuationCache).toBe(permanent);
+        expect(range.revision).toBe("revision");
+      }
+    },
+  );
 });
