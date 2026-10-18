@@ -81,6 +81,98 @@ describe("getRateWithBacktracking", () => {
     expect(result).toEqual({ rate: 1.234, source: "timeSeries" });
   });
 
+  test("detailed lookup treats a quote covering the publication cutoff as stable", async () => {
+    const deps = createDeps();
+    const latestFetchableDate = new Date("2026-05-11Z");
+    deps.getCachedRate.mockResolvedValueOnce({
+      rate: 120,
+      timestamp: latestFetchableDate.getTime(),
+    });
+    const fetchRate = vi.fn();
+    expect(
+      await getRateWithBacktrackingDetails(
+        {
+          seriesKey: "valuation:key",
+          backtrackedFallbackCacheKey: "valuation:fallback:key",
+          date: new Date("2026-05-12Z"),
+          latestFetchableDate,
+          fetchRate,
+        },
+        deps,
+      ),
+    ).toEqual({ rate: 120, source: "timeSeries" });
+    expect(fetchRate).not.toHaveBeenCalled();
+    expect(deps.clearBacktrackedFallbackFromCache).toHaveBeenCalledWith(
+      "valuation:fallback:key",
+    );
+  });
+
+  test.each(["failed probes", "cooldown skips", "explicit no data"])(
+    "marks an older TimeSeries quote reached through %s as temporary fallback",
+    async (kind) => {
+      const deps = createDeps();
+      deps.getCachedRate.mockResolvedValueOnce({
+        rate: 110,
+        timestamp: Date.UTC(2026, 4, 8),
+      });
+      deps.hasRecentMissedAttemptForSeriesTimestamp.mockResolvedValue(
+        kind === "cooldown skips",
+      );
+      const fetchRate = vi
+        .fn()
+        .mockResolvedValue(
+          kind === "explicit no data" ? NO_DATA_FETCH_RESULT : null,
+        );
+      const result = await getRateWithBacktrackingDetails(
+        {
+          seriesKey: "valuation:key",
+          backtrackedFallbackCacheKey: "valuation:fallback:key",
+          date: new Date("2026-05-12Z"),
+          latestFetchableDate: new Date("2026-05-11Z"),
+          stopOnExplicitNoData: false,
+          fetchRate,
+        },
+        deps,
+      );
+      expect(result).toEqual({ rate: 110, source: "fallback" });
+      expect(fetchRate).toHaveBeenCalledTimes(
+        kind === "cooldown skips" ? 0 : 3,
+      );
+      expect(deps.storeBacktrackedFallbackInCache).toHaveBeenCalledWith(
+        "valuation:fallback:key",
+        { kind: "rate", rate: 110, sourceTimestamp: Date.UTC(2026, 4, 8) },
+        3600,
+      );
+    },
+  );
+
+  test("marks an older TimeSeries quote beyond the search window as temporary fallback", async () => {
+    const deps = createDeps();
+    deps.getCachedRate.mockResolvedValueOnce({
+      rate: 100,
+      timestamp: Date.UTC(2026, 3, 30),
+    });
+    const fetchRate = vi.fn().mockResolvedValue(null);
+    expect(
+      await getRateWithBacktrackingDetails(
+        {
+          seriesKey: "valuation:key",
+          backtrackedFallbackCacheKey: "valuation:fallback:key",
+          date: new Date("2026-05-12Z"),
+          latestFetchableDate: new Date("2026-05-11Z"),
+          fetchRate,
+        },
+        deps,
+      ),
+    ).toEqual({ rate: 100, source: "fallback" });
+    expect(fetchRate).toHaveBeenCalledTimes(4);
+    expect(deps.storeBacktrackedFallbackInCache).toHaveBeenCalledWith(
+      "valuation:fallback:key",
+      { kind: "rate", rate: 100, sourceTimestamp: Date.UTC(2026, 3, 30) },
+      3600,
+    );
+  });
+
   test("detailed lookup marks fallback hits as fallback source", async () => {
     const deps = createDeps();
     deps.getBacktrackedFallbackFromCache.mockResolvedValueOnce({

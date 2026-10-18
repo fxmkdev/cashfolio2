@@ -201,7 +201,8 @@ export async function getRateWithBacktrackingDetails(
         },
         deps.backtrackedFallbackTtlSeconds,
       );
-      return { rate: cached.rate, source: "timeSeries" };
+      // An older stored quote is temporary until newer fetchable days are available.
+      return { rate: cached.rate, source: "fallback" };
     }
 
     const hasRecentMissedAttempt =
@@ -298,7 +299,7 @@ export async function getRateWithBacktrackingDetails(
       },
       deps.backtrackedFallbackTtlSeconds,
     );
-    return { rate: cached.rate, source: "timeSeries" };
+    return { rate: cached.rate, source: "fallback" };
   }
 
   return { rate: null, source: "missing" };

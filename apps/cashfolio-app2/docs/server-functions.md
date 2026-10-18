@@ -231,8 +231,8 @@ namespaces and preserves global valuation caches.
   - Cleanup hint (never used to determine cache validity):
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
 - History metrics entry:
-  `period:history:metrics:v6:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
-- Base-data v8 and History metrics v6 store monetary values as tagged exact
+  `period:history:metrics:v7:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
+- Base-data v8 and History metrics v7 store monetary values as tagged exact
   decimal strings through `src/server/money-cache-codec.ts`
   (`{ __cashfolioDecimal: "..." }`). Dates retain their existing
   `{ __cashfolioDateMs: milliseconds }` representation. Reads reconstruct
@@ -269,9 +269,11 @@ namespaces and preserves global valuation caches.
   retry loop. This handles book/child deadlocks introduced by the revision
   triggers without replaying committed writes or external effects.
 - History metrics entries are written only when every valuation dependency came
-  from identity conversion or the long-lived Redis TimeSeries valuation cache.
-  Metrics that needed provider fetches, short-lived fallback entries, or missing
-  valuation results are returned but not persisted as derived History metrics.
+  from identity conversion or stable Redis TimeSeries hits covering the
+  requested day or the publication-window cutoff. Temporarily backtracked older
+  quotes are classified as fallback and do not qualify. Metrics that needed
+  provider fetches, short-lived fallback entries, or missing valuation results
+  are returned but not persisted as derived History metrics.
 - `updateAccountBookSettings` (`src/server/accounts/account-book-settings.ts`)
   also invalidates period caches when `referenceCurrency` or `startDate`
   changes.
@@ -498,8 +500,8 @@ valuation-cacheability tracking.
 Base-data v8 adds required `executionResidualTransactions` and does not reuse v7
 entries. The existing Decimal/date codec, 24-hour TTL, 2 MiB size limit, and
 database revision invalidation apply to these raw inputs. Converted residual
-results remain outside the base-data cache. History metrics stay at v6 because
-this refactor preserves their response shape and accounting semantics. No schema
+results remain outside the base-data cache. History metrics use a separately
+versioned cache; v7 excludes temporary backtracked valuations. No schema
 migration is required. This boundary removes live database queries during
 calculations. Each uncached period dataset is loaded in one read-only PostgreSQL
 `RepeatableRead` transaction with a 30-second timeout. Account-book settings,
@@ -600,7 +602,7 @@ are unchanged, and authorization runs before cache access. Ledger summaries and
 calculation drawers bypass this cache.
 
 - Key:
-  `account:gain-loss:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{asOfDate}:{latestFetchableDate}`.
+  `account:gain-loss:v2:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{asOfDate}:{latestFetchableDate}`.
   Dates are UTC `YYYY-MM-DD`; both days are captured before loading. The latest
   fetchable day uses the shared valuation publication-window rules.
 - TTL is 24 hours; maximum encoded size is 512 KiB. The shared Decimal codec
@@ -611,7 +613,7 @@ calculation drawers bypass this cache.
   Inflight promise deduplication uses the entire key, preventing requests after
   a mutation from joining an older calculation. Only the DB snapshot runs inside
   the existing read-only repeatable-read transaction; valuation runs afterwards.
-- Persistence requires identity/TimeSeries valuation sources, a snapshot
+- Persistence requires identity/stable TimeSeries valuation sources, a snapshot
   revision matching the lookup revision and a final DB revision read, and an
   unchanged publication cutoff. Provider/fallback/missing results still answer
   the request without persistence. Database-only completeness diagnostics retain
@@ -626,3 +628,9 @@ calculation drawers bypass this cache.
 A warm hit skips historical DB inputs, valuation, and FIFO replay. A cold or
 non-cacheable request still performs the full replay; this cache does not add
 incremental FIFO snapshots or change pricing/concurrency semantics.
+
+G/L summary v2 and History metrics v7 do not reuse their previous versions:
+older entries may have persisted temporarily backtracked TimeSeries quotes as
+stable valuations. They expire naturally within 24 hours and remain covered by
+version-independent book/user deletion and restore cleanup. Global price/rate
+series and their fallback/cooldown caches are preserved.

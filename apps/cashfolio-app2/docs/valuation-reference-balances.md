@@ -146,8 +146,12 @@ values use the shared exact Decimal codec. Book/user deletion and restore
 cleanup include this cache family across all versions and environments.
 
 Persistence follows History's valuation-source policy: every dependency must
-come from identity conversion or Redis TimeSeries. Provider, temporary fallback,
-and missing valuations are returned for the request but not persisted. The
+come from identity conversion or a stable Redis TimeSeries hit covering the
+requested day or publication-window cutoff. An older TimeSeries quote reached
+after unsuccessful newer probes is a temporary fallback and does not qualify.
+Provider, temporary fallback, and missing valuations are returned for the
+request but not persisted. G/L cache v2 ignores v1 entries that could contain
+such backtracked valuations; the underlying valuation caches are preserved. The
 snapshot revision must match the lookup revision and a final committed-revision
 read, and the publication cutoff must remain unchanged during calculation.
 Overlapping loads share an in-process promise scoped to the complete cache key.

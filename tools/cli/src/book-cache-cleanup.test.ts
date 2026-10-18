@@ -16,7 +16,7 @@ function matches(pattern: string, key: string) {
 test("clears legacy and all versioned book caches while retaining global caches", async () => {
   const removed = [
     "account-book:legacy:balance",
-    ...["v1", "v8", "v99"].flatMap((v) => [
+    ...["v1", "v2", "v6", "v7", "v8", "v99"].flatMap((v) => [
       `period:base:${v}:local:book-1:revision:2026-01`,
       `period:base:index:${v}:preview:book-2:revision`,
       `period:base:generation:${v}:staging:book-3`,

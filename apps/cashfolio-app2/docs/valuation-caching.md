@@ -189,10 +189,16 @@ Plain-language summary:
 - Fallback answers: "What should we return for this requested day right now?"
 - Miss-cooldown answers: "Should we skip retrying this provider day for now?"
 
-Identity conversions and TimeSeries values are considered permanent enough for
-derived History metrics caching. One-hour fallback entries and provider results
-can still answer the current request, but History metrics produced from them are
-not persisted in the derived metrics cache.
+Identity conversions and stable TimeSeries hits are eligible for derived History
+metrics and Accounts-list G/L summary caching. `timeSeries` means an exact
+requested-day hit or a cached quote covering
+`min(requestedDay, latestFetchableDay)`. If newer probes fail, hit cooldowns, or
+exhaust the search window, an older TimeSeries quote is classified as
+`fallback`, including on the first request before its fallback entry exists. Its
+storage in TimeSeries does not make the requested valuation stable. One-hour
+fallback entries, these temporarily backtracked quotes, and provider results can
+still answer the current request, but derived results using them are not
+persisted.
 
 ## Core Lookup Algorithm
 
@@ -217,7 +223,7 @@ Behavior for a request date:
      - otherwise clear fallback and continue
 7. Backtrack day-by-day up to `MAX_BACKTRACK_DAYS` (30):
    - if an older cached TimeSeries point is now in range, reuse and store
-     fallback `kind: "rate"`
+     fallback `kind: "rate"` with source `fallback`
    - if miss-cooldown key exists for that day, skip provider call and continue
    - otherwise call provider via in-flight dedup map (`series + timestamp`)
    - on numeric rate:
@@ -234,7 +240,7 @@ Behavior for a request date:
      - store miss-cooldown key for that day
      - continue backtracking
 8. If loop ends and an older cached TimeSeries point exists, store fallback and
-   return it.
+   return it with source `fallback`.
 9. Otherwise return `null`.
 
 ```mermaid
