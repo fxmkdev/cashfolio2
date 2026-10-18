@@ -15,8 +15,8 @@ vi.mock("../../redis.server", () => ({ getRedisClient: mocks.redis }));
 vi.mock("../../prisma.server", () => ({
   prisma: { accountBook: { findUniqueOrThrow: mocks.revision } },
 }));
-vi.mock("./account-gain-loss-range.server", () => ({
-  loadAccountGainLossRange: mocks.load,
+vi.mock("./account-gain-loss-basis-cache.server", () => ({
+  loadAccountGainLossSummaryRange: mocks.load,
 }));
 import { getOrLoadAccountGainLossSummaries } from "./account-gain-loss-cache.server";
 import { queryAccountGainLossSummaries } from "./account-gain-loss.server";

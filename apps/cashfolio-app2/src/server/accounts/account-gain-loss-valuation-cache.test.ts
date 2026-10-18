@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
     accountBook: { findUniqueOrThrow: vi.fn() },
     account: { findMany: vi.fn() },
     accountGroup: { findMany: vi.fn() },
-    booking: { groupBy: vi.fn(), findMany: vi.fn() },
+    booking: { groupBy: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
     transaction: { findMany: vi.fn() },
   },
   snapshot: vi.fn(),
@@ -121,6 +121,7 @@ beforeEach(() => {
     { accountId: "holding", _sum: { value: "1" } },
   ]);
   mocks.db.booking.findMany.mockResolvedValue([]);
+  mocks.db.booking.findFirst.mockResolvedValue(null);
   mocks.db.transaction.findMany.mockResolvedValue([]);
   mocks.securityProvider.mockResolvedValue(null);
 });
@@ -135,6 +136,9 @@ describe("summary persistence with real FIFO and valuation backtracking", () => 
     expect(first.total.summary.totalGainLoss).toBe(10);
     expect(mocks.securityProvider).toHaveBeenCalledTimes(3);
     expect(mocks.values.has(summaryKey)).toBe(false);
+    expect(
+      mocks.values.has("account:gain-loss-basis:v1:test:book:revision:empty"),
+    ).toBe(true);
     expect((await ledger()).summary.totalGainLoss).toBe(10);
     expect(mocks.values.has(summaryKey)).toBe(false);
 

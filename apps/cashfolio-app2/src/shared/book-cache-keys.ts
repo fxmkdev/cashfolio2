@@ -3,6 +3,7 @@
 const PERIOD_BASE_CACHE_FAMILY = "period:base";
 const PERIOD_BASE_CACHE_INDEX_FAMILY = `${PERIOD_BASE_CACHE_FAMILY}:index`;
 const PERIOD_CACHE_GENERATION_FAMILY = `${PERIOD_BASE_CACHE_FAMILY}:generation`;
+const ACCOUNT_GAIN_LOSS_BASIS_CACHE_FAMILY = "account:gain-loss-basis";
 const ACCOUNT_GAIN_LOSS_CACHE_FAMILY = "account:gain-loss";
 const PERIOD_HISTORY_METRICS_CACHE_FAMILY = "period:history:metrics";
 
@@ -45,6 +46,12 @@ export function getAccountGainLossCacheEntryKey(
   return `${ACCOUNT_GAIN_LOSS_CACHE_FAMILY}:v2:${args.cacheEnv}:${args.accountBookId}:${args.generation}:${args.asOfDate}:${args.latestFetchableDate}`;
 }
 
+export function getAccountGainLossBasisCacheEntryKey(
+  args: BookCacheGenerationScope & { watermark: string },
+): string {
+  return `${ACCOUNT_GAIN_LOSS_BASIS_CACHE_FAMILY}:v1:${args.cacheEnv}:${args.accountBookId}:${args.generation}:${args.watermark}`;
+}
+
 function getPeriodCacheCleanupPatterns(bookPattern: string): string[] {
   return [
     `${PERIOD_BASE_CACHE_FAMILY}:v*:*:${bookPattern}:*`,
@@ -52,6 +59,7 @@ function getPeriodCacheCleanupPatterns(bookPattern: string): string[] {
     `${PERIOD_CACHE_GENERATION_FAMILY}:v*:*:${bookPattern}`,
     `${PERIOD_HISTORY_METRICS_CACHE_FAMILY}:v*:*:${bookPattern}:*`,
     `${ACCOUNT_GAIN_LOSS_CACHE_FAMILY}:v*:*:${bookPattern}:*`,
+    `${ACCOUNT_GAIN_LOSS_BASIS_CACHE_FAMILY}:v*:*:${bookPattern}:*`,
   ];
 }
 
@@ -71,6 +79,7 @@ export function isBookScopedPeriodCacheKey(
     PERIOD_CACHE_GENERATION_FAMILY,
     PERIOD_HISTORY_METRICS_CACHE_FAMILY,
     ACCOUNT_GAIN_LOSS_CACHE_FAMILY,
+    ACCOUNT_GAIN_LOSS_BASIS_CACHE_FAMILY,
   ].some((family) => {
     const prefix = `${family}:`;
     if (!key.startsWith(prefix)) return false;

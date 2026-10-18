@@ -9,6 +9,7 @@ import {
   loadAccountGainLossRange,
   resolveAccountGainLossDate,
 } from "./account-gain-loss-range.server";
+import { loadAccountGainLossSummaryRange } from "./account-gain-loss-basis-cache.server";
 import { getOrLoadAccountGainLossSummaries } from "./account-gain-loss-cache.server";
 
 export { resolveAccountGainLossDate } from "./account-gain-loss-range.server";
@@ -59,7 +60,11 @@ export async function queryAccountGainLoss(args: {
   period?: string;
   includeDetails?: boolean;
 }) {
-  const range = await loadAccountGainLossRange({
+  const range = await (
+    args.includeDetails
+      ? loadAccountGainLossRange
+      : loadAccountGainLossSummaryRange
+  )({
     ...args,
     asOfDate: resolveAccountGainLossDate(args.period),
     detailAccountId: args.includeDetails ? args.accountId : undefined,

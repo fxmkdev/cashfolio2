@@ -175,3 +175,21 @@ same range calculation. Report and History retain their existing period meaning;
 accumulated realised/unrealised values are not sums of period splits. Opening an
 event in the ledger closes the calculation drawer before navigating to the
 transaction and clearing the ledger's period filter.
+
+### Historical basis reuse
+
+Accounts-list and ledger summaries share a Redis cache of complete historical
+cost bases: realised G/L and remaining FIFO lots. Closing prices are resolved
+separately, so a missing/temporary closing valuation or a new day does not
+require historical replay when the effective bookings are unchanged. The
+existing final-summary cache remains above this layer for Accounts-list hits.
+Calculation drawers retain independent full replay and the same financial
+semantics.
+
+Basis keys use the book revision and latest effective booking date. Changes to
+bookings/settings or future bookings becoming effective force a rebuild. Only
+complete bases from stable historical valuation sources persist; recent
+non-identity execution prices cannot persist until their valuation dates pass
+the publication cutoff. Cache failures fall back to full calculation. See
+[Accumulated G/L historical basis cache](server-functions.md#accumulated-gl-historical-basis-cache)
+for limits, snapshot validation, and cleanup behavior.

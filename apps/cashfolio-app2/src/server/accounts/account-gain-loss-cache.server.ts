@@ -9,7 +9,7 @@ import {
   getPeriodCacheGeneration,
 } from "../period/cache/period-cache";
 import { createValuationLookupContext } from "../valuation/lookup-context";
-import { loadAccountGainLossRange } from "./account-gain-loss-range.server";
+import { loadAccountGainLossSummaryRange } from "./account-gain-loss-basis-cache.server";
 import {
   type AccountGainLossCacheData,
   isAccountGainLossCacheData,
@@ -28,7 +28,8 @@ export async function getOrLoadAccountGainLossSummaries(
   const asOfDate = startOfUtcDay(now);
   const latestFetchableDate =
     createValuationLookupContext(now).latestFetchableDate;
-  const load = () => loadAccountGainLossRange({ accountBookId, asOfDate });
+  const load = () =>
+    loadAccountGainLossSummaryRange({ accountBookId, asOfDate });
   const redis = await getRedisClient();
   if (!redis) return toAccountGainLossCacheData(await load());
 

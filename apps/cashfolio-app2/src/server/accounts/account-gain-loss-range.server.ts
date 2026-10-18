@@ -18,7 +18,11 @@ import type {
   DecimalValuationRateLookupResult,
   ValuationRateSource,
 } from "../valuation/types";
-import { calculateAccountGainLoss } from "./account-gain-loss-calculation.server";
+import { createValuationLookupContext } from "../valuation/lookup-context";
+import {
+  calculateAccountGainLoss,
+  type AccountGainLossBasis,
+} from "./account-gain-loss-calculation.server";
 
 export function resolveAccountGainLossDate(period?: string, now = new Date()) {
   const today = startOfUtcDay(now);
@@ -123,12 +127,25 @@ async function loadAccountGainLossInputs(
   };
 }
 
+export type AccountGainLossBasisRange = Pick<
+  Awaited<ReturnType<typeof loadAccountGainLossInputs>>,
+  "revision" | "accounts" | "groups" | "startDate" | "referenceCurrency"
+> & {
+  watermark: string;
+  basis: AccountGainLossBasis;
+};
+
 export async function loadAccountGainLossRange(args: {
   accountBookId: string;
   asOfDate: Date;
   detailAccountId?: string;
+  onBasis?: (
+    range: AccountGainLossBasisRange,
+    cacheable: boolean,
+  ) => Promise<void>;
 }) {
   const {
+    watermark,
     revision,
     accounts,
     groups,
@@ -142,7 +159,21 @@ export async function loadAccountGainLossRange(args: {
   } = await prisma.$transaction(
     async (tx) => {
       await tx.$executeRaw`SET TRANSACTION READ ONLY`;
-      return loadAccountGainLossInputs(args, tx);
+      const inputs = await loadAccountGainLossInputs(args, tx);
+      const lastBooking = args.onBasis
+        ? await tx.booking.findFirst({
+            where: {
+              accountBookId: args.accountBookId,
+              date: { lt: addUtcDays(args.asOfDate, 1) },
+            },
+            orderBy: { date: "desc" },
+            select: { date: true },
+          })
+        : null;
+      return {
+        ...inputs,
+        watermark: lastBooking?.date.toISOString() ?? "empty",
+      };
     },
     { isolationLevel: "RepeatableRead", timeout: 30_000 },
   );
@@ -150,10 +181,19 @@ export async function loadAccountGainLossRange(args: {
     string,
     Promise<DecimalValuationRateLookupResult>
   >();
+  const latestFetchableDate =
+    createValuationLookupContext().latestFetchableDate;
+  let basisPhase = true;
+  let cacheableBasis = true;
   let cacheableFromPermanentValuationCache = true;
-  const markSource = (source: ValuationRateSource) => {
-    if (source !== "identity" && source !== "timeSeries")
-      cacheableFromPermanentValuationCache = false;
+  const markSource = (source: ValuationRateSource, date: Date) => {
+    const permanent = source === "identity" || source === "timeSeries";
+    if (!permanent) cacheableFromPermanentValuationCache = false;
+    if (
+      basisPhase &&
+      (!permanent || (source !== "identity" && date > latestFetchableDate))
+    )
+      cacheableBasis = false;
   };
   const calculated = await calculateAccountGainLoss({
     holdingAccounts,
@@ -173,13 +213,28 @@ export async function loadAccountGainLossRange(args: {
     initialRateDate: addUtcDays(startDate, -1),
     periodEnd: asOfDate,
     detailAccountId: args.detailAccountId,
+    onBasis: async (basis) => {
+      await args.onBasis?.(
+        {
+          revision,
+          accounts,
+          groups,
+          startDate,
+          referenceCurrency,
+          watermark,
+          basis,
+        },
+        cacheableBasis && asOfDate >= startDate,
+      );
+      basisPhase = false;
+    },
     resolveRate: async (input) => {
       const result = await getUnitToReferenceExchangeRateDetails({
         ...input,
         referenceCurrency,
         exchangeRateByKey,
       });
-      markSource(result.source);
+      markSource(result.source, input.date);
       return result.rate;
     },
     convertBookingToReference: async (booking) => {
@@ -188,10 +243,39 @@ export async function loadAccountGainLossRange(args: {
         referenceCurrency,
         exchangeRateByKey,
       });
-      markSource(result.source);
+      markSource(result.source, booking.date);
       return result.value;
     },
   });
+  return finishAccountGainLossRange({
+    calculated,
+    revision,
+    accounts,
+    groups,
+    referenceCurrency,
+    startDate,
+    asOfDate,
+    cacheableFromPermanentValuationCache,
+  });
+}
+
+export function finishAccountGainLossRange(
+  args: Omit<AccountGainLossBasisRange, "basis" | "watermark"> & {
+    calculated: Awaited<ReturnType<typeof calculateAccountGainLoss>>;
+    asOfDate: Date;
+    cacheableFromPermanentValuationCache: boolean;
+  },
+) {
+  const {
+    calculated,
+    revision,
+    accounts,
+    groups,
+    referenceCurrency,
+    startDate,
+    asOfDate,
+    cacheableFromPermanentValuationCache,
+  } = args;
   for (const account of accounts) {
     if (calculated.results.has(account.id)) continue;
     const applicable = !(
