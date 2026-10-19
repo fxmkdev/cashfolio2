@@ -35,6 +35,7 @@ import type {
   TreeRow,
 } from "./-page-types";
 import type { loadAccountsPageData } from "./-page-loader";
+import { AccountGainLossDetails } from "./-gain-loss-header";
 
 type AccountsPageLoaderData = Awaited<ReturnType<typeof loadAccountsPageData>>;
 type RowTarget = {
@@ -240,34 +241,40 @@ export function AccountsPageView({
           </Button>
         </Alert>
       ) : null}
-      <DataGrid
-        containerStyle={{ flex: 1, minHeight: 0 }}
-        rowData={rows}
-        columnDefs={columnDefs}
-        autoGroupColumnDef={{
-          headerName: "Name",
-          field: "name",
-          flex: 1,
-          minWidth: 320,
-          filter: "agTextColumnFilter",
-          valueGetter: ({ data }) => data?.name,
-          cellRendererParams: {
-            suppressCount: true,
-          },
-        }}
-        treeData={true}
-        treeDataParentIdField="parentId"
-        pinnedBottomRowData={pinnedBottomRowData}
-        onGridReady={onGridReady}
-        isGroupOpenByDefault={isGroupOpenByDefault}
-        onRowGroupOpened={onRowGroupOpened}
-        getRowId={({ data }) => data.id}
-        onRowDoubleClicked={(e) => {
-          if (e.data?.nodeType === "account") {
-            onOpenLedger(e.data.id);
-          }
-        }}
-      />
+      <AccountGainLossDetails
+        data={gainLoss?.data}
+        loading={gainLoss?.loading ?? false}
+        isArchivedMode={isArchivedMode}
+      >
+        <DataGrid
+          containerStyle={{ flex: 1, minHeight: 0 }}
+          rowData={rows}
+          columnDefs={columnDefs}
+          autoGroupColumnDef={{
+            headerName: "Name",
+            field: "name",
+            flex: 1,
+            minWidth: 320,
+            filter: "agTextColumnFilter",
+            valueGetter: ({ data }) => data?.name,
+            cellRendererParams: {
+              suppressCount: true,
+            },
+          }}
+          treeData={true}
+          treeDataParentIdField="parentId"
+          pinnedBottomRowData={pinnedBottomRowData}
+          onGridReady={onGridReady}
+          isGroupOpenByDefault={isGroupOpenByDefault}
+          onRowGroupOpened={onRowGroupOpened}
+          getRowId={({ data }) => data.id}
+          onRowDoubleClicked={(e) => {
+            if (e.data?.nodeType === "account") {
+              onOpenLedger(e.data.id);
+            }
+          }}
+        />
+      </AccountGainLossDetails>
 
       {!isArchivedMode && (
         <>

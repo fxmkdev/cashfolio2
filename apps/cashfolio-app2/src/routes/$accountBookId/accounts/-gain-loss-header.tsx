@@ -7,25 +7,38 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { IconInfoCircle } from "@tabler/icons-react";
+import {
+  createContext,
+  useContext,
+  useRef,
+  useState,
+  type ReactNode,
+  type Ref,
+} from "react";
 import type { CustomInnerHeaderGroupProps } from "ag-grid-react";
 import { formatUtcDateForLocale } from "@/shared/date";
 import { useUserLocale } from "@/user-locale-context";
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import type { AccountsGridRow } from "./-page-types";
 
-export type GainLossHeaderParams = {
-  data?: Pick<AccountGainLossSummaries, "startDate" | "asOfDate">;
-  loading: boolean;
-  isArchivedMode: boolean;
-};
+const GainLossDetailsTargetContext = createContext<
+  { targetRef: Ref<HTMLButtonElement>; toggle: () => void } | undefined
+>(undefined);
 
-export function AccountGainLossHeader({
-  displayName,
+export function AccountGainLossDetails({
   data,
   loading,
   isArchivedMode,
-}: CustomInnerHeaderGroupProps<AccountsGridRow> & GainLossHeaderParams) {
+  children,
+}: {
+  data?: Pick<AccountGainLossSummaries, "startDate" | "asOfDate">;
+  loading: boolean;
+  isArchivedMode: boolean;
+  children: ReactNode;
+}) {
   const locale = useUserLocale();
+  const targetRef = useRef<HTMLButtonElement>(null);
+  const [opened, setOpened] = useState(false);
   const startDate = data
     ? formatUtcDateForLocale(new Date(data.startDate), locale)
     : undefined;
@@ -34,37 +47,36 @@ export function AccountGainLossHeader({
     : undefined;
 
   return (
-    <Group gap={4} wrap="nowrap" miw={0}>
-      <Text size="sm" truncate>
-        {displayName}
-      </Text>
+    <GainLossDetailsTargetContext.Provider
+      value={{ targetRef, toggle: () => setOpened((value) => !value) }}
+    >
+      {/* Keep the popup visible while AG Grid replaces its trigger. */}
       <Popover
+        opened={opened}
+        onChange={setOpened}
         width={340}
         position="bottom-end"
         withArrow
         shadow="md"
         withinPortal
         trapFocus
-        returnFocus
+        returnFocus={false}
+        closeOnEscape={false}
+        hideDetached={false}
         middlewares={{ flip: true, shift: { padding: 12 } }}
       >
-        <Popover.Target>
-          <Tooltip label="Show gain/loss details">
-            <ActionIcon
-              aria-label="Show gain/loss details"
-              size="sm"
-              variant="subtle"
-              onPointerDown={(event) => event.stopPropagation()}
-              onMouseDown={(event) => event.stopPropagation()}
-            >
-              <IconInfoCircle size={16} />
-            </ActionIcon>
-          </Tooltip>
-        </Popover.Target>
+        {children}
         <Popover.Dropdown
           aria-label="Gain/loss details"
           aria-labelledby={undefined}
           maw="calc(100vw - 24px)"
+          onKeyDownCapture={(event) => {
+            if (event.key !== "Escape") return;
+            event.stopPropagation();
+            setOpened(false);
+            // Grid updates can replace the trigger while the dialog is open.
+            targetRef.current?.focus({ preventScroll: true });
+          }}
         >
           <Stack gap="xs">
             <Text size="sm">
@@ -90,6 +102,33 @@ export function AccountGainLossHeader({
           </Stack>
         </Popover.Dropdown>
       </Popover>
+    </GainLossDetailsTargetContext.Provider>
+  );
+}
+
+export function AccountGainLossHeader({
+  displayName,
+}: CustomInnerHeaderGroupProps<AccountsGridRow>) {
+  const details = useContext(GainLossDetailsTargetContext);
+  return (
+    <Group gap={4} wrap="nowrap" miw={0}>
+      <Text size="sm" truncate>
+        {displayName}
+      </Text>
+      <Popover.Target ref={details?.targetRef}>
+        <Tooltip label="Show gain/loss details">
+          <ActionIcon
+            aria-label="Show gain/loss details"
+            size="sm"
+            variant="subtle"
+            onClick={details?.toggle}
+            onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <IconInfoCircle size={16} />
+          </ActionIcon>
+        </Tooltip>
+      </Popover.Target>
     </Group>
   );
 }

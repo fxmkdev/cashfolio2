@@ -124,7 +124,9 @@ and the explanation of active/archived totals and incomplete data. Calculation
 dates appear only in the popover, so the lazy summary request does not change
 the header height or move account rows. Details remain accessible while loading,
 with “Loading calculation dates…” before dates arrive and “Dates unavailable”
-after failure. Failures retain the page's error message and retry action.
+after failure. Failures retain the page's error message and retry action. An
+open details popover updates in place when loading completes, retaining keyboard
+focus.
 
 ![Account list with a compact G/L header and info button](images/account-gl-header-after.png)
 

@@ -864,6 +864,77 @@ export const GainLossLoadingToReady: Story = {
   },
 };
 
+export const GainLossCompletesWithDetailsOpen: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      gainLossState="loading"
+      toggleGainLossLoading
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const header = await canvas.findByRole("columnheader", {
+      name: /G\/L Since Start \(CHF\)/,
+    });
+    header.focus();
+    await userEvent.tab();
+    await userEvent.keyboard("{Enter}");
+    const details = await findVisibleDialog(body, "Gain/loss details");
+    expect(details).toHaveTextContent("Loading calculation dates…");
+    await waitFor(() =>
+      expect(details.contains(canvasElement.ownerDocument.activeElement)).toBe(
+        true,
+      ),
+    );
+
+    // Resolve the simulated request without an outside pointer event or focus change.
+    const toggleLoading = canvas.getByRole("button", {
+      name: "Toggle gain/loss loading",
+    });
+    toggleLoading.click();
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector(
+          '.ag-row[row-index="0"] [col-id="totalGainLoss"]',
+        ),
+      ).toHaveTextContent("10.00"),
+    );
+    await waitFor(() =>
+      expect(details).toHaveTextContent("Since 1/1/2026 · As of 3/31/2026"),
+    );
+    expect(details.isConnected).toBe(true);
+    expect(body.getByRole("dialog", { name: "Gain/loss details" })).toBe(
+      details,
+    );
+    expect(details.contains(canvasElement.ownerDocument.activeElement)).toBe(
+      true,
+    );
+
+    toggleLoading.click();
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector(
+          '.ag-row[row-index="0"] [col-id="totalGainLoss"] .mantine-Loader-root',
+        ),
+      ).toBeVisible(),
+    );
+    await waitFor(() =>
+      expect(details).toHaveTextContent("Loading calculation dates…"),
+    );
+    expect(details).not.toHaveTextContent("Since 1/1/2026");
+    expect(details.contains(canvasElement.ownerDocument.activeElement)).toBe(
+      true,
+    );
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(details).not.toBeVisible());
+    expect(
+      canvas.getByRole("button", { name: "Show gain/loss details" }),
+    ).toHaveFocus();
+  },
+};
+
 export const GainLossFailure: Story = {
   render: () => (
     <AccountsPageStoryHarness initialMode="active" gainLossState="error" />
