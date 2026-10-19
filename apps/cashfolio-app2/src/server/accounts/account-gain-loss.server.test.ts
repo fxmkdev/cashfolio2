@@ -32,6 +32,11 @@ vi.mock(
 vi.mock("./account-gain-loss-calculation.server", () => ({
   calculateAccountGainLoss: mocks.calculate,
 }));
+vi.mock("./account-gain-loss-basis-cache.server", async () => {
+  const { loadAccountGainLossRange } =
+    await import("./account-gain-loss-range.server");
+  return { loadAccountGainLossSummaryRange: loadAccountGainLossRange };
+});
 vi.mock("../period/period-conversion", () => ({
   convertBookingValueToReferenceDetails: mocks.conversion,
   getUnitToReferenceExchangeRateDetails: mocks.rate,

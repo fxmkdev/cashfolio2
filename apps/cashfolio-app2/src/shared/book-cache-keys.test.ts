@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getAccountGainLossCacheEntryKey,
+  getAccountGainLossBasisCacheEntryKey,
   getPeriodBaseCacheEntryKey,
   getPeriodBaseCacheIndexKey,
   getPeriodCacheGenerationKey,
@@ -31,6 +32,7 @@ const fixtureKeys = [
     `period:base:generation:${version}:local:book-1`,
     `period:history:metrics:${version}:preview:book-1:revision:2026-01:total`,
     `account:gain-loss:${version}:preview:book-1:revision:2026-05-11:2026-05-10`,
+    `account:gain-loss-basis:${version}:preview:book-1:revision:2026-05-10`,
   ]),
 ];
 const otherBookKeys = fixtureKeys.map((key) =>
@@ -46,6 +48,9 @@ const preservedKeys = [
 ];
 
 it("preserves deployed cache key formats and versions", () => {
+  expect(
+    getAccountGainLossBasisCacheEntryKey({ ...scope, watermark: "empty" }),
+  ).toBe("account:gain-loss-basis:v1:local:book-1:revision-1:empty");
   expect(
     getAccountGainLossCacheEntryKey({
       ...scope,

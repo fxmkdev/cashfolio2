@@ -598,8 +598,9 @@ deduplication remain shared.
 summary dataset, including leaf diagnostics and account/group view metadata.
 Filtering by Asset/Liability and active/archived state and Decimal group/footer
 aggregation happen after retrieval. Public server-function inputs and responses
-are unchanged, and authorization runs before cache access. Ledger summaries and
-calculation drawers bypass this cache.
+are unchanged, and authorization runs before cache access. Ledger summaries
+bypass this final-summary cache but share the historical basis cache below.
+Calculation drawers bypass both caches.
 
 - Key:
   `account:gain-loss:v2:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{asOfDate}:{latestFetchableDate}`.
@@ -625,9 +626,58 @@ calculation drawers bypass this cache.
   key-family helpers include this cache in book/user deletion and restore
   cleanup.
 
-A warm hit skips historical DB inputs, valuation, and FIFO replay. A cold or
-non-cacheable request still performs the full replay; this cache does not add
-incremental FIFO snapshots or change pricing/concurrency semantics.
+A warm hit skips historical DB inputs, valuation, and FIFO replay. Misses use
+historical basis caching before falling back to a complete replay.
+
+### Accumulated G/L historical basis cache
+
+`src/server/accounts/account-gain-loss-basis-cache.server.ts` supplies the
+Accounts-list cache and ledger summaries with book-wide realised G/L and open
+FIFO lots. The calculation separates chronological execution/transfer replay
+from closing valuation. A basis hit needs only lightweight validity reads and
+closing-price lookups; it does not load historical transactions or reprice
+executions. Calculation drawers still replay independently, using the same
+stages and retaining detailed execution explanations. Period Report and History
+calculations are unchanged.
+
+- Key:
+  `account:gain-loss-basis:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{watermark}`.
+  The watermark is the latest booking timestamp strictly before the day after
+  the requested UTC as-of day, or `empty`. All book bookings participate
+  conservatively. Revision and watermark are read together in a read-only
+  RepeatableRead transaction. This allows reuse across days and historical
+  periods with identical effective bookings while detecting already-posted
+  future bookings becoming effective without a database mutation. Dates before
+  book start bypass basis caching.
+- Payloads include book/account/group metadata, exact Decimal realised amounts,
+  and remaining lots with acquisition order. They exclude raw transactions,
+  execution explanations, and closing prices. Closing valuation uses a private
+  state copy. TTL is seven days, with a 2 MiB encoded limit and shared
+  Decimal/date codec; reads validate the structure and holding metadata.
+- Only complete bases can persist. Opening/execution dependencies must use
+  identity or stable TimeSeries results; non-identity valuation dates must also
+  be no newer than the publication cutoff captured before replay. This prevents
+  a recent execution priced using the latest available prior day from becoming
+  frozen across daily publication boundaries. Missing basis, partial postings,
+  incomplete metadata, provider results, and temporary fallback prices prevent
+  persistence. Missing or temporary **closing** prices do not prevent basis
+  persistence and are retried on subsequent summary requests.
+- Cold replay includes its watermark in the same snapshot as historical inputs.
+  Persistence checks matching lookup/snapshot revisions and watermarks, a final
+  committed revision read, and an unchanged publication cutoff. Revision or
+  watermark changes rebuild the complete basis; incremental replay is not used.
+- Inflight requests share work by basis key, requested as-of date, and
+  publication cutoff so different closing dates never share a final result.
+  Rejected loads are removed for retry. Missing Redis, validity-read failures,
+  malformed or oversized entries, and cache-command failures fall back to full
+  calculation. Authorization and required environment namespace behavior remain
+  unchanged.
+- Shared book-cache helpers include this family in book/user deletion and
+  restore cleanup. Obsolete revisions expire naturally. No migration is needed.
+
+The outer Accounts summary cache retains its 24-hour TTL, date/publication keys,
+and valuation-source rules. Historical basis and final-summary cacheability are
+tracked separately, so final summaries still cannot freeze temporary prices.
 
 G/L summary v2 and History metrics v7 do not reuse their previous versions:
 older entries may have persisted temporarily backtracked TimeSeries quotes as

@@ -22,6 +22,7 @@ test("clears legacy and all versioned book caches while retaining global caches"
       `period:base:generation:${v}:staging:book-3`,
       `period:history:metrics:${v}:local:book-4:revision:2026-01:total`,
       `account:gain-loss:${v}:preview:book-5:revision:2026-05-11:2026-05-10`,
+      `account:gain-loss-basis:${v}:preview:book-5:revision:2026-05-10`,
     ]),
   ];
   const preserved = [

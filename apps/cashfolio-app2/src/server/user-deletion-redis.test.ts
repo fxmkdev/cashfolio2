@@ -11,6 +11,7 @@ vi.mock("@/redis.server", () => ({
   getRedisClient,
 }));
 
+import { getBookScopedRedisKeyPatterns } from "../shared/book-cache-keys";
 import { deleteBookScopedRedisDataForAccountBooks } from "./user-deletion-redis";
 
 async function* scanResult(keys: string[]) {
@@ -74,6 +75,8 @@ describe("deleteBookScopedRedisDataForAccountBooks", () => {
       "period:base:v8:local:book-2:revision:2026-01",
       "account:gain-loss:v1:preview:book-1:revision:2026-05-11:2026-05-10",
       "account:gain-loss:v99:local:book-2:revision:2026-05-11:2026-05-10",
+      "account:gain-loss-basis:v1:local:book-1:revision:empty",
+      "account:gain-loss-basis:v99:preview:book-2:revision:2026-05-11",
     ];
     const preserved = [
       "period:base:v8:local:book-10:revision:2026-01",
@@ -83,6 +86,7 @@ describe("deleteBookScopedRedisDataForAccountBooks", () => {
       "session:user-1",
       "account:gain-loss:v1:local:book-3:revision:2026-05-11:2026-05-10",
       "account:gain-loss:v1:local:book-3:revision:scope:book-1:child",
+      "account:gain-loss-basis:v1:local:book-3:revision:empty",
     ];
     const keys = new Set([...target, ...preserved]);
     redis.scanIterator.mockImplementation(async function* ({ MATCH }) {
@@ -105,7 +109,9 @@ describe("deleteBookScopedRedisDataForAccountBooks", () => {
       "book-1",
     ]);
     expect([...keys]).toEqual(preserved);
-    expect(redis.scanIterator).toHaveBeenCalledTimes(10);
+    expect(redis.scanIterator).toHaveBeenCalledTimes(
+      2 * getBookScopedRedisKeyPatterns("book-1").length,
+    );
     for (const [options] of redis.scanIterator.mock.calls)
       expect(options.COUNT).toBe(100);
   });
