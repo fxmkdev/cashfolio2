@@ -212,6 +212,7 @@ export function useAccountTreeColumnDefs(params: {
               referenceCurrency,
               data: gainLossData,
               loading: isGainLossLoading ?? false,
+              isArchivedMode,
             }),
           ]
         : []),

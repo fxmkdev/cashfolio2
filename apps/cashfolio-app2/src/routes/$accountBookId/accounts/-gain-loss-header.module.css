@@ -1,0 +1,11 @@
+.header {
+  min-width: 0;
+}
+
+.dates {
+  height: 18px;
+  line-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

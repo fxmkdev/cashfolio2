@@ -1,7 +1,5 @@
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
-import { formatUtcDateForLocale } from "@/shared/date";
-import { useUserLocale } from "@/user-locale-context";
-import { Alert, Text, Button, Group, Tabs, Title } from "@mantine/core";
+import { Alert, Button, Group, Tabs, Title } from "@mantine/core";
 import { IconArchive, IconPlus } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
 import { LinkButton } from "@/components/navigation/link-button";
@@ -153,7 +151,6 @@ export function AccountsPageView({
 }: AccountsPageViewProps) {
   const isArchivedMode = mode === "archived";
 
-  const locale = useUserLocale();
   return (
     <PageShell>
       <TopPageHeader
@@ -243,18 +240,10 @@ export function AccountsPageView({
           </Button>
         </Alert>
       ) : null}
-      {gainLoss?.data ? (
-        <Text size="xs" c="dimmed" mb="xs">
-          Holding G/L since{" "}
-          {formatUtcDateForLocale(new Date(gainLoss.data.startDate), locale)} ·
-          As of{" "}
-          {formatUtcDateForLocale(new Date(gainLoss.data.asOfDate), locale)} ·
-          Totals include only {isArchivedMode ? "archived" : "active"} accounts
-          in this tab. Incomplete columns show —; totals require complete data
-          for every eligible account.
-        </Text>
-      ) : null}
       <DataGrid
+        groupHeaderHeight={
+          tab === "ASSET" || tab === "LIABILITY" ? 64 : undefined
+        }
         containerStyle={{ flex: 1, minHeight: 0 }}
         rowData={rows}
         columnDefs={columnDefs}
