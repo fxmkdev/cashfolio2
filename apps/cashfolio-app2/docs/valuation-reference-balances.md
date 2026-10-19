@@ -128,8 +128,6 @@ after failure. Failures retain the page's error message and retry action. An
 open details popover updates in place when loading completes, retaining keyboard
 focus.
 
-![Account list with a compact G/L header and info button](images/account-gl-header-after.png)
-
 The shared FIFO/execution-pricing engine supports chronological range replay.
 Executions are ordered by booking date, and completed same-unit transfers carry
 acquisition costs between accounts. Source-first multi-day transfers remove FIFO
