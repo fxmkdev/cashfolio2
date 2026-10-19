@@ -11,6 +11,8 @@ import {
   type computeHoldingGainLossSplit,
 } from "../period/holdings/period-overview-holdings";
 import { applyPendingHoldingExecutions } from "../period/holdings/holding-executions";
+import { hasOpenHoldingLots } from "../period/holdings/period-holding-account-finalization";
+import { prefetchAccountGainLossConversions } from "./account-gain-loss-prefetch.server";
 import type {
   HoldingAccountState,
   HoldingSkippedItem,
@@ -104,10 +106,15 @@ export async function replayAccountGainLossBasis(args: AccountCalculationArgs) {
     onSkippedItem,
   });
   state.chronological = true;
-  state.convertBookingToReference = args.convertBookingToReference;
+  const convertBookingToReference = await prefetchAccountGainLossConversions({
+    ...args,
+    state,
+  });
+  state.convertBookingToReference = convertBookingToReference;
   await applyHoldingTransactionsToGainLossState({
     ...args,
     state,
+    convertBookingToReference,
     onSkippedItem,
   });
   await applyPendingHoldingExecutions({
@@ -173,6 +180,26 @@ export async function valueAccountGainLossBasis(args: {
   const realizedEvents: GainLossReconciliationRealizedEvent<Money>[] = [];
   const unrealizedOpenLots: GainLossReconciliationOpenLot<Money>[] = [];
   const unvaluedOpenLots: GainLossReconciliationOpenLot<Money, null>[] = [];
+  // The basis has already been published; only closing dependencies are warmed here.
+  const closingRateByUnit = new Map<
+    string | null,
+    ReturnType<CalculationArgs["resolveRate"]>
+  >();
+  const resolveRate: CalculationArgs["resolveRate"] = (input) => {
+    const key = toHoldingUnitIdentifier(input);
+    const existing = closingRateByUnit.get(key);
+    if (existing) return existing;
+    const promise = args.resolveRate(input);
+    closingRateByUnit.set(key, promise);
+    return promise;
+  };
+  await Promise.all(
+    holdings
+      .filter(({ state }) => !state.skipped && hasOpenHoldingLots(state))
+      .map(({ state }) =>
+        resolveRate({ ...state.account, date: args.periodEnd }),
+      ),
+  );
   await finalizeHoldingGainLossState({
     state: {
       stateByHoldingAccountId: new Map(
@@ -182,7 +209,7 @@ export async function valueAccountGainLossBasis(args: {
       convertedCount: 0,
     },
     periodEnd: args.periodEnd,
-    resolveRate: args.resolveRate,
+    resolveRate,
     onAccountGainLoss: (item) => {
       results.get(item.accountId)!.summary = {
         realizedGainLoss: item.realizedGainLoss,

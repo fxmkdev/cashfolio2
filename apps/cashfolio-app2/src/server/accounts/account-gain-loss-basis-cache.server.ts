@@ -11,6 +11,7 @@ import { getUnitToReferenceExchangeRateDetails } from "../period/period-conversi
 import { createValuationLookupContext } from "../valuation/lookup-context";
 import type { DecimalValuationRateLookupResult } from "../valuation/types";
 import { valueAccountGainLossBasis } from "./account-gain-loss-calculation.server";
+import { createAccountGainLossLookupScheduler } from "./account-gain-loss-prefetch.server";
 import {
   finishAccountGainLossRange,
   loadAccountGainLossRange,
@@ -111,6 +112,7 @@ export async function loadAccountGainLossSummaryRange(args: {
       }
     }
     if (cachedBasis) {
+      const scheduleLookup = createAccountGainLossLookupScheduler();
       const exchangeRateByKey = new Map<
         string,
         Promise<DecimalValuationRateLookupResult>
@@ -124,6 +126,7 @@ export async function loadAccountGainLossSummaryRange(args: {
             ...input,
             referenceCurrency: cachedBasis.referenceCurrency,
             exchangeRateByKey,
+            scheduleLookup,
           });
           if (result.source !== "identity" && result.source !== "timeSeries")
             cacheableFromPermanentValuationCache = false;

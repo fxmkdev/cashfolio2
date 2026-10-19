@@ -98,6 +98,14 @@ export function applyHoldingAccountExecution(
   return 0;
 }
 
+export function hasOpenHoldingLots(state: HoldingAccountState): boolean {
+  const openQuantity = state.lots.reduce(
+    (sum, lot) => moneyAdd(sum, moneyAbs(lot.quantity)),
+    toMoney(0),
+  );
+  return openQuantity.comparedTo(QUANTITY_EPSILON) > 0;
+}
+
 /** Apply ordered executions to one account's FIFO lots, then value open lots. */
 export async function finalizeHoldingAccountGainLoss(
   args: {
@@ -142,11 +150,7 @@ export async function finalizeHoldingAccountGainLoss(
   }
   args.state.processedExecutionEvents = [];
 
-  const openQuantity = args.state.lots.reduce(
-    (sum, lot) => moneyAdd(sum, moneyAbs(lot.quantity)),
-    toMoney(0),
-  );
-  if (toMoney(openQuantity).comparedTo(QUANTITY_EPSILON) > 0) {
+  if (hasOpenHoldingLots(args.state)) {
     const periodEndRate = await args.resolveRate({
       unit: args.state.account.unit,
       currency: args.state.account.currency,

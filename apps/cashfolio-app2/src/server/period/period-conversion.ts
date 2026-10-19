@@ -32,7 +32,14 @@ type RateLookupInput = {
 
 type RateLookupDetailsInput = Omit<RateLookupInput, "exchangeRateByKey"> & {
   exchangeRateByKey: Map<string, Promise<ValuationRateLookupResult>>;
+  scheduleLookup?: ValuationLookupScheduler;
 };
+
+export type ValuationLookupScheduler = (
+  lookup: () => Promise<ValuationRateLookupResult>,
+) => Promise<ValuationRateLookupResult>;
+
+const runLookup: ValuationLookupScheduler = (lookup) => lookup();
 
 export type ReferenceConversionResult = {
   value: Money | null;
@@ -126,6 +133,7 @@ export async function getUnitToReferenceExchangeRateDetails(
   args: RateLookupDetailsInput,
 ): Promise<ValuationRateLookupResult> {
   const { unit, referenceCurrency, exchangeRateByKey } = args;
+  const scheduleLookup = args.scheduleLookup ?? runLookup;
   const dateKey = toDateKey(args.date);
 
   if (unit === Unit.CURRENCY) {
@@ -139,11 +147,13 @@ export async function getUnitToReferenceExchangeRateDetails(
     const existingPromise = exchangeRateByKey.get(cacheKey);
     const exchangeRatePromise =
       existingPromise ??
-      getCurrencyExchangeRateDetails({
-        sourceCurrency,
-        targetCurrency: referenceCurrency,
-        date: args.date,
-      });
+      scheduleLookup(() =>
+        getCurrencyExchangeRateDetails({
+          sourceCurrency,
+          targetCurrency: referenceCurrency,
+          date: args.date,
+        }),
+      );
 
     if (!existingPromise) {
       exchangeRateByKey.set(cacheKey, exchangeRatePromise);
@@ -160,11 +170,13 @@ export async function getUnitToReferenceExchangeRateDetails(
     const existingPromise = exchangeRateByKey.get(cacheKey);
     const exchangeRatePromise =
       existingPromise ??
-      getCryptocurrencyToCurrencyExchangeRateDetails({
-        cryptocurrency,
-        targetCurrency: referenceCurrency,
-        date: args.date,
-      });
+      scheduleLookup(() =>
+        getCryptocurrencyToCurrencyExchangeRateDetails({
+          cryptocurrency,
+          targetCurrency: referenceCurrency,
+          date: args.date,
+        }),
+      );
 
     if (!existingPromise) {
       exchangeRateByKey.set(cacheKey, exchangeRatePromise);
@@ -183,12 +195,14 @@ export async function getUnitToReferenceExchangeRateDetails(
   const existingPromise = exchangeRateByKey.get(cacheKey);
   const exchangeRatePromise =
     existingPromise ??
-    getSecurityToCurrencyExchangeRateDetails({
-      symbol,
-      tradeCurrency,
-      targetCurrency: referenceCurrency,
-      date: args.date,
-    });
+    scheduleLookup(() =>
+      getSecurityToCurrencyExchangeRateDetails({
+        symbol,
+        tradeCurrency,
+        targetCurrency: referenceCurrency,
+        date: args.date,
+      }),
+    );
 
   if (!existingPromise) {
     exchangeRateByKey.set(cacheKey, exchangeRatePromise);
@@ -245,6 +259,7 @@ export async function convertBookingValueToReferenceDetails(args: {
   date: Date;
   referenceCurrency: string;
   exchangeRateByKey: Map<string, Promise<ValuationRateLookupResult>>;
+  scheduleLookup?: ValuationLookupScheduler;
 }): Promise<ReferenceConversionResult> {
   if (moneyIsZero(args.value)) {
     return { value: toMoney(0), source: "identity" };
@@ -263,6 +278,7 @@ export async function convertBookingValueToReferenceDetails(args: {
           date: args.date,
           referenceCurrency: args.referenceCurrency,
           exchangeRateByKey: args.exchangeRateByKey,
+          scheduleLookup: args.scheduleLookup,
         });
 
   const exchangeRate = await exchangeRatePromise;
