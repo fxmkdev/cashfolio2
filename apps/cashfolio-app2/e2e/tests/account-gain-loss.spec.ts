@@ -107,7 +107,10 @@ test("accumulated account G/L, nested totals, historical summary, and FIFO expla
     name: /G\/L Since Start \(CHF\)/,
   });
   await expect(gainLossHeader).toBeVisible();
-  await expect(gainLossHeader).toContainText("1/1/2026 –");
+  await expect(gainLossHeader).not.toContainText("1/1/2026");
+  await expect(
+    agGridCellByColId(agGridPinnedBottomRow(page), "totalGainLoss"),
+  ).toHaveText("21.00");
   await gainLossHeader
     .getByRole("button", { name: "Show gain/loss details" })
     .click();
@@ -132,9 +135,6 @@ test("accumulated account G/L, nested totals, historical summary, and FIFO expla
     await expect(
       agGridCellByColId(agGridRowByText(page, name), "totalGainLoss"),
     ).toHaveText("21.00");
-  await expect(
-    agGridCellByColId(agGridPinnedBottomRow(page), "totalGainLoss"),
-  ).toHaveText("21.00");
   await row.dblclick();
   // Each figure has the same currency/text shape; stable IDs disambiguate the three summary values.
   await expect(page.getByTestId("account-gain-loss-realised")).toContainText(
@@ -313,21 +313,25 @@ test("G/L request failure can be retried without blocking the accounts page", as
     page.getByText("Gain/loss could not be loaded. Please try again."),
   ).toBeVisible();
   await expect(
-    page.getByText("Dates unavailable", { exact: true }),
-  ).toBeVisible();
-  await expect(
     page.getByRole("heading", { name: "Accounts", exact: true }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Show gain/loss details" }).click();
+  const details = page.getByRole("dialog", { name: "Gain/loss details" });
+  await expect(
+    details.getByText("Dates unavailable", { exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
   await page.unroute(pattern);
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(
     page.getByText("Gain/loss could not be loaded. Please try again."),
   ).not.toBeVisible();
   await expect(
-    page
-      .getByRole("columnheader", { name: /G\/L Since Start \(CHF\)/ })
-      .getByText(/\d.+ – \d/),
-  ).toBeVisible();
+    page.locator('.ag-cell[col-id="totalGainLoss"] .mantine-Loader-root'),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Show gain/loss details" }).click();
+  await expect(details).toContainText(/Since .+ · As of/);
+  await page.keyboard.press("Escape");
 });
 
 test("ledger G/L refreshes after editing execution proceeds", async ({

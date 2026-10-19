@@ -118,16 +118,15 @@ Only Asset and Liability accounts are eligible, excluding reference-currency
 cash. Ledger data always includes the book's reference currency, independently
 of whether booking values need conversion for reference-currency columns.
 
-The G/L column-group header shows the locale-formatted calculation start and
-as-of dates on a second line. Its height is reserved before the lazy summary
-request completes, with date skeletons during loading and “Dates unavailable”
-after failure, so loaded dates do not move the grid or account rows. The
-header's info button opens calculation details, labelled dates, and the
-explanation of active/archived totals and incomplete data. Details remain
-accessible while loading; failures retain the page's error message and retry
-action.
+The G/L column-group header contains its title and an info button. The button
+opens calculation details with locale-formatted, labelled start and as-of dates
+and the explanation of active/archived totals and incomplete data. Calculation
+dates appear only in the popover, so the lazy summary request does not change
+the header height or move account rows. Details remain accessible while loading,
+with “Loading calculation dates…” before dates arrive and “Dates unavailable”
+after failure. Failures retain the page's error message and retry action.
 
-![Account list with G/L calculation dates in the column header](images/account-gl-header-after.png)
+![Account list with a compact G/L header and info button](images/account-gl-header-after.png)
 
 The shared FIFO/execution-pricing engine supports chronological range replay.
 Executions are ordered by booking date, and completed same-unit transfers carry

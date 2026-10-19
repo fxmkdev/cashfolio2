@@ -2,7 +2,6 @@ import {
   ActionIcon,
   Group,
   Popover,
-  Skeleton,
   Stack,
   Text,
   Tooltip,
@@ -13,7 +12,6 @@ import { formatUtcDateForLocale } from "@/shared/date";
 import { useUserLocale } from "@/user-locale-context";
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import type { AccountsGridRow } from "./-page-types";
-import classes from "./-gain-loss-header.module.css";
 
 export type GainLossHeaderParams = {
   data?: Pick<AccountGainLossSummaries, "startDate" | "asOfDate">;
@@ -36,84 +34,62 @@ export function AccountGainLossHeader({
     : undefined;
 
   return (
-    <Stack gap={2} className={classes.header}>
-      <Group gap={4} wrap="nowrap">
-        <Text size="sm" truncate>
-          {displayName}
-        </Text>
-        <Popover
-          width={340}
-          position="bottom-end"
-          withArrow
-          shadow="md"
-          withinPortal
-          trapFocus
-          returnFocus
-          middlewares={{ flip: true, shift: { padding: 12 } }}
-        >
-          <Popover.Target>
-            <Tooltip label="Show gain/loss details">
-              <ActionIcon
-                aria-label="Show gain/loss details"
-                size="sm"
-                variant="subtle"
-                onPointerDown={(event) => event.stopPropagation()}
-                onMouseDown={(event) => event.stopPropagation()}
-              >
-                <IconInfoCircle size={16} />
-              </ActionIcon>
-            </Tooltip>
-          </Popover.Target>
-          <Popover.Dropdown
-            aria-label="Gain/loss details"
-            aria-labelledby={undefined}
-            maw="calc(100vw - 24px)"
-          >
-            <Stack gap="xs">
-              <Text size="sm">
-                {data ? (
-                  <>
-                    Since {startDate} · As of {asOfDate}
-                  </>
-                ) : loading ? (
-                  "Loading calculation dates…"
-                ) : (
-                  "Dates unavailable"
-                )}
-              </Text>
-              <Text size="sm">
-                Calculated holding G/L since account-book start; excludes
-                explicit G/L bookings.
-              </Text>
-              <Text size="sm">
-                Totals include only {isArchivedMode ? "archived" : "active"}{" "}
-                accounts in this tab. Incomplete columns show —; totals require
-                complete data for every eligible account.
-              </Text>
-            </Stack>
-          </Popover.Dropdown>
-        </Popover>
-      </Group>
-      <Text
-        component="div"
-        size="xs"
-        c="dimmed"
-        className={classes.dates}
-        aria-busy={loading}
-        aria-label={loading ? "Loading calculation dates" : undefined}
-      >
-        {data ? (
-          `${startDate} – ${asOfDate}`
-        ) : loading ? (
-          <Group gap={6} wrap="nowrap" aria-hidden="true">
-            <Skeleton width={64} height={10} />
-            <span>–</span>
-            <Skeleton width={64} height={10} />
-          </Group>
-        ) : (
-          "Dates unavailable"
-        )}
+    <Group gap={4} wrap="nowrap" miw={0}>
+      <Text size="sm" truncate>
+        {displayName}
       </Text>
-    </Stack>
+      <Popover
+        width={340}
+        position="bottom-end"
+        withArrow
+        shadow="md"
+        withinPortal
+        trapFocus
+        returnFocus
+        middlewares={{ flip: true, shift: { padding: 12 } }}
+      >
+        <Popover.Target>
+          <Tooltip label="Show gain/loss details">
+            <ActionIcon
+              aria-label="Show gain/loss details"
+              size="sm"
+              variant="subtle"
+              onPointerDown={(event) => event.stopPropagation()}
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <IconInfoCircle size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </Popover.Target>
+        <Popover.Dropdown
+          aria-label="Gain/loss details"
+          aria-labelledby={undefined}
+          maw="calc(100vw - 24px)"
+        >
+          <Stack gap="xs">
+            <Text size="sm">
+              {data ? (
+                <>
+                  Since {startDate} · As of {asOfDate}
+                </>
+              ) : loading ? (
+                "Loading calculation dates…"
+              ) : (
+                "Dates unavailable"
+              )}
+            </Text>
+            <Text size="sm">
+              Calculated holding G/L since account-book start; excludes explicit
+              G/L bookings.
+            </Text>
+            <Text size="sm">
+              Totals include only {isArchivedMode ? "archived" : "active"}{" "}
+              accounts in this tab. Incomplete columns show —; totals require
+              complete data for every eligible account.
+            </Text>
+          </Stack>
+        </Popover.Dropdown>
+      </Popover>
+    </Group>
   );
 }

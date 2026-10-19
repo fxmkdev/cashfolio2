@@ -241,9 +241,6 @@ export function AccountsPageView({
         </Alert>
       ) : null}
       <DataGrid
-        groupHeaderHeight={
-          tab === "ASSET" || tab === "LIABILITY" ? 64 : undefined
-        }
         containerStyle={{ flex: 1, minHeight: 0 }}
         rowData={rows}
         columnDefs={columnDefs}

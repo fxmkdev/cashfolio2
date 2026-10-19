@@ -570,6 +570,18 @@ async function findVisibleDialog(
   return dialog;
 }
 
+async function openGainLossDetails(canvasElement: HTMLElement) {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", {
+      name: "Show gain/loss details",
+    }),
+  );
+  return findVisibleDialog(
+    within(canvasElement.ownerDocument.body),
+    "Gain/loss details",
+  );
+}
+
 export const ActiveHappyPath: Story = {
   render: () => <AccountsPageStoryHarness initialMode="active" />,
 };
@@ -767,17 +779,7 @@ export const GainLossLoading: Story = {
     <AccountsPageStoryHarness initialMode="active" gainLossState="loading" />
   ),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    expect(
-      await canvas.findByLabelText("Loading calculation dates"),
-    ).toHaveAttribute("aria-busy", "true");
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Show gain/loss details" }),
-    );
-    const details = await within(canvasElement.ownerDocument.body).findByRole(
-      "dialog",
-      { name: "Gain/loss details" },
-    );
+    const details = await openGainLossDetails(canvasElement);
     expect(details).toHaveTextContent("Loading calculation dates…");
     expect(details).toHaveTextContent("Totals include only active accounts");
     await userEvent.keyboard("{Escape}");
@@ -794,23 +796,35 @@ export const GainLossLoadingToReady: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByLabelText("Loading calculation dates");
+    let header = await canvas.findByRole("columnheader", {
+      name: /G\/L Since Start \(CHF\)/,
+    });
+    await canvas.findByText("Assets", { exact: true });
     const grid = canvasElement.querySelector(".ag-root-wrapper");
     const firstRow = canvasElement.querySelector('.ag-row[row-index="0"]');
     if (!grid || !firstRow) throw new Error("Accounts grid has no first row");
+    expect(grid.getBoundingClientRect().height).toBeGreaterThan(100);
     const gridTop = grid.getBoundingClientRect().top;
     const rowTop = firstRow.getBoundingClientRect().top;
+    const headerBounds = header.getBoundingClientRect();
+    expect(header).not.toHaveTextContent(/2026|Loading|unavailable/);
     await userEvent.click(
       canvas.getByRole("button", { name: "Toggle gain/loss loading" }),
     );
-    await canvas.findByText("1/1/2026 – 3/31/2026");
-    expect(grid.getBoundingClientRect().top).toBe(gridTop);
-    expect(firstRow.getBoundingClientRect().top).toBe(rowTop);
-
-    const header = canvas.getByRole("columnheader", {
+    await waitFor(() =>
+      expect(
+        firstRow.querySelector('[col-id="totalGainLoss"]'),
+      ).toHaveTextContent("10.00"),
+    );
+    header = canvas.getByRole("columnheader", {
       name: /G\/L Since Start \(CHF\)/,
     });
-    expect(header.getBoundingClientRect().height).toBe(64);
+    expect(grid.getBoundingClientRect().top).toBe(gridTop);
+    expect(firstRow.getBoundingClientRect().top).toBe(rowTop);
+    expect(header.getBoundingClientRect().top).toBe(headerBounds.top);
+    expect(header.getBoundingClientRect().height).toBe(headerBounds.height);
+    expect(header).not.toHaveTextContent(/2026|Loading|unavailable/);
+
     header.focus();
     await userEvent.tab();
     const button = canvas.getByRole("button", {
@@ -836,10 +850,17 @@ export const GainLossLoadingToReady: Story = {
     await userEvent.click(
       canvas.getByRole("button", { name: "Toggle gain/loss loading" }),
     );
-    await canvas.findByLabelText("Loading calculation dates");
-    expect(canvas.queryByText("1/1/2026 – 3/31/2026")).not.toBeInTheDocument();
+    const loadingDetails = await openGainLossDetails(canvasElement);
+    header = canvas.getByRole("columnheader", {
+      name: /G\/L Since Start \(CHF\)/,
+    });
+    expect(loadingDetails).toHaveTextContent("Loading calculation dates…");
+    expect(loadingDetails).not.toHaveTextContent("Since 1/1/2026");
     expect(grid.getBoundingClientRect().top).toBe(gridTop);
     expect(firstRow.getBoundingClientRect().top).toBe(rowTop);
+    expect(header.getBoundingClientRect().top).toBe(headerBounds.top);
+    expect(header.getBoundingClientRect().height).toBe(headerBounds.height);
+    await userEvent.keyboard("{Escape}");
   },
 };
 
@@ -849,19 +870,15 @@ export const GainLossFailure: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByText("Dates unavailable");
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Show gain/loss details" }),
-    );
-    const details = await within(canvasElement.ownerDocument.body).findByRole(
-      "dialog",
-      { name: "Gain/loss details" },
-    );
+    expect(canvas.queryByText("Dates unavailable")).not.toBeInTheDocument();
+    const details = await openGainLossDetails(canvasElement);
     expect(details).toHaveTextContent("Dates unavailable");
     await userEvent.keyboard("{Escape}");
     await userEvent.click(canvas.getByRole("button", { name: "Retry" }));
-    await canvas.findByText("1/1/2026 – 3/31/2026");
+    const readyDetails = await openGainLossDetails(canvasElement);
+    expect(readyDetails).toHaveTextContent("Since 1/1/2026 · As of 3/31/2026");
     expect(canvas.queryByText("Gain/Loss Unavailable")).not.toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
   },
 };
 export const GainLossPartial: Story = {
@@ -869,7 +886,9 @@ export const GainLossPartial: Story = {
     <AccountsPageStoryHarness initialMode="active" gainLossState="partial" />
   ),
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByText("1/1/2026 – 3/31/2026");
+    const details = await openGainLossDetails(canvasElement);
+    expect(details).toHaveTextContent("Since 1/1/2026 · As of 3/31/2026");
+    await userEvent.keyboard("{Escape}");
   },
 };
 
@@ -880,6 +899,8 @@ export const LocalizedLiabilityGainLoss: Story = {
     </UserLocaleProvider>
   ),
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByText("1.1.2026 – 31.3.2026");
+    const details = await openGainLossDetails(canvasElement);
+    expect(details).toHaveTextContent("Since 1.1.2026 · As of 31.3.2026");
+    await userEvent.keyboard("{Escape}");
   },
 };
