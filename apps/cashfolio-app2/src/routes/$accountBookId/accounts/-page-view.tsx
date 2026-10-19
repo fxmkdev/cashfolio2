@@ -1,7 +1,5 @@
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
-import { formatUtcDateForLocale } from "@/shared/date";
-import { useUserLocale } from "@/user-locale-context";
-import { Alert, Text, Button, Group, Tabs, Title } from "@mantine/core";
+import { Alert, Button, Group, Tabs, Title } from "@mantine/core";
 import { IconArchive, IconPlus } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
 import { LinkButton } from "@/components/navigation/link-button";
@@ -37,6 +35,7 @@ import type {
   TreeRow,
 } from "./-page-types";
 import type { loadAccountsPageData } from "./-page-loader";
+import { AccountGainLossDetails } from "./-gain-loss-header";
 
 type AccountsPageLoaderData = Awaited<ReturnType<typeof loadAccountsPageData>>;
 type RowTarget = {
@@ -153,7 +152,6 @@ export function AccountsPageView({
 }: AccountsPageViewProps) {
   const isArchivedMode = mode === "archived";
 
-  const locale = useUserLocale();
   return (
     <PageShell>
       <TopPageHeader
@@ -243,45 +241,40 @@ export function AccountsPageView({
           </Button>
         </Alert>
       ) : null}
-      {gainLoss?.data ? (
-        <Text size="xs" c="dimmed" mb="xs">
-          Holding G/L since{" "}
-          {formatUtcDateForLocale(new Date(gainLoss.data.startDate), locale)} ·
-          As of{" "}
-          {formatUtcDateForLocale(new Date(gainLoss.data.asOfDate), locale)} ·
-          Totals include only {isArchivedMode ? "archived" : "active"} accounts
-          in this tab. Incomplete columns show —; totals require complete data
-          for every eligible account.
-        </Text>
-      ) : null}
-      <DataGrid
-        containerStyle={{ flex: 1, minHeight: 0 }}
-        rowData={rows}
-        columnDefs={columnDefs}
-        autoGroupColumnDef={{
-          headerName: "Name",
-          field: "name",
-          flex: 1,
-          minWidth: 320,
-          filter: "agTextColumnFilter",
-          valueGetter: ({ data }) => data?.name,
-          cellRendererParams: {
-            suppressCount: true,
-          },
-        }}
-        treeData={true}
-        treeDataParentIdField="parentId"
-        pinnedBottomRowData={pinnedBottomRowData}
-        onGridReady={onGridReady}
-        isGroupOpenByDefault={isGroupOpenByDefault}
-        onRowGroupOpened={onRowGroupOpened}
-        getRowId={({ data }) => data.id}
-        onRowDoubleClicked={(e) => {
-          if (e.data?.nodeType === "account") {
-            onOpenLedger(e.data.id);
-          }
-        }}
-      />
+      <AccountGainLossDetails
+        data={gainLoss?.data}
+        loading={gainLoss?.loading ?? false}
+        isArchivedMode={isArchivedMode}
+      >
+        <DataGrid
+          containerStyle={{ flex: 1, minHeight: 0 }}
+          rowData={rows}
+          columnDefs={columnDefs}
+          autoGroupColumnDef={{
+            headerName: "Name",
+            field: "name",
+            flex: 1,
+            minWidth: 320,
+            filter: "agTextColumnFilter",
+            valueGetter: ({ data }) => data?.name,
+            cellRendererParams: {
+              suppressCount: true,
+            },
+          }}
+          treeData={true}
+          treeDataParentIdField="parentId"
+          pinnedBottomRowData={pinnedBottomRowData}
+          onGridReady={onGridReady}
+          isGroupOpenByDefault={isGroupOpenByDefault}
+          onRowGroupOpened={onRowGroupOpened}
+          getRowId={({ data }) => data.id}
+          onRowDoubleClicked={(e) => {
+            if (e.data?.nodeType === "account") {
+              onOpenLedger(e.data.id);
+            }
+          }}
+        />
+      </AccountGainLossDetails>
 
       {!isArchivedMode && (
         <>

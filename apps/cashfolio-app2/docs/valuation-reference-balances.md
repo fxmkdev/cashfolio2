@@ -118,6 +118,16 @@ Only Asset and Liability accounts are eligible, excluding reference-currency
 cash. Ledger data always includes the book's reference currency, independently
 of whether booking values need conversion for reference-currency columns.
 
+The G/L column-group header contains its title and an info button. The button
+opens calculation details with locale-formatted, labelled start and as-of dates
+and the explanation of active/archived totals and incomplete data. Calculation
+dates appear only in the popover, so the lazy summary request does not change
+the header height or move account rows. Details remain accessible while loading,
+with “Loading calculation dates…” before dates arrive and “Dates unavailable”
+after failure. Failures retain the page's error message and retry action. An
+open details popover updates in place when loading completes, retaining keyboard
+focus.
+
 The shared FIFO/execution-pricing engine supports chronological range replay.
 Executions are ordered by booking date, and completed same-unit transfers carry
 acquisition costs between accounts. Source-first multi-day transfers remove FIFO

@@ -8,6 +8,7 @@ import type {
 import { getCurrencyDecimals } from "@/shared/unit-format";
 import type { AccountsGridRow } from "./-page-types";
 import { isReferenceCurrencyTotalFooterRow } from "./-page-types";
+import { AccountGainLossHeader } from "./-gain-loss-header";
 
 export function buildAccountGainLossColumns(args: {
   referenceCurrency: string;
@@ -27,7 +28,31 @@ export function buildAccountGainLossColumns(args: {
     { field: "unrealizedGainLoss", label: "Unrealised" },
   ];
   return {
+    groupId: "holding-gain-loss",
     headerName: `G/L Since Start (${args.referenceCurrency})`,
+    headerGroupComponentParams: {
+      innerHeaderGroupComponent: AccountGainLossHeader,
+    },
+    suppressHeaderKeyboardEvent: ({ event }) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return false;
+      const header = target.closest<HTMLElement>('[role="columnheader"]');
+      const button = header?.querySelector<HTMLButtonElement>("button");
+      if (!button) return false;
+      if (event.key === "Tab") {
+        if (target === header && !event.shiftKey) {
+          event.preventDefault();
+          button.focus();
+          return true;
+        }
+        if (target === button && event.shiftKey) {
+          event.preventDefault();
+          header?.focus();
+          return true;
+        }
+      }
+      return target === button && ["Enter", " ", "Escape"].includes(event.key);
+    },
     marryChildren: true,
     children: fields.map(({ field, label }) => ({
       colId: field,

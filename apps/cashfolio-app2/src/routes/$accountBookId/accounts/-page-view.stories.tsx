@@ -1,7 +1,7 @@
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { Box, Text } from "@mantine/core";
+import { Box, Button, Text } from "@mantine/core";
 import { useMemo, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { AccountType, Unit } from "@/.prisma-client/enums";
@@ -19,6 +19,7 @@ import {
   useSelectedSiblingRows,
 } from "./-page-data";
 import { AccountsPageView, type AccountsPageViewProps } from "./-page-view";
+import { UserLocaleProvider } from "@/user-locale-context";
 import {
   REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
   type AccountsMode,
@@ -255,7 +256,8 @@ function getPinnedBottomRowData(
 function AccountsPageStoryHarness({
   rowsOverride,
   expandGroups = false,
-  gainLossState = "ready",
+  gainLossState: initialGainLossState = "ready",
+  toggleGainLossLoading = false,
   initialMode,
   initialTab = "ASSET",
   startWithCreateModal = false,
@@ -265,12 +267,14 @@ function AccountsPageStoryHarness({
   rowsOverride?: TreeRow[];
   expandGroups?: boolean;
   gainLossState?: "ready" | "loading" | "error" | "partial";
+  toggleGainLossLoading?: boolean;
   initialMode: AccountsMode;
   initialTab?: TabValue;
   startWithCreateModal?: boolean;
   startWithEditModal?: boolean;
   routeSmoke?: boolean;
 }) {
+  const [gainLossState, setGainLossState] = useState(initialGainLossState);
   const [tabState] = useState<TabValue>(initialTab);
   const [modeState, setModeState] = useState<AccountsMode>(initialMode);
   const [createModalOpened, setCreateModalOpened] =
@@ -439,9 +443,20 @@ function AccountsPageStoryHarness({
       style={{
         display: "flex",
         flexDirection: "column",
-        minHeight: "100dvh",
+        height: "100dvh",
       }}
     >
+      {toggleGainLossLoading && (
+        <Button
+          onClick={() =>
+            setGainLossState((state) =>
+              state === "loading" ? "ready" : "loading",
+            )
+          }
+        >
+          Toggle gain/loss loading
+        </Button>
+      )}
       <AccountsPageView
         gainLoss={{
           data:
@@ -453,7 +468,7 @@ function AccountsPageStoryHarness({
             gainLossState === "error"
               ? "Gain/loss could not be loaded. Please try again."
               : undefined,
-          retry: () => {},
+          retry: () => setGainLossState("ready"),
         }}
         accountBookId="storybook-book"
         tab={tab}
@@ -555,6 +570,18 @@ async function findVisibleDialog(
   return dialog;
 }
 
+async function openGainLossDetails(canvasElement: HTMLElement) {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", {
+      name: "Show gain/loss details",
+    }),
+  );
+  return findVisibleDialog(
+    within(canvasElement.ownerDocument.body),
+    "Gain/loss details",
+  );
+}
+
 export const ActiveHappyPath: Story = {
   render: () => <AccountsPageStoryHarness initialMode="active" />,
 };
@@ -602,12 +629,40 @@ export const ConstrainedWidthWithGainLoss: Story = {
         canvas.getAllByRole("button", { name: "Edit" }).length,
       ).toBeGreaterThan(0);
     });
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Show gain/loss details" }),
+    );
+    const details = await within(canvasElement.ownerDocument.body).findByRole(
+      "dialog",
+      { name: "Gain/loss details" },
+    );
+    await waitFor(() => {
+      const bounds = details.getBoundingClientRect();
+      expect(bounds.left).toBeGreaterThanOrEqual(0);
+      expect(bounds.right).toBeLessThanOrEqual(
+        canvasElement.ownerDocument.documentElement.clientWidth,
+      );
+    });
+    await userEvent.keyboard("{Escape}");
     viewport.scrollLeft = 0;
   },
 };
 
 export const ArchivedMode: Story = {
   render: () => <AccountsPageStoryHarness initialMode="archived" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Show gain/loss details" }),
+    );
+    const details = await within(canvasElement.ownerDocument.body).findByRole(
+      "dialog",
+      { name: "Gain/loss details" },
+    );
+    expect(details).toHaveTextContent("Totals include only archived accounts");
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(details).not.toBeVisible());
+  },
 };
 
 export const ArchivedModeActions: Story = {
@@ -723,14 +778,200 @@ export const GainLossLoading: Story = {
   render: () => (
     <AccountsPageStoryHarness initialMode="active" gainLossState="loading" />
   ),
+  play: async ({ canvasElement }) => {
+    const details = await openGainLossDetails(canvasElement);
+    expect(details).toHaveTextContent("Loading calculation dates…");
+    expect(details).toHaveTextContent("Totals include only active accounts");
+    await userEvent.keyboard("{Escape}");
+  },
 };
+
+export const GainLossLoadingToReady: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      gainLossState="loading"
+      toggleGainLossLoading
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    let header = await canvas.findByRole("columnheader", {
+      name: /G\/L Since Start \(CHF\)/,
+    });
+    await canvas.findByText("Assets", { exact: true });
+    const grid = canvasElement.querySelector(".ag-root-wrapper");
+    const firstRow = canvasElement.querySelector('.ag-row[row-index="0"]');
+    if (!grid || !firstRow) throw new Error("Accounts grid has no first row");
+    expect(grid.getBoundingClientRect().height).toBeGreaterThan(100);
+    const gridTop = grid.getBoundingClientRect().top;
+    const rowTop = firstRow.getBoundingClientRect().top;
+    const headerBounds = header.getBoundingClientRect();
+    expect(header).not.toHaveTextContent(/2026|Loading|unavailable/);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Toggle gain/loss loading" }),
+    );
+    await waitFor(() =>
+      expect(
+        firstRow.querySelector('[col-id="totalGainLoss"]'),
+      ).toHaveTextContent("10.00"),
+    );
+    header = canvas.getByRole("columnheader", {
+      name: /G\/L Since Start \(CHF\)/,
+    });
+    expect(grid.getBoundingClientRect().top).toBe(gridTop);
+    expect(firstRow.getBoundingClientRect().top).toBe(rowTop);
+    expect(header.getBoundingClientRect().top).toBe(headerBounds.top);
+    expect(header.getBoundingClientRect().height).toBe(headerBounds.height);
+    expect(header).not.toHaveTextContent(/2026|Loading|unavailable/);
+
+    header.focus();
+    await userEvent.tab();
+    const button = canvas.getByRole("button", {
+      name: "Show gain/loss details",
+    });
+    expect(button).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    const details = await within(canvasElement.ownerDocument.body).findByRole(
+      "dialog",
+      { name: "Gain/loss details" },
+    );
+    expect(details).toHaveTextContent("Since 1/1/2026 · As of 3/31/2026");
+    expect(details).toHaveTextContent("Incomplete columns show —");
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(details).not.toBeVisible());
+    expect(button).toHaveFocus();
+    await userEvent.tab({ shift: true });
+    expect(header).toHaveFocus();
+    await userEvent.tab();
+    await userEvent.tab();
+    expect(button).not.toHaveFocus();
+
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Toggle gain/loss loading" }),
+    );
+    const loadingDetails = await openGainLossDetails(canvasElement);
+    header = canvas.getByRole("columnheader", {
+      name: /G\/L Since Start \(CHF\)/,
+    });
+    expect(loadingDetails).toHaveTextContent("Loading calculation dates…");
+    expect(loadingDetails).not.toHaveTextContent("Since 1/1/2026");
+    expect(grid.getBoundingClientRect().top).toBe(gridTop);
+    expect(firstRow.getBoundingClientRect().top).toBe(rowTop);
+    expect(header.getBoundingClientRect().top).toBe(headerBounds.top);
+    expect(header.getBoundingClientRect().height).toBe(headerBounds.height);
+    await userEvent.keyboard("{Escape}");
+  },
+};
+
+export const GainLossCompletesWithDetailsOpen: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      gainLossState="loading"
+      toggleGainLossLoading
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const header = await canvas.findByRole("columnheader", {
+      name: /G\/L Since Start \(CHF\)/,
+    });
+    header.focus();
+    await userEvent.tab();
+    await userEvent.keyboard("{Enter}");
+    const details = await findVisibleDialog(body, "Gain/loss details");
+    expect(details).toHaveTextContent("Loading calculation dates…");
+    await waitFor(() =>
+      expect(details.contains(canvasElement.ownerDocument.activeElement)).toBe(
+        true,
+      ),
+    );
+
+    // Resolve the simulated request without an outside pointer event or focus change.
+    const toggleLoading = canvas.getByRole("button", {
+      name: "Toggle gain/loss loading",
+    });
+    toggleLoading.click();
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector(
+          '.ag-row[row-index="0"] [col-id="totalGainLoss"]',
+        ),
+      ).toHaveTextContent("10.00"),
+    );
+    await waitFor(() =>
+      expect(details).toHaveTextContent("Since 1/1/2026 · As of 3/31/2026"),
+    );
+    expect(details.isConnected).toBe(true);
+    expect(body.getByRole("dialog", { name: "Gain/loss details" })).toBe(
+      details,
+    );
+    expect(details.contains(canvasElement.ownerDocument.activeElement)).toBe(
+      true,
+    );
+
+    toggleLoading.click();
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector(
+          '.ag-row[row-index="0"] [col-id="totalGainLoss"] .mantine-Loader-root',
+        ),
+      ).toBeVisible(),
+    );
+    await waitFor(() =>
+      expect(details).toHaveTextContent("Loading calculation dates…"),
+    );
+    expect(details).not.toHaveTextContent("Since 1/1/2026");
+    expect(details.contains(canvasElement.ownerDocument.activeElement)).toBe(
+      true,
+    );
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(details).not.toBeVisible());
+    expect(
+      canvas.getByRole("button", { name: "Show gain/loss details" }),
+    ).toHaveFocus();
+  },
+};
+
 export const GainLossFailure: Story = {
   render: () => (
     <AccountsPageStoryHarness initialMode="active" gainLossState="error" />
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    expect(canvas.queryByText("Dates unavailable")).not.toBeInTheDocument();
+    const details = await openGainLossDetails(canvasElement);
+    expect(details).toHaveTextContent("Dates unavailable");
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(canvas.getByRole("button", { name: "Retry" }));
+    const readyDetails = await openGainLossDetails(canvasElement);
+    expect(readyDetails).toHaveTextContent("Since 1/1/2026 · As of 3/31/2026");
+    expect(canvas.queryByText("Gain/Loss Unavailable")).not.toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+  },
 };
 export const GainLossPartial: Story = {
   render: () => (
     <AccountsPageStoryHarness initialMode="active" gainLossState="partial" />
   ),
+  play: async ({ canvasElement }) => {
+    const details = await openGainLossDetails(canvasElement);
+    expect(details).toHaveTextContent("Since 1/1/2026 · As of 3/31/2026");
+    await userEvent.keyboard("{Escape}");
+  },
+};
+
+export const LocalizedLiabilityGainLoss: Story = {
+  render: () => (
+    <UserLocaleProvider locale="de-CH">
+      <AccountsPageStoryHarness initialMode="active" initialTab="LIABILITY" />
+    </UserLocaleProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const details = await openGainLossDetails(canvasElement);
+    expect(details).toHaveTextContent("Since 1.1.2026 · As of 31.3.2026");
+    await userEvent.keyboard("{Escape}");
+  },
 };
