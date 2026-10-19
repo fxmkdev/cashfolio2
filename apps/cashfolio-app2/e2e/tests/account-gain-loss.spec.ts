@@ -1,5 +1,7 @@
+import { createId } from "@paralleldrive/cuid2";
 import { expect, test } from "../support/fixtures";
 import { seedDatabase } from "../support/db";
+import { prisma } from "../support/db-client";
 import { openEditTransaction } from "../support/transaction-form";
 import { seedAccountGainLoss } from "../support/account-gain-loss-seeds";
 import {
@@ -8,6 +10,85 @@ import {
   agGridPinnedBottomRow,
   setGridCellValue,
 } from "../support/grid";
+
+test("ledger excludes reference-currency accounts before requesting G/L and preserves eligible loading", async ({
+  page,
+  e2eExternalId,
+}) => {
+  const book = await seedDatabase({
+    userExternalId: e2eExternalId,
+    accountBookStartDate: new Date("2026-01-01Z"),
+  });
+  const { destination } = await seedAccountGainLoss(
+    book.accountBookId,
+    book.cashAccount.id,
+  );
+  const liability = await prisma.account.create({
+    data: {
+      id: createId(),
+      accountBookId: book.accountBookId,
+      name: "Reference-currency liability",
+      type: "LIABILITY",
+      unit: "CURRENCY",
+      currency: "CHF",
+    },
+  });
+
+  const summaryResponse = page.waitForResponse(async (response) => {
+    if (!response.url().includes("/_serverFn/")) return false;
+    const body = await response.text().catch(() => "");
+    return (
+      body.includes("realizedGainLoss") &&
+      body.includes("accountName") &&
+      body.includes(destination.name)
+    );
+  });
+  await page.goto(`/${book.accountBookId}/${destination.id}`);
+  const endpoint = (await summaryResponse).url().split("?")[0];
+  await expect(page.getByTestId("account-gain-loss-total")).toBeVisible();
+
+  let requests = 0;
+  let releaseResponse!: () => void;
+  const responseGate = new Promise<void>((resolve) => {
+    releaseResponse = resolve;
+  });
+  const pattern = `${endpoint}*`;
+  await page.route(pattern, async (route) => {
+    requests += 1;
+    await responseGate;
+    await route.continue();
+  });
+
+  try {
+    for (const account of [book.cashAccount, liability, book.expenseAccount]) {
+      await page.goto(`/${book.accountBookId}/${account.id}`);
+      await expect(
+        page.getByRole("heading", { name: account.name, exact: true }),
+      ).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      await expect(
+        page.getByRole("heading", { name: "G/L Since Start", exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByLabel("Loading Gain/Loss", { exact: true }),
+      ).toHaveCount(0);
+      expect(requests).toBe(0);
+    }
+
+    await page.goto(`/${book.accountBookId}/${destination.id}`);
+    await expect.poll(() => requests).toBe(1);
+    await expect(
+      page.getByRole("heading", { name: "G/L Since Start", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByLabel("Loading Gain/Loss", { exact: true }),
+    ).toBeVisible();
+  } finally {
+    releaseResponse();
+  }
+  await expect(page.getByTestId("account-gain-loss-total")).toBeVisible();
+  await page.unroute(pattern);
+});
 
 test("accumulated account G/L, nested totals, historical summary, and FIFO explanation", async ({
   page,

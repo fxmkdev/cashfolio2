@@ -112,6 +112,12 @@ holding price/FX gains and losses, excluding separately booked explicit G/L and
 income such as dividends and interest. Securities traded in the reference
 currency are eligible; reference-currency cash is not.
 
+The ledger decides whether to show G/L Since Start from the account metadata and
+the book's actual reference currency before rendering or requesting G/L data.
+Only Asset and Liability accounts are eligible, excluding reference-currency
+cash. Ledger data always includes the book's reference currency, independently
+of whether booking values need conversion for reference-currency columns.
+
 The shared FIFO/execution-pricing engine supports chronological range replay.
 Executions are ordered by booking date, and completed same-unit transfers carry
 acquisition costs between accounts. Source-first multi-day transfers remove FIFO

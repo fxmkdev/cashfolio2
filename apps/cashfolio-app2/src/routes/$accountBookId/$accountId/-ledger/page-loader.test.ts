@@ -34,6 +34,22 @@ vi.mock("@/server/ledger", () => ({
   getLedgerPeriodBounds: vi.fn(),
 }));
 
+const ledgerAccount: Awaited<ReturnType<typeof getAccountForLedger>> = {
+  id: "account-1",
+  name: "Checking",
+  isActive: true,
+  type: AccountType.ASSET,
+  equityAccountSubtype: null,
+  unit: Unit.CURRENCY,
+  currency: "CHF",
+  cryptocurrency: null,
+  symbol: null,
+  tradeCurrency: null,
+  statementImportCsvFormat: null,
+  isCashAccount: false,
+  groupPathSegments: ["Bank accounts"],
+};
+
 describe("loadLedgerPageData", () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -46,19 +62,8 @@ describe("loadLedgerPageData", () => {
     "loads $accountState editor groups and validation nodes for the ledger account",
     async ({ isActive, accountState }) => {
       const account = {
-        id: "account-1",
-        name: "Checking",
+        ...ledgerAccount,
         isActive,
-        type: AccountType.ASSET,
-        equityAccountSubtype: null,
-        unit: Unit.CURRENCY,
-        currency: "CHF",
-        cryptocurrency: null,
-        symbol: null,
-        tradeCurrency: null,
-        statementImportCsvFormat: null,
-        isCashAccount: false,
-        groupPathSegments: ["Bank accounts"],
       };
       const accountGroups = [
         {
@@ -111,7 +116,7 @@ describe("loadLedgerPageData", () => {
       });
       vi.mocked(getLedgerData).mockResolvedValue({
         rows: [],
-        referenceCurrency: null,
+        referenceCurrency: "CHF",
         firstBookingDate: null,
         balanceBeforePeriod: 0,
         hasBookingsBeforePeriod: false,
@@ -142,6 +147,124 @@ describe("loadLedgerPageData", () => {
       expect(props.accountGroups).toBe(accountGroups);
       expect(props.existingNodes).toBe(existingNodes);
       expect(props.initialValues?.groupId).toBe("group-1");
+    },
+  );
+
+  test.each([
+    { name: "reference-currency asset", account: {}, showGainLoss: false },
+    {
+      name: "reference-currency liability",
+      account: { type: AccountType.LIABILITY },
+      showGainLoss: false,
+    },
+    {
+      name: "case-insensitive reference-currency match",
+      account: { currency: "chf" },
+      showGainLoss: false,
+    },
+    {
+      name: "foreign-currency asset",
+      account: { currency: "USD" },
+      showGainLoss: true,
+    },
+    {
+      name: "foreign-currency liability",
+      account: { type: AccountType.LIABILITY, currency: "EUR" },
+      showGainLoss: true,
+    },
+    {
+      name: "cryptocurrency",
+      account: {
+        unit: Unit.CRYPTOCURRENCY,
+        currency: null,
+        cryptocurrency: "BTC",
+      },
+      showGainLoss: true,
+    },
+    {
+      name: "security traded in reference currency",
+      account: {
+        unit: Unit.SECURITY,
+        currency: null,
+        symbol: "AAPL",
+        tradeCurrency: "CHF",
+      },
+      showGainLoss: true,
+    },
+    {
+      name: "equity income",
+      account: {
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.INCOME,
+        currency: null,
+        unit: null,
+      },
+      showGainLoss: false,
+    },
+    {
+      name: "equity expenses",
+      account: {
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+        currency: null,
+        unit: null,
+      },
+      showGainLoss: false,
+    },
+    {
+      name: "opening balances",
+      account: {
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+        currency: null,
+        unit: null,
+      },
+      showGainLoss: false,
+    },
+    {
+      name: "archived foreign-currency account",
+      account: { isActive: false, currency: "USD" },
+      showGainLoss: true,
+    },
+    {
+      name: "archived reference-currency account",
+      account: { isActive: false },
+      showGainLoss: false,
+    },
+    {
+      name: "incomplete holding metadata",
+      account: { currency: null, unit: null },
+      showGainLoss: true,
+    },
+  ])(
+    "decides G/L visibility before rendering for $name",
+    async ({ account, showGainLoss }) => {
+      vi.mocked(getAccountForLedger).mockResolvedValue({
+        ...ledgerAccount,
+        ...account,
+      });
+      vi.mocked(getLedgerData).mockResolvedValue({
+        rows: [],
+        referenceCurrency: "CHF",
+        firstBookingDate: null,
+        balanceBeforePeriod: 0,
+        hasBookingsBeforePeriod: false,
+      });
+
+      const data = await loadLedgerPageData({
+        accountBookId: "book-1",
+        accountId: ledgerAccount.id,
+      });
+
+      expect(data.showGainLoss).toBe(showGainLoss);
+      expect(data.referenceCurrency).toBe("CHF");
+      if (data.account.type !== AccountType.EQUITY) {
+        expect(getLedgerData).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({ includeReferenceValues: false }),
+          }),
+        );
+      }
     },
   );
 });

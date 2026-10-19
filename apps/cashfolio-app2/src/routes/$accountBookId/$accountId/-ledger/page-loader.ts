@@ -1,4 +1,8 @@
-import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "@/.prisma-client/enums";
 import {
   getAccountGroups,
   getAccounts,
@@ -94,6 +98,14 @@ export async function loadLedgerPageData(args: {
     existingNodes,
     rows: ledgerData.rows,
     referenceCurrency: ledgerData.referenceCurrency,
+    showGainLoss:
+      (account.type === AccountType.ASSET ||
+        account.type === AccountType.LIABILITY) &&
+      !(
+        account.unit === Unit.CURRENCY &&
+        account.currency?.toUpperCase() ===
+          ledgerData.referenceCurrency.toUpperCase()
+      ),
     firstBookingDate: ledgerData.firstBookingDate,
     balanceBeforePeriod: ledgerData.balanceBeforePeriod,
     hasBookingsBeforePeriod: ledgerData.hasBookingsBeforePeriod,

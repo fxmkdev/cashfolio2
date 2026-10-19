@@ -141,11 +141,7 @@ export function LedgerPageContent() {
     <Suspense fallback={null}>
       <LedgerPageView
         gainLossSection={
-          loaderData.account.type !== "EQUITY" &&
-          !(
-            loaderData.account.unit === "CURRENCY" &&
-            loaderData.account.currency === loaderData.referenceCurrency
-          ) ? (
+          loaderData.showGainLoss ? (
             <AccountGainLossSection
               accountBookId={accountBookId}
               accountId={accountId}

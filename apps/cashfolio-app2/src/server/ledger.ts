@@ -244,14 +244,12 @@ export const getLedgerData = createServerFn({ method: "GET" })
           },
         },
       }),
-      data.includeReferenceValues
-        ? prisma.accountBook
-            .findUniqueOrThrow({
-              where: { id: data.accountBookId },
-              select: { referenceCurrency: true },
-            })
-            .then((accountBook) => accountBook.referenceCurrency.toUpperCase())
-        : Promise.resolve<string | null>(null),
+      prisma.accountBook
+        .findUniqueOrThrow({
+          where: { id: data.accountBookId },
+          select: { referenceCurrency: true },
+        })
+        .then((accountBook) => accountBook.referenceCurrency.toUpperCase()),
       carryOverMetadataPromise,
       firstBookingPromise,
     ]);
