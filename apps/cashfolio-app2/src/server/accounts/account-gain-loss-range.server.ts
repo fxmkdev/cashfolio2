@@ -19,6 +19,7 @@ import type {
   ValuationRateSource,
 } from "../valuation/types";
 import { createValuationLookupContext } from "../valuation/lookup-context";
+import { createAccountGainLossLookupScheduler } from "./account-gain-loss-prefetch.server";
 import {
   calculateAccountGainLoss,
   type AccountGainLossBasis,
@@ -181,6 +182,7 @@ export async function loadAccountGainLossRange(args: {
     string,
     Promise<DecimalValuationRateLookupResult>
   >();
+  const scheduleLookup = createAccountGainLossLookupScheduler();
   const latestFetchableDate =
     createValuationLookupContext().latestFetchableDate;
   let basisPhase = true;
@@ -233,6 +235,7 @@ export async function loadAccountGainLossRange(args: {
         ...input,
         referenceCurrency,
         exchangeRateByKey,
+        scheduleLookup,
       });
       markSource(result.source, input.date);
       return result.rate;
@@ -242,6 +245,7 @@ export async function loadAccountGainLossRange(args: {
         ...booking,
         referenceCurrency,
         exchangeRateByKey,
+        scheduleLookup,
       });
       markSource(result.source, booking.date);
       return result.value;

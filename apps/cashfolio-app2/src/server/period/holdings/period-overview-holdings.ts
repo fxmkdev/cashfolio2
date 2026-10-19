@@ -1,17 +1,15 @@
 import { applyPendingHoldingExecutions } from "./holding-executions";
-import { toMoney, type Money, moneyAdd, moneySum } from "../../../shared/money";
+import { toMoney, type Money, moneyAdd } from "../../../shared/money";
 import {
-  isExplicitGainLossBooking,
   isNearZero,
-  isWithinPeriod,
   toLotAcquisitionSortKey,
 } from "./period-overview-holdings-common";
 import { applyMixedPeriodSameUnitHoldingTransfer } from "./period-overview-holdings-mixed-transfer";
 import {
   applyHoldingTransfer,
   resolveHoldingTransferDirection,
-  toHoldingUnitIdentifier,
 } from "./period-overview-holdings-transfer";
+import { getHoldingTransactionContext } from "./holding-transaction-context";
 import type {
   HoldingAccountState,
   HoldingBookingConverter,
@@ -115,64 +113,20 @@ export async function applyHoldingTransactionsToGainLossState(args: {
   onSkippedItem?: (item: HoldingTransactionSkippedItem) => void;
 }) {
   for (const transaction of args.transactions) {
-    const allNonExplicitBookings = transaction.bookings.filter(
-      (booking) => !isExplicitGainLossBooking(booking),
-    );
-
-    if (allNonExplicitBookings.length === 0) {
-      continue;
-    }
-
-    const inPeriodHoldingBookings = allNonExplicitBookings.filter((booking) => {
-      if (
-        !isWithinPeriod({
-          date: booking.date,
-          periodStart: args.periodStart,
-          periodEndExclusive: args.periodEndExclusive,
-        })
-      ) {
-        return false;
-      }
-      const state = args.state.stateByHoldingAccountId.get(booking.accountId);
-      return state != null && !state.skipped;
-    });
+    const {
+      allNonExplicitBookings,
+      inPeriodHoldingBookings,
+      allNonExplicitAreHolding,
+      allNonExplicitInPeriod,
+      nonExplicitUnitIdentifiers,
+      isChronologicalTransfer,
+    } = getHoldingTransactionContext({ ...args, transaction });
 
     if (inPeriodHoldingBookings.length === 0) {
       continue;
     }
 
-    const allNonExplicitAreHolding = allNonExplicitBookings.every((booking) => {
-      const state = args.state.stateByHoldingAccountId.get(booking.accountId);
-      return state != null && !state.skipped;
-    });
-    const allNonExplicitInPeriod = allNonExplicitBookings.every((booking) =>
-      isWithinPeriod({
-        date: booking.date,
-        periodStart: args.periodStart,
-        periodEndExclusive: args.periodEndExclusive,
-      }),
-    );
-    const nonExplicitUnitIdentifiers = new Set(
-      allNonExplicitBookings.map((booking) =>
-        toHoldingUnitIdentifier({
-          unit: booking.unit,
-          currency: booking.currency,
-          cryptocurrency: booking.cryptocurrency,
-          symbol: booking.symbol,
-          tradeCurrency: booking.tradeCurrency,
-        }),
-      ),
-    );
-    if (
-      args.state.chronological &&
-      allNonExplicitAreHolding &&
-      allNonExplicitInPeriod &&
-      nonExplicitUnitIdentifiers.size === 1 &&
-      !nonExplicitUnitIdentifiers.has(null) &&
-      isNearZero(
-        moneySum(inPeriodHoldingBookings.map((booking) => booking.value)),
-      )
-    ) {
+    if (isChronologicalTransfer) {
       (args.state.holdingTransfers ??= []).push(inPeriodHoldingBookings);
       continue;
     }

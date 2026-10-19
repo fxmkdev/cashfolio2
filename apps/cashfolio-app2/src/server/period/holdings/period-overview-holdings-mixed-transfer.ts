@@ -85,7 +85,7 @@ function applyNonRealizingExecutionToLots(args: {
   });
 }
 
-function isMixedPeriodSameUnitHoldingTransfer(args: {
+export function isMixedPeriodSameUnitHoldingTransfer(args: {
   allNonExplicitAreHolding: boolean;
   allNonExplicitInPeriod: boolean;
   nonExplicitUnitIdentifiers: Set<string | null>;

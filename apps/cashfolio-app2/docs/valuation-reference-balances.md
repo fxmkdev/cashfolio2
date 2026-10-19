@@ -193,3 +193,20 @@ non-identity execution prices cannot persist until their valuation dates pass
 the publication cutoff. Cache failures fall back to full calculation. See
 [Accumulated G/L historical basis cache](server-functions.md#accumulated-gl-historical-basis-cache)
 for limits, snapshot validation, and cleanup behavior.
+
+### Concurrent account G/L valuation
+
+Accumulated account G/L overlaps independent valuation lookups with a limit of
+four high-level lookups per calculation. Rate/date Promise memoization runs
+before scheduling, so repeated rates share a lookup without occupying extra
+slots. Opening balances, historical execution pricing, on-demand transfer
+fallbacks, and closing valuations use the same request-local limit.
+
+After opening holdings are initialized, required historical conversions are
+prefetched before ordered execution pricing and FIFO replay. Transfers carrying
+cost basis need no market prices; replay-dependent transfer fallbacks remain on
+demand. All historical dependencies finish before a basis can be cached. Closing
+prices for open positions are then prefetched separately, including on
+basis-cache hits; closed and skipped holdings require no closing lookup.
+Callbacks, diagnostics, and lot replay retain their order. Report and History
+retain their existing lookup behavior.
