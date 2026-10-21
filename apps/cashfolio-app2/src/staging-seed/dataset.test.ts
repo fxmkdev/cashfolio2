@@ -5,7 +5,7 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../.prisma-client/enums";
-import { getOpeningBalancesBookingDate } from "../shared/date";
+import { addUtcDays, getOpeningBalancesBookingDate } from "../shared/date";
 import { validateGainLossSimpleTransactionInvariant } from "../shared/gain-loss-transaction-invariant";
 import { readStatementImportCsvFormat } from "../shared/statement-import-csv-format";
 import {
@@ -112,6 +112,14 @@ describe("staging synthetic dataset", () => {
     ["wallet", ["Cash", "Cash wallet CHF"]],
     ["aapl", ["Investments", "Shares", "Apple shares"]],
     ["btc", ["Investments", "Cryptocurrencies", "Bitcoin wallet"]],
+    [
+      "btc-transfer-source",
+      ["Investments", "Cryptocurrencies", "Bitcoin transfer source"],
+    ],
+    [
+      "btc-transfer-destination",
+      ["Investments", "Cryptocurrencies", "Bitcoin transfer destination"],
+    ],
     ["pension", ["Investments", "Pillar 3a savings"]],
     ["rent", ["Housing", "Rent"]],
     ["groceries", ["Daily living", "Groceries"]],
@@ -160,6 +168,101 @@ describe("staging synthetic dataset", () => {
     expect(days.has(today.toISOString())).toBe(true);
     expect(days.has("2024-02-29T00:00:00.000Z")).toBe(true);
   });
+
+  it.each(["2026-10-10", "2026-01-01", "2024-03-01"])(
+    "keeps the Bitcoin transfer demo deterministic and balanced through %s",
+    (day) => {
+      const asOf = new Date(`${day}T00:00:00Z`);
+      const generated = generateStagingDataset(asOf);
+      expect(generateStagingDataset(asOf)).toEqual(generated);
+      const book = generated.books[0];
+      const transactions = book.transactions.filter((transaction) =>
+        transaction.description.startsWith("Bitcoin transfer demo:"),
+      );
+      expect(
+        transactions.map((transaction) => transaction.description),
+      ).toEqual([
+        "Bitcoin transfer demo: purchase",
+        "Bitcoin transfer demo: transfer with network fee",
+        "Bitcoin transfer demo: partial sale",
+      ]);
+      expect(
+        transactions.map((transaction) =>
+          transaction.bookings.map((booking) => ({
+            account: booking.accountKey,
+            value: booking.value,
+          })),
+        ),
+      ).toEqual([
+        [
+          { account: "btc-transfer-source", value: "0.01" },
+          { account: "current", value: "-1000" },
+        ],
+        [
+          { account: "btc-transfer-source", value: "-0.01" },
+          { account: "btc-transfer-destination", value: "0.0099" },
+          { account: "btc-transfer-fees", value: "0.0001" },
+        ],
+        [
+          { account: "btc-transfer-destination", value: "-0.004" },
+          { account: "current", value: "600" },
+        ],
+      ]);
+      for (const [index, offset] of [-21, -14, -7].entries()) {
+        for (const booking of transactions[index]!.bookings) {
+          expect(booking.date).toEqual(addUtcDays(asOf, offset));
+          expect(booking.date >= book.startDate && booking.date <= asOf).toBe(
+            true,
+          );
+          if (booking.accountKey.startsWith("btc-transfer-")) {
+            expect(booking).toMatchObject({
+              unit: Unit.CRYPTOCURRENCY,
+              cryptocurrency: "BTC",
+            });
+          } else {
+            expect(booking).toMatchObject({
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+            });
+          }
+        }
+      }
+      expect(
+        Decimal.sum(
+          ...transactions[1]!.bookings.map((booking) => booking.value),
+        ).isZero(),
+      ).toBe(true);
+      const bookings = allBookings(book);
+      for (const [key, balance] of [
+        ["btc-transfer-source", "0"],
+        ["btc-transfer-destination", "0.0059"],
+        ["btc-transfer-fees", "0.0001"],
+      ]) {
+        expect(
+          Decimal.sum(
+            ...bookings
+              .filter((booking) => booking.accountKey === key)
+              .map((booking) => booking.value),
+          ).toString(),
+        ).toBe(balance);
+      }
+      expect(
+        book.accounts.find((account) => account.key === "btc-transfer-fees"),
+      ).toMatchObject({
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+        unit: Unit.CRYPTOCURRENCY,
+        cryptocurrency: "BTC",
+      });
+      expect(
+        bookings.some(
+          (booking) =>
+            booking.accountKey.startsWith("btc-transfer-") &&
+            booking.date < book.startDate,
+        ),
+      ).toBe(false);
+    },
+  );
 
   it("clamps the start anniversary for leap days and accepts early-month current days", () => {
     for (const [day, start] of [

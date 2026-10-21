@@ -51,6 +51,40 @@ living, and Leisure and travel are top-level expense groups; income, debts,
 Taxes, and Bank and trading fees are ungrouped. Former bank accounts remains an
 archived group with a closed account.
 
+## Test a holding transfer with fees
+
+In `1. Swiss Household Demo`, open
+`Investments → Cryptocurrencies → Bitcoin transfer source` or
+`Bitcoin transfer destination`. The separate `Bitcoin transfer fees` expense
+account is denominated in BTC. These accounts have no opening holdings and are
+independent of the existing Bitcoin savings activity.
+
+Search for `Bitcoin transfer demo` to find three transactions. Dates are
+relative to the seed's Zurich calendar date and move with each refresh:
+
+| Date           | Transaction                                      | Bookings                                                    |
+| -------------- | ------------------------------------------------ | ----------------------------------------------------------- |
+| Today −21 days | Bitcoin transfer demo: purchase                  | Source +0.01 BTC; Everyday account CHF −1,000 CHF           |
+| Today −14 days | Bitcoin transfer demo: transfer with network fee | Source −0.01 BTC; destination +0.0099 BTC; fees +0.0001 BTC |
+| Today −7 days  | Bitcoin transfer demo: partial sale              | Destination −0.004 BTC; Everyday account CHF +600 CHF       |
+
+Use the unfiltered ledger's **G/L Since Start** and **View Calculation** to
+inspect the original CHF 100,000-per-BTC cost and acquisition date. The transfer
+carries CHF 990 of acquisition cost to the destination without realising G/L on
+that quantity. The source realises G/L only on the 0.0001 BTC fee, whose cost is
+CHF 10; its execution value comes from the transfer-date quote.
+
+After the sale, the source balance is zero and the destination holds **0.0059
+BTC** with **CHF 590** remaining acquisition cost. The destination's accumulated
+realised G/L is **CHF 200** (CHF 600 proceeds less CHF 400 original cost). Those
+figures are fixed by the seed. The fee's realised G/L and the destination's
+unrealised G/L depend on market quotes. Report and History retain their
+period-opening valuation semantics, so their period splits can differ from
+accumulated G/L.
+
+The scenario becomes available through the normal enabled staging refresh or
+deployment; adding it to the seed source does not reset staging immediately.
+
 ## Configure the approved target
 
 Manually configure these secrets on the staging Fly app, following the existing

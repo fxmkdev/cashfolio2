@@ -36,6 +36,7 @@ type ReplayOperation =
   | {
       sortKey: string;
       execution: Execution;
+      carry?: never;
       transfer?: never;
       bookings?: never;
     }
@@ -43,6 +44,14 @@ type ReplayOperation =
       sortKey: string;
       execution?: never;
       transfer: TransferReplay;
+      carry?: never;
+      bookings: HoldingTransactionBooking[];
+    }
+  | {
+      sortKey: string;
+      carry: HoldingTransactionBooking[];
+      execution?: never;
+      transfer?: never;
       bookings: HoldingTransactionBooking[];
     };
 
@@ -53,6 +62,7 @@ function bookingSortKey(booking: HoldingTransactionBooking) {
 function scheduleOperations(
   executions: Execution[],
   transfers: TransferReplay[],
+  carries: HoldingTransactionBooking[][],
 ) {
   const operations: ReplayOperation[] = executions.map((execution) => ({
     sortKey: toLotAcquisitionSortKey({
@@ -72,8 +82,33 @@ function scheduleOperations(
       });
     }
   }
-  return operations.sort((left, right) =>
-    left.sortKey.localeCompare(right.sortKey, "en"),
+  for (const carry of carries) {
+    for (const booking of carry) {
+      operations.push({
+        sortKey: bookingSortKey(booking),
+        carry,
+        bookings: [booking],
+      });
+    }
+  }
+  // A split booking's transfer/carry consumes FIFO before its execution remainder.
+  const transferSortKeys = new Map<string, string>();
+  for (const operation of operations) {
+    for (const booking of operation.bookings ?? []) {
+      const existing = transferSortKeys.get(booking.id);
+      if (!existing || operation.sortKey > existing)
+        transferSortKeys.set(booking.id, operation.sortKey);
+    }
+  }
+  for (const operation of operations) {
+    if (!operation.execution) continue;
+    const key = transferSortKeys.get(operation.execution.event.bookingId);
+    if (key && key > operation.sortKey) operation.sortKey = key;
+  }
+  return operations.sort(
+    (left, right) =>
+      left.sortKey.localeCompare(right.sortKey, "en") ||
+      Number(!!left.execution) - Number(!!right.execution),
   );
 }
 
@@ -117,7 +152,11 @@ export function buildHoldingReplayOperations(
   // Moving one such transfer can change another's available quantity, so replan
   // until no further transfers need atomic treatment. Each pass fixes at least one.
   for (;;) {
-    const operations = scheduleOperations(executions, transfers);
+    const operations = scheduleOperations(
+      executions,
+      transfers,
+      state.holdingCarries ?? [],
+    );
     const quantities = new Map(
       [...state.stateByHoldingAccountId].map(([id, account]) => [
         id,
@@ -144,24 +183,47 @@ export function buildHoldingReplayOperations(
         }
         continue;
       }
+      if (operation.carry) {
+        for (const booking of operation.bookings)
+          quantities.set(
+            booking.accountId,
+            moneyAdd(
+              quantities.get(booking.accountId) ?? toMoney(0),
+              booking.value,
+            ),
+          );
+        continue;
+      }
       const { transfer, bookings } = operation;
       const deltas = new Map<string, ReturnType<typeof toMoney>>();
-      for (const booking of bookings)
+      const outgoing = new Map<string, ReturnType<typeof toMoney>>();
+      const incoming = new Map<string, ReturnType<typeof toMoney>>();
+      for (const booking of bookings) {
+        const side = booking.value.isNegative() ? outgoing : incoming;
+        side.set(
+          booking.accountId,
+          moneyAdd(side.get(booking.accountId) ?? toMoney(0), booking.value),
+        );
         deltas.set(
           booking.accountId,
           moneyAdd(deltas.get(booking.accountId) ?? toMoney(0), booking.value),
         );
+      }
       for (const [id, delta] of deltas) {
         const after = moneyAdd(quantities.get(id) ?? toMoney(0), delta);
         if (!transfer.atomic) {
           if (
-            toMoney(delta).lt(-QUANTITY_EPSILON) &&
-            toMoney(after).lt(-QUANTITY_EPSILON)
+            outgoing.has(id) &&
+            moneyAdd(quantities.get(id) ?? toMoney(0), outgoing.get(id)!).lt(
+              -QUANTITY_EPSILON,
+            )
           )
             transfer.canTransferLong = false;
           if (
-            toMoney(delta).gt(QUANTITY_EPSILON) &&
-            toMoney(after).gt(QUANTITY_EPSILON)
+            incoming.has(id) &&
+            moneyAdd(quantities.get(id) ?? toMoney(0), incoming.get(id)!).gt(
+              QUANTITY_EPSILON,
+            )
           )
             transfer.canTransferShort = false;
         }
@@ -178,6 +240,26 @@ export function buildHoldingReplayOperations(
             ? "LONG"
             : "SHORT";
       if (!transfer.direction) continue;
+      const byId = new Map(
+        transfer.bookings.map((booking) => [booking.id, booking]),
+      );
+      const receivesBeforeSource = transfer.bookings.some((booking) => {
+        const isReceipt =
+          transfer.direction === "LONG"
+            ? booking.value.isPositive()
+            : booking.value.isNegative();
+        return (
+          isReceipt &&
+          booking.transferPeers?.some(
+            (peer) => byId.get(peer.bookingId)!.date > booking.date,
+          )
+        );
+      });
+      if (receivesBeforeSource) {
+        transfer.atomic = true;
+        reschedule = true;
+        continue;
+      }
       let inTransit = toMoney(0);
       const sign = transfer.direction === "LONG" ? 1 : -1;
       for (const batch of transfer.batches) {

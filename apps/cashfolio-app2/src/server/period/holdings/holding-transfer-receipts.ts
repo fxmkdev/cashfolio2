@@ -31,11 +31,31 @@ export function receiveHoldingTransfer(args: {
   let effectiveReferenceAmount = toMoney(0);
   let realizedGainLossDelta = toMoney(0);
   const lotMatches: HoldingExecutionLotMatch[] = [];
+  const peers = booking.transferPeers?.map((peer) => ({ ...peer }));
 
   while (!isNearZero(remaining) && transferPool.length > 0) {
-    const carried = transferPool[0]!;
+    const poolIndex = peers
+      ? transferPool.findIndex((lot) =>
+          peers.some(
+            (peer) =>
+              peer.bookingId === lot.transferSourceBookingId &&
+              !isNearZero(peer.quantity),
+          ),
+        )
+      : 0;
+    if (poolIndex < 0) break;
+    const carried = transferPool[poolIndex]!;
+    const peer = peers?.find(
+      (item) =>
+        item.bookingId === carried.transferSourceBookingId &&
+        !isNearZero(item.quantity),
+    );
     const sign = carried.quantity.comparedTo(0);
-    const magnitude = MoneyDecimal.min(remaining, moneyAbs(carried.quantity));
+    const magnitude = MoneyDecimal.min(
+      remaining,
+      moneyAbs(carried.quantity),
+      peer?.quantity ?? remaining,
+    );
     const oppositeQuantity = state.lots.reduce(
       (sum, lot) =>
         lot.quantity.comparedTo(0) === -sign
@@ -79,7 +99,11 @@ export function receiveHoldingTransfer(args: {
     const movedQuantity = moneyMultiply(sign, magnitude);
     const residualQuantity = moneySubtract(movedQuantity, closedQuantity);
     if (!isNearZero(residualQuantity)) {
-      const lot = { ...carried, quantity: residualQuantity };
+      const lot = {
+        quantity: residualQuantity,
+        unitCostInReference: carried.unitCostInReference,
+        acquisitionSortKey: carried.acquisitionSortKey,
+      };
       const index = state.lots.findIndex(
         (existing) => existing.acquisitionSortKey > lot.acquisitionSortKey,
       );
@@ -88,7 +112,8 @@ export function receiveHoldingTransfer(args: {
     }
     carried.quantity = moneySubtract(carried.quantity, movedQuantity);
     remaining = moneySubtract(remaining, magnitude);
-    if (isNearZero(carried.quantity)) transferPool.shift();
+    if (peer) peer.quantity = moneySubtract(peer.quantity, magnitude);
+    if (isNearZero(carried.quantity)) transferPool.splice(poolIndex, 1);
   }
 
   state.realizedGainLoss = moneyAdd(

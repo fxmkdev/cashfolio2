@@ -104,18 +104,19 @@ export function resolveHoldingTransferDirection(args: {
   stateByHoldingAccountId: Map<string, HoldingAccountState>;
   holdingBookings: HoldingTransactionBooking[];
 }): HoldingTransferDirection | null {
-  const netByAccountId = new Map<string, Money>();
+  const outgoingByAccountId = new Map<string, Money>();
+  const incomingByAccountId = new Map<string, Money>();
   let netQuantity: Money = toMoney(0);
   let hasPositive = false;
   let hasNegative = false;
 
   for (const booking of args.holdingBookings) {
-    netByAccountId.set(
+    const amounts = booking.value.isNegative()
+      ? outgoingByAccountId
+      : incomingByAccountId;
+    amounts.set(
       booking.accountId,
-      moneyAdd(
-        netByAccountId.get(booking.accountId) ?? toMoney(0),
-        booking.value,
-      ),
+      moneyAdd(amounts.get(booking.accountId) ?? toMoney(0), booking.value),
     );
     netQuantity = moneyAdd(netQuantity, booking.value);
     if (toMoney(booking.value).comparedTo(QUANTITY_EPSILON) > 0) {
@@ -130,7 +131,7 @@ export function resolveHoldingTransferDirection(args: {
   }
 
   let canTransferLong = true;
-  for (const [accountId, netDelta] of netByAccountId) {
+  for (const [accountId, netDelta] of outgoingByAccountId) {
     if (toMoney(netDelta).comparedTo(-QUANTITY_EPSILON) >= 0) {
       continue;
     }
@@ -153,7 +154,7 @@ export function resolveHoldingTransferDirection(args: {
   }
 
   let canTransferShort = true;
-  for (const [accountId, netDelta] of netByAccountId) {
+  for (const [accountId, netDelta] of incomingByAccountId) {
     if (toMoney(netDelta).comparedTo(QUANTITY_EPSILON) <= 0) {
       continue;
     }
@@ -225,7 +226,7 @@ export function applyHoldingTransfer(args: {
         lots: state.lots,
         quantity: moneyAbs(booking.value),
         lotSign,
-      }),
+      }).map((lot) => ({ ...lot, transferSourceBookingId: booking.id })),
     );
   }
 

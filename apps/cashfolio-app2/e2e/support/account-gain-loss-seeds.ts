@@ -4,7 +4,7 @@ import { prisma, assertSafeWriteTarget } from "./db-client";
 export async function seedAccountGainLoss(
   accountBookId: string,
   cashAccountId: string,
-  scenario: "default" | "opposite" = "default",
+  scenario: "default" | "opposite" | "fee" = "default",
 ) {
   assertSafeWriteTarget();
   const root = await prisma.accountGroup.findFirstOrThrow({
@@ -112,7 +112,7 @@ export async function seedAccountGainLoss(
         transactionId,
         accountId: source.id,
         date: new Date(scenario === "opposite" ? "2026-01-03Z" : "2026-02-10Z"),
-        value: -2,
+        value: scenario === "fee" ? -3 : -2,
         unit: "SECURITY",
         symbol: "AAPL",
         tradeCurrency: "CHF",
@@ -131,10 +131,30 @@ export async function seedAccountGainLoss(
       },
     ],
   });
+  if (scenario === "fee") {
+    const expense = await prisma.account.findFirstOrThrow({
+      where: { accountBookId, type: "EQUITY", equityAccountSubtype: "EXPENSE" },
+    });
+    await prisma.booking.create({
+      data: {
+        id: createId(),
+        accountBookId,
+        transactionId,
+        accountId: expense.id,
+        date: new Date("2026-02-10Z"),
+        value: 1,
+        unit: "SECURITY",
+        symbol: "AAPL",
+        tradeCurrency: "CHF",
+        description: "Transfer Fee",
+      },
+    });
+  }
   if (scenario === "opposite") {
     await trade("Close Position", "2026-01-05Z", -1, 160);
   } else {
-    await trade("Source Sale", "2026-02-20Z", -1, 8, source.id);
+    if (scenario !== "fee")
+      await trade("Source Sale", "2026-02-20Z", -1, 8, source.id);
     await trade("Partial Sale", "2026-03-10Z", -1, 15);
   }
   await prisma.account.update({

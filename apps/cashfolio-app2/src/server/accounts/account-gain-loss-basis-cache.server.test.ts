@@ -94,7 +94,7 @@ let closingRate: number | null;
 let basisSource: ValuationRateSource;
 let closingSource: ValuationRateSource;
 const basisKey =
-  "account:gain-loss-basis:v1:test:book:revision:2026-03-03T00:00:00.000Z";
+  "account:gain-loss-basis:v2:test:book:revision:2026-03-03T00:00:00.000Z";
 const load = (date = "2026-05-12Z") =>
   loadAccountGainLossSummaryRange({
     accountBookId: "book",
@@ -322,7 +322,7 @@ describe("historical G/L basis cache through the real FIFO calculation", () => {
     expect(mocks.rate).toHaveBeenCalledTimes(rates);
     expect(
       [...mocks.entries.keys()].filter((key) =>
-        key.startsWith("account:gain-loss:v2:"),
+        key.startsWith("account:gain-loss:v3:"),
       ),
     ).toHaveLength(1);
   });
@@ -387,7 +387,7 @@ describe("historical G/L basis cache through the real FIFO calculation", () => {
     transactions = [];
     await load();
     expect([...mocks.entries.keys()]).toEqual([
-      "account:gain-loss-basis:v1:test:book:revision:empty",
+      "account:gain-loss-basis:v2:test:book:revision:empty",
     ]);
   });
 
@@ -465,6 +465,19 @@ describe("historical G/L basis cache through the real FIFO calculation", () => {
   it("requires the shared namespace", async () => {
     vi.stubEnv("PERIOD_BASE_CACHE_ENV", "");
     await expect(load()).rejects.toThrow("PERIOD_BASE_CACHE_ENV");
+  });
+
+  it("rebuilds instead of reusing v1 historical bases", async () => {
+    await load();
+    const payload = mocks.entries.get(basisKey)!;
+    mocks.entries.clear();
+    const oldKey = basisKey.replace(":v2:", ":v1:");
+    mocks.entries.set(oldKey, payload);
+    mocks.db.transaction.findMany.mockClear();
+    await load();
+    expect(mocks.db.transaction.findMany).toHaveBeenCalled();
+    expect(mocks.entries.has(basisKey)).toBe(true);
+    expect(mocks.entries.get(oldKey)).toBe(payload);
   });
 
   it("ignores malformed and oversized entries and bounds writes", async () => {

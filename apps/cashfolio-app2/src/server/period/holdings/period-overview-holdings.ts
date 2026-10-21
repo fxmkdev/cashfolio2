@@ -4,11 +4,6 @@ import {
   isNearZero,
   toLotAcquisitionSortKey,
 } from "./period-overview-holdings-common";
-import { applyMixedPeriodSameUnitHoldingTransfer } from "./period-overview-holdings-mixed-transfer";
-import {
-  applyHoldingTransfer,
-  resolveHoldingTransferDirection,
-} from "./period-overview-holdings-transfer";
 import { getHoldingTransactionContext } from "./holding-transaction-context";
 import type {
   HoldingAccountState,
@@ -112,66 +107,26 @@ export async function applyHoldingTransactionsToGainLossState(args: {
   convertBookingToReference: HoldingBookingConverter;
   onSkippedItem?: (item: HoldingTransactionSkippedItem) => void;
 }) {
+  args.state.convertBookingToReference = args.convertBookingToReference;
   for (const transaction of args.transactions) {
-    const {
-      allNonExplicitBookings,
-      inPeriodHoldingBookings,
-      allNonExplicitAreHolding,
-      allNonExplicitInPeriod,
-      nonExplicitUnitIdentifiers,
-      isChronologicalTransfer,
-    } = getHoldingTransactionContext({ ...args, transaction });
-
-    if (inPeriodHoldingBookings.length === 0) {
-      continue;
+    const context = getHoldingTransactionContext({ ...args, transaction });
+    for (const bookings of context.transfers) {
+      const inPeriodHoldingBookings = bookings.filter(
+        (booking) =>
+          booking.date >= args.periodStart &&
+          booking.date < args.periodEndExclusive,
+      );
+      if (!inPeriodHoldingBookings.length) continue;
+      if (inPeriodHoldingBookings.length !== bookings.length) {
+        (args.state.holdingCarries ??= []).push(inPeriodHoldingBookings);
+      } else {
+        (args.state.holdingTransfers ??= []).push(bookings);
+      }
     }
-
-    if (isChronologicalTransfer) {
-      (args.state.holdingTransfers ??= []).push(inPeriodHoldingBookings);
-      continue;
-    }
-    const transferDirection =
-      allNonExplicitAreHolding &&
-      allNonExplicitInPeriod &&
-      nonExplicitUnitIdentifiers.size === 1 &&
-      !nonExplicitUnitIdentifiers.has(null)
-        ? resolveHoldingTransferDirection({
-            stateByHoldingAccountId: args.state.stateByHoldingAccountId,
-            holdingBookings: inPeriodHoldingBookings,
-          })
-        : null;
-
-    if (transferDirection != null) {
-      applyHoldingTransfer({
-        stateByHoldingAccountId: args.state.stateByHoldingAccountId,
-        holdingBookings: inPeriodHoldingBookings,
-        direction: transferDirection,
-      });
-      continue;
-    }
-
-    const handledAsMixedTransfer =
-      await applyMixedPeriodSameUnitHoldingTransfer({
-        state: args.state,
-        inPeriodHoldingBookings,
-        allNonExplicitAreHolding,
-        allNonExplicitInPeriod,
-        nonExplicitUnitIdentifiers,
-        convertBookingToReference: args.convertBookingToReference,
-        onSkippedItem: args.onSkippedItem,
-      });
-    if (handledAsMixedTransfer) {
-      continue;
-    }
-
+    if (!context.inPeriodHoldingBookings.length) continue;
     await applyHoldingTransactionExecutionPricing({
-      state: args.state,
-      inPeriodHoldingBookings,
-      allNonExplicitBookings,
-      allNonExplicitAreHolding,
-      nonExplicitUnitIdentifiers,
-      convertBookingToReference: args.convertBookingToReference,
-      onSkippedItem: args.onSkippedItem,
+      ...args,
+      ...context,
     });
   }
 }
@@ -183,12 +138,11 @@ export async function finalizeHoldingGainLossState(
     resolveRate: HoldingRateResolver;
   } & HoldingGainLossFinalizationCallbacks,
 ) {
-  if (args.state.chronological)
-    await applyPendingHoldingExecutions({
-      state: args.state,
-      captureLotMatches: !!args.onAccountExecutionEvent,
-      onSkippedItem: args.onSkippedItem,
-    });
+  await applyPendingHoldingExecutions({
+    state: args.state,
+    captureLotMatches: !!args.onAccountExecutionEvent,
+    onSkippedItem: args.onSkippedItem,
+  });
   let skippedCount = args.state.skippedCount;
   const convertedCount = args.state.convertedCount;
   let realizedGainLoss: Money = toMoney(0);
@@ -246,7 +200,6 @@ export async function finalizeHoldingGainLossState(
 
 export async function computeHoldingGainLossSplit(
   args: {
-    chronological?: boolean;
     holdingAccounts: HoldingRateConvertibleAccount[];
     initialBalanceByAccountId: Map<string, Money>;
     transactions: HoldingTransaction[];
@@ -266,7 +219,6 @@ export async function computeHoldingGainLossSplit(
     onSkippedItem: args.onSkippedItem,
   });
 
-  state.chronological = args.chronological;
   state.convertBookingToReference = args.convertBookingToReference;
   await applyHoldingTransactionsToGainLossState({
     state,

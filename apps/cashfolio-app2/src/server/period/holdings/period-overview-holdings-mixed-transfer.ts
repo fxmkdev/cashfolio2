@@ -148,7 +148,8 @@ function resolveOpeningUnitCostInReference(args: {
   return null;
 }
 
-export async function applyMixedPeriodSameUnitHoldingTransfer(args: {
+/** Value a carry group once, then replay its dated legs without realizing G/L. */
+export async function prepareMixedPeriodSameUnitHoldingTransfer(args: {
   state: HoldingGainLossWorkingState;
   inPeriodHoldingBookings: HoldingTransactionBooking[];
   allNonExplicitAreHolding: boolean;
@@ -164,7 +165,7 @@ export async function applyMixedPeriodSameUnitHoldingTransfer(args: {
     reason: "missingConversion" | "invalidExecutionPrice";
     date: Date;
   }) => void;
-}): Promise<boolean> {
+}) {
   if (
     !isMixedPeriodSameUnitHoldingTransfer({
       allNonExplicitAreHolding: args.allNonExplicitAreHolding,
@@ -172,7 +173,7 @@ export async function applyMixedPeriodSameUnitHoldingTransfer(args: {
       nonExplicitUnitIdentifiers: args.nonExplicitUnitIdentifiers,
     })
   ) {
-    return false;
+    return null;
   }
 
   const convertedByBookingId = new Map<string, Money | null>();
@@ -215,7 +216,7 @@ export async function applyMixedPeriodSameUnitHoldingTransfer(args: {
   }
 
   if (hasMissingConversion) {
-    return true;
+    return null;
   }
 
   const unitIdentifier =
@@ -227,57 +228,57 @@ export async function applyMixedPeriodSameUnitHoldingTransfer(args: {
     unitIdentifier,
   });
 
-  for (const booking of toSortedBookings(args.inPeriodHoldingBookings)) {
-    if (moneyAbs(booking.value).comparedTo(QUANTITY_EPSILON) <= 0) {
-      continue;
-    }
+  return (bookings: HoldingTransactionBooking[]) => {
+    for (const booking of toSortedBookings(bookings)) {
+      if (moneyAbs(booking.value).comparedTo(QUANTITY_EPSILON) <= 0) {
+        continue;
+      }
 
-    const convertedValue = convertedByBookingId.get(booking.id);
-    if (convertedValue == null) {
-      continue;
-    }
+      const convertedValue = convertedByBookingId.get(booking.id);
+      if (convertedValue == null) {
+        continue;
+      }
 
-    const executionUnitPriceInReference = moneyDivide(
-      convertedValue,
-      booking.value,
-    );
-    if (!moneyIsFinite(executionUnitPriceInReference)) {
-      args.state.skippedCount += 1;
-      args.onSkippedItem?.({
-        accountId: booking.accountId,
-        bookingId: booking.id,
-        bookingDescription: booking.description,
-        transactionDescription: booking.transactionDescription,
-        transactionId: booking.transactionId ?? null,
-        reason: "invalidExecutionPrice",
-        date: booking.date,
+      const executionUnitPriceInReference = moneyDivide(
+        convertedValue,
+        booking.value,
+      );
+      if (!moneyIsFinite(executionUnitPriceInReference)) {
+        args.state.skippedCount += 1;
+        args.onSkippedItem?.({
+          accountId: booking.accountId,
+          bookingId: booking.id,
+          bookingDescription: booking.description,
+          transactionDescription: booking.transactionDescription,
+          transactionId: booking.transactionId ?? null,
+          reason: "invalidExecutionPrice",
+          date: booking.date,
+        });
+        continue;
+      }
+
+      const accountState = args.state.stateByHoldingAccountId.get(
+        booking.accountId,
+      );
+      if (!accountState || accountState.skipped) {
+        continue;
+      }
+
+      const lotMovementUnitCostInReference =
+        toMoney(booking.value).comparedTo(QUANTITY_EPSILON) > 0 &&
+        openingUnitCostInReference != null
+          ? openingUnitCostInReference
+          : executionUnitPriceInReference;
+
+      applyNonRealizingExecutionToLots({
+        lots: accountState.lots,
+        quantity: booking.value,
+        unitCostInReference: lotMovementUnitCostInReference,
+        acquisitionSortKey: toLotAcquisitionSortKey({
+          date: booking.date,
+          bookingId: booking.id,
+        }),
       });
-      continue;
     }
-
-    const accountState = args.state.stateByHoldingAccountId.get(
-      booking.accountId,
-    );
-    if (!accountState || accountState.skipped) {
-      continue;
-    }
-
-    const lotMovementUnitCostInReference =
-      toMoney(booking.value).comparedTo(QUANTITY_EPSILON) > 0 &&
-      openingUnitCostInReference != null
-        ? openingUnitCostInReference
-        : executionUnitPriceInReference;
-
-    applyNonRealizingExecutionToLots({
-      lots: accountState.lots,
-      quantity: booking.value,
-      unitCostInReference: lotMovementUnitCostInReference,
-      acquisitionSortKey: toLotAcquisitionSortKey({
-        date: booking.date,
-        bookingId: booking.id,
-      }),
-    });
-  }
-
-  return true;
+  };
 }

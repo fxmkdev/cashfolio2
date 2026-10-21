@@ -19,7 +19,7 @@ import type {
   HoldingRateConvertibleAccount,
   HoldingTransaction,
 } from "../period/holdings/period-overview-holdings-types";
-import { isExplicitGainLossBooking } from "../period/holdings/period-overview-holdings-common";
+import { decomposeHoldingTransaction } from "../period/holdings/holding-transaction-decomposition";
 import { toHoldingUnitIdentifier } from "../period/holdings/period-overview-holdings-transfer";
 import {
   parseAcquisitionSortKey,
@@ -80,11 +80,23 @@ export async function replayAccountGainLossBasis(args: AccountCalculationArgs) {
   );
   const accountsByBookingId = new Map<string, string[]>();
   for (const transaction of args.transactions) {
-    const affected = transaction.bookings
-      .filter((booking) => results.has(booking.accountId))
-      .map((booking) => booking.accountId);
-    for (const booking of transaction.bookings)
-      accountsByBookingId.set(booking.id, affected);
+    const { transfers, residualBookings } = decomposeHoldingTransaction(
+      transaction.bookings,
+      new Set(results.keys()),
+    );
+    for (const bookings of [...transfers, residualBookings]) {
+      const affected = bookings
+        .filter((booking) => results.has(booking.accountId))
+        .map((booking) => booking.accountId);
+      for (const booking of bookings) {
+        accountsByBookingId.set(booking.id, [
+          ...new Set([
+            ...(accountsByBookingId.get(booking.id) ?? []),
+            ...affected,
+          ]),
+        ]);
+      }
+    }
   }
   const onSkippedItem = (item: HoldingSkippedItem) => {
     const affected = item.bookingId
@@ -105,7 +117,6 @@ export async function replayAccountGainLossBasis(args: AccountCalculationArgs) {
     ...args,
     onSkippedItem,
   });
-  state.chronological = true;
   const convertBookingToReference = await prefetchAccountGainLossConversions({
     ...args,
     state,
@@ -293,20 +304,16 @@ function getTransferPeers(
   const byId = new Map(accounts.map((account) => [account.id, account]));
   const peers = new Map<string, Set<string>>();
   for (const transaction of transactions) {
-    const bookings = transaction.bookings.filter(
-      (booking) => !isExplicitGainLossBooking(booking),
+    const { transfers } = decomposeHoldingTransaction(
+      transaction.bookings,
+      new Set(byId.keys()),
     );
-    if (
-      !bookings.length ||
-      bookings.some((booking) => !byId.has(booking.accountId))
-    )
-      continue;
-    const units = new Set(bookings.map(toHoldingUnitIdentifier));
-    if (units.size !== 1 || units.has(null)) continue;
-    for (const booking of bookings) {
-      const connected = peers.get(booking.accountId) ?? new Set<string>();
-      for (const other of bookings) connected.add(other.accountId);
-      peers.set(booking.accountId, connected);
+    for (const bookings of transfers) {
+      for (const booking of bookings) {
+        const connected = peers.get(booking.accountId) ?? new Set<string>();
+        for (const other of bookings) connected.add(other.accountId);
+        peers.set(booking.accountId, connected);
+      }
     }
   }
   return peers;

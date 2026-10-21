@@ -69,7 +69,7 @@ export function parseAcquisitionSortKey(sortKey: string): {
   }
 
   const datePart = sortKey.slice(0, separatorIndex);
-  const bookingId = sortKey.slice(separatorIndex + 2);
+  const bookingId = sortKey.slice(separatorIndex + 2).split("::")[0]!;
   const acquisitionDate = new Date(datePart);
   return {
     acquisitionDate: Number.isFinite(acquisitionDate.getTime())
@@ -125,7 +125,7 @@ export function toRoundedRealizedEvent(
   const roundedRunningRealizedGainLoss = round(event.runningRealizedGainLoss);
 
   return {
-    id: `event:${event.bookingId}`,
+    id: `event:${event.bookingId}${event.portion === "transfer-fallback" ? ":transfer-fallback" : event.pricingSource === "transferBasis" ? ":transfer" : ""}`,
     date: event.date.toISOString(),
     bookingId: event.bookingId,
     bookingDescription: event.bookingDescription ?? null,

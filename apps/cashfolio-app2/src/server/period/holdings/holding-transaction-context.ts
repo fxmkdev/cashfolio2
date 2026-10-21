@@ -1,9 +1,5 @@
-import { moneySum } from "../../../shared/money";
-import {
-  isExplicitGainLossBooking,
-  isNearZero,
-  isWithinPeriod,
-} from "./period-overview-holdings-common";
+import { decomposeHoldingTransaction } from "./holding-transaction-decomposition";
+import { isWithinPeriod } from "./period-overview-holdings-common";
 import { toHoldingUnitIdentifier } from "./period-overview-holdings-transfer";
 import type {
   HoldingGainLossWorkingState,
@@ -17,9 +13,11 @@ export function getHoldingTransactionContext(args: {
   periodStart: Date;
   periodEndExclusive: Date;
 }) {
-  const allNonExplicitBookings = args.transaction.bookings.filter(
-    (booking) => !isExplicitGainLossBooking(booking),
-  );
+  const { transfers, residualBookings: allNonExplicitBookings } =
+    decomposeHoldingTransaction(
+      args.transaction.bookings,
+      new Set(args.state.stateByHoldingAccountId.keys()),
+    );
   const inPeriod = (date: Date) =>
     isWithinPeriod({
       date,
@@ -42,22 +40,12 @@ export function getHoldingTransactionContext(args: {
   const nonExplicitUnitIdentifiers = new Set(
     allNonExplicitBookings.map(toHoldingUnitIdentifier),
   );
-  const isSameUnitHoldingTransfer =
-    allNonExplicitAreHolding &&
-    nonExplicitUnitIdentifiers.size === 1 &&
-    !nonExplicitUnitIdentifiers.has(null);
   return {
     allNonExplicitBookings,
     inPeriodHoldingBookings,
     allNonExplicitAreHolding,
     allNonExplicitInPeriod,
     nonExplicitUnitIdentifiers,
-    isChronologicalTransfer:
-      !!args.state.chronological &&
-      isSameUnitHoldingTransfer &&
-      allNonExplicitInPeriod &&
-      isNearZero(
-        moneySum(inPeriodHoldingBookings.map((booking) => booking.value)),
-      ),
+    transfers,
   };
 }

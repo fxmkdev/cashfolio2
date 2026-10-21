@@ -46,8 +46,9 @@ export function isWithinPeriod(args: {
 export function toLotAcquisitionSortKey(args: {
   date: Date;
   bookingId: string;
+  portion?: "transfer-fallback" | "execution";
 }): string {
-  return `${args.date.toISOString()}::${args.bookingId}`;
+  return `${args.date.toISOString()}::${args.bookingId}${args.portion ? `::${args.portion === "transfer-fallback" ? "0" : "1"}` : ""}`;
 }
 
 export function buildResidualAllocationWeights(args: {

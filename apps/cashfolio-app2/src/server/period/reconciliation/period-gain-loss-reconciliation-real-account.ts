@@ -16,7 +16,6 @@ import {
   finalizeHoldingGainLossState,
   initializeHoldingGainLossState,
 } from "../holdings/period-overview-holdings";
-import { toHoldingUnitIdentifier } from "../holdings/period-overview-holdings-transfer";
 import {
   addRunningUnrealizedGainLoss,
   pushDiagnostic,
@@ -120,27 +119,9 @@ export async function buildRealAccountReconciliation(args: {
     siblingAccounts,
     args.referenceCurrency,
   );
-  const targetUnitIdentifier = toHoldingUnitIdentifier({
-    unit: targetAccount.unit,
-    currency: targetAccount.currency,
-    cryptocurrency: targetAccount.cryptocurrency,
-    symbol: targetAccount.symbol,
-    tradeCurrency: targetAccount.tradeCurrency,
-  });
-  const trackedHoldingAccounts = siblingHoldingAccounts.filter(
-    (holdingAccount) =>
-      toHoldingUnitIdentifier({
-        unit: holdingAccount.unit,
-        currency: holdingAccount.currency,
-        cryptocurrency: holdingAccount.cryptocurrency,
-        symbol: holdingAccount.symbol,
-        tradeCurrency: holdingAccount.tradeCurrency,
-      }) === targetUnitIdentifier,
-  );
-  const targetTrackedHoldingAccounts =
-    trackedHoldingAccounts.length > 0
-      ? trackedHoldingAccounts
-      : [targetAccount];
+  const targetTrackedHoldingAccounts = siblingHoldingAccounts.length
+    ? siblingHoldingAccounts
+    : [targetAccount];
   const trackedHoldingAccountIds = targetTrackedHoldingAccounts.map(
     (holdingAccount) => holdingAccount.id,
   );
@@ -196,7 +177,7 @@ export async function buildRealAccountReconciliation(args: {
           {
             bookings: {
               some: {
-                accountId: targetAccount.id,
+                accountId: { in: trackedHoldingAccountIds },
                 date: {
                   gte: args.queryStart,
                   lt: args.queryEndExclusive,

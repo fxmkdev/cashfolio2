@@ -183,6 +183,50 @@ test("accumulated account G/L, nested totals, historical summary, and FIFO expla
   ).toHaveText("6.00");
 });
 
+test("a three-booking transfer realises only the holding spent on fees", async ({
+  page,
+  e2eExternalId,
+}) => {
+  const book = await seedDatabase({
+    userExternalId: e2eExternalId,
+    accountBookStartDate: new Date("2026-01-01Z"),
+  });
+  const { source, destination } = await seedAccountGainLoss(
+    book.accountBookId,
+    book.cashAccount.id,
+    "fee",
+  );
+  await page.goto(`/${book.accountBookId}/${source.id}?period=2026-02`);
+  await expect(page.getByTestId("account-gain-loss-realised")).toContainText(
+    "8.00",
+  );
+  await expect(page.getByTestId("account-gain-loss-unrealised")).toContainText(
+    "0.00",
+  );
+  await page
+    .getByRole("button", { name: "View Calculation", exact: true })
+    .click();
+  const calculation = page.getByRole("dialog", {
+    name: "Gain/Loss Calculation",
+    exact: true,
+  });
+  const disposal = calculation
+    .locator(".ag-row")
+    .filter({ hasText: "Transfer Holding" });
+  await expect(disposal).toHaveCount(1);
+  await expect(agGridCellByColId(disposal, "quantity")).toHaveText("-1");
+  await expect(agGridCellByColId(disposal, "realizedGainLossDelta")).toHaveText(
+    "8.00",
+  );
+  await page.goto(`/${book.accountBookId}/${destination.id}?period=2026-02`);
+  await expect(page.getByTestId("account-gain-loss-realised")).toContainText(
+    "0.00",
+  );
+  await expect(page.getByTestId("account-gain-loss-unrealised")).toContainText(
+    "16.00",
+  );
+});
+
 test("opening a calculation event in the ledger closes the drawer and clears the period filter", async ({
   page,
   e2eExternalId,

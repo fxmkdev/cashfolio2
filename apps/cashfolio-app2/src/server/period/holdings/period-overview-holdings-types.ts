@@ -15,6 +15,8 @@ export type HoldingRateConvertibleAccount = {
 };
 
 export type HoldingTransactionBooking = {
+  executionPortion?: boolean;
+  transferPeers?: { bookingId: string; quantity: Money }[];
   id: string;
   description?: string | null;
   transactionDescription?: string | null;
@@ -36,6 +38,7 @@ export type HoldingTransaction = {
 };
 
 export type HoldingLot = {
+  transferSourceBookingId?: string;
   quantity: Money;
   unitCostInReference: Money;
   acquisitionSortKey: string;
@@ -54,6 +57,7 @@ export type HoldingExecutionLotMatch = {
 };
 
 export type HoldingExecutionEvent = {
+  portion?: "transfer-fallback" | "execution";
   bookingId: string;
   bookingDescription?: string | null;
   transactionDescription?: string | null;
@@ -96,8 +100,8 @@ export type HoldingBookingConverter = (booking: {
 }) => Promise<Money | null>;
 
 export type HoldingGainLossWorkingState = {
-  chronological?: boolean;
   holdingTransfers?: HoldingTransactionBooking[][];
+  holdingCarries?: HoldingTransactionBooking[][];
   convertBookingToReference?: HoldingBookingConverter;
   stateByHoldingAccountId: Map<string, HoldingAccountState>;
   skippedCount: number;

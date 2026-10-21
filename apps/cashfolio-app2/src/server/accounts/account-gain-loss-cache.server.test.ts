@@ -22,7 +22,7 @@ import { getOrLoadAccountGainLossSummaries } from "./account-gain-loss-cache.ser
 import { queryAccountGainLossSummaries } from "./account-gain-loss.server";
 import { toAccountGainLossCacheData } from "./account-gain-loss-cache-data";
 
-const key = "account:gain-loss:v2:test:book:gen-1:2026-05-11:2026-05-10";
+const key = "account:gain-loss:v3:test:book:gen-1:2026-05-11:2026-05-10";
 function createRange(): Awaited<ReturnType<typeof LoadRange>> {
   const base = {
     name: "Holding",
@@ -145,22 +145,25 @@ describe("account G/L summary cache", () => {
     expect(active).not.toHaveProperty("cacheableFromPermanentValuationCache");
   });
 
-  it("ignores v1 summaries that could contain temporary backtracked prices", async () => {
-    const stale = toAccountGainLossCacheData(createRange());
-    stale.accounts[0]!.result.summary.realizedGainLoss = toMoney(999);
-    const oldKey = key.replace(
-      "account:gain-loss:v2:",
-      "account:gain-loss:v1:",
-    );
-    mocks.kv.set(oldKey, JSON.stringify(encodeMoneyCache(stale)));
-    const data = await getOrLoadAccountGainLossSummaries("book");
-    expect(data.accounts[0]!.result.summary.realizedGainLoss!.toString()).toBe(
-      "0.100000000000000001",
-    );
-    expect(mocks.load).toHaveBeenCalledTimes(1);
-    expect(mocks.get).toHaveBeenCalledWith(key);
-    expect(mocks.kv.has(oldKey)).toBe(true);
-  });
+  it.each(["v1", "v2"])(
+    "ignores %s summaries from earlier calculations",
+    async (version) => {
+      const stale = toAccountGainLossCacheData(createRange());
+      stale.accounts[0]!.result.summary.realizedGainLoss = toMoney(999);
+      const oldKey = key.replace(
+        "account:gain-loss:v3:",
+        `account:gain-loss:${version}:`,
+      );
+      mocks.kv.set(oldKey, JSON.stringify(encodeMoneyCache(stale)));
+      const data = await getOrLoadAccountGainLossSummaries("book");
+      expect(
+        data.accounts[0]!.result.summary.realizedGainLoss!.toString(),
+      ).toBe("0.100000000000000001");
+      expect(mocks.load).toHaveBeenCalledTimes(1);
+      expect(mocks.get).toHaveBeenCalledWith(key);
+      expect(mocks.kv.has(oldKey)).toBe(true);
+    },
+  );
 
   it("round-trips exact decimals and excludes replay details from its payload", async () => {
     const cold = await getOrLoadAccountGainLossSummaries("book");
@@ -194,11 +197,11 @@ describe("account G/L summary cache", () => {
     await getOrLoadAccountGainLossSummaries("book");
     expect(mocks.setEx.mock.calls.map(([k]) => k)).toEqual([
       key,
-      "account:gain-loss:v2:test:other:gen-1:2026-05-11:2026-05-10",
-      "account:gain-loss:v2:production:book:gen-1:2026-05-11:2026-05-10",
-      "account:gain-loss:v2:production:book:gen-2:2026-05-11:2026-05-10",
-      "account:gain-loss:v2:production:book:gen-2:2026-05-12:2026-05-10",
-      "account:gain-loss:v2:production:book:gen-2:2026-05-12:2026-05-11",
+      "account:gain-loss:v3:test:other:gen-1:2026-05-11:2026-05-10",
+      "account:gain-loss:v3:production:book:gen-1:2026-05-11:2026-05-10",
+      "account:gain-loss:v3:production:book:gen-2:2026-05-11:2026-05-10",
+      "account:gain-loss:v3:production:book:gen-2:2026-05-12:2026-05-10",
+      "account:gain-loss:v3:production:book:gen-2:2026-05-12:2026-05-11",
     ]);
     expect(mocks.load).toHaveBeenCalledTimes(6);
   });
