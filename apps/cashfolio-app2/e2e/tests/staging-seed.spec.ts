@@ -8,11 +8,7 @@ import {
   insertSeedBooks,
   type SeedSummary,
 } from "../../src/staging-seed/writer";
-import {
-  agGridCellByColId,
-  agGridRowByText,
-  setGridAccountTreeCellValue,
-} from "../support/grid";
+import { agGridRowByText, setGridAccountTreeCellValue } from "../support/grid";
 import { assertSafeWriteTarget, prisma } from "../support/db-client";
 import { expect, test } from "../support/fixtures";
 
@@ -137,25 +133,20 @@ test("the seeded Bitcoin fee transfer preserves acquisition basis through a late
     name: "Gain/Loss Calculation",
     exact: true,
   });
-  const lot = calculation
-    .locator(".ag-row")
-    .filter({ has: page.locator('.ag-cell[col-id="unitCostInReference"]') });
-  await expect(lot).toHaveCount(1);
+  const openLots = calculation.getByRole("grid").nth(1);
+  await expect(openLots.getByRole("row")).toHaveCount(2);
+  const lot = openLots.getByRole("row").nth(1);
   // 0.0059 BTC at the original CHF 100,000/BTC basis leaves CHF 590 of cost.
-  await expect(agGridCellByColId(lot, "quantity")).toHaveText("0.0059");
-  await expect(agGridCellByColId(lot, "unitCostInReference")).toHaveText(
-    /100[’']000/,
-  );
-  await expect(agGridCellByColId(lot, "acquisitionDate")).toHaveText(
+  await expect(lot.getByRole("gridcell").nth(1)).toHaveText("0.00590");
+  await expect(lot.getByRole("gridcell").nth(2)).toHaveText(/100[’']000/);
+  await expect(lot.getByRole("gridcell").nth(0)).toHaveText(
     formatUtcDateForLocale(new Date("2026-09-19Z"), "en-CH"),
   );
   const sale = calculation
-    .locator(".ag-row")
+    .getByRole("row")
     .filter({ hasText: "Bitcoin transfer demo: partial sale" });
-  await expect(agGridCellByColId(sale, "quantity")).toHaveText("-0.004");
-  await expect(agGridCellByColId(sale, "realizedGainLossDelta")).toHaveText(
-    "200.00",
-  );
+  await expect(sale.getByRole("gridcell").nth(3)).toHaveText("-0.00400");
+  await expect(sale.getByRole("gridcell").nth(6)).toHaveText("200.00");
 
   await page.goto(`/${household.id}/${source.id}`);
   await page
@@ -166,10 +157,10 @@ test("the seeded Bitcoin fee transfer preserves acquisition basis through a late
     exact: true,
   });
   const fee = sourceCalculation
-    .locator(".ag-row")
+    .getByRole("row")
     .filter({ hasText: "Bitcoin transfer demo: transfer with network fee" });
   await expect(fee).toHaveCount(1);
-  await expect(agGridCellByColId(fee, "quantity")).toHaveText("-0.0001");
+  await expect(fee.getByRole("gridcell").nth(3)).toHaveText("-0.00010");
   const balance = await prisma.booking.aggregate({
     where: { accountBookId: household.id, accountId: source.id },
     _sum: { value: true },
