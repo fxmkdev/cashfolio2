@@ -15,6 +15,7 @@ export type HoldingRateConvertibleAccount = {
 };
 
 export type HoldingTransactionBooking = {
+  executionPortion?: boolean;
   transferPeers?: { bookingId: string; quantity: Money }[];
   id: string;
   description?: string | null;
@@ -56,7 +57,7 @@ export type HoldingExecutionLotMatch = {
 };
 
 export type HoldingExecutionEvent = {
-  portion?: "transfer-fallback";
+  portion?: "transfer-fallback" | "execution";
   bookingId: string;
   bookingDescription?: string | null;
   transactionDescription?: string | null;

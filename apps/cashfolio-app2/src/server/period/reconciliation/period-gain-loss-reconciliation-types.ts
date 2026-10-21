@@ -102,7 +102,7 @@ export type GainLossReconciliationDetails<Amount = number> = {
 };
 
 export type ReconciliationExecutionEventInput = {
-  portion?: "transfer-fallback";
+  portion?: "transfer-fallback" | "execution";
   bookingId: string;
   bookingDescription?: string | null;
   transactionId: string | null;

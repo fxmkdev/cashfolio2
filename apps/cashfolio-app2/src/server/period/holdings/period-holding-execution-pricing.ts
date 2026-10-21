@@ -156,6 +156,7 @@ export async function applyHoldingTransactionExecutionPricing(args: {
     }
 
     state.executionEvents.push({
+      ...(booking.executionPortion ? { portion: "execution" as const } : {}),
       bookingId: booking.id,
       bookingDescription: booking.description,
       transactionDescription: booking.transactionDescription,

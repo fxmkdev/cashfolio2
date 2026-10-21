@@ -679,6 +679,47 @@ describe("accumulated account G/L", () => {
     expect(result.results.get("c")!.summary.realizedGainLoss).toBeNull();
   });
 
+  it("preserves split fallback lot FIFO order after a later transfer", async () => {
+    const a = account("a"),
+      b = account("b"),
+      c = account("c");
+    const result = await calculate({
+      accounts: [a, b, c],
+      detailAccountId: "c",
+      transactions: [
+        {
+          bookings: [
+            booking("out", a, "2026-02-01Z", -1),
+            booking("in", b, "2026-02-01Z", 2),
+            booking(
+              "cash",
+              { ...account("cash", "CURRENCY"), currency: "CHF" },
+              "2026-02-01Z",
+              -120,
+            ),
+          ],
+        },
+        {
+          bookings: [
+            booking("later-out", b, "2026-03-01Z", -2),
+            booking("later-in", c, "2026-03-01Z", 2),
+          ],
+        },
+        trade("sale", c, "2026-04-01Z", -1, -160),
+      ],
+    });
+    expect(toNumericMoney(result.results.get("c")!.summary)).toEqual({
+      realizedGainLoss: 60,
+      unrealizedGainLoss: 40,
+      totalGainLoss: 100,
+    });
+    expect(
+      toNumericMoney(
+        result.realizedEvents[0]!.lotMatches[0]!.lotUnitCostInReference,
+      ),
+    ).toBe(100);
+  });
+
   it("preserves purchase basis through transfer and later sale, irrespective of input order", async () => {
     const a = account("a"),
       b = account("b");

@@ -164,7 +164,9 @@ export function decomposeHoldingTransaction(
     const quantity = matched.get(booking.id);
     if (quantity == null) return [booking];
     const value = moneySubtract(booking.value, quantity);
-    return isNearZero(value) ? [] : [{ ...booking, value }];
+    return isNearZero(value)
+      ? []
+      : [{ ...booking, value, executionPortion: true }];
   });
   return { transfers, residualBookings };
 }

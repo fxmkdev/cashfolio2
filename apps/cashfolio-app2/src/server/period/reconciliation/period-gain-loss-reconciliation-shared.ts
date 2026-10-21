@@ -125,7 +125,7 @@ export function toRoundedRealizedEvent(
   const roundedRunningRealizedGainLoss = round(event.runningRealizedGainLoss);
 
   return {
-    id: `event:${event.bookingId}${event.portion ? `:${event.portion}` : event.pricingSource === "transferBasis" ? ":transfer" : ""}`,
+    id: `event:${event.bookingId}${event.portion === "transfer-fallback" ? ":transfer-fallback" : event.pricingSource === "transferBasis" ? ":transfer" : ""}`,
     date: event.date.toISOString(),
     bookingId: event.bookingId,
     bookingDescription: event.bookingDescription ?? null,
