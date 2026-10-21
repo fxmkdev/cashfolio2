@@ -72,6 +72,8 @@ export function householdAccounts(target: SeedBook) {
     ["aapl", "Apple shares", "securities", AAPL],
     ["msft", "Microsoft shares", "securities", MSFT],
     ["btc", "Bitcoin wallet", "crypto", BTC],
+    ["btc-transfer-source", "Bitcoin transfer source", "crypto", BTC],
+    ["btc-transfer-destination", "Bitcoin transfer destination", "crypto", BTC],
     ["eth", "Ethereum wallet", "crypto", ETH],
     ["pension", "Pillar 3a savings", "investments", CHF],
   ] as const) {
@@ -113,6 +115,16 @@ export function householdAccounts(target: SeedBook) {
       equityAccountSubtype: EquityAccountSubtype.EXPENSE,
     });
   }
+  addAccount(
+    target,
+    "btc-transfer-fees",
+    "Bitcoin transfer fees",
+    AccountType.EQUITY,
+    {
+      ...BTC,
+      equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+    },
+  );
   addAccount(target, "opening", "Opening Balances", AccountType.EQUITY, {
     equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
   });
@@ -383,6 +395,25 @@ export function householdTransactions(target: SeedBook, today: Date) {
       );
     }
   }
+
+  post(target, addUtcDays(today, -21), "Bitcoin transfer demo: purchase", [
+    { accountKey: "btc-transfer-source", value: "0.01" },
+    { accountKey: "current", value: "-1000" },
+  ]);
+  post(
+    target,
+    addUtcDays(today, -14),
+    "Bitcoin transfer demo: transfer with network fee",
+    [
+      { accountKey: "btc-transfer-source", value: "-0.01" },
+      { accountKey: "btc-transfer-destination", value: "0.0099" },
+      { accountKey: "btc-transfer-fees", value: "0.0001" },
+    ],
+  );
+  post(target, addUtcDays(today, -7), "Bitcoin transfer demo: partial sale", [
+    { accountKey: "btc-transfer-destination", value: "-0.004" },
+    { accountKey: "current", value: "600" },
+  ]);
 
   transfer(
     target,

@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer";
+import { formatUtcDateForLocale } from "../../src/shared/date";
 import {
   generateStagingDataset,
   generateStatementImportSample,
@@ -7,7 +8,11 @@ import {
   insertSeedBooks,
   type SeedSummary,
 } from "../../src/staging-seed/writer";
-import { agGridRowByText, setGridAccountTreeCellValue } from "../support/grid";
+import {
+  agGridCellByColId,
+  agGridRowByText,
+  setGridAccountTreeCellValue,
+} from "../support/grid";
 import { assertSafeWriteTarget, prisma } from "../support/db-client";
 import { expect, test } from "../support/fixtures";
 
@@ -25,7 +30,7 @@ test.beforeAll(async ({ e2eExternalId }) => {
   assertSafeWriteTarget();
   const user = await prisma.user.upsert({
     where: { externalId: e2eExternalId },
-    update: {},
+    update: { locale: "en-CH" },
     create: { externalId: e2eExternalId, locale: "en-CH" },
     select: { id: true },
   });
@@ -104,6 +109,72 @@ test("configured testers can switch to empty and valuation edge-case books", asy
       /skipped because reference-currency balances were unavailable\./,
     ),
   ).toBeVisible();
+});
+
+test("the seeded Bitcoin fee transfer preserves acquisition basis through a later sale", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const household = seededBook("household");
+  const source = await prisma.account.findFirstOrThrow({
+    where: { accountBookId: household.id, name: "Bitcoin transfer source" },
+  });
+  const destination = await prisma.account.findFirstOrThrow({
+    where: {
+      accountBookId: household.id,
+      name: "Bitcoin transfer destination",
+    },
+  });
+  await page.goto(`/${household.id}/${destination.id}`);
+  await expect(page.getByTestId("account-gain-loss-realised")).toContainText(
+    "200.00",
+    { timeout: 60_000 },
+  );
+  await page
+    .getByRole("button", { name: "View Calculation", exact: true })
+    .click();
+  const calculation = page.getByRole("dialog", {
+    name: "Gain/Loss Calculation",
+    exact: true,
+  });
+  const lot = calculation
+    .locator(".ag-row")
+    .filter({ has: page.locator('.ag-cell[col-id="unitCostInReference"]') });
+  await expect(lot).toHaveCount(1);
+  // 0.0059 BTC at the original CHF 100,000/BTC basis leaves CHF 590 of cost.
+  await expect(agGridCellByColId(lot, "quantity")).toHaveText("0.0059");
+  await expect(agGridCellByColId(lot, "unitCostInReference")).toHaveText(
+    /100[’']000/,
+  );
+  await expect(agGridCellByColId(lot, "acquisitionDate")).toHaveText(
+    formatUtcDateForLocale(new Date("2026-09-19Z"), "en-CH"),
+  );
+  const sale = calculation
+    .locator(".ag-row")
+    .filter({ hasText: "Bitcoin transfer demo: partial sale" });
+  await expect(agGridCellByColId(sale, "quantity")).toHaveText("-0.004");
+  await expect(agGridCellByColId(sale, "realizedGainLossDelta")).toHaveText(
+    "200.00",
+  );
+
+  await page.goto(`/${household.id}/${source.id}`);
+  await page
+    .getByRole("button", { name: "View Calculation", exact: true })
+    .click();
+  const sourceCalculation = page.getByRole("dialog", {
+    name: "Gain/Loss Calculation",
+    exact: true,
+  });
+  const fee = sourceCalculation
+    .locator(".ag-row")
+    .filter({ hasText: "Bitcoin transfer demo: transfer with network fee" });
+  await expect(fee).toHaveCount(1);
+  await expect(agGridCellByColId(fee, "quantity")).toHaveText("-0.0001");
+  const balance = await prisma.booking.aggregate({
+    where: { accountBookId: household.id, accountId: source.id },
+    _sum: { value: true },
+  });
+  expect(balance._sum.value!.toString()).toBe("0");
 });
 
 test("archived synthetic accounts remain available for archive workflows", async ({
