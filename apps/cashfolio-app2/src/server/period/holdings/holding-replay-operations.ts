@@ -52,7 +52,7 @@ type ReplayOperation =
       carry: HoldingTransactionBooking[];
       execution?: never;
       transfer?: never;
-      bookings?: never;
+      bookings: HoldingTransactionBooking[];
     };
 
 function bookingSortKey(booking: HoldingTransactionBooking) {
@@ -83,15 +83,18 @@ function scheduleOperations(
     }
   }
   for (const carry of carries) {
-    operations.push({
-      sortKey: carry.map(bookingSortKey).sort().at(-1)!,
-      carry,
-    });
+    for (const booking of carry) {
+      operations.push({
+        sortKey: bookingSortKey(booking),
+        carry,
+        bookings: [booking],
+      });
+    }
   }
   // A split booking's transfer/carry consumes FIFO before its execution remainder.
   const transferSortKeys = new Map<string, string>();
   for (const operation of operations) {
-    for (const booking of operation.bookings ?? operation.carry ?? []) {
+    for (const booking of operation.bookings ?? []) {
       const existing = transferSortKeys.get(booking.id);
       if (!existing || operation.sortKey > existing)
         transferSortKeys.set(booking.id, operation.sortKey);
@@ -181,7 +184,7 @@ export function buildHoldingReplayOperations(
         continue;
       }
       if (operation.carry) {
-        for (const booking of operation.carry)
+        for (const booking of operation.bookings)
           quantities.set(
             booking.accountId,
             moneyAdd(

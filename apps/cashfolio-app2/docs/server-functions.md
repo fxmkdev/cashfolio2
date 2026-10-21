@@ -377,7 +377,10 @@ single tracked-account flow:
   as summaries.
 - Same-unit mixed-period holding transfers are treated as non-realizing carry
   adjustments, so in-period legs no longer create false realization when the
-  opposite leg sits outside the selected period.
+  opposite leg sits outside the selected period. Carry legs replay on their own
+  booking dates, before any execution remainder of the same booking, so an
+  intervening execution sees the updated FIFO position. Each carry group keeps
+  its conversion completeness check and opening unit basis across dated batches.
 - Explicit gain/loss remains separate from holdings realization:
   - `stats.explicitGainLoss` includes explicit equity G/L bookings only
   - `stats.realizedGainLoss` includes holdings realization and residual-only
