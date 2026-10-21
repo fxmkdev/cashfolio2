@@ -231,7 +231,7 @@ namespaces and preserves global valuation caches.
   - Cleanup hint (never used to determine cache validity):
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
 - History metrics entry:
-  `period:history:metrics:v7:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
+  `period:history:metrics:v8:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
 - Base-data v8 and History metrics v7 store monetary values as tagged exact
   decimal strings through `src/server/money-cache-codec.ts`
   (`{ __cashfolioDecimal: "..." }`). Dates retain their existing
@@ -367,6 +367,14 @@ single tracked-account flow:
 - Both real transactions and synthetic transfer-clearing transactions flow
   through the same lot/FIFO pipeline in
   `src/server/period/holdings/period-overview-holdings.ts`
+- Each transaction is decomposed by holding identity into maximum cross-account
+  transfer quantities and residual executions, regardless of additional fee or
+  other bookings. Transfers carry FIFO cost and acquisition order; residual
+  quantities alone participate in execution pricing. At a split booking,
+  transfer movement precedes its execution remainder. All calculation paths
+  replay in booking-date/ID order. Real-account reconciliation loads sibling
+  holdings and their period transactions to reconstruct the same transfer basis
+  as summaries.
 - Same-unit mixed-period holding transfers are treated as non-realizing carry
   adjustments, so in-period legs no longer create false realization when the
   opposite leg sits outside the selected period.
@@ -384,8 +392,10 @@ transactions is isolated in
   post-period legs) multi-unit transactions with at least one in-period booking
   and at least one income/expense leg, while excluding explicit/opening balance
   cases
-- Residual realization is skipped unless all required conversions succeed and no
-  in-period tracked holding booking exists in the transaction
+- Residual realization uses the same transfer decomposition and is skipped
+  unless all required conversions succeed and no residual in-period tracked
+  holding booking exists. Fully transferred holding legs cannot suppress
+  unrelated execution residuals or receive their attribution
 - Residual breakdown attribution is weighted across non-reference legs by
   absolute converted amount
 
@@ -501,15 +511,16 @@ Base-data v8 adds required `executionResidualTransactions` and does not reuse v7
 entries. The existing Decimal/date codec, 24-hour TTL, 2 MiB size limit, and
 database revision invalidation apply to these raw inputs. Converted residual
 results remain outside the base-data cache. History metrics use a separately
-versioned cache; v7 excludes temporary backtracked valuations. No schema
-migration is required. This boundary removes live database queries during
-calculations. Each uncached period dataset is loaded in one read-only PostgreSQL
-`RepeatableRead` transaction with a 30-second timeout. Account-book settings,
-cache revision, account metadata, balances, all paginated booking/transaction
-queries, transfer clearing, and explicit counterpart resolution use that same
-transaction client. Transaction failures propagate rather than falling back to
-independent reads. Calculations, valuation/provider requests, and Redis I/O run
-after the transaction finishes.
+versioned cache; v8 excludes results from before partial-transfer recognition
+and retains the stable-valuation policy introduced in v7. No schema migration is
+required. This boundary removes live database queries during calculations. Each
+uncached period dataset is loaded in one read-only PostgreSQL `RepeatableRead`
+transaction with a 30-second timeout. Account-book settings, cache revision,
+account metadata, balances, all paginated booking/transaction queries, transfer
+clearing, and explicit counterpart resolution use that same transaction client.
+Transaction failures propagate rather than falling back to independent reads.
+Calculations, valuation/provider requests, and Redis I/O run after the
+transaction finishes.
 
 The snapshot loader returns its revision as internal metadata; public responses
 and cached payloads are unchanged. A base-cache miss is persisted only when the
@@ -578,16 +589,24 @@ snapshot; valuation requests and FIFO replay run after that transaction
 completes. All relevant real accounts participate before active/archived and
 Asset/Liability display filtering.
 
-`calculateAccountGainLoss` reuses the existing holding FIFO/pricing engine with
-chronological replay and per-account callbacks. Its completeness diagnostics
-propagate missing basis through transfers, and its optional detail collection
-retains exact amounts until the numeric serialization boundary. Transfer
-receipts match opposing destination lots at each carried acquisition cost and
-attribute realised G/L to the destination. Reconciliation emits one
-`transferBasis` event per matching receipt (including zero-gain matches), with
-the matched quantity, weighted-average carried price, individual FIFO match
-prices, and a null `pricing.marketReferenceAmount`. Unmatched quantities keep
-their original costs and acquisition order. Existing period loaders retain their
+`calculateAccountGainLoss` reuses the shared holding FIFO/pricing engine with
+chronological replay and per-account callbacks. Shared transaction decomposition
+recognizes partial same-unit transfers alongside fee, cash, and other holding
+bookings. Valuation prefetch uses the residual booking quantities and memoizes
+conversions by original booking ID plus exact quantity. Incomplete-basis
+transfer dependencies come from these matched groups. Transfer source routing
+remains attached only to temporary replay pools, not persisted open lots. Its
+completeness diagnostics propagate missing basis through transfers, and its
+optional detail collection retains exact amounts until the numeric serialization
+boundary. Transfer receipts match opposing destination lots at each carried
+acquisition cost and attribute realised G/L to the destination. Reconciliation
+emits one `transferBasis` event per matching receipt (including zero-gain
+matches), with the matched quantity, weighted-average carried price, individual
+FIFO match prices, and a null `pricing.marketReferenceAmount`. Unmatched
+quantities keep their original costs and acquisition order. Split receipt events
+use distinct IDs for transfer-basis and execution portions while retaining the
+original booking/transaction links. Market-fallback portions also have distinct
+event and acquisition-lot identities. Existing period loaders retain their
 period-opening valuation and rounding semantics. Accounts-list accumulated G/L
 uses the summary cache described below; valuation caches and request-local rate
 deduplication remain shared.
@@ -603,7 +622,7 @@ bypass this final-summary cache but share the historical basis cache below.
 Calculation drawers bypass both caches.
 
 - Key:
-  `account:gain-loss:v2:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{asOfDate}:{latestFetchableDate}`.
+  `account:gain-loss:v3:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{asOfDate}:{latestFetchableDate}`.
   Dates are UTC `YYYY-MM-DD`; both days are captured before loading. The latest
   fetchable day uses the shared valuation publication-window rules.
 - TTL is 24 hours; maximum encoded size is 512 KiB. The shared Decimal codec
@@ -638,10 +657,11 @@ from closing valuation. A basis hit needs only lightweight validity reads and
 closing-price lookups; it does not load historical transactions or reprice
 executions. Calculation drawers still replay independently, using the same
 stages and retaining detailed execution explanations. Period Report and History
-calculations are unchanged.
+use the shared matching rules with their own period-opening bases and do not use
+this historical basis cache.
 
 - Key:
-  `account:gain-loss-basis:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{watermark}`.
+  `account:gain-loss-basis:v2:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{watermark}`.
   The watermark is the latest booking timestamp strictly before the day after
   the requested UTC as-of day, or `empty`. All book bookings participate
   conservatively. Revision and watermark are read together in a read-only
@@ -679,8 +699,9 @@ The outer Accounts summary cache retains its 24-hour TTL, date/publication keys,
 and valuation-source rules. Historical basis and final-summary cacheability are
 tracked separately, so final summaries still cannot freeze temporary prices.
 
-G/L summary v2 and History metrics v7 do not reuse their previous versions:
-older entries may have persisted temporarily backtracked TimeSeries quotes as
-stable valuations. They expire naturally within 24 hours and remain covered by
+G/L summary v3, historical basis v2, and History metrics v8 do not reuse earlier
+generations computed before partial-transfer recognition. Their valuation-source
+policies also continue to exclude temporarily backtracked TimeSeries quotes. Old
+entries expire naturally under their existing TTLs and remain covered by
 version-independent book/user deletion and restore cleanup. Global price/rate
 series and their fallback/cooldown caches are preserved.

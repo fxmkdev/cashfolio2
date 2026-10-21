@@ -11,6 +11,58 @@ import type { PeriodBaseExecutionResidualTransaction } from "../base-data/period
 import { computeExecutionResidualRealization } from "./period-execution-residuals";
 
 describe("computeExecutionResidualRealization", () => {
+  it("retains unrelated execution residuals after removing a fully matched holding transfer", async () => {
+    const base = residualTransaction().bookings[0]!;
+    const bookings = [
+      {
+        ...base,
+        id: "out",
+        accountId: "source",
+        unit: Unit.SECURITY,
+        currency: null,
+        symbol: "AAPL",
+        tradeCurrency: "CHF",
+        value: toMoney(-2),
+      },
+      {
+        ...base,
+        id: "in",
+        accountId: "destination",
+        unit: Unit.SECURITY,
+        currency: null,
+        symbol: "AAPL",
+        tradeCurrency: "CHF",
+        value: toMoney(2),
+      },
+      { ...base, id: "cash", value: toMoney(-90) },
+      {
+        ...base,
+        id: "fee",
+        accountId: "expense",
+        currency: "USD",
+        value: toMoney(100),
+      },
+    ];
+    const convert = vi.fn(
+      async (booking: { value: Money; currency: string | null }) =>
+        booking.currency === "USD" ? booking.value.times("0.8") : booking.value,
+    );
+    const onContribution = vi.fn();
+    const result = await computeExecutionResidualRealization({
+      transactions: [{ id: "mixed", bookings }],
+      periodStart: new Date("2026-02-01Z"),
+      periodEndExclusive: new Date("2026-03-01Z"),
+      referenceCurrency: "CHF",
+      trackedHoldingAccountIdSet: new Set(["source", "destination"]),
+      convertBookingToReference: convert,
+      onContribution,
+    });
+    expect(toNumericMoney(result.realizedGainLoss)).toBe(-10);
+    expect(convert).toHaveBeenCalledTimes(2);
+    expect(onContribution).toHaveBeenCalledOnce();
+    expect(onContribution.mock.calls[0]![0].accountId).toBe("expense");
+  });
+
   it("converts cross-period completion candidates without realizing zero residuals", async () => {
     const transactions = [
       {

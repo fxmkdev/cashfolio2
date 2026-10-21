@@ -75,7 +75,7 @@ describe("deleteBookScopedRedisDataForAccountBooks", () => {
       "period:base:v8:local:book-2:revision:2026-01",
       "account:gain-loss:v1:preview:book-1:revision:2026-05-11:2026-05-10",
       "account:gain-loss:v99:local:book-2:revision:2026-05-11:2026-05-10",
-      "account:gain-loss-basis:v1:local:book-1:revision:empty",
+      "account:gain-loss-basis:v2:local:book-1:revision:empty",
       "account:gain-loss-basis:v99:preview:book-2:revision:2026-05-11",
     ];
     const preserved = [
@@ -86,7 +86,7 @@ describe("deleteBookScopedRedisDataForAccountBooks", () => {
       "session:user-1",
       "account:gain-loss:v1:local:book-3:revision:2026-05-11:2026-05-10",
       "account:gain-loss:v1:local:book-3:revision:scope:book-1:child",
-      "account:gain-loss-basis:v1:local:book-3:revision:empty",
+      "account:gain-loss-basis:v2:local:book-3:revision:empty",
     ];
     const keys = new Set([...target, ...preserved]);
     redis.scanIterator.mockImplementation(async function* ({ MATCH }) {

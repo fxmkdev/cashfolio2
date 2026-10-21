@@ -137,7 +137,7 @@ describe("summary persistence with real FIFO and valuation backtracking", () => 
     expect(mocks.securityProvider).toHaveBeenCalledTimes(3);
     expect(mocks.values.has(summaryKey)).toBe(false);
     expect(
-      mocks.values.has("account:gain-loss-basis:v1:test:book:revision:empty"),
+      mocks.values.has("account:gain-loss-basis:v2:test:book:revision:empty"),
     ).toBe(true);
     expect((await ledger()).summary.totalGainLoss).toBe(10);
     expect(mocks.values.has(summaryKey)).toBe(false);

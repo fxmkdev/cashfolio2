@@ -129,23 +129,33 @@ open details popover updates in place when loading completes, retaining keyboard
 focus.
 
 The shared FIFO/execution-pricing engine supports chronological range replay.
-Executions are ordered by booking date, and completed same-unit transfers carry
-acquisition costs between accounts. Source-first multi-day transfers remove FIFO
-lots on each outgoing booking date and hold them in a transfer-specific pool
-until receipt. Sales between those dates consume only the source's remaining
-lots. On receipt, carried lots close any opposite destination position using
-FIFO and each incoming lot's carried acquisition cost. The destination records
-that realised G/L; any remainder keeps its original cost and acquisition order.
-The calculation exposes one transfer-basis event per receipt that closes lots,
-with per-match costs and no market-reference amount. A fully closed position has
-no open lots and needs no closing valuation. Same-date and
-receipt-before-withdrawal transfers retain their existing atomic treatment.
-Calculation includes all real holding accounts, including archived accounts and
-both account types; filtering to the selected active/archived mode and tab
-happens afterwards. Virtual transfer clearing is not included in real-account
-totals. Group and footer amounts sum account leaves using Decimal arithmetic
-before conversion to display numbers. Zero-balance and archived accounts retain
-realised gains.
+Executions and transfers are ordered by booking date and booking ID. Each
+transaction is decomposed into same-unit transfer quantities and remaining
+executions. Opposite quantities in different Asset/Liability accounts are
+matched by exact currency, cryptocurrency, or security symbol and trading
+currency; fee, cash, income/expense, and explicit G/L bookings do not disqualify
+a transfer. Matching maximizes the cross-account quantity and retains
+source-to-destination routing, so an account that both sends and receives never
+receives its own lots as its matched transfer. Matched quantities carry
+acquisition costs between accounts. A split source booking transfers FIFO lots
+before its execution remainder is consumed. Only residual quantities participate
+in execution pricing and residual allocation. Fees retain their existing expense
+treatment; this does not capitalize fees into transferred holdings. Source-first
+multi-day transfers remove FIFO lots on each outgoing booking date and hold them
+in a transfer-specific pool until receipt. Sales between those dates consume
+only the source's remaining lots. On receipt, carried lots close any opposite
+destination position using FIFO and each incoming lot's carried acquisition
+cost. The destination records that realised G/L; any remainder keeps its
+original cost and acquisition order. The calculation exposes one transfer-basis
+event per receipt that closes lots, with per-match costs and no market-reference
+amount. A fully closed position has no open lots and needs no closing valuation.
+Same-date and receipt-before-withdrawal transfers retain their existing atomic
+treatment. Calculation includes all real holding accounts, including archived
+accounts and both account types; filtering to the selected active/archived mode
+and tab happens afterwards. Virtual transfer clearing is not included in
+real-account totals. Group and footer amounts sum account leaves using Decimal
+arithmetic before conversion to display numbers. Zero-balance and archived
+accounts retain realised gains.
 
 The Accounts list caches one book-wide summary dataset in Redis before filtering
 by account type and active/archived state. Warm hits skip transaction loading,
@@ -166,14 +176,15 @@ come from identity conversion or a stable Redis TimeSeries hit covering the
 requested day or publication-window cutoff. An older TimeSeries quote reached
 after unsuccessful newer probes is a temporary fallback and does not qualify.
 Provider, temporary fallback, and missing valuations are returned for the
-request but not persisted. G/L cache v2 ignores v1 entries that could contain
-such backtracked valuations; the underlying valuation caches are preserved. The
-snapshot revision must match the lookup revision and a final committed-revision
-read, and the publication cutoff must remain unchanged during calculation.
-Overlapping loads share an in-process promise scoped to the complete cache key.
-Unavailable Redis or revision reads, malformed/oversized cache entries, and
-Redis command failures fall back to the uncached calculation. As with the other
-period caches, Redis requires `PERIOD_BASE_CACHE_ENV`.
+request but not persisted. G/L cache v3 ignores earlier summary generations,
+including v2 results computed before partial-transfer recognition; the
+underlying valuation caches are preserved. The snapshot revision must match the
+lookup revision and a final committed-revision read, and the publication cutoff
+must remain unchanged during calculation. Overlapping loads share an in-process
+promise scoped to the complete cache key. Unavailable Redis or revision reads,
+malformed/oversized cache entries, and Redis command failures fall back to the
+uncached calculation. As with the other period caches, Redis requires
+`PERIOD_BASE_CACHE_ENV`.
 
 G/L hydrates independently of the account tree and reference balances. A failed
 request exposes a retry action. A missing closing price leaves reliable Realised
@@ -202,11 +213,12 @@ existing final-summary cache remains above this layer for Accounts-list hits.
 Calculation drawers retain independent full replay and the same financial
 semantics.
 
-Basis keys use the book revision and latest effective booking date. Changes to
-bookings/settings or future bookings becoming effective force a rebuild. Only
-complete bases from stable historical valuation sources persist; recent
-non-identity execution prices cannot persist until their valuation dates pass
-the publication cutoff. Cache failures fall back to full calculation. See
+Basis cache v2 ignores v1 cost bases computed before partial-transfer
+recognition. Keys use the book revision and latest effective booking date.
+Changes to bookings/settings or future bookings becoming effective force a
+rebuild. Only complete bases from stable historical valuation sources persist;
+recent non-identity execution prices cannot persist until their valuation dates
+pass the publication cutoff. Cache failures fall back to full calculation. See
 [Accumulated G/L historical basis cache](server-functions.md#accumulated-gl-historical-basis-cache)
 for limits, snapshot validation, and cleanup behavior.
 

@@ -9,6 +9,7 @@ import {
 } from "../../../shared/money";
 import { Unit } from "../../../.prisma-client/enums";
 import type { PeriodBaseExecutionResidualTransaction } from "../base-data/period-base-data-types";
+import { decomposeHoldingTransaction } from "./holding-transaction-decomposition";
 import { isMultiUnitTransaction } from "../period-helpers";
 import { isNearZero, isWithinPeriod } from "./period-overview-holdings-common";
 
@@ -59,7 +60,23 @@ export async function computeExecutionResidualRealization(args: {
   let convertedCount = 0;
   let skippedCount = 0;
   for (const transaction of args.transactions) {
-    const nonExplicitBookings = transaction.bookings;
+    const originalById = new Map(
+      transaction.bookings.map((booking) => [booking.id, booking]),
+    );
+    const { residualBookings } = decomposeHoldingTransaction(
+      transaction.bookings.map((booking) => ({
+        ...booking,
+        accountType: args.trackedHoldingAccountIdSet.has(booking.accountId)
+          ? "ASSET"
+          : "EQUITY",
+        equityAccountSubtype: null,
+      })),
+      args.trackedHoldingAccountIdSet,
+    );
+    const nonExplicitBookings = residualBookings.map((booking) => ({
+      ...originalById.get(booking.id)!,
+      value: booking.value,
+    }));
 
     if (nonExplicitBookings.length === 0) {
       continue;

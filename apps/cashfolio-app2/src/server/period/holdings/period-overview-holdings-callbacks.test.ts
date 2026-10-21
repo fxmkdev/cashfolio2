@@ -287,6 +287,54 @@ describe("holding engine callbacks and counters", () => {
     expect(events[0]!.marketReferenceAmount).toBeNull();
   });
 
+  it.each(["2026-02-10Z", "2026-03-10Z"])(
+    "splits a fee disposal from a period transfer received on %s",
+    async (receiptDate) => {
+      const source = { ...account, id: "source" };
+      const events: HoldingAccountExecutionEvent[] = [];
+      const result = await computeHoldingGainLossSplit({
+        ...period,
+        holdingAccounts: [source, account],
+        initialBalanceByAccountId: new Map([[source.id, toMoney(10)]]),
+        transactions: [
+          {
+            bookings: [
+              booking("a-out", -10, source.id),
+              { ...booking("z-in", 9), date: new Date(receiptDate) },
+              {
+                ...booking("fee", 150, "expense"),
+                accountType: "EQUITY",
+                equityAccountSubtype: "EXPENSE",
+                unit: "CURRENCY",
+                currency: "CHF",
+                symbol: null,
+                tradeCurrency: null,
+              },
+            ],
+          },
+        ],
+        resolveRate: async ({ date }) =>
+          toMoney(date === period.initialRateDate ? 100 : 150),
+        convertBookingToReference: async (item) =>
+          item.value.times(item.currency === "CHF" ? 1 : 150),
+        onAccountExecutionEvent: (event) => events.push(event),
+      });
+      expect(toNumericMoney(result.realizedGainLoss)).toBe(50);
+      expect(toNumericMoney(result.unrealizedGainLoss)).toBe(
+        receiptDate === "2026-02-10Z" ? 450 : 0,
+      );
+      expect(
+        toNumericMoney(
+          events.map((event) => ({
+            id: event.bookingId,
+            quantity: event.quantity,
+            gain: event.realizedGainLossDelta,
+          })),
+        ),
+      ).toEqual([{ id: "a-out", quantity: -1, gain: 50 }]);
+    },
+  );
+
   it("keeps realized explain data when the period-end rate is unavailable", async () => {
     const callbackOrder: string[] = [];
     const onAccountOpenLotValuation = vi.fn();

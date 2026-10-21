@@ -62,6 +62,7 @@ export function applyHoldingAccountExecution(
     acquisitionSortKey: toLotAcquisitionSortKey({
       date: event.date,
       bookingId: event.bookingId,
+      portion: event.portion,
     }),
     ...(args.onAccountExecutionEvent
       ? {
@@ -79,6 +80,7 @@ export function applyHoldingAccountExecution(
     realizedGainLossDelta,
   );
   args.onAccountExecutionEvent?.({
+    ...(event.portion ? { portion: event.portion } : {}),
     accountId: args.state.account.id,
     bookingId: event.bookingId,
     bookingDescription: event.bookingDescription,

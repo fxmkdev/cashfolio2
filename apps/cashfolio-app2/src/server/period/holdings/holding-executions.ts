@@ -8,6 +8,8 @@ import type {
 } from "./period-overview-holdings-types";
 import { toMoney } from "../../../shared/money";
 import { applyHoldingAccountExecution } from "./period-holding-account-finalization";
+import { applyMixedPeriodSameUnitHoldingTransfer } from "./period-overview-holdings-mixed-transfer";
+import { toHoldingUnitIdentifier } from "./period-overview-holdings-transfer";
 import { buildHoldingReplayOperations } from "./holding-replay-operations";
 import type {
   HoldingGainLossWorkingState,
@@ -39,6 +41,20 @@ export async function applyPendingHoldingExecutions(args: {
   for (const operation of operations) {
     if (operation.execution) {
       execute(operation.execution.state, operation.execution.event);
+      continue;
+    }
+    if (operation.carry) {
+      await applyMixedPeriodSameUnitHoldingTransfer({
+        state: args.state,
+        inPeriodHoldingBookings: operation.carry,
+        allNonExplicitAreHolding: true,
+        allNonExplicitInPeriod: false,
+        nonExplicitUnitIdentifiers: new Set(
+          operation.carry.map(toHoldingUnitIdentifier),
+        ),
+        convertBookingToReference: args.state.convertBookingToReference!,
+        onSkippedItem: args.onSkippedItem,
+      });
       continue;
     }
     const { bookings, transfer } = operation;
@@ -73,6 +89,7 @@ export async function applyPendingHoldingExecutions(args: {
         }
         args.state.convertedCount += 1;
         execute(args.state.stateByHoldingAccountId.get(booking.accountId)!, {
+          portion: "transfer-fallback",
           bookingId: booking.id,
           bookingDescription: booking.description,
           transactionId: booking.transactionId,
@@ -90,4 +107,5 @@ export async function applyPendingHoldingExecutions(args: {
   for (const state of args.state.stateByHoldingAccountId.values())
     state.executionEvents = [];
   args.state.holdingTransfers = [];
+  args.state.holdingCarries = [];
 }

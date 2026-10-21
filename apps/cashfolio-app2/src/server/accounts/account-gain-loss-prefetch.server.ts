@@ -1,6 +1,5 @@
 import type { ValuationLookupScheduler } from "../period/period-conversion";
 import { getHoldingTransactionContext } from "../period/holdings/holding-transaction-context";
-import { isMixedPeriodSameUnitHoldingTransfer } from "../period/holdings/period-overview-holdings-mixed-transfer";
 import type { applyHoldingTransactionsToGainLossState } from "../period/holdings/period-overview-holdings";
 import type { HoldingBookingConverter } from "../period/holdings/period-overview-holdings-types";
 
@@ -36,24 +35,36 @@ export async function prefetchAccountGainLossConversions(
     ReturnType<HoldingBookingConverter>
   >();
   const convertBookingToReference: HoldingBookingConverter = (booking) => {
-    const existing = convertedByBookingId.get(booking.id);
+    const key = `${booking.id}:${booking.value.toString()}`;
+    const existing = convertedByBookingId.get(key);
     if (existing) return existing;
     const promise = Promise.resolve().then(() =>
       args.convertBookingToReference(booking),
     );
-    convertedByBookingId.set(booking.id, promise);
+    convertedByBookingId.set(key, promise);
     return promise;
   };
   const conversions = args.transactions.flatMap((transaction) => {
     const context = getHoldingTransactionContext({ ...args, transaction });
-    if (
-      !context.inPeriodHoldingBookings.length ||
-      context.isChronologicalTransfer
-    )
-      return [];
-    return isMixedPeriodSameUnitHoldingTransfer(context)
-      ? context.inPeriodHoldingBookings
-      : context.allNonExplicitBookings;
+    const carries = context.transfers.flatMap((bookings) =>
+      bookings.some(
+        (booking) =>
+          booking.date < args.periodStart ||
+          booking.date >= args.periodEndExclusive,
+      )
+        ? bookings.filter(
+            (booking) =>
+              booking.date >= args.periodStart &&
+              booking.date < args.periodEndExclusive,
+          )
+        : [],
+    );
+    return [
+      ...carries,
+      ...(context.inPeriodHoldingBookings.length
+        ? context.allNonExplicitBookings
+        : []),
+    ];
   });
   // Attach handlers to every lookup immediately, including when one rejects.
   await Promise.all(conversions.map(convertBookingToReference));

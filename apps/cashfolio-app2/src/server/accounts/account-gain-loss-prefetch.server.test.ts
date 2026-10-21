@@ -16,7 +16,11 @@ import {
   calculateAccountGainLoss,
   valueAccountGainLossBasis,
 } from "./account-gain-loss-calculation.server";
-import { createAccountGainLossLookupScheduler } from "./account-gain-loss-prefetch.server";
+import { initializeHoldingGainLossState } from "../period/holdings/period-overview-holdings";
+import {
+  prefetchAccountGainLossConversions,
+  createAccountGainLossLookupScheduler,
+} from "./account-gain-loss-prefetch.server";
 
 type Lookup = {
   symbol?: string;
@@ -409,6 +413,52 @@ describe("bounded account G/L valuation prefetch", () => {
       "4",
       "5",
     ]);
+  });
+
+  it("prefetches residual quantities and memoizes different portions independently", async () => {
+    const source = account("source"),
+      destination = { ...account("destination"), symbol: source.symbol };
+    const state = await initializeHoldingGainLossState({
+      holdingAccounts: [source, destination],
+      initialBalanceByAccountId: new Map(),
+      initialRateDate: period.initialRateDate,
+      resolveRate: vi.fn(),
+    });
+    const out = booking(source, -10, "out");
+    const converter = vi.fn<HoldingBookingConverter>(async (item) =>
+      item.value.times(100),
+    );
+    const convert = await prefetchAccountGainLossConversions({
+      ...period,
+      state,
+      transactions: [
+        {
+          bookings: [
+            out,
+            booking(destination, 9, "in"),
+            {
+              ...booking(account("expense"), 1, "fee"),
+              accountType: "EQUITY",
+              equityAccountSubtype: "EXPENSE",
+            },
+          ],
+        },
+      ],
+      convertBookingToReference: converter,
+    });
+    expect(
+      converter.mock.calls.map(([item]) => [item.id, item.value.toString()]),
+    ).toEqual([
+      ["out", "-1"],
+      ["fee", "1"],
+    ]);
+    expect((await convert({ ...out, value: toMoney(-9) }))!.toString()).toBe(
+      "-900",
+    );
+    expect((await convert({ ...out, value: toMoney(-1) }))!.toString()).toBe(
+      "-100",
+    );
+    expect(converter).toHaveBeenCalledTimes(3);
   });
 
   it("keeps price-free basis transfers and replay-dependent market fallbacks on demand", async () => {
