@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
 import { Suspense, lazy, useCallback, useMemo } from "react";
+import type { GridApi } from "ag-grid-enterprise";
 import { useTransactionScroll } from "@/hooks/use-transaction-scroll";
 import { PeriodFilterAction } from "../-period-filter-action";
 import { useExplicitPeriodFilter } from "../-use-explicit-period-filter";
@@ -44,8 +45,16 @@ export function TransactionsPageContent() {
   const userLocale = useUserLocale();
 
   const navigate = Route.useNavigate();
-  const { pendingScrollRef, handleRowDataUpdated } =
+  const { pendingScrollRef, handleRowDataUpdated, getScrollTarget } =
     useTransactionScroll<TransactionsRow>(transactionId, navigate);
+  const resolveScrollTarget = useCallback(
+    (api: GridApi<TransactionsRow>) => {
+      const target = getScrollTarget();
+      handleRowDataUpdated({ api });
+      return target;
+    },
+    [getScrollTarget, handleRowDataUpdated],
+  );
   const maxDate = useMemo(
     () => new Date(loaderData.periodBounds.maxDate),
     [loaderData.periodBounds.maxDate],
@@ -110,7 +119,8 @@ export function TransactionsPageContent() {
         accountBookId={accountBookId}
         {...viewProps}
         periodFilterControls={<PeriodFilterAction {...controls} />}
-        onRowDataUpdated={handleRowDataUpdated}
+        navigationTransactionId={transactionId}
+        resolveScrollTarget={resolveScrollTarget}
       />
     </Suspense>
   );

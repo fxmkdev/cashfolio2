@@ -1,11 +1,6 @@
 import { useMemo } from "react";
 import { ActionIcon, Group, Tooltip } from "@mantine/core";
-import {
-  IconCopy,
-  IconPencil,
-  IconSquareArrowRight,
-  IconTrash,
-} from "@tabler/icons-react";
+import { IconSquareArrowRight } from "@tabler/icons-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { Unit } from "@/.prisma-client/enums";
 import {
@@ -54,10 +49,7 @@ export function useTransactionsColumnDefs(args: {
   accountBookId: string;
   selectedPeriodValue?: string;
   referenceCurrency: string;
-  onEditClick: (transactionId: string) => void;
   onRebookClick: (args: RebookClickArgs) => void;
-  onCopyClick: (transactionId: string) => void;
-  onDeleteClick: (transactionId: string, description: string) => void;
 }): {
   columnDefs: ColDef<TransactionsRow>[];
   detailColumnDefs: ColDef<TransactionsBookingRow>[];
@@ -66,10 +58,7 @@ export function useTransactionsColumnDefs(args: {
     accountBookId,
     selectedPeriodValue,
     referenceCurrency,
-    onEditClick,
     onRebookClick,
-    onCopyClick,
-    onDeleteClick,
   } = args;
 
   return useMemo(() => {
@@ -106,13 +95,15 @@ export function useTransactionsColumnDefs(args: {
       {
         field: "date",
         headerName: "Date",
-        width: 130,
+        width: 110,
         type: DATE_COLUMN,
       },
       {
         field: "account",
         headerName: "Account",
-        width: 220,
+        minWidth: 160,
+        flex: 1,
+        tooltip: ({ data }) => data?.account.name,
         cellRenderer: ({
           value,
           data,
@@ -136,14 +127,14 @@ export function useTransactionsColumnDefs(args: {
       {
         field: "description",
         headerName: "Description",
-        minWidth: 260,
+        minWidth: 180,
         flex: 1,
         filter: "agTextColumnFilter",
       },
       {
         colId: "unitIdentifier",
         headerName: "Ccy./Symbol",
-        width: 130,
+        width: 140,
         filter: true,
         valueGetter: ({ data }: { data?: TransactionsBookingRow }) => {
           if (!data) return null;
@@ -162,21 +153,21 @@ export function useTransactionsColumnDefs(args: {
       {
         field: "debit",
         headerName: "Debit",
-        width: 130,
+        width: 110,
         type: FORMATTED_NUMERIC_COLUMN,
         filter: "agNumberColumnFilter",
       },
       {
         field: "credit",
         headerName: "Credit",
-        width: 130,
+        width: 110,
         type: FORMATTED_NUMERIC_COLUMN,
         filter: "agNumberColumnFilter",
       },
       {
         field: "referenceDebit",
         headerName: `Debit (${referenceCurrency})`,
-        width: 150,
+        width: 110,
         type: FORMATTED_NUMERIC_COLUMN,
         context: {
           formattedNumeric: {
@@ -188,7 +179,7 @@ export function useTransactionsColumnDefs(args: {
       {
         field: "referenceCredit",
         headerName: `Credit (${referenceCurrency})`,
-        width: 150,
+        width: 110,
         type: FORMATTED_NUMERIC_COLUMN,
         context: {
           formattedNumeric: {
@@ -200,7 +191,7 @@ export function useTransactionsColumnDefs(args: {
       {
         colId: "actions",
         headerName: "",
-        width: 70,
+        width: 54,
         sortable: false,
         filter: false,
         resizable: false,
@@ -259,14 +250,16 @@ export function useTransactionsColumnDefs(args: {
       {
         field: "date",
         headerName: "Date",
-        width: 170,
+        width: 110,
         type: DATE_COLUMN,
-        cellRenderer: "agGroupCellRenderer",
       },
       {
         field: "debitAccounts",
         headerName: "Debit Account(s)",
-        width: 240,
+        minWidth: 160,
+        flex: 1,
+        tooltip: ({ data }) =>
+          data?.debitAccounts.map((account) => account.name).join(", "),
         ...multiValueSetFilterColumn,
         filterValueGetter: ({ data }) =>
           getTransactionAccountFilterValues(data?.debitAccounts),
@@ -284,7 +277,10 @@ export function useTransactionsColumnDefs(args: {
       {
         field: "creditAccounts",
         headerName: "Credit Account(s)",
-        width: 240,
+        minWidth: 160,
+        flex: 1,
+        tooltip: ({ data }) =>
+          data?.creditAccounts.map((account) => account.name).join(", "),
         ...multiValueSetFilterColumn,
         filterValueGetter: ({ data }) =>
           getTransactionAccountFilterValues(data?.creditAccounts),
@@ -302,14 +298,14 @@ export function useTransactionsColumnDefs(args: {
       {
         field: "description",
         headerName: "Description",
-        minWidth: 260,
-        flex: 1,
+        minWidth: 220,
+        flex: 2,
         filter: "agTextColumnFilter",
       },
       {
         colId: "unitIdentifiers",
         headerName: "Ccy./Symbol",
-        width: 150,
+        width: 140,
         ...multiValueSetFilterColumn,
         valueGetter: ({ data }) =>
           getTransactionUnitIdentifierFilterValues(data),
@@ -317,7 +313,7 @@ export function useTransactionsColumnDefs(args: {
       {
         field: "originalAmount",
         headerName: "Amount",
-        width: 140,
+        width: 110,
         type: FORMATTED_NUMERIC_COLUMN,
         context: {
           formattedNumeric: {
@@ -336,7 +332,7 @@ export function useTransactionsColumnDefs(args: {
       {
         field: "referenceAmount",
         headerName: `Amount (${referenceCurrency})`,
-        width: 160,
+        width: 130,
         type: FORMATTED_NUMERIC_COLUMN,
         context: {
           formattedNumeric: {
@@ -345,102 +341,8 @@ export function useTransactionsColumnDefs(args: {
         },
         filter: "agNumberColumnFilter",
       },
-      {
-        colId: "actions",
-        headerName: "",
-        width: 120,
-        sortable: false,
-        filter: false,
-        resizable: false,
-        suppressHeaderMenuButton: true,
-        cellClass: "actions-cell",
-        cellRenderer: ({ data }: ICellRendererParams<TransactionsRow>) => {
-          if (!data) return null;
-          const isOpeningBalancesTransaction =
-            data.isOpeningBalancesTransaction;
-          return (
-            <Group gap={4} wrap="nowrap" h="100%" align="center">
-              <Tooltip
-                label={
-                  isOpeningBalancesTransaction
-                    ? OPENING_BALANCES_MANAGEMENT_MESSAGE
-                    : "Edit"
-                }
-              >
-                <span style={{ display: "inline-flex" }}>
-                  <ActionIcon
-                    variant="subtle"
-                    size="sm"
-                    disabled={isOpeningBalancesTransaction}
-                    onClick={() => {
-                      if (isOpeningBalancesTransaction) return;
-                      onEditClick(data.transactionId);
-                    }}
-                    aria-label="Edit"
-                  >
-                    <IconPencil size={16} />
-                  </ActionIcon>
-                </span>
-              </Tooltip>
-              <Tooltip
-                label={
-                  isOpeningBalancesTransaction
-                    ? OPENING_BALANCES_MANAGEMENT_MESSAGE
-                    : "Copy"
-                }
-              >
-                <span style={{ display: "inline-flex" }}>
-                  <ActionIcon
-                    variant="subtle"
-                    size="sm"
-                    disabled={isOpeningBalancesTransaction}
-                    onClick={() => {
-                      if (isOpeningBalancesTransaction) return;
-                      onCopyClick(data.transactionId);
-                    }}
-                    aria-label="Copy"
-                  >
-                    <IconCopy size={16} />
-                  </ActionIcon>
-                </span>
-              </Tooltip>
-              <Tooltip
-                label={
-                  isOpeningBalancesTransaction
-                    ? OPENING_BALANCES_MANAGEMENT_MESSAGE
-                    : "Delete"
-                }
-              >
-                <span style={{ display: "inline-flex" }}>
-                  <ActionIcon
-                    variant="subtle"
-                    size="sm"
-                    color="red"
-                    disabled={isOpeningBalancesTransaction}
-                    onClick={() => {
-                      if (isOpeningBalancesTransaction) return;
-                      onDeleteClick(data.transactionId, data.description);
-                    }}
-                    aria-label="Delete"
-                  >
-                    <IconTrash size={16} />
-                  </ActionIcon>
-                </span>
-              </Tooltip>
-            </Group>
-          );
-        },
-      },
     ];
 
     return { columnDefs, detailColumnDefs };
-  }, [
-    accountBookId,
-    onCopyClick,
-    onDeleteClick,
-    onEditClick,
-    onRebookClick,
-    referenceCurrency,
-    selectedPeriodValue,
-  ]);
+  }, [accountBookId, onRebookClick, referenceCurrency, selectedPeriodValue]);
 }

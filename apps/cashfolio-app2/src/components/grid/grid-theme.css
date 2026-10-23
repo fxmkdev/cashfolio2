@@ -26,18 +26,3 @@
 .ag-row.statement-import-row-ignored {
   background-color: var(--mantine-color-gray-light);
 }
-
-.transactions-master-grid .ag-details-row {
-  padding: 12px;
-}
-
-.transactions-master-grid
-  .ag-details-row
-  .ag-layout-auto-height
-  .ag-grid-scrolling-rows,
-.transactions-master-grid
-  .ag-details-row
-  .ag-layout-auto-height
-  .ag-grid-scrolling-container {
-  min-height: 0;
-}

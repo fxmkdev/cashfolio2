@@ -15,7 +15,7 @@ export function useTransactionScroll<Row extends { transactionId: string }>(
   const pendingScrollRef = useRef<string | undefined>(undefined);
 
   const handleRowDataUpdated = useCallback(
-    (event: RowDataUpdatedEvent<Row>) => {
+    (event: Pick<RowDataUpdatedEvent<Row>, "api">) => {
       const targetTxId = pendingScrollRef.current ?? scrollTargetRef.current;
       if (!targetTxId) return;
 
@@ -64,5 +64,10 @@ export function useTransactionScroll<Row extends { transactionId: string }>(
     [navigate],
   );
 
-  return { pendingScrollRef, handleRowDataUpdated };
+  const getScrollTarget = useCallback(
+    () => pendingScrollRef.current ?? scrollTargetRef.current,
+    [],
+  );
+
+  return { pendingScrollRef, handleRowDataUpdated, getScrollTarget };
 }

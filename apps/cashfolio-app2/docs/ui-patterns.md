@@ -460,16 +460,17 @@ for ledger child routes.
 
 ## Transactions Page Pattern
 
-The transactions page (`src/routes/$accountBookId/transactions/index.tsx`) shows
-one master row per transaction across the whole account book, newest first. It
-is not in a single-account context. Expanding a master row opens a detail grid
-with the transaction's bookings.
+The transactions page (`src/routes/$accountBookId/transactions/route.tsx`) shows
+one row per transaction across the whole account book, newest first. It is not
+in a single-account context. Clicking an ordinary row cell or pressing Enter on
+a focused ordinary cell opens a separate bookings grid in a bottom details
+panel. Account links and bulk-selection checkboxes do not open details.
 
-- **Master columns**: Date, Debit Account(s), Credit Account(s), Description,
-  Ccy./Symbol, Amount in reference currency, and transaction actions. The Date
+- **Transaction columns**: Date, Debit Account(s), Credit Account(s),
+  Description, Ccy./Symbol, Amount, and Amount in reference currency. The Date
   is the earliest booking date in the transaction, and the reference amount is
   the larger absolute converted debit or credit side.
-- **Detail columns**: Date, Account, Description, Ccy./Symbol, Debit/Credit in
+- **Booking columns**: Date, Account, Description, Ccy./Symbol, Debit/Credit in
   booking unit, Debit/Credit in reference currency, and booking actions. Detail
   booking rows intentionally show only the booking description; they do not fall
   back to the transaction description when the booking description is blank.
@@ -481,9 +482,61 @@ with the transaction's bookings.
   the selected period, the page shows the complete transaction, including
   bookings outside that period.
 - **Actions**: Add Transaction and Edit open the split transaction editor
-  without a locked current account booking. Edit, Copy, and Delete are
-  transaction-level actions on the master row. Rebook is a booking-level action
-  in the detail grid and excludes the clicked booking's current account.
+  without a locked current account booking. The details header reuses the
+  ledger's secondary `SplitButton` with `variant="default"`: Edit is the main
+  action, and the Transaction actions menu contains Copy, a divider, then Delete
+  in red. For opening balances, Edit is disabled and the menu remains available
+  to show disabled Copy/Delete items with their explanatory tooltips. On mobile,
+  the split button occupies a second row while Close stays at the upper right.
+  Close is a neutral tertiary text button with the same 36px height and
+  typography as Edit; its width follows its label. Rebook is a booking-level
+  action in the details panel and excludes the clicked booking's current
+  account.
+
+- **Details layout**: The desktop panel has a fixed 320px height, including its
+  header and bookings grid, capped at 50% of the available list area on short
+  windows. A separate 10px (`xs`) gap divides it from the transaction list,
+  which fills the remaining space. Both grids scroll independently, and the main
+  grid stays mounted when details open, close or move to mobile. The header has
+  10px vertical padding and no horizontal padding: its heading and Close button
+  align with the bookings grid's outer edges. Date and booking count sit 2px
+  below the heading. Headings wrap to at most two lines, or one when the panel
+  is 256px tall or shorter, preserving usable space for booking rows and Rebook.
+  The complete heading remains its accessible name and native hover title. Below
+  the Mantine `sm` breakpoint, details use a full-screen bottom drawer with the
+  same header alignment; the inspected transaction survives viewport changes.
+- **Column sizing**: Both grids fit a 1470px viewport at 100% zoom with the
+  sidebar expanded by default. Compact date, unit and numeric columns leave
+  flexible account and description columns room to grow; headers wrap and adjust
+  their height. Tooltips expose full text and formatted values. All columns,
+  filters and manual resizing remain available; smaller viewports or enlarged
+  columns may scroll horizontally. Booking widths survive transaction changes
+  and reopening during the current visit.
+- **Inspection state**: Inspection is independent of bulk checkbox selection and
+  highlights its transaction row. Details derive from current loaded rows, so
+  edits and rebooking refresh immediately. Switching transactions resets booking
+  filters and scroll position while retaining column widths. Filtering out or
+  deleting the inspected transaction, or changing book/period, closes details.
+  Navigation and successful create/edit/rebook scroll targets open details too.
+- **Keyboard and screen readers**: The grids are named `Transactions` and
+  `Transaction bookings`. Desktop details are a named region without a focus
+  trap. Ordinary cell clicks retain list focus and announce the inspected
+  transaction; plain Enter moves focus to the details heading. The transaction
+  grid references a screen-reader-only instruction explaining Enter activation
+  and Space selection; no visible hint or dedicated details column is added.
+  Links, action buttons, selection controls, and modified shortcuts retain their
+  own behavior. Close returns focus to the originating transaction cell, using
+  its transaction and column IDs rather than its row index. Navigation without
+  an originating cell falls back to the transaction's Date cell; an unavailable
+  transaction falls back to the main grid. The mobile drawer uses modal focus
+  handling and supports Escape. Escape closes an open action menu before closing
+  the mobile drawer. Mutation dialogs return focus to Edit or, for menu actions,
+  the menu trigger; successful deletion retains the main-grid focus fallback.
+
+Use Mantine components for generic controls and layouts. The details UI uses
+`SplitButton`, `Drawer`, `ActionIcon`, `Tooltip`, `Button`, `Title`, `Text`,
+`Group`, `Stack`, `Flex`, `Box`, and `VisuallyHidden`; its custom components
+compose transaction behavior and the existing AG Grid wrappers.
 
 ## Bulk Transaction Actions
 
@@ -875,13 +928,11 @@ scrolling. Rendered body rows are direct children of
 cell sections inside each row. Pinned bottom rows are in
 `.ag-grid-pinned-bottom-rows`. Avoid selectors using the old center-column,
 pinned-column, or floating-bottom containers. Scope row actions to their row and
-modal editing locators to their dialog; master/detail grids can reuse row
-indices.
-
-The transaction detail grid's auto-height override applies to both the scrolling
-rows wrapper and its container so short booking lists remain compact. Loading
-and empty overlays are siblings of the viewport in v36; do not depend on them
-being viewport children.
+modal editing locators to their dialog. Transactions list and bookings grids
+have independent row indices; scope booking queries to the named details region
+or drawer. Both grids use constrained heights with independent scrolling.
+Loading and empty overlays are siblings of the viewport in v36; do not depend on
+them being viewport children.
 
 `ensureGridModulesRegistered` supplies the same selective feature modules in the
 application and Storybook. Development registers `ValidationModule` with
