@@ -25,12 +25,12 @@ export function StatementImportDiscardModal({
       </Text>
       <Group justify="flex-end">
         <Button variant="subtle" onClick={onClose}>
-          Keep reviewing
+          Keep Reviewing
         </Button>
         <Button color="red" onClick={onConfirm}>
           {action === "upload"
-            ? "Discard and upload another file"
-            : "Discard and leave"}
+            ? "Discard and Upload Another File"
+            : "Discard and Leave"}
         </Button>
       </Group>
     </Modal>

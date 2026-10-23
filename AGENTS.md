@@ -69,6 +69,11 @@ pnpm lint:workflows                           # actionlint check for GitHub work
 
 ## cashfolio-app2 Working Conventions
 
+- Follow the
+  [UI capitalization guidelines](apps/cashfolio-app2/docs/ui-patterns.md#capitalization):
+  use Title Case for short UI labels and titles, sentence case for prose,
+  instructions, and status messages, and preserve the documented identity
+  exceptions. Review visible copy and accessible names together.
 - Use `User`/`user` for identities in app-owned code; reserve
   `Account`/`account` for the financial business entity. In customer-facing
   identity actions, use "Cashfolio account"; admin actions may use "user".

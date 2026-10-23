@@ -54,13 +54,13 @@ export function DeleteUserAction({
         user.isCurrentUser
           ? "You cannot delete yourself"
           : user.deletionPending
-            ? "Retry deletion"
+            ? "Retry Deletion"
             : "Delete"
       }
     >
       <span style={TOOLTIP_TRIGGER_STYLE}>
         <ActionIcon
-          aria-label={user.deletionPending ? "Retry deletion" : "Delete"}
+          aria-label={user.deletionPending ? "Retry Deletion" : "Delete"}
           color="red"
           disabled={user.isCurrentUser}
           onClick={() => onDeleteUser(user)}
@@ -130,7 +130,7 @@ export function DeleteUserModal({
     <Modal
       opened={opened}
       onClose={handleClose}
-      title={user?.deletionPending ? "Retry deletion" : "Delete user"}
+      title={user?.deletionPending ? "Retry Deletion" : "Delete user"}
       size="md"
       closeOnEscape={!isSubmitting}
       closeOnClickOutside={!isSubmitting}
@@ -179,7 +179,7 @@ export function DeleteUserModal({
               to confirm.
             </Text>
             <TextInput
-              label={user.email ? "Email address" : "External ID"}
+              label={user.email ? "Email Address" : "External ID"}
               value={confirmation}
               onChange={(event) => {
                 setConfirmation(event.currentTarget.value);
@@ -211,7 +211,7 @@ export function DeleteUserModal({
                 disabled={isSubmitting || !confirmationMatches}
                 leftSection={<IconTrash size={16} />}
               >
-                {user.deletionPending ? "Retry deletion" : "Delete user"}
+                {user.deletionPending ? "Retry Deletion" : "Delete user"}
               </Button>
             </Group>
           </Stack>

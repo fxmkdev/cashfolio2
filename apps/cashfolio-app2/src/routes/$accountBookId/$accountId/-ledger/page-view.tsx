@@ -322,13 +322,13 @@ export function LedgerPageView({
           <Group gap="sm">
             {periodFilterControls}
             <Tooltip
-              label={accountEditDisabledReason ?? "Edit account"}
+              label={accountEditDisabledReason ?? "Edit Account"}
               disabled={!accountEditDisabledReason}
             >
               <span>
                 <SplitButton
                   leftSection={<IconPencil size={16} />}
-                  menuLabel="Account actions"
+                  menuLabel="Account Actions"
                   onClick={onOpenAccountEdit}
                   primaryDisabled={!!accountEditDisabledReason}
                   menuItems={[

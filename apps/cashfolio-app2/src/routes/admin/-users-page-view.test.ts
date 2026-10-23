@@ -118,7 +118,7 @@ describe("AdminUsersPageView", () => {
     );
     expect(markup).toContain("Deletion pending");
     expect(markup).toContain("Admin (inactive)");
-    expect(markup).toContain('aria-label="Retry deletion"');
+    expect(markup).toContain('aria-label="Retry Deletion"');
     expect(markup).toMatch(
       /<button[^>]*disabled[^>]*aria-label="Manage Roles"/,
     );

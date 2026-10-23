@@ -58,7 +58,7 @@ export function AccountGainLossCalculation({
       buildOpenLotColumns<number | null>(decimals).map((column) => ({
         ...column,
         ...(column.field === "periodEndRate"
-          ? { headerName: "As-of Rate" }
+          ? { headerName: "As-Of Rate" }
           : {}),
         ...([
           "periodEndRate",

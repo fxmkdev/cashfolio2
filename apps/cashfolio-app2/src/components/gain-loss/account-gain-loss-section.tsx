@@ -64,7 +64,7 @@ export function AccountGainLossSection(args: {
         size="90%"
         title="Gain/Loss Calculation"
       >
-        {details.loading ? <Loader aria-label="Loading Calculation" /> : null}
+        {details.loading ? <Loader aria-label="Loading calculation" /> : null}
         {details.error ? (
           <Alert color="red" title="Calculation Unavailable">
             {details.error}

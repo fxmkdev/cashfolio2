@@ -17,7 +17,7 @@ describe("AdminRouteErrorComponent", () => {
       ),
     );
 
-    expect(markup).toContain("Admin access required");
+    expect(markup).toContain("Admin Access Required");
     expect(markup).toContain(
       "You are not authorized to access the Admin area.",
     );

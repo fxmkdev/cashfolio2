@@ -7,7 +7,7 @@ export function AdminRouteErrorComponent({ error }: ErrorComponentProps) {
   if (!isForbiddenResponse) {
     return (
       <AdminRouteErrorPage
-        title="Admin area unavailable"
+        title="Admin Area Unavailable"
         message="The Admin area could not be loaded. Please try again from the app."
       />
     );
@@ -15,7 +15,7 @@ export function AdminRouteErrorComponent({ error }: ErrorComponentProps) {
 
   return (
     <AdminRouteErrorPage
-      title="Admin access required"
+      title="Admin Access Required"
       message="You are not authorized to access the Admin area."
     />
   );

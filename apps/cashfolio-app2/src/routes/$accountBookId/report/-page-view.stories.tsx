@@ -693,14 +693,14 @@ export const GainsLossesDrillSmoke: Story = {
     );
     await expect(
       await canvas.findByText(
-        /Top-Level Groups for Gains\/Losses in the Selected Period/,
+        /Top-level groups for gains\/losses in the selected period/,
       ),
     ).toBeInTheDocument();
 
     await userEvent.dblClick(gainsLossesChart);
     await waitFor(() => {
       expect(
-        canvas.getByText(/Drilled Gains\/Losses in the Selected Period/),
+        canvas.getByText(/Drilled gains\/losses in the selected period/),
       ).toBeInTheDocument();
     });
     await expect(canvas.getByText("FX")).toBeInTheDocument();

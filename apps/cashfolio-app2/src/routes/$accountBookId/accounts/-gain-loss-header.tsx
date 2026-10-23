@@ -67,7 +67,7 @@ export function AccountGainLossDetails({
       >
         {children}
         <Popover.Dropdown
-          aria-label="Gain/loss details"
+          aria-label="Gain/Loss Details"
           aria-labelledby={undefined}
           maw="calc(100vw - 24px)"
           onKeyDownCapture={(event) => {
@@ -116,9 +116,9 @@ export function AccountGainLossHeader({
         {displayName}
       </Text>
       <Popover.Target ref={details?.targetRef}>
-        <Tooltip label="Show gain/loss details">
+        <Tooltip label="Show Gain/Loss Details">
           <ActionIcon
-            aria-label="Show gain/loss details"
+            aria-label="Show Gain/Loss Details"
             size="sm"
             variant="subtle"
             onClick={details?.toggle}

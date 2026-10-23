@@ -242,7 +242,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
                     >
                       <span style={{ display: "inline-flex" }}>
                         <Checkbox
-                          label="Cash account"
+                          label="Cash Account"
                           checked={cashAccountValue}
                           disabled={!cashAccountEditable}
                           onChange={(event) =>

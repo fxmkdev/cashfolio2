@@ -239,7 +239,7 @@ export const TransferClosesOppositePosition: Story = {
     });
     await waitFor(async () => {
       await expect(
-        within(event).getByText("Transfer basis", { exact: true }),
+        within(event).getByText("Transfer Basis", { exact: true }),
       ).toBeVisible();
       await expect(
         within(event).getByText(/carried acquisition costs/),

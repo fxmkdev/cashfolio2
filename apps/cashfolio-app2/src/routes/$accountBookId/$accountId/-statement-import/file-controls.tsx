@@ -78,7 +78,7 @@ function StatementImportDropzone({
 
         <Stack gap={4}>
           <Text size="sm" fw={500}>
-            Drop CSV File Here
+            Drop CSV file here
           </Text>
           <Text size="xs" c="dimmed">
             Drag and drop a statement, or click to select one.

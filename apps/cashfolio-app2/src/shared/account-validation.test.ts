@@ -37,7 +37,7 @@ describe("validateAccountTradeCurrency", () => {
   test("requires trade currency for security assets/liabilities", () => {
     expect(
       validateAccountTradeCurrency(undefined, Unit.SECURITY, AccountType.ASSET),
-    ).toBe("Trade Currency is required");
+    ).toBe("Trade currency is required");
   });
 
   test("allows non-security units without trade currency", () => {

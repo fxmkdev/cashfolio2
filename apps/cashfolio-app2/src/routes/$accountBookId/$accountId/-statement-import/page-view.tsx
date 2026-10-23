@@ -1,6 +1,5 @@
 import { Center, Group, Loader, Stack, Stepper, Text } from "@mantine/core";
 import { IconFileUpload, IconTable } from "@tabler/icons-react";
-import { LocaleModule } from "ag-grid-enterprise";
 import { DataGrid } from "@/components/grid/data-grid";
 import { gridTheme } from "@/components/grid/grid-theme";
 import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
@@ -27,7 +26,6 @@ import { isStatementImportReviewDraftRow } from "./page-controller";
 const statementImportGridTheme = gridTheme.withParams({
   selectedRowBackgroundColor: "transparent",
 });
-const statementImportGridModules = [LocaleModule];
 
 type StatementImportPageViewProps = {
   accountBookId: string;
@@ -175,7 +173,6 @@ export function AccountStatementImportPageView({
               <StatementImportReviewSummary summaryText={state.summaryText} />
 
               <DataGrid
-                modules={statementImportGridModules}
                 context={{
                   onCellEditorDirtyChange: state.setIsReviewCellDirty,
                 }}
@@ -218,9 +215,9 @@ export function AccountStatementImportPageView({
                 }}
                 localeText={{
                   ariaRowToggleSelection:
-                    "Press Space to Toggle Inclusion; Shift+Space to Apply to a Range",
+                    "Press Space to toggle inclusion; Shift+Space to apply to a range",
                   ariaRowSelectAll:
-                    "Press Space to Toggle Inclusion of All Rows",
+                    "Press Space to toggle inclusion of all rows",
                   ariaHeaderSelection: "Include All Rows",
                   ariaRowSelect: "Include Row",
                   ariaRowDeselect: "Ignore Row",

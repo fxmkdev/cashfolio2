@@ -98,7 +98,7 @@ export function validateAccountTradeCurrency(
   type?: AccountType,
 ): string | null {
   if (!isAssetOrLiability(type) || unit !== "SECURITY") return null;
-  return tradeCurrency ? null : "Trade Currency is required";
+  return tradeCurrency ? null : "Trade currency is required";
 }
 
 export function validateAccountStatementImportCsvFormat(

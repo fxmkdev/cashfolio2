@@ -180,7 +180,7 @@ export const Empty: Story = {
   ),
   play: async ({ canvasElement }) => {
     await expect(
-      await within(canvasElement).findByText("No Rows To Show"),
+      await within(canvasElement).findByText("No rows to show"),
     ).toBeVisible();
   },
 };

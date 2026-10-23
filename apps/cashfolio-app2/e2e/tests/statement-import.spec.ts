@@ -27,7 +27,7 @@ test.beforeAll(async ({ e2eExternalId }) => {
 });
 
 async function openStatementImportPage(page: Page) {
-  await page.getByRole("button", { name: "Account actions" }).click();
+  await page.getByRole("button", { name: "Account Actions" }).click();
   await page.getByRole("menuitem", { name: "Import Statement" }).click();
 }
 
@@ -47,7 +47,7 @@ async function selectImportCounterAccount(page: Page, description: string) {
 }
 
 async function expectStatementUploadDropzone(page: Page) {
-  await expect(page.getByText("Drop CSV File Here")).toBeVisible();
+  await expect(page.getByText("Drop CSV file here")).toBeVisible();
   await expect(
     page.getByText("Drag and drop a statement, or click to select one."),
   ).toBeVisible();
@@ -294,7 +294,7 @@ test("Shift applies the starting inclusion state to mixed statement ranges", asy
   await expectIncluded([0, 1, 2, 3, 4]);
   await expect(checkbox(0)).toHaveAttribute(
     "aria-label",
-    /Toggle Inclusion.*\(checked\)/,
+    /toggle inclusion.*\(checked\)/,
   );
 
   // Without an anchor, Shift toggles only the endpoint.
@@ -302,7 +302,7 @@ test("Shift applies the starting inclusion state to mixed statement ranges", asy
   await expectIncluded([0, 1, 2, 3]);
   await expect(checkbox(4)).toHaveAttribute(
     "aria-label",
-    /Toggle Inclusion.*\(unchecked\)/,
+    /toggle inclusion.*\(unchecked\)/,
   );
   await click(1);
   // The already-unchecked endpoint must still ignore the entire range.
@@ -336,7 +336,7 @@ test("Shift applies the starting inclusion state to mixed statement ranges", asy
   await page.getByRole("button", { name: /Upload/ }).click();
   await page
     .getByRole("dialog", { name: "Discard reviewed statement?" })
-    .getByRole("button", { name: "Discard and upload another file" })
+    .getByRole("button", { name: "Discard and Upload Another File" })
     .click();
   await page.locator('input[type="file"]').setInputFiles(file);
   await expectIncluded([0, 1, 2, 3, 4]);
@@ -536,16 +536,16 @@ test("checkboxes control statement row inclusion and skip unchecked rows during 
     name: "Discard reviewed statement?",
   });
   await expect(discardDialog).toBeVisible();
-  await discardDialog.getByRole("button", { name: "Keep reviewing" }).click();
+  await discardDialog.getByRole("button", { name: "Keep Reviewing" }).click();
   await expect(discardDialog).toHaveCount(0);
   await expect(includedRow).toBeVisible();
 
   await page.getByRole("button", { name: /Upload/ }).click();
   await discardDialog
-    .getByRole("button", { name: "Discard and upload another file" })
+    .getByRole("button", { name: "Discard and Upload Another File" })
     .click();
   await expectStatementUploadDropzone(page);
-  await page.getByRole("button", { name: /Review/ }).click();
+  await page.getByRole("button", { name: "Review", exact: true }).click();
   await expectStatementUploadDropzone(page);
   await page.locator('input[type="file"]').setInputFiles({
     name: "statement-import-ignore-reupload.csv",

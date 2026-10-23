@@ -249,7 +249,7 @@ export function ValuationProviderUsagePageView({
       <div className={classes.contentLayout}>
         <Card withBorder radius="md" p="lg">
           <Stack gap={4}>
-            <Text fw={600}>30-day Breakdown</Text>
+            <Text fw={600}>30-Day Breakdown</Text>
             <Text c="dimmed" size="sm">
               Provider calls by outcome and request reason.
             </Text>

@@ -22,7 +22,7 @@ export function StatementImportActions({
             ? includedCount === 0
               ? "At least one non-ignored imported transaction is required."
               : "All non-ignored imported transactions must be ready."
-            : "Create transactions"
+            : "Create Transactions"
         }
         disabled={!importDisabled || draftsLength === 0}
       >

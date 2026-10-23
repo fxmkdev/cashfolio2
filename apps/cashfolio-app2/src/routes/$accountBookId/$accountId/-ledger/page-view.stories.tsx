@@ -578,7 +578,7 @@ export const AccountActionsMenu: Story = {
     const canvas = within(canvasElement);
 
     await userEvent.click(
-      canvas.getByRole("button", { name: "Account actions" }),
+      canvas.getByRole("button", { name: "Account Actions" }),
     );
 
     await waitFor(() => {
@@ -612,7 +612,7 @@ export const ArchivedAccountActionsMenu: Story = {
     ).not.toBeInTheDocument();
 
     await userEvent.click(
-      canvas.getByRole("button", { name: "Account actions" }),
+      canvas.getByRole("button", { name: "Account Actions" }),
     );
 
     await waitFor(() => {
@@ -635,7 +635,7 @@ export const DisabledAccountActionsMenu: Story = {
     const canvas = within(canvasElement);
 
     await userEvent.click(
-      canvas.getByRole("button", { name: "Account actions" }),
+      canvas.getByRole("button", { name: "Account Actions" }),
     );
 
     await waitFor(() => {

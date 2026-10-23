@@ -27,7 +27,7 @@ export const AccountAction: Story = {
   render: () => (
     <SplitButton
       leftSection={<IconPencil size={16} />}
-      menuLabel="Account actions"
+      menuLabel="Account Actions"
       onClick={() => undefined}
       menuItems={[
         {

@@ -90,7 +90,7 @@ export function AccountGainLossSummaryView(args: {
           </Button>
         </Group>
         {args.loading ? (
-          <Loader size="sm" aria-label="Loading Gain/Loss" />
+          <Loader size="sm" aria-label="Loading gain/loss" />
         ) : null}
         {args.error ? (
           <Alert color="red" title="Gain/Loss Unavailable">
