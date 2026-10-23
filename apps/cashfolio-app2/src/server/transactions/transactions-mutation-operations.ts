@@ -265,7 +265,9 @@ export async function createSimpleTransactionOperation(
     counterAccount.equityAccountSubtype === EquityAccountSubtype.INCOME &&
     data.direction !== "DEBIT"
   ) {
-    throw new Error("Income accounts require a debit on the current account.");
+    throw new Error(
+      "Income categories require a debit on the current account.",
+    );
   }
   if (
     counterAccount.type === AccountType.EQUITY &&
@@ -273,7 +275,7 @@ export async function createSimpleTransactionOperation(
     data.direction !== "CREDIT"
   ) {
     throw new Error(
-      "Expense accounts require a credit on the current account.",
+      "Expense categories require a credit on the current account.",
     );
   }
 

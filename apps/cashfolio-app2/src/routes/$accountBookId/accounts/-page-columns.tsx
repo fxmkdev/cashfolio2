@@ -1,3 +1,4 @@
+import { getAccountConstraintMessage } from "@/shared/account-presentation";
 import { buildAccountGainLossColumns } from "./-gain-loss-columns";
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import { useMemo, useRef } from "react";
@@ -243,8 +244,18 @@ export function useAccountTreeColumnDefs(params: {
                 unarchivePending={unarchivePending}
                 reorderEnabled={hasSiblings}
                 reorderLabel={reorderLabel}
-                deleteLabel={data.deleteDisabledReason ?? "Delete"}
-                unarchiveLabel={data.unarchiveDisabledReason ?? "Unarchive"}
+                deleteLabel={
+                  getAccountConstraintMessage(
+                    data.deleteDisabledReason,
+                    isEquityTab ? "categories" : "accounts",
+                  ) ?? "Delete"
+                }
+                unarchiveLabel={
+                  getAccountConstraintMessage(
+                    data.unarchiveDisabledReason,
+                    isEquityTab ? "categories" : "accounts",
+                  ) ?? "Unarchive"
+                }
                 deletable={data.deletable}
                 unarchivable={data.unarchivable}
                 onEdit={() => onEditRow(data)}
@@ -262,7 +273,12 @@ export function useAccountTreeColumnDefs(params: {
 
           return (
             <ActiveAccountTreeActionsCell
-              archiveLabel={data.archiveDisabledReason ?? "Archive"}
+              archiveLabel={
+                getAccountConstraintMessage(
+                  data.archiveDisabledReason,
+                  isEquityTab ? "categories" : "accounts",
+                ) ?? "Archive"
+              }
               deleteLabel={data.deleteDisabledReason ?? "Delete"}
               archivable={data.archivable}
               deletable={data.deletable}

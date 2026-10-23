@@ -28,6 +28,8 @@ import {
   applyAccountGroupCashInheritance,
 } from "./account-cash-form-rules";
 
+import { getAccountConstraintMessage } from "@/shared/account-presentation";
+
 export function useEditAccountModalController({
   opened,
   onClose,
@@ -44,6 +46,11 @@ export function useEditAccountModalController({
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const submitState = useDialogSubmitState({
     captureErrors: true,
+    formatErrorMessage: (message) =>
+      getAccountConstraintMessage(
+        message,
+        typeDescriptor.startsWith("EQUITY-") ? "categories" : "accounts",
+      ) ?? message,
     onRefreshConstraints,
   });
   const { isSubmitting, runSubmit, clearSubmissionError } = submitState;
@@ -62,7 +69,12 @@ export function useEditAccountModalController({
               n.id !== editingId,
           )
           .map((n) => n.name);
-        return validateAccountName(value, siblingNames);
+        return (
+          getAccountConstraintMessage(
+            validateAccountName(value, siblingNames),
+            typeDescriptor.startsWith("EQUITY-") ? "categories" : "accounts",
+          ) ?? null
+        );
       },
       typeDescriptor: isNotEmpty("Type is required"),
       groupId: (value, values) =>

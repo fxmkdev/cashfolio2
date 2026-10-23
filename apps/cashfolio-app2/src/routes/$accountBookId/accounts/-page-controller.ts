@@ -24,7 +24,7 @@ import {
 import {
   REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
   type AccountsGridRow,
-  tabs,
+  getManagementTabs,
   type ReferenceCurrencyTotalFooterRow,
 } from "./-page-types";
 import {
@@ -38,6 +38,10 @@ import { useAccountsReferenceBalanceRows } from "./-page-reference-balances";
 import { useAccountTreeColumnDefs } from "./-page-columns";
 import { loadAccountsPageData } from "./-page-loader";
 import type { AccountsPageViewProps } from "./-page-view";
+import {
+  getAccountConstraintMessage,
+  type AccountManagementContext,
+} from "@/shared/account-presentation";
 
 type AccountsPageLoaderData = Awaited<ReturnType<typeof loadAccountsPageData>>;
 type AccountsPageControllerViewProps = AccountsPageViewProps;
@@ -252,6 +256,7 @@ export function createAccountsMutationActions(args: {
 }
 
 export function useAccountsPageController(args: {
+  managementContext?: AccountManagementContext;
   loaderData: AccountsPageLoaderData;
   accountBookId: string;
   tab: AccountsPageViewProps["tab"];
@@ -309,7 +314,9 @@ export function useAccountsPageController(args: {
     load: loadGainLoss,
   });
 
-  const storageKey = `cashfolio:expandedGroups:${args.accountBookId}:active:${args.tab}`;
+  const expansionMode =
+    args.managementContext === "categories" ? args.mode : "active";
+  const storageKey = `cashfolio:expandedGroups:${args.accountBookId}:${expansionMode}:${args.tab}`;
   const { isGroupOpenByDefault, onRowGroupOpened } = useExpandedGroups(
     storageKey,
     isVirtualArchivedGroup,
@@ -389,7 +396,8 @@ export function useAccountsPageController(args: {
 
   const actions = createAccountsMutationActions({
     accountBookId: args.accountBookId,
-    createGroupIsActive: true,
+    createGroupIsActive:
+      args.managementContext !== "categories" || args.mode !== "archived",
     invalidate: args.invalidate,
     state: {
       getEditingAccount: () => modalState.editingAccount,
@@ -408,6 +416,11 @@ export function useAccountsPageController(args: {
   const unarchiveRecovery = useUnarchiveMutation({
     scopeKey: `${args.accountBookId}:${args.tab}:${args.mode}`,
     onUnarchive: actions.handleUnarchiveRow,
+    formatErrorMessage: (message) =>
+      getAccountConstraintMessage(
+        message,
+        args.managementContext ?? "accounts",
+      ) ?? message,
     onRefreshConstraints,
     isEligible: (target) =>
       rows.some(
@@ -434,13 +447,14 @@ export function useAccountsPageController(args: {
   });
 
   return {
+    managementContext: args.managementContext ?? "accounts",
     gainLoss,
     onRefreshConstraints,
     unarchiveRecovery,
     accountBookId: args.accountBookId,
     tab: args.tab,
     mode: args.mode,
-    tabs,
+    tabs: getManagementTabs(args.managementContext ?? "accounts"),
     accountGroups,
     archivedAccountGroups,
     archivedExistingNodes,

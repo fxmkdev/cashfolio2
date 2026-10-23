@@ -307,10 +307,12 @@ export const RebookSelection: Story = {
     );
     await waitFor(() =>
       expect(
-        dialog.getByText("Move 2 selected bookings to the target account."),
+        dialog.getByText(
+          "Move 2 selected bookings to the target account or category.",
+        ),
       ).toBeVisible(),
     );
-    await userEvent.click(dialog.getByLabelText("Target Account"));
+    await userEvent.click(dialog.getByLabelText("Account or category"));
     await userEvent.click(await body.findByRole("option", { name: "Savings" }));
     await userEvent.click(dialog.getByRole("button", { name: "Rebook" }));
     await expect(args.submitRebook).toHaveBeenCalledWith(
@@ -432,10 +434,12 @@ export const NoCommonRebookTarget: Story = {
       canvas.getByRole("button", { name: "Rebook Selected" }),
     );
     const dialog = within(await body.findByRole("dialog"));
-    await expect(dialog.getByLabelText("Target Account")).toBeDisabled();
+    await expect(dialog.getByLabelText("Account or category")).toBeDisabled();
     await expect(dialog.getByRole("button", { name: "Rebook" })).toBeDisabled();
     await waitFor(() =>
-      expect(dialog.getByText(/No target account is compatible/)).toBeVisible(),
+      expect(
+        dialog.getByText(/No target account or category is compatible/),
+      ).toBeVisible(),
     );
     await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
     await expect(canvas.getByRole("status")).toHaveTextContent(
@@ -460,7 +464,7 @@ export const RebookFailure: Story = {
     const element = await body.findByRole("dialog");
     await waitFor(() => expect(element).toBeVisible());
     const dialog = within(element);
-    await userEvent.click(dialog.getByLabelText("Target Account"));
+    await userEvent.click(dialog.getByLabelText("Account or category"));
     await userEvent.click(await body.findByRole("option", { name: "Savings" }));
     await userEvent.click(dialog.getByRole("button", { name: "Rebook" }));
     await expect(
@@ -490,7 +494,7 @@ export const PendingRebook: Story = {
     const element = await body.findByRole("dialog");
     await waitFor(() => expect(element).toBeVisible());
     const dialog = within(element);
-    await userEvent.click(dialog.getByLabelText("Target Account"));
+    await userEvent.click(dialog.getByLabelText("Account or category"));
     await userEvent.click(await body.findByRole("option", { name: "Savings" }));
     await userEvent.click(dialog.getByRole("button", { name: "Rebook" }));
     await expect(dialog.getByRole("button", { name: "Cancel" })).toBeDisabled();

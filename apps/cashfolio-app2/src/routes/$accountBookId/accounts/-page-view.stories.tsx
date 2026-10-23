@@ -1,4 +1,5 @@
 import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows";
+import { SettingsNavigation } from "../settings/-settings-navigation";
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -25,6 +26,7 @@ import {
   REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
   type AccountsMode,
   tabs,
+  getManagementTabs,
   type TabValue,
   type TreeRow,
 } from "./-page-types";
@@ -233,6 +235,20 @@ const existingNodes: AccountsPageViewProps["existingNodes"] = [
 ];
 
 function getRowsFor(args: { mode: AccountsMode; tab: TabValue }): TreeRow[] {
+  if (args.tab === "EQUITY-EXPENSE")
+    return activeAssetRows.slice(0, 4).map((row, i) => ({
+      ...row,
+      name: ["Housing", "Utilities", "Electricity", "Rent"][i],
+      type: AccountType.EQUITY,
+      equityAccountSubtype: "EXPENSE",
+      unit: null,
+      currency: null,
+      balance: null,
+      balanceInReferenceCurrency: null,
+      isActive: args.mode === "active",
+      archivable: args.mode === "active",
+      unarchivable: args.mode === "archived",
+    }));
   if (args.tab !== "ASSET") return [];
   return args.mode === "archived" ? archivedAssetRows : activeAssetRows;
 }
@@ -332,7 +348,11 @@ function AccountsPageStoryHarness({
 
   const rows = useMemo(
     () =>
-      buildUnifiedAccountTreeRows(rowsOverride ?? getRowsFor({ mode, tab })),
+      tab.startsWith("EQUITY-")
+        ? (rowsOverride ?? getRowsFor({ mode, tab }))
+        : buildUnifiedAccountTreeRows(
+            rowsOverride ?? getRowsFor({ mode, tab }),
+          ),
     [mode, tab, rowsOverride],
   );
   const rowsByParentKey = useRowsByParentKey(rows);
@@ -389,7 +409,7 @@ function AccountsPageStoryHarness({
   };
   const columnDefs = useAccountTreeColumnDefs({
     gainLossData:
-      gainLossState === "loading" || gainLossState === "error"
+      isEquityTab || gainLossState === "loading" || gainLossState === "error"
         ? undefined
         : gainLossData,
     isGainLossLoading: gainLossState === "loading",
@@ -424,7 +444,10 @@ function AccountsPageStoryHarness({
             name: row.name,
             type: row.type,
             equityAccountSubtype: row.equityAccountSubtype,
-            parentGroupId: row.persistedParentId ?? undefined,
+            parentGroupId:
+              (row.persistedParentId === undefined
+                ? row.parentId
+                : row.persistedParentId) ?? undefined,
             sortOrder: row.sortOrder ?? undefined,
           },
         });
@@ -458,13 +481,17 @@ function AccountsPageStoryHarness({
           Toggle gain/loss loading
         </Button>
       )}
+      {isEquityTab && (
+        <SettingsNavigation accountBookId="storybook-book" categories />
+      )}
       <AccountsPageView
         gainLoss={{
           data:
-            gainLossState === "loading" || gainLossState === "error"
+            gainLossState === "loading" ||
+            (!isEquityTab && gainLossState === "error")
               ? undefined
               : gainLossData,
-          loading: gainLossState === "loading",
+          loading: !isEquityTab && gainLossState === "loading",
           error:
             gainLossState === "error"
               ? "Gain/loss could not be loaded. Please try again."
@@ -474,8 +501,24 @@ function AccountsPageStoryHarness({
         accountBookId="storybook-book"
         tab={tab}
         mode={mode}
-        tabs={tabs}
-        accountGroups={accountGroups}
+        managementContext={isEquityTab ? "categories" : "accounts"}
+        tabs={getManagementTabs(isEquityTab ? "categories" : "accounts")}
+        accountGroups={
+          isEquityTab
+            ? rows
+                .filter((row) => row.nodeType === "accountGroup")
+                .map((row) => ({
+                  value: row.id,
+                  label: row.name,
+                  type: row.type,
+                  equityAccountSubtype: row.equityAccountSubtype,
+                  parentGroupId: row.parentId ?? null,
+                  isCashAccount: false,
+                  treePath: row.parentId ? ["Housing"] : [],
+                  treeLabel: row.name,
+                }))
+            : accountGroups
+        }
         existingNodes={existingNodes}
         unitUsage={{
           currencies: ["CHF", "EUR", "USD"],
@@ -880,7 +923,9 @@ export const GainLossLoadingToReady: Story = {
     let header = await canvas.findByRole("columnheader", {
       name: /G\/L Since Start \(CHF\)/,
     });
-    await canvas.findByText("Assets", { exact: true });
+    await within(canvas.getByRole("treegrid")).findByText("Assets", {
+      exact: true,
+    });
     const grid = canvasElement.querySelector(".ag-root-wrapper");
     const firstRow = canvasElement.querySelector('.ag-row[row-index="0"]');
     if (!grid || !firstRow) throw new Error("Accounts grid has no first row");
@@ -1054,5 +1099,61 @@ export const LocalizedLiabilityGainLoss: Story = {
     const details = await openGainLossDetails(canvasElement);
     expect(details).toHaveTextContent("Since 1.1.2026 · As of 31.3.2026");
     await userEvent.keyboard("{Escape}");
+  },
+};
+
+export const ExpenseCategories: Story = {
+  parameters: {
+    router: {
+      initialPath:
+        "/storybook-book/settings/categories?tab=EQUITY-EXPENSE&mode=active",
+    },
+  },
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      initialTab="EQUITY-EXPENSE"
+      expandGroups
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("heading", { name: "Income & expense categories" }),
+    ).toBeVisible();
+    await expect(
+      canvas.getByText("Electricity", { exact: true }),
+    ).toBeVisible();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Add expense category" }),
+    );
+    await findVisibleDialog(
+      within(canvasElement.ownerDocument.body),
+      "New Category",
+    );
+  },
+};
+
+export const CategoryArchive: Story = {
+  parameters: {
+    router: {
+      initialPath:
+        "/storybook-book/settings/categories?tab=EQUITY-EXPENSE&mode=archived",
+    },
+  },
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="archived"
+      initialTab="EQUITY-EXPENSE"
+      expandGroups
+    />
+  ),
+};
+
+export const CategoriesMobile: Story = {
+  ...ExpenseCategories,
+  parameters: {
+    ...ExpenseCategories.parameters,
+    viewport: { defaultViewport: "cashfolioMobile" },
   },
 };

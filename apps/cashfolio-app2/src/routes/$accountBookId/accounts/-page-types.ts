@@ -1,10 +1,11 @@
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import type { getAccountTreeData } from "@/server/accounts";
 import type { TabValue } from "@/shared/account-tabs";
+import type { AccountManagementContext } from "@/shared/account-presentation";
 
 export const tabs = [
-  { value: "ASSET", label: "Asset", type: AccountType.ASSET },
-  { value: "LIABILITY", label: "Liability", type: AccountType.LIABILITY },
+  { value: "ASSET", label: "Assets", type: AccountType.ASSET },
+  { value: "LIABILITY", label: "Liabilities", type: AccountType.LIABILITY },
   {
     value: `EQUITY-${EquityAccountSubtype.INCOME}`,
     label: "Income",
@@ -13,16 +14,41 @@ export const tabs = [
   },
   {
     value: `EQUITY-${EquityAccountSubtype.EXPENSE}`,
-    label: "Expense",
+    label: "Expenses",
     type: AccountType.EQUITY,
     equityAccountSubtype: EquityAccountSubtype.EXPENSE,
   },
 ] as const;
 
+export function getManagementTabs(context: AccountManagementContext) {
+  return tabs.filter((tab) =>
+    context === "categories"
+      ? tab.type === AccountType.EQUITY
+      : tab.type !== AccountType.EQUITY,
+  );
+}
+
+export function parseCategoriesSearch(search: Record<string, unknown>) {
+  return {
+    tab: getManagementTabs("categories").some((tab) => tab.value === search.tab)
+      ? (search.tab as TabValue)
+      : ("EQUITY-INCOME" as const),
+    mode:
+      search.mode === "archived" ? ("archived" as const) : ("active" as const),
+  };
+}
+
 export type { TabValue };
 export type AccountsMode = "active" | "archived";
 
-export function getAccountsPageTitle(_mode?: AccountsMode): string {
+export function getAccountsPageTitle(
+  mode: AccountsMode = "active",
+  context: AccountManagementContext = "accounts",
+): string {
+  if (context === "categories")
+    return mode === "archived"
+      ? "Category archive"
+      : "Income & expense categories";
   return "Accounts";
 }
 
@@ -62,7 +88,12 @@ export function toRowTarget(data: TreeRow): RowTarget {
   };
 }
 
-export function getEntityLabel(nodeType: RowTarget["nodeType"]): string {
+export function getEntityLabel(
+  nodeType: RowTarget["nodeType"],
+  context: AccountManagementContext = "accounts",
+): string {
+  if (context === "categories")
+    return nodeType === "account" ? "Category" : "Category group";
   return nodeType === "account" ? "Account" : "Group";
 }
 

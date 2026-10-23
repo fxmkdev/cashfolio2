@@ -12,8 +12,10 @@ export function useUnarchiveMutation({
   onUnarchive,
   onRefreshConstraints,
   isEligible,
+  formatErrorMessage,
 }: {
   scopeKey: string;
+  formatErrorMessage?: (message: string) => string;
   onUnarchive: (target: UnarchiveTarget) => Promise<void>;
   onRefreshConstraints: () => Promise<void>;
   isEligible: (target: UnarchiveTarget) => boolean;
@@ -21,6 +23,7 @@ export function useUnarchiveMutation({
   const [target, setTarget] = useState<UnarchiveTarget | null>(null);
   const submitState = useDialogSubmitState({
     captureErrors: true,
+    formatErrorMessage,
     onRefreshConstraints,
   });
   useEffect(() => setTarget(null), [scopeKey]);

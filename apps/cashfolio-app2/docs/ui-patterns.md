@@ -399,6 +399,31 @@ booking-unit debit/credit columns. Show native unit labels and native
 debit/credit amounts only when they add information, such as foreign currency,
 crypto, or security bookings.
 
+## Accounts and categories
+
+`Account` remains the unified internal bookkeeping entity. In customer-facing
+copy, **accounts** are the existing asset/liability accounts; **categories** are
+income, expense, and gain/loss accounts. Opening Balances remains a special
+system account. Identity actions still use "Cashfolio account".
+
+Account management has Assets and Liabilities tabs. Income and expense category
+management lives under **account book Settings → Categories**, with Income and
+Expenses tabs and active/archive modes. Gain/Loss and Opening Balances retain
+their system-managed restrictions and are not creation tabs. Primary navigation
+is unchanged. Viewing a category ledger is an activity view, not a settings
+page: its URL and Accounts navigation highlight remain unchanged.
+
+Categories have explicit **category groups**, backed by `AccountGroup`. Groups
+can contain categories and nested groups; categories can also be at the root.
+Only categories accept bookings and are selectable transaction destinations.
+Preserve existing subtype compatibility and ordering rules. Use "Add income
+category"/"Add expense category", "Add group", and "Category group" in forms.
+Selectors accepting both entities use "Account or category".
+
+Use the shared `account-presentation` predicates and labels at presentation
+boundaries. These names do not change stored account types, booking signs,
+liability display inversion, income/expense direction rules, or calculations.
+
 ## Accounts List Columns
 
 - The `Name` column has a 320px minimum width and grows with the available

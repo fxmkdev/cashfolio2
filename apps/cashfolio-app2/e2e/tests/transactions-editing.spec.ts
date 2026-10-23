@@ -30,7 +30,7 @@ test("eligible edit opens simple editor and ineligible edit opens split editor",
   });
   await page.getByLabel("Date").fill("01/04/2026");
   await page.getByLabel("Description").fill("E2E Editable Simple");
-  await simpleCreateDialog.getByLabel("Counter Account").click();
+  await simpleCreateDialog.getByLabel("Account or category").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
   await page.getByLabel("Amount").fill("20");
   await simpleCreateDialog.getByRole("button", { name: "Create" }).click();
@@ -42,7 +42,9 @@ test("eligible edit opens simple editor and ineligible edit opens split editor",
   await expect(
     simpleEditDialog.getByRole("button", { name: "Switch to Split Editor" }),
   ).toBeVisible();
-  await expect(simpleEditDialog.getByLabel("Counter Account")).toBeVisible();
+  await expect(
+    simpleEditDialog.getByLabel("Account or category"),
+  ).toBeVisible();
   await simpleEditDialog.getByRole("button", { name: "Save" }).click();
 
   await page.goto(`/${seeded.accountBookId}/${seeded.expenseAccount.id}`);
@@ -89,7 +91,7 @@ test("switch from simple edit to split carries over edited values", async ({
   });
   await page.getByLabel("Date").fill("01/05/2026");
   await page.getByLabel("Description").fill("E2E Carry Switch");
-  await simpleCreateDialog.getByLabel("Counter Account").click();
+  await simpleCreateDialog.getByLabel("Account or category").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
   await page.getByLabel("Amount").fill("15");
   await simpleCreateDialog.getByRole("button", { name: "Create" }).click();
@@ -141,7 +143,7 @@ test("create flow: changing date before switching to split still allows split cr
   const simpleDialog = await openCreateSimpleTransaction(page);
   await simpleDialog.getByLabel("Date").fill("01/06/2026");
   await simpleDialog.getByLabel("Description").fill("E2E Create Date Switch");
-  await simpleDialog.getByLabel("Counter Account").click();
+  await simpleDialog.getByLabel("Account or category").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
   await simpleDialog.getByLabel("Amount").fill("22");
 

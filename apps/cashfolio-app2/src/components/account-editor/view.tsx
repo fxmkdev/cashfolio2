@@ -1,3 +1,8 @@
+import {
+  getAccountEntityLabel,
+  isBalanceAccount,
+  isCategoryAccount,
+} from "@/shared/account-presentation";
 import { type EditAccountModalProps } from "./types";
 import {
   Unit,
@@ -51,6 +56,8 @@ export function EditAccountModal(props: EditAccountModalProps) {
     handleClose,
     handleSubmit,
   } = useEditAccountModalController(props);
+  const entity = getAccountEntityLabel({ type, equityAccountSubtype });
+  const isCategory = isCategoryAccount({ type, equityAccountSubtype });
   return (
     <Modal
       opened={opened}
@@ -59,7 +66,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
       closeOnEscape={!isSubmitting}
       closeOnClickOutside={!isSubmitting}
       withCloseButton={!isSubmitting}
-      title={isEdit ? "Edit Account" : "New Account"}
+      title={`${isEdit ? "Edit" : "New"} ${entity}`}
       size="lg"
     >
       <form onSubmit={handleSubmit}>
@@ -70,7 +77,13 @@ export function EditAccountModal(props: EditAccountModalProps) {
                 label="Name"
                 name="name"
                 withAsterisk
-                placeholder="e.g. Checking Account"
+                placeholder={
+                  isCategory
+                    ? equityAccountSubtype === EquityAccountSubtype.INCOME
+                      ? "e.g. Salary"
+                      : "e.g. Groceries"
+                    : "e.g. Checking Account"
+                }
                 {...form.getInputProps("name")}
               />
             </Grid.Col>
@@ -83,7 +96,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
                 disabled
                 data={[
                   {
-                    group: "Position Accounts (Non-Equity)",
+                    group: "Accounts",
                     items: [
                       {
                         value: AccountType.ASSET,
@@ -96,7 +109,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
                     ],
                   },
                   {
-                    group: "Flow Accounts (Equity)",
+                    group: "Categories",
                     items: [
                       {
                         value: `${AccountType.EQUITY}-${EquityAccountSubtype.INCOME}`,
@@ -123,7 +136,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
             </Grid.Col>
             <Grid.Col span={9}>
               <GroupTreeSelect
-                label="Group"
+                label={isCategory ? "Category group" : "Group"}
                 searchable
                 clearable
                 groups={accountGroups.filter(
@@ -148,9 +161,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
                 {...form.getInputProps("sortOrder")}
               />
             </Grid.Col>
-            {(
-              [AccountType.ASSET, AccountType.LIABILITY] as AccountType[]
-            ).includes(type) && (
+            {isBalanceAccount({ type }) && (
               <Grid.Col span={3}>
                 <FormattedNumberInput
                   label="Opening Balance"
@@ -159,9 +170,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
                 />
               </Grid.Col>
             )}
-            {(
-              [AccountType.ASSET, AccountType.LIABILITY] as AccountType[]
-            ).includes(type) && (
+            {isBalanceAccount({ type }) && (
               <>
                 <Grid.Col span={3}>
                   <Select

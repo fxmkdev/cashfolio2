@@ -11,11 +11,13 @@ export function ConfirmDeleteModal({
   description,
   onConfirm,
   onRefreshConstraints,
+  formatErrorMessage,
   onExitTransitionEnd,
 }: {
   opened: boolean;
   onClose: () => void;
   onRefreshConstraints?: () => Promise<void>;
+  formatErrorMessage?: (message: string) => string;
   title: string;
   name?: string;
   description?: ReactNode;
@@ -24,6 +26,7 @@ export function ConfirmDeleteModal({
 }) {
   const submitState = useDialogSubmitState({
     captureErrors: true,
+    formatErrorMessage,
     onRefreshConstraints,
   });
   const { isSubmitting, runSubmit } = submitState;

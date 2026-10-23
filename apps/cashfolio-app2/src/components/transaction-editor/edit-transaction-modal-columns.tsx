@@ -174,6 +174,7 @@ export function createEditTransactionColumnDefs(args: {
     },
     {
       field: "account",
+      headerName: "Account or category",
       type: ACCOUNT_TREE_SELECT_COLUMN,
       context: { options: accounts },
       minWidth: 150,

@@ -1,7 +1,14 @@
+import {
+  getAccountManagementPath,
+  getAccountConstraintMessage,
+  type AccountManagementContext,
+} from "@/shared/account-presentation";
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import { Alert, Button, Group, Tabs, Text, Title } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
+import { IconArchive, IconPlus } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
+import { LinkButton } from "@/components/navigation/link-button";
+import { PageBreadcrumbs } from "@/components/navigation/page-breadcrumbs";
 import { LinkTab } from "@/components/navigation/link-tab";
 import { TopPageHeader } from "@/components/layout/top-page-header";
 import type { AccountGroupInitialValues } from "@/components/account-editor/edit-account-group-modal";
@@ -48,6 +55,7 @@ type RowTarget = {
 };
 
 export type AccountsPageViewProps = {
+  managementContext?: AccountManagementContext;
   gainLoss?: {
     data?: AccountGainLossSummaries;
     error?: string;
@@ -109,11 +117,13 @@ export type AccountsPageViewProps = {
 };
 
 export function AccountsPageView({
+  managementContext = "accounts",
   gainLoss,
   accountBookId,
   onRefreshConstraints,
   unarchiveRecovery,
   tab,
+  mode,
   tabs,
   accountGroups,
   existingNodes,
@@ -162,31 +172,85 @@ export function AccountsPageView({
   const isEditingArchivedGroup = rows.some(
     (row) => row.id === editingGroup?.id && !row.isActive,
   );
+  const isCategories = managementContext === "categories";
+  const isArchivedMode = isCategories && mode === "archived";
+  const formatErrorMessage = (message: string) =>
+    getAccountConstraintMessage(message, managementContext) ?? message;
+  const managementPath = getAccountManagementPath(managementContext);
 
   return (
     <PageShell>
       <TopPageHeader
-        heading={<Title order={2}>{getAccountsPageTitle()}</Title>}
+        heading={
+          isArchivedMode ? (
+            <PageBreadcrumbs
+              items={[
+                {
+                  label: isCategories
+                    ? "Income & expense categories"
+                    : "Accounts",
+                  to: managementPath,
+                  params: { accountBookId },
+                  search: { tab, mode: "active" },
+                },
+                { label: getAccountsPageTitle("archived", managementContext) },
+              ]}
+            />
+          ) : (
+            <Title order={2}>
+              {getAccountsPageTitle("active", managementContext)}
+            </Title>
+          )
+        }
         actions={
           <Group>
-            <Button
-              variant="default"
-              leftSection={<IconPlus size={16} />}
-              onClick={onOpenCreateGroup}
-            >
-              Add Group
-            </Button>
-            <Button
-              leftSection={<IconPlus size={16} />}
-              onClick={onOpenCreateAccount}
-            >
-              Add Account
-            </Button>
+            {!isArchivedMode && (
+              <>
+                {isCategories && (
+                  <LinkButton
+                    variant="default"
+                    leftSection={<IconArchive size={16} />}
+                    to={managementPath}
+                    params={{ accountBookId }}
+                    search={{ tab, mode: "archived" }}
+                  >
+                    Archive
+                  </LinkButton>
+                )}
+                <Button
+                  variant="default"
+                  leftSection={<IconPlus size={16} />}
+                  onClick={onOpenCreateGroup}
+                >
+                  Add Group
+                </Button>
+                <Button
+                  leftSection={<IconPlus size={16} />}
+                  onClick={onOpenCreateAccount}
+                >
+                  {isCategories
+                    ? tab === "EQUITY-INCOME"
+                      ? "Add income category"
+                      : "Add expense category"
+                    : "Add Account"}
+                </Button>
+              </>
+            )}
+            {isArchivedMode && (
+              <Button
+                variant="default"
+                leftSection={<IconPlus size={16} />}
+                onClick={onOpenCreateGroup}
+              >
+                Add Group
+              </Button>
+            )}
           </Group>
         }
       />
 
       <UnarchiveMutationFeedback
+        listLabel={isCategories ? "category list" : "account list"}
         recovery={unarchiveRecovery}
         onRefreshConstraints={onRefreshConstraints}
       />
@@ -196,9 +260,9 @@ export function AccountsPageView({
             <LinkTab
               key={t.value}
               value={t.value}
-              to="/$accountBookId/accounts"
+              to={managementPath}
               params={{ accountBookId }}
-              search={{ tab: t.value, mode: "active" }}
+              search={{ tab: t.value, mode: isCategories ? mode : "active" }}
             >
               {t.label}
             </LinkTab>
@@ -206,9 +270,12 @@ export function AccountsPageView({
         </Tabs.List>
       </Tabs>
 
-      <Text size="sm" c="dimmed" mb="sm">
-        Totals include active and archived accounts, including collapsed groups.
-      </Text>
+      {!isCategories && (
+        <Text size="sm" c="dimmed" mb="sm">
+          Totals include active and archived accounts, including collapsed
+          groups.
+        </Text>
+      )}
       {gainLoss?.error ? (
         <Alert color="red" title="Gain/Loss Unavailable" mb="sm">
           {gainLoss.error}
@@ -254,30 +321,33 @@ export function AccountsPageView({
         />
       </AccountGainLossDetails>
 
-      <>
-        <EditAccountModal
-          onRefreshConstraints={onRefreshConstraints}
-          opened={createModalOpened}
-          onClose={onCloseCreateAccount}
-          accountGroups={accountGroups}
-          unitUsage={unitUsage}
-          onSubmit={onSubmitCreateAccount}
-          existingNodes={existingNodes}
-          typeDescriptor={tab}
-        />
-        <ConfirmArchiveModal
-          onRefreshConstraints={onRefreshConstraints}
-          opened={!!archivingRow}
-          onClose={onCloseArchive}
-          title={
-            archivingRow
-              ? `Archive ${getEntityLabel(archivingRow.nodeType)}`
-              : "Archive"
-          }
-          name={archivingRow?.name}
-          onConfirm={onConfirmArchive}
-        />
-      </>
+      {!isArchivedMode && (
+        <>
+          <EditAccountModal
+            onRefreshConstraints={onRefreshConstraints}
+            opened={createModalOpened}
+            onClose={onCloseCreateAccount}
+            accountGroups={accountGroups}
+            unitUsage={unitUsage}
+            onSubmit={onSubmitCreateAccount}
+            existingNodes={existingNodes}
+            typeDescriptor={tab}
+          />
+          <ConfirmArchiveModal
+            formatErrorMessage={formatErrorMessage}
+            onRefreshConstraints={onRefreshConstraints}
+            opened={!!archivingRow}
+            onClose={onCloseArchive}
+            title={
+              archivingRow
+                ? `Archive ${getEntityLabel(archivingRow.nodeType, managementContext)}`
+                : "Archive"
+            }
+            name={archivingRow?.name}
+            onConfirm={onConfirmArchive}
+          />
+        </>
+      )}
 
       <EditAccountGroupModal
         onRefreshConstraints={onRefreshConstraints}
@@ -295,13 +365,17 @@ export function AccountsPageView({
         onClose={onCloseEditAccount}
         onExitTransitionEnd={onClearEditingAccount}
         accountGroups={
-          isEditingArchivedAccount ? archivedAccountGroups : accountGroups
+          !isCategories && isEditingArchivedAccount
+            ? archivedAccountGroups
+            : accountGroups
         }
         unitUsage={unitUsage}
         onSubmit={onSubmitUpdateAccount}
         initialValues={editingAccount?.initialValues}
         existingNodes={
-          isEditingArchivedAccount ? archivedExistingNodes : existingNodes
+          !isCategories && isEditingArchivedAccount
+            ? archivedExistingNodes
+            : existingNodes
         }
         editingId={editingAccount?.id}
         typeDescriptor={tab}
@@ -313,24 +387,29 @@ export function AccountsPageView({
         onClose={onCloseEditGroup}
         onExitTransitionEnd={onClearEditingGroup}
         accountGroups={
-          isEditingArchivedGroup ? archivedAccountGroups : accountGroups
+          !isCategories && isEditingArchivedGroup
+            ? archivedAccountGroups
+            : accountGroups
         }
         onSubmit={onSubmitUpdateGroup}
         initialValues={editingGroup?.initialValues}
         existingNodes={
-          isEditingArchivedGroup ? archivedExistingNodes : existingNodes
+          !isCategories && isEditingArchivedGroup
+            ? archivedExistingNodes
+            : existingNodes
         }
         editingId={editingGroup?.id}
         typeDescriptor={tab}
       />
 
       <ConfirmDeleteModal
+        formatErrorMessage={formatErrorMessage}
         onRefreshConstraints={onRefreshConstraints}
         opened={!!deletingRow}
         onClose={onCloseDelete}
         title={
           deletingRow
-            ? `Delete ${getEntityLabel(deletingRow.nodeType)}`
+            ? `Delete ${getEntityLabel(deletingRow.nodeType, managementContext)}`
             : "Delete"
         }
         name={deletingRow?.name}

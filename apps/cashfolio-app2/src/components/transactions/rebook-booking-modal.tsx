@@ -40,7 +40,7 @@ export function RebookBookingModal({
   const noEligibleAccountReason =
     disabledReason ??
     (targetAccounts.length === 0
-      ? "No eligible target account is available."
+      ? "No eligible target account or category is available."
       : null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -58,8 +58,8 @@ export function RebookBookingModal({
     ) {
       setValidationError(
         selectedTargetAccountId
-          ? "The selected account is no longer available. Choose another account."
-          : "Target account is required",
+          ? "The selected account or category is no longer available. Choose another account or category."
+          : "Account or category is required",
       );
       return;
     }
@@ -77,8 +77,8 @@ export function RebookBookingModal({
       <Stack gap="md">
         {description && <Text size="sm">{description}</Text>}
         <AccountTreeSelect
-          label="Target Account"
-          placeholder="Select target account"
+          label="Account or Category"
+          placeholder="Select account or category"
           accounts={targetAccounts}
           data-autofocus
           value={targetAccountId}

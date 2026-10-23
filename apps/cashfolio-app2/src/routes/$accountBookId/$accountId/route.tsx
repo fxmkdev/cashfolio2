@@ -1,3 +1,7 @@
+import {
+  getAccountManagementContext,
+  getAccountManagementPath,
+} from "@/shared/account-presentation";
 import { AccountGainLossSection } from "@/components/gain-loss/account-gain-loss-section";
 import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
 import { Suspense, lazy, useCallback, useMemo } from "react";
@@ -125,7 +129,9 @@ export function LedgerPageContent() {
     },
     onAccountDeleted: ({ tab, mode }) =>
       navigate({
-        to: "/$accountBookId/accounts",
+        to: getAccountManagementPath(
+          getAccountManagementContext(loaderData.account),
+        ),
         params: { accountBookId },
         search: { tab, mode },
       }),

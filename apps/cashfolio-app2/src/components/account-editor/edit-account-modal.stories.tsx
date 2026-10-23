@@ -51,6 +51,24 @@ export const Create: Story = {
   },
 };
 
+export const IncomeCategory: Story = {
+  args: {
+    typeDescriptor: "EQUITY-INCOME",
+    accountGroups: [],
+    existingNodes: [],
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await expect(
+      body.getByRole("dialog", { name: "New Category" }),
+    ).toBeInTheDocument();
+    await expect(body.getByPlaceholderText("e.g. Salary")).toBeInTheDocument();
+    await expect(
+      body.queryByLabelText("Opening Balance"),
+    ).not.toBeInTheDocument();
+  },
+};
+
 export const Edit: Story = {
   args: {
     initialValues: editAccountInitialValues,

@@ -62,7 +62,7 @@ export function BulkTransactionDialogs({
         onClose={actions.onClose}
         title="Delete Transactions"
         name={`${deletion?.transactionIds.length ?? 0} selected ${(deletion?.transactionIds.length ?? 0) === 1 ? "transaction" : "transactions"}`}
-        description="All bookings in these transactions, including bookings in other accounts, will be permanently deleted."
+        description="All bookings in these transactions, including bookings in other accounts or categories, will be permanently deleted."
         onConfirm={actions.onConfirmDelete}
         onRefreshConstraints={actions.onRefreshConstraints}
       />
@@ -79,11 +79,11 @@ export function BulkTransactionDialogs({
       >
         {rebook && (
           <RebookBookingModal
-            description={`Move ${rebook.bookings.length} selected ${rebook.bookings.length === 1 ? "booking" : "bookings"} to the target account.`}
+            description={`Move ${rebook.bookings.length} selected ${rebook.bookings.length === 1 ? "booking" : "bookings"} to the target account or category.`}
             targetAccounts={actions.targetAccounts}
             disabledReason={
               actions.targetAccounts.length === 0
-                ? "No target account is compatible with every selected booking. Adjust your selection and try again."
+                ? "No target account or category is compatible with every selected booking. Adjust your selection and try again."
                 : undefined
             }
             onClose={actions.onClose}

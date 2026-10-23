@@ -27,6 +27,24 @@ type Story = StoryObj<typeof meta>;
 
 export const Create: Story = {};
 
+export const ExpenseCategoryGroup: Story = {
+  args: {
+    typeDescriptor: "EQUITY-EXPENSE",
+    accountGroups: [],
+    existingNodes: [],
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await expect(
+      body.getByRole("dialog", { name: "New Category group" }),
+    ).toBeInTheDocument();
+    await expect(body.getByPlaceholderText("e.g. Housing")).toBeInTheDocument();
+    await expect(
+      body.getByLabelText("Parent category group"),
+    ).toBeInTheDocument();
+  },
+};
+
 export const Edit: Story = {
   args: {
     initialValues: editAccountGroupInitialValues,

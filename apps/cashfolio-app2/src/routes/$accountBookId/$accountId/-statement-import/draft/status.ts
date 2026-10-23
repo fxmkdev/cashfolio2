@@ -60,10 +60,10 @@ export function getStatementImportDraftStatus(args: {
       return error(OPENING_BALANCES_MANAGEMENT_MESSAGE);
     }
     if (isIncomeAccount(account) && booking.value > 0) {
-      return error("Income accounts cannot have debit entries.");
+      return error("Income categories cannot have debit entries.");
     }
     if (isExpenseAccount(account) && booking.value < 0) {
-      return error("Expense accounts cannot have credit entries.");
+      return error("Expense categories cannot have credit entries.");
     }
 
     const bookingDate = parseUtcDayDate(booking.date);

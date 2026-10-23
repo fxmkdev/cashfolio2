@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { EquityAccountSubtype } from "@/.prisma-client/enums";
-import { getAccountsPageTitle, parseAccountsSearch, tabs } from "./-page-types";
+import {
+  getAccountsPageTitle,
+  getEntityLabel,
+  getManagementTabs,
+  parseCategoriesSearch,
+  parseAccountsSearch,
+  tabs,
+} from "./-page-types";
 
 describe("accounts page tab parsing", () => {
   it("does not expose the gain/loss tab", () => {
@@ -34,6 +41,44 @@ describe("accounts page tab parsing", () => {
 });
 
 describe("getAccountsPageTitle", () => {
+  it("separates editable category tabs from balance accounts and system accounts", () => {
+    expect(getManagementTabs("accounts").map((tab) => tab.value)).toEqual([
+      "ASSET",
+      "LIABILITY",
+    ]);
+    expect(getManagementTabs("categories").map((tab) => tab.value)).toEqual([
+      "EQUITY-INCOME",
+      "EQUITY-EXPENSE",
+    ]);
+    expect(getAccountsPageTitle("active", "categories")).toBe(
+      "Income & expense categories",
+    );
+    expect(getAccountsPageTitle("archived", "categories")).toBe(
+      "Category archive",
+    );
+    expect(getEntityLabel("account", "categories")).toBe("Category");
+    expect(getEntityLabel("accountGroup", "categories")).toBe("Category group");
+  });
+
+  it.each([
+    undefined,
+    "ASSET",
+    "LIABILITY",
+    "EQUITY-GAIN_LOSS",
+    "EQUITY-OPENING_BALANCES",
+    "unknown",
+  ])("defaults unsupported category tabs (%s) to Income", (tab) => {
+    expect(parseCategoriesSearch({ tab })).toEqual({
+      tab: "EQUITY-INCOME",
+      mode: "active",
+    });
+  });
+
+  it("preserves category archive selection", () => {
+    expect(
+      parseCategoriesSearch({ tab: "EQUITY-EXPENSE", mode: "archived" }),
+    ).toEqual({ tab: "EQUITY-EXPENSE", mode: "archived" });
+  });
   it("uses the active accounts heading for active mode", () => {
     expect(getAccountsPageTitle("active")).toBe("Accounts");
   });
