@@ -65,7 +65,6 @@ export function getAccountListBalanceValue(args: {
 export function useAccountTreeColumnDefs(params: {
   gainLossData?: AccountGainLossSummaries;
   isGainLossLoading?: boolean;
-  isArchivedMode: boolean;
   isEquityTab: boolean;
   rowsByParentKey: Map<string, TreeRow[]>;
   referenceCurrency: string;
@@ -81,7 +80,6 @@ export function useAccountTreeColumnDefs(params: {
   const {
     gainLossData,
     isGainLossLoading,
-    isArchivedMode,
     isEquityTab,
     rowsByParentKey,
     referenceCurrency,
@@ -227,16 +225,19 @@ export function useAccountTreeColumnDefs(params: {
         cellRenderer: ({ data }: ICellRendererParams<AccountsGridRow>) => {
           if (!data) return null;
           if (isReferenceCurrencyTotalFooterRow(data)) return null;
+          if (data.isVirtualArchivedGroup) return null;
 
           const parentKey = data.parentId ?? ROOT_PARENT_KEY;
           const siblingCount =
-            (rowsByParentKeyRef.current.get(parentKey)?.length ?? 0) - 1;
+            (rowsByParentKeyRef.current
+              .get(parentKey)
+              ?.filter((row) => !row.isVirtualArchivedGroup).length ?? 0) - 1;
           const hasSiblings = siblingCount >= 1;
           const reorderLabel = hasSiblings
             ? "Reorder Siblings"
             : "Cannot reorder because this row has no siblings";
 
-          if (isArchivedMode) {
+          if (!data.isActive) {
             return (
               <ArchivedAccountTreeActionsCell
                 unarchivePending={unarchivePending}
@@ -284,7 +285,6 @@ export function useAccountTreeColumnDefs(params: {
   }, [
     gainLossData,
     isGainLossLoading,
-    isArchivedMode,
     isEquityTab,
     referenceCurrency,
     onEditRow,

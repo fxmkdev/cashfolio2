@@ -1,4 +1,5 @@
 import { toNumericMoney } from "../money-boundary";
+export { buildUnifiedAccountTreeRows } from "../../shared/archived-account-tree-rows";
 import { toMoney, type Money } from "../../shared/money";
 import type {
   AccountType,
@@ -57,6 +58,8 @@ export type AccountTreeGroup = {
 };
 
 export type AccountTreeRow = {
+  isVirtualArchivedGroup?: boolean;
+  persistedParentId?: string | null;
   id: string;
   nodeType: "account" | "accountGroup";
   name: string;
@@ -85,10 +88,11 @@ export type AccountTreeRow = {
 };
 
 export function filterGroupsForAccountState(args: {
-  accountState: "active" | "inactive";
+  accountState: "active" | "inactive" | "all";
   accountGroups: AccountTreeGroup[];
   accounts: Pick<AccountTreeAccount, "groupId">[];
 }): AccountTreeGroup[] {
+  if (args.accountState === "all") return args.accountGroups;
   if (args.accountState === "active") {
     return args.accountGroups.filter((group) => group.isActive);
   }
@@ -295,6 +299,10 @@ export function sortAccountTreeRows(rows: AccountTreeRow[]): AccountTreeRow[] {
     const parentRight = right.parentId ?? "";
     if (parentLeft !== parentRight) {
       return parentLeft.localeCompare(parentRight);
+    }
+
+    if (!!left.isVirtualArchivedGroup !== !!right.isVirtualArchivedGroup) {
+      return left.isVirtualArchivedGroup ? 1 : -1;
     }
 
     if (left.sortOrder !== right.sortOrder) {

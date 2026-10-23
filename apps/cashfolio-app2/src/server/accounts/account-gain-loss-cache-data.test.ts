@@ -26,7 +26,7 @@ function createData() {
         },
       },
     ],
-    groups: [{ id: "g", type: "EQUITY", parentGroupId: null }],
+    groups: [{ id: "g", type: "EQUITY", parentGroupId: null, isActive: true }],
   };
 }
 
@@ -43,6 +43,7 @@ describe("account G/L cache payload validation", () => {
     { startDate: "invalid" },
     { asOfDate: null },
     { accounts: null },
+    { groups: [{ id: "g", type: "ASSET", parentGroupId: null }] },
     { accounts: [null] },
     { accounts: [{ ...createData().accounts[0], id: null }] },
     { accounts: [{ ...createData().accounts[0], type: "EQUITY" }] },

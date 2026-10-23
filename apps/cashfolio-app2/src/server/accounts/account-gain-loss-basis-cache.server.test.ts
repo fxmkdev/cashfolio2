@@ -94,7 +94,7 @@ let closingRate: number | null;
 let basisSource: ValuationRateSource;
 let closingSource: ValuationRateSource;
 const basisKey =
-  "account:gain-loss-basis:v2:test:book:revision:2026-03-03T00:00:00.000Z";
+  "account:gain-loss-basis:v3:test:book:revision:2026-03-03T00:00:00.000Z";
 const load = (date = "2026-05-12Z") =>
   loadAccountGainLossSummaryRange({
     accountBookId: "book",
@@ -132,7 +132,7 @@ beforeEach(() => {
   mocks.db.accountBook.findUniqueOrThrow.mockResolvedValue(book);
   mocks.db.account.findMany.mockResolvedValue([holding]);
   mocks.db.accountGroup.findMany.mockResolvedValue([
-    { id: "group", parentGroupId: null, type: "ASSET" },
+    { id: "group", parentGroupId: null, type: "ASSET", isActive: true },
   ]);
   mocks.db.booking.groupBy.mockResolvedValue([
     { accountId: "holding", _sum: { value: "2" } },
@@ -322,7 +322,7 @@ describe("historical G/L basis cache through the real FIFO calculation", () => {
     expect(mocks.rate).toHaveBeenCalledTimes(rates);
     expect(
       [...mocks.entries.keys()].filter((key) =>
-        key.startsWith("account:gain-loss:v3:"),
+        key.startsWith("account:gain-loss:v4:"),
       ),
     ).toHaveLength(1);
   });
@@ -387,7 +387,7 @@ describe("historical G/L basis cache through the real FIFO calculation", () => {
     transactions = [];
     await load();
     expect([...mocks.entries.keys()]).toEqual([
-      "account:gain-loss-basis:v2:test:book:revision:empty",
+      "account:gain-loss-basis:v3:test:book:revision:empty",
     ]);
   });
 
@@ -467,11 +467,11 @@ describe("historical G/L basis cache through the real FIFO calculation", () => {
     await expect(load()).rejects.toThrow("PERIOD_BASE_CACHE_ENV");
   });
 
-  it("rebuilds instead of reusing v1 historical bases", async () => {
+  it("rebuilds instead of reusing bases without archived group metadata", async () => {
     await load();
     const payload = mocks.entries.get(basisKey)!;
     mocks.entries.clear();
-    const oldKey = basisKey.replace(":v2:", ":v1:");
+    const oldKey = basisKey.replace(":v3:", ":v2:");
     mocks.entries.set(oldKey, payload);
     mocks.db.transaction.findMany.mockClear();
     await load();

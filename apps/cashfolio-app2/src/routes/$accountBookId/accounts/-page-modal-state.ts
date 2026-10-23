@@ -30,6 +30,7 @@ export function useAccountsPageModalState() {
   >();
 
   const handleEditRow = useCallback((data: TreeRow) => {
+    if (data.isVirtualArchivedGroup) return;
     if (data.nodeType === "account") {
       setEditingAccount({
         id: data.id,
@@ -45,7 +46,10 @@ export function useAccountsPageModalState() {
         name: data.name,
         type: data.type,
         equityAccountSubtype: data.equityAccountSubtype,
-        parentGroupId: data.parentId,
+        parentGroupId:
+          data.persistedParentId === undefined
+            ? data.parentId
+            : (data.persistedParentId ?? undefined),
         sortOrder: data.sortOrder ?? undefined,
         isCashAccount: data.isCashAccount ?? false,
       },

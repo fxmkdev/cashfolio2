@@ -165,7 +165,7 @@ export function getAccountsLinkSearch(args: {
 
     return {
       tab: getAccountsTabFromLedgerAccount(match.account),
-      mode: match.account.isActive ? "active" : "archived",
+      mode: "active",
     };
   }
 

@@ -1,3 +1,4 @@
+import { expandArchivedGroups } from "../support/grid";
 import { Buffer } from "node:buffer";
 import { createId } from "@paralleldrive/cuid2";
 import { expect, test, type Page } from "../support/fixtures";
@@ -184,6 +185,7 @@ for (const nodeType of ["account", "accountGroup"] as const) {
     const parentRow = agGridRowByText(page, `Parent ${nodeType}`);
     const contracted = parentRow.locator(".ag-group-contracted").first();
     if (await contracted.isVisible()) await contracted.click();
+    await expandArchivedGroups(page);
     const row = agGridRowByText(page, name);
     await revealRowActions(row);
     await expect(row.getByRole("button", { name: "Unarchive" })).toBeEnabled();

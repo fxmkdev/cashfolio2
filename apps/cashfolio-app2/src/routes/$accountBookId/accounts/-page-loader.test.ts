@@ -23,7 +23,7 @@ describe("loadAccountsPageData", () => {
     getAccountsPageData.mockResolvedValue(mockResult);
   });
 
-  it("loads only the selected asset tab in active mode", async () => {
+  it("loads active and archived accounts for the selected asset tab", async () => {
     const result = await loadAccountsPageData({
       accountBookId: "book-1",
       mode: "active",
@@ -34,14 +34,14 @@ describe("loadAccountsPageData", () => {
     expect(getAccountsPageData).toHaveBeenCalledWith({
       data: {
         accountBookId: "book-1",
-        accountState: "active",
+        accountState: "all",
         type: AccountType.ASSET,
       },
     });
     expect(result).toBe(mockResult);
   });
 
-  it("loads the selected equity subtype in archived mode", async () => {
+  it("loads both states for the selected equity subtype, including legacy archived mode", async () => {
     await loadAccountsPageData({
       accountBookId: "book-2",
       mode: "archived",
@@ -52,7 +52,7 @@ describe("loadAccountsPageData", () => {
     expect(getAccountsPageData).toHaveBeenCalledWith({
       data: {
         accountBookId: "book-2",
-        accountState: "inactive",
+        accountState: "all",
         type: AccountType.EQUITY,
         equityAccountSubtype: EquityAccountSubtype.EXPENSE,
       },

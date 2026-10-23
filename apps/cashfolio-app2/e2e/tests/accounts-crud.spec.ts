@@ -1,3 +1,4 @@
+import { expandArchivedGroups } from "../support/grid";
 import {
   agGridRowByText,
   clickRowAction,
@@ -66,7 +67,7 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
 
   await archiveAccountRow({ page, name: updatedName });
 
-  await page.getByRole("link", { name: "Archive" }).click();
+  await expandArchivedGroups(page);
   const archivedRow = agGridRowByText(page, updatedName);
   await expect(archivedRow).toBeVisible();
 
@@ -78,7 +79,7 @@ test("create, edit, archive, and unarchive account", async ({ page }) => {
   await expect(archivedRow).toBeVisible();
 
   await clickRowAction(archivedRow, "Unarchive");
-  await expect(agGridRowByText(page, updatedName)).toHaveCount(0);
+  await expect(agGridRowByText(page, updatedName)).toBeVisible();
 
   await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
   const unarchivedRow = agGridRowByText(page, updatedName);
@@ -139,7 +140,7 @@ test("edit unitless equity account from list and ledger", async ({ page }) => {
   ).toEqual([]);
 });
 
-test("archived mode allows edit, reorder siblings, and delete", async ({
+test("archived rows allow edit, reorder siblings, and delete in unified Accounts", async ({
   page,
 }) => {
   await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
@@ -154,7 +155,7 @@ test("archived mode allows edit, reorder siblings, and delete", async ({
   await archiveAccountRow({ page, name: primaryName });
   await archiveAccountRow({ page, name: siblingName });
 
-  await page.getByRole("link", { name: "Archive" }).click();
+  await expandArchivedGroups(page);
 
   const archivedPrimaryRow = agGridRowByText(page, primaryName);
   await expect(archivedPrimaryRow).toBeVisible();
@@ -195,7 +196,7 @@ test("archived mode allows edit, reorder siblings, and delete", async ({
   await expect(agGridRowByText(page, siblingName)).toHaveCount(0);
 
   await clickRowAction(renamedArchivedPrimaryRow, "Unarchive");
-  await expect(agGridRowByText(page, renamedPrimaryName)).toHaveCount(0);
+  await expect(agGridRowByText(page, renamedPrimaryName)).toBeVisible();
 
   await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
   const unarchivedRow = agGridRowByText(page, renamedPrimaryName);

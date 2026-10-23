@@ -50,14 +50,14 @@ const preservedKeys = [
 it("preserves deployed cache key formats and versions", () => {
   expect(
     getAccountGainLossBasisCacheEntryKey({ ...scope, watermark: "empty" }),
-  ).toBe("account:gain-loss-basis:v2:local:book-1:revision-1:empty");
+  ).toBe("account:gain-loss-basis:v3:local:book-1:revision-1:empty");
   expect(
     getAccountGainLossCacheEntryKey({
       ...scope,
       asOfDate: "2026-05-11",
       latestFetchableDate: "2026-05-10",
     }),
-  ).toBe("account:gain-loss:v3:local:book-1:revision-1:2026-05-11:2026-05-10");
+  ).toBe("account:gain-loss:v4:local:book-1:revision-1:2026-05-11:2026-05-10");
   expect(
     getPeriodBaseCacheEntryKey({ ...scope, periodCacheKey: "2026-01" }),
   ).toBe("period:base:v8:local:book-1:revision-1:2026-01");
@@ -112,7 +112,7 @@ describe("cleanup namespace ownership", () => {
   it("checks ownership for G/L suffixes containing another book ID", () => {
     expect(
       isBookScopedPeriodCacheKey(
-        "account:gain-loss:v3:local:book-2:revision:book-1:2026-05-10",
+        "account:gain-loss:v4:local:book-2:revision:book-1:2026-05-10",
         "book-1",
       ),
     ).toBe(false);

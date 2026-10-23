@@ -48,6 +48,16 @@ it("never queries an unauthorized book", async () => {
   ).rejects.toThrow("Unauthorized");
   expect(mocks.details).not.toHaveBeenCalled();
 });
+it("authorizes and forwards the unified account scope", async () => {
+  const data = {
+    accountBookId: "book",
+    type: "ASSET" as const,
+    accountState: "all" as const,
+  };
+  await getAccountGainLossSummaries({ data });
+  expect(mocks.authorize).toHaveBeenCalledWith("book");
+  expect(mocks.summaries).toHaveBeenCalledWith(data);
+});
 it("rejects invalid list scopes", () => {
   expect(() =>
     getAccountGainLossSummaries({
@@ -63,7 +73,7 @@ it("rejects invalid list scopes", () => {
       data: {
         accountBookId: "book",
         type: "ASSET",
-        accountState: "all" as "active",
+        accountState: "invalid" as "active",
       },
     }),
   ).toThrow("Invalid account G/L scope");

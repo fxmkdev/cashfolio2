@@ -1,3 +1,4 @@
+import { expandArchivedGroups } from "../support/grid";
 import { Buffer } from "node:buffer";
 import { formatUtcDateForLocale } from "../../src/shared/date";
 import {
@@ -174,7 +175,11 @@ test("archived synthetic accounts remain available for archive workflows", async
   await page.goto(
     `/${seededBook("household").id}/accounts?tab=ASSET&mode=archived`,
   );
-  await expect(page.getByRole("heading", { name: "Archive" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+  await expandArchivedGroups(page);
+  await agGridRowByText(page, "Former bank accounts")
+    .locator(".ag-group-contracted")
+    .click();
   await expect(agGridRowByText(page, "Closed bank account CHF")).toBeVisible();
 });
 

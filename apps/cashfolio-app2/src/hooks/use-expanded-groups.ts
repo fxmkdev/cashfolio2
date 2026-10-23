@@ -17,13 +17,18 @@ function parseStoredExpandedIds(stored: string): string[] | null {
   }
 }
 
-export function useExpandedGroups(storageKey: string) {
+export function useExpandedGroups(
+  storageKey: string,
+  isInitiallyCollapsed?: (data: unknown) => boolean,
+) {
   const storageKeyRef = useRef(storageKey);
   storageKeyRef.current = storageKey;
 
   const isGroupOpenByDefault = useCallback(
     (params: IsGroupOpenByDefaultParams) => {
-      const defaultIsOpen = params.rowNode.level === 0;
+      const defaultIsOpen =
+        params.rowNode.level === 0 &&
+        !isInitiallyCollapsed?.(params.rowNode.data);
       let stored: string | null;
       try {
         stored = sessionStorage.getItem(storageKeyRef.current);
@@ -52,7 +57,7 @@ export function useExpandedGroups(storageKey: string) {
 
       return expandedIds.includes(rowKey);
     },
-    [],
+    [isInitiallyCollapsed],
   );
 
   const onRowGroupOpened = useCallback((event: RowGroupOpenedEvent) => {

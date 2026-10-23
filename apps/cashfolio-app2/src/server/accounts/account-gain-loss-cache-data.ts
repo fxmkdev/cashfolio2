@@ -84,6 +84,7 @@ export function isAccountGainLossCacheData(
       (group: unknown) =>
         isRecord(group) &&
         typeof group.id === "string" &&
+        typeof group.isActive === "boolean" &&
         (group.type === "ASSET" ||
           group.type === "LIABILITY" ||
           group.type === "EQUITY") &&

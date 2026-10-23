@@ -1,3 +1,4 @@
+import { expandArchivedGroups } from "../support/grid";
 import {
   agGridCellByColId,
   agGridPinnedBottomRow,
@@ -47,7 +48,7 @@ test("balance column visibility and baseline values across tabs/modes", async ({
   await expect(assetFooterRow).toContainText("Total");
   await expect(
     agGridCellByColId(assetFooterRow, "balanceInReferenceCurrency"),
-  ).toHaveText("205.00");
+  ).toHaveText("209.00");
 
   const cashRow = agGridRowByText(page, seeded.cashAccount.name);
   await expect(agGridCellByColId(cashRow, "balance")).toHaveText(/^\s*$/);
@@ -79,9 +80,9 @@ test("balance column visibility and baseline values across tabs/modes", async ({
   );
   await expect(
     agGridCellByColId(assetsGroupRow, "balanceInReferenceCurrency"),
-  ).toHaveText("205.00");
+  ).toHaveText("209.00");
 
-  await page.getByRole("link", { name: "Archive" }).click();
+  await expandArchivedGroups(page);
   await expect(
     page.getByRole("columnheader", { name: "Balance", exact: true }),
   ).toBeVisible();
@@ -92,7 +93,7 @@ test("balance column visibility and baseline values across tabs/modes", async ({
   await expect(archivedFooterRow).toContainText("Total");
   await expect(
     agGridCellByColId(archivedFooterRow, "balanceInReferenceCurrency"),
-  ).toHaveText("4.00");
+  ).toHaveText("209.00");
   const archivedUsdRow = agGridRowByText(
     page,
     seededAdditionalTabBalances.archivedAssetAccountName,

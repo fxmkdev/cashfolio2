@@ -11,7 +11,7 @@ import {
 } from "../valuation.server";
 import { computeRawBalanceInReferenceCurrency } from "./accounts-reference-balance";
 
-export type AccountState = "active" | "inactive";
+export type AccountState = "active" | "inactive" | "all";
 
 export type AccountReferenceBalanceSource = {
   id: string;
@@ -31,7 +31,9 @@ export function getAccountsWhereClause(args: {
 }) {
   return {
     accountBookId: args.accountBookId,
-    isActive: args.accountState === "active",
+    ...(args.accountState === "all"
+      ? {}
+      : { isActive: args.accountState === "active" }),
     type: args.type,
     ...(args.equityAccountSubtype
       ? { equityAccountSubtype: args.equityAccountSubtype }

@@ -618,14 +618,16 @@ deduplication remain shared.
 
 `src/server/accounts/account-gain-loss-cache.server.ts` caches one book-wide
 summary dataset, including leaf diagnostics and account/group view metadata.
-Filtering by Asset/Liability and active/archived state and Decimal group/footer
-aggregation happen after retrieval. Public server-function inputs and responses
-are unchanged, and authorization runs before cache access. Ledger summaries
-bypass this final-summary cache but share the historical basis cache below.
-Calculation drawers bypass both caches.
+Filtering by Asset/Liability and account state and Decimal group/footer
+aggregation happen after retrieval. Accounts requests the `all` state; group
+metadata includes archived state so the shared display projection can aggregate
+virtual Archived groups from account leaves. Summary v4 and basis v3 ignore
+older payloads without this metadata. Authorization runs before cache access.
+Ledger summaries bypass this final-summary cache but share the historical basis
+cache below. Calculation drawers bypass both caches.
 
 - Key:
-  `account:gain-loss:v3:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{asOfDate}:{latestFetchableDate}`.
+  `account:gain-loss:v4:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{asOfDate}:{latestFetchableDate}`.
   Dates are UTC `YYYY-MM-DD`; both days are captured before loading. The latest
   fetchable day uses the shared valuation publication-window rules.
 - TTL is 24 hours; maximum encoded size is 512 KiB. The shared Decimal codec
@@ -664,7 +666,7 @@ use the shared matching rules with their own period-opening bases and do not use
 this historical basis cache.
 
 - Key:
-  `account:gain-loss-basis:v2:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{watermark}`.
+  `account:gain-loss-basis:v3:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{watermark}`.
   The watermark is the latest booking timestamp strictly before the day after
   the requested UTC as-of day, or `empty`. All book bookings participate
   conservatively. Revision and watermark are read together in a read-only

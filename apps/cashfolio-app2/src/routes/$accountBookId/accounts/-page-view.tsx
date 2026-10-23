@@ -1,10 +1,8 @@
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
-import { Alert, Button, Group, Tabs, Title } from "@mantine/core";
-import { IconArchive, IconPlus } from "@tabler/icons-react";
+import { Alert, Button, Group, Tabs, Text, Title } from "@mantine/core";
+import { IconPlus } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
-import { LinkButton } from "@/components/navigation/link-button";
 import { LinkTab } from "@/components/navigation/link-tab";
-import { PageBreadcrumbs } from "@/components/navigation/page-breadcrumbs";
 import { TopPageHeader } from "@/components/layout/top-page-header";
 import type { AccountGroupInitialValues } from "@/components/account-editor/edit-account-group-modal";
 import {
@@ -35,6 +33,7 @@ import type {
   TreeRow,
 } from "./-page-types";
 import type { loadAccountsPageData } from "./-page-loader";
+import { postSortAccountRows } from "./-archived-grid-rows";
 import { AccountGainLossDetails } from "./-gain-loss-header";
 
 type AccountsPageLoaderData = Awaited<ReturnType<typeof loadAccountsPageData>>;
@@ -57,6 +56,8 @@ export type AccountsPageViewProps = {
   tab: TabValue;
   mode: AccountsMode;
   tabs: readonly { value: TabValue; label: string }[];
+  archivedAccountGroups?: AccountsPageLoaderData["archivedAccountGroups"];
+  archivedExistingNodes?: AccountsPageLoaderData["archivedExistingNodes"];
   accountGroups: AccountsPageLoaderData["accountGroups"];
   existingNodes: AccountsPageLoaderData["existingNodes"];
   unitUsage: AccountsPageLoaderData["unitUsage"];
@@ -109,10 +110,11 @@ export function AccountsPageView({
   onRefreshConstraints,
   unarchiveRecovery,
   tab,
-  mode,
   tabs,
   accountGroups,
   existingNodes,
+  archivedAccountGroups = accountGroups,
+  archivedExistingNodes = existingNodes,
   unitUsage,
   rows,
   columnDefs,
@@ -150,65 +152,32 @@ export function AccountsPageView({
   onCloseReorder,
   onReorderSiblings,
 }: AccountsPageViewProps) {
-  const isArchivedMode = mode === "archived";
+  const isEditingArchivedAccount = rows.some(
+    (row) => row.id === editingAccount?.id && !row.isActive,
+  );
+  const isEditingArchivedGroup = rows.some(
+    (row) => row.id === editingGroup?.id && !row.isActive,
+  );
 
   return (
     <PageShell>
       <TopPageHeader
-        heading={
-          isArchivedMode ? (
-            <PageBreadcrumbs
-              items={[
-                {
-                  label: "Accounts",
-                  to: "/$accountBookId/accounts",
-                  params: { accountBookId },
-                  search: { tab, mode: "active" },
-                },
-                { label: getAccountsPageTitle("archived") },
-              ]}
-            />
-          ) : (
-            <Title order={2}>{getAccountsPageTitle("active")}</Title>
-          )
-        }
+        heading={<Title order={2}>{getAccountsPageTitle()}</Title>}
         actions={
           <Group>
-            {!isArchivedMode && (
-              <>
-                <LinkButton
-                  variant="default"
-                  leftSection={<IconArchive size={16} />}
-                  to="/$accountBookId/accounts"
-                  params={{ accountBookId }}
-                  search={{ tab, mode: "archived" }}
-                >
-                  Archive
-                </LinkButton>
-                <Button
-                  variant="default"
-                  leftSection={<IconPlus size={16} />}
-                  onClick={onOpenCreateGroup}
-                >
-                  Add Group
-                </Button>
-                <Button
-                  leftSection={<IconPlus size={16} />}
-                  onClick={onOpenCreateAccount}
-                >
-                  Add Account
-                </Button>
-              </>
-            )}
-            {isArchivedMode && (
-              <Button
-                variant="default"
-                leftSection={<IconPlus size={16} />}
-                onClick={onOpenCreateGroup}
-              >
-                Add Group
-              </Button>
-            )}
+            <Button
+              variant="default"
+              leftSection={<IconPlus size={16} />}
+              onClick={onOpenCreateGroup}
+            >
+              Add Group
+            </Button>
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={onOpenCreateAccount}
+            >
+              Add Account
+            </Button>
           </Group>
         }
       />
@@ -225,7 +194,7 @@ export function AccountsPageView({
               value={t.value}
               to="/$accountBookId/accounts"
               params={{ accountBookId }}
-              search={{ tab: t.value, mode }}
+              search={{ tab: t.value, mode: "active" }}
             >
               {t.label}
             </LinkTab>
@@ -233,6 +202,9 @@ export function AccountsPageView({
         </Tabs.List>
       </Tabs>
 
+      <Text size="sm" c="dimmed" mb="sm">
+        Totals include active and archived accounts, including collapsed groups.
+      </Text>
       {gainLoss?.error ? (
         <Alert color="red" title="Gain/Loss Unavailable" mb="sm">
           {gainLoss.error}
@@ -244,7 +216,6 @@ export function AccountsPageView({
       <AccountGainLossDetails
         data={gainLoss?.data}
         loading={gainLoss?.loading ?? false}
-        isArchivedMode={isArchivedMode}
       >
         <DataGrid
           containerStyle={{ flex: 1, minHeight: 0 }}
@@ -261,6 +232,7 @@ export function AccountsPageView({
               suppressCount: true,
             },
           }}
+          postSortRows={postSortAccountRows}
           treeData={true}
           treeDataParentIdField="parentId"
           pinnedBottomRowData={pinnedBottomRowData}
@@ -276,32 +248,30 @@ export function AccountsPageView({
         />
       </AccountGainLossDetails>
 
-      {!isArchivedMode && (
-        <>
-          <EditAccountModal
-            onRefreshConstraints={onRefreshConstraints}
-            opened={createModalOpened}
-            onClose={onCloseCreateAccount}
-            accountGroups={accountGroups}
-            unitUsage={unitUsage}
-            onSubmit={onSubmitCreateAccount}
-            existingNodes={existingNodes}
-            typeDescriptor={tab}
-          />
-          <ConfirmArchiveModal
-            onRefreshConstraints={onRefreshConstraints}
-            opened={!!archivingRow}
-            onClose={onCloseArchive}
-            title={
-              archivingRow
-                ? `Archive ${getEntityLabel(archivingRow.nodeType)}`
-                : "Archive"
-            }
-            name={archivingRow?.name}
-            onConfirm={onConfirmArchive}
-          />
-        </>
-      )}
+      <>
+        <EditAccountModal
+          onRefreshConstraints={onRefreshConstraints}
+          opened={createModalOpened}
+          onClose={onCloseCreateAccount}
+          accountGroups={accountGroups}
+          unitUsage={unitUsage}
+          onSubmit={onSubmitCreateAccount}
+          existingNodes={existingNodes}
+          typeDescriptor={tab}
+        />
+        <ConfirmArchiveModal
+          onRefreshConstraints={onRefreshConstraints}
+          opened={!!archivingRow}
+          onClose={onCloseArchive}
+          title={
+            archivingRow
+              ? `Archive ${getEntityLabel(archivingRow.nodeType)}`
+              : "Archive"
+          }
+          name={archivingRow?.name}
+          onConfirm={onConfirmArchive}
+        />
+      </>
 
       <EditAccountGroupModal
         onRefreshConstraints={onRefreshConstraints}
@@ -318,11 +288,15 @@ export function AccountsPageView({
         opened={editModalOpen}
         onClose={onCloseEditAccount}
         onExitTransitionEnd={onClearEditingAccount}
-        accountGroups={accountGroups}
+        accountGroups={
+          isEditingArchivedAccount ? archivedAccountGroups : accountGroups
+        }
         unitUsage={unitUsage}
         onSubmit={onSubmitUpdateAccount}
         initialValues={editingAccount?.initialValues}
-        existingNodes={existingNodes}
+        existingNodes={
+          isEditingArchivedAccount ? archivedExistingNodes : existingNodes
+        }
         editingId={editingAccount?.id}
         typeDescriptor={tab}
       />
@@ -332,10 +306,14 @@ export function AccountsPageView({
         opened={editGroupModalOpen}
         onClose={onCloseEditGroup}
         onExitTransitionEnd={onClearEditingGroup}
-        accountGroups={accountGroups}
+        accountGroups={
+          isEditingArchivedGroup ? archivedAccountGroups : accountGroups
+        }
         onSubmit={onSubmitUpdateGroup}
         initialValues={editingGroup?.initialValues}
-        existingNodes={existingNodes}
+        existingNodes={
+          isEditingArchivedGroup ? archivedExistingNodes : existingNodes
+        }
         editingId={editingGroup?.id}
         typeDescriptor={tab}
       />

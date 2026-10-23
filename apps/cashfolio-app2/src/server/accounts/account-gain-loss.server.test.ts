@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { toMoney } from "../../shared/money";
+import type { AccountGainLossResult } from "../../shared/account-gain-loss";
+import { toMoney, type Money } from "../../shared/money";
 import { toNumericMoney } from "../money-boundary";
 const mocks = vi.hoisted(() => ({
   snapshot: vi.fn(),
@@ -60,7 +61,7 @@ const account = (
   isActive = true,
   groupId: string | null = "child",
 ) => ({ ...base, id, name: id, type, isActive, groupId });
-const result = (amount: string) => ({
+const result = (amount: string): AccountGainLossResult<Money> => ({
   applicable: true,
   summary: {
     realizedGainLoss: toMoney(amount),
@@ -94,9 +95,9 @@ beforeEach(() => {
     { ...account("cash"), unit: "CURRENCY", currency: "CHF" },
   ]);
   mocks.groups.mockResolvedValue([
-    { id: "root", parentGroupId: null, type: "ASSET" },
-    { id: "child", parentGroupId: "root", type: "ASSET" },
-    { id: "empty", parentGroupId: null, type: "ASSET" },
+    { id: "root", parentGroupId: null, type: "ASSET", isActive: true },
+    { id: "child", parentGroupId: "root", type: "ASSET", isActive: true },
+    { id: "empty", parentGroupId: null, type: "ASSET", isActive: true },
   ]);
   mocks.balances.mockResolvedValue([
     { accountId: "a", _sum: { value: toMoney(2) } },
@@ -239,6 +240,96 @@ describe("account G/L queries", () => {
       response.total.summary,
     );
   });
+  it("includes active and archived leaves once in real, virtual, and footer totals", async () => {
+    mocks.accounts.mockResolvedValue([
+      account("a"),
+      account("b", "ASSET", false),
+      account("archived-root", "ASSET", false, null),
+      account("nested-leaf", "ASSET", false, "archived-group"),
+    ]);
+    mocks.groups.mockResolvedValue([
+      { id: "root", parentGroupId: null, type: "ASSET", isActive: true },
+      { id: "child", parentGroupId: "root", type: "ASSET", isActive: true },
+      {
+        id: "archived-group",
+        parentGroupId: "root",
+        type: "ASSET",
+        isActive: false,
+      },
+    ]);
+    mocks.calculate.mockResolvedValue({
+      results: new Map([
+        ["a", result("0.1")],
+        ["b", result("0.2")],
+        ["archived-root", result("0.3")],
+        ["nested-leaf", result("0.4")],
+      ]),
+      realizedEvents: [],
+      unrealizedOpenLots: [],
+    });
+    const response = await queryAccountGainLossSummaries({
+      accountBookId: "book",
+      type: "ASSET",
+      accountState: "all",
+    });
+    const totalFor = (id: string) =>
+      response.rows.find((row) => row.id === id)?.summary.totalGainLoss;
+    expect(response.total.summary.totalGainLoss).toBe(1);
+    expect(totalFor("root")).toBe(0.7);
+    expect(totalFor("child")).toBe(0.3);
+    expect(totalFor("__archived__:group:child")).toBe(0.2);
+    expect(totalFor("__archived__:group:root")).toBe(0.4);
+    expect(totalFor("__archived__:root")).toBe(0.3);
+    expect(totalFor("archived-group")).toBe(0.4);
+    expect(
+      response.rows.some(
+        (row) => row.id === "__archived__:group:archived-group",
+      ),
+    ).toBe(false);
+  });
+
+  it("propagates incomplete archived components through virtual/real groups and footer", async () => {
+    mocks.calculate.mockResolvedValue({
+      results: new Map([
+        ["a", result("0.1")],
+        [
+          "b",
+          {
+            ...result("0.2"),
+            summary: {
+              realizedGainLoss: toMoney("0.2"),
+              unrealizedGainLoss: null,
+              totalGainLoss: null,
+            },
+            diagnostics: [
+              { date: "2026-01-01Z", message: "Missing closing price" },
+            ],
+          },
+        ],
+      ]),
+      realizedEvents: [],
+      unrealizedOpenLots: [],
+    });
+    const response = await queryAccountGainLossSummaries({
+      accountBookId: "book",
+      type: "ASSET",
+      accountState: "all",
+    });
+    expect(response.total.summary).toEqual({
+      realizedGainLoss: 0.3,
+      unrealizedGainLoss: null,
+      totalGainLoss: null,
+    });
+    for (const id of ["root", "child", "__archived__:group:child"]) {
+      const row = response.rows.find((row) => row.id === id)!;
+      expect(row.summary.totalGainLoss).toBeNull();
+      expect(row.diagnostics).toContainEqual({
+        date: "2026-01-01Z",
+        message: "Missing closing price",
+      });
+    }
+  });
+
   it("loads historical summaries and on-demand details from the same range", async () => {
     const summary = await queryAccountGainLoss({
       accountBookId: "book",

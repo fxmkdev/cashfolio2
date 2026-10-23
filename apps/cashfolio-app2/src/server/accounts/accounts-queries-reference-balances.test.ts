@@ -99,6 +99,20 @@ describe("getAccountReferenceBalances", () => {
     );
   });
 
+  it("hydrates both active and archived accounts in unified scope", async () => {
+    await getAccountReferenceBalances({
+      data: {
+        accountBookId: "book-1",
+        accountState: "all",
+        type: AccountType.ASSET,
+      },
+    });
+    expect(prisma.account.findMany.mock.calls[0]![0].where).toEqual({
+      accountBookId: "book-1",
+      type: AccountType.ASSET,
+    });
+  });
+
   it("returns signed reference balances and preserves null when conversion is unavailable", async () => {
     prisma.account.findMany.mockResolvedValue([
       {
