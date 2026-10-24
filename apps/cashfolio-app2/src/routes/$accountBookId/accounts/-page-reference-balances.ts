@@ -104,7 +104,7 @@ export function useAccountsReferenceBalanceRows(args: {
     void getAccountReferenceBalances({
       data: {
         accountBookId: args.accountBookId,
-        accountState: args.mode === "archived" ? "inactive" : "active",
+        accountState: "all",
         type: tabDefinition.type,
         ...("equityAccountSubtype" in tabDefinition
           ? { equityAccountSubtype: tabDefinition.equityAccountSubtype }

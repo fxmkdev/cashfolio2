@@ -43,13 +43,13 @@ export function getAccountGainLossCacheEntryKey(
     latestFetchableDate: string;
   },
 ): string {
-  return `${ACCOUNT_GAIN_LOSS_CACHE_FAMILY}:v3:${args.cacheEnv}:${args.accountBookId}:${args.generation}:${args.asOfDate}:${args.latestFetchableDate}`;
+  return `${ACCOUNT_GAIN_LOSS_CACHE_FAMILY}:v4:${args.cacheEnv}:${args.accountBookId}:${args.generation}:${args.asOfDate}:${args.latestFetchableDate}`;
 }
 
 export function getAccountGainLossBasisCacheEntryKey(
   args: BookCacheGenerationScope & { watermark: string },
 ): string {
-  return `${ACCOUNT_GAIN_LOSS_BASIS_CACHE_FAMILY}:v2:${args.cacheEnv}:${args.accountBookId}:${args.generation}:${args.watermark}`;
+  return `${ACCOUNT_GAIN_LOSS_BASIS_CACHE_FAMILY}:v3:${args.cacheEnv}:${args.accountBookId}:${args.generation}:${args.watermark}`;
 }
 
 function getPeriodCacheCleanupPatterns(bookPattern: string): string[] {

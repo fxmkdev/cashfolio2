@@ -1,4 +1,5 @@
 import { formatUnitLabel } from "../period/period-unit-format";
+import { projectArchivedAccountHierarchy } from "../../shared/archived-account-hierarchy";
 import type { Money } from "../../shared/money";
 import {
   aggregateAccountGainLoss,
@@ -17,7 +18,7 @@ export { resolveAccountGainLossDate } from "./account-gain-loss-range.server";
 export async function queryAccountGainLossSummaries(args: {
   accountBookId: string;
   type: "ASSET" | "LIABILITY";
-  accountState: "active" | "inactive";
+  accountState: "active" | "inactive" | "all";
 }) {
   const range = await getOrLoadAccountGainLossSummaries(args.accountBookId);
   const groups = range.groups.filter((group) => group.type === args.type);
@@ -25,26 +26,48 @@ export async function queryAccountGainLossSummaries(args: {
   const selectedAccounts = range.accounts.filter(
     (account) =>
       account.type === args.type &&
-      account.isActive === (args.accountState === "active"),
+      (args.accountState === "all" ||
+        account.isActive === (args.accountState === "active")),
   );
+  const projection =
+    args.accountState === "all"
+      ? projectArchivedAccountHierarchy([
+          ...groups.map((group) => ({
+            ...group,
+            nodeType: "accountGroup" as const,
+            parentId: group.parentGroupId ?? undefined,
+          })),
+          ...selectedAccounts.map((account) => ({
+            ...account,
+            nodeType: "account" as const,
+            parentId: account.groupId ?? undefined,
+          })),
+        ])
+      : undefined;
   const descendants = new Map<string, AccountGainLossResult<Money>[]>();
   const rows = selectedAccounts.map((account) => {
     const result = account.result;
-    let groupId = account.groupId;
+    let groupId = projection
+      ? projection.parentIdById.get(account.id)
+      : account.groupId;
     const visited = new Set<string>();
     while (groupId && !visited.has(groupId)) {
       visited.add(groupId);
       const children = descendants.get(groupId) ?? [];
       children.push(result);
       descendants.set(groupId, children);
-      groupId = groupById.get(groupId)?.parentGroupId ?? null;
+      groupId = projection
+        ? projection.parentIdById.get(groupId)
+        : (groupById.get(groupId)?.parentGroupId ?? null);
     }
     return { id: account.id, ...result };
   });
-  const groupRows = groups.map((group) => ({
-    id: group.id,
-    ...aggregateAccountGainLoss(descendants.get(group.id) ?? []),
-  }));
+  const groupRows = [...groups, ...(projection?.archivedGroups ?? [])].map(
+    (group) => ({
+      id: group.id,
+      ...aggregateAccountGainLoss(descendants.get(group.id) ?? []),
+    }),
+  );
   return toNumericMoney({
     referenceCurrency: range.referenceCurrency,
     startDate: range.startDate,

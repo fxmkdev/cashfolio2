@@ -1,3 +1,4 @@
+import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows";
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -240,7 +241,7 @@ function getPinnedBottomRowData(
   args: { tab: TabValue; mode: AccountsMode },
   referenceBalanceTotal: number | null,
 ): AccountsPageViewProps["pinnedBottomRowData"] {
-  if (args.tab.startsWith("EQUITY-") || args.mode === "archived") {
+  if (args.tab.startsWith("EQUITY-")) {
     return undefined;
   }
   return [
@@ -330,7 +331,8 @@ function AccountsPageStoryHarness({
     routeSearch.mode === "archived" ? "archived" : modeState;
 
   const rows = useMemo(
-    () => rowsOverride ?? getRowsFor({ mode, tab }),
+    () =>
+      buildUnifiedAccountTreeRows(rowsOverride ?? getRowsFor({ mode, tab })),
     [mode, tab, rowsOverride],
   );
   const rowsByParentKey = useRowsByParentKey(rows);
@@ -391,7 +393,6 @@ function AccountsPageStoryHarness({
         ? undefined
         : gainLossData,
     isGainLossLoading: gainLossState === "loading",
-    isArchivedMode: mode === "archived",
     isEquityTab,
     rowsByParentKey,
     referenceCurrency: "CHF",
@@ -423,7 +424,7 @@ function AccountsPageStoryHarness({
             name: row.name,
             type: row.type,
             equityAccountSubtype: row.equityAccountSubtype,
-            parentGroupId: row.parentId,
+            parentGroupId: row.persistedParentId ?? undefined,
             sortOrder: row.sortOrder ?? undefined,
           },
         });
@@ -648,7 +649,7 @@ export const ConstrainedWidthWithGainLoss: Story = {
   },
 };
 
-export const ArchivedMode: Story = {
+export const ArchivedGroups: Story = {
   render: () => <AccountsPageStoryHarness initialMode="archived" />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -659,13 +660,15 @@ export const ArchivedMode: Story = {
       "dialog",
       { name: "Gain/Loss Details" },
     );
-    expect(details).toHaveTextContent("Totals include only archived accounts");
+    expect(details).toHaveTextContent(
+      "Totals include active and archived accounts",
+    );
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(details).not.toBeVisible());
   },
 };
 
-export const ArchivedModeActions: Story = {
+export const ArchivedGroupActions: Story = {
   render: () => <AccountsPageStoryHarness initialMode="archived" />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -725,6 +728,89 @@ export const ArchivedModeActions: Story = {
   },
 };
 
+export const VirtualArchivedAppearance: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      rowsOverride={[
+        createGroupRow({
+          id: "real-archived",
+          name: "Archived",
+          type: AccountType.ASSET,
+          isActive: true,
+          sortOrder: 0,
+        }),
+        createAccountRow({
+          id: "closed-wallet",
+          name: "Closed wallet",
+          type: AccountType.ASSET,
+          isActive: false,
+          sortOrder: 1,
+          currency: "CHF",
+          balance: 0,
+          balanceInReferenceCurrency: 0,
+        }),
+      ]}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findAllByText("Archived", { exact: true });
+    const label = canvasElement.querySelector<HTMLElement>(
+      "[data-virtual-archived-label]",
+    );
+    if (!label) throw new Error("Missing virtual Archived label");
+    const row = label.closest<HTMLElement>(".ag-row");
+    const cell = label.closest<HTMLElement>(".ag-cell");
+    if (!row || !cell) throw new Error("Missing Archived row");
+    expect(label.querySelector('svg[aria-hidden="true"]')).toHaveAttribute(
+      "width",
+      "16",
+    );
+    expect(
+      canvasElement.querySelectorAll("[data-virtual-archived-label]"),
+    ).toHaveLength(1);
+    const numeric = row.querySelector<HTMLElement>(
+      '[col-id="balanceInReferenceCurrency"]',
+    );
+    if (!numeric) throw new Error("Missing reference balance cell");
+    expect(getComputedStyle(label).color).not.toBe(
+      getComputedStyle(numeric).color,
+    );
+    const realLabel = canvasElement.querySelector<HTMLElement>(
+      '[row-id="real-archived"] .ag-group-value',
+    );
+    const chevron = row.querySelector<HTMLElement>(".ag-group-contracted");
+    if (!realLabel || !chevron) throw new Error("Missing ordinary tree cells");
+    expect(realLabel).toHaveTextContent("Archived");
+    expect(realLabel.querySelector("svg")).toBeNull();
+    expect(getComputedStyle(realLabel).color).toBe(
+      getComputedStyle(numeric).color,
+    );
+    expect(getComputedStyle(chevron).color).toBe(
+      getComputedStyle(numeric).color,
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.hover(label);
+    expect(await body.findByRole("tooltip")).toHaveTextContent(
+      "Archived items grouped automatically. Included in totals.",
+    );
+    await userEvent.unhover(label);
+    cell.focus();
+    await userEvent.tab();
+    expect(label).toHaveFocus();
+    expect(await body.findByRole("tooltip")).toHaveTextContent(
+      "Archived items grouped automatically. Included in totals.",
+    );
+    await userEvent.tab({ shift: true });
+    expect(cell).toHaveFocus();
+    const expand = row.querySelector<HTMLElement>(".ag-group-contracted");
+    if (!expand) throw new Error("Missing Archived expander");
+    await userEvent.click(expand);
+    expect(await canvas.findByText("Closed wallet")).toBeVisible();
+  },
+};
+
 export const CreateModalOpen: Story = {
   render: () => (
     <AccountsPageStoryHarness
@@ -751,23 +837,16 @@ export const RouteSmoke: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(
-      canvas.getByRole("link", { name: "Archive" }),
+    expect(
+      canvas.queryByRole("link", { name: "Archive" }),
+    ).not.toBeInTheDocument();
+    expect(
+      canvas.getByRole("heading", { name: "Accounts" }),
     ).toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("link", { name: "Archive" }));
+    await userEvent.click(canvas.getByRole("tab", { name: "Expense" }));
     await expect(canvas.getByTestId("router-search")).toHaveTextContent(
-      '"mode":"archived"',
+      '"tab":"EQUITY-EXPENSE"',
     );
-    await expect(
-      canvas.getByRole("heading", { name: "Archive" }),
-    ).toBeInTheDocument();
-    await expect(
-      canvas.getByRole("link", { name: "Accounts" }),
-    ).toBeInTheDocument();
-    await expect(
-      canvas.getByRole("button", { name: "Add Group" }),
-    ).toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("link", { name: "Accounts" }));
     await expect(canvas.getByTestId("router-search")).toHaveTextContent(
       '"mode":"active"',
     );
@@ -781,7 +860,9 @@ export const GainLossLoading: Story = {
   play: async ({ canvasElement }) => {
     const details = await openGainLossDetails(canvasElement);
     expect(details).toHaveTextContent("Loading calculation dates…");
-    expect(details).toHaveTextContent("Totals include only active accounts");
+    expect(details).toHaveTextContent(
+      "Totals include active and archived accounts",
+    );
     await userEvent.keyboard("{Escape}");
   },
 };

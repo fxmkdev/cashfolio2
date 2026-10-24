@@ -1,3 +1,4 @@
+import { isVirtualArchivedGroup } from "./-archived-grid-rows";
 import { getAccountGainLossSummaries } from "@/server/account-gain-loss";
 import { useGainLossRequest } from "@/hooks/use-gain-loss-request";
 import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
@@ -268,6 +269,8 @@ export function useAccountsPageController(args: {
     );
   const {
     accountGroups,
+    archivedAccountGroups,
+    archivedExistingNodes,
     rows: loaderRows,
     existingNodes,
     referenceCurrency,
@@ -276,7 +279,6 @@ export function useAccountsPageController(args: {
 
   const gridApiRef = useRef<GridApi<AccountsGridRow> | null>(null);
   const modalState = useAccountsPageModalState();
-  const isArchivedMode = args.mode === "archived";
   const {
     isEquityTab,
     rowsWithAccountReferenceBalances,
@@ -295,10 +297,10 @@ export function useAccountsPageController(args: {
         data: {
           accountBookId: args.accountBookId,
           type: args.tab === "LIABILITY" ? "LIABILITY" : "ASSET",
-          accountState: args.mode === "archived" ? "inactive" : "active",
+          accountState: "all",
         },
       }),
-    [args.accountBookId, args.tab, args.mode],
+    [args.accountBookId, args.tab],
   );
   const gainLoss = useGainLossRequest({
     enabled: !isEquityTab,
@@ -307,9 +309,11 @@ export function useAccountsPageController(args: {
     load: loadGainLoss,
   });
 
-  const storageKey = `cashfolio:expandedGroups:${args.accountBookId}:${args.mode}:${args.tab}`;
-  const { isGroupOpenByDefault, onRowGroupOpened } =
-    useExpandedGroups(storageKey);
+  const storageKey = `cashfolio:expandedGroups:${args.accountBookId}:active:${args.tab}`;
+  const { isGroupOpenByDefault, onRowGroupOpened } = useExpandedGroups(
+    storageKey,
+    isVirtualArchivedGroup,
+  );
 
   const rowsByParentKeyForGroupAggregation = useRowsByParentKey(
     rowsWithAccountReferenceBalances,
@@ -385,7 +389,7 @@ export function useAccountsPageController(args: {
 
   const actions = createAccountsMutationActions({
     accountBookId: args.accountBookId,
-    createGroupIsActive: !isArchivedMode,
+    createGroupIsActive: true,
     invalidate: args.invalidate,
     state: {
       getEditingAccount: () => modalState.editingAccount,
@@ -416,7 +420,6 @@ export function useAccountsPageController(args: {
   const columnDefs = useAccountTreeColumnDefs({
     gainLossData: gainLoss.data,
     isGainLossLoading: gainLoss.loading,
-    isArchivedMode,
     isEquityTab,
     rowsByParentKey,
     referenceCurrency,
@@ -439,6 +442,8 @@ export function useAccountsPageController(args: {
     mode: args.mode,
     tabs,
     accountGroups,
+    archivedAccountGroups,
+    archivedExistingNodes,
     existingNodes,
     unitUsage,
     rows,

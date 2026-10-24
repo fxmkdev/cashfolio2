@@ -28,12 +28,10 @@ const GainLossDetailsTargetContext = createContext<
 export function AccountGainLossDetails({
   data,
   loading,
-  isArchivedMode,
   children,
 }: {
   data?: Pick<AccountGainLossSummaries, "startDate" | "asOfDate">;
   loading: boolean;
-  isArchivedMode: boolean;
   children: ReactNode;
 }) {
   const locale = useUserLocale();
@@ -95,8 +93,8 @@ export function AccountGainLossDetails({
               G/L bookings.
             </Text>
             <Text size="sm">
-              Totals include only {isArchivedMode ? "archived" : "active"}{" "}
-              accounts in this tab. Incomplete columns show —; totals require
+              Totals include active and archived accounts in this tab, including
+              collapsed groups. Incomplete columns show —; totals require
               complete data for every eligible account.
             </Text>
           </Stack>

@@ -1,5 +1,6 @@
 import {
   createFileRoute,
+  redirect,
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
@@ -17,6 +18,16 @@ const AccountsPageView = lazy(async () => {
 export const Route = createFileRoute("/$accountBookId/accounts")({
   validateSearch: parseAccountsSearch,
   loaderDeps: ({ search }) => ({ mode: search.mode, tab: search.tab }),
+  beforeLoad: ({ location, search, params }) => {
+    if (new URLSearchParams(location.searchStr).get("mode") === "archived") {
+      throw redirect({
+        to: "/$accountBookId/accounts",
+        params,
+        search: { tab: search.tab, mode: "active" },
+        replace: true,
+      });
+    }
+  },
   loader: async ({ params: { accountBookId }, deps: { mode, tab } }) => {
     const pageData = await loadAccountsPageData({ accountBookId, mode, tab });
     return { ...pageData, documentTitle: getAccountsPageTitle(mode) };

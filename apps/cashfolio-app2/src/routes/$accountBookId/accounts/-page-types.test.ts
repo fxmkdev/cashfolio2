@@ -28,7 +28,7 @@ describe("accounts page tab parsing", () => {
       }),
     ).toEqual({
       tab: `EQUITY-${EquityAccountSubtype.EXPENSE}`,
-      mode: "archived",
+      mode: "active",
     });
   });
 });
@@ -38,7 +38,7 @@ describe("getAccountsPageTitle", () => {
     expect(getAccountsPageTitle("active")).toBe("Accounts");
   });
 
-  it("uses the archive heading for archived mode", () => {
-    expect(getAccountsPageTitle("archived")).toBe("Archive");
+  it("uses the Accounts heading for legacy archived mode", () => {
+    expect(getAccountsPageTitle("archived")).toBe("Accounts");
   });
 });

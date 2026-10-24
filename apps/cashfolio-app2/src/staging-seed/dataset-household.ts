@@ -1,3 +1,7 @@
+import {
+  archivedHouseholdAccounts,
+  archivedHouseholdTransactions,
+} from "./dataset-archived";
 import Decimal from "decimal.js";
 import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { addUtcDays } from "../shared/date";
@@ -49,10 +53,6 @@ export function householdAccounts(target: SeedBook) {
       equityAccountSubtype: EquityAccountSubtype.EXPENSE,
     });
   }
-  addGroup(target, "old-bank", "Former bank accounts", AccountType.ASSET, {
-    isActive: false,
-    isCashAccount: true,
-  });
   for (const [key, name, groupKey, unit] of [
     ["current", "Everyday account CHF", "zkb", CHF],
     ["savings", "Emergency savings CHF", "zkb", CHF],
@@ -128,12 +128,7 @@ export function householdAccounts(target: SeedBook) {
   addAccount(target, "opening", "Opening Balances", AccountType.EQUITY, {
     equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
   });
-  addAccount(target, "archived", "Closed bank account CHF", AccountType.ASSET, {
-    ...CHF,
-    groupKey: "old-bank",
-    isActive: false,
-    isCashAccount: true,
-  });
+  archivedHouseholdAccounts(target);
 }
 
 export function householdTransactions(target: SeedBook, today: Date) {
@@ -149,18 +144,10 @@ export function householdTransactions(target: SeedBook, today: Date) {
     ["btc", "0.18"],
     ["eth", "2.5"],
     ["loan", "-15000"],
-    ["archived", "500"],
   ] as const) {
     opening(target, key, value);
   }
-  transfer(
-    target,
-    addUtcDays(target.startDate, 30),
-    "Close former bank account",
-    "archived",
-    "current",
-    "500",
-  );
+  archivedHouseholdTransactions(target);
 
   for (
     let date = target.startDate, index = 0;

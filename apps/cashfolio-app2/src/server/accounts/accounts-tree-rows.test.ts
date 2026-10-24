@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { AccountType, Unit } from "../../.prisma-client/enums";
 import {
   buildAccountRows,
+  buildUnifiedAccountTreeRows,
   buildGroupRows,
   filterGroupsForAccountState,
   sortAccountTreeRows,
@@ -281,5 +282,72 @@ describe("sortAccountTreeRows", () => {
     ]);
 
     expect(sortedRows.map((row) => row.id)).toEqual(["b", "a", "c"]);
+  });
+});
+
+describe("unified account tree", () => {
+  test("preserves real parent metadata and places a mutation-free Archived row last", () => {
+    const group: AccountTreeGroup = {
+      id: "group",
+      name: "Z group",
+      type: AccountType.ASSET,
+      equityAccountSubtype: null,
+      isCashAccount: false,
+      parentGroupId: null,
+      isActive: true,
+      sortOrder: null,
+    };
+    const rows = buildGroupRows({
+      groups: [
+        group,
+        {
+          ...group,
+          id: "archived",
+          name: "A archived",
+          parentGroupId: "group",
+          isActive: false,
+        },
+        {
+          ...group,
+          id: "active-child",
+          name: "Z active",
+          parentGroupId: "group",
+        },
+      ],
+      groupById: createGroupHierarchyMap([group]),
+      includeActionAvailability: true,
+      groupsWithChildAccounts: new Set(),
+      groupsWithChildGroups: new Set(),
+      groupsWithActiveChildAccounts: new Set(),
+      groupsWithActiveChildGroups: new Set(),
+    });
+    const before = structuredClone(rows);
+    const result = buildUnifiedAccountTreeRows(rows);
+    expect(result.find((row) => row.id === "archived")).toMatchObject({
+      persistedParentId: "group",
+      parentId: "__archived__:group:group",
+      groupId: "archived",
+    });
+    expect(
+      result.filter((row) => row.parentId === "group").map((row) => row.id),
+    ).toEqual(["active-child", "__archived__:group:group"]);
+    expect(result.find((row) => row.isVirtualArchivedGroup)).toMatchObject({
+      deletable: false,
+      archivable: false,
+      unarchivable: false,
+      groupId: undefined,
+    });
+    expect(
+      result.find((row) => row.id === "group")?.persistedParentId,
+    ).toBeNull();
+    expect(rows).toEqual(before);
+    expect(buildUnifiedAccountTreeRows([])).toEqual([]);
+    expect(
+      filterGroupsForAccountState({
+        accountState: "all",
+        accountGroups: [group],
+        accounts: [],
+      }),
+    ).toEqual([group]);
   });
 });

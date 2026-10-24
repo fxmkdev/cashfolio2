@@ -1,3 +1,4 @@
+import { expandArchivedGroups } from "../support/grid";
 import { createId } from "@paralleldrive/cuid2";
 import { expect, test } from "../support/fixtures";
 import { seedDatabase } from "../support/db";
@@ -110,13 +111,15 @@ test("accumulated account G/L, nested totals, historical summary, and FIFO expla
   await expect(gainLossHeader).not.toContainText("1/1/2026");
   await expect(
     agGridCellByColId(agGridPinnedBottomRow(page), "totalGainLoss"),
-  ).toHaveText("21.00");
+  ).toHaveText("27.00");
   await gainLossHeader
     .getByRole("button", { name: "Show Gain/Loss Details" })
     .click();
   const details = page.getByRole("dialog", { name: "Gain/Loss Details" });
   await expect(details).toContainText("Since 1/1/2026 · As of");
-  await expect(details).toContainText("Totals include only active accounts");
+  await expect(details).toContainText(
+    "Totals include active and archived accounts",
+  );
   await page.keyboard.press("Escape");
   await expect(details).not.toBeVisible();
   const row = agGridRowByText(page, destination.name);
@@ -134,7 +137,7 @@ test("accumulated account G/L, nested totals, historical summary, and FIFO expla
   for (const name of ["G/L Holdings", "G/L Portfolio"])
     await expect(
       agGridCellByColId(agGridRowByText(page, name), "totalGainLoss"),
-    ).toHaveText("21.00");
+    ).toHaveText("27.00");
   await row.dblclick();
   // Each figure has the same currency/text shape; stable IDs disambiguate the three summary values.
   await expect(page.getByTestId("account-gain-loss-realised")).toContainText(
@@ -171,6 +174,7 @@ test("accumulated account G/L, nested totals, historical summary, and FIFO expla
     if (await expand.isVisible()) await expand.click();
     await expect(groupRow).toHaveAttribute("aria-expanded", "true");
   }
+  await expandArchivedGroups(page);
   await expect(agGridCellByColId(archived, "totalGainLoss")).toHaveText("6.00");
   await expect(agGridCellByColId(archived, "realizedGainLoss")).toHaveText(
     "6.00",
@@ -180,7 +184,7 @@ test("accumulated account G/L, nested totals, historical summary, and FIFO expla
   );
   await expect(
     agGridCellByColId(agGridPinnedBottomRow(page), "totalGainLoss"),
-  ).toHaveText("6.00");
+  ).toHaveText("27.00");
 });
 
 test("a three-booking transfer realises only the holding spent on fees", async ({

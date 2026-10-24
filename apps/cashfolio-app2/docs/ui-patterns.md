@@ -194,8 +194,8 @@ copy; technical admin tools and architecture docs may name Logto.
   as a button with an `onClick` navigation handler.
 - Use:
   - `LinkAnchor` for text links/breadcrumbs
-  - `LinkButton` for button-styled navigation actions (for example Accounts,
-    Archive, or Report)
+  - `LinkButton` for button-styled navigation actions (for example Accounts or
+    Report)
   - `LinkTab` for route-driven tab navigation (for example Asset/Liability/etc.
     on the accounts list)
 - Keep real `<Button onClick={...}>` controls for non-navigation actions only
@@ -472,17 +472,22 @@ crypto, or security bookings.
 
 - Add `archivable` and `archiveDisabledReason` fields to tree rows returned from
   `getAccountTreeData`
-- Add `unarchivable` and `unarchiveDisabledReason` fields for archived-view
+- Add `unarchivable` and `unarchiveDisabledReason` fields for archived-row
   actions
 - Keep enforcement server-side:
   - account archive constraints in `archiveAccount`
   - group archive constraints in `archiveAccountGroup`
   - unarchive parent-chain constraints in `unarchiveAccount` and
     `unarchiveAccountGroup`
-- Active view uses archive confirmation via `<ConfirmArchiveModal>`
+- Active rows use archive confirmation via `<ConfirmArchiveModal>`
   (`src/components/dialogs/confirm-archive-modal.tsx`)
-- Archived view triggers unarchive directly from the action icon (no
-  confirmation modal)
+- Archived rows trigger unarchive directly from the action icon (no confirmation
+  modal)
+
+Accounts uses one hierarchy for active and archived rows. Virtual Archived
+groups are collapsed by default, stay last among siblings, and have no mutation
+actions. Their display parents must never be submitted as real parent IDs. See
+[Archived groups and totals](valuation-reference-balances.md#archived-groups-and-totals).
 
 ## Type Descriptor Pattern
 

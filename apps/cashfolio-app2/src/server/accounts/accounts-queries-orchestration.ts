@@ -41,6 +41,7 @@ import {
 import {
   type AccountTreeRow,
   buildAccountRows,
+  buildUnifiedAccountTreeRows,
   buildGroupRows,
   filterGroupsForAccountState,
   sortAccountTreeRows,
@@ -143,7 +144,9 @@ export async function queryExistingNodes(
     prisma.account.findMany({
       where: {
         accountBookId,
-        isActive: accountState === "active",
+        ...(accountState === "all"
+          ? {}
+          : { isActive: accountState === "active" }),
       },
       select: {
         id: true,
@@ -349,7 +352,12 @@ export async function queryAccountTreeData(data: AccountTreeDataInput) {
 
   return {
     referenceCurrency,
-    rows: sortAccountTreeRows([...accountRows, ...groupRows]),
+    rows:
+      accountState === "all"
+        ? sortAccountTreeRows(
+            buildUnifiedAccountTreeRows([...accountRows, ...groupRows]),
+          )
+        : sortAccountTreeRows([...accountRows, ...groupRows]),
   };
 }
 
@@ -552,21 +560,39 @@ export async function queryAccountReferenceBalances(
 export async function queryAccountsPageData(data: AccountsPageDataInput) {
   const accountState = data.accountState ?? "active";
 
-  const [treeData, accountGroups, existingNodes, unitUsageAccounts] =
-    await Promise.all([
-      queryAccountTreeData({
-        accountBookId: data.accountBookId,
-        accountState,
-        type: data.type,
-        equityAccountSubtype: data.equityAccountSubtype,
-        includeReferenceBalances: false,
-      }),
-      queryAccountGroups(data.accountBookId, accountState),
-      queryExistingNodes(data.accountBookId, accountState),
-      accountState === "active"
-        ? queryActiveAccountUnitUsageAccounts(data.accountBookId)
-        : Promise.resolve([]),
-    ]);
+  const [
+    treeData,
+    accountGroups,
+    existingNodes,
+    archivedAccountGroups,
+    archivedExistingNodes,
+    unitUsageAccounts,
+  ] = await Promise.all([
+    queryAccountTreeData({
+      accountBookId: data.accountBookId,
+      accountState,
+      type: data.type,
+      equityAccountSubtype: data.equityAccountSubtype,
+      includeReferenceBalances: false,
+    }),
+    queryAccountGroups(
+      data.accountBookId,
+      accountState === "all" ? "active" : accountState,
+    ),
+    queryExistingNodes(
+      data.accountBookId,
+      accountState === "all" ? "active" : accountState,
+    ),
+    accountState === "all"
+      ? queryAccountGroups(data.accountBookId, "inactive")
+      : Promise.resolve([]),
+    accountState === "all"
+      ? queryExistingNodes(data.accountBookId, "inactive")
+      : Promise.resolve([]),
+    accountState !== "inactive"
+      ? queryActiveAccountUnitUsageAccounts(data.accountBookId)
+      : Promise.resolve([]),
+  ]);
   const unitUsage = createAccountBookUnitUsage({
     referenceCurrency: treeData.referenceCurrency,
     accounts: unitUsageAccounts,
@@ -575,6 +601,8 @@ export async function queryAccountsPageData(data: AccountsPageDataInput) {
   return {
     accountGroups,
     existingNodes,
+    archivedAccountGroups,
+    archivedExistingNodes,
     referenceCurrency: treeData.referenceCurrency,
     unitUsage,
     rows: treeData.rows,

@@ -74,7 +74,8 @@ describe("staging synthetic dataset", () => {
       "Housing",
       "Daily living",
       "Leisure and travel",
-      "Former bank accounts",
+      "Consulting",
+      "Car",
     ]);
     for (const book of dataset.books) {
       expect(
@@ -124,7 +125,7 @@ describe("staging synthetic dataset", () => {
     ["rent", ["Housing", "Rent"]],
     ["groceries", ["Daily living", "Groceries"]],
     ["travel", ["Leisure and travel", "Travel"]],
-    ["archived", ["Former bank accounts", "Closed bank account CHF"]],
+    ["archived", ["Cash", "Zürcher Kantonalbank", "Closed bank account CHF"]],
   ])("places %s in a realistic account path", (key, expectedPath) => {
     const account = household.accounts.find((account) => account.key === key)!;
     const path = [account.name];
@@ -387,7 +388,7 @@ describe("staging synthetic dataset", () => {
         expect(account.type).toBe(AccountType.ASSET);
         expect(account.unit).toBe(Unit.CURRENCY);
       }
-      if (!account.isActive)
+      if (!account.isActive && account.type !== AccountType.EQUITY)
         expect(accountBalance(account.key).toString()).toBe("0");
       const parent = household.groups.find(
         (group) => group.key === account.groupKey,
@@ -403,6 +404,91 @@ describe("staging synthetic dataset", () => {
         .filter((account) => !account.unit)
         .map((account) => account.key),
     ).toEqual(expect.arrayContaining(["opening", "travel", "interest"]));
+  });
+
+  it("places closed items at real institutions and preserves fully archived subtrees across all tabs", () => {
+    const groups = new Map(household.groups.map((group) => [group.key, group]));
+    expect(groups.has("old-bank")).toBe(false);
+    expect(groups.get("ubs")).toMatchObject({
+      parentKey: "cash",
+      isActive: false,
+      isCashAccount: true,
+    });
+    expect(groups.get("credit-suisse-equities")).toMatchObject({
+      parentKey: "credit-suisse",
+      isActive: false,
+    });
+    expect(groups.get("credit-suisse")).toMatchObject({
+      parentKey: "investments",
+      isActive: false,
+    });
+    expect(groups.get("car-running")).toMatchObject({
+      parentKey: "car",
+      isActive: false,
+    });
+    for (const group of household.groups.filter((group) => !group.isActive)) {
+      expect(
+        household.groups
+          .filter((child) => child.parentKey === group.key)
+          .every((child) => !child.isActive),
+      ).toBe(true);
+      expect(
+        household.accounts
+          .filter((child) => child.groupKey === group.key)
+          .every((child) => !child.isActive),
+      ).toBe(true);
+    }
+    const archived = household.accounts.filter((account) => !account.isActive);
+    expect(
+      new Set(
+        archived.map(
+          (account) => `${account.type}:${account.equityAccountSubtype ?? ""}`,
+        ),
+      ),
+    ).toEqual(
+      new Set(["ASSET:", "LIABILITY:", "EQUITY:INCOME", "EQUITY:EXPENSE"]),
+    );
+    for (const account of archived) {
+      const postings = allBookings().filter(
+        (booking) => booking.accountKey === account.key,
+      );
+      expect(postings.length).toBeGreaterThan(0);
+      expect(
+        postings.every(
+          (posting) => posting.date <= addUtcDays(household.startDate, 180),
+        ),
+      ).toBe(true);
+    }
+    expect(accountBalance("closed-project").toString()).toBe("-1200");
+    expect(accountBalance("closed-fuel").toString()).toBe("120");
+    expect(accountBalance("closed-membership").toString()).toBe("180");
+  });
+
+  it("closes investment quantities and settlement cash while retaining positive and negative realised proceeds", () => {
+    for (const [key, gain] of [
+      ["closed-aapl", "40"],
+      ["closed-cs-aapl", "300"],
+      ["closed-cs-msft", "-200"],
+    ]) {
+      const trades = household.transactions.filter(
+        (transaction) =>
+          transaction.description.startsWith("Archived investment:") &&
+          transaction.bookings.some((booking) => booking.accountKey === key),
+      );
+      expect(trades).toHaveLength(2);
+      expect(accountBalance(key).isZero()).toBe(true);
+      expect(
+        Decimal.sum(
+          ...trades.flatMap((trade) =>
+            trade.bookings
+              .filter((booking) => booking.currency === "USD")
+              .map((booking) => booking.value),
+          ),
+        ).toString(),
+      ).toBe(gain);
+    }
+    expect(accountBalance("closed-cs-usd").isZero()).toBe(true);
+    expect(accountBalance("closed-car-loan").isZero()).toBe(true);
   });
 
   it("keeps loan and credit card debt nonpositive and pays only outstanding card debt", () => {

@@ -11,14 +11,42 @@ Related docs:
 
 ## Overview
 
-- The account list route (`$accountBookId/accounts.tsx`) renders `Balance` and
-  `Balance (<referenceCurrency>)` columns.
+- The account list route (`$accountBookId/accounts/route.tsx`) renders `Balance`
+  and `Balance (<referenceCurrency>)` columns.
 - Route orchestration for this page is in
-  `src/routes/$accountBookId/-accounts-page-controller.ts`, with focused helpers
+  `src/routes/$accountBookId/accounts/-page-controller.ts`, with focused helpers
   in:
-  - `-accounts-page-modal-state.ts` (modal/edit/delete/archive/reorder state)
-  - `-accounts-page-reference-balances.ts` (lazy reference-balance hydration and
-    delayed loading indicator state)
+  - `-page-modal-state.ts` (modal/edit/delete/archive/reorder state)
+  - `-page-reference-balances.ts` (lazy reference-balance hydration and delayed
+    loading indicator state)
+
+## Archived groups and totals
+
+All four Accounts tabs show active and archived real items together. Directly
+archived children of an active group, or archived roots, appear beneath a
+virtual **Archived** group. Archived real groups retain their complete original
+subtrees; no further virtual wrappers are inserted inside them. Empty virtual
+groups are omitted. Virtual groups start collapsed, remember expansion per
+book/tab in the session, remain last among siblings even during column sorting,
+and have no mutation actions. A real group named Archived remains an ordinary
+editable group.
+
+Virtual name cells use a muted archive icon and label, with the tooltip
+“Archived items grouped automatically. Included in totals.” on hover and
+keyboard focus. Chevrons and monetary columns retain normal contrast.
+
+The hierarchy projection changes display parents only. Real parent IDs remain
+available for editors; virtual IDs never enter persisted relationships or editor
+choices. Real rows retain their existing archive/unarchive constraints and
+actions. Reordering uses the displayed real sibling set and excludes virtual
+rows.
+
+Group and footer balances and G/L include active and archived account leaves
+exactly once, regardless of collapse or filtering in the grid. Virtual groups
+use the same descendant aggregation and completeness rules as real groups. Asset
+and Liability tabs retain balance/G/L columns; Income and Expense remain
+unitless. Existing `mode=archived` links redirect to Accounts, preserving the
+selected tab and using normal session expansion behavior.
 
 ## Account List Loading Strategy
 
@@ -151,17 +179,18 @@ event per receipt that closes lots, with per-match costs and no market-reference
 amount. A fully closed position has no open lots and needs no closing valuation.
 Same-date and receipt-before-withdrawal transfers retain their existing atomic
 treatment. Calculation includes all real holding accounts, including archived
-accounts and both account types; filtering to the selected active/archived mode
-and tab happens afterwards. Virtual transfer clearing is not included in
-real-account totals. Group and footer amounts sum account leaves using Decimal
-arithmetic before conversion to display numbers. Zero-balance and archived
-accounts retain realised gains.
+accounts and both account types; filtering to the selected tab happens
+afterwards. The Accounts hierarchy and its totals include active and archived
+accounts. Virtual transfer clearing is not included in real-account totals.
+Group and footer amounts sum account leaves using Decimal arithmetic before
+conversion to display numbers. Zero-balance and archived accounts retain
+realised gains.
 
 The Accounts list caches one book-wide summary dataset in Redis before filtering
-by account type and active/archived state. Warm hits skip transaction loading,
-valuation lookups, and FIFO replay. Ledger summaries and calculation drawers
-continue calculating independently. This improves repeat loads; a cold cache
-still requires the complete historical replay.
+by account type. Warm hits skip transaction loading, valuation lookups, and FIFO
+replay. Ledger summaries and calculation drawers continue calculating
+independently. This improves repeat loads; a cold cache still requires the
+complete historical replay.
 
 The cache uses the existing deployment namespace and database-owned
 `AccountBook.periodCacheRevision`, plus the resolved UTC as-of day and latest
@@ -176,15 +205,14 @@ come from identity conversion or a stable Redis TimeSeries hit covering the
 requested day or publication-window cutoff. An older TimeSeries quote reached
 after unsuccessful newer probes is a temporary fallback and does not qualify.
 Provider, temporary fallback, and missing valuations are returned for the
-request but not persisted. G/L cache v3 ignores earlier summary generations,
-including v2 results computed before partial-transfer recognition; the
-underlying valuation caches are preserved. The snapshot revision must match the
-lookup revision and a final committed-revision read, and the publication cutoff
-must remain unchanged during calculation. Overlapping loads share an in-process
-promise scoped to the complete cache key. Unavailable Redis or revision reads,
-malformed/oversized cache entries, and Redis command failures fall back to the
-uncached calculation. As with the other period caches, Redis requires
-`PERIOD_BASE_CACHE_ENV`.
+request but not persisted. G/L cache v4 includes archived group metadata and
+ignores earlier summary generations; the underlying valuation caches are
+preserved. The snapshot revision must match the lookup revision and a final
+committed-revision read, and the publication cutoff must remain unchanged during
+calculation. Overlapping loads share an in-process promise scoped to the
+complete cache key. Unavailable Redis or revision reads, malformed/oversized
+cache entries, and Redis command failures fall back to the uncached calculation.
+As with the other period caches, Redis requires `PERIOD_BASE_CACHE_ENV`.
 
 G/L hydrates independently of the account tree and reference balances. A failed
 request exposes a retry action. A missing closing price leaves reliable Realised
@@ -213,12 +241,12 @@ existing final-summary cache remains above this layer for Accounts-list hits.
 Calculation drawers retain independent full replay and the same financial
 semantics.
 
-Basis cache v2 ignores v1 cost bases computed before partial-transfer
-recognition. Keys use the book revision and latest effective booking date.
-Changes to bookings/settings or future bookings becoming effective force a
-rebuild. Only complete bases from stable historical valuation sources persist;
-recent non-identity execution prices cannot persist until their valuation dates
-pass the publication cutoff. Cache failures fall back to full calculation. See
+Basis cache v3 includes archived group metadata and ignores earlier cost bases.
+Keys use the book revision and latest effective booking date. Changes to
+bookings/settings or future bookings becoming effective force a rebuild. Only
+complete bases from stable historical valuation sources persist; recent
+non-identity execution prices cannot persist until their valuation dates pass
+the publication cutoff. Cache failures fall back to full calculation. See
 [Accumulated G/L historical basis cache](server-functions.md#accumulated-gl-historical-basis-cache)
 for limits, snapshot validation, and cleanup behavior.
 

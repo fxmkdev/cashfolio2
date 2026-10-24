@@ -70,7 +70,7 @@ async function loadAccountGainLossInputs(
     }),
     db.accountGroup.findMany({
       where: { accountBookId: args.accountBookId },
-      select: { id: true, parentGroupId: true, type: true },
+      select: { id: true, parentGroupId: true, type: true, isActive: true },
     }),
   ]);
   const startDate = startOfUtcDay(book.startDate);

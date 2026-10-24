@@ -1,3 +1,4 @@
+import Decimal from "decimal.js";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
@@ -226,6 +227,37 @@ describe("staging seed against disposable PostgreSQL", () => {
         booking.date.toISOString().startsWith("2026-10-10"),
       ),
     ).toBe(true);
+    const household = current.books.find(
+      (book) => book.name === "1. Swiss Household Demo",
+    )!;
+    const archived = current.accounts.filter(
+      (account) => account.accountBookId === household.id && !account.isActive,
+    );
+    expect(
+      current.groups.some((group) => group.name === "Former bank accounts"),
+    ).toBe(false);
+    const portfolio = current.groups.find(
+      (group) =>
+        group.accountBookId === household.id &&
+        group.name === "Credit Suisse portfolio",
+    )!;
+    expect(portfolio.isActive).toBe(false);
+    expect(
+      current.groups.find((group) => group.parentGroupId === portfolio.id),
+    ).toMatchObject({ name: "Equities", isActive: false });
+    for (const account of archived.filter(
+      (account) => account.type !== "EQUITY",
+    )) {
+      const bookings = current.bookings.filter(
+        (booking) => booking.accountId === account.id,
+      );
+      expect(bookings.length).toBeGreaterThan(0);
+      expect(
+        Decimal.sum(
+          ...bookings.map((booking) => booking.value.toString()),
+        ).isZero(),
+      ).toBe(true);
+    }
     const [privileges] = await seed.$queryRaw<
       { superuser: boolean; createRole: boolean; createDatabase: boolean }[]
     >`

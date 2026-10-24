@@ -22,8 +22,8 @@ export const tabs = [
 export type { TabValue };
 export type AccountsMode = "active" | "archived";
 
-export function getAccountsPageTitle(mode: AccountsMode): string {
-  return mode === "archived" ? "Archive" : "Accounts";
+export function getAccountsPageTitle(_mode?: AccountsMode): string {
+  return "Accounts";
 }
 
 export function getTabDefinition(tabValue: TabValue) {
@@ -84,6 +84,6 @@ export function parseAccountsSearch(search: Record<string, unknown>): {
 } {
   return {
     tab: isTabValue(search.tab) ? search.tab : "ASSET",
-    mode: search.mode === "archived" ? "archived" : "active",
+    mode: "active",
   };
 }

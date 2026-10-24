@@ -104,6 +104,7 @@ export function isAccountGainLossBasisCacheData(
       (group: unknown) =>
         isRecord(group) &&
         typeof group.id === "string" &&
+        typeof group.isActive === "boolean" &&
         isNullableString(group.parentGroupId) &&
         (isAccountType(group.type) || group.type === "EQUITY"),
     ) ||

@@ -85,7 +85,7 @@ describe("getAccountsLinkSearch", () => {
       }),
     ).toEqual({
       tab: "LIABILITY",
-      mode: "archived",
+      mode: "active",
     });
   });
 
@@ -106,7 +106,7 @@ describe("getAccountsLinkSearch", () => {
       }),
     ).toEqual({
       tab: "EQUITY-EXPENSE",
-      mode: "archived",
+      mode: "active",
     });
   });
 

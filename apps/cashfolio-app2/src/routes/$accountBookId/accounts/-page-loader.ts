@@ -7,13 +7,12 @@ export async function loadAccountsPageData(args: {
   mode: AccountsMode;
   tab: TabValue;
 }) {
-  const accountState = args.mode === "archived" ? "inactive" : "active";
   const tabDefinition = getTabDefinition(args.tab);
 
   return getAccountsPageData({
     data: {
       accountBookId: args.accountBookId,
-      accountState,
+      accountState: "all",
       type: tabDefinition.type,
       ...("equityAccountSubtype" in tabDefinition
         ? { equityAccountSubtype: tabDefinition.equityAccountSubtype }

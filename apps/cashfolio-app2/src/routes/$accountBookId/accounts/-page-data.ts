@@ -31,11 +31,13 @@ export function useSelectedSiblingRows(
 ) {
   return useMemo(() => {
     if (!reorderingRow) return [];
-    return (rowsByParentKey.get(reorderingRow.parentKey) ?? []).map((row) => ({
-      id: row.id,
-      name: row.name,
-      nodeType: row.nodeType,
-    }));
+    return (rowsByParentKey.get(reorderingRow.parentKey) ?? [])
+      .filter((row) => !row.isVirtualArchivedGroup)
+      .map((row) => ({
+        id: row.id,
+        name: row.name,
+        nodeType: row.nodeType,
+      }));
   }, [rowsByParentKey, reorderingRow]);
 }
 

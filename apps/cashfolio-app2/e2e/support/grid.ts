@@ -15,6 +15,15 @@ export function agGridPinnedBottomRow(page: Page): Locator {
   return page.locator(".ag-grid-pinned-bottom-rows .ag-row-pinned").first();
 }
 
+export async function expandArchivedGroups(page: Page) {
+  const expanders = page.locator(
+    '[row-id^="__archived__:"] .ag-group-contracted:visible',
+  );
+  while (await expanders.count()) {
+    await expanders.first().click();
+  }
+}
+
 export async function revealRowActions(row: Locator) {
   await row.hover();
   // Virtualised action columns are only mounted after scrolling into view.
