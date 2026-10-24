@@ -851,7 +851,9 @@ export const VirtualArchivedAppearance: Story = {
     const expand = row.querySelector<HTMLElement>(".ag-group-contracted");
     if (!expand) throw new Error("Missing Archived expander");
     await userEvent.click(expand);
-    expect(await canvas.findByText("Closed wallet")).toBeVisible();
+    await waitFor(() =>
+      expect(canvas.getByText("Closed wallet")).toBeVisible(),
+    );
   },
 };
 
