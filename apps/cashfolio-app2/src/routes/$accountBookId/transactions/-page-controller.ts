@@ -34,7 +34,10 @@ export function useTransactionsPageController(args: {
   setPeriodFilter: (nextPeriodValue: string | undefined) => void;
   pendingScrollRef: { current: string | undefined };
   invalidate: () => void;
-}): Omit<TransactionsPageViewProps, "accountBookId" | "onRowDataUpdated"> {
+}): Omit<
+  TransactionsPageViewProps,
+  "accountBookId" | "resolveScrollTarget" | "navigationTransactionId"
+> {
   const { data: loaderData, refresh: onRefreshConstraints } =
     useRefreshedMutationData(args.loaderData, () =>
       loadTransactionsPageData({
@@ -189,10 +192,7 @@ export function useTransactionsPageController(args: {
     accountBookId: args.accountBookId,
     selectedPeriodValue: args.selectedPeriodValue,
     referenceCurrency: loaderData.referenceCurrency,
-    onEditClick: handleEditClick,
     onRebookClick: handleRebookClick,
-    onCopyClick: handleCopyClick,
-    onDeleteClick: handleDeleteClick,
   });
 
   const bulkActions = useBulkTransactionActions({
@@ -207,6 +207,10 @@ export function useTransactionsPageController(args: {
   });
 
   return {
+    onEditClick: handleEditClick,
+    onCopyClick: handleCopyClick,
+    onDeleteClick: handleDeleteClick,
+    scopeKey: `${args.accountBookId}:${args.selectedPeriodValue ?? ""}`,
     onRefreshConstraints,
     rows: loaderData.rows,
     bulkActions,

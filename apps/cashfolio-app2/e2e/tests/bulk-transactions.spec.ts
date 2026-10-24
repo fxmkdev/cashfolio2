@@ -85,7 +85,11 @@ test("rebooks selected ledger bookings and deletes their unique whole transactio
     `/${seeded.accountBookId}/${seeded.cashAccount.id}?period=2026-05`,
   );
   await selectIds(page, bookingIds);
-  await expect(page.getByRole("status")).toContainText("3 bookings selected");
+  await expect(
+    page
+      .getByRole("toolbar", { name: "Selected Row Actions" })
+      .getByRole("status"),
+  ).toContainText("3 bookings selected");
   const rebook = await openRebook(page);
   await expect(rebook).toContainText("Move 3 selected bookings");
   await rebook.getByRole("button", { name: "Rebook", exact: true }).click();
@@ -124,7 +128,11 @@ test("rebooks selected ledger bookings and deletes their unique whole transactio
   await expect(deletion).toContainText("2 selected transactions");
   await expect(deletion).toContainText("including bookings in other accounts");
   await deletion.getByRole("button", { name: "Cancel" }).click();
-  await expect(page.getByRole("status")).toContainText("3 bookings selected");
+  await expect(
+    page
+      .getByRole("toolbar", { name: "Selected Row Actions" })
+      .getByRole("status"),
+  ).toContainText("3 bookings selected");
   await expect(deletion).not.toBeVisible();
   await page.getByRole("button", { name: "Delete Selected" }).click();
   await deletion.getByRole("button", { name: "Delete", exact: true }).click();
@@ -154,9 +162,11 @@ test("deletes selected master transactions without offering bulk Rebook", async 
     page,
     transactions.map((transaction) => transaction.id),
   );
-  await expect(page.getByRole("status")).toContainText(
-    "2 transactions selected",
-  );
+  await expect(
+    page
+      .getByRole("toolbar", { name: "Selected Row Actions" })
+      .getByRole("status"),
+  ).toContainText("2 transactions selected");
   await expect(
     page.getByRole("button", { name: "Rebook Selected" }),
   ).toHaveCount(0);
@@ -214,9 +224,11 @@ test("keeps every transaction when a selected transaction becomes protected befo
   // Failed submissions refresh current constraints while preserving the dialog
   // snapshot. The newly protected row is removed from the live selection.
   await expect(deletion).toContainText("2 selected transactions");
-  await expect(page.getByRole("status")).toContainText(
-    "1 transaction selected",
-  );
+  await expect(
+    page
+      .getByRole("toolbar", { name: "Selected Row Actions" })
+      .getByRole("status"),
+  ).toContainText("1 transaction selected");
   await expect(
     page.locator(
       `.ag-row[row-id="${transactions[1].id}"] .ag-selection-checkbox input`,
@@ -253,5 +265,9 @@ test("keeps every booking when the last selected booking becomes incompatible be
       where: { id: { in: bookingIds }, accountId: seeded.cashAccount.id },
     }),
   ).toBe(3);
-  await expect(page.getByRole("status")).toContainText("3 bookings selected");
+  await expect(
+    page
+      .getByRole("toolbar", { name: "Selected Row Actions" })
+      .getByRole("status"),
+  ).toContainText("3 bookings selected");
 });

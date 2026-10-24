@@ -7,8 +7,11 @@ import { Button, Group, Modal, Title } from "@mantine/core";
 import { IconBolt } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
 import { ConfirmDeleteModal } from "@/components/dialogs/confirm-delete-modal";
-import { DataGrid, dataTypeDefinitions } from "@/components/grid/data-grid";
-import { columnTypes } from "@/components/grid/column-types";
+import {
+  TransactionsGrid,
+  type TransactionsGridProps,
+} from "./-details/transactions-grid";
+import type { TransactionActions } from "./-details/booking-details";
 import type { AccountOption } from "@/shared/account-options";
 import {
   EditTransactionModal,
@@ -23,7 +26,6 @@ import { PageShell } from "@/components/layout/page-shell";
 import { TopPageHeader } from "@/components/layout/top-page-header";
 import type { ReactNode } from "react";
 import type { Unit } from "@/.prisma-client/enums";
-import { useUserLocale } from "@/user-locale-context";
 import type { TransactionsBookingRow, TransactionsRow } from "./-page-types";
 
 export type TransactionBookingInput = {
@@ -57,7 +59,7 @@ export type RebookingState = {
   };
 };
 
-export type TransactionsPageViewProps = {
+export type TransactionsPageViewProps = TransactionActions & {
   bulkActions?: BulkTransactionActions<TransactionsRow>;
   accountBookId: string;
   onRefreshConstraints?: () => Promise<void>;
@@ -89,7 +91,9 @@ export type TransactionsPageViewProps = {
   editAccountOptions: AccountOption[];
   rebookTargetAccountOptions: RebookTargetOption[];
   periodFilterControls?: ReactNode;
-  onRowDataUpdated: AgGridReactProps<TransactionsRow>["onRowDataUpdated"];
+  scopeKey: string;
+  navigationTransactionId?: string;
+  resolveScrollTarget: TransactionsGridProps["resolveScrollTarget"];
   onAddTransactionClick: () => void;
   onCloseCreateModal: () => void;
   onCreateSubmittingChange: (isSubmitting: boolean) => void;
@@ -132,7 +136,9 @@ export function TransactionsPageView({
   editAccountOptions,
   rebookTargetAccountOptions,
   periodFilterControls,
-  onRowDataUpdated,
+  scopeKey,
+  navigationTransactionId,
+  resolveScrollTarget,
   onAddTransactionClick,
   onCloseCreateModal,
   onCreateSubmittingChange,
@@ -147,8 +153,10 @@ export function TransactionsPageView({
   onSubmitRebookBooking,
   onCloseDeleteModal,
   onConfirmDeleteTransaction,
+  onEditClick,
+  onCopyClick,
+  onDeleteClick,
 }: TransactionsPageViewProps) {
-  const userLocale = useUserLocale();
   const createDialogText = getTransactionCreateDialogText(
     !!createTransactionInitialValues,
   );
@@ -172,46 +180,24 @@ export function TransactionsPageView({
 
       {bulkActions && <BulkTransactionToolbar actions={bulkActions} />}
 
-      <DataGrid
-        {...bulkActions?.gridProps}
-        className="transactions-master-grid"
-        containerStyle={{ flex: 1, minHeight: 0 }}
-        rowData={rows}
+      <TransactionsGrid
+        onEditClick={onEditClick}
+        onCopyClick={onCopyClick}
+        onDeleteClick={onDeleteClick}
+        rows={rows}
         columnDefs={columnDefs}
-        defaultColDef={{
-          sortable: false,
-          suppressHeaderMenuButton: true,
-        }}
-        getRowId={({ data }) => data.id}
-        onRowDataUpdated={(event) => {
-          bulkActions?.gridProps.onRowDataUpdated?.(event);
-          onRowDataUpdated?.(event);
-        }}
-        masterDetail
-        detailRowAutoHeight
-        suppressColumnVirtualisation
-        detailCellRendererParams={{
-          detailGridOptions: {
-            columnDefs: detailColumnDefs,
-            columnTypes,
-            dataTypeDefinitions,
-            context: { userLocale },
-            defaultColDef: {
-              sortable: false,
-              suppressHeaderMenuButton: true,
-            },
-            getRowId: ({ data }: { data: TransactionsBookingRow }) => data.id,
-          },
-          getDetailRowData: ({
-            data,
-            successCallback,
-          }: {
-            data?: TransactionsRow;
-            successCallback: (rowData: TransactionsBookingRow[]) => void;
-          }) => {
-            successCallback(data?.bookings ?? []);
-          },
-        }}
+        detailColumnDefs={detailColumnDefs}
+        bulkActions={bulkActions}
+        scopeKey={scopeKey}
+        navigationTransactionId={navigationTransactionId}
+        resolveScrollTarget={resolveScrollTarget}
+        mutationDialogOpened={
+          createModalOpened ||
+          editModalOpened ||
+          rebookModalOpened ||
+          !!deletingTransaction ||
+          !!bulkActions?.dialogOpened
+        }
       />
 
       {bulkActions && <BulkTransactionDialogs actions={bulkActions} />}

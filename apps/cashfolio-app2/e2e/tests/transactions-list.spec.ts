@@ -72,13 +72,6 @@ async function rowIndex(row: Locator): Promise<number> {
   return Number(index);
 }
 
-async function expandTransactionRow(row: Locator) {
-  const expandButton = row.locator(".ag-group-contracted").first();
-  await expect(expandButton).toBeVisible();
-  await expandButton.click();
-  await expect(row.locator(".ag-group-expanded").first()).toBeVisible();
-}
-
 test.beforeAll(async ({ e2eExternalId }) => {
   seeded = await seedDatabase({ userExternalId: e2eExternalId });
 });
@@ -162,7 +155,11 @@ test("lists transactions with booking details, carries account link context, and
     agGridCellByColId(newerTransactionRow, "referenceAmount"),
   ).toContainText("125.00");
 
-  await expandTransactionRow(newerTransactionRow);
+  await agGridCellByColId(newerTransactionRow, "date").click();
+  const details = page.getByRole("region", {
+    name: `Transaction details: ${scenario.newerDescription}`,
+  });
+  await expect(details).toBeVisible();
   const newerCashBookingRow = agGridRowByText(
     page,
     `${scenario.newerDescription} Cash`,
@@ -173,23 +170,13 @@ test("lists transactions with booking details, carries account link context, and
   );
   await expect(agGridCellByColId(newerCashBookingRow, "credit")).toHaveText("");
 
-  // Short detail grids should fit their bookings without the default 150px body minimum.
-  const detailBody = page
-    .locator(
-      ".transactions-master-grid .ag-details-row .ag-grid-scrolling-rows",
-    )
-    .first();
-  await expect
-    .poll(() =>
-      detailBody.evaluate((body) => {
-        const rows = body.querySelector(".ag-grid-scrolling-container")!;
-        return Math.abs(
-          body.getBoundingClientRect().height -
-            rows.getBoundingClientRect().height,
-        );
-      }),
-    )
-    .toBeLessThan(1);
+  await expect(
+    page.getByRole("grid", { name: "Transactions", exact: true }),
+  ).toBeVisible();
+  await expect(
+    details.getByRole("grid", { name: "Transaction bookings" }),
+  ).toBeVisible();
+  await expect(page.locator(".ag-details-row")).toHaveCount(0);
 
   await agGridCellByColId(newerCashBookingRow, "account")
     .getByRole("link", { name: seeded.cashAccount.name })
@@ -235,6 +222,11 @@ test("lists transactions with booking details, carries account link context, and
   await createDialog.getByRole("button", { name: "Create" }).click();
 
   await expect(agGridRowByText(page, createdDescription)).toBeVisible();
+  await expect(
+    page.getByRole("region", {
+      name: `Transaction details: ${createdDescription}`,
+    }),
+  ).toBeVisible();
   const bookings = await getTransactionBookingsByDescription({
     accountBookId: seeded.accountBookId,
     description: createdDescription,
