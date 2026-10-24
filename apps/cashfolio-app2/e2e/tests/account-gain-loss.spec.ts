@@ -95,6 +95,8 @@ test("accumulated account G/L, nested totals, historical summary, and FIFO expla
   page,
   e2eExternalId,
 }) => {
+  // This scenario compares all account columns at once; overflow is covered separately.
+  await page.setViewportSize({ width: 2200, height: 1080 });
   const book = await seedDatabase({
     userExternalId: e2eExternalId,
     accountBookStartDate: new Date("2026-01-01Z"),

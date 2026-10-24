@@ -209,7 +209,10 @@ for (const nodeType of ["account", "accountGroup"] as const) {
     await expect(
       page.getByText(`Unarchive ${name}`, { exact: true }),
     ).toBeVisible();
-    await expect(row.getByRole("button", { name: "Unarchive" })).toBeDisabled();
+    const refreshedActionRow = await revealRowActions(row);
+    await expect(
+      refreshedActionRow.getByRole("button", { name: "Unarchive" }),
+    ).toBeDisabled();
     await page.getByRole("button", { name: "Refresh Choices" }).click();
     await expect(page.getByRole("alert")).toContainText(
       "parent group is archived",

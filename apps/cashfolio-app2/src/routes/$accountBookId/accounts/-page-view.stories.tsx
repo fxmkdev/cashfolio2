@@ -779,11 +779,17 @@ export const ArchivedGroupActions: Story = {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
     const getWalletRowQueries = async () => {
+      const viewport =
+        canvasElement.querySelector<HTMLElement>(".ag-grid-viewport");
+      if (!viewport)
+        throw new Error("Could not resolve the account grid viewport");
+      viewport.scrollLeft = 0;
       const walletCell = await canvas.findByText("Wallet", undefined, {
         timeout: 10000,
       });
       const walletRow = walletCell.closest(".ag-row");
       if (!walletRow) throw new Error("Could not resolve Wallet row");
+      viewport.scrollLeft = viewport.scrollWidth;
       return within(walletRow as HTMLElement);
     };
 
