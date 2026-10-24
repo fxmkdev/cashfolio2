@@ -1,5 +1,6 @@
 import { toNumericMoney } from "../money-boundary";
 import { toMoney, moneyIsZero } from "../../shared/money";
+import { isBalanceAccount } from "../../shared/account-presentation";
 import { prisma } from "../../prisma.server";
 import type {
   AccountType,
@@ -491,21 +492,14 @@ export async function queryLedgerAccountActionData(
     tradeCurrency: account.tradeCurrency as string | null,
     statementImportCsvFormat: account.statementImportCsvFormat,
     isCashAccount: account.isCashAccount,
-    balance:
-      account.type === "ASSET"
-        ? rawBalance
-        : account.type === "LIABILITY"
-          ? toMoney(rawBalance).neg()
-          : null,
+    balance: isBalanceAccount(account) ? rawBalance : null,
     balanceInReferenceCurrency: null,
     openingBalance:
       openingRawBalance == null
         ? null
-        : account.type === "ASSET"
+        : isBalanceAccount(account)
           ? openingRawBalance
-          : account.type === "LIABILITY"
-            ? toMoney(openingRawBalance).neg()
-            : null,
+          : null,
     parentId: account.groupId ?? undefined,
     isActive: account.isActive,
     groupId: account.groupId ?? undefined,

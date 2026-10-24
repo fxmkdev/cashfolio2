@@ -138,6 +138,12 @@ Dynamic PR preview deployment (`.github/workflows/build.yml`) sets:
 
 ## Accumulated Holding Gain/Loss
 
+Account-list native and reference-currency balances retain their signed booking
+values for both assets and liabilities: positive means owned, negative means
+owed. Group and footer balances sum these signed amounts; missing-conversion
+rules remain unchanged. This presentation does not alter Report/History
+classification, net worth, or the gain/loss calculations below.
+
 Asset and Liability account lists display Total, Realised, and Unrealised under
 `G/L Since Start (<referenceCurrency>)`. These figures replay holdings from the
 account-book start through today, using the existing opening valuation on the

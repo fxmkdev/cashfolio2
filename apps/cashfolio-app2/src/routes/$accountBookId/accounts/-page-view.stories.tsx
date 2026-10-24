@@ -912,7 +912,9 @@ export const VirtualArchivedAppearance: Story = {
     const expand = row.querySelector<HTMLElement>(".ag-group-contracted");
     if (!expand) throw new Error("Missing Archived expander");
     await userEvent.click(expand);
-    expect(await canvas.findByText("Closed wallet")).toBeVisible();
+    await waitFor(() =>
+      expect(canvas.getByText("Closed wallet")).toBeVisible(),
+    );
   },
 };
 
@@ -1148,6 +1150,75 @@ export const GainLossPartial: Story = {
     const details = await openGainLossDetails(canvasElement);
     expect(details).toHaveTextContent("Since 1/1/2026 · As of 3/31/2026");
     await userEvent.keyboard("{Escape}");
+  },
+};
+
+export const SignedLiabilityBalances: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      initialTab="LIABILITY"
+      expandGroups
+      rowsOverride={[
+        {
+          ...createGroupRow({
+            id: "cards",
+            name: "Credit Cards",
+            type: AccountType.LIABILITY,
+            isActive: true,
+            sortOrder: 0,
+          }),
+          // Group balances are computed by the controller before rendering.
+          balanceInReferenceCurrency: -75,
+        },
+        createAccountRow({
+          id: "card-debt",
+          name: "Outstanding Debt",
+          groupId: "cards",
+          type: AccountType.LIABILITY,
+          isActive: true,
+          sortOrder: 0,
+          currency: "CHF",
+          balance: -100,
+          balanceInReferenceCurrency: -100,
+        }),
+        createAccountRow({
+          id: "card-credit",
+          name: "Overpaid Card",
+          groupId: "cards",
+          type: AccountType.LIABILITY,
+          isActive: true,
+          sortOrder: 1,
+          currency: "CHF",
+          balance: 25,
+          balanceInReferenceCurrency: 25,
+        }),
+      ]}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector(
+          '[row-id="card-debt"] [col-id="balanceInReferenceCurrency"]',
+        ),
+      ).toHaveTextContent("-100.00"),
+    );
+    await expect(
+      canvasElement.querySelector(
+        '[row-id="card-credit"] [col-id="balanceInReferenceCurrency"]',
+      ),
+    ).toHaveTextContent("25.00");
+    await expect(
+      canvasElement.querySelector(
+        '[row-id="cards"] [col-id="balanceInReferenceCurrency"]',
+      ),
+    ).toHaveTextContent("-75.00");
+    await expect(
+      canvasElement.querySelector(
+        '.ag-row-pinned [col-id="balanceInReferenceCurrency"]',
+      ),
+    ).toHaveTextContent("-75.00");
   },
 };
 

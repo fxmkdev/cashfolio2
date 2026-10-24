@@ -104,8 +104,8 @@ describe("calculateBalanceInReferenceCurrencyByGroupId", () => {
         cryptocurrency: null,
         symbol: null,
         tradeCurrency: null,
-        balance: 5,
-        balanceInReferenceCurrency: 5,
+        balance: -5,
+        balanceInReferenceCurrency: -5,
         openingBalance: null,
         parentId: "g2",
         isActive: true,
@@ -152,12 +152,12 @@ describe("calculateBalanceInReferenceCurrencyByGroupId", () => {
     );
 
     expect(result.get("g2")).toEqual({
-      sum: 5,
+      sum: -5,
       hasAccountDescendants: true,
       hasMissingReferenceBalance: true,
     });
     expect(result.get("g1")).toEqual({
-      sum: 15,
+      sum: 5,
       hasAccountDescendants: true,
       hasMissingReferenceBalance: true,
     });

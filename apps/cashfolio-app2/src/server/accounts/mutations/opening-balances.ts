@@ -187,10 +187,7 @@ export async function applyOpeningBalanceTarget(args: {
       },
     },
   );
-  const targetRawOpeningBalance =
-    args.account.type === AccountType.ASSET
-      ? normalizedOpeningBalance
-      : toMoney(normalizedOpeningBalance).neg();
+  const targetRawOpeningBalance = normalizedOpeningBalance;
   const hasTargetOpeningBalance = moneyAbs(targetRawOpeningBalance).greaterThan(
     OPENING_BALANCE_EPSILON,
   );
