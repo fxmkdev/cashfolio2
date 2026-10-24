@@ -3,6 +3,7 @@ import {
   archivedHouseholdTransactions,
 } from "./dataset-archived";
 import Decimal from "decimal.js";
+import { min } from "date-fns";
 import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { addUtcDays } from "../shared/date";
 import {
@@ -79,6 +80,16 @@ export function householdAccounts(target: SeedBook) {
   ] as const) {
     addAccount(target, key, name, AccountType.ASSET, { ...unit, groupKey });
   }
+  addAccount(
+    target,
+    "managed-portfolio",
+    "Managed Portfolio CHF",
+    AccountType.ASSET,
+    {
+      ...CHF,
+      groupKey: "investments",
+    },
+  );
   for (const [key, name] of [
     ["card", "Credit card CHF"],
     ["loan", "Personal loan CHF"],
@@ -139,6 +150,7 @@ export function householdTransactions(target: SeedBook, today: Date) {
     ["eur", "1800"],
     ["usd", "5000"],
     ["pension", "24000"],
+    ["managed-portfolio", "50000"],
     ["aapl", "25"],
     ["msft", "12"],
     ["btc", "0.18"],
@@ -242,6 +254,42 @@ export function householdTransactions(target: SeedBook, today: Date) {
         "utilities",
         "179",
       ),
+    );
+    on(5, (date) =>
+      transfer(
+        target,
+        date,
+        "Managed portfolio: contribution",
+        "current",
+        "managed-portfolio",
+        "250",
+      ),
+    );
+    if (month.getUTCMonth() === 5) {
+      on(20, (date) =>
+        transfer(
+          target,
+          date,
+          "Managed portfolio: withdrawal",
+          "managed-portfolio",
+          "current",
+          "1000",
+        ),
+      );
+    }
+    // Statement value changes after cash flows, rather than automatic holding prices.
+    const valuationDate = min([
+      today,
+      new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 0)),
+    ]);
+    const adjustment = ["600", "-350", "450", "250", "-200", "500"][index % 6]!;
+    transfer(
+      target,
+      valuationDate,
+      "Managed portfolio: statement valuation",
+      GAIN_LOSS_ACCOUNT_KEY,
+      "managed-portfolio",
+      adjustment,
     );
     on(6, (date) =>
       transfer(
@@ -430,13 +478,5 @@ export function householdTransactions(target: SeedBook, today: Date) {
     "wallet",
     "groceries",
     "18.5",
-  );
-  transfer(
-    target,
-    today,
-    "Currency rounding adjustment",
-    "current",
-    GAIN_LOSS_ACCOUNT_KEY,
-    "0.05",
   );
 }

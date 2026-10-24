@@ -17,6 +17,7 @@ import {
 } from "../support/grid";
 import { assertSafeWriteTarget, prisma } from "../support/db-client";
 import { expect, test } from "../support/fixtures";
+import { selectSegmentedControlOption } from "../support/segmented-control";
 
 const today = new Date("2026-10-10T00:00:00Z");
 let seeded: SeedSummary;
@@ -82,6 +83,65 @@ test("synthetic household data supports reports and three years of history", asy
       .getByRole("radiogroup", { name: "History Period Mode" })
       .getByRole("radio", { name: "Yearly" }),
   ).toBeChecked();
+});
+
+test("the managed portfolio separates cash flows from explicit statement gains and losses", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const household = seededBook("household");
+  const portfolio = await prisma.account.findFirstOrThrow({
+    where: { accountBookId: household.id, name: "Managed Portfolio CHF" },
+  });
+  const gainLoss = await prisma.account.findFirstOrThrow({
+    where: { accountBookId: household.id, equityAccountSubtype: "GAIN_LOSS" },
+  });
+  await page.goto(`/${household.id}/${portfolio.id}?period=2026-10`);
+  await expect(
+    page.getByRole("heading", { name: "Managed Portfolio CHF", exact: true }),
+  ).toBeVisible();
+  await expect(
+    agGridRowByText(page, "Managed portfolio: contribution"),
+  ).toBeVisible();
+  await expect(
+    agGridCellByColId(
+      agGridRowByText(page, "Managed portfolio: statement valuation"),
+      "balance",
+    ),
+  ).toHaveText(/64[’']100\.00/);
+
+  for (const [period, expectedGainLoss] of [
+    ["2026-10", "600.00"],
+    ["2023-11", "-350.00"],
+  ]) {
+    await page.goto(`/${household.id}/report?period=${period}`);
+    await selectSegmentedControlOption(
+      page.getByRole("radiogroup", { name: "Gains/Losses Chart Type" }),
+      "Table",
+    );
+    const table = page.getByTestId("period-gains-losses-breakdown-table");
+    await expect(table).toBeVisible();
+    const portfolioRow = table
+      .locator(".ag-grid-scrolling-container > .ag-row")
+      .filter({ hasText: "Managed Portfolio CHF" });
+    await expect(portfolioRow).toHaveCount(1);
+    await expect(agGridCellByColId(portfolioRow, "totalGainLoss")).toHaveText(
+      expectedGainLoss,
+    );
+    const explicitRow = table
+      .locator(".ag-grid-scrolling-container > .ag-row")
+      .filter({ hasText: "Explicit G/L" });
+    await expect(agGridCellByColId(explicitRow, "totalGainLoss")).toHaveText(
+      expectedGainLoss,
+    );
+    await portfolioRow.dblclick();
+    await expect(page).toHaveURL(
+      new RegExp(`/${household.id}/${gainLoss.id}\\?period=${period}$`),
+    );
+    await expect(
+      agGridRowByText(page, "Managed portfolio: statement valuation"),
+    ).toBeVisible();
+  }
 });
 
 test("configured testers can switch to empty and valuation edge-case books", async ({

@@ -122,6 +122,7 @@ describe("staging synthetic dataset", () => {
       ["Investments", "Cryptocurrencies", "Bitcoin transfer destination"],
     ],
     ["pension", ["Investments", "Pillar 3a savings"]],
+    ["managed-portfolio", ["Investments", "Managed Portfolio CHF"]],
     ["rent", ["Housing", "Rent"]],
     ["groceries", ["Daily living", "Groceries"]],
     ["travel", ["Leisure and travel", "Travel"]],
@@ -562,25 +563,28 @@ describe("staging synthetic dataset", () => {
         ),
       ).toBe(true);
     }
-    const gainLoss = household.transactions.find((transaction) =>
+    const gainLossTransactions = household.transactions.filter((transaction) =>
       transaction.bookings.some(
         (booking) => booking.accountKey === GAIN_LOSS_ACCOUNT_KEY,
       ),
-    )!;
-    expect(
-      validateGainLossSimpleTransactionInvariant(
-        gainLoss.bookings.map((booking) =>
-          booking.accountKey === GAIN_LOSS_ACCOUNT_KEY
-            ? {
-                type: AccountType.EQUITY,
-                equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
-              }
-            : household.accounts.find(
-                (account) => account.key === booking.accountKey,
-              )!,
+    );
+    expect(gainLossTransactions.length).toBeGreaterThan(0);
+    for (const transaction of gainLossTransactions) {
+      expect(
+        validateGainLossSimpleTransactionInvariant(
+          transaction.bookings.map((booking) =>
+            booking.accountKey === GAIN_LOSS_ACCOUNT_KEY
+              ? {
+                  type: AccountType.EQUITY,
+                  equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+                }
+              : household.accounts.find(
+                  (account) => account.key === booking.accountKey,
+                )!,
+          ),
         ),
-      ),
-    ).toBeNull();
+      ).toBeNull();
+    }
   });
 
   it("isolates missing valuation and crosses a month boundary without future bookings", () => {

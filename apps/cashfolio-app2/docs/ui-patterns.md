@@ -502,6 +502,40 @@ The form's `transformValues` splits these into separate `type` and
 selected tab and the Type field is always disabled — it cannot be changed after
 creation. The server enforces this by rejecting type changes on update.
 
+## Explicit Gain/Loss for Manually Valued Accounts
+
+Use the system-managed **Gain/Loss** equity account to record value changes in
+accounts valued manually, such as managed or discretionary portfolios. Represent
+the portfolio as an asset account in its reporting currency, tracking its total
+reported monetary value rather than individual securities.
+
+Record contributions and withdrawals as transfers between the portfolio and the
+funding or receiving account. When a new portfolio statement arrives, calculate:
+
+**adjustment = reported value − balance after contributions and withdrawals**
+
+Book that adjustment against Gain/Loss in a simple transaction with exactly two
+bookings in the same currency on the statement date:
+
+- A gain increases the portfolio balance and credits Gain/Loss (negative raw
+  equity booking).
+- A loss decreases the portfolio balance and debits Gain/Loss (positive raw
+  equity booking).
+
+For example, a CHF 50,000 portfolio receiving a CHF 250 contribution has a
+pre-adjustment balance of CHF 50,250. A statement value of CHF 50,850 requires a
+CHF 600 gain. If a subsequent CHF 1,000 withdrawal reduces that balance to CHF
+49,850 and the next statement reports CHF 49,500, book a CHF 350 loss. Cash
+flows themselves are transfers, not investment performance.
+
+Individual security and cryptocurrency holdings already produce calculated
+gains/losses through automatic valuation and holding calculations. Do not also
+book their calculated value changes explicitly; that would count performance
+twice. The Gain/Loss account is not intended for routine cash rounding
+adjustments. Reports and History attribute explicit gains/losses to the
+corresponding manually valued account separately from calculated holding
+results.
+
 ## Ledger Page Pattern
 
 The account ledger (`src/routes/$accountBookId/$accountId/index.tsx`) shows all
