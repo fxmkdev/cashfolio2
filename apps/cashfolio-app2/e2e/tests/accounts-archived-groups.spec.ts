@@ -114,10 +114,10 @@ for (const tab of [
     await expect(rootArchive).toHaveAttribute("aria-expanded", "false");
     await expect(groupArchive).toHaveAttribute("aria-expanded", "false");
     await expect(agGridRowByText(page, "A Closed Group")).toHaveCount(0);
-    await revealRowActions(groupArchive);
-    await expect(groupArchive.locator('[col-id="actions"] button')).toHaveCount(
-      0,
-    );
+    const groupActionRow = await revealRowActions(groupArchive);
+    await expect(
+      groupActionRow.locator('[col-id="actions"] button'),
+    ).toHaveCount(0);
     // Return the name column to view after checking the action column.
     await page.locator(".ag-grid-viewport").evaluate((element) => {
       element.scrollLeft = 0;
@@ -156,9 +156,9 @@ for (const tab of [
     await expect(
       page.locator(`[row-id="__archived__:group:${closed.id}"]`),
     ).toHaveCount(0);
-    await revealRowActions(leaf);
+    const leafActionRow = await revealRowActions(leaf);
     await expect(
-      leaf.getByRole("button", { name: "Unarchive" }),
+      leafActionRow.getByRole("button", { name: "Unarchive" }),
     ).toBeDisabled();
     await clickRowAction(closedRow, "Edit");
     const dialog = page.getByRole("dialog").filter({

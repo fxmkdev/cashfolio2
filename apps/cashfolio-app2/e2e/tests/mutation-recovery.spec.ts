@@ -192,8 +192,10 @@ for (const nodeType of ["account", "accountGroup"] as const) {
     await expandArchivedGroups(page);
     const row = agGridRowByText(page, name);
     await expect(row).toBeVisible();
-    await revealRowActions(row);
-    await expect(row.getByRole("button", { name: "Unarchive" })).toBeEnabled();
+    const actionRow = await revealRowActions(row);
+    await expect(
+      actionRow.getByRole("button", { name: "Unarchive" }),
+    ).toBeEnabled();
     await prisma.accountGroup.update({
       where: {
         id_accountBookId: { id: parentId, accountBookId: seeded.accountBookId },

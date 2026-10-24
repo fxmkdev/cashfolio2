@@ -15,3 +15,9 @@ export const assetClassOptions = Object.values(AssetClass).map((value) => ({
   value,
   label: assetClassLabels[value],
 }));
+
+export function getAssetClassLabel(
+  assetClass: AssetClass | null | undefined,
+): string {
+  return assetClass == null ? "Unclassified" : assetClassLabels[assetClass];
+}

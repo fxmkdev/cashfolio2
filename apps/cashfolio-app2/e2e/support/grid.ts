@@ -25,14 +25,26 @@ export async function expandArchivedGroups(page: Page) {
 }
 
 export async function revealRowActions(row: Locator) {
-  await row.hover();
+  const viewport = row.page().locator(".ag-grid-viewport").first();
+  await viewport.evaluate((element) => {
+    element.scrollLeft = 0;
+  });
+  const rowId = await row.getAttribute("row-id");
+  if (rowId == null) throw new Error("The grid row has no stable ID.");
+  const stableRow = row
+    .page()
+    .locator(
+      `.ag-grid-scrolling-container > .ag-row[row-id=${JSON.stringify(rowId)}]`,
+    );
+  await stableRow.hover();
   // Virtualised action columns are only mounted after scrolling into view.
-  await row.evaluate((element) => {
+  await stableRow.evaluate((element) => {
     const viewport = element
       .closest(".ag-root-wrapper")
       ?.querySelector(".ag-grid-viewport");
     if (viewport) viewport.scrollLeft = viewport.scrollWidth;
   });
+  return stableRow;
 }
 
 export async function clickRowAction(
@@ -46,8 +58,15 @@ export async function clickRowAction(
     | "Unarchive"
     | "Reorder Siblings",
 ) {
-  await revealRowActions(row);
-  await row.getByRole("button", { name: actionLabel }).click();
+  const stableRow = await revealRowActions(row);
+  await stableRow.getByRole("button", { name: actionLabel }).click();
+  await row
+    .page()
+    .locator(".ag-grid-viewport")
+    .first()
+    .evaluate((element) => {
+      element.scrollLeft = 0;
+    });
 }
 
 export async function clickPinnedRowAction(args: {

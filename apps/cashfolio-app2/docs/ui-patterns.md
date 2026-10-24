@@ -255,6 +255,11 @@ Unit, cash flags, groups, or other fields. Users can choose any class or clear
 back to Unclassified. Income, expense, and system equity accounts do not expose
 this selector.
 
+Assets and liabilities show classification beside the type and unit badges in
+the ledger header. The gray pill uses the light variant for a selected class and
+the outline variant for Unclassified, including on archived accounts. Its title
+includes the field name and full label. Equity accounts have no pill.
+
 The current classification will apply to all historical periods once asset-class
 reporting is introduced. Changing it does not change amounts or valuation. This
 first version stores classification only; current reports and Explicit G/L
@@ -471,8 +476,12 @@ sign; debt amounts are positive magnitudes in those reports.
   Accounts and both category tabs, including when archived items are visible.
 - G/L figures use the order `Total`, `Realised`, `Unrealised` in the Accounts
   grid, account summary, calculation drawer, and period reconciliation cards.
-- The Accounts scope (`BALANCE`) renders `Ccy.`, `Symbol`, `Balance`, and
-  `Balance (<referenceCurrency>)`.
+- The Accounts scope (`BALANCE`) renders `Asset Class`, `Ccy.`, `Symbol`,
+  `Balance`, and `Balance (<referenceCurrency>)`.
+- `Asset Class` follows `Name`, starts at 220px, and can be resized. Its text
+  filter and tooltip use the full display label. Unset accounts show muted
+  `Unclassified`; group, virtual Archived, and total rows stay blank. The column
+  preserves the existing sibling ordering and grid-only horizontal scrolling.
 - `Balance` is account-level only (group rows are blank), with no aggregation.
 - Currency accounts whose currency matches the account book reference currency
   leave `Ccy.` and `Balance` blank to avoid duplicating the value already shown

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import {
   AccountType,
+  AssetClass,
   EquityAccountSubtype,
   Unit,
 } from "@/.prisma-client/enums";
@@ -55,6 +56,7 @@ const statementImportCsvFormat: StatementImportCsvFormat = {
 };
 
 const assetAccount = {
+  assetClass: null,
   id: "account-checking",
   name: "Checking",
   isActive: true,
@@ -146,6 +148,7 @@ function LedgerPageStoryHarness({
   accountActionsDisabled = false,
   equitySubtype,
   returnLabel,
+  assetClass = null,
 }: {
   routeSmoke?: boolean;
   includePeriodFilterControls?: boolean;
@@ -157,6 +160,7 @@ function LedgerPageStoryHarness({
   accountActionsDisabled?: boolean;
   equitySubtype?: EquityAccountSubtype;
   returnLabel?: string;
+  assetClass?: AssetClass | null;
 }) {
   const [accountEditModalOpened, setAccountEditModalOpened] = useState(false);
   const [archivingAccount, setArchivingAccount] = useState<
@@ -253,7 +257,12 @@ function LedgerPageStoryHarness({
           isCashAccount: false,
           groupPathSegments: ["Equity"],
         }
-      : { ...assetAccount, isActive: accountActive };
+      : {
+          ...assetAccount,
+          type: accountType,
+          isActive: accountActive,
+          assetClass,
+        };
 
   const setPeriodFilter = (nextPeriodValue: string | undefined) => {
     navigate({
@@ -349,6 +358,7 @@ function LedgerPageStoryHarness({
         splitModalOpened={splitModalOpened}
         accountEditModalOpened={accountEditModalOpened}
         accountEditInitialValues={{
+          assetClass: account.assetClass,
           name: account.name,
           type: account.type,
           equityAccountSubtype: account.equityAccountSubtype,
@@ -612,10 +622,65 @@ export const HappyPath: Story = {
     await expect(canvas.getByText("Account", { exact: true })).toBeVisible();
     await expect(canvas.getByText("CHF")).toBeVisible();
     await expect(
+      canvas.getByTitle("Asset Class: Unclassified"),
+    ).toHaveAttribute("data-variant", "outline");
+    await expect(
       canvas.queryByRole("link", { name: "Accounts" }),
     ).not.toBeInTheDocument();
     await expect(
       canvas.queryByRole("link", { name: "Archive" }),
+    ).not.toBeInTheDocument();
+  },
+};
+
+export const ClassifiedAsset: Story = {
+  render: () => (
+    <LedgerPageStoryHarness
+      assetClass={AssetClass.COMMODITIES_AND_PRECIOUS_METALS}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByTitle(
+        "Asset Class: Commodities & Precious Metals",
+      ),
+    ).toHaveAttribute("data-variant", "light");
+  },
+};
+
+export const UnclassifiedLiability: Story = {
+  render: () => <LedgerPageStoryHarness accountType={AccountType.LIABILITY} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("Liability", { exact: true })).toBeVisible();
+    await expect(
+      canvas.getByTitle("Asset Class: Unclassified"),
+    ).toHaveAttribute("data-variant", "outline");
+  },
+};
+
+export const ArchivedClassifiedLiability: Story = {
+  render: () => (
+    <LedgerPageStoryHarness
+      accountType={AccountType.LIABILITY}
+      accountActive={false}
+      assetClass={AssetClass.FIXED_INCOME}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("Archived", { exact: true })).toBeVisible();
+    await expect(
+      canvas.getByTitle("Asset Class: Fixed Income"),
+    ).toHaveAttribute("data-variant", "light");
+  },
+};
+
+export const EquityWithoutAssetClass: Story = {
+  render: () => <LedgerPageStoryHarness accountType={AccountType.EQUITY} />,
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).queryByTitle(/^Asset Class:/),
     ).not.toBeInTheDocument();
   },
 };

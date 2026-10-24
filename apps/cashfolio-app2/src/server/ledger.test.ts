@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AccountType, Unit } from "../.prisma-client/enums";
+import { AccountType, AssetClass, Unit } from "../.prisma-client/enums";
 import { toMoney } from "../shared/money";
 
 const mocks = vi.hoisted(() => ({
@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   convertBookingValueToReference: vi.fn(),
   prisma: {
     account: { findUniqueOrThrow: vi.fn() },
+    accountGroup: { findMany: vi.fn() },
     accountBook: { findUniqueOrThrow: vi.fn() },
     booking: { findMany: vi.fn() },
   },
@@ -37,7 +38,38 @@ vi.mock("./period/period-conversion", () => ({
   convertBookingValueToReference: mocks.convertBookingValueToReference,
 }));
 
-import { getLedgerData } from "./ledger";
+import { getLedgerData, getAccountForLedger } from "./ledger";
+
+describe("ledger account classification", () => {
+  beforeEach(() => vi.resetAllMocks());
+
+  it.each([null, AssetClass.OTHER_ASSETS])(
+    "returns classification %s for the header",
+    async (assetClass) => {
+      mocks.prisma.account.findUniqueOrThrow.mockResolvedValue({
+        id: "account-1",
+        groupId: null,
+        assetClass,
+      });
+      mocks.prisma.accountGroup.findMany.mockResolvedValue([]);
+      const account = await getAccountForLedger({
+        data: { accountId: "account-1", accountBookId: "book-1" },
+      });
+      expect(account.assetClass).toBe(assetClass);
+      expect(mocks.prisma.account.findUniqueOrThrow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            id_accountBookId: { id: "account-1", accountBookId: "book-1" },
+          },
+          select: expect.objectContaining({ assetClass: true }),
+        }),
+      );
+      expect(mocks.ensureAuthorizedForAccountBookId).toHaveBeenCalledWith(
+        "book-1",
+      );
+    },
+  );
+});
 
 describe("getLedgerData reference currency", () => {
   beforeEach(() => {
