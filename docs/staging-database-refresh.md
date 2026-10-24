@@ -51,6 +51,48 @@ living, and Leisure and travel are top-level expense groups; income, debts,
 Taxes, and Bank and trading fees are ungrouped. Closed accounts stay under their
 real institutions, with archived groups retaining their original subtrees.
 
+## Test a manually valued managed portfolio
+
+In `1. Swiss Household Demo`, open `Investments → Managed Portfolio CHF`. This
+non-cash CHF asset account tracks the reported total value of a discretionary
+portfolio. It has no individual security or crypto holdings and requires no
+market quotes. See the
+[manual Gain/Loss workflow](../apps/cashfolio-app2/docs/ui-patterns.md#explicit-gainloss-for-manually-valued-accounts).
+
+The portfolio starts with CHF 50,000 on the book's opening-balance date and
+includes three years of cash flows and monthly statement valuations:
+
+| Event               | Schedule                                          | Bookings                                         |
+| ------------------- | ------------------------------------------------- | ------------------------------------------------ |
+| Contribution        | Fifth of each month                               | Everyday account CHF −250; portfolio +250        |
+| Withdrawal          | June 20 each year                                 | Portfolio −1,000; Everyday account CHF +1,000    |
+| Statement valuation | Historical month-end; today for the current month | Portfolio adjustment; opposite Gain/Loss booking |
+
+Only cash-flow dates within the book's active range through today are included.
+Statement adjustments repeat **+600, −350, +450, +250, −200, +500 CHF**,
+beginning with the book's first calendar month. These synthetic changes
+represent the difference between a statement's reported value and the balance
+after cash flows. They are not contributions, withdrawals, or automatically
+calculated holding returns. Search for `Managed portfolio:` to find the
+transactions. The previous cash rounding adjustment is no longer seeded.
+
+In the portfolio ledger, inspect the running balance and the separate
+contribution, withdrawal, and statement valuation transactions. In Report,
+switch Gains/Losses to Table and inspect `Explicit G/L → Managed Portfolio CHF`;
+double-click the portfolio row to open the system Gain/Loss ledger for that
+period. In History, select Gains/Losses and the
+`Explicit G/L / Managed Portfolio CHF` scope to inspect the monthly series.
+
+For the automated fixture dated **2026-10-10**, there are 37 statement
+valuations with **CHF 8,100** cumulative explicit gains, CHF 9,000 of
+contributions, and CHF 3,000 of withdrawals. The portfolio balance is **CHF
+64,100**. October 2026 has a CHF 600 explicit gain; November 2023 has a CHF 350
+explicit loss. These CHF figures are independent of live market rates. For other
+seed dates, cash-flow counts and the final balance follow the schedule above.
+
+The example becomes available through the normal enabled staging refresh or
+deployment; changing the seed source does not reset staging immediately.
+
 ## Test archived groups and accumulated G/L
 
 The household includes closed bank accounts under Zürcher Kantonalbank and

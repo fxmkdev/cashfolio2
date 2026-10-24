@@ -346,6 +346,13 @@ to update `sortOrder` values after reordering sibling rows in the reorder modal.
 
 ## Period Overview Gain/Loss
 
+Explicit Gain/Loss bookings record statement value adjustments for manually
+valued accounts, such as managed or discretionary portfolios. Contributions and
+withdrawals remain transfers; automatically valued holdings use calculated
+holding results. See
+[Explicit Gain/Loss for manually valued accounts](ui-patterns.md#explicit-gainloss-for-manually-valued-accounts)
+for the workflow, adjustment formula, and booking signs.
+
 The canonical period gain/loss semantics are shared between:
 
 - `getPeriodOverview` (`src/server/period.ts`)
