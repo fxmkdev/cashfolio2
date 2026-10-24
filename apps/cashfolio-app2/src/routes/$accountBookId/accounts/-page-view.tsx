@@ -254,21 +254,23 @@ export function AccountsPageView({
         recovery={unarchiveRecovery}
         onRefreshConstraints={onRefreshConstraints}
       />
-      <Tabs value={tab}>
-        <Tabs.List mb="md">
-          {tabs.map((t) => (
-            <LinkTab
-              key={t.value}
-              value={t.value}
-              to={managementPath}
-              params={{ accountBookId }}
-              search={{ tab: t.value, mode: isCategories ? mode : "active" }}
-            >
-              {t.label}
-            </LinkTab>
-          ))}
-        </Tabs.List>
-      </Tabs>
+      {isCategories && (
+        <Tabs value={tab}>
+          <Tabs.List mb="md">
+            {tabs.map((t) => (
+              <LinkTab
+                key={t.value}
+                value={t.value}
+                to={managementPath}
+                params={{ accountBookId }}
+                search={{ tab: t.value, mode: isCategories ? mode : "active" }}
+              >
+                {t.label}
+              </LinkTab>
+            ))}
+          </Tabs.List>
+        </Tabs>
+      )}
 
       {!isCategories && (
         <Text size="sm" c="dimmed" mb="sm">

@@ -120,7 +120,7 @@ describe("transformAccountValues", () => {
     ).toBeNull();
   });
 
-  test("keeps cash flag for currency asset accounts", () => {
+  test("keeps cash flag for currency accounts", () => {
     expect(
       transformAccountValues({
         name: "Checking",
@@ -243,9 +243,7 @@ describe("account cash group helpers", () => {
         type: AccountType.ASSET,
         unit: Unit.SECURITY,
       }),
-    ).toBe(
-      "Only root-level currency asset accounts can be marked as cash accounts.",
-    );
+    ).toBe("Only root-level currency accounts can be marked as cash accounts.");
   });
 
   test("blocks cash group options for non-currency assets", () => {
@@ -268,7 +266,6 @@ describe("account cash group helpers", () => {
   test.each([
     ["security asset", AccountType.ASSET, Unit.SECURITY],
     ["crypto asset", AccountType.ASSET, Unit.CRYPTOCURRENCY],
-    ["liability", AccountType.LIABILITY, Unit.CURRENCY],
     ["equity", AccountType.EQUITY, Unit.CURRENCY],
   ])(
     "returns a group error when moving a %s account into a cash group",
@@ -280,20 +277,23 @@ describe("account cash group helpers", () => {
           groupId: "cash-group",
           accountGroups,
         }),
-      ).toBe("Cash account groups can contain only currency asset accounts.");
+      ).toBe("Cash account groups can contain only currency accounts.");
     },
   );
 
-  test("allows currency asset accounts in cash groups", () => {
-    expect(
-      getAccountCashParentCompatibilityError({
-        accountType: AccountType.ASSET,
-        accountUnit: Unit.CURRENCY,
-        groupId: "cash-group",
-        accountGroups,
-      }),
-    ).toBeNull();
-  });
+  test.each([AccountType.ASSET, AccountType.LIABILITY])(
+    "allows currency %s accounts in cash groups",
+    (accountType) => {
+      expect(
+        getAccountCashParentCompatibilityError({
+          accountType,
+          accountUnit: Unit.CURRENCY,
+          groupId: "cash-group",
+          accountGroups,
+        }),
+      ).toBeNull();
+    },
+  );
 
   test("applies inherited cash status before submit", () => {
     expect(

@@ -34,11 +34,11 @@ export function getLedgerAccountKindBadgeProps(account: {
 }): LedgerAccountKindBadgeProps {
   const label = getTypeLabel(account.type, account.equityAccountSubtype);
 
-  if (account.type === AccountType.ASSET) {
-    return { label, color: "green", variant: "light" };
-  }
-  if (account.type === AccountType.LIABILITY) {
-    return { label, color: "red", variant: "light" };
+  if (
+    account.type === AccountType.ASSET ||
+    account.type === AccountType.LIABILITY
+  ) {
+    return { label, color: "gray", variant: "light" };
   }
   if (account.equityAccountSubtype === EquityAccountSubtype.INCOME) {
     return { label, color: "green", variant: "filled" };
@@ -126,7 +126,7 @@ export function getSimpleTransactionDisabledReason(args: {
     account.type !== AccountType.ASSET &&
     account.type !== AccountType.LIABILITY
   ) {
-    return "Simple transactions are only available for asset and liability accounts.";
+    return "Simple transactions are only available for accounts.";
   }
   if (!currentSimpleUnitIdentifier) {
     return "Simple transactions require a current account with a complete unit.";

@@ -90,7 +90,8 @@ export function useEditAccountModalController({
       openingBalance: (value, values) => {
         if (
           values.typeDescriptor !== AccountType.ASSET &&
-          values.typeDescriptor !== AccountType.LIABILITY
+          values.typeDescriptor !== AccountType.LIABILITY &&
+          values.typeDescriptor !== "BALANCE"
         ) {
           return null;
         }
@@ -102,30 +103,30 @@ export function useEditAccountModalController({
           : "Opening balance is invalid";
       },
       unit: (value, values) =>
-        validateAccountUnit(value, values.typeDescriptor as AccountType),
+        validateAccountUnit(value, transformAccountValues(values).type),
       currency: (value, values) =>
         validateAccountCurrency(
           value,
           values.unit,
-          values.typeDescriptor as AccountType,
+          transformAccountValues(values).type,
         ),
       cryptocurrency: (value, values) =>
         validateAccountCryptocurrency(
           value,
           values.unit,
-          values.typeDescriptor as AccountType,
+          transformAccountValues(values).type,
         ),
       symbol: (value, values) =>
         validateAccountSymbol(
           value,
           values.unit,
-          values.typeDescriptor as AccountType,
+          transformAccountValues(values).type,
         ),
       tradeCurrency: (value, values) =>
         validateAccountTradeCurrency(
           value,
           values.unit,
-          values.typeDescriptor as AccountType,
+          transformAccountValues(values).type,
         ),
       statementImportCsvFormat: (value, values) =>
         validateStatementImportCsvFormatFormValue(value, values.typeDescriptor),
@@ -179,7 +180,8 @@ export function useEditAccountModalController({
     form.getValues(),
   );
   const canMarkAsCashAccount =
-    type === AccountType.ASSET && unit === Unit.CURRENCY;
+    (type === AccountType.ASSET || type === AccountType.LIABILITY) &&
+    unit === Unit.CURRENCY;
   const groupId = form.getValues().groupId;
   const cashAccountEditable = isRootCashAccountEditable({
     type,

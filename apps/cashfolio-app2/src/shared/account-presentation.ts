@@ -14,6 +14,22 @@ export function isBalanceAccount(account: AccountClassification): boolean {
   );
 }
 
+export function isAccountGroupCompatible(
+  account: AccountClassification,
+  group: { type: string; equityAccountSubtype?: string | null },
+): boolean {
+  if (isBalanceAccount(account)) {
+    return (
+      group.type === AccountType.ASSET || group.type === AccountType.LIABILITY
+    );
+  }
+  return (
+    group.type === AccountType.EQUITY &&
+    (!group.equityAccountSubtype ||
+      group.equityAccountSubtype === account.equityAccountSubtype)
+  );
+}
+
 export function isCategoryAccount(account: AccountClassification): boolean {
   return (
     account.type === AccountType.EQUITY &&

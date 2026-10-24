@@ -1,3 +1,7 @@
+import {
+  type AccountTypeScope,
+  getPersistedAccountTypeFilter,
+} from "../../shared/account-tabs";
 import { toMoney, type Money, moneyMultiply } from "../../shared/money";
 import type {
   AccountType,
@@ -26,7 +30,7 @@ export type AccountReferenceBalanceSource = {
 export function getAccountsWhereClause(args: {
   accountBookId: string;
   accountState: AccountState;
-  type?: AccountType;
+  type?: AccountTypeScope;
   equityAccountSubtype?: EquityAccountSubtype;
 }) {
   return {
@@ -34,7 +38,7 @@ export function getAccountsWhereClause(args: {
     ...(args.accountState === "all"
       ? {}
       : { isActive: args.accountState === "active" }),
-    type: args.type,
+    type: getPersistedAccountTypeFilter(args.type),
     ...(args.equityAccountSubtype
       ? { equityAccountSubtype: args.equityAccountSubtype }
       : undefined),

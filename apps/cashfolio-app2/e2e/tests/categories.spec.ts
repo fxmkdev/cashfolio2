@@ -48,7 +48,7 @@ test("settings hosts categories without changing primary navigation or general s
   await page.getByRole("link", { name: "Accounts", exact: true }).click();
   await expect(
     page.getByRole("tab", { name: "Assets", exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(
     page.getByRole("tab", { name: "Income", exact: true }),
   ).toHaveCount(0);

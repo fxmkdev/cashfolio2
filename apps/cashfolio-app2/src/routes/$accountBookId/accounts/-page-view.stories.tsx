@@ -249,7 +249,7 @@ function getRowsFor(args: { mode: AccountsMode; tab: TabValue }): TreeRow[] {
       archivable: args.mode === "active",
       unarchivable: args.mode === "archived",
     }));
-  if (args.tab !== "ASSET") return [];
+  if (args.tab !== "BALANCE") return [];
   return args.mode === "archived" ? archivedAssetRows : activeAssetRows;
 }
 
@@ -276,7 +276,7 @@ function AccountsPageStoryHarness({
   gainLossState: initialGainLossState = "ready",
   toggleGainLossLoading = false,
   initialMode,
-  initialTab = "ASSET",
+  initialTab = "BALANCE",
   startWithCreateModal = false,
   startWithEditModal = false,
   routeSmoke = false,
@@ -864,6 +864,16 @@ export const CreateModalOpen: Story = {
       startWithCreateModal={true}
     />
   ),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole("dialog", { name: "New Account" });
+    expect(
+      within(dialog).queryByRole("combobox", { name: "Type" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(canvasElement).queryByRole("tablist"),
+    ).not.toBeInTheDocument();
+  },
 };
 
 export const EditModalOpen: Story = {
@@ -875,7 +885,7 @@ export const EditModalOpen: Story = {
 export const RouteSmoke: Story = {
   parameters: {
     router: {
-      initialPath: "/storybook-book/accounts?tab=ASSET&mode=active",
+      initialPath: "/storybook-book/accounts?tab=BALANCE&mode=active",
     },
   },
   render: () => (
@@ -889,9 +899,9 @@ export const RouteSmoke: Story = {
     expect(
       canvas.getByRole("heading", { name: "Accounts" }),
     ).toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("tab", { name: "Liabilities" }));
+    expect(canvas.queryByRole("tablist")).not.toBeInTheDocument();
     await expect(canvas.getByTestId("router-search")).toHaveTextContent(
-      '"tab":"LIABILITY"',
+      '"tab":"BALANCE"',
     );
     await expect(canvas.getByTestId("router-search")).toHaveTextContent(
       '"mode":"active"',
@@ -1096,7 +1106,7 @@ export const SignedLiabilityBalances: Story = {
   render: () => (
     <AccountsPageStoryHarness
       initialMode="active"
-      initialTab="LIABILITY"
+      initialTab="BALANCE"
       expandGroups
       rowsOverride={[
         {
@@ -1164,7 +1174,7 @@ export const SignedLiabilityBalances: Story = {
 export const LocalizedLiabilityGainLoss: Story = {
   render: () => (
     <UserLocaleProvider locale="de-CH">
-      <AccountsPageStoryHarness initialMode="active" initialTab="LIABILITY" />
+      <AccountsPageStoryHarness initialMode="active" initialTab="BALANCE" />
     </UserLocaleProvider>
   ),
   play: async ({ canvasElement }) => {
@@ -1227,5 +1237,63 @@ export const CategoriesMobile: Story = {
   parameters: {
     ...ExpenseCategories.parameters,
     viewport: { defaultViewport: "cashfolioMobile" },
+  },
+};
+
+export const MixedBalanceHierarchy: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      expandGroups
+      rowsOverride={[
+        {
+          ...createGroupRow({
+            id: "banking",
+            name: "Banking",
+            type: AccountType.ASSET,
+            isActive: true,
+            sortOrder: 0,
+          }),
+          balanceInReferenceCurrency: 40,
+        },
+        createAccountRow({
+          id: "bank",
+          name: "Bank Balance",
+          groupId: "banking",
+          type: AccountType.ASSET,
+          isActive: true,
+          sortOrder: 0,
+          currency: "CHF",
+          balance: 100,
+          balanceInReferenceCurrency: 100,
+        }),
+        createAccountRow({
+          id: "credit",
+          name: "Credit Balance",
+          groupId: "banking",
+          type: AccountType.LIABILITY,
+          isActive: true,
+          sortOrder: 1,
+          currency: "CHF",
+          balance: -60,
+          balanceInReferenceCurrency: -60,
+        }),
+      ]}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    expect(canvas.queryByRole("tablist")).not.toBeInTheDocument();
+    await expect(
+      canvas.findByText("Bank Balance", { exact: true }),
+    ).resolves.toBeVisible();
+    await expect(
+      canvas.findByText("Credit Balance", { exact: true }),
+    ).resolves.toBeVisible();
+    expect(
+      canvasElement.querySelector(
+        '[row-id="banking"] [col-id="balanceInReferenceCurrency"]',
+      ),
+    ).toHaveTextContent("40.00");
   },
 };

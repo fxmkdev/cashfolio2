@@ -1,52 +1,36 @@
 import { useCallback, useRef } from "react";
+import { readExpandedGroupPreference } from "../shared/expanded-group-preference";
 import type {
   IsGroupOpenByDefaultParams,
   RowGroupOpenedEvent,
 } from "ag-grid-enterprise";
 
-function parseStoredExpandedIds(stored: string): string[] | null {
-  try {
-    const parsed = JSON.parse(stored);
-    if (!Array.isArray(parsed)) {
-      return null;
-    }
-
-    return parsed.filter((item): item is string => typeof item === "string");
-  } catch {
-    return null;
-  }
-}
-
 export function useExpandedGroups(
   storageKey: string,
   isInitiallyCollapsed?: (data: unknown) => boolean,
+  legacyStorageKeys?: readonly string[],
 ) {
   const storageKeyRef = useRef(storageKey);
   storageKeyRef.current = storageKey;
+  const legacyStorageKeysRef = useRef(legacyStorageKeys);
+  legacyStorageKeysRef.current = legacyStorageKeys;
 
   const isGroupOpenByDefault = useCallback(
     (params: IsGroupOpenByDefaultParams) => {
       const defaultIsOpen =
         params.rowNode.level === 0 &&
         !isInitiallyCollapsed?.(params.rowNode.data);
-      let stored: string | null;
+      let expandedIds: string[] | null;
       try {
-        stored = sessionStorage.getItem(storageKeyRef.current);
+        expandedIds = readExpandedGroupPreference(
+          sessionStorage,
+          storageKeyRef.current,
+          legacyStorageKeysRef.current,
+        );
       } catch {
         return defaultIsOpen;
       }
-
-      if (stored == null) {
-        return defaultIsOpen;
-      }
-
-      const expandedIds = parseStoredExpandedIds(stored);
       if (expandedIds == null) {
-        try {
-          sessionStorage.removeItem(storageKeyRef.current);
-        } catch {
-          // Ignore storage cleanup failures.
-        }
         return defaultIsOpen;
       }
 

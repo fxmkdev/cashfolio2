@@ -27,11 +27,15 @@ export const Route = createFileRoute("/$accountBookId/accounts")({
         replace: true,
       });
     }
-    if (new URLSearchParams(location.searchStr).get("mode") === "archived") {
+    const rawSearch = new URLSearchParams(location.searchStr);
+    if (
+      rawSearch.get("mode") === "archived" ||
+      rawSearch.get("tab") !== "BALANCE"
+    ) {
       throw redirect({
         to: "/$accountBookId/accounts",
         params,
-        search: { tab: search.tab, mode: "active" },
+        search: { tab: "BALANCE", mode: "active" },
         replace: true,
       });
     }

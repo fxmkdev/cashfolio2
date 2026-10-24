@@ -1,3 +1,4 @@
+import { isAccountGroupCompatible } from "@/shared/account-presentation";
 import {
   isCategoryAccount,
   getAccountConstraintMessage,
@@ -36,7 +37,8 @@ import { GroupTreeSelect } from "../account-tree/group-tree-select";
 
 type FormValues = {
   name?: string;
-  typeDescriptor?: "ASSET" | "LIABILITY" | `EQUITY-${EquityAccountSubtype}`;
+  typeDescriptor?:
+    "BALANCE" | "ASSET" | "LIABILITY" | `EQUITY-${EquityAccountSubtype}`;
   parentGroupId?: string;
   sortOrder?: number;
   isCashAccount?: boolean;
@@ -74,14 +76,19 @@ function toFormValues(initial: AccountGroupInitialValues): FormValues {
 function transformAccountGroupValues(
   values: FormValues,
 ): AccountGroupTransformedFormValues {
-  const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
-    []) as [AccountType, EquityAccountSubtype?];
+  const [descriptorType, equityAccountSubtype] = (values.typeDescriptor?.split(
+    "-",
+  ) ?? []) as [AccountType | "BALANCE", EquityAccountSubtype?];
+  const type =
+    descriptorType === "BALANCE" ? AccountType.ASSET : descriptorType;
 
   return {
     ...values,
     type,
     isCashAccount:
-      type === AccountType.ASSET ? (values.isCashAccount ?? false) : false,
+      type === AccountType.ASSET || type === AccountType.LIABILITY
+        ? (values.isCashAccount ?? false)
+        : false,
     ...(type === AccountType.EQUITY ? { equityAccountSubtype } : undefined),
   };
 }
@@ -286,7 +293,7 @@ export function EditAccountGroupModal({
       >
         <Stack gap="xl">
           <Grid>
-            <Grid.Col span={6}>
+            <Grid.Col span={isCategory ? 6 : 12}>
               <TextInput
                 label="Name"
                 name="name"
@@ -295,53 +302,55 @@ export function EditAccountGroupModal({
                 {...form.getInputProps("name")}
               />
             </Grid.Col>
-            <Grid.Col span={6}>
-              <Select
-                label="Type"
-                withAsterisk
-                withAlignedLabels
-                allowDeselect={false}
-                disabled
-                data={[
-                  {
-                    group: "Accounts",
-                    items: [
-                      {
-                        value: AccountType.ASSET,
-                        label: "Asset",
-                      },
-                      {
-                        value: AccountType.LIABILITY,
-                        label: "Liability",
-                      },
-                    ],
-                  },
-                  {
-                    group: "Categories",
-                    items: [
-                      {
-                        value: `${AccountType.EQUITY}-${EquityAccountSubtype.INCOME}`,
-                        label: "Income",
-                      },
-                      {
-                        value: `${AccountType.EQUITY}-${EquityAccountSubtype.EXPENSE}`,
-                        label: "Expense",
-                      },
-                    ],
-                  },
-                  {
-                    group: "System Accounts",
-                    items: [
-                      {
-                        value: `${AccountType.EQUITY}-${EquityAccountSubtype.OPENING_BALANCES}`,
-                        label: "Opening Balances",
-                      },
-                    ],
-                  },
-                ]}
-                {...form.getInputProps("typeDescriptor")}
-              />
-            </Grid.Col>
+            {isCategory && (
+              <Grid.Col span={6}>
+                <Select
+                  label="Type"
+                  withAsterisk
+                  withAlignedLabels
+                  allowDeselect={false}
+                  disabled
+                  data={[
+                    {
+                      group: "Accounts",
+                      items: [
+                        {
+                          value: AccountType.ASSET,
+                          label: "Asset",
+                        },
+                        {
+                          value: AccountType.LIABILITY,
+                          label: "Liability",
+                        },
+                      ],
+                    },
+                    {
+                      group: "Categories",
+                      items: [
+                        {
+                          value: `${AccountType.EQUITY}-${EquityAccountSubtype.INCOME}`,
+                          label: "Income",
+                        },
+                        {
+                          value: `${AccountType.EQUITY}-${EquityAccountSubtype.EXPENSE}`,
+                          label: "Expense",
+                        },
+                      ],
+                    },
+                    {
+                      group: "System Accounts",
+                      items: [
+                        {
+                          value: `${AccountType.EQUITY}-${EquityAccountSubtype.OPENING_BALANCES}`,
+                          label: "Opening Balances",
+                        },
+                      ],
+                    },
+                  ]}
+                  {...form.getInputProps("typeDescriptor")}
+                />
+              </Grid.Col>
+            )}
             <Grid.Col span={9}>
               <GroupTreeSelect
                 label={isCategory ? "Parent Category Group" : "Parent Group"}
@@ -349,10 +358,10 @@ export function EditAccountGroupModal({
                 clearable
                 groups={accountGroups.filter(
                   (g) =>
-                    g.type === type &&
-                    (!equityAccountSubtype ||
-                      !g.equityAccountSubtype ||
-                      g.equityAccountSubtype === equityAccountSubtype) &&
+                    isAccountGroupCompatible(
+                      { type, equityAccountSubtype },
+                      g,
+                    ) &&
                     g.value !== editingId &&
                     !descendantGroupIds.has(g.value),
                 )}
@@ -366,7 +375,7 @@ export function EditAccountGroupModal({
                 {...form.getInputProps("sortOrder")}
               />
             </Grid.Col>
-            {type === AccountType.ASSET ? (
+            {type === AccountType.ASSET || type === AccountType.LIABILITY ? (
               <Grid.Col span={12}>
                 <Tooltip
                   label={cashAccountDisabledReason}

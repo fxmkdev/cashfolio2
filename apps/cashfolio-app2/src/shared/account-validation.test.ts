@@ -48,7 +48,7 @@ describe("validateAccountTradeCurrency", () => {
 });
 
 describe("validateAccountCashAccountFlag", () => {
-  test("allows currency asset accounts to be marked as cash", () => {
+  test("allows currency accounts to be marked as cash", () => {
     expect(
       validateAccountCashAccountFlag(true, Unit.CURRENCY, AccountType.ASSET),
     ).toBeNull();
@@ -57,14 +57,10 @@ describe("validateAccountCashAccountFlag", () => {
   test("rejects non-currency asset cash accounts", () => {
     expect(
       validateAccountCashAccountFlag(true, Unit.SECURITY, AccountType.ASSET),
-    ).toBe("Cash accounts must be currency asset accounts");
+    ).toBe("Cash accounts must be currency accounts");
     expect(
-      validateAccountCashAccountFlag(
-        true,
-        Unit.CURRENCY,
-        AccountType.LIABILITY,
-      ),
-    ).toBe("Cash accounts must be currency asset accounts");
+      validateAccountCashAccountFlag(true, Unit.CURRENCY, AccountType.EQUITY),
+    ).toBe("Cash accounts must be currency accounts");
   });
 });
 
@@ -75,10 +71,10 @@ describe("validateAccountGroupCashAccountFlag", () => {
     ).toBeNull();
   });
 
-  test("rejects non-asset cash account groups", () => {
-    expect(
-      validateAccountGroupCashAccountFlag(true, AccountType.LIABILITY),
-    ).toBe("Cash account groups must be asset groups");
+  test("rejects category cash account groups", () => {
+    expect(validateAccountGroupCashAccountFlag(true, AccountType.EQUITY)).toBe(
+      "Cash account groups must be account groups",
+    );
   });
 });
 
@@ -169,7 +165,7 @@ describe("validateAccountInput", () => {
     };
 
     expect(() => validateAccountInput(invalid)).toThrowError(
-      "Cash accounts must be currency asset accounts",
+      "Cash accounts must be currency accounts",
     );
   });
 });
@@ -218,15 +214,15 @@ describe("validateAccountGroupInput", () => {
     ).toThrowError("Equity subtype is only allowed for equity groups");
   });
 
-  test("rejects cash flag on non-asset group input", () => {
+  test("rejects cash flag on category group input", () => {
     expect(() =>
       validateAccountGroupInput({
         accountBookId: "book-1",
         name: "Invalid cash group",
-        type: AccountType.LIABILITY,
+        type: AccountType.EQUITY,
         isCashAccount: true,
       }),
-    ).toThrowError("Cash account groups must be asset groups");
+    ).toThrowError("Cash account groups must be account groups");
   });
 });
 
