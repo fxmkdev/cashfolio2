@@ -351,6 +351,9 @@ submit UX and prevent duplicate requests.
 
 ## Period Breakdown Drill-Down Pattern
 
+- Income, expense, and allocation bars use the automatic category palette, like
+  donut sectors. Only Cash Flow bars opt into sign-based colors: green for
+  positive amounts, red for negative amounts, and gray for zero.
 - AG Charts 14 callbacks have no source datum for waterfall totals/subtotals.
   Use `itemType` to identify aggregate bars and the existing contribution model
   to format Savings and Total Return. Aggregate bars do not drill down.
