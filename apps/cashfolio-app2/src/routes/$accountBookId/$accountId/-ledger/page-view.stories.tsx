@@ -652,7 +652,7 @@ export const UnclassifiedLiability: Story = {
   render: () => <LedgerPageStoryHarness accountType={AccountType.LIABILITY} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("Liability", { exact: true })).toBeVisible();
+    await expect(canvas.getByText("Account", { exact: true })).toBeVisible();
     await expect(
       canvas.getByTitle("Asset Class: Unclassified"),
     ).toHaveAttribute("data-variant", "outline");
