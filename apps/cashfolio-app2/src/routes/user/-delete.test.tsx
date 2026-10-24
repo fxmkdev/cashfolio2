@@ -125,8 +125,8 @@ describe("user deletion routes", () => {
 
   it("identifies the Cashfolio identity and both affected-book groups", () => {
     const markup = renderPage();
-    expect(markup).toContain("Delete your Cashfolio account");
-    expect(markup).toContain("Delete my Cashfolio account");
+    expect(markup).toContain("Delete Your Cashfolio Account");
+    expect(markup).toContain("Delete My Cashfolio Account");
     expect(markup).toContain('action="/user/delete"');
     expect(markup).toContain("Ada");
     expect(markup).toContain("Private Book");

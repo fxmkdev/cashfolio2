@@ -130,7 +130,7 @@ export function DeleteUserModal({
     <Modal
       opened={opened}
       onClose={handleClose}
-      title={user?.deletionPending ? "Retry Deletion" : "Delete user"}
+      title={user?.deletionPending ? "Retry Deletion" : "Delete User"}
       size="md"
       closeOnEscape={!isSubmitting}
       closeOnClickOutside={!isSubmitting}
@@ -211,7 +211,7 @@ export function DeleteUserModal({
                 disabled={isSubmitting || !confirmationMatches}
                 leftSection={<IconTrash size={16} />}
               >
-                {user.deletionPending ? "Retry Deletion" : "Delete user"}
+                {user.deletionPending ? "Retry Deletion" : "Delete User"}
               </Button>
             </Group>
           </Stack>

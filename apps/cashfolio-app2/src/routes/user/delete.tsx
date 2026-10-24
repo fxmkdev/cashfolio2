@@ -37,7 +37,7 @@ export const Route = createFileRoute("/user/delete")({
       preview: await getUserDeletionPreview(),
     };
   },
-  head: () => createDocumentTitleHead("Delete your Cashfolio account"),
+  head: () => createDocumentTitleHead("Delete Your Cashfolio Account"),
   server: {
     handlers: {
       POST: async ({ request }) => {
@@ -64,7 +64,7 @@ function UserDeletePage() {
   return (
     <Container size="sm" py="xl">
       <Stack gap="lg">
-        <Title order={1}>Delete your Cashfolio account</Title>
+        <Title order={1}>Delete Your Cashfolio Account</Title>
         <Text c="dimmed">
           This permanently deletes your Cashfolio account ({preview.displayName}
           ) and sign-in access.
@@ -82,7 +82,7 @@ function UserDeletePage() {
 
         <Stack gap="xs">
           <Title order={2} size="h3">
-            Account books to delete
+            Account Books to Delete
           </Title>
           <AccountBookList
             accountBooks={preview.accountBooksToDelete}
@@ -92,7 +92,7 @@ function UserDeletePage() {
 
         <Stack gap="xs">
           <Title order={2} size="h3">
-            Account books to leave shared
+            Account Books to Leave Shared
           </Title>
           <AccountBookList
             accountBooks={preview.accountBooksToUnlink}
@@ -109,7 +109,7 @@ function UserDeletePage() {
               leftSection={<IconTrash size={16} />}
               type="submit"
             >
-              Delete my Cashfolio account
+              Delete My Cashfolio Account
             </Button>
           </Group>
         </form>

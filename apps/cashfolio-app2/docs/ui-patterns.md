@@ -125,16 +125,7 @@ name, match its label, such as "Choose a Target Account."
   and proper nouns; normal sentence punctuation applies to explanatory
   sentences.
 
-#### Explicit exceptions and preserved content
-
-The identity terminology below takes precedence over Title Case. Preserve
-`Cashfolio account`, `Sign-in & security`, `Delete your Cashfolio account`,
-`Delete my Cashfolio account`, `Cashfolio account deleted`, and the admin action
-`Delete user`, including their use as titles and actions. Keep `User Settings`
-as written. These exceptions do not make unrelated labels such as
-`Email Address` or `Retry Deletion` sentence case. The deletion page's existing
-identity-flow headings `Account books to delete` and
-`Account books to leave shared` also remain in sentence case.
+#### Preserved content
 
 Never recase user/book/account names, imported descriptions, provider names,
 symbols, currency codes, dates, filenames, URLs, JSON keys, or confirmation
@@ -163,16 +154,18 @@ pages are outside this policy's implementation scope.
 Cashfolio has distinct `User`, `AccountBook`, and `Account` entities. Keep their
 names distinct in routes, modules, types, functions, props, tests, and docs:
 
-| Concept                            | App-owned code                                                     | Customer-facing wording                                    |
-| ---------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------- |
-| Sign-in identity                   | `User`, `user-deletion`, `deleteAuthenticatedUser`, `/user/delete` | "Cashfolio account", "Delete my Cashfolio account"         |
-| Identity security                  | `userSecurityUrl`, `getUserSecurityUrl`                            | "Sign-in & security"                                       |
-| Financial account                  | `Account`, `deleteAccount`, `accountId`                            | "Account", "Delete Account", with the account name visible |
-| Book containing financial accounts | `AccountBook`, `accountBookId`                                     | "Account Book"                                             |
+| Concept                            | App-owned code                                                     | Customer-facing wording                                                  |
+| ---------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Sign-in identity                   | `User`, `user-deletion`, `deleteAuthenticatedUser`, `/user/delete` | "Cashfolio account" in prose; "Delete My Cashfolio Account" as an action |
+| Identity security                  | `userSecurityUrl`, `getUserSecurityUrl`                            | "Sign-In & Security"                                                     |
+| Financial account                  | `Account`, `deleteAccount`, `accountId`                            | "Account", "Delete Account", with the account name visible               |
+| Book containing financial accounts | `AccountBook`, `accountBookId`                                     | "Account Book"                                                           |
 
-Use "user" in admin actions such as "Delete user" and retain "User Settings" for
-personal preferences. Avoid unqualified "account settings" or "account deletion"
-for identities in app-owned code, diagnostics, or documentation.
+Identity labels follow the general capitalization policy: use "Delete User" in
+admin actions and "User Settings" for personal preferences. Generic references
+to a "Cashfolio account" or "user" in prose stay in sentence case. Avoid
+unqualified "account settings" or "account deletion" for identities in app-owned
+code, diagnostics, or documentation.
 
 Provider-scoped terms such as `LogtoAccountResponse`, Logto Account API, and
 `/api/my-account` retain the provider's terminology. The legacy
@@ -180,13 +173,14 @@ Provider-scoped terms such as `LogtoAccountResponse`, Logto Account API, and
 routes; see [self-service deletion](server-functions.md#auth-and-authorization).
 
 Destructive UI must identify the target and explain its consequences. User
-self-deletion uses "Delete your Cashfolio account", "Delete my Cashfolio
-account", and "Cashfolio account deleted". Explain loss of sign-in access,
-deletion of books only that person can access, and preservation of shared books
-for other users; show the affected-book preview. Financial-account deletion
-shows the financial account's name alongside "Delete Account". Keep provider
-storage details out of ordinary profile and deletion copy; technical admin tools
-and architecture docs may name Logto.
+self-deletion uses "Delete Your Cashfolio Account" as the page title and "Delete
+My Cashfolio Account" as the action. The outcome heading "Cashfolio account
+deleted" stays in sentence case because it reports status. Explain loss of
+sign-in access, deletion of books only that person can access, and preservation
+of shared books for other users; show the affected-book preview.
+Financial-account deletion shows the financial account's name alongside "Delete
+Account". Keep provider storage details out of ordinary profile and deletion
+copy; technical admin tools and architecture docs may name Logto.
 
 ## Label Typography
 

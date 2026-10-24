@@ -72,12 +72,13 @@ pnpm lint:workflows                           # actionlint check for GitHub work
 - Follow the
   [UI capitalization guidelines](apps/cashfolio-app2/docs/ui-patterns.md#capitalization):
   use Title Case for short UI labels and titles, sentence case for prose,
-  instructions, and status messages, and preserve the documented identity
-  exceptions. Review visible copy and accessible names together.
+  instructions, and status messages. Review visible copy and accessible names
+  together.
 - Use `User`/`user` for identities in app-owned code; reserve
-  `Account`/`account` for the financial business entity. In customer-facing
-  identity actions, use "Cashfolio account"; admin actions may use "user".
-  Explicit provider terms and documented legacy URLs are exceptions. See
+  `Account`/`account` for the financial business entity. Use "Cashfolio account"
+  for customer-facing identity references and "user" in admin actions, applying
+  the general capitalization policy to labels. Explicit provider terms and
+  documented legacy URLs are exceptions. See
   [Identity and financial-account terminology](apps/cashfolio-app2/docs/ui-patterns.md#identity-and-financial-account-terminology).
 - Prefer Mantine styling; use CSS modules when manual styling is required.
 - Import Prisma enums from `src/.prisma-client/enums` (not `@prisma/client`).
