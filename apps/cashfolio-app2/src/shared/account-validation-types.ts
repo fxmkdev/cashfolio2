@@ -1,4 +1,5 @@
 import type {
+  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -6,6 +7,7 @@ import type {
 import type { StatementImportCsvFormat } from "./statement-import-csv-format";
 
 export type AccountInput = {
+  assetClass?: AssetClass | null;
   accountBookId: string;
   name: string;
   type: AccountType;

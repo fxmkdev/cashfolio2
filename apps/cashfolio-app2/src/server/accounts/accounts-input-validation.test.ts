@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { AssetClass } from "../../.prisma-client/enums";
 import {
   validateAccountBookNodeIdInput,
   validateAccountGroupMutationInput,
@@ -22,6 +23,19 @@ const csv = {
 };
 
 describe("account mutation input contracts", () => {
+  it.each(Object.values(AssetClass))("accepts asset class %s", (assetClass) => {
+    expect(
+      validateAccountMutationInput({ ...account, assetClass }).assetClass,
+    ).toBe(assetClass);
+  });
+
+  it("preserves omitted classification and explicit clearing", () => {
+    expect(validateAccountMutationInput(account).assetClass).toBeUndefined();
+    expect(
+      validateAccountUpdateInput({ ...account, id: "a", assetClass: null })
+        .assetClass,
+    ).toBeNull();
+  });
   it("preserves omitted update fields and strips unrecognized fields", () => {
     const parsed = validateAccountUpdateInput({
       accountBookId: "book-1",
@@ -67,6 +81,9 @@ describe("account mutation input contracts", () => {
     ["type", "EXPENSE"],
     ["equityAccountSubtype", "OTHER"],
     ["unit", "STOCK"],
+    ["assetClass", "UNCLASSIFIED"],
+    ["assetClass", ""],
+    ["assetClass", 1],
     ["groupId", ""],
     ["currency", 1],
     ["cryptocurrency", false],

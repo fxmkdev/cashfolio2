@@ -1,4 +1,5 @@
 import { type EditAccountModalProps } from "./types";
+import { assetClassOptions } from "../../shared/asset-class";
 import {
   Unit,
   AccountType,
@@ -163,6 +164,20 @@ export function EditAccountModal(props: EditAccountModalProps) {
               [AccountType.ASSET, AccountType.LIABILITY] as AccountType[]
             ).includes(type) && (
               <>
+                <Grid.Col span={12}>
+                  <Select
+                    label="Asset Class"
+                    key={form.key("assetClass")}
+                    placeholder="Unclassified"
+                    clearable
+                    data={[
+                      { value: "", label: "Unclassified" },
+                      ...assetClassOptions,
+                    ]}
+                    description="Classifies what this account represents. Future asset-class reports will apply this selection to all historical periods. Changing it does not change total amounts or valuation."
+                    {...form.getInputProps("assetClass")}
+                  />
+                </Grid.Col>
                 <Grid.Col span={3}>
                   <Select
                     label="Unit"

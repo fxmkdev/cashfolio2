@@ -1,5 +1,6 @@
 import { type Money } from "../../../shared/money";
 import type {
+  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -23,6 +24,7 @@ type PeriodBaseSelectionData = {
 };
 
 export type PeriodBaseAssetLiabilityAccount = {
+  assetClass: AssetClass | null;
   id: string;
   name: string;
   groupId: string | null;

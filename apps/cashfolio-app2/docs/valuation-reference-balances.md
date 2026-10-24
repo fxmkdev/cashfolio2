@@ -11,6 +11,19 @@ Related docs:
 
 ## Overview
 
+`Account.assetClass` is manually selected reporting metadata. Unclassified is
+the default for both existing and new accounts. Classification does not select
+valuation providers or change balances, cash-flow eligibility, FIFO, execution
+pricing, or realized/unrealized gain/loss calculations. `Unit` and the existing
+currency/cryptocurrency/symbol/trade-currency fields continue to determine
+conversion and pricing. A currency-denominated equity portfolio can therefore
+use the Equities asset class while retaining automatic FX conversion. Manual
+balance adjustments remain ordinary Gain/Loss transactions.
+
+Current reports do not use asset classes yet. Future reporting will apply the
+account's current classification across historical periods without changing
+total amounts.
+
 - The account list route (`$accountBookId/accounts/route.tsx`) renders `Balance`
   and `Balance (<referenceCurrency>)` columns.
 - Route orchestration for this page is in

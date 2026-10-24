@@ -80,6 +80,17 @@ for (const scenario of [
 
     const updatedName = `${accountName} updated`;
     await nameInput.fill(updatedName);
+    await expect(
+      dialog.getByRole("combobox", { name: "Unit", exact: true }),
+    ).toBeDisabled();
+    const assetClassInput = dialog.getByRole("combobox", {
+      name: "Asset Class",
+    });
+    await expect(assetClassInput).toBeEnabled();
+    await assetClassInput.click();
+    await page
+      .getByRole("option", { name: "Real Estate", exact: true })
+      .click();
     await dialog.getByRole("button", { name: "Save", exact: true }).click();
     await expect(dialog).not.toBeVisible();
     await expect(
@@ -93,12 +104,18 @@ for (const scenario of [
     await expect(page.getByText("Archived", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Edit", exact: true }).click();
     await expect(groupInput).toHaveValue(groupName);
+    await expect(assetClassInput).toHaveValue("Real Estate");
     await expect(dialog.getByText(/no longer available/)).toHaveCount(0);
     await expect(
       prisma.account.findUniqueOrThrow({
         where: { id_accountBookId: { id: accountId, accountBookId } },
-        select: { name: true, groupId: true, isActive: true },
+        select: { name: true, groupId: true, isActive: true, assetClass: true },
       }),
-    ).resolves.toEqual({ name: updatedName, groupId, isActive: false });
+    ).resolves.toEqual({
+      name: updatedName,
+      groupId,
+      isActive: false,
+      assetClass: "REAL_ESTATE",
+    });
   });
 }

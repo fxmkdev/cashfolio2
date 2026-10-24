@@ -71,6 +71,15 @@ paths are relative to that app directory.
 
 ## Enums
 
+- `AssetClass`: Cash & Cash Equivalents, Equities, Fixed Income, Real Estate,
+  Commodities & Precious Metals, Digital Assets, Alternative Investments, and
+  Other Assets. `Account.assetClass` is nullable: null means Unclassified,
+  distinct from Other Assets. A database check permits non-null classification
+  only on asset/liability accounts. The migration performs no backfill; all
+  existing accounts, including archived accounts, remain Unclassified. New
+  accounts also default to Unclassified, with classification selected manually.
+  Groups and bookings have no asset class, and classification has no history.
+
 - `AccountType`: `ASSET`, `LIABILITY`, `EQUITY`
 - `EquityAccountSubtype`: `INCOME`, `EXPENSE`, `GAIN_LOSS`, `OPENING_BALANCES`
 - `Unit`: `CURRENCY`, `CRYPTOCURRENCY`, `SECURITY`

@@ -1,4 +1,5 @@
 import {
+  type AssetClass,
   EquityAccountSubtype,
   Unit,
   AccountType,
@@ -14,6 +15,7 @@ export type AccountTypeDescriptor =
   "ASSET" | "LIABILITY" | `EQUITY-${EquityAccountSubtype}`;
 
 export type FormValues = {
+  assetClass?: AssetClass | "" | null;
   name?: string;
   typeDescriptor?: AccountTypeDescriptor;
   groupId?: string;
@@ -30,6 +32,7 @@ export type FormValues = {
 
 export type TransformedFormValues = Omit<
   FormValues,
+  | "assetClass"
   | "openingBalance"
   | "unit"
   | "currency"
@@ -38,6 +41,7 @@ export type TransformedFormValues = Omit<
   | "tradeCurrency"
   | "statementImportCsvFormat"
 > & {
+  assetClass?: AssetClass | null;
   type: AccountType;
   equityAccountSubtype?: EquityAccountSubtype;
   unit?: Unit;
@@ -51,6 +55,7 @@ export type TransformedFormValues = Omit<
 };
 
 export type AccountInitialValues = {
+  assetClass?: AssetClass | null;
   name: string;
   type: AccountType;
   equityAccountSubtype?: EquityAccountSubtype | null;
@@ -69,6 +74,7 @@ export type AccountInitialValues = {
 export type AccountInitialValuesSource = Pick<
   AccountInitialValues,
   | "name"
+  | "assetClass"
   | "type"
   | "equityAccountSubtype"
   | "groupId"
