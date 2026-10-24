@@ -434,6 +434,7 @@ export function useAccountsPageController(args: {
     gainLossData: gainLoss.data,
     isGainLossLoading: gainLoss.loading,
     isEquityTab,
+    isCategoryArchive: isEquityTab && args.mode === "archived",
     rowsByParentKey,
     referenceCurrency,
     isReferenceBalancesLoading: shouldShowReferenceBalancesLoading,

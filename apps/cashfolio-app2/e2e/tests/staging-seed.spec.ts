@@ -188,7 +188,7 @@ test("archived synthetic accounts remain available for archive workflows", async
   await expect(agGridRowByText(page, "Closed bank account CHF")).toBeVisible();
 });
 
-test("archived seed hierarchies are available on all four account tabs", async ({
+test("archived seed hierarchies are available in Accounts and Category Archive", async ({
   page,
 }) => {
   const id = seededBook("household").id;
@@ -198,20 +198,26 @@ test("archived seed hierarchies are available on all four account tabs", async (
     ["EQUITY-INCOME", ["Consulting"], "One-off project"],
     ["EQUITY-EXPENSE", ["Car", "Running costs"], "Fuel"],
   ] as const) {
-    await page.goto(`/${id}/accounts?tab=${tab}`);
+    const isCategory = tab.startsWith("EQUITY-");
+    await page.goto(
+      `/${id}/accounts?tab=${tab}${isCategory ? "&mode=archived" : ""}`,
+    );
     if (tab === "ASSET")
       await agGridRowByText(page, groups[0])
         .locator(".ag-group-contracted")
         .click();
-    await expect(
-      page.locator('[row-id^="__archived__:"]').first(),
-    ).toBeVisible();
-    await expandArchivedGroups(page);
+    if (!isCategory) {
+      await expect(
+        page.locator('[row-id^="__archived__:"]').first(),
+      ).toBeVisible();
+      await expandArchivedGroups(page);
+    }
     if (tab !== "ASSET")
       for (const name of groups) {
         const group = agGridRowByText(page, name);
         await expect(group).toBeVisible();
-        await group.locator(".ag-group-contracted").click();
+        const expander = group.locator(".ag-group-contracted");
+        if (await expander.isVisible()) await expander.click();
       }
     await expect(agGridRowByText(page, item)).toBeVisible();
     await expect(agGridRowByText(page, "Former bank accounts")).toHaveCount(0);

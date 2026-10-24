@@ -23,13 +23,7 @@ export const Route = createFileRoute("/$accountBookId/accounts")({
       throw redirect({
         to: "/$accountBookId/settings/categories",
         params,
-        search: {
-          tab: search.tab,
-          mode:
-            new URLSearchParams(location.searchStr).get("mode") === "archived"
-              ? "archived"
-              : "active",
-        },
+        search,
         replace: true,
       });
     }

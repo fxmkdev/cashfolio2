@@ -414,6 +414,7 @@ function AccountsPageStoryHarness({
         : gainLossData,
     isGainLossLoading: gainLossState === "loading",
     isEquityTab,
+    isCategoryArchive: isEquityTab && mode === "archived",
     rowsByParentKey,
     referenceCurrency: "CHF",
     isReferenceBalancesLoading: false,
@@ -886,9 +887,9 @@ export const RouteSmoke: Story = {
     expect(
       canvas.getByRole("heading", { name: "Accounts" }),
     ).toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("tab", { name: "Expense" }));
+    await userEvent.click(canvas.getByRole("tab", { name: "Liabilities" }));
     await expect(canvas.getByTestId("router-search")).toHaveTextContent(
-      '"tab":"EQUITY-EXPENSE"',
+      '"tab":"LIABILITY"',
     );
     await expect(canvas.getByTestId("router-search")).toHaveTextContent(
       '"mode":"active"',

@@ -113,8 +113,12 @@ export function parseAccountsSearch(search: Record<string, unknown>): {
   tab: TabValue;
   mode: AccountsMode;
 } {
+  const tab = isTabValue(search.tab) ? search.tab : "ASSET";
   return {
-    tab: isTabValue(search.tab) ? search.tab : "ASSET",
-    mode: "active",
+    tab,
+    mode:
+      tab.startsWith("EQUITY-") && search.mode === "archived"
+        ? "archived"
+        : "active",
   };
 }

@@ -905,6 +905,7 @@ test("previews historical balances and read-only unmatched bookings during a par
   await expect(agGridCellByColId(candidateA, "balance")).toHaveText("75.00");
   await expect(page.getByText("0 of 3 ready, 2 ignored")).toBeVisible();
   await clickGridRowSelectionCheckbox(candidateA);
+  await expect(page.getByText("0 of 3 ready, 1 ignored")).toBeVisible();
   for (const row of [candidateA, candidateB]) {
     await setGridAccountTreeCellValue({
       root: page,

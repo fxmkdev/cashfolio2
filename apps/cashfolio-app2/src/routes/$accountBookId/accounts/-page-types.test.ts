@@ -27,7 +27,7 @@ describe("accounts page tab parsing", () => {
     ).toEqual({ tab: "ASSET", mode: "active" });
   });
 
-  it("keeps supported equity tabs unchanged", () => {
+  it("preserves legacy category tab and archive selection for its redirect", () => {
     expect(
       parseAccountsSearch({
         tab: `EQUITY-${EquityAccountSubtype.EXPENSE}`,
@@ -35,9 +35,19 @@ describe("accounts page tab parsing", () => {
       }),
     ).toEqual({
       tab: `EQUITY-${EquityAccountSubtype.EXPENSE}`,
-      mode: "active",
+      mode: "archived",
     });
   });
+
+  it.each(["ASSET", "LIABILITY", "unknown"])(
+    "normalizes archived mode to the combined Accounts view for %s",
+    (tab) => {
+      expect(parseAccountsSearch({ tab, mode: "archived" })).toEqual({
+        tab: tab === "LIABILITY" ? "LIABILITY" : "ASSET",
+        mode: "active",
+      });
+    },
+  );
 });
 
 describe("getAccountsPageTitle", () => {

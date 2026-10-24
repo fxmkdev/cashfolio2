@@ -87,58 +87,71 @@ for (const tab of [
     });
 
     await page.goto(`/${book.accountBookId}/accounts?tab=${tab}&mode=archived`);
+    const isCategory = type === "EQUITY";
     await expect(
-      page.getByRole("heading", { name: "Accounts", exact: true }),
+      page.getByRole("heading", {
+        name: isCategory ? "Category Archive" : "Accounts",
+        exact: true,
+      }),
     ).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Archive", exact: true }),
     ).toHaveCount(0);
-    await expect(
-      page.getByText(
-        "Totals include active and archived accounts, including collapsed groups.",
-      ),
-    ).toBeVisible();
-    const rootArchive = page.locator('[row-id="__archived__:root"]');
-    const groupArchive = page.locator(
-      `[row-id="__archived__:group:${live.id}"]`,
-    );
-    await expect(rootArchive).toHaveAttribute("aria-expanded", "false");
-    await expect(groupArchive).toHaveAttribute("aria-expanded", "false");
-    await expect(agGridRowByText(page, "A Closed Group")).toHaveCount(0);
-    await revealRowActions(groupArchive);
-    await expect(groupArchive.locator('[col-id="actions"] button')).toHaveCount(
-      0,
-    );
-    // Return the name column to view after checking the action column.
-    await page.locator(".ag-grid-viewport").evaluate((element) => {
-      element.scrollLeft = 0;
-    });
-    for (let sort = 0; sort < 2; sort += 1) {
-      await page
-        .getByRole("columnheader", { name: "Name", exact: true })
-        .click();
-      await expect
-        .poll(
-          async () =>
-            Number(await rootArchive.getAttribute("row-index")) >
-            Number(
-              await agGridRowByText(page, live.name).getAttribute("row-index"),
-            ),
-        )
-        .toBe(true);
-      await expect
-        .poll(
-          async () =>
-            Number(await groupArchive.getAttribute("row-index")) >
-            Number(
-              await agGridRowByText(page, "Z Live Account").getAttribute(
-                "row-index",
+    if (!isCategory) {
+      await expect(
+        page.getByText(
+          "Totals include active and archived accounts, including collapsed groups.",
+        ),
+      ).toBeVisible();
+      const rootArchive = page.locator('[row-id="__archived__:root"]');
+      const groupArchive = page.locator(
+        `[row-id="__archived__:group:${live.id}"]`,
+      );
+      await expect(rootArchive).toHaveAttribute("aria-expanded", "false");
+      await expect(groupArchive).toHaveAttribute("aria-expanded", "false");
+      await expect(agGridRowByText(page, "A Closed Group")).toHaveCount(0);
+      await revealRowActions(groupArchive);
+      await expect(
+        groupArchive.locator('[col-id="actions"] button'),
+      ).toHaveCount(0);
+      // Return the name column to view after checking the action column.
+      await page.locator(".ag-grid-viewport").evaluate((element) => {
+        element.scrollLeft = 0;
+      });
+      for (let sort = 0; sort < 2; sort += 1) {
+        await page
+          .getByRole("columnheader", { name: "Name", exact: true })
+          .click();
+        await expect
+          .poll(
+            async () =>
+              Number(await rootArchive.getAttribute("row-index")) >
+              Number(
+                await agGridRowByText(page, live.name).getAttribute(
+                  "row-index",
+                ),
               ),
-            ),
-        )
-        .toBe(true);
+          )
+          .toBe(true);
+        await expect
+          .poll(
+            async () =>
+              Number(await groupArchive.getAttribute("row-index")) >
+              Number(
+                await agGridRowByText(page, "Z Live Account").getAttribute(
+                  "row-index",
+                ),
+              ),
+          )
+          .toBe(true);
+      }
+      await groupArchive.locator(".ag-group-contracted").click();
+    } else {
+      const liveRow = agGridRowByText(page, live.name);
+      await expect(liveRow).toBeVisible();
+      const expander = liveRow.locator(".ag-group-contracted");
+      if (await expander.isVisible()) await expander.click();
     }
-    await groupArchive.locator(".ag-group-contracted").click();
     const closedRow = agGridRowByText(page, closed.name);
     await expect(closedRow).toBeVisible();
     await closedRow.locator(".ag-group-contracted").click();
@@ -153,7 +166,10 @@ for (const tab of [
     ).toBeDisabled();
     await clickRowAction(closedRow, "Edit");
     const dialog = page.getByRole("dialog").filter({
-      has: page.getByRole("heading", { name: "Edit Group", exact: true }),
+      has: page.getByRole("heading", {
+        name: isCategory ? "Edit Category Group" : "Edit Group",
+        exact: true,
+      }),
     });
     await dialog.getByLabel("Name").fill("A Closed Renamed");
     await dialog.getByRole("button", { name: "Save", exact: true }).click();
@@ -186,13 +202,27 @@ for (const tab of [
     await reorder.getByRole("button", { name: "Close", exact: true }).click();
 
     await page.reload();
-    await expect(groupArchive).toHaveAttribute("aria-expanded", "true");
-    await expect(rootArchive).toHaveAttribute("aria-expanded", "false");
+    const groupArchive = page.locator(
+      `[row-id="__archived__:group:${live.id}"]`,
+    );
+    const rootArchive = page.locator('[row-id="__archived__:root"]');
+    if (!isCategory) {
+      await expect(groupArchive).toHaveAttribute("aria-expanded", "true");
+      await expect(rootArchive).toHaveAttribute("aria-expanded", "false");
+    }
     await clickRowAction(renamed, "Unarchive");
-    await expect(renamed).toBeVisible();
-    await expect(
-      page.locator(`[row-id="__archived__:group:${closed.id}"]`),
-    ).toHaveAttribute("aria-expanded", "false");
+    if (isCategory) {
+      // The restored group remains as context for its still-archived child.
+      await expect(
+        renamed.getByRole("button", { name: "Unarchive", exact: true }),
+      ).toBeDisabled();
+      await expect(leaf).toBeVisible();
+    } else {
+      await expect(renamed).toBeVisible();
+      await expect(
+        page.locator(`[row-id="__archived__:group:${closed.id}"]`),
+      ).toHaveAttribute("aria-expanded", "false");
+    }
     const saved = await prisma.accountGroup.findUniqueOrThrow({
       where: {
         id_accountBookId: { id: closed.id, accountBookId: book.accountBookId },

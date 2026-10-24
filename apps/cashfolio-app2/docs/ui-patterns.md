@@ -413,6 +413,10 @@ their system-managed restrictions and are not creation tabs. Primary navigation
 is unchanged. Viewing a category ledger is an activity view, not a settings
 page: its URL and Accounts navigation highlight remain unchanged.
 
+Accounts combines active and archived items in one hierarchy. Categories keeps a
+separate Category Archive: its loader filters by the selected state, and its
+group expansion preferences remain separate for active and archived views.
+
 Categories have explicit **category groups**, backed by `AccountGroup`. Groups
 can contain categories and nested groups; categories can also be at the root.
 Only categories accept bookings and are selectable transaction destinations.
