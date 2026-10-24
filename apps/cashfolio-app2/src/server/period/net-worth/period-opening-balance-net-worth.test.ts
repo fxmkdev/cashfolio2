@@ -28,8 +28,7 @@ vi.mock("../transfer-clearing/period-transfer-clearing-buckets", () => ({
 }));
 vi.mock("../../.prisma-client/enums", () => ({
   AccountType: {
-    ASSET: "ASSET",
-    LIABILITY: "LIABILITY",
+    BALANCE: "BALANCE",
   },
   Unit: {
     CURRENCY: "CURRENCY",
@@ -50,7 +49,7 @@ describe("loadOpeningBalanceNetWorthForPeriod", () => {
     prisma.account.findMany.mockResolvedValue([
       {
         id: "asset-cash",
-        type: "ASSET",
+        type: "BALANCE",
         unit: "CURRENCY",
         currency: "CHF",
         cryptocurrency: null,

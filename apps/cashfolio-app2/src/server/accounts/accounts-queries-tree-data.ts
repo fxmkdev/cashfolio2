@@ -1,7 +1,3 @@
-import {
-  type AccountTypeScope,
-  getPersistedAccountTypeFilter,
-} from "../../shared/account-tabs";
 import { toMoney } from "../../shared/money";
 import { prisma } from "../../prisma.server";
 import {
@@ -56,7 +52,7 @@ type AccountBookTreeMeta = {
 export async function fetchAccountTreeQueryData(args: {
   accountBookId: string;
   accountState: AccountState;
-  type?: AccountTypeScope;
+  type?: AccountType;
   equityAccountSubtype?: EquityAccountSubtype;
   includeActionAvailability: boolean;
 }) {
@@ -97,7 +93,7 @@ export async function fetchAccountTreeQueryData(args: {
     prisma.accountGroup.findMany({
       where: {
         accountBookId: args.accountBookId,
-        type: getPersistedAccountTypeFilter(args.type),
+        type: args.type,
         ...(args.equityAccountSubtype
           ? {
               OR: [
@@ -122,10 +118,8 @@ export async function fetchAccountTreeQueryData(args: {
   ]);
   const groupById = new Map(accountGroups.map((group) => [group.id, group]));
 
-  const assetAndLiabilityAccountIds = accounts
-    .filter(
-      (account) => account.type === "ASSET" || account.type === "LIABILITY",
-    )
+  const balanceAccountIds = accounts
+    .filter((account) => account.type === "BALANCE")
     .map((account) => account.id);
   const currentBalanceEndExclusive = addUtcDays(startOfUtcDay(new Date()), 1);
 
@@ -149,23 +143,23 @@ export async function fetchAccountTreeQueryData(args: {
           _count: true,
         })
       : Promise.resolve([]),
-    assetAndLiabilityAccountIds.length > 0
+    balanceAccountIds.length > 0
       ? prisma.booking.groupBy({
           by: ["accountId"],
           where: {
             accountBookId: args.accountBookId,
-            accountId: { in: assetAndLiabilityAccountIds },
+            accountId: { in: balanceAccountIds },
             date: { lt: currentBalanceEndExclusive },
           },
           _sum: { value: true },
         })
       : Promise.resolve([]),
-    assetAndLiabilityAccountIds.length > 0
+    balanceAccountIds.length > 0
       ? prisma.booking.groupBy({
           by: ["accountId"],
           where: {
             accountBookId: args.accountBookId,
-            accountId: { in: assetAndLiabilityAccountIds },
+            accountId: { in: balanceAccountIds },
           },
           _sum: { value: true },
         })
@@ -235,12 +229,12 @@ export async function fetchAccountTreeQueryData(args: {
   );
   const openingBalanceRange = getUtcDayRange(openingBalanceDate);
   const openingBalanceSums =
-    assetAndLiabilityAccountIds.length > 0
+    balanceAccountIds.length > 0
       ? await prisma.booking.groupBy({
           by: ["accountId"],
           where: {
             accountBookId: args.accountBookId,
-            accountId: { in: assetAndLiabilityAccountIds },
+            accountId: { in: balanceAccountIds },
             date: {
               gte: openingBalanceRange.start,
               lt: openingBalanceRange.endExclusive,
@@ -275,7 +269,7 @@ export async function fetchAccountTreeQueryData(args: {
 export async function fetchAccountReferenceBalancesQueryData(args: {
   accountBookId: string;
   accountState: AccountState;
-  type?: AccountTypeScope;
+  type?: AccountType;
   equityAccountSubtype?: EquityAccountSubtype;
 }) {
   const accounts = await prisma.account.findMany({
@@ -297,20 +291,18 @@ export async function fetchAccountReferenceBalancesQueryData(args: {
     },
   });
 
-  const assetAndLiabilityAccountIds = accounts
-    .filter(
-      (account) => account.type === "ASSET" || account.type === "LIABILITY",
-    )
+  const balanceAccountIds = accounts
+    .filter((account) => account.type === "BALANCE")
     .map((account) => account.id);
   const currentBalanceEndExclusive = addUtcDays(startOfUtcDay(new Date()), 1);
 
   const [accountBalances, accountBook] = await Promise.all([
-    assetAndLiabilityAccountIds.length > 0
+    balanceAccountIds.length > 0
       ? prisma.booking.groupBy({
           by: ["accountId"],
           where: {
             accountBookId: args.accountBookId,
-            accountId: { in: assetAndLiabilityAccountIds },
+            accountId: { in: balanceAccountIds },
             date: { lt: currentBalanceEndExclusive },
           },
           _sum: { value: true },

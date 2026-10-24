@@ -110,7 +110,10 @@ describe("getPeriodGainLossReconciliation", () => {
               cryptocurrency: null,
               symbol: "AAPL",
               tradeCurrency: "USD",
-              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+              account: {
+                type: AccountType.BALANCE,
+                equityAccountSubtype: null,
+              },
             },
             {
               id: "c-buy",
@@ -122,7 +125,10 @@ describe("getPeriodGainLossReconciliation", () => {
               cryptocurrency: null,
               symbol: null,
               tradeCurrency: null,
-              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+              account: {
+                type: AccountType.BALANCE,
+                equityAccountSubtype: null,
+              },
             },
           ],
         },
@@ -139,7 +145,10 @@ describe("getPeriodGainLossReconciliation", () => {
               cryptocurrency: null,
               symbol: "AAPL",
               tradeCurrency: "USD",
-              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+              account: {
+                type: AccountType.BALANCE,
+                equityAccountSubtype: null,
+              },
             },
             {
               id: "c-sell",
@@ -151,7 +160,10 @@ describe("getPeriodGainLossReconciliation", () => {
               cryptocurrency: null,
               symbol: null,
               tradeCurrency: null,
-              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+              account: {
+                type: AccountType.BALANCE,
+                equityAccountSubtype: null,
+              },
             },
           ],
         },
@@ -289,7 +301,10 @@ describe("getPeriodGainLossReconciliation", () => {
               cryptocurrency: null,
               symbol: "AAPL",
               tradeCurrency: "USD",
-              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+              account: {
+                type: AccountType.BALANCE,
+                equityAccountSubtype: null,
+              },
             },
             {
               id: "h-transfer-in",
@@ -302,7 +317,10 @@ describe("getPeriodGainLossReconciliation", () => {
               cryptocurrency: null,
               symbol: "AAPL",
               tradeCurrency: "USD",
-              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+              account: {
+                type: AccountType.BALANCE,
+                equityAccountSubtype: null,
+              },
             },
           ],
         },
@@ -463,7 +481,10 @@ describe("getPeriodGainLossReconciliation", () => {
               cryptocurrency: null,
               symbol: "AAPL",
               tradeCurrency: "USD",
-              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+              account: {
+                type: AccountType.BALANCE,
+                equityAccountSubtype: null,
+              },
             },
             {
               id: "c-buy",
@@ -475,7 +496,10 @@ describe("getPeriodGainLossReconciliation", () => {
               cryptocurrency: null,
               symbol: null,
               tradeCurrency: null,
-              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+              account: {
+                type: AccountType.BALANCE,
+                equityAccountSubtype: null,
+              },
             },
           ],
         },
@@ -492,7 +516,10 @@ describe("getPeriodGainLossReconciliation", () => {
               cryptocurrency: null,
               symbol: "AAPL",
               tradeCurrency: "USD",
-              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+              account: {
+                type: AccountType.BALANCE,
+                equityAccountSubtype: null,
+              },
             },
             {
               id: "c-sell",
@@ -504,7 +531,10 @@ describe("getPeriodGainLossReconciliation", () => {
               cryptocurrency: null,
               symbol: null,
               tradeCurrency: null,
-              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+              account: {
+                type: AccountType.BALANCE,
+                equityAccountSubtype: null,
+              },
             },
           ],
         },
@@ -565,7 +595,10 @@ describe("getPeriodGainLossReconciliation", () => {
               cryptocurrency: null,
               symbol: "AAPL",
               tradeCurrency: "USD",
-              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+              account: {
+                type: AccountType.BALANCE,
+                equityAccountSubtype: null,
+              },
             },
             {
               id: "c-buy",
@@ -577,7 +610,10 @@ describe("getPeriodGainLossReconciliation", () => {
               cryptocurrency: null,
               symbol: null,
               tradeCurrency: null,
-              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+              account: {
+                type: AccountType.BALANCE,
+                equityAccountSubtype: null,
+              },
             },
           ],
         },
@@ -594,7 +630,10 @@ describe("getPeriodGainLossReconciliation", () => {
               cryptocurrency: null,
               symbol: "AAPL",
               tradeCurrency: "USD",
-              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+              account: {
+                type: AccountType.BALANCE,
+                equityAccountSubtype: null,
+              },
             },
             {
               id: "c-sell",
@@ -606,7 +645,10 @@ describe("getPeriodGainLossReconciliation", () => {
               cryptocurrency: null,
               symbol: null,
               tradeCurrency: null,
-              account: { type: AccountType.ASSET, equityAccountSubtype: null },
+              account: {
+                type: AccountType.BALANCE,
+                equityAccountSubtype: null,
+              },
             },
           ],
         },

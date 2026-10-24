@@ -14,14 +14,14 @@ const accountGroups = [
   {
     value: "cash-parent",
     label: "Cash",
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     equityAccountSubtype: null,
     isCashAccount: true,
   },
   {
     value: "asset-parent",
     label: "Assets",
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     equityAccountSubtype: null,
     isCashAccount: false,
   },
@@ -31,19 +31,19 @@ describe("account group cash helpers", () => {
   test("allows editing only for root balance groups", () => {
     expect(
       isRootCashAccountGroupEditable({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         parentGroupId: undefined,
       }),
     ).toBe(true);
     expect(
       isRootCashAccountGroupEditable({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         parentGroupId: "parent",
       }),
     ).toBe(false);
     expect(
       isRootCashAccountGroupEditable({
-        type: AccountType.LIABILITY,
+        type: AccountType.BALANCE,
         parentGroupId: undefined,
       }),
     ).toBe(true);
@@ -52,7 +52,7 @@ describe("account group cash helpers", () => {
   test("inherits cash status from selected parent group", () => {
     expect(
       resolveAccountGroupCashAccountFormValue({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         parentGroupId: "cash-parent",
         isCashAccount: false,
         accountGroups,
@@ -60,7 +60,7 @@ describe("account group cash helpers", () => {
     ).toBe(true);
     expect(
       resolveAccountGroupCashAccountFormValue({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         parentGroupId: "asset-parent",
         isCashAccount: true,
         accountGroups,
@@ -73,8 +73,8 @@ describe("account group cash helpers", () => {
       applyAccountGroupParentCashInheritance(
         {
           name: "Wallets",
-          typeDescriptor: AccountType.ASSET,
-          type: AccountType.ASSET,
+          typeDescriptor: AccountType.BALANCE,
+          type: AccountType.BALANCE,
           parentGroupId: "cash-parent",
           isCashAccount: false,
         },
@@ -89,20 +89,20 @@ describe("account group cash helpers", () => {
         id: "group-cash",
         name: "Cash",
         nodeType: "accountGroup",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
       },
       {
         id: "group-wallets",
         name: "Wallets",
         nodeType: "accountGroup",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         parentId: "group-cash",
       },
       {
         id: "account-wallet",
         name: "Wallet",
         nodeType: "account",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         groupId: "group-wallets",
       },
@@ -116,7 +116,7 @@ describe("account group cash helpers", () => {
     ).toBe(true);
     expect(
       getCashAccountGroupDisabledReason({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         groupId: "group-cash",
         existingNodes,
       }),
@@ -124,8 +124,8 @@ describe("account group cash helpers", () => {
   });
 
   test.each([
-    ["security account", AccountType.ASSET, Unit.SECURITY],
-    ["crypto account", AccountType.ASSET, Unit.CRYPTOCURRENCY],
+    ["security account", AccountType.BALANCE, Unit.SECURITY],
+    ["crypto account", AccountType.BALANCE, Unit.CRYPTOCURRENCY],
     ["equity account", AccountType.EQUITY, Unit.CURRENCY],
   ])(
     "disables cash marking when descendants include a %s",
@@ -135,7 +135,7 @@ describe("account group cash helpers", () => {
           id: "group-assets",
           name: "Assets",
           nodeType: "accountGroup",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
         },
         {
           id: "account-child",
@@ -149,7 +149,7 @@ describe("account group cash helpers", () => {
 
       expect(
         getCashAccountGroupDisabledReason({
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           groupId: "group-assets",
           existingNodes,
         }),
@@ -165,7 +165,7 @@ describe("account group cash helpers", () => {
         id: "group-assets",
         name: "Assets",
         nodeType: "accountGroup",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
       },
       {
         id: "group-liability",
@@ -178,7 +178,7 @@ describe("account group cash helpers", () => {
 
     expect(
       getCashAccountGroupDisabledReason({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         groupId: "group-assets",
         existingNodes,
       }),
@@ -190,7 +190,7 @@ describe("account group cash helpers", () => {
   test("explains inherited cash status for nested groups", () => {
     expect(
       getCashAccountGroupDisabledReason({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         parentGroupId: "asset-parent",
         groupId: "group-child",
         existingNodes: [],
@@ -204,13 +204,13 @@ describe("account group cash helpers", () => {
         id: "group-assets",
         name: "Assets",
         nodeType: "accountGroup",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
       },
       {
         id: "account-brokerage",
         name: "Brokerage",
         nodeType: "account",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.SECURITY,
         groupId: "group-assets",
       },
@@ -218,7 +218,7 @@ describe("account group cash helpers", () => {
 
     expect(
       getAccountGroupCashParentCompatibilityError({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         parentGroupId: "cash-parent",
         groupId: "group-assets",
         accountGroups,
@@ -235,13 +235,13 @@ describe("account group cash helpers", () => {
         id: "group-assets",
         name: "Assets",
         nodeType: "accountGroup",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
       },
       {
         id: "account-wallet",
         name: "Wallet",
         nodeType: "account",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         groupId: "group-assets",
       },
@@ -249,7 +249,7 @@ describe("account group cash helpers", () => {
 
     expect(
       getAccountGroupCashParentCompatibilityError({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         parentGroupId: "cash-parent",
         groupId: "group-assets",
         accountGroups,

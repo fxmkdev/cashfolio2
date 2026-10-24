@@ -193,8 +193,8 @@ test("archived seed hierarchies are available in Accounts and Category Archive",
 }) => {
   const id = seededBook("household").id;
   for (const [tab, groups, item] of [
-    ["ASSET", ["Zürcher Kantonalbank"], "Closed bank account CHF"],
-    ["LIABILITY", [], "Repaid car loan CHF"],
+    ["BALANCE", ["Zürcher Kantonalbank"], "Closed bank account CHF"],
+    ["BALANCE", [], "Repaid car loan CHF"],
     ["EQUITY-INCOME", ["Consulting"], "One-off project"],
     ["EQUITY-EXPENSE", ["Car", "Running costs"], "Fuel"],
   ] as const) {
@@ -202,7 +202,7 @@ test("archived seed hierarchies are available in Accounts and Category Archive",
     await page.goto(
       `/${id}/accounts?tab=${tab}${isCategory ? "&mode=archived" : ""}`,
     );
-    if (tab === "ASSET")
+    if (groups[0] && !isCategory)
       await agGridRowByText(page, groups[0])
         .locator(".ag-group-contracted")
         .click();
@@ -212,7 +212,7 @@ test("archived seed hierarchies are available in Accounts and Category Archive",
       ).toBeVisible();
       await expandArchivedGroups(page);
     }
-    if (tab !== "ASSET")
+    if (tab !== "BALANCE")
       for (const name of groups) {
         const group = agGridRowByText(page, name);
         await expect(group).toBeVisible();

@@ -85,10 +85,7 @@ export function buildTransferClearingVirtualHierarchy(args: {
       id: accountId,
       name: bucket.unitLabel,
       groupId: getTransferClearingUnitTypeGroupId(bucket.unitType),
-      type:
-        toMoney(clearingRawBalance).comparedTo(0) > 0
-          ? AccountType.ASSET
-          : AccountType.LIABILITY,
+      type: AccountType.BALANCE,
       unit: bucket.unit,
       currency: bucket.currency,
       cryptocurrency: bucket.cryptocurrency,

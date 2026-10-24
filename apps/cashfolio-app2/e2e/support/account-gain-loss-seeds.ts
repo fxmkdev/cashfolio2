@@ -8,14 +8,19 @@ export async function seedAccountGainLoss(
 ) {
   assertSafeWriteTarget();
   const root = await prisma.accountGroup.findFirstOrThrow({
-    where: { accountBookId, type: "ASSET", parentGroupId: null },
+    where: {
+      accountBookId,
+      type: "BALANCE",
+      name: "Assets",
+      parentGroupId: null,
+    },
   });
   const group = await prisma.accountGroup.create({
     data: {
       id: createId(),
       accountBookId,
       name: "G/L Portfolio",
-      type: "ASSET",
+      type: "BALANCE",
       parentGroupId: root.id,
     },
   });
@@ -24,7 +29,7 @@ export async function seedAccountGainLoss(
       id: createId(),
       accountBookId,
       name: "G/L Holdings",
-      type: "ASSET",
+      type: "BALANCE",
       parentGroupId: group.id,
     },
   });
@@ -33,7 +38,7 @@ export async function seedAccountGainLoss(
       id: createId(),
       accountBookId,
       name: "G/L Archived Source",
-      type: "ASSET",
+      type: "BALANCE",
       unit: "SECURITY",
       symbol: "AAPL",
       tradeCurrency: "CHF",
@@ -45,7 +50,7 @@ export async function seedAccountGainLoss(
       id: createId(),
       accountBookId,
       name: "G/L Active Holding",
-      type: "ASSET",
+      type: "BALANCE",
       unit: "SECURITY",
       symbol: "AAPL",
       tradeCurrency: "CHF",

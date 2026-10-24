@@ -10,7 +10,7 @@ describe("createLedgerAccountEditModalProps", () => {
     };
     const initialValues = {
       name: "Brokerage",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       groupId: "group-assets",
       sortOrder: 4,
@@ -31,7 +31,7 @@ describe("createLedgerAccountEditModalProps", () => {
       initialValues,
       existingNodes: [],
       editingId: "account-brokerage",
-      typeDescriptor: "ASSET",
+      typeDescriptor: "BALANCE",
     });
 
     expect(props.unitUsage).toBe(unitUsage);

@@ -37,8 +37,7 @@ import { GroupTreeSelect } from "../account-tree/group-tree-select";
 
 type FormValues = {
   name?: string;
-  typeDescriptor?:
-    "BALANCE" | "ASSET" | "LIABILITY" | `EQUITY-${EquityAccountSubtype}`;
+  typeDescriptor?: "BALANCE" | `EQUITY-${EquityAccountSubtype}`;
   parentGroupId?: string;
   sortOrder?: number;
   isCashAccount?: boolean;
@@ -62,7 +61,7 @@ function toFormValues(initial: AccountGroupInitialValues): FormValues {
   const typeDescriptor: FormValues["typeDescriptor"] =
     initial.type === AccountType.EQUITY && initial.equityAccountSubtype
       ? `${AccountType.EQUITY}-${initial.equityAccountSubtype}`
-      : (initial.type as "ASSET" | "LIABILITY");
+      : (initial.type as "BALANCE");
 
   return {
     name: initial.name,
@@ -76,19 +75,14 @@ function toFormValues(initial: AccountGroupInitialValues): FormValues {
 function transformAccountGroupValues(
   values: FormValues,
 ): AccountGroupTransformedFormValues {
-  const [descriptorType, equityAccountSubtype] = (values.typeDescriptor?.split(
-    "-",
-  ) ?? []) as [AccountType | "BALANCE", EquityAccountSubtype?];
-  const type =
-    descriptorType === "BALANCE" ? AccountType.ASSET : descriptorType;
+  const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
+    []) as [AccountType, EquityAccountSubtype?];
 
   return {
     ...values,
     type,
     isCashAccount:
-      type === AccountType.ASSET || type === AccountType.LIABILITY
-        ? (values.isCashAccount ?? false)
-        : false,
+      type === AccountType.BALANCE ? (values.isCashAccount ?? false) : false,
     ...(type === AccountType.EQUITY ? { equityAccountSubtype } : undefined),
   };
 }
@@ -312,19 +306,6 @@ export function EditAccountGroupModal({
                   disabled
                   data={[
                     {
-                      group: "Accounts",
-                      items: [
-                        {
-                          value: AccountType.ASSET,
-                          label: "Asset",
-                        },
-                        {
-                          value: AccountType.LIABILITY,
-                          label: "Liability",
-                        },
-                      ],
-                    },
-                    {
                       group: "Categories",
                       items: [
                         {
@@ -375,7 +356,7 @@ export function EditAccountGroupModal({
                 {...form.getInputProps("sortOrder")}
               />
             </Grid.Col>
-            {type === AccountType.ASSET || type === AccountType.LIABILITY ? (
+            {type === AccountType.BALANCE ? (
               <Grid.Col span={12}>
                 <Tooltip
                   label={cashAccountDisabledReason}

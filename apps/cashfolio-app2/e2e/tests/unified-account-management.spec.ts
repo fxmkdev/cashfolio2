@@ -4,7 +4,7 @@ import { expect, test } from "../support/fixtures";
 import { agGridRowByText, clickRowAction } from "../support/grid";
 import { openDialogFromButton } from "../support/ui";
 
-test("unifies legacy accounts, supports mixed groups, and preserves storage types", async ({
+test("supports balance groups, canonicalizes legacy URLs, and persists the unified type", async ({
   page,
   e2eExternalId,
 }) => {
@@ -13,14 +13,14 @@ test("unifies legacy accounts, supports mixed groups, and preserves storage type
     data: {
       accountBookId: book.accountBookId,
       name: "Legacy Credit",
-      type: "LIABILITY",
+      type: "BALANCE",
     },
   });
   const card = await prisma.account.create({
     data: {
       accountBookId: book.accountBookId,
       name: "Legacy Card",
-      type: "LIABILITY",
+      type: "BALANCE",
       groupId: legacyGroup.id,
       unit: "CURRENCY",
       currency: "CHF",
@@ -63,7 +63,7 @@ test("unifies legacy accounts, supports mixed groups, and preserves storage type
   const everyday = await prisma.accountGroup.findFirstOrThrow({
     where: { accountBookId: book.accountBookId, name: "Everyday" },
   });
-  expect(everyday.type).toBe("ASSET");
+  expect(everyday.type).toBe("BALANCE");
   expect(
     await prisma.accountGroup.findUniqueOrThrow({
       where: {
@@ -74,7 +74,7 @@ test("unifies legacy accounts, supports mixed groups, and preserves storage type
       },
     }),
   ).toMatchObject({
-    type: "LIABILITY",
+    type: "BALANCE",
     parentGroupId: everyday.id,
     isCashAccount: true,
   });
@@ -84,7 +84,7 @@ test("unifies legacy accounts, supports mixed groups, and preserves storage type
         id_accountBookId: { id: card.id, accountBookId: book.accountBookId },
       },
     }),
-  ).toMatchObject({ type: "LIABILITY", isCashAccount: true });
+  ).toMatchObject({ type: "BALANCE", isCashAccount: true });
 
   const create = await openDialogFromButton(page, {
     buttonName: "Add Account",
@@ -109,7 +109,11 @@ test("unifies legacy accounts, supports mixed groups, and preserves storage type
     await prisma.account.findFirstOrThrow({
       where: { accountBookId: book.accountBookId, name: "New Overdraft" },
     }),
-  ).toMatchObject({ type: "ASSET", groupId: everyday.id, isCashAccount: true });
+  ).toMatchObject({
+    type: "BALANCE",
+    groupId: everyday.id,
+    isCashAccount: true,
+  });
 
   await page.goto(`/${book.accountBookId}/${card.id}`);
   await page.getByRole("button", { name: "Edit", exact: true }).click();
@@ -129,5 +133,5 @@ test("unifies legacy accounts, supports mixed groups, and preserves storage type
         id_accountBookId: { id: card.id, accountBookId: book.accountBookId },
       },
     }),
-  ).toMatchObject({ type: "LIABILITY", groupId: everyday.id });
+  ).toMatchObject({ type: "BALANCE", groupId: everyday.id });
 });

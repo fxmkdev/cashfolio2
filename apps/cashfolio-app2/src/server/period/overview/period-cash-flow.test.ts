@@ -23,7 +23,7 @@ function cashBooking(
       id: "cash-a",
       name: "Cash A",
       groupId: "cash-group",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       isCashAccount: true,
     },
     ...overrides,
@@ -36,7 +36,7 @@ describe("computePeriodCashFlow", () => {
       id: "card",
       name: "Card",
       groupId: "banking",
-      type: AccountType.LIABILITY,
+      type: AccountType.BALANCE,
       isCashAccount: true,
     };
     const expense = {
@@ -148,7 +148,7 @@ describe("computePeriodCashFlow", () => {
                 id: "brokerage-a",
                 name: "Brokerage A",
                 groupId: null,
-                type: AccountType.ASSET,
+                type: AccountType.BALANCE,
                 isCashAccount: false,
               },
             }),

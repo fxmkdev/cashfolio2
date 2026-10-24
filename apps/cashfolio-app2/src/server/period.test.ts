@@ -161,7 +161,7 @@ describe("computeEndOfPeriodBalanceStats", () => {
       accounts: [
         {
           id: "asset-chf",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
           currency: "CHF",
           cryptocurrency: null,
@@ -170,7 +170,7 @@ describe("computeEndOfPeriodBalanceStats", () => {
         },
         {
           id: "liability-usd",
-          type: AccountType.LIABILITY,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
           currency: "USD",
           cryptocurrency: null,
@@ -215,7 +215,7 @@ describe("computeEndOfPeriodBalanceStats", () => {
       accounts: [
         {
           id: "asset-ok",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
           currency: "CHF",
           cryptocurrency: null,
@@ -224,7 +224,7 @@ describe("computeEndOfPeriodBalanceStats", () => {
         },
         {
           id: "liability-ok",
-          type: AccountType.LIABILITY,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
           currency: "CHF",
           cryptocurrency: null,
@@ -233,7 +233,7 @@ describe("computeEndOfPeriodBalanceStats", () => {
         },
         {
           id: "asset-missing-unit",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: null,
           currency: null,
           cryptocurrency: null,
@@ -242,7 +242,7 @@ describe("computeEndOfPeriodBalanceStats", () => {
         },
         {
           id: "asset-no-rate",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: Unit.SECURITY,
           currency: null,
           cryptocurrency: null,
@@ -285,7 +285,7 @@ describe("computeEndOfPeriodBalanceStats", () => {
       accounts: [
         {
           id: "asset-missing-unit-no-balance",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: null,
           currency: null,
           cryptocurrency: null,
@@ -318,7 +318,7 @@ describe("computeEndOfPeriodBalanceStats", () => {
       accounts: [
         {
           id: "asset-missing-unit-zero-net",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: null,
           currency: null,
           cryptocurrency: null,
@@ -991,7 +991,7 @@ describe("buildPeriodEndAllocationBreakdown", () => {
           accountId: "liability-card",
           accountName: "Credit Card",
           groupId: "liabilities",
-          accountType: AccountType.LIABILITY,
+          accountType: AccountType.BALANCE,
           convertedBalanceInReferenceCurrency: toMoney(-1200.5),
         },
       ],
@@ -1019,28 +1019,28 @@ describe("buildPeriodEndAllocationBreakdown", () => {
           accountId: "asset-missing",
           accountName: "Missing",
           groupId: "assets",
-          accountType: AccountType.ASSET,
+          accountType: AccountType.BALANCE,
           convertedBalanceInReferenceCurrency: null,
         },
         {
           accountId: "asset-zero",
           accountName: "Zero",
           groupId: "assets",
-          accountType: AccountType.ASSET,
+          accountType: AccountType.BALANCE,
           convertedBalanceInReferenceCurrency: toMoney(0),
         },
         {
           accountId: "liability-not-outstanding",
           accountName: "Not Outstanding",
           groupId: "liabilities",
-          accountType: AccountType.LIABILITY,
+          accountType: AccountType.BALANCE,
           convertedBalanceInReferenceCurrency: toMoney(25),
         },
         {
           accountId: "asset-visible",
           accountName: "Visible",
           groupId: "assets",
-          accountType: AccountType.ASSET,
+          accountType: AccountType.BALANCE,
           convertedBalanceInReferenceCurrency: toMoney(100),
         },
       ],
@@ -1075,14 +1075,14 @@ describe("buildPeriodEndAllocationBreakdown", () => {
           accountId: "asset-main",
           accountName: "Main",
           groupId: "assets",
-          accountType: AccountType.ASSET,
+          accountType: AccountType.BALANCE,
           convertedBalanceInReferenceCurrency: toMoney(100.002),
         },
         {
           accountId: "asset-tiny",
           accountName: "Tiny",
           groupId: "assets",
-          accountType: AccountType.ASSET,
+          accountType: AccountType.BALANCE,
           convertedBalanceInReferenceCurrency: toMoney(0.004),
         },
       ],

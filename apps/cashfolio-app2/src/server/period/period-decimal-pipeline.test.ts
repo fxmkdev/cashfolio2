@@ -47,7 +47,7 @@ function createScenario(): PeriodBaseData {
     id: "security",
     name: "Security",
     groupId: null,
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     unit: Unit.SECURITY,
     currency: null,
     cryptocurrency: null,
@@ -100,7 +100,7 @@ function createScenario(): PeriodBaseData {
             cryptocurrency: null,
             symbol: "ABC",
             tradeCurrency: "CHF",
-            accountType: AccountType.ASSET,
+            accountType: AccountType.BALANCE,
             equityAccountSubtype: null,
           },
           {
@@ -113,7 +113,7 @@ function createScenario(): PeriodBaseData {
             cryptocurrency: null,
             symbol: null,
             tradeCurrency: null,
-            accountType: AccountType.ASSET,
+            accountType: AccountType.BALANCE,
             equityAccountSubtype: null,
           },
         ],
@@ -291,7 +291,7 @@ describe("Decimal monetary pipelines", () => {
         ...bank,
         id: "card",
         name: "Card",
-        type: AccountType.LIABILITY,
+        type: AccountType.BALANCE,
       };
       scenario.baseAssetLiabilityAccounts = [bank, card];
       scenario.allAccountGroups = [

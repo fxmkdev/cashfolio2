@@ -7,12 +7,13 @@ const CONVERTIBLE_BALANCE_SEED_DATE = new Date("2026-01-03T00:00:00.000Z");
 async function findTopLevelGroupId(args: {
   prisma: PrismaClient;
   accountBookId: string;
-  type: AccountType;
+  name: "Assets" | "Liabilities";
 }) {
   const group = await args.prisma.accountGroup.findFirstOrThrow({
     where: {
       accountBookId: args.accountBookId,
-      type: args.type,
+      type: AccountType.BALANCE,
+      name: args.name,
       parentGroupId: null,
     },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -48,7 +49,7 @@ export async function seedNonZeroConvertibleAssetBalancesWithPrisma(args: {
   const assetRootGroupId = await findTopLevelGroupId({
     prisma: args.prisma,
     accountBookId: args.accountBookId,
-    type: AccountType.ASSET,
+    name: "Assets",
   });
 
   const usdAccount = await args.prisma.account.create({
@@ -56,7 +57,7 @@ export async function seedNonZeroConvertibleAssetBalancesWithPrisma(args: {
       id: createId(),
       accountBookId: args.accountBookId,
       name: `E2E USD Cash ${seedSuffix}`,
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       groupId: assetRootGroupId,
       unit: Unit.CURRENCY,
       currency: "USD",
@@ -70,7 +71,7 @@ export async function seedNonZeroConvertibleAssetBalancesWithPrisma(args: {
       id: createId(),
       accountBookId: args.accountBookId,
       name: `E2E BTC Wallet ${seedSuffix}`,
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       groupId: assetRootGroupId,
       unit: Unit.CRYPTOCURRENCY,
       cryptocurrency: "BTC",
@@ -84,7 +85,7 @@ export async function seedNonZeroConvertibleAssetBalancesWithPrisma(args: {
       id: createId(),
       accountBookId: args.accountBookId,
       name: `E2E AAPL Holdings ${seedSuffix}`,
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       groupId: assetRootGroupId,
       unit: Unit.SECURITY,
       symbol: "AAPL",
@@ -196,12 +197,12 @@ export async function seedNonZeroConvertibleArchivedAndLiabilityBalancesWithPris
     findTopLevelGroupId({
       prisma: args.prisma,
       accountBookId: args.accountBookId,
-      type: AccountType.ASSET,
+      name: "Assets",
     }),
     findTopLevelGroupId({
       prisma: args.prisma,
       accountBookId: args.accountBookId,
-      type: AccountType.LIABILITY,
+      name: "Liabilities",
     }),
   ]);
 
@@ -210,7 +211,7 @@ export async function seedNonZeroConvertibleArchivedAndLiabilityBalancesWithPris
       id: createId(),
       accountBookId: args.accountBookId,
       name: `E2E Archived USD Cash ${seedSuffix}`,
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       groupId: assetRootGroupId,
       unit: Unit.CURRENCY,
       currency: "USD",
@@ -225,7 +226,7 @@ export async function seedNonZeroConvertibleArchivedAndLiabilityBalancesWithPris
       id: createId(),
       accountBookId: args.accountBookId,
       name: `E2E Liability USD ${seedSuffix}`,
-      type: AccountType.LIABILITY,
+      type: AccountType.BALANCE,
       groupId: liabilityRootGroupId,
       unit: Unit.CURRENCY,
       currency: "USD",

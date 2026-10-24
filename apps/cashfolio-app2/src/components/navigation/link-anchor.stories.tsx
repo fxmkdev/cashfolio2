@@ -9,7 +9,7 @@ const meta = {
     children: "Open Account Book",
     to: "/$accountBookId",
     params: { accountBookId: "storybook-book" } as never,
-    search: { tab: "ASSET", mode: "active" } as never,
+    search: { tab: "BALANCE", mode: "active" } as never,
   },
 } satisfies Meta<typeof LinkAnchor>;
 

@@ -527,32 +527,30 @@ actions. Their display parents must never be submitted as real parent IDs. See
 
 ## Type Descriptor Pattern
 
-Account management uses the presentation/query scope `BALANCE`, covering stored
-`ASSET` and `LIABILITY` records. The Type field is hidden in balance account and
-group editors. New accounts/groups store `ASSET` as a temporary compatibility
-value regardless of balance sign or parent type. Editing preserves stored types.
-No booking values or IDs are migrated. Persisted-type cleanup is a later stage.
+Account management uses the persisted type `BALANCE` for all balance accounts
+and groups. The Type field is hidden in their editors. Both positive and
+negative balances use the same type; report classification depends on the
+balance at the reporting date. No booking values or IDs are migrated.
 
 Category editors retain the disabled Income/Expense Type field. Gain/Loss and
 Opening Balances remain system-managed and cannot be created through these
 forms.
 
-Balance accounts and groups can share either legacy balance-group type. Parent
+Balance accounts and groups can share any balance-group parent. Parent
 compatibility is enforced on the server, including account-book ownership,
 active-parent requirements for active nodes, category-subtype compatibility, and
 cycle prevention. Existing group IDs and names remain distinct.
 
 Cash Account is an explicit capability: any currency balance account may be
-marked as cash, regardless of legacy type. Root flags default to false; children
-inherit the parent group flag. Cash groups may contain only currency balance
-accounts and balance sub-groups, including archived descendants. Securities,
-crypto, and categories are ineligible. Reparenting or toggling a group
-propagates the inherited flag through its subtree and invalidates derived book
-caches.
+marked as cash. Root flags default to false; children inherit the parent group
+flag. Cash groups may contain only currency balance accounts and balance
+sub-groups, including archived descendants. Securities, crypto, and categories
+are ineligible. Reparenting or toggling a group propagates the inherited flag
+through its subtree and invalidates derived book caches.
 
 Accounts links canonicalize to `tab=BALANCE&mode=active`, including legacy
 asset/liability/archive links. Category redirects retain their tab/archive mode.
-Selectors use an Accounts root for both legacy types; ledger badges show Account
+Selectors use an Accounts root for balance accounts; ledger badges show Account
 with a neutral color. Report Assets/Liabilities remain balance-based labels.
 Unified account expansion preferences use
 `cashfolio:expandedGroups:${accountBookId}:active:BALANCE`, initially seeded
@@ -778,10 +776,10 @@ creation and eligible edit of two-booking transactions from the ledger route
   - selecting an `EXPENSE` account forces `Credit` on the current account
   - the direction toggle action icon is disabled while forced
 - Availability:
-  - only for current accounts of type `ASSET` or `LIABILITY`
+  - only for current accounts of type `BALANCE`
   - current account must have a complete unit identifier
   - selected account must be active
-  - `ASSET`/`LIABILITY` options must match the current account unit identifier
+  - `BALANCE` options must match the current account unit identifier
   - all active `EQUITY` accounts are available
   - for security units, compatibility is symbol-based (trade currency is not
     part of unit identity)
@@ -1131,10 +1129,10 @@ versions and live cross-tab synchronization remain separate follow-ups.
 
 Assets include positive period-end account balances; Liabilities include the
 absolute values of negative balances, regardless of the stored account type. The
-Account management combines both legacy types in a stable hierarchy. Report
-allocation tables/charts and History totals/scopes use the same rule. An
-overdrawn asset account appears under Liabilities and an overpaid liability
-account appears under Assets, retaining its original group path and ledger link.
-A group can appear on both sides, with only the relevant accounts on each side.
-History scopes show zero for dates on the opposite side. Category roles, cash
-account flags, and signed ledger/import conventions do not change.
+Account management uses a stable balance-account hierarchy. Report allocation
+tables/charts and History totals/scopes use the same rule. An overdrawn asset
+account appears under Liabilities and an overpaid liability account appears
+under Assets, retaining its original group path and ledger link. A group can
+appear on both sides, with only the relevant accounts on each side. History
+scopes show zero for dates on the opposite side. Category roles, cash account
+flags, and signed ledger/import conventions do not change.

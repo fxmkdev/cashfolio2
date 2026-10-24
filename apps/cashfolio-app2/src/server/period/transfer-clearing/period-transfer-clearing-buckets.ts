@@ -91,7 +91,7 @@ async function loadTransferClearingBookings(
           OR: [
             {
               type: {
-                in: [AccountType.ASSET, AccountType.LIABILITY],
+                in: [AccountType.BALANCE],
               },
             },
             {

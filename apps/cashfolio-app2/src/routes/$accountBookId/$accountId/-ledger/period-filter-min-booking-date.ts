@@ -12,10 +12,7 @@ export function resolvePeriodFilterMinBookingDate(args: {
     return null;
   }
 
-  if (
-    accountType === AccountType.ASSET ||
-    accountType === AccountType.LIABILITY
-  ) {
+  if (accountType === AccountType.BALANCE) {
     if (!firstAccountBookingDate) {
       return accountBookMinBookingDate;
     }

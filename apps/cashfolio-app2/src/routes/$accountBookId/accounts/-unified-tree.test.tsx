@@ -15,7 +15,7 @@ function row(id: string, overrides: Partial<TreeRow> = {}): TreeRow {
     id,
     name: id,
     nodeType: "account",
-    type: "ASSET",
+    type: "BALANCE",
     equityAccountSubtype: null,
     unit: "CURRENCY",
     currency: "CHF",

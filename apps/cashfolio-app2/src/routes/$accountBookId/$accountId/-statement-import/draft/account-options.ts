@@ -18,11 +18,8 @@ export function getStatementImportDisabledReason(account: {
   tradeCurrency: string | null;
   statementImportCsvFormat?: StatementImportCsvFormat | null;
 }): string | null {
-  if (
-    account.type !== AccountType.ASSET &&
-    account.type !== AccountType.LIABILITY
-  ) {
-    return "Statement imports are only available for asset and liability accounts.";
+  if (account.type !== AccountType.BALANCE) {
+    return "Statement imports are only available for accounts.";
   }
 
   if (!getSimpleTransactionUnitIdentifier(account)) {

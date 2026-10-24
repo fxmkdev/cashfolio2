@@ -24,7 +24,7 @@ import {
 } from "./dataset-model";
 
 export function householdAccounts(target: SeedBook) {
-  addGroup(target, "cash", "Cash", AccountType.ASSET, {
+  addGroup(target, "cash", "Cash", AccountType.BALANCE, {
     isCashAccount: true,
   });
   for (const [key, name] of [
@@ -32,16 +32,16 @@ export function householdAccounts(target: SeedBook) {
     ["postfinance", "PostFinance"],
     ["swissquote", "Swissquote"],
   ]) {
-    addGroup(target, key, name, AccountType.ASSET, {
+    addGroup(target, key, name, AccountType.BALANCE, {
       parentKey: "cash",
       isCashAccount: true,
     });
   }
-  addGroup(target, "investments", "Investments", AccountType.ASSET);
-  addGroup(target, "securities", "Shares", AccountType.ASSET, {
+  addGroup(target, "investments", "Investments", AccountType.BALANCE);
+  addGroup(target, "securities", "Shares", AccountType.BALANCE, {
     parentKey: "investments",
   });
-  addGroup(target, "crypto", "Cryptocurrencies", AccountType.ASSET, {
+  addGroup(target, "crypto", "Cryptocurrencies", AccountType.BALANCE, {
     parentKey: "investments",
   });
   for (const [key, name] of [
@@ -61,7 +61,7 @@ export function householdAccounts(target: SeedBook) {
     ["usd", "Broker cash USD", "swissquote", USD],
     ["spare", "Holiday savings CHF", "postfinance", CHF],
   ] as const) {
-    addAccount(target, key, name, AccountType.ASSET, {
+    addAccount(target, key, name, AccountType.BALANCE, {
       ...unit,
       groupKey,
       isCashAccount: true,
@@ -77,13 +77,13 @@ export function householdAccounts(target: SeedBook) {
     ["eth", "Ethereum wallet", "crypto", ETH],
     ["pension", "Pillar 3a savings", "investments", CHF],
   ] as const) {
-    addAccount(target, key, name, AccountType.ASSET, { ...unit, groupKey });
+    addAccount(target, key, name, AccountType.BALANCE, { ...unit, groupKey });
   }
   for (const [key, name] of [
     ["card", "Credit card CHF"],
     ["loan", "Personal loan CHF"],
   ]) {
-    addAccount(target, key, name, AccountType.LIABILITY, {
+    addAccount(target, key, name, AccountType.BALANCE, {
       ...CHF,
     });
   }

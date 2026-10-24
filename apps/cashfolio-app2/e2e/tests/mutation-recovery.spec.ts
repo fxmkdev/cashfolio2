@@ -56,7 +56,7 @@ test("a rejected reorder restores the saved grid order and can be explicitly ret
       id: groupId,
       accountBookId: seeded.accountBookId,
       name: "Reorder recovery group",
-      type: "ASSET",
+      type: "BALANCE",
     },
   });
   const ids = [createId(), createId()];
@@ -68,7 +68,7 @@ test("a rejected reorder restores the saved grid order and can be explicitly ret
       sortOrder,
       groupId,
       accountBookId: seeded.accountBookId,
-      type: "ASSET" as const,
+      type: "BALANCE" as const,
       unit: "CURRENCY" as const,
       currency: "CHF",
     })),
@@ -151,7 +151,7 @@ for (const nodeType of ["account", "accountGroup"] as const) {
         id: parentId,
         accountBookId: seeded.accountBookId,
         name: `Parent ${nodeType}`,
-        type: "ASSET",
+        type: "BALANCE",
       },
     });
     if (nodeType === "account") {
@@ -160,7 +160,7 @@ for (const nodeType of ["account", "accountGroup"] as const) {
           id,
           accountBookId: seeded.accountBookId,
           name,
-          type: "ASSET",
+          type: "BALANCE",
           groupId: parentId,
           isActive: false,
           unit: "CURRENCY",
@@ -173,7 +173,7 @@ for (const nodeType of ["account", "accountGroup"] as const) {
           id,
           accountBookId: seeded.accountBookId,
           name,
-          type: "ASSET",
+          type: "BALANCE",
           parentGroupId: parentId,
           isActive: false,
         },
@@ -233,7 +233,7 @@ test("ledger unarchive displays busy rollback and succeeds only on explicit retr
       id,
       accountBookId: seeded.accountBookId,
       name,
-      type: "ASSET",
+      type: "BALANCE",
       isActive: false,
       unit: "CURRENCY",
       currency: "CHF",
@@ -383,7 +383,7 @@ for (const action of ["Archive", "Delete"] as const) {
       data: {
         id,
         name,
-        type: "ASSET",
+        type: "BALANCE",
         unit: "CURRENCY",
         currency: "CHF",
         accountBookId: seeded.accountBookId,
@@ -522,7 +522,7 @@ for (const entity of ["account", "group"] as const) {
       id,
       name: original,
       accountBookId: seeded.accountBookId,
-      type: "ASSET" as const,
+      type: "BALANCE" as const,
     };
     if (entity === "account")
       await prisma.account.create({

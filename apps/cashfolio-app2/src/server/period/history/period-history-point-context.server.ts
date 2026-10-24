@@ -26,7 +26,7 @@ export async function loadPeriodHistoryPointContext(args: {
     where: {
       accountBookId: args.accountBookId,
       type: {
-        in: [AccountType.ASSET, AccountType.LIABILITY],
+        in: [AccountType.BALANCE],
       },
     },
     select: {

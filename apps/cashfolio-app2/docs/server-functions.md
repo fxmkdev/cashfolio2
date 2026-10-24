@@ -618,11 +618,11 @@ deduplication remain shared.
 
 `src/server/accounts/account-gain-loss-cache.server.ts` caches one book-wide
 summary dataset, including leaf diagnostics and account/group view metadata.
-Filtering by scope (`BALANCE` or legacy `ASSET`/`LIABILITY`), account state, and
-Decimal group/footer aggregation happen after retrieval. Accounts requests
-`BALANCE` with the `all` state; group metadata includes archived state so the
-shared display projection can aggregate virtual Archived groups from account
-leaves. Summary v4 and basis v3 ignore older payloads without this metadata.
+Filtering by persisted type (`BALANCE` or `EQUITY`), account state, and Decimal
+group/footer aggregation happen after retrieval. Accounts requests `BALANCE`
+with the `all` state; group metadata includes archived state so the shared
+display projection can aggregate virtual Archived groups from account leaves.
+Summary v4 and basis v3 ignore older payloads without this metadata.
 Authorization runs before cache access. Ledger summaries bypass this
 final-summary cache but share the historical basis cache below. Calculation
 drawers bypass both caches.
@@ -717,10 +717,10 @@ series and their fallback/cooldown caches are preserved.
 Report and History classify each balance account by its exact reference-currency
 balance at the reporting date, before rounding or grouping. Positive balances
 contribute to Assets; absolute values of negative balances contribute to
-Liabilities. Zero balances contribute to neither. Stored `ASSET`/`LIABILITY`
-types determine eligibility only; equity accounts are excluded. Virtual
-transfer-clearing accounts follow the same rule. Net worth remains Assets minus
-Liabilities and is unchanged by this classification.
+Liabilities. Zero balances contribute to neither. The stored `BALANCE` type
+determines eligibility; equity accounts are excluded. Virtual transfer-clearing
+accounts follow the same rule. Net worth remains Assets minus Liabilities and is
+unchanged by this classification.
 
 Allocation charts and tables preserve the original account/group hierarchy on
 each side, even when a group's accounts have mixed signs. Unavailable valuations
@@ -739,15 +739,16 @@ base-data v8 and valuation caches remain compatible.
 ### Unified account management queries
 
 Tree, page-data, reference-balance, and account gain/loss summary queries accept
-the `BALANCE` scope. Query boundaries map it to persisted `ASSET`/`LIABILITY`
-filters for both accounts and groups, excluding categories and system accounts.
-Existing single-type scopes remain supported. Balance-group ancestry and G/L
-aggregation span both types. Creation still stores a compatibility `ASSET` type;
-updates preserve the original type. No schema or booking migration is required.
+the persisted `BALANCE` type directly for both accounts and groups, excluding
+categories and system accounts. Balance-group ancestry and G/L aggregation span
+all balance accounts. Creation and updates use the same persisted type. Mutation
+inputs reject obsolete `ASSET`/`LIABILITY` values; clients loaded before the
+cutover must reload. Legacy account-page URLs and browser expansion preferences
+remain supported only at their existing presentation boundaries.
 
 Account/group mutations validate parent ownership, balance/category
 compatibility, category subtype, active status, and group cycles before saving.
 Cash eligibility is based on the explicit flag and currency unit rather than the
-legacy balance type; cash-flow calculation includes marked accounts of either
-type and excludes pure cash-to-cash transfers. Existing mutation invalidation
-refreshes results.
+balance sign; cash-flow calculation includes marked balance accounts and
+excludes pure cash-to-cash transfers. Existing mutation invalidation refreshes
+results.

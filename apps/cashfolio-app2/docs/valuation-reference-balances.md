@@ -22,14 +22,14 @@ Related docs:
 
 ## Archived groups and totals
 
-Accounts shows both legacy balance types and active/archived real items
-together. Directly archived children of an active group, or archived roots,
-appear beneath a virtual **Archived** group. Archived real groups retain their
-complete original subtrees; no further virtual wrappers are inserted inside
-them. Empty virtual groups are omitted. Virtual groups start collapsed, remember
-expansion per book in the session, remain last among siblings even during column
-sorting, and have no mutation actions. A real group named Archived remains an
-ordinary editable group.
+Accounts shows balance accounts and active/archived real items together.
+Directly archived children of an active group, or archived roots, appear beneath
+a virtual **Archived** group. Archived real groups retain their complete
+original subtrees; no further virtual wrappers are inserted inside them. Empty
+virtual groups are omitted. Virtual groups start collapsed, remember expansion
+per book in the session, remain last among siblings even during column sorting,
+and have no mutation actions. A real group named Archived remains an ordinary
+editable group.
 
 Virtual name cells use a muted archive icon and label, with the tooltip
 “Archived items grouped automatically. Included in totals.” on hover and
@@ -46,7 +46,7 @@ exactly once, regardless of collapse or filtering in the grid. Virtual groups
 use the same descendant aggregation and completeness rules as real groups.
 Accounts retains balance/G/L columns. Legacy asset/liability and archive links
 redirect to `tab=BALANCE&mode=active`. Both sides contribute once to the signed
-footer total, and groups may contain accounts of either legacy type.
+footer total, and groups may contain accounts with either balance sign.
 
 Income and expense categories remain unitless and use separate active and
 archived views under Account Book Settings. Their real hierarchy has no virtual

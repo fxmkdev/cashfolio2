@@ -53,7 +53,7 @@ const assetAccount = {
   id: "account-checking",
   name: "Checking",
   isActive: true,
-  type: AccountType.ASSET,
+  type: AccountType.BALANCE,
   equityAccountSubtype: null,
   unit: Unit.CURRENCY,
   currency: "CHF",
@@ -133,7 +133,7 @@ const createSplitInitialValues: SplitModalInitialValues = {
 function LedgerPageStoryHarness({
   routeSmoke = false,
   includePeriodFilterControls = false,
-  accountType = AccountType.ASSET,
+  accountType = AccountType.BALANCE,
   startWithSimpleModal = false,
   startWithSplitModal = false,
   startWithEditModal = false,
@@ -287,7 +287,7 @@ function LedgerPageStoryHarness({
       }}
     >
       <LedgerPageView
-        backTab="ASSET"
+        backTab="BALANCE"
         account={account}
         accountGroups={[]}
         existingNodes={[]}

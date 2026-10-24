@@ -12,12 +12,7 @@ import {
   revealRowActions,
 } from "../support/grid";
 
-for (const tab of [
-  "ASSET",
-  "LIABILITY",
-  "EQUITY-INCOME",
-  "EQUITY-EXPENSE",
-] as const) {
+for (const tab of ["BALANCE", "EQUITY-INCOME", "EQUITY-EXPENSE"] as const) {
   test(`${tab}: Archived groups preserve hierarchy, actions, and ordering`, async ({
     page,
     e2eExternalId,
@@ -25,7 +20,7 @@ for (const tab of [
     const book = await seedDatabase({ userExternalId: e2eExternalId });
     const type: AccountType = tab.startsWith("EQUITY-")
       ? "EQUITY"
-      : (tab as "ASSET" | "LIABILITY");
+      : (tab as "BALANCE");
     const equityAccountSubtype: EquityAccountSubtype | null =
       tab === "EQUITY-INCOME"
         ? "INCOME"
