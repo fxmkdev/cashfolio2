@@ -21,14 +21,15 @@ pnpm --filter cashfolio-app2 prisma:generate
 pnpm --filter cashfolio-app2 storybook
 ```
 
-Build Storybook:
+For local development or debugging, build Storybook with:
 
 ```bash
 pnpm --filter cashfolio-app2 build-storybook
 ```
 
-Run browser render/interaction tests directly; no running Storybook server is
-required:
+When local verification is justified by the
+[verification policy](../../../CONTRIBUTING.md#verification-policy), run browser
+render/interaction tests directly; no running Storybook server is required:
 
 ```bash
 pnpm --filter cashfolio-app2 test-storybook
@@ -42,10 +43,13 @@ pnpm --filter cashfolio-app2 test-storybook:coverage
   stories in `src/**/*.stories.tsx` in the same PR.
 - Include key states and important interaction paths, not only the default happy
   path.
-- Before finishing, ensure Storybook is healthy:
-  - `pnpm --filter cashfolio-app2 build-storybook`
-  - run `pnpm --filter cashfolio-app2 test-storybook` when interaction behavior
-    or story play functions changed.
+- Use the `cashfolio-app2: Storybook Tests` CI check for build and interaction
+  verification when reviewing the current PR revision. Do not duplicate it
+  locally just to review the PR, including while CI is pending or unavailable.
+- During implementation, including changes to story play functions, run focused
+  interaction tests when they provide inexpensive feedback. Leave full Storybook
+  builds/tests to CI by default; use local runs for a concrete investigation, a
+  relevant gap in CI coverage, or an explicit user request.
 
 Chromatic publishing:
 

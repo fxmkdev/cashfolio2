@@ -3,6 +3,37 @@
 Scope: This document describes `apps/cashfolio-app2`. Unless noted otherwise,
 paths are relative to that app directory.
 
+## Verification Policy
+
+When reviewing an existing PR, reuse CI results for its current revision rather
+than repeating CI-covered checks locally, including inexpensive ones. Pending or
+unavailable CI does not automatically trigger local replacements. Local checks
+during review are reserved for concrete investigations, gaps in CI coverage, or
+explicit user requests. Inspect failing CI logs and artifacts first, then run
+the smallest useful local reproduction if needed.
+
+During implementation, including fixes made during a review, run relevant
+inexpensive local checks before pushing even when CI also covers them. Prefer
+focused unit tests, typecheck, and lint/format checks scoped to the change where
+practical. Choose checks based on the changed behavior and their actual cost;
+avoid unrelated checks or repeating successful runs without new changes or a
+specific reason.
+
+Leave expensive full coverage runs, database-backed integration suites,
+production builds, E2E, and full Storybook builds/tests to CI by default. Run
+these locally only for a concrete investigation, a relevant gap in CI coverage,
+or an explicit user request, using the smallest useful run.
+
+Earlier green results do not validate later changes, and pending, missing,
+skipped, cancelled, or inaccessible results are not passes. Report CI evidence
+separately from any local execution. Commands below support both implementation
+feedback and focused investigations.
+
+See the repository's
+[Verification Policy](../../../CONTRIBUTING.md#verification-policy) for
+readiness requirements and exceptions for necessary setup, code generation, and
+intentional coverage-baseline updates.
+
 ## Testing Pyramid
 
 - **Unit tests (base layer)**: fast, deterministic logic tests with Vitest.
