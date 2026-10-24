@@ -145,7 +145,7 @@ describe("buildAccountRows and buildGroupRows", () => {
       ]),
       displayBalanceInReferenceCurrencyByAccountId: new Map([
         ["asset-1", toMoney(100)],
-        ["liability-1", toMoney(-25)],
+        ["liability-1", toMoney(25)],
       ]),
       bookingCountByAccountId: new Map(),
       groupById: createGroupHierarchyMap(groups),
@@ -166,9 +166,9 @@ describe("buildAccountRows and buildGroupRows", () => {
         }),
         expect.objectContaining({
           id: "liability-1",
-          balance: -25,
-          balanceInReferenceCurrency: -25,
-          openingBalance: 10,
+          balance: 25,
+          balanceInReferenceCurrency: 25,
+          openingBalance: -10,
           deletable: false,
           archivable: false,
           unarchivable: false,

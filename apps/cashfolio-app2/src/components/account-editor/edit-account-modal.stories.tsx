@@ -85,6 +85,36 @@ export const Edit: Story = {
   },
 };
 
+export const LiabilityOpeningDebt: Story = {
+  args: {
+    initialValues: {
+      ...editAccountInitialValues,
+      name: "Credit Card",
+      type: "LIABILITY",
+      openingBalance: -100,
+      groupId: undefined,
+      isCashAccount: false,
+    },
+    typeDescriptor: "LIABILITY",
+    editingId: "account-card",
+  },
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole("dialog", { name: "Edit Account" });
+    const balance = within(dialog).getByLabelText("Opening Balance");
+    await expect(balance).toHaveValue("-100");
+    await expect(balance).toHaveAccessibleDescription(
+      "Use positive amounts for balances you own and negative amounts for balances you owe.",
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "LIABILITY", openingBalance: -100 }),
+      ),
+    );
+  },
+};
+
 export const ValidationSmoke: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);

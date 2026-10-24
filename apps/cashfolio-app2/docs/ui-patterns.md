@@ -426,7 +426,15 @@ Selectors accepting both entities use "Account or Category".
 
 Use the shared `account-presentation` predicates and labels at presentation
 boundaries. These names do not change stored account types, booking signs,
-liability display inversion, income/expense direction rules, or calculations.
+income/expense direction rules, or calculations.
+
+Asset and liability account balances use the same signed convention: positive
+means owned and negative means owed. This applies to native and
+reference-currency balances, opening balances, ledger running balances, and
+statement import previews. Opening-balance inputs use that same sign without
+type-based inversion. The Assets/Liabilities tabs remain fixed classifications;
+Report and History retain their existing type-based calculations and positive
+debt presentation.
 
 ## Accounts List Columns
 
@@ -454,8 +462,7 @@ liability display inversion, income/expense direction rules, or calculations.
 - The footer `Total` also stays blank when any account row in the tab has a
   blank `Balance (<referenceCurrency>)` value.
 - Balances are displayed in each account's own unit/currency; no conversion.
-- Liability balances are sign-adjusted for display (same direction as ledger
-  display conventions).
+- Liability balances retain their stored sign, including group and footer sums.
 - For right-aligned numeric columns, loading and placeholder content inside
   cells must also be right-aligned (for example dotted loaders in
   `Balance (<referenceCurrency>)` cells).
@@ -538,11 +545,11 @@ bookings for a single account in chronological order. The parent
 `src/routes/$accountBookId/$accountId.tsx` route acts as a shared layout/loader
 for ledger child routes.
 
-- **Sign convention**: Values are negated for `LIABILITY` and `EQUITY`
-  (non-`EXPENSE`) accounts so that balances display naturally (positive =
-  increase)
-- **Debit/Credit split**: Positive adjusted values → debit column, negative →
-  credit column (shown as positive)
+- **Sign convention**: Asset and liability running balances retain their stored
+  sign (positive = owned, negative = owed). Only `EQUITY` (non-`EXPENSE`)
+  balances retain their existing display inversion.
+- **Debit/Credit split**: Positive booking values → debit column, negative →
+  credit column (shown as positive), independent of account type.
 - **Debit/Credit column visibility**: Income accounts hide the debit column;
   Expense accounts hide the credit column; Equity (non-Expense) accounts hide
   the balance column
@@ -804,8 +811,8 @@ compatibility but ignored by the importer.
   bookings count once, including those matched to ignored candidates. Selecting
   a matched candidate deliberately adds another transaction. Later bookings do
   not affect earlier row balances. Edits recalculate using each current-account
-  booking's own UTC date and compatible unit; liability balances are
-  sign-adjusted. The combined grid shows newest dates first, preserving CSV row
+  booking's own UTC date and compatible unit; liability balances retain their
+  signed values. The combined grid shows newest dates first, preserving CSV row
   order within each day (calculated bottom-to-top). Matched bookings occupy
   their CSV row's position; other existing same-day bookings precede the CSV
   sequence. A non-zero projected balance before the earliest review date appears

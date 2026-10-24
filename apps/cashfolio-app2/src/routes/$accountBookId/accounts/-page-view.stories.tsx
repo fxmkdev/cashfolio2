@@ -1090,6 +1090,75 @@ export const GainLossPartial: Story = {
   },
 };
 
+export const SignedLiabilityBalances: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      initialTab="LIABILITY"
+      expandGroups
+      rowsOverride={[
+        {
+          ...createGroupRow({
+            id: "cards",
+            name: "Credit Cards",
+            type: AccountType.LIABILITY,
+            isActive: true,
+            sortOrder: 0,
+          }),
+          // Group balances are computed by the controller before rendering.
+          balanceInReferenceCurrency: -75,
+        },
+        createAccountRow({
+          id: "card-debt",
+          name: "Outstanding Debt",
+          groupId: "cards",
+          type: AccountType.LIABILITY,
+          isActive: true,
+          sortOrder: 0,
+          currency: "CHF",
+          balance: -100,
+          balanceInReferenceCurrency: -100,
+        }),
+        createAccountRow({
+          id: "card-credit",
+          name: "Overpaid Card",
+          groupId: "cards",
+          type: AccountType.LIABILITY,
+          isActive: true,
+          sortOrder: 1,
+          currency: "CHF",
+          balance: 25,
+          balanceInReferenceCurrency: 25,
+        }),
+      ]}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector(
+          '[row-id="card-debt"] [col-id="balanceInReferenceCurrency"]',
+        ),
+      ).toHaveTextContent("-100.00"),
+    );
+    await expect(
+      canvasElement.querySelector(
+        '[row-id="card-credit"] [col-id="balanceInReferenceCurrency"]',
+      ),
+    ).toHaveTextContent("25.00");
+    await expect(
+      canvasElement.querySelector(
+        '[row-id="cards"] [col-id="balanceInReferenceCurrency"]',
+      ),
+    ).toHaveTextContent("-75.00");
+    await expect(
+      canvasElement.querySelector(
+        '.ag-row-pinned [col-id="balanceInReferenceCurrency"]',
+      ),
+    ).toHaveTextContent("-75.00");
+  },
+};
+
 export const LocalizedLiabilityGainLoss: Story = {
   render: () => (
     <UserLocaleProvider locale="de-CH">

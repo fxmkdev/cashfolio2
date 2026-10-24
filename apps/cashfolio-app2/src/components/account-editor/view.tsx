@@ -165,6 +165,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
               <Grid.Col span={3}>
                 <FormattedNumberInput
                   label="Opening Balance"
+                  description="Use positive amounts for balances you own and negative amounts for balances you owe."
                   hideControls
                   {...form.getInputProps("openingBalance")}
                 />

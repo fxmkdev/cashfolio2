@@ -516,7 +516,7 @@ describe("statement import page controller", () => {
     expect(rows[0]?.balance).toBe(12);
   });
 
-  test("sign-adjusts liability balances like ledger display", () => {
+  test("keeps liability debt negative like ledger display", () => {
     const draft = createDraft({
       amount: -25,
       transaction: {
@@ -544,7 +544,7 @@ describe("statement import page controller", () => {
       drafts: [draft],
     });
 
-    expect(rows[0]?.balance).toBe(125);
+    expect(rows[0]?.balance).toBe(-125);
     expect(
       getStatementImportBalanceCarriedForwardRow({
         account: {
@@ -555,6 +555,6 @@ describe("statement import page controller", () => {
         existingBookings: openingBooking(-100),
         drafts: [draft],
       })?.balance,
-    ).toBe(100);
+    ).toBe(-100);
   });
 });
