@@ -245,6 +245,7 @@ export function usePeriodBreakdownViewModel(args: {
   const chartOptions = usePeriodBreakdownChartOptions({
     chartData,
     selectedChartType: effectiveSelectedChartType,
+    colorBySign: selectedBreakdown === "cashFlow",
     colors,
     totalBreakdownAmountLabel,
     onNodeDoubleClick: handleNodeDoubleClick,

@@ -60,12 +60,14 @@ export function buildCommonChartThemeParams(colors: DashboardChartThemeColors) {
 export function usePeriodBreakdownChartOptions(args: {
   chartData: PeriodBreakdownChartDatum[];
   selectedChartType: BreakdownChartType;
+  colorBySign?: boolean;
   colors: DashboardChartThemeColors;
   totalBreakdownAmountLabel: string;
   onNodeDoubleClick: (datum: PeriodBreakdownNodeDatum) => void;
 }): PeriodBreakdownChartOptions {
   const {
     chartData,
+    colorBySign = false,
     colors,
     onNodeDoubleClick,
     selectedChartType,
@@ -147,7 +149,7 @@ export function usePeriodBreakdownChartOptions(args: {
         params: buildCommonChartThemeParams(colors),
       },
       legend: {
-        enabled: false,
+        enabled: !colorBySign,
         position: "bottom",
       },
       series: chartData.map<AgBarSeriesOptions<PeriodBreakdownChartDatum>>(
@@ -156,23 +158,27 @@ export function usePeriodBreakdownChartOptions(args: {
           data: [datum],
           direction: "vertical" as const,
           grouped: false,
-          fill:
-            datum.amount > 0
-              ? colors.positiveMarkerColor
-              : datum.amount < 0
-                ? colors.negativeMarkerColor
-                : colors.zeroLineColor,
-          stroke:
-            datum.amount > 0
-              ? colors.positiveMarkerColor
-              : datum.amount < 0
-                ? colors.negativeMarkerColor
-                : colors.zeroLineColor,
+          ...(colorBySign
+            ? {
+                fill:
+                  datum.amount > 0
+                    ? colors.positiveMarkerColor
+                    : datum.amount < 0
+                      ? colors.negativeMarkerColor
+                      : colors.zeroLineColor,
+                stroke:
+                  datum.amount > 0
+                    ? colors.positiveMarkerColor
+                    : datum.amount < 0
+                      ? colors.negativeMarkerColor
+                      : colors.zeroLineColor,
+              }
+            : {}),
           widthRatio: 0.72,
           xKey: "label" as const,
           yKey: "amount" as const,
-          yName: "Amount",
-          showInLegend: false,
+          yName: datum.label,
+          showInLegend: !colorBySign,
           tooltip: {
             renderer: ({ datum }: { datum: PeriodBreakdownChartDatum }) =>
               buildBreakdownTooltipData(datum),
@@ -208,7 +214,7 @@ export function usePeriodBreakdownChartOptions(args: {
         },
       },
     }),
-    [amountCompactFormatter, chartData, colors, onNodeDoubleClick],
+    [amountCompactFormatter, chartData, colorBySign, colors, onNodeDoubleClick],
   );
 
   return selectedChartType === "bar" ? barChartOptions : donutChartOptions;
