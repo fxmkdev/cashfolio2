@@ -108,7 +108,7 @@ describe("accounts-mutations system-managed subtype guards", () => {
           equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
         },
       }),
-    ).rejects.toThrow("Gain/Loss accounts are system-managed.");
+    ).rejects.toThrow("Gain/Loss categories are system-managed.");
   });
 
   it("rejects creating opening balances accounts", async () => {
@@ -140,7 +140,7 @@ describe("accounts-mutations system-managed subtype guards", () => {
           equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
         },
       }),
-    ).rejects.toThrow("Gain/Loss accounts are system-managed.");
+    ).rejects.toThrow("Gain/Loss categories are system-managed.");
     expect(prisma.account.findMany).not.toHaveBeenCalled();
     expect(validateAccountInput).not.toHaveBeenCalled();
   });
@@ -176,17 +176,17 @@ describe("accounts-mutations system-managed subtype guards", () => {
 
     await expect(
       deleteAccount({ data: { id: "account-1", accountBookId: "book-1" } }),
-    ).rejects.toThrow("Gain/Loss accounts are system-managed.");
+    ).rejects.toThrow("Gain/Loss categories are system-managed.");
 
     await expect(
       archiveAccount({ data: { id: "account-1", accountBookId: "book-1" } }),
-    ).rejects.toThrow("Gain/Loss accounts are system-managed.");
+    ).rejects.toThrow("Gain/Loss categories are system-managed.");
 
     await expect(
       unarchiveAccount({
         data: { id: "account-1", accountBookId: "book-1" },
       }),
-    ).rejects.toThrow("Gain/Loss accounts are system-managed.");
+    ).rejects.toThrow("Gain/Loss categories are system-managed.");
   });
 
   it("rejects deleting and archiving opening balances accounts", async () => {
@@ -222,7 +222,7 @@ describe("accounts-mutations system-managed subtype guards", () => {
           equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
         },
       }),
-    ).rejects.toThrow("Gain/Loss groups are system-managed.");
+    ).rejects.toThrow("Gain/Loss category groups are system-managed.");
   });
 
   it("rejects creating opening balances groups", async () => {
@@ -248,7 +248,7 @@ describe("accounts-mutations system-managed subtype guards", () => {
           equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
         },
       }),
-    ).rejects.toThrow("Gain/Loss accounts are system-managed.");
+    ).rejects.toThrow("Gain/Loss categories are system-managed.");
 
     await expect(
       createAccountGroup({
@@ -278,7 +278,7 @@ describe("accounts-mutations system-managed subtype guards", () => {
           equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
         },
       }),
-    ).rejects.toThrow("Gain/Loss groups are system-managed.");
+    ).rejects.toThrow("Gain/Loss category groups are system-managed.");
     expect(prisma.accountGroup.findMany).not.toHaveBeenCalled();
     expect(validateAccountGroupInput).not.toHaveBeenCalled();
   });
@@ -314,19 +314,19 @@ describe("accounts-mutations system-managed subtype guards", () => {
 
     await expect(
       deleteAccountGroup({ data: { id: "group-1", accountBookId: "book-1" } }),
-    ).rejects.toThrow("Gain/Loss groups are system-managed.");
+    ).rejects.toThrow("Gain/Loss category groups are system-managed.");
 
     await expect(
       archiveAccountGroup({
         data: { id: "group-1", accountBookId: "book-1" },
       }),
-    ).rejects.toThrow("Gain/Loss groups are system-managed.");
+    ).rejects.toThrow("Gain/Loss category groups are system-managed.");
 
     await expect(
       unarchiveAccountGroup({
         data: { id: "group-1", accountBookId: "book-1" },
       }),
-    ).rejects.toThrow("Gain/Loss groups are system-managed.");
+    ).rejects.toThrow("Gain/Loss category groups are system-managed.");
   });
 
   it("rejects deleting and archiving opening balances groups", async () => {

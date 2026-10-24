@@ -5,10 +5,12 @@ export function useDialogSubmitState({
   onSubmittingChange,
   captureErrors = false,
   onRefreshConstraints,
+  formatErrorMessage,
 }: {
   onSubmittingChange?: (isSubmitting: boolean) => void;
   captureErrors?: boolean;
   onRefreshConstraints?: () => Promise<void>;
+  formatErrorMessage?: (message: string) => string;
 } = {}) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
@@ -23,6 +25,8 @@ export function useDialogSubmitState({
   );
   const refreshRef = useRef(onRefreshConstraints);
   refreshRef.current = onRefreshConstraints;
+  const formatErrorMessageRef = useRef(formatErrorMessage);
+  formatErrorMessageRef.current = formatErrorMessage;
   const isSubmittingRef = useRef(false);
   const onSubmittingChangeRef = useRef(onSubmittingChange);
 
@@ -70,7 +74,13 @@ export function useDialogSubmitState({
         return true;
       } catch (error) {
         if (!captureErrors) throw error;
-        setSubmissionError(getMutationError(error));
+        const mutationError = getMutationError(error);
+        setSubmissionError({
+          ...mutationError,
+          message:
+            formatErrorMessageRef.current?.(mutationError.message) ??
+            mutationError.message,
+        });
         clearTimeout(waitingTimer.current);
         setIsWaiting(false);
         await refreshConstraints();

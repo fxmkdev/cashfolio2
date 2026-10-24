@@ -80,17 +80,31 @@ Related docs:
     `/user-settings` with the current URL as `returnTo`.
 - `$accountBookId/index.tsx` - index redirect route that forwards to
   `$accountBookId/accounts`
-- `$accountBookId/accounts/route.tsx` - accounts page with tabs (one per account
-  type: Asset, Liability, Income, Expense)
+- `$accountBookId/accounts/route.tsx` - accounts page with Assets and
+  Liabilities tabs. Legacy Income/Expense tab links redirect to settings
+  category management, preserving their tab, mapping archived mode to
+  `showArchived=true`, and replacing the history entry.
   - Loader data is tab-scoped: only the selected tab is fetched in the route
     loader critical path.
 - `$accountBookId/transactions/route.tsx` - transactions page showing one master
   row per transaction, with AG Grid Master Detail expansion for the underlying
   booking rows. The explicit month/year period filter includes a full
   transaction when any of its bookings intersects the selected period.
-- `$accountBookId/settings/route.tsx` - account-book settings page for editing
-  account book name, reference currency, and start date, plus a danger-zone
-  delete flow that requires typing the current account-book name
+- `$accountBookId/settings/route.tsx` - account-book settings layout with local
+  General/Categories navigation and an outlet. The primary sidebar is unchanged.
+- `$accountBookId/settings/index.tsx` - General settings at the existing
+  `/settings` URL: account book name, reference currency, start date, and the
+  typed-name danger-zone delete flow.
+- `$accountBookId/settings/categories/route.tsx` - Income/Expenses category and
+  category-group management, including nested groups, ordering, and optional
+  archived items within the grid. Its typed `showArchived` search boolean
+  defaults to false and is preserved across Income/Expenses tabs. Legacy
+  category `mode` parameters normalize to the new visibility state; a valid
+  explicit boolean takes precedence. The document title remains Income & Expense
+  Categories. Reuses the account-management controller and grid with category
+  presentation. The General form is not mounted on this route. Category ledgers
+  retain their existing URLs and remain directly accessible from transactions
+  and reports.
 - `$accountBookId/report/route.tsx` - period layout route with shared period
   search validation and loader data used by nested report pages
 - `$accountBookId/report/index.tsx` - report overview page with contribution,

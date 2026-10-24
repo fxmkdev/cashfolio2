@@ -22,11 +22,9 @@ function createActions(args: {
   state: unknown;
   api: unknown;
   invalidate: () => void;
-  createGroupIsActive?: boolean;
 }) {
   return createAccountsMutationActions({
     accountBookId: "book-1",
-    createGroupIsActive: args.createGroupIsActive,
     invalidate: args.invalidate,
     state: args.state as Parameters<
       typeof createAccountsMutationActions
@@ -167,7 +165,7 @@ describe("createAccountsMutationActions", () => {
     expect(invalidate).toHaveBeenCalledOnce();
   });
 
-  test("creates an archived group when configured for archived mode", async () => {
+  test("creates active category groups", async () => {
     const invalidate = vi.fn();
     const state = {
       getEditingAccount: () => undefined,
@@ -198,27 +196,26 @@ describe("createAccountsMutationActions", () => {
       invalidate,
       state,
       api,
-      createGroupIsActive: false,
     });
 
     await actions.handleCreateGroup({
-      name: "Old Banks",
-      typeDescriptor: "ASSET",
-      type: AccountType.ASSET,
-      equityAccountSubtype: undefined,
-      parentGroupId: "archived-parent",
+      name: "New Expenses",
+      typeDescriptor: "EQUITY-EXPENSE",
+      type: AccountType.EQUITY,
+      equityAccountSubtype: "EXPENSE",
+      parentGroupId: undefined,
       sortOrder: 1,
     });
 
     expect(api.createAccountGroup).toHaveBeenCalledWith({
       data: {
         accountBookId: "book-1",
-        name: "Old Banks",
-        type: AccountType.ASSET,
-        equityAccountSubtype: undefined,
-        parentGroupId: "archived-parent",
+        name: "New Expenses",
+        type: AccountType.EQUITY,
+        equityAccountSubtype: "EXPENSE",
+        parentGroupId: undefined,
         sortOrder: 1,
-        isActive: false,
+        isActive: true,
       },
     });
     expect(state.setCreateGroupModalOpened).toHaveBeenCalledWith(false);

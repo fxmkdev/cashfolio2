@@ -1,5 +1,19 @@
+import {
+  getAccountManagementPath,
+  getAccountConstraintMessage,
+  type AccountManagementContext,
+} from "@/shared/account-presentation";
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
-import { Alert, Button, Group, Tabs, Text, Title } from "@mantine/core";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Group,
+  Tabs,
+  Text,
+  Title,
+  VisuallyHidden,
+} from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
 import { LinkTab } from "@/components/navigation/link-tab";
@@ -48,6 +62,7 @@ type RowTarget = {
 };
 
 export type AccountsPageViewProps = {
+  managementContext?: AccountManagementContext;
   gainLoss?: {
     data?: AccountGainLossSummaries;
     error?: string;
@@ -59,6 +74,8 @@ export type AccountsPageViewProps = {
   unarchiveRecovery?: ReturnType<typeof useUnarchiveMutation>;
   tab: TabValue;
   mode: AccountsMode;
+  showArchived?: boolean;
+  onShowArchivedChange?: (showArchived: boolean) => void;
   tabs: readonly { value: TabValue; label: string }[];
   archivedAccountGroups?: AccountsPageLoaderData["archivedAccountGroups"];
   archivedExistingNodes?: AccountsPageLoaderData["archivedExistingNodes"];
@@ -109,11 +126,14 @@ export type AccountsPageViewProps = {
 };
 
 export function AccountsPageView({
+  managementContext = "accounts",
   gainLoss,
   accountBookId,
   onRefreshConstraints,
   unarchiveRecovery,
   tab,
+  showArchived = false,
+  onShowArchivedChange,
   tabs,
   accountGroups,
   existingNodes,
@@ -162,53 +182,100 @@ export function AccountsPageView({
   const isEditingArchivedGroup = rows.some(
     (row) => row.id === editingGroup?.id && !row.isActive,
   );
+  const isCategories = managementContext === "categories";
+  const formatErrorMessage = (message: string) =>
+    getAccountConstraintMessage(message, managementContext) ?? message;
+  const managementPath = getAccountManagementPath(managementContext);
+
+  const managementTabs = (
+    <Tabs value={tab} variant={isCategories ? "pills" : "default"}>
+      <Tabs.List
+        aria-label={isCategories ? "Category Type" : undefined}
+        mb={isCategories ? undefined : "md"}
+      >
+        {tabs.map((t) => (
+          <LinkTab
+            key={t.value}
+            value={t.value}
+            to={managementPath}
+            params={{ accountBookId }}
+            search={
+              isCategories
+                ? { tab: t.value, showArchived }
+                : { tab: t.value, mode: "active" }
+            }
+          >
+            {t.label}
+          </LinkTab>
+        ))}
+      </Tabs.List>
+    </Tabs>
+  );
+  const managementActions = (
+    <Group gap={isCategories ? "sm" : "md"}>
+      <Button
+        variant="default"
+        leftSection={<IconPlus size={16} />}
+        onClick={onOpenCreateGroup}
+      >
+        Add Group
+      </Button>
+      <Button
+        leftSection={<IconPlus size={16} />}
+        onClick={onOpenCreateAccount}
+      >
+        {isCategories
+          ? tab === "EQUITY-INCOME"
+            ? "Add Income Category"
+            : "Add Expense Category"
+          : "Add Account"}
+      </Button>
+    </Group>
+  );
 
   return (
     <PageShell>
-      <TopPageHeader
-        heading={<Title order={2}>{getAccountsPageTitle()}</Title>}
-        actions={
-          <Group>
-            <Button
-              variant="default"
-              leftSection={<IconPlus size={16} />}
-              onClick={onOpenCreateGroup}
-            >
-              Add Group
-            </Button>
-            <Button
-              leftSection={<IconPlus size={16} />}
-              onClick={onOpenCreateAccount}
-            >
-              Add Account
-            </Button>
+      {isCategories ? (
+        <>
+          <VisuallyHidden component="div">
+            <Title order={2}>
+              {getAccountsPageTitle(undefined, managementContext)}
+            </Title>
+          </VisuallyHidden>
+          <Group justify="space-between" align="center" gap="md" mb="md">
+            <Group gap="md">
+              {managementTabs}
+              <Checkbox
+                label="Show Archived"
+                checked={showArchived}
+                onChange={(event) =>
+                  onShowArchivedChange?.(event.currentTarget.checked)
+                }
+              />
+            </Group>
+            {managementActions}
           </Group>
-        }
-      />
+        </>
+      ) : (
+        <TopPageHeader
+          heading={<Title order={2}>{getAccountsPageTitle()}</Title>}
+          actions={managementActions}
+        />
+      )}
 
       <UnarchiveMutationFeedback
+        listLabel={isCategories ? "category list" : "account list"}
         recovery={unarchiveRecovery}
         onRefreshConstraints={onRefreshConstraints}
       />
-      <Tabs value={tab}>
-        <Tabs.List mb="md">
-          {tabs.map((t) => (
-            <LinkTab
-              key={t.value}
-              value={t.value}
-              to="/$accountBookId/accounts"
-              params={{ accountBookId }}
-              search={{ tab: t.value, mode: "active" }}
-            >
-              {t.label}
-            </LinkTab>
-          ))}
-        </Tabs.List>
-      </Tabs>
+      {!isCategories && managementTabs}
 
-      <Text size="sm" c="dimmed" mb="sm">
-        Totals include active and archived accounts, including collapsed groups.
-      </Text>
+      {!isCategories && (
+        <Text size="sm" c="dimmed" mb="sm">
+          Totals include active and archived accounts, including collapsed
+          groups.
+        </Text>
+      )}
       {gainLoss?.error ? (
         <Alert color="red" title="Gain/Loss Unavailable" mb="sm">
           {gainLoss.error}
@@ -266,12 +333,13 @@ export function AccountsPageView({
           typeDescriptor={tab}
         />
         <ConfirmArchiveModal
+          formatErrorMessage={formatErrorMessage}
           onRefreshConstraints={onRefreshConstraints}
           opened={!!archivingRow}
           onClose={onCloseArchive}
           title={
             archivingRow
-              ? `Archive ${getEntityLabel(archivingRow.nodeType)}`
+              ? `Archive ${getEntityLabel(archivingRow.nodeType, managementContext)}`
               : "Archive"
           }
           name={archivingRow?.name}
@@ -325,12 +393,13 @@ export function AccountsPageView({
       />
 
       <ConfirmDeleteModal
+        formatErrorMessage={formatErrorMessage}
         onRefreshConstraints={onRefreshConstraints}
         opened={!!deletingRow}
         onClose={onCloseDelete}
         title={
           deletingRow
-            ? `Delete ${getEntityLabel(deletingRow.nodeType)}`
+            ? `Delete ${getEntityLabel(deletingRow.nodeType, managementContext)}`
             : "Delete"
         }
         name={deletingRow?.name}

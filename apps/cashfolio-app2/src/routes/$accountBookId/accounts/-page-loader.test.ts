@@ -41,21 +41,27 @@ describe("loadAccountsPageData", () => {
     expect(result).toBe(mockResult);
   });
 
-  it("loads both states for the selected equity subtype, including legacy archived mode", async () => {
-    await loadAccountsPageData({
-      accountBookId: "book-2",
-      mode: "archived",
-      tab: `EQUITY-${EquityAccountSubtype.EXPENSE}`,
-    });
-
-    expect(getAccountsPageData).toHaveBeenCalledTimes(1);
-    expect(getAccountsPageData).toHaveBeenCalledWith({
-      data: {
+  it.each([
+    [false, "active"],
+    [true, "all"],
+  ] as const)(
+    "loads category states for archived visibility %s",
+    async (showArchived, accountState) => {
+      await loadAccountsPageData({
         accountBookId: "book-2",
-        accountState: "all",
-        type: AccountType.EQUITY,
-        equityAccountSubtype: EquityAccountSubtype.EXPENSE,
-      },
-    });
-  });
+        showArchived,
+        tab: `EQUITY-${EquityAccountSubtype.EXPENSE}`,
+      });
+
+      expect(getAccountsPageData).toHaveBeenCalledTimes(1);
+      expect(getAccountsPageData).toHaveBeenCalledWith({
+        data: {
+          accountBookId: "book-2",
+          accountState,
+          type: AccountType.EQUITY,
+          equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+        },
+      });
+    },
+  );
 });

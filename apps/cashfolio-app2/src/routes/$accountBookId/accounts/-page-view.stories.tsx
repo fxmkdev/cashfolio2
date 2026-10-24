@@ -1,4 +1,6 @@
+import { isVirtualArchivedGroup } from "./-archived-grid-rows";
 import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows";
+import { SettingsNavigation } from "../settings/-settings-navigation";
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -25,6 +27,7 @@ import {
   REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
   type AccountsMode,
   tabs,
+  getManagementTabs,
   type TabValue,
   type TreeRow,
 } from "./-page-types";
@@ -232,7 +235,62 @@ const existingNodes: AccountsPageViewProps["existingNodes"] = [
   },
 ];
 
-function getRowsFor(args: { mode: AccountsMode; tab: TabValue }): TreeRow[] {
+function getRowsFor(args: {
+  mode: AccountsMode;
+  tab: TabValue;
+  showArchived?: boolean;
+}): TreeRow[] {
+  if (args.tab.startsWith("EQUITY-")) {
+    const active = activeAssetRows.slice(0, 4).map((row, i) => ({
+      ...row,
+      name: ["Housing", "Utilities", "Electricity", "Rent"][i],
+      type: AccountType.EQUITY,
+      equityAccountSubtype:
+        args.tab === "EQUITY-INCOME"
+          ? ("INCOME" as const)
+          : ("EXPENSE" as const),
+      unit: null,
+      currency: null,
+      balance: null,
+      balanceInReferenceCurrency: null,
+      isActive: true,
+      archivable: true,
+      unarchivable: false,
+    }));
+    if (!args.showArchived) return active;
+    return [
+      ...active,
+      {
+        ...active[2],
+        id: "archived-category-root",
+        name: "Old Category",
+        parentId: undefined,
+        groupId: undefined,
+        isActive: false,
+        archivable: false,
+        unarchivable: true,
+      },
+      {
+        ...active[1],
+        id: "archived-category-group",
+        name: "Former Categories",
+        parentId: active[0].id,
+        isActive: false,
+        archivable: false,
+        unarchivable: true,
+      },
+      {
+        ...active[2],
+        id: "archived-category-child",
+        name: "Old Child Category",
+        parentId: "archived-category-group",
+        groupId: "archived-category-group",
+        isActive: false,
+        archivable: false,
+        unarchivable: false,
+      },
+    ];
+  }
   if (args.tab !== "ASSET") return [];
   return args.mode === "archived" ? archivedAssetRows : activeAssetRows;
 }
@@ -330,10 +388,15 @@ function AccountsPageStoryHarness({
   const mode: AccountsMode =
     routeSearch.mode === "archived" ? "archived" : modeState;
 
+  const showArchived = routeSearch.showArchived === true;
   const rows = useMemo(
     () =>
-      buildUnifiedAccountTreeRows(rowsOverride ?? getRowsFor({ mode, tab })),
-    [mode, tab, rowsOverride],
+      tab.startsWith("EQUITY-") && !showArchived
+        ? (rowsOverride ?? getRowsFor({ mode, tab }))
+        : buildUnifiedAccountTreeRows(
+            rowsOverride ?? getRowsFor({ mode, tab, showArchived }),
+          ),
+    [mode, tab, showArchived, rowsOverride],
   );
   const rowsByParentKey = useRowsByParentKey(rows);
   const selectedSiblingRows: ReorderGroupChildRow[] = useSelectedSiblingRows(
@@ -389,7 +452,7 @@ function AccountsPageStoryHarness({
   };
   const columnDefs = useAccountTreeColumnDefs({
     gainLossData:
-      gainLossState === "loading" || gainLossState === "error"
+      isEquityTab || gainLossState === "loading" || gainLossState === "error"
         ? undefined
         : gainLossData,
     isGainLossLoading: gainLossState === "loading",
@@ -424,7 +487,10 @@ function AccountsPageStoryHarness({
             name: row.name,
             type: row.type,
             equityAccountSubtype: row.equityAccountSubtype,
-            parentGroupId: row.persistedParentId ?? undefined,
+            parentGroupId:
+              (row.persistedParentId === undefined
+                ? row.parentId
+                : row.persistedParentId) ?? undefined,
             sortOrder: row.sortOrder ?? undefined,
           },
         });
@@ -458,13 +524,17 @@ function AccountsPageStoryHarness({
           Toggle gain/loss loading
         </Button>
       )}
+      {isEquityTab && (
+        <SettingsNavigation accountBookId="storybook-book" categories />
+      )}
       <AccountsPageView
         gainLoss={{
           data:
-            gainLossState === "loading" || gainLossState === "error"
+            gainLossState === "loading" ||
+            (!isEquityTab && gainLossState === "error")
               ? undefined
               : gainLossData,
-          loading: gainLossState === "loading",
+          loading: !isEquityTab && gainLossState === "loading",
           error:
             gainLossState === "error"
               ? "Gain/loss could not be loaded. Please try again."
@@ -474,8 +544,32 @@ function AccountsPageStoryHarness({
         accountBookId="storybook-book"
         tab={tab}
         mode={mode}
-        tabs={tabs}
-        accountGroups={accountGroups}
+        showArchived={showArchived}
+        onShowArchivedChange={(value) => {
+          void navigate({
+            to: "/$accountBookId/settings/categories",
+            params: { accountBookId: "storybook-book" },
+            search: { tab, showArchived: value },
+          });
+        }}
+        managementContext={isEquityTab ? "categories" : "accounts"}
+        tabs={getManagementTabs(isEquityTab ? "categories" : "accounts")}
+        accountGroups={
+          isEquityTab
+            ? rows
+                .filter((row) => row.nodeType === "accountGroup")
+                .map((row) => ({
+                  value: row.id,
+                  label: row.name,
+                  type: row.type,
+                  equityAccountSubtype: row.equityAccountSubtype,
+                  parentGroupId: row.parentId ?? null,
+                  isCashAccount: false,
+                  treePath: row.parentId ? ["Housing"] : [],
+                  treeLabel: row.name,
+                }))
+            : accountGroups
+        }
         existingNodes={existingNodes}
         unitUsage={{
           currencies: ["CHF", "EUR", "USD"],
@@ -487,7 +581,11 @@ function AccountsPageStoryHarness({
           { mode, tab },
           referenceCurrencyBalanceTotal,
         )}
-        isGroupOpenByDefault={() => expandGroups || initialMode === "archived"}
+        isGroupOpenByDefault={({ rowNode }) =>
+          isEquityTab && isVirtualArchivedGroup(rowNode.data)
+            ? false
+            : expandGroups || initialMode === "archived"
+        }
         onRowGroupOpened={() => undefined}
         createModalOpened={createModalOpened}
         editModalOpen={editModalOpen}
@@ -843,9 +941,9 @@ export const RouteSmoke: Story = {
     expect(
       canvas.getByRole("heading", { name: "Accounts" }),
     ).toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("tab", { name: "Expense" }));
+    await userEvent.click(canvas.getByRole("tab", { name: "Liabilities" }));
     await expect(canvas.getByTestId("router-search")).toHaveTextContent(
-      '"tab":"EQUITY-EXPENSE"',
+      '"tab":"LIABILITY"',
     );
     await expect(canvas.getByTestId("router-search")).toHaveTextContent(
       '"mode":"active"',
@@ -880,7 +978,9 @@ export const GainLossLoadingToReady: Story = {
     let header = await canvas.findByRole("columnheader", {
       name: /G\/L Since Start \(CHF\)/,
     });
-    await canvas.findByText("Assets", { exact: true });
+    await within(canvas.getByRole("treegrid")).findByText("Assets", {
+      exact: true,
+    });
     const grid = canvasElement.querySelector(".ag-root-wrapper");
     const firstRow = canvasElement.querySelector('.ag-row[row-index="0"]');
     if (!grid || !firstRow) throw new Error("Accounts grid has no first row");
@@ -1054,5 +1154,137 @@ export const LocalizedLiabilityGainLoss: Story = {
     const details = await openGainLossDetails(canvasElement);
     expect(details).toHaveTextContent("Since 1.1.2026 · As of 31.3.2026");
     await userEvent.keyboard("{Escape}");
+  },
+};
+
+export const ExpenseCategories: Story = {
+  parameters: {
+    router: {
+      initialPath:
+        "/storybook-book/settings/categories?tab=EQUITY-EXPENSE&showArchived=false",
+    },
+  },
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      initialTab="EQUITY-EXPENSE"
+      expandGroups
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      within(canvas.getByRole("tablist", { name: "Category Type" })).getByRole(
+        "tab",
+        { name: "Expenses" },
+      ),
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(
+      canvas.getByText("Electricity", { exact: true }),
+    ).toBeVisible();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Add Expense Category" }),
+    );
+    await findVisibleDialog(
+      within(canvasElement.ownerDocument.body),
+      "New Category",
+    );
+  },
+};
+
+export const CategoriesWithArchived: Story = {
+  parameters: {
+    router: {
+      initialPath:
+        "/storybook-book/settings/categories?tab=EQUITY-EXPENSE&showArchived=true",
+    },
+  },
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      initialTab="EQUITY-EXPENSE"
+      expandGroups
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const visibility = canvas.getByRole("checkbox", { name: "Show Archived" });
+    await expect(visibility).toBeChecked();
+    for (const label of await canvas.findAllByText("Archived", {
+      exact: true,
+    })) {
+      expect(label.closest('[role="row"]')).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
+    }
+    await expect(
+      canvas.getByRole("button", { name: "Add Expense Category" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("navigation", { name: "Category Archive" }),
+    ).not.toBeInTheDocument();
+    await userEvent.hover(canvas.getAllByText("Archived", { exact: true })[0]);
+    await expect(
+      await within(canvasElement.ownerDocument.body).findByRole("tooltip"),
+    ).toHaveTextContent(
+      "Archived categories grouped automatically. Their transaction history is preserved.",
+    );
+    await userEvent.click(visibility);
+    await waitFor(() =>
+      expect(canvas.queryAllByText("Archived", { exact: true })).toHaveLength(
+        0,
+      ),
+    );
+    await expect(visibility).not.toBeChecked();
+  },
+};
+
+export const CategoriesMobile: Story = {
+  ...ExpenseCategories,
+  parameters: {
+    ...ExpenseCategories.parameters,
+    viewport: { defaultViewport: "cashfolioMobile" },
+  },
+};
+
+export const IncomeCategories: Story = {
+  parameters: {
+    router: {
+      initialPath:
+        "/storybook-book/settings/categories?tab=EQUITY-INCOME&showArchived=false",
+    },
+  },
+  render: () => (
+    <AccountsPageStoryHarness initialMode="active" initialTab="EQUITY-INCOME" />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      within(
+        canvas.getByRole("tablist", { name: "Account Book Settings" }),
+      ).getByRole("tab", { name: "Categories" }),
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(
+      within(canvas.getByRole("tablist", { name: "Category Type" })).getByRole(
+        "tab",
+        { name: "Income" },
+      ),
+    ).toHaveAttribute("aria-selected", "true");
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Add Income Category" }),
+    );
+    await findVisibleDialog(
+      within(canvasElement.ownerDocument.body),
+      "New Category",
+    );
+  },
+};
+
+export const CategoriesWithArchivedMobile: Story = {
+  ...CategoriesWithArchived,
+  parameters: {
+    ...CategoriesWithArchived.parameters,
+    viewport: { defaultViewport: "cashfolioMobile" },
   },
 };

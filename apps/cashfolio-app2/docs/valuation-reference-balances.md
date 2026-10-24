@@ -22,14 +22,14 @@ Related docs:
 
 ## Archived groups and totals
 
-All four Accounts tabs show active and archived real items together. Directly
-archived children of an active group, or archived roots, appear beneath a
-virtual **Archived** group. Archived real groups retain their complete original
-subtrees; no further virtual wrappers are inserted inside them. Empty virtual
-groups are omitted. Virtual groups start collapsed, remember expansion per
-book/tab in the session, remain last among siblings even during column sorting,
-and have no mutation actions. A real group named Archived remains an ordinary
-editable group.
+The Assets and Liabilities tabs show active and archived real items together.
+Directly archived children of an active group, or archived roots, appear beneath
+a virtual **Archived** group. Archived real groups retain their complete
+original subtrees; no further virtual wrappers are inserted inside them. Empty
+virtual groups are omitted. Virtual groups start collapsed, remember expansion
+per book/tab in the session, remain last among siblings even during column
+sorting, and have no mutation actions. A real group named Archived remains an
+ordinary editable group.
 
 Virtual name cells use a muted archive icon and label, with the tooltip
 “Archived items grouped automatically. Included in totals.” on hover and
@@ -44,9 +44,15 @@ rows.
 Group and footer balances and G/L include active and archived account leaves
 exactly once, regardless of collapse or filtering in the grid. Virtual groups
 use the same descendant aggregation and completeness rules as real groups. Asset
-and Liability tabs retain balance/G/L columns; Income and Expense remain
-unitless. Existing `mode=archived` links redirect to Accounts, preserving the
-selected tab and using normal session expansion behavior.
+and Liability tabs retain balance/G/L columns. Existing asset/liability
+`mode=archived` links redirect to Accounts, preserving the selected tab and
+using normal session expansion behavior.
+
+Income and expense categories remain unitless. Under Account Book Settings,
+**Show Archived** defaults off and selects active-only tree data; enabling it
+loads both states and uses the same virtual Archived hierarchy. Categories have
+no balance/G/L columns or totals explanation. Legacy Income/Expense archive
+links preserve the selected tab and enable archived visibility.
 
 ## Account List Loading Strategy
 

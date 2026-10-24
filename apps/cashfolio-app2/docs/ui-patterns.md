@@ -399,6 +399,47 @@ booking-unit debit/credit columns. Show native unit labels and native
 debit/credit amounts only when they add information, such as foreign currency,
 crypto, or security bookings.
 
+## Accounts and categories
+
+`Account` remains the unified internal bookkeeping entity. In customer-facing
+copy, **accounts** are the existing asset/liability accounts; **categories** are
+income, expense, and gain/loss accounts. Opening Balances remains a special
+system account. Identity actions still use "Cashfolio account".
+
+Account management has Assets and Liabilities tabs. Income and expense category
+management lives under **Account Book Settings → Categories**, with Income and
+Expenses tabs and a **Show Archived** checkbox. Gain/Loss and Opening Balances
+retain their system-managed restrictions and are not creation tabs. Primary
+navigation is unchanged. Viewing a category ledger is an activity view, not a
+settings page: its URL and Accounts navigation highlight remain unchanged.
+
+Settings uses underline tabs for General/Categories and pill tabs for
+Income/Expenses. Category type tabs and management actions share a wrapping
+toolbar. General and Categories omit visible page headings while retaining
+visually hidden semantic headings and document titles. **Show Archived** sits
+beside the category-type pills; there is no separate archive page or breadcrumb.
+
+Accounts combines active and archived items in one hierarchy. Categories
+defaults to active items; enabling **Show Archived** requests both states and
+reuses the same collapsed virtual Archived branches, sorting, and archived-row
+actions. Visibility lives in the `showArchived` URL boolean, persists across
+type changes, reloads and browser history, and defaults off on fresh visits.
+Legacy `mode=archived` links normalize to visibility enabled with replacement
+navigation. Creation always produces active items. Real-group expansion
+preferences retain the existing per-book/type active-view session key. Category
+archive tooltips explain preserved history rather than financial totals.
+
+Categories have explicit **category groups**, backed by `AccountGroup`. Groups
+can contain categories and nested groups; categories can also be at the root.
+Only categories accept bookings and are selectable transaction destinations.
+Preserve existing subtype compatibility and ordering rules. Use "Add Income
+Category"/"Add Expense Category", "Add Group", and "Category Group" in forms.
+Selectors accepting both entities use "Account or Category".
+
+Use the shared `account-presentation` predicates and labels at presentation
+boundaries. These names do not change stored account types, booking signs,
+liability display inversion, income/expense direction rules, or calculations.
+
 ## Accounts List Columns
 
 - The `Name` column has a 320px minimum width and grows with the available

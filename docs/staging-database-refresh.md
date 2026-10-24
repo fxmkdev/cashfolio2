@@ -60,7 +60,9 @@ Accounts; they use a muted archive icon and label with the explanation “Archiv
 items grouped automatically. Included in totals.” The chevron and amounts retain
 their normal contrast.
 
-Expand these paths in the unified Accounts grid:
+Expand the asset/liability paths in the unified Accounts grid. Income and
+expense paths are in Account Book Settings → Categories with **Show Archived**
+enabled:
 
 | Tab       | Display path                                                                                  |
 | --------- | --------------------------------------------------------------------------------------------- |

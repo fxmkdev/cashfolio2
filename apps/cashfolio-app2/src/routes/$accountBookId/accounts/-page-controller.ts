@@ -24,7 +24,7 @@ import {
 import {
   REFERENCE_CURRENCY_TOTAL_FOOTER_ROW_ID,
   type AccountsGridRow,
-  tabs,
+  getManagementTabs,
   type ReferenceCurrencyTotalFooterRow,
 } from "./-page-types";
 import {
@@ -38,6 +38,10 @@ import { useAccountsReferenceBalanceRows } from "./-page-reference-balances";
 import { useAccountTreeColumnDefs } from "./-page-columns";
 import { loadAccountsPageData } from "./-page-loader";
 import type { AccountsPageViewProps } from "./-page-view";
+import {
+  getAccountConstraintMessage,
+  type AccountManagementContext,
+} from "@/shared/account-presentation";
 
 type AccountsPageLoaderData = Awaited<ReturnType<typeof loadAccountsPageData>>;
 type AccountsPageControllerViewProps = AccountsPageViewProps;
@@ -89,7 +93,6 @@ const defaultAccountsMutationApi: AccountsMutationApi = {
 
 export function createAccountsMutationActions(args: {
   accountBookId: string;
-  createGroupIsActive?: boolean;
   invalidate: () => void;
   state: AccountsMutationState;
   api?: AccountsMutationApi;
@@ -157,7 +160,7 @@ export function createAccountsMutationActions(args: {
           parentGroupId: values.parentGroupId,
           sortOrder: values.sortOrder,
           isCashAccount: values.isCashAccount,
-          isActive: args.createGroupIsActive ?? true,
+          isActive: true,
         },
       });
       args.state.setCreateGroupModalOpened(false);
@@ -252,19 +255,25 @@ export function createAccountsMutationActions(args: {
 }
 
 export function useAccountsPageController(args: {
+  managementContext?: AccountManagementContext;
   loaderData: AccountsPageLoaderData;
   accountBookId: string;
   tab: AccountsPageViewProps["tab"];
-  mode: AccountsPageViewProps["mode"];
+  mode?: AccountsPageViewProps["mode"];
+  showArchived?: boolean;
+  onShowArchivedChange?: AccountsPageViewProps["onShowArchivedChange"];
   invalidate: () => void;
   onOpenLedger: AccountsPageViewProps["onOpenLedger"];
 }): AccountsPageControllerViewProps {
+  const mode = args.mode ?? "active";
+  const showArchived = args.showArchived ?? false;
+  const scopeKey = `${args.accountBookId}:${args.tab}:${mode}:${showArchived}`;
   const { data: loaderData, refresh: onRefreshConstraints } =
     useRefreshedMutationData(args.loaderData, () =>
       loadAccountsPageData({
         accountBookId: args.accountBookId,
         tab: args.tab,
-        mode: args.mode,
+        showArchived,
       }),
     );
   const {
@@ -286,7 +295,7 @@ export function useAccountsPageController(args: {
   } = useAccountsReferenceBalanceRows({
     accountBookId: args.accountBookId,
     tab: args.tab,
-    mode: args.mode,
+    mode,
     referenceCurrency,
     rows: loaderRows,
   });
@@ -304,7 +313,7 @@ export function useAccountsPageController(args: {
   );
   const gainLoss = useGainLossRequest({
     enabled: !isEquityTab,
-    scopeKey: `${args.accountBookId}:${args.tab}:${args.mode}`,
+    scopeKey,
     refreshKey: loaderData,
     load: loadGainLoss,
   });
@@ -313,6 +322,7 @@ export function useAccountsPageController(args: {
   const { isGroupOpenByDefault, onRowGroupOpened } = useExpandedGroups(
     storageKey,
     isVirtualArchivedGroup,
+    args.managementContext === "categories" && !showArchived,
   );
 
   const rowsByParentKeyForGroupAggregation = useRowsByParentKey(
@@ -389,7 +399,6 @@ export function useAccountsPageController(args: {
 
   const actions = createAccountsMutationActions({
     accountBookId: args.accountBookId,
-    createGroupIsActive: true,
     invalidate: args.invalidate,
     state: {
       getEditingAccount: () => modalState.editingAccount,
@@ -406,8 +415,13 @@ export function useAccountsPageController(args: {
   });
 
   const unarchiveRecovery = useUnarchiveMutation({
-    scopeKey: `${args.accountBookId}:${args.tab}:${args.mode}`,
+    scopeKey,
     onUnarchive: actions.handleUnarchiveRow,
+    formatErrorMessage: (message) =>
+      getAccountConstraintMessage(
+        message,
+        args.managementContext ?? "accounts",
+      ) ?? message,
     onRefreshConstraints,
     isEligible: (target) =>
       rows.some(
@@ -434,13 +448,16 @@ export function useAccountsPageController(args: {
   });
 
   return {
+    managementContext: args.managementContext ?? "accounts",
     gainLoss,
     onRefreshConstraints,
     unarchiveRecovery,
     accountBookId: args.accountBookId,
     tab: args.tab,
-    mode: args.mode,
-    tabs,
+    mode,
+    showArchived,
+    onShowArchivedChange: args.onShowArchivedChange,
+    tabs: getManagementTabs(args.managementContext ?? "accounts"),
     accountGroups,
     archivedAccountGroups,
     archivedExistingNodes,

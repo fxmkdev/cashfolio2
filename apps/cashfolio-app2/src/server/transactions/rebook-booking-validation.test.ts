@@ -98,7 +98,7 @@ describe("validateRebookBookingTarget", () => {
         }),
         accountBookStartDate: new Date("2026-01-01T00:00:00.000Z"),
       }),
-    ).toThrowError("Expense accounts cannot have credit entries.");
+    ).toThrowError("Expense categories cannot have credit entries.");
   });
 
   test("accepts symbol-compatible security rebook with different trade currency", () => {

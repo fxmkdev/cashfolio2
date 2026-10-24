@@ -1,3 +1,7 @@
+import {
+  isCategoryAccount,
+  getAccountConstraintMessage,
+} from "@/shared/account-presentation";
 import { MutationSubmitFeedback } from "../dialogs/mutation-submit-feedback";
 import {
   Button,
@@ -109,6 +113,11 @@ export function EditAccountGroupModal({
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const submitState = useDialogSubmitState({
     captureErrors: true,
+    formatErrorMessage: (message) =>
+      getAccountConstraintMessage(
+        message,
+        typeDescriptor?.startsWith("EQUITY-") ? "categories" : "accounts",
+      ) ?? message,
     onRefreshConstraints,
   });
   const { isSubmitting, runSubmit, clearSubmissionError } = submitState;
@@ -149,7 +158,12 @@ export function EditAccountGroupModal({
               n.id !== editingId,
           )
           .map((n) => n.name);
-        return validateAccountGroupName(value, siblingNames);
+        return (
+          getAccountConstraintMessage(
+            validateAccountGroupName(value, siblingNames),
+            typeDescriptor?.startsWith("EQUITY-") ? "categories" : "accounts",
+          ) ?? null
+        );
       },
       typeDescriptor: isNotEmpty("Type is required"),
       parentGroupId: (value, values) =>
@@ -245,6 +259,7 @@ export function EditAccountGroupModal({
     onClose();
   };
 
+  const isCategory = isCategoryAccount({ type, equityAccountSubtype });
   return (
     <Modal
       opened={opened}
@@ -253,7 +268,7 @@ export function EditAccountGroupModal({
       closeOnEscape={!isSubmitting}
       closeOnClickOutside={!isSubmitting}
       withCloseButton={!isSubmitting}
-      title={isEdit ? "Edit Group" : "New Group"}
+      title={`${isEdit ? "Edit" : "New"} ${isCategory ? "Category Group" : "Group"}`}
       size="lg"
     >
       <form
@@ -276,7 +291,7 @@ export function EditAccountGroupModal({
                 label="Name"
                 name="name"
                 withAsterisk
-                placeholder="e.g. Bank Accounts"
+                placeholder={isCategory ? "e.g. Housing" : "e.g. Bank Accounts"}
                 {...form.getInputProps("name")}
               />
             </Grid.Col>
@@ -289,7 +304,7 @@ export function EditAccountGroupModal({
                 disabled
                 data={[
                   {
-                    group: "Position Accounts (Non-Equity)",
+                    group: "Accounts",
                     items: [
                       {
                         value: AccountType.ASSET,
@@ -302,7 +317,7 @@ export function EditAccountGroupModal({
                     ],
                   },
                   {
-                    group: "Flow Accounts (Equity)",
+                    group: "Categories",
                     items: [
                       {
                         value: `${AccountType.EQUITY}-${EquityAccountSubtype.INCOME}`,
@@ -329,7 +344,7 @@ export function EditAccountGroupModal({
             </Grid.Col>
             <Grid.Col span={9}>
               <GroupTreeSelect
-                label="Parent Group"
+                label={isCategory ? "Parent Category Group" : "Parent Group"}
                 searchable
                 clearable
                 groups={accountGroups.filter(

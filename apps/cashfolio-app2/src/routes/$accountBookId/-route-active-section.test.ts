@@ -77,6 +77,20 @@ describe("getActiveSection", () => {
 });
 
 describe("getAccountsLinkSearch", () => {
+  it("does not send the primary Accounts link into category settings", () => {
+    expect(
+      getAccountsLinkSearch({
+        locationSearch: { tab: "EQUITY-INCOME", mode: "archived" },
+        matches: [],
+      }),
+    ).toEqual({ tab: "ASSET", mode: "active" });
+    expect(
+      getActiveSection({
+        pathname: "/book-1/settings/categories",
+        accountBookId: "book-1",
+      }),
+    ).toBe("settings");
+  });
   it("preserves explicit accounts search context when tab/mode are in the URL", () => {
     expect(
       getAccountsLinkSearch({
@@ -105,7 +119,7 @@ describe("getAccountsLinkSearch", () => {
         ],
       }),
     ).toEqual({
-      tab: "EQUITY-EXPENSE",
+      tab: "ASSET",
       mode: "active",
     });
   });

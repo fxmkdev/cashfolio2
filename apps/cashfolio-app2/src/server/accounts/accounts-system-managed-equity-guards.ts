@@ -1,4 +1,8 @@
-import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
+import { isSystemManagedAccount } from "../../shared/account-presentation";
+import {
+  type AccountType,
+  type EquityAccountSubtype,
+} from "../../.prisma-client/enums";
 import {
   getSystemManagedAccountSubtypeMessage,
   getSystemManagedGroupSubtypeMessage,
@@ -11,10 +15,7 @@ type EquityNode = {
 };
 
 export function isSystemManagedEquityNode(node: EquityNode): boolean {
-  return (
-    node.type === AccountType.EQUITY &&
-    isSystemManagedEquitySubtype(node.equityAccountSubtype)
-  );
+  return isSystemManagedAccount(node);
 }
 
 export function assertNoSystemManagedAccountSubtype(node: EquityNode): void {

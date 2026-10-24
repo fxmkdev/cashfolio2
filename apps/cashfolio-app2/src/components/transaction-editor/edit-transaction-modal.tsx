@@ -166,10 +166,10 @@ export function EditTransactionModal({
         },
         account: (value) =>
           !value
-            ? "Account is required"
+            ? "Account or category is required"
             : accounts.some((account) => account.value === value)
               ? null
-              : "The selected account is no longer available. Choose another account.",
+              : "The selected account or category is no longer available. Choose another account or category.",
         unit: isNotEmpty("Unit is required"),
         debit: (value) => (value === 0 ? "Must be non-zero" : null),
         credit: (value) => (value === 0 ? "Must be non-zero" : null),

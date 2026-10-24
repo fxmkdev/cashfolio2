@@ -5,9 +5,9 @@ export const OPENING_BALANCES_ACCOUNT_MANAGEMENT_MESSAGE =
 export const OPENING_BALANCES_GROUP_MANAGEMENT_MESSAGE =
   "Opening Balances groups are system-managed.";
 export const GAIN_LOSS_ACCOUNT_MANAGEMENT_MESSAGE =
-  "Gain/Loss accounts are system-managed.";
+  "Gain/Loss categories are system-managed.";
 export const GAIN_LOSS_GROUP_MANAGEMENT_MESSAGE =
-  "Gain/Loss groups are system-managed.";
+  "Gain/Loss category groups are system-managed.";
 
 type SystemManagedEquitySubtype = Extract<
   EquityAccountSubtype,

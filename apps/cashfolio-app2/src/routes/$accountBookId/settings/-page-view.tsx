@@ -7,6 +7,7 @@ import {
   Text,
   TextInput,
   Title,
+  VisuallyHidden,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { type UseFormReturnType, useForm } from "@mantine/form";
@@ -15,7 +16,6 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 import { IconAlertTriangle, IconCheck, IconTrash } from "@tabler/icons-react";
 import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
 import { NarrowPageShell } from "@/components/layout/narrow-page-shell";
-import { TopPageHeader } from "@/components/layout/top-page-header";
 import { CurrencySelect } from "@/components/controls/unit-select";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import {
@@ -308,7 +308,9 @@ export function SettingsPageView(args: {
 
   return (
     <NarrowPageShell>
-      <TopPageHeader heading={<Title order={2}>Settings</Title>} />
+      <VisuallyHidden component="div">
+        <Title order={2}>General Settings</Title>
+      </VisuallyHidden>
 
       <form
         onSubmit={form.onSubmit(async (values) => {

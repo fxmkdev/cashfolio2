@@ -122,31 +122,12 @@ export function hasLedgerAccountLoaderData(value: unknown): value is {
   return isLedgerAccount(account);
 }
 
-function getAccountsTabFromLedgerAccount(account: {
-  type: AccountType;
-  equityAccountSubtype: EquityAccountSubtype | null;
-}): TabValue {
-  if (account.type === AccountType.ASSET) {
-    return "ASSET";
-  }
-  if (account.type === AccountType.LIABILITY) {
-    return "LIABILITY";
-  }
-  if (account.equityAccountSubtype === EquityAccountSubtype.INCOME) {
-    return "EQUITY-INCOME";
-  }
-  if (account.equityAccountSubtype === EquityAccountSubtype.EXPENSE) {
-    return "EQUITY-EXPENSE";
-  }
-  return "ASSET";
-}
-
 export function getAccountsLinkSearch(args: {
   locationSearch: Record<string, unknown>;
   matches: readonly RouterMatchSnapshot[];
 }): AccountsLinkSearch {
   const tabFromSearch = parseAccountsTab(args.locationSearch.tab);
-  if (tabFromSearch) {
+  if (tabFromSearch === "ASSET" || tabFromSearch === "LIABILITY") {
     return parseAccountsSearch({
       tab: tabFromSearch,
       mode: args.locationSearch.mode,
@@ -164,7 +145,7 @@ export function getAccountsLinkSearch(args: {
     }
 
     return {
-      tab: getAccountsTabFromLedgerAccount(match.account),
+      tab: match.account.type === AccountType.LIABILITY ? "LIABILITY" : "ASSET",
       mode: "active",
     };
   }

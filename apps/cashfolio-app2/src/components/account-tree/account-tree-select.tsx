@@ -156,7 +156,7 @@ export const AccountTreeSelect = forwardRef<
       error={
         props.error ??
         (missing
-          ? "The selected account is no longer available. Choose another account."
+          ? "The selected account or category is no longer available. Choose another account or category."
           : undefined)
       }
       searchable={searchable}
