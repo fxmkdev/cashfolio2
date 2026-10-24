@@ -597,7 +597,7 @@ holding transaction queries, and valuation conversions. Its metadata, opening
 balances, transactions, and group hierarchy share one read-only RepeatableRead
 snapshot; valuation requests and FIFO replay run after that transaction
 completes. All relevant real accounts participate before active/archived and
-Asset/Liability display filtering.
+balance-scope display filtering.
 
 `calculateAccountGainLoss` reuses the shared holding FIFO/pricing engine with
 chronological replay and per-account callbacks. Shared transaction decomposition
@@ -625,13 +625,14 @@ deduplication remain shared.
 
 `src/server/accounts/account-gain-loss-cache.server.ts` caches one book-wide
 summary dataset, including leaf diagnostics and account/group view metadata.
-Filtering by Asset/Liability and account state and Decimal group/footer
-aggregation happen after retrieval. Accounts requests the `all` state; group
-metadata includes archived state so the shared display projection can aggregate
-virtual Archived groups from account leaves. Summary v4 and basis v3 ignore
-older payloads without this metadata. Authorization runs before cache access.
-Ledger summaries bypass this final-summary cache but share the historical basis
-cache below. Calculation drawers bypass both caches.
+Filtering by scope (`BALANCE` or legacy `ASSET`/`LIABILITY`), account state, and
+Decimal group/footer aggregation happen after retrieval. Accounts requests
+`BALANCE` with the `all` state; group metadata includes archived state so the
+shared display projection can aggregate virtual Archived groups from account
+leaves. Summary v4 and basis v3 ignore older payloads without this metadata.
+Authorization runs before cache access. Ledger summaries bypass this
+final-summary cache but share the historical basis cache below. Calculation
+drawers bypass both caches.
 
 - Key:
   `account:gain-loss:v4:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{revision}:{asOfDate}:{latestFetchableDate}`.
@@ -741,3 +742,19 @@ contribution; a selected account contributes zero while on the opposite side.
 Scope options remain the union across period points. History metrics v9 prevents
 reuse of results computed with permanent asset/liability classification;
 base-data v8 and valuation caches remain compatible.
+
+### Unified account management queries
+
+Tree, page-data, reference-balance, and account gain/loss summary queries accept
+the `BALANCE` scope. Query boundaries map it to persisted `ASSET`/`LIABILITY`
+filters for both accounts and groups, excluding categories and system accounts.
+Existing single-type scopes remain supported. Balance-group ancestry and G/L
+aggregation span both types. Creation still stores a compatibility `ASSET` type;
+updates preserve the original type. No schema or booking migration is required.
+
+Account/group mutations validate parent ownership, balance/category
+compatibility, category subtype, active status, and group cycles before saving.
+Cash eligibility is based on the explicit flag and currency unit rather than the
+legacy balance type; cash-flow calculation includes marked accounts of either
+type and excludes pure cash-to-cash transfers. Existing mutation invalidation
+refreshes results.

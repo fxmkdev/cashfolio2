@@ -17,7 +17,7 @@ test("account-book sidebar links navigate between key sections", async ({
   await page.goto(`/${seeded.accountBookId}`);
 
   await expect(page).toHaveURL(
-    new RegExp(`/${seeded.accountBookId}/accounts\\?tab=ASSET&mode=active$`),
+    new RegExp(`/${seeded.accountBookId}/accounts\\?tab=BALANCE&mode=active$`),
   );
   await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
 
@@ -43,7 +43,7 @@ test("account-book sidebar links navigate between key sections", async ({
 
   await page.getByRole("link", { name: "Accounts" }).click();
   await expect(page).toHaveURL(
-    new RegExp(`/${seeded.accountBookId}/accounts\\?tab=ASSET&mode=active$`),
+    new RegExp(`/${seeded.accountBookId}/accounts\\?tab=BALANCE&mode=active$`),
   );
 });
 
@@ -51,7 +51,7 @@ test("mobile sidebar burger reveals and uses navigation links", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=BALANCE&mode=active`);
 
   const burger = page.getByRole("button", { name: "Toggle Navigation" });
   await expect(burger).toBeVisible();

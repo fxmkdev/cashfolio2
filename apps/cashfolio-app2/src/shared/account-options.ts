@@ -32,7 +32,10 @@ export type AccountOptionSource = {
 };
 
 function toAccountOption(account: AccountOptionSource): AccountOption {
-  const typeLabel = getTypeLabel(account.type, account.equityAccountSubtype);
+  const typeLabel =
+    account.type === AccountType.EQUITY
+      ? getTypeLabel(account.type, account.equityAccountSubtype)
+      : "Accounts";
 
   return {
     label: account.name,

@@ -7,7 +7,7 @@ import { getAccountsForAccountBook, getUserAccountBooks } from "../support/db";
 import { expect, test, useIsolatedE2EUser } from "../support/fixtures";
 
 const activeAssetAccountsUrlPattern =
-  /\/[^/]+\/accounts\?(?=.*\bmode=active\b)(?=.*\btab=ASSET\b)/;
+  /\/[^/]+\/accounts\?(?=.*\bmode=active\b)(?=.*\btab=BALANCE\b)/;
 
 function getAccountBookIdFromAccountsUrl(url: string): string {
   const match = new URL(url).pathname.match(/^\/([^/]+)\/accounts$/);

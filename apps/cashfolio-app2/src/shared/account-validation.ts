@@ -120,8 +120,8 @@ export function validateAccountCashAccountFlag(
   type?: AccountType,
 ): string | null {
   if (!isCashAccount) return null;
-  if (type === "ASSET" && unit === "CURRENCY") return null;
-  return "Cash accounts must be currency asset accounts";
+  if (isAssetOrLiability(type) && unit === "CURRENCY") return null;
+  return "Cash accounts must be currency accounts";
 }
 
 export function validateAccountGroupCashAccountFlag(
@@ -129,8 +129,8 @@ export function validateAccountGroupCashAccountFlag(
   type?: AccountType,
 ): string | null {
   if (!isCashAccount) return null;
-  if (type === "ASSET") return null;
-  return "Cash account groups must be asset groups";
+  if (isAssetOrLiability(type)) return null;
+  return "Cash account groups must be account groups";
 }
 
 export function validateAccountGroupName(

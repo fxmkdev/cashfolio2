@@ -1,3 +1,4 @@
+import { isAccountGroupCompatible } from "../../shared/account-presentation";
 import { AccountType, Unit } from "../../.prisma-client/enums";
 import type { Prisma } from "../../.prisma-client/client";
 import { prisma } from "../../prisma.server";
@@ -22,17 +23,26 @@ export function normalizeMissingGroupCashAccountFlag<
 }
 
 function canBeCashAccount(account: { type: AccountType; unit?: Unit | null }) {
-  return account.type === AccountType.ASSET && account.unit === Unit.CURRENCY;
+  return (
+    (account.type === AccountType.ASSET ||
+      account.type === AccountType.LIABILITY) &&
+    account.unit === Unit.CURRENCY
+  );
 }
 
 function canBeCashGroup(group: { type: AccountType }) {
-  return group.type === AccountType.ASSET;
+  return (
+    group.type === AccountType.ASSET || group.type === AccountType.LIABILITY
+  );
 }
 
 async function getParentGroupCashFlag(
   args: {
     accountBookId: string;
     parentGroupId?: string | null;
+    type: AccountInput["type"];
+    equityAccountSubtype?: AccountInput["equityAccountSubtype"];
+    isActive: boolean;
   },
   db: Pick<Prisma.TransactionClient, "accountGroup">,
 ) {
@@ -45,27 +55,46 @@ async function getParentGroupCashFlag(
         accountBookId: args.accountBookId,
       },
     },
-    select: { isCashAccount: true },
+    select: {
+      isCashAccount: true,
+      type: true,
+      equityAccountSubtype: true,
+      isActive: true,
+    },
   });
 
+  if (!isAccountGroupCompatible(args, parentGroup)) {
+    throw new Error(
+      "The selected group is not compatible with this account or category",
+    );
+  }
+  if (args.isActive && !parentGroup.isActive) {
+    throw new Error(
+      "Active accounts and groups cannot belong to an archived group",
+    );
+  }
   return parentGroup.isCashAccount;
 }
 
 export async function resolveAccountCashFlag<T extends AccountInput>(
   data: T,
   db: Pick<Prisma.TransactionClient, "accountGroup"> = prisma,
+  isActive = true,
 ): Promise<T> {
   const parentCashFlag = await getParentGroupCashFlag(
     {
       accountBookId: data.accountBookId,
       parentGroupId: data.groupId,
+      type: data.type,
+      equityAccountSubtype: data.equityAccountSubtype,
+      isActive,
     },
     db,
   );
   const isCashAccount = parentCashFlag ?? data.isCashAccount ?? false;
 
   if (isCashAccount && !canBeCashAccount(data)) {
-    throw new Error("Cash accounts must be currency asset accounts");
+    throw new Error("Cash accounts must be currency accounts");
   }
 
   return {
@@ -82,13 +111,16 @@ export async function resolveAccountGroupCashFlag<T extends AccountGroupInput>(
     {
       accountBookId: data.accountBookId,
       parentGroupId: data.parentGroupId,
+      type: data.type,
+      equityAccountSubtype: data.equityAccountSubtype,
+      isActive: data.isActive ?? true,
     },
     db,
   );
   const isCashAccount = parentCashFlag ?? data.isCashAccount ?? false;
 
   if (isCashAccount && !canBeCashGroup(data)) {
-    throw new Error("Cash account groups must be asset groups");
+    throw new Error("Cash account groups must be account groups");
   }
 
   return {
@@ -150,12 +182,10 @@ export async function assertCashableGroupSubtree(args: {
   ]);
 
   if (groups.some((group) => !canBeCashGroup(group))) {
-    throw new Error("Cash account groups must contain only asset groups");
+    throw new Error("Cash account groups must contain only account groups");
   }
   if (accounts.some((account) => !canBeCashAccount(account))) {
-    throw new Error(
-      "Cash account groups must contain only currency asset accounts",
-    );
+    throw new Error("Cash account groups must contain only currency accounts");
   }
 }
 

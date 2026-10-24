@@ -111,6 +111,26 @@ describe("getAccountTreeData", () => {
     vi.useRealTimers();
   });
 
+  it("filters both account and group queries to persisted balance types", async () => {
+    await getAccountTreeData({
+      data: { accountBookId: "book-1", type: "BALANCE", accountState: "all" },
+    });
+    expect(prisma.account.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          type: { in: ["ASSET", "LIABILITY"] },
+        }),
+      }),
+    );
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          type: { in: ["ASSET", "LIABILITY"] },
+        }),
+      }),
+    );
+  });
+
   it("returns null reference balances and unavailable actions when those features are disabled", async () => {
     prisma.account.findMany.mockResolvedValue([
       {

@@ -79,3 +79,36 @@ it.each([false, true])(
     );
   },
 );
+
+it("migrates legacy choices while retaining hidden groups during visibility changes", () => {
+  const storage = new Map<string, string>([
+    ["assets", JSON.stringify(["visible"])],
+    ["liabilities", JSON.stringify(["hidden-archived"])],
+  ]);
+  vi.stubGlobal("sessionStorage", {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => storage.set(key, value),
+    removeItem: (key: string) => storage.delete(key),
+  });
+  let handlers: ReturnType<typeof useExpandedGroups>;
+  function Harness() {
+    handlers = useExpandedGroups("unified", undefined, true, [
+      "assets",
+      "liabilities",
+    ]);
+    return null;
+  }
+  renderToStaticMarkup(createElement(Harness));
+  expect(
+    handlers!.isGroupOpenByDefault({
+      rowNode: { key: "visible", data: {}, level: 0 },
+    } as Parameters<typeof handlers.isGroupOpenByDefault>[0]),
+  ).toBe(true);
+  handlers!.onRowGroupOpened({
+    api: {
+      forEachNode: (visit: (node: object) => void) =>
+        visit({ group: true, expanded: false, key: "visible" }),
+    },
+  } as Parameters<typeof handlers.onRowGroupOpened>[0]);
+  expect(JSON.parse(storage.get("unified")!)).toEqual(["hidden-archived"]);
+});

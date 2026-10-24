@@ -4,9 +4,9 @@ import type { GroupTreeOption } from "../account-tree/group-tree-select";
 const CASH_GROUP_INHERITED_DISABLED_REASON =
   "Cash account status is inherited from the parent group.";
 const CASH_GROUP_INELIGIBLE_DESCENDANTS_DISABLED_REASON =
-  "Cash account groups can contain only currency asset accounts and asset sub-groups.";
+  "Cash account groups can contain only currency accounts and account sub-groups.";
 const CASH_GROUP_ACCOUNT_COMPATIBILITY_ERROR =
-  "Cash account groups can contain only currency asset accounts.";
+  "Cash account groups can contain only currency accounts.";
 
 export type AccountGroupOption = GroupTreeOption & {
   type: string;
@@ -38,7 +38,7 @@ export function isRootCashAccountEditable(args: {
   groupId?: string | null;
 }) {
   return (
-    args.type === AccountType.ASSET &&
+    (args.type === AccountType.ASSET || args.type === AccountType.LIABILITY) &&
     args.unit === Unit.CURRENCY &&
     !args.groupId
   );
@@ -53,7 +53,7 @@ export function getCashAccountDisabledReason(args: {
   if (args.groupId) {
     return "Cash account status is inherited from the selected group.";
   }
-  return "Only root-level currency asset accounts can be marked as cash accounts.";
+  return "Only root-level currency accounts can be marked as cash accounts.";
 }
 
 export function resolveAccountCashAccountFormValue(args: {
@@ -80,7 +80,9 @@ export function isAccountGroupCompatibleWithAccountCashRules(args: {
 }) {
   if (!args.group.isCashAccount) return true;
   return (
-    args.accountType === AccountType.ASSET && args.accountUnit === Unit.CURRENCY
+    (args.accountType === AccountType.ASSET ||
+      args.accountType === AccountType.LIABILITY) &&
+    args.accountUnit === Unit.CURRENCY
   );
 }
 
@@ -137,7 +139,10 @@ export function isRootCashAccountGroupEditable(args: {
   type?: AccountType;
   parentGroupId?: string | null;
 }) {
-  return args.type === AccountType.ASSET && !args.parentGroupId;
+  return (
+    (args.type === AccountType.ASSET || args.type === AccountType.LIABILITY) &&
+    !args.parentGroupId
+  );
 }
 
 function getDescendantNodes(args: {
@@ -181,9 +186,15 @@ export function canMarkAccountGroupSubtreeAsCash(args: {
   const descendants = getDescendantNodes(args);
   return descendants.every((node) => {
     if (node.nodeType === "accountGroup") {
-      return node.type === AccountType.ASSET;
+      return (
+        node.type === AccountType.ASSET || node.type === AccountType.LIABILITY
+      );
     }
-    return node.type === AccountType.ASSET && node.unit === Unit.CURRENCY;
+    return (
+      (node.type === AccountType.ASSET ||
+        node.type === AccountType.LIABILITY) &&
+      node.unit === Unit.CURRENCY
+    );
   });
 }
 
@@ -193,7 +204,8 @@ export function getCashAccountGroupDisabledReason(args: {
   groupId?: string;
   existingNodes?: ExistingNode[];
 }) {
-  if (args.type !== AccountType.ASSET) return undefined;
+  if (args.type !== AccountType.ASSET && args.type !== AccountType.LIABILITY)
+    return undefined;
   if (args.parentGroupId) return CASH_GROUP_INHERITED_DISABLED_REASON;
   if (
     !canMarkAccountGroupSubtreeAsCash({
@@ -218,8 +230,8 @@ export function getAccountGroupCashParentCompatibilityError(args: {
     args.parentGroupId,
   );
   if (!parentGroup?.isCashAccount) return null;
-  if (args.type !== AccountType.ASSET) {
-    return "Cash account groups must contain only asset groups.";
+  if (args.type !== AccountType.ASSET && args.type !== AccountType.LIABILITY) {
+    return "Cash account groups must contain only account groups.";
   }
   return canMarkAccountGroupSubtreeAsCash({
     groupId: args.groupId,

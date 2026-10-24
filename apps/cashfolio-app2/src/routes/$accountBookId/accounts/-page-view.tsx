@@ -268,7 +268,6 @@ export function AccountsPageView({
         recovery={unarchiveRecovery}
         onRefreshConstraints={onRefreshConstraints}
       />
-      {!isCategories && managementTabs}
 
       {!isCategories && (
         <Text size="sm" c="dimmed" mb="sm">

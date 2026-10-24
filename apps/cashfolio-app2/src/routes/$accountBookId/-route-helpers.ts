@@ -1,11 +1,6 @@
 import { isBalanceAccount } from "@/shared/account-presentation";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
-import {
-  parseAccountsSearch,
-  tabs,
-  type AccountsMode,
-  type TabValue,
-} from "./accounts/-page-types";
+import { type AccountsMode, type TabValue } from "./accounts/-page-types";
 
 export type AccountBookSection =
   | "transactions"
@@ -24,7 +19,7 @@ export const DESKTOP_RAIL_COLLAPSED_STORAGE_KEY =
   "cashfolio:accountBookShell:desktopRailCollapsed";
 
 const DEFAULT_ACCOUNTS_LINK_SEARCH: AccountsLinkSearch = {
-  tab: "ASSET",
+  tab: "BALANCE",
   mode: "active",
 };
 
@@ -71,12 +66,6 @@ export function getActiveSection(args: {
     ledger.account.id === segments[1] &&
     isBalanceAccount(ledger.account)
     ? "accounts"
-    : null;
-}
-
-function parseAccountsTab(value: unknown): TabValue | null {
-  return typeof value === "string" && tabs.some((tab) => tab.value === value)
-    ? (value as TabValue)
     : null;
 }
 
@@ -134,33 +123,9 @@ export function hasLedgerAccountLoaderData(value: unknown): value is {
   return isLedgerAccount(account);
 }
 
-export function getAccountsLinkSearch(args: {
+export function getAccountsLinkSearch(_args: {
   locationSearch: Record<string, unknown>;
   matches: readonly RouterMatchSnapshot[];
 }): AccountsLinkSearch {
-  const tabFromSearch = parseAccountsTab(args.locationSearch.tab);
-  if (tabFromSearch === "ASSET" || tabFromSearch === "LIABILITY") {
-    return parseAccountsSearch({
-      tab: tabFromSearch,
-      mode: args.locationSearch.mode,
-    });
-  }
-
-  for (let index = args.matches.length - 1; index >= 0; index -= 1) {
-    const match = args.matches[index];
-    if (!LEDGER_ROUTE_IDS.has(match.routeId)) {
-      continue;
-    }
-
-    if (!isLedgerAccount(match.account)) {
-      continue;
-    }
-
-    return {
-      tab: match.account.type === AccountType.LIABILITY ? "LIABILITY" : "ASSET",
-      mode: "active",
-    };
-  }
-
   return DEFAULT_ACCOUNTS_LINK_SEARCH;
 }

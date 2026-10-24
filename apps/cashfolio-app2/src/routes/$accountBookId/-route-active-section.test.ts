@@ -160,7 +160,7 @@ describe("getAccountsLinkSearch", () => {
         locationSearch: { tab: "EQUITY-INCOME", mode: "archived" },
         matches: [],
       }),
-    ).toEqual({ tab: "ASSET", mode: "active" });
+    ).toEqual({ tab: "BALANCE", mode: "active" });
     expect(
       getActiveSection({
         pathname: "/book-1/settings/categories",
@@ -175,7 +175,7 @@ describe("getAccountsLinkSearch", () => {
         matches: [],
       }),
     ).toEqual({
-      tab: "LIABILITY",
+      tab: "BALANCE",
       mode: "active",
     });
   });
@@ -196,7 +196,7 @@ describe("getAccountsLinkSearch", () => {
         ],
       }),
     ).toEqual({
-      tab: "ASSET",
+      tab: "BALANCE",
       mode: "active",
     });
   });
@@ -217,7 +217,7 @@ describe("getAccountsLinkSearch", () => {
         ],
       }),
     ).toEqual({
-      tab: "LIABILITY",
+      tab: "BALANCE",
       mode: "active",
     });
   });
@@ -229,7 +229,7 @@ describe("getAccountsLinkSearch", () => {
         matches: [],
       }),
     ).toEqual({
-      tab: "LIABILITY",
+      tab: "BALANCE",
       mode: "active",
     });
   });
@@ -241,7 +241,7 @@ describe("getAccountsLinkSearch", () => {
         matches: [],
       }),
     ).toEqual({
-      tab: "ASSET",
+      tab: "BALANCE",
       mode: "active",
     });
   });
