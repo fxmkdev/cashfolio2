@@ -19,6 +19,14 @@ import {
 const today = new Date("2026-10-10T00:00:00.000Z");
 const dataset = generateStagingDataset(today);
 const household = dataset.books[0];
+
+it("leaves every seed account Unclassified, including archived accounts", () => {
+  expect(
+    dataset.books
+      .flatMap((book) => book.accounts)
+      .every((account) => account.assetClass === null),
+  ).toBe(true);
+});
 const allBookings = (book = household) =>
   book.transactions.flatMap((transaction) => transaction.bookings);
 const accountBalance = (key: string) =>

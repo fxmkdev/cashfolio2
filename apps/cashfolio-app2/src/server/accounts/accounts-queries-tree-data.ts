@@ -8,6 +8,7 @@ import {
 } from "../../shared/date";
 
 import type {
+  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -17,6 +18,7 @@ import type { AccountState } from "./accounts-queries-reference-balances";
 import { getAccountsWhereClause } from "./accounts-queries-reference-balances";
 
 export type AccountTreeQueryAccount = {
+  assetClass: AssetClass | null;
   id: string;
   name: string;
   type: AccountType;
@@ -68,6 +70,7 @@ export async function fetchAccountTreeQueryData(args: {
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
         select: {
           id: true,
+          assetClass: true,
           name: true,
           type: true,
           equityAccountSubtype: true,

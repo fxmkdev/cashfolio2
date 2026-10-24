@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Prisma } from "../../.prisma-client/client";
 import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../../shared/mutation-errors";
 import {
+  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -262,6 +263,66 @@ describe("updateAccount opening balance management", () => {
       }),
     });
   });
+
+  it.each([undefined, null, ...Object.values(AssetClass)])(
+    "creates accounts with explicit classification %s",
+    async (assetClass) => {
+      await createAccount({
+        data: {
+          accountBookId: "book-1",
+          name: "Portfolio",
+          type: AccountType.ASSET,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          assetClass,
+        },
+      });
+      expect(tx.account.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ assetClass: assetClass ?? null }),
+      });
+    },
+  );
+
+  it.each([undefined, null, AssetClass.OTHER_ASSETS])(
+    "updates classification %s without rewriting valuation or bookings",
+    async (assetClass) => {
+      tx.account.findUniqueOrThrow.mockResolvedValueOnce({
+        type: AccountType.ASSET,
+        equityAccountSubtype: null,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+        statementImportCsvFormat: null,
+        isCashAccount: false,
+        assetClass: AssetClass.EQUITIES,
+      });
+      await updateAccount({
+        data: {
+          id: "account-1",
+          accountBookId: "book-1",
+          name: "Portfolio",
+          type: AccountType.ASSET,
+          assetClass,
+        },
+      });
+      const written = tx.account.update.mock.calls[0]![0].data;
+      expect(written.assetClass).toBe(
+        assetClass === undefined ? AssetClass.EQUITIES : assetClass,
+      );
+      expect(written).not.toHaveProperty("unit");
+      expect(written).not.toHaveProperty("currency");
+      expect(written.isCashAccount).toBe(false);
+      expect(tx.transaction.create).not.toHaveBeenCalled();
+      expect(tx.transaction.update).not.toHaveBeenCalled();
+      expect(tx.transaction.deleteMany).not.toHaveBeenCalled();
+      expect(tx.booking.deleteMany).not.toHaveBeenCalled();
+      expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
+        "book-1",
+      );
+    },
+  );
 
   it("ignores stale submitted unit identity fields when updating unitless equity accounts", async () => {
     tx.account.findUniqueOrThrow.mockResolvedValueOnce({

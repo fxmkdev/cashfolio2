@@ -2,6 +2,7 @@ import { toNumericMoney } from "../money-boundary";
 export { buildUnifiedAccountTreeRows } from "../../shared/archived-account-tree-rows";
 import { toMoney, type Money } from "../../shared/money";
 import type {
+  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -30,6 +31,7 @@ function unavailableActionAvailability(): ActionAvailability {
 }
 
 export type AccountTreeAccount = {
+  assetClass: AssetClass | null;
   id: string;
   name: string;
   type: AccountType;
@@ -58,6 +60,7 @@ export type AccountTreeGroup = {
 };
 
 export type AccountTreeRow = {
+  assetClass?: AssetClass | null;
   isVirtualArchivedGroup?: boolean;
   persistedParentId?: string | null;
   id: string;
@@ -193,6 +196,7 @@ export function buildAccountRows(args: {
         id: account.id,
         nodeType: "account",
         name: account.name,
+        assetClass: account.assetClass,
         type: account.type,
         equityAccountSubtype: account.equityAccountSubtype,
         unit: account.unit,

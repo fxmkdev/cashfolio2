@@ -536,6 +536,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
             cryptocurrency: null,
             symbol: null,
             tradeCurrency: null,
+            assetClass: null,
             isCashAccount: false,
           },
           {
@@ -548,6 +549,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
             cryptocurrency: null,
             symbol: null,
             tradeCurrency: null,
+            assetClass: null,
             isCashAccount: false,
           },
         ],
@@ -685,6 +687,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
             cryptocurrency: null,
             symbol: null,
             tradeCurrency: null,
+            assetClass: null,
             isCashAccount: false,
           },
           {
@@ -697,6 +700,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
             cryptocurrency: null,
             symbol: null,
             tradeCurrency: null,
+            assetClass: null,
             isCashAccount: false,
           },
         ],

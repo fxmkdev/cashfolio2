@@ -102,6 +102,7 @@ export function createAccountsMutationActions(args: {
         data: {
           accountBookId: args.accountBookId,
           name: values.name!,
+          assetClass: values.assetClass,
           type: values.type,
           equityAccountSubtype: values.equityAccountSubtype,
           groupId: values.groupId,
@@ -129,6 +130,7 @@ export function createAccountsMutationActions(args: {
           id: editingAccount.id,
           accountBookId: args.accountBookId,
           name: values.name!,
+          assetClass: values.assetClass,
           type: values.type,
           equityAccountSubtype: values.equityAccountSubtype,
           groupId: values.groupId,

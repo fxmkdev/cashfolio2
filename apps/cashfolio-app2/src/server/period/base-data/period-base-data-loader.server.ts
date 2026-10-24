@@ -101,6 +101,7 @@ async function loadPeriodBaseDataFromClient(
           symbol: true,
           tradeCurrency: true,
           isCashAccount: true,
+          assetClass: true,
         },
       }),
       db.account.findMany({
