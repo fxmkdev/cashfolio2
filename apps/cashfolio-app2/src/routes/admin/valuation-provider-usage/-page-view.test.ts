@@ -147,7 +147,7 @@ describe("ValuationProviderUsagePageView", () => {
     expect(markup).toContain("Today");
     expect(markup).toContain("Last 7 days");
     expect(markup).toContain("Last 30 days");
-    expect(markup).toContain("30-day Breakdown");
+    expect(markup).toContain("30-Day Breakdown");
     expect(markup).toContain("Recent Calls");
     expect(markup).toContain("Provider");
     expect(markup).toContain("Outcome");

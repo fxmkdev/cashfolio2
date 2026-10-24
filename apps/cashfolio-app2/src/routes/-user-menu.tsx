@@ -59,7 +59,7 @@ export function UserMenuItems({
           leftSection={<IconShieldLock size={16} />}
           rightSection={<IconExternalLink size={16} />}
         >
-          Sign-in & security
+          Sign-In & Security
         </Menu.Item>
       )}
       <Menu.Divider />

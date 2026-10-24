@@ -116,12 +116,12 @@ test("a rejected reorder restores the saved grid order and can be explicitly ret
     });
     expect(saved.map((row) => row.id)).toEqual(ids);
     await expect(
-      dialog.getByRole("button", { name: "Try again" }),
+      dialog.getByRole("button", { name: "Try Again" }),
     ).toBeEnabled();
   } finally {
     await release();
   }
-  await dialog.getByRole("button", { name: "Try again" }).click();
+  await dialog.getByRole("button", { name: "Try Again" }).click();
   await expect(dialog.getByRole("alert")).toHaveCount(0);
   await expect(
     dialog.locator('.ag-row[row-index="0"] [col-id="name"]'),
@@ -201,7 +201,7 @@ for (const nodeType of ["account", "accountGroup"] as const) {
       page.getByText(`Unarchive ${name}`, { exact: true }),
     ).toBeVisible();
     await expect(row.getByRole("button", { name: "Unarchive" })).toBeDisabled();
-    await page.getByRole("button", { name: "Refresh choices" }).click();
+    await page.getByRole("button", { name: "Refresh Choices" }).click();
     await expect(page.getByRole("alert")).toContainText(
       "parent group is archived",
     );
@@ -235,7 +235,7 @@ test("ledger unarchive displays busy rollback and succeeds only on explicit retr
   await page.goto(`/${seeded.accountBookId}/${id}`);
   const release = await holdBookLock();
   try {
-    await page.getByRole("button", { name: "Account actions" }).click();
+    await page.getByRole("button", { name: "Account Actions" }).click();
     await page.getByRole("menuitem", { name: "Unarchive" }).click();
     await expect(page.getByRole("status")).toHaveText(
       "Waiting for another change to finish…",
@@ -256,11 +256,11 @@ test("ledger unarchive displays busy rollback and succeeds only on explicit retr
         })
       ).isActive,
     ).toBe(false);
-    await expect(page.getByRole("button", { name: "Try again" })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Try Again" })).toBeEnabled();
   } finally {
     await release();
   }
-  await page.getByRole("button", { name: "Try again" }).click();
+  await page.getByRole("button", { name: "Try Again" }).click();
   await expect(page.getByRole("alert")).toHaveCount(0);
   await expect
     .poll(
@@ -307,9 +307,9 @@ test("a changed start date rejects an open draft without losing its inputs", asy
   await expect(dialog.getByLabel("Date")).toHaveValue(date);
   await expect(dialog.getByLabel("Amount")).toHaveValue("20");
   await expect(
-    dialog.getByRole("button", { name: "Refresh choices" }),
+    dialog.getByRole("button", { name: "Refresh Choices" }),
   ).toBeEnabled();
-  await dialog.getByRole("button", { name: "Refresh choices" }).click();
+  await dialog.getByRole("button", { name: "Refresh Choices" }).click();
   await expect(dialog.getByLabel("Description")).toHaveValue(description);
   expect(
     await countTransactionsByDescription({
@@ -424,7 +424,7 @@ for (const action of ["Archive", "Delete"] as const) {
       action === "Archive" ? /balance/i : /booking/i,
     );
     await expect(
-      dialog.getByRole("button", { name: "Refresh choices" }),
+      dialog.getByRole("button", { name: "Refresh Choices" }),
     ).toBeEnabled();
     const account = await prisma.account.findUniqueOrThrow({
       where: { id_accountBookId: { id, accountBookId: seeded.accountBookId } },
@@ -441,7 +441,7 @@ test("a rejected import retains edited review rows and inclusion choices", async
   // Client navigation avoids uploading before the lazy import page hydrates.
   await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
   await page
-    .getByRole("button", { name: "Account actions", exact: true })
+    .getByRole("button", { name: "Account Actions", exact: true })
     .click();
   await page
     .getByRole("menuitem", { name: "Import Statement", exact: true })
@@ -546,10 +546,10 @@ for (const entity of ["account", "group"] as const) {
     await dialog.getByRole("button", { name: "Save", exact: true }).click();
     await expect(dialog.getByRole("alert")).toContainText(/already exists/i);
     await expect(
-      dialog.getByRole("button", { name: "Refresh choices" }),
+      dialog.getByRole("button", { name: "Refresh Choices" }),
     ).toBeEnabled();
     await expect(dialog.getByLabel("Name")).toHaveValue(duplicate);
-    await dialog.getByRole("button", { name: "Refresh choices" }).click();
+    await dialog.getByRole("button", { name: "Refresh Choices" }).click();
     await expect(dialog.getByLabel("Name")).toHaveValue(duplicate);
     const where = { id, name: original, accountBookId: seeded.accountBookId };
     const savedCount =
@@ -579,7 +579,7 @@ test("a rejected split draft retains both booking rows", async ({ page }) => {
     "Date cannot be before account book start date",
   );
   await expect(
-    dialog.getByRole("button", { name: "Refresh choices" }),
+    dialog.getByRole("button", { name: "Refresh Choices" }),
   ).toBeEnabled();
   await expect(dialog.getByLabel("Description", { exact: true })).toHaveValue(
     description,

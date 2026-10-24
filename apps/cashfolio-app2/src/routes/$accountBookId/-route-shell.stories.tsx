@@ -208,7 +208,7 @@ export const RouteSmoke: Story = {
     );
     const accountSecurityLink = await findVisibleMenuItem(
       body,
-      "Sign-in & security",
+      "Sign-In & Security",
     );
     await expect(accountSecurityLink).toHaveAttribute(
       "href",

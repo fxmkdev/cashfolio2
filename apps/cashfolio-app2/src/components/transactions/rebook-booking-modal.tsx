@@ -78,7 +78,7 @@ export function RebookBookingModal({
         {description && <Text size="sm">{description}</Text>}
         <AccountTreeSelect
           label="Target Account"
-          placeholder="Select Target Account"
+          placeholder="Select target account"
           accounts={targetAccounts}
           data-autofocus
           value={targetAccountId}

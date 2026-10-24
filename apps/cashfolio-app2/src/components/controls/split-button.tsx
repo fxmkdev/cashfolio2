@@ -33,7 +33,7 @@ export type SplitButtonMenuDivider = {
 export function SplitButton({
   children,
   leftSection,
-  menuLabel = "More actions",
+  menuLabel = "More Actions",
   menuItems,
   onClick,
   variant = "default",

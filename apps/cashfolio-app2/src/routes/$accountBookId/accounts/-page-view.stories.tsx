@@ -573,12 +573,12 @@ async function findVisibleDialog(
 async function openGainLossDetails(canvasElement: HTMLElement) {
   await userEvent.click(
     await within(canvasElement).findByRole("button", {
-      name: "Show gain/loss details",
+      name: "Show Gain/Loss Details",
     }),
   );
   return findVisibleDialog(
     within(canvasElement.ownerDocument.body),
-    "Gain/loss details",
+    "Gain/Loss Details",
   );
 }
 
@@ -630,11 +630,11 @@ export const ConstrainedWidthWithGainLoss: Story = {
       ).toBeGreaterThan(0);
     });
     await userEvent.click(
-      canvas.getByRole("button", { name: "Show gain/loss details" }),
+      canvas.getByRole("button", { name: "Show Gain/Loss Details" }),
     );
     const details = await within(canvasElement.ownerDocument.body).findByRole(
       "dialog",
-      { name: "Gain/loss details" },
+      { name: "Gain/Loss Details" },
     );
     await waitFor(() => {
       const bounds = details.getBoundingClientRect();
@@ -653,11 +653,11 @@ export const ArchivedMode: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Show gain/loss details" }),
+      await canvas.findByRole("button", { name: "Show Gain/Loss Details" }),
     );
     const details = await within(canvasElement.ownerDocument.body).findByRole(
       "dialog",
-      { name: "Gain/loss details" },
+      { name: "Gain/Loss Details" },
     );
     expect(details).toHaveTextContent("Totals include only archived accounts");
     await userEvent.keyboard("{Escape}");
@@ -828,13 +828,13 @@ export const GainLossLoadingToReady: Story = {
     header.focus();
     await userEvent.tab();
     const button = canvas.getByRole("button", {
-      name: "Show gain/loss details",
+      name: "Show Gain/Loss Details",
     });
     expect(button).toHaveFocus();
     await userEvent.keyboard("{Enter}");
     const details = await within(canvasElement.ownerDocument.body).findByRole(
       "dialog",
-      { name: "Gain/loss details" },
+      { name: "Gain/Loss Details" },
     );
     expect(details).toHaveTextContent("Since 1/1/2026 · As of 3/31/2026");
     expect(details).toHaveTextContent("Incomplete columns show —");
@@ -881,7 +881,7 @@ export const GainLossCompletesWithDetailsOpen: Story = {
     header.focus();
     await userEvent.tab();
     await userEvent.keyboard("{Enter}");
-    const details = await findVisibleDialog(body, "Gain/loss details");
+    const details = await findVisibleDialog(body, "Gain/Loss Details");
     expect(details).toHaveTextContent("Loading calculation dates…");
     await waitFor(() =>
       expect(details.contains(canvasElement.ownerDocument.activeElement)).toBe(
@@ -905,7 +905,7 @@ export const GainLossCompletesWithDetailsOpen: Story = {
       expect(details).toHaveTextContent("Since 1/1/2026 · As of 3/31/2026"),
     );
     expect(details.isConnected).toBe(true);
-    expect(body.getByRole("dialog", { name: "Gain/loss details" })).toBe(
+    expect(body.getByRole("dialog", { name: "Gain/Loss Details" })).toBe(
       details,
     );
     expect(details.contains(canvasElement.ownerDocument.activeElement)).toBe(
@@ -930,7 +930,7 @@ export const GainLossCompletesWithDetailsOpen: Story = {
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(details).not.toBeVisible());
     expect(
-      canvas.getByRole("button", { name: "Show gain/loss details" }),
+      canvas.getByRole("button", { name: "Show Gain/Loss Details" }),
     ).toHaveFocus();
   },
 };

@@ -63,34 +63,109 @@ existing Storybook titles and story export names stable when moving files.
 
 ## UI Copy
 
-- Use the explicit identity labels below in sentence case, including headings
-  and actions; these are exceptions to the general title-case convention.
-- Use Title Case for UI labels, including buttons, links, menu items, tabs,
-  field labels, alert titles, placeholders, and accessible labels such as
-  `aria-label`. Follow common product title-case rules: capitalize major words,
-  and keep short articles, conjunctions, and prepositions lowercase unless they
-  start or end the label.
-- Use sentence case for full-sentence prose, helper text, validation errors,
-  notifications, and explanatory empty states.
 - Keep labels short and action-oriented. Prefer concise commands such as
   `Create New` over longer menu text when the surrounding context already names
   the object.
+
+### Capitalization
+
+Cashfolio uses Title Case for short English UI labels and titles, and sentence
+case for prose and instructions. Classify text by its purpose, not its component
+or prop name: a tooltip can name an action or explain why it is unavailable; an
+`aria-label` can name a control or describe its current state.
+
+This is Cashfolio's product convention, not a universal UX requirement.
+[Apple's writing guidance](https://developer.apple.com/design/human-interface-guidelines/writing)
+recommends choosing a consistent style for each element type. The mechanics
+below follow the capitalization entry in the
+[Apple Style Guide](https://help.apple.com/pdf/applestyleguide/en_US/apple-style-guide.pdf#page=45).
+Other systems choose differently; for example,
+[Microsoft's style guide](https://learn.microsoft.com/en-us/style-guide/capitalization)
+generally uses sentence case even for UI labels. Research reviewed October
+23, 2026.
+
+| Text role                                                                                                                        | Convention                                                                         | Cashfolio examples                                                                       |
+| -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Page/document, dialog, section, card, and chart titles; table/grid headers and chart legends                                     | Title Case for short titles                                                        | `Create Account Book`, `Gain/Loss Details`, `Trade Currency`                             |
+| Buttons, navigation links, menu items, tabs, field labels, short checkbox/switch/radio labels, and predefined choices            | Title Case                                                                         | `Copy Example`, `Cash Account`, `Opening Balances`                                       |
+| Short action tooltips and accessible control names                                                                               | Title Case; use the visible label's wording and casing when naming the same action | `Show Gain/Loss Details`, `Include All Rows`                                             |
+| Explanations, helper text, validation errors, notification bodies, empty states, and progress/status messages (including badges) | Sentence case, even for fragments                                                  | `No regional format found`, `Deletion pending`, `Loading calculation`                    |
+| Instructional placeholders, explanatory tooltips, and accessibility instructions/descriptions                                    | Sentence case                                                                      | `Select target account`, `You cannot delete yourself`, `Press Space to toggle inclusion` |
+| Alert and notification headings                                                                                                  | Title Case for short titles; sentence case for statements or questions             | `Partial Data`, `This cannot be undone`, `Discard reviewed statement?`                   |
+| User content, example values, identifiers, brands, acronyms, and technical literals                                              | Preserve appropriate spelling and casing                                           | `Cashfolio`, `CSV`, `CHF`, `Gain/Loss`, `https://example.com/avatar.png`                 |
+
+Outcome headings such as `Statement imported` and `Account book switched` report
+status and stay in sentence case, even though they are short.
+
+A label embedded in prose does not make surrounding words Title Case. Write
+generic financial terms normally in sentences, such as "Choose an account book"
+or "The cash account is archived." When explicitly referring to a control by
+name, match its label, such as "Choose a Target Account."
+
+#### Title Case mechanics
+
+- Capitalize the first and last words and the first word after a colon, while
+  preserving brand names and technical literals with intentional casing.
+- Capitalize nouns, pronouns, verbs (including `Is`, `Are`, and `Be`),
+  adjectives, adverbs, subordinating conjunctions (such as `If`), and
+  prepositions with five or more letters (such as `Since`, `About`, and
+  `Between`).
+- Lowercase internal articles (`a`, `an`, `the`), coordinating conjunctions
+  (`and`, `but`, `or`, `nor`, `for`, `yet`, `so`), prepositions of four or fewer
+  letters (`to`, `of`, `in`, `on`, `from`, `with`, etc.), infinitive `to`, and
+  `as`. Examples: `Back to App`, `Contribution to Total Return`, `Save as CSV`.
+- Capitalize particles in phrasal verbs: `Sign Out`, `Log In to Cashfolio`,
+  `Turn On Notifications`. Their grammatical role matters, not just length.
+- Capitalize the second part of a hyphenated compound, such as `Period-End Rate`
+  and `30-Day Breakdown`; retain Apple's `Built-in` and `Plug-in` exceptions.
+  Apply the same word rules on each side of a slash: `Gain/Loss Details` and
+  `Debit/Credit Direction`. Preserve existing punctuation and abbreviations.
+- Do not add a period to a short label or title. Retain meaningful question
+  marks and existing action ellipses. Sentence case capitalizes the first word
+  and proper nouns; normal sentence punctuation applies to explanatory
+  sentences.
+
+#### Preserved content
+
+Never recase user/book/account names, imported descriptions, provider names,
+symbols, currency codes, dates, filenames, URLs, JSON keys, or confirmation
+values. Example values retain their intended casing. Do not change enum values,
+stored data, API fields, or routes to fix displayed copy. External provider
+pages are outside this policy's implementation scope.
+
+#### Authoring and review checklist
+
+- Review customer and admin screens, shared components, display-string helpers,
+  document titles, charts/grids, tooltips, placeholders, and accessibility text.
+  Include app-owned server-rendered pages and text overrides for exposed library
+  controls. Use supported library overrides where necessary.
+- Review each string in context, including both outcomes of conditional labels.
+  Keep explanatory or disabled-reason tooltips in sentence case even when their
+  action tooltip uses Title Case. Preserve dynamic content in mixed labels.
+- Author correct strings directly. Do not use runtime title-casing, CSS
+  `text-transform: capitalize`, or blanket search-and-replace over UI text.
+- Update affected unit tests, Storybook interactions, E2E accessible-name
+  selectors, and documentation examples together. Check rendered text for
+  truncation and verify that accessible names still identify visible actions.
+- Use this checklist during review; capitalization has no automated lint rule.
 
 ### Identity and financial-account terminology
 
 Cashfolio has distinct `User`, `AccountBook`, and `Account` entities. Keep their
 names distinct in routes, modules, types, functions, props, tests, and docs:
 
-| Concept                            | App-owned code                                                     | Customer-facing wording                                    |
-| ---------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------- |
-| Sign-in identity                   | `User`, `user-deletion`, `deleteAuthenticatedUser`, `/user/delete` | "Cashfolio account", "Delete my Cashfolio account"         |
-| Identity security                  | `userSecurityUrl`, `getUserSecurityUrl`                            | "Sign-in & security"                                       |
-| Financial account                  | `Account`, `deleteAccount`, `accountId`                            | "Account", "Delete Account", with the account name visible |
-| Book containing financial accounts | `AccountBook`, `accountBookId`                                     | "Account Book"                                             |
+| Concept                            | App-owned code                                                     | Customer-facing wording                                                  |
+| ---------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Sign-in identity                   | `User`, `user-deletion`, `deleteAuthenticatedUser`, `/user/delete` | "Cashfolio account" in prose; "Delete My Cashfolio Account" as an action |
+| Identity security                  | `userSecurityUrl`, `getUserSecurityUrl`                            | "Sign-In & Security"                                                     |
+| Financial account                  | `Account`, `deleteAccount`, `accountId`                            | "Account", "Delete Account", with the account name visible               |
+| Book containing financial accounts | `AccountBook`, `accountBookId`                                     | "Account Book"                                                           |
 
-Use "user" in admin actions such as "Delete user" and retain "User Settings" for
-personal preferences. Avoid unqualified "account settings" or "account deletion"
-for identities in app-owned code, diagnostics, or documentation.
+Identity labels follow the general capitalization policy: use "Delete User" in
+admin actions and "User Settings" for personal preferences. Generic references
+to a "Cashfolio account" or "user" in prose stay in sentence case. Avoid
+unqualified "account settings" or "account deletion" for identities in app-owned
+code, diagnostics, or documentation.
 
 Provider-scoped terms such as `LogtoAccountResponse`, Logto Account API, and
 `/api/my-account` retain the provider's terminology. The legacy
@@ -98,13 +173,14 @@ Provider-scoped terms such as `LogtoAccountResponse`, Logto Account API, and
 routes; see [self-service deletion](server-functions.md#auth-and-authorization).
 
 Destructive UI must identify the target and explain its consequences. User
-self-deletion uses "Delete your Cashfolio account", "Delete my Cashfolio
-account", and "Cashfolio account deleted". Explain loss of sign-in access,
-deletion of books only that person can access, and preservation of shared books
-for other users; show the affected-book preview. Financial-account deletion
-shows the financial account's name alongside "Delete Account". Keep provider
-storage details out of ordinary profile and deletion copy; technical admin tools
-and architecture docs may name Logto.
+self-deletion uses "Delete Your Cashfolio Account" as the page title and "Delete
+My Cashfolio Account" as the action. The outcome heading "Cashfolio account
+deleted" stays in sentence case because it reports status. Explain loss of
+sign-in access, deletion of books only that person can access, and preservation
+of shared books for other users; show the affected-book preview.
+Financial-account deletion shows the financial account's name alongside "Delete
+Account". Keep provider storage details out of ordinary profile and deletion
+copy; technical admin tools and architecture docs may name Logto.
 
 ## Label Typography
 
@@ -754,6 +830,11 @@ Defined in `src/components/grid/column-types.tsx`:
 
 ## AG Grid Context Pattern
 
+- Register `LocaleModule` centrally. `DataGrid` applies the shared UI text from
+  `grid/grid-locale.ts` and merges page-specific `localeText` overrides, such as
+  statement-import inclusion instructions, on top. Follow the capitalization
+  guidelines when adding either kind of text.
+
 Grids pass a context object to cell renderers and editors containing helper
 data, form references, and callbacks.
 
@@ -905,7 +986,7 @@ book's earliest booking date without router navigation or form reset. Account
 and group forms initialize once per open/edit session. Unavailable selections
 retain their IDs and display an explanation; the user must correct them under
 the current validation rules. Refresh failures appear separately from save
-errors, with a manual **Refresh choices** action.
+errors, with a manual **Refresh Choices** action.
 
 Statement-import recovery also reloads existing bookings and recalculates match
 markers and balance previews. It retains draft edits and inclusion decisions,
@@ -925,7 +1006,7 @@ Page-level feedback names the affected account/group, refreshes eligibility, and
 keeps other open drafts mounted. Pending actions cannot be submitted twice. Busy
 retries are disabled when the refreshed target is no longer eligible.
 
-Only the confirmed busy-book rollback offers **Try again**. A failed network
+Only the confirmed busy-book rollback offers **Try Again**. A failed network
 request can have an uncertain save outcome; feedback asks the user to refresh
 and check saved data before submitting again. The client never automatically
 retries a mutation. Server-side retries apply only to fully rolled-back database

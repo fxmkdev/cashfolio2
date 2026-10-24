@@ -55,9 +55,9 @@ function StatementImportCsvFormatHelp() {
       }}
     >
       <Popover.Target>
-        <Tooltip label="Show CSV format JSON help">
+        <Tooltip label="Show Statement Import CSV Format Help">
           <ActionIcon
-            aria-label="Show statement import CSV format help"
+            aria-label="Show Statement Import CSV Format Help"
             size="sm"
             variant="subtle"
           >
@@ -85,7 +85,7 @@ function StatementImportCsvFormatHelp() {
                 size="xs"
                 variant="light"
               >
-                {copied ? "Copied" : "Copy example"}
+                {copied ? "Copied" : "Copy Example"}
               </Button>
             )}
           </CopyButton>
@@ -105,7 +105,7 @@ export function StatementImportCsvFormatField({
   return (
     <Stack gap={4}>
       <Group gap={4}>
-        <Input.Label htmlFor={inputId}>Statement import CSV format</Input.Label>
+        <Input.Label htmlFor={inputId}>Statement Import CSV Format</Input.Label>
         <StatementImportCsvFormatHelp />
       </Group>
       <Textarea

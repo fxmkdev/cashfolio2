@@ -39,7 +39,7 @@ export function MutationSubmitFeedback({
               disabled={state.isSubmitting}
               onClick={() => void state.refreshConstraints()}
             >
-              Refresh choices
+              Refresh Choices
             </Button>
           )}
           {state.submissionError?.isBusy && (
@@ -51,7 +51,7 @@ export function MutationSubmitFeedback({
               }
               onClick={onRetry}
             >
-              Try again
+              Try Again
             </Button>
           )}
         </Group>

@@ -73,7 +73,7 @@ export function RealizedEventExplainDrawer(args: {
           </Card>
 
           {args.selectedEvent.pricing.source === "transferBasis" ? (
-            <Alert color="blue" title="Transfer basis">
+            <Alert color="blue" title="Transfer Basis">
               Incoming holdings close opposite positions using their carried
               acquisition costs. Quantity and effective amount cover only the
               matched portion. The displayed price is its weighted average; each

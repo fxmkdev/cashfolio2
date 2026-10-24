@@ -352,7 +352,7 @@ export function ValuationCachePageView({
           type: "line",
           xKey: "dateValue",
           yKey: "value",
-          yName: selectedUnit?.label ?? "Cached value",
+          yName: selectedUnit?.label ?? "Cached Value",
           stroke: isDarkMode ? theme.colors.teal[3] : theme.colors.teal[8],
           strokeWidth: 3,
           marker: {
@@ -367,7 +367,7 @@ export function ValuationCachePageView({
                 heading: point.dateLabel,
                 data: [
                   {
-                    label: "Cached value",
+                    label: "Cached Value",
                     value: numberFormatter.format(point.value),
                   },
                 ],

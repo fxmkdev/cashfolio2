@@ -46,25 +46,25 @@ describe("mutation submission feedback", () => {
       submissionError: getMutationError(new Error(ACCOUNT_BOOK_BUSY_MESSAGE)),
     });
     expect(busy).toContain(ACCOUNT_BOOK_BUSY_MESSAGE);
-    expect(busy).toContain("Try again");
+    expect(busy).toContain("Try Again");
     expect(busy).toContain('type="submit"');
     const network = render({
       submissionError: getMutationError(new TypeError("Failed to fetch")),
     });
     expect(network).toContain("check the saved data before submitting again");
-    expect(network).not.toContain("Try again");
+    expect(network).not.toContain("Try Again");
   });
   it("keeps manual recovery available after clearing the submission error", () => {
     const markup = render({
       refreshError: "Could not refresh choices. Your draft is still here.",
     });
     expect(markup).toContain("Your draft is still here");
-    expect(markup).toContain("Refresh choices");
+    expect(markup).toContain("Refresh Choices");
     expect(
       render(
         { submissionError: getMutationError(new Error("Rejected")) },
         false,
       ),
-    ).not.toContain("Refresh choices");
+    ).not.toContain("Refresh Choices");
   });
 });

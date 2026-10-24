@@ -62,14 +62,14 @@ export const PendingDeletion: Story = {
     const roles = canvas.getAllByRole("button", { name: "Manage Roles" });
     await expect(roles[1]).toBeDisabled();
     await userEvent.click(
-      canvas.getByRole("button", { name: "Retry deletion" }),
+      canvas.getByRole("button", { name: "Retry Deletion" }),
     );
-    const dialog = await body.findByRole("dialog", { name: "Retry deletion" });
+    const dialog = await body.findByRole("dialog", { name: "Retry Deletion" });
     const controls = within(dialog);
     await waitFor(() =>
       expect(controls.getByText(/Deletion has started/)).toBeVisible(),
     );
-    const submit = controls.getByRole("button", { name: "Retry deletion" });
+    const submit = controls.getByRole("button", { name: "Retry Deletion" });
     await expect(submit).toBeDisabled();
     await userEvent.type(
       controls.getByRole("textbox", { name: "External ID" }),
@@ -92,23 +92,23 @@ export const DeletionFailure: Story = {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Retry deletion" }),
+      await canvas.findByRole("button", { name: "Retry Deletion" }),
     );
     const controls = within(
-      await body.findByRole("dialog", { name: "Retry deletion" }),
+      await body.findByRole("dialog", { name: "Retry Deletion" }),
     );
     await userEvent.type(
       controls.getByRole("textbox", { name: "External ID" }),
       "pending-user",
     );
     await userEvent.click(
-      controls.getByRole("button", { name: "Retry deletion" }),
+      controls.getByRole("button", { name: "Retry Deletion" }),
     );
     await expect(
       await controls.findByText("Deletion is pending. Retry to finish it."),
     ).toBeVisible();
     await expect(
-      controls.getByRole("button", { name: "Retry deletion" }),
+      controls.getByRole("button", { name: "Retry Deletion" }),
     ).toBeEnabled();
   },
 };

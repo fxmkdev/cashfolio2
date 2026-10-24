@@ -57,7 +57,7 @@ describe("UserMenuItems", () => {
     });
     expect(securityItem).toMatchObject({
       props: {
-        children: "Sign-in & security",
+        children: "Sign-In & Security",
         href: "https://tenant.logto.app/account/security",
         rel: "noopener noreferrer",
         target: "_blank",
@@ -93,7 +93,7 @@ describe("UserMenuItems", () => {
     expect(Children.toArray(menuItems.props.children)).not.toContainEqual(
       expect.objectContaining({
         props: expect.objectContaining({
-          children: "Sign-in & security",
+          children: "Sign-In & Security",
         }),
       }),
     );

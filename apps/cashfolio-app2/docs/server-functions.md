@@ -573,7 +573,7 @@ last members of a shared book. Row locks prevent membership inserts from racing
 these decisions. Unrelated historical orphan books are never scanned or deleted.
 
 Admin user-list responses include `deletionPending`. Pending rows display their
-status, disable role editing, and offer **Retry deletion**. Admins can retry
+status, disable role editing, and offer **Retry Deletion**. Admins can retry
 with the existing confirmation flow (external ID when Logto reports a missing
 user). Logto `404` and repeated database deletion are idempotent. Self-service
 retries remain available while the identity/session is usable; otherwise another

@@ -77,17 +77,17 @@ test("pending deletions show inactive Admin status and a retry action", async ({
     await expect(
       row.getByRole("button", { name: "Manage Roles" }),
     ).toBeDisabled();
-    await row.getByRole("button", { name: "Retry deletion" }).click();
-    const dialog = page.getByRole("dialog", { name: "Retry deletion" });
+    await row.getByRole("button", { name: "Retry Deletion" }).click();
+    const dialog = page.getByRole("dialog", { name: "Retry Deletion" });
     await expect(dialog).toContainText("Deletion has started");
     await expect(
-      dialog.getByRole("button", { name: "Retry deletion" }),
+      dialog.getByRole("button", { name: "Retry Deletion" }),
     ).toBeDisabled();
     await dialog
       .getByRole("textbox", { name: "External ID" })
       .fill(targetUserExternalId);
     await expect(
-      dialog.getByRole("button", { name: "Retry deletion" }),
+      dialog.getByRole("button", { name: "Retry Deletion" }),
     ).toBeEnabled();
     await dialog.getByRole("button", { name: "Cancel" }).click();
   } finally {

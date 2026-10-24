@@ -43,7 +43,7 @@ async function upload(page: Page) {
 
 async function openReview(page: Page) {
   await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
-  await page.getByRole("button", { name: "Account actions" }).click();
+  await page.getByRole("button", { name: "Account Actions" }).click();
   await page.getByRole("menuitem", { name: "Import Statement" }).click();
   await upload(page);
 }
@@ -103,7 +103,7 @@ test("untouched and reverted reviews return to Upload and leave without confirma
 }) => {
   await openReview(page);
   await page.getByRole("button", { name: /Upload/ }).click();
-  await expect(page.getByText("Drop CSV File Here")).toBeVisible();
+  await expect(page.getByText("Drop CSV file here")).toBeVisible();
   await expect(discardDialog(page)).toHaveCount(0);
   await upload(page);
   const row = agGridRowByText(page, description);
@@ -168,14 +168,14 @@ for (const destination of [
     await leave();
     await expect(discardDialog(page)).toBeVisible();
     await discardDialog(page)
-      .getByRole("button", { name: "Keep reviewing" })
+      .getByRole("button", { name: "Keep Reviewing" })
       .click();
     await expect(discardDialog(page)).toHaveCount(0);
     await expect(page).toHaveURL(reviewUrl);
     await expect(agGridRowByText(page, changedDescription)).toBeVisible();
     await leave();
     await discardDialog(page)
-      .getByRole("button", { name: "Discard and leave" })
+      .getByRole("button", { name: "Discard and Leave" })
       .click();
     const targetBook =
       destination === "account book"
@@ -227,7 +227,7 @@ for (const action of ["reload", "document", "close"] as const) {
     } else {
       await dialog.accept();
       if (action === "reload")
-        await expect(page.getByText("Drop CSV File Here")).toBeVisible();
+        await expect(page.getByText("Drop CSV file here")).toBeVisible();
       else await expect(page).toHaveURL("about:blank");
     }
   });
@@ -247,7 +247,7 @@ test("pending inline input is protected before commit and Escape restores a clea
   await expect(input).toHaveValue("Pending inline description");
   await input.press("Escape");
   await page.getByRole("button", { name: /Upload/ }).click();
-  await expect(page.getByText("Drop CSV File Here")).toBeVisible();
+  await expect(page.getByText("Drop CSV file here")).toBeVisible();
   await expect(discardDialog(page)).toHaveCount(0);
 });
 
@@ -282,7 +282,7 @@ test("unsaved modal input is protected, and Cancel discards only editor changes"
   await expect(editor).toHaveCount(0);
   await expect(agGridRowByText(page, description)).toBeVisible();
   await page.getByRole("button", { name: /Upload/ }).click();
-  await expect(page.getByText("Drop CSV File Here")).toBeVisible();
+  await expect(page.getByText("Drop CSV file here")).toBeVisible();
 });
 
 test("reverting editor fields removes protection and subsequent booking additions restore it", async ({
@@ -320,7 +320,7 @@ test("reverting editor fields removes protection and subsequent booking addition
   await (await requestNativeDeparture(page, "reload")).dismiss();
   await editor.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.getByRole("button", { name: /Upload/ }).click();
-  await expect(page.getByText("Drop CSV File Here")).toBeVisible();
+  await expect(page.getByText("Drop CSV file here")).toBeVisible();
 });
 
 for (const input of ["invalid date", ""]) {
@@ -414,7 +414,7 @@ test("failed import and an import in flight remain protected", async ({
   await page.getByRole("link", { name: "Accounts", exact: true }).click();
   await expect(discardDialog(page)).toBeVisible();
   await discardDialog(page)
-    .getByRole("button", { name: "Keep reviewing" })
+    .getByRole("button", { name: "Keep Reviewing" })
     .click();
   release();
   await expect(

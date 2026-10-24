@@ -70,7 +70,7 @@ test("ledger excludes reference-currency accounts before requesting G/L and pres
         page.getByRole("heading", { name: "G/L Since Start", exact: true }),
       ).toHaveCount(0);
       await expect(
-        page.getByLabel("Loading Gain/Loss", { exact: true }),
+        page.getByLabel("Loading gain/loss", { exact: true }),
       ).toHaveCount(0);
       expect(requests).toBe(0);
     }
@@ -81,7 +81,7 @@ test("ledger excludes reference-currency accounts before requesting G/L and pres
       page.getByRole("heading", { name: "G/L Since Start", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByLabel("Loading Gain/Loss", { exact: true }),
+      page.getByLabel("Loading gain/loss", { exact: true }),
     ).toBeVisible();
   } finally {
     releaseResponse();
@@ -112,9 +112,9 @@ test("accumulated account G/L, nested totals, historical summary, and FIFO expla
     agGridCellByColId(agGridPinnedBottomRow(page), "totalGainLoss"),
   ).toHaveText("21.00");
   await gainLossHeader
-    .getByRole("button", { name: "Show gain/loss details" })
+    .getByRole("button", { name: "Show Gain/Loss Details" })
     .click();
-  const details = page.getByRole("dialog", { name: "Gain/loss details" });
+  const details = page.getByRole("dialog", { name: "Gain/Loss Details" });
   await expect(details).toContainText("Since 1/1/2026 · As of");
   await expect(details).toContainText("Totals include only active accounts");
   await page.keyboard.press("Escape");
@@ -296,7 +296,7 @@ test("transfers close opposite positions and explain their realised gain without
     exact: true,
   });
   await expect(
-    calculation.getByText("No Rows To Show", { exact: true }),
+    calculation.getByText("No rows to show", { exact: true }),
   ).toBeVisible();
   const transfer = calculation
     .locator(".ag-row")
@@ -308,7 +308,7 @@ test("transfers close opposite positions and explain their realised gain without
   await transfer.getByText("Transfer Holding", { exact: true }).click();
   const event = page.getByRole("dialog", { name: "Explain Realised Delta" });
   await expect(
-    event.getByText("Transfer basis", { exact: true }),
+    event.getByText("Transfer Basis", { exact: true }),
   ).toBeVisible();
   await expect(event.getByText(/carried acquisition costs/)).toBeVisible();
   await expect(event).toContainText("100.00000");
@@ -359,8 +359,8 @@ test("G/L request failure can be retried without blocking the accounts page", as
   await expect(
     page.getByRole("heading", { name: "Accounts", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Show gain/loss details" }).click();
-  const details = page.getByRole("dialog", { name: "Gain/loss details" });
+  await page.getByRole("button", { name: "Show Gain/Loss Details" }).click();
+  const details = page.getByRole("dialog", { name: "Gain/Loss Details" });
   await expect(
     details.getByText("Dates unavailable", { exact: true }),
   ).toBeVisible();
@@ -373,7 +373,7 @@ test("G/L request failure can be retried without blocking the accounts page", as
   await expect(
     page.locator('.ag-cell[col-id="totalGainLoss"] .mantine-Loader-root'),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "Show gain/loss details" }).click();
+  await page.getByRole("button", { name: "Show Gain/Loss Details" }).click();
   await expect(details).toContainText(/Since .+ · As of/);
   await page.keyboard.press("Escape");
 });

@@ -359,7 +359,7 @@ export function EditAccountGroupModal({
                 >
                   <span style={{ display: "inline-flex" }}>
                     <Checkbox
-                      label="Cash account"
+                      label="Cash Account"
                       checked={cashAccountValue}
                       disabled={
                         !!cashAccountDisabledReason || !cashAccountEditable

@@ -29,7 +29,7 @@ describe("UserSettingsPageView", () => {
     );
 
     expect(markup).toContain("User Settings");
-    expect(markup).not.toContain("Sign-in & security");
+    expect(markup).not.toContain("Sign-In & Security");
     expect(markup).not.toContain("https://tenant.logto.app/account/security");
     expect(markup).toContain("Name");
     expect(markup).toContain("Avatar URL");
