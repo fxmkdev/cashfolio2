@@ -149,7 +149,7 @@ export function usePeriodBreakdownChartOptions(args: {
         params: buildCommonChartThemeParams(colors),
       },
       legend: {
-        enabled: false,
+        enabled: !colorBySign,
         position: "bottom",
       },
       series: chartData.map<AgBarSeriesOptions<PeriodBreakdownChartDatum>>(
@@ -178,7 +178,8 @@ export function usePeriodBreakdownChartOptions(args: {
           xKey: "label" as const,
           yKey: "amount" as const,
           yName: "Amount",
-          showInLegend: false,
+          legendItemName: datum.label,
+          showInLegend: !colorBySign,
           tooltip: {
             renderer: ({ datum }: { datum: PeriodBreakdownChartDatum }) =>
               buildBreakdownTooltipData(datum),
