@@ -223,7 +223,7 @@ test("legacy recorded G/L scope opens the unified account explanation", async ({
     seeded.cashAccount.name,
   );
   await expect(new URL(page.url()).searchParams.get("gainLossScope")).toBe(
-    `explicit-account:${seeded.cashAccount.id}`,
+    `gain-loss-account:${seeded.cashAccount.id}`,
   );
 });
 
