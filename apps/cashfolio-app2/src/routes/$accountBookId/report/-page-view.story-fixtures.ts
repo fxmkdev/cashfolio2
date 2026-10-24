@@ -412,7 +412,6 @@ export const baseOverview: ReportPageViewProps["overview"] = {
     hasHiddenAmountDiscrepancy: false,
     hiddenAmountDiscrepancyNodeIds: [],
     skippedMissingReferenceBalanceCount: 1,
-    skippedNegativeCount: 1,
     items: [
       {
         id: "group:investments",
@@ -473,8 +472,7 @@ export const baseOverview: ReportPageViewProps["overview"] = {
     totalAmount: 5400,
     hasHiddenAmountDiscrepancy: false,
     hiddenAmountDiscrepancyNodeIds: [],
-    skippedMissingReferenceBalanceCount: 0,
-    skippedNegativeCount: 1,
+    skippedMissingReferenceBalanceCount: 1,
     items: [
       {
         id: "group:debt",

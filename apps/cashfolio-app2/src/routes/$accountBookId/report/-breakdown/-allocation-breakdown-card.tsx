@@ -1,4 +1,4 @@
-import { Flex, SegmentedControl } from "@mantine/core";
+import { Flex, SegmentedControl, Text } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { PeriodBreakdownChartOptions } from "./-breakdown-chart-options";
 import { BreakdownTable } from "./-breakdown-table";
@@ -120,7 +120,16 @@ export function PeriodAllocationBreakdownCard({
           />
         </Flex>
       }
-      footer={footer}
+      footer={
+        <>
+          <Text size="sm" c="dimmed" mt="md">
+            {selectedBreakdown === "asset"
+              ? "Assets include positive account balances at period end, regardless of account type."
+              : "Liabilities show amounts owed from negative account balances at period end, regardless of account type."}
+          </Text>
+          {footer}
+        </>
+      }
     />
   );
 }

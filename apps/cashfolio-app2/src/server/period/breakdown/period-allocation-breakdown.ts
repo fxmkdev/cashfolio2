@@ -1,19 +1,26 @@
-import { type Money, toMoney, moneyIsZero } from "../../../shared/money";
+import { type Money } from "../../../shared/money";
 import {
   type PeriodGroupNode,
   type BreakdownHierarchyAccumulatorItem,
 } from "./period-breakdown-state";
 import { type BreakdownHierarchyNode } from "../../../shared/breakdown-hierarchy";
-import { AccountType } from "../../../.prisma-client/enums";
+import { type AccountType } from "../../../.prisma-client/enums";
 import { buildBreakdownHierarchyWithMeta } from "./period-breakdown-hierarchy";
 import { buildBreakdownItems } from "./period-breakdown-buckets";
 
+import { isBalanceAccount } from "../../../shared/account-presentation";
+import {
+  classifyBalanceAccount,
+  type BalanceSide,
+} from "../balance-classification";
+
 export function buildPeriodEndAllocationBreakdown(args: {
+  side: BalanceSide;
   items: Array<{
     accountId: string;
     accountName: string;
     groupId: string | null;
-    accountType: "ASSET" | "LIABILITY";
+    accountType: AccountType;
     convertedBalanceInReferenceCurrency: Money | null;
   }>;
   groupById: Map<string, PeriodGroupNode>;
@@ -30,36 +37,28 @@ export function buildPeriodEndAllocationBreakdown(args: {
   hasHiddenAmountDiscrepancy: boolean;
   hiddenAmountDiscrepancyNodeIds: string[];
   skippedMissingReferenceBalanceCount: number;
-  skippedNegativeCount: number;
 } {
   const breakdownItems: BreakdownHierarchyAccumulatorItem[] = [];
   let skippedMissingReferenceBalanceCount = 0;
-  let skippedNegativeCount = 0;
 
   for (const item of args.items) {
+    if (!isBalanceAccount({ type: item.accountType })) continue;
     if (item.convertedBalanceInReferenceCurrency == null) {
       skippedMissingReferenceBalanceCount += 1;
       continue;
     }
 
-    const displayAmount =
-      item.accountType === AccountType.ASSET
-        ? item.convertedBalanceInReferenceCurrency
-        : toMoney(item.convertedBalanceInReferenceCurrency).neg();
-
-    if (toMoney(displayAmount).comparedTo(0) < 0) {
-      skippedNegativeCount += 1;
-      continue;
-    }
-    if (moneyIsZero(displayAmount)) {
-      continue;
-    }
+    const classified = classifyBalanceAccount(
+      item.accountType,
+      item.convertedBalanceInReferenceCurrency,
+    );
+    if (classified?.side !== args.side) continue;
 
     breakdownItems.push({
       accountId: item.accountId,
       accountName: item.accountName,
       groupId: item.groupId,
-      amount: displayAmount,
+      amount: classified.amount,
     });
   }
 
@@ -87,6 +86,5 @@ export function buildPeriodEndAllocationBreakdown(args: {
     hasHiddenAmountDiscrepancy,
     hiddenAmountDiscrepancyNodeIds,
     skippedMissingReferenceBalanceCount,
-    skippedNegativeCount,
   };
 }

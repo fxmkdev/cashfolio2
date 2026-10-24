@@ -983,8 +983,9 @@ describe("buildPeriodEndAllocationBreakdown", () => {
     ],
   ]);
 
-  test("applies liability display sign convention", () => {
+  test("shows amounts owed as positive allocation magnitudes", () => {
     const result = buildPeriodEndAllocationBreakdown({
+      side: "liability",
       items: [
         {
           accountId: "liability-card",
@@ -1008,11 +1009,11 @@ describe("buildPeriodEndAllocationBreakdown", () => {
       },
     ]);
     expect(result.skippedMissingReferenceBalanceCount).toBe(0);
-    expect(result.skippedNegativeCount).toBe(0);
   });
 
-  test("tracks missing conversion and non-positive exclusions", () => {
+  test("includes credit balances from liability accounts and tracks missing conversion", () => {
     const result = buildPeriodEndAllocationBreakdown({
+      side: "asset",
       items: [
         {
           accountId: "asset-missing",
@@ -1046,21 +1047,29 @@ describe("buildPeriodEndAllocationBreakdown", () => {
       groupById,
     });
 
+    expect(toNumericMoney(result.totalAmount)).toBe(125);
     expect(toNumericMoney(result.items)).toEqual([
       {
         id: "group:assets",
         label: "Assets",
         kind: "group",
         amount: 100,
-        percentage: 100,
+        percentage: 80,
+      },
+      {
+        id: "group:liabilities",
+        label: "Liabilities",
+        kind: "group",
+        amount: 25,
+        percentage: 20,
       },
     ]);
     expect(result.skippedMissingReferenceBalanceCount).toBe(1);
-    expect(result.skippedNegativeCount).toBe(1);
   });
 
   test("propagates discrepancy metadata for hidden rounded children", () => {
     const result = buildPeriodEndAllocationBreakdown({
+      side: "asset",
       items: [
         {
           accountId: "asset-main",

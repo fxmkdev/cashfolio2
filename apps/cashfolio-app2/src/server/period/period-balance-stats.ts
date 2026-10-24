@@ -5,7 +5,10 @@ import {
   moneySubtract,
   moneyIsZero,
 } from "../../shared/money";
-import { AccountType, type Unit } from "../../.prisma-client/enums";
+import { type AccountType, type Unit } from "../../.prisma-client/enums";
+
+import { isBalanceAccount } from "../../shared/account-presentation";
+import { classifyBalanceAccount } from "./balance-classification";
 
 export type EndOfPeriodBalanceAccount = {
   id: string;
@@ -52,7 +55,7 @@ export async function computeEndOfPeriodBalanceStatsWithConvertedBalances(args: 
   const convertedBalanceByAccountId = new Map<string, Money | null>();
 
   const conversionResults = await Promise.all(
-    args.accounts.map(async (account) => {
+    args.accounts.filter(isBalanceAccount).map(async (account) => {
       const rawBalance =
         args.rawBalanceByAccountId.get(account.id) ?? toMoney(0);
 
@@ -105,13 +108,14 @@ export async function computeEndOfPeriodBalanceStatsWithConvertedBalances(args: 
       continue;
     }
 
-    if (conversionResult.accountType === AccountType.ASSET) {
-      assets = moneyAdd(assets, conversionResult.convertedBalance);
-    } else if (conversionResult.accountType === AccountType.LIABILITY) {
-      liabilities = moneySubtract(
-        liabilities,
-        conversionResult.convertedBalance,
-      );
+    const classified = classifyBalanceAccount(
+      conversionResult.accountType,
+      conversionResult.convertedBalance,
+    );
+    if (classified?.side === "asset") {
+      assets = moneyAdd(assets, classified.amount);
+    } else if (classified?.side === "liability") {
+      liabilities = moneyAdd(liabilities, classified.amount);
     }
   }
 

@@ -2960,11 +2960,11 @@ describe("getPeriodOverview", () => {
       },
     });
 
-    expect(result.stats.endOfPeriodAssets).toBe(0);
-    expect(result.stats.endOfPeriodLiabilities).toBe(0);
+    expect(result.stats.endOfPeriodAssets).toBe(100);
+    expect(result.stats.endOfPeriodLiabilities).toBe(100);
     expect(result.stats.endOfPeriodNetWorth).toBe(0);
     expect(result.assetBreakdown.totalAmount).toBe(100);
-    expect(result.liabilityBreakdown.totalAmount).toBe(0);
+    expect(result.liabilityBreakdown.totalAmount).toBe(100);
     expect(
       findBreakdownNodeById(
         result.assetBreakdown.hierarchy,

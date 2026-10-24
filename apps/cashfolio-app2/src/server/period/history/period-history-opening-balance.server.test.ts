@@ -192,4 +192,50 @@ describe("loadHistoryOpeningBalancePoint", () => {
       scopedMetricValue: 75,
     });
   });
+  test.each(["assets", "liabilities"] as const)(
+    "classifies scoped %s opening balances by sign instead of stored type",
+    async (metric) => {
+      prisma.account.findMany.mockResolvedValue([
+        {
+          id: "overdraft",
+          name: "Bank",
+          groupId: "mixed",
+          type: AccountType.ASSET,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+        },
+        {
+          id: "overpayment",
+          name: "Card",
+          groupId: "mixed",
+          type: AccountType.LIABILITY,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+        },
+      ]);
+      prisma.accountGroup.findMany.mockResolvedValue([
+        { id: "mixed", name: "Mixed", parentGroupId: null },
+      ]);
+      prisma.booking.groupBy.mockResolvedValue([
+        { accountId: "overdraft", _sum: { value: -25 } },
+        { accountId: "overpayment", _sum: { value: 10 } },
+      ]);
+      loadTransferClearingUnitBuckets.mockResolvedValue([]);
+      convertBookingValueToReference.mockImplementation(
+        async ({ value }: { value: number }) => value,
+      );
+      const result = await loadHistoryOpeningBalancePoint({
+        accountBookId: "book-1",
+        accountBookStartDate: new Date("2026-01-05T00:00:00Z"),
+        referenceCurrency: "CHF",
+        metricScopeFilter: { metric, scope: "group:mixed" },
+      });
+      expect(toNumericMoney(result)).toMatchObject({
+        assets: 10,
+        liabilities: 25,
+        netWorth: -15,
+        scopedMetricValue: metric === "assets" ? 10 : 25,
+      });
+    },
+  );
 });

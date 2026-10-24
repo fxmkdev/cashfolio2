@@ -1116,3 +1116,15 @@ and check saved data before submitting again. The client never automatically
 retries a mutation. Server-side retries apply only to fully rolled-back database
 conflicts (see [server functions](server-functions.md)). Optimistic edit
 versions and live cross-tab synchronization remain separate follow-ups.
+
+## Balance-based Report and History Allocation
+
+Assets include positive period-end account balances; Liabilities include the
+absolute values of negative balances, regardless of the stored account type. The
+Accounts management tabs retain their fixed types during this migration. Report
+allocation tables/charts and History totals/scopes use the same rule. An
+overdrawn asset account appears under Liabilities and an overpaid liability
+account appears under Assets, retaining its original group path and ledger link.
+A group can appear on both sides, with only the relevant accounts on each side.
+History scopes show zero for dates on the opposite side. Category roles, cash
+account flags, and signed ledger/import conventions do not change.

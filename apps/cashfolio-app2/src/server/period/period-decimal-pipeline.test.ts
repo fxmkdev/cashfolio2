@@ -266,6 +266,78 @@ describe("Decimal monetary pipelines", () => {
     expect(prisma.transaction.findMany).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["2026-01", "month", 100, 20],
+    ["2026-02", "month", 0, 0],
+    ["2026-03", "month", -25, -40],
+    ["2024", "year", 100, 20],
+    ["2025", "year", -25, -40],
+  ] as const)(
+    "keeps Report and scoped History consistent for %s",
+    async (period, granularity, bankBalance, cardBalance) => {
+      const scenario = createScenario();
+      const template = scenario.baseAssetLiabilityAccounts[0]!;
+      const bank = {
+        ...template,
+        id: "bank",
+        name: "Bank",
+        groupId: "banking",
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        symbol: null,
+        tradeCurrency: null,
+      };
+      const card = {
+        ...bank,
+        id: "card",
+        name: "Card",
+        type: AccountType.LIABILITY,
+      };
+      scenario.baseAssetLiabilityAccounts = [bank, card];
+      scenario.allAccountGroups = [
+        { id: "banking", name: "Banking", parentGroupId: null },
+      ];
+      scenario.endOfPeriodRawBalances = [
+        { accountId: bank.id, rawBalance: toMoney(bankBalance) },
+        { accountId: card.id, rawBalance: toMoney(cardBalance) },
+      ];
+      scenario.holdingAccountsResolved = [];
+      scenario.holdingTransactions = [];
+      scenario.initialHoldingBalances = [];
+      scenario.equityBookings = [];
+      scenario.selection = {
+        ...scenario.selection,
+        periodValue: period,
+        granularity,
+      };
+      const overview = await loadPeriodOverview({
+        accountBookId: "book-1",
+        baseData: scenario,
+      });
+      const history = toNumericMoney(
+        await loadPeriodHistoryPointMetrics({
+          accountBookId: "book-1",
+          baseData: scenario,
+        }),
+      );
+      expect(history.assets).toBe(overview.stats.endOfPeriodAssets);
+      expect(history.liabilities).toBe(overview.stats.endOfPeriodLiabilities);
+      expect(history.netWorth).toBe(bankBalance + cardBalance);
+      expect(overview.assetBreakdown.totalAmount).toBe(history.assets);
+      expect(overview.liabilityBreakdown.totalAmount).toBe(history.liabilities);
+      for (const metric of ["assets", "liabilities"] as const) {
+        const scoped = await loadPeriodHistoryPointMetrics({
+          accountBookId: "book-1",
+          baseData: scenario,
+          metricScopeFilter: { metric, scope: "group:banking" },
+        });
+        expect(toNumericMoney(scoped.scopedMetricValue)).toBe(history[metric]);
+      }
+      expect(overview.stats.gainsLosses).toBe(0);
+      expect(overview.stats.totalReturn).toBe(0);
+    },
+  );
+
   it("cancels large account balances before the numeric response boundary", async () => {
     const scenario = createScenario();
     const first = scenario.baseAssetLiabilityAccounts[0]!;
@@ -280,7 +352,8 @@ describe("Decimal monetary pipelines", () => {
       referenceCurrency: "CHF",
       convertBalanceToReference: async ({ value }) => value,
     });
-    expect(stats.assets.toString()).toBe("0.003456789123456789");
+    expect(stats.assets.toString()).toBe("9007199254740993.123456789123456789");
+    expect(stats.liabilities.toString()).toBe("9007199254740993.12");
     expect(stats.netWorth.toString()).toBe("0.003456789123456789");
   });
 });
