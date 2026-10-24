@@ -279,7 +279,12 @@ export function useAccountTreeColumnDefs(params: {
                   isEquityTab ? "categories" : "accounts",
                 ) ?? "Archive"
               }
-              deleteLabel={data.deleteDisabledReason ?? "Delete"}
+              deleteLabel={
+                getAccountConstraintMessage(
+                  data.deleteDisabledReason,
+                  isEquityTab ? "categories" : "accounts",
+                ) ?? "Delete"
+              }
               archivable={data.archivable}
               deletable={data.deletable}
               reorderEnabled={hasSiblings}

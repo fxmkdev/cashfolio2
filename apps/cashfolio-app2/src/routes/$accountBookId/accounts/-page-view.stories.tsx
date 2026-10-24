@@ -256,6 +256,13 @@ function getRowsFor(args: {
       isActive: true,
       archivable: true,
       unarchivable: false,
+      ...(i === 2
+        ? {
+            deletable: false,
+            deleteDisabledReason:
+              "Cannot delete account because it has bookings",
+          }
+        : {}),
     }));
     if (!args.showArchived) return active;
     return [
@@ -1182,6 +1189,30 @@ export const ExpenseCategories: Story = {
     await expect(
       canvas.getByText("Electricity", { exact: true }),
     ).toBeVisible();
+    const body = within(canvasElement.ownerDocument.body);
+    for (const [name, reason] of [
+      ["Electricity", "Cannot delete category because it has bookings"],
+      [
+        "Housing",
+        "Cannot delete category group because it contains categories",
+      ],
+    ]) {
+      const row = canvas
+        .getByText(name, { exact: true })
+        .closest<HTMLElement>(".ag-row");
+      if (!row) throw new Error(`Missing ${name} row`);
+      const deleteButton = within(row).getByRole("button", { name: "Delete" });
+      await expect(deleteButton).toBeDisabled();
+      const trigger = deleteButton.parentElement!;
+      await userEvent.hover(trigger);
+      await waitFor(() =>
+        expect(body.getByRole("tooltip")).toHaveTextContent(reason),
+      );
+      await userEvent.unhover(trigger);
+      await waitFor(() =>
+        expect(body.queryByRole("tooltip")).not.toBeInTheDocument(),
+      );
+    }
     await userEvent.click(
       canvas.getByRole("button", { name: "Add Expense Category" }),
     );

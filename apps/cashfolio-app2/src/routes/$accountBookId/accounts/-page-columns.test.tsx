@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { createElement, type ReactElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 import type { AccountsGridRow, TreeRow } from "./-page-types";
 import {
   getAccountListBalanceValue,
   getAccountListCurrencyValue,
+  useAccountTreeColumnDefs,
 } from "./-page-columns";
 
 function createAccountRow(overrides: Partial<TreeRow> = {}): TreeRow {
@@ -162,4 +165,60 @@ describe("account list column value getters", () => {
       }),
     ).toBeNull();
   });
+});
+
+describe("account tree Delete explanations", () => {
+  for (const isActive of [true, false]) {
+    for (const isEquityTab of [true, false]) {
+      it.each(["account", "accountGroup"] as const)(
+        `uses contextual wording for ${isActive ? "active" : "archived"} ${isEquityTab ? "category" : "account"} %s rows`,
+        (nodeType) => {
+          const row =
+            nodeType === "account" ? createAccountRow() : createGroupRow();
+          row.isActive = isActive;
+          row.type = isEquityTab ? AccountType.EQUITY : AccountType.ASSET;
+          row.deletable = false;
+          row.deleteDisabledReason =
+            nodeType === "account"
+              ? "Cannot delete account because it has bookings"
+              : "Cannot delete group because it contains accounts";
+          let action!: ReactElement<{
+            deleteLabel: string;
+            deletable: boolean;
+          }>;
+          function Harness() {
+            const columns = useAccountTreeColumnDefs({
+              isEquityTab,
+              rowsByParentKey: new Map(),
+              referenceCurrency: "CHF",
+              isReferenceBalancesLoading: false,
+              balanceInReferenceCurrencyByGroupId: new Map(),
+              onEditRow: () => {},
+              onUnarchiveRow: async () => {},
+              onArchiveRow: () => {},
+              onDeleteRow: () => {},
+              onReorderRow: () => {},
+            });
+            const column = columns.find(
+              (candidate) =>
+                "colId" in candidate && candidate.colId === "actions",
+            );
+            if (!column || !("cellRenderer" in column))
+              throw new Error("Missing actions column");
+            action = column.cellRenderer({ data: row });
+            return null;
+          }
+          renderToStaticMarkup(createElement(Harness));
+          expect(action.props.deleteLabel).toBe(
+            isEquityTab
+              ? nodeType === "account"
+                ? "Cannot delete category because it has bookings"
+                : "Cannot delete category group because it contains categories"
+              : row.deleteDisabledReason,
+          );
+          expect(action.props.deletable).toBe(false);
+        },
+      );
+    }
+  }
 });
