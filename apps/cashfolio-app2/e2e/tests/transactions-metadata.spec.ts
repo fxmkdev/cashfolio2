@@ -31,7 +31,7 @@ test("create security simple transaction preserves account metadata", async ({
 
   await page.getByLabel("Date").fill("01/03/2026");
   await page.getByLabel("Description").fill("E2E Security Simple Transaction");
-  await simpleDialog.getByLabel("Counter Account").click();
+  await simpleDialog.getByLabel("Account or Category").click();
   await selectAccountLeaf(page, seeded.securityCounterAccount.name);
   await page.getByLabel("Amount").fill("3");
   await simpleDialog.getByRole("button", { name: "Create" }).click();
@@ -91,7 +91,7 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   await createSimpleDialog
     .getByLabel("Description")
     .fill("E2E Unitless Equity Create");
-  await createSimpleDialog.getByLabel("Counter Account").click();
+  await createSimpleDialog.getByLabel("Account or Category").click();
   await selectAccountLeaf(page, seeded.savingsAccount.name);
   await createSimpleDialog.getByLabel("Amount").fill("90");
   await createSimpleDialog
@@ -126,7 +126,7 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
   await securitySimpleDialog
     .getByLabel("Description")
     .fill("E2E Unitless Equity Edit");
-  await securitySimpleDialog.getByLabel("Counter Account").click();
+  await securitySimpleDialog.getByLabel("Account or Category").click();
   await selectAccountLeaf(page, seeded.securityCounterAccount.name);
   await securitySimpleDialog.getByLabel("Amount").fill("5");
   await securitySimpleDialog.getByRole("button", { name: "Create" }).click();

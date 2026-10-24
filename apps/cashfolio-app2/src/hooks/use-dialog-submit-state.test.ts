@@ -74,6 +74,27 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+describe("contextual mutation feedback", () => {
+  it("formats error copy while preserving busy retry metadata and refreshing choices", async () => {
+    const refresh = vi.fn(async () => undefined);
+    const useHook = () =>
+      useDialogSubmitState({
+        captureErrors: true,
+        onRefreshConstraints: refresh,
+        formatErrorMessage: (message) => `Category: ${message}`,
+      });
+    await render(useHook).runSubmit(async () => {
+      throw new Error(ACCOUNT_BOOK_BUSY_MESSAGE);
+    });
+    expect(render(useHook).submissionError).toMatchObject({
+      message: `Category: ${ACCOUNT_BOOK_BUSY_MESSAGE}`,
+      isBusy: true,
+      isUncertainOutcome: false,
+    });
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+});
+
 describe("reorder recovery", () => {
   const initialRows: ReorderGroupChildRow[] = [
     { id: "a", name: "A", nodeType: "account" },

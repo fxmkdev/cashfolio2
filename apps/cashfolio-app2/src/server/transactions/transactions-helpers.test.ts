@@ -371,7 +371,7 @@ describe("transactions helpers", () => {
         ],
         "book-1",
       ),
-    ).rejects.toThrow("Income accounts cannot have debit entries.");
+    ).rejects.toThrow("Income categories cannot have debit entries.");
 
     expect(prisma.account.findMany).toHaveBeenCalledWith({
       where: { id: { in: ["income"] }, accountBookId: "book-1" },
@@ -420,7 +420,7 @@ describe("transactions helpers", () => {
           accountBookStartDate: new Date("2026-01-03T00:00:00.000Z"),
         },
       ),
-    ).toThrow("Income accounts cannot have debit entries.");
+    ).toThrow("Income categories cannot have debit entries.");
 
     expect(() =>
       validateAccountTypeBookingsWithAccounts(
@@ -436,7 +436,7 @@ describe("transactions helpers", () => {
           accountBookStartDate: new Date("2026-01-03T00:00:00.000Z"),
         },
       ),
-    ).toThrow("Expense accounts cannot have credit entries.");
+    ).toThrow("Expense categories cannot have credit entries.");
   });
 
   test("rejects opening-balance bookings through transaction APIs", () => {

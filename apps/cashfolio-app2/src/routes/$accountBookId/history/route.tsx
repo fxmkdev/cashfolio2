@@ -1,3 +1,4 @@
+import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
 import {
   createFileRoute,
   useNavigate,
@@ -89,6 +90,7 @@ export const Route = createFileRoute("/$accountBookId/history")({
 });
 
 function HistoryPage() {
+  const ledgerNavigationState = useLedgerNavigationState();
   const isViewPending = useRouterState({
     select: (state) => state.status === "pending",
   });
@@ -180,7 +182,8 @@ function HistoryPage() {
             target,
             periodValue,
           });
-          if (navigation) void navigate(navigation);
+          if (navigation)
+            void navigate({ ...navigation, state: ledgerNavigationState });
         }}
         onModeChange={(mode) =>
           navigate(

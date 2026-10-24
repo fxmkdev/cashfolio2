@@ -105,14 +105,14 @@ export function validateRebookBookingTarget(args: {
       targetAccount.type === AccountType.EQUITY &&
       targetAccount.equityAccountSubtype === EquityAccountSubtype.INCOME
     ) {
-      throw new Error("Income accounts cannot have debit entries.");
+      throw new Error("Income categories cannot have debit entries.");
     }
 
     if (
       targetAccount.type === AccountType.EQUITY &&
       targetAccount.equityAccountSubtype === EquityAccountSubtype.EXPENSE
     ) {
-      throw new Error("Expense accounts cannot have credit entries.");
+      throw new Error("Expense categories cannot have credit entries.");
     }
   }
 }

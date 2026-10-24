@@ -22,7 +22,11 @@ function getHeadingLabel(pathname: string): string {
   return "Accounts";
 }
 
-function AccountBookShellSmokeHarness() {
+function AccountBookShellSmokeHarness({
+  neutralLedger = false,
+}: {
+  neutralLedger?: boolean;
+}) {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -54,11 +58,14 @@ function AccountBookShellSmokeHarness() {
           initials: "SU",
         }}
         pathname={pathname}
+        activeSection={neutralLedger ? null : undefined}
         accountsLinkSearch={{ tab: "ASSET", mode: "active" }}
         periodLinkSearch={{}}
       >
         <Box px="xl" py="xl">
-          <Title order={2}>{getHeadingLabel(pathname)}</Title>
+          <Title order={2}>
+            {neutralLedger ? "Category Activity" : getHeadingLabel(pathname)}
+          </Title>
           <Text data-testid="router-path">{pathname}</Text>
           <Text data-testid="router-search">{JSON.stringify(search)}</Text>
         </Box>
@@ -378,5 +385,29 @@ export const MobileFooterControlsSmoke: Story = {
     await expect(await findUserMenuButton(canvasElement)).toBeVisible();
     await userEvent.click(await findUserMenuButton(canvasElement));
     await expect(await findVisibleMenuItem(body, "Sign Out")).toBeVisible();
+  },
+};
+
+export const NeutralLedgerNavigation: Story = {
+  parameters: { router: { initialPath: "/storybook-book/category-id" } },
+  render: () => <AccountBookShellSmokeHarness neutralLedger />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("heading", { name: "Category Activity" }),
+    ).toBeVisible();
+    for (const name of [
+      "Accounts",
+      "Transactions",
+      "Report",
+      "History",
+      "Settings",
+    ]) {
+      await expect(
+        canvas.getByRole("link", {
+          name: new RegExp("^" + name + "$"),
+        }),
+      ).not.toHaveAttribute("data-active", "true");
+    }
   },
 };

@@ -100,6 +100,7 @@ export function SimpleTransactionModal({
   currentAccount: {
     id: string;
     label: string;
+    entityLabel?: "Account" | "Category";
   };
   accounts: AccountOption[];
   accountBookStartDate: Date;
@@ -150,15 +151,15 @@ export function SimpleTransactionModal({
         return null;
       },
       counterAccountId: (value, values) => {
-        if (!value) return "Counter account is required";
+        if (!value) return "Account or category is required";
 
         const counterAccount = accounts.find(
           (account) => account.value === value,
         );
         if (!counterAccount)
           return value
-            ? "The selected account is no longer available. Choose another account."
-            : "Counter account is required";
+            ? "The selected account or category is no longer available. Choose another account or category."
+            : "Account or category is required";
         if (isOpeningBalancesAccount(counterAccount)) {
           return OPENING_BALANCES_MANAGEMENT_MESSAGE;
         }
@@ -170,14 +171,14 @@ export function SimpleTransactionModal({
           effectiveDirection === "DEBIT" &&
           isExpenseAccount(counterAccount)
         ) {
-          return "Expense accounts cannot be credited";
+          return "Expense categories cannot be credited";
         }
 
         if (
           effectiveDirection === "CREDIT" &&
           isIncomeAccount(counterAccount)
         ) {
-          return "Income accounts cannot be debited";
+          return "Income categories cannot be debited";
         }
 
         return null;
@@ -201,9 +202,9 @@ export function SimpleTransactionModal({
   const forcedDirection = getForcedDirection(selectedAccount);
   const forcedDirectionReason =
     forcedDirection === "DEBIT"
-      ? "Income accounts require current account debit."
+      ? "Income categories require current account debit."
       : forcedDirection === "CREDIT"
-        ? "Expense accounts require current account credit."
+        ? "Expense categories require current account credit."
         : null;
 
   useEffect(() => {
@@ -264,7 +265,7 @@ export function SimpleTransactionModal({
 
         <Group align="end" wrap="wrap">
           <Select
-            label="Current Account"
+            label={`Current ${currentAccount.entityLabel ?? "Account"}`}
             data={[{ value: currentAccount.id, label: currentAccount.label }]}
             value={currentAccount.id}
             disabled
@@ -302,7 +303,7 @@ export function SimpleTransactionModal({
           </Tooltip>
 
           <AccountTreeSelect
-            label="Counter Account"
+            label="Account or Category"
             accounts={accounts}
             style={{ flex: "1 1 16rem" }}
             disabled={isSubmitting}

@@ -1,5 +1,19 @@
+import { isIncomeAccount, isExpenseAccount } from "@/shared/account-utils";
+import {
+  parseLedgerReturnTarget,
+  getLedgerReturnDelta,
+} from "@/shared/ledger-navigation";
+import {
+  isBalanceAccount,
+  getAccountManagementDestination,
+} from "@/shared/account-presentation";
 import { AccountGainLossSection } from "@/components/gain-loss/account-gain-loss-section";
-import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router";
 import { Suspense, lazy, useCallback, useMemo } from "react";
 import { useTransactionScroll } from "@/hooks/use-transaction-scroll";
 import {
@@ -49,6 +63,26 @@ export function LedgerPageContent() {
   const { transactionId, period } = Route.useSearch();
   const router = useRouter();
   const userLocale = useUserLocale();
+  const location = useRouterState({ select: (state) => state.location });
+  const returnTarget = parseLedgerReturnTarget(
+    location.state.ledgerReturnTarget,
+    accountBookId,
+  );
+  const returnNavigation =
+    !isBalanceAccount(loaderData.account) && returnTarget
+      ? {
+          target: returnTarget,
+          onReturn: () => {
+            const delta = getLedgerReturnDelta(
+              returnTarget,
+              location.state.__TSR_index,
+            );
+            if (delta != null) router.history.go(delta);
+            else
+              void router.navigate({ href: returnTarget.href, replace: true });
+          },
+        }
+      : undefined;
   const isPeriodFilterAvailable = isLedgerPeriodFilterAvailable(
     loaderData.account,
   );
@@ -90,6 +124,7 @@ export function LedgerPageContent() {
   const onPeriodChange = useCallback(
     (nextPeriodValue: string | undefined) => {
       navigate({
+        state: true,
         search: (previousSearch) => ({
           ...previousSearch,
           period: nextPeriodValue,
@@ -125,9 +160,11 @@ export function LedgerPageContent() {
     },
     onAccountDeleted: ({ tab, mode }) =>
       navigate({
-        to: "/$accountBookId/accounts",
+        ...getAccountManagementDestination(
+          { ...loaderData.account, isActive: mode === "active" },
+          tab,
+        ),
         params: { accountBookId },
-        search: { tab, mode },
       }),
     onOpenImportPage: () =>
       navigate({
@@ -149,6 +186,7 @@ export function LedgerPageContent() {
               refreshKey={loaderData}
               onOpenTransaction={(transactionId) => {
                 void navigate({
+                  state: true,
                   search: (previous) => ({
                     ...previous,
                     period: undefined,
@@ -161,6 +199,20 @@ export function LedgerPageContent() {
         }
 
         {...viewProps}
+        returnNavigation={returnNavigation}
+        onManageCategory={
+          isIncomeAccount(loaderData.account) ||
+          isExpenseAccount(loaderData.account)
+            ? () =>
+                void navigate({
+                  ...getAccountManagementDestination(
+                    viewProps.account,
+                    viewProps.backTab,
+                  ),
+                  params: { accountBookId },
+                })
+            : undefined
+        }
         periodFilterControls={
           isPeriodFilterAvailable ? (
             <PeriodFilterAction {...controls} />

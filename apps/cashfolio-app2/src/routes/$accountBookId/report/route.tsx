@@ -1,3 +1,4 @@
+import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { getGainLossEquityAccountId } from "@/server/accounts";
@@ -135,6 +136,7 @@ function ReportLayout() {
 }
 
 export function ReportPageContent() {
+  const ledgerNavigationState = useLedgerNavigationState();
   const { accountBookId } = Route.useParams();
   const search = Route.useSearch();
   const selectedPeriodValue = getPeriodValue(search);
@@ -168,6 +170,7 @@ export function ReportPageContent() {
         onBreakdownAccountDoubleClick={(accountId) =>
           navigate({
             to: "/$accountBookId/$accountId",
+            state: ledgerNavigationState,
             params: { accountBookId, accountId },
             search: {
               period: explicitLedgerPeriodValue,
@@ -181,6 +184,7 @@ export function ReportPageContent() {
 
           navigate({
             to: "/$accountBookId/$accountId",
+            state: ledgerNavigationState,
             params: { accountBookId, accountId: gainLossEquityAccountId },
             search: {
               period: explicitLedgerPeriodValue,

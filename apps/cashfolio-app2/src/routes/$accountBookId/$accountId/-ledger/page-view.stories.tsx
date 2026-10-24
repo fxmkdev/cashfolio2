@@ -1,9 +1,14 @@
+import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { Box, Text } from "@mantine/core";
+import { Box, Text, Button } from "@mantine/core";
 import { useEffect, useMemo, useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
-import { AccountType, Unit } from "@/.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "@/.prisma-client/enums";
 import {
   accountOptions as baseAccountOptions,
   editTransactionInitialValues,
@@ -139,6 +144,8 @@ function LedgerPageStoryHarness({
   startWithEditModal = false,
   accountActive = true,
   accountActionsDisabled = false,
+  equitySubtype,
+  returnLabel,
 }: {
   routeSmoke?: boolean;
   includePeriodFilterControls?: boolean;
@@ -148,6 +155,8 @@ function LedgerPageStoryHarness({
   startWithEditModal?: boolean;
   accountActive?: boolean;
   accountActionsDisabled?: boolean;
+  equitySubtype?: EquityAccountSubtype;
+  returnLabel?: string;
 }) {
   const [accountEditModalOpened, setAccountEditModalOpened] = useState(false);
   const [archivingAccount, setArchivingAccount] = useState<
@@ -232,7 +241,13 @@ function LedgerPageStoryHarness({
       ? {
           ...assetAccount,
           id: "account-equity",
-          name: "Retained Earnings",
+          name:
+            equitySubtype === EquityAccountSubtype.EXPENSE
+              ? "Groceries"
+              : equitySubtype === EquityAccountSubtype.INCOME
+                ? "Salary"
+                : "System Activity",
+          equityAccountSubtype: equitySubtype ?? null,
           isActive: accountActive,
           type: AccountType.EQUITY,
           isCashAccount: false,
@@ -287,6 +302,39 @@ function LedgerPageStoryHarness({
       }}
     >
       <LedgerPageView
+        returnNavigation={
+          returnLabel
+            ? {
+                target: {
+                  href: "/storybook-book/report?period=2026-01",
+                  label: returnLabel,
+                },
+                onReturn: () =>
+                  void navigate({
+                    to: "/$accountBookId/report",
+                    params: { accountBookId: "storybook-book" },
+                    search: { period: "2026-01" },
+                  }),
+              }
+            : undefined
+        }
+        onManageCategory={
+          equitySubtype === EquityAccountSubtype.EXPENSE ||
+          equitySubtype === EquityAccountSubtype.INCOME
+            ? () =>
+                void navigate({
+                  to: "/$accountBookId/settings/categories",
+                  params: { accountBookId: "storybook-book" },
+                  search: {
+                    tab:
+                      equitySubtype === EquityAccountSubtype.INCOME
+                        ? "EQUITY-INCOME"
+                        : "EQUITY-EXPENSE",
+                    showArchived: !accountActive,
+                  },
+                })
+            : undefined
+        }
         backTab="ASSET"
         account={account}
         accountGroups={[]}
@@ -716,5 +764,165 @@ export const PeriodFilterRouteSmoke: Story = {
     await expect(canvas.getByTestId("router-search-period")).toHaveTextContent(
       "(none)",
     );
+  },
+};
+
+export const ExpenseCategoryContext: Story = {
+  render: () => (
+    <LedgerPageStoryHarness
+      accountType={AccountType.EQUITY}
+      equitySubtype={EquityAccountSubtype.EXPENSE}
+      returnLabel="Report"
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByText("Expense Category", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole("link", { name: "Back to Report" }),
+    ).toHaveAttribute("href", "/storybook-book/report?period=2026-01");
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Category Actions" }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("menuitem", { name: "Manage Category" }),
+      ).toBeVisible(),
+    );
+  },
+};
+
+export const IncomeCategoryMobile: Story = {
+  parameters: { viewport: { value: "mobile1" } },
+  render: () => (
+    <LedgerPageStoryHarness
+      accountType={AccountType.EQUITY}
+      equitySubtype={EquityAccountSubtype.INCOME}
+      returnLabel="Checking"
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByText("Income Category", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole("link", { name: "Back to Checking" }),
+    ).toBeVisible();
+  },
+};
+
+export const OpeningBalancesDirectVisit: Story = {
+  render: () => (
+    <LedgerPageStoryHarness
+      accountType={AccountType.EQUITY}
+      equitySubtype={EquityAccountSubtype.OPENING_BALANCES}
+      accountActionsDisabled
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByText("System Account", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("link", { name: /^Back to/ }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Account Actions" }),
+    );
+    await screen.findByRole("menuitem", { name: "Archive" });
+    await expect(
+      screen.queryByRole("menuitem", { name: "Manage Category" }),
+    ).not.toBeInTheDocument();
+  },
+};
+
+export const GainLossContext: Story = {
+  render: () => (
+    <LedgerPageStoryHarness
+      accountType={AccountType.EQUITY}
+      equitySubtype={EquityAccountSubtype.GAIN_LOSS}
+      returnLabel="History"
+      accountActionsDisabled
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByText("System-Managed Category", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole("link", { name: "Back to History" }),
+    ).toBeVisible();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Category Actions" }),
+    );
+    await expect(
+      screen.queryByRole("menuitem", { name: "Manage Category" }),
+    ).not.toBeInTheDocument();
+  },
+};
+
+function StableLedgerNavigationHarness() {
+  const navigate = useNavigate();
+  const navigationState = useLedgerNavigationState();
+  const [initialState] = useState(() => navigationState);
+  const [renders, setRenders] = useState(0);
+  return (
+    <>
+      <Button onClick={() => setRenders((count) => count + 1)}>
+        Render Modal State
+      </Button>
+      <Button
+        onClick={async () => {
+          await navigate({
+            to: "/$accountBookId/report",
+            params: { accountBookId: "storybook-book" },
+            search: { period: "2026-02" },
+          });
+          setRenders((count) => count + 1);
+        }}
+      >
+        Change Source Period
+      </Button>
+      <Text data-testid="source-href">
+        {navigationState().ledgerReturnTarget?.href}
+      </Text>
+      <Text data-testid="local-render-count">{renders}</Text>
+      <Text data-testid="stable-navigation-state">
+        {String(initialState === navigationState)}
+      </Text>
+    </>
+  );
+}
+
+export const StableNavigationState: Story = {
+  parameters: {
+    router: { initialPath: "/storybook-book/report?period=2026-01" },
+  },
+  render: () => <StableLedgerNavigationHarness />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Render Modal State" }),
+    );
+    await expect(canvas.getByTestId("local-render-count")).toHaveTextContent(
+      "1",
+    );
+    await expect(
+      canvas.getByTestId("stable-navigation-state"),
+    ).toHaveTextContent("true");
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Change Source Period" }),
+    );
+    await expect(canvas.getByTestId("source-href")).toHaveTextContent(
+      "/storybook-book/report?period=2026-02",
+    );
+    await expect(
+      canvas.getByTestId("stable-navigation-state"),
+    ).toHaveTextContent("true");
   },
 };

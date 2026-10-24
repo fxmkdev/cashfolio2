@@ -35,10 +35,10 @@ describe("accounts-system-managed-equity-guards", () => {
     } as const;
 
     expect(() => assertNoSystemManagedAccountSubtype(gainLossNode)).toThrow(
-      "Gain/Loss accounts are system-managed.",
+      "Gain/Loss categories are system-managed.",
     );
     expect(() => assertNoSystemManagedGroupSubtype(gainLossNode)).toThrow(
-      "Gain/Loss groups are system-managed.",
+      "Gain/Loss category groups are system-managed.",
     );
   });
 
@@ -63,7 +63,7 @@ describe("accounts-system-managed-equity-guards", () => {
     } as const;
 
     expect(() => assertNoSystemManagedAccountSubtype(inconsistentNode)).toThrow(
-      "Gain/Loss accounts are system-managed.",
+      "Gain/Loss categories are system-managed.",
     );
   });
 });

@@ -29,6 +29,83 @@ describe("getActiveSection", () => {
       getActiveSection({
         pathname: "/book-1/account-cash",
         accountBookId,
+        matches: [
+          {
+            routeId: "/$accountBookId/$accountId",
+            account: {
+              id: "account-cash",
+              type: AccountType.ASSET,
+              equityAccountSubtype: null,
+              isActive: true,
+            },
+          },
+        ],
+      }),
+    ).toBe("accounts");
+  });
+
+  it.each(Object.values(EquityAccountSubtype))(
+    "leaves %s ledgers unselected",
+    (equityAccountSubtype) => {
+      expect(
+        getActiveSection({
+          pathname: "/book-1/equity",
+          accountBookId: "book-1",
+          matches: [
+            {
+              routeId: "/$accountBookId/$accountId",
+              account: {
+                id: "equity",
+                type: AccountType.EQUITY,
+                equityAccountSubtype,
+                isActive: true,
+              },
+            },
+          ],
+        }),
+      ).toBeNull();
+    },
+  );
+
+  it("leaves unresolved and stale ledger data unselected", () => {
+    expect(
+      getActiveSection({ pathname: "/book-1/equity", accountBookId: "book-1" }),
+    ).toBeNull();
+    expect(
+      getActiveSection({
+        pathname: "/book-1/equity",
+        accountBookId: "book-1",
+        matches: [
+          {
+            routeId: "/$accountBookId/$accountId",
+            account: {
+              id: "cash",
+              type: AccountType.ASSET,
+              equityAccountSubtype: null,
+              isActive: true,
+            },
+          },
+        ],
+      }),
+    ).toBeNull();
+  });
+
+  it("supports liability and nested ledger routes", () => {
+    expect(
+      getActiveSection({
+        pathname: "/book-1/card/import-statement",
+        accountBookId: "book-1",
+        matches: [
+          {
+            routeId: "/$accountBookId/$accountId",
+            account: {
+              id: "card",
+              type: AccountType.LIABILITY,
+              equityAccountSubtype: null,
+              isActive: false,
+            },
+          },
+        ],
       }),
     ).toBe("accounts");
   });
@@ -77,6 +154,20 @@ describe("getActiveSection", () => {
 });
 
 describe("getAccountsLinkSearch", () => {
+  it("does not send the primary Accounts link into category settings", () => {
+    expect(
+      getAccountsLinkSearch({
+        locationSearch: { tab: "EQUITY-INCOME", mode: "archived" },
+        matches: [],
+      }),
+    ).toEqual({ tab: "ASSET", mode: "active" });
+    expect(
+      getActiveSection({
+        pathname: "/book-1/settings/categories",
+        accountBookId: "book-1",
+      }),
+    ).toBe("settings");
+  });
   it("preserves explicit accounts search context when tab/mode are in the URL", () => {
     expect(
       getAccountsLinkSearch({
@@ -105,7 +196,7 @@ describe("getAccountsLinkSearch", () => {
         ],
       }),
     ).toEqual({
-      tab: "EQUITY-EXPENSE",
+      tab: "ASSET",
       mode: "active",
     });
   });

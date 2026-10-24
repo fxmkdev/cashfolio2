@@ -41,13 +41,20 @@ export function getLedgerAccountKindBadgeProps(account: {
     return { label, color: "red", variant: "light" };
   }
   if (account.equityAccountSubtype === EquityAccountSubtype.INCOME) {
-    return { label, color: "green", variant: "filled" };
+    return { label: "Income Category", color: "green", variant: "filled" };
   }
   if (account.equityAccountSubtype === EquityAccountSubtype.EXPENSE) {
-    return { label, color: "red", variant: "filled" };
+    return { label: "Expense Category", color: "red", variant: "filled" };
   }
   if (isSystemManagedEquitySubtype(account.equityAccountSubtype)) {
-    return { label, color: "yellow", variant: "light" };
+    return {
+      label:
+        account.equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS
+          ? "System-Managed Category"
+          : "System Account",
+      color: "yellow",
+      variant: "light",
+    };
   }
 
   return { label, color: "gray", variant: "light" };

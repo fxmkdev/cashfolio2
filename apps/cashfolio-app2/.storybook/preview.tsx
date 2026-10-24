@@ -149,6 +149,11 @@ function createStoryRouter(Story: ComponentType, initialPath: string) {
     path: "/settings",
     component: () => <Story />,
   });
+  const accountBookCategoriesRoute = createRoute({
+    getParentRoute: () => accountBookRoute,
+    path: "/settings/categories",
+    component: () => <Story />,
+  });
   const accountBookUserSettingsRoute = createRoute({
     getParentRoute: () => accountBookRoute,
     path: "/user-settings",
@@ -218,6 +223,7 @@ function createStoryRouter(Story: ComponentType, initialPath: string) {
     accountBookPeriodRoute,
     accountBookTimelineRoute,
     accountBookSettingsRoute,
+    accountBookCategoriesRoute,
     accountBookUserSettingsRoute,
     accountBookValuationCacheRoute,
     accountLedgerRouteTree,

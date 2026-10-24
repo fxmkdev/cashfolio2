@@ -5,7 +5,9 @@ import { MutationSubmitFeedback } from "./mutation-submit-feedback";
 export function UnarchiveMutationFeedback({
   recovery,
   onRefreshConstraints,
+  listLabel = "account list",
 }: {
+  listLabel?: string;
   recovery?: ReturnType<typeof useUnarchiveMutation>;
   onRefreshConstraints?: () => Promise<void>;
 }) {
@@ -21,8 +23,8 @@ export function UnarchiveMutationFeedback({
       />
       {recovery.submitState.submissionError && recovery.retryDisabled && (
         <Text size="sm">
-          This item is no longer eligible to unarchive. Check the refreshed
-          account list.
+          This item is no longer eligible to unarchive. Check the refreshed{" "}
+          {listLabel}.
         </Text>
       )}
     </Stack>

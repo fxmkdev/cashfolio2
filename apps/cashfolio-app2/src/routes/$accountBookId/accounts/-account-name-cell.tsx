@@ -1,3 +1,4 @@
+import { AccountType } from "@/.prisma-client/enums";
 import { Group, Text, Tooltip } from "@mantine/core";
 import { IconArchive } from "@tabler/icons-react";
 import type {
@@ -9,6 +10,9 @@ import type { AccountsGridRow } from "./-page-types";
 
 export const ARCHIVED_GROUP_DESCRIPTION =
   "Archived items grouped automatically. Included in totals.";
+
+export const ARCHIVED_CATEGORY_GROUP_DESCRIPTION =
+  "Archived categories grouped automatically. Their transaction history is preserved.";
 
 export function suppressAccountNameKeyboardEvent({
   event,
@@ -48,7 +52,11 @@ export function AccountNameCell({
 
   return (
     <Tooltip
-      label={ARCHIVED_GROUP_DESCRIPTION}
+      label={
+        data && "type" in data && data.type === AccountType.EQUITY
+          ? ARCHIVED_CATEGORY_GROUP_DESCRIPTION
+          : ARCHIVED_GROUP_DESCRIPTION
+      }
       events={{ hover: true, focus: true, touch: true }}
     >
       <Group

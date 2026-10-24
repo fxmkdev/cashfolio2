@@ -24,7 +24,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByLabelText("Target Account")).toHaveValue("");
+    await expect(canvas.getByLabelText("Account or Category")).toHaveValue("");
   },
 };
 
@@ -43,7 +43,7 @@ export const SubmitAndCancel: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    const targetAccountInput = canvas.getByLabelText("Target Account");
+    const targetAccountInput = canvas.getByLabelText("Account or Category");
 
     await userEvent.click(targetAccountInput);
     await userEvent.click(await body.findByText("Savings (CHF)"));
@@ -67,7 +67,7 @@ export const EnterSubmitPendingGuard: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    const targetAccountInput = canvas.getByLabelText("Target Account");
+    const targetAccountInput = canvas.getByLabelText("Account or Category");
 
     await userEvent.click(targetAccountInput);
     await userEvent.click(await body.findByText("Savings (CHF)"));

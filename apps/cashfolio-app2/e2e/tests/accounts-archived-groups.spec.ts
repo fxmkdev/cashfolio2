@@ -87,17 +87,26 @@ for (const tab of [
     });
 
     await page.goto(`/${book.accountBookId}/accounts?tab=${tab}&mode=archived`);
-    await expect(
-      page.getByRole("heading", { name: "Accounts", exact: true }),
-    ).toBeVisible();
+    const isCategory = type === "EQUITY";
+    if (isCategory) {
+      await expect(
+        page.getByRole("checkbox", { name: "Show Archived" }),
+      ).toBeChecked();
+    } else {
+      await expect(
+        page.getByRole("heading", { name: "Accounts", exact: true }),
+      ).toBeVisible();
+    }
     await expect(
       page.getByRole("link", { name: "Archive", exact: true }),
     ).toHaveCount(0);
-    await expect(
-      page.getByText(
-        "Totals include active and archived accounts, including collapsed groups.",
-      ),
-    ).toBeVisible();
+    if (!isCategory) {
+      await expect(
+        page.getByText(
+          "Totals include active and archived accounts, including collapsed groups.",
+        ),
+      ).toBeVisible();
+    }
     const rootArchive = page.locator('[row-id="__archived__:root"]');
     const groupArchive = page.locator(
       `[row-id="__archived__:group:${live.id}"]`,
@@ -153,7 +162,10 @@ for (const tab of [
     ).toBeDisabled();
     await clickRowAction(closedRow, "Edit");
     const dialog = page.getByRole("dialog").filter({
-      has: page.getByRole("heading", { name: "Edit Group", exact: true }),
+      has: page.getByRole("heading", {
+        name: isCategory ? "Edit Category Group" : "Edit Group",
+        exact: true,
+      }),
     });
     await dialog.getByLabel("Name").fill("A Closed Renamed");
     await dialog.getByRole("button", { name: "Save", exact: true }).click();
@@ -189,16 +201,22 @@ for (const tab of [
     await expect(groupArchive).toHaveAttribute("aria-expanded", "true");
     await expect(rootArchive).toHaveAttribute("aria-expanded", "false");
     await clickRowAction(renamed, "Unarchive");
+
     await expect(renamed).toBeVisible();
     await expect(
       page.locator(`[row-id="__archived__:group:${closed.id}"]`),
     ).toHaveAttribute("aria-expanded", "false");
-    const saved = await prisma.accountGroup.findUniqueOrThrow({
-      where: {
-        id_accountBookId: { id: closed.id, accountBookId: book.accountBookId },
-      },
-    });
-    expect(saved.isActive).toBe(true);
-    expect(saved.parentGroupId).toBe(live.id);
+    await expect
+      .poll(() =>
+        prisma.accountGroup.findUniqueOrThrow({
+          where: {
+            id_accountBookId: {
+              id: closed.id,
+              accountBookId: book.accountBookId,
+            },
+          },
+        }),
+      )
+      .toMatchObject({ isActive: true, parentGroupId: live.id });
   });
 }

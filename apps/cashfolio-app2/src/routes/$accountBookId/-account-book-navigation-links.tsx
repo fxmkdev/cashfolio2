@@ -54,7 +54,7 @@ const adminNavigationLinks: AccountBookNavigationLink[] = [
 
 type AccountBookNavigationLinksProps = {
   accountBookId: string;
-  activeSection: AccountBookSection;
+  activeSection: AccountBookSection | null;
   accountsLinkSearch: AccountsLinkSearch;
   collapsed: boolean;
   onNavigate: () => void;
@@ -237,7 +237,7 @@ function AccountBookNavigationLinkList({
 
 type AccountBookNavigationLinkItemOwnProps = {
   accountBookId: string;
-  activeSection: AccountBookSection;
+  activeSection: AccountBookSection | null;
   accountsLinkSearch: AccountsLinkSearch;
   collapsed?: boolean;
   link: AccountBookNavigationLink;

@@ -1,10 +1,11 @@
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import type { getAccountTreeData } from "@/server/accounts";
 import type { TabValue } from "@/shared/account-tabs";
+import type { AccountManagementContext } from "@/shared/account-presentation";
 
 export const tabs = [
-  { value: "ASSET", label: "Asset", type: AccountType.ASSET },
-  { value: "LIABILITY", label: "Liability", type: AccountType.LIABILITY },
+  { value: "ASSET", label: "Assets", type: AccountType.ASSET },
+  { value: "LIABILITY", label: "Liabilities", type: AccountType.LIABILITY },
   {
     value: `EQUITY-${EquityAccountSubtype.INCOME}`,
     label: "Income",
@@ -13,16 +14,48 @@ export const tabs = [
   },
   {
     value: `EQUITY-${EquityAccountSubtype.EXPENSE}`,
-    label: "Expense",
+    label: "Expenses",
     type: AccountType.EQUITY,
     equityAccountSubtype: EquityAccountSubtype.EXPENSE,
   },
 ] as const;
 
+export function getManagementTabs(context: AccountManagementContext) {
+  return tabs.filter((tab) =>
+    context === "categories"
+      ? tab.type === AccountType.EQUITY
+      : tab.type !== AccountType.EQUITY,
+  );
+}
+
+export function parseCategoriesSearch(search: Record<string, unknown>) {
+  return {
+    tab: getManagementTabs("categories").some((tab) => tab.value === search.tab)
+      ? (search.tab as TabValue)
+      : ("EQUITY-INCOME" as const),
+    showArchived:
+      typeof search.showArchived === "boolean"
+        ? search.showArchived
+        : search.mode === "archived",
+  };
+}
+
+export function getCategoriesRedirect(search: Record<string, unknown>) {
+  return {
+    to: "/$accountBookId/settings/categories" as const,
+    search: parseCategoriesSearch(search),
+    replace: true as const,
+  };
+}
+
 export type { TabValue };
 export type AccountsMode = "active" | "archived";
 
-export function getAccountsPageTitle(_mode?: AccountsMode): string {
+export function getAccountsPageTitle(
+  _mode: AccountsMode = "active",
+  context: AccountManagementContext = "accounts",
+): string {
+  if (context === "categories") return "Income & Expense Categories";
   return "Accounts";
 }
 
@@ -62,7 +95,12 @@ export function toRowTarget(data: TreeRow): RowTarget {
   };
 }
 
-export function getEntityLabel(nodeType: RowTarget["nodeType"]): string {
+export function getEntityLabel(
+  nodeType: RowTarget["nodeType"],
+  context: AccountManagementContext = "accounts",
+): string {
+  if (context === "categories")
+    return nodeType === "account" ? "Category" : "Category Group";
   return nodeType === "account" ? "Account" : "Group";
 }
 
@@ -81,9 +119,17 @@ function isTabValue(value: unknown): value is TabValue {
 export function parseAccountsSearch(search: Record<string, unknown>): {
   tab: TabValue;
   mode: AccountsMode;
+  showArchived?: boolean;
 } {
+  const tab = isTabValue(search.tab) ? search.tab : "ASSET";
   return {
-    tab: isTabValue(search.tab) ? search.tab : "ASSET",
-    mode: "active",
+    tab,
+    ...(tab.startsWith("EQUITY-") && typeof search.showArchived === "boolean"
+      ? { showArchived: search.showArchived }
+      : {}),
+    mode:
+      tab.startsWith("EQUITY-") && search.mode === "archived"
+        ? "archived"
+        : "active",
   };
 }

@@ -30,10 +30,10 @@ export function validateEditTransactionBookingsRoot(args: {
       return "A selected account is no longer available. Choose another account.";
 
     if (isIncomeAccount(account) && booking.debit !== undefined) {
-      return "Income accounts cannot have debit entries.";
+      return "Income categories cannot have debit entries.";
     }
     if (isExpenseAccount(account) && booking.credit !== undefined) {
-      return "Expense accounts cannot have credit entries.";
+      return "Expense categories cannot have credit entries.";
     }
     if (isOpeningBalancesAccount(account)) {
       return OPENING_BALANCES_MANAGEMENT_MESSAGE;

@@ -1,3 +1,4 @@
+import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
 import { useMemo } from "react";
 import { ActionIcon, Group, Tooltip } from "@mantine/core";
 import { IconSquareArrowRight } from "@tabler/icons-react";
@@ -61,6 +62,8 @@ export function useTransactionsColumnDefs(args: {
     onRebookClick,
   } = args;
 
+  const ledgerNavigationState = useLedgerNavigationState();
+
   return useMemo(() => {
     const referenceCurrencyDisplayDecimals =
       getCurrencyDecimals(referenceCurrency);
@@ -81,6 +84,7 @@ export function useTransactionsColumnDefs(args: {
           {index > 0 && ", "}
           <LinkAnchor
             to="/$accountBookId/$accountId"
+            state={ledgerNavigationState}
             params={{ accountBookId, accountId: account.id }}
             search={accountSearch(transactionId)}
             size="sm"
@@ -100,7 +104,7 @@ export function useTransactionsColumnDefs(args: {
       },
       {
         field: "account",
-        headerName: "Account",
+        headerName: "Account or Category",
         minWidth: 160,
         flex: 1,
         tooltip: ({ data }) => data?.account.name,
@@ -115,6 +119,7 @@ export function useTransactionsColumnDefs(args: {
           return (
             <LinkAnchor
               to="/$accountBookId/$accountId"
+              state={ledgerNavigationState}
               params={{ accountBookId, accountId: value.id }}
               search={accountSearch(data.transactionId)}
               size="sm"
@@ -255,7 +260,7 @@ export function useTransactionsColumnDefs(args: {
       },
       {
         field: "debitAccounts",
-        headerName: "Debit Account(s)",
+        headerName: "Debit Accounts / Categories",
         minWidth: 160,
         flex: 1,
         tooltip: ({ data }) =>
@@ -276,7 +281,7 @@ export function useTransactionsColumnDefs(args: {
       },
       {
         field: "creditAccounts",
-        headerName: "Credit Account(s)",
+        headerName: "Credit Accounts / Categories",
         minWidth: 160,
         flex: 1,
         tooltip: ({ data }) =>
@@ -344,5 +349,11 @@ export function useTransactionsColumnDefs(args: {
     ];
 
     return { columnDefs, detailColumnDefs };
-  }, [accountBookId, onRebookClick, referenceCurrency, selectedPeriodValue]);
+  }, [
+    accountBookId,
+    onRebookClick,
+    referenceCurrency,
+    selectedPeriodValue,
+    ledgerNavigationState,
+  ]);
 }

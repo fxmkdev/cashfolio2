@@ -31,6 +31,7 @@ import {
   getActiveSection,
   parseDesktopRailCollapsedPreference,
   type AccountsLinkSearch,
+  type AccountBookSection,
 } from "./-route-helpers";
 import {
   ACCOUNT_BOOK_RAIL_WIDTH,
@@ -47,6 +48,7 @@ export type AccountBookShellProps = {
   appVersion: string;
   userProfile: AuthenticatedUserProfile;
   accountsLinkSearch: AccountsLinkSearch;
+  activeSection?: AccountBookSection | null;
   periodLinkSearch: {
     period?: string;
   };
@@ -63,6 +65,7 @@ export function AccountBookShell({
   appVersion,
   userProfile,
   accountsLinkSearch,
+  activeSection: resolvedActiveSection,
   periodLinkSearch,
   children,
 }: AccountBookShellProps) {
@@ -71,7 +74,10 @@ export function AccountBookShell({
   const [desktopRailCollapsed, setDesktopRailCollapsed] = useState(false);
   const [desktopRailPreferenceHydrated, setDesktopRailPreferenceHydrated] =
     useState(false);
-  const activeSection = getActiveSection({ pathname, accountBookId });
+  const activeSection =
+    resolvedActiveSection === undefined
+      ? getActiveSection({ pathname, accountBookId })
+      : resolvedActiveSection;
   const accountBookSwitcherMenuProps = {
     accountBookId,
     accountBooks,

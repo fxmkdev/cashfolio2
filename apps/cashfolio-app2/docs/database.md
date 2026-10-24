@@ -71,7 +71,10 @@ paths are relative to that app directory.
 
 ## Enums
 
-- `AccountType`: `ASSET`, `LIABILITY`, `EQUITY`
+- `AccountType`: `ASSET`, `LIABILITY`, `EQUITY`. These internal types are
+  unchanged by the UI distinction between accounts and categories: income,
+  expense, and gain/loss categories remain `Account` records, and their groups
+  remain `AccountGroup` records. Opening Balances is a protected system account.
 - `EquityAccountSubtype`: `INCOME`, `EXPENSE`, `GAIN_LOSS`, `OPENING_BALANCES`
 - `Unit`: `CURRENCY`, `CRYPTOCURRENCY`, `SECURITY`
 - `UserRole`: `ADMIN`

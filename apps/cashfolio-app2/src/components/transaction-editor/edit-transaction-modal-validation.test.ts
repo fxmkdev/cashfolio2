@@ -125,7 +125,7 @@ describe("validateEditTransactionBookingsRoot", () => {
       [account("income", AccountType.EQUITY, EquityAccountSubtype.INCOME)],
     );
 
-    expect(result).toBe("Income accounts cannot have debit entries.");
+    expect(result).toBe("Income categories cannot have debit entries.");
   });
 
   test("returns balance error when single-unit split is unbalanced", () => {

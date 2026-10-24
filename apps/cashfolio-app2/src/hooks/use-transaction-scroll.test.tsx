@@ -57,6 +57,7 @@ describe("transaction scroll targets", () => {
     expect(navigate).toHaveBeenCalledOnce();
     const navigation = navigate.mock.calls[0]![0];
     expect(navigation.replace).toBe(true);
+    expect(navigation.state).toBe(true);
     expect(
       navigation.search({ period: "2026-05", transactionId: "target" }),
     ).toEqual({ period: "2026-05", transactionId: undefined });

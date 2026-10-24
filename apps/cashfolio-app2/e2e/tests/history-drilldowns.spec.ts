@@ -211,6 +211,13 @@ test("Explicit G/L account bar opens Gain/Loss ledger", async ({ page }) => {
     "2026-01",
   );
   await expect(page.getByText("E2E Explicit Gain/Loss Seed")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Accounts", exact: true }),
+  ).not.toHaveAttribute("data-active", "true");
+  await page.getByRole("link", { name: "Back to History" }).click();
+  await expect(new URL(page.url()).searchParams.get("gainLossScope")).toBe(
+    `explicit-account:${seeded.cashAccount.id}`,
+  );
 });
 
 test("empty asset period before first booking stays selected after refresh", async ({

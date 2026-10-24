@@ -92,7 +92,7 @@ export function useStatementImportColumnDefs(args: {
       },
       {
         field: "counterAccountId",
-        headerName: "Counter Account",
+        headerName: "Account or Category",
         width: 215,
         editable: ({ data }) =>
           !isSubmitting &&

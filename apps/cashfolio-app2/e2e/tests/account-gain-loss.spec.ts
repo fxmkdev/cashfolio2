@@ -351,7 +351,7 @@ test("G/L request failure can be retried without blocking the accounts page", as
     await failure;
     await route.abort();
   });
-  await page.getByRole("tab", { name: "Liability", exact: true }).click();
+  await page.getByRole("tab", { name: "Liabilities", exact: true }).click();
   await expect(page.locator(".mantine-Loader-root").first()).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Accounts", exact: true }),

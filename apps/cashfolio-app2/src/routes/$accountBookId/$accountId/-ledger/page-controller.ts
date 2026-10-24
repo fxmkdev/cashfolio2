@@ -1,3 +1,7 @@
+import {
+  getAccountConstraintMessage,
+  getAccountManagementContext,
+} from "@/shared/account-presentation";
 import { useRefreshedMutationData } from "@/hooks/use-refreshed-mutation-data";
 import { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
 import { deleteTransactions, rebookBookings } from "@/server/transactions";
@@ -408,6 +412,11 @@ export function useLedgerPageController(args: {
   const unarchiveRecovery = useUnarchiveMutation({
     scopeKey: `${args.accountBookId}:${account.id}`,
     onUnarchive: accountActions.handleUnarchiveAccount,
+    formatErrorMessage: (message) =>
+      getAccountConstraintMessage(
+        message,
+        getAccountManagementContext(account),
+      ) ?? message,
     onRefreshConstraints,
     isEligible: (target) =>
       target.id === account.id &&

@@ -183,7 +183,7 @@ export function validateAccountTypeBookingsWithAccounts(
       account.equityAccountSubtype === EquityAccountSubtype.INCOME &&
       toMoney(b.value).gt(0)
     ) {
-      errors.push(`Booking ${i}: Income accounts cannot have debit entries.`);
+      errors.push(`Booking ${i}: Income categories cannot have debit entries.`);
     }
 
     if (
@@ -191,7 +191,9 @@ export function validateAccountTypeBookingsWithAccounts(
       account.equityAccountSubtype === EquityAccountSubtype.EXPENSE &&
       toMoney(b.value).lt(0)
     ) {
-      errors.push(`Booking ${i}: Expense accounts cannot have credit entries.`);
+      errors.push(
+        `Booking ${i}: Expense categories cannot have credit entries.`,
+      );
     }
 
     if (

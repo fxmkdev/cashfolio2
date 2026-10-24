@@ -1,3 +1,4 @@
+import { isBalanceAccount } from "./account-presentation";
 import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 
 type GainLossInvariantAccount = {
@@ -15,7 +16,7 @@ export function isGainLossAccount(
 }
 
 export const GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE =
-  "Gain/Loss equity bookings require a simple transaction with exactly one Gain/Loss booking and one asset or liability booking.";
+  "Gain/Loss category bookings require a simple transaction with exactly one Gain/Loss booking and one account booking.";
 
 export function validateGainLossSimpleTransactionInvariant(
   accounts: GainLossInvariantAccount[],
@@ -34,11 +35,7 @@ export function validateGainLossSimpleTransactionInvariant(
   }
 
   const otherAccount = accounts.find((account) => !isGainLossAccount(account));
-  if (
-    !otherAccount ||
-    (otherAccount.type !== AccountType.ASSET &&
-      otherAccount.type !== AccountType.LIABILITY)
-  ) {
+  if (!otherAccount || !isBalanceAccount(otherAccount)) {
     return GAIN_LOSS_SIMPLE_TRANSACTION_INVARIANT_MESSAGE;
   }
 

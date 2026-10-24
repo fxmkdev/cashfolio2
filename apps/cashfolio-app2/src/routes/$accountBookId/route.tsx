@@ -6,6 +6,7 @@ import {
 import { AccountBookShell } from "./-account-book-shell";
 import { UserLocaleProvider } from "@/user-locale-context";
 import {
+  getActiveSection,
   getAccountsLinkSearch,
   getPeriodLinkSearch,
   hasLedgerAccountLoaderData,
@@ -88,6 +89,7 @@ function AccountBookLayout() {
         canAccessAdmin={canAccessAdmin}
         currentHref={href}
         pathname={pathname}
+        activeSection={getActiveSection({ pathname, accountBookId, matches })}
         accountBooks={accountBooks}
         appVersion={appVersion}
         userProfile={userProfile}

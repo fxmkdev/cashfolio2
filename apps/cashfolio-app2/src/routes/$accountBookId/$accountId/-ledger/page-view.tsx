@@ -1,3 +1,10 @@
+import type { LedgerReturnTarget } from "@/shared/ledger-navigation";
+import { Anchor } from "@mantine/core";
+import {
+  getAccountEntityLabel,
+  getAccountManagementContext,
+  getAccountConstraintMessage,
+} from "@/shared/account-presentation";
 import { UnarchiveMutationFeedback } from "@/components/dialogs/unarchive-mutation-feedback";
 import type { useUnarchiveMutation } from "@/hooks/use-unarchive-mutation";
 import {
@@ -6,6 +13,8 @@ import {
 } from "@/components/transactions/bulk-transaction-actions";
 import type { BulkTransactionActions } from "@/hooks/use-bulk-transaction-actions";
 import {
+  IconArrowLeft,
+  IconSettings,
   IconArchive,
   IconArchiveOff,
   IconBolt,
@@ -102,6 +111,8 @@ export type RebookingState = {
 };
 
 export type LedgerPageViewProps = {
+  returnNavigation?: { target: LedgerReturnTarget; onReturn: () => void };
+  onManageCategory?: () => void;
   onRefreshConstraints?: () => Promise<void>;
   bulkActions?: BulkTransactionActions<LedgerRow>;
   backTab: TabValue;
@@ -201,6 +212,8 @@ export type LedgerPageViewProps = {
 };
 
 export function LedgerPageView({
+  returnNavigation,
+  onManageCategory,
   onRefreshConstraints,
   bulkActions,
   backTab,
@@ -286,6 +299,10 @@ export function LedgerPageView({
   onCloseDeleteModal,
   onConfirmDeleteTransaction,
 }: LedgerPageViewProps) {
+  const entityLabel = getAccountEntityLabel(account);
+  const context = getAccountManagementContext(account);
+  const formatErrorMessage = (message: string) =>
+    getAccountConstraintMessage(message, context) ?? message;
   const accountKindBadge = getLedgerAccountKindBadgeProps(account);
   const simpleCreateDialogText = getTransactionCreateDialogText(
     !!createSimpleInitialValues,
@@ -295,6 +312,30 @@ export function LedgerPageView({
 
   return (
     <PageShell>
+      {returnNavigation && (
+        <Anchor
+          href={returnNavigation.target.href}
+          size="sm"
+          mb="sm"
+          onClick={(event) => {
+            if (
+              event.button !== 0 ||
+              event.metaKey ||
+              event.ctrlKey ||
+              event.shiftKey ||
+              event.altKey
+            )
+              return;
+            event.preventDefault();
+            returnNavigation.onReturn();
+          }}
+        >
+          <Group component="span" gap="xs" wrap="nowrap">
+            <IconArrowLeft size={16} aria-hidden="true" />
+            <span>Back to {returnNavigation.target.label}</span>
+          </Group>
+        </Anchor>
+      )}
       <TopPageHeader
         heading={<Title order={2}>{account.name}</Title>}
         headingAccessory={
@@ -322,16 +363,31 @@ export function LedgerPageView({
           <Group gap="sm">
             {periodFilterControls}
             <Tooltip
-              label={accountEditDisabledReason ?? "Edit Account"}
+              label={
+                getAccountConstraintMessage(
+                  accountEditDisabledReason,
+                  context,
+                ) ?? `Edit ${entityLabel}`
+              }
               disabled={!accountEditDisabledReason}
             >
               <span>
                 <SplitButton
                   leftSection={<IconPencil size={16} />}
-                  menuLabel="Account Actions"
+                  menuLabel={`${entityLabel} Actions`}
                   onClick={onOpenAccountEdit}
                   primaryDisabled={!!accountEditDisabledReason}
                   menuItems={[
+                    ...(onManageCategory
+                      ? [
+                          {
+                            key: "manage-category",
+                            label: "Manage Category",
+                            leftSection: <IconSettings size={16} />,
+                            onClick: onManageCategory,
+                          },
+                        ]
+                      : []),
                     {
                       key: "import-statement",
                       label: "Import Statement",
@@ -349,7 +405,10 @@ export function LedgerPageView({
                       ? {
                           key: "archive",
                           label: "Archive",
-                          disabledReason: accountArchiveLabel,
+                          disabledReason: getAccountConstraintMessage(
+                            accountArchiveLabel,
+                            context,
+                          ),
                           disabled: !accountArchivable,
                           color: "yellow",
                           leftSection: <IconArchive size={16} />,
@@ -358,7 +417,10 @@ export function LedgerPageView({
                       : {
                           key: "unarchive",
                           label: "Unarchive",
-                          disabledReason: accountUnarchiveLabel,
+                          disabledReason: getAccountConstraintMessage(
+                            accountUnarchiveLabel,
+                            context,
+                          ),
                           disabled:
                             !accountUnarchivable ||
                             unarchiveRecovery?.isPending,
@@ -369,7 +431,10 @@ export function LedgerPageView({
                     {
                       key: "delete",
                       label: "Delete",
-                      disabledReason: accountDeleteLabel,
+                      disabledReason: getAccountConstraintMessage(
+                        accountDeleteLabel,
+                        context,
+                      ),
                       disabled: !accountDeletable,
                       color: "red",
                       leftSection: <IconTrash size={16} />,
@@ -402,6 +467,9 @@ export function LedgerPageView({
       />
 
       <UnarchiveMutationFeedback
+        listLabel={
+          entityLabel === "Category" ? "category list" : "account list"
+        }
         recovery={unarchiveRecovery}
         onRefreshConstraints={onRefreshConstraints}
       />
@@ -441,7 +509,11 @@ export function LedgerPageView({
       >
         <SimpleTransactionModal
           onRefreshConstraints={onRefreshConstraints}
-          currentAccount={{ id: account.id, label: currentAccountLabel }}
+          currentAccount={{
+            id: account.id,
+            label: currentAccountLabel,
+            entityLabel,
+          }}
           accounts={
             createSimpleInitialValues
               ? editSimpleCounterAccountOptions
@@ -511,7 +583,11 @@ export function LedgerPageView({
         editingSimpleInitialValues ? (
           <SimpleTransactionModal
             onRefreshConstraints={onRefreshConstraints}
-            currentAccount={{ id: account.id, label: currentAccountLabel }}
+            currentAccount={{
+              id: account.id,
+              label: currentAccountLabel,
+              entityLabel,
+            }}
             accounts={editSimpleCounterAccountOptions}
             initialValues={editingSimpleInitialValues}
             accountBookStartDate={accountBookStartDate}
@@ -558,19 +634,21 @@ export function LedgerPageView({
       />
 
       <ConfirmArchiveModal
+        formatErrorMessage={formatErrorMessage}
         onRefreshConstraints={onRefreshConstraints}
         opened={!!archivingAccount}
         onClose={onCloseArchiveAccount}
-        title="Archive Account"
+        title={`Archive ${entityLabel}`}
         name={archivingAccount?.name}
         onConfirm={onConfirmArchiveAccount}
       />
 
       <ConfirmDeleteModal
+        formatErrorMessage={formatErrorMessage}
         onRefreshConstraints={onRefreshConstraints}
         opened={!!deletingAccount}
         onClose={onCloseDeleteAccount}
-        title="Delete Account"
+        title={`Delete ${entityLabel}`}
         name={deletingAccount?.name}
         onConfirm={onConfirmDeleteAccount}
       />

@@ -113,7 +113,7 @@ test("edit unitless equity account from list and ledger", async ({ page }) => {
   await expect(expenseRow).toBeVisible();
 
   await clickRowAction(expenseRow, "Edit");
-  const listEditDialog = page.getByRole("dialog", { name: "Edit Account" });
+  const listEditDialog = page.getByRole("dialog", { name: "Edit Category" });
   await expect(listEditDialog).toBeVisible();
   await listEditDialog.getByLabel("Name").fill(listUpdatedName);
   await listEditDialog.getByRole("button", { name: "Save" }).click();
@@ -125,7 +125,7 @@ test("edit unitless equity account from list and ledger", async ({ page }) => {
     `/${seeded.accountBookId}/${seeded.unitlessExpenseAccount.id}`,
   );
   await page.getByRole("button", { name: "Edit" }).click();
-  const ledgerEditDialog = page.getByRole("dialog", { name: "Edit Account" });
+  const ledgerEditDialog = page.getByRole("dialog", { name: "Edit Category" });
   await expect(ledgerEditDialog).toBeVisible();
   await ledgerEditDialog.getByLabel("Name").fill(ledgerUpdatedName);
   await ledgerEditDialog.getByRole("button", { name: "Save" }).click();

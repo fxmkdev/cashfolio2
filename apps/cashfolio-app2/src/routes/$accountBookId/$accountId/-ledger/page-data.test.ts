@@ -27,28 +27,28 @@ describe("getLedgerAccountKindBadgeProps", () => {
         type: AccountType.EQUITY,
         equityAccountSubtype: EquityAccountSubtype.INCOME,
       },
-      { label: "Income", color: "green", variant: "filled" },
+      { label: "Income Category", color: "green", variant: "filled" },
     ],
     [
       {
         type: AccountType.EQUITY,
         equityAccountSubtype: EquityAccountSubtype.EXPENSE,
       },
-      { label: "Expense", color: "red", variant: "filled" },
+      { label: "Expense Category", color: "red", variant: "filled" },
     ],
     [
       {
         type: AccountType.EQUITY,
         equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
       },
-      { label: "Gain/Loss", color: "yellow", variant: "light" },
+      { label: "System-Managed Category", color: "yellow", variant: "light" },
     ],
     [
       {
         type: AccountType.EQUITY,
         equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
       },
-      { label: "Opening Balances", color: "yellow", variant: "light" },
+      { label: "System Account", color: "yellow", variant: "light" },
     ],
     [
       { type: AccountType.EQUITY, equityAccountSubtype: null },
