@@ -1,6 +1,7 @@
 import { toNumericMoney } from "../money-boundary";
 export { buildUnifiedAccountTreeRows } from "../../shared/archived-account-tree-rows";
 import { toMoney, type Money } from "../../shared/money";
+import { isBalanceAccount } from "../../shared/account-presentation";
 import type {
   AccountType,
   EquityAccountSubtype,
@@ -169,12 +170,7 @@ export function buildAccountRows(args: {
             hasInactiveAncestor,
           })
         : unavailableActionAvailability();
-      const displayBalance =
-        account.type === "ASSET"
-          ? rawBalance
-          : account.type === "LIABILITY"
-            ? toMoney(rawBalance).neg()
-            : null;
+      const displayBalance = isBalanceAccount(account) ? rawBalance : null;
       const displayBalanceInReferenceCurrency =
         args.displayBalanceInReferenceCurrencyByAccountId.get(account.id) ??
         null;
@@ -184,11 +180,9 @@ export function buildAccountRows(args: {
       const displayOpeningBalance =
         openingRawBalance == null
           ? null
-          : account.type === "ASSET"
+          : isBalanceAccount(account)
             ? openingRawBalance
-            : account.type === "LIABILITY"
-              ? toMoney(openingRawBalance).neg()
-              : null;
+            : null;
       return {
         id: account.id,
         nodeType: "account",

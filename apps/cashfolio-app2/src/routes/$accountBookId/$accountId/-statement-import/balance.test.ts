@@ -295,7 +295,7 @@ describe("statement import chronological balances", () => {
     expect(rows.map((row) => row.balance)).toEqual([100, 100]);
   });
 
-  it("retains decimal precision and sign-adjusts liability balances", () => {
+  it("retains decimal precision and signed liability balances", () => {
     const rows = getStatementImportGridRows({
       account: { ...account, type: AccountType.LIABILITY },
       existingBookings: [
@@ -304,7 +304,7 @@ describe("statement import chronological balances", () => {
       ],
       drafts: [draft("2026-02-02", "-0.3")],
     });
-    expect(rows.map((row) => row.balance)).toEqual([0.6, 0.3, 0.1]);
+    expect(rows.map((row) => row.balance)).toEqual([-0.6, -0.3, -0.1]);
     expect(rows[1].amount).toBe(-0.2);
   });
 
