@@ -115,6 +115,9 @@ test("edit unitless equity account from list and ledger", async ({ page }) => {
   await clickRowAction(expenseRow, "Edit");
   const listEditDialog = page.getByRole("dialog", { name: "Edit Category" });
   await expect(listEditDialog).toBeVisible();
+  await expect(
+    listEditDialog.getByRole("combobox", { name: "Asset Class" }),
+  ).toHaveCount(0);
   await listEditDialog.getByLabel("Name").fill(listUpdatedName);
   await listEditDialog.getByRole("button", { name: "Save" }).click();
 
@@ -230,8 +233,8 @@ test("archive action is disabled for non-zero asset balances", async ({
 
   const usdRow = agGridRowByText(page, seededBalances.usdAccountName);
   await expect(usdRow).toBeVisible();
-  await revealRowActions(usdRow);
+  const actionRow = await revealRowActions(usdRow);
 
-  const archiveButton = usdRow.getByRole("button", { name: "Archive" });
+  const archiveButton = actionRow.getByRole("button", { name: "Archive" });
   await expect(archiveButton).toBeDisabled();
 });

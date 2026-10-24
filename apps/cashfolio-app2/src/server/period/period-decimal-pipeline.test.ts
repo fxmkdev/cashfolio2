@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -53,6 +54,7 @@ function createScenario(): PeriodBaseData {
     cryptocurrency: null,
     symbol: "ABC",
     tradeCurrency: "CHF",
+    assetClass: null,
     isCashAccount: false,
   };
   const date = new Date("2026-02-15T00:00:00Z");
@@ -140,6 +142,27 @@ function createScenario(): PeriodBaseData {
 }
 
 describe("Decimal monetary pipelines", () => {
+  it("keeps overview and history amounts unchanged for every asset class", async () => {
+    const scenario = createScenario();
+    getOrLoadPeriodBaseData.mockResolvedValue(scenario);
+    const args = { accountBookId: "book-1", period: "2026-02" };
+    const overview = await loadPeriodOverview({ ...args, baseData: scenario });
+    const history = await loadPeriodHistoryPointMetrics(args);
+    for (const assetClass of Object.values(AssetClass)) {
+      const classified: PeriodBaseData = {
+        ...scenario,
+        baseAssetLiabilityAccounts: scenario.baseAssetLiabilityAccounts.map(
+          (account) => ({ ...account, assetClass }),
+        ),
+      };
+      getOrLoadPeriodBaseData.mockResolvedValue(classified);
+      expect(
+        await loadPeriodOverview({ ...args, baseData: classified }),
+      ).toEqual(overview);
+      expect(await loadPeriodHistoryPointMetrics(args)).toEqual(history);
+    }
+  });
+
   it("agrees across overview, history, FIFO reconciliation, and cached base inputs", async () => {
     vi.clearAllMocks();
     const scenario = createScenario();

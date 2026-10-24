@@ -35,6 +35,7 @@ vi.mock("@/server/ledger", () => ({
 }));
 
 const ledgerAccount: Awaited<ReturnType<typeof getAccountForLedger>> = {
+  assetClass: null,
   id: "account-1",
   name: "Checking",
   isActive: true,

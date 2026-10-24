@@ -60,9 +60,9 @@ it("preserves deployed cache key formats and versions", () => {
   ).toBe("account:gain-loss:v4:local:book-1:revision-1:2026-05-11:2026-05-10");
   expect(
     getPeriodBaseCacheEntryKey({ ...scope, periodCacheKey: "2026-01" }),
-  ).toBe("period:base:v8:local:book-1:revision-1:2026-01");
+  ).toBe("period:base:v9:local:book-1:revision-1:2026-01");
   expect(getPeriodBaseCacheIndexKey(scope)).toBe(
-    "period:base:index:v8:local:book-1:revision-1",
+    "period:base:index:v9:local:book-1:revision-1",
   );
   expect(getPeriodCacheGenerationKey(scope)).toBe(
     "period:base:generation:v1:local:book-1",

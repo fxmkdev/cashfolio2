@@ -52,7 +52,8 @@ import { getTransactionCreateDialogText } from "@/components/transactions/transa
 import { TopPageHeader } from "@/components/layout/top-page-header";
 import { PageShell } from "@/components/layout/page-shell";
 import type { ReactNode } from "react";
-import type { Unit } from "@/.prisma-client/enums";
+import { AccountType, type Unit } from "@/.prisma-client/enums";
+import { getAssetClassLabel } from "@/shared/asset-class";
 import type { AccountBookUnitUsage } from "@/shared/account-book-unit-usage";
 import type { TabValue } from "@/shared/account-tabs";
 import {
@@ -304,6 +305,7 @@ export function LedgerPageView({
   const formatErrorMessage = (message: string) =>
     getAccountConstraintMessage(message, context) ?? message;
   const accountKindBadge = getLedgerAccountKindBadgeProps(account);
+  const assetClassLabel = getAssetClassLabel(account.assetClass);
   const simpleCreateDialogText = getTransactionCreateDialogText(
     !!createSimpleInitialValues,
   );
@@ -350,6 +352,17 @@ export function LedgerPageView({
             {unitLabel ? (
               <Badge size="lg" color="gray">
                 {unitLabel}
+              </Badge>
+            ) : null}
+            {account.type === AccountType.ASSET ||
+            account.type === AccountType.LIABILITY ? (
+              <Badge
+                size="lg"
+                color="gray"
+                variant={account.assetClass == null ? "outline" : "light"}
+                title={`Asset Class: ${assetClassLabel}`}
+              >
+                {assetClassLabel}
               </Badge>
             ) : null}
             {!account.isActive ? (

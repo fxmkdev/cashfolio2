@@ -1,7 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import { expect, test } from "@playwright/test";
 import type { Prisma } from "../../src/.prisma-client/client";
-import { AccountType, Unit } from "../../src/.prisma-client/enums";
+import { AccountType, AssetClass, Unit } from "../../src/.prisma-client/enums";
 import { withDatabaseConflictRetry } from "../../src/server/database-conflict-retry";
 import { prisma } from "../support/db-client";
 
@@ -64,6 +64,36 @@ test.afterEach(async () => {
   await prisma.accountBook.deleteMany({
     where: { id: { in: [bookId, otherBookId] } },
   });
+});
+
+test("classification changes advance only the owning book revision and roll back atomically", async () => {
+  const before = await revision();
+  const otherBefore = await revision(otherBookId);
+  await prisma.account.update({
+    where: { id_accountBookId: { id: accountId, accountBookId: bookId } },
+    data: { assetClass: AssetClass.EQUITIES },
+  });
+  const committed = await revision();
+  expect(committed).not.toBe(before);
+  expect(await revision(otherBookId)).toBe(otherBefore);
+  await expect(
+    prisma.$transaction(async (tx) => {
+      await tx.account.update({
+        where: { id_accountBookId: { id: accountId, accountBookId: bookId } },
+        data: { assetClass: null },
+      });
+      expect(await revision(bookId, tx)).not.toBe(committed);
+      throw new Error("Rollback classification");
+    }),
+  ).rejects.toThrow("Rollback classification");
+  expect(await revision()).toBe(committed);
+  expect(
+    (
+      await prisma.account.findUniqueOrThrow({
+        where: { id_accountBookId: { id: accountId, accountBookId: bookId } },
+      })
+    ).assetClass,
+  ).toBe(AssetClass.EQUITIES);
 });
 
 const mutations = [

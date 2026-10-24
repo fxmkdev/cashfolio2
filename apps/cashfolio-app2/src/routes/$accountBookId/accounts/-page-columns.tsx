@@ -2,13 +2,14 @@ import { getAccountConstraintMessage } from "@/shared/account-presentation";
 import { buildAccountGainLossColumns } from "./-gain-loss-columns";
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import { useMemo, useRef } from "react";
-import { Loader } from "@mantine/core";
+import { Loader, Text } from "@mantine/core";
 import {
   type ColDef,
   type ColGroupDef,
   type ICellRendererParams,
 } from "ag-grid-enterprise";
 import { Unit } from "@/.prisma-client/enums";
+import { getAssetClassLabel } from "@/shared/asset-class";
 import { FORMATTED_NUMERIC_COLUMN } from "@/components/grid/column-types";
 import { getCurrencyDecimals } from "@/shared/unit-format";
 import {
@@ -25,6 +26,19 @@ import {
   type TreeRow,
 } from "./-page-types";
 import { shouldShowReferenceBalanceLoadingIndicator } from "./-reference-balance-loading";
+
+export function getAccountListAssetClassValue(
+  data: AccountsGridRow | undefined,
+): string | undefined {
+  if (
+    !data ||
+    isReferenceCurrencyTotalFooterRow(data) ||
+    data.nodeType !== "account"
+  ) {
+    return undefined;
+  }
+  return getAssetClassLabel(data.assetClass);
+}
 
 export function getAccountListCurrencyValue(args: {
   data: AccountsGridRow | undefined;
@@ -112,6 +126,27 @@ export function useAccountTreeColumnDefs(params: {
     return [
       ...(!isEquityTab
         ? [
+            {
+              colId: "assetClass",
+              headerName: "Asset Class",
+              width: 220,
+              resizable: true,
+              sortable: false,
+              filter: "agTextColumnFilter",
+              valueGetter: ({ data }) => getAccountListAssetClassValue(data),
+              tooltipValueGetter: ({ data }) =>
+                getAccountListAssetClassValue(data),
+              cellRenderer: ({
+                value,
+              }: ICellRendererParams<AccountsGridRow, string | undefined>) =>
+                value === "Unclassified" ? (
+                  <Text component="span" inherit c="dimmed">
+                    {value}
+                  </Text>
+                ) : (
+                  (value ?? null)
+                ),
+            } satisfies ColDef<AccountsGridRow>,
             {
               colId: "currency",
               headerName: "Ccy.",

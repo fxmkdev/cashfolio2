@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -17,6 +18,50 @@ import {
   validateAccountStatementImportCsvFormat,
 } from "./account-validation";
 import type { AccountInput } from "./account-validation-types";
+
+describe("asset class eligibility", () => {
+  test.each(Object.values(AssetClass))(
+    "allows %s independently of unit",
+    (assetClass) => {
+      for (const type of [AccountType.ASSET, AccountType.LIABILITY]) {
+        for (const unit of Object.values(Unit)) {
+          expect(() =>
+            validateAccountInput({
+              accountBookId: "book",
+              name: "Account",
+              type,
+              unit,
+              assetClass,
+              currency: "USD",
+              cryptocurrency: "BTC",
+              symbol: "AAPL",
+              tradeCurrency: "USD",
+            }),
+          ).not.toThrow();
+        }
+      }
+    },
+  );
+
+  test.each(Object.values(EquityAccountSubtype))(
+    "rejects classification on %s equity",
+    (equityAccountSubtype) => {
+      const input: AccountInput = {
+        accountBookId: "book",
+        name: "Equity",
+        type: AccountType.EQUITY,
+        equityAccountSubtype,
+      };
+      expect(() =>
+        validateAccountInput({ ...input, assetClass: AssetClass.EQUITIES }),
+      ).toThrow("Asset class is only allowed for asset and liability accounts");
+      expect(() =>
+        validateAccountInput({ ...input, assetClass: null }),
+      ).not.toThrow();
+      expect(() => validateAccountInput(input)).not.toThrow();
+    },
+  );
+});
 
 describe("validateAccountUnit", () => {
   test("requires unit for asset and liability accounts", () => {

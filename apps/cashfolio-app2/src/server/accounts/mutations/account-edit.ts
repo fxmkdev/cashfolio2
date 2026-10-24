@@ -131,6 +131,7 @@ export async function createAccountOperation(
   const account = await tx.account.create({
     data: {
       name: normalizedData.name,
+      assetClass: normalizedData.assetClass ?? null,
       type: normalizedData.type,
       equityAccountSubtype: normalizedData.equityAccountSubtype,
       groupId: normalizedData.groupId ?? null,
@@ -182,6 +183,7 @@ export async function updateAccountOperation(
       },
     },
     select: {
+      assetClass: true,
       type: true,
       equityAccountSubtype: true,
       unit: true,
@@ -205,6 +207,10 @@ export async function updateAccountOperation(
   assertAccountUnitIdentityUnchanged(submittedData, existing);
   const submittedDataWithExistingCashFlag = {
     ...submittedData,
+    assetClass:
+      submittedData.assetClass === undefined
+        ? existing.assetClass
+        : submittedData.assetClass,
     isCashAccount: submittedData.isCashAccount ?? existing.isCashAccount,
   };
   const normalizedData = await resolveAccountCashFlag(
@@ -240,6 +246,7 @@ export async function updateAccountOperation(
     },
     data: {
       name: normalizedData.name,
+      assetClass: normalizedData.assetClass,
       groupId: normalizedData.groupId ?? null,
       sortOrder:
         typeof normalizedData.sortOrder === "number"

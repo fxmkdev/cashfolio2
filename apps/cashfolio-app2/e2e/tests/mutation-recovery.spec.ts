@@ -192,8 +192,10 @@ for (const nodeType of ["account", "accountGroup"] as const) {
     await expandArchivedGroups(page);
     const row = agGridRowByText(page, name);
     await expect(row).toBeVisible();
-    await revealRowActions(row);
-    await expect(row.getByRole("button", { name: "Unarchive" })).toBeEnabled();
+    const actionRow = await revealRowActions(row);
+    await expect(
+      actionRow.getByRole("button", { name: "Unarchive" }),
+    ).toBeEnabled();
     await prisma.accountGroup.update({
       where: {
         id_accountBookId: { id: parentId, accountBookId: seeded.accountBookId },
@@ -207,7 +209,21 @@ for (const nodeType of ["account", "accountGroup"] as const) {
     await expect(
       page.getByText(`Unarchive ${name}`, { exact: true }),
     ).toBeVisible();
-    await expect(row.getByRole("button", { name: "Unarchive" })).toBeDisabled();
+    await expect(
+      page.getByText(
+        "This item is no longer eligible to unarchive. Check the refreshed account list.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    // Refreshing moves the inactive parent into a newly collapsed Archived branch.
+    await expandArchivedGroups(page);
+    await expect(parentRow).toBeVisible();
+    if (await contracted.isVisible()) await contracted.click();
+    await expandArchivedGroups(page);
+    const refreshedActionRow = await revealRowActions(row);
+    await expect(
+      refreshedActionRow.getByRole("button", { name: "Unarchive" }),
+    ).toBeDisabled();
     await page.getByRole("button", { name: "Refresh Choices" }).click();
     await expect(page.getByRole("alert")).toContainText(
       "parent group is archived",

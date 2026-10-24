@@ -210,6 +210,29 @@ describe("staging seed against disposable PostgreSQL", () => {
           account.equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS,
       ),
     ).toHaveLength(3);
+    expect(
+      current.accounts
+        .filter(
+          (account) =>
+            account.equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS,
+        )
+        .every((account) => account.assetClass === null),
+    ).toBe(true);
+    for (const book of dataset.books) {
+      const persistedBook = current.books.find(
+        (candidate) => candidate.name === book.name,
+      )!;
+      for (const account of book.accounts) {
+        expect(current.accounts).toContainEqual(
+          expect.objectContaining({
+            accountBookId: persistedBook.id,
+            name: account.name,
+            isActive: account.isActive,
+            assetClass: account.assetClass,
+          }),
+        );
+      }
+    }
     expect(current.books.some((book) => book.id === "legacy-book-id")).toBe(
       false,
     );

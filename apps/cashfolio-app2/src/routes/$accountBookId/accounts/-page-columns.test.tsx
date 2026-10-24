@@ -1,11 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { AccountType, Unit } from "@/.prisma-client/enums";
+import { AccountType, AssetClass, Unit } from "@/.prisma-client/enums";
 import type { AccountsGridRow, TreeRow } from "./-page-types";
 import {
   getAccountListBalanceValue,
   getAccountListCurrencyValue,
+  getAccountListAssetClassValue,
   useAccountTreeColumnDefs,
 } from "./-page-columns";
 
@@ -74,6 +75,43 @@ const footerRow: AccountsGridRow = {
 };
 
 describe("account list column value getters", () => {
+  it.each([
+    [AssetClass.CASH_AND_CASH_EQUIVALENTS, "Cash & Cash Equivalents"],
+    [AssetClass.EQUITIES, "Equities"],
+    [AssetClass.FIXED_INCOME, "Fixed Income"],
+    [AssetClass.REAL_ESTATE, "Real Estate"],
+    [
+      AssetClass.COMMODITIES_AND_PRECIOUS_METALS,
+      "Commodities & Precious Metals",
+    ],
+    [AssetClass.DIGITAL_ASSETS, "Digital Assets"],
+    [AssetClass.ALTERNATIVE_INVESTMENTS, "Alternative Investments"],
+    [AssetClass.OTHER_ASSETS, "Other Assets"],
+    [null, "Unclassified"],
+    [undefined, "Unclassified"],
+  ] as const)("displays %s using its shared label", (assetClass, label) => {
+    for (const type of [AccountType.ASSET, AccountType.LIABILITY]) {
+      for (const isActive of [true, false]) {
+        expect(
+          getAccountListAssetClassValue(
+            createAccountRow({ assetClass, type, isActive }),
+          ),
+        ).toBe(label);
+      }
+    }
+  });
+
+  it("leaves groups, virtual Archived rows, totals, and missing data blank", () => {
+    for (const row of [
+      createGroupRow(),
+      { ...createGroupRow(), isVirtualArchivedGroup: true },
+      footerRow,
+      undefined,
+    ]) {
+      expect(getAccountListAssetClassValue(row)).toBeUndefined();
+    }
+  });
+
   it("hides native currency and balance for reference-currency cash accounts", () => {
     const row = createAccountRow({
       currency: "CHF",
@@ -221,4 +259,45 @@ describe("account tree Delete explanations", () => {
       );
     }
   }
+});
+
+describe("asset class column", () => {
+  function readColumns(isEquityTab: boolean) {
+    let columns: ReturnType<typeof useAccountTreeColumnDefs> = [];
+    function ReadColumns() {
+      columns = useAccountTreeColumnDefs({
+        isEquityTab,
+        rowsByParentKey: new Map(),
+        referenceCurrency: "CHF",
+        isReferenceBalancesLoading: false,
+        balanceInReferenceCurrencyByGroupId: new Map(),
+        onEditRow: vi.fn(),
+        onUnarchiveRow: vi.fn(),
+        onArchiveRow: vi.fn(),
+        onDeleteRow: vi.fn(),
+        onReorderRow: vi.fn(),
+      });
+      return null;
+    }
+    renderToStaticMarkup(<ReadColumns />);
+    return columns;
+  }
+
+  it("is the first data column with label filtering, tooltips, and resizing", () => {
+    expect(readColumns(false)[0]).toMatchObject({
+      colId: "assetClass",
+      headerName: "Asset Class",
+      width: 220,
+      resizable: true,
+      sortable: false,
+      filter: "agTextColumnFilter",
+      valueGetter: expect.any(Function),
+      tooltipValueGetter: expect.any(Function),
+    });
+  });
+
+  it("does not add classification columns on equity tabs", () => {
+    expect(readColumns(true)).toHaveLength(1);
+    expect(readColumns(true)[0]).toMatchObject({ colId: "actions" });
+  });
 });

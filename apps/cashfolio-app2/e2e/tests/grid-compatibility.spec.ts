@@ -57,7 +57,7 @@ test("account names keep their minimum width and overflow stays inside the grid"
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(dialog).not.toBeVisible();
 
-  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.setViewportSize({ width: 2200, height: 1080 });
   await viewport.evaluate((element) => {
     element.scrollLeft = 0;
   });

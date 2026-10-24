@@ -2,6 +2,7 @@ import Decimal from "decimal.js";
 import { describe, expect, it, vi } from "vitest";
 import {
   AccountType,
+  AssetClass,
   EquityAccountSubtype,
   Unit,
 } from "../.prisma-client/enums";
@@ -15,10 +16,68 @@ import {
   getZurichToday,
   type SeedBooking,
 } from "./dataset";
+import { addAccount, book } from "./dataset-model";
 
 const today = new Date("2026-10-10T00:00:00.000Z");
 const dataset = generateStagingDataset(today);
 const household = dataset.books[0];
+
+it("uses curated asset classes for active and archived demo balance accounts", () => {
+  const classifications = (bookKey: string) =>
+    Object.fromEntries(
+      dataset.books
+        .find((book) => book.key === bookKey)!
+        .accounts.filter((account) => account.type !== AccountType.EQUITY)
+        .map((account) => [account.key, account.assetClass]),
+    );
+  expect(classifications("household")).toEqual({
+    current: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    savings: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    wallet: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    eur: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    usd: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    spare: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    pension: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    aapl: AssetClass.EQUITIES,
+    msft: AssetClass.EQUITIES,
+    btc: AssetClass.DIGITAL_ASSETS,
+    "btc-transfer-source": AssetClass.DIGITAL_ASSETS,
+    "btc-transfer-destination": AssetClass.DIGITAL_ASSETS,
+    eth: AssetClass.DIGITAL_ASSETS,
+    "managed-portfolio": AssetClass.OTHER_ASSETS,
+    card: AssetClass.OTHER_ASSETS,
+    loan: AssetClass.OTHER_ASSETS,
+    archived: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    "closed-postfinance-eur": AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    "closed-ubs-chf": AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    "closed-ubs-usd": AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    "closed-cs-usd": AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    "closed-aapl": AssetClass.EQUITIES,
+    "closed-cs-aapl": AssetClass.EQUITIES,
+    "closed-cs-msft": AssetClass.EQUITIES,
+    "closed-car-loan": AssetClass.OTHER_ASSETS,
+  });
+  expect(classifications("edge-cases")).toEqual({
+    current: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    eur: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    unlisted: AssetClass.ALTERNATIVE_INVESTMENTS,
+  });
+});
+
+it("keeps seed equity accounts and unspecified classifications Unclassified", () => {
+  for (const account of dataset.books.flatMap((book) => book.accounts)) {
+    if (account.type === AccountType.EQUITY) {
+      expect(account.assetClass).toBeNull();
+    }
+  }
+  const target = book("defaults", "Default classifications", today);
+  for (const type of Object.values(AccountType)) {
+    addAccount(target, type, type, type);
+  }
+  expect(target.accounts.every((account) => account.assetClass === null)).toBe(
+    true,
+  );
+});
 const allBookings = (book = household) =>
   book.transactions.flatMap((transaction) => transaction.bookings);
 const accountBalance = (key: string) =>

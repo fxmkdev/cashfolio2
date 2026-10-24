@@ -96,7 +96,21 @@ test("the managed portfolio separates cash flows from explicit statement gains a
   const gainLoss = await prisma.account.findFirstOrThrow({
     where: { accountBookId: household.id, equityAccountSubtype: "GAIN_LOSS" },
   });
+  await page.goto(`/${household.id}/accounts?tab=ASSET`);
+  const investments = agGridRowByText(page, "Investments");
+  await expect(investments).toBeVisible();
+  const expander = investments.locator(".ag-group-contracted");
+  if (await expander.isVisible()) await expander.click();
+  await expect(
+    agGridCellByColId(
+      agGridRowByText(page, "Managed Portfolio CHF"),
+      "assetClass",
+    ),
+  ).toHaveText("Other Assets");
   await page.goto(`/${household.id}/${portfolio.id}?period=2026-10`);
+  await expect(
+    page.getByTitle("Asset Class: Other Assets", { exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Managed Portfolio CHF", exact: true }),
   ).toBeVisible();
@@ -162,6 +176,23 @@ test("configured testers can switch to empty and valuation edge-case books", asy
   await page
     .getByRole("menuitem", { name: edgeCases.name, exact: true })
     .click();
+  await page.goto(`/${edgeCases.id}/accounts?tab=ASSET`);
+  await expect(
+    agGridCellByColId(
+      agGridRowByText(page, "Unlisted investment (valuation unavailable)"),
+      "assetClass",
+    ),
+  ).toHaveText("Alternative Investments");
+  const unlisted = await prisma.account.findFirstOrThrow({
+    where: {
+      accountBookId: edgeCases.id,
+      name: "Unlisted investment (valuation unavailable)",
+    },
+  });
+  await page.goto(`/${edgeCases.id}/${unlisted.id}`);
+  await expect(
+    page.getByTitle("Asset Class: Alternative Investments", { exact: true }),
+  ).toBeVisible();
   await page.goto(`/${edgeCases.id}/report?period=2026-10`);
   await expect(
     page.getByRole("heading", { name: "October 2026" }),
@@ -188,6 +219,9 @@ test("the seeded Bitcoin fee transfer preserves acquisition basis through a late
     },
   });
   await page.goto(`/${household.id}/${destination.id}`);
+  await expect(
+    page.getByTitle("Asset Class: Digital Assets", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByTestId("account-gain-loss-realised")).toContainText(
     "200.00",
     { timeout: 60_000 },
@@ -246,6 +280,22 @@ test("archived synthetic accounts remain available for archive workflows", async
     .click();
   await expandArchivedGroups(page);
   await expect(agGridRowByText(page, "Closed bank account CHF")).toBeVisible();
+  await expect(
+    agGridCellByColId(
+      agGridRowByText(page, "Closed bank account CHF"),
+      "assetClass",
+    ),
+  ).toHaveText("Cash & Cash Equivalents");
+  const archived = await prisma.account.findFirstOrThrow({
+    where: {
+      accountBookId: seededBook("household").id,
+      name: "Closed bank account CHF",
+    },
+  });
+  await page.goto(`/${seededBook("household").id}/${archived.id}`);
+  await expect(
+    page.getByTitle("Asset Class: Cash & Cash Equivalents", { exact: true }),
+  ).toBeVisible();
 });
 
 test("archived seed hierarchies are available in Accounts and Categories", async ({

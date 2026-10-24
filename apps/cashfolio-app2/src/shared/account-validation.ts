@@ -65,6 +65,15 @@ export function validateAccountUnit(
   return unit ? null : "Unit is required";
 }
 
+export function validateAccountAssetClass(
+  assetClass: AccountInput["assetClass"],
+  type?: AccountType,
+): string | null {
+  return assetClass == null || isAssetOrLiability(type)
+    ? null
+    : "Asset class is only allowed for asset and liability accounts";
+}
+
 export function validateAccountCurrency(
   currency?: string,
   unit?: Unit,
@@ -177,6 +186,7 @@ export function validateAccountInput(
     validateAccountName(data.name, siblingNames),
     validateEquitySubtypeTypeCombination(data.type, data.equityAccountSubtype),
     validateAccountUnit(data.unit, data.type),
+    validateAccountAssetClass(data.assetClass, data.type),
     validateAccountCurrency(data.currency, data.unit, data.type),
     validateAccountCryptocurrency(data.cryptocurrency, data.unit, data.type),
     validateAccountSymbol(data.symbol, data.unit, data.type),

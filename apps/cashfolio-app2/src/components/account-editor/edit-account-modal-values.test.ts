@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -16,6 +17,49 @@ import {
   transformAccountValues,
   validateStatementImportCsvFormatFormValue,
 } from "./edit-account-modal";
+import { toFormValues } from "./values";
+
+describe("asset class form values", () => {
+  test.each([null, ...Object.values(AssetClass)])(
+    "round-trips classification %s",
+    (assetClass) => {
+      const initial = createAccountInitialValues({
+        name: "Portfolio",
+        type: AccountType.ASSET,
+        assetClass,
+        unit: Unit.CURRENCY,
+        currency: "USD",
+      });
+      const form = toFormValues(initial);
+      expect(form.assetClass).toBe(assetClass);
+      for (const unit of Object.values(Unit)) {
+        expect(transformAccountValues({ ...form, unit }).assetClass).toBe(
+          assetClass,
+        );
+      }
+    },
+  );
+
+  test("defaults to Unclassified without inferring from unit or cash flag", () => {
+    for (const unit of Object.values(Unit)) {
+      expect(
+        transformAccountValues({
+          name: "Account",
+          typeDescriptor: AccountType.ASSET,
+          unit,
+          isCashAccount: true,
+        }).assetClass,
+      ).toBeNull();
+    }
+    expect(
+      transformAccountValues({
+        typeDescriptor: AccountType.ASSET,
+        unit: Unit.CURRENCY,
+        assetClass: "",
+      }).assetClass,
+    ).toBeNull();
+  });
+});
 
 describe("transformAccountValues", () => {
   test("strips hidden unit identity fields for equity accounts", () => {
@@ -38,6 +82,7 @@ describe("transformAccountValues", () => {
         isCashAccount: true,
       }),
     ).toEqual({
+      assetClass: null,
       name: "Groceries",
       typeDescriptor: `${AccountType.EQUITY}-${EquityAccountSubtype.EXPENSE}`,
       groupId: "group-expenses",
@@ -76,6 +121,7 @@ describe("transformAccountValues", () => {
         isCashAccount: true,
       }),
     ).toEqual({
+      assetClass: null,
       name: "Brokerage",
       typeDescriptor: AccountType.ASSET,
       groupId: "group-assets",
@@ -163,6 +209,7 @@ describe("createAccountInitialValues", () => {
         openingBalance: 100,
       }),
     ).toEqual({
+      assetClass: null,
       name: "Checking",
       type: AccountType.ASSET,
       equityAccountSubtype: null,
