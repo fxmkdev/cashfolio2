@@ -244,7 +244,7 @@ describe("accounts-mutations system-managed subtype guards", () => {
         data: {
           accountBookId: "book-1",
           name: "Invalid subtype account",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
         },
       }),
@@ -255,7 +255,7 @@ describe("accounts-mutations system-managed subtype guards", () => {
         data: {
           accountBookId: "book-1",
           name: "Invalid subtype group",
-          type: AccountType.LIABILITY,
+          type: AccountType.BALANCE,
           equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
         },
       }),

@@ -38,7 +38,7 @@ export async function resolveExplicitCounterpartNonEquityAccounts(
       transactionId: { in: missingTransactionIds },
       account: {
         type: {
-          in: [AccountType.ASSET, AccountType.LIABILITY],
+          in: [AccountType.BALANCE],
         },
       },
     },

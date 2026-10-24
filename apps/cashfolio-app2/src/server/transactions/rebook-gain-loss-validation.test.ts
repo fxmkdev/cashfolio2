@@ -24,7 +24,7 @@ describe("validateRebookGainLossSimpleTransactionInvariant", () => {
       {
         id: "booking-1",
         account: {
-          type: AccountType.LIABILITY,
+          type: AccountType.BALANCE,
           equityAccountSubtype: null,
         },
       },
@@ -43,7 +43,7 @@ describe("validateRebookGainLossSimpleTransactionInvariant", () => {
         transactionId: "tx-1",
         bookingId: "booking-1",
         targetAccount: {
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           equityAccountSubtype: null,
         },
       }),
@@ -55,7 +55,7 @@ describe("validateRebookGainLossSimpleTransactionInvariant", () => {
       {
         id: "booking-1",
         account: {
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           equityAccountSubtype: null,
         },
       },

@@ -29,7 +29,7 @@ test("ledger excludes reference-currency accounts before requesting G/L and pres
       id: createId(),
       accountBookId: book.accountBookId,
       name: "Reference-currency liability",
-      type: "LIABILITY",
+      type: "BALANCE",
       unit: "CURRENCY",
       currency: "CHF",
     },

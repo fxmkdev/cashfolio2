@@ -54,7 +54,7 @@ describe("period database snapshot boundary", () => {
               id: "usd",
               name: "USD Cash",
               groupId: null,
-              type: AccountType.ASSET,
+              type: AccountType.BALANCE,
               unit: Unit.CURRENCY,
               currency: "USD",
               cryptocurrency: null,

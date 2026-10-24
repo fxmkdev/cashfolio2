@@ -75,7 +75,7 @@ describe("getLedgerData reference currency", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.prisma.account.findUniqueOrThrow.mockResolvedValue({
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       unit: Unit.CURRENCY,
       currency: "USD",

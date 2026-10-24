@@ -32,7 +32,7 @@ function booking(
   holding: HoldingRateConvertibleAccount,
   date: string,
   value: number,
-  type: "ASSET" | "LIABILITY" = "ASSET",
+  type: "BALANCE" = "BALANCE",
 ): HoldingTransactionBooking {
   return {
     ...holding,
@@ -814,8 +814,8 @@ describe("accumulated account G/L", () => {
         trade("short2", a, "2026-01-02Z", -1, -200),
         {
           bookings: [
-            booking("out", a, "2026-01-03Z", 1, "LIABILITY"),
-            booking("in", b, "2026-01-20Z", -1, "LIABILITY"),
+            booking("out", a, "2026-01-03Z", 1, "BALANCE"),
+            booking("in", b, "2026-01-20Z", -1, "BALANCE"),
           ],
         },
         trade("cover", a, "2026-01-10Z", 1, 150),
@@ -1025,8 +1025,8 @@ describe("accumulated account G/L", () => {
       transactions: [
         {
           bookings: [
-            booking("out", a, "2026-02-01Z", 2, "LIABILITY"),
-            booking("in", b, "2026-02-01Z", -2, "LIABILITY"),
+            booking("out", a, "2026-02-01Z", 2, "BALANCE"),
+            booking("in", b, "2026-02-01Z", -2, "BALANCE"),
           ],
         },
         trade("cover", b, "2026-03-01Z", 1, 80),
@@ -1074,7 +1074,7 @@ describe("accumulated account G/L", () => {
         {
           bookings: [
             booking("out", a, "2026-02-01Z", -2),
-            booking("in", b, "2026-02-01Z", 2, "LIABILITY"),
+            booking("in", b, "2026-02-01Z", 2, "BALANCE"),
           ],
         },
       ],

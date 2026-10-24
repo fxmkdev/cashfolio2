@@ -84,8 +84,7 @@ export async function computePeriodCashFlow(args: {
 
     const cashBookings = transaction.bookings.filter(
       (booking) =>
-        (booking.account.type === AccountType.ASSET ||
-          booking.account.type === AccountType.LIABILITY) &&
+        booking.account.type === AccountType.BALANCE &&
         booking.account.isCashAccount &&
         isWithinPeriod({
           date: booking.date,

@@ -48,7 +48,7 @@ export async function buildRealAccountReconciliation(args: {
       accountBookId: args.accountBookId,
       id: args.accountId,
       type: {
-        in: [AccountType.ASSET, AccountType.LIABILITY],
+        in: [AccountType.BALANCE],
       },
     },
     select: {
@@ -103,7 +103,7 @@ export async function buildRealAccountReconciliation(args: {
     where: {
       accountBookId: args.accountBookId,
       type: {
-        in: [AccountType.ASSET, AccountType.LIABILITY],
+        in: [AccountType.BALANCE],
       },
     },
     select: {

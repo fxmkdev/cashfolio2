@@ -15,11 +15,11 @@ import {
 describe("getLedgerAccountKindBadgeProps", () => {
   test.each([
     [
-      { type: AccountType.ASSET, equityAccountSubtype: null },
+      { type: AccountType.BALANCE, equityAccountSubtype: null },
       { label: "Account", color: "gray", variant: "light" },
     ],
     [
-      { type: AccountType.LIABILITY, equityAccountSubtype: null },
+      { type: AccountType.BALANCE, equityAccountSubtype: null },
       { label: "Account", color: "gray", variant: "light" },
     ],
     [
@@ -86,7 +86,7 @@ describe("createAccountOptions", () => {
           cryptocurrency: null,
           symbol: null,
           tradeCurrency: null,
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           equityAccountSubtype: null,
         } as unknown as Parameters<typeof createAccountOptions>[0][number],
       ],

@@ -167,7 +167,7 @@ describe("period read consistency against disposable PostgreSQL", () => {
           id: "cash",
           name: "Cash",
           accountBookId: bookId,
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
           currency: "CHF",
           isCashAccount: true,

@@ -39,7 +39,7 @@ const ledgerAccount: Awaited<ReturnType<typeof getAccountForLedger>> = {
   id: "account-1",
   name: "Checking",
   isActive: true,
-  type: AccountType.ASSET,
+  type: AccountType.BALANCE,
   equityAccountSubtype: null,
   unit: Unit.CURRENCY,
   currency: "CHF",
@@ -70,7 +70,7 @@ describe("loadLedgerPageData", () => {
         {
           value: "group-1",
           label: "Bank accounts",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           equityAccountSubtype: null,
           isCashAccount: false,
           parentGroupId: null,
@@ -84,7 +84,7 @@ describe("loadLedgerPageData", () => {
           name: "Savings",
           nodeType: "account" as const,
           groupId: "group-1",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
         },
       ];
@@ -143,7 +143,7 @@ describe("loadLedgerPageData", () => {
         onSubmit: vi.fn(),
         initialValues: { ...data.accountTreeRow },
         editingId: data.account.id,
-        typeDescriptor: "ASSET",
+        typeDescriptor: "BALANCE",
       });
       expect(props.accountGroups).toBe(accountGroups);
       expect(props.existingNodes).toBe(existingNodes);
@@ -155,7 +155,7 @@ describe("loadLedgerPageData", () => {
     { name: "reference-currency asset", account: {}, showGainLoss: false },
     {
       name: "reference-currency liability",
-      account: { type: AccountType.LIABILITY },
+      account: { type: AccountType.BALANCE },
       showGainLoss: false,
     },
     {
@@ -170,7 +170,7 @@ describe("loadLedgerPageData", () => {
     },
     {
       name: "foreign-currency liability",
-      account: { type: AccountType.LIABILITY, currency: "EUR" },
+      account: { type: AccountType.BALANCE, currency: "EUR" },
       showGainLoss: true,
     },
     {
@@ -274,13 +274,13 @@ describe("isLedgerPeriodFilterAvailable", () => {
   test("returns true for asset and liability accounts", () => {
     expect(
       isLedgerPeriodFilterAvailable({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
       }),
     ).toBe(true);
     expect(
       isLedgerPeriodFilterAvailable({
-        type: AccountType.LIABILITY,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
       }),
     ).toBe(true);

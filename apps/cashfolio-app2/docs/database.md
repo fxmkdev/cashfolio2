@@ -75,18 +75,28 @@ paths are relative to that app directory.
   Commodities & Precious Metals, Digital Assets, Alternative Investments, and
   Other Assets. `Account.assetClass` is nullable: null means Unclassified,
   distinct from Other Assets. A database check permits non-null classification
-  only on asset/liability accounts. The migration performs no backfill; all
+  only on balance accounts. The migration performs no backfill; all
   existing accounts, including archived accounts, remain Unclassified. New
   accounts also default to Unclassified, with classification selected manually.
   Groups and bookings have no asset class, and classification has no history.
 
-- `AccountType`: `ASSET`, `LIABILITY`, `EQUITY`. These internal types are
-  unchanged by the UI distinction between accounts and categories: income,
-  expense, and gain/loss categories remain `Account` records, and their groups
-  remain `AccountGroup` records. Opening Balances is a protected system account.
+- `AccountType`: `BALANCE`, `EQUITY`. Balance accounts and their groups use
+  `BALANCE` regardless of whether their signed balances are owned or owed.
+  Income, expense, and gain/loss categories remain `Account` records, and their
+  groups remain `AccountGroup` records. Opening Balances is a protected system
+  account.
 - `EquityAccountSubtype`: `INCOME`, `EXPENSE`, `GAIN_LOSS`, `OPENING_BALANCES`
 - `Unit`: `CURRENCY`, `CRYPTOCURRENCY`, `SECURITY`
 - `UserRole`: `ADMIN`
+
+The `20261024120000_unify_balance_account_types` migration replaces both legacy
+`ASSET` and `LIABILITY` values with `BALANCE` on accounts and groups, including
+archived records. It preserves IDs, grouping, metadata, timestamps, and all
+bookings. The enum replacement, recreation of the system-account partial unique
+indexes, and rotation of every book's cache revision commit atomically. Legacy
+cache payloads are rejected by current validators. Historical migrations remain
+unchanged. This migration requires the
+[coordinated deployment cutover](deployment.md#balance-account-type-cutover).
 
 ## Composite Key Pattern
 

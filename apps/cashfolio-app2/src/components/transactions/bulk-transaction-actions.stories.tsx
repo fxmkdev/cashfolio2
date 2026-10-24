@@ -61,7 +61,7 @@ const accountOptions = [
   {
     value: "target",
     label: "Savings",
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     equityAccountSubtype: null,
     unit: Unit.CURRENCY,
     currency: "CHF",

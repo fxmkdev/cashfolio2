@@ -109,7 +109,7 @@ describe("period base-data cache", () => {
               name: "Cash",
               assetClass: AssetClass.EQUITIES,
               groupId: null,
-              type: AccountType.ASSET,
+              type: AccountType.BALANCE,
               unit: Unit.CURRENCY,
               currency: "CHF",
               cryptocurrency: null,
@@ -281,7 +281,7 @@ describe("period base-data cache", () => {
       id: "asset-1",
       name: "Cash",
       groupId: "cash-group",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       unit: Unit.CURRENCY,
       currency: "CHF",
       cryptocurrency: null,
@@ -316,7 +316,7 @@ describe("period base-data cache", () => {
             bookings: [
               {
                 ...booking,
-                account: { type: AccountType.ASSET, isCashAccount: true },
+                account: { type: AccountType.BALANCE, isCashAccount: true },
               },
             ],
           },
@@ -340,7 +340,7 @@ describe("period base-data cache", () => {
         id: "asset-1",
         name: "Cash",
         groupId: "cash-group",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         isCashAccount: true,
       });
       expect(result.cashFlowTransactions[0]?.bookings[0]?.date).toBeInstanceOf(
@@ -558,7 +558,7 @@ describe("period base-data cache", () => {
               id: "asset-1",
               name: "x".repeat(2_300_000),
               groupId: null,
-              type: AccountType.ASSET,
+              type: AccountType.BALANCE,
               unit: Unit.CURRENCY,
               currency: "CHF",
               cryptocurrency: null,

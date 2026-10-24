@@ -13,7 +13,7 @@ export const accountGroupOptions = [
   {
     value: "group-assets",
     label: "Assets",
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     equityAccountSubtype: null,
     isCashAccount: false,
     parentGroupId: null,
@@ -23,7 +23,7 @@ export const accountGroupOptions = [
   {
     value: "group-cash",
     label: "Assets / Cash",
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     equityAccountSubtype: null,
     isCashAccount: true,
     parentGroupId: "group-assets",
@@ -33,7 +33,7 @@ export const accountGroupOptions = [
   {
     value: "group-liabilities",
     label: "Liabilities",
-    type: AccountType.LIABILITY,
+    type: AccountType.BALANCE,
     equityAccountSubtype: null,
     isCashAccount: false,
     parentGroupId: null,
@@ -67,21 +67,21 @@ export const existingNodes: ExistingNode[] = [
     id: "group-assets",
     name: "Assets",
     nodeType: "accountGroup",
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
   },
   {
     id: "group-cash",
     name: "Cash",
     nodeType: "accountGroup",
     parentId: "group-assets",
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
   },
   {
     id: "account-checking",
     name: "Checking",
     nodeType: "account",
     groupId: "group-cash",
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     unit: Unit.CURRENCY,
   },
   {
@@ -89,7 +89,7 @@ export const existingNodes: ExistingNode[] = [
     name: "Savings",
     nodeType: "account",
     groupId: "group-assets",
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     unit: Unit.CURRENCY,
   },
   {
@@ -102,7 +102,7 @@ export const existingNodes: ExistingNode[] = [
 
 export const editAccountInitialValues: AccountInitialValues = {
   name: "Checking",
-  type: AccountType.ASSET,
+  type: AccountType.BALANCE,
   groupId: "group-cash",
   sortOrder: 10,
   unit: Unit.CURRENCY,
@@ -111,7 +111,7 @@ export const editAccountInitialValues: AccountInitialValues = {
 
 export const editAccountGroupInitialValues: AccountGroupInitialValues = {
   name: "Cash",
-  type: AccountType.ASSET,
+  type: AccountType.BALANCE,
   parentGroupId: "group-assets",
   sortOrder: 20,
   isCashAccount: false,
@@ -121,21 +121,21 @@ export const accountOptions: AccountOption[] = [
   {
     value: "account-checking",
     label: "Checking (CHF)",
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     unit: Unit.CURRENCY,
     currency: "CHF",
   },
   {
     value: "account-savings",
     label: "Savings (CHF)",
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     unit: Unit.CURRENCY,
     currency: "CHF",
   },
   {
     value: "account-credit-card",
     label: "Credit Card (CHF)",
-    type: AccountType.LIABILITY,
+    type: AccountType.BALANCE,
     unit: Unit.CURRENCY,
     currency: "CHF",
   },

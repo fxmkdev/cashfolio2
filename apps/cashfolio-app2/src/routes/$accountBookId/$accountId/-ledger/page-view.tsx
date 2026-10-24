@@ -354,8 +354,7 @@ export function LedgerPageView({
                 {unitLabel}
               </Badge>
             ) : null}
-            {account.type === AccountType.ASSET ||
-            account.type === AccountType.LIABILITY ? (
+            {account.type === AccountType.BALANCE ? (
               <Badge
                 size="lg"
                 color="gray"

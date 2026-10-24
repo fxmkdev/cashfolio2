@@ -13,7 +13,7 @@ const meta = {
   args: {
     opened: true,
     accountGroups: accountGroupOptions,
-    typeDescriptor: "ASSET",
+    typeDescriptor: "BALANCE",
     existingNodes,
     onClose: fn(),
     onSubmit: fn(async () => undefined),

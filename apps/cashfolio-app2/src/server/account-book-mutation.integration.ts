@@ -90,7 +90,7 @@ function account(
   return {
     accountBookId: bookId,
     name,
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     unit: Unit.CURRENCY,
     currency: "CHF",
     ...overrides,
@@ -102,7 +102,7 @@ function groupUpdate(id: string, parentGroupId?: string) {
       accountBookId: bookId,
       id,
       name: id,
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       parentGroupId,
     },
   };
@@ -204,7 +204,7 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
         id,
         name: id,
         accountBookId: bookId,
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
       })),
     });
   });
@@ -247,7 +247,7 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
             id: "retry-account",
             name: "Retry",
             accountBookId: bookId,
-            type: AccountType.ASSET,
+            type: AccountType.BALANCE,
             unit: Unit.CURRENCY,
             currency: "CHF",
           },
@@ -297,9 +297,9 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
       () => mutations.createAccount({ data: account("wallet") }),
     );
     expectRejected(outcomes, "already exists");
-    expect(await db.account.count({ where: { type: AccountType.ASSET } })).toBe(
-      1,
-    );
+    expect(
+      await db.account.count({ where: { type: AccountType.BALANCE } }),
+    ).toBe(1);
   });
 
   it("creates one shared opening-balances account for concurrent initial balances", async () => {
@@ -432,9 +432,9 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
     } finally {
       spy.mockRestore();
     }
-    expect(await db.account.count({ where: { type: AccountType.ASSET } })).toBe(
-      0,
-    );
+    expect(
+      await db.account.count({ where: { type: AccountType.BALANCE } }),
+    ).toBe(0);
     expect(await db.transaction.count()).toBe(0);
     expect(await db.booking.count()).toBe(0);
     // A failed mutation releases the lock so the next writer can proceed.

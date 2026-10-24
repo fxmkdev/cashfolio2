@@ -15,7 +15,7 @@ test.beforeAll(async ({ e2eExternalId }) => {
   seeded = await seedDatabase({ userExternalId: e2eExternalId });
 });
 
-for (const type of ["ASSET", "LIABILITY"] as const) {
+for (const type of ["BALANCE"] as const) {
   for (const isActive of [true, false]) {
     test(`${isActive ? "active" : "archived"} ${type} classification updates in the header and list`, async ({
       page,

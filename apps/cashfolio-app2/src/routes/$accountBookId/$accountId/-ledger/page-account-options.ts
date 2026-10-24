@@ -79,8 +79,7 @@ export function useLedgerAccountOptions(args: {
           candidate.id !== args.account.id &&
           !isOpeningBalancesAccount(candidate) &&
           (candidate.type === AccountType.EQUITY ||
-            ((candidate.type === AccountType.ASSET ||
-              candidate.type === AccountType.LIABILITY) &&
+            (candidate.type === AccountType.BALANCE &&
               currentSimpleUnitIdentifier !== null &&
               getSimpleTransactionUnitIdentifier({
                 unit: candidate.unit,

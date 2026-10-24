@@ -12,12 +12,12 @@ import {
 
 describe("accountTypeRequiresZeroBalanceForArchive", () => {
   test("returns true for asset and liability accounts", () => {
-    expect(accountTypeRequiresZeroBalanceForArchive(AccountType.ASSET)).toBe(
+    expect(accountTypeRequiresZeroBalanceForArchive(AccountType.BALANCE)).toBe(
       true,
     );
-    expect(
-      accountTypeRequiresZeroBalanceForArchive(AccountType.LIABILITY),
-    ).toBe(true);
+    expect(accountTypeRequiresZeroBalanceForArchive(AccountType.BALANCE)).toBe(
+      true,
+    );
   });
 
   test("returns false for equity accounts", () => {

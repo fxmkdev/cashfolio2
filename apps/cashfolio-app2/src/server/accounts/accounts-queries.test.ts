@@ -111,21 +111,21 @@ describe("getAccountTreeData", () => {
     vi.useRealTimers();
   });
 
-  it("filters both account and group queries to persisted balance types", async () => {
+  it("filters both account and group queries to the persisted balance type", async () => {
     await getAccountTreeData({
       data: { accountBookId: "book-1", type: "BALANCE", accountState: "all" },
     });
     expect(prisma.account.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          type: { in: ["ASSET", "LIABILITY"] },
+          type: "BALANCE",
         }),
       }),
     );
     expect(prisma.accountGroup.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          type: { in: ["ASSET", "LIABILITY"] },
+          type: "BALANCE",
         }),
       }),
     );
@@ -136,7 +136,7 @@ describe("getAccountTreeData", () => {
       {
         id: "asset-1",
         name: "Asset One",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
         unit: Unit.CURRENCY,
         currency: "CHF",
@@ -151,7 +151,7 @@ describe("getAccountTreeData", () => {
       {
         id: "liability-1",
         name: "Liability One",
-        type: AccountType.LIABILITY,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
         unit: Unit.CURRENCY,
         currency: "CHF",
@@ -167,7 +167,7 @@ describe("getAccountTreeData", () => {
       {
         id: "group-1",
         name: "Assets",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
         parentGroupId: null,
         isActive: true,
@@ -242,7 +242,7 @@ describe("getAccountTreeData", () => {
       {
         id: "asset-archived",
         name: "Archived Asset",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
         unit: Unit.CURRENCY,
         currency: "CHF",
@@ -258,7 +258,7 @@ describe("getAccountTreeData", () => {
       {
         id: "group-root",
         name: "Root",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
         parentGroupId: null,
         isActive: true,
@@ -267,7 +267,7 @@ describe("getAccountTreeData", () => {
       {
         id: "group-child",
         name: "Child",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
         parentGroupId: "group-root",
         isActive: false,
@@ -343,7 +343,7 @@ describe("getAccountTreeData", () => {
       {
         id: "asset-scheduled",
         name: "Scheduled Asset",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
         unit: Unit.CURRENCY,
         currency: "CHF",
@@ -397,7 +397,7 @@ describe("getLedgerAccountActionData", () => {
     prisma.account.findUnique.mockResolvedValue({
       id: "asset-1",
       name: "Asset One",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       unit: Unit.CURRENCY,
       currency: "CHF",
@@ -447,7 +447,7 @@ describe("getLedgerAccountActionData", () => {
     prisma.account.findUnique.mockResolvedValue({
       id: "liability-1",
       name: "Credit Card",
-      type: AccountType.LIABILITY,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       unit: Unit.CURRENCY,
       currency: "CHF",
@@ -499,7 +499,7 @@ describe("getAccountsPageData", () => {
           id: "archived-account",
           name: "Archived Account",
           groupId: "group-child",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
         },
       ])
@@ -508,7 +508,7 @@ describe("getAccountsPageData", () => {
           id: "archived-account",
           name: "Archived Account",
           groupId: "group-child",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
         },
       ]);
@@ -518,7 +518,7 @@ describe("getAccountsPageData", () => {
         {
           id: "group-root",
           name: "Root",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           equityAccountSubtype: null,
           parentGroupId: null,
           isActive: true,
@@ -527,7 +527,7 @@ describe("getAccountsPageData", () => {
         {
           id: "group-child",
           name: "Archived Child",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           equityAccountSubtype: null,
           parentGroupId: "group-root",
           isActive: false,
@@ -536,7 +536,7 @@ describe("getAccountsPageData", () => {
         {
           id: "group-active-sibling",
           name: "Active Sibling",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           equityAccountSubtype: null,
           parentGroupId: "group-root",
           isActive: true,
@@ -547,7 +547,7 @@ describe("getAccountsPageData", () => {
         {
           id: "group-root",
           name: "Root",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           equityAccountSubtype: null,
           parentGroupId: null,
           isActive: true,
@@ -556,7 +556,7 @@ describe("getAccountsPageData", () => {
         {
           id: "group-child",
           name: "Archived Child",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           equityAccountSubtype: null,
           parentGroupId: "group-root",
           isActive: false,
@@ -565,7 +565,7 @@ describe("getAccountsPageData", () => {
         {
           id: "group-active-sibling",
           name: "Active Sibling",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           equityAccountSubtype: null,
           parentGroupId: "group-root",
           isActive: true,
@@ -594,7 +594,7 @@ describe("getAccountsPageData", () => {
         name: "Archived Account",
         nodeType: "account",
         groupId: "group-child",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
       },
       {
@@ -602,14 +602,14 @@ describe("getAccountsPageData", () => {
         name: "Root",
         nodeType: "accountGroup",
         parentId: undefined,
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
       },
       {
         id: "group-child",
         name: "Archived Child",
         nodeType: "accountGroup",
         parentId: "group-root",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
       },
     ]);
     expect(result).toMatchObject({

@@ -60,7 +60,7 @@ const assetAccount = {
   id: "account-checking",
   name: "Checking",
   isActive: true,
-  type: AccountType.ASSET,
+  type: AccountType.BALANCE,
   equityAccountSubtype: null,
   unit: Unit.CURRENCY,
   currency: "CHF",
@@ -140,7 +140,7 @@ const createSplitInitialValues: SplitModalInitialValues = {
 function LedgerPageStoryHarness({
   routeSmoke = false,
   includePeriodFilterControls = false,
-  accountType = AccountType.ASSET,
+  accountType = AccountType.BALANCE,
   startWithSimpleModal = false,
   startWithSplitModal = false,
   startWithEditModal = false,
@@ -344,7 +344,7 @@ function LedgerPageStoryHarness({
                 })
             : undefined
         }
-        backTab="ASSET"
+        backTab="BALANCE"
         account={account}
         accountGroups={[]}
         existingNodes={[]}
@@ -649,7 +649,7 @@ export const ClassifiedAsset: Story = {
 };
 
 export const UnclassifiedLiability: Story = {
-  render: () => <LedgerPageStoryHarness accountType={AccountType.LIABILITY} />,
+  render: () => <LedgerPageStoryHarness accountType={AccountType.BALANCE} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByText("Account", { exact: true })).toBeVisible();
@@ -662,7 +662,7 @@ export const UnclassifiedLiability: Story = {
 export const ArchivedClassifiedLiability: Story = {
   render: () => (
     <LedgerPageStoryHarness
-      accountType={AccountType.LIABILITY}
+      accountType={AccountType.BALANCE}
       accountActive={false}
       assetClass={AssetClass.FIXED_INCOME}
     />

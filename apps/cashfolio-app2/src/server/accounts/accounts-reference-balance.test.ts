@@ -8,7 +8,7 @@ describe("computeRawBalanceInReferenceCurrency", () => {
     const getCurrencyToReferenceRate = vi.fn().mockResolvedValue(1.1);
 
     const converted = await computeRawBalanceInReferenceCurrency({
-      type: "ASSET",
+      type: "BALANCE",
       unit: "CURRENCY",
       currency: "EUR",
       cryptocurrency: null,
@@ -25,7 +25,7 @@ describe("computeRawBalanceInReferenceCurrency", () => {
     expect(getCurrencyToReferenceRate).toHaveBeenCalledWith("EUR");
 
     const noConversion = await computeRawBalanceInReferenceCurrency({
-      type: "ASSET",
+      type: "BALANCE",
       unit: "CURRENCY",
       currency: "chf",
       cryptocurrency: null,
@@ -46,7 +46,7 @@ describe("computeRawBalanceInReferenceCurrency", () => {
     const securityRate = vi.fn().mockResolvedValue(180);
 
     const crypto = await computeRawBalanceInReferenceCurrency({
-      type: "LIABILITY",
+      type: "BALANCE",
       unit: "CRYPTOCURRENCY",
       currency: null,
       cryptocurrency: "btc",
@@ -63,7 +63,7 @@ describe("computeRawBalanceInReferenceCurrency", () => {
     expect(cryptoRate).toHaveBeenCalledWith("BTC");
 
     const security = await computeRawBalanceInReferenceCurrency({
-      type: "ASSET",
+      type: "BALANCE",
       unit: "SECURITY",
       currency: null,
       cryptocurrency: null,
@@ -80,7 +80,7 @@ describe("computeRawBalanceInReferenceCurrency", () => {
     expect(securityRate).toHaveBeenCalledWith("AAPL", "USD");
 
     const missingTradeCurrency = await computeRawBalanceInReferenceCurrency({
-      type: "ASSET",
+      type: "BALANCE",
       unit: "SECURITY",
       currency: null,
       cryptocurrency: null,
@@ -114,7 +114,7 @@ describe("computeRawBalanceInReferenceCurrency", () => {
     expect(result).toBeNull();
 
     const missingCurrency = await computeRawBalanceInReferenceCurrency({
-      type: "ASSET",
+      type: "BALANCE",
       unit: "CURRENCY",
       currency: null,
       cryptocurrency: null,

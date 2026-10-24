@@ -499,8 +499,8 @@ describe("createLedgerAccountMutationActions", () => {
 
     await actions.handleUpdateAccount({
       name: "Checking",
-      typeDescriptor: "ASSET",
-      type: AccountType.ASSET,
+      typeDescriptor: "BALANCE",
+      type: AccountType.BALANCE,
       equityAccountSubtype: undefined,
       groupId: "group-1",
       sortOrder: 3,
@@ -517,7 +517,7 @@ describe("createLedgerAccountMutationActions", () => {
         id: "account-1",
         accountBookId: "book-1",
         name: "Checking",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: undefined,
         groupId: "group-1",
         sortOrder: 3,
@@ -559,8 +559,8 @@ describe("createLedgerAccountMutationActions", () => {
     await expect(
       actions.handleUpdateAccount({
         name: undefined,
-        typeDescriptor: "ASSET",
-        type: AccountType.ASSET,
+        typeDescriptor: "BALANCE",
+        type: AccountType.BALANCE,
         equityAccountSubtype: undefined,
         groupId: "group-1",
         sortOrder: 3,

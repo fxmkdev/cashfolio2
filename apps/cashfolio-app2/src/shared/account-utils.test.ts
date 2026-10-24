@@ -77,7 +77,7 @@ describe("isBookingValueCompatibleWithAccountType", () => {
   test("returns true for non-equity accounts", () => {
     expect(
       isBookingValueCompatibleWithAccountType(-100, {
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
       }),
     ).toBe(true);
@@ -108,7 +108,7 @@ describe("isOpeningBalancesAccount", () => {
     ).toBe(false);
     expect(
       isOpeningBalancesAccount({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
       }),
     ).toBe(false);

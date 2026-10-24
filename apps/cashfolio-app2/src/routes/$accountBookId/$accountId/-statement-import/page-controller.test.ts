@@ -365,7 +365,7 @@ describe("statement import page controller", () => {
 
     const rows = getStatementImportReviewRows({
       account: {
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         currency: "CHF",
       },
@@ -378,7 +378,7 @@ describe("statement import page controller", () => {
     expect(
       getStatementImportBalanceCarriedForwardRow({
         account: {
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
           currency: "CHF",
         },
@@ -394,7 +394,7 @@ describe("statement import page controller", () => {
     expect(
       getStatementImportGridRows({
         account: {
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
           currency: "CHF",
         },
@@ -412,7 +412,7 @@ describe("statement import page controller", () => {
     expect(
       getStatementImportBalanceCarriedForwardRow({
         account: {
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
           currency: "CHF",
         },
@@ -459,7 +459,7 @@ describe("statement import page controller", () => {
 
     const rows = getStatementImportReviewRows({
       account: {
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         currency: "CHF",
       },
@@ -505,7 +505,7 @@ describe("statement import page controller", () => {
 
     const rows = getStatementImportReviewRows({
       account: {
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         currency: "CHF",
       },
@@ -536,7 +536,7 @@ describe("statement import page controller", () => {
 
     const rows = getStatementImportReviewRows({
       account: {
-        type: AccountType.LIABILITY,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         currency: "CHF",
       },
@@ -548,7 +548,7 @@ describe("statement import page controller", () => {
     expect(
       getStatementImportBalanceCarriedForwardRow({
         account: {
-          type: AccountType.LIABILITY,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
           currency: "CHF",
         },

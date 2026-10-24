@@ -114,10 +114,7 @@ export async function applyOpeningBalanceTarget(args: {
   if (normalizedOpeningBalance === undefined) {
     return;
   }
-  if (
-    args.account.type !== AccountType.ASSET &&
-    args.account.type !== AccountType.LIABILITY
-  ) {
+  if (args.account.type !== AccountType.BALANCE) {
     return;
   }
 

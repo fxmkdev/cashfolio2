@@ -13,7 +13,7 @@ describe("staging manually valued portfolio", () => {
     expect(account).toMatchObject({
       name: "Managed Portfolio CHF",
       groupKey: "investments",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       unit: Unit.CURRENCY,
       currency: "CHF",
       isActive: true,

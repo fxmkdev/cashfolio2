@@ -43,7 +43,7 @@ export async function loadHistoryOpeningBalancePoint(args: {
       where: {
         accountBookId: args.accountBookId,
         type: {
-          in: [AccountType.ASSET, AccountType.LIABILITY],
+          in: [AccountType.BALANCE],
         },
       },
       select: {

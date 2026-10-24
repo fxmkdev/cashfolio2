@@ -152,7 +152,7 @@ describe("transaction mutation boundary validation", () => {
 function createAssetAccount(id: string) {
   return {
     id,
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     equityAccountSubtype: null,
     unit: Unit.CURRENCY,
     currency: "CHF",
@@ -256,8 +256,8 @@ describe("transactions mutations", () => {
       transactionId: "tx-1",
     });
     prisma.booking.findMany.mockResolvedValue([
-      createBookingType("booking-1", AccountType.ASSET, null),
-      createBookingType("booking-2", AccountType.LIABILITY, null),
+      createBookingType("booking-1", AccountType.BALANCE, null),
+      createBookingType("booking-2", AccountType.BALANCE, null),
     ]);
     prisma.booking.update.mockResolvedValue({ id: "booking-1" });
     prisma.booking.deleteMany.mockResolvedValue({ count: 2 });
@@ -276,7 +276,7 @@ describe("transactions mutations", () => {
       cryptocurrency: null,
       symbol: null,
       tradeCurrency: null,
-      type: AccountType.LIABILITY,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
     });
     prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
@@ -385,7 +385,7 @@ describe("transactions mutations", () => {
       createAssetAccount("asset-1"),
       {
         id: "counter-1",
-        type: AccountType.LIABILITY,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
         unit: Unit.CURRENCY,
         currency: "USD",
@@ -633,12 +633,12 @@ describe("transactions mutations", () => {
       },
       {
         id: "asset-1",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
       },
       {
         id: "liability-1",
-        type: AccountType.LIABILITY,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
       },
     ]);
@@ -832,7 +832,7 @@ describe("transactions mutations", () => {
       equityAccountSubtype: EquityAccountSubtype.EXPENSE,
     });
     prisma.booking.findMany.mockResolvedValueOnce([
-      createBookingType("booking-1", AccountType.ASSET, null),
+      createBookingType("booking-1", AccountType.BALANCE, null),
       createBookingType(
         "booking-2",
         AccountType.EQUITY,

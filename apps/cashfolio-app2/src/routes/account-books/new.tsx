@@ -189,7 +189,7 @@ function NewAccountBookPageContent({
                 await navigate({
                   to: "/$accountBookId/accounts",
                   params: { accountBookId: created.id },
-                  search: { tab: "ASSET", mode: "active" },
+                  search: { tab: "BALANCE", mode: "active" },
                 });
               } catch (error) {
                 setSubmitError(

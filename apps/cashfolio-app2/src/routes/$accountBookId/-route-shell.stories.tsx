@@ -59,7 +59,7 @@ function AccountBookShellSmokeHarness({
         }}
         pathname={pathname}
         activeSection={neutralLedger ? null : undefined}
-        accountsLinkSearch={{ tab: "ASSET", mode: "active" }}
+        accountsLinkSearch={{ tab: "BALANCE", mode: "active" }}
         periodLinkSearch={{}}
       >
         <Box px="xl" py="xl">

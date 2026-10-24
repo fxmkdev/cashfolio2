@@ -23,17 +23,11 @@ export function normalizeMissingGroupCashAccountFlag<
 }
 
 function canBeCashAccount(account: { type: AccountType; unit?: Unit | null }) {
-  return (
-    (account.type === AccountType.ASSET ||
-      account.type === AccountType.LIABILITY) &&
-    account.unit === Unit.CURRENCY
-  );
+  return account.type === AccountType.BALANCE && account.unit === Unit.CURRENCY;
 }
 
 function canBeCashGroup(group: { type: AccountType }) {
-  return (
-    group.type === AccountType.ASSET || group.type === AccountType.LIABILITY
-  );
+  return group.type === AccountType.BALANCE;
 }
 
 async function getParentGroupCashFlag(

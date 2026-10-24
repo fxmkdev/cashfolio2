@@ -12,7 +12,7 @@ import {
 const account = {
   accountBookId: "book-1",
   name: "Savings",
-  type: "ASSET",
+  type: "BALANCE",
   unit: "CURRENCY",
   currency: "CHF",
 };
@@ -36,12 +36,29 @@ describe("account mutation input contracts", () => {
         .assetClass,
     ).toBeNull();
   });
+  it.each(["ASSET", "LIABILITY"])(
+    "rejects obsolete %s mutation types",
+    (type) => {
+      for (const validate of [
+        validateAccountMutationInput,
+        validateAccountGroupMutationInput,
+      ]) {
+        expect(() => validate({ ...account, type })).toThrow();
+      }
+      for (const validate of [
+        validateAccountUpdateInput,
+        validateAccountGroupUpdateInput,
+      ]) {
+        expect(() => validate({ ...account, id: "existing", type })).toThrow();
+      }
+    },
+  );
   it("preserves omitted update fields and strips unrecognized fields", () => {
     const parsed = validateAccountUpdateInput({
       accountBookId: "book-1",
       id: "account-1",
       name: "Renamed",
-      type: "ASSET",
+      type: "BALANCE",
       bookings: [{ value: 10 }],
     });
     expect(parsed).toMatchObject({ id: "account-1", name: "Renamed" });
@@ -117,7 +134,7 @@ describe("account mutation input contracts", () => {
   });
 
   it("accepts every account and unit enum variant", () => {
-    for (const type of ["ASSET", "LIABILITY", "EQUITY"]) {
+    for (const type of ["BALANCE", "EQUITY"]) {
       expect(validateAccountMutationInput({ ...account, type }).type).toBe(
         type,
       );
@@ -195,7 +212,7 @@ describe("account mutation input contracts", () => {
     const input = {
       accountBookId: "book-1",
       name: "Group",
-      type: "ASSET",
+      type: "BALANCE",
       [field as string]: value,
     };
     expect(() => validateAccountGroupMutationInput(input)).toThrow();

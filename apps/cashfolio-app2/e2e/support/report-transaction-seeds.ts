@@ -13,7 +13,8 @@ export async function seedAssetAccountWithMissingReferenceBalance(args: {
   const assetRootGroup = await prisma.accountGroup.findFirstOrThrow({
     where: {
       accountBookId: args.accountBookId,
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
+      name: "Assets",
       parentGroupId: null,
     },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -25,7 +26,7 @@ export async function seedAssetAccountWithMissingReferenceBalance(args: {
       id: createId(),
       accountBookId: args.accountBookId,
       name: "E2E Missing Valuation",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       groupId: assetRootGroup.id,
       unit: Unit.CURRENCY,
       currency: "XXX",

@@ -88,11 +88,7 @@ export function useEditAccountModalController({
           accountGroups,
         }),
       openingBalance: (value, values) => {
-        if (
-          values.typeDescriptor !== AccountType.ASSET &&
-          values.typeDescriptor !== AccountType.LIABILITY &&
-          values.typeDescriptor !== "BALANCE"
-        ) {
+        if (values.typeDescriptor !== AccountType.BALANCE) {
           return null;
         }
         if (value == null || value === "") {
@@ -180,8 +176,7 @@ export function useEditAccountModalController({
     form.getValues(),
   );
   const canMarkAsCashAccount =
-    (type === AccountType.ASSET || type === AccountType.LIABILITY) &&
-    unit === Unit.CURRENCY;
+    type === AccountType.BALANCE && unit === Unit.CURRENCY;
   const groupId = form.getValues().groupId;
   const cashAccountEditable = isRootCashAccountEditable({
     type,

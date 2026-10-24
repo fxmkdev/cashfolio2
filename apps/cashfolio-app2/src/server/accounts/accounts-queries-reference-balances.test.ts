@@ -83,7 +83,7 @@ describe("getAccountReferenceBalances", () => {
       data: {
         accountBookId: "book-1",
         accountState: "inactive",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
       },
     });
 
@@ -93,7 +93,7 @@ describe("getAccountReferenceBalances", () => {
         where: {
           accountBookId: "book-1",
           isActive: false,
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
         },
       }),
     );
@@ -104,12 +104,12 @@ describe("getAccountReferenceBalances", () => {
       data: {
         accountBookId: "book-1",
         accountState: "all",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
       },
     });
     expect(prisma.account.findMany.mock.calls[0]![0].where).toEqual({
       accountBookId: "book-1",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
     });
   });
 
@@ -119,7 +119,7 @@ describe("getAccountReferenceBalances", () => {
       prisma.account.findMany.mockResolvedValue([
         {
           id: "asset-chf",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
           currency: "CHF",
           cryptocurrency: null,
@@ -128,7 +128,7 @@ describe("getAccountReferenceBalances", () => {
         },
         {
           id: "liability-usd",
-          type: AccountType.LIABILITY,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
           currency: "USD",
           cryptocurrency: null,
@@ -137,7 +137,7 @@ describe("getAccountReferenceBalances", () => {
         },
         {
           id: "asset-security",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: Unit.SECURITY,
           currency: null,
           cryptocurrency: null,
@@ -210,7 +210,7 @@ describe("getAccountReferenceBalances", () => {
     prisma.account.findMany.mockResolvedValue([
       {
         id: "asset-chf",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         currency: "CHF",
         cryptocurrency: null,

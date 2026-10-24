@@ -12,7 +12,7 @@ import {
 import { matchStatementImportDrafts } from "./draft/matching";
 import { createRow, currentAccount } from "./test-fixtures";
 
-const account = { ...currentAccount, type: AccountType.ASSET };
+const account = { ...currentAccount, type: AccountType.BALANCE };
 function draft(date: string, amount: string, row = 2) {
   return createStatementImportDraft({
     currentAccount,
@@ -297,7 +297,7 @@ describe("statement import chronological balances", () => {
 
   it("retains decimal precision and signed liability balances", () => {
     const rows = getStatementImportGridRows({
-      account: { ...account, type: AccountType.LIABILITY },
+      account: { ...account, type: AccountType.BALANCE },
       existingBookings: [
         booking("opening", "2026-01-01", "-0.1"),
         booking("manual", "2026-02-02", "-0.2"),
@@ -315,7 +315,7 @@ describe("statement import chronological balances", () => {
     const row = draft("2026-02-02", "1");
     Object.assign(row.transaction.bookings[0], unit);
     const rows = getStatementImportGridRows({
-      account: { type: AccountType.ASSET, ...unit },
+      account: { type: AccountType.BALANCE, ...unit },
       existingBookings: [opening],
       drafts: [row],
     });
