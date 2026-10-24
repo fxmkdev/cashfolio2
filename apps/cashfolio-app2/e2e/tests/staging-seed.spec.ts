@@ -22,6 +22,7 @@ import { selectSegmentedControlOption } from "../support/segmented-control";
 const today = new Date("2026-10-10T00:00:00Z");
 let seeded: SeedSummary;
 let bankAccountId: string;
+let previousLocale: string | null = null;
 
 function seededBook(key: string) {
   const book = seeded.books.find((candidate) => candidate.key === key);
@@ -31,6 +32,13 @@ function seededBook(key: string) {
 
 test.beforeAll(async ({ e2eExternalId }) => {
   assertSafeWriteTarget();
+  previousLocale =
+    (
+      await prisma.user.findUnique({
+        where: { externalId: e2eExternalId },
+        select: { locale: true },
+      })
+    )?.locale ?? null;
   const user = await prisma.user.upsert({
     where: { externalId: e2eExternalId },
     update: { locale: "en-CH" },
@@ -51,6 +59,14 @@ test.beforeAll(async ({ e2eExternalId }) => {
     select: { id: true },
   });
   bankAccountId = bank.id;
+});
+
+test.afterAll(async ({ e2eExternalId }) => {
+  // Worker identities are reused by later files; keep this locale fixture local.
+  await prisma.user.updateMany({
+    where: { externalId: e2eExternalId },
+    data: { locale: previousLocale },
+  });
 });
 
 test("synthetic household data supports reports and three years of history", async ({

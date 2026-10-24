@@ -333,6 +333,9 @@ test("a changed start date rejects an open draft without losing its inputs", asy
     dialog.getByRole("button", { name: "Refresh Choices" }),
   ).toBeEnabled();
   await dialog.getByRole("button", { name: "Refresh Choices" }).click();
+  await expect(
+    dialog.getByRole("button", { name: "Refresh Choices" }),
+  ).toBeEnabled();
   await expect(dialog.getByLabel("Description")).toHaveValue(description);
   expect(
     await countTransactionsByDescription({
