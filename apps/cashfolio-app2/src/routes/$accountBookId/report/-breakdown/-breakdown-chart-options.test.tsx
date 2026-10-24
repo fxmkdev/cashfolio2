@@ -1,3 +1,4 @@
+import { _ModuleSupport } from "ag-charts-community";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
@@ -37,8 +38,19 @@ function expectCategoryColorsAndLegend(options: PeriodBreakdownChartOptions) {
     expect(item).not.toHaveProperty("fill");
     expect(item).not.toHaveProperty("stroke");
     expect(item.showInLegend).toBe(true);
-    expect(item.legendItemName).toBe(item.data?.[0].label);
-    expect(item.yName).toBe("Amount");
+    expect(item.legendItemName).toBeUndefined();
+    expect(item.yName).toBe(item.data?.[0].label);
+    const renderer = item.tooltip?.renderer;
+    if (!renderer) throw new Error("Expected a tooltip renderer");
+    expect(
+      renderer({ datum: item.data?.[0] } as Parameters<typeof renderer>[0]),
+    ).toEqual({
+      heading: item.data?.[0].label,
+      data: [
+        { label: "Amount", value: item.data?.[0].amountLabel },
+        { label: "Share", value: item.data?.[0].percentageLabel },
+      ],
+    });
   }
 }
 
@@ -111,10 +123,96 @@ describe("report breakdown bar colors and legends", () => {
         }).chartOptions,
     );
     expectCategoryColorsAndLegend(options);
-    expect(
-      getBarSeries(options).map((series) => series.legendItemName),
-    ).toEqual(["Rent", "Utilities"]);
+    expect(getBarSeries(options).map((series) => series.yName)).toEqual([
+      "Rent",
+      "Utilities",
+    ]);
   });
+
+  test.each([0, 1])(
+    "legend interactions target only category %i when a group and account share a name",
+    (selectedIndex) => {
+      const options = renderChartOptions(
+        () =>
+          usePeriodBreakdownViewModel({
+            ...commonArgs,
+            overview: {
+              ...baseOverview,
+              expenseBreakdown: {
+                ...baseOverview.expenseBreakdown,
+                hierarchy: [
+                  {
+                    id: "group:investments",
+                    label: "Investments",
+                    kind: "group",
+                    amount: 100,
+                    children: [
+                      {
+                        id: "account:fund-fees",
+                        label: "Fund Fees",
+                        kind: "account",
+                        amount: 100,
+                        children: [],
+                      },
+                    ],
+                  },
+                  {
+                    id: "account:investments",
+                    label: "Investments",
+                    kind: "account",
+                    amount: 50,
+                    children: [],
+                  },
+                ],
+              },
+            },
+            selectedBreakdown: "expense",
+            selectedChartType: "bar",
+            drillPathByBreakdown: { expense: [], income: [], cashFlow: [] },
+            setDrillPathByBreakdown: vi.fn(),
+          }).chartOptions,
+      );
+      const series = getBarSeries(options).map((properties, index) => ({
+        id: `series-${index}`,
+        properties,
+        toggleSeriesItem: vi.fn(),
+      }));
+      const selectedSeries = series[selectedIndex];
+      const otherSeries = series[1 - selectedIndex];
+      const event = {
+        legendType: "category" as const,
+        enabled: false,
+        series: selectedSeries,
+        itemId: "amount",
+        legendItemName: selectedSeries.properties.legendItemName,
+      };
+      // Exercise the installed AG Charts handlers; shared legendItemName values
+      // link otherwise independent series even when their IDs differ.
+      for (const item of series) {
+        _ModuleSupport.Series.prototype.onLegendItemClick.call(
+          item as unknown as _ModuleSupport.UnknownSeries,
+          event,
+        );
+      }
+      expect(selectedSeries.toggleSeriesItem).toHaveBeenCalledOnce();
+      expect(otherSeries.toggleSeriesItem).not.toHaveBeenCalled();
+
+      for (const item of series) {
+        item.toggleSeriesItem.mockClear();
+        _ModuleSupport.Series.prototype.onLegendItemDoubleClick.call(
+          item as unknown as _ModuleSupport.UnknownSeries,
+          { ...event, enabled: true, numVisibleItems: 2 },
+        );
+      }
+      expect(selectedSeries.toggleSeriesItem.mock.calls[0]?.[0]).toBe(true);
+      expect(otherSeries.toggleSeriesItem.mock.calls[0]?.[0]).toBe(false);
+      expectCategoryColorsAndLegend(options);
+      expect(series.map((item) => item.properties.yName)).toEqual([
+        "Investments",
+        "Investments",
+      ]);
+    },
+  );
 
   test.each(["bar", "donut"] as const)(
     "cash flow uses sign colors when the stored chart type is %s",

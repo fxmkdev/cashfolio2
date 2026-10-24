@@ -356,6 +356,11 @@ submit UX and prevent duplicate requests.
   level. Only Cash Flow bars opt into sign-based colors: green for positive
   amounts, red for negative amounts, and gray for zero; they do not show a
   category legend.
+- Use each bar series' `yName` for its category legend text. Reserve
+  `legendItemName` for intentionally linked series: AG Charts groups legend
+  interactions by that name, so sibling accounts and groups with identical
+  labels must not share it. Keep the custom tooltip's amount field named
+  `Amount`.
 - AG Charts 14 callbacks have no source datum for waterfall totals/subtotals.
   Use `itemType` to identify aggregate bars and the existing contribution model
   to format Savings and Total Return. Aggregate bars do not drill down.

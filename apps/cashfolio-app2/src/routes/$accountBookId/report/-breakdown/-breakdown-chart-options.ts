@@ -177,8 +177,7 @@ export function usePeriodBreakdownChartOptions(args: {
           widthRatio: 0.72,
           xKey: "label" as const,
           yKey: "amount" as const,
-          yName: "Amount",
-          legendItemName: datum.label,
+          yName: datum.label,
           showInLegend: !colorBySign,
           tooltip: {
             renderer: ({ datum }: { datum: PeriodBreakdownChartDatum }) =>
