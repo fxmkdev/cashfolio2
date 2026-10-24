@@ -44,10 +44,12 @@ pnpm --filter cashfolio-app2 test-storybook:coverage
 - Include key states and important interaction paths, not only the default happy
   path.
 - Use the `cashfolio-app2: Storybook Tests` CI check for build and interaction
-  verification of the current PR revision, including changes to story play
-  functions. Do not duplicate it locally when it passes or while CI is pending
-  or unavailable. Use the commands above only for development or a justified
-  local investigation.
+  verification when reviewing the current PR revision. Do not duplicate it
+  locally just to review the PR, including while CI is pending or unavailable.
+- During implementation, including changes to story play functions, run focused
+  interaction tests when they provide inexpensive feedback. Leave full Storybook
+  builds/tests to CI by default; use local runs for a concrete investigation, a
+  relevant gap in CI coverage, or an explicit user request.
 
 Chromatic publishing:
 

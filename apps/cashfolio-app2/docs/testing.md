@@ -5,18 +5,29 @@ paths are relative to that app directory.
 
 ## Verification Policy
 
-For reviews and implementation work, rely on the relevant CI checks for the
-current PR revision. Do not repeat CI-covered checks locally when they pass or
-while CI is pending or unavailable, including after fixes. Earlier green results
-do not validate later changes, and pending, missing, skipped, cancelled, or
-inaccessible results are not passes.
+When reviewing an existing PR, reuse CI results for its current revision rather
+than repeating CI-covered checks locally, including inexpensive ones. Pending or
+unavailable CI does not automatically trigger local replacements. Local checks
+during review are reserved for concrete investigations, gaps in CI coverage, or
+explicit user requests. Inspect failing CI logs and artifacts first, then run
+the smallest useful local reproduction if needed.
 
-Local commands in this document are references for concrete investigations,
-checks CI does not cover, or explicit user requests. Inspect failing CI logs and
-artifacts first, then run the smallest useful local reproduction if needed.
-Avoid duplicate full unit/coverage suites, integration tests, production builds,
-E2E, and Storybook builds/tests; change size or perceived risk alone does not
-justify them. Report CI evidence separately from any local execution.
+During implementation, including fixes made during a review, run relevant
+inexpensive local checks before pushing even when CI also covers them. Prefer
+focused unit tests, typecheck, and lint/format checks scoped to the change where
+practical. Choose checks based on the changed behavior and their actual cost;
+avoid unrelated checks or repeating successful runs without new changes or a
+specific reason.
+
+Leave expensive full coverage runs, database-backed integration suites,
+production builds, E2E, and full Storybook builds/tests to CI by default. Run
+these locally only for a concrete investigation, a relevant gap in CI coverage,
+or an explicit user request, using the smallest useful run.
+
+Earlier green results do not validate later changes, and pending, missing,
+skipped, cancelled, or inaccessible results are not passes. Report CI evidence
+separately from any local execution. Commands below support both implementation
+feedback and focused investigations.
 
 See the repository's
 [Verification Policy](../../../CONTRIBUTING.md#verification-policy) for

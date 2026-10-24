@@ -43,11 +43,11 @@ Perform a complete self-review for the current pull request, implement the most 
      - `needs larger change` (architecture tradeoffs, broad refactor, risky scope, or unclear intent)
    - Prioritize applying `auto-fixable now` and `bounded fix` items across code, docs, tests, and config.
 
-4. Use CI as baseline verification.
-   - Inspect the workflows and CI results for the current PR revision to establish which relevant checks CI covers. Accept successful results as verification; do not repeat those checks locally.
-   - Defer CI-covered checks to CI, including when results are pending, missing, skipped, cancelled, or inaccessible. Report those states accurately rather than treating them as passes or automatically falling back to local execution. The same policy applies in branch-only mode.
-   - Run local checks only for a concrete investigation, a relevant check CI does not cover, or an explicit user request. For failing CI, inspect logs and artifacts first, then use the smallest useful reproduction if needed.
-   - Avoid duplicate full unit suites, coverage runs, production builds, E2E, and Storybook builds/tests. Change size or perceived risk alone does not justify local verification.
+4. Reuse CI evidence while reviewing the existing revision.
+   - Inspect the workflows and CI results for the current PR revision to establish which relevant checks CI covers. Accept successful results as verification; do not repeat those checks locally, including inexpensive ones, just to review the PR.
+   - Pending, missing, skipped, cancelled, or inaccessible CI does not automatically justify local replacements. Report those states accurately rather than treating them as passes. Branch-only review does not automatically require a local baseline suite either.
+   - During review, run local checks only for a concrete investigation, a relevant check CI does not cover, or an explicit user request. For failing CI, inspect logs and artifacts first, then use the smallest useful reproduction if needed.
+   - Leave expensive verification such as full coverage runs, database-backed integration suites, production builds, E2E, and full Storybook builds/tests to CI by default, including after fixes. Run these locally only for a concrete investigation, a relevant gap in CI coverage, or an explicit user request. Change size or perceived risk alone does not justify rerunning expensive suites.
    - Dependency installation and code generation needed to perform the work remain appropriate; do not run them solely to repeat CI verification.
 
 5. Implement feasible fixes.
@@ -58,9 +58,10 @@ Perform a complete self-review for the current pull request, implement the most 
      `gh api -X PATCH repos/<owner>/<repo>/pulls/<number> -f body="$(cat <path>)"`.
    - Do not over-claim: leave `needs larger change` items unimplemented and keep them explicit in the final report.
 
-6. Verify the updated revision through CI.
-   - After authorized fixes are pushed, inspect CI for the new PR revision. Earlier green results do not validate later commits or uncommitted changes.
-   - Do not automatically rerun baseline or broader checks locally after fixes. Apply the same limited local-check exceptions as in step 4; pending CI remains pending.
+6. Validate implemented fixes with fast local feedback and CI.
+   - Once fixes are made, treat that work as implementation: run relevant inexpensive local checks before pushing even when CI also covers them. Prefer focused unit tests, typecheck, and lint/format checks scoped to the change where practical; choose checks based on the changed behavior and their actual cost.
+   - Avoid unrelated checks and do not repeat successful local checks without new changes, failures, or a specific investigation. Do not reinstate a mandatory full baseline or deep pass; expensive suites remain subject to step 4.
+   - After authorized fixes are pushed, inspect CI for the new PR revision. Earlier green results do not validate later commits or uncommitted changes; pending CI remains pending.
    - Record CI results with the revision and run/check links separately from any local commands, their results, and the reason for running them.
 
 7. Re-evaluate readiness.
@@ -84,7 +85,7 @@ Perform a complete self-review for the current pull request, implement the most 
 ## Output Rules
 
 - In `Checks Run`, distinguish CI evidence from local execution. Successful CI coverage is sufficient evidence; not repeating a check locally is not `Missing Evidence`.
-- In `Missing Evidence`, identify applicable checks without successful results for the final revision, including pending, missing, skipped, cancelled, or inaccessible CI. State what remains to be verified without automatically running local replacements.
+- In `Missing Evidence`, identify applicable checks without successful results for the final revision, including pending, missing, skipped, cancelled, or inaccessible CI. State what remains to be verified without automatically running local replacements just to complete a review.
 - Separate facts from assumptions.
 - Distinguish clearly between findings that were fixed and findings that remain.
 - Prefer direct, actionable remediation over broad advice.

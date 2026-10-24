@@ -50,18 +50,23 @@ The `self-review` skill expects:
 
 ## Verification Policy
 
-The skill uses CI results for the current PR revision as verification, including
-typecheck, lint, formatting, unit/coverage, builds, E2E, and Storybook checks.
-It does not repeat successful checks locally or run local replacements while CI
-is pending or unavailable, including after review fixes. Earlier green results
-do not validate later changes.
+When reviewing an existing revision, the skill reuses CI results instead of
+repeating CI-covered checks locally, including inexpensive ones. Pending or
+unavailable CI does not automatically trigger local replacements. Local checks
+during review are reserved for concrete investigations, gaps in CI coverage, or
+explicit user requests; inspect failure logs and artifacts first.
 
-Local checks are reserved for a concrete investigation, a relevant check CI
-does not cover, or an explicit user request. Inspect CI failure logs and
-artifacts first and use the smallest useful reproduction; avoid expensive full
-suites solely for reassurance. See [the skill](self-review/SKILL.md) for readiness
-and evidence reporting, and [Testing](../../../apps/cashfolio-app2/docs/testing.md)
-for debugging commands.
+When implementing fixes, run relevant inexpensive local checks for fast feedback
+before pushing, even when CI also covers them. Prefer focused unit tests,
+typecheck, and lint/format checks scoped to the change where practical. Leave
+expensive coverage, integration, production build, E2E, and full Storybook runs
+to CI by default, using local runs only for a concrete investigation, a relevant
+gap in CI coverage, or an explicit user request.
+
+Earlier green results do not validate later changes. See
+[the skill](self-review/SKILL.md) for readiness and evidence reporting, and
+[Testing](../../../apps/cashfolio-app2/docs/testing.md) for development and
+debugging commands.
 
 When using a copied installation, sync the installed `SKILL.md` after updating
 the repository source. An existing symlink continues to use its target checkout;

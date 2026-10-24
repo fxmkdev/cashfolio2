@@ -101,16 +101,20 @@ pnpm lint:workflows                           # actionlint check for GitHub work
 
 ## Quality Checklist
 
-- Use CI as the default verification gate for reviews and implementation work.
-  Inspect workflow coverage and results for the current PR revision; do not
-  repeat CI-covered checks locally when they pass or while results are pending
-  or unavailable, including after fixes.
-- Run local checks only for a concrete investigation, a relevant check CI does
-  not cover, or an explicit user request. Inspect failing CI logs and artifacts
-  first, then use the smallest useful reproduction if needed.
-- Avoid duplicate full unit suites, coverage runs, production builds, E2E, and
-  Storybook builds/tests. Change size or perceived risk alone does not justify
-  running checks locally.
+- When reviewing an existing PR, use CI results for its current revision rather
+  than repeating CI-covered checks locally. Pending or unavailable CI does not
+  automatically justify local replacements. Run a local check during review only
+  for a concrete investigation, a relevant gap in CI coverage, or an explicit
+  user request; inspect failing CI logs and artifacts first.
+- During implementation, including fixes made during a review, run relevant
+  inexpensive local checks before pushing for fast feedback. Prefer focused unit
+  tests, typecheck, and lint/format checks scoped to the change where practical,
+  even when CI also runs them. Do not run unrelated checks or repeat successful
+  local checks without new changes or a specific reason.
+- Leave expensive verification such as full coverage runs, database-backed
+  integration suites, production builds, E2E, and full Storybook builds/tests to
+  CI by default. Run these locally only for a concrete investigation, a relevant
+  gap in CI coverage, or an explicit user request; use the smallest useful run.
 - Report CI evidence separately from local commands. Pending, missing, skipped,
   cancelled, or inaccessible checks are not passes; earlier green results do not
   validate later changes. Final merge readiness requires successful applicable

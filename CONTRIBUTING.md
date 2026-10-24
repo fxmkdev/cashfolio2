@@ -58,10 +58,10 @@ need to be strictly Conventional Commit formatted.
 
 Use the pnpm 12 version pinned by `packageManager` and `engines`. Keep Docker's
 pnpm pin aligned. Dependency updates retain a minimum release age of 1440
-minutes; do not add broad exceptions or relax the build-script allowlist.
-Use `pnpm install --frozen-lockfile` when dependency installation is needed for
-the work. Rely on CI to verify the committed dependency graph rather than
-installing locally solely to repeat that verification.
+minutes; do not add broad exceptions or relax the build-script allowlist. Use
+`pnpm install --frozen-lockfile` when dependency installation is needed for the
+work. Rely on CI to verify the committed dependency graph rather than installing
+locally solely to repeat that verification.
 
 ## Compiler Tooling
 
@@ -87,26 +87,35 @@ when comparing compatibility; preserve native `tsc` in typecheck scripts.
 
 ## Verification Policy
 
-Use CI as the default verification gate for reviews and implementation work.
-Inspect workflows and results for the current PR revision to establish which
-relevant checks CI covers. Accept successful CI results without repeating those
-checks locally. This includes typecheck, lint, formatting, unit/coverage,
-workflow lint, integration tests, production builds, E2E, and Storybook
-builds/tests.
+When reviewing an existing PR, inspect workflows and results for its current
+revision and reuse CI evidence rather than repeating CI-covered checks locally.
+This applies to inexpensive checks as well as expensive suites. Pending,
+missing, skipped, cancelled, or inaccessible CI results do not automatically
+justify local replacements. Run a local check during review only for a concrete
+investigation, a relevant check CI does not cover, or an explicit user request.
+Inspect failing CI logs and artifacts first, then use the smallest useful local
+reproduction if needed. Reviewing a branch without a PR does not automatically
+require a local baseline suite either.
 
-Defer CI-covered checks to CI even when results are pending, missing, skipped,
-cancelled, or inaccessible, including after fixes or before a PR exists. Report
-these states accurately; they are not passes and do not automatically justify
-local replacements. After authorized changes are pushed, use CI results for the
-new revision. Earlier green results do not validate later commits or uncommitted
-changes. Final merge readiness requires successful applicable CI checks for the
-final PR revision and no unverified local fixes.
+During implementation, including fixes made during a review, run relevant
+inexpensive local checks before pushing for fast feedback even when CI also
+covers them. Prefer focused unit tests, typecheck, and lint/format checks scoped
+to the change where practical. Choose checks based on the changed behavior and
+their actual cost; a small unit suite may be appropriate in full, while a costly
+suite should be narrowed. Avoid unrelated checks and do not repeat successful
+local checks without new changes, failures, or a specific investigation.
 
-Run local checks only for a concrete investigation, a relevant check CI does not
-cover, or an explicit user request. Inspect failing CI logs and artifacts first;
-if local reproduction is useful, run the smallest relevant check. Avoid
-expensive full suites solely for reassurance. Change size or perceived risk
-alone does not justify repeating CI locally.
+Leave expensive verification to CI by default: full coverage runs,
+database-backed integration suites, production builds, E2E, and full Storybook
+builds/tests. Run these locally only for a concrete investigation, a relevant
+gap in CI coverage, or an explicit user request, using the smallest useful run.
+Change size or perceived risk alone does not justify rerunning expensive suites.
+
+After authorized changes are pushed, use CI results for the new revision.
+Earlier green results do not validate later commits or uncommitted changes.
+Pending, missing, skipped, cancelled, or inaccessible results are not passes.
+Final merge readiness requires successful applicable CI checks for the final PR
+revision and no unverified local fixes.
 
 Report CI evidence with the revision and run/check links separately from local
 commands and their results. A successful CI check is not missing evidence merely
