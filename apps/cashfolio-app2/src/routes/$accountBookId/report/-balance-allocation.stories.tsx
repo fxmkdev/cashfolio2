@@ -128,8 +128,8 @@ export const OverdraftAndOverpayment: Story = {
       expect(table.queryByText("Credit Card")).not.toBeInTheDocument(),
     );
     await userEvent.dblClick(table.getByText("Bank Account"));
-    await expect(args.onBreakdownAccountDoubleClick).toHaveBeenCalledWith(
-      "bank",
+    await waitFor(() =>
+      expect(args.onBreakdownAccountDoubleClick).toHaveBeenCalledWith("bank"),
     );
     await expect(
       canvas.queryByText(/excluded from allocation/),
