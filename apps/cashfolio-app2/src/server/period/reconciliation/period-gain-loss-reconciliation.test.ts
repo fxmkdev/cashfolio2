@@ -58,6 +58,20 @@ vi.mock("../period-conversion", () => ({
   getUnitToReferenceExchangeRate,
 }));
 
+vi.mock("../cache/period-base-data-cache", () => ({
+  getOrLoadPeriodBaseData: vi.fn(async () => ({
+    baseAssetLiabilityAccounts: [],
+  })),
+}));
+vi.mock("./period-account-gain-loss-sources", () => ({
+  loadAccountGainLossSources: vi.fn(async () => ({
+    node: undefined,
+    contribution: undefined,
+    recordedAdjustments: [],
+    executionResiduals: [],
+  })),
+}));
+
 import {
   getPeriodGainLossReconciliation,
   getPeriodGainLossReconciliationPageData,

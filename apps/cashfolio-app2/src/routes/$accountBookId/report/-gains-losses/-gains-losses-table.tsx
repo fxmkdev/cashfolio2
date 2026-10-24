@@ -4,13 +4,11 @@ import { FORMATTED_NUMERIC_COLUMN } from "@/components/grid/column-types";
 import { DataGrid } from "@/components/grid/data-grid";
 import { useExpandedGroups } from "@/hooks/use-expanded-groups";
 import type { GainsLossesBreakdownNode } from "./-gains-losses-breakdown-types";
-import { isExplicitGainLossDrillRow } from "./-gains-losses-drill";
 import {
   GAINS_LOSSES_TOTAL_FOOTER_ROW_ID,
   type GainsLossesGridRow,
   type GainsLossesTotalFooterRow,
   flattenGainsLossesHierarchyRows,
-  parseGainsLossesUnitAccountId,
   sumTopLevelRealizedGainLoss,
   sumTopLevelTotalGainLoss,
   sumTopLevelUnrealizedGainLoss,
@@ -20,7 +18,6 @@ type GainsLossesTableProps = {
   hierarchy: GainsLossesBreakdownNode[];
   displayDecimals?: number;
   expandedGroupsStorageKey: string;
-  onExplicitGainLossDoubleClick?: () => void;
   onUnitAccountDoubleClick?: (accountId: string) => void;
 };
 
@@ -28,7 +25,6 @@ export function GainsLossesTable({
   hierarchy,
   displayDecimals = 2,
   expandedGroupsStorageKey,
-  onExplicitGainLossDoubleClick,
   onUnitAccountDoubleClick,
 }: GainsLossesTableProps) {
   const rowData = useMemo(
@@ -80,7 +76,7 @@ export function GainsLossesTable({
         suppressHeaderMenuButton: true,
       }}
       autoGroupColumnDef={{
-        headerName: "Unit",
+        headerName: "Asset Class / Account",
         field: "name",
         width: 475,
         suppressSizeToFit: true,
@@ -110,18 +106,8 @@ export function GainsLossesTable({
           return;
         }
 
-        const unitAccountId = parseGainsLossesUnitAccountId({
-          rowId: event.data.id,
-          parentId: event.data.parentId,
-        });
-        if (unitAccountId) {
-          onUnitAccountDoubleClick?.(unitAccountId);
-          return;
-        }
-
-        if (isExplicitGainLossDrillRow(event.data)) {
-          onExplicitGainLossDoubleClick?.();
-        }
+        if (event.data.accountId)
+          onUnitAccountDoubleClick?.(event.data.accountId);
       }}
     />
   );

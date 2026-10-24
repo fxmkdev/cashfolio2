@@ -136,6 +136,8 @@ function getEquityBookingSelect(usesPreloadedEquityAccountFilter: boolean) {
     id: true,
     accountId: true,
     transactionId: true,
+    description: true,
+    transaction: { select: { description: true } },
     date: true,
     value: true,
     unit: true,
@@ -182,6 +184,8 @@ function mapPeriodEquityBooking(args: {
 
   return {
     id: args.booking.id,
+    description: args.booking.description ?? null,
+    transactionDescription: args.booking.transaction?.description ?? null,
     accountId: bookingAccountId,
     accountName: account.name,
     accountGroupId: account.groupId,

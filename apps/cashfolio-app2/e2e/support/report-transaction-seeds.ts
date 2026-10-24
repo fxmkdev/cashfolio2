@@ -1,6 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 import {
   AccountType,
+  AssetClass,
   EquityAccountSubtype,
   Unit,
 } from "../../src/.prisma-client/enums";
@@ -82,6 +83,10 @@ export async function seedSecurityGainLossDrilldownScenario(args: {
   securityAccountId: string;
   counterAccountId: string;
 }) {
+  await prisma.account.update({
+    where: { id_accountBookId: { id: args.securityAccountId, accountBookId: args.accountBookId } },
+    data: { assetClass: AssetClass.EQUITIES },
+  });
   const securityAccount = await prisma.account.findFirstOrThrow({
     where: {
       id: args.securityAccountId,

@@ -32,7 +32,7 @@ export function ReconciliationStatCards(args: {
         valueColor={args.summary.totalGainLoss >= 0 ? "green" : "red"}
       />
       <StatCard
-        label="Realised"
+        label="Realised / Recorded"
         value={args.currencyFormatter.format(args.summary.realizedGainLoss)}
         valueColor={args.summary.realizedGainLoss >= 0 ? "green" : "red"}
       />

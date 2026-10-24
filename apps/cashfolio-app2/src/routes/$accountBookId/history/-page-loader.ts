@@ -8,7 +8,6 @@ import type {
   HistoryScopedMetric,
 } from "@/shared/history-scope";
 import type { UserLocale } from "@/user-locale";
-import { getGainLossEquityAccountId } from "@/server/accounts";
 import { DEFAULT_USER_LOCALE } from "@/user-locale";
 
 export type HistoryPageLoaderData = {
@@ -43,16 +42,8 @@ export async function loadHistoryPageData(args: {
     },
   });
 
-  const gainLossEquityAccountId =
-    args.scopedMetric === "gainsLosses" &&
-    history.scopeSelection.gainsLosses.startsWith("explicit-account:")
-      ? await getGainLossEquityAccountId({
-          data: { accountBookId: args.accountBookId },
-        })
-      : null;
-
   return {
     history,
-    gainLossEquityAccountId,
+    gainLossEquityAccountId: null,
   };
 }

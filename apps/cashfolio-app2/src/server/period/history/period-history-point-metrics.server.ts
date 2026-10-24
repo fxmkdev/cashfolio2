@@ -1,3 +1,4 @@
+import { buildGainLossAccountAttribution } from "../breakdown/period-gain-loss-attribution";
 import { toMoney, type Money, moneyAdd, moneySum } from "../../../shared/money";
 import { round2 } from "../period-helpers";
 
@@ -272,6 +273,7 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
   });
   const gainsLossesBreakdown = buildGainsLossesBreakdown({
     contributions: Array.from(gainsLossesContributionByKey.values()),
+    accountAttributionById: buildGainLossAccountAttribution(baseData),
     referenceCurrency,
   });
   const gainLossScopeOptions = buildHistoryGainLossScopeOptions({

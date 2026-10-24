@@ -21,7 +21,10 @@ import type {
   HoldingRateConvertibleAccount,
   HoldingTransaction,
 } from "./period-overview-holdings-types";
-import { computeExecutionResidualRealization } from "./period-execution-residuals";
+import {
+  computeExecutionResidualRealization,
+  type ExecutionResidualContribution,
+} from "./period-execution-residuals";
 import type { TransferClearingUnitBucket } from "../transfer-clearing/period-transfer-clearing";
 
 import type { PeriodBaseExecutionResidualTransaction } from "../base-data/period-base-data-types";
@@ -48,6 +51,7 @@ export async function computePeriodHoldingGainLoss(args: {
     }
   >;
   executionResidualTransactions: PeriodBaseExecutionResidualTransaction[];
+  onExecutionResidual?: (contribution: ExecutionResidualContribution) => void;
   resolveRate: (input: {
     unit: Unit;
     currency: string | null;
@@ -221,6 +225,7 @@ export async function computePeriodHoldingGainLoss(args: {
       trackedHoldingAccountIdSet: holdingAccountIdSet,
       convertBookingToReference: args.convertBookingToReference,
       onContribution: (contribution) => {
+        args.onExecutionResidual?.(contribution);
         accumulateGainLossContribution({
           byKey: args.gainsLossesContributionByKey,
           sourceKind: "HOLDING",

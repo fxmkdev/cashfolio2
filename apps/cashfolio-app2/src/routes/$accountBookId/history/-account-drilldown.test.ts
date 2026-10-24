@@ -14,22 +14,29 @@ const options: HistoryScopeOption[] = [
     label: "Clearing",
     kind: "account",
   },
-  { value: "unit-type:security", label: "Security", kind: "gainLoss" },
-  { value: "unit:security:AAPL:USD", label: "AAPL", kind: "gainLoss" },
+  { value: "asset-class:EQUITIES", label: "Security", kind: "gainLoss" },
+  { value: "asset-class:EQUITIES", label: "AAPL", kind: "gainLoss" },
   {
-    value: "unit-account:security:AAPL:USD:asset",
+    value: "gain-loss-account:asset",
     label: "Asset",
+    accountId: "asset",
     kind: "gainLoss",
-    parentValue: "unit:security:AAPL:USD",
+    parentValue: "asset-class:EQUITIES",
   },
   {
     value:
-      "unit-account:security:AAPL:USD:virtual:transfer-clearing:account:security:AAPL:USD",
+      "gain-loss-account:virtual:transfer-clearing:account:security:AAPL:USD",
     label: "Clearing",
+    accountId: "virtual:transfer-clearing:account:security:AAPL:USD",
     kind: "gainLoss",
-    parentValue: "unit:security:AAPL:USD",
+    parentValue: "asset-class:EQUITIES",
   },
-  { value: "explicit-account:cash", label: "Cash", kind: "gainLoss" },
+  {
+    value: "gain-loss-account:cash",
+    label: "Cash",
+    kind: "gainLoss",
+    accountId: "cash",
+  },
 ];
 
 describe("History account drill-down", () => {
@@ -80,7 +87,7 @@ describe("History account drill-down", () => {
     },
   );
 
-  test("uses parent unit prefix and preserves virtual account IDs", () => {
+  test("uses account metadata and preserves virtual account IDs", () => {
     for (const accountId of [
       "asset",
       "virtual:transfer-clearing:account:security:AAPL:USD",
@@ -88,7 +95,7 @@ describe("History account drill-down", () => {
       expect(
         resolveHistoryAccountDrillTarget({
           metric: "gainsLosses",
-          scope: `unit-account:security:AAPL:USD:${accountId}`,
+          scope: `gain-loss-account:${accountId}`,
           options,
           gainLossEquityAccountId: null,
         }),
@@ -98,8 +105,8 @@ describe("History account drill-down", () => {
 
   test.each([
     "total",
-    "unit-type:security",
-    "unit:security:AAPL:USD",
+    "asset-class:EQUITIES",
+    "asset-class:EQUITIES",
     "account:expense",
   ] as const)("rejects Gain/Loss aggregate scope %s", (scope) => {
     expect(
@@ -114,14 +121,14 @@ describe("History account drill-down", () => {
 
   test("rejects unit account scopes with missing or mismatched parents or empty IDs", () => {
     for (const option of [
-      { value: "unit-account:security:AAPL:USD:asset", parentValue: undefined },
+      { value: "gain-loss-account:asset", parentValue: undefined },
       {
-        value: "unit-account:security:AAPL:USD:asset",
+        value: "gain-loss-account:asset",
         parentValue: "unit:fx:USD",
       },
       {
-        value: "unit-account:security:AAPL:USD:",
-        parentValue: "unit:security:AAPL:USD",
+        value: "gain-loss-account:",
+        parentValue: "asset-class:EQUITIES",
       },
     ] as const) {
       expect(
@@ -135,23 +142,15 @@ describe("History account drill-down", () => {
     }
   });
 
-  test("Explicit G/L uses the Gain/Loss ledger rather than the counterparty", () => {
+  test("recorded and mixed sources open the counterpart's unified explanation", () => {
     expect(
       resolveHistoryAccountDrillTarget({
         metric: "gainsLosses",
-        scope: "explicit-account:cash",
-        options,
-        gainLossEquityAccountId: "gain-loss",
-      }),
-    ).toEqual({ kind: "ledger", accountId: "gain-loss" });
-    expect(
-      resolveHistoryAccountDrillTarget({
-        metric: "gainsLosses",
-        scope: "explicit-account:cash",
+        scope: "gain-loss-account:cash",
         options,
         gainLossEquityAccountId: null,
       }),
-    ).toBeNull();
+    ).toEqual({ kind: "reconciliation", accountId: "cash" });
   });
 
   test.each(["ledger", "reconciliation"] as const)(

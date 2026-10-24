@@ -53,6 +53,8 @@ type PeriodBaseAccountGroup = {
 };
 
 export type PeriodBaseEquityBooking = {
+  description?: string | null;
+  transactionDescription?: string | null;
   id: string;
   accountId: string;
   accountName: string;

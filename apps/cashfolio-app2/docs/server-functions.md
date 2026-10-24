@@ -238,14 +238,14 @@ namespaces and preserves global valuation caches.
 - Redis key namespace includes deployment scope and the database-backed
   invalidation generation (`AccountBook.periodCacheRevision`):
   - Entry:
-    `period:base:v9:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
+    `period:base:v10:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
   - Index:
-    `period:base:index:v9:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
+    `period:base:index:v10:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
   - Cleanup hint (never used to determine cache validity):
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
 - History metrics entry:
   `period:history:metrics:v9:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
-- Base-data v9 and History metrics v9 store monetary values as tagged exact
+- Base-data v10 and History metrics v9 store monetary values as tagged exact
   decimal strings through `src/server/money-cache-codec.ts`
   (`{ __cashfolioDecimal: "..." }`). Dates retain their existing
   `{ __cashfolioDateMs: milliseconds }` representation. Reads reconstruct
@@ -435,6 +435,51 @@ are split into dedicated modules under `src/server/period/`:
 - `src/server/period/holdings/period-holding-gain-loss.ts` handles tracked
   holding lot/FIFO orchestration (real + transfer-clearing synthetic
   transactions) and residual realization integration
+
+## Asset-Class Gain/Loss Reporting
+
+Period overview and History share the contribution pipeline and the
+`Asset Class → Account` breakdown. Current `Account.assetClass` applies to every
+period, including archived assets and liabilities. Unit and instrument identity
+continue to control valuation and FIFO independently of classification.
+
+Calculated holdings G/L uses the owning account's classification. Recorded
+Gain/Loss equity bookings use their resolved asset/liability counterpart.
+Calculated and recorded amounts are combined once per account, with their
+provenance retained in account-node metadata. Reference-currency accounts have
+no calculated FX contribution, but their recorded adjustments remain included.
+Null classification is Unclassified, distinct from Other Assets.
+
+Execution residual amounts retain their existing allocation weights. Real
+accounts use their own class; equity-origin residuals inherit a class only when
+one originating financial account is identifiable. Transfer-clearing FIFO stays
+pooled by unit. Its reporting class comes from a single identifiable originating
+account; multiple or missing origins remain Unclassified with an explanation.
+Legacy missing/multiple-counterpart amounts also remain visible there.
+
+All aggregation uses Decimal before the existing two-decimal response rounding.
+Independently rounded rows can differ from a rounded aggregate by a cent; no
+synthetic balancing contribution is added. The underlying total G/L, balances,
+net-worth reconciliation, and income/expense calculations are unchanged.
+
+The breakdown's realised component continues to include recorded adjustments;
+where displayed together it is labelled Realised / Recorded. A recorded manual
+adjustment does not establish economic realisation. Aggregate
+`stats.realizedGainLoss` still means calculated holdings/residual realisation,
+with `stats.explicitGainLoss` separate. A broader realisation model is outside
+this reporting change.
+
+The account reconciliation page replays the shared contribution pipeline and
+shows the combined total, calculated FIFO explanations, recorded adjustments,
+and execution residual rows with transaction links. Reference-currency and
+legacy unattributed accounts are supported. Synthetic transaction links open
+Transactions; real-account links preserve the account ledger and period.
+
+Base-data v10 adds originating-account IDs and recorded booking descriptions.
+History metrics v9 carries class/account scopes and explicit account metadata;
+older hierarchy payloads are not reused. Classification edits already advance
+`AccountBook.periodCacheRevision` transactionally, invalidating both cache
+families for all periods. No changes to provider caches or FIFO keys are needed.
 
 ## Gain/Loss Reconciliation Explain Fields
 

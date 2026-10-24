@@ -85,6 +85,10 @@ function GainLossReconciliationPage() {
           if (!explicitLedgerPeriodValue) {
             return;
           }
+          if (reconciliation?.target.isVirtual) {
+            navigate({ to: "/$accountBookId/transactions", params: { accountBookId }, search: { period: explicitLedgerPeriodValue, transactionId } });
+            return;
+          }
           navigate({
             to: "/$accountBookId/$accountId",
             state: ledgerNavigationState,

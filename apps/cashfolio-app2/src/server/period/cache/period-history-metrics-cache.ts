@@ -49,6 +49,9 @@ function isHistoryScopeOption(value: unknown): value is HistoryScopeOption {
   return (
     isHistoryScopeSelection(option.value) &&
     typeof option.label === "string" &&
+    (!option.value?.startsWith("gain-loss-account:") ||
+      (typeof option.accountId === "string" && option.value === `gain-loss-account:${option.accountId}`)) &&
+    (option.legacyValues === undefined || (Array.isArray(option.legacyValues) && option.legacyValues.every(value => typeof value === "string"))) &&
     (option.kind === "total" ||
       option.kind === "group" ||
       option.kind === "account" ||

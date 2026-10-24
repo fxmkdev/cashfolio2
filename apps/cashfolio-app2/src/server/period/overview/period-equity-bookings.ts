@@ -29,6 +29,11 @@ export async function processPeriodEquityBookingsFromBaseData(args: {
     date: Date;
   }) => Promise<Money | null>;
   conversionBatchSize?: number;
+  onRecordedAdjustment?: (
+    booking: PeriodBaseEquityBooking,
+    amount: Money,
+    counterpartAccountId: string,
+  ) => void;
 }) {
   const explicitCounterpartAccountByTransactionId = new Map(
     args.explicitCounterparts.map((counterpart) => [
@@ -136,6 +141,13 @@ export async function processPeriodEquityBookingsFromBaseData(args: {
       );
     }
 
+    args.onRecordedAdjustment?.(
+      args.equityBookings.find(
+        (booking) => booking.id === explicitBooking.bookingId,
+      )!,
+      toMoney(explicitBooking.convertedValue).neg(),
+      counterpartAccount.id,
+    );
     accumulateGainLossContribution({
       byKey: args.gainsLossesContributionByKey,
       sourceKind: "EXPLICIT",

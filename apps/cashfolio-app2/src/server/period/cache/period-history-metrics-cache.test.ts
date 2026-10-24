@@ -109,6 +109,27 @@ describe("period history metrics cache", () => {
     );
   });
 
+  it("reclassifies warm historical scopes after a committed account revision", async () => {
+    const args = { accountBookId: "book-1", period: "2026-04", metricScopeFilter: { metric: "gainsLosses" as const, scope: "asset-class:EQUITIES" as const } };
+    const options = (assetClass: string) => ({ ...createMetrics().scopeOptions, gainsLosses: [
+      { value: `asset-class:${assetClass}`, label: assetClass, kind: "gainLoss" },
+      { value: "gain-loss-account:portfolio", label: `${assetClass} / Portfolio`, kind: "gainLoss", parentValue: `asset-class:${assetClass}`, accountId: "portfolio", legacyValues: ["explicit-account:portfolio"] },
+    ] });
+    loadPeriodHistoryPointMetricsWithCacheability.mockResolvedValue({ metrics: createMetrics({ scopeOptions: options("EQUITIES"), scopedMetricValue: toMoney(2) }), cacheableFromPermanentValuationCache: true });
+    const first = await getOrLoadPeriodHistoryPointMetrics(args);
+    const warm = await getOrLoadPeriodHistoryPointMetrics(args);
+    expect(toNumericMoney(warm)).toEqual(toNumericMoney(first));
+    expect(warm.scopeOptions.gainsLosses[1]).toMatchObject({ accountId: "portfolio", legacyValues: ["explicit-account:portfolio"] });
+    expect(loadPeriodHistoryPointMetricsWithCacheability).toHaveBeenCalledTimes(1);
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({ periodCacheRevision: "reclassified" });
+    loadPeriodHistoryPointMetricsWithCacheability.mockResolvedValue({ metrics: createMetrics({ scopeOptions: options("OTHER_ASSETS"), scopedMetricValue: toMoney(0) }), cacheableFromPermanentValuationCache: true });
+    const changed = await getOrLoadPeriodHistoryPointMetrics(args);
+    expect(changed.gainsLosses.toString()).toBe(first.gainsLosses.toString());
+    expect(changed.scopedMetricValue?.toString()).toBe("0");
+    expect(changed.scopeOptions.gainsLosses[1].parentValue).toBe("asset-class:OTHER_ASSETS");
+    expect(loadPeriodHistoryPointMetricsWithCacheability).toHaveBeenCalledTimes(2);
+  });
+
   it("adds a UTC-day discriminator only for current explicit periods", async () => {
     await getOrLoadPeriodHistoryPointMetrics({
       accountBookId: "book-1",

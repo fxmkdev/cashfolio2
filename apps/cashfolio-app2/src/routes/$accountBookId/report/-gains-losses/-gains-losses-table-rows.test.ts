@@ -2,7 +2,6 @@ import { describe, expect, test } from "vitest";
 import type { GainsLossesBreakdownNode } from "./-gains-losses-breakdown-types";
 import {
   flattenGainsLossesHierarchyRows,
-  parseGainsLossesUnitAccountId,
   sumTopLevelRealizedGainLoss,
   sumTopLevelTotalGainLoss,
   sumTopLevelUnrealizedGainLoss,
@@ -180,32 +179,3 @@ describe("top-level gains/losses sums", () => {
   });
 });
 
-describe("parseGainsLossesUnitAccountId", () => {
-  test("extracts account id for regular unit-account rows", () => {
-    expect(
-      parseGainsLossesUnitAccountId({
-        rowId: "unit-account:security:AAPL:USD:account-aapl",
-        parentId: "unit:security:AAPL:USD",
-      }),
-    ).toBe("account-aapl");
-  });
-
-  test("extracts virtual account ids that contain colons", () => {
-    expect(
-      parseGainsLossesUnitAccountId({
-        rowId:
-          "unit-account:security:AAPL:USD:virtual:transfer-clearing:account:security:AAPL:USD",
-        parentId: "unit:security:AAPL:USD",
-      }),
-    ).toBe("virtual:transfer-clearing:account:security:AAPL:USD");
-  });
-
-  test("returns null for non unit-account ids", () => {
-    expect(
-      parseGainsLossesUnitAccountId({
-        rowId: "explicit-account:account-fees",
-        parentId: "unit-type:explicit",
-      }),
-    ).toBeNull();
-  });
-});

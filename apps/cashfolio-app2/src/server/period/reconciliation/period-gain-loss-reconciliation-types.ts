@@ -1,3 +1,4 @@
+import type { AccountGainLossSourceRow } from "./period-account-gain-loss-sources";
 import type { HoldingExecutionPricingSource } from "../holdings/period-overview-holdings-types";
 import type { Money } from "../../../shared/money";
 import type { Unit } from "../../../.prisma-client/enums";
@@ -135,6 +136,13 @@ export type ReconciliationOpenLotInput = {
 };
 
 export type PeriodGainLossReconciliation = {
+  sources?: {
+    calculatedRealizedGainLoss: number;
+    recordedGainLoss: number;
+    attributionExplanation: string | null;
+    recordedAdjustments: AccountGainLossSourceRow[];
+    executionResiduals: AccountGainLossSourceRow[];
+  };
   target: GainLossReconciliationTarget;
   referenceCurrency: string;
   selectedPeriodValue: string;

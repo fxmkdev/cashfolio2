@@ -145,7 +145,7 @@ describe("loadHistoryPageData", () => {
     "unit-account:fx:USD:cash",
     "total",
   ] as const)(
-    "looks up Gain/Loss ledger only for an active validated Explicit G/L leaf (%s)",
+    "does not load the global Gain/Loss ledger for account explanations (%s)",
     async (scope) => {
       mockedGetPeriodHistory.mockResolvedValueOnce({
         ...historyFixture,
@@ -166,14 +166,8 @@ describe("loadHistoryPageData", () => {
         assetScope: "total",
         liabilityScope: "total",
       });
-      expect(result.gainLossEquityAccountId).toBe(
-        scope.startsWith("explicit-account:") ? "gain-loss" : null,
-      );
-      if (scope.startsWith("explicit-account:"))
-        expect(getGainLossEquityAccountId).toHaveBeenCalledWith({
-          data: { accountBookId: "book-1" },
-        });
-      else expect(getGainLossEquityAccountId).not.toHaveBeenCalled();
+      expect(result.gainLossEquityAccountId).toBeNull();
+      expect(getGainLossEquityAccountId).not.toHaveBeenCalled();
     },
   );
 });

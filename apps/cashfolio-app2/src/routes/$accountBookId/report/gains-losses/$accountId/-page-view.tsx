@@ -1,3 +1,4 @@
+import { GainLossSourceDetails } from "./-source-details";
 import { Alert, Card, Group, Stack, Text, Title } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
@@ -317,6 +318,12 @@ function LoadedGainLossReconciliationPageView({
         <ReconciliationStatCards
           summary={reconciliation.summary}
           currencyFormatter={currencyFormatter}
+        />
+
+        <GainLossSourceDetails
+          sources={reconciliation.sources}
+          currencyFormatter={currencyFormatter}
+          onOpenTransaction={onOpenEventTransaction}
         />
 
         <Card withBorder radius="md" p="md">

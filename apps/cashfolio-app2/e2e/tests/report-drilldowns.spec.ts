@@ -160,7 +160,7 @@ test("period allocation table account drilldown opens ledger with selected perio
   ).toBeVisible();
 });
 
-test("period gains/losses table unit-account drilldown opens reconciliation page and event ledger link", async ({
+test("period gains/losses table account drilldown opens reconciliation page and event ledger link", async ({
   page,
 }) => {
   const period = "2026-02";
@@ -181,9 +181,9 @@ test("period gains/losses table unit-account drilldown opens reconciliation page
     tableTestId: "period-gains-losses-breakdown-table",
   });
 
-  const securityUnitRow = gridRowByText(gainsLossesTable, "AAPL (USD)");
-  await expect(securityUnitRow).toBeVisible();
-  await expandRowIfCollapsed(securityUnitRow);
+  const assetClassRow = gridRowByText(gainsLossesTable, "Equities");
+  await expect(assetClassRow).toBeVisible();
+  await expandRowIfCollapsed(assetClassRow);
 
   const securityAccountRow = gridRowByText(
     gainsLossesTable,
@@ -234,11 +234,11 @@ test("period gains/losses table unit-account drilldown opens reconciliation page
   await expect(page.getByText(gainLossSeed.sellDescription)).toBeVisible();
 });
 
-test("period explicit gains/losses rows drill to gain/loss ledger", async ({
+test("period recorded gains/losses rows open the reference-currency account explanation", async ({
   page,
 }) => {
   const period = "2026-01";
-  const explicitSeed = await seedExplicitGainLossDrilldownScenario({
+  await seedExplicitGainLossDrilldownScenario({
     accountBookId: seeded.accountBookId,
     counterAccountId: seeded.cashAccount.id,
   });
@@ -260,23 +260,14 @@ test("period explicit gains/losses rows drill to gain/loss ledger", async ({
 
   await expect(page).toHaveURL(
     new RegExp(
-      `/${seeded.accountBookId}/${explicitSeed.gainLossAccountId}\\?period=${period}$`,
+      `/${seeded.accountBookId}/report/gains-losses/${seeded.cashAccount.id}\\?period=${period}$`,
     ),
   );
   await expect(page.getByTestId("period-picker-trigger")).toContainText(
     "January 2026",
   );
+  await expect(page.getByRole("heading", { name: "Recorded Adjustments" })).toBeVisible();
   await expect(page.getByText("E2E Explicit Gain/Loss Seed")).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "Accounts", exact: true }),
-  ).not.toHaveAttribute("data-active", "true");
-  const back = page.getByRole("link", { name: "Back to Report" });
-  await expect(back).toHaveAttribute(
-    "href",
-    `/${seeded.accountBookId}/report?period=${period}`,
-  );
-  await back.click();
-  await expect(page).toHaveURL(
-    `/${seeded.accountBookId}/report?period=${period}`,
-  );
+  await page.getByRole("button", { name: "Open Transaction", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/${seeded.accountBookId}/${seeded.cashAccount.id}\\?`));
 });

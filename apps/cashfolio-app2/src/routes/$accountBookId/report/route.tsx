@@ -1,7 +1,6 @@
 import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
-import { getGainLossEquityAccountId } from "@/server/accounts";
 import { getPeriodEndNetWorth } from "@/server/period-end-net-worth";
 import { getOpeningBalanceNetWorthForPeriod } from "@/server/period-opening-balance-net-worth";
 import { getPeriodOverview } from "@/server/period";
@@ -12,7 +11,6 @@ import {
   getPreviousPeriodValue,
   type NetWorthReconciliationModel,
 } from "./-net-worth/-net-worth-reconciliation";
-import { hasExplicitGainLossGroup } from "./-gains-losses/-gains-losses-explicit";
 import {
   DEFAULT_PERIOD_VALUE,
   getPeriodValue,
@@ -103,28 +101,17 @@ export const Route = createFileRoute("/$accountBookId/report")({
         locale: userLocale,
       },
     });
-    const [gainLossEquityAccountId, netWorthReconciliation] = await Promise.all(
-      [
-        hasExplicitGainLossGroup(overview.gainsLossesBreakdown.hierarchy)
-          ? getGainLossEquityAccountId({
-              data: {
-                accountBookId,
-              },
-            })
-          : Promise.resolve<string | null>(null),
-        loadNetWorthReconciliationModel({
-          accountBookId,
-          selectedGranularity: overview.selectedGranularity,
-          selectedYear: overview.selectedYear,
-          selectedMonth: overview.selectedMonth,
-          minBookingDate: overview.minBookingDate,
-          currentNetWorth: overview.stats.endOfPeriodNetWorth,
-          totalReturn: overview.stats.totalReturn,
-        }),
-      ],
-    );
+    const netWorthReconciliation = await loadNetWorthReconciliationModel({
+      accountBookId,
+      selectedGranularity: overview.selectedGranularity,
+      selectedYear: overview.selectedYear,
+      selectedMonth: overview.selectedMonth,
+      minBookingDate: overview.minBookingDate,
+      currentNetWorth: overview.stats.endOfPeriodNetWorth,
+      totalReturn: overview.stats.totalReturn,
+    });
 
-    return { overview, gainLossEquityAccountId, netWorthReconciliation };
+    return { overview, netWorthReconciliation };
   },
   head: ({ loaderData }) =>
     createDocumentTitleHead(loaderData?.overview.selectedPeriodLabel),
@@ -140,8 +127,7 @@ export function ReportPageContent() {
   const { accountBookId } = Route.useParams();
   const search = Route.useSearch();
   const selectedPeriodValue = getPeriodValue(search);
-  const { overview, gainLossEquityAccountId, netWorthReconciliation } =
-    Route.useLoaderData();
+  const { overview, netWorthReconciliation } = Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/report" });
   const explicitLedgerPeriodValue = getSelectedExplicitPeriodValue({
     selectedGranularity: overview.selectedGranularity,
@@ -177,20 +163,6 @@ export function ReportPageContent() {
             },
           })
         }
-        onExplicitGainLossDoubleClick={() => {
-          if (!gainLossEquityAccountId) {
-            return;
-          }
-
-          navigate({
-            to: "/$accountBookId/$accountId",
-            state: ledgerNavigationState,
-            params: { accountBookId, accountId: gainLossEquityAccountId },
-            search: {
-              period: explicitLedgerPeriodValue,
-            },
-          });
-        }}
         onGainLossUnitAccountDoubleClick={(accountId) =>
           navigate({
             to: "/$accountBookId/report/gains-losses/$accountId",

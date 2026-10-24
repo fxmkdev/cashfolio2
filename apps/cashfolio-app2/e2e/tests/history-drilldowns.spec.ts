@@ -10,7 +10,6 @@ import {
 import { expect, test, type Page } from "../support/fixtures";
 
 let seeded: SeededData;
-let gainLossAccountId: string;
 
 test.beforeAll(async ({ e2eExternalId }) => {
   seeded = await seedDatabase({
@@ -60,11 +59,10 @@ test.beforeAll(async ({ e2eExternalId }) => {
     securityAccountId: seeded.securityAccount.id,
     counterAccountId: seeded.cashAccount.id,
   });
-  const explicit = await seedExplicitGainLossDrilldownScenario({
+  await seedExplicitGainLossDrilldownScenario({
     accountBookId: seeded.accountBookId,
     counterAccountId: seeded.cashAccount.id,
   });
-  gainLossAccountId = explicit.gainLossAccountId;
 });
 
 // Use the chart's keyboard focus indicator to locate a real rendered datum,
@@ -200,16 +198,17 @@ test("Gain/Loss unit account bar opens period reconciliation", async ({
   ).toBeVisible();
 });
 
-test("Explicit G/L account bar opens Gain/Loss ledger", async ({ page }) => {
+test("legacy recorded G/L scope opens the unified account explanation", async ({ page }) => {
   await page.goto(
     `/${seeded.accountBookId}/history?metric=gainsLosses&gainLossScope=explicit-account:${seeded.cashAccount.id}`,
   );
   await doubleClickHistoryPoint(page, 0);
   await expectPeriodDestination(
     page,
-    `/${seeded.accountBookId}/${gainLossAccountId}`,
+    `/${seeded.accountBookId}/report/gains-losses/${seeded.cashAccount.id}`,
     "2026-01",
   );
+  await expect(page.getByRole("heading", { name: "Recorded Adjustments" })).toBeVisible();
   await expect(page.getByText("E2E Explicit Gain/Loss Seed")).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Accounts", exact: true }),
