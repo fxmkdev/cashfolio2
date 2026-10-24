@@ -1,3 +1,4 @@
+import type { AccountTypeScope } from "../../shared/account-tabs";
 import { toNumericMoney } from "../money-boundary";
 import { toMoney, moneyIsZero } from "../../shared/money";
 import { isBalanceAccount } from "../../shared/account-presentation";
@@ -50,7 +51,7 @@ import {
 
 export type AccountTreeDataInput = {
   accountBookId: string;
-  type?: AccountType;
+  type?: AccountTypeScope;
   equityAccountSubtype?: EquityAccountSubtype;
   accountState?: AccountState;
   includeReferenceBalances?: boolean;
@@ -59,14 +60,14 @@ export type AccountTreeDataInput = {
 
 export type AccountReferenceBalancesInput = {
   accountBookId: string;
-  type?: AccountType;
+  type?: AccountTypeScope;
   equityAccountSubtype?: EquityAccountSubtype;
   accountState?: AccountState;
 };
 
 export type AccountsPageDataInput = {
   accountBookId: string;
-  type?: AccountType;
+  type?: AccountTypeScope;
   equityAccountSubtype?: EquityAccountSubtype;
   accountState?: AccountState;
 };

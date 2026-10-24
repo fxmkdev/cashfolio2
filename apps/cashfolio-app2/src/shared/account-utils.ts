@@ -9,8 +9,8 @@ export function getTypeLabel(
   type: AccountType,
   equityAccountSubtype: EquityAccountSubtype | null,
 ): string {
-  if (type === AccountType.ASSET) return "Asset";
-  if (type === AccountType.LIABILITY) return "Liability";
+  if (type === AccountType.ASSET || type === AccountType.LIABILITY)
+    return "Account";
   if (equityAccountSubtype === EquityAccountSubtype.OPENING_BALANCES)
     return "Opening Balances";
   if (equityAccountSubtype === EquityAccountSubtype.INCOME) return "Income";

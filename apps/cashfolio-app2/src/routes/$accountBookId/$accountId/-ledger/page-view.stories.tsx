@@ -609,7 +609,7 @@ export const HappyPath: Story = {
     await expect(
       canvas.getByRole("heading", { name: "Checking" }),
     ).toBeVisible();
-    await expect(canvas.getByText("Asset")).toBeVisible();
+    await expect(canvas.getByText("Account", { exact: true })).toBeVisible();
     await expect(canvas.getByText("CHF")).toBeVisible();
     await expect(
       canvas.queryByRole("link", { name: "Accounts" }),
@@ -733,7 +733,7 @@ export const PeriodFilterRouteSmoke: Story = {
     );
     await userEvent.click(canvas.getByRole("button", { name: "All Periods" }));
     await expect(
-      screen.getByRole("button", { name: "Clear Filter" }),
+      await screen.findByRole("button", { name: "Clear Filter" }),
     ).toBeDisabled();
 
     await userEvent.click(screen.getByRole("radio", { name: "Year" }));

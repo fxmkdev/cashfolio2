@@ -305,11 +305,11 @@ export function useAccountsPageController(args: {
       getAccountGainLossSummaries({
         data: {
           accountBookId: args.accountBookId,
-          type: args.tab === "LIABILITY" ? "LIABILITY" : "ASSET",
+          type: "BALANCE",
           accountState: "all",
         },
       }),
-    [args.accountBookId, args.tab],
+    [args.accountBookId],
   );
   const gainLoss = useGainLossRequest({
     enabled: !isEquityTab,
@@ -323,6 +323,12 @@ export function useAccountsPageController(args: {
     storageKey,
     isVirtualArchivedGroup,
     args.managementContext === "categories" && !showArchived,
+    args.tab === "BALANCE"
+      ? [
+          `cashfolio:expandedGroups:${args.accountBookId}:active:ASSET`,
+          `cashfolio:expandedGroups:${args.accountBookId}:active:LIABILITY`,
+        ]
+      : undefined,
   );
 
   const rowsByParentKeyForGroupAggregation = useRowsByParentKey(

@@ -19,13 +19,13 @@ describe("accounts page tab parsing", () => {
     ).toBe(false);
   });
 
-  it("falls back to ASSET for stale gain/loss tab search params", () => {
+  it("falls back to BALANCE for stale gain/loss tab search params", () => {
     expect(
       parseAccountsSearch({
         tab: `EQUITY-${EquityAccountSubtype.GAIN_LOSS}`,
         mode: "active",
       }),
-    ).toEqual({ tab: "ASSET", mode: "active" });
+    ).toEqual({ tab: "BALANCE", mode: "active" });
   });
 
   it("preserves legacy category tab and archive selection for its redirect", () => {
@@ -44,7 +44,7 @@ describe("accounts page tab parsing", () => {
     "normalizes archived mode to the combined Accounts view for %s",
     (tab) => {
       expect(parseAccountsSearch({ tab, mode: "archived" })).toEqual({
-        tab: tab === "LIABILITY" ? "LIABILITY" : "ASSET",
+        tab: "BALANCE",
         mode: "active",
       });
     },
@@ -54,8 +54,7 @@ describe("accounts page tab parsing", () => {
 describe("getAccountsPageTitle", () => {
   it("separates editable category tabs from balance accounts and system accounts", () => {
     expect(getManagementTabs("accounts").map((tab) => tab.value)).toEqual([
-      "ASSET",
-      "LIABILITY",
+      "BALANCE",
     ]);
     expect(getManagementTabs("categories").map((tab) => tab.value)).toEqual([
       "EQUITY-INCOME",

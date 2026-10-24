@@ -93,6 +93,7 @@ test("restores pre-upgrade expanded group storage and persists collapse", async 
   page,
 }) => {
   const storageKey = `cashfolio:expandedGroups:${seeded.accountBookId}:active:ASSET`;
+  const unifiedStorageKey = `cashfolio:expandedGroups:${seeded.accountBookId}:active:BALANCE`;
   await page.addInitScript(
     ({ storageKey, assetRootId }) => {
       // Seed once so a reload verifies the value saved by the application.
@@ -108,7 +109,9 @@ test("restores pre-upgrade expanded group storage and persists collapse", async 
   await root.locator(".ag-group-expanded").click();
   await expect(agGridRowByText(page, seeded.cashAccount.name)).toHaveCount(0);
   await expect
-    .poll(() => page.evaluate((key) => sessionStorage.getItem(key), storageKey))
+    .poll(() =>
+      page.evaluate((key) => sessionStorage.getItem(key), unifiedStorageKey),
+    )
     .toBe("[]");
   await page.reload();
   await expect(root.locator(".ag-group-contracted")).toBeVisible();

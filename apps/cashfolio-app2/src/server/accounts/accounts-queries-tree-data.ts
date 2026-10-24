@@ -1,3 +1,7 @@
+import {
+  type AccountTypeScope,
+  getPersistedAccountTypeFilter,
+} from "../../shared/account-tabs";
 import { toMoney } from "../../shared/money";
 import { prisma } from "../../prisma.server";
 import {
@@ -52,7 +56,7 @@ type AccountBookTreeMeta = {
 export async function fetchAccountTreeQueryData(args: {
   accountBookId: string;
   accountState: AccountState;
-  type?: AccountType;
+  type?: AccountTypeScope;
   equityAccountSubtype?: EquityAccountSubtype;
   includeActionAvailability: boolean;
 }) {
@@ -93,7 +97,7 @@ export async function fetchAccountTreeQueryData(args: {
     prisma.accountGroup.findMany({
       where: {
         accountBookId: args.accountBookId,
-        type: args.type,
+        type: getPersistedAccountTypeFilter(args.type),
         ...(args.equityAccountSubtype
           ? {
               OR: [
@@ -271,7 +275,7 @@ export async function fetchAccountTreeQueryData(args: {
 export async function fetchAccountReferenceBalancesQueryData(args: {
   accountBookId: string;
   accountState: AccountState;
-  type?: AccountType;
+  type?: AccountTypeScope;
   equityAccountSubtype?: EquityAccountSubtype;
 }) {
   const accounts = await prisma.account.findMany({

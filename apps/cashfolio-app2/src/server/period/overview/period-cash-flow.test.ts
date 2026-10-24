@@ -31,6 +31,41 @@ function cashBooking(
 }
 
 describe("computePeriodCashFlow", () => {
+  it("counts explicitly cash-marked liabilities and excludes mixed-type cash transfers", async () => {
+    const card = {
+      id: "card",
+      name: "Card",
+      groupId: "banking",
+      type: AccountType.LIABILITY,
+      isCashAccount: true,
+    };
+    const expense = {
+      id: "expense",
+      name: "Expense",
+      groupId: null,
+      type: AccountType.EQUITY,
+      isCashAccount: false,
+    };
+    const result = await computePeriodCashFlow({
+      transactions: [
+        {
+          id: "purchase",
+          bookings: [
+            cashBooking(-25, { account: card }),
+            cashBooking(25, { account: expense }),
+          ],
+        },
+        {
+          id: "transfer",
+          bookings: [cashBooking(-100), cashBooking(100, { account: card })],
+        },
+      ],
+      convertBookingToReference: async (booking) => booking.value,
+    });
+    expect(result.cashFlow.toString()).toBe("-25");
+    expect([...result.cashFlowAmountByAccountId.keys()]).toEqual(["card"]);
+  });
+
   it("adds income cash receipts and subtracts cash expenses", async () => {
     const result = await computePeriodCashFlow({
       transactions: [

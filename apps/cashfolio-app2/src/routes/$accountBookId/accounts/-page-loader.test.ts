@@ -23,11 +23,11 @@ describe("loadAccountsPageData", () => {
     getAccountsPageData.mockResolvedValue(mockResult);
   });
 
-  it("loads active and archived accounts for the selected asset tab", async () => {
+  it("loads active and archived accounts for the unified balance scope", async () => {
     const result = await loadAccountsPageData({
       accountBookId: "book-1",
       mode: "active",
-      tab: "ASSET",
+      tab: "BALANCE",
     });
 
     expect(getAccountsPageData).toHaveBeenCalledTimes(1);
@@ -35,7 +35,7 @@ describe("loadAccountsPageData", () => {
       data: {
         accountBookId: "book-1",
         accountState: "all",
-        type: AccountType.ASSET,
+        type: "BALANCE",
       },
     });
     expect(result).toBe(mockResult);

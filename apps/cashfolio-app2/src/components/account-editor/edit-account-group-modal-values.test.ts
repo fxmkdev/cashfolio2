@@ -28,7 +28,7 @@ const accountGroups = [
 ];
 
 describe("account group cash helpers", () => {
-  test("allows editing only for root asset groups", () => {
+  test("allows editing only for root balance groups", () => {
     expect(
       isRootCashAccountGroupEditable({
         type: AccountType.ASSET,
@@ -46,7 +46,7 @@ describe("account group cash helpers", () => {
         type: AccountType.LIABILITY,
         parentGroupId: undefined,
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   test("inherits cash status from selected parent group", () => {
@@ -126,7 +126,6 @@ describe("account group cash helpers", () => {
   test.each([
     ["security account", AccountType.ASSET, Unit.SECURITY],
     ["crypto account", AccountType.ASSET, Unit.CRYPTOCURRENCY],
-    ["liability account", AccountType.LIABILITY, Unit.CURRENCY],
     ["equity account", AccountType.EQUITY, Unit.CURRENCY],
   ])(
     "disables cash marking when descendants include a %s",
@@ -155,12 +154,12 @@ describe("account group cash helpers", () => {
           existingNodes,
         }),
       ).toBe(
-        "Cash account groups can contain only currency asset accounts and asset sub-groups.",
+        "Cash account groups can contain only currency accounts and account sub-groups.",
       );
     },
   );
 
-  test("disables cash marking when descendants include a non-asset group", () => {
+  test("disables cash marking when descendants include a category group", () => {
     const existingNodes: ExistingNode[] = [
       {
         id: "group-assets",
@@ -172,7 +171,7 @@ describe("account group cash helpers", () => {
         id: "group-liability",
         name: "Liabilities",
         nodeType: "accountGroup",
-        type: AccountType.LIABILITY,
+        type: AccountType.EQUITY,
         parentId: "group-assets",
       },
     ];
@@ -184,7 +183,7 @@ describe("account group cash helpers", () => {
         existingNodes,
       }),
     ).toBe(
-      "Cash account groups can contain only currency asset accounts and asset sub-groups.",
+      "Cash account groups can contain only currency accounts and account sub-groups.",
     );
   });
 
@@ -226,7 +225,7 @@ describe("account group cash helpers", () => {
         existingNodes,
       }),
     ).toBe(
-      "Cash account groups can contain only currency asset accounts and asset sub-groups.",
+      "Cash account groups can contain only currency accounts and account sub-groups.",
     );
   });
 

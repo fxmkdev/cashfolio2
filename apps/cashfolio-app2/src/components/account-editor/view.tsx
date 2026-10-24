@@ -1,3 +1,4 @@
+import { isAccountGroupCompatible } from "@/shared/account-presentation";
 import {
   getAccountEntityLabel,
   isBalanceAccount,
@@ -72,7 +73,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
       <form onSubmit={handleSubmit}>
         <Stack gap="xl">
           <Grid>
-            <Grid.Col span={6}>
+            <Grid.Col span={isCategory ? 6 : 12}>
               <TextInput
                 label="Name"
                 name="name"
@@ -87,53 +88,55 @@ export function EditAccountModal(props: EditAccountModalProps) {
                 {...form.getInputProps("name")}
               />
             </Grid.Col>
-            <Grid.Col span={6}>
-              <Select
-                label="Type"
-                withAsterisk
-                withAlignedLabels
-                allowDeselect={false}
-                disabled
-                data={[
-                  {
-                    group: "Accounts",
-                    items: [
-                      {
-                        value: AccountType.ASSET,
-                        label: "Asset",
-                      },
-                      {
-                        value: AccountType.LIABILITY,
-                        label: "Liability",
-                      },
-                    ],
-                  },
-                  {
-                    group: "Categories",
-                    items: [
-                      {
-                        value: `${AccountType.EQUITY}-${EquityAccountSubtype.INCOME}`,
-                        label: "Income",
-                      },
-                      {
-                        value: `${AccountType.EQUITY}-${EquityAccountSubtype.EXPENSE}`,
-                        label: "Expense",
-                      },
-                    ],
-                  },
-                  {
-                    group: "System Accounts",
-                    items: [
-                      {
-                        value: `${AccountType.EQUITY}-${EquityAccountSubtype.OPENING_BALANCES}`,
-                        label: "Opening Balances",
-                      },
-                    ],
-                  },
-                ]}
-                {...form.getInputProps("typeDescriptor")}
-              />
-            </Grid.Col>
+            {isCategory && (
+              <Grid.Col span={6}>
+                <Select
+                  label="Type"
+                  withAsterisk
+                  withAlignedLabels
+                  allowDeselect={false}
+                  disabled
+                  data={[
+                    {
+                      group: "Accounts",
+                      items: [
+                        {
+                          value: AccountType.ASSET,
+                          label: "Asset",
+                        },
+                        {
+                          value: AccountType.LIABILITY,
+                          label: "Liability",
+                        },
+                      ],
+                    },
+                    {
+                      group: "Categories",
+                      items: [
+                        {
+                          value: `${AccountType.EQUITY}-${EquityAccountSubtype.INCOME}`,
+                          label: "Income",
+                        },
+                        {
+                          value: `${AccountType.EQUITY}-${EquityAccountSubtype.EXPENSE}`,
+                          label: "Expense",
+                        },
+                      ],
+                    },
+                    {
+                      group: "System Accounts",
+                      items: [
+                        {
+                          value: `${AccountType.EQUITY}-${EquityAccountSubtype.OPENING_BALANCES}`,
+                          label: "Opening Balances",
+                        },
+                      ],
+                    },
+                  ]}
+                  {...form.getInputProps("typeDescriptor")}
+                />
+              </Grid.Col>
+            )}
             <Grid.Col span={9}>
               <GroupTreeSelect
                 label={isCategory ? "Category Group" : "Group"}
@@ -141,10 +144,10 @@ export function EditAccountModal(props: EditAccountModalProps) {
                 clearable
                 groups={accountGroups.filter(
                   (g) =>
-                    g.type === type &&
-                    (!equityAccountSubtype ||
-                      !g.equityAccountSubtype ||
-                      g.equityAccountSubtype === equityAccountSubtype) &&
+                    isAccountGroupCompatible(
+                      { type, equityAccountSubtype },
+                      g,
+                    ) &&
                     isAccountGroupCompatibleWithAccountCashRules({
                       accountType: type,
                       accountUnit: unit,

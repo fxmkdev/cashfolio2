@@ -191,9 +191,15 @@ describe("updateAccount opening balance management", () => {
       tradeCurrency: null,
       isCashAccount: false,
     });
-    tx.accountGroup.findUniqueOrThrow.mockResolvedValue({
+    tx.accountGroup.findUniqueOrThrow.mockImplementation(async ({ where }) => ({
+      type:
+        where.id_accountBookId.id === "group-expenses"
+          ? AccountType.EQUITY
+          : AccountType.ASSET,
+      equityAccountSubtype: null,
       isCashAccount: false,
-    });
+      isActive: true,
+    }));
     prisma.$transaction.mockImplementation(async (callback) => callback(tx));
 
     tx.account.update.mockResolvedValue({
@@ -225,6 +231,91 @@ describe("updateAccount opening balance management", () => {
     tx.transaction.update.mockResolvedValue({ id: "tx-open" });
     tx.transaction.deleteMany.mockResolvedValue({ count: 0 });
     tx.booking.deleteMany.mockResolvedValue({ count: 0 });
+  });
+
+  it.each([AccountType.ASSET, AccountType.LIABILITY])(
+    "creates accounts in a %s parent with explicit cash inheritance",
+    async (parentType) => {
+      tx.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
+        type: parentType,
+        equityAccountSubtype: null,
+        isActive: true,
+        isCashAccount: true,
+      });
+      await createAccount({
+        data: {
+          accountBookId: "book-1",
+          name: "Card",
+          type: AccountType.LIABILITY,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          groupId: "banking",
+        },
+      });
+      expect(tx.account.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          type: AccountType.LIABILITY,
+          groupId: "banking",
+          isCashAccount: true,
+        }),
+      });
+      expect(tx.accountGroup.findUniqueOrThrow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            id_accountBookId: { id: "banking", accountBookId: "book-1" },
+          },
+        }),
+      );
+    },
+  );
+
+  it.each([
+    {
+      type: AccountType.EQUITY,
+      equityAccountSubtype: EquityAccountSubtype.INCOME,
+      isActive: true,
+    },
+    { type: AccountType.ASSET, equityAccountSubtype: null, isActive: false },
+  ])(
+    "rejects an incompatible parent before creating an account: %j",
+    async (parent) => {
+      tx.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
+        ...parent,
+        isCashAccount: false,
+      });
+      await expect(
+        createAccount({
+          data: {
+            accountBookId: "book-1",
+            name: "Bank",
+            type: AccountType.ASSET,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            groupId: "parent",
+          },
+        }),
+      ).rejects.toThrow();
+      expect(tx.account.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects parents outside the current account book", async () => {
+    tx.accountGroup.findUniqueOrThrow.mockRejectedValueOnce(
+      new Error("Record not found"),
+    );
+    await expect(
+      createAccount({
+        data: {
+          accountBookId: "book-1",
+          name: "Bank",
+          type: AccountType.ASSET,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          groupId: "foreign-parent",
+        },
+      }),
+    ).rejects.toThrow("Record not found");
+    expect(tx.account.create).not.toHaveBeenCalled();
   });
 
   it("updates editable account fields without rewriting unit identity fields", async () => {
@@ -489,7 +580,7 @@ describe("updateAccount opening balance management", () => {
     });
   });
 
-  it("persists cash flag for currency asset accounts", async () => {
+  it("persists cash flag for currency accounts", async () => {
     tx.account.create.mockResolvedValueOnce({
       id: "account-3",
       name: "Checking",
@@ -534,6 +625,9 @@ describe("updateAccount opening balance management", () => {
 
   it("inherits cash status when creating accounts inside cash groups", async () => {
     tx.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
+      type: AccountType.ASSET,
+      equityAccountSubtype: null,
+      isActive: true,
       isCashAccount: true,
     });
 
@@ -559,6 +653,9 @@ describe("updateAccount opening balance management", () => {
 
   it("inherits cash status when moving accounts into cash groups", async () => {
     tx.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
+      type: AccountType.ASSET,
+      equityAccountSubtype: null,
+      isActive: true,
       isCashAccount: true,
     });
 
@@ -879,6 +976,7 @@ describe("createAccountGroup", () => {
     tx.accountGroup.findUniqueOrThrow.mockResolvedValue({
       type: AccountType.ASSET,
       equityAccountSubtype: null,
+      isActive: true,
       isCashAccount: false,
     });
     tx.accountGroup.create.mockResolvedValue({
@@ -1004,6 +1102,9 @@ describe("createAccountGroup", () => {
 
   it("inherits cash status from parent groups when creating nested groups", async () => {
     tx.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
+      type: AccountType.ASSET,
+      equityAccountSubtype: null,
+      isActive: true,
       isCashAccount: true,
     });
 
@@ -1154,7 +1255,7 @@ describe("createAccountGroup", () => {
         },
       }),
     ).rejects.toThrow(
-      "Cash account groups must contain only currency asset accounts",
+      "Cash account groups must contain only currency accounts",
     );
 
     expect(tx.accountGroup.update).not.toHaveBeenCalled();

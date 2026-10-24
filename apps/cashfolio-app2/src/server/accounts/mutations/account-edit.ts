@@ -191,6 +191,7 @@ export async function updateAccountOperation(
       tradeCurrency: true,
       statementImportCsvFormat: true,
       isCashAccount: true,
+      isActive: true,
     },
   });
   assertNoSystemManagedAccountSubtype(existing);
@@ -212,6 +213,7 @@ export async function updateAccountOperation(
       existing,
     ),
     tx,
+    existing.isActive,
   );
   const dataWithExistingUnitIdentity = mergeExistingAccountUnitIdentity(
     normalizedData,

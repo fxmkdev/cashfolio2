@@ -406,13 +406,14 @@ copy, **accounts** are the existing asset/liability accounts; **categories** are
 income, expense, and gain/loss accounts. Opening Balances remains a special
 system account. Identity actions still use "Cashfolio account".
 
-Account management has Assets and Liabilities tabs. Income and expense category
-management lives under **Account Book Settings → Categories**, with Income and
-Expenses tabs and a **Show Archived** checkbox. Gain/Loss and Opening Balances
-retain their system-managed restrictions and are not creation tabs. Primary
-navigation is unchanged. Viewing a category ledger is an activity view, not a
-settings page: its URL remains unchanged, and no primary navigation item is
-selected. Asset/liability ledgers continue highlighting Accounts.
+Account management uses one Accounts hierarchy without asset/liability tabs.
+Income and expense category management lives under **Account Book Settings →
+Categories**, with Income and Expenses tabs and a **Show Archived** checkbox.
+Gain/Loss and Opening Balances retain their system-managed restrictions and are
+not creation tabs. Primary navigation is unchanged. Viewing a category ledger is
+an activity view, not a settings page: its URL remains unchanged, and no primary
+navigation item is selected. Balance-account ledgers continue highlighting
+Accounts.
 
 Settings uses underline tabs for General/Categories and pill tabs for
 Income/Expenses. Category type tabs and management actions share a wrapping
@@ -445,9 +446,8 @@ Asset and liability account balances use the same signed convention: positive
 means owned and negative means owed. This applies to native and
 reference-currency balances, opening balances, ledger running balances, and
 statement import previews. Opening-balance inputs use that same sign without
-type-based inversion. The Assets/Liabilities tabs remain fixed classifications;
-Report and History retain their existing type-based calculations and positive
-debt presentation.
+type-based inversion. Report and History classify Assets/Liabilities by balance
+sign; debt amounts are positive magnitudes in those reports.
 
 ## Accounts List Columns
 
@@ -457,7 +457,7 @@ debt presentation.
   every tab in both active and archived views.
 - G/L figures use the order `Total`, `Realised`, `Unrealised` in the Accounts
   grid, account summary, calculation drawer, and period reconciliation cards.
-- Non-equity tabs (`ASSET`, `LIABILITY`) render `Ccy.`, `Symbol`, `Balance`, and
+- The Accounts scope (`BALANCE`) renders `Ccy.`, `Symbol`, `Balance`, and
   `Balance (<referenceCurrency>)`.
 - `Balance` is account-level only (group rows are blank), with no aggregation.
 - Currency accounts whose currency matches the account book reference currency
@@ -467,12 +467,12 @@ debt presentation.
   `Unit.CURRENCY`, `Unit.CRYPTOCURRENCY`, and `Unit.SECURITY` when a reference
   conversion is available (or the raw balance is 0), and shows aggregated
   descendant sums on group rows.
-- Non-equity tabs render a pinned footer row with `Total` in
+- Accounts renders a pinned footer row with `Total` in
   `Balance (<referenceCurrency>)`.
 - If any descendant account in a group has a blank
   `Balance (<referenceCurrency>)`, that group row stays blank in this column to
   avoid partial totals.
-- The footer `Total` also stays blank when any account row in the tab has a
+- The footer `Total` also stays blank when any account row in Accounts has a
   blank `Balance (<referenceCurrency>)` value.
 - Balances are displayed in each account's own unit/currency; no conversion.
 - Liability balances retain their stored sign, including group and footer sums.
@@ -540,16 +540,38 @@ actions. Their display parents must never be submitted as real parent IDs. See
 
 ## Type Descriptor Pattern
 
-Account/group types are represented in form selects as composite strings:
-`"ASSET" | "LIABILITY" | "EQUITY-INCOME" | "EQUITY-EXPENSE"`
+Account management uses the presentation/query scope `BALANCE`, covering stored
+`ASSET` and `LIABILITY` records. The Type field is hidden in balance account and
+group editors. New accounts/groups store `ASSET` as a temporary compatibility
+value regardless of balance sign or parent type. Editing preserves stored types.
+No booking values or IDs are migrated. Persisted-type cleanup is a later stage.
 
-`EQUITY-GAIN_LOSS` and `EQUITY-OPENING_BALANCES` are system-managed and are not
-creation tabs.
+Category editors retain the disabled Income/Expense Type field. Gain/Loss and
+Opening Balances remain system-managed and cannot be created through these
+forms.
 
-The form's `transformValues` splits these into separate `type` and
-`equityAccountSubtype` fields. The type is always derived from the currently
-selected tab and the Type field is always disabled — it cannot be changed after
-creation. The server enforces this by rejecting type changes on update.
+Balance accounts and groups can share either legacy balance-group type. Parent
+compatibility is enforced on the server, including account-book ownership,
+active-parent requirements for active nodes, category-subtype compatibility, and
+cycle prevention. Existing group IDs and names remain distinct.
+
+Cash Account is an explicit capability: any currency balance account may be
+marked as cash, regardless of legacy type. Root flags default to false; children
+inherit the parent group flag. Cash groups may contain only currency balance
+accounts and balance sub-groups, including archived descendants. Securities,
+crypto, and categories are ineligible. Reparenting or toggling a group
+propagates the inherited flag through its subtree and invalidates derived book
+caches.
+
+Accounts links canonicalize to `tab=BALANCE&mode=active`, including legacy
+asset/liability/archive links. Category redirects retain their tab/archive mode.
+Selectors use an Accounts root for both legacy types; ledger badges show Account
+with a neutral color. Report Assets/Liabilities remain balance-based labels.
+Unified account expansion preferences use
+`cashfolio:expandedGroups:${accountBookId}:active:BALANCE`, initially seeded
+from the union of valid `active:ASSET` and `active:LIABILITY` preferences. Once
+written, the unified preference takes precedence, including an empty collapsed
+selection.
 
 ## Explicit Gain/Loss for Manually Valued Accounts
 
@@ -1170,7 +1192,7 @@ versions and live cross-tab synchronization remain separate follow-ups.
 
 Assets include positive period-end account balances; Liabilities include the
 absolute values of negative balances, regardless of the stored account type. The
-Accounts management tabs retain their fixed types during this migration. Report
+Account management combines both legacy types in a stable hierarchy. Report
 allocation tables/charts and History totals/scopes use the same rule. An
 overdrawn asset account appears under Liabilities and an overpaid liability
 account appears under Assets, retaining its original group path and ledger link.

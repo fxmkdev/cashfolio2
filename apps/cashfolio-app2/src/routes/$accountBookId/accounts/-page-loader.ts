@@ -1,5 +1,4 @@
 import { getAccountsPageData } from "@/server/accounts";
-import { isCategoryAccount } from "@/shared/account-presentation";
 import type { AccountsMode, TabValue } from "./-page-types";
 import { getTabDefinition } from "./-page-types";
 
@@ -15,7 +14,7 @@ export async function loadAccountsPageData(args: {
     data: {
       accountBookId: args.accountBookId,
       accountState:
-        isCategoryAccount(tabDefinition) && !args.showArchived
+        tabDefinition.type === "EQUITY" && !args.showArchived
           ? "active"
           : "all",
       type: tabDefinition.type,

@@ -116,6 +116,28 @@ beforeEach(() => {
 });
 
 describe("account G/L queries", () => {
+  it("aggregates both legacy types and archived descendants in a mixed hierarchy", async () => {
+    mocks.groups.mockResolvedValueOnce([
+      { id: "root", parentGroupId: null, type: "ASSET", isActive: true },
+      { id: "child", parentGroupId: "root", type: "LIABILITY", isActive: true },
+    ]);
+    const response = await queryAccountGainLossSummaries({
+      accountBookId: "book",
+      type: "BALANCE",
+      accountState: "all",
+    });
+    expect(response.total.summary.totalGainLoss).toBe(0.6);
+    expect(
+      response.rows.find((row) => row.id === "root")?.summary.totalGainLoss,
+    ).toBe(0.6);
+    expect(
+      response.rows.find((row) => row.id === "child")?.summary.totalGainLoss,
+    ).toBe(0.6);
+    expect(
+      response.rows.find((row) => row.id === "b")?.summary.totalGainLoss,
+    ).toBe(0.2);
+  });
+
   it("loads one read-only snapshot and finishes it before calculations", async () => {
     mocks.snapshot.mockImplementationOnce(async (load) => {
       const client = {
