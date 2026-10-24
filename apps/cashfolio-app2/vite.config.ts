@@ -25,6 +25,21 @@ if (baseUrl) {
 
 export default defineConfig({
   plugins: [tanstackStart(), nitro()],
+  build: {
+    rolldownOptions: {
+      onLog(level, log, defaultHandler) {
+        // Dependencies ship RSC markers; this app uses SSR without RSC.
+        if (
+          level === "warn" &&
+          log.code === "MODULE_LEVEL_DIRECTIVE" &&
+          log.message.includes("use client")
+        ) {
+          return;
+        }
+        defaultHandler(level, log);
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
