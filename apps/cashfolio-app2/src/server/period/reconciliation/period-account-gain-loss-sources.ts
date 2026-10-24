@@ -100,7 +100,10 @@ export async function loadAccountGainLossSources(
   const hierarchy = buildGainsLossesBreakdown({
     contributions,
     referenceCurrency: baseData.referenceCurrency,
-    accountAttributionById: buildGainLossAccountAttribution(baseData),
+    accountAttributionById: buildGainLossAccountAttribution(
+      baseData,
+      contributions,
+    ),
   }).hierarchy;
   return {
     node: hierarchy

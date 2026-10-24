@@ -1,3 +1,7 @@
+import {
+  accumulateGainLossContribution,
+  type GainLossContributionAccumulator,
+} from "./period-gains-losses-contributions";
 import { describe, expect, it } from "vitest";
 import { AccountType, AssetClass, Unit } from "../../../.prisma-client/enums";
 import { toMoney, moneySum } from "../../../shared/money";
@@ -125,6 +129,34 @@ describe("asset-class gain/loss attribution", () => {
     );
   });
 
+  it("retains ambiguity when residuals from different originating accounts are combined", () => {
+    const byKey = new Map<string, GainLossContributionAccumulator>();
+    for (const [origin, amount] of [
+      ["first", "2.25"],
+      ["second", "3.75"],
+    ] as const) {
+      accumulateGainLossContribution({
+        byKey,
+        ...contribution("expense", "HOLDING", amount),
+        originatingAccountIds: [origin],
+      });
+    }
+    expect(byKey.size).toBe(1);
+    expect([...byKey.values()][0]!.realizedGainLoss.toString()).toBe("6");
+    const result = buildGainLossAccountAttribution(
+      {
+        baseAssetLiabilityAccounts: [
+          account("first", AssetClass.EQUITIES),
+          account("second", AssetClass.OTHER_ASSETS),
+        ],
+        transferClearingUnitBuckets: [],
+        executionResidualTransactions: [],
+      },
+      [...byKey.values()],
+    );
+    expect(result.get("expense")).toMatchObject({ assetClass: null });
+  });
+
   it("uses a unique origin for virtual clearing and residuals, retaining pooled amounts as Unclassified", () => {
     const booking = {
       id: "leg",
@@ -169,7 +201,9 @@ describe("asset-class gain/loss attribution", () => {
         },
       ],
     };
-    const unique = buildGainLossAccountAttribution(inputs);
+    const unique = buildGainLossAccountAttribution(inputs, [
+      { accountId: "expense", originatingAccountIds: ["origin"] },
+    ]);
     expect(
       unique.get("virtual:transfer-clearing:account:currency:USD"),
     ).toMatchObject({
@@ -189,7 +223,14 @@ describe("asset-class gain/loss attribution", () => {
       accountId: "second",
       account: { name: "Second" },
     });
-    const pooled = buildGainLossAccountAttribution(inputs);
+    expect(
+      buildGainLossAccountAttribution(inputs, [
+        { accountId: "expense", originatingAccountIds: ["origin"] },
+      ]).get("expense")?.assetClass,
+    ).toBe(AssetClass.EQUITIES);
+    const pooled = buildGainLossAccountAttribution(inputs, [
+      { accountId: "expense", originatingAccountIds: ["origin", "second"] },
+    ]);
     expect(pooled.get("expense")).toMatchObject({ assetClass: null });
     expect(
       pooled.get("virtual:transfer-clearing:account:currency:USD"),

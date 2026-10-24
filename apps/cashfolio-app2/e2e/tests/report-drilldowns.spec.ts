@@ -319,7 +319,9 @@ test("archived manual portfolio reclassification moves historical G/L without ch
     .innerText();
   expect(amount).toMatch(/25/);
   await expect(table.getByText("Explicit G/L", { exact: true })).toHaveCount(0);
-  const footer = await table.locator(".ag-floating-bottom").innerText();
+  const footer = await table
+    .locator(".ag-grid-pinned-bottom-rows .ag-row-pinned")
+    .innerText();
   await prisma.account.update({
     where: {
       id_accountBookId: {
@@ -343,7 +345,11 @@ test("archived manual portfolio reclassification moves historical G/L without ch
       '[col-id="totalGainLoss"]',
     ),
   ).toHaveText(amount);
-  expect(await table.locator(".ag-floating-bottom").innerText()).toBe(footer);
+  expect(
+    await table
+      .locator(".ag-grid-pinned-bottom-rows .ag-row-pinned")
+      .innerText(),
+  ).toBe(footer);
   for (const mode of ["month", "year"]) {
     await page.goto(
       `/${book.accountBookId}/history?mode=${mode}&metric=gainsLosses&gainLossScope=asset-class:OTHER_ASSETS`,

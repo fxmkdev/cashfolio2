@@ -450,7 +450,9 @@ provenance retained in account-node metadata. Reference-currency accounts have
 no calculated FX contribution, but their recorded adjustments remain included.
 Null classification is Unclassified, distinct from Other Assets.
 
-Execution residual amounts retain their existing allocation weights. Real
+Execution residual amounts retain their existing allocation weights. Only
+contributing residual portions carry originating-account metadata; fully
+transferred legs and skipped candidates cannot affect classification. Real
 accounts use their own class; equity-origin residuals inherit a class only when
 one originating financial account is identifiable. Transfer-clearing FIFO stays
 pooled by unit. Its reporting class comes from a single identifiable originating

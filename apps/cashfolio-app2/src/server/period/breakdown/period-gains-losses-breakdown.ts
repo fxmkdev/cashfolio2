@@ -10,6 +10,7 @@ export type PeriodGainsLossesContribution = {
   sourceKind: "HOLDING" | "EXPLICIT";
   accountId: string;
   accountName: string;
+  originatingAccountIds?: string[];
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;

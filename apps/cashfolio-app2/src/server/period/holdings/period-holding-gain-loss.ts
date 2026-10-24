@@ -223,6 +223,9 @@ export async function computePeriodHoldingGainLoss(args: {
       periodEndExclusive: args.periodEndExclusive,
       referenceCurrency: args.referenceCurrency,
       trackedHoldingAccountIdSet: holdingAccountIdSet,
+      assetLiabilityAccountIdSet: new Set(
+        args.assetLiabilityAccountNameById.keys(),
+      ),
       convertBookingToReference: args.convertBookingToReference,
       onContribution: (contribution) => {
         args.onExecutionResidual?.(contribution);
@@ -231,6 +234,7 @@ export async function computePeriodHoldingGainLoss(args: {
           sourceKind: "HOLDING",
           accountId: contribution.accountId,
           accountName: contribution.accountName,
+          originatingAccountIds: contribution.originatingAccountIds,
           unit: contribution.unit,
           currency: contribution.currency,
           cryptocurrency: contribution.cryptocurrency,

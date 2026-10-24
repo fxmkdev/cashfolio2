@@ -138,7 +138,9 @@ async function loadPeriodGainLossReconciliationPageData(
 
   const node = sourceDetails.node;
   if (!details && (node || realAccount)) {
-    const identity = sourceDetails.contribution ?? realAccount;
+    const identity = realAccount?.unit
+      ? realAccount
+      : sourceDetails.contribution;
     if (identity) {
       const unitIdentity = {
         ...identity,

@@ -177,7 +177,9 @@ export async function loadPeriodOverview(args: {
     bookingsCount,
     convertedBookingsCount,
     skippedBookingsCount,
-    gainLossAccountAttributionById: buildGainLossAccountAttribution(baseData),
+    gainLossAccountAttributionById: buildGainLossAccountAttribution(baseData, [
+      ...gainsLossesContributionByKey.values(),
+    ]),
     gainsLossesContributions: Array.from(gainsLossesContributionByKey.values()),
     locale: args.locale,
   });

@@ -1,3 +1,4 @@
+import type { GainLossContributionAccumulator } from "./period-gains-losses-contributions";
 import type { AssetClass } from "../../../.prisma-client/enums";
 import type { PeriodBaseData } from "../base-data/period-base-data-types";
 
@@ -16,6 +17,10 @@ export function buildGainLossAccountAttribution(
     | "transferClearingUnitBuckets"
     | "executionResidualTransactions"
   >,
+  contributions: Pick<
+    GainLossContributionAccumulator,
+    "accountId" | "originatingAccountIds"
+  >[] = [],
 ): Map<string, GainLossAccountAttribution> {
   const accounts = new Map(
     baseData.baseAssetLiabilityAccounts.map((account) => [account.id, account]),
@@ -65,18 +70,19 @@ export function buildGainLossAccountAttribution(
     );
   }
   const residualOrigins = new Map<string, Set<string>>();
-  for (const transaction of baseData.executionResidualTransactions) {
-    const ids = transaction.bookings
-      .filter((booking) => accounts.has(booking.accountId))
-      .map((booking) => booking.accountId);
-    for (const booking of transaction.bookings) {
-      if (accounts.has(booking.accountId)) continue;
-      const origins =
-        residualOrigins.get(booking.accountId) ?? new Set<string>();
-      // An unattributed transaction must not be hidden by an attributable one.
-      for (const id of ids.length ? ids : ["unknown"]) origins.add(id);
-      residualOrigins.set(booking.accountId, origins);
-    }
+  for (const contribution of contributions) {
+    if (
+      accounts.has(contribution.accountId) ||
+      !contribution.originatingAccountIds
+    )
+      continue;
+    const origins =
+      residualOrigins.get(contribution.accountId) ?? new Set<string>();
+    for (const id of contribution.originatingAccountIds.length
+      ? contribution.originatingAccountIds
+      : ["unknown"])
+      origins.add(id);
+    residualOrigins.set(contribution.accountId, origins);
   }
   for (const [id, origins] of residualOrigins)
     result.set(id, originating(origins, "unattributed"));

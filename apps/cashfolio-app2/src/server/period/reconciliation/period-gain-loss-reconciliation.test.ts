@@ -121,6 +121,7 @@ describe("getPeriodGainLossReconciliation", () => {
         ...identity,
         accountId,
         accountName: identity.name,
+        currency: kind === "reference-currency" ? "USD" : "CHF",
         sourceKind: "EXPLICIT",
         realizedGainLoss: toMoney("12.34"),
         unrealizedGainLoss: toMoney(0),

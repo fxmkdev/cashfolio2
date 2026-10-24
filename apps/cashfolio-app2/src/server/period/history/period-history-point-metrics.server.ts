@@ -273,7 +273,9 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
   });
   const gainsLossesBreakdown = buildGainsLossesBreakdown({
     contributions: Array.from(gainsLossesContributionByKey.values()),
-    accountAttributionById: buildGainLossAccountAttribution(baseData),
+    accountAttributionById: buildGainLossAccountAttribution(baseData, [
+      ...gainsLossesContributionByKey.values(),
+    ]),
     referenceCurrency,
   });
   const gainLossScopeOptions = buildHistoryGainLossScopeOptions({
