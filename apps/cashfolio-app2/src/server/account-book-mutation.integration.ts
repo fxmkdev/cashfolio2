@@ -347,7 +347,7 @@ describe("account-book mutation invariants against disposable PostgreSQL", () =>
           }),
         }),
     );
-    expectRejected(outcomes, "currency asset accounts");
+    expectRejected(outcomes, "currency accounts");
     expect(await db.account.count({ where: { groupId: "A" } })).toBe(0);
   });
 
