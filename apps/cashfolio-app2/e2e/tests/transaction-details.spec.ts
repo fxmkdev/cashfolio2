@@ -736,7 +736,7 @@ test("opens navigation and mutation targets, refreshes bookings, and closes afte
     exact: true,
   });
   await expect(rebook).toBeVisible();
-  await rebook.getByLabel("Target Account").click();
+  await rebook.getByLabel("Account or Category").click();
   await page.keyboard.type(seeded.savingsAccount.name);
   await page
     .getByRole("option", { name: new RegExp(seeded.savingsAccount.name) })
