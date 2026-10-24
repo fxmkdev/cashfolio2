@@ -223,12 +223,17 @@ for (const tab of [
         page.locator(`[row-id="__archived__:group:${closed.id}"]`),
       ).toHaveAttribute("aria-expanded", "false");
     }
-    const saved = await prisma.accountGroup.findUniqueOrThrow({
-      where: {
-        id_accountBookId: { id: closed.id, accountBookId: book.accountBookId },
-      },
-    });
-    expect(saved.isActive).toBe(true);
-    expect(saved.parentGroupId).toBe(live.id);
+    await expect
+      .poll(() =>
+        prisma.accountGroup.findUniqueOrThrow({
+          where: {
+            id_accountBookId: {
+              id: closed.id,
+              accountBookId: book.accountBookId,
+            },
+          },
+        }),
+      )
+      .toMatchObject({ isActive: true, parentGroupId: live.id });
   });
 }
