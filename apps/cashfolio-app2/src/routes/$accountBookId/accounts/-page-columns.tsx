@@ -140,7 +140,7 @@ export function useAccountTreeColumnDefs(params: {
                 value,
               }: ICellRendererParams<AccountsGridRow, string | undefined>) =>
                 value === "Unclassified" ? (
-                  <Text component="span" size="inherit" c="dimmed">
+                  <Text component="span" inherit c="dimmed">
                     {value}
                   </Text>
                 ) : (

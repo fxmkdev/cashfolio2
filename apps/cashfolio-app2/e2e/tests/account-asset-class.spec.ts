@@ -134,6 +134,13 @@ test("manually classifies a currency portfolio from Accounts and clears it from 
   const row = agGridRowByText(page, name);
   await expect(row).toBeVisible();
   await expect(agGridCellByColId(row, "assetClass")).toHaveText("Equities");
+  const classifiedTypography = await agGridCellByColId(
+    row,
+    "assetClass",
+  ).evaluate((cell) => {
+    const style = getComputedStyle(cell.firstElementChild ?? cell);
+    return { fontSize: style.fontSize, color: style.color };
+  });
   const nextCreate = await openDialogFromButton(page, {
     buttonName: "Add Account",
     dialogName: "New Account",
@@ -215,7 +222,20 @@ test("manually classifies a currency portfolio from Accounts and clears it from 
   ).toEqual(bookings);
   await edit.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET`);
-  await expect(
-    agGridCellByColId(agGridRowByText(page, name), "assetClass"),
-  ).toHaveText("Unclassified");
+  const unclassifiedCell = agGridCellByColId(
+    agGridRowByText(page, name),
+    "assetClass",
+  );
+  await expect(unclassifiedCell).toHaveText("Unclassified");
+  const unclassifiedText = unclassifiedCell.getByText("Unclassified", {
+    exact: true,
+  });
+  await expect(unclassifiedText).toHaveCSS(
+    "font-size",
+    classifiedTypography.fontSize,
+  );
+  await expect(unclassifiedText).not.toHaveCSS(
+    "color",
+    classifiedTypography.color,
+  );
 });
