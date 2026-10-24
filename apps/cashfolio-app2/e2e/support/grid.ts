@@ -31,10 +31,11 @@ export async function revealRowActions(row: Locator) {
   });
   const rowId = await row.getAttribute("row-id");
   if (rowId == null) throw new Error("The grid row has no stable ID.");
+  // Reparenting can retain a fading copy with the same ID during row animation.
   const stableRow = row
     .page()
     .locator(
-      `.ag-grid-scrolling-container > .ag-row[row-id=${JSON.stringify(rowId)}]`,
+      `.ag-grid-scrolling-container > .ag-row:not(.ag-opacity-zero)[row-id=${JSON.stringify(rowId)}]`,
     );
   await stableRow.hover();
   // Virtualised action columns are only mounted after scrolling into view.

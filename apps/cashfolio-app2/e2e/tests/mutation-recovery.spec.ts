@@ -209,6 +209,17 @@ for (const nodeType of ["account", "accountGroup"] as const) {
     await expect(
       page.getByText(`Unarchive ${name}`, { exact: true }),
     ).toBeVisible();
+    await expect(
+      page.getByText(
+        "This item is no longer eligible to unarchive. Check the refreshed account list.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    // Refreshing moves the inactive parent into a newly collapsed Archived branch.
+    await expandArchivedGroups(page);
+    await expect(parentRow).toBeVisible();
+    if (await contracted.isVisible()) await contracted.click();
+    await expandArchivedGroups(page);
     const refreshedActionRow = await revealRowActions(row);
     await expect(
       refreshedActionRow.getByRole("button", { name: "Unarchive" }),
