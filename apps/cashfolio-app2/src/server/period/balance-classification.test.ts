@@ -52,12 +52,12 @@ async function compute(
 describe("balance-based reporting", () => {
   it("reconciles totals, allocation trees, and History scopes before netting mixed-sign groups", async () => {
     const accounts = [
-      account("bank", AccountType.ASSET),
-      account("overdraft", AccountType.ASSET, "USD"),
-      account("overpayment", AccountType.LIABILITY),
-      account("card-debt", AccountType.LIABILITY),
-      account("zero", AccountType.LIABILITY, "UNKNOWN"),
-      account("unvalued", AccountType.ASSET, "UNKNOWN"),
+      account("bank", AccountType.BALANCE),
+      account("overdraft", AccountType.BALANCE, "USD"),
+      account("overpayment", AccountType.BALANCE),
+      account("card-debt", AccountType.BALANCE),
+      account("zero", AccountType.BALANCE, "UNKNOWN"),
+      account("unvalued", AccountType.BALANCE, "UNKNOWN"),
       account("equity", AccountType.EQUITY),
     ];
     const stats = await compute(
@@ -131,7 +131,7 @@ describe("balance-based reporting", () => {
     }
   });
 
-  it.each([AccountType.ASSET, AccountType.LIABILITY])(
+  it.each([AccountType.BALANCE])(
     "clips scoped contributions to each side as a %s account crosses zero",
     async (type) => {
       const accounts = [account("crossing", type)];
@@ -175,8 +175,8 @@ describe("balance-based reporting", () => {
   it("classifies exact balances without losing sub-cent values", async () => {
     const stats = await compute(
       [
-        account("tiny-debt", AccountType.ASSET),
-        account("tiny-credit", AccountType.LIABILITY),
+        account("tiny-debt", AccountType.BALANCE),
+        account("tiny-credit", AccountType.BALANCE),
       ],
       new Map([
         ["tiny-debt", toMoney("-0.004")],

@@ -88,7 +88,11 @@ function setup() {
         description: "Opening",
       },
     ],
-    account: { type: AccountType.ASSET, unit: Unit.CURRENCY, currency: "CHF" },
+    account: {
+      type: AccountType.BALANCE,
+      unit: Unit.CURRENCY,
+      currency: "CHF",
+    },
     drafts,
   })!;
   const balanceNode = {

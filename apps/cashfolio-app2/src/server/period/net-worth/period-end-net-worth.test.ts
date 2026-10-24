@@ -14,7 +14,7 @@ function createBaseData(input: {
   endOfPeriodRawBalances: Array<{ accountId: string; rawBalance: number }>;
   baseAssetLiabilityAccounts: Array<{
     id: string;
-    type: "ASSET" | "LIABILITY";
+    type: "BALANCE";
     unit: "CURRENCY" | "SECURITY" | "CRYPTOCURRENCY";
     currency: string | null;
     cryptocurrency: string | null;
@@ -62,7 +62,7 @@ describe("loadPeriodEndNetWorth", () => {
       baseAssetLiabilityAccounts: [
         {
           id: "asset-cash",
-          type: "ASSET",
+          type: "BALANCE",
           unit: "CURRENCY",
           currency: "CHF",
           cryptocurrency: null,
@@ -114,7 +114,7 @@ describe("loadPeriodEndNetWorth", () => {
       baseAssetLiabilityAccounts: [
         {
           id: "asset-cash",
-          type: "ASSET",
+          type: "BALANCE",
           unit: "CURRENCY",
           currency: "CHF",
           cryptocurrency: null,

@@ -32,7 +32,7 @@ describe("period calculation preparation", () => {
         {
           id: "cash",
           name: "Cash",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           groupId: "group",
           unit: Unit.CURRENCY,
           currency: "CHF",
@@ -62,10 +62,10 @@ describe("period calculation preparation", () => {
     expect(
       context.assetLiabilityAccounts.map(({ id, type }) => [id, type]),
     ).toEqual([
-      ["cash", AccountType.ASSET],
-      ["virtual:transfer-clearing:account:currency:USD", AccountType.ASSET],
-      ["virtual:transfer-clearing:account:currency:EUR", AccountType.LIABILITY],
-      ["virtual:transfer-clearing:account:currency:CHF", AccountType.ASSET],
+      ["cash", AccountType.BALANCE],
+      ["virtual:transfer-clearing:account:currency:USD", AccountType.BALANCE],
+      ["virtual:transfer-clearing:account:currency:EUR", AccountType.BALANCE],
+      ["virtual:transfer-clearing:account:currency:CHF", AccountType.BALANCE],
     ]);
     expect(
       context.endOfPeriodRawBalanceByAccountId

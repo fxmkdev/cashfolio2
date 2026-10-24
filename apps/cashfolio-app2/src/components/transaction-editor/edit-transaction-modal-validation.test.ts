@@ -73,7 +73,7 @@ describe("validateEditTransactionBookingsRoot", () => {
           AccountType.EQUITY,
           EquityAccountSubtype.GAIN_LOSS,
         ),
-        account("asset", AccountType.ASSET, null),
+        account("asset", AccountType.BALANCE, null),
       ],
     );
 
@@ -147,8 +147,8 @@ describe("validateEditTransactionBookingsRoot", () => {
         },
       ],
       [
-        account("asset-1", AccountType.ASSET, null),
-        account("asset-2", AccountType.ASSET, null),
+        account("asset-1", AccountType.BALANCE, null),
+        account("asset-2", AccountType.BALANCE, null),
       ],
     );
 
@@ -174,8 +174,8 @@ describe("validateEditTransactionBookingsRoot", () => {
         },
       ],
       [
-        account("asset-1", AccountType.ASSET, null),
-        account("asset-2", AccountType.ASSET, null),
+        account("asset-1", AccountType.BALANCE, null),
+        account("asset-2", AccountType.BALANCE, null),
       ],
     );
 
@@ -209,9 +209,9 @@ describe("validateEditTransactionBookingsRoot", () => {
         },
       ],
       [
-        account("asset-1", AccountType.ASSET, null),
-        account("asset-2", AccountType.ASSET, null),
-        account("asset-3", AccountType.ASSET, null),
+        account("asset-1", AccountType.BALANCE, null),
+        account("asset-2", AccountType.BALANCE, null),
+        account("asset-3", AccountType.BALANCE, null),
       ],
     );
 

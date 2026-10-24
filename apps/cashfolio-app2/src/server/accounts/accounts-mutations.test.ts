@@ -115,7 +115,7 @@ describe("account mutation boundary validation", () => {
   it.each([
     [
       createAccount,
-      { accountBookId: "book-1", name: 123, type: AccountType.ASSET },
+      { accountBookId: "book-1", name: 123, type: AccountType.BALANCE },
     ],
     [
       updateAccount,
@@ -123,7 +123,7 @@ describe("account mutation boundary validation", () => {
         accountBookId: "book-1",
         id: "a-1",
         name: "Name",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         openingBalance: "100",
       },
     ],
@@ -137,7 +137,7 @@ describe("account mutation boundary validation", () => {
         accountBookId: "book-1",
         id: "g-1",
         name: "Name",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         isCashAccount: "true",
       },
     ],
@@ -182,7 +182,7 @@ describe("updateAccount opening balance management", () => {
 
     tx.account.findMany.mockResolvedValue([]);
     tx.account.findUniqueOrThrow.mockResolvedValue({
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       unit: Unit.CURRENCY,
       currency: "CHF",
@@ -195,7 +195,7 @@ describe("updateAccount opening balance management", () => {
       type:
         where.id_accountBookId.id === "group-expenses"
           ? AccountType.EQUITY
-          : AccountType.ASSET,
+          : AccountType.BALANCE,
       equityAccountSubtype: null,
       isCashAccount: false,
       isActive: true,
@@ -205,7 +205,7 @@ describe("updateAccount opening balance management", () => {
     tx.account.update.mockResolvedValue({
       id: "account-1",
       name: "Cash",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       unit: Unit.CURRENCY,
       currency: "CHF",
       cryptocurrency: null,
@@ -217,7 +217,7 @@ describe("updateAccount opening balance management", () => {
     tx.accountGroup.update.mockResolvedValue({
       id: "group-1",
       name: "Group",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       isCashAccount: false,
     });
     tx.accountGroup.updateMany.mockResolvedValue({ count: 0 });
@@ -233,7 +233,7 @@ describe("updateAccount opening balance management", () => {
     tx.booking.deleteMany.mockResolvedValue({ count: 0 });
   });
 
-  it.each([AccountType.ASSET, AccountType.LIABILITY])(
+  it.each([AccountType.BALANCE])(
     "creates accounts in a %s parent with explicit cash inheritance",
     async (parentType) => {
       tx.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
@@ -246,7 +246,7 @@ describe("updateAccount opening balance management", () => {
         data: {
           accountBookId: "book-1",
           name: "Card",
-          type: AccountType.LIABILITY,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
           currency: "CHF",
           groupId: "banking",
@@ -254,7 +254,7 @@ describe("updateAccount opening balance management", () => {
       });
       expect(tx.account.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          type: AccountType.LIABILITY,
+          type: AccountType.BALANCE,
           groupId: "banking",
           isCashAccount: true,
         }),
@@ -275,7 +275,7 @@ describe("updateAccount opening balance management", () => {
       equityAccountSubtype: EquityAccountSubtype.INCOME,
       isActive: true,
     },
-    { type: AccountType.ASSET, equityAccountSubtype: null, isActive: false },
+    { type: AccountType.BALANCE, equityAccountSubtype: null, isActive: false },
   ])(
     "rejects an incompatible parent before creating an account: %j",
     async (parent) => {
@@ -288,7 +288,7 @@ describe("updateAccount opening balance management", () => {
           data: {
             accountBookId: "book-1",
             name: "Bank",
-            type: AccountType.ASSET,
+            type: AccountType.BALANCE,
             unit: Unit.CURRENCY,
             currency: "CHF",
             groupId: "parent",
@@ -308,7 +308,7 @@ describe("updateAccount opening balance management", () => {
         data: {
           accountBookId: "book-1",
           name: "Bank",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
           currency: "CHF",
           groupId: "foreign-parent",
@@ -324,7 +324,7 @@ describe("updateAccount opening balance management", () => {
         id: "account-1",
         accountBookId: "book-1",
         name: "Cash renamed",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         groupId: "group-1",
         sortOrder: 7,
       },
@@ -482,7 +482,7 @@ describe("updateAccount opening balance management", () => {
     tx.account.create.mockResolvedValueOnce({
       id: "account-2",
       name: "Checking",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       unit: Unit.CURRENCY,
       currency: "CHF",
@@ -495,7 +495,7 @@ describe("updateAccount opening balance management", () => {
       data: {
         accountBookId: "book-1",
         name: "Checking",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         currency: "CHF",
         statementImportCsvFormat,
@@ -527,7 +527,7 @@ describe("updateAccount opening balance management", () => {
         id: "account-1",
         accountBookId: "book-1",
         name: "Cash",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         statementImportCsvFormat,
       },
     });
@@ -551,7 +551,7 @@ describe("updateAccount opening balance management", () => {
       columns: ["date", "amount", "description"],
     };
     tx.account.findUniqueOrThrow.mockResolvedValueOnce({
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       unit: Unit.CURRENCY,
       currency: "CHF",
@@ -566,7 +566,7 @@ describe("updateAccount opening balance management", () => {
         id: "account-1",
         accountBookId: "book-1",
         name: "Cash",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
       },
     });
 
@@ -584,7 +584,7 @@ describe("updateAccount opening balance management", () => {
     tx.account.create.mockResolvedValueOnce({
       id: "account-3",
       name: "Checking",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       unit: Unit.CURRENCY,
       currency: "CHF",
       cryptocurrency: null,
@@ -597,7 +597,7 @@ describe("updateAccount opening balance management", () => {
       data: {
         accountBookId: "book-1",
         name: "Checking",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         currency: "CHF",
         isCashAccount: true,
@@ -606,7 +606,7 @@ describe("updateAccount opening balance management", () => {
 
     expect(validateAccountInput).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         currency: "CHF",
         isCashAccount: true,
@@ -625,7 +625,7 @@ describe("updateAccount opening balance management", () => {
 
   it("inherits cash status when creating accounts inside cash groups", async () => {
     tx.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       isActive: true,
       isCashAccount: true,
@@ -635,7 +635,7 @@ describe("updateAccount opening balance management", () => {
       data: {
         accountBookId: "book-1",
         name: "Wallet",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         currency: "CHF",
         groupId: "cash-group",
@@ -653,7 +653,7 @@ describe("updateAccount opening balance management", () => {
 
   it("inherits cash status when moving accounts into cash groups", async () => {
     tx.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       isActive: true,
       isCashAccount: true,
@@ -664,7 +664,7 @@ describe("updateAccount opening balance management", () => {
         id: "account-1",
         accountBookId: "book-1",
         name: "Cash",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         groupId: "cash-group",
         isCashAccount: false,
       },
@@ -683,7 +683,7 @@ describe("updateAccount opening balance management", () => {
 
   it("preserves cash status when updating accounts without a cash flag", async () => {
     tx.account.findUniqueOrThrow.mockResolvedValueOnce({
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       unit: Unit.CURRENCY,
       currency: "CHF",
@@ -699,7 +699,7 @@ describe("updateAccount opening balance management", () => {
         id: "account-1",
         accountBookId: "book-1",
         name: "Cash renamed",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         groupId: null,
       },
     });
@@ -732,7 +732,7 @@ describe("updateAccount opening balance management", () => {
           id: "account-1",
           accountBookId: "book-1",
           name: "Cash",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           ...change,
         },
       }),
@@ -744,9 +744,10 @@ describe("updateAccount opening balance management", () => {
     expect(invalidatePeriodBaseDataCacheForAccountBook).not.toHaveBeenCalled();
   });
 
-  it.each([AccountType.ASSET, AccountType.LIABILITY])(
-    "updates an existing %s opening-balance transaction with the signed input",
-    async (type) => {
+  it.each([-150, 150])(
+    "updates an existing opening-balance transaction with signed input %s",
+    async (openingBalance) => {
+      const type = AccountType.BALANCE;
       tx.account.findUniqueOrThrow.mockResolvedValue({
         type,
         equityAccountSubtype: null,
@@ -761,7 +762,6 @@ describe("updateAccount opening balance management", () => {
         unit: Unit.CURRENCY,
         currency: "CHF",
       });
-      const openingBalance = type === AccountType.LIABILITY ? -150 : 150;
       tx.transaction.findMany.mockResolvedValue([
         {
           id: "tx-open",
@@ -851,7 +851,7 @@ describe("updateAccount opening balance management", () => {
     },
   );
 
-  it.each([AccountType.ASSET, AccountType.LIABILITY])(
+  it.each([AccountType.BALANCE])(
     "deletes %s opening-balance transactions when opening balance is removed",
     async (type) => {
       tx.account.findUniqueOrThrow.mockResolvedValue({
@@ -932,7 +932,7 @@ describe("updateAccount opening balance management", () => {
         id: "account-1",
         accountBookId: "book-1",
         name: "Cash",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         currency: "CHF",
         openingBalance: 250,
@@ -974,7 +974,7 @@ describe("createAccountGroup", () => {
 
     tx.accountGroup.findMany.mockResolvedValue([]);
     tx.accountGroup.findUniqueOrThrow.mockResolvedValue({
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       isActive: true,
       isCashAccount: false,
@@ -983,7 +983,7 @@ describe("createAccountGroup", () => {
       id: "group-1",
       accountBookId: "book-1",
       name: "Group",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       isActive: true,
       isCashAccount: false,
@@ -994,7 +994,7 @@ describe("createAccountGroup", () => {
       id: "group-1",
       accountBookId: "book-1",
       name: "Group",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       isActive: true,
       isCashAccount: false,
@@ -1007,13 +1007,13 @@ describe("createAccountGroup", () => {
     tx.accountGroup.findMany.mockImplementation(async ({ select }) =>
       select.name
         ? []
-        : [{ id: "group-1", parentGroupId: null, type: AccountType.ASSET }],
+        : [{ id: "group-1", parentGroupId: null, type: AccountType.BALANCE }],
     );
     tx.accountGroup.update.mockResolvedValue({
       id: "group-1",
       accountBookId: "book-1",
       name: "Group",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       isActive: true,
       isCashAccount: false,
@@ -1028,7 +1028,7 @@ describe("createAccountGroup", () => {
       data: {
         accountBookId: "book-1",
         name: "Group",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
       },
     });
 
@@ -1036,7 +1036,7 @@ describe("createAccountGroup", () => {
       data: {
         accountBookId: "book-1",
         name: "Group",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: undefined,
         isActive: true,
         parentGroupId: undefined,
@@ -1054,7 +1054,7 @@ describe("createAccountGroup", () => {
       data: {
         accountBookId: "book-1",
         name: "Archived Group",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         parentGroupId: "parent-1",
         sortOrder: 2,
         isActive: false,
@@ -1065,7 +1065,7 @@ describe("createAccountGroup", () => {
       data: {
         accountBookId: "book-1",
         name: "Archived Group",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: undefined,
         isActive: false,
         parentGroupId: "parent-1",
@@ -1083,7 +1083,7 @@ describe("createAccountGroup", () => {
       data: {
         accountBookId: "book-1",
         name: "Cash",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         isCashAccount: true,
       },
     });
@@ -1102,7 +1102,7 @@ describe("createAccountGroup", () => {
 
   it("inherits cash status from parent groups when creating nested groups", async () => {
     tx.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       isActive: true,
       isCashAccount: true,
@@ -1112,7 +1112,7 @@ describe("createAccountGroup", () => {
       data: {
         accountBookId: "book-1",
         name: "Wallets",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         parentGroupId: "cash-parent",
         isCashAccount: false,
       },
@@ -1132,7 +1132,7 @@ describe("createAccountGroup", () => {
         id: "group-1",
         accountBookId: "book-1",
         name: "Cash",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         isCashAccount: true,
       },
     });
@@ -1164,14 +1164,14 @@ describe("createAccountGroup", () => {
 
   it("preserves and returns group cash status when updating groups without a cash flag", async () => {
     tx.accountGroup.findUniqueOrThrow.mockResolvedValueOnce({
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       isCashAccount: true,
     });
     tx.accountGroup.update.mockImplementationOnce(async ({ data }) => ({
       id: "group-1",
       accountBookId: "book-1",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       isActive: true,
       parentGroupId: null,
@@ -1184,7 +1184,7 @@ describe("createAccountGroup", () => {
         id: "group-1",
         accountBookId: "book-1",
         name: "Cash renamed",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
       },
     });
 
@@ -1218,7 +1218,7 @@ describe("createAccountGroup", () => {
         id: "group-1",
         accountBookId: "book-1",
         name: "Assets",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         isCashAccount: false,
       },
     });
@@ -1241,7 +1241,7 @@ describe("createAccountGroup", () => {
 
   it("rejects marking a group cash when its subtree has non-cashable accounts", async () => {
     tx.account.findMany.mockResolvedValueOnce([
-      { type: AccountType.ASSET, unit: Unit.SECURITY },
+      { type: AccountType.BALANCE, unit: Unit.SECURITY },
     ]);
 
     await expect(
@@ -1250,7 +1250,7 @@ describe("createAccountGroup", () => {
           id: "group-1",
           accountBookId: "book-1",
           name: "Cash",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           isCashAccount: true,
         },
       }),

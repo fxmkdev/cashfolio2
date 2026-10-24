@@ -27,8 +27,8 @@ export function validateAccountGroupId(_groupId?: string): string | null {
   return null;
 }
 
-function isAssetOrLiability(type?: AccountType): boolean {
-  return type === "ASSET" || type === "LIABILITY";
+function isBalanceAccountType(type?: AccountType): boolean {
+  return type === "BALANCE";
 }
 
 function hasEquitySubtype(
@@ -61,7 +61,7 @@ export function validateAccountUnit(
   unit?: Unit,
   type?: AccountType,
 ): string | null {
-  if (!isAssetOrLiability(type)) return null;
+  if (!isBalanceAccountType(type)) return null;
   return unit ? null : "Unit is required";
 }
 
@@ -70,7 +70,7 @@ export function validateAccountCurrency(
   unit?: Unit,
   type?: AccountType,
 ): string | null {
-  if (!isAssetOrLiability(type) || unit !== "CURRENCY") return null;
+  if (!isBalanceAccountType(type) || unit !== "CURRENCY") return null;
   return currency ? null : "Currency is required";
 }
 
@@ -79,7 +79,7 @@ export function validateAccountCryptocurrency(
   unit?: Unit,
   type?: AccountType,
 ): string | null {
-  if (!isAssetOrLiability(type) || unit !== "CRYPTOCURRENCY") return null;
+  if (!isBalanceAccountType(type) || unit !== "CRYPTOCURRENCY") return null;
   return cryptocurrency ? null : "Cryptocurrency is required";
 }
 
@@ -88,7 +88,7 @@ export function validateAccountSymbol(
   unit?: Unit,
   type?: AccountType,
 ): string | null {
-  if (!isAssetOrLiability(type) || unit !== "SECURITY") return null;
+  if (!isBalanceAccountType(type) || unit !== "SECURITY") return null;
   return symbol ? null : "Symbol is required";
 }
 
@@ -97,7 +97,7 @@ export function validateAccountTradeCurrency(
   unit?: Unit,
   type?: AccountType,
 ): string | null {
-  if (!isAssetOrLiability(type) || unit !== "SECURITY") return null;
+  if (!isBalanceAccountType(type) || unit !== "SECURITY") return null;
   return tradeCurrency ? null : "Trade currency is required";
 }
 
@@ -106,8 +106,8 @@ export function validateAccountStatementImportCsvFormat(
   type?: AccountType,
 ): string | null {
   if (statementImportCsvFormat == null) return null;
-  if (!isAssetOrLiability(type)) {
-    return "Statement import CSV format is only allowed for asset and liability accounts";
+  if (!isBalanceAccountType(type)) {
+    return "Statement import CSV format is only available for accounts";
   }
 
   const result = readStatementImportCsvFormat(statementImportCsvFormat);
@@ -120,7 +120,7 @@ export function validateAccountCashAccountFlag(
   type?: AccountType,
 ): string | null {
   if (!isCashAccount) return null;
-  if (isAssetOrLiability(type) && unit === "CURRENCY") return null;
+  if (isBalanceAccountType(type) && unit === "CURRENCY") return null;
   return "Cash accounts must be currency accounts";
 }
 
@@ -129,7 +129,7 @@ export function validateAccountGroupCashAccountFlag(
   type?: AccountType,
 ): string | null {
   if (!isCashAccount) return null;
-  if (isAssetOrLiability(type)) return null;
+  if (isBalanceAccountType(type)) return null;
   return "Cash account groups must be account groups";
 }
 

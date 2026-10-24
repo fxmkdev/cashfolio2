@@ -12,7 +12,7 @@ const meta = {
     leftSection: <IconCalendarMonth size={16} />,
     to: "/$accountBookId/accounts",
     params: { accountBookId: "storybook-book" } as never,
-    search: { tab: "ASSET", mode: "active" } as never,
+    search: { tab: "BALANCE", mode: "active" } as never,
   },
 } satisfies Meta<typeof LinkButton>;
 

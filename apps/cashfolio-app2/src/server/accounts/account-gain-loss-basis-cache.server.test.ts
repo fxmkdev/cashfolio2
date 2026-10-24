@@ -42,7 +42,7 @@ const redis = {
 const holding = {
   id: "holding",
   name: "Holding",
-  type: "ASSET",
+  type: "BALANCE",
   isActive: true,
   groupId: "group",
   unit: "SECURITY",
@@ -69,7 +69,7 @@ function trade(id: string, day: string, quantity: string, proceeds: string) {
         date,
         value: quantity,
         description: null,
-        account: { type: "ASSET", equityAccountSubtype: null },
+        account: { type: "BALANCE", equityAccountSubtype: null },
       },
       {
         id: `${id}:cash`,
@@ -82,7 +82,7 @@ function trade(id: string, day: string, quantity: string, proceeds: string) {
         cryptocurrency: null,
         symbol: null,
         tradeCurrency: null,
-        account: { type: "ASSET", equityAccountSubtype: null },
+        account: { type: "BALANCE", equityAccountSubtype: null },
       },
     ],
   };
@@ -103,7 +103,7 @@ const load = (date = "2026-05-12Z") =>
 const list = () =>
   queryAccountGainLossSummaries({
     accountBookId: "book",
-    type: "ASSET",
+    type: "BALANCE",
     accountState: "active",
   });
 const ledger = (includeDetails = false, period?: string) =>
@@ -132,7 +132,7 @@ beforeEach(() => {
   mocks.db.accountBook.findUniqueOrThrow.mockResolvedValue(book);
   mocks.db.account.findMany.mockResolvedValue([holding]);
   mocks.db.accountGroup.findMany.mockResolvedValue([
-    { id: "group", parentGroupId: null, type: "ASSET", isActive: true },
+    { id: "group", parentGroupId: null, type: "BALANCE", isActive: true },
   ]);
   mocks.db.booking.groupBy.mockResolvedValue([
     { accountId: "holding", _sum: { value: "2" } },
@@ -277,7 +277,7 @@ describe("historical G/L basis cache through the real FIFO calculation", () => {
       if (scenario.endsWith("transfer")) {
         const archived = await queryAccountGainLossSummaries({
           accountBookId: "book",
-          type: "ASSET",
+          type: "BALANCE",
           accountState: "inactive",
         });
         expect(archived.total.summary.realizedGainLoss).toBe(20);
@@ -514,6 +514,16 @@ describe("historical G/L basis cache through the real FIFO calculation", () => {
     expect(isAccountGainLossBasisCacheData(decoded)).toBe(true);
     if (!isAccountGainLossBasisCacheData(decoded))
       throw new Error("invalid fixture");
+    for (const type of ["ASSET", "LIABILITY"]) {
+      for (const field of ["accounts", "groups"] as const) {
+        expect(
+          isAccountGainLossBasisCacheData({
+            ...decoded,
+            [field]: decoded[field].map((row) => ({ ...row, type })),
+          }),
+        ).toBe(false);
+      }
+    }
     expect(decoded.basis.holdings[0]!.state.lots[0]!.quantity.toString()).toBe(
       "1.000000000000000001",
     );

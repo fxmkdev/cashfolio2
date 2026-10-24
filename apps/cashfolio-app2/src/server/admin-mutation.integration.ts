@@ -121,12 +121,14 @@ async function createBook(id: string, memberIds: string[]) {
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01"),
       userLinks: { create: memberIds.map((userId) => ({ userId })) },
-      groups: { create: { id: `${id}-group`, name: "Assets", type: "ASSET" } },
+      groups: {
+        create: { id: `${id}-group`, name: "Assets", type: "BALANCE" },
+      },
       accounts: {
         create: {
           id: `${id}-account`,
           name: "Cash",
-          type: "ASSET",
+          type: "BALANCE",
           groupId: `${id}-group`,
         },
       },

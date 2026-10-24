@@ -94,7 +94,7 @@ describe("getAccountsLinkSearch", () => {
   it("preserves explicit accounts search context when tab/mode are in the URL", () => {
     expect(
       getAccountsLinkSearch({
-        locationSearch: { tab: "LIABILITY", mode: "archived" },
+        locationSearch: { tab: "BALANCE", mode: "archived" },
         matches: [],
       }),
     ).toEqual({
@@ -132,7 +132,7 @@ describe("getAccountsLinkSearch", () => {
           {
             routeId: "/$accountId",
             account: {
-              type: AccountType.LIABILITY,
+              type: AccountType.BALANCE,
               equityAccountSubtype: null,
               isActive: true,
             },
@@ -148,7 +148,7 @@ describe("getAccountsLinkSearch", () => {
   it("keeps selected tab when mode is omitted and defaults mode to active", () => {
     expect(
       getAccountsLinkSearch({
-        locationSearch: { tab: "LIABILITY" },
+        locationSearch: { tab: "BALANCE" },
         matches: [],
       }),
     ).toEqual({

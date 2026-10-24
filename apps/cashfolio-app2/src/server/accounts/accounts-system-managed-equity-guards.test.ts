@@ -58,7 +58,7 @@ describe("accounts-system-managed-equity-guards", () => {
 
   test("rejects system-managed subtype even when type is not equity", () => {
     const inconsistentNode = {
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
     } as const;
 

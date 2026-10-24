@@ -73,8 +73,7 @@ function isLedgerAccount(value: unknown): value is {
   };
 
   const hasValidType =
-    candidate.type === AccountType.ASSET ||
-    candidate.type === AccountType.LIABILITY ||
+    candidate.type === AccountType.BALANCE ||
     candidate.type === AccountType.EQUITY;
   const hasValidEquitySubtype =
     candidate.equityAccountSubtype === null ||

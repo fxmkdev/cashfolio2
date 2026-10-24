@@ -49,13 +49,13 @@ function createRange(): Awaited<ReturnType<typeof LoadRange>> {
   });
   return {
     accounts: [
-      { ...base, id: "a", type: "ASSET", isActive: true },
-      { ...base, id: "b", type: "ASSET", isActive: false },
-      { ...base, id: "c", type: "LIABILITY", isActive: true, groupId: null },
+      { ...base, id: "a", type: "BALANCE", isActive: true },
+      { ...base, id: "b", type: "BALANCE", isActive: false },
+      { ...base, id: "c", type: "BALANCE", isActive: true, groupId: null },
     ],
     groups: [
-      { id: "root", parentGroupId: null, type: "ASSET", isActive: true },
-      { id: "child", parentGroupId: "root", type: "ASSET", isActive: true },
+      { id: "root", parentGroupId: null, type: "BALANCE", isActive: true },
+      { id: "child", parentGroupId: "root", type: "BALANCE", isActive: true },
     ],
     results: new Map([
       ["a", result("0.100000000000000001")],
@@ -107,40 +107,35 @@ afterEach(() => {
 });
 
 describe("account G/L summary cache", () => {
-  it("shares a book-wide replay across tabs and states, preserving group totals and diagnostics", async () => {
-    const query = (
-      type: "ASSET" | "LIABILITY",
-      accountState: "active" | "inactive",
-    ) =>
+  it("shares a book-wide replay across account states, preserving group totals and diagnostics", async () => {
+    const query = (type: "BALANCE", accountState: "active" | "inactive") =>
       queryAccountGainLossSummaries({
         accountBookId: "book",
         type,
         accountState,
       });
-    const active = await query("ASSET", "active");
-    const archived = await query("ASSET", "inactive");
-    const liabilities = await query("LIABILITY", "active");
-    const empty = await query("LIABILITY", "inactive");
-    expect(active.rows.map((r) => r.id)).toEqual(["a", "root", "child"]);
+    const active = await query("BALANCE", "active");
+    const archived = await query("BALANCE", "inactive");
+    const cachedActive = await query("BALANCE", "active");
+    expect(cachedActive).toEqual(active);
+    expect(active.rows.map((r) => r.id)).toEqual(["a", "c", "root", "child"]);
     expect(active.rows.map((r) => r.summary.realizedGainLoss)).toEqual([
-      0.1, 0.1, 0.1,
+      0.1, 0.3, 0.1, 0.1,
     ]);
     expect(active.total.summary).toEqual({
-      realizedGainLoss: 0.1,
+      realizedGainLoss: 0.4,
       unrealizedGainLoss: null,
       totalGainLoss: null,
     });
-    expect(active.rows[1]!.diagnostics).toEqual(active.rows[0]!.diagnostics);
+    expect(active.rows[2]!.diagnostics).toEqual(active.rows[0]!.diagnostics);
     expect(archived.total.summary.realizedGainLoss).toBe(0.2);
-    expect(liabilities.total.summary.realizedGainLoss).toBe(0.3);
-    expect(empty.total.applicable).toBe(false);
     expect(mocks.load).toHaveBeenCalledTimes(1);
     expect(mocks.load).toHaveBeenCalledWith({
       accountBookId: "book",
       asOfDate: new Date("2026-05-11Z"),
     });
     expect(mocks.setEx).toHaveBeenCalledWith(key, 86400, expect.any(String));
-    expect(mocks.revision).toHaveBeenCalledTimes(5);
+    expect(mocks.revision).toHaveBeenCalledTimes(4);
     expect(active).not.toHaveProperty("revision");
     expect(active).not.toHaveProperty("cacheableFromPermanentValuationCache");
   });
@@ -328,6 +323,22 @@ describe("account G/L summary cache", () => {
     }
     expect(mocks.load).toHaveBeenCalledTimes(2);
   });
+
+  it.each(["ASSET", "LIABILITY"])(
+    "reloads cached legacy %s account and group types",
+    async (type) => {
+      const data = toAccountGainLossCacheData(createRange());
+      for (const field of ["accounts", "groups"] as const) {
+        const legacy = {
+          ...data,
+          [field]: data[field].map((row) => ({ ...row, type })),
+        };
+        mocks.kv.set(key, JSON.stringify(encodeMoneyCache(legacy)));
+        await getOrLoadAccountGainLossSummaries("book");
+      }
+      expect(mocks.load).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it("deduplicates overlapping loads and clears failed promises for retry", async () => {
     const gate = deferred<Awaited<ReturnType<typeof LoadRange>>>();

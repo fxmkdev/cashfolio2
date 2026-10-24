@@ -18,7 +18,7 @@ const accounts: AccountOption[] = [
     value: "account-checking",
     label: "Checking",
     treePath: ["Asset", "Cash"],
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     unit: Unit.CURRENCY,
     currency: "CHF",
   },

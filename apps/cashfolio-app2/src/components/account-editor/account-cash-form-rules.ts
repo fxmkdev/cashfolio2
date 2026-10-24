@@ -38,7 +38,7 @@ export function isRootCashAccountEditable(args: {
   groupId?: string | null;
 }) {
   return (
-    (args.type === AccountType.ASSET || args.type === AccountType.LIABILITY) &&
+    args.type === AccountType.BALANCE &&
     args.unit === Unit.CURRENCY &&
     !args.groupId
   );
@@ -80,8 +80,7 @@ export function isAccountGroupCompatibleWithAccountCashRules(args: {
 }) {
   if (!args.group.isCashAccount) return true;
   return (
-    (args.accountType === AccountType.ASSET ||
-      args.accountType === AccountType.LIABILITY) &&
+    args.accountType === AccountType.BALANCE &&
     args.accountUnit === Unit.CURRENCY
   );
 }
@@ -139,10 +138,7 @@ export function isRootCashAccountGroupEditable(args: {
   type?: AccountType;
   parentGroupId?: string | null;
 }) {
-  return (
-    (args.type === AccountType.ASSET || args.type === AccountType.LIABILITY) &&
-    !args.parentGroupId
-  );
+  return args.type === AccountType.BALANCE && !args.parentGroupId;
 }
 
 function getDescendantNodes(args: {
@@ -186,15 +182,9 @@ export function canMarkAccountGroupSubtreeAsCash(args: {
   const descendants = getDescendantNodes(args);
   return descendants.every((node) => {
     if (node.nodeType === "accountGroup") {
-      return (
-        node.type === AccountType.ASSET || node.type === AccountType.LIABILITY
-      );
+      return node.type === AccountType.BALANCE;
     }
-    return (
-      (node.type === AccountType.ASSET ||
-        node.type === AccountType.LIABILITY) &&
-      node.unit === Unit.CURRENCY
-    );
+    return node.type === AccountType.BALANCE && node.unit === Unit.CURRENCY;
   });
 }
 
@@ -204,8 +194,7 @@ export function getCashAccountGroupDisabledReason(args: {
   groupId?: string;
   existingNodes?: ExistingNode[];
 }) {
-  if (args.type !== AccountType.ASSET && args.type !== AccountType.LIABILITY)
-    return undefined;
+  if (args.type !== AccountType.BALANCE) return undefined;
   if (args.parentGroupId) return CASH_GROUP_INHERITED_DISABLED_REASON;
   if (
     !canMarkAccountGroupSubtreeAsCash({
@@ -230,7 +219,7 @@ export function getAccountGroupCashParentCompatibilityError(args: {
     args.parentGroupId,
   );
   if (!parentGroup?.isCashAccount) return null;
-  if (args.type !== AccountType.ASSET && args.type !== AccountType.LIABILITY) {
+  if (args.type !== AccountType.BALANCE) {
     return "Cash account groups must contain only account groups.";
   }
   return canMarkAccountGroupSubtreeAsCash({

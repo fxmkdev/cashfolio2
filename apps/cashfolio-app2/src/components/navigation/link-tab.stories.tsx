@@ -3,23 +3,23 @@ import { Tabs } from "@mantine/core";
 import { expect, within } from "storybook/test";
 import { LinkTab } from "./link-tab";
 
-function LinkTabStory({ selectedTab }: { selectedTab: "ASSET" | "LIABILITY" }) {
+function LinkTabStory({ selectedTab }: { selectedTab: "BALANCE" }) {
   return (
     <Tabs value={selectedTab}>
       <Tabs.List>
         <LinkTab
-          value="ASSET"
+          value="BALANCE"
           to="/$accountBookId/accounts"
           params={{ accountBookId: "storybook-book" }}
-          search={{ tab: "ASSET", mode: "active" }}
+          search={{ tab: "BALANCE", mode: "active" }}
         >
           Asset
         </LinkTab>
         <LinkTab
-          value="LIABILITY"
+          value="BALANCE"
           to="/$accountBookId/accounts"
           params={{ accountBookId: "storybook-book" }}
-          search={{ tab: "LIABILITY", mode: "active" }}
+          search={{ tab: "BALANCE", mode: "active" }}
         >
           Liability
         </LinkTab>
@@ -32,7 +32,7 @@ const meta = {
   title: "Components/LinkTab",
   component: LinkTabStory,
   args: {
-    selectedTab: "ASSET",
+    selectedTab: "BALANCE",
   },
 } satisfies Meta<typeof LinkTabStory>;
 
@@ -44,7 +44,7 @@ export const SelectedAsset: Story = {};
 
 export const SelectedLiability: Story = {
   args: {
-    selectedTab: "LIABILITY",
+    selectedTab: "BALANCE",
   },
 };
 

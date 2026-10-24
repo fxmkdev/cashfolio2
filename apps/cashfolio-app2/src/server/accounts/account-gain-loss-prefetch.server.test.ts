@@ -78,7 +78,7 @@ function booking(
     accountId: holding.id,
     value: toMoney(value),
     date: executionDate,
-    accountType: "ASSET",
+    accountType: "BALANCE",
     equityAccountSubtype: null,
   };
 }

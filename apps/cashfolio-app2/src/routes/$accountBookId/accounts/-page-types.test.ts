@@ -39,7 +39,7 @@ describe("accounts page tab parsing", () => {
     });
   });
 
-  it.each(["ASSET", "LIABILITY", "unknown"])(
+  it.each(["BALANCE", "unknown"])(
     "normalizes archived mode to the combined Accounts view for %s",
     (tab) => {
       expect(parseAccountsSearch({ tab, mode: "archived" })).toEqual({
@@ -71,8 +71,7 @@ describe("getAccountsPageTitle", () => {
 
   it.each([
     undefined,
-    "ASSET",
-    "LIABILITY",
+    "BALANCE",
     "EQUITY-GAIN_LOSS",
     "EQUITY-OPENING_BALANCES",
     "unknown",

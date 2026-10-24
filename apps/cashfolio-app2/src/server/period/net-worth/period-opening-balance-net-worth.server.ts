@@ -21,7 +21,7 @@ async function loadAssetLiabilityAccounts(args: {
     where: {
       accountBookId: args.accountBookId,
       type: {
-        in: [AccountType.ASSET, AccountType.LIABILITY],
+        in: [AccountType.BALANCE],
       },
     },
     select: {

@@ -7,7 +7,7 @@ describe("resolvePeriodFilterMinBookingDate", () => {
 
   test("uses first account booking for asset/liability accounts", () => {
     const result = resolvePeriodFilterMinBookingDate({
-      accountType: AccountType.ASSET,
+      accountType: AccountType.BALANCE,
       accountBookMinBookingDate: accountBookMinDate,
       firstAccountBookingDate: new Date("2026-03-10T00:00:00.000Z"),
     });
@@ -17,7 +17,7 @@ describe("resolvePeriodFilterMinBookingDate", () => {
 
   test("never allows dates before account-book start for asset/liability accounts", () => {
     const result = resolvePeriodFilterMinBookingDate({
-      accountType: AccountType.LIABILITY,
+      accountType: AccountType.BALANCE,
       accountBookMinBookingDate: accountBookMinDate,
       firstAccountBookingDate: new Date("2025-12-31T00:00:00.000Z"),
     });
@@ -27,7 +27,7 @@ describe("resolvePeriodFilterMinBookingDate", () => {
 
   test("falls back to account-book start for asset/liability accounts without bookings", () => {
     const result = resolvePeriodFilterMinBookingDate({
-      accountType: AccountType.ASSET,
+      accountType: AccountType.BALANCE,
       accountBookMinBookingDate: accountBookMinDate,
       firstAccountBookingDate: null,
     });

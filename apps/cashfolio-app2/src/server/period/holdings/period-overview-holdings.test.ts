@@ -48,7 +48,7 @@ function createHoldingBooking(args: {
     cryptocurrency: null,
     symbol: "AAPL",
     tradeCurrency: "USD",
-    accountType: AccountType.ASSET,
+    accountType: AccountType.BALANCE,
     equityAccountSubtype: null,
   } as const;
 }
@@ -70,7 +70,7 @@ function createHoldingCurrencyBooking(args: {
     cryptocurrency: null,
     symbol: null,
     tradeCurrency: null,
-    accountType: AccountType.ASSET,
+    accountType: AccountType.BALANCE,
     equityAccountSubtype: null,
   } as const;
 }
@@ -90,7 +90,7 @@ function createCashBooking(args: {
     cryptocurrency: null,
     symbol: null,
     tradeCurrency: null,
-    accountType: AccountType.ASSET,
+    accountType: AccountType.BALANCE,
     equityAccountSubtype: null,
   } as const;
 }

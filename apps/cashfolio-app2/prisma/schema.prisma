@@ -14,8 +14,7 @@ datasource db {
 }
 
 enum AccountType {
-  ASSET
-  LIABILITY
+  BALANCE
   EQUITY
 }
 

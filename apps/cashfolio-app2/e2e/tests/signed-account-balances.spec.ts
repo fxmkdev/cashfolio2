@@ -112,7 +112,7 @@ test("liability import keeps configured sign inversion, negative previews, and d
     data: {
       accountBookId: seeded.accountBookId,
       name: "Signed Import Credit Card",
-      type: "LIABILITY",
+      type: "BALANCE",
       unit: "CURRENCY",
       currency: "CHF",
       statementImportCsvFormat: {

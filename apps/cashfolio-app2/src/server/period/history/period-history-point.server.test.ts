@@ -94,7 +94,7 @@ describe("loadPeriodHistoryPointContext", () => {
       where: {
         accountBookId: "book-ctx",
         type: {
-          in: [AccountType.ASSET, AccountType.LIABILITY],
+          in: [AccountType.BALANCE],
         },
       },
       select: {
@@ -268,7 +268,7 @@ describe("loadPeriodHistoryPoint", () => {
       where: {
         accountBookId: "book-context",
         type: {
-          in: [AccountType.ASSET, AccountType.LIABILITY],
+          in: [AccountType.BALANCE],
         },
       },
       select: {

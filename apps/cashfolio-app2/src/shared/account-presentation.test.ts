@@ -11,7 +11,7 @@ import {
 } from "./account-presentation";
 
 describe("account roles and presentation", () => {
-  it.each([AccountType.ASSET, AccountType.LIABILITY])(
+  it.each([AccountType.BALANCE])(
     "keeps %s a balance account regardless of its balance",
     (type) => {
       const account = { type };

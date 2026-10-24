@@ -27,7 +27,7 @@ import { AccountBookAdminNavigationLinks } from "./-account-book-navigation-link
 const commonProps = {
   accountBookId: "book-1",
   activeSection: "accounts" as const,
-  accountsLinkSearch: { tab: "ASSET" as const, mode: "active" as const },
+  accountsLinkSearch: { tab: "BALANCE" as const, mode: "active" as const },
   collapsed: false,
   onNavigate: vi.fn(),
   periodLinkSearch: {},

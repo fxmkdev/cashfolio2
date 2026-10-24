@@ -9,9 +9,7 @@ type AccountClassification = {
 export type AccountManagementContext = "accounts" | "categories";
 
 export function isBalanceAccount(account: AccountClassification): boolean {
-  return (
-    account.type === AccountType.ASSET || account.type === AccountType.LIABILITY
-  );
+  return account.type === AccountType.BALANCE;
 }
 
 export function isAccountGroupCompatible(
@@ -19,9 +17,7 @@ export function isAccountGroupCompatible(
   group: { type: string; equityAccountSubtype?: string | null },
 ): boolean {
   if (isBalanceAccount(account)) {
-    return (
-      group.type === AccountType.ASSET || group.type === AccountType.LIABILITY
-    );
+    return group.type === AccountType.BALANCE;
   }
   return (
     group.type === AccountType.EQUITY &&

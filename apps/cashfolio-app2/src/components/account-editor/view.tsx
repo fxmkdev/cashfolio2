@@ -98,19 +98,6 @@ export function EditAccountModal(props: EditAccountModalProps) {
                   disabled
                   data={[
                     {
-                      group: "Accounts",
-                      items: [
-                        {
-                          value: AccountType.ASSET,
-                          label: "Asset",
-                        },
-                        {
-                          value: AccountType.LIABILITY,
-                          label: "Liability",
-                        },
-                      ],
-                    },
-                    {
                       group: "Categories",
                       items: [
                         {

@@ -20,10 +20,10 @@ import type { AccountInput } from "./account-validation-types";
 
 describe("validateAccountUnit", () => {
   test("requires unit for asset and liability accounts", () => {
-    expect(validateAccountUnit(undefined, AccountType.ASSET)).toBe(
+    expect(validateAccountUnit(undefined, AccountType.BALANCE)).toBe(
       "Unit is required",
     );
-    expect(validateAccountUnit(undefined, AccountType.LIABILITY)).toBe(
+    expect(validateAccountUnit(undefined, AccountType.BALANCE)).toBe(
       "Unit is required",
     );
   });
@@ -36,13 +36,21 @@ describe("validateAccountUnit", () => {
 describe("validateAccountTradeCurrency", () => {
   test("requires trade currency for security assets/liabilities", () => {
     expect(
-      validateAccountTradeCurrency(undefined, Unit.SECURITY, AccountType.ASSET),
+      validateAccountTradeCurrency(
+        undefined,
+        Unit.SECURITY,
+        AccountType.BALANCE,
+      ),
     ).toBe("Trade currency is required");
   });
 
   test("allows non-security units without trade currency", () => {
     expect(
-      validateAccountTradeCurrency(undefined, Unit.CURRENCY, AccountType.ASSET),
+      validateAccountTradeCurrency(
+        undefined,
+        Unit.CURRENCY,
+        AccountType.BALANCE,
+      ),
     ).toBeNull();
   });
 });
@@ -50,13 +58,13 @@ describe("validateAccountTradeCurrency", () => {
 describe("validateAccountCashAccountFlag", () => {
   test("allows currency accounts to be marked as cash", () => {
     expect(
-      validateAccountCashAccountFlag(true, Unit.CURRENCY, AccountType.ASSET),
+      validateAccountCashAccountFlag(true, Unit.CURRENCY, AccountType.BALANCE),
     ).toBeNull();
   });
 
   test("rejects non-currency asset cash accounts", () => {
     expect(
-      validateAccountCashAccountFlag(true, Unit.SECURITY, AccountType.ASSET),
+      validateAccountCashAccountFlag(true, Unit.SECURITY, AccountType.BALANCE),
     ).toBe("Cash accounts must be currency accounts");
     expect(
       validateAccountCashAccountFlag(true, Unit.CURRENCY, AccountType.EQUITY),
@@ -67,7 +75,7 @@ describe("validateAccountCashAccountFlag", () => {
 describe("validateAccountGroupCashAccountFlag", () => {
   test("allows asset groups to be marked as cash", () => {
     expect(
-      validateAccountGroupCashAccountFlag(true, AccountType.ASSET),
+      validateAccountGroupCashAccountFlag(true, AccountType.BALANCE),
     ).toBeNull();
   });
 
@@ -83,7 +91,7 @@ describe("validateAccountInput", () => {
     const invalid: AccountInput = {
       accountBookId: "book-1",
       name: "",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       unit: undefined,
     };
 
@@ -96,7 +104,7 @@ describe("validateAccountInput", () => {
     const valid: AccountInput = {
       accountBookId: "book-1",
       name: "Broker",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       unit: Unit.SECURITY,
       symbol: "AAPL",
       tradeCurrency: "USD",
@@ -109,7 +117,7 @@ describe("validateAccountInput", () => {
     const invalid: AccountInput = {
       accountBookId: "book-1",
       name: "Invalid",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
       unit: Unit.CURRENCY,
       currency: "CHF",
@@ -131,7 +139,7 @@ describe("validateAccountInput", () => {
             amount: { mode: "signed", column: 1 },
           },
         },
-        AccountType.ASSET,
+        AccountType.BALANCE,
       ),
     ).toBe(
       'CSV format cannot use header column "Date" when hasHeader is false.',
@@ -148,16 +156,14 @@ describe("validateAccountInput", () => {
         },
         AccountType.EQUITY,
       ),
-    ).toBe(
-      "Statement import CSV format is only allowed for asset and liability accounts",
-    );
+    ).toBe("Statement import CSV format is only available for accounts");
   });
 
   test("rejects cash flag on non-currency asset input", () => {
     const invalid: AccountInput = {
       accountBookId: "book-1",
       name: "Broker",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       unit: Unit.SECURITY,
       symbol: "AAPL",
       tradeCurrency: "USD",
@@ -196,7 +202,7 @@ describe("validateAccountGroupInput", () => {
         {
           accountBookId: "book-1",
           name: "Assets",
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
         },
         ["assets"],
       ),
@@ -208,7 +214,7 @@ describe("validateAccountGroupInput", () => {
       validateAccountGroupInput({
         accountBookId: "book-1",
         name: "Invalid group",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
       }),
     ).toThrowError("Equity subtype is only allowed for equity groups");
@@ -245,13 +251,13 @@ describe("equity subtype type-combination validators", () => {
   test("rejects subtype on non-equity accounts and groups", () => {
     expect(
       validateEquitySubtypeTypeCombination(
-        AccountType.LIABILITY,
+        AccountType.BALANCE,
         EquityAccountSubtype.GAIN_LOSS,
       ),
     ).toBe("Equity subtype is only allowed for equity accounts");
     expect(
       validateGroupEquitySubtypeTypeCombination(
-        AccountType.ASSET,
+        AccountType.BALANCE,
         EquityAccountSubtype.OPENING_BALANCES,
       ),
     ).toBe("Equity subtype is only allowed for equity groups");

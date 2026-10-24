@@ -38,7 +38,7 @@ function createTargetAccount(
     cryptocurrency: null,
     symbol: null,
     tradeCurrency: null,
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     equityAccountSubtype: null,
     ...overrides,
   };

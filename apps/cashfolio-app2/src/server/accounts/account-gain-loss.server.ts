@@ -17,19 +17,15 @@ export { resolveAccountGainLossDate } from "./account-gain-loss-range.server";
 
 export async function queryAccountGainLossSummaries(args: {
   accountBookId: string;
-  type: "ASSET" | "LIABILITY" | "BALANCE";
+  type: "BALANCE";
   accountState: "active" | "inactive" | "all";
 }) {
   const range = await getOrLoadAccountGainLossSummaries(args.accountBookId);
-  const groups = range.groups.filter((group) =>
-    args.type === "BALANCE"
-      ? group.type !== "EQUITY"
-      : group.type === args.type,
-  );
+  const groups = range.groups.filter((group) => group.type === args.type);
   const groupById = new Map(groups.map((group) => [group.id, group]));
   const selectedAccounts = range.accounts.filter(
     (account) =>
-      (args.type === "BALANCE" || account.type === args.type) &&
+      account.type === args.type &&
       (args.accountState === "all" ||
         account.isActive === (args.accountState === "active")),
   );

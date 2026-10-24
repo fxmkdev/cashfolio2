@@ -13,7 +13,7 @@ const meta = {
   args: {
     opened: true,
     accountGroups: accountGroupOptions,
-    typeDescriptor: "ASSET",
+    typeDescriptor: "BALANCE",
     existingNodes,
     onClose: fn(),
     onSubmit: fn(async () => undefined),
@@ -90,12 +90,12 @@ export const LiabilityOpeningDebt: Story = {
     initialValues: {
       ...editAccountInitialValues,
       name: "Credit Card",
-      type: "LIABILITY",
+      type: "BALANCE",
       openingBalance: -100,
       groupId: undefined,
       isCashAccount: false,
     },
-    typeDescriptor: "LIABILITY",
+    typeDescriptor: "BALANCE",
     editingId: "account-card",
   },
   play: async ({ canvasElement, args }) => {
@@ -109,7 +109,7 @@ export const LiabilityOpeningDebt: Story = {
     await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
     await waitFor(() =>
       expect(args.onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({ type: "LIABILITY", openingBalance: -100 }),
+        expect.objectContaining({ type: "BALANCE", openingBalance: -100 }),
       ),
     );
   },

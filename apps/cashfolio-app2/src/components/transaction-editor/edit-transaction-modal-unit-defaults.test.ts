@@ -15,7 +15,7 @@ function accountOption(
     value: overrides.value,
     label: overrides.label,
     unit: "unit" in overrides ? (overrides.unit ?? null) : Unit.CURRENCY,
-    type: overrides.type ?? AccountType.ASSET,
+    type: overrides.type ?? AccountType.BALANCE,
     currency: overrides.currency,
     cryptocurrency: overrides.cryptocurrency,
     symbol: overrides.symbol,
@@ -55,7 +55,7 @@ describe("createBookingUnitDefaults", () => {
     const selectedAccount = accountOption({
       value: "crypto",
       label: "BTC",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       unit: Unit.CRYPTOCURRENCY,
       cryptocurrency: "BTC",
     });

@@ -217,13 +217,8 @@ export async function createSimpleTransactionOperation(
     throw new Error("Counter account was not found.");
   }
 
-  if (
-    currentAccount.type !== AccountType.ASSET &&
-    currentAccount.type !== AccountType.LIABILITY
-  ) {
-    throw new Error(
-      "Simple transactions are only allowed for asset or liability accounts.",
-    );
+  if (currentAccount.type !== AccountType.BALANCE) {
+    throw new Error("Simple transactions are only available for accounts.");
   }
 
   if (!counterAccount.isActive) {
@@ -238,16 +233,12 @@ export async function createSimpleTransactionOperation(
 
   if (
     counterAccount.type !== AccountType.EQUITY &&
-    counterAccount.type !== AccountType.ASSET &&
-    counterAccount.type !== AccountType.LIABILITY
+    counterAccount.type !== AccountType.BALANCE
   ) {
     throw new Error("Account type is not supported for simple transactions.");
   }
 
-  if (
-    counterAccount.type === AccountType.ASSET ||
-    counterAccount.type === AccountType.LIABILITY
-  ) {
+  if (counterAccount.type === AccountType.BALANCE) {
     const counterUnitIdentifier =
       getSimpleTransactionUnitIdentifier(counterAccount);
     if (!counterUnitIdentifier) {
