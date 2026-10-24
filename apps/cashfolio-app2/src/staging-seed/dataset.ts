@@ -1,5 +1,6 @@
 import {
   AccountType,
+  AssetClass,
   EquityAccountSubtype,
   Unit,
 } from "../.prisma-client/enums";
@@ -67,11 +68,13 @@ function edgeCases(startDate: Date, today: Date): SeedBook {
     ...CHF,
     groupKey: "cash",
     isCashAccount: true,
+    assetClass: AssetClass.CASH_AND_CASH_EQUIVALENTS,
   });
   addAccount(target, "eur", "Transfer account EUR", AccountType.ASSET, {
     ...EUR,
     groupKey: "cash",
     isCashAccount: true,
+    assetClass: AssetClass.CASH_AND_CASH_EQUIVALENTS,
   });
   addAccount(target, "opening", "Opening Balances", AccountType.EQUITY, {
     equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
@@ -81,7 +84,12 @@ function edgeCases(startDate: Date, today: Date): SeedBook {
     "unlisted",
     "Unlisted investment (valuation unavailable)",
     AccountType.ASSET,
-    { unit: Unit.SECURITY, symbol: "CFDEMO_UNLISTED", tradeCurrency: "CHF" },
+    {
+      unit: Unit.SECURITY,
+      symbol: "CFDEMO_UNLISTED",
+      tradeCurrency: "CHF",
+      assetClass: AssetClass.ALTERNATIVE_INVESTMENTS,
+    },
   );
   addAccount(
     target,

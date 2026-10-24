@@ -1,5 +1,9 @@
 import Decimal from "decimal.js";
-import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
+import {
+  AccountType,
+  AssetClass,
+  EquityAccountSubtype,
+} from "../.prisma-client/enums";
 import { addUtcDays } from "../shared/date";
 import {
   AAPL,
@@ -58,18 +62,44 @@ export function archivedHouseholdAccounts(target: SeedBook) {
       groupKey,
       isActive: false,
       isCashAccount: true,
+      assetClass: AssetClass.CASH_AND_CASH_EQUIVALENTS,
     });
   }
-  for (const [key, name, groupKey, unit] of [
-    ["closed-aapl", "Closed Apple position", "securities", AAPL],
-    ["closed-cs-aapl", "Apple shares", "credit-suisse-equities", AAPL],
-    ["closed-cs-msft", "Microsoft shares", "credit-suisse-equities", MSFT],
-    ["closed-cs-usd", "Settlement account USD", "credit-suisse", USD],
+  for (const [key, name, groupKey, unit, assetClass] of [
+    [
+      "closed-aapl",
+      "Closed Apple position",
+      "securities",
+      AAPL,
+      AssetClass.EQUITIES,
+    ],
+    [
+      "closed-cs-aapl",
+      "Apple shares",
+      "credit-suisse-equities",
+      AAPL,
+      AssetClass.EQUITIES,
+    ],
+    [
+      "closed-cs-msft",
+      "Microsoft shares",
+      "credit-suisse-equities",
+      MSFT,
+      AssetClass.EQUITIES,
+    ],
+    [
+      "closed-cs-usd",
+      "Settlement account USD",
+      "credit-suisse",
+      USD,
+      AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    ],
   ] as const) {
     addAccount(target, key, name, AccountType.ASSET, {
       ...unit,
       groupKey,
       isActive: false,
+      assetClass,
     });
   }
   addAccount(
@@ -77,7 +107,7 @@ export function archivedHouseholdAccounts(target: SeedBook) {
     "closed-car-loan",
     "Repaid car loan CHF",
     AccountType.LIABILITY,
-    { ...CHF, isActive: false },
+    { ...CHF, isActive: false, assetClass: AssetClass.OTHER_ASSETS },
   );
   addAccount(target, "closed-project", "One-off project", AccountType.EQUITY, {
     ...CHF,

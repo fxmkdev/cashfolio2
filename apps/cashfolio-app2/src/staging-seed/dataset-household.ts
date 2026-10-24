@@ -4,7 +4,11 @@ import {
 } from "./dataset-archived";
 import Decimal from "decimal.js";
 import { min } from "date-fns";
-import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
+import {
+  AccountType,
+  AssetClass,
+  EquityAccountSubtype,
+} from "../.prisma-client/enums";
 import { addUtcDays } from "../shared/date";
 import {
   AAPL,
@@ -66,19 +70,42 @@ export function householdAccounts(target: SeedBook) {
       ...unit,
       groupKey,
       isCashAccount: true,
+      assetClass: AssetClass.CASH_AND_CASH_EQUIVALENTS,
       ...(key === "current" ? { statementImportCsvFormat } : undefined),
     });
   }
-  for (const [key, name, groupKey, unit] of [
-    ["aapl", "Apple shares", "securities", AAPL],
-    ["msft", "Microsoft shares", "securities", MSFT],
-    ["btc", "Bitcoin wallet", "crypto", BTC],
-    ["btc-transfer-source", "Bitcoin transfer source", "crypto", BTC],
-    ["btc-transfer-destination", "Bitcoin transfer destination", "crypto", BTC],
-    ["eth", "Ethereum wallet", "crypto", ETH],
-    ["pension", "Pillar 3a savings", "investments", CHF],
+  for (const [key, name, groupKey, unit, assetClass] of [
+    ["aapl", "Apple shares", "securities", AAPL, AssetClass.EQUITIES],
+    ["msft", "Microsoft shares", "securities", MSFT, AssetClass.EQUITIES],
+    ["btc", "Bitcoin wallet", "crypto", BTC, AssetClass.DIGITAL_ASSETS],
+    [
+      "btc-transfer-source",
+      "Bitcoin transfer source",
+      "crypto",
+      BTC,
+      AssetClass.DIGITAL_ASSETS,
+    ],
+    [
+      "btc-transfer-destination",
+      "Bitcoin transfer destination",
+      "crypto",
+      BTC,
+      AssetClass.DIGITAL_ASSETS,
+    ],
+    ["eth", "Ethereum wallet", "crypto", ETH, AssetClass.DIGITAL_ASSETS],
+    [
+      "pension",
+      "Pillar 3a savings",
+      "investments",
+      CHF,
+      AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    ],
   ] as const) {
-    addAccount(target, key, name, AccountType.ASSET, { ...unit, groupKey });
+    addAccount(target, key, name, AccountType.ASSET, {
+      ...unit,
+      groupKey,
+      assetClass,
+    });
   }
   addAccount(
     target,
@@ -88,6 +115,7 @@ export function householdAccounts(target: SeedBook) {
     {
       ...CHF,
       groupKey: "investments",
+      assetClass: AssetClass.OTHER_ASSETS,
     },
   );
   for (const [key, name] of [
@@ -96,6 +124,7 @@ export function householdAccounts(target: SeedBook) {
   ]) {
     addAccount(target, key, name, AccountType.LIABILITY, {
       ...CHF,
+      assetClass: AssetClass.OTHER_ASSETS,
     });
   }
   for (const [key, name] of [

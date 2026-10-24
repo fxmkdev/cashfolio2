@@ -51,6 +51,26 @@ living, and Leisure and travel are top-level expense groups; income, debts,
 Taxes, and Bank and trading fees are ungrouped. Closed accounts stay under their
 real institutions, with archived groups retaining their original subtrees.
 
+Staging account fixtures include explicit, curated asset classes for both active
+and archived accounts:
+
+| Demo accounts                                                                                | Asset class             |
+| -------------------------------------------------------------------------------------------- | ----------------------- |
+| Bank, savings, cash wallet, broker cash, settlement and transfer accounts; Pillar 3a savings | Cash & Cash Equivalents |
+| Apple and Microsoft positions                                                                | Equities                |
+| Bitcoin and Ethereum accounts, including transfer accounts                                   | Digital Assets          |
+| Managed Portfolio CHF; credit-card and loan accounts                                         | Other Assets            |
+| Unlisted investment in Valuation Edge Cases                                                  | Alternative Investments |
+
+Income, expense, Opening Balances and system Gain/Loss accounts remain
+Unclassified. These assignments are staging examples, independent of Unit,
+cash-flow eligibility and valuation configuration. Ordinary new accounts and
+seed accounts without an explicit selection still default to Unclassified;
+classification remains manual, with no inference or backfill. The Empty Demo
+stays empty apart from its system Gain/Loss account. The curated values take
+effect through the normal staging refresh or deployment; editing the fixtures
+does not reset deployed staging immediately.
+
 ## Test a manually valued managed portfolio
 
 In `1. Swiss Household Demo`, open `Investments → Managed Portfolio CHF`. This
