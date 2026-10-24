@@ -1,3 +1,4 @@
+import { isBalanceAccount } from "@/shared/account-presentation";
 import { AccountType, EquityAccountSubtype } from "@/.prisma-client/enums";
 import {
   parseAccountsSearch,
@@ -47,7 +48,8 @@ export function parseDesktopRailCollapsedPreference(
 export function getActiveSection(args: {
   pathname: string;
   accountBookId: string;
-}): AccountBookSection {
+  matches?: readonly RouterMatchSnapshot[];
+}): AccountBookSection | null {
   const segments = args.pathname.split("/").filter(Boolean);
   if (segments[0] !== args.accountBookId) {
     return "accounts";
@@ -59,7 +61,17 @@ export function getActiveSection(args: {
   if (section === "settings") return "settings";
   if (section === "user-settings") return "user-settings";
   if (section === "history") return "history";
-  return "accounts";
+  if (section === "accounts" || !section) return "accounts";
+  const ledger = args.matches?.find((match) =>
+    LEDGER_ROUTE_IDS.has(match.routeId),
+  );
+  return ledger &&
+    isLedgerAccount(ledger.account) &&
+    "id" in ledger.account &&
+    ledger.account.id === segments[1] &&
+    isBalanceAccount(ledger.account)
+    ? "accounts"
+    : null;
 }
 
 function parseAccountsTab(value: unknown): TabValue | null {

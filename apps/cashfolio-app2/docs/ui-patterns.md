@@ -411,7 +411,8 @@ management lives under **Account Book Settings → Categories**, with Income and
 Expenses tabs and a **Show Archived** checkbox. Gain/Loss and Opening Balances
 retain their system-managed restrictions and are not creation tabs. Primary
 navigation is unchanged. Viewing a category ledger is an activity view, not a
-settings page: its URL and Accounts navigation highlight remain unchanged.
+settings page: its URL remains unchanged, and no primary navigation item is
+selected. Asset/liability ledgers continue highlighting Accounts.
 
 Settings uses underline tabs for General/Categories and pill tabs for
 Income/Expenses. Category type tabs and management actions share a wrapping
@@ -577,8 +578,22 @@ for ledger child routes.
     row when prior bookings exist
 - **Counterparty names**: Derived from sibling bookings on the same transaction,
   deduplicated
-- **Navigation**: Double-click an account row on the accounts list to open its
-  ledger; back link returns to accounts list
+- **Navigation**: Asset/liability ledgers highlight Accounts. Category and
+  system ledgers leave primary navigation unselected and show a compact
+  `Back to {source}` link when opened within the app. The source is captured in
+  router history state from account/category grids, transaction/counterparty
+  links, Report, History, and reconciliation. It preserves the source URL,
+  period, and fragment without adding ledger query parameters or preferences.
+  Opening another ledger captures the immediate source; same-ledger period and
+  transaction-selection changes retain the original context. Reload and
+  Back/Forward preserve context, while direct/new-tab visits without state omit
+  the link. Return traverses to the source history entry, falling back to URL
+  replacement when its index is unavailable.
+- **Classification badges**: Income Category, Expense Category, System Account
+  (Opening Balances), and System-Managed Category (Gain/Loss). Names remain user
+  content. Editable income/expense ledgers offer Manage Category in their action
+  menu, selecting the corresponding Settings tab and showing archived items when
+  the category is archived. System-managed restrictions remain unchanged.
 
 ## Transactions Page Pattern
 

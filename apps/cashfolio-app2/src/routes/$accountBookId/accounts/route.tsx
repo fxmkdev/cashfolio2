@@ -1,3 +1,4 @@
+import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
 import {
   createFileRoute,
   redirect,
@@ -48,6 +49,7 @@ export const Route = createFileRoute("/$accountBookId/accounts")({
 });
 
 function AccountsPage() {
+  const ledgerNavigationState = useLedgerNavigationState();
   const loaderData = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
   const { tab, mode } = Route.useSearch();
@@ -65,6 +67,7 @@ function AccountsPage() {
     onOpenLedger: (nextAccountId) => {
       navigate({
         to: "/$accountBookId/$accountId",
+        state: ledgerNavigationState,
         params: { accountBookId, accountId: nextAccountId },
       });
     },

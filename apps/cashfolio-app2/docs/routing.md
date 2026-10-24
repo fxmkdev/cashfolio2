@@ -72,8 +72,16 @@ Related docs:
   - Supports a desktop sidebar rail mode that keeps icon navigation visible,
     defaults to the expanded sidebar, and persists the global user preference in
     `localStorage`.
-  - Keeps `Accounts` highlighted for account routes (`/$accountId`) as well as
-    `/accounts`.
+  - Keeps `Accounts` highlighted for `/accounts` and loaded asset/liability
+    ledgers. Category/system ledgers and unresolved ledger loads leave the
+    sidebar unselected. Nested gain/loss reconciliation remains under Report.
+  - Ledger entry links capture their immediate source URL, label, and history
+    index in typed router history state. Category/system ledgers show a compact
+    return link that preserves source search/fragment state and survives reload
+    and Back/Forward. Same-ledger period changes and transaction highlighting
+    preserve this state. Direct visits have no inferred return destination.
+    Return navigation traverses to the source history index when available,
+    otherwise replaces the current entry with the validated same-book URL.
   - Loads account-book switcher options and current user profile claims at shell
     level. The footer keeps account-book actions in the account-book menu and
     sign-out in the user menu. The shared user menu links to isolated

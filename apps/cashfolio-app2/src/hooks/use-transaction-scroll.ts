@@ -4,6 +4,7 @@ import type { IRowNode, RowDataUpdatedEvent } from "ag-grid-enterprise";
 type NavigateFn = (opts: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
   replace: boolean;
+  state: true;
 }) => void;
 
 export function useTransactionScroll<Row extends { transactionId: string }>(
@@ -25,6 +26,7 @@ export function useTransactionScroll<Row extends { transactionId: string }>(
         navigate({
           search: (prev) => ({ ...prev, transactionId: undefined }),
           replace: true,
+          state: true,
         });
       }
 

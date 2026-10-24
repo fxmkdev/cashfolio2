@@ -267,4 +267,16 @@ test("period explicit gains/losses rows drill to gain/loss ledger", async ({
     "January 2026",
   );
   await expect(page.getByText("E2E Explicit Gain/Loss Seed")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Accounts", exact: true }),
+  ).not.toHaveAttribute("data-active", "true");
+  const back = page.getByRole("link", { name: "Back to Report" });
+  await expect(back).toHaveAttribute(
+    "href",
+    `/${seeded.accountBookId}/report?period=${period}`,
+  );
+  await back.click();
+  await expect(page).toHaveURL(
+    `/${seeded.accountBookId}/report?period=${period}`,
+  );
 });

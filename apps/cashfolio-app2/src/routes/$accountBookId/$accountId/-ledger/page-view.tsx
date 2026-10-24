@@ -1,3 +1,5 @@
+import type { LedgerReturnTarget } from "@/shared/ledger-navigation";
+import { Anchor } from "@mantine/core";
 import {
   getAccountEntityLabel,
   getAccountManagementContext,
@@ -11,6 +13,8 @@ import {
 } from "@/components/transactions/bulk-transaction-actions";
 import type { BulkTransactionActions } from "@/hooks/use-bulk-transaction-actions";
 import {
+  IconArrowLeft,
+  IconSettings,
   IconArchive,
   IconArchiveOff,
   IconBolt,
@@ -107,6 +111,8 @@ export type RebookingState = {
 };
 
 export type LedgerPageViewProps = {
+  returnNavigation?: { target: LedgerReturnTarget; onReturn: () => void };
+  onManageCategory?: () => void;
   onRefreshConstraints?: () => Promise<void>;
   bulkActions?: BulkTransactionActions<LedgerRow>;
   backTab: TabValue;
@@ -206,6 +212,8 @@ export type LedgerPageViewProps = {
 };
 
 export function LedgerPageView({
+  returnNavigation,
+  onManageCategory,
   onRefreshConstraints,
   bulkActions,
   backTab,
@@ -304,6 +312,30 @@ export function LedgerPageView({
 
   return (
     <PageShell>
+      {returnNavigation && (
+        <Anchor
+          href={returnNavigation.target.href}
+          size="sm"
+          mb="sm"
+          onClick={(event) => {
+            if (
+              event.button !== 0 ||
+              event.metaKey ||
+              event.ctrlKey ||
+              event.shiftKey ||
+              event.altKey
+            )
+              return;
+            event.preventDefault();
+            returnNavigation.onReturn();
+          }}
+        >
+          <Group component="span" gap="xs" wrap="nowrap">
+            <IconArrowLeft size={16} aria-hidden="true" />
+            <span>Back to {returnNavigation.target.label}</span>
+          </Group>
+        </Anchor>
+      )}
       <TopPageHeader
         heading={<Title order={2}>{account.name}</Title>}
         headingAccessory={
@@ -346,6 +378,16 @@ export function LedgerPageView({
                   onClick={onOpenAccountEdit}
                   primaryDisabled={!!accountEditDisabledReason}
                   menuItems={[
+                    ...(onManageCategory
+                      ? [
+                          {
+                            key: "manage-category",
+                            label: "Manage Category",
+                            leftSection: <IconSettings size={16} />,
+                            onClick: onManageCategory,
+                          },
+                        ]
+                      : []),
                     {
                       key: "import-statement",
                       label: "Import Statement",

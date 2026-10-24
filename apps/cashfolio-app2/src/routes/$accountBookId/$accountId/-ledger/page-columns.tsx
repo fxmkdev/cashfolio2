@@ -1,3 +1,4 @@
+import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
 import { useMemo } from "react";
 import { ActionIcon, Group, Tooltip } from "@mantine/core";
 import {
@@ -121,6 +122,8 @@ export function useLedgerColumnDefs(args: {
     onDeleteClick,
   } = args;
 
+  const ledgerNavigationState = useLedgerNavigationState();
+
   return useMemo<ColDef<LedgerRow>[]>(() => {
     const referenceCurrencyDisplayDecimals =
       getCurrencyDecimals(referenceCurrency);
@@ -152,6 +155,7 @@ export function useLedgerColumnDefs(args: {
               {index > 0 && ", "}
               <LinkAnchor
                 to="/$accountBookId/$accountId"
+                state={ledgerNavigationState}
                 params={{ accountBookId, accountId: account.id }}
                 search={buildCounterpartyLedgerSearch({
                   transactionId: data.transactionId,
@@ -413,6 +417,7 @@ export function useLedgerColumnDefs(args: {
       },
     ];
   }, [
+    ledgerNavigationState,
     accountBookId,
     hasPeriodFilter,
     selectedPeriodValue,

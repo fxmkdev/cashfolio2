@@ -1,3 +1,4 @@
+import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { getPeriodGainLossReconciliationPageData } from "@/server/period-gain-loss-reconciliation";
@@ -43,6 +44,7 @@ export const Route = createFileRoute(
 });
 
 function GainLossReconciliationPage() {
+  const ledgerNavigationState = useLedgerNavigationState();
   const { accountBookId, accountId } = Route.useParams();
   const selectedPeriodValue = getPeriodValue(Route.useSearch());
   const pageData = Route.useLoaderData();
@@ -85,6 +87,7 @@ function GainLossReconciliationPage() {
           }
           navigate({
             to: "/$accountBookId/$accountId",
+            state: ledgerNavigationState,
             params: {
               accountBookId,
               accountId,
