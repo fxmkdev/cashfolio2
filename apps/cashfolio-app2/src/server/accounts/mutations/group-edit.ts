@@ -119,7 +119,7 @@ export async function updateAccountGroupOperation(
     },
     data: {
       name: normalizedData.name,
-      parentGroupId: normalizedData.parentGroupId ?? null,
+      parentGroupId: normalizedData.parentGroupId,
       sortOrder:
         typeof normalizedData.sortOrder === "number"
           ? normalizedData.sortOrder
