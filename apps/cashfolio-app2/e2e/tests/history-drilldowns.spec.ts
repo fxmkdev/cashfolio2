@@ -217,7 +217,11 @@ test("legacy recorded G/L scope opens the unified account explanation", async ({
   await expect(
     page.getByRole("link", { name: "Accounts", exact: true }),
   ).not.toHaveAttribute("data-active", "true");
-  await page.getByRole("link", { name: "Back to History" }).click();
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "View" })).toHaveValue(
+    seeded.cashAccount.name,
+  );
   await expect(new URL(page.url()).searchParams.get("gainLossScope")).toBe(
     `explicit-account:${seeded.cashAccount.id}`,
   );

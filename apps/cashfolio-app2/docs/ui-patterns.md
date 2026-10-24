@@ -298,11 +298,11 @@ the ledger header. The gray pill uses the light variant for a selected class and
 the outline variant for Unclassified, including on archived accounts. Its title
 includes the field name and full label. Equity accounts have no pill.
 
-The current classification will apply to all historical periods once asset-class
-reporting is introduced. Changing it does not change amounts or valuation. This
-first version stores classification only; current reports and Explicit G/L
-reporting buckets remain unchanged. Accounting `AccountType.EQUITY` is unrelated
-to the Equities asset class.
+The current classification applies to all historical periods in Report and
+History. Calculated and recorded gains/losses are grouped by Asset Class then
+Account; recorded adjustments use their counterpart financial account's class.
+Changing classification does not change amounts or valuation. Accounting
+`AccountType.EQUITY` is unrelated to the Equities asset class.
 
 `src/components/account-editor/edit-account-modal.tsx` remains the public
 account-editor entry point, including its existing type and form-value exports.
@@ -432,13 +432,14 @@ submit UX and prevent duplicate requests.
   - Expense/Income charts (`Donut`, `Bar`)
   - Gains/Losses chart (`Waterfall`)
 - Double-clicking a drillable chart node drills into its children.
-- Account leaves (or any node without children) are informational and do not
-  drill.
-- In Gains/Losses table mode, only explicit account leaf rows
-  (`explicit-account:*`) should navigate to the system-managed Gain/Loss equity
-  ledger for the selected period.
-- Keep the top-level explicit group row (`unit-type:explicit`) non-navigating so
-  double-click can continue to expand/collapse that group.
+- Leaves have no further hierarchy to drill into. Supported account leaves can
+  navigate to a ledger or gain/loss reconciliation for the selected period.
+- Gains/Losses uses Asset Class → Account. Account metadata drives navigation
+  from chart and table leaves to the unified explanation, including calculated
+  holdings, recorded adjustments, and supported synthetic amounts. Do not infer
+  a destination from node-ID prefixes.
+- Asset-class nodes drill into their accounts in charts and expand/collapse in
+  tables; they do not open a ledger.
 - Keep drill state local to the page and scoped per card/type, preserving each
   side/path when toggling chart mode or breakdown side.
 - Show an `Up` action and breadcrumb context (`All Expenses` / `All Income` /

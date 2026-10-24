@@ -278,6 +278,18 @@ test("period recorded gains/losses rows open the reference-currency account expl
   await expect(page).toHaveURL(
     new RegExp(`/${seeded.accountBookId}/${seeded.cashAccount.id}\\?`),
   );
+  await expect(
+    page.getByRole("link", { name: "Accounts", exact: true }),
+  ).toHaveAttribute("data-active", "true");
+  await page.goBack();
+  await expect(page).toHaveURL(
+    new RegExp(
+      `/${seeded.accountBookId}/report/gains-losses/${seeded.cashAccount.id}\\?period=${period}$`,
+    ),
+  );
+  await expect(
+    page.getByRole("heading", { name: "Recorded Adjustments" }),
+  ).toBeVisible();
 });
 
 test("archived manual portfolio reclassification moves historical G/L without changing the amount", async ({

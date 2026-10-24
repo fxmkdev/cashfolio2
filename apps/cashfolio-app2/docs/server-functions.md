@@ -244,8 +244,8 @@ namespaces and preserves global valuation caches.
   - Cleanup hint (never used to determine cache validity):
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
 - History metrics entry:
-  `period:history:metrics:v9:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
-- Base-data v10 and History metrics v9 store monetary values as tagged exact
+  `period:history:metrics:v10:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
+- Base-data v10 and History metrics v10 store monetary values as tagged exact
   decimal strings through `src/server/money-cache-codec.ts`
   (`{ __cashfolioDecimal: "..." }`). Dates retain their existing
   `{ __cashfolioDateMs: milliseconds }` representation. Reads reconstruct
@@ -478,7 +478,7 @@ legacy unattributed accounts are supported. Synthetic transaction links open
 Transactions; real-account links preserve the account ledger and period.
 
 Base-data v10 adds originating-account IDs and recorded booking descriptions.
-History metrics v9 carries class/account scopes and explicit account metadata;
+History metrics v10 carries class/account scopes and explicit account metadata;
 older hierarchy payloads are not reused. Classification edits already advance
 `AccountBook.periodCacheRevision` transactionally, invalidating both cache
 families for all periods. No changes to provider caches or FIFO keys are needed.
@@ -799,9 +799,9 @@ applicable.
 History applies classification independently at every month/year endpoint and
 its opening baseline. Account/group scopes contain only that metric's
 contribution; a selected account contributes zero while on the opposite side.
-Scope options remain the union across period points. History metrics v9 prevents
-reuse of results computed with permanent asset/liability classification;
-base-data v8 and valuation caches remain compatible.
+Scope options remain the union across period points. History metrics v10
+prevents reuse of results computed with permanent asset/liability
+classification; base-data v10 and valuation caches remain compatible.
 
 ### Unified account management queries
 
