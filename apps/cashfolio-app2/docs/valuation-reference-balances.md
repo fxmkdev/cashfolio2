@@ -48,10 +48,11 @@ and Liability tabs retain balance/G/L columns. Existing asset/liability
 `mode=archived` links redirect to Accounts, preserving the selected tab and
 using normal session expansion behavior.
 
-Income and expense categories remain unitless and use separate active and
-archived views under Account Book Settings. Their real hierarchy has no virtual
-Archived wrappers. Legacy Income/Expense links preserve their tab and archive
-selection when redirecting to category management.
+Income and expense categories remain unitless. Under Account Book Settings,
+**Show Archived** defaults off and selects active-only tree data; enabling it
+loads both states and uses the same virtual Archived hierarchy. Categories have
+no balance/G/L columns or totals explanation. Legacy Income/Expense archive
+links preserve the selected tab and enable archived visibility.
 
 ## Account List Loading Strategy
 

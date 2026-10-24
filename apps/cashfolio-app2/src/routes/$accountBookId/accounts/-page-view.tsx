@@ -6,18 +6,16 @@ import {
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import {
   Alert,
-  Breadcrumbs,
   Button,
+  Checkbox,
   Group,
   Tabs,
   Text,
   Title,
   VisuallyHidden,
 } from "@mantine/core";
-import { IconArchive, IconPlus } from "@tabler/icons-react";
+import { IconPlus } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
-import { LinkButton } from "@/components/navigation/link-button";
-import { LinkAnchor } from "@/components/navigation/link-anchor";
 import { LinkTab } from "@/components/navigation/link-tab";
 import { TopPageHeader } from "@/components/layout/top-page-header";
 import type { AccountGroupInitialValues } from "@/components/account-editor/edit-account-group-modal";
@@ -76,6 +74,8 @@ export type AccountsPageViewProps = {
   unarchiveRecovery?: ReturnType<typeof useUnarchiveMutation>;
   tab: TabValue;
   mode: AccountsMode;
+  showArchived?: boolean;
+  onShowArchivedChange?: (showArchived: boolean) => void;
   tabs: readonly { value: TabValue; label: string }[];
   archivedAccountGroups?: AccountsPageLoaderData["archivedAccountGroups"];
   archivedExistingNodes?: AccountsPageLoaderData["archivedExistingNodes"];
@@ -132,7 +132,8 @@ export function AccountsPageView({
   onRefreshConstraints,
   unarchiveRecovery,
   tab,
-  mode,
+  showArchived = false,
+  onShowArchivedChange,
   tabs,
   accountGroups,
   existingNodes,
@@ -182,7 +183,6 @@ export function AccountsPageView({
     (row) => row.id === editingGroup?.id && !row.isActive,
   );
   const isCategories = managementContext === "categories";
-  const isArchivedMode = isCategories && mode === "archived";
   const formatErrorMessage = (message: string) =>
     getAccountConstraintMessage(message, managementContext) ?? message;
   const managementPath = getAccountManagementPath(managementContext);
@@ -199,7 +199,11 @@ export function AccountsPageView({
             value={t.value}
             to={managementPath}
             params={{ accountBookId }}
-            search={{ tab: t.value, mode: isCategories ? mode : "active" }}
+            search={
+              isCategories
+                ? { tab: t.value, showArchived }
+                : { tab: t.value, mode: "active" }
+            }
           >
             {t.label}
           </LinkTab>
@@ -209,17 +213,6 @@ export function AccountsPageView({
   );
   const managementActions = (
     <Group gap={isCategories ? "sm" : "md"}>
-      {!isArchivedMode && isCategories && (
-        <LinkButton
-          variant="default"
-          leftSection={<IconArchive size={16} />}
-          to={managementPath}
-          params={{ accountBookId }}
-          search={{ tab, mode: "archived" }}
-        >
-          Archive
-        </LinkButton>
-      )}
       <Button
         variant="default"
         leftSection={<IconPlus size={16} />}
@@ -227,18 +220,16 @@ export function AccountsPageView({
       >
         Add Group
       </Button>
-      {!isArchivedMode && (
-        <Button
-          leftSection={<IconPlus size={16} />}
-          onClick={onOpenCreateAccount}
-        >
-          {isCategories
-            ? tab === "EQUITY-INCOME"
-              ? "Add Income Category"
-              : "Add Expense Category"
-            : "Add Account"}
-        </Button>
-      )}
+      <Button
+        leftSection={<IconPlus size={16} />}
+        onClick={onOpenCreateAccount}
+      >
+        {isCategories
+          ? tab === "EQUITY-INCOME"
+            ? "Add Income Category"
+            : "Add Expense Category"
+          : "Add Account"}
+      </Button>
     </Group>
   );
 
@@ -248,27 +239,20 @@ export function AccountsPageView({
         <>
           <VisuallyHidden component="div">
             <Title order={2}>
-              {getAccountsPageTitle(mode, managementContext)}
+              {getAccountsPageTitle(undefined, managementContext)}
             </Title>
           </VisuallyHidden>
-          {isArchivedMode && (
-            <Breadcrumbs
-              mb="md"
-              role="navigation"
-              aria-label="Category Archive"
-            >
-              <LinkAnchor
-                to={managementPath}
-                params={{ accountBookId }}
-                search={{ tab, mode: "active" }}
-              >
-                Categories
-              </LinkAnchor>
-              <Text aria-current="page">Archive</Text>
-            </Breadcrumbs>
-          )}
           <Group justify="space-between" align="center" gap="md" mb="md">
-            {managementTabs}
+            <Group gap="md">
+              {managementTabs}
+              <Checkbox
+                label="Show Archived"
+                checked={showArchived}
+                onChange={(event) =>
+                  onShowArchivedChange?.(event.currentTarget.checked)
+                }
+              />
+            </Group>
             {managementActions}
           </Group>
         </>
@@ -337,33 +321,31 @@ export function AccountsPageView({
         />
       </AccountGainLossDetails>
 
-      {!isArchivedMode && (
-        <>
-          <EditAccountModal
-            onRefreshConstraints={onRefreshConstraints}
-            opened={createModalOpened}
-            onClose={onCloseCreateAccount}
-            accountGroups={accountGroups}
-            unitUsage={unitUsage}
-            onSubmit={onSubmitCreateAccount}
-            existingNodes={existingNodes}
-            typeDescriptor={tab}
-          />
-          <ConfirmArchiveModal
-            formatErrorMessage={formatErrorMessage}
-            onRefreshConstraints={onRefreshConstraints}
-            opened={!!archivingRow}
-            onClose={onCloseArchive}
-            title={
-              archivingRow
-                ? `Archive ${getEntityLabel(archivingRow.nodeType, managementContext)}`
-                : "Archive"
-            }
-            name={archivingRow?.name}
-            onConfirm={onConfirmArchive}
-          />
-        </>
-      )}
+      <>
+        <EditAccountModal
+          onRefreshConstraints={onRefreshConstraints}
+          opened={createModalOpened}
+          onClose={onCloseCreateAccount}
+          accountGroups={accountGroups}
+          unitUsage={unitUsage}
+          onSubmit={onSubmitCreateAccount}
+          existingNodes={existingNodes}
+          typeDescriptor={tab}
+        />
+        <ConfirmArchiveModal
+          formatErrorMessage={formatErrorMessage}
+          onRefreshConstraints={onRefreshConstraints}
+          opened={!!archivingRow}
+          onClose={onCloseArchive}
+          title={
+            archivingRow
+              ? `Archive ${getEntityLabel(archivingRow.nodeType, managementContext)}`
+              : "Archive"
+          }
+          name={archivingRow?.name}
+          onConfirm={onConfirmArchive}
+        />
+      </>
 
       <EditAccountGroupModal
         onRefreshConstraints={onRefreshConstraints}
@@ -381,17 +363,13 @@ export function AccountsPageView({
         onClose={onCloseEditAccount}
         onExitTransitionEnd={onClearEditingAccount}
         accountGroups={
-          !isCategories && isEditingArchivedAccount
-            ? archivedAccountGroups
-            : accountGroups
+          isEditingArchivedAccount ? archivedAccountGroups : accountGroups
         }
         unitUsage={unitUsage}
         onSubmit={onSubmitUpdateAccount}
         initialValues={editingAccount?.initialValues}
         existingNodes={
-          !isCategories && isEditingArchivedAccount
-            ? archivedExistingNodes
-            : existingNodes
+          isEditingArchivedAccount ? archivedExistingNodes : existingNodes
         }
         editingId={editingAccount?.id}
         typeDescriptor={tab}
@@ -403,16 +381,12 @@ export function AccountsPageView({
         onClose={onCloseEditGroup}
         onExitTransitionEnd={onClearEditingGroup}
         accountGroups={
-          !isCategories && isEditingArchivedGroup
-            ? archivedAccountGroups
-            : accountGroups
+          isEditingArchivedGroup ? archivedAccountGroups : accountGroups
         }
         onSubmit={onSubmitUpdateGroup}
         initialValues={editingGroup?.initialValues}
         existingNodes={
-          !isCategories && isEditingArchivedGroup
-            ? archivedExistingNodes
-            : existingNodes
+          isEditingArchivedGroup ? archivedExistingNodes : existingNodes
         }
         editingId={editingGroup?.id}
         typeDescriptor={tab}

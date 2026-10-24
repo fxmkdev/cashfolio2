@@ -42,14 +42,14 @@ describe("loadAccountsPageData", () => {
   });
 
   it.each([
-    ["active", "active"],
-    ["archived", "inactive"],
+    [false, "active"],
+    [true, "all"],
   ] as const)(
-    "loads only %s categories for their separate management view",
-    async (mode, accountState) => {
+    "loads category states for archived visibility %s",
+    async (showArchived, accountState) => {
       await loadAccountsPageData({
         accountBookId: "book-2",
-        mode,
+        showArchived,
         tab: `EQUITY-${EquityAccountSubtype.EXPENSE}`,
       });
 

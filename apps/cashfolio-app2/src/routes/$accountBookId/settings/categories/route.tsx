@@ -1,5 +1,6 @@
 import {
   createFileRoute,
+  redirect,
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
@@ -8,6 +9,7 @@ import { createDocumentTitleHead } from "@/shared/document-title";
 import {
   getAccountsPageTitle,
   parseCategoriesSearch,
+  getCategoriesRedirect,
 } from "../../accounts/-page-types";
 import { loadAccountsPageData } from "../../accounts/-page-loader";
 import { useAccountsPageController } from "../../accounts/-page-controller";
@@ -19,12 +21,27 @@ const AccountsPageView = lazy(async () => {
 
 export const Route = createFileRoute("/$accountBookId/settings/categories")({
   validateSearch: parseCategoriesSearch,
-  loaderDeps: ({ search }) => ({ mode: search.mode, tab: search.tab }),
-  loader: async ({ params: { accountBookId }, deps: { mode, tab } }) => {
-    const pageData = await loadAccountsPageData({ accountBookId, mode, tab });
+  loaderDeps: ({ search }) => ({
+    showArchived: search.showArchived,
+    tab: search.tab,
+  }),
+  beforeLoad: ({ location, params, search }) => {
+    if (new URLSearchParams(location.searchStr).has("mode")) {
+      throw redirect({ ...getCategoriesRedirect(search), params });
+    }
+  },
+  loader: async ({
+    params: { accountBookId },
+    deps: { showArchived, tab },
+  }) => {
+    const pageData = await loadAccountsPageData({
+      accountBookId,
+      showArchived,
+      tab,
+    });
     return {
       ...pageData,
-      documentTitle: getAccountsPageTitle(mode, "categories"),
+      documentTitle: getAccountsPageTitle(undefined, "categories"),
     };
   },
   head: ({ loaderData }) => createDocumentTitleHead(loaderData?.documentTitle),
@@ -34,7 +51,7 @@ export const Route = createFileRoute("/$accountBookId/settings/categories")({
 function CategoriesPage() {
   const loaderData = Route.useLoaderData();
   const { accountBookId } = Route.useParams();
-  const { tab, mode } = Route.useSearch();
+  const { tab, showArchived } = Route.useSearch();
   const navigate = useNavigate({ from: "/$accountBookId/settings/categories" });
   const router = useRouter();
   const viewProps = useAccountsPageController({
@@ -42,7 +59,10 @@ function CategoriesPage() {
     loaderData,
     accountBookId,
     tab,
-    mode,
+    showArchived,
+    onShowArchivedChange: (nextShowArchived) => {
+      void navigate({ search: { tab, showArchived: nextShowArchived } });
+    },
     invalidate: () => {
       void router.invalidate();
     },

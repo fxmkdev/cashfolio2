@@ -5,7 +5,8 @@ import { getTabDefinition } from "./-page-types";
 
 export async function loadAccountsPageData(args: {
   accountBookId: string;
-  mode: AccountsMode;
+  mode?: AccountsMode;
+  showArchived?: boolean;
   tab: TabValue;
 }) {
   const tabDefinition = getTabDefinition(args.tab);
@@ -13,11 +14,10 @@ export async function loadAccountsPageData(args: {
   return getAccountsPageData({
     data: {
       accountBookId: args.accountBookId,
-      accountState: isCategoryAccount(tabDefinition)
-        ? args.mode === "archived"
-          ? "inactive"
-          : "active"
-        : "all",
+      accountState:
+        isCategoryAccount(tabDefinition) && !args.showArchived
+          ? "active"
+          : "all",
       type: tabDefinition.type,
       ...("equityAccountSubtype" in tabDefinition
         ? { equityAccountSubtype: tabDefinition.equityAccountSubtype }

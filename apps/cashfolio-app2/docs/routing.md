@@ -82,8 +82,8 @@ Related docs:
   `$accountBookId/accounts`
 - `$accountBookId/accounts/route.tsx` - accounts page with Assets and
   Liabilities tabs. Legacy Income/Expense tab links redirect to settings
-  category management, preserving their tab and archive mode and replacing the
-  history entry.
+  category management, preserving their tab, mapping archived mode to
+  `showArchived=true`, and replacing the history entry.
   - Loader data is tab-scoped: only the selected tab is fetched in the route
     loader critical path.
 - `$accountBookId/transactions/route.tsx` - transactions page showing one master
@@ -96,10 +96,15 @@ Related docs:
   `/settings` URL: account book name, reference currency, start date, and the
   typed-name danger-zone delete flow.
 - `$accountBookId/settings/categories/route.tsx` - Income/Expenses category and
-  category-group management, including nested groups, ordering, and archives.
-  Reuses the account-management controller and grid with category presentation.
-  The General form is not mounted on this route. Category ledgers retain their
-  existing URLs and remain directly accessible from transactions and reports.
+  category-group management, including nested groups, ordering, and optional
+  archived items within the grid. Its typed `showArchived` search boolean
+  defaults to false and is preserved across Income/Expenses tabs. Legacy
+  category `mode` parameters normalize to the new visibility state; a valid
+  explicit boolean takes precedence. The document title remains Income & Expense
+  Categories. Reuses the account-management controller and grid with category
+  presentation. The General form is not mounted on this route. Category ledgers
+  retain their existing URLs and remain directly accessible from transactions
+  and reports.
 - `$accountBookId/report/route.tsx` - period layout route with shared period
   search validation and loader data used by nested report pages
 - `$accountBookId/report/index.tsx` - report overview page with contribution,

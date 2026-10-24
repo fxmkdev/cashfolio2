@@ -3,6 +3,7 @@ import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import {
   getAccountConstraintMessage,
   getAccountEntityLabel,
+  getAccountManagementDestination,
   getAccountManagementContext,
   getAccountManagementPath,
   isBalanceAccount,
@@ -89,4 +90,39 @@ describe("account roles and presentation", () => {
     expect(getAccountConstraintMessage(null, "categories")).toBeUndefined();
     expect(getAccountConstraintMessage(undefined, "accounts")).toBeUndefined();
   });
+});
+
+describe("management destinations after ledger deletion", () => {
+  it.each(["INCOME", "EXPENSE"] as const)(
+    "returns %s categories to their visibility state",
+    (equityAccountSubtype) => {
+      for (const isActive of [false, true]) {
+        expect(
+          getAccountManagementDestination(
+            { type: AccountType.EQUITY, equityAccountSubtype, isActive },
+            `EQUITY-${equityAccountSubtype}`,
+          ),
+        ).toEqual({
+          to: "/$accountBookId/settings/categories",
+          search: {
+            tab: `EQUITY-${equityAccountSubtype}`,
+            showArchived: !isActive,
+          },
+        });
+      }
+    },
+  );
+  it.each([AccountType.ASSET, AccountType.LIABILITY])(
+    "preserves %s destinations",
+    (type) => {
+      for (const isActive of [false, true]) {
+        expect(
+          getAccountManagementDestination({ type, isActive }, type),
+        ).toEqual({
+          to: "/$accountBookId/accounts",
+          search: { tab: type, mode: isActive ? "active" : "archived" },
+        });
+      }
+    },
+  );
 });

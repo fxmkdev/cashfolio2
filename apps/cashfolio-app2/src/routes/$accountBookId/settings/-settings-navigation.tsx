@@ -22,7 +22,7 @@ export function SettingsNavigation({
           value="categories"
           to="/$accountBookId/settings/categories"
           params={{ accountBookId }}
-          search={{ tab: "EQUITY-INCOME", mode: "active" }}
+          search={{ tab: "EQUITY-INCOME", showArchived: false }}
         >
           Categories
         </LinkTab>

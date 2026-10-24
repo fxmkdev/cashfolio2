@@ -20,9 +20,12 @@ function parseStoredExpandedIds(stored: string): string[] | null {
 export function useExpandedGroups(
   storageKey: string,
   isInitiallyCollapsed?: (data: unknown) => boolean,
+  preserveMissingGroups = false,
 ) {
   const storageKeyRef = useRef(storageKey);
   storageKeyRef.current = storageKey;
+  const preserveMissingGroupsRef = useRef(preserveMissingGroups);
+  preserveMissingGroupsRef.current = preserveMissingGroups;
 
   const isGroupOpenByDefault = useCallback(
     (params: IsGroupOpenByDefaultParams) => {
@@ -62,13 +65,21 @@ export function useExpandedGroups(
 
   const onRowGroupOpened = useCallback((event: RowGroupOpenedEvent) => {
     const expandedIds: string[] = [];
+    const presentGroups = new Set<string>();
     event.api.forEachNode((node) => {
-      if (node.group && node.expanded && node.key) {
-        expandedIds.push(node.key);
+      if (node.group && node.key) {
+        presentGroups.add(node.key);
+        if (node.expanded) expandedIds.push(node.key);
       }
     });
 
     try {
+      if (preserveMissingGroupsRef.current) {
+        const stored = sessionStorage.getItem(storageKeyRef.current);
+        const previous =
+          stored == null ? [] : (parseStoredExpandedIds(stored) ?? []);
+        expandedIds.push(...previous.filter((id) => !presentGroups.has(id)));
+      }
       sessionStorage.setItem(
         storageKeyRef.current,
         JSON.stringify(expandedIds),

@@ -61,7 +61,8 @@ items grouped automatically. Included in totals.” The chevron and amounts reta
 their normal contrast.
 
 Expand the asset/liability paths in the unified Accounts grid. Income and
-expense paths are in Account Book Settings → Categories → Archive:
+expense paths are in Account Book Settings → Categories with **Show Archived**
+enabled:
 
 | Tab       | Display path                                                                                  |
 | --------- | --------------------------------------------------------------------------------------------- |
@@ -71,9 +72,9 @@ expense paths are in Account Book Settings → Categories → Archive:
 | Asset     | Investments → Shares → Archived → Closed Apple position                                       |
 | Asset     | Investments → Archived → Credit Suisse portfolio → Equities → Apple shares / Microsoft shares |
 | Liability | Archived → Repaid car loan CHF                                                                |
-| Income    | Consulting → One-off project                                                                  |
-| Expense   | Car → Running costs → Fuel / Vehicle insurance                                                |
-| Expense   | Leisure and travel → Sports club membership                                                   |
+| Income    | Archived → Consulting → One-off project                                                       |
+| Expense   | Archived → Car → Running costs → Fuel / Vehicle insurance                                     |
+| Expense   | Leisure and travel → Archived → Sports club membership                                        |
 
 The archived Credit Suisse portfolio also contains a Settlement account USD. It
 is funded from active broker cash on day 45 after book start, buys holdings on

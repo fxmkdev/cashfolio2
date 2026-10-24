@@ -188,7 +188,7 @@ test("archived synthetic accounts remain available for archive workflows", async
   await expect(agGridRowByText(page, "Closed bank account CHF")).toBeVisible();
 });
 
-test("archived seed hierarchies are available in Accounts and Category Archive", async ({
+test("archived seed hierarchies are available in Accounts and Categories", async ({
   page,
 }) => {
   const id = seededBook("household").id;
@@ -206,12 +206,10 @@ test("archived seed hierarchies are available in Accounts and Category Archive",
       await agGridRowByText(page, groups[0])
         .locator(".ag-group-contracted")
         .click();
-    if (!isCategory) {
-      await expect(
-        page.locator('[row-id^="__archived__:"]').first(),
-      ).toBeVisible();
-      await expandArchivedGroups(page);
-    }
+    await expect(
+      page.locator('[row-id^="__archived__:"]').first(),
+    ).toBeVisible();
+    await expandArchivedGroups(page);
     if (tab !== "ASSET")
       for (const name of groups) {
         const group = agGridRowByText(page, name);

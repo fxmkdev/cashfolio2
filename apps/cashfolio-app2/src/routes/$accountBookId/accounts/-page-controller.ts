@@ -93,7 +93,6 @@ const defaultAccountsMutationApi: AccountsMutationApi = {
 
 export function createAccountsMutationActions(args: {
   accountBookId: string;
-  createGroupIsActive?: boolean;
   invalidate: () => void;
   state: AccountsMutationState;
   api?: AccountsMutationApi;
@@ -161,7 +160,7 @@ export function createAccountsMutationActions(args: {
           parentGroupId: values.parentGroupId,
           sortOrder: values.sortOrder,
           isCashAccount: values.isCashAccount,
-          isActive: args.createGroupIsActive ?? true,
+          isActive: true,
         },
       });
       args.state.setCreateGroupModalOpened(false);
@@ -260,16 +259,21 @@ export function useAccountsPageController(args: {
   loaderData: AccountsPageLoaderData;
   accountBookId: string;
   tab: AccountsPageViewProps["tab"];
-  mode: AccountsPageViewProps["mode"];
+  mode?: AccountsPageViewProps["mode"];
+  showArchived?: boolean;
+  onShowArchivedChange?: AccountsPageViewProps["onShowArchivedChange"];
   invalidate: () => void;
   onOpenLedger: AccountsPageViewProps["onOpenLedger"];
 }): AccountsPageControllerViewProps {
+  const mode = args.mode ?? "active";
+  const showArchived = args.showArchived ?? false;
+  const scopeKey = `${args.accountBookId}:${args.tab}:${mode}:${showArchived}`;
   const { data: loaderData, refresh: onRefreshConstraints } =
     useRefreshedMutationData(args.loaderData, () =>
       loadAccountsPageData({
         accountBookId: args.accountBookId,
         tab: args.tab,
-        mode: args.mode,
+        showArchived,
       }),
     );
   const {
@@ -291,7 +295,7 @@ export function useAccountsPageController(args: {
   } = useAccountsReferenceBalanceRows({
     accountBookId: args.accountBookId,
     tab: args.tab,
-    mode: args.mode,
+    mode,
     referenceCurrency,
     rows: loaderRows,
   });
@@ -309,17 +313,16 @@ export function useAccountsPageController(args: {
   );
   const gainLoss = useGainLossRequest({
     enabled: !isEquityTab,
-    scopeKey: `${args.accountBookId}:${args.tab}:${args.mode}`,
+    scopeKey,
     refreshKey: loaderData,
     load: loadGainLoss,
   });
 
-  const expansionMode =
-    args.managementContext === "categories" ? args.mode : "active";
-  const storageKey = `cashfolio:expandedGroups:${args.accountBookId}:${expansionMode}:${args.tab}`;
+  const storageKey = `cashfolio:expandedGroups:${args.accountBookId}:active:${args.tab}`;
   const { isGroupOpenByDefault, onRowGroupOpened } = useExpandedGroups(
     storageKey,
     isVirtualArchivedGroup,
+    args.managementContext === "categories" && !showArchived,
   );
 
   const rowsByParentKeyForGroupAggregation = useRowsByParentKey(
@@ -396,8 +399,6 @@ export function useAccountsPageController(args: {
 
   const actions = createAccountsMutationActions({
     accountBookId: args.accountBookId,
-    createGroupIsActive:
-      args.managementContext !== "categories" || args.mode !== "archived",
     invalidate: args.invalidate,
     state: {
       getEditingAccount: () => modalState.editingAccount,
@@ -414,7 +415,7 @@ export function useAccountsPageController(args: {
   });
 
   const unarchiveRecovery = useUnarchiveMutation({
-    scopeKey: `${args.accountBookId}:${args.tab}:${args.mode}`,
+    scopeKey,
     onUnarchive: actions.handleUnarchiveRow,
     formatErrorMessage: (message) =>
       getAccountConstraintMessage(
@@ -434,7 +435,6 @@ export function useAccountsPageController(args: {
     gainLossData: gainLoss.data,
     isGainLossLoading: gainLoss.loading,
     isEquityTab,
-    isCategoryArchive: isEquityTab && args.mode === "archived",
     rowsByParentKey,
     referenceCurrency,
     isReferenceBalancesLoading: shouldShowReferenceBalancesLoading,
@@ -454,7 +454,9 @@ export function useAccountsPageController(args: {
     unarchiveRecovery,
     accountBookId: args.accountBookId,
     tab: args.tab,
-    mode: args.mode,
+    mode,
+    showArchived,
+    onShowArchivedChange: args.onShowArchivedChange,
     tabs: getManagementTabs(args.managementContext ?? "accounts"),
     accountGroups,
     archivedAccountGroups,

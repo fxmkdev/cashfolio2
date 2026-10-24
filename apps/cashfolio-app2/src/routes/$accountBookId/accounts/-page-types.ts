@@ -33,8 +33,18 @@ export function parseCategoriesSearch(search: Record<string, unknown>) {
     tab: getManagementTabs("categories").some((tab) => tab.value === search.tab)
       ? (search.tab as TabValue)
       : ("EQUITY-INCOME" as const),
-    mode:
-      search.mode === "archived" ? ("archived" as const) : ("active" as const),
+    showArchived:
+      typeof search.showArchived === "boolean"
+        ? search.showArchived
+        : search.mode === "archived",
+  };
+}
+
+export function getCategoriesRedirect(search: Record<string, unknown>) {
+  return {
+    to: "/$accountBookId/settings/categories" as const,
+    search: parseCategoriesSearch(search),
+    replace: true as const,
   };
 }
 
@@ -42,13 +52,10 @@ export type { TabValue };
 export type AccountsMode = "active" | "archived";
 
 export function getAccountsPageTitle(
-  mode: AccountsMode = "active",
+  _mode: AccountsMode = "active",
   context: AccountManagementContext = "accounts",
 ): string {
-  if (context === "categories")
-    return mode === "archived"
-      ? "Category Archive"
-      : "Income & Expense Categories";
+  if (context === "categories") return "Income & Expense Categories";
   return "Accounts";
 }
 
@@ -112,10 +119,14 @@ function isTabValue(value: unknown): value is TabValue {
 export function parseAccountsSearch(search: Record<string, unknown>): {
   tab: TabValue;
   mode: AccountsMode;
+  showArchived?: boolean;
 } {
   const tab = isTabValue(search.tab) ? search.tab : "ASSET";
   return {
     tab,
+    ...(tab.startsWith("EQUITY-") && typeof search.showArchived === "boolean"
+      ? { showArchived: search.showArchived }
+      : {}),
     mode:
       tab.startsWith("EQUITY-") && search.mode === "archived"
         ? "archived"

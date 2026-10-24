@@ -6,7 +6,11 @@ import {
 } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 import { createDocumentTitleHead } from "@/shared/document-title";
-import { getAccountsPageTitle, parseAccountsSearch } from "./-page-types";
+import {
+  getAccountsPageTitle,
+  parseAccountsSearch,
+  getCategoriesRedirect,
+} from "./-page-types";
 import { loadAccountsPageData } from "./-page-loader";
 import { useAccountsPageController } from "./-page-controller";
 
@@ -21,10 +25,8 @@ export const Route = createFileRoute("/$accountBookId/accounts")({
   beforeLoad: ({ params, search, location }) => {
     if (search.tab === "EQUITY-INCOME" || search.tab === "EQUITY-EXPENSE") {
       throw redirect({
-        to: "/$accountBookId/settings/categories",
+        ...getCategoriesRedirect(search),
         params,
-        search,
-        replace: true,
       });
     }
     if (new URLSearchParams(location.searchStr).get("mode") === "archived") {

@@ -408,20 +408,26 @@ system account. Identity actions still use "Cashfolio account".
 
 Account management has Assets and Liabilities tabs. Income and expense category
 management lives under **Account Book Settings → Categories**, with Income and
-Expenses tabs and active/archive modes. Gain/Loss and Opening Balances retain
-their system-managed restrictions and are not creation tabs. Primary navigation
-is unchanged. Viewing a category ledger is an activity view, not a settings
-page: its URL and Accounts navigation highlight remain unchanged.
+Expenses tabs and a **Show Archived** checkbox. Gain/Loss and Opening Balances
+retain their system-managed restrictions and are not creation tabs. Primary
+navigation is unchanged. Viewing a category ledger is an activity view, not a
+settings page: its URL and Accounts navigation highlight remain unchanged.
 
 Settings uses underline tabs for General/Categories and pill tabs for
 Income/Expenses. Category type tabs and management actions share a wrapping
 toolbar. General and Categories omit visible page headings while retaining
-visually hidden semantic headings and document titles. Category Archive uses a
-compact Categories/Archive breadcrumb above its toolbar.
+visually hidden semantic headings and document titles. **Show Archived** sits
+beside the category-type pills; there is no separate archive page or breadcrumb.
 
-Accounts combines active and archived items in one hierarchy. Categories keeps a
-separate Category Archive: its loader filters by the selected state, and its
-group expansion preferences remain separate for active and archived views.
+Accounts combines active and archived items in one hierarchy. Categories
+defaults to active items; enabling **Show Archived** requests both states and
+reuses the same collapsed virtual Archived branches, sorting, and archived-row
+actions. Visibility lives in the `showArchived` URL boolean, persists across
+type changes, reloads and browser history, and defaults off on fresh visits.
+Legacy `mode=archived` links normalize to visibility enabled with replacement
+navigation. Creation always produces active items. Real-group expansion
+preferences retain the existing per-book/type active-view session key. Category
+archive tooltips explain preserved history rather than financial totals.
 
 Categories have explicit **category groups**, backed by `AccountGroup`. Groups
 can contain categories and nested groups; categories can also be at the root.

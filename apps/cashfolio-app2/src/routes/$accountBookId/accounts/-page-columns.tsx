@@ -67,7 +67,6 @@ export function useAccountTreeColumnDefs(params: {
   gainLossData?: AccountGainLossSummaries;
   isGainLossLoading?: boolean;
   isEquityTab: boolean;
-  isCategoryArchive?: boolean;
   rowsByParentKey: Map<string, TreeRow[]>;
   referenceCurrency: string;
   isReferenceBalancesLoading: boolean;
@@ -83,7 +82,6 @@ export function useAccountTreeColumnDefs(params: {
     gainLossData,
     isGainLossLoading,
     isEquityTab,
-    isCategoryArchive = false,
     rowsByParentKey,
     referenceCurrency,
     isReferenceBalancesLoading,
@@ -240,7 +238,7 @@ export function useAccountTreeColumnDefs(params: {
             ? "Reorder Siblings"
             : "Cannot reorder because this row has no siblings";
 
-          if (!data.isActive || isCategoryArchive) {
+          if (!data.isActive) {
             return (
               <ArchivedAccountTreeActionsCell
                 unarchivePending={unarchivePending}
@@ -304,7 +302,6 @@ export function useAccountTreeColumnDefs(params: {
     gainLossData,
     isGainLossLoading,
     isEquityTab,
-    isCategoryArchive,
     referenceCurrency,
     onEditRow,
     onUnarchiveRow,

@@ -1,5 +1,6 @@
 import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
 import { isSystemManagedEquitySubtype } from "./system-managed-equity-subtypes";
+import type { TabValue } from "./account-tabs";
 
 type AccountClassification = {
   type: AccountType;
@@ -48,6 +49,25 @@ export function getAccountManagementContext(
   account: AccountClassification,
 ): AccountManagementContext {
   return isCategoryAccount(account) ? "categories" : "accounts";
+}
+
+export function getAccountManagementDestination(
+  account: AccountClassification & { isActive: boolean },
+  tab: TabValue,
+) {
+  if (isCategoryAccount(account)) {
+    return {
+      to: "/$accountBookId/settings/categories" as const,
+      search: { tab, showArchived: !account.isActive },
+    };
+  }
+  return {
+    to: "/$accountBookId/accounts" as const,
+    search: {
+      tab,
+      mode: account.isActive ? ("active" as const) : ("archived" as const),
+    },
+  };
 }
 
 /** Translate existing constraint messages at the presentation boundary only. */
