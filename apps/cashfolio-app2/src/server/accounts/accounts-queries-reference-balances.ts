@@ -172,16 +172,7 @@ export async function getDisplayBalanceInReferenceCurrencyByAccountId(args: {
             getSecurityToReferenceRate,
           });
 
-        const displayBalanceInReferenceCurrency =
-          rawBalanceInReferenceCurrency == null
-            ? null
-            : account.type === "ASSET"
-              ? rawBalanceInReferenceCurrency
-              : account.type === "LIABILITY"
-                ? toMoney(rawBalanceInReferenceCurrency).neg()
-                : null;
-
-        return [account.id, displayBalanceInReferenceCurrency] as const;
+        return [account.id, rawBalanceInReferenceCurrency] as const;
       }),
     ),
   );

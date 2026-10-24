@@ -113,88 +113,98 @@ describe("getAccountReferenceBalances", () => {
     });
   });
 
-  it("returns signed reference balances and preserves null when conversion is unavailable", async () => {
-    prisma.account.findMany.mockResolvedValue([
-      {
-        id: "asset-chf",
-        type: AccountType.ASSET,
-        unit: Unit.CURRENCY,
-        currency: "CHF",
-        cryptocurrency: null,
-        symbol: null,
-        tradeCurrency: null,
-      },
-      {
-        id: "liability-usd",
-        type: AccountType.LIABILITY,
-        unit: Unit.CURRENCY,
-        currency: "USD",
-        cryptocurrency: null,
-        symbol: null,
-        tradeCurrency: null,
-      },
-      {
-        id: "asset-security",
-        type: AccountType.ASSET,
-        unit: Unit.SECURITY,
-        currency: null,
-        cryptocurrency: null,
-        symbol: "AAPL",
-        tradeCurrency: "USD",
-      },
-    ]);
-    prisma.booking.groupBy.mockResolvedValue([
-      { accountId: "asset-chf", _sum: { value: 10 } },
-      { accountId: "liability-usd", _sum: { value: 5 } },
-      { accountId: "asset-security", _sum: { value: 3 } },
-    ]);
-    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
-      referenceCurrency: "CHF",
-    });
+  it.each([-5, 0, 5])(
+    "returns signed reference balances for liability value %s and preserves missing conversions",
+    async (liabilityValue) => {
+      prisma.account.findMany.mockResolvedValue([
+        {
+          id: "asset-chf",
+          type: AccountType.ASSET,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+        },
+        {
+          id: "liability-usd",
+          type: AccountType.LIABILITY,
+          unit: Unit.CURRENCY,
+          currency: "USD",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+        },
+        {
+          id: "asset-security",
+          type: AccountType.ASSET,
+          unit: Unit.SECURITY,
+          currency: null,
+          cryptocurrency: null,
+          symbol: "AAPL",
+          tradeCurrency: "USD",
+        },
+      ]);
+      prisma.booking.groupBy.mockResolvedValue([
+        { accountId: "asset-chf", _sum: { value: 10 } },
+        { accountId: "liability-usd", _sum: { value: liabilityValue } },
+        { accountId: "asset-security", _sum: { value: 3 } },
+      ]);
+      prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+        referenceCurrency: "CHF",
+      });
 
-    getCurrencyExchangeRate.mockImplementation(
-      async ({ sourceCurrency, targetCurrency }) => {
-        if (sourceCurrency === "USD" && targetCurrency === "CHF") return 0.9;
-        if (sourceCurrency === "USD" && targetCurrency === "USD") return 1;
-        return null;
-      },
-    );
-    getSecurityToCurrencyExchangeRate.mockResolvedValue(null);
+      getCurrencyExchangeRate.mockImplementation(
+        async ({ sourceCurrency, targetCurrency }) => {
+          if (sourceCurrency === "USD" && targetCurrency === "CHF") return 0.9;
+          if (sourceCurrency === "USD" && targetCurrency === "USD") return 1;
+          return null;
+        },
+      );
+      getSecurityToCurrencyExchangeRate.mockResolvedValue(null);
 
-    const result = await getAccountReferenceBalances({
-      data: {
-        accountBookId: "book-2",
-        accountState: "active",
-      },
-    });
+      const result = await getAccountReferenceBalances({
+        data: {
+          accountBookId: "book-2",
+          accountState: "active",
+        },
+      });
 
-    expect(result.referenceCurrency).toBe("CHF");
-    expect(result.rows).toEqual([
-      { id: "asset-chf", balanceInReferenceCurrency: 10 },
-      { id: "liability-usd", balanceInReferenceCurrency: -4.5 },
-      { id: "asset-security", balanceInReferenceCurrency: null },
-    ]);
-    expect(prisma.booking.groupBy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          date: { lt: new Date("2026-02-11T00:00:00.000Z") },
+      expect(result.referenceCurrency).toBe("CHF");
+      expect(result.rows).toEqual([
+        { id: "asset-chf", balanceInReferenceCurrency: 10 },
+        {
+          id: "liability-usd",
+          balanceInReferenceCurrency: liabilityValue * 0.9,
+        },
+        { id: "asset-security", balanceInReferenceCurrency: null },
+      ]);
+      expect(prisma.booking.groupBy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            date: { lt: new Date("2026-02-11T00:00:00.000Z") },
+          }),
         }),
-      }),
-    );
+      );
 
-    expect(getCurrencyExchangeRate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sourceCurrency: "USD",
-        targetCurrency: "CHF",
-      }),
-    );
-    expect(getCurrencyExchangeRate).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        sourceCurrency: "USD",
-        targetCurrency: "USD",
-      }),
-    );
-  });
+      if (liabilityValue === 0) {
+        expect(getCurrencyExchangeRate).not.toHaveBeenCalled();
+      } else {
+        expect(getCurrencyExchangeRate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            sourceCurrency: "USD",
+            targetCurrency: "CHF",
+          }),
+        );
+      }
+      expect(getCurrencyExchangeRate).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          sourceCurrency: "USD",
+          targetCurrency: "USD",
+        }),
+      );
+    },
+  );
 
   it("does not fetch USD->reference FX when no account needs conversion", async () => {
     prisma.account.findMany.mockResolvedValue([

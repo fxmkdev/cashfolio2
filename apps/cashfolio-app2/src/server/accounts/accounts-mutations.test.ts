@@ -647,146 +647,181 @@ describe("updateAccount opening balance management", () => {
     expect(invalidatePeriodBaseDataCacheForAccountBook).not.toHaveBeenCalled();
   });
 
-  it("updates the existing opening-balance transaction instead of creating a new one", async () => {
-    tx.transaction.findMany.mockResolvedValue([
-      {
-        id: "tx-open",
-        bookings: [
-          {
-            id: "booking-account",
-            accountId: "account-1",
-            account: {
-              id: "account-1",
-              type: AccountType.ASSET,
-              equityAccountSubtype: null,
-            },
-          },
-          {
-            id: "booking-opening",
-            accountId: "opening-account",
-            account: {
-              id: "opening-account",
-              type: AccountType.EQUITY,
-              equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-            },
-          },
-        ],
-      },
-    ]);
-
-    await updateAccount({
-      data: {
-        id: "account-1",
-        accountBookId: "book-1",
-        name: "Cash",
-        type: AccountType.ASSET,
+  it.each([AccountType.ASSET, AccountType.LIABILITY])(
+    "updates an existing %s opening-balance transaction with the signed input",
+    async (type) => {
+      tx.account.findUniqueOrThrow.mockResolvedValue({
+        type,
+        equityAccountSubtype: null,
         unit: Unit.CURRENCY,
         currency: "CHF",
-        openingBalance: 150,
-      },
-    });
-
-    expect(tx.transaction.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: {
-          id_accountBookId: {
-            id: "tx-open",
-            accountBookId: "book-1",
-          },
+        isCashAccount: false,
+      });
+      tx.account.update.mockResolvedValue({
+        id: "account-1",
+        name: "Account",
+        type,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+      });
+      const openingBalance = type === AccountType.LIABILITY ? -150 : 150;
+      tx.transaction.findMany.mockResolvedValue([
+        {
+          id: "tx-open",
+          bookings: [
+            {
+              id: "booking-account",
+              accountId: "account-1",
+              account: {
+                id: "account-1",
+                type,
+                equityAccountSubtype: null,
+              },
+            },
+            {
+              id: "booking-opening",
+              accountId: "opening-account",
+              account: {
+                id: "opening-account",
+                type: AccountType.EQUITY,
+                equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+              },
+            },
+          ],
         },
-        data: expect.objectContaining({
-          bookings: expect.objectContaining({
-            update: expect.arrayContaining([
-              expect.objectContaining({
-                where: {
-                  id_accountBookId: {
-                    id: "booking-account",
-                    accountBookId: "book-1",
+      ]);
+
+      await updateAccount({
+        data: {
+          id: "account-1",
+          accountBookId: "book-1",
+          name: "Cash",
+          type,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          openingBalance,
+        },
+      });
+
+      expect(tx.transaction.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            id_accountBookId: {
+              id: "tx-open",
+              accountBookId: "book-1",
+            },
+          },
+          data: expect.objectContaining({
+            bookings: expect.objectContaining({
+              update: expect.arrayContaining([
+                expect.objectContaining({
+                  where: {
+                    id_accountBookId: {
+                      id: "booking-account",
+                      accountBookId: "book-1",
+                    },
                   },
-                },
-                data: expect.objectContaining({
-                  unit: Unit.CURRENCY,
-                  currency: "CHF",
-                  value: "150",
-                  sortOrder: 0,
+                  data: expect.objectContaining({
+                    unit: Unit.CURRENCY,
+                    currency: "CHF",
+                    value: String(openingBalance),
+                    sortOrder: 0,
+                  }),
                 }),
-              }),
-              expect.objectContaining({
-                where: {
-                  id_accountBookId: {
-                    id: "booking-opening",
-                    accountBookId: "book-1",
+                expect.objectContaining({
+                  where: {
+                    id_accountBookId: {
+                      id: "booking-opening",
+                      accountBookId: "book-1",
+                    },
                   },
-                },
-                data: expect.objectContaining({
-                  unit: Unit.CURRENCY,
-                  currency: "CHF",
-                  value: "-150",
-                  sortOrder: 1,
+                  data: expect.objectContaining({
+                    unit: Unit.CURRENCY,
+                    currency: "CHF",
+                    value: String(-openingBalance),
+                    sortOrder: 1,
+                  }),
                 }),
-              }),
-            ]),
+              ]),
+            }),
           }),
         }),
-      }),
-    );
-    expect(tx.transaction.create).not.toHaveBeenCalled();
-    expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
-      "book-1",
-    );
-  });
+      );
+      expect(tx.transaction.create).not.toHaveBeenCalled();
+      expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
+        "book-1",
+      );
+    },
+  );
 
-  it("deletes opening-balance transactions when opening balance is removed", async () => {
-    tx.transaction.findMany.mockResolvedValue([
-      {
-        id: "tx-open",
-        bookings: [
-          {
-            id: "booking-account",
-            accountId: "account-1",
-            account: {
-              id: "account-1",
-              type: AccountType.ASSET,
-              equityAccountSubtype: null,
-            },
-          },
-          {
-            id: "booking-opening",
-            accountId: "opening-account",
-            account: {
-              id: "opening-account",
-              type: AccountType.EQUITY,
-              equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-            },
-          },
-        ],
-      },
-    ]);
-
-    await updateAccount({
-      data: {
-        id: "account-1",
-        accountBookId: "book-1",
-        name: "Cash",
-        type: AccountType.ASSET,
+  it.each([AccountType.ASSET, AccountType.LIABILITY])(
+    "deletes %s opening-balance transactions when opening balance is removed",
+    async (type) => {
+      tx.account.findUniqueOrThrow.mockResolvedValue({
+        type,
+        equityAccountSubtype: null,
         unit: Unit.CURRENCY,
         currency: "CHF",
-        openingBalance: null,
-      },
-    });
+        isCashAccount: false,
+      });
+      tx.account.update.mockResolvedValue({
+        id: "account-1",
+        name: "Account",
+        type,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+      });
+      tx.transaction.findMany.mockResolvedValue([
+        {
+          id: "tx-open",
+          bookings: [
+            {
+              id: "booking-account",
+              accountId: "account-1",
+              account: {
+                id: "account-1",
+                type,
+                equityAccountSubtype: null,
+              },
+            },
+            {
+              id: "booking-opening",
+              accountId: "opening-account",
+              account: {
+                id: "opening-account",
+                type: AccountType.EQUITY,
+                equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+              },
+            },
+          ],
+        },
+      ]);
 
-    expect(tx.transaction.deleteMany).toHaveBeenCalledWith({
-      where: {
-        accountBookId: "book-1",
-        id: { in: ["tx-open"] },
-      },
-    });
-    expect(tx.transaction.update).not.toHaveBeenCalled();
-    expect(tx.transaction.create).not.toHaveBeenCalled();
-    expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
-      "book-1",
-    );
-  });
+      await updateAccount({
+        data: {
+          id: "account-1",
+          accountBookId: "book-1",
+          name: "Cash",
+          type,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          openingBalance: null,
+        },
+      });
+
+      expect(tx.transaction.deleteMany).toHaveBeenCalledWith({
+        where: {
+          accountBookId: "book-1",
+          id: { in: ["tx-open"] },
+        },
+      });
+      expect(tx.transaction.update).not.toHaveBeenCalled();
+      expect(tx.transaction.create).not.toHaveBeenCalled();
+      expect(invalidatePeriodBaseDataCacheForAccountBook).toHaveBeenCalledWith(
+        "book-1",
+      );
+    },
+  );
 
   it("reuses concurrently created opening-balances account on unique conflict", async () => {
     tx.transaction.findMany.mockResolvedValue([]);

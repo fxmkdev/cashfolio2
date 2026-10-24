@@ -1,4 +1,4 @@
-import { AccountType } from "@/.prisma-client/enums";
+import type { AccountType } from "@/.prisma-client/enums";
 import type { StatementImportExistingBooking } from "@/server/statement-import";
 import { getUnitIdentifier } from "@/shared/account-utils";
 import type { BookingUnitFieldsSource } from "@/shared/booking-unit-fields";
@@ -153,9 +153,6 @@ export function getStatementImportGridRows(
       left.bookingOrder - right.bookingOrder,
   );
 
-  const negate = args.account.type === AccountType.LIABILITY;
-  const displayBalance = (value: MoneyInput) =>
-    toMoneyNumber(negate ? toMoney(value).neg() : value);
   let runningBalance = toMoney(0);
   let balanceBeforeReview = toMoney(0);
   const rows: StatementImportGridRow[] = [];
@@ -163,7 +160,7 @@ export function getStatementImportGridRows(
     runningBalance = moneyAdd(runningBalance, event.value);
     if (event.date < firstDate) balanceBeforeReview = runningBalance;
     if (event.row) {
-      rows.push({ ...event.row, balance: displayBalance(runningBalance) });
+      rows.push({ ...event.row, balance: toMoneyNumber(runningBalance) });
     }
   }
 
@@ -173,7 +170,7 @@ export function getStatementImportGridRows(
       id: STATEMENT_IMPORT_BALANCE_CARRIED_FORWARD_ROW_ID,
       rowType: "balanceCarriedForward",
       description: "Balance carried forward",
-      balance: displayBalance(balanceBeforeReview),
+      balance: toMoneyNumber(balanceBeforeReview),
     });
   }
   return rows;

@@ -66,9 +66,8 @@ function shouldNegate(
   equityAccountSubtype: EquityAccountSubtype | null,
 ): boolean {
   return (
-    type === AccountType.LIABILITY ||
-    (type === AccountType.EQUITY &&
-      equityAccountSubtype !== EquityAccountSubtype.EXPENSE)
+    type === AccountType.EQUITY &&
+    equityAccountSubtype !== EquityAccountSubtype.EXPENSE
   );
 }
 

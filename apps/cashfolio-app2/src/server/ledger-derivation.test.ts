@@ -96,14 +96,72 @@ describe("deriveLedgerPresentationData", () => {
     });
 
     expect(result.rows).toEqual([
-      expect.objectContaining({ date: "10.01.2026", balance: 80 }),
+      expect.objectContaining({
+        date: "10.01.2026",
+        balance: -80,
+        debit: 20,
+        credit: null,
+        referenceDebit: 20,
+        referenceCredit: null,
+      }),
       expect.objectContaining({
         date: "",
-        balance: 100,
+        balance: -100,
         isVirtualCarryOver: true,
       }),
     ]);
   });
+
+  test.each([AccountType.ASSET, AccountType.LIABILITY])(
+    "%s balances cross zero without changing debit/credit sides",
+    (type) => {
+      const result = deriveLedgerPresentationData({
+        account: createAccount({ type }),
+        bookings: createBookings([
+          {
+            date: utcDate(2026, 0, 10),
+            value: -30,
+            valueInReferenceCurrency: -60,
+          },
+          {
+            date: utcDate(2026, 0, 11),
+            value: 100,
+            valueInReferenceCurrency: 200,
+          },
+          {
+            date: utcDate(2026, 0, 12),
+            value: -20,
+            valueInReferenceCurrency: -40,
+          },
+        ]),
+        hasPeriodFilter: true,
+        balanceBeforePeriodRaw: toMoney(-50),
+        hasBookingsBeforePeriod: true,
+      });
+
+      expect(result.rows).toEqual([
+        expect.objectContaining({
+          balance: 0,
+          debit: null,
+          credit: 20,
+          referenceCredit: 40,
+        }),
+        expect.objectContaining({
+          balance: 20,
+          debit: 100,
+          credit: null,
+          referenceDebit: 200,
+        }),
+        expect.objectContaining({
+          balance: -80,
+          debit: null,
+          credit: 30,
+          referenceCredit: 60,
+        }),
+        expect.objectContaining({ balance: -50, isVirtualCarryOver: true }),
+      ]);
+    },
+  );
 
   test("uses reference-currency running balance for filtered equity", () => {
     const result = deriveLedgerPresentationData({

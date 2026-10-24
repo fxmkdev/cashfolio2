@@ -205,9 +205,9 @@ describe("getAccountTreeData", () => {
       unarchiveDisabledReason: "Action availability not requested",
     });
     expect(liabilityRow).toMatchObject({
-      balance: -5,
+      balance: 5,
       balanceInReferenceCurrency: null,
-      openingBalance: -2,
+      openingBalance: 2,
     });
     expect(groupRow).toMatchObject({
       nodeType: "accountGroup",
@@ -421,6 +421,30 @@ describe("getLedgerAccountActionData", () => {
       openingBalance: 8,
       balance: 10,
     });
+  });
+
+  it("returns signed debt and opening balance for liability ledger edits", async () => {
+    prisma.account.findUnique.mockResolvedValue({
+      id: "liability-1",
+      name: "Credit Card",
+      type: AccountType.LIABILITY,
+      equityAccountSubtype: null,
+      unit: Unit.CURRENCY,
+      currency: "CHF",
+      groupId: null,
+      isActive: true,
+    });
+    prisma.booking.aggregate.mockReset();
+    prisma.booking.aggregate
+      .mockResolvedValueOnce({ _sum: { value: -120 } })
+      .mockResolvedValueOnce({ _sum: { value: -120 } })
+      .mockResolvedValueOnce({ _sum: { value: -100 } });
+
+    const result = await getLedgerAccountActionData({
+      data: { accountBookId: "book-1", accountId: "liability-1" },
+    });
+
+    expect(result).toMatchObject({ balance: -120, openingBalance: -100 });
   });
 });
 
