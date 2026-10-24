@@ -728,6 +728,89 @@ export const ArchivedGroupActions: Story = {
   },
 };
 
+export const VirtualArchivedAppearance: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      rowsOverride={[
+        createGroupRow({
+          id: "real-archived",
+          name: "Archived",
+          type: AccountType.ASSET,
+          isActive: true,
+          sortOrder: 0,
+        }),
+        createAccountRow({
+          id: "closed-wallet",
+          name: "Closed wallet",
+          type: AccountType.ASSET,
+          isActive: false,
+          sortOrder: 1,
+          currency: "CHF",
+          balance: 0,
+          balanceInReferenceCurrency: 0,
+        }),
+      ]}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findAllByText("Archived", { exact: true });
+    const label = canvasElement.querySelector<HTMLElement>(
+      "[data-virtual-archived-label]",
+    );
+    if (!label) throw new Error("Missing virtual Archived label");
+    const row = label.closest<HTMLElement>(".ag-row");
+    const cell = label.closest<HTMLElement>(".ag-cell");
+    if (!row || !cell) throw new Error("Missing Archived row");
+    expect(label.querySelector('svg[aria-hidden="true"]')).toHaveAttribute(
+      "width",
+      "16",
+    );
+    expect(
+      canvasElement.querySelectorAll("[data-virtual-archived-label]"),
+    ).toHaveLength(1);
+    const numeric = row.querySelector<HTMLElement>(
+      '[col-id="balanceInReferenceCurrency"]',
+    );
+    if (!numeric) throw new Error("Missing reference balance cell");
+    expect(getComputedStyle(label).color).not.toBe(
+      getComputedStyle(numeric).color,
+    );
+    const realLabel = canvasElement.querySelector<HTMLElement>(
+      '[row-id="real-archived"] .ag-group-value',
+    );
+    const chevron = row.querySelector<HTMLElement>(".ag-group-contracted");
+    if (!realLabel || !chevron) throw new Error("Missing ordinary tree cells");
+    expect(realLabel).toHaveTextContent("Archived");
+    expect(realLabel.querySelector("svg")).toBeNull();
+    expect(getComputedStyle(realLabel).color).toBe(
+      getComputedStyle(numeric).color,
+    );
+    expect(getComputedStyle(chevron).color).toBe(
+      getComputedStyle(numeric).color,
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.hover(label);
+    expect(await body.findByRole("tooltip")).toHaveTextContent(
+      "Archived items grouped automatically. Included in totals.",
+    );
+    await userEvent.unhover(label);
+    cell.focus();
+    await userEvent.tab();
+    expect(label).toHaveFocus();
+    expect(await body.findByRole("tooltip")).toHaveTextContent(
+      "Archived items grouped automatically. Included in totals.",
+    );
+    await userEvent.tab({ shift: true });
+    expect(cell).toHaveFocus();
+    const expand = row.querySelector<HTMLElement>(".ag-group-contracted");
+    if (!expand) throw new Error("Missing Archived expander");
+    await userEvent.click(expand);
+    expect(await canvas.findByText("Closed wallet")).toBeVisible();
+  },
+};
+
 export const CreateModalOpen: Story = {
   render: () => (
     <AccountsPageStoryHarness

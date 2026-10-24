@@ -34,6 +34,10 @@ import type {
 } from "./-page-types";
 import type { loadAccountsPageData } from "./-page-loader";
 import { postSortAccountRows } from "./-archived-grid-rows";
+import {
+  AccountNameCell,
+  suppressAccountNameKeyboardEvent,
+} from "./-account-name-cell";
 import { AccountGainLossDetails } from "./-gain-loss-header";
 
 type AccountsPageLoaderData = Awaited<ReturnType<typeof loadAccountsPageData>>;
@@ -228,8 +232,10 @@ export function AccountsPageView({
             minWidth: 320,
             filter: "agTextColumnFilter",
             valueGetter: ({ data }) => data?.name,
+            suppressKeyboardEvent: suppressAccountNameKeyboardEvent,
             cellRendererParams: {
               suppressCount: true,
+              innerRenderer: AccountNameCell,
             },
           }}
           postSortRows={postSortAccountRows}

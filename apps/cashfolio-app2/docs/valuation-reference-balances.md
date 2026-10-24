@@ -31,6 +31,10 @@ book/tab in the session, remain last among siblings even during column sorting,
 and have no mutation actions. A real group named Archived remains an ordinary
 editable group.
 
+Virtual name cells use a muted archive icon and label, with the tooltip
+“Archived items grouped automatically. Included in totals.” on hover and
+keyboard focus. Chevrons and monetary columns retain normal contrast.
+
 The hierarchy projection changes display parents only. Real parent IDs remain
 available for editors; virtual IDs never enter persisted relationships or editor
 choices. Real rows retain their existing archive/unarchive constraints and

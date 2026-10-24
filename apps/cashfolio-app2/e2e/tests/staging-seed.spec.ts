@@ -9,7 +9,12 @@ import {
   insertSeedBooks,
   type SeedSummary,
 } from "../../src/staging-seed/writer";
-import { agGridRowByText, setGridAccountTreeCellValue } from "../support/grid";
+import {
+  agGridCellByColId,
+  agGridPinnedBottomRow,
+  agGridRowByText,
+  setGridAccountTreeCellValue,
+} from "../support/grid";
 import { assertSafeWriteTarget, prisma } from "../support/db-client";
 import { expect, test } from "../support/fixtures";
 
@@ -176,11 +181,145 @@ test("archived synthetic accounts remain available for archive workflows", async
     `/${seededBook("household").id}/accounts?tab=ASSET&mode=archived`,
   );
   await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
-  await expandArchivedGroups(page);
-  await agGridRowByText(page, "Former bank accounts")
+  await agGridRowByText(page, "Zürcher Kantonalbank")
     .locator(".ag-group-contracted")
     .click();
+  await expandArchivedGroups(page);
   await expect(agGridRowByText(page, "Closed bank account CHF")).toBeVisible();
+});
+
+test("archived seed hierarchies are available on all four account tabs", async ({
+  page,
+}) => {
+  const id = seededBook("household").id;
+  for (const [tab, groups, item] of [
+    ["ASSET", ["Zürcher Kantonalbank"], "Closed bank account CHF"],
+    ["LIABILITY", [], "Repaid car loan CHF"],
+    ["EQUITY-INCOME", ["Consulting"], "One-off project"],
+    ["EQUITY-EXPENSE", ["Car", "Running costs"], "Fuel"],
+  ] as const) {
+    await page.goto(`/${id}/accounts?tab=${tab}`);
+    if (tab === "ASSET")
+      await agGridRowByText(page, groups[0])
+        .locator(".ag-group-contracted")
+        .click();
+    await expect(
+      page.locator('[row-id^="__archived__:"]').first(),
+    ).toBeVisible();
+    await expandArchivedGroups(page);
+    if (tab !== "ASSET")
+      for (const name of groups) {
+        const group = agGridRowByText(page, name);
+        await expect(group).toBeVisible();
+        await group.locator(".ag-group-contracted").click();
+      }
+    await expect(agGridRowByText(page, item)).toBeVisible();
+    await expect(agGridRowByText(page, "Former bank accounts")).toHaveCount(0);
+  }
+});
+
+test("closed seed investments retain realised gains and losses in collapsed unified totals", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const accountBookId = seededBook("household").id;
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  const groups = await prisma.accountGroup.findMany({
+    where: { accountBookId },
+  });
+  const investments = groups.find((group) => group.name === "Investments")!;
+  const shares = groups.find((group) => group.name === "Shares")!;
+  const portfolio = groups.find(
+    (group) => group.name === "Credit Suisse portfolio",
+  )!;
+  const equities = groups.find(
+    (group) => group.parentGroupId === portfolio.id,
+  )!;
+  const holdings = await prisma.account.findMany({
+    where: { accountBookId, groupId: equities.id },
+  });
+  await page.goto(`/${accountBookId}/accounts?tab=ASSET`);
+  const archive = page.locator(
+    `[row-id="__archived__:group:${investments.id}"]`,
+  );
+  await expect(archive).toHaveAttribute("aria-expanded", "false");
+  await expect(agGridCellByColId(archive, "realizedGainLoss")).toHaveText(
+    "50.00",
+    { timeout: 60_000 },
+  );
+  await expect(agGridCellByColId(archive, "unrealizedGainLoss")).toHaveText(
+    "0.00",
+  );
+  await expect(agGridCellByColId(archive, "totalGainLoss")).toHaveText("50.00");
+  await expect(
+    agGridCellByColId(archive, "balanceInReferenceCurrency"),
+  ).toHaveText("0.00");
+  const parent = page.locator(`[row-id="${investments.id}"]`);
+  const footer = agGridPinnedBottomRow(page);
+  const fields = [
+    "realizedGainLoss",
+    "unrealizedGainLoss",
+    "totalGainLoss",
+    "balanceInReferenceCurrency",
+  ];
+  const before = await Promise.all(
+    [parent, footer].flatMap((row) =>
+      fields.map((field) => agGridCellByColId(row, field).innerText()),
+    ),
+  );
+  await archive.locator(".ag-group-contracted").click();
+  const portfolioRow = page.locator(`[row-id="${portfolio.id}"]`);
+  await expect(agGridCellByColId(portfolioRow, "totalGainLoss")).toHaveText(
+    "50.00",
+  );
+  await portfolioRow.locator(".ag-group-contracted").click();
+  const equitiesRow = page.locator(`[row-id="${equities.id}"]`);
+  await expect(agGridCellByColId(equitiesRow, "totalGainLoss")).toHaveText(
+    "50.00",
+  );
+  await equitiesRow.locator(".ag-group-contracted").click();
+  for (const [symbol, expected] of [
+    ["AAPL", "150.00"],
+    ["MSFT", "-100.00"],
+  ]) {
+    const row = page.locator(
+      `[row-id="${holdings.find((holding) => holding.symbol === symbol)!.id}"]`,
+    );
+    await expect(agGridCellByColId(row, "realizedGainLoss")).toHaveText(
+      expected,
+    );
+    await expect(agGridCellByColId(row, "unrealizedGainLoss")).toHaveText(
+      "0.00",
+    );
+    await expect(agGridCellByColId(row, "totalGainLoss")).toHaveText(expected);
+  }
+  await page.locator(`[row-id="${shares.id}"] .ag-group-contracted`).click();
+  const directArchive = page.locator(
+    `[row-id="__archived__:group:${shares.id}"]`,
+  );
+  await expect(agGridCellByColId(directArchive, "totalGainLoss")).toHaveText(
+    "20.00",
+  );
+  await directArchive.locator(".ag-group-contracted").click();
+  await expect(
+    agGridCellByColId(
+      agGridRowByText(page, "Closed Apple position"),
+      "totalGainLoss",
+    ),
+  ).toHaveText("20.00");
+  const after = await Promise.all(
+    [parent, footer].flatMap((row) =>
+      fields.map((field) => agGridCellByColId(row, field).innerText()),
+    ),
+  );
+  expect(after).toEqual(before);
+  await archive.locator(".ag-group-expanded").click();
+  const collapsed = await Promise.all(
+    [parent, footer].flatMap((row) =>
+      fields.map((field) => agGridCellByColId(row, field).innerText()),
+    ),
+  );
+  expect(collapsed).toEqual(before);
 });
 
 test("the sample CSV imports into the configured synthetic bank account", async ({
