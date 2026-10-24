@@ -231,7 +231,7 @@ namespaces and preserves global valuation caches.
   - Cleanup hint (never used to determine cache validity):
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
 - History metrics entry:
-  `period:history:metrics:v8:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
+  `period:history:metrics:v9:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
 - Base-data v8 and History metrics v7 store monetary values as tagged exact
   decimal strings through `src/server/money-cache-codec.ts`
   (`{ __cashfolioDecimal: "..." }`). Dates retain their existing
@@ -710,3 +710,27 @@ policies also continue to exclude temporarily backtracked TimeSeries quotes. Old
 entries expire naturally under their existing TTLs and remain covered by
 version-independent book/user deletion and restore cleanup. Global price/rate
 series and their fallback/cooldown caches are preserved.
+
+### Balance-based Asset and Liability Reporting
+
+Report and History classify each balance account by its exact reference-currency
+balance at the reporting date, before rounding or grouping. Positive balances
+contribute to Assets; absolute values of negative balances contribute to
+Liabilities. Zero balances contribute to neither. Stored `ASSET`/`LIABILITY`
+types determine eligibility only; equity accounts are excluded. Virtual
+transfer-clearing accounts follow the same rule. Net worth remains Assets minus
+Liabilities and is unchanged by this classification.
+
+Allocation charts and tables preserve the original account/group hierarchy on
+each side, even when a group's accounts have mixed signs. Unavailable valuations
+are omitted; both allocation views report the same overall missing-balance
+count. Amounts on the liability side are positive debt magnitudes. Existing
+allocation rounding and hidden-small-balance discrepancy indicators remain
+applicable.
+
+History applies classification independently at every month/year endpoint and
+its opening baseline. Account/group scopes contain only that metric's
+contribution; a selected account contributes zero while on the opposite side.
+Scope options remain the union across period points. History metrics v9 prevents
+reuse of results computed with permanent asset/liability classification;
+base-data v8 and valuation caches remain compatible.

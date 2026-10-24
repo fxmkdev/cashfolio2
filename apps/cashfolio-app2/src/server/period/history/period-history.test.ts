@@ -167,6 +167,83 @@ describe("getPeriodHistory", () => {
     vi.useRealTimers();
   });
 
+  test.each([
+    ["month", "assets"],
+    ["month", "liabilities"],
+    ["year", "assets"],
+    ["year", "liabilities"],
+  ] as const)(
+    "retains a crossing account's scoped %s/%s series across periods on the opposite side",
+    async (granularity, metric) => {
+      if (granularity === "year") {
+        loadPeriodHistoryPointContext.mockResolvedValue({
+          referenceCurrency: "CHF",
+          accountBookStartDate: new Date("2024-01-01T00:00:00Z"),
+          holdingAccountsResolved: [],
+          hasCashAccounts: true,
+        });
+      }
+      const original = loadPeriodHistoryPoint.getMockImplementation()!;
+      const option = {
+        value: "account:crossing",
+        label: "Crossing Account",
+        kind: "account",
+      };
+      loadPeriodHistoryPoint.mockImplementation(async (args) => {
+        const base = await original(args);
+        const index =
+          granularity === "year"
+            ? Number(args.period) - 2024
+            : Number(args.period.slice(-2)) - 1;
+        const balance = [25, 0, -10][index]!;
+        const assets = Math.max(balance, 0);
+        const liabilities = Math.max(-balance, 0);
+        return {
+          ...base,
+          assets,
+          liabilities,
+          netWorth: balance,
+          scopedMetricValue: metric === "assets" ? assets : liabilities,
+          scopeOptions: {
+            ...base.scopeOptions,
+            assets: assets > 0 ? [option] : [],
+            liabilities: liabilities > 0 ? [option] : [],
+          },
+        };
+      });
+      loadHistoryOpeningBalancePoint.mockResolvedValue({
+        date: "2023-12-31T00:00:00Z",
+        label: "Opening Balance",
+        assets: 25,
+        liabilities: 0,
+        netWorth: 25,
+        scopedMetricValue: metric === "assets" ? 25 : 0,
+      });
+      const result = await getPeriodHistory({
+        data: {
+          accountBookId: "book-1",
+          granularity,
+          scopedMetric: metric,
+          ...(metric === "assets"
+            ? { assetScope: "account:crossing" }
+            : { liabilityScope: "account:crossing" }),
+        },
+      });
+      expect(result.scopeSelection[metric]).toBe("account:crossing");
+      expect(result.scopeOptions.assets).toContainEqual(option);
+      expect(result.scopeOptions.liabilities).toContainEqual(option);
+      expect(result.points.map((point) => point[metric])).toEqual(
+        metric === "assets" ? [25, 0, 0] : [0, 0, 10],
+      );
+      expect(result.points.map((point) => point.netWorth)).toEqual([
+        25, 0, -10,
+      ]);
+      expect(result.openingBalancePoint[metric]).toBe(
+        metric === "assets" ? 25 : 0,
+      );
+    },
+  );
+
   test("authorizes and builds monthly points from account-book start to current month", async () => {
     const result = await getPeriodHistory({
       data: {

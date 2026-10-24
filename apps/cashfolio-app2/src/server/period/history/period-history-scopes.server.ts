@@ -5,7 +5,7 @@ import {
   moneyRound2,
   moneySum,
 } from "../../../shared/money";
-import { AccountType } from "../../../.prisma-client/enums";
+import { type AccountType } from "../../../.prisma-client/enums";
 import { createGroupPathResolver } from "../../accounts/accounts-helpers";
 import {
   round2,
@@ -19,6 +19,8 @@ import {
   type HistoryScopedMetric,
 } from "../../../shared/history-scope";
 import type { PeriodGainsLossesBreakdownNode } from "../breakdown/period-gains-losses-breakdown";
+
+import { classifyBalanceAccount } from "../balance-classification";
 
 export type HistoryMetricScopeFilter = {
   metric: HistoryScopedMetric;
@@ -45,28 +47,18 @@ export function buildBalanceHistoryScopeAmountMaps(args: {
 
   for (const account of args.accounts) {
     const convertedBalance = args.convertedBalanceByAccountId.get(account.id);
-    if (convertedBalance == null) {
-      continue;
-    }
-
-    if (account.type === AccountType.ASSET) {
-      assetAmountByAccountId.set(account.id, {
-        accountId: account.id,
-        accountName: account.name,
-        groupId: account.groupId,
-        amount: convertedBalance,
-      });
-      continue;
-    }
-
-    if (account.type === AccountType.LIABILITY) {
-      liabilityAmountByAccountId.set(account.id, {
-        accountId: account.id,
-        accountName: account.name,
-        groupId: account.groupId,
-        amount: toMoney(convertedBalance).neg(),
-      });
-    }
+    const classified = classifyBalanceAccount(account.type, convertedBalance);
+    if (!classified) continue;
+    const target =
+      classified.side === "asset"
+        ? assetAmountByAccountId
+        : liabilityAmountByAccountId;
+    target.set(account.id, {
+      accountId: account.id,
+      accountName: account.name,
+      groupId: account.groupId,
+      amount: classified.amount,
+    });
   }
 
   return {
