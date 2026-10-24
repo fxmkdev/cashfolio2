@@ -46,7 +46,9 @@ beforeAll(async () => {
   await cp("prisma", previousSchemaDirectory, {
     recursive: true,
     filter: (source) =>
-      !source.split(/[\\/]/).some((part) => /^\d{14}_/.test(part) && part >= migrationName),
+      !source
+        .split(/[\\/]/)
+        .some((part) => /^\d{14}_/.test(part) && part >= migrationName),
   });
   const options = {
     env: { ...process.env, DATABASE_URL: databaseUrl.href },

@@ -54,7 +54,7 @@ describe("asset class eligibility", () => {
       };
       expect(() =>
         validateAccountInput({ ...input, assetClass: AssetClass.EQUITIES }),
-      ).toThrow("Asset class is only allowed for asset and liability accounts");
+      ).toThrow("Asset class is only allowed for balance accounts");
       expect(() =>
         validateAccountInput({ ...input, assetClass: null }),
       ).not.toThrow();

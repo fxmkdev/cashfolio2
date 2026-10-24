@@ -69,9 +69,9 @@ export function validateAccountAssetClass(
   assetClass: AccountInput["assetClass"],
   type?: AccountType,
 ): string | null {
-  return assetClass == null || isAssetOrLiability(type)
+  return assetClass == null || isBalanceAccountType(type)
     ? null
-    : "Asset class is only allowed for asset and liability accounts";
+    : "Asset class is only allowed for balance accounts";
 }
 
 export function validateAccountCurrency(

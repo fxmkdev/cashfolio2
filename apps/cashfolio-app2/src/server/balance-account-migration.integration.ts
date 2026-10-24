@@ -295,7 +295,9 @@ describe("unified balance account migration against disposable PostgreSQL", () =
   it("preserves asset classification and enforces its balance-account constraint", async () => {
     expect(
       await db.account.findUniqueOrThrow({
-        where: { id_accountBookId: { id: "archived-asset", accountBookId: "book" } },
+        where: {
+          id_accountBookId: { id: "archived-asset", accountBookId: "book" },
+        },
         select: { type: true, assetClass: true },
       }),
     ).toEqual({ type: "BALANCE", assetClass: "CASH_AND_CASH_EQUIVALENTS" });
