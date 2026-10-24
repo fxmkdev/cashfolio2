@@ -454,7 +454,7 @@ sign; debt amounts are positive magnitudes in those reports.
 - The `Name` column has a 320px minimum width and grows with the available
   space. When columns no longer fit, scroll horizontally inside the grid to
   reach the remaining balances, G/L columns, and row actions. This applies to
-  every tab in both active and archived views.
+  Accounts and both category tabs, including when archived items are visible.
 - G/L figures use the order `Total`, `Realised`, `Unrealised` in the Accounts
   grid, account summary, calculation drawer, and period reconciliation cards.
 - The Accounts scope (`BALANCE`) renders `Ccy.`, `Symbol`, `Balance`, and
@@ -564,14 +564,14 @@ propagates the inherited flag through its subtree and invalidates derived book
 caches.
 
 Accounts links canonicalize to `tab=BALANCE&mode=active`, including legacy
-asset/liability/archive links. Category redirects retain their tab/archive mode.
-Selectors use an Accounts root for both legacy types; ledger badges show Account
-with a neutral color. Report Assets/Liabilities remain balance-based labels.
-Unified account expansion preferences use
-`cashfolio:expandedGroups:${accountBookId}:active:BALANCE`, initially seeded
-from the union of valid `active:ASSET` and `active:LIABILITY` preferences. Once
-written, the unified preference takes precedence, including an empty collapsed
-selection.
+asset/liability/archive links. Category redirects retain the category tab and
+map legacy archive mode to `showArchived=true`. Selectors use an Accounts root
+for both legacy types; ledger badges show Account with a neutral color. Report
+Assets/Liabilities remain balance-based labels. Unified account expansion
+preferences use `cashfolio:expandedGroups:${accountBookId}:active:BALANCE`,
+initially seeded from the union of valid `active:ASSET` and `active:LIABILITY`
+preferences. Once written, the unified preference takes precedence, including an
+empty collapsed selection.
 
 ## Explicit Gain/Loss for Manually Valued Accounts
 
