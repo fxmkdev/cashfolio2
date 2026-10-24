@@ -17,6 +17,17 @@ Related docs:
 - Route files use `createFileRoute` with `loader` for server-side data fetching
   and `component` for rendering
 
+### Build Diagnostics
+
+The app uses server-side rendering (SSR) without React Server Components (RSC).
+Dependencies such as Mantine and TanStack Router ship `"use client"` directives
+for RSC consumers. These markers have no role in this app's bundles, but
+Rolldown warns for each module that contains one.
+
+`vite.config.ts` filters only `MODULE_LEVEL_DIRECTIVE` warnings mentioning
+`use client` through `build.rolldownOptions.onLog`; other diagnostics retain
+their default handling. Revisit this filter if the app enables RSC.
+
 ### Route Structure
 
 - `index.tsx` - authenticated home route; redirects to the first accessible
