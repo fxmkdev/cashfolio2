@@ -25,35 +25,10 @@ type DrillPathByAllocationBreakdownUpdater =
       previousValue: DrillPathByAllocationBreakdown,
     ) => DrillPathByAllocationBreakdown);
 
-type AllocationPartialDataNotesArgs = {
-  skippedMissingReferenceBalanceCount: number;
-  skippedNegativeCount: number;
-};
-
-function formatAccountCountWithVerb(count: number): string {
-  const accountLabel = count === 1 ? "account" : "accounts";
-  const verb = count === 1 ? "was" : "were";
-
-  return `${count} ${accountLabel} ${verb}`;
-}
-
-function formatAccountCount(count: number): string {
-  const accountLabel = count === 1 ? "account" : "accounts";
-
-  return `${count} ${accountLabel}`;
-}
-
-function getAllocationPartialDataNotes(args: AllocationPartialDataNotesArgs) {
-  return [
-    args.skippedMissingReferenceBalanceCount > 0
-      ? `${formatAccountCountWithVerb(args.skippedMissingReferenceBalanceCount)} skipped because reference-currency balances were unavailable.`
-      : null,
-    args.skippedNegativeCount > 0
-      ? `${formatAccountCount(args.skippedNegativeCount)} with negative balances ${args.skippedNegativeCount === 1 ? "was" : "were"} excluded from allocation.`
-      : null,
-  ]
-    .filter((value): value is string => value != null)
-    .join(" ");
+function getAllocationPartialDataNotes(count: number): string {
+  if (count === 0) return "";
+  const accountLabel = count === 1 ? "account was" : "accounts were";
+  return `${count} ${accountLabel} skipped because reference-currency balances were unavailable. This affects both asset and liability allocations.`;
 }
 
 export type PeriodAllocationBreakdownViewModel = {
@@ -271,19 +246,16 @@ export function usePeriodAllocationBreakdownViewModel(args: {
   }, [allocationChartData, handleAllocationNodeDoubleClick]);
 
   const hasAllocationPartialData =
-    activeAllocationBreakdown.skippedMissingReferenceBalanceCount > 0 ||
-    activeAllocationBreakdown.skippedNegativeCount > 0;
+    activeAllocationBreakdown.skippedMissingReferenceBalanceCount > 0;
 
-  const allocationPartialDataNotes = getAllocationPartialDataNotes({
-    skippedMissingReferenceBalanceCount:
-      activeAllocationBreakdown.skippedMissingReferenceBalanceCount,
-    skippedNegativeCount: activeAllocationBreakdown.skippedNegativeCount,
-  });
+  const allocationPartialDataNotes = getAllocationPartialDataNotes(
+    activeAllocationBreakdown.skippedMissingReferenceBalanceCount,
+  );
 
   const emptyAllocationBreakdownMessage =
     selectedAllocationBreakdown === "asset"
-      ? "No positive, convertible asset balances were found as of period end."
-      : "No positive, convertible liability balances were found as of period end.";
+      ? "No positive, convertible account balances were found as of period end."
+      : "No negative, convertible account balances were found as of period end.";
 
   return {
     activeAllocationBreakdown,

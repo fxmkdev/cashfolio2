@@ -8,7 +8,7 @@ import {
   moneyAbs,
   moneySum,
 } from "../../../shared/money";
-import { AccountType } from "../../../.prisma-client/enums";
+import { type AccountType } from "../../../.prisma-client/enums";
 import {
   formatMonthPeriodLabel,
   formatMonthPeriodValue,
@@ -111,23 +111,13 @@ export function buildPeriodOverviewResponse(args: {
     }),
   );
   const assetBreakdown = buildPeriodEndAllocationBreakdown({
-    items: convertedPeriodEndBalances.filter(
-      (
-        item,
-      ): item is (typeof convertedPeriodEndBalances)[number] & {
-        accountType: "ASSET";
-      } => item.accountType === AccountType.ASSET,
-    ),
+    side: "asset",
+    items: convertedPeriodEndBalances,
     groupById: args.groupById,
   });
   const liabilityBreakdown = buildPeriodEndAllocationBreakdown({
-    items: convertedPeriodEndBalances.filter(
-      (
-        item,
-      ): item is (typeof convertedPeriodEndBalances)[number] & {
-        accountType: "LIABILITY";
-      } => item.accountType === AccountType.LIABILITY,
-    ),
+    side: "liability",
+    items: convertedPeriodEndBalances,
     groupById: args.groupById,
   });
 
