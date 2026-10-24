@@ -40,6 +40,7 @@ describe("period calculation preparation", () => {
           symbol: null,
           tradeCurrency: null,
           equityAccountSubtype: null,
+          assetClass: null,
           isCashAccount: true,
         },
       ],

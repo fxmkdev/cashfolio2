@@ -247,6 +247,20 @@ render trees in extracted `*PageView` components.
 
 ## Modal Pattern
 
+The account editor offers an **Asset Class** selector for assets and
+liabilities, separate from Unit and valuation configuration. It remains editable
+for booked and archived accounts while instrument identity stays locked.
+Unclassified is the default; no classification is suggested or inferred from
+Unit, cash flags, groups, or other fields. Users can choose any class or clear
+back to Unclassified. Income, expense, and system equity accounts do not expose
+this selector.
+
+The current classification will apply to all historical periods once asset-class
+reporting is introduced. Changing it does not change amounts or valuation. This
+first version stores classification only; current reports and Explicit G/L
+reporting buckets remain unchanged. Accounting `AccountType.EQUITY` is unrelated
+to the Equities asset class.
+
 `src/components/account-editor/edit-account-modal.tsx` remains the public
 account-editor entry point, including its existing type and form-value exports.
 Its implementation lives in `src/components/account-editor/`:

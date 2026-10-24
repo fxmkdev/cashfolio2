@@ -63,6 +63,19 @@ scope and test exemptions.
 
 ### Account Mutation Operations
 
+Account mutations accept optional nullable `assetClass`. Creation stores null
+when omitted; updates preserve an omitted value and clear it when explicitly
+null. Non-null classification is restricted to assets and liabilities, but is
+independent of Unit and cash-flow eligibility. It remains editable independently
+of immutable instrument identity. Statement imports preserve classification;
+system-created equity accounts remain null.
+
+Account queries and period base-data snapshots carry classification as metadata.
+Changing it uses the existing account mutation boundary, database cache revision
+trigger, post-commit cleanup, and router invalidation. Base-data cache v9
+includes the new field; History metrics retain their current format and version.
+No report calculation or grouping uses asset class yet.
+
 `src/server/accounts/accounts-mutation-operations.ts` keeps the existing
 operation exports stable. Implementations live in
 `src/server/accounts/mutations/`:
@@ -225,14 +238,14 @@ namespaces and preserves global valuation caches.
 - Redis key namespace includes deployment scope and the database-backed
   invalidation generation (`AccountBook.periodCacheRevision`):
   - Entry:
-    `period:base:v8:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
+    `period:base:v9:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
   - Index:
-    `period:base:index:v8:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
+    `period:base:index:v9:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
   - Cleanup hint (never used to determine cache validity):
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
 - History metrics entry:
   `period:history:metrics:v9:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
-- Base-data v8 and History metrics v7 store monetary values as tagged exact
+- Base-data v9 and History metrics v9 store monetary values as tagged exact
   decimal strings through `src/server/money-cache-codec.ts`
   (`{ __cashfolioDecimal: "..." }`). Dates retain their existing
   `{ __cashfolioDateMs: milliseconds }` representation. Reads reconstruct

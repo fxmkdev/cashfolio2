@@ -3,6 +3,7 @@ export { buildUnifiedAccountTreeRows } from "../../shared/archived-account-tree-
 import { toMoney, type Money } from "../../shared/money";
 import { isBalanceAccount } from "../../shared/account-presentation";
 import type {
+  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -31,6 +32,7 @@ function unavailableActionAvailability(): ActionAvailability {
 }
 
 export type AccountTreeAccount = {
+  assetClass: AssetClass | null;
   id: string;
   name: string;
   type: AccountType;
@@ -59,6 +61,7 @@ export type AccountTreeGroup = {
 };
 
 export type AccountTreeRow = {
+  assetClass?: AssetClass | null;
   isVirtualArchivedGroup?: boolean;
   persistedParentId?: string | null;
   id: string;
@@ -187,6 +190,7 @@ export function buildAccountRows(args: {
         id: account.id,
         nodeType: "account",
         name: account.name,
+        assetClass: account.assetClass,
         type: account.type,
         equityAccountSubtype: account.equityAccountSubtype,
         unit: account.unit,

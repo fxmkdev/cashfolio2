@@ -275,6 +275,7 @@ export async function queryAccountTreeData(data: AccountTreeDataInput) {
   );
   const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
   const normalizedAccounts = accounts.map((account) => ({
+    assetClass: account.assetClass,
     id: account.id,
     name: account.name,
     type: account.type,
@@ -394,6 +395,7 @@ export async function queryLedgerAccountActionData(
           symbol: true,
           tradeCurrency: true,
           statementImportCsvFormat: true,
+          assetClass: true,
           isCashAccount: true,
           groupId: true,
           isActive: true,
@@ -492,6 +494,7 @@ export async function queryLedgerAccountActionData(
     symbol: account.symbol as string | null,
     tradeCurrency: account.tradeCurrency as string | null,
     statementImportCsvFormat: account.statementImportCsvFormat,
+    assetClass: account.assetClass,
     isCashAccount: account.isCashAccount,
     balance: isBalanceAccount(account) ? rawBalance : null,
     balanceInReferenceCurrency: null,

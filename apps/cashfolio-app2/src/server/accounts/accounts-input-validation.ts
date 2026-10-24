@@ -1,4 +1,5 @@
 import {
+  AssetClass,
   AccountType,
   EquityAccountSubtype,
   Unit,
@@ -54,6 +55,9 @@ export function validateAccountMutationInput(data: unknown): AccountInput {
   }
   return {
     ...commonFields,
+    assetClass: nullableOptionalField(data, "assetClass", (record, field) =>
+      requireEnumField(record, field, Object.values(AssetClass)),
+    ),
     groupId: nullableOptionalField(data, "groupId", requireStringField),
     unit: optionalField(data, "unit", (record, field) =>
       requireEnumField(record, field, Object.values(Unit)),
