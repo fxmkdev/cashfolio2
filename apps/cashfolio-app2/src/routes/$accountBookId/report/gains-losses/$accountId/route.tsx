@@ -86,7 +86,11 @@ function GainLossReconciliationPage() {
             return;
           }
           if (reconciliation?.target.isVirtual) {
-            navigate({ to: "/$accountBookId/transactions", params: { accountBookId }, search: { period: explicitLedgerPeriodValue, transactionId } });
+            navigate({
+              to: "/$accountBookId/transactions",
+              params: { accountBookId },
+              search: { period: explicitLedgerPeriodValue, transactionId },
+            });
             return;
           }
           navigate({

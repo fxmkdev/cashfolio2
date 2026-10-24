@@ -26,7 +26,14 @@ export function buildGainLossAccountAttribution(
       assetClass: account.assetClass ?? null,
       kind: "account",
       explanation: null,
-      instrumentLabel: [account.currency, account.cryptocurrency, account.symbol, account.tradeCurrency].filter(Boolean).join(" / "),
+      instrumentLabel: [
+        account.currency,
+        account.cryptocurrency,
+        account.symbol,
+        account.tradeCurrency,
+      ]
+        .filter(Boolean)
+        .join(" / "),
     });
   }
   const originating = (

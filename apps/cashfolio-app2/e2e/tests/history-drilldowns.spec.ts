@@ -198,7 +198,9 @@ test("Gain/Loss unit account bar opens period reconciliation", async ({
   ).toBeVisible();
 });
 
-test("legacy recorded G/L scope opens the unified account explanation", async ({ page }) => {
+test("legacy recorded G/L scope opens the unified account explanation", async ({
+  page,
+}) => {
   await page.goto(
     `/${seeded.accountBookId}/history?metric=gainsLosses&gainLossScope=explicit-account:${seeded.cashAccount.id}`,
   );
@@ -208,7 +210,9 @@ test("legacy recorded G/L scope opens the unified account explanation", async ({
     `/${seeded.accountBookId}/report/gains-losses/${seeded.cashAccount.id}`,
     "2026-01",
   );
-  await expect(page.getByRole("heading", { name: "Recorded Adjustments" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Recorded Adjustments" }),
+  ).toBeVisible();
   await expect(page.getByText("E2E Explicit Gain/Loss Seed")).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Accounts", exact: true }),

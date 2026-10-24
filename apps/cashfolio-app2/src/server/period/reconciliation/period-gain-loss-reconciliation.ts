@@ -1,3 +1,4 @@
+import type { Money } from "../../../shared/money";
 import { getOrLoadPeriodBaseData } from "../cache/period-base-data-cache";
 import { loadAccountGainLossSources } from "./period-account-gain-loss-sources";
 import { toNumericMoney } from "../../money-boundary";
@@ -100,9 +101,11 @@ async function loadPeriodGainLossReconciliationPageData(
     accountBookId: data.accountBookId,
     period: data.period,
   });
+  const exchangeRateByKey = new Map<string, Promise<Money | null>>();
   const sourceDetails = await loadAccountGainLossSources(
     baseData,
     data.accountId,
+    exchangeRateByKey,
   );
   const realAccount = baseData.baseAssetLiabilityAccounts.find(
     (account) => account.id === data.accountId,
@@ -113,6 +116,7 @@ async function loadPeriodGainLossReconciliationPageData(
     ? await buildTransferClearingReconciliation({
         accountBookId: data.accountBookId,
         accountId: data.accountId,
+        exchangeRateByKey,
         queryStart,
         queryEndExclusive,
         initialHoldingDate,
@@ -123,6 +127,7 @@ async function loadPeriodGainLossReconciliationPageData(
     : await buildRealAccountReconciliation({
         accountBookId: data.accountBookId,
         accountId: data.accountId,
+        exchangeRateByKey,
         queryStart,
         queryEndExclusive,
         initialHoldingDate,

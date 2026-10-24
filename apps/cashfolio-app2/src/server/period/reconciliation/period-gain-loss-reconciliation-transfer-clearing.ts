@@ -49,6 +49,7 @@ export async function buildTransferClearingReconciliation(args: {
   periodEnd: Date;
   referenceCurrency: string;
   isBeforeAccountBookStart: boolean;
+  exchangeRateByKey?: Map<string, Promise<Money | null>>;
 }): Promise<GainLossReconciliationDetails | null> {
   const unitBuckets = await loadTransferClearingUnitBuckets({
     accountBookId: args.accountBookId,
@@ -88,7 +89,8 @@ export async function buildTransferClearingReconciliation(args: {
     });
   }
 
-  const exchangeRateByKey = new Map<string, Promise<Money | null>>();
+  const exchangeRateByKey =
+    args.exchangeRateByKey ?? new Map<string, Promise<Money | null>>();
   const split = await computeTransferClearingGainLossSplit({
     unitBuckets: [targetBucket],
     periodStart: args.queryStart,

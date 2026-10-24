@@ -1,5 +1,7 @@
-import { Unit } from "../../../.prisma-client/enums";
-import type { HistoryScopeOption } from "../../../shared/history-scope";
+import {
+  getLegacyHoldingGainLossScope,
+  type HistoryScopeOption,
+} from "../../../shared/history-scope";
 import { AccountType } from "../../../.prisma-client/enums";
 import { prisma } from "../../../prisma.server";
 import { startOfUtcDay } from "../../../shared/date";
@@ -52,7 +54,7 @@ export async function loadPeriodHistoryPointContext(args: {
       kind: "gainLoss",
       legacyValues: [
         `explicit-account:${account.id}`,
-        `unit-account:${account.unit === Unit.CURRENCY ? `fx:${account.currency?.toUpperCase()}` : account.unit === Unit.CRYPTOCURRENCY ? `crypto:${account.cryptocurrency?.toUpperCase()}` : `security:${account.symbol?.toUpperCase()}:${account.tradeCurrency?.toUpperCase()}`}:${account.id}`,
+        getLegacyHoldingGainLossScope(account),
       ],
     })),
     holdingAccountsResolved: filterConvertibleHoldingAccounts(

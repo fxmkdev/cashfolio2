@@ -45,6 +45,7 @@ export async function processPeriodEquityBookingsFromBaseData(args: {
     ]),
   );
   const explicitConvertedBookings: Array<{
+    booking: PeriodBaseEquityBooking;
     bookingId: string;
     transactionId: string;
     unit: PeriodBaseEquityBooking["unit"];
@@ -118,6 +119,7 @@ export async function processPeriodEquityBookingsFromBaseData(args: {
 
       if (booking.equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS) {
         explicitConvertedBookings.push({
+          booking,
           bookingId: booking.id,
           transactionId: booking.transactionId,
           unit: booking.unit,
@@ -142,9 +144,7 @@ export async function processPeriodEquityBookingsFromBaseData(args: {
     }
 
     args.onRecordedAdjustment?.(
-      args.equityBookings.find(
-        (booking) => booking.id === explicitBooking.bookingId,
-      )!,
+      explicitBooking.booking,
       toMoney(explicitBooking.convertedValue).neg(),
       counterpartAccount.id,
     );

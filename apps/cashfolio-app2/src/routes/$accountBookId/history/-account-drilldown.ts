@@ -15,7 +15,6 @@ export function resolveHistoryAccountDrillTarget(args: {
   metric: HistoryMetric;
   scope?: HistoryScopeSelection;
   options: HistoryScopeOption[];
-  gainLossEquityAccountId: string | null;
 }): HistoryAccountDrillTarget | null {
   if (!isHistoryScopedMetric(args.metric)) return null;
   const option = args.options.find(

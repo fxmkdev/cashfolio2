@@ -84,7 +84,12 @@ export async function seedSecurityGainLossDrilldownScenario(args: {
   counterAccountId: string;
 }) {
   await prisma.account.update({
-    where: { id_accountBookId: { id: args.securityAccountId, accountBookId: args.accountBookId } },
+    where: {
+      id_accountBookId: {
+        id: args.securityAccountId,
+        accountBookId: args.accountBookId,
+      },
+    },
     data: { assetClass: AssetClass.EQUITIES },
   });
   const securityAccount = await prisma.account.findFirstOrThrow({

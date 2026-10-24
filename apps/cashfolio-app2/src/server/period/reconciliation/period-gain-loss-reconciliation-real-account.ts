@@ -42,6 +42,7 @@ export async function buildRealAccountReconciliation(args: {
   periodEnd: Date;
   referenceCurrency: string;
   isBeforeAccountBookStart: boolean;
+  exchangeRateByKey?: Map<string, Promise<Money | null>>;
 }): Promise<GainLossReconciliationDetails | null> {
   const account = await prisma.account.findFirst({
     where: {
@@ -144,7 +145,8 @@ export async function buildRealAccountReconciliation(args: {
     ]),
   );
 
-  const exchangeRateByKey = new Map<string, Promise<Money | null>>();
+  const exchangeRateByKey =
+    args.exchangeRateByKey ?? new Map<string, Promise<Money | null>>();
   let targetSkippedCount = 0;
   let targetRealizedGainLoss: Money = toMoney(0);
   let targetUnrealizedGainLoss: Money = toMoney(0);

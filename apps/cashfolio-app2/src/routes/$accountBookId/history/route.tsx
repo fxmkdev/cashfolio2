@@ -122,7 +122,7 @@ function HistoryPage() {
     search,
     metric: "liabilities",
   });
-  const { history, gainLossEquityAccountId } = Route.useLoaderData();
+  const { history } = Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/history" });
 
   useEffect(() => {
@@ -175,7 +175,6 @@ function HistoryPage() {
         selectedMetric={selectedMetric}
         isViewPending={isViewPending}
         history={history}
-        gainLossEquityAccountId={gainLossEquityAccountId}
         onAccountPeriodDoubleClick={(target, periodValue) => {
           const navigation = buildHistoryAccountDrillNavigation({
             accountBookId,

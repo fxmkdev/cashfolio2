@@ -2208,10 +2208,12 @@ describe("getPeriodOverview", () => {
         label: "Unclassified",
         children: [
           {
-            label: "Cash 1", totalGainLoss: 5,
+            label: "Cash 1",
+            totalGainLoss: 5,
           },
           {
-            label: "Cash 2", totalGainLoss: 7,
+            label: "Cash 2",
+            totalGainLoss: 7,
           },
         ],
         totalGainLoss: 12,

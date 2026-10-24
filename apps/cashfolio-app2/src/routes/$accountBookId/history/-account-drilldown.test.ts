@@ -52,7 +52,6 @@ describe("History account drill-down", () => {
         metric,
         scope: "account:expense",
         options,
-        gainLossEquityAccountId: null,
       }),
     ).toEqual({ kind: "ledger", accountId: "expense" });
   });
@@ -68,7 +67,6 @@ describe("History account drill-down", () => {
         metric: "expenses",
         scope,
         options,
-        gainLossEquityAccountId: null,
       }),
     ).toBeNull();
   });
@@ -81,7 +79,6 @@ describe("History account drill-down", () => {
           metric,
           scope: "account:expense",
           options,
-          gainLossEquityAccountId: null,
         }),
       ).toBeNull();
     },
@@ -97,7 +94,6 @@ describe("History account drill-down", () => {
           metric: "gainsLosses",
           scope: `gain-loss-account:${accountId}`,
           options,
-          gainLossEquityAccountId: null,
         }),
       ).toEqual({ kind: "reconciliation", accountId });
     }
@@ -114,7 +110,6 @@ describe("History account drill-down", () => {
         metric: "gainsLosses",
         scope,
         options,
-        gainLossEquityAccountId: "gain-loss",
       }),
     ).toBeNull();
   });
@@ -136,7 +131,6 @@ describe("History account drill-down", () => {
           metric: "gainsLosses",
           scope: option.value,
           options: [{ ...option, label: "Asset", kind: "gainLoss" }],
-          gainLossEquityAccountId: null,
         }),
       ).toBeNull();
     }
@@ -148,7 +142,6 @@ describe("History account drill-down", () => {
         metric: "gainsLosses",
         scope: "gain-loss-account:cash",
         options,
-        gainLossEquityAccountId: null,
       }),
     ).toEqual({ kind: "reconciliation", accountId: "cash" });
   });

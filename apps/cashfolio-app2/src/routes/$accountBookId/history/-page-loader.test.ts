@@ -93,7 +93,6 @@ describe("loadHistoryPageData", () => {
     });
     expect(getGainLossEquityAccountId).not.toHaveBeenCalled();
     expect(result).toEqual({
-      gainLossEquityAccountId: null,
       history: {
         referenceCurrency: "CHF",
         hasCashAccounts: true,
@@ -166,7 +165,7 @@ describe("loadHistoryPageData", () => {
         assetScope: "total",
         liabilityScope: "total",
       });
-      expect(result.gainLossEquityAccountId).toBeNull();
+      expect(result.history.scopeSelection.gainsLosses).toBe(scope);
       expect(getGainLossEquityAccountId).not.toHaveBeenCalled();
     },
   );

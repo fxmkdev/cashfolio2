@@ -31,4 +31,3 @@ export function getGainsLossesDrillState(args: {
     isNodeDrillable: isGainsLossesNodeDrillable,
   });
 }
-

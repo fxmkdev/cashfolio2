@@ -102,9 +102,24 @@ describe("asset-class gain/loss attribution", () => {
     ] as const)
       expect(normalizeGainLossScope(scope, options)).toBe("total");
     expect(parseHistoryScopeSelection("gain-loss-account:  ")).toBeUndefined();
-    expect(normalizeGainLossScope("unit-account:fx:USD:virtual:transfer-clearing:account:currency:USD", [])).toBe("gain-loss-account:virtual:transfer-clearing:account:currency:USD");
-    expect(normalizeGainLossScope("unit-account:fx:EUR:virtual:transfer-clearing:account:currency:USD", [])).toBe("total");
-    expect(normalizeGainLossScope("explicit-account:explicit-unattributed:missing-counterpart", [])).toBe("gain-loss-account:explicit-unattributed:missing-counterpart");
+    expect(
+      normalizeGainLossScope(
+        "unit-account:fx:USD:virtual:transfer-clearing:account:currency:USD",
+        [],
+      ),
+    ).toBe("gain-loss-account:virtual:transfer-clearing:account:currency:USD");
+    expect(
+      normalizeGainLossScope(
+        "unit-account:fx:EUR:virtual:transfer-clearing:account:currency:USD",
+        [],
+      ),
+    ).toBe("total");
+    expect(
+      normalizeGainLossScope(
+        "explicit-account:explicit-unattributed:missing-counterpart",
+        [],
+      ),
+    ).toBe("gain-loss-account:explicit-unattributed:missing-counterpart");
     expect(parseHistoryScopeSelection("asset-class:EQUITIES")).toBe(
       "asset-class:EQUITIES",
     );

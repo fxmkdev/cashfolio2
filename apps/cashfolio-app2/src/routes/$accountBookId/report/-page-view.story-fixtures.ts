@@ -509,143 +509,133 @@ export const baseOverview: ReportPageViewProps["overview"] = {
   },
   gainsLossesBreakdown: {
     hierarchy: [
-  {
-    "id": "asset-class:CASH_AND_CASH_EQUIVALENTS",
-    "label": "Cash & Cash Equivalents",
-    "realizedGainLoss": 200,
-    "unrealizedGainLoss": 80,
-    "totalGainLoss": 280,
-    "children": [
       {
-        "id": "gain-loss-account:account-cash-usd-1",
-        "label": "Cash Account USD 1",
-        "realizedGainLoss": 120,
-        "unrealizedGainLoss": 40,
-        "totalGainLoss": 160,
-        "children": [],
-        "account": {
-          "id": "account-cash-usd-1",
-          "assetClass": "CASH_AND_CASH_EQUIVALENTS",
-          "kind": "account",
-          "explanation": null,
-          "legacyScopes": [],
-          "instrumentLabel": "USD",
-          "sources": [
-            "HOLDING"
-          ],
-          "recordedGainLoss": 0,
-          "calculatedRealizedGainLoss": 120,
-          "calculatedUnrealizedGainLoss": 40
-        }
+        id: "asset-class:CASH_AND_CASH_EQUIVALENTS",
+        label: "Cash & Cash Equivalents",
+        realizedGainLoss: 200,
+        unrealizedGainLoss: 80,
+        totalGainLoss: 280,
+        children: [
+          {
+            id: "gain-loss-account:account-cash-usd-1",
+            label: "Cash Account USD 1",
+            realizedGainLoss: 120,
+            unrealizedGainLoss: 40,
+            totalGainLoss: 160,
+            children: [],
+            account: {
+              id: "account-cash-usd-1",
+              assetClass: "CASH_AND_CASH_EQUIVALENTS",
+              kind: "account",
+              explanation: null,
+              legacyScopes: [],
+              instrumentLabel: "USD",
+              sources: ["HOLDING"],
+              recordedGainLoss: 0,
+              calculatedRealizedGainLoss: 120,
+              calculatedUnrealizedGainLoss: 40,
+            },
+          },
+          {
+            id: "gain-loss-account:account-cash-usd-2",
+            label: "Cash Account USD 2",
+            realizedGainLoss: 80,
+            unrealizedGainLoss: 40,
+            totalGainLoss: 120,
+            children: [],
+            account: {
+              id: "account-cash-usd-2",
+              assetClass: "CASH_AND_CASH_EQUIVALENTS",
+              kind: "account",
+              explanation: null,
+              legacyScopes: [],
+              instrumentLabel: "USD",
+              sources: ["HOLDING"],
+              recordedGainLoss: 0,
+              calculatedRealizedGainLoss: 80,
+              calculatedUnrealizedGainLoss: 40,
+            },
+          },
+        ],
       },
       {
-        "id": "gain-loss-account:account-cash-usd-2",
-        "label": "Cash Account USD 2",
-        "realizedGainLoss": 80,
-        "unrealizedGainLoss": 40,
-        "totalGainLoss": 120,
-        "children": [],
-        "account": {
-          "id": "account-cash-usd-2",
-          "assetClass": "CASH_AND_CASH_EQUIVALENTS",
-          "kind": "account",
-          "explanation": null,
-          "legacyScopes": [],
-          "instrumentLabel": "USD",
-          "sources": [
-            "HOLDING"
-          ],
-          "recordedGainLoss": 0,
-          "calculatedRealizedGainLoss": 80,
-          "calculatedUnrealizedGainLoss": 40
-        }
-      }
-    ]
-  },
-  {
-    "id": "asset-class:EQUITIES",
-    "label": "Equities",
-    "realizedGainLoss": 1060,
-    "unrealizedGainLoss": 100,
-    "totalGainLoss": 1160,
-    "children": [
-      {
-        "id": "gain-loss-account:account-aapl-trading",
-        "label": "AAPL Trading Account",
-        "realizedGainLoss": 1000,
-        "unrealizedGainLoss": 100,
-        "totalGainLoss": 1100,
-        "children": [],
-        "account": {
-          "id": "account-aapl-trading",
-          "assetClass": "EQUITIES",
-          "kind": "account",
-          "explanation": null,
-          "legacyScopes": [],
-          "instrumentLabel": "USD",
-          "sources": [
-            "HOLDING"
-          ],
-          "recordedGainLoss": 0,
-          "calculatedRealizedGainLoss": 1000,
-          "calculatedUnrealizedGainLoss": 100
-        }
+        id: "asset-class:EQUITIES",
+        label: "Equities",
+        realizedGainLoss: 1060,
+        unrealizedGainLoss: 100,
+        totalGainLoss: 1160,
+        children: [
+          {
+            id: "gain-loss-account:account-aapl-trading",
+            label: "AAPL Trading Account",
+            realizedGainLoss: 1000,
+            unrealizedGainLoss: 100,
+            totalGainLoss: 1100,
+            children: [],
+            account: {
+              id: "account-aapl-trading",
+              assetClass: "EQUITIES",
+              kind: "account",
+              explanation: null,
+              legacyScopes: [],
+              instrumentLabel: "USD",
+              sources: ["HOLDING"],
+              recordedGainLoss: 0,
+              calculatedRealizedGainLoss: 1000,
+              calculatedUnrealizedGainLoss: 100,
+            },
+          },
+          {
+            id: "gain-loss-account:account-fees",
+            label: "Fees Adjustment Account",
+            realizedGainLoss: 60,
+            unrealizedGainLoss: 0,
+            totalGainLoss: 60,
+            children: [],
+            account: {
+              id: "account-fees",
+              assetClass: "EQUITIES",
+              kind: "account",
+              explanation: null,
+              legacyScopes: [],
+              instrumentLabel: "CHF",
+              sources: ["EXPLICIT"],
+              recordedGainLoss: 60,
+              calculatedRealizedGainLoss: 0,
+              calculatedUnrealizedGainLoss: 0,
+            },
+          },
+        ],
       },
       {
-        "id": "gain-loss-account:account-fees",
-        "label": "Fees Adjustment Account",
-        "realizedGainLoss": 60,
-        "unrealizedGainLoss": 0,
-        "totalGainLoss": 60,
-        "children": [],
-        "account": {
-          "id": "account-fees",
-          "assetClass": "EQUITIES",
-          "kind": "account",
-          "explanation": null,
-          "legacyScopes": [],
-          "instrumentLabel": "CHF",
-          "sources": [
-            "EXPLICIT"
-          ],
-          "recordedGainLoss": 60,
-          "calculatedRealizedGainLoss": 0,
-          "calculatedUnrealizedGainLoss": 0
-        }
-      }
-    ]
-  },
-  {
-    "id": "asset-class:DIGITAL_ASSETS",
-    "label": "Digital Assets",
-    "realizedGainLoss": 300,
-    "unrealizedGainLoss": 20,
-    "totalGainLoss": 320,
-    "children": [
-      {
-        "id": "gain-loss-account:account-btc-wallet",
-        "label": "BTC Wallet",
-        "realizedGainLoss": 300,
-        "unrealizedGainLoss": 20,
-        "totalGainLoss": 320,
-        "children": [],
-        "account": {
-          "id": "account-btc-wallet",
-          "assetClass": "DIGITAL_ASSETS",
-          "kind": "account",
-          "explanation": null,
-          "legacyScopes": [],
-          "instrumentLabel": "USD",
-          "sources": [
-            "HOLDING"
-          ],
-          "recordedGainLoss": 0,
-          "calculatedRealizedGainLoss": 300,
-          "calculatedUnrealizedGainLoss": 20
-        }
-      }
-    ]
-  }
-],
+        id: "asset-class:DIGITAL_ASSETS",
+        label: "Digital Assets",
+        realizedGainLoss: 300,
+        unrealizedGainLoss: 20,
+        totalGainLoss: 320,
+        children: [
+          {
+            id: "gain-loss-account:account-btc-wallet",
+            label: "BTC Wallet",
+            realizedGainLoss: 300,
+            unrealizedGainLoss: 20,
+            totalGainLoss: 320,
+            children: [],
+            account: {
+              id: "account-btc-wallet",
+              assetClass: "DIGITAL_ASSETS",
+              kind: "account",
+              explanation: null,
+              legacyScopes: [],
+              instrumentLabel: "USD",
+              sources: ["HOLDING"],
+              recordedGainLoss: 0,
+              calculatedRealizedGainLoss: 300,
+              calculatedUnrealizedGainLoss: 20,
+            },
+          },
+        ],
+      },
+    ],
   },
 };

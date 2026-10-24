@@ -24,6 +24,7 @@ export type AccountGainLossSourceRow<Amount = number> = {
 export async function loadAccountGainLossSources(
   baseData: PeriodBaseData,
   accountId: string,
+  exchangeRateByKey = new Map<string, Promise<Money | null>>(),
 ) {
   const context = preparePeriodCalculationContext(baseData);
   const gainsLossesContributionByKey = new Map<
@@ -32,14 +33,20 @@ export async function loadAccountGainLossSources(
   >();
   const recordedAdjustments: AccountGainLossSourceRow<Money>[] = [];
   const executionResiduals: AccountGainLossSourceRow<Money>[] = [];
-  const exchangeRateByKey = new Map<string, Promise<Money | null>>();
   const conversion = {
     referenceCurrency: baseData.referenceCurrency,
     exchangeRateByKey,
   };
   if (!baseData.selection.isBeforeAccountBookStart) {
+    const recordedTransactionIds = new Set(
+      baseData.explicitCounterparts
+        .filter((counterpart) => counterpart.accountId === accountId)
+        .map((counterpart) => counterpart.transactionId),
+    );
     await processPeriodEquityBookingsFromBaseData({
-      equityBookings: baseData.equityBookings,
+      equityBookings: baseData.equityBookings.filter((booking) =>
+        recordedTransactionIds.has(booking.transactionId),
+      ),
       explicitCounterparts: baseData.explicitCounterparts,
       equityAggregation: createPeriodOverviewEquityAggregation(),
       gainsLossesContributionByKey,

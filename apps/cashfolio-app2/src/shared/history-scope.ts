@@ -1,3 +1,5 @@
+import { Unit } from "../.prisma-client/enums";
+
 export type HistoryScopedMetric =
   "cashFlow" | "income" | "expenses" | "gainsLosses" | "assets" | "liabilities";
 
@@ -127,9 +129,14 @@ export function normalizeGainLossScope(
     scope.startsWith("explicit-account:") ||
     scope.startsWith("unit-account:")
   ) {
-    const matched = options.find(option => option.legacyValues?.includes(scope));
+    const matched = options.find((option) =>
+      option.legacyValues?.includes(scope),
+    );
     if (matched) return matched.value;
-    for (const id of ["explicit-unattributed:missing-counterpart", "explicit-unattributed:multiple-counterparts"]) {
+    for (const id of [
+      "explicit-unattributed:missing-counterpart",
+      "explicit-unattributed:multiple-counterparts",
+    ]) {
       if (scope === `explicit-account:${id}`) return `gain-loss-account:${id}`;
     }
     // Virtual IDs embed their complete unit identity. Reconstruct the entire old
@@ -139,8 +146,11 @@ export function normalizeGainLossScope(
     if (index !== -1) {
       const accountId = scope.slice(index + 1);
       const unitKey = accountId.slice(virtualPrefix.length);
-      const legacyUnit = unitKey.startsWith("currency:") ? `fx:${unitKey.slice("currency:".length)}` : unitKey;
-      if (scope === `unit-account:${legacyUnit}:${accountId}`) return `gain-loss-account:${accountId}`;
+      const legacyUnit = unitKey.startsWith("currency:")
+        ? `fx:${unitKey.slice("currency:".length)}`
+        : unitKey;
+      if (scope === `unit-account:${legacyUnit}:${accountId}`)
+        return `gain-loss-account:${accountId}`;
     }
     return "total";
   }
@@ -149,4 +159,24 @@ export function normalizeGainLossScope(
     scope.startsWith("gain-loss-account:")
     ? scope
     : "total";
+}
+
+/** Preserve the full historic leaf identity, including colon-containing account IDs. */
+export function getLegacyHoldingGainLossScope(account: {
+  id: string;
+  unit: Unit | null;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  tradeCurrency: string | null;
+}): string {
+  const code = (value: string | null) =>
+    value?.trim().toUpperCase() || "UNKNOWN";
+  let unitId: string;
+  if (account.unit === Unit.CURRENCY) unitId = `fx:${code(account.currency)}`;
+  else if (account.unit === Unit.CRYPTOCURRENCY)
+    unitId = `crypto:${code(account.cryptocurrency)}`;
+  else
+    unitId = `security:${code(account.symbol)}:${code(account.tradeCurrency)}`;
+  return `unit-account:${unitId}:${account.id}`;
 }

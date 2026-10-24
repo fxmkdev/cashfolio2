@@ -12,7 +12,6 @@ import { DEFAULT_USER_LOCALE } from "@/user-locale";
 
 export type HistoryPageLoaderData = {
   history: PeriodHistoryResponse;
-  gainLossEquityAccountId: string | null;
 };
 
 export async function loadHistoryPageData(args: {
@@ -44,6 +43,5 @@ export async function loadHistoryPageData(args: {
 
   return {
     history,
-    gainLossEquityAccountId: null,
   };
 }

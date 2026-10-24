@@ -175,7 +175,8 @@ describe("Decimal monetary pipelines", () => {
     const scenario = createScenario();
     const stock = {
       ...scenario.baseAssetLiabilityAccounts[0]!,
-      assetClass: AssetClass.EQUITIES, unit: Unit.SECURITY,
+      assetClass: AssetClass.EQUITIES,
+      unit: Unit.SECURITY,
     };
     const portfolio = {
       ...stock,
@@ -453,6 +454,13 @@ describe("Decimal monetary pipelines", () => {
         baseData: scenario,
       }),
     );
+    const residualExplanation = toNumericMoney(
+      await loadAccountGainLossSources(scenario, "expense-security"),
+    );
+    expect(residualExplanation.executionResiduals).toMatchObject([
+      { transactionId: "residual", id: "expense-security" },
+    ]);
+    expect(residualExplanation.node?.totalGainLoss).toBe(-19.94);
     expect(overview.stats.gainsLosses).toBe(-12.84);
     expect(history.gainsLosses).toBe(overview.stats.gainsLosses);
     expect(history.totalReturn).toBe(overview.stats.totalReturn);

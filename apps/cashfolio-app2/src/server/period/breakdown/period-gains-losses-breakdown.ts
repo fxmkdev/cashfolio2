@@ -1,5 +1,6 @@
+import { getLegacyHoldingGainLossScope } from "../../../shared/history-scope";
 import { toMoney, type Money, moneyAdd, moneySum } from "../../../shared/money";
-import { Unit } from "../../../.prisma-client/enums";
+import type { Unit } from "../../../.prisma-client/enums";
 
 import { round2 } from "../period-helpers";
 import { assetClassOptions } from "../../../shared/asset-class";
@@ -98,17 +99,19 @@ export function buildGainsLossesBreakdown(args: {
           legacyScopes: values.map((value) =>
             value.sourceKind === "EXPLICIT"
               ? `explicit-account:${accountId}`
-              : `unit-account:${value.unit === Unit.CURRENCY ? `fx:${value.currency?.toUpperCase() ?? "UNKNOWN"}` : value.unit === Unit.CRYPTOCURRENCY ? `crypto:${value.cryptocurrency?.toUpperCase() ?? "UNKNOWN"}` : `security:${value.symbol?.toUpperCase() ?? "UNKNOWN"}:${value.tradeCurrency?.toUpperCase() ?? "UNKNOWN"}`}:${accountId}`,
+              : getLegacyHoldingGainLossScope({ ...value, id: accountId }),
           ),
           sources: [...new Set(values.map((value) => value.sourceKind))],
-          instrumentLabel: attribution.instrumentLabel ?? [
-            first.currency,
-            first.cryptocurrency,
-            first.symbol,
-            first.tradeCurrency,
-          ]
-            .filter(Boolean)
-            .join(" / "),
+          instrumentLabel:
+            attribution.instrumentLabel ??
+            [
+              first.currency,
+              first.cryptocurrency,
+              first.symbol,
+              first.tradeCurrency,
+            ]
+              .filter(Boolean)
+              .join(" / "),
           calculatedRealizedGainLoss: round2(
             moneySum(calculated.map((value) => value.realizedGainLoss)),
           ),
