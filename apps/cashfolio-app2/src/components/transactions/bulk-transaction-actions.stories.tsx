@@ -312,7 +312,7 @@ export const RebookSelection: Story = {
         ),
       ).toBeVisible(),
     );
-    await userEvent.click(dialog.getByLabelText("Account or category"));
+    await userEvent.click(dialog.getByLabelText("Account or Category"));
     await userEvent.click(await body.findByRole("option", { name: "Savings" }));
     await userEvent.click(dialog.getByRole("button", { name: "Rebook" }));
     await expect(args.submitRebook).toHaveBeenCalledWith(
@@ -434,7 +434,7 @@ export const NoCommonRebookTarget: Story = {
       canvas.getByRole("button", { name: "Rebook Selected" }),
     );
     const dialog = within(await body.findByRole("dialog"));
-    await expect(dialog.getByLabelText("Account or category")).toBeDisabled();
+    await expect(dialog.getByLabelText("Account or Category")).toBeDisabled();
     await expect(dialog.getByRole("button", { name: "Rebook" })).toBeDisabled();
     await waitFor(() =>
       expect(
@@ -464,7 +464,7 @@ export const RebookFailure: Story = {
     const element = await body.findByRole("dialog");
     await waitFor(() => expect(element).toBeVisible());
     const dialog = within(element);
-    await userEvent.click(dialog.getByLabelText("Account or category"));
+    await userEvent.click(dialog.getByLabelText("Account or Category"));
     await userEvent.click(await body.findByRole("option", { name: "Savings" }));
     await userEvent.click(dialog.getByRole("button", { name: "Rebook" }));
     await expect(
@@ -494,7 +494,7 @@ export const PendingRebook: Story = {
     const element = await body.findByRole("dialog");
     await waitFor(() => expect(element).toBeVisible());
     const dialog = within(element);
-    await userEvent.click(dialog.getByLabelText("Account or category"));
+    await userEvent.click(dialog.getByLabelText("Account or Category"));
     await userEvent.click(await body.findByRole("option", { name: "Savings" }));
     await userEvent.click(dialog.getByRole("button", { name: "Rebook" }));
     await expect(dialog.getByRole("button", { name: "Cancel" })).toBeDisabled();

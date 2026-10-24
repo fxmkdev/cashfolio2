@@ -51,13 +51,13 @@ describe("getAccountsPageTitle", () => {
       "EQUITY-EXPENSE",
     ]);
     expect(getAccountsPageTitle("active", "categories")).toBe(
-      "Income & expense categories",
+      "Income & Expense Categories",
     );
     expect(getAccountsPageTitle("archived", "categories")).toBe(
-      "Category archive",
+      "Category Archive",
     );
     expect(getEntityLabel("account", "categories")).toBe("Category");
-    expect(getEntityLabel("accountGroup", "categories")).toBe("Category group");
+    expect(getEntityLabel("accountGroup", "categories")).toBe("Category Group");
   });
 
   it.each([

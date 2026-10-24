@@ -291,7 +291,7 @@ async function fillDraft(page: Page, description: string) {
   await dialog.getByLabel("Date").fill("01/04/2026");
   await dialog.getByLabel("Description").fill(description);
   await dialog.getByLabel("Amount").fill("20");
-  await dialog.getByLabel("Account or category").click();
+  await dialog.getByLabel("Account or Category").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
   return dialog;
 }
@@ -352,7 +352,7 @@ test("an archived counter account remains visible until the draft is corrected",
   await dialog.getByRole("button", { name: "Create", exact: true }).click();
   await expect(dialog.getByRole("alert")).toBeVisible();
   await expect(dialog.getByLabel("Description")).toHaveValue(description);
-  await expect(dialog.getByLabel("Account or category")).toHaveValue(
+  await expect(dialog.getByLabel("Account or Category")).toHaveValue(
     seeded.expenseAccount.name,
   );
   await dialog.getByRole("button", { name: "Create", exact: true }).click();
@@ -367,7 +367,7 @@ test("an archived counter account remains visible until the draft is corrected",
       description,
     }),
   ).toBe(0);
-  await dialog.getByLabel("Account or category").click();
+  await dialog.getByLabel("Account or Category").click();
   await selectAccountLeaf(page, seeded.savingsAccount.name);
   await dialog.getByRole("button", { name: "Create", exact: true }).click();
   await expect(dialog).toHaveCount(0);

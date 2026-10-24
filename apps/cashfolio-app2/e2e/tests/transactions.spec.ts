@@ -105,7 +105,7 @@ test("create simple transaction", async ({ page }) => {
 
   await page.getByLabel("Date").fill("01/02/2026");
   await page.getByLabel("Description").fill("E2E Simple Transaction");
-  await simpleDialog.getByLabel("Account or category").click();
+  await simpleDialog.getByLabel("Account or Category").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
 
   await expect(
@@ -138,7 +138,7 @@ test("copy simple transaction keeps source date and saves selected copy date", a
   const simpleDialog = await openCreateSimpleTransaction(page);
   await simpleDialog.getByLabel("Date").fill("01/10/2026");
   await simpleDialog.getByLabel("Description").fill(sourceDescription);
-  await simpleDialog.getByLabel("Account or category").click();
+  await simpleDialog.getByLabel("Account or Category").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
   await simpleDialog.getByLabel("Amount").fill("33");
   await simpleDialog.getByRole("button", { name: "Create" }).click();
@@ -183,7 +183,7 @@ test("counterparty account link highlights the matching booking row", async ({
   const simpleDialog = await openCreateSimpleTransaction(page);
   await page.getByLabel("Date").fill("01/03/2026");
   await page.getByLabel("Description").fill(description);
-  await simpleDialog.getByLabel("Account or category").click();
+  await simpleDialog.getByLabel("Account or Category").click();
   await selectAccountLeaf(page, seeded.savingsAccount.name);
   await page.getByLabel("Amount").fill("77");
   await simpleDialog.getByRole("button", { name: "Create" }).click();
@@ -215,7 +215,7 @@ test("rebook booking to another compatible account", async ({ page }) => {
   const simpleDialog = await openCreateSimpleTransaction(page);
   await page.getByLabel("Date").fill("01/04/2026");
   await page.getByLabel("Description").fill("E2E Rebook Transaction");
-  await simpleDialog.getByLabel("Account or category").click();
+  await simpleDialog.getByLabel("Account or Category").click();
   await selectAccountLeaf(page, seeded.savingsAccount.name);
   await simpleDialog
     .getByRole("button", { name: "Swap Debit/Credit Direction" })
@@ -230,7 +230,7 @@ test("rebook booking to another compatible account", async ({ page }) => {
   const rebookDialog = page.getByRole("dialog", { name: "Rebook Booking" });
   await expect(rebookDialog).toBeVisible();
 
-  const targetAccountInput = rebookDialog.getByLabel("Account or category");
+  const targetAccountInput = rebookDialog.getByLabel("Account or Category");
   await expect(targetAccountInput).toHaveValue("");
   await expectAccountLeafSearchResult({
     input: targetAccountInput,

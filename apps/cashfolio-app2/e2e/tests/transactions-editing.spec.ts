@@ -30,7 +30,7 @@ test("eligible edit opens simple editor and ineligible edit opens split editor",
   });
   await page.getByLabel("Date").fill("01/04/2026");
   await page.getByLabel("Description").fill("E2E Editable Simple");
-  await simpleCreateDialog.getByLabel("Account or category").click();
+  await simpleCreateDialog.getByLabel("Account or Category").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
   await page.getByLabel("Amount").fill("20");
   await simpleCreateDialog.getByRole("button", { name: "Create" }).click();
@@ -43,7 +43,7 @@ test("eligible edit opens simple editor and ineligible edit opens split editor",
     simpleEditDialog.getByRole("button", { name: "Switch to Split Editor" }),
   ).toBeVisible();
   await expect(
-    simpleEditDialog.getByLabel("Account or category"),
+    simpleEditDialog.getByLabel("Account or Category"),
   ).toBeVisible();
   await simpleEditDialog.getByRole("button", { name: "Save" }).click();
 
@@ -91,7 +91,7 @@ test("switch from simple edit to split carries over edited values", async ({
   });
   await page.getByLabel("Date").fill("01/05/2026");
   await page.getByLabel("Description").fill("E2E Carry Switch");
-  await simpleCreateDialog.getByLabel("Account or category").click();
+  await simpleCreateDialog.getByLabel("Account or Category").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
   await page.getByLabel("Amount").fill("15");
   await simpleCreateDialog.getByRole("button", { name: "Create" }).click();
@@ -143,7 +143,7 @@ test("create flow: changing date before switching to split still allows split cr
   const simpleDialog = await openCreateSimpleTransaction(page);
   await simpleDialog.getByLabel("Date").fill("01/06/2026");
   await simpleDialog.getByLabel("Description").fill("E2E Create Date Switch");
-  await simpleDialog.getByLabel("Account or category").click();
+  await simpleDialog.getByLabel("Account or Category").click();
   await selectAccountLeaf(page, seeded.expenseAccount.name);
   await simpleDialog.getByLabel("Amount").fill("22");
 

@@ -268,7 +268,7 @@ export function EditAccountGroupModal({
       closeOnEscape={!isSubmitting}
       closeOnClickOutside={!isSubmitting}
       withCloseButton={!isSubmitting}
-      title={`${isEdit ? "Edit" : "New"} ${isCategory ? "Category group" : "Group"}`}
+      title={`${isEdit ? "Edit" : "New"} ${isCategory ? "Category Group" : "Group"}`}
       size="lg"
     >
       <form
@@ -344,7 +344,7 @@ export function EditAccountGroupModal({
             </Grid.Col>
             <Grid.Col span={9}>
               <GroupTreeSelect
-                label={isCategory ? "Parent category group" : "Parent Group"}
+                label={isCategory ? "Parent Category Group" : "Parent Group"}
                 searchable
                 clearable
                 groups={accountGroups.filter(

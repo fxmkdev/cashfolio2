@@ -11,11 +11,11 @@ test.beforeAll(async ({ e2eExternalId }) => {
 async function createGroup(page: Page, name: string, parent?: string) {
   const dialog = await openDialogFromButton(page, {
     buttonName: "Add Group",
-    dialogName: "New Category group",
+    dialogName: "New Category Group",
   });
   await dialog.getByLabel("Name").fill(name);
   if (parent) {
-    await dialog.getByLabel("Parent category group").fill(parent);
+    await dialog.getByLabel("Parent Category Group").fill(parent);
     await page.getByRole("option", { name: parent, exact: true }).click();
   }
   await dialog.getByRole("button", { name: "Create", exact: true }).click();
@@ -34,7 +34,7 @@ test("settings hosts categories without changing primary navigation or general s
     /\/settings\/categories\?tab=EQUITY-INCOME&mode=active$/,
   );
   await expect(
-    page.getByRole("heading", { name: "Income & expense categories" }),
+    page.getByRole("heading", { name: "Income & Expense Categories" }),
   ).toBeVisible();
   await expect(
     page.getByRole("textbox", { name: "Account Book Name", exact: true }),
@@ -64,7 +64,7 @@ test("legacy category links redirect with their tab and archive selection", asyn
     /\/settings\/categories\?tab=EQUITY-EXPENSE&mode=archived$/,
   );
   await expect(
-    page.getByRole("heading", { name: "Category archive" }),
+    page.getByRole("heading", { name: "Category Archive" }),
   ).toBeVisible();
   await page.goto(`/${seeded.accountBookId}/settings/categories?tab=ASSET`);
   await expect(
@@ -81,12 +81,12 @@ test("category groups preserve nesting, category CRUD, ledger access and archive
   await createGroup(page, "E2E Utilities", "E2E Housing");
 
   const create = await openDialogFromButton(page, {
-    buttonName: "Add expense category",
+    buttonName: "Add Expense Category",
     dialogName: "New Category",
   });
   await create.getByLabel("Name").fill("E2E Electricity");
   await create
-    .getByLabel("Category group", { exact: true })
+    .getByLabel("Category Group", { exact: true })
     .fill("E2E Utilities");
   await page
     .getByRole("option", { name: "E2E Utilities", exact: true })
@@ -95,12 +95,12 @@ test("category groups preserve nesting, category CRUD, ledger access and archive
   await expect(create).toBeHidden();
 
   const sibling = await openDialogFromButton(page, {
-    buttonName: "Add expense category",
+    buttonName: "Add Expense Category",
     dialogName: "New Category",
   });
   await sibling.getByLabel("Name").fill("E2E Water");
   await sibling
-    .getByLabel("Category group", { exact: true })
+    .getByLabel("Category Group", { exact: true })
     .fill("E2E Utilities");
   await page
     .getByRole("option", { name: "E2E Utilities", exact: true })
@@ -151,7 +151,7 @@ test("category groups preserve nesting, category CRUD, ledger access and archive
   await expect(archived).toHaveCount(0);
   await page.goto(url);
   await updated.dblclick();
-  await page.getByRole("button", { name: "Category actions" }).click();
+  await page.getByRole("button", { name: "Category Actions" }).click();
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
   const deletion = page.getByRole("dialog", { name: "Delete Category" });
   await deletion.getByRole("button", { name: "Delete", exact: true }).click();

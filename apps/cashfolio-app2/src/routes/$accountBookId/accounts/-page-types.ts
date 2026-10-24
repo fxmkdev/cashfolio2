@@ -47,8 +47,8 @@ export function getAccountsPageTitle(
 ): string {
   if (context === "categories")
     return mode === "archived"
-      ? "Category archive"
-      : "Income & expense categories";
+      ? "Category Archive"
+      : "Income & Expense Categories";
   return "Accounts";
 }
 
@@ -93,7 +93,7 @@ export function getEntityLabel(
   context: AccountManagementContext = "accounts",
 ): string {
   if (context === "categories")
-    return nodeType === "account" ? "Category" : "Category group";
+    return nodeType === "account" ? "Category" : "Category Group";
   return nodeType === "account" ? "Account" : "Group";
 }
 

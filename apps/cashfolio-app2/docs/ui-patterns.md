@@ -407,7 +407,7 @@ income, expense, and gain/loss accounts. Opening Balances remains a special
 system account. Identity actions still use "Cashfolio account".
 
 Account management has Assets and Liabilities tabs. Income and expense category
-management lives under **account book Settings → Categories**, with Income and
+management lives under **Account Book Settings → Categories**, with Income and
 Expenses tabs and active/archive modes. Gain/Loss and Opening Balances retain
 their system-managed restrictions and are not creation tabs. Primary navigation
 is unchanged. Viewing a category ledger is an activity view, not a settings
@@ -416,9 +416,9 @@ page: its URL and Accounts navigation highlight remain unchanged.
 Categories have explicit **category groups**, backed by `AccountGroup`. Groups
 can contain categories and nested groups; categories can also be at the root.
 Only categories accept bookings and are selectable transaction destinations.
-Preserve existing subtype compatibility and ordering rules. Use "Add income
-category"/"Add expense category", "Add group", and "Category group" in forms.
-Selectors accepting both entities use "Account or category".
+Preserve existing subtype compatibility and ordering rules. Use "Add Income
+Category"/"Add Expense Category", "Add Group", and "Category Group" in forms.
+Selectors accepting both entities use "Account or Category".
 
 Use the shared `account-presentation` predicates and labels at presentation
 boundaries. These names do not change stored account types, booking signs,

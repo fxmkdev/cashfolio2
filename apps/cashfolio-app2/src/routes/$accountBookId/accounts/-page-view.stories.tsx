@@ -1119,13 +1119,13 @@ export const ExpenseCategories: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByRole("heading", { name: "Income & expense categories" }),
+      canvas.getByRole("heading", { name: "Income & Expense Categories" }),
     ).toBeVisible();
     await expect(
       canvas.getByText("Electricity", { exact: true }),
     ).toBeVisible();
     await userEvent.click(
-      canvas.getByRole("button", { name: "Add expense category" }),
+      canvas.getByRole("button", { name: "Add Expense Category" }),
     );
     await findVisibleDialog(
       within(canvasElement.ownerDocument.body),

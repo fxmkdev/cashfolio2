@@ -303,7 +303,7 @@ export function SimpleTransactionModal({
           </Tooltip>
 
           <AccountTreeSelect
-            label="Account or category"
+            label="Account or Category"
             accounts={accounts}
             style={{ flex: "1 1 16rem" }}
             disabled={isSubmitting}

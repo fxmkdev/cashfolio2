@@ -12,7 +12,7 @@ export function SettingsNavigation({
     <Tabs
       value={categories ? "categories" : "general"}
       mb="md"
-      aria-label="Account book settings"
+      aria-label="Account Book Settings"
     >
       <Tabs.List>
         <LinkTab

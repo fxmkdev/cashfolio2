@@ -71,7 +71,7 @@ function cashBookingIds(transactions: Awaited<ReturnType<typeof seedPair>>) {
 async function openRebook(page: Page) {
   await page.getByRole("button", { name: "Rebook Selected" }).click();
   const dialog = page.getByRole("dialog", { name: "Rebook Bookings" });
-  await dialog.getByLabel("Account or category").click();
+  await dialog.getByLabel("Account or Category").click();
   await selectAccountLeaf(page, seeded.savingsAccount.name);
   return dialog;
 }

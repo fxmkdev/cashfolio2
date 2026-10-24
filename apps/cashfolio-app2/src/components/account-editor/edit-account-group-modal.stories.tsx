@@ -36,11 +36,11 @@ export const ExpenseCategoryGroup: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await expect(
-      body.getByRole("dialog", { name: "New Category group" }),
+      body.getByRole("dialog", { name: "New Category Group" }),
     ).toBeInTheDocument();
     await expect(body.getByPlaceholderText("e.g. Housing")).toBeInTheDocument();
     await expect(
-      body.getByLabelText("Parent category group"),
+      body.getByLabelText("Parent Category Group"),
     ).toBeInTheDocument();
   },
 };

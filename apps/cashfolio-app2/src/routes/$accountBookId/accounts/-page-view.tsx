@@ -187,7 +187,7 @@ export function AccountsPageView({
               items={[
                 {
                   label: isCategories
-                    ? "Income & expense categories"
+                    ? "Income & Expense Categories"
                     : "Accounts",
                   to: managementPath,
                   params: { accountBookId },
@@ -230,8 +230,8 @@ export function AccountsPageView({
                 >
                   {isCategories
                     ? tab === "EQUITY-INCOME"
-                      ? "Add income category"
-                      : "Add expense category"
+                      ? "Add Income Category"
+                      : "Add Expense Category"
                     : "Add Account"}
                 </Button>
               </>

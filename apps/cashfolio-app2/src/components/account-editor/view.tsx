@@ -136,7 +136,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
             </Grid.Col>
             <Grid.Col span={9}>
               <GroupTreeSelect
-                label={isCategory ? "Category group" : "Group"}
+                label={isCategory ? "Category Group" : "Group"}
                 searchable
                 clearable
                 groups={accountGroups.filter(
