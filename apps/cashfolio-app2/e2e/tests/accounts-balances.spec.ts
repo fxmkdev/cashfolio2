@@ -19,7 +19,7 @@ test.beforeAll(async ({ e2eExternalId }) => {
   seeded = await seedDatabase({ userExternalId: e2eExternalId });
 });
 
-test("balance column visibility and baseline values across tabs/modes", async ({
+test("balance columns and unified totals across legacy URLs and archive expansion", async ({
   page,
 }) => {
   const seededBalances = await seedNonZeroConvertibleAssetBalances({
@@ -48,7 +48,7 @@ test("balance column visibility and baseline values across tabs/modes", async ({
   await expect(assetFooterRow).toContainText("Total");
   await expect(
     agGridCellByColId(assetFooterRow, "balanceInReferenceCurrency"),
-  ).toHaveText("209.00");
+  ).toHaveText("212.00");
 
   const cashRow = agGridRowByText(page, seeded.cashAccount.name);
   await expect(agGridCellByColId(cashRow, "balance")).toHaveText(/^\s*$/);
@@ -93,7 +93,7 @@ test("balance column visibility and baseline values across tabs/modes", async ({
   await expect(archivedFooterRow).toContainText("Total");
   await expect(
     agGridCellByColId(archivedFooterRow, "balanceInReferenceCurrency"),
-  ).toHaveText("209.00");
+  ).toHaveText("212.00");
   const archivedUsdRow = agGridRowByText(
     page,
     seededAdditionalTabBalances.archivedAssetAccountName,
@@ -116,7 +116,7 @@ test("balance column visibility and baseline values across tabs/modes", async ({
   await expect(liabilityFooterRow).toContainText("Total");
   await expect(
     agGridCellByColId(liabilityFooterRow, "balanceInReferenceCurrency"),
-  ).toHaveText("3.00");
+  ).toHaveText("212.00");
   const liabilityUsdRow = agGridRowByText(
     page,
     seededAdditionalTabBalances.liabilityAccountName,

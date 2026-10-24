@@ -16,11 +16,11 @@ describe("getLedgerAccountKindBadgeProps", () => {
   test.each([
     [
       { type: AccountType.ASSET, equityAccountSubtype: null },
-      { label: "Asset", color: "green", variant: "light" },
+      { label: "Account", color: "gray", variant: "light" },
     ],
     [
       { type: AccountType.LIABILITY, equityAccountSubtype: null },
-      { label: "Liability", color: "red", variant: "light" },
+      { label: "Account", color: "gray", variant: "light" },
     ],
     [
       {
@@ -95,7 +95,7 @@ describe("createAccountOptions", () => {
 
     expect(option?.label).toBe("Checking");
     expect(option?.treePath).toEqual([
-      "Asset",
+      "Accounts",
       "Assets",
       "Cash / Bank",
       "Daily",

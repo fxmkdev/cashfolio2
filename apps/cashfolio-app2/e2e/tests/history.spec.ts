@@ -23,7 +23,7 @@ test.beforeAll(async ({ e2eExternalId }) => {
 test("history page is reachable and persists selected period mode across refresh", async ({
   page,
 }) => {
-  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=BALANCE&mode=active`);
   await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
 
   await page.getByRole("link", { name: "History" }).click();
@@ -55,7 +55,7 @@ test("history page is reachable and persists selected period mode across refresh
 test("history mode toggles update URL mode and keep history compact", async ({
   page,
 }) => {
-  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=BALANCE&mode=active`);
   await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
 
   await page.getByRole("link", { name: "History" }).click();
@@ -83,7 +83,7 @@ test("history mode toggles update URL mode and keep history compact", async ({
 
   await page.goBack();
   await expect(page).toHaveURL(
-    new RegExp(`/${seeded.accountBookId}/accounts\\?tab=ASSET&mode=active$`),
+    new RegExp(`/${seeded.accountBookId}/accounts\\?tab=BALANCE&mode=active$`),
   );
   await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
 });
@@ -198,7 +198,7 @@ test("history view tree selects roots, groups and accounts and supports search",
 test("history view search waits for a pending scope selection to commit", async ({
   page,
 }) => {
-  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
+  await page.goto(`/${seeded.accountBookId}/accounts?tab=BALANCE&mode=active`);
   await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
   await page.goto(
     `/${seeded.accountBookId}/history?mode=year&metric=expenses&liabilityScope=account:${seeded.cashAccount.id}`,

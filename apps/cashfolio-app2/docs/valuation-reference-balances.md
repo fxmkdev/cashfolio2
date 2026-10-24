@@ -22,12 +22,12 @@ Related docs:
 
 ## Archived groups and totals
 
-The Assets and Liabilities tabs show active and archived real items together.
-Directly archived children of an active group, or archived roots, appear beneath
-a virtual **Archived** group. Archived real groups retain their complete
-original subtrees; no further virtual wrappers are inserted inside them. Empty
-virtual groups are omitted. Virtual groups start collapsed, remember expansion
-per book/tab in the session, remain last among siblings even during column
+Accounts shows both legacy balance types and active/archived real items
+together. Directly archived children of an active group, or archived roots,
+appear beneath a virtual **Archived** group. Archived real groups retain their
+complete original subtrees; no further virtual wrappers are inserted inside
+them. Empty virtual groups are omitted. Virtual groups start collapsed, remember
+expansion per book in the session, remain last among siblings even during column
 sorting, and have no mutation actions. A real group named Archived remains an
 ordinary editable group.
 
@@ -43,10 +43,10 @@ rows.
 
 Group and footer balances and G/L include active and archived account leaves
 exactly once, regardless of collapse or filtering in the grid. Virtual groups
-use the same descendant aggregation and completeness rules as real groups. Asset
-and Liability tabs retain balance/G/L columns. Existing asset/liability
-`mode=archived` links redirect to Accounts, preserving the selected tab and
-using normal session expansion behavior.
+use the same descendant aggregation and completeness rules as real groups.
+Accounts retains balance/G/L columns. Legacy asset/liability and archive links
+redirect to `tab=BALANCE&mode=active`. Both sides contribute once to the signed
+footer total, and groups may contain accounts of either legacy type.
 
 Income and expense categories remain unitless and use separate active and
 archived views under Account Book Settings. Their real hierarchy has no virtual
@@ -143,7 +143,7 @@ owed. Group and footer balances sum these signed amounts; missing-conversion
 rules remain unchanged. This presentation does not alter Report/History
 classification, net worth, or the gain/loss calculations below.
 
-Asset and Liability account lists display Total, Realised, and Unrealised under
+The unified Accounts list displays Total, Realised, and Unrealised under
 `G/L Since Start (<referenceCurrency>)`. These figures replay holdings from the
 account-book start through today, using the existing opening valuation on the
 day before book start as the basis for opening holdings. They include calculated

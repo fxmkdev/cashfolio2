@@ -62,7 +62,8 @@ export function validateStatementImportCsvFormatFormValue(
 ): string | null {
   if (
     typeDescriptor !== AccountType.ASSET &&
-    typeDescriptor !== AccountType.LIABILITY
+    typeDescriptor !== AccountType.LIABILITY &&
+    typeDescriptor !== "BALANCE"
   ) {
     return null;
   }
@@ -73,8 +74,11 @@ export function validateStatementImportCsvFormatFormValue(
 export function transformAccountValues(
   values: FormValues,
 ): TransformedFormValues {
-  const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
-    []) as [AccountType, EquityAccountSubtype?];
+  const [descriptorType, equityAccountSubtype] = (values.typeDescriptor?.split(
+    "-",
+  ) ?? []) as [AccountType | "BALANCE", EquityAccountSubtype?];
+  const type =
+    descriptorType === "BALANCE" ? AccountType.ASSET : descriptorType;
   const openingBalance =
     values.openingBalance == null || values.openingBalance === ""
       ? null
@@ -105,7 +109,8 @@ export function transformAccountValues(
   return {
     ...transformed,
     isCashAccount:
-      type === AccountType.ASSET && values.unit === Unit.CURRENCY
+      (type === AccountType.ASSET || type === AccountType.LIABILITY) &&
+      values.unit === Unit.CURRENCY
         ? (values.isCashAccount ?? false)
         : false,
   };

@@ -4,8 +4,7 @@ import type { TabValue } from "@/shared/account-tabs";
 import type { AccountManagementContext } from "@/shared/account-presentation";
 
 export const tabs = [
-  { value: "ASSET", label: "Assets", type: AccountType.ASSET },
-  { value: "LIABILITY", label: "Liabilities", type: AccountType.LIABILITY },
+  { value: "BALANCE", label: "Accounts", type: "BALANCE" },
   {
     value: `EQUITY-${EquityAccountSubtype.INCOME}`,
     label: "Income",
@@ -113,7 +112,7 @@ export function parseAccountsSearch(search: Record<string, unknown>): {
   tab: TabValue;
   mode: AccountsMode;
 } {
-  const tab = isTabValue(search.tab) ? search.tab : "ASSET";
+  const tab = isTabValue(search.tab) ? search.tab : "BALANCE";
   return {
     tab,
     mode:

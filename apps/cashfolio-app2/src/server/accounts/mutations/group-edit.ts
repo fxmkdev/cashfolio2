@@ -60,7 +60,12 @@ export async function updateAccountGroupOperation(
         accountBookId: submittedData.accountBookId,
       },
     },
-    select: { type: true, equityAccountSubtype: true, isCashAccount: true },
+    select: {
+      type: true,
+      equityAccountSubtype: true,
+      isCashAccount: true,
+      isActive: true,
+    },
   });
   assertNoSystemManagedGroupSubtype(existing);
   if (
@@ -73,6 +78,7 @@ export async function updateAccountGroupOperation(
   const normalizedData = await resolveAccountGroupCashFlag(
     {
       ...submittedData,
+      isActive: existing.isActive,
       isCashAccount: submittedData.isCashAccount ?? existing.isCashAccount,
     },
     tx,
@@ -113,7 +119,7 @@ export async function updateAccountGroupOperation(
     },
     data: {
       name: normalizedData.name,
-      parentGroupId: normalizedData.parentGroupId,
+      parentGroupId: normalizedData.parentGroupId ?? null,
       sortOrder:
         typeof normalizedData.sortOrder === "number"
           ? normalizedData.sortOrder
