@@ -3,6 +3,26 @@
 Scope: This document describes `apps/cashfolio-app2`. Unless noted otherwise,
 paths are relative to that app directory.
 
+## Verification Policy
+
+For reviews and implementation work, rely on the relevant CI checks for the
+current PR revision. Do not repeat CI-covered checks locally when they pass or
+while CI is pending or unavailable, including after fixes. Earlier green
+results do not validate later changes, and pending, missing, skipped, cancelled,
+or inaccessible results are not passes.
+
+Local commands in this document are references for concrete investigations,
+checks CI does not cover, or explicit user requests. Inspect failing CI logs and
+artifacts first, then run the smallest useful local reproduction if needed.
+Avoid duplicate full unit/coverage suites, integration tests, production builds,
+E2E, and Storybook builds/tests; change size or perceived risk alone does not
+justify them. Report CI evidence separately from any local execution.
+
+See the repository's
+[Verification Policy](../../../CONTRIBUTING.md#verification-policy) for readiness
+requirements and exceptions for necessary setup, code generation, and intentional
+coverage-baseline updates.
+
 ## Testing Pyramid
 
 - **Unit tests (base layer)**: fast, deterministic logic tests with Vitest.

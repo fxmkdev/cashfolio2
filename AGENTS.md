@@ -101,21 +101,26 @@ pnpm lint:workflows                           # actionlint check for GitHub work
 
 ## Quality Checklist
 
-- Run `pnpm --filter cashfolio-app2 typecheck` before finishing code changes.
-- Run `pnpm --filter cashfolio-app2 lint` before finishing code changes.
-- Run `pnpm --filter cashfolio-app2 test:unit` before finishing code changes.
-- Run `pnpm --filter cashfolio-app2 test:unit:coverage:ratchet` when touching
-  tested app logic, so local checks align with CI coverage gating.
+- Use CI as the default verification gate for reviews and implementation work.
+  Inspect workflow coverage and results for the current PR revision; do not
+  repeat CI-covered checks locally when they pass or while results are pending
+  or unavailable, including after fixes.
+- Run local checks only for a concrete investigation, a relevant check CI does
+  not cover, or an explicit user request. Inspect failing CI logs and artifacts
+  first, then use the smallest useful reproduction if needed.
+- Avoid duplicate full unit suites, coverage runs, production builds, E2E, and
+  Storybook builds/tests. Change size or perceived risk alone does not justify
+  running checks locally.
+- Report CI evidence separately from local commands. Pending, missing, skipped,
+  cancelled, or inaccessible checks are not passes; earlier green results do not
+  validate later changes. Final merge readiness requires successful applicable
+  CI checks for the final PR revision and no unverified local fixes.
+- See [Verification Policy](CONTRIBUTING.md#verification-policy) for details.
 - When intentionally raising coverage baseline, run
   `pnpm --filter cashfolio-app2 coverage:ratchet:accept` and commit
   `apps/cashfolio-app2/coverage-baseline.json` in the same PR.
-- Run `pnpm --filter cashfolio-app2 format` when touching formatting-sensitive
-  files.
-- Run `pnpm lint:workflows` when touching GitHub workflows or local actions.
-- Run `pnpm --filter cashfolio-app2 e2e` for changes that bear a significant
-  risk of breaking the application.
-- If Prisma schema/client changes, run
-  `pnpm --filter cashfolio-app2 prisma:generate`.
+- Install dependencies and regenerate Prisma clients when needed to perform the
+  work, rather than solely to repeat CI verification.
 - Update relevant docs in `docs/` (shared) or app-local `docs/` folders when
   behavior or conventions change.
 

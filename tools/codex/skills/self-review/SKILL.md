@@ -26,7 +26,7 @@ Perform a complete self-review for the current pull request, implement the most 
    - Validate PR description quality against required content:
      - problem/context
      - what changed
-     - test evidence and commands run
+     - CI evidence for the current PR revision and any local commands run
      - risks and mitigations
      - follow-ups or known limitations
    - Perform code-quality review using `AGENTS.md` and `CONTRIBUTING.md` conventions.
@@ -43,11 +43,12 @@ Perform a complete self-review for the current pull request, implement the most 
      - `needs larger change` (architecture tradeoffs, broad refactor, risky scope, or unclear intent)
    - Prioritize applying `auto-fixable now` and `bounded fix` items across code, docs, tests, and config.
 
-4. Run first-pass verification before changes.
-   - First pass (baseline, pre-fix):
-     - `pnpm --filter cashfolio-app2 typecheck`
-     - `pnpm --filter cashfolio-app2 test:unit`
-     - `pnpm --filter cashfolio-app2 format`
+4. Use CI as baseline verification.
+   - Inspect the workflows and CI results for the current PR revision to establish which relevant checks CI covers. Accept successful results as verification; do not repeat those checks locally.
+   - Defer CI-covered checks to CI, including when results are pending, missing, skipped, cancelled, or inaccessible. Report those states accurately rather than treating them as passes or automatically falling back to local execution. The same policy applies in branch-only mode.
+   - Run local checks only for a concrete investigation, a relevant check CI does not cover, or an explicit user request. For failing CI, inspect logs and artifacts first, then use the smallest useful reproduction if needed.
+   - Avoid duplicate full unit suites, coverage runs, production builds, E2E, and Storybook builds/tests. Change size or perceived risk alone does not justify local verification.
+   - Dependency installation and code generation needed to perform the work remain appropriate; do not run them solely to repeat CI verification.
 
 5. Implement feasible fixes.
    - Apply `auto-fixable now` items directly in-repo.
@@ -57,16 +58,13 @@ Perform a complete self-review for the current pull request, implement the most 
      `gh api -X PATCH repos/<owner>/<repo>/pulls/<number> -f body="$(cat <path>)"`.
    - Do not over-claim: leave `needs larger change` items unimplemented and keep them explicit in the final report.
 
-6. Run second-pass verification after fixes.
-   - Second pass (post-fix gate): rerun the same baseline checks after applied fixes.
-   - Deep pass (when tested logic changed, risk is higher, or either pass fails):
-     - `pnpm --filter cashfolio-app2 test:unit:coverage:ratchet`
-     - targeted broader checks as needed
-     - suggest `pnpm --filter cashfolio-app2 e2e` when change risk is significant
-   - Record exactly what ran, what did not run, and why.
+6. Verify the updated revision through CI.
+   - After authorized fixes are pushed, inspect CI for the new PR revision. Earlier green results do not validate later commits or uncommitted changes.
+   - Do not automatically rerun baseline or broader checks locally after fixes. Apply the same limited local-check exceptions as in step 4; pending CI remains pending.
+   - Record CI results with the revision and run/check links separately from any local commands, their results, and the reason for running them.
 
 7. Re-evaluate readiness.
-   - Mark `Ready` only when all blockers are cleared and required checks are green.
+   - Mark `Ready` only when all blockers are cleared and applicable required CI checks are successful for the final PR revision, with no unverified local fixes remaining.
    - If any blocker remains (including CI failures, high-risk unimplemented findings, or missing critical evidence), mark `Not Ready` and provide concrete next steps.
 
 8. Produce the required report format.
@@ -85,7 +83,8 @@ Perform a complete self-review for the current pull request, implement the most 
 
 ## Output Rules
 
-- Do not hide uncertainty. If a check could not be run, list it in `Missing Evidence`.
+- In `Checks Run`, distinguish CI evidence from local execution. Successful CI coverage is sufficient evidence; not repeating a check locally is not `Missing Evidence`.
+- In `Missing Evidence`, identify applicable checks without successful results for the final revision, including pending, missing, skipped, cancelled, or inaccessible CI. State what remains to be verified without automatically running local replacements.
 - Separate facts from assumptions.
 - Distinguish clearly between findings that were fixed and findings that remain.
 - Prefer direct, actionable remediation over broad advice.
