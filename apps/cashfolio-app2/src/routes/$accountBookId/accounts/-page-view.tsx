@@ -4,11 +4,20 @@ import {
   type AccountManagementContext,
 } from "@/shared/account-presentation";
 import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
-import { Alert, Button, Group, Tabs, Text, Title } from "@mantine/core";
+import {
+  Alert,
+  Breadcrumbs,
+  Button,
+  Group,
+  Tabs,
+  Text,
+  Title,
+  VisuallyHidden,
+} from "@mantine/core";
 import { IconArchive, IconPlus } from "@tabler/icons-react";
 import type { AgGridReactProps } from "ag-grid-react";
 import { LinkButton } from "@/components/navigation/link-button";
-import { PageBreadcrumbs } from "@/components/navigation/page-breadcrumbs";
+import { LinkAnchor } from "@/components/navigation/link-anchor";
 import { LinkTab } from "@/components/navigation/link-tab";
 import { TopPageHeader } from "@/components/layout/top-page-header";
 import type { AccountGroupInitialValues } from "@/components/account-editor/edit-account-group-modal";
@@ -178,97 +187,104 @@ export function AccountsPageView({
     getAccountConstraintMessage(message, managementContext) ?? message;
   const managementPath = getAccountManagementPath(managementContext);
 
+  const managementTabs = (
+    <Tabs value={tab} variant={isCategories ? "pills" : "default"}>
+      <Tabs.List
+        aria-label={isCategories ? "Category Type" : undefined}
+        mb={isCategories ? undefined : "md"}
+      >
+        {tabs.map((t) => (
+          <LinkTab
+            key={t.value}
+            value={t.value}
+            to={managementPath}
+            params={{ accountBookId }}
+            search={{ tab: t.value, mode: isCategories ? mode : "active" }}
+          >
+            {t.label}
+          </LinkTab>
+        ))}
+      </Tabs.List>
+    </Tabs>
+  );
+  const managementActions = (
+    <Group gap={isCategories ? "sm" : "md"}>
+      {!isArchivedMode && isCategories && (
+        <LinkButton
+          variant="default"
+          leftSection={<IconArchive size={16} />}
+          to={managementPath}
+          params={{ accountBookId }}
+          search={{ tab, mode: "archived" }}
+        >
+          Archive
+        </LinkButton>
+      )}
+      <Button
+        variant="default"
+        leftSection={<IconPlus size={16} />}
+        onClick={onOpenCreateGroup}
+      >
+        Add Group
+      </Button>
+      {!isArchivedMode && (
+        <Button
+          leftSection={<IconPlus size={16} />}
+          onClick={onOpenCreateAccount}
+        >
+          {isCategories
+            ? tab === "EQUITY-INCOME"
+              ? "Add Income Category"
+              : "Add Expense Category"
+            : "Add Account"}
+        </Button>
+      )}
+    </Group>
+  );
+
   return (
     <PageShell>
-      <TopPageHeader
-        heading={
-          isArchivedMode ? (
-            <PageBreadcrumbs
-              items={[
-                {
-                  label: isCategories
-                    ? "Income & Expense Categories"
-                    : "Accounts",
-                  to: managementPath,
-                  params: { accountBookId },
-                  search: { tab, mode: "active" },
-                },
-                { label: getAccountsPageTitle("archived", managementContext) },
-              ]}
-            />
-          ) : (
+      {isCategories ? (
+        <>
+          <VisuallyHidden component="div">
             <Title order={2}>
-              {getAccountsPageTitle("active", managementContext)}
+              {getAccountsPageTitle(mode, managementContext)}
             </Title>
-          )
-        }
-        actions={
-          <Group>
-            {!isArchivedMode && (
-              <>
-                {isCategories && (
-                  <LinkButton
-                    variant="default"
-                    leftSection={<IconArchive size={16} />}
-                    to={managementPath}
-                    params={{ accountBookId }}
-                    search={{ tab, mode: "archived" }}
-                  >
-                    Archive
-                  </LinkButton>
-                )}
-                <Button
-                  variant="default"
-                  leftSection={<IconPlus size={16} />}
-                  onClick={onOpenCreateGroup}
-                >
-                  Add Group
-                </Button>
-                <Button
-                  leftSection={<IconPlus size={16} />}
-                  onClick={onOpenCreateAccount}
-                >
-                  {isCategories
-                    ? tab === "EQUITY-INCOME"
-                      ? "Add Income Category"
-                      : "Add Expense Category"
-                    : "Add Account"}
-                </Button>
-              </>
-            )}
-            {isArchivedMode && (
-              <Button
-                variant="default"
-                leftSection={<IconPlus size={16} />}
-                onClick={onOpenCreateGroup}
+          </VisuallyHidden>
+          {isArchivedMode && (
+            <Breadcrumbs
+              mb="md"
+              role="navigation"
+              aria-label="Category Archive"
+            >
+              <LinkAnchor
+                to={managementPath}
+                params={{ accountBookId }}
+                search={{ tab, mode: "active" }}
               >
-                Add Group
-              </Button>
-            )}
+                Categories
+              </LinkAnchor>
+              <Text aria-current="page">Archive</Text>
+            </Breadcrumbs>
+          )}
+          <Group justify="space-between" align="center" gap="md" mb="md">
+            {managementTabs}
+            {managementActions}
           </Group>
-        }
-      />
+        </>
+      ) : (
+        <TopPageHeader
+          heading={<Title order={2}>{getAccountsPageTitle()}</Title>}
+          actions={managementActions}
+        />
+      )}
 
       <UnarchiveMutationFeedback
         listLabel={isCategories ? "category list" : "account list"}
         recovery={unarchiveRecovery}
         onRefreshConstraints={onRefreshConstraints}
       />
-      <Tabs value={tab}>
-        <Tabs.List mb="md">
-          {tabs.map((t) => (
-            <LinkTab
-              key={t.value}
-              value={t.value}
-              to={managementPath}
-              params={{ accountBookId }}
-              search={{ tab: t.value, mode: isCategories ? mode : "active" }}
-            >
-              {t.label}
-            </LinkTab>
-          ))}
-        </Tabs.List>
-      </Tabs>
+      {!isCategories && managementTabs}
 
       {!isCategories && (
         <Text size="sm" c="dimmed" mb="sm">

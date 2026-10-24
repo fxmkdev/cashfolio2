@@ -9,12 +9,8 @@ export function SettingsNavigation({
   categories: boolean;
 }) {
   return (
-    <Tabs
-      value={categories ? "categories" : "general"}
-      mb="md"
-      aria-label="Account Book Settings"
-    >
-      <Tabs.List>
+    <Tabs value={categories ? "categories" : "general"} mb="md">
+      <Tabs.List aria-label="Account Book Settings">
         <LinkTab
           value="general"
           to="/$accountBookId/settings"

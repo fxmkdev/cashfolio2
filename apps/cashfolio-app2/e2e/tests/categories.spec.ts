@@ -34,8 +34,10 @@ test("settings hosts categories without changing primary navigation or general s
     /\/settings\/categories\?tab=EQUITY-INCOME&mode=active$/,
   );
   await expect(
-    page.getByRole("heading", { name: "Income & Expense Categories" }),
-  ).toBeVisible();
+    page
+      .getByRole("tablist", { name: "Category Type" })
+      .getByRole("tab", { name: "Income", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
   await expect(
     page.getByRole("textbox", { name: "Account Book Name", exact: true }),
   ).toHaveCount(0);
@@ -64,7 +66,9 @@ test("legacy category links redirect with their tab and archive selection", asyn
     /\/settings\/categories\?tab=EQUITY-EXPENSE&mode=archived$/,
   );
   await expect(
-    page.getByRole("heading", { name: "Category Archive" }),
+    page
+      .getByRole("navigation", { name: "Category Archive" })
+      .getByText("Archive", { exact: true }),
   ).toBeVisible();
   await page.goto(`/${seeded.accountBookId}/settings/categories?tab=ASSET`);
   await expect(
@@ -160,3 +164,102 @@ test("category groups preserve nesting, category CRUD, ledger access and archive
   );
   await expect(updated).toHaveCount(0);
 });
+
+test("General settings saves without a visible page header", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/settings`);
+  await expect(
+    page
+      .getByRole("tablist", { name: "Account Book Settings" })
+      .getByRole("tab", { name: "General", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(
+    page.getByRole("heading", { name: "Settings", exact: true }),
+  ).toHaveCount(0);
+  const name = page.getByRole("textbox", {
+    name: "Account Book Name",
+    exact: true,
+  });
+  await name.fill("E2E Settings Updated");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(
+    page.getByText("Settings saved.", { exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(name).toHaveValue("E2E Settings Updated");
+  await expect(
+    page.getByRole("heading", { name: "Danger Zone" }),
+  ).toBeVisible();
+});
+
+for (const colorScheme of ["light", "dark"] as const) {
+  for (const width of [1280, 390]) {
+    test(`settings navigation and category toolbar: ${colorScheme}, ${width}px`, async ({
+      page,
+    }, testInfo) => {
+      async function capture(filename: string) {
+        await expect
+          .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+          .toBeLessThanOrEqual(width);
+        await page.screenshot({
+          path: testInfo.outputPath(filename),
+          animations: "disabled",
+        });
+      }
+      await page.emulateMedia({ colorScheme });
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`/${seeded.accountBookId}/settings`);
+      const settingsTabs = page.getByRole("tablist", {
+        name: "Account Book Settings",
+      });
+      await expect(
+        settingsTabs.getByRole("tab", { name: "General", exact: true }),
+      ).toHaveAttribute("aria-selected", "true");
+      await expect(
+        page.getByRole("textbox", { name: "Account Book Name", exact: true }),
+      ).toBeVisible();
+      await capture("general.png");
+      await settingsTabs
+        .getByRole("tab", { name: "General", exact: true })
+        .focus();
+      await page.keyboard.press("ArrowRight");
+      const categoryTabs = page.getByRole("tablist", { name: "Category Type" });
+      const income = categoryTabs.getByRole("tab", {
+        name: "Income",
+        exact: true,
+      });
+      const expenses = categoryTabs.getByRole("tab", {
+        name: "Expenses",
+        exact: true,
+      });
+      await expect(income).toHaveAttribute("aria-selected", "true");
+      await expect(
+        page.getByRole("button", { name: "Add Income Category" }),
+      ).toBeVisible();
+      await expect(page.getByRole("treegrid")).toBeVisible();
+      await capture("income.png");
+      await income.focus();
+      await page.keyboard.press("ArrowRight");
+      await expect(expenses).toHaveAttribute("aria-selected", "true");
+      await expect(page).toHaveURL(/tab=EQUITY-EXPENSE&mode=active$/);
+      await expect(
+        page.getByRole("button", { name: "Add Expense Category" }),
+      ).toBeVisible();
+      await capture("expenses.png");
+      await page.getByRole("link", { name: "Archive", exact: true }).click();
+      const breadcrumb = page.getByRole("navigation", {
+        name: "Category Archive",
+      });
+      await expect(
+        breadcrumb.getByText("Archive", { exact: true }),
+      ).toHaveAttribute("aria-current", "page");
+      await expect(expenses).toHaveAttribute("aria-selected", "true");
+      await capture("archive.png");
+      await breadcrumb
+        .getByRole("link", { name: "Categories", exact: true })
+        .click();
+      await expect(page).toHaveURL(/tab=EQUITY-EXPENSE&mode=active$/);
+    });
+  }
+}

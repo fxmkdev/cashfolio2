@@ -1120,8 +1120,11 @@ export const ExpenseCategories: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByRole("heading", { name: "Income & Expense Categories" }),
-    ).toBeVisible();
+      within(canvas.getByRole("tablist", { name: "Category Type" })).getByRole(
+        "tab",
+        { name: "Expenses" },
+      ),
+    ).toHaveAttribute("aria-selected", "true");
     await expect(
       canvas.getByText("Electricity", { exact: true }),
     ).toBeVisible();
@@ -1149,12 +1152,71 @@ export const CategoryArchive: Story = {
       expandGroups
     />
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const breadcrumb = within(
+      canvas.getByRole("navigation", { name: "Category Archive" }),
+    );
+    await expect(
+      breadcrumb.getByRole("link", { name: "Categories" }),
+    ).toBeVisible();
+    await expect(
+      breadcrumb.getByText("Archive", { exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+    await expect(
+      canvas.getByRole("button", { name: "Add Group" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", { name: "Add Expense Category" }),
+    ).not.toBeInTheDocument();
+  },
 };
 
 export const CategoriesMobile: Story = {
   ...ExpenseCategories,
   parameters: {
     ...ExpenseCategories.parameters,
+    viewport: { defaultViewport: "cashfolioMobile" },
+  },
+};
+
+export const IncomeCategories: Story = {
+  parameters: {
+    router: {
+      initialPath:
+        "/storybook-book/settings/categories?tab=EQUITY-INCOME&mode=active",
+    },
+  },
+  render: () => (
+    <AccountsPageStoryHarness initialMode="active" initialTab="EQUITY-INCOME" />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      within(
+        canvas.getByRole("tablist", { name: "Account Book Settings" }),
+      ).getByRole("tab", { name: "Categories" }),
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(
+      within(canvas.getByRole("tablist", { name: "Category Type" })).getByRole(
+        "tab",
+        { name: "Income" },
+      ),
+    ).toHaveAttribute("aria-selected", "true");
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Add Income Category" }),
+    );
+    await findVisibleDialog(
+      within(canvasElement.ownerDocument.body),
+      "New Category",
+    );
+  },
+};
+
+export const CategoryArchiveMobile: Story = {
+  ...CategoryArchive,
+  parameters: {
+    ...CategoryArchive.parameters,
     viewport: { defaultViewport: "cashfolioMobile" },
   },
 };

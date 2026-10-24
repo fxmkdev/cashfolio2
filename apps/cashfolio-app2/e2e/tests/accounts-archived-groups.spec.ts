@@ -88,12 +88,15 @@ for (const tab of [
 
     await page.goto(`/${book.accountBookId}/accounts?tab=${tab}&mode=archived`);
     const isCategory = type === "EQUITY";
-    await expect(
-      page.getByRole("heading", {
-        name: isCategory ? "Category Archive" : "Accounts",
-        exact: true,
-      }),
-    ).toBeVisible();
+    if (isCategory) {
+      await expect(
+        page.getByRole("navigation", { name: "Category Archive" }),
+      ).toBeVisible();
+    } else {
+      await expect(
+        page.getByRole("heading", { name: "Accounts", exact: true }),
+      ).toBeVisible();
+    }
     await expect(
       page.getByRole("link", { name: "Archive", exact: true }),
     ).toHaveCount(0);

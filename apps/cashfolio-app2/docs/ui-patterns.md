@@ -413,6 +413,12 @@ their system-managed restrictions and are not creation tabs. Primary navigation
 is unchanged. Viewing a category ledger is an activity view, not a settings
 page: its URL and Accounts navigation highlight remain unchanged.
 
+Settings uses underline tabs for General/Categories and pill tabs for
+Income/Expenses. Category type tabs and management actions share a wrapping
+toolbar. General and Categories omit visible page headings while retaining
+visually hidden semantic headings and document titles. Category Archive uses a
+compact Categories/Archive breadcrumb above its toolbar.
+
 Accounts combines active and archived items in one hierarchy. Categories keeps a
 separate Category Archive: its loader filters by the selected state, and its
 group expansion preferences remain separate for active and archived views.
