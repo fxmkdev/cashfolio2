@@ -73,8 +73,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard_index: [1, 2]
-        shard_total: [2]
+        shard_index: [1, 2, 3]
+        shard_total: [3]
     services:
       postgres:
         image: postgres:17
