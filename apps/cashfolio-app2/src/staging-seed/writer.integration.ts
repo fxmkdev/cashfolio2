@@ -204,6 +204,28 @@ describe("staging seed against disposable PostgreSQL", () => {
       current.books.every((book) => book.referenceCurrency === "CHF"),
     ).toBe(true);
     expect(current.links).toHaveLength(6);
+    for (const account of current.accounts.filter(
+      (account) => account.type === "EQUITY",
+    )) {
+      expect(account).toMatchObject({
+        unit: null,
+        currency: null,
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      });
+    }
+    const feeCategory = current.accounts.find(
+      (account) => account.name === "Bitcoin transfer fees",
+    )!;
+    const feeBooking = current.bookings.find(
+      (booking) => booking.accountId === feeCategory.id,
+    )!;
+    expect(feeBooking).toMatchObject({
+      unit: "CRYPTOCURRENCY",
+      cryptocurrency: "BTC",
+    });
+    expect(feeBooking.value.toString()).toBe("0.0001");
     expect(
       current.accounts.filter(
         (account) =>

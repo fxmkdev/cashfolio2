@@ -133,7 +133,6 @@ export function householdAccounts(target: SeedBook) {
     ["side-income", "Freelance income"],
   ]) {
     addAccount(target, key, name, AccountType.EQUITY, {
-      ...(key === "interest" ? {} : CHF),
       equityAccountSubtype: EquityAccountSubtype.INCOME,
     });
   }
@@ -150,7 +149,6 @@ export function householdAccounts(target: SeedBook) {
     ["fees", "Bank and trading fees", undefined],
   ] as const) {
     addAccount(target, key, name, AccountType.EQUITY, {
-      ...(key === "travel" ? {} : CHF),
       groupKey,
       equityAccountSubtype: EquityAccountSubtype.EXPENSE,
     });
@@ -161,7 +159,6 @@ export function householdAccounts(target: SeedBook) {
     "Bitcoin transfer fees",
     AccountType.EQUITY,
     {
-      ...BTC,
       equityAccountSubtype: EquityAccountSubtype.EXPENSE,
     },
   );
@@ -471,7 +468,7 @@ export function householdTransactions(target: SeedBook, today: Date) {
     [
       { accountKey: "btc-transfer-source", value: "-0.01" },
       { accountKey: "btc-transfer-destination", value: "0.0099" },
-      { accountKey: "btc-transfer-fees", value: "0.0001" },
+      { accountKey: "btc-transfer-fees", value: "0.0001", metadata: BTC },
     ],
   );
   post(target, addUtcDays(today, -7), "Bitcoin transfer demo: partial sale", [

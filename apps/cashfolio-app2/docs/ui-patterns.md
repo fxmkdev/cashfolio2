@@ -553,6 +553,13 @@ Preserve existing subtype compatibility and ordering rules. Use "Add Income
 Category"/"Add Expense Category", "Add Group", and "Category Group" in forms.
 Selectors accepting both entities use "Account or Category".
 
+Equity accounts, including income/expense categories, Gain/Loss, and Opening
+Balances, have no account-level unit metadata (`unit`, `currency`,
+`cryptocurrency`, `symbol`, or `tradeCurrency`). Their bookings carry their own
+unit metadata. Shared account validation rejects these fields on equity
+accounts. Application create/update mutations continue normalizing away hidden
+category unit fields before validation; seeds must supply valid account data.
+
 Use the shared `account-presentation` predicates and labels at presentation
 boundaries. These names do not change stored account types, booking signs,
 income/expense direction rules, or calculations.
@@ -919,8 +926,16 @@ create/edit of transactions with split bookings:
 - **Minimum bookings**: at least 2 bookings enforced
 - **Date propagation**: calendar-day changes propagate to all bookings;
   unrelated updates that clone a `Date` must not overwrite booking dates
-- **Unit auto-population**: unit is auto-populated from selected account
-  metadata
+- **Booking units and currencies**: selecting a balance account with a fixed
+  unit uses that account's unit metadata. Selecting an equity account, including
+  an income/expense category, preserves the booking's existing unit and
+  associated metadata. Only bookings without a unit inherit the current-account
+  booking's metadata. This rule applies to both ledger and statement-import
+  editors. Equity accounts have no account-level unit metadata. Unit, currency,
+  and security symbol remain editable for their bookings, so a category booking
+  can use EUR while the current account uses CHF. Defaults do not convert
+  amounts or require currencies to match. Existing units with incomplete
+  metadata are preserved for validation rather than filled from another booking.
 - **Booking row reordering**: enabled via AG Grid row drag in both create and
   edit flows
 - **Dirty reporting**: optional `onDirtyChange` reports form and pending editor
@@ -1074,9 +1089,11 @@ compatibility but ignored by the importer.
   or draft-edit submission is in progress.
 - Import uses a batch server mutation so either all reviewed drafts are created
   or none are.
-- For imported mixed-currency drafts, `EditTransactionModal` preserves the
-  prefilled counter booking unit when the user selects a unitless equity counter
-  account.
+- Imported drafts follow the shared
+  [booking unit and currency rules](#transaction-editing-edittransactionmodal).
+  Selecting a counter category preserves the imported original currency; newly
+  added bookings without a unit inherit the current-account booking's metadata.
+  Category booking units and currencies remain editable.
 
 ### Conditional Editability Affordance
 
@@ -1098,11 +1115,9 @@ compatibility but ignored by the importer.
 
 ### Form Root Validation
 
-- UI validation in `EditTransactionModal` requires all bookings to use the same
-  unit
-- UI validation requires debit/credit to balance (sum difference < 0.001)
-- Server validation intentionally allows multi-unit transactions; it enforces
-  sum-to-zero only when all bookings share the same unit identifier
+- Both `EditTransactionModal` and server validation allow multi-unit
+  transactions. Debits and credits must balance only when all bookings share the
+  same unit identifier.
 
 ### Unit Identifier Pattern
 

@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { AccountType, Unit } from "../../.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../../.prisma-client/enums";
 import {
   ACCOUNT_TREE_SELECT_COLUMN,
   columnTypes,
@@ -25,6 +29,59 @@ const accounts: AccountOption[] = [
 ];
 
 describe("createEditTransactionColumnDefs", () => {
+  test.each([EquityAccountSubtype.INCOME, EquityAccountSubtype.EXPENSE])(
+    "keeps unit metadata editable for a %s category",
+    (equityAccountSubtype) => {
+      const category: AccountOption = {
+        value: "category",
+        label: "Category",
+        type: AccountType.EQUITY,
+        equityAccountSubtype,
+        unit: null,
+      };
+      const columnDefs = createEditTransactionColumnDefs({
+        accounts: [...accounts, category],
+        isSubmitting: false,
+        accountBookStartDate: new Date("2026-01-04T00:00:00.000Z"),
+      });
+      const unitColumn = columnDefs.find((column) => column.field === "unit");
+      const currencyColumn = columnDefs.find(
+        (column) => column.colId === "ccy",
+      );
+      const symbolColumn = columnDefs.find(
+        (column) => column.field === "symbol",
+      );
+
+      for (const column of [unitColumn, currencyColumn, symbolColumn]) {
+        if (typeof column?.editable !== "function") {
+          throw new Error("Expected conditional unit/currency editability");
+        }
+        expect(
+          column.editable({
+            data: {
+              key: "category-booking",
+              account: category.value,
+              unit: Unit.SECURITY,
+              symbol: "AAPL",
+              tradeCurrency: "EUR",
+            },
+          } as never),
+        ).toBe(true);
+        expect(
+          column.editable({
+            data: {
+              key: "account-booking",
+              account: "account-checking",
+              unit: Unit.SECURITY,
+              symbol: "AAPL",
+              tradeCurrency: "CHF",
+            },
+          } as never),
+        ).toBe(false);
+      }
+    },
+  );
+
   test("shows full fractional COP precision in debit and credit entry columns", () => {
     const columnDefs = createEditTransactionColumnDefs({
       accounts,

@@ -128,7 +128,6 @@ export function updateStatementImportDraftCounterAccount(args: {
     selectedAccount,
     lockedBooking: currentBooking ? toBookingValues(currentBooking) : undefined,
     currentBooking: toBookingValues(counterBooking),
-    preserveCurrentBookingUnitForUnitlessEquity: true,
   });
 
   return updateStatementImportDraftTransaction({

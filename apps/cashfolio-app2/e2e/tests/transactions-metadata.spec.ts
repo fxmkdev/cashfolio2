@@ -1,5 +1,9 @@
 import { Unit } from "../../src/.prisma-client/enums";
-import { agGridCellByColId, agGridRowByText } from "../support/grid";
+import {
+  agGridCellByColId,
+  agGridRowByText,
+  setGridCellValue,
+} from "../support/grid";
 import {
   getTransactionBookingsByDescription,
   seedDatabase,
@@ -9,11 +13,11 @@ import { expect, test } from "../support/fixtures";
 import {
   gridRowByIndex,
   openCreateSimpleTransaction,
+  openCreateTransaction,
   openEditTransaction,
   selectAccountLeaf,
   setGridAccountCellValue,
   setUnitlessEquityAccountOnEditableRow,
-  splitCreateDialog,
 } from "../support/transaction-form";
 
 let seeded: SeededData;
@@ -81,29 +85,23 @@ test("create security simple transaction preserves account metadata", async ({
   ).toHaveText(/^-13\.6[34]$/);
 });
 
-test("split dialogs auto-fill unit metadata for unitless equity account selection", async ({
+test("split dialogs default empty equity bookings and preserve existing unit metadata", async ({
   page,
 }) => {
   await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
 
-  const createSimpleDialog = await openCreateSimpleTransaction(page);
-  await createSimpleDialog.getByLabel("Date").fill("01/08/2026");
-  await createSimpleDialog
+  const createDialog = await openCreateTransaction(page);
+  await createDialog.getByLabel("Date").fill("01/08/2026");
+  await createDialog
     .getByLabel("Description")
     .fill("E2E Unitless Equity Create");
-  await createSimpleDialog.getByLabel("Account or Category").click();
-  await selectAccountLeaf(page, seeded.savingsAccount.name);
-  await createSimpleDialog.getByLabel("Amount").fill("90");
-  await createSimpleDialog
-    .getByRole("button", { name: "Switch to Split Editor" })
-    .click();
-
-  const createDialog = splitCreateDialog(page);
-  await expect(createDialog).toBeVisible();
+  await setGridCellValue(createDialog, 0, "credit", "90");
 
   const createCounterRow = createDialog
     .locator('.ag-grid-scrolling-container > .ag-row[row-index="1"]')
     .first();
+  await expect(agGridCellByColId(createCounterRow, "unit")).toHaveText("");
+  await expect(agGridCellByColId(createCounterRow, "ccy")).toHaveText("");
   await setGridAccountCellValue({
     dialog: createDialog,
     rowIndex: 1,
@@ -113,6 +111,7 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
     "Currency",
   );
   await expect(agGridCellByColId(createCounterRow, "ccy")).toContainText("CHF");
+  await setGridCellValue(createDialog, 1, "debit", "90");
 
   await createDialog.getByRole("button", { name: "Create" }).click();
   await expect(
@@ -146,54 +145,42 @@ test("split dialogs auto-fill unit metadata for unitless equity account selectio
       accountName: seeded.unitlessEquityAccount.name,
     });
   const lockedRow = gridRowByIndex(editDialog, lockedRowIndex);
-  const expectedUnit = (
-    await agGridCellByColId(lockedRow, "unit").innerText()
-  ).trim();
-  const expectedSymbol = (
-    await agGridCellByColId(lockedRow, "symbol").innerText()
-  ).trim();
-  const expectedCcy = (
-    await agGridCellByColId(lockedRow, "ccy").innerText()
-  ).trim();
+  await expect(agGridCellByColId(lockedRow, "ccy")).toHaveText("USD");
   const editedRow = gridRowByIndex(editDialog, editedRowIndex);
-  await expect(agGridCellByColId(editedRow, "unit")).toContainText(
-    expectedUnit,
-  );
-  await expect(agGridCellByColId(editedRow, "symbol")).toContainText(
-    expectedSymbol,
-  );
-  await expect(agGridCellByColId(editedRow, "ccy")).toContainText(expectedCcy);
+  await expect(agGridCellByColId(editedRow, "unit")).toHaveText("Security");
+  await expect(agGridCellByColId(editedRow, "symbol")).toHaveText("AAPL");
+  await expect(agGridCellByColId(editedRow, "ccy")).toHaveText("EUR");
 
   await editDialog.getByRole("button", { name: "Save" }).click();
   await expect(agGridRowByText(page, "E2E Unitless Equity Edit")).toBeVisible();
 
   await expect
     .poll(
-      async () => {
-        const bookings = await getTransactionBookingsByDescription({
+      () =>
+        getTransactionBookingsByDescription({
           accountBookId: seeded.accountBookId,
           description: "E2E Unitless Equity Edit",
-        });
-        const unitlessEquityBooking = bookings.find(
-          (booking) => booking.accountId === seeded.unitlessEquityAccount.id,
-        );
-        const lockedBooking = bookings.find(
-          (booking) => booking.accountId !== seeded.unitlessEquityAccount.id,
-        );
-        if (!unitlessEquityBooking || !lockedBooking) {
-          return false;
-        }
-
-        return (
-          unitlessEquityBooking.unit === lockedBooking.unit &&
-          unitlessEquityBooking.symbol === lockedBooking.symbol &&
-          unitlessEquityBooking.tradeCurrency === lockedBooking.tradeCurrency &&
-          unitlessEquityBooking.value === -lockedBooking.value
-        );
-      },
+        }),
       {
         timeout: 10_000,
       },
     )
-    .toBe(true);
+    .toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          accountId: seeded.unitlessEquityAccount.id,
+          unit: Unit.SECURITY,
+          symbol: "AAPL",
+          tradeCurrency: "EUR",
+          value: -5,
+        }),
+        expect.objectContaining({
+          accountId: seeded.securityAccount.id,
+          unit: Unit.SECURITY,
+          symbol: "AAPL",
+          tradeCurrency: "USD",
+          value: 5,
+        }),
+      ]),
+    );
 });
