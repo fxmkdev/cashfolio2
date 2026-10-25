@@ -117,7 +117,7 @@ export function usePeriodBreakdownViewModel(args: {
       if (selectedBreakdown === "income") {
         return "Top-level groups for income in the selected period";
       }
-      return "Top-level cash account groups in the selected period";
+      return "Top-level account groups included in cash flow in the selected period";
     }
 
     if (selectedBreakdown === "expense") {
@@ -126,7 +126,7 @@ export function usePeriodBreakdownViewModel(args: {
     if (selectedBreakdown === "income") {
       return "Drilled income groups in the selected period";
     }
-    return "Drilled cash account groups in the selected period";
+    return "Drilled account groups included in cash flow in the selected period";
   }, [drillState.clampedPath.length, selectedBreakdown]);
 
   const currentBreakdownLevelTotalAmount = useMemo(

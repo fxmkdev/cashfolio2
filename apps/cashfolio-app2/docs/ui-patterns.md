@@ -32,7 +32,7 @@ responsibility that owns it:
 
 | Folder                | Responsibility                                                         |
 | --------------------- | ---------------------------------------------------------------------- |
-| `account-editor/`     | Account/group editing, form values, and cash-account form rules        |
+| `account-editor/`     | Account/group editing, form values, and cash-flow inclusion form rules |
 | `account-tree/`       | Account/group tree selection, row actions, and sibling reordering      |
 | `transaction-editor/` | Split transaction editing, booking columns, validation, and form state |
 | `transactions/`       | Simple transaction editing, rebooking, bulk actions, and dialog copy   |
@@ -87,7 +87,7 @@ generally uses sentence case even for UI labels. Research reviewed October
 | Text role                                                                                                                        | Convention                                                                         | Cashfolio examples                                                                       |
 | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | Page/document, dialog, section, card, and chart titles; table/grid headers and chart legends                                     | Title Case for short titles                                                        | `Create Account Book`, `Gain/Loss Details`, `Trade Currency`                             |
-| Buttons, navigation links, menu items, tabs, field labels, short checkbox/switch/radio labels, and predefined choices            | Title Case                                                                         | `Copy Example`, `Cash Account`, `Opening Balances`                                       |
+| Buttons, navigation links, menu items, tabs, field labels, short checkbox/switch/radio labels, and predefined choices            | Title Case                                                                         | `Copy Example`, `Include in Cash Flow`, `Opening Balances`                               |
 | Short action tooltips and accessible control names                                                                               | Title Case; use the visible label's wording and casing when naming the same action | `Show Gain/Loss Details`, `Include All Rows`                                             |
 | Explanations, helper text, validation errors, notification bodies, empty states, and progress/status messages (including badges) | Sentence case, even for fragments                                                  | `No regional format found`, `Deletion pending`, `Loading calculation`                    |
 | Instructional placeholders, explanatory tooltips, and accessibility instructions/descriptions                                    | Sentence case                                                                      | `Select target account`, `You cannot delete yourself`, `Press Space to toggle inclusion` |
@@ -626,12 +626,18 @@ compatibility is enforced on the server, including account-book ownership,
 active-parent requirements for active nodes, category-subtype compatibility, and
 cycle prevention. Existing group IDs and names remain distinct.
 
-Cash Account is an explicit capability: any currency balance account may be
-marked as cash. Root flags default to false; children inherit the parent group
-flag. Cash groups may contain only currency balance accounts and balance
-sub-groups, including archived descendants. Securities, crypto, and categories
-are ineligible. Reparenting or toggling a group propagates the inherited flag
-through its subtree and invalidates derived book caches.
+**Include in Cash Flow** controls whether a currency balance account
+participates in cash-flow reporting. Transfers entirely between included
+accounts are excluded from cash flow. This setting is independent of **Asset
+Class**, which classifies holdings for reporting; selecting **Cash & Cash
+Equivalents** does not include an account in cash flow.
+
+The setting is stored in `isCashAccount`. Root flags default to false; children
+inherit the parent group flag. Groups included in cash flow may contain only
+currency balance accounts and balance sub-groups, including archived
+descendants. Securities, crypto, and categories are ineligible. Reparenting or
+toggling a group propagates the inherited flag through its subtree and
+invalidates derived book caches.
 
 Accounts links canonicalize to `tab=BALANCE&mode=active`, including legacy
 asset/liability/archive links. Category redirects retain the category tab and
@@ -1267,5 +1273,5 @@ tables/charts and History totals/scopes use the same rule. An overdrawn asset
 account appears under Liabilities and an overpaid liability account appears
 under Assets, retaining its original group path and ledger link. A group can
 appear on both sides, with only the relevant accounts on each side. History
-scopes show zero for dates on the opposite side. Category roles, cash account
-flags, and signed ledger/import conventions do not change.
+scopes show zero for dates on the opposite side. Category roles, cash-flow
+inclusion flags, and signed ledger/import conventions do not change.

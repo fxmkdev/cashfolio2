@@ -364,7 +364,7 @@ export function EditAccountGroupModal({
                 >
                   <span style={{ display: "inline-flex" }}>
                     <Checkbox
-                      label="Cash Account"
+                      label="Include in Cash Flow"
                       checked={cashAccountValue}
                       disabled={
                         !!cashAccountDisabledReason || !cashAccountEditable

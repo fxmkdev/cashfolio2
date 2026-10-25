@@ -88,7 +88,7 @@ export async function resolveAccountCashFlag<T extends AccountInput>(
   const isCashAccount = parentCashFlag ?? data.isCashAccount ?? false;
 
   if (isCashAccount && !canBeCashAccount(data)) {
-    throw new Error("Cash accounts must be currency accounts");
+    throw new Error("Only currency accounts can be included in cash flow");
   }
 
   return {
@@ -114,7 +114,7 @@ export async function resolveAccountGroupCashFlag<T extends AccountGroupInput>(
   const isCashAccount = parentCashFlag ?? data.isCashAccount ?? false;
 
   if (isCashAccount && !canBeCashGroup(data)) {
-    throw new Error("Cash account groups must be account groups");
+    throw new Error("Only account groups can be included in cash flow");
   }
 
   return {
@@ -176,10 +176,14 @@ export async function assertCashableGroupSubtree(args: {
   ]);
 
   if (groups.some((group) => !canBeCashGroup(group))) {
-    throw new Error("Cash account groups must contain only account groups");
+    throw new Error(
+      "Groups included in cash flow must contain only account groups",
+    );
   }
   if (accounts.some((account) => !canBeCashAccount(account))) {
-    throw new Error("Cash account groups must contain only currency accounts");
+    throw new Error(
+      "Groups included in cash flow must contain only currency accounts",
+    );
   }
 }
 

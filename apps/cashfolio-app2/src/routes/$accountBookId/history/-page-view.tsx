@@ -390,7 +390,7 @@ export function HistoryPageView({
         {shouldShowCashFlowEmptyState ? (
           <div className={classes.emptyState}>
             <Text c="dimmed" ta="center">
-              No cash accounts are configured for this account book.
+              No accounts are included in cash flow for this account book.
             </Text>
           </div>
         ) : rebasedChartData.length === 0 ? (
