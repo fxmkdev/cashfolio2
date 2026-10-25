@@ -22,13 +22,24 @@ describe("createSplitInitialValuesFromSimpleDraft", () => {
     {
       label: "Groceries",
       value: "account-counter",
-      unit: Unit.CURRENCY,
-      currency: "CHF",
+      unit: null,
+      currency: null,
       cryptocurrency: null,
       symbol: null,
       tradeCurrency: null,
       type: AccountType.EQUITY,
       equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+    },
+    {
+      label: "Savings",
+      value: "account-savings",
+      unit: Unit.CURRENCY,
+      currency: "CHF",
+      cryptocurrency: null,
+      symbol: null,
+      tradeCurrency: null,
+      type: AccountType.BALANCE,
+      equityAccountSubtype: null,
     },
   ];
 
@@ -40,6 +51,59 @@ describe("createSplitInitialValuesFromSimpleDraft", () => {
     symbol: null,
     tradeCurrency: null,
   };
+
+  test.each([
+    { amount: undefined, direction: "DEBIT" },
+    { amount: "", direction: "CREDIT" },
+    { amount: "12.5", direction: "DEBIT" },
+    { amount: "12.5", direction: "CREDIT" },
+  ] as const)(
+    "keeps the counter booking empty for amount $amount and direction $direction",
+    ({ amount, direction }) => {
+      const result = createSplitInitialValuesFromSimpleDraft({
+        draft: {
+          date: new Date("2026-01-11T00:00:00.000Z"),
+          description: "Draft transaction",
+          counterAccountId: "",
+          amount,
+          direction,
+        },
+        fallback: {
+          date: new Date("2026-01-10T00:00:00.000Z"),
+          description: "",
+          counterAccountId: "account-counter",
+          amount: 0,
+          direction: "DEBIT",
+        },
+        allAccountOptions,
+        currentAccount,
+      });
+
+      const expectedAmount = amount ? 12.5 : undefined;
+      const isDebit = direction === "DEBIT";
+      expect(result).toEqual({
+        description: "Draft transaction",
+        bookings: [
+          {
+            date: "2026-01-11T00:00:00.000Z",
+            account: "account-current",
+            description: "",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            debit: isDebit ? expectedAmount : undefined,
+            credit: isDebit ? undefined : expectedAmount,
+          },
+          {
+            date: "2026-01-11T00:00:00.000Z",
+            account: "",
+            description: "",
+            debit: isDebit ? undefined : expectedAmount,
+            credit: isDebit ? expectedAmount : undefined,
+          },
+        ],
+      });
+    },
+  );
 
   test("keeps split debit/credit empty when simple draft amount is missing", () => {
     const result = createSplitInitialValuesFromSimpleDraft({
@@ -94,4 +158,36 @@ describe("createSplitInitialValuesFromSimpleDraft", () => {
     expect(result.bookings?.[1]?.debit).toBe(12.5);
     expect(result.bookings?.[1]?.credit).toBeUndefined();
   });
+
+  test.each(["account-savings", "account-counter"])(
+    "keeps the explicit counter selection %s and its booking unit",
+    (counterAccountId) => {
+      const result = createSplitInitialValuesFromSimpleDraft({
+        draft: {
+          date: new Date("2026-01-11T00:00:00.000Z"),
+          description: "Selected counter account",
+          counterAccountId,
+          amount: 10,
+          direction: "CREDIT",
+        },
+        fallback: {
+          date: new Date("2026-01-10T00:00:00.000Z"),
+          description: "",
+          counterAccountId: "",
+          amount: 0,
+          direction: "DEBIT",
+        },
+        allAccountOptions,
+        currentAccount,
+      });
+
+      expect(result.bookings?.[1]).toMatchObject({
+        account: counterAccountId,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        debit: 10,
+        credit: undefined,
+      });
+    },
+  );
 });
