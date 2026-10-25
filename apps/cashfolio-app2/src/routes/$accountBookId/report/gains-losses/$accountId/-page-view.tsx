@@ -43,6 +43,7 @@ type GainLossReconciliationPageViewProps = {
   reconciliation: PeriodGainLossReconciliation | null;
   onPeriodChange: (nextPeriodValue: string) => void;
   onOpenEventTransaction: (transactionId: string) => void;
+  onOpenRecordedTransaction: (transactionId: string) => void;
 };
 
 type LoadedGainLossReconciliationPageViewProps = Omit<
@@ -92,6 +93,7 @@ export function GainLossReconciliationPageView({
   reconciliation,
   onPeriodChange,
   onOpenEventTransaction,
+  onOpenRecordedTransaction,
 }: GainLossReconciliationPageViewProps) {
   const heading = getGainLossReconciliationPageTitle(reconciliation);
   if (!reconciliation) {
@@ -124,6 +126,7 @@ export function GainLossReconciliationPageView({
       heading={heading}
       onPeriodChange={onPeriodChange}
       onOpenEventTransaction={onOpenEventTransaction}
+      onOpenRecordedTransaction={onOpenRecordedTransaction}
     />
   );
 }
@@ -137,6 +140,7 @@ function LoadedGainLossReconciliationPageView({
   heading,
   onPeriodChange,
   onOpenEventTransaction,
+  onOpenRecordedTransaction,
 }: LoadedGainLossReconciliationPageViewProps) {
   const userLocale = useUserLocale();
   const [pickerOpened, setPickerOpened] = useState(false);
@@ -324,6 +328,7 @@ function LoadedGainLossReconciliationPageView({
           sources={reconciliation.sources}
           currencyFormatter={currencyFormatter}
           onOpenTransaction={onOpenEventTransaction}
+          onOpenRecordedTransaction={onOpenRecordedTransaction}
         />
 
         <Card withBorder radius="md" p="md">

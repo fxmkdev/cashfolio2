@@ -6,10 +6,12 @@ export function GainLossSourceDetails({
   sources,
   currencyFormatter,
   onOpenTransaction,
+  onOpenRecordedTransaction,
 }: {
   sources: PeriodGainLossReconciliation["sources"];
   currencyFormatter: Intl.NumberFormat;
   onOpenTransaction: (transactionId: string) => void;
+  onOpenRecordedTransaction: (transactionId: string) => void;
 }) {
   if (!sources) return null;
   return (
@@ -27,10 +29,18 @@ export function GainLossSourceDetails({
       ) : null}
       {(
         [
-          ["Recorded Adjustments", sources.recordedAdjustments],
-          ["Execution Residuals", sources.executionResiduals],
+          [
+            "Recorded Adjustments",
+            sources.recordedAdjustments,
+            onOpenRecordedTransaction,
+          ],
+          [
+            "Execution Residuals",
+            sources.executionResiduals,
+            onOpenTransaction,
+          ],
         ] as const
-      ).map(([title, rows]) =>
+      ).map(([title, rows, openTransaction]) =>
         rows.length ? (
           <Card key={title} withBorder radius="md" p="md">
             <Stack gap="sm">
@@ -58,7 +68,7 @@ export function GainLossSourceDetails({
                         <Button
                           variant="subtle"
                           size="xs"
-                          onClick={() => onOpenTransaction(row.transactionId)}
+                          onClick={() => openTransaction(row.transactionId)}
                         >
                           Open Transaction
                         </Button>

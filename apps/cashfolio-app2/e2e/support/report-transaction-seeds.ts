@@ -192,8 +192,14 @@ export async function seedExplicitGainLossDrilldownScenario(args: {
   accountBookId: string;
   counterAccountId: string;
   amount?: number;
+  gainLossBookingDate?: Date;
+  counterpartBookingDate?: Date;
 }) {
   const amount = args.amount ?? 25;
+  const gainLossBookingDate =
+    args.gainLossBookingDate ?? new Date("2026-01-11T00:00:00.000Z");
+  const counterpartBookingDate =
+    args.counterpartBookingDate ?? gainLossBookingDate;
 
   const gainLossAccount =
     (await prisma.account.findFirst({
@@ -232,7 +238,7 @@ export async function seedExplicitGainLossDrilldownScenario(args: {
           {
             id: createId(),
             accountId: gainLossAccount.id,
-            date: new Date("2026-01-11T00:00:00.000Z"),
+            date: gainLossBookingDate,
             description,
             unit: Unit.CURRENCY,
             currency: "CHF",
@@ -242,7 +248,7 @@ export async function seedExplicitGainLossDrilldownScenario(args: {
           {
             id: createId(),
             accountId: args.counterAccountId,
-            date: new Date("2026-01-11T00:00:00.000Z"),
+            date: counterpartBookingDate,
             description,
             unit: Unit.CURRENCY,
             currency: "CHF",

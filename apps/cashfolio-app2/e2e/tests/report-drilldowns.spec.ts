@@ -276,11 +276,17 @@ test("period recorded gains/losses rows open the reference-currency account expl
     .getByRole("button", { name: "Open Transaction", exact: true })
     .click();
   await expect(page).toHaveURL(
-    new RegExp(`/${seeded.accountBookId}/${seeded.cashAccount.id}\\?`),
+    new RegExp(`/${seeded.accountBookId}/transactions\\?period=${period}`),
   );
   await expect(
-    page.getByRole("link", { name: "Accounts", exact: true }),
+    page.getByRole("link", { name: "Transactions", exact: true }),
   ).toHaveAttribute("data-active", "true");
+  const details = page.getByRole("region", {
+    name: "Transaction details: E2E Explicit Gain/Loss Seed",
+  });
+  await expect(details).toBeVisible();
+  await expect(details).toContainText("2 bookings");
+  await expect(details).toContainText(seeded.cashAccount.name);
   await page.goBack();
   await expect(page).toHaveURL(
     new RegExp(
@@ -291,6 +297,91 @@ test("period recorded gains/losses rows open the reference-currency account expl
     page.getByRole("heading", { name: "Recorded Adjustments" }),
   ).toBeVisible();
 });
+
+for (const scenario of [
+  {
+    name: "month boundary",
+    gainLossBookingDate: "2026-01-31",
+    counterpartBookingDate: "2026-02-01",
+    period: "2026-01",
+    bookingDateLabels: ["31.01.2026", "01.02.2026"],
+  },
+  {
+    name: "year boundary from a monthly explanation",
+    gainLossBookingDate: "2025-12-31",
+    counterpartBookingDate: "2026-01-01",
+    period: "2025-12",
+    bookingDateLabels: ["31.12.2025", "01.01.2026"],
+  },
+  {
+    name: "year boundary from a yearly explanation",
+    gainLossBookingDate: "2025-12-31",
+    counterpartBookingDate: "2026-01-01",
+    period: "2025",
+    bookingDateLabels: ["31.12.2025", "01.01.2026"],
+  },
+] as const) {
+  test(`recorded adjustment transaction links span the ${scenario.name}`, async ({
+    page,
+    e2eExternalId,
+  }) => {
+    const book = await seedDatabase({
+      userExternalId: e2eExternalId,
+      accountBookStartDate: new Date("2025-01-01T00:00:00Z"),
+    });
+    const adjustment = await seedExplicitGainLossDrilldownScenario({
+      accountBookId: book.accountBookId,
+      counterAccountId: book.cashAccount.id,
+      gainLossBookingDate: new Date(
+        `${scenario.gainLossBookingDate}T00:00:00Z`,
+      ),
+      counterpartBookingDate: new Date(
+        `${scenario.counterpartBookingDate}T00:00:00Z`,
+      ),
+    });
+    const explanationPath = `/${book.accountBookId}/report/gains-losses/${book.cashAccount.id}?period=${scenario.period}`;
+    await page.goto(explanationPath);
+    const recorded = page
+      .getByRole("heading", { name: "Recorded Adjustments" })
+      .locator("..");
+    const adjustmentRow = recorded.getByRole("row").filter({
+      hasText: "E2E Explicit Gain/Loss Seed",
+    });
+    await expect(adjustmentRow).toBeVisible();
+    await expect(adjustmentRow.getByRole("cell").nth(2)).toContainText("25.00");
+    const amount = await adjustmentRow.getByRole("cell").nth(2).innerText();
+
+    await adjustmentRow
+      .getByRole("button", { name: "Open Transaction" })
+      .click();
+    await expect(page).toHaveURL(
+      new RegExp(
+        `/${book.accountBookId}/transactions\\?period=${scenario.period}(?:&|$)`,
+      ),
+    );
+    const details = page.getByRole("region", {
+      name: "Transaction details: E2E Explicit Gain/Loss Seed",
+    });
+    await expect(details).toBeVisible();
+    await expect(details).toContainText("2 bookings");
+    await expect(
+      page
+        .getByRole("grid", { name: "Transactions", exact: true })
+        .locator(".ag-row.transaction-inspected"),
+    ).toHaveAttribute("row-id", adjustment.transactionId);
+    for (const date of scenario.bookingDateLabels) {
+      await expect(
+        details.getByRole("gridcell", { name: date, exact: true }),
+      ).toBeVisible();
+    }
+    await expect(details).toContainText(book.cashAccount.name);
+    await expect(details).toContainText(adjustment.gainLossAccountName);
+
+    await page.goBack();
+    await expect(page).toHaveURL(explanationPath);
+    await expect(adjustmentRow.getByRole("cell").nth(2)).toHaveText(amount);
+  });
+}
 
 test("archived manual portfolio reclassification moves historical G/L without changing the amount", async ({
   page,

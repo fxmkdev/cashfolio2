@@ -474,8 +474,11 @@ this reporting change.
 The account reconciliation page replays the shared contribution pipeline and
 shows the combined total, calculated FIFO explanations, recorded adjustments,
 and execution residual rows with transaction links. Reference-currency and
-legacy unattributed accounts are supported. Synthetic transaction links open
-Transactions; real-account links preserve the account ledger and period.
+legacy unattributed accounts are supported. Recorded-adjustment links open the
+complete transaction in Transactions for the reconciliation period. Its G/L
+booking ensures inclusion even when the financial-account booking falls in a
+different month or year. Calculated-event and execution-residual links retain
+the real account's ledger and period, or Transactions for virtual accounts.
 
 Base-data v10 adds originating-account IDs and recorded booking descriptions.
 History metrics v10 carries class/account scopes and explicit account metadata;

@@ -130,7 +130,11 @@ their default handling. Revisit this filter if the app enables RSC.
   allocation, and gains/losses breakdown cards
 - `$accountBookId/report/gains-losses/$accountId/route.tsx` - dedicated
   gain/loss reconciliation page for account drill-down (opened from Gains/Losses
-  Breakdown leaf rows)
+  Breakdown leaf rows). Recorded-adjustment transaction links open Transactions
+  with the resolved reconciliation period and transaction ID, selecting the full
+  transaction even when its bookings span periods. Calculated-event and
+  execution-residual links keep their existing account-ledger or virtual-account
+  Transactions destinations. Browser Back restores the original explanation.
 - `$accountBookId/history/route.tsx` - history page showing monthly/yearly
   metric history as a full-page chart with metric-specific rendering:
   - Flow metrics (`totalReturn`, `savings`, `cashFlow`, `income`, `expenses`,
