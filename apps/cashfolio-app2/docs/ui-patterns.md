@@ -528,18 +528,22 @@ sign; debt amounts are positive magnitudes in those reports.
 
 ## Accounts List Columns
 
-- The `Name` column has a 320px minimum width and grows with the available
-  space. When columns no longer fit, scroll horizontally inside the grid to
-  reach the remaining balances, G/L columns, and row actions. This applies to
-  Accounts and both category tabs, including when archived items are visible.
+- The `Name` column is frozen on the left, starts at 320px, and can be resized
+  with a 320px minimum width. Row actions are frozen on the right at 145px. When
+  columns no longer fit, scroll horizontally inside the grid to reach the middle
+  columns. This applies to Accounts and both category tabs, including when
+  archived items are visible. AG Grid automatically unpins columns when the
+  viewport is too narrow to accommodate the frozen columns.
 - G/L figures use the order `Total`, `Realised`, `Unrealised` in the Accounts
   grid, account summary, calculation drawer, and period reconciliation cards.
-- The Accounts scope (`BALANCE`) renders `Asset Class`, `Ccy.`, `Symbol`,
-  `Balance`, and `Balance (<referenceCurrency>)`.
-- `Asset Class` follows `Name`, starts at 220px, and can be resized. Its text
-  filter and tooltip use the full display label. Unset accounts show muted
-  `Unclassified`; group, virtual Archived, and total rows stay blank. The column
-  preserves the existing sibling ordering and grid-only horizontal scrolling.
+- The Accounts scope (`BALANCE`) renders `Name`, `Ccy.`, `Symbol`, `Balance`,
+  `Balance (<referenceCurrency>)`, `Asset Class`, G/L, and row actions in that
+  order.
+- `Asset Class` follows the Balance columns, starts at 220px, and can be
+  resized. Its text filter and tooltip use the full display label. Unset
+  accounts show muted `Unclassified`; group, virtual Archived, and total rows
+  stay blank. The column preserves the existing sibling ordering and grid-only
+  horizontal scrolling.
 - `Balance` is account-level only (group rows are blank), with no aggregation.
 - Currency accounts whose currency matches the account book reference currency
   leave `Ccy.` and `Balance` blank to avoid duplicating the value already shown

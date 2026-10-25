@@ -127,27 +127,6 @@ export function useAccountTreeColumnDefs(params: {
       ...(!isEquityTab
         ? [
             {
-              colId: "assetClass",
-              headerName: "Asset Class",
-              width: 220,
-              resizable: true,
-              sortable: false,
-              filter: "agTextColumnFilter",
-              valueGetter: ({ data }) => getAccountListAssetClassValue(data),
-              tooltipValueGetter: ({ data }) =>
-                getAccountListAssetClassValue(data),
-              cellRenderer: ({
-                value,
-              }: ICellRendererParams<AccountsGridRow, string | undefined>) =>
-                value === "Unclassified" ? (
-                  <Text component="span" inherit c="dimmed">
-                    {value}
-                  </Text>
-                ) : (
-                  (value ?? null)
-                ),
-            } satisfies ColDef<AccountsGridRow>,
-            {
               colId: "currency",
               headerName: "Ccy.",
               filter: true,
@@ -242,6 +221,27 @@ export function useAccountTreeColumnDefs(params: {
                 return formatValue?.(value) ?? value.toString();
               },
             } satisfies ColDef<AccountsGridRow>,
+            {
+              colId: "assetClass",
+              headerName: "Asset Class",
+              width: 220,
+              resizable: true,
+              sortable: false,
+              filter: "agTextColumnFilter",
+              valueGetter: ({ data }) => getAccountListAssetClassValue(data),
+              tooltipValueGetter: ({ data }) =>
+                getAccountListAssetClassValue(data),
+              cellRenderer: ({
+                value,
+              }: ICellRendererParams<AccountsGridRow, string | undefined>) =>
+                value === "Unclassified" ? (
+                  <Text component="span" inherit c="dimmed">
+                    {value}
+                  </Text>
+                ) : (
+                  (value ?? null)
+                ),
+            } satisfies ColDef<AccountsGridRow>,
             buildAccountGainLossColumns({
               referenceCurrency,
               data: gainLossData,
@@ -253,6 +253,7 @@ export function useAccountTreeColumnDefs(params: {
         colId: "actions",
         headerName: "",
         width: 145,
+        pinned: "right",
         sortable: false,
         filter: false,
         resizable: false,

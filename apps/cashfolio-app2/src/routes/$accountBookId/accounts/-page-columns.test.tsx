@@ -283,8 +283,18 @@ describe("asset class column", () => {
     return columns;
   }
 
-  it("is the first data column with label filtering, tooltips, and resizing", () => {
-    expect(readColumns(false)[0]).toMatchObject({
+  it("follows the balance columns with label filtering, tooltips, and resizing", () => {
+    const columns = readColumns(false);
+    expect(columns).toMatchObject([
+      { colId: "currency" },
+      { field: "symbol" },
+      { field: "balance" },
+      { field: "balanceInReferenceCurrency" },
+      { colId: "assetClass" },
+      { groupId: "holding-gain-loss" },
+      { colId: "actions", pinned: "right" },
+    ]);
+    expect(columns[4]).toMatchObject({
       colId: "assetClass",
       headerName: "Asset Class",
       width: 220,
@@ -298,6 +308,9 @@ describe("asset class column", () => {
 
   it("does not add classification columns on equity tabs", () => {
     expect(readColumns(true)).toHaveLength(1);
-    expect(readColumns(true)[0]).toMatchObject({ colId: "actions" });
+    expect(readColumns(true)[0]).toMatchObject({
+      colId: "actions",
+      pinned: "right",
+    });
   });
 });
