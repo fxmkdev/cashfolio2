@@ -257,3 +257,22 @@ export const MoveSubmissionGuards: Story = {
     );
   },
 };
+
+export const CancelBeforeChoosing: Story = {
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = within(
+      await body.findByRole("dialog", { name: "Move to Group" }),
+    );
+    await waitFor(() =>
+      expect(dialog.getByText(/2 accounts selected/)).toHaveFocus(),
+    );
+    await expect(
+      body.queryByRole("option", { name: "No Group" }),
+    ).not.toBeInTheDocument();
+    await expect(dialog.getByRole("button", { name: "Move" })).toBeDisabled();
+    await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
+    await expect(args.onClose).toHaveBeenCalledTimes(1);
+    await expect(args.onSubmit).not.toHaveBeenCalled();
+  },
+};

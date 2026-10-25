@@ -86,7 +86,7 @@ export function MoveAccountsDialog(props: {
         }}
       >
         <Stack>
-          <Text size="sm">
+          <Text size="sm" tabIndex={-1} data-autofocus>
             {count} {count === 1 ? "account" : "accounts"} selected (
             {props.target.archivedCount} archived).
           </Text>
@@ -101,7 +101,6 @@ export function MoveAccountsDialog(props: {
             }}
             error={error}
             disabled={state.isSubmitting}
-            data-autofocus
           />
           {available && !error && (
             <>
