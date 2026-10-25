@@ -15,7 +15,10 @@ export function createBookingUnitDefaults(args: {
     args.selectedAccount.type === AccountType.EQUITY &&
     args.selectedAccount.unit == null
   ) {
-    if (args.preserveCurrentBookingUnitForUnitlessEquity) {
+    if (
+      args.preserveCurrentBookingUnitForUnitlessEquity &&
+      args.currentBooking?.unit != null
+    ) {
       return {
         unit: args.currentBooking?.unit,
         currency: args.currentBooking?.currency,

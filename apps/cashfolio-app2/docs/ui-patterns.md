@@ -1038,7 +1038,9 @@ compatibility but ignored by the importer.
   or none are.
 - For imported mixed-currency drafts, `EditTransactionModal` preserves the
   prefilled counter booking unit when the user selects a unitless equity counter
-  account.
+  account. If the booking has no unit yet, as with a newly added booking, it
+  defaults to the current-account booking's unit and associated metadata,
+  matching the ledger dialog.
 
 ### Conditional Editability Affordance
 

@@ -25,6 +25,114 @@ function accountOption(
 }
 
 describe("createBookingUnitDefaults", () => {
+  const unitlessEquityAccount = accountOption({
+    value: "expense",
+    label: "Expense",
+    type: AccountType.EQUITY,
+    equityAccountSubtype: EquityAccountSubtype.EXPENSE,
+    unit: null,
+  });
+  const unitFields: Pick<
+    BookingValues,
+    "unit" | "currency" | "cryptocurrency" | "symbol" | "tradeCurrency"
+  >[] = [
+    { unit: Unit.CURRENCY, currency: "EUR" },
+    { unit: Unit.CRYPTOCURRENCY, cryptocurrency: "BTC" },
+    { unit: Unit.SECURITY, symbol: "AAPL", tradeCurrency: "USD" },
+  ];
+
+  test.each(unitFields)(
+    "defaults a new import booking to the locked booking's $unit metadata",
+    (fields) => {
+      expect(
+        createBookingUnitDefaults({
+          selectedAccount: unitlessEquityAccount,
+          lockedBooking: { key: "locked", ...fields },
+          currentBooking: { key: "new" },
+          preserveCurrentBookingUnitForUnitlessEquity: true,
+        }),
+      ).toEqual({
+        currency: undefined,
+        cryptocurrency: undefined,
+        symbol: undefined,
+        tradeCurrency: undefined,
+        ...fields,
+      });
+    },
+  );
+
+  test.each(unitFields)(
+    "preserves existing import booking $unit metadata instead of the locked CHF unit",
+    (fields) => {
+      expect(
+        createBookingUnitDefaults({
+          selectedAccount: unitlessEquityAccount,
+          lockedBooking: {
+            key: "locked",
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+          },
+          currentBooking: { key: "imported", ...fields },
+          preserveCurrentBookingUnitForUnitlessEquity: true,
+        }),
+      ).toEqual({
+        currency: undefined,
+        cryptocurrency: undefined,
+        symbol: undefined,
+        tradeCurrency: undefined,
+        ...fields,
+      });
+    },
+  );
+
+  test("copies unit fields together without retaining metadata from a unitless booking", () => {
+    expect(
+      createBookingUnitDefaults({
+        selectedAccount: unitlessEquityAccount,
+        lockedBooking: {
+          key: "locked",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+        },
+        currentBooking: {
+          key: "new",
+          currency: "EUR",
+          cryptocurrency: "BTC",
+          symbol: "AAPL",
+          tradeCurrency: "USD",
+        },
+        preserveCurrentBookingUnitForUnitlessEquity: true,
+      }),
+    ).toEqual({
+      unit: Unit.CURRENCY,
+      currency: "CHF",
+      cryptocurrency: undefined,
+      symbol: undefined,
+      tradeCurrency: undefined,
+    });
+  });
+
+  test("preserves an existing unit with incomplete metadata for validation", () => {
+    expect(
+      createBookingUnitDefaults({
+        selectedAccount: unitlessEquityAccount,
+        lockedBooking: {
+          key: "locked",
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+        },
+        currentBooking: { key: "incomplete", unit: Unit.CURRENCY },
+        preserveCurrentBookingUnitForUnitlessEquity: true,
+      }),
+    ).toEqual({
+      unit: Unit.CURRENCY,
+      currency: undefined,
+      cryptocurrency: undefined,
+      symbol: undefined,
+      tradeCurrency: undefined,
+    });
+  });
+
   test("copies locked booking unit fields for unitless equity targets", () => {
     const selectedAccount = accountOption({
       value: "equity",
@@ -66,7 +174,16 @@ describe("createBookingUnitDefaults", () => {
     };
 
     expect(
-      createBookingUnitDefaults({ selectedAccount, lockedBooking }),
+      createBookingUnitDefaults({
+        selectedAccount,
+        lockedBooking,
+        currentBooking: {
+          key: "imported",
+          unit: Unit.CURRENCY,
+          currency: "EUR",
+        },
+        preserveCurrentBookingUnitForUnitlessEquity: true,
+      }),
     ).toEqual({
       unit: Unit.CRYPTOCURRENCY,
       currency: undefined,
