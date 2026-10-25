@@ -539,7 +539,7 @@ sign; debt amounts are positive magnitudes in those reports.
 - The Accounts scope (`BALANCE`) renders `Name`, `Ccy./Symbol`, `Balance`,
   `Balance (<referenceCurrency>)`, `Asset Class`, G/L, and row actions in that
   order.
-- `Ccy./Symbol` starts at 130px and can be resized and filtered. It shows
+- `Ccy./Symbol` starts at 180px and can be resized and filtered. It shows
   foreign currency codes, cryptocurrency tickers, or security symbols; security
   trade currencies are omitted. Group, virtual Archived, and total rows stay
   blank.

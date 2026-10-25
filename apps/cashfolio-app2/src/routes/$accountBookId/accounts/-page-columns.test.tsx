@@ -321,7 +321,7 @@ describe("asset class column", () => {
       {
         colId: "unitIdentifier",
         headerName: "Ccy./Symbol",
-        initialWidth: 130,
+        initialWidth: 180,
         resizable: true,
         filter: "agTextColumnFilter",
       },

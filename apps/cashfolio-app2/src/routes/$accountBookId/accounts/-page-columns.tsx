@@ -134,7 +134,7 @@ export function useAccountTreeColumnDefs(params: {
               colId: "unitIdentifier",
               headerName: "Ccy./Symbol",
               filter: "agTextColumnFilter",
-              initialWidth: 130,
+              initialWidth: 180,
               resizable: true,
               valueGetter: ({
                 data,
