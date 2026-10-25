@@ -57,7 +57,7 @@ for (const scenario of ["missing book", "missing ledger", "unmatched path"]) {
         ? `/${createId()}/accounts?tab=BALANCE&mode=active`
         : scenario === "missing ledger"
           ? `/${seeded.accountBookId}/${createId()}`
-          : `/${seeded.accountBookId}/accounts/unknown/extra`;
+          : `/${seeded.accountBookId}/accounts/unknown/extra?tab=BALANCE&mode=active`;
 
     await expectDirectNotFound(page, path);
     await page.getByRole("link", { name: "Go to App" }).click();
