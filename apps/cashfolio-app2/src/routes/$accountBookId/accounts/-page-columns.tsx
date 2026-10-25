@@ -40,13 +40,17 @@ export function getAccountListAssetClassValue(
   return getAssetClassLabel(data.assetClass);
 }
 
-export function getAccountListCurrencyValue(args: {
+export function getAccountListUnitIdentifierDisplayValue(args: {
   data: AccountsGridRow | undefined;
   referenceCurrency: string;
 }): string | null | undefined {
   const { data, referenceCurrency } = args;
 
-  if (!data || isReferenceCurrencyTotalFooterRow(data)) {
+  if (
+    !data ||
+    isReferenceCurrencyTotalFooterRow(data) ||
+    data.nodeType !== "account"
+  ) {
     return undefined;
   }
   if (!data.unit) return undefined;
@@ -54,7 +58,7 @@ export function getAccountListCurrencyValue(args: {
     case Unit.CURRENCY:
       return data.currency === referenceCurrency ? undefined : data.currency;
     case Unit.SECURITY:
-      return data.tradeCurrency;
+      return data.symbol;
     case Unit.CRYPTOCURRENCY:
       return data.cryptocurrency;
   }
@@ -127,25 +131,21 @@ export function useAccountTreeColumnDefs(params: {
       ...(!isEquityTab
         ? [
             {
-              colId: "currency",
-              headerName: "Ccy.",
-              filter: true,
-              width: 100,
+              colId: "unitIdentifier",
+              headerName: "Ccy./Symbol",
+              filter: "agTextColumnFilter",
+              initialWidth: 130,
+              resizable: true,
               valueGetter: ({
                 data,
               }: {
                 data: AccountsGridRow | undefined;
               }) => {
-                return getAccountListCurrencyValue({
+                return getAccountListUnitIdentifierDisplayValue({
                   data,
                   referenceCurrency,
                 });
               },
-            } satisfies ColDef<AccountsGridRow>,
-            {
-              field: "symbol",
-              filter: true,
-              width: 120,
             } satisfies ColDef<AccountsGridRow>,
             {
               field: "balance",

@@ -536,9 +536,13 @@ sign; debt amounts are positive magnitudes in those reports.
   viewport is too narrow to accommodate the frozen columns.
 - G/L figures use the order `Total`, `Realised`, `Unrealised` in the Accounts
   grid, account summary, calculation drawer, and period reconciliation cards.
-- The Accounts scope (`BALANCE`) renders `Name`, `Ccy.`, `Symbol`, `Balance`,
+- The Accounts scope (`BALANCE`) renders `Name`, `Ccy./Symbol`, `Balance`,
   `Balance (<referenceCurrency>)`, `Asset Class`, G/L, and row actions in that
   order.
+- `Ccy./Symbol` starts at 130px and can be resized and filtered. It shows
+  foreign currency codes, cryptocurrency tickers, or security symbols; security
+  trade currencies are omitted. Group, virtual Archived, and total rows stay
+  blank.
 - `Asset Class` follows the Balance columns, starts at 220px, and can be
   resized. Its text filter and tooltip use the full display label. Unset
   accounts show muted `Unclassified`; group, virtual Archived, and total rows
@@ -546,8 +550,8 @@ sign; debt amounts are positive magnitudes in those reports.
   horizontal scrolling.
 - `Balance` is account-level only (group rows are blank), with no aggregation.
 - Currency accounts whose currency matches the account book reference currency
-  leave `Ccy.` and `Balance` blank to avoid duplicating the value already shown
-  in `Balance (<referenceCurrency>)`.
+  leave `Ccy./Symbol` and `Balance` blank to avoid duplicating the value already
+  shown in `Balance (<referenceCurrency>)`.
 - `Balance (<referenceCurrency>)` is account-level for leaf accounts across
   `Unit.CURRENCY`, `Unit.CRYPTOCURRENCY`, and `Unit.SECURITY` when a reference
   conversion is available (or the raw balance is 0), and shows aggregated

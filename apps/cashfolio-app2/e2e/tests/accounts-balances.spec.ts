@@ -34,10 +34,14 @@ test("balance columns and unified totals across legacy URLs and archive expansio
 
   await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET&mode=active`);
 
-  await expect(page.getByRole("columnheader", { name: "Ccy." })).toBeVisible();
   await expect(
-    page.getByRole("columnheader", { name: "Symbol" }),
+    page.getByRole("columnheader", { name: "Ccy./Symbol", exact: true }),
   ).toBeVisible();
+  for (const name of ["Ccy.", "Symbol"]) {
+    await expect(
+      page.getByRole("columnheader", { name, exact: true }),
+    ).toHaveCount(0);
+  }
   await expect(
     page.getByRole("columnheader", { name: "Balance", exact: true }),
   ).toBeVisible();
@@ -46,35 +50,51 @@ test("balance columns and unified totals across legacy URLs and archive expansio
   ).toBeVisible();
   const assetFooterRow = agGridPinnedBottomRow(page);
   await expect(assetFooterRow).toContainText("Total");
+  await expect(agGridCellByColId(assetFooterRow, "unitIdentifier")).toHaveText(
+    /^\s*$/,
+  );
   await expect(
     agGridCellByColId(assetFooterRow, "balanceInReferenceCurrency"),
   ).toHaveText("212.00");
 
   const cashRow = agGridRowByText(page, seeded.cashAccount.name);
+  await expect(agGridCellByColId(cashRow, "unitIdentifier")).toHaveText(
+    /^\s*$/,
+  );
   await expect(agGridCellByColId(cashRow, "balance")).toHaveText(/^\s*$/);
   await expect(
     agGridCellByColId(cashRow, "balanceInReferenceCurrency"),
   ).toHaveText("-15.00");
 
   const usdRow = agGridRowByText(page, seededBalances.usdAccountName);
+  await expect(agGridCellByColId(usdRow, "unitIdentifier")).toHaveText("USD");
   await expect(agGridCellByColId(usdRow, "balance")).toHaveText("10.00");
   await expect(
     agGridCellByColId(usdRow, "balanceInReferenceCurrency"),
   ).toHaveText("5.00");
 
   const cryptoRow = agGridRowByText(page, seededBalances.cryptoAccountName);
+  await expect(agGridCellByColId(cryptoRow, "unitIdentifier")).toHaveText(
+    "BTC",
+  );
   await expect(agGridCellByColId(cryptoRow, "balance")).toHaveText("2.00000");
   await expect(
     agGridCellByColId(cryptoRow, "balanceInReferenceCurrency"),
   ).toHaveText("200.00");
 
   const securityRow = agGridRowByText(page, seededBalances.securityAccountName);
+  await expect(agGridCellByColId(securityRow, "unitIdentifier")).toHaveText(
+    "AAPL",
+  );
   await expect(agGridCellByColId(securityRow, "balance")).toHaveText("3");
   await expect(
     agGridCellByColId(securityRow, "balanceInReferenceCurrency"),
   ).toHaveText("15.00");
 
   const assetsGroupRow = agGridRowByText(page, "Assets");
+  await expect(agGridCellByColId(assetsGroupRow, "unitIdentifier")).toHaveText(
+    /^\s*$/,
+  );
   await expect(agGridCellByColId(assetsGroupRow, "balance")).toHaveText(
     /^\s*$/,
   );
@@ -97,6 +117,9 @@ test("balance columns and unified totals across legacy URLs and archive expansio
   const archivedUsdRow = agGridRowByText(
     page,
     seededAdditionalTabBalances.archivedAssetAccountName,
+  );
+  await expect(agGridCellByColId(archivedUsdRow, "unitIdentifier")).toHaveText(
+    "USD",
   );
   await expect(agGridCellByColId(archivedUsdRow, "balance")).toHaveText("8.00");
   await expect(
