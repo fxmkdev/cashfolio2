@@ -949,6 +949,63 @@ export const EditModalOpen: Story = {
   ),
 };
 
+export const AssetClassHelpEscapePreservesDraft: Story = {
+  render: () => (
+    <AccountsPageStoryHarness initialMode="active" startWithEditModal={true} />
+  ),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await findVisibleDialog(body, "Edit Account");
+    const name = within(dialog).getByRole("textbox", { name: "Name" });
+    const helpButton = within(dialog).getByRole("button", {
+      name: "Show Asset Class Help",
+    });
+    const draftName = "Unsaved Checking Account";
+
+    await userEvent.clear(name);
+    await userEvent.type(name, draftName);
+
+    for (const activation of ["click", "keyboard"] as const) {
+      if (activation === "click") {
+        await userEvent.click(helpButton);
+      } else {
+        await expect(helpButton).toHaveFocus();
+        await userEvent.keyboard("{Enter}");
+      }
+
+      const help = await body.findByRole("dialog", {
+        name: "Show Asset Class Help",
+      });
+      await waitFor(() => expect(help).toHaveFocus());
+      if (activation === "keyboard") {
+        // Also cover Escape when focus is still on the popover trigger.
+        helpButton.focus();
+      }
+      await userEvent.keyboard("{Escape}");
+
+      await waitFor(() => expect(help).not.toBeInTheDocument());
+      await expect(dialog).toBeVisible();
+      await expect(name).toHaveValue(draftName);
+      await waitFor(() => expect(helpButton).toHaveFocus());
+    }
+
+    for (const dismissTarget of [helpButton, name]) {
+      await userEvent.click(helpButton);
+      const help = await body.findByRole("dialog", {
+        name: "Show Asset Class Help",
+      });
+      await waitFor(() => expect(help).toHaveFocus());
+      await userEvent.click(dismissTarget);
+      await waitFor(() => expect(help).not.toBeInTheDocument());
+      await expect(dialog).toBeVisible();
+      await expect(name).toHaveValue(draftName);
+    }
+
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+  },
+};
+
 export const RouteSmoke: Story = {
   parameters: {
     router: {
