@@ -142,3 +142,31 @@ export function validateReorderAccountTreeItemsInput(data: unknown) {
     }),
   };
 }
+
+export function validateSetAccountsAssetClassInput(data: unknown): {
+  accountBookId: string;
+  accountIds: string[];
+  assetClass: AssetClass | null;
+} {
+  assertRecord(data);
+  const ids = requireArrayField(data, "accountIds");
+  if (!ids.length) throw new Error("Select at least one account.");
+  return {
+    accountBookId: requireStringField(data, "accountBookId"),
+    accountIds: [
+      ...new Set(
+        Array.from(ids, (id) =>
+          requireStringField(
+            { id },
+            "id",
+            "Each account id must be a nonempty string.",
+          ),
+        ),
+      ),
+    ],
+    assetClass:
+      data.assetClass === null
+        ? null
+        : requireEnumField(data, "assetClass", Object.values(AssetClass)),
+  };
+}

@@ -70,6 +70,16 @@ independent of Unit and cash-flow eligibility. It remains editable independently
 of immutable instrument identity. Statement imports preserve classification;
 system-created equity accounts remain null.
 
+`setAccountsAssetClass` accepts an account book ID, a nonempty list of account
+IDs, and an explicit nullable asset class. IDs are deduplicated. Authorization
+and the serialized account-book mutation boundary apply; every target must exist
+in that book and be a balance account before any write. Active and archived
+accounts are eligible. The transaction updates only asset class and invalidates
+period base-data caches after commit. It returns the target count. Both
+selected-account and group assignment submit explicit account IDs frozen when
+their dialog opens; newly added group members are excluded from that assignment.
+There is no group-level value or ongoing inheritance.
+
 Account queries and period base-data snapshots carry classification as metadata.
 Changing it uses the existing account mutation boundary, database cache revision
 trigger, post-commit cleanup, and router invalidation. Base-data cache v10

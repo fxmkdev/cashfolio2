@@ -1,5 +1,6 @@
 import { ActionIcon, Group, Tooltip } from "@mantine/core";
 import {
+  IconTags,
   IconArrowsSort,
   IconArchive,
   IconArchiveOff,
@@ -15,6 +16,8 @@ export function ArchivedAccountTreeActionsCell({
   deleteLabel,
   deletable,
   unarchiveLabel,
+  onSetAssetClass,
+  setAssetClassEnabled = true,
   onEdit,
   onDelete,
   onReorder,
@@ -27,6 +30,8 @@ export function ArchivedAccountTreeActionsCell({
   deleteLabel: string;
   deletable: boolean;
   unarchiveLabel: string;
+  onSetAssetClass?: () => void;
+  setAssetClassEnabled?: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onReorder?: () => void;
@@ -45,6 +50,27 @@ export function ArchivedAccountTreeActionsCell({
 
   return (
     <Group gap={4} wrap="nowrap" h="100%" align="center">
+      {onSetAssetClass && (
+        <Tooltip
+          label={
+            setAssetClassEnabled
+              ? "Set Asset Class for Accounts…"
+              : "This group contains no accounts"
+          }
+        >
+          <span style={TOOLTIP_TRIGGER_STYLE}>
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              onClick={onSetAssetClass}
+              disabled={!setAssetClassEnabled}
+              aria-label="Set Asset Class for Accounts…"
+            >
+              <IconTags size={16} />
+            </ActionIcon>
+          </span>
+        </Tooltip>
+      )}
       <Tooltip label={resolvedReorderTooltipLabel}>
         <span style={TOOLTIP_TRIGGER_STYLE}>
           <ActionIcon
@@ -107,6 +133,8 @@ export function ActiveAccountTreeActionsCell({
   deletable,
   reorderLabel,
   reorderEnabled = true,
+  onSetAssetClass,
+  setAssetClassEnabled = true,
   onEdit,
   onArchive,
   onDelete,
@@ -118,6 +146,8 @@ export function ActiveAccountTreeActionsCell({
   deletable: boolean;
   reorderLabel?: string;
   reorderEnabled?: boolean;
+  onSetAssetClass?: () => void;
+  setAssetClassEnabled?: boolean;
   onEdit: () => void;
   onArchive: () => void;
   onDelete: () => void;
@@ -134,6 +164,27 @@ export function ActiveAccountTreeActionsCell({
 
   return (
     <Group gap={4} wrap="nowrap" h="100%" align="center">
+      {onSetAssetClass && (
+        <Tooltip
+          label={
+            setAssetClassEnabled
+              ? "Set Asset Class for Accounts…"
+              : "This group contains no accounts"
+          }
+        >
+          <span style={TOOLTIP_TRIGGER_STYLE}>
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              onClick={onSetAssetClass}
+              disabled={!setAssetClassEnabled}
+              aria-label="Set Asset Class for Accounts…"
+            >
+              <IconTags size={16} />
+            </ActionIcon>
+          </span>
+        </Tooltip>
+      )}
       <Tooltip label={resolvedReorderTooltipLabel}>
         <span style={TOOLTIP_TRIGGER_STYLE}>
           <ActionIcon

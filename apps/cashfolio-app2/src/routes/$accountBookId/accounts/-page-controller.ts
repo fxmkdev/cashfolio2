@@ -1,3 +1,4 @@
+import { useAssetClassAssignment } from "./-use-asset-class-assignment";
 import { isVirtualArchivedGroup } from "./-archived-grid-rows";
 import { getAccountGainLossSummaries } from "@/server/account-gain-loss";
 import { useGainLossRequest } from "@/hooks/use-gain-loss-request";
@@ -9,6 +10,7 @@ import { useExpandedGroups } from "@/hooks/use-expanded-groups";
 import type { TransformedFormValues } from "@/components/account-editor/edit-account-modal";
 import type { AccountGroupTransformedFormValues } from "@/components/account-editor/edit-account-group-modal";
 import {
+  setAccountsAssetClass,
   archiveAccount,
   archiveAccountGroup,
   createAccount,
@@ -439,7 +441,22 @@ export function useAccountsPageController(args: {
           row.unarchivable,
       ),
   });
+  const assetClassAssignment = useAssetClassAssignment({
+    scopeKey,
+    enabled: !isEquityTab,
+    rows,
+    submit: (accountIds, assetClass) =>
+      setAccountsAssetClass({
+        data: { accountBookId: args.accountBookId, accountIds, assetClass },
+      }),
+    invalidate: args.invalidate,
+    onRefreshConstraints,
+  });
   const columnDefs = useAccountTreeColumnDefs({
+    onSetGroupAssetClass: !isEquityTab
+      ? assetClassAssignment.openGroup
+      : undefined,
+    canAssignGroupAssetClass: assetClassAssignment.canAssignGroup,
     gainLossData: gainLoss.data,
     isGainLossLoading: gainLoss.loading,
     isEquityTab,
@@ -456,6 +473,7 @@ export function useAccountsPageController(args: {
   });
 
   return {
+    assetClassAssignment: !isEquityTab ? assetClassAssignment : undefined,
     managementContext: args.managementContext ?? "accounts",
     gainLoss,
     onRefreshConstraints,

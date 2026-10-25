@@ -301,6 +301,22 @@ Unit, cash flags, groups, or other fields. Users can choose any class or clear
 back to Unclassified. Income, expense, and system equity accounts do not expose
 this selector.
 
+Accounts supports one-time bulk asset class assignment with checkbox selection
+and **Set Asset Class**. Only balance-account leaves are selectable, including
+archived accounts; filtered-out selections are removed, and header select-all
+uses the filtered account set. Ordinary cell clicks retain their existing
+behavior. Selection resets when switching account books or management contexts.
+
+Real balance-group row actions offer **Set Asset Class for Accounts…**. This
+includes all descendant accounts through persisted group relationships,
+including archived accounts and subgroups, independent of filters and expansion.
+Empty groups disable the action; virtual Archived groups do not offer it. The
+dialog freezes account IDs when opened, shows total and archived counts, and
+requires an explicit asset class or Unclassified. Applying replaces existing
+classifications for the displayed target set and all historical Report/History
+periods. Errors retain the choice for retry. Success clears selection and
+refreshes data. Groups do not store a class or provide inheritance.
+
 Assets and liabilities show classification beside the type and unit badges in
 the ledger header. The gray pill uses the light variant for a selected class and
 the outline variant for Unclassified, including on archived accounts. Its title

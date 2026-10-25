@@ -1,4 +1,9 @@
 import {
+  AssetClassAssignmentToolbar,
+  AssetClassAssignmentDialog,
+} from "./-asset-class-assignment";
+import type { AssetClassAssignment } from "./-use-asset-class-assignment";
+import {
   getAccountManagementPath,
   getAccountConstraintMessage,
   type AccountManagementContext,
@@ -62,6 +67,7 @@ type RowTarget = {
 };
 
 export type AccountsPageViewProps = {
+  assetClassAssignment?: AssetClassAssignment;
   managementContext?: AccountManagementContext;
   gainLoss?: {
     data?: AccountGainLossSummaries;
@@ -126,6 +132,7 @@ export type AccountsPageViewProps = {
 };
 
 export function AccountsPageView({
+  assetClassAssignment,
   managementContext = "accounts",
   gainLoss,
   accountBookId,
@@ -283,11 +290,23 @@ export function AccountsPageView({
           </Button>
         </Alert>
       ) : null}
+      {assetClassAssignment && (
+        <AssetClassAssignmentToolbar actions={assetClassAssignment} />
+      )}
+      {assetClassAssignment?.target && (
+        <AssetClassAssignmentDialog
+          target={assetClassAssignment.target}
+          onClose={assetClassAssignment.close}
+          onSubmit={assetClassAssignment.apply}
+          onRefreshConstraints={assetClassAssignment.onRefreshConstraints}
+        />
+      )}
       <AccountGainLossDetails
         data={gainLoss?.data}
         loading={gainLoss?.loading ?? false}
       >
         <DataGrid
+          {...assetClassAssignment?.gridProps}
           containerStyle={{ flex: 1, minHeight: 0 }}
           rowData={rows}
           columnDefs={columnDefs}
@@ -310,7 +329,10 @@ export function AccountsPageView({
           treeData={true}
           treeDataParentIdField="parentId"
           pinnedBottomRowData={pinnedBottomRowData}
-          onGridReady={onGridReady}
+          onGridReady={(event) => {
+            onGridReady?.(event);
+            assetClassAssignment?.gridProps.onGridReady?.(event);
+          }}
           isGroupOpenByDefault={isGroupOpenByDefault}
           onRowGroupOpened={onRowGroupOpened}
           getRowId={({ data }) => data.id}
