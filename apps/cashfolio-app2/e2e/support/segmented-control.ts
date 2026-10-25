@@ -20,9 +20,7 @@ export async function selectSegmentedControlOption(
     return;
   }
 
-  await control.scrollIntoViewIfNeeded();
   if ((await optionLabel.count()) > 0) {
-    await optionLabel.scrollIntoViewIfNeeded();
     await optionLabel.click();
   } else {
     await option.focus();

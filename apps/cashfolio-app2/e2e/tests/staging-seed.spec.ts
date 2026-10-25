@@ -1,3 +1,4 @@
+import { uploadStatementFile } from "../support/ui";
 import { expandArchivedGroups } from "../support/grid";
 import { Buffer } from "node:buffer";
 import { formatUtcDateForLocale } from "../../src/shared/date";
@@ -460,7 +461,7 @@ test("the sample CSV imports into the configured synthetic bank account", async 
   await expect(
     page.getByRole("heading", { name: "Import Statement" }),
   ).toBeVisible();
-  await page.locator('input[type="file"]').setInputFiles({
+  await uploadStatementFile(page, {
     name: "synthetic-statement.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(generateStatementImportSample(today)),

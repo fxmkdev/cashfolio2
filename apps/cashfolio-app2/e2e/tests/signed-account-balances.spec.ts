@@ -1,3 +1,4 @@
+import { uploadStatementFile } from "../support/ui";
 import { Buffer } from "node:buffer";
 import {
   seedDatabase,
@@ -162,7 +163,7 @@ test("liability import keeps configured sign inversion, negative previews, and d
     await page.getByRole("button", { name: "Account Actions" }).click();
     await page.getByRole("menuitem", { name: "Import Statement" }).click();
     await expect(page.getByText("Drop CSV File Here")).toBeVisible();
-    await page.locator('input[type="file"]').setInputFiles({
+    await uploadStatementFile(page, {
       name: "card.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(
