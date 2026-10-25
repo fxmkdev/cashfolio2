@@ -144,16 +144,14 @@ export const accountOptions: AccountOption[] = [
     label: "Salary (Income)",
     type: AccountType.EQUITY,
     equityAccountSubtype: EquityAccountSubtype.INCOME,
-    unit: Unit.CURRENCY,
-    currency: "CHF",
+    unit: null,
   },
   {
     value: "account-groceries",
     label: "Groceries (Expense)",
     type: AccountType.EQUITY,
     equityAccountSubtype: EquityAccountSubtype.EXPENSE,
-    unit: Unit.CURRENCY,
-    currency: "CHF",
+    unit: null,
   },
 ];
 

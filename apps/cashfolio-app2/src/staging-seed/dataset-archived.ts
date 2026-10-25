@@ -110,7 +110,6 @@ export function archivedHouseholdAccounts(target: SeedBook) {
     { ...CHF, isActive: false, assetClass: AssetClass.OTHER_ASSETS },
   );
   addAccount(target, "closed-project", "One-off project", AccountType.EQUITY, {
-    ...CHF,
     groupKey: "consulting",
     equityAccountSubtype: EquityAccountSubtype.INCOME,
     isActive: false,
@@ -121,7 +120,6 @@ export function archivedHouseholdAccounts(target: SeedBook) {
     ["closed-membership", "Sports club membership", "leisure"],
   ] as const) {
     addAccount(target, key, name, AccountType.EQUITY, {
-      ...CHF,
       groupKey,
       equityAccountSubtype: EquityAccountSubtype.EXPENSE,
       isActive: false,

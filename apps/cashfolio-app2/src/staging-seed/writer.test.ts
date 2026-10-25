@@ -1,8 +1,9 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { beforeEach, expect, it, vi } from "vitest";
 import { Prisma, type PrismaClient } from "../.prisma-client/client";
-import { generateStagingDataset } from "./dataset";
-import { replaceStagingData } from "./writer";
+import { Unit } from "../.prisma-client/enums";
+import { generateStagingDataset, type SeedAccount } from "./dataset";
+import { insertSeedBooks, replaceStagingData } from "./writer";
 import { SeedSafetyError } from "./target";
 
 vi.mock("node:timers/promises", () => ({
@@ -27,6 +28,64 @@ const summary = {
   testers: 1,
   books: [],
 };
+
+it.each([
+  { unit: Unit.CURRENCY },
+  { currency: "CHF" },
+  { cryptocurrency: "BTC" },
+  { symbol: "AAPL" },
+  { tradeCurrency: "USD" },
+])(
+  "rejects invalid category metadata %j before any seed database writes",
+  async (metadata) => {
+    const invalidDataset = {
+      ...dataset,
+      books: dataset.books.map((book) => ({
+        ...book,
+        accounts: book.accounts.map((account) =>
+          account.key === "groceries" ? { ...account, ...metadata } : account,
+        ),
+      })),
+    };
+    const transaction = vi.fn();
+    const createBook = vi.fn();
+    const client = { $transaction: transaction } as unknown as PrismaClient;
+    const tx = {
+      accountBook: { create: createBook },
+    } as unknown as Prisma.TransactionClient;
+
+    const message =
+      "Invalid seed account household/groceries: Unit metadata is only allowed for balance accounts";
+    await expect(
+      replaceStagingData(client, config, invalidDataset),
+    ).rejects.toThrow(message);
+    await expect(
+      insertSeedBooks(tx, invalidDataset, [{ id: "tester" }]),
+    ).rejects.toThrow(message);
+    expect(transaction).not.toHaveBeenCalled();
+    expect(createBook).not.toHaveBeenCalled();
+    expect(delay).not.toHaveBeenCalled();
+  },
+);
+
+it("rejects incomplete balance-account metadata using shared validation", async () => {
+  const invalidAccount: SeedAccount = {
+    ...dataset.books[0].accounts.find((account) => account.key === "current")!,
+    currency: undefined,
+  };
+  const invalidDataset = {
+    ...dataset,
+    books: [{ ...dataset.books[0], accounts: [invalidAccount] }],
+  };
+  const transaction = vi.fn();
+  const client = { $transaction: transaction } as unknown as PrismaClient;
+  await expect(
+    replaceStagingData(client, config, invalidDataset),
+  ).rejects.toThrow(
+    `Invalid seed account household/${invalidAccount.key}: Currency is required`,
+  );
+  expect(transaction).not.toHaveBeenCalled();
+});
 
 function prismaError(code: string, meta?: Record<string, unknown>) {
   return new Prisma.PrismaClientKnownRequestError("transaction failure", {

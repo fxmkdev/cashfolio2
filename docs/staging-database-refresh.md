@@ -19,6 +19,19 @@ transaction write conflicts, waiting 100 ms and then 200 ms before retries. Each
 attempt repeats destination verification and lock acquisition. Other errors fail
 immediately; exhausted retries fail the release.
 
+Seed accounts are checked with shared application account validation before the
+replacement transaction begins and before direct seed insertion writes. Invalid
+input is rejected with its book/account key, rather than silently corrected.
+Equity accounts (income, expense, Gain/Loss, and Opening Balances) must not
+contain unit, currency, cryptocurrency, symbol, or trade-currency metadata.
+Those fields belong to their bookings; for example, the Bitcoin network-fee
+booking carries BTC metadata while its expense category has none. Application
+create/update requests retain their existing normalization of hidden category
+unit fields before validation.
+
+The corrected fixtures take effect through the normal staging refresh or
+deployment; changing them does not immediately modify deployed data.
+
 The `Refresh staging database` workflow rebuilds and redeploys staging daily at
 03:30 Europe/Zurich, keeping the dataset current even without code changes. It
 also supports manual runs from `main`. It no longer resets staging from

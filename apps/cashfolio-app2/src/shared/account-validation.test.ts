@@ -19,6 +19,33 @@ import {
 } from "./account-validation";
 import type { AccountInput } from "./account-validation-types";
 
+describe("equity account unit metadata", () => {
+  test.each(Object.values(EquityAccountSubtype))(
+    "rejects each unit field on %s equity accounts",
+    (equityAccountSubtype) => {
+      const input: AccountInput = {
+        accountBookId: "book",
+        name: "Category",
+        type: AccountType.EQUITY,
+        equityAccountSubtype,
+      };
+      expect(() => validateAccountInput(input)).not.toThrow();
+      for (const metadata of [
+        { unit: Unit.CURRENCY },
+        { currency: "CHF" },
+        { cryptocurrency: "BTC" },
+        { symbol: "AAPL" },
+        { tradeCurrency: "USD" },
+        { currency: "" },
+      ]) {
+        expect(() => validateAccountInput({ ...input, ...metadata })).toThrow(
+          "Unit metadata is only allowed for balance accounts",
+        );
+      }
+    },
+  );
+});
+
 describe("asset class eligibility", () => {
   test.each(Object.values(AssetClass))(
     "allows %s independently of unit",

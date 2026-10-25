@@ -22,6 +22,43 @@ const today = new Date("2026-10-10T00:00:00.000Z");
 const dataset = generateStagingDataset(today);
 const household = dataset.books[0];
 
+it("keeps all unit metadata off equity accounts while retaining booking units", () => {
+  for (const book of dataset.books) {
+    const equityAccounts = book.accounts.filter(
+      (account) => account.type === AccountType.EQUITY,
+    );
+    for (const account of equityAccounts) {
+      for (const field of [
+        "unit",
+        "currency",
+        "cryptocurrency",
+        "symbol",
+        "tradeCurrency",
+      ] as const) {
+        expect(
+          account[field],
+          `${book.key}/${account.key}.${field}`,
+        ).toBeUndefined();
+      }
+    }
+    const equityKeys = new Set(equityAccounts.map((account) => account.key));
+    for (const booking of book.transactions.flatMap(
+      ({ bookings }) => bookings,
+    )) {
+      if (!equityKeys.has(booking.accountKey)) continue;
+      expect(booking.unit).toBeDefined();
+      if (booking.unit === Unit.CURRENCY) expect(booking.currency).toBeTruthy();
+      if (booking.unit === Unit.CRYPTOCURRENCY) {
+        expect(booking.cryptocurrency).toBeTruthy();
+      }
+      if (booking.unit === Unit.SECURITY) {
+        expect(booking.symbol).toBeTruthy();
+        expect(booking.tradeCurrency).toBeTruthy();
+      }
+    }
+  }
+});
+
 it("uses curated asset classes for active and archived demo balance accounts", () => {
   const classifications = (bookKey: string) =>
     Object.fromEntries(
@@ -312,8 +349,6 @@ describe("staging synthetic dataset", () => {
       ).toMatchObject({
         type: AccountType.EQUITY,
         equityAccountSubtype: EquityAccountSubtype.EXPENSE,
-        unit: Unit.CRYPTOCURRENCY,
-        cryptocurrency: "BTC",
       });
       expect(
         bookings.some(

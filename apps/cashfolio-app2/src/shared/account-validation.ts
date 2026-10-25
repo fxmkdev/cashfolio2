@@ -65,6 +65,22 @@ export function validateAccountUnit(
   return unit ? null : "Unit is required";
 }
 
+function validateEquityAccountUnitMetadata(data: AccountInput): string | null {
+  if (
+    data.type === "EQUITY" &&
+    [
+      data.unit,
+      data.currency,
+      data.cryptocurrency,
+      data.symbol,
+      data.tradeCurrency,
+    ].some((value) => value != null)
+  ) {
+    return "Unit metadata is only allowed for balance accounts";
+  }
+  return null;
+}
+
 export function validateAccountAssetClass(
   assetClass: AccountInput["assetClass"],
   type?: AccountType,
@@ -185,6 +201,7 @@ export function validateAccountInput(
   const errors = [
     validateAccountName(data.name, siblingNames),
     validateEquitySubtypeTypeCombination(data.type, data.equityAccountSubtype),
+    validateEquityAccountUnitMetadata(data),
     validateAccountUnit(data.unit, data.type),
     validateAccountAssetClass(data.assetClass, data.type),
     validateAccountCurrency(data.currency, data.unit, data.type),

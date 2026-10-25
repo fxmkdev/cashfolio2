@@ -29,21 +29,15 @@ const accounts: AccountOption[] = [
 ];
 
 describe("createEditTransactionColumnDefs", () => {
-  test.each(
-    [EquityAccountSubtype.INCOME, EquityAccountSubtype.EXPENSE].flatMap(
-      (equityAccountSubtype) =>
-        [null, Unit.CURRENCY].map((unit) => ({ equityAccountSubtype, unit })),
-    ),
-  )(
-    "keeps unit metadata editable for a $equityAccountSubtype category with stored unit $unit",
-    ({ equityAccountSubtype, unit }) => {
+  test.each([EquityAccountSubtype.INCOME, EquityAccountSubtype.EXPENSE])(
+    "keeps unit metadata editable for a %s category",
+    (equityAccountSubtype) => {
       const category: AccountOption = {
         value: "category",
         label: "Category",
         type: AccountType.EQUITY,
         equityAccountSubtype,
-        unit,
-        currency: unit === Unit.CURRENCY ? "CHF" : undefined,
+        unit: null,
       };
       const columnDefs = createEditTransactionColumnDefs({
         accounts: [...accounts, category],

@@ -25,21 +25,15 @@ function accountOption(
 }
 
 describe("createBookingUnitDefaults", () => {
-  describe.each(
-    [EquityAccountSubtype.INCOME, EquityAccountSubtype.EXPENSE].flatMap(
-      (equityAccountSubtype) =>
-        [null, Unit.CURRENCY].map((unit) => ({ equityAccountSubtype, unit })),
-    ),
-  )(
-    "$equityAccountSubtype category with stored unit $unit",
-    ({ equityAccountSubtype, unit }) => {
+  describe.each([EquityAccountSubtype.INCOME, EquityAccountSubtype.EXPENSE])(
+    "%s category",
+    (equityAccountSubtype) => {
       const selectedCategory = accountOption({
         value: "category",
         label: "Category",
         type: AccountType.EQUITY,
         equityAccountSubtype,
-        unit,
-        currency: unit === Unit.CURRENCY ? "CHF" : undefined,
+        unit: null,
       });
       const unitFields: Pick<
         BookingValues,

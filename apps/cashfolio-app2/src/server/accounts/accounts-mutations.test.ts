@@ -416,6 +416,10 @@ describe("updateAccount opening balance management", () => {
   );
 
   it("ignores stale submitted unit identity fields when updating unitless equity accounts", async () => {
+    const actual = await vi.importActual<
+      typeof import("../../shared/account-validation")
+    >("../../shared/account-validation");
+    validateAccountInput.mockImplementationOnce(actual.validateAccountInput);
     tx.account.findUniqueOrThrow.mockResolvedValueOnce({
       type: AccountType.EQUITY,
       equityAccountSubtype: EquityAccountSubtype.EXPENSE,
@@ -448,6 +452,9 @@ describe("updateAccount opening balance management", () => {
         sortOrder: 2,
         unit: Unit.CURRENCY,
         currency: "CHF",
+        cryptocurrency: "BTC",
+        symbol: "AAPL",
+        tradeCurrency: "USD",
       },
     });
 
@@ -478,6 +485,10 @@ describe("updateAccount opening balance management", () => {
   });
 
   it("stores newly created equity accounts without hidden unit identity fields", async () => {
+    const actual = await vi.importActual<
+      typeof import("../../shared/account-validation")
+    >("../../shared/account-validation");
+    validateAccountInput.mockImplementationOnce(actual.validateAccountInput);
     tx.account.create.mockResolvedValueOnce({
       id: "account-2",
       name: "Groceries",
@@ -500,6 +511,9 @@ describe("updateAccount opening balance management", () => {
         sortOrder: 1,
         unit: Unit.CURRENCY,
         currency: "CHF",
+        cryptocurrency: "BTC",
+        symbol: "AAPL",
+        tradeCurrency: "USD",
       },
     });
 

@@ -64,7 +64,6 @@ const editCategoryUnitAndCurrency: Story["play"] = async ({
     await waitFor(() => expect(categoryCell(column)).toHaveTextContent(label));
   }
 
-  // The shared fixture stores Currency/CHF on the category, as the staging seed does.
   await selectCellOption("unit", "Crypto");
   await selectCellOption("unit", "Currency");
   await selectCellOption("ccy", "EUR");

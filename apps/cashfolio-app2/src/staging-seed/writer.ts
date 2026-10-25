@@ -7,6 +7,7 @@ import {
   UserRole,
 } from "../.prisma-client/enums";
 import { GAIN_LOSS_ACCOUNT_KEY, type SeedDataset } from "./dataset";
+import { validateAccountInput } from "../shared/account-validation";
 import {
   SeedSafetyError,
   verifyServerIdentity,
@@ -30,6 +31,22 @@ export type SeedSummary = {
 const BATCH_SIZE = 500;
 const MAX_REPLACEMENT_ATTEMPTS = 3;
 
+function validateSeedAccounts(dataset: SeedDataset): void {
+  for (const book of dataset.books) {
+    for (const account of book.accounts) {
+      try {
+        validateAccountInput({ ...account, accountBookId: book.key });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Invalid account";
+        throw new SeedSafetyError(
+          `Invalid seed account ${book.key}/${account.key}: ${message}`,
+        );
+      }
+    }
+  }
+}
+
 type ReplacementConfig = {
   target: ApprovedSeedTarget;
   testerExternalIds: string[];
@@ -52,6 +69,7 @@ export async function insertSeedBooks(
   dataset: SeedDataset,
   users: { id: string }[],
 ): Promise<SeedSummary> {
+  validateSeedAccounts(dataset);
   const summary: SeedSummary = {
     from: dataset.books[0].startDate.toISOString().slice(0, 10),
     through: dataset.today.toISOString().slice(0, 10),
@@ -183,6 +201,7 @@ export async function replaceStagingData(
       "At least one configured tester is required before replacement.",
     );
   }
+  validateSeedAccounts(dataset);
   for (let attempt = 1; ; attempt++) {
     try {
       return await replaceStagingDataOnce(prisma, config, dataset);
