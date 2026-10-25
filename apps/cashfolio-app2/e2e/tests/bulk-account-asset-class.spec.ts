@@ -40,6 +40,8 @@ test("assigns selected active and archived accounts, replaces existing classes, 
     })),
   });
   await page.goto(`/${book.accountBookId}/accounts`);
+  // The grid loads lazily; wait for its Archived wrapper before counting expanders.
+  await expect(page.locator('[row-id="__archived__:root"]')).toBeVisible();
   await expandArchivedGroups(page);
   for (const id of ids)
     await clickGridRowSelectionCheckbox(
