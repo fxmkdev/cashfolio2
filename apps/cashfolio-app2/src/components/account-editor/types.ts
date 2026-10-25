@@ -12,7 +12,7 @@ import {
 import { type AccountBookUnitUsage } from "../../shared/account-book-unit-usage";
 
 export type AccountTypeDescriptor =
-  "BALANCE" | "ASSET" | "LIABILITY" | `EQUITY-${EquityAccountSubtype}`;
+  "BALANCE" | `EQUITY-${EquityAccountSubtype}`;
 
 export type FormValues = {
   assetClass?: AssetClass | "" | null;

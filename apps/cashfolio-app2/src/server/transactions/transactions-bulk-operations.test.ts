@@ -48,7 +48,7 @@ import {
 const target = {
   id: "target",
   isActive: true,
-  type: AccountType.ASSET,
+  type: AccountType.BALANCE,
   equityAccountSubtype: null,
   unit: Unit.CURRENCY,
   currency: "CHF",

@@ -37,7 +37,7 @@ function disabled(disabledReason: string): ActionAvailability {
 export function accountTypeRequiresZeroBalanceForArchive(
   accountType: AccountType,
 ): boolean {
-  return accountType === "ASSET" || accountType === "LIABILITY";
+  return accountType === "BALANCE";
 }
 
 export function getAccountDeleteAvailability(

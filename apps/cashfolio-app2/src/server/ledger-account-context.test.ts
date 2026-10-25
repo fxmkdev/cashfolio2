@@ -10,7 +10,7 @@ import {
 } from "./ledger-account-context";
 
 const validInput = {
-  accountType: AccountType.ASSET,
+  accountType: AccountType.BALANCE,
   accountEquityAccountSubtype: null,
   accountUnit: Unit.CURRENCY,
   accountCurrency: "CHF",
@@ -22,7 +22,7 @@ const validInput = {
 describe("parseLedgerAccountContextFromInput", () => {
   it("parses a complete ledger account context", () => {
     expect(parseLedgerAccountContextFromInput(validInput)).toEqual({
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       unit: Unit.CURRENCY,
       currency: "CHF",
@@ -107,7 +107,7 @@ describe("parseLedgerAccountContextFromInput", () => {
 
 describe("doesLedgerAccountContextMatchAccount", () => {
   const accountContext = {
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     equityAccountSubtype: null,
     unit: Unit.SECURITY,
     currency: null,
@@ -127,7 +127,7 @@ describe("doesLedgerAccountContextMatchAccount", () => {
 
   it("rejects mismatched account contexts", () => {
     for (const account of [
-      { ...accountContext, type: AccountType.LIABILITY },
+      { ...accountContext, type: AccountType.EQUITY },
       {
         ...accountContext,
         equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,

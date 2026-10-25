@@ -438,14 +438,8 @@ describe("staging synthetic dataset", () => {
 
   it("includes realistic balances, liabilities, cash-flow flags and safe archived accounts", () => {
     for (const account of household.accounts) {
-      if (account.type === AccountType.ASSET) {
-        expect(accountBalance(account.key).gte(0)).toBe(true);
-      }
-      if (account.type === AccountType.LIABILITY) {
-        expect(accountBalance(account.key).lte(0)).toBe(true);
-      }
       if (account.isCashAccount) {
-        expect(account.type).toBe(AccountType.ASSET);
+        expect(account.type).toBe(AccountType.BALANCE);
         expect(account.unit).toBe(Unit.CURRENCY);
       }
       if (!account.isActive && account.type !== AccountType.EQUITY)
@@ -505,9 +499,7 @@ describe("staging synthetic dataset", () => {
           (account) => `${account.type}:${account.equityAccountSubtype ?? ""}`,
         ),
       ),
-    ).toEqual(
-      new Set(["ASSET:", "LIABILITY:", "EQUITY:INCOME", "EQUITY:EXPENSE"]),
-    );
+    ).toEqual(new Set(["BALANCE:", "EQUITY:INCOME", "EQUITY:EXPENSE"]));
     for (const account of archived) {
       const postings = allBookings().filter(
         (booking) => booking.accountKey === account.key,

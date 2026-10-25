@@ -44,7 +44,7 @@ function booking(
     accountId,
     date: day,
     value: toMoney(value),
-    accountType: AccountType.ASSET,
+    accountType: AccountType.BALANCE,
     equityAccountSubtype: null,
     description: `${id} description`,
     transactionDescription: `${id} transaction`,

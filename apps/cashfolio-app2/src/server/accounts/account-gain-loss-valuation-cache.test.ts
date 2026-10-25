@@ -72,7 +72,7 @@ const summaryKey = getAccountGainLossCacheEntryKey({
 const list = () =>
   queryAccountGainLossSummaries({
     accountBookId: "book",
-    type: "ASSET",
+    type: "BALANCE",
     accountState: "active",
   });
 const ledger = () =>
@@ -106,7 +106,7 @@ beforeEach(() => {
     {
       id: "holding",
       name: "Holding",
-      type: "ASSET",
+      type: "BALANCE",
       isActive: true,
       groupId: null,
       unit: "SECURITY",

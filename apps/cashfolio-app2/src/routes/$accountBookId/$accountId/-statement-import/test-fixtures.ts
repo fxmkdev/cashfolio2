@@ -27,7 +27,7 @@ export const accountOptions: AccountOption[] = [
     label: "Checking",
     unit: Unit.CURRENCY,
     currency: "CHF",
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
   },
   {
     value: "income-1",
@@ -48,7 +48,7 @@ export const accountOptions: AccountOption[] = [
     label: "USD Cash",
     unit: Unit.CURRENCY,
     currency: "USD",
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
   },
 ];
 

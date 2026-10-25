@@ -22,7 +22,7 @@ describe("isGainLossAccount", () => {
     ).toBe(false);
     expect(
       isGainLossAccount({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
       }),
     ).toBe(false);
@@ -38,7 +38,7 @@ describe("validateGainLossSimpleTransactionInvariant", () => {
           equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
         },
         {
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           equityAccountSubtype: null,
         },
       ]),
@@ -53,7 +53,7 @@ describe("validateGainLossSimpleTransactionInvariant", () => {
           equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
         },
         {
-          type: AccountType.LIABILITY,
+          type: AccountType.BALANCE,
           equityAccountSubtype: null,
         },
       ]),
@@ -68,11 +68,11 @@ describe("validateGainLossSimpleTransactionInvariant", () => {
           equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
         },
         {
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           equityAccountSubtype: null,
         },
         {
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           equityAccountSubtype: null,
         },
       ]),

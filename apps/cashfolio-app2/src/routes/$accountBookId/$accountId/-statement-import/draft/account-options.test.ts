@@ -20,7 +20,7 @@ describe("statement import account options", () => {
     const archivedCurrentAccount = {
       id: "asset-1",
       isActive: false,
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
     };
     const archivedOtherAccount = {
@@ -58,7 +58,7 @@ describe("statement import account options", () => {
   test("requires an account statement import format", () => {
     expect(
       getStatementImportDisabledReason({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         currency: "CHF",
         cryptocurrency: null,
@@ -71,7 +71,7 @@ describe("statement import account options", () => {
     );
     expect(
       getStatementImportDisabledReason({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         currency: "CHF",
         cryptocurrency: null,

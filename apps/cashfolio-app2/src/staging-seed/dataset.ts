@@ -63,14 +63,16 @@ function threeYearsBefore(today: Date): Date {
 
 function edgeCases(startDate: Date, today: Date): SeedBook {
   const target = book("edge-cases", "2. Valuation Edge Cases", startDate);
-  addGroup(target, "cash", "Cash", AccountType.ASSET, { isCashAccount: true });
-  addAccount(target, "current", "Transfer account CHF", AccountType.ASSET, {
+  addGroup(target, "cash", "Cash", AccountType.BALANCE, {
+    isCashAccount: true,
+  });
+  addAccount(target, "current", "Transfer account CHF", AccountType.BALANCE, {
     ...CHF,
     groupKey: "cash",
     isCashAccount: true,
     assetClass: AssetClass.CASH_AND_CASH_EQUIVALENTS,
   });
-  addAccount(target, "eur", "Transfer account EUR", AccountType.ASSET, {
+  addAccount(target, "eur", "Transfer account EUR", AccountType.BALANCE, {
     ...EUR,
     groupKey: "cash",
     isCashAccount: true,
@@ -83,7 +85,7 @@ function edgeCases(startDate: Date, today: Date): SeedBook {
     target,
     "unlisted",
     "Unlisted investment (valuation unavailable)",
-    AccountType.ASSET,
+    AccountType.BALANCE,
     {
       unit: Unit.SECURITY,
       symbol: "CFDEMO_UNLISTED",

@@ -15,7 +15,7 @@ function createAccountRow(overrides: Partial<TreeRow> = {}): TreeRow {
     id: "account-1",
     nodeType: "account",
     name: "Cash",
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     equityAccountSubtype: null,
     unit: Unit.CURRENCY,
     currency: "CHF",
@@ -44,7 +44,7 @@ function createGroupRow(): TreeRow {
     id: "group-1",
     nodeType: "accountGroup",
     name: "Assets",
-    type: AccountType.ASSET,
+    type: AccountType.BALANCE,
     equityAccountSubtype: null,
     unit: null,
     currency: null,
@@ -90,7 +90,7 @@ describe("account list column value getters", () => {
     [null, "Unclassified"],
     [undefined, "Unclassified"],
   ] as const)("displays %s using its shared label", (assetClass, label) => {
-    for (const type of [AccountType.ASSET, AccountType.LIABILITY]) {
+    for (const type of [AccountType.BALANCE]) {
       for (const isActive of [true, false]) {
         expect(
           getAccountListAssetClassValue(
@@ -214,7 +214,7 @@ describe("account tree Delete explanations", () => {
           const row =
             nodeType === "account" ? createAccountRow() : createGroupRow();
           row.isActive = isActive;
-          row.type = isEquityTab ? AccountType.EQUITY : AccountType.ASSET;
+          row.type = isEquityTab ? AccountType.EQUITY : AccountType.BALANCE;
           row.deletable = false;
           row.deleteDisabledReason =
             nodeType === "account"

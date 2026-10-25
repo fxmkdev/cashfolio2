@@ -25,7 +25,7 @@ describe("asset class form values", () => {
     (assetClass) => {
       const initial = createAccountInitialValues({
         name: "Portfolio",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         assetClass,
         unit: Unit.CURRENCY,
         currency: "USD",
@@ -45,7 +45,7 @@ describe("asset class form values", () => {
       expect(
         transformAccountValues({
           name: "Account",
-          typeDescriptor: AccountType.ASSET,
+          typeDescriptor: AccountType.BALANCE,
           unit,
           isCashAccount: true,
         }).assetClass,
@@ -53,7 +53,7 @@ describe("asset class form values", () => {
     }
     expect(
       transformAccountValues({
-        typeDescriptor: AccountType.ASSET,
+        typeDescriptor: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         assetClass: "",
       }).assetClass,
@@ -110,7 +110,7 @@ describe("transformAccountValues", () => {
     expect(
       transformAccountValues({
         name: "Brokerage",
-        typeDescriptor: AccountType.ASSET,
+        typeDescriptor: AccountType.BALANCE,
         groupId: "group-assets",
         sortOrder: 2,
         openingBalance: "125.5",
@@ -123,7 +123,7 @@ describe("transformAccountValues", () => {
     ).toEqual({
       assetClass: null,
       name: "Brokerage",
-      typeDescriptor: AccountType.ASSET,
+      typeDescriptor: AccountType.BALANCE,
       groupId: "group-assets",
       sortOrder: 2,
       openingBalance: 125.5,
@@ -132,7 +132,7 @@ describe("transformAccountValues", () => {
       tradeCurrency: "USD",
       statementImportCsvFormat,
       isCashAccount: false,
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
     });
   });
 
@@ -140,7 +140,7 @@ describe("transformAccountValues", () => {
     expect(
       transformAccountValues({
         name: "Cash",
-        typeDescriptor: AccountType.ASSET,
+        typeDescriptor: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         currency: "CHF",
         statementImportCsvFormat: "   ",
@@ -152,7 +152,10 @@ describe("transformAccountValues", () => {
 
   test("validates statement import format JSON", () => {
     expect(
-      validateStatementImportCsvFormatFormValue("{not-json", AccountType.ASSET),
+      validateStatementImportCsvFormatFormValue(
+        "{not-json",
+        AccountType.BALANCE,
+      ),
     ).toBe("Statement import CSV format must be valid JSON.");
     expect(
       validateStatementImportCsvFormatFormValue(
@@ -161,7 +164,7 @@ describe("transformAccountValues", () => {
           delimitersToGuess: [","],
           columns: ["date", "amount", "description"],
         }),
-        AccountType.ASSET,
+        AccountType.BALANCE,
       ),
     ).toBeNull();
   });
@@ -170,13 +173,13 @@ describe("transformAccountValues", () => {
     expect(
       transformAccountValues({
         name: "Checking",
-        typeDescriptor: AccountType.ASSET,
+        typeDescriptor: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         currency: "CHF",
         isCashAccount: true,
       }),
     ).toMatchObject({
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       unit: Unit.CURRENCY,
       currency: "CHF",
       isCashAccount: true,
@@ -195,7 +198,7 @@ describe("createAccountInitialValues", () => {
     expect(
       createAccountInitialValues({
         name: "Checking",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
         groupId: null,
         sortOrder: null,
@@ -211,7 +214,7 @@ describe("createAccountInitialValues", () => {
     ).toEqual({
       assetClass: null,
       name: "Checking",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       groupId: undefined,
       sortOrder: undefined,
@@ -232,14 +235,14 @@ describe("account cash group helpers", () => {
     {
       value: "cash-group",
       label: "Cash",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       isCashAccount: true,
     },
     {
       value: "asset-group",
       label: "Assets",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
       isCashAccount: false,
     },
@@ -248,7 +251,7 @@ describe("account cash group helpers", () => {
   test("inherits cash status from selected account group", () => {
     expect(
       resolveAccountCashAccountFormValue({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         groupId: "cash-group",
         isCashAccount: false,
@@ -257,7 +260,7 @@ describe("account cash group helpers", () => {
     ).toBe(true);
     expect(
       resolveAccountCashAccountFormValue({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         groupId: "asset-group",
         isCashAccount: true,
@@ -269,7 +272,7 @@ describe("account cash group helpers", () => {
   test("keeps root cash account selections independent", () => {
     expect(
       resolveAccountCashAccountFormValue({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         isCashAccount: true,
         accountGroups,
@@ -280,14 +283,14 @@ describe("account cash group helpers", () => {
   test("explains disabled cash account state", () => {
     expect(
       getCashAccountDisabledReason({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
         groupId: "cash-group",
       }),
     ).toBe("Cash account status is inherited from the selected group.");
     expect(
       getCashAccountDisabledReason({
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.SECURITY,
       }),
     ).toBe("Only root-level currency accounts can be marked as cash accounts.");
@@ -296,14 +299,14 @@ describe("account cash group helpers", () => {
   test("blocks cash group options for non-currency assets", () => {
     expect(
       isAccountGroupCompatibleWithAccountCashRules({
-        accountType: AccountType.ASSET,
+        accountType: AccountType.BALANCE,
         accountUnit: Unit.SECURITY,
         group: { isCashAccount: true },
       }),
     ).toBe(false);
     expect(
       isAccountGroupCompatibleWithAccountCashRules({
-        accountType: AccountType.ASSET,
+        accountType: AccountType.BALANCE,
         accountUnit: Unit.SECURITY,
         group: { isCashAccount: false },
       }),
@@ -311,8 +314,8 @@ describe("account cash group helpers", () => {
   });
 
   test.each([
-    ["security asset", AccountType.ASSET, Unit.SECURITY],
-    ["crypto asset", AccountType.ASSET, Unit.CRYPTOCURRENCY],
+    ["security asset", AccountType.BALANCE, Unit.SECURITY],
+    ["crypto asset", AccountType.BALANCE, Unit.CRYPTOCURRENCY],
     ["equity", AccountType.EQUITY, Unit.CURRENCY],
   ])(
     "returns a group error when moving a %s account into a cash group",
@@ -328,7 +331,7 @@ describe("account cash group helpers", () => {
     },
   );
 
-  test.each([AccountType.ASSET, AccountType.LIABILITY])(
+  test.each([AccountType.BALANCE])(
     "allows currency %s accounts in cash groups",
     (accountType) => {
       expect(
@@ -347,8 +350,8 @@ describe("account cash group helpers", () => {
       applyAccountGroupCashInheritance(
         {
           name: "Brokerage",
-          typeDescriptor: AccountType.ASSET,
-          type: AccountType.ASSET,
+          typeDescriptor: AccountType.BALANCE,
+          type: AccountType.BALANCE,
           unit: Unit.SECURITY,
           groupId: "asset-group",
           isCashAccount: true,

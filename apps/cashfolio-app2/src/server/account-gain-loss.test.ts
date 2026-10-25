@@ -31,7 +31,7 @@ beforeEach(() => {
 });
 it("authorizes list summaries and details before querying", async () => {
   await getAccountGainLossSummaries({
-    data: { accountBookId: "book", type: "ASSET", accountState: "active" },
+    data: { accountBookId: "book", type: "BALANCE", accountState: "active" },
   });
   await getAccountGainLoss({
     data: { accountBookId: "book", accountId: "a", includeDetails: true },
@@ -51,7 +51,7 @@ it("never queries an unauthorized book", async () => {
 it("authorizes and forwards the unified account scope", async () => {
   const data = {
     accountBookId: "book",
-    type: "ASSET" as const,
+    type: "BALANCE" as const,
     accountState: "all" as const,
   };
   await getAccountGainLossSummaries({ data });
@@ -63,7 +63,7 @@ it("rejects invalid list scopes", () => {
     getAccountGainLossSummaries({
       data: {
         accountBookId: "book",
-        type: "EQUITY" as "ASSET",
+        type: "EQUITY" as "BALANCE",
         accountState: "active",
       },
     }),
@@ -72,7 +72,7 @@ it("rejects invalid list scopes", () => {
     getAccountGainLossSummaries({
       data: {
         accountBookId: "book",
-        type: "ASSET",
+        type: "BALANCE",
         accountState: "invalid" as "active",
       },
     }),

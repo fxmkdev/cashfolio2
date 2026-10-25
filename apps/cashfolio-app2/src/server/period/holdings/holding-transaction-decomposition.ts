@@ -133,8 +133,7 @@ export function decomposeHoldingTransaction(
     const unit = toHoldingUnitIdentifier(booking);
     if (
       !holdingAccountIds.has(booking.accountId) ||
-      (booking.accountType !== "ASSET" &&
-        booking.accountType !== "LIABILITY") ||
+      booking.accountType !== "BALANCE" ||
       !unit ||
       isNearZero(booking.value)
     )

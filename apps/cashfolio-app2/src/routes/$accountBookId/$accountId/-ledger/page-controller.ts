@@ -377,7 +377,7 @@ export function useLedgerPageController(args: {
     account.type === AccountType.EQUITY && account.equityAccountSubtype
       ? `EQUITY-${account.equityAccountSubtype}`
       : account.type
-  ) as "ASSET" | "LIABILITY" | `EQUITY-${EquityAccountSubtype}`;
+  ) as "BALANCE" | `EQUITY-${EquityAccountSubtype}`;
   const accountActions = createLedgerAccountMutationActions({
     accountBookId: args.accountBookId,
     accountId: account.id,

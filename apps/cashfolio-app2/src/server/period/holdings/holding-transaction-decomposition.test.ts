@@ -19,7 +19,7 @@ function booking(
     tradeCurrency: "CHF",
     currency: null,
     cryptocurrency: null,
-    accountType: "ASSET",
+    accountType: "BALANCE",
     equityAccountSubtype: null,
   };
 }
@@ -28,10 +28,7 @@ function split(bookings: HoldingTransactionBooking[]) {
     bookings,
     new Set(
       bookings
-        .filter(
-          (item) =>
-            item.accountType === "ASSET" || item.accountType === "LIABILITY",
-        )
+        .filter((item) => item.accountType === "BALANCE")
         .map((item) => item.accountId),
     ),
   );

@@ -53,7 +53,7 @@ async function loadAccountGainLossInputs(
     db.account.findMany({
       where: {
         accountBookId: args.accountBookId,
-        type: { in: [AccountType.ASSET, AccountType.LIABILITY] },
+        type: { in: [AccountType.BALANCE] },
       },
       select: {
         id: true,

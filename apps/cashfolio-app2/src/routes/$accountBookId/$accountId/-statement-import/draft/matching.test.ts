@@ -143,7 +143,7 @@ describe("statement import matching", () => {
     expect(
       getStatementImportReviewRows({
         account: {
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
           currency: "CHF",
         },
@@ -173,7 +173,7 @@ describe("statement import matching", () => {
     expect(
       getStatementImportReviewRows({
         account: {
-          type: AccountType.ASSET,
+          type: AccountType.BALANCE,
           unit: Unit.CURRENCY,
           currency: "CHF",
         },

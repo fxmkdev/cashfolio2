@@ -23,7 +23,7 @@ test.beforeAll(async ({ e2eExternalId }) => {
       id: cardId,
       accountBookId: seeded.accountBookId,
       name: "Reporting Credit Card",
-      type: AccountType.LIABILITY,
+      type: AccountType.BALANCE,
       unit: Unit.CURRENCY,
       currency: "CHF",
     },

@@ -79,8 +79,8 @@ describe("createAccountsMutationActions", () => {
 
     await actions.handleCreateAccount({
       name: "Cash",
-      typeDescriptor: "ASSET",
-      type: AccountType.ASSET,
+      typeDescriptor: "BALANCE",
+      type: AccountType.BALANCE,
       equityAccountSubtype: undefined,
       groupId: "group-1",
       sortOrder: 2,
@@ -96,7 +96,7 @@ describe("createAccountsMutationActions", () => {
       data: {
         accountBookId: "book-1",
         name: "Cash",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: undefined,
         groupId: "group-1",
         sortOrder: 2,
@@ -143,8 +143,8 @@ describe("createAccountsMutationActions", () => {
 
     await actions.handleCreateGroup({
       name: "Bank",
-      typeDescriptor: "ASSET",
-      type: AccountType.ASSET,
+      typeDescriptor: "BALANCE",
+      type: AccountType.BALANCE,
       equityAccountSubtype: undefined,
       parentGroupId: undefined,
       sortOrder: 0,
@@ -154,7 +154,7 @@ describe("createAccountsMutationActions", () => {
       data: {
         accountBookId: "book-1",
         name: "Bank",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: undefined,
         parentGroupId: undefined,
         sortOrder: 0,
@@ -260,8 +260,8 @@ describe("createAccountsMutationActions", () => {
 
     await actions.handleUpdateAccount({
       name: "Updated",
-      typeDescriptor: "ASSET",
-      type: AccountType.ASSET,
+      typeDescriptor: "BALANCE",
+      type: AccountType.BALANCE,
       equityAccountSubtype: undefined,
       groupId: undefined,
       sortOrder: 0,
@@ -280,8 +280,8 @@ describe("createAccountsMutationActions", () => {
 
     await actions.handleUpdateAccount({
       name: "Updated",
-      typeDescriptor: "ASSET",
-      type: AccountType.ASSET,
+      typeDescriptor: "BALANCE",
+      type: AccountType.BALANCE,
       equityAccountSubtype: undefined,
       groupId: undefined,
       sortOrder: 0,
@@ -297,7 +297,7 @@ describe("createAccountsMutationActions", () => {
         id: "account-1",
         accountBookId: "book-1",
         name: "Updated",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: undefined,
         groupId: undefined,
         sortOrder: 0,

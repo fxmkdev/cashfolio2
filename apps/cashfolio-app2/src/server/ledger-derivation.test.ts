@@ -62,7 +62,7 @@ function utcDate(
 describe("deriveLedgerPresentationData", () => {
   test("orders rows newest-first and appends carry-over row for filtered assets", () => {
     const result = deriveLedgerPresentationData({
-      account: createAccount({ type: AccountType.ASSET }),
+      account: createAccount({ type: AccountType.BALANCE }),
       bookings: createBookings([
         { date: utcDate(2026, 0, 10, 9), value: toMoney(-50) },
         { date: utcDate(2026, 0, 11, 9), value: toMoney(30) },
@@ -86,7 +86,7 @@ describe("deriveLedgerPresentationData", () => {
 
   test("seeds filtered liability balances from pre-period totals", () => {
     const result = deriveLedgerPresentationData({
-      account: createAccount({ type: AccountType.LIABILITY }),
+      account: createAccount({ type: AccountType.BALANCE }),
       bookings: createBookings([
         { date: utcDate(2026, 0, 10, 9), value: toMoney(20) },
       ]),
@@ -112,7 +112,7 @@ describe("deriveLedgerPresentationData", () => {
     ]);
   });
 
-  test.each([AccountType.ASSET, AccountType.LIABILITY])(
+  test.each([AccountType.BALANCE])(
     "%s balances cross zero without changing debit/credit sides",
     (type) => {
       const result = deriveLedgerPresentationData({
@@ -265,7 +265,7 @@ describe("deriveLedgerPresentationData", () => {
 
   test("keeps 2-decimal exactness in running balances for floating-point edge values", () => {
     const result = deriveLedgerPresentationData({
-      account: createAccount({ type: AccountType.ASSET }),
+      account: createAccount({ type: AccountType.BALANCE }),
       bookings: createBookings([
         { date: utcDate(2026, 0, 10, 9), value: toMoney(-8439.45) },
         { date: utcDate(2026, 0, 11, 9), value: toMoney(9311.0) },

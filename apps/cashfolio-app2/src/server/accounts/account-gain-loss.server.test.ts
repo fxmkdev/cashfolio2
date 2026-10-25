@@ -57,7 +57,7 @@ const base = {
 };
 const account = (
   id: string,
-  type = "ASSET",
+  type = "BALANCE",
   isActive = true,
   groupId: string | null = "child",
 ) => ({ ...base, id, name: id, type, isActive, groupId });
@@ -90,14 +90,14 @@ beforeEach(() => {
   });
   mocks.accounts.mockResolvedValue([
     account("a"),
-    account("b", "ASSET", false),
-    account("c", "LIABILITY"),
+    account("b", "BALANCE", false),
+    account("c", "BALANCE"),
     { ...account("cash"), unit: "CURRENCY", currency: "CHF" },
   ]);
   mocks.groups.mockResolvedValue([
-    { id: "root", parentGroupId: null, type: "ASSET", isActive: true },
-    { id: "child", parentGroupId: "root", type: "ASSET", isActive: true },
-    { id: "empty", parentGroupId: null, type: "ASSET", isActive: true },
+    { id: "root", parentGroupId: null, type: "BALANCE", isActive: true },
+    { id: "child", parentGroupId: "root", type: "BALANCE", isActive: true },
+    { id: "empty", parentGroupId: null, type: "BALANCE", isActive: true },
   ]);
   mocks.balances.mockResolvedValue([
     { accountId: "a", _sum: { value: toMoney(2) } },
@@ -116,10 +116,10 @@ beforeEach(() => {
 });
 
 describe("account G/L queries", () => {
-  it("aggregates both legacy types and archived descendants in a mixed hierarchy", async () => {
+  it("aggregates balance accounts and archived descendants in a nested hierarchy", async () => {
     mocks.groups.mockResolvedValueOnce([
-      { id: "root", parentGroupId: null, type: "ASSET", isActive: true },
-      { id: "child", parentGroupId: "root", type: "LIABILITY", isActive: true },
+      { id: "root", parentGroupId: null, type: "BALANCE", isActive: true },
+      { id: "child", parentGroupId: "root", type: "BALANCE", isActive: true },
     ]);
     const response = await queryAccountGainLossSummaries({
       accountBookId: "book",
@@ -159,7 +159,7 @@ describe("account G/L queries", () => {
     });
     await queryAccountGainLossSummaries({
       accountBookId: "book",
-      type: "ASSET",
+      type: "BALANCE",
       accountState: "active",
     });
     expect(mocks.snapshot).toHaveBeenCalledWith(expect.any(Function), {
@@ -180,10 +180,10 @@ describe("account G/L queries", () => {
     expect(mocks.calculate).not.toHaveBeenCalled();
   });
 
-  it("calculates all holdings, then scopes nested groups/footer to active assets", async () => {
+  it("calculates all holdings, then scopes nested groups/footer to active accounts", async () => {
     const response = await queryAccountGainLossSummaries({
       accountBookId: "book",
-      type: "ASSET",
+      type: "BALANCE",
       accountState: "active",
     });
     expect(
@@ -193,6 +193,7 @@ describe("account G/L queries", () => {
     ).toEqual(["a", "b", "c"]);
     expect(response.rows.map((item) => item.id)).toEqual([
       "a",
+      "c",
       "cash",
       "root",
       "child",
@@ -201,8 +202,8 @@ describe("account G/L queries", () => {
     for (const id of ["a", "root", "child"])
       expect(
         response.rows.find((row) => row.id === id)!.summary.totalGainLoss,
-      ).toBe(0.1);
-    expect(response.total.summary.totalGainLoss).toBe(0.1);
+      ).toBe(id === "a" ? 0.1 : 0.4);
+    expect(response.total.summary.totalGainLoss).toBe(0.4);
     expect(response.rows.find((row) => row.id === "cash")!.applicable).toBe(
       false,
     );
@@ -216,23 +217,24 @@ describe("account G/L queries", () => {
       new Date("2025-12-31Z"),
     );
   });
-  it("retains archived account realised gains and uses economic signs on liabilities", async () => {
+  it("retains archived account realised gains separately from active accounts", async () => {
     const archived = await queryAccountGainLossSummaries({
       accountBookId: "book",
-      type: "ASSET",
+      type: "BALANCE",
       accountState: "inactive",
     });
-    const liabilities = await queryAccountGainLossSummaries({
+    const active = await queryAccountGainLossSummaries({
       accountBookId: "book",
-      type: "LIABILITY",
+      type: "BALANCE",
       accountState: "active",
     });
     expect(archived.total.summary.realizedGainLoss).toBe(0.2);
-    expect(liabilities.total.summary.realizedGainLoss).toBe(0.3);
+    expect(active.total.summary.realizedGainLoss).toBe(0.4);
   });
   it("withholds a group/footer component when a descendant is incomplete", async () => {
     mocks.calculate.mockResolvedValue({
       results: new Map([
+        ["c", result("0")],
         [
           "a",
           {
@@ -250,7 +252,7 @@ describe("account G/L queries", () => {
     });
     const response = await queryAccountGainLossSummaries({
       accountBookId: "book",
-      type: "ASSET",
+      type: "BALANCE",
       accountState: "active",
     });
     expect(response.total.summary).toEqual({
@@ -265,17 +267,17 @@ describe("account G/L queries", () => {
   it("includes active and archived leaves once in real, virtual, and footer totals", async () => {
     mocks.accounts.mockResolvedValue([
       account("a"),
-      account("b", "ASSET", false),
-      account("archived-root", "ASSET", false, null),
-      account("nested-leaf", "ASSET", false, "archived-group"),
+      account("b", "BALANCE", false),
+      account("archived-root", "BALANCE", false, null),
+      account("nested-leaf", "BALANCE", false, "archived-group"),
     ]);
     mocks.groups.mockResolvedValue([
-      { id: "root", parentGroupId: null, type: "ASSET", isActive: true },
-      { id: "child", parentGroupId: "root", type: "ASSET", isActive: true },
+      { id: "root", parentGroupId: null, type: "BALANCE", isActive: true },
+      { id: "child", parentGroupId: "root", type: "BALANCE", isActive: true },
       {
         id: "archived-group",
         parentGroupId: "root",
-        type: "ASSET",
+        type: "BALANCE",
         isActive: false,
       },
     ]);
@@ -291,7 +293,7 @@ describe("account G/L queries", () => {
     });
     const response = await queryAccountGainLossSummaries({
       accountBookId: "book",
-      type: "ASSET",
+      type: "BALANCE",
       accountState: "all",
     });
     const totalFor = (id: string) =>
@@ -314,6 +316,7 @@ describe("account G/L queries", () => {
     mocks.calculate.mockResolvedValue({
       results: new Map([
         ["a", result("0.1")],
+        ["c", result("0")],
         [
           "b",
           {
@@ -334,7 +337,7 @@ describe("account G/L queries", () => {
     });
     const response = await queryAccountGainLossSummaries({
       accountBookId: "book",
-      type: "ASSET",
+      type: "BALANCE",
       accountState: "all",
     });
     expect(response.total.summary).toEqual({
@@ -453,12 +456,12 @@ describe("summary cache integration", () => {
     try {
       await queryAccountGainLossSummaries({
         accountBookId: "book",
-        type: "ASSET",
+        type: "BALANCE",
         accountState: "active",
       });
       await queryAccountGainLossSummaries({
         accountBookId: "book",
-        type: "LIABILITY",
+        type: "BALANCE",
         accountState: "active",
       });
       expect(mocks.snapshot).toHaveBeenCalledTimes(1);

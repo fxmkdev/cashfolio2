@@ -9,6 +9,7 @@ export default defineConfig({
     environment: "node",
     include: [
       "src/server/accounts/account-asset-class-migration.integration.ts",
+      "src/server/balance-account-migration.integration.ts",
       "src/server/account-book-mutation.integration.ts",
       "src/server/admin-mutation.integration.ts",
       "src/server/period/base-data/period-base-data-snapshot.integration.ts",

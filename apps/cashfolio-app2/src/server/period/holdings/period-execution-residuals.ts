@@ -67,7 +67,7 @@ export async function computeExecutionResidualRealization(args: {
       transaction.bookings.map((booking) => ({
         ...booking,
         accountType: args.trackedHoldingAccountIdSet.has(booking.accountId)
-          ? "ASSET"
+          ? "BALANCE"
           : "EQUITY",
         equityAccountSubtype: null,
       })),

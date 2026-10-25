@@ -170,7 +170,7 @@ export async function computePeriodHoldingGainLoss(args: {
               cryptocurrency: booking.cryptocurrency,
               symbol: booking.symbol,
               tradeCurrency: booking.tradeCurrency,
-              accountType: AccountType.ASSET,
+              accountType: AccountType.BALANCE,
               equityAccountSubtype: null,
             },
           ],

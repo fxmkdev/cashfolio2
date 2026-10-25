@@ -37,7 +37,7 @@ function booking(
     accountId,
     value: toMoney(value),
     date: new Date(date),
-    accountType: AccountType.ASSET,
+    accountType: AccountType.BALANCE,
     equityAccountSubtype: null,
   };
 }

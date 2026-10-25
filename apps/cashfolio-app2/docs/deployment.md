@@ -35,6 +35,53 @@ run from the same image before app Machines update. The Docker runtime image is
 still intentionally slim: it copies Nitro `.output` plus a minimal Prisma
 migration payload, not the full repository or workspace install.
 
+## Balance account type cutover
+
+The `20261024120000_unify_balance_account_types` migration is incompatible with
+application images whose generated Prisma client expects `ASSET`/`LIABILITY`.
+Fly runs release migrations before replacing web Machines, so an ordinary
+automatic deployment can temporarily leave old Machines serving requests against
+the new enum. Account reads and writes can fail between the migration committing
+and replacement completing. This temporary interruption is accepted for this
+release: the existing automatic deployment flow remains supported without an
+additional approval gate, traffic blocking, or stopping old Machines beforehand.
+Operators may optionally block traffic, stop Machines, and pause
+database-writing jobs to manage the interruption within a maintenance window.
+
+1. Build and validate the new immutable image. Record the previous image and
+   take a database backup with a verified restoration procedure.
+2. Deploy through the existing workflow. The new image's migration release
+   command maps account/group types to `BALANCE`, preserves financial records,
+   recreates the asset-class constraint and system-account indexes, and rotates
+   book cache revisions in one transaction. Fly then replaces the web Machines.
+   New environments can apply the full migration history normally.
+3. Verify migration and replacement success, with all web Machines running the
+   new image. Check account/category lists, signed bank and credit-card
+   balances, opening-balance edits, imports, Gain/Loss, and Report/History
+   totals. Net worth and booking values must match the pre-cutover results using
+   the same valuations. Verify account creation stores `BALANCE` and system
+   Gain/Loss seeding still works.
+4. Previously open browser tabs must reload; old mutation types are
+   intentionally rejected. Retry requests or database-writing jobs that failed
+   during the interruption using the new image. If traffic or jobs were
+   optionally paused, resume them after replacement completes.
+
+If migration fails before commit, inspect Prisma's migration status. Verify that
+the transaction rolled back and resolve the cause; then run
+`prisma migrate resolve --rolled-back 20261024120000_unify_balance_account_types`
+using the new image's migration tooling before retrying its release command. If
+the migration commits but Machine replacement fails, application errors can
+continue until recovery completes. Finish or retry deployment using the new
+image; restarting or rolling back to the old image cannot restore compatibility
+with the migrated database. Database rollback requires stopping all writers and
+restoring the verified pre-cutover database backup together with the previous
+image, accounting for any post-cutover writes. There is no automatic reverse
+migration because the original permanent classification has been removed. Cache
+revisions are restored with the database backup.
+
+The accepted interruption does not change backup, verification, or rollback
+requirements. No additional deployment gate is required for this migration.
+
 ## Staging release seed
 
 The seed CLI lives inside `cashfolio-app2` because it is an app-specific

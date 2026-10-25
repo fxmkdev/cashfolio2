@@ -20,8 +20,7 @@ export function isLedgerPeriodFilterAvailable(account: {
   equityAccountSubtype: EquityAccountSubtype | null;
 }) {
   return (
-    account.type === AccountType.ASSET ||
-    account.type === AccountType.LIABILITY ||
+    account.type === AccountType.BALANCE ||
     (account.type === AccountType.EQUITY &&
       account.equityAccountSubtype !== EquityAccountSubtype.OPENING_BALANCES)
   );
@@ -43,9 +42,7 @@ export async function loadLedgerPageData(args: {
   const isPeriodFilterAllowed = isLedgerPeriodFilterAvailable(account);
   const shouldIncludeReferenceValues =
     isPeriodFilterAllowed && account.type === AccountType.EQUITY;
-  const shouldIncludeFirstBookingDate =
-    account.type === AccountType.ASSET ||
-    account.type === AccountType.LIABILITY;
+  const shouldIncludeFirstBookingDate = account.type === AccountType.BALANCE;
   const [
     ledgerData,
     accounts,
@@ -99,8 +96,7 @@ export async function loadLedgerPageData(args: {
     rows: ledgerData.rows,
     referenceCurrency: ledgerData.referenceCurrency,
     showGainLoss:
-      (account.type === AccountType.ASSET ||
-        account.type === AccountType.LIABILITY) &&
+      account.type === AccountType.BALANCE &&
       !(
         account.unit === Unit.CURRENCY &&
         account.currency?.toUpperCase() ===

@@ -9,11 +9,11 @@ export const getAccountGainLossSummaries = createServerFn({ method: "GET" })
   .validator(
     (data: {
       accountBookId: string;
-      type: "ASSET" | "LIABILITY" | "BALANCE";
+      type: "BALANCE";
       accountState: "active" | "inactive" | "all";
     }) => {
       if (
-        !["ASSET", "LIABILITY", "BALANCE"].includes(data.type) ||
+        data.type !== "BALANCE" ||
         !["active", "inactive", "all"].includes(data.accountState)
       )
         throw new Error("Invalid account G/L scope");

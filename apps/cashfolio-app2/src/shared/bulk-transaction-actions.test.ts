@@ -27,7 +27,7 @@ const booking = {
 const account = {
   value: "target",
   label: "Target",
-  type: AccountType.ASSET,
+  type: AccountType.BALANCE,
   equityAccountSubtype: null,
   unit: Unit.CURRENCY,
   currency: "CHF",

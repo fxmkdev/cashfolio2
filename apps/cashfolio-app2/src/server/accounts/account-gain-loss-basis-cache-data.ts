@@ -72,7 +72,7 @@ function isHoldingMetadata(value: Record<string, unknown>) {
   );
 }
 function isAccountType(value: unknown) {
-  return value === "ASSET" || value === "LIABILITY";
+  return value === "BALANCE";
 }
 function isDate(value: unknown): value is Date {
   return value instanceof Date && Number.isFinite(value.getTime());

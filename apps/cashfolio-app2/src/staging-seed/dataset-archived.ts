@@ -21,7 +21,7 @@ import {
 
 /** Closed accounts retain their real institutions and their historical bookings. */
 export function archivedHouseholdAccounts(target: SeedBook) {
-  addGroup(target, "ubs", "UBS", AccountType.ASSET, {
+  addGroup(target, "ubs", "UBS", AccountType.BALANCE, {
     parentKey: "cash",
     isCashAccount: true,
     isActive: false,
@@ -30,10 +30,10 @@ export function archivedHouseholdAccounts(target: SeedBook) {
     target,
     "credit-suisse",
     "Credit Suisse portfolio",
-    AccountType.ASSET,
+    AccountType.BALANCE,
     { parentKey: "investments", isActive: false },
   );
-  addGroup(target, "credit-suisse-equities", "Equities", AccountType.ASSET, {
+  addGroup(target, "credit-suisse-equities", "Equities", AccountType.BALANCE, {
     parentKey: "credit-suisse",
     isActive: false,
   });
@@ -57,7 +57,7 @@ export function archivedHouseholdAccounts(target: SeedBook) {
     ["closed-ubs-chf", "Savings account CHF", "ubs", CHF],
     ["closed-ubs-usd", "Savings account USD", "ubs", USD],
   ] as const) {
-    addAccount(target, key, name, AccountType.ASSET, {
+    addAccount(target, key, name, AccountType.BALANCE, {
       ...unit,
       groupKey,
       isActive: false,
@@ -95,7 +95,7 @@ export function archivedHouseholdAccounts(target: SeedBook) {
       AssetClass.CASH_AND_CASH_EQUIVALENTS,
     ],
   ] as const) {
-    addAccount(target, key, name, AccountType.ASSET, {
+    addAccount(target, key, name, AccountType.BALANCE, {
       ...unit,
       groupKey,
       isActive: false,
@@ -106,7 +106,7 @@ export function archivedHouseholdAccounts(target: SeedBook) {
     target,
     "closed-car-loan",
     "Repaid car loan CHF",
-    AccountType.LIABILITY,
+    AccountType.BALANCE,
     { ...CHF, isActive: false, assetClass: AssetClass.OTHER_ASSETS },
   );
   addAccount(target, "closed-project", "One-off project", AccountType.EQUITY, {

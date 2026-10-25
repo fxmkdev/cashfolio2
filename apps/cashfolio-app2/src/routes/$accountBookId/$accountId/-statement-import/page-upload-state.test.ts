@@ -70,7 +70,7 @@ function setup() {
         ...currentAccount,
         assetClass: null,
         name: "Cash",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
         isActive: true,
         statementImportCsvFormat: null,

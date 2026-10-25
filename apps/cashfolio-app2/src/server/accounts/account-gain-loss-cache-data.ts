@@ -74,7 +74,7 @@ export function isAccountGainLossCacheData(
       (account: unknown) =>
         isRecord(account) &&
         typeof account.id === "string" &&
-        (account.type === "ASSET" || account.type === "LIABILITY") &&
+        account.type === "BALANCE" &&
         typeof account.isActive === "boolean" &&
         isNullableString(account.groupId) &&
         isResult(account.result),
@@ -85,9 +85,7 @@ export function isAccountGainLossCacheData(
         isRecord(group) &&
         typeof group.id === "string" &&
         typeof group.isActive === "boolean" &&
-        (group.type === "ASSET" ||
-          group.type === "LIABILITY" ||
-          group.type === "EQUITY") &&
+        (group.type === "BALANCE" || group.type === "EQUITY") &&
         isNullableString(group.parentGroupId),
     )
   );

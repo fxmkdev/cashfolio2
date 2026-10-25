@@ -11,7 +11,7 @@ let seeded: SeededData;
 test.beforeAll(async ({ e2eExternalId }) => {
   seeded = await seedDatabase({ userExternalId: e2eExternalId });
   // Spending without an opening balance leaves Cash overdrawn, so it belongs
-  // to the Liabilities History scope despite its stored ASSET type.
+  // to the Liabilities History scope based on its negative balance.
   await seedThreeBookingSplitTransaction({
     accountBookId: seeded.accountBookId,
     description: "E2E History Expense Scope Seed",

@@ -37,7 +37,7 @@ export function toFormValues(initial: AccountInitialValues): FormValues {
   const typeDescriptor: FormValues["typeDescriptor"] =
     initial.type === AccountType.EQUITY && initial.equityAccountSubtype
       ? `${AccountType.EQUITY}-${initial.equityAccountSubtype}`
-      : (initial.type as "ASSET" | "LIABILITY");
+      : (initial.type as "BALANCE");
 
   return {
     name: initial.name,
@@ -62,11 +62,7 @@ export function validateStatementImportCsvFormatFormValue(
   value: string | undefined,
   typeDescriptor?: AccountTypeDescriptor,
 ): string | null {
-  if (
-    typeDescriptor !== AccountType.ASSET &&
-    typeDescriptor !== AccountType.LIABILITY &&
-    typeDescriptor !== "BALANCE"
-  ) {
+  if (typeDescriptor !== AccountType.BALANCE) {
     return null;
   }
 
@@ -76,11 +72,8 @@ export function validateStatementImportCsvFormatFormValue(
 export function transformAccountValues(
   values: FormValues,
 ): TransformedFormValues {
-  const [descriptorType, equityAccountSubtype] = (values.typeDescriptor?.split(
-    "-",
-  ) ?? []) as [AccountType | "BALANCE", EquityAccountSubtype?];
-  const type =
-    descriptorType === "BALANCE" ? AccountType.ASSET : descriptorType;
+  const [type, equityAccountSubtype] = (values.typeDescriptor?.split("-") ??
+    []) as [AccountType, EquityAccountSubtype?];
   const openingBalance =
     values.openingBalance == null || values.openingBalance === ""
       ? null
@@ -113,8 +106,7 @@ export function transformAccountValues(
   return {
     ...transformed,
     isCashAccount:
-      (type === AccountType.ASSET || type === AccountType.LIABILITY) &&
-      values.unit === Unit.CURRENCY
+      type === AccountType.BALANCE && values.unit === Unit.CURRENCY
         ? (values.isCashAccount ?? false)
         : false,
   };

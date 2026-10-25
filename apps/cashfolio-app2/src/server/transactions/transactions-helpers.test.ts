@@ -66,7 +66,7 @@ function createAccountMap(
       "asset",
       {
         id: "asset",
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
       },
     ],
@@ -74,7 +74,7 @@ function createAccountMap(
       "liability",
       {
         id: "liability",
-        type: AccountType.LIABILITY,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
       },
     ],
@@ -395,12 +395,12 @@ describe("transactions helpers", () => {
     expect(
       accountTypeMeta({
         id: "account-1",
-        type: AccountType.LIABILITY,
+        type: AccountType.BALANCE,
         equityAccountSubtype: null,
       }),
     ).toEqual({
       id: "account-1",
-      type: AccountType.LIABILITY,
+      type: AccountType.BALANCE,
       equityAccountSubtype: null,
     });
   });
@@ -627,7 +627,7 @@ describe("exact monetary transaction validation", () => {
       accounts: input.bookings.map((booking) => ({
         value: booking.accountId,
         label: booking.accountId,
-        type: AccountType.ASSET,
+        type: AccountType.BALANCE,
         unit: Unit.CURRENCY,
       })),
       thousandSeparator: "'",

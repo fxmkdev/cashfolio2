@@ -45,7 +45,10 @@ beforeAll(async () => {
   );
   await cp("prisma", previousSchemaDirectory, {
     recursive: true,
-    filter: (source) => !source.includes(migrationName),
+    filter: (source) =>
+      !source
+        .split(/[\\/]/)
+        .some((part) => /^\d{14}_/.test(part) && part >= migrationName),
   });
   const options = {
     env: { ...process.env, DATABASE_URL: databaseUrl.href },
@@ -71,13 +74,14 @@ beforeAll(async () => {
       startDate: new Date("2026-01-01"),
     },
   });
-  for (const type of Object.values(AccountType)) {
+  // These tokens describe the schema before the asset-class and balance cutovers.
+  for (const type of ["ASSET", "LIABILITY", "EQUITY"] as const) {
     for (const unit of Object.values(Unit)) {
       for (const isActive of [true, false]) {
         const id = `${type}-${unit}-${isActive}`;
         await db.$executeRaw`
           INSERT INTO "Account" ("id", "accountBookId", "name", "type", "unit", "isActive", "isCashAccount", "updatedAt")
-          VALUES (${id}, 'book', ${id}, ${type}::"AccountType", ${unit}::"Unit", ${isActive}, ${type === AccountType.ASSET && unit === Unit.CURRENCY}, NOW())
+          VALUES (${id}, 'book', ${id}, ${type}::"AccountType", ${unit}::"Unit", ${isActive}, ${type === "ASSET" && unit === Unit.CURRENCY}, NOW())
         `;
       }
     }
@@ -108,7 +112,7 @@ it("defaults newly created accounts to Unclassified", async () => {
       id: "new",
       accountBookId: "book",
       name: "New cryptocurrency",
-      type: AccountType.ASSET,
+      type: AccountType.BALANCE,
       unit: Unit.CRYPTOCURRENCY,
       cryptocurrency: "BTC",
     },
@@ -116,13 +120,13 @@ it("defaults newly created accounts to Unclassified", async () => {
   expect(account.assetClass).toBeNull();
 });
 
-it("allows all classes on assets/liabilities and rejects classified equity", async () => {
-  for (const type of [AccountType.ASSET, AccountType.LIABILITY]) {
+it("allows all classes on converted balance accounts and rejects classified equity", async () => {
+  for (const legacyType of ["ASSET", "LIABILITY"]) {
     for (const assetClass of Object.values(AssetClass)) {
       const updated = await db.account.update({
         where: {
           id_accountBookId: {
-            id: `${type}-CURRENCY-true`,
+            id: `${legacyType}-CURRENCY-true`,
             accountBookId: "book",
           },
         },

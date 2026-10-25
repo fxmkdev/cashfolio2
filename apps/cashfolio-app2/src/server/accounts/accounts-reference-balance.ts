@@ -24,8 +24,8 @@ export async function computeRawBalanceInReferenceCurrency(args: {
     tradeCurrency: string,
   ) => Promise<Money | null>;
 }): Promise<Money | null> {
-  const isAssetOrLiability = args.type === "ASSET" || args.type === "LIABILITY";
-  if (!isAssetOrLiability) return null;
+  const isBalanceAccount = args.type === "BALANCE";
+  if (!isBalanceAccount) return null;
 
   if (args.unit === "CURRENCY") {
     if (!args.currency) return null;
