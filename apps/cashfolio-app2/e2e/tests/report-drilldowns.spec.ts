@@ -1,4 +1,5 @@
 import { AssetClass } from "../../src/.prisma-client/enums";
+import { defaultStringifySearch } from "@tanstack/react-router";
 import { prisma } from "../support/db-client";
 import {
   seedDatabase,
@@ -339,8 +340,10 @@ for (const scenario of [
         `${scenario.counterpartBookingDate}T00:00:00Z`,
       ),
     });
-    const explanationPath = `/${book.accountBookId}/report/gains-losses/${book.cashAccount.id}?period=${scenario.period}`;
+    const periodSearch = defaultStringifySearch({ period: scenario.period });
+    const explanationPath = `/${book.accountBookId}/report/gains-losses/${book.cashAccount.id}${periodSearch}`;
     await page.goto(explanationPath);
+    await expect(page).toHaveURL(explanationPath);
     const recorded = page
       .getByRole("heading", { name: "Recorded Adjustments" })
       .locator("..");
@@ -354,11 +357,18 @@ for (const scenario of [
     await adjustmentRow
       .getByRole("button", { name: "Open Transaction" })
       .click();
-    await expect(page).toHaveURL(
-      new RegExp(
-        `/${book.accountBookId}/transactions\\?period=${scenario.period}(?:&|$)`,
-      ),
-    );
+    await expect
+      .poll(() => {
+        const url = new URL(page.url());
+        return {
+          path: url.pathname,
+          period: url.searchParams.get("period"),
+        };
+      })
+      .toEqual({
+        path: `/${book.accountBookId}/transactions`,
+        period: new URLSearchParams(periodSearch).get("period"),
+      });
     const details = page.getByRole("region", {
       name: "Transaction details: E2E Explicit Gain/Loss Seed",
     });
