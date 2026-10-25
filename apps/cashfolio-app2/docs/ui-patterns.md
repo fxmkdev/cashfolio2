@@ -302,20 +302,23 @@ back to Unclassified. Income, expense, and system equity accounts do not expose
 this selector.
 
 Accounts supports one-time bulk asset class assignment with checkbox selection
-and **Set Asset Class**. Only balance-account leaves are selectable, including
-archived accounts; filtered-out selections are removed, and header select-all
-uses the filtered account set. Ordinary cell clicks retain their existing
-behavior. Selection resets when switching account books or management contexts.
+and **Set Asset Class**. Balance-account leaves, real groups, and virtual
+Archived groups show checkboxes. Group checkboxes select matching descendant
+accounts, including nested and archived accounts regardless of expansion, using
+AG Grid's native filtered-descendant selection. Empty groups have disabled
+checkboxes; totals and categories are excluded. Groups show native
+checked/indeterminate states, and individual accounts can be excluded from a
+selection. The toolbar counts accounts, and requests contain only account IDs.
 
-Real balance-group row actions offer **Set Asset Class for Accounts…**. This
-includes all descendant accounts through persisted group relationships,
-including archived accounts and subgroups, independent of filters and expansion.
-Empty groups disable the action; virtual Archived groups do not offer it. The
-dialog freezes account IDs when opened, shows total and archived counts, and
-requires an explicit asset class or Unclassified. Applying replaces existing
-classifications for the displayed target set and all historical Report/History
-periods. Errors retain the choice for retry. Success clears selection and
-refreshes data. Groups do not store a class or provide inheritance.
+Filtered-out selections are removed, header select-all uses the filtered account
+set, and clearing a filter does not add accounts to an existing selection.
+Ordinary cell clicks retain their existing behavior. Selection resets when
+switching account books or management contexts. The dialog freezes selected
+account IDs when opened, shows total and archived counts, and requires an
+explicit asset class or Unclassified. Applying replaces existing classifications
+for the selected accounts and all historical Report/History periods. Errors
+retain the choice for retry. Success clears selection and refreshes data. Groups
+do not store a class or provide inheritance.
 
 Assets and liabilities show classification beside the type and unit badges in
 the ledger header. The gray pill uses the light variant for a selected class and

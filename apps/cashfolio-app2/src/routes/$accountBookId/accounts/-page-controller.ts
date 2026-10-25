@@ -453,10 +453,6 @@ export function useAccountsPageController(args: {
     onRefreshConstraints,
   });
   const columnDefs = useAccountTreeColumnDefs({
-    onSetGroupAssetClass: !isEquityTab
-      ? assetClassAssignment.openGroup
-      : undefined,
-    canAssignGroupAssetClass: assetClassAssignment.canAssignGroup,
     gainLossData: gainLoss.data,
     isGainLossLoading: gainLoss.loading,
     isEquityTab,

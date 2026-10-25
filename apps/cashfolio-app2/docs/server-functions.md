@@ -75,10 +75,11 @@ IDs, and an explicit nullable asset class. IDs are deduplicated. Authorization
 and the serialized account-book mutation boundary apply; every target must exist
 in that book and be a balance account before any write. Active and archived
 accounts are eligible. The transaction updates only asset class and invalidates
-period base-data caches after commit. It returns the target count. Both
-selected-account and group assignment submit explicit account IDs frozen when
-their dialog opens; newly added group members are excluded from that assignment.
-There is no group-level value or ongoing inheritance.
+period base-data caches after commit. It returns the target count. The selection
+toolbar submits explicit account IDs frozen when the dialog opens. Group
+checkboxes select filtered descendant accounts in the grid; group IDs and newly
+added group members are excluded from the submitted snapshot. There is no
+group-level value or ongoing inheritance.
 
 Account queries and period base-data snapshots carry classification as metadata.
 Changing it uses the existing account mutation boundary, database cache revision

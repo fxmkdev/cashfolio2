@@ -68,13 +68,6 @@ export function AssetClassAssignmentDialog(props: {
             Update {count} {count === 1 ? "account" : "accounts"} (
             {props.target.archivedCount} archived).
           </Text>
-          {props.target.groupName && (
-            <Text size="sm">
-              Includes all accounts in “{props.target.groupName}” and its
-              subgroups, including archived accounts, regardless of filters or
-              collapsed groups.
-            </Text>
-          )}
           <Text size="sm">
             This replaces existing classifications and applies to all historical
             periods in Report and History.

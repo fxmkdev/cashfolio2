@@ -5,7 +5,6 @@ import { seedDatabase } from "../support/db";
 import {
   clickGridRowSelectionCheckbox,
   expandArchivedGroups,
-  revealRowActions,
 } from "../support/grid";
 import { expect, test, type Page } from "../support/fixtures";
 
@@ -106,7 +105,7 @@ test("assigns selected active and archived accounts, replaces existing classes, 
   ).toBeNull();
 });
 
-test("group assignment includes collapsed subgroups and archived descendants only in that group", async ({
+test("group checkbox selects collapsed and archived descendants while allowing individual exclusions", async ({
   page,
   e2eExternalId,
 }) => {
@@ -143,22 +142,43 @@ test("group assignment includes collapsed subgroups and archived descendants onl
   await page.goto(`/${book.accountBookId}/accounts`);
   const row = page.locator(`.ag-row[row-id="${group.id}"]`).first();
   await expect(row).toBeVisible();
-  // The group shortcut deliberately includes descendants that are not expanded.
-  const stableRow = await revealRowActions(row);
-  await stableRow
-    .getByRole("button", { name: "Set Asset Class for Accounts…" })
+  await row.locator(".ag-group-expanded").click();
+  await expect(row).toHaveAttribute("aria-expanded", "false");
+  await clickGridRowSelectionCheckbox(row);
+  await expect(
+    page.getByRole("toolbar", { name: "Selected Account Actions" }),
+  ).toContainText("3 accounts selected");
+  await row.locator(".ag-group-contracted").click();
+  await clickGridRowSelectionCheckbox(
+    page.locator(`.ag-row[row-id="${ids[0]}"]`).first(),
+  );
+  await expect(
+    page.getByRole("toolbar", { name: "Selected Account Actions" }),
+  ).toContainText("2 accounts selected");
+  await page
+    .getByRole("button", { name: "Set Asset Class", exact: true })
     .click();
   await expect(
     page.getByRole("dialog", { name: "Set Asset Class", exact: true }),
-  ).toContainText("3 accounts (2 archived)");
+  ).toContainText("2 accounts (2 archived)");
   await applyClass(page, "Equities");
   await expect
-    .poll(async () =>
-      (await prisma.account.findMany({ where: { id: { in: ids } } })).map(
-        (account) => account.assetClass,
-      ),
+    .poll(
+      async () =>
+        await prisma.account.count({
+          where: { id: { in: ids.slice(1) }, assetClass: AssetClass.EQUITIES },
+        }),
     )
-    .toEqual([AssetClass.EQUITIES, AssetClass.EQUITIES, AssetClass.EQUITIES]);
+    .toBe(2);
+  expect(
+    (
+      await prisma.account.findUniqueOrThrow({
+        where: {
+          id_accountBookId: { id: ids[0], accountBookId: book.accountBookId },
+        },
+      })
+    ).assetClass,
+  ).toBe(AssetClass.DIGITAL_ASSETS);
   expect(
     (
       await prisma.account.findUniqueOrThrow({

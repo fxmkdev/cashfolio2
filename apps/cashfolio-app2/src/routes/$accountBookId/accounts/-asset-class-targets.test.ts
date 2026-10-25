@@ -4,7 +4,7 @@ import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows
 import type { TreeRow } from "./-page-types";
 import {
   createAssetClassAssignmentTarget,
-  getGroupAssetClassAccounts,
+  isAssetClassSelectionRow,
   isAssetClassAccount,
 } from "./-asset-class-targets";
 
@@ -53,21 +53,28 @@ describe("asset class assignment targets", () => {
     row("empty", "accountGroup"),
   ];
 
-  it("includes all nested active and archived accounts through persisted parents", () => {
+  it("shows checkboxes on balance accounts, real groups, and Archived wrappers", () => {
     const projected = buildUnifiedAccountTreeRows(raw);
-    expect(projected.some((r) => r.isVirtualArchivedGroup)).toBe(true);
+    expect(projected.some((row) => row.isVirtualArchivedGroup)).toBe(true);
+    expect(projected.every(isAssetClassSelectionRow)).toBe(true);
+    for (const nodeType of ["account", "accountGroup"] as const) {
+      expect(
+        isAssetClassSelectionRow({
+          ...raw[0],
+          nodeType,
+          type: AccountType.EQUITY,
+        }),
+      ).toBe(false);
+    }
+    expect(isAssetClassSelectionRow(undefined)).toBe(false);
     expect(
-      getGroupAssetClassAccounts(projected, "group").map((r) => r.id),
-    ).toEqual(["active", "archived", "old-child"]);
-    expect(getGroupAssetClassAccounts(raw, "group").map((r) => r.id)).toEqual([
-      "active",
-      "archived",
-      "old-child",
-    ]);
-    expect(
-      getGroupAssetClassAccounts(projected, "old-group").map((r) => r.id),
-    ).toEqual(["old-child"]);
-    expect(getGroupAssetClassAccounts(projected, "empty")).toEqual([]);
+      isAssetClassSelectionRow({
+        id: "__reference_currency_total_footer__",
+        rowType: "referenceCurrencyTotalFooter",
+        name: "Total",
+        balanceInReferenceCurrency: 0,
+      }),
+    ).toBe(false);
   });
 
   it("selects balance-account leaves only, including archived accounts", () => {
@@ -93,13 +100,12 @@ describe("asset class assignment targets", () => {
   });
 
   it("freezes IDs and archived count when opening a dialog", () => {
-    const accounts = getGroupAssetClassAccounts(raw, "group");
-    const target = createAssetClassAssignmentTarget(accounts, "Portfolio");
+    const accounts = [raw[2], raw[3], raw[5]];
+    const target = createAssetClassAssignmentTarget(accounts);
     accounts.push(row("new", "account", "group"));
     expect(target).toEqual({
       accountIds: ["active", "archived", "old-child"],
       archivedCount: 2,
-      groupName: "Portfolio",
     });
   });
 });

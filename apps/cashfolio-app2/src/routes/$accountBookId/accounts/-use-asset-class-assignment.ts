@@ -6,7 +6,7 @@ import { notifications } from "@mantine/notifications";
 import type { AccountsGridRow, TreeRow } from "./-page-types";
 import {
   createAssetClassAssignmentTarget,
-  getGroupAssetClassAccounts,
+  isAssetClassSelectionRow,
   isAssetClassAccount,
   type AssetClassAssignmentTarget,
 } from "./-asset-class-targets";
@@ -61,9 +61,9 @@ export function useAssetClassAssignment(args: {
       mode: "multiRow",
       selectAll: "filtered",
       enableClickSelection: false,
-      groupSelects: "self",
+      groupSelects: "filteredDescendants",
       isRowSelectable: (node) => isAssetClassAccount(node.data),
-      checkboxes: (params) => isAssetClassAccount(params.data),
+      checkboxes: (params) => isAssetClassSelectionRow(params.data),
     }),
     [],
   );
@@ -102,13 +102,6 @@ export function useAssetClassAssignment(args: {
       if (selectedAccounts.length)
         setTarget(createAssetClassAssignmentTarget(selectedAccounts));
     },
-    openGroup: (group: TreeRow) => {
-      const accounts = getGroupAssetClassAccounts(args.rows, group.id);
-      if (accounts.length)
-        setTarget(createAssetClassAssignmentTarget(accounts, group.name));
-    },
-    canAssignGroup: (group: TreeRow) =>
-      getGroupAssetClassAccounts(args.rows, group.id).length > 0,
     close: () => setTarget(undefined),
     onRefreshConstraints: args.onRefreshConstraints,
     apply: async (assetClass: AssetClass | null) => {

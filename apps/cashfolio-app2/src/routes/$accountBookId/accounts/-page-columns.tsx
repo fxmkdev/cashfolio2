@@ -89,8 +89,6 @@ export function useAccountTreeColumnDefs(params: {
   referenceCurrency: string;
   isReferenceBalancesLoading: boolean;
   balanceInReferenceCurrencyByGroupId: Map<string, GroupBalanceAggregation>;
-  onSetGroupAssetClass?: (row: TreeRow) => void;
-  canAssignGroupAssetClass?: (row: TreeRow) => boolean;
   onEditRow: (row: TreeRow) => void;
   onUnarchiveRow: (row: TreeRow) => Promise<void>;
   unarchivePending?: boolean;
@@ -106,8 +104,6 @@ export function useAccountTreeColumnDefs(params: {
     referenceCurrency,
     isReferenceBalancesLoading,
     balanceInReferenceCurrencyByGroupId,
-    onSetGroupAssetClass,
-    canAssignGroupAssetClass,
     onEditRow,
     onUnarchiveRow,
     unarchivePending,
@@ -256,7 +252,7 @@ export function useAccountTreeColumnDefs(params: {
       {
         colId: "actions",
         headerName: "",
-        width: !isEquityTab && onSetGroupAssetClass ? 174 : 145,
+        width: 145,
         pinned: "right",
         sortable: false,
         filter: false,
@@ -281,18 +277,6 @@ export function useAccountTreeColumnDefs(params: {
           if (!data.isActive) {
             return (
               <ArchivedAccountTreeActionsCell
-                onSetAssetClass={
-                  !isEquityTab &&
-                  data.nodeType === "accountGroup" &&
-                  onSetGroupAssetClass
-                    ? () => onSetGroupAssetClass(data)
-                    : undefined
-                }
-                setAssetClassEnabled={
-                  data.nodeType === "accountGroup"
-                    ? canAssignGroupAssetClass?.(data)
-                    : undefined
-                }
                 unarchivePending={unarchivePending}
                 reorderEnabled={hasSiblings}
                 reorderLabel={reorderLabel}
@@ -325,18 +309,6 @@ export function useAccountTreeColumnDefs(params: {
 
           return (
             <ActiveAccountTreeActionsCell
-              onSetAssetClass={
-                !isEquityTab &&
-                data.nodeType === "accountGroup" &&
-                onSetGroupAssetClass
-                  ? () => onSetGroupAssetClass(data)
-                  : undefined
-              }
-              setAssetClassEnabled={
-                data.nodeType === "accountGroup"
-                  ? canAssignGroupAssetClass?.(data)
-                  : undefined
-              }
               archiveLabel={
                 getAccountConstraintMessage(
                   data.archiveDisabledReason,
@@ -372,8 +344,6 @@ export function useAccountTreeColumnDefs(params: {
     isGainLossLoading,
     isEquityTab,
     referenceCurrency,
-    onSetGroupAssetClass,
-    canAssignGroupAssetClass,
     onEditRow,
     onUnarchiveRow,
     unarchivePending,
