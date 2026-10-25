@@ -63,7 +63,7 @@ export function GainsLossesCard({
 
   return (
     <DrilldownCardShell
-      title="Gains / Losses Breakdown"
+      title="Gains/Losses Breakdown"
       subtitle={subtitle}
       breadcrumbs={breadcrumbs}
       clampedPath={clampedPath}

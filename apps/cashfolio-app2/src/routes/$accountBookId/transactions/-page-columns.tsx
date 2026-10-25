@@ -260,7 +260,7 @@ export function useTransactionsColumnDefs(args: {
       },
       {
         field: "debitAccounts",
-        headerName: "Debit Accounts / Categories",
+        headerName: "Debit Accounts/Categories",
         minWidth: 160,
         flex: 1,
         tooltip: ({ data }) =>
@@ -281,7 +281,7 @@ export function useTransactionsColumnDefs(args: {
       },
       {
         field: "creditAccounts",
-        headerName: "Credit Accounts / Categories",
+        headerName: "Credit Accounts/Categories",
         minWidth: 160,
         flex: 1,
         tooltip: ({ data }) =>

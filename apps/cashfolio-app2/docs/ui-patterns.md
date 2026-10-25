@@ -119,7 +119,8 @@ name, match its label, such as "Choose a Target Account."
 - Capitalize the second part of a hyphenated compound, such as `Period-End Rate`
   and `30-Day Breakdown`; retain Apple's `Built-in` and `Plug-in` exceptions.
   Apply the same word rules on each side of a slash: `Gain/Loss Details` and
-  `Debit/Credit Direction`. Preserve existing punctuation and abbreviations.
+  `Debit/Credit Direction`. Preserve abbreviations and follow the
+  [slash-spacing rules](#slashes) for punctuation.
 - Do not add a period to a short label or title. Retain meaningful question
   marks and existing action ellipses. Sentence case capitalizes the first word
   and proper nouns; normal sentence punctuation applies to explanatory
@@ -148,6 +149,43 @@ pages are outside this policy's implementation scope.
   selectors, and documentation examples together. Check rendered text for
   truncation and verify that accessible names still identify visible actions.
 - Use this checklist during review; capitalization has no automated lint rule.
+
+### Slashes
+
+Use slashes sparingly in compact labels. In prose and instructions, prefer `and`
+or `or` when that makes the relationship clearer. For app-owned UI copy, apply
+these spacing rules consistently to visible text and accessible names:
+
+- **Single-word alternatives or paired terms:** no spaces, including
+  abbreviations. Examples: `Gain/Loss`, `Debit/Credit`, `Ccy./Symbol`.
+- **Multiword alternatives:** one space on both sides if either term contains
+  spaces. Examples: `Income Category / Expense Category`,
+  `Account / Income Category`. Never put a space on only one side.
+- **Shared surrounding words:** consider the terms joined by the slash, rather
+  than every word in the label. Write `Debit Accounts/Categories` and
+  `Credit Accounts/Categories`: `Debit` or `Credit` applies to both `Accounts`
+  and `Categories`, so the joined terms are single words. Likewise, write
+  `Gain/Loss Details`, `Gains/Losses Breakdown`, and
+  `Swap Debit/Credit Direction`. If shortening
+  `Income Category / Expense Category` to share the noun, write
+  `Income/Expense Category`.
+- **Displayed hierarchy paths:** keep spaces around the separator regardless of
+  segment length, such as `Assets / Cash / Checking`. These slashes separate
+  levels rather than alternatives.
+- **Technical and conventional notation:** preserve the required format in URLs,
+  file paths, date formats, fractions, units, and currency pairs, such as
+  `https://example.com`, `MM/dd/yyyy`, `1/2`, `km/h`, and `EUR/CHF`. Do not
+  normalize user-entered names or imported content.
+
+The transaction headers `Debit Accounts/Categories`,
+`Credit Accounts/Categories`, and `Ccy./Symbol` therefore all use unspaced
+slashes. Do not change spacing to control line wrapping; address wrapping
+through layout or clearer wording.
+
+This is Cashfolio's house style, following the
+[Chicago Manual of Style's word-versus-phrase distinction](https://www.chicagomanualofstyle.org/qanda/data/faq/topics/Punctuation/faq0096.html).
+Style guides differ; the goal is a consistent, readable product convention.
+Research reviewed October 25, 2026.
 
 ### Identity and financial-account terminology
 

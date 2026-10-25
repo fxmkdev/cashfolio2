@@ -74,6 +74,13 @@ pnpm lint:workflows                           # actionlint check for GitHub work
   use Title Case for short UI labels and titles, sentence case for prose,
   instructions, and status messages. Review visible copy and accessible names
   together.
+- Follow the
+  [slash-spacing guidelines](apps/cashfolio-app2/docs/ui-patterns.md#slashes):
+  use no spaces between single-word terms (`Gain/Loss`), spaces on both sides
+  when either alternative is multiword (`Income Category / Expense Category`),
+  and spaced separators for displayed hierarchy paths (`Assets / Cash`). Exclude
+  shared qualifiers when assessing the alternatives
+  (`Debit Accounts/Categories`, `Income/Expense Category`).
 - Use `User`/`user` for identities in app-owned code; reserve
   `Account`/`account` for the financial business entity. Use "Cashfolio account"
   for customer-facing identity references and "user" in admin actions, applying

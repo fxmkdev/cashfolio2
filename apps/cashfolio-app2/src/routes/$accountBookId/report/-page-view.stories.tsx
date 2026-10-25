@@ -93,7 +93,7 @@ export const HappyPath: Story = {
     ).toBeInTheDocument();
     await expect(
       within(analysisSection).getByRole("heading", {
-        name: "Gains / Losses Breakdown",
+        name: "Gains/Losses Breakdown",
       }),
     ).toBeInTheDocument();
     await expect(canvas.queryByText("Total Income")).not.toBeInTheDocument();

@@ -68,7 +68,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
       type: "waterfall",
       xKey: "label",
       yKey: "totalGainLoss",
-      yName: "Gain / Loss",
+      yName: "Gain/Loss",
       widthRatio: 0.72,
       totals,
       item: {
@@ -153,7 +153,7 @@ export function useGainsLossesWaterfallChartOptions(args: {
       type: "bar",
       xKey: "label",
       yKey: "totalGainLoss",
-      yName: "Gain / Loss",
+      yName: "Gain/Loss",
       widthRatio: 0.72,
       itemStyler: ({ datum }) => {
         const amount = toFiniteNumber(
