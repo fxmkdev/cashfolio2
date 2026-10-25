@@ -790,22 +790,19 @@ describe("getPeriodOverview", () => {
     expect(gainsLossesBreakdownTotal).toBe(result.stats.gainsLosses);
     expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
       {
-        label: "Security",
-        realizedGainLoss: 20,
-        unrealizedGainLoss: -30,
-        totalGainLoss: -10,
+        id: "asset-class:unclassified",
+        label: "Unclassified",
         children: [
           {
-            label: "AAPL (USD)",
+            label: "AAPL",
             totalGainLoss: -10,
-            children: [{ label: "AAPL", totalGainLoss: -10 }],
+          },
+          {
+            label: "Cash",
+            totalGainLoss: 5,
           },
         ],
-      },
-      {
-        label: "Explicit G/L",
-        totalGainLoss: 5,
-        children: [{ label: "Cash", totalGainLoss: 5 }],
+        totalGainLoss: -5,
       },
     ]);
     expect(getUnitToReferenceExchangeRate).toHaveBeenCalled();
@@ -935,15 +932,15 @@ describe("getPeriodOverview", () => {
     });
     expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
       {
-        label: "FX",
-        totalGainLoss: -10,
+        id: "asset-class:unclassified",
+        label: "Unclassified",
         children: [
           {
-            label: "USD",
+            label: "Travel USD",
             totalGainLoss: -10,
-            children: [{ label: "Travel USD", totalGainLoss: -10 }],
           },
         ],
+        totalGainLoss: -10,
       },
     ]);
   });
@@ -1072,15 +1069,15 @@ describe("getPeriodOverview", () => {
     });
     expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
       {
-        label: "FX",
-        totalGainLoss: 10,
+        id: "asset-class:unclassified",
+        label: "Unclassified",
         children: [
           {
-            label: "USD",
+            label: "Salary USD",
             totalGainLoss: 10,
-            children: [{ label: "Salary USD", totalGainLoss: 10 }],
           },
         ],
+        totalGainLoss: 10,
       },
     ]);
   });
@@ -1960,14 +1957,15 @@ describe("getPeriodOverview", () => {
     expect(result.stats.gainsLosses).toBe(5);
     expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
       {
-        label: "Explicit G/L",
-        totalGainLoss: 5,
+        id: "asset-class:unclassified",
+        label: "Unclassified",
         children: [
           {
             label: "Unattributed (Multiple Counterpart Accounts)",
             totalGainLoss: 5,
           },
         ],
+        totalGainLoss: 5,
       },
     ]);
   });
@@ -2024,14 +2022,15 @@ describe("getPeriodOverview", () => {
     expect(result.stats.gainsLosses).toBe(5);
     expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
       {
-        label: "Explicit G/L",
-        totalGainLoss: 5,
+        id: "asset-class:unclassified",
+        label: "Unclassified",
         children: [
           {
             label: "Unattributed (No Counterpart Account)",
             totalGainLoss: 5,
           },
         ],
+        totalGainLoss: 5,
       },
     ]);
   });
@@ -2205,7 +2204,18 @@ describe("getPeriodOverview", () => {
     });
     expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
       {
-        label: "Explicit G/L",
+        id: "asset-class:unclassified",
+        label: "Unclassified",
+        children: [
+          {
+            label: "Cash 1",
+            totalGainLoss: 5,
+          },
+          {
+            label: "Cash 2",
+            totalGainLoss: 7,
+          },
+        ],
         totalGainLoss: 12,
       },
     ]);
@@ -2770,26 +2780,19 @@ describe("getPeriodOverview", () => {
     expect(result.stats.endOfPeriodLiabilities).toBe(36);
     expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
       {
-        label: "FX",
-        realizedGainLoss: -4,
-        unrealizedGainLoss: -21,
-        totalGainLoss: -25,
+        id: "asset-class:unclassified",
+        label: "Unclassified",
         children: [
           {
             label: "USD",
             realizedGainLoss: -4,
             unrealizedGainLoss: -21,
             totalGainLoss: -25,
-            children: [
-              {
-                label: "USD",
-                realizedGainLoss: -4,
-                unrealizedGainLoss: -21,
-                totalGainLoss: -25,
-              },
-            ],
           },
         ],
+        realizedGainLoss: -4,
+        unrealizedGainLoss: -21,
+        totalGainLoss: -25,
       },
     ]);
     expect(

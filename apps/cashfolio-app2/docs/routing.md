@@ -129,8 +129,12 @@ their default handling. Revisit this filter if the app enables RSC.
 - `$accountBookId/report/index.tsx` - report overview page with contribution,
   allocation, and gains/losses breakdown cards
 - `$accountBookId/report/gains-losses/$accountId/route.tsx` - dedicated
-  gain/loss reconciliation page for unit-account drill-down (opened from
-  Gains/Losses Breakdown leaf rows)
+  gain/loss reconciliation page for account drill-down (opened from Gains/Losses
+  Breakdown leaf rows). Recorded-adjustment transaction links open Transactions
+  with the resolved reconciliation period and transaction ID, selecting the full
+  transaction even when its bookings span periods. Calculated-event and
+  execution-residual links keep their existing account-ledger or virtual-account
+  Transactions destinations. Browser Back restores the original explanation.
 - `$accountBookId/history/route.tsx` - history page showing monthly/yearly
   metric history as a full-page chart with metric-specific rendering:
   - Flow metrics (`totalReturn`, `savings`, `cashFlow`, `income`, `expenses`,
@@ -146,16 +150,16 @@ their default handling. Revisit this filter if the app enables RSC.
   - The scope combobox applies to `cashFlow`, `income`, `expenses`,
     `gainsLosses`, `assets`, and `liabilities`. The `Total` scope preserves the
     aggregate view; concrete scopes replace the selected metric series with that
-    scope's value. Gain/Loss scopes use the Period Gains/Loss hierarchy: unit
-    type, unit, then asset/liability account; Explicit G/L drills only to the
-    counterpart asset/liability account.
+    scope's value. Gain/Loss scopes use asset class then account, with explicit
+    account metadata driving navigation. Current classification applies to all
+    history periods, and an account scope survives reclassification.
   - When an account scope is selected, double-click a period bar or an
     Assets/Liabilities balance point to open its ledger with that exact month or
-    year. Gain/Loss unit-account scopes open period reconciliation (including
-    supported virtual transfer-clearing accounts); Explicit G/L account scopes
-    open the book's Gain/Loss equity ledger. Totals, groups, units, cumulative
-    and rolling-average overlays, and the synthetic opening-balance point do not
-    open an account. A hint appears when a destination is available.
+    year. Gain/Loss account scopes open the unified account reconciliation page,
+    including recorded adjustments, calculated holdings and residuals. Supported
+    synthetic and unattributed accounts retain their own explanations. Totals,
+    asset classes, groups, overlays, and the opening-balance point do not open
+    an account. A hint appears when a destination is available.
   - Cumulative line rebases to the currently visible range for flow metrics so
     navigator/range-button/zoom interactions update the running baseline.
   - Loader fetches only the currently selected granularity (`mode` search
@@ -291,8 +295,14 @@ controllers.
   - `cashFlowScope?`, `incomeScope?`, `expenseScope?`, `assetScope?`, and
     `liabilityScope?` use `total`, `group:<id>`, or `account:<id>` for scoped
     history metrics. `gainLossScope?` uses `total` or Period Gain/Loss hierarchy
-    node IDs such as `unit-type:fx`, `unit:fx:USD`,
-    `unit-account:fx:USD:<accountId>`, and `explicit-account:<accountId>`.
+    node IDs such as `unit-type:fx`, `unit:fx:USD`, `asset-class:EQUITIES`,
+    `asset-class:unclassified`, and `gain-loss-account:<accountId>`. Legacy
+    `explicit-account:` and `unit-account:` leaves translate to a combined
+    account scope when their complete identity is known. Old valuation-type/unit
+    scopes and unknown selections fall back to Total. The loader normalizes
+    scope before calculating scoped metrics and choosing derived cache keys; the
+    route writes the valid selection back to the URL. Obsolete report drill
+    paths are clamped, and G/L expanded-group storage uses a new version.
 
 ### Global Navigation Progress
 

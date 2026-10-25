@@ -109,9 +109,7 @@ test("the managed portfolio separates cash flows from explicit statement gains a
   const portfolio = await prisma.account.findFirstOrThrow({
     where: { accountBookId: household.id, name: "Managed Portfolio CHF" },
   });
-  const gainLoss = await prisma.account.findFirstOrThrow({
-    where: { accountBookId: household.id, equityAccountSubtype: "GAIN_LOSS" },
-  });
+
   await page.goto(`/${household.id}/accounts?tab=ASSET`);
   const investments = agGridRowByText(page, "Investments");
   await expect(investments).toBeVisible();
@@ -151,6 +149,12 @@ test("the managed portfolio separates cash flows from explicit statement gains a
     );
     const table = page.getByTestId("period-gains-losses-breakdown-table");
     await expect(table).toBeVisible();
+    const classRow = table
+      .locator(".ag-grid-scrolling-container > .ag-row")
+      .filter({ hasText: /^Other Assets/ });
+    await expect(classRow).toBeVisible();
+    const classExpander = classRow.locator(".ag-group-contracted");
+    if (await classExpander.isVisible()) await classExpander.click();
     const portfolioRow = table
       .locator(".ag-grid-scrolling-container > .ag-row")
       .filter({ hasText: "Managed Portfolio CHF" });
@@ -158,18 +162,23 @@ test("the managed portfolio separates cash flows from explicit statement gains a
     await expect(agGridCellByColId(portfolioRow, "totalGainLoss")).toHaveText(
       expectedGainLoss,
     );
-    const explicitRow = table
-      .locator(".ag-grid-scrolling-container > .ag-row")
-      .filter({ hasText: "Explicit G/L" });
-    await expect(agGridCellByColId(explicitRow, "totalGainLoss")).toHaveText(
+    await expect(table.getByText("Explicit G/L", { exact: true })).toHaveCount(
+      0,
+    );
+    await expect(agGridCellByColId(classRow, "totalGainLoss")).toHaveText(
       expectedGainLoss,
     );
     await portfolioRow.dblclick();
     await expect(page).toHaveURL(
-      new RegExp(`/${household.id}/${gainLoss.id}\\?period=${period}$`),
+      new RegExp(
+        `/${household.id}/report/gains-losses/${portfolio.id}\\?period=${period}$`,
+      ),
     );
     await expect(
-      agGridRowByText(page, "Managed portfolio: statement valuation"),
+      page.getByRole("heading", { name: "Recorded Adjustments" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Managed portfolio: statement valuation"),
     ).toBeVisible();
   }
 });

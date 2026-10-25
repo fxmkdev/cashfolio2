@@ -1,3 +1,4 @@
+import type { GainLossAccountAttribution } from "../breakdown/period-gain-loss-attribution";
 import { toNumericMoney } from "../../money-boundary";
 import {
   toMoney,
@@ -64,6 +65,10 @@ export function buildPeriodOverviewResponse(args: {
   bookingsCount: number;
   convertedBookingsCount: number;
   skippedBookingsCount: number;
+  gainLossAccountAttributionById?: ReadonlyMap<
+    string,
+    GainLossAccountAttribution
+  >;
   gainsLossesContributions?: PeriodGainsLossesContribution[];
   locale?: UserLocale;
 }) {
@@ -199,6 +204,7 @@ export function buildPeriodOverviewResponse(args: {
   });
   const gainsLossesBreakdown = buildGainsLossesBreakdown({
     contributions: args.gainsLossesContributions ?? [],
+    accountAttributionById: args.gainLossAccountAttributionById,
     referenceCurrency: args.referenceCurrency,
   });
 

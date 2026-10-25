@@ -129,9 +129,19 @@ async function loadTransferClearingBookings(
         id: true,
         description: true,
         transactionId: true,
+        accountId: true,
+        account: { select: { type: true } },
         transaction: {
           select: {
             description: true,
+            bookings: {
+              where: {
+                account: {
+                  type: AccountType.BALANCE,
+                },
+              },
+              select: { accountId: true },
+            },
           },
         },
         date: true,
@@ -151,6 +161,16 @@ async function loadTransferClearingBookings(
     for (const booking of bookingsPage) {
       results.push({
         id: booking.id,
+        originatingAccountIds:
+          booking.account?.type === AccountType.BALANCE
+            ? [booking.accountId]
+            : [
+                ...new Set(
+                  (booking.transaction?.bookings ?? []).map(
+                    (leg) => leg.accountId,
+                  ),
+                ),
+              ],
         description: booking.description,
         transactionDescription: booking.transaction?.description ?? null,
         transactionId: booking.transactionId,

@@ -1,3 +1,4 @@
+import { assetClassOptions } from "../../../shared/asset-class";
 import { toNumericMoney } from "../../money-boundary";
 import { createServerFn } from "@tanstack/react-start";
 import { formatMonthPeriodValue } from "../../../shared/period";
@@ -5,6 +6,7 @@ import { startOfUtcDay } from "../../../shared/date";
 import type { HistoryOpeningBalancePoint } from "./period-history-opening-balance.server";
 import {
   isHistoryScopedMetric,
+  normalizeGainLossScope,
   parseHistoryScopeSelection,
   type HistoryScopeOption,
   type HistoryScopeSelection,
@@ -21,10 +23,8 @@ export type PeriodHistoryGranularity = "month" | "year";
 
 const HISTORY_POINT_LOAD_CONCURRENCY = 4;
 const GAIN_LOSS_ROOT_SCOPE_ORDER: HistoryScopeSelection[] = [
-  "unit-type:fx",
-  "unit-type:security",
-  "unit-type:cryptocurrency",
-  "unit-type:explicit",
+  ...assetClassOptions.map((option) => `asset-class:${option.value}` as const),
+  "asset-class:unclassified",
 ];
 
 export type PeriodHistoryPoint = {
@@ -304,6 +304,10 @@ export const getPeriodHistory = createServerFn({
     const context = await loadPeriodHistoryPointContext({
       accountBookId: data.accountBookId,
     });
+    data.gainLossScope = normalizeGainLossScope(
+      data.gainLossScope,
+      context.gainLossAccountScopes ?? [],
+    );
     const activeMetricScopeFilter = (() => {
       if (data.scopedMetric === "cashFlow" && data.cashFlowScope !== "total") {
         return {

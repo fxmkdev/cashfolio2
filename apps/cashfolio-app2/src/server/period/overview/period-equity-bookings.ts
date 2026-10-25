@@ -29,6 +29,11 @@ export async function processPeriodEquityBookingsFromBaseData(args: {
     date: Date;
   }) => Promise<Money | null>;
   conversionBatchSize?: number;
+  onRecordedAdjustment?: (
+    booking: PeriodBaseEquityBooking,
+    amount: Money,
+    counterpartAccountId: string,
+  ) => void;
 }) {
   const explicitCounterpartAccountByTransactionId = new Map(
     args.explicitCounterparts.map((counterpart) => [
@@ -40,6 +45,7 @@ export async function processPeriodEquityBookingsFromBaseData(args: {
     ]),
   );
   const explicitConvertedBookings: Array<{
+    booking: PeriodBaseEquityBooking;
     bookingId: string;
     transactionId: string;
     unit: PeriodBaseEquityBooking["unit"];
@@ -113,6 +119,7 @@ export async function processPeriodEquityBookingsFromBaseData(args: {
 
       if (booking.equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS) {
         explicitConvertedBookings.push({
+          booking,
           bookingId: booking.id,
           transactionId: booking.transactionId,
           unit: booking.unit,
@@ -136,6 +143,11 @@ export async function processPeriodEquityBookingsFromBaseData(args: {
       );
     }
 
+    args.onRecordedAdjustment?.(
+      explicitBooking.booking,
+      toMoney(explicitBooking.convertedValue).neg(),
+      counterpartAccount.id,
+    );
     accumulateGainLossContribution({
       byKey: args.gainsLossesContributionByKey,
       sourceKind: "EXPLICIT",

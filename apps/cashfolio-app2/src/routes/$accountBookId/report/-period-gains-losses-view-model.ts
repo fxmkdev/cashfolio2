@@ -3,7 +3,6 @@ import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import type { getPeriodOverview } from "@/server/period";
 import { useGainsLossesWaterfallChartOptions } from "./-gains-losses/-gains-losses-chart-options";
 import { getGainsLossesDrillState } from "./-gains-losses/-gains-losses-drill";
-import { parseGainsLossesUnitAccountId } from "./-gains-losses/-gains-losses-table-rows";
 import { buildGainsLossesWaterfallModel } from "./-gains-losses/-gains-losses-waterfall-model";
 import type { GainsLossesChartType } from "./-breakdown/-breakdown-types";
 
@@ -50,7 +49,7 @@ export function usePeriodGainsLossesViewModel(args: {
     waterfallPalette,
     onUnitAccountDoubleClick,
   } = args;
-  const gainsLossesTableExpandedGroupsStorageKey = `cashfolio:periodExpandedGroups:${accountBookId}:gains-losses`;
+  const gainsLossesTableExpandedGroupsStorageKey = `cashfolio:periodExpandedGroups:${accountBookId}:gains-losses:v2`;
   const gainsLossesDrillState = useMemo(
     () =>
       getGainsLossesDrillState({
@@ -84,10 +83,9 @@ export function usePeriodGainsLossesViewModel(args: {
   );
   const handleNodeDoubleClick = useCallback(
     (datum: (typeof waterfallModel)["data"][number]) => {
-      const accountId = parseGainsLossesUnitAccountId({
-        rowId: datum.id,
-        parentId: gainsLossesDrillState.clampedPath.at(-1),
-      });
+      const accountId = gainsLossesDrillState.currentNodes.find(
+        (node) => node.id === datum.id,
+      )?.account?.id;
       if (accountId) {
         onUnitAccountDoubleClick?.(accountId);
         return;
@@ -107,6 +105,7 @@ export function usePeriodGainsLossesViewModel(args: {
     },
     [
       gainsLossesDrillState.clampedPath,
+      gainsLossesDrillState.currentNodes,
       onUnitAccountDoubleClick,
       updateGainsLossesDrillPath,
     ],

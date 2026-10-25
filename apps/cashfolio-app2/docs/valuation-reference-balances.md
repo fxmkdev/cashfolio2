@@ -20,9 +20,12 @@ conversion and pricing. A currency-denominated equity portfolio can therefore
 use the Equities asset class while retaining automatic FX conversion. Manual
 balance adjustments remain ordinary Gain/Loss transactions.
 
-Current reports do not use asset classes yet. Future reporting will apply the
-account's current classification across historical periods without changing
-total amounts.
+Report and History group gains/losses by the account's current asset class for
+all periods. Changing classification moves contributions between reporting
+classes without changing valuation, balances, or total gains/losses. Calculated
+and recorded contributions are combined per account, including
+reference-currency recorded adjustments; their provenance remains available in
+reconciliation.
 
 - The account list route (`$accountBookId/accounts/route.tsx`) renders `Balance`
   and `Balance (<referenceCurrency>)` columns.

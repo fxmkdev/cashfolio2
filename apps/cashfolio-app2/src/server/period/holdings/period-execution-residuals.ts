@@ -13,7 +13,11 @@ import { decomposeHoldingTransaction } from "./holding-transaction-decomposition
 import { isMultiUnitTransaction } from "../period-helpers";
 import { isNearZero, isWithinPeriod } from "./period-overview-holdings-common";
 
-type ExecutionResidualContribution = {
+export type ExecutionResidualContribution = {
+  originatingAccountIds: string[];
+  bookingId: string;
+  transactionId: string;
+  date: Date;
   accountId: string;
   accountName: string;
   unit: Unit;
@@ -45,6 +49,7 @@ export async function computeExecutionResidualRealization(args: {
   periodEndExclusive: Date;
   referenceCurrency: string;
   trackedHoldingAccountIdSet: Set<string>;
+  assetLiabilityAccountIdSet?: ReadonlySet<string>;
   convertBookingToReference: (booking: {
     value: Money;
     unit: Unit;
@@ -181,6 +186,18 @@ export async function computeExecutionResidualRealization(args: {
           : moneyDivide(1, nonReferenceBookings.length);
 
       args.onContribution({
+        originatingAccountIds: [
+          ...new Set(
+            nonExplicitBookings
+              .filter((leg) =>
+                args.assetLiabilityAccountIdSet?.has(leg.accountId),
+              )
+              .map((leg) => leg.accountId),
+          ),
+        ],
+        bookingId: booking.id,
+        transactionId: transaction.id,
+        date: booking.date,
         accountId: booking.accountId,
         accountName: booking.account.name,
         unit: booking.unit,

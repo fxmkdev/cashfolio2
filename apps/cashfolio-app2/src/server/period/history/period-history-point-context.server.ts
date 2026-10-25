@@ -1,3 +1,7 @@
+import {
+  getLegacyHoldingGainLossScope,
+  type HistoryScopeOption,
+} from "../../../shared/history-scope";
 import { AccountType } from "../../../.prisma-client/enums";
 import { prisma } from "../../../prisma.server";
 import { startOfUtcDay } from "../../../shared/date";
@@ -8,6 +12,7 @@ export type PeriodHistoryPointContext = {
   accountBookStartDate: Date;
   holdingAccountsResolved: ReturnType<typeof filterConvertibleHoldingAccounts>;
   hasCashAccounts: boolean;
+  gainLossAccountScopes?: HistoryScopeOption[];
 };
 
 export async function loadPeriodHistoryPointContext(args: {
@@ -43,6 +48,15 @@ export async function loadPeriodHistoryPointContext(args: {
   return {
     referenceCurrency,
     accountBookStartDate: startOfUtcDay(accountBook.startDate),
+    gainLossAccountScopes: baseAssetLiabilityAccounts.map((account) => ({
+      value: `gain-loss-account:${account.id}`,
+      label: account.id,
+      kind: "gainLoss",
+      legacyValues: [
+        `explicit-account:${account.id}`,
+        getLegacyHoldingGainLossScope(account),
+      ],
+    })),
     holdingAccountsResolved: filterConvertibleHoldingAccounts(
       baseAssetLiabilityAccounts,
       referenceCurrency,

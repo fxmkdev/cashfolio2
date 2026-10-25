@@ -138,8 +138,8 @@ describe("getPeriodHistory", () => {
           ],
           gainsLosses: [
             {
-              value: "unit-type:fx",
-              label: "FX",
+              value: "asset-class:CASH_AND_CASH_EQUIVALENTS",
+              label: "Cash & Cash Equivalents",
               kind: "gainLoss",
             },
           ],
@@ -408,8 +408,8 @@ describe("getPeriodHistory", () => {
         gainsLosses: [
           { value: "total", label: "Total", kind: "total" },
           {
-            value: "unit-type:fx",
-            label: "FX",
+            value: "asset-class:CASH_AND_CASH_EQUIVALENTS",
+            label: "Cash & Cash Equivalents",
             kind: "gainLoss",
           },
         ],
@@ -478,109 +478,49 @@ describe("getPeriodHistory", () => {
     });
   });
 
-  test("keeps merged Gain/Loss scope options in Period hierarchy order", async () => {
-    loadPeriodHistoryPoint.mockImplementation(
-      async ({ period }: { period: string }) => ({
-        selectedPeriodValue: period,
-        selectedPeriodLabel: `Label ${period}`,
-        selectedPeriodEnd:
-          period === "2026-03"
-            ? new Date("2026-03-17T00:00:00.000Z")
-            : period === "2026-02"
-              ? new Date("2026-02-28T00:00:00.000Z")
-              : new Date("2026-01-31T00:00:00.000Z"),
-        totalReturn: 0,
-        savings: 0,
-        cashFlow: 0,
-        income: 0,
-        expenses: 0,
-        gainsLosses: 0,
-        assets: 0,
-        liabilities: 0,
-        netWorth: 0,
+  test("keeps merged Gain/Loss scopes in asset-class order", async () => {
+    const original = loadPeriodHistoryPoint.getMockImplementation()!;
+    loadPeriodHistoryPoint.mockImplementation(async (args) => {
+      const point = await original(args);
+      const assetClass =
+        args.period === "2026-01"
+          ? "unclassified"
+          : args.period === "2026-02"
+            ? "EQUITIES"
+            : "CASH_AND_CASH_EQUIVALENTS";
+      return {
+        ...point,
         scopeOptions: {
-          cashFlow: [],
-          income: [],
-          expenses: [],
-          gainsLosses:
-            period === "2026-01"
-              ? [
-                  {
-                    value: "unit-type:explicit",
-                    label: "Explicit G/L",
-                    kind: "gainLoss",
-                  },
-                  {
-                    value: "explicit-account:cash",
-                    label: "Explicit G/L / Cash",
-                    kind: "gainLoss",
-                    parentValue: "unit-type:explicit",
-                  },
-                ]
-              : period === "2026-02"
-                ? [
-                    {
-                      value: "unit-type:fx",
-                      label: "FX",
-                      kind: "gainLoss",
-                    },
-                    {
-                      value: "unit:fx:USD",
-                      label: "FX / USD",
-                      kind: "gainLoss",
-                      parentValue: "unit-type:fx",
-                    },
-                    {
-                      value: "unit-account:fx:USD:cash-usd",
-                      label: "FX / USD / USD Cash",
-                      kind: "gainLoss",
-                      parentValue: "unit:fx:USD",
-                    },
-                  ]
-                : [
-                    {
-                      value: "unit-type:security",
-                      label: "Security",
-                      kind: "gainLoss",
-                    },
-                    {
-                      value: "unit:security:AAPL:USD",
-                      label: "Security / AAPL (USD)",
-                      kind: "gainLoss",
-                      parentValue: "unit-type:security",
-                    },
-                    {
-                      value: "unit-account:security:AAPL:USD:brokerage",
-                      label: "Security / AAPL (USD) / Brokerage",
-                      kind: "gainLoss",
-                      parentValue: "unit:security:AAPL:USD",
-                    },
-                  ],
-          assets: [],
-          liabilities: [],
+          ...point.scopeOptions,
+          gainsLosses: [
+            {
+              value: `asset-class:${assetClass}`,
+              label: assetClass,
+              kind: "gainLoss",
+            },
+            {
+              value: `gain-loss-account:${assetClass}`,
+              label: `${assetClass} / Account`,
+              kind: "gainLoss",
+              parentValue: `asset-class:${assetClass}`,
+            },
+          ],
         },
-      }),
-    );
-
-    const result = await getPeriodHistory({
-      data: {
-        accountBookId: "book-1",
-        granularity: "month",
-      },
+      };
     });
-
+    const result = await getPeriodHistory({
+      data: { accountBookId: "book-1", granularity: "month" },
+    });
     expect(
       result.scopeOptions.gainsLosses.map((option) => option.value),
     ).toEqual([
       "total",
-      "unit-type:fx",
-      "unit:fx:USD",
-      "unit-account:fx:USD:cash-usd",
-      "unit-type:security",
-      "unit:security:AAPL:USD",
-      "unit-account:security:AAPL:USD:brokerage",
-      "unit-type:explicit",
-      "explicit-account:cash",
+      "asset-class:CASH_AND_CASH_EQUIVALENTS",
+      "gain-loss-account:CASH_AND_CASH_EQUIVALENTS",
+      "asset-class:EQUITIES",
+      "gain-loss-account:EQUITIES",
+      "asset-class:unclassified",
+      "gain-loss-account:unclassified",
     ]);
   });
 
@@ -652,7 +592,7 @@ describe("getPeriodHistory", () => {
         accountBookId: "book-gains",
         granularity: "year",
         scopedMetric: "gainsLosses",
-        gainLossScope: "unit-type:fx",
+        gainLossScope: "asset-class:CASH_AND_CASH_EQUIVALENTS",
       },
     });
 
@@ -667,7 +607,7 @@ describe("getPeriodHistory", () => {
       },
       metricScopeFilter: {
         metric: "gainsLosses",
-        scope: "unit-type:fx",
+        scope: "asset-class:CASH_AND_CASH_EQUIVALENTS",
       },
       valuationContext: {
         exchangeRateByKey: expect.any(Map),
@@ -685,7 +625,9 @@ describe("getPeriodHistory", () => {
         gainsLosses: 24,
       }),
     ]);
-    expect(result.scopeSelection.gainsLosses).toBe("unit-type:fx");
+    expect(result.scopeSelection.gainsLosses).toBe(
+      "asset-class:CASH_AND_CASH_EQUIVALENTS",
+    );
   });
 
   test("applies scoped cash flow values without opening-balance scoping", async () => {

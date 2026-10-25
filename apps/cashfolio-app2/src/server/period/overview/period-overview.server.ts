@@ -1,3 +1,4 @@
+import { buildGainLossAccountAttribution } from "../breakdown/period-gain-loss-attribution";
 import { toMoney, type Money, moneyAdd } from "../../../shared/money";
 import { startOfUtcDay } from "../../../shared/date";
 
@@ -176,6 +177,9 @@ export async function loadPeriodOverview(args: {
     bookingsCount,
     convertedBookingsCount,
     skippedBookingsCount,
+    gainLossAccountAttributionById: buildGainLossAccountAttribution(baseData, [
+      ...gainsLossesContributionByKey.values(),
+    ]),
     gainsLossesContributions: Array.from(gainsLossesContributionByKey.values()),
     locale: args.locale,
   });

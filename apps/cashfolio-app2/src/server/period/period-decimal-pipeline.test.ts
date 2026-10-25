@@ -19,6 +19,12 @@ const getOrLoadPeriodBaseData = vi.hoisted(() => vi.fn());
 vi.mock("../../prisma.server", () => ({ prisma }));
 vi.mock("./cache/period-base-data-cache", () => ({ getOrLoadPeriodBaseData }));
 vi.mock("../valuation.server", () => ({
+  getCurrencyExchangeRate: async ({ date }: { date: Date }) =>
+    toMoney(date.getUTCMonth() === 0 ? "0.8" : "0.9"),
+  getCurrencyExchangeRateDetails: async ({ date }: { date: Date }) => ({
+    rate: toMoney(date.getUTCMonth() === 0 ? "0.8" : "0.9"),
+    source: "timeSeries",
+  }),
   getSecurityToCurrencyExchangeRate: async ({ date }: { date: Date }) =>
     securityRate(date),
   getSecurityToCurrencyExchangeRateDetails: async ({
@@ -31,6 +37,7 @@ vi.mock("../valuation.server", () => ({
 import { loadPeriodOverview } from "./overview/period-overview.server";
 import { loadPeriodHistoryPointMetrics } from "./history/period-history-point-metrics.server";
 import { buildRealAccountReconciliation } from "./reconciliation/period-gain-loss-reconciliation-real-account";
+import { loadAccountGainLossSources } from "./reconciliation/period-account-gain-loss-sources";
 import { computeEndOfPeriodBalanceStats } from "./period-balance-stats";
 
 function securityRate(date: Date) {
@@ -158,8 +165,175 @@ describe("Decimal monetary pipelines", () => {
       getOrLoadPeriodBaseData.mockResolvedValue(classified);
       expect(
         await loadPeriodOverview({ ...args, baseData: classified }),
-      ).toEqual(overview);
-      expect(await loadPeriodHistoryPointMetrics(args)).toEqual(history);
+      ).toMatchObject({ stats: overview.stats });
+      const { scopeOptions: _scopeOptions, ...amounts } = history;
+      expect(await loadPeriodHistoryPointMetrics(args)).toMatchObject(amounts);
+    }
+  });
+
+  it("combines USD equity FX and recorded adjustments, includes CHF adjustments, and reclassifies every period", async () => {
+    const scenario = createScenario();
+    const stock = {
+      ...scenario.baseAssetLiabilityAccounts[0]!,
+      assetClass: AssetClass.EQUITIES,
+      unit: Unit.SECURITY,
+    };
+    const portfolio = {
+      ...stock,
+      id: "portfolio",
+      name: "USD Equity Portfolio",
+      unit: Unit.CURRENCY,
+      currency: "USD",
+      symbol: null,
+      tradeCurrency: null,
+    };
+    const bank = {
+      ...portfolio,
+      id: "bank",
+      name: "USD Bank",
+      assetClass: AssetClass.CASH_AND_CASH_EQUIVALENTS,
+    };
+    const chf = {
+      ...portfolio,
+      id: "chf",
+      name: "CHF Portfolio",
+      currency: "CHF",
+    };
+    scenario.baseAssetLiabilityAccounts = [stock, portfolio, bank, chf];
+    scenario.holdingAccountsResolved = [stock, portfolio, bank];
+    scenario.initialHoldingBalances.push(
+      { accountId: "portfolio", rawBalance: toMoney(100) },
+      { accountId: "bank", rawBalance: toMoney(200) },
+    );
+    scenario.endOfPeriodRawBalances.push(
+      { accountId: "portfolio", rawBalance: toMoney(120) },
+      { accountId: "bank", rawBalance: toMoney(200) },
+      { accountId: "chf", rawBalance: toMoney(50) },
+    );
+    for (const [account, amount] of [
+      [portfolio, 20],
+      [chf, 5],
+    ] as const) {
+      const booking = {
+        ...scenario.equityBookings[0]!,
+        id: `adjustment-${account.id}`,
+        transactionId: `adjustment-${account.id}`,
+        accountId: "gain-loss",
+        equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
+        value: toMoney(amount).neg(),
+        currency: account.currency,
+        description: "Recorded investment gain",
+      };
+      scenario.equityBookings.push(booking);
+      scenario.explicitCounterparts.push({
+        transactionId: booking.transactionId,
+        accountId: account.id,
+        accountName: account.name,
+      });
+      scenario.holdingTransactions.push({
+        id: booking.transactionId,
+        bookings: [
+          {
+            ...booking,
+            accountId: account.id,
+            value: toMoney(amount),
+            accountType: AccountType.BALANCE,
+            equityAccountSubtype: null,
+          },
+          { ...booking, accountType: AccountType.EQUITY },
+        ],
+      });
+    }
+    const overview = await loadPeriodOverview({
+      accountBookId: "book-1",
+      baseData: scenario,
+    });
+    const leaves = overview.gainsLossesBreakdown.hierarchy.flatMap(
+      (node) => node.children,
+    );
+    expect(
+      leaves.find((node) => node.account?.id === "portfolio"),
+    ).toMatchObject({
+      totalGainLoss: 28,
+      account: {
+        sources: ["EXPLICIT", "HOLDING"],
+        recordedGainLoss: 18,
+        calculatedUnrealizedGainLoss: 10,
+      },
+    });
+    expect(
+      overview.gainsLossesBreakdown.hierarchy.map((node) => [
+        node.label,
+        node.totalGainLoss,
+      ]),
+    ).toEqual([
+      ["Cash & Cash Equivalents", 20],
+      ["Equities", 40.1],
+    ]);
+    expect(overview.stats.gainsLosses).toBe(60.1);
+    const explanation = toNumericMoney(
+      await loadAccountGainLossSources(scenario, "portfolio"),
+    );
+    expect(explanation.node?.totalGainLoss).toBe(28);
+    expect(explanation.recordedAdjustments).toMatchObject([
+      {
+        amount: 18,
+        transactionId: "adjustment-portfolio",
+        description: "Recorded investment gain",
+      },
+    ]);
+    const chfExplanation = toNumericMoney(
+      await loadAccountGainLossSources(scenario, "chf"),
+    );
+    expect(chfExplanation.node?.totalGainLoss).toBe(5);
+    for (const granularity of ["month", "year"] as const) {
+      const baseData = {
+        ...scenario,
+        selection: { ...scenario.selection, granularity },
+      };
+      const history = toNumericMoney(
+        await loadPeriodHistoryPointMetrics({
+          accountBookId: "book-1",
+          baseData,
+          metricScopeFilter: {
+            metric: "gainsLosses",
+            scope: "gain-loss-account:portfolio",
+          },
+        }),
+      );
+      expect(history.gainsLosses).toBe(overview.stats.gainsLosses);
+      expect(history.scopedMetricValue).toBe(28);
+      const reclassified = {
+        ...baseData,
+        baseAssetLiabilityAccounts: baseData.baseAssetLiabilityAccounts.map(
+          (account) =>
+            account.id === "portfolio"
+              ? { ...account, assetClass: AssetClass.OTHER_ASSETS }
+              : account,
+        ),
+      };
+      const changed = await loadPeriodOverview({
+        accountBookId: "book-1",
+        baseData: reclassified,
+      });
+      expect(changed.stats).toEqual(overview.stats);
+      expect(
+        changed.gainsLossesBreakdown.hierarchy.find(
+          (node) => node.label === "Other Assets",
+        )?.totalGainLoss,
+      ).toBe(28);
+      const changedHistory = toNumericMoney(
+        await loadPeriodHistoryPointMetrics({
+          accountBookId: "book-1",
+          baseData: reclassified,
+          metricScopeFilter: {
+            metric: "gainsLosses",
+            scope: "asset-class:OTHER_ASSETS",
+          },
+        }),
+      );
+      expect(changedHistory.scopedMetricValue).toBe(28);
+      expect(changedHistory.gainsLosses).toBe(overview.stats.gainsLosses);
     }
   });
 
@@ -280,6 +454,13 @@ describe("Decimal monetary pipelines", () => {
         baseData: scenario,
       }),
     );
+    const residualExplanation = toNumericMoney(
+      await loadAccountGainLossSources(scenario, "expense-security"),
+    );
+    expect(residualExplanation.executionResiduals).toMatchObject([
+      { transactionId: "residual", id: "expense-security" },
+    ]);
+    expect(residualExplanation.node?.totalGainLoss).toBe(-19.94);
     expect(overview.stats.gainsLosses).toBe(-12.84);
     expect(history.gainsLosses).toBe(overview.stats.gainsLosses);
     expect(history.totalReturn).toBe(overview.stats.totalReturn);

@@ -15,7 +15,6 @@ export function resolveHistoryAccountDrillTarget(args: {
   metric: HistoryMetric;
   scope?: HistoryScopeSelection;
   options: HistoryScopeOption[];
-  gainLossEquityAccountId: string | null;
 }): HistoryAccountDrillTarget | null {
   if (!isHistoryScopedMetric(args.metric)) return null;
   const option = args.options.find(
@@ -31,20 +30,9 @@ export function resolveHistoryAccountDrillTarget(args: {
   }
   if (args.metric !== "gainsLosses") return null;
 
-  if (option.value.startsWith("explicit-account:")) {
-    return args.gainLossEquityAccountId
-      ? { kind: "ledger", accountId: args.gainLossEquityAccountId }
-      : null;
-  }
-  if (
-    !option.value.startsWith("unit-account:") ||
-    !option.parentValue?.startsWith("unit:")
-  )
-    return null;
-  const prefix = `unit-account:${option.parentValue.slice("unit:".length)}:`;
-  if (!option.value.startsWith(prefix)) return null;
-  const accountId = option.value.slice(prefix.length);
-  return accountId ? { kind: "reconciliation", accountId } : null;
+  return option.accountId
+    ? { kind: "reconciliation", accountId: option.accountId }
+    : null;
 }
 
 export function buildHistoryAccountDrillNavigation(args: {

@@ -1,8 +1,12 @@
+import { Unit } from "../.prisma-client/enums";
+
 export type HistoryScopedMetric =
   "cashFlow" | "income" | "expenses" | "gainsLosses" | "assets" | "liabilities";
 
 export type HistoryScopeSelection =
   | "total"
+  | `asset-class:${string}`
+  | `gain-loss-account:${string}`
   | `group:${string}`
   | `account:${string}`
   | `unit-type:${string}`
@@ -18,6 +22,8 @@ export type HistoryScopeOption = {
   kind: HistoryScopeKind;
   treeLabel?: string;
   parentValue?: HistoryScopeSelection;
+  accountId?: string;
+  legacyValues?: string[];
 };
 
 export function isHistoryScopedMetric(
@@ -42,6 +48,13 @@ export function parseHistoryScopeSelection(
 
   if (typeof value !== "string") {
     return undefined;
+  }
+
+  for (const prefix of ["asset-class:", "gain-loss-account:"] as const) {
+    if (value.startsWith(prefix)) {
+      const id = value.slice(prefix.length).trim();
+      return id ? `${prefix}${id}` : undefined;
+    }
   }
 
   if (value.startsWith("group:")) {
@@ -105,4 +118,65 @@ export function getHistoryScopeKind(
   }
 
   return "gainLoss";
+}
+
+/** Legacy leaf identities name an account; valuation categories cannot name a class. */
+export function normalizeGainLossScope(
+  scope: HistoryScopeSelection,
+  options: HistoryScopeOption[],
+): HistoryScopeSelection {
+  if (
+    scope.startsWith("explicit-account:") ||
+    scope.startsWith("unit-account:")
+  ) {
+    const matched = options.find((option) =>
+      option.legacyValues?.includes(scope),
+    );
+    if (matched) return matched.value;
+    for (const id of [
+      "explicit-unattributed:missing-counterpart",
+      "explicit-unattributed:multiple-counterparts",
+    ]) {
+      if (scope === `explicit-account:${id}`) return `gain-loss-account:${id}`;
+    }
+    // Virtual IDs embed their complete unit identity. Reconstruct the entire old
+    // leaf rather than taking an ambiguous account-ID suffix from a real leaf.
+    const virtualPrefix = "virtual:transfer-clearing:account:";
+    const index = scope.indexOf(`:${virtualPrefix}`);
+    if (index !== -1) {
+      const accountId = scope.slice(index + 1);
+      const unitKey = accountId.slice(virtualPrefix.length);
+      const legacyUnit = unitKey.startsWith("currency:")
+        ? `fx:${unitKey.slice("currency:".length)}`
+        : unitKey;
+      if (scope === `unit-account:${legacyUnit}:${accountId}`)
+        return `gain-loss-account:${accountId}`;
+    }
+    return "total";
+  }
+  return scope === "total" ||
+    scope.startsWith("asset-class:") ||
+    scope.startsWith("gain-loss-account:")
+    ? scope
+    : "total";
+}
+
+/** Preserve the full historic leaf identity, including colon-containing account IDs. */
+export function getLegacyHoldingGainLossScope(account: {
+  id: string;
+  unit: Unit | null;
+  currency: string | null;
+  cryptocurrency: string | null;
+  symbol: string | null;
+  tradeCurrency: string | null;
+}): string {
+  const code = (value: string | null) =>
+    value?.trim().toUpperCase() || "UNKNOWN";
+  let unitId: string;
+  if (account.unit === Unit.CURRENCY) unitId = `fx:${code(account.currency)}`;
+  else if (account.unit === Unit.CRYPTOCURRENCY)
+    unitId = `crypto:${code(account.cryptocurrency)}`;
+  else
+    unitId = `security:${code(account.symbol)}:${code(account.tradeCurrency)}`;
+  return `unit-account:${unitId}:${account.id}`;
 }

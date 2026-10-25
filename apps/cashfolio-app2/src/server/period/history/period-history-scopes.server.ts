@@ -14,6 +14,7 @@ import {
 
 import {
   parseHistoryScopeSelection,
+  normalizeGainLossScope,
   type HistoryScopeOption,
   type HistoryScopeSelection,
   type HistoryScopedMetric,
@@ -186,7 +187,12 @@ export function resolveScopedMetricValue(args: {
   if (args.metricScopeFilter.metric === "gainsLosses") {
     return resolveScopedGainLossValue({
       hierarchy: args.gainsLossesHierarchy ?? [],
-      scope: parsedScope,
+      scope: normalizeGainLossScope(
+        parsedScope,
+        buildHistoryGainLossScopeOptions({
+          hierarchy: args.gainsLossesHierarchy ?? [],
+        }),
+      ),
     });
   }
 
@@ -226,6 +232,12 @@ export function buildHistoryGainLossScopeOptions(args: {
         label,
         kind: "gainLoss",
         treeLabel: node.label,
+        ...(node.account
+          ? {
+              accountId: node.account.id,
+              legacyValues: node.account.legacyScopes,
+            }
+          : {}),
         ...(parentValue ? { parentValue } : {}),
       });
       appendNodes(node.children, value, label);

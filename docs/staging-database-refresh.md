@@ -98,10 +98,12 @@ transactions. The previous cash rounding adjustment is no longer seeded.
 
 In the portfolio ledger, inspect the running balance and the separate
 contribution, withdrawal, and statement valuation transactions. In Report,
-switch Gains/Losses to Table and inspect `Explicit G/L → Managed Portfolio CHF`;
-double-click the portfolio row to open the system Gain/Loss ledger for that
-period. In History, select Gains/Losses and the
-`Explicit G/L / Managed Portfolio CHF` scope to inspect the monthly series.
+switch Gains/Losses to Table and inspect `Other Assets → Managed Portfolio CHF`;
+double-click the portfolio row to open its unified gain/loss explanation for
+that period. Recorded Adjustments lists the statement valuations and links to
+their full transactions in Transactions for the selected report period,
+including bookings outside that period. In History, select Gains/Losses and the
+`Other Assets / Managed Portfolio CHF` scope to inspect the monthly series.
 
 For the automated fixture dated **2026-10-10**, there are 37 statement
 valuations with **CHF 8,100** cumulative explicit gains, CHF 9,000 of

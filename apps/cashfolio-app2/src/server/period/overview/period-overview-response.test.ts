@@ -234,8 +234,8 @@ describe("period overview response", () => {
           cryptocurrency: null,
           symbol: null,
           tradeCurrency: null,
-          realizedGainLoss: toMoney(3),
-          unrealizedGainLoss: toMoney(2),
+          realizedGainLoss: toMoney(0),
+          unrealizedGainLoss: toMoney(0),
         },
         {
           sourceKind: "HOLDING",
@@ -329,109 +329,50 @@ describe("period overview response", () => {
         },
       ],
     });
-    expect(response.gainsLossesBreakdown.hierarchy).toEqual([
+    expect(response.gainsLossesBreakdown.hierarchy).toMatchObject([
       {
-        id: "unit-type:fx",
-        label: "FX",
-        realizedGainLoss: 5,
-        unrealizedGainLoss: 0,
-        totalGainLoss: 5,
+        id: "asset-class:unclassified",
+        label: "Unclassified",
         children: [
           {
-            id: "unit:fx:USD",
-            label: "USD",
-            realizedGainLoss: 5,
-            unrealizedGainLoss: 0,
-            totalGainLoss: 5,
-            children: [
-              {
-                id: "unit-account:fx:USD:account-usd-cash-1",
-                label: "USD Cash 1",
-                realizedGainLoss: 4,
-                unrealizedGainLoss: 1,
-                totalGainLoss: 5,
-                children: [],
-              },
-              {
-                id: "unit-account:fx:USD:account-usd-cash-2",
-                label: "USD Cash 2",
-                realizedGainLoss: 1,
-                unrealizedGainLoss: -1,
-                totalGainLoss: 0,
-                children: [],
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: "unit-type:security",
-        label: "Security",
-        realizedGainLoss: 1,
-        unrealizedGainLoss: 9,
-        totalGainLoss: 10,
-        children: [
-          {
-            id: "unit:security:AAPL:USD",
-            label: "AAPL (USD)",
+            id: "gain-loss-account:account-aapl",
+            label: "AAPL Trading",
             realizedGainLoss: 1,
             unrealizedGainLoss: 9,
             totalGainLoss: 10,
-            children: [
-              {
-                id: "unit-account:security:AAPL:USD:account-aapl",
-                label: "AAPL Trading",
-                realizedGainLoss: 1,
-                unrealizedGainLoss: 9,
-                totalGainLoss: 10,
-                children: [],
-              },
-            ],
           },
-        ],
-      },
-      {
-        id: "unit-type:cryptocurrency",
-        label: "Cryptocurrency",
-        realizedGainLoss: -1,
-        unrealizedGainLoss: 6,
-        totalGainLoss: 5,
-        children: [
           {
-            id: "unit:crypto:BTC",
-            label: "BTC",
+            id: "gain-loss-account:account-btc",
+            label: "BTC Wallet",
             realizedGainLoss: -1,
             unrealizedGainLoss: 6,
             totalGainLoss: 5,
-            children: [
-              {
-                id: "unit-account:crypto:BTC:account-btc",
-                label: "BTC Wallet",
-                realizedGainLoss: -1,
-                unrealizedGainLoss: 6,
-                totalGainLoss: 5,
-                children: [],
-              },
-            ],
           },
-        ],
-      },
-      {
-        id: "unit-type:explicit",
-        label: "Explicit G/L",
-        realizedGainLoss: 10,
-        unrealizedGainLoss: 0,
-        totalGainLoss: 10,
-        children: [
           {
-            id: "explicit-account:account-fees",
+            id: "gain-loss-account:account-fees",
             label: "Fees Account",
             realizedGainLoss: 10,
             unrealizedGainLoss: 0,
             totalGainLoss: 10,
-            children: [],
+          },
+          {
+            id: "gain-loss-account:account-usd-cash-1",
+            label: "USD Cash 1",
+            realizedGainLoss: 4,
+            unrealizedGainLoss: 1,
+            totalGainLoss: 5,
+          },
+          {
+            id: "gain-loss-account:account-usd-cash-2",
+            label: "USD Cash 2",
+            realizedGainLoss: 1,
+            unrealizedGainLoss: -1,
+            totalGainLoss: 0,
           },
         ],
+        realizedGainLoss: 15,
+        unrealizedGainLoss: 15,
+        totalGainLoss: 30,
       },
     ]);
   });
@@ -507,49 +448,29 @@ describe("period overview response", () => {
       gainsLosses: 3.67,
       explicitGainLoss: 0.34,
     });
-    expect(response.gainsLossesBreakdown.hierarchy).toEqual([
+    expect(response.gainsLossesBreakdown.hierarchy).toMatchObject([
       {
-        id: "unit-type:fx",
-        label: "FX",
-        realizedGainLoss: 4.44,
-        unrealizedGainLoss: -1.11,
-        totalGainLoss: 3.33,
+        id: "asset-class:unclassified",
+        label: "Unclassified",
         children: [
           {
-            id: "unit:fx:USD",
-            label: "USD",
-            realizedGainLoss: 4.44,
-            unrealizedGainLoss: -1.11,
-            totalGainLoss: 3.33,
-            children: [
-              {
-                id: "unit-account:fx:USD:account-usd-cash",
-                label: "USD Cash",
-                realizedGainLoss: 4.44,
-                unrealizedGainLoss: -1.11,
-                totalGainLoss: 3.33,
-                children: [],
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: "unit-type:explicit",
-        label: "Explicit G/L",
-        realizedGainLoss: 0.34,
-        unrealizedGainLoss: 0,
-        totalGainLoss: 0.34,
-        children: [
-          {
-            id: "explicit-account:account-fees",
+            id: "gain-loss-account:account-fees",
             label: "Fees Account",
             realizedGainLoss: 0.34,
             unrealizedGainLoss: 0,
             totalGainLoss: 0.34,
-            children: [],
+          },
+          {
+            id: "gain-loss-account:account-usd-cash",
+            label: "USD Cash",
+            realizedGainLoss: 4.44,
+            unrealizedGainLoss: -1.11,
+            totalGainLoss: 3.33,
           },
         ],
+        realizedGainLoss: 4.78,
+        unrealizedGainLoss: -1.11,
+        totalGainLoss: 3.67,
       },
     ]);
   });

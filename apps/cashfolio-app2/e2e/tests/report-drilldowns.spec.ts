@@ -1,3 +1,6 @@
+import { AssetClass } from "../../src/.prisma-client/enums";
+import { defaultStringifySearch } from "@tanstack/react-router";
+import { prisma } from "../support/db-client";
 import {
   seedDatabase,
   seedExplicitGainLossDrilldownScenario,
@@ -160,7 +163,7 @@ test("period allocation table account drilldown opens ledger with selected perio
   ).toBeVisible();
 });
 
-test("period gains/losses table unit-account drilldown opens reconciliation page and event ledger link", async ({
+test("period gains/losses table account drilldown opens reconciliation page and event ledger link", async ({
   page,
 }) => {
   const period = "2026-02";
@@ -181,9 +184,9 @@ test("period gains/losses table unit-account drilldown opens reconciliation page
     tableTestId: "period-gains-losses-breakdown-table",
   });
 
-  const securityUnitRow = gridRowByText(gainsLossesTable, "AAPL (USD)");
-  await expect(securityUnitRow).toBeVisible();
-  await expandRowIfCollapsed(securityUnitRow);
+  const assetClassRow = gridRowByText(gainsLossesTable, "Equities");
+  await expect(assetClassRow).toBeVisible();
+  await expandRowIfCollapsed(assetClassRow);
 
   const securityAccountRow = gridRowByText(
     gainsLossesTable,
@@ -234,11 +237,11 @@ test("period gains/losses table unit-account drilldown opens reconciliation page
   await expect(page.getByText(gainLossSeed.sellDescription)).toBeVisible();
 });
 
-test("period explicit gains/losses rows drill to gain/loss ledger", async ({
+test("period recorded gains/losses rows open the reference-currency account explanation", async ({
   page,
 }) => {
   const period = "2026-01";
-  const explicitSeed = await seedExplicitGainLossDrilldownScenario({
+  await seedExplicitGainLossDrilldownScenario({
     accountBookId: seeded.accountBookId,
     counterAccountId: seeded.cashAccount.id,
   });
@@ -260,23 +263,221 @@ test("period explicit gains/losses rows drill to gain/loss ledger", async ({
 
   await expect(page).toHaveURL(
     new RegExp(
-      `/${seeded.accountBookId}/${explicitSeed.gainLossAccountId}\\?period=${period}$`,
+      `/${seeded.accountBookId}/report/gains-losses/${seeded.cashAccount.id}\\?period=${period}$`,
     ),
   );
   await expect(page.getByTestId("period-picker-trigger")).toContainText(
     "January 2026",
   );
-  await expect(page.getByText("E2E Explicit Gain/Loss Seed")).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Accounts", exact: true }),
-  ).not.toHaveAttribute("data-active", "true");
-  const back = page.getByRole("link", { name: "Back to Report" });
-  await expect(back).toHaveAttribute(
-    "href",
-    `/${seeded.accountBookId}/report?period=${period}`,
-  );
-  await back.click();
+    page.getByRole("heading", { name: "Recorded Adjustments" }),
+  ).toBeVisible();
+  await expect(page.getByText("E2E Explicit Gain/Loss Seed")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Open Transaction", exact: true })
+    .click();
   await expect(page).toHaveURL(
-    `/${seeded.accountBookId}/report?period=${period}`,
+    new RegExp(`/${seeded.accountBookId}/transactions\\?period=${period}`),
   );
+  await expect(
+    page.getByRole("link", { name: "Transactions", exact: true }),
+  ).toHaveAttribute("data-active", "true");
+  const details = page.getByRole("region", {
+    name: "Transaction details: E2E Explicit Gain/Loss Seed",
+  });
+  await expect(details).toBeVisible();
+  await expect(details).toContainText("2 bookings");
+  await expect(details).toContainText(seeded.cashAccount.name);
+  await page.goBack();
+  await expect(page).toHaveURL(
+    new RegExp(
+      `/${seeded.accountBookId}/report/gains-losses/${seeded.cashAccount.id}\\?period=${period}$`,
+    ),
+  );
+  await expect(
+    page.getByRole("heading", { name: "Recorded Adjustments" }),
+  ).toBeVisible();
+});
+
+for (const scenario of [
+  {
+    name: "month boundary",
+    gainLossBookingDate: "2026-01-31",
+    counterpartBookingDate: "2026-02-01",
+    period: "2026-01",
+    bookingDateLabels: ["31.01.2026", "01.02.2026"],
+  },
+  {
+    name: "year boundary from a monthly explanation",
+    gainLossBookingDate: "2025-12-31",
+    counterpartBookingDate: "2026-01-01",
+    period: "2025-12",
+    bookingDateLabels: ["31.12.2025", "01.01.2026"],
+  },
+  {
+    name: "year boundary from a yearly explanation",
+    gainLossBookingDate: "2025-12-31",
+    counterpartBookingDate: "2026-01-01",
+    period: "2025",
+    bookingDateLabels: ["31.12.2025", "01.01.2026"],
+  },
+] as const) {
+  test(`recorded adjustment transaction links span the ${scenario.name}`, async ({
+    page,
+    e2eExternalId,
+  }) => {
+    const book = await seedDatabase({
+      userExternalId: e2eExternalId,
+      accountBookStartDate: new Date("2025-01-01T00:00:00Z"),
+    });
+    const adjustment = await seedExplicitGainLossDrilldownScenario({
+      accountBookId: book.accountBookId,
+      counterAccountId: book.cashAccount.id,
+      gainLossBookingDate: new Date(
+        `${scenario.gainLossBookingDate}T00:00:00Z`,
+      ),
+      counterpartBookingDate: new Date(
+        `${scenario.counterpartBookingDate}T00:00:00Z`,
+      ),
+    });
+    const periodSearch = defaultStringifySearch({ period: scenario.period });
+    const explanationPath = `/${book.accountBookId}/report/gains-losses/${book.cashAccount.id}${periodSearch}`;
+    await page.goto(explanationPath);
+    await expect(page).toHaveURL(explanationPath);
+    const recorded = page
+      .getByRole("heading", { name: "Recorded Adjustments" })
+      .locator("..");
+    const adjustmentRow = recorded.getByRole("row").filter({
+      hasText: "E2E Explicit Gain/Loss Seed",
+    });
+    await expect(adjustmentRow).toBeVisible();
+    await expect(adjustmentRow.getByRole("cell").nth(2)).toContainText("25.00");
+    const amount = await adjustmentRow.getByRole("cell").nth(2).innerText();
+
+    await adjustmentRow
+      .getByRole("button", { name: "Open Transaction" })
+      .click();
+    await expect
+      .poll(() => {
+        const url = new URL(page.url());
+        return {
+          path: url.pathname,
+          period: url.searchParams.get("period"),
+        };
+      })
+      .toEqual({
+        path: `/${book.accountBookId}/transactions`,
+        period: new URLSearchParams(periodSearch).get("period"),
+      });
+    const details = page.getByRole("region", {
+      name: "Transaction details: E2E Explicit Gain/Loss Seed",
+    });
+    await expect(details).toBeVisible();
+    await expect(details).toContainText("2 bookings");
+    await expect(
+      page
+        .getByRole("grid", { name: "Transactions", exact: true })
+        .locator(".ag-row.transaction-inspected"),
+    ).toHaveAttribute("row-id", adjustment.transactionId);
+    for (const date of scenario.bookingDateLabels) {
+      await expect(
+        details.getByRole("gridcell", { name: date, exact: true }),
+      ).toBeVisible();
+    }
+    await expect(details).toContainText(book.cashAccount.name);
+    await expect(details).toContainText(adjustment.gainLossAccountName);
+
+    await page.goBack();
+    await expect(page).toHaveURL(explanationPath);
+    await expect(adjustmentRow.getByRole("cell").nth(2)).toHaveText(amount);
+  });
+}
+
+test("archived manual portfolio reclassification moves historical G/L without changing the amount", async ({
+  page,
+  e2eExternalId,
+}) => {
+  const book = await seedDatabase({
+    userExternalId: e2eExternalId,
+    accountBookStartDate: new Date("2026-01-01T00:00:00Z"),
+  });
+  await prisma.account.update({
+    where: {
+      id_accountBookId: {
+        id: book.cashAccount.id,
+        accountBookId: book.accountBookId,
+      },
+    },
+    data: {
+      name: "Archived CHF Equity Portfolio",
+      isActive: false,
+      assetClass: AssetClass.EQUITIES,
+    },
+  });
+  await seedExplicitGainLossDrilldownScenario({
+    accountBookId: book.accountBookId,
+    counterAccountId: book.cashAccount.id,
+  });
+  const reportUrl = `/${book.accountBookId}/report?period=2026-01`;
+  await page.goto(reportUrl);
+  let table = await openTableView({
+    page,
+    controlName: "Gains/Losses Chart Type",
+    tableTestId: "period-gains-losses-breakdown-table",
+  });
+  await expect(gridRowByText(table, "Equities")).toBeVisible();
+  await expandRowIfCollapsed(gridRowByText(table, "Equities"));
+  const amount = await gridRowByText(table, "Archived CHF Equity Portfolio")
+    .locator('[col-id="totalGainLoss"]')
+    .innerText();
+  expect(amount).toMatch(/25/);
+  await expect(table.getByText("Explicit G/L", { exact: true })).toHaveCount(0);
+  const footer = await table
+    .locator(".ag-grid-pinned-bottom-rows .ag-row-pinned")
+    .innerText();
+  await prisma.account.update({
+    where: {
+      id_accountBookId: {
+        id: book.cashAccount.id,
+        accountBookId: book.accountBookId,
+      },
+    },
+    data: { assetClass: AssetClass.OTHER_ASSETS },
+  });
+  await page.reload();
+  table = await openTableView({
+    page,
+    controlName: "Gains/Losses Chart Type",
+    tableTestId: "period-gains-losses-breakdown-table",
+  });
+  await expect(gridRowByText(table, "Equities")).toHaveCount(0);
+  await expect(gridRowByText(table, "Other Assets")).toBeVisible();
+  await expandRowIfCollapsed(gridRowByText(table, "Other Assets"));
+  await expect(
+    gridRowByText(table, "Archived CHF Equity Portfolio").locator(
+      '[col-id="totalGainLoss"]',
+    ),
+  ).toHaveText(amount);
+  expect(
+    await table
+      .locator(".ag-grid-pinned-bottom-rows .ag-row-pinned")
+      .innerText(),
+  ).toBe(footer);
+  for (const mode of ["month", "year"]) {
+    await page.goto(
+      `/${book.accountBookId}/history?mode=${mode}&metric=gainsLosses&gainLossScope=asset-class:OTHER_ASSETS`,
+    );
+    await expect(page.getByRole("textbox", { name: "View" })).toHaveValue(
+      "Other Assets",
+    );
+    await page.goto(
+      `/${book.accountBookId}/history?mode=${mode}&metric=gainsLosses&gainLossScope=explicit-account:${book.cashAccount.id}`,
+    );
+    await expect(page.getByRole("textbox", { name: "View" })).toHaveValue(
+      "Archived CHF Equity Portfolio",
+    );
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("gainLossScope"))
+      .toBe(`gain-loss-account:${book.cashAccount.id}`);
+  }
 });

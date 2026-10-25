@@ -72,7 +72,7 @@ system-created equity accounts remain null.
 
 Account queries and period base-data snapshots carry classification as metadata.
 Changing it uses the existing account mutation boundary, database cache revision
-trigger, post-commit cleanup, and router invalidation. Base-data cache v9
+trigger, post-commit cleanup, and router invalidation. Base-data cache v10
 includes the new field; History metrics retain their current format and version.
 No report calculation or grouping uses asset class yet.
 
@@ -238,14 +238,14 @@ namespaces and preserves global valuation caches.
 - Redis key namespace includes deployment scope and the database-backed
   invalidation generation (`AccountBook.periodCacheRevision`):
   - Entry:
-    `period:base:v9:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
+    `period:base:v10:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}`
   - Index:
-    `period:base:index:v9:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
+    `period:base:index:v10:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}`
   - Cleanup hint (never used to determine cache validity):
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
 - History metrics entry:
-  `period:history:metrics:v9:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
-- Base-data v9 and History metrics v9 store monetary values as tagged exact
+  `period:history:metrics:v10:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
+- Base-data v10 and History metrics v10 store monetary values as tagged exact
   decimal strings through `src/server/money-cache-codec.ts`
   (`{ __cashfolioDecimal: "..." }`). Dates retain their existing
   `{ __cashfolioDateMs: milliseconds }` representation. Reads reconstruct
@@ -435,6 +435,56 @@ are split into dedicated modules under `src/server/period/`:
 - `src/server/period/holdings/period-holding-gain-loss.ts` handles tracked
   holding lot/FIFO orchestration (real + transfer-clearing synthetic
   transactions) and residual realization integration
+
+## Asset-Class Gain/Loss Reporting
+
+Period overview and History share the contribution pipeline and the
+`Asset Class → Account` breakdown. Current `Account.assetClass` applies to every
+period, including archived assets and liabilities. Unit and instrument identity
+continue to control valuation and FIFO independently of classification.
+
+Calculated holdings G/L uses the owning account's classification. Recorded
+Gain/Loss equity bookings use their resolved asset/liability counterpart.
+Calculated and recorded amounts are combined once per account, with their
+provenance retained in account-node metadata. Reference-currency accounts have
+no calculated FX contribution, but their recorded adjustments remain included.
+Null classification is Unclassified, distinct from Other Assets.
+
+Execution residual amounts retain their existing allocation weights. Only
+contributing residual portions carry originating-account metadata; fully
+transferred legs and skipped candidates cannot affect classification. Real
+accounts use their own class; equity-origin residuals inherit a class only when
+one originating financial account is identifiable. Transfer-clearing FIFO stays
+pooled by unit. Its reporting class comes from a single identifiable originating
+account; multiple or missing origins remain Unclassified with an explanation.
+Legacy missing/multiple-counterpart amounts also remain visible there.
+
+All aggregation uses Decimal before the existing two-decimal response rounding.
+Independently rounded rows can differ from a rounded aggregate by a cent; no
+synthetic balancing contribution is added. The underlying total G/L, balances,
+net-worth reconciliation, and income/expense calculations are unchanged.
+
+The breakdown's realised component continues to include recorded adjustments;
+where displayed together it is labelled Realised / Recorded. A recorded manual
+adjustment does not establish economic realisation. Aggregate
+`stats.realizedGainLoss` still means calculated holdings/residual realisation,
+with `stats.explicitGainLoss` separate. A broader realisation model is outside
+this reporting change.
+
+The account reconciliation page replays the shared contribution pipeline and
+shows the combined total, calculated FIFO explanations, recorded adjustments,
+and execution residual rows with transaction links. Reference-currency and
+legacy unattributed accounts are supported. Recorded-adjustment links open the
+complete transaction in Transactions for the reconciliation period. Its G/L
+booking ensures inclusion even when the financial-account booking falls in a
+different month or year. Calculated-event and execution-residual links retain
+the real account's ledger and period, or Transactions for virtual accounts.
+
+Base-data v10 adds originating-account IDs and recorded booking descriptions.
+History metrics v10 carries class/account scopes and explicit account metadata;
+older hierarchy payloads are not reused. Classification edits already advance
+`AccountBook.periodCacheRevision` transactionally, invalidating both cache
+families for all periods. No changes to provider caches or FIFO keys are needed.
 
 ## Gain/Loss Reconciliation Explain Fields
 
@@ -752,9 +802,9 @@ applicable.
 History applies classification independently at every month/year endpoint and
 its opening baseline. Account/group scopes contain only that metric's
 contribution; a selected account contributes zero while on the opposite side.
-Scope options remain the union across period points. History metrics v9 prevents
-reuse of results computed with permanent asset/liability classification;
-base-data v8 and valuation caches remain compatible.
+Scope options remain the union across period points. History metrics v10
+prevents reuse of results computed with permanent asset/liability
+classification; base-data v10 and valuation caches remain compatible.
 
 ### Unified account management queries
 

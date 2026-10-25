@@ -6,6 +6,7 @@ export type GainLossContributionAccumulator = {
   sourceKind: "HOLDING" | "EXPLICIT";
   accountId: string;
   accountName: string;
+  originatingAccountIds?: string[];
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
@@ -76,6 +77,7 @@ export function accumulateGainLossContribution(args: {
   sourceKind: GainLossContributionAccumulator["sourceKind"];
   accountId: string;
   accountName: string;
+  originatingAccountIds?: string[];
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
@@ -110,6 +112,18 @@ export function accumulateGainLossContribution(args: {
   const existing = args.byKey.get(key);
 
   if (existing) {
+    if (existing.originatingAccountIds || args.originatingAccountIds) {
+      existing.originatingAccountIds = [
+        ...new Set([
+          ...(existing.originatingAccountIds?.length
+            ? existing.originatingAccountIds
+            : ["unknown"]),
+          ...(args.originatingAccountIds?.length
+            ? args.originatingAccountIds
+            : ["unknown"]),
+        ]),
+      ];
+    }
     existing.realizedGainLoss = moneyAdd(
       existing.realizedGainLoss,
       realizedGainLoss,
@@ -132,6 +146,9 @@ export function accumulateGainLossContribution(args: {
     sourceKind: args.sourceKind,
     accountId: args.accountId,
     accountName: args.accountName,
+    ...(args.originatingAccountIds
+      ? { originatingAccountIds: args.originatingAccountIds }
+      : {}),
     unit: args.unit,
     currency: args.currency,
     cryptocurrency: args.cryptocurrency,

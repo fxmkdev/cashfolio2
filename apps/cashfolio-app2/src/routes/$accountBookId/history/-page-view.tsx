@@ -58,7 +58,6 @@ export type HistoryPageViewProps = {
   selectedMetric: HistoryMetric;
   isViewPending: boolean;
   history: PeriodHistoryResponse;
-  gainLossEquityAccountId: string | null;
   onAccountPeriodDoubleClick: (
     target: HistoryAccountDrillTarget,
     periodValue: string,
@@ -102,7 +101,6 @@ export function HistoryPageView({
   selectedMetric,
   isViewPending,
   history,
-  gainLossEquityAccountId,
   onAccountPeriodDoubleClick,
   onModeChange,
   onViewChange,
@@ -239,14 +237,8 @@ export function HistoryPageView({
         options: isHistoryScopedMetric(selectedMetric)
           ? history.scopeOptions[selectedMetric]
           : [],
-        gainLossEquityAccountId,
       }),
-    [
-      selectedMetric,
-      history.scopeSelection,
-      history.scopeOptions,
-      gainLossEquityAccountId,
-    ],
+    [selectedMetric, history.scopeSelection, history.scopeOptions],
   );
   const handlePeriodDoubleClick = useCallback(
     (periodValue: string) => {

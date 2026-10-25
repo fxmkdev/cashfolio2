@@ -50,7 +50,6 @@ export type ReportPageViewProps = {
   netWorthReconciliation?: NetWorthReconciliationModel | null;
   onPeriodChange: (nextPeriodValue: string) => void;
   onBreakdownAccountDoubleClick: (accountId: string) => void;
-  onExplicitGainLossDoubleClick?: () => void;
   onGainLossUnitAccountDoubleClick?: (accountId: string) => void;
 };
 
@@ -61,7 +60,6 @@ export function ReportPageView({
   netWorthReconciliation = null,
   onPeriodChange,
   onBreakdownAccountDoubleClick,
-  onExplicitGainLossDoubleClick,
   onGainLossUnitAccountDoubleClick,
 }: ReportPageViewProps) {
   const userLocale = useUserLocale();
@@ -330,7 +328,6 @@ export function ReportPageView({
                 onChartContainerDoubleClick={
                   gainsLosses.handleChartContainerDoubleClick
                 }
-                onExplicitGainLossDoubleClick={onExplicitGainLossDoubleClick}
                 onUnitAccountDoubleClick={onGainLossUnitAccountDoubleClick}
               />
             </Grid.Col>

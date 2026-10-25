@@ -381,45 +381,29 @@ describe("loadPeriodHistoryPointMetrics", () => {
       period: "2026-02",
       metricScopeFilter: {
         metric: "gainsLosses",
-        scope: "unit-type:fx",
+        scope: "gain-loss-account:usd-cash",
       },
     });
 
     expect(toNumericMoney(result.gainsLosses)).toBe(15);
     expect(toNumericMoney(result.scopedMetricValue)).toBe(10);
-    expect(toNumericMoney(result.scopeOptions.gainsLosses)).toEqual([
+    expect(toNumericMoney(result.scopeOptions.gainsLosses)).toMatchObject([
       {
-        value: "unit-type:fx",
-        label: "FX",
+        value: "asset-class:unclassified",
+        label: "Unclassified",
         kind: "gainLoss",
-        treeLabel: "FX",
       },
       {
-        value: "unit:fx:USD",
-        label: "FX / USD",
-        kind: "gainLoss",
-        treeLabel: "USD",
-        parentValue: "unit-type:fx",
+        value: "gain-loss-account:cash-1",
+        label: "Unclassified / Cash",
+        accountId: "cash-1",
+        parentValue: "asset-class:unclassified",
       },
       {
-        value: "unit-account:fx:USD:usd-cash",
-        label: "FX / USD / USD Cash",
-        kind: "gainLoss",
-        treeLabel: "USD Cash",
-        parentValue: "unit:fx:USD",
-      },
-      {
-        value: "unit-type:explicit",
-        label: "Explicit G/L",
-        kind: "gainLoss",
-        treeLabel: "Explicit G/L",
-      },
-      {
-        value: "explicit-account:cash-1",
-        label: "Explicit G/L / Cash",
-        kind: "gainLoss",
-        treeLabel: "Cash",
-        parentValue: "unit-type:explicit",
+        value: "gain-loss-account:usd-cash",
+        label: "Unclassified / USD Cash",
+        accountId: "usd-cash",
+        parentValue: "asset-class:unclassified",
       },
     ]);
 
@@ -429,10 +413,10 @@ describe("loadPeriodHistoryPointMetrics", () => {
         period: "2026-02",
         metricScopeFilter: {
           metric: "gainsLosses",
-          scope: "unit:fx:USD",
+          scope: "asset-class:unclassified",
         },
       }).then(toNumericMoney),
-    ).resolves.toMatchObject({ scopedMetricValue: 10 });
+    ).resolves.toMatchObject({ scopedMetricValue: 15 });
     await expect(
       loadPeriodHistoryPointMetrics({
         accountBookId: "book-1",

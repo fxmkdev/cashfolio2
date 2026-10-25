@@ -655,34 +655,7 @@ export const GainsLossesDrillSmoke: Story = {
     overview: {
       ...baseOverview,
       gainsLossesBreakdown: {
-        hierarchy: [
-          {
-            id: "unit-type:fx",
-            label: "FX",
-            realizedGainLoss: 200,
-            unrealizedGainLoss: 80,
-            totalGainLoss: 280,
-            children: [
-              {
-                id: "unit:fx:USD",
-                label: "USD",
-                realizedGainLoss: 200,
-                unrealizedGainLoss: 80,
-                totalGainLoss: 280,
-                children: [
-                  {
-                    id: "unit-account:fx:USD:account-cash-usd-1",
-                    label: "Cash Account USD 1",
-                    realizedGainLoss: 120,
-                    unrealizedGainLoss: 40,
-                    totalGainLoss: 160,
-                    children: [],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
+        hierarchy: [baseOverview.gainsLossesBreakdown.hierarchy[0]!],
       },
     },
   },
@@ -703,11 +676,8 @@ export const GainsLossesDrillSmoke: Story = {
         canvas.getByText(/Drilled gains\/losses in the selected period/),
       ).toBeInTheDocument();
     });
-    await expect(canvas.getByText("FX")).toBeInTheDocument();
-
-    await userEvent.dblClick(gainsLossesChart);
-    await waitFor(() => {
-      expect(canvas.getByText("USD")).toBeInTheDocument();
-    });
+    await expect(
+      canvas.getByText("Cash & Cash Equivalents"),
+    ).toBeInTheDocument();
   },
 };

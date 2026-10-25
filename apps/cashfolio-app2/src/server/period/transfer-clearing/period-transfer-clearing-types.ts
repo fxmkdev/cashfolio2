@@ -3,6 +3,7 @@ import { Unit } from "../../../.prisma-client/enums";
 import type { EndOfPeriodBalanceAccount } from "../period-balance-stats";
 
 export type TransferClearingBooking = {
+  originatingAccountIds?: string[];
   id: string;
   description?: string | null;
   transactionDescription?: string | null;

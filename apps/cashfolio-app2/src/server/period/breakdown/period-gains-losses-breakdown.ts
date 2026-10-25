@@ -1,13 +1,16 @@
+import { getLegacyHoldingGainLossScope } from "../../../shared/history-scope";
 import { toMoney, type Money, moneyAdd, moneySum } from "../../../shared/money";
-import { Unit } from "../../../.prisma-client/enums";
+import type { Unit } from "../../../.prisma-client/enums";
 
 import { round2 } from "../period-helpers";
-import { normalizeUppercaseCode } from "../period-unit-format";
+import { assetClassOptions } from "../../../shared/asset-class";
+import type { GainLossAccountAttribution } from "./period-gain-loss-attribution";
 
 export type PeriodGainsLossesContribution = {
   sourceKind: "HOLDING" | "EXPLICIT";
   accountId: string;
   accountName: string;
+  originatingAccountIds?: string[];
   unit: Unit;
   currency: string | null;
   cryptocurrency: string | null;
@@ -24,79 +27,21 @@ export type PeriodGainsLossesBreakdownNode = {
   unrealizedGainLoss: Money;
   totalGainLoss: Money;
   children: PeriodGainsLossesBreakdownNode[];
-};
-
-type UnitTypeDescriptor = {
-  id: "fx" | "security" | "cryptocurrency" | "explicit";
-  label: "FX" | "Security" | "Cryptocurrency" | "Explicit G/L";
-};
-
-const UNIT_TYPE_DESCRIPTORS: UnitTypeDescriptor[] = [
-  { id: "fx", label: "FX" },
-  { id: "security", label: "Security" },
-  { id: "cryptocurrency", label: "Cryptocurrency" },
-  { id: "explicit", label: "Explicit G/L" },
-];
-
-function getUnitTypeDescriptor(unit: Unit): UnitTypeDescriptor {
-  if (unit === Unit.CURRENCY) {
-    return UNIT_TYPE_DESCRIPTORS[0]!;
-  }
-  if (unit === Unit.SECURITY) {
-    return UNIT_TYPE_DESCRIPTORS[1]!;
-  }
-  return UNIT_TYPE_DESCRIPTORS[2]!;
-}
-
-function getUnitContributionDescriptor(
-  args: PeriodGainsLossesContribution & { referenceCurrency: string },
-): {
-  unitType: UnitTypeDescriptor;
-  unitId: string;
-  unitLabel: string;
-} | null {
-  if (args.unit === Unit.CURRENCY) {
-    const currency = normalizeUppercaseCode(args.currency) ?? "UNKNOWN";
-    const referenceCurrency =
-      normalizeUppercaseCode(args.referenceCurrency) ?? "UNKNOWN";
-    if (currency === referenceCurrency) {
-      return null;
-    }
-    return {
-      unitType: getUnitTypeDescriptor(args.unit),
-      unitId: `fx:${currency}`,
-      unitLabel: currency,
-    };
-  }
-
-  if (args.unit === Unit.CRYPTOCURRENCY) {
-    const cryptocurrency =
-      normalizeUppercaseCode(args.cryptocurrency) ?? "UNKNOWN";
-    return {
-      unitType: getUnitTypeDescriptor(args.unit),
-      unitId: `crypto:${cryptocurrency}`,
-      unitLabel: cryptocurrency,
-    };
-  }
-
-  const symbol = normalizeUppercaseCode(args.symbol) ?? "UNKNOWN";
-  const tradeCurrency = normalizeUppercaseCode(args.tradeCurrency) ?? "UNKNOWN";
-  return {
-    unitType: getUnitTypeDescriptor(args.unit),
-    unitId: `security:${symbol}:${tradeCurrency}`,
-    unitLabel: `${symbol} (${tradeCurrency})`,
+  account?: GainLossAccountAttribution & {
+    id: string;
+    legacyScopes: string[];
+    sources: Array<PeriodGainsLossesContribution["sourceKind"]>;
+    instrumentLabel: string;
+    calculatedRealizedGainLoss: Money;
+    calculatedUnrealizedGainLoss: Money;
+    recordedGainLoss: Money;
   };
-}
+};
 
-function toRoundedGainLossTotals(args: {
-  realizedGainLoss: Money;
-  unrealizedGainLoss: Money;
-}) {
-  const realizedGainLoss = round2(args.realizedGainLoss);
-  const unrealizedGainLoss = round2(args.unrealizedGainLoss);
+function totals(realizedGainLoss: Money, unrealizedGainLoss: Money) {
   return {
-    realizedGainLoss,
-    unrealizedGainLoss,
+    realizedGainLoss: round2(realizedGainLoss),
+    unrealizedGainLoss: round2(unrealizedGainLoss),
     totalGainLoss: round2(moneyAdd(realizedGainLoss, unrealizedGainLoss)),
   };
 }
@@ -104,194 +49,97 @@ function toRoundedGainLossTotals(args: {
 export function buildGainsLossesBreakdown(args: {
   contributions: PeriodGainsLossesContribution[];
   referenceCurrency: string;
-}): {
-  hierarchy: PeriodGainsLossesBreakdownNode[];
-} {
-  type UnitContributionBucket = {
-    unitTypeId: UnitTypeDescriptor["id"];
-    unitLabel: string;
-    byAccountId: Map<
-      string,
-      {
-        accountName: string;
-        realizedGainLoss: Money;
-        unrealizedGainLoss: Money;
-      }
-    >;
-  };
-
-  const byUnitId = new Map<string, UnitContributionBucket>();
-  const explicitByAccountId = new Map<
-    string,
-    {
-      accountName: string;
-      realizedGainLoss: Money;
-      unrealizedGainLoss: Money;
-    }
-  >();
-
+  accountAttributionById?: ReadonlyMap<string, GainLossAccountAttribution>;
+}): { hierarchy: PeriodGainsLossesBreakdownNode[] } {
+  const byAccount = new Map<string, PeriodGainsLossesContribution[]>();
   for (const contribution of args.contributions) {
     if (
-      toMoney(contribution.realizedGainLoss).equals(0) &&
-      toMoney(contribution.unrealizedGainLoss).equals(0)
-    ) {
+      toMoney(contribution.realizedGainLoss).isZero() &&
+      toMoney(contribution.unrealizedGainLoss).isZero()
+    )
       continue;
-    }
-
-    if (contribution.sourceKind === "EXPLICIT") {
-      const explicitExisting = explicitByAccountId.get(contribution.accountId);
-      if (explicitExisting) {
-        explicitExisting.realizedGainLoss = moneyAdd(
-          explicitExisting.realizedGainLoss,
-          contribution.realizedGainLoss,
-        );
-        explicitExisting.unrealizedGainLoss = moneyAdd(
-          explicitExisting.unrealizedGainLoss,
-          contribution.unrealizedGainLoss,
-        );
-      } else {
-        explicitByAccountId.set(contribution.accountId, {
-          accountName: contribution.accountName,
-          realizedGainLoss: contribution.realizedGainLoss,
-          unrealizedGainLoss: contribution.unrealizedGainLoss,
-        });
-      }
-      continue;
-    }
-
-    const descriptor = getUnitContributionDescriptor({
-      ...contribution,
-      referenceCurrency: args.referenceCurrency,
-    });
-    if (!descriptor) {
-      continue;
-    }
-    const existingUnit = byUnitId.get(descriptor.unitId);
-    const unitValue =
-      existingUnit ??
-      ({
-        unitTypeId: descriptor.unitType.id,
-        unitLabel: descriptor.unitLabel,
-        byAccountId: new Map(),
-      } satisfies UnitContributionBucket);
-    if (!existingUnit) {
-      byUnitId.set(descriptor.unitId, unitValue);
-    }
-
-    const existingAccount = unitValue.byAccountId.get(contribution.accountId);
-    if (existingAccount) {
-      existingAccount.realizedGainLoss = moneyAdd(
-        existingAccount.realizedGainLoss,
-        contribution.realizedGainLoss,
+    const values = byAccount.get(contribution.accountId) ?? [];
+    values.push(contribution);
+    byAccount.set(contribution.accountId, values);
+  }
+  const classes = [
+    ...assetClassOptions,
+    { value: "unclassified", label: "Unclassified" },
+  ];
+  const hierarchy: PeriodGainsLossesBreakdownNode[] = [];
+  for (const descriptor of classes) {
+    const contributions: PeriodGainsLossesContribution[] = [];
+    const children: PeriodGainsLossesBreakdownNode[] = [];
+    for (const [accountId, values] of byAccount) {
+      const attribution = args.accountAttributionById?.get(accountId) ?? {
+        assetClass: null,
+        kind: "unattributed" as const,
+        explanation:
+          "No single originating asset/liability account can be established; the amount remains Unclassified.",
+      };
+      if ((attribution.assetClass ?? "unclassified") !== descriptor.value)
+        continue;
+      contributions.push(...values);
+      const first = values[0]!;
+      const calculated = values.filter(
+        (value) => value.sourceKind === "HOLDING",
       );
-      existingAccount.unrealizedGainLoss = moneyAdd(
-        existingAccount.unrealizedGainLoss,
-        contribution.unrealizedGainLoss,
+      const recorded = values.filter(
+        (value) => value.sourceKind === "EXPLICIT",
       );
-    } else {
-      unitValue.byAccountId.set(contribution.accountId, {
-        accountName: contribution.accountName,
-        realizedGainLoss: contribution.realizedGainLoss,
-        unrealizedGainLoss: contribution.unrealizedGainLoss,
+      children.push({
+        id: `gain-loss-account:${accountId}`,
+        label: first.accountName,
+        ...totals(
+          moneySum(values.map((value) => value.realizedGainLoss)),
+          moneySum(values.map((value) => value.unrealizedGainLoss)),
+        ),
+        account: {
+          ...attribution,
+          id: accountId,
+          legacyScopes: values.map((value) =>
+            value.sourceKind === "EXPLICIT"
+              ? `explicit-account:${accountId}`
+              : getLegacyHoldingGainLossScope({ ...value, id: accountId }),
+          ),
+          sources: [...new Set(values.map((value) => value.sourceKind))],
+          instrumentLabel:
+            attribution.instrumentLabel ??
+            [
+              first.currency,
+              first.cryptocurrency,
+              first.symbol,
+              first.tradeCurrency,
+            ]
+              .filter(Boolean)
+              .join(" / "),
+          calculatedRealizedGainLoss: round2(
+            moneySum(calculated.map((value) => value.realizedGainLoss)),
+          ),
+          calculatedUnrealizedGainLoss: round2(
+            moneySum(calculated.map((value) => value.unrealizedGainLoss)),
+          ),
+          recordedGainLoss: round2(
+            moneySum(recorded.map((value) => value.realizedGainLoss)),
+          ),
+        },
+        children: [],
       });
     }
-  }
-
-  const hierarchy: PeriodGainsLossesBreakdownNode[] = [];
-
-  for (const unitType of UNIT_TYPE_DESCRIPTORS) {
-    if (unitType.id === "explicit") {
-      continue;
-    }
-
-    const childNodes = Array.from(byUnitId.entries())
-      .filter(([, unitValue]) => unitValue.unitTypeId === unitType.id)
-      .sort((left, right) =>
-        left[1].unitLabel.localeCompare(right[1].unitLabel, "en"),
-      )
-      .map(([unitId, unitValue]) => ({
-        id: `unit:${unitId}`,
-        label: unitValue.unitLabel,
-        ...(() => {
-          const accountNodes = Array.from(unitValue.byAccountId.entries())
-            .sort((left, right) =>
-              left[1].accountName.localeCompare(right[1].accountName, "en"),
-            )
-            .map(([accountId, accountValue]) => ({
-              id: `unit-account:${unitId}:${accountId}`,
-              label: accountValue.accountName,
-              ...toRoundedGainLossTotals({
-                realizedGainLoss: accountValue.realizedGainLoss,
-                unrealizedGainLoss: accountValue.unrealizedGainLoss,
-              }),
-              children: [],
-            }));
-          const roundedTotals = toRoundedGainLossTotals({
-            realizedGainLoss: moneySum(
-              accountNodes.map((node) => node.realizedGainLoss),
-            ),
-            unrealizedGainLoss: moneySum(
-              accountNodes.map((node) => node.unrealizedGainLoss),
-            ),
-          });
-          return {
-            ...roundedTotals,
-            children: accountNodes,
-          };
-        })(),
-      }));
-
-    if (childNodes.length === 0) {
-      continue;
-    }
-
-    const roundedTotals = toRoundedGainLossTotals({
-      realizedGainLoss: moneySum(
-        childNodes.map((node) => node.realizedGainLoss),
-      ),
-      unrealizedGainLoss: moneySum(
-        childNodes.map((node) => node.unrealizedGainLoss),
-      ),
-    });
-
+    if (!children.length) continue;
     hierarchy.push({
-      id: `unit-type:${unitType.id}`,
-      label: unitType.label,
-      ...roundedTotals,
-      children: childNodes,
-    });
-  }
-
-  const explicitChildren = Array.from(explicitByAccountId.entries())
-    .sort((left, right) =>
-      left[1].accountName.localeCompare(right[1].accountName, "en"),
-    )
-    .map(([accountId, accountValue]) => ({
-      id: `explicit-account:${accountId}`,
-      label: accountValue.accountName,
-      ...toRoundedGainLossTotals({
-        realizedGainLoss: accountValue.realizedGainLoss,
-        unrealizedGainLoss: accountValue.unrealizedGainLoss,
-      }),
-      children: [],
-    }));
-
-  if (explicitChildren.length > 0) {
-    const roundedTotals = toRoundedGainLossTotals({
-      realizedGainLoss: moneySum(
-        explicitChildren.map((node) => node.realizedGainLoss),
+      id: `asset-class:${descriptor.value}`,
+      label: descriptor.label,
+      ...totals(
+        moneySum(contributions.map((value) => value.realizedGainLoss)),
+        moneySum(contributions.map((value) => value.unrealizedGainLoss)),
       ),
-      unrealizedGainLoss: moneySum(
-        explicitChildren.map((node) => node.unrealizedGainLoss),
+      children: children.sort(
+        (a, b) =>
+          a.label.localeCompare(b.label, "en") ||
+          a.id.localeCompare(b.id, "en"),
       ),
     });
-    hierarchy.push({
-      id: "unit-type:explicit",
-      label: "Explicit G/L",
-      ...roundedTotals,
-      children: explicitChildren,
-    });
   }
-
   return { hierarchy };
 }

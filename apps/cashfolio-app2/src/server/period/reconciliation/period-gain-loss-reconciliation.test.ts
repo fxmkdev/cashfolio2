@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { toMoney } from "../../../shared/money";
 import { AccountType, Unit } from "../../../.prisma-client/enums";
 
 const createServerFn = vi.hoisted(() =>
@@ -58,6 +59,13 @@ vi.mock("../period-conversion", () => ({
   getUnitToReferenceExchangeRate,
 }));
 
+const getOrLoadPeriodBaseData = vi.hoisted(() => vi.fn());
+const loadAccountGainLossSources = vi.hoisted(() => vi.fn());
+vi.mock("../cache/period-base-data-cache", () => ({ getOrLoadPeriodBaseData }));
+vi.mock("./period-account-gain-loss-sources", () => ({
+  loadAccountGainLossSources,
+}));
+
 import {
   getPeriodGainLossReconciliation,
   getPeriodGainLossReconciliationPageData,
@@ -74,6 +82,15 @@ describe("getPeriodGainLossReconciliation", () => {
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
 
+    getOrLoadPeriodBaseData.mockResolvedValue({
+      baseAssetLiabilityAccounts: [],
+    });
+    loadAccountGainLossSources.mockResolvedValue({
+      node: undefined,
+      contribution: undefined,
+      recordedAdjustments: [],
+      executionResiduals: [],
+    });
     prisma.booking.findMany.mockResolvedValue([]);
     prisma.booking.groupBy.mockResolvedValue([]);
     prisma.transaction.findMany.mockResolvedValue([]);
@@ -83,6 +100,96 @@ describe("getPeriodGainLossReconciliation", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
+
+  it.each(["reference-currency", "unattributed"])(
+    "serializes recorded %s explanations without requiring a calculated holding",
+    async (kind) => {
+      const accountId =
+        kind === "reference-currency"
+          ? "chf-portfolio"
+          : "explicit-unattributed:multiple-counterparts";
+      const identity = {
+        id: accountId,
+        name: "Recorded Portfolio",
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      };
+      const contribution = {
+        ...identity,
+        accountId,
+        accountName: identity.name,
+        currency: kind === "reference-currency" ? "USD" : "CHF",
+        sourceKind: "EXPLICIT",
+        realizedGainLoss: toMoney("12.34"),
+        unrealizedGainLoss: toMoney(0),
+      };
+      getOrLoadPeriodBaseData.mockResolvedValue({
+        baseAssetLiabilityAccounts:
+          kind === "reference-currency" ? [identity] : [],
+      });
+      prisma.account.findFirst.mockResolvedValue(
+        kind === "reference-currency" ? identity : null,
+      );
+      loadAccountGainLossSources.mockResolvedValue({
+        contribution,
+        node: {
+          label: identity.name,
+          realizedGainLoss: toMoney("12.34"),
+          unrealizedGainLoss: toMoney(0),
+          totalGainLoss: toMoney("12.34"),
+          account: {
+            kind: kind === "reference-currency" ? "account" : "unattributed",
+            calculatedRealizedGainLoss: toMoney(0),
+            recordedGainLoss: toMoney("12.34"),
+            explanation: "Classification is unavailable.",
+          },
+        },
+        recordedAdjustments: [
+          {
+            id: "booking",
+            date: "2026-02-03T00:00:00.000Z",
+            transactionId: "tx",
+            description: "Manual adjustment",
+            amount: toMoney("12.34"),
+          },
+        ],
+        executionResiduals: [],
+      });
+      const response = await getPeriodGainLossReconciliation({
+        data: { accountBookId: "book-1", accountId, period: "2026-02" },
+      });
+      expect(response?.summary).toEqual({
+        realizedGainLoss: 12.34,
+        unrealizedGainLoss: 0,
+        totalGainLoss: 12.34,
+      });
+      expect(response?.target).toEqual({
+        accountId,
+        accountName: identity.name,
+        isVirtual: kind === "unattributed",
+        unit: Unit.CURRENCY,
+        unitLabel: "CHF",
+        currency: "CHF",
+        cryptocurrency: null,
+        symbol: null,
+        tradeCurrency: null,
+      });
+      expect(response?.sources).toMatchObject({
+        calculatedRealizedGainLoss: 0,
+        recordedGainLoss: 12.34,
+        attributionExplanation: "Classification is unavailable.",
+        recordedAdjustments: [{ transactionId: "tx", amount: 12.34 }],
+      });
+      expect(response?.realizedEvents).toEqual([]);
+      expect(
+        JSON.parse(JSON.stringify(response)).sources.recordedAdjustments[0]
+          .amount,
+      ).toBe(12.34);
+    },
+  );
 
   it("returns full reconciliation for a real holding account", async () => {
     prisma.account.findFirst.mockResolvedValue({

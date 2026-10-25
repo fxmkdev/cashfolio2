@@ -2,210 +2,91 @@ import { describe, expect, test } from "vitest";
 import type { GainsLossesBreakdownNode } from "./-gains-losses-breakdown-types";
 import {
   flattenGainsLossesHierarchyRows,
-  parseGainsLossesUnitAccountId,
   sumTopLevelRealizedGainLoss,
   sumTopLevelTotalGainLoss,
   sumTopLevelUnrealizedGainLoss,
 } from "./-gains-losses-table-rows";
 
-describe("flattenGainsLossesHierarchyRows", () => {
-  test("flattens unit-type and unit rows with parent-child ids", () => {
-    const hierarchy: GainsLossesBreakdownNode[] = [
+const hierarchy: GainsLossesBreakdownNode[] = [
+  {
+    id: "asset-class:EQUITIES",
+    label: "Equities",
+    realizedGainLoss: 8,
+    unrealizedGainLoss: -1,
+    totalGainLoss: 7,
+    children: [
       {
-        id: "unit-type:fx",
-        label: "FX",
+        // Navigation depends on metadata even if the row ID does not encode an account.
+        id: "opaque-row",
+        label: "USD Equity Portfolio",
         realizedGainLoss: 8,
         unrealizedGainLoss: -1,
         totalGainLoss: 7,
-        children: [
-          {
-            id: "unit:fx:USD",
-            label: "USD",
-            realizedGainLoss: 8,
-            unrealizedGainLoss: -1,
-            totalGainLoss: 7,
-            children: [
-              {
-                id: "unit-account:fx:USD:account-cash-usd-1",
-                label: "Cash USD 1",
-                realizedGainLoss: 8,
-                unrealizedGainLoss: -1,
-                totalGainLoss: 7,
-                children: [],
-              },
-            ],
-          },
-        ],
+        children: [],
+        account: {
+          id: "portfolio",
+          assetClass: "EQUITIES",
+          kind: "account",
+          explanation: null,
+          legacyScopes: [],
+          instrumentLabel: "USD",
+          sources: ["HOLDING", "EXPLICIT"],
+          calculatedRealizedGainLoss: 3,
+          calculatedUnrealizedGainLoss: -1,
+          recordedGainLoss: 5,
+        },
       },
-      {
-        id: "unit-type:security",
-        label: "Security",
-        realizedGainLoss: 20,
-        unrealizedGainLoss: -30,
-        totalGainLoss: -10,
-        children: [
-          {
-            id: "unit:security:AAPL:USD",
-            label: "AAPL (USD)",
-            realizedGainLoss: 20,
-            unrealizedGainLoss: -30,
-            totalGainLoss: -10,
-            children: [],
-          },
-        ],
-      },
-      {
-        id: "unit-type:explicit",
-        label: "Explicit G/L",
-        realizedGainLoss: 5,
-        unrealizedGainLoss: 0,
-        totalGainLoss: 5,
-        children: [
-          {
-            id: "explicit-account:account-fees",
-            label: "Fees Account",
-            realizedGainLoss: 5,
-            unrealizedGainLoss: 0,
-            totalGainLoss: 5,
-            children: [],
-          },
-        ],
-      },
-    ];
+    ],
+  },
+  {
+    id: "asset-class:unclassified",
+    label: "Unclassified",
+    realizedGainLoss: 20,
+    unrealizedGainLoss: -30,
+    totalGainLoss: -10,
+    children: [],
+  },
+];
 
+describe("asset-class table rows", () => {
+  test("flattens classes and accounts once, retaining metadata for mixed-source explanations", () => {
     expect(flattenGainsLossesHierarchyRows(hierarchy)).toEqual([
       {
-        id: "unit-type:fx",
+        id: "asset-class:EQUITIES",
         parentId: undefined,
-        name: "FX",
+        name: "Equities",
         realizedGainLoss: 8,
         unrealizedGainLoss: -1,
         totalGainLoss: 7,
       },
       {
-        id: "unit:fx:USD",
-        parentId: "unit-type:fx",
-        name: "USD",
+        id: "opaque-row",
+        parentId: "asset-class:EQUITIES",
+        name: "USD Equity Portfolio",
+        accountId: "portfolio",
         realizedGainLoss: 8,
         unrealizedGainLoss: -1,
         totalGainLoss: 7,
       },
       {
-        id: "unit-account:fx:USD:account-cash-usd-1",
-        parentId: "unit:fx:USD",
-        name: "Cash USD 1",
-        realizedGainLoss: 8,
-        unrealizedGainLoss: -1,
-        totalGainLoss: 7,
-      },
-      {
-        id: "unit-type:security",
+        id: "asset-class:unclassified",
         parentId: undefined,
-        name: "Security",
+        name: "Unclassified",
         realizedGainLoss: 20,
         unrealizedGainLoss: -30,
         totalGainLoss: -10,
-      },
-      {
-        id: "unit:security:AAPL:USD",
-        parentId: "unit-type:security",
-        name: "AAPL (USD)",
-        realizedGainLoss: 20,
-        unrealizedGainLoss: -30,
-        totalGainLoss: -10,
-      },
-      {
-        id: "unit-type:explicit",
-        parentId: undefined,
-        name: "Explicit G/L",
-        realizedGainLoss: 5,
-        unrealizedGainLoss: 0,
-        totalGainLoss: 5,
-      },
-      {
-        id: "explicit-account:account-fees",
-        parentId: "unit-type:explicit",
-        name: "Fees Account",
-        realizedGainLoss: 5,
-        unrealizedGainLoss: 0,
-        totalGainLoss: 5,
       },
     ]);
   });
-
-  test("returns empty array for empty hierarchy", () => {
-    expect(flattenGainsLossesHierarchyRows([])).toEqual([]);
-  });
-});
-
-describe("top-level gains/losses sums", () => {
-  test("sums only top-level values", () => {
-    const hierarchy: GainsLossesBreakdownNode[] = [
-      {
-        id: "unit-type:fx",
-        label: "FX",
-        realizedGainLoss: 8,
-        unrealizedGainLoss: -1,
-        totalGainLoss: 7,
-        children: [
-          {
-            id: "unit:fx:USD",
-            label: "USD",
-            realizedGainLoss: 8,
-            unrealizedGainLoss: -1,
-            totalGainLoss: 7,
-            children: [],
-          },
-        ],
-      },
-      {
-        id: "unit-type:security",
-        label: "Security",
-        realizedGainLoss: 20,
-        unrealizedGainLoss: -30,
-        totalGainLoss: -10,
-        children: [],
-      },
-    ];
-
+  test("sums classes without double-counting account leaves", () => {
     expect(sumTopLevelRealizedGainLoss(hierarchy)).toBe(28);
     expect(sumTopLevelUnrealizedGainLoss(hierarchy)).toBe(-31);
     expect(sumTopLevelTotalGainLoss(hierarchy)).toBe(-3);
   });
-
-  test("returns zero for empty hierarchy", () => {
+  test("supports an empty hierarchy", () => {
+    expect(flattenGainsLossesHierarchyRows([])).toEqual([]);
     expect(sumTopLevelRealizedGainLoss([])).toBe(0);
     expect(sumTopLevelUnrealizedGainLoss([])).toBe(0);
     expect(sumTopLevelTotalGainLoss([])).toBe(0);
-  });
-});
-
-describe("parseGainsLossesUnitAccountId", () => {
-  test("extracts account id for regular unit-account rows", () => {
-    expect(
-      parseGainsLossesUnitAccountId({
-        rowId: "unit-account:security:AAPL:USD:account-aapl",
-        parentId: "unit:security:AAPL:USD",
-      }),
-    ).toBe("account-aapl");
-  });
-
-  test("extracts virtual account ids that contain colons", () => {
-    expect(
-      parseGainsLossesUnitAccountId({
-        rowId:
-          "unit-account:security:AAPL:USD:virtual:transfer-clearing:account:security:AAPL:USD",
-        parentId: "unit:security:AAPL:USD",
-      }),
-    ).toBe("virtual:transfer-clearing:account:security:AAPL:USD");
-  });
-
-  test("returns null for non unit-account ids", () => {
-    expect(
-      parseGainsLossesUnitAccountId({
-        rowId: "explicit-account:account-fees",
-        parentId: "unit-type:explicit",
-      }),
-    ).toBeNull();
   });
 });

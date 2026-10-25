@@ -54,6 +54,7 @@ describe("computeExecutionResidualRealization", () => {
       periodEndExclusive: new Date("2026-03-01Z"),
       referenceCurrency: "CHF",
       trackedHoldingAccountIdSet: new Set(["source", "destination"]),
+      assetLiabilityAccountIdSet: new Set(["source", "destination", "cash"]),
       convertBookingToReference: convert,
       onContribution,
     });
@@ -61,6 +62,9 @@ describe("computeExecutionResidualRealization", () => {
     expect(convert).toHaveBeenCalledTimes(2);
     expect(onContribution).toHaveBeenCalledOnce();
     expect(onContribution.mock.calls[0]![0].accountId).toBe("expense");
+    expect(onContribution.mock.calls[0]![0].originatingAccountIds).toEqual([
+      "cash",
+    ]);
   });
 
   it("converts cross-period completion candidates without realizing zero residuals", async () => {

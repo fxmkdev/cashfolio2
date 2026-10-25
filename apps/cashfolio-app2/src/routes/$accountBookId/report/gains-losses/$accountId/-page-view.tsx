@@ -1,3 +1,4 @@
+import { GainLossSourceDetails } from "./-source-details";
 import { Alert, Card, Group, Stack, Text, Title } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
@@ -42,6 +43,7 @@ type GainLossReconciliationPageViewProps = {
   reconciliation: PeriodGainLossReconciliation | null;
   onPeriodChange: (nextPeriodValue: string) => void;
   onOpenEventTransaction: (transactionId: string) => void;
+  onOpenRecordedTransaction: (transactionId: string) => void;
 };
 
 type LoadedGainLossReconciliationPageViewProps = Omit<
@@ -91,6 +93,7 @@ export function GainLossReconciliationPageView({
   reconciliation,
   onPeriodChange,
   onOpenEventTransaction,
+  onOpenRecordedTransaction,
 }: GainLossReconciliationPageViewProps) {
   const heading = getGainLossReconciliationPageTitle(reconciliation);
   if (!reconciliation) {
@@ -123,6 +126,7 @@ export function GainLossReconciliationPageView({
       heading={heading}
       onPeriodChange={onPeriodChange}
       onOpenEventTransaction={onOpenEventTransaction}
+      onOpenRecordedTransaction={onOpenRecordedTransaction}
     />
   );
 }
@@ -136,6 +140,7 @@ function LoadedGainLossReconciliationPageView({
   heading,
   onPeriodChange,
   onOpenEventTransaction,
+  onOpenRecordedTransaction,
 }: LoadedGainLossReconciliationPageViewProps) {
   const userLocale = useUserLocale();
   const [pickerOpened, setPickerOpened] = useState(false);
@@ -317,6 +322,13 @@ function LoadedGainLossReconciliationPageView({
         <ReconciliationStatCards
           summary={reconciliation.summary}
           currencyFormatter={currencyFormatter}
+        />
+
+        <GainLossSourceDetails
+          sources={reconciliation.sources}
+          currencyFormatter={currencyFormatter}
+          onOpenTransaction={onOpenEventTransaction}
+          onOpenRecordedTransaction={onOpenRecordedTransaction}
         />
 
         <Card withBorder radius="md" p="md">

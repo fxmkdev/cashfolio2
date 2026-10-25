@@ -60,9 +60,9 @@ it("preserves deployed cache key formats and versions", () => {
   ).toBe("account:gain-loss:v4:local:book-1:revision-1:2026-05-11:2026-05-10");
   expect(
     getPeriodBaseCacheEntryKey({ ...scope, periodCacheKey: "2026-01" }),
-  ).toBe("period:base:v9:local:book-1:revision-1:2026-01");
+  ).toBe("period:base:v10:local:book-1:revision-1:2026-01");
   expect(getPeriodBaseCacheIndexKey(scope)).toBe(
-    "period:base:index:v9:local:book-1:revision-1",
+    "period:base:index:v10:local:book-1:revision-1",
   );
   expect(getPeriodCacheGenerationKey(scope)).toBe(
     "period:base:generation:v1:local:book-1",
@@ -74,7 +74,7 @@ it("preserves deployed cache key formats and versions", () => {
       scopeKey: "cashFlow:account:asset-1",
     }),
   ).toBe(
-    "period:history:metrics:v9:local:book-1:revision-1:2026-01:cashFlow:account:asset-1",
+    "period:history:metrics:v10:local:book-1:revision-1:2026-01:cashFlow:account:asset-1",
   );
 });
 
@@ -104,7 +104,7 @@ describe("cleanup namespace ownership", () => {
       expect(isBookScopedPeriodCacheKey(key, "book-1")).toBe(false);
     expect(
       isBookScopedPeriodCacheKey(
-        "period:history:metrics:v9:local:book-2:revision:2026-01:scope:book-1:child",
+        "period:history:metrics:v10:local:book-2:revision:2026-01:scope:book-1:child",
         "book-1",
       ),
     ).toBe(false);
