@@ -294,8 +294,10 @@ export function AccountsPageView({
           autoGroupColumnDef={{
             headerName: "Name",
             field: "name",
-            flex: 1,
+            pinned: "left",
+            initialWidth: 320,
             minWidth: 320,
+            resizable: true,
             filter: "agTextColumnFilter",
             valueGetter: ({ data }) => data?.name,
             suppressKeyboardEvent: suppressAccountNameKeyboardEvent,

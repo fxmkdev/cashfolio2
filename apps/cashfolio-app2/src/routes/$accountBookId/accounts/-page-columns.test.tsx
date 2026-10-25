@@ -5,7 +5,7 @@ import { AccountType, AssetClass, Unit } from "@/.prisma-client/enums";
 import type { AccountsGridRow, TreeRow } from "./-page-types";
 import {
   getAccountListBalanceValue,
-  getAccountListCurrencyValue,
+  getAccountListUnitIdentifierDisplayValue,
   getAccountListAssetClassValue,
   useAccountTreeColumnDefs,
 } from "./-page-columns";
@@ -112,96 +112,128 @@ describe("account list column value getters", () => {
     }
   });
 
-  it("hides native currency and balance for reference-currency cash accounts", () => {
-    const row = createAccountRow({
-      currency: "CHF",
-      balance: 10,
-    });
+  it.each([true, false])(
+    "hides native currency and balance for reference-currency cash accounts (active=%s)",
+    (isActive) => {
+      const row = createAccountRow({
+        currency: "CHF",
+        balance: 10,
+        isActive,
+      });
 
-    expect(
-      getAccountListCurrencyValue({
-        data: row,
-        referenceCurrency: "CHF",
-      }),
-    ).toBeUndefined();
-    expect(
-      getAccountListBalanceValue({
-        data: row,
-        referenceCurrency: "CHF",
-      }),
-    ).toBeNull();
+      expect(
+        getAccountListUnitIdentifierDisplayValue({
+          data: row,
+          referenceCurrency: "CHF",
+        }),
+      ).toBeUndefined();
+      expect(
+        getAccountListBalanceValue({
+          data: row,
+          referenceCurrency: "CHF",
+        }),
+      ).toBeNull();
+    },
+  );
+
+  it.each([true, false])(
+    "keeps native currency and balance for non-reference-currency cash accounts (active=%s)",
+    (isActive) => {
+      const row = createAccountRow({
+        currency: "USD",
+        balance: 20,
+        isActive,
+      });
+
+      expect(
+        getAccountListUnitIdentifierDisplayValue({
+          data: row,
+          referenceCurrency: "CHF",
+        }),
+      ).toBe("USD");
+      expect(
+        getAccountListBalanceValue({
+          data: row,
+          referenceCurrency: "CHF",
+        }),
+      ).toBe(20);
+    },
+  );
+
+  it.each(["CHF", "USD"])(
+    "shows security symbols and quantities with %s trade currency",
+    (tradeCurrency) => {
+      for (const isActive of [true, false]) {
+        const row = createAccountRow({
+          unit: Unit.SECURITY,
+          currency: null,
+          tradeCurrency,
+          symbol: "ACME",
+          balance: 5,
+          isActive,
+        });
+
+        expect(
+          getAccountListUnitIdentifierDisplayValue({
+            data: row,
+            referenceCurrency: "CHF",
+          }),
+        ).toBe("ACME");
+        expect(
+          getAccountListBalanceValue({
+            data: row,
+            referenceCurrency: "CHF",
+          }),
+        ).toBe(5);
+      }
+    },
+  );
+
+  it("shows cryptocurrency tickers and quantities for active and archived accounts", () => {
+    for (const isActive of [true, false]) {
+      const row = createAccountRow({
+        unit: Unit.CRYPTOCURRENCY,
+        currency: null,
+        cryptocurrency: "BTC",
+        balance: 2,
+        isActive,
+      });
+      expect(
+        getAccountListUnitIdentifierDisplayValue({
+          data: row,
+          referenceCurrency: "CHF",
+        }),
+      ).toBe("BTC");
+      expect(
+        getAccountListBalanceValue({
+          data: row,
+          referenceCurrency: "CHF",
+        }),
+      ).toBe(2);
+    }
   });
 
-  it("keeps native currency and balance for non-reference-currency cash accounts", () => {
-    const row = createAccountRow({
-      currency: "USD",
-      balance: 20,
-    });
-
-    expect(
-      getAccountListCurrencyValue({
-        data: row,
-        referenceCurrency: "CHF",
-      }),
-    ).toBe("USD");
-    expect(
-      getAccountListBalanceValue({
-        data: row,
-        referenceCurrency: "CHF",
-      }),
-    ).toBe(20);
-  });
-
-  it("keeps security trade currency and quantity even when trade currency matches the reference currency", () => {
-    const row = createAccountRow({
-      unit: Unit.SECURITY,
-      currency: null,
-      tradeCurrency: "CHF",
-      symbol: "ACME",
-      balance: 5,
-    });
-
-    expect(
-      getAccountListCurrencyValue({
-        data: row,
-        referenceCurrency: "CHF",
-      }),
-    ).toBe("CHF");
-    expect(
-      getAccountListBalanceValue({
-        data: row,
-        referenceCurrency: "CHF",
-      }),
-    ).toBe(5);
-  });
-
-  it("keeps group and footer rows blank in native currency and balance columns", () => {
-    const groupRow = createGroupRow();
-
-    expect(
-      getAccountListCurrencyValue({
-        data: groupRow,
-        referenceCurrency: "CHF",
-      }),
-    ).toBeUndefined();
-    expect(
-      getAccountListBalanceValue({
-        data: groupRow,
-        referenceCurrency: "CHF",
-      }),
-    ).toBeNull();
-    expect(
-      getAccountListCurrencyValue({
-        data: footerRow,
-        referenceCurrency: "CHF",
-      }),
-    ).toBeUndefined();
-    expect(
-      getAccountListBalanceValue({
-        data: footerRow,
-        referenceCurrency: "CHF",
-      }),
-    ).toBeNull();
+  it("leaves groups, virtual Archived rows, totals, unitless accounts, and missing data blank in unit and native balance columns", () => {
+    for (const data of [
+      createGroupRow(),
+      { ...createGroupRow(), isVirtualArchivedGroup: true },
+      footerRow,
+      createAccountRow({ unit: null, balance: null }),
+      undefined,
+    ]) {
+      expect(
+        getAccountListUnitIdentifierDisplayValue({
+          data,
+          referenceCurrency: "CHF",
+        }),
+      ).toBeUndefined();
+      expect(
+        getAccountListBalanceValue({
+          data,
+          referenceCurrency: "CHF",
+        }),
+      ).toBeNull();
+    }
   });
 });
 
@@ -283,8 +315,23 @@ describe("asset class column", () => {
     return columns;
   }
 
-  it("is the first data column with label filtering, tooltips, and resizing", () => {
-    expect(readColumns(false)[0]).toMatchObject({
+  it("follows the balance columns with label filtering, tooltips, and resizing", () => {
+    const columns = readColumns(false);
+    expect(columns).toMatchObject([
+      {
+        colId: "unitIdentifier",
+        headerName: "Ccy./Symbol",
+        initialWidth: 180,
+        resizable: true,
+        filter: "agTextColumnFilter",
+      },
+      { field: "balance" },
+      { field: "balanceInReferenceCurrency" },
+      { colId: "assetClass" },
+      { groupId: "holding-gain-loss" },
+      { colId: "actions", pinned: "right" },
+    ]);
+    expect(columns[3]).toMatchObject({
       colId: "assetClass",
       headerName: "Asset Class",
       width: 220,
@@ -298,6 +345,9 @@ describe("asset class column", () => {
 
   it("does not add classification columns on equity tabs", () => {
     expect(readColumns(true)).toHaveLength(1);
-    expect(readColumns(true)[0]).toMatchObject({ colId: "actions" });
+    expect(readColumns(true)[0]).toMatchObject({
+      colId: "actions",
+      pinned: "right",
+    });
   });
 });

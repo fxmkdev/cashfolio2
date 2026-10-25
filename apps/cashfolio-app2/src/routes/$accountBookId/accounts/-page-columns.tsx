@@ -40,13 +40,17 @@ export function getAccountListAssetClassValue(
   return getAssetClassLabel(data.assetClass);
 }
 
-export function getAccountListCurrencyValue(args: {
+export function getAccountListUnitIdentifierDisplayValue(args: {
   data: AccountsGridRow | undefined;
   referenceCurrency: string;
 }): string | null | undefined {
   const { data, referenceCurrency } = args;
 
-  if (!data || isReferenceCurrencyTotalFooterRow(data)) {
+  if (
+    !data ||
+    isReferenceCurrencyTotalFooterRow(data) ||
+    data.nodeType !== "account"
+  ) {
     return undefined;
   }
   if (!data.unit) return undefined;
@@ -54,7 +58,7 @@ export function getAccountListCurrencyValue(args: {
     case Unit.CURRENCY:
       return data.currency === referenceCurrency ? undefined : data.currency;
     case Unit.SECURITY:
-      return data.tradeCurrency;
+      return data.symbol;
     case Unit.CRYPTOCURRENCY:
       return data.cryptocurrency;
   }
@@ -127,46 +131,21 @@ export function useAccountTreeColumnDefs(params: {
       ...(!isEquityTab
         ? [
             {
-              colId: "assetClass",
-              headerName: "Asset Class",
-              width: 220,
-              resizable: true,
-              sortable: false,
+              colId: "unitIdentifier",
+              headerName: "Ccy./Symbol",
               filter: "agTextColumnFilter",
-              valueGetter: ({ data }) => getAccountListAssetClassValue(data),
-              tooltipValueGetter: ({ data }) =>
-                getAccountListAssetClassValue(data),
-              cellRenderer: ({
-                value,
-              }: ICellRendererParams<AccountsGridRow, string | undefined>) =>
-                value === "Unclassified" ? (
-                  <Text component="span" inherit c="dimmed">
-                    {value}
-                  </Text>
-                ) : (
-                  (value ?? null)
-                ),
-            } satisfies ColDef<AccountsGridRow>,
-            {
-              colId: "currency",
-              headerName: "Ccy.",
-              filter: true,
-              width: 100,
+              initialWidth: 180,
+              resizable: true,
               valueGetter: ({
                 data,
               }: {
                 data: AccountsGridRow | undefined;
               }) => {
-                return getAccountListCurrencyValue({
+                return getAccountListUnitIdentifierDisplayValue({
                   data,
                   referenceCurrency,
                 });
               },
-            } satisfies ColDef<AccountsGridRow>,
-            {
-              field: "symbol",
-              filter: true,
-              width: 120,
             } satisfies ColDef<AccountsGridRow>,
             {
               field: "balance",
@@ -242,6 +221,27 @@ export function useAccountTreeColumnDefs(params: {
                 return formatValue?.(value) ?? value.toString();
               },
             } satisfies ColDef<AccountsGridRow>,
+            {
+              colId: "assetClass",
+              headerName: "Asset Class",
+              width: 220,
+              resizable: true,
+              sortable: false,
+              filter: "agTextColumnFilter",
+              valueGetter: ({ data }) => getAccountListAssetClassValue(data),
+              tooltipValueGetter: ({ data }) =>
+                getAccountListAssetClassValue(data),
+              cellRenderer: ({
+                value,
+              }: ICellRendererParams<AccountsGridRow, string | undefined>) =>
+                value === "Unclassified" ? (
+                  <Text component="span" inherit c="dimmed">
+                    {value}
+                  </Text>
+                ) : (
+                  (value ?? null)
+                ),
+            } satisfies ColDef<AccountsGridRow>,
             buildAccountGainLossColumns({
               referenceCurrency,
               data: gainLossData,
@@ -253,6 +253,7 @@ export function useAccountTreeColumnDefs(params: {
         colId: "actions",
         headerName: "",
         width: 145,
+        pinned: "right",
         sortable: false,
         filter: false,
         resizable: false,

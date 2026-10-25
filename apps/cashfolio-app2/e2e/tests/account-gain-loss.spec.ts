@@ -354,7 +354,15 @@ test("G/L request failure can be retried without blocking the accounts page", as
     await route.abort();
   });
   await page.reload();
-  await expect(page.locator(".mantine-Loader-root").first()).toBeVisible();
+  // G/L cells are virtualised until their columns are scrolled into view.
+  await page.locator(".ag-grid-viewport").evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  await expect(
+    page
+      .locator('.ag-cell[col-id="totalGainLoss"] .mantine-Loader-root')
+      .first(),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Accounts", exact: true }),
   ).toBeVisible();

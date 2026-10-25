@@ -723,18 +723,90 @@ export const ConstrainedWidthWithGainLoss: Story = {
       );
       expect(canvas.getByText("Household current account")).toBeVisible();
     });
+    const resizeHandle = nameHeader.querySelector<HTMLElement>(
+      ".ag-header-cell-resize",
+    );
+    if (!resizeHandle) throw new Error("Missing Name column resize handle");
+    const bounds = resizeHandle.getBoundingClientRect();
+    const startX = bounds.left + bounds.width / 2;
+    const clientY = bounds.top + bounds.height / 2;
+    await userEvent.pointer([
+      {
+        target: resizeHandle,
+        coords: { clientX: startX, clientY },
+        keys: "[MouseLeft>]",
+      },
+      { target: resizeHandle, coords: { clientX: startX + 100, clientY } },
+      { keys: "[/MouseLeft]" },
+    ]);
+    await waitFor(() =>
+      expect(nameHeader.getBoundingClientRect().width).toBe(420),
+    );
     const viewport = canvasElement.querySelector(".ag-grid-viewport");
     if (!viewport) throw new Error("Could not resolve Accounts viewport");
     expect(viewport.scrollWidth).toBeGreaterThan(viewport.clientWidth);
+    const nameCell = canvas
+      .getByText("Household current account")
+      .closest<HTMLElement>(".ag-cell");
+    const accountRow = nameCell?.closest<HTMLElement>(".ag-row");
+    const actionsCell =
+      accountRow?.querySelector<HTMLElement>('[col-id="actions"]');
+    if (!nameCell || !accountRow || !actionsCell)
+      throw new Error("Could not resolve account name and actions cells");
+    const initialNameLeft = nameCell.getBoundingClientRect().left;
+    const initialActionsRight = actionsCell.getBoundingClientRect().right;
+    expect(initialNameLeft).toBeGreaterThanOrEqual(
+      viewport.getBoundingClientRect().left,
+    );
+    expect(initialActionsRight).toBeLessThanOrEqual(
+      viewport.getBoundingClientRect().right,
+    );
     viewport.scrollLeft = viewport.scrollWidth;
     await waitFor(() => {
+      expect(viewport.scrollLeft).toBeGreaterThan(0);
+      expect(nameCell.getBoundingClientRect().left).toBeCloseTo(
+        initialNameLeft,
+        0,
+      );
+      expect(actionsCell.getBoundingClientRect().right).toBeCloseTo(
+        initialActionsRight,
+        0,
+      );
+      expect(canvas.getByText("Household current account")).toBeVisible();
       expect(
         canvas.getByRole("columnheader", { name: "Unrealised" }),
       ).toBeVisible();
-      expect(
-        canvas.getAllByRole("button", { name: "Edit" }).length,
-      ).toBeGreaterThan(0);
     });
+    await userEvent.hover(nameCell);
+    await waitFor(() => expect(actionsCell).toHaveStyle({ opacity: "1" }));
+    await userEvent.click(
+      within(accountRow).getByRole("button", { name: "Edit" }),
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    const editDialog = await findVisibleDialog(body, "Edit Account");
+    expect(nameHeader.getBoundingClientRect().width).toBe(420);
+    await userEvent.click(
+      within(editDialog).getByRole("button", { name: "Cancel" }),
+    );
+    await waitFor(() => expect(editDialog).not.toBeInTheDocument());
+    expect(nameHeader.getBoundingClientRect().width).toBe(420);
+    const groupRow = canvas
+      .getByText("Cash and savings accounts")
+      .closest<HTMLElement>(".ag-row");
+    const collapse = groupRow?.querySelector<HTMLElement>(".ag-group-expanded");
+    if (!groupRow || !collapse) throw new Error("Missing Cash group expander");
+    await userEvent.click(collapse);
+    await waitFor(() =>
+      expect(
+        canvas.queryByText("Household current account"),
+      ).not.toBeInTheDocument(),
+    );
+    const expand = groupRow.querySelector<HTMLElement>(".ag-group-contracted");
+    if (!expand) throw new Error("Missing Cash group expander");
+    await userEvent.click(expand);
+    await waitFor(() =>
+      expect(canvas.getByText("Household current account")).toBeVisible(),
+    );
     await userEvent.click(
       canvas.getByRole("button", { name: "Show Gain/Loss Details" }),
     );
@@ -1333,6 +1405,19 @@ export const ExpenseCategories: Story = {
     await expect(
       canvas.getByText("Electricity", { exact: true }),
     ).toBeVisible();
+    const viewport =
+      canvasElement.querySelector<HTMLElement>(".ag-grid-viewport");
+    if (!viewport) throw new Error("Missing category grid viewport");
+    if (viewport.clientWidth < 320 + 145) {
+      // Automatic unpinning replaces the action cells after the grid lays out.
+      await waitFor(() =>
+        expect(
+          canvasElement.querySelector(
+            '.ag-grid-pinned-right-cells [col-id="actions"]',
+          ),
+        ).toBeNull(),
+      );
+    }
     const body = within(canvasElement.ownerDocument.body);
     for (const [name, reason] of [
       ["Electricity", "Cannot delete category because it has bookings"],
@@ -1348,6 +1433,7 @@ export const ExpenseCategories: Story = {
       const deleteButton = within(row).getByRole("button", { name: "Delete" });
       await expect(deleteButton).toBeDisabled();
       const trigger = deleteButton.parentElement!;
+      trigger.scrollIntoView({ block: "nearest", inline: "nearest" });
       await userEvent.hover(trigger);
       await waitFor(() =>
         expect(body.getByRole("tooltip")).toHaveTextContent(reason),

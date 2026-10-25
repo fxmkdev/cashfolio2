@@ -18,7 +18,7 @@ test.beforeAll(async ({ e2eExternalId }) => {
   assetRootId = root.id;
 });
 
-test("account names keep their minimum width and overflow stays inside the grid", async ({
+test("account names and actions stay frozen while overflow stays inside the grid", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -32,7 +32,22 @@ test("account names keep their minimum width and overflow stays inside the grid"
   await expect(agGridRowByText(page, seeded.cashAccount.name)).toBeVisible();
   await expect
     .poll(async () => (await nameHeader.boundingBox())?.width ?? 0)
-    .toBeGreaterThanOrEqual(320);
+    .toBe(320);
+  const cashRow = grid.locator(`.ag-row[row-id="${seeded.cashAccount.id}"]`);
+  const name = cashRow
+    .locator(".ag-grid-pinned-left-cells")
+    .getByText(seeded.cashAccount.name, { exact: true });
+  const actions = cashRow.locator(
+    '.ag-grid-pinned-right-cells [col-id="actions"]',
+  );
+  await expect(name).toBeInViewport();
+  await expect(actions).toBeInViewport();
+  const initialNameLeft = await nameHeader.evaluate(
+    (element) => element.getBoundingClientRect().left,
+  );
+  const initialActionsRight = await actions.evaluate(
+    (element) => element.getBoundingClientRect().right,
+  );
   await expect
     .poll(() =>
       viewport.evaluate((element) => element.scrollWidth > element.clientWidth),
@@ -47,7 +62,18 @@ test("account names keep their minimum width and overflow stays inside the grid"
   await expect(
     grid.getByRole("columnheader", { name: "Unrealised", exact: true }),
   ).toBeInViewport();
-  const cashRow = grid.locator(`.ag-row[row-id="${seeded.cashAccount.id}"]`);
+  await expect(name).toBeInViewport();
+  await expect(actions).toBeInViewport();
+  await expect
+    .poll(() =>
+      nameHeader.evaluate((element) => element.getBoundingClientRect().left),
+    )
+    .toBeCloseTo(initialNameLeft, 0);
+  await expect
+    .poll(() =>
+      actions.evaluate((element) => element.getBoundingClientRect().right),
+    )
+    .toBeCloseTo(initialActionsRight, 0);
   await cashRow.hover();
   const edit = cashRow.getByRole("button", { name: "Edit", exact: true });
   await expect(edit).toBeInViewport();
@@ -63,7 +89,7 @@ test("account names keep their minimum width and overflow stays inside the grid"
   });
   await expect
     .poll(async () => (await nameHeader.boundingBox())?.width ?? 0)
-    .toBeGreaterThan(320);
+    .toBe(320);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect
