@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { AccountType, Unit } from "../../.prisma-client/enums";
+import {
+  AccountType,
+  EquityAccountSubtype,
+  Unit,
+} from "../../.prisma-client/enums";
 import {
   ACCOUNT_TREE_SELECT_COLUMN,
   columnTypes,
@@ -25,6 +29,54 @@ const accounts: AccountOption[] = [
 ];
 
 describe("createEditTransactionColumnDefs", () => {
+  test.each([EquityAccountSubtype.INCOME, EquityAccountSubtype.EXPENSE])(
+    "keeps unit and currency editable for a %s category with a different currency",
+    (equityAccountSubtype) => {
+      const category: AccountOption = {
+        value: "category",
+        label: "Category",
+        type: AccountType.EQUITY,
+        equityAccountSubtype,
+        unit: null,
+      };
+      const columnDefs = createEditTransactionColumnDefs({
+        accounts: [...accounts, category],
+        isSubmitting: false,
+        accountBookStartDate: new Date("2026-01-04T00:00:00.000Z"),
+      });
+      const unitColumn = columnDefs.find((column) => column.field === "unit");
+      const currencyColumn = columnDefs.find(
+        (column) => column.colId === "ccy",
+      );
+
+      for (const column of [unitColumn, currencyColumn]) {
+        if (typeof column?.editable !== "function") {
+          throw new Error("Expected conditional unit/currency editability");
+        }
+        expect(
+          column.editable({
+            data: {
+              key: "category-booking",
+              account: category.value,
+              unit: Unit.CURRENCY,
+              currency: "EUR",
+            },
+          } as never),
+        ).toBe(true);
+        expect(
+          column.editable({
+            data: {
+              key: "account-booking",
+              account: "account-checking",
+              unit: Unit.CURRENCY,
+              currency: "CHF",
+            },
+          } as never),
+        ).toBe(false);
+      }
+    },
+  );
+
   test("shows full fractional COP precision in debit and credit entry columns", () => {
     const columnDefs = createEditTransactionColumnDefs({
       accounts,

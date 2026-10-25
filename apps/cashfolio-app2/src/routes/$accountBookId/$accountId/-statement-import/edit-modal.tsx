@@ -50,7 +50,6 @@ export function StatementImportEditModal({
           currentAccountId={account.id}
           accountBookStartDate={accountBookStartDate}
           unitUsage={unitUsage}
-          preserveBookingUnitOnUnitlessEquityAccountChange
           onClose={onClose}
           onSubmittingChange={onSubmittingChange}
           onDirtyChange={onDirtyChange}

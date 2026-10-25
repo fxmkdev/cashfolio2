@@ -881,8 +881,16 @@ create/edit of transactions with split bookings:
 - **Minimum bookings**: at least 2 bookings enforced
 - **Date propagation**: calendar-day changes propagate to all bookings;
   unrelated updates that clone a `Date` must not overwrite booking dates
-- **Unit auto-population**: unit is auto-populated from selected account
-  metadata
+- **Booking units and currencies**: selecting an account with a fixed unit uses
+  that account's unit metadata. Selecting a unitless equity account, including
+  an income/expense category, preserves the booking's existing unit and
+  associated metadata. Only bookings without a unit inherit the current-account
+  booking's metadata. This rule applies to both ledger and statement-import
+  editors. Unit and currency remain editable for unitless accounts, so a
+  category booking can use EUR while the current account uses CHF. Defaults do
+  not convert amounts or require currencies to match. Existing units with
+  incomplete metadata are preserved for validation rather than filled from
+  another booking.
 - **Booking row reordering**: enabled via AG Grid row drag in both create and
   edit flows
 - **Dirty reporting**: optional `onDirtyChange` reports form and pending editor
@@ -1036,11 +1044,11 @@ compatibility but ignored by the importer.
   or draft-edit submission is in progress.
 - Import uses a batch server mutation so either all reviewed drafts are created
   or none are.
-- For imported mixed-currency drafts, `EditTransactionModal` preserves the
-  prefilled counter booking unit when the user selects a unitless equity counter
-  account. If the booking has no unit yet, as with a newly added booking, it
-  defaults to the current-account booking's unit and associated metadata,
-  matching the ledger dialog.
+- Imported drafts follow the shared
+  [booking unit and currency rules](#transaction-editing-edittransactionmodal).
+  Selecting a unitless counter category preserves the imported original
+  currency; newly added bookings without a unit inherit the current-account
+  booking's metadata. Category booking units and currencies remain editable.
 
 ### Conditional Editability Affordance
 
