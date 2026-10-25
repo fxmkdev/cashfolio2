@@ -5,7 +5,7 @@ import {
   type TreeRow,
 } from "./-page-types";
 
-export function isAssetClassSelectionRow(
+export function isBulkAccountRow(
   row: AccountsGridRow | undefined,
 ): row is TreeRow {
   return (
@@ -15,20 +15,20 @@ export function isAssetClassSelectionRow(
   );
 }
 
-export function isAssetClassAccount(
+export function isBulkAccount(
   row: AccountsGridRow | undefined,
 ): row is TreeRow {
-  return isAssetClassSelectionRow(row) && row.nodeType === "account";
+  return isBulkAccountRow(row) && row.nodeType === "account";
 }
 
-export type AssetClassAssignmentTarget = {
+export type AccountBulkActionTarget = {
   accountIds: string[];
   archivedCount: number;
 };
 
-export function createAssetClassAssignmentTarget(
+export function createAccountBulkActionTarget(
   accounts: TreeRow[],
-): AssetClassAssignmentTarget {
+): AccountBulkActionTarget {
   return {
     accountIds: accounts.map((row) => row.id),
     archivedCount: accounts.filter((row) => !row.isActive).length,

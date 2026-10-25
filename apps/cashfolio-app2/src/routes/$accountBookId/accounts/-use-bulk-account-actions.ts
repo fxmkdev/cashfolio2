@@ -1,3 +1,4 @@
+import type { MoveAccountsInput } from "@/shared/bulk-account-move";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AgGridReactProps } from "ag-grid-react";
 import type { GridApi } from "ag-grid-enterprise";
@@ -5,39 +6,47 @@ import type { AssetClass } from "@/.prisma-client/enums";
 import { notifications } from "@mantine/notifications";
 import type { AccountsGridRow, TreeRow } from "./-page-types";
 import {
-  createAssetClassAssignmentTarget,
-  isAssetClassSelectionRow,
-  isAssetClassAccount,
-  type AssetClassAssignmentTarget,
-} from "./-asset-class-targets";
+  createAccountBulkActionTarget,
+  isBulkAccountRow,
+  isBulkAccount,
+  type AccountBulkActionTarget,
+} from "./-bulk-account-targets";
 
-export function useAssetClassAssignment(args: {
+export function useBulkAccountActions(args: {
   scopeKey: string;
   enabled: boolean;
   rows: TreeRow[];
-  submit: (
+  submitAssetClass: (
     accountIds: string[],
     assetClass: AssetClass | null,
   ) => Promise<unknown>;
+  submitMove?: (
+    data: Omit<MoveAccountsInput, "accountBookId" | "accountIds"> & {
+      accountIds: string[];
+    },
+  ) => Promise<{ count: number }>;
   invalidate: () => void;
   onRefreshConstraints?: () => Promise<void>;
 }) {
   const apiRef = useRef<GridApi<AccountsGridRow> | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [target, setTarget] = useState<AssetClassAssignmentTarget>();
+  const [assetClassTarget, setAssetClassTarget] =
+    useState<AccountBulkActionTarget>();
+  const [moveTarget, setMoveTarget] = useState<AccountBulkActionTarget>();
   const clearSelection = useCallback(() => {
     apiRef.current?.deselectAll();
     setSelectedIds([]);
   }, []);
   useEffect(() => {
     clearSelection();
-    setTarget(undefined);
+    setAssetClassTarget(undefined);
+    setMoveTarget(undefined);
   }, [args.scopeKey, clearSelection]);
 
   const reconcileSelection = useCallback((api: GridApi<AccountsGridRow>) => {
     const filteredIds = new Set<string>();
     api.forEachNodeAfterFilter((node) => {
-      if (isAssetClassAccount(node.data)) filteredIds.add(node.data.id);
+      if (isBulkAccount(node.data)) filteredIds.add(node.data.id);
     });
     const hidden = api
       .getSelectedNodes()
@@ -46,13 +55,13 @@ export function useAssetClassAssignment(args: {
     setSelectedIds(
       api
         .getSelectedRows()
-        .filter(isAssetClassAccount)
+        .filter(isBulkAccount)
         .map((row) => row.id),
     );
   }, []);
   const selectedIdSet = new Set(selectedIds);
   const selectedAccounts = args.rows.filter(
-    (row) => isAssetClassAccount(row) && selectedIdSet.has(row.id),
+    (row) => isBulkAccount(row) && selectedIdSet.has(row.id),
   );
   const rowSelection = useMemo<
     AgGridReactProps<AccountsGridRow>["rowSelection"]
@@ -62,8 +71,8 @@ export function useAssetClassAssignment(args: {
       selectAll: "filtered",
       enableClickSelection: false,
       groupSelects: "filteredDescendants",
-      isRowSelectable: (node) => isAssetClassAccount(node.data),
-      checkboxes: (params) => isAssetClassSelectionRow(params.data),
+      isRowSelectable: (node) => isBulkAccount(node.data),
+      checkboxes: (params) => isBulkAccountRow(params.data),
     }),
     [],
   );
@@ -96,26 +105,55 @@ export function useAssetClassAssignment(args: {
   return {
     gridProps,
     selectedCount: selectedAccounts.length,
-    target,
+    assetClassTarget,
+    moveTarget,
     clearSelection,
-    openSelected: () => {
+    openAssetClass: () => {
       if (selectedAccounts.length)
-        setTarget(createAssetClassAssignmentTarget(selectedAccounts));
+        setAssetClassTarget(createAccountBulkActionTarget(selectedAccounts));
     },
-    close: () => setTarget(undefined),
+    openMove: args.submitMove
+      ? () => {
+          if (selectedAccounts.length)
+            setMoveTarget(createAccountBulkActionTarget(selectedAccounts));
+        }
+      : undefined,
+    close: () => {
+      setAssetClassTarget(undefined);
+      setMoveTarget(undefined);
+    },
     onRefreshConstraints: args.onRefreshConstraints,
-    apply: async (assetClass: AssetClass | null) => {
-      if (!target) return;
-      await args.submit(target.accountIds, assetClass);
-      setTarget(undefined);
+    applyMove: async (
+      data: Pick<
+        MoveAccountsInput,
+        "targetGroupId" | "expectedCashFlowChanges"
+      >,
+    ) => {
+      if (!moveTarget || !args.submitMove) return;
+      const result = await args.submitMove({
+        ...data,
+        accountIds: moveTarget.accountIds,
+      });
+      setMoveTarget(undefined);
       clearSelection();
       args.invalidate();
       notifications.show({
         color: "green",
-        message: `Asset class updated for ${target.accountIds.length} ${target.accountIds.length === 1 ? "account" : "accounts"}.`,
+        message: `${result.count} ${result.count === 1 ? "account" : "accounts"} moved.`,
+      });
+    },
+    applyAssetClass: async (assetClass: AssetClass | null) => {
+      if (!assetClassTarget) return;
+      await args.submitAssetClass(assetClassTarget.accountIds, assetClass);
+      setAssetClassTarget(undefined);
+      clearSelection();
+      args.invalidate();
+      notifications.show({
+        color: "green",
+        message: `Asset class updated for ${assetClassTarget.accountIds.length} ${assetClassTarget.accountIds.length === 1 ? "account" : "accounts"}.`,
       });
     },
   };
 }
 
-export type AssetClassAssignment = ReturnType<typeof useAssetClassAssignment>;
+export type BulkAccountActions = ReturnType<typeof useBulkAccountActions>;

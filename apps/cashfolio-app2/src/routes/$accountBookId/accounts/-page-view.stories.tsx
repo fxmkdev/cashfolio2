@@ -1,4 +1,10 @@
-import { useAssetClassAssignment } from "./-use-asset-class-assignment";
+import {
+  getMoveCashFlowChanges,
+  getMovingAccounts,
+  cashFlowChangesMatch,
+} from "@/shared/bulk-account-move";
+import { getMoveAccountsData } from "./-move-accounts-data";
+import { useBulkAccountActions } from "./-use-bulk-account-actions";
 import type { GridApi } from "ag-grid-enterprise";
 import type { AccountsGridRow } from "./-page-types";
 import type { AssetClass } from "@/.prisma-client/enums";
@@ -355,6 +361,9 @@ function AccountsPageStoryHarness({
   const [assetClasses, setAssetClasses] = useState<
     Record<string, AssetClass | null>
   >({});
+  const [movedAccounts, setMovedAccounts] = useState<
+    Record<string, { groupId: string | null; isCashAccount: boolean }>
+  >({});
   const [submittedAccountIds, setSubmittedAccountIds] = useState<string[]>([]);
   const [refreshCount, setRefreshCount] = useState(0);
   const [invalidationCount, setInvalidationCount] = useState(0);
@@ -417,15 +426,23 @@ function AccountsPageStoryHarness({
   const rows = useMemo(() => {
     const sourceRows = (
       rowsOverride ?? getRowsFor({ mode, tab, showArchived })
-    ).map((row) =>
-      Object.hasOwn(assetClasses, row.id)
-        ? { ...row, assetClass: assetClasses[row.id] }
-        : row,
-    );
+    ).map((row) => ({
+      ...row,
+      ...(Object.hasOwn(assetClasses, row.id)
+        ? { assetClass: assetClasses[row.id] }
+        : {}),
+      ...(movedAccounts[row.id]
+        ? {
+            ...movedAccounts[row.id],
+            groupId: movedAccounts[row.id].groupId ?? undefined,
+            parentId: movedAccounts[row.id].groupId ?? undefined,
+          }
+        : {}),
+    }));
     return tab.startsWith("EQUITY-") && !showArchived
       ? sourceRows
       : buildUnifiedAccountTreeRows(sourceRows);
-  }, [mode, tab, showArchived, rowsOverride, assetClasses]);
+  }, [mode, tab, showArchived, rowsOverride, assetClasses, movedAccounts]);
   const rowsByParentKey = useRowsByParentKey(rows);
   const selectedSiblingRows: ReorderGroupChildRow[] = useSelectedSiblingRows(
     rowsByParentKey,
@@ -478,11 +495,11 @@ function AccountsPageStoryHarness({
       diagnostics: [],
     },
   };
-  const assignment = useAssetClassAssignment({
+  const assignment = useBulkAccountActions({
     scopeKey: `${assignmentScope}:${tab}:${mode}`,
     enabled: bulkAssignment && !isEquityTab,
     rows,
-    submit: async (accountIds, assetClass) => {
+    submitAssetClass: async (accountIds, assetClass) => {
       if (assignmentFailsOnce && !hasFailed.current) {
         hasFailed.current = true;
         throw new Error(ACCOUNT_BOOK_BUSY_MESSAGE);
@@ -492,6 +509,37 @@ function AccountsPageStoryHarness({
         ...current,
         ...Object.fromEntries(accountIds.map((id) => [id, assetClass])),
       }));
+    },
+    submitMove: async ({
+      accountIds,
+      targetGroupId,
+      expectedCashFlowChanges,
+    }) => {
+      const data = getMoveAccountsData(rows, accountIds);
+      const group =
+        data.groups.find((group) => group.id === targetGroupId) ?? null;
+      if (
+        !cashFlowChangesMatch(
+          getMoveCashFlowChanges(data.accounts, group),
+          expectedCashFlowChanges,
+        )
+      )
+        throw new Error("Cash-flow inclusion has changed.");
+      const moving = getMovingAccounts(data.accounts, targetGroupId);
+      setMovedAccounts((current) => ({
+        ...current,
+        ...Object.fromEntries(
+          moving.map((account) => [
+            account.id,
+            {
+              groupId: targetGroupId,
+              isCashAccount: group?.isCashAccount ?? account.isCashAccount,
+            },
+          ]),
+        ),
+      }));
+      setSubmittedAccountIds(accountIds);
+      return { count: moving.length };
     },
     invalidate: () => setInvalidationCount((count) => count + 1),
     onRefreshConstraints: async () => {
@@ -605,7 +653,7 @@ function AccountsPageStoryHarness({
         <SettingsNavigation accountBookId="storybook-book" categories />
       )}
       <AccountsPageView
-        assetClassAssignment={
+        bulkAccountActions={
           bulkAssignment && !isEquityTab ? assignment : undefined
         }
         onGridReady={({ api }) => {
@@ -2095,5 +2143,48 @@ export const BulkFilteredGroupCheckboxSelection: Story = {
     await expect(
       canvasElement.querySelector('[row-id="old"] [col-id="assetClass"]'),
     ).toHaveTextContent("Digital Assets");
+  },
+};
+
+export const BulkMoveToGroup: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      bulkAssignment
+      expandGroups
+      rowsOverride={bulkRows.map((row) =>
+        row.id === "account-checking" ? { ...row, isCashAccount: true } : row,
+      )}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await selectAssignmentAccount(canvasElement, "account-checking");
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Move to Group" }),
+    );
+    const dialog = within(await findVisibleDialog(body, "Move to Group"));
+    await expect(dialog.getByRole("button", { name: "Move" })).toBeDisabled();
+    await userEvent.click(dialog.getByLabelText("Destination Group"));
+    await userEvent.click(body.getByRole("option", { name: "Empty" }));
+    await expect(
+      dialog.getByText(/1 will be excluded from cash flow: Checking/),
+    ).toBeVisible();
+    await userEvent.click(dialog.getByRole("button", { name: "Move" }));
+    await waitFor(() =>
+      expect(
+        body.queryByRole("dialog", { name: "Move to Group" }),
+      ).not.toBeInTheDocument(),
+    );
+    await expect(
+      canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
+    ).not.toBeInTheDocument();
+    await expect(canvas.getByTestId("assignment-refreshes")).toHaveTextContent(
+      "invalidations: 1",
+    );
+    await expect(
+      canvas.getByTestId("assignment-account-ids"),
+    ).toHaveTextContent("account-checking");
   },
 };

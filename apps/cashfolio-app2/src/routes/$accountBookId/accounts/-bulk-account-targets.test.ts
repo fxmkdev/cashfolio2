@@ -3,10 +3,10 @@ import { AccountType } from "@/.prisma-client/enums";
 import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows";
 import type { TreeRow } from "./-page-types";
 import {
-  createAssetClassAssignmentTarget,
-  isAssetClassSelectionRow,
-  isAssetClassAccount,
-} from "./-asset-class-targets";
+  createAccountBulkActionTarget,
+  isBulkAccountRow,
+  isBulkAccount,
+} from "./-bulk-account-targets";
 
 function row(
   id: string,
@@ -56,19 +56,19 @@ describe("asset class assignment targets", () => {
   it("shows checkboxes on balance accounts, real groups, and Archived wrappers", () => {
     const projected = buildUnifiedAccountTreeRows(raw);
     expect(projected.some((row) => row.isVirtualArchivedGroup)).toBe(true);
-    expect(projected.every(isAssetClassSelectionRow)).toBe(true);
+    expect(projected.every(isBulkAccountRow)).toBe(true);
     for (const nodeType of ["account", "accountGroup"] as const) {
       expect(
-        isAssetClassSelectionRow({
+        isBulkAccountRow({
           ...raw[0],
           nodeType,
           type: AccountType.EQUITY,
         }),
       ).toBe(false);
     }
-    expect(isAssetClassSelectionRow(undefined)).toBe(false);
+    expect(isBulkAccountRow(undefined)).toBe(false);
     expect(
-      isAssetClassSelectionRow({
+      isBulkAccountRow({
         id: "__reference_currency_total_footer__",
         rowType: "referenceCurrencyTotalFooter",
         name: "Total",
@@ -79,29 +79,27 @@ describe("asset class assignment targets", () => {
 
   it("selects balance-account leaves only, including archived accounts", () => {
     const projected = buildUnifiedAccountTreeRows(raw);
-    expect(projected.filter(isAssetClassAccount).map((r) => r.id)).toEqual([
+    expect(projected.filter(isBulkAccount).map((r) => r.id)).toEqual([
       "active",
       "archived",
       "old-child",
       "outside",
     ]);
-    expect(isAssetClassAccount({ ...raw[2], type: AccountType.EQUITY })).toBe(
-      false,
-    );
+    expect(isBulkAccount({ ...raw[2], type: AccountType.EQUITY })).toBe(false);
     expect(
-      isAssetClassAccount({
+      isBulkAccount({
         id: "__reference_currency_total_footer__",
         rowType: "referenceCurrencyTotalFooter",
         name: "Total",
         balanceInReferenceCurrency: 0,
       }),
     ).toBe(false);
-    expect(isAssetClassAccount(undefined)).toBe(false);
+    expect(isBulkAccount(undefined)).toBe(false);
   });
 
   it("freezes IDs and archived count when opening a dialog", () => {
     const accounts = [raw[2], raw[3], raw[5]];
-    const target = createAssetClassAssignmentTarget(accounts);
+    const target = createAccountBulkActionTarget(accounts);
     accounts.push(row("new", "account", "group"));
     expect(target).toEqual({
       accountIds: ["active", "archived", "old-child"],

@@ -4,33 +4,10 @@ import type { AssetClass } from "@/.prisma-client/enums";
 import { assetClassOptions } from "@/shared/asset-class";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
 import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-feedback";
-import type { AssetClassAssignment } from "./-use-asset-class-assignment";
-import type { AssetClassAssignmentTarget } from "./-asset-class-targets";
-
-export function AssetClassAssignmentToolbar({
-  actions,
-}: {
-  actions: AssetClassAssignment;
-}) {
-  if (!actions.selectedCount) return null;
-  return (
-    <Group mb="sm" role="toolbar" aria-label="Selected Account Actions">
-      <Text size="sm" role="status">
-        {actions.selectedCount}{" "}
-        {actions.selectedCount === 1 ? "account" : "accounts"} selected
-      </Text>
-      <Button variant="light" onClick={actions.openSelected}>
-        Set Asset Class
-      </Button>
-      <Button variant="subtle" onClick={actions.clearSelection}>
-        Clear Selection
-      </Button>
-    </Group>
-  );
-}
+import type { AccountBulkActionTarget } from "./-bulk-account-targets";
 
 export function AssetClassAssignmentDialog(props: {
-  target: AssetClassAssignmentTarget;
+  target: AccountBulkActionTarget;
   onClose: () => void;
   onSubmit: (assetClass: AssetClass | null) => Promise<void>;
   onRefreshConstraints?: () => Promise<void>;
