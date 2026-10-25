@@ -69,10 +69,10 @@ for (const type of ["BALANCE"] as const) {
       await expect(agGridCellByColId(row, "assetClass")).toHaveText(label);
       await expect(
         page.getByRole("columnheader", { name: "Name", exact: true }),
-      ).toHaveAttribute("aria-colindex", "1");
+      ).toHaveAttribute("aria-colindex", "2");
       await expect(
         page.getByRole("columnheader", { name: "Asset Class", exact: true }),
-      ).toHaveAttribute("aria-colindex", "5");
+      ).toHaveAttribute("aria-colindex", "6");
       expect(
         (
           await page

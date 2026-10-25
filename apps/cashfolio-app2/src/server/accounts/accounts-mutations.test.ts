@@ -45,6 +45,7 @@ const tx = vi.hoisted(() => ({
     create: vi.fn(),
   },
   accountGroup: {
+    findUnique: vi.fn(),
     findUniqueOrThrow: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
@@ -79,7 +80,8 @@ vi.mock("../../security/same-origin.server", () => ({
   ensureSameOriginRequestFromServerContext,
 }));
 
-vi.mock("../../shared/account-validation", () => ({
+vi.mock("../../shared/account-validation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../shared/account-validation")>()),
   validateAccountInput,
   validateAccountGroupInput,
 }));
@@ -97,6 +99,8 @@ vi.mock("node:timers/promises", () => ({
 }));
 
 import {
+  setAccountsAssetClass,
+  moveAccounts,
   archiveAccount,
   archiveAccountGroup,
   createAccount,
@@ -1385,5 +1389,381 @@ describe("reorderAccountTreeItems conflict recovery", () => {
     expect(
       invalidatePeriodBaseDataCacheForAccountBook,
     ).toHaveBeenCalledExactlyOnceWith("book-1");
+  });
+});
+
+describe("setAccountsAssetClass", () => {
+  const input = {
+    accountBookId: "book-1",
+    accountIds: ["active", "archived"],
+    assetClass: AssetClass.EQUITIES,
+  };
+  beforeEach(() => {
+    vi.clearAllMocks();
+    ensureAuthorizedForAccountBookId.mockReset().mockResolvedValue(undefined);
+    ensureSameOriginRequestFromServerContext.mockReset();
+    prisma.$transaction
+      .mockReset()
+      .mockImplementation(async (callback) => callback(tx));
+    tx.$queryRaw.mockResolvedValue([{ id: "book-1" }]);
+    tx.account.findMany.mockResolvedValue([
+      { id: "active", type: AccountType.BALANCE },
+      { id: "archived", type: AccountType.BALANCE },
+    ]);
+    tx.account.updateMany.mockResolvedValue({ count: 2 });
+  });
+
+  it.each([...Object.values(AssetClass), null])(
+    "sets %s on active and archived accounts in one book mutation",
+    async (assetClass) => {
+      await expect(
+        setAccountsAssetClass({ data: { ...input, assetClass } }),
+      ).resolves.toEqual({ count: 2 });
+      expect(ensureSameOriginRequestFromServerContext).toHaveBeenCalledOnce();
+      expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-1");
+      expect(tx.$queryRaw).toHaveBeenCalledOnce();
+      expect(tx.account.findMany).toHaveBeenCalledWith({
+        where: { accountBookId: "book-1", id: { in: input.accountIds } },
+        select: { id: true, type: true },
+      });
+      expect(tx.account.updateMany).toHaveBeenCalledExactlyOnceWith({
+        where: {
+          accountBookId: "book-1",
+          id: { in: input.accountIds },
+          type: AccountType.BALANCE,
+        },
+        data: { assetClass },
+      });
+      expect(
+        invalidatePeriodBaseDataCacheForAccountBook,
+      ).toHaveBeenCalledExactlyOnceWith("book-1");
+    },
+  );
+
+  it("deduplicates account IDs before checking the complete target set", async () => {
+    await setAccountsAssetClass({
+      data: { ...input, accountIds: ["active", "archived", "active"] },
+    });
+    expect(tx.account.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: { in: input.accountIds } }),
+      }),
+    );
+  });
+
+  it.each([
+    [
+      "missing or foreign-book account",
+      [{ id: "active", type: AccountType.BALANCE }],
+    ],
+    [
+      "category",
+      [
+        { id: "active", type: AccountType.BALANCE },
+        { id: "archived", type: AccountType.EQUITY },
+      ],
+    ],
+  ])("rejects the entire selection for a %s", async (_, accounts) => {
+    tx.account.findMany.mockResolvedValue(accounts);
+    await expect(setAccountsAssetClass({ data: input })).rejects.toThrow(
+      "no longer available",
+    );
+    expect(tx.account.updateMany).not.toHaveBeenCalled();
+    expect(invalidatePeriodBaseDataCacheForAccountBook).not.toHaveBeenCalled();
+  });
+
+  it("does not read or write accounts when authorization fails", async () => {
+    ensureAuthorizedForAccountBookId.mockRejectedValueOnce(
+      new Error("Forbidden"),
+    );
+    await expect(setAccountsAssetClass({ data: input })).rejects.toThrow(
+      "Forbidden",
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(tx.account.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("does not invalidate caches after a failed transaction", async () => {
+    tx.account.updateMany.mockRejectedValueOnce(new Error("Write failed"));
+    await expect(setAccountsAssetClass({ data: input })).rejects.toThrow(
+      "Write failed",
+    );
+    expect(invalidatePeriodBaseDataCacheForAccountBook).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { accountIds: [] },
+    { accountIds: [""] },
+    { accountIds: [1] },
+    { accountIds: "active" },
+    { assetClass: undefined },
+    { assetClass: "UNCLASSIFIED" },
+    { assetClass: "" },
+    { assetClass: 1 },
+    { accountBookId: "" },
+  ])(
+    "rejects malformed input %j before opening a transaction",
+    async (override) => {
+      await expect(
+        setAccountsAssetClass({ data: { ...input, ...override } }),
+      ).rejects.toThrow();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe("moveAccounts", () => {
+  const changes = { includedAccountIds: [], excludedAccountIds: ["active"] };
+  const input = {
+    accountBookId: "book-1",
+    accountIds: ["active", "archived"],
+    targetGroupId: "target",
+    expectedCashFlowChanges: changes,
+  };
+  const accounts = [
+    {
+      id: "active",
+      name: "Checking",
+      type: AccountType.BALANCE,
+      unit: Unit.CURRENCY,
+      groupId: "source",
+      isActive: true,
+      isCashAccount: true,
+    },
+    {
+      id: "archived",
+      name: "Closed",
+      type: AccountType.BALANCE,
+      unit: Unit.CURRENCY,
+      groupId: "source",
+      isActive: false,
+      isCashAccount: false,
+    },
+  ];
+  const group = {
+    id: "target",
+    name: "Target",
+    type: AccountType.BALANCE,
+    parentGroupId: null,
+    isActive: true,
+    isCashAccount: false,
+  };
+  beforeEach(() => {
+    vi.clearAllMocks();
+    ensureAuthorizedForAccountBookId.mockReset().mockResolvedValue(undefined);
+    ensureSameOriginRequestFromServerContext.mockReset();
+    prisma.$transaction
+      .mockReset()
+      .mockImplementation(async (callback) => callback(tx));
+    tx.$queryRaw.mockResolvedValue([{ id: "book-1" }]);
+    tx.account.findMany
+      .mockReset()
+      .mockImplementation(async ({ where }) => (where.id ? accounts : []));
+    tx.accountGroup.findUnique.mockReset().mockResolvedValue(group);
+    tx.account.updateMany.mockReset().mockResolvedValue({ count: 2 });
+  });
+
+  it("authorizes, locks the book, and moves active/archived accounts with inherited cash status", async () => {
+    await expect(moveAccounts({ data: input })).resolves.toEqual({ count: 2 });
+    expect(ensureSameOriginRequestFromServerContext).toHaveBeenCalledOnce();
+    expect(ensureAuthorizedForAccountBookId).toHaveBeenCalledWith("book-1");
+    expect(tx.$queryRaw).toHaveBeenCalledOnce();
+    expect(tx.accountGroup.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id_accountBookId: { id: "target", accountBookId: "book-1" } },
+      }),
+    );
+    expect(tx.account.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { accountBookId: "book-1", groupId: "target" },
+      }),
+    );
+    expect(tx.account.updateMany).toHaveBeenCalledExactlyOnceWith({
+      where: {
+        accountBookId: "book-1",
+        id: { in: input.accountIds },
+        type: AccountType.BALANCE,
+      },
+      data: { groupId: "target", isCashAccount: false },
+    });
+    expect(
+      invalidatePeriodBaseDataCacheForAccountBook,
+    ).toHaveBeenCalledExactlyOnceWith("book-1");
+  });
+
+  it("preserves each account's cash status when moving to No Group", async () => {
+    await moveAccounts({
+      data: {
+        ...input,
+        targetGroupId: null,
+        expectedCashFlowChanges: {
+          includedAccountIds: [],
+          excludedAccountIds: [],
+        },
+      },
+    });
+    expect(tx.accountGroup.findUnique).not.toHaveBeenCalled();
+    expect(tx.account.updateMany).toHaveBeenCalledWith({
+      where: {
+        accountBookId: "book-1",
+        id: { in: ["active"] },
+        type: AccountType.BALANCE,
+      },
+      data: { groupId: null, isCashAccount: true },
+    });
+    expect(tx.account.updateMany).toHaveBeenCalledWith({
+      where: {
+        accountBookId: "book-1",
+        id: { in: ["archived"] },
+        type: AccountType.BALANCE,
+      },
+      data: { groupId: null, isCashAccount: false },
+    });
+  });
+
+  it("deduplicates IDs and supports currency accounts entering cash flow", async () => {
+    tx.accountGroup.findUnique.mockResolvedValue({
+      ...group,
+      isCashAccount: true,
+    });
+    await moveAccounts({
+      data: {
+        ...input,
+        accountIds: [...input.accountIds, "active"],
+        expectedCashFlowChanges: {
+          includedAccountIds: ["archived"],
+          excludedAccountIds: [],
+        },
+      },
+    });
+    expect(tx.account.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { groupId: "target", isCashAccount: true },
+      }),
+    );
+  });
+
+  it("skips accounts already in the target and avoids writes/cache invalidation for a no-op", async () => {
+    tx.account.findMany.mockResolvedValueOnce(
+      accounts.map((account) => ({ ...account, groupId: "target" })),
+    );
+    await expect(
+      moveAccounts({
+        data: {
+          ...input,
+          expectedCashFlowChanges: {
+            includedAccountIds: [],
+            excludedAccountIds: [],
+          },
+        },
+      }),
+    ).resolves.toEqual({ count: 0 });
+    expect(tx.account.updateMany).not.toHaveBeenCalled();
+    expect(invalidatePeriodBaseDataCacheForAccountBook).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["missing/foreign account", [accounts[0]]],
+    ["category", [accounts[0], { ...accounts[1], type: AccountType.EQUITY }]],
+  ])("rejects a %s before any write", async (_, selection) => {
+    tx.account.findMany.mockResolvedValueOnce(selection);
+    await expect(moveAccounts({ data: input })).rejects.toThrow(
+      "no longer available",
+    );
+    expect(tx.account.updateMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["missing/foreign group", null, "no longer available"],
+    ["category group", { ...group, type: AccountType.EQUITY }, "account group"],
+    ["archived group", { ...group, isActive: false }, "Active accounts"],
+  ])("rejects an incompatible %s", async (_, target, message) => {
+    tx.accountGroup.findUnique.mockResolvedValue(target);
+    await expect(moveAccounts({ data: input })).rejects.toThrow(message);
+    expect(tx.account.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("allows archived accounts in an archived group", async () => {
+    tx.accountGroup.findUnique.mockResolvedValue({ ...group, isActive: false });
+    tx.account.findMany.mockResolvedValueOnce(
+      accounts.map((account) => ({ ...account, isActive: false })),
+    );
+    await expect(moveAccounts({ data: input })).resolves.toEqual({ count: 2 });
+  });
+
+  it("rejects a cash-flow group for a security account", async () => {
+    tx.accountGroup.findUnique.mockResolvedValue({
+      ...group,
+      isCashAccount: true,
+    });
+    tx.account.findMany.mockResolvedValueOnce([
+      accounts[0],
+      { ...accounts[1], unit: Unit.SECURITY },
+    ]);
+    await expect(moveAccounts({ data: input })).rejects.toThrow(
+      "only currency accounts",
+    );
+    expect(tx.account.updateMany).not.toHaveBeenCalled();
+  });
+
+  it.each(["destination", "selection"])(
+    "rejects case-insensitive name conflicts in the %s",
+    async (kind) => {
+      tx.account.findMany.mockResolvedValueOnce(
+        kind === "selection"
+          ? [accounts[0], { ...accounts[1], name: "CHECKING" }]
+          : accounts,
+      );
+      tx.account.findMany.mockResolvedValueOnce(
+        kind === "destination" ? [{ id: "conflict", name: "checking" }] : [],
+      );
+      await expect(moveAccounts({ data: input })).rejects.toThrow("same name");
+      expect(tx.account.updateMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it("requires the actual cash-flow changes to match the reviewed preview", async () => {
+    tx.accountGroup.findUnique.mockResolvedValue({
+      ...group,
+      isCashAccount: true,
+    });
+    await expect(moveAccounts({ data: input })).rejects.toThrow(
+      "has changed since this move was reviewed",
+    );
+    expect(tx.account.updateMany).not.toHaveBeenCalled();
+    expect(invalidatePeriodBaseDataCacheForAccountBook).not.toHaveBeenCalled();
+  });
+
+  it("does not read or write accounts when authorization fails", async () => {
+    ensureAuthorizedForAccountBookId.mockRejectedValueOnce(
+      new Error("Forbidden"),
+    );
+    await expect(moveAccounts({ data: input })).rejects.toThrow("Forbidden");
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("does not invalidate cache when a transactional write fails", async () => {
+    tx.account.updateMany.mockRejectedValueOnce(new Error("Write failed"));
+    await expect(moveAccounts({ data: input })).rejects.toThrow("Write failed");
+    expect(invalidatePeriodBaseDataCacheForAccountBook).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { accountIds: [] },
+    { accountIds: [1] },
+    { targetGroupId: undefined },
+    { targetGroupId: "" },
+    { expectedCashFlowChanges: undefined },
+    {
+      expectedCashFlowChanges: {
+        includedAccountIds: "invalid",
+        excludedAccountIds: [],
+      },
+    },
+  ])("rejects malformed input %j before a transaction", async (override) => {
+    await expect(
+      moveAccounts({ data: { ...input, ...override } }),
+    ).rejects.toThrow();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

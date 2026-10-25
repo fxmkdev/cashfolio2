@@ -1,3 +1,7 @@
+import { AssetClassAssignmentDialog } from "./-asset-class-assignment";
+import { BulkAccountToolbar } from "./-bulk-account-toolbar";
+import { MoveAccountsDialog } from "./-move-accounts-dialog";
+import type { BulkAccountActions } from "./-use-bulk-account-actions";
 import {
   getAccountManagementPath,
   getAccountConstraintMessage,
@@ -62,6 +66,7 @@ type RowTarget = {
 };
 
 export type AccountsPageViewProps = {
+  bulkAccountActions?: BulkAccountActions;
   managementContext?: AccountManagementContext;
   gainLoss?: {
     data?: AccountGainLossSummaries;
@@ -126,6 +131,7 @@ export type AccountsPageViewProps = {
 };
 
 export function AccountsPageView({
+  bulkAccountActions,
   managementContext = "accounts",
   gainLoss,
   accountBookId,
@@ -283,11 +289,46 @@ export function AccountsPageView({
           </Button>
         </Alert>
       ) : null}
+      {bulkAccountActions && (
+        <BulkAccountToolbar actions={bulkAccountActions} />
+      )}
+      {bulkAccountActions?.assetClassTarget && (
+        <AssetClassAssignmentDialog
+          target={bulkAccountActions.assetClassTarget}
+          onClose={bulkAccountActions.close}
+          onSubmit={bulkAccountActions.applyAssetClass}
+          onRefreshConstraints={bulkAccountActions.onRefreshConstraints}
+        />
+      )}
+      {bulkAccountActions?.moveTarget && (
+        <MoveAccountsDialog
+          target={bulkAccountActions.moveTarget}
+          rows={rows}
+          existingAccounts={[
+            ...new Map(
+              [...existingNodes, ...(archivedExistingNodes ?? [])]
+                .filter((node) => node.nodeType === "account")
+                .map((node) => [
+                  node.id,
+                  {
+                    id: node.id,
+                    name: node.name,
+                    groupId: node.groupId ?? null,
+                  },
+                ]),
+            ).values(),
+          ]}
+          onClose={bulkAccountActions.close}
+          onSubmit={bulkAccountActions.applyMove}
+          onRefreshConstraints={bulkAccountActions.onRefreshConstraints}
+        />
+      )}
       <AccountGainLossDetails
         data={gainLoss?.data}
         loading={gainLoss?.loading ?? false}
       >
         <DataGrid
+          {...bulkAccountActions?.gridProps}
           containerStyle={{ flex: 1, minHeight: 0 }}
           rowData={rows}
           columnDefs={columnDefs}
@@ -310,7 +351,10 @@ export function AccountsPageView({
           treeData={true}
           treeDataParentIdField="parentId"
           pinnedBottomRowData={pinnedBottomRowData}
-          onGridReady={onGridReady}
+          onGridReady={(event) => {
+            onGridReady?.(event);
+            bulkAccountActions?.gridProps.onGridReady?.(event);
+          }}
           isGroupOpenByDefault={isGroupOpenByDefault}
           onRowGroupOpened={onRowGroupOpened}
           getRowId={({ data }) => data.id}

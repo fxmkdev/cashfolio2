@@ -1,3 +1,14 @@
+import {
+  getMoveCashFlowChanges,
+  getMovingAccounts,
+  cashFlowChangesMatch,
+} from "@/shared/bulk-account-move";
+import { getMoveAccountsData } from "./-move-accounts-data";
+import { useBulkAccountActions } from "./-use-bulk-account-actions";
+import type { GridApi } from "ag-grid-enterprise";
+import type { AccountsGridRow } from "./-page-types";
+import type { AssetClass } from "@/.prisma-client/enums";
+import { ACCOUNT_BOOK_BUSY_MESSAGE } from "@/shared/mutation-errors";
 import { isVirtualArchivedGroup } from "./-archived-grid-rows";
 import { buildUnifiedAccountTreeRows } from "@/shared/archived-account-tree-rows";
 import { SettingsNavigation } from "../settings/-settings-navigation";
@@ -5,7 +16,7 @@ import type { AccountGainLossSummaries } from "@/shared/account-gain-loss";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Box, Button, Text } from "@mantine/core";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { AccountType, Unit } from "@/.prisma-client/enums";
 import type { AccountGroupInitialValues } from "@/components/account-editor/edit-account-group-modal";
@@ -320,6 +331,8 @@ function getPinnedBottomRowData(
 }
 
 function AccountsPageStoryHarness({
+  bulkAssignment = false,
+  assignmentFailsOnce = false,
   rowsOverride,
   expandGroups = false,
   gainLossState: initialGainLossState = "ready",
@@ -330,6 +343,8 @@ function AccountsPageStoryHarness({
   startWithEditModal = false,
   routeSmoke = false,
 }: {
+  bulkAssignment?: boolean;
+  assignmentFailsOnce?: boolean;
   rowsOverride?: TreeRow[];
   expandGroups?: boolean;
   gainLossState?: "ready" | "loading" | "error" | "partial";
@@ -340,6 +355,18 @@ function AccountsPageStoryHarness({
   startWithEditModal?: boolean;
   routeSmoke?: boolean;
 }) {
+  const [assignmentScope, setAssignmentScope] = useState("first");
+  const bulkApiRef = useRef<GridApi<AccountsGridRow> | null>(null);
+  const hasFailed = useRef(false);
+  const [assetClasses, setAssetClasses] = useState<
+    Record<string, AssetClass | null>
+  >({});
+  const [movedAccounts, setMovedAccounts] = useState<
+    Record<string, { groupId: string | null; isCashAccount: boolean }>
+  >({});
+  const [submittedAccountIds, setSubmittedAccountIds] = useState<string[]>([]);
+  const [refreshCount, setRefreshCount] = useState(0);
+  const [invalidationCount, setInvalidationCount] = useState(0);
   const [gainLossState, setGainLossState] = useState(initialGainLossState);
   const [tabState] = useState<TabValue>(initialTab);
   const [modeState, setModeState] = useState<AccountsMode>(initialMode);
@@ -396,15 +423,26 @@ function AccountsPageStoryHarness({
     routeSearch.mode === "archived" ? "archived" : modeState;
 
   const showArchived = routeSearch.showArchived === true;
-  const rows = useMemo(
-    () =>
-      tab.startsWith("EQUITY-") && !showArchived
-        ? (rowsOverride ?? getRowsFor({ mode, tab }))
-        : buildUnifiedAccountTreeRows(
-            rowsOverride ?? getRowsFor({ mode, tab, showArchived }),
-          ),
-    [mode, tab, showArchived, rowsOverride],
-  );
+  const rows = useMemo(() => {
+    const sourceRows = (
+      rowsOverride ?? getRowsFor({ mode, tab, showArchived })
+    ).map((row) => ({
+      ...row,
+      ...(Object.hasOwn(assetClasses, row.id)
+        ? { assetClass: assetClasses[row.id] }
+        : {}),
+      ...(movedAccounts[row.id]
+        ? {
+            ...movedAccounts[row.id],
+            groupId: movedAccounts[row.id].groupId ?? undefined,
+            parentId: movedAccounts[row.id].groupId ?? undefined,
+          }
+        : {}),
+    }));
+    return tab.startsWith("EQUITY-") && !showArchived
+      ? sourceRows
+      : buildUnifiedAccountTreeRows(sourceRows);
+  }, [mode, tab, showArchived, rowsOverride, assetClasses, movedAccounts]);
   const rowsByParentKey = useRowsByParentKey(rows);
   const selectedSiblingRows: ReorderGroupChildRow[] = useSelectedSiblingRows(
     rowsByParentKey,
@@ -457,6 +495,57 @@ function AccountsPageStoryHarness({
       diagnostics: [],
     },
   };
+  const assignment = useBulkAccountActions({
+    scopeKey: `${assignmentScope}:${tab}:${mode}`,
+    enabled: bulkAssignment && !isEquityTab,
+    rows,
+    submitAssetClass: async (accountIds, assetClass) => {
+      if (assignmentFailsOnce && !hasFailed.current) {
+        hasFailed.current = true;
+        throw new Error(ACCOUNT_BOOK_BUSY_MESSAGE);
+      }
+      setSubmittedAccountIds(accountIds);
+      setAssetClasses((current) => ({
+        ...current,
+        ...Object.fromEntries(accountIds.map((id) => [id, assetClass])),
+      }));
+    },
+    submitMove: async ({
+      accountIds,
+      targetGroupId,
+      expectedCashFlowChanges,
+    }) => {
+      const data = getMoveAccountsData(rows, accountIds);
+      const group =
+        data.groups.find((group) => group.id === targetGroupId) ?? null;
+      if (
+        !cashFlowChangesMatch(
+          getMoveCashFlowChanges(data.accounts, group),
+          expectedCashFlowChanges,
+        )
+      )
+        throw new Error("Cash-flow inclusion has changed.");
+      const moving = getMovingAccounts(data.accounts, targetGroupId);
+      setMovedAccounts((current) => ({
+        ...current,
+        ...Object.fromEntries(
+          moving.map((account) => [
+            account.id,
+            {
+              groupId: targetGroupId,
+              isCashAccount: group?.isCashAccount ?? account.isCashAccount,
+            },
+          ]),
+        ),
+      }));
+      setSubmittedAccountIds(accountIds);
+      return { count: moving.length };
+    },
+    invalidate: () => setInvalidationCount((count) => count + 1),
+    onRefreshConstraints: async () => {
+      setRefreshCount((count) => count + 1);
+    },
+  });
   const columnDefs = useAccountTreeColumnDefs({
     gainLossData:
       isEquityTab || gainLossState === "loading" || gainLossState === "error"
@@ -520,6 +609,35 @@ function AccountsPageStoryHarness({
         height: "100dvh",
       }}
     >
+      {bulkAssignment && (
+        <>
+          <Button
+            onClick={() =>
+              bulkApiRef.current?.setFilterModel({
+                "ag-Grid-AutoColumn": {
+                  filterType: "text",
+                  type: "equals",
+                  filter: "Checking",
+                },
+              })
+            }
+          >
+            Filter to Checking
+          </Button>
+          <Button onClick={() => bulkApiRef.current?.setFilterModel(null)}>
+            Clear Account Filters
+          </Button>
+          <Text data-testid="assignment-account-ids">
+            {submittedAccountIds.join(",")}
+          </Text>
+          <Button onClick={() => setAssignmentScope("second")}>
+            Change Account Book
+          </Button>
+          <Text data-testid="assignment-refreshes">
+            Refreshes: {refreshCount}; invalidations: {invalidationCount}
+          </Text>
+        </>
+      )}
       {toggleGainLossLoading && (
         <Button
           onClick={() =>
@@ -535,6 +653,12 @@ function AccountsPageStoryHarness({
         <SettingsNavigation accountBookId="storybook-book" categories />
       )}
       <AccountsPageView
+        bulkAccountActions={
+          bulkAssignment && !isEquityTab ? assignment : undefined
+        }
+        onGridReady={({ api }) => {
+          bulkApiRef.current = api;
+        }}
         gainLoss={{
           data:
             gainLossState === "loading" ||
@@ -1605,5 +1729,464 @@ export const MixedBalanceHierarchy: Story = {
         '[row-id="banking"] [col-id="balanceInReferenceCurrency"]',
       ),
     ).toHaveTextContent("40.00");
+  },
+};
+
+const bulkRows: TreeRow[] = [
+  createGroupRow({
+    id: "portfolio",
+    name: "Portfolio",
+    type: AccountType.BALANCE,
+    isActive: true,
+    sortOrder: 0,
+  }),
+  createGroupRow({
+    id: "nested",
+    name: "Nested",
+    parentId: "portfolio",
+    type: AccountType.BALANCE,
+    isActive: true,
+    sortOrder: 0,
+  }),
+  createGroupRow({
+    id: "empty",
+    name: "Empty",
+    type: AccountType.BALANCE,
+    isActive: true,
+    sortOrder: 1,
+  }),
+  {
+    ...activeAssetRows.find((row) => row.id === "account-checking")!,
+    groupId: "portfolio",
+    parentId: "portfolio",
+    assetClass: "FIXED_INCOME",
+  },
+  {
+    ...activeAssetRows.find((row) => row.nodeType === "account")!,
+    id: "old",
+    name: "Old Holding",
+    groupId: "nested",
+    parentId: "nested",
+    isActive: false,
+    assetClass: "DIGITAL_ASSETS",
+  },
+];
+
+async function selectAssignmentAccount(canvasElement: HTMLElement, id: string) {
+  const selector = `.ag-row[row-id="${id}"] .ag-selection-checkbox input`;
+  await waitFor(() =>
+    expect(canvasElement.querySelector(selector)).not.toBeNull(),
+  );
+  await userEvent.click(canvasElement.querySelector(selector)!);
+}
+
+export const BulkAssetClassSelection: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      bulkAssignment
+      expandGroups
+      rowsOverride={bulkRows}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await selectAssignmentAccount(canvasElement, "account-checking");
+    await expect(await canvas.findByRole("status")).toHaveTextContent(
+      "1 account selected",
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Set Asset Class" }),
+    );
+    const dialog = within(await findVisibleDialog(body, "Set Asset Class"));
+    await expect(dialog.getByRole("button", { name: "Apply" })).toBeDisabled();
+    await expect(dialog.getByText(/1 account \(0 archived\)/)).toBeVisible();
+    await userEvent.click(dialog.getByLabelText("Asset Class"));
+    await userEvent.click(body.getByRole("option", { name: "Equities" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Apply" }));
+    await waitFor(() =>
+      expect(
+        body.queryByRole("dialog", { name: "Set Asset Class" }),
+      ).not.toBeInTheDocument(),
+    );
+    await expect(
+      canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
+    ).not.toBeInTheDocument();
+    await expect(canvas.getByTestId("assignment-refreshes")).toHaveTextContent(
+      "invalidations: 1",
+    );
+    await expect(
+      canvasElement.querySelector(
+        '[row-id="account-checking"] [col-id="assetClass"]',
+      ),
+    ).toHaveTextContent("Equities");
+  },
+};
+
+export const BulkAssetClassFilteredSelection: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      bulkAssignment
+      expandGroups
+      rowsOverride={bulkRows}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector(".ag-header-select-all input"),
+      ).not.toBeNull(),
+    );
+    await userEvent.click(
+      canvasElement.querySelector(".ag-header-select-all input")!,
+    );
+    await expect(await canvas.findByRole("status")).toHaveTextContent(
+      "2 accounts selected",
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Filter to Checking" }),
+    );
+    await waitFor(() =>
+      expect(canvas.getByRole("status")).toHaveTextContent(
+        "1 account selected",
+      ),
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Clear Selection" }),
+    );
+    await userEvent.click(
+      canvasElement.querySelector(".ag-header-select-all input")!,
+    );
+    await expect(await canvas.findByRole("status")).toHaveTextContent(
+      "1 account selected",
+    );
+  },
+};
+
+export const GroupAssetClassRetry: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      bulkAssignment
+      assignmentFailsOnce
+      rowsOverride={bulkRows}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await selectAssignmentAccount(canvasElement, "portfolio");
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Set Asset Class" }),
+    );
+    const dialog = within(await findVisibleDialog(body, "Set Asset Class"));
+    await expect(dialog.getByText(/2 accounts \(1 archived\)/)).toBeVisible();
+    await userEvent.click(dialog.getByLabelText("Asset Class"));
+    await userEvent.click(body.getByRole("option", { name: "Unclassified" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Apply" }));
+    await expect(await dialog.findByRole("alert")).toHaveTextContent(
+      ACCOUNT_BOOK_BUSY_MESSAGE,
+    );
+    await expect(dialog.getByLabelText("Asset Class")).toHaveValue(
+      "Unclassified",
+    );
+    await expect(canvas.getByTestId("assignment-refreshes")).toHaveTextContent(
+      "Refreshes: 1; invalidations: 0",
+    );
+    await userEvent.click(dialog.getByRole("button", { name: "Try Again" }));
+    await waitFor(() =>
+      expect(
+        body.queryByRole("dialog", { name: "Set Asset Class" }),
+      ).not.toBeInTheDocument(),
+    );
+    await expect(canvas.getByTestId("assignment-refreshes")).toHaveTextContent(
+      "invalidations: 1",
+    );
+  },
+};
+
+export const BulkAssetClassScopeReset: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      bulkAssignment
+      expandGroups
+      rowsOverride={bulkRows}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await selectAssignmentAccount(canvasElement, "account-checking");
+    await expect(await canvas.findByRole("status")).toHaveTextContent(
+      "1 account selected",
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Change Account Book" }),
+    );
+    await waitFor(() =>
+      expect(
+        canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
+      ).not.toBeInTheDocument(),
+    );
+    await expect(
+      canvasElement.querySelector(
+        '[row-id="account-checking"] .ag-selection-checkbox input',
+      ),
+    ).not.toBeChecked();
+  },
+};
+
+const groupSelectionRows: TreeRow[] = [
+  ...bulkRows,
+  createGroupRow({
+    id: "other-group",
+    name: "Other Group",
+    type: AccountType.BALANCE,
+    isActive: true,
+    sortOrder: 2,
+  }),
+  {
+    ...bulkRows[3],
+    id: "other",
+    name: "Other Account",
+    groupId: "other-group",
+    parentId: "other-group",
+  },
+  createGroupRow({
+    id: "closed",
+    name: "Closed Group",
+    type: AccountType.BALANCE,
+    isActive: false,
+    sortOrder: 3,
+  }),
+  {
+    ...bulkRows[4],
+    id: "closed-child",
+    name: "Closed Account",
+    groupId: "closed",
+    parentId: "closed",
+  },
+];
+
+function assignmentCheckbox(canvasElement: HTMLElement, id: string) {
+  return canvasElement.querySelector<HTMLInputElement>(
+    `.ag-row[row-id="${id}"] .ag-selection-checkbox input`,
+  );
+}
+
+async function expandAssignmentGroup(canvasElement: HTMLElement, id: string) {
+  const selector = `.ag-row[row-id="${id}"] .ag-group-contracted`;
+  await waitFor(() =>
+    expect(canvasElement.querySelector(selector)).not.toBeNull(),
+  );
+  await userEvent.click(canvasElement.querySelector(selector)!);
+}
+
+export const BulkGroupCheckboxSelection: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      bulkAssignment
+      rowsOverride={groupSelectionRows}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await waitFor(() =>
+      expect(assignmentCheckbox(canvasElement, "empty")).toBeDisabled(),
+    );
+    await userEvent.click(canvas.getByText("Portfolio", { exact: true }));
+    await expect(
+      canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
+    ).not.toBeInTheDocument();
+    await selectAssignmentAccount(canvasElement, "portfolio");
+    await expect(await canvas.findByRole("status")).toHaveTextContent(
+      "2 accounts selected",
+    );
+    await expect(assignmentCheckbox(canvasElement, "portfolio")).toBeChecked();
+    await expect(canvasElement.querySelector('[row-id="old"]')).toBeNull();
+    await expandAssignmentGroup(canvasElement, "portfolio");
+    await selectAssignmentAccount(canvasElement, "nested");
+    await expect(canvas.getByRole("status")).toHaveTextContent(
+      "1 account selected",
+    );
+    await waitFor(() =>
+      expect(
+        assignmentCheckbox(canvasElement, "portfolio")?.indeterminate,
+      ).toBe(true),
+    );
+    await selectAssignmentAccount(canvasElement, "account-checking");
+    await expect(
+      canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
+    ).not.toBeInTheDocument();
+    await selectAssignmentAccount(canvasElement, "portfolio");
+    await selectAssignmentAccount(canvasElement, "other-group");
+    await expect(canvas.getByRole("status")).toHaveTextContent(
+      "3 accounts selected",
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Set Asset Class" }),
+    );
+    const dialog = within(await findVisibleDialog(body, "Set Asset Class"));
+    await expect(dialog.getByText(/3 accounts \(1 archived\)/)).toBeVisible();
+    await userEvent.click(dialog.getByLabelText("Asset Class"));
+    await userEvent.click(body.getByRole("option", { name: "Equities" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Apply" }));
+    await waitFor(() =>
+      expect(canvas.getByTestId("assignment-account-ids")).toHaveTextContent(
+        "account-checking,old,other",
+      ),
+    );
+    await expect(
+      canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
+    ).not.toBeInTheDocument();
+  },
+};
+
+export const BulkArchivedCheckboxSelection: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      bulkAssignment
+      rowsOverride={groupSelectionRows}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await selectAssignmentAccount(canvasElement, "__archived__:root");
+    await expect(await canvas.findByRole("status")).toHaveTextContent(
+      "1 account selected",
+    );
+    await expect(
+      canvasElement.querySelector('[row-id="closed-child"]'),
+    ).toBeNull();
+    await selectAssignmentAccount(canvasElement, "__archived__:root");
+    await expect(
+      canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
+    ).not.toBeInTheDocument();
+    await expandAssignmentGroup(canvasElement, "__archived__:root");
+    await selectAssignmentAccount(canvasElement, "closed");
+    await expect(await canvas.findByRole("status")).toHaveTextContent(
+      "1 account selected",
+    );
+    await expect(
+      assignmentCheckbox(canvasElement, "__archived__:root"),
+    ).toBeChecked();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Clear Selection" }),
+    );
+    await expandAssignmentGroup(canvasElement, "portfolio");
+    await expandAssignmentGroup(canvasElement, "nested");
+    await selectAssignmentAccount(canvasElement, "__archived__:group:nested");
+    await expect(await canvas.findByRole("status")).toHaveTextContent(
+      "1 account selected",
+    );
+    await waitFor(() =>
+      expect(
+        assignmentCheckbox(canvasElement, "portfolio")?.indeterminate,
+      ).toBe(true),
+    );
+  },
+};
+
+export const BulkFilteredGroupCheckboxSelection: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      bulkAssignment
+      expandGroups
+      rowsOverride={bulkRows}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Filter to Checking" }),
+    );
+    await waitFor(() =>
+      expect(canvasElement.querySelector('[row-id="old"]')).toBeNull(),
+    );
+    await selectAssignmentAccount(canvasElement, "portfolio");
+    await expect(await canvas.findByRole("status")).toHaveTextContent(
+      "1 account selected",
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Clear Account Filters" }),
+    );
+    await waitFor(() =>
+      expect(assignmentCheckbox(canvasElement, "old")).not.toBeNull(),
+    );
+    await expect(assignmentCheckbox(canvasElement, "old")).not.toBeChecked();
+    await waitFor(() =>
+      expect(
+        assignmentCheckbox(canvasElement, "portfolio")?.indeterminate,
+      ).toBe(true),
+    );
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Set Asset Class" }),
+    );
+    const dialog = within(await findVisibleDialog(body, "Set Asset Class"));
+    await expect(dialog.getByText(/1 account \(0 archived\)/)).toBeVisible();
+    await userEvent.click(dialog.getByLabelText("Asset Class"));
+    await userEvent.click(body.getByRole("option", { name: "Equities" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Apply" }));
+    await waitFor(() =>
+      expect(canvas.getByTestId("assignment-account-ids")).toHaveTextContent(
+        "account-checking",
+      ),
+    );
+    await expect(
+      canvasElement.querySelector('[row-id="old"] [col-id="assetClass"]'),
+    ).toHaveTextContent("Digital Assets");
+  },
+};
+
+export const BulkMoveToGroup: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      bulkAssignment
+      expandGroups
+      rowsOverride={bulkRows.map((row) =>
+        row.id === "account-checking" ? { ...row, isCashAccount: true } : row,
+      )}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await selectAssignmentAccount(canvasElement, "account-checking");
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Move Accounts to Group" }),
+    );
+    const dialog = within(
+      await findVisibleDialog(body, "Move Accounts to Group"),
+    );
+    await expect(dialog.getByRole("button", { name: "Move" })).toBeDisabled();
+    await userEvent.click(dialog.getByLabelText("Destination Group"));
+    await userEvent.click(body.getByRole("option", { name: "Empty" }));
+    await expect(
+      dialog.getByText(/1 will be excluded from cash flow: Checking/),
+    ).toBeVisible();
+    await userEvent.click(dialog.getByRole("button", { name: "Move" }));
+    await waitFor(() =>
+      expect(
+        body.queryByRole("dialog", { name: "Move Accounts to Group" }),
+      ).not.toBeInTheDocument(),
+    );
+    await expect(
+      canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
+    ).not.toBeInTheDocument();
+    await expect(canvas.getByTestId("assignment-refreshes")).toHaveTextContent(
+      "invalidations: 1",
+    );
+    await expect(
+      canvas.getByTestId("assignment-account-ids"),
+    ).toHaveTextContent("account-checking");
   },
 };

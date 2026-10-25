@@ -16,6 +16,8 @@ export {
 } from "./accounts/accounts-queries";
 
 export {
+  setAccountsAssetClass,
+  moveAccounts,
   archiveAccount,
   archiveAccountGroup,
   createAccount,

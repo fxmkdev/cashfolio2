@@ -2,6 +2,8 @@ import type { Prisma } from "../../.prisma-client/client";
 import { withAccountBookMutation } from "../account-book-mutation.server";
 import { createServerFn } from "@tanstack/react-start";
 import {
+  validateSetAccountsAssetClassInput,
+  validateMoveAccountsInput,
   validateAccountMutationInput,
   validateAccountUpdateInput,
   validateAccountGroupMutationInput,
@@ -13,6 +15,8 @@ import { ensureAuthorizedAccountBookMutation } from "../mutation-guard.server";
 import { withDatabaseConflictRetry } from "../database-conflict-retry";
 import { invalidatePeriodBaseDataCacheForAccountBook } from "../period/cache/period-base-data-cache";
 import {
+  setAccountsAssetClassOperation,
+  moveAccountsOperation,
   archiveAccountGroupOperation,
   archiveAccountOperation,
   createAccountGroupOperation,
@@ -128,5 +132,21 @@ export const reorderAccountTreeItems = createServerFn({ method: "POST" })
   .handler(async ({ data }) =>
     runAccountMutation(data.accountBookId, (tx) =>
       reorderAccountTreeItemsOperation(data, tx),
+    ),
+  );
+
+export const setAccountsAssetClass = createServerFn({ method: "POST" })
+  .validator(validateSetAccountsAssetClassInput)
+  .handler(async ({ data }) =>
+    runAccountMutation(data.accountBookId, (tx) =>
+      setAccountsAssetClassOperation(data, tx),
+    ),
+  );
+
+export const moveAccounts = createServerFn({ method: "POST" })
+  .validator(validateMoveAccountsInput)
+  .handler(async ({ data }) =>
+    runAccountMutation(data.accountBookId, (tx) =>
+      moveAccountsOperation(data, tx),
     ),
   );

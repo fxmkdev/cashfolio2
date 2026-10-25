@@ -1,3 +1,4 @@
+import { useBulkAccountActions } from "./-use-bulk-account-actions";
 import { isVirtualArchivedGroup } from "./-archived-grid-rows";
 import { getAccountGainLossSummaries } from "@/server/account-gain-loss";
 import { useGainLossRequest } from "@/hooks/use-gain-loss-request";
@@ -9,6 +10,8 @@ import { useExpandedGroups } from "@/hooks/use-expanded-groups";
 import type { TransformedFormValues } from "@/components/account-editor/edit-account-modal";
 import type { AccountGroupTransformedFormValues } from "@/components/account-editor/edit-account-group-modal";
 import {
+  setAccountsAssetClass,
+  moveAccounts,
   archiveAccount,
   archiveAccountGroup,
   createAccount,
@@ -439,6 +442,19 @@ export function useAccountsPageController(args: {
           row.unarchivable,
       ),
   });
+  const bulkAccountActions = useBulkAccountActions({
+    scopeKey,
+    enabled: !isEquityTab,
+    rows,
+    submitAssetClass: (accountIds, assetClass) =>
+      setAccountsAssetClass({
+        data: { accountBookId: args.accountBookId, accountIds, assetClass },
+      }),
+    submitMove: (data) =>
+      moveAccounts({ data: { ...data, accountBookId: args.accountBookId } }),
+    invalidate: args.invalidate,
+    onRefreshConstraints,
+  });
   const columnDefs = useAccountTreeColumnDefs({
     gainLossData: gainLoss.data,
     isGainLossLoading: gainLoss.loading,
@@ -456,6 +472,7 @@ export function useAccountsPageController(args: {
   });
 
   return {
+    bulkAccountActions: !isEquityTab ? bulkAccountActions : undefined,
     managementContext: args.managementContext ?? "accounts",
     gainLoss,
     onRefreshConstraints,

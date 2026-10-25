@@ -70,6 +70,34 @@ independent of Unit and cash-flow eligibility. It remains editable independently
 of immutable instrument identity. Statement imports preserve classification;
 system-created equity accounts remain null.
 
+`setAccountsAssetClass` accepts an account book ID, a nonempty list of account
+IDs, and an explicit nullable asset class. IDs are deduplicated. Authorization
+and the serialized account-book mutation boundary apply; every target must exist
+in that book and be a balance account before any write. Active and archived
+accounts are eligible. The transaction updates only asset class and invalidates
+period base-data caches after commit. It returns the target count. The selection
+toolbar submits explicit account IDs frozen when the dialog opens. Group
+checkboxes select filtered descendant accounts in the grid; group IDs and newly
+added group members are excluded from the submitted snapshot. There is no
+group-level value or ongoing inheritance.
+
+`moveAccounts` accepts `accountBookId`, a nonempty deduplicated `accountIds`
+list, explicit nullable `targetGroupId`, and `expectedCashFlowChanges` with
+`includedAccountIds` and `excludedAccountIds` arrays. It uses the same
+authorized, serialized book mutation boundary. Every selected account must be a
+balance account in the book, and a non-null destination must be a compatible
+real group in that book. Active accounts cannot enter archived groups; cash-flow
+groups accept only currency accounts. Destination sibling names (including
+archived accounts) and names within the selection must remain unique under the
+existing account-name comparison. All validation precedes writes.
+
+Cash-flow change sets must match the reviewed preview, or the entire operation
+fails and the dialog refreshes current constraints. Moving to root preserves
+individual cash flags. The operation updates only group ID and inherited cash
+flag, skipping accounts already in the destination. It returns the moved count;
+nonempty moves invalidate period base-data caches after commit. No schema
+migration or account-group mutation is involved.
+
 Account queries and period base-data snapshots carry classification as metadata.
 Changing it uses the existing account mutation boundary, database cache revision
 trigger, post-commit cleanup, and router invalidation. Base-data cache v10
