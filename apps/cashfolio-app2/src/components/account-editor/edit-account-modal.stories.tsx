@@ -48,6 +48,9 @@ export const Create: Story = {
     await waitFor(() => expect(getFieldControl(dialog, "Unit")).toBeVisible());
     await expect(getFieldControl(dialog, "Unit")).not.toBeDisabled();
     await expect(getFieldControl(dialog, "Currency")).not.toBeDisabled();
+    await expect(
+      within(dialog).getByRole("button", { name: "Statement Import Settings" }),
+    ).toHaveAttribute("aria-expanded", "false");
   },
 };
 
@@ -104,7 +107,7 @@ export const LiabilityOpeningDebt: Story = {
     const balance = within(dialog).getByLabelText("Opening Balance");
     await expect(balance).toHaveValue("-100");
     await expect(balance).toHaveAccessibleDescription(
-      "Use positive amounts for balances you own and negative amounts for balances you owe.",
+      "Positive for balances you own; negative for amounts you owe.",
     );
     await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
     await waitFor(() =>
@@ -112,6 +115,86 @@ export const LiabilityOpeningDebt: Story = {
         expect.objectContaining({ type: "BALANCE", openingBalance: -100 }),
       ),
     );
+  },
+};
+
+export const StatementImportSettings: Story = {
+  args: {
+    initialValues: {
+      ...editAccountInitialValues,
+      statementImportCsvFormat: {
+        hasHeader: true,
+        delimitersToGuess: [","],
+        columns: ["date", "amount", "description"],
+      },
+    },
+    editingId: "account-checking",
+  },
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole("dialog", { name: "Edit Account" });
+    const settings = within(dialog).getByRole("button", {
+      name: "Statement Import Settings",
+    });
+    const format = within(dialog).getByLabelText("Statement Import CSV Format");
+
+    await expect(settings).toHaveAttribute("aria-expanded", "false");
+    await expect(format).not.toBeVisible();
+    await userEvent.click(settings);
+    await waitFor(() => expect(format).toBeVisible());
+    await expect(format).toHaveValue(
+      JSON.stringify(args.initialValues?.statementImportCsvFormat, null, 2),
+    );
+
+    const updatedFormat = {
+      hasHeader: false,
+      delimitersToGuess: [";"],
+      columns: ["date", "amount", "description"],
+    };
+    await userEvent.clear(format);
+    await userEvent.paste(JSON.stringify(updatedFormat));
+    await userEvent.click(settings);
+    await waitFor(() => expect(format).not.toBeVisible());
+    await userEvent.click(settings);
+    await waitFor(() => expect(format).toBeVisible());
+    await expect(format).toHaveValue(JSON.stringify(updatedFormat));
+    await userEvent.click(settings);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ statementImportCsvFormat: updatedFormat }),
+      ),
+    );
+  },
+};
+
+export const CollapsedStatementImportError: Story = {
+  args: {
+    initialValues: editAccountInitialValues,
+    editingId: "account-checking",
+  },
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole("dialog", { name: "Edit Account" });
+    const settings = within(dialog).getByRole("button", {
+      name: "Statement Import Settings",
+    });
+    const format = within(dialog).getByLabelText("Statement Import CSV Format");
+
+    await userEvent.click(settings);
+    await waitFor(() => expect(format).toBeVisible());
+    await userEvent.click(format);
+    await userEvent.paste("invalid JSON");
+    await userEvent.click(settings);
+    await waitFor(() => expect(format).not.toBeVisible());
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(settings).toHaveAttribute("aria-expanded", "true"),
+    );
+    await waitFor(() => expect(format).toBeVisible());
+    await expect(format).toHaveAttribute("aria-invalid", "true");
+    await expect(args.onSubmit).not.toHaveBeenCalled();
   },
 };
 

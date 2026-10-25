@@ -3,7 +3,7 @@ import {
   type FormValues,
   type TransformedFormValues,
 } from "./types";
-import { useId, useReducer, useRef, useMemo, useEffect } from "react";
+import { useId, useReducer, useRef, useMemo, useEffect, useState } from "react";
 import { useDialogSubmitState } from "../../hooks/use-dialog-submit-state";
 import { useForm, isNotEmpty } from "@mantine/form";
 import {
@@ -43,6 +43,8 @@ export function useEditAccountModalController({
 }: EditAccountModalProps) {
   const isEdit = !!initialValues;
   const statementImportCsvFormatInputId = useId();
+  const [statementImportSettingsOpened, setStatementImportSettingsOpened] =
+    useState(false);
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const submitState = useDialogSubmitState({
     captureErrors: true,
@@ -161,6 +163,7 @@ export function useEditAccountModalController({
       const currentForm = formRef.current;
       currentForm.setInitialValues(resetInitialValues);
       currentForm.reset();
+      setStatementImportSettingsOpened(false);
       clearSubmissionError();
       forceUpdate();
     }
@@ -201,18 +204,27 @@ export function useEditAccountModalController({
     onClose();
   };
 
-  const handleSubmit = form.onSubmit((values) => {
-    clearSubmissionError();
-    return runSubmit(async () => {
-      await onSubmit(applyAccountGroupCashInheritance(values, accountGroups));
-    });
-  });
+  const handleSubmit = form.onSubmit(
+    (values) => {
+      clearSubmissionError();
+      return runSubmit(async () => {
+        await onSubmit(applyAccountGroupCashInheritance(values, accountGroups));
+      });
+    },
+    (errors) => {
+      if (errors.statementImportCsvFormat) {
+        setStatementImportSettingsOpened(true);
+      }
+    },
+  );
   return {
     form,
     submitState,
     isSubmitting,
     isEdit,
     statementImportCsvFormatInputId,
+    statementImportSettingsOpened,
+    setStatementImportSettingsOpened,
     unit,
     type,
     equityAccountSubtype,

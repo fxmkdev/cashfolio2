@@ -285,6 +285,14 @@ render trees in extracted `*PageView` components.
 
 ## Modal Pattern
 
+The account editor groups identity fields first, followed by unit details and
+the Cash Account flag, then Opening Balance beside Asset Class. Columns stack at
+narrow viewport widths. Opening Balance keeps concise sign guidance below the
+input; the detailed Asset Class explanation is available in a help popover.
+Statement Import Settings is collapsed at the start of each create/edit session.
+Its CSV editor stays mounted so collapsing it preserves drafts, and submitting
+an invalid CSV format opens the section to expose its validation error.
+
 The account editor offers an **Asset Class** selector for assets and
 liabilities, separate from Unit and valuation configuration. It remains editable
 for booked and archived accounts while instrument identity stays locked.
@@ -313,6 +321,7 @@ Its implementation lives in `src/components/account-editor/`:
 - `controller.ts`: form validation, edit-session initialization, cash
   eligibility, submission, and close guards
 - `view.tsx`: the account modal render tree
+- `asset-class-field.tsx`: classification input and explanatory help
 - `statement-import-csv-format-field.tsx`: CSV configuration input and JSON help
 
 The form/controller is created once per modal render, and a constraint refresh
