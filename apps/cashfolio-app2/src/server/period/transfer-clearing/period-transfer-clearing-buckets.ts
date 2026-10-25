@@ -137,7 +137,7 @@ async function loadTransferClearingBookings(
             bookings: {
               where: {
                 account: {
-                  type: { in: [AccountType.ASSET, AccountType.LIABILITY] },
+                  type: AccountType.BALANCE,
                 },
               },
               select: { accountId: true },
@@ -162,8 +162,7 @@ async function loadTransferClearingBookings(
       results.push({
         id: booking.id,
         originatingAccountIds:
-          booking.account?.type === AccountType.ASSET ||
-          booking.account?.type === AccountType.LIABILITY
+          booking.account?.type === AccountType.BALANCE
             ? [booking.accountId]
             : [
                 ...new Set(

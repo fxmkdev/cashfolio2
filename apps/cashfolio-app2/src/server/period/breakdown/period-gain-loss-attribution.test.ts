@@ -21,7 +21,7 @@ const account = (id: string, assetClass: AssetClass | null) => ({
   id,
   name: id,
   assetClass,
-  type: AccountType.LIABILITY,
+  type: AccountType.BALANCE,
   groupId: null,
   unit: Unit.CURRENCY,
   currency: "CHF",
@@ -48,7 +48,7 @@ const contribution = (
 });
 
 describe("asset-class gain/loss attribution", () => {
-  it("retains recorded reference-currency amounts, mixed cancellation, liabilities and unattributed amounts", () => {
+  it("retains recorded reference-currency amounts, mixed cancellation, balance accounts and unattributed amounts", () => {
     const metadata = buildGainLossAccountAttribution({
       baseAssetLiabilityAccounts: [
         account("mixed", AssetClass.EQUITIES),

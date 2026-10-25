@@ -237,7 +237,7 @@ describe("Decimal monetary pipelines", () => {
             ...booking,
             accountId: account.id,
             value: toMoney(amount),
-            accountType: AccountType.ASSET,
+            accountType: AccountType.BALANCE,
             equityAccountSubtype: null,
           },
           { ...booking, accountType: AccountType.EQUITY },
