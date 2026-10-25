@@ -35,7 +35,7 @@ test("liability opening debt survives list and ledger edits, becomes an overpaym
   await expect(
     dialog.getByLabel("Opening Balance"),
   ).toHaveAccessibleDescription(
-    "Use positive amounts for balances you own and negative amounts for balances you owe.",
+    "Positive for balances you own; negative for amounts you owe.",
   );
   await dialog.getByRole("combobox", { name: "Currency" }).click();
   await page
