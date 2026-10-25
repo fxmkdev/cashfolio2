@@ -54,6 +54,17 @@ test("bulk move discloses inherited cash-flow changes and preserves other accoun
   e2eExternalId,
 }) => {
   const book = await seedDatabase({ userExternalId: e2eExternalId });
+  const untouchedQuery = {
+    where: {
+      id_accountBookId: {
+        id: book.cashAccount.id,
+        accountBookId: book.accountBookId,
+      },
+    },
+    select: { groupId: true, isCashAccount: true, assetClass: true },
+  };
+  const untouchedBefore =
+    await prisma.account.findUniqueOrThrow(untouchedQuery);
   const target = await prisma.accountGroup.create({
     data: {
       id: createId(),
@@ -107,18 +118,9 @@ test("bulk move discloses inherited cash-flow changes and preserves other accoun
       isCashAccount: false,
     });
   }
-  expect(
-    (
-      await prisma.account.findUniqueOrThrow({
-        where: {
-          id_accountBookId: {
-            id: book.cashAccount.id,
-            accountBookId: book.accountBookId,
-          },
-        },
-      })
-    ).isCashAccount,
-  ).toBe(true);
+  expect(await prisma.account.findUniqueOrThrow(untouchedQuery)).toEqual(
+    untouchedBefore,
+  );
 });
 
 test("moving to No Group preserves mixed inherited cash-flow inclusion", async ({
