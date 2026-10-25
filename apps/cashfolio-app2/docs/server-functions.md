@@ -323,6 +323,11 @@ namespaces and preserves global valuation caches.
   admin-triggered deletion of DB-backed users, including missing Logto
   identities: `src/server/admin-users.ts`
 - Account-book authorization guard: `src/account-books/functions.server.ts`
+  throws `notFound({ routeId: rootRouteId })` when the current user has no
+  access link, covering both nonexistent and inaccessible books without
+  revealing their existence. Router not-found signals are serializable and
+  render the root 404 page when propagated through route loaders. Expected
+  not-found signals are excluded from unexpected server-request error logs.
 - All account/ledger/transaction server functions enforce account-book access
   before querying/updating data
 - Same-origin request guard for mutation handlers lives in

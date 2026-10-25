@@ -1,3 +1,4 @@
+import { notFound, rootRouteId } from "@tanstack/react-router";
 import { prisma } from "../prisma.server";
 import { ensureUser } from "../users/functions.server";
 
@@ -14,7 +15,7 @@ export async function ensureAuthorizedForAccountBookId(accountBookId: string) {
   });
 
   if (!link) {
-    throw new Response(null, { status: 404 });
+    throw notFound({ routeId: rootRouteId });
   }
 
   return link;

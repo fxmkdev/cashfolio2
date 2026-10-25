@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountType, AssetClass, Unit } from "../.prisma-client/enums";
 import { toMoney } from "../shared/money";
+import { isNotFound, rootRouteId } from "@tanstack/react-router";
 
 const mocks = vi.hoisted(() => ({
   ensureAuthorizedForAccountBookId: vi.fn(),
   convertBookingValueToReference: vi.fn(),
   prisma: {
-    account: { findUniqueOrThrow: vi.fn() },
+    account: { findUnique: vi.fn(), findUniqueOrThrow: vi.fn() },
     accountGroup: { findMany: vi.fn() },
     accountBook: { findUniqueOrThrow: vi.fn() },
     booking: { findMany: vi.fn() },
@@ -46,7 +47,7 @@ describe("ledger account classification", () => {
   it.each([null, AssetClass.OTHER_ASSETS])(
     "returns classification %s for the header",
     async (assetClass) => {
-      mocks.prisma.account.findUniqueOrThrow.mockResolvedValue({
+      mocks.prisma.account.findUnique.mockResolvedValue({
         id: "account-1",
         groupId: null,
         assetClass,
@@ -56,7 +57,7 @@ describe("ledger account classification", () => {
         data: { accountId: "account-1", accountBookId: "book-1" },
       });
       expect(account.assetClass).toBe(assetClass);
-      expect(mocks.prisma.account.findUniqueOrThrow).toHaveBeenCalledWith(
+      expect(mocks.prisma.account.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             id_accountBookId: { id: "account-1", accountBookId: "book-1" },
@@ -69,6 +70,55 @@ describe("ledger account classification", () => {
       );
     },
   );
+});
+
+describe("getAccountForLedger not-found handling", () => {
+  beforeEach(() => vi.resetAllMocks());
+
+  it("throws a root not-found signal for a missing account in the requested book", async () => {
+    mocks.prisma.account.findUnique.mockResolvedValue(null);
+
+    const error = await getAccountForLedger({
+      data: { accountId: "missing-account", accountBookId: "book-1" },
+    }).catch((error: unknown) => error);
+
+    expect(isNotFound(error)).toBe(true);
+    expect(error).toMatchObject({ routeId: rootRouteId });
+    expect(mocks.prisma.account.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id_accountBookId: {
+            id: "missing-account",
+            accountBookId: "book-1",
+          },
+        },
+      }),
+    );
+    expect(mocks.prisma.accountGroup.findMany).not.toHaveBeenCalled();
+  });
+
+  it("checks book access before looking up the ledger account", async () => {
+    const error = new Error("Access denied");
+    mocks.ensureAuthorizedForAccountBookId.mockRejectedValue(error);
+
+    await expect(
+      getAccountForLedger({
+        data: { accountId: "account-1", accountBookId: "book-1" },
+      }),
+    ).rejects.toBe(error);
+    expect(mocks.prisma.account.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("preserves database errors instead of treating them as missing accounts", async () => {
+    const error = new Error("Database unavailable");
+    mocks.prisma.account.findUnique.mockRejectedValue(error);
+
+    await expect(
+      getAccountForLedger({
+        data: { accountId: "account-1", accountBookId: "book-1" },
+      }),
+    ).rejects.toBe(error);
+  });
 });
 
 describe("getLedgerData reference currency", () => {

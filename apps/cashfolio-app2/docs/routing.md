@@ -17,6 +17,24 @@ Related docs:
 - Route files use `createFileRoute` with `loader` for server-side data fetching
   and `component` for rendering
 
+### Not Found Pages
+
+The root route provides a standalone Mantine 404 page for unmatched URLs and
+missing or inaccessible resources. The router uses `notFoundMode: "root"` so the
+page renders outside account-book and Admin shells and requires no loader data.
+It preserves the requested URL and links to `/` with **Go to App**, letting the
+home route resolve the user's current accessible book or book creation page. The
+recovery link performs a full navigation to discard stale client-side book
+options.
+
+Server functions signal missing resources with
+`throw notFound({ routeId: rootRouteId })` from `@tanstack/react-router`. Do not
+throw a raw `Response` for these failures: it cannot be serialized as route
+error state during SSR. Missing account-book access links use the same not-found
+signal whether the book is absent or inaccessible. Ledger account lookups remain
+scoped to both book and account IDs. Unexpected database errors remain server
+failures; do not translate them into 404s.
+
 ### Build Diagnostics
 
 The app uses server-side rendering (SSR) without React Server Components (RSC).

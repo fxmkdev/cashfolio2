@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { notFound, rootRouteId } from "@tanstack/react-router";
 import {
   serializeServerError,
   shouldLogServerRequestError,
@@ -127,6 +128,13 @@ describe("serializeServerError", () => {
 });
 
 describe("shouldLogServerRequestError", () => {
+  it("skips expected router not-found signals", () => {
+    expect(shouldLogServerRequestError(notFound())).toBe(false);
+    expect(
+      shouldLogServerRequestError(notFound({ routeId: rootRouteId })),
+    ).toBe(false);
+  });
+
   it("skips expected redirects and non-5xx Response values", () => {
     expect(
       shouldLogServerRequestError(new Response(null, { status: 404 })),
