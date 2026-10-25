@@ -1,3 +1,4 @@
+import { uploadStatementFile } from "../support/ui";
 import { expandArchivedGroups } from "../support/grid";
 import { Buffer } from "node:buffer";
 import { createId } from "@paralleldrive/cuid2";
@@ -8,7 +9,6 @@ import {
   countTransactionsByDescription,
 } from "../support/db";
 import { prisma } from "../support/db-client";
-import { ACCOUNT_BOOK_BUSY_MESSAGE } from "../../src/shared/mutation-errors";
 import {
   agGridRowByText,
   agGridCellByColId,
@@ -22,122 +22,6 @@ import {
 } from "../support/transaction-form";
 
 let seeded: SeededData;
-
-async function holdBookLock() {
-  let notifyLocked!: () => void;
-  const locked = new Promise<void>((resolve) => {
-    notifyLocked = resolve;
-  });
-  let release!: () => void;
-  const gate = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  const holder = prisma.$transaction(
-    async (tx) => {
-      await tx.$queryRaw`SELECT id FROM "AccountBook" WHERE id = ${seeded.accountBookId} FOR UPDATE`;
-      notifyLocked();
-      await gate;
-    },
-    { timeout: 60_000 },
-  );
-  await Promise.race([locked, holder]);
-  return async () => {
-    release();
-    await holder;
-  };
-}
-
-test("a rejected reorder restores the saved grid order and can be explicitly retried", async ({
-  page,
-}) => {
-  const groupId = createId();
-  await prisma.accountGroup.create({
-    data: {
-      id: groupId,
-      accountBookId: seeded.accountBookId,
-      name: "Reorder recovery group",
-      type: "BALANCE",
-    },
-  });
-  const ids = [createId(), createId()];
-  const names = ["Reorder first", "Reorder second"];
-  await prisma.account.createMany({
-    data: ids.map((id, sortOrder) => ({
-      id,
-      name: names[sortOrder],
-      sortOrder,
-      groupId,
-      accountBookId: seeded.accountBookId,
-      type: "BALANCE" as const,
-      unit: "CURRENCY" as const,
-      currency: "CHF",
-    })),
-  });
-  await page.goto(`/${seeded.accountBookId}/accounts?tab=ASSET`);
-  const groupRow = agGridRowByText(page, "Reorder recovery group");
-  const contracted = groupRow.locator(".ag-group-contracted").first();
-  if (await contracted.isVisible()) await contracted.click();
-  await clickRowAction(agGridRowByText(page, names[0]), "Reorder Siblings");
-  const dialog = page.getByRole("dialog", { name: "Reorder Siblings" });
-  const release = await holdBookLock();
-  try {
-    const handle = dialog.locator(`.ag-row[row-id="${ids[0]}"] .ag-row-drag`);
-    const source = await handle.boundingBox();
-    const target = await dialog
-      .locator(`.ag-row[row-id="${ids[1]}"]`)
-      .boundingBox();
-    if (!source || !target) throw new Error("Reorder rows were not visible");
-    await page.mouse.move(
-      source.x + source.width / 2,
-      source.y + source.height / 2,
-    );
-    await page.mouse.down();
-    await page.mouse.move(
-      source.x + source.width / 2,
-      target.y + target.height - 3,
-      { steps: 12 },
-    );
-    await page.mouse.up();
-    await expect(dialog.getByRole("status")).toHaveText(
-      "Waiting for another change to finish…",
-    );
-    await expect(dialog.getByRole("alert")).toHaveText(
-      ACCOUNT_BOOK_BUSY_MESSAGE,
-      { timeout: 35_000 },
-    );
-    await expect(
-      dialog.locator('.ag-row[row-index="0"] [col-id="name"]'),
-    ).toHaveText(names[0]);
-    await expect(
-      dialog.locator('.ag-row[row-index="1"] [col-id="name"]'),
-    ).toHaveText(names[1]);
-    const saved = await prisma.account.findMany({
-      where: { groupId },
-      orderBy: { sortOrder: "asc" },
-    });
-    expect(saved.map((row) => row.id)).toEqual(ids);
-    await expect(
-      dialog.getByRole("button", { name: "Try Again" }),
-    ).toBeEnabled();
-  } finally {
-    await release();
-  }
-  await dialog.getByRole("button", { name: "Try Again" }).click();
-  await expect(dialog.getByRole("alert")).toHaveCount(0);
-  await expect(
-    dialog.locator('.ag-row[row-index="0"] [col-id="name"]'),
-  ).toHaveText(names[1]);
-  await expect
-    .poll(async () =>
-      (
-        await prisma.account.findMany({
-          where: { groupId },
-          orderBy: { sortOrder: "asc" },
-        })
-      ).map((row) => row.id),
-    )
-    .toEqual([...ids].reverse());
-});
 
 for (const nodeType of ["account", "accountGroup"] as const) {
   test(`direct ${nodeType} unarchive shows a stale-ancestor rejection and refreshes eligibility`, async ({
@@ -239,65 +123,6 @@ for (const nodeType of ["account", "accountGroup"] as const) {
   });
 }
 
-test("ledger unarchive displays busy rollback and succeeds only on explicit retry", async ({
-  page,
-}) => {
-  const id = createId();
-  const name = "Busy ledger unarchive";
-  await prisma.account.create({
-    data: {
-      id,
-      accountBookId: seeded.accountBookId,
-      name,
-      type: "BALANCE",
-      isActive: false,
-      unit: "CURRENCY",
-      currency: "CHF",
-    },
-  });
-  await page.goto(`/${seeded.accountBookId}/${id}`);
-  const release = await holdBookLock();
-  try {
-    await page.getByRole("button", { name: "Account Actions" }).click();
-    await page.getByRole("menuitem", { name: "Unarchive" }).click();
-    await expect(page.getByRole("status")).toHaveText(
-      "Waiting for another change to finish…",
-    );
-    await expect(page.getByRole("alert")).toHaveText(
-      ACCOUNT_BOOK_BUSY_MESSAGE,
-      { timeout: 35_000 },
-    );
-    await expect(
-      page.getByText(`Unarchive ${name}`, { exact: true }),
-    ).toBeVisible();
-    expect(
-      (
-        await prisma.account.findUniqueOrThrow({
-          where: {
-            id_accountBookId: { id, accountBookId: seeded.accountBookId },
-          },
-        })
-      ).isActive,
-    ).toBe(false);
-    await expect(page.getByRole("button", { name: "Try Again" })).toBeEnabled();
-  } finally {
-    await release();
-  }
-  await page.getByRole("button", { name: "Try Again" }).click();
-  await expect(page.getByRole("alert")).toHaveCount(0);
-  await expect
-    .poll(
-      async () =>
-        (
-          await prisma.account.findUniqueOrThrow({
-            where: {
-              id_accountBookId: { id, accountBookId: seeded.accountBookId },
-            },
-          })
-        ).isActive,
-    )
-    .toBe(true);
-});
 test.beforeEach(async ({ e2eExternalId }) => {
   seeded = await seedDatabase({ userExternalId: e2eExternalId });
 });
@@ -464,23 +289,13 @@ for (const action of ["Archive", "Delete"] as const) {
 test("a rejected import retains edited review rows and inclusion choices", async ({
   page,
 }) => {
-  // Client navigation avoids uploading before the lazy import page hydrates.
-  await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
-  await page
-    .getByRole("button", { name: "Account Actions", exact: true })
-    .click();
-  await page
-    .getByRole("menuitem", { name: "Import Statement", exact: true })
-    .click();
-  await expect(page).toHaveURL(
-    new RegExp(
-      `/${seeded.accountBookId}/${seeded.cashAccount.id}/import-statement(?:\\?|$)`,
-    ),
+  await page.goto(
+    `/${seeded.accountBookId}/${seeded.cashAccount.id}/import-statement`,
   );
   await expect(
     page.getByRole("heading", { name: "Import Statement", exact: true }),
   ).toBeVisible();
-  await page.locator('input[type="file"]').setInputFiles({
+  await uploadStatementFile(page, {
     name: "draft.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(

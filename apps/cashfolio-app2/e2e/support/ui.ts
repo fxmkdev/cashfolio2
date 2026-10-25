@@ -2,6 +2,17 @@ import { expect, type Locator, type Page } from "@playwright/test";
 
 type AccessibleName = string | RegExp;
 
+export async function uploadStatementFile(
+  page: Page,
+  file: Parameters<Locator["setInputFiles"]>[0],
+): Promise<void> {
+  // Mantine Dropzone's hidden input has no accessible name. setInputFiles
+  // does not wait for enabled state, so explicitly wait for lazy hydration.
+  const input = page.locator('input[type="file"]');
+  await expect(input).toBeEnabled();
+  await input.setInputFiles(file);
+}
+
 export async function openDialogFromButton(
   page: Page,
   args: {

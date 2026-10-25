@@ -1,3 +1,4 @@
+import { uploadStatementFile } from "../support/ui";
 import { Buffer } from "node:buffer";
 import { expect, test, type Page } from "../support/fixtures";
 import { seedDatabase, type SeededData } from "../support/db";
@@ -31,7 +32,7 @@ function discardDialog(page: Page) {
 }
 
 async function upload(page: Page) {
-  await page.locator('input[type="file"]').setInputFiles({
+  await uploadStatementFile(page, {
     name: "navigation.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(

@@ -18,6 +18,7 @@ import { MutationSubmitFeedback } from "@/components/dialogs/mutation-submit-fee
 import { NarrowPageShell } from "@/components/layout/narrow-page-shell";
 import { CurrencySelect } from "@/components/controls/unit-select";
 import { useDialogSubmitState } from "@/hooks/use-dialog-submit-state";
+import { useHydrated } from "@/hooks/use-hydrated";
 import {
   getDateInputValueFormat,
   normalizeDateInputValue,
@@ -77,6 +78,7 @@ export function isDeleteAccountBookConfirmationMatch(args: {
 
 function SettingsFormFields(args: {
   form: UseFormReturnType<SettingsFormValues>;
+  isDisabled: boolean;
   isSubmitting: boolean;
   submitState: ReturnType<typeof useDialogSubmitState>;
   onRefreshConstraints?: () => Promise<void>;
@@ -89,7 +91,7 @@ function SettingsFormFields(args: {
       <TextInput
         label="Account Book Name"
         withAsterisk
-        disabled={args.isSubmitting}
+        disabled={args.isDisabled}
         {...args.form.getInputProps("name")}
       />
 
@@ -97,7 +99,7 @@ function SettingsFormFields(args: {
         label="Reference Currency"
         withAsterisk
         allowDeselect={false}
-        disabled={args.isSubmitting}
+        disabled={args.isDisabled}
         unitUsage={args.settings.unitUsage}
         selectedCurrency={args.form.values.referenceCurrency}
         compactLabels={false}
@@ -110,7 +112,7 @@ function SettingsFormFields(args: {
         label="Start Date"
         withAsterisk
         maxDate={startOfUtcDay(new Date())}
-        disabled={args.isSubmitting}
+        disabled={args.isDisabled}
         {...args.form.getInputProps("startDate")}
       />
 
@@ -123,7 +125,7 @@ function SettingsFormFields(args: {
         <Button
           type="submit"
           loading={args.isSubmitting}
-          disabled={args.isSubmitting}
+          disabled={args.isDisabled}
         >
           Save
         </Button>
@@ -231,7 +233,7 @@ function DeleteAccountBookModal(args: {
   );
 }
 
-function DangerZone(args: { onDeleteClick: () => void }) {
+function DangerZone(args: { disabled: boolean; onDeleteClick: () => void }) {
   return (
     <Stack gap="md" mt="xl">
       <Divider />
@@ -250,6 +252,7 @@ function DangerZone(args: { onDeleteClick: () => void }) {
           variant="outline"
           leftSection={<IconTrash size={16} />}
           onClick={args.onDeleteClick}
+          disabled={args.disabled}
         >
           Delete Account Book
         </Button>
@@ -270,6 +273,7 @@ export function SettingsPageView(args: {
   onRefreshConstraints?: () => Promise<void>;
 }) {
   const { settings } = args;
+  const isHydrated = useHydrated();
   const submitState = useDialogSubmitState({
     captureErrors: true,
     onRefreshConstraints: args.onRefreshConstraints,
@@ -334,6 +338,7 @@ export function SettingsPageView(args: {
       >
         <SettingsFormFields
           form={form}
+          isDisabled={!isHydrated || isSubmitting}
           isSubmitting={isSubmitting}
           submitState={submitState}
           onRefreshConstraints={args.onRefreshConstraints}
@@ -341,7 +346,10 @@ export function SettingsPageView(args: {
         />
       </form>
 
-      <DangerZone onDeleteClick={() => setDeleteModalOpened(true)} />
+      <DangerZone
+        disabled={!isHydrated || isSubmitting}
+        onDeleteClick={() => setDeleteModalOpened(true)}
+      />
 
       <DeleteAccountBookModal
         opened={deleteModalOpened}

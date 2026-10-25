@@ -1,3 +1,4 @@
+import { uploadStatementFile } from "../support/ui";
 import { Buffer } from "node:buffer";
 import type { Page } from "@playwright/test";
 import { Unit } from "../../src/.prisma-client/enums";
@@ -77,7 +78,7 @@ test("imports a statement after selecting the counter account in the review grid
   ).toBeVisible();
   await expect(page.getByRole("button", { name: /Upload/ })).toBeVisible();
 
-  await page.locator('input[type="file"]').setInputFiles({
+  await uploadStatementFile(page, {
     name: "statement-import.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(csv),
@@ -165,7 +166,7 @@ test("shows multiple for drafts with several counter bookings", async ({
   );
   await openStatementImportPage(page);
 
-  await page.locator('input[type="file"]').setInputFiles({
+  await uploadStatementFile(page, {
     name: "statement-import-multiple.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(csv),
@@ -262,7 +263,7 @@ test("Shift applies the starting inclusion state to mixed statement ranges", asy
   };
   await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
   await openStatementImportPage(page);
-  await page.locator('input[type="file"]').setInputFiles(file);
+  await uploadStatementFile(page, file);
 
   const rows = descriptions.map((description) =>
     agGridRowByText(page, description),
@@ -338,7 +339,7 @@ test("Shift applies the starting inclusion state to mixed statement ranges", asy
     .getByRole("dialog", { name: "Discard reviewed statement?" })
     .getByRole("button", { name: "Discard and Upload Another File" })
     .click();
-  await page.locator('input[type="file"]').setInputFiles(file);
+  await uploadStatementFile(page, file);
   await expectIncluded([0, 1, 2, 3, 4]);
   await click(2, true);
   await expectIncluded([0, 1, 3, 4]);
@@ -422,7 +423,7 @@ test("Space on the Edit button preserves the statement inclusion anchor", async 
   ].join("\n");
   await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
   await openStatementImportPage(page);
-  await page.locator('input[type="file"]').setInputFiles({
+  await uploadStatementFile(page, {
     name: "statement-edit-space.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(csv),
@@ -491,7 +492,7 @@ test("checkboxes control statement row inclusion and skip unchecked rows during 
   );
   await openStatementImportPage(page);
 
-  await page.locator('input[type="file"]').setInputFiles({
+  await uploadStatementFile(page, {
     name: "statement-import-ignore.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(csv),
@@ -547,7 +548,7 @@ test("checkboxes control statement row inclusion and skip unchecked rows during 
   await expectStatementUploadDropzone(page);
   await page.getByRole("button", { name: "Review", exact: true }).click();
   await expectStatementUploadDropzone(page);
-  await page.locator('input[type="file"]').setInputFiles({
+  await uploadStatementFile(page, {
     name: "statement-import-ignore-reupload.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(csv),
@@ -722,7 +723,7 @@ test("overlapping statements skip existing transactions and transfers while pres
     `/${seeded.accountBookId}/${seeded.cashAccount.id}?period=2026-04`,
   );
   await openStatementImportPage(page);
-  await page.locator('input[type="file"]').setInputFiles({
+  await uploadStatementFile(page, {
     name: "overlap.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(csv),
@@ -777,7 +778,7 @@ test("overlapping statements skip existing transactions and transfers while pres
 
   // Reimporting the expanded statement now matches every row.
   await openStatementImportPage(page);
-  await page.locator('input[type="file"]').setInputFiles({
+  await uploadStatementFile(page, {
     name: "overlap-again.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(csv),
@@ -862,7 +863,7 @@ test("previews historical balances and read-only unmatched bookings during a par
   );
   await openStatementImportPage(page);
   const upload = () =>
-    page.locator('input[type="file"]').setInputFiles({
+    uploadStatementFile(page, {
       name: "preview.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(csv),

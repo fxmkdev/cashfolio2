@@ -1,5 +1,6 @@
 import { Alert, Button, Group, Stack, Text } from "@mantine/core";
 import { Dropzone, MIME_TYPES } from "@mantine/dropzone";
+import { useHydrated } from "@/hooks/use-hydrated";
 import {
   IconFileCheck,
   IconFileText,
@@ -20,17 +21,20 @@ export function StatementImportFileControls({
   isSubmitting: boolean;
   onFileChange: (file: File | null) => void;
 }) {
+  const isHydrated = useHydrated();
+  const disabled = !isHydrated || isSubmitting;
+
   return (
     <Stack align="center" gap="xs" w="100%">
       <StatementImportDropzone
-        disabled={isSubmitting}
+        disabled={disabled}
         onFileChange={onFileChange}
       />
 
       {file ? (
         <StatementImportSelectedFile
           fileName={file.name}
-          disabled={isSubmitting}
+          disabled={disabled}
           onClear={() => onFileChange(null)}
         />
       ) : null}

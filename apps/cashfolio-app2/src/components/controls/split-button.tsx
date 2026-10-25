@@ -7,6 +7,7 @@ import {
 } from "@mantine/core";
 import { IconChevronDown } from "@tabler/icons-react";
 import { Fragment, type ComponentPropsWithoutRef, type ReactNode } from "react";
+import { useHydrated } from "@/hooks/use-hydrated";
 
 export function SplitButtonGroup(
   props: ComponentPropsWithoutRef<typeof Button.Group>,
@@ -47,19 +48,26 @@ export function SplitButton({
   variant?: ButtonProps["variant"];
   primaryDisabled?: boolean;
 }) {
+  const isHydrated = useHydrated();
+
   return (
     <SplitButtonGroup>
       <Button
         variant={variant}
         leftSection={leftSection}
         onClick={onClick}
-        disabled={primaryDisabled}
+        disabled={!isHydrated || primaryDisabled}
       >
         {children}
       </Button>
       <Menu position="bottom-end" shadow="md" width={220}>
         <Menu.Target>
-          <Button variant={variant} px="xs" aria-label={menuLabel}>
+          <Button
+            variant={variant}
+            px="xs"
+            aria-label={menuLabel}
+            disabled={!isHydrated}
+          >
             <IconChevronDown size={16} />
           </Button>
         </Menu.Target>

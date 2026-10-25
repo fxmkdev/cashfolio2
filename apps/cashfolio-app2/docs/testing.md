@@ -112,7 +112,12 @@ retains the earlier state while the next load sees the complete committed state.
 
 `e2e/tests/mutation-recovery.spec.ts` verifies rejected simple/split drafts,
 archived selections, archive/delete confirmation errors, account/group edits,
-and import review/inclusion preservation after a constraint refresh.
+and import review/inclusion preservation after a constraint refresh. The real
+PostgreSQL busy-rollback scenarios live separately in
+`mutation-recovery-reorder.spec.ts` and `mutation-recovery-unarchive.spec.ts` so
+workers can schedule each lock wait independently. `withBookLock` always
+releases the book lock, including when assertions fail; production lock-wait and
+retry timing remains unchanged.
 
 ## Lint
 
@@ -136,6 +141,17 @@ pnpm --filter cashfolio-app2 lint
 - The app's `typecheck` command includes all E2E tests, helpers, global setup
   and teardown, and `playwright.config.ts`. The existing CI typecheck gate
   checks these files too.
+- General Settings, split-button actions, and statement-upload controls use
+  `useHydrated` inside their lazy views to remain disabled in SSR until their
+  own hydration commits. A root-level mount does not mean every Suspense
+  boundary has hydrated. `hydration.spec.ts` holds client scripts to verify the
+  disabled SSR controls, then releases them and verifies the first edit/upload
+  is retained.
+- Use `uploadStatementFile` from `e2e/support/ui` for statement uploads. Unlike
+  a click or fill, Playwright's `setInputFiles` does not wait for an enabled
+  control. Avoid fixed sleeps or retries to compensate for lost pre-hydration
+  input. Segmented-control helpers rely on locator clicks to scroll and retry
+  detached elements rather than separate `scrollIntoViewIfNeeded` calls.
 - `e2e/tests/period-cache-revision.spec.ts` verifies the database-owned report
   cache revision against PostgreSQL: all financial tables, settings edits,
   rollback/commit visibility, bulk statements, concurrent commits, and recovery
