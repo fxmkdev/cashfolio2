@@ -29,15 +29,21 @@ const accounts: AccountOption[] = [
 ];
 
 describe("createEditTransactionColumnDefs", () => {
-  test.each([EquityAccountSubtype.INCOME, EquityAccountSubtype.EXPENSE])(
-    "keeps unit and currency editable for a %s category with a different currency",
-    (equityAccountSubtype) => {
+  test.each(
+    [EquityAccountSubtype.INCOME, EquityAccountSubtype.EXPENSE].flatMap(
+      (equityAccountSubtype) =>
+        [null, Unit.CURRENCY].map((unit) => ({ equityAccountSubtype, unit })),
+    ),
+  )(
+    "keeps unit metadata editable for a $equityAccountSubtype category with stored unit $unit",
+    ({ equityAccountSubtype, unit }) => {
       const category: AccountOption = {
         value: "category",
         label: "Category",
         type: AccountType.EQUITY,
         equityAccountSubtype,
-        unit: null,
+        unit,
+        currency: unit === Unit.CURRENCY ? "CHF" : undefined,
       };
       const columnDefs = createEditTransactionColumnDefs({
         accounts: [...accounts, category],
@@ -48,8 +54,11 @@ describe("createEditTransactionColumnDefs", () => {
       const currencyColumn = columnDefs.find(
         (column) => column.colId === "ccy",
       );
+      const symbolColumn = columnDefs.find(
+        (column) => column.field === "symbol",
+      );
 
-      for (const column of [unitColumn, currencyColumn]) {
+      for (const column of [unitColumn, currencyColumn, symbolColumn]) {
         if (typeof column?.editable !== "function") {
           throw new Error("Expected conditional unit/currency editability");
         }
@@ -58,8 +67,9 @@ describe("createEditTransactionColumnDefs", () => {
             data: {
               key: "category-booking",
               account: category.value,
-              unit: Unit.CURRENCY,
-              currency: "EUR",
+              unit: Unit.SECURITY,
+              symbol: "AAPL",
+              tradeCurrency: "EUR",
             },
           } as never),
         ).toBe(true);
@@ -68,8 +78,9 @@ describe("createEditTransactionColumnDefs", () => {
             data: {
               key: "account-booking",
               account: "account-checking",
-              unit: Unit.CURRENCY,
-              currency: "CHF",
+              unit: Unit.SECURITY,
+              symbol: "AAPL",
+              tradeCurrency: "CHF",
             },
           } as never),
         ).toBe(false);

@@ -881,12 +881,14 @@ create/edit of transactions with split bookings:
 - **Minimum bookings**: at least 2 bookings enforced
 - **Date propagation**: calendar-day changes propagate to all bookings;
   unrelated updates that clone a `Date` must not overwrite booking dates
-- **Booking units and currencies**: selecting an account with a fixed unit uses
-  that account's unit metadata. Selecting a unitless equity account, including
+- **Booking units and currencies**: selecting a balance account with a fixed
+  unit uses that account's unit metadata. Selecting an equity account, including
   an income/expense category, preserves the booking's existing unit and
   associated metadata. Only bookings without a unit inherit the current-account
   booking's metadata. This rule applies to both ledger and statement-import
-  editors. Unit and currency remain editable for unitless accounts, so a
+  editors. Equity account unit metadata does not fix a booking's unit, including
+  metadata stored by legacy data or staging seeds. Unit, currency, and security
+  symbol remain editable for equity accounts and unitless balance accounts, so a
   category booking can use EUR while the current account uses CHF. Defaults do
   not convert amounts or require currencies to match. Existing units with
   incomplete metadata are preserved for validation rather than filled from
@@ -1046,9 +1048,9 @@ compatibility but ignored by the importer.
   or none are.
 - Imported drafts follow the shared
   [booking unit and currency rules](#transaction-editing-edittransactionmodal).
-  Selecting a unitless counter category preserves the imported original
-  currency; newly added bookings without a unit inherit the current-account
-  booking's metadata. Category booking units and currencies remain editable.
+  Selecting a counter category preserves the imported original currency; newly
+  added bookings without a unit inherit the current-account booking's metadata.
+  Category booking units and currencies remain editable.
 
 ### Conditional Editability Affordance
 

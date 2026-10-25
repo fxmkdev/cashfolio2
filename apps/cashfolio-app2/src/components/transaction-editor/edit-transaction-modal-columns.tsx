@@ -2,7 +2,7 @@ import type { CellClassParams, ColDef } from "ag-grid-enterprise";
 import type { CustomCellRendererProps } from "ag-grid-react";
 import { ActionIcon, Box, Group, ThemeIcon, Tooltip } from "@mantine/core";
 import { IconTrash, IconX } from "@tabler/icons-react";
-import { Unit } from "../../.prisma-client/enums";
+import { AccountType, Unit } from "../../.prisma-client/enums";
 import type { AccountBookUnitUsage } from "../../shared/account-book-unit-usage";
 import {
   getUnitIdentifier,
@@ -196,7 +196,7 @@ export function createEditTransactionColumnDefs(args: {
       editable: ({ data }) => {
         if (!data?.account) return true;
         const acct = accounts.find((a) => a.value === data.account);
-        return !acct?.unit;
+        return acct?.type === AccountType.EQUITY || !acct?.unit;
       },
       width: 120,
       context: {
@@ -214,7 +214,7 @@ export function createEditTransactionColumnDefs(args: {
       editable: ({ data }) => {
         if (!data?.account) return true;
         const acct = accounts.find((a) => a.value === data.account);
-        return !acct?.unit;
+        return acct?.type === AccountType.EQUITY || !acct?.unit;
       },
       width: 90,
       valueFormatter: ({ value }: { value: unknown }) =>
@@ -275,7 +275,7 @@ export function createEditTransactionColumnDefs(args: {
         if (data?.unit !== Unit.SECURITY) return false;
         if (!data?.account) return true;
         const acct = accounts.find((a) => a.value === data.account);
-        return !acct?.unit;
+        return acct?.type === AccountType.EQUITY || !acct?.unit;
       },
       width: 90,
     },

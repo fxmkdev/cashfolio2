@@ -25,15 +25,21 @@ function accountOption(
 }
 
 describe("createBookingUnitDefaults", () => {
-  describe.each([EquityAccountSubtype.INCOME, EquityAccountSubtype.EXPENSE])(
-    "%s category",
-    (equityAccountSubtype) => {
-      const unitlessEquityAccount = accountOption({
+  describe.each(
+    [EquityAccountSubtype.INCOME, EquityAccountSubtype.EXPENSE].flatMap(
+      (equityAccountSubtype) =>
+        [null, Unit.CURRENCY].map((unit) => ({ equityAccountSubtype, unit })),
+    ),
+  )(
+    "$equityAccountSubtype category with stored unit $unit",
+    ({ equityAccountSubtype, unit }) => {
+      const selectedCategory = accountOption({
         value: "category",
         label: "Category",
         type: AccountType.EQUITY,
         equityAccountSubtype,
-        unit: null,
+        unit,
+        currency: unit === Unit.CURRENCY ? "CHF" : undefined,
       });
       const unitFields: Pick<
         BookingValues,
@@ -49,7 +55,7 @@ describe("createBookingUnitDefaults", () => {
         (fields) => {
           expect(
             createBookingUnitDefaults({
-              selectedAccount: unitlessEquityAccount,
+              selectedAccount: selectedCategory,
               lockedBooking: { key: "locked", ...fields },
               currentBooking: { key: "new" },
             }),
@@ -68,7 +74,7 @@ describe("createBookingUnitDefaults", () => {
         (fields) => {
           expect(
             createBookingUnitDefaults({
-              selectedAccount: unitlessEquityAccount,
+              selectedAccount: selectedCategory,
               lockedBooking: {
                 key: "locked",
                 unit: Unit.CURRENCY,
@@ -89,7 +95,7 @@ describe("createBookingUnitDefaults", () => {
       test("copies unit fields together without retaining metadata from a unitless booking", () => {
         expect(
           createBookingUnitDefaults({
-            selectedAccount: unitlessEquityAccount,
+            selectedAccount: selectedCategory,
             lockedBooking: {
               key: "locked",
               unit: Unit.CURRENCY,
@@ -115,7 +121,7 @@ describe("createBookingUnitDefaults", () => {
       test("preserves an existing unit with incomplete metadata for validation", () => {
         expect(
           createBookingUnitDefaults({
-            selectedAccount: unitlessEquityAccount,
+            selectedAccount: selectedCategory,
             lockedBooking: {
               key: "locked",
               unit: Unit.CURRENCY,

@@ -10,10 +10,7 @@ export function createBookingUnitDefaults(args: {
   BookingValues,
   "unit" | "currency" | "cryptocurrency" | "symbol" | "tradeCurrency"
 > {
-  if (
-    args.selectedAccount.type === AccountType.EQUITY &&
-    args.selectedAccount.unit == null
-  ) {
+  if (args.selectedAccount.type === AccountType.EQUITY) {
     if (args.currentBooking?.unit != null) {
       return {
         unit: args.currentBooking?.unit,
