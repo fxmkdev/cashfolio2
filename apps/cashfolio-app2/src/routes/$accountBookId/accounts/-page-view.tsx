@@ -335,7 +335,8 @@ export function AccountsPageView({
           autoGroupColumnDef={{
             headerName: "Name",
             field: "name",
-            pinned: "left",
+            pinned: isCategories ? null : "left",
+            flex: isCategories ? 1 : 0,
             initialWidth: 320,
             minWidth: 320,
             resizable: true,
