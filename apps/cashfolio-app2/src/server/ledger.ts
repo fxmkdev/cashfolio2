@@ -1,6 +1,7 @@
 import { toNumericMoney } from "./money-boundary";
 import { toMoney, type Money } from "../shared/money";
 import { createServerFn } from "@tanstack/react-start";
+import { notFound, rootRouteId } from "@tanstack/react-router";
 import { prisma } from "../prisma.server";
 import { ensureAuthorizedForAccountBookId } from "../account-books/functions.server";
 import { AccountType, EquityAccountSubtype } from "../.prisma-client/enums";
@@ -35,7 +36,7 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
   .validator((data: { accountId: string; accountBookId: string }) => data)
   .handler(async ({ data }) => {
     await ensureAuthorizedForAccountBookId(data.accountBookId);
-    const account = await prisma.account.findUniqueOrThrow({
+    const account = await prisma.account.findUnique({
       where: {
         id_accountBookId: {
           id: data.accountId,
@@ -59,6 +60,10 @@ export const getAccountForLedger = createServerFn({ method: "GET" })
         groupId: true,
       },
     });
+
+    if (!account) {
+      throw notFound({ routeId: rootRouteId });
+    }
 
     const allGroups = await prisma.accountGroup.findMany({
       where: { accountBookId: data.accountBookId },

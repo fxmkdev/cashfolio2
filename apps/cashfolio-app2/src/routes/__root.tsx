@@ -16,10 +16,12 @@ import { createDocumentTitleHead } from "@/shared/document-title";
 import "../mantine";
 import { theme } from "../theme";
 import { useEffect } from "react";
+import { NotFoundPage } from "./-not-found-page";
 
 export const Route = createRootRoute({
   head: () => createDocumentTitleHead(),
   component: RootComponent,
+  notFoundComponent: NotFoundPage,
 });
 
 function RootComponent() {

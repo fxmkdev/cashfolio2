@@ -317,12 +317,23 @@ namespaces and preserves global valuation caches.
   `LOGTO_MANAGEMENT_API_APP_ID`, and `LOGTO_MANAGEMENT_API_APP_SECRET`. The same
   Management API helper also reads `GET /api/users/{userId}` and uses batched
   `GET /api/users` exact-id searches for Admin user-table identity enrichment.
-- User auth guard: `src/auth/functions.server.ts` (`ensureAuthenticated`)
+- User auth guard: `src/auth/functions.server.ts` (`ensureAuthenticated`) shares
+  a non-redirecting `getAuthenticationContext` lookup with
+  `getAuthenticationStatus` in `src/server/authentication.ts`. The GET status
+  function returns only the session's authentication boolean, marks the response
+  `no-store`, and requires no app-owned user or book records. The 404 page uses
+  it after hydration to conditionally offer Sign Out; lookup failures leave that
+  optional action hidden without replacing the 404 page.
 - User upsert/lookup: `src/users/functions.server.ts`
 - Admin user listing, current-user Admin capability checks, role management, and
   admin-triggered deletion of DB-backed users, including missing Logto
   identities: `src/server/admin-users.ts`
 - Account-book authorization guard: `src/account-books/functions.server.ts`
+  throws `notFound({ routeId: rootRouteId })` when the current user has no
+  access link, covering both nonexistent and inaccessible books without
+  revealing their existence. Router not-found signals are serializable and
+  render the root 404 page when propagated through route loaders. Expected
+  not-found signals are excluded from unexpected server-request error logs.
 - All account/ledger/transaction server functions enforce account-book access
   before querying/updating data
 - Same-origin request guard for mutation handlers lives in

@@ -18,7 +18,7 @@ function getE2EBypassExternalId(): string | null {
   );
 }
 
-export async function ensureAuthenticated() {
+export async function getAuthenticationContext() {
   const e2eExternalId = getE2EBypassExternalId();
 
   if (e2eExternalId) {
@@ -33,7 +33,11 @@ export async function ensureAuthenticated() {
   }
 
   const { getLogtoContext } = await import("./logto.server");
-  const context = await getLogtoContext({ getAccessToken: false });
+  return getLogtoContext({ getAccessToken: false });
+}
+
+export async function ensureAuthenticated() {
+  const context = await getAuthenticationContext();
 
   if (!context.isAuthenticated) {
     throw redirect({ href: "/api/logto/sign-in", reloadDocument: true });

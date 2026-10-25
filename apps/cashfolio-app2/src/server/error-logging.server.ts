@@ -1,3 +1,5 @@
+import { isNotFound } from "@tanstack/react-router";
+
 const REDACTED = "[redacted]";
 const MAX_DEPTH = 4;
 const MAX_BODY_TEXT_LENGTH = 4_000;
@@ -50,7 +52,7 @@ export function shouldLogServerRequestError(error: unknown) {
     return error.status >= 500;
   }
 
-  if (isRedirectLike(error)) {
+  if (isRedirectLike(error) || isNotFound(error)) {
     return false;
   }
 

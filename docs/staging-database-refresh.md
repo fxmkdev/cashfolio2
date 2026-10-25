@@ -38,6 +38,11 @@ period-cache reads; previous staging deep links become invalid. Shared
 market-rate caches remain available and old period-cache entries expire
 normally.
 
+Opening a previous book URL after replacement shows the app's **Page Not Found**
+page with HTTP 404. Select **Go to App** to return through `/` and open a
+current accessible book. Book IDs intentionally change on every replacement; old
+deep links are not redirected to a different book automatically.
+
 The seeded books are named `1. Swiss Household Demo`, `2. Valuation Edge Cases`,
 and `3. Empty Demo`. Numeric prefixes put the household first and the empty book
 last in the existing alphabetical account-book selector.
