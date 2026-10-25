@@ -2162,9 +2162,11 @@ export const BulkMoveToGroup: Story = {
     const body = within(canvasElement.ownerDocument.body);
     await selectAssignmentAccount(canvasElement, "account-checking");
     await userEvent.click(
-      canvas.getByRole("button", { name: "Move to Group" }),
+      canvas.getByRole("button", { name: "Move Accounts to Group" }),
     );
-    const dialog = within(await findVisibleDialog(body, "Move to Group"));
+    const dialog = within(
+      await findVisibleDialog(body, "Move Accounts to Group"),
+    );
     await expect(dialog.getByRole("button", { name: "Move" })).toBeDisabled();
     await userEvent.click(dialog.getByLabelText("Destination Group"));
     await userEvent.click(body.getByRole("option", { name: "Empty" }));
@@ -2174,7 +2176,7 @@ export const BulkMoveToGroup: Story = {
     await userEvent.click(dialog.getByRole("button", { name: "Move" }));
     await waitFor(() =>
       expect(
-        body.queryByRole("dialog", { name: "Move to Group" }),
+        body.queryByRole("dialog", { name: "Move Accounts to Group" }),
       ).not.toBeInTheDocument(),
     );
     await expect(

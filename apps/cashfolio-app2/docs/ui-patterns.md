@@ -320,11 +320,12 @@ for the selected accounts and all historical Report/History periods. Errors
 retain the choice for retry. Success clears selection and refreshes data. Groups
 do not store a class or provide inheritance.
 
-**Move to Group** uses the same selected account IDs. Users explicitly choose a
-compatible real group or **No Group**; virtual Archived wrappers are never
-destinations. Active accounts require active groups, while archived-only
-selections may use archived groups. Groups included in cash flow require
-currency accounts. Name conflicts use the existing case-insensitive,
+**Move Accounts to Group** uses the same selected account IDs. Accounts move
+directly to the destination; groups and subgroups stay in place. Users
+explicitly choose a compatible real group or **No Group**; virtual Archived
+wrappers are never destinations. Active accounts require active groups, while
+archived-only selections may use archived groups. Groups included in cash flow
+require currency accounts. Name conflicts use the existing case-insensitive,
 accent-sensitive account-name rules, including archived destination accounts and
 conflicts among selected accounts. Conflicts block the complete move.
 

@@ -18,7 +18,7 @@ export function BulkAccountToolbar({
       </Button>
       {actions.openMove && (
         <Button variant="light" onClick={actions.openMove}>
-          Move to Group
+          Move Accounts to Group
         </Button>
       )}
       <Button variant="subtle" onClick={actions.clearSelection}>

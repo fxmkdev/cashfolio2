@@ -26,14 +26,17 @@ async function selectAccounts(
       page.locator(`.ag-row[row-id="${id}"]`).first(),
     );
   await page
-    .getByRole("button", { name: "Move to Group", exact: true })
+    .getByRole("button", { name: "Move Accounts to Group", exact: true })
     .click();
-  return page.getByRole("dialog", { name: "Move to Group", exact: true });
+  return page.getByRole("dialog", {
+    name: "Move Accounts to Group",
+    exact: true,
+  });
 }
 
 async function chooseGroup(page: Page, name: string) {
   const dialog = page.getByRole("dialog", {
-    name: "Move to Group",
+    name: "Move Accounts to Group",
     exact: true,
   });
   await dialog.getByLabel("Destination Group").click();
@@ -93,7 +96,7 @@ test("bulk move discloses inherited cash-flow changes and preserves other accoun
     page.getByRole("toolbar", { name: "Selected Account Actions" }),
   ).toContainText("2 accounts selected");
   await page
-    .getByRole("button", { name: "Move to Group", exact: true })
+    .getByRole("button", { name: "Move Accounts to Group", exact: true })
     .click();
   dialog = await chooseGroup(page, target.name);
   await expect(dialog).toContainText("2 accounts selected (1 archived)");

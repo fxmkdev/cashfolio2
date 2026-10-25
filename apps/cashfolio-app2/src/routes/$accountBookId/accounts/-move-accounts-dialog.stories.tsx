@@ -84,7 +84,7 @@ type Story = StoryObj<typeof meta>;
 async function chooseGroup(canvasElement: HTMLElement, label: string) {
   const body = within(canvasElement.ownerDocument.body);
   const dialog = within(
-    await body.findByRole("dialog", { name: "Move to Group" }),
+    await body.findByRole("dialog", { name: "Move Accounts to Group" }),
   );
   await userEvent.click(dialog.getByLabelText("Destination Group"));
   await userEvent.click(body.getByRole("option", { name: label }));
@@ -94,6 +94,11 @@ async function chooseGroup(canvasElement: HTMLElement, label: string) {
 export const ExcludesFromCashFlow: Story = {
   play: async ({ canvasElement, args }) => {
     const dialog = await chooseGroup(canvasElement, "Destination");
+    await expect(
+      dialog.getByText(
+        "Accounts move directly to the destination. Groups and subgroups stay in place.",
+      ),
+    ).toBeVisible();
     await expect(
       dialog.getByText(/1 will be excluded from cash flow: Checking/),
     ).toBeVisible();
@@ -262,7 +267,7 @@ export const CancelBeforeChoosing: Story = {
   play: async ({ canvasElement, args }) => {
     const body = within(canvasElement.ownerDocument.body);
     const dialog = within(
-      await body.findByRole("dialog", { name: "Move to Group" }),
+      await body.findByRole("dialog", { name: "Move Accounts to Group" }),
     );
     await waitFor(() =>
       expect(dialog.getByText(/2 accounts selected/)).toHaveFocus(),
