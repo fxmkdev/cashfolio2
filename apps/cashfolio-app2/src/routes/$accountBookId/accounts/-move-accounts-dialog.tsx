@@ -90,10 +90,6 @@ export function MoveAccountsDialog(props: {
             {count} {count === 1 ? "account" : "accounts"} selected (
             {props.target.archivedCount} archived).
           </Text>
-          <Text size="sm">
-            Accounts move directly to the destination. Groups and subgroups stay
-            in place.
-          </Text>
           <GroupTreeSelect
             label="Destination Group"
             placeholder="Select destination group"

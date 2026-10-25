@@ -95,10 +95,10 @@ export const ExcludesFromCashFlow: Story = {
   play: async ({ canvasElement, args }) => {
     const dialog = await chooseGroup(canvasElement, "Destination");
     await expect(
-      dialog.getByText(
+      dialog.queryByText(
         "Accounts move directly to the destination. Groups and subgroups stay in place.",
       ),
-    ).toBeVisible();
+    ).not.toBeInTheDocument();
     await expect(
       dialog.getByText(/1 will be excluded from cash flow: Checking/),
     ).toBeVisible();

@@ -301,33 +301,46 @@ Unit, cash flags, groups, or other fields. Users can choose any class or clear
 back to Unclassified. Income, expense, and system equity accounts do not expose
 this selector.
 
-Accounts supports checkbox selection with **Set Asset Class** and **Move to
-Group** toolbar actions. Balance-account leaves, real groups, and virtual
-Archived groups show checkboxes. Group checkboxes select matching descendant
-accounts, including nested and archived accounts regardless of expansion, using
-AG Grid's native filtered-descendant selection. Empty groups have disabled
-checkboxes; totals and categories are excluded. Groups show native
-checked/indeterminate states, and individual accounts can be excluded from a
-selection. The toolbar counts accounts, and requests contain only account IDs.
+Accounts supports checkbox selection with **Set Asset Class** and **Move
+Accounts to Group** toolbar actions. Balance-account leaves and real groups show
+checkboxes; virtual Archived sections, totals, and categories do not. Empty
+groups have disabled checkboxes. AG Grid's independent (`self`) selection keeps
+group and account checkboxes separate: selecting a group does not check its
+descendants, and selecting all accounts in a group does not check the group. The
+toolbar counts explicitly selected groups and accounts separately.
 
-Filtered-out selections are removed, header select-all uses the filtered account
-set, and clearing a filter does not add accounts to an existing selection.
-Ordinary cell clicks retain their existing behavior. Selection resets when
-switching account books or management contexts. The dialog freezes selected
-account IDs when opened, shows total and archived counts, and requires an
-explicit asset class or Unclassified. Applying replaces existing classifications
-for the selected accounts and all historical Report/History periods. Errors
-retain the choice for retry. Success clears selection and refreshes data. Groups
-do not store a class or provide inheritance.
+**Set Asset Class** resolves selected groups to matching descendant accounts,
+including nested and archived accounts regardless of expansion. Overlapping
+group and account selections are deduplicated. Group targets are captured when
+selected; filtering or data refresh may remove targets but cannot silently add
+accounts. Reselecting a group captures its current matching descendants. Groups
+with no remaining captured targets are deselected. Requests contain only account
+IDs.
 
-**Move Accounts to Group** uses the same selected account IDs. Accounts move
-directly to the destination; groups and subgroups stay in place. Users
-explicitly choose a compatible real group or **No Group**; virtual Archived
-wrappers are never destinations. Active accounts require active groups, while
-archived-only selections may use archived groups. Groups included in cash flow
-require currency accounts. Name conflicts use the existing case-insensitive,
-accent-sensitive account-name rules, including archived destination accounts and
-conflicts among selected accounts. Conflicts block the complete move.
+Filtered-out selections are removed. The **Select All Accounts** header checkbox
+selects filtered accounts, including collapsed accounts, and clears group
+selections. Its checked/indeterminate state reflects explicit account
+selections. Unchecking it clears selection. Clearing a filter does not add
+accounts to an existing selection. Ordinary cell clicks retain their existing
+behavior. Selection resets when switching account books or management contexts.
+The dialog freezes selected account IDs when opened, shows total and archived
+counts, and requires an explicit asset class or Unclassified. Applying replaces
+existing classifications for the selected accounts and all historical
+Report/History periods. Errors retain the choice for retry. Success clears
+selection and refreshes data. Groups do not store a class or provide
+inheritance.
+
+**Move Accounts to Group** is available only for individual account selections.
+For group or mixed selections, it stays visible but disabled with the helper
+text "Select only individual accounts to move them." Selecting every account in
+a group individually still permits moving those accounts. The dialog freezes the
+selected account IDs when opened. Users explicitly choose a compatible real
+group or **No Group**; virtual Archived wrappers are never destinations. Active
+accounts require active groups, while archived-only selections may use archived
+groups. Groups included in cash flow require currency accounts. Name conflicts
+use the existing case-insensitive, accent-sensitive account-name rules,
+including archived destination accounts and conflicts among selected accounts.
+Conflicts block the complete move.
 
 The move dialog lists accounts whose inherited cash-flow inclusion will change,
 with included/excluded counts and names, and explains the effect on historical

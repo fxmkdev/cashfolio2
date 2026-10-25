@@ -1837,11 +1837,11 @@ export const BulkAssetClassFilteredSelection: Story = {
     const canvas = within(canvasElement);
     await waitFor(() =>
       expect(
-        canvasElement.querySelector(".ag-header-select-all input"),
+        canvas.getByRole("checkbox", { name: "Select All Accounts" }),
       ).not.toBeNull(),
     );
     await userEvent.click(
-      canvasElement.querySelector(".ag-header-select-all input")!,
+      canvas.getByRole("checkbox", { name: "Select All Accounts" }),
     );
     await expect(await canvas.findByRole("status")).toHaveTextContent(
       "2 accounts selected",
@@ -1858,7 +1858,7 @@ export const BulkAssetClassFilteredSelection: Story = {
       canvas.getByRole("button", { name: "Clear Selection" }),
     );
     await userEvent.click(
-      canvasElement.querySelector(".ag-header-select-all input")!,
+      canvas.getByRole("checkbox", { name: "Select All Accounts" }),
     );
     await expect(await canvas.findByRole("status")).toHaveTextContent(
       "1 account selected",
@@ -2005,29 +2005,29 @@ export const BulkGroupCheckboxSelection: Story = {
     ).not.toBeInTheDocument();
     await selectAssignmentAccount(canvasElement, "portfolio");
     await expect(await canvas.findByRole("status")).toHaveTextContent(
-      "2 accounts selected",
+      "1 group selected",
+    );
+    const move = canvas.getByRole("button", { name: "Move Accounts to Group" });
+    await expect(move).toBeDisabled();
+    await expect(move).toHaveAccessibleDescription(
+      "Select only individual accounts to move them.",
     );
     await expect(assignmentCheckbox(canvasElement, "portfolio")).toBeChecked();
     await expect(canvasElement.querySelector('[row-id="old"]')).toBeNull();
     await expandAssignmentGroup(canvasElement, "portfolio");
-    await selectAssignmentAccount(canvasElement, "nested");
-    await expect(canvas.getByRole("status")).toHaveTextContent(
-      "1 account selected",
-    );
-    await waitFor(() =>
+    await waitFor(() => {
       expect(
-        assignmentCheckbox(canvasElement, "portfolio")?.indeterminate,
-      ).toBe(true),
-    );
+        assignmentCheckbox(canvasElement, "account-checking"),
+      ).not.toBeChecked();
+      expect(assignmentCheckbox(canvasElement, "nested")).not.toBeChecked();
+    });
+    await selectAssignmentAccount(canvasElement, "nested");
     await selectAssignmentAccount(canvasElement, "account-checking");
-    await expect(
-      canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
-    ).not.toBeInTheDocument();
-    await selectAssignmentAccount(canvasElement, "portfolio");
     await selectAssignmentAccount(canvasElement, "other-group");
     await expect(canvas.getByRole("status")).toHaveTextContent(
-      "3 accounts selected",
+      "3 groups and 1 account selected",
     );
+    await expect(move).toBeDisabled();
     await userEvent.click(
       canvas.getByRole("button", { name: "Set Asset Class" }),
     );
@@ -2057,39 +2057,47 @@ export const BulkArchivedCheckboxSelection: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await selectAssignmentAccount(canvasElement, "__archived__:root");
-    await expect(await canvas.findByRole("status")).toHaveTextContent(
-      "1 account selected",
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector('[row-id="__archived__:root"]'),
+      ).not.toBeNull(),
     );
     await expect(
-      canvasElement.querySelector('[row-id="closed-child"]'),
-    ).toBeNull();
-    await selectAssignmentAccount(canvasElement, "__archived__:root");
-    await expect(
-      canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
+      within(
+        canvasElement.querySelector<HTMLElement>(
+          '[row-id="__archived__:root"]',
+        )!,
+      ).queryByRole("checkbox"),
     ).not.toBeInTheDocument();
     await expandAssignmentGroup(canvasElement, "__archived__:root");
     await selectAssignmentAccount(canvasElement, "closed");
     await expect(await canvas.findByRole("status")).toHaveTextContent(
-      "1 account selected",
+      "1 group selected",
     );
     await expect(
-      assignmentCheckbox(canvasElement, "__archived__:root"),
-    ).toBeChecked();
+      canvas.getByRole("button", { name: "Move Accounts to Group" }),
+    ).toBeDisabled();
     await userEvent.click(
       canvas.getByRole("button", { name: "Clear Selection" }),
     );
-    await expandAssignmentGroup(canvasElement, "portfolio");
-    await expandAssignmentGroup(canvasElement, "nested");
-    await selectAssignmentAccount(canvasElement, "__archived__:group:nested");
+    await expandAssignmentGroup(canvasElement, "closed");
+    await selectAssignmentAccount(canvasElement, "closed-child");
     await expect(await canvas.findByRole("status")).toHaveTextContent(
       "1 account selected",
     );
-    await waitFor(() =>
-      expect(
-        assignmentCheckbox(canvasElement, "portfolio")?.indeterminate,
-      ).toBe(true),
-    );
+    await expect(
+      canvas.getByRole("button", { name: "Move Accounts to Group" }),
+    ).toBeEnabled();
+    await expect(assignmentCheckbox(canvasElement, "closed")).not.toBeChecked();
+    await expandAssignmentGroup(canvasElement, "portfolio");
+    await expandAssignmentGroup(canvasElement, "nested");
+    await waitFor(() => {
+      const section = canvasElement.querySelector<HTMLElement>(
+        '[row-id="__archived__:group:nested"]',
+      );
+      expect(section).not.toBeNull();
+      expect(within(section!).queryByRole("checkbox")).not.toBeInTheDocument();
+    });
   },
 };
 
@@ -2113,7 +2121,7 @@ export const BulkFilteredGroupCheckboxSelection: Story = {
     );
     await selectAssignmentAccount(canvasElement, "portfolio");
     await expect(await canvas.findByRole("status")).toHaveTextContent(
-      "1 account selected",
+      "1 group selected",
     );
     await userEvent.click(
       canvas.getByRole("button", { name: "Clear Account Filters" }),
@@ -2122,11 +2130,7 @@ export const BulkFilteredGroupCheckboxSelection: Story = {
       expect(assignmentCheckbox(canvasElement, "old")).not.toBeNull(),
     );
     await expect(assignmentCheckbox(canvasElement, "old")).not.toBeChecked();
-    await waitFor(() =>
-      expect(
-        assignmentCheckbox(canvasElement, "portfolio")?.indeterminate,
-      ).toBe(true),
-    );
+    await expect(assignmentCheckbox(canvasElement, "portfolio")).toBeChecked();
     await userEvent.click(
       canvas.getByRole("button", { name: "Set Asset Class" }),
     );
@@ -2188,5 +2192,61 @@ export const BulkMoveToGroup: Story = {
     await expect(
       canvas.getByTestId("assignment-account-ids"),
     ).toHaveTextContent("account-checking");
+  },
+};
+
+export const BulkMoveIndividualSelection: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      bulkAssignment
+      expandGroups
+      rowsOverride={bulkRows}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await selectAssignmentAccount(canvasElement, "account-checking");
+    const move = canvas.getByRole("button", { name: "Move Accounts to Group" });
+    await expect(move).toBeEnabled();
+    const selectAll = canvas.getByRole("checkbox", {
+      name: "Select All Accounts",
+    });
+    await expect(selectAll).toBePartiallyChecked();
+    await selectAssignmentAccount(canvasElement, "old");
+    await expect(selectAll).toBeChecked();
+    await expect(
+      assignmentCheckbox(canvasElement, "portfolio"),
+    ).not.toBeChecked();
+    await expect(assignmentCheckbox(canvasElement, "nested")).not.toBeChecked();
+    await expect(move).toBeEnabled();
+    await selectAssignmentAccount(canvasElement, "portfolio");
+    await expect(canvas.getByRole("status")).toHaveTextContent(
+      "1 group and 2 accounts selected",
+    );
+    await expect(move).toBeDisabled();
+    await selectAssignmentAccount(canvasElement, "portfolio");
+    await expect(move).toBeEnabled();
+    await expect(
+      canvas.queryByText("Select only individual accounts to move them."),
+    ).not.toBeInTheDocument();
+    await userEvent.click(selectAll);
+    await expect(canvas.queryByRole("toolbar")).not.toBeInTheDocument();
+    await selectAssignmentAccount(canvasElement, "portfolio");
+    await expect(selectAll).not.toBeChecked();
+    selectAll.focus();
+    await userEvent.keyboard("[Space]");
+    await expect(selectAll).toBeChecked();
+    await expect(
+      assignmentCheckbox(canvasElement, "portfolio"),
+    ).not.toBeChecked();
+    await expect(canvas.getByRole("status")).toHaveTextContent(
+      "2 accounts selected",
+    );
+    await expect(
+      canvas.getByRole("button", { name: "Move Accounts to Group" }),
+    ).toBeEnabled();
+    await userEvent.click(selectAll);
+    await expect(canvas.queryByRole("toolbar")).not.toBeInTheDocument();
   },
 };

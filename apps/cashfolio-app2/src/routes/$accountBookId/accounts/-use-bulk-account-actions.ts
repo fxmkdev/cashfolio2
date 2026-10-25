@@ -5,10 +5,15 @@ import type { GridApi } from "ag-grid-enterprise";
 import type { AssetClass } from "@/.prisma-client/enums";
 import { notifications } from "@mantine/notifications";
 import type { AccountsGridRow, TreeRow } from "./-page-types";
+import { AccountSelectionHeader } from "./-account-selection-header";
 import {
   createAccountBulkActionTarget,
   isBulkAccountRow,
   isBulkAccount,
+  getBulkAccountGroupTargets,
+  getBulkAccountSelectionSummary,
+  reconcileBulkAccountSelection,
+  type BulkAccountSelection,
   type AccountBulkActionTarget,
 } from "./-bulk-account-targets";
 
@@ -29,13 +34,16 @@ export function useBulkAccountActions(args: {
   onRefreshConstraints?: () => Promise<void>;
 }) {
   const apiRef = useRef<GridApi<AccountsGridRow> | null>(null);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const selectionRef = useRef<BulkAccountSelection>(new Map());
+  const reconciling = useRef(false);
+  const [selection, setSelection] = useState<BulkAccountSelection>(new Map());
   const [assetClassTarget, setAssetClassTarget] =
     useState<AccountBulkActionTarget>();
   const [moveTarget, setMoveTarget] = useState<AccountBulkActionTarget>();
   const clearSelection = useCallback(() => {
+    selectionRef.current = new Map();
     apiRef.current?.deselectAll();
-    setSelectedIds([]);
+    setSelection(new Map());
   }, []);
   useEffect(() => {
     clearSelection();
@@ -44,37 +52,54 @@ export function useBulkAccountActions(args: {
   }, [args.scopeKey, clearSelection]);
 
   const reconcileSelection = useCallback((api: GridApi<AccountsGridRow>) => {
-    const filteredIds = new Set<string>();
+    if (reconciling.current) return;
+    const filteredRows: TreeRow[] = [];
     api.forEachNodeAfterFilter((node) => {
-      if (isBulkAccount(node.data)) filteredIds.add(node.data.id);
+      if (node.data && !("rowType" in node.data)) filteredRows.push(node.data);
     });
-    const hidden = api
-      .getSelectedNodes()
-      .filter((node) => !node.data || !filteredIds.has(node.data.id));
-    if (hidden.length) api.setNodesSelected({ nodes: hidden, newValue: false });
-    setSelectedIds(
-      api
-        .getSelectedRows()
-        .filter(isBulkAccount)
-        .map((row) => row.id),
+    const selectedNodes = api.getSelectedNodes();
+    const next = reconcileBulkAccountSelection(
+      filteredRows,
+      selectedNodes.flatMap((node) => (node.data ? [node.data.id] : [])),
+      selectionRef.current,
     );
+    selectionRef.current = next;
+    const unavailable = selectedNodes.filter(
+      (node) => !node.data || !next.has(node.data.id),
+    );
+    reconciling.current = true;
+    try {
+      if (unavailable.length)
+        api.setNodesSelected({ nodes: unavailable, newValue: false });
+    } finally {
+      reconciling.current = false;
+    }
+    setSelection(next);
   }, []);
-  const selectedIdSet = new Set(selectedIds);
-  const selectedAccounts = args.rows.filter(
-    (row) => isBulkAccount(row) && selectedIdSet.has(row.id),
+  const {
+    accounts: selectedAccounts,
+    selectedAccountCount,
+    selectedGroupCount,
+    canMove,
+  } = getBulkAccountSelectionSummary(args.rows, selection);
+  const groupTargets = useMemo(
+    () => getBulkAccountGroupTargets(args.rows),
+    [args.rows],
   );
   const rowSelection = useMemo<
     AgGridReactProps<AccountsGridRow>["rowSelection"]
   >(
     () => ({
       mode: "multiRow",
-      selectAll: "filtered",
+      headerCheckbox: false,
       enableClickSelection: false,
-      groupSelects: "filteredDescendants",
-      isRowSelectable: (node) => isBulkAccount(node.data),
+      groupSelects: "self",
+      isRowSelectable: (node) =>
+        isBulkAccount(node.data) ||
+        (isBulkAccountRow(node.data) && groupTargets.has(node.data.id)),
       checkboxes: (params) => isBulkAccountRow(params.data),
     }),
-    [],
+    [groupTargets],
   );
   const gridProps: Pick<
     AgGridReactProps<AccountsGridRow>,
@@ -92,6 +117,7 @@ export function useBulkAccountActions(args: {
           width: 48,
           resizable: false,
           suppressHeaderMenuButton: true,
+          headerComponent: AccountSelectionHeader,
         },
         onGridReady: ({ api }) => {
           apiRef.current = api;
@@ -104,7 +130,9 @@ export function useBulkAccountActions(args: {
 
   return {
     gridProps,
-    selectedCount: selectedAccounts.length,
+    selectedAccountCount,
+    selectedGroupCount,
+    canMove,
     assetClassTarget,
     moveTarget,
     clearSelection,
@@ -114,7 +142,7 @@ export function useBulkAccountActions(args: {
     },
     openMove: args.submitMove
       ? () => {
-          if (selectedAccounts.length)
+          if (canMove)
             setMoveTarget(createAccountBulkActionTarget(selectedAccounts));
         }
       : undefined,

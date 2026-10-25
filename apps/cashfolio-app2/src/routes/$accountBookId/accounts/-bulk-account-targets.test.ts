@@ -6,6 +6,9 @@ import {
   createAccountBulkActionTarget,
   isBulkAccountRow,
   isBulkAccount,
+  getBulkAccountGroupTargets,
+  getBulkAccountSelectionSummary,
+  reconcileBulkAccountSelection,
 } from "./-bulk-account-targets";
 
 function row(
@@ -53,10 +56,12 @@ describe("asset class assignment targets", () => {
     row("empty", "accountGroup"),
   ];
 
-  it("shows checkboxes on balance accounts, real groups, and Archived wrappers", () => {
+  it("shows checkboxes on balance accounts and real groups, excluding Archived wrappers", () => {
     const projected = buildUnifiedAccountTreeRows(raw);
     expect(projected.some((row) => row.isVirtualArchivedGroup)).toBe(true);
-    expect(projected.every(isBulkAccountRow)).toBe(true);
+    expect(projected.filter(isBulkAccountRow).map((row) => row.id)).toEqual(
+      raw.map((row) => row.id),
+    );
     for (const nodeType of ["account", "accountGroup"] as const) {
       expect(
         isBulkAccountRow({
@@ -105,5 +110,149 @@ describe("asset class assignment targets", () => {
       accountIds: ["active", "archived", "old-child"],
       archivedCount: 2,
     });
+  });
+
+  it("resolves nested and archived descendants through display wrappers", () => {
+    const targets = getBulkAccountGroupTargets(
+      buildUnifiedAccountTreeRows(raw),
+    );
+    expect(targets.get("group")).toEqual(["active", "archived", "old-child"]);
+    expect(targets.get("nested")).toEqual(["archived"]);
+    expect(targets.get("old-group")).toEqual(["old-child"]);
+    expect(targets.has("empty")).toBe(false);
+    expect(
+      [...targets.keys()].some((id) => id.startsWith("__archived__:")),
+    ).toBe(false);
+  });
+
+  it("counts explicit group/account selections and deduplicates their targets", () => {
+    const selected = reconcileBulkAccountSelection(
+      raw,
+      ["group", "nested", "active", "outside"],
+      new Map(),
+    );
+    const summary = getBulkAccountSelectionSummary(raw, selected);
+    expect(summary.selectedAccountCount).toBe(2);
+    expect(summary.selectedGroupCount).toBe(2);
+    expect(summary.canMove).toBe(false);
+    expect(createAccountBulkActionTarget(summary.accounts)).toEqual({
+      accountIds: ["active", "archived", "old-child", "outside"],
+      archivedCount: 2,
+    });
+  });
+
+  it("allows moving every account in a group without selecting the group", () => {
+    const selected = reconcileBulkAccountSelection(
+      raw,
+      ["active", "archived", "old-child"],
+      new Map(),
+    );
+    expect(getBulkAccountSelectionSummary(raw, selected)).toMatchObject({
+      selectedAccountCount: 3,
+      selectedGroupCount: 0,
+      canMove: true,
+    });
+    const mixed = reconcileBulkAccountSelection(
+      raw,
+      [...selected.keys(), "group"],
+      selected,
+    );
+    expect(getBulkAccountSelectionSummary(raw, mixed).canMove).toBe(false);
+    const accountsOnly = reconcileBulkAccountSelection(
+      raw,
+      [...selected.keys()],
+      mixed,
+    );
+    expect(getBulkAccountSelectionSummary(raw, accountsOnly).canMove).toBe(
+      true,
+    );
+    expect(getBulkAccountSelectionSummary(raw, new Map()).canMove).toBe(false);
+  });
+
+  it("captures only filtered descendants and never adds targets when a filter clears", () => {
+    const filtered = raw.filter(
+      (row) => row.id !== "archived" && row.id !== "old-child",
+    );
+    const selected = reconcileBulkAccountSelection(
+      filtered,
+      ["group"],
+      new Map(),
+    );
+    expect(selected.get("group")).toEqual(["active"]);
+    expect(
+      reconcileBulkAccountSelection(raw, ["group"], selected).get("group"),
+    ).toEqual(["active"]);
+  });
+
+  it("removes filtered targets and requires reselection to restore them", () => {
+    const selected = reconcileBulkAccountSelection(
+      raw,
+      ["group", "outside"],
+      new Map(),
+    );
+    const narrowed = reconcileBulkAccountSelection(
+      raw.filter((row) => row.id !== "archived" && row.id !== "outside"),
+      [...selected.keys()],
+      selected,
+    );
+    expect(narrowed.get("group")).toEqual(["active", "old-child"]);
+    expect(narrowed.has("outside")).toBe(false);
+    expect(
+      reconcileBulkAccountSelection(raw, [...narrowed.keys()], narrowed).get(
+        "group",
+      ),
+    ).toEqual(["active", "old-child"]);
+    expect(
+      reconcileBulkAccountSelection(raw, ["group"], new Map()).get("group"),
+    ).toEqual(["active", "archived", "old-child"]);
+  });
+
+  it("drops empty, synthetic, unavailable, and non-balance selections", () => {
+    const projected = buildUnifiedAccountTreeRows(raw);
+    const selected = reconcileBulkAccountSelection(
+      projected,
+      ["group"],
+      new Map(),
+    );
+    const filtered = projected.filter((row) => !isBulkAccount(row));
+    expect(
+      reconcileBulkAccountSelection(filtered, ["group"], selected).size,
+    ).toBe(0);
+    expect(
+      reconcileBulkAccountSelection(
+        projected,
+        ["empty", "missing", "__archived__:root"],
+        new Map(),
+      ).size,
+    ).toBe(0);
+    expect(
+      reconcileBulkAccountSelection(
+        [{ ...raw[0], type: AccountType.EQUITY }],
+        ["group"],
+        new Map(),
+      ).size,
+    ).toBe(0);
+  });
+
+  it("removes deleted or moved accounts on refresh without adding new descendants", () => {
+    const selected = reconcileBulkAccountSelection(raw, ["group"], new Map());
+    const refreshed = [
+      ...raw
+        .filter((row) => row.id !== "archived")
+        .map((row) =>
+          row.id === "active" ? { ...row, parentId: undefined } : row,
+        ),
+      row("new", "account", "group"),
+    ];
+    const next = reconcileBulkAccountSelection(refreshed, ["group"], selected);
+    expect(next.get("group")).toEqual(["old-child"]);
+    expect(selected.get("group")).toEqual(["active", "archived", "old-child"]);
+    expect(
+      reconcileBulkAccountSelection(
+        raw.filter((row) => row.id !== "group"),
+        ["group"],
+        selected,
+      ).size,
+    ).toBe(0);
   });
 });

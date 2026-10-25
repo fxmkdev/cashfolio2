@@ -105,7 +105,7 @@ test("assigns selected active and archived accounts, replaces existing classes, 
   ).toBeNull();
 });
 
-test("group checkbox selects collapsed and archived descendants while allowing individual exclusions", async ({
+test("group selection assigns collapsed and archived descendants without selecting their rows", async ({
   page,
   e2eExternalId,
 }) => {
@@ -147,29 +147,37 @@ test("group checkbox selects collapsed and archived descendants while allowing i
   await clickGridRowSelectionCheckbox(row);
   await expect(
     page.getByRole("toolbar", { name: "Selected Account Actions" }),
-  ).toContainText("3 accounts selected");
+  ).toContainText("1 group selected");
+  await expect(
+    page.getByRole("button", { name: "Move Accounts to Group", exact: true }),
+  ).toBeDisabled();
   await row.locator(".ag-group-contracted").click();
+  await expect(
+    page
+      .locator(`.ag-row[row-id="${ids[0]}"] .ag-selection-checkbox input`)
+      .first(),
+  ).not.toBeChecked();
   await clickGridRowSelectionCheckbox(
     page.locator(`.ag-row[row-id="${ids[0]}"]`).first(),
   );
   await expect(
     page.getByRole("toolbar", { name: "Selected Account Actions" }),
-  ).toContainText("2 accounts selected");
+  ).toContainText("1 group and 1 account selected");
   await page
     .getByRole("button", { name: "Set Asset Class", exact: true })
     .click();
   await expect(
     page.getByRole("dialog", { name: "Set Asset Class", exact: true }),
-  ).toContainText("2 accounts (2 archived)");
+  ).toContainText("3 accounts (2 archived)");
   await applyClass(page, "Equities");
   await expect
     .poll(
       async () =>
         await prisma.account.count({
-          where: { id: { in: ids.slice(1) }, assetClass: AssetClass.EQUITIES },
+          where: { id: { in: ids }, assetClass: AssetClass.EQUITIES },
         }),
     )
-    .toBe(2);
+    .toBe(3);
   expect(
     (
       await prisma.account.findUniqueOrThrow({
@@ -178,7 +186,7 @@ test("group checkbox selects collapsed and archived descendants while allowing i
         },
       })
     ).assetClass,
-  ).toBe(AssetClass.DIGITAL_ASSETS);
+  ).toBe(AssetClass.EQUITIES);
   expect(
     (
       await prisma.account.findUniqueOrThrow({
