@@ -576,9 +576,10 @@ sign; debt amounts are positive magnitudes in those reports.
 - The `Name` column is frozen on the left, starts at 320px, and can be resized
   with a 320px minimum width. Row actions are frozen on the right at 145px. When
   columns no longer fit, scroll horizontally inside the grid to reach the middle
-  columns. This applies to Accounts and both category tabs, including when
-  archived items are visible. AG Grid automatically unpins columns when the
-  viewport is too narrow to accommodate the frozen columns.
+  columns. In both category tabs, `Name` is unpinned and flexes to fill the
+  space beside the row actions, retaining its 320px minimum width. These layouts
+  also apply when archived items are visible. AG Grid automatically unpins
+  columns when the viewport is too narrow to accommodate the frozen columns.
 - G/L figures use the order `Total`, `Realised`, `Unrealised` in the Accounts
   grid, account summary, calculation drawer, and period reconciliation cards.
 - The Accounts scope (`BALANCE`) renders `Name`, `Ccy./Symbol`, `Balance`,
