@@ -7,9 +7,11 @@ import {
 } from "../support/db";
 import { expect, test } from "../support/fixtures";
 import {
+  gridRowByIndex,
   openCreateSimpleTransaction,
   openEditTransaction,
   selectAccountLeaf,
+  setGridAccountCellValue,
   splitCreateDialog,
 } from "../support/transaction-form";
 
@@ -166,4 +168,60 @@ test("create flow: changing date before switching to split still allows split cr
 
   await splitDialog.getByRole("button", { name: "Create" }).click();
   await expect(agGridRowByText(page, "E2E Create Date Switch")).toBeVisible();
+});
+
+test("create flow: switching to split keeps an unselected counter account empty", async ({
+  page,
+}) => {
+  await page.goto(`/${seeded.accountBookId}/${seeded.cashAccount.id}`);
+
+  const simpleDialog = await openCreateSimpleTransaction(page);
+  await simpleDialog.getByLabel("Date").fill("01/06/2026");
+  await simpleDialog.getByLabel("Description").fill("E2E Empty Counter Switch");
+  await simpleDialog.getByLabel("Amount").fill("22");
+  await simpleDialog
+    .getByRole("button", { name: "Swap Debit/Credit Direction" })
+    .click();
+  await expect(simpleDialog.getByLabel("Account or Category")).toHaveValue("");
+
+  await simpleDialog
+    .getByRole("button", { name: "Switch to Split Editor" })
+    .click();
+
+  const splitDialog = splitCreateDialog(page);
+  await expect(splitDialog).toBeVisible();
+  await expect(splitDialog.getByLabel("Description")).toHaveValue(
+    "E2E Empty Counter Switch",
+  );
+  const currentRow = gridRowByIndex(splitDialog, 0);
+  const counterRow = gridRowByIndex(splitDialog, 1);
+  await expect(agGridCellByColId(currentRow, "account")).toContainText(
+    seeded.cashAccount.name,
+  );
+  await expect(agGridCellByColId(currentRow, "credit")).toContainText("22");
+  await expect(agGridCellByColId(counterRow, "account")).toHaveText("");
+  await expect(agGridCellByColId(counterRow, "debit")).toContainText("22");
+
+  await setGridAccountCellValue({
+    dialog: splitDialog,
+    rowIndex: 1,
+    accountName: seeded.expenseAccount.name,
+  });
+  await splitDialog.getByRole("button", { name: "Create" }).click();
+  await expect(agGridRowByText(page, "E2E Empty Counter Switch")).toBeVisible();
+
+  const bookings = await getTransactionBookingsByDescription({
+    accountBookId: seeded.accountBookId,
+    description: "E2E Empty Counter Switch",
+  });
+  expect(bookings).toHaveLength(2);
+  expect(bookings).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ accountId: seeded.cashAccount.id, value: -22 }),
+      expect.objectContaining({
+        accountId: seeded.expenseAccount.id,
+        value: 22,
+      }),
+    ]),
+  );
 });

@@ -1,5 +1,6 @@
 import type { AccountOption } from "@/shared/account-options";
 import type { SimpleTransactionDraftValues } from "@/components/transactions/simple-transaction-modal";
+import { getBookingUnitFields } from "@/shared/booking-unit-fields";
 import {
   buildSimpleTransactionValues,
   normalizeSimpleDraft,
@@ -7,7 +8,10 @@ import {
   toEditTransactionData,
   type SimpleTransactionEditInitialValues,
 } from "./page-transaction-utils";
-import type { SimpleTransactionValues } from "./page-view";
+import type {
+  SimpleTransactionValues,
+  SplitModalInitialValues,
+} from "./page-view";
 
 type CurrentAccountForSimpleTransaction = {
   id: string;
@@ -58,7 +62,34 @@ export function createSplitInitialValuesFromSimpleDraft(args: {
   fallback: SimpleTransactionEditInitialValues;
   allAccountOptions: AccountOption[];
   currentAccount: CurrentAccountForSimpleTransaction;
-}) {
+}): SplitModalInitialValues {
+  if (!args.draft.counterAccountId) {
+    const values = normalizeSimpleDraft(args);
+    const debit = values.direction === "DEBIT";
+    const amount = values.amount > 0 ? values.amount : undefined;
+
+    return {
+      description: values.description,
+      bookings: [
+        {
+          date: values.date,
+          account: args.currentAccount.id,
+          description: "",
+          ...getBookingUnitFields(args.currentAccount, "current account"),
+          debit: debit ? amount : undefined,
+          credit: debit ? undefined : amount,
+        },
+        {
+          date: values.date,
+          account: "",
+          description: "",
+          debit: debit ? undefined : amount,
+          credit: debit ? amount : undefined,
+        },
+      ],
+    };
+  }
+
   const payload = buildPayloadFromSimpleDraft(args);
   return toCreateSplitInitialValues(payload.description, payload.bookings);
 }

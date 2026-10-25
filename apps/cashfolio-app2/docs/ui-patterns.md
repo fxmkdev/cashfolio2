@@ -900,6 +900,8 @@ creation and eligible edit of two-booking transactions from the ledger route
   - users can switch one-way to split editor from the simple create dialog via
     `Switch to Split Editor`
   - switch carries over current simple-form draft values into split form
+  - an unselected counter account/category stays empty in the second booking
+    when switching to the split editor
 
 - Entry fields:
   - date, description, and amount (first row)

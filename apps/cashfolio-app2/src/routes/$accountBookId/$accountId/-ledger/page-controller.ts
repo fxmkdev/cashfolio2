@@ -203,7 +203,7 @@ export function useLedgerPageController(args: {
         fallback: {
           date: new Date(),
           description: "",
-          counterAccountId: simpleCounterAccountOptions[0]?.value ?? "",
+          counterAccountId: "",
           amount: 0,
           direction: "DEBIT",
         },
