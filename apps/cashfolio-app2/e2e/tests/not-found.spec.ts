@@ -23,7 +23,11 @@ test.beforeEach(async ({ context, page }, testInfo) => {
   });
 });
 
-async function expectNotFoundPage(page: Page, path: string) {
+async function expectNotFoundPage(
+  page: Page,
+  path: string,
+  isAuthenticated = true,
+) {
   await expect(page).toHaveURL(new URL(path, page.url()).href);
   await expect(
     page.getByRole("heading", { name: "Page Not Found", exact: true }),
@@ -37,8 +41,93 @@ async function expectNotFoundPage(page: Page, path: string) {
     "/",
   );
   await expect(page.getByRole("navigation")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Sign Out", exact: true }),
+  ).toHaveCount(isAuthenticated ? 1 : 0);
   expect(browserErrors).toEqual([]);
 }
+
+test("Sign Out stays hidden until authentication is confirmed", async ({
+  page,
+}) => {
+  let confirmAuthentication!: () => void;
+  const confirmation = new Promise<void>((resolve) => {
+    confirmAuthentication = resolve;
+  });
+  let markCheckStarted!: () => void;
+  const checkStarted = new Promise<void>((resolve) => {
+    markCheckStarted = resolve;
+  });
+  // Direct 404 loads run route loaders on the server; the only browser RPC is
+  // the page's session-status check after hydration.
+  await page.route("**/_serverFn/**", async (route) => {
+    expect(route.request().method()).toBe("GET");
+    markCheckStarted();
+    await confirmation;
+    await route.fulfill({ json: { result: true } });
+  });
+  const path = `/${createId()}/accounts?tab=BALANCE&mode=active`;
+
+  try {
+    const response = await page.goto(path);
+    expect(response?.status()).toBe(404);
+    await checkStarted;
+    await expectNotFoundPage(page, path, false);
+  } finally {
+    confirmAuthentication();
+  }
+
+  await expectNotFoundPage(page, path);
+});
+
+for (const status of ["signed out", "unavailable"] as const) {
+  test(`Sign Out stays hidden when authentication is ${status}`, async ({
+    page,
+  }) => {
+    const checkCompleted = page.waitForResponse((response) =>
+      response.url().includes("/_serverFn/"),
+    );
+    await page.route("**/_serverFn/**", async (route) => {
+      expect(route.request().method()).toBe("GET");
+      if (status === "signed out") {
+        await route.fulfill({ json: { result: false } });
+      } else {
+        await route.fulfill({
+          status: 503,
+          contentType: "text/plain",
+          body: "Session unavailable",
+        });
+      }
+    });
+    const path = `/${createId()}/accounts?tab=BALANCE&mode=active`;
+    const response = await page.goto(path);
+    expect(response?.status()).toBe(404);
+    await (await checkCompleted).finished();
+    await expectNotFoundPage(page, path, false);
+    await expect(page.getByRole("link", { name: "Go to App" })).toBeVisible();
+  });
+}
+
+test("Sign Out submits the existing POST endpoint", async ({ page }) => {
+  const path = `/${createId()}/accounts?tab=BALANCE&mode=active`;
+  await page.goto(path);
+  await expectNotFoundPage(page, path);
+  await page.route("**/api/logto/sign-out", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: "Signed out",
+    });
+  });
+  const submission = page.waitForRequest(
+    (request) => new URL(request.url()).pathname === "/api/logto/sign-out",
+  );
+
+  await page.getByRole("button", { name: "Sign Out", exact: true }).click();
+  const request = await submission;
+  expect(request.method()).toBe("POST");
+  expect(request.isNavigationRequest()).toBe(true);
+});
 
 async function expectDirectNotFound(page: Page, path: string) {
   const response = await page.goto(path);

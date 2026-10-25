@@ -27,6 +27,15 @@ home route resolve the user's current accessible book or book creation page. The
 recovery link performs a full navigation to discard stale client-side book
 options.
 
+After hydration, the 404 page checks the current session through
+`getAuthenticationStatus` and shows a secondary **Sign Out** button only for a
+confirmed signed-in user. The native POST form reuses `/api/logto/sign-out`. The
+check reads authentication context without redirecting, querying the database,
+or loading profile/book data. Its response is `Cache-Control: no-store`; each
+mount checks again. Sign Out stays hidden while checking, for signed-out
+visitors, and if the check fails. The 404 content and **Go to App** remain
+available throughout, without adding authentication to the root loader.
+
 Server functions signal missing resources with
 `throw notFound({ routeId: rootRouteId })` from `@tanstack/react-router`. Do not
 throw a raw `Response` for these failures: it cannot be serialized as route
