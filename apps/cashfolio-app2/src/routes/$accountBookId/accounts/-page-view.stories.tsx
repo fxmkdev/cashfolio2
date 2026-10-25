@@ -1529,19 +1529,17 @@ export const ExpenseCategories: Story = {
     await expect(
       canvas.getByText("Electricity", { exact: true }),
     ).toBeVisible();
-    const viewport =
-      canvasElement.querySelector<HTMLElement>(".ag-grid-viewport");
-    if (!viewport) throw new Error("Missing category grid viewport");
-    if (viewport.clientWidth < 320 + 145) {
-      // Automatic unpinning replaces the action cells after the grid lays out.
-      await waitFor(() =>
-        expect(
-          canvasElement.querySelector(
-            '.ag-grid-pinned-right-cells [col-id="actions"]',
-          ),
-        ).toBeNull(),
-      );
-    }
+    // Name scrolls while row actions remain pinned, including on mobile.
+    await expect(
+      canvasElement.querySelector(
+        '.ag-grid-scrolling-cells [col-id="ag-Grid-AutoColumn"]',
+      ),
+    ).toBeVisible();
+    await expect(
+      canvasElement.querySelector(
+        '.ag-grid-pinned-right-cells [col-id="actions"]',
+      ),
+    ).toBeVisible();
     const body = within(canvasElement.ownerDocument.body);
     for (const [name, reason] of [
       ["Electricity", "Cannot delete category because it has bookings"],
