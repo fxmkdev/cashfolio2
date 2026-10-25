@@ -27,6 +27,31 @@ async function beforeHydration(page: Page, check: () => Promise<void>) {
   }
 }
 
+for (const entity of ["Account", "Category"] as const) {
+  test(`${entity} actions stay disabled until hydration and open on the first click`, async ({
+    page,
+  }) => {
+    const account =
+      entity === "Account" ? seeded.cashAccount : seeded.expenseAccount;
+    const actions = page.getByRole("button", { name: `${entity} Actions` });
+    const edit = page.getByRole("button", { name: "Edit", exact: true });
+    await beforeHydration(page, async () => {
+      await page.goto(`/${seeded.accountBookId}/${account.id}`, {
+        waitUntil: "commit",
+      });
+      await expect(actions).toBeVisible();
+      await expect(actions).toBeDisabled();
+      await expect(edit).toBeDisabled();
+    });
+
+    await expect(edit).toBeEnabled();
+    await actions.click();
+    await expect(
+      page.getByRole("menuitem", { name: "Delete", exact: true }),
+    ).toBeVisible();
+  });
+}
+
 test("settings stay disabled until hydration and preserve the first edit", async ({
   page,
 }) => {

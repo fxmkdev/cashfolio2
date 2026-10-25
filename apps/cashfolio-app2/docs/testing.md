@@ -141,11 +141,12 @@ pnpm --filter cashfolio-app2 lint
 - The app's `typecheck` command includes all E2E tests, helpers, global setup
   and teardown, and `playwright.config.ts`. The existing CI typecheck gate
   checks these files too.
-- General Settings and statement-upload controls use `useHydrated` inside their
-  lazy views to remain disabled in SSR until their own hydration commits. A
-  root-level mount does not mean every Suspense boundary has hydrated.
-  `hydration.spec.ts` holds client scripts to verify the disabled SSR controls,
-  then releases them and verifies the first edit/upload is retained.
+- General Settings, split-button actions, and statement-upload controls use
+  `useHydrated` inside their lazy views to remain disabled in SSR until their
+  own hydration commits. A root-level mount does not mean every Suspense
+  boundary has hydrated. `hydration.spec.ts` holds client scripts to verify the
+  disabled SSR controls, then releases them and verifies the first edit/upload
+  is retained.
 - Use `uploadStatementFile` from `e2e/support/ui` for statement uploads. Unlike
   a click or fill, Playwright's `setInputFiles` does not wait for an enabled
   control. Avoid fixed sleeps or retries to compensate for lost pre-hydration
