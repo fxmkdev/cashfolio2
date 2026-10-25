@@ -194,7 +194,7 @@ When bypass is disabled, app auth behavior remains unchanged.
 
 - Tests run against PostgreSQL.
 - The suite runs a one-time DB reset in Playwright global setup.
-- CI runs two Playwright workers per shard. Playwright keeps
+- CI runs three shards with two Playwright workers per shard. Playwright keeps
   `fullyParallel=false`, so workers run spec files in parallel while tests
   within a spec file remain serial.
 - Each worker gets a unique e2e auth external id through `e2e/support/fixtures`.
