@@ -2,11 +2,11 @@ import { AccountType, Unit } from "../../.prisma-client/enums";
 import type { GroupTreeOption } from "../account-tree/group-tree-select";
 
 const CASH_GROUP_INHERITED_DISABLED_REASON =
-  "Cash account status is inherited from the parent group.";
+  "Cash-flow inclusion is inherited from the parent group.";
 const CASH_GROUP_INELIGIBLE_DESCENDANTS_DISABLED_REASON =
-  "Cash account groups can contain only currency accounts and account sub-groups.";
+  "Groups included in cash flow can contain only currency accounts and account sub-groups.";
 const CASH_GROUP_ACCOUNT_COMPATIBILITY_ERROR =
-  "Cash account groups can contain only currency accounts.";
+  "Groups included in cash flow can contain only currency accounts.";
 
 export type AccountGroupOption = GroupTreeOption & {
   type: string;
@@ -51,9 +51,9 @@ export function getCashAccountDisabledReason(args: {
 }) {
   if (isRootCashAccountEditable(args)) return undefined;
   if (args.groupId) {
-    return "Cash account status is inherited from the selected group.";
+    return "Cash-flow inclusion is inherited from the selected group.";
   }
-  return "Only root-level currency accounts can be marked as cash accounts.";
+  return "Only root-level currency accounts can be included in cash flow directly.";
 }
 
 export function resolveAccountCashAccountFormValue(args: {
@@ -220,7 +220,7 @@ export function getAccountGroupCashParentCompatibilityError(args: {
   );
   if (!parentGroup?.isCashAccount) return null;
   if (args.type !== AccountType.BALANCE) {
-    return "Cash account groups must contain only account groups.";
+    return "Groups included in cash flow must contain only account groups.";
   }
   return canMarkAccountGroupSubtreeAsCash({
     groupId: args.groupId,

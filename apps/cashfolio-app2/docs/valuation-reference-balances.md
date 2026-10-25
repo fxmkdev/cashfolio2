@@ -20,6 +20,13 @@ conversion and pricing. A currency-denominated equity portfolio can therefore
 use the Equities asset class while retaining automatic FX conversion. Manual
 balance adjustments remain ordinary Gain/Loss transactions.
 
+**Include in Cash Flow** is a separate setting stored in
+`Account.isCashAccount`. It selects currency balance accounts for cash-flow
+reporting; transfers entirely between included accounts are excluded from cash
+flow. Selecting the Cash & Cash Equivalents asset class does not enable this
+setting, and changing cash-flow inclusion does not change the asset class. Child
+accounts inherit cash-flow inclusion from their parent group.
+
 Report and History group gains/losses by the account's current asset class for
 all periods. Changing classification moves contributions between reporting
 classes without changing valuation, balances, or total gains/losses. Calculated

@@ -44,7 +44,7 @@ test("supports balance groups, canonicalizes legacy URLs, and persists the unifi
   ).toHaveCount(0);
   await group.getByLabel("Name").fill("Everyday");
   await group
-    .getByRole("checkbox", { name: "Cash Account", exact: true })
+    .getByRole("checkbox", { name: "Include in Cash Flow", exact: true })
     .check();
   await group.getByRole("button", { name: "Create", exact: true }).click();
   await expect(group).toBeHidden();

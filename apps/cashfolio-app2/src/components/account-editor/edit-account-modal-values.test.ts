@@ -287,13 +287,15 @@ describe("account cash group helpers", () => {
         unit: Unit.CURRENCY,
         groupId: "cash-group",
       }),
-    ).toBe("Cash account status is inherited from the selected group.");
+    ).toBe("Cash-flow inclusion is inherited from the selected group.");
     expect(
       getCashAccountDisabledReason({
         type: AccountType.BALANCE,
         unit: Unit.SECURITY,
       }),
-    ).toBe("Only root-level currency accounts can be marked as cash accounts.");
+    ).toBe(
+      "Only root-level currency accounts can be included in cash flow directly.",
+    );
   });
 
   test("blocks cash group options for non-currency assets", () => {
@@ -327,7 +329,9 @@ describe("account cash group helpers", () => {
           groupId: "cash-group",
           accountGroups,
         }),
-      ).toBe("Cash account groups can contain only currency accounts.");
+      ).toBe(
+        "Groups included in cash flow can contain only currency accounts.",
+      );
     },
   );
 

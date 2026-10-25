@@ -1316,7 +1316,7 @@ describe("createAccountGroup", () => {
         },
       }),
     ).rejects.toThrow(
-      "Cash account groups must contain only currency accounts",
+      "Groups included in cash flow must contain only currency accounts",
     );
 
     expect(tx.accountGroup.update).not.toHaveBeenCalled();

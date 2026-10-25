@@ -292,7 +292,9 @@ export const BreakdownToggleSmoke: Story = {
       canvas.getByRole("heading", { name: "Cash Flow Breakdown" }),
     ).toBeInTheDocument();
     await expect(
-      canvas.getByText("Top-level cash account groups in the selected period"),
+      canvas.getByText(
+        "Top-level account groups included in cash flow in the selected period",
+      ),
     ).toBeInTheDocument();
     await expect(
       within(breakdownChartTypeControl).queryByRole("radio", {

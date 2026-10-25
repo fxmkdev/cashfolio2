@@ -110,10 +110,10 @@ describe("validateAccountCashAccountFlag", () => {
   test("rejects non-currency asset cash accounts", () => {
     expect(
       validateAccountCashAccountFlag(true, Unit.SECURITY, AccountType.BALANCE),
-    ).toBe("Cash accounts must be currency accounts");
+    ).toBe("Only currency accounts can be included in cash flow");
     expect(
       validateAccountCashAccountFlag(true, Unit.CURRENCY, AccountType.EQUITY),
-    ).toBe("Cash accounts must be currency accounts");
+    ).toBe("Only currency accounts can be included in cash flow");
   });
 });
 
@@ -126,7 +126,7 @@ describe("validateAccountGroupCashAccountFlag", () => {
 
   test("rejects category cash account groups", () => {
     expect(validateAccountGroupCashAccountFlag(true, AccountType.EQUITY)).toBe(
-      "Cash account groups must be account groups",
+      "Only account groups can be included in cash flow",
     );
   });
 });
@@ -216,7 +216,7 @@ describe("validateAccountInput", () => {
     };
 
     expect(() => validateAccountInput(invalid)).toThrowError(
-      "Cash accounts must be currency accounts",
+      "Only currency accounts can be included in cash flow",
     );
   });
 });
@@ -273,7 +273,7 @@ describe("validateAccountGroupInput", () => {
         type: AccountType.EQUITY,
         isCashAccount: true,
       }),
-    ).toThrowError("Cash account groups must be account groups");
+    ).toThrowError("Only account groups can be included in cash flow");
   });
 });
 

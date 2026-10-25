@@ -130,7 +130,7 @@ export function validateAccountCashAccountFlag(
 ): string | null {
   if (!isCashAccount) return null;
   if (isBalanceAccountType(type) && unit === "CURRENCY") return null;
-  return "Cash accounts must be currency accounts";
+  return "Only currency accounts can be included in cash flow";
 }
 
 export function validateAccountGroupCashAccountFlag(
@@ -139,7 +139,7 @@ export function validateAccountGroupCashAccountFlag(
 ): string | null {
   if (!isCashAccount) return null;
   if (isBalanceAccountType(type)) return null;
-  return "Cash account groups must be account groups";
+  return "Only account groups can be included in cash flow";
 }
 
 export function validateAccountGroupName(

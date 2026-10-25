@@ -154,7 +154,7 @@ describe("account group cash helpers", () => {
           existingNodes,
         }),
       ).toBe(
-        "Cash account groups can contain only currency accounts and account sub-groups.",
+        "Groups included in cash flow can contain only currency accounts and account sub-groups.",
       );
     },
   );
@@ -183,7 +183,7 @@ describe("account group cash helpers", () => {
         existingNodes,
       }),
     ).toBe(
-      "Cash account groups can contain only currency accounts and account sub-groups.",
+      "Groups included in cash flow can contain only currency accounts and account sub-groups.",
     );
   });
 
@@ -195,7 +195,7 @@ describe("account group cash helpers", () => {
         groupId: "group-child",
         existingNodes: [],
       }),
-    ).toBe("Cash account status is inherited from the parent group.");
+    ).toBe("Cash-flow inclusion is inherited from the parent group.");
   });
 
   test("returns a parent group error when moving a non-cashable subtree into a cash group", () => {
@@ -225,7 +225,7 @@ describe("account group cash helpers", () => {
         existingNodes,
       }),
     ).toBe(
-      "Cash account groups can contain only currency accounts and account sub-groups.",
+      "Groups included in cash flow can contain only currency accounts and account sub-groups.",
     );
   });
 
