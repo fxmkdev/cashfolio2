@@ -72,7 +72,7 @@ for (const type of ["BALANCE"] as const) {
       ).toHaveAttribute("aria-colindex", "1");
       await expect(
         page.getByRole("columnheader", { name: "Asset Class", exact: true }),
-      ).toHaveAttribute("aria-colindex", "2");
+      ).toHaveAttribute("aria-colindex", "6");
       expect(
         (
           await page
