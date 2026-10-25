@@ -295,7 +295,7 @@ export function AccountsPageView({
             headerName: "Name",
             field: "name",
             pinned: "left",
-            width: 320,
+            initialWidth: 320,
             minWidth: 320,
             resizable: true,
             filter: "agTextColumnFilter",

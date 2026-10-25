@@ -723,6 +723,25 @@ export const ConstrainedWidthWithGainLoss: Story = {
       );
       expect(canvas.getByText("Household current account")).toBeVisible();
     });
+    const resizeHandle = nameHeader.querySelector<HTMLElement>(
+      ".ag-header-cell-resize",
+    );
+    if (!resizeHandle) throw new Error("Missing Name column resize handle");
+    const bounds = resizeHandle.getBoundingClientRect();
+    const startX = bounds.left + bounds.width / 2;
+    const clientY = bounds.top + bounds.height / 2;
+    await userEvent.pointer([
+      {
+        target: resizeHandle,
+        coords: { clientX: startX, clientY },
+        keys: "[MouseLeft>]",
+      },
+      { target: resizeHandle, coords: { clientX: startX + 100, clientY } },
+      { keys: "[/MouseLeft]" },
+    ]);
+    await waitFor(() =>
+      expect(nameHeader.getBoundingClientRect().width).toBe(420),
+    );
     const viewport = canvasElement.querySelector(".ag-grid-viewport");
     if (!viewport) throw new Error("Could not resolve Accounts viewport");
     expect(viewport.scrollWidth).toBeGreaterThan(viewport.clientWidth);
@@ -765,10 +784,12 @@ export const ConstrainedWidthWithGainLoss: Story = {
     );
     const body = within(canvasElement.ownerDocument.body);
     const editDialog = await findVisibleDialog(body, "Edit Account");
+    expect(nameHeader.getBoundingClientRect().width).toBe(420);
     await userEvent.click(
       within(editDialog).getByRole("button", { name: "Cancel" }),
     );
     await waitFor(() => expect(editDialog).not.toBeInTheDocument());
+    expect(nameHeader.getBoundingClientRect().width).toBe(420);
     const groupRow = canvas
       .getByText("Cash and savings accounts")
       .closest<HTMLElement>(".ag-row");
