@@ -96,8 +96,9 @@ bookings, including existing asset classifications. The enum replacement,
 recreation of the asset-class eligibility constraint and system-account partial
 unique indexes, and rotation of every book's cache revision commit atomically.
 Legacy cache payloads are rejected by current validators. Historical migrations
-remain unchanged. This migration requires the
-[coordinated deployment cutover](deployment.md#balance-account-type-cutover).
+remain unchanged. The existing automatic deployment flow is supported with
+accepted temporary read/write errors while old Machines are replaced; see the
+[deployment and recovery guidance](deployment.md#balance-account-type-cutover).
 
 ## Composite Key Pattern
 

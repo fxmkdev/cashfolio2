@@ -40,45 +40,47 @@ migration payload, not the full repository or workspace install.
 The `20261024120000_unify_balance_account_types` migration is incompatible with
 application images whose generated Prisma client expects `ASSET`/`LIABILITY`.
 Fly runs release migrations before replacing web Machines, so an ordinary
-rolling deployment is **not supported** for this release. Apply this procedure
-separately to each existing environment when its prerequisite stack is deployed:
+automatic deployment can temporarily leave old Machines serving requests against
+the new enum. Account reads and writes can fail between the migration committing
+and replacement completing. This temporary interruption is accepted for this
+release: the existing automatic deployment flow remains supported without an
+additional approval gate, traffic blocking, or stopping old Machines beforehand.
+Operators may optionally block traffic, stop Machines, and pause
+database-writing jobs to manage the interruption within a maintenance window.
 
 1. Build and validate the new immutable image. Record the previous image and
-   take a database backup with a verified restoration procedure. Reserve a
-   maintenance window; do not let automated deployments race the cutover.
-2. Block incoming traffic, including automatic wake-up of old Machines. Pause
-   scheduled cleanup, staging seed, administrative scripts, and other database
-   writers, then stop all old web Machines and wait for in-flight writes to
-   finish. Do not rely on stopping Machines alone while auto-start remains
-   reachable through the proxy.
-3. Run the new image's migration release command against this environment. The
-   migration maps account/group types to `BALANCE`, preserves financial records,
-   recreates the system-account indexes, and rotates book cache revisions in one
-   transaction. Verify migration success before starting web traffic. New
-   environments can apply the full migration history normally.
-4. Start only Machines running the new image. Verify account/category lists,
-   signed bank and credit-card balances, opening-balance edits, imports,
-   Gain/Loss, and Report/History totals. Net worth and booking values must match
-   the pre-cutover results using the same valuations. Verify account creation
-   stores `BALANCE` and system Gain/Loss seeding still works.
-5. Restore traffic and automatic wake-up only after no old image can serve
-   requests. Resume compatible scheduled jobs and deployments. Previously open
-   browser tabs must reload; old mutation types are intentionally rejected.
+   take a database backup with a verified restoration procedure.
+2. Deploy through the existing workflow. The new image's migration release
+   command maps account/group types to `BALANCE`, preserves financial records,
+   recreates the asset-class constraint and system-account indexes, and rotates
+   book cache revisions in one transaction. Fly then replaces the web Machines.
+   New environments can apply the full migration history normally.
+3. Verify migration and replacement success, with all web Machines running the
+   new image. Check account/category lists, signed bank and credit-card
+   balances, opening-balance edits, imports, Gain/Loss, and Report/History
+   totals. Net worth and booking values must match the pre-cutover results using
+   the same valuations. Verify account creation stores `BALANCE` and system
+   Gain/Loss seeding still works.
+4. Previously open browser tabs must reload; old mutation types are
+   intentionally rejected. Retry requests or database-writing jobs that failed
+   during the interruption using the new image. If traffic or jobs were
+   optionally paused, resume them after replacement completes.
 
-If migration fails before commit, keep traffic blocked and inspect Prisma's
-migration status. Verify that the transaction rolled back and resolve the cause;
-then run
+If migration fails before commit, inspect Prisma's migration status. Verify that
+the transaction rolled back and resolve the cause; then run
 `prisma migrate resolve --rolled-back 20261024120000_unify_balance_account_types`
-using the new image's migration tooling before retrying its release command.
-Once the migration commits, **never restart the old image against the migrated
-database**. Rollback requires stopping all new writers and restoring the
-verified pre-cutover database backup together with the previous image,
-accounting for any post-cutover writes. There is no automatic reverse migration
-because the original permanent classification has been removed. Cache revisions
-are restored with the database backup.
+using the new image's migration tooling before retrying its release command. If
+the migration commits but Machine replacement fails, application errors can
+continue until recovery completes. Finish or retry deployment using the new
+image; restarting or rolling back to the old image cannot restore compatibility
+with the migrated database. Database rollback requires stopping all writers and
+restoring the verified pre-cutover database backup together with the previous
+image, accounting for any post-cutover writes. There is no automatic reverse
+migration because the original permanent classification has been removed. Cache
+revisions are restored with the database backup.
 
-This procedure documents an operator-run deployment; creating the migration PR
-does not authorize executing it on production or staging.
+The accepted interruption does not change backup, verification, or rollback
+requirements. No additional deployment gate is required for this migration.
 
 ## Staging release seed
 
