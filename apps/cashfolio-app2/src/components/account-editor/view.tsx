@@ -5,7 +5,6 @@ import {
   isCategoryAccount,
 } from "@/shared/account-presentation";
 import { type EditAccountModalProps } from "./types";
-import { assetClassOptions } from "../../shared/asset-class";
 import {
   Unit,
   AccountType,
@@ -23,6 +22,7 @@ import {
   Tooltip,
   Checkbox,
   Button,
+  Accordion,
 } from "@mantine/core";
 import { GroupTreeSelect } from "../account-tree/group-tree-select";
 import { FormattedNumberInput } from "../controls/formatted-number-input";
@@ -31,6 +31,7 @@ import { Fragment } from "react/jsx-runtime";
 import { StatementImportCsvFormatField } from "./statement-import-csv-format-field";
 import { MutationSubmitFeedback } from "../dialogs/mutation-submit-feedback";
 import { useEditAccountModalController } from "./controller";
+import { AssetClassField } from "./asset-class-field";
 
 export function EditAccountModal(props: EditAccountModalProps) {
   const {
@@ -47,6 +48,8 @@ export function EditAccountModal(props: EditAccountModalProps) {
     isSubmitting,
     isEdit,
     statementImportCsvFormatInputId,
+    statementImportSettingsOpened,
+    setStatementImportSettingsOpened,
     unit,
     type,
     equityAccountSubtype,
@@ -74,7 +77,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
       <form onSubmit={handleSubmit}>
         <Stack gap="xl">
           <Grid>
-            <Grid.Col span={isCategory ? 6 : 12}>
+            <Grid.Col span={{ base: 12, sm: isCategory ? 6 : 12 }}>
               <TextInput
                 label="Name"
                 name="name"
@@ -90,7 +93,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
               />
             </Grid.Col>
             {isCategory && (
-              <Grid.Col span={6}>
+              <Grid.Col span={{ base: 12, sm: 6 }}>
                 <Select
                   label="Type"
                   withAsterisk
@@ -125,7 +128,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
                 />
               </Grid.Col>
             )}
-            <Grid.Col span={9}>
+            <Grid.Col span={{ base: 12, sm: 9 }}>
               <GroupTreeSelect
                 label={isCategory ? "Category Group" : "Group"}
                 searchable
@@ -145,7 +148,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
                 {...form.getInputProps("groupId")}
               />
             </Grid.Col>
-            <Grid.Col span={3}>
+            <Grid.Col span={{ base: 12, sm: 3 }}>
               <NumberInput
                 label="Sort Order"
                 allowDecimal={false}
@@ -153,32 +156,10 @@ export function EditAccountModal(props: EditAccountModalProps) {
               />
             </Grid.Col>
             {isBalanceAccount({ type }) && (
-              <Grid.Col span={3}>
-                <FormattedNumberInput
-                  label="Opening Balance"
-                  description="Use positive amounts for balances you own and negative amounts for balances you owe."
-                  hideControls
-                  {...form.getInputProps("openingBalance")}
-                />
-              </Grid.Col>
-            )}
-            {isBalanceAccount({ type }) && (
               <>
-                <Grid.Col span={12}>
-                  <Select
-                    label="Asset Class"
-                    key={form.key("assetClass")}
-                    placeholder="Unclassified"
-                    clearable
-                    data={[
-                      { value: "", label: "Unclassified" },
-                      ...assetClassOptions,
-                    ]}
-                    description="Classifies what this account represents. Future asset-class reports will apply this selection to all historical periods. Changing it does not change total amounts or valuation."
-                    {...form.getInputProps("assetClass")}
-                  />
-                </Grid.Col>
-                <Grid.Col span={3}>
+                <Grid.Col
+                  span={{ base: 12, sm: unit === Unit.SECURITY ? 3 : 4 }}
+                >
                   <Select
                     label="Unit"
                     withAsterisk
@@ -194,7 +175,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
                   />
                 </Grid.Col>
                 {unit === Unit.CURRENCY ? (
-                  <Grid.Col span={6} key={Unit.CURRENCY}>
+                  <Grid.Col span={{ base: 12, sm: 8 }} key={Unit.CURRENCY}>
                     <CurrencySelect
                       label="Currency"
                       withAsterisk
@@ -207,7 +188,10 @@ export function EditAccountModal(props: EditAccountModalProps) {
                     />
                   </Grid.Col>
                 ) : unit === Unit.CRYPTOCURRENCY ? (
-                  <Grid.Col span={6} key={Unit.CRYPTOCURRENCY}>
+                  <Grid.Col
+                    span={{ base: 12, sm: 8 }}
+                    key={Unit.CRYPTOCURRENCY}
+                  >
                     <CryptocurrencySelect
                       label="Cryptocurrency"
                       withAsterisk
@@ -221,7 +205,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
                   </Grid.Col>
                 ) : unit === Unit.SECURITY ? (
                   <Fragment key={Unit.SECURITY}>
-                    <Grid.Col span={3}>
+                    <Grid.Col span={{ base: 12, sm: 3 }}>
                       <TextInput
                         label="Symbol"
                         withAsterisk
@@ -229,7 +213,7 @@ export function EditAccountModal(props: EditAccountModalProps) {
                         {...form.getInputProps("symbol")}
                       />
                     </Grid.Col>
-                    <Grid.Col span={6}>
+                    <Grid.Col span={{ base: 12, sm: 6 }}>
                       <CurrencySelect
                         label="Trade Currency"
                         withAsterisk
@@ -243,12 +227,6 @@ export function EditAccountModal(props: EditAccountModalProps) {
                     </Grid.Col>
                   </Fragment>
                 ) : null}
-                <Grid.Col span={12}>
-                  <StatementImportCsvFormatField
-                    inputId={statementImportCsvFormatInputId}
-                    inputProps={form.getInputProps("statementImportCsvFormat")}
-                  />
-                </Grid.Col>
                 {canMarkAsCashAccount ? (
                   <Grid.Col span={12}>
                     <Tooltip
@@ -271,9 +249,50 @@ export function EditAccountModal(props: EditAccountModalProps) {
                     </Tooltip>
                   </Grid.Col>
                 ) : null}
+                <Grid.Col span={{ base: 12, sm: 6 }}>
+                  <FormattedNumberInput
+                    label="Opening Balance"
+                    description="Positive for balances you own; negative for amounts you owe."
+                    inputWrapperOrder={[
+                      "label",
+                      "input",
+                      "description",
+                      "error",
+                    ]}
+                    hideControls
+                    {...form.getInputProps("openingBalance")}
+                  />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 6 }}>
+                  <AssetClassField
+                    key={form.key("assetClass")}
+                    {...form.getInputProps("assetClass")}
+                  />
+                </Grid.Col>
               </>
             )}
           </Grid>
+          {isBalanceAccount({ type }) && (
+            <Accordion
+              variant="separated"
+              keepMounted
+              value={statementImportSettingsOpened ? "statement-import" : null}
+              onChange={(value) =>
+                setStatementImportSettingsOpened(value === "statement-import")
+              }
+            >
+              <Accordion.Item value="statement-import">
+                <Accordion.Control>Statement Import Settings</Accordion.Control>
+                <Accordion.Panel>
+                  <StatementImportCsvFormatField
+                    key={form.key("statementImportCsvFormat")}
+                    inputId={statementImportCsvFormatInputId}
+                    inputProps={form.getInputProps("statementImportCsvFormat")}
+                  />
+                </Accordion.Panel>
+              </Accordion.Item>
+            </Accordion>
+          )}
           <MutationSubmitFeedback
             state={submitState}
             onRefreshConstraints={onRefreshConstraints}
