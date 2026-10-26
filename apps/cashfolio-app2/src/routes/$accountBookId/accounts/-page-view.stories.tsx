@@ -816,6 +816,58 @@ export const ActiveHappyPath: Story = {
   render: () => <AccountsPageStoryHarness initialMode="active" />,
 };
 
+export const ExpandedGroupsWithScrolling: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      bulkAssignment
+      expandGroups
+      rowsOverride={[
+        activeAssetRows[0],
+        ...Array.from({ length: 40 }, (_, index) => ({
+          ...activeAssetRows[2],
+          id: `scroll-account-${index}`,
+          name: `Account ${index + 1}`,
+          parentId: "group-assets",
+          groupId: "group-assets",
+          sortOrder: index,
+        })),
+      ]}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const viewport =
+      canvasElement.querySelector<HTMLElement>(".ag-grid-viewport")!;
+    await canvas.findByText("Account 1", { exact: true });
+    await waitFor(() =>
+      expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight),
+    );
+
+    viewport.scrollTop = viewport.scrollHeight;
+    await waitFor(() =>
+      expect(canvas.getByText("Account 40", { exact: true })).toBeVisible(),
+    );
+    viewport.scrollTop = 0;
+    await waitFor(() => {
+      expect(viewport.scrollTop).toBe(0);
+      expect(canvas.getByText("Account 1", { exact: true })).toBeVisible();
+    });
+
+    const groupRow = canvasElement.querySelector<HTMLElement>(
+      '.ag-grid-scrolling-container > .ag-row[row-id="group-assets"]',
+    )!;
+    await userEvent.click(groupRow.querySelector(".ag-group-expanded")!);
+    await waitFor(() =>
+      expect(canvas.queryByText("Account 1", { exact: true })).toBeNull(),
+    );
+    await userEvent.click(groupRow.querySelector(".ag-group-contracted")!);
+    await waitFor(() =>
+      expect(canvas.getByText("Account 1", { exact: true })).toBeVisible(),
+    );
+  },
+};
+
 export const ConstrainedWidthWithGainLoss: Story = {
   render: () => (
     <Box w={960} maw="100%">

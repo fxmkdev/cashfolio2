@@ -1272,6 +1272,8 @@ const { pendingScrollRef, handleRowDataUpdated } = useTransactionScroll(
   `fontFamily: "Inter, sans-serif"`
 - AG Grid theme in `src/components/grid/grid-theme.tsx` maps Mantine CSS
   variables to AG Grid theming
+- Grid icon masks do not repeat (`grid-theme.css`), preventing tile-edge
+  artifacts when pinned tree-row chevrons fall on fractional device pixels.
 - PostCSS configured with `postcss-preset-mantine` and `postcss-simple-vars`
 
 ### AG Grid 36 containers and diagnostics

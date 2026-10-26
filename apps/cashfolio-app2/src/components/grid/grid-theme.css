@@ -3,6 +3,11 @@
   -webkit-font-smoothing: var(--mantine-webkit-font-smoothing);
 }
 
+/* Avoid mask tile seams when icons land on fractional device pixels. */
+.ag-icon::before {
+  mask-repeat: no-repeat;
+}
+
 .ag-cell.actions-cell {
   opacity: 0;
   transition: opacity 150ms ease;
