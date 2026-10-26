@@ -1,104 +1,50 @@
 name: Cleanup dynamic preview
 on:
-  pull_request:
-    types:
-      - closed
-
-env:
-  FLYCTL_VERSION: 0.4.115
-
+  pull_request_target:
+    types: [closed]
+permissions:
+  contents: read
+  pull-requests: read
 jobs:
   cleanup-preview:
-    name: Cleanup preview resources
-    if: github.event.pull_request.head.repo.fork == false
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    timeout-minutes: 15
+    environment: preview-cashfolio-provision
+    concurrency:
+      group: cashfolio-app2-preview-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-      - name: Set up flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@master
+      - uses: actions/checkout@v5
         with:
-          version: ${{ env.FLYCTL_VERSION }}
-      - name: Resolve preview resource names
-        id: names
-        uses: ./.github/actions/resolve-preview-names
+          ref: main
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
         with:
-          pr_number: ${{ github.event.pull_request.number }}
-          head_ref: ${{ github.event.pull_request.head.ref }}
-      - name: Delete Fly app
-        run: |
-          set -euo pipefail
-
-          delete_fly_app_if_exists() {
-            local app_name="$1"
-            local fly_status_output=""
-
-            if fly_status_output="$(flyctl status --app "$app_name" 2>&1)"; then
-              echo "Destroying Fly app ${app_name}"
-              flyctl apps destroy "$app_name" --yes
-              return 0
-            fi
-
-            if printf '%s\n' "$fly_status_output" | grep -qiE 'could not find app|app not found|unknown app'; then
-              echo "Fly app ${app_name} does not exist, skipping"
-              return 2
-            fi
-
-            echo "Failed to check status of Fly app ${app_name}:"
-            printf '%s\n' "$fly_status_output"
-            return 1
-          }
-
-          FLY_APP_NEW="${{ steps.names.outputs.fly_app }}"
-          FLY_APP_LEGACY="${{ steps.names.outputs.fly_app_legacy }}"
-
-          new_delete_result=0
-          delete_fly_app_if_exists "$FLY_APP_NEW" || new_delete_result="$?"
-          if [ "$new_delete_result" -eq 1 ]; then
-            exit 1
-          fi
-
-          echo "Trying legacy Fly app name ${FLY_APP_LEGACY}"
-          legacy_delete_result=0
-          delete_fly_app_if_exists "$FLY_APP_LEGACY" || legacy_delete_result="$?"
-          if [ "$legacy_delete_result" -eq 1 ]; then
-            exit 1
-          fi
-
-          if [ "$new_delete_result" -eq 2 ] && [ "$legacy_delete_result" -eq 2 ]; then
-            echo "No Fly preview app found for this PR, nothing to delete"
-          fi
+          node-version: 24
+      - name: Install trusted tooling without PR caches
+        run:
+          pnpm --filter cashfolio-app2 install --frozen-lockfile
+          --ignore-scripts
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: 0.4.115
+      - name: Remove preview app, database and roles
+        run: node apps/cashfolio-app2/scripts/preview/cleanup.ts
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-      - name: Delete Neon branch (new name)
-        id: delete-neon-branch-new
-        # Node 24 upgrade: https://github.com/neondatabase/delete-branch-action/pull/29
-        uses: neondatabase/delete-branch-action@aed9ab1ec86e380312c7b0a9e29942e41349adf6
-        continue-on-error: true
-        with:
-          project_id: ${{ vars.NEON_STAGING_PROJECT_ID }}
-          branch: ${{ steps.names.outputs.neon_branch_name }}
-          api_key: ${{ secrets.NEON_API_KEY }}
-      - name: Delete Neon branch (legacy name)
-        id: delete-neon-branch-legacy
-        # Node 24 upgrade: https://github.com/neondatabase/delete-branch-action/pull/29
-        uses: neondatabase/delete-branch-action@aed9ab1ec86e380312c7b0a9e29942e41349adf6
-        continue-on-error: true
-        with:
-          project_id: ${{ vars.NEON_STAGING_PROJECT_ID }}
-          branch: ${{ steps.names.outputs.neon_branch_legacy }}
-          api_key: ${{ secrets.NEON_API_KEY }}
-      - name: Warn if new Neon branch deletion failed
-        if: steps.delete-neon-branch-new.outcome == 'failure'
+          PREVIEW_DATABASE_ADMIN_URL: ${{ secrets.PREVIEW_DATABASE_ADMIN_URL }}
+          PREVIEW_DATABASE_TARGET: ${{ vars.PREVIEW_DATABASE_TARGET }}
+      - name: Cleanup summary
+        if: always()
         run: |
-          echo "::warning::Failed to delete Neon branch ${NEON_BRANCH_NAME}. It may already be expired or there may be a Neon API/permission issue. Branches are created with a 14-day expiration fallback."
+          {
+            echo '### Preview cleanup'
+            echo "PR: #$PR_NUMBER"
+            echo "Outcome: $OUTCOME"
+          } >> "$GITHUB_STEP_SUMMARY"
         env:
-          NEON_BRANCH_NAME: ${{ steps.names.outputs.neon_branch_name }}
-      - name: Warn if legacy Neon branch deletion failed
-        if: steps.delete-neon-branch-legacy.outcome == 'failure'
-        run: |
-          echo "::warning::Failed to delete legacy Neon branch ${NEON_BRANCH_NAME}. It may already be expired or there may be a Neon API/permission issue."
-        env:
-          NEON_BRANCH_NAME: ${{ steps.names.outputs.neon_branch_legacy }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          OUTCOME: ${{ job.status }}
