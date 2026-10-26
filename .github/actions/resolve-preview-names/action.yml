@@ -1,107 +1,41 @@
 name: Resolve preview resource names
-description:
-  Compute deterministic preview resource names from PR number and branch ref.
+description: Resolve preview names without executing PR-controlled shell input.
 inputs:
   pr_number:
     description: Pull request number
     required: true
   head_ref:
-    description: Pull request head ref (branch name)
+    description: Pull request branch name
+    required: true
+  pr_title:
+    description: Pull request title used for the database name
     required: true
 outputs:
   fly_app:
-    description: Fly app name for preview deploy
     value: ${{ steps.resolve.outputs.fly_app }}
+    description: Fly app name
   fly_app_legacy:
-    description: Legacy Fly app name used before branch-tail suffixing
     value: ${{ steps.resolve.outputs.fly_app_legacy }}
+    description: Legacy Fly app name
   preview_hostname:
-    description: Preview hostname
     value: ${{ steps.resolve.outputs.preview_hostname }}
+    description: Preview hostname
   preview_url:
-    description: Preview URL
     value: ${{ steps.resolve.outputs.preview_url }}
-  neon_branch_name:
-    description: Neon branch name for preview deploy
-    value: ${{ steps.resolve.outputs.neon_branch_name }}
-  neon_branch_legacy:
-    description: Legacy Neon branch name used before branch-tail suffixing
-    value: ${{ steps.resolve.outputs.neon_branch_legacy }}
+    description: Preview URL
+  database_name:
+    value: ${{ steps.resolve.outputs.database_name }}
+    description:
+      Initial database name; provisioning reuses an existing database after
+      title edits
 runs:
   using: composite
   steps:
-    - name: Resolve preview resource names
+    - name: Resolve names
       id: resolve
       shell: bash
+      run: node apps/cashfolio-app2/scripts/preview/names.ts
       env:
         PR_NUMBER: ${{ inputs.pr_number }}
         HEAD_REF: ${{ inputs.head_ref }}
-      run: |
-        set -euo pipefail
-
-        BRANCH_TAIL="${HEAD_REF##*/}"
-
-        BRANCH_TAIL_SLUG="$(printf '%s' "$BRANCH_TAIL" \
-          | tr '[:upper:]' '[:lower:]' \
-          | sed -E 's/[^a-z0-9-]+/-/g; s/-+/-/g; s/^-+//; s/-+$//')"
-        if [ -z "$BRANCH_TAIL_SLUG" ]; then
-          BRANCH_TAIL_SLUG="branch"
-        fi
-
-        PREFIX="cashfolio-app2-pr-${PR_NUMBER}-"
-        MAX_SUFFIX_LEN=$((63 - ${#PREFIX}))
-        if [ "$MAX_SUFFIX_LEN" -lt 1 ]; then
-          echo "Computed max suffix length is invalid (${MAX_SUFFIX_LEN}) for prefix ${PREFIX}" >&2
-          exit 1
-        fi
-
-        truncate_suffix() {
-          local suffix="$1"
-
-          if [ "${#suffix}" -le "$MAX_SUFFIX_LEN" ]; then
-            printf '%s' "$suffix"
-            return 0
-          fi
-
-          local hash
-          local keep_len
-          local trimmed_suffix
-
-          hash="$(printf '%s' "$suffix" | sha1sum | cut -c1-6)"
-          keep_len=$((MAX_SUFFIX_LEN - 7))
-          if [ "$keep_len" -lt 1 ]; then
-            keep_len=1
-          fi
-
-          trimmed_suffix="${suffix:0:$keep_len}"
-          trimmed_suffix="$(printf '%s' "$trimmed_suffix" | sed -E 's/-+$//')"
-          if [ -z "$trimmed_suffix" ]; then
-            trimmed_suffix="b"
-          fi
-
-          printf '%s-%s' "$trimmed_suffix" "$hash"
-        }
-
-        FLY_BRANCH_TAIL_SLUG="${BRANCH_TAIL_SLUG//github/gh}"
-        FLY_BRANCH_TAIL_SLUG="$(printf '%s' "$FLY_BRANCH_TAIL_SLUG" \
-          | sed -E 's/-+/-/g; s/^-+//; s/-+$//')"
-        if [ -z "$FLY_BRANCH_TAIL_SLUG" ]; then
-          FLY_BRANCH_TAIL_SLUG="branch"
-        fi
-
-        FLY_SUFFIX="$(truncate_suffix "$FLY_BRANCH_TAIL_SLUG")"
-        NEON_SUFFIX="$(truncate_suffix "$BRANCH_TAIL_SLUG")"
-
-        FLY_APP="cashfolio-app2-pr-${PR_NUMBER}-${FLY_SUFFIX}"
-        PREVIEW_HOSTNAME="${FLY_APP}.fly.dev"
-        PREVIEW_URL="https://${PREVIEW_HOSTNAME}/"
-        NEON_BRANCH_NAME="pr-${PR_NUMBER}-${NEON_SUFFIX}-cashfolio-app2"
-
-        {
-          echo "fly_app=${FLY_APP}"
-          echo "fly_app_legacy=cashfolio-app2-pr-${PR_NUMBER}"
-          echo "preview_hostname=${PREVIEW_HOSTNAME}"
-          echo "preview_url=${PREVIEW_URL}"
-          echo "neon_branch_name=${NEON_BRANCH_NAME}"
-          echo "neon_branch_legacy=pr-${PR_NUMBER}-cashfolio-app2"
-        } >> "$GITHUB_OUTPUT"
+        PR_TITLE: ${{ inputs.pr_title }}

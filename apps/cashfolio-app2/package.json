@@ -37,9 +37,10 @@
     "test:provider-usage-cleanup-runner": "node --test scripts/run-provider-usage-cleanup.test.ts",
     "seed:staging": "node dist/staging-seed/seed.mjs",
     "test:staging-seed": "pnpm prisma:generate && vitest run --config vitest.staging-seed.config.ts",
-    "test:staging-release": "node --test scripts/release-staging.test.mjs",
     "build:e2e": "vite build --mode e2e",
-    "test:build-boundary": "node --test scripts/build-boundary.test.ts"
+    "test:build-boundary": "node --test scripts/build-boundary.test.ts",
+    "test:preview": "node --test scripts/preview/*.test.ts",
+    "seed:nonproduction": "node dist/staging-seed/seed.mjs"
   },
   "dependencies": {
     "@logto/node": "^4.0.0",
@@ -63,6 +64,7 @@
     "ag-grid-react": "^36.2.0",
     "decimal.js": "^10.6.0",
     "papaparse": "^5.7.0",
+    "pg": "8.23.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-number-format": "^5.4.5",
@@ -78,6 +80,7 @@
     "@tanstack/eslint-plugin-router": "^1.162.0",
     "@types/node": "^26.6.5",
     "@types/papaparse": "^5.5.2",
+    "@types/pg": "8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@typescript-eslint/utils": "8.72.1",

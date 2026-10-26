@@ -18,7 +18,7 @@ import {
 } from "vitest";
 import { PrismaClient } from "../.prisma-client/client";
 import { EquityAccountSubtype, UserRole } from "../.prisma-client/enums";
-import type { ApprovedSeedTarget } from "./target";
+import type { NeonTarget } from "./target";
 import { generateStagingDataset } from "./dataset";
 import { replaceStagingData } from "./writer";
 import { defaultAssetClassNodes } from "../shared/asset-class";
@@ -73,7 +73,7 @@ function client(connectionString: string) {
 const admin = client(adminUrl.href);
 const fixture = client(databaseUrl.href);
 const seed = client(seedUrl.href);
-const target: ApprovedSeedTarget = {
+const target: NeonTarget = {
   hostname: adminUrl.hostname,
   projectId: "staging-seed-test-project",
   branchId: "staging-seed-test-branch",
@@ -264,6 +264,63 @@ describe("staging seed against disposable PostgreSQL", () => {
     await admin.$disconnect();
   });
 
+  it("bootstraps only explicitly configured administrators in an empty database", async () => {
+    await fixture.$executeRawUnsafe(
+      `TRUNCATE ${applicationTables.map((table) => `"${table}"`).join(", ")} CASCADE`,
+    );
+    await replaceStagingData(
+      seed,
+      { ...config, adminExternalIds: [testerExternalIds[0]] },
+      dataset,
+    );
+    const users = await fixture.user.findMany({
+      orderBy: { externalId: "asc" },
+    });
+    expect(
+      users.find((user) => user.externalId === testerExternalIds[0])?.roles,
+    ).toEqual([UserRole.ADMIN]);
+    expect(
+      users.find((user) => user.externalId === testerExternalIds[1])?.roles,
+    ).toEqual([]);
+    await replaceStagingData(
+      seed,
+      { ...config, adminExternalIds: [testerExternalIds[1]] },
+      dataset,
+    );
+    expect(
+      (
+        await fixture.user.findUniqueOrThrow({
+          where: { externalId: testerExternalIds[1] },
+        })
+      ).roles,
+    ).toEqual([]);
+  });
+
+  it("refuses bootstrap in a nonempty database and rolls back without replacing data", async () => {
+    await fixture.user.updateMany({ data: { roles: [] } });
+    const initial = await snapshot();
+    await expect(
+      replaceStagingData(
+        seed,
+        { ...config, adminExternalIds: [testerExternalIds[0]] },
+        dataset,
+      ),
+    ).rejects.toThrow("existing administrator");
+    expect(await snapshot()).toEqual(initial);
+  });
+
+  it("rejects unconfigured administrator identities without changing data", async () => {
+    const initial = await snapshot();
+    await expect(
+      replaceStagingData(
+        seed,
+        { ...config, adminExternalIds: ["unconfigured"] },
+        dataset,
+      ),
+    ).rejects.toThrow("also be configured testers");
+    expect(await snapshot()).toEqual(initial);
+  });
+
   it("replaces legacy data, preserves tester roles/locales, and creates valid shared books using CRUD-only credentials", async () => {
     const existingAdmin = await fixture.user.findUniqueOrThrow({
       where: { externalId: testerExternalIds[0] },
@@ -415,7 +472,7 @@ describe("staging seed against disposable PostgreSQL", () => {
         },
         dataset,
       ),
-    ).rejects.toThrow("existing staging administrator");
+    ).rejects.toThrow("existing administrator");
     expect(await snapshot()).toEqual(initial);
   });
 

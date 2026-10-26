@@ -9,7 +9,10 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/staging-seed/writer.integration.ts"],
+    include: [
+      "src/staging-seed/writer.integration.ts",
+      "scripts/preview/*.integration.ts",
+    ],
     fileParallelism: false,
     hookTimeout: 120_000,
     testTimeout: 120_000,

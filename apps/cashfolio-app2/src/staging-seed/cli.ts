@@ -9,7 +9,7 @@ try {
   console.error(
     error instanceof SeedSafetyError
       ? error.message
-      : "Staging seed failed; inspect the database using operator credentials.",
+      : "Nonproduction seed failed; inspect the database using operator credentials.",
   );
   process.exitCode = 1;
 }
