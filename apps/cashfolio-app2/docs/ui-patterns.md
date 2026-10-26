@@ -1272,8 +1272,10 @@ const { pendingScrollRef, handleRowDataUpdated } = useTransactionScroll(
   `fontFamily: "Inter, sans-serif"`
 - AG Grid theme in `src/components/grid/grid-theme.tsx` maps Mantine CSS
   variables to AG Grid theming
-- Grid icon masks do not repeat (`grid-theme.css`), preventing tile-edge
-  artifacts when pinned tree-row chevrons fall on fractional device pixels.
+- Tree expand/collapse icons use inline Tabler SVGs from `grid-icons.tsx`,
+  avoiding the masked-icon rendering path in Firefox. `DataGrid` merges
+  caller-provided icon overrides with these defaults; AG Grid still handles
+  expansion, keyboard interactions, and expanded-state accessibility.
 - PostCSS configured with `postcss-preset-mantine` and `postcss-simple-vars`
 
 ### AG Grid 36 containers and diagnostics

@@ -865,6 +865,21 @@ export const ExpandedGroupsWithScrolling: Story = {
     await waitFor(() =>
       expect(canvas.getByText("Account 1", { exact: true })).toBeVisible(),
     );
+
+    const nameCell = canvas
+      .getByText("Assets", { exact: true })
+      .closest<HTMLElement>(".ag-cell")!;
+    await userEvent.click(nameCell);
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => {
+      expect(nameCell).toHaveAttribute("aria-expanded", "false");
+      expect(canvas.queryByText("Account 1", { exact: true })).toBeNull();
+    });
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => {
+      expect(nameCell).toHaveAttribute("aria-expanded", "true");
+      expect(canvas.getByText("Account 1", { exact: true })).toBeVisible();
+    });
   },
 };
 
