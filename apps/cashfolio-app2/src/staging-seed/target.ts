@@ -4,7 +4,7 @@ export const STAGING_SEED_ROLE = "cashfolio_staging_seed";
 
 export class SeedSafetyError extends Error {}
 
-export type ApprovedSeedTarget = {
+export type NeonTarget = {
   hostname: string;
   projectId: string;
   branchId: string;
@@ -13,9 +13,16 @@ export type ApprovedSeedTarget = {
   role: string;
 };
 
+export type ApprovedSeedTarget = NeonTarget & {
+  environment: "staging" | "preview";
+  flyApp: string;
+  migrationRole: string;
+};
+
 export type SeedConfig = {
   target: ApprovedSeedTarget;
   testerExternalIds: string[];
+  adminExternalIds: string[];
   seedConnection: VerifiedConnection;
 };
 
@@ -32,7 +39,7 @@ export type VerifiedConnection = {
   max: number;
 };
 
-function requireValue(env: NodeJS.ProcessEnv, key: string): string {
+export function requireValue(env: NodeJS.ProcessEnv, key: string): string {
   const value = env[key]?.trim();
   if (!value) throw new SeedSafetyError(`${key} is required.`);
   return value;
@@ -40,49 +47,61 @@ function requireValue(env: NodeJS.ProcessEnv, key: string): string {
 
 export function readSeedConfig(
   env: NodeJS.ProcessEnv = process.env,
-  requireEnabled = true,
 ): SeedConfig {
-  if (env.APP_ENVIRONMENT !== "staging") {
-    throw new SeedSafetyError("Seeding is permitted only in staging.");
-  }
-  if (requireEnabled && env.STAGING_SEED_ENABLED !== "true") {
-    throw new SeedSafetyError("Staging seeding has not been enabled.");
+  if (!["staging", "preview"].includes(env.APP_ENVIRONMENT ?? "")) {
+    throw new SeedSafetyError(
+      "Seeding is permitted only in staging or preview.",
+    );
   }
   if (env.PGOPTIONS?.trim()) {
-    throw new SeedSafetyError(
-      "PGOPTIONS overrides are forbidden for staging seeding.",
-    );
+    throw new SeedSafetyError("PGOPTIONS overrides are forbidden for seeding.");
   }
 
-  const target = parseApprovedTarget(requireValue(env, "STAGING_SEED_TARGET"));
-  const testerExternalIds = [
-    ...new Set(
-      requireValue(env, "STAGING_SEED_USER_EXTERNAL_IDS")
-        .split(",")
-        .map((id) => id.trim()),
-    ),
-  ];
-  if (testerExternalIds.some((id) => !id || /[\r\n]/.test(id))) {
+  const target = parseApprovedTarget(requireValue(env, "SEED_TARGET"));
+  if (
+    target.environment !== env.APP_ENVIRONMENT ||
+    target.flyApp !== env.FLY_APP_NAME
+  ) {
     throw new SeedSafetyError(
-      "Tester IDs must be a nonempty comma-separated list.",
+      "The approved target does not match this environment and Fly app.",
     );
   }
+  const testerExternalIds = readExternalIds(
+    requireValue(env, "SEED_USER_EXTERNAL_IDS"),
+  );
+  const adminExternalIds = readExternalIds(
+    requireValue(env, "SEED_ADMIN_EXTERNAL_IDS"),
+  );
+  if (adminExternalIds.some((id) => !testerExternalIds.includes(id)))
+    throw new SeedSafetyError(
+      "Configured administrators must also be configured testers.",
+    );
   return {
     target,
     testerExternalIds,
+    adminExternalIds,
     seedConnection: parseVerifiedConnection(
-      requireValue(env, "STAGING_SEED_DATABASE_URL"),
+      requireValue(env, "SEED_DATABASE_URL"),
       target,
     ),
   };
 }
 
-export function parseApprovedTarget(raw: string): ApprovedSeedTarget {
+export function readExternalIds(raw: string): string[] {
+  const ids = [...new Set(raw.split(",").map((id) => id.trim()))];
+  if (!ids.length || ids.some((id) => !id || /[\r\n]/.test(id)))
+    throw new SeedSafetyError(
+      "Tester IDs must be a nonempty comma-separated list.",
+    );
+  return ids;
+}
+
+export function parseNeonTarget(raw: string): NeonTarget {
   let value: unknown;
   try {
     value = JSON.parse(raw);
   } catch {
-    throw new SeedSafetyError("STAGING_SEED_TARGET must be valid JSON.");
+    throw new SeedSafetyError("The approved target must be valid JSON.");
   }
   const keys = [
     "hostname",
@@ -93,9 +112,7 @@ export function parseApprovedTarget(raw: string): ApprovedSeedTarget {
     "role",
   ];
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new SeedSafetyError(
-      "STAGING_SEED_TARGET must be an approved target object.",
-    );
+    throw new SeedSafetyError("The approved target must be an object.");
   }
   const record = value as Record<string, unknown>;
   if (
@@ -103,10 +120,10 @@ export function parseApprovedTarget(raw: string): ApprovedSeedTarget {
     keys.some((key) => typeof record[key] !== "string" || !record[key])
   ) {
     throw new SeedSafetyError(
-      "STAGING_SEED_TARGET requires hostname, projectId, branchId, endpointId, database and role.",
+      "The approved target requires hostname, projectId, branchId, endpointId, database and role.",
     );
   }
-  const target = record as ApprovedSeedTarget;
+  const target = record as NeonTarget;
   if (
     !/^ep-[a-z0-9-]+$/.test(target.endpointId) ||
     target.endpointId.endsWith("-pooler") ||
@@ -114,19 +131,66 @@ export function parseApprovedTarget(raw: string): ApprovedSeedTarget {
     !/^ep-[a-z0-9-]+(?:\.[a-z0-9-]+)+\.neon\.tech$/.test(target.hostname) ||
     !/^[a-z0-9-]+$/.test(target.projectId) ||
     !/^br-[a-z0-9-]+$/.test(target.branchId) ||
-    !/^[a-zA-Z0-9_]+$/.test(target.database) ||
-    target.role !== STAGING_SEED_ROLE
+    !/^[a-zA-Z0-9_-]{1,63}$/.test(target.database) ||
+    !/^[a-zA-Z0-9_]{1,63}$/.test(target.role)
   ) {
     throw new SeedSafetyError(
-      "The approved staging target must identify a direct Neon endpoint and the dedicated seed role.",
+      "The approved target must identify a direct Neon endpoint, database and role.",
     );
   }
   return target;
 }
 
+export function parseApprovedTarget(raw: string): ApprovedSeedTarget {
+  let value: ApprovedSeedTarget;
+  try {
+    value = JSON.parse(raw) as ApprovedSeedTarget;
+  } catch {
+    throw new SeedSafetyError("SEED_TARGET must be valid JSON.");
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new SeedSafetyError("SEED_TARGET must be an approved target object.");
+  const { environment, flyApp, migrationRole, ...destination } = value;
+  parseNeonTarget(JSON.stringify(destination));
+  if (
+    !["staging", "preview"].includes(environment) ||
+    typeof flyApp !== "string" ||
+    !/^[a-z0-9-]{1,63}$/.test(flyApp) ||
+    typeof migrationRole !== "string" ||
+    !/^[a-zA-Z0-9_]{1,63}$/.test(migrationRole) ||
+    migrationRole === value.role
+  )
+    throw new SeedSafetyError(
+      "The target must identify staging or preview, a Fly app and a separate migration role.",
+    );
+  if (
+    environment === "staging" &&
+    (value.role !== STAGING_SEED_ROLE ||
+      flyApp.startsWith("cashfolio-app2-pr-"))
+  )
+    throw new SeedSafetyError(
+      "Staging requires its dedicated seed role and app.",
+    );
+  if (environment === "preview") {
+    const pr = /^pr-([1-9][0-9]*)-[a-z0-9-]+-cashfolio-app2$/.exec(
+      value.database,
+    )?.[1];
+    if (
+      !pr ||
+      value.role !== `cashfolio_pr_${pr}_seed` ||
+      migrationRole !== `cashfolio_pr_${pr}_app` ||
+      !flyApp.startsWith(`cashfolio-app2-pr-${pr}-`)
+    )
+      throw new SeedSafetyError(
+        "The preview database, roles and app must identify the same PR.",
+      );
+  }
+  return value;
+}
+
 export function parseVerifiedConnection(
   raw: string,
-  target: ApprovedSeedTarget,
+  target: NeonTarget,
   migration = false,
 ): VerifiedConnection {
   let url: URL;
@@ -158,10 +222,10 @@ export function parseVerifiedConnection(
     database !== target.database ||
     !user ||
     !password ||
-    (!migration && user !== target.role)
+    user !== target.role
   ) {
     throw new SeedSafetyError(
-      "The connection does not match the approved staging endpoint, database or role.",
+      "The connection does not match the approved endpoint, database or role.",
     );
   }
   const allowedParameters = new Set(["sslmode", "channel_binding"]);
@@ -200,7 +264,7 @@ export function parseVerifiedConnection(
 
 export async function verifyServerIdentity(
   connection: Pick<Prisma.TransactionClient, "$queryRaw">,
-  target: ApprovedSeedTarget,
+  target: NeonTarget,
 ): Promise<void> {
   const identities = await connection.$queryRaw<
     Array<{
@@ -225,7 +289,7 @@ export async function verifyServerIdentity(
     )
   ) {
     throw new SeedSafetyError(
-      "The connected database is not the approved staging target; no replacement is permitted.",
+      "The connected database is not the approved target; no replacement is permitted.",
     );
   }
 }
