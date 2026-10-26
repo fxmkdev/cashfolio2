@@ -109,6 +109,11 @@ The same command also verifies period snapshots against real PostgreSQL. It
 pauses a read after balance loading or between pagination queries, commits an
 independent deposit or settings change, and verifies that the paused dataset
 retains the earlier state while the next load sees the complete committed state.
+It also freezes planner statistics in its disposable database, inserts a new
+three-year household fixture after analyzing existing books, and loads four
+yearly snapshots concurrently under the production transaction timeout. This
+guards against slow subtype-exclusion query plans before the next automatic
+`ANALYZE`, alongside a concurrent account-reclassification consistency check.
 
 `e2e/tests/mutation-recovery.spec.ts` verifies rejected simple/split drafts,
 archived selections, archive/delete confirmation errors, account/group edits,

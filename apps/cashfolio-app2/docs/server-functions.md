@@ -617,6 +617,14 @@ Transaction failures propagate rather than falling back to independent reads.
 Calculations, valuation/provider requests, and Redis I/O run after the
 transaction finishes.
 
+Transaction candidate queries resolve income/expense, opening-balance, and
+explicit gain/loss account IDs from metadata read in that same snapshot. Their
+booking predicates filter these IDs directly instead of joining account
+classification for each candidate. This avoids repeated whole-book scans when
+PostgreSQL statistics predate a newly imported or seeded book, which can
+otherwise exhaust the snapshot timeout during cold yearly History loading.
+Opening-balance accounts remain excluded from period equity bookings.
+
 The snapshot loader returns its revision as internal metadata; public responses
 and cached payloads are unchanged. A base-cache miss is persisted only when the
 snapshot revision matches the lookup revision. Derived History metrics also

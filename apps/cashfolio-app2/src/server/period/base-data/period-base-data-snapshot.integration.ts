@@ -19,6 +19,8 @@ import {
 } from "../../../.prisma-client/enums";
 import * as cashFlow from "./period-base-data-cash-flow-transactions.server";
 import type { PeriodBaseDataSnapshot } from "./period-base-data-loader.server";
+import { generateStagingDataset } from "../../../staging-seed/dataset";
+import { insertSeedBooks } from "../../../staging-seed/writer";
 
 const run = promisify(execFile);
 // Match the mutation suite's safety boundary: only a disposable local database.
@@ -247,6 +249,32 @@ describe("period read consistency against disposable PostgreSQL", () => {
     expect(next.revision).not.toBe(snapshot.revision);
   });
 
+  it("keeps transaction subtype filters in the snapshot when an account is reclassified", async () => {
+    await writer.transaction.create({ data: deposit("deposit", 100) });
+    const snapshot = await readDuringCommit(() =>
+      writer.account.update({
+        where: { id_accountBookId: { id: "income", accountBookId: bookId } },
+        data: { equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES },
+      }),
+    );
+    expect(snapshot.data.cashFlowTransactions.map((row) => row.id)).toEqual([
+      "deposit",
+    ]);
+    expect(
+      snapshot.data.executionResidualTransactions.map((row) => row.id),
+    ).toEqual(["deposit"]);
+    expect(snapshot.data.equityBookings[0].equityAccountSubtype).toBe(
+      EquityAccountSubtype.INCOME,
+    );
+    const next = await loadSnapshot({
+      accountBookId: bookId,
+      period: "2026-02",
+    });
+    expect(next.data.cashFlowTransactions).toEqual([]);
+    expect(next.data.executionResidualTransactions).toEqual([]);
+    expect(next.data.equityBookings).toEqual([]);
+  });
+
   it("retains deleted rows and excludes new rows when a mutation commits between pages", async () => {
     const ids = Array.from(
       { length: 201 },
@@ -309,4 +337,63 @@ describe("period read consistency against disposable PostgreSQL", () => {
       "deposit-new",
     ]);
   });
+
+  it("loads concurrent yearly household snapshots before PostgreSQL has statistics for the new book", async () => {
+    // Freeze statistics in this disposable database to reproduce the interval
+    // between a large seed/import and autovacuum's next ANALYZE. Statistics for
+    // existing books underestimate rows in a newly inserted book and used to
+    // produce repeated whole-book scans in subtype exclusion joins.
+    for (const table of ["Booking", "Account", "Transaction"]) {
+      await writer.$executeRawUnsafe(
+        `ALTER TABLE "${table}" SET (autovacuum_enabled = false)`,
+      );
+    }
+    const dataset = generateStagingDataset(new Date("2026-10-10T00:00:00Z"));
+    for (let index = 0; index < 8; index++) {
+      await writer.$transaction((tx) => insertSeedBooks(tx, dataset, []), {
+        timeout: 120_000,
+      });
+    }
+    for (const table of ["Booking", "Account", "Transaction"]) {
+      await writer.$executeRawUnsafe(`ANALYZE "${table}"`);
+    }
+    const seeded = await writer.$transaction(
+      (tx) => insertSeedBooks(tx, dataset, []),
+      { timeout: 120_000 },
+    );
+    const household = seeded.books.find((book) => book.key === "household")!;
+    const snapshots = await Promise.all(
+      ["2023", "2024", "2025", "2026"].map((period) =>
+        loadSnapshot({ accountBookId: household.id, period }),
+      ),
+    );
+    for (const snapshot of snapshots) {
+      expect(snapshot.revision).toBe(snapshots[0].revision);
+      expect(snapshot.data.cashFlowTransactions.length).toBeGreaterThan(100);
+      expect(snapshot.data.holdingTransactions.length).toBeGreaterThan(0);
+      expect(
+        snapshot.data.executionResidualTransactions.length,
+      ).toBeGreaterThan(100);
+      expect(
+        snapshot.data.equityBookings.every(
+          (booking) =>
+            booking.equityAccountSubtype !==
+            EquityAccountSubtype.OPENING_BALANCES,
+        ),
+      ).toBe(true);
+      for (const rows of [
+        snapshot.data.cashFlowTransactions,
+        snapshot.data.holdingTransactions,
+        snapshot.data.executionResidualTransactions,
+      ]) {
+        expect(new Set(rows.map((row) => row.id)).size).toBe(rows.length);
+      }
+    }
+    // Exercise multiple cash-flow and residual pages within the unchanged
+    // production 30-second snapshot timeout, as a cold yearly History does.
+    expect(snapshots[1].data.cashFlowTransactions.length).toBeGreaterThan(200);
+    expect(
+      snapshots[1].data.executionResidualTransactions.length,
+    ).toBeGreaterThan(200);
+  }, 90_000);
 });

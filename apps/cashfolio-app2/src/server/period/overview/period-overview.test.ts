@@ -305,19 +305,28 @@ describe("getPeriodOverview", () => {
 
   it("excludes opening-balance transactions for transaction contributions without filtering holding balances", async () => {
     vi.setSystemTime(new Date("2026-03-10T12:00:00.000Z"));
-    prisma.account.findMany.mockResolvedValue([
-      {
-        id: "asset-holding",
-        name: "AAPL",
-        groupId: null,
-        type: AccountType.BALANCE,
-        unit: Unit.SECURITY,
-        currency: null,
-        cryptocurrency: null,
-        symbol: "AAPL",
-        tradeCurrency: "USD",
-      },
-    ]);
+    prisma.account.findMany
+      .mockResolvedValueOnce([
+        {
+          id: "asset-holding",
+          name: "AAPL",
+          groupId: null,
+          type: AccountType.BALANCE,
+          unit: Unit.SECURITY,
+          currency: null,
+          cryptocurrency: null,
+          symbol: "AAPL",
+          tradeCurrency: "USD",
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "opening",
+          name: "Opening Balances",
+          groupId: null,
+          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+        },
+      ]);
     prisma.booking.findMany.mockImplementation((args) => {
       if (args.where?.account?.type === AccountType.EQUITY) {
         return Promise.resolve([]);
@@ -350,10 +359,7 @@ describe("getPeriodOverview", () => {
             expect.objectContaining({
               bookings: {
                 none: {
-                  account: {
-                    type: AccountType.EQUITY,
-                    equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-                  },
+                  accountId: { in: ["opening"] },
                 },
               },
             }),
@@ -374,20 +380,29 @@ describe("getPeriodOverview", () => {
 
   it("excludes opening-balance transactions from cash flow in the account-book start period", async () => {
     vi.setSystemTime(new Date("2026-02-10T12:00:00.000Z"));
-    prisma.account.findMany.mockResolvedValue([
-      {
-        id: "asset-cash",
-        name: "Cash",
-        groupId: null,
-        type: AccountType.BALANCE,
-        unit: Unit.CURRENCY,
-        currency: "CHF",
-        cryptocurrency: null,
-        symbol: null,
-        tradeCurrency: null,
-        isCashAccount: true,
-      },
-    ]);
+    prisma.account.findMany
+      .mockResolvedValueOnce([
+        {
+          id: "asset-cash",
+          name: "Cash",
+          groupId: null,
+          type: AccountType.BALANCE,
+          unit: Unit.CURRENCY,
+          currency: "CHF",
+          cryptocurrency: null,
+          symbol: null,
+          tradeCurrency: null,
+          isCashAccount: true,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "opening",
+          name: "Opening Balances",
+          groupId: null,
+          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+        },
+      ]);
     prisma.booking.findMany.mockResolvedValue([]);
     prisma.booking.groupBy.mockResolvedValue([]);
 
@@ -415,10 +430,7 @@ describe("getPeriodOverview", () => {
             expect.objectContaining({
               bookings: {
                 none: {
-                  account: {
-                    type: AccountType.EQUITY,
-                    equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-                  },
+                  accountId: { in: ["opening"] },
                 },
               },
             }),

@@ -1,7 +1,3 @@
-import {
-  AccountType,
-  EquityAccountSubtype,
-} from "../../../.prisma-client/enums";
 import type { PeriodReadClient } from "./period-read-client";
 import { toMoney } from "../../../shared/money";
 import type { PeriodBaseExecutionResidualTransaction } from "./period-base-data-types";
@@ -11,6 +7,8 @@ const TRANSACTIONS_PAGE_SIZE = 200;
 export async function loadPeriodExecutionResidualTransactionsRaw(
   args: {
     accountBookId: string;
+    incomeExpenseAccountIds: string[];
+    excludedAccountIds: string[];
     periodStart: Date;
     periodEndExclusive: Date;
   },
@@ -36,15 +34,7 @@ export async function loadPeriodExecutionResidualTransactionsRaw(
           {
             bookings: {
               some: {
-                account: {
-                  type: AccountType.EQUITY,
-                  equityAccountSubtype: {
-                    in: [
-                      EquityAccountSubtype.INCOME,
-                      EquityAccountSubtype.EXPENSE,
-                    ],
-                  },
-                },
+                accountId: { in: args.incomeExpenseAccountIds },
               },
             },
           },
@@ -60,20 +50,7 @@ export async function loadPeriodExecutionResidualTransactionsRaw(
           {
             bookings: {
               none: {
-                account: {
-                  type: AccountType.EQUITY,
-                  equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-                },
-              },
-            },
-          },
-          {
-            bookings: {
-              none: {
-                account: {
-                  type: AccountType.EQUITY,
-                  equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
-                },
+                accountId: { in: args.excludedAccountIds },
               },
             },
           },

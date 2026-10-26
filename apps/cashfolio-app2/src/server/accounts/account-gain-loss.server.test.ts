@@ -116,6 +116,28 @@ beforeEach(() => {
 });
 
 describe("account G/L queries", () => {
+  it("uses snapshot opening-balance account IDs when loading holding transactions", async () => {
+    mocks.accounts
+      .mockResolvedValueOnce([account("a")])
+      .mockResolvedValueOnce([{ id: "opening" }]);
+    await loadAccountGainLossRange({
+      accountBookId: "book",
+      asOfDate: new Date("2026-02-01T00:00:00Z"),
+    });
+    expect(mocks.accounts).toHaveBeenCalledWith({
+      where: {
+        accountBookId: "book",
+        type: "EQUITY",
+        equityAccountSubtype: "OPENING_BALANCES",
+      },
+      select: { id: true },
+    });
+    expect(mocks.transactions).toHaveBeenCalledWith(
+      expect.objectContaining({ openingBalanceAccountIds: ["opening"] }),
+      expect.any(Object),
+    );
+  });
+
   it("aggregates balance accounts and archived descendants in a nested hierarchy", async () => {
     mocks.groups.mockResolvedValueOnce([
       { id: "root", parentGroupId: null, type: "BALANCE", isActive: true },

@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  AccountType,
-  EquityAccountSubtype,
-  Unit,
-} from "../../../.prisma-client/enums";
+import { Unit } from "../../../.prisma-client/enums";
 import { toMoney } from "../../../shared/money";
 import { toNumericMoney } from "../../money-boundary";
 const prisma = vi.hoisted(() => ({ transaction: { findMany: vi.fn() } }));
@@ -12,6 +8,8 @@ import { loadPeriodExecutionResidualTransactionsRaw } from "./period-base-data-e
 
 const args = {
   accountBookId: "book-1",
+  incomeExpenseAccountIds: ["income", "expense"],
+  excludedAccountIds: ["opening", "gain-loss"],
   periodStart: new Date("2026-02-01"),
   periodEndExclusive: new Date("2026-03-01"),
 };
@@ -43,6 +41,7 @@ describe("execution-residual candidate loader", () => {
   it("scopes candidates by book, completion period, income/expense, and excludes opening/explicit bookings", async () => {
     await loadPeriodExecutionResidualTransactionsRaw(
       {
+        ...args,
         accountBookId: "book-1",
         periodStart: new Date("2026-01-01T00:00:00.000Z"),
         periodEndExclusive: new Date("2026-02-01T00:00:00.000Z"),
@@ -69,25 +68,14 @@ describe("execution-residual candidate loader", () => {
         expect.objectContaining({
           bookings: expect.objectContaining({
             some: expect.objectContaining({
-              account: {
-                type: AccountType.EQUITY,
-                equityAccountSubtype: {
-                  in: [
-                    EquityAccountSubtype.INCOME,
-                    EquityAccountSubtype.EXPENSE,
-                  ],
-                },
-              },
+              accountId: { in: ["income", "expense"] },
             }),
           }),
         }),
         expect.objectContaining({
           bookings: {
             none: {
-              account: {
-                type: AccountType.EQUITY,
-                equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
-              },
+              accountId: { in: ["opening", "gain-loss"] },
             },
           },
         }),
@@ -124,10 +112,7 @@ describe("execution-residual candidate loader", () => {
         {
           bookings: {
             none: {
-              account: {
-                type: AccountType.EQUITY,
-                equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-              },
+              accountId: { in: ["opening", "gain-loss"] },
             },
           },
         },
