@@ -1,5 +1,9 @@
 import { useMemo } from "react";
-import { ROOT_PARENT_KEY, type TreeRow } from "./-page-types";
+import {
+  ROOT_PARENT_KEY,
+  type GroupAssetClassSummary,
+  type TreeRow,
+} from "./-page-types";
 
 export type GroupBalanceAggregation = {
   sum: number;
@@ -23,6 +27,54 @@ export function useRowsByParentKey(rows: TreeRow[]): Map<string, TreeRow[]> {
     }
     return siblingRowsByParentKey;
   }, [rows]);
+}
+
+export function useRowsWithGroupAssetClasses(
+  rowsByParentKey: Map<string, TreeRow[]>,
+  rows: TreeRow[],
+  enabled = true,
+): TreeRow[] {
+  return useMemo(
+    () => (enabled ? addGroupAssetClassSummaries(rowsByParentKey, rows) : rows),
+    [enabled, rowsByParentKey, rows],
+  );
+}
+
+export function addGroupAssetClassSummaries(
+  rowsByParentKey: Map<string, TreeRow[]>,
+  rows: TreeRow[],
+): TreeRow[] {
+  const summaries = new Map<string, GroupAssetClassSummary | undefined>();
+
+  const summarizeGroup = (
+    groupId: string,
+  ): GroupAssetClassSummary | undefined => {
+    if (summaries.has(groupId)) return summaries.get(groupId);
+
+    let summary: GroupAssetClassSummary | undefined;
+    for (const child of rowsByParentKey.get(groupId) ?? []) {
+      const childSummary =
+        child.nodeType === "account"
+          ? (child.assetClass ?? null)
+          : summarizeGroup(child.id);
+      if (childSummary === undefined) continue;
+      summary =
+        summary === undefined || summary === childSummary
+          ? childSummary
+          : "Mixed";
+    }
+
+    summaries.set(groupId, summary);
+    return summary;
+  };
+
+  return rows.map((row) => {
+    if (row.nodeType !== "accountGroup") return row;
+    const groupAssetClass = summarizeGroup(row.id);
+    return row.groupAssetClass === groupAssetClass
+      ? row
+      : { ...row, groupAssetClass };
+  });
 }
 
 export function useSelectedSiblingRows(

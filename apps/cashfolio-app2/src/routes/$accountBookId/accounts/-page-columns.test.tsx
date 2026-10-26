@@ -101,7 +101,23 @@ describe("account list column value getters", () => {
     }
   });
 
-  it("leaves groups, virtual Archived rows, totals, and missing data blank", () => {
+  it.each([
+    [AssetClass.EQUITIES, "Equities"],
+    [null, "Unclassified"],
+    ["Mixed", "Mixed"],
+  ] as const)("displays group summary %s as %s", (groupAssetClass, label) => {
+    for (const isVirtualArchivedGroup of [true, false]) {
+      expect(
+        getAccountListAssetClassValue({
+          ...createGroupRow(),
+          groupAssetClass,
+          isVirtualArchivedGroup,
+        }),
+      ).toBe(label);
+    }
+  });
+
+  it("leaves empty groups, totals, and missing data blank", () => {
     for (const row of [
       createGroupRow(),
       { ...createGroupRow(), isVirtualArchivedGroup: true },
@@ -350,4 +366,45 @@ describe("asset class column", () => {
       pinned: "right",
     });
   });
+
+  it.each([
+    [AssetClass.EQUITIES, "Equities"],
+    [null, "Unclassified"],
+    ["Mixed", "Mixed"],
+    [undefined, undefined],
+  ] as const)(
+    "uses the group display label for filtering and tooltips (%s)",
+    (groupAssetClass, label) => {
+      const column = readColumns(false).find(
+        (candidate) => "colId" in candidate && candidate.colId === "assetClass",
+      );
+      if (
+        !column ||
+        !("valueGetter" in column) ||
+        typeof column.valueGetter !== "function" ||
+        typeof column.tooltipValueGetter !== "function"
+      ) {
+        throw new Error("Missing asset class getters");
+      }
+      const data = { ...createGroupRow(), groupAssetClass };
+      expect(
+        column.valueGetter({ data } as Parameters<
+          typeof column.valueGetter
+        >[0]),
+      ).toBe(label);
+      expect(
+        column.tooltipValueGetter({ data } as Parameters<
+          typeof column.tooltipValueGetter
+        >[0]),
+      ).toBe(label);
+      const rendered = column.cellRenderer({ value: label });
+      if (label === "Unclassified") {
+        expect(
+          (rendered as ReactElement<{ c: string; children: string }>).props,
+        ).toMatchObject({ c: "dimmed", children: "Unclassified" });
+      } else {
+        expect(rendered).toBe(label ?? null);
+      }
+    },
+  );
 });
