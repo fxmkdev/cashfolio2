@@ -46,9 +46,22 @@ test("assigns selected active and archived accounts, replaces existing classes, 
     await clickGridRowSelectionCheckbox(
       page.locator(`.ag-row[row-id="${id}"]`).first(),
     );
+  const toolbar = page.getByRole("toolbar", {
+    name: "Selected Account Actions",
+  });
+  await expect(toolbar).toContainText("2 accounts selected");
   await expect(
-    page.getByRole("toolbar", { name: "Selected Account Actions" }),
-  ).toContainText("2 accounts selected");
+    toolbar.getByRole("button", { name: "Set Asset Class", exact: true }),
+  ).toBeVisible();
+  await expect(
+    toolbar.getByRole("button", { name: "Clear Selection", exact: true }),
+  ).toBeVisible();
+  await expect(
+    toolbar.getByRole("button", {
+      name: "Move Accounts to Group",
+      exact: true,
+    }),
+  ).toHaveCount(0);
   await page
     .getByRole("button", { name: "Set Asset Class", exact: true })
     .click();

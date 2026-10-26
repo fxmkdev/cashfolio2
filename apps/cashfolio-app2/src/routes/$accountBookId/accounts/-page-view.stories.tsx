@@ -1,9 +1,3 @@
-import {
-  getMoveCashFlowChanges,
-  getMovingAccounts,
-  cashFlowChangesMatch,
-} from "@/shared/bulk-account-move";
-import { getMoveAccountsData } from "./-move-accounts-data";
 import { useBulkAccountActions } from "./-use-bulk-account-actions";
 import type { GridApi } from "ag-grid-enterprise";
 import type { AccountsGridRow } from "./-page-types";
@@ -361,9 +355,6 @@ function AccountsPageStoryHarness({
   const [assetClasses, setAssetClasses] = useState<
     Record<string, AssetClass | null>
   >({});
-  const [movedAccounts, setMovedAccounts] = useState<
-    Record<string, { groupId: string | null; isCashAccount: boolean }>
-  >({});
   const [submittedAccountIds, setSubmittedAccountIds] = useState<string[]>([]);
   const [refreshCount, setRefreshCount] = useState(0);
   const [invalidationCount, setInvalidationCount] = useState(0);
@@ -431,18 +422,11 @@ function AccountsPageStoryHarness({
       ...(Object.hasOwn(assetClasses, row.id)
         ? { assetClass: assetClasses[row.id] }
         : {}),
-      ...(movedAccounts[row.id]
-        ? {
-            ...movedAccounts[row.id],
-            groupId: movedAccounts[row.id].groupId ?? undefined,
-            parentId: movedAccounts[row.id].groupId ?? undefined,
-          }
-        : {}),
     }));
     return tab.startsWith("EQUITY-") && !showArchived
       ? sourceRows
       : buildUnifiedAccountTreeRows(sourceRows);
-  }, [mode, tab, showArchived, rowsOverride, assetClasses, movedAccounts]);
+  }, [mode, tab, showArchived, rowsOverride, assetClasses]);
   const rowsByParentKey = useRowsByParentKey(rows);
   const selectedSiblingRows: ReorderGroupChildRow[] = useSelectedSiblingRows(
     rowsByParentKey,
@@ -509,37 +493,6 @@ function AccountsPageStoryHarness({
         ...current,
         ...Object.fromEntries(accountIds.map((id) => [id, assetClass])),
       }));
-    },
-    submitMove: async ({
-      accountIds,
-      targetGroupId,
-      expectedCashFlowChanges,
-    }) => {
-      const data = getMoveAccountsData(rows, accountIds);
-      const group =
-        data.groups.find((group) => group.id === targetGroupId) ?? null;
-      if (
-        !cashFlowChangesMatch(
-          getMoveCashFlowChanges(data.accounts, group),
-          expectedCashFlowChanges,
-        )
-      )
-        throw new Error("Cash-flow inclusion has changed.");
-      const moving = getMovingAccounts(data.accounts, targetGroupId);
-      setMovedAccounts((current) => ({
-        ...current,
-        ...Object.fromEntries(
-          moving.map((account) => [
-            account.id,
-            {
-              groupId: targetGroupId,
-              isCashAccount: group?.isCashAccount ?? account.isCashAccount,
-            },
-          ]),
-        ),
-      }));
-      setSubmittedAccountIds(accountIds);
-      return { count: moving.length };
     },
     invalidate: () => setInvalidationCount((count) => count + 1),
     onRefreshConstraints: async () => {
@@ -1794,6 +1747,20 @@ export const BulkAssetClassSelection: Story = {
     await expect(await canvas.findByRole("status")).toHaveTextContent(
       "1 account selected",
     );
+    const toolbar = within(
+      canvas.getByRole("toolbar", { name: "Selected Account Actions" }),
+    );
+    await expect(
+      toolbar.getByRole("button", { name: "Set Asset Class" }),
+    ).toBeVisible();
+    await expect(
+      toolbar.getByRole("button", { name: "Clear Selection" }),
+    ).toBeVisible();
+    await expect(
+      toolbar.queryByRole("button", {
+        name: "Move Accounts to Group",
+      }),
+    ).not.toBeInTheDocument();
     await userEvent.click(
       canvas.getByRole("button", { name: "Set Asset Class" }),
     );
@@ -2141,50 +2108,5 @@ export const BulkFilteredGroupCheckboxSelection: Story = {
     await expect(
       canvasElement.querySelector('[row-id="old"] [col-id="assetClass"]'),
     ).toHaveTextContent("Digital Assets");
-  },
-};
-
-export const BulkMoveToGroup: Story = {
-  render: () => (
-    <AccountsPageStoryHarness
-      initialMode="active"
-      bulkAssignment
-      expandGroups
-      rowsOverride={bulkRows.map((row) =>
-        row.id === "account-checking" ? { ...row, isCashAccount: true } : row,
-      )}
-    />
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const body = within(canvasElement.ownerDocument.body);
-    await selectAssignmentAccount(canvasElement, "account-checking");
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Move Accounts to Group" }),
-    );
-    const dialog = within(
-      await findVisibleDialog(body, "Move Accounts to Group"),
-    );
-    await expect(dialog.getByRole("button", { name: "Move" })).toBeDisabled();
-    await userEvent.click(dialog.getByLabelText("Destination Group"));
-    await userEvent.click(body.getByRole("option", { name: "Empty" }));
-    await expect(
-      dialog.getByText(/1 will be excluded from cash flow: Checking/),
-    ).toBeVisible();
-    await userEvent.click(dialog.getByRole("button", { name: "Move" }));
-    await waitFor(() =>
-      expect(
-        body.queryByRole("dialog", { name: "Move Accounts to Group" }),
-      ).not.toBeInTheDocument(),
-    );
-    await expect(
-      canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
-    ).not.toBeInTheDocument();
-    await expect(canvas.getByTestId("assignment-refreshes")).toHaveTextContent(
-      "invalidations: 1",
-    );
-    await expect(
-      canvas.getByTestId("assignment-account-ids"),
-    ).toHaveTextContent("account-checking");
   },
 };

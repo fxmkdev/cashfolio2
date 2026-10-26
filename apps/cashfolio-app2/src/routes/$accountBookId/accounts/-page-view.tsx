@@ -1,6 +1,5 @@
 import { AssetClassAssignmentDialog } from "./-asset-class-assignment";
 import { BulkAccountToolbar } from "./-bulk-account-toolbar";
-import { MoveAccountsDialog } from "./-move-accounts-dialog";
 import type { BulkAccountActions } from "./-use-bulk-account-actions";
 import {
   getAccountManagementPath,
@@ -297,29 +296,6 @@ export function AccountsPageView({
           target={bulkAccountActions.assetClassTarget}
           onClose={bulkAccountActions.close}
           onSubmit={bulkAccountActions.applyAssetClass}
-          onRefreshConstraints={bulkAccountActions.onRefreshConstraints}
-        />
-      )}
-      {bulkAccountActions?.moveTarget && (
-        <MoveAccountsDialog
-          target={bulkAccountActions.moveTarget}
-          rows={rows}
-          existingAccounts={[
-            ...new Map(
-              [...existingNodes, ...(archivedExistingNodes ?? [])]
-                .filter((node) => node.nodeType === "account")
-                .map((node) => [
-                  node.id,
-                  {
-                    id: node.id,
-                    name: node.name,
-                    groupId: node.groupId ?? null,
-                  },
-                ]),
-            ).values(),
-          ]}
-          onClose={bulkAccountActions.close}
-          onSubmit={bulkAccountActions.applyMove}
           onRefreshConstraints={bulkAccountActions.onRefreshConstraints}
         />
       )}

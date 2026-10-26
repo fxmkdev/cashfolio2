@@ -301,14 +301,14 @@ Unit, cash flags, groups, or other fields. Users can choose any class or clear
 back to Unclassified. Income, expense, and system equity accounts do not expose
 this selector.
 
-Accounts supports checkbox selection with **Set Asset Class** and **Move to
-Group** toolbar actions. Balance-account leaves, real groups, and virtual
-Archived groups show checkboxes. Group checkboxes select matching descendant
-accounts, including nested and archived accounts regardless of expansion, using
-AG Grid's native filtered-descendant selection. Empty groups have disabled
-checkboxes; totals and categories are excluded. Groups show native
-checked/indeterminate states, and individual accounts can be excluded from a
-selection. The toolbar counts accounts, and requests contain only account IDs.
+Accounts supports checkbox selection with the **Set Asset Class** toolbar
+action. Balance-account leaves, real groups, and virtual Archived groups show
+checkboxes. Group checkboxes select matching descendant accounts, including
+nested and archived accounts regardless of expansion, using AG Grid's native
+filtered-descendant selection. Empty groups have disabled checkboxes; totals and
+categories are excluded. Groups show native checked/indeterminate states, and
+individual accounts can be excluded from a selection. The toolbar counts
+accounts, and requests contain only account IDs.
 
 Filtered-out selections are removed, header select-all uses the filtered account
 set, and clearing a filter does not add accounts to an existing selection.
@@ -319,25 +319,6 @@ explicit asset class or Unclassified. Applying replaces existing classifications
 for the selected accounts and all historical Report/History periods. Errors
 retain the choice for retry. Success clears selection and refreshes data. Groups
 do not store a class or provide inheritance.
-
-**Move Accounts to Group** uses the same selected account IDs. Accounts move
-directly to the destination; groups and subgroups stay in place. Users
-explicitly choose a compatible real group or **No Group**; virtual Archived
-wrappers are never destinations. Active accounts require active groups, while
-archived-only selections may use archived groups. Groups included in cash flow
-require currency accounts. Name conflicts use the existing case-insensitive,
-accent-sensitive account-name rules, including archived destination accounts and
-conflicts among selected accounts. Conflicts block the complete move.
-
-The move dialog lists accounts whose inherited cash-flow inclusion will change,
-with included/excluded counts and names, and explains the effect on historical
-Cash Flow. No Group preserves each account's current cash-flow inclusion. The
-server rechecks the reviewed change sets within the book mutation transaction;
-stale changes fail before any write and refresh choices without discarding the
-destination. Accounts already in the destination are skipped. Other fields,
-including asset class, instrument identity, import configuration, and sort
-order, are preserved. Success clears selection and refreshes the account list
-once.
 
 Assets and liabilities show classification beside the type and unit badges in
 the ledger header. The gray pill uses the light variant for a selected class and

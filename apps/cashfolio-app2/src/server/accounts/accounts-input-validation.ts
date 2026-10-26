@@ -1,4 +1,3 @@
-import type { MoveAccountsInput } from "../../shared/bulk-account-move";
 import {
   AssetClass,
   AccountType,
@@ -163,11 +162,9 @@ export function validateSetAccountsAssetClassInput(data: unknown): {
 function readAccountIds(
   data: Record<string, unknown>,
   field: string,
-  allowEmpty = false,
 ): string[] {
   const ids = requireArrayField(data, field);
-  if (!allowEmpty && !ids.length)
-    throw new Error("Select at least one account.");
+  if (!ids.length) throw new Error("Select at least one account.");
   return [
     ...new Set(
       Array.from(ids, (id) =>
@@ -179,22 +176,4 @@ function readAccountIds(
       ),
     ),
   ];
-}
-
-export function validateMoveAccountsInput(data: unknown): MoveAccountsInput {
-  assertRecord(data);
-  const changes = data.expectedCashFlowChanges;
-  assertRecord(changes, "Expected cash-flow changes are required.");
-  return {
-    accountBookId: requireStringField(data, "accountBookId"),
-    accountIds: readAccountIds(data, "accountIds"),
-    targetGroupId:
-      data.targetGroupId === null
-        ? null
-        : requireStringField(data, "targetGroupId"),
-    expectedCashFlowChanges: {
-      includedAccountIds: readAccountIds(changes, "includedAccountIds", true),
-      excludedAccountIds: readAccountIds(changes, "excludedAccountIds", true),
-    },
-  };
 }

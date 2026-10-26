@@ -1,4 +1,3 @@
-import type { MoveAccountsInput } from "@/shared/bulk-account-move";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AgGridReactProps } from "ag-grid-react";
 import type { GridApi } from "ag-grid-enterprise";
@@ -20,11 +19,6 @@ export function useBulkAccountActions(args: {
     accountIds: string[],
     assetClass: AssetClass | null,
   ) => Promise<unknown>;
-  submitMove?: (
-    data: Omit<MoveAccountsInput, "accountBookId" | "accountIds"> & {
-      accountIds: string[];
-    },
-  ) => Promise<{ count: number }>;
   invalidate: () => void;
   onRefreshConstraints?: () => Promise<void>;
 }) {
@@ -32,7 +26,6 @@ export function useBulkAccountActions(args: {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [assetClassTarget, setAssetClassTarget] =
     useState<AccountBulkActionTarget>();
-  const [moveTarget, setMoveTarget] = useState<AccountBulkActionTarget>();
   const clearSelection = useCallback(() => {
     apiRef.current?.deselectAll();
     setSelectedIds([]);
@@ -40,7 +33,6 @@ export function useBulkAccountActions(args: {
   useEffect(() => {
     clearSelection();
     setAssetClassTarget(undefined);
-    setMoveTarget(undefined);
   }, [args.scopeKey, clearSelection]);
 
   const reconcileSelection = useCallback((api: GridApi<AccountsGridRow>) => {
@@ -106,42 +98,15 @@ export function useBulkAccountActions(args: {
     gridProps,
     selectedCount: selectedAccounts.length,
     assetClassTarget,
-    moveTarget,
     clearSelection,
     openAssetClass: () => {
       if (selectedAccounts.length)
         setAssetClassTarget(createAccountBulkActionTarget(selectedAccounts));
     },
-    openMove: args.submitMove
-      ? () => {
-          if (selectedAccounts.length)
-            setMoveTarget(createAccountBulkActionTarget(selectedAccounts));
-        }
-      : undefined,
     close: () => {
       setAssetClassTarget(undefined);
-      setMoveTarget(undefined);
     },
     onRefreshConstraints: args.onRefreshConstraints,
-    applyMove: async (
-      data: Pick<
-        MoveAccountsInput,
-        "targetGroupId" | "expectedCashFlowChanges"
-      >,
-    ) => {
-      if (!moveTarget || !args.submitMove) return;
-      const result = await args.submitMove({
-        ...data,
-        accountIds: moveTarget.accountIds,
-      });
-      setMoveTarget(undefined);
-      clearSelection();
-      args.invalidate();
-      notifications.show({
-        color: "green",
-        message: `${result.count} ${result.count === 1 ? "account" : "accounts"} moved.`,
-      });
-    },
     applyAssetClass: async (assetClass: AssetClass | null) => {
       if (!assetClassTarget) return;
       await args.submitAssetClass(assetClassTarget.accountIds, assetClass);

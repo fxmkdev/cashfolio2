@@ -16,11 +16,6 @@ export function BulkAccountToolbar({
       <Button variant="light" onClick={actions.openAssetClass}>
         Set Asset Class
       </Button>
-      {actions.openMove && (
-        <Button variant="light" onClick={actions.openMove}>
-          Move Accounts to Group
-        </Button>
-      )}
       <Button variant="subtle" onClick={actions.clearSelection}>
         Clear Selection
       </Button>

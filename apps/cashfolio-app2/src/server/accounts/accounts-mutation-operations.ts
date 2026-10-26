@@ -20,5 +20,3 @@ export {
 export { reorderAccountTreeItemsOperation } from "./mutations/reorder";
 
 export { setAccountsAssetClassOperation } from "./mutations/asset-class";
-
-export { moveAccountsOperation } from "./mutations/move-accounts";
