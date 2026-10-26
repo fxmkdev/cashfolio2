@@ -17,7 +17,6 @@ export {
 
 export {
   setAccountsAssetClass,
-  moveAccounts,
   archiveAccount,
   archiveAccountGroup,
   createAccount,

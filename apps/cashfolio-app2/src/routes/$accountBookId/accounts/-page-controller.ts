@@ -11,7 +11,6 @@ import type { TransformedFormValues } from "@/components/account-editor/edit-acc
 import type { AccountGroupTransformedFormValues } from "@/components/account-editor/edit-account-group-modal";
 import {
   setAccountsAssetClass,
-  moveAccounts,
   archiveAccount,
   archiveAccountGroup,
   createAccount,
@@ -450,8 +449,6 @@ export function useAccountsPageController(args: {
       setAccountsAssetClass({
         data: { accountBookId: args.accountBookId, accountIds, assetClass },
       }),
-    submitMove: (data) =>
-      moveAccounts({ data: { ...data, accountBookId: args.accountBookId } }),
     invalidate: args.invalidate,
     onRefreshConstraints,
   });
