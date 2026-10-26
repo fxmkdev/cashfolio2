@@ -11,7 +11,7 @@ import { validateAccountInput } from "../shared/account-validation";
 import {
   SeedSafetyError,
   verifyServerIdentity,
-  type ApprovedSeedTarget,
+  type NeonTarget,
 } from "./target";
 
 export type SeedSummary = {
@@ -48,8 +48,9 @@ function validateSeedAccounts(dataset: SeedDataset): void {
 }
 
 type ReplacementConfig = {
-  target: ApprovedSeedTarget;
+  target: NeonTarget;
   testerExternalIds: string[];
+  adminExternalIds?: string[];
 };
 
 function isTransactionConflict(error: unknown): boolean {
@@ -235,15 +236,45 @@ async function replaceStagingDataOnce(
         LOCK TABLE "User", "AccountBook", "UserAccountBookLink", "AccountGroup",
           "Account", "Transaction", "Booking" IN SHARE ROW EXCLUSIVE MODE
       `;
+      const adminIds = config.adminExternalIds ?? [];
+      if (adminIds.some((id) => !config.testerExternalIds.includes(id)))
+        throw new SeedSafetyError(
+          "Configured administrators must also be configured testers.",
+        );
+      const tableCounts = await Promise.all([
+        tx.user.count(),
+        tx.accountBook.count(),
+        tx.userAccountBookLink.count(),
+        tx.accountGroup.count(),
+        tx.account.count(),
+        tx.transaction.count(),
+        tx.booking.count(),
+      ]);
+      if (tableCounts.every((count) => count === 0)) {
+        if (!adminIds.length)
+          throw new SeedSafetyError(
+            "An empty database requires explicitly configured administrators.",
+          );
+        for (const externalId of adminIds)
+          await tx.user.create({
+            data: {
+              id: createId(),
+              externalId,
+              locale: "en-CH",
+              roles: [UserRole.ADMIN],
+            },
+          });
+      }
       const retainedAdmins = await tx.user.count({
         where: {
           externalId: { in: config.testerExternalIds },
           roles: { has: UserRole.ADMIN },
+          deletionPending: false,
         },
       });
       if (!retainedAdmins) {
         throw new SeedSafetyError(
-          "Configured testers must include an existing staging administrator before replacement.",
+          "Configured testers must include an existing administrator before replacement.",
         );
       }
       await tx.booking.deleteMany();

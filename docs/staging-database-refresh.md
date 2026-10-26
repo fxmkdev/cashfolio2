@@ -1,23 +1,17 @@
 # Synthetic staging data
 
-Every staging application deployment can replace its application data with a
-synthetic personal-finance dataset. Seeding is initially disabled until the
-operator completes the destination and credential checks below. Production and
-preview releases always use the migration-only release command.
+Every staging and preview application deployment applies migrations and replaces
+application data with the shared synthetic dataset. Production remains
+migration-only. Missing approved seed settings fail the nonproduction release;
+there is no seed enablement flag or silent migration-only fallback.
 
-When enabled, the staging release command first verifies both the dedicated seed
-connection and the application's migration connection read-only, applies Prisma
-migrations, and replaces the application data in one transaction. The reset
-locks all seven application tables against concurrent writes; reads continue and
-waiting edits resume after commit. Any validation, migration, or seed failure
-fails the release before application Machines update. Deployments for the same
-environment are serialized across main builds, manual Deploy runs, and the daily
-refresh workflow.
-
-Replacement makes at most three transaction attempts for deadlocks or Prisma
-transaction write conflicts, waiting 100 ms and then 200 ms before retries. Each
-attempt repeats destination verification and lock acquisition. Other errors fail
-immediately; exhausted retries fail the release.
+The release command verifies both the seed connection and migration connection
+read-only before migrations, grants narrowly scoped seed permissions after
+migrations, then replaces application data in one transaction. The replacement
+locks all seven application tables against concurrent writes and verifies server
+identity again inside the transaction. Any failure fails the release before web
+Machines update. Transaction conflicts/deadlocks get at most three attempts,
+with 100 ms and 200 ms retry delays; other failures fail immediately.
 
 Seed accounts are checked with shared application account validation before the
 replacement transaction begins and before direct seed insertion writes. Invalid
@@ -32,11 +26,11 @@ unit fields before validation.
 The corrected fixtures take effect through the normal staging refresh or
 deployment; changing them does not immediately modify deployed data.
 
-The `Refresh staging database` workflow rebuilds and redeploys staging daily at
-03:30 Europe/Zurich, keeping the dataset current even without code changes. It
-also supports manual runs from `main`. It no longer resets staging from
-production. The two UTC schedules retain exactly one run for Zurich's current
-UTC offset.
+The `Refresh staging database` workflow still rebuilds and redeploys staging
+daily at 03:30 Europe/Zurich, and supports manual dispatch from `main`. Staging
+stays on its existing database. Preview databases are independent, initially
+empty databases on a fixed preview-only host; see
+[Preview environments](preview-environments.md).
 
 The history covers the rolling three years through today's Zurich calendar date,
 uses CHF as the reference currency, and includes Swiss household income,
@@ -223,70 +217,51 @@ deployment; adding it to the seed source does not reset staging immediately.
 
 ## Configure the approved target
 
-Manually configure these secrets on the staging Fly app, following the existing
-staging/production secret-provisioning convention. No copies are required in
-GitHub:
+Before deploying the shared release runner, install these secrets on the staging
+Fly app. Use a protected file (mode `0600`) and `flyctl secrets import --stage`
+with stdin so values do not appear in shell history or command arguments.
 
-- Secret `STAGING_SEED_DATABASE_URL`: a **direct** Neon connection string for
-  the dedicated `cashfolio_staging_seed` role created only on staging. Never use
-  the production owner credential. There is no fallback to `DATABASE_URL`.
-- Secret `STAGING_SEED_TARGET`: JSON containing the reviewed destination below.
-- Secret `STAGING_SEED_USER_EXTERNAL_IDS`: a comma-separated list of tester
-  Logto external IDs. Include an existing staging administrator; replacement
-  fails before removing data if no configured tester already has `ADMIN`. Use at
-  least two tester identities to exercise sharing. Roles are preserved; new app
-  users receive no administrator role automatically.
-
-Keep `STAGING_SEED_ENABLED` as a variable in the `staging-cashfolio-app` GitHub
-environment. Leave it `false` or unset until all checks pass, then set exactly
-`true`. Other nonempty values fail the staging release. CI includes this
-non-secret flag in the generated Fly configuration.
+- `SEED_DATABASE_URL`: direct verified-TLS connection for the existing dedicated
+  `cashfolio_staging_seed` role. It has no fallback to the app's `DATABASE_URL`.
+- `SEED_TARGET`: the exact reviewed JSON destination below, including the actual
+  staging Fly app name and actual migration role from `DATABASE_URL`.
+- `SEED_USER_EXTERNAL_IDS`: nonempty comma-separated tester Logto external IDs.
+- `SEED_ADMIN_EXTERNAL_IDS`: nonempty comma-separated administrator external
+  IDs, all also present in the tester list. These only bootstrap a fully empty
+  application database. Existing databases must retain a configured, active
+  administrator; seeding never promotes another tester in a nonempty database.
 
 ```json
 {
+  "environment": "staging",
+  "flyApp": "your-staging-fly-app",
   "hostname": "ep-approved-staging.eu-central-1.aws.neon.tech",
   "projectId": "approved-project-id",
   "branchId": "br-approved-staging",
   "endpointId": "ep-approved-staging",
   "database": "neondb",
-  "role": "cashfolio_staging_seed"
+  "role": "cashfolio_staging_seed",
+  "migrationRole": "neondb_owner"
 }
 ```
 
-Obtain these identifiers from the reviewed Neon staging branch and its primary
-compute. Compare them against the existing preview `NEON_STAGING_PROJECT_ID` and
-`NEON_STAGING_BRANCH_ID`; those variables must still identify this same staging
-branch. Exact hostname matching is required, including the actual region. The
-seed rejects pooled endpoints, routing overrides, and a mismatched database or
-role. Use port 5432 and `sslmode=verify-full`; the client verifies certificates.
+The environment and Fly app must match the running Machine's `APP_ENVIRONMENT`
+and `FLY_APP_NAME`. Both connections must identify the exact project, fixed
+branch, endpoint, database and their respective approved roles. Missing or
+mismatched metadata fails closed. The seed URL must be direct, port 5432, with
+`sslmode=verify-full`; a same-endpoint pooled migration URL may use
+`sslmode=require`, but preflight still verifies its TLS certificate. Routing
+options, duplicate query parameters and `PGOPTIONS` are forbidden.
 
-After provisioning the role below, create an empty input file outside the
-repository and restrict it to permissions `0600` before entering secrets. Using
-a trusted editor, include three `NAME=VALUE` lines: the dedicated seed URL, the
-reviewed target JSON on one line, and the comma-separated tester IDs. Replace
-the app name and file path in this example with the reviewed staging app and
-your protected file:
+Keep the old `STAGING_SEED_*` secrets until the first new staging release
+succeeds, then remove them and the obsolete `STAGING_SEED_ENABLED` GitHub
+variable. New code reads only `SEED_*`. Do not place staging seed credentials on
+preview apps or production. Preview settings are generated by trusted
+provisioning with a separate database and role for each PR.
 
-```bash
-umask 077
-touch /secure/path/staging-seed.env
-chmod 600 /secure/path/staging-seed.env
-# Populate the file with the three values using a trusted editor before importing.
-flyctl secrets import --app YOUR_STAGING_FLY_APP --stage < /secure/path/staging-seed.env
-```
-
-Using stdin keeps secret values out of command arguments and shell history.
-Remove the input file after successful import. `--stage` stores the secrets
-without deploying or enabling seeding; the next deployment consumes them.
-Complete the credential and destination checks below before enabling the flag.
-
-CI does not create, update, or copy staging seed secrets. Automatic Fly secret
-provisioning remains limited to dynamic previews' ordinary application secrets;
-previews receive no seed credentials or configuration. The application migration
-connection remains the existing Fly `DATABASE_URL`. The seed URL provides only
-data permissions and is never used to run migrations. Do not set these secrets
-on production or preview Fly apps. An enabled release with missing configuration
-fails its read-only preflight before migrations or replacement.
+Configured testers preserve their IDs, locales and roles. Newly added testers
+receive no administrator role unless explicitly configured for bootstrap in an
+otherwise completely empty application database. Logto identities are untouched.
 
 ## Provision isolated seed credentials
 
@@ -333,11 +308,10 @@ rejection from the reachable production service. A network failure, timeout, or
 DNS error does not establish credential isolation. Do not record the password or
 connection string in the evidence. Keep only the reviewed endpoint identifiers
 and the successful staging/failed production authentication outcome. A uniquely
-named staging-only role provides isolation without changing projects. New
-preview branches inherit that role, but do not receive the staging seed secret
-and cannot pass the approved-target checks.
+named staging-only role provides isolation without changing projects. The fixed
+preview host has independent roles and receives no staging seed secrets.
 
-## Validate and enable
+## Validate before deployment
 
 Read the following through each staging connection before any replacement:
 
@@ -356,7 +330,7 @@ settings are supplied by the compute and cannot be changed by the session.
 Missing, empty, or mismatched settings fail closed. The migration connection
 must identify the same approved staging database. Verify that staging has the
 settings and that production authentication with the seed credentials fails
-before setting `STAGING_SEED_ENABLED=true`. The first enabled staging release
+before deploying the shared seed release. The first shared staging release
 repeats this read-only preflight before migrations, then validates again before
 replacement.
 
@@ -369,12 +343,11 @@ and populated by its
 
 ## Preview lifecycle and verification
 
-New Neon preview branches copy the seeded staging database when they are
-created. Existing preview branches are reused and keep their current data; they
-are neither reset nor reseeded on subsequent PR deployments. To exercise the new
-dataset in an existing preview, use an explicitly reviewed recreation of that
-preview branch/app or open a new preview after staging has been seeded. See
-[Preview environments](preview-environments.md).
+Previews create empty databases and run migrations plus this same seed code on
+every deployment. They no longer copy staging data or create Neon child
+branches. An initial seed creates only explicitly configured administrator
+identities; subsequent replacements preserve configured tester permissions. See
+[Preview environments](preview-environments.md) for provisioning and cutover.
 
 Verify login and tester book access, sharing and admin access for appropriately
 configured roles, accounts and nested/archived groups, today and historical

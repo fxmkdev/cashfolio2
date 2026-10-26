@@ -27,6 +27,7 @@
     "vite.staging-seed.config.ts",
     "vite.provider-usage-cleanup.config.ts",
     "vitest.provider-usage-cleanup.config.ts",
-    "vitest.staging-seed.config.ts"
+    "vitest.staging-seed.config.ts",
+    "scripts/preview/**/*.ts"
   ]
 }

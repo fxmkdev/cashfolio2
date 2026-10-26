@@ -50,10 +50,6 @@ inputs:
   app_environment:
     description: Application deployment environment
     required: true
-  staging_seed_enabled:
-    description: Whether approved staging synthetic seeding is enabled
-    required: false
-    default: "false"
   release_command:
     description: Release command selected by the deployment workflow
     required: false
@@ -76,7 +72,6 @@ runs:
         cat apps/cashfolio-app2/fly.generated.toml
       env:
         APP_ENVIRONMENT: ${{ inputs.app_environment }}
-        STAGING_SEED_ENABLED: ${{ inputs.staging_seed_enabled }}
         RELEASE_COMMAND: ${{ inputs.release_command }}
         FLY_APP: ${{ inputs.fly_app }}
         FLY_PRIMARY_REGION: ${{ inputs.fly_primary_region }}

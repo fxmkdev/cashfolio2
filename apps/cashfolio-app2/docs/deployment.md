@@ -82,39 +82,37 @@ revisions are restored with the database backup.
 The accepted interruption does not change backup, verification, or rollback
 requirements. No additional deployment gate is required for this migration.
 
-## Staging release seed
+## Nonproduction release seed
 
-The seed CLI lives inside `cashfolio-app2` because it is an app-specific
-deployment task that uses the app’s generated Prisma client and accounting
-conventions. This avoids making `tools/cli` depend on application internals. If
-both projects later need it, extract an independent workspace package for shared
-use.
+Staging and preview deployments run
+`node apps/cashfolio-app2/dist/staging-seed/seed.mjs --release` from the exact
+image being deployed. The shared runner verifies both approved connections
+read-only, applies migrations with the existing reachability retry helper,
+grants application-table seed permissions, then transactionally replaces data.
+Missing configuration fails deployment. Production retains its migration-only
+release command and cannot invoke the seed CLI with its environment.
 
-Staging selects `scripts/release-staging.sh` as its Fly release command. With
-`STAGING_SEED_ENABLED=true`, it verifies the approved seed and migration targets
-read-only before applying migrations, then transactionally replaces staging
-application data. Seeding defaults to disabled until destination and credential
-isolation are verified. Production and preview use the original migration-only
-command and never receive the dedicated seed URL.
+The shared `seed:nonproduction` command executes the built payload. Its
+`--release` option resolves the migration helper relative to the payload, so it
+works from the repository root and the app directory.
 
-Operators manually provision `STAGING_SEED_DATABASE_URL`, `STAGING_SEED_TARGET`,
-and `STAGING_SEED_USER_EXTERNAL_IDS` as secrets on staging's Fly app, following
-the staging/production convention. CI does not set or copy these secrets. The
-`STAGING_SEED_ENABLED` GitHub environment variable remains the non-secret
-deployment flag and defaults to disabled. Missing seed configuration fails the
-enabled release's read-only preflight before migrations. Dynamic previews retain
-automatic provisioning of their ordinary app secrets and receive no seed
-configuration.
+The source and bundled paths retain their historical `staging-seed` name to
+avoid moving the dataset and its tests. `pnpm build:staging-seed` bundles the
+shared runner with the generated Prisma client and accounting conventions;
+Docker copies the complete output directory and query compiler chunks into the
+slim release payload. The command needs no workspace install in that image.
 
-`pnpm build:staging-seed` uses an independent Vite SSR configuration with
-bundled dependencies to produce `dist/staging-seed/seed.mjs` and its dynamic
-query compiler chunks. Docker builds this after Prisma generation and copies the
-entire output directory into the release payload; the seed does not need a
-workspace install in the runtime image. Keep generated chunks beside the entry
-point.
+Staging's `SEED_DATABASE_URL`, `SEED_TARGET`, `SEED_USER_EXTERNAL_IDS`, and
+`SEED_ADMIN_EXTERNAL_IDS` remain operator-provisioned Fly secrets. Previews
+receive only their own generated database/seed credentials from a trusted
+controller on `main`; its database provisioning credential never enters PR code.
+No Neon branching operations are used. Exact Neon identity checks continue to
+protect the configured fixed hosts and databases.
 
-See [Synthetic staging data](../../../docs/staging-database-refresh.md) for the
-approved target, staging-only role, tester access, and enablement procedure.
+See [Synthetic staging data](../../../docs/staging-database-refresh.md) for
+staging setup and [Preview environments](../../../docs/preview-environments.md)
+for the required preview-only host, protected GitHub environment, credentials
+and existing-preview cutover.
 
 ## Provider usage cleanup
 
