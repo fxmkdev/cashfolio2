@@ -229,6 +229,10 @@ describe("server-backed Logto authentication", () => {
     mocks.rows.get(token).data.idToken = makeIdToken(-120);
     expect((await getLogtoContext()).isAuthenticated).toBe(false);
     expect(mocks.cookie).toBe(token);
+    expect((await handleLogtoSignIn()).headers.get("location")).toBe(
+      "/user/delete",
+    );
+    expect(mocks.cookie).toBe(token);
     expect(
       (await getLogtoContext(undefined, { allowDeletionPending: true }))
         .isAuthenticated,

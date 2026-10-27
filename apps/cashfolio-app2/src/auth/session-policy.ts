@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { addDays, addHours, addMinutes } from "date-fns";
+import { addHours, addMinutes } from "date-fns";
 
 export const SESSION_COOKIE = "__Host-cashfolio-session";
 export const LEGACY_SESSION_COOKIE = "logtoCookies";
@@ -15,7 +15,9 @@ export function hashSessionToken(token: string | undefined): string | null {
 }
 
 export function sessionDeadlines(now: Date, authenticated: boolean) {
-  const expiresAt = authenticated ? addDays(now, 14) : addMinutes(now, 10);
+  const expiresAt = authenticated
+    ? addHours(now, 14 * 24)
+    : addMinutes(now, 10);
   return {
     expiresAt,
     idleExpiresAt: authenticated ? addHours(now, 24) : expiresAt,

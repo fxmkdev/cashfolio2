@@ -171,20 +171,28 @@ async function startSignIn(signUp: boolean) {
   const client = createSessionClient(getLogtoConfig(), storage, (url) => {
     navigateToUrl = url;
   });
-  await client.signIn({
-    redirectUri: new URL(
-      "/api/logto/callback",
-      requireEnv("BASE_URL"),
-    ).toString(),
-    ...(signUp ? { interactionMode: "signUp" as const } : {}),
-  });
   const session = await withSessionLock(
     getCookie(SESSION_COOKIE),
     async (tx, current) => {
+      // Preserve deletion-only credentials when an ordinary route sends a
+      // user with incomplete deletion back through sign-in.
+      if (current?.user?.deletionPending) return null;
+      await client.signIn({
+        redirectUri: new URL(
+          "/api/logto/callback",
+          requireEnv("BASE_URL"),
+        ).toString(),
+        ...(signUp ? { interactionMode: "signUp" as const } : {}),
+      });
       await revokeSession(tx, current);
       return createSession(tx, storage.data, null);
     },
   );
+  if (!session)
+    return new Response(null, {
+      status: 302,
+      headers: { Location: "/user/delete" },
+    });
   writeCookie(session);
   return new Response(null, {
     status: 302,

@@ -23,9 +23,17 @@ describe("real Logto SDK session integration", () => {
       idToken: makeIdToken(-1),
       refreshToken: "refresh",
       accessToken: JSON.stringify({
-        "#": { token: "cached", expiresAt: Date.now() / 1000 + 3600 },
+        "@": {
+          token: "cached",
+          scope: "openid profile email",
+          expiresAt: Date.now() / 1000 + 3600,
+        },
       }),
     });
+    expect(
+      await createSessionClient(providerConfig, storage).getAccessToken(),
+    ).toBe("cached");
+    expect(provider.requests).not.toContain(`${providerEndpoint}/token`);
     const { context } = await authenticateSessionClient(
       providerConfig,
       storage,

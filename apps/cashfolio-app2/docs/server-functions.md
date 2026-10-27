@@ -46,6 +46,8 @@ still-valid server session as a deletion-only credential even if Logto cleanup
 has already removed the identity. This path does not require provider refresh,
 so partial cleanup remains retryable. Session absolute/idle deadlines still
 apply. Successful user deletion removes all sessions through the user FK.
+Sign-in redirects a still-valid pending-deletion session back to the deletion
+page, preserving its retry capability when an ordinary route triggers sign-in.
 
 ## Server Function Pattern
 
