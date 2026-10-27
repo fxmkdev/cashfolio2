@@ -6,9 +6,11 @@ import { formatUnitLabel } from "../period-unit-format";
 import { Unit } from "../../../.prisma-client/enums";
 import { createServerFn } from "@tanstack/react-start";
 import { ensureAuthorizedForAccountBookId } from "../../../account-books/functions.server";
-import { prisma } from "../../../prisma.server";
 import { startOfUtcDay } from "../../../shared/date";
-import { normalizePeriodValue } from "../../../shared/period";
+import {
+  formatMonthPeriodLabel,
+  normalizePeriodValue,
+} from "../../../shared/period";
 import { buildRealAccountReconciliation } from "./period-gain-loss-reconciliation-real-account";
 import { VIRTUAL_TRANSFER_CLEARING_ACCOUNT_PREFIX } from "./period-gain-loss-reconciliation-shared";
 import { buildTransferClearingReconciliation } from "./period-gain-loss-reconciliation-transfer-clearing";
@@ -16,10 +18,6 @@ import type {
   GainLossReconciliationDiagnostic,
   PeriodGainLossReconciliation,
 } from "./period-gain-loss-reconciliation-types";
-import {
-  getPeriodEndExclusive,
-  resolvePeriodSelection,
-} from "../period-selection";
 import {
   normalizeUserLocaleInput,
   type UserLocale,
@@ -71,36 +69,22 @@ async function loadPeriodGainLossReconciliationPageData(
 ): Promise<PeriodGainLossReconciliationPageData> {
   await ensureAuthorizedForAccountBookId(data.accountBookId);
 
-  const accountBook = await prisma.accountBook.findUniqueOrThrow({
-    where: { id: data.accountBookId },
-    select: {
-      referenceCurrency: true,
-      startDate: true,
-    },
-  });
-
-  const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
-  const accountBookStartDate = startOfUtcDay(accountBook.startDate);
-  const now = new Date();
-  const selection = resolvePeriodSelection({
-    periodValue: data.period,
-    now,
-    firstBookingDate: accountBookStartDate,
-    locale: data.locale,
-  });
-  const reportPeriodValue = selection.periodValue;
-  const reportPeriodLabel = selection.label;
-  const isBeforeAccountBookStart = selection.to < accountBookStartDate;
-  const queryStart = selection.from;
-  const queryEndExclusive = getPeriodEndExclusive(selection.to);
-  const initialHoldingDate = new Date(
-    queryStart.getTime() - 24 * 60 * 60 * 1000,
-  );
-
   const baseData = await getOrLoadPeriodBaseData({
     accountBookId: data.accountBookId,
     period: data.period,
   });
+  const { selection, referenceCurrency } = baseData;
+  const accountBookStartDate = selection.minPeriodDate;
+  const now = new Date();
+  const reportPeriodValue = selection.periodValue;
+  const reportPeriodLabel =
+    selection.granularity === "month"
+      ? formatMonthPeriodLabel(
+          selection.year,
+          selection.month ?? 0,
+          data.locale,
+        )
+      : String(selection.year);
   const exchangeRateByKey = new Map<string, Promise<Money | null>>();
   const sourceDetails = await loadAccountGainLossSources(
     baseData,
@@ -114,26 +98,14 @@ async function loadPeriodGainLossReconciliationPageData(
     VIRTUAL_TRANSFER_CLEARING_ACCOUNT_PREFIX,
   )
     ? await buildTransferClearingReconciliation({
-        accountBookId: data.accountBookId,
+        baseData,
         accountId: data.accountId,
         exchangeRateByKey,
-        queryStart,
-        queryEndExclusive,
-        initialHoldingDate,
-        periodEnd: selection.to,
-        referenceCurrency,
-        isBeforeAccountBookStart,
       })
     : await buildRealAccountReconciliation({
-        accountBookId: data.accountBookId,
+        baseData,
         accountId: data.accountId,
         exchangeRateByKey,
-        queryStart,
-        queryEndExclusive,
-        initialHoldingDate,
-        periodEnd: selection.to,
-        referenceCurrency,
-        isBeforeAccountBookStart,
       });
 
   const node = sourceDetails.node;
@@ -185,7 +157,7 @@ async function loadPeriodGainLossReconciliationPageData(
       target: details.target,
       referenceCurrency,
       selectedPeriodValue: selection.periodValue,
-      selectedPeriodLabel: selection.label,
+      selectedPeriodLabel: reportPeriodLabel,
       selectedPeriodSpecifier: selection.periodSpecifier,
       selectedGranularity: selection.granularity,
       selectedYear: selection.year,

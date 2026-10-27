@@ -632,6 +632,15 @@ recheck the revision after calculation and skip persistence if it changed or
 cannot be read. An overlapping mutation can therefore return a coherent older
 snapshot without contaminating a newer cache generation.
 
+Gain/loss reconciliation loads the same `PeriodBaseData` snapshot once and uses
+it for both contribution totals and real/virtual account explanation rows. Book
+settings, resolved period bounds, account identities, opening holdings,
+transactions, and transfer-clearing buckets all come from that snapshot. The
+explanation builders do not query Prisma or reload transfer-clearing data during
+valuation. A concurrent edit may leave the response on the older committed
+snapshot, but cannot mix its totals with newer explanation inputs. Labels are
+formatted for the requested locale from the snapshot's resolved month/year.
+
 This guarantee applies to each period overview or History point independently. A
 multi-period History response may contain points from different committed
 revisions; it does not hold one database transaction across all points or

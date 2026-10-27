@@ -375,34 +375,14 @@ describe("Decimal monetary pipelines", () => {
     expect(prisma.transaction.findMany).not.toHaveBeenCalled();
 
     const holding = scenario.baseAssetLiabilityAccounts[0]!;
-    prisma.account.findFirst.mockResolvedValue(holding);
-    prisma.account.findMany.mockResolvedValue([holding]);
-    prisma.booking.groupBy.mockResolvedValue([
-      { accountId: holding.id, _sum: { value: { toString: () => "0.3" } } },
-    ]);
-    prisma.transaction.findMany.mockResolvedValueOnce(
-      scenario.holdingTransactions.map((transaction) => ({
-        ...transaction,
-        bookings: transaction.bookings.map((booking) => ({
-          ...booking,
-          value: { toString: () => booking.value.toString() },
-          account: {
-            type: booking.accountType,
-            equityAccountSubtype: booking.equityAccountSubtype,
-          },
-        })),
-      })),
-    );
     const reconciliation = await buildRealAccountReconciliation({
-      accountBookId: "book-1",
+      baseData: warm,
       accountId: holding.id,
-      queryStart: scenario.selection.from,
-      queryEndExclusive: scenario.selection.queryEndExclusive,
-      initialHoldingDate: scenario.selection.initialHoldingDate,
-      periodEnd: scenario.selection.to,
-      referenceCurrency: "CHF",
-      isBeforeAccountBookStart: false,
     });
+    expect(prisma.account.findFirst).not.toHaveBeenCalled();
+    expect(prisma.account.findMany).not.toHaveBeenCalled();
+    expect(prisma.booking.groupBy).not.toHaveBeenCalled();
+    expect(prisma.transaction.findMany).not.toHaveBeenCalled();
     expect(reconciliation?.summary).toEqual({
       realizedGainLoss: 1.7,
       unrealizedGainLoss: 5.4,

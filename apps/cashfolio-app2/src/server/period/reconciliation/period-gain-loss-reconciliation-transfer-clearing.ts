@@ -1,8 +1,8 @@
+import type { PeriodBaseData } from "../base-data/period-base-data-types";
 import { toNumericMoney } from "../../money-boundary";
 import { type Money } from "../../../shared/money";
 import {
   computeTransferClearingGainLossSplit,
-  loadTransferClearingUnitBuckets,
   type TransferClearingUnitBucket,
 } from "../transfer-clearing/period-transfer-clearing";
 import {
@@ -41,24 +41,15 @@ function findTargetVirtualUnitBucket(args: {
 }
 
 export async function buildTransferClearingReconciliation(args: {
-  accountBookId: string;
+  baseData: PeriodBaseData;
   accountId: string;
-  queryStart: Date;
-  queryEndExclusive: Date;
-  initialHoldingDate: Date;
-  periodEnd: Date;
-  referenceCurrency: string;
-  isBeforeAccountBookStart: boolean;
   exchangeRateByKey?: Map<string, Promise<Money | null>>;
 }): Promise<GainLossReconciliationDetails | null> {
-  const unitBuckets = await loadTransferClearingUnitBuckets({
-    accountBookId: args.accountBookId,
-    periodEndExclusive: args.queryEndExclusive,
-    referenceCurrency: args.referenceCurrency,
-  });
+  const { selection, referenceCurrency, transferClearingUnitBuckets } =
+    args.baseData;
   const targetBucket = findTargetVirtualUnitBucket({
     accountId: args.accountId,
-    unitBuckets,
+    unitBuckets: transferClearingUnitBuckets,
   });
   if (!targetBucket || !targetBucket.isNonReferenceUnit) {
     return null;
@@ -68,7 +59,7 @@ export async function buildTransferClearingReconciliation(args: {
   const realizedEvents: GainLossReconciliationRealizedEvent<Money>[] = [];
   const unrealizedOpenLots: GainLossReconciliationOpenLot<Money>[] = [];
 
-  if (args.isBeforeAccountBookStart) {
+  if (selection.isBeforeAccountBookStart) {
     return toNumericMoney({
       target: {
         accountId: args.accountId,
@@ -93,20 +84,20 @@ export async function buildTransferClearingReconciliation(args: {
     args.exchangeRateByKey ?? new Map<string, Promise<Money | null>>();
   const split = await computeTransferClearingGainLossSplit({
     unitBuckets: [targetBucket],
-    periodStart: args.queryStart,
-    periodEndExclusive: args.queryEndExclusive,
-    initialRateDate: args.initialHoldingDate,
-    periodEnd: args.periodEnd,
+    periodStart: selection.from,
+    periodEndExclusive: selection.queryEndExclusive,
+    initialRateDate: selection.initialHoldingDate,
+    periodEnd: selection.to,
     resolveRate: (input) =>
       getUnitToReferenceExchangeRate({
         ...input,
-        referenceCurrency: args.referenceCurrency,
+        referenceCurrency,
         exchangeRateByKey,
       }),
     convertBookingToReference: (booking) =>
       convertBookingValueToReference({
         ...booking,
-        referenceCurrency: args.referenceCurrency,
+        referenceCurrency,
         exchangeRateByKey,
       }),
     onUnitExecutionEvent: (event) => {
