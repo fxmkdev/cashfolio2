@@ -11,6 +11,7 @@ import { loadHistoryPageData } from "./-page-loader";
 import { buildHistoryAccountDrillNavigation } from "./-account-drilldown";
 import {
   buildHistorySearchNavigation,
+  buildHistoryLegacySearchNavigation,
   buildHistoryViewNavigation,
 } from "./-page-navigation";
 import {
@@ -53,16 +54,13 @@ export const Route = createFileRoute("/$accountBookId/history")({
     }),
     scopedMetric: getHistoryScopedMetric(getHistoryMetric(search)),
   }),
-  beforeLoad: ({ location, params, search }) => {
-    if (
-      "assetScope" in location.search ||
-      "liabilityScope" in location.search
-    ) {
+  beforeLoad: ({ location, params }) => {
+    const navigation = buildHistoryLegacySearchNavigation(location.search);
+    if (navigation) {
       throw redirect({
         to: "/$accountBookId/history",
         params,
-        search,
-        replace: true,
+        ...navigation,
       });
     }
   },

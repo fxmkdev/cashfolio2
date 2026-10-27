@@ -1,8 +1,72 @@
 import { describe, expect, test } from "vitest";
 import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from "@tanstack/react-router";
+import {
+  buildHistoryLegacySearchNavigation,
   buildHistorySearchNavigation,
   buildHistoryViewNavigation,
 } from "./-page-navigation";
+import { parseHistorySearch } from "./-page-types";
+
+describe("legacy History URL canonicalization", () => {
+  test.each([
+    ["metric=assets&assetScope=account:bank", "netWorth", "account:bank"],
+    [
+      "metric=liabilities&liabilityScope=group:cards",
+      "netWorth",
+      "group:cards",
+    ],
+    [
+      "metric=assets&assetScope=total&liabilityScope=account:bank",
+      "assets",
+      null,
+    ],
+    ["metric=income&liabilityScope=account:bank", "income", null],
+    [
+      "metric=assets&assetScope=account:bank&netWorthScope=group:cards",
+      "netWorth",
+      "group:cards",
+    ],
+  ])(
+    "removes legacy keys from %s without redirecting again",
+    (query, metric, scope) => {
+      const root = createRootRoute();
+      const historyRoute = createRoute({
+        getParentRoute: () => root,
+        path: "/$accountBookId/history",
+        validateSearch: parseHistorySearch,
+      });
+      const router = createRouter({
+        routeTree: root.addChildren([historyRoute]),
+        history: createMemoryHistory({
+          initialEntries: [`/book/history?mode=year&${query}`],
+        }),
+      });
+      const navigation = buildHistoryLegacySearchNavigation(
+        router.latestLocation.search,
+      )!;
+      expect(navigation.replace).toBe(true);
+      const location = router.buildLocation({
+        to: "/$accountBookId/history",
+        params: { accountBookId: "book" },
+        ...navigation,
+      });
+      const url = new URL(location.href, "https://cashfolio.test");
+      expect(url.searchParams.get("metric")).toBe(metric);
+      expect(url.searchParams.get("mode")).toBe("year");
+      expect(url.searchParams.get("netWorthScope")).toBe(scope);
+      expect(url.searchParams.has("assetScope")).toBe(false);
+      expect(url.searchParams.has("liabilityScope")).toBe(false);
+      expect(
+        buildHistoryLegacySearchNavigation(location.search),
+      ).toBeUndefined();
+    },
+  );
+});
 
 describe("history page navigation", () => {
   test("uses history replace and preserves existing search params", () => {

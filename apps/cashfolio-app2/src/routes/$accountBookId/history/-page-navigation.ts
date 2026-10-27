@@ -2,6 +2,7 @@ import {
   DEFAULT_HISTORY_SCOPE,
   DEFAULT_HISTORY_METRIC,
   DEFAULT_HISTORY_MODE,
+  parseHistorySearch,
   type HistoryMetric,
   type HistoryPeriodMode,
   type HistoryViewSelection,
@@ -13,6 +14,21 @@ import {
 } from "@/shared/history-scope";
 
 type HistoryNavigationSearch = Record<string, unknown>;
+
+export function buildHistoryLegacySearchNavigation(
+  search: HistoryNavigationSearch,
+) {
+  if (search.assetScope === undefined && search.liabilityScope === undefined)
+    return undefined;
+  return {
+    replace: true,
+    search: {
+      ...parseHistorySearch(search),
+      assetScope: undefined,
+      liabilityScope: undefined,
+    },
+  } as const;
+}
 
 export function buildHistorySearchNavigation(args: {
   mode: HistoryPeriodMode;
