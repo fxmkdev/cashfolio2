@@ -572,8 +572,14 @@ sign; debt amounts are positive magnitudes in those reports.
   blank.
 - `Asset Class` follows the Balance columns, starts at 220px, and can be
   resized. Its text filter and tooltip use the full display label. Unset
-  accounts show muted `Unclassified`; group, virtual Archived, and total rows
-  stay blank. The column preserves the existing sibling ordering and grid-only
+  accounts show muted `Unclassified`. Real groups and virtual Archived groups
+  summarize all descendant accounts, including archived accounts, regardless of
+  collapse or grid filters: one distinct value shows its label; multiple values
+  show `Mixed`. Unclassified counts as a distinct value, so all-unclassified
+  groups show muted `Unclassified`, and classified plus unclassified shows
+  `Mixed` in normal text. Empty subgroups do not contribute a value; groups
+  without descendant accounts and the total row stay blank. Group summaries are
+  read-only. The column preserves the existing sibling ordering and grid-only
   horizontal scrolling.
 - `Balance` is account-level only (group rows are blank), with no aggregation.
 - Currency accounts whose currency matches the account book reference currency

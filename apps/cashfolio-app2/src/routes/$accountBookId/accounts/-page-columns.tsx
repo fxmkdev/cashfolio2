@@ -30,12 +30,14 @@ import { shouldShowReferenceBalanceLoadingIndicator } from "./-reference-balance
 export function getAccountListAssetClassValue(
   data: AccountsGridRow | undefined,
 ): string | undefined {
-  if (
-    !data ||
-    isReferenceCurrencyTotalFooterRow(data) ||
-    data.nodeType !== "account"
-  ) {
+  if (!data || isReferenceCurrencyTotalFooterRow(data)) {
     return undefined;
+  }
+  if (data.nodeType === "accountGroup") {
+    if (data.groupAssetClass === undefined) return undefined;
+    return data.groupAssetClass === "Mixed"
+      ? "Mixed"
+      : getAssetClassLabel(data.groupAssetClass);
   }
   return getAssetClassLabel(data.assetClass);
 }

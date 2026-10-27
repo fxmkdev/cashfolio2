@@ -33,6 +33,7 @@ import {
   useBalanceInReferenceCurrencyByGroupId,
   useReferenceCurrencyBalanceTotal,
   useRowsByParentKey,
+  useRowsWithGroupAssetClasses,
   useSelectedSiblingRows,
 } from "./-page-data";
 import { type RowTarget, useAccountsPageModalState } from "./-page-modal-state";
@@ -344,9 +345,14 @@ export function useAccountsPageController(args: {
       rowsWithAccountReferenceBalances,
       !isEquityTab,
     );
+  const rowsWithGroupAssetClasses = useRowsWithGroupAssetClasses(
+    rowsByParentKeyForGroupAggregation,
+    rowsWithAccountReferenceBalances,
+    !isEquityTab,
+  );
   const rows = useMemo(
     () =>
-      rowsWithAccountReferenceBalances.map((row) => {
+      rowsWithGroupAssetClasses.map((row) => {
         if (row.nodeType !== "accountGroup") {
           return row;
         }
@@ -370,7 +376,7 @@ export function useAccountsPageController(args: {
           balanceInReferenceCurrency: computedReferenceBalance,
         };
       }),
-    [rowsWithAccountReferenceBalances, balanceInReferenceCurrencyByGroupId],
+    [rowsWithGroupAssetClasses, balanceInReferenceCurrencyByGroupId],
   );
   const rowsByParentKey = useRowsByParentKey(rows);
   const selectedSiblingRows = useSelectedSiblingRows(

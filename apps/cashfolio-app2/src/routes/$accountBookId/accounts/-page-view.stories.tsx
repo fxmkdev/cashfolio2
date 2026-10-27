@@ -24,6 +24,7 @@ import {
   useBalanceInReferenceCurrencyByGroupId,
   useReferenceCurrencyBalanceTotal,
   useRowsByParentKey,
+  useRowsWithGroupAssetClasses,
   useSelectedSiblingRows,
 } from "./-page-data";
 import { AccountsPageView, type AccountsPageViewProps } from "./-page-view";
@@ -414,7 +415,7 @@ function AccountsPageStoryHarness({
     routeSearch.mode === "archived" ? "archived" : modeState;
 
   const showArchived = routeSearch.showArchived === true;
-  const rows = useMemo(() => {
+  const sourceRows = useMemo(() => {
     const sourceRows = (
       rowsOverride ?? getRowsFor({ mode, tab, showArchived })
     ).map((row) => ({
@@ -427,12 +428,18 @@ function AccountsPageStoryHarness({
       ? sourceRows
       : buildUnifiedAccountTreeRows(sourceRows);
   }, [mode, tab, showArchived, rowsOverride, assetClasses]);
+  const sourceRowsByParentKey = useRowsByParentKey(sourceRows);
+  const isEquityTab = tab.startsWith("EQUITY-");
+  const rows = useRowsWithGroupAssetClasses(
+    sourceRowsByParentKey,
+    sourceRows,
+    !isEquityTab,
+  );
   const rowsByParentKey = useRowsByParentKey(rows);
   const selectedSiblingRows: ReorderGroupChildRow[] = useSelectedSiblingRows(
     rowsByParentKey,
     reorderingRow,
   );
-  const isEquityTab = tab.startsWith("EQUITY-");
   const balanceInReferenceCurrencyByGroupId =
     useBalanceInReferenceCurrencyByGroupId(rowsByParentKey, rows, !isEquityTab);
   const referenceCurrencyBalanceTotal = useReferenceCurrencyBalanceTotal(
@@ -1731,6 +1738,10 @@ async function selectAssignmentAccount(canvasElement: HTMLElement, id: string) {
   await userEvent.click(canvasElement.querySelector(selector)!);
 }
 
+function assetClassCell(canvasElement: HTMLElement, id: string) {
+  return canvasElement.querySelector(`[row-id="${id}"] [col-id="assetClass"]`);
+}
+
 export const BulkAssetClassSelection: Story = {
   render: () => (
     <AccountsPageStoryHarness
@@ -1818,6 +1829,9 @@ export const BulkAssetClassFilteredSelection: Story = {
       expect(canvas.getByRole("status")).toHaveTextContent(
         "1 account selected",
       ),
+    );
+    await expect(assetClassCell(canvasElement, "portfolio")).toHaveTextContent(
+      "Mixed",
     );
     await userEvent.click(
       canvas.getByRole("button", { name: "Clear Selection" }),
@@ -1936,6 +1950,37 @@ const groupSelectionRows: TreeRow[] = [
   },
 ];
 
+export const GroupAssetClassSummaries: Story = {
+  render: () => (
+    <AccountsPageStoryHarness
+      initialMode="active"
+      rowsOverride={groupSelectionRows}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await waitFor(() =>
+      expect(assetClassCell(canvasElement, "portfolio")).toHaveTextContent(
+        "Mixed",
+      ),
+    );
+    await expect(
+      assetClassCell(canvasElement, "other-group"),
+    ).toHaveTextContent("Fixed Income");
+    await expect(
+      assetClassCell(canvasElement, "__archived__:root"),
+    ).toHaveTextContent("Digital Assets");
+    await expect(assetClassCell(canvasElement, "empty")).toHaveTextContent(
+      /^$/,
+    );
+    await expect(
+      canvasElement.querySelector('[row-id="account-checking"]'),
+    ).toBeNull();
+    await expect(
+      canvasElement.querySelector('[row-id="closed-child"]'),
+    ).toBeNull();
+  },
+};
+
 function assignmentCheckbox(canvasElement: HTMLElement, id: string) {
   return canvasElement.querySelector<HTMLInputElement>(
     `.ag-row[row-id="${id}"] .ag-selection-checkbox input`,
@@ -1963,6 +2008,9 @@ export const BulkGroupCheckboxSelection: Story = {
     const body = within(canvasElement.ownerDocument.body);
     await waitFor(() =>
       expect(assignmentCheckbox(canvasElement, "empty")).toBeDisabled(),
+    );
+    await expect(assetClassCell(canvasElement, "portfolio")).toHaveTextContent(
+      "Mixed",
     );
     await userEvent.click(canvas.getByText("Portfolio", { exact: true }));
     await expect(
@@ -2006,6 +2054,17 @@ export const BulkGroupCheckboxSelection: Story = {
         "account-checking,old,other",
       ),
     );
+    await waitFor(() =>
+      expect(assetClassCell(canvasElement, "portfolio")).toHaveTextContent(
+        "Equities",
+      ),
+    );
+    await expect(assetClassCell(canvasElement, "nested")).toHaveTextContent(
+      "Equities",
+    );
+    await expect(
+      assetClassCell(canvasElement, "other-group"),
+    ).toHaveTextContent("Equities");
     await expect(
       canvas.queryByRole("toolbar", { name: "Selected Account Actions" }),
     ).not.toBeInTheDocument();
