@@ -124,6 +124,16 @@ workers can schedule each lock wait independently. `withBookLock` always
 releases the book lock, including when assertions fail; production lock-wait and
 retry timing remains unchanged.
 
+## Typecheck
+
+`pnpm --filter cashfolio-app2 typecheck` checks application code, colocated
+tests and stories, E2E tests, and handwritten TypeScript tooling. The app's
+`tsconfig.json` includes root-level `.ts` configuration files and TypeScript
+sources under `scripts/`, `eslint-rules/`, and `.storybook/`, including
+Storybook configuration, preview decorators, setup, and stubs. New files in
+these locations are included automatically; add any new tooling source
+directories to the typecheck as well.
+
 ## Lint
 
 - ESLint uses a flat config in `eslint.config.js`.
