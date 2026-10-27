@@ -11,7 +11,6 @@ import type {
   ReconciliationOpenLotInput,
 } from "./period-gain-loss-reconciliation-types";
 
-export const RECONCILIATION_TRANSACTIONS_PAGE_SIZE = 200;
 export const VIRTUAL_TRANSFER_CLEARING_ACCOUNT_PREFIX =
   "virtual:transfer-clearing:account:";
 

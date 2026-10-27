@@ -1,6 +1,95 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { toMoney } from "../../../shared/money";
+import { toMoney, type MoneyInput } from "../../../shared/money";
 import { AccountType, Unit } from "../../../.prisma-client/enums";
+
+import type {
+  PeriodBaseData,
+  PeriodBaseHoldingTransaction,
+} from "../base-data/period-base-data-types";
+import type { TransferClearingBooking } from "../transfer-clearing/period-transfer-clearing-types";
+import { filterConvertibleHoldingAccounts } from "../period-helpers";
+import {
+  getPeriodEndExclusive,
+  resolvePeriodSelection,
+} from "../period-selection";
+import { addUtcDays } from "../../../shared/date";
+
+let baseData: PeriodBaseData;
+
+function setAccounts(
+  accounts: (Partial<PeriodBaseData["baseAssetLiabilityAccounts"][number]> & {
+    id: string;
+  })[],
+) {
+  baseData.baseAssetLiabilityAccounts = accounts.map((account) => ({
+    name: "AAPL Trading",
+    type: AccountType.BALANCE,
+    groupId: null,
+    assetClass: null,
+    isCashAccount: false,
+    unit: null,
+    currency: null,
+    cryptocurrency: null,
+    symbol: null,
+    tradeCurrency: null,
+    ...account,
+  }));
+  baseData.holdingAccountsResolved = filterConvertibleHoldingAccounts(
+    baseData.baseAssetLiabilityAccounts,
+    baseData.referenceCurrency,
+  );
+}
+
+type FixtureBooking = Omit<
+  PeriodBaseHoldingTransaction["bookings"][number],
+  "value" | "accountType" | "equityAccountSubtype"
+> & {
+  value: MoneyInput;
+  account: { type: AccountType; equityAccountSubtype: null };
+};
+
+function setHoldingTransactions(
+  transactions: {
+    id: string;
+    description?: string;
+    bookings: FixtureBooking[];
+  }[],
+) {
+  baseData.holdingTransactions = transactions.map((transaction) => ({
+    id: transaction.id,
+    bookings: transaction.bookings.map(({ account, value, ...booking }) => ({
+      ...booking,
+      value: toMoney(value),
+      transactionId: transaction.id,
+      transactionDescription: transaction.description,
+      accountType: account.type,
+      equityAccountSubtype: account.equityAccountSubtype,
+    })),
+  }));
+}
+
+function setTransferClearingBookings(
+  bookings: (Omit<TransferClearingBooking, "value"> & { value: MoneyInput })[],
+) {
+  baseData.transferClearingUnitBuckets = [
+    {
+      unitKey: "security:AAPL:USD",
+      unitLabel: "AAPL:USD",
+      unitType: "security",
+      unit: Unit.SECURITY,
+      currency: null,
+      cryptocurrency: null,
+      symbol: "AAPL",
+      tradeCurrency: "USD",
+      isNonReferenceUnit: true,
+      rawBalance: toMoney(-6),
+      bookings: bookings.map((booking) => ({
+        ...booking,
+        value: toMoney(booking.value),
+      })),
+    },
+  ];
+}
 
 const createServerFn = vi.hoisted(() =>
   vi.fn(() => {
@@ -77,28 +166,51 @@ describe("getPeriodGainLossReconciliation", () => {
     vi.resetAllMocks();
     vi.setSystemTime(new Date("2026-03-10T12:00:00.000Z"));
 
-    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+    const selection = resolvePeriodSelection({
+      periodValue: "2026-02",
+      firstBookingDate: new Date("2026-01-01"),
+    });
+    baseData = {
+      accountBookId: "book-1",
+      periodValue: "2026-02",
       referenceCurrency: "CHF",
-      startDate: new Date("2026-01-01T00:00:00.000Z"),
-    });
-
-    getOrLoadPeriodBaseData.mockResolvedValue({
+      selection: {
+        ...selection,
+        queryEndExclusive: getPeriodEndExclusive(selection.to),
+        initialHoldingDate: addUtcDays(selection.from, -1),
+        minPeriodDate: new Date("2026-01-01"),
+        isBeforeAccountBookStart: false,
+      },
       baseAssetLiabilityAccounts: [],
-    });
+      holdingAccountsResolved: [],
+      initialHoldingBalances: [],
+      holdingTransactions: [],
+      transferClearingUnitBuckets: [],
+      allAccountGroups: [],
+      endOfPeriodRawBalances: [],
+      equityBookings: [],
+      explicitCounterparts: [],
+      executionResidualTransactions: [],
+      cashFlowTransactions: [],
+      hasCashAccounts: false,
+    };
+    getOrLoadPeriodBaseData.mockImplementation(async () => baseData);
     loadAccountGainLossSources.mockResolvedValue({
       node: undefined,
       contribution: undefined,
       recordedAdjustments: [],
       executionResiduals: [],
     });
-    prisma.booking.findMany.mockResolvedValue([]);
-    prisma.booking.groupBy.mockResolvedValue([]);
-    prisma.transaction.findMany.mockResolvedValue([]);
-    prisma.account.findMany.mockResolvedValue([]);
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    // No settings, account, balance, transaction, or transfer-clearing rereads
+    // may escape the snapshot loader, even while external valuation is pending.
+    for (const model of Object.values(prisma)) {
+      for (const query of Object.values(model))
+        expect(query).not.toHaveBeenCalled();
+    }
   });
 
   it.each(["reference-currency", "unattributed"])(
@@ -126,13 +238,7 @@ describe("getPeriodGainLossReconciliation", () => {
         realizedGainLoss: toMoney("12.34"),
         unrealizedGainLoss: toMoney(0),
       };
-      getOrLoadPeriodBaseData.mockResolvedValue({
-        baseAssetLiabilityAccounts:
-          kind === "reference-currency" ? [identity] : [],
-      });
-      prisma.account.findFirst.mockResolvedValue(
-        kind === "reference-currency" ? identity : null,
-      );
+      setAccounts(kind === "reference-currency" ? [identity] : []);
       loadAccountGainLossSources.mockResolvedValue({
         contribution,
         node: {
@@ -191,102 +297,119 @@ describe("getPeriodGainLossReconciliation", () => {
     },
   );
 
-  it("returns full reconciliation for a real holding account", async () => {
-    prisma.account.findFirst.mockResolvedValue({
-      id: "account-aapl",
-      name: "AAPL Trading",
-      unit: Unit.SECURITY,
-      currency: null,
-      cryptocurrency: null,
-      symbol: "AAPL",
-      tradeCurrency: "USD",
+  it("keeps snapshot totals and explanation rows consistent across a concurrent edit", async () => {
+    setAccounts([
+      {
+        id: "account-aapl",
+        name: "AAPL Trading",
+        unit: Unit.SECURITY,
+        currency: null,
+        cryptocurrency: null,
+        symbol: "AAPL",
+        tradeCurrency: "USD",
+      },
+    ]);
+
+    setHoldingTransactions([
+      {
+        id: "tx-buy",
+        bookings: [
+          {
+            id: "h-buy",
+            accountId: "account-aapl",
+            date: new Date("2026-02-05T00:00:00.000Z"),
+            value: 10,
+            unit: Unit.SECURITY,
+            currency: null,
+            cryptocurrency: null,
+            symbol: "AAPL",
+            tradeCurrency: "USD",
+            account: {
+              type: AccountType.BALANCE,
+              equityAccountSubtype: null,
+            },
+          },
+          {
+            id: "c-buy",
+            accountId: "account-cash",
+            date: new Date("2026-02-05T00:00:00.000Z"),
+            value: -1000,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            account: {
+              type: AccountType.BALANCE,
+              equityAccountSubtype: null,
+            },
+          },
+        ],
+      },
+      {
+        id: "tx-sell",
+        bookings: [
+          {
+            id: "h-sell",
+            accountId: "account-aapl",
+            date: new Date("2026-02-12T00:00:00.000Z"),
+            value: -4,
+            unit: Unit.SECURITY,
+            currency: null,
+            cryptocurrency: null,
+            symbol: "AAPL",
+            tradeCurrency: "USD",
+            account: {
+              type: AccountType.BALANCE,
+              equityAccountSubtype: null,
+            },
+          },
+          {
+            id: "c-sell",
+            accountId: "account-cash",
+            date: new Date("2026-02-12T00:00:00.000Z"),
+            value: 480,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            account: {
+              type: AccountType.BALANCE,
+              equityAccountSubtype: null,
+            },
+          },
+        ],
+      },
+    ]);
+
+    const actualSources = await vi.importActual<
+      typeof import("./period-account-gain-loss-sources")
+    >("./period-account-gain-loss-sources");
+    loadAccountGainLossSources.mockImplementationOnce(
+      actualSources.loadAccountGainLossSources,
+    );
+    convertBookingValueToReference.mockImplementation(
+      async ({ value, unit, date }) =>
+        toMoney(value).times(
+          unit === Unit.SECURITY ? (date.getUTCDate() === 5 ? 100 : 120) : 1,
+        ),
+    );
+    let signalValuationStarted!: () => void;
+    const valuationStarted = new Promise<void>((resolve) => {
+      signalValuationStarted = resolve;
+    });
+    let resumeValuation!: () => void;
+    const valuationResumed = new Promise<void>((resolve) => {
+      resumeValuation = resolve;
+    });
+    getUnitToReferenceExchangeRate.mockImplementation(async () => {
+      signalValuationStarted();
+      await valuationResumed;
+      return toMoney(130);
     });
 
-    prisma.transaction.findMany
-      .mockResolvedValueOnce([
-        {
-          id: "tx-buy",
-          bookings: [
-            {
-              id: "h-buy",
-              accountId: "account-aapl",
-              date: new Date("2026-02-05T00:00:00.000Z"),
-              value: 10,
-              unit: Unit.SECURITY,
-              currency: null,
-              cryptocurrency: null,
-              symbol: "AAPL",
-              tradeCurrency: "USD",
-              account: {
-                type: AccountType.BALANCE,
-                equityAccountSubtype: null,
-              },
-            },
-            {
-              id: "c-buy",
-              accountId: "account-cash",
-              date: new Date("2026-02-05T00:00:00.000Z"),
-              value: -1000,
-              unit: Unit.CURRENCY,
-              currency: "CHF",
-              cryptocurrency: null,
-              symbol: null,
-              tradeCurrency: null,
-              account: {
-                type: AccountType.BALANCE,
-                equityAccountSubtype: null,
-              },
-            },
-          ],
-        },
-        {
-          id: "tx-sell",
-          bookings: [
-            {
-              id: "h-sell",
-              accountId: "account-aapl",
-              date: new Date("2026-02-12T00:00:00.000Z"),
-              value: -4,
-              unit: Unit.SECURITY,
-              currency: null,
-              cryptocurrency: null,
-              symbol: "AAPL",
-              tradeCurrency: "USD",
-              account: {
-                type: AccountType.BALANCE,
-                equityAccountSubtype: null,
-              },
-            },
-            {
-              id: "c-sell",
-              accountId: "account-cash",
-              date: new Date("2026-02-12T00:00:00.000Z"),
-              value: 480,
-              unit: Unit.CURRENCY,
-              currency: "CHF",
-              cryptocurrency: null,
-              symbol: null,
-              tradeCurrency: null,
-              account: {
-                type: AccountType.BALANCE,
-                equityAccountSubtype: null,
-              },
-            },
-          ],
-        },
-      ])
-      .mockResolvedValueOnce([]);
-
-    convertBookingValueToReference.mockImplementation(async ({ id }) => {
-      if (id === "h-buy") return 1000;
-      if (id === "c-buy") return -1000;
-      if (id === "h-sell") return -480;
-      if (id === "c-sell") return 480;
-      return null;
-    });
-    getUnitToReferenceExchangeRate.mockResolvedValue(130);
-
-    const response = await getPeriodGainLossReconciliation({
+    const pendingResponse = getPeriodGainLossReconciliation({
       data: {
         accountBookId: "book-1",
         accountId: "account-aapl",
@@ -294,6 +417,34 @@ describe("getPeriodGainLossReconciliation", () => {
       },
     });
 
+    await valuationStarted;
+    // A committed edit changes the live book while the snapshot's valuation
+    // is pending. Neither settings nor explanation inputs may be reread.
+    prisma.accountBook.findUniqueOrThrow.mockResolvedValue({
+      referenceCurrency: "USD",
+      startDate: new Date("2026-02-15"),
+    });
+    prisma.account.findFirst.mockResolvedValue(null);
+    prisma.account.findMany.mockResolvedValue([]);
+    prisma.booking.groupBy.mockResolvedValue([]);
+    prisma.transaction.findMany.mockResolvedValue([]);
+    vi.setSystemTime(new Date("2026-04-01T12:00:00.000Z"));
+    resumeValuation();
+    const response = await pendingResponse;
+    expect(getOrLoadPeriodBaseData).toHaveBeenCalledExactlyOnceWith({
+      accountBookId: "book-1",
+      period: "2026-02",
+    });
+    expect(response).toMatchObject({
+      referenceCurrency: "CHF",
+      selectedPeriodValue: "2026-02",
+      selectedPeriodLabel: "February 2026",
+      periodBounds: { minBookingDate: "2026-01-01T00:00:00.000Z" },
+      periodDateRange: {
+        from: "2026-02-01T00:00:00.000Z",
+        to: "2026-02-28T00:00:00.000Z",
+      },
+    });
     expect(response).not.toBeNull();
     expect(response?.target).toMatchObject({
       accountId: "account-aapl",
@@ -352,16 +503,18 @@ describe("getPeriodGainLossReconciliation", () => {
   });
 
   it("keeps same-unit internal transfers non-realizing in real-account reconciliation", async () => {
-    prisma.account.findFirst.mockResolvedValue({
-      id: "account-aapl",
-      name: "AAPL Trading",
-      unit: Unit.SECURITY,
-      currency: null,
-      cryptocurrency: null,
-      symbol: "AAPL",
-      tradeCurrency: "USD",
-    });
-    prisma.account.findMany.mockResolvedValue([
+    setAccounts([
+      {
+        id: "account-aapl",
+        name: "AAPL Trading",
+        unit: Unit.SECURITY,
+        currency: null,
+        cryptocurrency: null,
+        symbol: "AAPL",
+        tradeCurrency: "USD",
+      },
+    ]);
+    setAccounts([
       {
         id: "account-aapl",
         unit: Unit.SECURITY,
@@ -387,52 +540,53 @@ describe("getPeriodGainLossReconciliation", () => {
         tradeCurrency: null,
       },
     ]);
-    prisma.booking.groupBy.mockResolvedValue([
+    baseData.initialHoldingBalances = [
       { accountId: "account-aapl", _sum: { value: 10 } },
       { accountId: "account-aapl-2", _sum: { value: 0 } },
+    ].map(({ accountId, _sum }) => ({
+      accountId,
+      rawBalance: toMoney(_sum.value),
+    }));
+    setHoldingTransactions([
+      {
+        id: "tx-transfer",
+        description: "Internal transfer",
+        bookings: [
+          {
+            id: "h-transfer-out",
+            description: "Transfer out",
+            accountId: "account-aapl",
+            date: new Date("2026-02-12T00:00:00.000Z"),
+            value: -4,
+            unit: Unit.SECURITY,
+            currency: null,
+            cryptocurrency: null,
+            symbol: "AAPL",
+            tradeCurrency: "USD",
+            account: {
+              type: AccountType.BALANCE,
+              equityAccountSubtype: null,
+            },
+          },
+          {
+            id: "h-transfer-in",
+            description: "Transfer in",
+            accountId: "account-aapl-2",
+            date: new Date("2026-02-12T00:00:00.000Z"),
+            value: 4,
+            unit: Unit.SECURITY,
+            currency: null,
+            cryptocurrency: null,
+            symbol: "AAPL",
+            tradeCurrency: "USD",
+            account: {
+              type: AccountType.BALANCE,
+              equityAccountSubtype: null,
+            },
+          },
+        ],
+      },
     ]);
-    prisma.transaction.findMany
-      .mockResolvedValueOnce([
-        {
-          id: "tx-transfer",
-          description: "Internal transfer",
-          bookings: [
-            {
-              id: "h-transfer-out",
-              description: "Transfer out",
-              accountId: "account-aapl",
-              date: new Date("2026-02-12T00:00:00.000Z"),
-              value: -4,
-              unit: Unit.SECURITY,
-              currency: null,
-              cryptocurrency: null,
-              symbol: "AAPL",
-              tradeCurrency: "USD",
-              account: {
-                type: AccountType.BALANCE,
-                equityAccountSubtype: null,
-              },
-            },
-            {
-              id: "h-transfer-in",
-              description: "Transfer in",
-              accountId: "account-aapl-2",
-              date: new Date("2026-02-12T00:00:00.000Z"),
-              value: 4,
-              unit: Unit.SECURITY,
-              currency: null,
-              cryptocurrency: null,
-              symbol: "AAPL",
-              tradeCurrency: "USD",
-              account: {
-                type: AccountType.BALANCE,
-                equityAccountSubtype: null,
-              },
-            },
-          ],
-        },
-      ])
-      .mockResolvedValueOnce([]);
 
     getUnitToReferenceExchangeRate.mockImplementation(async ({ date }) => {
       if (date.toISOString() === "2026-01-31T00:00:00.000Z") {
@@ -472,8 +626,8 @@ describe("getPeriodGainLossReconciliation", () => {
   });
 
   it("returns full reconciliation for virtual transfer-clearing accounts", async () => {
-    prisma.account.findFirst.mockResolvedValue(null);
-    prisma.booking.findMany.mockResolvedValue([
+    setAccounts([]);
+    setTransferClearingBookings([
       {
         id: "tc-open",
         transactionId: "tx-open",
@@ -498,12 +652,15 @@ describe("getPeriodGainLossReconciliation", () => {
       },
     ]);
 
-    convertBookingValueToReference.mockImplementation(async ({ value, id }) => {
-      if (id === "tc-close") {
-        return 520;
-      }
-      return value;
-    });
+    const actualSources = await vi.importActual<
+      typeof import("./period-account-gain-loss-sources")
+    >("./period-account-gain-loss-sources");
+    loadAccountGainLossSources.mockImplementationOnce(
+      actualSources.loadAccountGainLossSources,
+    );
+    convertBookingValueToReference.mockImplementation(async ({ value }) =>
+      toMoney(value).times(130),
+    );
     getUnitToReferenceExchangeRate.mockImplementation(async ({ date }) => {
       if (date.toISOString() === "2026-01-31T00:00:00.000Z") {
         return 100;
@@ -564,89 +721,89 @@ describe("getPeriodGainLossReconciliation", () => {
   });
 
   it("marks residual-adjusted event pricing metadata", async () => {
-    prisma.account.findFirst.mockResolvedValue({
-      id: "account-aapl",
-      name: "AAPL Trading",
-      unit: Unit.SECURITY,
-      currency: null,
-      cryptocurrency: null,
-      symbol: "AAPL",
-      tradeCurrency: "USD",
-    });
-    prisma.transaction.findMany
-      .mockResolvedValueOnce([
-        {
-          id: "tx-buy",
-          bookings: [
-            {
-              id: "h-buy",
-              accountId: "account-aapl",
-              date: new Date("2026-02-05T00:00:00.000Z"),
-              value: 10,
-              unit: Unit.SECURITY,
-              currency: null,
-              cryptocurrency: null,
-              symbol: "AAPL",
-              tradeCurrency: "USD",
-              account: {
-                type: AccountType.BALANCE,
-                equityAccountSubtype: null,
-              },
+    setAccounts([
+      {
+        id: "account-aapl",
+        name: "AAPL Trading",
+        unit: Unit.SECURITY,
+        currency: null,
+        cryptocurrency: null,
+        symbol: "AAPL",
+        tradeCurrency: "USD",
+      },
+    ]);
+    setHoldingTransactions([
+      {
+        id: "tx-buy",
+        bookings: [
+          {
+            id: "h-buy",
+            accountId: "account-aapl",
+            date: new Date("2026-02-05T00:00:00.000Z"),
+            value: 10,
+            unit: Unit.SECURITY,
+            currency: null,
+            cryptocurrency: null,
+            symbol: "AAPL",
+            tradeCurrency: "USD",
+            account: {
+              type: AccountType.BALANCE,
+              equityAccountSubtype: null,
             },
-            {
-              id: "c-buy",
-              accountId: "account-cash",
-              date: new Date("2026-02-05T00:00:00.000Z"),
-              value: -1000,
-              unit: Unit.CURRENCY,
-              currency: "CHF",
-              cryptocurrency: null,
-              symbol: null,
-              tradeCurrency: null,
-              account: {
-                type: AccountType.BALANCE,
-                equityAccountSubtype: null,
-              },
+          },
+          {
+            id: "c-buy",
+            accountId: "account-cash",
+            date: new Date("2026-02-05T00:00:00.000Z"),
+            value: -1000,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            account: {
+              type: AccountType.BALANCE,
+              equityAccountSubtype: null,
             },
-          ],
-        },
-        {
-          id: "tx-sell",
-          bookings: [
-            {
-              id: "h-sell",
-              accountId: "account-aapl",
-              date: new Date("2026-02-12T00:00:00.000Z"),
-              value: -4,
-              unit: Unit.SECURITY,
-              currency: null,
-              cryptocurrency: null,
-              symbol: "AAPL",
-              tradeCurrency: "USD",
-              account: {
-                type: AccountType.BALANCE,
-                equityAccountSubtype: null,
-              },
+          },
+        ],
+      },
+      {
+        id: "tx-sell",
+        bookings: [
+          {
+            id: "h-sell",
+            accountId: "account-aapl",
+            date: new Date("2026-02-12T00:00:00.000Z"),
+            value: -4,
+            unit: Unit.SECURITY,
+            currency: null,
+            cryptocurrency: null,
+            symbol: "AAPL",
+            tradeCurrency: "USD",
+            account: {
+              type: AccountType.BALANCE,
+              equityAccountSubtype: null,
             },
-            {
-              id: "c-sell",
-              accountId: "account-cash",
-              date: new Date("2026-02-12T00:00:00.000Z"),
-              value: 500,
-              unit: Unit.CURRENCY,
-              currency: "CHF",
-              cryptocurrency: null,
-              symbol: null,
-              tradeCurrency: null,
-              account: {
-                type: AccountType.BALANCE,
-                equityAccountSubtype: null,
-              },
+          },
+          {
+            id: "c-sell",
+            accountId: "account-cash",
+            date: new Date("2026-02-12T00:00:00.000Z"),
+            value: 500,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            account: {
+              type: AccountType.BALANCE,
+              equityAccountSubtype: null,
             },
-          ],
-        },
-      ])
-      .mockResolvedValueOnce([]);
+          },
+        ],
+      },
+    ]);
     convertBookingValueToReference.mockImplementation(async ({ id }) => {
       if (id === "h-buy") return 1000;
       if (id === "c-buy") return -1000;
@@ -678,89 +835,89 @@ describe("getPeriodGainLossReconciliation", () => {
   });
 
   it("exposes raw and rounded realized-delta values consistently", async () => {
-    prisma.account.findFirst.mockResolvedValue({
-      id: "account-aapl",
-      name: "AAPL Trading",
-      unit: Unit.SECURITY,
-      currency: null,
-      cryptocurrency: null,
-      symbol: "AAPL",
-      tradeCurrency: "USD",
-    });
-    prisma.transaction.findMany
-      .mockResolvedValueOnce([
-        {
-          id: "tx-buy",
-          bookings: [
-            {
-              id: "h-buy",
-              accountId: "account-aapl",
-              date: new Date("2026-02-05T00:00:00.000Z"),
-              value: 3,
-              unit: Unit.SECURITY,
-              currency: null,
-              cryptocurrency: null,
-              symbol: "AAPL",
-              tradeCurrency: "USD",
-              account: {
-                type: AccountType.BALANCE,
-                equityAccountSubtype: null,
-              },
+    setAccounts([
+      {
+        id: "account-aapl",
+        name: "AAPL Trading",
+        unit: Unit.SECURITY,
+        currency: null,
+        cryptocurrency: null,
+        symbol: "AAPL",
+        tradeCurrency: "USD",
+      },
+    ]);
+    setHoldingTransactions([
+      {
+        id: "tx-buy",
+        bookings: [
+          {
+            id: "h-buy",
+            accountId: "account-aapl",
+            date: new Date("2026-02-05T00:00:00.000Z"),
+            value: 3,
+            unit: Unit.SECURITY,
+            currency: null,
+            cryptocurrency: null,
+            symbol: "AAPL",
+            tradeCurrency: "USD",
+            account: {
+              type: AccountType.BALANCE,
+              equityAccountSubtype: null,
             },
-            {
-              id: "c-buy",
-              accountId: "account-cash",
-              date: new Date("2026-02-05T00:00:00.000Z"),
-              value: -1000,
-              unit: Unit.CURRENCY,
-              currency: "CHF",
-              cryptocurrency: null,
-              symbol: null,
-              tradeCurrency: null,
-              account: {
-                type: AccountType.BALANCE,
-                equityAccountSubtype: null,
-              },
+          },
+          {
+            id: "c-buy",
+            accountId: "account-cash",
+            date: new Date("2026-02-05T00:00:00.000Z"),
+            value: -1000,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            account: {
+              type: AccountType.BALANCE,
+              equityAccountSubtype: null,
             },
-          ],
-        },
-        {
-          id: "tx-sell",
-          bookings: [
-            {
-              id: "h-sell",
-              accountId: "account-aapl",
-              date: new Date("2026-02-12T00:00:00.000Z"),
-              value: -1,
-              unit: Unit.SECURITY,
-              currency: null,
-              cryptocurrency: null,
-              symbol: "AAPL",
-              tradeCurrency: "USD",
-              account: {
-                type: AccountType.BALANCE,
-                equityAccountSubtype: null,
-              },
+          },
+        ],
+      },
+      {
+        id: "tx-sell",
+        bookings: [
+          {
+            id: "h-sell",
+            accountId: "account-aapl",
+            date: new Date("2026-02-12T00:00:00.000Z"),
+            value: -1,
+            unit: Unit.SECURITY,
+            currency: null,
+            cryptocurrency: null,
+            symbol: "AAPL",
+            tradeCurrency: "USD",
+            account: {
+              type: AccountType.BALANCE,
+              equityAccountSubtype: null,
             },
-            {
-              id: "c-sell",
-              accountId: "account-cash",
-              date: new Date("2026-02-12T00:00:00.000Z"),
-              value: 400,
-              unit: Unit.CURRENCY,
-              currency: "CHF",
-              cryptocurrency: null,
-              symbol: null,
-              tradeCurrency: null,
-              account: {
-                type: AccountType.BALANCE,
-                equityAccountSubtype: null,
-              },
+          },
+          {
+            id: "c-sell",
+            accountId: "account-cash",
+            date: new Date("2026-02-12T00:00:00.000Z"),
+            value: 400,
+            unit: Unit.CURRENCY,
+            currency: "CHF",
+            cryptocurrency: null,
+            symbol: null,
+            tradeCurrency: null,
+            account: {
+              type: AccountType.BALANCE,
+              equityAccountSubtype: null,
             },
-          ],
-        },
-      ])
-      .mockResolvedValueOnce([]);
+          },
+        ],
+      },
+    ]);
     convertBookingValueToReference.mockImplementation(async ({ id }) => {
       if (id === "h-buy") return 1000;
       if (id === "c-buy") return -1000;
@@ -796,7 +953,7 @@ describe("getPeriodGainLossReconciliation", () => {
   });
 
   it("returns null for unsupported targets", async () => {
-    prisma.account.findFirst.mockResolvedValue(null);
+    setAccounts([]);
 
     const response = await getPeriodGainLossReconciliation({
       data: {
@@ -810,20 +967,20 @@ describe("getPeriodGainLossReconciliation", () => {
   });
 
   it("returns the report period label for unsupported targets", async () => {
-    prisma.account.findFirst.mockResolvedValue(null);
+    setAccounts([]);
 
     const response = await getPeriodGainLossReconciliationPageData({
       data: {
         accountBookId: "book-1",
         accountId: "unknown-account",
         period: "2026-02",
-        locale: "en-US",
+        locale: "de-CH",
       },
     });
 
     expect(response).toEqual({
       reportPeriodValue: "2026-02",
-      reportPeriodLabel: "February 2026",
+      reportPeriodLabel: "Februar 2026",
       reconciliation: null,
     });
   });
