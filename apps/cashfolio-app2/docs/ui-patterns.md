@@ -240,14 +240,14 @@ copy; technical admin tools and architecture docs may name Logto.
 ## Navigation Link Pattern
 
 - If an element navigates to another page (including route-search state such as
-  the accounts list `tab`/`mode`), render it as a TanStack link (an `<a>`), not
+  the category-management `tab`), render it as a TanStack link (an `<a>`), not
   as a button with an `onClick` navigation handler.
 - Use:
   - `LinkAnchor` for text links/breadcrumbs
   - `LinkButton` for button-styled navigation actions (for example Accounts or
     Report)
-  - `LinkTab` for route-driven tab navigation (for example Asset/Liability/etc.
-    on the accounts list)
+  - `LinkTab` for route-driven tab navigation (for example Income/Expenses in
+    Settings category management)
 - Keep real `<Button onClick={...}>` controls for non-navigation actions only
   (submit, open modal, mutate data, etc.).
 - For Mantine `Menu.Item` navigation, use a TanStack link wrapper based on
@@ -1116,17 +1116,18 @@ compatibility but ignored by the importer.
 ### Form Root Validation
 
 - Both `EditTransactionModal` and server validation allow multi-unit
-  transactions. Debits and credits must balance only when all bookings share the
-  same unit identifier.
+  transactions. Debits and credits must balance exactly only when all bookings
+  share the same unit identifier.
 
 ### Unit Identifier Pattern
 
 Bookings are grouped by a unit identifier string: `currency:${code}`,
 `crypto:${symbol}`, or `security:${symbol}`.
 
-In the UI transaction form, only one unit identifier is allowed per transaction.
-Server-side validation intentionally allows multi-unit transactions and only
-enforces sum-to-zero when all bookings share the same unit identifier.
+Both the split transaction editor and server validation allow multiple unit
+identifiers per transaction. They enforce an exact sum of zero only when all
+bookings share the same unit identifier; amounts in different units are not
+summed for balancing.
 
 The shared `getUnitIdentifier({ unit, currency, cryptocurrency, symbol })` in
 `src/shared/account-utils.ts` produces these strings. Callers must guard that
@@ -1208,7 +1209,9 @@ data groups them hierarchically. Fields that don't apply to a node type are
 
 `src/components/controls/formatted-number-input.tsx` wraps Mantine's
 `NumberInput` using `Intl.NumberFormat` to extract locale-specific
-thousand/decimal separators (defaults to `en-US`).
+thousand/decimal separators. An explicit `locale` prop takes precedence;
+otherwise the input uses the active user locale from `useUserLocale()`. The
+context fallback is `DEFAULT_USER_LOCALE` (`en-US`) from `src/user-locale.ts`.
 
 Precision behavior:
 

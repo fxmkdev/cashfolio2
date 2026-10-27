@@ -121,9 +121,9 @@ band.
 Numeric axis labels pass bigint values directly to `Intl.NumberFormat`. History
 zoom boundaries support v14 grouped/bigint values, converting only safe
 timestamp integers at the display boundary. Decimal calculations, currency
-conversions, `en-CH` formatting, enterprise modules, and license configuration
-retain their existing behavior. The admin valuation-cache chart's widened
-time/numeric formatter types are also compatible.
+conversions, user-locale formatting, enterprise modules, and license
+configuration retain their existing behavior. The admin valuation-cache chart's
+widened time/numeric formatter types are also compatible.
 
 The app accepts v14's font, focus, and tooltip defaults alongside its explicit
 themes. Before/after report captures cover positive and negative returns, empty
@@ -226,9 +226,10 @@ Vitest 5 reports the same covered-file, branch, and function inventory. It
 counts four fewer total statements/lines across the generated Prisma namespace
 and `unit-format.ts`. After rebasing onto the merged Storybook migration, the
 2026-10-10 local Node 24.21.0 run passed all 1000 unit tests and covered all 256
-files: statements 73.00% (6128/8394), branches 65.04% (3922/6030), functions 70.33%
-(1425/2026), and lines 73.86% (5962/8072). The committed coverage baseline remains
-unchanged and its ratchet passes; no exclusions or assertions were weakened.
+files: statements 73.00% (6128/8394), branches 65.04% (3922/6030), functions
+70.33% (1425/2026), and lines 73.86% (5962/8072). The committed coverage
+baseline remains unchanged and its ratchet passes; no exclusions or assertions
+were weakened.
 
 ## TypeScript 7 migration
 
@@ -249,12 +250,11 @@ lockfile for macOS development and Linux Docker/CI builds.
 ## pnpm 12 migration
 
 The workspace pins stable pnpm 12.11.1 in packageManager (with registry SHA-512
-integrity), engines, and the Docker migration-tools stage. Published on October 9
-at 12:22 UTC, it passed the one-day release-age threshold when rechecked on
+integrity), engines, and the Docker migration-tools stage. Published on October
+9 at 12:22 UTC, it passed the one-day release-age threshold when rechecked on
 October 10 before the final review. pnpm 12.11.2 remains too young. The existing
-one-day policy is now explicit as
-`minimumReleaseAge: 1440`; retain the narrow `@fxmk/releaser@0.5.6` exception
-and the reviewed `allowBuilds` entries.
+one-day policy is now explicit as `minimumReleaseAge: 1440`; retain the narrow
+`@fxmk/releaser@0.5.6` exception and the reviewed `allowBuilds` entries.
 
 The stable default installation mode is retained. Review pnpm 12's workspace
 setting validation, engine enforcement, cyclic peer resolution, platform binary
@@ -275,7 +275,8 @@ application dependency versions changed during the package-manager migration.
 Repeat resolution and frozen installation must preserve this result. See the
 [official pnpm 12 migration differences](https://pnpm.io/blog/whats-different-in-pnpm-12)
 and
-[pnpm 12.11.0 release notes](https://github.com/pnpm/pnpm/releases/tag/v12.11.0), and
+[pnpm 12.11.0 release notes](https://github.com/pnpm/pnpm/releases/tag/v12.11.0),
+and
 [pnpm 12.11.1 patch notes](https://github.com/pnpm/pnpm/releases/tag/v12.11.1).
 
 ## Tooling migration verification
