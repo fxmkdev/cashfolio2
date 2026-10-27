@@ -55,6 +55,10 @@ describe("parseHistorySearch", () => {
       netWorthScope: "account:bank",
       mode: "year",
     });
+    expect(parseHistorySearch({ metric, [key]: "group:banking" })).toEqual({
+      metric: "netWorth",
+      netWorthScope: "group:banking",
+    });
     expect(
       parseHistorySearch({
         metric,
