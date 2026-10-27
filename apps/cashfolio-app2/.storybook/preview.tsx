@@ -106,7 +106,7 @@ function createStoryRouter(Story: ComponentType, initialPath: string) {
         <Navigate
           to="/$accountBookId/accounts"
           params={{ accountBookId }}
-          search={{ tab: "ASSET", mode: "active" }}
+          search={{ tab: "BALANCE", mode: "active" }}
           replace
         />
       );

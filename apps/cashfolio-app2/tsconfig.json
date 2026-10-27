@@ -19,14 +19,10 @@
   "include": [
     "src",
     "e2e",
-    "scripts/run-provider-usage-cleanup.ts",
-    "scripts/run-provider-usage-cleanup.test.ts",
-    "playwright.config.ts",
+    "*.ts",
+    "scripts/**/*.ts",
     "eslint-rules/**/*.ts",
-    "vite.config.ts",
-    "vite.staging-seed.config.ts",
-    "vite.provider-usage-cleanup.config.ts",
-    "vitest.provider-usage-cleanup.config.ts",
-    "vitest.staging-seed.config.ts"
+    ".storybook/**/*.ts",
+    ".storybook/**/*.tsx"
   ]
 }
