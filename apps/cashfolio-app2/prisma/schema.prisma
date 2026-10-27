@@ -87,8 +87,25 @@ model User {
 
   deletionPending Boolean @default(false)
 
+  authSessions AuthSession[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model AuthSession {
+  id            String   @id
+  tokenHash     String   @unique
+  encryptedData String
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+  idleExpiresAt DateTime
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([idleExpiresAt])
 }
 
 model UserAccountBookLink {
@@ -241,9 +258,9 @@ model ValuationProviderRequest {
   symbol         String?
   tradeCurrency  String?
 
-  httpStatus  Int?
-  durationMs  Int
-  retryCount  Int     @default(0)
+  httpStatus   Int?
+  durationMs   Int
+  retryCount   Int     @default(0)
   errorMessage String?
 
   @@index([requestedAt])

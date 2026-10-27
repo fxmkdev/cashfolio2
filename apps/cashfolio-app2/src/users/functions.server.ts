@@ -50,7 +50,18 @@ async function upsertUserByExternalId(externalId: string) {
 
 export async function ensureUser() {
   const userContext = await ensureAuthenticated();
-  const user = await getOrCreateUser(userContext);
+  if (!userContext.claims?.sub)
+    throw new Response("Forbidden", { status: 403 });
+  const isTestBypass =
+    process.env.E2E_TEST_MODE === "true" &&
+    process.env.E2E_AUTH_BYPASS === "true";
+  const user = isTestBypass
+    ? await getOrCreateUser(userContext)
+    : await prisma.user.findUnique({
+        where: { externalId: userContext.claims?.sub },
+      });
+  if (!user || user.deletionPending)
+    throw new Response("Forbidden", { status: 403 });
   return user;
 }
 

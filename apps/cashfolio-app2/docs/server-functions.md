@@ -8,6 +8,45 @@ Related docs:
 - [Routing](routing.md)
 - [Account list valuation and reference balances](valuation-reference-balances.md)
 
+## Authentication sessions
+
+Production authentication uses PostgreSQL-backed sessions, independent of Redis.
+The `__Host-cashfolio-session` cookie contains a random 256-bit bearer and uses
+Secure, HttpOnly, SameSite=Lax, and Path=/. Only its SHA-256 hash is stored in
+`AuthSession`; Logto state and credentials are encrypted with `SESSION_SECRET`.
+Legacy `logtoCookies` values are never accepted as authentication credentials.
+
+Sign-in creates ten-minute anonymous state. The SDK validates callback state,
+PKCE, and the signed ID token before the callback creates/finds the application
+user and rotates the bearer into a new authenticated session. Application
+requests look up existing users rather than recreating missing records. The
+existing explicitly enabled E2E bypass retains its test-user provisioning path.
+
+Every authenticated lookup checks the session's fourteen-day absolute deadline,
+twenty-four-hour idle deadline, and owning user. Successful requests advance
+only the idle deadline, bounded by the original absolute deadline. Expired ID
+tokens force the SDK to refresh rather than reuse cached access tokens; ordinary
+access requires fresh, unexpired ID claims and a usable access token. Invalid
+refresh credentials revoke the session. Provider outages fail closed with a
+retryable 503, and database failures never fall back to cookies or Redis.
+
+SDK refresh and persistence run under a transaction-scoped PostgreSQL advisory
+lock per bearer hash, shared across Machines. Conditional updates cannot
+recreate deleted sessions or renew expired ones. These transactions are not
+retried, because an external refresh may already have consumed a rotating token.
+SDK requests have five-second timeouts; transactions have a thirty-second
+timeout and ten-second lock timeout. Logout commits local revocation before
+clearing the cookie or attempting remote sign-out. Database revocation failure
+preserves the cookie for retry; provider failure after revocation cannot undo
+local logout.
+
+`deletionPending` immediately blocks ordinary access through every session. Only
+deletion preview/retry helpers pass `allowDeletionPending: true`; they use the
+still-valid server session as a deletion-only credential even if Logto cleanup
+has already removed the identity. This path does not require provider refresh,
+so partial cleanup remains retryable. Session absolute/idle deadlines still
+apply. Successful user deletion removes all sessions through the user FK.
+
 ## Server Function Pattern
 
 Server production modules may depend on shared contracts and logic, but must not

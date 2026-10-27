@@ -1,78 +1,147 @@
-import LogtoClient, {
-  CookieStorage,
+import {
   type GetContextParameters,
   type LogtoConfig,
+  type LogtoContext,
 } from "@logto/node";
 import { getCookie, setCookie } from "@tanstack/react-start/server";
 import { ensureSameOriginRequest } from "../security/same-origin.server";
+import {
+  authenticateSessionClient,
+  createSessionClient,
+  hasUnexpiredClaims,
+  isInvalidSessionCredential,
+  LogtoSessionStorage,
+} from "./logto-session-client.server";
+import {
+  createSession,
+  readSessionData,
+  revokeSession,
+  saveSession,
+  withSessionLock,
+} from "./session-store.server";
+import {
+  hashSessionToken,
+  isSessionCurrent,
+  LEGACY_SESSION_COOKIE,
+  SESSION_COOKIE,
+} from "./session-policy";
 
-const DEFAULT_LOGTO_SCOPES = ["email"];
-const LOGTO_ACCOUNT_API_SCOPES = ["email", "profile"];
+export type SessionAccessOptions = { allowDeletionPending?: boolean };
 
 function requireEnv(name: string): string {
   const value = process.env[name];
-  if (!value) {
-    throw new Error(`${name} must be set`);
-  }
+  if (!value) throw new Error(`${name} must be set`);
   return value;
 }
 
-function getRuntimeConfig({
-  scopes = DEFAULT_LOGTO_SCOPES,
-}: {
-  scopes?: string[];
-} = {}): {
-  logtoConfig: LogtoConfig;
-  baseUrl: string;
-  sessionSecret: string;
-} {
+function getLogtoConfig(): LogtoConfig {
   return {
-    logtoConfig: {
-      endpoint: requireEnv("LOGTO_ENDPOINT"),
-      appId: requireEnv("LOGTO_APP_ID"),
-      appSecret: requireEnv("LOGTO_APP_SECRET"),
-      scopes,
-    },
-    baseUrl: requireEnv("BASE_URL"),
-    sessionSecret: requireEnv("SESSION_SECRET"),
+    endpoint: requireEnv("LOGTO_ENDPOINT"),
+    appId: requireEnv("LOGTO_APP_ID"),
+    appSecret: requireEnv("LOGTO_APP_SECRET"),
+    scopes: ["email", "profile"],
   };
 }
 
-function absoluteUrl(pathname: string, baseUrl: string): string {
-  return new URL(pathname, baseUrl).toString();
+const cookieOptions = {
+  secure: true,
+  httpOnly: true,
+  sameSite: "lax",
+  path: "/",
+} as const;
+
+function clearCookie() {
+  setCookie(SESSION_COOKIE, "", { ...cookieOptions, maxAge: 0 });
 }
 
-async function createLogtoClient(
-  onNavigate?: (url: string) => void,
-  configOptions?: { scopes?: string[] },
-) {
-  const { logtoConfig, sessionSecret } = getRuntimeConfig(configOptions);
-  const storage = new CookieStorage({
-    encryptionKey: sessionSecret,
-    isSecure: true,
-    getCookie: (name) => getCookie(name),
-    setCookie: (name, value, options) => {
-      setCookie(name, value, options);
-    },
+function writeCookie(session: { token: string; expiresAt: Date }) {
+  setCookie(SESSION_COOKIE, session.token, {
+    ...cookieOptions,
+    maxAge: Math.max(
+      0,
+      Math.floor((session.expiresAt.getTime() - Date.now()) / 1000),
+    ),
   });
+  setCookie(LEGACY_SESSION_COOKIE, "", { ...cookieOptions, maxAge: 0 });
+}
 
-  await storage.init();
-
-  const client = new LogtoClient(logtoConfig, {
-    storage,
-    navigate: async (url) => {
-      onNavigate?.(url);
-    },
+async function withAuthenticatedClient<T>(
+  operation: (
+    client: ReturnType<typeof createSessionClient>,
+    context: LogtoContext,
+  ) => Promise<T>,
+  options: SessionAccessOptions = {},
+): Promise<T | null> {
+  const token = getCookie(SESSION_COOKIE);
+  if (!hashSessionToken(token)) {
+    if (token) clearCookie();
+    return null;
+  }
+  const result = await withSessionLock(token, async (tx, session) => {
+    if (!session) return { value: null, clear: true };
+    if (!session.user) return { value: null, clear: false };
+    if (session.user.deletionPending && !options.allowDeletionPending) {
+      return { value: null, clear: false };
+    }
+    const storage = new LogtoSessionStorage(await readSessionData(session));
+    try {
+      // A pending deletion's server session authorizes only deletion retries.
+      // Its Logto identity may already be gone after partial cleanup.
+      const authenticated =
+        session.user.deletionPending && options.allowDeletionPending
+          ? await (async () => {
+              const client = createSessionClient(getLogtoConfig(), storage);
+              return {
+                client,
+                context: await client.getContext({ getAccessToken: false }),
+              };
+            })()
+          : await authenticateSessionClient(getLogtoConfig(), storage);
+      const { client, context } = authenticated;
+      if (
+        !context.isAuthenticated ||
+        context.claims?.sub !== session.user.externalId
+      ) {
+        await revokeSession(tx, session);
+        return { value: null, clear: true };
+      }
+      const value = await operation(client, context);
+      if (
+        !(await saveSession(
+          tx,
+          session,
+          storage.data,
+          options.allowDeletionPending,
+        ))
+      ) {
+        return { value: null, clear: false };
+      }
+      return { value, clear: false };
+    } catch (error) {
+      if (!isInvalidSessionCredential(error)) {
+        throw new Response(
+          "Authentication is temporarily unavailable. Please try again.",
+          { status: 503 },
+        );
+      }
+      await revokeSession(tx, session);
+      return { value: null, clear: true };
+    }
   });
-
-  return { client, storage };
+  if (result.clear) clearCookie();
+  return result.value;
 }
 
 export async function getLogtoContext(
-  parameters: GetContextParameters = { getAccessToken: false },
-) {
-  const { client } = await createLogtoClient();
-  return client.getContext(parameters);
+  _parameters: GetContextParameters = { getAccessToken: false },
+  options?: SessionAccessOptions,
+): Promise<LogtoContext> {
+  return (
+    (await withAuthenticatedClient(
+      async (_client, context) => context,
+      options,
+    )) ?? { isAuthenticated: false }
+  );
 }
 
 export function getLogtoAccountSecurityUrl() {
@@ -83,85 +152,130 @@ export async function fetchLogtoAccountApi(
   pathname: string,
   init?: RequestInit,
 ) {
-  const accountApiConfig = { scopes: LOGTO_ACCOUNT_API_SCOPES };
-  const { logtoConfig } = getRuntimeConfig(accountApiConfig);
-  const { client } = await createLogtoClient(undefined, accountApiConfig);
-  const accessToken = await client.getAccessToken();
-  const headers = new Headers(init?.headers);
-  headers.set("authorization", `Bearer ${accessToken}`);
-
-  return fetch(new URL(pathname, logtoConfig.endpoint), {
-    ...init,
-    headers,
+  const response = await withAuthenticatedClient(async (client) => {
+    const headers = new Headers(init?.headers);
+    headers.set("authorization", `Bearer ${await client.getAccessToken()}`);
+    return fetch(new URL(pathname, requireEnv("LOGTO_ENDPOINT")), {
+      ...init,
+      headers,
+      signal: AbortSignal.timeout(5_000),
+    });
   });
+  if (!response) throw new Response("Unauthorized", { status: 401 });
+  return response;
 }
 
-export async function handleLogtoSignIn() {
-  let navigateToUrl = "/api/logto/sign-in";
-  const { baseUrl } = getRuntimeConfig();
-
-  const { client } = await createLogtoClient((url) => {
+async function startSignIn(signUp: boolean) {
+  let navigateToUrl = "/";
+  const storage = new LogtoSessionStorage();
+  const client = createSessionClient(getLogtoConfig(), storage, (url) => {
     navigateToUrl = url;
   });
-
-  await client.signIn(absoluteUrl("/api/logto/callback", baseUrl));
-
-  return new Response(null, {
-    status: 302,
-    headers: { Location: navigateToUrl },
-  });
-}
-
-export async function handleLogtoSignUp() {
-  let navigateToUrl = "/api/logto/sign-up";
-  const { baseUrl } = getRuntimeConfig();
-
-  const { client } = await createLogtoClient((url) => {
-    navigateToUrl = url;
-  });
-
   await client.signIn({
-    redirectUri: absoluteUrl("/api/logto/callback", baseUrl),
-    interactionMode: "signUp",
+    redirectUri: new URL(
+      "/api/logto/callback",
+      requireEnv("BASE_URL"),
+    ).toString(),
+    ...(signUp ? { interactionMode: "signUp" as const } : {}),
   });
-
+  const session = await withSessionLock(
+    getCookie(SESSION_COOKIE),
+    async (tx, current) => {
+      await revokeSession(tx, current);
+      return createSession(tx, storage.data, null);
+    },
+  );
+  writeCookie(session);
   return new Response(null, {
     status: 302,
     headers: { Location: navigateToUrl },
   });
 }
+
+export const handleLogtoSignIn = () => startSignIn(false);
+export const handleLogtoSignUp = () => startSignIn(true);
 
 export async function handleLogtoSignInCallback(request: Request) {
-  const { baseUrl } = getRuntimeConfig();
-  const requestUrl = new URL(request.url);
-  const callbackUri = new URL(
-    `${requestUrl.pathname}${requestUrl.search}`,
-    baseUrl,
-  ).toString();
-
-  const { client } = await createLogtoClient();
-
-  await client.handleSignInCallback(callbackUri);
-
-  return new Response(null, {
-    status: 302,
-    headers: { Location: "/" },
+  const token = getCookie(SESSION_COOKIE);
+  if (!hashSessionToken(token))
+    throw new Response("Sign-in session expired. Please sign in again.", {
+      status: 400,
+    });
+  const result = await withSessionLock(token, async (tx, pending) => {
+    if (!pending || pending.userId) return null;
+    const storage = new LogtoSessionStorage(await readSessionData(pending));
+    const client = createSessionClient(getLogtoConfig(), storage);
+    const url = new URL(request.url);
+    const callbackUri = new URL(
+      `${url.pathname}${url.search}`,
+      requireEnv("BASE_URL"),
+    ).toString();
+    try {
+      await client.handleSignInCallback(callbackUri);
+    } catch {
+      await revokeSession(tx, pending);
+      return null;
+    }
+    const context = await client.getContext({ getAccessToken: false });
+    if (
+      !isSessionCurrent(pending) ||
+      !context.isAuthenticated ||
+      !context.claims ||
+      !hasUnexpiredClaims(context.claims)
+    ) {
+      await revokeSession(tx, pending);
+      return null;
+    }
+    await tx.user.upsert({
+      where: { externalId: context.claims.sub },
+      create: { externalId: context.claims.sub },
+      update: {},
+    });
+    await tx.$queryRaw`SELECT id FROM "User" WHERE "externalId" = ${context.claims.sub} FOR UPDATE`;
+    const user = await tx.user.findUniqueOrThrow({
+      where: { externalId: context.claims.sub },
+    });
+    await revokeSession(tx, pending);
+    if (user.deletionPending) return null;
+    return createSession(tx, storage.data, user.id);
   });
+  if (!result) {
+    clearCookie();
+    throw new Response(
+      "Sign-in session expired or invalid. Please sign in again.",
+      { status: 400 },
+    );
+  }
+  writeCookie(result);
+  return new Response(null, { status: 302, headers: { Location: "/" } });
 }
 
 export async function handleLogtoSignOut(request: Request) {
-  const { baseUrl } = getRuntimeConfig();
+  const baseUrl = requireEnv("BASE_URL");
   ensureSameOriginRequest(request, { baseUrl });
-
+  const data = await withSessionLock(
+    getCookie(SESSION_COOKIE),
+    async (tx, session) => {
+      const data = session ? await readSessionData(session) : {};
+      await revokeSession(tx, session);
+      return data;
+    },
+  );
+  // Commit revocation before fallible provider operations or cookie clearing.
+  clearCookie();
   let navigateToUrl = "/";
-
-  const { client, storage } = await createLogtoClient((url) => {
-    navigateToUrl = url;
-  });
-
-  await client.signOut(absoluteUrl("/", baseUrl));
-  await storage.destroy();
-
+  try {
+    const client = createSessionClient(
+      getLogtoConfig(),
+      new LogtoSessionStorage(data),
+      (url) => {
+        navigateToUrl = url;
+      },
+    );
+    await client.signOut(new URL("/", baseUrl).toString());
+  } catch {
+    navigateToUrl = "/";
+  }
   return new Response(null, {
     status: 302,
     headers: { Location: navigateToUrl },
@@ -169,6 +283,8 @@ export async function handleLogtoSignOut(request: Request) {
 }
 
 export async function destroyLogtoSession() {
-  const { storage } = await createLogtoClient();
-  await storage.destroy();
+  await withSessionLock(getCookie(SESSION_COOKIE), async (tx, session) =>
+    revokeSession(tx, session),
+  );
+  clearCookie();
 }
