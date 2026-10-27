@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
+import { UserRole } from "../../.prisma-client/enums";
 import {
   isValuationUnitTab,
   type ValuationUnitTab,
 } from "../../shared/valuation-unit-tabs";
 import { getRedisClient } from "../../redis.server";
-import { ensureUser } from "../../users/functions.server";
+import { ensureUserHasRole } from "../../users/functions.server";
 import { assertRecord } from "../input-validation";
 import { BASE_CURRENCY } from "./constants";
 import { toDayString } from "./date-utils";
@@ -266,7 +267,7 @@ async function scanValuationCacheUnitKeys(
 export const getValuationCacheUnits = createServerFn({ method: "GET" })
   .validator(validateGetValuationCacheUnitsInput)
   .handler(async () => {
-    await ensureUser();
+    await ensureUserHasRole(UserRole.ADMIN);
 
     const currencyUnitsByKey = new Map<string, ValuationCacheUnitRow>();
     const cryptocurrencyUnitsByKey = new Map<string, ValuationCacheUnitRow>();
@@ -302,7 +303,7 @@ export const getValuationCacheUnits = createServerFn({ method: "GET" })
 export const getValuationCacheSeries = createServerFn({ method: "GET" })
   .validator(validateGetValuationCacheSeriesInput)
   .handler(async ({ data }) => {
-    await ensureUser();
+    await ensureUserHasRole(UserRole.ADMIN);
 
     const seriesKey = getSeriesKey(data);
     const redis = await getRedisClient();
