@@ -1,3 +1,11 @@
+import type {
+  HoldingExecutionPricingSource,
+  HoldingGainLossSkippedReason,
+} from "../../../shared/gain-loss-reconciliation";
+export type {
+  HoldingExecutionPricingSource,
+  HoldingGainLossSkippedReason,
+} from "../../../shared/gain-loss-reconciliation";
 import { type Money } from "../../../shared/money";
 import {
   type AccountType,
@@ -43,9 +51,6 @@ export type HoldingLot = {
   unitCostInReference: Money;
   acquisitionSortKey: string;
 };
-
-export type HoldingExecutionPricingSource =
-  "directConversion" | "residualAdjusted" | "marketFallback" | "transferBasis";
 
 export type HoldingExecutionLotMatch = {
   acquisitionSortKey: string;
@@ -107,12 +112,6 @@ export type HoldingGainLossWorkingState = {
   skippedCount: number;
   convertedCount: number;
 };
-
-export type HoldingGainLossSkippedReason =
-  | "missingInitialRate"
-  | "missingConversion"
-  | "invalidExecutionPrice"
-  | "missingPeriodEndRate";
 
 export type HoldingInitialSkippedItem = {
   accountId: string;

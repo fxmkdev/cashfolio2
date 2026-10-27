@@ -5,18 +5,30 @@ paths are relative to that app directory.
 
 ## Shared Contract Ownership
 
-Cross-feature contracts belong in `src/shared/`, independent of UI components.
-Import `AccountOption` directly from `src/shared/account-options.ts` in account
-selectors, transaction editors, route controllers, and bulk-action helpers. The
-transaction-modal modules retain compatibility type re-exports; editor-only
-`BookingValues` and `TransactionFormValues` remain in the editor's types module.
+Cross-feature contracts belong in `src/shared/`, independent of UI components
+and server implementations. Import `AccountOption` directly from
+`src/shared/account-options.ts` in account selectors, transaction editors, route
+controllers, and bulk-action helpers. The transaction-modal modules retain
+compatibility type re-exports; editor-only `BookingValues` and
+`TransactionFormValues` remain in the editor's types module.
+
+Account-tree rows use `AccountTreeRow` from `src/shared/account-tree.ts`. Public
+gain/loss response types, source rows, pricing-source values, and diagnostic
+reasons live in `src/shared/gain-loss-reconciliation.ts`. Shared helpers, UI
+consumers, and server implementations import these contracts directly from their
+shared owners. Existing server type exports remain as compatibility re-exports.
+Money-based reconciliation inputs and calculation callbacks remain server
+implementation details.
 
 The `cashfolio/no-ui-dependencies` ESLint rule rejects dependencies from
 production modules in `src/shared/` and `src/server/` into `src/components/` or
-`src/routes/`. It checks type-only imports, re-exports, literal dynamic imports,
-TypeScript import types, and literal `require` calls as well as regular imports.
-Both `@/` and normalized relative paths are checked. Test and integration-test
-files are exempt so they can compare behavior across layers.
+`src/routes/`. It also rejects dependencies from production `src/shared/`
+modules into `src/server/`, including type-only dependencies. Server modules may
+depend on shared contracts and other server modules. The rule checks type-only
+imports, re-exports, literal dynamic imports, TypeScript import types, and
+literal `require` calls as well as regular imports. Both `@/` and normalized
+relative paths are checked. Test and integration-test files are exempt so they
+can compare behavior across layers.
 
 Custom ESLint rules are TypeScript sources under `eslint-rules/`, included in
 the app's strict typecheck. The ESLint config imports their `.ts` files

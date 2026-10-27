@@ -7,6 +7,8 @@ import type {
   GainLossReconciliationRealizedEvent,
   GainLossReconciliationRealizedEventLotMatch,
   GainLossReconciliationSummary,
+} from "../../../shared/gain-loss-reconciliation";
+import type {
   ReconciliationExecutionEventInput,
   ReconciliationOpenLotInput,
 } from "./period-gain-loss-reconciliation-types";

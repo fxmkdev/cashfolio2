@@ -1,4 +1,4 @@
-import type { AccountTreeRow } from "../server/accounts/accounts-tree-rows";
+import type { AccountTreeRow } from "./account-tree";
 import { projectArchivedAccountHierarchy } from "./archived-account-hierarchy";
 
 export function buildUnifiedAccountTreeRows(

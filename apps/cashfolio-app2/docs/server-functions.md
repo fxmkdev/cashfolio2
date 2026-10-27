@@ -14,7 +14,10 @@ Server production modules may depend on shared contracts and logic, but must not
 import component or route implementations, including type-only dependencies. The
 `cashfolio/no-ui-dependencies` lint rule enforces this direction; see
 [shared contract ownership](ui-patterns.md#shared-contract-ownership) for its
-scope and test exemptions.
+scope and test exemptions. Shared modules must not import server modules, even
+for types. Account-tree and public gain/loss contracts are owned by
+`src/shared/`; existing server type exports remain compatibility re-exports.
+Reconciliation calculation inputs and callbacks stay in server modules.
 
 - Public server-function facades live in `src/server/` (for example,
   `src/server/accounts.ts`) so import paths remain stable.

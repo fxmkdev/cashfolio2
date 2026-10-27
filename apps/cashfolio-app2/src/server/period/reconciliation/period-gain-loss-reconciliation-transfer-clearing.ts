@@ -23,7 +23,7 @@ import type {
   GainLossReconciliationDiagnostic,
   GainLossReconciliationOpenLot,
   GainLossReconciliationRealizedEvent,
-} from "./period-gain-loss-reconciliation-types";
+} from "../../../shared/gain-loss-reconciliation";
 import { formatUnitLabel, normalizeUppercaseCode } from "../period-unit-format";
 
 function findTargetVirtualUnitBucket(args: {

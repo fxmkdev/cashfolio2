@@ -2,7 +2,7 @@ import type {
   GainLossReconciliationTarget,
   GainLossReconciliationOpenLot,
   GainLossReconciliationRealizedEvent,
-} from "../server/period/reconciliation/period-gain-loss-reconciliation-types";
+} from "./gain-loss-reconciliation";
 import { moneyAdd, toMoney, type MoneyInput } from "./money";
 
 export type AccountGainLossSummary<Amount = number> = {

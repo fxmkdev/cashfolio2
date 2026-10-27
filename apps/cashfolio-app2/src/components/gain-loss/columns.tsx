@@ -1,6 +1,6 @@
 import { ActionIcon, Badge, Group, Tooltip } from "@mantine/core";
 import { IconTable } from "@tabler/icons-react";
-import type { GainLossReconciliationOpenLot } from "@/server/period/reconciliation/period-gain-loss-reconciliation-types";
+import type { GainLossReconciliationOpenLot } from "@/shared/gain-loss-reconciliation";
 import type { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import {
   DATE_COLUMN,

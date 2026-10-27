@@ -1,7 +1,7 @@
 export type {
   GainLossReconciliationRealizedEvent,
   PeriodGainLossReconciliation,
-} from "./period/reconciliation/period-gain-loss-reconciliation-types";
+} from "../shared/gain-loss-reconciliation";
 export {
   getPeriodGainLossReconciliation,
   getPeriodGainLossReconciliationPageData,

@@ -1,3 +1,5 @@
+import type { AccountTreeRow } from "../../shared/account-tree";
+export type { AccountTreeRow } from "../../shared/account-tree";
 import { toNumericMoney } from "../money-boundary";
 export { buildUnifiedAccountTreeRows } from "../../shared/archived-account-tree-rows";
 import { toMoney, type Money } from "../../shared/money";
@@ -58,37 +60,6 @@ export type AccountTreeGroup = {
   parentGroupId: string | null;
   isActive: boolean;
   sortOrder: number | null;
-};
-
-export type AccountTreeRow = {
-  assetClass?: AssetClass | null;
-  isVirtualArchivedGroup?: boolean;
-  persistedParentId?: string | null;
-  id: string;
-  nodeType: "account" | "accountGroup";
-  name: string;
-  type: AccountType;
-  equityAccountSubtype: EquityAccountSubtype | null;
-  unit: Unit | null;
-  currency: string | null;
-  cryptocurrency: string | null;
-  symbol: string | null;
-  tradeCurrency: string | null;
-  statementImportCsvFormat?: StatementImportCsvFormat | null;
-  isCashAccount?: boolean;
-  balance: number | null;
-  balanceInReferenceCurrency: number | null;
-  openingBalance: number | null;
-  parentId: string | undefined;
-  isActive: boolean;
-  groupId: string | undefined;
-  sortOrder: number | null;
-  deletable: boolean;
-  deleteDisabledReason: string | undefined;
-  archivable: boolean;
-  archiveDisabledReason: string | undefined;
-  unarchivable: boolean;
-  unarchiveDisabledReason: string | undefined;
 };
 
 export function filterGroupsForAccountState(args: {

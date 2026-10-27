@@ -1,4 +1,4 @@
-import type { PeriodGainLossReconciliation } from "@/server/period-gain-loss-reconciliation";
+import type { PeriodGainLossReconciliation } from "@/shared/gain-loss-reconciliation";
 
 export type RealizedEventRow =
   PeriodGainLossReconciliation["realizedEvents"][number];

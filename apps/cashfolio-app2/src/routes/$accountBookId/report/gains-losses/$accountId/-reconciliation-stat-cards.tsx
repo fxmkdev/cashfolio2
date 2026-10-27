@@ -1,5 +1,5 @@
 import { Card, SimpleGrid, Stack, Text } from "@mantine/core";
-import type { PeriodGainLossReconciliation } from "@/server/period-gain-loss-reconciliation";
+import type { PeriodGainLossReconciliation } from "@/shared/gain-loss-reconciliation";
 
 function StatCard(args: {
   label: string;
