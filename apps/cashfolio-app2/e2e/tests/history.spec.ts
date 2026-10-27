@@ -335,7 +335,11 @@ test("history view tree switches metric and account together and retains other s
 
   await viewInput.click();
   await viewInput.fill("Net Worth");
-  await page.getByRole("option", { name: "Net Worth", exact: true }).click();
+  await page
+    .getByRole("option")
+    .filter({ hasText: /^Net Worth$/ })
+    .first()
+    .click();
   await expect(viewInput).toHaveValue("Net Worth");
   await expect
     .poll(() => new URL(page.url()).searchParams.get("metric"))

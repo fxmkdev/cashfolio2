@@ -87,5 +87,13 @@ export const NetWorthHierarchy: Story = {
       metric: "netWorth",
       scope: "account:card",
     });
+    await userEvent.click(input);
+    await userEvent.clear(input);
+    await userEvent.type(input, "Net Worth");
+    await userEvent.click(canvas.getByText("Net Worth", { exact: true }));
+    await expect(args.onViewChange).toHaveBeenCalledWith({
+      metric: "netWorth",
+      scope: "total",
+    });
   },
 };
