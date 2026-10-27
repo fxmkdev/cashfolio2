@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PeriodGainLossReconciliation } from "@/server/period-gain-loss-reconciliation";
+import type { PeriodGainLossReconciliation } from "@/shared/gain-loss-reconciliation";
 import { getGainLossReconciliationPageTitle } from "./-page-title";
 
 describe("getGainLossReconciliationPageTitle", () => {

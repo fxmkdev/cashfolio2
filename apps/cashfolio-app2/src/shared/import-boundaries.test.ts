@@ -61,7 +61,7 @@ describe("configured shared/server import boundaries", () => {
       async (suffix) => {
         expect(
           await boundaryMessages(
-            'import type { Value } from "@/components/example"; export * from "../routes/example"; void import("@/routes/example"); type Other = import("@/components/example").Value; const helper = require("@/components/example");',
+            'import type { Value } from "@/components/example"; export * from "../routes/example"; void import("@/routes/example"); type Other = import("@/components/example").Value; const helper = require("@/components/example"); import type { Contract } from "@/server/example"; export * from "../server/example"; void import("@/server/example"); type ServerType = import("@/server/example").Value; const serverHelper = require("@/server/example");',
             `src/${area}/example.${suffix}`,
           ),
         ).toHaveLength(0);
@@ -70,13 +70,66 @@ describe("configured shared/server import boundaries", () => {
   }
 
   it.each([
+    'import { value } from "@/server/example";',
+    'import type { Value } from "@/server/example";',
+    'import { type Value } from "@/server/example";',
+    'export { value } from "@/server/example";',
+    'export type { Value } from "@/server/example";',
+    'export * from "@/server/example";',
+    'export type * from "@/server/example";',
+    'const value = import("@/server/example");',
+    'type Value = import("@/server/example").Value;',
+    'const value = require("@/server/example");',
+    'import type { Value } from "../server/example";',
+    'import { value } from "@/shared/../server/example";',
+    'export type { Value } from "./../shared/../server/example";',
+    'import { value } from "@/server";',
+    'import { value } from "../server";',
+  ])("shared rejects server dependency: %s", async (code) => {
+    const messages = await boundaryMessages(code, "src/shared/example.ts");
+    expect(messages).toHaveLength(1);
+    expect(messages[0].severity).toBe(2);
+    expect(messages[0].messageId).toBe("serverDependency");
+  });
+
+  it("shared rejects nested relative server imports and re-exports", async () => {
+    const messages = await boundaryMessages(
+      'import type { Value } from "../../../server/example"; export * from "../../../server/example";',
+      "src/shared/domain/nested/example.tsx",
+    );
+    expect(messages).toHaveLength(2);
+    expect(
+      messages.every((message) => message.messageId === "serverDependency"),
+    ).toBe(true);
+  });
+
+  it.each([
     ["src/shared/example.ts", 'import { value } from "./account-utils";'],
     [
       "src/server/example.ts",
       'import type { Value } from "@/shared/account-options";',
     ],
     ["src/server/domain/example.ts", 'import { value } from "../concurrency";'],
+    ["src/server/example.ts", 'import type { Value } from "@/server/example";'],
+    ["src/components/example.tsx", 'import { value } from "@/server/example";'],
+    ["src/routes/example.tsx", 'import { value } from "@/server/example";'],
     ["src/shared/example.ts", 'import { value } from "react";'],
+    [
+      "src/shared/example.ts",
+      'import type { Value } from "@/.prisma-client/enums";',
+    ],
+    [
+      "src/shared/example.ts",
+      'import { value } from "some-package/server/example";',
+    ],
+    [
+      "src/shared/example.ts",
+      'import { value } from "@/server-other/example";',
+    ],
+    [
+      "src/shared/example.ts",
+      'import { value } from "@/server/../shared/account-utils";',
+    ],
     [
       "src/shared/example.ts",
       'import { value } from "some-package/components/example";',

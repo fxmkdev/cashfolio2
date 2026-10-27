@@ -17,7 +17,7 @@ import { buildTransferClearingReconciliation } from "./period-gain-loss-reconcil
 import type {
   GainLossReconciliationDiagnostic,
   PeriodGainLossReconciliation,
-} from "./period-gain-loss-reconciliation-types";
+} from "../../../shared/gain-loss-reconciliation";
 import {
   normalizeUserLocaleInput,
   type UserLocale,

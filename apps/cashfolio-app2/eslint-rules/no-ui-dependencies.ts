@@ -2,14 +2,14 @@ import { dirname, resolve, sep } from "node:path";
 import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
 type Options = [{ sourceRoot: string }];
-type MessageIds = "uiDependency";
+type MessageIds = "uiDependency" | "serverDependency";
 
 const noUiDependencies: TSESLint.RuleModule<MessageIds, Options> = {
   meta: {
     type: "problem",
     docs: {
       description:
-        "Keep shared and server modules independent of UI implementations",
+        "Keep shared modules independent of server implementations and shared/server modules independent of UI implementations",
     },
     schema: [
       {
@@ -22,6 +22,8 @@ const noUiDependencies: TSESLint.RuleModule<MessageIds, Options> = {
     messages: {
       uiDependency:
         "Shared and server modules must not depend on components or routes. Move reusable contracts and logic into shared modules.",
+      serverDependency:
+        "Shared modules must not depend on server modules, including their types. Move reusable contracts and logic into shared modules.",
     },
   },
   create(context) {
@@ -29,6 +31,10 @@ const noUiDependencies: TSESLint.RuleModule<MessageIds, Options> = {
     const forbiddenRoots = ["components", "routes"].map((directory) =>
       resolve(sourceRoot, directory),
     );
+    const sharedRoot = resolve(sourceRoot, "shared");
+    const serverRoot = resolve(sourceRoot, "server");
+    const filename = resolve(context.filename);
+    const isSharedModule = filename.startsWith(`${sharedRoot}${sep}`);
 
     function checkSource(source: TSESTree.Node | null | undefined): void {
       if (source?.type === "TSLiteralType") source = source.literal;
@@ -51,6 +57,12 @@ const noUiDependencies: TSESLint.RuleModule<MessageIds, Options> = {
         )
       ) {
         context.report({ node: source, messageId: "uiDependency" });
+      }
+      if (
+        isSharedModule &&
+        (target === serverRoot || target.startsWith(`${serverRoot}${sep}`))
+      ) {
+        context.report({ node: source, messageId: "serverDependency" });
       }
     }
 

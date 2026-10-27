@@ -10,7 +10,7 @@ import {
 } from "@mantine/core";
 import type { ColDef } from "ag-grid-enterprise";
 import { DataGrid } from "@/components/grid/data-grid";
-import type { PeriodGainLossReconciliation } from "@/server/period-gain-loss-reconciliation";
+import type { PeriodGainLossReconciliation } from "@/shared/gain-loss-reconciliation";
 import { useUserLocale } from "@/user-locale-context";
 import { formatDateLabel, formatDescription, toEventSide } from "./formatters";
 import type { RealizedEventLotMatchRow, RealizedEventRow } from "./types";

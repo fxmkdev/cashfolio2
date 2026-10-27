@@ -30,7 +30,7 @@ import {
 import type {
   GainLossReconciliationOpenLot,
   GainLossReconciliationRealizedEvent,
-} from "../period/reconciliation/period-gain-loss-reconciliation-types";
+} from "../../shared/gain-loss-reconciliation";
 
 type CalculationArgs = Parameters<typeof computeHoldingGainLossSplit>[0];
 

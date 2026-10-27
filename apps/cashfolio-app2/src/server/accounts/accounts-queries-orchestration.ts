@@ -1,3 +1,4 @@
+import type { AccountTreeRow } from "../../shared/account-tree";
 import { toNumericMoney } from "../money-boundary";
 import { toMoney, moneyIsZero } from "../../shared/money";
 import { isBalanceAccount } from "../../shared/account-presentation";
@@ -40,7 +41,6 @@ import {
   getAccountUnarchiveAvailability,
 } from "./account-tree-rules";
 import {
-  type AccountTreeRow,
   buildAccountRows,
   buildUnifiedAccountTreeRows,
   buildGroupRows,

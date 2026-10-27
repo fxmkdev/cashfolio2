@@ -1,3 +1,5 @@
+import type { AccountGainLossSourceRow } from "../../../shared/gain-loss-reconciliation";
+export type { AccountGainLossSourceRow } from "../../../shared/gain-loss-reconciliation";
 import type { PeriodBaseData } from "../base-data/period-base-data-types";
 import { buildGainLossAccountAttribution } from "../breakdown/period-gain-loss-attribution";
 import { buildGainsLossesBreakdown } from "../breakdown/period-gains-losses-breakdown";
@@ -11,14 +13,6 @@ import {
   getUnitToReferenceExchangeRate,
 } from "../period-conversion";
 import type { Money } from "../../../shared/money";
-
-export type AccountGainLossSourceRow<Amount = number> = {
-  id: string;
-  date: string;
-  transactionId: string;
-  description: string | null;
-  amount: Amount;
-};
 
 /** Replay the same contribution pipeline as overview/history, with explanation callbacks. */
 export async function loadAccountGainLossSources(

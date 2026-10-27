@@ -11,7 +11,7 @@ import {
 } from "../../../shared/money";
 import { Unit } from "../../../.prisma-client/enums";
 
-import type { HoldingGainLossSkippedReason } from "../holdings/period-overview-holdings";
+import type { HoldingGainLossSkippedReason } from "../../../shared/gain-loss-reconciliation";
 import type { HoldingExecutionLotMatch } from "../holdings/period-overview-holdings-types";
 import {
   applyExecutionToLots,
