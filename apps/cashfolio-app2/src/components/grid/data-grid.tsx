@@ -1,6 +1,5 @@
 import { AgGridReact, type AgGridReactProps } from "ag-grid-react";
 import { gridTheme } from "./grid-theme";
-import { gridIcons } from "./grid-icons";
 import { columnTypes } from "./column-types";
 import { ensureGridModulesRegistered } from "../../ag-grid-modules";
 import { formatUtcDateForLocale } from "@/shared/date";
@@ -12,7 +11,6 @@ ensureGridModulesRegistered();
 
 export function DataGrid({
   context,
-  icons,
   localeText,
   ...props
 }: AgGridReactProps & { ref?: React.Ref<AgGridReact> }) {
@@ -21,7 +19,6 @@ export function DataGrid({
     () => ({ ...context, userLocale }),
     [context, userLocale],
   );
-  const resolvedIcons = useMemo(() => ({ ...gridIcons, ...icons }), [icons]);
   const resolvedLocaleText = useMemo(
     () => ({ ...GRID_UI_TEXT, ...localeText }),
     [localeText],
@@ -31,7 +28,6 @@ export function DataGrid({
     <AgGridReact
       singleClickEdit={true}
       theme={gridTheme}
-      icons={resolvedIcons}
       columnTypes={columnTypes}
       dataTypeDefinitions={dataTypeDefinitions}
       context={resolvedContext}
