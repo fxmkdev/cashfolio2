@@ -1,7 +1,7 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../.prisma-client/client";
 import { CLEANUP_LOG_PREFIX, cleanupProviderUsage } from "./run";
-import { createCleanupStore } from "./store";
+import { CLEANUP_CONNECTION_TIMEOUT_MS, createCleanupStore } from "./store";
 
 let client: PrismaClient | undefined;
 try {
@@ -11,7 +11,7 @@ try {
     adapter: new PrismaPg({
       connectionString: process.env.DATABASE_URL,
       max: 1,
-      connectionTimeoutMillis: 20_000,
+      connectionTimeoutMillis: CLEANUP_CONNECTION_TIMEOUT_MS,
     }),
   });
   await cleanupProviderUsage(createCleanupStore(client), {

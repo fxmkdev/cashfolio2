@@ -4,6 +4,7 @@ import { cp, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { setTimeout as delay } from "node:timers/promises";
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
   afterAll,
@@ -226,6 +227,31 @@ describe("provider usage cleanup against disposable PostgreSQL", () => {
     expect(await cleanupProviderUsage(store, { now })).toMatchObject({
       deletedRows: 0,
     });
+  });
+
+  test("allows a fresh database transaction to take longer than one second to start", async () => {
+    const adapter = new PrismaPg({ connectionString: databaseUrl.href });
+    const connect = adapter.connect.bind(adapter);
+    vi.spyOn(adapter, "connect").mockImplementation(async () => {
+      const connection = await connect();
+      const startTransaction = connection.startTransaction.bind(connection);
+      vi.spyOn(connection, "startTransaction").mockImplementationOnce(
+        async (...args) => {
+          // Model connection establishment/BEGIN on a cold remote database.
+          await delay(1_200);
+          return startTransaction(...args);
+        },
+      );
+      return connection;
+    });
+    const coldClient = new PrismaClient({ adapter });
+    try {
+      await expect(
+        cleanupProviderUsage(createCleanupStore(coldClient), { now }),
+      ).resolves.toMatchObject({ status: "completed", deletedRows: 0 });
+    } finally {
+      await coldClient.$disconnect();
+    }
   });
 
   test("deletes oldest rows first and commits each batch despite a later failure", async () => {

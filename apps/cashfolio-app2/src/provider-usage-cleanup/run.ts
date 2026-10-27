@@ -1,3 +1,5 @@
+import { getCleanupFailureReason, type CleanupFailureReason } from "./failure";
+
 export const RETENTION_DAYS = 90;
 export const CLEANUP_BATCH_SIZE = 1_000;
 export const CLEANUP_TIMEOUT_MS = 5 * 60 * 1_000;
@@ -10,6 +12,7 @@ export type CleanupSummary = {
   batchCount: number;
   elapsedMs: number;
   tableBytes: number | null;
+  failureReason?: CleanupFailureReason;
 };
 
 export type CleanupStore = {
@@ -79,6 +82,10 @@ export async function cleanupProviderUsage(
   } catch (error) {
     summary.status =
       error instanceof CleanupTimeoutError ? "incomplete" : "failed";
+    summary.failureReason =
+      error instanceof CleanupTimeoutError
+        ? "deadline-exceeded"
+        : getCleanupFailureReason(error);
     report();
     throw error;
   }

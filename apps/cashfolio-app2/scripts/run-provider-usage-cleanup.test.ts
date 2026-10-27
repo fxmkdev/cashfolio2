@@ -326,6 +326,26 @@ test("reordered log delivery cannot replace terminal metrics with earlier progre
   );
 });
 
+test("includes only allowlisted cleanup failure reasons in workflow reports", async () => {
+  const failed: CleanupSummary = {
+    ...metrics,
+    status: "failed",
+    failureReason: "transaction-failed",
+  };
+  assert.deepEqual(parseCleanupLogs(log(failed)), failed);
+  assert.match(summaryMarkdown("staging", failed, false), /transaction-failed/);
+  const { args, reports } = fixture({
+    state: stopped({ exited_at: "date", exit_code: 1 }),
+    logs: log(failed),
+  });
+  await assert.rejects(runCleanupJob(args), /exited unsuccessfully/);
+  assert.deepEqual(reports, [[failed, false]]);
+
+  const parsed = parseCleanupLogs(log({ ...metrics, failureReason: "secret" }));
+  assert.deepEqual(parsed, metrics);
+  assert.ok(!summaryMarkdown("staging", parsed, false).includes("secret"));
+});
+
 test("lost create response recovers and destroys by unique name", async () => {
   const { args } = fixture();
   let created: Machine | undefined;

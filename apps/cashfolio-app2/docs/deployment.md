@@ -128,6 +128,14 @@ valuation API secrets. After building,
 `pnpm --filter cashfolio-app2 cleanup:provider-usage` executes it against the
 configured database; this is a destructive retention operation.
 
+Each database operation retains a maximum 30-second budget. Transaction
+acquisition includes opening the PostgreSQL connection and `BEGIN`, so it may
+use up to 20 seconds (matching the driver's connection timeout), reserving the
+remaining budget for the transaction. Smaller remaining budgets reduce both
+limits. A one-second acquisition limit can reject a cold remote database before
+cleanup reaches its first table-size query. Statement and lock timeouts remain
+transaction-local, and previously committed batches survive later failures.
+
 `.github/workflows/cleanup-provider-usage.yml` runs daily at 03:43 UTC on the
 default branch. Manual dispatch on `main` selects `prod`, `staging`, or `both`.
 Scheduled runs target both; PR previews are excluded. Runs are serialized per
@@ -159,10 +167,13 @@ different image or a GitHub-hosted database connection. Review GitHub Actions
 logs and summaries for the UTC cutoff, deleted rows, committed batches, elapsed
 milliseconds, and table-plus-index bytes. Failed runs report the last available
 progress (or unavailable metrics when the command could not start) and fail the
-job. No connection strings, raw driver errors, or arbitrary remote logs are
-printed. Machines API HTTP errors identify the method, operation, and status
-without including the response body. There is no additional notification
-service.
+job. New payloads also report an allowlisted failure reason, distinguishing
+connection, authentication, permission, schema, transaction, query, and overall
+deadline failures. Unknown errors remain `unknown`; older payloads without this
+field remain supported. No connection strings, raw driver errors, or arbitrary
+remote logs are printed. Machines API HTTP errors identify the method,
+operation, and status without including the response body. There is no
+additional notification service.
 
 CI exercises the runner with mocked Fly responses and the database cleanup in a
 fresh, isolated PostgreSQL database, including the bundled CLI. Run locally with

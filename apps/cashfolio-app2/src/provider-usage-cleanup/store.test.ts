@@ -1,6 +1,6 @@
 import { expect, test, vi } from "vitest";
 import type { PrismaClient } from "../.prisma-client/client";
-import { createCleanupStore } from "./store";
+import { CLEANUP_CONNECTION_TIMEOUT_MS, createCleanupStore } from "./store";
 
 function fixture() {
   const transaction = {
@@ -37,11 +37,22 @@ test("bounds every independent transaction and parameterizes the exclusive cutof
   expect(await store.hasExpired(cutoff, 5_000)).toBe(false);
   expect(await store.tableSize(1_000)).toBe(8_192);
   expect(client.$transaction).toHaveBeenCalledTimes(3);
-  for (const [_operation, options] of client.$transaction.mock.calls) {
+  for (const [
+    index,
+    [_operation, options],
+  ] of client.$transaction.mock.calls.entries()) {
     expect(options.maxWait).toBeGreaterThan(0);
     expect(options.timeout).toBeGreaterThan(0);
-    expect(options.maxWait + options.timeout).toBeLessThanOrEqual(30_000);
+    expect(options.maxWait + options.timeout).toBeLessThanOrEqual(
+      [30_000, 5_000, 1_000][index],
+    );
   }
+  expect(client.$transaction.mock.calls[0][1]).toEqual({
+    maxWait: CLEANUP_CONNECTION_TIMEOUT_MS,
+    timeout: 10_000,
+  });
+  expect(client.$transaction.mock.calls[1][1].maxWait).toBeLessThan(5_000);
+  expect(client.$transaction.mock.calls[2][1].maxWait).toBeLessThan(1_000);
   expect(transaction.$executeRaw).toHaveBeenCalledWith(
     expect.anything(),
     cutoff,
