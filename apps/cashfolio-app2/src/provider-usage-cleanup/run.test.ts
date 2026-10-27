@@ -89,6 +89,7 @@ describe("provider usage retention", () => {
         deletedRows: 1_000,
         batchCount: 1,
         elapsedMs: CLEANUP_TIMEOUT_MS,
+        failureReason: "deadline-exceeded",
       }),
     );
     await expect(cleanupProviderUsage(store, { now })).resolves.toMatchObject({
@@ -109,6 +110,29 @@ describe("provider usage retention", () => {
         status: "failed",
         deletedRows: 1,
         batchCount: 1,
+        failureReason: "unknown",
+      }),
+    );
+    expect(JSON.stringify(report.mock.calls)).not.toContain(
+      "private driver error",
+    );
+  });
+
+  test("reports a safe transaction failure category in progress metrics", async () => {
+    const { store } = fixture([]);
+    vi.mocked(store.tableSize).mockRejectedValueOnce({
+      code: "P2028",
+      message: "private driver error",
+    });
+    const report = vi.fn();
+    await expect(cleanupProviderUsage(store, { now, report })).rejects.toEqual(
+      expect.objectContaining({ code: "P2028" }),
+    );
+    expect(report).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        status: "failed",
+        failureReason: "transaction-failed",
+        deletedRows: 0,
       }),
     );
     expect(JSON.stringify(report.mock.calls)).not.toContain(

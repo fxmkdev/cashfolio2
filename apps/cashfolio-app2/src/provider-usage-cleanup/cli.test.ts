@@ -14,7 +14,10 @@ vi.mock("../.prisma-client/client", () => ({
     }
   },
 }));
-vi.mock("./store", () => ({ createCleanupStore: vi.fn() }));
+vi.mock("./store", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./store")>()),
+  createCleanupStore: vi.fn(),
+}));
 vi.mock("./run", () => ({
   CLEANUP_LOG_PREFIX: "PROVIDER_USAGE_CLEANUP ",
   cleanupProviderUsage: mocks.cleanup,

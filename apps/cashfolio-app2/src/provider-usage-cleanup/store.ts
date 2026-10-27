@@ -1,13 +1,20 @@
 import type { Prisma, PrismaClient } from "../.prisma-client/client";
 import type { CleanupStore } from "./run";
 
+export const CLEANUP_CONNECTION_TIMEOUT_MS = 20_000;
+
 export function createCleanupStore(client: PrismaClient): CleanupStore {
   // Each operation has its own bounded transaction; completed batches stay committed.
   async function query<T>(
     timeoutMs: number,
     operation: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
-    const maxWait = Math.max(1, Math.min(1_000, Math.floor(timeoutMs / 10)));
+    // Prisma includes connection establishment and BEGIN in maxWait. A fresh
+    // maintenance process must allow database startup, not just a warm pool.
+    const maxWait = Math.max(
+      1,
+      Math.min(CLEANUP_CONNECTION_TIMEOUT_MS, Math.floor((timeoutMs * 2) / 3)),
+    );
     const transactionTimeout = Math.max(1, timeoutMs - maxWait);
     return client.$transaction(
       async (tx) => {

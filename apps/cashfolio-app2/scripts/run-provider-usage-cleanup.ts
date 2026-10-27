@@ -3,6 +3,10 @@ import { randomUUID } from "node:crypto";
 import { appendFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import {
+  isCleanupFailureReason,
+  type CleanupFailureReason,
+} from "../src/provider-usage-cleanup/failure.ts";
 
 const LOG_PREFIX = "PROVIDER_USAGE_CLEANUP ";
 const JOB_TIMEOUT_MS = 8 * 60 * 1_000;
@@ -42,6 +46,7 @@ export interface CleanupSummary {
   batchCount: number;
   elapsedMs: number;
   tableBytes: number | null;
+  failureReason?: CleanupFailureReason;
 }
 
 type HttpMethod = "GET" | "POST" | "DELETE";
@@ -146,6 +151,9 @@ export function parseCleanupLogs(output: string) {
         batchCount: value.batchCount,
         elapsedMs: value.elapsedMs,
         tableBytes: value.tableBytes,
+        ...(isCleanupFailureReason(value.failureReason)
+          ? { failureReason: value.failureReason }
+          : {}),
       };
     } catch {
       // Ignore unrelated Fly logs; never forward arbitrary log text or secrets.
@@ -166,6 +174,7 @@ export function summaryMarkdown(
     "| Metric | Value |",
     "| --- | --- |",
     `| Status | ${summary?.status ?? "unavailable"} |`,
+    `| Failure reason | ${summary?.failureReason ?? (succeeded ? "none" : "unavailable")} |`,
     `| UTC cutoff (exclusive) | ${summary?.cutoff ?? "unavailable"} |`,
     `| Deleted rows | ${summary?.deletedRows ?? "unavailable"} |`,
     `| Committed batches | ${summary?.batchCount ?? "unavailable"} |`,
