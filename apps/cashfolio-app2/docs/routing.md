@@ -126,12 +126,16 @@ their default handling. Revisit this filter if the app enables RSC.
     `/user-settings` with the current URL as `returnTo`.
 - `$accountBookId/index.tsx` - index redirect route that forwards to
   `$accountBookId/accounts`
-- `$accountBookId/accounts/route.tsx` - accounts page with Assets and
-  Liabilities tabs. Legacy Income/Expense tab links redirect to settings
-  category management, preserving their tab, mapping archived mode to
-  `showArchived=true`, and replacing the history entry.
-  - Loader data is tab-scoped: only the selected tab is fetched in the route
-    loader critical path.
+- `$accountBookId/accounts/route.tsx` - accounts page with one balance-account
+  hierarchy containing active and archived accounts and groups. There are no
+  separate Assets/Liabilities tabs or archived view. Accounts URLs canonicalize
+  to `tab=BALANCE&mode=active`, including legacy Asset/Liability and
+  archived-mode links, with replacement navigation. Legacy Income/Expense tab
+  links redirect to settings category management, preserving their tab, mapping
+  archived mode to `showArchived=true`, and replacing the history entry.
+  - The loader fetches the unified balance-account hierarchy. The shared
+    account-management loader fetches only the selected category subtype for
+    settings category tabs.
 - `$accountBookId/transactions/route.tsx` - transactions page showing one master
   row per transaction, with AG Grid Master Detail expansion for the underlying
   booking rows. The explicit month/year period filter includes a full
@@ -285,9 +289,10 @@ controllers.
 
 - Routes use `validateSearch` to define typed, validated search parameters
 - `$accountBookId/accounts/route.tsx` uses:
-  - `tab: TabValue` to track the active account type tab
-  - `mode: "active" | "archived"` to switch between active and archived account
-    trees
+  - Canonical `tab=BALANCE&mode=active` for the unified Accounts hierarchy;
+    these parameters do not select separate account-type or archived views.
+  - Legacy Income/Expense tab parameters redirect to Settings category
+    management with the selected category tab and archived visibility preserved.
 - `$accountBookId/$accountId/route.tsx` uses:
   - `transactionId?: string` to auto-scroll and highlight a booking row
   - `period?: string` for explicit month/year period filtering on supported

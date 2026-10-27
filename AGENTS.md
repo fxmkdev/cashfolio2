@@ -96,7 +96,8 @@ pnpm lint:workflows                           # actionlint check for GitHub work
 - For server-side monetary math, use `decimal.js` to preserve precision (avoid
   native `number` arithmetic for money values).
 - Use `react-number-format` for locale-aware number inputs.
-- Use `en-CH` locale for number formatting.
+- Use the active user locale for number formatting, with `en-US` as the fallback
+  defined in `src/user-locale.ts`.
 - Keep currency/crypto constants in `src/currencies.ts` and
   `src/cryptocurrencies.ts`.
 - In `src/routes/`, non-route files must be prefixed with `-` or live inside a

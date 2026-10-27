@@ -84,8 +84,10 @@ group-level value or ongoing inheritance.
 Account queries and period base-data snapshots carry classification as metadata.
 Changing it uses the existing account mutation boundary, database cache revision
 trigger, post-commit cleanup, and router invalidation. Base-data cache v10
-includes the new field; History metrics retain their current format and version.
-No report calculation or grouping uses asset class yet.
+includes the field. Classification drives the
+[Asset Class → Account reporting hierarchy](#asset-class-gainloss-reporting) in
+Period overview and History; Unit and instrument identity continue to control
+valuation and FIFO calculations independently of classification.
 
 `src/server/accounts/accounts-mutation-operations.ts` keeps the existing
 operation exports stable. Implementations live in
