@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { UserRole } from "../../.prisma-client/enums";
 
 const createServerFn = vi.hoisted(() =>
   vi.fn(() => {
@@ -19,7 +20,7 @@ const createServerFn = vi.hoisted(() =>
   }),
 );
 
-const ensureUser = vi.hoisted(() => vi.fn());
+const ensureUserHasRole = vi.hoisted(() => vi.fn());
 const getRedisClient = vi.hoisted(() => vi.fn());
 const getCurrencyExchangeRate = vi.hoisted(() => vi.fn());
 const getCryptocurrencyToCurrencyExchangeRate = vi.hoisted(() => vi.fn());
@@ -30,7 +31,7 @@ vi.mock("@tanstack/react-start", () => ({
 }));
 
 vi.mock("../../users/functions.server", () => ({
-  ensureUser,
+  ensureUserHasRole,
 }));
 
 vi.mock("../../redis.server", () => ({
@@ -52,8 +53,52 @@ describe("valuation-cache server functions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    ensureUser.mockResolvedValue({ id: "user-1" });
+    ensureUserHasRole.mockReset();
+    ensureUserHasRole.mockResolvedValue({
+      id: "admin-user",
+      roles: [UserRole.ADMIN],
+    });
     getRedisClient.mockResolvedValue(null);
+  });
+
+  describe.each([
+    {
+      endpoint: "unit list",
+      request: () => getValuationCacheUnits({ data: {} }),
+    },
+    {
+      endpoint: "series",
+      request: () =>
+        getValuationCacheSeries({
+          data: { unitType: "CURRENCY", currency: "EUR" },
+        }),
+    },
+  ])("$endpoint authorization", ({ request }) => {
+    it.each(["available", "unavailable"])(
+      "rejects non-admin requests before accessing an %s cache",
+      async (availability) => {
+        const forbidden = new Response("Forbidden", { status: 403 });
+        ensureUserHasRole.mockRejectedValueOnce(forbidden);
+        const redis = {
+          scanIterator: vi.fn(),
+          exists: vi.fn(),
+          ts: { range: vi.fn() },
+        };
+        getRedisClient.mockResolvedValue(
+          availability === "available" ? redis : null,
+        );
+
+        await expect(request()).rejects.toBe(forbidden);
+
+        expect(ensureUserHasRole).toHaveBeenCalledExactlyOnceWith(
+          UserRole.ADMIN,
+        );
+        expect(getRedisClient).not.toHaveBeenCalled();
+        expect(redis.scanIterator).not.toHaveBeenCalled();
+        expect(redis.exists).not.toHaveBeenCalled();
+        expect(redis.ts.range).not.toHaveBeenCalled();
+      },
+    );
   });
 
   it("deduplicates and normalizes all permanent valuation TimeSeries keys", async () => {
@@ -87,7 +132,7 @@ describe("valuation-cache server functions", () => {
       data: {},
     });
 
-    expect(ensureUser).toHaveBeenCalledTimes(1);
+    expect(ensureUserHasRole).toHaveBeenCalledExactlyOnceWith(UserRole.ADMIN);
     expect(redis.scanIterator).toHaveBeenCalledWith({
       MATCH: "valuation:currencylayer:USD:*",
       COUNT: 100,
@@ -162,7 +207,7 @@ describe("valuation-cache server functions", () => {
       },
     });
 
-    expect(ensureUser).toHaveBeenCalledTimes(1);
+    expect(ensureUserHasRole).toHaveBeenCalledExactlyOnceWith(UserRole.ADMIN);
     expect(redis.exists).toHaveBeenCalledWith(
       "valuation:currencylayer:USD:EUR",
     );
@@ -268,7 +313,7 @@ describe("valuation-cache server functions", () => {
       }),
     ).rejects.toThrow("Input must be an object.");
 
-    expect(ensureUser).not.toHaveBeenCalled();
+    expect(ensureUserHasRole).not.toHaveBeenCalled();
   });
 
   it("validates valuation cache series input before authorization", async () => {
@@ -288,7 +333,7 @@ describe("valuation-cache server functions", () => {
       status: 400,
     });
 
-    expect(ensureUser).not.toHaveBeenCalled();
+    expect(ensureUserHasRole).not.toHaveBeenCalled();
   });
 
   it("logs cache series read failures only once while returning non-fatal empty data", async () => {

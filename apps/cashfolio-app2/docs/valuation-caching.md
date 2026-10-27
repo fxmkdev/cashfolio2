@@ -352,6 +352,11 @@ The Admin `Valuation Cache` page answers "what valuation data is cached in
 Redis?" The Admin `Provider Usage` page answers "how often did we call external
 providers, and why?"
 
+Both valuation-cache server functions require the Admin role before accessing
+Redis, including when called directly without loading the Admin page. Ordinary
+signed-in users receive a `403 Forbidden` response even when Redis is
+unavailable.
+
 ### Raw request retention
 
 Raw requests are retained for 90 elapsed days, based on `requestedAt`, not the
