@@ -29,8 +29,7 @@ export type HistorySearch = {
   incomeScope?: HistoryScopeSelection;
   expenseScope?: HistoryScopeSelection;
   gainLossScope?: HistoryScopeSelection;
-  assetScope?: HistoryScopeSelection;
-  liabilityScope?: HistoryScopeSelection;
+  netWorthScope?: HistoryScopeSelection;
 };
 
 export const DEFAULT_HISTORY_MODE: HistoryPeriodMode = "month";
@@ -87,12 +86,34 @@ export function getHistoryMetricLabel(metric: HistoryMetric): string {
 export function parseHistorySearch(
   search: Record<string, unknown>,
 ): HistorySearch {
+  const legacyScope =
+    search.metric === "assets"
+      ? search.assetScope
+      : search.metric === "liabilities"
+        ? search.liabilityScope
+        : undefined;
+  const migrateLegacyScope =
+    (search.metric === "assets" || search.metric === "liabilities") &&
+    legacyScope !== undefined &&
+    legacyScope !== "total";
+  const netWorthScope =
+    "netWorthScope" in search
+      ? search.netWorthScope
+      : migrateLegacyScope
+        ? legacyScope
+        : undefined;
   return {
     ...("mode" in search
       ? { mode: isHistoryPeriodMode(search.mode) ? search.mode : undefined }
       : {}),
     ...("metric" in search
-      ? { metric: isHistoryMetric(search.metric) ? search.metric : undefined }
+      ? {
+          metric: migrateLegacyScope
+            ? "netWorth"
+            : isHistoryMetric(search.metric)
+              ? search.metric
+              : undefined,
+        }
       : {}),
     ...("cashFlowScope" in search
       ? { cashFlowScope: parseHistoryScopeSelection(search.cashFlowScope) }
@@ -106,11 +127,8 @@ export function parseHistorySearch(
     ...("gainLossScope" in search
       ? { gainLossScope: parseHistoryScopeSelection(search.gainLossScope) }
       : {}),
-    ...("assetScope" in search
-      ? { assetScope: parseHistoryScopeSelection(search.assetScope) }
-      : {}),
-    ...("liabilityScope" in search
-      ? { liabilityScope: parseHistoryScopeSelection(search.liabilityScope) }
+    ...("netWorthScope" in search || migrateLegacyScope
+      ? { netWorthScope: parseHistoryScopeSelection(netWorthScope) }
       : {}),
   };
 }
@@ -143,11 +161,7 @@ export function getHistoryScopeForMetric(args: {
     return args.search.gainLossScope ?? DEFAULT_HISTORY_SCOPE;
   }
 
-  if (args.metric === "assets") {
-    return args.search.assetScope ?? DEFAULT_HISTORY_SCOPE;
-  }
-
-  return args.search.liabilityScope ?? DEFAULT_HISTORY_SCOPE;
+  return args.search.netWorthScope ?? DEFAULT_HISTORY_SCOPE;
 }
 
 export function getHistoryScopedMetric(

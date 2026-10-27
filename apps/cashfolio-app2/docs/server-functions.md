@@ -255,8 +255,8 @@ namespaces and preserves global valuation caches.
   - Cleanup hint (never used to determine cache validity):
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
 - History metrics entry:
-  `period:history:metrics:v10:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
-- Base-data v10 and History metrics v10 store monetary values as tagged exact
+  `period:history:metrics:v11:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
+- Base-data v10 and History metrics v11 store monetary values as tagged exact
   decimal strings through `src/server/money-cache-codec.ts`
   (`{ __cashfolioDecimal: "..." }`). Dates retain their existing
   `{ __cashfolioDateMs: milliseconds }` representation. Reads reconstruct
@@ -503,7 +503,7 @@ different month or year. Calculated-event and execution-residual links retain
 the real account's ledger and period, or Transactions for virtual accounts.
 
 Base-data v10 adds originating-account IDs and recorded booking descriptions.
-History metrics v10 carries class/account scopes and explicit account metadata;
+History metrics v11 carries class/account scopes and explicit account metadata;
 older hierarchy payloads are not reused. Classification edits already advance
 `AccountBook.periodCacheRevision` transactionally, invalidating both cache
 families for all periods. No changes to provider caches or FIFO keys are needed.
@@ -839,11 +839,15 @@ allocation rounding and hidden-small-balance discrepancy indicators remain
 applicable.
 
 History applies classification independently at every month/year endpoint and
-its opening baseline. Account/group scopes contain only that metric's
-contribution; a selected account contributes zero while on the opposite side.
-Scope options remain the union across period points. History metrics v10
-prevents reuse of results computed with permanent asset/liability
-classification; base-data v10 and valuation caches remain compatible.
+its opening baseline. Assets and Liabilities expose aggregate totals only. Net
+Worth supports account/group scopes using signed reference-currency balances,
+including the opening baseline; group scopes sum all descendant accounts before
+rounding. The complete real Balance Account hierarchy is loaded once per
+request, including archived accounts, zero balances, and empty Balance Account
+groups. Virtual transfer-clearing scopes are merged across period points.
+Unavailable valuations remain omitted from amounts without removing real scope
+options. History metrics v11 replaces asset/liability scope metadata with Net
+Worth scope metadata; base-data v10 and valuation caches remain compatible.
 
 ### Unified account management queries
 

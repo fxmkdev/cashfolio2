@@ -17,9 +17,10 @@ import { createPeriodOverviewEquityAggregation } from "../overview/period-overvi
 import { preparePeriodCalculationContext } from "../period-calculation-context";
 import type { GainLossContributionAccumulator } from "../breakdown/period-gains-losses-contributions";
 import {
-  buildBalanceHistoryScopeAmountMaps,
+  buildNetWorthHistoryScopeAmountMap,
   buildHistoryGainLossScopeOptions,
   buildHistoryScopeOptions,
+  buildNetWorthHistoryScopeOptions,
   resolveScopedMetricValue,
   type HistoryMetricScopeFilter,
 } from "./period-history-scopes.server";
@@ -48,8 +49,7 @@ export type PeriodHistoryPointMetrics = {
     income: HistoryScopeOption[];
     expenses: HistoryScopeOption[];
     gainsLosses: HistoryScopeOption[];
-    assets: HistoryScopeOption[];
-    liabilities: HistoryScopeOption[];
+    netWorth: HistoryScopeOption[];
   };
   scopedMetricValue?: Money;
 };
@@ -110,8 +110,7 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
           income: [],
           expenses: [],
           gainsLosses: [],
-          assets: [],
-          liabilities: [],
+          netWorth: [],
         },
         scopedMetricValue: args.metricScopeFilter ? toMoney(0) : undefined,
       } satisfies PeriodHistoryPointMetrics,
@@ -245,12 +244,11 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
   const roundedAssets = round2(endOfPeriodBalanceStats.assets);
   const roundedLiabilities = round2(endOfPeriodBalanceStats.liabilities);
   const roundedNetWorth = round2(endOfPeriodBalanceStats.netWorth);
-  const { assetAmountByAccountId, liabilityAmountByAccountId } =
-    buildBalanceHistoryScopeAmountMaps({
-      accounts: assetLiabilityAccounts,
-      convertedBalanceByAccountId:
-        endOfPeriodBalanceStats.convertedBalanceByAccountId,
-    });
+  const netWorthAmountByAccountId = buildNetWorthHistoryScopeAmountMap({
+    accounts: assetLiabilityAccounts,
+    convertedBalanceByAccountId:
+      endOfPeriodBalanceStats.convertedBalanceByAccountId,
+  });
   const cashFlowScopeOptions = buildHistoryScopeOptions({
     amountByAccountId: cashFlowResult.cashFlowAmountByAccountId,
     allAccountGroups,
@@ -263,13 +261,11 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
     amountByAccountId: equityAggregation.expenseAmountByAccountId,
     allAccountGroups,
   });
-  const assetScopeOptions = buildHistoryScopeOptions({
-    amountByAccountId: assetAmountByAccountId,
-    allAccountGroups,
-  });
-  const liabilityScopeOptions = buildHistoryScopeOptions({
-    amountByAccountId: liabilityAmountByAccountId,
-    allAccountGroups,
+  const netWorthScopeOptions = buildNetWorthHistoryScopeOptions({
+    accounts: assetLiabilityAccounts.filter((account) =>
+      account.id.startsWith("virtual:"),
+    ),
+    groups: allAccountGroups.filter((group) => group.id.startsWith("virtual:")),
   });
   const gainsLossesBreakdown = buildGainsLossesBreakdown({
     contributions: Array.from(gainsLossesContributionByKey.values()),
@@ -287,8 +283,7 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
       income: equityAggregation.incomeAmountByAccountId,
       cashFlow: cashFlowResult.cashFlowAmountByAccountId,
       expenses: equityAggregation.expenseAmountByAccountId,
-      assets: assetAmountByAccountId,
-      liabilities: liabilityAmountByAccountId,
+      netWorth: netWorthAmountByAccountId,
     },
     gainsLossesHierarchy: gainsLossesBreakdown.hierarchy,
     allAccountGroups,
@@ -310,8 +305,7 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
         income: incomeScopeOptions,
         expenses: expenseScopeOptions,
         gainsLosses: gainLossScopeOptions,
-        assets: assetScopeOptions,
-        liabilities: liabilityScopeOptions,
+        netWorth: netWorthScopeOptions,
       },
       scopedMetricValue,
     } satisfies PeriodHistoryPointMetrics,

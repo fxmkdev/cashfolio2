@@ -14,7 +14,7 @@ import {
   loadTransferClearingUnitBuckets,
 } from "../transfer-clearing/period-transfer-clearing";
 import {
-  buildBalanceHistoryScopeAmountMaps,
+  buildNetWorthHistoryScopeAmountMap,
   resolveScopedMetricValue,
   type HistoryMetricScopeFilter,
 } from "./period-history-scopes.server";
@@ -122,19 +122,17 @@ export async function loadHistoryOpeningBalancePoint(args: {
           exchangeRateByKey,
         }),
     });
-  const { assetAmountByAccountId, liabilityAmountByAccountId } =
-    buildBalanceHistoryScopeAmountMaps({
-      accounts: [...baseAssetLiabilityAccounts, ...virtualAccounts],
-      convertedBalanceByAccountId:
-        openingBalanceStats.convertedBalanceByAccountId,
-    });
+  const netWorthAmountByAccountId = buildNetWorthHistoryScopeAmountMap({
+    accounts: [...baseAssetLiabilityAccounts, ...virtualAccounts],
+    convertedBalanceByAccountId:
+      openingBalanceStats.convertedBalanceByAccountId,
+  });
   const scopedMetricValue = resolveScopedMetricValue({
     metricScopeFilter: args.metricScopeFilter,
     amountByMetric: {
       income: new Map(),
       expenses: new Map(),
-      assets: assetAmountByAccountId,
-      liabilities: liabilityAmountByAccountId,
+      netWorth: netWorthAmountByAccountId,
     },
     allAccountGroups: [...accountGroups, ...virtualGroups],
   });

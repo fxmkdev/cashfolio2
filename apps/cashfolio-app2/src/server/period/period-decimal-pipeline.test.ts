@@ -509,7 +509,7 @@ describe("Decimal monetary pipelines", () => {
       expect(history.netWorth).toBe(bankBalance + cardBalance);
       expect(overview.assetBreakdown.totalAmount).toBe(history.assets);
       expect(overview.liabilityBreakdown.totalAmount).toBe(history.liabilities);
-      for (const metric of ["assets", "liabilities"] as const) {
+      for (const metric of ["netWorth"] as const) {
         const scoped = await loadPeriodHistoryPointMetrics({
           accountBookId: "book-1",
           baseData: scenario,

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
 import { HistoryViewSelect } from "./-view-select";
+import { netWorthScopeOptions } from "./-story-fixtures";
 
 const meta = {
   title: "Routes/HistoryViewSelect",
@@ -12,8 +13,7 @@ const meta = {
       income: "total",
       expenses: "total",
       gainsLosses: "total",
-      assets: "total",
-      liabilities: "total",
+      netWorth: "total",
     },
     scopeOptions: {
       cashFlow: [],
@@ -27,8 +27,7 @@ const meta = {
         },
       ],
       gainsLosses: [],
-      assets: [],
-      liabilities: [],
+      netWorth: [],
     },
     onViewChange: fn(),
   },
@@ -64,5 +63,29 @@ export const Pending: Story = {
     await userEvent.click(input);
     await expect(canvas.queryByRole("listbox")).not.toBeInTheDocument();
     await expect(args.onViewChange).not.toHaveBeenCalled();
+  },
+};
+
+export const NetWorthHierarchy: Story = {
+  args: {
+    selectedMetric: "netWorth",
+    scopeSelection: {
+      ...meta.args.scopeSelection,
+      netWorth: "account:checking",
+    },
+    scopeOptions: { ...meta.args.scopeOptions, netWorth: netWorthScopeOptions },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByRole("textbox", { name: "View" });
+    await expect(input).toHaveValue("Checking");
+    await userEvent.click(input);
+    await userEvent.clear(input);
+    await userEvent.type(input, "Net Worth / Banking / Credit Card");
+    await userEvent.click(canvas.getByRole("option", { name: "Credit Card" }));
+    await expect(args.onViewChange).toHaveBeenCalledWith({
+      metric: "netWorth",
+      scope: "account:card",
+    });
   },
 };

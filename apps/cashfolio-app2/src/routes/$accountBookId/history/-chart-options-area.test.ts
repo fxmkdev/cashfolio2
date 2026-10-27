@@ -10,6 +10,41 @@ import {
 } from "./-chart-test-helpers";
 
 describe("createHistoryChartOptions (balance metrics)", () => {
+  test("uses the selected account name in both signed Net Worth series and tooltips", () => {
+    const chartData = mapHistoryPointsToChartData([
+      createHistoryPoint({
+        periodValue: "2026-01",
+        periodLabel: "January 2026",
+        netWorth: -40,
+        totalReturn: 0,
+        savings: 0,
+        income: 0,
+        expenses: 0,
+        gainsLosses: 0,
+      }),
+    ]);
+    const options = createHistoryChartOptions({
+      chartData,
+      periodMode: "month",
+      selectedMetric: "netWorth",
+      selectedMetricSeriesLabel: "Checking",
+      amountCompactFormatter: new Intl.NumberFormat("en-CH"),
+      currencyFormatter: new Intl.NumberFormat("en-CH"),
+      colors: mockColors,
+      theme: mockTheme,
+      isDarkMode: false,
+    });
+    for (const series of options.series ?? []) {
+      expect(series).toMatchObject({ yName: "Checking" });
+      const area = series as unknown as {
+        tooltip: { renderer: (args: { datum: unknown }) => unknown };
+      };
+      expect(area.tooltip.renderer({ datum: chartData[0] })).toMatchObject({
+        data: [{ label: "Checking", value: "-40" }],
+      });
+    }
+  });
+
   test("renders assets as green area without cumulative line", () => {
     const chartData = mapHistoryPointsToChartData([
       createHistoryPoint({

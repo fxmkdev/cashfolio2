@@ -71,14 +71,24 @@ describe("History chart drill-down", () => {
     expect(onPeriodDoubleClick).not.toHaveBeenCalled();
   });
 
-  test("does not wire aggregate overlays or Net Worth", () => {
+  test("does not wire aggregate overlays", () => {
     const onPeriodDoubleClick = vi.fn();
     for (const overlay of series(
       createOptions("expenses", onPeriodDoubleClick),
     ).slice(1))
       expect(overlay.listeners).toBeUndefined();
-    for (const area of series(createOptions("netWorth", onPeriodDoubleClick)))
-      expect(area.listeners).toBeUndefined();
+  });
+
+  test("opens periods from both signed Net Worth series and ignores the opening balance", () => {
+    const onPeriodDoubleClick = vi.fn();
+    for (const area of series(createOptions("netWorth", onPeriodDoubleClick))) {
+      expect(area.marker).toMatchObject({ enabled: true, size: 5 });
+      area.listeners?.seriesNodeDoubleClick({ datum: chartData[0] });
+      area.listeners?.seriesNodeDoubleClick({
+        datum: { ...chartData[0], periodValue: "opening-balance:2025-12-31" },
+      });
+    }
+    expect(onPeriodDoubleClick.mock.calls).toEqual([["2026-01"], ["2026-01"]]);
   });
 
   test("omits events and balance markers when no destination is available", () => {

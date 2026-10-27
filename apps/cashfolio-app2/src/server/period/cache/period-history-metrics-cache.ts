@@ -96,8 +96,7 @@ function isHistoryMetricsCacheEntry(
     isHistoryScopeOptionArray(record.scopeOptions.income) &&
     isHistoryScopeOptionArray(record.scopeOptions.expenses) &&
     isHistoryScopeOptionArray(record.scopeOptions.gainsLosses) &&
-    isHistoryScopeOptionArray(record.scopeOptions.assets) &&
-    isHistoryScopeOptionArray(record.scopeOptions.liabilities) &&
+    isHistoryScopeOptionArray(record.scopeOptions.netWorth) &&
     (record.scopedMetricValue === undefined ||
       isCachedMoney(record.scopedMetricValue))
   );

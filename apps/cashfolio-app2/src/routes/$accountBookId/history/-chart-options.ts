@@ -119,12 +119,14 @@ export function createHistoryChartOptions(args: {
             type: "area" as const,
             xKey: "periodMetricDate",
             yKey: "netWorthPositive",
-            yName: selectedMetricLabel,
+            yName: flowSeriesLabel,
+            listeners: periodListeners,
             stroke: positiveFillColor,
             fill: positiveFillColor,
             fillOpacity: 0.4,
             marker: {
-              enabled: false,
+              enabled: !!args.onPeriodDoubleClick,
+              size: 5,
             },
             tooltip: {
               renderer: ({ datum }: { datum: unknown }) => {
@@ -133,7 +135,7 @@ export function createHistoryChartOptions(args: {
                   heading: getAreaTooltipHeading(point),
                   data: [
                     {
-                      label: selectedMetricLabel,
+                      label: flowSeriesLabel,
                       value: args.currencyFormatter.format(point.netWorth),
                     },
                   ],
@@ -145,13 +147,15 @@ export function createHistoryChartOptions(args: {
             type: "area" as const,
             xKey: "periodMetricDate",
             yKey: "netWorthNegative",
-            yName: selectedMetricLabel,
+            yName: flowSeriesLabel,
+            listeners: periodListeners,
             showInLegend: false,
             stroke: negativeFillColor,
             fill: negativeFillColor,
             fillOpacity: 0.4,
             marker: {
-              enabled: false,
+              enabled: !!args.onPeriodDoubleClick,
+              size: 5,
             },
             tooltip: {
               renderer: ({ datum }: { datum: unknown }) => {
@@ -160,7 +164,7 @@ export function createHistoryChartOptions(args: {
                   heading: getAreaTooltipHeading(point),
                   data: [
                     {
-                      label: selectedMetricLabel,
+                      label: flowSeriesLabel,
                       value: args.currencyFormatter.format(point.netWorth),
                     },
                   ],
