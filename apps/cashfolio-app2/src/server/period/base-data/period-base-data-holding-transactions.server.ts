@@ -1,8 +1,4 @@
 import { toMoney } from "../../../shared/money";
-import {
-  AccountType,
-  EquityAccountSubtype,
-} from "../../../.prisma-client/enums";
 import type { PeriodReadClient } from "./period-read-client";
 
 import type { PeriodBaseHoldingTransaction } from "./period-base-data-types";
@@ -12,6 +8,7 @@ const TRANSACTIONS_PAGE_SIZE = 200;
 type LoadPeriodHoldingTransactionsRawArgs = {
   accountBookId: string;
   holdingAccountIds: string[];
+  openingBalanceAccountIds: string[];
   queryStart: Date;
   queryEndExclusive: Date;
 };
@@ -132,7 +129,11 @@ function getHoldingTransactionsWhere(
           },
         },
       },
-      getNoOpeningBalanceBookingsFilter(),
+      {
+        bookings: {
+          none: { accountId: { in: args.openingBalanceAccountIds } },
+        },
+      },
     ],
   };
 }
@@ -158,18 +159,5 @@ function mapPeriodHoldingTransaction(
       accountType: booking.account.type,
       equityAccountSubtype: booking.account.equityAccountSubtype,
     })),
-  };
-}
-
-function getNoOpeningBalanceBookingsFilter() {
-  return {
-    bookings: {
-      none: {
-        account: {
-          type: AccountType.EQUITY,
-          equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
-        },
-      },
-    },
   };
 }

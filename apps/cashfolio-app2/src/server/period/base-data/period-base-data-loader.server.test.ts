@@ -48,6 +48,16 @@ describe("period database snapshot boundary", () => {
               groupId: null,
               equityAccountSubtype: EquityAccountSubtype.GAIN_LOSS,
             },
+            ...[
+              ["opening", EquityAccountSubtype.OPENING_BALANCES],
+              ["income", EquityAccountSubtype.INCOME],
+              ["expense", EquityAccountSubtype.EXPENSE],
+            ].map(([id, equityAccountSubtype]) => ({
+              id,
+              name: id,
+              groupId: null,
+              equityAccountSubtype,
+            })),
           ]
         : [
             {
@@ -149,6 +159,41 @@ describe("period database snapshot boundary", () => {
     expect(data.referenceCurrency).toBe("CHF");
     expect(data).not.toHaveProperty("revision");
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it("resolves transaction subtype filters from snapshot metadata and keeps opening balances out of equity period bookings", async () => {
+    await loadPeriodBaseDataSnapshot({
+      accountBookId: "book",
+      period: "2026-02",
+    });
+    expect(tx.account.findMany).toHaveBeenCalledTimes(2);
+    const transactionQueries = tx.transaction.findMany.mock.calls.map(
+      ([query]) => query,
+    );
+    for (const query of transactionQueries) {
+      expect(query.where.AND).toContainEqual({
+        bookings: {
+          none: { accountId: { in: expect.arrayContaining(["opening"]) } },
+        },
+      });
+      expect(JSON.stringify(query.where)).not.toContain('"account":');
+    }
+    const residualQuery = transactionQueries.find((query) =>
+      query.where.AND.some(
+        (filter: { bookings?: { some?: { accountId?: { in: string[] } } } }) =>
+          filter.bookings?.some?.accountId?.in.includes("expense"),
+      ),
+    );
+    expect(residualQuery.where.AND).toContainEqual({
+      bookings: { none: { accountId: { in: ["gain-loss", "opening"] } } },
+    });
+    expect(tx.booking.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          accountId: { in: ["gain-loss", "income", "expense"] },
+        }),
+      }),
+    );
   });
 
   it("propagates transaction failures without retrying through the global client", async () => {

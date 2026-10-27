@@ -1,4 +1,4 @@
-import { AccountType } from "../../.prisma-client/enums";
+import { AccountType, EquityAccountSubtype } from "../../.prisma-client/enums";
 import { prisma } from "../../prisma.server";
 import { toMoney } from "../../shared/money";
 import { addUtcDays, startOfUtcDay } from "../../shared/date";
@@ -41,7 +41,7 @@ async function loadAccountGainLossInputs(
   args: { accountBookId: string; asOfDate: Date },
   db: PeriodReadClient,
 ) {
-  const [book, accounts, groups] = await Promise.all([
+  const [book, accounts, groups, openingBalanceAccounts] = await Promise.all([
     db.accountBook.findUniqueOrThrow({
       where: { id: args.accountBookId },
       select: {
@@ -72,6 +72,14 @@ async function loadAccountGainLossInputs(
       where: { accountBookId: args.accountBookId },
       select: { id: true, parentGroupId: true, type: true, isActive: true },
     }),
+    db.account.findMany({
+      where: {
+        accountBookId: args.accountBookId,
+        type: AccountType.EQUITY,
+        equityAccountSubtype: EquityAccountSubtype.OPENING_BALANCES,
+      },
+      select: { id: true },
+    }),
   ]);
   const startDate = startOfUtcDay(book.startDate);
   const { asOfDate } = args;
@@ -97,6 +105,9 @@ async function loadAccountGainLossInputs(
           {
             accountBookId: args.accountBookId,
             holdingAccountIds: holdingIds,
+            openingBalanceAccountIds: openingBalanceAccounts.map(
+              (account) => account.id,
+            ),
             queryStart: startDate,
             queryEndExclusive: addUtcDays(asOfDate, 1),
           },

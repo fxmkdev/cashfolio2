@@ -73,7 +73,7 @@ async function loadPeriodBaseDataFromClient(
   });
 
   const referenceCurrency = accountBook.referenceCurrency.toUpperCase();
-  const [allAccountGroups, baseAssetLiabilityAccounts, equityAccounts] =
+  const [allAccountGroups, baseAssetLiabilityAccounts, allEquityAccounts] =
     await Promise.all([
       db.accountGroup.findMany({
         where: { accountBookId: args.accountBookId },
@@ -113,6 +113,7 @@ async function loadPeriodBaseDataFromClient(
               EquityAccountSubtype.INCOME,
               EquityAccountSubtype.EXPENSE,
               EquityAccountSubtype.GAIN_LOSS,
+              EquityAccountSubtype.OPENING_BALANCES,
             ],
           },
         },
@@ -148,6 +149,34 @@ async function loadPeriodBaseDataFromClient(
   );
   const cashAccountIds = baseAssetLiabilityAccounts
     .filter((account) => account.isCashAccount === true)
+    .map((account) => account.id);
+  // Resolve subtype filters once in this snapshot. Joining Account inside each
+  // transaction-page exclusion can make PostgreSQL rescan the whole book for
+  // every candidate when a newly inserted book has no planner statistics yet.
+  const openingBalanceAccountIds = allEquityAccounts
+    .filter(
+      (account) =>
+        account.equityAccountSubtype === EquityAccountSubtype.OPENING_BALANCES,
+    )
+    .map((account) => account.id);
+  const equityAccounts = allEquityAccounts.filter(
+    (account) =>
+      account.equityAccountSubtype !== EquityAccountSubtype.OPENING_BALANCES,
+  );
+  const incomeExpenseAccountIds = equityAccounts
+    .filter(
+      (account) =>
+        account.equityAccountSubtype === EquityAccountSubtype.INCOME ||
+        account.equityAccountSubtype === EquityAccountSubtype.EXPENSE,
+    )
+    .map((account) => account.id);
+  const excludedExecutionAccountIds = allEquityAccounts
+    .filter(
+      (account) =>
+        account.equityAccountSubtype ===
+          EquityAccountSubtype.OPENING_BALANCES ||
+        account.equityAccountSubtype === EquityAccountSubtype.GAIN_LOSS,
+    )
     .map((account) => account.id);
   const equityAccountIds = equityAccounts.map((account) => account.id);
   const equityAccountById = new Map(
@@ -213,6 +242,7 @@ async function loadPeriodBaseDataFromClient(
           {
             accountBookId: args.accountBookId,
             holdingAccountIds,
+            openingBalanceAccountIds,
             queryStart,
             queryEndExclusive,
           },
@@ -224,6 +254,7 @@ async function loadPeriodBaseDataFromClient(
           {
             accountBookId: args.accountBookId,
             cashAccountIds,
+            openingBalanceAccountIds,
             queryStart,
             queryEndExclusive,
           },
@@ -236,6 +267,8 @@ async function loadPeriodBaseDataFromClient(
             accountBookId: args.accountBookId,
             periodStart: queryStart,
             periodEndExclusive: queryEndExclusive,
+            incomeExpenseAccountIds,
+            excludedAccountIds: excludedExecutionAccountIds,
           },
           db,
         ),
