@@ -1,6 +1,7 @@
 import LogtoClient, {
   PersistKey,
   type LogtoConfig,
+  type LogtoContext,
   type SessionData,
   type Storage,
   type StorageKey,
@@ -45,10 +46,10 @@ export function hasUnexpiredClaims(claims: { exp?: number }, now = Date.now()) {
 export async function authenticateSessionClient(
   config: LogtoConfig,
   storage: LogtoSessionStorage,
-) {
+): Promise<{ accessToken: string | null; context: LogtoContext }> {
   let client = createSessionClient(config, storage);
   if (!(await client.isAuthenticated()))
-    return { client, context: { isAuthenticated: false as const } };
+    return { accessToken: null, context: { isAuthenticated: false as const } };
   if (!hasUnexpiredClaims(await client.getIdTokenClaims())) {
     // A new client loads the changed storage rather than its stale in-memory map.
     await storage.removeItem(PersistKey.AccessToken);
@@ -56,16 +57,16 @@ export async function authenticateSessionClient(
   }
   // getContext catches token errors; request the token directly to distinguish
   // invalid credentials from a temporary provider outage.
-  await client.getAccessToken();
+  const accessToken = await client.getAccessToken();
   const context = await client.getContext({ getAccessToken: false });
   if (
     !context.isAuthenticated ||
     !context.claims ||
     !hasUnexpiredClaims(context.claims)
   ) {
-    return { client, context: { isAuthenticated: false as const } };
+    return { accessToken: null, context: { isAuthenticated: false as const } };
   }
-  return { client, context };
+  return { accessToken, context };
 }
 
 export function isInvalidSessionCredential(error: unknown) {

@@ -107,6 +107,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   closeTestProviders();
+  vi.useRealTimers();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
@@ -329,6 +330,75 @@ describe("server-backed Logto authentication", () => {
     expect((await getLogtoContext()).isAuthenticated).toBe(true);
     expect(provider.tokenRequests).toHaveLength(2);
   });
+  it.each([
+    { cachedInitiallyValid: true, upstreamStatus: 200 },
+    { cachedInitiallyValid: true, upstreamStatus: 401 },
+    { cachedInitiallyValid: false, upstreamStatus: 200 },
+  ])(
+    "captures the downstream token under lock (cached valid: $cachedInitiallyValid, upstream: $upstreamStatus)",
+    async ({ cachedInitiallyValid, upstreamStatus }) => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-28T12:00:00Z"));
+      const provider = createTestProvider({
+        rotateRefreshTokens: true,
+        accountApiStatus: upstreamStatus,
+      });
+      const { token } = await login();
+      const row = mocks.rows.get(token);
+      row.data.accessToken = JSON.stringify({
+        "@": {
+          token: "cached-near-expiry",
+          scope: "openid profile email",
+          expiresAt: Date.now() / 1000 + (cachedInitiallyValid ? 1 : -1),
+        },
+      });
+      const originalLock = mocks.lock.getMockImplementation()!;
+      let lockHeld = false;
+      let advanceAtCommit = true;
+      mocks.lock.mockImplementation(async (...args) => {
+        lockHeld = true;
+        try {
+          const result = await originalLock(...args);
+          // Persistence has finished, but downstream HTTP work has not started.
+          if (advanceAtCommit) {
+            advanceAtCommit = false;
+            vi.setSystemTime(Date.now() + 2_000);
+          }
+          return result;
+        } finally {
+          lockHeld = false;
+        }
+      });
+      provider.options.afterTokenExchange = async () => {
+        expect(lockHeld).toBe(true);
+      };
+
+      const response = await fetchLogtoAccountApi("/api/my-account");
+      expect(response.status).toBe(upstreamStatus);
+      expect(provider.accountApiAuthorizations).toEqual([
+        cachedInitiallyValid
+          ? "Bearer cached-near-expiry"
+          : "Bearer test-access",
+      ]);
+      expect(provider.tokenRequests).toHaveLength(cachedInitiallyValid ? 1 : 2);
+      expect(row.data.refreshToken).toBe(
+        cachedInitiallyValid ? "test-refresh-1" : "test-refresh-2",
+      );
+      expect(lockHeld).toBe(false);
+
+      provider.options.accountApiStatus = 200;
+      const nextResponse = await fetchLogtoAccountApi("/api/my-account");
+      expect(nextResponse.status).toBe(200);
+      expect(provider.accountApiAuthorizations[1]).toBe("Bearer test-access");
+      expect(provider.tokenRequests).toHaveLength(2);
+      expect(provider.tokenRequests[1].refreshToken).toBe("test-refresh-1");
+      expect(row.data.refreshToken).toBe("test-refresh-2");
+      const context = await getLogtoContext();
+      expect(context.isAuthenticated).toBe(true);
+      expect(context).not.toHaveProperty("accessToken");
+      expect(provider.tokenRequests).toHaveLength(2);
+    },
+  );
   it.each(["expiresAt", "idleExpiresAt", "logout", "deletion"] as const)(
     "cannot recover over concurrent %s",
     async (change) => {

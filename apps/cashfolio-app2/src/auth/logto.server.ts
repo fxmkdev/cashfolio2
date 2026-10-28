@@ -67,11 +67,8 @@ function writeCookie(session: { token: string; expiresAt: Date }) {
   setCookie(LEGACY_SESSION_COOKIE, "", { ...cookieOptions, maxAge: 0 });
 }
 
-async function withAuthenticatedClient<T>(
-  operation: (
-    client: ReturnType<typeof createSessionClient>,
-    context: LogtoContext,
-  ) => Promise<T>,
+async function withAuthenticatedSession<T>(
+  operation: (accessToken: string | null, context: LogtoContext) => Promise<T>,
   options: SessionAccessOptions = {},
 ): Promise<T | null> {
   const token = getCookie(SESSION_COOKIE);
@@ -84,7 +81,7 @@ async function withAuthenticatedClient<T>(
     | { kind: "unavailable" }
     | {
         kind: "authenticated";
-        client: ReturnType<typeof createSessionClient>;
+        accessToken: string | null;
         context: LogtoContext;
       };
   const result = await withSessionLock<AuthenticationResult>(
@@ -106,7 +103,7 @@ async function withAuthenticatedClient<T>(
             ? await (async () => {
                 const client = createSessionClient(getLogtoConfig(), storage);
                 return {
-                  client,
+                  accessToken: null,
                   context: await client.getContext({ getAccessToken: false }),
                 };
               })()
@@ -128,7 +125,7 @@ async function withAuthenticatedClient<T>(
         // Commit recovery before returning a 503; throwing here rolls it back.
         return { kind: "unavailable" };
       }
-      const { client, context } = authenticated;
+      const { accessToken, context } = authenticated;
       if (
         !context.isAuthenticated ||
         context.claims?.sub !== session.user.externalId
@@ -146,7 +143,7 @@ async function withAuthenticatedClient<T>(
       ) {
         return { kind: "anonymous", clear: false };
       }
-      return { kind: "authenticated", client, context };
+      return { kind: "authenticated", accessToken, context };
     },
   );
   if (result.kind === "unavailable")
@@ -160,7 +157,7 @@ async function withAuthenticatedClient<T>(
   }
   // Credentials are durable before any downstream work can fail.
   try {
-    return await operation(result.client, result.context);
+    return await operation(result.accessToken, result.context);
   } catch {
     throw new Response(
       "Authentication is temporarily unavailable. Please try again.",
@@ -174,8 +171,8 @@ export async function getLogtoContext(
   options?: SessionAccessOptions,
 ): Promise<LogtoContext> {
   return (
-    (await withAuthenticatedClient(
-      async (_client, context) => context,
+    (await withAuthenticatedSession(
+      async (_accessToken, context) => context,
       options,
     )) ?? { isAuthenticated: false }
   );
@@ -189,9 +186,10 @@ export async function fetchLogtoAccountApi(
   pathname: string,
   init?: RequestInit,
 ) {
-  const response = await withAuthenticatedClient(async (client) => {
+  const response = await withAuthenticatedSession(async (accessToken) => {
+    if (!accessToken) return null;
     const headers = new Headers(init?.headers);
-    headers.set("authorization", `Bearer ${await client.getAccessToken()}`);
+    headers.set("authorization", `Bearer ${accessToken}`);
     return fetch(new URL(pathname, requireEnv("LOGTO_ENDPOINT")), {
       ...init,
       headers,

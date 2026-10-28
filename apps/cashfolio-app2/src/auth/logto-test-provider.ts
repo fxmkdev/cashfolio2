@@ -41,11 +41,13 @@ export function createTestProvider(
     invalidSignature?: boolean;
     invalidAudience?: boolean;
     accountApiUnavailable?: boolean;
+    accountApiStatus?: number;
     subject?: string;
     afterTokenExchange?: () => Promise<void>;
   } = {},
 ) {
   const requests: string[] = [];
+  const accountApiAuthorizations: (string | null)[] = [];
   const tokenRequests: {
     grantType: string | null;
     code: string | null;
@@ -124,10 +126,17 @@ export function createTestProvider(
       await options.afterTokenExchange?.();
       return response;
     }
-    if (url.endsWith("/api/my-account"))
+    if (url.endsWith("/api/my-account")) {
+      accountApiAuthorizations.push(
+        input instanceof Request ? input.headers.get("authorization") : null,
+      );
       return options.accountApiUnavailable
         ? Response.error()
-        : Response.json({ name: "Test User" });
+        : Response.json(
+            { name: "Test User" },
+            { status: options.accountApiStatus ?? 200 },
+          );
+    }
     if (url.endsWith("/revoke")) return new Response(null, { status: 204 });
     throw new Error("Unexpected test identity request");
   };
@@ -137,7 +146,7 @@ export function createTestProvider(
   server.listen({ onUnhandledRequest: "error" });
   syncBuiltinESMExports();
   servers.push(server);
-  return { fetch, requests, options, tokenRequests };
+  return { fetch, requests, options, tokenRequests, accountApiAuthorizations };
 }
 
 const servers: ReturnType<typeof setupServer>[] = [];

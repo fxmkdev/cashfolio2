@@ -34,14 +34,14 @@ describe("real Logto SDK session integration", () => {
       await createSessionClient(providerConfig, storage).getAccessToken(),
     ).toBe("cached");
     expect(provider.requests).not.toContain(`${providerEndpoint}/token`);
-    const { context } = await authenticateSessionClient(
-      providerConfig,
-      storage,
-    );
+    const result = await authenticateSessionClient(providerConfig, storage);
+    const { context, accessToken } = result;
     expect(context.isAuthenticated).toBe(true);
     expect(context.claims!.exp).toBeGreaterThan(Date.now() / 1000);
     expect(provider.requests).toContain(`${providerEndpoint}/token`);
     expect(storage.data.refreshToken).toBe("test-refresh");
+    expect(accessToken).toBe("test-access");
+    expect(result).not.toHaveProperty("client");
   });
   it("rejects a refresh response that still has expired ID claims", async () => {
     createTestProvider({ expiresInSeconds: -120 });

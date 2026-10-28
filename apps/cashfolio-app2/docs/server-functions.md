@@ -46,8 +46,14 @@ ID token and removes cached access tokens. It commits before the caller receives
 are never stored or used for access. The next request must refresh and verify
 again. Definitive token-validation failures still revoke the session. Successful
 verified credentials commit before downstream Account API work, so a later
-network failure cannot roll them back. Database failure after token consumption
-cannot guarantee durable recovery and may require a fresh sign-in.
+network failure cannot roll them back. The locked authentication phase captures
+the access-token string before saving credentials; only that string and verified
+context leave the transaction. Downstream HTTP work cannot call the SDK or
+refresh after lock release. If the captured token expires during commit, the
+upstream response follows the existing API error handling; a later application
+request can refresh under the lock. Deletion-only sessions carry no access
+token. Database failure after token consumption cannot guarantee durable
+recovery and may require a fresh sign-in.
 
 SDK refresh and persistence run under a transaction-scoped PostgreSQL advisory
 lock per bearer hash, shared across Machines. Conditional updates cannot
