@@ -33,11 +33,12 @@ runs:
     - name: Resolve preview resource names
       id: resolve
       shell: bash
+      env:
+        PR_NUMBER: ${{ inputs.pr_number }}
+        HEAD_REF: ${{ inputs.head_ref }}
       run: |
         set -euo pipefail
 
-        PR_NUMBER="${{ inputs.pr_number }}"
-        HEAD_REF="${{ inputs.head_ref }}"
         BRANCH_TAIL="${HEAD_REF##*/}"
 
         BRANCH_TAIL_SLUG="$(printf '%s' "$BRANCH_TAIL" \
