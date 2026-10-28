@@ -2,29 +2,31 @@
 
 The October 2026 refresh updates stable releases within the existing major
 versions, plus Logto 4, Chromatic 18, and dotenv 18. Node runtime and typings
-stay on 24; pnpm is now on stable 12.11.1. Package families such as Mantine,
+stay on 24; pnpm is now on stable 12.16.1. Package families such as Mantine,
 React, Prisma, Storybook, AG Grid, AG Charts, and Vitest must be updated
 together.
 
 The refreshed manifest versions are:
 
-| Package family                           | Version                  |
-| ---------------------------------------- | ------------------------ |
-| Mantine                                  | 9.7.1                    |
-| React / React DOM / their typings        | 19.3.0                   |
-| TanStack Router / Start                  | 1.170.41 / 1.168.60      |
-| Prisma CLI / client / PostgreSQL adapter | 7.10.0                   |
-| Vite                                     | 8.3.4                    |
-| Storybook                                | 10.6.1                   |
-| Playwright                               | 1.64.0                   |
-| AG Grid / AG Charts                      | 36.2.0 / 14.2.0          |
-| Vitest / coverage / browser              | 5.0.3                    |
-| TypeScript / typescript6 compatibility   | 7.0.2 / 6.0.2            |
-| MSW                                      | 2.15.0                   |
-| Logto / Chromatic / dotenv               | 4.0.0 / 18.11.0 / 18.0.6 |
-| Redis / PostgreSQL driver                | 6.3.0 / 8.23.1           |
-| Node runtime / typings                   | 24.21.0 / 24.19.1        |
-| pnpm / Prettier                          | 12.11.1 / 3.9.9          |
+| Package family                           | Version                   |
+| ---------------------------------------- | ------------------------- |
+| Mantine                                  | 9.7.1                     |
+| React / React DOM / their typings        | 19.3.0                    |
+| TanStack Router / Start                  | 1.170.41 / 1.168.60       |
+| Prisma CLI / client / PostgreSQL adapter | 7.10.0                    |
+| Vite                                     | 8.3.4                     |
+| Storybook                                | 10.6.1                    |
+| Playwright                               | 1.64.0                    |
+| AG Grid / AG Charts                      | 36.2.0 / 14.2.0           |
+| Vitest / coverage / browser              | 5.0.3                     |
+| TypeScript / typescript6 compatibility   | 7.0.2 / 6.0.2             |
+| MSW                                      | 2.15.0                    |
+| Logto / Chromatic / dotenv               | 4.0.0 / 18.13.3 / 18.0.6  |
+| ESLint / typescript-eslint / utils       | 10.13.0 / 8.72.1 / 8.72.1 |
+| Tabler React icons                       | 3.50.0                    |
+| Redis / PostgreSQL driver                | 6.3.0 / 8.23.1            |
+| Node runtime / typings                   | 24.21.0 / 24.19.1         |
+| pnpm / Prettier                          | 12.16.1 / 3.9.9           |
 
 MSW 3 and Prisma prereleases are deferred to separate migrations. Storybook uses
 addon-vitest 10.6.1 with the Playwright browser provider 5.0.3. Vitest,
@@ -278,6 +280,34 @@ and
 [pnpm 12.11.0 release notes](https://github.com/pnpm/pnpm/releases/tag/v12.11.0),
 and
 [pnpm 12.11.1 patch notes](https://github.com/pnpm/pnpm/releases/tag/v12.11.1).
+
+## October 28 tooling follow-up
+
+The focused follow-up upgrades pnpm to 12.16.1, ESLint to 10.13.0,
+typescript-eslint and its directly pinned utils package to 8.72.1, Chromatic to
+18.13.3, and Tabler React icons to 3.50.0. The root engine and
+integrity-qualified package-manager pin, Docker migration-tools version, and
+lockfile agree on pnpm 12.16.1. The package-manager platform entries remain
+available for macOS and Linux.
+
+pnpm 12.16.1 was published on October 27 at 15:28 UTC and exceeds the existing
+1440-minute release-age threshold. The build approvals, security overrides, and
+narrow releaser exception are preserved. Only the selected direct packages and
+their required dependency/peer entries change; TanStack Start and MSW remain
+deferred to separate PRs. Node 24 and the native TypeScript 7 / TypeScript 6 API
+aliases remain in place.
+
+Local verification on Node 24.21.0 / pnpm 12.16.1 passed frozen-lockfile
+installation, Prisma generation, app lint, app and CLI typechecks, changed-file
+formatting, and Chromatic CLI startup/help. Production/Docker builds, coverage,
+Storybook interactions, application E2E, and publishing remain CI checks.
+
+The October 28 audit reports the same advisory IDs and vulnerable versions as
+the freshly fetched main lockfile: two critical, three high, four moderate, and
+two low findings, with none introduced or resolved by this follow-up. Findings
+affect the unchanged Storybook 10.6.1, Vitest 5.0.3 browser/UI, Zod 4.6.5, and
+fast-uri 3.1.8 packages. These need a separate security update; the historical
+zero-finding audit below does not describe the current graph.
 
 ## Tooling migration verification
 
