@@ -1352,8 +1352,10 @@ regions and red negative regions. Zero balances remain real chart points rather
 than gaps. All balance charts hide permanent markers, regardless of whether the
 scope supports ledger navigation. Hover/focus highlighting retains the
 corresponding sign color (green at zero), tooltips, and real-account period
-double-click navigation. Storybook stories can set `parameters.colorScheme` to
-`light` or `dark` to force the Mantine and grid themes consistently for visual
+double-click navigation. Tooltip symbols match the chart colors: green for
+Assets, red for Liabilities, and the hovered balance's sign color for Net Worth
+(green at zero). Storybook stories can set `parameters.colorScheme` to `light`
+or `dark` to force the Mantine and grid themes consistently for visual
 verification.
 
 Legacy History links selecting an account/group under Assets or Liabilities move

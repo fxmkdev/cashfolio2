@@ -172,8 +172,14 @@ export function createHistoryChartOptions(args: {
           tooltip: {
             renderer: ({ datum }: { datum: unknown }) => {
               const point = datum as HistoryChartDatum;
+              const color =
+                selectedMetricKey === "liabilities" ||
+                (selectedMetricKey === "netWorth" && point.netWorth < 0)
+                  ? negativeFillColor
+                  : positiveFillColor;
               return {
                 heading: getAreaTooltipHeading(point),
+                symbol: { line: { stroke: color } },
                 data: [
                   {
                     label: flowSeriesLabel,

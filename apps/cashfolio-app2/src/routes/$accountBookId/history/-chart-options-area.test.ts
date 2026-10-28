@@ -10,6 +10,53 @@ import {
 } from "./-chart-test-helpers";
 
 describe("createHistoryChartOptions (balance metrics)", () => {
+  describe.each([false, true])(
+    "tooltip colors with dark mode %s",
+    (isDarkMode) => {
+      test.each([
+        { metric: "netWorth", balance: -40, color: "red" },
+        { metric: "netWorth", balance: 0, color: "green" },
+        { metric: "netWorth", balance: 20, color: "green" },
+        { metric: "assets", balance: 120, color: "green" },
+        { metric: "liabilities", balance: 50, color: "red" },
+      ] as const)(
+        "matches $metric at $balance to $color",
+        ({ metric, balance, color }) => {
+          const chartData = mapHistoryPointsToChartData([
+            createHistoryPoint({
+              periodValue: "2026-01",
+              periodLabel: "January 2026",
+              totalReturn: 0,
+              savings: 0,
+              income: 0,
+              expenses: 0,
+              gainsLosses: 0,
+              [metric]: balance,
+            }),
+          ]);
+          const options = createHistoryChartOptions({
+            chartData,
+            periodMode: "month",
+            selectedMetric: metric,
+            amountCompactFormatter: new Intl.NumberFormat("en-CH"),
+            currencyFormatter: new Intl.NumberFormat("en-CH"),
+            colors: mockColors,
+            theme: mockTheme,
+            isDarkMode,
+          });
+          const area = options.series?.[0] as unknown as {
+            tooltip: { renderer: (args: { datum: unknown }) => unknown };
+          };
+          expect(area.tooltip.renderer({ datum: chartData[0] })).toMatchObject({
+            symbol: {
+              line: { stroke: mockTheme.colors[color][isDarkMode ? 5 : 6] },
+            },
+          });
+        },
+      );
+    },
+  );
+
   test.each([-40, 0, 20])(
     "uses the selected account name and signed balance %s in Net Worth tooltips",
     (balance) => {
