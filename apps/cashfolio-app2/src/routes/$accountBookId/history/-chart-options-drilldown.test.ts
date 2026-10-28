@@ -79,16 +79,26 @@ describe("History chart drill-down", () => {
       expect(overlay.listeners).toBeUndefined();
   });
 
-  test("opens periods from both signed Net Worth series and ignores the opening balance", () => {
+  test("opens negative, zero, and positive Net Worth periods and ignores the opening balance", () => {
     const onPeriodDoubleClick = vi.fn();
-    for (const area of series(createOptions("netWorth", onPeriodDoubleClick))) {
+    const areas = series(createOptions("netWorth", onPeriodDoubleClick));
+    expect(areas).toHaveLength(1);
+    for (const area of areas) {
       expect(area.marker).toMatchObject({ enabled: true, size: 5 });
-      area.listeners?.seriesNodeDoubleClick({ datum: chartData[0] });
+      for (const netWorth of [-110, 0, 20]) {
+        area.listeners?.seriesNodeDoubleClick({
+          datum: { ...chartData[0], netWorth },
+        });
+      }
       area.listeners?.seriesNodeDoubleClick({
         datum: { ...chartData[0], periodValue: "opening-balance:2025-12-31" },
       });
     }
-    expect(onPeriodDoubleClick.mock.calls).toEqual([["2026-01"], ["2026-01"]]);
+    expect(onPeriodDoubleClick.mock.calls).toEqual([
+      ["2026-01"],
+      ["2026-01"],
+      ["2026-01"],
+    ]);
   });
 
   test("omits events and balance markers when no destination is available", () => {

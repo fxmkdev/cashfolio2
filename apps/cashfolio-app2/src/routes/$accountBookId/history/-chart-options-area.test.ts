@@ -10,7 +10,7 @@ import {
 } from "./-chart-test-helpers";
 
 describe("createHistoryChartOptions (balance metrics)", () => {
-  test("uses the selected account name in both signed Net Worth series and tooltips", () => {
+  test("uses the selected account name and signed balance in Net Worth tooltips", () => {
     const chartData = mapHistoryPointsToChartData([
       createHistoryPoint({
         periodValue: "2026-01",
@@ -149,7 +149,7 @@ describe("createHistoryChartOptions (balance metrics)", () => {
     ).toBe(false);
   });
 
-  test("renders net worth as sign-split areas without cumulative line", () => {
+  test("renders net worth as one continuous area styled above and below zero", () => {
     const options = createHistoryChartOptions({
       chartData: mapHistoryPointsToChartData([
         createHistoryPoint({
@@ -192,14 +192,86 @@ describe("createHistoryChartOptions (balance metrics)", () => {
     });
 
     const series = Array.isArray(options.series) ? options.series : [];
-    expect(series).toHaveLength(2);
-    expect(series[0]).toMatchObject({ type: "area", yKey: "netWorthPositive" });
-    expect(series[1]).toMatchObject({
+    expect(series).toHaveLength(1);
+    expect(series[0]).toMatchObject({
       type: "area",
-      yKey: "netWorthNegative",
-      showInLegend: false,
+      yKey: "netWorth",
+      segmentation: {
+        key: "y",
+        segments: [
+          { stop: 0, fill: "#e03131", stroke: "#e03131" },
+          { start: 0, fill: "#2b8a3e", stroke: "#2b8a3e" },
+        ],
+      },
     });
   });
+
+  test.each([
+    [0, -110, 0, -110, 0],
+    [-40, -30, -70, -10, -20],
+    [0, 0, 0, 0, 0],
+    [20, -30, 0, 40, -10],
+  ])("keeps every signed balance in one series: %j", (...balances) => {
+    const chartData = mapHistoryPointsToChartData(
+      balances.map((netWorth, index) =>
+        createHistoryPoint({
+          periodValue: `2026-0${index + 1}`,
+          periodLabel: `Month ${index + 1}`,
+          netWorth,
+          totalReturn: 0,
+          savings: 0,
+          income: 0,
+          expenses: 0,
+          gainsLosses: 0,
+        }),
+      ),
+    );
+    const options = createHistoryChartOptions({
+      chartData,
+      periodMode: "month",
+      selectedMetric: "netWorth",
+      amountCompactFormatter: new Intl.NumberFormat("en-CH"),
+      currencyFormatter: new Intl.NumberFormat("en-CH"),
+      colors: mockColors,
+      theme: mockTheme,
+      isDarkMode: false,
+    });
+    expect(options.series).toHaveLength(1);
+    expect(options.series![0]).toMatchObject({ yKey: "netWorth" });
+    expect(options.data?.map((point) => point.netWorth)).toEqual(balances);
+    const area = options.series![0] as unknown as {
+      marker: {
+        itemStyler: (params: { datum: unknown }) => {
+          fill: string;
+          stroke: string;
+        };
+      };
+    };
+    for (const datum of chartData) {
+      const color = datum.netWorth < 0 ? "#e03131" : "#2b8a3e";
+      expect(area.marker.itemStyler({ datum })).toEqual({
+        fill: color,
+        stroke: color,
+      });
+    }
+  });
+
+  test.each(["assets", "liabilities", "netWorth"] as const)(
+    "hides the %s legend",
+    (selectedMetric) => {
+      const options = createHistoryChartOptions({
+        chartData: [],
+        periodMode: "month",
+        selectedMetric,
+        amountCompactFormatter: new Intl.NumberFormat("en-CH"),
+        currencyFormatter: new Intl.NumberFormat("en-CH"),
+        colors: mockColors,
+        theme: mockTheme,
+        isDarkMode: false,
+      });
+      expect(options.legend).toEqual({ enabled: false });
+    },
+  );
 
   test("forces y-axis to include zero for positive-only metrics", () => {
     const options = createHistoryChartOptions({

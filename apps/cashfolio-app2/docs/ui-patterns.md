@@ -1346,6 +1346,13 @@ Real account selections support double-clicking a period to open its ledger.
 Groups, virtual accounts, and the opening baseline do not have ledger
 navigation.
 
+Assets, Liabilities, and Net Worth History charts omit legends. Net Worth uses a
+single continuous signed area series, segmented at zero with green positive
+regions and red negative regions. Zero balances remain real chart points rather
+than gaps, and markers use the corresponding sign color (green at zero).
+Storybook stories can set `parameters.colorScheme` to `light` or `dark` to force
+the Mantine and grid themes consistently for visual verification.
+
 Legacy History links selecting an account/group under Assets or Liabilities move
 that selection to Net Worth. Explicit `netWorthScope` takes precedence;
 aggregate links remain unchanged, inactive legacy scope parameters are

@@ -72,5 +72,55 @@ export const SignedAccountHistory: Story = {
     await expect(
       canvas.getByText("Double-click a period to open ledger."),
     ).toBeInTheDocument();
+    await expect(
+      canvas.queryByRole("list", { name: "Legend" }),
+    ).not.toBeInTheDocument();
   },
+};
+
+const creditCardHistory: PeriodHistoryResponse = {
+  ...history,
+  openingBalancePoint: { ...history.openingBalancePoint, netWorth: 0 },
+  points: [0, -110, 0, -110, 0, -220].map((netWorth, index) => ({
+    ...history.points[0],
+    periodValue: `2026-0${index + 1}`,
+    periodLabel: `Month ${index + 1}`,
+    periodEndDate: new Date(Date.UTC(2026, index + 1, 0)).toISOString(),
+    netWorth,
+  })),
+  scopeOptions: {
+    ...history.scopeOptions,
+    netWorth: history.scopeOptions.netWorth.map((option) =>
+      option.value === "account:card"
+        ? {
+            ...option,
+            label: "Banking / Credit Card CHF",
+            treeLabel: "Credit Card CHF",
+          }
+        : option,
+    ),
+  },
+  scopeSelection: { ...history.scopeSelection, netWorth: "account:card" },
+};
+
+export const CreditCardLight: Story = {
+  args: { history: creditCardHistory },
+  parameters: { colorScheme: "light" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByText("Credit Card CHF by Period"),
+    ).toBeInTheDocument();
+    await expect(
+      canvas.getByRole("figure", { name: "chart, 1 series" }),
+    ).toBeInTheDocument();
+    await expect(
+      canvas.queryByRole("list", { name: "Legend" }),
+    ).not.toBeInTheDocument();
+  },
+};
+
+export const CreditCardDark: Story = {
+  ...CreditCardLight,
+  parameters: { colorScheme: "dark" },
 };

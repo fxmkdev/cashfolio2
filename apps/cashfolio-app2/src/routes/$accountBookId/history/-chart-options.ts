@@ -113,104 +113,80 @@ export function createHistoryChartOptions(args: {
     : undefined;
 
   const series = isAreaHistoryMetric(selectedMetricKey)
-    ? selectedMetricKey === "netWorth"
-      ? [
-          {
-            type: "area" as const,
-            xKey: "periodMetricDate",
-            yKey: "netWorthPositive",
-            yName: flowSeriesLabel,
-            listeners: periodListeners,
-            stroke: positiveFillColor,
-            fill: positiveFillColor,
-            fillOpacity: 0.4,
-            marker: {
-              enabled: !!args.onPeriodDoubleClick,
-              size: 5,
-            },
-            tooltip: {
-              renderer: ({ datum }: { datum: unknown }) => {
-                const point = datum as HistoryChartDatum;
-                return {
-                  heading: getAreaTooltipHeading(point),
-                  data: [
+    ? [
+        {
+          type: "area" as const,
+          xKey: "periodMetricDate",
+          yKey: selectedMetricKey,
+          yName: flowSeriesLabel,
+          listeners: periodListeners,
+          stroke:
+            selectedMetricKey === "liabilities"
+              ? negativeFillColor
+              : positiveFillColor,
+          fill:
+            selectedMetricKey === "liabilities"
+              ? negativeFillColor
+              : positiveFillColor,
+          fillOpacity: 0.4,
+          segmentation:
+            selectedMetricKey === "netWorth"
+              ? {
+                  key: "y" as const,
+                  segments: [
                     {
-                      label: flowSeriesLabel,
-                      value: args.currencyFormatter.format(point.netWorth),
+                      stop: 0,
+                      fill: negativeFillColor,
+                      stroke: negativeFillColor,
+                    },
+                    {
+                      start: 0,
+                      fill: positiveFillColor,
+                      stroke: positiveFillColor,
                     },
                   ],
-                };
-              },
-            },
-          },
-          {
-            type: "area" as const,
-            xKey: "periodMetricDate",
-            yKey: "netWorthNegative",
-            yName: flowSeriesLabel,
-            listeners: periodListeners,
-            showInLegend: false,
-            stroke: negativeFillColor,
-            fill: negativeFillColor,
-            fillOpacity: 0.4,
-            marker: {
-              enabled: !!args.onPeriodDoubleClick,
-              size: 5,
-            },
-            tooltip: {
-              renderer: ({ datum }: { datum: unknown }) => {
-                const point = datum as HistoryChartDatum;
-                return {
-                  heading: getAreaTooltipHeading(point),
-                  data: [
-                    {
-                      label: flowSeriesLabel,
-                      value: args.currencyFormatter.format(point.netWorth),
-                    },
-                  ],
-                };
-              },
-            },
-          },
-        ]
-      : [
-          {
-            type: "area" as const,
-            xKey: "periodMetricDate",
-            yKey: selectedMetricKey,
-            listeners: periodListeners,
-            yName: selectedMetricLabel,
-            stroke:
-              selectedMetricKey === "assets"
-                ? positiveFillColor
-                : negativeFillColor,
+                }
+              : undefined,
+          marker: {
+            enabled: !!args.onPeriodDoubleClick,
+            size: 5,
             fill:
-              selectedMetricKey === "assets"
-                ? positiveFillColor
-                : negativeFillColor,
-            fillOpacity: 0.4,
-            marker: {
-              enabled: !!args.onPeriodDoubleClick,
-              size: 5,
-            },
-            tooltip: {
-              renderer: ({ datum }: { datum: unknown }) => {
-                const point = datum as HistoryChartDatum;
-                return {
-                  heading: getAreaTooltipHeading(point),
-                  data: [
-                    {
-                      label: selectedMetricLabel,
-                      value: args.currencyFormatter.format(
-                        point[selectedMetricKey],
-                      ),
-                    },
-                  ],
-                };
-              },
+              selectedMetricKey === "liabilities"
+                ? negativeFillColor
+                : positiveFillColor,
+            stroke:
+              selectedMetricKey === "liabilities"
+                ? negativeFillColor
+                : positiveFillColor,
+            itemStyler:
+              selectedMetricKey === "netWorth"
+                ? ({ datum }: { datum: unknown }) => {
+                    const color =
+                      (datum as HistoryChartDatum).netWorth < 0
+                        ? negativeFillColor
+                        : positiveFillColor;
+                    return { fill: color, stroke: color };
+                  }
+                : undefined,
+          },
+          tooltip: {
+            renderer: ({ datum }: { datum: unknown }) => {
+              const point = datum as HistoryChartDatum;
+              return {
+                heading: getAreaTooltipHeading(point),
+                data: [
+                  {
+                    label: flowSeriesLabel,
+                    value: args.currencyFormatter.format(
+                      point[selectedMetricKey],
+                    ),
+                  },
+                ],
+              };
             },
           },
-        ]
+        },
+      ]
     : [
         {
           type: "bar" as const,
@@ -345,7 +321,7 @@ export function createHistoryChartOptions(args: {
       },
     },
     legend: {
-      enabled: true,
+      enabled: !isAreaHistoryMetric(selectedMetricKey),
     },
     navigator: {
       enabled: true,
