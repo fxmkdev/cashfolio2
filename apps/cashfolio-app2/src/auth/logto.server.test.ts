@@ -25,7 +25,8 @@ const mocks = vi.hoisted(() => ({
   rows: new Map<string, any>(),
   user: { id: "user-1", externalId: "external-1", deletionPending: false },
   tx: {
-    user: { upsert: vi.fn(), findUniqueOrThrow: vi.fn() },
+    user: { createMany: vi.fn(), findUniqueOrThrow: vi.fn() },
+    authSubjectRevocation: { findUnique: vi.fn() },
     $queryRaw: vi.fn(),
   },
 }));
@@ -89,17 +90,19 @@ beforeEach(() => {
   mocks.revoke.mockImplementation(async (_tx, row) => {
     if (row) mocks.rows.delete(row.id);
   });
-  mocks.save.mockImplementation(async (_tx, row, data, allowPending) => {
-    if (
-      !mocks.rows.has(row.id) ||
-      !isSessionCurrent(row) ||
-      (row.user.deletionPending && !allowPending)
-    )
-      return false;
-    row.data = structuredClone(data);
-    row.idleExpiresAt = nextIdleDeadline(row.expiresAt);
-    return true;
-  });
+  mocks.save.mockImplementation(
+    async (_tx, row, data, allowPending, renewIdle = true) => {
+      if (
+        !mocks.rows.has(row.id) ||
+        !isSessionCurrent(row) ||
+        (row.user.deletionPending && !allowPending)
+      )
+        return false;
+      row.data = structuredClone(data);
+      if (renewIdle) row.idleExpiresAt = nextIdleDeadline(row.expiresAt);
+      return true;
+    },
+  );
   mocks.tx.user.findUniqueOrThrow.mockResolvedValue(mocks.user);
 });
 afterEach(() => {
@@ -220,7 +223,7 @@ describe("server-backed Logto authentication", () => {
       ),
     ).rejects.toMatchObject({ status: 400 });
     expect(mocks.rows.has(pending)).toBe(false);
-    expect(mocks.tx.user.upsert).not.toHaveBeenCalled();
+    expect(mocks.tx.user.createMany).not.toHaveBeenCalled();
   });
   it("denies normal access during deletion but preserves deletion-only retries after Logto is gone", async () => {
     createTestProvider();
@@ -261,6 +264,115 @@ describe("server-backed Logto authentication", () => {
     provider.options.unavailable = true;
     await expect(getLogtoContext()).rejects.toMatchObject({ status: 503 });
     expect(mocks.rows.has(token)).toBe(true);
+  });
+  it.each([false, true])(
+    "commits rotated refresh recovery after JWKS failure (expired ID: %s)",
+    async (expiredId) => {
+      const provider = createTestProvider({ rotateRefreshTokens: true });
+      const { token } = await login();
+      const row = mocks.rows.get(token);
+      row.data.idToken = makeIdToken(expiredId ? -120 : 3600);
+      row.data.accessToken = JSON.stringify({
+        "@": {
+          token: "old-access",
+          scope: "openid profile email",
+          expiresAt: 0,
+        },
+      });
+      const previous = structuredClone(row.data);
+      const idleExpiresAt = row.idleExpiresAt;
+      const expiresAt = row.expiresAt;
+      provider.options.jwksUnavailable = true;
+      let committed = false;
+      const original = mocks.lock.getMockImplementation()!;
+      mocks.lock.mockImplementationOnce(async (...args) => {
+        const result = await original(...args);
+        committed = true;
+        return result;
+      });
+      await expect(getLogtoContext()).rejects.toMatchObject({ status: 503 });
+      expect(committed).toBe(true);
+      expect(row.data).toEqual({
+        idToken: previous.idToken,
+        refreshToken: "test-refresh-2",
+      });
+      expect(row.idleExpiresAt).toBe(idleExpiresAt);
+      expect(row.expiresAt).toBe(expiresAt);
+      provider.options.jwksUnavailable = false;
+      expect((await getLogtoContext()).isAuthenticated).toBe(true);
+      expect(
+        provider.tokenRequests.slice(1).map((r) => r.refreshToken),
+      ).toEqual(["test-refresh-1", "test-refresh-2"]);
+    },
+  );
+  it.each(["invalidSignature", "invalidAudience"] as const)(
+    "revokes on definitive %s failure rather than persisting recovery",
+    async (failure) => {
+      const provider = createTestProvider({ rotateRefreshTokens: true });
+      const { token } = await login();
+      mocks.rows.get(token).data.idToken = makeIdToken(-120);
+      provider.options[failure] = true;
+      expect((await getLogtoContext()).isAuthenticated).toBe(false);
+      expect(mocks.rows.has(token)).toBe(false);
+    },
+  );
+  it("keeps verified rotated credentials when downstream Account API work fails", async () => {
+    const provider = createTestProvider({ rotateRefreshTokens: true });
+    const { token } = await login();
+    const row = mocks.rows.get(token);
+    row.data.idToken = makeIdToken(-120);
+    provider.options.accountApiUnavailable = true;
+    await expect(fetchLogtoAccountApi("/api/my-account")).rejects.toMatchObject(
+      { status: 503 },
+    );
+    expect(row.data.refreshToken).toBe("test-refresh-2");
+    expect((await getLogtoContext()).isAuthenticated).toBe(true);
+    expect(provider.tokenRequests).toHaveLength(2);
+  });
+  it.each(["expiresAt", "idleExpiresAt", "logout", "deletion"] as const)(
+    "cannot recover over concurrent %s",
+    async (change) => {
+      const provider = createTestProvider({ rotateRefreshTokens: true });
+      const { token } = await login();
+      const row = mocks.rows.get(token);
+      row.data.idToken = makeIdToken(-120);
+      const previous = structuredClone(row.data);
+      provider.options.jwksUnavailable = true;
+      provider.options.afterTokenExchange = async () => {
+        if (change === "logout") mocks.rows.delete(token);
+        else if (change === "deletion") row.user.deletionPending = true;
+        else row[change] = new Date(0);
+      };
+      await expect(getLogtoContext()).rejects.toMatchObject({ status: 503 });
+      expect(row.data).toEqual(previous);
+      provider.options.afterTokenExchange = undefined;
+      provider.options.jwksUnavailable = false;
+      expect((await getLogtoContext()).isAuthenticated).toBe(false);
+    },
+  );
+  it("fails closed when recovery cannot be written to the database", async () => {
+    const provider = createTestProvider({ rotateRefreshTokens: true });
+    const { token } = await login();
+    const row = mocks.rows.get(token);
+    row.data.idToken = makeIdToken(-120);
+    const previous = structuredClone(row.data);
+    provider.options.jwksUnavailable = true;
+    mocks.save.mockRejectedValueOnce(
+      new Error("recovery database unavailable"),
+    );
+    await expect(getLogtoContext()).rejects.toThrow(
+      "recovery database unavailable",
+    );
+    expect(row.data).toEqual(previous);
+  });
+  it("rejects callbacks for permanently revoked subjects without issuing a session", async () => {
+    createTestProvider();
+    mocks.tx.authSubjectRevocation.findUnique.mockResolvedValue({
+      revokedAt: new Date(),
+    });
+    await expect(login()).rejects.toMatchObject({ status: 400 });
+    expect(mocks.tx.user.createMany).not.toHaveBeenCalled();
+    expect(mocks.rows.size).toBe(0);
   });
   it("does not accept a session whose subject changed or whose persistence failed", async () => {
     createTestProvider();

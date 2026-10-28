@@ -157,4 +157,20 @@ describe("PostgreSQL session storage", () => {
       where: { id: session.id },
     });
   });
+  it("persists refresh recovery without touching either deadline", async () => {
+    const session = storedSession();
+    await saveSession(
+      tx,
+      session,
+      { idToken: "previous-verified", refreshToken: "replacement" },
+      false,
+      false,
+    );
+    const { data } = mocks.tx.authSession.updateMany.mock.calls[0][0];
+    expect(data).not.toHaveProperty("idleExpiresAt");
+    expect(data).not.toHaveProperty("expiresAt");
+    expect(
+      await readSessionData({ ...session, encryptedData: data.encryptedData }),
+    ).toEqual({ idToken: "previous-verified", refreshToken: "replacement" });
+  });
 });

@@ -89,6 +89,24 @@ export function isInvalidSessionCredential(error: unknown) {
       "ERR_JWT_EXPIRED",
       "ERR_JWT_CLAIM_VALIDATION_FAILED",
       "ERR_JWS_SIGNATURE_VERIFICATION_FAILED",
+      "ERR_JWT_INVALID",
+      "ERR_JWS_INVALID",
+      "ERR_JOSE_ALG_NOT_ALLOWED",
+      "ERR_JOSE_NOT_SUPPORTED",
+      "id_token.invalid_iat",
+      "id_token.invalid_token",
     ].includes(code)
   );
+}
+
+/** Keep a rotated refresh credential without trusting any unverified tokens. */
+export function getRefreshRecoveryData(
+  previous: SessionData,
+  updated: SessionData,
+): SessionData | null {
+  if (!updated.refreshToken || updated.refreshToken === previous.refreshToken)
+    return null;
+  const recovery = { ...previous, refreshToken: updated.refreshToken };
+  delete recovery.accessToken;
+  return recovery;
 }

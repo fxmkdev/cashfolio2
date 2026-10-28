@@ -19,6 +19,22 @@ lifetime and twenty-four-hour idle timeout; pending sign-ins expire after ten
 minutes. PostgreSQL availability is required for authenticated access. Redis
 remains optional for valuation caching and is not an authentication dependency.
 
+The follow-up `20261028193000_add_auth_subject_revocations` migration backfills
+permanent hashed markers for existing pending deletions. Callback provisioning
+and deletion reservation must both run the new subject guard on every Machine;
+older instances do not write markers. Drain authentication/deletion requests
+during this cutover, replace all old instances, then discard outstanding
+anonymous sign-ins before resuming traffic:
+
+```sql
+DELETE FROM "AuthSession" WHERE "userId" IS NULL;
+```
+
+This prevents pending callbacks from spanning a deletion performed by old code.
+Users with an interrupted sign-in can restart it; active authenticated sessions
+keep their existing deadlines. Do not remove the revocation markers when
+cleaning up expired sessions or deleting users.
+
 `cashfolio-app2` builds a TanStack Start production runtime with Nitro and runs
 the generated Node server from `.output/server/index.mjs`.
 

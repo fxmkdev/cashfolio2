@@ -93,6 +93,7 @@ export async function saveSession(
   session: StoredSession,
   data: SessionData,
   allowDeletionPending = false,
+  renewIdle = true,
 ) {
   const now = new Date();
   const result = await tx.authSession.updateMany({
@@ -106,7 +107,9 @@ export async function saveSession(
     },
     data: {
       encryptedData: await wrapSession(data, encryptionKey()),
-      idleExpiresAt: nextIdleDeadline(session.expiresAt, now),
+      ...(renewIdle
+        ? { idleExpiresAt: nextIdleDeadline(session.expiresAt, now) }
+        : {}),
     },
   });
   return result.count === 1;

@@ -9,6 +9,7 @@ import {
   authenticateSessionClient,
   createSessionClient,
   hasUnexpiredClaims,
+  getRefreshRecoveryData,
   isInvalidSessionCredential,
   LogtoSessionStorage,
 } from "./logto-session-client.server";
@@ -25,6 +26,7 @@ import {
   LEGACY_SESSION_COOKIE,
   SESSION_COOKIE,
 } from "./session-policy";
+import { provisionCallbackUser } from "./subject-revocation.server";
 
 export type SessionAccessOptions = { allowDeletionPending?: boolean };
 
@@ -77,35 +79,63 @@ async function withAuthenticatedClient<T>(
     if (token) clearCookie();
     return null;
   }
-  const result = await withSessionLock(token, async (tx, session) => {
-    if (!session) return { value: null, clear: true };
-    if (!session.user) return { value: null, clear: false };
-    if (session.user.deletionPending && !options.allowDeletionPending) {
-      return { value: null, clear: false };
-    }
-    const storage = new LogtoSessionStorage(await readSessionData(session));
-    try {
-      // A pending deletion's server session authorizes only deletion retries.
-      // Its Logto identity may already be gone after partial cleanup.
-      const authenticated =
-        session.user.deletionPending && options.allowDeletionPending
-          ? await (async () => {
-              const client = createSessionClient(getLogtoConfig(), storage);
-              return {
-                client,
-                context: await client.getContext({ getAccessToken: false }),
-              };
-            })()
-          : await authenticateSessionClient(getLogtoConfig(), storage);
+  type AuthenticationResult =
+    | { kind: "anonymous"; clear: boolean }
+    | { kind: "unavailable" }
+    | {
+        kind: "authenticated";
+        client: ReturnType<typeof createSessionClient>;
+        context: LogtoContext;
+      };
+  const result = await withSessionLock<AuthenticationResult>(
+    token,
+    async (tx, session) => {
+      if (!session) return { kind: "anonymous", clear: true };
+      if (!session.user) return { kind: "anonymous", clear: false };
+      if (session.user.deletionPending && !options.allowDeletionPending) {
+        return { kind: "anonymous", clear: false };
+      }
+      const previous = await readSessionData(session);
+      const storage = new LogtoSessionStorage({ ...previous });
+      let authenticated: Awaited<ReturnType<typeof authenticateSessionClient>>;
+      try {
+        // A pending deletion's server session authorizes only deletion retries.
+        // Its Logto identity may already be gone after partial cleanup.
+        authenticated =
+          session.user.deletionPending && options.allowDeletionPending
+            ? await (async () => {
+                const client = createSessionClient(getLogtoConfig(), storage);
+                return {
+                  client,
+                  context: await client.getContext({ getAccessToken: false }),
+                };
+              })()
+            : await authenticateSessionClient(getLogtoConfig(), storage);
+      } catch (error) {
+        if (isInvalidSessionCredential(error)) {
+          await revokeSession(tx, session);
+          return { kind: "anonymous", clear: true };
+        }
+        const recovery = getRefreshRecoveryData(previous, storage.data);
+        if (recovery)
+          await saveSession(
+            tx,
+            session,
+            recovery,
+            options.allowDeletionPending,
+            false,
+          );
+        // Commit recovery before returning a 503; throwing here rolls it back.
+        return { kind: "unavailable" };
+      }
       const { client, context } = authenticated;
       if (
         !context.isAuthenticated ||
         context.claims?.sub !== session.user.externalId
       ) {
         await revokeSession(tx, session);
-        return { value: null, clear: true };
+        return { kind: "anonymous", clear: true };
       }
-      const value = await operation(client, context);
       if (
         !(await saveSession(
           tx,
@@ -114,22 +144,29 @@ async function withAuthenticatedClient<T>(
           options.allowDeletionPending,
         ))
       ) {
-        return { value: null, clear: false };
+        return { kind: "anonymous", clear: false };
       }
-      return { value, clear: false };
-    } catch (error) {
-      if (!isInvalidSessionCredential(error)) {
-        throw new Response(
-          "Authentication is temporarily unavailable. Please try again.",
-          { status: 503 },
-        );
-      }
-      await revokeSession(tx, session);
-      return { value: null, clear: true };
-    }
-  });
-  if (result.clear) clearCookie();
-  return result.value;
+      return { kind: "authenticated", client, context };
+    },
+  );
+  if (result.kind === "unavailable")
+    throw new Response(
+      "Authentication is temporarily unavailable. Please try again.",
+      { status: 503 },
+    );
+  if (result.kind === "anonymous") {
+    if (result.clear) clearCookie();
+    return null;
+  }
+  // Credentials are durable before any downstream work can fail.
+  try {
+    return await operation(result.client, result.context);
+  } catch {
+    throw new Response(
+      "Authentication is temporarily unavailable. Please try again.",
+      { status: 503 },
+    );
+  }
 }
 
 export async function getLogtoContext(
@@ -234,17 +271,9 @@ export async function handleLogtoSignInCallback(request: Request) {
       await revokeSession(tx, pending);
       return null;
     }
-    await tx.user.upsert({
-      where: { externalId: context.claims.sub },
-      create: { externalId: context.claims.sub },
-      update: {},
-    });
-    await tx.$queryRaw`SELECT id FROM "User" WHERE "externalId" = ${context.claims.sub} FOR UPDATE`;
-    const user = await tx.user.findUniqueOrThrow({
-      where: { externalId: context.claims.sub },
-    });
+    const user = await provisionCallbackUser(tx, context.claims.sub);
     await revokeSession(tx, pending);
-    if (user.deletionPending) return null;
+    if (!user) return null;
     return createSession(tx, storage.data, user.id);
   });
   if (!result) {

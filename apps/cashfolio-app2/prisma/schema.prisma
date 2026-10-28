@@ -108,6 +108,11 @@ model AuthSession {
   @@index([idleExpiresAt])
 }
 
+model AuthSubjectRevocation {
+  subjectHash String   @id
+  revokedAt   DateTime @default(now())
+}
+
 model UserAccountBookLink {
   userId        String
   accountBookId String

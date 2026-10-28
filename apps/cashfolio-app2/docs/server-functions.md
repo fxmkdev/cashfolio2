@@ -22,6 +22,15 @@ user and rotates the bearer into a new authenticated session. Application
 requests look up existing users rather than recreating missing records. The
 existing explicitly enabled E2E bypass retains its test-user provisioning path.
 
+Callback provisioning and deletion reservation share a PostgreSQL advisory lock
+per hashed subject. Reservation writes an `AuthSubjectRevocation` marker after
+authorization and final-admin checks, in the same transaction as the pending
+flag. Callbacks check that durable marker before an atomic conflict-safe user
+insert (`createMany` with `skipDuplicates`). A callback with an already
+exchanged code cannot recreate a deleted user even when its anonymous session
+survives the user/session cascade. Different first-time sessions can provision
+the same subject without retrying consumed authorization codes.
+
 Every authenticated lookup checks the session's fourteen-day absolute deadline,
 twenty-four-hour idle deadline, and owning user. Successful requests advance
 only the idle deadline, bounded by the original absolute deadline. Expired ID
@@ -29,6 +38,16 @@ tokens force the SDK to refresh rather than reuse cached access tokens; ordinary
 access requires fresh, unexpired ID claims and a usable access token. Invalid
 refresh credentials revoke the session. Provider outages fail closed with a
 retryable 503, and database failures never fall back to cookies or Redis.
+
+If exchange rotates a refresh credential before a temporary JWKS failure, the
+transaction preserves only that replacement refresh token alongside the previous
+ID token and removes cached access tokens. It commits before the caller receives
+503, without extending either deadline. Unverified replacement ID/access tokens
+are never stored or used for access. The next request must refresh and verify
+again. Definitive token-validation failures still revoke the session. Successful
+verified credentials commit before downstream Account API work, so a later
+network failure cannot roll them back. Database failure after token consumption
+cannot guarantee durable recovery and may require a fresh sign-in.
 
 SDK refresh and persistence run under a transaction-scoped PostgreSQL advisory
 lock per bearer hash, shared across Machines. Conditional updates cannot
