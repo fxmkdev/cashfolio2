@@ -198,28 +198,68 @@ Guidelines:
 
 ### Auth in E2E
 
-E2E runs use a test-only auth bypass in `src/auth/functions.server.ts`.
+E2E runs use the explicit `pnpm build:e2e` build (`vite build --mode e2e`),
+which writes `.output-e2e`. The normal `pnpm build` writes `.output` and
+excludes synthetic authentication, provider mocks, MSW, and fallback provider
+keys. The `__E2E_BUILD__` constant is fixed at build time, independent of
+runtime environment variables. Test-only implementations live in `src/e2e/`.
 
-Required env vars:
+Playwright builds and launches the E2E artifact itself, binds to loopback, and
+never reuses an existing server. Its server environment explicitly sets:
 
+- `APP_ENVIRONMENT=e2e`
 - `E2E_TEST_MODE=true`
-- `E2E_AUTH_BYPASS=true`
+- `E2E_AUTH_BYPASS=true` (may be set to `false` to use normal authentication)
 - `E2E_AUTH_EXTERNAL_ID=<fallback-external-id-used-for-seeded-user>`
+- `HOST`, `NITRO_HOST`, and `BASE_URL` using loopback addresses
 
-When bypass is disabled, app auth behavior remains unchanged.
+A synchronous Nitro startup plugin rejects E2E artifacts without the required
+environment or loopback configuration before opening the Node listener.
+Permitted hosts are `127.0.0.1`, `localhost`, and `::1`. `NITRO_HOST` takes
+precedence over `HOST`; wildcard bindings and missing hosts are forbidden.
+`BASE_URL` must be an absolute loopback HTTP(S) URL without credentials.
+`NODE_ENV=production` remains supported because E2E tests exercise built code.
+
+The test cookie selects synthetic claims only in an E2E build with both flags
+enabled. Synthetic identities then use the app's existing authenticated-user
+provisioning path; normal Logto identities retain that same provisioning
+behavior. When bypass is disabled, app auth behavior remains unchanged.
 
 ### Valuation Provider Mocks in E2E
 
-- When `E2E_TEST_MODE=true`, server-side external valuation calls
-  (`currencylayer`, `coinlayer`, `marketstack`) are intercepted by MSW node
-  handlers in `src/server/valuation/e2e-provider-mocks.server.ts`.
-- Unhandled requests to valuation provider hostnames fail fast in E2E, so URL
-  mismatches cannot silently bypass mocks and hit real external services.
-- In E2E mode, provider API-key checks also use a deterministic internal
-  fallback key so no external provider secrets are required for these flows.
-- This keeps E2E deterministic and avoids external provider traffic while still
-  exercising valuation conversion logic end-to-end.
+- The E2E build registers `src/e2e/provider-plugin.server.ts`, which starts MSW
+  once during startup. `E2E_TEST_MODE=true` is mandatory for an E2E runtime.
+- External valuation calls (`currencylayer`, `coinlayer`, `marketstack`) are
+  intercepted by the handlers in `src/e2e/provider-mocks.server.ts`.
+- Unhandled requests to valuation provider hostnames fail fast, so URL
+  mismatches cannot silently hit real external services.
+- Provider API-key checks use an E2E-only deterministic fallback when no key is
+  configured. No provider secrets are required for these flows.
 - The mocked rates/prices are fixed values intended for assertion stability.
+
+### Built Artifact Security Checks
+
+The `cashfolio-app2: Build security` CI job builds both artifacts against
+isolated local PostgreSQL and runs `pnpm test:build-security`. It verifies the
+normal artifact's emitted module metadata and packaged code, startup rejection
+for forbidden configurations, the anonymous redirect despite a synthetic auth
+cookie, and healthy startup of a correctly configured E2E build. Every process
+has a bounded startup wait and is terminated after the check. Diagnostics are
+bounded and sanitized; external deployment secrets are not inherited.
+
+To investigate locally, use a disposable local PostgreSQL database whose name
+contains `test` or `e2e` as an underscore/hyphen-separated component:
+
+```bash
+pnpm --filter cashfolio-app2 build
+pnpm --filter cashfolio-app2 check:build-security
+pnpm --filter cashfolio-app2 build:e2e
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/cashfolio_build_security_test pnpm --filter cashfolio-app2 test:build-security
+```
+
+Prisma generation and migrations must be applied to that disposable database
+before running the runtime checks. Docker also runs `check:build-security` after
+the normal build, before the deployment image is assembled.
 
 ### Database Lifecycle
 
@@ -232,8 +272,8 @@ When bypass is disabled, app auth behavior remains unchanged.
 - Each spec file seeds an isolated account-book-scoped dataset in `beforeAll()`
   for its worker-scoped user.
 - Specs that need a different authenticated user can set the e2e-only
-  `cashfolio-e2e-external-id` cookie. The auth bypass reads this cookie only
-  when both `E2E_TEST_MODE=true` and `E2E_AUTH_BYPASS=true`.
+  `cashfolio-e2e-external-id` cookie. The auth bypass reads this cookie only in
+  an E2E build with both `E2E_TEST_MODE=true` and `E2E_AUTH_BYPASS=true`.
 - Seeding creates:
   - a user with the worker-scoped e2e external id
   - an account book and user-account-book link

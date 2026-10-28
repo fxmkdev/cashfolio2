@@ -42,6 +42,7 @@ RUN pnpm --filter cashfolio-app2 prisma:generate
 
 # Build application
 RUN pnpm --filter cashfolio-app2 build
+RUN pnpm --filter cashfolio-app2 check:build-security
 RUN pnpm --filter cashfolio-app2 build:staging-seed
 RUN pnpm --filter cashfolio-app2 build:provider-usage-cleanup
 

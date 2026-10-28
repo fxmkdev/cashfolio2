@@ -3,6 +3,26 @@
 `cashfolio-app2` builds a TanStack Start production runtime with Nitro and runs
 the generated Node server from `.output/server/index.mjs`.
 
+## E2E build isolation
+
+Deployment images always run the ordinary `pnpm build` artifact in `.output`.
+The separate `build:e2e` command writes `.output-e2e`, which is excluded from
+Git and Docker contexts. Do not deploy or copy E2E artifacts to Fly.
+
+Normal servers refuse startup when `E2E_TEST_MODE=true`, `E2E_AUTH_BYPASS=true`,
+or `APP_ENVIRONMENT=e2e`. Remove these settings from deployment configuration;
+setting flags cannot activate synthetic authentication or provider mocks in a
+normal build. The startup guard runs synchronously before the Node listener. No
+database migration or change to the normal start command is required.
+
+Normal builds emit server-only `build-security.json` module metadata. Docker
+runs `check:build-security` to reject E2E implementations and MSW in the output.
+The dedicated build-security CI job additionally launches both artifacts to
+verify runtime guards and anonymous authentication. Preview and automatic
+staging deployments wait for that job; manual image deployments retain the
+Docker build exclusion check. See
+[Testing](testing.md#built-artifact-security-checks).
+
 ## Nitro version pin
 
 The app intentionally pins `nitro` to an exact beta version instead of a range.

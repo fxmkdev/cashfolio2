@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import { nitro } from "nitro/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import { buildSecurityManifest } from "./build-security";
 
 const previewAllowedHosts = new Set<string>([
   "localhost",
@@ -23,8 +24,30 @@ if (baseUrl) {
   }
 }
 
-export default defineConfig({
-  plugins: [tanstackStart(), nitro()],
+export default defineConfig(({ mode }) => ({
+  define: { __E2E_BUILD__: JSON.stringify(mode === "e2e") },
+  plugins: [
+    tanstackStart(),
+    nitro({
+      output: { dir: mode === "e2e" ? ".output-e2e" : ".output" },
+      plugins: [
+        fileURLToPath(
+          new URL(
+            "./src/security/runtime-configuration-plugin.server.ts",
+            import.meta.url,
+          ),
+        ),
+        ...(mode === "e2e"
+          ? [
+              fileURLToPath(
+                new URL("./src/e2e/provider-plugin.server.ts", import.meta.url),
+              ),
+            ]
+          : []),
+      ],
+    }),
+    buildSecurityManifest(mode === "e2e"),
+  ],
   build: {
     rolldownOptions: {
       onLog(level, log, defaultHandler) {
@@ -48,4 +71,4 @@ export default defineConfig({
   preview: {
     allowedHosts: [...previewAllowedHosts],
   },
-});
+}));

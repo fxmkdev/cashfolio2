@@ -22,7 +22,7 @@ import { BASE_CURRENCY, COINLAYER_TIMEOUT_MS } from "../constants";
 import { toDayString } from "../date-utils";
 import { isNoDataProviderError } from "../provider-response-parsers";
 
-function getCoinLayerApiKey(): string | null {
+function getCoinLayerApiKey(): Promise<string | null> {
   return getProviderApiKey({
     envVarName: "COINLAYER_API_KEY",
     missingKeyWarning:
@@ -35,7 +35,7 @@ export async function fetchUsdPerCryptocurrencyRateFromCoinLayer(
   date: Date,
   requestReason: ValuationProviderRequestReason = VALUATION_PROVIDER_REQUEST_REASONS.INITIAL_PROBE,
 ): Promise<FetchRateResult> {
-  const apiKey = getCoinLayerApiKey();
+  const apiKey = await getCoinLayerApiKey();
   if (!apiKey) return null;
 
   const requestContext = {

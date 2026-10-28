@@ -26,7 +26,7 @@ import {
 } from "../constants";
 import { parseMarketstackEodResponse } from "../provider-response-parsers";
 
-function getMarketstackApiKey(): string | null {
+function getMarketstackApiKey(): Promise<string | null> {
   return getProviderApiKey({
     envVarName: "MARKETSTACK_API_KEY",
     missingKeyWarning:
@@ -41,7 +41,7 @@ export async function fetchSecurityPriceFromMarketstack(
   requestReason: ValuationProviderRequestReason = VALUATION_PROVIDER_REQUEST_REASONS.INITIAL_PROBE,
   retryCount = 0,
 ): Promise<FetchRateResult> {
-  const apiKey = getMarketstackApiKey();
+  const apiKey = await getMarketstackApiKey();
   if (!apiKey) return null;
 
   const requestContext = {

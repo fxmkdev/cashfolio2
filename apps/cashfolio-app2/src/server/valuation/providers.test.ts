@@ -290,40 +290,23 @@ describe("Valuation provider helpers", () => {
     }
   });
 
-  test("uses e2e fallback API key when provider keys are unset", async () => {
-    const originalCurrencyLayerApiKey = process.env.CURRENCYLAYER_API_KEY;
-    const originalE2ETestMode = process.env.E2E_TEST_MODE;
-    delete process.env.CURRENCYLAYER_API_KEY;
-    process.env.E2E_TEST_MODE = "true";
-
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          success: true,
-          quotes: { USDCHF: 0.9 },
-        }),
-        { status: 200 },
-      ),
-    );
-
-    const result = await fetchUsdToCurrencyRateFromCurrencyLayer(
-      "CHF",
-      new Date("2026-03-28T00:00:00.000Z"),
-    );
-
-    expect(result).toBe(0.9);
-    expect(fetchSpy).toHaveBeenCalledOnce();
-
-    fetchSpy.mockRestore();
-    if (originalCurrencyLayerApiKey == null) {
-      delete process.env.CURRENCYLAYER_API_KEY;
-    } else {
-      process.env.CURRENCYLAYER_API_KEY = originalCurrencyLayerApiKey;
-    }
-    if (originalE2ETestMode == null) {
-      delete process.env.E2E_TEST_MODE;
-    } else {
-      process.env.E2E_TEST_MODE = originalE2ETestMode;
+  test("does not use a mock API key in a normal build even with E2E_TEST_MODE", async () => {
+    vi.stubEnv("CURRENCYLAYER_API_KEY", "");
+    vi.stubEnv("E2E_TEST_MODE", "true");
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      await expect(
+        fetchUsdToCurrencyRateFromCurrencyLayer(
+          "CHF",
+          new Date("2026-03-28T00:00:00Z"),
+        ),
+      ).resolves.toBeNull();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+      warnSpy.mockRestore();
+      vi.unstubAllEnvs();
     }
   });
 

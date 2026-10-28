@@ -67,6 +67,49 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
+  cashfolio-app2-build-security:
+    name: "cashfolio-app2: Build security"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cashfolio_build_security_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cashfolio_build_security_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/cashfolio_build_security_test?schema=public
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Install dependencies
+        run: pnpm --filter cashfolio-app2 install --frozen-lockfile
+      - name: Generate Prisma client and migrate disposable database
+        run: |
+          pnpm --filter cashfolio-app2 prisma:generate
+          pnpm --filter cashfolio-app2 exec prisma migrate deploy
+      - name: Test artifact inspection tools
+        run:
+          pnpm --filter cashfolio-app2 exec node --test
+          scripts/build-security/artifact.test.ts
+      - name: Build deployment artifact
+        run: pnpm --filter cashfolio-app2 build
+      - name: Check deployment artifact exclusion
+        run: pnpm --filter cashfolio-app2 check:build-security
+      - name: Build isolated E2E artifact
+        run: pnpm --filter cashfolio-app2 build:e2e
+      - name: Verify startup guards and authentication boundary
+        run: pnpm --filter cashfolio-app2 test:build-security
+
   cashfolio-app2-e2e:
     name: "cashfolio-app2: E2E (Shard ${{ matrix.shard_index }}/${{ matrix.shard_total }})"
     runs-on: ubuntu-latest
@@ -90,6 +133,8 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cashfolio?schema=public
       BASE_URL: http://127.0.0.1:4173
+      APP_ENVIRONMENT: e2e
+      E2E_TEST_MODE: "true"
       E2E_AUTH_BYPASS: "true"
       E2E_AUTH_EXTERNAL_ID: e2e-user
       E2E_WORKERS: "2"
@@ -408,6 +453,7 @@ jobs:
       - version
       - cashfolio-app2-build-push
       - resolve-preview-names
+      - cashfolio-app2-build-security
       - cli-tests
     permissions:
       contents: read
@@ -506,6 +552,7 @@ jobs:
       - version
       - cashfolio-app2-build-push
       - cashfolio-app2-unit
+      - cashfolio-app2-build-security
       - cashfolio-app2-staging-seed
       - cashfolio-app2-e2e-required
       - cashfolio-app2-typecheck

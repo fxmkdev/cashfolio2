@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { getE2ESecurityPrice } from "./e2e-security-prices";
+import { getE2ESecurityPrice } from "./security-prices";
 
 const USD_TO_CURRENCY_RATE_BY_SYMBOL: Record<string, number> = {
   USD: 1,

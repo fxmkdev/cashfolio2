@@ -1,35 +1,9 @@
 import { redirect } from "@tanstack/react-router";
-import { getCookie } from "@tanstack/react-start/server";
-import type { LogtoContext } from "@logto/node";
-import { E2E_AUTH_EXTERNAL_ID_COOKIE } from "./e2e-auth";
-
-function getE2EBypassExternalId(): string | null {
-  const bypassRequested = process.env.E2E_AUTH_BYPASS === "true";
-  const testModeEnabled = process.env.E2E_TEST_MODE === "true";
-
-  if (!bypassRequested || !testModeEnabled) {
-    return null;
-  }
-
-  return (
-    getCookie(E2E_AUTH_EXTERNAL_ID_COOKIE) ??
-    process.env.E2E_AUTH_EXTERNAL_ID ??
-    "e2e-user"
-  );
-}
-
 export async function getAuthenticationContext() {
-  const e2eExternalId = getE2EBypassExternalId();
-
-  if (e2eExternalId) {
-    return {
-      isAuthenticated: true,
-      claims: {
-        sub: e2eExternalId,
-        name: "E2E User",
-        email: `${e2eExternalId}@example.test`,
-      },
-    } as LogtoContext;
+  if (__E2E_BUILD__) {
+    const { getE2EAuthenticationContext } = await import("../e2e/auth.server");
+    const context = getE2EAuthenticationContext();
+    if (context) return context;
   }
 
   const { getLogtoContext } = await import("./logto.server");

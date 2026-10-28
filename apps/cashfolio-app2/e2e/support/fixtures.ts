@@ -5,7 +5,7 @@ import {
   type TestInfo,
 } from "@playwright/test";
 import { createId } from "@paralleldrive/cuid2";
-import { E2E_AUTH_EXTERNAL_ID_COOKIE } from "../../src/auth/e2e-auth";
+import { E2E_AUTH_EXTERNAL_ID_COOKIE } from "../../src/e2e/auth-cookie";
 
 type E2EWorkerFixtures = {
   e2eExternalId: string;
