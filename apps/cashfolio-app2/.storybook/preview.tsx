@@ -16,6 +16,7 @@ import "../src/mantine";
 import { theme } from "../src/theme";
 
 type RouterStoryParameters = {
+  colorScheme?: "light" | "dark";
   router?: {
     initialPath?: string;
   };
@@ -69,8 +70,19 @@ const preview: Preview = {
   ],
   decorators: [
     (Story, context) => (
-      <div data-ag-theme-mode={getPreferredColorScheme()}>
-        <MantineProvider theme={theme} defaultColorScheme="auto">
+      <div
+        data-ag-theme-mode={
+          (context.parameters as RouterStoryParameters).colorScheme ??
+          getPreferredColorScheme()
+        }
+      >
+        <MantineProvider
+          theme={theme}
+          defaultColorScheme="auto"
+          forceColorScheme={
+            (context.parameters as RouterStoryParameters).colorScheme
+          }
+        >
           <StoryContext.Provider value={Story}>
             <RouterProvider router={context.loaded.storyRouter} />
           </StoryContext.Provider>

@@ -64,8 +64,7 @@ export async function loadPeriodHistoryPoint(args: {
         income: [],
         expenses: [],
         gainsLosses: [],
-        assets: [],
-        liabilities: [],
+        netWorth: [],
       },
       scopedMetricValue: args.metricScopeFilter ? 0 : undefined,
     };

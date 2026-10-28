@@ -213,8 +213,7 @@ const emptyScopeOptions = {
   income: [],
   expenses: [],
   gainsLosses: [],
-  assets: [],
-  liabilities: [],
+  netWorth: [],
 };
 
 describe("unified history view tree", () => {
@@ -237,7 +236,7 @@ describe("unified history view tree", () => {
   test("nests groups and accounts under their metric and removes redundant totals", () => {
     const scopeOptions = {
       ...emptyScopeOptions,
-      assets: [
+      netWorth: [
         { value: "total", label: "Total", kind: "total" },
         { value: "group:assets", label: "Assets", kind: "group" },
         {
@@ -257,29 +256,42 @@ describe("unified history view tree", () => {
         { value: "account:ungrouped", label: "Ungrouped", kind: "account" },
       ] as const,
     };
-    const options = { ...scopeOptions, assets: [...scopeOptions.assets] };
+    const options = { ...scopeOptions, netWorth: [...scopeOptions.netWorth] };
     const root = buildHistoryViewTreeData(options).find(
-      (node) => node.value === "assets:total",
+      (node) => node.value === "netWorth:total",
     )!;
+    for (const metric of ["assets", "liabilities"] as const) {
+      const aggregate = buildHistoryViewTreeData(options).find(
+        (node) => node.value === `${metric}:total`,
+      )!;
+      expect(aggregate.children).toBeUndefined();
+      expect(getHistoryViewTreeSelection(aggregate.value, options)).toEqual({
+        metric,
+        scope: "total",
+      });
+      expect(
+        getHistoryViewTreeSelection(`${metric}:account:shared`, options),
+      ).toBeUndefined();
+    }
     expect(root.children?.map((node) => node.value)).toEqual([
-      "assets:group:assets",
-      "assets:account:ungrouped",
+      "netWorth:group:assets",
+      "netWorth:account:ungrouped",
     ]);
     const account = root.children![0].children![0].children![0];
     expect(account.label).toBe("Bank");
     expect(getHistoryScopeTreeSearchLabel(account)).toBe(
-      "Assets / Assets / Cash / Bank",
+      "Net Worth / Assets / Cash / Bank",
     );
     expect(getHistoryViewTreeSelection(account.value, options)).toEqual({
-      metric: "assets",
+      metric: "netWorth",
       scope: "account:shared",
     });
     expect(
       getHistoryViewTreeSelection(root.children![0].value, options),
-    ).toEqual({ metric: "assets", scope: "group:assets" });
+    ).toEqual({ metric: "netWorth", scope: "group:assets" });
   });
 
-  test("namespaces the same account across Cash Flow and Assets", () => {
+  test("namespaces the same account across Cash Flow and Net Worth", () => {
     const account = {
       value: "account:bank",
       label: "Bank",
@@ -288,14 +300,14 @@ describe("unified history view tree", () => {
     const options = {
       ...emptyScopeOptions,
       cashFlow: [account],
-      assets: [account],
+      netWorth: [account],
     };
     const data = buildHistoryViewTreeData(options);
     const values = data.flatMap(
       (node) => node.children?.map((child) => child.value) ?? [],
     );
-    expect(values).toEqual(["cashFlow:account:bank", "assets:account:bank"]);
-    for (const metric of ["cashFlow", "assets"] as const) {
+    expect(values).toEqual(["cashFlow:account:bank", "netWorth:account:bank"]);
+    for (const metric of ["cashFlow", "netWorth"] as const) {
       const selection = { metric, scope: account.value };
       expect(
         getHistoryViewTreeSelection(
@@ -349,10 +361,10 @@ describe("unified history view tree", () => {
     "",
     "assets",
     "unknown:total",
-    "assets:invalid",
-    "assets:account:missing",
+    "netWorth:invalid",
+    "netWorth:account:missing",
     "savings:account:bank",
-    "assets:group:",
+    "netWorth:group:",
   ])("rejects invalid or unavailable selection %s", (value) => {
     expect(
       getHistoryViewTreeSelection(value, emptyScopeOptions),
@@ -362,9 +374,9 @@ describe("unified history view tree", () => {
   test("uses the node label when a custom search label is absent", () => {
     expect(
       getHistoryScopeTreeSearchLabel({
-        value: "assets:total",
-        label: "Assets",
+        value: "netWorth:total",
+        label: "Net Worth",
       }),
-    ).toBe("Assets");
+    ).toBe("Net Worth");
   });
 });

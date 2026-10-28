@@ -85,6 +85,7 @@ describe("getPeriodHistory", () => {
       referenceCurrency: "CHF",
       accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
       holdingAccountsResolved: [],
+      netWorthScopes: [],
       hasCashAccounts: true,
     });
     loadHistoryOpeningBalancePoint.mockResolvedValue({
@@ -143,14 +144,12 @@ describe("getPeriodHistory", () => {
               kind: "gainLoss",
             },
           ],
-          assets: [
+          netWorth: [
             {
               value: "group:asset-g",
               label: "Asset G",
               kind: "group",
             },
-          ],
-          liabilities: [
             {
               value: "account:liability-a",
               label: "Liability A",
@@ -167,80 +166,116 @@ describe("getPeriodHistory", () => {
     vi.useRealTimers();
   });
 
-  test.each([
-    ["month", "assets"],
-    ["month", "liabilities"],
-    ["year", "assets"],
-    ["year", "liabilities"],
-  ] as const)(
-    "retains a crossing account's scoped %s/%s series across periods on the opposite side",
-    async (granularity, metric) => {
-      if (granularity === "year") {
-        loadPeriodHistoryPointContext.mockResolvedValue({
-          referenceCurrency: "CHF",
-          accountBookStartDate: new Date("2024-01-01T00:00:00Z"),
-          holdingAccountsResolved: [],
-          hasCashAccounts: true,
-        });
-      }
-      const original = loadPeriodHistoryPoint.getMockImplementation()!;
+  test("retains zero-only scopes and empty groups from the request hierarchy", async () => {
+    const original = loadPeriodHistoryPointContext.getMockImplementation()!;
+    loadPeriodHistoryPointContext.mockImplementation(async (args) => ({
+      ...(await original(args)),
+      netWorthScopes: [
+        {
+          value: "group:empty",
+          label: "Empty",
+          kind: "group",
+          treeLabel: "Empty",
+        },
+        {
+          value: "account:zero",
+          label: "Zero",
+          kind: "account",
+          treeLabel: "Zero",
+        },
+      ],
+    }));
+    const point = loadPeriodHistoryPoint.getMockImplementation()!;
+    loadPeriodHistoryPoint.mockImplementation(async (args) => ({
+      ...(await point(args)),
+      scopedMetricValue: 0,
+    }));
+    loadHistoryOpeningBalancePoint.mockResolvedValueOnce({
+      date: "2026-01-04T00:00:00Z",
+      label: "Opening Balance",
+      assets: 150,
+      liabilities: 40,
+      netWorth: 110,
+      scopedMetricValue: 0,
+    });
+    const result = await getPeriodHistory({
+      data: {
+        accountBookId: "book-1",
+        granularity: "month",
+        scopedMetric: "netWorth",
+        netWorthScope: "account:zero",
+      },
+    });
+    expect(result.scopeSelection.netWorth).toBe("account:zero");
+    expect(result.points.map((point) => point.netWorth)).toEqual([0, 0, 0]);
+    expect(result.openingBalancePoint.netWorth).toBe(0);
+    expect(result.scopeOptions.netWorth.map((option) => option.value)).toEqual([
+      "total",
+      "group:asset-g",
+      "group:empty",
+      "account:liability-a",
+      "account:zero",
+    ]);
+    expect(loadPeriodHistoryPointContext).toHaveBeenCalledTimes(1);
+  });
+
+  test.each(["month", "year"] as const)(
+    "preserves signed account values across zero in %s history",
+    async (granularity) => {
       const option = {
         value: "account:crossing",
         label: "Crossing Account",
         kind: "account",
       };
+      loadPeriodHistoryPointContext.mockResolvedValue({
+        referenceCurrency: "CHF",
+        accountBookStartDate: new Date(
+          granularity === "year"
+            ? "2024-01-01T00:00:00Z"
+            : "2026-01-01T00:00:00Z",
+        ),
+        holdingAccountsResolved: [],
+        hasCashAccounts: true,
+        netWorthScopes: [option],
+      });
+      const original = loadPeriodHistoryPoint.getMockImplementation()!;
       loadPeriodHistoryPoint.mockImplementation(async (args) => {
         const base = await original(args);
         const index =
           granularity === "year"
             ? Number(args.period) - 2024
             : Number(args.period.slice(-2)) - 1;
-        const balance = [25, 0, -10][index]!;
-        const assets = Math.max(balance, 0);
-        const liabilities = Math.max(-balance, 0);
-        return {
-          ...base,
-          assets,
-          liabilities,
-          netWorth: balance,
-          scopedMetricValue: metric === "assets" ? assets : liabilities,
-          scopeOptions: {
-            ...base.scopeOptions,
-            assets: assets > 0 ? [option] : [],
-            liabilities: liabilities > 0 ? [option] : [],
-          },
-        };
+        return { ...base, scopedMetricValue: [25, 0, -10][index] };
       });
       loadHistoryOpeningBalancePoint.mockResolvedValue({
         date: "2023-12-31T00:00:00Z",
         label: "Opening Balance",
-        assets: 25,
-        liabilities: 0,
-        netWorth: 25,
-        scopedMetricValue: metric === "assets" ? 25 : 0,
+        assets: 100,
+        liabilities: 25,
+        netWorth: 75,
+        scopedMetricValue: -5,
       });
       const result = await getPeriodHistory({
         data: {
           accountBookId: "book-1",
           granularity,
-          scopedMetric: metric,
-          ...(metric === "assets"
-            ? { assetScope: "account:crossing" }
-            : { liabilityScope: "account:crossing" }),
+          scopedMetric: "netWorth",
+          netWorthScope: "account:crossing",
         },
       });
-      expect(result.scopeSelection[metric]).toBe("account:crossing");
-      expect(result.scopeOptions.assets).toContainEqual(option);
-      expect(result.scopeOptions.liabilities).toContainEqual(option);
-      expect(result.points.map((point) => point[metric])).toEqual(
-        metric === "assets" ? [25, 0, 0] : [0, 0, 10],
-      );
+      expect(result.scopeSelection.netWorth).toBe("account:crossing");
+      expect(result.scopeOptions.netWorth).toContainEqual(option);
       expect(result.points.map((point) => point.netWorth)).toEqual([
         25, 0, -10,
       ]);
-      expect(result.openingBalancePoint[metric]).toBe(
-        metric === "assets" ? 25 : 0,
+      expect(result.points.map((point) => point.assets)).toEqual(
+        granularity === "year" ? [9, 9, 9] : [12, 12, 12],
       );
+      expect(result.openingBalancePoint).toMatchObject({
+        netWorth: -5,
+        assets: 100,
+        liabilities: 25,
+      });
     },
   );
 
@@ -273,6 +308,7 @@ describe("getPeriodHistory", () => {
         referenceCurrency: "CHF",
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
+        netWorthScopes: [],
         hasCashAccounts: true,
       },
       metricScopeFilter: undefined,
@@ -288,6 +324,7 @@ describe("getPeriodHistory", () => {
         referenceCurrency: "CHF",
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
+        netWorthScopes: [],
         hasCashAccounts: true,
       },
       metricScopeFilter: undefined,
@@ -303,6 +340,7 @@ describe("getPeriodHistory", () => {
         referenceCurrency: "CHF",
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
+        netWorthScopes: [],
         hasCashAccounts: true,
       },
       metricScopeFilter: undefined,
@@ -413,16 +451,13 @@ describe("getPeriodHistory", () => {
             kind: "gainLoss",
           },
         ],
-        assets: [
+        netWorth: [
           { value: "total", label: "Total", kind: "total" },
           {
             value: "group:asset-g",
             label: "Asset G",
             kind: "group",
           },
-        ],
-        liabilities: [
-          { value: "total", label: "Total", kind: "total" },
           {
             value: "account:liability-a",
             label: "Liability A",
@@ -435,8 +470,7 @@ describe("getPeriodHistory", () => {
         income: "total",
         expenses: "total",
         gainsLosses: "total",
-        assets: "total",
-        liabilities: "total",
+        netWorth: "total",
       },
     });
   });
@@ -465,6 +499,7 @@ describe("getPeriodHistory", () => {
         referenceCurrency: "CHF",
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
+        netWorthScopes: [],
         hasCashAccounts: true,
       },
       metricScopeFilter: {
@@ -524,7 +559,7 @@ describe("getPeriodHistory", () => {
     ]);
   });
 
-  test("applies scoped asset values and scoped opening balance", async () => {
+  test("applies scoped Net Worth values and scoped opening balance", async () => {
     loadHistoryOpeningBalancePoint.mockResolvedValueOnce({
       date: "2026-01-04T00:00:00.000Z",
       label: "Opening Balance",
@@ -538,8 +573,8 @@ describe("getPeriodHistory", () => {
       data: {
         accountBookId: "book-assets",
         granularity: "year",
-        scopedMetric: "assets",
-        assetScope: "group:asset-g",
+        scopedMetric: "netWorth",
+        netWorthScope: "group:asset-g",
       },
     });
 
@@ -550,10 +585,11 @@ describe("getPeriodHistory", () => {
         referenceCurrency: "CHF",
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
+        netWorthScopes: [],
         hasCashAccounts: true,
       },
       metricScopeFilter: {
-        metric: "assets",
+        metric: "netWorth",
         scope: "group:asset-g",
       },
       valuationContext: {
@@ -566,24 +602,24 @@ describe("getPeriodHistory", () => {
       accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
       referenceCurrency: "CHF",
       metricScopeFilter: {
-        metric: "assets",
+        metric: "netWorth",
         scope: "group:asset-g",
       },
     });
     expect(result.openingBalancePoint).toEqual({
       date: "2026-01-04T00:00:00.000Z",
       label: "Opening Balance",
-      assets: 90,
+      assets: 150,
       liabilities: 40,
-      netWorth: 110,
+      netWorth: 90,
     });
     expect(result.points).toEqual([
       expect.objectContaining({
-        assets: 24,
+        netWorth: 24,
         liabilities: 10,
       }),
     ]);
-    expect(result.scopeSelection.assets).toBe("group:asset-g");
+    expect(result.scopeSelection.netWorth).toBe("group:asset-g");
   });
 
   test("applies scoped Gain/Loss values without opening-balance scoping", async () => {
@@ -603,6 +639,7 @@ describe("getPeriodHistory", () => {
         referenceCurrency: "CHF",
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
+        netWorthScopes: [],
         hasCashAccounts: true,
       },
       metricScopeFilter: {
@@ -647,6 +684,7 @@ describe("getPeriodHistory", () => {
         referenceCurrency: "CHF",
         accountBookStartDate: new Date("2026-01-05T00:00:00.000Z"),
         holdingAccountsResolved: [],
+        netWorthScopes: [],
         hasCashAccounts: true,
       },
       metricScopeFilter: {
@@ -693,8 +731,7 @@ describe("getPeriodHistory", () => {
       income: "total",
       expenses: "total",
       gainsLosses: "total",
-      assets: "total",
-      liabilities: "total",
+      netWorth: "total",
     });
   });
 
@@ -716,22 +753,23 @@ describe("getPeriodHistory", () => {
     expect(result.scopeSelection.cashFlow).toBe("total");
   });
 
-  test("falls back to total liabilities when scoped liability selection is stale", async () => {
+  test("falls back to total Net Worth when a selected account is deleted", async () => {
     const result = await getPeriodHistory({
       data: {
         accountBookId: "book-4",
         granularity: "year",
-        scopedMetric: "liabilities",
-        liabilityScope: "account:missing",
+        scopedMetric: "netWorth",
+        netWorthScope: "account:missing",
       },
     });
 
     expect(result.points).toEqual([
       expect.objectContaining({
+        netWorth: 11,
         liabilities: 10,
       }),
     ]);
-    expect(result.scopeSelection.liabilities).toBe("total");
+    expect(result.scopeSelection.netWorth).toBe("total");
   });
 
   test("falls back to total Gain/Loss when scoped Gain/Loss selection is stale", async () => {

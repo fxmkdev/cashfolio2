@@ -1344,9 +1344,37 @@ versions and live cross-tab synchronization remain separate follow-ups.
 Assets include positive period-end account balances; Liabilities include the
 absolute values of negative balances, regardless of the stored account type. The
 Account management uses a stable balance-account hierarchy. Report allocation
-tables/charts and History totals/scopes use the same rule. An overdrawn asset
-account appears under Liabilities and an overpaid liability account appears
-under Assets, retaining its original group path and ledger link. A group can
-appear on both sides, with only the relevant accounts on each side. History
-scopes show zero for dates on the opposite side. Category roles, cash-flow
-inclusion flags, and signed ledger/import conventions do not change.
+tables/charts and History totals use the same rule. An overdrawn asset account
+appears under Liabilities and an overpaid liability account appears under
+Assets, retaining its original group path and ledger link. A group can appear on
+both sides, with only the relevant accounts on each side. Category roles,
+cash-flow inclusion flags, and signed ledger/import conventions do not change.
+
+History's Assets and Liabilities nodes are selectable aggregate totals without
+children. Net Worth contains the complete Balance Account hierarchy, including
+archived accounts, zero-only accounts, and empty groups. Account selections show
+signed balances across zero; groups sum their descendants' signed balances. The
+same scope applies to the opening baseline. Tree nodes, selected labels, chart
+headings, series, and tooltips use existing account/group names without a
+"Balance" suffix; full paths remain searchable to disambiguate duplicate names.
+Real account selections support double-clicking a period to open its ledger.
+Groups, virtual accounts, and the opening baseline do not have ledger
+navigation.
+
+Assets, Liabilities, and Net Worth History charts omit legends. Net Worth uses a
+single continuous signed area series, segmented at zero with green positive
+regions and red negative regions. Zero balances remain real chart points rather
+than gaps. All balance charts hide permanent markers, regardless of whether the
+scope supports ledger navigation. Hover/focus highlighting retains the
+corresponding sign color (green at zero), tooltips, and real-account period
+double-click navigation. Tooltip symbols match the chart colors: green for
+Assets, red for Liabilities, and the hovered balance's sign color for Net Worth
+(green at zero). Storybook stories can set `parameters.colorScheme` to `light`
+or `dark` to force the Mantine and grid themes consistently for visual
+verification.
+
+Legacy History links selecting an account/group under Assets or Liabilities move
+that selection to Net Worth. Explicit `netWorthScope` takes precedence;
+aggregate links remain unchanged, inactive legacy scope parameters are
+discarded, and deleted/invalid scopes fall back to Net Worth total. Canonical
+URLs use `netWorthScope` and remove `assetScope`/`liabilityScope`.

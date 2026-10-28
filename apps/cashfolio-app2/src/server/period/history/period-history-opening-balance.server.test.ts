@@ -135,7 +135,7 @@ describe("loadHistoryOpeningBalancePoint", () => {
     expect(toNumericMoney("scopedMetricValue" in result)).toBe(false);
   });
 
-  test("resolves scoped asset opening balance from account groups", async () => {
+  test("resolves scoped Net Worth opening balance from account groups", async () => {
     prisma.account.findMany.mockResolvedValue([
       {
         id: "asset-1",
@@ -178,7 +178,7 @@ describe("loadHistoryOpeningBalancePoint", () => {
       accountBookStartDate: new Date("2026-01-05T15:42:00.000Z"),
       referenceCurrency: "CHF",
       metricScopeFilter: {
-        metric: "assets",
+        metric: "netWorth",
         scope: "group:group-assets",
       },
     });
@@ -192,8 +192,8 @@ describe("loadHistoryOpeningBalancePoint", () => {
       scopedMetricValue: 75,
     });
   });
-  test.each(["assets", "liabilities"] as const)(
-    "classifies scoped %s opening balances by sign instead of stored type",
+  test.each(["netWorth"] as const)(
+    "sums signed %s opening balances in mixed-sign groups",
     async (metric) => {
       prisma.account.findMany.mockResolvedValue([
         {
@@ -234,7 +234,7 @@ describe("loadHistoryOpeningBalancePoint", () => {
         assets: 10,
         liabilities: 25,
         netWorth: -15,
-        scopedMetricValue: metric === "assets" ? 10 : 25,
+        scopedMetricValue: -15,
       });
     },
   );

@@ -115,8 +115,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
         income: [],
         expenses: [],
         gainsLosses: [],
-        assets: [],
-        liabilities: [],
+        netWorth: [],
       },
       scopedMetricValue: undefined,
     });
@@ -205,8 +204,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
         income: [],
         expenses: [],
         gainsLosses: [],
-        assets: [],
-        liabilities: [],
+        netWorth: [],
       },
       scopedMetricValue: undefined,
     });
@@ -612,13 +610,7 @@ describe("loadPeriodHistoryPointMetrics", () => {
         income: [],
         expenses: [],
         gainsLosses: [],
-        assets: [
-          {
-            value: "account:asset-1",
-            label: "Cash",
-            kind: "account",
-            treeLabel: "Cash",
-          },
+        netWorth: [
           {
             value: "group:virtual:transfer-clearing",
             label: "Transfer Clearing",
@@ -640,20 +632,12 @@ describe("loadPeriodHistoryPointMetrics", () => {
             parentValue: "group:virtual:transfer-clearing:currency",
           },
         ],
-        liabilities: [
-          {
-            value: "account:liability-1",
-            label: "Credit Card",
-            kind: "account",
-            treeLabel: "Credit Card",
-          },
-        ],
       },
       scopedMetricValue: undefined,
     });
   });
 
-  test("builds balance scope options and resolves scoped liability values", async () => {
+  test("builds virtual balance scope options and resolves signed Net Worth values", async () => {
     const baseData = createBaseData({
       overrides: {
         allAccountGroups: [
@@ -747,41 +731,13 @@ describe("loadPeriodHistoryPointMetrics", () => {
       accountBookId: "book-1",
       period: "2026-02",
       metricScopeFilter: {
-        metric: "liabilities",
+        metric: "netWorth",
         scope: "group:grp-liabilities",
       },
     });
 
-    expect(toNumericMoney(result.scopedMetricValue)).toBe(70);
-    expect(toNumericMoney(result.scopeOptions.assets)).toEqual([
-      {
-        value: "group:grp-assets",
-        label: "Assets",
-        kind: "group",
-        treeLabel: "Assets",
-      },
-      {
-        value: "account:asset-1",
-        label: "Assets / Cash",
-        kind: "account",
-        treeLabel: "Cash",
-        parentValue: "group:grp-assets",
-      },
-    ]);
-    expect(toNumericMoney(result.scopeOptions.liabilities)).toEqual([
-      {
-        value: "group:grp-liabilities",
-        label: "Liabilities",
-        kind: "group",
-        treeLabel: "Liabilities",
-      },
-      {
-        value: "account:liability-1",
-        label: "Liabilities / Credit Card",
-        kind: "account",
-        treeLabel: "Credit Card",
-        parentValue: "group:grp-liabilities",
-      },
+    expect(toNumericMoney(result.scopedMetricValue)).toBe(-70);
+    expect(toNumericMoney(result.scopeOptions.netWorth)).toEqual([
       {
         value: "group:virtual:transfer-clearing",
         label: "Transfer Clearing",

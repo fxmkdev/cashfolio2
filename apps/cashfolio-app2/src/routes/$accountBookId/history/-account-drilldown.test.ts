@@ -40,21 +40,18 @@ const options: HistoryScopeOption[] = [
 ];
 
 describe("History account drill-down", () => {
-  test.each([
-    "cashFlow",
-    "income",
-    "expenses",
-    "assets",
-    "liabilities",
-  ] as const)("opens %s account scopes in ledger", (metric) => {
-    expect(
-      resolveHistoryAccountDrillTarget({
-        metric,
-        scope: "account:expense",
-        options,
-      }),
-    ).toEqual({ kind: "ledger", accountId: "expense" });
-  });
+  test.each(["cashFlow", "income", "expenses", "netWorth"] as const)(
+    "opens %s account scopes in ledger",
+    (metric) => {
+      expect(
+        resolveHistoryAccountDrillTarget({
+          metric,
+          scope: "account:expense",
+          options,
+        }),
+      ).toEqual({ kind: "ledger", accountId: "expense" });
+    },
+  );
 
   test.each([
     "total",
@@ -64,14 +61,14 @@ describe("History account drill-down", () => {
   ] as const)("does not navigate for unsupported scope %s", (scope) => {
     expect(
       resolveHistoryAccountDrillTarget({
-        metric: "expenses",
+        metric: "netWorth",
         scope,
         options,
       }),
     ).toBeNull();
   });
 
-  test.each(["totalReturn", "savings", "netWorth"] as const)(
+  test.each(["totalReturn", "savings", "assets", "liabilities"] as const)(
     "does not navigate from unscoped metric %s",
     (metric) => {
       expect(

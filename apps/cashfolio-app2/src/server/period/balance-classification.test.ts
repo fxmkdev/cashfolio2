@@ -5,8 +5,8 @@ import { toNumericMoney } from "../money-boundary";
 import { computeEndOfPeriodBalanceStatsWithConvertedBalances } from "./period-balance-stats";
 import { buildPeriodEndAllocationBreakdown } from "./breakdown/period-allocation-breakdown";
 import {
-  buildBalanceHistoryScopeAmountMaps,
-  buildHistoryScopeOptions,
+  buildNetWorthHistoryScopeAmountMap,
+  buildNetWorthHistoryScopeOptions,
   resolveScopedMetricValue,
 } from "./history/period-history-scopes.server";
 import { buildTransferClearingVirtualHierarchy } from "./transfer-clearing/period-transfer-clearing-hierarchy";
@@ -80,18 +80,27 @@ describe("balance-based reporting", () => {
     expect(stats.convertedBalanceByAccountId.has("equity")).toBe(false);
     expect(stats.convertedBalanceByAccountId.get("zero")?.toString()).toBe("0");
 
-    const maps = buildBalanceHistoryScopeAmountMaps({
+    const amountMap = buildNetWorthHistoryScopeAmountMap({
       accounts,
       convertedBalanceByAccountId: stats.convertedBalanceByAccountId,
     });
-    for (const [side, amountMap, expectedIds, total] of [
-      ["asset", maps.assetAmountByAccountId, ["bank", "overpayment"], 105],
-      [
-        "liability",
-        maps.liabilityAmountByAccountId,
-        ["card-debt", "overdraft"],
-        60,
-      ],
+    expect(
+      toNumericMoney(
+        resolveScopedMetricValue({
+          metricScopeFilter: { metric: "netWorth", scope: "group:banking" },
+          amountByMetric: { netWorth: amountMap },
+          allAccountGroups: groups,
+        }),
+      ),
+    ).toBe(45);
+    const scopes = buildNetWorthHistoryScopeOptions({
+      accounts: accounts.filter((a) => a.type === AccountType.BALANCE),
+      groups,
+    });
+    expect(scopes.map((option) => option.value)).toContain("account:zero");
+    for (const [side, expectedIds, total] of [
+      ["asset", ["bank", "overpayment"], 105],
+      ["liability", ["card-debt", "overdraft"], 60],
     ] as const) {
       const allocation = buildPeriodEndAllocationBreakdown({
         side,
@@ -112,65 +121,36 @@ describe("balance-based reporting", () => {
       expect(
         allocation.hierarchy[0]?.children[0]?.children.map((node) => node.id),
       ).toEqual(expectedIds.map((id) => `account:${id}`));
-      const metric = side === "asset" ? "assets" : "liabilities";
-      expect(
-        toNumericMoney(
-          resolveScopedMetricValue({
-            metricScopeFilter: { metric, scope: "group:banking" },
-            amountByMetric: { [metric]: amountMap },
-            allAccountGroups: groups,
-          }),
-        ),
-      ).toBe(total);
-      expect(
-        buildHistoryScopeOptions({
-          amountByAccountId: amountMap,
-          allAccountGroups: groups,
-        }).map((option) => option.value),
-      ).toContain(`account:${expectedIds[0]}`);
     }
   });
 
-  it.each([AccountType.BALANCE])(
-    "clips scoped contributions to each side as a %s account crosses zero",
-    async (type) => {
-      const accounts = [account("crossing", type)];
-      const values = [];
-      for (const value of [25, 0, -10]) {
-        const stats = await compute(
-          accounts,
-          new Map([["crossing", toMoney(value)]]),
-        );
-        const maps = buildBalanceHistoryScopeAmountMaps({
-          accounts,
-          convertedBalanceByAccountId: stats.convertedBalanceByAccountId,
-        });
-        values.push(
-          ["assets", "liabilities"].map((metric) =>
-            toNumericMoney(
-              resolveScopedMetricValue({
-                metricScopeFilter: {
-                  metric: metric as "assets" | "liabilities",
-                  scope: "account:crossing",
-                },
-                amountByMetric: {
-                  assets: maps.assetAmountByAccountId,
-                  liabilities: maps.liabilityAmountByAccountId,
-                },
-                allAccountGroups: groups,
-              }),
-            ),
-          ),
-        );
-        expect(stats.netWorth.toString()).toBe(String(value));
-      }
-      expect(values).toEqual([
-        [25, 0],
-        [0, 0],
-        [0, 10],
-      ]);
-    },
-  );
+  it("preserves signed scoped balances as accounts cross zero", async () => {
+    const accounts = [account("crossing", AccountType.BALANCE)];
+    const values = [];
+    for (const value of [25, 0, -10]) {
+      const stats = await compute(
+        accounts,
+        new Map([["crossing", toMoney(value)]]),
+      );
+      const amounts = buildNetWorthHistoryScopeAmountMap({
+        accounts,
+        convertedBalanceByAccountId: stats.convertedBalanceByAccountId,
+      });
+      values.push(
+        toNumericMoney(
+          resolveScopedMetricValue({
+            metricScopeFilter: {
+              metric: "netWorth",
+              scope: "account:crossing",
+            },
+            amountByMetric: { netWorth: amounts },
+            allAccountGroups: groups,
+          }),
+        ),
+      );
+    }
+    expect(values).toEqual([25, 0, -10]);
+  });
 
   it("classifies exact balances without losing sub-cent values", async () => {
     const stats = await compute(

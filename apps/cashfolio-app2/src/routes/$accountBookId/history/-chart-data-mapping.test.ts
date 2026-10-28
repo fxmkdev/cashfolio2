@@ -39,15 +39,13 @@ describe("mapHistoryPointsToChartData", () => {
         assets: 150,
         liabilities: 40,
         netWorth: 110,
-        netWorthPositive: 110,
-        netWorthNegative: null,
         cumulativeMetric: 0,
         rollingAverageMetric: null,
       },
     ]);
   });
 
-  test("keeps net worth zero in positive split to avoid gaps at zero", () => {
+  test("preserves net worth zero as a real balance point", () => {
     expect(
       mapHistoryPointsToChartData([
         createHistoryPoint({
@@ -66,8 +64,6 @@ describe("mapHistoryPointsToChartData", () => {
     ).toEqual([
       expect.objectContaining({
         netWorth: 0,
-        netWorthPositive: 0,
-        netWorthNegative: null,
       }),
     ]);
   });

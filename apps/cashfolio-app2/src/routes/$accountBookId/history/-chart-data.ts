@@ -22,8 +22,6 @@ export type HistoryChartDatum = {
   assets: number;
   liabilities: number;
   netWorth: number;
-  netWorthPositive: number | null;
-  netWorthNegative: number | null;
   cumulativeMetric: number;
   rollingAverageMetric: number | null;
 };
@@ -79,14 +77,6 @@ export function getHistoryMetricValue(
   metric: HistoryMetric,
 ): number {
   return datum[metric] ?? 0;
-}
-
-function getNetWorthPositiveValue(netWorth: number): number | null {
-  return netWorth >= 0 ? netWorth : null;
-}
-
-function getNetWorthNegativeValue(netWorth: number): number | null {
-  return netWorth < 0 ? netWorth : null;
 }
 
 export function rebaseHistoryChartDataCumulativeToVisibleRange(args: {
@@ -158,8 +148,6 @@ export function mapHistoryPointsToChartData(
         assets: point.assets,
         liabilities: point.liabilities,
         netWorth: point.netWorth,
-        netWorthPositive: getNetWorthPositiveValue(point.netWorth),
-        netWorthNegative: getNetWorthNegativeValue(point.netWorth),
         cumulativeMetric: 0,
         rollingAverageMetric: null,
       },
@@ -246,12 +234,6 @@ export function prependOpeningBalanceChartDatum(args: {
     assets: args.openingBalancePoint.assets,
     liabilities: args.openingBalancePoint.liabilities,
     netWorth: args.openingBalancePoint.netWorth,
-    netWorthPositive: getNetWorthPositiveValue(
-      args.openingBalancePoint.netWorth,
-    ),
-    netWorthNegative: getNetWorthNegativeValue(
-      args.openingBalancePoint.netWorth,
-    ),
     cumulativeMetric: 0,
     rollingAverageMetric: null,
   };

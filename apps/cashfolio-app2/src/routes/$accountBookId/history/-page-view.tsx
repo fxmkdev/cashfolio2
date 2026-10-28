@@ -191,9 +191,12 @@ export function HistoryPageView({
       return undefined;
     }
 
-    return history.scopeOptions[selectedMetric].find(
+    const option = history.scopeOptions[selectedMetric].find(
       (option) => option.value === selectedScope,
-    )?.label;
+    );
+    return selectedMetric === "netWorth"
+      ? (option?.treeLabel ?? option?.label)
+      : option?.label;
   }, [selectedMetric, history.scopeOptions, history.scopeSelection]);
   const shouldShowCashFlowEmptyState =
     selectedMetric === "cashFlow" && history.hasCashAccounts === false;
@@ -360,7 +363,10 @@ export function HistoryPageView({
         <Group justify="space-between" align="flex-start" wrap="wrap" gap="sm">
           <Stack gap={4}>
             <Text fw={600}>
-              {getHistoryMetricLabel(selectedMetric)} by Period
+              {(selectedMetric === "netWorth"
+                ? selectedMetricSeriesLabel
+                : undefined) ?? getHistoryMetricLabel(selectedMetric)}{" "}
+              by Period
             </Text>
             <Text c="dimmed" size="sm">
               Amounts shown in {activeReferenceCurrency}

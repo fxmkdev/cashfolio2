@@ -57,7 +57,7 @@ describe("History chart drill-down", () => {
       });
       expect(onPeriodDoubleClick.mock.calls).toEqual([["2026-01"], ["2026"]]);
       if (metric !== "expenses")
-        expect(primary.marker).toMatchObject({ enabled: true, size: 5 });
+        expect(primary.marker).toMatchObject({ enabled: false, size: 5 });
     },
   );
 
@@ -71,21 +71,48 @@ describe("History chart drill-down", () => {
     expect(onPeriodDoubleClick).not.toHaveBeenCalled();
   });
 
-  test("does not wire aggregate overlays or Net Worth", () => {
+  test("does not wire aggregate overlays", () => {
     const onPeriodDoubleClick = vi.fn();
     for (const overlay of series(
       createOptions("expenses", onPeriodDoubleClick),
     ).slice(1))
       expect(overlay.listeners).toBeUndefined();
-    for (const area of series(createOptions("netWorth", onPeriodDoubleClick)))
-      expect(area.listeners).toBeUndefined();
   });
 
-  test("omits events and balance markers when no destination is available", () => {
-    expect(series(createOptions("expenses"))[0].listeners).toBeUndefined();
-    expect(series(createOptions("assets"))[0]).toMatchObject({
-      marker: { enabled: false },
-      listeners: undefined,
-    });
+  test("opens negative, zero, and positive Net Worth periods and ignores the opening balance", () => {
+    const onPeriodDoubleClick = vi.fn();
+    const areas = series(createOptions("netWorth", onPeriodDoubleClick));
+    expect(areas).toHaveLength(1);
+    for (const area of areas) {
+      expect(area.marker).toMatchObject({ enabled: false, size: 5 });
+      for (const netWorth of [-110, 0, 20]) {
+        area.listeners?.seriesNodeDoubleClick({
+          datum: { ...chartData[0], netWorth },
+        });
+      }
+      area.listeners?.seriesNodeDoubleClick({
+        datum: { ...chartData[0], periodValue: "opening-balance:2025-12-31" },
+      });
+    }
+    expect(onPeriodDoubleClick.mock.calls).toEqual([
+      ["2026-01"],
+      ["2026-01"],
+      ["2026-01"],
+    ]);
   });
+
+  test.each(["assets", "liabilities", "netWorth"] as const)(
+    "hides permanent %s markers independently of ledger navigation",
+    (metric) => {
+      for (const onPeriodDoubleClick of [undefined, vi.fn()]) {
+        const area = series(createOptions(metric, onPeriodDoubleClick))[0];
+        expect(area.marker).toMatchObject({ enabled: false, size: 5 });
+        if (onPeriodDoubleClick) {
+          expect(area.listeners?.seriesNodeDoubleClick).toBeTypeOf("function");
+        } else {
+          expect(area.listeners).toBeUndefined();
+        }
+      }
+    },
+  );
 });

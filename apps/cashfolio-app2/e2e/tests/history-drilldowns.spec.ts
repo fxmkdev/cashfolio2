@@ -90,7 +90,7 @@ async function doubleClickHistoryPoint(
   const box = await focusedPoint.boundingBox();
   expect(box).not.toBeNull();
   // A rolling-average marker can overlap the bar's midpoint. Click inside the
-  // bar away from that overlay; balance markers use their center.
+  // bar away from that overlay; balance points use their focus indicator center.
   await page.mouse.dblclick(
     box!.x + box!.width / 2,
     box!.y + box!.height * (isBalancePoint ? 0.5 : 0.8),
@@ -163,9 +163,11 @@ test("yearly account bar opens the whole year and excludes future-year bookings"
   await expect(page.getByRole("radio", { name: "Yearly" })).toBeChecked();
 });
 
-test("asset balance point opens ledger for that period", async ({ page }) => {
+test("Net Worth account balance point opens ledger without permanent markers", async ({
+  page,
+}) => {
   await page.goto(
-    `/${seeded.accountBookId}/history?metric=assets&assetScope=account:${seeded.savingsAccount.id}`,
+    `/${seeded.accountBookId}/history?metric=netWorth&netWorthScope=account:${seeded.savingsAccount.id}`,
   );
   // Balance charts start with a synthetic opening-balance point.
   await doubleClickHistoryPoint(page, 2, true);
