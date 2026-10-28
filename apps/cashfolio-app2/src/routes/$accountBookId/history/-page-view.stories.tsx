@@ -124,3 +124,47 @@ export const CreditCardDark: Story = {
   ...CreditCardLight,
   parameters: { colorScheme: "dark" },
 };
+
+export const BalanceGroupLight: Story = {
+  args: {
+    history: {
+      ...history,
+      scopeSelection: { ...history.scopeSelection, netWorth: "group:banking" },
+    },
+  },
+  parameters: { colorScheme: "light" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("Banking by Period")).toBeInTheDocument();
+    await expect(
+      canvas.queryByText("Double-click a period to open ledger."),
+    ).not.toBeInTheDocument();
+  },
+};
+
+export const BalanceGroupDark: Story = {
+  ...BalanceGroupLight,
+  parameters: { colorScheme: "dark" },
+};
+
+export const NetWorthTotalLight: Story = {
+  args: {
+    history: {
+      ...history,
+      scopeSelection: { ...history.scopeSelection, netWorth: "total" },
+    },
+  },
+  parameters: { colorScheme: "light" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("Net Worth by Period")).toBeInTheDocument();
+    await expect(
+      canvas.queryByText("Double-click a period to open ledger."),
+    ).not.toBeInTheDocument();
+  },
+};
+
+export const NetWorthTotalDark: Story = {
+  ...NetWorthTotalLight,
+  parameters: { colorScheme: "dark" },
+};

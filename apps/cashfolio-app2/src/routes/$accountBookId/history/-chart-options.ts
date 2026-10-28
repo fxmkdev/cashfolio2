@@ -148,7 +148,7 @@ export function createHistoryChartOptions(args: {
                 }
               : undefined,
           marker: {
-            enabled: !!args.onPeriodDoubleClick,
+            enabled: false,
             size: 5,
             fill:
               selectedMetricKey === "liabilities"

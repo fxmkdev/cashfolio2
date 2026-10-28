@@ -57,7 +57,7 @@ describe("History chart drill-down", () => {
       });
       expect(onPeriodDoubleClick.mock.calls).toEqual([["2026-01"], ["2026"]]);
       if (metric !== "expenses")
-        expect(primary.marker).toMatchObject({ enabled: true, size: 5 });
+        expect(primary.marker).toMatchObject({ enabled: false, size: 5 });
     },
   );
 
@@ -84,7 +84,7 @@ describe("History chart drill-down", () => {
     const areas = series(createOptions("netWorth", onPeriodDoubleClick));
     expect(areas).toHaveLength(1);
     for (const area of areas) {
-      expect(area.marker).toMatchObject({ enabled: true, size: 5 });
+      expect(area.marker).toMatchObject({ enabled: false, size: 5 });
       for (const netWorth of [-110, 0, 20]) {
         area.listeners?.seriesNodeDoubleClick({
           datum: { ...chartData[0], netWorth },
@@ -101,11 +101,18 @@ describe("History chart drill-down", () => {
     ]);
   });
 
-  test("omits events and balance markers when no destination is available", () => {
-    expect(series(createOptions("expenses"))[0].listeners).toBeUndefined();
-    expect(series(createOptions("assets"))[0]).toMatchObject({
-      marker: { enabled: false },
-      listeners: undefined,
-    });
-  });
+  test.each(["assets", "liabilities", "netWorth"] as const)(
+    "hides permanent %s markers independently of ledger navigation",
+    (metric) => {
+      for (const onPeriodDoubleClick of [undefined, vi.fn()]) {
+        const area = series(createOptions(metric, onPeriodDoubleClick))[0];
+        expect(area.marker).toMatchObject({ enabled: false, size: 5 });
+        if (onPeriodDoubleClick) {
+          expect(area.listeners?.seriesNodeDoubleClick).toBeTypeOf("function");
+        } else {
+          expect(area.listeners).toBeUndefined();
+        }
+      }
+    },
+  );
 });
