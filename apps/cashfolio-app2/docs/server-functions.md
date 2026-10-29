@@ -114,6 +114,17 @@ Reconciliation calculation inputs and callbacks stay in server modules.
 - Account-book mutations should use `src/server/mutation-guard.server.ts` to
   enforce same-origin and account-book authorization consistently.
 
+## Native Collection APIs
+
+Server-only code runs on Node 26 and may use `Map.getOrInsertComputed()` to
+initialize arrays, sets, or nested maps lazily when grouping values. Keep
+read-only fallback lookups non-mutating and preserve existing insertion order
+and deduplication behavior.
+
+The app's `ESNext.Collection` TypeScript library provides these declarations; it
+does not polyfill the APIs or establish browser support. Client and shared code
+must continue to respect the supported browser baseline.
+
 ## Core Modules
 
 - Key public facades: `accounts.ts`, `account-books.ts`, `transactions.ts`,

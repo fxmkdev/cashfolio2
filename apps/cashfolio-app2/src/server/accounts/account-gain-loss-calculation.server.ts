@@ -310,9 +310,11 @@ function getTransferPeers(
     );
     for (const bookings of transfers) {
       for (const booking of bookings) {
-        const connected = peers.get(booking.accountId) ?? new Set<string>();
+        const connected = peers.getOrInsertComputed(
+          booking.accountId,
+          () => new Set<string>(),
+        );
         for (const other of bookings) connected.add(other.accountId);
-        peers.set(booking.accountId, connected);
       }
     }
   }

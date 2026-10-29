@@ -135,9 +135,9 @@ async function getDescendantGroupIds(args: {
   const childrenByParentGroupId = new Map<string, string[]>();
   for (const group of groups) {
     if (!group.parentGroupId) continue;
-    const children = childrenByParentGroupId.get(group.parentGroupId) ?? [];
-    children.push(group.id);
-    childrenByParentGroupId.set(group.parentGroupId, children);
+    childrenByParentGroupId
+      .getOrInsertComputed(group.parentGroupId, () => [])
+      .push(group.id);
   }
 
   const groupIds = new Set<string>();

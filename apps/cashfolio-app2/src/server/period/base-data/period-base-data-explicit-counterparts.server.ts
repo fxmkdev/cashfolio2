@@ -55,16 +55,13 @@ export async function resolveExplicitCounterpartNonEquityAccounts(
 
   const counterpartByTransactionId = new Map<string, Map<string, string>>();
   for (const counterpartBooking of counterpartBookings) {
-    const byAccountId =
-      counterpartByTransactionId.get(counterpartBooking.transactionId) ??
-      new Map<string, string>();
+    const byAccountId = counterpartByTransactionId.getOrInsertComputed(
+      counterpartBooking.transactionId,
+      () => new Map<string, string>(),
+    );
     byAccountId.set(
       counterpartBooking.accountId,
       counterpartBooking.account.name,
-    );
-    counterpartByTransactionId.set(
-      counterpartBooking.transactionId,
-      byAccountId,
     );
   }
 

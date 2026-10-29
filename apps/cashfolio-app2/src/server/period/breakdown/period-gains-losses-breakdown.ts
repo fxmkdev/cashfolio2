@@ -58,9 +58,9 @@ export function buildGainsLossesBreakdown(args: {
       toMoney(contribution.unrealizedGainLoss).isZero()
     )
       continue;
-    const values = byAccount.get(contribution.accountId) ?? [];
-    values.push(contribution);
-    byAccount.set(contribution.accountId, values);
+    byAccount
+      .getOrInsertComputed(contribution.accountId, () => [])
+      .push(contribution);
   }
   const classes = [
     ...assetClassOptions,

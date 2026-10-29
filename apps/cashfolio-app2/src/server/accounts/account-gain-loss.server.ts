@@ -53,9 +53,7 @@ export async function queryAccountGainLossSummaries(args: {
     const visited = new Set<string>();
     while (groupId && !visited.has(groupId)) {
       visited.add(groupId);
-      const children = descendants.get(groupId) ?? [];
-      children.push(result);
-      descendants.set(groupId, children);
+      descendants.getOrInsertComputed(groupId, () => []).push(result);
       groupId = projection
         ? projection.parentIdById.get(groupId)
         : (groupById.get(groupId)?.parentGroupId ?? null);
