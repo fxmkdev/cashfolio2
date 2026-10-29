@@ -211,10 +211,15 @@ When bypass is disabled, app auth behavior remains unchanged.
 ### Valuation Provider Mocks in E2E
 
 - When `E2E_TEST_MODE=true`, server-side external valuation calls
-  (`currencylayer`, `coinlayer`, `marketstack`) are intercepted by MSW node
+  (`currencylayer`, `coinlayer`, `marketstack`) are intercepted by MSW 3 node
   handlers in `src/server/valuation/e2e-provider-mocks.server.ts`.
 - Unhandled requests to valuation provider hostnames fail fast in E2E, so URL
   mismatches cannot silently bypass mocks and hit real external services.
+- The `onUnhandledFrame` callback checks HTTP frames and produces a local error
+  response for unmatched provider requests. Unrelated traffic bypasses the
+  mocks. The colocated `e2e-provider-mocks.server.test.ts` suite verifies real
+  HTTP interception and initialization/cleanup behavior without provider
+  credentials.
 - In E2E mode, provider API-key checks also use a deterministic internal
   fallback key so no external provider secrets are required for these flows.
 - This keeps E2E deterministic and avoids external provider traffic while still

@@ -1,6 +1,6 @@
 import { generateKeyPairSync, sign } from "node:crypto";
 import { syncBuiltinESMExports } from "node:module";
-import { http } from "msw";
+import { http } from "msw/http";
 import { setupServer } from "msw/node";
 
 const { privateKey, publicKey } = generateKeyPairSync("rsa", {
@@ -143,7 +143,7 @@ export function createTestProvider(
   const server = setupServer(
     http.all(`${providerEndpoint}/*`, ({ request }) => fetch(request)),
   );
-  server.listen({ onUnhandledRequest: "error" });
+  server.listen({ onUnhandledFrame: "error" });
   syncBuiltinESMExports();
   servers.push(server);
   return { fetch, requests, options, tokenRequests, accountApiAuthorizations };

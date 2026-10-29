@@ -18,9 +18,9 @@ The refreshed manifest versions are:
 | Storybook                                | 10.6.1                    |
 | Playwright                               | 1.64.0                    |
 | AG Grid / AG Charts                      | 36.2.0 / 14.2.0           |
-| Vitest / coverage / browser              | 5.0.3                     |
+| Vitest / coverage / browser              | 5.0.5                     |
 | TypeScript / typescript6 compatibility   | 7.0.2 / 6.0.2             |
-| MSW                                      | 2.15.0                    |
+| MSW                                      | 3.0.3                     |
 | Logto / Chromatic / dotenv               | 4.0.0 / 18.13.3 / 18.0.6  |
 | ESLint / typescript-eslint / utils       | 10.13.0 / 8.72.1 / 8.72.1 |
 | Tabler React icons                       | 3.50.0                    |
@@ -28,10 +28,9 @@ The refreshed manifest versions are:
 | Node runtime / typings                   | 26.13.0 / 26.6.5          |
 | pnpm / Prettier                          | 12.16.1 / 3.9.9           |
 
-MSW 3 and Prisma prereleases are deferred to separate migrations. Storybook uses
-addon-vitest 10.6.1 with the Playwright browser provider 5.0.3. Vitest,
-coverage, and browser packages are upgraded together to stable 5.0.3. See the
-app's
+Prisma prereleases remain deferred. Storybook uses addon-vitest 10.6.1 with the
+Playwright browser provider 5.0.5. Vitest, coverage, and browser packages are
+upgraded together to stable 5.0.5 alongside MSW 3.0.3. See the app's
 [Nitro compatibility notes](../apps/cashfolio-app2/docs/deployment.md#nitro-version-pin)
 before revisiting its beta pin or scoped H3 override.
 
@@ -221,8 +220,9 @@ coverage baseline must not be weakened. Unit coverage still uses `coverage/`,
 while Storybook uses `coverage-storybook/`. Browser failure artifacts now use
 `.vitest/` and are uploaded by the existing CI artifact action.
 
-MSW stays on 2.15.0. The application MSW 3 migration is explicitly deferred;
-`@vitest/mocker@5.0.3` still declares the compatible MSW 2 peer range `^2.4.9`.
+The initial migration retained MSW 2.15.0 because `@vitest/mocker@5.0.3`
+declared the MSW 2 peer range `^2.4.9`. The subsequent upgrade below removes
+that constraint.
 
 Vitest 5 reports the same covered-file, branch, and function inventory. It
 counts four fewer total statements/lines across the generated Prisma namespace
@@ -232,6 +232,37 @@ files: statements 73.00% (6128/8394), branches 65.04% (3922/6030), functions
 70.33% (1425/2026), and lines 73.86% (5962/8072). The committed coverage
 baseline remains unchanged and its ratchet passes; no exclusions or assertions
 were weakened.
+
+## MSW 3 and Vitest 5.0.5 follow-up
+
+MSW 3.0.3 and the published Vitest 5 family packages move together to Vitest
+5.0.5, whose mocker supports `msw: ^2.4.9 || ^3.0.0`. Direct dependency ranges
+retain carets, and the lockfile aligns browser, UI, mocker, spy, pretty-format,
+and utils packages on 5.0.5. There is no published `@vitest/runner@5.0.5`;
+Storybook's optional runner peer stays on compatible 4.1.11. Storybook's pinned
+internal Vitest 3 dependencies remain unchanged.
+
+The E2E valuation mocks import HTTP helpers from `msw/http` and retain
+`setupServer` from `msw/node`. Their custom `onUnhandledFrame` callback narrows
+HTTP frames using `HttpNetworkFrame` before inspecting `frame.data.request`.
+Unmatched provider requests produce a local error response, while unrelated HTTP
+requests and WebSocket connections retain bypass behavior. Initialization
+remains synchronous, E2E-only, and idempotent, with process-exit cleanup.
+
+The Logto session test provider also imports `http` from `msw/http` and uses
+`onUnhandledFrame: "error"` to reject unmatched traffic. Its regression test
+verifies an unmatched request cannot reach a local destination server.
+
+Nitro traces the full `@mswjs/interceptors` package to preserve its relative
+`llhttp/llhttp.wasm` asset in the standalone server output. See the app's
+[runtime asset notes](../apps/cashfolio-app2/docs/deployment.md#msw-runtime-assets).
+
+Node 26, the TypeScript compatibility alias, package-manager policies, and the
+coverage baseline remain unchanged. Focused regression tests exercise actual
+HTTP interception, deterministic provider responses, no-data cases, unmatched
+provider failures, unrelated local traffic, and activation/cleanup behavior.
+Full coverage, Storybook interactions, production builds, and application E2E
+remain CI checks.
 
 ## TypeScript 7 migration
 
@@ -293,9 +324,9 @@ available for macOS and Linux.
 pnpm 12.16.1 was published on October 27 at 15:28 UTC and exceeds the existing
 1440-minute release-age threshold. The build approvals, security overrides, and
 narrow releaser exception are preserved. Only the selected direct packages and
-their required dependency/peer entries change; TanStack Start and MSW remain
-deferred to separate PRs. Node 24 and the native TypeScript 7 / TypeScript 6 API
-aliases remain in place.
+their required dependency/peer entries change; TanStack Start remains deferred.
+MSW is upgraded in the subsequent follow-up above. Node 24 and the native
+TypeScript 7 / TypeScript 6 API aliases remain in place.
 
 Local verification on Node 24.21.0 / pnpm 12.16.1 passed frozen-lockfile
 installation, Prisma generation, app lint, app and CLI typechecks, changed-file
@@ -327,10 +358,10 @@ horizontal-scroll assertion exercises overflow at both sizes.
 Docker verification covers filtered frozen installation, the Linux native
 compiler, Prisma schema validation, release migrations against a dedicated local
 test database, and an HTTP 200 response from the generated production server.
-Both workspace and separate migration-payload audits report zero findings.
-Outdated checks still list intentionally excluded newer Node/typing, MSW, Prisma
-prerelease, and Nitro beta lines, plus unrelated Chromatic updates; these are
-not refreshed by this migration.
+Both workspace and separate migration-payload audits report zero findings. At
+that stage, outdated checks listed intentionally excluded newer Node/typing,
+MSW, Prisma prerelease, and Nitro beta lines, plus unrelated Chromatic updates;
+these are not refreshed by this migration.
 
 ## Node 26 migration
 
