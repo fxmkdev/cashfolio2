@@ -6,7 +6,7 @@ import {
   toTemporalInstant,
   toUtcPlainDate,
 } from "./temporal-adapters";
-import { DEFAULT_USER_LOCALE } from "@/user-locale";
+import { DEFAULT_USER_LOCALE } from "../user-locale";
 
 export function startOfUtcDay(date: Date): Date {
   return Number.isFinite(date.getTime())
