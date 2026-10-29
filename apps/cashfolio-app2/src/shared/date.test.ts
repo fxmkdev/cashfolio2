@@ -1,3 +1,17 @@
+import { Temporal } from "./temporal";
+import {
+  fromUtcPlainDate,
+  toUtcPlainDate,
+  toTemporalInstant,
+} from "./temporal-adapters";
+import {
+  addUtcDays,
+  earliestDate,
+  isBeforeDate,
+  isSameLocalDay,
+  startOfLocalDay,
+  formatLocalDate,
+} from "./date";
 import { describe, expect, test } from "vitest";
 import {
   createDateInputValueFromUtcDay,
@@ -165,5 +179,97 @@ describe("shared/date", () => {
 
     expect(ambiguousUsDate?.toISOString()).toBe("2026-04-05T00:00:00.000Z");
     expect(swissFallbackDate?.toISOString()).toBe("2026-12-31T00:00:00.000Z");
+  });
+});
+
+describe("Temporal calendar compatibility", () => {
+  test("strictly validates leap dates and retains the accepted year range", () => {
+    expect(parseUtcDayDate("2024-02-29")?.toISOString()).toBe(
+      "2024-02-29T00:00:00.000Z",
+    );
+    for (const value of [
+      "2026-02-29",
+      "2026-04-31",
+      "2026-13-01",
+      "0099-01-01",
+      "0000-01-01",
+    ]) {
+      expect(parseUtcDayDate(value)).toBeNull();
+    }
+    expect(parseUtcDayDate("0100-01-01")?.toISOString()).toBe(
+      "0100-01-01T00:00:00.000Z",
+    );
+  });
+
+  test.each([
+    ["2026-03-29T00:30:00+01:00", "2026-03-28T23:30:00.000Z"],
+    ["2026-10-25T02:30:00+02:00", "2026-10-25T00:30:00.000Z"],
+    ["2026-10-25T02:30:00+01:00", "2026-10-25T01:30:00.000Z"],
+    ["2026-04-20T24:00Z", "2026-04-21T00:00:00.000Z"],
+    ["2026-04-20T12:34:56.12-07:00", "2026-04-20T19:34:56.120Z"],
+    ["2026-04-20T00:00+99:00", "2026-04-15T21:00:00.000Z"],
+  ])("preserves ISO instant parsing for %s", (value, expected) => {
+    expect(normalizeDateInputValue(value)?.toISOString()).toBe(expected);
+  });
+
+  test.each([
+    "2026-02-30T12:00Z",
+    "2026-04-20T24:01Z",
+    "2026-04-20T24:00:00.001Z",
+    "2026-04-20T12:00:60Z",
+    "2026-04-20T12:60Z",
+    "2026-04-20T00:00+01:60",
+  ])("rejects invalid ISO date/time %s", (value) => {
+    expect(normalizeDateInputValue(value)).toBeNull();
+  });
+
+  test("UTC day arithmetic crosses DST and month/year boundaries without losing time", () => {
+    for (const [start, expected] of [
+      ["2026-03-28T23:30:01.123Z", "2026-03-29T23:30:01.123Z"],
+      ["2026-10-24T23:30:01.123Z", "2026-10-25T23:30:01.123Z"],
+      ["2024-02-28T12:00:00.000Z", "2024-02-29T12:00:00.000Z"],
+      ["2026-12-31T12:00:00.000Z", "2027-01-01T12:00:00.000Z"],
+    ]) {
+      expect(addUtcDays(new Date(start), 1).toISOString()).toBe(expected);
+    }
+    expect(addUtcDays(new Date("2026-01-01T12:00Z"), 0.5).toISOString()).toBe(
+      "2026-01-02T00:00:00.000Z",
+    );
+  });
+
+  test("local picker dates round trip independently of the process/browser timezone", () => {
+    for (const day of [
+      "2026-03-08",
+      "2026-03-29",
+      "2026-10-25",
+      "2026-11-01",
+    ]) {
+      const date = createDateInputValueFromUtcDay(`${day}T00:00:00.000Z`)!;
+      expect(formatDateInputValueAsUtcDayIsoString(date)).toBe(
+        `${day}T00:00:00.000Z`,
+      );
+      expect(isSameLocalDay(date, startOfLocalDay(date))).toBe(true);
+      expect(formatLocalDate(date).split(".").reverse().join("-")).toBe(day);
+    }
+  });
+
+  test("converts calendar dates and instants at Date boundaries", () => {
+    const date = new Date("2026-10-29T12:34:56.789Z");
+    expect(toTemporalInstant(date).epochMilliseconds).toBe(date.getTime());
+    expect(toUtcPlainDate(date).toString()).toBe("2026-10-29");
+    expect(
+      fromUtcPlainDate(Temporal.PlainDate.from("2026-10-29")).toISOString(),
+    ).toBe("2026-10-29T00:00:00.000Z");
+    expect(earliestDate([date, new Date("2026-01-01")])).toEqual(
+      new Date("2026-01-01"),
+    );
+    expect(Number.isNaN(earliestDate([]).getTime())).toBe(true);
+    expect(Number.isNaN(earliestDate([new Date(NaN)]).getTime())).toBe(true);
+    expect(isBeforeDate(date, new Date(NaN))).toBe(false);
+    expect(isSameLocalDay(new Date(NaN), date)).toBe(false);
+    expect(isSameUtcDay(new Date(NaN), date)).toBe(false);
+    expect(Number.isNaN(startOfUtcDay(new Date(NaN)).getTime())).toBe(true);
+    expect(Number.isNaN(startOfUtcMonth(new Date(NaN)).getTime())).toBe(true);
+    expect(Number.isNaN(addUtcDays(date, NaN).getTime())).toBe(true);
   });
 });

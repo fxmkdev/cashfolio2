@@ -1378,3 +1378,29 @@ that selection to Net Worth. Explicit `netWorthScope` takes precedence;
 aggregate links remain unchanged, inactive legacy scope parameters are
 discarded, and deleted/invalid scopes fall back to Net Worth total. Canonical
 URLs use `netWorthScope` and remove `assetScope`/`liabilityScope`.
+
+## Calendar Dates and Temporal
+
+Import Temporal from `src/shared/temporal.ts` for calendar logic on both the
+server and browser. The explicit `temporal-polyfill` entry point uses native
+Temporal on Node 26 and supporting browsers, with a synchronous fallback for
+Safari. It does not patch global objects or require client bootstrap ordering.
+Use the package's exported types rather than adding global Temporal types.
+
+Use `Temporal.PlainDate` for accounting days, `PlainYearMonth` or calendar
+addition for periods, and `Instant` for actual timestamps. The internal
+`temporal-adapters.ts` module converts existing `Date` boundaries. Prisma,
+server responses, charts, and Mantine inputs retain their Date/string contracts.
+Existing external month fields remain zero-based; Temporal months are one-based.
+
+Accounting dates represent UTC days. DateInput values represent local calendar
+days and must pass through the existing shared date input adapters before
+submission. Preserve canonical UTC-midnight values during normalization. Reject
+invalid dates explicitly rather than allowing Temporal's default constrained
+overflow to change user input. Continue formatting Date boundary values with
+`Intl.DateTimeFormat`; native Intl cannot format fallback Temporal objects.
+Elapsed session timeouts and retention windows remain elapsed durations rather
+than local calendar days.
+
+The app no longer directly depends on date-fns. Date validation, comparison,
+formatting, and arithmetic use the shared Temporal-backed helpers.

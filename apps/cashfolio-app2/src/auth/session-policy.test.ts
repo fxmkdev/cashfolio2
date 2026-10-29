@@ -60,3 +60,21 @@ describe("session deadlines and credentials", () => {
     );
   });
 });
+
+// Session lifetimes are elapsed durations, even when a local day is 23/25 hours.
+it.each(["2026-03-29T00:30:00Z", "2026-10-25T00:30:00Z"])(
+  "preserves elapsed session lifetimes across DST at %s",
+  (value) => {
+    const now = new Date(value);
+    const deadlines = sessionDeadlines(now, true);
+    expect(deadlines.expiresAt.getTime() - now.getTime()).toBe(
+      14 * 24 * 60 * 60 * 1000,
+    );
+    expect(deadlines.idleExpiresAt.getTime() - now.getTime()).toBe(
+      24 * 60 * 60 * 1000,
+    );
+    expect(
+      sessionDeadlines(now, false).expiresAt.getTime() - now.getTime(),
+    ).toBe(10 * 60 * 1000);
+  },
+);

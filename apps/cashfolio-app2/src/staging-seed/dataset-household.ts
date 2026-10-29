@@ -1,9 +1,10 @@
+import { fromUtcPlainDate, toUtcPlainDate } from "../shared/temporal-adapters";
 import {
   archivedHouseholdAccounts,
   archivedHouseholdTransactions,
 } from "./dataset-archived";
 import Decimal from "decimal.js";
-import { min } from "date-fns";
+import { earliestDate } from "../shared/date";
 import {
   AccountType,
   AssetClass,
@@ -232,20 +233,13 @@ export function householdTransactions(target: SeedBook, today: Date) {
 
   const first = target.startDate;
   for (
-    let month = new Date(
-        Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), 1),
-      ),
+    let month = fromUtcPlainDate(toUtcPlainDate(first).with({ day: 1 })),
       index = 0;
     month <= today;
-    month = new Date(
-      Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 1),
-    ),
-      index++
+    month = fromUtcPlainDate(toUtcPlainDate(month).add({ months: 1 })), index++
   ) {
     const on = (day: number, action: (date: Date) => void) => {
-      const date = new Date(
-        Date.UTC(month.getUTCFullYear(), month.getUTCMonth(), day),
-      );
+      const date = fromUtcPlainDate(toUtcPlainDate(month).with({ day }));
       if (date >= first && date <= today) action(date);
     };
     on(25, (date) =>
@@ -304,9 +298,11 @@ export function householdTransactions(target: SeedBook, today: Date) {
       );
     }
     // Statement value changes after cash flows, rather than automatic holding prices.
-    const valuationDate = min([
+    const valuationDate = earliestDate([
       today,
-      new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 0)),
+      fromUtcPlainDate(
+        toUtcPlainDate(month).add({ months: 1 }).subtract({ days: 1 }),
+      ),
     ]);
     const adjustment = ["600", "-350", "450", "250", "-200", "500"][index % 6]!;
     transfer(

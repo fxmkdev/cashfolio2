@@ -296,6 +296,30 @@ jobs:
           path: apps/cashfolio-app2/.vitest
           if-no-files-found: ignore
 
+  cashfolio-app2-temporal-browser:
+    name: "cashfolio-app2: Temporal Browser Compatibility"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Install dependencies
+        run: pnpm --filter cashfolio-app2 install --frozen-lockfile
+      - name: Install compatibility browsers
+        run: |
+          pnpm --filter cashfolio-app2 exec playwright install --with-deps \
+            chromium webkit
+      - name: Test native and fallback calendar behavior
+        run: pnpm --filter cashfolio-app2 test:temporal:browser
+      - name: Upload browser failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cashfolio-app2-temporal-browser-failures
+          path: apps/cashfolio-app2/.vitest
+          if-no-files-found: ignore
+
   github-actions-lint:
     name: "GitHub Actions: Lint"
     runs-on: ubuntu-latest
@@ -511,6 +535,7 @@ jobs:
       - cashfolio-app2-typecheck
       - cashfolio-app2-lint
       - cashfolio-app2-storybook-tests
+      - cashfolio-app2-temporal-browser
       - cashfolio-app2-format
       - github-actions-lint
       - cli-typecheck

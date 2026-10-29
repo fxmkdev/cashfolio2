@@ -1,3 +1,8 @@
+import { Temporal } from "../../shared/temporal";
+import {
+  fromUtcPlainDate,
+  toUtcPlainDate,
+} from "../../shared/temporal-adapters";
 import {
   DEFAULT_PERIOD_VALUE,
   formatMonthPeriodValue,
@@ -31,16 +36,22 @@ export type NormalizedPeriodSelection = NormalizedPeriodBase & {
 };
 
 function endOfUtcMonth(year: number, month: number): Date {
-  return new Date(Date.UTC(year, month + 1, 0));
+  return fromUtcPlainDate(
+    Temporal.PlainDate.from({ year, month: month + 1, day: 1 })
+      .add({ months: 1 })
+      .subtract({ days: 1 }),
+  );
 }
 
 function endOfUtcYear(year: number): Date {
-  return new Date(Date.UTC(year, 12, 0));
+  return fromUtcPlainDate(
+    Temporal.PlainDate.from({ year, month: 12, day: 31 }),
+  );
 }
 
 function addUtcMonths(date: Date, months: number): Date {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1),
+  return fromUtcPlainDate(
+    toUtcPlainDate(date).with({ day: 1 }).add({ months }),
   );
 }
 
@@ -55,8 +66,8 @@ function normalizePeriodBase(args: {
     return {
       granularity: "month",
       periodSpecifier: PERIOD_PRESET_MTD,
-      year: currentMonthStart.getUTCFullYear(),
-      month: currentMonthStart.getUTCMonth(),
+      year: toUtcPlainDate(currentMonthStart).year,
+      month: toUtcPlainDate(currentMonthStart).month - 1,
     };
   }
 
@@ -65,8 +76,8 @@ function normalizePeriodBase(args: {
     return {
       granularity: "month",
       periodSpecifier: PERIOD_PRESET_LAST_MONTH,
-      year: lastMonthStart.getUTCFullYear(),
-      month: lastMonthStart.getUTCMonth(),
+      year: toUtcPlainDate(lastMonthStart).year,
+      month: toUtcPlainDate(lastMonthStart).month - 1,
     };
   }
 
@@ -74,7 +85,7 @@ function normalizePeriodBase(args: {
     return {
       granularity: "year",
       periodSpecifier: PERIOD_PRESET_YTD,
-      year: currentMonthStart.getUTCFullYear(),
+      year: toUtcPlainDate(currentMonthStart).year,
       month: null,
     };
   }
@@ -83,7 +94,7 @@ function normalizePeriodBase(args: {
     return {
       granularity: "year",
       periodSpecifier: PERIOD_PRESET_LAST_YEAR,
-      year: currentMonthStart.getUTCFullYear() - 1,
+      year: toUtcPlainDate(currentMonthStart).year - 1,
       month: null,
     };
   }
@@ -122,8 +133,8 @@ function clampExplicitSelectionToBounds(args: {
     return base;
   }
 
-  const currentYear = now.getUTCFullYear();
-  const currentMonth = now.getUTCMonth();
+  const currentYear = toUtcPlainDate(now).year;
+  const currentMonth = toUtcPlainDate(now).month - 1;
   const hasNoBookings = firstBookingDate === null;
   const firstBookingDay = firstBookingDate
     ? startOfUtcDay(firstBookingDate)
@@ -133,7 +144,8 @@ function clampExplicitSelectionToBounds(args: {
     const month = base.month ?? 0;
     const monthIndex = base.year * 12 + month;
     const minMonthIndex = firstBookingDay
-      ? firstBookingDay.getUTCFullYear() * 12 + firstBookingDay.getUTCMonth()
+      ? toUtcPlainDate(firstBookingDay).year * 12 +
+        (toUtcPlainDate(firstBookingDay).month - 1)
       : hasNoBookings
         ? currentYear * 12 + currentMonth
         : monthIndex;
@@ -154,7 +166,7 @@ function clampExplicitSelectionToBounds(args: {
   }
 
   const minYear = firstBookingDay
-    ? firstBookingDay.getUTCFullYear()
+    ? toUtcPlainDate(firstBookingDay).year
     : hasNoBookings
       ? currentYear
       : base.year;
@@ -196,8 +208,8 @@ export function resolvePeriodSelection(args: {
     firstBookingDate: firstBookingDateForClamping,
   });
 
-  const currentYear = now.getUTCFullYear();
-  const currentMonth = now.getUTCMonth();
+  const currentYear = toUtcPlainDate(now).year;
+  const currentMonth = toUtcPlainDate(now).month - 1;
   const firstBookingDate = firstBookingDateForClamping ?? null;
 
   const year = base.year;
@@ -208,15 +220,19 @@ export function resolvePeriodSelection(args: {
 
   if (base.granularity === "month") {
     const monthIndex = month ?? 0;
-    from = new Date(Date.UTC(year, monthIndex, 1));
+    from = fromUtcPlainDate(
+      Temporal.PlainDate.from({ year, month: monthIndex + 1, day: 1 }),
+    );
     const isCurrentMonth = year === currentYear && monthIndex === currentMonth;
     to = isCurrentMonth ? addUtcDays(now, -1) : endOfUtcMonth(year, monthIndex);
   } else {
     const startMonth =
-      firstBookingDate && year === firstBookingDate.getUTCFullYear()
-        ? firstBookingDate.getUTCMonth()
+      firstBookingDate && year === toUtcPlainDate(firstBookingDate).year
+        ? toUtcPlainDate(firstBookingDate).month - 1
         : 0;
-    from = new Date(Date.UTC(year, startMonth, 1));
+    from = fromUtcPlainDate(
+      Temporal.PlainDate.from({ year, month: startMonth + 1, day: 1 }),
+    );
     const isCurrentYear = year === currentYear;
     to = isCurrentYear ? addUtcDays(now, -1) : endOfUtcYear(year);
   }

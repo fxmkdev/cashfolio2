@@ -1,20 +1,41 @@
-import { parseISO } from "date-fns";
+import { Temporal } from "./temporal";
+import {
+  fromLocalPlainDate,
+  fromUtcPlainDate,
+  toLocalPlainDate,
+  toTemporalInstant,
+  toUtcPlainDate,
+} from "./temporal-adapters";
 import { DEFAULT_USER_LOCALE } from "@/user-locale";
 
 export function startOfUtcDay(date: Date): Date {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-  );
+  return Number.isFinite(date.getTime())
+    ? fromUtcPlainDate(toUtcPlainDate(date))
+    : new Date(NaN);
 }
 
 export function startOfUtcMonth(date: Date): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+  return Number.isFinite(date.getTime())
+    ? fromUtcPlainDate(toUtcPlainDate(date).with({ day: 1 }))
+    : new Date(NaN);
 }
 
 export const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export function addUtcDays(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * MILLISECONDS_PER_DAY);
+  if (!Number.isFinite(date.getTime()) || !Number.isFinite(days)) {
+    return new Date(NaN);
+  }
+  // Preserve the time of day: these legacy helpers also accept instants.
+  return new Date(
+    toTemporalInstant(date)
+      .toZonedDateTimeISO("UTC")
+      .add(
+        Number.isInteger(days)
+          ? { days }
+          : { milliseconds: Math.trunc(days * MILLISECONDS_PER_DAY) },
+      ).epochMilliseconds,
+  );
 }
 
 export function getUtcDayRange(date: Date): {
@@ -22,29 +43,56 @@ export function getUtcDayRange(date: Date): {
   endExclusive: Date;
 } {
   const start = startOfUtcDay(date);
-  return {
-    start,
-    endExclusive: new Date(start.getTime() + MILLISECONDS_PER_DAY),
-  };
+  return { start, endExclusive: addUtcDays(start, 1) };
 }
 
 export function getOpeningBalancesBookingDate(
   accountBookStartDate: Date,
 ): Date {
-  const startDate = startOfUtcDay(accountBookStartDate);
-  return new Date(startDate.getTime() - MILLISECONDS_PER_DAY);
+  return addUtcDays(startOfUtcDay(accountBookStartDate), -1);
 }
 
 export function isSameUtcDay(a: Date, b: Date): boolean {
-  return (
-    a.getUTCFullYear() === b.getUTCFullYear() &&
-    a.getUTCMonth() === b.getUTCMonth() &&
-    a.getUTCDate() === b.getUTCDate()
-  );
+  return Number.isFinite(a.getTime()) && Number.isFinite(b.getTime())
+    ? toUtcPlainDate(a).equals(toUtcPlainDate(b))
+    : false;
 }
 
 export function formatUtcDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return toUtcPlainDate(date).toString();
+}
+
+export function startOfLocalDay(date: Date): Date {
+  return fromLocalPlainDate(toLocalPlainDate(date));
+}
+
+export function isSameLocalDay(a: Date | string, b: Date | string): boolean {
+  const left = a instanceof Date ? a : new Date(a);
+  const right = b instanceof Date ? b : new Date(b);
+  return Number.isFinite(left.getTime()) && Number.isFinite(right.getTime())
+    ? toLocalPlainDate(left).equals(toLocalPlainDate(right))
+    : false;
+}
+
+export function isBeforeDate(a: Date, b: Date): boolean {
+  return Number.isFinite(a.getTime()) && Number.isFinite(b.getTime())
+    ? Temporal.Instant.compare(toTemporalInstant(a), toTemporalInstant(b)) < 0
+    : false;
+}
+
+export function earliestDate(dates: Date[]): Date {
+  if (!dates.length || dates.some((date) => !Number.isFinite(date.getTime()))) {
+    return new Date(NaN);
+  }
+  return new Date(
+    dates.reduce((first, date) => (isBeforeDate(date, first) ? date : first)),
+  );
+}
+
+/** Preserve the existing fixed local-calendar display used by source details. */
+export function formatLocalDate(date: Date): string {
+  const day = toLocalPlainDate(date);
+  return `${String(day.day).padStart(2, "0")}.${String(day.month).padStart(2, "0")}.${String(day.year).padStart(4, "0")}`;
 }
 
 export function formatUtcDateForLocale(
@@ -104,13 +152,12 @@ export function normalizeDateInputValue(
     return createUtcDateFromParts({ year, month, day });
   }
 
-  if (
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(?:\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/.test(
+  const instantMatch =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?(Z|([+-])(\d{2}):(\d{2}))$/.exec(
       trimmed,
-    )
-  ) {
-    const parsed = parseISO(trimmed);
-    return isNaN(parsed.getTime()) ? null : parsed;
+    );
+  if (instantMatch) {
+    return parseDateTimeInput(instantMatch);
   }
 
   return null;
@@ -125,11 +172,7 @@ export function normalizeDateInputValueToUtcDay(
     const utcDay = startOfUtcDay(value);
     if (value.getTime() === utcDay.getTime()) return utcDay;
 
-    return createUtcDateFromParts({
-      year: value.getFullYear(),
-      month: value.getMonth() + 1,
-      day: value.getDate(),
-    });
+    return fromUtcPlainDate(toLocalPlainDate(value));
   }
 
   const normalized = normalizeDateInputValue(value, locale);
@@ -151,11 +194,7 @@ export function createDateInputValueFromUtcDay(
       ? startOfUtcDay(value)
       : normalizeDateInputValueToUtcDay(value);
   if (!utcDay || isNaN(utcDay.getTime())) return null;
-  return new Date(
-    utcDay.getUTCFullYear(),
-    utcDay.getUTCMonth(),
-    utcDay.getUTCDate(),
-  );
+  return fromLocalPlainDate(toUtcPlainDate(utcDay));
 }
 
 export function parseUtcDayDate(value: Date | string): Date | null {
@@ -230,16 +269,61 @@ function parseLocalizedDateInputValue(value: string, locale: string) {
   });
 }
 
-function createUtcDateFromParts(args: {
+export function createUtcDateFromParts(args: {
   year: number;
   month: number;
   day: number;
 }): Date | null {
-  const result = new Date(Date.UTC(args.year, args.month - 1, args.day));
-  const isExactMatch =
-    result.getUTCFullYear() === args.year &&
-    result.getUTCMonth() === args.month - 1 &&
-    result.getUTCDate() === args.day;
+  // Date.UTC historically rejected years 0000–0099 in this parser because it
+  // interprets them as 1900–1999. Keep the accepted input range unchanged.
+  if (args.year < 100 || !Object.values(args).every(Number.isInteger))
+    return null;
+  try {
+    return fromUtcPlainDate(
+      Temporal.PlainDate.from(args, { overflow: "reject" }),
+    );
+  } catch {
+    return null;
+  }
+}
 
-  return isExactMatch ? result : null;
+/** Keep the legacy ISO input grammar, including 24:00 and offset conversion. */
+function parseDateTimeInput(match: RegExpExecArray): Date | null {
+  let hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6] ?? 0);
+  const millisecond = Number((match[7] ?? "").padEnd(3, "0"));
+  const offsetMinute = Number(match[11] ?? 0);
+  if (offsetMinute > 59) return null;
+  try {
+    let day = Temporal.PlainDate.from(
+      {
+        year: Number(match[1]),
+        month: Number(match[2]),
+        day: Number(match[3]),
+      },
+      { overflow: "reject" },
+    );
+    if (hour === 24) {
+      if (minute || second || millisecond) return null;
+      day = day.add({ days: 1 });
+      hour = 0;
+    }
+    const time = Temporal.PlainTime.from(
+      { hour, minute, second, millisecond },
+      { overflow: "reject" },
+    );
+    const offset =
+      (Number(match[10] ?? 0) * 60 + offsetMinute) *
+      (match[9] === "-" ? -1 : 1);
+    return new Date(
+      day
+        .toPlainDateTime(time)
+        .toZonedDateTime("UTC")
+        .toInstant()
+        .subtract({ minutes: offset }).epochMilliseconds,
+    );
+  } catch {
+    return null;
+  }
 }

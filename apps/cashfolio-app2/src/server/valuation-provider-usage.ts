@@ -1,3 +1,4 @@
+import { addUtcDays } from "../shared/date";
 import { createServerFn } from "@tanstack/react-start";
 import { UserRole } from "../.prisma-client/enums";
 import { prisma } from "../prisma.server";
@@ -69,7 +70,7 @@ type GroupedProviderUsageRow = {
 };
 
 function subUtcDays(date: Date, days: number): Date {
-  return new Date(date.getTime() - days * 24 * 60 * 60 * 1000);
+  return addUtcDays(date, -days);
 }
 
 function sumBy<T extends string>(

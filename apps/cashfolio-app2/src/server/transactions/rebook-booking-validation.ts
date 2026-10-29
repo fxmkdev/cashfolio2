@@ -4,7 +4,7 @@ import {
   EquityAccountSubtype,
   Unit,
 } from "../../.prisma-client/enums";
-import { isBefore } from "date-fns";
+import { isBeforeDate } from "../../shared/date";
 import { formatUtcDate, startOfUtcDay } from "../../shared/date";
 import {
   getAccountUnitIdentifier,
@@ -78,7 +78,7 @@ export function validateRebookBookingTarget(args: {
 
   const bookingDay = startOfUtcDay(booking.date);
   const accountBookStartDay = startOfUtcDay(accountBookStartDate);
-  if (isBefore(bookingDay, accountBookStartDay)) {
+  if (isBeforeDate(bookingDay, accountBookStartDay)) {
     throw new Error(
       `Date cannot be before account book start date (${formatUtcDate(accountBookStartDay)}).`,
     );

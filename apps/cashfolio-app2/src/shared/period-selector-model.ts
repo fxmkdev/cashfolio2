@@ -1,3 +1,6 @@
+import { Temporal } from "./temporal";
+import { fromLocalPlainDate } from "./temporal-adapters";
+import { toUtcPlainDate } from "./temporal-adapters";
 import { formatMonthPeriodValue } from "@/shared/period";
 
 export type PeriodMode = "month" | "year";
@@ -15,15 +18,15 @@ export function getMonthBoundsForYear(args: {
   let maxMonth = 11;
 
   if (minBookingDate) {
-    if (minBookingDate.getUTCFullYear() === year) {
-      minMonth = minBookingDate.getUTCMonth();
+    if (toUtcPlainDate(minBookingDate).year === year) {
+      minMonth = toUtcPlainDate(minBookingDate).month - 1;
     }
-  } else if (maxDate.getUTCFullYear() === year) {
-    minMonth = maxDate.getUTCMonth();
+  } else if (toUtcPlainDate(maxDate).year === year) {
+    minMonth = toUtcPlainDate(maxDate).month - 1;
   }
 
-  if (maxDate.getUTCFullYear() === year) {
-    maxMonth = maxDate.getUTCMonth();
+  if (toUtcPlainDate(maxDate).year === year) {
+    maxMonth = toUtcPlainDate(maxDate).month - 1;
   }
 
   return {
@@ -38,9 +41,9 @@ export function getYearBounds(args: {
 }): { minYear: number; maxYear: number } {
   return {
     minYear: args.minBookingDate
-      ? args.minBookingDate.getUTCFullYear()
-      : args.maxDate.getUTCFullYear(),
-    maxYear: args.maxDate.getUTCFullYear(),
+      ? toUtcPlainDate(args.minBookingDate).year
+      : toUtcPlainDate(args.maxDate).year,
+    maxYear: toUtcPlainDate(args.maxDate).year,
   };
 }
 
@@ -59,11 +62,17 @@ export function fromMonthIndex(monthIndex: number): {
 }
 
 function toPickerMonthDate(year: number, month: number): Date {
-  return new Date(year, month, 1, 12);
+  return fromLocalPlainDate(
+    Temporal.PlainDate.from({ year, month: month + 1, day: 1 }),
+    12,
+  );
 }
 
 function toPickerYearDate(year: number): Date {
-  return new Date(year, 0, 1, 12);
+  return fromLocalPlainDate(
+    Temporal.PlainDate.from({ year, month: 1, day: 1 }),
+    12,
+  );
 }
 
 export type PeriodSelectorModel = {
@@ -91,13 +100,13 @@ export function buildPeriodSelectorModel(args: {
   maxDate: Date;
 }): PeriodSelectorModel {
   const periodMode: PeriodMode = args.selectedGranularity;
-  const currentYear = args.maxDate.getUTCFullYear();
-  const currentMonth = args.maxDate.getUTCMonth();
+  const currentYear = toUtcPlainDate(args.maxDate).year;
+  const currentMonth = toUtcPlainDate(args.maxDate).month - 1;
   const minMonthYear = args.minBookingDate
-    ? args.minBookingDate.getUTCFullYear()
+    ? toUtcPlainDate(args.minBookingDate).year
     : currentYear;
   const minMonthValue = args.minBookingDate
-    ? args.minBookingDate.getUTCMonth()
+    ? toUtcPlainDate(args.minBookingDate).month - 1
     : currentMonth;
   const minMonthIndex = toMonthIndex(minMonthYear, minMonthValue);
   const maxMonthIndex = toMonthIndex(currentYear, currentMonth);

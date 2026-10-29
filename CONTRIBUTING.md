@@ -54,6 +54,15 @@ need to be strictly Conventional Commit formatted.
 - Keep `@types/node` aligned with Node 26. Do not upgrade to Node 27+ typings
   until the runtime migration is planned.
 
+## Calendar Operations
+
+Use the app's shared Temporal entry point for calendar operations in server and
+browser code. It selects native Temporal or the synchronous browser fallback
+without modifying globals. Keep existing Date/string interfaces at Prisma,
+transport, chart, and form boundaries. Preserve UTC accounting-day semantics and
+local-calendar picker semantics separately. See the app's UI patterns for date
+adapters and browser compatibility tests.
+
 ## Package Manager
 
 Use the pnpm 12 version pinned by `packageManager` and `engines`. Keep Docker's

@@ -1,5 +1,5 @@
 import { Button, Card, Stack, Table, Text, Title } from "@mantine/core";
-import { format } from "date-fns";
+import { formatLocalDate } from "@/shared/date";
 import type { PeriodGainLossReconciliation } from "@/shared/gain-loss-reconciliation";
 
 export function GainLossSourceDetails({
@@ -57,9 +57,7 @@ export function GainLossSourceDetails({
                 <Table.Tbody>
                   {rows.map((row) => (
                     <Table.Tr key={row.id}>
-                      <Table.Td>
-                        {format(new Date(row.date), "dd.MM.yyyy")}
-                      </Table.Td>
+                      <Table.Td>{formatLocalDate(new Date(row.date))}</Table.Td>
                       <Table.Td>{row.description ?? "—"}</Table.Td>
                       <Table.Td>
                         {currencyFormatter.format(row.amount)}

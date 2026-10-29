@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { addHours, addMinutes } from "date-fns";
+import { toTemporalInstant } from "../shared/temporal-adapters";
 
 export const SESSION_COOKIE = "__Host-cashfolio-session";
 export const LEGACY_SESSION_COOKIE = "logtoCookies";
@@ -15,12 +15,16 @@ export function hashSessionToken(token: string | undefined): string | null {
 }
 
 export function sessionDeadlines(now: Date, authenticated: boolean) {
-  const expiresAt = authenticated
-    ? addHours(now, 14 * 24)
-    : addMinutes(now, 10);
+  const instant = toTemporalInstant(now);
+  const expiresAt = new Date(
+    instant.add(authenticated ? { hours: 14 * 24 } : { minutes: 10 })
+      .epochMilliseconds,
+  );
   return {
     expiresAt,
-    idleExpiresAt: authenticated ? addHours(now, 24) : expiresAt,
+    idleExpiresAt: authenticated
+      ? new Date(instant.add({ hours: 24 }).epochMilliseconds)
+      : expiresAt,
   };
 }
 
@@ -32,5 +36,10 @@ export function isSessionCurrent(
 }
 
 export function nextIdleDeadline(expiresAt: Date, now = new Date()) {
-  return new Date(Math.min(expiresAt.getTime(), addHours(now, 24).getTime()));
+  return new Date(
+    Math.min(
+      expiresAt.getTime(),
+      toTemporalInstant(now).add({ hours: 24 }).epochMilliseconds,
+    ),
+  );
 }

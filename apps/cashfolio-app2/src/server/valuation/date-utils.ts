@@ -1,26 +1,19 @@
-const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+import { addUtcDays, formatUtcDate, startOfUtcDay } from "../../shared/date";
 
-export function toDayString(date: Date): string {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+export const toDayString = formatUtcDate;
 
 export function toSeriesTimestamp(date: Date): number {
-  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  return startOfUtcDay(date).getTime();
 }
 
-export function toUtcDay(date: Date): Date {
-  return new Date(toSeriesTimestamp(date));
-}
+export const toUtcDay = startOfUtcDay;
 
 export function subUtcDay(date: Date): Date {
-  return new Date(date.getTime() - MILLISECONDS_PER_DAY);
+  return addUtcDays(date, -1);
 }
 
 export function subUtcDays(date: Date, days: number): Date {
-  return new Date(date.getTime() - days * MILLISECONDS_PER_DAY);
+  return addUtcDays(date, -days);
 }
 
 export function getLatestAssumedAvailableHistoricalUtcDay(args: {

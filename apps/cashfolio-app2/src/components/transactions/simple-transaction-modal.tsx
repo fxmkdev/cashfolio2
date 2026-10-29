@@ -10,7 +10,7 @@ import {
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
-import { startOfDay } from "date-fns";
+import { startOfLocalDay } from "../../shared/date";
 import { useEffect, useRef } from "react";
 import { IconArrowRight } from "@tabler/icons-react";
 import {
@@ -120,7 +120,7 @@ export function SimpleTransactionModal({
   }) => Promise<void>;
 }) {
   const userLocale = useUserLocale();
-  const today = startOfDay(new Date());
+  const today = startOfLocalDay(new Date());
   const accountBookStartDay = startOfUtcDay(accountBookStartDate);
   const accountBookStartDateLabel = formatUtcDateForLocale(
     accountBookStartDay,
