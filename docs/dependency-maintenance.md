@@ -249,6 +249,10 @@ Unmatched provider requests produce a local error response, while unrelated HTTP
 requests and WebSocket connections retain bypass behavior. Initialization
 remains synchronous, E2E-only, and idempotent, with process-exit cleanup.
 
+The Logto session test provider also imports `http` from `msw/http` and uses
+`onUnhandledFrame: "error"` to reject unmatched traffic. Its regression test
+verifies an unmatched request cannot reach a local destination server.
+
 Nitro traces the full `@mswjs/interceptors` package to preserve its relative
 `llhttp/llhttp.wasm` asset in the standalone server output. See the app's
 [runtime asset notes](../apps/cashfolio-app2/docs/deployment.md#msw-runtime-assets).
