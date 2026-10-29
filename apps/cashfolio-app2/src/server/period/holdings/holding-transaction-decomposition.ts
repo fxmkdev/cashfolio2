@@ -93,9 +93,9 @@ function matchQuantities(bookings: HoldingTransactionBooking[]) {
       [outgoing, incoming],
       [incoming, outgoing],
     ] as const) {
-      const matches = peers.get(booking.id) ?? [];
-      matches.push({ bookingId: other.id, quantity });
-      peers.set(booking.id, matches);
+      peers
+        .getOrInsertComputed(booking.id, () => [])
+        .push({ bookingId: other.id, quantity });
     }
   }
   const quantities = new Map([
@@ -138,9 +138,7 @@ export function decomposeHoldingTransaction(
       isNearZero(booking.value)
     )
       continue;
-    const group = groups.get(unit) ?? [];
-    group.push(booking);
-    groups.set(unit, group);
+    groups.getOrInsertComputed(unit, () => []).push(booking);
   }
   const matched = new Map<string, Money>();
   const transfers: HoldingTransactionBooking[][] = [];

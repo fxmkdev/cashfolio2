@@ -126,9 +126,9 @@ export function buildHoldingReplayOperations(
     (bookings) => {
       const byDate = new Map<number, HoldingTransactionBooking[]>();
       for (const booking of bookings) {
-        const batch = byDate.get(booking.date.getTime()) ?? [];
-        batch.push(booking);
-        byDate.set(booking.date.getTime(), batch);
+        byDate
+          .getOrInsertComputed(booking.date.getTime(), () => [])
+          .push(booking);
       }
       const batches = [...byDate]
         .sort(([left], [right]) => left - right)
