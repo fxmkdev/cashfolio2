@@ -32,7 +32,7 @@ can compare behavior across layers.
 
 Custom ESLint rules are TypeScript sources under `eslint-rules/`, included in
 the app's strict typecheck. The ESLint config imports their `.ts` files
-directly; Node 24 loads them through native type stripping without a build step
+directly; Node 26 loads them through native type stripping without a build step
 or custom loader. Use type-only imports for ESLint/AST types and erasable
 TypeScript syntax so direct loading remains supported. Type stripping does not
 check types; the normal `typecheck` command does.

@@ -154,7 +154,7 @@ approved target, staging-only role, tester access, and enablement procedure.
 ## Provider usage cleanup
 
 `pnpm --filter cashfolio-app2 build:provider-usage-cleanup` builds the
-independent Node 24 payload at `dist/provider-usage-cleanup/cleanup.mjs`. Docker
+independent Node 26 payload at `dist/provider-usage-cleanup/cleanup.mjs`. Docker
 copies the whole directory, including query compiler chunks, following the
 staging-seed packaging pattern. The command requires only the app's
 `DATABASE_URL`, creates its own Prisma client, and disconnects it on success or
@@ -179,7 +179,7 @@ environment without cancelling active cleanup. The workflow uses the existing
 `FLY_PRIMARY_REGION` variables, and `FLY_API_TOKEN` secret. No database
 connection string is copied into GitHub Actions.
 
-The Node 24 runner `scripts/run-provider-usage-cleanup.ts` resolves the
+The Node 26 runner `scripts/run-provider-usage-cleanup.ts` resolves the
 immutable image digest from the deployed `app` process Machines. Mixed web
 images fail clearly, so rerun after deployment finishes. It uses the Fly
 Machines API to launch a temporary Machine in that app, inheriting the app's
@@ -236,7 +236,7 @@ existing PRs need to incorporate the updated workflows first.
 
 ## Compiler and package-manager installation
 
-Docker keeps Node 24 and Prisma CLI/client/adapter 7.x. The build stage follows
+Docker keeps Node 26 and Prisma CLI/client/adapter 7.x. The build stage follows
 the workspace's integrity-qualified pnpm 12.16.1 packageManager pin; the
 separate migration-tools stage explicitly activates the same version. Filtered
 frozen installation must retain TypeScript 7's Linux platform package and
@@ -247,6 +247,6 @@ workspace so the same release-age and patched compatible security overrides
 govern that install. Audit this payload separately from the app's lockfile.
 
 Docker pins Corepack 0.36.0, the eligible stable bootstrap checked during the
-migration, rather than downloading an unreviewed latest release. Its Node 24
-requirement is satisfied by the existing 24.21.0 image pin. Review Corepack's
+migration, rather than downloading an unreviewed latest release. Its runtime
+requirement is satisfied by the Node 26.13.0 image pin. Review Corepack's
 publication age and runtime compatibility when changing this bootstrap pin.

@@ -50,8 +50,8 @@ need to be strictly Conventional Commit formatted.
 
 ## Runtime and Typings Policy
 
-- Use Node 24 for local development, CI, and application runtime.
-- Keep `@types/node` aligned with Node 24. Do not upgrade to Node 25+ typings
+- Use Node 26 for local development, CI, and application runtime.
+- Keep `@types/node` aligned with Node 26. Do not upgrade to Node 27+ typings
   until the runtime migration is planned.
 
 ## Package Manager

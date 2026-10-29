@@ -4,7 +4,7 @@ This repository contains multiple Cashfolio applications and shared tooling.
 
 ## Runtime
 
-Use Node 24 and pnpm 12 for local development. The repository includes
+Use Node 26 and pnpm 12 for local development. The repository includes
 `.node-version` and `.nvmrc` files for version managers, and the root package
 manifest pins the exact pnpm version.
 

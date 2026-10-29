@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "engines": {
-    "node": ">=24 <25"
+    "node": ">=26 <27"
   },
   "scripts": {
     "start": "tsx src/index.ts",
@@ -17,7 +17,7 @@
     "redis": "^6.3.0"
   },
   "devDependencies": {
-    "@types/node": "^24.19.1",
+    "@types/node": "^26.6.5",
     "@typescript/native": "npm:typescript@^7.0.2",
     "tsx": "^4.23.15",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
