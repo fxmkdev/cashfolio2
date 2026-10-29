@@ -1,6 +1,7 @@
 import { useLedgerNavigationState } from "@/hooks/use-ledger-navigation-state";
 import {
   createFileRoute,
+  redirect,
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router";
@@ -10,6 +11,7 @@ import { loadHistoryPageData } from "./-page-loader";
 import { buildHistoryAccountDrillNavigation } from "./-account-drilldown";
 import {
   buildHistorySearchNavigation,
+  buildHistoryLegacySearchNavigation,
   buildHistoryViewNavigation,
 } from "./-page-navigation";
 import {
@@ -46,16 +48,22 @@ export const Route = createFileRoute("/$accountBookId/history")({
       search,
       metric: "gainsLosses",
     }),
-    assetScope: getHistoryScopeForMetric({
+    netWorthScope: getHistoryScopeForMetric({
       search,
-      metric: "assets",
-    }),
-    liabilityScope: getHistoryScopeForMetric({
-      search,
-      metric: "liabilities",
+      metric: "netWorth",
     }),
     scopedMetric: getHistoryScopedMetric(getHistoryMetric(search)),
   }),
+  beforeLoad: ({ location, params }) => {
+    const navigation = buildHistoryLegacySearchNavigation(location.search);
+    if (navigation) {
+      throw redirect({
+        to: "/$accountBookId/history",
+        params,
+        ...navigation,
+      });
+    }
+  },
   loader: async ({
     params: { accountBookId },
     deps: {
@@ -65,8 +73,7 @@ export const Route = createFileRoute("/$accountBookId/history")({
       incomeScope,
       expenseScope,
       gainLossScope,
-      assetScope,
-      liabilityScope,
+      netWorthScope,
     },
   }) => {
     const { getAuthenticatedUserLocale } =
@@ -80,8 +87,7 @@ export const Route = createFileRoute("/$accountBookId/history")({
       incomeScope,
       expenseScope,
       gainLossScope,
-      assetScope,
-      liabilityScope,
+      netWorthScope,
       locale: userLocale,
     });
   },
@@ -114,13 +120,9 @@ function HistoryPage() {
     search,
     metric: "gainsLosses",
   });
-  const selectedAssetScope = getHistoryScopeForMetric({
+  const selectedNetWorthScope = getHistoryScopeForMetric({
     search,
-    metric: "assets",
-  });
-  const selectedLiabilityScope = getHistoryScopeForMetric({
-    search,
-    metric: "liabilities",
+    metric: "netWorth",
   });
   const { history } = Route.useLoaderData();
   const navigate = useNavigate({ from: "/$accountBookId/history" });
@@ -131,8 +133,7 @@ function HistoryPage() {
       selectedIncomeScope === history.scopeSelection.income &&
       selectedExpenseScope === history.scopeSelection.expenses &&
       selectedGainLossScope === history.scopeSelection.gainsLosses &&
-      selectedAssetScope === history.scopeSelection.assets &&
-      selectedLiabilityScope === history.scopeSelection.liabilities
+      selectedNetWorthScope === history.scopeSelection.netWorth
     ) {
       return;
     }
@@ -145,26 +146,23 @@ function HistoryPage() {
         incomeScope: history.scopeSelection.income,
         expenseScope: history.scopeSelection.expenses,
         gainLossScope: history.scopeSelection.gainsLosses,
-        assetScope: history.scopeSelection.assets,
-        liabilityScope: history.scopeSelection.liabilities,
+        netWorthScope: history.scopeSelection.netWorth,
       }),
     );
   }, [
     navigate,
-    selectedAssetScope,
+    selectedNetWorthScope,
     selectedCashFlowScope,
     selectedExpenseScope,
     selectedGainLossScope,
     selectedIncomeScope,
-    selectedLiabilityScope,
     selectedMetric,
     selectedMode,
     history.scopeSelection.cashFlow,
-    history.scopeSelection.assets,
+    history.scopeSelection.netWorth,
     history.scopeSelection.expenses,
     history.scopeSelection.gainsLosses,
     history.scopeSelection.income,
-    history.scopeSelection.liabilities,
   ]);
 
   return (
@@ -193,8 +191,7 @@ function HistoryPage() {
               incomeScope: history.scopeSelection.income,
               expenseScope: history.scopeSelection.expenses,
               gainLossScope: history.scopeSelection.gainsLosses,
-              assetScope: history.scopeSelection.assets,
-              liabilityScope: history.scopeSelection.liabilities,
+              netWorthScope: history.scopeSelection.netWorth,
             }),
           )
         }

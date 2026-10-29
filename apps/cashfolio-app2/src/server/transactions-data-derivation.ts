@@ -311,10 +311,9 @@ export function deriveTransactionsRows(args: {
   >();
 
   for (const booking of args.bookings) {
-    const transactionBookings =
-      bookingsByTransactionId.get(booking.transactionId) ?? [];
-    transactionBookings.push(booking);
-    bookingsByTransactionId.set(booking.transactionId, transactionBookings);
+    bookingsByTransactionId
+      .getOrInsertComputed(booking.transactionId, () => [])
+      .push(booking);
   }
 
   const rows = Array.from(bookingsByTransactionId.values()).map((bookings) => {

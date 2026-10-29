@@ -1,7 +1,7 @@
 import { Unit } from "../.prisma-client/enums";
 
 export type HistoryScopedMetric =
-  "cashFlow" | "income" | "expenses" | "gainsLosses" | "assets" | "liabilities";
+  "cashFlow" | "income" | "expenses" | "gainsLosses" | "netWorth";
 
 export type HistoryScopeSelection =
   | "total"
@@ -34,8 +34,7 @@ export function isHistoryScopedMetric(
     value === "income" ||
     value === "expenses" ||
     value === "gainsLosses" ||
-    value === "assets" ||
-    value === "liabilities"
+    value === "netWorth"
   );
 }
 

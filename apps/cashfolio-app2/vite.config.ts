@@ -2,7 +2,6 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import { nitro } from "nitro/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-import { buildSecurityManifest } from "./build-security";
 
 const previewAllowedHosts = new Set<string>([
   "localhost",
@@ -29,6 +28,8 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     tanstackStart(),
     nitro({
+      // MSW 3 needs its parser WASM only in the isolated E2E artifact.
+      ...(mode === "e2e" ? { traceDeps: ["@mswjs/interceptors*"] } : {}),
       output: { dir: mode === "e2e" ? ".output-e2e" : ".output" },
       plugins: [
         fileURLToPath(
@@ -46,7 +47,6 @@ export default defineConfig(({ mode }) => ({
           : []),
       ],
     }),
-    buildSecurityManifest(mode === "e2e"),
   ],
   build: {
     rolldownOptions: {

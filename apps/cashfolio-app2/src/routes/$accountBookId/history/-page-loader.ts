@@ -22,8 +22,7 @@ export async function loadHistoryPageData(args: {
   incomeScope: HistoryScopeSelection;
   expenseScope: HistoryScopeSelection;
   gainLossScope: HistoryScopeSelection;
-  assetScope: HistoryScopeSelection;
-  liabilityScope: HistoryScopeSelection;
+  netWorthScope: HistoryScopeSelection;
   locale?: UserLocale;
 }): Promise<HistoryPageLoaderData> {
   const history = await getPeriodHistory({
@@ -35,8 +34,7 @@ export async function loadHistoryPageData(args: {
       incomeScope: args.incomeScope,
       expenseScope: args.expenseScope,
       gainLossScope: args.gainLossScope,
-      assetScope: args.assetScope,
-      liabilityScope: args.liabilityScope,
+      netWorthScope: args.netWorthScope,
       locale: args.locale ?? DEFAULT_USER_LOCALE,
     },
   });

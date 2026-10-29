@@ -198,68 +198,44 @@ Guidelines:
 
 ### Auth in E2E
 
-E2E runs use the explicit `pnpm build:e2e` build (`vite build --mode e2e`),
-which writes `.output-e2e`. The normal `pnpm build` writes `.output` and
-excludes synthetic authentication, provider mocks, MSW, and fallback provider
-keys. The `__E2E_BUILD__` constant is fixed at build time, independent of
-runtime environment variables. Test-only implementations live in `src/e2e/`.
+Playwright runs `build:e2e` (`vite build --mode e2e`) and launches
+`.output-e2e`. Normal builds write `.output`. The compile-time `__E2E_BUILD__`
+gate keeps synthetic identities, test-user provisioning, provider mocks, and
+mock API keys in `src/e2e/` out of normal builds.
 
-Playwright builds and launches the E2E artifact itself, binds to loopback, and
-never reuses an existing server. Its server environment explicitly sets:
+The test server explicitly sets `APP_ENVIRONMENT=e2e`, `E2E_TEST_MODE=true`, and
+loopback `HOST`, `NITRO_HOST`, and `BASE_URL` values. A synchronous startup
+guard rejects missing test configuration and non-loopback addresses before the
+server listens. Allowed hosts are `127.0.0.1`, `localhost`, and `::1`;
+`NITRO_HOST` takes precedence over `HOST`. Playwright never reuses an existing
+server.
 
-- `APP_ENVIRONMENT=e2e`
-- `E2E_TEST_MODE=true`
-- `E2E_AUTH_BYPASS=true` (may be set to `false` to use normal authentication)
-- `E2E_AUTH_EXTERNAL_ID=<fallback-external-id-used-for-seeded-user>`
-- `HOST`, `NITRO_HOST`, and `BASE_URL` using loopback addresses
-
-A synchronous Nitro startup plugin rejects E2E artifacts without the required
-environment or loopback configuration before opening the Node listener.
-Permitted hosts are `127.0.0.1`, `localhost`, and `::1`. `NITRO_HOST` takes
-precedence over `HOST`; wildcard bindings and missing hosts are forbidden.
-`BASE_URL` must be an absolute loopback HTTP(S) URL without credentials.
-`NODE_ENV=production` remains supported because E2E tests exercise built code.
-
-The test cookie selects synthetic claims only in an E2E build with both flags
-enabled. Synthetic identities then use the app's existing authenticated-user
-provisioning path; normal Logto identities retain that same provisioning
-behavior. When bypass is disabled, app auth behavior remains unchanged.
+`E2E_AUTH_BYPASS=true` enables synthetic authentication. The identity cookie
+selects the test user, falling back to `E2E_AUTH_EXTERNAL_ID` and then
+`e2e-user`. Setting bypass to `false` retains normal authentication.
 
 ### Valuation Provider Mocks in E2E
 
-- The E2E build registers `src/e2e/provider-plugin.server.ts`, which starts MSW
-  once during startup. `E2E_TEST_MODE=true` is mandatory for an E2E runtime.
-- External valuation calls (`currencylayer`, `coinlayer`, `marketstack`) are
-  intercepted by the handlers in `src/e2e/provider-mocks.server.ts`.
-- Unhandled requests to valuation provider hostnames fail fast, so URL
-  mismatches cannot silently hit real external services.
-- Provider API-key checks use an E2E-only deterministic fallback when no key is
-  configured. No provider secrets are required for these flows.
-- The mocked rates/prices are fixed values intended for assertion stability.
+The E2E-only startup plugin enables MSW 3 once. Its HTTP handlers return fixed
+Currencylayer, Coinlayer, and Marketstack responses without provider
+credentials. The `onUnhandledFrame` hook returns a local error for unmatched
+provider HTTP requests; unrelated traffic bypasses interception. Colocated
+provider tests verify responses, interception, initialization, and cleanup.
 
-### Built Artifact Security Checks
+### Deployment Build Smoke Test
 
-The `cashfolio-app2: Build security` CI job builds both artifacts against
-isolated local PostgreSQL and runs `pnpm test:build-security`. It verifies the
-normal artifact's emitted module metadata and packaged code, startup rejection
-for forbidden configurations, the anonymous redirect despite a synthetic auth
-cookie, and healthy startup of a correctly configured E2E build. Every process
-has a bounded startup wait and is terminated after the check. Diagnostics are
-bounded and sanitized; external deployment secrets are not inherited.
-
-To investigate locally, use a disposable local PostgreSQL database whose name
-contains `test` or `e2e` as an underscore/hyphen-separated component:
+Docker runs `test:build-boundary` immediately after the normal build. This small
+test starts the compiled server with both E2E flags enabled and requires a
+nonzero exit with the expected startup-guard error. It has a ten-second timeout
+and needs no database or browser. For a local investigation:
 
 ```bash
 pnpm --filter cashfolio-app2 build
-pnpm --filter cashfolio-app2 check:build-security
-pnpm --filter cashfolio-app2 build:e2e
-DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/cashfolio_build_security_test pnpm --filter cashfolio-app2 test:build-security
+pnpm --filter cashfolio-app2 test:build-boundary
 ```
 
-Prisma generation and migrations must be applied to that disposable database
-before running the runtime checks. Docker also runs `check:build-security` after
-the normal build, before the deployment image is assembled.
+Focused unit tests cover normal authentication, mock-key exclusion, and startup
+validation. The existing E2E suite verifies the correctly configured E2E build.
 
 ### Database Lifecycle
 

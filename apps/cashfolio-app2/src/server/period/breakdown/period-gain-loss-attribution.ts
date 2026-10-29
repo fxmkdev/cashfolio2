@@ -76,13 +76,14 @@ export function buildGainLossAccountAttribution(
       !contribution.originatingAccountIds
     )
       continue;
-    const origins =
-      residualOrigins.get(contribution.accountId) ?? new Set<string>();
+    const origins = residualOrigins.getOrInsertComputed(
+      contribution.accountId,
+      () => new Set<string>(),
+    );
     for (const id of contribution.originatingAccountIds.length
       ? contribution.originatingAccountIds
       : ["unknown"])
       origins.add(id);
-    residualOrigins.set(contribution.accountId, origins);
   }
   for (const [id, origins] of residualOrigins)
     result.set(id, originating(origins, "unattributed"));

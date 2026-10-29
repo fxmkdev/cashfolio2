@@ -55,16 +55,14 @@ export type PeriodHistoryResponse = {
     income: HistoryScopeOption[];
     expenses: HistoryScopeOption[];
     gainsLosses: HistoryScopeOption[];
-    assets: HistoryScopeOption[];
-    liabilities: HistoryScopeOption[];
+    netWorth: HistoryScopeOption[];
   };
   scopeSelection: {
     cashFlow: HistoryScopeSelection;
     income: HistoryScopeSelection;
     expenses: HistoryScopeSelection;
     gainsLosses: HistoryScopeSelection;
-    assets: HistoryScopeSelection;
-    liabilities: HistoryScopeSelection;
+    netWorth: HistoryScopeSelection;
   };
 };
 
@@ -76,8 +74,7 @@ type HistoryInput = {
   incomeScope: HistoryScopeSelection;
   expenseScope: HistoryScopeSelection;
   gainLossScope: HistoryScopeSelection;
-  assetScope: HistoryScopeSelection;
-  liabilityScope: HistoryScopeSelection;
+  netWorthScope: HistoryScopeSelection;
   locale: UserLocale;
 };
 
@@ -276,8 +273,7 @@ export const getPeriodHistory = createServerFn({
       incomeScope?: unknown;
       expenseScope?: unknown;
       gainLossScope?: unknown;
-      assetScope?: unknown;
-      liabilityScope?: unknown;
+      netWorthScope?: unknown;
       locale?: unknown;
     }): HistoryInput => ({
       accountBookId: data.accountBookId,
@@ -287,8 +283,7 @@ export const getPeriodHistory = createServerFn({
       incomeScope: parseHistoryScopeSelectionOrDefault(data.incomeScope),
       expenseScope: parseHistoryScopeSelectionOrDefault(data.expenseScope),
       gainLossScope: parseHistoryScopeSelectionOrDefault(data.gainLossScope),
-      assetScope: parseHistoryScopeSelectionOrDefault(data.assetScope),
-      liabilityScope: parseHistoryScopeSelectionOrDefault(data.liabilityScope),
+      netWorthScope: parseHistoryScopeSelectionOrDefault(data.netWorthScope),
       locale: normalizeUserLocaleInput(data.locale),
     }),
   )
@@ -336,20 +331,8 @@ export const getPeriodHistory = createServerFn({
           scope: data.gainLossScope,
         };
       }
-      if (data.scopedMetric === "assets" && data.assetScope !== "total") {
-        return {
-          metric: "assets" as const,
-          scope: data.assetScope,
-        };
-      }
-      if (
-        data.scopedMetric === "liabilities" &&
-        data.liabilityScope !== "total"
-      ) {
-        return {
-          metric: "liabilities" as const,
-          scope: data.liabilityScope,
-        };
+      if (data.scopedMetric === "netWorth" && data.netWorthScope !== "total") {
+        return { metric: "netWorth" as const, scope: data.netWorthScope };
       }
       return undefined;
     })();
@@ -358,8 +341,7 @@ export const getPeriodHistory = createServerFn({
       accountBookStartDate: context.accountBookStartDate,
       referenceCurrency: context.referenceCurrency,
       metricScopeFilter:
-        activeMetricScopeFilter?.metric === "assets" ||
-        activeMetricScopeFilter?.metric === "liabilities"
+        activeMetricScopeFilter?.metric === "netWorth"
           ? activeMetricScopeFilter
           : undefined,
     });
@@ -386,14 +368,10 @@ export const getPeriodHistory = createServerFn({
       HistoryScopeSelection,
       HistoryScopeOption
     >();
-    const assetScopeOptions = new Map<
+    const netWorthScopeOptions = new Map<
       HistoryScopeSelection,
       HistoryScopeOption
-    >();
-    const liabilityScopeOptions = new Map<
-      HistoryScopeSelection,
-      HistoryScopeOption
-    >();
+    >(context.netWorthScopes.map((option) => [option.value, option]));
 
     const valuationContext: HistoryValuationContext = {
       exchangeRateByKey: new Map(),
@@ -427,11 +405,8 @@ export const getPeriodHistory = createServerFn({
       for (const option of point.scopeOptions.gainsLosses) {
         gainLossScopeOptions.set(option.value, option);
       }
-      for (const option of point.scopeOptions.assets) {
-        assetScopeOptions.set(option.value, option);
-      }
-      for (const option of point.scopeOptions.liabilities) {
-        liabilityScopeOptions.set(option.value, option);
+      for (const option of point.scopeOptions.netWorth) {
+        netWorthScopeOptions.set(option.value, option);
       }
       scopedMetricValues.push(toNumericMoney(point.scopedMetricValue ?? 0));
       points.push(
@@ -465,11 +440,8 @@ export const getPeriodHistory = createServerFn({
       sortGainLossScopeOptions(gainLossScopeOptions.values()),
       { sort: "none" },
     );
-    const finalizedAssetScopeOptions = createHistoryScopeOptionsWithTotal(
-      assetScopeOptions.values(),
-    );
-    const finalizedLiabilityScopeOptions = createHistoryScopeOptionsWithTotal(
-      liabilityScopeOptions.values(),
+    const finalizedNetWorthScopeOptions = createHistoryScopeOptionsWithTotal(
+      netWorthScopeOptions.values(),
     );
     const clampedCashFlowScope = clampHistoryScopeSelection({
       requested: data.cashFlowScope,
@@ -487,13 +459,9 @@ export const getPeriodHistory = createServerFn({
       requested: data.gainLossScope,
       options: finalizedGainLossScopeOptions,
     });
-    const clampedAssetScope = clampHistoryScopeSelection({
-      requested: data.assetScope,
-      options: finalizedAssetScopeOptions,
-    });
-    const clampedLiabilityScope = clampHistoryScopeSelection({
-      requested: data.liabilityScope,
-      options: finalizedLiabilityScopeOptions,
+    const clampedNetWorthScope = clampHistoryScopeSelection({
+      requested: data.netWorthScope,
+      options: finalizedNetWorthScopeOptions,
     });
     const shouldUseScopedCashFlow =
       data.scopedMetric === "cashFlow" && clampedCashFlowScope !== "total";
@@ -503,10 +471,8 @@ export const getPeriodHistory = createServerFn({
       data.scopedMetric === "expenses" && clampedExpenseScope !== "total";
     const shouldUseScopedGainLosses =
       data.scopedMetric === "gainsLosses" && clampedGainLossScope !== "total";
-    const shouldUseScopedAssets =
-      data.scopedMetric === "assets" && clampedAssetScope !== "total";
-    const shouldUseScopedLiabilities =
-      data.scopedMetric === "liabilities" && clampedLiabilityScope !== "total";
+    const shouldUseScopedNetWorth =
+      data.scopedMetric === "netWorth" && clampedNetWorthScope !== "total";
     const responsePoints = points.map((point, index) => ({
       ...point,
       cashFlow: shouldUseScopedCashFlow
@@ -521,23 +487,17 @@ export const getPeriodHistory = createServerFn({
       gainsLosses: shouldUseScopedGainLosses
         ? (scopedMetricValues[index] ?? 0)
         : point.gainsLosses,
-      assets: shouldUseScopedAssets
+      netWorth: shouldUseScopedNetWorth
         ? (scopedMetricValues[index] ?? 0)
-        : point.assets,
-      liabilities: shouldUseScopedLiabilities
-        ? (scopedMetricValues[index] ?? 0)
-        : point.liabilities,
+        : point.netWorth,
     }));
     const { scopedMetricValue, ...baseOpeningBalancePoint } =
       openingBalancePoint;
     const responseOpeningBalancePoint = {
       ...baseOpeningBalancePoint,
-      assets: shouldUseScopedAssets
+      netWorth: shouldUseScopedNetWorth
         ? (scopedMetricValue ?? 0)
-        : openingBalancePoint.assets,
-      liabilities: shouldUseScopedLiabilities
-        ? (scopedMetricValue ?? 0)
-        : openingBalancePoint.liabilities,
+        : openingBalancePoint.netWorth,
     };
 
     return {
@@ -550,16 +510,14 @@ export const getPeriodHistory = createServerFn({
         income: finalizedIncomeScopeOptions,
         expenses: finalizedExpenseScopeOptions,
         gainsLosses: finalizedGainLossScopeOptions,
-        assets: finalizedAssetScopeOptions,
-        liabilities: finalizedLiabilityScopeOptions,
+        netWorth: finalizedNetWorthScopeOptions,
       },
       scopeSelection: {
         cashFlow: clampedCashFlowScope,
         income: clampedIncomeScope,
         expenses: clampedExpenseScope,
         gainsLosses: clampedGainLossScope,
-        assets: clampedAssetScope,
-        liabilities: clampedLiabilityScope,
+        netWorth: clampedNetWorthScope,
       },
     } satisfies PeriodHistoryResponse;
   });

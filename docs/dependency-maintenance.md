@@ -2,34 +2,35 @@
 
 The October 2026 refresh updates stable releases within the existing major
 versions, plus Logto 4, Chromatic 18, and dotenv 18. Node runtime and typings
-stay on 24; pnpm is now on stable 12.11.1. Package families such as Mantine,
-React, Prisma, Storybook, AG Grid, AG Charts, and Vitest must be updated
-together.
+now use 26 following the runtime migration; pnpm stays on stable 12.16.1.
+Package families such as Mantine, React, Prisma, Storybook, AG Grid, AG Charts,
+and Vitest must be updated together.
 
 The refreshed manifest versions are:
 
-| Package family                           | Version                  |
-| ---------------------------------------- | ------------------------ |
-| Mantine                                  | 9.7.1                    |
-| React / React DOM / their typings        | 19.3.0                   |
-| TanStack Router / Start                  | 1.170.41 / 1.168.60      |
-| Prisma CLI / client / PostgreSQL adapter | 7.10.0                   |
-| Vite                                     | 8.3.4                    |
-| Storybook                                | 10.6.1                   |
-| Playwright                               | 1.64.0                   |
-| AG Grid / AG Charts                      | 36.2.0 / 14.2.0          |
-| Vitest / coverage / browser              | 5.0.3                    |
-| TypeScript / typescript6 compatibility   | 7.0.2 / 6.0.2            |
-| MSW                                      | 2.15.0                   |
-| Logto / Chromatic / dotenv               | 4.0.0 / 18.11.0 / 18.0.6 |
-| Redis / PostgreSQL driver                | 6.3.0 / 8.23.1           |
-| Node runtime / typings                   | 24.21.0 / 24.19.1        |
-| pnpm / Prettier                          | 12.11.1 / 3.9.9          |
+| Package family                           | Version                   |
+| ---------------------------------------- | ------------------------- |
+| Mantine                                  | 9.7.1                     |
+| React / React DOM / their typings        | 19.3.0                    |
+| TanStack Router / Start                  | 1.170.41 / 1.168.60       |
+| Prisma CLI / client / PostgreSQL adapter | 7.10.0                    |
+| Vite                                     | 8.3.4                     |
+| Storybook                                | 10.6.1                    |
+| Playwright                               | 1.64.0                    |
+| AG Grid / AG Charts                      | 36.2.0 / 14.2.0           |
+| Vitest / coverage / browser              | 5.0.5                     |
+| TypeScript / typescript6 compatibility   | 7.0.2 / 6.0.2             |
+| MSW                                      | 3.0.3                     |
+| Logto / Chromatic / dotenv               | 4.0.0 / 18.13.3 / 18.0.6  |
+| ESLint / typescript-eslint / utils       | 10.13.0 / 8.72.1 / 8.72.1 |
+| Tabler React icons                       | 3.50.0                    |
+| Redis / PostgreSQL driver                | 6.3.0 / 8.23.1            |
+| Node runtime / typings                   | 26.13.0 / 26.6.5          |
+| pnpm / Prettier                          | 12.16.1 / 3.9.9           |
 
-MSW 3 and Prisma prereleases are deferred to separate migrations. Storybook uses
-addon-vitest 10.6.1 with the Playwright browser provider 5.0.3. Vitest,
-coverage, and browser packages are upgraded together to stable 5.0.3. See the
-app's
+Prisma prereleases remain deferred. Storybook uses addon-vitest 10.6.1 with the
+Playwright browser provider 5.0.5. Vitest, coverage, and browser packages are
+upgraded together to stable 5.0.5 alongside MSW 3.0.3. See the app's
 [Nitro compatibility notes](../apps/cashfolio-app2/docs/deployment.md#nitro-version-pin)
 before revisiting its beta pin or scoped H3 override.
 
@@ -219,8 +220,9 @@ coverage baseline must not be weakened. Unit coverage still uses `coverage/`,
 while Storybook uses `coverage-storybook/`. Browser failure artifacts now use
 `.vitest/` and are uploaded by the existing CI artifact action.
 
-MSW stays on 2.15.0. The application MSW 3 migration is explicitly deferred;
-`@vitest/mocker@5.0.3` still declares the compatible MSW 2 peer range `^2.4.9`.
+The initial migration retained MSW 2.15.0 because `@vitest/mocker@5.0.3`
+declared the MSW 2 peer range `^2.4.9`. The subsequent upgrade below removes
+that constraint.
 
 Vitest 5 reports the same covered-file, branch, and function inventory. It
 counts four fewer total statements/lines across the generated Prisma namespace
@@ -230,6 +232,37 @@ files: statements 73.00% (6128/8394), branches 65.04% (3922/6030), functions
 70.33% (1425/2026), and lines 73.86% (5962/8072). The committed coverage
 baseline remains unchanged and its ratchet passes; no exclusions or assertions
 were weakened.
+
+## MSW 3 and Vitest 5.0.5 follow-up
+
+MSW 3.0.3 and the published Vitest 5 family packages move together to Vitest
+5.0.5, whose mocker supports `msw: ^2.4.9 || ^3.0.0`. Direct dependency ranges
+retain carets, and the lockfile aligns browser, UI, mocker, spy, pretty-format,
+and utils packages on 5.0.5. There is no published `@vitest/runner@5.0.5`;
+Storybook's optional runner peer stays on compatible 4.1.11. Storybook's pinned
+internal Vitest 3 dependencies remain unchanged.
+
+The E2E valuation mocks import HTTP helpers from `msw/http` and retain
+`setupServer` from `msw/node`. Their custom `onUnhandledFrame` callback narrows
+HTTP frames using `HttpNetworkFrame` before inspecting `frame.data.request`.
+Unmatched provider requests produce a local error response, while unrelated HTTP
+requests and WebSocket connections retain bypass behavior. Initialization
+remains synchronous, E2E-only, and idempotent, with process-exit cleanup.
+
+The Logto session test provider also imports `http` from `msw/http` and uses
+`onUnhandledFrame: "error"` to reject unmatched traffic. Its regression test
+verifies an unmatched request cannot reach a local destination server.
+
+Nitro traces the full `@mswjs/interceptors` package to preserve its relative
+`llhttp/llhttp.wasm` asset in the standalone server output. See the app's
+[runtime asset notes](../apps/cashfolio-app2/docs/deployment.md#msw-runtime-assets).
+
+Node 26, the TypeScript compatibility alias, package-manager policies, and the
+coverage baseline remain unchanged. Focused regression tests exercise actual
+HTTP interception, deterministic provider responses, no-data cases, unmatched
+provider failures, unrelated local traffic, and activation/cleanup behavior.
+Full coverage, Storybook interactions, production builds, and application E2E
+remain CI checks.
 
 ## TypeScript 7 migration
 
@@ -279,6 +312,34 @@ and
 and
 [pnpm 12.11.1 patch notes](https://github.com/pnpm/pnpm/releases/tag/v12.11.1).
 
+## October 28 tooling follow-up
+
+The focused follow-up upgrades pnpm to 12.16.1, ESLint to 10.13.0,
+typescript-eslint and its directly pinned utils package to 8.72.1, Chromatic to
+18.13.3, and Tabler React icons to 3.50.0. The root engine and
+integrity-qualified package-manager pin, Docker migration-tools version, and
+lockfile agree on pnpm 12.16.1. The package-manager platform entries remain
+available for macOS and Linux.
+
+pnpm 12.16.1 was published on October 27 at 15:28 UTC and exceeds the existing
+1440-minute release-age threshold. The build approvals, security overrides, and
+narrow releaser exception are preserved. Only the selected direct packages and
+their required dependency/peer entries change; TanStack Start remains deferred.
+MSW is upgraded in the subsequent follow-up above. Node 24 and the native
+TypeScript 7 / TypeScript 6 API aliases remain in place.
+
+Local verification on Node 24.21.0 / pnpm 12.16.1 passed frozen-lockfile
+installation, Prisma generation, app lint, app and CLI typechecks, changed-file
+formatting, and Chromatic CLI startup/help. Production/Docker builds, coverage,
+Storybook interactions, application E2E, and publishing remain CI checks.
+
+The October 28 audit reports the same advisory IDs and vulnerable versions as
+the freshly fetched main lockfile: two critical, three high, four moderate, and
+two low findings, with none introduced or resolved by this follow-up. Findings
+affect the unchanged Storybook 10.6.1, Vitest 5.0.3 browser/UI, Zod 4.6.5, and
+fast-uri 3.1.8 packages. These need a separate security update; the historical
+zero-finding audit below does not describe the current graph.
+
 ## Tooling migration verification
 
 The rebased stack preserves all 89 original story IDs plus main's four Grid
@@ -297,7 +358,29 @@ horizontal-scroll assertion exercises overflow at both sizes.
 Docker verification covers filtered frozen installation, the Linux native
 compiler, Prisma schema validation, release migrations against a dedicated local
 test database, and an HTTP 200 response from the generated production server.
-Both workspace and separate migration-payload audits report zero findings.
-Outdated checks still list intentionally excluded newer Node/typing, MSW, Prisma
-prerelease, and Nitro beta lines, plus unrelated Chromatic updates; these are
-not refreshed by this migration.
+Both workspace and separate migration-payload audits report zero findings. At
+that stage, outdated checks listed intentionally excluded newer Node/typing,
+MSW, Prisma prerelease, and Nitro beta lines, plus unrelated Chromatic updates;
+these are not refreshed by this migration.
+
+## Node 26 migration
+
+The workspace now uses Node 26 for local development, CI, CLI tooling, and
+application runtime. The managed runtime and Docker image start at Node 26.13.0
+LTS; package engines require `>=26 <27`. App and CLI Node typings start at
+26.6.5, with the existing 24-hour release-age policy applied during resolution.
+The standalone staging-seed and provider-usage-cleanup bundles target `node26`.
+
+The pnpm 12.16.1, Corepack 0.36.0, Prisma 7.10.0, compiler, security override,
+and coverage policies are retained. Third-party GitHub Actions keep their own
+embedded runtimes; workflow shell commands use the repository's Node 26 setup.
+Earlier verification records in this document describe the runtime used at the
+time.
+
+Local verification on Node 26.13.0 / pnpm 12.16.1 passed frozen-lockfile
+installation, Prisma generation, app and CLI typechecks, all 16 CLI tests, all
+28 provider-usage-cleanup runner tests, workflow lint, and ESLint for both
+changed bundle configs. Both standalone bundles built with the `node26` target,
+and the staging-seed sample CSV command succeeded without database credentials.
+Production Docker builds, coverage, database integration, E2E, and Storybook
+verification remain assigned to CI.

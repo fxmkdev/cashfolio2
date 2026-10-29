@@ -15,7 +15,8 @@ vi.mock("../auth/functions.server", () => ({
   ensureAuthenticated: vi.fn(),
 }));
 
-import { getOrCreateUser, ensureUserHasRole } from "./functions.server";
+import { ensureUser, ensureUserHasRole } from "./functions.server";
+import { getOrCreateUser } from "../e2e/user.server";
 import { ensureAuthenticated } from "../auth/functions.server";
 import { UserRole } from "../.prisma-client/enums";
 
@@ -92,7 +93,7 @@ describe("Admin authorization", () => {
     "checks deletion pending state (%s)",
     async (deletionPending) => {
       vi.mocked(ensureAuthenticated).mockResolvedValue(userContext);
-      prisma.user.upsert.mockResolvedValue({
+      prisma.user.findUnique.mockResolvedValue({
         ...user,
         roles: [UserRole.ADMIN],
         deletionPending,
@@ -108,4 +109,28 @@ describe("Admin authorization", () => {
       }
     },
   );
+});
+
+describe("ordinary user lookup", () => {
+  it("does not recreate a deleted user from an existing authenticated context", async () => {
+    vi.clearAllMocks();
+    vi.mocked(ensureAuthenticated).mockResolvedValue(userContext);
+    prisma.user.findUnique.mockResolvedValue(null);
+    await expect(ensureUser()).rejects.toMatchObject({ status: 403 });
+    expect(prisma.user.upsert).not.toHaveBeenCalled();
+  });
+
+  it("cannot enable test-user provisioning through runtime flags in a normal build", async () => {
+    vi.clearAllMocks();
+    vi.stubEnv("E2E_TEST_MODE", "true");
+    vi.stubEnv("E2E_AUTH_BYPASS", "true");
+    vi.mocked(ensureAuthenticated).mockResolvedValue(userContext);
+    prisma.user.findUnique.mockResolvedValue(null);
+    try {
+      await expect(ensureUser()).rejects.toMatchObject({ status: 403 });
+      expect(prisma.user.upsert).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });

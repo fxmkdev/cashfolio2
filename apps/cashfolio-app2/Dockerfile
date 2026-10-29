@@ -1,9 +1,9 @@
 # syntax = docker/dockerfile:1
 
-ARG NODE_VERSION=24.21.0
+ARG NODE_VERSION=26.13.0
 ARG DOTENV_VERSION=18.0.6
 ARG PRISMA_VERSION=7.10.0
-ARG PNPM_VERSION=12.11.1
+ARG PNPM_VERSION=12.16.1
 ARG COREPACK_VERSION=0.36.0
 FROM node:${NODE_VERSION}-slim AS base
 
@@ -42,7 +42,7 @@ RUN pnpm --filter cashfolio-app2 prisma:generate
 
 # Build application
 RUN pnpm --filter cashfolio-app2 build
-RUN pnpm --filter cashfolio-app2 check:build-security
+RUN pnpm --filter cashfolio-app2 test:build-boundary
 RUN pnpm --filter cashfolio-app2 build:staging-seed
 RUN pnpm --filter cashfolio-app2 build:provider-usage-cleanup
 

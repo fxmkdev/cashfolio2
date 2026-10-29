@@ -21,14 +21,14 @@ import {
 } from "../../../shared/history-scope";
 import type { PeriodGainsLossesBreakdownNode } from "../breakdown/period-gains-losses-breakdown";
 
-import { classifyBalanceAccount } from "../balance-classification";
+import { isBalanceAccount } from "../../../shared/account-presentation";
 
 export type HistoryMetricScopeFilter = {
   metric: HistoryScopedMetric;
   scope: HistoryScopeSelection;
 };
 
-export function buildBalanceHistoryScopeAmountMaps(args: {
+export function buildNetWorthHistoryScopeAmountMap(args: {
   accounts: Array<{
     id: string;
     name: string;
@@ -37,35 +37,52 @@ export function buildBalanceHistoryScopeAmountMaps(args: {
   }>;
   convertedBalanceByAccountId: Map<string, Money | null>;
 }) {
-  const assetAmountByAccountId = new Map<
+  const amountByAccountId = new Map<
     string,
     BreakdownHierarchyAccumulatorItem
   >();
-  const liabilityAmountByAccountId = new Map<
-    string,
-    BreakdownHierarchyAccumulatorItem
-  >();
-
   for (const account of args.accounts) {
     const convertedBalance = args.convertedBalanceByAccountId.get(account.id);
-    const classified = classifyBalanceAccount(account.type, convertedBalance);
-    if (!classified) continue;
-    const target =
-      classified.side === "asset"
-        ? assetAmountByAccountId
-        : liabilityAmountByAccountId;
-    target.set(account.id, {
+    if (!isBalanceAccount(account) || convertedBalance == null) continue;
+    amountByAccountId.set(account.id, {
       accountId: account.id,
       accountName: account.name,
       groupId: account.groupId,
-      amount: classified.amount,
+      amount: convertedBalance,
     });
   }
 
-  return {
-    assetAmountByAccountId,
-    liabilityAmountByAccountId,
-  };
+  return amountByAccountId;
+}
+
+/** Balance scopes include the complete hierarchy regardless of valuation or activity. */
+export function buildNetWorthHistoryScopeOptions(args: {
+  accounts: Array<{ id: string; name: string; groupId: string | null }>;
+  groups: Array<{ id: string; name: string; parentGroupId: string | null }>;
+}): HistoryScopeOption[] {
+  const resolveGroupPath = createGroupPathResolver(args.groups);
+  return [
+    ...args.groups.map((group): HistoryScopeOption => ({
+      value: `group:${group.id}`,
+      label: resolveGroupPath(group.id),
+      treeLabel: group.name,
+      kind: "group",
+      ...(group.parentGroupId
+        ? { parentValue: `group:${group.parentGroupId}` as const }
+        : {}),
+    })),
+    ...args.accounts.map((account): HistoryScopeOption => ({
+      value: `account:${account.id}`,
+      label: account.groupId
+        ? `${resolveGroupPath(account.groupId)} / ${account.name}`
+        : account.name,
+      treeLabel: account.name,
+      kind: "account",
+      ...(account.groupId
+        ? { parentValue: `group:${account.groupId}` as const }
+        : {}),
+    })),
+  ];
 }
 
 function hasGroupInPath(args: {

@@ -48,6 +48,16 @@ describe("getAuthenticationContext", () => {
     await expect(getAuthenticationContext()).rejects.toBe(error);
   });
 
+  it("preserves deletion-retry access options", async () => {
+    const options = { allowDeletionPending: true };
+    mocks.getLogtoContext.mockResolvedValue({ isAuthenticated: false });
+    await getAuthenticationContext(options);
+    expect(mocks.getLogtoContext).toHaveBeenCalledExactlyOnceWith(
+      { getAccessToken: false },
+      options,
+    );
+  });
+
   it("ignores a synthetic identity cookie and both runtime flags in a normal build", async () => {
     vi.stubEnv("E2E_AUTH_BYPASS", "true");
     vi.stubEnv("E2E_TEST_MODE", "true");

@@ -2,6 +2,7 @@ import {
   DEFAULT_HISTORY_SCOPE,
   DEFAULT_HISTORY_METRIC,
   DEFAULT_HISTORY_MODE,
+  parseHistorySearch,
   type HistoryMetric,
   type HistoryPeriodMode,
   type HistoryViewSelection,
@@ -14,6 +15,21 @@ import {
 
 type HistoryNavigationSearch = Record<string, unknown>;
 
+export function buildHistoryLegacySearchNavigation(
+  search: HistoryNavigationSearch,
+) {
+  if (search.assetScope === undefined && search.liabilityScope === undefined)
+    return undefined;
+  return {
+    replace: true,
+    search: {
+      ...parseHistorySearch(search),
+      assetScope: undefined,
+      liabilityScope: undefined,
+    },
+  } as const;
+}
+
 export function buildHistorySearchNavigation(args: {
   mode: HistoryPeriodMode;
   metric: HistoryMetric;
@@ -21,8 +37,7 @@ export function buildHistorySearchNavigation(args: {
   incomeScope: HistoryScopeSelection;
   expenseScope: HistoryScopeSelection;
   gainLossScope: HistoryScopeSelection;
-  assetScope: HistoryScopeSelection;
-  liabilityScope: HistoryScopeSelection;
+  netWorthScope: HistoryScopeSelection;
 }) {
   return {
     replace: true,
@@ -46,12 +61,12 @@ export function buildHistorySearchNavigation(args: {
         args.gainLossScope === DEFAULT_HISTORY_SCOPE
           ? undefined
           : args.gainLossScope,
-      assetScope:
-        args.assetScope === DEFAULT_HISTORY_SCOPE ? undefined : args.assetScope,
-      liabilityScope:
-        args.liabilityScope === DEFAULT_HISTORY_SCOPE
+      netWorthScope:
+        args.netWorthScope === DEFAULT_HISTORY_SCOPE
           ? undefined
-          : args.liabilityScope,
+          : args.netWorthScope,
+      assetScope: undefined,
+      liabilityScope: undefined,
     }),
   } as const;
 }
@@ -74,7 +89,6 @@ export function buildHistoryViewNavigation(args: {
     incomeScope: scopes.income,
     expenseScope: scopes.expenses,
     gainLossScope: scopes.gainsLosses,
-    assetScope: scopes.assets,
-    liabilityScope: scopes.liabilities,
+    netWorthScope: scopes.netWorth,
   });
 }

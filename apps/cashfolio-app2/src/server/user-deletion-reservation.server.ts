@@ -1,5 +1,9 @@
 import { UserRole } from "../.prisma-client/enums";
 import {
+  lockAuthSubject,
+  revokeAuthSubject,
+} from "../auth/subject-revocation.server";
+import {
   FINAL_ADMIN_MESSAGE,
   requireActiveAdmin,
   requireAnotherActiveAdmin,
@@ -13,11 +17,15 @@ export function reserveUserDeletion(args: {
 }): Promise<void> {
   return withAdminMutation(async (tx) => {
     if (args.currentAdminId) await requireActiveAdmin(tx, args.currentAdminId);
+    const subjectHash = await lockAuthSubject(tx, args.externalId);
     const user = await tx.user.findUnique({
       where: { externalId: args.externalId },
     });
-    // An already completed retry or a Logto-only user needs no DB reservation.
-    if (!user) return;
+    // Logto-only users and completed retries still need a durable marker.
+    if (!user) {
+      await revokeAuthSubject(tx, subjectHash);
+      return;
+    }
     if (args.currentAdminId === user.id)
       throw new Error("You cannot delete yourself.");
     if (!user.deletionPending) {
@@ -35,5 +43,6 @@ export function reserveUserDeletion(args: {
         data: { deletionPending: true },
       });
     }
+    await revokeAuthSubject(tx, subjectHash);
   });
 }

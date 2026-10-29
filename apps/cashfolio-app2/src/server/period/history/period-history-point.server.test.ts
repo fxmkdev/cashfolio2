@@ -5,6 +5,7 @@ const prisma = vi.hoisted(() => ({
   accountBook: {
     findUniqueOrThrow: vi.fn(),
   },
+  accountGroup: { findMany: vi.fn() },
   account: {
     findMany: vi.fn(),
   },
@@ -32,6 +33,7 @@ function createContext(args: {
   hasCashAccounts?: boolean;
 }): PeriodHistoryPointContext {
   return {
+    netWorthScopes: [],
     referenceCurrency: "CHF",
     accountBookStartDate: new Date(args.startDate),
     holdingAccountsResolved: args.holdingAccountsResolved ?? [],
@@ -47,9 +49,12 @@ describe("loadPeriodHistoryPointContext", () => {
       referenceCurrency: "chf",
       startDate: new Date("2026-02-12T18:45:00.000Z"),
     });
+    prisma.accountGroup.findMany.mockResolvedValue([]);
     prisma.account.findMany.mockResolvedValue([
       {
         id: "holding-security",
+        name: "holding-security",
+        groupId: null,
         unit: Unit.SECURITY,
         currency: null,
         cryptocurrency: null,
@@ -59,6 +64,8 @@ describe("loadPeriodHistoryPointContext", () => {
       },
       {
         id: "cash-reference",
+        name: "cash-reference",
+        groupId: null,
         unit: Unit.CURRENCY,
         currency: "CHF",
         cryptocurrency: null,
@@ -68,6 +75,8 @@ describe("loadPeriodHistoryPointContext", () => {
       },
       {
         id: "liability-foreign",
+        name: "liability-foreign",
+        groupId: null,
         unit: Unit.CURRENCY,
         currency: "USD",
         cryptocurrency: null,
@@ -99,6 +108,8 @@ describe("loadPeriodHistoryPointContext", () => {
       },
       select: {
         id: true,
+        name: true,
+        groupId: true,
         unit: true,
         currency: true,
         cryptocurrency: true,
@@ -116,6 +127,86 @@ describe("loadPeriodHistoryPointContext", () => {
     );
     expect(result.hasCashAccounts).toBe(true);
   });
+
+  test("loads the full Balance Account hierarchy once without filtering activity or balances", async () => {
+    prisma.account.findMany.mockResolvedValue([
+      {
+        id: "zero",
+        name: "Bank",
+        groupId: "nested",
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        isActive: true,
+      },
+      {
+        id: "archived",
+        name: "Bank",
+        groupId: "other",
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+        isActive: false,
+      },
+      {
+        id: "ungrouped",
+        name: "Wallet",
+        groupId: null,
+        unit: Unit.CURRENCY,
+        currency: "CHF",
+      },
+    ]);
+    prisma.accountGroup.findMany.mockResolvedValue([
+      { id: "parent", name: "Banking", parentGroupId: null },
+      { id: "nested", name: "Cash", parentGroupId: "parent" },
+      { id: "other", name: "Other", parentGroupId: null },
+      { id: "empty", name: "Empty", parentGroupId: null },
+    ]);
+    const result = await loadPeriodHistoryPointContext({
+      accountBookId: "book-ctx",
+    });
+    expect(prisma.account.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.accountGroup.findMany).toHaveBeenCalledWith({
+      where: { accountBookId: "book-ctx", type: AccountType.BALANCE },
+      select: { id: true, name: true, parentGroupId: true },
+    });
+    expect(result.netWorthScopes).toEqual(
+      expect.arrayContaining([
+        {
+          value: "group:empty",
+          label: "Empty",
+          treeLabel: "Empty",
+          kind: "group",
+        },
+        {
+          value: "group:nested",
+          label: "Banking / Cash",
+          treeLabel: "Cash",
+          kind: "group",
+          parentValue: "group:parent",
+        },
+        {
+          value: "account:zero",
+          label: "Banking / Cash / Bank",
+          treeLabel: "Bank",
+          kind: "account",
+          parentValue: "group:nested",
+        },
+        {
+          value: "account:archived",
+          label: "Other / Bank",
+          treeLabel: "Bank",
+          kind: "account",
+          parentValue: "group:other",
+        },
+        {
+          value: "account:ungrouped",
+          label: "Wallet",
+          treeLabel: "Wallet",
+          kind: "account",
+        },
+      ]),
+    );
+  });
 });
 
 describe("loadPeriodHistoryPoint", () => {
@@ -128,6 +219,7 @@ describe("loadPeriodHistoryPoint", () => {
       referenceCurrency: "CHF",
       startDate: new Date("2026-01-01T00:00:00.000Z"),
     });
+    prisma.accountGroup.findMany.mockResolvedValue([]);
     prisma.account.findMany.mockResolvedValue([]);
 
     getOrLoadPeriodHistoryPointMetrics.mockResolvedValue({
@@ -145,8 +237,7 @@ describe("loadPeriodHistoryPoint", () => {
         income: [],
         expenses: [],
         gainsLosses: [],
-        assets: [],
-        liabilities: [],
+        netWorth: [],
       },
       scopedMetricValue: 0,
     });
@@ -184,8 +275,7 @@ describe("loadPeriodHistoryPoint", () => {
         income: [],
         expenses: [],
         gainsLosses: [],
-        assets: [],
-        liabilities: [],
+        netWorth: [],
       },
       scopedMetricValue: undefined,
     });
@@ -244,8 +334,7 @@ describe("loadPeriodHistoryPoint", () => {
         income: [],
         expenses: [],
         gainsLosses: [],
-        assets: [],
-        liabilities: [],
+        netWorth: [],
       },
       scopedMetricValue: 0,
     });
@@ -273,6 +362,8 @@ describe("loadPeriodHistoryPoint", () => {
       },
       select: {
         id: true,
+        name: true,
+        groupId: true,
         unit: true,
         currency: true,
         cryptocurrency: true,

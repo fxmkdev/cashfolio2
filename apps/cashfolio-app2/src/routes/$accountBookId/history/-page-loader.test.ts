@@ -42,16 +42,14 @@ const historyFixture: Awaited<ReturnType<typeof getPeriodHistory>> = {
     income: [{ value: "total", label: "Total", kind: "total" }],
     expenses: [{ value: "total", label: "Total", kind: "total" }],
     gainsLosses: [{ value: "total", label: "Total", kind: "total" }],
-    assets: [{ value: "total", label: "Total", kind: "total" }],
-    liabilities: [{ value: "total", label: "Total", kind: "total" }],
+    netWorth: [{ value: "total", label: "Total", kind: "total" }],
   },
   scopeSelection: {
     cashFlow: "total",
     income: "total",
     expenses: "total",
     gainsLosses: "total",
-    assets: "total",
-    liabilities: "total",
+    netWorth: "total",
   },
 };
 
@@ -72,8 +70,7 @@ describe("loadHistoryPageData", () => {
       incomeScope: "group:income-1",
       expenseScope: "total",
       gainLossScope: "total",
-      assetScope: "total",
-      liabilityScope: "total",
+      netWorthScope: "total",
     });
 
     expect(mockedGetPeriodHistory).toHaveBeenCalledTimes(1);
@@ -86,8 +83,7 @@ describe("loadHistoryPageData", () => {
         incomeScope: "group:income-1",
         expenseScope: "total",
         gainLossScope: "total",
-        assetScope: "total",
-        liabilityScope: "total",
+        netWorthScope: "total",
         locale: "en-US",
       },
     });
@@ -124,16 +120,14 @@ describe("loadHistoryPageData", () => {
           income: [{ value: "total", label: "Total", kind: "total" }],
           expenses: [{ value: "total", label: "Total", kind: "total" }],
           gainsLosses: [{ value: "total", label: "Total", kind: "total" }],
-          assets: [{ value: "total", label: "Total", kind: "total" }],
-          liabilities: [{ value: "total", label: "Total", kind: "total" }],
+          netWorth: [{ value: "total", label: "Total", kind: "total" }],
         },
         scopeSelection: {
           cashFlow: "total",
           income: "total",
           expenses: "total",
           gainsLosses: "total",
-          assets: "total",
-          liabilities: "total",
+          netWorth: "total",
         },
       },
     });
@@ -162,8 +156,7 @@ describe("loadHistoryPageData", () => {
         incomeScope: "total",
         expenseScope: "total",
         gainLossScope: "explicit-account:cash",
-        assetScope: "total",
-        liabilityScope: "total",
+        netWorthScope: "total",
       });
       expect(result.history.scopeSelection.gainsLosses).toBe(scope);
       expect(getGainLossEquityAccountId).not.toHaveBeenCalled();

@@ -39,6 +39,7 @@ const tx = vi.hoisted(() => ({
     findMany: vi.fn(),
     deleteMany: vi.fn(),
   },
+  authSubjectRevocation: { createMany: vi.fn() },
   $executeRaw: vi.fn(),
   $queryRaw: vi.fn(),
 }));

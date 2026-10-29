@@ -143,7 +143,7 @@ test("Report moves overdrafts and overpayments between allocation sides and pres
   ).toBeVisible();
 });
 
-test("History retains accounts on either side across zero crossings in monthly and yearly views", async ({
+test("History migrates legacy account links to signed Net Worth history in monthly and yearly views", async ({
   page,
 }) => {
   for (const [metric, scopeKey, accountId, accountName] of [
@@ -165,11 +165,39 @@ test("History retains accounts on either side across zero crossings in monthly a
       await expect(
         page.getByText("Double-click a period to open ledger."),
       ).toBeVisible();
-      expect(new URL(page.url()).searchParams.get(scopeKey)).toBe(
+      expect(new URL(page.url()).searchParams.get("metric")).toBe("netWorth");
+      expect(new URL(page.url()).searchParams.get(scopeKey)).toBeNull();
+      expect(new URL(page.url()).searchParams.get("netWorthScope")).toBe(
         `account:${accountId}`,
+      );
+      await page.reload();
+      await expect(page.getByRole("textbox", { name: "View" })).toHaveValue(
+        accountName,
       );
     }
   }
+});
+
+test("History discards inactive legacy scopes and preserves aggregate links", async ({
+  page,
+}) => {
+  await page.goto(
+    `/${seeded.accountBookId}/history?metric=assets&assetScope=total&liabilityScope=account:${cardId}`,
+  );
+  await expect(page.getByRole("textbox", { name: "View" })).toHaveValue(
+    "Assets",
+  );
+  expect(new URL(page.url()).searchParams.get("metric")).toBe("assets");
+  expect(new URL(page.url()).searchParams.has("assetScope")).toBe(false);
+  expect(new URL(page.url()).searchParams.has("liabilityScope")).toBe(false);
+  await page.goto(
+    `/${seeded.accountBookId}/history?metric=expenses&liabilityScope=account:${cardId}`,
+  );
+  await expect(page.getByRole("textbox", { name: "View" })).toHaveValue(
+    "Expenses",
+  );
+  expect(new URL(page.url()).searchParams.get("metric")).toBe("expenses");
+  expect(new URL(page.url()).searchParams.has("liabilityScope")).toBe(false);
 });
 
 test("Report excludes zero balances and shows the correct side at each period end", async ({

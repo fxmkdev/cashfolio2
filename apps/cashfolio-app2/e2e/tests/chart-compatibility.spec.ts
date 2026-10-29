@@ -95,6 +95,9 @@ for (const colorScheme of ["light", "dark"] as const) {
         await expect(
           page.locator(".ag-charts-wrapper canvas").first(),
         ).toBeVisible();
+        await expect(page.getByRole("list", { name: "Legend" })).toHaveCount(
+          metric === "netWorth" ? 0 : 1,
+        );
         // AG Charts draws the series and legend in canvas; the range toolbar is DOM.
         const rangeButton = page
           .locator(

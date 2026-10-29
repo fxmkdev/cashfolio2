@@ -87,8 +87,30 @@ model User {
 
   deletionPending Boolean @default(false)
 
+  authSessions AuthSession[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model AuthSession {
+  id            String   @id
+  tokenHash     String   @unique
+  encryptedData String
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+  idleExpiresAt DateTime
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([idleExpiresAt])
+}
+
+model AuthSubjectRevocation {
+  subjectHash String   @id
+  revokedAt   DateTime @default(now())
 }
 
 model UserAccountBookLink {

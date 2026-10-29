@@ -1,4 +1,5 @@
-import { http, HttpResponse } from "msw";
+import { HttpNetworkFrame } from "msw/experimental";
+import { http, HttpResponse } from "msw/http";
 import { setupServer } from "msw/node";
 import { getE2ESecurityPrice } from "./security-prices";
 
@@ -114,8 +115,10 @@ export function ensureE2EValuationProviderMocksEnabled(): void {
   }
 
   e2eValuationProviderServer.listen({
-    onUnhandledRequest(request) {
-      enforceHandledValuationProviderRequests(request);
+    onUnhandledFrame({ frame }) {
+      if (frame instanceof HttpNetworkFrame) {
+        enforceHandledValuationProviderRequests(frame.data.request);
+      }
     },
   });
   hasStartedE2EValuationProviderMocks = true;

@@ -8,6 +8,72 @@ Related docs:
 - [Routing](routing.md)
 - [Account list valuation and reference balances](valuation-reference-balances.md)
 
+## Authentication sessions
+
+Production authentication uses PostgreSQL-backed sessions, independent of Redis.
+The `__Host-cashfolio-session` cookie contains a random 256-bit bearer and uses
+Secure, HttpOnly, SameSite=Lax, and Path=/. Only its SHA-256 hash is stored in
+`AuthSession`; Logto state and credentials are encrypted with `SESSION_SECRET`.
+Legacy `logtoCookies` values are never accepted as authentication credentials.
+
+Sign-in creates ten-minute anonymous state. The SDK validates callback state,
+PKCE, and the signed ID token before the callback creates/finds the application
+user and rotates the bearer into a new authenticated session. Application
+requests look up existing users rather than recreating missing records. The
+existing explicitly enabled E2E bypass retains its test-user provisioning path.
+
+Callback provisioning and deletion reservation share a PostgreSQL advisory lock
+per hashed subject. Reservation writes an `AuthSubjectRevocation` marker after
+authorization and final-admin checks, in the same transaction as the pending
+flag. Callbacks check that durable marker before an atomic conflict-safe user
+insert (`createMany` with `skipDuplicates`). A callback with an already
+exchanged code cannot recreate a deleted user even when its anonymous session
+survives the user/session cascade. Different first-time sessions can provision
+the same subject without retrying consumed authorization codes.
+
+Every authenticated lookup checks the session's fourteen-day absolute deadline,
+twenty-four-hour idle deadline, and owning user. Successful requests advance
+only the idle deadline, bounded by the original absolute deadline. Expired ID
+tokens force the SDK to refresh rather than reuse cached access tokens; ordinary
+access requires fresh, unexpired ID claims and a usable access token. Invalid
+refresh credentials revoke the session. Provider outages fail closed with a
+retryable 503, and database failures never fall back to cookies or Redis.
+
+If exchange rotates a refresh credential before a temporary JWKS failure, the
+transaction preserves only that replacement refresh token alongside the previous
+ID token and removes cached access tokens. It commits before the caller receives
+503, without extending either deadline. Unverified replacement ID/access tokens
+are never stored or used for access. The next request must refresh and verify
+again. Definitive token-validation failures still revoke the session. Successful
+verified credentials commit before downstream Account API work, so a later
+network failure cannot roll them back. The locked authentication phase captures
+the access-token string before saving credentials; only that string and verified
+context leave the transaction. Downstream HTTP work cannot call the SDK or
+refresh after lock release. If the captured token expires during commit, the
+upstream response follows the existing API error handling; a later application
+request can refresh under the lock. Deletion-only sessions carry no access
+token. Database failure after token consumption cannot guarantee durable
+recovery and may require a fresh sign-in.
+
+SDK refresh and persistence run under a transaction-scoped PostgreSQL advisory
+lock per bearer hash, shared across Machines. Conditional updates cannot
+recreate deleted sessions or renew expired ones. These transactions are not
+retried, because an external refresh may already have consumed a rotating token.
+SDK requests have five-second timeouts; transactions have a thirty-second
+timeout and ten-second lock timeout. Logout commits local revocation before
+clearing the cookie or attempting remote sign-out. Database revocation failure
+preserves the cookie for retry; provider failure after revocation cannot undo
+local logout.
+
+`deletionPending` immediately blocks ordinary access through every session. Only
+deletion preview/retry helpers pass `allowDeletionPending: true`; they use the
+still-valid server session as a deletion-only credential even if Logto cleanup
+has already removed the identity. This path does not require provider refresh,
+so partial cleanup remains retryable. Session absolute/idle deadlines still
+apply. Successful user deletion removes all sessions through the user FK.
+Sign-in redirects a still-valid pending-deletion session back to the deletion
+page, preserving its retry capability when an ordinary route triggers sign-in.
+
 ## Server Function Pattern
 
 Server production modules may depend on shared contracts and logic, but must not
@@ -47,6 +113,17 @@ Reconciliation calculation inputs and callbacks stay in server modules.
   balances, and book start-date constraints) remain in domain operations.
 - Account-book mutations should use `src/server/mutation-guard.server.ts` to
   enforce same-origin and account-book authorization consistently.
+
+## Native Collection APIs
+
+Server-only code runs on Node 26 and may use `Map.getOrInsertComputed()` to
+initialize arrays, sets, or nested maps lazily when grouping values. Keep
+read-only fallback lookups non-mutating and preserve existing insertion order
+and deduplication behavior.
+
+The app's `ESNext.Collection` TypeScript library provides these declarations; it
+does not polyfill the APIs or establish browser support. Client and shared code
+must continue to respect the supported browser baseline.
 
 ## Core Modules
 
@@ -260,8 +337,8 @@ namespaces and preserves global valuation caches.
   - Cleanup hint (never used to determine cache validity):
     `period:base:generation:v1:{PERIOD_BASE_CACHE_ENV}:{accountBookId}`
 - History metrics entry:
-  `period:history:metrics:v10:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
-- Base-data v10 and History metrics v10 store monetary values as tagged exact
+  `period:history:metrics:v11:{PERIOD_BASE_CACHE_ENV}:{accountBookId}:{generation}:{periodCacheKey}:{scopeKey}`
+- Base-data v10 and History metrics v11 store monetary values as tagged exact
   decimal strings through `src/server/money-cache-codec.ts`
   (`{ __cashfolioDecimal: "..." }`). Dates retain their existing
   `{ __cashfolioDateMs: milliseconds }` representation. Reads reconstruct
@@ -508,7 +585,7 @@ different month or year. Calculated-event and execution-residual links retain
 the real account's ledger and period, or Transactions for virtual accounts.
 
 Base-data v10 adds originating-account IDs and recorded booking descriptions.
-History metrics v10 carries class/account scopes and explicit account metadata;
+History metrics v11 carries class/account scopes and explicit account metadata;
 older hierarchy payloads are not reused. Classification edits already advance
 `AccountBook.periodCacheRevision` transactionally, invalidating both cache
 families for all periods. No changes to provider caches or FIFO keys are needed.
@@ -844,11 +921,15 @@ allocation rounding and hidden-small-balance discrepancy indicators remain
 applicable.
 
 History applies classification independently at every month/year endpoint and
-its opening baseline. Account/group scopes contain only that metric's
-contribution; a selected account contributes zero while on the opposite side.
-Scope options remain the union across period points. History metrics v10
-prevents reuse of results computed with permanent asset/liability
-classification; base-data v10 and valuation caches remain compatible.
+its opening baseline. Assets and Liabilities expose aggregate totals only. Net
+Worth supports account/group scopes using signed reference-currency balances,
+including the opening baseline; group scopes sum all descendant accounts before
+rounding. The complete real Balance Account hierarchy is loaded once per
+request, including archived accounts, zero balances, and empty Balance Account
+groups. Virtual transfer-clearing scopes are merged across period points.
+Unavailable valuations remain omitted from amounts without removing real scope
+options. History metrics v11 replaces asset/liability scope metadata with Net
+Worth scope metadata; base-data v10 and valuation caches remain compatible.
 
 ### Unified account management queries
 

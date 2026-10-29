@@ -44,6 +44,47 @@ describe("isHistoryMetric", () => {
 });
 
 describe("parseHistorySearch", () => {
+  test.each([
+    ["assets", "assetScope"],
+    ["liabilities", "liabilityScope"],
+  ])("moves a legacy %s selection to Net Worth", (metric, key) => {
+    expect(
+      parseHistorySearch({ metric, [key]: "account:bank", mode: "year" }),
+    ).toEqual({
+      metric: "netWorth",
+      netWorthScope: "account:bank",
+      mode: "year",
+    });
+    expect(parseHistorySearch({ metric, [key]: "group:banking" })).toEqual({
+      metric: "netWorth",
+      netWorthScope: "group:banking",
+    });
+    expect(
+      parseHistorySearch({
+        metric,
+        [key]: "group:banking",
+        netWorthScope: "account:other",
+      }),
+    ).toEqual({
+      metric: "netWorth",
+      netWorthScope: "account:other",
+    });
+    expect(parseHistorySearch({ metric, [key]: "total" })).toEqual({ metric });
+    expect(parseHistorySearch({ metric, [key]: "bad" })).toEqual({
+      metric: "netWorth",
+      netWorthScope: undefined,
+    });
+  });
+
+  test("discards inactive legacy scopes without changing the selected metric", () => {
+    expect(
+      parseHistorySearch({
+        metric: "income",
+        assetScope: "account:bank",
+        liabilityScope: "group:cards",
+      }),
+    ).toEqual({ metric: "income" });
+  });
   test("keeps validated search shape minimal when keys are absent", () => {
     const result = parseHistorySearch({ mode: "month" });
     expect(result).toEqual({ mode: "month" });
@@ -52,8 +93,7 @@ describe("parseHistorySearch", () => {
     expect("incomeScope" in result).toBe(false);
     expect("expenseScope" in result).toBe(false);
     expect("gainLossScope" in result).toBe(false);
-    expect("assetScope" in result).toBe(false);
-    expect("liabilityScope" in result).toBe(false);
+    expect("netWorthScope" in result).toBe(false);
   });
 
   test("keeps valid mode values", () => {
@@ -104,13 +144,13 @@ describe("parseHistorySearch", () => {
     expect(parseHistorySearch({ expenseScope: "account:a-1" })).toEqual({
       expenseScope: "account:a-1",
     });
-    expect(parseHistorySearch({ assetScope: "group:assets" })).toEqual({
-      assetScope: "group:assets",
+    expect(parseHistorySearch({ netWorthScope: "group:assets" })).toEqual({
+      netWorthScope: "group:assets",
     });
     expect(
-      parseHistorySearch({ liabilityScope: "account:liability-1" }),
+      parseHistorySearch({ netWorthScope: "account:liability-1" }),
     ).toEqual({
-      liabilityScope: "account:liability-1",
+      netWorthScope: "account:liability-1",
     });
     expect(parseHistorySearch({ gainLossScope: "unit-type:fx" })).toEqual({
       gainLossScope: "unit-type:fx",
@@ -155,11 +195,11 @@ describe("parseHistorySearch", () => {
     expect(parseHistorySearch({ expenseScope: "invalid" })).toEqual({
       expenseScope: undefined,
     });
-    expect(parseHistorySearch({ assetScope: "account:" })).toEqual({
-      assetScope: undefined,
+    expect(parseHistorySearch({ netWorthScope: "account:" })).toEqual({
+      netWorthScope: undefined,
     });
-    expect(parseHistorySearch({ liabilityScope: "wat" })).toEqual({
-      liabilityScope: undefined,
+    expect(parseHistorySearch({ netWorthScope: "wat" })).toEqual({
+      netWorthScope: undefined,
     });
     expect(parseHistorySearch({ gainLossScope: "unit:" })).toEqual({
       gainLossScope: undefined,
@@ -215,14 +255,14 @@ describe("getHistoryScopeForMetric", () => {
     ).toBe("unit-type:fx");
     expect(
       getHistoryScopeForMetric({
-        metric: "assets",
-        search: { assetScope: "group:asset-group" },
+        metric: "netWorth",
+        search: { netWorthScope: "group:asset-group" },
       }),
     ).toBe("group:asset-group");
     expect(
       getHistoryScopeForMetric({
-        metric: "liabilities",
-        search: { liabilityScope: "account:liability-1" },
+        metric: "netWorth",
+        search: { netWorthScope: "account:liability-1" },
       }),
     ).toBe("account:liability-1");
   });
@@ -243,8 +283,8 @@ describe("getHistoryScopedMetric", () => {
     expect(getHistoryScopedMetric("income")).toBe("income");
     expect(getHistoryScopedMetric("expenses")).toBe("expenses");
     expect(getHistoryScopedMetric("gainsLosses")).toBe("gainsLosses");
-    expect(getHistoryScopedMetric("assets")).toBe("assets");
-    expect(getHistoryScopedMetric("liabilities")).toBe("liabilities");
-    expect(getHistoryScopedMetric("netWorth")).toBeUndefined();
+    expect(getHistoryScopedMetric("assets")).toBeUndefined();
+    expect(getHistoryScopedMetric("liabilities")).toBeUndefined();
+    expect(getHistoryScopedMetric("netWorth")).toBe("netWorth");
   });
 });

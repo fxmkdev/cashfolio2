@@ -1,5 +1,40 @@
 # Deployment
 
+## Session security cutover
+
+The `20261027120000_add_auth_sessions` migration adds server-side authentication
+storage without changing existing financial data. Apply it before replacing app
+Machines. New code ignores legacy encrypted `logtoCookies`; everyone must sign
+in again once after this deployment. No cookie/session migration is supported.
+
+Finish replacing **all** old Machines before considering the cutover complete:
+old code can still accept legacy cookies during a rolling deployment. Do not
+roll back to a version that accepts legacy cookies. `SESSION_SECRET` must remain
+configured and is used to encrypt database-held provider credentials. Rotating
+it makes existing session payloads unreadable and requires another sign-in.
+
+Verify sign-in, callback token rotation, copied-cookie rejection after logout,
+and deletion retries in preview. Normal sessions have a fourteen-day absolute
+lifetime and twenty-four-hour idle timeout; pending sign-ins expire after ten
+minutes. PostgreSQL availability is required for authenticated access. Redis
+remains optional for valuation caching and is not an authentication dependency.
+
+The follow-up `20261028193000_add_auth_subject_revocations` migration backfills
+permanent hashed markers for existing pending deletions. Callback provisioning
+and deletion reservation must both run the new subject guard on every Machine;
+older instances do not write markers. Drain authentication/deletion requests
+during this cutover, replace all old instances, then discard outstanding
+anonymous sign-ins before resuming traffic:
+
+```sql
+DELETE FROM "AuthSession" WHERE "userId" IS NULL;
+```
+
+This prevents pending callbacks from spanning a deletion performed by old code.
+Users with an interrupted sign-in can restart it; active authenticated sessions
+keep their existing deadlines. Do not remove the revocation markers when
+cleaning up expired sessions or deleting users.
+
 `cashfolio-app2` builds a TanStack Start production runtime with Nitro and runs
 the generated Node server from `.output/server/index.mjs`.
 
@@ -15,13 +50,11 @@ setting flags cannot activate synthetic authentication or provider mocks in a
 normal build. The startup guard runs synchronously before the Node listener. No
 database migration or change to the normal start command is required.
 
-Normal builds emit server-only `build-security.json` module metadata. Docker
-runs `check:build-security` to reject E2E implementations and MSW in the output.
-The dedicated build-security CI job additionally launches both artifacts to
-verify runtime guards and anonymous authentication. Preview and automatic
-staging deployments wait for that job; manual image deployments retain the
-Docker build exclusion check. See
-[Testing](testing.md#built-artifact-security-checks).
+Docker runs `test:build-boundary` after building the normal artifact. It
+verifies that enabling both E2E flags causes the compiled server to reject
+startup. The existing image-build dependency gates preview and staging
+deployments. Unit tests cover configuration cases; the E2E suite covers
+test-build behavior. See [Testing](testing.md#deployment-build-smoke-test).
 
 ## Nitro version pin
 
@@ -47,6 +80,17 @@ pnpm view nitro@3.0.0 peerDependencies --json
 The pinned beta uses `ocache` 0.1. Newer stable H3 releases require `ocache`
 0.3, so `pnpm-workspace.yaml` pins `nitro>h3` to the patched `2.0.1-rc.20`
 release candidate. Revisit this scoped override together with the Nitro pin.
+
+## MSW runtime assets
+
+Nitro traces the full `@mswjs/interceptors` package through
+`traceDeps: ["@mswjs/interceptors*"]` in `vite.config.ts`. MSW 3's Node
+interceptors load `llhttp/llhttp.wasm` relative to their module at runtime;
+bundling the JavaScript alone relocates that lookup and omits the binary.
+Tracing preserves the package layout and includes its WASM asset in `.output`,
+so the built E2E server can initialize provider mocks without the workspace
+installation. Keep this rule when updating MSW or Nitro, and verify built-server
+E2E startup before removing it.
 
 ## Fly release migrations
 
@@ -139,7 +183,7 @@ approved target, staging-only role, tester access, and enablement procedure.
 ## Provider usage cleanup
 
 `pnpm --filter cashfolio-app2 build:provider-usage-cleanup` builds the
-independent Node 24 payload at `dist/provider-usage-cleanup/cleanup.mjs`. Docker
+independent Node 26 payload at `dist/provider-usage-cleanup/cleanup.mjs`. Docker
 copies the whole directory, including query compiler chunks, following the
 staging-seed packaging pattern. The command requires only the app's
 `DATABASE_URL`, creates its own Prisma client, and disconnects it on success or
@@ -164,7 +208,7 @@ environment without cancelling active cleanup. The workflow uses the existing
 `FLY_PRIMARY_REGION` variables, and `FLY_API_TOKEN` secret. No database
 connection string is copied into GitHub Actions.
 
-The Node 24 runner `scripts/run-provider-usage-cleanup.ts` resolves the
+The Node 26 runner `scripts/run-provider-usage-cleanup.ts` resolves the
 immutable image digest from the deployed `app` process Machines. Mixed web
 images fail clearly, so rerun after deployment finishes. It uses the Fly
 Machines API to launch a temporary Machine in that app, inheriting the app's
@@ -221,8 +265,8 @@ existing PRs need to incorporate the updated workflows first.
 
 ## Compiler and package-manager installation
 
-Docker keeps Node 24 and Prisma CLI/client/adapter 7.x. The build stage follows
-the workspace's integrity-qualified pnpm 12.11.1 packageManager pin; the
+Docker keeps Node 26 and Prisma CLI/client/adapter 7.x. The build stage follows
+the workspace's integrity-qualified pnpm 12.16.1 packageManager pin; the
 separate migration-tools stage explicitly activates the same version. Filtered
 frozen installation must retain TypeScript 7's Linux platform package and
 TypeScript 6's compiler API alias. Preserve the minimal release-command payload
@@ -232,6 +276,6 @@ workspace so the same release-age and patched compatible security overrides
 govern that install. Audit this payload separately from the app's lockfile.
 
 Docker pins Corepack 0.36.0, the eligible stable bootstrap checked during the
-migration, rather than downloading an unreviewed latest release. Its Node 24
-requirement is satisfied by the existing 24.21.0 image pin. Review Corepack's
+migration, rather than downloading an unreviewed latest release. Its runtime
+requirement is satisfied by the Node 26.13.0 image pin. Review Corepack's
 publication age and runtime compatibility when changing this bootstrap pin.

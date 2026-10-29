@@ -13,7 +13,7 @@ file and the linked docs are for `apps/cashfolio-app2`.
 ## Repository-wide Guidelines
 
 - Use `pnpm` as package manager.
-- Use Node 24 for local development, CI, and application runtime.
+- Use Node 26 for local development, CI, and application runtime.
 - Always author new handwritten application code, tests, scripts, and tooling
   (including custom ESLint rules) in TypeScript, and include them in the owning
   package's typecheck. Existing JavaScript files can be migrated separately;
@@ -41,8 +41,8 @@ file and the linked docs are for `apps/cashfolio-app2`.
   the branch base.
 - After you address a pull request review comment, resolve that conversation in
   the PR.
-- Keep `@types/node` aligned with the current runtime major (Node 24). Do not
-  upgrade to Node 25+ typings until the runtime migration is planned.
+- Keep `@types/node` aligned with the current runtime major (Node 26). Do not
+  upgrade to Node 27+ typings until the runtime migration is planned.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution guidelines.
 
