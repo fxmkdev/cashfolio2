@@ -15,7 +15,11 @@ vi.mock("../auth/functions.server", () => ({
   ensureAuthenticated: vi.fn(),
 }));
 
-import { getOrCreateUser, ensureUserHasRole } from "./functions.server";
+import {
+  getOrCreateUser,
+  ensureUser,
+  ensureUserHasRole,
+} from "./functions.server";
 import { ensureAuthenticated } from "../auth/functions.server";
 import { UserRole } from "../.prisma-client/enums";
 
@@ -92,7 +96,7 @@ describe("Admin authorization", () => {
     "checks deletion pending state (%s)",
     async (deletionPending) => {
       vi.mocked(ensureAuthenticated).mockResolvedValue(userContext);
-      prisma.user.upsert.mockResolvedValue({
+      prisma.user.findUnique.mockResolvedValue({
         ...user,
         roles: [UserRole.ADMIN],
         deletionPending,
@@ -108,4 +112,14 @@ describe("Admin authorization", () => {
       }
     },
   );
+});
+
+describe("ordinary user lookup", () => {
+  it("does not recreate a deleted user from an existing authenticated context", async () => {
+    vi.clearAllMocks();
+    vi.mocked(ensureAuthenticated).mockResolvedValue(userContext);
+    prisma.user.findUnique.mockResolvedValue(null);
+    await expect(ensureUser()).rejects.toMatchObject({ status: 403 });
+    expect(prisma.user.upsert).not.toHaveBeenCalled();
+  });
 });

@@ -17,6 +17,7 @@ const tx = vi.hoisted(() => ({
     findMany: vi.fn(),
     deleteMany: vi.fn(),
   },
+  authSubjectRevocation: { createMany: vi.fn() },
   $executeRaw: vi.fn(),
   $queryRaw: vi.fn(),
 }));
@@ -162,6 +163,19 @@ describe("user deletion", () => {
     expect(await response.text()).toContain("Appoint another Admin");
     expect(deleteLogtoUser).not.toHaveBeenCalled();
     expect(destroyLogtoSession).not.toHaveBeenCalled();
+    expect(tx.authSubjectRevocation.createMany).not.toHaveBeenCalled();
+  });
+
+  it("reserves a hashed subject even when the application User is already absent", async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+    await deleteAuthenticatedUser();
+    expect(tx.authSubjectRevocation.createMany).toHaveBeenCalledWith({
+      data: [{ subjectHash: expect.stringMatching(/^[a-f0-9]{64}$/) }],
+      skipDuplicates: true,
+    });
+    expect(
+      tx.authSubjectRevocation.createMany.mock.invocationCallOrder[0],
+    ).toBeLessThan(deleteLogtoUser.mock.invocationCallOrder[0]);
   });
 
   it("plans last-linked account books for deletion and shared books for unlinking", () => {

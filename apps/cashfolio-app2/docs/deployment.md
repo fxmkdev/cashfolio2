@@ -1,5 +1,40 @@
 # Deployment
 
+## Session security cutover
+
+The `20261027120000_add_auth_sessions` migration adds server-side authentication
+storage without changing existing financial data. Apply it before replacing app
+Machines. New code ignores legacy encrypted `logtoCookies`; everyone must sign
+in again once after this deployment. No cookie/session migration is supported.
+
+Finish replacing **all** old Machines before considering the cutover complete:
+old code can still accept legacy cookies during a rolling deployment. Do not
+roll back to a version that accepts legacy cookies. `SESSION_SECRET` must remain
+configured and is used to encrypt database-held provider credentials. Rotating
+it makes existing session payloads unreadable and requires another sign-in.
+
+Verify sign-in, callback token rotation, copied-cookie rejection after logout,
+and deletion retries in preview. Normal sessions have a fourteen-day absolute
+lifetime and twenty-four-hour idle timeout; pending sign-ins expire after ten
+minutes. PostgreSQL availability is required for authenticated access. Redis
+remains optional for valuation caching and is not an authentication dependency.
+
+The follow-up `20261028193000_add_auth_subject_revocations` migration backfills
+permanent hashed markers for existing pending deletions. Callback provisioning
+and deletion reservation must both run the new subject guard on every Machine;
+older instances do not write markers. Drain authentication/deletion requests
+during this cutover, replace all old instances, then discard outstanding
+anonymous sign-ins before resuming traffic:
+
+```sql
+DELETE FROM "AuthSession" WHERE "userId" IS NULL;
+```
+
+This prevents pending callbacks from spanning a deletion performed by old code.
+Users with an interrupted sign-in can restart it; active authenticated sessions
+keep their existing deadlines. Do not remove the revocation markers when
+cleaning up expired sessions or deleting users.
+
 `cashfolio-app2` builds a TanStack Start production runtime with Nitro and runs
 the generated Node server from `.output/server/index.mjs`.
 

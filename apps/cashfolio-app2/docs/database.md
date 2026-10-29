@@ -68,6 +68,21 @@ paths are relative to that app directory.
   `accountBookLinks`, roles, and timestamps
 - `UserAccountBookLink` — composite key `(userId, accountBookId)`; grants a user
   access to an account book
+- `AuthSession` — a SHA-256 bearer-token hash, encrypted Logto storage, absolute
+  and idle expiry timestamps, and an optional owning user. Anonymous OIDC state
+  expires after ten minutes. Authenticated sessions expire after fourteen days
+  or twenty-four hours of inactivity. Deleting the user cascades to all
+  sessions. The cookie bearer and unencrypted provider credentials are never
+  stored in database rows. Expired rows are removed in batches of at most 100
+  when a new session is created; indexed expiry checks deny access independently
+  of cleanup.
+- `AuthSubjectRevocation` — permanent SHA-256 subject hashes and revocation
+  timestamps, independent of `User` and its session cascade. Deletion
+  reservation writes the marker atomically with `deletionPending`, including for
+  Logto-only identities. The migration backfills existing pending deletions.
+  Markers survive cleanup and retries; they are not automatically expired or
+  removed by user deletion. No raw external ID or provider credentials are
+  retained in a marker.
 
 ## Enums
 

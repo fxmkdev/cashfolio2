@@ -67,7 +67,7 @@ async function getUserAccountBookLinks(externalId: string) {
 }
 
 export async function getUserDeletionPreview(): Promise<UserDeletionPreview> {
-  const context = await ensureAuthenticated();
+  const context = await ensureAuthenticated({ allowDeletionPending: true });
   const externalId = getAuthenticatedExternalId(context);
   const user = await getUserAccountBookLinks(externalId);
   const plan = planUserDeletionFromLinks(user?.accountBookLinks ?? []);
@@ -141,7 +141,7 @@ export async function deleteUserData(args: {
 }
 
 export async function deleteAuthenticatedUser(): Promise<void> {
-  const context = await ensureAuthenticated();
+  const context = await ensureAuthenticated({ allowDeletionPending: true });
   await deleteUserData({
     externalId: getAuthenticatedExternalId(context),
   });
