@@ -249,6 +249,10 @@ Unmatched provider requests produce a local error response, while unrelated HTTP
 requests and WebSocket connections retain bypass behavior. Initialization
 remains synchronous, E2E-only, and idempotent, with process-exit cleanup.
 
+Nitro traces the full `@mswjs/interceptors` package to preserve its relative
+`llhttp/llhttp.wasm` asset in the standalone server output. See the app's
+[runtime asset notes](../apps/cashfolio-app2/docs/deployment.md#msw-runtime-assets).
+
 Node 26, the TypeScript compatibility alias, package-manager policies, and the
 coverage baseline remain unchanged. Focused regression tests exercise actual
 HTTP interception, deterministic provider responses, no-data cases, unmatched

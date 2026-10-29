@@ -24,7 +24,13 @@ if (baseUrl) {
 }
 
 export default defineConfig({
-  plugins: [tanstackStart(), nitro()],
+  plugins: [
+    tanstackStart(),
+    nitro({
+      // Keep MSW's parser WASM beside its interceptor modules at runtime.
+      traceDeps: ["@mswjs/interceptors*"],
+    }),
+  ],
   build: {
     rolldownOptions: {
       onLog(level, log, defaultHandler) {
