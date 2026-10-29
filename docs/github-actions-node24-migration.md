@@ -40,7 +40,7 @@ Resolved since #104 was opened:
 - `pnpm/action-setup` was upgraded from `v4` to `v6`; `v6` declares
   `runs.using: node24` and still reads the root `packageManager` field
 - The previous `fxmkdev/webplatform` setup/version dependency was replaced by
-  local workflows/actions that use this repository's Node 24 configuration
+  local workflows/actions that use this repository's Node configuration
 - `neondatabase/reset-branch-action` is no longer used by this repository's
   workflows, so it is no longer a migration blocker
 

@@ -2,9 +2,9 @@
 
 The October 2026 refresh updates stable releases within the existing major
 versions, plus Logto 4, Chromatic 18, and dotenv 18. Node runtime and typings
-stay on 24; pnpm is now on stable 12.16.1. Package families such as Mantine,
-React, Prisma, Storybook, AG Grid, AG Charts, and Vitest must be updated
-together.
+now use 26 following the runtime migration; pnpm stays on stable 12.16.1.
+Package families such as Mantine, React, Prisma, Storybook, AG Grid, AG Charts,
+and Vitest must be updated together.
 
 The refreshed manifest versions are:
 
@@ -25,7 +25,7 @@ The refreshed manifest versions are:
 | ESLint / typescript-eslint / utils       | 10.13.0 / 8.72.1 / 8.72.1 |
 | Tabler React icons                       | 3.50.0                    |
 | Redis / PostgreSQL driver                | 6.3.0 / 8.23.1            |
-| Node runtime / typings                   | 24.21.0 / 24.19.1         |
+| Node runtime / typings                   | 26.13.0 / 26.6.5          |
 | pnpm / Prettier                          | 12.16.1 / 3.9.9           |
 
 MSW 3 and Prisma prereleases are deferred to separate migrations. Storybook uses
@@ -331,3 +331,25 @@ Both workspace and separate migration-payload audits report zero findings.
 Outdated checks still list intentionally excluded newer Node/typing, MSW, Prisma
 prerelease, and Nitro beta lines, plus unrelated Chromatic updates; these are
 not refreshed by this migration.
+
+## Node 26 migration
+
+The workspace now uses Node 26 for local development, CI, CLI tooling, and
+application runtime. The managed runtime and Docker image start at Node 26.13.0
+LTS; package engines require `>=26 <27`. App and CLI Node typings start at
+26.6.5, with the existing 24-hour release-age policy applied during resolution.
+The standalone staging-seed and provider-usage-cleanup bundles target `node26`.
+
+The pnpm 12.16.1, Corepack 0.36.0, Prisma 7.10.0, compiler, security override,
+and coverage policies are retained. Third-party GitHub Actions keep their own
+embedded runtimes; workflow shell commands use the repository's Node 26 setup.
+Earlier verification records in this document describe the runtime used at the
+time.
+
+Local verification on Node 26.13.0 / pnpm 12.16.1 passed frozen-lockfile
+installation, Prisma generation, app and CLI typechecks, all 16 CLI tests, all
+28 provider-usage-cleanup runner tests, workflow lint, and ESLint for both
+changed bundle configs. Both standalone bundles built with the `node26` target,
+and the staging-seed sample CSV command succeeded without database credentials.
+Production Docker builds, coverage, database integration, E2E, and Storybook
+verification remain assigned to CI.

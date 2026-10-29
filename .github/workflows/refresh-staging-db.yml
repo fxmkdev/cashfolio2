@@ -9,7 +9,7 @@ on:
     - cron: "30 2 * * *"
 
 env:
-  NODE_VERSION: 24
+  NODE_VERSION: 26
   FLYCTL_VERSION: 0.4.115
 
 concurrency:

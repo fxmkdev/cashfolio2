@@ -6,7 +6,7 @@ export default defineConfig({
   ssr: { target: "node", noExternal: true },
   build: {
     ssr: "src/staging-seed/cli.ts",
-    target: "node24",
+    target: "node26",
     outDir: "dist/staging-seed",
     rolldownOptions: {
       output: { entryFileNames: "seed.mjs" },
