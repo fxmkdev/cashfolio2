@@ -328,17 +328,31 @@ client.
 
 ## Temporal Browser Compatibility
 
-Run `pnpm --filter cashfolio-app2 test:temporal:browser` after installing the
-Playwright Chromium and WebKit browsers. This database-free Vitest suite covers
-shared date helper contracts and real Mantine DateInput display/submission round
-trips in UTC, Europe/Zurich, and America/Los_Angeles. Chromium checks native
-Temporal; WebKit aliases the package entry point to its forced implementation so
-Safari fallback behavior stays covered even when preview WebKit implements
-Temporal. The tests do not patch globals.
+The root `vitest.config.ts` registers focused Chromium projects for native
+Temporal and the forced polyfill in UTC, Europe/Zurich, and America/Los_Angeles.
+They cover shared date/period contracts and real Mantine DateInput
+display/submission round trips. An explicit project mode verifies which
+implementation is selected; no global objects are patched.
 
-Browser-only `*.browser.test.tsx` files are excluded from the Node unit suite.
-Compatibility tests run separately from unit coverage and Storybook, with their
-own CI job required before staging deployment. The coverage baseline is
-unchanged. Run affected Node date/period tests with `TZ=UTC`,
-`TZ=Europe/Zurich`, and `TZ=America/Los_Angeles` when investigating timezone
-behavior.
+After installing Playwright Chromium, run only these projects with:
+
+```bash
+pnpm --filter cashfolio-app2 exec vitest run --project 'temporal-*'
+```
+
+The existing Storybook CI job runs Storybook once alongside the six Temporal
+projects, sharing dependency setup, Chromium installation, and failure
+artifacts:
+
+```bash
+pnpm --filter cashfolio-app2 exec vitest run --project storybook --project 'temporal-*'
+```
+
+The project filters exclude the Node unit project. Browser-only
+`*.browser.test.tsx` files remain excluded from Node unit tests, and unit
+coverage and its baseline are unchanged. WebKit is not required; the forced
+polyfill projects exercise the Safari fallback implementation in Chromium
+without testing Safari-specific engine behavior.
+
+Run affected Node date/period tests with `TZ=UTC`, `TZ=Europe/Zurich`, and
+`TZ=America/Los_Angeles` when investigating timezone behavior.

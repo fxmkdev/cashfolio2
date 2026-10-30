@@ -2,7 +2,7 @@ import { MantineProvider } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
-import { expect, test } from "vitest";
+import { expect, inject, test } from "vitest";
 import { Temporal as FallbackTemporal } from "temporal-polyfill/implementation";
 import { Temporal } from "./temporal";
 import {
@@ -11,10 +11,16 @@ import {
   getDateInputValueFormat,
 } from "./date";
 
-test("selects native Temporal in Chromium and the forced fallback in WebKit", () => {
+declare module "vitest" {
+  interface ProvidedContext {
+    temporalMode: "native" | "polyfill";
+  }
+}
+
+test("selects the Temporal implementation specified by the project", () => {
   const native = Reflect.get(globalThis, "Temporal") as
     typeof Temporal | undefined;
-  if (navigator.userAgent.includes("Chrome")) {
+  if (inject("temporalMode") === "native") {
     expect(native).toBeDefined();
     expect(Temporal).toBe(native);
   } else {

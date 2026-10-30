@@ -37,7 +37,6 @@
     "test:provider-usage-cleanup-runner": "node --test scripts/run-provider-usage-cleanup.test.ts",
     "seed:staging": "node dist/staging-seed/seed.mjs",
     "test:staging-seed": "pnpm prisma:generate && vitest run --config vitest.staging-seed.config.ts",
-    "test:temporal:browser": "vitest run --config vitest.temporal-browser.config.ts",
     "test:staging-release": "node --test scripts/release-staging.test.mjs"
   },
   "dependencies": {
