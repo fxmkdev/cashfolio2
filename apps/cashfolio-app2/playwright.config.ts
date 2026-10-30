@@ -54,8 +54,6 @@ export default defineConfig({
       NITRO_HOST: webServerHost.replace(/^\[|\]$/g, ""),
       PORT: webServerPort,
       NITRO_PORT: webServerPort,
-      E2E_TEST_MODE: "true",
-      E2E_AUTH_BYPASS: process.env.E2E_AUTH_BYPASS ?? "true",
       E2E_AUTH_EXTERNAL_ID: process.env.E2E_AUTH_EXTERNAL_ID ?? "e2e-user",
     },
   },

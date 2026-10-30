@@ -3,12 +3,6 @@ import { getCookie } from "@tanstack/react-start/server";
 import { E2E_AUTH_EXTERNAL_ID_COOKIE } from "./auth-cookie";
 
 export function getE2EAuthenticationContext(): LogtoContext | null {
-  if (
-    process.env.E2E_TEST_MODE !== "true" ||
-    process.env.E2E_AUTH_BYPASS !== "true"
-  ) {
-    return null;
-  }
   const externalId =
     getCookie(E2E_AUTH_EXTERNAL_ID_COOKIE) ??
     process.env.E2E_AUTH_EXTERNAL_ID ??

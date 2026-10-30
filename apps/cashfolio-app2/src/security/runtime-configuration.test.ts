@@ -3,7 +3,6 @@ import { assertSafeRuntimeConfiguration } from "./runtime-configuration";
 
 const valid = {
   APP_ENVIRONMENT: "e2e",
-  E2E_TEST_MODE: "true",
   HOST: "127.0.0.1",
   BASE_URL: "http://127.0.0.1:4173",
 };
@@ -12,23 +11,18 @@ describe("runtime build boundary", () => {
   it.each([
     {},
     { APP_ENVIRONMENT: "prod" },
-    { E2E_TEST_MODE: "false", E2E_AUTH_BYPASS: "false" },
+    { APP_ENVIRONMENT: "staging" },
+    { APP_ENVIRONMENT: "preview" },
   ])("accepts normal configuration %j", (env) => {
     expect(() => assertSafeRuntimeConfiguration(false, env)).not.toThrow();
   });
-  it.each([
-    [{ E2E_TEST_MODE: "true" }, "E2E_TEST_MODE"],
-    [{ E2E_AUTH_BYPASS: "true" }, "E2E_AUTH_BYPASS"],
-    [{ E2E_TEST_MODE: "true", E2E_AUTH_BYPASS: "true" }, "E2E_TEST_MODE"],
-    [{ APP_ENVIRONMENT: "e2e" }, "APP_ENVIRONMENT"],
-  ] as const)(
-    "rejects runtime activation in normal builds: %j",
-    (env, setting) => {
-      expect(() => assertSafeRuntimeConfiguration(false, env)).toThrow(
-        `Unsafe E2E configuration: ${setting}`,
-      );
-    },
-  );
+  it("rejects the E2E environment in normal builds", () => {
+    expect(() =>
+      assertSafeRuntimeConfiguration(false, { APP_ENVIRONMENT: "e2e" }),
+    ).toThrow(
+      "Unsafe E2E configuration: APP_ENVIRONMENT=e2e requires an E2E build.",
+    );
+  });
   it.each(["127.0.0.1", "localhost", "::1"])(
     "accepts explicit loopback %s",
     (host) => {
@@ -48,14 +42,6 @@ describe("runtime build boundary", () => {
       expect(() =>
         assertSafeRuntimeConfiguration(true, { ...valid, APP_ENVIRONMENT }),
       ).toThrow("APP_ENVIRONMENT");
-    },
-  );
-  it.each([undefined, "false"])(
-    "requires provider test mode %s",
-    (E2E_TEST_MODE) => {
-      expect(() =>
-        assertSafeRuntimeConfiguration(true, { ...valid, E2E_TEST_MODE }),
-      ).toThrow("E2E_TEST_MODE");
     },
   );
   it.each([undefined, "0.0.0.0", "::", "example.com", "127.0.0.1.example.com"])(
@@ -97,12 +83,11 @@ describe("runtime build boundary", () => {
       assertSafeRuntimeConfiguration(true, { ...valid, BASE_URL }),
     ).not.toThrow("secret");
   });
-  it("does not use NODE_ENV as the E2E switch, and allows bypass to be disabled", () => {
+  it("does not use NODE_ENV as the E2E switch", () => {
     expect(() =>
       assertSafeRuntimeConfiguration(true, {
         ...valid,
         NODE_ENV: "production",
-        E2E_AUTH_BYPASS: "false",
       }),
     ).not.toThrow();
   });

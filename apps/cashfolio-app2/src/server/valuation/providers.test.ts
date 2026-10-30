@@ -290,9 +290,9 @@ describe("Valuation provider helpers", () => {
     }
   });
 
-  test("does not use a mock API key in a normal build even with E2E_TEST_MODE", async () => {
+  test("does not use a mock API key in a normal build even in the E2E environment", async () => {
     vi.stubEnv("CURRENCYLAYER_API_KEY", "");
-    vi.stubEnv("E2E_TEST_MODE", "true");
+    vi.stubEnv("APP_ENVIRONMENT", "e2e");
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {

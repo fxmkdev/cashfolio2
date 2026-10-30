@@ -120,10 +120,9 @@ describe("ordinary user lookup", () => {
     expect(prisma.user.upsert).not.toHaveBeenCalled();
   });
 
-  it("cannot enable test-user provisioning through runtime flags in a normal build", async () => {
+  it("cannot enable test-user provisioning through the E2E environment in a normal build", async () => {
     vi.clearAllMocks();
-    vi.stubEnv("E2E_TEST_MODE", "true");
-    vi.stubEnv("E2E_AUTH_BYPASS", "true");
+    vi.stubEnv("APP_ENVIRONMENT", "e2e");
     vi.mocked(ensureAuthenticated).mockResolvedValue(userContext);
     prisma.user.findUnique.mockResolvedValue(null);
     try {

@@ -44,14 +44,15 @@ Deployment images always run the ordinary `pnpm build` artifact in `.output`.
 The separate `build:e2e` command writes `.output-e2e`, which is excluded from
 Git and Docker contexts. Do not deploy or copy E2E artifacts to Fly.
 
-Normal servers refuse startup when `E2E_TEST_MODE=true`, `E2E_AUTH_BYPASS=true`,
-or `APP_ENVIRONMENT=e2e`. Remove these settings from deployment configuration;
-setting flags cannot activate synthetic authentication or provider mocks in a
-normal build. The startup guard runs synchronously before the Node listener. No
-database migration or change to the normal start command is required.
+Normal servers refuse startup when `APP_ENVIRONMENT=e2e`. E2E builds require
+that environment and explicit loopback listening and base URLs; synthetic
+authentication and provider mocks are always enabled in those builds. Runtime
+configuration cannot activate these capabilities in a normal build. The startup
+guard runs synchronously before the Node listener. No database migration or
+change to the normal start command is required.
 
 Docker runs `test:build-boundary` after building the normal artifact. It
-verifies that enabling both E2E flags causes the compiled server to reject
+verifies that setting `APP_ENVIRONMENT=e2e` causes the compiled server to reject
 startup. The existing image-build dependency gates preview and staging
 deployments. Unit tests cover configuration cases; the E2E suite covers
 test-build behavior. See [Testing](testing.md#deployment-build-smoke-test).

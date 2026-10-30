@@ -16,7 +16,6 @@ describe("E2E valuation provider interception", () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    vi.stubEnv("E2E_TEST_MODE", "true");
     vi.spyOn(console, "info").mockImplementation(() => {});
     ({ ensureE2EValuationProviderMocksEnabled: ensureMocks } =
       await import("./provider-mocks.server"));
@@ -31,17 +30,6 @@ describe("E2E valuation provider interception", () => {
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
-
-  it.each([undefined, "false"])(
-    "does not enable interception when E2E_TEST_MODE is %s",
-    (mode) => {
-      vi.stubEnv("E2E_TEST_MODE", mode);
-      const listeners = process.listeners("exit");
-      enableMocks();
-      expect(process.listeners("exit")).toEqual(listeners);
-      expect(console.info).not.toHaveBeenCalled();
-    },
-  );
 
   it("enables interception and registers cleanup only once", async () => {
     const listenerCount = process.listenerCount("exit");

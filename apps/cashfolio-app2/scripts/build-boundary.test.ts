@@ -3,16 +3,14 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
-test("the deployment server rejects E2E authentication flags at startup", () => {
+test("the deployment server rejects the E2E environment at startup", () => {
   const result = spawnSync(
     process.execPath,
     [fileURLToPath(new URL("../.output/server/index.mjs", import.meta.url))],
     {
       env: {
         NODE_ENV: "production",
-        APP_ENVIRONMENT: "prod",
-        E2E_TEST_MODE: "true",
-        E2E_AUTH_BYPASS: "true",
+        APP_ENVIRONMENT: "e2e",
         HOST: "127.0.0.1",
         NITRO_HOST: "127.0.0.1",
         PORT: "0",
@@ -33,6 +31,6 @@ test("the deployment server rejects E2E authentication flags at startup", () => 
   assert.notEqual(result.status, 0, "Server must reject this configuration");
   assert.match(
     result.stderr,
-    /Unsafe E2E configuration: E2E_TEST_MODE requires an E2E build\./,
+    /Unsafe E2E configuration: APP_ENVIRONMENT=e2e requires an E2E build\./,
   );
 });

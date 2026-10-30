@@ -20,7 +20,8 @@ Sign-in creates ten-minute anonymous state. The SDK validates callback state,
 PKCE, and the signed ID token before the callback creates/finds the application
 user and rotates the bearer into a new authenticated session. Application
 requests look up existing users rather than recreating missing records. The
-existing explicitly enabled E2E bypass retains its test-user provisioning path.
+isolated E2E build always uses synthetic authentication and test-user
+provisioning.
 
 Callback provisioning and deletion reservation share a PostgreSQL advisory lock
 per hashed subject. Reservation writes an `AuthSubjectRevocation` marker after

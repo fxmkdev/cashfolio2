@@ -20,8 +20,6 @@ import {
 
 beforeEach(() => {
   vi.resetAllMocks();
-  vi.stubEnv("E2E_AUTH_BYPASS", "false");
-  vi.stubEnv("E2E_TEST_MODE", "false");
   vi.stubEnv("E2E_AUTH_EXTERNAL_ID", "");
 });
 
@@ -58,9 +56,8 @@ describe("getAuthenticationContext", () => {
     );
   });
 
-  it("ignores a synthetic identity cookie and both runtime flags in a normal build", async () => {
-    vi.stubEnv("E2E_AUTH_BYPASS", "true");
-    vi.stubEnv("E2E_TEST_MODE", "true");
+  it("ignores a synthetic identity cookie and the E2E environment in a normal build", async () => {
+    vi.stubEnv("APP_ENVIRONMENT", "e2e");
     mocks.getCookie.mockReturnValue("admin-external-id");
     mocks.getLogtoContext.mockResolvedValue({ isAuthenticated: false });
     await expect(getAuthenticationContext()).resolves.toEqual({
@@ -70,16 +67,6 @@ describe("getAuthenticationContext", () => {
     expect(mocks.getLogtoContext).toHaveBeenCalledExactlyOnceWith({
       getAccessToken: false,
     });
-  });
-
-  it("does not bypass Logto when test mode is disabled", async () => {
-    vi.stubEnv("E2E_AUTH_BYPASS", "true");
-    mocks.getLogtoContext.mockResolvedValue({ isAuthenticated: false });
-
-    await expect(getAuthenticationContext()).resolves.toEqual({
-      isAuthenticated: false,
-    });
-    expect(mocks.getCookie).not.toHaveBeenCalled();
   });
 });
 

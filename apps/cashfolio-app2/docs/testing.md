@@ -203,16 +203,15 @@ Playwright runs `build:e2e` (`vite build --mode e2e`) and launches
 gate keeps synthetic identities, test-user provisioning, provider mocks, and
 mock API keys in `src/e2e/` out of normal builds.
 
-The test server explicitly sets `APP_ENVIRONMENT=e2e`, `E2E_TEST_MODE=true`, and
-loopback `HOST`, `NITRO_HOST`, and `BASE_URL` values. A synchronous startup
-guard rejects missing test configuration and non-loopback addresses before the
-server listens. Allowed hosts are `127.0.0.1`, `localhost`, and `::1`;
-`NITRO_HOST` takes precedence over `HOST`. Playwright never reuses an existing
-server.
+The test server explicitly sets `APP_ENVIRONMENT=e2e` and loopback `HOST`,
+`NITRO_HOST`, and `BASE_URL` values. A synchronous startup guard rejects missing
+test configuration and non-loopback addresses before the server listens. Allowed
+hosts are `127.0.0.1`, `localhost`, and `::1`; `NITRO_HOST` takes precedence
+over `HOST`. Playwright never reuses an existing server.
 
-`E2E_AUTH_BYPASS=true` enables synthetic authentication. The identity cookie
-selects the test user, falling back to `E2E_AUTH_EXTERNAL_ID` and then
-`e2e-user`. Setting bypass to `false` retains normal authentication.
+E2E builds always use synthetic authentication. The identity cookie selects the
+test user, falling back to `E2E_AUTH_EXTERNAL_ID` and then `e2e-user`. Real
+Logto authentication is exercised through normal builds.
 
 ### Valuation Provider Mocks in E2E
 
@@ -225,7 +224,7 @@ provider tests verify responses, interception, initialization, and cleanup.
 ### Deployment Build Smoke Test
 
 Docker runs `test:build-boundary` immediately after the normal build. This small
-test starts the compiled server with both E2E flags enabled and requires a
+test starts the compiled server with `APP_ENVIRONMENT=e2e` and requires a
 nonzero exit with the expected startup-guard error. It has a ten-second timeout
 and needs no database or browser. For a local investigation:
 
@@ -248,8 +247,11 @@ validation. The existing E2E suite verifies the correctly configured E2E build.
 - Each spec file seeds an isolated account-book-scoped dataset in `beforeAll()`
   for its worker-scoped user.
 - Specs that need a different authenticated user can set the e2e-only
-  `cashfolio-e2e-external-id` cookie. The auth bypass reads this cookie only in
-  an E2E build with both `E2E_TEST_MODE=true` and `E2E_AUTH_BYPASS=true`.
+  `cashfolio-e2e-external-id` cookie. Synthetic authentication reads this cookie
+  only in an E2E build.
+- Database writes require `APP_ENVIRONMENT=e2e` and an approved local/CI
+  database host and database name; declaring the environment alone does not
+  permit writes to an arbitrary database.
 - Seeding creates:
   - a user with the worker-scoped e2e external id
   - an account book and user-account-book link

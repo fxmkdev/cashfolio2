@@ -6,11 +6,7 @@ export async function ensureUser() {
   const userContext = await ensureAuthenticated();
   if (!userContext.claims?.sub)
     throw new Response("Forbidden", { status: 403 });
-  const isTestBypass =
-    __E2E_BUILD__ &&
-    process.env.E2E_TEST_MODE === "true" &&
-    process.env.E2E_AUTH_BYPASS === "true";
-  const user = isTestBypass
+  const user = __E2E_BUILD__
     ? await import("../e2e/user.server").then(({ getOrCreateUser }) =>
         getOrCreateUser(userContext),
       )

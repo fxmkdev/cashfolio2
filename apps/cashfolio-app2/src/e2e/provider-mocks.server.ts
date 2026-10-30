@@ -106,10 +106,6 @@ const e2eValuationProviderServer = setupServer(
 let hasStartedE2EValuationProviderMocks = false;
 
 export function ensureE2EValuationProviderMocksEnabled(): void {
-  if (process.env.E2E_TEST_MODE !== "true") {
-    return;
-  }
-
   if (hasStartedE2EValuationProviderMocks) {
     return;
   }
