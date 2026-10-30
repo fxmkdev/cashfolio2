@@ -1,5 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
-import { min } from "date-fns";
+import { earliestDate } from "../../shared/date";
 import type { Unit } from "../../.prisma-client/enums";
 import {
   createDateInputValueFromUtcDay,
@@ -30,7 +30,8 @@ export function createTransactionFormInitialValues(args: {
       .filter((date): date is Date => date != null) ?? [];
   const initialDate =
     initialBookingDates.length > 0
-      ? (createDateInputValueFromUtcDay(min(initialBookingDates)) ?? undefined)
+      ? (createDateInputValueFromUtcDay(earliestDate(initialBookingDates)) ??
+        undefined)
       : undefined;
 
   return {

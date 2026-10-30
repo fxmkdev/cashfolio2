@@ -10,7 +10,7 @@ import {
   isIncomeAccount,
   isOpeningBalancesAccount,
 } from "../../shared/account-utils";
-import { isSameDay } from "date-fns";
+import { isSameLocalDay } from "../../shared/date";
 import {
   DATE_COLUMN,
   FORMATTED_NUMERIC_COLUMN,
@@ -159,7 +159,10 @@ export function createEditTransactionColumnDefs(args: {
         return !isOpeningBalancesAccount(account);
       },
       cellStyle: ({ value, context }: CellClassParams) => {
-        const isStartDate = isSameDay(value as Date, context.startDate as Date);
+        const isStartDate = isSameLocalDay(
+          value as Date,
+          context.startDate as Date,
+        );
         return isStartDate
           ? { color: "var(--mantine-color-dimmed)", fontWeight: 400 }
           : { color: "var(--mantine-color-yellow-text)", fontWeight: 600 };

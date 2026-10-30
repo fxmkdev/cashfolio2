@@ -1,3 +1,5 @@
+import { Temporal } from "./temporal";
+import { fromUtcPlainDate } from "./temporal-adapters";
 import { DEFAULT_USER_LOCALE } from "@/user-locale";
 
 const PERIOD_MONTH_REGEX = /^(\d{4})-(\d{2})$/;
@@ -71,7 +73,11 @@ export function formatMonthPeriodLabel(
     month: "long",
     year: "numeric",
     timeZone: "UTC",
-  }).format(new Date(Date.UTC(year, month, 1)));
+  }).format(
+    fromUtcPlainDate(
+      Temporal.PlainDate.from({ year, month: month + 1, day: 1 }),
+    ),
+  );
 }
 
 export function parseExplicitMonthPeriod(
@@ -168,16 +174,18 @@ export function getExplicitPeriodDateRange(
   from: Date;
   toExclusive: Date;
 } {
-  if (selection.granularity === "month") {
-    return {
-      from: new Date(Date.UTC(selection.year, selection.month, 1)),
-      toExclusive: new Date(Date.UTC(selection.year, selection.month + 1, 1)),
-    };
-  }
-
+  const from = Temporal.PlainDate.from({
+    year: selection.year,
+    month: selection.granularity === "month" ? selection.month + 1 : 1,
+    day: 1,
+  });
   return {
-    from: new Date(Date.UTC(selection.year, 0, 1)),
-    toExclusive: new Date(Date.UTC(selection.year + 1, 0, 1)),
+    from: fromUtcPlainDate(from),
+    toExclusive: fromUtcPlainDate(
+      from.add(
+        selection.granularity === "month" ? { months: 1 } : { years: 1 },
+      ),
+    ),
   };
 }
 

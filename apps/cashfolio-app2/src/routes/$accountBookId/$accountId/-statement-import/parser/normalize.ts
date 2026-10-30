@@ -1,3 +1,4 @@
+import { createUtcDateFromParts } from "@/shared/date";
 import { parseUtcDayDate } from "@/shared/date";
 import {
   type StatementImportCsvAmountMapping,
@@ -192,19 +193,6 @@ function parseDateWithFormat(
   return format === "dd.MM.yyyy"
     ? createUtcDateFromParts({ year, month: second, day: first })
     : createUtcDateFromParts({ year, month: first, day: second });
-}
-
-function createUtcDateFromParts(args: {
-  year: number;
-  month: number;
-  day: number;
-}): Date | null {
-  const date = new Date(Date.UTC(args.year, args.month - 1, args.day));
-  return date.getUTCFullYear() === args.year &&
-    date.getUTCMonth() === args.month - 1 &&
-    date.getUTCDate() === args.day
-    ? date
-    : null;
 }
 
 function normalizeAmountValue(args: {

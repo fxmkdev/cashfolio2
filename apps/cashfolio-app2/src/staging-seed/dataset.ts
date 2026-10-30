@@ -1,10 +1,15 @@
 import {
+  fromUtcPlainDate,
+  toTemporalInstant,
+  toUtcPlainDate,
+} from "../shared/temporal-adapters";
+import {
   AccountType,
   AssetClass,
   EquityAccountSubtype,
   Unit,
 } from "../.prisma-client/enums";
-import { addUtcDays } from "../shared/date";
+import { addUtcDays, startOfUtcMonth } from "../shared/date";
 import {
   CHF,
   EUR,
@@ -30,15 +35,9 @@ export type {
 
 /** Interpret the deployment clock in Switzerland; persisted dates use UTC days. */
 export function getZurichToday(now = new Date()): Date {
-  const parts = new Intl.DateTimeFormat("en-CH", {
-    timeZone: "Europe/Zurich",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(now);
-  const value = (type: Intl.DateTimeFormatPartTypes) =>
-    Number(parts.find((part) => part.type === type)!.value);
-  return new Date(Date.UTC(value("year"), value("month") - 1, value("day")));
+  return fromUtcPlainDate(
+    toTemporalInstant(now).toZonedDateTimeISO("Europe/Zurich").toPlainDate(),
+  );
 }
 
 function resolveToday(today: Date | undefined): Date {
@@ -55,10 +54,7 @@ function resolveToday(today: Date | undefined): Date {
 }
 
 function threeYearsBefore(today: Date): Date {
-  const year = today.getUTCFullYear() - 3;
-  const month = today.getUTCMonth();
-  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-  return new Date(Date.UTC(year, month, Math.min(today.getUTCDate(), lastDay)));
+  return fromUtcPlainDate(toUtcPlainDate(today).subtract({ years: 3 }));
 }
 
 function edgeCases(startDate: Date, today: Date): SeedBook {
@@ -103,9 +99,7 @@ function edgeCases(startDate: Date, today: Date): SeedBook {
   opening(target, "current", "1500");
   opening(target, "eur", "500");
   opening(target, "unlisted", "10");
-  const monthStart = new Date(
-    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1),
-  );
+  const monthStart = startOfUtcMonth(today);
   post(
     target,
     addUtcDays(monthStart, -1),

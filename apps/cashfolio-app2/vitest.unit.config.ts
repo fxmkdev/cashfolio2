@@ -13,7 +13,7 @@ export default defineConfig({
     name: "unit",
     environment: "node",
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
-    exclude: ["e2e/**", "dist/**"],
+    exclude: ["e2e/**", "dist/**", "src/**/*.browser.test.tsx"],
     env: {
       DATABASE_URL:
         process.env.DATABASE_URL ??

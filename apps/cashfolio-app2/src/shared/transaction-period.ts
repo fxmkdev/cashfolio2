@@ -1,3 +1,4 @@
+import { toUtcPlainDate } from "./temporal-adapters";
 import { formatMonthPeriodValue, parseExplicitPeriodSelection } from "./period";
 
 export function getBookingPeriodValue(args: {
@@ -8,12 +9,12 @@ export function getBookingPeriodValue(args: {
     ? parseExplicitPeriodSelection(args.currentPeriodValue)
     : null;
   if (currentPeriod?.granularity === "year") {
-    return String(args.date.getUTCFullYear()).padStart(4, "0");
+    return String(toUtcPlainDate(args.date).year).padStart(4, "0");
   }
 
   return formatMonthPeriodValue(
-    args.date.getUTCFullYear(),
-    args.date.getUTCMonth(),
+    toUtcPlainDate(args.date).year,
+    toUtcPlainDate(args.date).month - 1,
   );
 }
 

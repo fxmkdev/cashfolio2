@@ -92,7 +92,9 @@ pnpm lint:workflows                           # actionlint check for GitHub work
 - Do not edit `src/routeTree.gen.ts` (generated file).
 - Use `@tabler/icons-react` for icons.
 - Use `@paralleldrive/cuid2` for unique IDs.
-- Use `date-fns` for date operations.
+- Use Temporal through `src/shared/temporal.ts` for calendar operations on the
+  server and browser. Keep `Date`/string adapters at Prisma, form, chart, and
+  transport boundaries; distinguish UTC accounting days from local picker days.
 - For server-side monetary math, use `decimal.js` to preserve precision (avoid
   native `number` arithmetic for money values).
 - Use `react-number-format` for locale-aware number inputs.

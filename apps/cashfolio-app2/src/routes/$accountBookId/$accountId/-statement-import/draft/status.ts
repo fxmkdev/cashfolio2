@@ -1,4 +1,4 @@
-import { isBefore } from "date-fns";
+import { isBeforeDate } from "@/shared/date";
 import { Unit } from "@/.prisma-client/enums";
 import type { AccountOption } from "@/shared/account-options";
 import {
@@ -71,7 +71,7 @@ export function getStatementImportDraftStatus(args: {
       return error(`Booking ${index + 1}: date must be a valid UTC day.`);
     }
     const bookingDay = startOfUtcDay(bookingDate);
-    if (isBefore(bookingDay, accountBookStartDay)) {
+    if (isBeforeDate(bookingDay, accountBookStartDay)) {
       return error(
         `Booking ${index + 1}: Date cannot be before account book start date (${accountBookStartDateLabel}).`,
       );
