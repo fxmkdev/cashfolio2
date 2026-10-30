@@ -90,7 +90,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cashfolio?schema=public
       BASE_URL: http://127.0.0.1:4173
-      E2E_AUTH_BYPASS: "true"
+      APP_ENVIRONMENT: e2e
       E2E_AUTH_EXTERNAL_ID: e2e-user
       E2E_WORKERS: "2"
       E2E_SHARD: ${{ matrix.shard_index }}/${{ matrix.shard_total }}

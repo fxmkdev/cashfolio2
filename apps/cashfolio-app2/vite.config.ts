@@ -23,12 +23,29 @@ if (baseUrl) {
   }
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  define: { __E2E_BUILD__: JSON.stringify(mode === "e2e") },
   plugins: [
     tanstackStart(),
     nitro({
-      // Keep MSW's parser WASM beside its interceptor modules at runtime.
-      traceDeps: ["@mswjs/interceptors*"],
+      // MSW 3 needs its parser WASM only in the isolated E2E artifact.
+      ...(mode === "e2e" ? { traceDeps: ["@mswjs/interceptors*"] } : {}),
+      output: { dir: mode === "e2e" ? ".output-e2e" : ".output" },
+      plugins: [
+        fileURLToPath(
+          new URL(
+            "./src/security/runtime-configuration-plugin.server.ts",
+            import.meta.url,
+          ),
+        ),
+        ...(mode === "e2e"
+          ? [
+              fileURLToPath(
+                new URL("./src/e2e/provider-plugin.server.ts", import.meta.url),
+              ),
+            ]
+          : []),
+      ],
     }),
   ],
   build: {
@@ -54,4 +71,4 @@ export default defineConfig({
   preview: {
     allowedHosts: [...previewAllowedHosts],
   },
-});
+}));

@@ -1,7 +1,7 @@
 import { HttpNetworkFrame } from "msw/experimental";
 import { http, HttpResponse } from "msw/http";
 import { setupServer } from "msw/node";
-import { getE2ESecurityPrice } from "./e2e-security-prices";
+import { getE2ESecurityPrice } from "./security-prices";
 
 const USD_TO_CURRENCY_RATE_BY_SYMBOL: Record<string, number> = {
   USD: 1,
@@ -106,10 +106,6 @@ const e2eValuationProviderServer = setupServer(
 let hasStartedE2EValuationProviderMocks = false;
 
 export function ensureE2EValuationProviderMocksEnabled(): void {
-  if (process.env.E2E_TEST_MODE !== "true") {
-    return;
-  }
-
   if (hasStartedE2EValuationProviderMocks) {
     return;
   }

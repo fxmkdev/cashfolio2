@@ -198,33 +198,43 @@ Guidelines:
 
 ### Auth in E2E
 
-E2E runs use a test-only auth bypass in `src/auth/functions.server.ts`.
+Playwright runs `build:e2e` (`vite build --mode e2e`) and launches
+`.output-e2e`. Normal builds write `.output`. The compile-time `__E2E_BUILD__`
+gate keeps synthetic identities, test-user provisioning, provider mocks, and
+mock API keys in `src/e2e/` out of normal builds.
 
-Required env vars:
+The test server explicitly sets `APP_ENVIRONMENT=e2e` and loopback `HOST`,
+`NITRO_HOST`, and `BASE_URL` values. A synchronous startup guard rejects missing
+test configuration and non-loopback addresses before the server listens. Allowed
+hosts are `127.0.0.1`, `localhost`, and `::1`; `NITRO_HOST` takes precedence
+over `HOST`. Playwright never reuses an existing server.
 
-- `E2E_TEST_MODE=true`
-- `E2E_AUTH_BYPASS=true`
-- `E2E_AUTH_EXTERNAL_ID=<fallback-external-id-used-for-seeded-user>`
-
-When bypass is disabled, app auth behavior remains unchanged.
+E2E builds always use synthetic authentication. The identity cookie selects the
+test user, falling back to `E2E_AUTH_EXTERNAL_ID` and then `e2e-user`. Real
+Logto authentication is exercised through normal builds.
 
 ### Valuation Provider Mocks in E2E
 
-- When `E2E_TEST_MODE=true`, server-side external valuation calls
-  (`currencylayer`, `coinlayer`, `marketstack`) are intercepted by MSW 3 node
-  handlers in `src/server/valuation/e2e-provider-mocks.server.ts`.
-- Unhandled requests to valuation provider hostnames fail fast in E2E, so URL
-  mismatches cannot silently bypass mocks and hit real external services.
-- The `onUnhandledFrame` callback checks HTTP frames and produces a local error
-  response for unmatched provider requests. Unrelated traffic bypasses the
-  mocks. The colocated `e2e-provider-mocks.server.test.ts` suite verifies real
-  HTTP interception and initialization/cleanup behavior without provider
-  credentials.
-- In E2E mode, provider API-key checks also use a deterministic internal
-  fallback key so no external provider secrets are required for these flows.
-- This keeps E2E deterministic and avoids external provider traffic while still
-  exercising valuation conversion logic end-to-end.
-- The mocked rates/prices are fixed values intended for assertion stability.
+The E2E-only startup plugin enables MSW 3 once. Its HTTP handlers return fixed
+Currencylayer, Coinlayer, and Marketstack responses without provider
+credentials. The `onUnhandledFrame` hook returns a local error for unmatched
+provider HTTP requests; unrelated traffic bypasses interception. Colocated
+provider tests verify responses, interception, initialization, and cleanup.
+
+### Deployment Build Smoke Test
+
+Docker runs `test:build-boundary` immediately after the normal build. This small
+test starts the compiled server with `APP_ENVIRONMENT=e2e` and requires a
+nonzero exit with the expected startup-guard error. It has a ten-second timeout
+and needs no database or browser. For a local investigation:
+
+```bash
+pnpm --filter cashfolio-app2 build
+pnpm --filter cashfolio-app2 test:build-boundary
+```
+
+Focused unit tests cover normal authentication, mock-key exclusion, and startup
+validation. The existing E2E suite verifies the correctly configured E2E build.
 
 ### Database Lifecycle
 
@@ -237,8 +247,11 @@ When bypass is disabled, app auth behavior remains unchanged.
 - Each spec file seeds an isolated account-book-scoped dataset in `beforeAll()`
   for its worker-scoped user.
 - Specs that need a different authenticated user can set the e2e-only
-  `cashfolio-e2e-external-id` cookie. The auth bypass reads this cookie only
-  when both `E2E_TEST_MODE=true` and `E2E_AUTH_BYPASS=true`.
+  `cashfolio-e2e-external-id` cookie. Synthetic authentication reads this cookie
+  only in an E2E build.
+- Database writes require `APP_ENVIRONMENT=e2e` and an approved local/CI
+  database host and database name; declaring the environment alone does not
+  permit writes to an arbitrary database.
 - Seeding creates:
   - a user with the worker-scoped e2e external id
   - an account book and user-account-book link

@@ -15,11 +15,8 @@ vi.mock("../auth/functions.server", () => ({
   ensureAuthenticated: vi.fn(),
 }));
 
-import {
-  getOrCreateUser,
-  ensureUser,
-  ensureUserHasRole,
-} from "./functions.server";
+import { ensureUser, ensureUserHasRole } from "./functions.server";
+import { getOrCreateUser } from "../e2e/user.server";
 import { ensureAuthenticated } from "../auth/functions.server";
 import { UserRole } from "../.prisma-client/enums";
 
@@ -121,5 +118,18 @@ describe("ordinary user lookup", () => {
     prisma.user.findUnique.mockResolvedValue(null);
     await expect(ensureUser()).rejects.toMatchObject({ status: 403 });
     expect(prisma.user.upsert).not.toHaveBeenCalled();
+  });
+
+  it("cannot enable test-user provisioning through the E2E environment in a normal build", async () => {
+    vi.clearAllMocks();
+    vi.stubEnv("APP_ENVIRONMENT", "e2e");
+    vi.mocked(ensureAuthenticated).mockResolvedValue(userContext);
+    prisma.user.findUnique.mockResolvedValue(null);
+    try {
+      await expect(ensureUser()).rejects.toMatchObject({ status: 403 });
+      expect(prisma.user.upsert).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

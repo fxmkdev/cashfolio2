@@ -465,8 +465,10 @@ Required for full valuation behavior:
 - `REDIS_URL` (Redis with TimeSeries support)
 
 Without provider keys in normal runtime, related conversions return `null` and
-log a one-time warning. In `E2E_TEST_MODE=true`, provider key lookup uses a
-special mocked key path for test flows.
+log a one-time warning. E2E builds use a fallback mock key when a configured key
+is absent and always intercept provider requests. These builds require
+`APP_ENVIRONMENT=e2e` and loopback configuration at startup; runtime settings
+cannot enable mock keys or provider interception in normal builds.
 
 ## Practical Notes for Contributors
 

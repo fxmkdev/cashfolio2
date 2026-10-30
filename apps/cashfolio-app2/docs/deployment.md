@@ -38,6 +38,25 @@ cleaning up expired sessions or deleting users.
 `cashfolio-app2` builds a TanStack Start production runtime with Nitro and runs
 the generated Node server from `.output/server/index.mjs`.
 
+## E2E build isolation
+
+Deployment images always run the ordinary `pnpm build` artifact in `.output`.
+The separate `build:e2e` command writes `.output-e2e`, which is excluded from
+Git and Docker contexts. Do not deploy or copy E2E artifacts to Fly.
+
+Normal servers refuse startup when `APP_ENVIRONMENT=e2e`. E2E builds require
+that environment and explicit loopback listening and base URLs; synthetic
+authentication and provider mocks are always enabled in those builds. Runtime
+configuration cannot activate these capabilities in a normal build. The startup
+guard runs synchronously before the Node listener. No database migration or
+change to the normal start command is required.
+
+Docker runs `test:build-boundary` after building the normal artifact. It
+verifies that setting `APP_ENVIRONMENT=e2e` causes the compiled server to reject
+startup. The existing image-build dependency gates preview and staging
+deployments. Unit tests cover configuration cases; the E2E suite covers
+test-build behavior. See [Testing](testing.md#deployment-build-smoke-test).
+
 ## Nitro version pin
 
 The app intentionally pins `nitro` to an exact beta version instead of a range.
@@ -65,14 +84,14 @@ release candidate. Revisit this scoped override together with the Nitro pin.
 
 ## MSW runtime assets
 
-Nitro traces the full `@mswjs/interceptors` package through
+For E2E builds only, Nitro traces the full `@mswjs/interceptors` package through
 `traceDeps: ["@mswjs/interceptors*"]` in `vite.config.ts`. MSW 3's Node
 interceptors load `llhttp/llhttp.wasm` relative to their module at runtime;
 bundling the JavaScript alone relocates that lookup and omits the binary.
-Tracing preserves the package layout and includes its WASM asset in `.output`,
-so the built E2E server can initialize provider mocks without the workspace
-installation. Keep this rule when updating MSW or Nitro, and verify built-server
-E2E startup before removing it.
+Tracing preserves the package layout and includes its WASM asset in
+`.output-e2e`, so the built E2E server can initialize provider mocks without the
+workspace installation. Keep this rule when updating MSW or Nitro, and verify
+built-server E2E startup before removing it.
 
 ## Fly release migrations
 

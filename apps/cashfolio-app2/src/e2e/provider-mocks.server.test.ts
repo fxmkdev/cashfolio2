@@ -3,7 +3,7 @@ import { once } from "node:events";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("E2E valuation provider interception", () => {
-  let ensureMocks: typeof import("./e2e-provider-mocks.server").ensureE2EValuationProviderMocksEnabled;
+  let ensureMocks: typeof import("./provider-mocks.server").ensureE2EValuationProviderMocksEnabled;
   let cleanupMocks: ((code: number) => void) | undefined;
 
   function enableMocks() {
@@ -16,10 +16,9 @@ describe("E2E valuation provider interception", () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    vi.stubEnv("E2E_TEST_MODE", "true");
     vi.spyOn(console, "info").mockImplementation(() => {});
     ({ ensureE2EValuationProviderMocksEnabled: ensureMocks } =
-      await import("./e2e-provider-mocks.server"));
+      await import("./provider-mocks.server"));
   });
 
   afterEach(() => {
@@ -31,17 +30,6 @@ describe("E2E valuation provider interception", () => {
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
-
-  it.each([undefined, "false"])(
-    "does not enable interception when E2E_TEST_MODE is %s",
-    (mode) => {
-      vi.stubEnv("E2E_TEST_MODE", mode);
-      const listeners = process.listeners("exit");
-      enableMocks();
-      expect(process.listeners("exit")).toEqual(listeners);
-      expect(console.info).not.toHaveBeenCalled();
-    },
-  );
 
   it("enables interception and registers cleanup only once", async () => {
     const listenerCount = process.listenerCount("exit");

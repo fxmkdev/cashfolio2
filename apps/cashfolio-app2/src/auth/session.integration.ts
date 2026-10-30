@@ -127,7 +127,6 @@ beforeAll(async () => {
   vi.stubEnv("LOGTO_APP_ID", "test-app");
   vi.stubEnv("LOGTO_APP_SECRET", "test-secret");
   vi.stubEnv("BASE_URL", "https://app.example.test");
-  vi.stubEnv("E2E_TEST_MODE", "false");
   applicationDb = (await import("../prisma.server")).prisma;
   store = await import("./session-store.server");
   logto = await import("./logto.server");

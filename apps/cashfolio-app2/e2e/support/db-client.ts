@@ -12,9 +12,9 @@ export const DEFAULT_EXTERNAL_ID =
   process.env.E2E_AUTH_EXTERNAL_ID ?? "e2e-user";
 
 export function assertSafeWriteTarget() {
-  if (process.env.E2E_TEST_MODE !== "true") {
+  if (process.env.APP_ENVIRONMENT !== "e2e") {
     throw new Error(
-      "Refusing e2e DB writes because E2E_TEST_MODE is not set to true.",
+      "Refusing e2e DB writes because APP_ENVIRONMENT is not set to e2e.",
     );
   }
 

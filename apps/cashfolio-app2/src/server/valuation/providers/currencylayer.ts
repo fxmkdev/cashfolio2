@@ -22,7 +22,7 @@ import { BASE_CURRENCY, CURRENCYLAYER_TIMEOUT_MS } from "../constants";
 import { toDayString } from "../date-utils";
 import { isNoDataProviderError } from "../provider-response-parsers";
 
-function getCurrencyLayerApiKey(): string | null {
+function getCurrencyLayerApiKey(): Promise<string | null> {
   return getProviderApiKey({
     envVarName: "CURRENCYLAYER_API_KEY",
     missingKeyWarning:
@@ -35,7 +35,7 @@ export async function fetchUsdToCurrencyRateFromCurrencyLayer(
   date: Date,
   requestReason: ValuationProviderRequestReason = VALUATION_PROVIDER_REQUEST_REASONS.INITIAL_PROBE,
 ): Promise<FetchRateResult> {
-  const apiKey = getCurrencyLayerApiKey();
+  const apiKey = await getCurrencyLayerApiKey();
   if (!apiKey) return null;
 
   const requestContext = {

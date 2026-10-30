@@ -4,6 +4,7 @@
 **/.pnpm-store
 **/dist
 **/.output
+**/.output-e2e
 **/.prisma-client
 **/storybook-static
 **/playwright-report

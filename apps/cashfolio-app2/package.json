@@ -27,8 +27,8 @@
     "chromatic": "chromatic --project-token=$CHROMATIC_PROJECT_TOKEN --exit-zero-on-changes --auto-accept-changes",
     "prisma:generate": "prisma generate",
     "e2e:install": "playwright install chromium",
-    "e2e": "E2E_TEST_MODE=${E2E_TEST_MODE:-true} DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@127.0.0.1:5433/postgres?schema=public} BASE_URL=${BASE_URL:-http://127.0.0.1:4173} E2E_AUTH_BYPASS=${E2E_AUTH_BYPASS:-true} E2E_AUTH_EXTERNAL_ID=${E2E_AUTH_EXTERNAL_ID:-e2e-user} sh -c 'pnpm prisma:generate && pnpm exec prisma migrate deploy && playwright test'",
-    "e2e:ci": "E2E_TEST_MODE=${E2E_TEST_MODE:-true} sh -c 'pnpm prisma:generate && playwright test ${E2E_SHARD:+--shard=$E2E_SHARD}'",
+    "e2e": "APP_ENVIRONMENT=e2e DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@127.0.0.1:5433/postgres?schema=public} BASE_URL=${BASE_URL:-http://127.0.0.1:4173} E2E_AUTH_EXTERNAL_ID=${E2E_AUTH_EXTERNAL_ID:-e2e-user} sh -c 'pnpm prisma:generate && pnpm exec prisma migrate deploy && playwright test'",
+    "e2e:ci": "APP_ENVIRONMENT=e2e sh -c 'pnpm prisma:generate && playwright test ${E2E_SHARD:+--shard=$E2E_SHARD}'",
     "test-storybook:coverage": "vitest run --project storybook --coverage",
     "build:staging-seed": "vite build --config vite.staging-seed.config.ts",
     "build:provider-usage-cleanup": "vite build --config vite.provider-usage-cleanup.config.ts",
@@ -37,7 +37,9 @@
     "test:provider-usage-cleanup-runner": "node --test scripts/run-provider-usage-cleanup.test.ts",
     "seed:staging": "node dist/staging-seed/seed.mjs",
     "test:staging-seed": "pnpm prisma:generate && vitest run --config vitest.staging-seed.config.ts",
-    "test:staging-release": "node --test scripts/release-staging.test.mjs"
+    "test:staging-release": "node --test scripts/release-staging.test.mjs",
+    "build:e2e": "vite build --mode e2e",
+    "test:build-boundary": "node --test scripts/build-boundary.test.ts"
   },
   "dependencies": {
     "@logto/node": "^4.0.0",

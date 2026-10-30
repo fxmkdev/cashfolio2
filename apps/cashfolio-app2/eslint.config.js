@@ -15,6 +15,7 @@ export default tseslint.config(
       "dist/**",
       "node_modules/**",
       ".output/**",
+      ".output-e2e/**",
       "playwright-report/**",
       "src/.prisma-client/**",
       "src/routeTree.gen.ts",

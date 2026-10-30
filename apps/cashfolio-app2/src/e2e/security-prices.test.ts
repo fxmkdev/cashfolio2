@@ -1,7 +1,7 @@
 import Decimal from "decimal.js";
 import { expect, it } from "vitest";
-import { generateStagingDataset } from "../../staging-seed/dataset";
-import { getE2ESecurityPrice } from "./e2e-security-prices";
+import { generateStagingDataset } from "../staging-seed/dataset";
+import { getE2ESecurityPrice } from "./security-prices";
 
 it("matches each closed investment's recorded execution price in the fixed staging fixture", () => {
   const household = generateStagingDataset(new Date("2026-10-10T00:00:00Z"))

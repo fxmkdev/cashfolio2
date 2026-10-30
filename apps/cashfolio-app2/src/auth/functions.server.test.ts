@@ -17,12 +17,9 @@ import {
   ensureAuthenticated,
   getAuthenticationContext,
 } from "./functions.server";
-import { E2E_AUTH_EXTERNAL_ID_COOKIE } from "./e2e-auth";
 
 beforeEach(() => {
   vi.resetAllMocks();
-  vi.stubEnv("E2E_AUTH_BYPASS", "false");
-  vi.stubEnv("E2E_TEST_MODE", "false");
   vi.stubEnv("E2E_AUTH_EXTERNAL_ID", "");
 });
 
@@ -49,35 +46,27 @@ describe("getAuthenticationContext", () => {
     await expect(getAuthenticationContext()).rejects.toBe(error);
   });
 
-  it.each([
-    ["cookie-user", "configured-user", "cookie-user"],
-    [undefined, "configured-user", "configured-user"],
-    [undefined, undefined, "e2e-user"],
-  ])(
-    "uses the existing test identity fallback for cookie %s and configured ID %s",
-    async (cookie, configuredId, expectedId) => {
-      vi.stubEnv("E2E_AUTH_BYPASS", "true");
-      vi.stubEnv("E2E_TEST_MODE", "true");
-      vi.stubEnv("E2E_AUTH_EXTERNAL_ID", configuredId);
-      mocks.getCookie.mockReturnValue(cookie);
-
-      await expect(getAuthenticationContext()).resolves.toMatchObject({
-        isAuthenticated: true,
-        claims: { sub: expectedId },
-      });
-      expect(mocks.getCookie).toHaveBeenCalledWith(E2E_AUTH_EXTERNAL_ID_COOKIE);
-      expect(mocks.getLogtoContext).not.toHaveBeenCalled();
-    },
-  );
-
-  it("does not bypass Logto when test mode is disabled", async () => {
-    vi.stubEnv("E2E_AUTH_BYPASS", "true");
+  it("preserves deletion-retry access options", async () => {
+    const options = { allowDeletionPending: true };
     mocks.getLogtoContext.mockResolvedValue({ isAuthenticated: false });
+    await getAuthenticationContext(options);
+    expect(mocks.getLogtoContext).toHaveBeenCalledExactlyOnceWith(
+      { getAccessToken: false },
+      options,
+    );
+  });
 
+  it("ignores a synthetic identity cookie and the E2E environment in a normal build", async () => {
+    vi.stubEnv("APP_ENVIRONMENT", "e2e");
+    mocks.getCookie.mockReturnValue("admin-external-id");
+    mocks.getLogtoContext.mockResolvedValue({ isAuthenticated: false });
     await expect(getAuthenticationContext()).resolves.toEqual({
       isAuthenticated: false,
     });
     expect(mocks.getCookie).not.toHaveBeenCalled();
+    expect(mocks.getLogtoContext).toHaveBeenCalledExactlyOnceWith({
+      getAccessToken: false,
+    });
   });
 });
 
