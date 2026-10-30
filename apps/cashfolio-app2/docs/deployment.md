@@ -84,14 +84,14 @@ release candidate. Revisit this scoped override together with the Nitro pin.
 
 ## MSW runtime assets
 
-Nitro traces the full `@mswjs/interceptors` package through
+For E2E builds only, Nitro traces the full `@mswjs/interceptors` package through
 `traceDeps: ["@mswjs/interceptors*"]` in `vite.config.ts`. MSW 3's Node
 interceptors load `llhttp/llhttp.wasm` relative to their module at runtime;
 bundling the JavaScript alone relocates that lookup and omits the binary.
-Tracing preserves the package layout and includes its WASM asset in `.output`,
-so the built E2E server can initialize provider mocks without the workspace
-installation. Keep this rule when updating MSW or Nitro, and verify built-server
-E2E startup before removing it.
+Tracing preserves the package layout and includes its WASM asset in
+`.output-e2e`, so the built E2E server can initialize provider mocks without the
+workspace installation. Keep this rule when updating MSW or Nitro, and verify
+built-server E2E startup before removing it.
 
 ## Fly release migrations
 
