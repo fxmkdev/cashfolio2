@@ -281,6 +281,7 @@ test("period recorded gains/losses rows open the reference-currency account expl
   });
 
   await page.goto(`/${seeded.accountBookId}/report?period=${period}`);
+  await selectReportGrouping(page, "Asset Class");
   await expect(
     page.getByRole("heading", { name: "January 2026" }),
   ).toBeVisible();
