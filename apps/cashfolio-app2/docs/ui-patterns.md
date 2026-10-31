@@ -338,10 +338,11 @@ the outline variant for Unclassified, including on archived accounts. Its title
 includes the field name and full label. Equity accounts have no pill.
 
 The current classification applies to all historical periods in Report and
-History. Calculated and recorded gains/losses are grouped by Asset Class then
-Account; recorded adjustments use their counterpart financial account's class.
-Changing classification does not change amounts or valuation. Accounting
-`AccountType.EQUITY` is unrelated to the Equities asset class.
+History. Calculated and recorded gains/losses support either Account Structure
+or Asset Class then Account; recorded adjustments use their counterpart
+financial account's class and group. Changing classification does not change
+amounts or valuation. Accounting `AccountType.EQUITY` is unrelated to the
+Equities asset class.
 
 `src/components/account-editor/edit-account-modal.tsx` remains the public
 account-editor entry point, including its existing type and form-value exports.
@@ -474,14 +475,31 @@ submit UX and prevent duplicate requests.
 - Double-clicking a drillable chart node drills into its children.
 - Leaves have no further hierarchy to drill into. Supported account leaves can
   navigate to a ledger or gain/loss reconciliation for the selected period.
-- Gains/Losses uses Asset Class → Account. Account metadata drives navigation
-  from chart and table leaves to the unified explanation, including calculated
-  holdings, recorded adjustments, and supported synthetic amounts. Do not infer
-  a destination from node-ID prefixes.
+- Gains/Losses supports Account Structure and Asset Class → Account. Account
+  metadata drives navigation from chart and table leaves to the unified
+  explanation, including calculated holdings, recorded adjustments, and
+  supported synthetic amounts. Do not infer a destination from node-ID prefixes.
 - Asset-class nodes drill into their accounts in charts and expand/collapse in
   tables; they do not open a ledger.
 - Keep drill state local to the page and scoped per card/type, preserving each
   side/path when toggling chart mode or breakdown side.
+- Report's **Group Accounts By** selector sits beside the period control and
+  applies together to Assets, Liabilities, and Gains/Losses charts and tables.
+  It defaults to Account Structure and uses per-book session storage. Income,
+  Expenses, and Cash Flow retain their existing category/account breakdowns.
+- Preserve allocation and G/L drill paths separately per grouping, and namespace
+  expanded-table storage by grouping. Legacy allocation paths belong to Account
+  Structure; legacy G/L paths belong to Asset Class. Chart type choices survive
+  switching. Recreate the table when its expansion-storage key changes.
+- History's Gain/Loss View contains **By Account Structure** and **By Asset
+  Class** navigation headings, in that order. Clicking or pressing Enter on a
+  heading only toggles expansion; it keeps the dropdown open and preserves the
+  chart selection and URL. Actual groups/classes and the Gain/Loss total remain
+  selectable. Search paths and scoped chart descriptions include the grouping.
+- Grouping does not change total amounts. Allocation footers and chart totals
+  use the rounded sum of exact balances. G/L footers use exact contribution
+  aggregates; a non-drillable Rounding waterfall bar reconciles rounded bars
+  with the selected scope's total when necessary.
 - Show an `Up` action and breadcrumb context (`All Expenses` / `All Income` /
   `All Gains/Losses` -> group path) directly above chart views.
 - Persist Period card state in `sessionStorage`, scoped by `accountBookId`,

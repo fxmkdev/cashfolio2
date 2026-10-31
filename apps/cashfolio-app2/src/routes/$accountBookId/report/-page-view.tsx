@@ -1,5 +1,7 @@
 import {
   Alert,
+  Group,
+  Select,
   Grid,
   SimpleGrid,
   Stack,
@@ -38,6 +40,10 @@ import { PeriodStatsCardsSection } from "./-period-stats-cards";
 import { useReportPageSessionState } from "./-selector/-page-session-state";
 import { useReportPeriodFilterActionProps } from "./-selector/-period-filter-action-props";
 import { useSyncedReportDrillPaths } from "./-report-page-drill-path-sync";
+import {
+  isReportingGrouping,
+  reportingGroupingOptions,
+} from "@/shared/reporting-grouping";
 
 ensureChartModulesRegistered();
 
@@ -64,6 +70,8 @@ export function ReportPageView({
 }: ReportPageViewProps) {
   const userLocale = useUserLocale();
   const {
+    selectedGrouping,
+    setSelectedGrouping,
     selectedBreakdown,
     selectedChartType,
     selectedAllocationBreakdown,
@@ -81,6 +89,8 @@ export function ReportPageView({
     setDrillPathByAllocationBreakdown,
     setDrillPathByGainsLosses,
   } = useReportPageSessionState(accountBookId);
+  const accountBreakdowns =
+    overview.accountBreakdownsByGrouping[selectedGrouping];
   const theme = useMantineTheme();
   const isDarkMode = useComputedColorScheme() === "dark";
   const colors = useMemo(
@@ -140,9 +150,10 @@ export function ReportPageView({
     expenseBreakdownHierarchy: overview.expenseBreakdown.hierarchy,
     incomeBreakdownHierarchy: overview.incomeBreakdown.hierarchy,
     cashFlowBreakdownHierarchy: overview.cashFlowBreakdown.hierarchy,
-    assetBreakdownHierarchy: overview.assetBreakdown.hierarchy,
-    liabilityBreakdownHierarchy: overview.liabilityBreakdown.hierarchy,
-    gainsLossesBreakdownHierarchy: overview.gainsLossesBreakdown.hierarchy,
+    assetBreakdownHierarchy: accountBreakdowns.assetBreakdown.hierarchy,
+    liabilityBreakdownHierarchy: accountBreakdowns.liabilityBreakdown.hierarchy,
+    gainsLossesBreakdownHierarchy:
+      accountBreakdowns.gainsLossesBreakdown.hierarchy,
     setDrillPathByBreakdown,
     setDrillPathByAllocationBreakdown,
     setDrillPathByGainsLosses,
@@ -173,6 +184,7 @@ export function ReportPageView({
   const allocationBreakdown = usePeriodAllocationBreakdownViewModel({
     accountBookId,
     overview,
+    grouping: selectedGrouping,
     selectedAllocationBreakdown,
     selectedAllocationChartType,
     drillPathByAllocationBreakdown,
@@ -184,7 +196,8 @@ export function ReportPageView({
   });
   const gainsLosses = usePeriodGainsLossesViewModel({
     accountBookId,
-    gainsLossesBreakdownHierarchy: overview.gainsLossesBreakdown.hierarchy,
+    grouping: selectedGrouping,
+    gainsLossesBreakdown: accountBreakdowns.gainsLossesBreakdown,
     selectedGainsLossesChartType,
     drillPathByGainsLosses,
     setDrillPathByGainsLosses,
@@ -204,7 +217,20 @@ export function ReportPageView({
     <PageShell>
       <TopPageHeader
         heading={<Title order={2}>{overview.selectedPeriodLabel}</Title>}
-        actions={<PeriodFilterAction {...periodFilterActionProps} />}
+        actions={
+          <Group gap="sm" align="flex-end">
+            <Select
+              label="Group Accounts By"
+              data={reportingGroupingOptions}
+              value={selectedGrouping}
+              allowDeselect={false}
+              onChange={(value) => {
+                if (isReportingGrouping(value)) setSelectedGrouping(value);
+              }}
+            />
+            <PeriodFilterAction {...periodFilterActionProps} />
+          </Group>
+        }
       />
 
       <Stack gap="lg">
@@ -232,6 +258,9 @@ export function ReportPageView({
             />
 
             <PeriodAllocationBreakdownCard
+              totalAmount={
+                allocationBreakdown.activeAllocationBreakdown.totalAmount
+              }
               selectedBreakdown={selectedAllocationBreakdown}
               selectedChartType={selectedAllocationChartType}
               tableExpandedGroupsStorageKey={
@@ -311,6 +340,8 @@ export function ReportPageView({
             </Grid.Col>
             <Grid.Col span={{ base: 12, lg: 6 }}>
               <GainsLossesCard
+                grouping={selectedGrouping}
+                totals={accountBreakdowns.gainsLossesBreakdown}
                 selectedChartType={selectedGainsLossesChartType}
                 displayDecimals={referenceCurrencyDisplayDecimals}
                 tableExpandedGroupsStorageKey={
@@ -321,7 +352,7 @@ export function ReportPageView({
                 clampedPath={gainsLosses.gainsLossesDrillState.clampedPath}
                 hasGainsLosses={gainsLosses.hasGainsLosses}
                 emptyMessage={gainsLosses.emptyGainsLossesMessage}
-                hierarchy={overview.gainsLossesBreakdown.hierarchy}
+                hierarchy={accountBreakdowns.gainsLossesBreakdown.hierarchy}
                 chartOptions={gainsLosses.gainsLossesChartOptions}
                 onSelectedChartTypeChange={setSelectedGainsLossesChartType}
                 onDrillPathChange={gainsLosses.updateGainsLossesDrillPath}

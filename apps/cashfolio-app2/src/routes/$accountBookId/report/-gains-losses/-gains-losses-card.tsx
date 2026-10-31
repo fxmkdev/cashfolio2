@@ -9,8 +9,14 @@ import {
 } from "../-selector/-chart-type-segmented-control";
 import { DrilldownCardShell } from "../-breakdown/-drilldown-card-shell";
 import { GainsLossesTable } from "./-gains-losses-table";
+import type { ReportingGrouping } from "@/shared/reporting-grouping";
 
 type GainsLossesCardProps = {
+  grouping?: ReportingGrouping;
+  totals?: Pick<
+    GainsLossesBreakdownNode,
+    "realizedGainLoss" | "unrealizedGainLoss" | "totalGainLoss"
+  >;
   selectedChartType: GainsLossesChartType;
   displayDecimals: number;
   tableExpandedGroupsStorageKey: string;
@@ -41,6 +47,8 @@ const GAINS_LOSSES_CHART_TYPE_OPTIONS = [
 ] as const satisfies readonly ChartTypeOption<GainsLossesChartType>[];
 
 export function GainsLossesCard({
+  grouping,
+  totals,
   selectedChartType,
   displayDecimals,
   tableExpandedGroupsStorageKey,
@@ -73,6 +81,9 @@ export function GainsLossesCard({
       tableContent={
         isTableView ? (
           <GainsLossesTable
+            key={tableExpandedGroupsStorageKey}
+            grouping={grouping}
+            totals={totals}
             hierarchy={hierarchy}
             displayDecimals={displayDecimals}
             expandedGroupsStorageKey={tableExpandedGroupsStorageKey}

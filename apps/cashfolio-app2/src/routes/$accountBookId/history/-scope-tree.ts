@@ -1,4 +1,5 @@
 import type { TreeNodeData } from "@mantine/core";
+import { reportingGroupingOptions } from "@/shared/reporting-grouping";
 import {
   isHistoryScopedMetric,
   parseHistoryScopeSelection,
@@ -14,6 +15,12 @@ import {
 } from "./-page-types";
 
 type HistoryScopeOptions = Record<HistoryScopedMetric, HistoryScopeOption[]>;
+
+export function isHistoryGroupingBranch(value: string): boolean {
+  return reportingGroupingOptions.some(
+    ({ value: grouping }) => value === `gainsLosses:grouping:${grouping}`,
+  );
+}
 
 export function getHistoryViewTreeValue(
   selection: HistoryViewSelection,
@@ -47,15 +54,22 @@ export function buildHistoryViewTreeData(
   scopeOptions: HistoryScopeOptions,
 ): TreeNodeData[] {
   return HISTORY_METRIC_OPTIONS.map(({ value: metric, label }) => {
-    function namespaceNode(node: TreeNodeData): TreeNodeData {
+    function namespaceNode(
+      node: TreeNodeData,
+      branchLabel?: string,
+    ): TreeNodeData {
       return {
         ...node,
         value: `${metric}:${node.value}`,
         nodeProps: {
-          searchLabel: `${label} / ${getHistoryScopeTreeSearchLabel(node)}`,
+          searchLabel: `${label} / ${branchLabel ? `${branchLabel} / ` : ""}${getHistoryScopeTreeSearchLabel(node)}`,
         },
         ...(node.children
-          ? { children: node.children.map(namespaceNode) }
+          ? {
+              children: node.children.map((child) =>
+                namespaceNode(child, branchLabel),
+              ),
+            }
           : {}),
       };
     }
@@ -63,14 +77,32 @@ export function buildHistoryViewTreeData(
     const children = isHistoryScopedMetric(metric)
       ? buildHistoryScopeTreeData(
           scopeOptions[metric].filter((option) => option.value !== "total"),
-        ).map(namespaceNode)
+        ).map((node) => namespaceNode(node))
       : [];
+
+    const groupedChildren =
+      metric === "gainsLosses" && children.length > 0
+        ? reportingGroupingOptions.map(
+            ({ value: grouping, label: groupingLabel }) => ({
+              value: `gainsLosses:grouping:${grouping}`,
+              label: `By ${groupingLabel}`,
+              nodeProps: { searchLabel: `${label} / By ${groupingLabel}` },
+              children: buildHistoryScopeTreeData(
+                scopeOptions.gainsLosses.filter(
+                  (option) =>
+                    option.value !== "total" &&
+                    (option.grouping ?? "assetClass") === grouping,
+                ),
+              ).map((node) => namespaceNode(node, `By ${groupingLabel}`)),
+            }),
+          )
+        : children;
 
     return {
       value: getHistoryViewTreeValue({ metric, scope: "total" }),
       label,
       nodeProps: { searchLabel: label },
-      ...(children.length > 0 ? { children } : {}),
+      ...(groupedChildren.length > 0 ? { children: groupedChildren } : {}),
     };
   });
 }

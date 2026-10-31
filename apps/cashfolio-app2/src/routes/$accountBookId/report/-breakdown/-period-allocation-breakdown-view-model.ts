@@ -1,3 +1,4 @@
+import type { ReportingGrouping } from "@/shared/reporting-grouping";
 import { useCallback, useMemo } from "react";
 import type { DashboardChartThemeColors } from "@/shared/dashboard-chart-theme";
 import type { getPeriodOverview } from "@/server/period";
@@ -32,7 +33,7 @@ function getAllocationPartialDataNotes(count: number): string {
 }
 
 export type PeriodAllocationBreakdownViewModel = {
-  activeAllocationBreakdown: PeriodOverview["assetBreakdown"];
+  activeAllocationBreakdown: PeriodOverview["accountBreakdownsByGrouping"]["accountStructure"]["assetBreakdown"];
   allocationBreakdownTitle: string;
   allocationTableExpandedGroupsStorageKey: string;
   allocationBreakdownSubtitle: string;
@@ -49,6 +50,7 @@ export type PeriodAllocationBreakdownViewModel = {
 
 export function usePeriodAllocationBreakdownViewModel(args: {
   accountBookId: string;
+  grouping: ReportingGrouping;
   overview: PeriodOverview;
   selectedAllocationBreakdown: AllocationBreakdownType;
   selectedAllocationChartType: BreakdownChartType;
@@ -63,6 +65,7 @@ export function usePeriodAllocationBreakdownViewModel(args: {
 }): PeriodAllocationBreakdownViewModel {
   const {
     accountBookId,
+    grouping,
     overview,
     selectedAllocationBreakdown,
     selectedAllocationChartType,
@@ -74,23 +77,17 @@ export function usePeriodAllocationBreakdownViewModel(args: {
     onBreakdownAccountDoubleClick,
   } = args;
 
-  const activeAllocationBreakdown = useMemo(
-    () =>
-      selectedAllocationBreakdown === "asset"
-        ? overview.assetBreakdown
-        : overview.liabilityBreakdown,
-    [
-      overview.assetBreakdown,
-      overview.liabilityBreakdown,
-      selectedAllocationBreakdown,
-    ],
-  );
+  const accountBreakdowns = overview.accountBreakdownsByGrouping[grouping];
+  const activeAllocationBreakdown =
+    selectedAllocationBreakdown === "asset"
+      ? accountBreakdowns.assetBreakdown
+      : accountBreakdowns.liabilityBreakdown;
 
   const allocationBreakdownTitle =
     selectedAllocationBreakdown === "asset"
       ? "Assets Allocation"
       : "Liabilities Allocation";
-  const allocationTableExpandedGroupsStorageKey = `cashfolio:periodExpandedGroups:${accountBookId}:allocation:${selectedAllocationBreakdown}`;
+  const allocationTableExpandedGroupsStorageKey = `cashfolio:periodExpandedGroups:${accountBookId}:allocation:${selectedAllocationBreakdown}:${grouping}`;
   const allocationBreakdownRootLabel =
     selectedAllocationBreakdown === "asset" ? "All Assets" : "All Liabilities";
 
@@ -123,11 +120,10 @@ export function usePeriodAllocationBreakdownViewModel(args: {
 
   const currentAllocationLevelTotalAmount = useMemo(
     () =>
-      allocationDrillState.currentNodes.reduce(
-        (sum, breakdownNode) => sum + breakdownNode.amount,
-        0,
-      ),
-    [allocationDrillState.currentNodes],
+      allocationDrillState.clampedPath.length === 0
+        ? activeAllocationBreakdown.totalAmount
+        : allocationDrillState.currentPathNodes.at(-1)!.amount,
+    [allocationDrillState, activeAllocationBreakdown.totalAmount],
   );
 
   const allocationChartData = useMemo<PeriodBreakdownChartDatum[]>(

@@ -5,6 +5,12 @@ import type { Unit } from "../../../.prisma-client/enums";
 import { round2 } from "../period-helpers";
 import { assetClassOptions } from "../../../shared/asset-class";
 import type { GainLossAccountAttribution } from "./period-gain-loss-attribution";
+import type { ReportingGrouping } from "../../../shared/reporting-grouping";
+import {
+  resolveGroupPathToRoot,
+  type PeriodGroupNode,
+} from "./period-breakdown-state";
+import { UNATTRIBUTED_GROUP_ID } from "./period-reporting-groups";
 
 export type PeriodGainsLossesContribution = {
   sourceKind: "HOLDING" | "EXPLICIT";
@@ -50,7 +56,10 @@ export function buildGainsLossesBreakdown(args: {
   contributions: PeriodGainsLossesContribution[];
   referenceCurrency: string;
   accountAttributionById?: ReadonlyMap<string, GainLossAccountAttribution>;
-}): { hierarchy: PeriodGainsLossesBreakdownNode[] } {
+  grouping?: ReportingGrouping;
+  accounts?: Array<{ id: string; groupId: string | null }>;
+  groupById?: Map<string, PeriodGroupNode>;
+}) {
   const byAccount = new Map<string, PeriodGainsLossesContribution[]>();
   for (const contribution of args.contributions) {
     if (
@@ -141,5 +150,74 @@ export function buildGainsLossesBreakdown(args: {
       ),
     });
   }
-  return { hierarchy };
+  const total = totals(
+    moneySum(args.contributions.map((value) => value.realizedGainLoss)),
+    moneySum(args.contributions.map((value) => value.unrealizedGainLoss)),
+  );
+  if (args.grouping !== "accountStructure") return { hierarchy, ...total };
+
+  const accounts = new Map(
+    args.accounts?.map((account) => [account.id, account]),
+  );
+  const groups = new Map(args.groupById);
+  groups.set(UNATTRIBUTED_GROUP_ID, {
+    id: UNATTRIBUTED_GROUP_ID,
+    name: "Unattributed",
+    parentGroupId: null,
+  });
+  const roots: PeriodGainsLossesBreakdownNode[] = [];
+  const groupNodes = new Map<string, PeriodGainsLossesBreakdownNode>();
+  // Group totals use the original contributions, never rounded child values.
+  const rawByGroup = new Map<string, PeriodGainsLossesContribution[]>();
+  for (const leaf of hierarchy.flatMap((node) => node.children)) {
+    const accountId = leaf.account!.id;
+    const account = accounts.get(accountId);
+    const path =
+      account && (!account.groupId || groups.has(account.groupId))
+        ? account.groupId
+          ? resolveGroupPathToRoot({
+              groupId: account.groupId,
+              groupById: groups,
+            }).reverse()
+          : []
+        : [groups.get(UNATTRIBUTED_GROUP_ID)!];
+    let children = roots;
+    for (const group of path) {
+      let node = groupNodes.get(group.id);
+      if (!node) {
+        node = {
+          id: `group:${group.id}`,
+          label: group.name,
+          ...totals(toMoney(0), toMoney(0)),
+          children: [],
+        };
+        groupNodes.set(group.id, node);
+        children.push(node);
+      }
+      rawByGroup
+        .getOrInsertComputed(group.id, () => [])
+        .push(...byAccount.get(accountId)!);
+      children = node.children;
+    }
+    children.push({ ...leaf, id: `account:${accountId}` });
+  }
+  for (const [id, node] of groupNodes) {
+    const values = rawByGroup.get(id)!;
+    Object.assign(
+      node,
+      totals(
+        moneySum(values.map((value) => value.realizedGainLoss)),
+        moneySum(values.map((value) => value.unrealizedGainLoss)),
+      ),
+    );
+  }
+  const sort = (nodes: PeriodGainsLossesBreakdownNode[]) => {
+    nodes.sort(
+      (a, b) =>
+        a.label.localeCompare(b.label, "en") || a.id.localeCompare(b.id, "en"),
+    );
+    for (const node of nodes) sort(node.children);
+  };
+  sort(roots);
+  return { hierarchy: roots, ...total };
 }

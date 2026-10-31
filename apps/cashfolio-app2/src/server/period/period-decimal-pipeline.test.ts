@@ -248,9 +248,10 @@ describe("Decimal monetary pipelines", () => {
       accountBookId: "book-1",
       baseData: scenario,
     });
-    const leaves = overview.gainsLossesBreakdown.hierarchy.flatMap(
-      (node) => node.children,
-    );
+    const leaves =
+      overview.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown.hierarchy.flatMap(
+        (node) => node.children,
+      );
     expect(
       leaves.find((node) => node.account?.id === "portfolio"),
     ).toMatchObject({
@@ -262,10 +263,9 @@ describe("Decimal monetary pipelines", () => {
       },
     });
     expect(
-      overview.gainsLossesBreakdown.hierarchy.map((node) => [
-        node.label,
-        node.totalGainLoss,
-      ]),
+      overview.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown.hierarchy.map(
+        (node) => [node.label, node.totalGainLoss],
+      ),
     ).toEqual([
       ["Cash & Cash Equivalents", 20],
       ["Equities", 40.1],
@@ -303,6 +303,27 @@ describe("Decimal monetary pipelines", () => {
       );
       expect(history.gainsLosses).toBe(overview.stats.gainsLosses);
       expect(history.scopedMetricValue).toBe(28);
+      const structureHistory = toNumericMoney(
+        await loadPeriodHistoryPointMetrics({
+          accountBookId: "book-1",
+          baseData,
+          metricScopeFilter: {
+            metric: "gainsLosses",
+            scope: "account:portfolio",
+          },
+        }),
+      );
+      expect(structureHistory.scopedMetricValue).toBe(
+        history.scopedMetricValue,
+      );
+      expect(
+        overview.accountBreakdownsByGrouping.accountStructure
+          .gainsLossesBreakdown.totalGainLoss,
+      ).toBe(overview.stats.gainsLosses);
+      expect(
+        overview.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown
+          .totalGainLoss,
+      ).toBe(overview.stats.gainsLosses);
       const reclassified = {
         ...baseData,
         baseAssetLiabilityAccounts: baseData.baseAssetLiabilityAccounts.map(
@@ -318,7 +339,7 @@ describe("Decimal monetary pipelines", () => {
       });
       expect(changed.stats).toEqual(overview.stats);
       expect(
-        changed.gainsLossesBreakdown.hierarchy.find(
+        changed.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown.hierarchy.find(
           (node) => node.label === "Other Assets",
         )?.totalGainLoss,
       ).toBe(28);
@@ -507,8 +528,14 @@ describe("Decimal monetary pipelines", () => {
       expect(history.assets).toBe(overview.stats.endOfPeriodAssets);
       expect(history.liabilities).toBe(overview.stats.endOfPeriodLiabilities);
       expect(history.netWorth).toBe(bankBalance + cardBalance);
-      expect(overview.assetBreakdown.totalAmount).toBe(history.assets);
-      expect(overview.liabilityBreakdown.totalAmount).toBe(history.liabilities);
+      expect(
+        overview.accountBreakdownsByGrouping.accountStructure.assetBreakdown
+          .totalAmount,
+      ).toBe(history.assets);
+      expect(
+        overview.accountBreakdownsByGrouping.accountStructure.liabilityBreakdown
+          .totalAmount,
+      ).toBe(history.liabilities);
       for (const metric of ["netWorth"] as const) {
         const scoped = await loadPeriodHistoryPointMetrics({
           accountBookId: "book-1",

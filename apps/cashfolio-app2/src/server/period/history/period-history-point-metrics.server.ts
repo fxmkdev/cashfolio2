@@ -14,7 +14,10 @@ import {
 import { computePeriodHoldingGainLoss } from "../holdings/period-holding-gain-loss";
 import { processPeriodEquityBookingsFromBaseData } from "../overview/period-equity-bookings";
 import { createPeriodOverviewEquityAggregation } from "../overview/period-overview-aggregation";
-import { preparePeriodCalculationContext } from "../period-calculation-context";
+import {
+  preparePeriodCalculationContext,
+  prepareGainLossStructure,
+} from "../period-calculation-context";
 import type { GainLossContributionAccumulator } from "../breakdown/period-gains-losses-contributions";
 import {
   buildNetWorthHistoryScopeAmountMap,
@@ -274,9 +277,25 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
     ]),
     referenceCurrency,
   });
-  const gainLossScopeOptions = buildHistoryGainLossScopeOptions({
-    hierarchy: gainsLossesBreakdown.hierarchy,
+  const accountStructureGainsLossesBreakdown = buildGainsLossesBreakdown({
+    contributions: Array.from(gainsLossesContributionByKey.values()),
+    accountAttributionById: buildGainLossAccountAttribution(baseData, [
+      ...gainsLossesContributionByKey.values(),
+    ]),
+    referenceCurrency,
+    grouping: "accountStructure",
+    ...prepareGainLossStructure(baseData),
   });
+  const gainLossScopeOptions = [
+    ...buildHistoryGainLossScopeOptions({
+      hierarchy: accountStructureGainsLossesBreakdown.hierarchy,
+      grouping: "accountStructure",
+    }),
+    ...buildHistoryGainLossScopeOptions({
+      hierarchy: gainsLossesBreakdown.hierarchy,
+      grouping: "assetClass",
+    }),
+  ];
   const scopedMetricValue = resolveScopedMetricValue({
     metricScopeFilter: args.metricScopeFilter,
     amountByMetric: {
@@ -286,6 +305,8 @@ export async function loadPeriodHistoryPointMetricsWithCacheability(args: {
       netWorth: netWorthAmountByAccountId,
     },
     gainsLossesHierarchy: gainsLossesBreakdown.hierarchy,
+    accountStructureGainsLossesHierarchy:
+      accountStructureGainsLossesBreakdown.hierarchy,
     allAccountGroups,
   });
 

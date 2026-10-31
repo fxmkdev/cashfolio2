@@ -15,6 +15,7 @@ import {
 } from "./-breakdown-table-rows";
 
 type BreakdownTableProps = {
+  totalAmount?: number;
   hierarchy: BreakdownHierarchyNode[];
   valueHeaderName: string;
   displayDecimals?: number;
@@ -23,6 +24,7 @@ type BreakdownTableProps = {
 };
 
 export function BreakdownTable({
+  totalAmount,
   hierarchy,
   valueHeaderName,
   displayDecimals = 2,
@@ -39,10 +41,10 @@ export function BreakdownTable({
         id: BREAKDOWN_TOTAL_FOOTER_ROW_ID,
         rowType: "breakdownTotalFooter",
         name: "Total",
-        value: sumTopLevelBreakdownHierarchyAmount(hierarchy),
+        value: totalAmount ?? sumTopLevelBreakdownHierarchyAmount(hierarchy),
       },
     ],
-    [hierarchy],
+    [hierarchy, totalAmount],
   );
   const { isGroupOpenByDefault, onRowGroupOpened } = useExpandedGroups(
     expandedGroupsStorageKey ?? "",

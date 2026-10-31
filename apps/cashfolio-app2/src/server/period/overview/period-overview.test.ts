@@ -506,8 +506,13 @@ describe("getPeriodOverview", () => {
     expect(result.skippedBookingsCount).toBe(0);
     expect(result.expenseBreakdown.items).toEqual([]);
     expect(result.incomeBreakdown.items).toEqual([]);
-    expect(result.assetBreakdown.items).toEqual([]);
-    expect(result.liabilityBreakdown.items).toEqual([]);
+    expect(
+      result.accountBreakdownsByGrouping.accountStructure.assetBreakdown.items,
+    ).toEqual([]);
+    expect(
+      result.accountBreakdownsByGrouping.accountStructure.liabilityBreakdown
+        .items,
+    ).toEqual([]);
   });
 
   it("tracks converted/skipped counts across equity conversions", async () => {
@@ -795,12 +800,15 @@ describe("getPeriodOverview", () => {
       endOfPeriodAssets: 390,
     });
     const gainsLossesBreakdownTotal =
-      result.gainsLossesBreakdown.hierarchy.reduce(
+      result.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown.hierarchy.reduce(
         (sum, unitTypeNode) => sum + unitTypeNode.totalGainLoss,
         0,
       );
     expect(gainsLossesBreakdownTotal).toBe(result.stats.gainsLosses);
-    expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
+    expect(
+      result.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown
+        .hierarchy,
+    ).toMatchObject([
       {
         id: "asset-class:unclassified",
         label: "Unclassified",
@@ -942,7 +950,10 @@ describe("getPeriodOverview", () => {
       totalReturn: -100,
       endOfPeriodNetWorth: -100,
     });
-    expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
+    expect(
+      result.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown
+        .hierarchy,
+    ).toMatchObject([
       {
         id: "asset-class:unclassified",
         label: "Unclassified",
@@ -1079,7 +1090,10 @@ describe("getPeriodOverview", () => {
       totalReturn: 100,
       endOfPeriodNetWorth: 100,
     });
-    expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
+    expect(
+      result.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown
+        .hierarchy,
+    ).toMatchObject([
       {
         id: "asset-class:unclassified",
         label: "Unclassified",
@@ -1322,7 +1336,10 @@ describe("getPeriodOverview", () => {
       totalReturn: 0,
       endOfPeriodNetWorth: -100,
     });
-    expect(result.gainsLossesBreakdown.hierarchy).toEqual([]);
+    expect(
+      result.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown
+        .hierarchy,
+    ).toEqual([]);
   });
 
   it("keeps total return equal to net-worth delta for explicit gain/loss periods", async () => {
@@ -1967,7 +1984,10 @@ describe("getPeriodOverview", () => {
     });
 
     expect(result.stats.gainsLosses).toBe(5);
-    expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
+    expect(
+      result.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown
+        .hierarchy,
+    ).toMatchObject([
       {
         id: "asset-class:unclassified",
         label: "Unclassified",
@@ -2032,7 +2052,10 @@ describe("getPeriodOverview", () => {
     });
 
     expect(result.stats.gainsLosses).toBe(5);
-    expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
+    expect(
+      result.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown
+        .hierarchy,
+    ).toMatchObject([
       {
         id: "asset-class:unclassified",
         label: "Unclassified",
@@ -2113,7 +2136,10 @@ describe("getPeriodOverview", () => {
     });
 
     expect(result.stats.gainsLosses).toBe(0);
-    expect(result.gainsLossesBreakdown.hierarchy).toEqual([]);
+    expect(
+      result.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown
+        .hierarchy,
+    ).toEqual([]);
   });
 
   it("batches explicit counterpart account resolution across explicit transactions in the period", async () => {
@@ -2214,7 +2240,10 @@ describe("getPeriodOverview", () => {
     expect(counterpartLookupCalls[0]?.[0].where?.transactionId).toMatchObject({
       in: expect.arrayContaining(["tx-explicit-1", "tx-explicit-2"]),
     });
-    expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
+    expect(
+      result.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown
+        .hierarchy,
+    ).toMatchObject([
       {
         id: "asset-class:unclassified",
         label: "Unclassified",
@@ -2512,11 +2541,13 @@ describe("getPeriodOverview", () => {
     expect(result.stats.endOfPeriodNetWorth).toBe(-97);
 
     const assetRoot = findBreakdownNodeById(
-      result.assetBreakdown.hierarchy,
+      result.accountBreakdownsByGrouping.accountStructure.assetBreakdown
+        .hierarchy,
       "group:virtual:transfer-clearing",
     );
     const liabilityRoot = findBreakdownNodeById(
-      result.liabilityBreakdown.hierarchy,
+      result.accountBreakdownsByGrouping.accountStructure.liabilityBreakdown
+        .hierarchy,
       "group:virtual:transfer-clearing",
     );
 
@@ -2526,7 +2557,8 @@ describe("getPeriodOverview", () => {
     );
     expect(
       findBreakdownNodeById(
-        result.assetBreakdown.hierarchy,
+        result.accountBreakdownsByGrouping.accountStructure.assetBreakdown
+          .hierarchy,
         "account:virtual:transfer-clearing:account:security:AAPL:USD",
       )?.label,
     ).toBe("AAPL:USD");
@@ -2540,13 +2572,15 @@ describe("getPeriodOverview", () => {
     );
     expect(
       findBreakdownNodeById(
-        result.liabilityBreakdown.hierarchy,
+        result.accountBreakdownsByGrouping.accountStructure.liabilityBreakdown
+          .hierarchy,
         "account:virtual:transfer-clearing:account:currency:CHF",
       )?.label,
     ).toBe("CHF");
     expect(
       findBreakdownNodeById(
-        result.liabilityBreakdown.hierarchy,
+        result.accountBreakdownsByGrouping.accountStructure.liabilityBreakdown
+          .hierarchy,
         "account:virtual:transfer-clearing:account:crypto:BTC",
       )?.label,
     ).toBe("BTC");
@@ -2618,17 +2652,25 @@ describe("getPeriodOverview", () => {
     expect(result.stats.endOfPeriodAssets).toBe(80);
     expect(result.stats.endOfPeriodLiabilities).toBe(100);
     expect(result.stats.endOfPeriodNetWorth).toBe(-20);
-    expect(result.assetBreakdown.totalAmount).toBe(80);
-    expect(result.liabilityBreakdown.totalAmount).toBe(100);
+    expect(
+      result.accountBreakdownsByGrouping.accountStructure.assetBreakdown
+        .totalAmount,
+    ).toBe(80);
+    expect(
+      result.accountBreakdownsByGrouping.accountStructure.liabilityBreakdown
+        .totalAmount,
+    ).toBe(100);
     expect(
       findBreakdownNodeById(
-        result.assetBreakdown.hierarchy,
+        result.accountBreakdownsByGrouping.accountStructure.assetBreakdown
+          .hierarchy,
         "account:virtual:transfer-clearing:account:currency:USD",
       )?.amount,
     ).toBe(80);
     expect(
       findBreakdownNodeById(
-        result.liabilityBreakdown.hierarchy,
+        result.accountBreakdownsByGrouping.accountStructure.liabilityBreakdown
+          .hierarchy,
         "account:virtual:transfer-clearing:account:currency:CHF",
       )?.amount,
     ).toBe(100);
@@ -2685,7 +2727,10 @@ describe("getPeriodOverview", () => {
     });
 
     expect(result.stats.endOfPeriodLiabilities).toBe(100);
-    expect(result.liabilityBreakdown.totalAmount).toBe(100);
+    expect(
+      result.accountBreakdownsByGrouping.accountStructure.liabilityBreakdown
+        .totalAmount,
+    ).toBe(100);
     expect(result.convertedBookingsCount).toBe(0);
     expect(result.stats.gainsLosses).toBe(0);
   });
@@ -2790,7 +2835,10 @@ describe("getPeriodOverview", () => {
     expect(result.stats.gainsLosses).toBe(-25);
     expect(result.stats.totalReturn).toBe(-25);
     expect(result.stats.endOfPeriodLiabilities).toBe(36);
-    expect(result.gainsLossesBreakdown.hierarchy).toMatchObject([
+    expect(
+      result.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown
+        .hierarchy,
+    ).toMatchObject([
       {
         id: "asset-class:unclassified",
         label: "Unclassified",
@@ -2808,7 +2856,7 @@ describe("getPeriodOverview", () => {
       },
     ]);
     expect(
-      result.gainsLossesBreakdown.hierarchy.reduce(
+      result.accountBreakdownsByGrouping.assetClass.gainsLossesBreakdown.hierarchy.reduce(
         (sum, node) => sum + node.totalGainLoss,
         0,
       ),
@@ -2978,11 +3026,18 @@ describe("getPeriodOverview", () => {
     expect(result.stats.endOfPeriodAssets).toBe(100);
     expect(result.stats.endOfPeriodLiabilities).toBe(100);
     expect(result.stats.endOfPeriodNetWorth).toBe(0);
-    expect(result.assetBreakdown.totalAmount).toBe(100);
-    expect(result.liabilityBreakdown.totalAmount).toBe(100);
+    expect(
+      result.accountBreakdownsByGrouping.accountStructure.assetBreakdown
+        .totalAmount,
+    ).toBe(100);
+    expect(
+      result.accountBreakdownsByGrouping.accountStructure.liabilityBreakdown
+        .totalAmount,
+    ).toBe(100);
     expect(
       findBreakdownNodeById(
-        result.assetBreakdown.hierarchy,
+        result.accountBreakdownsByGrouping.accountStructure.assetBreakdown
+          .hierarchy,
         "account:virtual:transfer-clearing:account:currency:CHF",
       )?.amount,
     ).toBe(100);

@@ -194,6 +194,9 @@ export function HistoryPageView({
     const option = history.scopeOptions[selectedMetric].find(
       (option) => option.value === selectedScope,
     );
+    if (selectedMetric === "gainsLosses" && option) {
+      return `By ${option.grouping === "accountStructure" ? "Account Structure" : "Asset Class"} / ${option.label}`;
+    }
     return selectedMetric === "netWorth"
       ? (option?.treeLabel ?? option?.label)
       : option?.label;

@@ -97,3 +97,110 @@ export const NetWorthHierarchy: Story = {
     });
   },
 };
+
+const gainLossArgs = {
+  selectedMetric: "gainsLosses" as const,
+  scopeOptions: {
+    ...meta.args.scopeOptions,
+    gainsLosses: [
+      {
+        value: "group:investments",
+        label: "Investments",
+        kind: "gainLoss",
+        grouping: "accountStructure",
+      },
+      {
+        value: "account:portfolio",
+        label: "Investments / Portfolio",
+        treeLabel: "Portfolio",
+        kind: "gainLoss",
+        grouping: "accountStructure",
+        parentValue: "group:investments",
+        accountId: "portfolio",
+      },
+      {
+        value: "asset-class:EQUITIES",
+        label: "Equities",
+        kind: "gainLoss",
+        grouping: "assetClass",
+      },
+      {
+        value: "gain-loss-account:portfolio",
+        label: "Equities / Portfolio",
+        treeLabel: "Portfolio",
+        kind: "gainLoss",
+        grouping: "assetClass",
+        parentValue: "asset-class:EQUITIES",
+        accountId: "portfolio",
+      },
+    ],
+  },
+} satisfies Partial<Story["args"]>;
+
+export const GainLossNavigationBranches: Story = {
+  args: gainLossArgs,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByRole("textbox", { name: "View" });
+    await userEvent.click(input);
+    const total = canvas
+      .getByText("Gain/Loss", { exact: true })
+      .closest<HTMLElement>('[role="option"]')!;
+    await userEvent.click(
+      within(total).getByRole("button", { name: "Expand" }),
+    );
+    await userEvent.click(
+      canvas.getByText("By Account Structure", { exact: true }),
+    );
+    await expect(
+      canvas.getByText("Investments", { exact: true }),
+    ).toBeVisible();
+    await expect(args.onViewChange).not.toHaveBeenCalled();
+    await expect(input).toHaveValue("Gain/Loss");
+    await userEvent.click(
+      canvas.getByText("By Account Structure", { exact: true }),
+    );
+    await expect(
+      canvas.queryByText("Investments", { exact: true }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByText("By Asset Class", { exact: true }));
+    await expect(canvas.getByText("Equities", { exact: true })).toBeVisible();
+    await expect(args.onViewChange).not.toHaveBeenCalled();
+    await userEvent.click(canvas.getByText("Equities", { exact: true }));
+    await expect(args.onViewChange).toHaveBeenCalledWith({
+      metric: "gainsLosses",
+      scope: "asset-class:EQUITIES",
+    });
+    await userEvent.click(input);
+    await userEvent.clear(input);
+    await userEvent.type(
+      input,
+      "Gain/Loss / By Account Structure / Investments / Portfolio",
+    );
+    await userEvent.click(canvas.getByRole("option", { name: "Portfolio" }));
+    await expect(args.onViewChange).toHaveBeenCalledWith({
+      metric: "gainsLosses",
+      scope: "account:portfolio",
+    });
+  },
+};
+
+export const GainLossKeyboardNavigation: Story = {
+  args: gainLossArgs,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByRole("textbox", { name: "View" });
+    await userEvent.click(input);
+    await userEvent.keyboard("{ArrowRight}{ArrowDown}{Enter}");
+    await expect(
+      canvas.getByText("Investments", { exact: true }),
+    ).toBeVisible();
+    await expect(args.onViewChange).not.toHaveBeenCalled();
+    await expect(input).toHaveValue("Gain/Loss");
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+    await expect(args.onViewChange).toHaveBeenCalledWith({
+      metric: "gainsLosses",
+      scope: "group:investments",
+    });
+  },
+};

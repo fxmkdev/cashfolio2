@@ -385,7 +385,13 @@ describe("loadPeriodHistoryPointMetrics", () => {
 
     expect(toNumericMoney(result.gainsLosses)).toBe(15);
     expect(toNumericMoney(result.scopedMetricValue)).toBe(10);
-    expect(toNumericMoney(result.scopeOptions.gainsLosses)).toMatchObject([
+    expect(
+      toNumericMoney(
+        result.scopeOptions.gainsLosses.filter(
+          (option) => option.grouping === "assetClass",
+        ),
+      ),
+    ).toMatchObject([
       {
         value: "asset-class:unclassified",
         label: "Unclassified",

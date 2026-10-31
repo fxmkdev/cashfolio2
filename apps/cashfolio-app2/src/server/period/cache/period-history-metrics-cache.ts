@@ -1,5 +1,6 @@
 import { getHistoryMetricsCacheEntryKey } from "../../../shared/book-cache-keys";
 import Decimal from "decimal.js";
+import { isReportingGrouping } from "../../../shared/reporting-grouping";
 import { encodeMoneyCache, decodeMoneyCache } from "../../money-cache-codec";
 import { moneyIsFinite, type Money } from "../../../shared/money";
 import { getRedisClient } from "../../../redis.server";
@@ -49,6 +50,7 @@ function isHistoryScopeOption(value: unknown): value is HistoryScopeOption {
   return (
     isHistoryScopeSelection(option.value) &&
     typeof option.label === "string" &&
+    (option.grouping === undefined || isReportingGrouping(option.grouping)) &&
     (!option.value?.startsWith("gain-loss-account:") ||
       (typeof option.accountId === "string" &&
         option.value === `gain-loss-account:${option.accountId}`)) &&

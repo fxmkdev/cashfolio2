@@ -1,4 +1,5 @@
 import type { ColDef } from "ag-grid-enterprise";
+import type { ReportingGrouping } from "@/shared/reporting-grouping";
 import { useMemo } from "react";
 import { FORMATTED_NUMERIC_COLUMN } from "@/components/grid/column-types";
 import { DataGrid } from "@/components/grid/data-grid";
@@ -15,6 +16,11 @@ import {
 } from "./-gains-losses-table-rows";
 
 type GainsLossesTableProps = {
+  grouping?: ReportingGrouping;
+  totals?: Pick<
+    GainsLossesBreakdownNode,
+    "realizedGainLoss" | "unrealizedGainLoss" | "totalGainLoss"
+  >;
   hierarchy: GainsLossesBreakdownNode[];
   displayDecimals?: number;
   expandedGroupsStorageKey: string;
@@ -22,6 +28,8 @@ type GainsLossesTableProps = {
 };
 
 export function GainsLossesTable({
+  grouping = "assetClass",
+  totals,
   hierarchy,
   displayDecimals = 2,
   expandedGroupsStorageKey,
@@ -37,12 +45,16 @@ export function GainsLossesTable({
         id: GAINS_LOSSES_TOTAL_FOOTER_ROW_ID,
         rowType: "gainsLossesTotalFooter",
         name: "Total",
-        realizedGainLoss: sumTopLevelRealizedGainLoss(hierarchy),
-        unrealizedGainLoss: sumTopLevelUnrealizedGainLoss(hierarchy),
-        totalGainLoss: sumTopLevelTotalGainLoss(hierarchy),
+        realizedGainLoss:
+          totals?.realizedGainLoss ?? sumTopLevelRealizedGainLoss(hierarchy),
+        unrealizedGainLoss:
+          totals?.unrealizedGainLoss ??
+          sumTopLevelUnrealizedGainLoss(hierarchy),
+        totalGainLoss:
+          totals?.totalGainLoss ?? sumTopLevelTotalGainLoss(hierarchy),
       },
     ],
-    [hierarchy],
+    [hierarchy, totals],
   );
   const { isGroupOpenByDefault, onRowGroupOpened } = useExpandedGroups(
     expandedGroupsStorageKey,
@@ -76,7 +88,10 @@ export function GainsLossesTable({
         suppressHeaderMenuButton: true,
       }}
       autoGroupColumnDef={{
-        headerName: "Asset Class / Account",
+        headerName:
+          grouping === "assetClass"
+            ? "Asset Class / Account"
+            : "Account Structure",
         field: "name",
         width: 475,
         suppressSizeToFit: true,
