@@ -48,10 +48,12 @@ for (const scope of ["BALANCE", "INCOME", "EXPENSE"] as const) {
       }),
     ).toHaveValue(parentName);
     if (!isCategory) {
-      await expect(dialog.getByLabel("Tracking Method")).toHaveValue(
-        "Individual Units",
-      );
-      await dialog.getByLabel("Tracking Method").click();
+      await expect(
+        dialog.getByRole("combobox", { name: "Tracking Method", exact: true }),
+      ).toHaveValue("Individual Units");
+      await dialog
+        .getByRole("combobox", { name: "Tracking Method", exact: true })
+        .click();
       await page
         .getByRole("option", { name: "Total Portfolio Value", exact: true })
         .click();
@@ -88,9 +90,9 @@ for (const scope of ["BALANCE", "INCOME", "EXPENSE"] as const) {
       }),
     ).toHaveValue("");
     if (!isCategory)
-      await expect(dialog.getByLabel("Tracking Method")).toHaveValue(
-        "Individual Units",
-      );
+      await expect(
+        dialog.getByRole("combobox", { name: "Tracking Method", exact: true }),
+      ).toHaveValue("Individual Units");
     await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(dialog).not.toBeVisible();
     await clickPinnedRowAction({
