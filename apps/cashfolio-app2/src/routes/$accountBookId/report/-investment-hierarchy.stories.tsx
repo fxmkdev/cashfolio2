@@ -212,12 +212,14 @@ export const TablesWithLongPaths: Story = {
       await expect(apples).toHaveLength(2);
       const row = apples[0].closest<HTMLElement>("[role='row']")!;
       await expect(within(row).getByText(longParentPath)).toBeVisible();
-      const pathBox = within(row)
-        .getByText(longParentPath)
-        .getBoundingClientRect();
-      await expect(row.getBoundingClientRect().bottom).toBeGreaterThanOrEqual(
-        pathBox.bottom,
-      );
+      await waitFor(() => {
+        const pathBox = within(row)
+          .getByText(longParentPath)
+          .getBoundingClientRect();
+        expect(row.getBoundingClientRect().bottom).toBeGreaterThanOrEqual(
+          pathBox.bottom,
+        );
+      });
     }
     await userEvent.dblClick(
       allocationTable.getAllByText("Apple", { exact: true })[0],
@@ -251,6 +253,7 @@ export const AllocationAccountPaths: Story = {
       "period-allocation-breakdown-chart",
     );
     await expect(canvas.getByText("AAPL", { exact: true })).toBeVisible();
+    chart.scrollIntoView({ block: "center" });
     for (const [index, path, id] of [
       [0, `${longParentPath} / Apple`, "apple-one"],
       [1, "Other Bank / Apple", "apple-two"],
@@ -266,8 +269,7 @@ export const AllocationAccountPaths: Story = {
           clientY: box.top + box.height * 0.5,
         };
         await userEvent.pointer({ target, coords });
-        const tooltip =
-          canvasElement.ownerDocument.querySelector(".ag-charts-tooltip");
+        const tooltip = chart.querySelector(".ag-charts-tooltip");
         expect(tooltip).toBeVisible();
         expect(tooltip).toHaveTextContent(path);
       });

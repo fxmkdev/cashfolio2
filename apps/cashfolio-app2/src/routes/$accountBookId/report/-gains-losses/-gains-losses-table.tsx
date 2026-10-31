@@ -104,7 +104,7 @@ export function GainsLossesTable({
         autoHeight: true,
         valueGetter: ({ data }: { data: GainsLossesGridRow | undefined }) =>
           getReportRowLabel(data),
-        tooltipValueGetter: ({ data }) => getReportRowLabel(data),
+        tooltip: ({ data }) => getReportRowLabel(data),
         cellRendererParams: {
           suppressCount: true,
           innerRenderer: ReportNameCell,

@@ -87,7 +87,7 @@ export function BreakdownTable({
         autoHeight: true,
         valueGetter: ({ data }: { data: BreakdownGridRow | undefined }) =>
           getReportRowLabel(data),
-        tooltipValueGetter: ({ data }) => getReportRowLabel(data),
+        tooltip: ({ data }) => getReportRowLabel(data),
         cellRendererParams: {
           suppressCount: true,
           innerRenderer: ReportNameCell,
